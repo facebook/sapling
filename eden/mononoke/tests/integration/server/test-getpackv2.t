@@ -47,13 +47,13 @@ Pull from Mononoke
   $ setconfig remotefilelog.fetchpacks=True
   $ setconfig remotefilelog.getpackversion=2
   $ setconfig extensions.pushrebase=
-  $ hgmn pull -q --config ui.disable-stream-clone=true
+  $ hg pull -q --config ui.disable-stream-clone=true
   warning: stream clone is disabled
 
 Make sure that cache is empty
   $ ls $TESTTMP/cachepath/repo/packs/manifests
 
-  $ hgmn prefetch -r "min(all())" -r1 --debug 2>&1 | grep "getpackv2 command"
+  $ hg prefetch -r "min(all())" -r1 --debug 2>&1 | grep "getpackv2 command"
   sending getpackv2 command
 
 Make sure that `hg update` succeeds
@@ -63,16 +63,16 @@ Make sure that `hg update` succeeds
 Create new commit that modifies A
   $ sl up -q tip
   $ echo AA > A && sl ci -m 'AA'
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
 Go to repo3 and prefetch both revisions that modified file A.
 Then make sure update succeeds
   $ cd $TESTTMP/repo3
   $ setconfig remotefilelog.fetchpacks=True
   $ setconfig remotefilelog.getpackversion=2
-  $ hgmn pull -q --config ui.disable-stream-clone=true
+  $ hg pull -q --config ui.disable-stream-clone=true
   warning: stream clone is disabled
-  $ hgmn prefetch -r "min(all())" -r 3 --debug 2>&1 | grep "getpackv2 command"
+  $ hg prefetch -r "min(all())" -r 3 --debug 2>&1 | grep "getpackv2 command"
   sending getpackv2 command
   $ hg up --config paths.default=badpath 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -103,19 +103,19 @@ Then make sure update succeeds
   
 Rename a file and then prefetch it
   $ cd $TESTTMP/repo2
-  $ hgmn up -q tip
+  $ hg up -q tip
   $ hg mv A AA
   $ hg ci -m 'rename A to AA'
-  $ hgmn push -r . --to master_bookmark
-  pushing rev daf20827925b to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev daf20827925b to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   updating bookmark master_bookmark
   $ cd $TESTTMP/repo3
-  $ hgmn pull -q
-  $ hgmn prefetch -r 4 --debug 2>&1 | grep "getpackv2 command"
+  $ hg pull -q
+  $ hg prefetch -r 4 --debug 2>&1 | grep "getpackv2 command"
   sending getpackv2 command
   $ hg debugdatapack --node 5abbc96341e3bb0cdfc5c54599ee869e2ffa573f $TESTTMP/cachepath/repo/packs/ee71793980651ba90038f48b623b83d4f3c8585a.dataidx
   $TESTTMP/cachepath/repo/packs/ee71793980651ba90038f48b623b83d4f3c8585a:
@@ -134,7 +134,7 @@ Make sure the push succeeds - we had a problem when an incorrect delta was
 generated because copy metadata wasn't added
   $ echo B > AA
   $ sl ci -m 'commit on top of a rename'
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 0ce8239858c4 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 0ce8239858c4 to destination mono:repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark

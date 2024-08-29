@@ -57,6 +57,6 @@ function add_triangle_merge_commits_and_push() {
   # simulate updating master with several single parents commits then a merge
   for commit in "${topush[@]}"; do
     hg co "${commit}"
-    hgmn push -r . --to master_bookmark --pushvar NON_FAST_FORWARD=true
+    hg push -r . --to master_bookmark --pushvar NON_FAST_FORWARD=true
   done
 }

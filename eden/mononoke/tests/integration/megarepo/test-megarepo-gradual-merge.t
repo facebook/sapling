@@ -120,8 +120,8 @@ setup hg server repo
 
   $ start_and_wait_for_mononoke_server
 
-  $ hgmn pull
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg pull
+  pulling from mono:repo
   searching for changes
   adding changesets
   adding manifests
@@ -149,7 +149,7 @@ setup hg server repo
       │
       o  426bada5c675 A
   
-  $ hgmn up head_bookmark
+  $ hg up head_bookmark
   6 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ ls
   A

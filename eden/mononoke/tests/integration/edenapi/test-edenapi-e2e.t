@@ -34,11 +34,11 @@ Import and start mononoke
   $ wait_for_mononoke
 
 Clone 1 and 2
-  $ sl clone "mononoke://$(mononoke_address)/repo" client1
+  $ sl clone mono:repo client1
   Cloning repo into $TESTTMP/client1
   Checking out 'master_bookmark'
   1 files updated
-  $ sl clone "mononoke://$(mononoke_address)/repo" client2 -q
+  $ sl clone mono:repo client2 -q
   $ cd client1
   $ smartlog
   @  8b2dca0c8a72 public 'base_commit'  remote/master_bookmark
@@ -47,7 +47,7 @@ Clone 1 and 2
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo a > a && sl commit -m "new commit" -A a
   $ sl push --to master_bookmark
-  pushing rev 8ca8131de573 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  pushing rev 8ca8131de573 to destination mono:repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
   $ smartlog
@@ -60,7 +60,7 @@ Clone 3
   $ cd $TESTTMP
 This is a hack, it seems WBC may be stale, causing the test to be flaky. It needs a proper fix.
   $ sleep 3
-  $ sl clone "mononoke://$(mononoke_address)/repo" client3
+  $ sl clone mono:repo client3
   Cloning repo into $TESTTMP/client3
   Checking out 'master_bookmark'
   2 files updated
@@ -74,7 +74,7 @@ This is a hack, it seems WBC may be stale, causing the test to be flaky. It need
   
   $ echo b > a && sl commit -m "newer commit"
   $ sl push --to master_bookmark
-  pushing rev 6b51b03e4f04 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  pushing rev 6b51b03e4f04 to destination mono:repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
 
@@ -83,7 +83,7 @@ Back to clone 1
 This is a hack, it seems WBC may be stale, causing the test to be flaky. It needs a proper fix.
   $ sleep 3
   $ sl pull
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  pulling from mono:repo
   searching for changes
   $ smartlog
   o  6b51b03e4f04 public 'newer commit'  remote/master_bookmark
@@ -98,7 +98,7 @@ This is a hack, it seems WBC may be stale, causing the test to be flaky. It need
 On clone 2 with tailer
   $ cd "$TESTTMP/client2"
   $ sl pull
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  pulling from mono:repo
   searching for changes
   $ smartlog
   o  6b51b03e4f04 public 'newer commit'  remote/master_bookmark

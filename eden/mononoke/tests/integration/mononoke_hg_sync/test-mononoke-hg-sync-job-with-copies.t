@@ -47,7 +47,7 @@ Push a simple commit to Mononoke
   $ hg ci -Aqm 'test commit'
   $ hg log -r tip -T '{node}\n'
   f1c370cc51a0684dcc579385cc255882bcdc8bcb
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
 Push two commits to Mononoke, one of them has a force copy
   $ hg up -q "min(all())"
@@ -58,7 +58,7 @@ Push two commits to Mononoke, one of them has a force copy
 
   $ hg cp 2 1 --force
   $ hg ci -m 'bad commit'
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
   $ hg log -r tip -T '{node}\n'
   a1e678b3ed9a3df8ef590d407b97d88891a66778
 
@@ -98,7 +98,7 @@ Push of a merge with a copy
   $ hg cp fromcopylocal localcopied
   $ echo 2 > notinfirstparent
   $ hg ci -m 'copied'
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
   $ hg log -r tip
   commit:      bc6bfc6ac632
   bookmark:    default/master_bookmark
@@ -108,7 +108,7 @@ Push of a merge with a copy
   summary:     copied
   
 
-  $ hgmn st --change tip -C
+  $ hg st --change tip -C
   A fromcopyremote
   A localcopied
     fromcopylocal
@@ -140,7 +140,7 @@ Merge when one filenode is ancestor of another
   $ INITIALCOMMIT=$(hg log -r tip -T '{node}')
   $ echo 1 >> 1
   $ hg ci -m 'some commit'
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
 Make 4 commits arranged in a diamond shape
 "ancestorscase" file is created in the start commit,
@@ -162,10 +162,10 @@ modified in one of the merged parents and in the merge commit itself
   $ hg merge -q $SECONDPARENT
   $ echo 3 > ancestorscase
   $ hg ci -m 'ancestors'
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
   $ hg log -r tip -T '{node}\n'
   e09d568b9a5530903dcc9e4a2a60b1912141379c
-  $ hgmn st --change tip -C
+  $ hg st --change tip -C
   M ancestorscase
   A somefile
 
@@ -173,11 +173,11 @@ modified in one of the merged parents and in the merge commit itself
 Second diamond push, this time "ancestorscase2" is modified in the second
 parent 
 
-  $ hgmn up -q master_bookmark
+  $ hg up -q master_bookmark
   $ INITIALCOMMIT=$(hg log -r tip -T '{node}')
   $ echo 1 >> 1
   $ hg ci -m 'some commit'
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
   $ hg up -q $INITIALCOMMIT
   $ echo 1 > ancestorscase2
@@ -196,7 +196,7 @@ parent
   $ hg merge -q $SECONDPARENT
   $ echo 3 > ancestorscase2
   $ hg ci -m 'ancestors'
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
   $ hg log -r tip -T '{node}\n'
   c019126b122e679401c27e13131609aa50d3e806
 

@@ -50,12 +50,12 @@ Push to Mononoke
   $ hg up -q tip
 
   $ mkcommit pushcommit
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
   $ mkcommit anothercommit
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
-  $ hgmn push -r .^ --to master_bookmark -q --non-forward-move --pushvar NON_FAST_FORWARD=true
+  $ hg push -r .^ --to master_bookmark -q --non-forward-move --pushvar NON_FAST_FORWARD=true
 
 Check that new entry was added to the sync database. 3 pushes and 1 blobimport
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) from bookmarks_update_log";
@@ -154,7 +154,7 @@ Make one more push from the client
   $ cd $TESTTMP/client-push
   $ hg up -q master_bookmark
   $ mkcommit onemorecommit
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
 Continue replay
   $ cd $TESTTMP
@@ -170,23 +170,23 @@ Continue replay
   
 Make a commit that makes a file executable and a commit that adds a symlink. Make sure they are sync correctly
   $ cd $TESTTMP/client-push
-  $ hgmn up -q 2
+  $ hg up -q 2
   $ chmod +x pushcommit
   $ hg ci -m 'exec mode'
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 15776eb106e6 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 15776eb106e6 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   updating bookmark master_bookmark
-  $ hgmn up -q 2
+  $ hg up -q 2
   $ ln -s pushcommit symlink_to_pushcommit
   $ hg addremove
   adding symlink_to_pushcommit
   $ hg ci -m 'symlink'
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 6f060fabc8e7 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 6f060fabc8e7 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -265,8 +265,8 @@ Test bookmark deletion sync
   > prepushkey = python:$TESTTMP/replayverification.py:verify_replay
   > CONFIG
   $ cd $TESTTMP/client-push
-  $ hgmn -q up master_bookmark
-  $ hgmn -q push --rev . --to book_to_delete --create
+  $ hg -q up master_bookmark
+  $ hg -q push --rev . --to book_to_delete --create
   $ hg log -r master_bookmark
   commit:      6f24f1b38581
   bookmark:    default/book_to_delete
@@ -281,7 +281,7 @@ Test bookmark deletion sync
   $ mononoke_hg_sync_loop repo-3 7 2>&1 | grep 'successful sync'
   * successful sync of entries [8]* (glob)
   $ cd $TESTTMP/client-push
-  $ hgmn push --delete book_to_delete
+  $ hg push --delete book_to_delete
   pushing to * (glob)
   searching for changes
   no changes found
@@ -309,7 +309,7 @@ Test bookmark deletion sync
 
 Test force pushrebase sync
   $ cd $TESTTMP/client-push
-  $ hgmn -q up master_bookmark^
+  $ hg -q up master_bookmark^
 -- create a commit, which is not an ancestor of master
   $ mkcommit commit_to_force_pushmaster
   $ hg log -r .
@@ -319,7 +319,7 @@ Test force pushrebase sync
   summary:     commit_to_force_pushmaster
   
 -- force-pushrebase this commit
-  $ hgmn push -q -f --to master_bookmark
+  $ hg push -q -f --to master_bookmark
 -- master should now point to it
   $ hg log -r .
   commit:      cc83c88b72d3
@@ -347,7 +347,7 @@ Test the job exits when the exit file is set
   $ cd $TESTTMP/client-push
   $ hg up -q master_bookmark
   $ mkcommit exitcommit
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
   $ touch $TESTTMP/exit-file
   $ cd $TESTTMP
   $ mononoke_hg_sync_loop repo-3 8 --exit-file $TESTTMP/exit-file 2>&1 | grep 'exists'

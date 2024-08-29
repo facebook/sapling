@@ -52,7 +52,7 @@ Prepare the client-side repo
   > EOF
 
 Push commit to ancestor bookmark, should work
-  $ hgmn up -q master_bookmark
+  $ hg up -q master_bookmark
   $ sl push -r . --to ancestor --create
   pushing rev 112478962961 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark ancestor
   creating remote bookmark ancestor

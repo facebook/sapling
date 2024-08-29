@@ -28,8 +28,8 @@ Test with ignored paths
   $ mkdir interfaces
   $ echo $LARGE_CONTENT > interfaces/1.graphql
   $ hg commit -Aqm msg
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 4b2f324c9502 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 4b2f324c9502 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -39,8 +39,8 @@ Test with ignored paths
   $ hg up -q "min(all())"
   $ echo $LARGE_CONTENT > bin-1.tgz
   $ hg commit -Aqm msg
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 74cf48a19435 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 74cf48a19435 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:

@@ -9,7 +9,7 @@
 
 setup configuration
   $ base_snapshot_repo_setup client1
-  $ cd repo  
+  $ cd client1
   $ mkdir test_tmp
   $ cd test_tmp
   $ echo "a file content" > a

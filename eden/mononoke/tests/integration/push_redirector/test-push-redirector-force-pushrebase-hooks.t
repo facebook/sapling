@@ -42,7 +42,7 @@
 We can't force pushrebase to a shared bookmark, so create a test bookmark that only belongs
 to the small repo
   $ cd "$TESTTMP/small-hg-client"
-  $ REPONAME=small-mon hgmn up -q master_bookmark
+  $ hg up -q master_bookmark
   $ REPONAME=small-mon sl push -r . --to test_bookmark --create
   pushing rev 11f848659bfc to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark test_bookmark
   creating remote bookmark test_bookmark
@@ -60,7 +60,7 @@ blocked by deny_files
 
 -- newcommit is also present in the large repo (after a pull)
   $ cd "$TESTTMP"/large-hg-client
-  $ REPONAME=large-mon hgmn pull -q
+  $ hg pull -q
   $ log -r bookprefix/test_bookmark
   o  newcommit [public;rev=3;819e91b238b7] default/bookprefix/test_bookmark
   │
@@ -72,7 +72,7 @@ Pushing to the small repo triggers deny_files, even though deny_files is only co
 Note that the node is from the small repo, even though the hook is in the large repo
 
   $ cd "$TESTTMP"/small-hg-client
-  $ REPONAME=small-mon hgmn up -q test_bookmark
+  $ hg up -q test_bookmark
   $ mkdir -p f/.git
   $ echo 2 > f/.git/HEAD && hg addremove -q && hg ci -q -m .git
   $ hg log -T"small_node: {node}\n" -r .
@@ -93,7 +93,7 @@ Create a commit in the large repo that triggers deny_files.  Since we haven't en
 there, we are ok to create it.  Create a commit on top of that that is backsynced.
 
   $ cd "$TESTTMP"/large-hg-client
-  $ REPONAME=large-mon hgmn up -q master_bookmark
+  $ hg up -q master_bookmark
   $ mkdir -p x/.git
   $ echo 2 > x/.git/HEAD && hg addremove -q && hg ci -q -m .git-large
   $ hg log -T "large_node: {node}\n" -r .
@@ -116,7 +116,7 @@ there, we are ok to create it.  Create a commit on top of that that is backsynce
 
 Commit has been backsynced
   $ cd "$TESTTMP"/small-hg-client
-  $ REPONAME=small-mon hgmn pull -q
+  $ hg pull -q
   $ log -r master_bookmark
   o  backsync [public;rev=4;cd9bfa9f25eb] default/master_bookmark
   │
@@ -127,7 +127,7 @@ hook in the large repo.
 Note that since the large repo commit doesn't map to the small repo, we see the large repo
 changeset id.
 
-  $ REPONAME=small-mon hgmn up -q master_bookmark
+  $ hg up -q master_bookmark
   $ REPONAME=small-mon sl push -r . --to test_bookmark --pushvar NON_FAST_FORWARD=true
   pushing rev cd9bfa9f25eb to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark test_bookmark
   moving remote bookmark test_bookmark from ce81c7d38286 to cd9bfa9f25eb

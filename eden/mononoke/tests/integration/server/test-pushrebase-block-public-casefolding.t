@@ -77,7 +77,7 @@ attempt to push a case conflict onto main
 
 it's ok to push it on to a scratch bookmark, though
   $ sl push -r . --to scratch/conflict1 --create
-  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
+  pushing to mono:repo
   searching for changes
 
 if we stack a commit that fixes the case conflict, we still can't land the stack
@@ -113,7 +113,7 @@ attempt to push a commit that introduces a case conflict onto main
 
 again, it's ok to push this to a scratch branch
   $ sl push -r . --to scratch/conflict2 --create
-  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
+  pushing to mono:repo
   searching for changes
 
 we can't move the bookmark to a commit with a pre-existing case conflict via bookmark-only pushrebase

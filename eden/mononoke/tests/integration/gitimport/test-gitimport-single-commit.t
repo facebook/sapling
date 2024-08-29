@@ -54,7 +54,7 @@
   $ cd "$TESTTMP"
   $ hg clone -q mono:repo "$HG_REPO"
   $ cd "$HG_REPO"
-  $ hgmn up -q master
+  $ hg up -q master
   $ cat file1
   this is file1
   $ cat dir/file2

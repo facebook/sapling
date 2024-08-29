@@ -102,7 +102,7 @@ Now let's push the same commit again but with a bypass. It should pushrebase,
 not move a bookmark
   $ cd ../repo2
   $ sl push -r . --to master_bookmark --pushvar BYPASS_REVIEW=true -q --config push.skip-cleanup-commits=true
-  $ hgmn up -q master_bookmark
+  $ hg up -q master_bookmark
   $ log
   @  to push [public;rev=5;a6205c464622] default/master_bookmark
   │
@@ -133,7 +133,7 @@ Move master again
 Now let's push commit cloud commit. Again, it should do pushrebase
   $ cd ../repo2
   $ sl push -r . --to master_bookmark --pushvar BYPASS_REVIEW=true -q --config push.skip-cleanup-commits=true
-  $ hgmn up -q master_bookmark
+  $ hg up -q master_bookmark
   $ log
   @  commitcloud [public;rev=8;3308f3bd8048] default/master_bookmark
   │

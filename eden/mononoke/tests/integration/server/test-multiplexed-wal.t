@@ -25,7 +25,7 @@ start mononoke
 
 
 clone
-  $ sl clone -q  "mononoke://$(mononoke_address)/repo" client1
+  $ sl clone -q  mono:repo client1
   $ cd client1
 
 Push
@@ -36,7 +36,7 @@ otherwise, the test is going to be flaky becasue of the eventual consistency mod
   $ echo "$(read_blobstore_wal_queue_size)"
   0
   $ sl push -r . --to main
-  pushing rev 523cda1e6192 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark main
+  pushing rev 523cda1e6192 to destination mono:repo bookmark main
   searching for changes
   updating bookmark main
 

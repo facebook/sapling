@@ -76,18 +76,18 @@ Record current master and the first commit in the preserved stack
 Create marker commits, so that we don't have to add $WITH_MERGE_C1 and $MEGAREPO_MERGE to the mapping
 (as it's not correct: $WITH_MERGE_C1 is supposed to be preserved)
   $ cd "$TESTTMP/with_merge_hg"
-  $ REPONAME=with_merge hgmn pull -q
-  $ REPONAME=with_merge hgmn up -q with_merge_master
-  $ hgmn ci -m "marker commit" --config ui.allowemptycommit=True
-  $ REPONAME=with_merge hgmn push -r . --to with_merge_master -q
+  $ hg pull -q
+  $ hg up -q with_merge_master
+  $ hg ci -m "marker commit" --config ui.allowemptycommit=True
+  $ hg push -r . --to with_merge_master -q
   $ WITH_MERGE_MARKER=$(mononoke_newadmin bookmarks --repo-id 1 get with_merge_master)
 
   $ cd "$TESTTMP/meg_hg"
   $ setconfig paths.default=mono:meg
-  $ REPONAME=meg hgmn pull -q
-  $ REPONAME=meg hgmn up -q master_bookmark
-  $ hgmn ci -m "marker commit" --config ui.allowemptycommit=True
-  $ REPONAME=meg hgmn push -r . --to master_bookmark -q
+  $ hg pull -q
+  $ hg up -q master_bookmark
+  $ hg ci -m "marker commit" --config ui.allowemptycommit=True
+  $ hg push -r . --to master_bookmark -q
   $ MEGAREPO_MARKER=$(mononoke_newadmin bookmarks --repo-id 0 get master_bookmark)
 
 insert sync mapping entry
@@ -102,8 +102,8 @@ Preserve commits from with_merge
 
 Do a test pull
   $ cd "$TESTTMP"/meg_hg
-  $ REPONAME=meg hgmn pull -q
-  $ REPONAME=meg hgmn up -q master_bookmark
+  $ hg pull -q
+  $ hg up -q master_bookmark
   $ ls
   arvr-legacy
   somefilebeforemerge
@@ -151,7 +151,7 @@ Create a branch merge in a small repo
 
 
   $ cd "$TESTTMP"/with_merge_hg
-  $ REPONAME=with_merge hgmn up -q tip
+  $ hg up -q tip
   $ ls -R
   .:
   A
@@ -161,7 +161,7 @@ Create a branch merge in a small repo
   somefilebeforemerge
 
 Push a single premerge commit and sync it to megarepo
-  $ REPONAME=with_merge hgmn push -r 68360e2c98f0 --to with_merge_master -q
+  $ hg push -r 68360e2c98f0 --to with_merge_master -q
   $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark --commit with_merge_master  &> /dev/null
 
 Push a commit from another small repo that modifies existing file
@@ -169,15 +169,15 @@ Push a commit from another small repo that modifies existing file
   $ hg up -q another_master
   $ echo 2 > file.txt
   $ hg ci -m 'modify file.txt'
-  $ REPONAME=another hgmn push -r . --to another_master -q
+  $ hg push -r . --to another_master -q
 
   $ mononoke_x_repo_sync 2 0 once --target-bookmark master_bookmark --commit another_master  &> /dev/null
 
   $ cd "$TESTTMP"/with_merge_hg
 Push and sync commits before a diamond commit
-  $ REPONAME=with_merge hgmn push -r 7a7632995e68 --to with_merge_master -q
+  $ hg push -r 7a7632995e68 --to with_merge_master -q
   $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark --commit with_merge_master  &> /dev/null
-  $ REPONAME=with_merge hgmn push -r be5140c7bfcc --to with_merge_master -q
+  $ hg push -r be5140c7bfcc --to with_merge_master -q
   $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark --commit with_merge_master  &> /dev/null
 
 Push one more commit from another small repo
@@ -185,7 +185,7 @@ Push one more commit from another small repo
   $ hg up -q another_master
   $ echo 3 > file.txt
   $ hg ci -m 'second modification of file.txt'
-  $ REPONAME=another hgmn push -r . --to another_master -q
+  $ hg push -r . --to another_master -q
 
   $ mononoke_x_repo_sync 2 0 once --target-bookmark master_bookmark --commit another_master  &> /dev/null
 
@@ -193,7 +193,7 @@ Push diamond commit
   $ cd "$TESTTMP"/with_merge_hg
   $ hg log -r 62dba675d1b3 -T '{p1node|short} {p2node|short}'
   be5140c7bfcc 23aa3f5a6de2 (no-eol)
-  $ REPONAME=with_merge hgmn push -r 62dba675d1b3 --to with_merge_master -q &> /dev/null
+  $ hg push -r 62dba675d1b3 --to with_merge_master -q &> /dev/null
 
 Try to sync it automatically, it's expected to fail
   $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark --commit with_merge_master 2>&1 | grep 'unsupported merge'
@@ -217,8 +217,8 @@ Now sync with the tool
 
 Pull from megarepo
   $ cd "$TESTTMP"/meg_hg
-  $ REPONAME=meg hgmn pull -q
-  $ REPONAME=meg hgmn up -q master_bookmark
+  $ hg pull -q
+  $ hg up -q master_bookmark
   $ ls -R
   .:
   A
@@ -251,13 +251,13 @@ Merge with preserved ancestors
   RewrittenAs([(ChangesetId(Blake2(d27a299389c7bedbe3e4dc01b7d4e7ac2162d935401c5d8462b7e1663dfee0e4)), CommitSyncConfigVersion("TEST_VERSION_NAME"))])
 
 -- create a p2, based on a pre-merge commit
-  $ REPONAME=with_merge hgmn up with_merge_pre_big_merge -q
+  $ hg up with_merge_pre_big_merge -q
   $ echo preserved_pre_big_merge_file > preserved_pre_big_merge_file
   $ hg ci -Aqm "preserved_pre_big_merge_file"
   $ hg book -r . pre_merge_p2
 
 -- create a p1, based on a master
-  $ REPONAME=with_merge hgmn up with_merge_master -q
+  $ hg up with_merge_master -q
   $ echo ababagalamaga > ababagalamaga
   $ hg ci -Aqm "ababagalamaga"
   $ hg book -r . pre_merge_p1
@@ -272,7 +272,7 @@ Merge with preserved ancestors
   $ hg book -r . merge_with_preserved
 
 -- push these folks to the server-side repo
-  $ REPONAME=with_merge hgmn push --to with_merge_master 2>&1 | grep updating
+  $ hg push --to with_merge_master 2>&1 | grep updating
   updating bookmark with_merge_master
 
 -- sync p1

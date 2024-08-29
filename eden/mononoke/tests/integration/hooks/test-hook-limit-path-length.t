@@ -23,8 +23,8 @@ Ok file path - should work
 
   $ touch 123456789
   $ hg ci -Aqm 1
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 2f6ac546dc81 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 2f6ac546dc81 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -36,8 +36,8 @@ File path too long - should fail
   $ hg up -q "min(all())"
   $ touch 1234567890
   $ hg ci -Aqm 1
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 56fa24a52883 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 56fa24a52883 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -58,8 +58,8 @@ File path too long (UTF-8 multibyte characters) - should fail
   $ hg up -q "min(all())"
   $ touch 12345678€
   $ hg ci -Aqm 1
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 2aa9727c0ca2 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 2aa9727c0ca2 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:

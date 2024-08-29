@@ -51,14 +51,14 @@ create new bookmarks, then update their properties
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ touch b && hg addremove && hg ci -q -m 'add b'
   adding b
-  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to "not_pull_default" --create
-  pushing rev 907767d421e4 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark not_pull_default
+  $ hg push -r . --to "not_pull_default" --create
+  pushing rev 907767d421e4 to destination mono:repo bookmark not_pull_default
   searching for changes
   exporting bookmark not_pull_default
   $ touch c && hg addremove && hg ci -q -m 'add c'
   adding c
-  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to "scratch" --create
-  pushing rev b2d646f64a99 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark scratch
+  $ hg push -r . --to "scratch" --create
+  pushing rev b2d646f64a99 to destination mono:repo bookmark scratch
   searching for changes
   exporting bookmark scratch
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "UPDATE bookmarks SET hg_kind = CAST('scratch' AS BLOB) WHERE CAST(name AS TEXT) LIKE 'scratch';"
@@ -80,16 +80,16 @@ test publishing
   $ tglogpnr
   o  ac82d8b1f7c4 public 'add a'  default/master_bookmark
   
-  $ hgmn pull
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg pull
+  pulling from mono:repo
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  $ hgmn up 907767d421e4cb28c7978bedef8ccac7242b155e
+  $ hg up 907767d421e4cb28c7978bedef8ccac7242b155e
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hgmn up b2d646f64a9978717516887968786c6b7a33edf9
-  pulling 'b2d646f64a9978717516887968786c6b7a33edf9' from 'mononoke://$LOCALIP:$LOCAL_PORT/repo'
+  $ hg up b2d646f64a9978717516887968786c6b7a33edf9
+  pulling 'b2d646f64a9978717516887968786c6b7a33edf9' from 'mono:repo'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ tglogpnr
   @  b2d646f64a99 draft 'add c'
@@ -98,17 +98,17 @@ test publishing
   │
   o  ac82d8b1f7c4 public 'add a'  default/master_bookmark
   
-  $ hgmn bookmarks
+  $ hg bookmarks
   no bookmarks set
-  $ hgmn bookmarks --list-remote "*"
+  $ hg bookmarks --list-remote "*"
      master_bookmark           ac82d8b1f7c418c61a493ed229ffaa981bda8e90
      not_pull_default          907767d421e4cb28c7978bedef8ccac7242b155e
      scratch                   b2d646f64a9978717516887968786c6b7a33edf9
 Exercise the limit (5 bookmarks should be allowed, this was our limit)
   $ cd ../repo-push
-  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to "more/1" --create >/dev/null 2>&1
-  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to "more/2" --create >/dev/null 2>&1
-  $ hgmn bookmarks --list-remote "*"
+  $ hg push -r . --to "more/1" --create >/dev/null 2>&1
+  $ hg push -r . --to "more/2" --create >/dev/null 2>&1
+  $ hg bookmarks --list-remote "*"
      master_bookmark           ac82d8b1f7c418c61a493ed229ffaa981bda8e90
      more/1                    b2d646f64a9978717516887968786c6b7a33edf9
      more/2                    b2d646f64a9978717516887968786c6b7a33edf9
@@ -117,8 +117,8 @@ Exercise the limit (5 bookmarks should be allowed, this was our limit)
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "UPDATE bookmarks SET hg_kind = CAST('scratch' AS BLOB) WHERE CAST(name AS TEXT) LIKE 'more/%';"
   $ flush_mononoke_bookmarks
 Exercise the limit (6 bookmarks should fail)
-  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to "more/3" --create >/dev/null 2>&1
-  $ hgmn bookmarks --list-remote "*"
+  $ hg push -r . --to "more/3" --create >/dev/null 2>&1
+  $ hg bookmarks --list-remote "*"
   remote: Command failed
   remote:   Error:
   remote:     Bookmark query was truncated after 6 results, use a more specific prefix search.
@@ -132,7 +132,7 @@ Exercise the limit (6 bookmarks should fail)
   [255]
 
 Narrowing down our query should fix it:
-  $ hgmn bookmarks --list-remote "more/*"
+  $ hg bookmarks --list-remote "more/*"
      more/1                    b2d646f64a9978717516887968786c6b7a33edf9
      more/2                    b2d646f64a9978717516887968786c6b7a33edf9
      more/3                    b2d646f64a9978717516887968786c6b7a33edf9

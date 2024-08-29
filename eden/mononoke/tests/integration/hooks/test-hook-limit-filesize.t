@@ -19,8 +19,8 @@ Small file
   $ hg up -q "min(all())"
   $ echo 1 > 1
   $ hg ci -Aqm 1
-  $ hgmn push -r . --to master_bookmark
-  pushing rev a0c9c5791058 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev a0c9c5791058 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -32,8 +32,8 @@ Large file
   $ hg up -q "min(all())"
   $ echo "$LARGE_CONTENT" > largefile
   $ hg ci -Aqm largefile
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 328ac95dcdf8 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 328ac95dcdf8 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -51,8 +51,8 @@ Large file
 
 Bypass
   $ hg commit --amend -m "@allow-large-files"
-  $ hgmn push -r . --to master_bookmark
-  pushing rev bac6b7a9e627 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev bac6b7a9e627 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests

@@ -87,14 +87,14 @@ Disable bookmarks cache because bookmarks are modified by two separate processes
   $ start_and_wait_for_mononoke_server
 -- create an older version of fbsource_master, with a single simple change
   $ cd "$TESTTMP"/fbs-hg-cnt
-  $ REPONAME=fbs-mon hgmn up -q master_bookmark
+  $ hg up -q master_bookmark
   $ createfile fbcode/fbcodefile2_fbsource
   $ createfile arvr/arvrfile2_fbsource
   $ hg -q ci -m "fbsource commit 2"
-  $ REPONAME=fbs-mon hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
   $ createfile fbcode/fbcodefile3_fbsource
   $ hg -q ci -m "fbsource commit 3"
-  $ REPONAME=fbs-mon hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
 -- sync things to Megarepo
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES (0, 'xreposync_from_1', 1)";
@@ -112,14 +112,14 @@ Record new fbsource master
 Check that we validate the file type
 
   $ cd "$TESTTMP/meg-hg-cnt"
-  $ REPONAME=meg-mon hgmn pull -q
-  $ REPONAME=meg-mon hgmn -q up "master_bookmark~1"
+  $ hg pull -q
+  $ hg -q up "master_bookmark~1"
 
 -- create a commit, that is identical to master, but has a different file mode
-  $ REPONAME=meg-mon hgmn cat fbcode/fbcodefile3_fbsource -r master_bookmark > fbcode/fbcodefile3_fbsource
+  $ hg cat fbcode/fbcodefile3_fbsource -r master_bookmark > fbcode/fbcodefile3_fbsource
   $ chmod +x fbcode/fbcodefile3_fbsource
   $ hg ci -qAm "Introduce fbcode/fbcodefile3_fbsource as executable"
-  $ REPONAME=meg-mon hgmn push --to executable_bookmark --create -q
+  $ hg push --to executable_bookmark --create -q
   $ MEGAREPO_EXECUTABLE_BONSAI=$(mononoke_newadmin bookmarks --repo-id 0 get executable_bookmark)
 
 -- fake a commit sync mapping between fbsource master and executable commit
@@ -134,13 +134,13 @@ Check that we validate the file type
 
 Check that we validate the file contents
   $ cd "$TESTTMP/meg-hg-cnt"
-  $ REPONAME=meg-mon hgmn -q up "master_bookmark~1"
+  $ hg -q up "master_bookmark~1"
 
 -- create a commit, that is identical to master, but has a different file contents
-  $ REPONAME=meg-mon hgmn cat fbcode/fbcodefile3_fbsource -r master_bookmark > fbcode/fbcodefile3_fbsource
+  $ hg cat fbcode/fbcodefile3_fbsource -r master_bookmark > fbcode/fbcodefile3_fbsource
   $ echo "Aeneas was a lively fellow" >> fbcode/fbcodefile3_fbsource
   $ hg ci -qAm "Introduce fbcode/fbcodefile3_fbsource with different content"
-  $ REPONAME=meg-mon hgmn push --to corrupted_bookmark --create -q
+  $ hg push --to corrupted_bookmark --create -q
   $ MEGAREPO_CORRUPTED_BONSAI=$(mononoke_newadmin bookmarks --repo-id 0 get corrupted_bookmark)
 
 -- fake a commit sync mapping between fbsource master and corrupted commit
@@ -155,13 +155,13 @@ Check that we validate the file contents
 
 Check that we pay attention to missing files in small repo, but present in large repo
   $ cd "$TESTTMP/meg-hg-cnt"
-  $ REPONAME=meg-mon hgmn -q up "master_bookmark~1"
+  $ hg -q up "master_bookmark~1"
 
 -- create a commit, that is identical to master, but has an extra file (and correspondingly has an extra file, comparing to fbsource master)
   $ echo "Aeneas was a lively fellow" >> fbcode/fbcodefile4_fbsource
-  $ REPONAME=meg-mon hgmn cat fbcode/fbcodefile3_fbsource -r master_bookmark > fbcode/fbcodefile3_fbsource
+  $ hg cat fbcode/fbcodefile3_fbsource -r master_bookmark > fbcode/fbcodefile3_fbsource
   $ hg ci -qAm "Introduce fbcode/fbcodefile3_fbsource with different content"
-  $ REPONAME=meg-mon hgmn push --to extrafile_bookmark --create -q
+  $ hg push --to extrafile_bookmark --create -q
   $ MEGAREPO_EXTRAFILE_BONSAI=$(mononoke_newadmin bookmarks --repo-id 0 get extrafile_bookmark)
 
 -- fake a commit sync mapping between fbsource master and corrupted commit
@@ -177,19 +177,19 @@ Check that we pay attention to missing files in small repo, but present in large
 Check that we pay attention to missing files in large repo, but present in small repo
 -- Create a large repo commit
   $ cd "$TESTTMP/meg-hg-cnt"
-  $ REPONAME=meg-mon hgmn -q up "master_bookmark"
+  $ hg -q up "master_bookmark"
   $ echo "Aeneas was a lively fellow" >> fbcode/fbcodefile5
   $ hg ci -qAm "A commit with missing file in large repo"
-  $ REPONAME=meg-mon hgmn push --to missing_in_large --create -q
+  $ hg push --to missing_in_large --create -q
   $ MEGAREPO_MISSING_IN_LARGE_BONSAI=$(mononoke_newadmin bookmarks --repo-id 0 get missing_in_large)
 
 -- Create a small repo commit
   $ cd "$TESTTMP/fbs-hg-cnt"
-  $ REPONAME=fbs-mon hgmn -q up "master_bookmark"
+  $ hg -q up "master_bookmark"
   $ echo "Aeneas was a lively fellow" >> fbcode/fbcodefile5
   $ echo "Aeneas was a lively fellow" >> fbcode/fbcodefile6
   $ hg ci -qAm "A commit with missing file in large repo"
-  $ REPONAME=fbs-mon hgmn push --to missing_in_large --create -q
+  $ hg push --to missing_in_large --create -q
   $ FBSOURCE_MISSING_IN_LARGE_BONSAI=$(mononoke_newadmin bookmarks --repo-id 1 get missing_in_large)
 
 -- fake a commit sync mapping between fbsource master and corrupted commit
@@ -203,7 +203,7 @@ Check that for bookmarks_update_log entries, which touch >1 commit in master, we
 attention to more than just the last commit (successful validation of many commits)
 -- Create three commits in the large repo
   $ cd "$TESTTMP/meg-hg-cnt"
-  $ REPONAME=meg-mon hgmn -q up "master_bookmark"
+  $ hg -q up "master_bookmark"
 
   $ echo same1 > .fbsource-rest/arvr/tripple_1
   $ hg ci -qAm "Commit 1 of 3"
@@ -211,7 +211,7 @@ attention to more than just the last commit (successful validation of many commi
   $ hg ci -qAm "Commit 2 of 3"
   $ echo same3 > .fbsource-rest/arvr/tripple_3
   $ hg ci -qAm "Commit 3 of 3"
-  $ REPONAME=meg-mon hgmn push -q --to master_bookmark
+  $ hg push -q --to master_bookmark
   $ MEGAREPO_MASTER_BONSAI=$(mononoke_newadmin bookmarks --repo-id 0 get master_bookmark)
   $ MEGAREPO_C1_BONSAI=$(mononoke_newadmin convert --repo-id 0 --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark~2))
   $ MEGAREPO_C2_BONSAI=$(mononoke_newadmin convert --repo-id 0 --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark~1))
@@ -219,14 +219,14 @@ attention to more than just the last commit (successful validation of many commi
 
 -- Create three commits in the small repo
   $ cd "$TESTTMP/fbs-hg-cnt"
-  $ REPONAME=fbs-mon hgmn -q up "master_bookmark"
+  $ hg -q up "master_bookmark"
   $ echo same1 > arvr/tripple_1
   $ hg ci -qAm "Commit 1 of 3"
   $ echo same2 > arvr/tripple_2
   $ hg ci -qAm "Commit 2 of 3"
   $ echo same3 > arvr/tripple_3
   $ hg ci -qAm "Commit 3 of 3"
-  $ REPONAME=fbs-mon hgmn push -q --to master_bookmark
+  $ hg push -q --to master_bookmark
   $ FBSOURCE_MASTER_BONSAI=$(mononoke_newadmin bookmarks --repo-id 1 get master_bookmark)
   $ FBSOURCE_C1_BONSAI=$(mononoke_newadmin convert --repo-id 1 --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark~2))
   $ FBSOURCE_C2_BONSAI=$(mononoke_newadmin convert --repo-id 1 --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark~1))
@@ -252,7 +252,7 @@ Check that for bookmarks_update_log entries, which touch >1 commit in master, we
 attention to more than just the last commit (failed validation of inner commit)
 -- Create three commits in the large repo
   $ cd "$TESTTMP/meg-hg-cnt"
-  $ REPONAME=meg-mon hgmn -q up "master_bookmark"
+  $ hg -q up "master_bookmark"
 
   $ echo same1 >> .fbsource-rest/arvr/tripple_1
   $ hg ci -qAm "Commit 1 of 3"
@@ -260,7 +260,7 @@ attention to more than just the last commit (failed validation of inner commit)
   $ hg ci -qAm "Commit 2 of 3"
   $ echo same3 >> .fbsource-rest/arvr/tripple_3
   $ hg ci -qAm "Commit 3 of 3"
-  $ REPONAME=meg-mon hgmn push -q --to master_bookmark
+  $ hg push -q --to master_bookmark
   $ MEGAREPO_MASTER_BONSAI=$(mononoke_newadmin bookmarks --repo-id 0 get master_bookmark)
   $ MEGAREPO_C1_BONSAI=$(mononoke_newadmin convert --repo-id 0 --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark~2))
   $ MEGAREPO_C2_BONSAI=$(mononoke_newadmin convert --repo-id 0 --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark~1))
@@ -268,14 +268,14 @@ attention to more than just the last commit (failed validation of inner commit)
 
 -- Create three commits in the small repo
   $ cd "$TESTTMP/fbs-hg-cnt"
-  $ REPONAME=fbs-mon hgmn -q up "master_bookmark"
+  $ hg -q up "master_bookmark"
   $ echo same1 >> arvr/tripple_1
   $ hg ci -qAm "Commit 1 of 3"
   $ echo different2 >> arvr/tripple_2
   $ hg ci -qAm "Commit 2 of 3"
   $ echo same3 >> arvr/tripple_3
   $ hg ci -qAm "Commit 3 of 3"
-  $ REPONAME=fbs-mon hgmn push -q --to master_bookmark
+  $ hg push -q --to master_bookmark
   $ FBSOURCE_MASTER_BONSAI=$(mononoke_newadmin bookmarks --repo-id 1 get master_bookmark)
   $ FBSOURCE_C1_BONSAI=$(mononoke_newadmin convert --repo-id 1 --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark~2))
   $ FBSOURCE_C2_BONSAI=$(mononoke_newadmin convert --repo-id 1 --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark~1))
@@ -300,21 +300,21 @@ attention to more than just the last commit (failed validation of inner commit)
 Check that we validate the topological order
 -- Create three commits in the large repo
   $ cd "$TESTTMP/meg-hg-cnt"
-  $ REPONAME=meg-mon hgmn -q up "master_bookmark"
+  $ hg -q up "master_bookmark"
 
   $ hg ci -qAm "Commit 1 of 2" --config ui.allowemptycommit=True
   $ hg ci -qAm "Commit 2 of 2" --config ui.allowemptycommit=True
-  $ REPONAME=meg-mon hgmn push -q --to master_bookmark
+  $ hg push -q --to master_bookmark
   $ MEGAREPO_MASTER_BONSAI=$(mononoke_newadmin bookmarks --repo-id 0 get master_bookmark)
   $ MEGAREPO_C1_BONSAI=$(mononoke_newadmin convert --repo-id 0 --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark~1))
   $ MEGAREPO_C2_BONSAI=$(mononoke_newadmin convert --repo-id 0 --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark))
 
 -- Create three commits in the small repo
   $ cd "$TESTTMP/fbs-hg-cnt"
-  $ REPONAME=fbs-mon hgmn -q up "master_bookmark"
+  $ hg -q up "master_bookmark"
   $ hg ci -qAm "Commit 1 of 2" --config ui.allowemptycommit=True
   $ hg ci -qAm "Commit 2 of 2" --config ui.allowemptycommit=True
-  $ REPONAME=fbs-mon hgmn push -q --to master_bookmark
+  $ hg push -q --to master_bookmark
   $ FBSOURCE_MASTER_BONSAI=$(mononoke_newadmin bookmarks --repo-id 1 get master_bookmark)
   $ FBSOURCE_C1_BONSAI=$(mononoke_newadmin convert --repo-id 1 --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark~1))
   $ FBSOURCE_C2_BONSAI=$(mononoke_newadmin convert --repo-id 1 --from hg --to bonsai $(hg log -T"{node}" -r master_bookmark))
@@ -336,17 +336,17 @@ Check that we validate the topological order
 
 Check that we validate the newly-added root commits
   $ cd "$TESTTMP/meg-hg-cnt"
-  $ REPONAME=meg-mon hgmn up -q null
+  $ hg up -q null
   $ mkdir -p .fbsource-rest/arvr && echo root > .fbsource-rest/arvr/root
   $ hg ci -qAm "Root commit"
-  $ REPONAME=meg-mon hgmn push -r . --to another_root --force --create -q
+  $ hg push -r . --to another_root --force --create -q
   $ MEGAREPO_NEWROOT_BONSAI=$(mononoke_newadmin bookmarks --repo-id 0 get another_root)
 
   $ cd "$TESTTMP/fbs-hg-cnt"
-  $ REPONAME=fbs-mon hgmn up -q null
+  $ hg up -q null
   $ mkdir arvr && echo root > arvr/root
   $ hg ci -qAm "Root commit"
-  $ REPONAME=fbs-mon hgmn push -r . --to another_root --force --create -q
+  $ hg push -r . --to another_root --force --create -q
   $ FBSOURCE_NEWROOT_BONSAI=$(mononoke_newadmin bookmarks --repo-id 1 get another_root)
 
 -- fake a commit sync mapping between the new commits

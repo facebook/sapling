@@ -135,7 +135,7 @@ blobimport hg servers repos into Mononoke repos
 setup hg client repos
   $ function init_client() {
   > cd "$TESTTMP"
-  > hg clone -q ssh://user@dummy/"$1" "$2" --noupdate
+  > hg clone -q mono:"$1" "$2" --noupdate
   > cd "$TESTTMP/$2"
   > cat >> .hg/hgrc <<EOF
   > [extensions]
@@ -159,7 +159,7 @@ Make sure mapping is set up and we know what we don't have to sync initial entri
 
 Normal pushrebase with one commit
   $ cd "$TESTTMP/small-hg-client-1"
-  $ REPONAME=small-mon-1 hgmn up -q master_bookmark
+  $ hg up -q master_bookmark
   $ echo 2 > 2 && hg addremove -q && hg ci -q -m newcommit
   $ REPONAME=small-mon-1 sl push -r . --to master_bookmark 2>&1 | grep "updated remote bookmark"
   updated remote bookmark master_bookmark to 6989db12d1e5
@@ -175,7 +175,7 @@ Normal pushrebase with one commit
   o  first post-move commit [public;rev=3;bca7e9574548] default/master_bookmark
   │
   ~
-  $ REPONAME=large-mon hgmn pull -q
+  $ hg pull -q
   $ log -r master_bookmark
   o  newcommit [public;rev=4;7c9a729ceb57] default/master_bookmark
   │
@@ -188,7 +188,7 @@ Live change of the config, without Mononoke restart
   $ force_update_configerator
 
   $ cd "$TESTTMP"/small-hg-client-1
-  $ REPONAME=small-mon-1 hgmn up master_bookmark -q
+  $ hg up master_bookmark -q
   $ echo 1 >> 1 && hg add 1 && hg ci -m 'change of mapping'
   $ hg revert -r .^ 1
   $ hg commit --amend
@@ -234,8 +234,8 @@ Do a push it should fail because we disallow pushing over a changeset that chang
 Again, normal pushrebase with one commit
   $ cd "$TESTTMP/small-hg-client-1"
   $ hg st
-  $ REPONAME=small-mon-1 hgmn pull -q
-  $ REPONAME=small-mon-1 hgmn up -q master_bookmark
+  $ hg pull -q
+  $ hg up -q master_bookmark
   $ hg log -r master_bookmark
   commit:      * (glob)
   bookmark:    default/master_bookmark
@@ -251,8 +251,8 @@ Again, normal pushrebase with one commit
 
 -- in the large repo, new commit touched an after_change path
   $ cd "$TESTTMP"/large-hg-client
-  $ REPONAME=large-mon hgmn pull -q
-  $ REPONAME=large-mon hgmn log -T "{files % '{file}\n'}" -r master_bookmark
+  $ hg pull -q
+  $ hg log -T "{files % '{file}\n'}" -r master_bookmark
   specialsmallrepofolder_after_change/f
 
   $ EXPECTED_RC=1 quiet_grep "NonRootMPath" -- megarepo_tool_multirepo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL1 check-push-redirection-prereqs master_bookmark master_bookmark TEST_VERSION_NAME_LIVE_V1

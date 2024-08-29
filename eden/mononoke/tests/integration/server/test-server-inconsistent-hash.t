@@ -40,8 +40,8 @@
   > pushrebase =
   > EOF
 
-  $ hgmn pull -q
-  $ hgmn update -r master_bookmark -q
+  $ hg pull -q
+  $ hg update -r master_bookmark -q
 
 # 4. Make a commit with corrupted file node, Change file node text
   $ echo "hello_world" > file
@@ -60,8 +60,8 @@ Corrupt file contents via an extension:
 
 Do a push, but disable cache verification on the client side, otherwise
 filenode won't be send at all
-  $ hgmn push -r . --to master_bookmark -v --config remotefilelog.validatecachehashes=False --config extensions.corrupt=$TESTTMP/corrupt.py
-  pushing rev cb67355f2348 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark -v --config remotefilelog.validatecachehashes=False --config extensions.corrupt=$TESTTMP/corrupt.py
+  pushing rev cb67355f2348 to destination mono:repo bookmark master_bookmark
   searching for changes
   validated revset for rebase
   1 changesets found

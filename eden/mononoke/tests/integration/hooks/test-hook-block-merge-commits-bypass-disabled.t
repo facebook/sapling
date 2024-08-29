@@ -22,8 +22,8 @@
 
   $ hg up -q tip
   $ echo file1 > file1 && hg -q addremove && hg commit -m "file1"
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 8e911067eac2 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 8e911067eac2 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -35,8 +35,8 @@
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   [26805a] C
   $ echo file2 > file2 && hg -q addremove && hg commit -m "file2"
-  $ hgmn push -r . --to feature_bookmark --create
-  pushing rev 0c7057776586 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark feature_bookmark
+  $ hg push -r . --to feature_bookmark --create
+  pushing rev 0c7057776586 to destination mono:repo bookmark feature_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -50,8 +50,8 @@
   (branch merge, don't forget to commit)
   $ hg commit -m "merge commit"
 Should fail
-  $ hgmn push -r . --to master_bookmark
-  pushing rev abc80faa8edf to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev abc80faa8edf to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -68,8 +68,8 @@ Should fail
   [255]
 
   $ hg metaedit -m "commit message with bypass @merge-commit in message"
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 5003ea84c31d to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 5003ea84c31d to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:

@@ -10,7 +10,7 @@
 setup configuration
 # Need short-term expiring bubbles with mark-and-delete deletion mode
   $ BUBBLE_DELETION_MODE=2 BUBBLE_EXPIRATION_SECS=0 BUBBLE_LIFESPAN_SECS=10 base_snapshot_repo_setup client1
-  $ cd repo  
+  $ cd client1
   $ mkdir test_tmp
   $ cd test_tmp
   $ echo "a file content" > a

@@ -21,7 +21,7 @@
 
 Normal pushrebase with one commit
   $ cd "$TESTTMP/small-hg-client"
-  $ REPONAME=small-mon hgmn up -q master_bookmark
+  $ hg up -q master_bookmark
   $ echo 2 > 2 && hg addremove -q && hg ci -q -m newcommit
   $ REPONAME=small-mon quiet sl push -r . --to master_bookmark
 -- Check scribe category
@@ -49,7 +49,7 @@ Normal pushrebase with one commit
   @  first post-move commit [public;rev=2;bfcfb674663c] default/master_bookmark
   │
   ~
-  $ REPONAME=large-mon hgmn pull -q
+  $ hg pull -q
   $ log -r master_bookmark
   o  newcommit [public;rev=3;819e91b238b7] default/master_bookmark
   │
@@ -80,7 +80,7 @@ Noop bookmark-only pushrebase
 
 -- this is not a `common_pushrebase_bookmark`, so should be prefixed
   $ cd "$TESTTMP/large-hg-client"
-  $ REPONAME=large-mon hgmn pull -q
+  $ hg pull -q
   $ hg book --all
   no bookmarks set
      default/bookprefix/master_bookmark_2 bfcfb674663c
@@ -96,14 +96,14 @@ Delete a bookmark
   no bookmarks set
      default/master_bookmark   ce81c7d38286
   $ cd "$TESTTMP/large-hg-client"
-  $ REPONAME=large-mon hgmn pull -q
+  $ hg pull -q
   $ hg book --all
   no bookmarks set
      default/master_bookmark   819e91b238b7
 
 Normal pushrebase with many commits
   $ cd "$TESTTMP/small-hg-client"
-  $ REPONAME=small-mon hgmn up -q master_bookmark
+  $ hg up -q master_bookmark
   $ createfile 4 && hg ci -qm "Aeneas was a lively fellow"
   $ createfile 5 && hg ci -qm "Lusty as any Cossack blade"
   $ createfile 6 && hg ci -qm "In every kind of mischief mellow"
@@ -126,7 +126,7 @@ Normal pushrebase with many commits
   ~
 -- this should also be present in a large repo, once we pull:
   $ cd "$TESTTMP/large-hg-client"
-  $ REPONAME=large-mon hgmn pull -q
+  $ hg pull -q
   $ log -r master_bookmark
   o  The staunchest tramp to ply his trade [public;rev=7;34c34be6efde] default/master_bookmark
   │
@@ -135,11 +135,11 @@ Normal pushrebase with many commits
 
 Pushrebase, which copies and removes files
   $ cd "$TESTTMP/small-hg-client"
-  $ REPONAME=small-mon hgmn up -q master_bookmark
+  $ hg up -q master_bookmark
   $ hg rm 4 -q
   $ hg mv 5 5.renamed -q
   $ hg cp 6 subdir/6.copy -q
-  $ REPONAME=small-mon hgmn ci -m "Moves, renames and copies"
+  $ hg ci -m "Moves, renames and copies"
   $ REPONAME=small-mon sl push --to master_bookmark 2>&1 | grep 'updated remote bookmark'
   updated remote bookmark master_bookmark to b888ee4f19b5
   $ log -r master_bookmark
@@ -148,7 +148,7 @@ Pushrebase, which copies and removes files
   ~
 -- this should also be present in a large repo, once we pull:
   $ cd "$TESTTMP/large-hg-client"
-  $ REPONAME=large-mon hgmn pull -q
+  $ hg pull -q
   $ log -r master_bookmark
   o  Moves, renames and copies [public;rev=8;b4e3e504160c] default/master_bookmark
   │
@@ -157,7 +157,7 @@ Pushrebase, which copies and removes files
 
 Pushrebase, which replaces a directory with a file
   $ cd "$TESTTMP/small-hg-client"
-  $ REPONAME=small-mon hgmn up -q master_bookmark
+  $ hg up -q master_bookmark
   $ hg rm subdir
   removing subdir/6.copy
   $ createfile subdir && hg ci -qm "Replace a directory with a file"
@@ -169,7 +169,7 @@ Pushrebase, which replaces a directory with a file
   ~
 -- this should also be present in a large repo, once we pull
   $ cd "$TESTTMP/large-hg-client"
-  $ REPONAME=large-mon hgmn pull -q
+  $ hg pull -q
   $ log -r master_bookmark
   o  Replace a directory with a file [public;rev=9;6ac00e7afd93] default/master_bookmark
   │
@@ -179,7 +179,7 @@ Pushrebase, which replaces a directory with a file
 Normal pushrebase to a prefixed bookmark
 -- push to create a second bookmark
   $ cd "$TESTTMP/small-hg-client"
-  $ REPONAME=small-mon hgmn up -q master_bookmark^
+  $ hg up -q master_bookmark^
   $ createfile epicfail && hg ci -qm "The epicness of this fail is great"
   $ REPONAME=small-mon sl push --to master_bookmark_2 --create -q
   $ log -r master_bookmark_2
@@ -188,7 +188,7 @@ Normal pushrebase to a prefixed bookmark
   ~
 -- this should also be present in a large repo, once we pull
   $ cd "$TESTTMP/large-hg-client"
-  $ REPONAME=large-mon hgmn pull -q
+  $ hg pull -q
   $ log -r bookprefix/master_bookmark_2
   o  The epicness of this fail is great [public;rev=10;030470259cb4] default/bookprefix/master_bookmark_2
   │
@@ -196,7 +196,7 @@ Normal pushrebase to a prefixed bookmark
   $ verify_wc bookprefix/master_bookmark_2
 -- push to update a second bookmark
   $ cd "$TESTTMP/small-hg-client"
-  $ REPONAME=small-mon hgmn up -q master_bookmark_2
+  $ hg up -q master_bookmark_2
   $ echo "more epicness" >> epicfail && hg ci -m "The epicness of this fail is greater"
   $ REPONAME=small-mon sl push --to master_bookmark_2 2>&1 | grep 'updated remote bookmark'
   updated remote bookmark master_bookmark_2 to bd5577e4b538
@@ -206,7 +206,7 @@ Normal pushrebase to a prefixed bookmark
   ~
 -- this should also be present in a large repo, once we pull
   $ cd "$TESTTMP/large-hg-client"
-  $ REPONAME=large-mon hgmn pull -q
+  $ hg pull -q
   $ log -r bookprefix/master_bookmark_2
   o  The epicness of this fail is greater [public;rev=11;ccbb367ae93a] default/bookprefix/master_bookmark_2
   │
@@ -216,30 +216,30 @@ Normal pushrebase to a prefixed bookmark
 Pushrebase with a rename between a shifted and a non-shifted behavior
 -- let's create a file in a non-shifted directory
   $ cd "$TESTTMP/small-hg-client"
-  $ REPONAME=small-mon hgmn up -q master_bookmark
+  $ hg up -q master_bookmark
   $ createfile non_path_shifting/filetomove && createfile filetonotmove
   $ hg ci -qm "But since it is for you, I vow To slap Aeneas down to hell"
   $ REPONAME=small-mon sl push --to master_bookmark 2>&1 | grep 'updated remote bookmark'
   updated remote bookmark master_bookmark to 6e3fc27a15b1
 -- let's sync it, make sure everything is fine
   $ cd "$TESTTMP/large-hg-client"
-  $ REPONAME=large-mon hgmn pull -q
-  $ REPONAME=large-mon hgmn up -q master_bookmark
+  $ hg pull -q
+  $ hg up -q master_bookmark
   $ ls non_path_shifting
   filetomove
   $ verify_wc master_bookmark
 
 -- let's now move this file to a shifted directory
   $ cd "$TESTTMP/small-hg-client"
-  $ REPONAME=small-mon hgmn up -q master_bookmark
+  $ hg up -q master_bookmark
   $ hg mv non_path_shifting/filetomove filetomove
   $ hg ci -qm "I shall delay no longer now But knock him for a fare-you-well."
   $ REPONAME=small-mon sl push --to master_bookmark 2>&1 | grep 'updated remote bookmark'
   updated remote bookmark master_bookmark to 4273bf9c3d03
 -- let's also sync it to the large repo
   $ cd "$TESTTMP/large-hg-client"
-  $ REPONAME=large-mon hgmn pull -q
-  $ REPONAME=large-mon hgmn up -q master_bookmark
+  $ hg pull -q
+  $ hg up -q master_bookmark
   $ ls non_path_shifting/filetomove
   ls: cannot access *: No such file or directory (glob)
   [2]
@@ -249,15 +249,15 @@ Pushrebase with a rename between a shifted and a non-shifted behavior
 
 -- let's now move this file back
   $ cd "$TESTTMP/small-hg-client"
-  $ REPONAME=small-mon hgmn up -q master_bookmark
+  $ hg up -q master_bookmark
   $ hg mv filetomove non_path_shifting/filetomove
   $ hg ci -qm "Now Dido was in such great sorrow All day she neither drank nor ate"
   $ REPONAME=small-mon sl push --to master_bookmark 2>&1 | grep 'updated remote bookmark'
   updated remote bookmark master_bookmark to eb96c35ce02c
 -- let's also sync it to the large repo
   $ cd "$TESTTMP/large-hg-client"
-  $ REPONAME=large-mon hgmn pull -q
-  $ REPONAME=large-mon hgmn up -q master_bookmark
+  $ hg pull -q
+  $ hg up -q master_bookmark
   $ ls non_path_shifting
   filetomove
   $ ls smallrepofolder/filetomove
@@ -267,7 +267,7 @@ Pushrebase with a rename between a shifted and a non-shifted behavior
 
 Pushrebase, which replaces a file with a directory
   $ cd "$TESTTMP/small-hg-client"
-  $ REPONAME=small-mon hgmn up -q master_bookmark
+  $ hg up -q master_bookmark
   $ hg rm subdir
   $ mkdir subdir
   $ createfile subdir/greatfile && hg ci -qm "Replace a file with a directory"
@@ -279,8 +279,8 @@ Pushrebase, which replaces a file with a directory
   ~
 -- this should also be present in a large repo, once we pull
   $ cd "$TESTTMP/large-hg-client"
-  $ REPONAME=large-mon hgmn pull -q
-  $ REPONAME=large-mon hgmn up -q master_bookmark
+  $ hg pull -q
+  $ hg up -q master_bookmark
   $ ls smallrepofolder/subdir
   greatfile
   $ log -r master_bookmark

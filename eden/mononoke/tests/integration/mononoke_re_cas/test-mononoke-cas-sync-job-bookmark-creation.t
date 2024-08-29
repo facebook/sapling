@@ -10,7 +10,7 @@
   $ setconfig drawdag.defaultfiles=false
 
   $ start_and_wait_for_mononoke_server
-  $ hgmn_init repo
+  $ hg clone -q mono:repo repo
   $ cd repo
   $ drawdag << EOS
   > D # D/qux = random:30

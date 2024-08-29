@@ -18,12 +18,12 @@ Start Mononoke & LFS. Require TLS certs in LFS.
 
 Create a repo
 
-  $ hgmn_init repo
+  $ hg clone -q mono:repo repo
   $ cd repo
   $ yes 2>/dev/null | head -c 100 > large
   $ hg add large
   $ hg ci -ma
-  $ hgmn push -q --to master --create
+  $ hg push -q --to master --create
   $ cd "$TESTTMP"
 
 Clone the repo. Enable LFS. Take a different cache path to make sure we have to go to the server.
@@ -35,13 +35,13 @@ Clone the repo. Enable LFS. Take a different cache path to make sure we have to 
 
 Initially, unconfigure client certs. This will fail, because certs are required.
 
-  $ hgmn up master -q --config auth.mononoke.schemes=doesntmatch 2>&1 | grep -i 'certificate' -m 1
+  $ hg up master -q --config auth.mononoke.schemes=doesntmatch 2>&1 | grep -i 'certificate' -m 1
   certificate error: No certificates have been found to connect to Mononoke * (glob)
   $ ! test -f large
 
 Now, with certs. This will work.
 
-  $ hgmn up master -q
+  $ hg up master -q
   $ test -f large
 
 Finally, check what identities the client presented.

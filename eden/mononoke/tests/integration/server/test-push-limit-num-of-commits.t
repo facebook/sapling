@@ -48,8 +48,8 @@ create new commit in repo2 and check that push fails
   $ hg addremove
   $ hg ci -ma
 
-  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to master_bookmark
-  pushing rev 2b761f0782ab to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 2b761f0782ab to destination mono:repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
 
@@ -60,8 +60,8 @@ create new commit in repo2 and check that push fails
   $ hg ci -maaa
   $ echo "1" >> a
   $ hg ci -maaaa
-  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to master_bookmark
-  pushing rev 3a090ff5a2b7 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 3a090ff5a2b7 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:

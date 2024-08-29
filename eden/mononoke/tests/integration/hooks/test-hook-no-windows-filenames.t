@@ -20,8 +20,8 @@
   $ hg up -q "min(all())"
   $ echo "ok"  > "com"
   $ hg ci -Aqm success
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 2bdf0e02c487 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 2bdf0e02c487 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -32,8 +32,8 @@
   $ echo "bad" > "COM5"
   $ hg ci -Aqm failure
   warning: filename contains 'COM5', which is reserved on Windows: COM5
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 0a31cb8056d1 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 0a31cb8056d1 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -53,8 +53,8 @@
   $ echo "bad" > "nul.txt"
   $ hg ci -Aqm failure
   warning: filename contains 'nul', which is reserved on Windows: nul.txt
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 7e7f8fb54a0b to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 7e7f8fb54a0b to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -75,8 +75,8 @@
   $ echo "bad" > dir/CoN.txt
   $ hg ci -Aqm failure
   warning: filename contains 'CoN', which is reserved on Windows: dir/CoN.txt
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 49604693a23c to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 49604693a23c to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -96,8 +96,8 @@
   $ mkdir dir
   $ echo "ok" > dir/Icon.txt
   $ hg ci -Aqm success
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 74f01fef9e70 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 74f01fef9e70 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -108,8 +108,8 @@
   $ mkdir dir
   $ echo "ok" > dir/Icom5
   $ hg ci -Aqm success
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 47222c857e63 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 47222c857e63 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -121,8 +121,8 @@
   $ echo "bad" > con/foo
   $ hg ci -Aqm failure
   warning: filename contains 'con', which is reserved on Windows: con/foo
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 115c8cee8249 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 115c8cee8249 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:

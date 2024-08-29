@@ -51,11 +51,11 @@ Push to Mononoke
 Two pushes synced one after another
   $ hg up -q master_bookmark
   $ mkcommit commit_first
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
   $ hg up -q master_bookmark
   $ mkcommit commit_second
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
 Sync it to another client
   $ cd $TESTTMP/repo

@@ -31,11 +31,17 @@ Setup testing repo for mononoke:
 
 
 import testing repo to mononoke
-  $ blobimport .hg repo
+  $ cd
+  $ blobimport repo/.hg repo
 
 
 Start up SaplingRemoteAPI server.
   $ start_and_wait_for_mononoke_server
+
+Clone repo
+  $ hg clone -q mono:repo client
+  $ cd client
+
 Check response.
   $ sl debugapi -e bookmarks -i '["alpha", "beta", "unknown"]'
   {"beta": "112478962961147124edd43549aedd1a335e44bf",

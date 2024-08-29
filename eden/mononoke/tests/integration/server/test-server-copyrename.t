@@ -46,8 +46,8 @@ push some files with copy/move files
   $ hg mv b b_move
   $ hg addremove && hg ci -q -mb
   recording removal of b as rename to b_move (100% similar)
-  $ hgmn push mononoke://$(mononoke_address)/repo --to master_bookmark
-  pushing rev 4b747ca852a4 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push --to master_bookmark
+  pushing rev 4b747ca852a4 to destination mono:repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
 
@@ -58,8 +58,8 @@ pull them
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -T '{node}\n'
   0cd96de13884b090099512d4794ae87ad067ea8e
-  $ hgmn pull mononoke://$(mononoke_address)/repo
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg pull
+  pulling from mono:repo
   searching for changes
   adding changesets
   adding manifests
@@ -74,8 +74,8 @@ push files that modify copied and moved files
   $ echo "aa" >> a_copy
   $ echo "bb" >> b_move
   $ hg addremove && hg ci -q -mc
-  $ hgmn push mononoke://$(mononoke_address)/repo --to master_bookmark
-  pushing rev 8b374fd7e2ef to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push --to master_bookmark
+  pushing rev 8b374fd7e2ef to destination mono:repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
 
@@ -85,8 +85,8 @@ pull them
   $ hg log -T '{node}\n'
   4b747ca852a40a105b9bb71cd4d07248ea80f704
   0cd96de13884b090099512d4794ae87ad067ea8e
-  $ hgmn pull mononoke://$(mononoke_address)/repo
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg pull
+  pulling from mono:repo
   searching for changes
   adding changesets
   adding manifests
@@ -95,7 +95,7 @@ pull them
   8b374fd7e2ef1cc418b9c68f484ebd2cb6c6c6a1
   4b747ca852a40a105b9bb71cd4d07248ea80f704
   0cd96de13884b090099512d4794ae87ad067ea8e
-  $ hgmn up master_bookmark
+  $ hg up master_bookmark
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ cat a_copy
   a

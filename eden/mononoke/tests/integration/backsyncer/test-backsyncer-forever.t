@@ -27,13 +27,13 @@ We use multiplex blobstore here as this one provides logging that we test later.
 Before config change
 -- push to a large repo
   $ cd "$TESTTMP"/large-hg-client
-  $ REPONAME=large-mon hgmn up -q master_bookmark
+  $ hg up -q master_bookmark
 
   $ mkdir -p smallrepofolder
   $ echo bla > smallrepofolder/bla
   $ hg ci -Aqm "before config change"
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi small-mon master_bookmark)
-  $ REPONAME=large-mon hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
   $ log -r master_bookmark
   o  before config change [public;rev=4;*] default/master_bookmark (glob)
   │
@@ -44,8 +44,8 @@ Before config change
 
 -- check the same commit in the small repo
   $ cd "$TESTTMP/small-hg-client"
-  $ REPONAME=small-mon hgmn pull -q
-  $ REPONAME=small-mon hgmn up -q master_bookmark
+  $ hg pull -q
+  $ hg up -q master_bookmark
   $ log -r master_bookmark
   @  before config change [public;rev=2;*] default/master_bookmark (glob)
   │
@@ -59,12 +59,12 @@ Config change
   $ force_update_configerator
 
   $ cd "$TESTTMP"/large-hg-client
-  $ REPONAME=large-mon hgmn up master_bookmark -q
+  $ hg up master_bookmark -q
   $ echo 1 >> 1 && hg add 1 && hg ci -m 'change of mapping'
   $ hg revert -r .^ 1
   $ hg commit --amend
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi small-mon master_bookmark)
-  $ REPONAME=large-mon hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
 -- wait a second to give backsyncer some time to catch up
   $ wait_for_bookmark_move_away_edenapi small-mon master_bookmark  "$PREV_BOOK_VALUE"
@@ -74,13 +74,13 @@ Config change
 
 -- push to a large repo, using new path mapping
   $ cd "$TESTTMP"/large-hg-client
-  $ REPONAME=large-mon hgmn up -q master_bookmark
+  $ hg up -q master_bookmark
 
   $ mkdir -p smallrepofolder_after
   $ echo baz > smallrepofolder_after/baz
   $ hg ci -Aqm "after config change"
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi small-mon master_bookmark)
-  $ REPONAME=large-mon hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
   $ log -r master_bookmark
   o  after config change [public;rev=*;*] default/master_bookmark (glob)
   │
@@ -91,8 +91,8 @@ Config change
 
 -- check the same commit in the small repo
   $ cd "$TESTTMP/small-hg-client"
-  $ REPONAME=small-mon hgmn pull -q
-  $ REPONAME=small-mon hgmn up -q master_bookmark
+  $ hg pull -q
+  $ hg up -q master_bookmark
   $ log -r master_bookmark
   @  after config change [public;rev=*;*] default/master_bookmark (glob)
   │

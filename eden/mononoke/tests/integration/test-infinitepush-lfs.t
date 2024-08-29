@@ -57,8 +57,8 @@ Do infinitepush (aka commit cloud) push
   $ yes A 2>/dev/null | head -c 200 > large
   $ hg addremove -q
   $ hg ci -m new
-  $ hgmn push mononoke://$(mononoke_address)/repo -r . --bundle-store --debug --allow-anon
-  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg push -r . --bundle-store --debug --allow-anon
+  pushing to mono:repo
   sending hello command
   sending clienttelemetry command
   query 1; heads
@@ -87,8 +87,8 @@ Do infinitepush (aka commit cloud) push
 
 Try to pull it
   $ cd "${TESTTMP}/repo-pull"
-  $ hgmn pull -r 68394cf51f7e96952fe832a3c05d17a9b49e8b4b
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg pull -r 68394cf51f7e96952fe832a3c05d17a9b49e8b4b
+  pulling from mono:repo
   searching for changes
   adding changesets
   adding manifests

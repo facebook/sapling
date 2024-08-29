@@ -50,8 +50,8 @@ Setup configuration
 
 -- Checking imported files
   $ cd "$TESTTMP/large-hg-client"
-  $ REPONAME=large-mon hgmn pull -q
-  $ REPONAME=large-mon hgmn up -q master_bookmark
+  $ hg pull -q
+  $ hg up -q master_bookmark
 
   $ ls imported
   file1
@@ -60,8 +60,8 @@ Setup configuration
   e7822e32dbc25ae9781e0077bc195338547e84dc719402327d076fc90aaeb2d8
 
   $ cd "$TESTTMP/small-hg-client"
-  $ REPONAME=small-mon hgmn pull -q
-  $ REPONAME=small-mon hgmn up -q master_bookmark
+  $ hg pull -q
+  $ hg up -q master_bookmark
   $ hg log -G -T '{desc}'
   @  first post-move commit
   │
@@ -98,7 +98,7 @@ Setup configuration
   $ hg commit -m "Add new file in small repo"
   $ echo file1c > imported/file1
   $ hg commit -m "Modify file1 C"
-  $ REPONAME=large-mon hgmn push -q --to master_bookmark
+  $ hg push -q --to master_bookmark
 
   $ quiet_grep "unsafe_sync_commit" -- backsync_large_to_small | sed 's/.*for \([0-9a-f]*\),.*/\1/' | uniq
   7e8fc15d33370bd32761d6f0fc383418ec58406d5a23b413ee0c3369c6f72d8e
@@ -106,8 +106,8 @@ Setup configuration
 
 -- Check that the first commit was backsynced correctly.  The second should not be backsynced.
   $ cd "$TESTTMP/small-hg-client"
-  $ REPONAME=small-mon hgmn pull -q
-  $ REPONAME=small-mon hgmn up -q master_bookmark
+  $ hg pull -q
+  $ hg up -q master_bookmark
   $ hg log -G -T '{desc}'
   @  Add new file in small repo
   │

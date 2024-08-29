@@ -23,8 +23,8 @@ Small commit
   $ hg up -q "min(all())"
   $ for x in $(seq $BYTE_LIMIT); do echo -n 1 > $x; done
   $ hg ci -Aqm 1
-  $ hgmn push -r . --to master_bookmark
-  pushing rev e6f2d01a954a to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev e6f2d01a954a to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -36,8 +36,8 @@ Large file
   $ hg up -q "min(all())"
   $ echo -n "$LARGE_CONTENT" > largefile
   $ hg ci -Aqm largefile
-  $ hgmn push -r . --to master_bookmark
-  pushing rev b4b4dcaa16f9 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev b4b4dcaa16f9 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -57,8 +57,8 @@ Large commit
   $ hg up -q "min(all())"
   $ for x in $(seq $(( $BYTE_LIMIT + 1))); do echo -n 1 > "${x}_b"; done
   $ hg ci -Aqm largecommit
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 0d437325fdc4 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 0d437325fdc4 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -76,8 +76,8 @@ Large commit
 
 Bypass
   $ hg commit --amend -m "@allow-large-files"
-  $ hgmn push -r . --to master_bookmark
-  pushing rev dcf66a8e39a7 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev dcf66a8e39a7 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -85,7 +85,7 @@ Bypass
   updating bookmark master_bookmark
 
 Removing files whose total size is large should work
-  $ hgmn up master_bookmark
+  $ hg up master_bookmark
   12 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ for x in $(seq $(( $BYTE_LIMIT + 1))); do rm "${x}_b"; done
   $ hg ci -Aqm largeremove
@@ -101,8 +101,8 @@ Removing files whose total size is large should work
   R 7_b
   R 8_b
   R 9_b
-  $ hgmn push -r . --to master_bookmark
-  pushing rev f4021c22aa2d to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev f4021c22aa2d to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests

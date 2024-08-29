@@ -24,14 +24,14 @@ Before the change
   $ force_update_configerator
 
   $ cd "$TESTTMP/small-hg-client"
-  $ REPONAME=small-mon hgmn pull -q
-  $ REPONAME=small-mon hgmn up -q master_bookmark
+  $ hg pull -q
+  $ hg up -q master_bookmark
   $ mkdir -p non_path_shifting
   $ echo a > foo
   $ echo b > non_path_shifting/bar
   $ hg ci -Aqm "before config change"
-  $ REPONAME=small-mon hgmn push -r . --to new_bookmark --create
-  pushing rev bc6a206054d0 to destination mononoke://$LOCALIP:$LOCAL_PORT/small-mon bookmark new_bookmark
+  $ hg push -r . --to new_bookmark --create
+  pushing rev bc6a206054d0 to destination mono:small-mon bookmark new_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -99,13 +99,13 @@ Before the change
 
 -- Checking imported files
   $ cd "$TESTTMP/large-hg-client"
-  $ REPONAME=large-mon hgmn pull
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/large-mon
+  $ hg pull
+  pulling from mono:large-mon
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  $ REPONAME=large-mon hgmn up bookprefix/new_bookmark
+  $ hg up bookprefix/new_bookmark
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ ls smallrepofolder

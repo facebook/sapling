@@ -64,10 +64,10 @@ create new commit in repo2 and check that push to a bookmark fails
   $ hg add b_dir/b
   $ hg ci -mb
 
-  $ sl push --to master_bookmark --force --debug mononoke://$(mononoke_address)/repo
+  $ sl push --to master_bookmark --force --debug
   sending hello command
   sending clienttelemetry command
-  pushing rev bb0985934a0f to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  pushing rev bb0985934a0f to destination mono:repo bookmark master_bookmark
   query 1; heads
   sending heads command
   searching for changes
@@ -111,16 +111,16 @@ create new commit in repo2 and check that push to a bookmark fails
   [255]
 
 Try to bypass the check
-  $ sl push --force --to master_bookmark mononoke://$(mononoke_address)/repo --pushvars "BYPASS_READONLY=true"
-  pushing rev bb0985934a0f to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ sl push --force --to master_bookmark --pushvars "BYPASS_READONLY=true"
+  pushing rev bb0985934a0f to destination mono:repo bookmark master_bookmark
   searching for changes
   no changes found
   updating bookmark master_bookmark
 
 Check that a push which doesn't move a bookmark is allowed
-  $ sl push --force --debug mononoke://$(mononoke_address)/repo
+  $ sl push --force --debug
   tracking on None {}
-  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
+  pushing to mono:repo
   sending hello command
   sending clienttelemetry command
   query 1; heads

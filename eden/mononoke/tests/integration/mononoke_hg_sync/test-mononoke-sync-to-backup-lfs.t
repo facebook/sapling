@@ -40,7 +40,7 @@ Start Mononoke API server, to serve LFS blobs
 
 Create a new client repository. Enable LFS there.
   $ hg clone -q mono:orig repo-lfs --noupdate
-  $ hg clone -q mononoke://$(mononoke_address)/backup backup --noupdate
+  $ hg clone -q mono:backup backup --noupdate
   $ cd repo-lfs
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
@@ -50,15 +50,15 @@ Create a new client repository. Enable LFS there.
 
 
 Update in the client repo
-  $ hgmn pull -q
-  $ hgmn update -r master_bookmark -q
+  $ hg pull -q
+  $ hg update -r master_bookmark -q
 
 Perform LFS push
   $ LONG="$(yes A 2>/dev/null | head -c 2000)"
   $ echo "$LONG" > lfs-largefile
   $ hg commit -Aqm "add lfs-large files"
-  $ hgmn push -r . --to master_bookmark -v
-  pushing rev 99262937f158 to destination mononoke://$LOCALIP:$LOCAL_PORT/orig bookmark master_bookmark
+  $ hg push -r . --to master_bookmark -v
+  pushing rev 99262937f158 to destination mono:orig bookmark master_bookmark
   searching for changes
   validated revset for rebase
   1 changesets found
@@ -73,8 +73,8 @@ Perform LFS push
 Check LFS is not in backup
   $ cd "$TESTTMP/backup"
   $ REPONAME=backup
-  $ hgmn pull
-  pulling from mononoke://$LOCALIP:*/backup (glob)
+  $ hg pull
+  pulling from mono:backup
   searching for changes
   no changes found
   adding changesets
@@ -92,8 +92,8 @@ Sync to backup
 
 Check LFS is in backup
   $ cd "$TESTTMP/backup"
-  $ hgmn pull
-  pulling from mononoke://$LOCALIP:*/backup (glob)
+  $ hg pull
+  pulling from mono:backup
   searching for changes
   adding changesets
   adding manifests

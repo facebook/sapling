@@ -186,9 +186,9 @@ move master bookmarks
 
 push to Mononoke
 
-  $ hgmn push --force --debug mononoke://$(mononoke_address)/repo --allow-anon
+  $ hg push --force --debug --allow-anon
   tracking on None {}
-  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
+  pushing to mono:repo
   sending hello command
   sending clienttelemetry command
   query 1; heads
@@ -230,7 +230,7 @@ push to Mononoke
 Now pull what was just pushed
 
   $ cd ../repo3
-  $ hgmn log -r "reverse(all())" --stat
+  $ hg log -r "reverse(all())" --stat
   commit:      0e7ec5675652
   bookmark:    default/master_bookmark
   hoistedname: master_bookmark
@@ -241,20 +241,20 @@ Now pull what was just pushed
    a |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
    (re)
-  $ hgmn pull -q
+  $ hg pull -q
 
 Because the revision numbers are assigned nondeterministically we cannot
 compare output of the entire tree. Instead we compare only linear histories
 
-  $ hgmn log --graph --template '{node} {bookmarks}' -r "::f40c09205504"
-  pulling 'f40c09205504' from 'mononoke://$LOCALIP:$LOCAL_PORT/repo'
+  $ hg log --graph --template '{node} {bookmarks}' -r "::f40c09205504"
+  pulling 'f40c09205504' from 'mono:repo'
   o  f40c09205504d8410f8c8679bf7a85fef25f9337
   │
   o  bb0985934a0f8a493887892173b68940ceb40b4f
   │
   @  0e7ec5675652a04069cbf976a42e45b740f3243c
    (re)
-  $ hgmn log --graph --template '{node} {bookmarks}' -r "::634de738bb0f"
+  $ hg log --graph --template '{node} {bookmarks}' -r "::634de738bb0f"
   o  634de738bb0ff135e32d48567718fb9d7dedf575
   │
   o  8315ea53ef41d34f56232c88669cc80225b6e66d
@@ -271,7 +271,7 @@ This last step is verifying every commit one by one, it is done in a single
 command, but the output of this command is long
 
   $ for commit in `hg log --template '{node} ' -r '0e7ec567::634de738'` f40c09205504d8410f8c8679bf7a85fef25f9337; do \
-  $ if [ "`hg export -R $TESTTMP/repo2 ${commit}`" == "`hgmn export ${commit} 2> /dev/null`" ]; then echo "${commit} comparison SUCCESS"; fi; hgmn export ${commit}; echo; echo; done
+  $ if [ "`hg export -R $TESTTMP/repo2 ${commit}`" == "`hg export ${commit} 2> /dev/null`" ]; then echo "${commit} comparison SUCCESS"; fi; hg export ${commit}; echo; echo; done
   0e7ec5675652a04069cbf976a42e45b740f3243c comparison SUCCESS
   # HG changeset patch
   # User test

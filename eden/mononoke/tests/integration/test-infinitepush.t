@@ -61,8 +61,8 @@ Do infinitepush (aka commit cloud) push
   $ echo new > newfile
   $ hg addremove -q
   $ hg ci -m new
-  $ hgmn push mononoke://$(mononoke_address)/repo -r . --bundle-store --debug --allow-anon
-  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg push -r . --bundle-store --debug --allow-anon
+  pushing to mono:repo
   sending hello command
   sending clienttelemetry command
   query 1; heads
@@ -103,13 +103,13 @@ Do infinitepush (aka commit cloud) push
   > server=False
   > branchpattern=re:scratch/.+
   > EOF
-  $ hgmn pull -r 47da8b81097c
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg pull -r 47da8b81097c
+  pulling from mono:repo
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  $ hgmn up -q 47da8b81097c
+  $ hg up -q 47da8b81097c
   $ cat newfile
   new
 
@@ -126,8 +126,8 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   $ echo new2 > newfile2
   $ hg addremove -q
   $ hg ci -m new2
-  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to "scratch/123"
-  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg push -r . --to "scratch/123"
+  pushing to mono:repo
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -147,8 +147,8 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   abort: unexpected EOL, expected netstring digit
   [255]
 
-  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to "scratch/123" --create
-  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg push -r . --to "scratch/123" --create
+  pushing to mono:repo
   searching for changes
   $ tglogp
   @  007299f6399f draft 'new2'
@@ -160,8 +160,8 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'SELECT name, hg_kind, HEX(changeset_id) FROM bookmarks;'
   master_bookmark|pull_default|E10EC6CD13B1CBCFE2384F64BD37FC71B4BF9CFE21487D2EAF5064C1B3C0B793
   scratch/123|scratch|58C64A8A96ADD9087220CA5B94CD892364562F40CBDA51ACFBBA2DAD8F5C979E
-  $ hgmn push mononoke://$(mononoke_address)/repo -r 3903775176ed --to "scratch/123"
-  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg push -r 3903775176ed --to "scratch/123"
+  pushing to mono:repo
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -199,20 +199,20 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   abort: unexpected EOL, expected netstring digit
   [255]
 
-  $ hgmn push mononoke://$(mononoke_address)/repo -r 3903775176ed --to "scratch/123" --force
-  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg push -r 3903775176ed --to "scratch/123" --force
+  pushing to mono:repo
   searching for changes
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'SELECT name, hg_kind, HEX(changeset_id) FROM bookmarks;'
   master_bookmark|pull_default|E10EC6CD13B1CBCFE2384F64BD37FC71B4BF9CFE21487D2EAF5064C1B3C0B793
   scratch/123|scratch|E10EC6CD13B1CBCFE2384F64BD37FC71B4BF9CFE21487D2EAF5064C1B3C0B793
-  $ hgmn push mononoke://$(mononoke_address)/repo -r 007299f6399f --to "scratch/123"
-  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg push -r 007299f6399f --to "scratch/123"
+  pushing to mono:repo
   searching for changes
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'SELECT name, hg_kind, HEX(changeset_id) FROM bookmarks;'
   master_bookmark|pull_default|E10EC6CD13B1CBCFE2384F64BD37FC71B4BF9CFE21487D2EAF5064C1B3C0B793
   scratch/123|scratch|58C64A8A96ADD9087220CA5B94CD892364562F40CBDA51ACFBBA2DAD8F5C979E
-  $ hgmn push mononoke://$(mononoke_address)/repo -r 007299f6399f --to "scratch/124" --create --config "infinitepush.branchpattern=foo"
-  pushing rev 007299f6399f to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark scratch/124
+  $ hg push -r 007299f6399f --to "scratch/124" --create --config "infinitepush.branchpattern=foo"
+  pushing rev 007299f6399f to destination mono:repo bookmark scratch/124
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -247,13 +247,13 @@ Do infinitepush (aka commit cloud) push, to a bookmark
 
 
   $ cd ../repo-pull
-  $ hgmn pull -B "scratch/123"
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg pull -B "scratch/123"
+  pulling from mono:repo
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  $ hgmn up -q "007299f6399f"
+  $ hg up -q "007299f6399f"
   $ cat newfile2
   new2
 
@@ -311,13 +311,13 @@ Pushbackup to mononoke peer with compression enabled
   
 
   $ cd ../repo-pull
-  $ hgmn pull -r 2cfeca6399fd
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg pull -r 2cfeca6399fd
+  pulling from mono:repo
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  $ hgmn up -q 2cfeca6399fd
+  $ hg up -q 2cfeca6399fd
   $ cat aa
   aa
 
@@ -348,8 +348,8 @@ Pushbackup that does nothing, as only bookmarks have changed
   
 
 Finally, try to push existing commit to a public bookmark
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 2cfeca6399fd to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 2cfeca6399fd to destination mono:repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
 
@@ -366,8 +366,8 @@ Finally, try to push existing commit to a public bookmark
 
 Check phases on another side (for pull command and pull -r)
   $ cd ../repo-pull
-  $ hgmn pull -r 47da8b81097c
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg pull -r 47da8b81097c
+  pulling from mono:repo
   no changes found
   adding changesets
   adding manifests
@@ -383,8 +383,8 @@ Check phases on another side (for pull command and pull -r)
   o  3903775176ed public 'a'
   
 
-  $ hgmn pull
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg pull
+  pulling from mono:repo
   searching for changes
   no changes found
   adding changesets
@@ -403,15 +403,15 @@ Check phases on another side (for pull command and pull -r)
 
 # Test phases a for stack that is partially public
   $ cd ../repo-push
-  $ hgmn up 3903775176ed
+  $ hg up 3903775176ed
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   (leaving bookmark newbook)
   $ echo new > file1
   $ hg addremove -q
   $ hg ci -m "feature release"
 
-  $ hgmn push -r . --to "test_release_1.0.0"  --create # push this release (creating new remote bookmark)
-  pushing rev 500658c138a4 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark test_release_1.0.0
+  $ hg push -r . --to "test_release_1.0.0"  --create # push this release (creating new remote bookmark)
+  pushing rev 500658c138a4 to destination mono:repo bookmark test_release_1.0.0
   searching for changes
   exporting bookmark test_release_1.0.0
   $ echo new > file2
@@ -443,8 +443,8 @@ Check phases on another side (for pull command and pull -r)
   eca836c7c6519b769367cc438ce09d83b4a4e8e1
 
   $ cd ../repo-pull
-  $ hgmn pull -r eca836c7c651 # draft revision based on different public bookmark
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg pull -r eca836c7c651 # draft revision based on different public bookmark
+  pulling from mono:repo
   searching for changes
   adding changesets
   adding manifests
@@ -464,8 +464,8 @@ Check phases on another side (for pull command and pull -r)
   o  3903775176ed public 'a'
   
 
-  $ hgmn pull -r test_release_1.0.0
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg pull -r test_release_1.0.0
+  pulling from mono:repo
   no changes found
   adding changesets
   adding manifests
@@ -496,8 +496,8 @@ Test phases with pushrebase
   $ echo new > filea
   $ hg addremove -q
   $ hg ci -m "new feature on top of master"
-  $ hgmn push -r . --to master_bookmark # push-rebase
-  pushing rev f9e4cd522499 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark # push-rebase
+  pushing rev f9e4cd522499 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -536,33 +536,33 @@ More sophisticated test for phases
   > pushrebase=!
   > EOF
 
-  $ hgmn up 1708c61178dd -q
+  $ hg up 1708c61178dd -q
   $ mkcommit ww
-  $ hgmn push -r . --to "release 1"  --create -q
+  $ hg push -r . --to "release 1"  --create -q
   $ mkcommit xx
   $ mkcommit yy
   $ mkcommit zz
 
-  $ hgmn up 1708c61178dd -q
+  $ hg up 1708c61178dd -q
   $ mkcommit www
   $ mkcommit xxx
-  $ hgmn push -r . --to "release 2"  --create -q
+  $ hg push -r . --to "release 2"  --create -q
   $ mkcommit yyy
   $ mkcommit zzz
 
-  $ hgmn up 1708c61178dd -q
+  $ hg up 1708c61178dd -q
   $ mkcommit wwww
   $ mkcommit xxxx
   $ mkcommit yyyy
-  $ hgmn push -r . --to "release 3"  --create -q
+  $ hg push -r . --to "release 3"  --create -q
   $ mkcommit zzzz
 
-  $ hgmn up 1708c61178dd -q
+  $ hg up 1708c61178dd -q
   $ mkcommit wwwww
   $ mkcommit xxxxx
   $ mkcommit yyyyy
   $ mkcommit zzzzz
-  $ hgmn push -r . --to "release 4"  --create -q
+  $ hg push -r . --to "release 4"  --create -q
 
   $ sl cloud backup -q
 
@@ -621,8 +621,8 @@ More sophisticated test for phases
 
   $ cd ../repo-pull
 
-  $ hgmn pull -r b  # test ambiguous prefix
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg pull -r b  # test ambiguous prefix
+  pulling from mono:repo
   abort: ambiguous identifier
   suggestions are:
   
@@ -638,7 +638,7 @@ More sophisticated test for phases
   !
   [255]
 
-  $ hgmn pull -r 5e59ac0f4dd0 -r bf677f20a49d -r 7d67c7248d48 -r b9f080ea9500 -q
+  $ hg pull -r 5e59ac0f4dd0 -r bf677f20a49d -r 7d67c7248d48 -r b9f080ea9500 -q
 
   $ tglogpnr -r "::b9f080ea9500 - ::default/master_bookmark"
   o  b9f080ea9500 public 'zzzzz'  default/release 4

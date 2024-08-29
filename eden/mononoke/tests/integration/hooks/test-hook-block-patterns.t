@@ -19,8 +19,8 @@ No marker, should work
 
   $ echo "foo" > foo
   $ hg ci -Aqm 1
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 8b8214d70c17 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 8b8214d70c17 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -31,8 +31,8 @@ Has marker in the title
 
   $ echo "foo" >> foo
   $ hg ci -Aqm $"My imperfect commit\nI've used @""nocommit so it's never commited"
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 228cf1cc53cb to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 228cf1cc53cb to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -53,8 +53,8 @@ Has marker in a file, should fail
 
   $ echo "bar @""nocommit" > foo
   $ hg ci -Aqm 1
-  $ hgmn push -r . --to master_bookmark
-  pushing rev b950c81d785b to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev b950c81d785b to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:

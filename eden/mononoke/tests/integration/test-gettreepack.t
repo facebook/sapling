@@ -41,7 +41,7 @@ start mononoke
   $ start_and_wait_for_mononoke_server
 Pull from Mononoke
   $ cd repo2
-  $ hgmn pull --config ui.disable-stream-clone=true -q
+  $ hg pull --config ui.disable-stream-clone=true -q
   warning: stream clone is disabled
 
 Make sure that cache is empty
@@ -50,8 +50,8 @@ Make sure that cache is empty
   $ hg debugdumpindexedlog $TESTTMP/cachepath/repo/manifests/indexedloghistorystore/0 |& grep Entry | wc -l
   0
 
-  $ hgmn prefetch -r "min(all())" -r1
-  $ hgmn prefetch -r 2
+  $ hg prefetch -r "min(all())" -r1
+  $ hg prefetch -r 2
 
 Make sure that new entries were downloaded
   $ hg debugdumpindexedlog $TESTTMP/cachepath/repo/manifests/indexedlogdatastore/0 |& grep Entry | wc -l
@@ -61,7 +61,7 @@ Make sure that new entries were downloaded
 
 Update to the revisions. Change the path to make sure that gettreepack command is
 not sent because we've already downloaded all the trees
-  $ hgmn up 2 --config paths.default=mononoke://brokenpath -q
+  $ hg up 2 --config paths.default=mononoke://brokenpath -q
   $ ls
   A
   B
@@ -69,7 +69,7 @@ not sent because we've already downloaded all the trees
 
 Change the path to make sure that no wireproto commands should be sent at all,
 because everything has been already downloaded.
-  $ hgmn up 1 --config paths.default=mononoke://brokenpath -q
+  $ hg up 1 --config paths.default=mononoke://brokenpath -q
   $ ls
   A
   B
@@ -93,7 +93,7 @@ because everything has been already downloaded.
   >         bundle2.processbundle(repo, bundle, None)
   > EOF
 
-  $ hgmn --config extensions.gettreepack=$TESTTMP/gettreepack.py gettreepack --mfnode 1111111111111111111111111111111111111111
+  $ hg --config extensions.gettreepack=$TESTTMP/gettreepack.py gettreepack --mfnode 1111111111111111111111111111111111111111
   remote: Command failed
   remote:   Error:
   remote:     Blob is missing: hgmanifest.sha1.1111111111111111111111111111111111111111

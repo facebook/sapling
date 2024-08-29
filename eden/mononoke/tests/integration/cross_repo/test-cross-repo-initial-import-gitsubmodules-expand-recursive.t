@@ -707,12 +707,12 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 
   $ cd "$TESTTMP/$LARGE_REPO_NAME" || exit
   $ hg pull -q && hg co -q master  
-  $ hgmn status
-  $ hgmn co -q .^ # go before the commit that corrupts submodules
-  $ hgmn status
+  $ hg status
+  $ hg co -q .^ # go before the commit that corrupts submodules
+  $ hg status
   $ enable commitcloud infinitepush # to push commits to server
   $ function hg_log() { 
-  >   hgmn log --graph -T '{node|short} {desc}\n' "$@" 
+  >   hg log --graph -T '{node|short} {desc}\n' "$@" 
   > }
 
   $ hg_log
@@ -787,8 +787,8 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   6 directories, 10 files
   $ function backsync_get_info_and_derive_data() {
   >   REPONAME="$LARGE_REPO_NAME" sl cloud backup -q
-  >   COMMIT_TO_SYNC=$(hgmn whereami)
-  >   COMMIT_TITLE=$(hgmn log -l1  -T "{truncate(desc, 1)}")
+  >   COMMIT_TO_SYNC=$(hg whereami)
+  >   COMMIT_TITLE=$(hg log -l1  -T "{truncate(desc, 1)}")
   >   printf "Processing commit: $COMMIT_TITLE\n"
   >   printf "Commit hash: $COMMIT_TO_SYNC\n"
   >   
@@ -816,7 +816,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 -- Change a large repo file and try to backsync it to small repo
 -- EXPECT: commit isn't synced and returns working copy equivalent instead
   $ echo "changing large repo file" > file_in_large_repo.txt
-  $ hgmn commit -A -m "Changing large repo file" 
+  $ hg commit -A -m "Changing large repo file" 
   $ REPONAME=$LARGE_REPO_NAME sl push -q -r . --to master --non-forward-move --pushvar NON_FAST_FORWARD=true
   $ backsync_get_info_and_derive_data
   Processing commit: Changing large repo file
@@ -840,7 +840,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 -- Change a small repo file outside of a submodule expansion
 -- EXPECT: commit is backsynced normally because it doesn't touch submodule expansions
   $ echo "changing small repo file" > smallrepofolder1/regular_dir/aardvar
-  $ hgmn commit -A -m "Changing small repo in large repo (not submodule)" 
+  $ hg commit -A -m "Changing small repo in large repo (not submodule)" 
   $ REPONAME=$LARGE_REPO_NAME sl push -q -r . --to master --non-forward-move --pushvar NON_FAST_FORWARD=true
   $ backsync_get_info_and_derive_data
   Processing commit: Changing small repo in large repo (not submodule)
@@ -932,9 +932,9 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 
 -- Change a small repo file inside a submodule expansion
 -- First change the file without updating the submodule metadata file
-  $ hgmn co -q .^ # go to previous commit because the current one doesn't sync
+  $ hg co -q .^ # go to previous commit because the current one doesn't sync
   $ echo "changing submodule expansion" > smallrepofolder1/git-repo-b/foo
-  $ hgmn commit -Aq -m "Changing submodule expansion in large repo" 
+  $ hg commit -Aq -m "Changing submodule expansion in large repo" 
   $ backsync_get_info_and_derive_data
   Processing commit: Changing submodule expansion in large repo
   Commit hash: 17b64cd26d50139b93037e4aa7040cfaea104b15
@@ -942,9 +942,9 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   [255]
 
 -- Change a small repo file inside a recursive submodule expansion
-  $ hgmn co -q .^ # go to previous commit because the current one doesn't sync
+  $ hg co -q .^ # go to previous commit because the current one doesn't sync
   $ echo "changing submodule expansion" > smallrepofolder1/git-repo-b/git-repo-c/choo
-  $ hgmn commit -A -m "Changing recursive submodule expansion in large repo" 
+  $ hg commit -A -m "Changing recursive submodule expansion in large repo" 
   $ backsync_get_info_and_derive_data
   Processing commit: Changing recursive submodule expansion in large repo
   Commit hash: 392ccb8b74534dfd35eb99e3f3f4ead1f0277e96
@@ -952,9 +952,9 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   [255]
 
 -- Delete submodule metadata file
-  $ hgmn co -q .^ # go to previous commit because the current one doesn't sync
+  $ hg co -q .^ # go to previous commit because the current one doesn't sync
   $ rm smallrepofolder1/.x-repo-submodule-git-repo-b
-  $ hgmn commit -q -A -m "Deleting repo_b submodule metadata file" 
+  $ hg commit -q -A -m "Deleting repo_b submodule metadata file" 
   $ backsync_get_info_and_derive_data
   Processing commit: Deleting repo_b submodule metadata file
   Commit hash: fc9ac6bc48350781bc9affc6125b3d3c234688d9
@@ -963,9 +963,9 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 
 
 -- Delete recursive submodule metadata file
-  $ hgmn co -q .^ # go to previous commit because the current one doesn't sync
+  $ hg co -q .^ # go to previous commit because the current one doesn't sync
   $ rm smallrepofolder1/git-repo-b/.x-repo-submodule-git-repo-c
-  $ hgmn commit -q -A -m "Deleting repo_c recursive submodule metadata file" 
+  $ hg commit -q -A -m "Deleting repo_c recursive submodule metadata file" 
   $ backsync_get_info_and_derive_data
   Processing commit: Deleting repo_c recursive submodule metadata file
   Commit hash: c5ba322776e498b34aee61308c3fb3590d09b0ce
@@ -974,9 +974,9 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 
 
 -- Modify submodule metadata file
-  $ hgmn co -q .^ # go to previous commit because the current one doesn't sync
+  $ hg co -q .^ # go to previous commit because the current one doesn't sync
   $ echo "change metadata file" > smallrepofolder1/.x-repo-submodule-git-repo-b
-  $ hgmn commit -q -A -m "Change repo_b submodule metadata file" 
+  $ hg commit -q -A -m "Change repo_b submodule metadata file" 
   $ backsync_get_info_and_derive_data
   Processing commit: Change repo_b submodule metadata file
   Commit hash: cbf713928ec94ec9bf2d4eee8f9247d3001fc291
@@ -985,9 +985,9 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 
 
 -- Modify recursive submodule metadata file
-  $ hgmn co -q .^ # go to previous commit because the current one doesn't sync
+  $ hg co -q .^ # go to previous commit because the current one doesn't sync
   $ echo "change metadata file" > smallrepofolder1/git-repo-b/.x-repo-submodule-git-repo-c
-  $ hgmn commit -q -A -m "Change repo_c recursive submodule metadata file" 
+  $ hg commit -q -A -m "Change repo_c recursive submodule metadata file" 
   $ backsync_get_info_and_derive_data
   Processing commit: Change repo_c recursive submodule metadata file
   Commit hash: 02285a4ca81aa356b80d8dc2daf095822e0187d5
@@ -997,9 +997,9 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 
 
 -- Delete submodule expansion
-  $ hgmn co -q .^ # go to previous commit because the current one doesn't sync
+  $ hg co -q .^ # go to previous commit because the current one doesn't sync
   $ rm -rf smallrepofolder1/git-repo-b
-  $ hgmn commit -q -A -m "Delete repo_b submodule expansion" 
+  $ hg commit -q -A -m "Delete repo_b submodule expansion" 
   $ backsync_get_info_and_derive_data
   Processing commit: Delete repo_b submodule expansion
   Commit hash: 6bb6f4620ca201142b5fd0d42486879a04158229
@@ -1007,9 +1007,9 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   [255]
 
 -- Delete recursive submodule expansion
-  $ hgmn co -q .^ # go to previous commit because the current one doesn't sync
+  $ hg co -q .^ # go to previous commit because the current one doesn't sync
   $ rm -rf smallrepofolder1/git-repo-b/git-repo-c
-  $ hgmn commit -q -A -m "Delete repo_c recursive submodule expansion" 
+  $ hg commit -q -A -m "Delete repo_c recursive submodule expansion" 
   $ backsync_get_info_and_derive_data
   Processing commit: Delete repo_c recursive submodule expansion
   Commit hash: f229a7929d48e8d5e1e461443c41071b2c0be99e

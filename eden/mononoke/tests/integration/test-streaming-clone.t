@@ -38,7 +38,7 @@ Try creating again, this should fail
   [1]
 
   $ start_and_wait_for_mononoke_server
-  $ hgmn clone --stream mononoke://$(mononoke_address)/repo repo-streamclone
+  $ hg clone --stream mono:repo repo-streamclone
   streaming all changes
   2 files to transfer, 357 bytes of data
   transferred 357 bytes in * seconds (*) (glob)
@@ -64,7 +64,7 @@ Try creating again, this should fail
   * current max chunk num is None, repo: repo (glob)
   $ rm -rf "$TESTTMP/repo-streamclone"
   $ cd "$TESTTMP"
-  $ hgmn clone --stream mononoke://$(mononoke_address)/repo repo-streamclone
+  $ hg clone --stream mono:repo repo-streamclone
   streaming all changes
   2 files to transfer, 357 bytes of data
   transferred 357 bytes in * seconds (*) (glob)
@@ -87,25 +87,25 @@ Push a few new commits and update streaming clone
   $ hg clone -q mono:repo repo-push --noupdate
   $ cd repo-push
   $ enableextension remotenames
-  $ hgmn up tip
+  $ hg up tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 1 > 1
   $ hg add 1
   $ hg ci -m 'add 1'
-  $ hgmn push -r . --to master_bookmark
-  pushing rev abfb584eacfc to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev abfb584eacfc to destination mono:repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
   $ echo 11 > 1
   $ hg ci -m 'echo 11'
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 3f2a7f32ccfc to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 3f2a7f32ccfc to destination mono:repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
   $ echo 111 > 1
   $ hg ci -m 'echo 111'
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 9e0f64de2fee to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 9e0f64de2fee to destination mono:repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
   $ hg log -r tip
@@ -118,7 +118,7 @@ Push a few new commits and update streaming clone
   
 
   $ cd "$TESTTMP"
-  $ hgmn clone --stream mononoke://$(mononoke_address)/repo repo-streamclone-2
+  $ hg clone --stream mono:repo repo-streamclone-2
   streaming all changes
   2 files to transfer, 357 bytes of data
   transferred 357 bytes in * seconds (* KB/sec) (glob)
@@ -146,7 +146,7 @@ Check that with last chunk skipping no new batches are uploaded
 
 Clone it again to make sure saved streaming chunks are valid
   $ cd "$TESTTMP"
-  $ hgmn clone --stream mononoke://$(mononoke_address)/repo repo-streamclone-3
+  $ hg clone --stream mono:repo repo-streamclone-3
   streaming all changes
   2 files to transfer, 731 bytes of data
   transferred 731 bytes in 0.0 seconds (* KB/sec) (glob)

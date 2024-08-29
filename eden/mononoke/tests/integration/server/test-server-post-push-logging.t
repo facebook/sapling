@@ -167,7 +167,7 @@ Use normal push (non-pushrebase).  Since we are not pushing to a public bookmark
   $ hg add -q push
   $ hg ci -m 'commit'
   $ sl push --force --allow-anon
-  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
+  pushing to mono:repo
   searching for changes
 
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq 'select(.is_public == false)' | jq .bookmark
@@ -188,12 +188,12 @@ Use infinitepush push
   > EOF
 
 Stop tracking master_bookmark
-  $ hgmn up -q 0e7ec5675652
+  $ hg up -q 0e7ec5675652
   $ echo infinitepush > infinitepush
   $ hg add -q infinitepush
   $ hg ci -m 'infinitepush'
-  $ sl push mononoke://$(mononoke_address)/repo -r . --to "scratch/123" --create
-  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ sl push -r . --to "scratch/123" --create
+  pushing to mono:repo
   searching for changes
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq 'select(.is_public == false)' | jq .bookmark
   "scratch/123"
@@ -221,8 +221,8 @@ Update the scratch/123 bookmark
   $ echo new_commit > new_commit
   $ hg add -q new_commit
   $ hg ci -m 'new commit'
-  $ sl push mononoke://$(mononoke_address)/repo -r . --to "scratch/123"
-  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ sl push -r . --to "scratch/123"
+  pushing to mono:repo
   searching for changes
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .repo_name
   "repo"

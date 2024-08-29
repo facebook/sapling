@@ -221,14 +221,14 @@
 
   $ hg clone -q mono:repo repo1 --noupdate
   $ cd repo1
-  $ hgmn pull
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg pull
+  pulling from mono:repo
   searching for changes
   no changes found
   adding changesets
   adding manifests
   adding file changes
-  $ hgmn up master_bookmark
+  $ hg up master_bookmark
   6 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg whereami

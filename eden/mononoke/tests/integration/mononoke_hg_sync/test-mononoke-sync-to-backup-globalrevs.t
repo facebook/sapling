@@ -43,7 +43,7 @@ start mononoke
   $ start_and_wait_for_mononoke_server
 Make client repo
   $ hg clone -q mono:orig client-push --noupdate
-  $ hg clone -q mononoke://$(mononoke_address)/backup backup --noupdate
+  $ hg clone -q mono:backup backup --noupdate
 
 Push to Mononoke
   $ cd $TESTTMP/client-push
@@ -54,11 +54,11 @@ Push to Mononoke
   $ hg up -q master_bookmark
 
   $ mkcommit pushcommit
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
   $ hg up -q master_bookmark
   $ mkcommit pushcommit2
   $ mkcommit pushcommit3
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
 Sync to backup repos
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select repo_id, globalrev from bonsai_globalrev_mapping"

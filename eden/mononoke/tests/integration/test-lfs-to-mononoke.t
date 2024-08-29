@@ -40,16 +40,16 @@ Create a new client repository. Enable LFS there.
   > EOF
 
 Update in the client repo
-  $ hgmn pull -q
-  $ hgmn update -r master_bookmark -q
+  $ hg pull -q
+  $ hg update -r master_bookmark -q
 
 Perform LFS push
   $ LONG="$(yes A 2>/dev/null | head -c 2000)"
   $ echo "$LONG" > lfs-largefile
   $ echo "${LONG}for-rename" > lfs-largefile-for-rename
   $ hg commit -Aqm "add lfs-large files"
-  $ hgmn push -r . --to master_bookmark -v
-  pushing rev 99765c8d839c to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark -v
+  pushing rev 99765c8d839c to destination mono:repo bookmark master_bookmark
   searching for changes
   validated revset for rebase
   1 changesets found
@@ -65,8 +65,8 @@ Perform LFS push
 # Rename a file
   $ hg mv lfs-largefile-for-rename lfs-largefile-renamed
   $ hg commit -Aqm "rename"
-  $ hgmn push -r . --to master_bookmark -v
-  pushing rev c651f052c52d to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark -v
+  pushing rev c651f052c52d to destination mono:repo bookmark master_bookmark
   searching for changes
   validated revset for rebase
   1 changesets found
@@ -88,8 +88,8 @@ Verify that if we fail to upload LFS blobs first, the push fails
 
   $ echo "${LONG}ANOTHER-LFS" > f
   $ hg commit -m f -A f
-  $ hgmn push -r . --to master_bookmark -v
-  pushing rev e4337405c947 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark -v
+  pushing rev e4337405c947 to destination mono:repo bookmark master_bookmark
   searching for changes
   validated revset for rebase
   1 changesets found
@@ -142,8 +142,8 @@ Create a new client repository, using getpack (with its own cachepath)
   > cachepath=$TESTTMP/cachepath-alt
   > EOF
 
-  $ hgmn pull -v
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg pull -v
+  pulling from mono:repo
   searching for changes
   all local heads known remotely
   no changes found
@@ -151,7 +151,7 @@ Create a new client repository, using getpack (with its own cachepath)
   adding manifests
   adding file changes
  
-  $ hgmn update -r master_bookmark -v
+  $ hg update -r master_bookmark -v
   resolving manifests
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -161,7 +161,7 @@ Create a new client repository, using getpack (with its own cachepath)
   $ sha256sum lfs-largefile-renamed
   d19bca751e178f8cce59e1b872e0fd5857951c2577a2318aefad3253c317d982  lfs-largefile-renamed
 
-  $ hgmn st --change . -C
+  $ hg st --change . -C
   A lfs-largefile-renamed
     lfs-largefile-for-rename
   R lfs-largefile-for-rename

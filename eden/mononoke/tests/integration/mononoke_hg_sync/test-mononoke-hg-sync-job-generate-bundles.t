@@ -49,18 +49,18 @@ Push to Mononoke
   $ hg up -q tip
 
   $ mkcommit pushcommit
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
   $ hg up -q master_bookmark
   $ mkcommit pushcommit2
   $ mkcommit pushcommit3
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
 Modify same file
   $ hg up -q master_bookmark
   $ echo 1 >> 1 && hg addremove && hg ci -m 'modify 1'
   adding 1
   $ echo 1 >> 1 && hg addremove && hg ci -m 'modify 1'
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
 Empty commits
   $ hg up -q "min(all())"
@@ -70,16 +70,16 @@ Empty commits
   $ echo 1 > 1 && hg -q addremove && hg ci -m empty
   $ hg revert -r ".^" 1 && hg commit --amend
 
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
 Two pushes synced one after another
   $ hg up -q master_bookmark
   $ mkcommit commit_first
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
   $ hg up -q master_bookmark
   $ mkcommit commit_second
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
 Sync it to another client
   $ cd $TESTTMP/repo

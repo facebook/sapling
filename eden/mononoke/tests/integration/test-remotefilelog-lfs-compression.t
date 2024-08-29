@@ -19,12 +19,12 @@ Start Mononoke & LFS.
 Create a repo. Add a large file. Make it actually large to make sure we surface
 any block size boundaries or such.
 
-  $ hgmn_init repo
+  $ hg clone -q mono:repo repo
   $ cd repo
   $ yes 2>/dev/null | head -c 2MiB > large
   $ hg add large
   $ hg ci -ma
-  $ hgmn push -q --to master --create
+  $ hg push -q --to master --create
   $ cd "$TESTTMP"
 
 Clone the repo. Take a unique cache path to go to the server, and turn off compression.
@@ -39,7 +39,7 @@ Clone the repo. Take a unique cache path to go to the server, and turn off compr
 Update. Check for compression. It shouldn't be used.
 (the reply to the first query is either 280 or 276 as it includes either [::1] or 127.0.0.1)
 
-  $ hgmn up master -q
+  $ hg up master -q
   $ sha256sum large
   76903e148255cbd5ba91d3f47fe04759afcffdf64104977fc83f688892ac0dfd  large
 
@@ -64,7 +64,7 @@ Clone again. This time, enable compression
 
 Update again. This time, we should have compression.
 
-  $ hgmn up master -q
+  $ hg up master -q
   $ sha256sum large
   76903e148255cbd5ba91d3f47fe04759afcffdf64104977fc83f688892ac0dfd  large
 

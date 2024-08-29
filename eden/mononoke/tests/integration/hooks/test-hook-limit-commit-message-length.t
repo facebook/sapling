@@ -24,8 +24,8 @@ Ok commit message - should pass
 
   $ touch file1
   $ hg ci -Aqm 123456789
-  $ hgmn push -r . --to master_bookmark
-  pushing rev f95217ebe3a8 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev f95217ebe3a8 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -37,8 +37,8 @@ Commit message too long - should fail
   $ hg up -q "min(all())"
   $ touch file2
   $ hg ci -Aqm "$(printf "%s\n%s" "foo" "123456")"
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 6ef9fe6a13fa to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 6ef9fe6a13fa to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -59,8 +59,8 @@ Commit message too long (UTF-8 multibyte characters) - should fail
   $ hg up -q "min(all())"
   $ touch file3
   $ hg ci -Aqm "$(printf "%s\n%s" "title_SHOULD BE STRIPPED IN MSG" "1234€")"
-  $ hgmn push -r . --to master_bookmark
-  pushing rev e363a5d26663 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev e363a5d26663 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:

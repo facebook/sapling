@@ -12,8 +12,8 @@
 
   $ echo 1 > 1 && hg -q addremove && hg ci -m empty
   $ hg revert -r ".^" 1 && hg commit --amend
-  $ hgmn push -r . --to master_bookmark
-  pushing rev afd5c05eb235 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev afd5c05eb235 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -31,8 +31,8 @@
 
   $ echo 1 > 1 && hg addremove && hg ci --amend -m nonempty
   adding 1
-  $ hgmn push -r . --to master_bookmark
-  pushing rev d2f8add702e6 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev d2f8add702e6 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests

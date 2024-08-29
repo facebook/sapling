@@ -43,7 +43,7 @@ Try to push merge commit
   $ sl push -r . --to master_bookmark -q
 
 Now try to push over a merge commit
-  $ hgmn up -q 0
+  $ hg up -q 0
   $ echo 'somefile' > somefile
   $ hg add somefile
   $ hg ci -m 'pushrebase over merge'

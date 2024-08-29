@@ -24,12 +24,12 @@
 
 -- normal pushrebase with one commit
   $ cd "$TESTTMP/small-hg-client"
-  $ REPONAME=small-mon hgmn up -q master_bookmark
+  $ hg up -q master_bookmark
   $ echo 2 > 2 && hg addremove -q && hg ci -q -m newcommit
   $ REPONAME=small-mon sl push -r . --to master_bookmark 2>&1 | grep "updated remote bookmark"
   updated remote bookmark master_bookmark to * (glob)
 -- newcommit was correctly pushed to master_bookmark (we need to update, as it's a new commit with date rewriting)
-  $ REPONAME=small-mon hgmn up -q master_bookmark
+  $ hg up -q master_bookmark
   $ log -r master_bookmark
   @  newcommit [public;rev=3;*] default/master_bookmark (glob)
   │
@@ -40,14 +40,14 @@
   @  first post-move commit [public;rev=2;*] default/master_bookmark (glob)
   │
   ~
-  $ REPONAME=large-mon hgmn pull -q
+  $ hg pull -q
   $ log -r master_bookmark
   o  newcommit [public;rev=3;*] default/master_bookmark (glob)
   │
   ~
   $ verify_wc master_bookmark
 -- do a push to a large repo, then backsync it to a small one
-  $ REPONAME=large-mon hgmn up -q master_bookmark
+  $ hg up -q master_bookmark
   $ echo test > tolarge
   $ hg add tolarge
   $ hg ci -m tolarge

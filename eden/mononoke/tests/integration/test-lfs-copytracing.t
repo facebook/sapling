@@ -41,8 +41,8 @@ Clone the repository, then enable LFS
   > pushrebase =
   > EOF
 
-  $ hgmn pull -q
-  $ hgmn update -r master_bookmark -q
+  $ hg pull -q
+  $ hg update -r master_bookmark -q
 
 Submit a large file
   $ yes 2>/dev/null | head -c 2000 > large
@@ -50,7 +50,7 @@ Submit a large file
   $ hg cp large largeCopy
   $ hg mv large largeNew
   $ hg commit -Aqm "copy and move large"
-  $ hgmn push -q -r . --to master_bookmark
+  $ hg push -q -r . --to master_bookmark
 
 Create a new repository, enable LFS there as well
   $ hg clone -q mono:repo repo-lfs2 --noupdate
@@ -65,12 +65,12 @@ Create a new repository, enable LFS there as well
   > EOF
 
 Pull changes from Mononoke
-  $ hgmn pull -q
+  $ hg pull -q
 
-  $ hgmn update -r master_bookmark
+  $ hg update -r master_bookmark
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ hgmn st --change . -C
+  $ hg st --change . -C
   A largeCopy
     large
   A largeNew

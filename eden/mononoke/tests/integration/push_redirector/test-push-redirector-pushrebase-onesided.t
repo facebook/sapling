@@ -209,7 +209,7 @@ Make sure mapping is set up and we know what we don't have to sync initial entri
 
 Normal pushrebase with one commit
   $ cd "$TESTTMP/small-hg-client-1"
-  $ REPONAME=small-1 hgmn up -q master_bookmark
+  $ hg up -q master_bookmark
   $ echo 2 > 2 && hg addremove -q && hg ci -q -m newcommit
   $ REPONAME=small-1 sl push -r . --to master_bookmark 2>&1 | grep "updated remote bookmark"
   updated remote bookmark master_bookmark to 6989db12d1e5
@@ -225,7 +225,7 @@ Normal pushrebase with one commit
   o  first post-move commit [public;rev=3;bca7e9574548] default/master_bookmark
   │
   ~
-  $ REPONAME=large hgmn pull -q
+  $ hg pull -q
   $ log -r master_bookmark
   o  newcommit [public;rev=4;7c9a729ceb57] default/master_bookmark
   │
@@ -235,7 +235,7 @@ Normal pushrebase with one commit
 
 At the same time, the tailed repo gets new commits
   $ cd "$TESTTMP/small-hg-client-2"
-  $ REPONAME=small-2 hgmn up -q master_bookmark
+  $ hg up -q master_bookmark
   $ createfile file2_1
   $ hg ci -qm "Post-merge commit 1"
   $ REPONAME=small-2 sl push --to master_bookmark -q
@@ -245,7 +245,7 @@ At the same time, the tailed repo gets new commits
 
 Force pushrebase should fail, because it pushes to a shared bookmark
   $ cd "$TESTTMP/small-hg-client-1"
-  $ REPONAME=small-1 hgmn up -q master_bookmark^
+  $ hg up -q master_bookmark^
   $ echo 3 > 3 && hg add 3 && hg ci -q -m "non-forward move"
   $ REPONAME=small-1 sl push --to master_bookmark --force --pushvar NON_FAST_FORWARD=true >/dev/null
   pushing * (glob)
@@ -256,7 +256,7 @@ Non-shared bookmark should work
   $ REPONAME=small-1 sl push --to master_bookmark_non_fast_forward --force --create -q
 -- it should also be present in a large repo
   $ cd "$TESTTMP/large-hg-client"
-  $ REPONAME=large hgmn pull -q
+  $ hg pull -q
   $ log -r bookprefix1/master_bookmark_non_fast_forward
   o  non-forward move [public;rev=5;6b6a308437bb] default/bookprefix1/master_bookmark_non_fast_forward
   │
@@ -273,7 +273,7 @@ Bookmark-only pushrebase (Create a new bookmark, do not push commits)
      default/master_bookmark_non_fast_forward 161addaa86c7
 -- this is not a `common_pushrebase_bookmark`, so should be prefixed
   $ cd "$TESTTMP/large-hg-client"
-  $ REPONAME=large hgmn pull -q
+  $ hg pull -q
   $ hg book --all
   no bookmarks set
      default/bookprefix1/master_bookmark_2 bca7e9574548
@@ -291,7 +291,7 @@ Delete a bookmark
      default/master_bookmark   6989db12d1e5
      default/master_bookmark_non_fast_forward 161addaa86c7
   $ cd "$TESTTMP/large-hg-client"
-  $ REPONAME=large hgmn pull -q
+  $ hg pull -q
   $ hg book --all
   no bookmarks set
      default/bookprefix1/master_bookmark_non_fast_forward 6b6a308437bb

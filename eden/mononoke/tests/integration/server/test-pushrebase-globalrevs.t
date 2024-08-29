@@ -27,7 +27,7 @@ Push commit, check a globalrev was assigned
   $ hg log -r . -T '{extras % "{extra}\n"}'
   branch=default
   global_rev=1000147970
-  $ hgmn bookmarks --remote
+  $ hg bookmarks --remote
      default/master_bookmark   2fa5be0dd895
 
 Push another commit, check that the globalrev is incrementing
@@ -37,19 +37,19 @@ Push another commit, check that the globalrev is incrementing
   $ hg log -r . -T '{extras % "{extra}\n"}'
   branch=default
   global_rev=1000147971
-  $ hgmn bookmarks --remote
+  $ hg bookmarks --remote
      default/master_bookmark   7a3a1e2e51f5
 
 
 Check that we create a new bookmark that is a descendant of the globalrev bookmark
   $ sl push -q -r '.^' --to other_bookmark --create
-  $ hgmn bookmarks --remote
+  $ hg bookmarks --remote
      default/master_bookmark   7a3a1e2e51f5
      default/other_bookmark    2fa5be0dd895
 
 Check that we update bookmark to a descendant of the globalrev bookmark
   $ sl push -q -r . --to other_bookmark --force
-  $ hgmn bookmarks --remote
+  $ hg bookmarks --remote
      default/master_bookmark   7a3a1e2e51f5
      default/other_bookmark    7a3a1e2e51f5
 

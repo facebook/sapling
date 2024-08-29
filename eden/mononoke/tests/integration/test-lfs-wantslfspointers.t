@@ -40,15 +40,15 @@ Create a new client repository. Enable LFS there.
   > EOF
 
 Update in the client repo
-  $ hgmn pull -q
-  $ hgmn update -r master_bookmark -q
+  $ hg pull -q
+  $ hg update -r master_bookmark -q
 
 Perform LFS push
   $ LONG="$(yes A 2>/dev/null | head -c 2000)"
   $ echo "$LONG" > lfs-largefile
   $ hg commit -Aqm "add lfs-large files"
-  $ hgmn push -r . --to master_bookmark -v
-  pushing rev 99262937f158 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark -v
+  pushing rev 99262937f158 to destination mono:repo bookmark master_bookmark
   searching for changes
   validated revset for rebase
   1 changesets found
@@ -74,10 +74,10 @@ Create a new client repository, using getpack (with its own cachepath).
   > cachepath=$TESTTMP/cachepath-alt
   > EOF
 
-  $ hgmn pull -q
+  $ hg pull -q
 
 Make sure lfs is not used during update
-  $ hgmn update -r master_bookmark -v
+  $ hg update -r master_bookmark -v
   resolving manifests
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -96,9 +96,9 @@ Create a new client repository, using getpack (with its own cachepath).
   > cachepath=$TESTTMP/cachepath-alt2
   > EOF
 
-  $ hgmn pull -q
+  $ hg pull -q
 
 Now set wantslfspointers, make sure we download lfs pointers
-  $ hgmn update -r master_bookmark -v --config lfs.wantslfspointers=True
+  $ hg update -r master_bookmark -v --config lfs.wantslfspointers=True
   resolving manifests
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved

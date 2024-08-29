@@ -46,13 +46,13 @@ escaping.
   $ rm -r root/c # Remove all of c so it's not present locally
   $ hg commit -Aqm "commit f"
 
-  $ hgmn push -q -r . --to master_bookmark
+  $ hg push -q -r . --to master_bookmark
 
 Setup a client repo that doesn't have any of the manifests in its local store.
 
   $ hg clone -q mono:repo test_repo --noupdate
   $ cd test_repo
-  $ hgmn pull -q -B master_bookmark
+  $ hg pull -q -B master_bookmark
 
 Setup some arguments to see debug output from remotefilelog
 
@@ -60,7 +60,7 @@ Setup some arguments to see debug output from remotefilelog
 
 Fetch without designated nodes
 
-  $ hgmn "${LOG_ARGS[@]}" --config "remotefilelog.cachepath=$TESTTMP/cache1" --config treemanifest.ondemandfetch=False show "master_bookmark~2" >/dev/null
+  $ hg "${LOG_ARGS[@]}" --config "remotefilelog.cachepath=$TESTTMP/cache1" --config treemanifest.ondemandfetch=False show "master_bookmark~2" >/dev/null
   fetching tree for ('', 65b4f32575a18414983d65bbb6cdef3370aa582b)
   fetching tree '' 65b4f32575a18414983d65bbb6cdef3370aa582b
   1 trees fetched over 0.00s
@@ -77,7 +77,7 @@ Fetch without designated nodes
 
 Fetch with designated ndoes
 
-  $ hgmn "${LOG_ARGS[@]}" --config "remotefilelog.cachepath=$TESTTMP/cache2" --config treemanifest.ondemandfetch=True show "master_bookmark~2" >/dev/null
+  $ hg "${LOG_ARGS[@]}" --config "remotefilelog.cachepath=$TESTTMP/cache2" --config treemanifest.ondemandfetch=True show "master_bookmark~2" >/dev/null
   fetching tree for ('', 65b4f32575a18414983d65bbb6cdef3370aa582b)
   fetching tree '' 65b4f32575a18414983d65bbb6cdef3370aa582b
   1 trees fetched over * (glob)

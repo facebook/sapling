@@ -80,9 +80,9 @@ Start mononoke server
   $ REPOID=$FBS_REPOID  megarepo_tool merge cee330c0c3ab8ee70923d9b750e8fb56579e3be4db9fb41a54b63578c975bc8a f72c4b95a6f2e49b28c830406a0921e00621615b174cefee9f9e31c57346ac5a author "history fixup"  --mark-public --commit-date-rfc3339 "$COMMIT_DATE" --bookmark master 2> /dev/null
 
   $ cd "$TESTTMP"/fbs-hg-cnt
-  $ REPONAME=repo hgmn pull -q
+  $ hg pull -q
 
-  $ hgmn update -q master
+  $ hg update -q master
 
   $ ls *
   file_with_incorrect_history2

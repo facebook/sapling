@@ -15,8 +15,8 @@ Attempt to add a filename with spaces in it
   $ mkdir -p "test"
   $ echo "bad" > "test/foo bar"
   $ hg ci -Aqm success
-  $ hgmn push -r . --to master_bookmark
-  pushing rev c60235ea2c7f to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev c60235ea2c7f to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -37,8 +37,8 @@ Attempt to add a filename with braces in it
   $ mkdir -p "test"
   $ echo "bad" > "test/{foobar}"
   $ hg ci -Aqm success
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 8d7d42b0b3af to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 8d7d42b0b3af to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -58,8 +58,8 @@ Attempt to add a filename with a hypen at the start
   $ hg up -q "min(all())"
   $ echo "good" > -testfile
   $ hg ci -Aqm good
-  $ hgmn push -r . --to master_bookmark
-  pushing rev b2b56d66a707 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev b2b56d66a707 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -79,8 +79,8 @@ Attempt to add a filename with an apostrophe in it
   $ hg up -q "min(all())"
   $ echo "bad" > "test'file"
   $ hg ci -Aqm failure
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 11ee725a3317 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 11ee725a3317 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:

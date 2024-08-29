@@ -31,7 +31,7 @@ Push a directory
   $ hg -q addremove
   $ hg ci -m 'create dir'
   $ sl push -r . --to master_bookmark -q
-  $ hgmn up master_bookmark -q
+  $ hg up master_bookmark -q
 
 Now replace directory with a file and push it. Make sure file lists before push
 and after push match
@@ -48,7 +48,7 @@ List of files before the push
   dir dir/1 dir/2 dir/3 (no-eol)
 
   $ sl push -r . --to master_bookmark -q
-  $ hgmn up master_bookmark -q
+  $ hg up master_bookmark -q
 
 List of files after the push.
   $ hg log -r . -T '{files}'

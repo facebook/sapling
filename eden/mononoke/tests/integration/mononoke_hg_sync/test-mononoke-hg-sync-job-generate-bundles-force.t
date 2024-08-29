@@ -53,17 +53,17 @@ Two pushes, one with --force. Pushes intentionally modify the same file
   $ echo 1 > file_to_conflict
   $ hg addremove -q
   $ hg ci -m 'normal push'
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
   $ hg up -q "master_bookmark^"
   $ echo 11 > file_to_conflict
   $ hg addremove -q
   $ hg ci -m 'force push'
-  $ hgmn push -r . --to master_bookmark -q --force
+  $ hg push -r . --to master_bookmark -q --force
 
 Move backward
-  $ hgmn push -r .^ --to master_bookmark --force --pushvar NON_FAST_FORWARD=true
-  pushing rev add0c792bfce to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r .^ --to master_bookmark --force --pushvar NON_FAST_FORWARD=true
+  pushing rev add0c792bfce to destination mono:repo bookmark master_bookmark
   searching for changes
   no changes found
   updating bookmark master_bookmark

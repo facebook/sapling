@@ -51,11 +51,11 @@ Push to Mononoke
 Two pushes synced one after another
   $ hg up -q master_bookmark
   $ mkcommit commit_first
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
   $ hg up -q master_bookmark
   $ mkcommit commit_second
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
 Sync it to another client
   $ cd $TESTTMP/repo
@@ -76,9 +76,9 @@ update the "latest replayed" counter. We want to make sure we just skip the firs
   $ cd $TESTTMP/client-push
   $ hg up -q master_bookmark
   $ mkcommit commit_third
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
   $ mkcommit commit_fourth
-  $ hgmn push -r . --to another_book --create -q
+  $ hg push -r . --to another_book --create -q
 
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "replace into mutable_counters (repo_id, name, value) values(0, 'latest-replayed-request', 2)"
   $ mononoke_hg_sync_loop_regenerate repo 1 --combine-bundles 2 --bundle-prefetch 2 2>&1 | grep 'adjusting'
@@ -117,9 +117,9 @@ Check that extension was imported fine (i.e. nothing is printed to stderr)
 
   $ cd $TESTTMP/client-push
   $ mkcommit commit_fifth
-  $ hgmn push -r . --to another_book --create -q
+  $ hg push -r . --to another_book --create -q
   $ mkcommit commit_sixth
-  $ hgmn push -r . --to another_book --create -q
+  $ hg push -r . --to another_book --create -q
   $ mononoke_hg_sync_loop_regenerate repo 1 --combine-bundles 2 --bundle-prefetch 2 2>&1 | grep "adjust"
   * trying to adjust first batch for bookmark another_book - first batch starts points to Some(ChangesetId(Blake2(*))) but server points to None* (glob)
   * could not adjust first batch* (glob)

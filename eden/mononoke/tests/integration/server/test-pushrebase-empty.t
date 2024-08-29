@@ -62,7 +62,7 @@ Push empty and non-empty commit in a stack
   updated remote bookmark master_bookmark to e16fec5713c0
 
 Push stack of empty commits
-  $ hgmn up -q tip
+  $ hg up -q tip
   $ echo 1 > 11 && hg add 11 && hg ci -m emptystack1
   $ hg revert -r .^ 11
   $ hg commit --amend

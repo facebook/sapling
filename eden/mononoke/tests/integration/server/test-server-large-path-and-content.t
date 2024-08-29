@@ -31,7 +31,7 @@ clone the repo and check that mercurial can access the file
   $ cd $TESTTMP
   $ hg clone -q mono:repo repo
   $ cd repo
-  $ hgmn log
+  $ hg log
   commit:      41c590dc2a01
   bookmark:    default/master_bookmark
   hoistedname: master_bookmark
@@ -65,8 +65,8 @@ push another long path with a large file
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     long
   
-  $ hgmn push --to master_bookmark
-  pushing rev bddcd6316ae7 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push --to master_bookmark
+  pushing rev bddcd6316ae7 to destination mono:repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
 

@@ -667,6 +667,9 @@ use-rust=false
 
 [workingcopy]
 rust-checkout=false
+
+[schemes]
+hg=ssh://user@dummy/{1}
 EOF
 
   # Only set the dummy ssh "mono" scheme the first time. If we are called again after
@@ -675,7 +678,6 @@ EOF
     cat >> "$HGRCPATH" <<EOF
 [schemes]
 mono=ssh://user@dummy/{1}
-hg=ssh://user@dummy/{1}
 EOF
   fi
 }
@@ -1881,16 +1883,10 @@ function mononoke_git_service {
   MONONOKE_GIT_SERVICE_BASE_URL="https://localhost:$MONONOKE_GIT_SERVICE_PORT/repos/git/ro"
 }
 
-# Run an hg binary configured with the settings required to talk to Mononoke
-function hgmn {
-  reponame_urlencoded="$(urlencode encode "$REPONAME")"
-  hg --config paths.default="mononoke://$(mononoke_address)/$reponame_urlencoded" "$@"
-}
-
 # Run an hg binary configured with the settings require to talk to Mononoke
 # via SaplingRemoteAPI
 function sl {
-  hgmn \
+  hg \
     --config "edenapi.url=https://localhost:$MONONOKE_SOCKET/edenapi" \
     --config "edenapi.enable=true" \
     --config "remotefilelog.http=true" \
@@ -1989,9 +1985,10 @@ EOF
   cd ..
   blobimport "$REPONAME"/.hg "$REPONAME"
 
+  hg clone -q mono:"$REPONAME" repo2 --noupdate
+
   start_and_wait_for_mononoke_server
 
-  hg clone -q hg:"$REPONAME" repo2 --noupdate
   cd repo2 || exit 1
   cat >> .hg/hgrc <<EOF
 [extensions]

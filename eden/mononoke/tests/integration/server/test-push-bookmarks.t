@@ -43,8 +43,8 @@ Push with bookmark
   $ enableextension remotenames
   $ echo withbook > withbook && hg addremove && hg ci -m withbook
   adding withbook
-  $ hgmn push --to withbook --create
-  pushing rev 11f53bbd855a to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark withbook
+  $ hg push --to withbook --create
+  pushing rev 11f53bbd855a to destination mono:repo bookmark withbook
   searching for changes
   exporting bookmark withbook
 
@@ -52,7 +52,7 @@ Pull the bookmark
   $ cd ../repo-pull
   $ enableextension remotenames
 
-  $ hgmn pull -q
+  $ hg pull -q
   $ hg book --remote
      default/master_bookmark   0e7ec5675652
      default/withbook          11f53bbd855a
@@ -61,12 +61,12 @@ Update the bookmark
   $ cd ../repo-push
   $ echo update > update && hg addremove && hg ci -m update
   adding update
-  $ hgmn push --to withbook
-  pushing rev 66b9c137712a to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark withbook
+  $ hg push --to withbook
+  pushing rev 66b9c137712a to destination mono:repo bookmark withbook
   searching for changes
   updating bookmark withbook
   $ cd ../repo-pull
-  $ hgmn pull -q
+  $ hg pull -q
   $ hg book --remote
      default/master_bookmark   0e7ec5675652
      default/withbook          66b9c137712a
@@ -75,12 +75,12 @@ Try non fastforward moves (backwards and across branches)
   $ cd ../repo-push
   $ hg update -q master_bookmark
   $ echo other_commit > other_commit && hg -q addremove && hg ci -m other_commit
-  $ hgmn push --to master_bookmark
-  pushing rev a075b5221b92 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push --to master_bookmark
+  pushing rev a075b5221b92 to destination mono:repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
-  $ hgmn push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 0e7ec5675652 --to master_bookmark
-  pushing rev 0e7ec5675652 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 0e7ec5675652 --to master_bookmark
+  pushing rev 0e7ec5675652 to destination mono:repo bookmark master_bookmark
   searching for changes
   no changes found
   remote: Command failed
@@ -118,8 +118,8 @@ Try non fastforward moves (backwards and across branches)
   remote:     }
   abort: unexpected EOL, expected netstring digit
   [255]
-  $ hgmn push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 66b9c137712a --to master_bookmark
-  pushing rev 66b9c137712a to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 66b9c137712a --to master_bookmark
+  pushing rev 66b9c137712a to destination mono:repo bookmark master_bookmark
   searching for changes
   no changes found
   remote: Command failed
@@ -157,21 +157,21 @@ Try non fastforward moves (backwards and across branches)
   remote:     }
   abort: unexpected EOL, expected netstring digit
   [255]
-  $ hgmn push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 0e7ec5675652 --to withbook
-  pushing rev 0e7ec5675652 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark withbook
+  $ hg push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 0e7ec5675652 --to withbook
+  pushing rev 0e7ec5675652 to destination mono:repo bookmark withbook
   searching for changes
   no changes found
   updating bookmark withbook
   $ cd ../repo-pull
-  $ hgmn pull -q
+  $ hg pull -q
   $ hg book --remote
      default/master_bookmark   a075b5221b92
      default/withbook          0e7ec5675652
 
 Try non fastfoward moves on regex bookmark
-  $ hgmn push -r a075b5221b92 --to ffonly_bookmark --create -q
-  $ hgmn push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 0e7ec5675652 --to ffonly_bookmark
-  pushing rev 0e7ec5675652 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark ffonly_bookmark
+  $ hg push -r a075b5221b92 --to ffonly_bookmark --create -q
+  $ hg push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 0e7ec5675652 --to ffonly_bookmark
+  pushing rev 0e7ec5675652 to destination mono:repo bookmark ffonly_bookmark
   searching for changes
   no changes found
   remote: Command failed
@@ -212,8 +212,8 @@ Try non fastfoward moves on regex bookmark
 
 Try to delete master
   $ cd ../repo-push
-  $ hgmn push --delete master_bookmark
-  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg push --delete master_bookmark
+  pushing to mono:repo
   searching for changes
   no changes found
   remote: Command failed
@@ -247,14 +247,14 @@ Try to delete master
   [255]
 
 Delete the bookmark
-  $ hgmn push --delete withbook
-  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg push --delete withbook
+  pushing to mono:repo
   searching for changes
   no changes found
   deleting remote bookmark withbook
   [1]
   $ cd ../repo-pull
-  $ hgmn pull -q
+  $ hg pull -q
   $ hg book --remote
      default/ffonly_bookmark   a075b5221b92
      default/master_bookmark   a075b5221b92

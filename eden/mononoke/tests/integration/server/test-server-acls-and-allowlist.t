@@ -34,16 +34,16 @@ Clone the repo
   $ cd repo
 
 Pull with the default certificate - this should work.
-  $ hgmn pull
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg pull
+  pulling from mono:repo
 
 Pull from Mononoke with a different identity, make sure it fails
-  $ hgmn pull --config auth.mononoke.cert="$TEST_CERTDIR/client1.crt" --config auth.mononoke.key="$TEST_CERTDIR/client1.key"
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg pull --config auth.mononoke.cert="$TEST_CERTDIR/client1.crt" --config auth.mononoke.key="$TEST_CERTDIR/client1.key"
+  pulling from mono:repo
   remote: Authorization failed: Unauthorized access, permission denied
   abort: unexpected EOL, expected netstring digit
   [255]
 
 Pull with the identity in the global allowlist - this works, too.
-  $ hgmn pull --config auth.mononoke.cert="$TEST_CERTDIR/client2.crt" --config auth.mononoke.key="$TEST_CERTDIR/client2.key"
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg pull --config auth.mononoke.cert="$TEST_CERTDIR/client2.crt" --config auth.mononoke.key="$TEST_CERTDIR/client2.key"
+  pulling from mono:repo

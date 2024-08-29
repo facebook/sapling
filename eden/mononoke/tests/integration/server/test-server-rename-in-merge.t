@@ -56,13 +56,13 @@ blobimport them into Mononoke storage and start Mononoke
 start mononoke
   $ start_and_wait_for_mononoke_server
   $ cd repo2
-  $ hgmn pull
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg pull
+  pulling from mono:repo
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  $ hgmn up 2
+  $ hg up 2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg st --change . -C
   A 2

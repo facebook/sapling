@@ -46,7 +46,7 @@
   $ cd "$TESTTMP"
   $ hg clone -q mono:repo "$HG_REPO" --noupdate
   $ cd "$HG_REPO"
-  $ hgmn cat -r "$BOOKMARK" "$NAME"
+  $ hg cat -r "$BOOKMARK" "$NAME"
   foo
-  $ hgmn cat -r "$BOOKMARK" "$DIR/$NAME"
+  $ hg cat -r "$BOOKMARK" "$DIR/$NAME"
   bar

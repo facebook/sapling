@@ -64,8 +64,8 @@ push some draft commits
   $ hg commit -m draft1
   $ echo 2 >> newfile
   $ hg commit -m draft2
-  $ hgmn push mononoke://$(mononoke_address)/repo -r . --bundle-store --allow-anon
-  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg push -r . --bundle-store --allow-anon
+  pushing to mono:repo
   searching for changes
 
   $ graphlog
@@ -87,8 +87,8 @@ pull these draft commits
   > server=False
   > branchpattern=re:scratch/.+
   > EOF
-  $ hgmn pull -r fc8f2fba9ac9
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg pull -r fc8f2fba9ac9
+  pulling from mono:repo
   searching for changes
   adding changesets
   adding manifests
@@ -106,16 +106,16 @@ pull these draft commits
 
 land the first draft commit
   $ cd "$TESTTMP/repo-push"
-  $ hgmn push -r 48337b947baa --to master_bookmark
-  pushing rev 48337b947baa to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r 48337b947baa --to master_bookmark
+  pushing rev 48337b947baa to destination mono:repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
 
 put a new draft commit on top
   $ echo 3 >> newfile
   $ hg commit -m draft3
-  $ hgmn push mononoke://$(mononoke_address)/repo -r . --bundle-store --allow-anon
-  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg push -r . --bundle-store --allow-anon
+  pushing to mono:repo
   searching for changes
 
 add a new public branch
@@ -123,8 +123,8 @@ add a new public branch
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ echo 1 > branchfile
   $ hg commit -Aqm branch1
-  $ hgmn push -r . --to branch_bookmark --create
-  pushing rev eaf82af99127 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark branch_bookmark
+  $ hg push -r . --to branch_bookmark --create
+  pushing rev eaf82af99127 to destination mono:repo bookmark branch_bookmark
   searching for changes
   exporting bookmark branch_bookmark
 
@@ -133,8 +133,8 @@ add some draft commits to the branch
   $ hg commit -Aqm branch2
   $ echo 3 >> branchfile
   $ hg commit -Aqm branch3
-  $ hgmn push mononoke://$(mononoke_address)/repo -r . --bundle-store --allow-anon
-  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg push -r . --bundle-store --allow-anon
+  pushing to mono:repo
   searching for changes
 
   $ graphlog
@@ -157,8 +157,8 @@ add some draft commits to the branch
 
 pull all of these commits
   $ cd "$TESTTMP/repo-pull"
-  $ hgmn pull -r 09b17e5ff090 -r 3e86159717e8
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg pull -r 09b17e5ff090 -r 3e86159717e8
+  pulling from mono:repo
   searching for changes
   adding changesets
   adding manifests

@@ -15,8 +15,8 @@ Add a .hg(sub|tags|substate) file
   $ hg up -q "min(all())"
   $ echo "bad" > .hgtags
   $ hg ci -Aqm failure
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 42be02defdee to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 42be02defdee to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -36,8 +36,8 @@ Add a legitimate file with hg in its name
   $ hg up -q "min(all())"
   $ echo "good" > .hgsubstatefoo
   $ hg ci -Aqm good
-  $ hgmn push -r . --to master_bookmark
-  pushing rev e805597b3712 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev e805597b3712 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -49,8 +49,8 @@ Add a dir with a naughty .Git directory inside
   $ mkdir -p test/.Git/
   $ echo "bad" > test/.Git/test.py
   $ hg ci -Aqm failure
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 63a821ce8ce6 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 63a821ce8ce6 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -71,8 +71,8 @@ Add a dir with a naughty .git directory inside
   $ mkdir -p test/.git/
   $ echo "bad" > test/.git/test.py
   $ hg ci -Aqm failure
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 214bf1e67d48 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 214bf1e67d48 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -93,8 +93,8 @@ Add a dir with a naughty .git directory inside that includes a ~1
   $ mkdir -p test/.Git~1/
   $ echo "bad" > test/.Git~1/test.py
   $ hg ci -Aqm failure
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 7800fe789a87 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 7800fe789a87 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -115,8 +115,8 @@ Add a dir with a naughty .git directory inside that includes a ~1234
   $ mkdir -p test/.Git~1234/test
   $ echo "bad" > test/.Git~1234/test/test.py
   $ hg ci -Aqm failure
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 8e508312f2d6 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 8e508312f2d6 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -137,8 +137,8 @@ Add a bad dir
   $ mkdir -p dir1/.Git8B6C~2
   $ echo "bad" > dir1/.Git8B6C~2/file1
   $ hg ci -Aqm failure
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 695a2a5c3e7c to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 695a2a5c3e7c to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -159,8 +159,8 @@ Add a dir with a naughty .git directory inside that includes 2 ~1
   $ mkdir -p test~1/.Git~1/test
   $ echo "bad" > test~1/.Git~1/test/test.py
   $ hg ci -Aqm failure
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 014b76ac58ed to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 014b76ac58ed to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -181,8 +181,8 @@ Add a legitimate dir with git in its name
   $ mkdir -p test/git/
   $ echo "good" > test/git/test.py
   $ hg ci -Aqm good
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 70379a892860 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 70379a892860 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -193,8 +193,8 @@ Add a legitimate dir with jgit in its name
   $ hg up -q "min(all())"
   $ echo "good" > jgit
   $ hg ci -Aqm good
-  $ hgmn push -r . --to master_bookmark
-  pushing rev aee9ff2bb5ad to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev aee9ff2bb5ad to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -206,8 +206,8 @@ Add a legitimate dir with xGit in its name
   $ mkdir -p test/xGit/
   $ echo "good" > test/xGit/test.py
   $ hg ci -Aqm good
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 431331784585 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 431331784585 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -220,8 +220,8 @@ Add a file with an ignorable unicode char in it
   $ mkdir test
   $ echo "bad" > "test/.git${bad}"
   $ hg ci -Aqm failure
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 673dc62e3d09 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 673dc62e3d09 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -243,10 +243,10 @@ Check that we can delete insecure filenames
   $ hg up -q "min(all())"
   $ echo "bad" > .hgtags
   $ hg ci -Aqm insequre_filename
-  $ hgmn push -qr . --to master_bookmark --pushvars TEST_ONLY_ALLOW_INSECURE_FILENAMES=true
+  $ hg push -qr . --to master_bookmark --pushvars TEST_ONLY_ALLOW_INSECURE_FILENAMES=true
 
 -- delete just-added insecure filename
-  $ hgmn up -q master_bookmark
+  $ hg up -q master_bookmark
   $ hg rm .hgtags
   $ hg ci -qm "remove tags"
-  $ hgmn push -qr . --to master_bookmark
+  $ hg push -qr . --to master_bookmark

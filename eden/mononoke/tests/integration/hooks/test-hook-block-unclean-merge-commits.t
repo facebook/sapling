@@ -19,8 +19,8 @@
 
   $ hg up -q tip
   $ echo file1 > file1 && hg -q addremove && hg commit -m "file1"
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 8e911067eac2 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 8e911067eac2 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -32,8 +32,8 @@
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   [26805a] C
   $ echo file1differentcontent > file1 && hg -q addremove && hg commit -m "file1differentcontent"
-  $ hgmn push -r . --to feature_bookmark --create
-  pushing rev 074f168de560 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark feature_bookmark
+  $ hg push -r . --to feature_bookmark --create
+  pushing rev 074f168de560 to destination mono:repo bookmark feature_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -52,8 +52,8 @@
   (no more unresolved files)
   $ hg commit -m "merge commit"
 Should fail
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 6b4021133ae5 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 6b4021133ae5 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -75,8 +75,8 @@ Should fail
 
   $ hg up -q tip
   $ echo file2 > file2 && hg -q addremove && hg commit -m "file2"
-  $ hgmn push -r . --to new_bookmark_not_in_regex --create
-  pushing rev 70e3175a544f to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark new_bookmark_not_in_regex
+  $ hg push -r . --to new_bookmark_not_in_regex --create
+  pushing rev 70e3175a544f to destination mono:repo bookmark new_bookmark_not_in_regex
   searching for changes
   adding changesets
   adding manifests
@@ -88,8 +88,8 @@ Should fail
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   [6b4021] merge commit
   $ echo file2differentcontent > file1 && hg -q addremove && hg commit -m "file2differentcontent"
-  $ hgmn push -r . --to feature_bookmark2 --create
-  pushing rev 6b9010cdcc53 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark feature_bookmark2
+  $ hg push -r . --to feature_bookmark2 --create
+  pushing rev 6b9010cdcc53 to destination mono:repo bookmark feature_bookmark2
   searching for changes
   adding changesets
   adding manifests
@@ -105,8 +105,8 @@ Should fail
   (no more unresolved files)
   $ hg commit -m "merge commit"
 Should succeed
-  $ hgmn push -r . --to new_bookmark_not_in_regex
-  pushing rev f036c4e283ca to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark new_bookmark_not_in_regex
+  $ hg push -r . --to new_bookmark_not_in_regex
+  pushing rev f036c4e283ca to destination mono:repo bookmark new_bookmark_not_in_regex
   searching for changes
   adding changesets
   adding manifests

@@ -29,8 +29,8 @@ S200449
   $ mkdir -p "$DIR"
   $ touch "$DIR/$TOO_LARGE_FILE"
   $ hg ci -Aqm too_large
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 9af0f6fef03e to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 9af0f6fef03e to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -50,8 +50,8 @@ S200449
   $ mkdir -p "$DIR"
   $ touch "$DIR/$NOT_TOO_LARGE_FILE"
   $ hg ci -Aqm not_too_large
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 7dfdeae7524e to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 7dfdeae7524e to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests

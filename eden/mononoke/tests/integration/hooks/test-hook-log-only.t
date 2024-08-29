@@ -24,8 +24,8 @@ Push a commit that fails the hook, it is still allowed as the hook is log-only.
   $ echo "foo" >> foo
   $ hg ci -Aqm $"Contains @""nocommit"
 
-  $ hgmn push -r . --to master_bookmark
-  pushing rev d379d7937ea5 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev d379d7937ea5 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests

@@ -42,7 +42,9 @@ blobimport
 
 start mononoke
   $ start_and_wait_for_mononoke_server
-  $ cd repo
+  $ cd
+  $ hg clone -q mono:repo client
+  $ cd client
   $ hg up -q "min(all())"
 
 Helper script to test the lookup function
@@ -54,9 +56,7 @@ Helper script to test the lookup function
   > command = registrar.command(cmdtable)
   > @command('lookup', [], ('key'))
   > def _lookup(ui, repo, key, **opts):
-  >     treemanifestext = extensions.find('treemanifestserver')
-  >     fallbackpath = treemanifestext.getfallbackpath(repo)
-  >     with repo.connectionpool.get(fallbackpath) as conn:
+  >     with repo.connectionpool.get(ui.config("paths", "default")) as conn:
   >         remote = conn.peer
   >         csid = remote.lookup(key)
   >         if b'not found' in csid:
@@ -64,23 +64,23 @@ Helper script to test the lookup function
   > EOF
 
 Lookup non-existent hash
-  $ hgmn --config extensions.lookup=$TESTTMP/lookup.py lookup fffffffffffff6c66edf28380101a92122cbea50
+  $ hg --config extensions.lookup=$TESTTMP/lookup.py lookup fffffffffffff6c66edf28380101a92122cbea50
   abort: fffffffffffff6c66edf28380101a92122cbea50 not found!
   [255]
 
 Lookup existing hash
-  $ hgmn --config extensions.lookup=$TESTTMP/lookup.py lookup f9ae6ef0865e00431f2af076be6b680f75dd2777
+  $ hg --config extensions.lookup=$TESTTMP/lookup.py lookup f9ae6ef0865e00431f2af076be6b680f75dd2777
 
 Lookup non-existent bookmark
-  $ hgmn --config extensions.lookup=$TESTTMP/lookup.py lookup fake_bookmark
+  $ hg --config extensions.lookup=$TESTTMP/lookup.py lookup fake_bookmark
   abort: fake_bookmark not found!
   [255]
 
 Lookup existing bookmark
-  $ hgmn --config extensions.lookup=$TESTTMP/lookup.py lookup master_bookmark
+  $ hg --config extensions.lookup=$TESTTMP/lookup.py lookup master_bookmark
 
 Lookup bookmark with hash name that exists as a hash (returns hash)
-  $ hgmn --config extensions.lookup=$TESTTMP/lookup.py lookup 3903775176ed42b1458a6281db4a0ccf4d9f287a
+  $ hg --config extensions.lookup=$TESTTMP/lookup.py lookup 3903775176ed42b1458a6281db4a0ccf4d9f287a
 
 Lookup bookmark with hash name that doesn't exist as a hash (returns bookmark -> hash)
-  $ hgmn --config extensions.lookup=$TESTTMP/lookup.py lookup ffff775176ed42b1458a6281db4a0ccf4d9f287a
+  $ hg --config extensions.lookup=$TESTTMP/lookup.py lookup ffff775176ed42b1458a6281db4a0ccf4d9f287a

@@ -70,8 +70,8 @@ Do infinitepush (aka commit cloud) push
 
 Try to pull it
   $ cd "${TESTTMP}/repo-pull"
-  $ hgmn pull -r 68394cf51f7e96952fe832a3c05d17a9b49e8b4b
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg pull -r 68394cf51f7e96952fe832a3c05d17a9b49e8b4b
+  pulling from mono:repo
   searching for changes
   adding changesets
   adding manifests

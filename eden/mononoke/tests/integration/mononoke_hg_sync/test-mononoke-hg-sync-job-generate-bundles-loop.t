@@ -51,11 +51,11 @@ Push to Mononoke
 Two pushes synced one after another
   $ hg up -q master_bookmark
   $ mkcommit commit_first
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
   $ hg up -q master_bookmark
   $ mkcommit commit_second
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
 Sync it to another client
   $ cd $TESTTMP/repo
@@ -71,11 +71,11 @@ New bookmark is created
   $ cd $TESTTMP/client-push
   $ hg up -q "min(all())"
   $ mkcommit newbook_commit_first
-  $ hgmn push -r . --to newbook -q --create
+  $ hg push -r . --to newbook -q --create
 
   $ hg up -q newbook
   $ mkcommit newbook_commit_second
-  $ hgmn push -r . --to newbook -q
+  $ hg push -r . --to newbook -q
 
 Sync a pushrebase bookmark move. Note that we are using 0 start-id intentionally - sync job
 should ignore it and fetch the latest id from db

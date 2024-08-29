@@ -21,8 +21,8 @@ Small commit, one file changed
   $ hg up -q "min(all())"
   $ echo file > file
   $ hg ci -Aqm 1
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 4f751d63133d to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 4f751d63133d to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -33,8 +33,8 @@ Small commit, one file changed
 Large commit, a lot of files changed
   $ for x in $(seq 6); do echo $x > $x; done
   $ hg ci -Aqm 2
-  $ hgmn push -r . --to master_bookmark
-  pushing rev bb41d2a5d8c3 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev bb41d2a5d8c3 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:

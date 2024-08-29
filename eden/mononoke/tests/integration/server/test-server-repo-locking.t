@@ -29,7 +29,7 @@ Show it is locked
   repo                 Locked("integration test")
 
 Can still clone the repo
-  $ hg clone -q mononoke://$(mononoke_address)/repo repo
+  $ hg clone -q mono:repo repo
   $ cd repo
   $ enable infinitepush commitcloud pushrebase
   $ hg checkout -q '.^' 
@@ -47,8 +47,8 @@ Can still push to commit cloud
   edenapi: uploaded 1 changeset
 
 Cannot push to the server
-  $ hgmn push --to master
-  pushing rev 9c00c53d25b3 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master
+  $ hg push --to master
+  pushing rev 9c00c53d25b3 to destination mono:repo bookmark master
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -69,15 +69,15 @@ Unlock the repo
   repo unlocked
 
 Now we can push
-  $ hgmn push --to master
-  pushing rev 9c00c53d25b3 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master
+  $ hg push --to master
+  pushing rev 9c00c53d25b3 to destination mono:repo bookmark master
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   updating bookmark master
 
-  $ hgmn pull -q
+  $ hg pull -q
   $ tglogp
   o  1e21255e651f public 'D'
   │

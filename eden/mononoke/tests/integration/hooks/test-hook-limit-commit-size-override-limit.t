@@ -25,8 +25,8 @@ Large commit
   $ hg up -q "min(all())"
   $ for x in $(seq $(($OVERRIDE_BYTE_LIMIT))); do echo -n 1 > "${x}_b"; done
   $ hg ci -Aqm 1
-  $ hgmn push -r . --to master_bookmark
-  pushing rev f67c0f33f0f5 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev f67c0f33f0f5 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -37,8 +37,8 @@ Too large commit
   $ hg up -q "min(all())"
   $ for x in $(seq $(($OVERRIDE_BYTE_LIMIT + 1))); do echo -n 1 > "${x}_b"; done
   $ hg ci -Aqm 1
-  $ hgmn push -r . --to master_bookmark
-  pushing rev a998ef262b2a to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev a998ef262b2a to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:

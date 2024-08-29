@@ -108,19 +108,19 @@ blobimport
 start mononoke
 
   $ start_and_wait_for_mononoke_server
-  $ hgmn debugwireargs mononoke://$(mononoke_address)/disabled_repo one two --three three
+  $ hg debugwireargs mono:disabled_repo one two --three three
   remote: Requested repo "disabled_repo" does not exist or is disabled
   abort: unexpected EOL, expected netstring digit
   [255]
-  $ hgmn debugwireargs mononoke://$(mononoke_address)/repo one two --three three
+  $ hg debugwireargs mono:repo one two --three three
   one two three None None
 
   $ cd repo2
   $ hg up -q "min(all())"
 Test a pull of one specific revision
-  $ hgmn pull -r 3e19bf519e9af6c66edf28380101a92122cbea50 -q
+  $ hg pull -r 3e19bf519e9af6c66edf28380101a92122cbea50 -q
 Pull the rest
-  $ hgmn pull -q
+  $ hg pull -q
 
   $ hg log -r '3903775176ed::586ef37a04f7' --graph  -T '{node|short} {desc}'
   o  586ef37a04f7 modify file
@@ -135,7 +135,7 @@ Pull the rest
    (re)
   $ ls
   a
-  $ hgmn up 9f8e7242d9fa -q
+  $ hg up 9f8e7242d9fa -q
   $ ls
   a
   b
@@ -143,7 +143,7 @@ Pull the rest
   dir
   $ cat c
   cc
-  $ hgmn up 9f8e7242d9fa -q
+  $ hg up 9f8e7242d9fa -q
   $ hg log c -T '{node|short} {desc}\n'
   warning: file log can be slow on large repos - use -f to speed it up
   586ef37a04f7 modify file
@@ -160,7 +160,7 @@ Pull the rest
     dir/1
   R dir/1
 
-  $ hgmn up -q e635b24c95f7
+  $ hg up -q e635b24c95f7
 
 Sort the output because it may be unpredictable because of the merge
   $ hg log D --follow -T '{node|short} {desc}\n' | sort
@@ -177,7 +177,7 @@ to create a fileblob bookmark
 #  $ hg bookmarks
 #   * test-bookmark             0:3903775176ed
 #  $ cd ../repo2
-#  $ hgmn pull mononoke://$(mononoke_address)/repo
+#  $ hg pull mono:repo
 #  pulling from ssh://user@dummy/repo
 #  searching for changes
 #  no changes found
@@ -186,7 +186,7 @@ to create a fileblob bookmark
 #     test-bookmark             0:3903775176ed
 
 Do a streaming clone of the repo
-  $ hgmn clone --stream mononoke://$(mononoke_address)/repo repo-streamclone
+  $ hg clone --stream mono:repo repo-streamclone
   streaming all changes
   2 files to transfer, * bytes of data (glob)
   transferred * bytes in * seconds (* bytes/sec) (glob)

@@ -58,8 +58,8 @@ Do infinitepush (aka commit cloud) push
   $ echo new > newfile
   $ hg addremove -q
   $ hg ci -m new
-  $ hgmn push mononoke://$(mononoke_address)/repo -r . --to "scratch/123" --create
-  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg push -r . --to "scratch/123" --create
+  pushing to mono:repo
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -108,8 +108,8 @@ Commit should have been accepted
   > server=False
   > branchpattern=re:scratch/.+
   > EOF
-  $ hgmn pull -r 47da8b81097c5534f3eb7947a8764dd323cffe3d
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg pull -r 47da8b81097c5534f3eb7947a8764dd323cffe3d
+  pulling from mono:repo
   searching for changes
   adding changesets
   adding manifests

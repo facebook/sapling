@@ -41,7 +41,7 @@
 
 Ensure we can clone the repo using the commit graph segments endpoint
   $ cd $TESTTMP
-  $ sl clone "mononoke://$(mononoke_address)/repo" repo --config clone.use-rust=true --config clone.use-commit-graph=true
+  $ sl clone mono:repo repo --config clone.use-rust=true --config clone.use-commit-graph=true
   Cloning repo into $TESTTMP/repo
   Checking out 'master_bookmark'
   17 files updated
@@ -194,7 +194,7 @@ Add some new commits, move the master bookmark and do a pull
   $ sleep 1
 
   $ sl pull --config pull.use-commit-graph=true
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  pulling from mono:repo
   imported commit graph for 7 commits (3 segments)
 
   $ sl log -G -T '{node|short} {desc}'

@@ -16,22 +16,22 @@ setup configuration
 start mononoke
   $ start_and_wait_for_mononoke_server
 setup repo
-  $ hgmn_init repo
+  $ hg clone -q mono:repo repo
   $ cd repo
   $ echo "a file content" > a
   $ hg add a
   $ hg ci -ma
-  $ hgmn push -q --to master --create
+  $ hg push -q --to master --create
 
 clone from the new repo as well
   $ hg clone -q mono:repo repo-clone
 
 Push with bookmark
   $ cd repo-clone
-  $ echo withbook > withbook && hgmn addremove && hgmn ci -m withbook
+  $ echo withbook > withbook && hg addremove && hg ci -m withbook
   adding withbook
-  $ hgmn push --to withbook --create
-  pushing rev 11f53bbd855a to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark withbook
+  $ hg push --to withbook --create
+  pushing rev 11f53bbd855a to destination mono:repo bookmark withbook
   searching for changes
   exporting bookmark withbook
   $ hg book --remote

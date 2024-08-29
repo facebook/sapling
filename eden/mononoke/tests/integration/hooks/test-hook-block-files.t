@@ -44,8 +44,8 @@ Negative testing
   $ hg up -q "min(all())"
   $ echo "good" > good_file.txt
   $ hg ci -Aqm negative
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 7de92e406b02 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 7de92e406b02 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -57,8 +57,8 @@ Tricky case - this should succeed, but looks very similar to cases that should n
   $ mkdir -p test-buck-out/buck-out-test/
   $ echo "good" > test-buck-out/buck-out-test/buck-out
   $ hg ci -Aqm negative
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 94d93052245d to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 94d93052245d to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -70,8 +70,8 @@ buck-out directory is not allowed in the root
   $ mkdir -p buck-out/
   $ echo "bad" > buck-out/file
   $ hg ci -Aqm failure
-  $ hgmn push -r . --to master_bookmark
-  pushing rev f8301844633b to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev f8301844633b to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -92,8 +92,8 @@ buck-out directory is not allowed in any subdir
   $ mkdir -p dir/buck-out
   $ echo "bad" > dir/buck-out/file
   $ hg ci -Aqm failure
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 409273951981 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 409273951981 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -113,8 +113,8 @@ DO_NOT_COMMIT_THIS_FILE_OR_YOU_WILL_BE_FIRED does the needful
   $ hg up -q "min(all())"
   $ echo "bad" > important_DO_NOT_COMMIT_THIS_FILE_OR_YOU_WILL_BE_FIRED.txt
   $ hg ci -Aqm failure
-  $ hgmn push -r . --to master_bookmark
-  pushing rev d1a6e60539c6 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev d1a6e60539c6 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -135,8 +135,8 @@ Old fbmake leftovers cannot be committed
   $ mkdir -p fbcode/_bin
   $ echo "bad" > fbcode/_bin/file
   $ hg ci -Aqm failure
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 10b8f7a92bd1 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 10b8f7a92bd1 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -159,7 +159,7 @@ Cannot nest project dirs badly
   > echo fail > $path/files
   > done
   $ hg ci -Aqm failure
-  $ hgmn push -r . --to master_bookmark |& grep -P 'remote:\s+block_files for' | sort
+  $ hg push -r . --to master_bookmark |& grep -P 'remote:\s+block_files for' | sort
   remote:     block_files for 5d971d690977075710cf1270860e2ab65015eeec: Blocked filename 'fbandroid/fbandroid/files' matched name pattern '^fbandroid/fbandroid/'. Rename or remove this file and try again.
   remote:     block_files for 5d971d690977075710cf1270860e2ab65015eeec: Blocked filename 'fbandroid/fbandroid/files' matched name pattern '^fbandroid/fbandroid/'. Rename or remove this file and try again.
   remote:     block_files for 5d971d690977075710cf1270860e2ab65015eeec: Blocked filename 'fbcode/fbcode/files' matched name pattern '^fbcode/fbcode/'. Rename or remove this file and try again.
@@ -176,7 +176,7 @@ Cannot put crud in xplat
   > echo fail > $path/files
   > done
   $ hg ci -Aqm failure
-  $ hgmn push -r . --to master_bookmark |& grep -P 'remote:\s+block_files for' | sort
+  $ hg push -r . --to master_bookmark |& grep -P 'remote:\s+block_files for' | sort
   remote:     block_files for 42bbe801bb55fd1eee91d4dbb56f5a5dc3f0f0ad: Blocked filename 'xplat/fbandroid/files' matched name pattern '^xplat/fbandroid/'. Rename or remove this file and try again.
   remote:     block_files for 42bbe801bb55fd1eee91d4dbb56f5a5dc3f0f0ad: Blocked filename 'xplat/fbandroid/files' matched name pattern '^xplat/fbandroid/'. Rename or remove this file and try again.
   remote:     block_files for 42bbe801bb55fd1eee91d4dbb56f5a5dc3f0f0ad: Blocked filename 'xplat/fbcode/files' matched name pattern '^xplat/fbcode/'. Rename or remove this file and try again.
@@ -190,8 +190,8 @@ Owners files are disallowed
   $ echo 1 > good
   $ hg add good OWNERS
   $ hg ci -m 'owners'
-  $ hgmn push -r . --to master_bookmark
-  pushing rev fb86edb43149 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev fb86edb43149 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -213,8 +213,8 @@ Owners files are disallowed
   $ hg addremove
   adding owners
   $ hg ci -m 'owners'
-  $ hgmn push -r . --to master_bookmark
-  pushing rev a2511fd15afb to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev a2511fd15afb to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -237,8 +237,8 @@ Owners files are disallowed
   $ hg addremove
   adding dir/owners
   $ hg ci -m 'owners'
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 8d6b816aa4f3 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 8d6b816aa4f3 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -263,8 +263,8 @@ But file with owners inside is fine
   $ echo 1 > myowners
   $ hg -q addremove
   $ hg ci -m 'owners'
-  $ hgmn push -r . --to master_bookmark
-  pushing rev c5cf7687c442 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev c5cf7687c442 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -277,8 +277,8 @@ Cannot commit .git stuff into the repo
   $ echo > dir/.git/HEAD
   $ hg -q addremove
   $ hg ci -m 'git'
-  $ hgmn push -r . --to master_bookmark
-  pushing rev ad3e5bd3f2e3 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev ad3e5bd3f2e3 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -300,8 +300,8 @@ Cannot commit .git stuff into the repo root
   $ echo > .git/HEAD
   $ hg -q addremove
   $ hg ci -m 'git'
-  $ hgmn push -r . --to master_bookmark
-  pushing rev cba7ce32b8b5 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev cba7ce32b8b5 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -323,8 +323,8 @@ Something.git is ok
   $ echo 1 > dir.git/woot
   $ hg -q addremove
   $ hg ci -m 'ok'
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 6e5252e4e930 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 6e5252e4e930 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -337,8 +337,8 @@ The dot in the [.]git hook pattern isn't a wildcard that matches any character
   $ echo 1 > ogit/woot
   $ hg -q addremove
   $ hg ci -m 'ok'
-  $ hgmn push -r . --to master_bookmark
-  pushing rev d47a144a1dc1 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev d47a144a1dc1 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -356,8 +356,8 @@ The dot in the [.]git hook pattern isn't a wildcard that matches any character
   $ echo "{}" > dir/not.watchmanconfig
   $ echo "{}" > not.watchmanconfig
   $ hg ci -Aqm ok
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 42d8ce9969fa to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 42d8ce9969fa to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -369,8 +369,8 @@ The dot in the [.]git hook pattern isn't a wildcard that matches any character
   $ mkdir -p dir
   $ echo "{}" > dir/.watchmanconfig
   $ hg ci -Aqm failure
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 95659407febd to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 95659407febd to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -391,14 +391,14 @@ Check that can delete a file, which we cannot add
   $ hg up -q "min(all())"
   $ echo 1 > OWNERS
   $ hg ci -qAm "add OWNERS @bypass_block_files"
-  $ hgmn push -r . --to master_bookmark 2>&1 | grep updating
+  $ hg push -r . --to master_bookmark 2>&1 | grep updating
   updating bookmark master_bookmark
 
 - now delete it without a bypass
-  $ hgmn up -q default/master_bookmark
+  $ hg up -q default/master_bookmark
   $ hg rm OWNERS
   $ hg ci -qm "delete owners"
-  $ hgmn push -r . --to master_bookmark 2>&1 | grep updating
+  $ hg push -r . --to master_bookmark 2>&1 | grep updating
   updating bookmark master_bookmark
 
 Pushing to experimental directories should not work
@@ -406,8 +406,8 @@ Pushing to experimental directories should not work
   $ mkdir -p fbcode/experimental/this_is_a_test
   $ echo "test" > fbcode/experimental/this_is_a_test/file
   $ hg ci -Aqm experimental
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 164dce8b98ef to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 164dce8b98ef to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -429,15 +429,15 @@ Deleting from experimental directories should still be allowed
   $ mkdir -p fbcode/experimental/this_is_a_test
   $ echo "test" > fbcode/experimental/this_is_a_test/file
   $ hg ci -Aqm experimental
-  $ hgmn push -r . --to master_bookmark --pushvar "TEST_BYPASS=true" 2>&1 | grep updating
+  $ hg push -r . --to master_bookmark --pushvar "TEST_BYPASS=true" 2>&1 | grep updating
   updating bookmark master_bookmark
 
 - now delete it without a bypass
-  $ hgmn up -q default/master_bookmark
+  $ hg up -q default/master_bookmark
   $ hg rm fbcode/experimental/this_is_a_test/file
   $ hg ci -qm "delete this_is_a_test"
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 8592809d2854 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 8592809d2854 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests

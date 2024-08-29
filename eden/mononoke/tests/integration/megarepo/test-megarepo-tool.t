@@ -128,7 +128,7 @@ start mononoke server
   $ start_and_wait_for_mononoke_server
 pull the result
   $ cd $TESTTMP/repo-pull
-  $ hgmn -q pull && hgmn -q up master
+  $ hg -q pull && hg -q up master
   $ ls -1
   arvr
   arvr-legacy

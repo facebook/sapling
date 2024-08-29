@@ -25,10 +25,10 @@ Push a merge from a large repo
   $ hg addremove -q
   $ hg ci -m "newrepo"
   $ NODE="$(hg log -r . -T '{node}')"
-  $ REPONAME=large-mon hgmn up -q master_bookmark^
+  $ hg up -q master_bookmark^
   $ hg merge -r "$NODE" -q
   $ hg ci -m 'merge commit from large repo'
-  $ REPONAME=large-mon hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
 Push a merge that will not add any new files to the small repo
   $ hg up null
@@ -38,10 +38,10 @@ Push a merge that will not add any new files to the small repo
   $ hg addremove -q
   $ hg ci -m "second newrepo"
   $ NODE="$(hg log -r . -T '{node}')"
-  $ REPONAME=large-mon hgmn up -q master_bookmark
+  $ hg up -q master_bookmark
   $ hg merge -r "$NODE" -q
   $ hg ci -m 'merge commit no new files'
-  $ REPONAME=large-mon hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
 Backsync to a small repo
   $ backsync_large_to_small 2>&1 | grep "syncing bookmark"
@@ -52,7 +52,7 @@ Backsync to a small repo
 Pull from a small repo. Check that both merges are synced
 although the second one became non-merge commit
   $ cd "$TESTTMP/small-hg-client"
-  $ REPONAME=small-mon hgmn pull -q
+  $ hg pull -q
   $ log -r :
   o  merge commit no new files [public;rev=4;534a740cd266] default/master_bookmark
   │
@@ -64,8 +64,8 @@ although the second one became non-merge commit
   │
   o  pre-move commit [public;rev=0;fc7ae591de0e]
   $
-  $ REPONAME=small-mon hgmn up -q master_bookmark
-  $ REPONAME=small-mon hgmn show master_bookmark
+  $ hg up -q master_bookmark
+  $ hg show master_bookmark
   commit:      534a740cd266
   bookmark:    default/master_bookmark
   hoistedname: master_bookmark

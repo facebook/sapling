@@ -38,17 +38,17 @@ setup config
 set up the local repo
   $ hg clone -q mono:repo local
   $ cd local
-  $ hgmn pull
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg pull
+  pulling from mono:repo
   connected to * (glob)
   searching for changes
   no changes found
   adding changesets
   adding manifests
   adding file changes
-  $ hgmn pull -q
-  $ hgmn pull --config clienttelemetry.announceremotehostname=False
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg pull -q
+  $ hg pull --config clienttelemetry.announceremotehostname=False
+  pulling from mono:repo
   searching for changes
   no changes found
   adding changesets

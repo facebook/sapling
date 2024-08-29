@@ -49,8 +49,8 @@ Make client repo
   $ yes A 2>/dev/null | head -c 40 > long
   $ yes B 2>/dev/null | head -c 40 > long2
   $ hg commit -Aqm "add large files"
-  $ hgmn push -r . --to master_bookmark -v
-  pushing rev 2b6ce7b50f34 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark -v
+  pushing rev 2b6ce7b50f34 to destination mono:repo bookmark master_bookmark
   searching for changes
   validated revset for rebase
   1 changesets found

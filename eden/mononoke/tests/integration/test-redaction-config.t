@@ -71,15 +71,15 @@ start mononoke
 
   $ cd ../repo-push
 
-  $ hgmn up -q 0
+  $ hg up -q 0
   $ echo b > b
   $ hg ci -A -q -m "add b"
 
-  $ hgmn push -q -r .  --to master_bookmark
+  $ hg push -q -r .  --to master_bookmark
 
   $ cd "$TESTTMP/repo-pull"
-  $ hgmn pull -q
-  $ hgmn up -q 14961831bd3a
+  $ hg pull -q
+  $ hg up -q 14961831bd3a
 
 Redact file 'c' in commit '7389ca6413976090442f3003d4329990bc688ef7'
   $ mononoke_newadmin redaction create-key-list -R repo -i 7389ca6413976090442f3003d4329990bc688ef7 c --main-bookmark master_bookmark --output-file rs_0
@@ -140,8 +140,8 @@ Restart mononoke
   $ cd "$TESTTMP/repo-pull2"
 # Don't share caches.
   $ setconfig remotefilelog.cachepath="$(pwd)/.hg/cache"
-  $ hgmn pull -q
-  $ hgmn up -q 14961831bd3a
+  $ hg pull -q
+  $ hg up -q 14961831bd3a
 
 Should gives us the tombstone file since it is redacted
   $ cat b
@@ -168,8 +168,8 @@ Restart mononoke and disable redaction verification
   $ cd "$TESTTMP/repo-pull3"
 # Don't share caches.
   $ setconfig remotefilelog.cachepath="$(pwd)/.hg/cache"
-  $ hgmn pull -q
-  $ hgmn up -q 14961831bd3a
+  $ hg pull -q
+  $ hg up -q 14961831bd3a
 
 Even is file b is redacted, we will get its content
   $ cat b

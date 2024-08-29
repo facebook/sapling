@@ -41,10 +41,10 @@ Create new commits
   $ echo "regular file" > small
   $ yes A 2>/dev/null | head -c 200 > large
   $ hg commit -Aqm "add files"
-  $ hgmn push --debug --to master_bookmark
+  $ hg push --debug --to master_bookmark
   sending hello command
   sending clienttelemetry command
-  pushing rev 48d4d2fa17e5 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  pushing rev 48d4d2fa17e5 to destination mono:repo bookmark master_bookmark
   query 1; heads
   sending batch command
   searching for changes
@@ -76,7 +76,7 @@ Clone the repository, and pull
   $ hg clone -q mono:repo hg-client
   $ cd hg-client
   $ setup_hg_modern_lfs "$lfs_uri" 10B "$TESTTMP/lfs-cache"
-  $ hgmn pull -q
-  $ hgmn up -q master_bookmark
+  $ hg pull -q
+  $ hg up -q master_bookmark
   $ sha256sum large
   f9f7889fcedc8580403673810e2be90e35980f10234f80d08a6497bbda16a245  large

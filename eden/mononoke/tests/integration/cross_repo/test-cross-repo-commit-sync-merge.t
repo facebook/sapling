@@ -90,10 +90,10 @@ run the sync again
 
 check that the changes are synced
   $ cd $TESTTMP/meg-hg-cnt
-  $ REPONAME=meg-mon hgmn -q pull
-  $ REPONAME=meg-mon hgmn -q status --change master_bookmark 2>/dev/null
+  $ hg -q pull
+  $ hg -q status --change master_bookmark 2>/dev/null
   A .fbsource-rest/arvr/tomerge
-  $ REPONAME=meg-mon hgmn status --change 4523b8346e49
+  $ hg status --change 4523b8346e49
   A .fbsource-rest/arvr/tomerge
   $ hg log -G
   o    commit:      9c3b218de12e

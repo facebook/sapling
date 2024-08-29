@@ -57,8 +57,8 @@ Clone the repo
 Pushrebase commit 1
   $ hg up -q "min(all())"
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
-  $ hgmn push -r . --to master_bookmark
-  pushing rev a0c9c5791058 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev a0c9c5791058 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -67,4 +67,4 @@ Pushrebase commit 1
 
 Remove all filenodes, make sure that update still works fine
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "DELETE FROM filenodes where repo_id >= 0";
-  $ hgmn up -q master_bookmark
+  $ hg up -q master_bookmark

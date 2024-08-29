@@ -25,18 +25,18 @@ Setup repository
   > EOF
 
   $ cd "$TESTTMP/repo2"
-  $ hgmn pull -q
+  $ hg pull -q
   $ hg log -r "master_bookmark" -T '{desc}\n'
   C
 
-  $ hgmn up -q 0
+  $ hg up -q 0
   $ echo a >> anotherfile
   $ hg add anotherfile
   $ hg ci -m 'new commit'
   $ hg log -r master_bookmark -T '{node}\n'
   26805aba1e600a82e93661149f2313866a221a7b
-  $ hgmn push -r . --to master_bookmark
-  pushing rev b1673e56df82 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev b1673e56df82 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -49,6 +49,6 @@ Setup repository
   $ grep "Fetching bookmarks from Warm bookmarks cache" "$SCUBA_LOGGING_PATH" | wc -l
   3
 
-  $ hgmn pull -q
+  $ hg pull -q
   $ grep "Fetching bookmarks from Warm bookmarks cache" "$SCUBA_LOGGING_PATH" | wc -l
   4

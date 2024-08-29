@@ -16,13 +16,13 @@ setup configuration
 setup repo
   $ start_and_wait_for_mononoke_server
   $ cd $TESTTMP
-  $ hgmn_init repo
+  $ hg clone -q mono:repo repo
   $ cd repo
   $ echo B > B
   $ hg add B
   $ hg ci -m 'B'
-  $ hgmn push -r . --to master_bookmark --create
-  pushing rev c0e1f5917744 to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark --create
+  pushing rev c0e1f5917744 to destination mono:repo bookmark master_bookmark
   searching for changes
   exporting bookmark master_bookmark
 

@@ -46,15 +46,15 @@ start mononoke
 
 Prefetch should fail with corruption error
   $ cd $TESTTMP/repo-client
-  $ hgmn pull --config ui.disable-stream-clone=true
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg pull --config ui.disable-stream-clone=true
+  pulling from mono:repo
   warning: stream clone is disabled
   requesting all changes
   adding changesets
   adding manifests
   adding file changes
 
-  $ hgmn prefetch -r ":"
+  $ hg prefetch -r ":"
   remote: Command failed
   remote:   Error:
   remote:     Corrupt hg filenode returned: 005d992c5dcf32993668f7cede29d296c494a5d9 != a2e456504a5e61f763f1a0b36a6c247c7541b2b3

@@ -51,31 +51,31 @@ Push to Mononoke
 Two pushes synced one after another
   $ hg up -q master_bookmark
   $ mkcommit commit_1
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
   $ hg up -q master_bookmark
   $ mkcommit commit_2
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
   $ hg up -q master_bookmark
   $ mkcommit commit_3
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
   $ hg up -q master_bookmark
   $ mkcommit commit_4
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
   $ hg up -q master_bookmark
   $ mkcommit commit_5
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
   $ hg up -q master_bookmark
   $ mkcommit commit_6
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
   $ hg up -q master_bookmark
   $ mkcommit commit_7
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 Sync it to another client
   $ cd $TESTTMP/repo
   $ enable_replay_verification_hook

@@ -24,7 +24,7 @@ Pushrebase commit 1
   $ hg up -q "min(all())"
   $ mkdir dir
   $ echo 1 > dir/1 && hg addremove -q && hg ci -m 1
-  $ hgmn push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
 Check that filenodes exist
   $ mononoke_admin filenodes validate master_bookmark &> /dev/null

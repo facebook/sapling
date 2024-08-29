@@ -179,7 +179,7 @@ The eden api version performs a remote lookup with the `--remote` option only
 Try pull an uploaded commit from another client
   $ cd client2
   $ sl pull -r 65289540f44d80cecffca8a3fd655c0ca6243cd9
-  pulling from mononoke://$LOCALIP:*/repo (glob)
+  pulling from mono:repo
   searching for changes
   adding changesets
   adding manifests
@@ -227,7 +227,7 @@ Also, check that upload will not reupload file contents again.
 
   $ cd client2
   $ sl pull -r a8c7c28d0391c5948f0a40f43e8b16d7172289cf
-  pulling from mononoke://$LOCALIP:*/repo (glob)
+  pulling from mono:repo
   searching for changes
   adding changesets
   adding manifests
@@ -297,7 +297,7 @@ Back to client1 and sync.
   $ sl cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: nothing to upload
-  pulling 32551ca74417 from mononoke://$LOCALIP:*/repo (glob)
+  pulling 32551ca74417 from mono:repo
   searching for changes
   fetching revlog data for 3 commits
   commitcloud: commits synchronized

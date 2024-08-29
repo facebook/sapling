@@ -33,7 +33,7 @@
 Normal pushrebase to the small repo with one commit succeeds, and does not get
 blocked by deny_files
   $ cd "$TESTTMP/small-hg-client"
-  $ REPONAME=small-mon hgmn up -q master_bookmark
+  $ hg up -q master_bookmark
   $ echo 2 > 2 && hg addremove -q && hg ci -q -m newcommit
   $ REPONAME=small-mon sl push -r . --to master_bookmark 2>&1 | grep "updated remote bookmark"
   updated remote bookmark master_bookmark to ce81c7d38286
@@ -49,7 +49,7 @@ blocked by deny_files
   @  first post-move commit [public;rev=2;bfcfb674663c] default/master_bookmark
   │
   ~
-  $ REPONAME=large-mon hgmn pull -q
+  $ hg pull -q
   $ log -r master_bookmark
   o  newcommit [public;rev=3;819e91b238b7] default/master_bookmark
   │
@@ -61,7 +61,7 @@ Pushing to the small repo triggers deny_files, even though deny_files is only co
 Note that the node is from the small repo, even though the hook is in the large repo
 
   $ cd "$TESTTMP"/small-hg-client
-  $ REPONAME=small-mon hgmn up -q master_bookmark
+  $ hg up -q master_bookmark
   $ mkdir -p f/.git
   $ echo 2 > f/.git/HEAD && hg addremove -q && hg ci -q -m .git
   $ hg log -T"small_node: {node}\n" -r .

@@ -46,8 +46,8 @@ update master_bookmark concurrently.
   $ echo "b file content" > b
   $ hg add b
   $ hg ci -mb
-  $ hgmn push mononoke://$(mononoke_address)/repo -r . --allow-anon
-  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg push -r . --allow-anon
+  pushing to mono:repo
   searching for changes
   $ echo "c file content" > c
   $ hg add c
@@ -67,7 +67,7 @@ configure an extension so that a push happens right after pulldiscovery
   >     orig(pullop)
   >     pullop.repo.ui.write("*** running push\n")
   >     pullop.repo.ui.system(
-  >         "bash -c 'source \"${TEST_FIXTURES}/library.sh\"; hgmn push -R $TESTTMP/repo-push --allow-anon'",
+  >         "bash -c 'source \"${TEST_FIXTURES}/library.sh\"; hg push -R $TESTTMP/repo-push --allow-anon'",
   >         onerr=lambda str: Exception(str),
   >     )
   >     pullop.repo.ui.write("*** push complete\n")
@@ -75,12 +75,12 @@ configure an extension so that a push happens right after pulldiscovery
   >     extensions.wrapfunction(exchange, '_pulldiscovery', wrappulldiscovery)
   > EOF
 
-  $ hgmn pull --config extensions.pulldiscovery_push=$TESTTMP/pulldiscovery_push.py
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg pull --config extensions.pulldiscovery_push=$TESTTMP/pulldiscovery_push.py
+  pulling from mono:repo
   *** starting discovery
   searching for changes
   *** running push
-  pushing to mononoke://$LOCALIP:$LOCAL_PORT/repo
+  pushing to mono:repo
   searching for changes
   *** push complete
   no changes found
@@ -94,8 +94,8 @@ configure an extension so that a push happens right after pulldiscovery
 
 pull again to ensure the new version makes it into repo-pull
 
-  $ hgmn pull
-  pulling from mononoke://$LOCALIP:$LOCAL_PORT/repo
+  $ hg pull
+  pulling from mono:repo
   searching for changes
   no changes found
   adding changesets

@@ -9,7 +9,7 @@
   $ export CAS_STORE_PATH="$TESTTMP"
 
   $ start_and_wait_for_mononoke_server
-  $ hgmn_init repo
+  $ hg clone -q mono:repo repo
   $ cd repo
   $ drawdag << EOS
   > D # D/bar = zero\nuno\ntwo\n

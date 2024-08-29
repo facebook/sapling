@@ -20,18 +20,18 @@
 
 Creating a merge commit
   $ cd "$TESTTMP/repo2"
-  $ hgmn up -q null
+  $ hg up -q null
   $ echo 1 > tomerge
   $ hg -q addremove
   $ hg ci -m 'tomerge'
   $ NODE="$(hg log -r . -T '{node}')"
-  $ hgmn up -q master_bookmark
-  $ hgmn merge -q -r "$NODE"
+  $ hg up -q master_bookmark
+  $ hg merge -q -r "$NODE"
   $ hg ci -m 'merge'
 
 Pushing a merge
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 7d332475050d to destination mononoke://$LOCALIP:$LOCAL_PORT/repo bookmark master_bookmark
+  $ hg push -r . --to master_bookmark
+  pushing rev 7d332475050d to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
