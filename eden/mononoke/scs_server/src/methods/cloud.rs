@@ -11,6 +11,7 @@ use mononoke_api_hg::RepoContextHgExt;
 use crate::errors;
 use crate::errors::invalid_request;
 use crate::errors::ServiceError;
+use crate::into_response::IntoResponse;
 use crate::methods::thrift;
 use crate::source_control_impl::SourceControlServiceImpl;
 
@@ -28,20 +29,7 @@ impl SourceControlServiceImpl {
             .map_err(errors::invalid_request)?;
 
         Ok(thrift::CloudWorkspaceInfoResponse {
-            workspace_info: thrift::WorkspaceInfo {
-                specifier: thrift::WorkspaceSpecifier {
-                    name: info.name,
-                    repo: thrift::RepoSpecifier {
-                        name: info.reponame,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                is_archived: info.archived,
-                latest_version: info.version as i64,
-                latest_timestamp: info.timestamp,
-                ..Default::default()
-            },
+            workspace_info: info.into_response(),
             ..Default::default()
         })
     }

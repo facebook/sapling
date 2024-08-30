@@ -26,7 +26,6 @@ use edenapi_types::SmartlogData;
 use edenapi_types::SmartlogNode;
 use edenapi_types::UpdateArchiveParams;
 use edenapi_types::UpdateReferencesParams;
-use edenapi_types::WorkspaceData;
 use futures::TryStreamExt;
 use futures_util::future::try_join_all;
 use mercurial_types::HgChangesetId;
@@ -34,6 +33,7 @@ use mononoke_api::ChangesetContext;
 use mononoke_api::ChangesetSpecifier;
 use mononoke_api::MononokeError;
 use mononoke_api::MononokeRepo;
+use mononoke_types::commit_cloud::WorkspaceData;
 use phases::PhasesRef;
 
 use crate::HgRepoContext;

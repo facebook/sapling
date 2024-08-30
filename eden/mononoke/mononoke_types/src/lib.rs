@@ -12,6 +12,7 @@ pub mod basename_suffix_skeleton_manifest_v3;
 pub mod blame_v2;
 pub mod blob;
 pub mod bonsai_changeset;
+pub mod commit_cloud;
 pub mod content_chunk;
 pub mod content_metadata_v2;
 pub mod datetime;

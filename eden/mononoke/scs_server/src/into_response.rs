@@ -35,6 +35,7 @@ use mononoke_api::TreeEntry;
 use mononoke_api::TreeId;
 use mononoke_api::TreeSummary;
 use mononoke_api::UnifiedDiff;
+use mononoke_types::commit_cloud::WorkspaceData;
 use source_control as thrift;
 
 use crate::commit_id::map_commit_identities;
@@ -274,6 +275,25 @@ impl IntoResponse<thrift::Diff> for HeaderlessUnifiedDiff {
             is_binary: self.is_binary,
             ..Default::default()
         })
+    }
+}
+
+impl IntoResponse<thrift::WorkspaceInfo> for WorkspaceData {
+    fn into_response(self) -> thrift::WorkspaceInfo {
+        thrift::WorkspaceInfo {
+            specifier: thrift::WorkspaceSpecifier {
+                name: self.name,
+                repo: thrift::RepoSpecifier {
+                    name: self.reponame,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            is_archived: self.archived,
+            latest_version: self.version as i64,
+            latest_timestamp: self.timestamp,
+            ..Default::default()
+        }
     }
 }
 

@@ -23,6 +23,7 @@ use edenapi_types::SmartlogDataResponse;
 use edenapi_types::UpdateArchiveParams;
 use edenapi_types::UpdateArchiveResponse;
 use edenapi_types::UpdateReferencesParams;
+use edenapi_types::WorkspaceData;
 use edenapi_types::WorkspaceDataResponse;
 use edenapi_types::WorkspacesDataResponse;
 use futures::stream;
@@ -31,6 +32,7 @@ use futures::StreamExt;
 use mononoke_api::MononokeRepo;
 use mononoke_api::Repo;
 use mononoke_api_hg::HgRepoContext;
+use mononoke_types::commit_cloud::WorkspaceData as CCWorkspaceData;
 
 use super::handler::SaplingRemoteApiContext;
 use super::HandlerResult;
@@ -75,6 +77,7 @@ async fn get_workspace<R: MononokeRepo>(
         data: repo
             .cloud_workspace(&request.workspace, &request.reponame)
             .await
+            .map(cast_workspace_data)
             .map_err(ServerError::from),
     })
 }
@@ -106,6 +109,7 @@ async fn get_workspaces<R: MononokeRepo>(
         data: repo
             .cloud_workspaces(&request.prefix, &request.reponame)
             .await
+            .map(|workspaces| workspaces.into_iter().map(cast_workspace_data).collect())
             .map_err(ServerError::from),
     })
 }
@@ -356,4 +360,14 @@ async fn historical_versions<R: MononokeRepo>(
             .await
             .map_err(ServerError::from),
     })
+}
+
+fn cast_workspace_data(data: CCWorkspaceData) -> WorkspaceData {
+    WorkspaceData {
+        name: data.name,
+        reponame: data.reponame,
+        version: data.version,
+        archived: data.archived,
+        timestamp: data.timestamp,
+    }
 }

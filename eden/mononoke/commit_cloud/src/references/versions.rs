@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use edenapi_types::WorkspaceData;
+use mononoke_types::commit_cloud::WorkspaceData;
 use mononoke_types::Timestamp;
 
 use crate::sql::versions_ops::get_version_by_prefix;
