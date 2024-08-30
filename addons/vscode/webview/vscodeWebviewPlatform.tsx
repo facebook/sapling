@@ -12,11 +12,9 @@ import type {Comparison} from 'shared/Comparison';
 import type {Json} from 'shared/typeUtils';
 
 import {Internal} from './Internal';
-import {logger} from 'isl/src/logger';
 import {browserPlatformImpl} from 'isl/src/platform/browerPlatformImpl';
 import {registerCleanup} from 'isl/src/utils';
 import {lazy} from 'react';
-import {tryJsonParse} from 'shared/utils';
 
 const VSCodeSettings = lazy(() => import('./VSCodeSettings'));
 const AddMoreCwdsHint = lazy(() => import('./AddMoreCwdsHint'));
@@ -27,56 +25,7 @@ declare global {
   }
 }
 
-/**
- * Previously, persisted storage was backed by localStorage.
- * This is unreliable in vscode. Instead, we use extension storage.
- * If you previously used localStorage, let's load from there
- * initially, then clear localStorage to migrate.
- *
- * After this has rolled out to everyone, it's safe to delete this.
- */
-function tryGetStateFromLocalStorage(): Record<string, Json> | undefined {
-  const state: Record<string, Json> = {};
-  try {
-    const found = {...localStorage};
-    for (const key in found) {
-      state[key] = tryJsonParse(found[key] as string) ?? null;
-    }
-    if (localStorage.length > 0) {
-      // If we found localStorage, save it as persisted storage instead, then clear localStorage.
-      // We do this in a timeout because the clientToServerAPI is not initialized statically when this is run.
-      persistStateAsSoonAsPossible();
-      logger.info(
-        'Found initial state in localStorage. Saving to extension storage instead; clearing localStorage.',
-      );
-      localStorage.clear();
-    }
-    return state;
-  } catch (e) {
-    return undefined;
-  }
-}
-
-const persistedState: Record<string, Json> =
-  window.islInitialPersistedState ?? tryGetStateFromLocalStorage() ?? {};
-
-function persistStateAsSoonAsPossible() {
-  let tries = 20;
-  const persist = () => {
-    if (window.clientToServerAPI == null) {
-      if (tries-- > 0) {
-        setTimeout(persist, 100);
-      }
-      return;
-    }
-    window.clientToServerAPI?.postMessage({
-      type: 'platform/setPersistedState',
-      data: JSON.stringify(persistedState),
-    });
-    logger.info('Saved persisted state to extension storage');
-  };
-  setTimeout(persist, 10);
-}
+const persistedState: Record<string, Json> = window.islInitialPersistedState ?? {};
 
 export const vscodeWebviewPlatform: Platform = {
   platformName: 'vscode',
