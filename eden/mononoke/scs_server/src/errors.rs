@@ -308,6 +308,7 @@ impl_into_thrift_error!(service::RepoUploadPackfileBaseItemExn);
 impl_into_thrift_error!(service::CreateGitTreeExn);
 impl_into_thrift_error!(service::CreateGitTagExn);
 impl_into_thrift_error!(service::CloudWorkspaceInfoExn);
+impl_into_thrift_error!(service::CloudUserWorkspacesExn);
 
 pub(crate) fn invalid_request(reason: impl ToString) -> thrift::RequestError {
     thrift::RequestError {

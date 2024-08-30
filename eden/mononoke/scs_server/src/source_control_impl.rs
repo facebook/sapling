@@ -1152,5 +1152,9 @@ impl SourceControlService for SourceControlServiceThriftImpl {
         async fn cloud_workspace_info(
             params: thrift::CloudWorkspaceInfoParams,
         ) -> Result<thrift::CloudWorkspaceInfoResponse, service::CloudWorkspaceInfoExn>;
+
+        async fn cloud_user_workspaces(
+            params: thrift::CloudUserWorkspacesParams,
+        ) -> Result<thrift::CloudUserWorkspacesResponse, service::CloudUserWorkspacesExn>;
     }
 }

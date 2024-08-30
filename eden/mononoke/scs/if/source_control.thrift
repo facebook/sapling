@@ -2178,6 +2178,18 @@ struct CloudWorkspaceInfoResponse {
   1: WorkspaceInfo workspace_info;
 }
 
+struct CloudUserWorkspacesParams {
+  /// Repo the workspace is associated with
+  1: RepoSpecifier repo;
+  /// User unixname whose workspace list is being queried
+  2: string user;
+}
+
+struct CloudUserWorkspacesResponse {
+  /// Workspaces associated with a certain user in a speific repo
+  1: list<WorkspaceInfo> workspaces;
+}
+
 /// Exceptions
 
 enum RequestErrorKind {
@@ -2934,9 +2946,18 @@ service SourceControlService extends fb303_core.BaseService {
   /// Commit Cloud Methods
   /// ==================
 
-  /// Get heads, bookmarks, remote bookmarks and other relevant info of a commit cloud workspace
+  /// Get general info of a commit cloud workspace
   CloudWorkspaceInfoResponse cloud_workspace_info(
     1: CloudWorkspaceInfoParams params,
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
+
+  /// Get general info about all the workspaces associated with a user
+  CloudUserWorkspacesResponse cloud_user_workspaces(
+    1: CloudUserWorkspacesParams params,
   ) throws (
     1: RequestError request_error,
     2: InternalError internal_error,

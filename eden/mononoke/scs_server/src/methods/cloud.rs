@@ -9,6 +9,8 @@ use context::CoreContext;
 use mononoke_api_hg::RepoContextHgExt;
 
 use crate::errors;
+use crate::errors::invalid_request;
+use crate::errors::ServiceError;
 use crate::methods::thrift;
 use crate::source_control_impl::SourceControlServiceImpl;
 
@@ -42,5 +44,15 @@ impl SourceControlServiceImpl {
             },
             ..Default::default()
         })
+    }
+
+    pub async fn cloud_user_workspaces(
+        &self,
+        _ctx: CoreContext,
+        _params: thrift::CloudUserWorkspacesParams,
+    ) -> Result<thrift::CloudUserWorkspacesResponse, errors::ServiceError> {
+        Err(ServiceError::Request(invalid_request(
+            "'cloud_user_workspaces' is not implemented yet'".to_string(),
+        )))
     }
 }

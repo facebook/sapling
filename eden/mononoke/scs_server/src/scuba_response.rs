@@ -161,6 +161,8 @@ impl AddScubaResponse for thrift::MegarepoReadConfigResponse {}
 
 impl AddScubaResponse for thrift::CloudWorkspaceInfoResponse {}
 
+impl AddScubaResponse for thrift::CloudUserWorkspacesResponse {}
+
 // Helper fn to report PollResponse types
 fn report_maybe_result<R: AddScubaResponse>(
     maybe_result: &Option<R>,
