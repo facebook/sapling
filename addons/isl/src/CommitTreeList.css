@@ -100,6 +100,10 @@
   opacity: 0.5;
 }
 
+.commit.irrelevant .commit-title {
+  opacity: 0.5;
+}
+
 .commit-rows {
   display: flex;
   flex-direction: row;

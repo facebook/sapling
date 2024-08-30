@@ -37,6 +37,7 @@ import {FoldButton, useRunFoldPreview} from './fold';
 import {findPublicBaseAncestor} from './getCommitTree';
 import {t, T} from './i18n';
 import {IconStack} from './icons/IconStack';
+import {IrrelevantCwdIcon} from './icons/IrrelevantCwdIcon';
 import {atomFamilyWeak, readAtom, writeAtom} from './jotaiUtils';
 import {CONFLICT_SIDE_LABELS} from './mergeConflicts/state';
 import {getAmendToOperation, isAmendToAllowedForCommit} from './operationUtils';
@@ -51,6 +52,7 @@ import {
 import platform from './platform';
 import {CommitPreview, dagWithPreviews, uncommittedChangesWithPreviews} from './previews';
 import {RelativeDate, relativeDate} from './relativeDate';
+import {repoRelativeCwd, useIsIrrelevantToCwd} from './repositoryData';
 import {isNarrowCommitTree} from './responsive';
 import {selectedCommits, useCommitCallbacks} from './selection';
 import {inMergeConflicts, mergeConflicts} from './serverAPIState';
@@ -120,6 +122,8 @@ export const Commit = memo(
   }) => {
     const isPublic = commit.phase === 'public';
     const isObsoleted = commit.successorInfo != null;
+
+    const isIrrelevantToCwd = useIsIrrelevantToCwd(commit);
 
     const handlePreviewedOperation = useRunPreviewedOperation();
     const runOperation = useRunOperation();
@@ -376,7 +380,8 @@ export const Commit = memo(
         className={
           'commit' +
           (commit.isDot ? ' head-commit' : '') +
-          (commit.successorInfo != null ? ' obsolete' : '')
+          (commit.successorInfo != null ? ' obsolete' : '') +
+          (isIrrelevantToCwd ? ' irrelevant' : '')
         }
         onContextMenu={contextMenu}
         data-testid={`commit-${commit.hash}`}>
@@ -387,6 +392,21 @@ export const Commit = memo(
             }
             commit={commit}
             previewType={previewType}>
+            {!isPublic && isIrrelevantToCwd && (
+              <Tooltip
+                title={
+                  <T
+                    replace={{
+                      $prefix: <pre>{commit.maxCommonPathPrefix}</pre>,
+                      $cwd: <pre>{readAtom(repoRelativeCwd)}</pre>,
+                    }}>
+                    This commit only contains files within: $prefix These are irrelevant to your
+                    current working directory: $cwd
+                  </T>
+                }>
+                <IrrelevantCwdIcon />
+              </Tooltip>
+            )}
             {isPublic ? null : (
               <span className="commit-title">
                 {commitLabel && <CommitLabel>{commitLabel}</CommitLabel>}
