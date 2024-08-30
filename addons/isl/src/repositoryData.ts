@@ -5,11 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {RepoInfo} from './types';
+import type {CommitInfo, RepoInfo, RepoRelativePath} from './types';
 
 import {atomResetOnDepChange} from './jotaiUtils';
 import {initialParams} from './urlParams';
-import {atom} from 'jotai';
+import {atom, useAtomValue} from 'jotai';
 
 export const repositoryData = atom<{info?: RepoInfo; cwd?: string}>({});
 
@@ -26,6 +26,40 @@ const repoRoot = atom(get => {
   const data = get(repositoryData);
   return data.info?.type === 'success' ? data.info.repoRoot : '';
 });
+
+export const repoRelativeCwd = atom<RepoRelativePath>(get => {
+  const cwd = get(serverCwd);
+  const root = get(repoRoot);
+  return cwd.startsWith(root) ? cwd.slice(root.length + 1) + '/' : cwd;
+});
+
+/**
+ * Returns true if the commit is irrelevant to the current cwd,
+ * due to it modifying only files in folders that are not under the cwd.
+ * If the max prefix is "inside" the cwd, it is NOT irrelevant.
+ *   > if the max prefix is `addons/isl` and the cwd is `addons`, it is NOT irrelevant.
+ * If the max prefix is "above" the cwd, it is NOT irrelevant.
+ *   > if the max prefix is `addons` and the cwd is `addons/isl`, it is NOT irrelevant.
+ * Only if the max prefix contains portions that do not match the cwd is it irrelevant.
+ *   > if the max prefix is `addons/isl` and the cwd is `www`, it IS irrelevant.
+ * Thus, if the cwd is the repo root, it is never irrelevant.
+ *
+ * If a commit has only irrelevant files, but then a relevant file is added, the commit
+ * is guaranteed to become relevant, since the common portion of the paths will
+ * be a prefix of the relevant file.
+ */
+export const useIsIrrelevantToCwd = (commit: CommitInfo) => {
+  const cwd = useAtomValue(repoRelativeCwd);
+  return isIrrelevantToCwd(commit, cwd);
+};
+
+function isIrrelevantToCwd(commit: CommitInfo, repoRelativeCwd: RepoRelativePath): boolean {
+  return (
+    !commit.maxCommonPathPrefix.startsWith(repoRelativeCwd) &&
+    !repoRelativeCwd.startsWith(commit.maxCommonPathPrefix)
+  );
+}
+export const __TEST__ = {isIrrelevantToCwd};
 
 /**
  * A string of repo root and the "cwd". Note a same "cwd" does not infer the same repo,

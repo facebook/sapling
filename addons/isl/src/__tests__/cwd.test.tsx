@@ -6,6 +6,7 @@
  */
 
 import App from '../App';
+import {__TEST__} from '../repositoryData';
 import {CommitTreeListTestUtils} from '../testQueries';
 import {
   closeCommitInfoSidebar,
@@ -17,6 +18,7 @@ import {
   simulateRepoConnected,
 } from '../testUtils';
 import {fireEvent, render, screen, within, act} from '@testing-library/react';
+const {isIrrelevantToCwd} = __TEST__;
 
 const {clickGoto} = CommitTreeListTestUtils;
 
@@ -155,5 +157,27 @@ describe('cwd', () => {
     });
 
     expect(screen.queryByTestId('cwd-details-dropdown')).not.toBeInTheDocument();
+  });
+});
+
+describe('isIrrelevantToCwd', () => {
+  const C = (maxPrefix: string) => COMMIT('1', 'title', '0', {maxCommonPathPrefix: maxPrefix});
+  it('handles files outside cwd', () => {
+    expect(isIrrelevantToCwd(C('www/'), 'fbcode/')).toBe(true);
+    expect(isIrrelevantToCwd(C('www/subdir/'), 'fbcode/')).toBe(true);
+  });
+  it('handles files inside cwd', () => {
+    expect(isIrrelevantToCwd(C('www/'), 'www/')).toBe(false);
+    expect(isIrrelevantToCwd(C('www/subdir/'), 'www/')).toBe(false);
+  });
+  it('handles files above cwd', () => {
+    expect(isIrrelevantToCwd(C('addons/isl/'), 'addons/isl')).toBe(false);
+    expect(isIrrelevantToCwd(C('addons/'), 'addons/isl')).toBe(false);
+    expect(isIrrelevantToCwd(C(''), 'addons/isl')).toBe(false);
+  });
+  it('handles cwd is root', () => {
+    expect(isIrrelevantToCwd(C('addons/isl/'), '')).toBe(false);
+    expect(isIrrelevantToCwd(C('addons/'), '')).toBe(false);
+    expect(isIrrelevantToCwd(C(''), '')).toBe(false);
   });
 });
