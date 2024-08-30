@@ -139,6 +139,7 @@ mod test {
 
     use async_trait::async_trait;
     use futures::future;
+    use mononoke_macros::mononoke;
     use mononoke_types_mocks::contentid::ONES_CTID;
     use mononoke_types_mocks::hash::ONES_SHA256;
     use time_window_counter::GlobalTimeWindowCounter;
@@ -234,7 +235,7 @@ mod test {
         }
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_disabled(fb: FacebookInit) -> Result<(), Error> {
         let ctx = RepositoryRequestContext::test_builder(fb).await?.build()?;
         let ctr = DummyCounter::default();
@@ -244,7 +245,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_popularity(fb: FacebookInit) -> Result<(), Error> {
         let mut config = ServerConfig::default();
         *config.object_popularity_mut() = Some(ObjectPopularity {
@@ -291,7 +292,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_popularity_rings(fb: FacebookInit) -> Result<(), Error> {
         let mut config = ServerConfig::default();
         *config.object_popularity_mut() = Some(ObjectPopularity {
@@ -347,7 +348,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_timeout(fb: FacebookInit) -> Result<(), Error> {
         let mut config = ServerConfig::default();
         *config.object_popularity_mut() = Some(ObjectPopularity {
@@ -381,7 +382,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_error(fb: FacebookInit) -> Result<(), Error> {
         let mut config = ServerConfig::default();
         *config.object_popularity_mut() = Some(ObjectPopularity {

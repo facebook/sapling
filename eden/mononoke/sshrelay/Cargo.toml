@@ -16,3 +16,6 @@ netstring = { version = "0.1.0", git = "https://github.com/facebookexperimental/
 tokio-util = { version = "0.7.10", features = ["full"] }
 zstd = { version = "0.13", features = ["experimental", "zstdmt"] }
 zstd-safe = { version = "7.0.0", features = ["std"] }
+
+[dev-dependencies]
+mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }

@@ -216,6 +216,7 @@ mod test {
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
     use maplit::hashmap;
+    use mononoke_macros::mononoke;
     use repo_blobstore::RepoBlobstore;
     use repo_blobstore::RepoBlobstoreRef;
     use repo_derived_data::RepoDerivedData;
@@ -251,7 +252,7 @@ mod test {
         repo_identity: RepoIdentity,
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_split_commit_simple(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
@@ -334,7 +335,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_split_commit_with_renames(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
@@ -376,7 +377,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_split_commit_renamed_to_multiple_dest(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;

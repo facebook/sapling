@@ -33,6 +33,7 @@ rust_binary(
     test_deps = [
         "fbsource//third-party/rust:maplit",
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/repo_factory:test_repo_factory",
         "//eden/mononoke/tests/utils:tests_utils",
     ],

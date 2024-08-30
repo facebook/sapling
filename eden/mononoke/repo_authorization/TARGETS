@@ -14,6 +14,7 @@ rust_library(
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//common/rust/shed/justknobs_stub:justknobs",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/repo_factory:test_repo_factory",
     ],
     deps = [

@@ -36,8 +36,9 @@ pub fn git_delta(src: &[u8], trg: &[u8], max_delta_size: usize) -> Result<Vec<u8
 
 #[cfg(test)]
 mod tests {
+    use mononoke_macros::mononoke;
     use crate::git_delta;
-    #[test]
+    #[mononoke::test]
     fn smoke_test() {
         assert!(git_delta(b"a", b"b", 40).is_ok());
     }

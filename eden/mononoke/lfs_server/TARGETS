@@ -13,6 +13,7 @@ rust_binary(
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/blobstore:chaosblob",
         "//eden/mononoke/blobstore:memblob",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types-mocks",
         "//eden/mononoke/repo_factory:test_repo_factory",
     ],

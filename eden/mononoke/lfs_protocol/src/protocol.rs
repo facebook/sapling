@@ -332,6 +332,7 @@ impl Arbitrary for ResponseError {
 mod test {
     use assert_matches::assert_matches;
     use maplit::hashmap;
+    use mononoke_macros::mononoke;
     use quickcheck::quickcheck;
     use serde_json::json;
 
@@ -339,7 +340,7 @@ mod test {
 
     const ONES_SHA256: &str = "1111111111111111111111111111111111111111111111111111111111111111";
 
-    #[test]
+    #[mononoke::test]
     pub fn test_deserialize_ok_object() {
         let j = json!({
             "oid": ONES_SHA256,
@@ -367,7 +368,7 @@ mod test {
         )
     }
 
-    #[test]
+    #[mononoke::test]
     pub fn test_deserialize_err_object() {
         let j = json!({
             "oid": ONES_SHA256,
@@ -392,7 +393,7 @@ mod test {
         )
     }
 
-    #[test]
+    #[mononoke::test]
     pub fn test_deserialize_action() {
         let j = json!({
             "href": "https://some-download.com",

@@ -23,6 +23,7 @@ use maplit::hashmap;
 use maplit::hashset;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::ServiceWriteRestrictions;
+use mononoke_macros::mononoke;
 use mononoke_types::PrefixTrie;
 use permission_checker::MononokeIdentitySet;
 use repo_bookmark_attrs::RepoBookmarkAttrs;
@@ -43,7 +44,7 @@ struct Repo {
     repo_bookmark_attrs: RepoBookmarkAttrs,
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_full_access(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
@@ -134,7 +135,7 @@ impl RepoPermissionChecker for TestPermissionChecker {
     }
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_user_no_write_access(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let checker = Arc::new(TestPermissionChecker {
@@ -178,7 +179,7 @@ async fn test_user_no_write_access(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_user_no_draft_enforceent_off(fb: FacebookInit) -> Result<()> {
     with_just_knobs_async(
         JustKnobsInMemory::new(hashmap![
@@ -229,7 +230,7 @@ async fn test_user_no_draft_enforceent_off(fb: FacebookInit) -> Result<()> {
     .await
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_user_no_draft_no_write_access(fb: FacebookInit) -> Result<()> {
     with_just_knobs_async(
         JustKnobsInMemory::new(hashmap![
@@ -296,7 +297,7 @@ async fn test_user_no_draft_no_write_access(fb: FacebookInit) -> Result<()> {
 // Write access should give implied draft access. This will help with migration
 // to draft access enforcement and allow us to avoid unncecessary duplication of
 // ACLs.
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_user_write_no_draft_access(fb: FacebookInit) -> Result<()> {
     with_just_knobs_async(
         JustKnobsInMemory::new(hashmap![
@@ -347,7 +348,7 @@ async fn test_user_write_no_draft_access(fb: FacebookInit) -> Result<()> {
     .await
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_service_access(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let checker = Arc::new(TestPermissionChecker {
@@ -398,7 +399,7 @@ async fn test_service_access(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_user_readonly_instance(fb: FacebookInit) -> () {
     let ctx_session = SessionContainer::builder(fb).readonly(true).build();
     let ctx = CoreContext::test_mock_session(ctx_session);

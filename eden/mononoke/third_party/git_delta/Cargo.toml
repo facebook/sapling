@@ -11,5 +11,8 @@ license = "GPLv2+"
 anyhow = "1.0.86"
 libz-sys = "1.1.15"
 
+[dev-dependencies]
+mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
+
 [build-dependencies]
 cc = "1.0.90"

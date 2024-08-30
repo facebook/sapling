@@ -270,9 +270,11 @@ fn in_throttled_slice(
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
+
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_target_matches() {
         let test_ident = MononokeIdentity::new("USER", "foo");
         let test2_ident = MononokeIdentity::new("USER", "bar");
@@ -308,7 +310,7 @@ mod test {
         assert!(client_id_target.matches_client(None, Some(&test_client_id)))
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_target_in_static_slice() {
         let mut identities = MononokeIdentitySet::new();
         identities.insert(MononokeIdentity::new("MACHINE", "abc123.abc1.facebook.com"));
@@ -342,7 +344,7 @@ mod test {
     }
 
     #[cfg(fbcode_build)]
-    #[test]
+    #[mononoke::test]
     fn test_static_slice_of_identity_set() {
         let test_ident = MononokeIdentity::new("USER", "foo");
         let test2_ident = MononokeIdentity::new("SERVICE_IDENTITY", "bar");

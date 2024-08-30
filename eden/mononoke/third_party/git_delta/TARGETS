@@ -49,6 +49,9 @@ rust_library(
     cpp_deps = [
         ":bridge",
     ],
+    test_deps = [
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
     ],

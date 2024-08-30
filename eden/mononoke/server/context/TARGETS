@@ -7,6 +7,7 @@ oncall("mononoke")
 rust_library(
     name = "context",
     srcs = glob(["src/**/*.rs"]),
+    test_deps = ["//eden/mononoke/mononoke_macros:mononoke_macros"],
     deps = [
         "fbsource//third-party/rust:governor",
         "fbsource//third-party/rust:slog",

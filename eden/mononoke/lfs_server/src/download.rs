@@ -227,6 +227,7 @@ mod test {
     use fbinit::FacebookInit;
     use http::StatusCode;
     use maplit::hashmap;
+    use mononoke_macros::mononoke;
     use mononoke_types::typed_hash::BlobstoreKey;
     use mononoke_types_mocks::contentid::ONES_CTID;
     use permission_checker::MononokeIdentity;
@@ -236,7 +237,7 @@ mod test {
 
     use super::*;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_redacted_fetch(fb: FacebookInit) -> Result<(), Error> {
         let content_id = ONES_CTID;
         let reason = "test reason";
@@ -267,7 +268,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_parse_range() -> Result<(), Error> {
         // NOTE: This range is inclusive, so here we want bytes 1, 2, 3, 5 (a 5-byte range starting
         // at byte 1).
@@ -277,7 +278,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_should_disable_compression() -> Result<(), Error> {
         let mut config = ServerConfig::default();
         let test_ident = MononokeIdentity::new("USER", "test");

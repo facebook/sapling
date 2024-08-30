@@ -697,6 +697,7 @@ mod test {
     use futures::stream;
     use hyper::Uri;
     use memblob::Memblob;
+    use mononoke_macros::mononoke;
     use mononoke_types::ContentMetadataV2Id;
     use mononoke_types_mocks::hash::FOURS_SHA256;
     use mononoke_types_mocks::hash::ONES_SHA256;
@@ -720,7 +721,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_download() -> Result<(), Error> {
         let o1 = obj(ONES_SHA256, 111);
         let o2 = obj(TWOS_SHA256, 222);
@@ -817,7 +818,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_routing_keys() -> Result<(), Error> {
         // allowed keys
         let allowed_routing_key_base: String = format!("{}", ONES_SHA256);
@@ -836,7 +837,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_download_upstream_failed_and_its_ok() -> Result<(), Error> {
         let o1 = obj(ONES_SHA256, 111);
 
@@ -866,7 +867,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_download_upstream_failed_and_its_not_ok() -> Result<(), Error> {
         let o1 = obj(ONES_SHA256, 111);
 
@@ -891,7 +892,7 @@ mod test {
         Ok(r)
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_upload() -> Result<(), Error> {
         let o1 = obj(ONES_SHA256, 123);
         let o2 = obj(TWOS_SHA256, 456);
@@ -976,14 +977,14 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_resolve_missing(fb: FacebookInit) -> Result<(), Error> {
         let ctx = RepositoryRequestContext::test_builder(fb).await?.build()?;
         assert_eq!(resolve_internal_object(&ctx, ONES_SHA256).await?, None);
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_resolve_present(fb: FacebookInit) -> Result<(), Error> {
         let ctx = RepositoryRequestContext::test_builder(fb).await?.build()?;
 
@@ -1042,7 +1043,7 @@ mod test {
         }
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_resolve_redacted(fb: FacebookInit) -> Result<(), Error> {
         // Create a single factory with a blobstore we've created.
         let mut factory = TestRepoFactory::new(fb)?;
@@ -1126,7 +1127,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_resolve_size(fb: FacebookInit) -> Result<(), Error> {
         let repo: Repo = test_repo_factory::build_empty(fb).await?;
 

@@ -211,6 +211,7 @@ impl Encoder<SshMsg> for SshEncoder {
 mod test {
     use bytes::BufMut;
     use bytes::BytesMut;
+    use mononoke_macros::mononoke;
     use tokio_util::codec::Decoder;
     use tokio_util::codec::Encoder;
 
@@ -225,7 +226,7 @@ mod test {
 
     impl<T> ToBytes for T where T: AsRef<[u8]> {}
 
-    #[test]
+    #[mononoke::test]
     fn encode_simple() {
         let mut buf = BytesMut::with_capacity(1024);
         let mut encoder = SshEncoder::new(None).unwrap();
@@ -237,7 +238,7 @@ mod test {
         assert_eq!(buf.as_ref(), b"6:\x00ls -l,");
     }
 
-    #[test]
+    #[mononoke::test]
     fn encode_zero() {
         let mut buf = BytesMut::with_capacity(1024);
         let mut encoder = SshEncoder::new(None).unwrap();
@@ -249,7 +250,7 @@ mod test {
         assert_eq!(buf.as_ref(), b"1:\x00,");
     }
 
-    #[test]
+    #[mononoke::test]
     fn encode_one() {
         let mut buf = BytesMut::with_capacity(1024);
         let mut encoder = SshEncoder::new(None).unwrap();
@@ -261,7 +262,7 @@ mod test {
         assert_eq!(buf.as_ref(), b"2:\x00X,");
     }
 
-    #[test]
+    #[mononoke::test]
     fn encode_multi() {
         let mut buf = BytesMut::with_capacity(1024);
         let mut encoder = SshEncoder::new(None).unwrap();
@@ -279,7 +280,7 @@ mod test {
         assert_eq!(buf.as_ref(), b"2:\x00X,2:\x01Y,2:\x02Z,");
     }
 
-    #[test]
+    #[mononoke::test]
     fn encode_compressed() {
         let mut buf = BytesMut::with_capacity(1024);
         let mut encoder = SshEncoder::new(Some(3)).unwrap();
@@ -296,7 +297,7 @@ mod test {
         assert_eq!(buf.as_ref(), b"22:\x00\x28\xb5\x2f\xfd\x00\x58\x64\x00\x00\x30\x68\x65\x6c\x6c\x6f\x20\x01\x00\x24\x2a\x45\x2c");
     }
 
-    #[test]
+    #[mononoke::test]
     fn encode_compressed_too_big() {
         let mut buf = BytesMut::with_capacity(1024);
         let mut encoder = SshEncoder::new(Some(3)).unwrap();
@@ -307,7 +308,7 @@ mod test {
         assert!(result.is_err());
     }
 
-    #[test]
+    #[mononoke::test]
     fn decode_simple() {
         let mut buf = BytesMut::with_capacity(1024);
         buf.put_slice(b"6:\x00ls -l,");
@@ -320,7 +321,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn decode_zero() {
         let mut buf = BytesMut::with_capacity(1024);
         buf.put_slice(b"1:\x00,");
@@ -333,7 +334,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn decode_one() {
         let mut buf = BytesMut::with_capacity(1024);
         buf.put_slice(b"2:\x00X,");
@@ -346,7 +347,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn decode_multi() {
         let mut buf = BytesMut::with_capacity(1024);
         buf.put_slice(b"2:\x00X,2:\x01Y,2:\x02Z,");
@@ -367,7 +368,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn decode_bad() {
         let mut buf = BytesMut::with_capacity(1024);
         buf.put_slice(b"2:\x03X,");
@@ -380,7 +381,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn decode_short_framing() {
         let mut buf = BytesMut::with_capacity(1024);
         buf.put_slice(b"3:\x02X,");
@@ -393,7 +394,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn decode_broken_framing() {
         let mut buf = BytesMut::with_capacity(1024);
         buf.put_slice(b"1:\x02X,");

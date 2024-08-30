@@ -7,6 +7,7 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     test_deps = [
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
     ],
     deps = [

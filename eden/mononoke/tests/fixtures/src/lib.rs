@@ -958,6 +958,7 @@ pub fn json_config_small() -> String {
 #[cfg(test)]
 mod test {
     use commit_graph::CommitGraphRef;
+    use mononoke_macros::mononoke;
 
     use super::*;
 
@@ -1003,57 +1004,57 @@ mod test {
         assert_eq!(hg_changeset.to_hex(), expected_master_hg_id);
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_branch_even(fb: FacebookInit) {
         check_fixture::<BranchEven>(fb, "4f7f3fd428bec1a48f9314414b063c706d9c1aed").await;
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_branch_uneven(fb: FacebookInit) {
         check_fixture::<BranchUneven>(fb, "264f01429683b3dd8042cb3979e8bf37007118bc").await;
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_branch_wide(fb: FacebookInit) {
         check_fixture::<BranchWide>(fb, "49f53ab171171b3180e125b918bd1cf0af7e5449").await;
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_many_files_dirs(fb: FacebookInit) {
         check_fixture::<ManyFilesDirs>(fb, "5a28e25f924a5d209b82ce0713d8d83e68982bc8").await;
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_linear(fb: FacebookInit) {
         check_fixture::<Linear>(fb, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await;
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_merge_even(fb: FacebookInit) {
         check_fixture::<MergeEven>(fb, "1f6bc010883e397abeca773192f3370558ee1320").await;
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_merge_uneven(fb: FacebookInit) {
         check_fixture::<MergeUneven>(fb, "d35b1875cdd1ed2c687e86f1604b9d7e989450cb").await;
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_merge_multiple_files(fb: FacebookInit) {
         check_fixture::<MergeMultipleFiles>(fb, "c7bfbeed73ed19b01f5309716164d5b37725a61d").await;
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_unshared_merge_even(fb: FacebookInit) {
         check_fixture::<UnsharedMergeEven>(fb, "7fe9947f101acb4acf7d945e69f0d6ce76a81113").await;
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_unshared_merge_uneven(fb: FacebookInit) {
         check_fixture::<UnsharedMergeUneven>(fb, "dd993aab2bed7276e17c88470286ba8459ba6d94").await;
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_many_diamonds(fb: FacebookInit) {
         check_fixture::<ManyDiamonds>(fb, "6b43556e77b7312cabd16ac5f0a85cd920d95272").await;
     }

@@ -96,9 +96,11 @@ struct PerfCountersStackInner {
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
+
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_perf_counter_stack() {
         let k = PerfCounterType::BlobGets;
 

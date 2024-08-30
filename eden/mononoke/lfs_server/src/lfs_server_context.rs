@@ -561,6 +561,7 @@ mod test {
 
     use fbinit::FacebookInit;
     use lfs_protocol::Sha256 as LfsSha256;
+    use mononoke_macros::mononoke;
     use mononoke_types::hash::Sha256;
     use mononoke_types::ContentId;
     use repo_permission_checker::AlwaysAllowRepoPermissionChecker;
@@ -685,7 +686,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_basic_upload_uri() -> Result<(), Error> {
         let b = uri_builder(
             vec!["http://foo.com"],
@@ -699,7 +700,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_basic_upload_uri_slash() -> Result<(), Error> {
         let b = uri_builder(
             vec!["http://foo.com/"],
@@ -713,7 +714,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_prefix_upload_uri() -> Result<(), Error> {
         let b = uri_builder(
             vec!["http://foo.com/bar"],
@@ -727,7 +728,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_prefix_slash_upload_uri() -> Result<(), Error> {
         let b = uri_builder(
             vec!["http://foo.com/bar/"],
@@ -742,7 +743,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_basic_download_uri() -> Result<(), Error> {
         let b = uri_builder(
             vec!["http://foo.com"],
@@ -756,7 +757,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_basic_download_uri_slash() -> Result<(), Error> {
         let b = uri_builder(
             vec!["http://foo.com/"],
@@ -770,7 +771,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_prefix_download_uri() -> Result<(), Error> {
         let b = uri_builder(
             vec!["http://foo.com/bar"],
@@ -784,7 +785,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_prefix_slash_download_uri() -> Result<(), Error> {
         let b = uri_builder(
             vec!["http://foo.com/bar/"],
@@ -798,7 +799,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_basic_consistent_download_uri() -> Result<(), Error> {
         let b = uri_builder(
             vec!["http://foo.com"],
@@ -820,7 +821,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_basic_upstream_batch_uri() -> Result<(), Error> {
         let b = uri_builder(
             vec!["http://foo.com"],
@@ -834,7 +835,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_basic_upstream_batch_uri_slash() -> Result<(), Error> {
         let b = uri_builder(
             vec!["http://foo.com/"],
@@ -848,7 +849,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_prefix_upstream_batch_uri() -> Result<(), Error> {
         let b = uri_builder(
             vec!["http://foo.com"],
@@ -862,7 +863,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_prefix_slash_upstream_batch_uri() -> Result<(), Error> {
         let b = uri_builder(
             vec!["http://foo.com"],
@@ -876,7 +877,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_acl_check_no_certificates(fb: FacebookInit) -> Result<(), Error> {
         let aclchecker = AlwaysAllowRepoPermissionChecker::new();
         let repo: Repo = test_repo_factory::TestRepoFactory::new(fb)?
@@ -891,7 +892,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_acl_check_action(fb: FacebookInit) -> Result<(), Error> {
         let mut aclchecker = MockRepoPermissionChecker::new();
         aclchecker
@@ -915,7 +916,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_host_maybe_port_to_host() -> Result<(), Error> {
         assert_eq!(host_maybe_port_to_host("example.com")?, "example.com");
         assert_eq!(host_maybe_port_to_host("example.com:90")?, "example.com");

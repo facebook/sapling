@@ -75,6 +75,8 @@ pub fn should_log_scuba_sample<'a>(
 mod tests {
     use std::sync::RwLock;
 
+    use mononoke_macros::mononoke;
+
     use super::*;
 
     fn normal_scuba_cfg() -> ScubaObservabilityConfig {
@@ -86,7 +88,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_always_log_normal_samples() {
         let fields = ScubaLoggingDecisionFields {
             maybe_session_id: None,
@@ -114,7 +116,7 @@ mod tests {
         ));
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_log_any_sample_with_verbose_config() {
         let fields = ScubaLoggingDecisionFields {
             maybe_session_id: None,
@@ -140,7 +142,7 @@ mod tests {
         ));
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_session_filtering() {
         let observability_config = ScubaObservabilityConfig {
             verbose_sessions: vec!["verbose_session".to_string()],
@@ -186,7 +188,7 @@ mod tests {
         ));
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_unixname_filtering() {
         let observability_config = ScubaObservabilityConfig {
             verbose_unixnames: vec!["verbose_user".to_string()],
@@ -232,7 +234,7 @@ mod tests {
         ));
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_hostname_filtering() {
         let r = RwLock::new(vec![Regex::new("verbose_host.com").unwrap()]);
         let observability_config = ScubaObservabilityConfig {

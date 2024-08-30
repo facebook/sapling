@@ -723,9 +723,11 @@ pub use __drawdag_changes as changes;
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
+
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_action_specs() -> Result<()> {
         assert_eq!(
             Action::new(

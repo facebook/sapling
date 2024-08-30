@@ -443,11 +443,12 @@ mod test {
     use futures::future;
     use futures::stream;
     use memblob::Memblob;
+    use mononoke_macros::mononoke;
     use test_repo_factory::TestRepoFactory;
 
     use super::*;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_upload_from_client_discard_upstream(fb: FacebookInit) -> Result<(), Error> {
         let ctx = RepositoryRequestContext::test_builder(fb)
             .await?
@@ -464,7 +465,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_upload_from_client_failing_internal(fb: FacebookInit) -> Result<(), Error> {
         // Create a test repo with a blobstore that fails all reads and writes.
         let repo = TestRepoFactory::new(fb)?
