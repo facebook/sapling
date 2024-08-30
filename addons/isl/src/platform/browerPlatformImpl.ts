@@ -75,7 +75,17 @@ export const browserPlatformImpl = {
   },
   getAllPersistedState(): Json | undefined {
     try {
-      return {...localStorage};
+      return Object.fromEntries(
+        Object.entries({...localStorage})
+          .map(([key, value]: [string, unknown]) => {
+            try {
+              return [key, JSON.parse(value as string)];
+            } catch {
+              return null;
+            }
+          })
+          .filter((e): e is [string, Json] => e != null),
+      );
     } catch {
       return undefined;
     }
