@@ -457,7 +457,9 @@ impl LsRefsResponse {
         if let Some(target) = self.included_refs.get(SYMREF_HEAD) {
             write_binary_packetline(ref_line(SYMREF_HEAD, target).as_bytes(), writer).await?;
         }
-        for (name, target) in &self.included_refs {
+        let mut sorted_refs = self.included_refs.iter().collect::<Vec<_>>();
+        sorted_refs.sort_by(|(ref_a_name, _), (ref_b_name, _)| ref_a_name.cmp(ref_b_name));
+        for (name, target) in sorted_refs {
             if name.as_str() != SYMREF_HEAD {
                 write_binary_packetline(ref_line(name, target).as_bytes(), writer).await?;
             }
