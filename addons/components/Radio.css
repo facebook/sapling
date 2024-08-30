@@ -20,6 +20,7 @@
 
 .isl-radio:focus {
   border-color: var(--focus-border);
+  outline-color: var(--focus-border);
 }
 
 .isl-radio:before {
