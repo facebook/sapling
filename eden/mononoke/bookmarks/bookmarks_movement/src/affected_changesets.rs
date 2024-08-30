@@ -34,7 +34,8 @@ use mononoke_types::ChangesetId;
 use repo_authorization::AuthorizationContext;
 use skeleton_manifest::RootSkeletonManifestId;
 
-use crate::hook_running::run_hooks;
+use crate::hook_running::run_bookmark_hooks;
+use crate::hook_running::run_changeset_hooks;
 use crate::restrictions::should_run_hooks;
 use crate::BookmarkMovementError;
 use crate::Repo;
@@ -390,6 +391,33 @@ impl AffectedChangesets {
             stream::empty().boxed()
         };
 
+        if needs_hooks_check {
+            let head = match additional_changesets {
+                AdditionalChangesets::None => {
+                    // Bookmark deletion. Nothing to do.
+                    None
+                }
+                AdditionalChangesets::Ancestors(head) => Some(head),
+                AdditionalChangesets::Range { head, base: _ } => Some(head),
+            };
+            if let Some(head) = head {
+                let head = head
+                    .load(ctx, repo.repo_blobstore())
+                    .await
+                    .map_err(|e| BookmarkMovementError::Error(e.into()))?;
+                Self::check_bookmark_hooks(
+                    &head,
+                    ctx,
+                    authz,
+                    hook_manager,
+                    bookmark,
+                    pushvars,
+                    cross_repo_push_source,
+                )
+                .await?;
+            }
+        }
+
         self.already_checked_changesets = changesets_stream
             .chunks(N_CHANGESETS_TO_LOAD_AT_ONCE)
             // Aggregate any error loading changesets on a per-chunk basis
@@ -405,7 +433,7 @@ impl AffectedChangesets {
                         Self::check_case_conflicts(&chunk, ctx, repo).await?;
                     }
                     if needs_hooks_check {
-                        Self::check_hooks(
+                        Self::check_changeset_hooks(
                             adding_new_changesets_to_repo,
                             &chunk,
                             ctx,
@@ -561,10 +589,42 @@ impl AffectedChangesets {
     }
 
     /// If this is a user-initiated update to a public bookmark, run the
+    /// hooks against the bookmark. Also run hooks if it is a
+    /// service-initiated pushrebase but hooks will run with taking this
+    /// into account.
+    async fn check_bookmark_hooks(
+        to: &BonsaiChangeset,
+        ctx: &CoreContext,
+        authz: &AuthorizationContext,
+        hook_manager: &HookManager,
+        bookmark: &BookmarkKey,
+        pushvars: Option<&HashMap<String, Bytes>>,
+        cross_repo_push_source: CrossRepoPushSource,
+    ) -> Result<(), BookmarkMovementError> {
+        let push_authored_by = if authz.is_service() {
+            PushAuthoredBy::Service
+        } else {
+            PushAuthoredBy::User
+        };
+        run_bookmark_hooks(
+            ctx,
+            hook_manager,
+            bookmark,
+            to,
+            pushvars,
+            cross_repo_push_source,
+            push_authored_by,
+        )
+        .await?;
+
+        Ok(())
+    }
+
+    /// If this is a user-initiated update to a public bookmark, run the
     /// hooks against the affected changesets. Also run hooks if it is a
     /// service-initiated pushrebase but hooks will run with taking this
     /// into account.
-    async fn check_hooks(
+    async fn check_changeset_hooks(
         adding_new_changesets_to_repo: bool,
         loaded_changesets: &[BonsaiChangeset],
         ctx: &CoreContext,
@@ -606,7 +666,7 @@ impl AffectedChangesets {
             } else {
                 PushAuthoredBy::User
             };
-            run_hooks(
+            run_changeset_hooks(
                 ctx,
                 hook_manager,
                 bookmark,

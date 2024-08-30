@@ -62,7 +62,8 @@ pub use pushrebase_hooks::PushrebaseHooksError;
 
 pub use crate::create::CreateBookmarkOp;
 pub use crate::delete::DeleteBookmarkOp;
-pub use crate::hook_running::run_hooks;
+pub use crate::hook_running::run_bookmark_hooks;
+pub use crate::hook_running::run_changeset_hooks;
 pub use crate::pushrebase_onto::PushrebaseOntoBookmarkOp;
 pub use crate::restrictions::check_bookmark_sync_config;
 pub use crate::restrictions::BookmarkKindRestrictions;

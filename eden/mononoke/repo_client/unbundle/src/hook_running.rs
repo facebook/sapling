@@ -95,7 +95,7 @@ async fn run_pushrebase_hooks(
     action: &PostResolvePushRebase,
     cross_repo_push_source: CrossRepoPushSource,
 ) -> Result<(), BundleResolverError> {
-    match bookmarks_movement::run_hooks(
+    match bookmarks_movement::run_changeset_hooks(
         ctx,
         hook_manager,
         action.bookmark_spec.get_bookmark_name(),

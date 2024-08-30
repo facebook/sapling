@@ -72,7 +72,13 @@
 # Push unannotated tag - should fail
   $ git_client push origin completely_new_tag
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-   * [new tag]         completely_new_tag -> completely_new_tag
+   ! [remote rejected] completely_new_tag -> completely_new_tag (hooks failed:
+    block_unannotated_tags for e8615d6f149b876be0a2f30a1c5bf0c42bf8e136: The un-annotated tag "tags/completely_new_tag" is not allowed in this repository.
+  Use 'git tag [ -a | -s ]' for tags you want to propagate.
+  
+  For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
+  error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
+  [1]
 
 # Push annotated tag - should succeed
   $ git tag -a -m "note" completely_new_annotated_tag

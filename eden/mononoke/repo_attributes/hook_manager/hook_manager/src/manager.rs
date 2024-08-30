@@ -27,7 +27,6 @@ use metaconfig_types::HookConfig;
 use metaconfig_types::HookManagerParams;
 use mononoke_types::BasicFileChange;
 use mononoke_types::BonsaiChangeset;
-use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
 use permission_checker::AclProvider;
 use permission_checker::ArcMembershipChecker;
@@ -41,6 +40,8 @@ use slog::debug;
 
 use crate::errors::HookManagerError;
 use crate::provider::HookStateProvider;
+use crate::BookmarkHook;
+use crate::BookmarkHookExecutionId;
 use crate::ChangesetHook;
 use crate::ChangesetHookExecutionId;
 use crate::CrossRepoPushSource;
@@ -143,6 +144,16 @@ impl HookManager {
         }
     }
 
+    pub fn register_bookmark_hook(
+        &mut self,
+        hook_name: &str,
+        hook: Box<dyn BookmarkHook>,
+        config: HookConfig,
+    ) {
+        self.hooks
+            .insert(hook_name.to_string(), Hook::from_bookmark(hook, config));
+    }
+
     pub fn register_changeset_hook(
         &mut self,
         hook_name: &str,
@@ -227,7 +238,70 @@ impl HookManager {
         &self.scuba_bypassed_commits
     }
 
-    pub async fn run_hooks_for_bookmark(
+    pub async fn run_bookmark_hooks_for_bookmark(
+        &self,
+        ctx: &CoreContext,
+        to: &BonsaiChangeset,
+        bookmark: &BookmarkKey,
+        maybe_pushvars: Option<&HashMap<String, Bytes>>,
+        cross_repo_push_source: CrossRepoPushSource,
+        push_authored_by: PushAuthoredBy,
+    ) -> Result<Vec<HookOutcome>, Error> {
+        debug!(
+            ctx.logger(),
+            "Running bookmark hooks for bookmark {:?}", bookmark
+        );
+
+        let hooks = self.hooks_for_bookmark(bookmark);
+
+        let futs = FuturesUnordered::new();
+
+        let mut scuba = self.scuba.clone();
+        let username = ctx.metadata().unix_name();
+        let user_option = ctx.metadata().client_hostname().or(username);
+
+        if let Some(user) = user_option {
+            scuba.add("user", user);
+        }
+
+        for hook_name in hooks {
+            let hook = self
+                .hooks
+                .get(hook_name)
+                .ok_or_else(|| HookManagerError::NoSuchHook(hook_name.to_string()))?;
+
+            let mut scuba = scuba.clone();
+            scuba.add("hook", hook_name.to_string());
+            scuba.add("to", to.get_changeset_id().to_string());
+
+            if let Some(bypass_reason) = get_bypass_reason(
+                hook.get_config().bypass.as_ref(),
+                to.message(),
+                maybe_pushvars,
+            ) {
+                scuba.add("bypass_reason", bypass_reason);
+                scuba.log();
+                continue;
+            }
+
+            for future in hook.get_futures_for_bookmark_hooks(
+                ctx,
+                bookmark,
+                &*self.content_provider,
+                hook_name,
+                to,
+                scuba,
+                cross_repo_push_source,
+                push_authored_by,
+                hook.get_config().log_only,
+            ) {
+                futs.push(future);
+            }
+        }
+        futs.try_collect().await
+    }
+
+    pub async fn run_changesets_hooks_for_bookmark(
         &self,
         ctx: &CoreContext,
         changesets: impl Clone + itertools::Itertools<Item = &BonsaiChangeset>,
@@ -270,7 +344,7 @@ impl HookManager {
                 continue;
             }
 
-            for future in hook.get_futures(
+            for future in hook.get_futures_for_changeset_or_file_hooks(
                 ctx,
                 bookmark,
                 &*self.content_provider,
@@ -319,11 +393,13 @@ fn get_bypass_reason(
 }
 
 enum Hook {
+    Bookmark(Box<dyn BookmarkHook>, HookConfig),
     Changeset(Box<dyn ChangesetHook>, HookConfig),
     File(Box<dyn FileHook>, HookConfig),
 }
 
 enum HookInstance<'a> {
+    Bookmark(&'a dyn BookmarkHook),
     Changeset(&'a dyn ChangesetHook),
     File(
         &'a dyn FileHook,
@@ -333,7 +409,116 @@ enum HookInstance<'a> {
 }
 
 impl<'a> HookInstance<'a> {
-    async fn run(
+    async fn run_on_bookmark(
+        self,
+        ctx: &CoreContext,
+        bookmark: &BookmarkKey,
+        content_provider: &dyn HookStateProvider,
+        hook_name: &str,
+        mut scuba: MononokeScubaSampleBuilder,
+        to: &BonsaiChangeset,
+        cross_repo_push_source: CrossRepoPushSource,
+        push_authored_by: PushAuthoredBy,
+        log_only: bool,
+    ) -> Result<HookOutcome, Error> {
+        let cs_id = to.get_changeset_id();
+        let (stats, mut result) = match self {
+            Self::Bookmark(hook) => {
+                hook.run(
+                    ctx,
+                    bookmark,
+                    to,
+                    content_provider,
+                    cross_repo_push_source,
+                    push_authored_by,
+                )
+                .map_ok(|exec| {
+                    HookOutcome::BookmarkHook(
+                        BookmarkHookExecutionId {
+                            cs_id,
+                            bookmark_name: bookmark.to_string(),
+                            hook_name: hook_name.to_string(),
+                        },
+                        exec,
+                    )
+                })
+                .timed()
+                .await
+            }
+            Self::Changeset(..) => {
+                // Don't run changeset hook on bookmark. Just accept the change.
+                async { Ok(HookExecution::Accepted) }
+                    .map_ok(|exec| {
+                        HookOutcome::ChangesetHook(
+                            ChangesetHookExecutionId {
+                                cs_id,
+                                hook_name: hook_name.to_string(),
+                            },
+                            exec,
+                        )
+                    })
+                    .timed()
+                    .await
+            }
+            Self::File(_, path, _) => {
+                // Don't run file hook on bookmark. Just accept the change.
+                async { Ok(HookExecution::Accepted) }
+                    .map_ok(|exec| {
+                        HookOutcome::FileHook(
+                            FileHookExecutionId {
+                                cs_id,
+                                path: path.clone(),
+                                hook_name: hook_name.to_string(),
+                            },
+                            exec,
+                        )
+                    })
+                    .timed()
+                    .await
+            }
+        };
+
+        let mut errorcode = 0;
+        let mut failed_hooks = 0;
+        let mut stderr = None;
+
+        match result.as_mut() {
+            Ok(outcome) => match outcome.get_execution() {
+                HookExecution::Accepted => {
+                    // Nothing to do
+                }
+                HookExecution::Rejected(info) if log_only => {
+                    scuba.add("log_only_rejection", info.long_description.clone());
+                    // Convert to accepted as we are only logging.
+                    outcome.set_execution(HookExecution::Accepted);
+                }
+                HookExecution::Rejected(info) => {
+                    failed_hooks = 1;
+                    stderr = Some(info.long_description.clone());
+                }
+            },
+            Err(e) => {
+                errorcode = 1;
+                stderr = Some(format!("{:?}", e));
+            }
+        };
+
+        if let Some(stderr) = stderr {
+            scuba.add("stderr", stderr);
+        }
+
+        let elapsed = stats.completion_time.as_millis() as i64;
+        scuba
+            .add("elapsed", elapsed)
+            .add("total_time", elapsed)
+            .add("errorcode", errorcode)
+            .add("failed_hooks", failed_hooks)
+            .log();
+
+        result.map_err(|e| e.context(format!("while executing hook {}", hook_name)))
+    }
+
+    async fn run_on_changeset(
         self,
         ctx: &CoreContext,
         bookmark: &BookmarkKey,
@@ -341,12 +526,27 @@ impl<'a> HookInstance<'a> {
         hook_name: &str,
         mut scuba: MononokeScubaSampleBuilder,
         cs: &BonsaiChangeset,
-        cs_id: ChangesetId,
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
         log_only: bool,
     ) -> Result<HookOutcome, Error> {
+        let cs_id = cs.get_changeset_id();
         let (stats, mut result) = match self {
+            Self::Bookmark(..) => {
+                // Don't run bookmark hook on changeset. Just accept the change.
+                async { Ok(HookExecution::Accepted) }
+                    .map_ok(|exec| {
+                        HookOutcome::ChangesetHook(
+                            ChangesetHookExecutionId {
+                                cs_id,
+                                hook_name: hook_name.to_string(),
+                            },
+                            exec,
+                        )
+                    })
+                    .timed()
+                    .await
+            }
             Self::Changeset(hook) => {
                 hook.run(
                     ctx,
@@ -434,6 +634,10 @@ impl<'a> HookInstance<'a> {
 }
 
 impl Hook {
+    pub fn from_bookmark(hook: Box<dyn BookmarkHook>, config: HookConfig) -> Self {
+        Self::Bookmark(hook, config)
+    }
+
     pub fn from_changeset(hook: Box<dyn ChangesetHook>, config: HookConfig) -> Self {
         Self::Changeset(hook, config)
     }
@@ -444,12 +648,48 @@ impl Hook {
 
     pub fn get_config(&self) -> &HookConfig {
         match self {
+            Self::Bookmark(_, config) => config,
             Self::Changeset(_, config) => config,
             Self::File(_, config) => config,
         }
     }
 
-    pub fn get_futures<'a: 'cs, 'cs>(
+    pub fn get_futures_for_bookmark_hooks<'a: 'cs, 'cs>(
+        &'a self,
+        ctx: &'a CoreContext,
+        bookmark: &'a BookmarkKey,
+        content_provider: &'a dyn HookStateProvider,
+        hook_name: &'cs str,
+        to: &'cs BonsaiChangeset,
+        scuba: MononokeScubaSampleBuilder,
+        cross_repo_push_source: CrossRepoPushSource,
+        push_authored_by: PushAuthoredBy,
+        log_only: bool,
+    ) -> impl Iterator<Item = impl Future<Output = Result<HookOutcome, Error>> + 'cs> + 'cs {
+        let mut futures = Vec::new();
+
+        match self {
+            Self::Bookmark(hook, _) => {
+                futures.push(HookInstance::Bookmark(&**hook).run_on_bookmark(
+                    ctx,
+                    bookmark,
+                    content_provider,
+                    hook_name,
+                    scuba,
+                    to,
+                    cross_repo_push_source,
+                    push_authored_by,
+                    log_only,
+                ))
+            }
+            Self::Changeset(..) | Self::File(..) =>
+                /* Not a bookmark hook */
+                {}
+        };
+        futures.into_iter()
+    }
+
+    pub fn get_futures_for_changeset_or_file_hooks<'a: 'cs, 'cs>(
         &'a self,
         ctx: &'a CoreContext,
         bookmark: &'a BookmarkKey,
@@ -463,37 +703,38 @@ impl Hook {
     ) -> impl Iterator<Item = impl Future<Output = Result<HookOutcome, Error>> + 'cs> + 'cs {
         let mut futures = Vec::new();
 
-        let cs_id = cs.get_changeset_id();
-
         match self {
-            Self::Changeset(hook, _) => futures.push(HookInstance::Changeset(&**hook).run(
-                ctx,
-                bookmark,
-                content_provider,
-                hook_name,
-                scuba,
-                cs,
-                cs_id,
-                cross_repo_push_source,
-                push_authored_by,
-                log_only,
-            )),
+            Self::Changeset(hook, _) => {
+                futures.push(HookInstance::Changeset(&**hook).run_on_changeset(
+                    ctx,
+                    bookmark,
+                    content_provider,
+                    hook_name,
+                    scuba,
+                    cs,
+                    cross_repo_push_source,
+                    push_authored_by,
+                    log_only,
+                ))
+            }
             Self::File(hook, _) => {
                 futures.extend(cs.simplified_file_changes().map(move |(path, change)| {
-                    HookInstance::File(&**hook, path, change).run(
+                    HookInstance::File(&**hook, path, change).run_on_changeset(
                         ctx,
                         bookmark,
                         content_provider,
                         hook_name,
                         scuba.clone(),
                         cs,
-                        cs_id,
                         cross_repo_push_source,
                         push_authored_by,
                         log_only,
                     )
                 }))
             }
+            Self::Bookmark(..) =>
+                /* Not a changeset or file hook */
+                {}
         };
         futures.into_iter()
     }

@@ -19,18 +19,24 @@ use permission_checker::AclProvider;
 
 use crate::errors::*;
 #[cfg(fbcode_build)]
+use crate::facebook::implementations::make_bookmark_hook;
+#[cfg(fbcode_build)]
 use crate::facebook::implementations::make_changeset_hook;
 #[cfg(fbcode_build)]
 use crate::facebook::implementations::make_file_hook;
 #[cfg(not(fbcode_build))]
+use crate::implementations::make_bookmark_hook;
+#[cfg(not(fbcode_build))]
 use crate::implementations::make_changeset_hook;
 #[cfg(not(fbcode_build))]
 use crate::implementations::make_file_hook;
+use crate::BookmarkHook;
 use crate::ChangesetHook;
 use crate::FileHook;
 use crate::HookManager;
 
 enum LoadedRustHook {
+    BookmarkHook(Box<dyn BookmarkHook>),
     ChangesetHook(Box<dyn ChangesetHook>),
     FileHook(Box<dyn FileHook>),
 }
@@ -54,7 +60,17 @@ pub async fn load_hooks(
         }
 
         let rust_hook = {
-            if let Some(hook) = make_changeset_hook(
+            if let Some(hook) = make_bookmark_hook(
+                fb,
+                &hook,
+                acl_provider,
+                hook_manager.get_reviewers_perm_checker(),
+                hook_manager.repo_name(),
+            )
+            .await?
+            {
+                BookmarkHook(hook)
+            } else if let Some(hook) = make_changeset_hook(
                 fb,
                 &hook,
                 acl_provider,
@@ -72,6 +88,9 @@ pub async fn load_hooks(
         };
 
         match rust_hook {
+            BookmarkHook(rust_hook) => {
+                hook_manager.register_bookmark_hook(&hook.name, rust_hook, hook.config)
+            }
             FileHook(rust_hook) => {
                 hook_manager.register_file_hook(&hook.name, rust_hook, hook.config)
             }

@@ -1039,6 +1039,7 @@ impl SourceControlServiceImpl {
         for outcome in outcomes {
             let (name, execution) = match outcome {
                 HookOutcome::FileHook(id, exec) => (id.hook_name, exec),
+                HookOutcome::BookmarkHook(id, exec) => (id.hook_name, exec),
                 HookOutcome::ChangesetHook(id, exec) => (id.hook_name, exec),
             };
 

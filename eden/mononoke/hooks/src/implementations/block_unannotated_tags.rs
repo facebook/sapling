@@ -13,7 +13,7 @@ use context::CoreContext;
 use hook_manager::provider::TagType;
 use mononoke_types::BonsaiChangeset;
 
-use crate::ChangesetHook;
+use crate::BookmarkHook;
 use crate::CrossRepoPushSource;
 use crate::HookExecution;
 use crate::HookRejectionInfo;
@@ -30,12 +30,12 @@ impl BlockUnannotatedTagsHook {
 }
 
 #[async_trait]
-impl ChangesetHook for BlockUnannotatedTagsHook {
+impl BookmarkHook for BlockUnannotatedTagsHook {
     async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
         &'this self,
         ctx: &'ctx CoreContext,
         bookmark: &BookmarkKey,
-        _changeset: &'cs BonsaiChangeset,
+        _to: &'cs BonsaiChangeset,
         content_manager: &'fetcher dyn HookStateProvider,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,

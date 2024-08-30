@@ -371,7 +371,7 @@ async fn run_changeset_hooks_with_mgr(
 
     let changeset = changeset.unwrap_or_else(default_changeset);
     let res = hook_manager
-        .run_hooks_for_bookmark(
+        .run_changesets_hooks_for_bookmark(
             &ctx,
             vec![changeset].iter(),
             &BookmarkKey::new(bookmark_name).unwrap(),

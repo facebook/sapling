@@ -15,25 +15,6 @@
   > [source_control_service]
   > permit_writes = true
   > EOF
-
-  $ cat >> repos/repo/server.toml <<EOF
-  > [[bookmarks]]
-  > regex=".*"
-  > [[bookmarks.hooks]]
-  > hook_name="block_accidental_new_bookmark_creation"
-  > [[hooks]]
-  > name="block_accidental_new_bookmark_creation"
-  > config_json='''{
-  > "allow_creations_with_marker": {
-  >   "marker": "@new-branch",
-  >   "comparison_prefix": "heads/"
-  >  },
-  >  "bypass_for_bookmarks_matching_regex": "^heads/prefix.*"
-  > }'''
-  > EOF
-
-
-
 # Setup git repository
   $ mkdir -p "$GIT_REPO_ORIGIN"
   $ cd "$GIT_REPO_ORIGIN"
@@ -63,6 +44,25 @@
   >   }
   > }
   > EOF
+  $ cd "$TESTTMP"/mononoke-config
+  $ cat >> repos/repo/server.toml <<EOF
+  > [[bookmarks]]
+  > regex=".*"
+  > [[bookmarks.hooks]]
+  > hook_name="block_accidental_new_bookmark_creation"
+  > [[hooks]]
+  > name="block_accidental_new_bookmark_creation"
+  > config_json='''{
+  > "allow_creations_with_marker": {
+  >   "marker": "@new-branch",
+  >   "comparison_prefix": "heads/"
+  >  },
+  >  "bypass_for_bookmarks_matching_regex": "^heads/prefix.*"
+  > }'''
+  > EOF
+  $ cd -
+  $TESTTMP
+
 
 # Set Mononoke as the Source of Truth
   $ set_mononoke_as_source_of_truth_for_git
@@ -90,7 +90,6 @@
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
    ! [remote rejected] brand_new_branch -> brand_new_branch (hooks failed:
     block_accidental_new_bookmark_creation for 2307d182492a0467ac583fa1135517ebd45a2615: Add "@new-branch: brand_new_branch" to the commit message to be able to create this branch.
-    block_accidental_new_bookmark_creation for 1f4e1649c9648f8d8a2fbc5d42bbc6dddd1404df: Add "@new-branch: brand_new_branch" to the commit message to be able to create this branch.
   
   For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
   error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
@@ -105,12 +104,7 @@
 # now push succeeds
   $ git_client push origin brand_new_branch
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-   ! [remote rejected] brand_new_branch -> brand_new_branch (hooks failed:
-    block_accidental_new_bookmark_creation for 1f4e1649c9648f8d8a2fbc5d42bbc6dddd1404df: Add "@new-branch: brand_new_branch" to the commit message to be able to create this branch.
-  
-  For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
-  error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
-  [1]
+   * [new branch]      brand_new_branch -> brand_new_branch
 
 # now test the bypass based on bookmark matching a regex
   $ git checkout -b prefix_should_land_as_is
@@ -135,8 +129,6 @@
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
    ! [remote rejected] different_new_branch -> different_new_branch (hooks failed:
     block_accidental_new_bookmark_creation for 4fe07c27b4b62e3d5168b4f7fd5863265af9d25e: Add "@new-branch: different_new_branch" to the commit message to be able to create this branch.
-    block_accidental_new_bookmark_creation for 691e02c774d3d6afbfaea1ba03ee3f9a9583ac53: Add "@new-branch: different_new_branch" to the commit message to be able to create this branch.
-    block_accidental_new_bookmark_creation for 1f4e1649c9648f8d8a2fbc5d42bbc6dddd1404df: Add "@new-branch: different_new_branch" to the commit message to be able to create this branch.
   
   For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
   error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'

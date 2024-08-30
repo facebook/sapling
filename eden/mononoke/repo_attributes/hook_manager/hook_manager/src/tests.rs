@@ -474,7 +474,7 @@ async fn run_changeset_hooks(
 
     let changeset = default_changeset();
     let res = hook_manager
-        .run_hooks_for_bookmark(
+        .run_changesets_hooks_for_bookmark(
             &ctx,
             vec![changeset].iter(),
             &BookmarkKey::new(bookmark_name).unwrap(),
@@ -505,7 +505,7 @@ async fn run_file_hooks(
         hook_manager.register_file_hook(&hook_name, hook, Default::default());
     }
     let res = hook_manager
-        .run_hooks_for_bookmark(
+        .run_changesets_hooks_for_bookmark(
             &ctx,
             vec![cs].iter(),
             &BookmarkKey::new(bookmark_name).unwrap(),

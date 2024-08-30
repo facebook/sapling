@@ -65,7 +65,86 @@ fn take_n_changeset_ids<'a>(
         .collect()
 }
 
-pub async fn run_hooks(
+pub async fn run_bookmark_hooks(
+    ctx: &CoreContext,
+    hook_manager: &HookManager,
+    bookmark: &BookmarkKey,
+    to: &BonsaiChangeset,
+    pushvars: Option<&HashMap<String, Bytes>>,
+    cross_repo_push_source: CrossRepoPushSource,
+    push_authored_by: PushAuthoredBy,
+) -> Result<(), BookmarkMovementError> {
+    if cross_repo_push_source == CrossRepoPushSource::PushRedirected {
+        let disable_running_hooks_in_pushredirected_repo = justknobs::eval(
+            "scm/mononoke:disable_running_hooks_in_pushredirected_repo",
+            None,
+            None,
+        )?;
+
+        if disable_running_hooks_in_pushredirected_repo {
+            ctx.scuba()
+                .clone()
+                .add("bookmark", bookmark.to_string())
+                .log_with_msg("Hook execution in pushredirected repo was disabled", None);
+            return Ok(());
+        }
+    }
+
+    if is_admin_bypass(ctx, hook_manager, pushvars).await? || hook_manager.all_hooks_bypassed() {
+        let mut scuba_bypassed_commits = hook_manager.scuba_bypassed_commits().clone();
+
+        scuba_bypassed_commits
+            .add_metadata(ctx.metadata())
+            .add("bookmark", bookmark.to_string())
+            .add("repo_name", hook_manager.repo_name().clone());
+
+        if let Some(pushvars) = pushvars {
+            scuba_bypassed_commits.add(
+                "pushvars",
+                pushvars
+                    .iter()
+                    .map(|(key, val)| format!("{}={:?}", key, val))
+                    .collect::<Vec<_>>(),
+            );
+        }
+
+        scuba_bypassed_commits
+            .log_with_msg("Bypassed all hooks using BYPASS_ALL_HOOKS pushvar.", None);
+        return Ok(());
+    }
+
+    let (stats, outcomes) = hook_manager
+        .run_bookmark_hooks_for_bookmark(
+            ctx,
+            to,
+            bookmark,
+            pushvars,
+            cross_repo_push_source,
+            push_authored_by,
+        )
+        .timed()
+        .await;
+    let outcomes = outcomes.with_context(|| format!("Failed to run hooks for {}", bookmark))?;
+
+    let rejections: Vec<_> = outcomes
+        .into_iter()
+        .filter_map(HookOutcome::into_rejection)
+        .collect();
+
+    ctx.scuba()
+        .clone()
+        .add_future_stats(&stats)
+        .add("hook_rejections", rejections.len())
+        .log_with_msg("Executed hooks", None);
+
+    if rejections.is_empty() {
+        Ok(())
+    } else {
+        Err(BookmarkMovementError::HookFailure(rejections))
+    }
+}
+
+pub async fn run_changeset_hooks(
     ctx: &CoreContext,
     hook_manager: &HookManager,
     bookmark: &BookmarkKey,
@@ -118,7 +197,7 @@ pub async fn run_hooks(
     }
 
     let (stats, outcomes) = hook_manager
-        .run_hooks_for_bookmark(
+        .run_changesets_hooks_for_bookmark(
             ctx,
             changesets,
             bookmark,

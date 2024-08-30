@@ -158,7 +158,7 @@ impl<R: MononokeRepo> RepoContext<R> {
 
         let outcome = if let Some(redirector) = self.push_redirector.as_ref() {
             // run hooks on small repo
-            bookmarks_movement::run_hooks(
+            bookmarks_movement::run_changeset_hooks(
                 ctx,
                 self.hook_manager().as_ref(),
                 &bookmark,

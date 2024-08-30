@@ -18,6 +18,7 @@ mod lua_pattern;
 #[cfg(test)]
 mod testlib;
 
+pub use hook_manager::BookmarkHook;
 pub use hook_manager::ChangesetHook;
 pub use hook_manager::CrossRepoPushSource;
 pub use hook_manager::FileHook;

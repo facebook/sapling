@@ -40,11 +40,37 @@ use metaconfig_types::HookParams;
 use permission_checker::AclProvider;
 use permission_checker::ArcMembershipChecker;
 
+use crate::BookmarkHook;
 use crate::ChangesetHook;
 use crate::FileHook;
 
-fn b(t: impl ChangesetHook + 'static) -> Box<dyn ChangesetHook> {
-    Box::new(t)
+pub async fn make_bookmark_hook(
+    _fb: FacebookInit,
+    params: &HookParams,
+    _acl_provider: &dyn AclProvider,
+    _reviewers_membership: ArcMembershipChecker,
+    _repo_name: &str,
+) -> Result<Option<Box<dyn BookmarkHook + 'static>>> {
+    fn b(t: impl BookmarkHook + 'static) -> Box<dyn BookmarkHook> {
+        Box::new(t)
+    }
+
+    Ok(match params.implementation.as_str() {
+        "block_accidental_new_bookmark_creation" => Some(b(
+            block_accidental_new_bookmark_creation::BlockAccidentalNewBookmarkCreationHook::new(
+                &params.config,
+            )?,
+        )),
+        "block_new_bookmark_creations_by_name" => Some(b(
+            block_new_bookmark_creations_by_name::BlockNewBookmarkCreationsByNameHook::new(
+                &params.config,
+            )?,
+        )),
+        "block_unannotated_tags" => {
+            Some(b(block_unannotated_tags::BlockUnannotatedTagsHook::new()))
+        }
+        _ => None,
+    })
 }
 
 pub async fn make_changeset_hook(
@@ -54,6 +80,10 @@ pub async fn make_changeset_hook(
     _reviewers_membership: ArcMembershipChecker,
     _repo_name: &str,
 ) -> Result<Option<Box<dyn ChangesetHook + 'static>>> {
+    fn b(t: impl ChangesetHook + 'static) -> Box<dyn ChangesetHook> {
+        Box::new(t)
+    }
+
     Ok(match params.implementation.as_str() {
         "always_fail_changeset" => Some(b(always_fail_changeset::AlwaysFailChangeset::new())),
         "block_merge_commits" => Some(b(block_merge_commits::BlockMergeCommitsHook::new(
@@ -66,19 +96,6 @@ pub async fn make_changeset_hook(
             &params.config,
         )?)),
         "limit_tag_updates" => Some(b(limit_tag_updates::LimitTagUpdatesHook::new())),
-        "block_unannotated_tags" => {
-            Some(b(block_unannotated_tags::BlockUnannotatedTagsHook::new()))
-        }
-        "block_accidental_new_bookmark_creation" => Some(b(
-            block_accidental_new_bookmark_creation::BlockAccidentalNewBookmarkCreationHook::new(
-                &params.config,
-            )?,
-        )),
-        "block_new_bookmark_creations_by_name" => Some(b(
-            block_new_bookmark_creations_by_name::BlockNewBookmarkCreationsByNameHook::new(
-                &params.config,
-            )?,
-        )),
         "block_commit_message_pattern" => Some(b(
             block_commit_message_pattern::BlockCommitMessagePatternHook::new(&params.config)?,
         )),

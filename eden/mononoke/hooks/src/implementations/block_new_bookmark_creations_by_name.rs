@@ -14,7 +14,7 @@ use mononoke_types::BonsaiChangeset;
 use regex::Regex;
 use serde::Deserialize;
 
-use crate::ChangesetHook;
+use crate::BookmarkHook;
 use crate::CrossRepoPushSource;
 use crate::HookConfig;
 use crate::HookExecution;
@@ -44,12 +44,12 @@ impl BlockNewBookmarkCreationsByNameHook {
 }
 
 #[async_trait]
-impl ChangesetHook for BlockNewBookmarkCreationsByNameHook {
+impl BookmarkHook for BlockNewBookmarkCreationsByNameHook {
     async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
         &'this self,
         ctx: &'ctx CoreContext,
         bookmark: &BookmarkKey,
-        _changeset: &'cs BonsaiChangeset,
+        _from: &'cs BonsaiChangeset,
         content_manager: &'fetcher dyn HookStateProvider,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
