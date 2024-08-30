@@ -62,6 +62,11 @@ pub use source_control::MegarepoSyncTargetConfig as ThriftMegarepoSyncTargetConf
 pub use source_control::MegarepoTarget as ThriftMegarepoTarget;
 pub use source_control::RepoSpecifier as ThriftRepoSpecifier;
 
+const LEGACY_VALUE_TYPE_PARAMS: [&str; 1] = [
+    // Landed then reverted, but we have entries in the DB
+    "AsynchronousRequestParams",
+];
+
 /// Grouping of types and behaviors for an asynchronous request
 pub trait Request: Sized + Send + Sync {
     /// Name of the request
@@ -177,16 +182,28 @@ macro_rules! impl_async_svc_stored_type {
 
             pub async fn load_from_key(ctx: &CoreContext, blobstore: &Arc<dyn Blobstore>, key: &str) -> Result<Self, MegarepoError> {
                 let bytes = blobstore.get(ctx, key).await?;
-
-                let prefix = concat!("async.svc.", stringify!($value_type), ".blake2.");
-                if key.strip_prefix(prefix).is_none() {
-                    return Err(MegarepoError::internal(anyhow!("{} is not a blobstore key for {}", key, stringify!($value_type))));
-                }
-
+                Self::check_prefix(key)?;
                 match bytes {
                     Some(bytes) => Ok(bytes.into_bytes().try_into()?),
                     None => Err(MegarepoError::internal(anyhow!("Missing blob: {}", key))),
                 }
+            }
+
+            pub fn check_prefix(key: &str) -> Result<(), MegarepoError> {
+                let prefix = concat!("async.svc.", stringify!($value_type), ".blake2.");
+                if key.strip_prefix(prefix).is_some() {
+                    return Ok(());
+                }
+
+                // if the standard prefix is not valid, this might be in one of an alternative prefixes we support
+                for vt in LEGACY_VALUE_TYPE_PARAMS {
+                    let prefix = format!("async.svc.{}.blake2.", vt);
+                    if key.strip_prefix(&prefix).is_some() {
+                        return Ok(());
+                    }
+                }
+
+                return Err(MegarepoError::internal(anyhow!("{} is not a blobstore key for {}", key, stringify!($value_type))));
             }
 
             pub fn handle(&self) -> &$handle_type {
