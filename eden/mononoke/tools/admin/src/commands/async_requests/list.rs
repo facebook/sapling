@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use async_requests::types::ThriftMegarepoAsynchronousRequestParams;
@@ -34,7 +35,10 @@ pub async fn list_requests<R: MononokeRepo>(
     ctx: CoreContext,
     megarepo: MegarepoApi<R>,
 ) -> Result<(), Error> {
-    let repos_and_queues = megarepo.all_async_method_request_queues(&ctx).await?;
+    let repos_and_queues = megarepo
+        .all_async_method_request_queues(&ctx)
+        .await
+        .context("obtaining all async queues")?;
     let lookback = args.lookback;
     let mut table = Table::new();
     table.set_titles(row![
@@ -57,13 +61,16 @@ pub async fn list_requests<R: MononokeRepo>(
                     Timestamp::now().timestamp_seconds() - lookback,
                 )),
             )
-            .await?;
+            .await
+            .context("listing queued requests")?;
         for (req_id, entry, params) in res.into_iter() {
             let (source_name, changeset_id) = match params.thrift() {
                 ThriftMegarepoAsynchronousRequestParams::megarepo_sync_changeset_params(params) => {
                     (
                         params.source_name.clone(),
-                        ChangesetId::from_bytes(params.cs_id.clone())?.to_string(),
+                        ChangesetId::from_bytes(params.cs_id.clone())
+                            .context("deserializing entry")?
+                            .to_string(),
                     )
                 }
                 _ => ("".to_string(), "".to_string()),
@@ -82,7 +89,7 @@ pub async fn list_requests<R: MononokeRepo>(
                 req_id.0,
                 req_id.1,
                 entry.status,
-                params.target()?.bookmark,
+                params.target().context("decoding target")?.bookmark,
                 &source_name,
                 &changeset_id,
                 &created_at,

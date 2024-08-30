@@ -6,6 +6,7 @@
  */
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use async_requests::types::IntoConfigFormat;
@@ -115,13 +116,18 @@ pub async fn show_request<R: MononokeRepo>(
     ctx: CoreContext,
     megarepo: MegarepoApi<R>,
 ) -> Result<(), Error> {
-    let repos_and_queues = megarepo.all_async_method_request_queues(&ctx).await?;
+    let repos_and_queues = megarepo
+        .all_async_method_request_queues(&ctx)
+        .await
+        .context("obtaining all async queues")?;
 
     let row_id = args.request_id;
 
     for (_repo_ids, queue) in repos_and_queues {
-        if let Some((_request_id, entry, params, maybe_result)) =
-            queue.get_request_by_id(&ctx, &RowId(row_id)).await?
+        if let Some((_request_id, entry, params, maybe_result)) = queue
+            .get_request_by_id(&ctx, &RowId(row_id))
+            .await
+            .context("retrieving the request")?
         {
             println!(
                 "Entry: {:#?}\nParams: {:#?}\nResult: {:#?}",

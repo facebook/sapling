@@ -6,6 +6,7 @@
  */
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use async_requests::types::MegarepoAsynchronousRequestResult;
@@ -36,13 +37,18 @@ pub async fn abort_request<R: MononokeRepo>(
     ctx: CoreContext,
     megarepo: MegarepoApi<R>,
 ) -> Result<(), Error> {
-    let repos_and_queues = megarepo.all_async_method_request_queues(&ctx).await?;
+    let repos_and_queues = megarepo
+        .all_async_method_request_queues(&ctx)
+        .await
+        .context("obtaining all async queues")?;
 
     let row_id = args.request_id;
 
     for (_repo_ids, queue) in repos_and_queues {
-        if let Some((request_id, _entry, params, maybe_result)) =
-            queue.get_request_by_id(&ctx, &RowId(row_id)).await?
+        if let Some((request_id, _entry, params, maybe_result)) = queue
+            .get_request_by_id(&ctx, &RowId(row_id))
+            .await
+            .context("retrieving the request")?
         {
             if maybe_result.is_none() {
                 let err = MegarepoError::InternalError(anyhow!("aborted from CLI!").into());
@@ -64,7 +70,10 @@ pub async fn abort_request<R: MononokeRepo>(
                     }
                     _ => return Err(anyhow!("unknown request type!"))
                 };
-                queue.complete(&ctx, &request_id, result).await?;
+                queue
+                    .complete(&ctx, &request_id, result)
+                    .await
+                    .context("updating the request")?;
             } else {
                 return Err(anyhow!("Request already completed."));
             }
