@@ -779,7 +779,18 @@ def check_mount(
         MountState.INITIALIZED,
         MountState.STARTING,
     ):
-        tracker.add_problem(CheckoutIsStartingUp(checkout))
+        try:
+            check_starting_mount(
+                tracker,
+                instance,
+                checkout,
+                mount_table,
+                watchman_info,
+                debug,
+                fast,
+            )
+        except Exception as ex:
+            raise RuntimeError("Failed to check initializing/starting mount") from ex
     elif checkout.state in (
         MountState.SHUTTING_DOWN,
         MountState.SHUT_DOWN,
@@ -810,6 +821,32 @@ def check_mount(
                 )
     except Exception as ex:
         raise RuntimeError("Failed to detect nested checkout") from ex
+
+
+def check_starting_mount(
+    tracker: ProblemTracker,
+    instance: EdenInstance,
+    checkout_info: CheckoutInfo,
+    mount_table: mtab.MountTable,
+    watchman_info: check_watchman.WatchmanCheckInfo,
+    debug: bool,
+    fast: bool,
+) -> None:
+    checkout = checkout_info.get_checkout()
+    try:
+        checkout.get_config()
+        checkout.get_snapshot()
+    except Exception as ex:
+        # Config file is missing or invalid
+        tracker.add_problem(
+            EdenCheckoutCorruption(
+                checkout_info,
+                ex,
+            )
+        )
+        return
+    # Return this if there are no other problems
+    tracker.add_problem(CheckoutIsStartingUp(checkout_info))
 
 
 def check_running_mount(

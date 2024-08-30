@@ -7,6 +7,7 @@
 # pyre-strict
 
 import binascii
+import errno
 import os
 import stat
 import struct
@@ -118,6 +119,7 @@ class DoctorTest(DoctorTestBase):
 
     def setUpEdenMountTest(
         self,
+        state: Optional[MountState] = None,
     ) -> Tuple[doctor.ProblemFixer, TestOutput, EdenCheckout]:
         instance = FakeEdenInstance(self.make_temporary_directory())
         checkout = instance.create_test_mount("path1")
@@ -128,7 +130,7 @@ class DoctorTest(DoctorTestBase):
             # `FakeEdenInstance`.
             instance,
             path,
-            state=None,
+            state=state,
             backing_repo=checkout.get_backing_repo_path(),
         )
 
@@ -442,6 +444,68 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
 """,
         )
         self.assertEqual(1, exit_code)
+
+    @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
+    @patch("eden.fs.cli.config.EdenCheckout.get_config")
+    def test_edenfs_starting_mount_error(
+        self, mock_get_config: MagicMock, mock_watchman: MagicMock
+    ) -> None:
+        # Not strictly the correct file to but easier to mock the first call
+        mock_get_config.side_effect = FileNotFoundError(
+            errno.ENOENT, os.strerror(errno.ENOENT), "SNAPSHOT"
+        )
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout = instance.create_test_mount("path1")
+
+        path = checkout.path
+        checkout_info = CheckoutInfo(
+            # pyre-fixme[6]: For 3rd param expected `EdenInstance` but got
+            # `FakeEdenInstance`.
+            instance,
+            path,
+            state=MountState.STARTING,
+            backing_repo=path,
+            configured_state_dir=path,
+        )
+
+        fixer, out = self.create_fixer(dry_run=False)
+        mount_table = instance.mount_table
+
+        edenfs_path = "/path/to/eden-mount"
+        watchman_roots = {edenfs_path}
+        watchman_info = check_watchman.WatchmanCheckInfo(watchman_roots)
+
+        check_mount(
+            out,
+            fixer,
+            # pyre-fixme[6]: For 3rd param expected `EdenInstance` but got
+            # `FakeEdenInstance`.
+            instance,
+            checkout_info,
+            mount_table,
+            watchman_info,
+            [checkout_info],
+            set(),
+            True,
+            True,
+        )
+
+        self.assertEqual(len(fixer.problem_types), 1)
+        self.assertEqual(fixer.num_fixed_problems, 0)
+        self.assertEqual(fixer.num_manual_fixes, 1)
+        self.assertEquals(
+            out.getvalue(),
+            f"""<yellow>- Found problem:<reset>
+Eden's checkout state for {path} has been corrupted: [Errno 2] No such file or directory: 'SNAPSHOT'
+To recover, you will need to remove and reclone the repo.
+Your local commits will be uneffected, but reclones will lose uncommitted work or shelves.
+However, the local changes are manually recoverable before the reclone.
+If you have local changes you would like to save before reclone, see https://www.internalfb.com/intern/wiki/EdenFS/faq-and-troubleshooting/Recovering_local_changes_after_reclone/, or reachout to the EdenFS team.
+To reclone the corrupted repo, run: `fbclone $REPO --reclone --eden`
+For additional info see the wiki at https://www.internalfb.com/intern/wiki/EdenFS/faq-and-troubleshooting/Eden_Doctor/
+
+""",
+        )
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
     # pyre-fixme[2]: Parameter must be annotated.
@@ -2529,6 +2593,72 @@ To remove the corrupted repo, run: `eden rm {checkout.path}`
 """,
             out.getvalue(),
         )
+
+    @patch("eden.fs.cli.config.EdenCheckout.get_snapshot")
+    @patch("eden.fs.cli.config.EdenCheckout.get_config")
+    def test_corrupted_snapshot(
+        self,
+        mock_get_config: MagicMock,
+        mock_get_snapshot: MagicMock,
+    ) -> None:
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout = instance.create_test_mount("path1")
+        checkout_config = instance._checkouts_by_path[str(checkout.path)].config
+
+        mock_get_config.return_value = checkout_config
+        mock_get_snapshot.side_effect = RuntimeError("Missing SNAPSHOT file")
+        path = checkout.path
+        checkout_info = CheckoutInfo(
+            # pyre-fixme[6]: For 3rd param expected `EdenInstance` but got
+            # `FakeEdenInstance`.
+            instance,
+            path,
+            state=None,
+            backing_repo=checkout.get_backing_repo_path(),
+            running_state_dir=path,
+            configured_state_dir=path,
+            mount_inode_info=MountInodeInfo(1, 1, 1),
+        )
+
+        fixer, out = self.create_fixer(dry_run=False)
+        mount_table = instance.mount_table
+
+        edenfs_path = "/path/to/eden-mount"
+        watchman_roots = {edenfs_path}
+        watchman_info = check_watchman.WatchmanCheckInfo(watchman_roots)
+
+        check_running_mount(
+            fixer,
+            # pyre-fixme[6]: For 2rd param expected `EdenInstance` but got
+            # `FakeEdenInstance`.
+            instance,
+            checkout_info,
+            mount_table,
+            watchman_info,
+            False,
+            False,
+        )
+
+        self.assertEqual(
+            f"""\
+<yellow>- Found problem:<reset>
+Eden's checkout state for {checkout.path} has been corrupted: Missing SNAPSHOT file
+To recover, you will need to remove and reclone the repo.
+Your local commits will be uneffected, but reclones will lose uncommitted work or shelves.
+However, the local changes are manually recoverable before the reclone.
+If you have local changes you would like to save before reclone, see https://www.internalfb.com/intern/wiki/EdenFS/faq-and-troubleshooting/Recovering_local_changes_after_reclone/, or reachout to the EdenFS team.
+To reclone the corrupted repo, run: `fbclone $REPO --reclone --eden`"""
+            + (
+                f"\nFor additional info see the wiki at {get_doctor_link()}\n\n"
+                if get_doctor_link()
+                else "\n\n"
+            ),
+            out.getvalue(),
+        )
+        self.assertEqual(mock_get_snapshot.call_count, 1)
+        self.assertEqual(len(fixer.problem_types), 1)
+        self.assertEqual(fixer.num_fixed_problems, 0)
+        self.assertEqual(fixer.num_manual_fixes, 1)
 
 
 def _create_watchman_subscription(
