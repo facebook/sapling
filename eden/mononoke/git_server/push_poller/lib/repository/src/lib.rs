@@ -101,7 +101,7 @@ impl<'a> Repository<'a> {
         self.name.as_str()
     }
 
-    fn current_mononoke_fingerprint(&self) -> Result<RepositoryFingerprint> {
+    async fn current_mononoke_fingerprint(&self) -> Result<RepositoryFingerprint> {
         let mut pipe = RetryablePipe::new();
         let remote_git_retries = 2;
         let repo_url = format!(
@@ -126,7 +126,7 @@ impl<'a> Repository<'a> {
         pipe.add_nonretryable_command(vec!["sha1sum"]);
         pipe.add_nonretryable_command(vec!["awk", "{printf($1)}"]);
 
-        Ok(pipe.spawn_commands()?.into())
+        Ok(pipe.spawn_commands().await?.into())
     }
 
     async fn get_metagit_fingerprint(
@@ -164,7 +164,7 @@ impl<'a> Repository<'a> {
     }
 
     pub async fn update_metagit_fingerprint(&self) -> Result<RepositoryFingerprint> {
-        let mononoke_git_fingerprint = self.current_mononoke_fingerprint()?;
+        let mononoke_git_fingerprint = self.current_mononoke_fingerprint().await?;
         logging::debug!(
             "Current Mononoke git fingerprint is `{:?}` for repository `{}`",
             mononoke_git_fingerprint,
