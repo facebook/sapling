@@ -59,9 +59,13 @@ export const browserPlatformImpl = {
       return null;
     }
   },
-  setPersistedState<T>(key: string, value: T): void {
+  setPersistedState<T>(key: string, value: T | undefined): void {
     try {
-      localStorage.setItem(key, JSON.stringify(value));
+      if (value === undefined) {
+        localStorage.removeItem(key);
+      } else {
+        localStorage.setItem(key, JSON.stringify(value));
+      }
     } catch {}
   },
   clearPersistedState(): void {

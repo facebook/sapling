@@ -74,13 +74,17 @@ export const vscodeWebviewPlatform: Platform = {
   getPersistedState<T extends Json>(key: string): T | null {
     return persistedState[key] as T;
   },
-  setPersistedState<T extends Json>(key: string, value: T): void {
-    persistedState[key] = value;
+  setPersistedState<T extends Json>(key: string, value: T | undefined): void {
+    if (value === undefined) {
+      delete persistedState[key];
+    } else {
+      persistedState[key] = value;
+    }
 
     window.clientToServerAPI?.postMessage({
       type: 'platform/setPersistedState',
       key,
-      data: JSON.stringify(value),
+      data: value === undefined ? undefined : JSON.stringify(value),
     });
   },
   clearPersistedState(): void {

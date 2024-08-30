@@ -44,7 +44,7 @@ export interface Platform {
    */
   getPersistedState<T extends Json>(key: string): T | null;
   /** see getPersistedState  */
-  setPersistedState<T extends Json>(key: string, value: T): void;
+  setPersistedState<T extends Json>(key: string, value: T | undefined): void;
   /** see getPersistedState  */
   clearPersistedState(): void;
   /** see getPersistedState  */
