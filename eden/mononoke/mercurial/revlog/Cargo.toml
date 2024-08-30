@@ -13,7 +13,7 @@ path = "lib.rs"
 [dependencies]
 anyhow = "1.0.86"
 ascii = "1.0"
-bitflags = { version = "2.4", features = ["serde"] }
+bitflags = { version = "2.6", features = ["serde"] }
 bytes = { version = "1.6.0", features = ["serde"] }
 flate2 = { version = "1.0.33", features = ["rust_backend"], default-features = false }
 futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

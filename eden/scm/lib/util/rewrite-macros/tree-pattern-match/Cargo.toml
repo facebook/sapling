@@ -6,4 +6,4 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bitflags = { version = "2.4", features = ["serde"] }
+bitflags = { version = "2.6", features = ["serde"] }
