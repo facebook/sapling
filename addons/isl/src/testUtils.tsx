@@ -8,7 +8,6 @@
 import type {TestingEventBus} from './__mocks__/MessageBus';
 import type {
   ClientToServerMessage,
-  ClientToServerMessageWithPayload,
   CommitInfo,
   Hash,
   Result,
@@ -50,18 +49,10 @@ export function expectMessageNOTSentToServer(message: Partial<ClientToServerMess
 }
 
 /**
- * Return last `num` raw messages sent to the server.
- * Normal messages will be stingified JSON.
- * Binary messages with be ArrayBuffers.
+ * Return last `num` stringified JSON messages sent to the server.
  */
-export function getLastMessagesSentToServer(num: number): Array<string | ArrayBuffer> {
+export function getLastMessagesSentToServer(num: number): Array<string> {
   return testMessageBus.sent.slice(-num);
-}
-
-export function getLastBinaryMessageSentToServer(): ArrayBuffer | undefined {
-  return testMessageBus.sent.find(
-    (message): message is ArrayBuffer => message instanceof ArrayBuffer,
-  );
 }
 
 export function simulateServerDisconnected(): void {

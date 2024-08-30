@@ -146,7 +146,7 @@ export class LocalWebSocketEventBus {
     return {dispose};
   }
 
-  postMessage(message: string | ArrayBuffer) {
+  postMessage(message: string) {
     if (this.status.type === 'open') {
       this.websocket.send(message);
     } else {

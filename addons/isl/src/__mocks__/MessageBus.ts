@@ -11,10 +11,9 @@ import type {Disposable} from '../types';
 /** This fake implementation of MessageBus expects you to manually simulate messages from the server */
 export class TestingEventBus implements MessageBus {
   public handlers: Array<(e: MessageEvent<string>) => void> = [];
-  public sent: Array<string | ArrayBuffer> = [];
+  public sent: Array<string> = [];
   onMessage(handler: (event: MessageEvent<string>) => void | Promise<void>): Disposable {
     this.handlers.push(handler);
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
     return {dispose: () => {}};
   }
 
@@ -28,7 +27,6 @@ export class TestingEventBus implements MessageBus {
     handler({type: 'open'});
     this.statusChangeHandlers.add(handler);
 
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
     return {
       dispose: () => {
         this.statusChangeHandlers.delete(handler);

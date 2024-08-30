@@ -612,12 +612,6 @@ export type FileABugProgress =
   | {status: 'error'; error: Error};
 export type FileABugProgressMessage = {type: 'fileBugReportProgress'} & FileABugProgress;
 
-/**
- * Like ClientToServerMessage, but these messages will be followed
- * on the message bus by an additional binary ArrayBuffer payload message.
- */
-export type ClientToServerMessageWithPayload = {hasBinaryPayload: true};
-
 export type SubscriptionKind = 'uncommittedChanges' | 'smartlogCommits' | 'mergeConflicts';
 
 export const allConfigNames = [

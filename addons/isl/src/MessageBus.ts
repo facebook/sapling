@@ -15,14 +15,12 @@ export type {MessageBusStatus};
 
 /*
  * Abstraction for the bidirectional communication channel between the
- * Smartlog UI and the "business logic" that talks to EdenSCM, Watchman, etc.
+ * ISL UI and the "business logic" that talks to Sapling, Watchman, etc.
  */
 export interface MessageBus {
   onMessage(handler: (event: MessageEvent) => void | Promise<void>): Disposable;
   onChangeStatus(handler: (newStatus: MessageBusStatus) => void | Promise<void>): Disposable;
-  // post message accepts string or ArrayBuffer (to send binary data)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  postMessage(message: any): void;
+  postMessage(message: string): void;
 
   /** Force disconnect (for debugging), for supported implementations. */
   forceDisconnect?(durationMs?: number): void;
@@ -40,11 +38,10 @@ class VSCodeMessageBus {
   onChangeStatus(handler: (newStatus: MessageBusStatus) => unknown): Disposable {
     // VS Code connections don't close or change status (the webview would just be destroyed if closed)
     handler({type: 'open'});
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
     return {dispose: () => {}};
   }
 
-  postMessage(message: string | ArrayBuffer) {
+  postMessage(message: string) {
     this.vscode.postMessage(message);
   }
 }

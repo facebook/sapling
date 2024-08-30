@@ -5,19 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {
-  ServerToClientMessage,
-  ClientToServerMessage,
-  Disposable,
-  ClientToServerMessageWithPayload,
-} from './types';
+import type {ServerToClientMessage, ClientToServerMessage, Disposable} from './types';
 
 import messageBus from './MessageBus';
 import {deserializeFromString, serializeToString} from './serialize';
 import {defer} from 'shared/utils';
 
 export type IncomingMessage = ServerToClientMessage;
-export type OutgoingMessage = ClientToServerMessage | ClientToServerMessageWithPayload;
+export type OutgoingMessage = ClientToServerMessage;
 
 export const debugLogMessageTraffic = {shoudlLog: false};
 
@@ -184,22 +179,6 @@ class ClientToServerAPIImpl implements ClientToServerAPI {
       // eslint-disable-next-line no-console
       console.log('%c Outgoing ⮕ ', 'color:white;background-color:royalblue', message);
     }
-  }
-
-  /**
-   * Post a message with an ArrayBuffer binary payload.
-   * No need to specify `hasBinaryPayload: true` in your message.
-   * This actually sends two messages: the JSON text message, then the binary payload, and reconnects them on the server.
-   */
-  postMessageWithPayload(
-    // Omit lets callers not include hasBinaryPayload themselves, since it's implicit in calling postMessageWithPayload.
-    message: Omit<ClientToServerMessageWithPayload, 'hasBinaryPayload'>,
-    payload: ArrayBuffer,
-  ) {
-    messageBus.postMessage(
-      serializeToString({...message, hasBinaryPayload: true} as ClientToServerMessageWithPayload),
-    );
-    messageBus.postMessage(payload);
   }
 
   /**
