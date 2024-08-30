@@ -13,6 +13,7 @@ use blobstore_factory::BlobstoreOptions;
 use blobstore_factory::ReadOnlyStorage;
 use cached_config::ConfigStore;
 use clap::ValueEnum;
+use commit_graph_types::environment::CommitGraphOptions;
 use derived_data_remote::RemoteDerivationOptions;
 use fbinit::FacebookInit;
 use megarepo_config::MononokeMegarepoConfigsOptions;
@@ -123,4 +124,5 @@ pub struct MononokeEnvironment {
     pub bookmark_cache_options: BookmarkCacheOptions,
     /// Function determining whether given repo (identified by name) should be loaded
     pub filter_repos: Option<Arc<dyn Fn(&str) -> bool + Send + Sync + 'static>>,
+    pub commit_graph_options: CommitGraphOptions,
 }

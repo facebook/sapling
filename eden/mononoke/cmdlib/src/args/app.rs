@@ -104,6 +104,8 @@ pub const DERIVE_REMOTELY_TIER: &str = "derive-remotely-tier";
 
 pub const ACL_FILE: &str = "acl-file";
 
+pub const SKIP_PRELOADING_COMMIT_GRAPH: &str = "skip-preloading-commit-graph";
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ArgType {
     /// Options related to mononoke config
@@ -150,6 +152,8 @@ pub enum ArgType {
     Derivation,
     /// Adds options related to acls
     Acls,
+    /// Adds options related to commit graph
+    CommitGraph,
 }
 
 // Arguments that are enabled by default for MononokeAppBuilder
@@ -165,6 +169,7 @@ const DEFAULT_ARG_TYPES: &[ArgType] = &[
     ArgType::RendezVous,
     ArgType::Derivation,
     ArgType::Acls,
+    ArgType::CommitGraph,
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -671,6 +676,9 @@ impl MononokeAppBuilder {
         }
         if self.arg_types.contains(&ArgType::Acls) {
             app = add_acls_args(app);
+        }
+        if self.arg_types.contains(&ArgType::CommitGraph) {
+            app = add_commit_graph_args(app);
         }
 
         app = add_megarepo_svc_args(app);
@@ -1235,5 +1243,13 @@ fn add_acls_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .takes_value(true)
             .value_name("PATH")
             .help("Specify a file containing ACLs"),
+    )
+}
+
+fn add_commit_graph_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(
+        Arg::with_name(SKIP_PRELOADING_COMMIT_GRAPH)
+            .long(SKIP_PRELOADING_COMMIT_GRAPH)
+            .help("Skip preloading commit graph"),
     )
 }

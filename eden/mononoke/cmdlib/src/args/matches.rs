@@ -76,6 +76,8 @@ use tokio::runtime::Handle;
 use tokio::runtime::Runtime;
 
 pub type Normal = rand_distr::Normal<f64>;
+use commit_graph_types::environment::CommitGraphOptions;
+
 use super::app::ArgType;
 use super::app::MononokeAppData;
 use super::app::ACL_FILE;
@@ -122,6 +124,7 @@ use super::app::RENDEZVOUS_FREE_CONNECTIONS;
 use super::app::RUNTIME_THREADS;
 use super::app::SCUBA_DATASET_ARG;
 use super::app::SCUBA_LOG_FILE_ARG;
+use super::app::SKIP_PRELOADING_COMMIT_GRAPH;
 use super::app::WARM_BOOKMARK_CACHE_SCUBA_DATASET_ARG;
 use super::app::WITH_DYNAMIC_OBSERVABILITY;
 use super::app::WITH_READONLY_STORAGE_ARG;
@@ -207,6 +210,8 @@ impl<'a> MononokeMatches<'a> {
         let megarepo_configs_options = parse_mononoke_megarepo_configs_options(&matches)?;
         let remote_derivation_options = parse_remote_derivation_options(&matches)?;
         let acl_provider = create_acl_provider(fb, &matches)?;
+        let commit_graph_options =
+            parse_commit_graph_options(&matches).context("Failed to parse commit graph options")?;
 
         maybe_enable_mcrouter(fb, &matches, &arg_types);
 
@@ -232,6 +237,7 @@ impl<'a> MononokeMatches<'a> {
                     disabled_hooks: HashMap::new(),
                     bookmark_cache_options: Default::default(),
                     filter_repos: None,
+                    commit_graph_options,
                 }),
                 app_data,
             },
@@ -884,6 +890,13 @@ fn parse_rendezvous_options(matches: &ArgMatches<'_>) -> Result<RendezVousOption
     Ok(RendezVousOptions {
         free_connections,
         ..Default::default()
+    })
+}
+
+fn parse_commit_graph_options(matches: &ArgMatches<'_>) -> Result<CommitGraphOptions, Error> {
+    let skip_preloading_commit_graph = matches.is_present(SKIP_PRELOADING_COMMIT_GRAPH);
+    Ok(CommitGraphOptions {
+        skip_preloading_commit_graph,
     })
 }
 

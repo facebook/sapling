@@ -34,6 +34,7 @@ use cmdlib_caching::CachelibArgs;
 use cmdlib_caching::CachelibSettings;
 use cmdlib_logging::LoggingArgs;
 use cmdlib_logging::ScubaLoggingArgs;
+use commit_graph_types::environment::CommitGraphArgs;
 use derived_data_remote::RemoteDerivationArgs;
 use environment::BookmarkCacheOptions;
 use environment::MononokeEnvironment;
@@ -123,6 +124,9 @@ pub struct EnvironmentArgs {
 
     #[clap(flatten, next_help_heading = "GFLAGS")]
     gflags_args: GFlagsArgs,
+
+    #[clap(flatten, next_help_heading = "COMMIT GRAPH OPTIONS")]
+    commit_graph_args: CommitGraphArgs,
 }
 
 impl MononokeAppBuilder {
@@ -286,6 +290,7 @@ impl MononokeAppBuilder {
             rendezvous_args,
             just_knobs_args,
             gflags_args,
+            commit_graph_args,
         } = env_args;
 
         gflags_args.propagate(self.fb)?;
@@ -354,6 +359,8 @@ impl MononokeAppBuilder {
         let acl_provider =
             create_acl_provider(self.fb, &acl_args).context("Failed to create ACL provider")?;
 
+        let commit_graph_options = commit_graph_args.into();
+
         init_just_knobs_worker(
             &just_knobs_args,
             &config_store,
@@ -380,6 +387,7 @@ impl MononokeAppBuilder {
             disabled_hooks: HashMap::new(),
             bookmark_cache_options: self.bookmark_cache_options.clone(),
             filter_repos: None,
+            commit_graph_options,
         })
     }
 }

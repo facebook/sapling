@@ -6,6 +6,7 @@
  */
 
 pub mod edges;
+pub mod environment;
 pub mod frontier;
 pub mod segments;
 pub mod storage;

@@ -55,6 +55,7 @@ rust_library(
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/observability:observability",
         "//eden/mononoke/permission_checker:permission_checker",
+        "//eden/mononoke/repo_attributes/commit_graph/commit_graph_types:commit_graph_types",
         "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/repo_factory:repo_factory",
@@ -87,6 +88,7 @@ rust_library(
         "//eden/mononoke/megarepo_api:megarepo_config",
         "//eden/mononoke/observability:observability",
         "//eden/mononoke/permission_checker:permission_checker",
+        "//eden/mononoke/repo_attributes/commit_graph/commit_graph_types:commit_graph_types",
     ],
 )
 

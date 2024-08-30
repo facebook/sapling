@@ -1633,7 +1633,9 @@ impl RepoFactory {
             .commit_graph_config
             .preloaded_commit_graph_blobstore_key
         {
-            Some(preloaded_commit_graph_key) => {
+            Some(preloaded_commit_graph_key)
+                if !self.env.commit_graph_options.skip_preloading_commit_graph =>
+            {
                 let blobstore_without_cache = self
                     .repo_blobstore_from_blobstore(
                         repo_identity,
@@ -1656,7 +1658,7 @@ impl RepoFactory {
 
                 Ok(Arc::new(CommitGraph::new(preloaded_commit_graph_storage)))
             }
-            None => Ok(Arc::new(CommitGraph::new(maybe_cached_storage))),
+            _ => Ok(Arc::new(CommitGraph::new(maybe_cached_storage))),
         }
     }
 
