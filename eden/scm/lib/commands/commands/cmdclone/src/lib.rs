@@ -25,7 +25,6 @@ use cmdpy::HgPython;
 use cmdutil::define_flags;
 use cmdutil::ConfigSet;
 use cmdutil::Result;
-use configloader::hg::resolve_custom_scheme;
 use configloader::hg::PinnedConfig;
 use configmodel::Config;
 use configmodel::ConfigExt;
@@ -35,6 +34,8 @@ use exchange::convert_to_remote;
 use migration::feature::deprecate;
 use repo::repo::Repo;
 use repourl::encode_repo_name;
+use repourl::repo_name_from_url;
+use repourl::resolve_custom_scheme;
 use tracing::instrument;
 use types::HgId;
 use url::Url;
@@ -275,7 +276,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
             logger.verbose(|| format!("Repo name is {} from config", c));
             c
         }
-        None => match configloader::hg::repo_name_from_url(&config, &ctx.opts.source) {
+        None => match repo_name_from_url(&config, &ctx.opts.source) {
             Some(name) => {
                 logger.verbose(|| format!("Repo name is {} via URL {}", name, ctx.opts.source));
                 config.set(

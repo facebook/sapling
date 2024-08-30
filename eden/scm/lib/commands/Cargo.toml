@@ -73,6 +73,7 @@ pytracing = { version = "0.1.0", path = "../../saplingnative/bindings/modules/py
 pyworkingcopy = { version = "0.1.0", path = "../../saplingnative/bindings/modules/pyworkingcopy" }
 pyworkingcopyclient = { version = "0.1.0", path = "../../saplingnative/bindings/modules/pyworkingcopyclient" }
 repo = { version = "0.1.0", path = "../repo", features = ["wdir"] }
+repourl = { version = "0.1.0", path = "../repo/url" }
 revisionstore = { version = "0.1.0", path = "../revisionstore" }
 runlog = { version = "0.1.0", path = "../runlog" }
 sampling = { version = "0.1.0", path = "../sampling" }

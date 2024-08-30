@@ -85,6 +85,7 @@ rust_library(
         "//eden/scm/lib/progress/model:progress-model",
         "//eden/scm/lib/progress/render:progress-render",
         "//eden/scm/lib/repo:repo",
+        "//eden/scm/lib/repo/url:repourl",
         "//eden/scm/lib/runlog:runlog",
         "//eden/scm/lib/sampling:sampling",
         "//eden/scm/lib/tracing-collector:tracing-collector",

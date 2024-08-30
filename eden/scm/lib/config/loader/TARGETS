@@ -67,7 +67,6 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:tracing",
-        "fbsource//third-party/rust:url",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/config/set:configset",
         "//eden/scm/lib/config/static:staticconfig",
@@ -76,6 +75,7 @@ rust_library(
         "//eden/scm/lib/identity:identity",
         "//eden/scm/lib/minibytes:minibytes",
         "//eden/scm/lib/repo/repo-minimal-info:repo-minimal-info",
+        "//eden/scm/lib/repo/url:repourl",
         "//eden/scm/lib/util/hgplain:hgplain",
     ] + ([] if rust_oss.is_oss_build() else [
         "fbsource//third-party/rust:base64",
@@ -88,6 +88,7 @@ rust_library(
         "fbsource//third-party/rust:serde_urlencoded",
         "fbsource//third-party/rust:sha2",
         "fbsource//third-party/rust:tempfile",
+        "fbsource//third-party/rust:url",
         "fbsource//third-party/rust:zstd",
         "//common/rust/shed/hostcaps:hostcaps",
         "//eden/scm/lib/hgtime:hgtime",
