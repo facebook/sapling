@@ -9,6 +9,8 @@ import {Internal} from 'isl-server/src/Internal';
 import os from 'node:os';
 import * as vscode from 'vscode';
 
+export const PERSISTED_STORAGE_KEY_PREFIX = 'isl-persisted:';
+
 /**
  * Determine which command to use for `sl`, based on vscode configuration.
  * Changes to this setting require restarting, so it's ok to cache this value

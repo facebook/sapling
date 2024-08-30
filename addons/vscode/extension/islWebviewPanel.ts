@@ -12,9 +12,8 @@ import type {AppMode, ClientToServerMessage, ServerToClientMessage} from 'isl/sr
 import type {Comparison} from 'shared/Comparison';
 
 import packageJson from '../package.json';
-import {Internal} from './Internal';
 import {executeVSCodeCommand} from './commands';
-import {getCLICommand, shouldOpenBeside} from './config';
+import {getCLICommand, PERSISTED_STORAGE_KEY_PREFIX, shouldOpenBeside} from './config';
 import {locale, t} from './i18n';
 import {onClientConnection} from 'isl-server/src';
 import {deserializeFromString, serializeToString} from 'isl/src/serialize';
@@ -374,20 +373,70 @@ export function fetchUIState(): Promise<{state: string} | undefined> {
  * This gives the javascript snippet that can be safely put into a webview HTML <script> tag.
  */
 function getInitialStateJs(context: vscode.ExtensionContext, logger: Logger) {
-  const stateStr = context.globalState.get<string>('isl-persisted');
-  if (stateStr == null) {
-    logger.info('No initial persisted state found');
-    return '';
-  }
-  try {
-    // This snippet is injected directly as javascript, much like `eval`.
-    // Therefore, it's very important that the stateStr is validated to be safe to be injected.
-    const parsed = JSON.parse(stateStr);
-    if (typeof parsed !== 'object' || parsed == null) {
-      // JSON is not in the format we expect
-      logger.info('Found INVALID JSON for initial persisted state for webview: ', stateStr);
+  // Previously, all state was stored in a single global storage key.
+  // This meant we read and wrote the entire state on every change,
+  // notably the webview sent the entire state to the extension on every change.
+  // Now, we store each piece of state in its own key, and only send the changed keys to the extension.
+
+  const legacyKey = 'isl-persisted';
+
+  const legacyStateStr = context.globalState.get<string>(legacyKey);
+  let parsed: {[key: string]: unknown};
+  if (legacyStateStr != null) {
+    // We migrate to the new system if we see data in the old key.
+    // This can be deleted after some time to let clients update.
+    logger.info('Legacy persisted state format found, migrating to individual keys');
+
+    try {
+      parsed = JSON.parse(legacyStateStr);
+
+      // This snippet is injected directly as javascript, much like `eval`.
+      // Therefore, it's very important that the stateStr is validated to be safe to be injected.
+      if (typeof parsed !== 'object' || parsed == null) {
+        // JSON is not in the format we expect
+        logger.info('Found INVALID JSON for initial persisted state for webview: ', legacyStateStr);
+        // Move forward with empty data (eventually deleting the legacy key)
+        parsed = {};
+      }
+
+      for (const key in parsed) {
+        context.globalState.update(PERSISTED_STORAGE_KEY_PREFIX + key, parsed[key]);
+      }
+      logger.info(`Migrated ${Object.keys(parsed).length} keys from legacy persisted state`);
+    } catch {
+      logger.info('Found INVALID (legacy) initial persisted state for webview: ', legacyStateStr);
       return '';
+    } finally {
+      // Delete the legacy data either way
+      context.globalState.update(legacyKey, undefined);
+      logger.info('Deleted legacy persisted state');
     }
+  } else {
+    logger.info('No legacy persisted state found');
+
+    const allDataKeys = context.globalState.keys();
+    parsed = {};
+
+    for (const fullKey of allDataKeys) {
+      if (fullKey.startsWith(PERSISTED_STORAGE_KEY_PREFIX)) {
+        const keyWithoutPrefix = fullKey.slice(PERSISTED_STORAGE_KEY_PREFIX.length);
+        const found = context.globalState.get<string>(fullKey);
+        if (found) {
+          try {
+            parsed[keyWithoutPrefix] = JSON.parse(found);
+          } catch (err) {
+            logger.error(
+              `Failed to parse persisted state for key ${keyWithoutPrefix}. Skipping. ${err}`,
+            );
+          }
+        }
+      }
+    }
+
+    logger.info(`Loaded persisted data for ${allDataKeys.length} keys`);
+  }
+
+  try {
     // validated is injected not as a string, but directly as a javascript object (since JSON is a subset of js)
     const validated = JSON.stringify(parsed);
     logger.info('Found valid initial persisted state for webview: ', validated);
@@ -396,7 +445,7 @@ function getInitialStateJs(context: vscode.ExtensionContext, logger: Logger) {
     } catch (e) {}
     `;
   } catch {
-    logger.info('Found INVALID initial persisted state for webview: ', stateStr);
+    logger.info('Found INVALID initial persisted state for webview: ', parsed);
     return '';
   }
 }

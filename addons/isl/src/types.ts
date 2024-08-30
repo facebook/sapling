@@ -574,7 +574,7 @@ export type PlatformSpecificClientToServerMessages =
   | {type: 'platform/subscribeToAvailableCwds'}
   | {type: 'platform/subscribeToUnsavedFiles'}
   | {type: 'platform/saveAllUnsavedFiles'}
-  | {type: 'platform/setPersistedState'; data?: string}
+  | {type: 'platform/setPersistedState'; key: string; data?: string}
   | {
       type: 'platform/setVSCodeConfig';
       config: string;

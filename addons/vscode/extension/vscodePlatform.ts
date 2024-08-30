@@ -16,7 +16,7 @@ import type {
 import type {Json} from 'shared/typeUtils';
 
 import {executeVSCodeCommand} from './commands';
-import {shouldOpenBeside} from './config';
+import {PERSISTED_STORAGE_KEY_PREFIX, shouldOpenBeside} from './config';
 import {t} from './i18n';
 import {Repository} from 'isl-server/src/Repository';
 import {arraysEqual} from 'isl/src/utils';
@@ -202,8 +202,8 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           break;
         }
         case 'platform/setPersistedState': {
-          const {data} = message;
-          context.globalState.update('isl-persisted', data);
+          const {key, data} = message;
+          context.globalState.update(PERSISTED_STORAGE_KEY_PREFIX + key, data);
           break;
         }
         case 'platform/subscribeToVSCodeConfig': {
