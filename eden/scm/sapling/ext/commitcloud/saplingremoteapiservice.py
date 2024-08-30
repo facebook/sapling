@@ -78,7 +78,8 @@ class SaplingRemoteAPIService(baseservice.BaseService):
         if "data" in response:
             response = response["data"]["Ok"]
 
-        return self._makereferences(self._castreferences(response))
+        refs = self._castreferences(response)
+        return self._makereferences(refs)
 
     def updatereferences(
         self,
@@ -362,7 +363,7 @@ class SaplingRemoteAPIService(baseservice.BaseService):
 
         refs["remote_bookmarks"] = remote_bookmarks
         refs["bookmarks"] = local_bookmarks
-        refs["heads_date"] = heads_dates
+        refs["head_dates"] = heads_dates
         refs["snapshots"] = snapshots
         refs["heads"] = heads
         return refs
