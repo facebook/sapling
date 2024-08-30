@@ -310,7 +310,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_get_locked(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let builder = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?;

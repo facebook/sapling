@@ -201,12 +201,13 @@ where
 mod test {
     use assert_matches::assert_matches;
     use futures::stream;
+    use mononoke_macros::mononoke;
     use quickcheck::quickcheck;
     use tokio::runtime::Runtime;
 
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_make_chunks_no_chunk_size() {
         let in_stream = stream::empty();
 
@@ -216,7 +217,7 @@ mod test {
         };
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_make_chunks_no_chunking() {
         let in_stream = stream::empty();
 
@@ -226,7 +227,7 @@ mod test {
         };
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_make_chunks_no_chunking_limit() {
         let in_stream = stream::empty();
 
@@ -236,7 +237,7 @@ mod test {
         };
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_make_chunks_chunking() {
         let in_stream = stream::empty();
 

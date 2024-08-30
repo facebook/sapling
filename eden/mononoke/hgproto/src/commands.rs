@@ -650,6 +650,7 @@ pub trait HgCommands {
 mod test {
     use bytes::BufMut;
     use futures::stream;
+    use mononoke_macros::mononoke;
     use slog::o;
     use slog::Discard;
 
@@ -711,7 +712,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn getpackv1decoder() {
         let mut decoder = Getpackv1ArgDecoder::new();
         let mut buf = vec![];

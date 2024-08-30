@@ -102,9 +102,11 @@ impl ContentEncoding {
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
+
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_decode_content_encoding() -> Result<(), Error> {
         assert_eq!(
             ContentEncoding::from_header(b"identity, foobar")?,

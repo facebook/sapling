@@ -21,6 +21,7 @@ use mercurial_types_mocks::nodehash::THREES_CSID;
 use mercurial_types_mocks::nodehash::THREES_FNID;
 use mercurial_types_mocks::nodehash::TWOS_CSID;
 use mercurial_types_mocks::nodehash::TWOS_FNID;
+use mononoke_macros::mononoke;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
 use mononoke_types::RepositoryId;
@@ -76,7 +77,7 @@ async fn check_roundtrip(
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_basic(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
@@ -100,7 +101,7 @@ async fn test_basic(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn read_copy_info(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
@@ -139,7 +140,7 @@ async fn read_copy_info(fb: FacebookInit) -> Result<(), Error> {
 
     Ok(())
 }
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_repo_ids(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
@@ -181,7 +182,7 @@ mononoke_queries! {
     }
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_fallback_on_missing_copy_info(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
@@ -235,7 +236,7 @@ async fn test_fallback_on_missing_copy_info(fb: FacebookInit) -> Result<(), Erro
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_fallback_on_missing_paths(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
@@ -471,7 +472,7 @@ macro_rules! filenodes_tests {
 
             use super::*;
 
-            #[fbinit::test]
+            #[mononoke::fbinit_test]
             async fn test_simple_filenode_insert_and_get(fb: FacebookInit) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
                 let (mut reader, writer) = build_reader_writer($create_db()?);
@@ -504,7 +505,7 @@ macro_rules! filenodes_tests {
                 Ok(())
             }
 
-            #[fbinit::test]
+            #[mononoke::fbinit_test]
             async fn test_insert_identical_in_batch(fb: FacebookInit) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
                 let (_reader, writer) = build_reader_writer($create_db()?);
@@ -518,7 +519,7 @@ macro_rules! filenodes_tests {
                 Ok(())
             }
 
-            #[fbinit::test]
+            #[mononoke::fbinit_test]
             async fn test_filenode_insert_twice(fb: FacebookInit) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
                 let (_reader, writer) = build_reader_writer($create_db()?);
@@ -527,7 +528,7 @@ macro_rules! filenodes_tests {
                 Ok(())
             }
 
-            #[fbinit::test]
+            #[mononoke::fbinit_test]
             async fn test_insert_filenode_with_parent(fb: FacebookInit) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
                 let (mut reader, writer) = build_reader_writer($create_db()?);
@@ -556,7 +557,7 @@ macro_rules! filenodes_tests {
                 Ok(())
             }
 
-            #[fbinit::test]
+            #[mononoke::fbinit_test]
             async fn test_insert_root_filenode_with_two_parents(
                 fb: FacebookInit,
             ) -> Result<(), Error> {
@@ -579,7 +580,7 @@ macro_rules! filenodes_tests {
                 Ok(())
             }
 
-            #[fbinit::test]
+            #[mononoke::fbinit_test]
             async fn test_insert_file_filenode(fb: FacebookInit) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
                 let (mut reader, writer) = build_reader_writer($create_db()?);
@@ -617,7 +618,7 @@ macro_rules! filenodes_tests {
                 Ok(())
             }
 
-            #[fbinit::test]
+            #[mononoke::fbinit_test]
             async fn test_insert_different_repo(fb: FacebookInit) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
                 let (mut reader, writer) = build_reader_writer($create_db()?);
@@ -651,7 +652,7 @@ macro_rules! filenodes_tests {
                 Ok(())
             }
 
-            #[fbinit::test]
+            #[mononoke::fbinit_test]
             async fn test_insert_parent_and_child_in_same_batch(
                 fb: FacebookInit,
             ) -> Result<(), Error> {
@@ -690,7 +691,7 @@ macro_rules! filenodes_tests {
                 Ok(())
             }
 
-            #[fbinit::test]
+            #[mononoke::fbinit_test]
             async fn insert_copied_file(fb: FacebookInit) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
                 let (mut reader, writer) = build_reader_writer($create_db()?);
@@ -716,7 +717,7 @@ macro_rules! filenodes_tests {
                 Ok(())
             }
 
-            #[fbinit::test]
+            #[mononoke::fbinit_test]
             async fn insert_same_copied_file(fb: FacebookInit) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
                 let (_reader, writer) = build_reader_writer($create_db()?);
@@ -732,7 +733,7 @@ macro_rules! filenodes_tests {
                 Ok(())
             }
 
-            #[fbinit::test]
+            #[mononoke::fbinit_test]
             async fn insert_copied_file_to_different_repo(fb: FacebookInit) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
                 let (mut reader, writer) = build_reader_writer($create_db()?);
@@ -793,7 +794,7 @@ macro_rules! filenodes_tests {
                 Ok(())
             }
 
-            #[fbinit::test]
+            #[mononoke::fbinit_test]
             async fn get_all_filenodes_maybe_stale(fb: FacebookInit) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
                 let (mut reader, writer) = build_reader_writer($create_db()?);
@@ -856,7 +857,7 @@ macro_rules! filenodes_tests {
                 Ok(())
             }
 
-            #[fbinit::test]
+            #[mononoke::fbinit_test]
             async fn get_all_filenodes_maybe_stale_limited(fb: FacebookInit) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
                 let (mut reader, writer) = build_reader_writer($create_db()?);
@@ -913,7 +914,7 @@ macro_rules! filenodes_tests {
                 Ok(())
             }
 
-            #[fbinit::test]
+            #[mononoke::fbinit_test]
             async fn test_mixed_path_insert_and_get(fb: FacebookInit) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
                 let (mut reader, writer) = build_reader_writer($create_db()?);
@@ -992,7 +993,7 @@ filenodes_tests!(uncached_sharded_test, create_sharded, no_caching);
 filenodes_tests!(cached_unsharded_test, create_unsharded, with_caching);
 filenodes_tests!(cached_sharded_test, create_sharded, with_caching);
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_all_filenodes_caching(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
@@ -1036,7 +1037,7 @@ async fn test_all_filenodes_caching(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_point_filenode_caching(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 

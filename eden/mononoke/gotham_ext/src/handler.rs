@@ -195,6 +195,7 @@ mod test {
     use gotham_derive::StateData;
     use hyper::http::StatusCode;
     use hyper::Body;
+    use mononoke_macros::mononoke;
 
     use super::*;
 
@@ -291,7 +292,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_empty() -> Result<(), anyhow::Error> {
         let handler = MononokeHttpHandler::builder().build(TestHandler);
         let server = TestServer::new(handler)?;
@@ -300,7 +301,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_noop() -> Result<(), anyhow::Error> {
         let handler = MononokeHttpHandler::builder()
             .add(NoopMiddleware)
@@ -312,7 +313,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_chain() -> Result<(), anyhow::Error> {
         let handler = MononokeHttpHandler::builder()
             .add(MiddlewareValueMiddleware(None, 1))
@@ -324,7 +325,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_intercept_alone() -> Result<(), anyhow::Error> {
         let handler = MononokeHttpHandler::builder()
             .add(InterceptMiddleware)
@@ -335,7 +336,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_intercept_chain() -> Result<(), anyhow::Error> {
         let handler = MononokeHttpHandler::builder()
             .add(MiddlewareValueMiddleware(None, 1))

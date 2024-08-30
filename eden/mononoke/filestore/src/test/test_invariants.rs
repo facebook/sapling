@@ -19,6 +19,7 @@ use fbinit::FacebookInit;
 use futures::future;
 use futures::future::TryFutureExt;
 use futures::stream;
+use mononoke_macros::mononoke;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
 
@@ -85,7 +86,7 @@ async fn check_metadata<B: Blobstore>(
         .map(|r| r.is_some())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 fn test_invariants(fb: FacebookInit) -> Result<()> {
     // NOTE: We make calls to our Blobstore succeed with 75% probability below. This might seem
     // high, but this actually makes most store() calls fail, since there is a lot that needs to go
@@ -130,7 +131,7 @@ fn test_invariants(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_store_bytes_consistency(fb: FacebookInit) -> Result<(), Error> {
     let mut gen = Gen::new(128);
 

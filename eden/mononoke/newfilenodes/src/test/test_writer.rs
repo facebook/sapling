@@ -13,6 +13,7 @@ use filenodes::FilenodeInfo;
 use filenodes::PreparedFilenode;
 use mercurial_types_mocks::nodehash::ONES_CSID;
 use mercurial_types_mocks::nodehash::ONES_FNID;
+use mononoke_macros::mononoke;
 use mononoke_types::RepoPath;
 use mononoke_types_mocks::repo::REPO_ZERO;
 use vec1::vec1;
@@ -20,7 +21,7 @@ use vec1::vec1;
 use super::util::build_reader_writer;
 use super::util::build_shard;
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_batching(fb: FacebookInit) -> Result<(), Error> {
     let (_, writer) = build_reader_writer(vec1![build_shard()?, build_shard()?]);
 
@@ -54,7 +55,7 @@ async fn test_batching(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_no_empty_queries(fb: FacebookInit) -> Result<(), Error> {
     let (_, writer) = build_reader_writer(vec1![build_shard()?, build_shard()?]);
 

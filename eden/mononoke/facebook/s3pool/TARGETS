@@ -6,6 +6,7 @@ oncall("mononoke")
 rust_library(
     name = "s3pool",
     srcs = glob(["src/*.rs"]),
+    test_deps = ["//eden/mononoke/mononoke_macros:mononoke_macros"],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:base64",

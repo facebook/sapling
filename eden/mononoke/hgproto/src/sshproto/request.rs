@@ -689,16 +689,17 @@ fn parse_with_params(
 mod test {
     use maplit::hashmap;
     use mercurial_types_mocks::nodehash::NULL_HASH;
+    use mononoke_macros::mononoke;
 
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_integer() {
         assert_eq!(integer(b"1234 "), IResult::Done(&b" "[..], 1234));
         assert_eq!(integer(b"1234"), IResult::Incomplete(Needed::Unknown));
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_ident() {
         assert_eq!(
             ident(b"1234 "),
@@ -712,7 +713,7 @@ mod test {
         assert_eq!(ident(b"foo "), IResult::Done(&b" "[..], &b"foo"[..]));
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_param_star() {
         let p = b"* 0\ntrailer";
         assert_eq!(param_star(p), IResult::Done(&b"trailer"[..], hashmap! {}));
@@ -764,7 +765,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_param_kv() {
         let p = b"foo 12\n\
                   hello world!trailer";
@@ -791,7 +792,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_params() {
         let p = b"bar 12\n\
                   hello world!\
@@ -862,7 +863,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_params_star() {
         let star = b"* 1\n\
                      foo 0\n\
@@ -925,7 +926,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_batch_param_escaped() {
         let p = b"foo=b:ear";
 
@@ -935,7 +936,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_batch_params() {
         let p = b"foo=bar";
 
@@ -975,7 +976,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_nodehash() {
         assert_eq!(
             nodehash(b"0000000000000000000000000000000000000000"),
@@ -994,7 +995,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_parseval_extra_characters() {
         let kv = hashmap! {
         b"foo".to_vec() => b"0000000000000000000000000000000000000000extra".to_vec(),
@@ -1008,7 +1009,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_parseval_default_extra_characters() {
         let kv = hashmap! {
         b"foo".to_vec() => b"0000000000000000000000000000000000000000extra".to_vec(),
@@ -1022,7 +1023,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_pair() {
         let p =
             b"0000000000000000000000000000000000000000-0000000000000000000000000000000000000000";
@@ -1041,7 +1042,7 @@ mod test {
         assert_eq!(pair(&p[..40]), IResult::Incomplete(Needed::Size(41)));
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_pairlist() {
         let p =
             b"0000000000000000000000000000000000000000-0000000000000000000000000000000000000000 \
@@ -1080,7 +1081,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_hashlist() {
         let p =
             b"0000000000000000000000000000000000000000 0000000000000000000000000000000000000000 \
@@ -1115,7 +1116,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_commavalues() {
         // Empty list
         let p = b"";
@@ -1144,7 +1145,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_cmd() {
         let p = b"foo bar";
 
@@ -1160,7 +1161,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_cmdlist() {
         let p = b"foo bar";
 
@@ -1192,6 +1193,7 @@ mod test_parse {
     use maplit::btreeset;
     use maplit::hashmap;
     use maplit::hashset;
+    use mononoke_macros::mononoke;
     use mononoke_types::path::MPath;
 
     use super::*;
@@ -1283,7 +1285,7 @@ mod test_parse {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_parse_batch_1() {
         let inp = "batch\n\
                    * 0\n\
@@ -1293,7 +1295,7 @@ mod test_parse {
         test_parse(inp, Request::Batch(vec![SingleRequest::Hello]))
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_parse_batch_2() {
         let inp = "batch\n\
                    * 0\n\
@@ -1306,7 +1308,7 @@ mod test_parse {
         )
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_parse_batch_3() {
         let inp = "batch\n\
                    * 0\n\
@@ -1322,7 +1324,7 @@ mod test_parse {
         )
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_parse_between() {
         let inp = "between\n\
              pairs 163\n\
@@ -1336,21 +1338,21 @@ mod test_parse {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_parse_branchmap() {
         let inp = "branchmap\n";
 
         test_parse(inp, Request::Single(SingleRequest::Branchmap {}));
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_parse_capabilities() {
         let inp = "capabilities\n";
 
         test_parse(inp, Request::Single(SingleRequest::Capabilities {}));
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_parse_debugwireargs() {
         let inp = "debugwireargs\n\
                    * 2\n\
@@ -1373,7 +1375,7 @@ mod test_parse {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_parse_getbundle() {
         // with no arguments
         let inp = "getbundle\n\
@@ -1417,21 +1419,21 @@ mod test_parse {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_parse_heads() {
         let inp = "heads\n";
 
         test_parse(inp, Request::Single(SingleRequest::Heads {}));
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_parse_hello() {
         let inp = "hello\n";
 
         test_parse(inp, Request::Single(SingleRequest::Hello {}));
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_parse_listkeys() {
         let inp = "listkeys\n\
                    namespace 9\n\
@@ -1445,7 +1447,7 @@ mod test_parse {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_parse_lookup() {
         let inp = "lookup\n\
                    key 9\n\
@@ -1459,7 +1461,7 @@ mod test_parse {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_parse_lookup2() {
         let inp = "lookup\n\
                    key 4\n\
@@ -1473,7 +1475,7 @@ mod test_parse {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_parse_gettreepack() {
         let inp = "gettreepack\n\
                    * 4\n\
@@ -1565,7 +1567,7 @@ mod test_parse {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_parse_known_1() {
         let inp = "known\n\
                    * 0\n\
@@ -1580,7 +1582,7 @@ mod test_parse {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_parse_known_2() {
         let inp = "known\n\
                    * 0\n\
@@ -1603,19 +1605,19 @@ mod test_parse {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_parse_unbundle_minimal() {
         let bundle: &[u8] = &b"HG20\0\0\0\0\0\0\0\0"[..];
         test_parse_unbundle_with(bundle);
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_parse_unbundle_small() {
         let bundle: &[u8] = &include_bytes!("../../fixtures/min.bundle")[..];
         test_parse_unbundle_with(bundle);
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_batch_parse_heads() {
         match parse_with_params(b"heads\n", batch_params) {
             IResult::Done(rest, val) => {
@@ -1627,7 +1629,7 @@ mod test_parse {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_parse_batch_heads() {
         let inp = "batch\n\
                    * 0\n\
@@ -1651,7 +1653,7 @@ mod test_parse {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_parse_stream_out_shallow() {
         let inp = "stream_out_shallow\n\
                    * 1\n\
@@ -1664,7 +1666,7 @@ mod test_parse {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_parse_listkeyspatterns() {
         let input = "listkeyspatterns\n\
                      namespace 9\n\
@@ -1679,7 +1681,7 @@ mod test_parse {
         );
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_parse_getcommitdata() {
         let input = "getcommitdata\n\
                      nodes 81\n\

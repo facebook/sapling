@@ -9,6 +9,7 @@ rust_library(
         "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:quickcheck",
         "//eden/mononoke/mercurial:mercurial_types-mocks",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
     test_srcs = [
         "fixtures/min.bundle",

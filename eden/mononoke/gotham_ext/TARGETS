@@ -5,7 +5,10 @@ oncall("mononoke")
 rust_library(
     name = "gotham_ext",
     srcs = glob(["src/**/*.rs"]),
-    test_deps = ["fbsource//third-party/rust:tokio"],
+    test_deps = [
+        "fbsource//third-party/rust:tokio",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-compression",

@@ -47,3 +47,6 @@ tokio-openssl = "0.6"
 tokio-util = { version = "0.7.10", features = ["full"] }
 trust-dns-resolver = "0.20"
 yield_stream = { version = "0.1.0", path = "../common/yield_stream" }
+
+[dev-dependencies]
+mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }

@@ -268,9 +268,11 @@ pub async fn fetch_with_size<'a, B: Blobstore + Clone + 'a>(
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
+
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_real_size() {
         assert_eq!(RangeInner::All.real_size(5), 5);
 
