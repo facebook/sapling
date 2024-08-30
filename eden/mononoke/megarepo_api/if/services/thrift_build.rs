@@ -6,9 +6,9 @@ use std::path::Path;
 use thrift_compiler::Config;
 use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
-eden/mononoke/async_requests/if/async_requests_types_thrift.thrift crate //eden/mononoke/async_requests/if:async_requests_types-thrift-rust
 eden/mononoke/derived_data/if/derived_data_type.thrift source_control->derived_data_type_if //eden/mononoke/derived_data/if:derived_data_type_if-rust
 eden/mononoke/megarepo_api/if/megarepo_configs.thrift source_control->megarepo_configs //eden/mononoke/megarepo_api/if:megarepo_configs-rust
+eden/mononoke/megarepo_api/if/megarepo_types_thrift.thrift crate //eden/mononoke/megarepo_api/if:megarepo_types-thrift-rust
 eden/mononoke/mononoke_types/serialization/blame.thrift mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/bonsai.thrift mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/bssm.thrift mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
@@ -42,8 +42,8 @@ fn main() {
     Config::from_env(GenContext::Services)
         .expect("Failed to instantiate thrift_compiler::Config")
         .base_path("../../../../..")
-        .types_crate("async_requests_types-thrift__types")
-        .clients_crate("async_requests_types-thrift__clients")
-        .run(["../async_requests_types_thrift.thrift"])
+        .types_crate("megarepo_types-thrift__types")
+        .clients_crate("megarepo_types-thrift__clients")
+        .run(["../megarepo_types_thrift.thrift"])
         .expect("Failed while running thrift compilation");
 }

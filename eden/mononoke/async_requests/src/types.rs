@@ -11,10 +11,6 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
-pub use async_requests_types_thrift::AsynchronousRequestParams as ThriftAsynchronousRequestParams;
-pub use async_requests_types_thrift::AsynchronousRequestParamsId as ThriftAsynchronousRequestParamsId;
-pub use async_requests_types_thrift::AsynchronousRequestResult as ThriftAsynchronousRequestResult;
-pub use async_requests_types_thrift::AsynchronousRequestResultId as ThriftAsynchronousRequestResultId;
 use async_trait::async_trait;
 use blobstore::impl_loadable_storable;
 use blobstore::Blobstore;
@@ -23,6 +19,10 @@ use fbthrift::compact_protocol;
 pub use megarepo_config::SyncTargetConfig;
 pub use megarepo_config::Target;
 use megarepo_error::MegarepoError;
+pub use megarepo_types_thrift::MegarepoAsynchronousRequestParams as ThriftMegarepoAsynchronousRequestParams;
+pub use megarepo_types_thrift::MegarepoAsynchronousRequestParamsId as ThriftMegarepoAsynchronousRequestParamsId;
+pub use megarepo_types_thrift::MegarepoAsynchronousRequestResult as ThriftMegarepoAsynchronousRequestResult;
+pub use megarepo_types_thrift::MegarepoAsynchronousRequestResultId as ThriftMegarepoAsynchronousRequestResultId;
 use mononoke_api::Mononoke;
 use mononoke_api::MononokeRepo;
 use mononoke_types::hash::Blake2;
@@ -90,7 +90,7 @@ pub trait Request: Sized + Send + Sync {
 }
 
 /// Thrift type representing async service method parameters
-pub trait ThriftParams: Sized + Send + Sync + Into<AsynchronousRequestParams> {
+pub trait ThriftParams: Sized + Send + Sync + Into<MegarepoAsynchronousRequestParams> {
     type R: Request<ThriftParams = Self>;
 
     /// Every *Params argument referes to some Target
@@ -99,7 +99,7 @@ pub trait ThriftParams: Sized + Send + Sync + Into<AsynchronousRequestParams> {
     fn target(&self) -> &ThriftMegarepoTarget;
 }
 pub trait ThriftResult:
-    Sized + Send + Sync + TryFrom<AsynchronousRequestResult, Error = MegarepoError>
+    Sized + Send + Sync + TryFrom<MegarepoAsynchronousRequestResult, Error = MegarepoError>
 {
     type R: Request<ThriftResult = Self>;
 }
@@ -308,28 +308,28 @@ macro_rules! impl_async_svc_method_types {
             }
         }
 
-        impl From<Result<$response_type, MegarepoError>> for AsynchronousRequestResult {
-            fn from(r: Result<$response_type, MegarepoError>) -> AsynchronousRequestResult {
+        impl From<Result<$response_type, MegarepoError>> for MegarepoAsynchronousRequestResult {
+            fn from(r: Result<$response_type, MegarepoError>) -> MegarepoAsynchronousRequestResult {
                 let thrift = match r {
-                    Ok(payload) => ThriftAsynchronousRequestResult::$result_union_variant($result_value_thrift_type::success(payload)),
-                    Err(e) => ThriftAsynchronousRequestResult::$result_union_variant($result_value_thrift_type::error(e.into()))
+                    Ok(payload) => ThriftMegarepoAsynchronousRequestResult::$result_union_variant($result_value_thrift_type::success(payload)),
+                    Err(e) => ThriftMegarepoAsynchronousRequestResult::$result_union_variant($result_value_thrift_type::error(e.into()))
                 };
 
-                AsynchronousRequestResult::from_thrift(thrift)
+                MegarepoAsynchronousRequestResult::from_thrift(thrift)
             }
         }
 
-        impl From<$result_value_thrift_type> for AsynchronousRequestResult {
-            fn from(r: $result_value_thrift_type) -> AsynchronousRequestResult {
-                let thrift = ThriftAsynchronousRequestResult::$result_union_variant(r);
-                AsynchronousRequestResult::from_thrift(thrift)
+        impl From<$result_value_thrift_type> for MegarepoAsynchronousRequestResult {
+            fn from(r: $result_value_thrift_type) -> MegarepoAsynchronousRequestResult {
+                let thrift = ThriftMegarepoAsynchronousRequestResult::$result_union_variant(r);
+                MegarepoAsynchronousRequestResult::from_thrift(thrift)
             }
         }
 
-        impl From<$params_value_thrift_type> for AsynchronousRequestParams{
-            fn from(params: $params_value_thrift_type) -> AsynchronousRequestParams {
-                AsynchronousRequestParams::from_thrift(
-                    ThriftAsynchronousRequestParams::$params_union_variant(params)
+        impl From<$params_value_thrift_type> for MegarepoAsynchronousRequestParams{
+            fn from(params: $params_value_thrift_type) -> MegarepoAsynchronousRequestParams {
+                MegarepoAsynchronousRequestParams::from_thrift(
+                    ThriftMegarepoAsynchronousRequestParams::$params_union_variant(params)
                 )
             }
         }
@@ -338,13 +338,13 @@ macro_rules! impl_async_svc_method_types {
             type R = $request_struct;
         }
 
-        impl TryFrom<AsynchronousRequestResult> for $result_value_thrift_type {
+        impl TryFrom<MegarepoAsynchronousRequestResult> for $result_value_thrift_type {
             type Error = MegarepoError;
 
-            fn try_from(r: AsynchronousRequestResult) -> Result<$result_value_thrift_type, Self::Error> {
+            fn try_from(r: MegarepoAsynchronousRequestResult) -> Result<$result_value_thrift_type, Self::Error> {
                 match r.thrift {
-                    ThriftAsynchronousRequestResult::$result_union_variant(payload) => Ok(payload),
-                    ThriftAsynchronousRequestResult::UnknownField(x) => {
+                    ThriftMegarepoAsynchronousRequestResult::$result_union_variant(payload) => Ok(payload),
+                    ThriftMegarepoAsynchronousRequestResult::UnknownField(x) => {
                         // TODO: maybe use structured error?
                         Err(MegarepoError::internal(
                             anyhow!(
@@ -504,42 +504,42 @@ impl_async_svc_method_types! {
 }
 
 impl_async_svc_stored_type! {
-    handle_type => AsynchronousRequestParamsId,
-    handle_thrift_type => ThriftAsynchronousRequestParamsId,
-    value_type => AsynchronousRequestParams,
-    value_thrift_type => ThriftAsynchronousRequestParams,
-    context_type => AsynchronousRequestParamsIdContext,
+    handle_type => MegarepoAsynchronousRequestParamsId,
+    handle_thrift_type => ThriftMegarepoAsynchronousRequestParamsId,
+    value_type => MegarepoAsynchronousRequestParams,
+    value_thrift_type => ThriftMegarepoAsynchronousRequestParams,
+    context_type => MegarepoAsynchronousRequestParamsIdContext,
 }
 
 impl_async_svc_stored_type! {
-    handle_type => AsynchronousRequestResultId,
-    handle_thrift_type => ThriftAsynchronousRequestResultId,
-    value_type => AsynchronousRequestResult,
-    value_thrift_type => ThriftAsynchronousRequestResult,
-    context_type => AsynchronousRequestResultIdContext,
+    handle_type => MegarepoAsynchronousRequestResultId,
+    handle_thrift_type => ThriftMegarepoAsynchronousRequestResultId,
+    value_type => MegarepoAsynchronousRequestResult,
+    value_thrift_type => ThriftMegarepoAsynchronousRequestResult,
+    context_type => MegarepoAsynchronousRequestResultIdContext,
 }
 
-impl AsynchronousRequestParams {
+impl MegarepoAsynchronousRequestParams {
     pub fn target(&self) -> Result<&ThriftMegarepoTarget, MegarepoError> {
         match &self.thrift {
-            ThriftAsynchronousRequestParams::megarepo_add_target_params(params) => {
+            ThriftMegarepoAsynchronousRequestParams::megarepo_add_target_params(params) => {
                 Ok(params.target())
             }
-            ThriftAsynchronousRequestParams::megarepo_add_branching_target_params(params) => {
+            ThriftMegarepoAsynchronousRequestParams::megarepo_add_branching_target_params(
+                params,
+            ) => Ok(params.target()),
+            ThriftMegarepoAsynchronousRequestParams::megarepo_change_target_params(params) => {
                 Ok(params.target())
             }
-            ThriftAsynchronousRequestParams::megarepo_change_target_params(params) => {
+            ThriftMegarepoAsynchronousRequestParams::megarepo_remerge_source_params(params) => {
                 Ok(params.target())
             }
-            ThriftAsynchronousRequestParams::megarepo_remerge_source_params(params) => {
+            ThriftMegarepoAsynchronousRequestParams::megarepo_sync_changeset_params(params) => {
                 Ok(params.target())
             }
-            ThriftAsynchronousRequestParams::megarepo_sync_changeset_params(params) => {
-                Ok(params.target())
-            }
-            ThriftAsynchronousRequestParams::UnknownField(union_tag) => {
+            ThriftMegarepoAsynchronousRequestParams::UnknownField(union_tag) => {
                 Err(MegarepoError::internal(anyhow!(
-                    "this type of reuqest (AsynchronousRequestParams tag {}) not supported by this worker!",
+                    "this type of reuqest (MegarepoAsynchronousRequestParams tag {}) not supported by this worker!",
                     union_tag
                 )))
             }
@@ -659,27 +659,27 @@ mod test {
         // These IDs are persistent, and this test is really to make sure that they don't change
         // accidentally. Same as in typed_hash.rs
         test_blobstore_key!(
-            AsynchronousRequestParamsId,
-            "async.svc.AsynchronousRequestParams"
+            MegarepoAsynchronousRequestParamsId,
+            "async.svc.MegarepoAsynchronousRequestParams"
         );
         test_blobstore_key!(
-            AsynchronousRequestResultId,
-            "async.svc.AsynchronousRequestResult"
+            MegarepoAsynchronousRequestResultId,
+            "async.svc.MegarepoAsynchronousRequestResult"
         );
         test_blobstore_key!(
-            AsynchronousRequestParamsId,
-            "async.svc.AsynchronousRequestParams"
+            MegarepoAsynchronousRequestParamsId,
+            "async.svc.MegarepoAsynchronousRequestParams"
         );
         test_blobstore_key!(
-            AsynchronousRequestResultId,
-            "async.svc.AsynchronousRequestResult"
+            MegarepoAsynchronousRequestResultId,
+            "async.svc.MegarepoAsynchronousRequestResult"
         );
     }
 
     #[mononoke::test]
     fn test_serialize_deserialize() {
-        serialize_deserialize!(AsynchronousRequestParamsId);
-        serialize_deserialize!(AsynchronousRequestResultId);
+        serialize_deserialize!(MegarepoAsynchronousRequestParamsId);
+        serialize_deserialize!(MegarepoAsynchronousRequestResultId);
     }
 
     macro_rules! test_store_load {
@@ -705,7 +705,7 @@ mod test {
     async fn test_megaerpo_add_target_params_type(fb: FacebookInit) {
         let blobstore = Memblob::new(PutBehaviour::IfAbsent);
         let ctx = CoreContext::test_mock(fb);
-        test_store_load!(AsynchronousRequestParams, ctx, blobstore);
-        test_store_load!(AsynchronousRequestResult, ctx, blobstore);
+        test_store_load!(MegarepoAsynchronousRequestParams, ctx, blobstore);
+        test_store_load!(MegarepoAsynchronousRequestResult, ctx, blobstore);
     }
 }

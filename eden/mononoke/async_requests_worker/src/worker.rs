@@ -18,8 +18,8 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
 
-use async_requests::types::AsynchronousRequestParams;
 use async_requests::types::IntoConfigFormat;
+use async_requests::types::MegarepoAsynchronousRequestParams;
 use async_requests::AsyncMethodRequestQueue;
 use async_requests::ClaimedBy;
 use async_requests::RequestId;
@@ -114,7 +114,8 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
         ctx: CoreContext,
         queues_with_repos: Vec<(Vec<RepositoryId>, AsyncMethodRequestQueue)>,
         will_exit: Arc<AtomicBool>,
-    ) -> impl Stream<Item = Result<(RequestId, AsynchronousRequestParams), MegarepoError>> {
+    ) -> impl Stream<Item = Result<(RequestId, MegarepoAsynchronousRequestParams), MegarepoError>>
+    {
         let claimed_by = ClaimedBy(self.name.clone());
         let sleep_time = Duration::from_millis(DEQUEUE_STREAM_SLEEP_TIME);
         Self::request_stream_inner(
@@ -134,7 +135,8 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
         will_exit: Arc<AtomicBool>,
         sleep_time: Duration,
         abandoned_threshold_secs: i64,
-    ) -> impl Stream<Item = Result<(RequestId, AsynchronousRequestParams), MegarepoError>> {
+    ) -> impl Stream<Item = Result<(RequestId, MegarepoAsynchronousRequestParams), MegarepoError>>
+    {
         try_stream! {
             'outer: loop {
                 let mut yielded = false;
@@ -206,7 +208,7 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
         self,
         ctx: CoreContext,
         req_id: RequestId,
-        params: AsynchronousRequestParams,
+        params: MegarepoAsynchronousRequestParams,
     ) -> Result<bool, MegarepoError> {
         let target = params
             .target()?

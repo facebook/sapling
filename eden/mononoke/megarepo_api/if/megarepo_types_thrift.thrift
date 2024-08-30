@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-//! Thrift types for async service methods
+//! Thrift types for megarepo async service methods
 //! These aren't part of `source_control.trift`, because they aren't part of
 //! the service interface. They aren't part of of `megarepo_configs.thrift`,
 //! because they aren't configs. Rather, they are service implementation detail.
@@ -27,8 +27,8 @@ typedef id.Id MegarepoAddBranchingTargetResultId (rust.newtype)
 typedef id.Id MegarepoRemergeSourceResultId (rust.newtype)
 typedef id.Id MegarepoChangeTargetConfigResultId (rust.newtype)
 
-typedef id.Id AsynchronousRequestResultId (rust.newtype)
-union AsynchronousRequestResult {
+typedef id.Id MegarepoAsynchronousRequestResultId (rust.newtype)
+union MegarepoAsynchronousRequestResult {
   1: source_control.MegarepoAddTargetResult megarepo_add_target_result;
   2: source_control.MegarepoChangeTargetConfigResult megarepo_change_target_result;
   3: source_control.MegarepoRemergeSourceResult megarepo_remerge_source_result;
@@ -36,8 +36,8 @@ union AsynchronousRequestResult {
   5: source_control.MegarepoAddBranchingTargetResult megarepo_add_branching_target_result;
 }
 
-typedef id.Id AsynchronousRequestParamsId (rust.newtype)
-union AsynchronousRequestParams {
+typedef id.Id MegarepoAsynchronousRequestParamsId (rust.newtype)
+union MegarepoAsynchronousRequestParams {
   1: source_control.MegarepoAddTargetParams megarepo_add_target_params;
   2: source_control.MegarepoChangeTargetConfigParams megarepo_change_target_params;
   3: source_control.MegarepoRemergeSourceParams megarepo_remerge_source_params;

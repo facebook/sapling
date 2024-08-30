@@ -23,7 +23,6 @@ thrift_library(
     # THIS IS NOT A PUBLIC SOURCE CONTROL API AND THERE IS NO GUARANTEE OF BACKWARDS COMPATIBLITY.
     visibility = [
         "//eden/mononoke/async_requests:",
-        "//eden/mononoke/async_requests/if:",
         "//eden/mononoke/bonsai_git_mapping/if:",
         "//eden/mononoke/bonsai_globalrev_mapping/if:",
         "//eden/mononoke/bonsai_hg_mapping/if:",
