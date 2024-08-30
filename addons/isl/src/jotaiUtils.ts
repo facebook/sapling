@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {Platform} from './platform';
 import type {ConfigName, LocalStorageName, SettableConfigName} from './types';
 import type {WritableAtom, Atom, Getter} from 'jotai';
 import type {Json} from 'shared/typeUtils';
@@ -401,6 +402,71 @@ export interface AtomFamilyWeak<K, A extends Atom<unknown>> {
   threshold: number;
   /** Prefix of debugLabel. */
   debugLabel?: string;
+}
+
+function getAllPersistedStateWithPrefix<T>(
+  prefix: LocalStorageName,
+  islPlatform: Platform,
+): Record<string, T> {
+  const all = islPlatform.getAllPersistedState();
+  if (all == null) {
+    return {};
+  }
+  return Object.fromEntries(
+    Object.entries(all)
+      .filter(([key]) => key.startsWith(prefix))
+      .map(([key, value]) => [key.slice(prefix.length), value]),
+  );
+}
+
+/**
+ * An atom family that loads and persists data from local storage.
+ * Each key is stored in a separate local storage entry, using the `storageKeyPrefix`.
+ * Each stored value includes a timestamp so that stale data can be evicted,
+ * on next startup.
+ * Data is loaded once on startup, but written to local storage on every change.
+ */
+export function localStorageBackedAtomFamily<K extends string, T extends Json | Partial<Json>>(
+  storageKeyPrefix: LocalStorageName,
+  getDefault: (key: K) => T,
+  maxAgeDays = 14,
+  islPlatform = platform,
+): AtomFamilyWeak<K, MutAtom<T>> {
+  type StoredData = {
+    data: T;
+    date: number;
+  };
+  const initialData = getAllPersistedStateWithPrefix<StoredData>(storageKeyPrefix, islPlatform);
+
+  const ONE_DAY_MS = 1000 * 60 * 60 * 24;
+  // evict previously stored old data
+  for (const key in initialData) {
+    const data = initialData[key];
+    if (data?.date != null && Date.now() - data?.date > ONE_DAY_MS * maxAgeDays) {
+      islPlatform.setPersistedState(storageKeyPrefix + key, undefined);
+      delete initialData[key];
+    }
+  }
+
+  return atomFamilyWeak((key: K) => {
+    // We use the full getPersistedState instead of initialData, as this atom may have been evicted from the weak cache,
+    // and is now being recreated and requires checking the actual cache to get any changes after initialization.
+    const data = islPlatform.getPersistedState(storageKeyPrefix + key) as StoredData | null;
+    const initial = data?.data ?? getDefault(key);
+    const storageKey = storageKeyPrefix + key;
+
+    return atomWithOnChange(
+      atom<T>(initial),
+      value => {
+        // TODO: debounce?
+        islPlatform.setPersistedState(storageKey, {
+          data: value == null ? undefined : (value as Json),
+          date: Date.now(),
+        } as StoredData as Json);
+      },
+      /* skipInitialCall */ true,
+    );
+  });
 }
 
 function setDebugLabelForDerivedAtom<A extends Atom<unknown>>(

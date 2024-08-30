@@ -697,7 +697,9 @@ export type LocalStorageName =
   | 'isl.comparison-display-mode'
   | 'isl.expand-generated-files'
   | 'isl-color-theme'
-  | 'isl.auto-resolve-before-continue';
+  | 'isl.auto-resolve-before-continue'
+  // These keys are prefixes, with further dynamic keys appended afterwards
+  | 'isl.edited-commit-messages:';
 
 export type ClientToServerMessage =
   | {type: 'heartbeat'; id: string}

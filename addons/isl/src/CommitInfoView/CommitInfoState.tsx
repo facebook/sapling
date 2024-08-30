@@ -11,7 +11,7 @@ import type {CommitMessageFields} from './types';
 import serverAPI from '../ClientToServerAPI';
 import {successionTracker} from '../SuccessionTracker';
 import {latestCommitMessageFields} from '../codeReview/CodeReviewInfo';
-import {atomFamilyWeak, readAtom, writeAtom} from '../jotaiUtils';
+import {atomFamilyWeak, localStorageBackedAtomFamily, readAtom, writeAtom} from '../jotaiUtils';
 import {AmendMessageOperation} from '../operations/AmendMessageOperation';
 import {AmendOperation, PartialAmendOperation} from '../operations/AmendOperation';
 import {CommitOperation, PartialCommitOperation} from '../operations/CommitOperation';
@@ -76,9 +76,10 @@ export const getDefaultEditedCommitMessage = (): EditedMessage => ({});
  * This also stores the state of new commit messages being written, keyed by "head" instead of a commit hash.
  * Note: this state should be cleared when amending / committing / meta-editing.
  */
-export const editedCommitMessages = atomFamilyWeak((_hashOrHead: Hash | 'head') => {
-  return atom<EditedMessage>(getDefaultEditedCommitMessage());
-});
+export const editedCommitMessages = localStorageBackedAtomFamily<Hash | 'head', EditedMessage>(
+  'isl.edited-commit-messages:',
+  () => getDefaultEditedCommitMessage(),
+);
 
 function updateEditedCommitMessagesFromSuccessions() {
   return successionTracker.onSuccessions(successions => {

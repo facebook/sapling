@@ -6,6 +6,8 @@
  */
 
 import type {AtomFamilyWeak} from '../jotaiUtils';
+import type {Platform} from '../platform';
+import type {LocalStorageName} from '../types';
 import type {Atom} from 'jotai';
 
 import {
@@ -16,6 +18,7 @@ import {
   useAtomGet,
   useAtomHas,
   atomResetOnDepChange,
+  localStorageBackedAtomFamily,
 } from '../jotaiUtils';
 import {render, act} from '@testing-library/react';
 import {List} from 'immutable';
@@ -344,5 +347,68 @@ describe('atomResetOnDepChange', () => {
     writeAtom(testAtom, 3);
     writeAtom(depAtom, 10);
     expect(readAtom(testAtom)).toBe(3);
+  });
+});
+
+describe('localStorageBackedAtomFamily', () => {
+  function setupTestPlatform<T>(initialValues: Record<string, T>): Platform {
+    const state = {...initialValues};
+    const mockPlatform = {
+      getAllPersistedState: jest.fn().mockImplementation((): Record<string, T> => {
+        return state;
+      }),
+      getPersistedState: jest.fn().mockImplementation((key: string): T => {
+        return state[key];
+      }),
+      setPersistedState: jest.fn().mockImplementation((key: string, value: T) => {
+        state[key] = value;
+      }),
+    } as Partial<Platform> as Platform;
+    return mockPlatform;
+  }
+
+  const testKey = 'test_' as LocalStorageName;
+
+  it('loads initial state from storage', () => {
+    const mockPlatform = setupTestPlatform({test_a: {data: 1, date: Date.now()}});
+    const family = localStorageBackedAtomFamily(testKey, () => 0, 1, mockPlatform);
+
+    expect(readAtom(family('a'))).toEqual(1);
+    expect(readAtom(family('b'))).toEqual(0);
+  });
+
+  it('evicts old initial state from storage', () => {
+    const mockPlatform = setupTestPlatform({
+      test_a: {data: 1, date: 0},
+      test_b: {data: 2, date: Date.now()},
+    });
+    const family = localStorageBackedAtomFamily(testKey, () => 0, 1, mockPlatform);
+
+    expect(readAtom(family('a'))).toEqual(0);
+    expect(readAtom(family('b'))).toEqual(2);
+  });
+
+  it('writes to persisted state', () => {
+    const mockPlatform = setupTestPlatform<number>({});
+    const family = localStorageBackedAtomFamily(testKey, (): number => 0, 1, mockPlatform);
+
+    expect(readAtom(family('a'))).toEqual(0);
+    writeAtom(family('a'), 2);
+    expect(readAtom(family('a'))).toEqual(2);
+    expect(mockPlatform.setPersistedState).toHaveBeenCalledWith('test_a', {
+      data: 2,
+      date: expect.any(Number),
+    });
+  });
+
+  it("gets the latest data even after writing and then being gc'd", () => {
+    const mockPlatform = setupTestPlatform({test_a: {data: 1, date: Date.now()}});
+    const family = localStorageBackedAtomFamily(testKey, (): number => 0, 1, mockPlatform);
+
+    expect(readAtom(family('a'))).toEqual(1);
+    writeAtom(family('a'), 2);
+    expect(readAtom(family('a'))).toEqual(2);
+    family.clear();
+    expect(readAtom(family('a'))).toEqual(2);
   });
 });
