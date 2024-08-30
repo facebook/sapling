@@ -16,19 +16,6 @@
   > permit_writes = true
   > EOF
 
-  $ cat >> repos/repo/server.toml <<EOF
-  > [[bookmarks]]
-  > regex=".*"
-  > [[bookmarks.hooks]]
-  > hook_name="block_new_bookmark_creations_by_name"
-  > [[hooks]]
-  > name="block_new_bookmark_creations_by_name"
-  > config_json='''{
-  > "blocked_bookmarks": ".*this_is_blocked.*"
-  > }'''
-  > bypass_pushvar="x-git-allow-all-bookmarks=1"
-  > EOF
-
 # Setup git repository
   $ mkdir -p "$GIT_REPO_ORIGIN"
   $ cd "$GIT_REPO_ORIGIN"
@@ -57,11 +44,25 @@
   $ merge_just_knobs <<EOF
   > {
   >   "bools": {
-  >     "scm/mononoke:run_hooks_on_additional_changesets": true
+  >     "scm/mononoke:bookmarks_movement_load_changesets_aggressive_simplification": true
   >   }
   > }
   > EOF
 
+  $ cd "$TESTTMP"/mononoke-config
+  $ cat >> repos/repo/server.toml <<EOF
+  > [[bookmarks]]
+  > regex=".*"
+  > [[bookmarks.hooks]]
+  > hook_name="block_new_bookmark_creations_by_name"
+  > [[hooks]]
+  > name="block_new_bookmark_creations_by_name"
+  > config_json='''{
+  > "blocked_bookmarks": ".*this_is_blocked.*"
+  > }'''
+  > bypass_pushvar="x-git-allow-all-bookmarks=1"
+  > EOF
+  $ cd "${TESTTMP}"
 
 # Start up the Mononoke Git Service
   $ mononoke_git_service
