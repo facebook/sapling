@@ -425,13 +425,14 @@ function getAllPersistedStateWithPrefix<T>(
  * Each stored value includes a timestamp so that stale data can be evicted,
  * on next startup.
  * Data is loaded once on startup, but written to local storage on every change.
+ * Write `undefined` to any atom to explicitly remove it from local storage.
  */
 export function localStorageBackedAtomFamily<K extends string, T extends Json | Partial<Json>>(
   storageKeyPrefix: LocalStorageName,
   getDefault: (key: K) => T,
   maxAgeDays = 14,
   islPlatform = platform,
-): AtomFamilyWeak<K, MutAtom<T>> {
+): AtomFamilyWeak<K, WritableAtom<T, [T | undefined | ((prev: T) => T | undefined)], void>> {
   type StoredData = {
     data: T;
     date: number;
@@ -455,16 +456,27 @@ export function localStorageBackedAtomFamily<K extends string, T extends Json | 
     const initial = data?.data ?? getDefault(key);
     const storageKey = storageKeyPrefix + key;
 
-    return atomWithOnChange(
-      atom<T>(initial),
-      value => {
-        // TODO: debounce?
-        islPlatform.setPersistedState(storageKey, {
-          data: value == null ? undefined : (value as Json),
-          date: Date.now(),
-        } as StoredData as Json);
+    const inner = atom<T>(initial);
+    return atom(
+      get => get(inner),
+      (get, set, value) => {
+        const oldValue = get(inner);
+        const result = typeof value === 'function' ? value(oldValue) : value;
+        set(inner, result === undefined ? getDefault(key) : result);
+        const newValue = get(inner);
+        if (oldValue !== newValue) {
+          // TODO: debounce?
+          islPlatform.setPersistedState(
+            storageKey,
+            result == null
+              ? undefined
+              : ({
+                  data: newValue as Json,
+                  date: Date.now(),
+                } as StoredData as Json),
+          );
+        }
       },
-      /* skipInitialCall */ true,
     );
   });
 }

@@ -411,4 +411,19 @@ describe('localStorageBackedAtomFamily', () => {
     family.clear();
     expect(readAtom(family('a'))).toEqual(2);
   });
+
+  it('writing undefined clears from persisted storage', () => {
+    const mockPlatform = setupTestPlatform({test_a: {data: 1, date: Date.now()}});
+    const family = localStorageBackedAtomFamily(testKey, () => 0, 1, mockPlatform);
+
+    // type check that although we can SET to undefined, we can't READ undefined
+    const returnTypeShouldBeNonNull: number = readAtom(family('a'));
+    expect(returnTypeShouldBeNonNull).toEqual(1);
+
+    writeAtom(family('a'), undefined);
+
+    expect(mockPlatform.setPersistedState).toHaveBeenCalledWith('test_a', undefined);
+    expect(mockPlatform.getPersistedState('test_a')).toBeUndefined(); // nothing is stored
+    expect(readAtom(family('a'))).toEqual(0); // read still gives default value
+  });
 });

@@ -677,7 +677,8 @@ function ActionsBar({
         }
       }
 
-      writeAtom(editedCommitMessages(isCommitMode ? 'head' : commit.hash), {});
+      // Delete the edited message atom (and delete from persisted storage)
+      writeAtom(editedCommitMessages(isCommitMode ? 'head' : commit.hash), undefined);
     },
     [commit.hash, isCommitMode],
   );

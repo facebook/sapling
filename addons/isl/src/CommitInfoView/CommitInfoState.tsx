@@ -85,7 +85,13 @@ function updateEditedCommitMessagesFromSuccessions() {
   return successionTracker.onSuccessions(successions => {
     for (const [oldHash, newHash] of successions) {
       const existing = readAtom(editedCommitMessages(oldHash));
-      writeAtom(editedCommitMessages(newHash), existing);
+      writeAtom(
+        editedCommitMessages(newHash),
+        Object.keys(existing).length === 0
+          ? // If the edited message is empty, write undefined to remove from persisted storage
+            undefined
+          : existing,
+      );
 
       const existingUpdateMessage = readAtom(diffUpdateMessagesState(oldHash));
       if (existingUpdateMessage && existingUpdateMessage !== '') {
