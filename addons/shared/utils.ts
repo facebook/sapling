@@ -211,3 +211,7 @@ export function* mapIterable<T, R>(iterable: Iterable<T>, mapFn: (t: T) => R): I
     yield mapFn(item);
   }
 }
+
+export function base64Decode(data: string): ArrayBuffer {
+  return Buffer.from(data, 'base64');
+}

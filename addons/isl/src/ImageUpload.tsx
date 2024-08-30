@@ -63,14 +63,45 @@ function placeholderForImageUpload(id: number): string {
   return `【 Uploading #${id} 】`;
 }
 
+function getBase64(file: File): Promise<string> {
+  return new Promise((res, rej) => {
+    const reader = new FileReader();
+    reader.onload = function () {
+      const result = reader.result as string | null;
+      if (result == null) {
+        rej(new Error('got empty file content'));
+        return;
+      }
+      // The loaded image will be in the form:
+      // data:image/png;base64,iVB0R...
+      // Strip away the prefix (up to the ',') to get to the actual base64 portion
+      const commaIndex = result.indexOf(',');
+      if (commaIndex === -1) {
+        rej(new Error('file data is not in `data:*/*;base64,` format'));
+        return;
+      }
+      res(result.slice(commaIndex + 1));
+    };
+    reader.onerror = function (error) {
+      rej(error);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 /**
  * Send a File's contents to the server to get uploaded by an upload service,
  * and return the link to embed in the textArea.
  */
 export async function uploadFile(file: File): Promise<string> {
-  const payload = await file.arrayBuffer();
+  const base64 = await getBase64(file);
   const id = randomId();
-  clientToServerAPI.postMessageWithPayload({type: 'uploadFile', filename: file.name, id}, payload);
+  clientToServerAPI.postMessage({
+    type: 'uploadFile',
+    filename: file.name,
+    id,
+    b64Content: base64,
+  });
   const result = await clientToServerAPI.nextMessageMatching(
     'uploadFileResult',
     message => message.id === id,

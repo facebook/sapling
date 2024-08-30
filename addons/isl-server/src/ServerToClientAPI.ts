@@ -40,7 +40,7 @@ import {parseExecJson} from './utils';
 import {serializeToString, deserializeFromString} from 'isl/src/serialize';
 import {Readable} from 'node:stream';
 import {revsetForComparison} from 'shared/Comparison';
-import {randomId, nullthrows, notEmpty} from 'shared/utils';
+import {randomId, notEmpty, base64Decode} from 'shared/utils';
 
 export type IncomingMessage = ClientToServerMessage;
 type IncomingMessageWithPayload = ClientToServerMessageWithPayload;
@@ -237,30 +237,7 @@ export default class ServerToClientAPI {
   private handleIncomingMessageWithPayload(
     message: IncomingMessageWithPayload,
     payload: ArrayBuffer,
-  ) {
-    switch (message.type) {
-      case 'uploadFile': {
-        const {id, filename} = message;
-        const uploadFile = Internal.uploadFile;
-        if (uploadFile == null) {
-          return;
-        }
-        this.tracker
-          .operation('UploadImage', 'UploadImageError', {}, () =>
-            uploadFile(this.logger, {filename, data: payload}),
-          )
-          .then((result: string) => {
-            this.logger.info('sucessfully uploaded file', filename, result);
-            this.postMessage({type: 'uploadFileResult', id, result: {value: result}});
-          })
-          .catch((error: Error) => {
-            this.logger.info('error uploading file', filename, error);
-            this.postMessage({type: 'uploadFileResult', id, result: {error}});
-          });
-        break;
-      }
-    }
-  }
+  ) {}
 
   private handleIncomingMessage(data: IncomingMessage) {
     this.handleIncomingGeneralMessage(data as GeneralMessage);
@@ -586,6 +563,27 @@ export default class ServerToClientAPI {
       }
       case 'pageVisibility': {
         repo.setPageFocus(this.pageId, data.state);
+        break;
+      }
+      case 'uploadFile': {
+        const {id, filename, b64Content} = data;
+        const payload = base64Decode(b64Content);
+        const uploadFile = Internal.uploadFile;
+        if (uploadFile == null) {
+          return;
+        }
+        this.tracker
+          .operation('UploadImage', 'UploadImageError', {}, () =>
+            uploadFile(this.logger, {filename, data: payload}),
+          )
+          .then((result: string) => {
+            this.logger.info('sucessfully uploaded file', filename, result);
+            this.postMessage({type: 'uploadFileResult', id, result: {value: result}});
+          })
+          .catch((error: Error) => {
+            this.logger.info('error uploading file', filename, error);
+            this.postMessage({type: 'uploadFileResult', id, result: {error}});
+          });
         break;
       }
       case 'fetchCommitMessageTemplate': {

@@ -41,9 +41,7 @@ function filterMessages(wantedType?: string) {
   return messages;
 }
 
-export function expectMessageSentToServer(
-  message: Partial<ClientToServerMessage | ClientToServerMessageWithPayload>,
-): void {
+export function expectMessageSentToServer(message: Partial<ClientToServerMessage>): void {
   expect(filterMessages(message.type)).toContainEqual(message);
 }
 

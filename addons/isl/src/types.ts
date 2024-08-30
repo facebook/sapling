@@ -616,11 +616,7 @@ export type FileABugProgressMessage = {type: 'fileBugReportProgress'} & FileABug
  * Like ClientToServerMessage, but these messages will be followed
  * on the message bus by an additional binary ArrayBuffer payload message.
  */
-export type ClientToServerMessageWithPayload = {
-  type: 'uploadFile';
-  filename: string;
-  id: string;
-} & {hasBinaryPayload: true};
+export type ClientToServerMessageWithPayload = {hasBinaryPayload: true};
 
 export type SubscriptionKind = 'uncommittedChanges' | 'smartlogCommits' | 'mergeConflicts';
 
@@ -715,6 +711,12 @@ export type ClientToServerMessage =
   | {type: 'fetchShelvedChanges'}
   | {type: 'fetchLatestCommit'; revset: string}
   | {type: 'fetchCommitChangedFiles'; hash: Hash; limit: number}
+  | {
+      type: 'uploadFile';
+      filename: string;
+      id: string;
+      b64Content: string;
+    }
   | {type: 'renderMarkup'; markup: string; id: number}
   | {type: 'typeahead'; kind: TypeaheadKind; query: string; id: string}
   | {type: 'requestRepoInfo'}

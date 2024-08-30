@@ -14,7 +14,6 @@ import {
   expectMessageNOTSentToServer,
   expectMessageSentToServer,
   fireMouseEvent,
-  getLastBinaryMessageSentToServer,
   resetTestMessages,
   simulateCommits,
   simulateMessageFromServer,
@@ -52,10 +51,8 @@ describe('Image upload inside TextArea ', () => {
     });
   });
 
-  const mockFile = {
-    name: 'file.png',
-    arrayBuffer: () => Promise.resolve(new Uint8Array([0, 1, 2]).buffer),
-  } as File;
+  const mockFile = new File(['Hello'], 'file.png', {type: 'image/png'});
+  const mockFileContentInBase64 = btoa('Hello'); // SGVsbG8=
 
   const dataTransfer = {
     files: [mockFile] as unknown as FileList,
@@ -176,11 +173,9 @@ describe('Image upload inside TextArea ', () => {
       expectMessageSentToServer({
         type: 'uploadFile',
         filename: 'file.png',
-        hasBinaryPayload: true,
         id: '1111',
+        b64Content: mockFileContentInBase64,
       });
-      const binary = getLastBinaryMessageSentToServer();
-      expect(binary).toEqual(new Uint8Array([1, 2, 3, 4]).buffer);
     });
 
     it('removes placeholder when upload succeeds', async () => {
