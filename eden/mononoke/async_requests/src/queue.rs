@@ -10,6 +10,7 @@ use std::time::Duration;
 use std::time::Instant;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Error;
 use blobstore::Blobstore;
 use blobstore::PutBehaviour;
@@ -244,6 +245,7 @@ impl AsyncMethodRequestQueue {
         ctx: &CoreContext,
         repo_ids: &[RepositoryId],
         last_update_newer_than: Option<&Timestamp>,
+        fatal_errors: bool,
     ) -> Result<
         Vec<(
             RequestId,
@@ -255,22 +257,37 @@ impl AsyncMethodRequestQueue {
         let entries = self
             .table
             .list_requests(ctx, repo_ids, last_update_newer_than)
-            .await?;
+            .await
+            .context("listing requests from the DB")?;
 
-        stream::iter(entries)
+        let results = stream::iter(entries)
             .map(|entry| async {
                 let thrift_params = MegarepoAsynchronousRequestParams::load_from_key(
                     ctx,
                     &self.blobstore,
                     &entry.args_blobstore_key.0,
                 )
-                .await?;
+                .await
+                .context("deserializing")?;
                 let req_id = RequestId(entry.id.clone(), entry.request_type.clone());
                 Ok::<_, MegarepoError>((req_id, entry, thrift_params))
             })
-            .buffer_unordered(10)
-            .try_collect()
-            .await
+            .buffer_unordered(10);
+
+        if fatal_errors {
+            results.try_collect().await
+        } else {
+            Ok(results
+                .inspect_err(|err| println!("Error: {:?}, skipping", err))
+                .then(|entry| async { stream::iter(entry.into_iter()) })
+                .flatten()
+                .collect::<Vec<(
+                    RequestId,
+                    LongRunningRequestEntry,
+                    MegarepoAsynchronousRequestParams,
+                )>>()
+                .await)
+        }
     }
 
     pub async fn get_request_by_id(

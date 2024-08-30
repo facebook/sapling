@@ -60,6 +60,7 @@ pub async fn list_requests<R: MononokeRepo>(
                 Some(&Timestamp::from_timestamp_secs(
                     Timestamp::now().timestamp_seconds() - lookback,
                 )),
+                false,
             )
             .await
             .context("listing queued requests")?;
