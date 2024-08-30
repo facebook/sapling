@@ -538,6 +538,7 @@ mod test {
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
     use maplit::hashmap;
+    use mononoke_macros::mononoke;
     use mononoke_types::RepositoryId;
     use repo_blobstore::RepoBlobstore;
     use repo_derived_data::RepoDerivedData;
@@ -574,7 +575,7 @@ mod test {
         pub repo_identity: RepoIdentity,
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_split_in_batches_simple(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
@@ -620,7 +621,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_split_in_batches_all_in_one_batch(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
@@ -662,7 +663,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_split_in_batches_commit_limit(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
@@ -709,7 +710,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_split_in_batches_different_bookmarks(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
@@ -766,7 +767,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_split_in_batches_non_forward_move(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
@@ -818,7 +819,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_split_in_batches_weird_move(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
@@ -864,7 +865,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_maybe_adjust_batch(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;

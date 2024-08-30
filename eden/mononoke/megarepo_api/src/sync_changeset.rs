@@ -614,6 +614,7 @@ mod test {
     use fbinit::FacebookInit;
     use maplit::hashmap;
     use megarepo_mapping::REMAPPING_STATE_FILE;
+    use mononoke_macros::mononoke;
     use mononoke_types::FileChange;
     use mononoke_types::NonRootMPath;
     use tests_utils::bookmark;
@@ -625,7 +626,7 @@ mod test {
     use crate::megarepo_test_utils::MegarepoTest;
     use crate::megarepo_test_utils::SyncTargetConfigBuilder;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_sync_changeset_simple(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let mut test = MegarepoTest::new(&ctx).await?;
@@ -709,7 +710,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_sync_changeset_octopus_merge(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let mut test = MegarepoTest::new(&ctx).await?;
@@ -859,7 +860,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_sync_changeset_two_sources_one_with_diamond_merge(
         fb: FacebookInit,
     ) -> Result<(), Error> {
@@ -1000,7 +1001,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_sync_changeset_repeat_same_request(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let mut test = MegarepoTest::new(&ctx).await?;
@@ -1072,7 +1073,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_sync_changeset_squash_commit(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let mut test = MegarepoTest::new(&ctx).await?;

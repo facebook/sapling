@@ -253,11 +253,12 @@ mod tests {
     use mononoke_api::repo::Repo;
     use mononoke_api::repo::RepoContext;
     use mononoke_api::specifiers::HgChangesetId;
+    use mononoke_macros::mononoke;
 
     use super::*;
     use crate::RepoContextHgExt;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_hg_tree_context(fb: FacebookInit) -> Result<(), MononokeError> {
         let ctx = CoreContext::test_mock(fb);
         let repo = Arc::new(Linear::get_repo::<Repo>(fb).await);

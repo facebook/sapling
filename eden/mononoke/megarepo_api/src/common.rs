@@ -1310,9 +1310,11 @@ pub(crate) fn new_megarepo_automation_commit(
 
 #[cfg(test)]
 mod test {
+    use mononoke_macros::mononoke;
+
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_create_relative_symlink() -> Result<(), Error> {
         let path = NonRootMPath::new(&b"dir/1.txt"[..])?;
         let base = NonRootMPath::new(&b"dir/2.txt"[..])?;

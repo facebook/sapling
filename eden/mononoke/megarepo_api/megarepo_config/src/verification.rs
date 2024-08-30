@@ -52,6 +52,7 @@ mod verification_tests {
     use megarepo_configs::SourceRevision;
     use megarepo_configs::Target;
     use megarepo_configs::WithExtraMoveCommit;
+    use mononoke_macros::mononoke;
 
     use super::*;
 
@@ -111,7 +112,7 @@ mod verification_tests {
         }
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn test_verify_unique_source_names(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
 
@@ -121,7 +122,7 @@ mod verification_tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn test_verify_unique_source_names_bad(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
 

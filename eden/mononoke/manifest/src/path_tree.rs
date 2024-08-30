@@ -151,10 +151,11 @@ impl<V> IntoIterator for PathTree<V> {
 #[cfg(test)]
 mod tests {
     use anyhow::Result;
+    use mononoke_macros::mononoke;
 
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_path_tree() -> Result<()> {
         let tree = PathTree::from_iter(vec![
             (MPath::new("/one/two/three")?, true),
@@ -176,7 +177,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_path_insert_and_merge() -> Result<()> {
         let mut tree = PathTree::<Vec<_>>::default();
         let items = vec![

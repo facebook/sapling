@@ -124,6 +124,7 @@ mod test {
     use mercurial_types_mocks::globalrev::GLOBALREV_TWO;
     use mercurial_types_mocks::nodehash::ONES_CSID as ONES_HG_CSID;
     use mercurial_types_mocks::nodehash::TWOS_CSID as TWOS_HG_CSID;
+    use mononoke_macros::mononoke;
     use mononoke_types::RepositoryId;
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use mononoke_types_mocks::changesetid::TWOS_CSID;
@@ -131,7 +132,7 @@ mod test {
 
     use super::*;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_sync_darkstorm(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 

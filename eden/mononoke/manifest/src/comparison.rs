@@ -412,6 +412,7 @@ mod tests {
     use futures::stream::TryStreamExt;
     use maplit::btreemap;
     use memblob::Memblob;
+    use mononoke_macros::mononoke;
     use mononoke_types::path::MPath;
     use mononoke_types::FileType;
     use mononoke_types::SortedVectorTrieMap;
@@ -462,7 +463,7 @@ mod tests {
             .ok_or_else(|| anyhow!("path {} not found", path))
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_compare_manifest_single_parent(fb: FacebookInit) -> Result<()> {
         let blobstore: Arc<dyn Blobstore> = Arc::new(Memblob::new(PutBehaviour::Overwrite));
         let ctx = CoreContext::test_mock(fb);
@@ -551,7 +552,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_compare_manifest_tree(fb: FacebookInit) -> Result<()> {
         let blobstore: Arc<dyn Blobstore> = Arc::new(Memblob::new(PutBehaviour::Overwrite));
         let ctx = CoreContext::test_mock(fb);

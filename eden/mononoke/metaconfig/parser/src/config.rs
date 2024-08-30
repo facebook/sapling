@@ -588,6 +588,7 @@ mod test {
     use metaconfig_types::WalkerConfig;
     use metaconfig_types::XRepoSyncSourceConfig;
     use metaconfig_types::XRepoSyncSourceConfigMapping;
+    use mononoke_macros::mononoke;
     use mononoke_types::path::MPath;
     use mononoke_types::DerivableType;
     use mononoke_types::NonRootMPath;
@@ -635,7 +636,7 @@ mod test {
         tmp_dir
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_commit_sync_config_correct() {
         let commit_sync_config = r#"
             [mega]
@@ -704,7 +705,7 @@ mod test {
         assert_eq!(commit_sync, expected);
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_commit_sync_config_large_is_small() {
         let commit_sync_config = r#"
             [mega]
@@ -738,7 +739,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_commit_sync_config_duplicated_small_repos() {
         let commit_sync_config = r#"
             [mega]
@@ -774,7 +775,7 @@ mod test {
             assert!(msg.contains("present multiple times in the same CommitSyncConfig"));
         }
     }
-    #[test]
+    #[mononoke::test]
     fn test_duplicated_repo_ids() {
         let www_content = r#"
             scuba_table_hooks="scm_hooks"
@@ -825,7 +826,7 @@ mod test {
         assert!(msg.contains("DuplicatedRepoId"));
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_read_manifest() {
         let fbsource_content = r#"
             generation_cache_size=1048576
@@ -1517,7 +1518,7 @@ mod test {
         )
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_broken_bypass_config() {
         // Incorrect bypass string
         let content = r#"
@@ -1559,7 +1560,7 @@ mod test {
         assert!(msg.contains("InvalidPushvar"));
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_broken_common_config() {
         fn check_fails(common: &str, expect: &str) {
             let content = r#"
@@ -1612,7 +1613,7 @@ mod test {
         check_fails(common, "identity type and data must be specified");
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_common_storage() {
         const STORAGE: &str = r#"
         [multiplex_store.metadata.remote]
@@ -1729,7 +1730,7 @@ mod test {
         )
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_common_blobstores_local_override() {
         const STORAGE: &str = r#"
         [multiplex_store.metadata.remote]
@@ -1828,7 +1829,7 @@ mod test {
         )
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_stray_fields() {
         const REPO: &str = r#"
         storage_config = "randomstore"
@@ -1863,7 +1864,7 @@ mod test {
         assert!(msg.contains("unknown keys in config parsing"));
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_multiplexed_store_types() {
         const STORAGE: &str = r#"
         [multiplex_store.metadata.remote]

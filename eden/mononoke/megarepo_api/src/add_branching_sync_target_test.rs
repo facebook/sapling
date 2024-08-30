@@ -15,6 +15,7 @@ use megarepo_config::MononokeMegarepoConfigs;
 use megarepo_config::Target;
 use megarepo_mapping::SourceName;
 use metaconfig_types::RepoConfigArc;
+use mononoke_macros::mononoke;
 use tests_utils::bookmark;
 use tests_utils::resolve_cs_id;
 use tests_utils::CreateCommitContext;
@@ -25,7 +26,7 @@ use crate::common::MegarepoOp;
 use crate::megarepo_test_utils::MegarepoTest;
 use crate::megarepo_test_utils::SyncTargetConfigBuilder;
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_add_branching_sync_target_success(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mut test = MegarepoTest::new(&ctx).await?;
@@ -89,7 +90,7 @@ async fn test_add_branching_sync_target_success(fb: FacebookInit) -> Result<(), 
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_add_branching_sync_target_no_source(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let test = MegarepoTest::new(&ctx).await?;
@@ -114,7 +115,7 @@ async fn test_add_branching_sync_target_no_source(fb: FacebookInit) -> Result<()
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_add_branching_sync_target_wrong_branch(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mut test = MegarepoTest::new(&ctx).await?;

@@ -17,6 +17,7 @@ use fbinit::FacebookInit;
 use futures::stream::TryStreamExt;
 use maplit::btreemap;
 use memblob::Memblob;
+use mononoke_macros::mononoke;
 use mononoke_types::path::MPath;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
@@ -47,7 +48,7 @@ fn files_reference(files: BTreeMap<&str, &str>) -> Result<BTreeMap<NonRootMPath,
         .collect()
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_derive_manifest(fb: FacebookInit) -> Result<()> {
     let blobstore: Arc<dyn Blobstore> = Arc::new(Memblob::default());
     let ctx = CoreContext::test_mock(fb);
@@ -309,7 +310,7 @@ async fn test_derive_manifest(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_derive_stack_of_manifests(fb: FacebookInit) -> Result<()> {
     let blobstore: Arc<dyn Blobstore> = Arc::new(Memblob::default());
     let ctx = CoreContext::test_mock(fb);
@@ -711,7 +712,7 @@ fn describe_diff_item(diff: Diff<Entry<TestManifestId, (FileType, TestLeafId)>>)
     }
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_find_entries(fb: FacebookInit) -> Result<()> {
     let blobstore: Arc<dyn Blobstore> = Arc::new(Memblob::default());
     let ctx = CoreContext::test_mock(fb);
@@ -846,7 +847,7 @@ async fn test_find_entries(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_diff(fb: FacebookInit) -> Result<()> {
     let blobstore: Arc<dyn Blobstore> = Arc::new(Memblob::default());
     let ctx = CoreContext::test_mock(fb);
@@ -1060,7 +1061,7 @@ async fn test_diff(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_find_intersection_of_diffs(fb: FacebookInit) -> Result<()> {
     let blobstore: Arc<dyn Blobstore> = Arc::new(Memblob::default());
     let ctx = CoreContext::test_mock(fb);

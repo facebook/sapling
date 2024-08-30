@@ -23,6 +23,7 @@ rust_binary(
         "//eden/mononoke/blobstore:memblob",
         "//eden/mononoke/bonsai_globalrev_mapping:bonsai_globalrev_mapping",
         "//eden/mononoke/mercurial:mercurial_types-mocks",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types-mocks",
         "//eden/mononoke/repo_factory:test_repo_factory",
         "//eden/mononoke/tests/utils:tests_utils",

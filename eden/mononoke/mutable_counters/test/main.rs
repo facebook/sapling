@@ -8,6 +8,7 @@
 use anyhow::Result;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use mononoke_macros::mononoke;
 use mononoke_types_mocks::repo::REPO_ZERO;
 use mutable_counters::MutableCounters;
 use mutable_counters::SqlMutableCounters;
@@ -18,7 +19,7 @@ fn create_db() -> Result<SqlMutableCounters> {
     Ok(SqlMutableCountersBuilder::with_sqlite_in_memory()?.build(REPO_ZERO))
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_counter_simple(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let mutable_counters = create_db()?;
@@ -42,7 +43,7 @@ async fn test_counter_simple(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_counter_conditional_update(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let mutable_counters = create_db()?;

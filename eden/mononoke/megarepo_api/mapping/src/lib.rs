@@ -457,13 +457,14 @@ impl SqlConstructFromMetadataDatabaseConfig for MegarepoMapping {}
 mod test {
     use fbinit::FacebookInit;
     use maplit::btreemap;
+    use mononoke_macros::mononoke;
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use mononoke_types_mocks::changesetid::THREES_CSID;
     use mononoke_types_mocks::changesetid::TWOS_CSID;
 
     use super::*;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_simple_mapping(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let mapping = MegarepoMapping::with_sqlite_in_memory()?;
@@ -511,7 +512,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_reverse_mapping(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let mapping = MegarepoMapping::with_sqlite_in_memory()?;
@@ -555,7 +556,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_serialize(_fb: FacebookInit) -> Result<(), Error> {
         let state = CommitRemappingState::new(
             btreemap! {
@@ -583,7 +584,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_deserialization_ignores_extra_fields(_fb: FacebookInit) -> Result<(), Error> {
         let s = r#"{
   "latest_synced_changesets": {

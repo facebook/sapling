@@ -137,10 +137,11 @@ impl PushRedirectionConfig for SqlPushRedirectionConfig {
 #[cfg(test)]
 mod test {
     use fbinit::FacebookInit;
+    use mononoke_macros::mononoke;
 
     use super::*;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_set(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let builder = SqlPushRedirectionConfigBuilder::with_sqlite_in_memory()?;
@@ -178,7 +179,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_get(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let builder = SqlPushRedirectionConfigBuilder::with_sqlite_in_memory()?;

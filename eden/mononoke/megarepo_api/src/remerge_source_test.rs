@@ -19,6 +19,7 @@ use megarepo_mapping::CommitRemappingState;
 use megarepo_mapping::SourceName;
 use megarepo_mapping::REMAPPING_STATE_FILE;
 use metaconfig_types::RepoConfigArc;
+use mononoke_macros::mononoke;
 use mononoke_types::NonRootMPath;
 use tests_utils::bookmark;
 use tests_utils::list_working_copy_utf8;
@@ -31,7 +32,7 @@ use crate::megarepo_test_utils::MegarepoTest;
 use crate::megarepo_test_utils::SyncTargetConfigBuilder;
 use crate::remerge_source::RemergeSource;
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_remerge_source_simple(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mut test = MegarepoTest::new(&ctx).await?;

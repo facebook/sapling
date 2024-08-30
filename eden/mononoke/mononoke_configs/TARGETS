@@ -7,6 +7,7 @@ rust_library(
     name = "mononoke_configs",
     srcs = glob(["src/**/*.rs"]),
     test_deps = [
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/tests/fixtures:fixtures",
     ],
     deps = [

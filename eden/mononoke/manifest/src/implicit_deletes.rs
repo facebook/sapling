@@ -138,6 +138,7 @@ mod test {
     use blobstore::Storable;
     use fbinit::FacebookInit;
     use memblob::Memblob;
+    use mononoke_macros::mononoke;
     use mononoke_types::FileType;
 
     use super::*;
@@ -153,7 +154,7 @@ mod test {
         assert_eq!(hs1, hs2);
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_get_implicit_deletes_single_parent(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let store: Arc<dyn Blobstore> = Arc::new(Memblob::default());
@@ -220,7 +221,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_implicit_deletes(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let store: Arc<dyn Blobstore> = Arc::new(Memblob::default());

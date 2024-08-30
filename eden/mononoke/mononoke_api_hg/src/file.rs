@@ -220,11 +220,12 @@ mod tests {
     use mercurial_types::NULL_HASH;
     use mononoke_api::repo::Repo;
     use mononoke_api::repo::RepoContext;
+    use mononoke_macros::mononoke;
 
     use super::*;
     use crate::RepoContextHgExt;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_hg_file_context(fb: FacebookInit) -> Result<(), MononokeError> {
         let ctx = CoreContext::test_mock(fb);
         let repo = Arc::new(ManyFilesDirs::get_repo::<Repo>(fb).await);
@@ -263,7 +264,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_hg_file_history(fb: FacebookInit) -> Result<(), MononokeError> {
         let ctx = CoreContext::test_mock(fb);
         let repo = Arc::new(ManyFilesDirs::get_repo::<Repo>(fb).await);

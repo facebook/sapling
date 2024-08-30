@@ -305,12 +305,13 @@ mod test {
     use std::collections::HashSet;
     use std::sync::Arc;
 
+    use mononoke_macros::mononoke;
     use repos::RawRepoConfig;
     use repos::RawRepoConfigs;
 
     use super::*;
 
-    #[test]
+    #[mononoke::test]
     fn test_build_config_info_empty() {
         let results = (1..10)
             .map(|_i| {
@@ -330,7 +331,7 @@ mod test {
         assert_eq!(results.len(), 1);
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_build_config_info_one_repo() {
         let results = (1..10)
             .map(|_| {
@@ -354,7 +355,7 @@ mod test {
         assert_eq!(results.len(), 1);
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_build_config_info_two_repos() {
         let results = (1..10)
             .flat_map(|_| {
@@ -402,7 +403,7 @@ mod test {
 
     // The smallest fixture that did *not* demostrate non-deterministic behavior
     // with the old implementation.
-    #[test]
+    #[mononoke::test]
     fn test_build_config_info_minimal() {
         let results = (1..10)
             .map(|_| {
@@ -428,7 +429,7 @@ mod test {
 
     // The smallest fixture that *did* demostrate non-deterministic behavior
     // with the old implementation.
-    #[test]
+    #[mononoke::test]
     fn test_build_config_info_small() {
         let results = (1..10)
             .map(|_| {

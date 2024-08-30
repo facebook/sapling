@@ -34,6 +34,7 @@ rust_library(
         "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:pretty_assertions",
         "fbsource//third-party/rust:tempfile",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types-mocks",
     ],
     deps = [

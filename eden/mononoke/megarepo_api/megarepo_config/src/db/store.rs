@@ -162,10 +162,11 @@ impl SqlConstructFromMetadataDatabaseConfig for SqlMegarepoSyncConfig {}
 #[cfg(test)]
 mod test {
     use fbinit::FacebookInit;
+    use mononoke_macros::mononoke;
 
     use super::*;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_add_repo_config(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let config = SqlMegarepoSyncConfig::with_sqlite_in_memory()?;
@@ -191,7 +192,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_get_config_by_version(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let config = SqlMegarepoSyncConfig::with_sqlite_in_memory()?;

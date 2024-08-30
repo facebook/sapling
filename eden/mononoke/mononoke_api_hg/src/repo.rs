@@ -930,13 +930,14 @@ mod tests {
     use blobstore::Loadable;
     use fbinit::FacebookInit;
     use mononoke_api::repo::Repo;
+    use mononoke_macros::mononoke;
     use mononoke_types::ChangesetId;
     use tests_utils::CreateCommitContext;
 
     use super::*;
     use crate::RepoContextHgExt;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_new_hg_context(fb: FacebookInit) -> Result<(), MononokeError> {
         let ctx = CoreContext::test_mock(fb);
 
@@ -949,7 +950,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_trees_under_path(fb: FacebookInit) -> Result<(), MononokeError> {
         let ctx = CoreContext::test_mock(fb);
         let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;

@@ -421,6 +421,7 @@ mod test {
     use anyhow::Error;
     use maplit::btreemap;
     use megarepo_config::Target;
+    use mononoke_macros::mononoke;
     use mononoke_types::RepositoryId;
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use mononoke_types_mocks::changesetid::THREES_CSID;
@@ -436,7 +437,7 @@ mod test {
             .collect()
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_diff_configs() -> Result<(), Error> {
         let repo_id = RepositoryId::new(1);
         let target = Target {

@@ -407,6 +407,7 @@ mod test {
     use blobstore::Storable;
     use fbinit::FacebookInit;
     use memblob::Memblob;
+    use mononoke_macros::mononoke;
 
     use super::*;
     use crate::tests::test_manifest::TestLeaf;
@@ -433,7 +434,7 @@ mod test {
         }
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_unfold_file_from_files(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let store: Arc<dyn Blobstore> = Arc::new(Memblob::default());
@@ -488,7 +489,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_unfold_file_mode_change(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let store: Arc<dyn Blobstore> = Arc::new(Memblob::default());
@@ -515,7 +516,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_unfold_file_from_dirs(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let store: Arc<dyn Blobstore> = Arc::new(Memblob::default());
@@ -573,7 +574,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_unfold_dir_from_dirs(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let store: Arc<dyn Blobstore> = Arc::new(Memblob::default());
@@ -638,7 +639,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_unfold_dir_from_files(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let store: Arc<dyn Blobstore> = Arc::new(Memblob::default());
@@ -663,7 +664,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_unfold_missing_from_files(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let store: Arc<dyn Blobstore> = Arc::new(Memblob::default());
@@ -683,7 +684,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_unfold_missing_from_dirs(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let store: Arc<dyn Blobstore> = Arc::new(Memblob::default());

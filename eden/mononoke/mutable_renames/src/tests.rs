@@ -11,6 +11,7 @@ use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
 use fbinit::FacebookInit;
 use in_memory_commit_graph_storage::InMemoryCommitGraphStorage;
+use mononoke_macros::mononoke;
 use mononoke_types_mocks::changesetid::ONES_CSID;
 use mononoke_types_mocks::changesetid::TWOS_CSID;
 use mononoke_types_mocks::hash::ONES;
@@ -34,7 +35,7 @@ async fn setup_commit_graph(ctx: &CoreContext) -> Result<CommitGraph, Error> {
     Ok(commit_graph)
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_simple(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let store = SqlMutableRenamesStore::with_sqlite_in_memory()?;
@@ -62,7 +63,7 @@ async fn test_simple(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_insert_multiple(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let store = SqlMutableRenamesStore::with_sqlite_in_memory()?;
@@ -110,7 +111,7 @@ async fn test_insert_multiple(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::test]
+#[mononoke::fbinit_test]
 async fn test_overwrite(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let store = SqlMutableRenamesStore::with_sqlite_in_memory()?;

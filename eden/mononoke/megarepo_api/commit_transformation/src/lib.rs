@@ -856,6 +856,7 @@ mod test {
     use maplit::btreemap;
     use maplit::hashmap;
     use maplit::hashset;
+    use mononoke_macros::mononoke;
     use mononoke_types::ContentId;
     use mononoke_types::FileType;
     use mononoke_types::GitLfs;
@@ -881,7 +882,7 @@ mod test {
         FilestoreConfig,
     );
 
-    #[test]
+    #[mononoke::test]
     fn test_multi_mover_simple() -> Result<(), Error> {
         let mapping_rules = SourceMappingRules {
             default_prefix: "".to_string(),
@@ -895,7 +896,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_multi_mover_prefixed() -> Result<(), Error> {
         let mapping_rules = SourceMappingRules {
             default_prefix: "prefix".to_string(),
@@ -909,7 +910,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_multi_mover_prefixed_with_exceptions() -> Result<(), Error> {
         let mapping_rules = SourceMappingRules {
             default_prefix: "prefix".to_string(),
@@ -937,7 +938,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_multi_mover_longest_prefix_first() -> Result<(), Error> {
         let mapping_rules = SourceMappingRules {
             default_prefix: "prefix".to_string(),
@@ -994,7 +995,7 @@ mod test {
         assert_eq!(expected, minimized);
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     fn test_minimize_file_change_set(_fb: FacebookInit) {
         verify_minimized(
             vec![("a", Some(())), ("a", None)],
@@ -1016,7 +1017,7 @@ mod test {
         );
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_rewrite_commit_marks_lossy_conversions(fb: FacebookInit) -> Result<(), Error> {
         let repo: Repo = TestRepoFactory::new(fb)?.build().await?;
         let ctx = CoreContext::test_mock(fb);
@@ -1148,7 +1149,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_rewrite_commit_marks_lossy_conversions_with_implicit_deletes(
         fb: FacebookInit,
     ) -> Result<(), Error> {
@@ -1239,7 +1240,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_rewrite_commit(fb: FacebookInit) -> Result<(), Error> {
         let repo: Repo = TestRepoFactory::new(fb)?.build().await?;
         let ctx = CoreContext::test_mock(fb);
@@ -1486,7 +1487,7 @@ mod test {
 
     /// Tests applying a file change filter before getting the implicit deletes
     /// and calling the multi mover.
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_rewrite_commit_with_file_changes_filter_on_both_based_on_path(
         fb: FacebookInit,
     ) -> Result<(), Error> {
@@ -1529,7 +1530,7 @@ mod test {
 
     /// Tests applying a file change filter before getting the implicit deletes
     /// and calling the multi mover.
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_rewrite_commit_with_file_changes_filter_on_both_based_on_file_type(
         fb: FacebookInit,
     ) -> Result<(), Error> {
@@ -1578,7 +1579,7 @@ mod test {
 
     /// Tests applying a file change filter only before getting the
     /// implicit deletes.
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_rewrite_commit_with_file_changes_filter_implicit_deletes_only(
         fb: FacebookInit,
     ) -> Result<(), Error> {
@@ -1638,7 +1639,7 @@ mod test {
     /// This test uses the file type as the filter condition, to showcase
     /// a more realistic scenario where we only want to apply the filter to
     /// the multi mover.
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_rewrite_commit_with_file_changes_filter_multi_mover_only(
         fb: FacebookInit,
     ) -> Result<(), Error> {
@@ -1766,7 +1767,7 @@ mod test {
         Ok(())
     }
 
-    #[test]
+    #[mononoke::test]
     fn test_directory_multi_mover() -> Result<(), Error> {
         let mapping_rules = SourceMappingRules {
             default_prefix: "prefix".to_string(),
@@ -1782,7 +1783,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_rewrite_lfs_file(fb: FacebookInit) -> Result<(), Error> {
         let repo: Repo = TestRepoFactory::new(fb)?.build().await?;
         let ctx = CoreContext::test_mock(fb);

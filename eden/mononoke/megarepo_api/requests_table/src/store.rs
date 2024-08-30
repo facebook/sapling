@@ -564,10 +564,11 @@ mod test {
     use std::time::Duration;
 
     use fbinit::FacebookInit;
+    use mononoke_macros::mononoke;
 
     use super::*;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_mark_inprogress(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let queue = SqlLongRunningRequestsQueue::with_sqlite_in_memory()?;
@@ -610,7 +611,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_find_abandoned_requests(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let queue = SqlLongRunningRequestsQueue::with_sqlite_in_memory()?;
@@ -678,7 +679,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_mark_as_new(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let queue = SqlLongRunningRequestsQueue::with_sqlite_in_memory()?;

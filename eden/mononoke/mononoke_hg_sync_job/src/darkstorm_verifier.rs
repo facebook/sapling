@@ -73,10 +73,11 @@ mod test {
     use futures::TryFutureExt;
     use futures::TryStreamExt;
     use memblob::Memblob;
+    use mononoke_macros::mononoke;
 
     use super::*;
 
-    #[fbinit::test]
+    #[mononoke::fbinit_test]
     async fn test_upload(fb: FacebookInit) -> Result<(), anyhow::Error> {
         let ctx = CoreContext::test_mock(fb);
 
