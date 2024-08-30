@@ -37,7 +37,7 @@ mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
-repo_name = { version = "0.1.0", path = "../../scm/lib/repo_name" }
+repourl = { version = "0.1.0", path = "../../scm/lib/repo/url" }
 retry = { version = "0.1.0", path = "../common/retry" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 sharding_ext = { version = "0.1.0", path = "../cmdlib/sharding_ext" }

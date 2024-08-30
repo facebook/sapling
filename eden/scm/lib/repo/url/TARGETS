@@ -4,7 +4,7 @@ load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
 oncall("sapling")
 
 rust_library(
-    name = "repo_name",
+    name = "repourl",
     srcs = glob(["src/**/*.rs"]),
     deps = [
         "fbsource//third-party/rust:anyhow",

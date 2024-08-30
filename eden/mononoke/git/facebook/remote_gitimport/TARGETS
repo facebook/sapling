@@ -45,6 +45,6 @@ rust_binary(
         "//eden/mononoke/scs/if:source_control-rust-clients",
         "//eden/mononoke/server/context:context",
         "//eden/scm/lib/clientinfo:clientinfo",
-        "//eden/scm/lib/repo_name:repo_name",
+        "//eden/scm/lib/repo/url:repourl",
     ],
 )

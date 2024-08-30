@@ -12,7 +12,6 @@ use std::path::Path;
 use anyhow::anyhow;
 use anyhow::Result;
 use cached_config::ConfigStore;
-use repo_name::decode_repo_name;
 use repos::RawAclRegionConfig;
 use repos::RawCommitSyncConfig;
 use repos::RawCommonConfig;
@@ -21,6 +20,7 @@ use repos::RawRepoConfigs;
 use repos::RawRepoDefinition;
 use repos::RawRepoDefinitions;
 use repos::RawStorageConfig;
+use repourl::decode_repo_name;
 
 use crate::errors::ConfigurationError;
 

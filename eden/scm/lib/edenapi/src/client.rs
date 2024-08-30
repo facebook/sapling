@@ -123,7 +123,7 @@ use minibytes::Bytes;
 use parking_lot::Once;
 use progress_model::AggregatingProgressBar;
 use progress_model::ProgressBar;
-use repo_name::encode_repo_name;
+use repourl::encode_repo_name;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use types::HgId;

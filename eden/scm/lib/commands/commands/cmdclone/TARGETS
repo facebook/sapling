@@ -24,7 +24,7 @@ rust_library(
         "//eden/scm/lib/metalog:metalog",
         "//eden/scm/lib/migration:migration",
         "//eden/scm/lib/repo:repo",
-        "//eden/scm/lib/repo_name:repo_name",
+        "//eden/scm/lib/repo/url:repourl",
         "//eden/scm/lib/types:types",
         "//eden/scm/lib/util:util",
         "//eden/scm/lib/util/hgplain:hgplain",

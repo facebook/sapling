@@ -22,7 +22,7 @@ identity = { version = "0.1.0", path = "../../../identity" }
 metalog = { version = "0.1.0", path = "../../../metalog" }
 migration = { version = "0.1.0", path = "../../../migration" }
 repo = { version = "0.1.0", path = "../../../repo" }
-repo_name = { version = "0.1.0", path = "../../../repo_name" }
+repourl = { version = "0.1.0", path = "../../../repo/url" }
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 types = { version = "0.1.0", path = "../../../types" }
 url = "2.5.2"

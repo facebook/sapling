@@ -55,6 +55,6 @@ rust_library(
         "//configerator/structs/scm/mononoke/repos:repos-rust",
         "//eden/mononoke/bookmarks:bookmarks_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
-        "//eden/scm/lib/repo_name:repo_name",
+        "//eden/scm/lib/repo/url:repourl",
     ],
 )

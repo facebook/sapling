@@ -41,7 +41,7 @@ rust_library(
         "//eden/scm/lib/minibytes:minibytes",
         "//eden/scm/lib/pprint:pprint",
         "//eden/scm/lib/progress/model:progress-model",
-        "//eden/scm/lib/repo_name:repo_name",
+        "//eden/scm/lib/repo/url:repourl",
         "//eden/scm/lib/types:types",
         "//eden/scm/lib/version:rust_version",
     ],

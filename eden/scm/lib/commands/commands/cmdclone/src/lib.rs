@@ -34,7 +34,7 @@ use eagerepo::is_eager_repo;
 use exchange::convert_to_remote;
 use migration::feature::deprecate;
 use repo::repo::Repo;
-use repo_name::encode_repo_name;
+use repourl::encode_repo_name;
 use tracing::instrument;
 use types::HgId;
 use url::Url;

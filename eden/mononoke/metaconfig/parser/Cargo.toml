@@ -18,8 +18,8 @@ metaconfig_types = { version = "0.1.0", path = "../types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 nonzero_ext = "0.2"
 regex = "1.9.2"
-repo_name = { version = "0.1.0", path = "../../../scm/lib/repo_name" }
 repos = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/repos/repos" }
+repourl = { version = "0.1.0", path = "../../../scm/lib/repo/url" }
 rusoto_core = "0.46.0"
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_ignored = "0.1.8"

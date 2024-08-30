@@ -18,7 +18,7 @@ use fn_error_context::context;
 use fs_err::read_to_string;
 use fs_err::OpenOptions;
 use hgtime::HgTime;
-use repo_name::encode_repo_name;
+use repourl::encode_repo_name;
 use tracing::Span;
 use util::path::create_dir;
 use util::path::create_shared_dir;
