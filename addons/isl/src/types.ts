@@ -289,6 +289,16 @@ export type CommitInfo = {
   diffId?: DiffId;
   isFollower?: boolean;
   stableCommitMetadata?: ReadonlyArray<StableCommitMetadata>;
+  /**
+   * Longest path prefix shared by all files in this commit.
+   * For example, if a commit changes files like `a/b/c` and `a/b/d`, this is `a/b/`.
+   * Note: this always acts on `/` delimited paths, and is done on complete subdir names,
+   * never on matching prefixes of directories. For example, `a/dir1/a` and `a/dir2/a`
+   * have `a/` as the common prefix, not `a/dir`.
+   * If no commonality is found (due to edits to top level files or multiple subdirs), this is empty string.
+   * This can be useful to determine if a commit is relevant to your cwd.
+   */
+  maxCommonPathPrefix: RepoRelativePath;
 };
 export type SuccessorInfo = {
   hash: string;

@@ -11,6 +11,7 @@ import type {
   CommitInfo,
   CommitPhaseType,
   Hash,
+  RepoRelativePath,
   ShelvedChange,
   SmartlogCommits,
   StableCommitFetchConfig,
@@ -21,6 +22,7 @@ import type {
 import {Internal} from './Internal';
 import {MAX_FETCHED_FILES_PER_COMMIT} from './commands';
 import {fromEntries} from './utils';
+import path from 'path';
 
 export const COMMIT_END_MARK = '<<COMMIT_END_MARK>>';
 export const NULL_CHAR = '\0';
@@ -89,6 +91,12 @@ export function parseCommitInfoOutput(
           status: 'R' as const,
         })),
       ];
+
+      // Find if the commit is entirely within the cwd and therefore mroe relevant to the user.
+      // Note: this must be done on the server using the full list of files, not just the sample that the client gets.
+      // TODO: should we cache this by commit hash to avoid iterating all files on the same commits every time?
+      const maxCommonPathPrefix = findMaxCommonPathPrefix(files);
+
       commitInfos.push({
         hash: lines[FIELD_INDEX.hash],
         title: lines[FIELD_INDEX.title],
@@ -113,12 +121,53 @@ export function parseCommitInfoOutput(
           lines[FIELD_INDEX.stableCommitMetadata] != ''
             ? stableCommitConfig?.parse(lines[FIELD_INDEX.stableCommitMetadata])
             : undefined,
+        maxCommonPathPrefix,
       });
     } catch (err) {
       logger.error('failed to parse commit');
     }
   }
   return commitInfos;
+}
+
+/**
+ * Given a set of changed files, find the longest common path prefix.
+ * See {@link CommitInfo}.maxCommonPathPrefix
+ * TODO: This could be cached by commit hash
+ */
+export function findMaxCommonPathPrefix(files: Array<ChangedFile>): RepoRelativePath {
+  let max: null | Array<string> = null;
+  let maxLength = 0;
+
+  // Path module separator should match what `sl` gives us
+  const sep = path.sep;
+
+  for (const file of files) {
+    if (max == null) {
+      max = file.path.split(sep);
+      max.pop(); // ignore file part, only care about directory
+      maxLength = max.reduce((acc, part) => acc + part.length + 1, 0); // +1 for slash
+      continue;
+    }
+    // small optimization: we only need to look as long as the max so far, max common path will always be shorter
+    const parts = file.path.slice(0, maxLength).split(sep);
+    for (const [i, part] of parts.entries()) {
+      if (part !== max[i]) {
+        max = max.slice(0, i);
+        maxLength = max.reduce((acc, part) => acc + part.length + 1, 0); // +1 for slash
+        break;
+      }
+    }
+    if (max.length === 0) {
+      return ''; // we'll never get *more* specific, early exit
+    }
+  }
+
+  const result = (max ?? []).join(sep);
+  if (result == '') {
+    return result;
+  }
+  return result + sep;
 }
 
 /**

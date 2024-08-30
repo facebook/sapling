@@ -32,6 +32,7 @@ describe('Dag', () => {
     remoteBookmarks: [],
     totalFileCount: 0,
     filesSample: [],
+    maxCommonPathPrefix: '',
   };
 
   describe('basic queries', () => {

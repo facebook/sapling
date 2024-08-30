@@ -146,6 +146,7 @@ export const emptyCommit: CommitInfo = {
   remoteBookmarks: [],
   filesSample: [],
   totalFileCount: 0,
+  maxCommonPathPrefix: '',
 };
 
 export function COMMIT(

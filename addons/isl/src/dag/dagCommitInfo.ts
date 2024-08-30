@@ -60,6 +60,7 @@ const CommitInfoExtRecord = Record<CommitInfoExtProps>({
   diffId: undefined,
   isFollower: undefined,
   stableCommitMetadata: undefined,
+  maxCommonPathPrefix: '',
 
   // WithPreviewType
   previewType: undefined,
@@ -187,5 +188,9 @@ export class DagCommitInfo extends SelfUpdate<CommitInfoExtRecord> {
 
   get isYouAreHere(): boolean | undefined {
     return this.inner.isYouAreHere;
+  }
+
+  get maxCommonPathPrefix(): string {
+    return this.inner.maxCommonPathPrefix;
   }
 }
