@@ -35,6 +35,7 @@ import {overrideDisabledSubmitModes} from '../codeReview/github/branchPrState';
 import GatedComponent from '../components/GatedComponent';
 import {FoldButton, useRunFoldPreview} from '../fold';
 import {t, T} from '../i18n';
+import {IrrelevantCwdIcon} from '../icons/IrrelevantCwdIcon';
 import {readAtom, writeAtom} from '../jotaiUtils';
 import {
   messageSyncingEnabledState,
@@ -52,6 +53,7 @@ import {useRunOperation} from '../operationsState';
 import {useUncommittedSelection} from '../partialSelection';
 import platform from '../platform';
 import {CommitPreview, uncommittedChangesWithPreviews} from '../previews';
+import {repoRelativeCwd, useIsIrrelevantToCwd} from '../repositoryData';
 import {selectedCommits} from '../selection';
 import {commitByHash, latestHeadCommit, repositoryInfo} from '../serverAPIState';
 import {latestSuccessorUnlessExplicitlyObsolete} from '../successionUtils';
@@ -188,6 +190,9 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
   const isOptimistic =
     useAtomValue(commitByHash(commit.hash)) == null && !isCommitMode && !isFoldPreview;
 
+  const cwd = useAtomValue(repoRelativeCwd);
+  const isIrrelevantToCwd = useIsIrrelevantToCwd(commit);
+
   const isPublic = commit.phase === 'public';
   const isObsoleted = commit.successorInfo != null;
   const isAmendDisabled = mode === 'amend' && (isPublic || isObsoleted);
@@ -311,6 +316,28 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
                         latestFields={parsedFields}
                         editedCommitMessageKey={isCommitMode ? 'head' : commit.hash}
                       />
+                      {!isPublic && isIrrelevantToCwd ? (
+                        <Tooltip
+                          title={
+                            <T
+                              replace={{
+                                $prefix: <pre>{commit.maxCommonPathPrefix}</pre>,
+                                $cwd: <pre>{cwd}</pre>,
+                              }}>
+                              This commit only contains files within: $prefix These are irrelevant
+                              to your current working directory: $cwd
+                            </T>
+                          }>
+                          <Banner kind={BannerKind.default}>
+                            <IrrelevantCwdIcon />
+                            <div style={{paddingLeft: 'var(--halfpad)'}}>
+                              <T replace={{$cwd: <code>{cwd}</code>}}>
+                                All files in this commit are outside $cwd
+                              </T>
+                            </div>
+                          </Banner>
+                        </Tooltip>
+                      ) : null}
                     </>
                   ) : undefined
                 }
