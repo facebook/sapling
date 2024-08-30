@@ -31,6 +31,7 @@ import {AutoResolveSettingCheckbox} from './mergeConflicts/state';
 import {SetConfigOperation} from './operations/SetConfigOperation';
 import {useRunOperation} from './operationsState';
 import platform from './platform';
+import {irrelevantCwdDeemphasisEnabled} from './repositoryData';
 import {renderCompactAtom, useZoomShortcut, zoomUISettingAtom} from './responsive';
 import {repositoryInfo} from './serverAPIState';
 import {useThemeShortcut, themeState} from './theme';
@@ -122,6 +123,7 @@ function SettingsDropdown({
         <Column alignStart>
           <RenderCompactSetting />
           <CondenseObsoleteSetting />
+          <DeemphasizeIrrelevantCommitsSetting />
           <GatedComponent featureFlag={Internal.featureFlags?.ShowSplitSuggestion}>
             <SplitSuggestionSetting />
           </GatedComponent>
@@ -259,6 +261,25 @@ function CondenseObsoleteSetting() {
           setValue(checked);
         }}>
         <T>Condense Obsolete Stacks</T>
+      </Checkbox>
+    </Tooltip>
+  );
+}
+
+function DeemphasizeIrrelevantCommitsSetting() {
+  const [value, setValue] = useAtom(irrelevantCwdDeemphasisEnabled);
+  return (
+    <Tooltip
+      title={t(
+        'Grey out commits which only change files in an unrelated directory to your current working directory.\n',
+      )}>
+      <Checkbox
+        data-testid="deemphasize-irrelevant-commits-setting"
+        checked={value !== false}
+        onChange={checked => {
+          setValue(checked);
+        }}>
+        <T>Deemphasize Cwd-Irrelevant Commits</T>
       </Checkbox>
     </Tooltip>
   );

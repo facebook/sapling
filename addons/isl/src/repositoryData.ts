@@ -7,7 +7,7 @@
 
 import type {CommitInfo, RepoInfo, RepoRelativePath} from './types';
 
-import {atomResetOnDepChange} from './jotaiUtils';
+import {atomResetOnDepChange, localStorageBackedAtom} from './jotaiUtils';
 import {initialParams} from './urlParams';
 import {atom, useAtomValue} from 'jotai';
 
@@ -49,7 +49,11 @@ export const repoRelativeCwd = atom<RepoRelativePath>(get => {
  * be a prefix of the relevant file.
  */
 export const useIsIrrelevantToCwd = (commit: CommitInfo) => {
+  const isEnabled = useAtomValue(irrelevantCwdDeemphasisEnabled);
   const cwd = useAtomValue(repoRelativeCwd);
+  if (!isEnabled) {
+    return false;
+  }
   return isIrrelevantToCwd(commit, cwd);
 };
 
@@ -60,6 +64,11 @@ function isIrrelevantToCwd(commit: CommitInfo, repoRelativeCwd: RepoRelativePath
   );
 }
 export const __TEST__ = {isIrrelevantToCwd};
+
+export const irrelevantCwdDeemphasisEnabled = localStorageBackedAtom<boolean>(
+  'isl.deemphasize-cwd-irrelevant-commits',
+  true,
+);
 
 /**
  * A string of repo root and the "cwd". Note a same "cwd" does not infer the same repo,
