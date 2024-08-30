@@ -26,6 +26,7 @@
   z-index: 1000;
   opacity: 0;
   animation: fadein 0.1s forwards linear;
+  height: 100%;
 }
 @keyframes fadein {
   0% {

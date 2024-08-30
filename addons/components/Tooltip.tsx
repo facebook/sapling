@@ -301,6 +301,8 @@ function RenderTooltipOnto({
     animationDelay: delayMs ? `${delayMs}ms` : undefined,
   };
 
+  const pad = 10;
+
   if (position.left > viewportDimensions.width / 2) {
     // All our position computations use top+left.
     // If we position using `left`, but the tooltip is near the right edge,
@@ -316,9 +318,15 @@ function RenderTooltipOnto({
   if (position.top > viewportDimensions.height / 2) {
     style.bottom =
       viewportDimensions.height - (position.top + viewportAdjust.top + renderedDimensions.height);
+    style.maxHeight = viewportDimensions.height - style.bottom - 3 * pad;
   } else {
     style.top = position.top + viewportAdjust.top;
+    style.maxHeight = viewportDimensions.height - style.top - 3 * pad;
   }
+  style.height =
+    renderedDimensions.height > style.maxHeight
+      ? '100%' // allow scrolling
+      : 'min-content';
 
   // Use a portal so the tooltip element is rendered into the global list of tooltips,
   // rather than as a descendant of the tooltip creator.
