@@ -33,6 +33,7 @@ pub use crate::typed_hash::ShardedMapNodeDMv2Id;
 use crate::MPathElement;
 use crate::ThriftConvert;
 
+#[allow(clippy::doc_lazy_continuation)]
 /// Deleted Manifest is a data structure that tracks deleted files and commits where they
 /// were deleted. This manifest was designed in addition to Unodes to make following file history
 /// across deletions possible.
@@ -40,6 +41,7 @@ use crate::ThriftConvert;
 /// Both directories and files are represented by the same data structure, which consists of:
 /// * optional<linknode>: if set, a changeset where this path was deleted
 /// * subentries: a map from base name to the deleted manifest for this path
+///
 /// Even though the manifest tracks only deleted paths, it will still have entries for the
 /// existing directories where files were deleted. Optional field `linknode` indicates whether the
 /// path still exists (not set) or it was deleted.
@@ -67,12 +69,12 @@ use crate::ThriftConvert;
 /// Assuming we have a computed deleted manifests for all the current commits, for a new
 /// changeset:
 /// 1. For each deleted file create a new manifest entry with a linknode to the changeset, where
-/// file was deleted.
+///    file was deleted.
 /// 2. For each recreated file remove this file from the manifest.
 /// 3. Remove directory manifest if it still exists and don’t have deleted children anymore.
 /// 4. Create new manifest nodes recursively.
 /// 5. Finalize the conversion by recording the mapping from changeset id to the root deleted
-/// files manifest hash.
+///    files manifest hash.
 ///
 /// Where does point a linknode for a file that was markes as deleted in a merge commit?
 ///

@@ -72,6 +72,7 @@ struct RendezVousInner<K, V, C> {
 /// Rendezvous was created to help with our SQL query load by:
 /// - Reducing the number of queries and connections to SQL
 /// - Make it easy to do batching right
+///
 /// See D27010317 for more context.
 pub struct RendezVous<K, V, C = ConfigurableRendezVousController> {
     inner: Arc<RendezVousInner<K, V, C>>,

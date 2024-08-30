@@ -58,7 +58,7 @@ impl TryFrom<BlobstoreBytes> for RootUnodeManifestId {
     type Error = Error;
 
     fn try_from(blob_bytes: BlobstoreBytes) -> Result<Self> {
-        ManifestUnodeId::from_bytes(&blob_bytes.into_bytes()).map(RootUnodeManifestId)
+        ManifestUnodeId::from_bytes(blob_bytes.into_bytes()).map(RootUnodeManifestId)
     }
 }
 

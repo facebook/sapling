@@ -31,10 +31,10 @@ use crate::CommitGraph;
 /// - excluding ancestors of a set of changesets (common).
 ///
 /// - excluding changesets that satisify a given property (if this property holds
-/// for one changeset then it has to hold for all its parents).
+///   for one changeset then it has to hold for all its parents).
 ///
 /// - including only changesets that satisfy a given property (if this property doesn't
-/// hold for one changeset then it mustn't hold for any of its parents).
+///   hold for one changeset then it mustn't hold for any of its parents).
 ///
 /// - including only changesets that are descendants of any one changeset.
 pub struct AncestorsStreamBuilder {

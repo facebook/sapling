@@ -47,7 +47,7 @@ impl TryFrom<BlobstoreBytes> for RootSkeletonManifestId {
     type Error = Error;
 
     fn try_from(blob_bytes: BlobstoreBytes) -> Result<Self> {
-        SkeletonManifestId::from_bytes(&blob_bytes.into_bytes()).map(RootSkeletonManifestId)
+        SkeletonManifestId::from_bytes(blob_bytes.into_bytes()).map(RootSkeletonManifestId)
     }
 }
 

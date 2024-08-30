@@ -132,11 +132,11 @@ impl ValidSubmoduleExpansionBonsai {
 /// repo.
 /// Among other things, it will assert that
 /// 1. If the submodule expansion is changed, the submodule metadata file (i.e.
-/// pointer) is updated as well.
+///    pointer) is updated as well.
 /// 2. The submoldule metadata file exists, contains a valid git commit hash
-/// and that commit exists in the submodule repo.
+///    and that commit exists in the submodule repo.
 /// 3. The working copy of the commit in the submodule repo is exactly the same
-/// as its expansion in the large repo.
+///    as its expansion in the large repo.
 ///
 /// NOTE: this function will derive fsnodes for the provided bonsais, so it
 /// requires access to the large repo's blobstore and that the parent commits
@@ -351,9 +351,9 @@ async fn validate_submodule_expansion<'a, R: Repo>(
 ///
 /// The submodule expansion can be deleted in two ways:
 /// 1. Manually deleting the entire directory, in which case there must be
-/// `FileChange::Deletion` for all the files in the expansion.
+///    `FileChange::Deletion` for all the files in the expansion.
 /// 2. Implicitly deleted by adding a file in the path of the expansion
-/// directory.
+///    directory.
 async fn _ensure_submodule_expansion_deletion<'a, R: Repo>(
     ctx: &'a CoreContext,
     sm_exp_data: SubmoduleExpansionData<'a, R>,

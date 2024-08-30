@@ -180,7 +180,7 @@ impl FastlogBatch {
     }
 
     pub fn into_bytes(self) -> Bytes {
-        compact_protocol::serialize(&self.into_thrift())
+        compact_protocol::serialize(self.into_thrift())
     }
 
     pub fn into_thrift(self) -> thrift::fastlog::FastlogBatch {

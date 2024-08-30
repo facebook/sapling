@@ -71,6 +71,8 @@ impl From<RemoteBookmark> for WorkspaceRemoteBookmark {
     }
 }
 
+// This must stay as-is to work with serde
+#[allow(clippy::ptr_arg)]
 pub fn rbs_from_list(bookmarks: &Vec<Vec<String>>) -> anyhow::Result<Vec<WorkspaceRemoteBookmark>> {
     bookmarks
         .iter()

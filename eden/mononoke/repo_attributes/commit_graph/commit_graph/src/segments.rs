@@ -755,7 +755,7 @@ impl CommitGraph {
     /// - The parents of each segment are correct.
     /// - No segment contains a merge changeset except potentially at its base.
     /// - Segments are returned in reverse topological order, each parent of each segment either
-    /// belong to a subsequent segment or is an ancestor of common.
+    ///   belong to a subsequent segment or is an ancestor of common.
     pub async fn verified_ancestors_difference_segments(
         &self,
         ctx: &CoreContext,

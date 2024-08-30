@@ -120,6 +120,7 @@ impl BonsaiGlobalrevMappingEntries {
     ///   small-repos since the large-repo became the source-of-truth if the cross-repo config.
     ///   That is because the large-repo commits take up assigned globalrev slots that the small-repo commits
     ///   can't claim.
+    ///
     /// In the former case, we should not cache a negative result.
     /// In the latter case, we should as it won't ever change.
     ///

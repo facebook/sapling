@@ -243,7 +243,7 @@ impl CachedPrefetchedChangesetEdges {
 
 impl MemcacheEntity for CachedPrefetchedChangesetEdges {
     fn serialize(&self) -> Bytes {
-        compact_protocol::serialize(&self.to_thrift())
+        compact_protocol::serialize(self.to_thrift())
     }
 
     fn deserialize(bytes: Bytes) -> McResult<Self> {

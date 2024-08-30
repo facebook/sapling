@@ -45,6 +45,7 @@ pub enum ErrorKind {
 /// - `Ok(None)` - the path should not be synced
 /// - `Err(e)` - the sync should fail, as this function
 ///   could not figure out how to rewrite path
+///
 /// Fine to have Option<NonRootMPath> in this case since the optional part is not for representing root paths
 /// but instead to handle control flow differently
 pub type Mover = Arc<dyn Fn(&NonRootMPath) -> Result<Option<NonRootMPath>> + Send + Sync + 'static>;

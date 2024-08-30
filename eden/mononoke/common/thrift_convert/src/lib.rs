@@ -25,13 +25,13 @@ mod impls;
 ///
 /// Deriving this trait is supported for:
 /// - Structs that have only ThriftConvert-able fields. A helper attribute is used to specify
-/// the path to the corresponding thrift type of the struct (#[thrift(path::to::thrift_type)]).
-/// Each field's name must match the corresponding thrift struct field name.
+///   the path to the corresponding thrift type of the struct (#[thrift(path::to::thrift_type)]).
+///   Each field's name must match the corresponding thrift struct field name.
 /// - Enums where the variants either have no fields or have a single unnamed field. The helper
-/// attribute must be used to specify the thrift type for the enum, as well as the thrift type
-/// for variants that have no fields. The enum is converted to a thrift union, and the each
-/// enum variant is converted to the thrift union variant that have the same name after being
-/// converted to snake case.
+///   attribute must be used to specify the thrift type for the enum, as well as the thrift type
+///   for variants that have no fields. The enum is converted to a thrift union, and the each
+///   enum variant is converted to the thrift union variant that have the same name after being
+///   converted to snake case.
 ///
 /// See thrift_convert/tests for examples of supported cases.
 pub trait ThriftConvert: Sized {
@@ -48,6 +48,6 @@ pub trait ThriftConvert: Sized {
         Self::from_thrift(thrift)
     }
     fn into_bytes(self) -> Bytes {
-        compact_protocol::serialize(&self.into_thrift())
+        compact_protocol::serialize(self.into_thrift())
     }
 }

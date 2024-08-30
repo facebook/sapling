@@ -103,7 +103,7 @@ impl GitSha1IncrementalHasher {
         let size = size.advise();
         let mut sha1 = Sha1::new();
         let prototype = hash::RichGitSha1::from_byte_array([0; 20], "blob", size);
-        sha1.update(&prototype.prefix());
+        sha1.update(prototype.prefix());
         Self(sha1, size)
     }
 }

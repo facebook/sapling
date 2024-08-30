@@ -58,7 +58,7 @@ impl RootDeletedManifestIdCommon for RootDeletedManifestV2Id {
 impl TryFrom<BlobstoreBytes> for RootDeletedManifestV2Id {
     type Error = Error;
     fn try_from(blob_bytes: BlobstoreBytes) -> Result<Self> {
-        DeletedManifestV2Id::from_bytes(&blob_bytes.into_bytes()).map(RootDeletedManifestV2Id)
+        DeletedManifestV2Id::from_bytes(blob_bytes.into_bytes()).map(RootDeletedManifestV2Id)
     }
 }
 

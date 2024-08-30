@@ -48,6 +48,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
     /// - the basename of the file path is in `basenames`, or there is a string
     ///   in `basename_suffixes` that is a suffix of the basename of the file,
     ///   or both `basenames` and `basename_suffixes` are None.
+    ///
     /// The order that files are returned is based on the parameter `ordering`.
     /// To continue a paginated query, use the parameter `ordering`.
     pub async fn find_files(

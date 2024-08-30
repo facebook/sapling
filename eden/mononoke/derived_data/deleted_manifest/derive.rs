@@ -74,23 +74,23 @@ use crate::mapping::RootDeletedManifestIdCommon;
 ///
 /// 1. If the path exists in current unode - we may need to delete the node from deleted manifest.
 /// 2. If the path doesn't exist in the current commit, and we have a single
-/// deleted parent manifest for it we can safely reuse it.
+///    deleted parent manifest for it we can safely reuse it.
 /// 3. If the path doesn't exist but existed in any of the parents we need to
 ///    create a new deleted manifest node.
 /// 4. If there are many different parent manifests and path doesn't exist in
-/// current commit we need to:
+///    current commit we need to:
 ///    - create a new deleted manifest node
 ///    - recurse into the deleted manifests trees to merge them
 ///
 /// We also recurse into additional paths in the following scenarios:
 ///
 /// 1. When one of the parents unodes has entry for path that other parent has
-/// deleted manifest for. In this case the other parent is resurrecting that
-/// entry and we have to accomodate for that.
+///    deleted manifest for. In this case the other parent is resurrecting that
+///    entry and we have to accommodate for that.
 ///
 /// 2. When the the path is a directory in one of the parents but a file in
-/// unode for current commit. In this case we descend into all paths in replaced
-/// directory.
+///    unode for current commit. In this case we descend into all paths in replaced
+///    directory.
 pub(crate) struct DeletedManifestDeriver<Manifest: DeletedManifestCommon>(
     std::marker::PhantomData<Manifest>,
 );

@@ -279,7 +279,7 @@ fn schedule_fill_filenode(
     key: &CacheKey<FilenodeInfo>,
     filenode: FilenodeInfo,
 ) {
-    let serialized = compact_protocol::serialize(&filenode.into_thrift());
+    let serialized = compact_protocol::serialize(filenode.into_thrift());
 
     // Quite unlikely that single filenode will be bigger than MEMCACHE_VALUE_MAX_SIZE
     // It's probably not even worth logging it
@@ -359,7 +359,7 @@ async fn fill_history(
             .collect::<Vec<_>>();
 
         let pointers = try_join_all(write_chunks_fut).await?;
-        compact_protocol::serialize(&thrift::FilenodeInfoList::Pointers(pointers))
+        compact_protocol::serialize(thrift::FilenodeInfoList::Pointers(pointers))
     };
 
     let root_key = keygen.key(&key.key);

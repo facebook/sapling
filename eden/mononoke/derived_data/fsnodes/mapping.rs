@@ -47,7 +47,7 @@ impl TryFrom<BlobstoreBytes> for RootFsnodeId {
     type Error = Error;
 
     fn try_from(blob_bytes: BlobstoreBytes) -> Result<Self> {
-        FsnodeId::from_bytes(&blob_bytes.into_bytes()).map(RootFsnodeId)
+        FsnodeId::from_bytes(blob_bytes.into_bytes()).map(RootFsnodeId)
     }
 }
 

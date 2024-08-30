@@ -48,7 +48,7 @@ pub fn encode(response: Response) -> OutputStream {
             let separator = Bytes::from(&b";"[..]);
             let escaped_results = resps
                 .into_iter()
-                .map(move |resp| Bytes::from(batch::escape(&encode_cmd(resp))));
+                .map(move |resp| Bytes::from(batch::escape(encode_cmd(resp))));
 
             let separated_results = Itertools::intersperse(escaped_results, separator);
             let separated_results: Vec<_> = separated_results.collect();

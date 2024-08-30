@@ -90,9 +90,10 @@ impl TestProcessExecutor {
 /// 2. No changes to functionality (in case the BP has multi-repo logic built
 ///    into its core, e.g. Walker)
 /// 3. Preventing rewrite of the existing repo-parsing logic from CLI args.
+///
 /// Note that even for existing jobs, the eventual goal would be to migrate
 /// to the below model.
-
+///
 /// For new jobs or existing jobs that do not have the above properties,
 /// the below function should not be a free function. It should instead be
 /// included as part of the RepoShardedProcessExecutor trait. In case of SM
@@ -102,7 +103,7 @@ impl TestProcessExecutor {
 /// `execute()` method within the trait. The entire logic will be housed in
 /// the structs that implement these traits and both the BPE and CLI run
 /// function will invoke the same methods.
-
+///
 /// Function representing the work that need to be done on the repo
 /// as part of this BP.
 async fn do_busy_work(

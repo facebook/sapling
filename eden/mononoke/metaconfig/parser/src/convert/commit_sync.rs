@@ -61,7 +61,7 @@ fn check_no_duplicate_small_repos(small_repos: &[RawCommitSyncSmallRepoConfig]) 
 /// Validate the commit sync config
 ///
 /// - Check that no two small repos use the same bookmark prefix. If they did, this would
-/// mean potentail bookmark name collisions.
+///   mean potentail bookmark name collisions.
 ///
 /// - Check that large repo from this config is not the same as any of the small repos
 fn validate_commit_sync_config(commit_sync_config: &CommitSyncConfig) -> Result<()> {

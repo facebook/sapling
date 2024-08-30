@@ -198,11 +198,11 @@ async fn compact_all_submodule_expansion_file_changes_impl<'a, R: Repo>(
 /// means:
 ///
 /// 1. Getting the submodule commit being expanded from the submodule expansion
-/// metadata file.
+///    metadata file.
 /// 2. Removing all the file changes from the expansion and metadata file from
-/// the bonsai.
+///    the bonsai.
 /// 3. Adding a single file change of type GitSubmodule to the bonsai, pointing
-/// to the submodule commit.
+///    to the submodule commit.
 ///
 /// IMPORTANT: this function assumes that the provided bonsai **has a valid
 /// submodule expansion**. So **never call this without validating the expansion

@@ -153,7 +153,7 @@ fn memcache_deserialize(bytes: Bytes) -> McResult<HgMutationCacheEntry> {
 }
 
 fn memcache_serialize(entry: &HgMutationCacheEntry) -> Bytes {
-    compact_protocol::serialize(&entry.clone().into_thrift())
+    compact_protocol::serialize(entry.clone().into_thrift())
 }
 
 const CHUNK_SIZE: usize = 1000;

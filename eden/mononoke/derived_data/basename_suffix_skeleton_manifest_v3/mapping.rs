@@ -41,7 +41,7 @@ pub fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId)
 impl TryFrom<BlobstoreBytes> for RootBssmV3DirectoryId {
     type Error = Error;
     fn try_from(blob_bytes: BlobstoreBytes) -> Result<Self> {
-        BssmV3DirectoryId::from_bytes(&blob_bytes.into_bytes()).map(RootBssmV3DirectoryId)
+        BssmV3DirectoryId::from_bytes(blob_bytes.into_bytes()).map(RootBssmV3DirectoryId)
     }
 }
 

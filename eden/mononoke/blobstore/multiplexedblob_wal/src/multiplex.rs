@@ -435,10 +435,10 @@ impl WalMultiplexedBlobstore {
     /// We will query underlying blobstores until up to `quorum.read` of the queries were
     /// successful.
     /// * If  by that time, all queried blobstores didn't have the key in question, we
-    /// will consider this key absent and return `None`,
+    ///   will consider this key absent and return `None`,
     /// * If any underlying blobstore has the key, return the output of its `get`,
     /// * If too many errors disable us from reaching one of the conditions above, propagate the
-    /// error to the caller.
+    ///   error to the caller.
     async fn get_impl<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -520,12 +520,12 @@ impl WalMultiplexedBlobstore {
 
     /// Is the key present in this multiplexed blobstore?
     /// * A key is considered `Present` if it can be found in any underlying blobstores by only
-    /// querying the first `quorum.read` that don't fail,
+    ///   querying the first `quorum.read` that don't fail,
     /// * A key is considered `Absent` if it cannot be found in the first `quorum.read` underlying
-    /// blobstores we queried,
+    ///   blobstores we queried,
     /// * If the key is not found to be `Present` anywhere and the number of errors from underlying
-    /// blobstore prevents us from reaching the `quorum.read` to decide it is absent, return an
-    /// `Error`.
+    ///   blobstore prevents us from reaching the `quorum.read` to decide it is absent, return an
+    ///   `Error`.
     async fn is_present_impl<'a>(
         &'a self,
         ctx: &'a CoreContext,

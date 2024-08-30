@@ -71,6 +71,7 @@ async fn query_queue_size(
 ///   so there's no way to terminate a stream from within `f`
 /// - this one expects `f` to return a `Result`, which is threaded downstream
 ///   and allows the consumer of the stream to terminate it on `Err`
+///
 /// The main motivation for this is to be able to use `?` in the item factory
 fn unfold_forever<T, F, Fut, Item>(
     init: T,

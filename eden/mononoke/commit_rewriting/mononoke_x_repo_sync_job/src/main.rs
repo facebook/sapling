@@ -15,7 +15,7 @@
 //! At the moment there two main limitations:
 //! 1) Syncing of some merge commits is not supported
 //! 2) Root commits and their descendants that are not merged into a main line
-//! aren't going to be synced. For example,
+//!    aren't going to be synced. For example,
 //
 //! ```text
 //!   O <- main bookmark

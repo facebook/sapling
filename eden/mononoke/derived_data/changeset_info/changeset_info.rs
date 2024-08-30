@@ -268,7 +268,7 @@ impl TryFrom<BlobstoreGetData> for ChangesetInfo {
 
 impl From<ChangesetInfo> for BlobstoreBytes {
     fn from(info: ChangesetInfo) -> BlobstoreBytes {
-        let data = compact_protocol::serialize(&info.into_thrift());
+        let data = compact_protocol::serialize(info.into_thrift());
         BlobstoreBytes::from_bytes(data)
     }
 }

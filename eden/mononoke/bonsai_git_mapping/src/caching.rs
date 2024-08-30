@@ -182,7 +182,7 @@ fn memcache_deserialize(bytes: Bytes) -> McResult<BonsaiGitMappingCacheEntry> {
 }
 
 fn memcache_serialize(entry: &BonsaiGitMappingCacheEntry) -> Bytes {
-    compact_protocol::serialize(&entry.clone().into_thrift())
+    compact_protocol::serialize(entry.clone().into_thrift())
 }
 
 const CHUNK_SIZE: usize = 1000;

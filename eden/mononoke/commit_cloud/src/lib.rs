@@ -428,7 +428,7 @@ impl CommitCloud {
         );
 
         let cri = self.ctx.client_request_info();
-        let (txn, affected_rows) = rename_all(&self.storage, cri, &cc_ctx, new_workspace).await?;
+        let (txn, affected_rows) = rename_all(&self.storage, cri, cc_ctx, new_workspace).await?;
 
         ensure!(
             affected_rows > 0,

@@ -352,7 +352,7 @@ mod test {
 
             let path = &mpath.to_string();
             let path = Path::new(&path);
-            File::create(&root_path.join(path))?.write_all(&blob)?;
+            File::create(root_path.join(path))?.write_all(&blob)?;
 
             index.add_path(path)?;
         }

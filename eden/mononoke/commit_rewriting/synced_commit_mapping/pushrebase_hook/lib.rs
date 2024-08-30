@@ -91,9 +91,9 @@ pub struct ForwardSyncedCommitInfo {
 /// CrossRepoSyncPushrebase hook is reponsible for updating the mapping versions of pushrebased commits for
 /// repos that have cross-repo-sync enabled. In particular that means:
 ///  1. Updating the large_repo_commit_version for all commits that were pushrebased
-///    (the mappings will be assigned by backsyncer once it gets to those)
+///     (the mappings will be assigned by backsyncer once it gets to those)
 ///  2. Updating small-to-large mapping for commtis that were forward-synced from small repo via pushrebase:
-///    as those commits are created during pushrebase transaction it's good to update the mapping atomically
+///     as those commits are created during pushrebase transaction it's good to update the mapping atomically
 ///  3. Verifying that the forward syncer doesn't accidentally change the mapping version.
 ///
 /// If the large_repo_commit version is not assigned for parent commit the hook does not fail but restricts its

@@ -119,6 +119,7 @@ impl CommitRewriteResult {
 ///              not be present in the rewrite target
 /// - `Ok(Some(rewritten))` for a successful rewrite, which should be
 ///                         present in the rewrite target
+///
 /// The notion that the commit "should not be present in the rewrite
 /// target" means that the commit is not a merge and all of its changes
 /// were rewritten into nothingness by the `Mover`.

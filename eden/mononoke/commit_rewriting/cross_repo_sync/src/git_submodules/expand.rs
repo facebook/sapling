@@ -859,10 +859,10 @@ async fn delete_submodule_expansion<'a, R: Repo>(
  After getting the file changes from the submodule repo, generate any additional
  file changes needed to bring the bonsai into a healthy/consistent state.
  - Submodule metadata file, which stores the pointer to the submodule revision
- being expanded and is used to validate consistency between the revision and
- its expansion.
+   being expanded and is used to validate consistency between the revision and
+   its expansion.
  - Deletions of files/directories that are being replaced by the creation of the
- submodule expansion.
+   submodule expansion.
 */
 async fn generate_additional_file_changes<'a, R: Repo>(
     ctx: &'a CoreContext,
