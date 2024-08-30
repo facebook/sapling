@@ -122,7 +122,6 @@ impl<'a> Repository<'a> {
         );
 
         pipe.add_nonretryable_command(vec!["tr", "'\t'", "' '"]);
-        pipe.add_nonretryable_command(vec!["sort", "-k", "2"]);
         pipe.add_nonretryable_command(vec!["sha1sum"]);
         pipe.add_nonretryable_command(vec!["awk", "{printf($1)}"]);
 
