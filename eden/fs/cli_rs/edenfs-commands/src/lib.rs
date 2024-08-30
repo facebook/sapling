@@ -31,6 +31,7 @@ mod minitop;
 mod pid;
 mod prefetch_profile;
 mod redirect;
+mod remove;
 mod status;
 mod top;
 mod uptime;
@@ -48,7 +49,7 @@ const DEFAULT_ETC_EDEN_DIR: &str = "C:\\ProgramData\\facebook\\eden";
 
 // Used to determine whether we should gate off certain oxidized edenfsctl commands
 const ROLLOUT_JSON: &str = "edenfsctl_rollout.json";
-const EXPERIMENTAL_COMMANDS: &[&str] = &[];
+const EXPERIMENTAL_COMMANDS: &[&str] = &["remove"];
 
 type ExitCode = i32;
 
@@ -111,6 +112,8 @@ pub enum TopLevelSubcommand {
     PrefetchProfile(crate::prefetch_profile::PrefetchCmd),
     #[clap(subcommand, alias = "redir")]
     Redirect(crate::redirect::RedirectCmd),
+    #[clap(alias = "rm")]
+    Remove(crate::remove::RemoveCmd),
     #[cfg(target_os = "windows")]
     Handles(crate::handles::HandlesCmd),
     Reloadconfig(crate::config::ReloadConfigCmd),
@@ -136,6 +139,7 @@ impl TopLevelSubcommand {
             Pid(cmd) => cmd,
             PrefetchProfile(cmd) => cmd,
             Redirect(cmd) => cmd,
+            Remove(cmd) => cmd,
             #[cfg(target_os = "windows")]
             Handles(cmd) => cmd,
             Status(cmd) => cmd,
@@ -160,6 +164,7 @@ impl TopLevelSubcommand {
             TopLevelSubcommand::Pid(_) => "pid",
             TopLevelSubcommand::PrefetchProfile(_) => "prefetch-profile",
             TopLevelSubcommand::Redirect(_) => "redirect",
+            TopLevelSubcommand::Remove(_) => "remove",
             TopLevelSubcommand::Reloadconfig(_) => "reloadconfig",
             TopLevelSubcommand::Status(_) => "status",
             //TopLevelSubcommand::Top(_) => "top",
