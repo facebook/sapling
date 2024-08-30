@@ -81,16 +81,40 @@ except ImportError:
 
 
 try:
-    from .facebook.internal_consts import get_doctor_link
+    from .facebook.internal_consts import (
+        get_doctor_link,
+        get_local_commit_recovery_link,
+    )
 except ImportError:
 
     def get_doctor_link() -> str:
+        return ""
+
+    def get_local_commit_recovery_link() -> str:
         return ""
 
 
 # working_directory_was_stale may be set to True by the CLI main module
 # if the original working directory referred to a stale eden mount point.
 working_directory_was_stale = False
+
+
+def get_reclone_msg(checkout_path: str) -> str:
+    reclone_msg = """To recover, you will need to remove and reclone the repo.
+Your local commits will be uneffected, but reclones will lose uncommitted work or shelves.
+However, the local changes are manually recoverable before the reclone."""
+
+    if get_local_commit_recovery_link():
+        reclone_msg += f"\nIf you have local changes you would like to save before reclone, see {get_local_commit_recovery_link()}, or reachout to the EdenFS team."
+
+    if get_doctor_link():
+        reclone_msg += (
+            "\nTo reclone the corrupted repo, run: `fbclone $REPO --reclone --eden`"
+        )
+        reclone_msg += f"\nFor additional info see the wiki at {get_doctor_link()}"
+    else:
+        reclone_msg += f"\nTo remove the corrupted repo, run: `eden rm {checkout_path}`"
+    return reclone_msg
 
 
 def cure_what_ails_you(
@@ -701,14 +725,7 @@ Checkouts inside backing repo are usually not intended and can cause spurious be
 
 class EdenCheckoutCorruption(Problem):
     def __init__(self, checkout: CheckoutInfo, ex: Exception) -> None:
-        remediation = f"""\
-To recover, you will need to remove and reclone the repo.
-You will lose uncommitted work or shelves, but all your local
-commits are safe.
-
-To remove the corrupted repo, run: `eden rm {checkout.path}`"""
-        if get_doctor_link():
-            remediation += f"\nFor additional info see the wiki at {get_doctor_link()}"
+        remediation = get_reclone_msg(str(checkout.path))
 
         super().__init__(
             f"Eden's checkout state for {checkout.path} has been corrupted: {ex}",
@@ -718,14 +735,7 @@ To remove the corrupted repo, run: `eden rm {checkout.path}`"""
 
 class EdenCheckoutInfosCorruption(Problem):
     def __init__(self, ex: Exception) -> None:
-        remediation = """\
-To recover, you will need to remove and reclone the repo.
-You will lose uncommitted work or shelves, but all your local
-commits are safe.
-
-To reclone the corrupted repo, run: `fbclone $REPO --reclone --eden`"""
-        if get_doctor_link():
-            remediation += f"\nFor additional info see the wiki at {get_doctor_link()}"
+        remediation = get_reclone_msg("$CHECKOUT_PATH")
 
         super().__init__(
             f"Encountered errors reading Eden's checkout info for the following checkouts:\n{ex}",
@@ -971,14 +981,8 @@ class CheckoutNotMounted(FixableProblem):
 {ex}
 
 {self._mount_path} appears to have been corrupted.
-This can happen if your devserver was hard-rebooted.
-To recover, you will need to remove and reclone the repo.
-You will lose uncommitted work or shelves, but all your local
-commits are safe.
-If you have non-trivial uncommitted work that you need to recover
-you may be able to restore it from your system backup.
-
-To remove the corrupted repo, run: `eden rm {self._mount_path}`"""
+This can happen if your machine was hard-rebooted.
+{get_reclone_msg(str(self._mount_path))}"""
                 )
 
             # if it is not this ^ eden corruption then it could be hg

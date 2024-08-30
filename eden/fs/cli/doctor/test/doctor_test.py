@@ -27,6 +27,7 @@ from eden.fs.cli.doctor import (
     check_running_mount,
     check_watchman,
     get_doctor_link,
+    get_local_commit_recovery_link,
 )
 from eden.fs.cli.doctor.check_filesystems import (
     check_hg_status_match_hg_diff,
@@ -108,6 +109,12 @@ class DoctorTest(DoctorTestBase):
     # The diffs for what is written to stdout can be large.
     # pyre-fixme[4]: Attribute must be annotated.
     maxDiff = None
+
+    def format_win_path_for_regex(self, path: str) -> str:
+        # Formats the path to be compatible with regex matching on windows
+        if sys.platform == "win32":
+            return path.replace("\\", "\\\\")
+        return path
 
     def setUpEdenMountTest(
         self,
@@ -2305,13 +2312,63 @@ Mount failed. Running `hg doctor` in the backing repo and then will retry the mo
         self.assertEqual(len(fixer.problem_types), 1)
         self.assertEqual(fixer.num_fixed_problems, 0)
         self.assertEqual(fixer.num_failed_fixes, 1)
+        clean_path = self.format_win_path_for_regex(str(checkout.path))
         self.assertRegex(
             out.getvalue(),
             r"""<yellow>- Found problem:<reset>
-.*
-.*
+{path} is not currently mounted
+Remounting {path}...<red>error<reset>
 Failed to fix or verify fix for problem CheckoutNotMounted: Exception: is too short for header
-((.|\n)*)""",
+
+{path} appears to have been corrupted.
+This can happen if your machine was hard-rebooted.
+To recover, you will need to remove and reclone the repo.
+Your local commits will be uneffected, but reclones will lose uncommitted work or shelves.
+However, the local changes are manually recoverable before the reclone.
+If you have local changes you would like to save before reclone, see {recovery_link}, or reachout to the EdenFS team.
+To reclone the corrupted repo, run: `fbclone \$REPO --reclone --eden`
+((.|\n)*)""".format(
+                path=clean_path, recovery_link=get_local_commit_recovery_link()
+            ),
+        )
+
+    @patch("eden.fs.cli.doctor.test.lib.fake_eden_instance.FakeEdenInstance.mount")
+    @patch("eden.fs.cli.doctor.get_doctor_link")
+    @patch("eden.fs.cli.doctor.get_local_commit_recovery_link")
+    def test_missing_mount_too_short_oss(
+        self,
+        mock_get_recovery_link: MagicMock,
+        mock_get_doctor_link: MagicMock,
+        mock_mount: MagicMock,
+    ) -> None:
+        mock_mount.side_effect = [Exception("is too short for header"), 0, 1]
+        mock_get_recovery_link.return_value = ""
+        mock_get_doctor_link.return_value = ""
+
+        fixer, out, checkout = self.setUpEdenMountTest()
+
+        self.assertEqual(mock_mount.call_count, 1)
+        self.assertEqual(mock_mount.mock_calls, [call(str(checkout.path), False)] * 1)
+        self.assertEqual(len(fixer.problem_types), 1)
+        self.assertEqual(fixer.num_fixed_problems, 0)
+        self.assertEqual(fixer.num_failed_fixes, 1)
+        clean_path = self.format_win_path_for_regex(str(checkout.path))
+        self.assertRegex(
+            out.getvalue(),
+            r"""<yellow>- Found problem:<reset>
+{path} is not currently mounted
+Remounting {path}...<red>error<reset>
+Failed to fix or verify fix for problem CheckoutNotMounted: Exception: is too short for header
+
+{path} appears to have been corrupted.
+This can happen if your machine was hard-rebooted.
+To recover, you will need to remove and reclone the repo.
+Your local commits will be uneffected, but reclones will lose uncommitted work or shelves.
+However, the local changes are manually recoverable before the reclone.
+To remove the corrupted repo, run: `eden rm {path}`
+((.|\n)*)""".format(
+                path=clean_path
+            ),
         )
 
     @patch("eden.fs.cli.doctor.test.lib.fake_eden_instance.FakeEdenInstance.mount")
@@ -2393,15 +2450,83 @@ Attempted and failed to fix problem CheckoutNotMounted
 <yellow>- Found problem:<reset>
 Eden's checkout state for {checkout.path} has been corrupted: FileNotFound
 To recover, you will need to remove and reclone the repo.
-You will lose uncommitted work or shelves, but all your local
-commits are safe.
-
-To remove the corrupted repo, run: `eden rm {checkout.path}`"""
+Your local commits will be uneffected, but reclones will lose uncommitted work or shelves.
+However, the local changes are manually recoverable before the reclone.
+If you have local changes you would like to save before reclone, see {get_local_commit_recovery_link()}, or reachout to the EdenFS team.
+To reclone the corrupted repo, run: `fbclone $REPO --reclone --eden`"""
             + (
                 f"\nFor additional info see the wiki at {get_doctor_link()}\n\n"
                 if get_doctor_link()
                 else "\n\n"
             ),
+            out.getvalue(),
+        )
+
+    @patch("eden.fs.cli.config.EdenCheckout.get_config")
+    @patch("eden.fs.cli.doctor.get_doctor_link")
+    @patch("eden.fs.cli.doctor.get_local_commit_recovery_link")
+    def test_corrupted_config_oss(
+        self,
+        mock_get_recovery_link: MagicMock,
+        mock_get_doctor_link: MagicMock,
+        mock_get_config: MagicMock,
+    ) -> None:
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout = instance.create_test_mount("path1")
+        checkout_config = instance._checkouts_by_path[str(checkout.path)].config
+
+        mock_get_recovery_link.return_value = ""
+        mock_get_doctor_link.return_value = ""
+
+        mock_get_config.side_effect = [
+            checkout_config,
+            FileNotFoundError("FileNotFound"),
+        ]
+        path = checkout.path
+        checkout_info = CheckoutInfo(
+            # pyre-fixme[6]: For 3rd param expected `EdenInstance` but got
+            # `FakeEdenInstance`.
+            instance,
+            path,
+            state=None,
+            backing_repo=checkout.get_backing_repo_path(),
+            running_state_dir=path,
+            configured_state_dir=path,
+        )
+
+        fixer, out = self.create_fixer(dry_run=False)
+        mount_table = instance.mount_table
+
+        edenfs_path = "/path/to/eden-mount"
+        watchman_roots = {edenfs_path}
+        watchman_info = check_watchman.WatchmanCheckInfo(watchman_roots)
+
+        check_running_mount(
+            fixer,
+            # pyre-fixme[6]: For 2rd param expected `EdenInstance` but got
+            # `FakeEdenInstance`.
+            instance,
+            checkout_info,
+            mount_table,
+            watchman_info,
+            False,
+            False,
+        )
+
+        self.assertEqual(mock_get_config.call_count, 2)
+        self.assertEqual(len(fixer.problem_types), 1)
+        self.assertEqual(fixer.num_fixed_problems, 0)
+        self.assertEqual(fixer.num_manual_fixes, 1)
+        self.assertEqual(
+            f"""\
+<yellow>- Found problem:<reset>
+Eden's checkout state for {checkout.path} has been corrupted: FileNotFound
+To recover, you will need to remove and reclone the repo.
+Your local commits will be uneffected, but reclones will lose uncommitted work or shelves.
+However, the local changes are manually recoverable before the reclone.
+To remove the corrupted repo, run: `eden rm {checkout.path}`
+
+""",
             out.getvalue(),
         )
 
