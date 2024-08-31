@@ -169,6 +169,7 @@ class ProblemFixer(ProblemTracker):
         self.num_advisory_fixes = 0
         self.problem_types: Set[str] = set()
         self.problem_fixable: Set[str] = set()
+        self.problem_successful_fixes: Set[str] = set()
         self.problem_failed_fixes: Set[str] = set()
         self.problem_manual_fixes: Set[str] = set()
         self.problem_no_fixes: Set[str] = set()
@@ -210,6 +211,8 @@ class ProblemFixer(ProblemTracker):
                 )
 
     def fix_problem(self, problem: FixableProblem) -> None:
+        self.num_fixable += 1
+        self.problem_fixable.add(problem.__class__.__name__)
         self._filtered_out.write(
             problem.severity(), f"{problem.start_msg()}...", flush=True
         )
@@ -224,6 +227,7 @@ class ProblemFixer(ProblemTracker):
                     flush=True,
                 )
                 self.num_fixed_problems += 1
+                self.problem_successful_fixes.add(problem.__class__.__name__)
             else:
                 self._filtered_out.writeln(
                     problem.severity(), "error", fg=self._filtered_out.out.RED
