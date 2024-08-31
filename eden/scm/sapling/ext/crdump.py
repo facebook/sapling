@@ -119,11 +119,17 @@ def crdump(ui, repo, *revs, **opts):
                 # Silence any output from commitcloud
                 repo.ui.quiet = True
                 _backedup, notbackedup = commitcloud.upload.upload(repo, revs)
-            except Exception:
+            except Exception as ex:
                 if ui.configbool("crdump", "commitcloudrequired"):
                     raise
-                # Don't let commit cloud exceptions block crdump
-                pass
+                # Don't let commit cloud exceptions block crdump, just log
+                # the exception.
+                ui.log_exception(
+                    exception_type=type(ex).__name__,
+                    exception_msg=str(ex),
+                    fatal="false",
+                    source="crdump_commitcloud",
+                )
             finally:
                 repo.ui.quiet = oldquiet
 
