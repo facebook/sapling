@@ -11,7 +11,7 @@ license = "GPLv2+"
 anyhow = "1.0.86"
 async-trait = "0.1.71"
 async_once_cell = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-async_requests = { version = "0.1.0", path = "../async_requests" }
+async_requests = { version = "0.1.0", path = "../async_requests/lib" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }

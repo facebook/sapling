@@ -1,10 +1,12 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
 
 oncall("mononoke")
 
 rust_library(
     name = "async_requests",
-    srcs = glob(["src/**/*.rs"]),
+    srcs = glob(["lib/src/**/*.rs"]),
+    autocargo = {"cargo_toml_dir": "lib"},
     test_deps = [
         "fbsource//third-party/rust:serde_json",
         "//common/rust/shed/fbinit:fbinit",
@@ -32,5 +34,43 @@ rust_library(
         "//eden/mononoke/scs/if:source_control-rust",
         "//eden/mononoke/server/context:context",
         "//thrift/lib/rust:fbthrift",
+    ],
+)
+
+rust_binary(
+    name = "worker",
+    srcs = glob(["worker/src/**/*.rs"]),
+    autocargo = {"cargo_toml_dir": "worker"},
+    crate_root = "worker/src/main.rs",
+    test_deps = [
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/megarepo_api:requests_table",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/repo_factory:test_repo_factory",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-stream",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:tokio",
+        ":async_requests",
+        "//common/rust/shed/cloned:cloned",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/hostname:hostname",
+        "//eden/mononoke/async_requests/if:async_requests_types-thrift-rust",
+        "//eden/mononoke/cmdlib:cmdlib_logging",
+        "//eden/mononoke/cmdlib:environment",
+        "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
+        "//eden/mononoke/megarepo_api:megarepo_api",
+        "//eden/mononoke/megarepo_api:megarepo_config",
+        "//eden/mononoke/megarepo_api:megarepo_error",
+        "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/mononoke_api:mononoke_api",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/scs/if:source_control-rust",
+        "//eden/mononoke/server/context:context",
     ],
 )
