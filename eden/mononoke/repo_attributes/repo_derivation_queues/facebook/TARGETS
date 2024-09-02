@@ -23,7 +23,6 @@ rust_library(
         "fbsource//third-party/rust:slog",
         "fbsource//third-party/rust:strum",
         "//common/rust/shed/cloned:cloned",
-        "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/zeus:zeus_client",
         "//eden/mononoke/blobrepo:repo_blobstore",

@@ -126,6 +126,8 @@ use metaconfig_types::MetadataDatabaseConfig;
 use metaconfig_types::Redaction;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::RepoReadOnly;
+#[cfg(fbcode_build)]
+use metaconfig_types::ZelosConfig;
 use mutable_counters::ArcMutableCounters;
 use mutable_counters::SqlMutableCountersBuilder;
 use mutable_renames::ArcMutableRenames;
@@ -199,8 +201,13 @@ use wireproto_handler::RepoHandlerBase;
 use wireproto_handler::TargetRepoDbs;
 #[cfg(fbcode_build)]
 use zelos_queue::zelos_derivation_queues;
+#[cfg(fbcode_build)]
+use zeus_client::zeus_cpp_client::ZeusCppClient;
+#[cfg(fbcode_build)]
+use zeus_client::ZeusClient;
 
 const DERIVED_DATA_LEASE: &str = "derived-data-lease";
+const ZEUS_CLIENT_ID: &str = "mononoke";
 
 #[derive(Clone)]
 struct RepoFactoryCache<K: Clone + Eq + Hash, V: Clone> {
@@ -248,6 +255,8 @@ pub struct RepoFactory {
     sql_factories: RepoFactoryCache<MetadataDatabaseConfig, Arc<MetadataSqlFactory>>,
     blobstores: RepoFactoryCache<BlobConfig, Arc<dyn Blobstore>>,
     redacted_blobs: RepoFactoryCache<MetadataDatabaseConfig, Arc<RedactedBlobs>>,
+    #[cfg(fbcode_build)]
+    zelos_clients: RepoFactoryCache<ZelosConfig, Arc<dyn ZeusClient>>,
     blobstore_override: Option<Arc<dyn RepoFactoryOverride<Arc<dyn Blobstore>>>>,
     lease_override: Option<Arc<dyn RepoFactoryOverride<Arc<dyn LeaseOps>>>>,
     scrub_handler: Arc<dyn ScrubHandler>,
@@ -261,6 +270,8 @@ impl RepoFactory {
             sql_factories: RepoFactoryCache::new(),
             blobstores: RepoFactoryCache::new(),
             redacted_blobs: RepoFactoryCache::new(),
+            #[cfg(fbcode_build)]
+            zelos_clients: RepoFactoryCache::new(),
             blobstore_override: None,
             lease_override: None,
             scrub_handler: default_scrub_handler(),
@@ -470,6 +481,33 @@ impl RepoFactory {
                 }
 
                 Ok(blobstore)
+            })
+            .await
+    }
+
+    #[cfg(fbcode_build)]
+    async fn zelos_client(&self, config: &ZelosConfig) -> Result<Arc<dyn ZeusClient>> {
+        self.zelos_clients
+            .get_or_try_init(config, || async move {
+                let zelos_client = match config {
+                    ZelosConfig::Local { port } => {
+                        ZeusCppClient::zelos_client_for_local_ensemble_reconnecting(*port)
+                            .with_context(|| {
+                                format!("Error creating Local Zeus client on port {}", port)
+                            })?
+                    }
+                    ZelosConfig::Remote { tier } => {
+                        ZeusCppClient::new_reconnecting(self.env.fb, ZEUS_CLIENT_ID, tier)
+                            .with_context(|| {
+                                format!(
+                                    "Error creating Zeus client to {} with client id {}",
+                                    tier, ZEUS_CLIENT_ID
+                                )
+                            })?
+                    }
+                };
+                let zelos_client: Arc<dyn ZeusClient> = Arc::new(zelos_client);
+                Ok(zelos_client)
             })
             .await
     }
@@ -1224,18 +1262,19 @@ impl RepoFactory {
         #[cfg(fbcode_build)]
         {
             let config = repo_config.derived_data_config.clone();
-            let zelos_config = repo_config.zelos_config.as_ref().ok_or_else(|| {
-                anyhow!("Missing zelos config while trying to construct repo_derivation_queues")
-            })?;
             let lease = self.lease(DERIVED_DATA_LEASE)?;
             let derived_data_scuba = build_scuba(
                 self.env.fb,
                 config.scuba_table.clone(),
                 repo_identity.name(),
             )?;
+            let zelos_config = repo_config.zelos_config.as_ref().ok_or_else(|| {
+                anyhow!("Missing zelos config while trying to construct repo_derivation_queues")
+            })?;
+            let zelos_client = self.zelos_client(zelos_config).await?;
+
             anyhow::Ok(Arc::new(
                 zelos_derivation_queues(
-                    self.env.fb,
                     repo_identity.id(),
                     repo_identity.name().to_string(),
                     commit_graph.clone(),
@@ -1247,7 +1286,7 @@ impl RepoFactory {
                     lease,
                     derived_data_scuba,
                     config,
-                    zelos_config,
+                    zelos_client,
                 )
                 .await?,
             ))

@@ -1840,7 +1840,7 @@ pub struct MetadataLoggerConfig {
 }
 
 /// Configuration for connecting to Zelos
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub enum ZelosConfig {
     /// Connect to a local Zelos server
     Local {
