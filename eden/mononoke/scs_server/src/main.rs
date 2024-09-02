@@ -288,6 +288,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         };
         source_control_impl::SourceControlServiceImpl::new(
             fb,
+            &app,
             mononoke.clone(),
             megarepo_api,
             logger.clone(),

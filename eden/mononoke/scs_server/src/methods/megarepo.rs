@@ -202,7 +202,7 @@ impl SourceControlServiceImpl {
         self.verify_repos_by_config(&config_with_new_target)?;
 
         let token = self
-            .megarepo_api
+            .queues_client
             .async_method_request_queue(&ctx, &target)
             .await?
             .enqueue(ctx, &self.mononoke, params)
@@ -223,7 +223,7 @@ impl SourceControlServiceImpl {
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
         let poll_response = self
-            .megarepo_api
+            .queues_client
             .async_method_request_queue(&ctx, &target)
             .await?
             .poll(ctx, token)
@@ -242,7 +242,7 @@ impl SourceControlServiceImpl {
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
         let token = self
-            .megarepo_api
+            .queues_client
             .async_method_request_queue(&ctx, &target)
             .await?
             .enqueue(ctx, &self.mononoke, params)
@@ -263,7 +263,7 @@ impl SourceControlServiceImpl {
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
         let poll_response = self
-            .megarepo_api
+            .queues_client
             .async_method_request_queue(&ctx, &target)
             .await?
             .poll(ctx, token)
@@ -282,7 +282,7 @@ impl SourceControlServiceImpl {
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
         let token = self
-            .megarepo_api
+            .queues_client
             .async_method_request_queue(&ctx, &target)
             .await?
             .enqueue(ctx, &self.mononoke, params)
@@ -303,7 +303,7 @@ impl SourceControlServiceImpl {
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
         let poll_response = self
-            .megarepo_api
+            .queues_client
             .async_method_request_queue(&ctx, &target)
             .await?
             .poll(ctx, token)
@@ -322,7 +322,7 @@ impl SourceControlServiceImpl {
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
         let token = self
-            .megarepo_api
+            .queues_client
             .async_method_request_queue(&ctx, &target)
             .await?
             .enqueue(ctx, &self.mononoke, params)
@@ -342,7 +342,7 @@ impl SourceControlServiceImpl {
         let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
         self.check_write_allowed(&ctx, target_repo_id).await?;
         let poll_response = self
-            .megarepo_api
+            .queues_client
             .async_method_request_queue(&ctx, &target)
             .await?
             .poll(ctx, token)
@@ -361,7 +361,7 @@ impl SourceControlServiceImpl {
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
         let token = self
-            .megarepo_api
+            .queues_client
             .async_method_request_queue(&ctx, &target)
             .await?
             .enqueue(ctx, &self.mononoke, params)
@@ -382,7 +382,7 @@ impl SourceControlServiceImpl {
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
         let poll_response = self
-            .megarepo_api
+            .queues_client
             .async_method_request_queue(&ctx, &target)
             .await?
             .poll(ctx, token)

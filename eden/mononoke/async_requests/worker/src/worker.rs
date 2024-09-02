@@ -24,6 +24,7 @@ use async_requests::AsyncMethodRequestQueue;
 use async_requests::ClaimedBy;
 use async_requests::RequestId;
 use async_stream::try_stream;
+use client::AsyncRequestsQueue;
 use cloned::cloned;
 use context::CoreContext;
 use futures::future::abortable;
@@ -36,7 +37,9 @@ use futures::Stream;
 use megarepo_api::MegarepoApi;
 use megarepo_config::Target;
 use megarepo_error::MegarepoError;
+use mononoke_api::Mononoke;
 use mononoke_api::MononokeRepo;
+use mononoke_app::MononokeApp;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 use slog::debug;
@@ -55,6 +58,7 @@ const KEEP_ALIVE_INTERVAL: Duration = Duration::from_secs(10);
 pub struct AsyncMethodRequestWorker<R> {
     megarepo: Arc<MegarepoApi<R>>,
     name: String,
+    queues_client: AsyncRequestsQueue<R>,
 }
 
 impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
@@ -62,8 +66,18 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
     /// The name argument should uniquely identify tailer instance and will be put
     /// in the queue table so it's possible to find out which instance is working on
     /// a given task (for debugging purposes).
-    pub fn new(megarepo: Arc<MegarepoApi<R>>, name: String) -> Self {
-        Self { megarepo, name }
+    pub fn new(
+        app: &MononokeApp,
+        mononoke: Arc<Mononoke<R>>,
+        megarepo: Arc<MegarepoApi<R>>,
+        name: String,
+    ) -> Self {
+        let queues_client = AsyncRequestsQueue::new(app, mononoke);
+        Self {
+            megarepo,
+            name,
+            queues_client,
+        }
     }
 
     /// Start async request worker.
@@ -78,7 +92,10 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
         limit: Option<usize>,
         concurrency_limit: usize,
     ) -> Result<(), MegarepoError> {
-        let queues_with_repos = self.megarepo.all_async_method_request_queues(ctx).await?;
+        let queues_with_repos = self
+            .queues_client
+            .all_async_method_request_queues(ctx)
+            .await?;
 
         // Build stream that pools all the queues
         let request_stream = self
@@ -213,7 +230,7 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
             .clone()
             .into_config_format(&self.megarepo.mononoke())?;
         let queue = self
-            .megarepo
+            .queues_client
             .async_method_request_queue(&ctx, &target)
             .await?;
 

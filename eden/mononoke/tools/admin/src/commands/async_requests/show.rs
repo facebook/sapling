@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
@@ -17,8 +19,8 @@ use async_requests::types::ThriftAsynchronousRequestParams;
 use async_requests::types::ThriftAsynchronousRequestResult;
 use async_requests::types::ThriftMegarepoSyncChangesetResult;
 use clap::Args;
+use client::AsyncRequestsQueue;
 use context::CoreContext;
-use megarepo_api::MegarepoApi;
 use mononoke_api::Mononoke;
 use mononoke_api::MononokeRepo;
 use mononoke_types::ChangesetId;
@@ -114,9 +116,10 @@ impl std::fmt::Debug for ResultsWrapper {
 pub async fn show_request<R: MononokeRepo>(
     args: AsyncRequestsShowArgs,
     ctx: CoreContext,
-    megarepo: MegarepoApi<R>,
+    queues_client: AsyncRequestsQueue<R>,
+    mononoke: Arc<Mononoke<R>>,
 ) -> Result<(), Error> {
-    let repos_and_queues = megarepo
+    let repos_and_queues = queues_client
         .all_async_method_request_queues(&ctx)
         .await
         .context("obtaining all async queues")?;
@@ -132,7 +135,7 @@ pub async fn show_request<R: MononokeRepo>(
             println!(
                 "Entry: {:#?}\nParams: {:#?}\nResult: {:#?}",
                 entry,
-                ParamsWrapper(&megarepo.mononoke(), params),
+                ParamsWrapper(&mononoke, params),
                 ResultsWrapper(maybe_result),
             );
             return Ok(());

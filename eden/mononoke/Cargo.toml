@@ -112,6 +112,7 @@ members = [
   "acl_regions",
   "admin",
   "aliasverify",
+  "async_requests/client",
   "async_requests/if",
   "async_requests/if/clients",
   "async_requests/if/mocks",

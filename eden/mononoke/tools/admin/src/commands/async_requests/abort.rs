@@ -13,8 +13,8 @@ use async_requests::types::AsynchronousRequestResult;
 use async_requests::types::RowId;
 use async_requests::types::ThriftAsynchronousRequestParams;
 use clap::Args;
+use client::AsyncRequestsQueue;
 use context::CoreContext;
-use megarepo_api::MegarepoApi;
 use megarepo_error::MegarepoError;
 use mononoke_api::MononokeRepo;
 use source_control::MegarepoAddBranchingTargetResult;
@@ -35,9 +35,9 @@ pub struct AsyncRequestsAbortArgs {
 pub async fn abort_request<R: MononokeRepo>(
     args: AsyncRequestsAbortArgs,
     ctx: CoreContext,
-    megarepo: MegarepoApi<R>,
+    queues_client: AsyncRequestsQueue<R>,
 ) -> Result<(), Error> {
-    let repos_and_queues = megarepo
+    let repos_and_queues = queues_client
         .all_async_method_request_queues(&ctx)
         .await
         .context("obtaining all async queues")?;

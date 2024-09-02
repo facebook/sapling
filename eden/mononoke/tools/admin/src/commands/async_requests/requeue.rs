@@ -11,8 +11,8 @@ use anyhow::Error;
 use anyhow::Result;
 use async_requests::types::RowId;
 use clap::Args;
+use client::AsyncRequestsQueue;
 use context::CoreContext;
-use megarepo_api::MegarepoApi;
 use mononoke_api::MononokeRepo;
 
 #[derive(Args)]
@@ -27,9 +27,9 @@ pub struct AsyncRequestsRequeueArgs {
 pub async fn requeue_request<R: MononokeRepo>(
     args: AsyncRequestsRequeueArgs,
     ctx: CoreContext,
-    megarepo: MegarepoApi<R>,
+    queues_client: AsyncRequestsQueue<R>,
 ) -> Result<(), Error> {
-    let repos_and_queues = megarepo
+    let repos_and_queues = queues_client
         .all_async_method_request_queues(&ctx)
         .await
         .context("obtaining all async queues")?;

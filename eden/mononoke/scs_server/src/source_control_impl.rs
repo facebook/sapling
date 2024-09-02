@@ -12,6 +12,7 @@ use std::num::NonZeroU64;
 use std::pin::Pin;
 use std::sync::Arc;
 
+use client::AsyncRequestsQueue;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use clientinfo::CLIENT_INFO_HEADER;
@@ -45,6 +46,7 @@ use mononoke_api::RepoContext;
 use mononoke_api::SessionContainer;
 use mononoke_api::TreeContext;
 use mononoke_api::TreeId;
+use mononoke_app::MononokeApp;
 use mononoke_configs::MononokeConfigs;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
@@ -112,6 +114,7 @@ pub(crate) struct SourceControlServiceImpl {
     pub(crate) scribe: Scribe,
     pub(crate) configs: Arc<MononokeConfigs>,
     pub(crate) factory_group: Option<Arc<FactoryGroup<2>>>,
+    pub(crate) queues_client: Arc<AsyncRequestsQueue<Repo>>,
     identity_proxy_checker: Arc<ConnectionSecurityChecker>,
 }
 
@@ -120,6 +123,7 @@ pub(crate) struct SourceControlServiceThriftImpl(Arc<SourceControlServiceImpl>);
 impl SourceControlServiceImpl {
     pub fn new(
         fb: FacebookInit,
+        app: &MononokeApp,
         mononoke: Arc<Mononoke<Repo>>,
         megarepo_api: Arc<MegarepoApi<Repo>>,
         logger: Logger,
@@ -134,7 +138,7 @@ impl SourceControlServiceImpl {
 
         Self {
             fb,
-            mononoke,
+            mononoke: mononoke.clone(),
             megarepo_api,
             logger,
             scuba_builder,
@@ -146,6 +150,7 @@ impl SourceControlServiceImpl {
             configs,
             identity_proxy_checker: Arc::new(identity_proxy_checker),
             factory_group,
+            queues_client: Arc::new(AsyncRequestsQueue::new(app, mononoke)),
         }
     }
 

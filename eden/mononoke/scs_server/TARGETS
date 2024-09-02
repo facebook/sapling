@@ -48,6 +48,7 @@ rust_binary(
         "//common/rust/srserver:srserver",
         "//configerator/structs/common/fbtype:fbtypes-rust",
         "//eden/mononoke/async_requests:async_requests",
+        "//eden/mononoke/async_requests:client",
         "//eden/mononoke/blobstore:ephemeral_blobstore",
         "//eden/mononoke/bookmarks:bookmarks",
         "//eden/mononoke/bookmarks:bookmarks_movement",

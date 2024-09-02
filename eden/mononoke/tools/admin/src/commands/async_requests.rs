@@ -16,8 +16,8 @@ use anyhow::Context;
 use anyhow::Result;
 use clap::Parser;
 use clap::Subcommand;
+use client::AsyncRequestsQueue;
 use context::SessionContainer;
-use megarepo_api::MegarepoApi;
 use mononoke_api::Repo;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
@@ -27,7 +27,7 @@ use crate::commands::async_requests::list::AsyncRequestsListArgs;
 use crate::commands::async_requests::requeue::AsyncRequestsRequeueArgs;
 use crate::commands::async_requests::show::AsyncRequestsShowArgs;
 
-/// View and manage the SCS async requests (used by megarepo)
+/// View and manage the SCS async requests
 #[derive(Parser)]
 pub struct CommandArgs {
     /// The repository name or ID
@@ -60,8 +60,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             .context("Failed to initialize Mononoke API")?
             .make_mononoke_api()?,
     );
-    let megarepo: MegarepoApi<Repo> =
-        MegarepoApi::new(&app, mononoke).context("Failed to initialize MegarepoApi")?;
+    let queues_client: AsyncRequestsQueue<Repo> = AsyncRequestsQueue::new(&app, mononoke.clone());
 
     let session = SessionContainer::new_with_defaults(app.environment().fb);
     let ctx = session.new_context(
@@ -71,16 +70,16 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
 
     match args.subcommand {
         AsyncRequestsSubcommand::List(list_args) => {
-            list::list_requests(list_args, ctx, megarepo).await?
+            list::list_requests(list_args, ctx, queues_client).await?
         }
         AsyncRequestsSubcommand::Show(show_args) => {
-            show::show_request(show_args, ctx, megarepo).await?
+            show::show_request(show_args, ctx, queues_client, mononoke).await?
         }
         AsyncRequestsSubcommand::Requeue(requeue_args) => {
-            requeue::requeue_request(requeue_args, ctx, megarepo).await?
+            requeue::requeue_request(requeue_args, ctx, queues_client).await?
         }
         AsyncRequestsSubcommand::Abort(abort_args) => {
-            abort::abort_request(abort_args, ctx, megarepo).await?
+            abort::abort_request(abort_args, ctx, queues_client).await?
         }
     }
     Ok(())

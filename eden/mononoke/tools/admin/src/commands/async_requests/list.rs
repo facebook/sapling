@@ -10,8 +10,8 @@ use anyhow::Error;
 use anyhow::Result;
 use async_requests::types::ThriftAsynchronousRequestParams;
 use clap::Args;
+use client::AsyncRequestsQueue;
 use context::CoreContext;
-use megarepo_api::MegarepoApi;
 use mononoke_api::MononokeRepo;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
@@ -33,9 +33,9 @@ pub struct AsyncRequestsListArgs {
 pub async fn list_requests<R: MononokeRepo>(
     args: AsyncRequestsListArgs,
     ctx: CoreContext,
-    megarepo: MegarepoApi<R>,
+    queues_client: AsyncRequestsQueue<R>,
 ) -> Result<(), Error> {
-    let repos_and_queues = megarepo
+    let repos_and_queues = queues_client
         .all_async_method_request_queues(&ctx)
         .await
         .context("obtaining all async queues")?;
