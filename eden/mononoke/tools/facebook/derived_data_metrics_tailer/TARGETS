@@ -27,12 +27,11 @@ rust_binary(
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//common/rust/shed/services:services",
         "//common/rust/shed/stats:stats",
-        "//common/rust/thrift/srclient:srclient",
         "//eden/mononoke/cmdlib:cmdlib_logging",
         "//eden/mononoke/common/retry:retry",
         "//eden/mononoke/derived_data:derived_data_constants",
         "//eden/mononoke/scs/if:source_control-rust",
-        "//eden/mononoke/scs/if:source_control-rust-clients",
+        "//eden/mononoke/scs/raw_client_lib:scs_client_raw",
     ],
 )
 
