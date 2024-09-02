@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
 use std::marker::PhantomData;
 
 use anyhow::Error;
+use async_stream::try_stream;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
@@ -20,16 +20,18 @@ use futures::stream::BoxStream;
 use futures::stream::Stream;
 use futures::FutureExt;
 use futures::StreamExt;
-use futures::TryFutureExt;
 use futures::TryStreamExt;
 use mononoke_types::path::MPath;
 use mononoke_types::NonRootMPath;
 
+use crate::comparison;
+use crate::comparison::Comparison;
 use crate::select::select_path_tree;
 use crate::AsyncManifest as Manifest;
 use crate::Entry;
 use crate::PathOrPrefix;
 use crate::StoreLoadable;
+use crate::TrieMapOps;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Diff<Entry> {
@@ -477,13 +479,15 @@ pub fn find_intersection_of_diffs<TreeId, LeafId, Store>(
     store: Store,
     mf_id: TreeId,
     diff_against: Vec<TreeId>,
-) -> impl Stream<Item = Result<(MPath, Entry<TreeId, LeafId>), Error>> + 'static
+) -> impl Stream<Item = Result<(MPath, Entry<TreeId, LeafId>), Error>>
 where
     Store: Sync + Send + Clone + 'static,
     TreeId: StoreLoadable<Store> + Clone + Send + Sync + Eq + Unpin + 'static,
     <TreeId as StoreLoadable<Store>>::Value:
         Manifest<Store, TreeId = TreeId, LeafId = LeafId> + Send + Sync,
-    LeafId: Clone + Send + Eq + Unpin + 'static,
+    LeafId: Clone + Send + Sync + Eq + Unpin + 'static,
+    <<TreeId as StoreLoadable<Store>>::Value as Manifest<Store>>::TrieMapType:
+        TrieMapOps<Store, Entry<TreeId, LeafId>> + Eq,
 {
     find_intersection_of_diffs_and_parents(ctx, store, mf_id, diff_against)
         .map_ok(|(path, entry, _)| (path, entry))
@@ -497,70 +501,63 @@ pub fn find_intersection_of_diffs_and_parents<TreeId, LeafId, Store>(
     mf_id: TreeId,
     diff_against: Vec<TreeId>,
 ) -> impl Stream<Item = Result<(MPath, Entry<TreeId, LeafId>, Vec<Entry<TreeId, LeafId>>), Error>>
-+ 'static
 where
     Store: Sync + Send + Clone + 'static,
     TreeId: StoreLoadable<Store> + Clone + Send + Sync + Eq + Unpin + 'static,
     <TreeId as StoreLoadable<Store>>::Value:
         Manifest<Store, TreeId = TreeId, LeafId = LeafId> + Send + Sync,
-    LeafId: Clone + Send + Eq + Unpin + 'static,
+    LeafId: Clone + Send + Sync + Eq + Unpin + 'static,
+    <<TreeId as StoreLoadable<Store>>::Value as Manifest<Store>>::TrieMapType:
+        TrieMapOps<Store, Entry<TreeId, LeafId>> + Eq,
 {
-    match diff_against.first().cloned() {
-        Some(parent) => async move {
-            tokio::spawn(async move {
-                let mut new_entries = Vec::new();
-                let mut parent_diff = parent.diff(ctx.clone(), store.clone(), mf_id);
-                while let Some(diff_entry) = parent_diff.try_next().await? {
-                    match diff_entry {
-                        Diff::Added(path, entry) => new_entries.push((path, entry, vec![])),
-                        Diff::Removed(..) => continue,
-                        Diff::Changed(path, parent_entry, entry) => {
-                            new_entries.push((path, entry, vec![parent_entry]))
+    try_stream! {
+        if diff_against.iter().any(|tree_id| tree_id == &mf_id) {
+            return;
+        }
+        yield (MPath::ROOT, Entry::Tree(mf_id.clone()), diff_against.iter().map(|tree_id| Entry::Tree(tree_id.clone())).collect());
+        let s = comparison::compare_manifest_tree::<<TreeId as StoreLoadable<Store>>::Value, Store>(&ctx, &store, mf_id, diff_against);
+        pin_mut!(s);
+        while let Some(diff) = s.try_next().await? {
+            match diff {
+                Comparison::New(path, value) => {
+                    yield (path.clone().into(), value.clone(), vec![]);
+                    if let Entry::Tree(tree_id) = &value {
+                        let mut subentries = tree_id.find_entries(ctx.clone(), store.clone(), Some(PathOrPrefix::Prefix(MPath::ROOT)));
+                        while let Some((subpath, entry)) = subentries.try_next().await? {
+                            yield (path.join(&subpath).into(), entry, vec![]);
                         }
                     }
                 }
-
-                let paths: Vec<_> = new_entries
-                    .clone()
-                    .into_iter()
-                    .map(|(path, _, _)| path)
-                    .collect();
-
-                let futs = diff_against.into_iter().skip(1).map(move |p| {
-                    p.find_entries(ctx.clone(), store.clone(), paths.clone())
-                        .try_collect::<HashMap<_, _>>()
-                });
-                let entries_in_parents = future::try_join_all(futs).await?;
-
-                let mut res = vec![];
-                for (path, unode, mut parent_entries) in new_entries {
-                    let mut new_entry = true;
-                    for p in &entries_in_parents {
-                        if let Some(parent_entry) = p.get(&path) {
-                            if parent_entry == &unode {
-                                new_entry = false;
-                                break;
-                            } else {
-                                parent_entries.push(parent_entry.clone());
+                Comparison::Changed(path, value, parents) => {
+                    yield (
+                        path.into(),
+                        value,
+                        parents
+                            .into_iter()
+                            .flatten()
+                            .collect(),
+                    );
+                }
+                Comparison::ManyNew(path, prefix, entries) => {
+                    let mut entries = entries.into_stream(&ctx, &store).await?;
+                    while let Some((elem, value)) = entries.try_next().await? {
+                        let entry_path = path.join_element(Some(&prefix.clone().join_into_element(&elem)?));
+                        yield (
+                            entry_path.clone(),
+                            value.clone(),
+                            vec![],
+                        );
+                        if let Entry::Tree(tree_id) = &value {
+                            let mut subentries = tree_id.find_entries(ctx.clone(), store.clone(), Some(PathOrPrefix::Prefix(MPath::ROOT)));
+                            while let Some((subpath, entry)) = subentries.try_next().await? {
+                                yield (entry_path.join(&subpath), entry, vec![]);
                             }
                         }
                     }
-
-                    if new_entry {
-                        res.push((path, unode, parent_entries));
-                    }
                 }
-
-                Ok(stream::iter(res.into_iter().map(Ok)))
-            })
-            .await?
+                _ => {}
+            }
         }
-        .try_flatten_stream()
-        .right_stream(),
-        None => mf_id
-            .list_all_entries(ctx, store)
-            .map_ok(|(path, entry)| (path, entry, vec![]))
-            .left_stream(),
     }
 }
 
