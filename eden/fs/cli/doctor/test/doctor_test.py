@@ -493,7 +493,7 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
         self.assertEqual(len(fixer.problem_types), 1)
         self.assertEqual(fixer.num_fixed_problems, 0)
         self.assertEqual(fixer.num_manual_fixes, 1)
-        self.assertEquals(
+        self.assertEqual(
             out.getvalue(),
             f"""<yellow>- Found problem:<reset>
 Eden's checkout state for {path} has been corrupted: [Errno 2] No such file or directory: 'SNAPSHOT'
