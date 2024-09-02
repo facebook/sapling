@@ -18,6 +18,7 @@ bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
 changeset_info = { version = "0.1.0", path = "../derived_data/changeset_info" }
 clientinfo = { version = "0.1.0", path = "../../scm/lib/clientinfo" }
 commit_cloud_helpers = { version = "0.1.0", path = "helpers" }
+commit_cloud_types = { version = "0.1.0", path = "types" }
 context = { version = "0.1.0", path = "../server/context" }
 edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

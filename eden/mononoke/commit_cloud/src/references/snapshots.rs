@@ -6,6 +6,7 @@
  */
 
 use clientinfo::ClientRequestInfo;
+use commit_cloud_types::WorkspaceSnapshot;
 use edenapi_types::HgId;
 use mercurial_types::HgChangesetId;
 use sql::Transaction;
@@ -15,11 +16,6 @@ use crate::sql::ops::Insert;
 use crate::sql::snapshots_ops::DeleteArgs;
 use crate::CommitCloudContext;
 use crate::SqlCommitCloud;
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct WorkspaceSnapshot {
-    pub commit: HgChangesetId,
-}
 
 pub async fn update_snapshots(
     sql_commit_cloud: &SqlCommitCloud,

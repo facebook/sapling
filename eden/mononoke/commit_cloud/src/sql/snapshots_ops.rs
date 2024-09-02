@@ -8,11 +8,11 @@
 use ::sql_ext::mononoke_queries;
 use async_trait::async_trait;
 use clientinfo::ClientRequestInfo;
+use commit_cloud_types::WorkspaceSnapshot;
 use mercurial_types::HgChangesetId;
 use sql::Transaction;
 
 use crate::ctx::CommitCloudContext;
-use crate::references::snapshots::WorkspaceSnapshot;
 use crate::sql::common::UpdateWorkspaceNameArgs;
 use crate::sql::ops::Delete;
 use crate::sql::ops::Get;

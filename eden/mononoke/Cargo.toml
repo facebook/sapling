@@ -222,6 +222,7 @@ members = [
   "cmds/copy_blobstore_keys",
   "commit_cloud",
   "commit_cloud/helpers",
+  "commit_cloud/types",
   "commit_rewriting/backsyncer",
   "commit_rewriting/backsyncer/backsyncer_cmd",
   "commit_rewriting/bookmark_renaming",

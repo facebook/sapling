@@ -8,10 +8,9 @@
 use std::str::FromStr;
 
 use clientinfo::ClientRequestInfo;
+use commit_cloud_types::WorkspaceHead;
 use edenapi_types::HgId;
 use mercurial_types::HgChangesetId;
-use serde::Deserialize;
-use serde::Serialize;
 use sql::Transaction;
 
 use crate::sql::heads_ops::DeleteArgs;
@@ -19,11 +18,6 @@ use crate::sql::ops::Delete;
 use crate::sql::ops::Insert;
 use crate::CommitCloudContext;
 use crate::SqlCommitCloud;
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct WorkspaceHead {
-    pub commit: HgChangesetId,
-}
 
 #[allow(clippy::ptr_arg)]
 pub fn heads_from_list(s: &Vec<String>) -> anyhow::Result<Vec<WorkspaceHead>> {

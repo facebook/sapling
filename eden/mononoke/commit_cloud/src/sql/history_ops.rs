@@ -8,13 +8,13 @@
 use ::sql_ext::mononoke_queries;
 use async_trait::async_trait;
 use clientinfo::ClientRequestInfo;
+use commit_cloud_types::WorkspaceHead;
 use mononoke_types::Timestamp;
 use sql::Transaction;
 
 use crate::ctx::CommitCloudContext;
 use crate::references::heads::heads_from_list;
 use crate::references::heads::heads_to_list;
-use crate::references::heads::WorkspaceHead;
 use crate::references::history::WorkspaceHistory;
 use crate::references::local_bookmarks::lbs_from_map;
 use crate::references::local_bookmarks::lbs_to_map;

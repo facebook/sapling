@@ -8,7 +8,6 @@
 use std::str::FromStr;
 
 use commit_cloud::ctx::CommitCloudContext;
-use commit_cloud::references::heads::WorkspaceHead;
 use commit_cloud::references::local_bookmarks::WorkspaceLocalBookmark;
 use commit_cloud::references::remote_bookmarks::WorkspaceRemoteBookmark;
 use commit_cloud::sql::builder::SqlCommitCloudBuilder;
@@ -16,6 +15,7 @@ use commit_cloud::sql::common::UpdateWorkspaceNameArgs;
 use commit_cloud::sql::ops::Delete;
 use commit_cloud::sql::ops::Insert;
 use commit_cloud::sql::ops::Update;
+use commit_cloud_types::WorkspaceHead;
 use fbinit::FacebookInit;
 use mercurial_types::HgChangesetId;
 use mononoke_macros::mononoke;
