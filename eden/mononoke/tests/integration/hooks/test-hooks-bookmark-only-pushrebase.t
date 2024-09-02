@@ -159,6 +159,8 @@ bypassing that also works
   pushing rev 5e6585e50f1b to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark other
   moving remote bookmark other from e3295448b1ef to 5e6585e50f1b
 
+  $ wait_for_bookmark_move_away_edenapi repo other $D
+
 we can now extend that bookmark further without a bypass needed
   $ hg up -q $D
   $ sl push -r . --to other
