@@ -6,8 +6,12 @@
  */
 
 #![feature(async_closure)]
+#![feature(error_generic_member_access)]
 
 pub mod types;
+
+mod error;
+pub use error::AsyncRequestsError;
 
 mod queue;
 pub use queue::AsyncMethodRequestQueue;

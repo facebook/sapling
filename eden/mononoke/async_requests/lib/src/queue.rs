@@ -20,7 +20,6 @@ use context::CoreContext;
 use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
-use megarepo_error::MegarepoError;
 use memblob::Memblob;
 use mononoke_api::Mononoke;
 use mononoke_api::MononokeRepo;
@@ -37,6 +36,7 @@ pub use requests_table::RowId;
 use requests_table::SqlLongRunningRequestsQueue;
 use sql_construct::SqlConstruct;
 
+use crate::error::AsyncRequestsError;
 use crate::types::AsynchronousRequestParams;
 use crate::types::AsynchronousRequestResult;
 use crate::types::IntoApiFormat;
@@ -103,7 +103,7 @@ impl AsyncMethodRequestQueue {
         ctx: &CoreContext,
         claimed_by: &ClaimedBy,
         supported_repos: &[RepositoryId],
-    ) -> Result<Option<(RequestId, AsynchronousRequestParams)>, MegarepoError> {
+    ) -> Result<Option<(RequestId, AsynchronousRequestParams)>, AsyncRequestsError> {
         let entry = self
             .table
             .claim_and_get_new_request(ctx, claimed_by, supported_repos)
@@ -129,7 +129,7 @@ impl AsyncMethodRequestQueue {
         ctx: &CoreContext,
         req_id: &RequestId,
         result: AsynchronousRequestResult,
-    ) -> Result<bool, MegarepoError> {
+    ) -> Result<bool, AsyncRequestsError> {
         let result_object_id = result.store(ctx, &self.blobstore).await?;
         let blobstore_key = BlobstoreKey(result_object_id.blobstore_key());
         Ok(self.table.mark_ready(ctx, req_id, blobstore_key).await?)
@@ -139,7 +139,7 @@ impl AsyncMethodRequestQueue {
         &self,
         ctx: &CoreContext,
         req_id: &RequestId,
-    ) -> Result<Option<<R as Request>::ThriftResult>, MegarepoError> {
+    ) -> Result<Option<<R as Request>::ThriftResult>, AsyncRequestsError> {
         let maybe_result_blobstore_key = match self.table.poll(ctx, req_id).await? {
             None => return Ok(None),
             Some((_, entry)) => entry.result_blobstore_key,
@@ -148,7 +148,7 @@ impl AsyncMethodRequestQueue {
         let result_blobstore_key = match maybe_result_blobstore_key {
             Some(rbk) => rbk,
             None => {
-                return Err(MegarepoError::internal(anyhow!(
+                return Err(AsyncRequestsError::internal(anyhow!(
                     "Programming error: successful poll with empty result_blobstore_key for {:?}",
                     req_id
                 )));
@@ -165,7 +165,7 @@ impl AsyncMethodRequestQueue {
         &self,
         ctx: CoreContext,
         token: T,
-    ) -> Result<<T::R as Request>::PollResponse, MegarepoError> {
+    ) -> Result<<T::R as Request>::PollResponse, AsyncRequestsError> {
         let mut backoff_ms = INITIAL_POLL_DELAY_MS;
         let before = Instant::now();
         let (row_id, _target) = token.to_db_id_and_target()?;
@@ -200,7 +200,7 @@ impl AsyncMethodRequestQueue {
         &self,
         ctx: &CoreContext,
         req_id: &RequestId,
-    ) -> Result<bool, MegarepoError> {
+    ) -> Result<bool, AsyncRequestsError> {
         Ok(self.table.update_in_progress_timestamp(ctx, req_id).await?)
     }
 
@@ -209,7 +209,7 @@ impl AsyncMethodRequestQueue {
         ctx: &CoreContext,
         repo_ids: &[RepositoryId],
         abandoned_timestamp: Timestamp,
-    ) -> Result<Vec<RequestId>, MegarepoError> {
+    ) -> Result<Vec<RequestId>, AsyncRequestsError> {
         Ok(self
             .table
             .find_abandoned_requests(ctx, repo_ids, abandoned_timestamp)
@@ -221,7 +221,7 @@ impl AsyncMethodRequestQueue {
         ctx: &CoreContext,
         request_id: RequestId,
         abandoned_timestamp: Timestamp,
-    ) -> Result<bool, MegarepoError> {
+    ) -> Result<bool, AsyncRequestsError> {
         Ok(self
             .table
             .mark_abandoned_request_as_new(ctx, request_id, abandoned_timestamp)
@@ -232,7 +232,7 @@ impl AsyncMethodRequestQueue {
         &self,
         ctx: &CoreContext,
         request_id: RequestId,
-    ) -> Result<bool, MegarepoError> {
+    ) -> Result<bool, AsyncRequestsError> {
         Ok(self.table.mark_new(ctx, &request_id).await?)
     }
 
@@ -248,7 +248,7 @@ impl AsyncMethodRequestQueue {
             LongRunningRequestEntry,
             AsynchronousRequestParams,
         )>,
-        MegarepoError,
+        AsyncRequestsError,
     > {
         let entries = self
             .table
@@ -266,7 +266,7 @@ impl AsyncMethodRequestQueue {
                 .await
                 .context("deserializing")?;
                 let req_id = RequestId(entry.id.clone(), entry.request_type.clone());
-                Ok::<_, MegarepoError>((req_id, entry, thrift_params))
+                Ok::<_, AsyncRequestsError>((req_id, entry, thrift_params))
             })
             .buffer_unordered(10);
 
@@ -297,7 +297,7 @@ impl AsyncMethodRequestQueue {
             AsynchronousRequestParams,
             Option<AsynchronousRequestResult>,
         )>,
-        MegarepoError,
+        AsyncRequestsError,
     > {
         let entry = self.table.test_get_request_entry_by_id(ctx, row_id).await?;
 

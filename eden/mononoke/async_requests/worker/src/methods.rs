@@ -18,6 +18,7 @@ use anyhow::anyhow;
 use async_requests::types::AsynchronousRequestParams;
 use async_requests::types::AsynchronousRequestResult;
 use async_requests::types::IntoConfigFormat;
+use async_requests::AsyncRequestsError;
 use context::CoreContext;
 use megarepo_api::MegarepoApi;
 use megarepo_error::MegarepoError;
@@ -170,30 +171,35 @@ pub(crate) async fn megarepo_async_request_compute<R: MononokeRepo>(
         async_requests_types_thrift::AsynchronousRequestParams::megarepo_add_target_params(params) => {
             megarepo_add_sync_target(ctx, megarepo_api, params)
                 .await
+                .map_err(|e| e.into())
                 .into()
         }
         async_requests_types_thrift::AsynchronousRequestParams::megarepo_add_branching_target_params(params) => {
             megarepo_add_branching_sync_target(ctx, megarepo_api, params)
                 .await
+                .map_err(|e| e.into())
                 .into()
         }
         async_requests_types_thrift::AsynchronousRequestParams::megarepo_change_target_params(params) => {
             megarepo_change_target_config(ctx, megarepo_api, params)
                 .await
+                .map_err(|e| e.into())
                 .into()
         }
         async_requests_types_thrift::AsynchronousRequestParams::megarepo_remerge_source_params(params) => {
             megarepo_remerge_source(ctx, megarepo_api, params)
                 .await
+                .map_err(|e| e.into())
                 .into()
         }
         async_requests_types_thrift::AsynchronousRequestParams::megarepo_sync_changeset_params(params) => {
             megarepo_sync_changeset(ctx, megarepo_api, params)
                 .await
+                .map_err(|e| e.into())
                 .into()
         }
         async_requests_types_thrift::AsynchronousRequestParams::UnknownField(union_tag) => {
-            Err::<thrift::MegarepoRemergeSourceResponse, _>(MegarepoError::internal(anyhow!(
+            Err::<thrift::MegarepoRemergeSourceResponse, _>(AsyncRequestsError::internal(anyhow!(
                 "this type of request (AsynchronousRequestParams tag {}) not supported by this worker!", union_tag
             )))
             .into()

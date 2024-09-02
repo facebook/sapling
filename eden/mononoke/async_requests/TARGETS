@@ -19,6 +19,7 @@ rust_library(
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
         ":requests_table",
         "//eden/mononoke/async_requests/if:async_requests_types-thrift-rust",

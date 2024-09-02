@@ -21,6 +21,7 @@ use std::time::Duration;
 use async_requests::types::AsynchronousRequestParams;
 use async_requests::types::IntoConfigFormat;
 use async_requests::AsyncMethodRequestQueue;
+use async_requests::AsyncRequestsError;
 use async_requests::ClaimedBy;
 use async_requests::RequestId;
 use async_stream::try_stream;
@@ -36,7 +37,6 @@ use futures::stream::TryStreamExt;
 use futures::Stream;
 use megarepo_api::MegarepoApi;
 use megarepo_config::Target;
-use megarepo_error::MegarepoError;
 use mononoke_api::Mononoke;
 use mononoke_api::MononokeRepo;
 use mononoke_app::MononokeApp;
@@ -91,7 +91,7 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
         will_exit: Arc<AtomicBool>,
         limit: Option<usize>,
         concurrency_limit: usize,
-    ) -> Result<(), MegarepoError> {
+    ) -> Result<(), AsyncRequestsError> {
         let queues_with_repos = self
             .queues_client
             .all_async_method_request_queues(ctx)
@@ -119,7 +119,7 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
                 let ctx = ctx.clone();
                 let _updated = tokio::spawn(worker.compute_and_mark_completed(ctx, req_id, params))
                     .await
-                    .map_err(MegarepoError::internal)??;
+                    .map_err(AsyncRequestsError::internal)??;
                 Ok(())
             })
             .await?;
@@ -131,7 +131,8 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
         ctx: CoreContext,
         queues_with_repos: Vec<(Vec<RepositoryId>, AsyncMethodRequestQueue)>,
         will_exit: Arc<AtomicBool>,
-    ) -> impl Stream<Item = Result<(RequestId, AsynchronousRequestParams), MegarepoError>> {
+    ) -> impl Stream<Item = Result<(RequestId, AsynchronousRequestParams), AsyncRequestsError>>
+    {
         let claimed_by = ClaimedBy(self.name.clone());
         let sleep_time = Duration::from_millis(DEQUEUE_STREAM_SLEEP_TIME);
         Self::request_stream_inner(
@@ -151,7 +152,8 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
         will_exit: Arc<AtomicBool>,
         sleep_time: Duration,
         abandoned_threshold_secs: i64,
-    ) -> impl Stream<Item = Result<(RequestId, AsynchronousRequestParams), MegarepoError>> {
+    ) -> impl Stream<Item = Result<(RequestId, AsynchronousRequestParams), AsyncRequestsError>>
+    {
         try_stream! {
             'outer: loop {
                 let mut yielded = false;
@@ -188,7 +190,7 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
         repo_ids: &[RepositoryId],
         queue: &AsyncMethodRequestQueue,
         abandoned_threshold_secs: i64,
-    ) -> Result<(), MegarepoError> {
+    ) -> Result<(), AsyncRequestsError> {
         let now = Timestamp::now();
         let abandoned_timestamp =
             Timestamp::from_timestamp_secs(now.timestamp_seconds() - abandoned_threshold_secs);
@@ -224,7 +226,7 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
         ctx: CoreContext,
         req_id: RequestId,
         params: AsynchronousRequestParams,
-    ) -> Result<bool, MegarepoError> {
+    ) -> Result<bool, AsyncRequestsError> {
         let target = params
             .target()?
             .clone()
@@ -286,8 +288,8 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
                 // inprogress timestamp. Most likely it means that other
                 // worker has completed it
 
-                res.map_err(MegarepoError::internal)?
-                    .map_err(MegarepoError::internal)?;
+                res.map_err(AsyncRequestsError::internal)?
+                    .map_err(AsyncRequestsError::internal)?;
                 info!(
                     ctx.logger(),
                     "[{}] was completed by other worker, stopping", &req_id.0

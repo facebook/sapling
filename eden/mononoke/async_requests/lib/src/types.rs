@@ -22,7 +22,6 @@ use context::CoreContext;
 use fbthrift::compact_protocol;
 pub use megarepo_config::SyncTargetConfig;
 pub use megarepo_config::Target;
-use megarepo_error::MegarepoError;
 use mononoke_api::Mononoke;
 use mononoke_api::MononokeRepo;
 use mononoke_types::hash::Blake2;
@@ -61,6 +60,8 @@ pub use source_control::MegarepoSyncChangesetToken as ThriftMegarepoSyncChangese
 pub use source_control::MegarepoSyncTargetConfig as ThriftMegarepoSyncTargetConfig;
 pub use source_control::MegarepoTarget as ThriftMegarepoTarget;
 pub use source_control::RepoSpecifier as ThriftRepoSpecifier;
+
+use crate::error::AsyncRequestsError;
 
 const LEGACY_VALUE_TYPE_PARAMS: [&str; 1] = [
     // Support the old format during the transition
@@ -104,7 +105,7 @@ pub trait ThriftParams: Sized + Send + Sync + Into<AsynchronousRequestParams> {
     fn target(&self) -> &ThriftMegarepoTarget;
 }
 pub trait ThriftResult:
-    Sized + Send + Sync + TryFrom<AsynchronousRequestResult, Error = MegarepoError>
+    Sized + Send + Sync + TryFrom<AsynchronousRequestResult, Error = AsyncRequestsError>
 {
     type R: Request<ThriftResult = Self>;
 }
@@ -116,7 +117,7 @@ pub trait Token: Clone + Sized + Send + Sync {
 
     fn into_thrift(self) -> Self::ThriftToken;
     fn from_db_id_and_target(id: RowId, target: ThriftMegarepoTarget) -> Self;
-    fn to_db_id_and_target(&self) -> Result<(RowId, ThriftMegarepoTarget), MegarepoError>;
+    fn to_db_id_and_target(&self) -> Result<(RowId, ThriftMegarepoTarget), AsyncRequestsError>;
 
     /// Every Token referes to some Target
     /// This method is needed to extract it from the
@@ -180,16 +181,16 @@ macro_rules! impl_async_svc_stored_type {
                 Self { id, thrift }
             }
 
-            pub async fn load_from_key(ctx: &CoreContext, blobstore: &Arc<dyn Blobstore>, key: &str) -> Result<Self, MegarepoError> {
+            pub async fn load_from_key(ctx: &CoreContext, blobstore: &Arc<dyn Blobstore>, key: &str) -> Result<Self, AsyncRequestsError> {
                 let bytes = blobstore.get(ctx, key).await?;
                 Self::check_prefix(key)?;
                 match bytes {
                     Some(bytes) => Ok(bytes.into_bytes().try_into()?),
-                    None => Err(MegarepoError::internal(anyhow!("Missing blob: {}", key))),
+                    None => Err(AsyncRequestsError::internal(anyhow!("Missing blob: {}", key))),
                 }
             }
 
-            pub fn check_prefix(key: &str) -> Result<(), MegarepoError> {
+            pub fn check_prefix(key: &str) -> Result<(), AsyncRequestsError> {
                 let prefix = concat!("async.svc.", stringify!($value_type), ".blake2.");
                 if key.strip_prefix(prefix).is_some() {
                     return Ok(());
@@ -203,7 +204,7 @@ macro_rules! impl_async_svc_stored_type {
                     }
                 }
 
-                return Err(MegarepoError::internal(anyhow!("{} is not a blobstore key for {}", key, stringify!($value_type))));
+                return Err(AsyncRequestsError::internal(anyhow!("{} is not a blobstore key for {}", key, stringify!($value_type))));
             }
 
             pub fn handle(&self) -> &$handle_type {
@@ -308,7 +309,7 @@ macro_rules! impl_async_svc_method_types {
                 Self(thrift_token)
             }
 
-            fn to_db_id_and_target(&self) -> Result<(RowId, ThriftMegarepoTarget), MegarepoError> {
+            fn to_db_id_and_target(&self) -> Result<(RowId, ThriftMegarepoTarget), AsyncRequestsError> {
                 let row_id = self.0.id as u64;
                 let row_id = RowId(row_id);
                 let target = self.0.target.clone();
@@ -325,8 +326,8 @@ macro_rules! impl_async_svc_method_types {
             }
         }
 
-        impl From<Result<$response_type, MegarepoError>> for AsynchronousRequestResult {
-            fn from(r: Result<$response_type, MegarepoError>) -> AsynchronousRequestResult {
+        impl From<Result<$response_type, AsyncRequestsError>> for AsynchronousRequestResult {
+            fn from(r: Result<$response_type, AsyncRequestsError>) -> AsynchronousRequestResult {
                 let thrift = match r {
                     Ok(payload) => ThriftAsynchronousRequestResult::$result_union_variant($result_value_thrift_type::success(payload)),
                     Err(e) => ThriftAsynchronousRequestResult::$result_union_variant($result_value_thrift_type::error(e.into()))
@@ -356,14 +357,14 @@ macro_rules! impl_async_svc_method_types {
         }
 
         impl TryFrom<AsynchronousRequestResult> for $result_value_thrift_type {
-            type Error = MegarepoError;
+            type Error = AsyncRequestsError;
 
             fn try_from(r: AsynchronousRequestResult) -> Result<$result_value_thrift_type, Self::Error> {
                 match r.thrift {
                     ThriftAsynchronousRequestResult::$result_union_variant(payload) => Ok(payload),
                     ThriftAsynchronousRequestResult::UnknownField(x) => {
                         // TODO: maybe use structured error?
-                        Err(MegarepoError::internal(
+                        Err(AsyncRequestsError::internal(
                             anyhow!(
                                 "failed to parse {} thrift. UnknownField: {}",
                                 stringify!($result_value_thrift_type),
@@ -372,7 +373,7 @@ macro_rules! impl_async_svc_method_types {
                         ))
                     },
                     x => {
-                        Err(MegarepoError::internal(
+                        Err(AsyncRequestsError::internal(
                             anyhow!(
                                 "failed to parse {} thrift. The result union contains the wrong result variant: {:?}",
                                 stringify!($result_value_thrift_type),
@@ -537,7 +538,7 @@ impl_async_svc_stored_type! {
 }
 
 impl AsynchronousRequestParams {
-    pub fn target(&self) -> Result<&ThriftMegarepoTarget, MegarepoError> {
+    pub fn target(&self) -> Result<&ThriftMegarepoTarget, AsyncRequestsError> {
         match &self.thrift {
             ThriftAsynchronousRequestParams::megarepo_add_target_params(params) => {
                 Ok(params.target())
@@ -555,7 +556,7 @@ impl AsynchronousRequestParams {
                 Ok(params.target())
             }
             ThriftAsynchronousRequestParams::UnknownField(union_tag) => {
-                Err(MegarepoError::internal(anyhow!(
+                Err(AsyncRequestsError::internal(anyhow!(
                     "this type of reuqest (AsynchronousRequestParams tag {}) not supported by this worker!",
                     union_tag
                 )))
@@ -566,11 +567,11 @@ impl AsynchronousRequestParams {
 
 /// Convert an item into a thrift type we use for storing configuration
 pub trait IntoConfigFormat<T, R> {
-    fn into_config_format(self, mononoke: &Mononoke<R>) -> Result<T, MegarepoError>;
+    fn into_config_format(self, mononoke: &Mononoke<R>) -> Result<T, AsyncRequestsError>;
 }
 
 impl<R: MononokeRepo> IntoConfigFormat<Target, R> for ThriftMegarepoTarget {
-    fn into_config_format(self, mononoke: &Mononoke<R>) -> Result<Target, MegarepoError> {
+    fn into_config_format(self, mononoke: &Mononoke<R>) -> Result<Target, AsyncRequestsError> {
         let repo_id = match (self.repo, self.repo_id) {
             (Some(repo), _) => mononoke
                 .repo_id_from_name(repo.name.clone())
@@ -588,7 +589,10 @@ impl<R: MononokeRepo> IntoConfigFormat<Target, R> for ThriftMegarepoTarget {
 }
 
 impl<R: MononokeRepo> IntoConfigFormat<SyncTargetConfig, R> for ThriftMegarepoSyncTargetConfig {
-    fn into_config_format(self, mononoke: &Mononoke<R>) -> Result<SyncTargetConfig, MegarepoError> {
+    fn into_config_format(
+        self,
+        mononoke: &Mononoke<R>,
+    ) -> Result<SyncTargetConfig, AsyncRequestsError> {
         Ok(SyncTargetConfig {
             target: self.target.into_config_format(mononoke)?,
             sources: self.sources,
@@ -599,7 +603,7 @@ impl<R: MononokeRepo> IntoConfigFormat<SyncTargetConfig, R> for ThriftMegarepoSy
 
 /// Convert an item into a thrift type we use in APIs
 pub trait IntoApiFormat<T, R> {
-    fn into_api_format(self, mononoke: &Mononoke<R>) -> Result<T, MegarepoError>;
+    fn into_api_format(self, mononoke: &Mononoke<R>) -> Result<T, AsyncRequestsError>;
 }
 
 #[async_trait]
@@ -607,7 +611,7 @@ impl<R: MononokeRepo> IntoApiFormat<ThriftMegarepoTarget, R> for Target {
     fn into_api_format(
         self,
         mononoke: &Mononoke<R>,
-    ) -> Result<ThriftMegarepoTarget, MegarepoError> {
+    ) -> Result<ThriftMegarepoTarget, AsyncRequestsError> {
         let repo = mononoke
             .repo_name_from_id(RepositoryId::new(self.repo_id as i32))
             .map(|name| ThriftRepoSpecifier {
@@ -628,7 +632,7 @@ impl<R: MononokeRepo> IntoApiFormat<ThriftMegarepoSyncTargetConfig, R> for SyncT
     fn into_api_format(
         self,
         mononoke: &Mononoke<R>,
-    ) -> Result<ThriftMegarepoSyncTargetConfig, MegarepoError> {
+    ) -> Result<ThriftMegarepoSyncTargetConfig, AsyncRequestsError> {
         Ok(ThriftMegarepoSyncTargetConfig {
             target: self.target.into_api_format(mononoke)?,
             sources: self.sources,
