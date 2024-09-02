@@ -57,7 +57,6 @@ use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
 use scuba_ext::ScubaValue;
 use slog::debug;
-use slog::info;
 use slog::Logger;
 use source_control as thrift;
 use source_control_services::errors::source_control_service as service;
@@ -841,7 +840,6 @@ macro_rules! impl_thrift_methods {
                         let group = factory_group.clone();
                         let queue: usize =
                             justknobs::get_as::<u64>("scm/mononoke:scs_factory_queue_for_method", Some(stringify!($method_name))).unwrap_or(0) as usize;
-                        info!(ctx.logger(), "Using factory group queue {} for method {}", queue, stringify!($method_name));
                         group.execute(queue, handler, None).await.map_err(|e| errors::internal_error(e.to_string()))?
                     } else {
                         let res: Result<$ok_type, $err_type> = handler.await;
