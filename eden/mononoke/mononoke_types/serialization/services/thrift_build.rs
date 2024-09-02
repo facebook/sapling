@@ -9,6 +9,7 @@ const CRATEMAP: &str = "\
 eden/mononoke/mononoke_types/serialization/blame.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/bonsai.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/bssm.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+eden/mononoke/mononoke_types/serialization/ccsm.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/changeset_info.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/content.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/data.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
@@ -40,6 +41,7 @@ fn main() {
             "../blame.thrift",
             "../bonsai.thrift",
             "../bssm.thrift",
+            "../ccsm.thrift",
             "../changeset_info.thrift",
             "../content.thrift",
             "../data.thrift",
