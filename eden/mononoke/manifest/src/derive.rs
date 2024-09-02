@@ -115,15 +115,16 @@ pub struct LeafInfo<LeafId, Leaf> {
 /// following way here:
 ///
 /// - We'll walk and merge the manifests from the parents. Those must be Manifests where trees are
-///   TreeId and leaves are LeafId.
+///   `TreeId` and leaves are `LeafId`.
 /// - We'll create new leaves (for the diff) through create_leaf (which should merge changes), and
-///   new tres through create_tree, which will receive entries consisting of existing trees and tres
-///   merged with new leaves and trees (and should produce a new tree).
-/// - To make this work, create_tree must return the same kind of TreeId as the ones that exist in
+///   new trees through create_tree, which will receive entries consisting of existing trees and
+///   trees merged with new leaves and trees (and should produce a new tree).
+/// - To make this work, create_tree must return the same kind of `TreeId` as the ones that exist in
 ///   the tree currently. That said, this constraint is marginally relaxed for leaves: create_leaf
-///   can return an IntermediateLeafId that must, and that is the also the type that create_tree will
-///   receive for leaves (to make this work, IntermediateLeafId must implement From<LeafId> so that
-///   leaves that are to be reused from the existing tree can be turned into IntermediateLeafId).
+///   can return an `IntermediateLeafId`, and that is the also the type that create_tree
+///   will receive for leaves (to make this work, `IntermediateLeafId` must implement `From<LeafId>`
+///   so that leaves that are to be reused from the existing tree can be turned into
+///   `IntermediateLeafId`).
 ///
 /// Note that for most use cases, IntermediateLeafId and LeafId should probably be the same type.
 /// That said, this distinction can be useful in cases where the leaves aren't actually objects
