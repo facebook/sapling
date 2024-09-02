@@ -9,9 +9,9 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use async_requests::types::MegarepoAsynchronousRequestResult;
+use async_requests::types::AsynchronousRequestResult;
 use async_requests::types::RowId;
-use async_requests::types::ThriftMegarepoAsynchronousRequestParams;
+use async_requests::types::ThriftAsynchronousRequestParams;
 use clap::Args;
 use context::CoreContext;
 use megarepo_api::MegarepoApi;
@@ -52,23 +52,23 @@ pub async fn abort_request<R: MononokeRepo>(
         {
             if maybe_result.is_none() {
                 let err = MegarepoError::InternalError(anyhow!("aborted from CLI!").into());
-                let result: MegarepoAsynchronousRequestResult  = match params.thrift() {
-                    ThriftMegarepoAsynchronousRequestParams::megarepo_sync_changeset_params(_) => {
+                let result: AsynchronousRequestResult = match params.thrift() {
+                    ThriftAsynchronousRequestParams::megarepo_sync_changeset_params(_) => {
                         MegarepoSyncChangesetResult::error(err.into()).into()
                     }
-                    ThriftMegarepoAsynchronousRequestParams::megarepo_add_target_params(_) => {
+                    ThriftAsynchronousRequestParams::megarepo_add_target_params(_) => {
                         MegarepoAddTargetResult::error(err.into()).into()
                     }
-                    ThriftMegarepoAsynchronousRequestParams::megarepo_change_target_params(_) => {
+                    ThriftAsynchronousRequestParams::megarepo_change_target_params(_) => {
                         MegarepoChangeTargetConfigResult::error(err.into()).into()
                     }
-                    ThriftMegarepoAsynchronousRequestParams::megarepo_remerge_source_params(_) => {
+                    ThriftAsynchronousRequestParams::megarepo_remerge_source_params(_) => {
                         MegarepoRemergeSourceResult::error(err.into()).into()
                     }
-                    ThriftMegarepoAsynchronousRequestParams::megarepo_add_branching_target_params(_) => {
+                    ThriftAsynchronousRequestParams::megarepo_add_branching_target_params(_) => {
                         MegarepoAddBranchingTargetResult::error(err.into()).into()
                     }
-                    _ => return Err(anyhow!("unknown request type!"))
+                    _ => return Err(anyhow!("unknown request type!")),
                 };
                 queue
                     .complete(&ctx, &request_id, result)

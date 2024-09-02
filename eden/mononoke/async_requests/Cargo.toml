@@ -10,6 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.86"
 async-trait = "0.1.71"
+async_requests_types_thrift = { version = "0.1.0", path = "if" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 context = { version = "0.1.0", path = "../server/context" }
@@ -17,7 +18,6 @@ fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbth
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 megarepo_config = { version = "0.1.0", path = "../megarepo_api/megarepo_config" }
 megarepo_error = { version = "0.1.0", path = "../megarepo_api/megarepo_error" }
-megarepo_types_thrift = { version = "0.1.0", path = "../megarepo_api/if" }
 memblob = { version = "0.1.0", path = "../blobstore/memblob" }
 mononoke_api = { version = "0.1.0", path = "../mononoke_api" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
