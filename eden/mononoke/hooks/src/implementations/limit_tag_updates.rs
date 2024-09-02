@@ -12,7 +12,7 @@ use bookmarks::BookmarkKey;
 use context::CoreContext;
 use mononoke_types::BonsaiChangeset;
 
-use crate::ChangesetHook;
+use crate::BookmarkHook;
 use crate::CrossRepoPushSource;
 use crate::HookExecution;
 use crate::HookRejectionInfo;
@@ -29,12 +29,12 @@ impl LimitTagUpdatesHook {
 }
 
 #[async_trait]
-impl ChangesetHook for LimitTagUpdatesHook {
+impl BookmarkHook for LimitTagUpdatesHook {
     async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
         &'this self,
         ctx: &'ctx CoreContext,
         bookmark: &BookmarkKey,
-        _changeset: &'cs BonsaiChangeset,
+        _to: &'cs BonsaiChangeset,
         content_manager: &'fetcher dyn HookStateProvider,
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
@@ -48,7 +48,7 @@ impl ChangesetHook for LimitTagUpdatesHook {
             return Ok(HookExecution::Accepted);
         }
         Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
-            "Modification of already existing tags is no allowed in this repository.",
+            "Modification of already existing tags is not allowed in this repository.",
             format!("Commit edits a tag {}", bookmark.as_str(),),
         )))
     }

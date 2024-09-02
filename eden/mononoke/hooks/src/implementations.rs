@@ -69,6 +69,7 @@ pub async fn make_bookmark_hook(
         "block_unannotated_tags" => {
             Some(b(block_unannotated_tags::BlockUnannotatedTagsHook::new()))
         }
+        "limit_tag_updates" => Some(b(limit_tag_updates::LimitTagUpdatesHook::new())),
         _ => None,
     })
 }
@@ -95,7 +96,6 @@ pub async fn make_changeset_hook(
         "limit_submodule_edits" => Some(b(limit_submodule_edits::LimitSubmoduleEditsHook::new(
             &params.config,
         )?)),
-        "limit_tag_updates" => Some(b(limit_tag_updates::LimitTagUpdatesHook::new())),
         "block_commit_message_pattern" => Some(b(
             block_commit_message_pattern::BlockCommitMessagePatternHook::new(&params.config)?,
         )),
