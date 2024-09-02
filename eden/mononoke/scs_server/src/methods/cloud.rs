@@ -63,4 +63,14 @@ impl SourceControlServiceImpl {
             ..Default::default()
         })
     }
+
+    pub async fn cloud_workspace_smartlog(
+        &self,
+        _ctx: CoreContext,
+        _params: thrift::CloudWorkspaceSmartlogParams,
+    ) -> Result<thrift::CloudWorkspaceSmartlogResponse, ServiceError> {
+        Err(ServiceError::Request(invalid_request(
+            "'cloud_workspace_smartlog' is not implemented yet".to_string(),
+        )))
+    }
 }

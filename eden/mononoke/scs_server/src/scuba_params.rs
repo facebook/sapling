@@ -657,3 +657,9 @@ impl AddScubaParams for thrift::CloudUserWorkspacesParams {
         scuba.add("param_user", self.user.clone());
     }
 }
+
+impl AddScubaParams for thrift::CloudWorkspaceSmartlogParams {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("param_workspace", self.workspace.name.clone());
+    }
+}

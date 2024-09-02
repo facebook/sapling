@@ -2168,6 +2168,58 @@ struct WorkspaceInfo {
   4: i64 latest_timestamp;
 }
 
+/// Represents a remote bookmark in a commit cloud workspace.
+struct WorkspaceRemoteBookmark {
+  /// Prefix (usually 'remote').
+  1: string remote;
+  /// Bookmark name, e.g., 'master'.
+  2: string name;
+  /// Optional Mercurial commit ID the remote bookmark is associated with.
+  3: optional string hg_id;
+}
+
+/// Represents a single commit within a workspace.
+struct SmartlogNode {
+  /// Mercurial commit ID.
+  1: string hd_id;
+  /// Whether the commit is public or draft.
+  2: string phase;
+  /// The author of the commit.
+  3: string author;
+  /// The date the commit was authored, as a Unix timestamp.
+  4: i64 date;
+  /// A message to be used in the commit description.
+  5: string message;
+  /// The parents of the commit.
+  6: list<string> parents;
+  /// Local bookmarks associated with the commit.
+  7: list<string> bookmarks;
+  /// Optional list of remote bookmarks associated with the commit.
+  8: optional list<WorkspaceRemoteBookmark> remote_bookmarks;
+}
+
+/// Represents the Smartlog view of the contents of a commit cloud workspace.
+struct SmartlogData {
+  /// List of nodes that make up the Smartlog.
+  1: list<SmartlogNode> nodes;
+  /// Optional version number of the workspace being retrieved.
+  2: optional i64 version;
+  /// Optional timestamp of when the workspace version was updated.
+  3: optional i64 timestamp;
+}
+
+enum CloudWorkspaceSmartlogFlags {
+  /// Do not provide metadata about public commits in the response
+  /// (by default both draft commits and their public roots are returned)
+  SKIP_PUBLIC_COMMITS_METADATA = 1,
+  /// return all remote bookmarks
+  /// (by default only remote bookmarks that belong to draft commits (scratch bookmarks) or their public roots are returned)
+  ADD_REMOTE_BOOKMARKS = 3,
+  /// return all local bookmarks
+  /// (by default only bookmarks that belong to draft commits or their public roots are returned)
+  ADD_ALL_BOOKMARKS = 4,
+}
+
 struct CloudWorkspaceInfoParams {
   /// Workspace name and the repo it's associated with
   1: WorkspaceSpecifier workspace;
@@ -2188,6 +2240,18 @@ struct CloudUserWorkspacesParams {
 struct CloudUserWorkspacesResponse {
   /// Workspaces associated with a certain user in a speific repo
   1: list<WorkspaceInfo> workspaces;
+}
+
+struct CloudWorkspaceSmartlogParams {
+  /// Workspace name and the repo it's associated with
+  1: WorkspaceSpecifier workspace;
+  /// Options about what info to include in the response
+  2: list<CloudWorkspaceSmartlogFlags> flags;
+}
+
+struct CloudWorkspaceSmartlogResponse {
+  /// Smartlog view of a commit cloud workspace
+  1: SmartlogData smartlog;
 }
 
 /// Exceptions
@@ -2958,6 +3022,14 @@ service SourceControlService extends fb303_core.BaseService {
   /// Get general info about all the workspaces associated with a user
   CloudUserWorkspacesResponse cloud_user_workspaces(
     1: CloudUserWorkspacesParams params,
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
+
+  CloudWorkspaceSmartlogResponse cloud_workspace_smartlog(
+    1: CloudWorkspaceSmartlogParams params,
   ) throws (
     1: RequestError request_error,
     2: InternalError internal_error,
