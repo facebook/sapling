@@ -19,6 +19,7 @@ use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use clientinfo::CLIENT_INFO_HEADER;
 use fbinit::FacebookInit;
+#[cfg(not(target_os = "windows"))]
 use identity::IdentitySet;
 use maplit::hashmap;
 use sharding_ext::encode_repo_name;
@@ -28,7 +29,9 @@ use source_control_x2pclients::build_SourceControlService_client;
 
 pub const SCS_DEFAULT_TIER: &str = "shardmanager:mononoke.scs";
 
+#[cfg(not(target_os = "windows"))]
 const CONN_TIMEOUT_MS: u32 = 5000;
+#[cfg(not(target_os = "windows"))]
 const RECV_TIMEOUT_MS: u32 = 30_000;
 
 pub struct ScsClientBuilder {
@@ -142,7 +145,7 @@ fn build_from_tier_name_via_sr(
     _client_id: String,
     _tier: impl AsRef<str>,
     _shardmanager_domain: Option<String>,
-    _single_host: Option<String>,
+    _single_host: Option<SocketAddr>,
     _processing_timeout: Option<Duration>,
 ) -> Result<ScsClient, Error> {
     Err(anyhow!(
@@ -295,7 +298,7 @@ impl std::ops::Deref for ScsClient {
     }
 }
 
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+#[cfg(not(any(target_os = "macos")))]
 trait MaybeWith<T> {
     fn maybe_with<S>(self, optional: Option<S>, f: impl FnOnce(T, S) -> Self) -> Self
     where
@@ -320,7 +323,7 @@ impl MaybeWith<srclient::ClientParams> for srclient::ClientParams {
     }
 }
 
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+#[cfg(not(any(target_os = "macos")))]
 impl MaybeWith<x2pclient::X2pClientBuilder> for x2pclient::X2pClientBuilder {
     fn maybe_with<S>(
         self,
