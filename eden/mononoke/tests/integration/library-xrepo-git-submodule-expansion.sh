@@ -299,6 +299,29 @@ function update_repo_b_submodule_pointer_in_large_repo {
   REPONAME="$LARGE_REPO_NAME" sl cloud backup -q
 }
 
+# Create a commit in repo_a.
+function create_repo_a_commit {
+  export REPO_A_GIT_HASH;
+
+  cd "$GIT_REPO_A" || exit
+  date >> file_in_a
+  git add .
+  git commit -q -am "A commit in repo_a"
+  cd "$TESTTMP" || exit
+
+  # Import this commit to repo_a mononoke mirror
+  REPOID="$SUBMODULE_REPO_ID" with_stripped_logs gitimport "$GIT_REPO_A" --bypass-derived-data-backfilling  \
+    --bypass-readonly --generate-bookmarks full-repo > "$TESTTMP/gitimport_repo_a_output"
+
+  GIT_REPO_A_HEAD=$(rg ".*Ref: \"refs/heads/master\": Some\(ChangesetId\(Blake2\((\w+).+" -or '$1' "$TESTTMP/gitimport_repo_a_output")
+  echo "GIT_REPO_A_HEAD: $GIT_REPO_A_HEAD"
+
+  REPO_A_GIT_HASH=$(mononoke_newadmin convert --repo-id "$SUBMODULE_REPO_ID" -f bonsai -t git "$GIT_REPO_A_HEAD")
+  echo "REPO_A_GIT_HASH: $REPO_A_GIT_HASH"
+}
+
+# Create commits in repo_c and repo_b that can be used to update their submodule
+# pointers from the large repo
 
 # Create a commit in repo_c that can be used to update its submodule pointer
 # from the large repo
