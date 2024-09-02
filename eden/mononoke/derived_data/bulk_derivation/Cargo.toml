@@ -14,6 +14,7 @@ path = "lib.rs"
 async-trait = "0.1.71"
 basename_suffix_skeleton_manifest_v3 = { version = "0.1.0", path = "../basename_suffix_skeleton_manifest_v3" }
 blame = { version = "0.1.0", path = "../blame" }
+case_conflict_skeleton_manifest = { version = "0.1.0", path = "../case_conflict_skeleton_manifest" }
 changeset_info = { version = "0.1.0", path = "../changeset_info" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../../server/context" }

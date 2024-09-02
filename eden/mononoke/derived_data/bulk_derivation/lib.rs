@@ -11,6 +11,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use basename_suffix_skeleton_manifest_v3::RootBssmV3DirectoryId;
 use blame::RootBlameV2;
+use case_conflict_skeleton_manifest::RootCaseConflictSkeletonManifestId;
 use changeset_info::ChangesetInfo;
 use cloned::cloned;
 use context::CoreContext;
@@ -315,6 +316,9 @@ fn manager_for_type(
         }
         DerivableType::SkeletonManifestsV2 => {
             Arc::new(SingleTypeManager::<RootSkeletonManifestV2Id>::new(manager))
+        }
+        DerivableType::Ccsm => {
+            Arc::new(SingleTypeManager::<RootCaseConflictSkeletonManifestId>::new(manager))
         }
         DerivableType::ChangesetInfo => Arc::new(SingleTypeManager::<ChangesetInfo>::new(manager)),
         DerivableType::GitTrees => Arc::new(SingleTypeManager::<TreeHandle>::new(manager)),

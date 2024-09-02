@@ -34,6 +34,7 @@ use bookmarks_types::Bookmark;
 use bookmarks_types::BookmarkKind;
 use bookmarks_types::BookmarkPagination;
 use bookmarks_types::BookmarkPrefix;
+use case_conflict_skeleton_manifest::RootCaseConflictSkeletonManifestId;
 use changeset_info::ChangesetInfo;
 use cloned::cloned;
 use context::CoreContext;
@@ -266,6 +267,9 @@ impl WarmBookmarksCacheBuilder {
             >(
                 &self.ctx, repo_derived_data.clone()
             )),
+            DerivableType::Ccsm => Some(create_derived_data_warmer::<
+                RootCaseConflictSkeletonManifestId,
+            >(&self.ctx, repo_derived_data.clone())),
             DerivableType::ChangesetInfo => Some(create_derived_data_warmer::<ChangesetInfo>(
                 &self.ctx,
                 repo_derived_data.clone(),

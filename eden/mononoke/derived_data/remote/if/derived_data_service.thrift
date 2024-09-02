@@ -78,6 +78,7 @@ union DerivedData {
   18: DerivedDataHgAugmentedManifest hg_augmented_manifest;
   19: DerivedDataGitDeltaManifestV2 git_delta_manifest_v2;
   20: DerivedDataSkeletonManifestV2 skeleton_manifest_v2;
+  21: DerivedDataCcsm ccsm;
 }
 
 union DerivedDataFsnode {
@@ -129,6 +130,10 @@ union DerivedDataBssmV3 {
 
 union DerivedDataSkeletonManifestV2 {
   1: id.SkeletonManifestV2Id root_skeleton_manifest_v2_id;
+}
+
+union DerivedDataCcsm {
+  1: id.CaseConflictSkeletonManifestId root_ccsm_id;
 }
 
 union DerivedDataTestManifest {

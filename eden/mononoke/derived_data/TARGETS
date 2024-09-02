@@ -51,6 +51,7 @@ rust_library(
         "fbsource//third-party/rust:futures",
         ":basename_suffix_skeleton_manifest_v3",
         ":blame",
+        ":case_conflict_skeleton_manifest",
         ":changeset_info",
         ":deleted_manifest",
         ":derived_data_manager",
@@ -505,6 +506,22 @@ rust_library(
         "//eden/mononoke/derived_data:skeleton_manifest",
         "//eden/mononoke/derived_data/remote/if:derived_data_service_if-rust",
         "//eden/mononoke/manifest:manifest",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/context:context",
+    ],
+)
+
+rust_library(
+    name = "case_conflict_skeleton_manifest",
+    srcs = glob(["case_conflict_skeleton_manifest/*.rs"]),
+    autocargo = {"cargo_toml_dir": "case_conflict_skeleton_manifest"},
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/derived_data:derived_data_manager",
+        "//eden/mononoke/derived_data:skeleton_manifest",
+        "//eden/mononoke/derived_data/remote/if:derived_data_service_if-rust",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/server/context:context",
     ],

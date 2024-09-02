@@ -273,6 +273,7 @@ members = [
   "derived_data/basename_suffix_skeleton_manifest_v3",
   "derived_data/blame",
   "derived_data/bulk_derivation",
+  "derived_data/case_conflict_skeleton_manifest",
   "derived_data/changeset_info",
   "derived_data/constants",
   "derived_data/deleted_manifest",

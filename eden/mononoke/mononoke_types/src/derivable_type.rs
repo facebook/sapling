@@ -28,6 +28,7 @@ use crate::thrift;
 pub enum DerivableType {
     BlameV2,
     BssmV3,
+    Ccsm,
     ChangesetInfo,
     DeletedManifests,
     Fastlog,
@@ -52,6 +53,7 @@ impl DerivableType {
         Ok(match s {
             "blame" => DerivableType::BlameV2,
             "bssm_v3" => DerivableType::BssmV3,
+            "ccsm" => DerivableType::Ccsm,
             "changeset_info" => DerivableType::ChangesetInfo,
             "deleted_manifest" => DerivableType::DeletedManifests,
             "fastlog" => DerivableType::Fastlog,
@@ -76,6 +78,7 @@ impl DerivableType {
         match self {
             DerivableType::BlameV2 => "blame",
             DerivableType::BssmV3 => "bssm_v3",
+            DerivableType::Ccsm => "ccsm",
             DerivableType::ChangesetInfo => "changeset_info",
             DerivableType::DeletedManifests => "deleted_manifest",
             DerivableType::Fastlog => "fastlog",
@@ -97,6 +100,7 @@ impl DerivableType {
         Ok(match other {
             thrift::DerivedDataType::BLAME => Self::BlameV2,
             thrift::DerivedDataType::BSSM_V3 => Self::BssmV3,
+            thrift::DerivedDataType::CCSM => Self::Ccsm,
             thrift::DerivedDataType::CHANGESET_INFO => Self::ChangesetInfo,
             thrift::DerivedDataType::DELETED_MANIFEST_V2 => Self::DeletedManifests,
             thrift::DerivedDataType::FASTLOG => Self::Fastlog,
@@ -119,6 +123,7 @@ impl DerivableType {
         match self {
             Self::BlameV2 => thrift::DerivedDataType::BLAME,
             Self::BssmV3 => thrift::DerivedDataType::BSSM_V3,
+            Self::Ccsm => thrift::DerivedDataType::CCSM,
             Self::ChangesetInfo => thrift::DerivedDataType::CHANGESET_INFO,
             Self::DeletedManifests => thrift::DerivedDataType::DELETED_MANIFEST_V2,
             Self::Fastlog => thrift::DerivedDataType::FASTLOG,

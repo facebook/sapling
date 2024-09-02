@@ -1200,6 +1200,7 @@ mod tests {
             DerivableType::TestManifests,
             DerivableType::TestShardedManifests,
             DerivableType::BssmV3,
+            DerivableType::Ccsm,
             DerivableType::HgAugmentedManifests,
             DerivableType::SkeletonManifestsV2,
         ]);
