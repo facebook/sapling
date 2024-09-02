@@ -76,6 +76,13 @@ rust_library(
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
+    # This crate contains internal implementation details that should not be
+    # visible outside of this directory.
+    visibility = [
+        ":async_requests",
+        ":client",
+        ":worker",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",

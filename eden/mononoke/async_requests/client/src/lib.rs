@@ -33,7 +33,9 @@ use repo_factory::RepoFactory;
 use repo_identity::ArcRepoIdentity;
 use repo_identity::RepoIdentityArc;
 use repo_identity::RepoIdentityRef;
+use requests_table::ArcLongRunningRequestsQueue;
 use requests_table::LongRunningRequestsQueue;
+use requests_table::SqlLongRunningRequestsQueue;
 use slog::info;
 use slog::warn;
 
@@ -165,10 +167,7 @@ impl<R: MononokeRepo> AsyncRequestsQueue<R> {
             "Opening a long_running_requests_queue table for {}",
             repo_identity.name()
         );
-        let table = self
-            .repo_factory
-            .long_running_requests_queue(repo_config)
-            .await?;
+        let table = self.long_running_requests_queue(repo_config).await?;
         info!(
             ctx.logger(),
             "Done opening a long_running_requests_queue table for {}",
@@ -207,5 +206,17 @@ impl<R: MononokeRepo> AsyncRequestsQueue<R> {
                 MegarepoError::request(anyhow!("repo not found {}", repo_identity.name()))
             })?;
         Ok(repo.repo_blobstore_arc())
+    }
+
+    pub async fn long_running_requests_queue(
+        &self,
+        repo_config: &ArcRepoConfig,
+    ) -> Result<ArcLongRunningRequestsQueue, Error> {
+        let sql_factory = self
+            .repo_factory
+            .sql_factory(&repo_config.storage_config.metadata)
+            .await?;
+        let long_running_requests_queue = sql_factory.open::<SqlLongRunningRequestsQueue>().await?;
+        Ok(Arc::new(long_running_requests_queue))
     }
 }

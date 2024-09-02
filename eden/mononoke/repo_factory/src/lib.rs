@@ -171,8 +171,6 @@ use repo_sparse_profiles::RepoSparseProfiles;
 use repo_sparse_profiles::SqlSparseProfilesSizes;
 use repo_stats_logger::ArcRepoStatsLogger;
 use repo_stats_logger::RepoStatsLogger;
-use requests_table::ArcLongRunningRequestsQueue;
-use requests_table::SqlLongRunningRequestsQueue;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::o;
 use sql_commit_graph_storage::ArcCommitGraphBulkFetcher;
@@ -865,17 +863,6 @@ impl RepoFactory {
         } else {
             Ok(Arc::new(bonsai_git_mapping))
         }
-    }
-
-    pub async fn long_running_requests_queue(
-        &self,
-        repo_config: &ArcRepoConfig,
-    ) -> Result<ArcLongRunningRequestsQueue> {
-        let long_running_requests_queue = self
-            .open_sql::<SqlLongRunningRequestsQueue>(repo_config)
-            .await
-            .context(RepoFactoryError::LongRunningRequestsQueue)?;
-        Ok(Arc::new(long_running_requests_queue))
     }
 
     pub async fn bonsai_globalrev_mapping(

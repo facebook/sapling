@@ -110,7 +110,6 @@ use repo_sparse_profiles::RepoSparseProfiles;
 use repo_sparse_profiles::SqlSparseProfilesSizes;
 use repo_stats_logger::ArcRepoStatsLogger;
 use repo_stats_logger::RepoStatsLogger;
-use requests_table::SqlLongRunningRequestsQueue;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sql::rusqlite::Connection as SqliteConnection;
 use sql::sqlite::SqliteCallbacks;
@@ -258,7 +257,6 @@ impl TestRepoFactory {
         metadata_con.execute_batch(SqlGitSymbolicRefsBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlPhasesBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlPushrebaseMutationMappingConnection::CREATION_QUERY)?;
-        metadata_con.execute_batch(SqlLongRunningRequestsQueue::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlMutableRenamesStore::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlSyncedCommitMappingBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlRepoLock::CREATION_QUERY)?;
