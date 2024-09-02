@@ -7,5 +7,6 @@
 
 pub mod references;
 
+pub use references::WorkspaceCheckoutLocation;
 pub use references::WorkspaceHead;
 pub use references::WorkspaceSnapshot;

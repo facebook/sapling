@@ -10,6 +10,7 @@ use std::path::PathBuf;
 use ::sql_ext::mononoke_queries;
 use async_trait::async_trait;
 use clientinfo::ClientRequestInfo;
+use commit_cloud_types::WorkspaceCheckoutLocation;
 use mercurial_types::HgChangesetId;
 use mononoke_types::Timestamp;
 use sql::Connection;
@@ -21,16 +22,6 @@ use crate::sql::ops::Get;
 use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
 use crate::sql::ops::Update;
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct WorkspaceCheckoutLocation {
-    pub hostname: String,
-    pub commit: HgChangesetId,
-    pub checkout_path: PathBuf,
-    pub shared_path: PathBuf,
-    pub timestamp: Timestamp,
-    pub unixname: String,
-}
 
 mononoke_queries! {
     pub(crate) read GetCheckoutLocations(reponame: String, workspace: String) -> (String, String, String, HgChangesetId, Timestamp, String) {
