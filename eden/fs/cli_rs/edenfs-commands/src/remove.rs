@@ -18,15 +18,20 @@ use crate::Subcommand;
 #[derive(Parser, Debug)]
 #[clap(name = "remove", about = "Remove an EdenFS checkout")]
 pub struct RemoveCmd {
-    #[clap(multiple_values = true, help = "The EdenFS checkout(s) to remove.")]
-    path: Vec<String>,
+    #[clap(
+        multiple_values = true,
+        help = "The EdenFS checkout(s) to remove.",
+        value_name = "PATH"
+    )]
+    paths: Vec<String>,
 
     #[clap(
             short = 'y',
-            visible_aliases = &["--yes", "--no-prompt"],
+            long = "yes",
+            visible_aliases = &["--no-prompt"],
             help = "Do not prompt for confirmation before removing the checkouts."
         )]
-    prompt: bool,
+    skip_prompt: bool,
 
     #[clap(long, hide = true)]
     preserve_mount_point: bool,
