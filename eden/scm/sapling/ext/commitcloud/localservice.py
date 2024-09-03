@@ -132,15 +132,15 @@ class LocalService(baseservice.BaseService):
         heads.extend(newheads)
         bookmarks = {
             name: node
-            for name, node in pycompat.iteritems(data["bookmarks"])
+            for name, node in data["bookmarks"].items()
             if name not in oldbookmarks
         }
         bookmarks.update(newbookmarks)
         remotebookmarks = {
             name: node
-            for name, node in pycompat.iteritems(
-                self._decoderemotebookmarks(data.get("remote_bookmarks", []))
-            )
+            for name, node in self._decoderemotebookmarks(
+                data.get("remote_bookmarks", [])
+            ).items()
             if name not in oldremotebookmarks
         }
         remotebookmarks.update(newremotebookmarks)

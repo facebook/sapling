@@ -916,7 +916,7 @@ def wraprepo(repo) -> None:
             refs = dict(self._bookmarks)
             refs["tip"] = self["tip"].rev()
             sha = ""
-            for k, v in sorted(pycompat.iteritems(refs)):
+            for k, v in sorted(refs.items()):
                 if k != "tip":
                     v = hex(v)
                 sha = hashlib.sha1(encodeutf8("%s%s%s" % (sha, k, v))).hexdigest()
@@ -1150,7 +1150,7 @@ def wraprepo(repo) -> None:
                 # the old cached ctx, since the old ctx contains a reference to
                 # the old revlog, which is now out of date.
                 mfl = self.manifestlog
-                for dirname, lrucache in pycompat.iteritems(oldmancache):
+                for dirname, lrucache in oldmancache.items():
                     if dirname == "":
                         for oldmfnode in lrucache:
                             oldmfctx = lrucache[oldmfnode]
@@ -1337,9 +1337,7 @@ def wraprepo(repo) -> None:
                 )
 
             # Compute new bookmarks, and delete old bookmarks
-            newbookmarks = dict(
-                (k, hex(v)) for k, v in pycompat.iteritems(self._bookmarks)
-            )
+            newbookmarks = dict((k, hex(v)) for k, v in self._bookmarks.items())
             oldbookmarks = []
             cursor.execute(
                 "SELECT name, value FROM revision_references "
@@ -1374,7 +1372,7 @@ def wraprepo(repo) -> None:
                 values.append(reponame)
                 values.append(head)
 
-            for k, v in pycompat.iteritems(newbookmarks):
+            for k, v in newbookmarks.items():
                 tmpl.append("(%s, 'bookmarks', %s, %s)")
                 values.append(repo.sqlreponame)
                 values.append(k)

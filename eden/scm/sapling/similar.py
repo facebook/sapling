@@ -86,7 +86,7 @@ def _findsimilarmatches(repo, added, removed, threshold):
                     copies[a] = (r, score)
                     bestscore = score
 
-    for dest, v in pycompat.iteritems(copies):
+    for dest, v in copies.items():
         source, bscore = v
         yield source, dest, bscore
 

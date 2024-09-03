@@ -7,7 +7,7 @@ from sapling import pycompat
 
 def reposetup(ui, repo):
     def reportphasemove(tr):
-        for rev, move in sorted(pycompat.iteritems(tr.changes["phases"])):
+        for rev, move in sorted(tr.changes["phases"].items()):
             if move[0] is None:
                 ui.write(("test-debug-phase: new rev %d:  x -> %d\n" % (rev, move[1])))
             else:

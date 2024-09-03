@@ -95,7 +95,7 @@ class branchcache(dict):
         return heads
 
     def iterbranches(self):
-        for bn, heads in pycompat.iteritems(self):
+        for bn, heads in self.items():
             yield (bn, heads) + self._branchtip(heads)
 
     def copy(self) -> "branchcache":

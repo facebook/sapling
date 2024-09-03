@@ -432,7 +432,7 @@ class remotefilelog:
             return nullid
 
         revmap, parentfunc = self._buildrevgraph(a, b)
-        nodemap = dict(((v, k) for (k, v) in pycompat.iteritems(revmap)))
+        nodemap = dict(((v, k) for (k, v) in revmap.items()))
 
         ancs = ancestor.ancestors(parentfunc, revmap[a], revmap[b])
         if ancs:
@@ -447,7 +447,7 @@ class remotefilelog:
             return nullid
 
         revmap, parentfunc = self._buildrevgraph(a, b)
-        nodemap = dict(((v, k) for (k, v) in pycompat.iteritems(revmap)))
+        nodemap = dict(((v, k) for (k, v) in revmap.items()))
 
         ancs = ancestor.commonancestorsheads(parentfunc, revmap[a], revmap[b])
         return list(map(nodemap.__getitem__, ancs))
@@ -463,7 +463,7 @@ class remotefilelog:
         parentsmap = collections.defaultdict(list)
         allparents = set()
         for mapping in (amap, bmap):
-            for node, pdata in pycompat.iteritems(mapping):
+            for node, pdata in mapping.items():
                 parents = parentsmap[node]
                 p1, p2, linknode, copyfrom = pdata
                 # Don't follow renames (copyfrom).

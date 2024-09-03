@@ -114,7 +114,7 @@ def localrepolistkeys(orig, self, namespace, patterns=None):
             if pattern.endswith("*"):
                 pattern = "re:^" + pattern[:-1] + ".*"
             kind, pat, matcher = util.stringmatcher(pattern)
-            for bookmark, node in pycompat.iteritems(bookmarks):
+            for bookmark, node in bookmarks.items():
                 if matcher(bookmark):
                     results[bookmark] = node
         return results
@@ -376,7 +376,7 @@ def _generateoutputparts(
                     if part.type == "changegroup":
                         haschangegroup = True
                     newpart = bundle2.bundlepart(part.type, data=part.read())
-                    for key, value in pycompat.iteritems(part.params):
+                    for key, value in part.params.items():
                         newpart.addparam(key, value)
                     parts.append(newpart)
 
@@ -523,7 +523,7 @@ def processparts(orig, repo, op, unbundler):
                     # differs from previous behavior, we need to put it behind a
                     # config flag for incremental rollout.
                     bundlepart = bundle2.bundlepart(part.type, data=part.read())
-                    for key, value in pycompat.iteritems(part.params):
+                    for key, value in part.params.items():
                         bundlepart.addparam(key, value)
 
                     # Certain parts require a response

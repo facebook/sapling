@@ -1610,7 +1610,7 @@ class localrepository:
     def nodebookmarks(self, node):
         """return the list of bookmarks pointing to the specified node"""
         marks = []
-        for bookmark, n in pycompat.iteritems(self._bookmarks):
+        for bookmark, n in self._bookmarks.items():
             if n == node:
                 marks.append(bookmark)
         return sorted(marks)
@@ -3186,7 +3186,7 @@ class localrepository:
                 if pattern.endswith("*"):
                     pattern = "re:^" + pattern[:-1] + ".*"
                 kind, pat, matcher = util.stringmatcher(pattern)
-                for bookmark, node in pycompat.iteritems(bmarks):
+                for bookmark, node in bmarks.items():
                     if matcher(bookmark):
                         values[bookmark] = node
         return values
@@ -3404,7 +3404,7 @@ def _validate_committable_ctx(ui, ctx):
 
     extraslimit = ui.configbytes("commit", "extras-size-limit")
     if extraslimit:
-        extraslen = sum(len(k) + len(v) for k, v in pycompat.iteritems(ctx.extra()))
+        extraslen = sum(len(k) + len(v) for k, v in ctx.extra().items())
         if extraslen > extraslimit:
             raise errormod.Abort(
                 _("commit extras total size (%s) exceeds configured limit (%s)")

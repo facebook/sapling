@@ -50,7 +50,7 @@ def printstacks(sig, currentframe) -> None:
 
 def writesigtrace(path, writestderr: bool = False) -> None:
     content = ""
-    for tid, frame in pycompat.iteritems(sys._current_frames()):
+    for tid, frame in sys._current_frames().items():
         content += "Thread %s:\n%s\n" % (
             tid,
             util.smarttraceback(frame, skipboring=False),

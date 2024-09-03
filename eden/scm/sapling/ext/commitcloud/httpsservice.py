@@ -36,7 +36,7 @@ def cleandict(d):
         return d
     return dict(
         (k, cleandict(v))
-        for k, v in pycompat.iteritems(d)
+        for k, v in d.items()
         if (v is not None and not (hasattr(v, "__len__") and len(v) == 0))
     )
 

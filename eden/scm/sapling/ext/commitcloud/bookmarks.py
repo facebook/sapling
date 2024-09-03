@@ -83,7 +83,7 @@ def _bookmarks(orig, ui, repo, *names, **opts):
 def _showbookmarks(ui, remotebookmarks, **opts) -> None:
     # Copy-paste from commands.py
     fm = ui.formatter("bookmarks", opts)
-    for bmark, n in sorted(pycompat.iteritems(remotebookmarks)):
+    for bmark, n in sorted(remotebookmarks.items()):
         fm.startitem()
         if not ui.quiet:
             fm.plain("   ")

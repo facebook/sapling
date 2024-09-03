@@ -39,7 +39,7 @@ def dumps(obj, paranoid=True):
         return _sysjson.dumps(obj)
     elif hasattr(obj, "keys"):
         out = []
-        for k, v in sorted(pycompat.iteritems(obj)):
+        for k, v in sorted(obj.items()):
             if isinstance(k, bytes):
                 key = '"%s"' % encoding.jsonescape(k, paranoid=paranoid)
             else:

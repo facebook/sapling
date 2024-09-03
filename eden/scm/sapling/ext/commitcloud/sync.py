@@ -736,7 +736,7 @@ def _processremotebookmarks(repo, cloudremotebooks, lastsyncstate):
     unfi = repo
     newnames = {
         name: node
-        for name, node in pycompat.iteritems(updates)
+        for name, node in updates.items()
         if node != nodemod.nullhex and node not in unfi and ispublic(name)
     }
     return (updates, newnames)
@@ -752,7 +752,7 @@ def _updateremotebookmarks(repo, tr, updates):
 
     # Filter out any deletions of default names.  These are protected and shouldn't
     # be deleted if this is the default remote
-    for remotename, node in pycompat.iteritems(updates):
+    for remotename, node in updates.items():
         remote, name = bookmarks.splitremotename(remotename)
         if node == nodemod.nullhex and remotename in protectednames:
             newremotebookmarks[remotename] = oldremotebookmarks.get(

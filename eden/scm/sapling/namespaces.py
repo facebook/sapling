@@ -209,7 +209,7 @@ class namespaces:
         return self._names.__iter__()
 
     def items(self):
-        return pycompat.iteritems(self._names)
+        return self._names.items()
 
     iteritems = items
 
@@ -241,7 +241,7 @@ class namespaces:
         namespaces, otherwise, namespaces with 'user_only=False' will be used,
         if 'self.included' is 'False'.
         """
-        for ns, v in pycompat.iteritems(self._names):
+        for ns, v in self._names.items():
             # Fast path: do not consider branches unless it's "default".
             if ns == "branches" and name != "default":
                 continue
@@ -373,7 +373,7 @@ class namespace:
 
 
 def loadpredicate(ui, extname, registrarobj):
-    for name, ns in pycompat.iteritems(registrarobj._table):
+    for name, ns in registrarobj._table.items():
         if name in namespacetable:
             raise error.ProgrammingError("namespace '%s' is already registered", name)
         namespacetable[name] = ns

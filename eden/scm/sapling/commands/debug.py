@@ -703,7 +703,7 @@ def debugcapabilities(ui, path, **opts) -> None:
     b2caps = bundle2.bundle2caps(peer)
     if b2caps:
         ui.write(_x("Bundle2 capabilities:\n"))
-        for key, values in sorted(pycompat.iteritems(b2caps)):
+        for key, values in sorted(b2caps.items()):
             ui.write(_x("  %s\n") % key)
             for v in values:
                 ui.write(_x("    %s\n") % v)
@@ -1173,7 +1173,7 @@ def debugstate(ui, repo, **opts) -> Optional[int]:
     # pyre-fixme[6]: For 2nd param expected `None` but got
     #  `Optional[typing.Callable[[Named(x, typing.Any)], Tuple[typing.Any,
     #  typing.Any]]]`.
-    for path, ent in sorted(pycompat.iteritems(dmap), key=keyfunc):
+    for path, ent in sorted(dmap.items(), key=keyfunc):
         if ent[3] == -1:
             timestr = "unset               "
         elif nodates:
@@ -2302,7 +2302,7 @@ def debugnamecomplete(ui, repo, *args, **opts) -> None:
     names = set()
     # since we previously only listed open branches, we will handle that
     # specially (after this for loop)
-    for name, ns in pycompat.iteritems(repo.names):
+    for name, ns in repo.names.items():
         # arc uses debugnamecomplete for doing some really wacky things, but
         # luckily it does so by setting HGPLAIN=1, hence the ui.plain()
         # check below
@@ -2728,7 +2728,7 @@ def debugpushkey(ui, repopath, namespace, *keyinfo, **opts) -> Optional[bool]:
         ui.status(str(r) + "\n")
         return not r
     else:
-        for k, v in sorted(pycompat.iteritems(target.listkeys(namespace))):
+        for k, v in sorted(target.listkeys(namespace).items()):
             ui.write("%s\t%s\n" % (util.escapestr(k), util.escapestr(v)))
 
 
@@ -3313,7 +3313,7 @@ def debugwalk(ui, repo, *pats, **opts) -> None:
 def debugwireargs(ui, repopath, *vals, **opts) -> None:
     repo = hg.peer(ui, opts, repopath)
     args = {}
-    for k, v in pycompat.iteritems(opts):
+    for k, v in opts.items():
         if v:
             args[k] = v
     args = args
@@ -3528,7 +3528,7 @@ def debugexistingcasecollisions(ui, repo, *basepaths, **opts) -> None:
             dirlistmap = {}
             for entry in dirlist:
                 dirlistmap.setdefault(entry.lower(), []).append(entry)
-            for _lowername, entries in sorted(pycompat.iteritems(dirlistmap)):
+            for _lowername, entries in sorted(dirlistmap.items()):
                 if len(entries) > 1:
                     ui.write(
                         _("%s contains collisions: %s\n")
@@ -3604,7 +3604,7 @@ def debugreadauthforuri(ui, _repo, uri, user=None) -> None:
     auth = httpconnection.readauthforuri(ui, uri, user)
     if auth is not None:
         auth, items = auth
-        for k, v in sorted(pycompat.iteritems(items)):
+        for k, v in sorted(items.items()):
             ui.write(_x("auth.%s.%s=%s\n") % (auth, k, v))
     else:
         ui.warn(_("no match found\n"))

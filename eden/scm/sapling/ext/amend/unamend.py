@@ -99,7 +99,7 @@ def unamend(ui, repo, **opts):
             dirstate.rebuild(prednode, cm, changedfiles)
             # we want added and removed files to be shown
             # properly, not with ? and ! prefixes
-            for filename, data in pycompat.iteritems(diff):
+            for filename, data in diff.items():
                 if data[0][0] is None:
                     dirstate.add(filename)
                 if data[1][0] is None:

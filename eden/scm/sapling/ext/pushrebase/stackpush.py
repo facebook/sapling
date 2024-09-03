@@ -175,7 +175,7 @@ class pushrequest:
         """
         mctx = ctx.manifestctx()
         conflicts = []
-        for path, expected in pycompat.iteritems(self.fileconditions):
+        for path, expected in self.fileconditions.items():
             try:
                 actual = mctx.find(path)
             except KeyError:

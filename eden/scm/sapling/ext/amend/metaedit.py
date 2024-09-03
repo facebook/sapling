@@ -316,7 +316,7 @@ def metaedit(ui, repo, templ, *revs, **opts) -> Optional[int]:
                     mapping = dict(
                         map(
                             lambda oldnew: (oldnew[0], [oldnew[1]]),
-                            pycompat.iteritems(replacemap),
+                            replacemap.items(),
                         )
                     )
                     templ.setprop("nodereplacements", mapping)

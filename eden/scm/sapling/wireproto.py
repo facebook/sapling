@@ -232,7 +232,7 @@ def encodebatchcmds(req):
 
         args = ",".join(
             "%s=%s" % (escapestringarg(k), escapestringarg(v))
-            for k, v in pycompat.iteritems(argsdict)
+            for k, v in argsdict.items()
         )
         cmds.append("%s %s" % (op, args))
 
@@ -406,7 +406,7 @@ class wirepeer(repository.legacypeer):
             kwargs["bundlecaps"] = sorted(bundlecaps)
         else:
             bundlecaps = ()  # kwargs could have it to None
-        for key, value in pycompat.iteritems(kwargs):
+        for key, value in kwargs.items():
             if value is None:
                 continue
             keytype = gboptsmap.get(key)
@@ -927,7 +927,7 @@ def between(repo, proto, pairs):
 def branchmap(repo, proto):
     branchmap = repo.branchmap()
     heads = []
-    for branch, nodes in pycompat.iteritems(branchmap):
+    for branch, nodes in branchmap.items():
         branchname = urlreq.quote(encoding.fromlocal(branch))
         branchnodes = encodelist(nodes)
         heads.append("%s %s" % (branchname, branchnodes))
@@ -1050,7 +1050,7 @@ def debugwireargs(repo, proto, one, two, others):
 @wireprotocommand("getbundle", "*")
 def getbundle(repo, proto, others):
     opts = options("getbundle", gboptsmap.keys(), others)
-    for k, v in pycompat.iteritems(opts):
+    for k, v in opts.items():
         keytype = gboptsmap[k]
         if keytype == "nodes":
             opts[k] = decodelist(v)
@@ -1128,7 +1128,7 @@ def listkeys(repo, proto, namespace):
 @wireprotocommand("listkeyspatterns", "namespace patterns")
 def listkeyspatterns(repo, proto, namespace, patterns):
     patterns = [pycompat.decodeutf8(p) for p in decodelist(patterns)]
-    d = pycompat.iteritems(repo.listkeys(encoding.tolocal(namespace), patterns))
+    d = repo.listkeys(encoding.tolocal(namespace), patterns).items()
     return pushkeymod.encodekeys(d)
 
 

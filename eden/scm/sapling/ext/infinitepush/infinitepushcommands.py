@@ -101,7 +101,7 @@ def debugfillinfinitepushmetadata(ui, repo, **opts) -> None:
         nodesmetadata[node] = output
 
     with index:
-        for node, metadata in pycompat.iteritems(nodesmetadata):
+        for node, metadata in nodesmetadata.items():
             dumped = json.dumps(metadata, sort_keys=True)
             index.saveoptionaljsonmetadata(node, pycompat.encodeutf8(dumped))
 

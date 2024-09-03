@@ -148,7 +148,7 @@ class _basewirecommands(pycompat.ABC):
                 if pattern.endswith("*"):
                     pattern = "re:^" + pattern[:-1] + ".*"
                 kind, pat, matcher = util.stringmatcher(pattern)
-                for bookmark, node in pycompat.iteritems(bmarks):
+                for bookmark, node in bmarks.items():
                     if matcher(bookmark):
                         values[bookmark] = node
         return values

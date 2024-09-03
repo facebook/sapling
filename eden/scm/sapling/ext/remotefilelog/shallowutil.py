@@ -115,7 +115,7 @@ def parsemeta(text, flags=0):
 def prefixkeys(dict, prefix):
     """Returns ``dict`` with ``prefix`` prepended to all its keys."""
     result = {}
-    for k, v in pycompat.iteritems(dict):
+    for k, v in dict.items():
         result[prefix + k] = v
     return result
 
@@ -158,7 +158,7 @@ def _buildpackmeta(metadict: "Mapping[str, bytes]") -> bytes:
     length limit is exceeded
     """
     metabuf = b""
-    for k, v in sorted(pycompat.iteritems((metadict or {}))):
+    for k, v in sorted((metadict or {}).items()):
         if len(k) != 1:
             raise error.ProgrammingError("packmeta: illegal key: %s" % k)
         if len(v) > 0xFFFE:
@@ -183,7 +183,7 @@ def buildpackmeta(metadict: "Mapping[str, int]") -> bytes:
     and METAKEYFLAG will be dropped if its value is 0.
     """
     newmeta = {}
-    for k, v in pycompat.iteritems((metadict or {})):
+    for k, v in (metadict or {}).items():
         expectedtype = _metaitemtypes.get(k, (bytes,))
         if not isinstance(v, expectedtype):
             raise error.ProgrammingError("packmeta: wrong type of key %s" % k)
@@ -204,7 +204,7 @@ def parsepackmeta(metabuf: bytes) -> "Dict[str, int]":
     integers.
     """
     metadict = _parsepackmeta(metabuf)
-    for k, v in pycompat.iteritems(metadict):
+    for k, v in metadict.items():
         if k in _metaitemtypes and int in _metaitemtypes[k]:
             metadict[k] = bin2int(v)
     return typing.cast("Dict[str, int]", metadict)

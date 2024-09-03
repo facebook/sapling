@@ -259,7 +259,7 @@ class _nestedformatter(baseformatter):
 def _iteritems(data):
     """iterate key-value pairs in stable order"""
     if isinstance(data, dict):
-        return sorted(pycompat.iteritems(data))
+        return sorted(data.items())
     return data
 
 

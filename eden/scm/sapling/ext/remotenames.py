@@ -704,7 +704,7 @@ def _pushrevs(repo, ui, rev):
 
 
 def expullcmd(orig, ui, repo, source="default", **opts):
-    revrenames = dict((v, k) for k, v in pycompat.iteritems(_getrenames(ui)))
+    revrenames = dict((v, k) for k, v in _getrenames(ui).items())
     source = revrenames.get(source, source)
 
     if opts.get("update") and opts.get("rebase"):
@@ -897,7 +897,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
     paths = dict((path, url) for path, url in ui.configitems("paths"))
     # XXX T58629567: The following line triggers an infinite loop in pyre, let's disable it for now.
     if not typing.TYPE_CHECKING:
-        revrenames = dict((v, k) for k, v in pycompat.iteritems(_getrenames(ui)))
+        revrenames = dict((v, k) for k, v in _getrenames(ui).items())
 
     origdest = dest
     defaultpush = ui.paths.get("default-push") or ui.paths.get("default")
@@ -1097,7 +1097,7 @@ def _readtracking(repo):
 def _writetracking(repo, tracking):
     with repo.wlock():
         data = ""
-        for book, track in pycompat.iteritems(tracking):
+        for book, track in tracking.items():
             data += "%s %s\n" % (book, track)
         vfs = repo.sharedvfs
         vfs.write("bookmarks.tracking", pycompat.encodeutf8(data))
@@ -1259,7 +1259,7 @@ def displaylocalbookmarks(ui, repo, opts, fm):
     distances = readdistancecache(repo)
     nq = not ui.quiet
 
-    for bmark, n in sorted(pycompat.iteritems(marks)):
+    for bmark, n in sorted(marks.items()):
         current = repo._activebookmark
         if bmark == current:
             prefix, label = "*", "bookmarks.current bookmarks.active"
@@ -1364,7 +1364,7 @@ def _getremotepeer(ui, repo, opts):
 
 def _showfetchedbookmarks(ui, remote, bookmarks, opts, fm):
     remotepath = activepath(ui, remote)
-    for bmark, n in sorted(pycompat.iteritems(bookmarks)):
+    for bmark, n in sorted(bookmarks.items()):
         fm.startitem()
         if not ui.quiet:
             fm.plain("   ")
@@ -1454,7 +1454,7 @@ def writedistancecache(repo, distance):
     try:
         cachevfs = shareawarecachevfs(repo)
         f = cachevfs("distance", "w", atomictemp=True)
-        for k, v in pycompat.iteritems(distance):
+        for k, v in distance.items():
             f.write(pycompat.encodeutf8("%s %d %d\n" % (k, v[0], v[1])))
     except (IOError, OSError):
         pass
@@ -1531,7 +1531,7 @@ def precachedistance(repo):
         distances = {}
         if repo.ui.configbool("remotenames", "precachedistance"):
             distances = {}
-            for bmark, tracked in pycompat.iteritems(_readtracking(repo)):
+            for bmark, tracked in _readtracking(repo).items():
                 distance = calculatenamedistance(repo, bmark, tracked)
                 if distance != (None, None):
                     distances[bmark] = distance

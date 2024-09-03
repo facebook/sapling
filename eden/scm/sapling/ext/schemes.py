@@ -128,7 +128,7 @@ def debugexpandscheme(ui, url, **opts) -> None:
 @command("debugexpandpaths")
 def debugexpandpaths(ui, repo, *args, **opts) -> None:
     """given a repo path, provide the scheme-expanded path"""
-    for name, path in sorted(pycompat.iteritems(ui.paths)):
+    for name, path in sorted(ui.paths.items()):
         url = path.rawloc
         repo = hg._peerlookup(url)
 

@@ -151,7 +151,7 @@ class histpacktestsbase:
         store = unionmetadatastore(pack)
 
         # Verify the pack contents
-        for (filename, node), (p1, p2, lastnode) in pycompat.iteritems(allentries):
+        for (filename, node), (p1, p2, lastnode) in allentries.items():
             ap1, ap2, alinknode, acopyfrom = store.getnodeinfo(filename, node)
             ep1, ep2, elinknode = allentries[(filename, node)]
             self.assertEqual(ap1, ep1)

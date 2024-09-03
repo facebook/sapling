@@ -346,7 +346,7 @@ def headsforactive(repo):
         raise ValueError("headsforactive() only makes sense with an active bookmark")
     name = repo._activebookmark.split("@", 1)[0]
     heads = []
-    for mark, n in pycompat.iteritems(repo._bookmarks):
+    for mark, n in repo._bookmarks.items():
         if mark.split("@", 1)[0] == name:
             heads.append(n)
     return heads
@@ -403,7 +403,7 @@ def listbinbookmarks(repo):
     marks = getattr(repo, "_bookmarks", {})
 
     hasnode = repo.changelog.hasnode
-    for k, v in pycompat.iteritems(marks):
+    for k, v in marks.items():
         # don't expose local divergent bookmarks
         if hasnode(v) and ("@" not in k or k.endswith("@")):
             yield k, v
@@ -905,7 +905,7 @@ def _printbookmarks(ui, repo, bmarks: typing.Sized, **opts) -> None:
     hexfn = fm.hexfunc
     if len(bmarks) == 0 and fm.isplain():
         ui.status(_("no bookmarks set\n"))
-    for bmark, (n, prefix, label) in sorted(pycompat.iteritems(bmarks)):
+    for bmark, (n, prefix, label) in sorted(bmarks.items()):
         fm.startitem()
         if not ui.quiet:
             fm.plain(" %s " % prefix, label=label)
@@ -934,7 +934,7 @@ def printbookmarks(ui, repo, **opts) -> None:
     """
     marks = repo._bookmarks
     bmarks = {}
-    for bmark, n in sorted(pycompat.iteritems(marks)):
+    for bmark, n in sorted(marks.items()):
         active = repo._activebookmark
         if bmark == active:
             prefix, label = "*", activebookmarklabel
@@ -975,9 +975,7 @@ def reachablerevs(repo, bookmarks):
     # same as 'bookmark() - nodes', as it includes nodes that are pointed to by
     # both bookmarks we are deleting and other bookmarks.
     othernodes = [
-        node
-        for bookmark, node in pycompat.iteritems(repobookmarks)
-        if bookmark not in bookmarks
+        node for bookmark, node in repobookmarks.items() if bookmark not in bookmarks
     ]
 
     return repo.revs("(%ln) %% (head() - (%ln) + (%ln))", nodes, nodes, othernodes)
@@ -1016,7 +1014,7 @@ class remotenames(dict):
         # Only supported for bookmarks
         bmchanges = changes.get("bookmarks", {})
         remotepathbooks = {}
-        for remotename, node in pycompat.iteritems(bmchanges):
+        for remotename, node in bmchanges.items():
             path, name = splitremotename(remotename)
             remotepathbooks.setdefault(path, {})[name] = node
 
@@ -1111,12 +1109,12 @@ def saveremotenames(repo, remotebookmarks, override: bool = True) -> None:
 
         journal = []
         nm = repo.changelog.nodemap
-        for remote, rmbookmarks in pycompat.iteritems(remotebookmarks):
+        for remote, rmbookmarks in remotebookmarks.items():
             # Do not write 'default-push' names. See https://fburl.com/1rft34i8.
             if remote == "default-push":
                 continue
             rmbookmarks = {} if rmbookmarks is None else rmbookmarks
-            for name, hexnode in pycompat.iteritems(rmbookmarks):
+            for name, hexnode in rmbookmarks.items():
                 oldnode = oldbooks.get((remote, name), hex(nullid))
                 newnode = hexnode
                 if not bin(newnode) in nm:
@@ -1261,7 +1259,7 @@ class lazyremotenamedict(pycompat.Mapping):
         """Iterate over (name, node) tuples"""
         if not self.loaded:
             self._load()
-        for k, vtup in pycompat.iteritems(self.potentialentries):
+        for k, vtup in self.potentialentries.items():
             yield (k, [bin(vtup[0])])
 
     def __iter__(self):

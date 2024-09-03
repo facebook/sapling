@@ -338,7 +338,7 @@ class dirstate:
 
     # pyre-fixme[11]: Annotation `dirstatetuple` is not defined as a type.
     def items(self) -> "Iterable[Tuple[str, dirstatetuple]]":
-        return pycompat.iteritems(self._map)
+        return self._map.items()
 
     iteritems: "Callable[[dirstate], Iterable[Tuple[str, dirstatetuple]]]" = items
 
@@ -770,7 +770,7 @@ class dirstate:
         # notify callbacks about parents change
         origpl = self._origpl
         if origpl is not None and origpl != self._pl:
-            for c, callback in sorted(pycompat.iteritems(self._plchangecallbacks)):
+            for c, callback in sorted(self._plchangecallbacks.items()):
                 callback(self, origpl, self._pl)
             # if the first parent has changed then consider this a new checkout
             if origpl[0] != self._pl[0]:
@@ -787,7 +787,7 @@ class dirstate:
         delaywrite = self._ui.configint("debug", "dirstate.delaywrite")
         if delaywrite > 0:
             # do we have any files to delay for?
-            for f, e in pycompat.iteritems(self._map):
+            for f, e in self._map.items():
                 if e[0] == "n" and e[3] == now:
                     import time  # to avoid useless import
 

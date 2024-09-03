@@ -139,7 +139,7 @@ class testtreestate(unittest.TestCase):
         def walk(setbits, unsetbits):
             return sorted(
                 k
-                for k, v in pycompat.iteritems(expected)
+                for k, v in expected.items()
                 if ((v[0] & unsetbits) == 0 and (v[0] & setbits) == setbits)
             )
 

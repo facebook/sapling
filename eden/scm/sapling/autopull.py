@@ -274,7 +274,7 @@ def _commitscheme(repo, x, rewritepullrev=False):
 
 
 def loadpredicate(ui, extname, registrarobj):
-    for name, func in pycompat.iteritems(registrarobj._table):
+    for name, func in registrarobj._table.items():
         if name in _table:
             raise error.ProgrammingError("namespace '%s' is already registered", name)
         _table[name] = func

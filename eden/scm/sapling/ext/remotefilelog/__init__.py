@@ -327,7 +327,7 @@ def onetimeclientsetup(ui):
         if shallowrepo.requirement in repo.requirements:
             files = []
             sparsematch = repo.maybesparsematch(mctx.rev())
-            for f, (m, actionargs, msg) in pycompat.iteritems(actions):
+            for f, (m, actionargs, msg) in actions.items():
                 if sparsematch and not sparsematch(f):
                     continue
                 if m == "c":

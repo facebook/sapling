@@ -765,7 +765,7 @@ def bookmark(repo, subset, x):
             bms.add(repo[bmrev].rev())
         else:
             matchrevs = set()
-            for name, bmrev in pycompat.iteritems(repo._bookmarks):
+            for name, bmrev in repo._bookmarks.items():
                 if matcher(name):
                     matchrevs.add(bmrev)
             if not matchrevs:
@@ -1592,7 +1592,7 @@ def named(repo, subset, x):
             raise error.RepoLookupError(_("namespace '%s' does not exist") % ns)
         namespaces.add(repo.names[pattern])
     else:
-        for name, ns in pycompat.iteritems(repo.names):
+        for name, ns in repo.names.items():
             if matcher(name):
                 namespaces.add(ns)
         if not namespaces:

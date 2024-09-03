@@ -177,7 +177,7 @@ class basectx:
         if mf1.hasgrafts():
             dmf1, dmf2 = bindings.manifest.treemanifest.applydiffgrafts(mf1, mf2)
         d = dmf1.diff(dmf2, matcher=match)
-        for fn, value in pycompat.iteritems(d):
+        for fn, value in d.items():
             if listclean:
                 cleanset.discard(fn)
             if fn in deletedset:

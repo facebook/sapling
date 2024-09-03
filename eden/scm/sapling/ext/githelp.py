@@ -100,10 +100,7 @@ def parseoptions(ui, cmdoptions, args):
 
     args = list([convert(x) for x in args])
     opts = dict(
-        [
-            (k, convert(v)) if isinstance(v, str) else (k, v)
-            for k, v in pycompat.iteritems(opts)
-        ]
+        [(k, convert(v)) if isinstance(v, str) else (k, v) for k, v in opts.items()]
     )
 
     return args, opts
@@ -119,7 +116,7 @@ class Command:
         prog = identity.default().cliname()
         cmd = prog + " " + self.name
         if self.opts:
-            for k, values in sorted(pycompat.iteritems(self.opts)):
+            for k, values in sorted(self.opts.items()):
                 for v in values:
                     if v:
                         cmd += " %s %s" % (k, v)

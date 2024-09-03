@@ -66,7 +66,7 @@ exts = {
 
 
 def guesskind(dest):
-    for kind, extensions in pycompat.iteritems(exts):
+    for kind, extensions in exts.items():
         if any(dest.endswith(ext) for ext in extensions):
             return kind
     return None

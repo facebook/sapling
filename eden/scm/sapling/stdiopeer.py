@@ -110,13 +110,13 @@ class stdiopeer(wireproto.wirepeer):
             else:
                 wireargs[k] = args[k]
                 del args[k]
-        for k, v in sorted(pycompat.iteritems(wireargs)):
+        for k, v in sorted(wireargs.items()):
             k = encodeutf8(k)
             if isinstance(v, str):
                 v = encodeutf8(v)
             self._pipeo.write(b"%s %d\n" % (k, len(v)))
             if isinstance(v, dict):
-                for dk, dv in pycompat.iteritems(v):
+                for dk, dv in v.items():
                     if isinstance(dk, str):
                         dk = encodeutf8(dk)
                     if isinstance(dv, str):

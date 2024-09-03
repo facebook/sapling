@@ -54,7 +54,7 @@ triggered = set()
 
 
 def loadhint(ui, extname, registrarobj) -> None:
-    for name, func in pycompat.iteritems(registrarobj._table):
+    for name, func in registrarobj._table.items():
         hinttable[name] = func
 
 

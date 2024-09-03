@@ -714,7 +714,7 @@ class treemanifestctx:
             raise NotImplemented("native trees don't support shallow " "readdelta yet")
         else:
             md = _buildtree(self._manifestlog)
-            for f, ((n1, fl1), (n2, fl2)) in pycompat.iteritems(parentmf.diff(mf)):
+            for f, ((n1, fl1), (n2, fl2)) in parentmf.diff(mf).items():
                 if n2:
                     md[f] = n2
                     if fl2:
@@ -848,7 +848,7 @@ def debuggetroottree(ui, repo, rootnode):
 def _difftoaddremove(diff):
     added = []
     removed = []
-    for filename, (old, new) in pycompat.iteritems(diff):
+    for filename, (old, new) in diff.items():
         if new is not None and new[0] is not None:
             added.append((filename, new[0], new[1]))
         else:

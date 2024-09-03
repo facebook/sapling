@@ -121,7 +121,7 @@ def _ctxdesc(ctx) -> str:
     desc = '%s "%s"' % (ctx, ctx.description().split("\n", 1)[0])
     repo = ctx.repo()
     names = []
-    for nsname, ns in pycompat.iteritems(repo.names):
+    for nsname, ns in repo.names.items():
         if nsname == "branches":
             continue
         names.extend(ns.names(repo, ctx.node()))
@@ -301,7 +301,7 @@ class rebaseruntime:
             activebookmark = pycompat.encodeutf8(self.activebookmark)
         f.write(b"%s\n" % activebookmark)
         destmap = self.destmap.node2node
-        for d, v in pycompat.iteritems(self.state.node2node):
+        for d, v in self.state.node2node.items():
             destnode = hex(destmap[d])
             f.write(pycompat.encodeutf8("%s:%s:%s\n" % (hex(d), hex(v), destnode)))
         repo.ui.debug("rebase status stored\n")
@@ -553,7 +553,7 @@ class rebaseruntime:
         # if we fail before the transaction closes.
         self.storestatus()
 
-        cands = [k for k, v in pycompat.iteritems(self.state) if v == revtodo]
+        cands = [k for k, v in self.state.items() if v == revtodo]
         total = len(cands)
         pos = 0
         with progress.bar(ui, _("rebasing"), _("changesets"), total) as prog:
@@ -1502,7 +1502,7 @@ def _definedestmap(
             # behavior may be abort with "cannot find branching point" error)
             bpbase.clear()
         tonodes = repo.changelog.tonodes
-        for bp, bs in pycompat.iteritems(bpbase):  # calculate roots
+        for bp, bs in bpbase.items():  # calculate roots
             rootnodes += list(
                 repo.dageval(lambda: children(tonodes([bp])) & ancestors(tonodes(bs)))
             )
@@ -2178,9 +2178,7 @@ def needupdate(repo, state) -> bool:
         return False
 
     # We should be standing on the first as-of-yet unrebased commit.
-    firstunrebased = min(
-        [old for old, new in pycompat.iteritems(state) if new == nullrev]
-    )
+    firstunrebased = min([old for old, new in state.items() if new == nullrev])
     if firstunrebased in parents:
         return True
 

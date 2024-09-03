@@ -127,9 +127,7 @@ class manifestdict:
             return m1.filesnotin(m2)
         diff = self.diff(m2)
         files = set(
-            filepath
-            for filepath, hashflags in pycompat.iteritems(diff)
-            if hashflags[1][0] is None
+            filepath for filepath, hashflags in diff.items() if hashflags[1][0] is None
         )
         return files
 

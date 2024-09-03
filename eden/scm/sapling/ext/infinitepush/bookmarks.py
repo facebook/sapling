@@ -52,7 +52,7 @@ def saveremotebookmarks(repo, newbookmarks, remote) -> None:
                 del newbookmarks[rname]
             bookmarks[rname] = hexnode
 
-    for bookmark, hexnode in pycompat.iteritems(newbookmarks):
+    for bookmark, hexnode in newbookmarks.items():
         bookmarks[bookmark] = hexnode
     remotenamesext.saveremotenames(repo, {remotepath: bookmarks})
 
@@ -62,7 +62,7 @@ def savelocalbookmarks(repo, bookmarks) -> None:
         return
     with repo.wlock(), repo.lock(), repo.transaction("bookmark") as tr:
         changes = []
-        for scratchbook, node in pycompat.iteritems(bookmarks):
+        for scratchbook, node in bookmarks.items():
             changectx = repo[node]
             changes.append((scratchbook, changectx.node()))
         repo._bookmarks.applychanges(repo, tr, changes)
@@ -70,7 +70,7 @@ def savelocalbookmarks(repo, bookmarks) -> None:
 
 def encodebookmarks(bookmarks) -> bytes:
     encoded = {}
-    for bookmark, node in pycompat.iteritems(bookmarks):
+    for bookmark, node in bookmarks.items():
         encoded[bookmark] = node
     dumped = pycompat.encodeutf8(json.dumps(encoded))
     result = struct.pack(">i", len(dumped)) + dumped
@@ -84,6 +84,6 @@ def decodebookmarks(stream):
     # python json module always returns unicode strings. We need to convert
     # it back to bytes string
     result = {}
-    for bookmark, node in pycompat.iteritems(unicodedict):
+    for bookmark, node in unicodedict.items():
         result[bookmark] = node
     return result

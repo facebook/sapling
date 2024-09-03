@@ -129,17 +129,13 @@ def _exthook(ui, repo, htype, name, cmd, args, throw, background=False):
     env["SAPLING_CLIENT_ENTRY_POINT"] = cri["entry_point"]
     env["SAPLING_CLIENT_CORRELATOR"] = cri["correlator"]
 
-    for k, v in pycompat.iteritems(args):
+    for k, v in args.items():
         if callable(v):
             v = v()
         if isinstance(v, dict):
             # make the dictionary element order stable across Python
             # implementations
-            v = (
-                "{"
-                + ", ".join("%r: %r" % i for i in sorted(pycompat.iteritems(v)))
-                + "}"
-            )
+            v = "{" + ", ".join("%r: %r" % i for i in sorted(v.items())) + "}"
         env["HG_" + k.upper()] = v
 
     if repo:

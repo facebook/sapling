@@ -46,7 +46,7 @@ class _overlaydict(dict):
 
 def _packmetadata(dictobj):
     result = []
-    for k, v in pycompat.iteritems(dictobj):
+    for k, v in dictobj.items():
         if not v:
             continue
         entry = "%s=%s" % (k, v)
@@ -121,7 +121,7 @@ class treestatemap:
             self._tree.importmap(importdirstate._map)
             # Import copymap
             copymap = importdirstate.copies()
-            for dest, src in pycompat.iteritems(copymap):
+            for dest, src in copymap.items():
                 self.copy(src, dest)
         assert len(self._parents) == 2
 

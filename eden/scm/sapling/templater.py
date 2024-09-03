@@ -631,7 +631,7 @@ def _buildfuncargs(exp, context, curmethods, funcname, argspec):
 
     def compiledict(xs):
         return util.sortdict(
-            (k, compileexp(x, context, curmethods)) for k, x in pycompat.iteritems(xs)
+            (k, compileexp(x, context, curmethods)) for k, x in xs.items()
         )
 
     def compilelist(xs):
@@ -703,8 +703,7 @@ def dict_(context, mapping, args):
         data[k] = evalfuncarg(context, mapping, v)
 
     data.update(
-        (k, evalfuncarg(context, mapping, v))
-        for k, v in pycompat.iteritems(args["kwargs"])
+        (k, evalfuncarg(context, mapping, v)) for k, v in args["kwargs"].items()
     )
     return templatekw.hybriddict(data)
 
@@ -1900,7 +1899,7 @@ def templatepath(name):
 
 def loadfunction(ui, extname, registrarobj):
     """Load template function from specified registrarobj"""
-    for name, func in pycompat.iteritems(registrarobj._table):
+    for name, func in registrarobj._table.items():
         funcs[name] = func
 
 

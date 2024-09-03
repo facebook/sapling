@@ -502,7 +502,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, filterfn, *pats, **opt
             # 5. finally restore backed-up files
             try:
                 dirstate = repo.dirstate
-                for realname, tmpname in pycompat.iteritems(backups):
+                for realname, tmpname in backups.items():
                     ui.debug("restoring %r to %r\n" % (tmpname, realname))
 
                     if dirstate[realname] == "n":
@@ -2099,7 +2099,7 @@ class changeset_printer:
         if branch != "default":
             self.ui.write(columns["branch"] % branch, label="log.branch")
 
-        for nsname, ns in pycompat.iteritems(self.repo.names):
+        for nsname, ns in self.repo.names.items():
             # branches has special logic already handled above, so here we just
             # skip it
             if nsname == "branches":

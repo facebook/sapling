@@ -107,7 +107,7 @@ def _chain(src, dst, a, b):
     then the result will be {"y": "x"}
     """
     t = a.copy()
-    for k, v in pycompat.iteritems(b):
+    for k, v in b.items():
         if v in t:
             # found a chain
             if t[v] != k:
@@ -402,7 +402,7 @@ def duplicatecopies(repo, wctx, rev, fromrev, skiprev=None):
     copies between fromrev and rev.
     """
     dagcopytrace = _get_dagcopytrace(repo, wctx, skiprev)
-    for dst, src in pycompat.iteritems(pathcopies(repo[fromrev], repo[rev])):
+    for dst, src in pathcopies(repo[fromrev], repo[rev]).items():
         if (
             dagcopytrace
             and dst in repo[skiprev]
@@ -485,7 +485,7 @@ def record_amend_copies(repo, amend_copies, old, amended_ctx):
                 pycompat.decodeutf8(codecs.decode(pycompat.encodeutf8(k), "base64")),
                 pycompat.decodeutf8(codecs.decode(pycompat.encodeutf8(v), "base64")),
             )
-            for (k, v) in pycompat.iteritems(orig_encoded)
+            for (k, v) in orig_encoded.items()
         )
 
         # Copytrace information is not valid if it refers to a file that
@@ -495,14 +495,14 @@ def record_amend_copies(repo, amend_copies, old, amended_ctx):
         #
         # Find chained copies and renames (a -> b -> c) and collapse them to
         # (a -> c).  Delete the entry for b if this was a rename.
-        for dst, src in pycompat.iteritems(amend_copies):
+        for dst, src in amend_copies.items():
             if src in orig_amend_copies:
                 amend_copies[dst] = orig_amend_copies[src]
                 if src not in amended_ctx:
                     del orig_amend_copies[src]
 
         # Copy any left over copies from the previous context.
-        for dst, src in pycompat.iteritems(orig_amend_copies):
+        for dst, src in orig_amend_copies.items():
             if dst not in amend_copies:
                 amend_copies[dst] = src
 
@@ -512,7 +512,7 @@ def record_amend_copies(repo, amend_copies, old, amended_ctx):
                 pycompat.decodeutf8(codecs.encode(pycompat.encodeutf8(k), "base64")),
                 pycompat.decodeutf8(codecs.encode(pycompat.encodeutf8(v), "base64")),
             )
-            for (k, v) in pycompat.iteritems(amend_copies)
+            for (k, v) in amend_copies.items()
         )
         db[amended_ctx.node()] = json.dumps(encoded)
         try:
@@ -577,7 +577,7 @@ def getamendcopies(repo, dest, ancestor):
                 codecs.decode(k.encode("utf8"), "base64").decode("utf8"),
                 codecs.decode(v.encode("utf8"), "base64").decode("utf8"),
             )
-            for (k, v) in pycompat.iteritems(encoded)
+            for (k, v) in encoded.items()
         )
     except Exception:
         repo.ui.log("copytrace", "Failed to load amend copytrace for %s" % dest.hex())

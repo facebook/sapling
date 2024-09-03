@@ -2755,7 +2755,7 @@ def diffhunks(
         copy = dict(
             (
                 (dst, src)
-                for (dst, src) in pycompat.iteritems(copy)
+                for (dst, src) in copy.items()
                 if dst.startswith(relroot) and src.startswith(relroot)
             )
         )

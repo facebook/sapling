@@ -389,7 +389,7 @@ def getpack(repo, proto, args, version=1):
         invalidatelinkrev = "invalidatelinkrev" in repo.storerequirements
 
         # Sort the files by name, so we provide deterministic results
-        for filename, nodes in sorted(pycompat.iteritems(files)):
+        for filename, nodes in sorted(files.items()):
             filename = pycompat.decodeutf8(filename)
             args.append([filename, [hex(n) for n in nodes]])
             fl = repo.file(filename)

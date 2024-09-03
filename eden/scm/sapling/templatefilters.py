@@ -488,7 +488,7 @@ def xmlescape(text):
 
 def loadfilter(ui, extname, registrarobj):
     """Load template filter from specified registrarobj"""
-    for name, func in pycompat.iteritems(registrarobj._table):
+    for name, func in registrarobj._table.items():
         filters[name] = func
 
 

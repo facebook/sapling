@@ -694,7 +694,7 @@ class sortdict(collections.OrderedDict):
         # __setitem__() isn't called as of PyPy 5.8.0
         def update(self, src):
             if isinstance(src, dict):
-                src = pycompat.iteritems(src)
+                src = src.items()
             for k, v in src:
                 self[k] = v
 
@@ -1142,7 +1142,7 @@ filtertable = {"tempfile:": tempfilter, "pipe:": pipefilter}
 
 def filter(s, cmd):
     "filter a string through a command that transforms its input to its output"
-    for name, fn in pycompat.iteritems(filtertable):
+    for name, fn in filtertable.items():
         if cmd.startswith(name):
             return fn(s, cmd[len(name) :].lstrip())
     return pipefilter(s, cmd)
@@ -1301,7 +1301,7 @@ def shellenviron(environ=None):
 
     env = dict(encoding.environ)
     if environ:
-        env.update((k, py2shell(v)) for k, v in pycompat.iteritems(environ))
+        env.update((k, py2shell(v)) for k, v in environ.items())
     env["HG"] = hgexecutable()
     return env
 

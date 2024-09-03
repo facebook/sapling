@@ -140,7 +140,7 @@ class shallowcg1packer(changegroup.cg1packer):
                 clrevision = cl.changelogrevision
                 mflog = repo.manifestlog
                 with progress.bar(repo.ui, _("manifests"), total=len(mfs)) as prog:
-                    for mfnode, clnode in pycompat.iteritems(mfs):
+                    for mfnode, clnode in mfs.items():
                         prog.value += 1
                         if (
                             filestosend == LocalFiles
@@ -162,7 +162,7 @@ class shallowcg1packer(changegroup.cg1packer):
                             p1node = clrevision(clp1node).manifest
                             p1ctx = tmfl[p1node]
 
-                        diff = pycompat.iteritems(p1ctx.read().diff(mfctx.read()))
+                        diff = p1ctx.read().diff(mfctx.read()).items()
                         for filename, ((anode, aflag), (bnode, bflag)) in diff:
                             if bnode is not None:
                                 fclnodes = fnodes.setdefault(filename, {})
@@ -207,7 +207,7 @@ class shallowcg1packer(changegroup.cg1packer):
                     linkrevnodes = linknodes(filerevlog, fname)
                     # Normally we'd prune the linkrevnodes first,
                     # but that would perform the server fetches one by one.
-                    for fnode, cnode in list(pycompat.iteritems(linkrevnodes)):
+                    for fnode, cnode in list(linkrevnodes.items()):
                         # Adjust linknodes so remote file revisions aren't sent
                         if filestosend == LocalFiles:
                             if phasecache.phase(repo, cl.rev(cnode)) == phases.public:
