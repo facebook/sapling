@@ -470,63 +470,6 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
         self.add_many(ctx, entries).await
     }
 
-    async fn get(
-        &self,
-        ctx: &CoreContext,
-        source_repo_id: RepositoryId,
-        bcs_id: ChangesetId,
-        target_repo_id: RepositoryId,
-    ) -> Result<
-        Vec<(
-            ChangesetId,
-            Option<CommitSyncConfigVersion>,
-            Option<SyncedCommitSourceRepo>,
-        )>,
-        Error,
-    > {
-        let entries = self
-            .get_many(ctx, source_repo_id, target_repo_id, &[bcs_id])
-            .await?
-            .remove(&bcs_id)
-            .unwrap_or_default();
-        Ok(entries
-            .into_iter()
-            .map(|entry| {
-                (
-                    entry.target_bcs_id,
-                    entry.maybe_version_name,
-                    entry.maybe_source_repo,
-                )
-            })
-            .collect())
-    }
-
-    async fn get_maybe_stale(
-        &self,
-        ctx: &CoreContext,
-        source_repo_id: RepositoryId,
-        bcs_id: ChangesetId,
-        target_repo_id: RepositoryId,
-    ) -> Result<Vec<FetchedMappingEntry>, Error> {
-        STATS::gets.add_value(1);
-        ctx.perf_counters()
-            .increment_counter(PerfCounterType::SqlReadsReplica);
-
-        let entries = self
-            .get_many_impl(
-                ctx,
-                source_repo_id,
-                target_repo_id,
-                &[bcs_id],
-                &self.read_connection,
-            )
-            .await?
-            .remove(&bcs_id)
-            .unwrap_or_default();
-
-        Ok(entries)
-    }
-
     async fn get_many(
         &self,
         ctx: &CoreContext,
@@ -577,6 +520,27 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
         }
 
         Ok(map)
+    }
+
+    async fn get_many_maybe_stale(
+        &self,
+        ctx: &CoreContext,
+        source_repo_id: RepositoryId,
+        target_repo_id: RepositoryId,
+        bcs_ids: &[ChangesetId],
+    ) -> Result<HashMap<ChangesetId, Vec<FetchedMappingEntry>>, Error> {
+        STATS::gets.add_value(1);
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
+
+        self.get_many_impl(
+            ctx,
+            source_repo_id,
+            target_repo_id,
+            bcs_ids,
+            &self.read_connection,
+        )
+        .await
     }
 
     async fn insert_equivalent_working_copy(

@@ -161,6 +161,15 @@ async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
         )
         .await
         .expect("Get many failed");
+    let result_maybe_stale = mapping
+        .get_many_maybe_stale(
+            &ctx,
+            REPO_ZERO,
+            REPO_ONE,
+            &[bonsai::ONES_CSID, bonsai::THREES_CSID],
+        )
+        .await
+        .expect("Get many maybe stale failed");
     assert_eq!(
         result
             .get(&bonsai::ONES_CSID)
@@ -187,6 +196,32 @@ async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
             maybe_source_repo: Some(SyncedCommitSourceRepo::Large),
         }
     );
+    assert_eq!(
+        result_maybe_stale
+            .get(&bonsai::ONES_CSID)
+            .unwrap()
+            .iter()
+            .next()
+            .expect("Unexpectedly, mapping is absent"),
+        &FetchedMappingEntry {
+            target_bcs_id: bonsai::TWOS_CSID,
+            maybe_version_name: Some(version_name.clone()),
+            maybe_source_repo: Some(SyncedCommitSourceRepo::Large)
+        }
+    );
+    assert_eq!(
+        result_maybe_stale
+            .get(&bonsai::THREES_CSID)
+            .unwrap()
+            .iter()
+            .next()
+            .expect("Unexpectedly, mapping is absent"),
+        &FetchedMappingEntry {
+            target_bcs_id: bonsai::FOURS_CSID,
+            maybe_version_name: Some(version_name.clone()),
+            maybe_source_repo: Some(SyncedCommitSourceRepo::Large),
+        }
+    );
 
     let result = mapping
         .get_many(
@@ -197,6 +232,15 @@ async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
         )
         .await
         .expect("Get many failed");
+    let result_maybe_stale = mapping
+        .get_many_maybe_stale(
+            &ctx,
+            REPO_ONE,
+            REPO_ZERO,
+            &[bonsai::FOURS_CSID, bonsai::TWOS_CSID],
+        )
+        .await
+        .expect("Get many maybe stale failed");
     assert_eq!(
         result
             .get(&bonsai::TWOS_CSID)
@@ -212,6 +256,32 @@ async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
     );
     assert_eq!(
         result
+            .get(&bonsai::FOURS_CSID)
+            .unwrap()
+            .iter()
+            .next()
+            .expect("Unexpectedly, mapping is absent"),
+        &FetchedMappingEntry {
+            target_bcs_id: bonsai::THREES_CSID,
+            maybe_version_name: Some(version_name.clone()),
+            maybe_source_repo: Some(SyncedCommitSourceRepo::Large)
+        }
+    );
+    assert_eq!(
+        result_maybe_stale
+            .get(&bonsai::TWOS_CSID)
+            .unwrap()
+            .iter()
+            .next()
+            .expect("Unexpectedly, mapping is absent"),
+        &FetchedMappingEntry {
+            target_bcs_id: bonsai::ONES_CSID,
+            maybe_version_name: Some(version_name.clone()),
+            maybe_source_repo: Some(SyncedCommitSourceRepo::Large)
+        }
+    );
+    assert_eq!(
+        result_maybe_stale
             .get(&bonsai::FOURS_CSID)
             .unwrap()
             .iter()

@@ -182,7 +182,23 @@ pub trait SyncedCommitMapping: Send + Sync {
             Option<SyncedCommitSourceRepo>,
         )>,
         Error,
-    >;
+    > {
+        let entries = self
+            .get_many(ctx, source_repo_id, target_repo_id, &[bcs_id])
+            .await?
+            .remove(&bcs_id)
+            .unwrap_or_default();
+        Ok(entries
+            .into_iter()
+            .map(|entry| {
+                (
+                    entry.target_bcs_id,
+                    entry.maybe_version_name,
+                    entry.maybe_source_repo,
+                )
+            })
+            .collect())
+    }
 
     /// Find all the mapping entries for a given source commit and target repo.
     ///
@@ -194,10 +210,29 @@ pub trait SyncedCommitMapping: Send + Sync {
         source_repo_id: RepositoryId,
         bcs_id: ChangesetId,
         target_repo_id: RepositoryId,
-    ) -> Result<Vec<FetchedMappingEntry>, Error>;
+    ) -> Result<Vec<FetchedMappingEntry>, Error> {
+        let entries = self
+            .get_many_maybe_stale(ctx, source_repo_id, target_repo_id, &[bcs_id])
+            .await?
+            .remove(&bcs_id)
+            .unwrap_or_default();
+        Ok(entries)
+    }
 
     /// Find all the mapping entries given many source commits and a target repo
     async fn get_many(
+        &self,
+        ctx: &CoreContext,
+        source_repo_id: RepositoryId,
+        target_repo_id: RepositoryId,
+        bcs_ids: &[ChangesetId],
+    ) -> Result<HashMap<ChangesetId, Vec<FetchedMappingEntry>>, Error>;
+
+    /// Find all the mapping entries given many source commits and a target repo
+    ///
+    /// This method is similar to `get_many`, but it doesn't query the DB master
+    /// and so can return stale data.
+    async fn get_many_maybe_stale(
         &self,
         ctx: &CoreContext,
         source_repo_id: RepositoryId,
