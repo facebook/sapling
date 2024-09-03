@@ -78,3 +78,20 @@ Back out a commit copying and modifying a file:
   @@ -1,1 +0,0 @@
   -B
   \ No newline at end of file
+
+Back out a commit copying and modifying a file (case 2)
+
+  $ newclientrepo
+  $ drawdag <<EOF
+  > C  # C/A = AA
+  > |
+  > B  # B/B = B (copied from A)
+  > |
+  > A
+  > EOF
+  $ hg go -q $C
+XXX Fixme
+  $ hg backout -r $B
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  nothing changed
+  [1]
