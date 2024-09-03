@@ -1568,7 +1568,7 @@ function wait_for_bookmark_delete() {
 function get_bookmark_value_edenapi {
   local repo="$1"
   local bookmark="$2"
-  REPONAME="$repo" sl debugapi -e bookmarks -i "[\"$bookmark\"]" | jq -r ".\"$bookmark\""
+  sl debugapi mono:"$repo" -e bookmarks -i "[\"$bookmark\"]" | jq -r ".\"$bookmark\""
 }
 
 function wait_for_bookmark_move_away_edenapi() {
@@ -1890,7 +1890,6 @@ function sl {
     --config "edenapi.url=https://localhost:$MONONOKE_SOCKET/edenapi" \
     --config "edenapi.enable=true" \
     --config "remotefilelog.http=true" \
-    --config "remotefilelog.reponame=$REPONAME" \
     "$@"
 }
 
@@ -2536,7 +2535,7 @@ function x_repo_lookup() {
   SOURCE_REPO="$1"
   TARGET_REPO="$2"
   HASH="$3"
-  TRANSLATED=$(REPONAME=$SOURCE_REPO sl debugapi -e committranslateids -i "[{'Hg': '$HASH'}]" -i "'Hg'" -i "'$SOURCE_REPO'" -i "'$TARGET_REPO'")
+  TRANSLATED=$(sl debugapi -e committranslateids -i "[{'Hg': '$HASH'}]" -i "'Hg'" -i "'$SOURCE_REPO'" -i "'$TARGET_REPO'")
   sl debugshell <<EOF
 print(hex(${TRANSLATED}[0]["translated"]["Hg"]))
 EOF

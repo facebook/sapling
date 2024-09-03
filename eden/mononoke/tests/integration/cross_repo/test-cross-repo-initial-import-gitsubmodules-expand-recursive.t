@@ -658,7 +658,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   >   
   >   printf "\n\nCall sl committranslateids\n" 
   >   
-  >   REPONAME=$LARGE_REPO_NAME sl debugapi -e committranslateids \
+  >   sl debugapi -e committranslateids \
   >     -i "[{'Hg': '$hg_hash'}]" -i "'Bonsai'" -i None -i "'$SUBMODULE_REPO_NAME'"
   >   
   > }
@@ -786,7 +786,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   
   6 directories, 10 files
   $ function backsync_get_info_and_derive_data() {
-  >   REPONAME="$LARGE_REPO_NAME" sl cloud backup -q
+  >   sl cloud backup -q
   >   COMMIT_TO_SYNC=$(hg whereami)
   >   COMMIT_TITLE=$(hg log -l1  -T "{truncate(desc, 1)}")
   >   printf "Processing commit: $COMMIT_TITLE\n"
@@ -817,7 +817,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 -- EXPECT: commit isn't synced and returns working copy equivalent instead
   $ echo "changing large repo file" > file_in_large_repo.txt
   $ hg commit -A -m "Changing large repo file" 
-  $ REPONAME=$LARGE_REPO_NAME sl push -q -r . --to master --non-forward-move --pushvar NON_FAST_FORWARD=true
+  $ sl push -q -r . --to master --non-forward-move --pushvar NON_FAST_FORWARD=true
   $ backsync_get_info_and_derive_data
   Processing commit: Changing large repo file
   Commit hash: 48021e7aeafd324f9976f551aea60aa88dd9f61a
@@ -841,7 +841,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 -- EXPECT: commit is backsynced normally because it doesn't touch submodule expansions
   $ echo "changing small repo file" > smallrepofolder1/regular_dir/aardvar
   $ hg commit -A -m "Changing small repo in large repo (not submodule)" 
-  $ REPONAME=$LARGE_REPO_NAME sl push -q -r . --to master --non-forward-move --pushvar NON_FAST_FORWARD=true
+  $ sl push -q -r . --to master --non-forward-move --pushvar NON_FAST_FORWARD=true
   $ backsync_get_info_and_derive_data
   Processing commit: Changing small repo in large repo (not submodule)
   Commit hash: 35e70dc7f37c3f51876a0f017a733a13809bef32

@@ -38,7 +38,7 @@ Create and send file request.
   > EOF
 
 Check files in response.
-  $ sl debugapi -e filesattrs -f req
+  $ sl debugapi mono:repo -e filesattrs -f req
   [{"key": {"node": bin("17b8d4e3bafd4ec4812ad7c930aace9bf07ab033"),
             "path": "copy.txt"},
     "result": {"Ok": {"key": {"node": bin("17b8d4e3bafd4ec4812ad7c930aace9bf07ab033"),
