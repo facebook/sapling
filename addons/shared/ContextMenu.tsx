@@ -6,10 +6,10 @@
  */
 
 import {Icon} from 'isl-components/Icon';
+import {findParentWithClassName} from 'isl-components/utils';
 import {getZoomLevel} from 'isl-components/zoom';
 import {atom, useAtom, useSetAtom} from 'jotai';
 import {useEffect, useRef, useState} from 'react';
-import {findParentWithClassName} from 'shared/utils';
 
 import './ContextMenu.css';
 

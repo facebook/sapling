@@ -21,3 +21,18 @@ export function stylexPropsWithClassName(
   const {className, ...rest} = stylex.props(style);
   return {...rest, className: className + ' ' + names.filter(name => name != null).join(' ')};
 }
+
+export function findParentWithClassName(
+  start: HTMLElement,
+  className: string,
+): HTMLElement | undefined {
+  let el = start as HTMLElement | null;
+  while (el) {
+    if (el.classList?.contains(className)) {
+      return el;
+    } else {
+      el = el.parentElement;
+    }
+  }
+  return undefined;
+}

@@ -9,10 +9,10 @@ import type {MouseEvent, ReactNode} from 'react';
 import type {ExclusiveOr} from 'shared/typeUtils';
 
 import {ViewportOverlay} from './ViewportOverlay';
+import {findParentWithClassName} from './utils';
 import {getZoomLevel} from './zoom';
 import React, {useLayoutEffect, useEffect, useRef, useState} from 'react';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
-import {findParentWithClassName} from 'shared/utils';
 
 import './Tooltip.css';
 

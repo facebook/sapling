@@ -70,21 +70,6 @@ export function basename(s: string, delimiter = '/') {
   return s.slice(foundIndex + 1);
 }
 
-export function findParentWithClassName(
-  start: HTMLElement,
-  className: string,
-): HTMLElement | undefined {
-  let el = start as HTMLElement | null;
-  while (el) {
-    if (el.classList?.contains(className)) {
-      return el;
-    } else {
-      el = el.parentElement;
-    }
-  }
-  return undefined;
-}
-
 /**
  * Given a multi-line string, return the first line excluding '\n'.
  * If no newlines in the string, return the whole string.
