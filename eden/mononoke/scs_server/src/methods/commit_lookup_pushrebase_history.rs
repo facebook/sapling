@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::cmp::Ordering;
 use std::iter::once;
 use std::sync::Arc;
 
@@ -71,6 +72,14 @@ impl RepoChangesetsPushrebaseHistory {
         }
     }
 
+    fn second_last(&self) -> Option<RepoChangeset> {
+        match self.changesets.len().cmp(&1) {
+            Ordering::Greater => self.changesets.get(self.changesets.len() - 2).cloned(),
+            Ordering::Equal => Some(self.head.clone()),
+            Ordering::Less => None,
+        }
+    }
+
     async fn repo(&self, repo_name: &String) -> Result<RepoContext<Repo>, errors::ServiceError> {
         let repo = self
             .mononoke
@@ -127,8 +136,15 @@ impl RepoChangesetsPushrebaseHistory {
         }
     }
 
-    async fn try_traverse_commit_sync(&mut self) -> Result<bool, errors::ServiceError> {
-        let RepoChangeset(repo_name, bcs_id) = self.last();
+    async fn try_traverse_commit_sync(
+        &mut self,
+        changeset: Option<RepoChangeset>,
+    ) -> Result<bool, errors::ServiceError> {
+        let RepoChangeset(repo_name, bcs_id) = match changeset {
+            Some(changeset) => changeset,
+            None => self.last(),
+        };
+
         let repo = self.repo(&repo_name).await?;
 
         let maybe_common_commit_sync_config = repo
@@ -241,12 +257,21 @@ impl SourceControlServiceImpl {
         let mut pushrebased = false;
         if history.try_traverse_pushrebase().await? {
             pushrebased = true;
-        } else if history.try_traverse_commit_sync().await? {
+        } else if history.try_traverse_commit_sync(None).await? {
             pushrebased = history.try_traverse_pushrebase().await?;
         }
 
         if pushrebased {
-            history.try_traverse_commit_sync().await?;
+            if !history.try_traverse_commit_sync(None).await? {
+                // In some scenarios, like the forward sync, we do not add the mapping for `small
+                // repository commit -> prepushrebase commit in large repository`. Fixing that, as
+                // in D59961713, by adding the relevant mapping is potentially risky. So, we just
+                // use a workaround here which is to look for the `small repository commit ->
+                // synced large repository commit` mapping which does always exist.
+                history
+                    .try_traverse_commit_sync(history.second_last())
+                    .await?;
+            }
         }
 
         Ok(history.into_thrift())
