@@ -21,7 +21,6 @@ use metaconfig_types::BackupRepoConfig;
 use metaconfig_types::BlobConfig;
 use metaconfig_types::CensoredScubaParams;
 use metaconfig_types::CommonConfig;
-use metaconfig_types::GitConfigs;
 use metaconfig_types::Redaction;
 use metaconfig_types::RedactionConfig;
 use metaconfig_types::RepoConfig;
@@ -232,7 +231,6 @@ fn parse_with_repo_definition(
         commit_graph_config,
         deep_sharding_config,
         everstore_local_path,
-        git_concurrency,
         metadata_logger_config,
         commit_cloud_config,
         zelos_config,
@@ -240,7 +238,7 @@ fn parse_with_repo_definition(
         default_objects_count,
         x_repo_sync_source_mapping,
         mononoke_cas_sync_config,
-        git_lfs_interpret_pointers,
+        git_configs,
         ..
     } = named_repo_config;
 
@@ -354,15 +352,13 @@ fn parse_with_repo_definition(
 
     let commit_graph_config = commit_graph_config.convert()?.unwrap_or_default();
     let deep_sharding_config = deep_sharding_config.convert()?;
-    let git_concurrency = git_concurrency.convert()?;
     let metadata_logger_config = metadata_logger_config.convert()?.unwrap_or_default();
     let zelos_config = zelos_config.convert()?;
     let x_repo_sync_source_mapping = x_repo_sync_source_mapping.convert()?;
-    let git_lfs_interpret_pointers = git_lfs_interpret_pointers.unwrap_or(false);
-    let git_configs = GitConfigs {
-        git_concurrency,
-        git_lfs_interpret_pointers,
-    };
+
+    let raw_git_configs = git_configs.unwrap_or_default();
+
+    let git_configs = raw_git_configs.convert()?;
 
     let commit_cloud_config = commit_cloud_config.convert()?.unwrap_or_default();
     let mononoke_cas_sync_config = mononoke_cas_sync_config.convert()?;
@@ -553,6 +549,7 @@ mod test {
     use metaconfig_types::EphemeralBlobstoreConfig;
     use metaconfig_types::FilestoreParams;
     use metaconfig_types::GitConcurrencyParams;
+    use metaconfig_types::GitConfigs;
     use metaconfig_types::HgSyncConfig;
     use metaconfig_types::HookBypass;
     use metaconfig_types::HookConfig;
@@ -924,7 +921,7 @@ mod test {
             scrub_enabled = true
             validate_enabled = true
 
-            [git_concurrency]
+            [git_configs.git_concurrency]
             trees_and_blobs = 500
             commits = 1000
             tags = 1000

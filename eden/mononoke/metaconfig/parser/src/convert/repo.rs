@@ -24,6 +24,7 @@ use metaconfig_types::CrossRepoCommitValidation;
 use metaconfig_types::DerivedDataConfig;
 use metaconfig_types::DerivedDataTypesConfig;
 use metaconfig_types::GitConcurrencyParams;
+use metaconfig_types::GitConfigs;
 use metaconfig_types::GitDeltaManifestV2Config;
 use metaconfig_types::GitDeltaManifestVersion;
 use metaconfig_types::GlobalrevConfig;
@@ -73,6 +74,7 @@ use repos::RawCrossRepoCommitValidationConfig;
 use repos::RawDerivedDataConfig;
 use repos::RawDerivedDataTypesConfig;
 use repos::RawGitConcurrencyParams;
+use repos::RawGitConfigs;
 use repos::RawGitDeltaManifestV2Config;
 use repos::RawHgSyncConfig;
 use repos::RawHookConfig;
@@ -800,6 +802,19 @@ impl Convert for RawGitConcurrencyParams {
             trees_and_blobs: self.trees_and_blobs.try_into()?,
             commits: self.commits.try_into()?,
             tags: self.tags.try_into()?,
+        })
+    }
+}
+
+impl Convert for RawGitConfigs {
+    type Output = GitConfigs;
+
+    fn convert(self) -> Result<Self::Output> {
+        let git_concurrency = self.git_concurrency.convert()?;
+        let git_lfs_interpret_pointers = self.git_lfs_interpret_pointers.unwrap_or(false);
+        Ok(GitConfigs {
+            git_concurrency,
+            git_lfs_interpret_pointers,
         })
     }
 }

@@ -1065,7 +1065,7 @@ fi
 
 if [ "$GIT_LFS_INTERPRET_POINTERS" == "1" ]; then
   cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
-git_lfs_interpret_pointers = true
+git_configs.git_lfs_interpret_pointers = true
 CONFIG
 fi
 
