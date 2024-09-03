@@ -68,6 +68,7 @@
     "scm/mononoke_memcache_sitevers:filenodes": 0,
     "scm/mononoke_memcache_sitevers:hg_mutation_store": 0,
     "scm/mononoke_memcache_sitevers:mutable_renames": 0,
-    "scm/mononoke_memcache_sitevers:sql": 0
+    "scm/mononoke_memcache_sitevers:sql": 0,
+    "scm/mononoke_memcache_sitevers:synced_commit_mapping": 0
   }
 }

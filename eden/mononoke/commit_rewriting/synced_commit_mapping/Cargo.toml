@@ -12,20 +12,29 @@ name = "synced_commit_mapping_test"
 path = "test/main.rs"
 
 [dependencies]
+abomonation = { version = "0.7", features = ["smallvec"] }
+abomonation_derive = "0.5"
 anyhow = "1.0.86"
 async-trait = "0.1.71"
 auto_impl = "1.1.0"
+bytes = { version = "1.6.0", features = ["serde"] }
+caching_ext = { version = "0.1.0", path = "../../common/rust/caching_ext" }
 context = { version = "0.1.0", path = "../../server/context" }
 dashmap = { version = "5.5.3", features = ["rayon", "serde"] }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 itertools = "0.11.0"
+justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+memcache = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+quickcheck = "1.0"
 rendezvous = { version = "0.1.0", path = "../../common/rendezvous" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+synced_commit_mapping_thrift = { version = "0.1.0", path = "if" }
 thiserror = "1.0.49"
 
 [dev-dependencies]

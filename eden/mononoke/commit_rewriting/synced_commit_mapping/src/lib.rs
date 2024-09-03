@@ -5,9 +5,11 @@
  * GNU General Public License version 2.
  */
 
+mod caching;
 mod sql;
 mod types;
 
+pub use crate::caching::CachingSyncedCommitMapping;
 pub use crate::sql::add_many_in_txn;
 pub use crate::sql::add_many_large_repo_commit_versions_in_txn;
 pub use crate::sql::SqlSyncedCommitMapping;

@@ -8,6 +8,8 @@ rust_library(
     srcs = glob(["types/src/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "types"},
     deps = [
+        "fbsource//third-party/rust:abomonation",
+        "fbsource//third-party/rust:abomonation_derive",
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:ascii",
         "fbsource//third-party/rust:clap",

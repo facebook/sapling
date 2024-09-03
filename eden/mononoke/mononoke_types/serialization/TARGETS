@@ -29,6 +29,7 @@ thrift_library(
         "//eden/mononoke/bonsai_hg_mapping/if:",
         "//eden/mononoke/bonsai_svnrev_mapping/if:",
         "//eden/mononoke/changesets/if:",
+        "//eden/mononoke/commit_rewriting/synced_commit_mapping/if:",
         "//eden/mononoke/derived_data:changeset_info",
         "//eden/mononoke/derived_data:changeset_info-unittest",
         "//eden/mononoke/derived_data/remote/if:",

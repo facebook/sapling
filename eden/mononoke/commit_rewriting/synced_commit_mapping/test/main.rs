@@ -7,7 +7,10 @@
 
 //! Tests for the synced commits mapping.
 
+use std::sync::Arc;
+
 use anyhow::Error;
+use caching_ext::CacheHandlerFactory;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use metaconfig_types::CommitSyncConfigVersion;
@@ -17,15 +20,41 @@ use mononoke_types_mocks::repo::REPO_ONE;
 use mononoke_types_mocks::repo::REPO_ZERO;
 use rendezvous::RendezVousOptions;
 use sql_construct::SqlConstruct;
+use synced_commit_mapping::CachingSyncedCommitMapping;
 use synced_commit_mapping::EquivalentWorkingCopyEntry;
 use synced_commit_mapping::FetchedMappingEntry;
+use synced_commit_mapping::SqlSyncedCommitMapping;
 use synced_commit_mapping::SqlSyncedCommitMappingBuilder;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMappingEntry;
 use synced_commit_mapping::SyncedCommitSourceRepo;
 use synced_commit_mapping::WorkingCopyEquivalence;
 
-async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
+fn sql_synced_commit_mapping() -> SqlSyncedCommitMapping {
+    SqlSyncedCommitMappingBuilder::with_sqlite_in_memory()
+        .unwrap()
+        .build(RendezVousOptions::for_test())
+}
+
+fn caching_synced_commit_mapping() -> CachingSyncedCommitMapping {
+    CachingSyncedCommitMapping::new(
+        Arc::new(sql_synced_commit_mapping()),
+        CacheHandlerFactory::Mocked,
+    )
+    .unwrap()
+}
+
+#[mononoke::fbinit_test]
+async fn test_add_and_get_sql(fb: FacebookInit) {
+    test_add_and_get_impl(fb, sql_synced_commit_mapping()).await;
+}
+
+#[mononoke::fbinit_test]
+async fn test_add_and_get_caching(fb: FacebookInit) {
+    test_add_and_get_impl(fb, caching_synced_commit_mapping()).await;
+}
+
+async fn test_add_and_get_impl(fb: FacebookInit, mapping: impl SyncedCommitMapping) {
     let version_name = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
     let ctx = CoreContext::test_mock(fb);
     let entry = SyncedCommitMappingEntry::new(
@@ -295,7 +324,17 @@ async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
     );
 }
 
-async fn missing<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
+#[mononoke::fbinit_test]
+async fn test_missing_sql(fb: FacebookInit) {
+    test_missing_impl(fb, sql_synced_commit_mapping()).await
+}
+
+#[mononoke::fbinit_test]
+async fn test_missing_caching(fb: FacebookInit) {
+    test_missing_impl(fb, caching_synced_commit_mapping()).await
+}
+
+async fn test_missing_impl(fb: FacebookInit, mapping: impl SyncedCommitMapping) {
     let ctx = CoreContext::test_mock(fb);
     let result = mapping
         .get(&ctx, REPO_ONE, bonsai::TWOS_CSID, REPO_ZERO)
@@ -304,7 +343,17 @@ async fn missing<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
     assert!(result.is_empty());
 }
 
-async fn equivalent_working_copy<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
+#[mononoke::fbinit_test]
+async fn test_equivalent_working_copy_sql(fb: FacebookInit) {
+    test_equivalent_working_copy_impl(fb, sql_synced_commit_mapping()).await
+}
+
+#[mononoke::fbinit_test]
+async fn test_equivalent_working_copy_caching(fb: FacebookInit) {
+    test_equivalent_working_copy_impl(fb, caching_synced_commit_mapping()).await
+}
+
+async fn test_equivalent_working_copy_impl(fb: FacebookInit, mapping: impl SyncedCommitMapping) {
     let ctx = CoreContext::test_mock(fb);
     let version_name = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
     let result = mapping
@@ -375,42 +424,19 @@ async fn equivalent_working_copy<M: SyncedCommitMapping>(fb: FacebookInit, mappi
 }
 
 #[mononoke::fbinit_test]
-async fn test_add_and_get(fb: FacebookInit) {
-    add_and_get(
-        fb,
-        SqlSyncedCommitMappingBuilder::with_sqlite_in_memory()
-            .unwrap()
-            .build(RendezVousOptions::for_test()),
-    )
-    .await;
+async fn test_version_for_large_repo_commit_sql(fb: FacebookInit) -> Result<(), Error> {
+    test_version_for_large_repo_commit_impl(fb, sql_synced_commit_mapping()).await
 }
 
 #[mononoke::fbinit_test]
-async fn test_missing(fb: FacebookInit) {
-    missing(
-        fb,
-        SqlSyncedCommitMappingBuilder::with_sqlite_in_memory()
-            .unwrap()
-            .build(RendezVousOptions::for_test()),
-    )
-    .await
+async fn test_version_for_large_repo_commit_caching(fb: FacebookInit) -> Result<(), Error> {
+    test_version_for_large_repo_commit_impl(fb, caching_synced_commit_mapping()).await
 }
 
-#[mononoke::fbinit_test]
-async fn test_equivalent_working_copy(fb: FacebookInit) {
-    equivalent_working_copy(
-        fb,
-        SqlSyncedCommitMappingBuilder::with_sqlite_in_memory()
-            .unwrap()
-            .build(RendezVousOptions::for_test()),
-    )
-    .await
-}
-
-#[mononoke::fbinit_test]
-async fn test_version_for_large_repo_commit(fb: FacebookInit) -> Result<(), Error> {
-    let mapping = SqlSyncedCommitMappingBuilder::with_sqlite_in_memory()?
-        .build(RendezVousOptions::for_test());
+async fn test_version_for_large_repo_commit_impl(
+    fb: FacebookInit,
+    mapping: impl SyncedCommitMapping,
+) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     // Check that at first we don't have a version for a given large repo commit
     assert!(
@@ -481,9 +507,19 @@ async fn test_version_for_large_repo_commit(fb: FacebookInit) -> Result<(), Erro
 }
 
 #[mononoke::fbinit_test]
-async fn test_overwrite(fb: FacebookInit) -> Result<(), Error> {
-    let mapping = SqlSyncedCommitMappingBuilder::with_sqlite_in_memory()?
-        .build(RendezVousOptions::for_test());
+async fn test_overwrite_sql(fb: FacebookInit) -> Result<(), Error> {
+    test_overwrite_impl(fb, sql_synced_commit_mapping()).await
+}
+
+#[mononoke::fbinit_test]
+async fn test_overwrite_caching(fb: FacebookInit) -> Result<(), Error> {
+    test_overwrite_impl(fb, caching_synced_commit_mapping()).await
+}
+
+async fn test_overwrite_impl(
+    fb: FacebookInit,
+    mapping: impl SyncedCommitMapping,
+) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
     // Insert working copy equivalence, version for the large commit

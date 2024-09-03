@@ -1,0 +1,16 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+
+oncall("mononoke")
+
+thrift_library(
+    name = "synced_commit_mapping_thrift",
+    languages = [
+        "rust",
+    ],
+    thrift_srcs = {
+        "synced_commit_mapping.thrift": [],
+    },
+    deps = [
+        "//eden/mononoke/mononoke_types/serialization:mononoke_types_serialization",
+    ],
+)

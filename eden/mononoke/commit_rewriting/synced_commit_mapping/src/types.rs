@@ -12,6 +12,8 @@ use ::sql::mysql_async::prelude::ConvIr;
 use ::sql::mysql_async::prelude::FromValue;
 use ::sql::mysql_async::FromValueError;
 use ::sql::mysql_async::Value;
+use abomonation_derive::Abomonation;
+use anyhow::anyhow;
 use anyhow::Error;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
@@ -19,6 +21,8 @@ use context::CoreContext;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
+use quickcheck::Arbitrary;
+use synced_commit_mapping_thrift as thrift;
 use thiserror::Error;
 
 #[derive(Debug, Eq, Error, PartialEq)]
@@ -44,10 +48,35 @@ pub enum ErrorKind {
 }
 
 // Repo that originally contained the synced commit
-#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq, mysql::OptTryFromRowField)]
+#[derive(
+    Abomonation,
+    Copy,
+    Clone,
+    Debug,
+    Eq,
+    Hash,
+    PartialEq,
+    mysql::OptTryFromRowField
+)]
 pub enum SyncedCommitSourceRepo {
     Large,
     Small,
+}
+
+impl SyncedCommitSourceRepo {
+    fn to_thrift(&self) -> thrift::SyncedCommitSourceRepo {
+        match self {
+            Self::Large => thrift::SyncedCommitSourceRepo::LARGE,
+            Self::Small => thrift::SyncedCommitSourceRepo::SMALL,
+        }
+    }
+    fn from_thrift(source_repo: thrift::SyncedCommitSourceRepo) -> Result<Self, Error> {
+        match source_repo {
+            thrift::SyncedCommitSourceRepo::LARGE => Ok(Self::Large),
+            thrift::SyncedCommitSourceRepo::SMALL => Ok(Self::Small),
+            _ => Err(anyhow!("Unknown SyncedCommitSourceRepo variant")),
+        }
+    }
 }
 
 impl ConvIr<SyncedCommitSourceRepo> for SyncedCommitSourceRepo {
@@ -81,6 +110,15 @@ impl From<SyncedCommitSourceRepo> for Value {
         match source_repo {
             Small => Value::Bytes(b"small".to_vec()),
             Large => Value::Bytes(b"large".to_vec()),
+        }
+    }
+}
+
+impl Arbitrary for SyncedCommitSourceRepo {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        match bool::arbitrary(g) {
+            true => Self::Large,
+            false => Self::Small,
         }
     }
 }
@@ -300,9 +338,47 @@ pub trait SyncedCommitMapping: Send + Sync {
     ) -> Result<Option<CommitSyncConfigVersion>, Error>;
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Abomonation, Clone, Debug, Hash, PartialEq, Eq)]
 pub struct FetchedMappingEntry {
     pub target_bcs_id: ChangesetId,
     pub maybe_version_name: Option<CommitSyncConfigVersion>,
     pub maybe_source_repo: Option<SyncedCommitSourceRepo>,
+}
+
+impl FetchedMappingEntry {
+    pub(crate) fn to_thrift(&self) -> thrift::FetchedMappingEntry {
+        thrift::FetchedMappingEntry {
+            target_bcs_id: self.target_bcs_id.into_thrift(),
+            maybe_version_name: self
+                .maybe_version_name
+                .as_ref()
+                .map(|version| version.0.clone()),
+            maybe_source_repo: self
+                .maybe_source_repo
+                .map(|source_repo| source_repo.to_thrift()),
+        }
+    }
+    pub(crate) fn from_thrift(entry: thrift::FetchedMappingEntry) -> Result<Self, Error> {
+        Ok(Self {
+            target_bcs_id: ChangesetId::from_thrift(entry.target_bcs_id)?,
+            maybe_version_name: entry.maybe_version_name.map(CommitSyncConfigVersion),
+            maybe_source_repo: entry
+                .maybe_source_repo
+                .map(SyncedCommitSourceRepo::from_thrift)
+                .transpose()?,
+        })
+    }
+}
+
+impl Arbitrary for FetchedMappingEntry {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        let target_bcs_id = ChangesetId::arbitrary(g);
+        let maybe_version_name = Option::<String>::arbitrary(g).map(CommitSyncConfigVersion);
+        let maybe_source_repo = Option::<SyncedCommitSourceRepo>::arbitrary(g);
+        Self {
+            target_bcs_id,
+            maybe_version_name,
+            maybe_source_repo,
+        }
+    }
 }
