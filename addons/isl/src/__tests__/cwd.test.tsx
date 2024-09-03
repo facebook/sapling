@@ -179,5 +179,8 @@ describe('isIrrelevantToCwd', () => {
     expect(isIrrelevantToCwd(C('addons/isl/'), '')).toBe(false);
     expect(isIrrelevantToCwd(C('addons/'), '')).toBe(false);
     expect(isIrrelevantToCwd(C(''), '')).toBe(false);
+    expect(isIrrelevantToCwd(C('addons/isl/'), '/')).toBe(false);
+    expect(isIrrelevantToCwd(C(''), '/')).toBe(false);
+    expect(isIrrelevantToCwd(C('/'), '/')).toBe(false);
   });
 });

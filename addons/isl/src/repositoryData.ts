@@ -59,6 +59,7 @@ export const useIsIrrelevantToCwd = (commit: CommitInfo) => {
 
 function isIrrelevantToCwd(commit: CommitInfo, repoRelativeCwd: RepoRelativePath): boolean {
   return (
+    repoRelativeCwd !== '/' &&
     !commit.maxCommonPathPrefix.startsWith(repoRelativeCwd) &&
     !repoRelativeCwd.startsWith(commit.maxCommonPathPrefix)
   );
