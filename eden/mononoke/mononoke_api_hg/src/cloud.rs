@@ -307,7 +307,8 @@ impl<R: MononokeRepo> HgRepoContext<R> {
             .await?;
         let lbs = history.local_bookmarks_as_map();
         let rbs = history.remote_bookmarks_as_map();
-        let hg_ids = history.collapse_into_vec(&rbs, &lbs);
+
+        let hg_ids = history.collapse_into_vec(&rbs, &lbs, flags);
 
         let nodes = self
             .form_smartlog_with_info(hg_ids, lbs, rbs, flags)

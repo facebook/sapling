@@ -10,6 +10,7 @@ use commit_cloud_types::references::WorkspaceRemoteBookmark;
 use commit_cloud_types::HistoricalVersion;
 use commit_cloud_types::LocalBookmarksMap;
 use commit_cloud_types::RemoteBookmarksMap;
+use commit_cloud_types::SmartlogFlag;
 use commit_cloud_types::WorkspaceHead;
 use commit_cloud_types::WorkspaceLocalBookmark;
 use mercurial_types::HgChangesetId;
@@ -70,13 +71,26 @@ impl WorkspaceHistory {
         &self,
         rbs: &RemoteBookmarksMap,
         lbs: &LocalBookmarksMap,
+        flags: &[SmartlogFlag],
     ) -> Vec<HgChangesetId> {
+        let lbs_heads = flags
+            .contains(&SmartlogFlag::AddAllBookmarks)
+            .then_some(lbs.keys().cloned())
+            .into_iter()
+            .flatten();
+
+        let rbs_heads = flags
+            .contains(&SmartlogFlag::AddRemoteBookmarks)
+            .then_some(rbs.keys().cloned())
+            .into_iter()
+            .flatten();
+
         self.heads
             .clone()
             .into_iter()
             .map(|head| head.commit)
-            .chain(rbs.keys().cloned())
-            .chain(lbs.keys().cloned())
+            .chain(lbs_heads)
+            .chain(rbs_heads)
             .collect::<Vec<HgChangesetId>>()
     }
 }
