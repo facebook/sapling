@@ -1766,7 +1766,10 @@ def concludenode(
 
 
 def rebasenode(repo, rev, p1, base, state, collapse, dest, wctx):
-    "Rebase a single revision rev on top of p1 using base as merge ancestor"
+    """Rebase a single revision rev on top of p1 using base as merge ancestor
+
+    Return a tuple of counts (updated, merged, removed, unresolved).
+    """
     # Merge phase
     # Update to destination and merge it with local
     if wctx.isinmemory():

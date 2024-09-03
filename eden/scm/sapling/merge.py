@@ -918,8 +918,9 @@ def manifestmerge(
         reverse_copies[v].append(k)
 
     actions = {}
-    # (n1, fl1) = "local"
-    # (n2, fl2) = "remote"
+    # (n1, fl1) = "local" (m1)
+    # (n2, fl2) = "remote" (m2)
+    # `n` means node, `fl` means flags (also called file type, see `types::tree::FileType` Rust type)
     for f1, ((n1, fl1), (n2, fl2)) in pycompat.iteritems(diff):
         # If the diff operation had re-mapped directories for one side, "m.ungraftedpath()"
         # will recover the original path for m.
@@ -945,16 +946,16 @@ def manifestmerge(
                 a = ma[fa]
                 fla = ma.flags(fa)
                 nol = "l" not in fl1 + fl2 + fla
-                if n2 == a and fl2 == fla:
+                if n2 == a and fl2 == fla:  # remote unchanged
                     actions[f1] = ("k", (), "remote unchanged")
                 elif n1 == a and fl1 == fla:  # local unchanged - use remote
                     if fl1 == fl2:
                         actions[f1] = ("g", (f2, fl2, False), "remote is newer")
                     else:
                         actions[f1] = ("rg", (f2, fl2, False), "flag differ")
-                elif nol and n2 == a:  # remote only changed 'x'
+                elif nol and n2 == a:  # remote only changed 'x' (file executable)
                     actions[f1] = ("e", (fl2,), "update permissions")
-                elif nol and n1 == a:  # local only changed 'x'
+                elif nol and n1 == a:  # local only changed 'x' (file executable)
                     actions[f1] = ("g", (f2, fl1, False), "remote is newer")
                 else:  # both changed something
                     actions[f1] = (
@@ -995,7 +996,7 @@ def manifestmerge(
                             "prompt changed/deleted",
                         )
                 elif n1 == addednodeid:
-                    # This extra 'a' is added by working copy manifest to mark
+                    # addednodeid is added by working copy manifest to mark
                     # the file as locally added. We should forget it instead of
                     # deleting it.
                     actions[f1] = ("f", None, "remote deleted")
@@ -2181,7 +2182,6 @@ def _update(
         elif not branchmerge:
             pas = [p1]
 
-        # deprecated config: merge.followcopies
         followcopies = repo.ui.configbool("merge", "followcopies")
         if overwrite:
             followcopies = False
