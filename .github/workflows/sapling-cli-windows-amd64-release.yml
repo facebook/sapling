@@ -52,7 +52,7 @@ jobs:
     - name: Grant Access
       run: git config --global --add safe.directory "$PWD"
     - name: Download Artifact
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4.1.7
       with:
         name: windows-amd64
     - name: Create pre-release
