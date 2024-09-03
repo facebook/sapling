@@ -194,10 +194,12 @@ Add a new config version to "all" configs, this new version has fbsource as larg
 Prepare for the invisible merge
 1. Create an independent ovrsource DAG in fbsource
   $ cd "$TESTTMP/ovr-hg-cnt"
+# edenapi uses repo name from paths.default - wrong! disable for now.
   $ hg push -q \
   >     --config extensions.pushrebase=! \
   >     --to ovrsource/pre_move_master \
   >     --create --force -r . \
+  >     --config edenapi.url= \
   >     mono:fbs-mon
   warning: repository is unrelated
 1.5. Mark independent ovrsource DAG in fbsource as preserved

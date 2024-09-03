@@ -38,11 +38,8 @@ Pull with the default certificate - this should work.
   pulling from mono:repo
 
 Pull from Mononoke with a different identity, make sure it fails
-  $ hg pull --config auth.mononoke.cert="$TEST_CERTDIR/client1.crt" --config auth.mononoke.key="$TEST_CERTDIR/client1.key"
-  pulling from mono:repo
-  remote: Authorization failed: Unauthorized access, permission denied
-  abort: unexpected EOL, expected netstring digit
-  [255]
+  $ hg pull --config auth.mononoke.cert="$TEST_CERTDIR/client1.crt" --config auth.mononoke.key="$TEST_CERTDIR/client1.key" 2>&1 | grep permission
+  *Failed to load repository: repo: permission denied: Repo metadata read access is not permitted* (glob)
 
 Pull with the identity in the global allowlist - this works, too.
   $ hg pull --config auth.mononoke.cert="$TEST_CERTDIR/client2.crt" --config auth.mononoke.key="$TEST_CERTDIR/client2.key"

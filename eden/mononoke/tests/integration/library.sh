@@ -573,10 +573,14 @@ function wait_for_mononoke {
     "${MONONOKE_START_TIMEOUT:-"$MONONOKE_DEFAULT_START_TIMEOUT"}" "$MONONOKE_SERVER_ADDR_FILE" \
     mononoke_health
 
-  # Now that we have started, write out a Sapling "mono" scheme that references our current IP/port.
+  # Now that we have started, write out a Sapling "mono" scheme that references our current IP/port,
+  # and configure the SLAPI URL.
   cat >> "$HGRCPATH" <<EOF
 [schemes]
 mono=mononoke://$(mononoke_address)/{1}
+
+[edenapi]
+url=https://localhost:$MONONOKE_SOCKET/edenapi/
 EOF
 }
 
@@ -1886,11 +1890,7 @@ function mononoke_git_service {
 # Run an hg binary configured with the settings require to talk to Mononoke
 # via SaplingRemoteAPI
 function sl {
-  hg \
-    --config "edenapi.url=https://localhost:$MONONOKE_SOCKET/edenapi" \
-    --config "edenapi.enable=true" \
-    --config "remotefilelog.http=true" \
-    "$@"
+  hg "$@" --config "remotefilelog.http=true"
 }
 
 function hginit_treemanifest() {
