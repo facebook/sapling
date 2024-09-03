@@ -47,6 +47,19 @@ from .i18n import _
 from .node import addednodeid, bin, hex, nullhex, nullid, wdirhex
 from .pycompat import encodeutf8
 
+# merge action types
+ACTION_MERGE = "m"
+ACTION_KEEP = "k"
+ACTION_GET = "g"
+ACTION_REMOVE_GET = "rg"  # symlink->file change
+ACTION_EXEC = "e"
+ACTION_CHANGED_DELETED = "cd"
+ACTION_REMOVE = "r"
+ACTION_FORGET = "f"
+ACTION_CREATED = "c"
+ACTION_CREATED_MERGE = "cm"
+ACTION_DELETED_CHANGED = "dc"
+
 
 class mergestate:
     """track 3-way merge state of individual files
@@ -932,13 +945,13 @@ def manifestmerge(
                 fa = copy.get(f1, None)
                 if fa is not None:
                     actions[f1] = (
-                        "m",
+                        ACTION_MERGE,
                         (f1, f2, fa, False, pa.node()),
                         "both renamed from " + fa,
                     )
                 else:
                     actions[f1] = (
-                        "m",
+                        ACTION_MERGE,
                         (f1, f2, None, False, pa.node()),
                         "both created",
                     )
@@ -947,19 +960,23 @@ def manifestmerge(
                 fla = ma.flags(fa)
                 nol = "l" not in fl1 + fl2 + fla
                 if n2 == a and fl2 == fla:  # remote unchanged
-                    actions[f1] = ("k", (), "remote unchanged")
+                    actions[f1] = (ACTION_KEEP, (), "remote unchanged")
                 elif n1 == a and fl1 == fla:  # local unchanged - use remote
                     if fl1 == fl2:
-                        actions[f1] = ("g", (f2, fl2, False), "remote is newer")
+                        actions[f1] = (ACTION_GET, (f2, fl2, False), "remote is newer")
                     else:
-                        actions[f1] = ("rg", (f2, fl2, False), "flag differ")
+                        actions[f1] = (
+                            ACTION_REMOVE_GET,
+                            (f2, fl2, False),
+                            "flag differ",
+                        )
                 elif nol and n2 == a:  # remote only changed 'x' (file executable)
-                    actions[f1] = ("e", (fl2,), "update permissions")
+                    actions[f1] = (ACTION_EXEC, (fl2,), "update permissions")
                 elif nol and n1 == a:  # local only changed 'x' (file executable)
-                    actions[f1] = ("g", (f2, fl1, False), "remote is newer")
+                    actions[f1] = (ACTION_GET, (f2, fl1, False), "remote is newer")
                 else:  # both changed something
                     actions[f1] = (
-                        "m",
+                        ACTION_MERGE,
                         (f1, f2, fa, False, pa.node()),
                         "versions differ",
                     )
@@ -973,7 +990,7 @@ def manifestmerge(
                 f2 = m2.ungraftedpath(f1prev) or f1prev
                 if f2 in m2:
                     actions[f1] = (
-                        "m",
+                        ACTION_MERGE,
                         (f1, f2, f2, False, pa.node()),
                         "local copied/moved from " + f1prev,
                     )
@@ -981,17 +998,17 @@ def manifestmerge(
                     # copy source doesn't exist - treat this as
                     # a change/delete conflict.
                     actions[f1] = (
-                        "cd",
+                        ACTION_CHANGED_DELETED,
                         (f1, None, f2, False, pa.node()),
                         "prompt changed/deleted copy source",
                     )
             elif fa in ma:  # clean, a different, no remote
                 if n1 != ma[fa]:
                     if acceptremote:
-                        actions[f1] = ("r", None, "remote delete")
+                        actions[f1] = (ACTION_REMOVE, None, "remote delete")
                     else:
                         actions[f1] = (
-                            "cd",
+                            ACTION_CHANGED_DELETED,
                             (f1, None, f1, False, pa.node()),
                             "prompt changed/deleted",
                         )
@@ -999,9 +1016,9 @@ def manifestmerge(
                     # addednodeid is added by working copy manifest to mark
                     # the file as locally added. We should forget it instead of
                     # deleting it.
-                    actions[f1] = ("f", None, "remote deleted")
+                    actions[f1] = (ACTION_FORGET, None, "remote deleted")
                 else:
-                    actions[f1] = ("r", None, "other deleted")
+                    actions[f1] = (ACTION_REMOVE, None, "other deleted")
         elif n2:  # file exists only on remote side
             if f1 in reverse_copies and any(
                 f in diff_files for f in reverse_copies[f1]
@@ -1012,13 +1029,13 @@ def manifestmerge(
                 f2prev = m2.ungraftedpath(f1prev) or f1prev
                 if f2prev in m2:
                     actions[f1] = (
-                        "m",
+                        ACTION_MERGE,
                         (f1prev, f2, f2prev, False, pa.node()),
                         "remote copied from " + f2prev,
                     )
                 else:
                     actions[f1] = (
-                        "m",
+                        ACTION_MERGE,
                         (f1prev, f2, f2prev, True, pa.node()),
                         "remote moved from " + f2prev,
                     )
@@ -1035,21 +1052,21 @@ def manifestmerge(
                 # Checking whether the files are different is expensive, so we
                 # don't do that when we can avoid it.
                 if not force:
-                    actions[f1] = ("c", (fl2,), "remote created")
+                    actions[f1] = (ACTION_CREATED, (fl2,), "remote created")
                 elif not branchmerge:
-                    actions[f1] = ("c", (fl2,), "remote created")
+                    actions[f1] = (ACTION_CREATED, (fl2,), "remote created")
                 else:
                     actions[f1] = (
-                        "cm",
+                        ACTION_CREATED_MERGE,
                         (f2, fl2, pa.node()),
                         "remote created, get or merge",
                     )
             elif n2 != ma[fa]:
                 if acceptremote:
-                    actions[f1] = ("c", (fl2,), "remote recreating")
+                    actions[f1] = (ACTION_CREATED, (fl2,), "remote recreating")
                 else:
                     actions[f1] = (
-                        "dc",
+                        ACTION_DELETED_CHANGED,
                         (None, f2, fa, False, pa.node()),
                         "prompt deleted/changed",
                     )
