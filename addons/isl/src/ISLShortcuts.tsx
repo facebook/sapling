@@ -8,8 +8,8 @@
 import {t} from './i18n';
 import {useModal} from './useModal';
 import {Kbd} from 'isl-components/Kbd';
+import {makeCommandDispatcher, KeyCode, Modifier} from 'isl-components/KeyboardShortcuts';
 import {useMemo} from 'react';
-import {makeCommandDispatcher, KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 import {isMac} from 'shared/OperatingSystem';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
 

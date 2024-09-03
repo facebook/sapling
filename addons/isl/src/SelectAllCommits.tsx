@@ -14,9 +14,9 @@ import {selectedCommits} from './selection';
 import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
 import {Kbd} from 'isl-components/Kbd';
+import {KeyCode, Modifier} from 'isl-components/KeyboardShortcuts';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useCallback} from 'react';
-import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 
 /** By default, "select all" selects draft, non-obsoleted commits. */
 function getSelectAllCommitHashSet(): Set<string> {

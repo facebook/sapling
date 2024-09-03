@@ -40,11 +40,11 @@ import {Checkbox} from 'isl-components/Checkbox';
 import {Dropdown} from 'isl-components/Dropdown';
 import {Icon} from 'isl-components/Icon';
 import {Kbd} from 'isl-components/Kbd';
+import {KeyCode, Modifier} from 'isl-components/KeyboardShortcuts';
 import {Subtle} from 'isl-components/Subtle';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom, useAtomValue} from 'jotai';
 import {Suspense} from 'react';
-import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 import {tryJsonParse, nullthrows} from 'shared/utils';
 
 import './SettingsTooltip.css';

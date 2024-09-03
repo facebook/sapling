@@ -15,9 +15,9 @@ import * as stylex from '@stylexjs/stylex';
 import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
 import {Kbd} from 'isl-components/Kbd';
+import {KeyCode, Modifier} from 'isl-components/KeyboardShortcuts';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom} from 'jotai';
-import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 
 const styles = stylex.create({
   focused: {

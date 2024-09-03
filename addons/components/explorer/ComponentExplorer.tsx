@@ -19,6 +19,7 @@ import {ErrorNotice} from '../ErrorNotice';
 import {HorizontallyGrowingTextField} from '../HorizontallyGrowingTextField';
 import {Icon} from '../Icon';
 import {Kbd} from '../Kbd';
+import {KeyCode, Modifier} from '../KeyboardShortcuts';
 import {Panels} from '../Panels';
 import {RadioGroup} from '../Radio';
 import {Subtle} from '../Subtle';
@@ -31,7 +32,6 @@ import {layout} from '../theme/layout';
 import {colors, font, radius, spacing} from '../theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import {useState, type ReactNode} from 'react';
-import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 
 /* eslint-disable no-console */
 

@@ -26,11 +26,11 @@ import {Checkbox} from 'isl-components/Checkbox';
 import {Divider} from 'isl-components/Divider';
 import {Icon} from 'isl-components/Icon';
 import {Kbd} from 'isl-components/Kbd';
+import {KeyCode, Modifier} from 'isl-components/KeyboardShortcuts';
 import {TextField} from 'isl-components/TextField';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom} from 'jotai';
 import {useEffect, useRef, useState} from 'react';
-import {KeyCode, Modifier} from 'shared/KeyboardShortcuts';
 import {nullthrows} from 'shared/utils';
 
 import './DownloadCommitsMenu.css';
