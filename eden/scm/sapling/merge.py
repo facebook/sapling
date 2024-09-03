@@ -2159,13 +2159,13 @@ def _update(
             xdir = p2.manifest().hasgrafts()
             if pas == [p2] and not xdir:
                 raise error.Abort(
-                    _("merging with a working directory ancestor" " has no effect")
+                    _("merging with a working directory ancestor has no effect")
                 )
             elif pas == [p1] and not xdir:
                 if not mergeancestor and wc.branch() == p2.branch():
                     raise error.Abort(
                         _("nothing to merge"),
-                        hint=_("use '@prog@ goto' " "or check '@prog@ heads'"),
+                        hint=_("use '@prog@ goto' or check '@prog@ heads'"),
                     )
             if not force and (wc.files() or wc.deleted()):
                 raise error.Abort(
