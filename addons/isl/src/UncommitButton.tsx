@@ -47,7 +47,8 @@ export function UncommitButton() {
             )
       }>
       <Button
-        onClick={async () => {
+        onClick={async e => {
+          e.stopPropagation();
           const confirmed = await foundPlatform.confirm(
             t('Are you sure you want to Uncommit?'),
             hasChildren
