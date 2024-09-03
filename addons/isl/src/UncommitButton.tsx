@@ -25,10 +25,11 @@ export function UncommitButton() {
   const isClosed = provider != null && diff.value != null && provider?.isDiffClosed(diff.value);
 
   const runOperation = useRunOperation();
-  if (!headCommit || dag.children(headCommit?.hash).size > 0) {
-    // if the head commit has children, we can't uncommit
+  if (!headCommit) {
     return null;
   }
+
+  const hasChildren = dag.children(headCommit?.hash).size > 0;
 
   if (isClosed) {
     return null;
@@ -36,23 +37,34 @@ export function UncommitButton() {
   return (
     <Tooltip
       delayMs={DOCUMENTATION_DELAY}
-      title={t(
-        'Remove this commit, but keep its changes as uncommitted changes, as if you never ran commit.',
-      )}>
+      title={
+        hasChildren
+          ? t(
+              'Go back to the previous commit, but keep the changes by skipping updating files in the working copy. Note: the original commit will not be deleted because it has children.',
+            )
+          : t(
+              'Hide this commit, but keep its changes as uncommitted changes, as if you never ran commit.',
+            )
+      }>
       <Button
         onClick={async () => {
           const confirmed = await foundPlatform.confirm(
             t('Are you sure you want to Uncommit?'),
-            t(
-              'Uncommitting will remove this commit, but keep its changes as uncommitted changes, as if you never ran commit.',
-            ),
+            hasChildren
+              ? t(
+                  'Uncommitting will not hide the original commit because it has children, but will move to the parent commit and keep its changes as uncommitted changes.',
+                )
+              : t(
+                  'Uncommitting will hide this commit, but keep its changes as uncommitted changes, as if you never ran commit.',
+                ),
           );
           if (!confirmed) {
             return;
           }
           runOperation(new UncommitOperation(headCommit));
         }}
-        icon>
+        icon
+        data-testid="uncommit-button">
         <Icon icon="debug-step-out" slot="start" />
         <T>Uncommit</T>
       </Button>
