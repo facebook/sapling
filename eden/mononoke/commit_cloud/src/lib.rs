@@ -23,13 +23,12 @@ use commit_cloud_intern_utils::acl_check::ACL_LINK;
 use commit_cloud_intern_utils::interngraph_publisher::publish_single_update;
 #[cfg(fbcode_build)]
 use commit_cloud_intern_utils::notification::NotificationData;
+use commit_cloud_types::HistoricalVersion;
 use commit_cloud_types::ReferencesData;
 use commit_cloud_types::SmartlogFilter;
 use commit_cloud_types::UpdateReferencesParams;
+use commit_cloud_types::WorkspaceSharingData;
 use context::CoreContext;
-use edenapi_types::cloud::WorkspaceSharingData;
-use edenapi_types::GetReferencesParams;
-use edenapi_types::HistoricalVersionsData;
 use facet::facet;
 use futures_stats::futures03::TimedFutureExt;
 use metaconfig_types::CommitCloudConfig;
@@ -145,9 +144,9 @@ impl CommitCloud {
     pub async fn get_references(
         &self,
         cc_ctx: &CommitCloudContext,
-        params: &GetReferencesParams,
+        version: u64,
     ) -> anyhow::Result<ReferencesData> {
-        let base_version = params.version;
+        let base_version = version;
 
         let mut latest_version: u64 = 0;
         let mut version_timestamp: i64 = 0;
@@ -520,7 +519,7 @@ impl CommitCloud {
     pub async fn get_historical_versions(
         &self,
         cc_ctx: &CommitCloudContext,
-    ) -> anyhow::Result<HistoricalVersionsData> {
+    ) -> anyhow::Result<Vec<HistoricalVersion>> {
         ensure!(
             WorkspaceVersion::fetch_from_db(&self.storage, &cc_ctx.workspace, &cc_ctx.reponame)
                 .await?

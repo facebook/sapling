@@ -9,6 +9,8 @@ use borrowed::borrowed;
 use commit_cloud::ctx::CommitCloudContext;
 use commit_cloud::CommitCloudRef;
 use commit_cloud::Phase;
+use commit_cloud_types::ClientInfo;
+use commit_cloud_types::HistoricalVersion;
 use commit_cloud_types::LocalBookmarksMap;
 use commit_cloud_types::ReferencesData;
 use commit_cloud_types::RemoteBookmarksMap;
@@ -17,14 +19,8 @@ use commit_cloud_types::SmartlogFilter;
 use commit_cloud_types::SmartlogFlag;
 use commit_cloud_types::SmartlogNode;
 use commit_cloud_types::UpdateReferencesParams;
+use commit_cloud_types::WorkspaceSharingData;
 use commit_graph::CommitGraphRef;
-use edenapi_types::cloud::CloudShareWorkspaceRequest;
-use edenapi_types::cloud::WorkspaceSharingData;
-use edenapi_types::GetReferencesParams;
-use edenapi_types::HistoricalVersionsData;
-use edenapi_types::HistoricalVersionsParams;
-use edenapi_types::RenameWorkspaceRequest;
-use edenapi_types::UpdateArchiveParams;
 use futures::TryStreamExt;
 use futures_util::future::try_join_all;
 use mercurial_types::HgChangesetId;
@@ -70,19 +66,21 @@ impl<R: MononokeRepo> HgRepoContext<R> {
 
     pub async fn cloud_references(
         &self,
-        params: &GetReferencesParams,
+        workspace: &str,
+        reponame: &str,
+        version: u64,
+        _client_info: Option<ClientInfo>,
     ) -> Result<ReferencesData, MononokeError> {
-        let mut ctx = CommitCloudContext::new(&params.workspace, &params.reponame)?;
+        let mut cc_ctx = CommitCloudContext::new(workspace, reponame)?;
         let authz = self.repo_ctx().authorization_context();
         authz
-            .require_commitcloud_operation(self.ctx(), self.repo_ctx().repo(), &mut ctx, "read")
+            .require_commitcloud_operation(self.ctx(), self.repo_ctx().repo(), &mut cc_ctx, "read")
             .await?;
-        let cc_ctx = CommitCloudContext::new(&params.workspace, &params.reponame)?;
         Ok(self
             .repo_ctx()
             .repo()
             .commit_cloud()
-            .get_references(&cc_ctx, params)
+            .get_references(&cc_ctx, version)
             .await?)
     }
 
@@ -212,9 +210,10 @@ impl<R: MononokeRepo> HgRepoContext<R> {
 
     pub async fn cloud_share_workspace(
         &self,
-        request: &CloudShareWorkspaceRequest,
+        workspace: &str,
+        reponame: &str,
     ) -> Result<WorkspaceSharingData, MononokeError> {
-        let mut ctx = CommitCloudContext::new(&request.workspace, &request.reponame)?;
+        let mut ctx = CommitCloudContext::new(workspace, reponame)?;
 
         let authz = self.repo_ctx().authorization_context();
         authz
@@ -236,9 +235,11 @@ impl<R: MononokeRepo> HgRepoContext<R> {
 
     pub async fn cloud_update_archive(
         &self,
-        params: &UpdateArchiveParams,
+        workspace: &str,
+        reponame: &str,
+        archived: bool,
     ) -> Result<String, MononokeError> {
-        let mut cc_ctx = CommitCloudContext::new(&params.workspace, &params.reponame)?;
+        let mut cc_ctx = CommitCloudContext::new(workspace, reponame)?;
 
         let authz = self.repo_ctx().authorization_context();
         authz
@@ -249,15 +250,17 @@ impl<R: MononokeRepo> HgRepoContext<R> {
             .repo_ctx()
             .repo()
             .commit_cloud()
-            .update_workspace_archive(&cc_ctx, params.archived)
+            .update_workspace_archive(&cc_ctx, archived)
             .await?)
     }
 
     pub async fn cloud_rename_workspace(
         &self,
-        request: &RenameWorkspaceRequest,
+        workspace: &str,
+        reponame: &str,
+        new_workspace: &str,
     ) -> Result<String, MononokeError> {
-        let mut ctx = CommitCloudContext::new(&request.workspace, &request.reponame)?;
+        let mut ctx = CommitCloudContext::new(workspace, reponame)?;
 
         let authz = self.repo_ctx().authorization_context();
         authz
@@ -268,7 +271,7 @@ impl<R: MononokeRepo> HgRepoContext<R> {
             .repo_ctx()
             .repo()
             .commit_cloud()
-            .rename_workspace(&ctx, &request.new_workspace)
+            .rename_workspace(&ctx, new_workspace)
             .await?)
     }
 
@@ -307,9 +310,10 @@ impl<R: MononokeRepo> HgRepoContext<R> {
 
     pub async fn cloud_historical_versions(
         &self,
-        params: &HistoricalVersionsParams,
-    ) -> Result<HistoricalVersionsData, MononokeError> {
-        let mut cc_ctx = CommitCloudContext::new(&params.workspace, &params.reponame)?;
+        workspace: &str,
+        reponame: &str,
+    ) -> Result<Vec<HistoricalVersion>, MononokeError> {
+        let mut cc_ctx = CommitCloudContext::new(workspace, reponame)?;
         let authz = self.repo_ctx().authorization_context();
         authz
             .require_commitcloud_operation(self.ctx(), self.repo_ctx().repo(), &mut cc_ctx, "read")

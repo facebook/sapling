@@ -7,12 +7,11 @@
 
 use anyhow::bail;
 use commit_cloud_types::references::WorkspaceRemoteBookmark;
+use commit_cloud_types::HistoricalVersion;
 use commit_cloud_types::LocalBookmarksMap;
 use commit_cloud_types::RemoteBookmarksMap;
 use commit_cloud_types::WorkspaceHead;
 use commit_cloud_types::WorkspaceLocalBookmark;
-use edenapi_types::cloud::HistoricalVersion;
-use edenapi_types::cloud::HistoricalVersionsData;
 use mercurial_types::HgChangesetId;
 use mononoke_types::Timestamp;
 
@@ -84,7 +83,7 @@ impl WorkspaceHistory {
 
 pub fn historical_versions_from_get_output(
     output: Vec<GetOutput>,
-) -> anyhow::Result<HistoricalVersionsData> {
+) -> anyhow::Result<Vec<HistoricalVersion>> {
     let mut versions = Vec::new();
     for out in output {
         match out {
@@ -97,5 +96,5 @@ pub fn historical_versions_from_get_output(
             _ => bail!("'historical_data' failed: expected output from get_version_timestamp"),
         }
     }
-    Ok(HistoricalVersionsData { versions })
+    Ok(versions)
 }

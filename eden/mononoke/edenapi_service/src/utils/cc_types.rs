@@ -6,6 +6,7 @@
  */
 
 use commit_cloud_types::ClientInfo as CCClientInfo;
+use commit_cloud_types::HistoricalVersion as CCHistoricalVersion;
 use commit_cloud_types::ReferencesData as CCReferencesData;
 use commit_cloud_types::SmartlogData as CCSmartlogData;
 use commit_cloud_types::SmartlogFilter as CCSmartlogFilter;
@@ -13,15 +14,18 @@ use commit_cloud_types::SmartlogFlag;
 use commit_cloud_types::SmartlogNode as CCSmartlogNode;
 use commit_cloud_types::UpdateReferencesParams as CCUpdateReferencesParams;
 use commit_cloud_types::WorkspaceRemoteBookmark;
+use commit_cloud_types::WorkspaceSharingData as CCWorkspaceSharingData;
 use edenapi_types::cloud::ClientInfo;
 use edenapi_types::cloud::ReferencesData;
 use edenapi_types::cloud::RemoteBookmark;
 use edenapi_types::cloud::SmartlogFilter;
 use edenapi_types::GetSmartlogFlag;
 use edenapi_types::HgId;
+use edenapi_types::HistoricalVersion;
 use edenapi_types::SmartlogData;
 use edenapi_types::SmartlogNode;
 use edenapi_types::UpdateReferencesParams;
+use edenapi_types::WorkspaceSharingData;
 use mercurial_types::HgChangesetId;
 
 pub trait FromCommitCloudType<T> {
@@ -155,6 +159,24 @@ impl FromCommitCloudType<CCSmartlogData> for SmartlogData {
                 .map(SmartlogNode::from_cc_type)
                 .collect::<anyhow::Result<Vec<SmartlogNode>>>()?,
             version: cc.version,
+            timestamp: cc.timestamp,
+        })
+    }
+}
+
+impl FromCommitCloudType<CCWorkspaceSharingData> for WorkspaceSharingData {
+    fn from_cc_type(cc: CCWorkspaceSharingData) -> anyhow::Result<Self> {
+        Ok(WorkspaceSharingData {
+            acl_name: cc.acl_name,
+            sharing_message: cc.sharing_message,
+        })
+    }
+}
+
+impl FromCommitCloudType<CCHistoricalVersion> for HistoricalVersion {
+    fn from_cc_type(cc: CCHistoricalVersion) -> anyhow::Result<Self> {
+        Ok(HistoricalVersion {
+            version_number: cc.version_number,
             timestamp: cc.timestamp,
         })
     }

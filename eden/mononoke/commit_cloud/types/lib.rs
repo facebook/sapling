@@ -22,3 +22,13 @@ pub use smartlog::SmartlogData;
 pub use smartlog::SmartlogFilter;
 pub use smartlog::SmartlogFlag;
 pub use smartlog::SmartlogNode;
+
+pub struct WorkspaceSharingData {
+    pub acl_name: String,
+    pub sharing_message: String,
+}
+
+pub struct HistoricalVersion {
+    pub version_number: i64,
+    pub timestamp: i64,
+}

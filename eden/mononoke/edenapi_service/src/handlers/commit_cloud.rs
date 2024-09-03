@@ -7,6 +7,7 @@
 
 use anyhow::Error;
 use async_trait::async_trait;
+use edenapi_types::cloud::ClientInfo;
 use edenapi_types::CloudShareWorkspaceRequest;
 use edenapi_types::CloudShareWorkspaceResponse;
 use edenapi_types::CloudWorkspaceRequest;
@@ -15,6 +16,8 @@ use edenapi_types::GetReferencesParams;
 use edenapi_types::GetSmartlogByVersionParams;
 use edenapi_types::GetSmartlogFlag;
 use edenapi_types::GetSmartlogParams;
+use edenapi_types::HistoricalVersion;
+use edenapi_types::HistoricalVersionsData;
 use edenapi_types::HistoricalVersionsParams;
 use edenapi_types::HistoricalVersionsResponse;
 use edenapi_types::ReferencesData;
@@ -29,6 +32,7 @@ use edenapi_types::UpdateArchiveResponse;
 use edenapi_types::UpdateReferencesParams;
 use edenapi_types::WorkspaceData;
 use edenapi_types::WorkspaceDataResponse;
+use edenapi_types::WorkspaceSharingData;
 use edenapi_types::WorkspacesDataResponse;
 use futures::stream;
 use futures::FutureExt;
@@ -142,7 +146,13 @@ async fn get_references<R: MononokeRepo>(
     request: GetReferencesParams,
     repo: HgRepoContext<R>,
 ) -> anyhow::Result<ReferencesDataResponse, Error> {
-    let cc_res = repo.cloud_references(&request).await;
+    let ci = request
+        .client_info
+        .map(ClientInfo::into_cc_type)
+        .transpose()?;
+    let cc_res = repo
+        .cloud_references(&request.workspace, &request.reponame, request.version, ci)
+        .await;
     let res = match cc_res {
         Ok(res) => Ok(ReferencesData::from_cc_type(res)?),
         Err(e) => Err(e),
@@ -249,11 +259,15 @@ async fn share_workspace<R: MononokeRepo>(
     request: CloudShareWorkspaceRequest,
     repo: HgRepoContext<R>,
 ) -> anyhow::Result<CloudShareWorkspaceResponse, Error> {
+    let cc_res = repo
+        .cloud_share_workspace(&request.workspace, &request.reponame)
+        .await;
+    let res = match cc_res {
+        Ok(res) => Ok(WorkspaceSharingData::from_cc_type(res)?),
+        Err(e) => Err(e),
+    };
     Ok(CloudShareWorkspaceResponse {
-        data: repo
-            .cloud_share_workspace(&request)
-            .await
-            .map_err(ServerError::from),
+        data: res.map_err(ServerError::from),
     })
 }
 
@@ -282,7 +296,7 @@ async fn update_archive<R: MononokeRepo>(
 ) -> anyhow::Result<UpdateArchiveResponse, Error> {
     Ok(UpdateArchiveResponse {
         data: repo
-            .cloud_update_archive(&request)
+            .cloud_update_archive(&request.workspace, &request.reponame, request.archived)
             .await
             .map_err(ServerError::from),
     })
@@ -313,7 +327,11 @@ async fn rename_workspace<R: MononokeRepo>(
 ) -> anyhow::Result<RenameWorkspaceResponse, Error> {
     Ok(RenameWorkspaceResponse {
         data: repo
-            .cloud_rename_workspace(&request)
+            .cloud_rename_workspace(
+                &request.workspace,
+                &request.reponame,
+                &request.new_workspace,
+            )
             .await
             .map_err(ServerError::from),
     })
@@ -383,11 +401,21 @@ async fn historical_versions<R: MononokeRepo>(
     request: HistoricalVersionsParams,
     repo: HgRepoContext<R>,
 ) -> anyhow::Result<HistoricalVersionsResponse, Error> {
+    let cc_res = repo
+        .cloud_historical_versions(&request.workspace, &request.reponame)
+        .await;
+    let res = match cc_res {
+        Ok(res) => Ok(HistoricalVersionsData {
+            versions: res
+                .into_iter()
+                .map(HistoricalVersion::from_cc_type)
+                .collect::<anyhow::Result<Vec<HistoricalVersion>>>()?,
+        }),
+        Err(e) => Err(e),
+    };
+
     Ok(HistoricalVersionsResponse {
-        data: repo
-            .cloud_historical_versions(&request)
-            .await
-            .map_err(ServerError::from),
+        data: res.map_err(ServerError::from),
     })
 }
 
