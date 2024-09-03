@@ -84,8 +84,8 @@ Run the x-repo with submodules setup
 
   $ export REPONAME=$LARGE_REPO_NAME
   $ cd $TESTTMP/$LARGE_REPO_NAME || exit
-  $ sl pull -q
-  $ sl checkout $MASTER_BOOKMARK_NAME -q
+  $ hg pull -q
+  $ hg checkout $MASTER_BOOKMARK_NAME -q
 
   $ sl_log -r "sort(all(), desc)" -l 3
   @  bee3089ac10c Small repo commit after git clone
@@ -122,15 +122,15 @@ Run the x-repo with submodules setup
   $ echo "change" > smallrepofolder1/from_large_repo
   $ mkdir forbidden
   $ echo "change" > forbidden/not_allowed
-  $ sl commit -qA -m "Change submodule repo from large repo" 
+  $ hg commit -qA -m "Change submodule repo from large repo" 
 
 # Make a change only to large repo to confirm it won't be backsynced
   $ echo "change" > large_repo_file.txt
-  $ sl commit -qAm "Large repo file change" 
+  $ hg commit -qAm "Large repo file change" 
 
 
 # Push to large repo, which should be backsynced to small repo
-  $ sl push -q --to master
+  $ hg push -q --to master
 
 
   $ mononoke_newadmin fetch -R $LARGE_REPO_NAME -B $MASTER_BOOKMARK_NAME

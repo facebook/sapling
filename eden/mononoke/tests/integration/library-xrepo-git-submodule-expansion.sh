@@ -296,7 +296,7 @@ function update_repo_b_submodule_pointer_in_large_repo {
   echo "new file abc" > smallrepofolder1/git-repo-b/abc
   printf "%s" "$REPO_B_GIT_COMMIT_HASH" > smallrepofolder1/.x-repo-submodule-git-repo-b
   hg commit -Aq -m "Valid repo_b submodule version bump from large repo"
-  sl cloud backup -q
+  hg cloud backup -q
 }
 
 # Create a commit in repo_a.
@@ -395,7 +395,7 @@ function update_repo_c_submodule_pointer_in_large_repo {
   printf "%s" "$REPO_B_GIT_COMMIT_HASH" > smallrepofolder1/.x-repo-submodule-git-repo-b
 
   hg commit -Aq -m "Valid repo_b and repo_c recursive submodule version bump from large repo"
-  sl cloud backup -q
+  hg cloud backup -q
 }
 
 function switch_source_of_truth_to_large_repo {

@@ -45,7 +45,7 @@
 
 # 4. Make a commit with corrupted file node, Change file node text
   $ echo "hello_world" > file
-  $ sl commit -Aqm "commit"
+  $ hg commit -Aqm "commit"
 
 Corrupt file contents via an extension:
   $ cat > $TESTTMP/corrupt.py <<EOF

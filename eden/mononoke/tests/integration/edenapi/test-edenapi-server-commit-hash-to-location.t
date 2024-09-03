@@ -74,7 +74,7 @@ Create and send request.
   > ]
   > EOF
 
-  $ sl debugapi mono:repo -e commithashtolocation -f master_heads -f hgids
+  $ hg debugapi mono:repo -e commithashtolocation -f master_heads -f hgids
   [{"hgid": bin("a194cadd16930608adaa649035ad4c16930cbd0f"),
     "result": {"Ok": {"distance": 0,
                       "descendant": bin("a194cadd16930608adaa649035ad4c16930cbd0f")}}},

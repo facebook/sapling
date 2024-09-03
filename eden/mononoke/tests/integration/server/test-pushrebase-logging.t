@@ -42,7 +42,7 @@ Push the commits
   ├─╯
   o  20ca2a4749a4 'A'
   
-  $ sl push -q -r . --to main
+  $ hg push -q -r . --to main
 
   $ tglog
   @  d6637437d715 'commit2'

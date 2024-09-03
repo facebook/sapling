@@ -58,7 +58,7 @@ start mononoke
   $ start_and_wait_for_mononoke_server
 
   $ cd client1
-  $ sl cloud join
+  $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'repo' repo
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: nothing to upload
@@ -66,7 +66,7 @@ start mononoke
   finished in * (glob)
   $ hg up master_bookmark -q
   $ cd ../client2
-  $ sl cloud join
+  $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'repo' repo
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: nothing to upload
@@ -80,7 +80,7 @@ Make commits in the first client, and sync it
   $ mkcommit "commit1"
   $ mkcommit "commit2"
   $ mkcommit "commit3"
-  $ sl cloud sync
+  $ hg cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: head '44641a2b1a42' hasn't been uploaded yet
   edenapi: queue 3 commits for upload
@@ -103,7 +103,7 @@ Make commits in the first client, and sync it
   
 Sync from the second client - the commits should appear
   $ cd ../client2
-  $ sl cloud sync
+  $ hg cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: nothing to upload
   pulling 44641a2b1a42 from mono:repo
@@ -126,7 +126,7 @@ Make commits from the second client and sync it
   $ mkcommit "commit4"
   $ mkcommit "commit5"
   $ mkcommit "commit6"
-  $ sl cloud sync
+  $ hg cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: head '58508421158d' hasn't been uploaded yet
   edenapi: queue 3 commits for upload
@@ -142,7 +142,7 @@ Make commits from the second client and sync it
 On the first client, make a bookmark, then sync - the bookmark and the new commits should be synced
   $ cd ../client1
   $ hg bookmark -r "min(all())" bookmark1
-  $ sl cloud sync
+  $ hg cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: nothing to upload
   pulling 58508421158d from mono:repo
@@ -172,7 +172,7 @@ On the first client rebase the stack
   rebasing 15f040cf571c "commit4"
   rebasing a1806767adaa "commit5"
   rebasing 58508421158d "commit6"
-  $ sl cloud sync
+  $ hg cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: head '8e3f03f8d9db' hasn't been uploaded yet
   edenapi: queue 3 commits for upload
@@ -186,7 +186,7 @@ On the first client rebase the stack
 
 On the second client sync it
   $ cd ../client2
-  $ sl cloud sync
+  $ hg cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: nothing to upload
   pulling 8e3f03f8d9db from mono:repo
@@ -215,7 +215,7 @@ On the second client sync it
   
 
 On the second client hide all draft commits
-  $ sl hide -r 'draft()'
+  $ hg hide -r 'draft()'
   hiding commit 660cb078da57 "commit1"
   hiding commit eba3648c3275 "commit2"
   hiding commit 44641a2b1a42 "commit3"
@@ -225,12 +225,12 @@ On the second client hide all draft commits
   0 files updated, 0 files merged, 6 files removed, 0 files unresolved
   working directory now at 8b2dca0c8a72
   6 changesets hidden
-  $ sl cloud sync
+  $ hg cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
-  $ sl up master_bookmark -q
+  $ hg up master_bookmark -q
 
   $ tglogp
   @  8b2dca0c8a72 public 'base_commit' bookmark1
@@ -238,7 +238,7 @@ On the second client hide all draft commits
 
 On the first client check that all commits were hidden
   $ cd ../client1
-  $ sl cloud sync
+  $ hg cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: nothing to upload
   commitcloud: commits synchronized
@@ -269,11 +269,11 @@ On the first client make 2 stacks
   
 Make one of the commits public when it shouldn't be.
   $ hg debugmakepublic 8d621fa11677
-  $ sl cloud sync 2>&1 | grep fail
+  $ hg cloud sync 2>&1 | grep fail
   commitcloud: failed to synchronize ec61bf312a03
 
   $ hg debugmakepublic --delete 8d621fa11677
-  $ sl cloud sync
+  $ hg cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: head 'ec61bf312a03' hasn't been uploaded yet
   edenapi: queue 2 commits for upload
@@ -287,7 +287,7 @@ Make one of the commits public when it shouldn't be.
 
 Commit still becomes available in the other repo
   $ cd ../client2
-  $ sl cloud sync
+  $ hg cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: nothing to upload
   pulling 88d416aed919 ec61bf312a03 from mono:repo
@@ -316,9 +316,9 @@ Fix up that public commit, set it back to draft
 
 Clean up
   $ hg hide -r 'draft()' -q
-  $ sl cloud sync -q
+  $ hg cloud sync -q
   $ cd ../client2
-  $ sl cloud sync -q
+  $ hg cloud sync -q
 
   $ tglogp
   @  8b2dca0c8a72 public 'base_commit' bookmark1

@@ -36,26 +36,26 @@ Setup config repo:
 
   $ cd "$TESTTMP/small-hg-client"
   $ export REPONAME=small-mon
-  $ sl debugapi -e committranslateids -i "[{'Bonsai': '$SMALL_MASTER_BONSAI'}]" -i "'Hg'"
+  $ hg debugapi -e committranslateids -i "[{'Bonsai': '$SMALL_MASTER_BONSAI'}]" -i "'Hg'"
   [{"commit": {"Bonsai": bin("1ba347e63a4bf200944c22ade8dbea038dd271ef97af346ba4ccfaaefb10dd4d")},
     "translated": {"Hg": bin("11f848659bfcf77abd04f947883badd8efa88d26")}}]
 
-  $ sl debugapi -e committranslateids -i "[{'Hg': '11f848659bfcf77abd04f947883badd8efa88d26'}]" -i "'Hg'" -i None -i "'large-mon'"
+  $ hg debugapi -e committranslateids -i "[{'Hg': '11f848659bfcf77abd04f947883badd8efa88d26'}]" -i "'Hg'" -i None -i "'large-mon'"
   [{"commit": {"Hg": bin("11f848659bfcf77abd04f947883badd8efa88d26")},
     "translated": {"Hg": bin("bfcfb674663c5438027bcde4a7ae5024c838f76a")}}]
 
-  $ sl debugapi -e committranslateids -i "[{'Hg': 'bfcfb674663c5438027bcde4a7ae5024c838f76a'}]" -i "'Hg'" -i "'large-mon'"
+  $ hg debugapi -e committranslateids -i "[{'Hg': 'bfcfb674663c5438027bcde4a7ae5024c838f76a'}]" -i "'Hg'" -i "'large-mon'"
   [{"commit": {"Hg": bin("bfcfb674663c5438027bcde4a7ae5024c838f76a")},
     "translated": {"Hg": bin("11f848659bfcf77abd04f947883badd8efa88d26")}}]
 
-  $ sl log -r bfcfb67466 -T '{node}\n' --config 'megarepo.transparent-lookup=small-mon large-mon' --config extensions.megarepo=
+  $ hg log -r bfcfb67466 -T '{node}\n' --config 'megarepo.transparent-lookup=small-mon large-mon' --config extensions.megarepo=
   pulling 'bfcfb67466' from 'mono:small-mon'
   pull failed: bfcfb67466 not found
   translated bfcfb674663c5438027bcde4a7ae5024c838f76a@large-mon to 11f848659bfcf77abd04f947883badd8efa88d26
   pulling '11f848659bfcf77abd04f947883badd8efa88d26' from 'mono:small-mon'
   11f848659bfcf77abd04f947883badd8efa88d26
 
-  $ sl log -r large-mon/master_bookmark -T '{node}\n' --config 'megarepo.transparent-lookup=large-mon' --config extensions.megarepo=
+  $ hg log -r large-mon/master_bookmark -T '{node}\n' --config 'megarepo.transparent-lookup=large-mon' --config extensions.megarepo=
   translated bfcfb674663c5438027bcde4a7ae5024c838f76a@large-mon to 11f848659bfcf77abd04f947883badd8efa88d26
   pulling '11f848659bfcf77abd04f947883badd8efa88d26' from 'mono:small-mon'
   11f848659bfcf77abd04f947883badd8efa88d26

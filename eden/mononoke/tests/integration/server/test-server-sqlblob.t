@@ -120,7 +120,7 @@ start mononoke
   $ cd repo2
   $ hg up -q 0
 Test a pull of one specific revision
-  $ sl pull -r 3e19bf519e9af6c66edf28380101a92122cbea50 -q
+  $ hg pull -r 3e19bf519e9af6c66edf28380101a92122cbea50 -q
 (with selectivepull, pulling a commit hash also pulls the selected bookmarks)
 
   $ hg log -r '3903775176ed::586ef37a04f7' --graph  -T '{node|short} {desc}'

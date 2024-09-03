@@ -68,9 +68,9 @@ Prepare the client-side repo
 
 Push
 
-  $ sl push -r C --to date-rewrite -q
-  $ sl push -r D --to no-date-rewrite -q
-  $ sl push -r E --to use-repo-config -q
+  $ hg push -r C --to date-rewrite -q
+  $ hg push -r D --to no-date-rewrite -q
+  $ hg push -r E --to use-repo-config -q
 
 Check result
 

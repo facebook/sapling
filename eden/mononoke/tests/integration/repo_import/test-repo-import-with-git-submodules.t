@@ -263,7 +263,7 @@ Normal log works
   $
 
 But using --stat crashes
-  $ sl log -r "ancestors(master_bookmark)" --stat
+  $ hg log -r "ancestors(master_bookmark)" --stat
   commit:      426bada5c675
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -320,7 +320,7 @@ But using --stat crashes
    3 files changed, 5 insertions(+), 0 deletions(-)
   
 
-  $ sl show 4ad443ff73f01bf1762918fa2be9c21cbdf038ea
+  $ hg show 4ad443ff73f01bf1762918fa2be9c21cbdf038ea
   commit:      4ad443ff73f0
   user:        mononoke <mononoke@mononoke>
   date:        Sat Jan 01 00:00:00 2000 +0000

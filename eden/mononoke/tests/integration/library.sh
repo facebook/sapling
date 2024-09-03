@@ -1438,7 +1438,7 @@ function blobimport {
   # --blobimport--> Mononoke repo
   local revlog="$input/revlog-export"
   rm -rf "$revlog"
-  sl --cwd "$input" debugexportrevlog revlog-export
+  hg --cwd "$input" debugexportrevlog revlog-export
   $MONONOKE_BLOBIMPORT \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
@@ -1572,7 +1572,7 @@ function wait_for_bookmark_delete() {
 function get_bookmark_value_edenapi {
   local repo="$1"
   local bookmark="$2"
-  sl debugapi mono:"$repo" -e bookmarks -i "[\"$bookmark\"]" | jq -r ".\"$bookmark\""
+  hg debugapi mono:"$repo" -e bookmarks -i "[\"$bookmark\"]" | jq -r ".\"$bookmark\""
 }
 
 function wait_for_bookmark_move_away_edenapi() {
@@ -1887,12 +1887,6 @@ function mononoke_git_service {
   MONONOKE_GIT_SERVICE_BASE_URL="https://localhost:$MONONOKE_GIT_SERVICE_PORT/repos/git/ro"
 }
 
-# Run an hg binary configured with the settings require to talk to Mononoke
-# via SaplingRemoteAPI
-function sl {
-  hg "$@" --config "remotefilelog.http=true"
-}
-
 function hginit_treemanifest() {
   hg init "$@"
   cat >> "$1"/.hg/hgrc <<EOF
@@ -2049,8 +2043,8 @@ function mkcommit() {
 
 function mkcommitedenapi() {
    echo "$1" > "$1"
-   sl add "$1"
-   sl ci -m "$1"
+   hg add "$1"
+   hg ci -m "$1"
 }
 
 function mkgitcommit() {
@@ -2535,8 +2529,8 @@ function x_repo_lookup() {
   SOURCE_REPO="$1"
   TARGET_REPO="$2"
   HASH="$3"
-  TRANSLATED=$(sl debugapi -e committranslateids -i "[{'Hg': '$HASH'}]" -i "'Hg'" -i "'$SOURCE_REPO'" -i "'$TARGET_REPO'")
-  sl debugshell <<EOF
+  TRANSLATED=$(hg debugapi -e committranslateids -i "[{'Hg': '$HASH'}]" -i "'Hg'" -i "'$SOURCE_REPO'" -i "'$TARGET_REPO'")
+  hg debugshell <<EOF
 print(hex(${TRANSLATED}[0]["translated"]["Hg"]))
 EOF
 }

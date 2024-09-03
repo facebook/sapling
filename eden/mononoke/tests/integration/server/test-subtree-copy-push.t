@@ -29,7 +29,7 @@ subtree copy and push
   $ hg ci -m 'foo/file1 -> foo/file2'
   $ echo bbb >> foo/file2
   $ hg ci -m 'update foo/file2'
-  $ sl subtree copy -r .^ --from-path foo --to-path bar
+  $ hg subtree copy -r .^ --from-path foo --to-path bar
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ ls bar
   file2
@@ -52,7 +52,7 @@ subtree copy and push
   o  426bada5c675 A
   
 tofix: push should be succeeded after Mononoke support subtree copy metadata
-  $ sl push -r . --to master_bookmark
+  $ hg push -r . --to master_bookmark
   pushing rev bd0866acb901 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 4 commits for upload
   edenapi: queue 3 files for upload

@@ -25,17 +25,17 @@ start mononoke
 
 
 clone
-  $ sl clone -q  mono:repo client1
+  $ hg clone -q  mono:repo client1
   $ cd client1
 
 Push
-  $ echo 1 > 1 && quiet sl commit -A -m 1
+  $ echo 1 > 1 && quiet hg commit -A -m 1
 We need to run the blobstore healer to clear the queue (i.e., flush the pending items into all replicas),
 otherwise, the test is going to be flaky becasue of the eventual consistency model employed by our system.
   $ mononoke_blobstore_healer -q --iteration-limit=1 --heal-min-age-secs=0 --storage-id=blobstore --sync-queue-limit=100 2>&1 > /dev/null
   $ echo "$(read_blobstore_wal_queue_size)"
   0
-  $ sl push -r . --to main
+  $ hg push -r . --to main
   pushing rev 523cda1e6192 to destination mono:repo bookmark main
   searching for changes
   updating bookmark main

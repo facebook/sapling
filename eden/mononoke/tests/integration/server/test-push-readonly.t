@@ -64,7 +64,7 @@ create new commit in repo2 and check that push to a bookmark fails
   $ hg add b_dir/b
   $ hg ci -mb
 
-  $ sl push --to master_bookmark --force --debug
+  $ hg push --to master_bookmark --force --debug
   sending hello command
   sending clienttelemetry command
   pushing rev bb0985934a0f to destination mono:repo bookmark master_bookmark
@@ -111,14 +111,14 @@ create new commit in repo2 and check that push to a bookmark fails
   [255]
 
 Try to bypass the check
-  $ sl push --force --to master_bookmark --pushvars "BYPASS_READONLY=true"
+  $ hg push --force --to master_bookmark --pushvars "BYPASS_READONLY=true"
   pushing rev bb0985934a0f to destination mono:repo bookmark master_bookmark
   searching for changes
   no changes found
   updating bookmark master_bookmark
 
 Check that a push which doesn't move a bookmark is allowed
-  $ sl push --force --debug
+  $ hg push --force --debug
   tracking on None {}
   pushing to mono:repo
   sending hello command

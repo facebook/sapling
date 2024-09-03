@@ -51,7 +51,7 @@ create new commit in repo2 and check that push fails
   $ hg add b_dir/b
   $ hg ci -mb --extra "change-xrepo-mapping-to-version=somemapping"
 
-  $ sl push -r . --to master_bookmark
+  $ hg push -r . --to master_bookmark
   pushing rev 9c40727be57c to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 2 files for upload
@@ -74,7 +74,7 @@ create new commit in repo2 and check that push fails
   $ mononoke
   $ wait_for_mononoke
   $ cd "$TESTTMP/repo2"
-  $ sl push -r . --to master_bookmark
+  $ hg push -r . --to master_bookmark
   pushing rev 9c40727be57c to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   pushrebasing stack (0e7ec5675652, 9c40727be57c] (1 commit) to remote bookmark master_bookmark
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved

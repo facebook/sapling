@@ -43,7 +43,7 @@ Clone repo
   $ cd client
 
 Check response.
-  $ sl debugapi -e bookmarks -i '["alpha", "beta", "unknown"]'
+  $ hg debugapi -e bookmarks -i '["alpha", "beta", "unknown"]'
   {"beta": "112478962961147124edd43549aedd1a335e44bf",
    "alpha": "426bada5c67598ca65036d57d9e4b64b0c1ce7a0",
    "unknown": None}

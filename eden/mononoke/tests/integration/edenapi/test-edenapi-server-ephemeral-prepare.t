@@ -28,5 +28,5 @@ Start up SaplingRemoteAPI server.
   $ setup_mononoke_config
   $ start_and_wait_for_mononoke_server
 Check response.
-  $ sl debugapi mono:repo -e ephemeralprepare -i None -i "['some', 'label']"
+  $ hg debugapi mono:repo -e ephemeralprepare -i None -i "['some', 'label']"
   {"bubble_id": 1}

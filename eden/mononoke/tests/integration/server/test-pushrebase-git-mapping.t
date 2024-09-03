@@ -24,20 +24,20 @@
 Push commit
   $ touch file1
   $ hg ci -Aqm commit1 --extra hg-git-rename-source=git --extra convert_revision=1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a
-  $ sl push -q -r . --to master_bookmark
+  $ hg push -q -r . --to master_bookmark
   $ wait_for_bookmark_move_away_edenapi repo master_bookmark "$C"
   $ D="$(hg whereami)"
 
 Push another commit
   $ touch file2
   $ hg ci -Aqm commit2 --extra hg-git-rename-source=git --extra convert_revision=2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b
-  $ sl push -q -r . --to master_bookmark
+  $ hg push -q -r . --to master_bookmark
   $ wait_for_bookmark_move_away_edenapi repo master_bookmark "$D"
 
 Push another commit that conflicts
   $ touch file3
   $ hg ci -Aqm commit3 --extra hg-git-rename-source=git --extra convert_revision=2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b
-  $ sl push -r . --to master_bookmark
+  $ hg push -r . --to master_bookmark
   pushing rev 7fc28fc53a18 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 0 files for upload
@@ -54,7 +54,7 @@ Force-push a commit
   [2388bc] commit1
   $ touch file4
   $ hg ci -Aqm commit4 --extra hg-git-rename-source=git --extra convert_revision=4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d
-  $ sl push -r . --to master_bookmark --force
+  $ hg push -r . --to master_bookmark --force
   pushing rev 1b5b68e81ae5 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 0 files for upload

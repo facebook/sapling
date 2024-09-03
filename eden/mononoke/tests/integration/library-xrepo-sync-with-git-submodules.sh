@@ -137,7 +137,7 @@ EOF
 }
 
 function sl_log() {
-   sl log --graph -T '{node|short} {desc}\n' "$@"
+   hg log --graph -T '{node|short} {desc}\n' "$@"
 }
 
 function clone_and_log_large_repo {

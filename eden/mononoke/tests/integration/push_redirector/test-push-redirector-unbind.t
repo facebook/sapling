@@ -27,7 +27,7 @@
   $ cd "$TESTTMP/small-hg-client"
   $ hg up -q master_bookmark
   $ echo 2 > 2 && hg addremove -q && hg ci -q -m newcommit
-  $ sl push -r . --to master_bookmark 2>&1 | grep 'updated remote bookmark'
+  $ hg push -r . --to master_bookmark 2>&1 | grep 'updated remote bookmark'
   updated remote bookmark master_bookmark to ce81c7d38286
 -- newcommit was correctly pushed to master_bookmark
   $ log -r master_bookmark
@@ -58,7 +58,7 @@
   $ echo 3 > 3 && hg addremove 3 && hg ci -m 'first unbound commit'
   $ echo 4 > 4 && hg addremove 4 && hg ci -m 'second unbound commit'
   $ SMALL_NODE="$(hg log -r tip -T '{node}')"
-  $ sl push -r . --to master_bookmark 2>&1 | grep 'updated remote bookmark'
+  $ hg push -r . --to master_bookmark 2>&1 | grep 'updated remote bookmark'
   updated remote bookmark master_bookmark to 2c39dde79608
   $ cd "$TESTTMP"/large-hg-client
   $ hg pull -q &> /dev/null
@@ -74,7 +74,7 @@
   $ hg up master_bookmark -q
   $ echo 'largerepocontent' > smallrepofolder/2
   $ hg ci -m 'large repo unbound commit'
-  $ sl push -r . --to master_bookmark 2>&1 | grep 'updated remote bookmark'
+  $ hg push -r . --to master_bookmark 2>&1 | grep 'updated remote bookmark'
   updated remote bookmark master_bookmark to c4fabb2e572b
   $ log -r master_bookmark
   @  large repo unbound commit [public;rev=4;c4fabb2e572b] default/master_bookmark
@@ -109,14 +109,14 @@
   2 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg ci -m 'rebinding'
-  $ sl push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
   $ LARGE_REBINDING="$(hg log -r master_bookmark -T '{node}')"
 
 -- Step 4. create a commit that fixes working copy in the small repo and push it
   $ cd "$TESTTMP/small-hg-client"
   $ echo 'largerepocontent' > 2
   $ hg ci -qm 'rebinding'
-  $ sl push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
   $ SMALL_REBINDING="$(hg log -r master_bookmark -T '{node}')"
 
 -- Step 5. mark commits that fix working copy as rewritten
@@ -139,7 +139,7 @@
   $ echo 'newfile' > newfile
   $ hg add newfile
   $ hg ci -qm 'after rebinding'
-  $ sl push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
   $ hg log -r master_bookmark
   commit:      ad40a9a26fbd
   bookmark:    default/master_bookmark
@@ -163,7 +163,7 @@
   $ hg up master_bookmark -q
   $ echo 'largenewcontent' > smallrepofolder/2
   $ hg ci -qm 'after rebinding from large'
-  $ sl push -r . --to master_bookmark -q
+  $ hg push -r . --to master_bookmark -q
 
 -- we do not have backsyncer running, so in order to see the change
 -- from small repo we need to do a push
@@ -171,7 +171,7 @@
   $ hg up -q master_bookmark
   $ echo 'newcontent' > 3
   $ hg ci -qm 'one more after rebinding'
-  $ sl push -r . --to master_bookmark
+  $ hg push -r . --to master_bookmark
   pushing rev 9cb648e934be to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload

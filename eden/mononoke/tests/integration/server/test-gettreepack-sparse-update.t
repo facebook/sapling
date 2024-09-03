@@ -31,13 +31,13 @@ Setup repo, and create test repo
   $ touch foo/456
   $ hg commit -Aqm 'add more files'
 
-  $ sl push -q -r . --to master_bookmark --force
+  $ hg push -q -r . --to master_bookmark --force
 
 Setup a client repo that doesn't have any of the manifests in its local store.
 
   $ hg clone -q mono:repo test_repo --noupdate
   $ cd test_repo
-  $ sl pull -q -B master_bookmark
+  $ hg pull -q -B master_bookmark
 
 Set up some config to enable sparse profiles, get logging from fetches, and
 also disable ondemand fetch to check this is overriden by sparse profiles.
@@ -56,15 +56,15 @@ also disable ondemand fetch to check this is overriden by sparse profiles.
 
 Checkout commits. Expect BFS prefetch to fill our tree
 
-  $ sl up 'master_bookmark~3'
+  $ hg up 'master_bookmark~3'
    INFO fetch_edenapi: revisionstore::scmstore::tree::fetch: enter
    INFO fetch_edenapi{* requests=1 *}: revisionstore::scmstore::tree::fetch: exit (glob)
    INFO fetch_edenapi: revisionstore::scmstore::tree::fetch: enter
    INFO fetch_edenapi{* requests=1 *}: revisionstore::scmstore::tree::fetch: exit (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ sl sparse enable sparse/profile
+  $ hg sparse enable sparse/profile
 
-  $ sl up 'master_bookmark~2'
+  $ hg up 'master_bookmark~2'
    INFO fetch_edenapi: revisionstore::scmstore::tree::fetch: enter
    INFO fetch_edenapi{* requests=1 *}: revisionstore::scmstore::tree::fetch: exit (glob)
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -75,11 +75,11 @@ Checkout commits. Expect BFS prefetch to fill our tree
 # fetching for the rest of the tree.
 
   $ rm -r "$TESTTMP/test_repo.cache"
-  $ sl debuggetroottree "$(hg log -r '.' -T '{manifest}')"
+  $ hg debuggetroottree "$(hg log -r '.' -T '{manifest}')"
    INFO fetch_edenapi: revisionstore::scmstore::tree::fetch: enter
    INFO fetch_edenapi{* requests=1 *}: revisionstore::scmstore::tree::fetch: exit (glob)
 
-  $ sl up 'master_bookmark' --config sparse.force_full_prefetch_on_sparse_profile_change=True
+  $ hg up 'master_bookmark' --config sparse.force_full_prefetch_on_sparse_profile_change=True
   2 files fetched over 2 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
    INFO fetch_edenapi: revisionstore::scmstore::tree::fetch: enter
    INFO fetch_edenapi{* requests=1 *}: revisionstore::scmstore::tree::fetch: exit (glob)
@@ -98,12 +98,12 @@ Checkout commits. Expect BFS prefetch to fill our tree
 # Now, force load the root tree for the commit again, and do update to master_bookmark
 # without force_full_prefetch_on_sparse_profile_change set. Note that we fetch less trees
 
-  $ sl up 'master_bookmark~2' -q
+  $ hg up 'master_bookmark~2' -q
   $ rm -r "$TESTTMP/test_repo.cache"
-  $ sl debuggetroottree "$(hg log -r '.' -T '{manifest}')"
+  $ hg debuggetroottree "$(hg log -r '.' -T '{manifest}')"
    INFO fetch_edenapi: revisionstore::scmstore::tree::fetch: enter
    INFO fetch_edenapi{* requests=1 *}: revisionstore::scmstore::tree::fetch: exit (glob)
-  $ sl up 'master_bookmark'
+  $ hg up 'master_bookmark'
    INFO fetch_edenapi: revisionstore::scmstore::tree::fetch: enter
    INFO fetch_edenapi{* requests=1 *}: revisionstore::scmstore::tree::fetch: exit (glob)
    INFO fetch_edenapi: revisionstore::scmstore::tree::fetch: enter
@@ -115,17 +115,17 @@ Checkout commits. Expect BFS prefetch to fill our tree
 Check that we can create some commits, and that nothing breaks even if the
 server does not know about our root manifest.
 
-  $ sl book client
+  $ hg book client
 
   $ cat >> sparse/profile <<EOF
   > # more comment
   > EOF
-  $ sl commit -Aqm 'modify sparse profile again'
+  $ hg commit -Aqm 'modify sparse profile again'
 
-  $ sl up 'client~1'
+  $ hg up 'client~1'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark client)
 
-  $ sl up 'client'
+  $ hg up 'client'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark client)
