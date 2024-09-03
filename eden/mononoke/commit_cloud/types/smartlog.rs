@@ -24,3 +24,15 @@ pub struct SmartlogData {
     pub version: Option<i64>,
     pub timestamp: Option<i64>,
 }
+
+pub enum SmartlogFilter {
+    Version(i64),
+    Timestamp(i64),
+}
+
+#[derive(PartialEq)]
+pub enum SmartlogFlag {
+    SkipPublicCommitsMetadata,
+    AddRemoteBookmarks,
+    AddAllBookmarks,
+}

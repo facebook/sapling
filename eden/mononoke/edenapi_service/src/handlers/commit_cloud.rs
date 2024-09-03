@@ -13,6 +13,7 @@ use edenapi_types::CloudWorkspaceRequest;
 use edenapi_types::CloudWorkspacesRequest;
 use edenapi_types::GetReferencesParams;
 use edenapi_types::GetSmartlogByVersionParams;
+use edenapi_types::GetSmartlogFlag;
 use edenapi_types::GetSmartlogParams;
 use edenapi_types::HistoricalVersionsParams;
 use edenapi_types::HistoricalVersionsResponse;
@@ -208,7 +209,14 @@ async fn get_smartlog<R: MononokeRepo>(
     request: GetSmartlogParams,
     repo: HgRepoContext<R>,
 ) -> anyhow::Result<SmartlogDataResponse, Error> {
-    let cc_res = repo.cloud_smartlog(&request).await;
+    let flags = request
+        .flags
+        .into_iter()
+        .map(GetSmartlogFlag::into_cc_type)
+        .collect::<anyhow::Result<Vec<_>>>()?;
+    let cc_res = repo
+        .cloud_smartlog(&request.workspace, &request.reponame, &flags)
+        .await;
     let res = match cc_res {
         Ok(res) => Ok(SmartlogData::from_cc_type(res)?),
         Err(e) => Err(e),
@@ -334,7 +342,15 @@ async fn get_smartlog_by_version<R: MononokeRepo>(
     request: GetSmartlogByVersionParams,
     repo: HgRepoContext<R>,
 ) -> anyhow::Result<SmartlogDataResponse, Error> {
-    let cc_res = repo.cloud_smartlog_by_version(&request).await;
+    let flags = request
+        .flags
+        .into_iter()
+        .map(GetSmartlogFlag::into_cc_type)
+        .collect::<anyhow::Result<Vec<_>>>()?;
+    let filter = request.filter.into_cc_type()?;
+    let cc_res = repo
+        .cloud_smartlog_by_version(&request.workspace, &request.reponame, &filter, &flags)
+        .await;
     let res = match cc_res {
         Ok(res) => Ok(SmartlogData::from_cc_type(res)?),
         Err(e) => Err(e),

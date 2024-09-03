@@ -24,9 +24,9 @@ use commit_cloud_intern_utils::interngraph_publisher::publish_single_update;
 #[cfg(fbcode_build)]
 use commit_cloud_intern_utils::notification::NotificationData;
 use commit_cloud_types::ReferencesData;
+use commit_cloud_types::SmartlogFilter;
 use commit_cloud_types::UpdateReferencesParams;
 use context::CoreContext;
-use edenapi_types::cloud::SmartlogFilter;
 use edenapi_types::cloud::WorkspaceSharingData;
 use edenapi_types::GetReferencesParams;
 use edenapi_types::HistoricalVersionsData;

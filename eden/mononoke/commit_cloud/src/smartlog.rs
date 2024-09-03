@@ -8,10 +8,10 @@
 use changeset_info::ChangesetInfo;
 use commit_cloud_types::LocalBookmarksMap;
 use commit_cloud_types::RemoteBookmarksMap;
+use commit_cloud_types::SmartlogFlag;
 use commit_cloud_types::SmartlogNode;
 use commit_cloud_types::WorkspaceHead;
 use commit_cloud_types::WorkspaceRemoteBookmark;
-use edenapi_types::GetSmartlogFlag;
 use mercurial_types::HgChangesetId;
 
 use crate::ctx::CommitCloudContext;
@@ -31,7 +31,7 @@ pub struct RawSmartlogData {
 impl RawSmartlogData {
     // Takes all the heads and bookmarks and returns them as a single Vec<HgChangesetId>
     // in order to create a  smartlog node list
-    pub fn collapse_into_vec(&self, flags: &[GetSmartlogFlag]) -> Vec<HgChangesetId> {
+    pub fn collapse_into_vec(&self, flags: &[SmartlogFlag]) -> Vec<HgChangesetId> {
         let mut heads = self
             .heads
             .clone()
@@ -39,7 +39,7 @@ impl RawSmartlogData {
             .map(|head| head.commit)
             .collect::<Vec<HgChangesetId>>();
 
-        if flags.contains(&GetSmartlogFlag::AddRemoteBookmarks) {
+        if flags.contains(&SmartlogFlag::AddRemoteBookmarks) {
             let mut rbs = self
                 .remote_bookmarks
                 .keys()
@@ -48,7 +48,7 @@ impl RawSmartlogData {
             heads.append(&mut rbs);
         }
 
-        if flags.contains(&GetSmartlogFlag::AddAllBookmarks) {
+        if flags.contains(&SmartlogFlag::AddAllBookmarks) {
             let mut lbs = self
                 .local_bookmarks
                 .keys()

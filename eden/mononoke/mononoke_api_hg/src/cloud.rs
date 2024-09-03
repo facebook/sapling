@@ -13,14 +13,14 @@ use commit_cloud_types::LocalBookmarksMap;
 use commit_cloud_types::ReferencesData;
 use commit_cloud_types::RemoteBookmarksMap;
 use commit_cloud_types::SmartlogData;
+use commit_cloud_types::SmartlogFilter;
+use commit_cloud_types::SmartlogFlag;
 use commit_cloud_types::SmartlogNode;
 use commit_cloud_types::UpdateReferencesParams;
 use commit_graph::CommitGraphRef;
 use edenapi_types::cloud::CloudShareWorkspaceRequest;
 use edenapi_types::cloud::WorkspaceSharingData;
 use edenapi_types::GetReferencesParams;
-use edenapi_types::GetSmartlogByVersionParams;
-use edenapi_types::GetSmartlogParams;
 use edenapi_types::HistoricalVersionsData;
 use edenapi_types::HistoricalVersionsParams;
 use edenapi_types::RenameWorkspaceRequest;
@@ -110,16 +110,18 @@ impl<R: MononokeRepo> HgRepoContext<R> {
 
     pub async fn cloud_smartlog(
         &self,
-        params: &GetSmartlogParams,
+        workspace: &str,
+        reponame: &str,
+        flags: &[SmartlogFlag],
     ) -> Result<SmartlogData, MononokeError> {
-        let cc_ctx = CommitCloudContext::new(&params.workspace, &params.reponame)?;
+        let cc_ctx = CommitCloudContext::new(workspace, reponame)?;
         let raw_data = self
             .repo_ctx()
             .repo()
             .commit_cloud()
             .get_smartlog_raw_info(&cc_ctx)
             .await?;
-        let hg_ids = raw_data.collapse_into_vec(&params.flags);
+        let hg_ids = raw_data.collapse_into_vec(flags);
 
         let nodes = self
             .form_smartlog_with_info(hg_ids, raw_data.local_bookmarks, raw_data.remote_bookmarks)
@@ -272,9 +274,12 @@ impl<R: MononokeRepo> HgRepoContext<R> {
 
     pub async fn cloud_smartlog_by_version(
         &self,
-        params: &GetSmartlogByVersionParams,
+        workspace: &str,
+        reponame: &str,
+        filter: &SmartlogFilter,
+        _flags: &[SmartlogFlag],
     ) -> Result<SmartlogData, MononokeError> {
-        let mut cc_ctx = CommitCloudContext::new(&params.workspace, &params.reponame)?;
+        let mut cc_ctx = CommitCloudContext::new(workspace, reponame)?;
 
         let authz = self.repo_ctx().authorization_context();
         authz
@@ -285,7 +290,7 @@ impl<R: MononokeRepo> HgRepoContext<R> {
             .repo_ctx()
             .repo()
             .commit_cloud()
-            .get_history_by(&cc_ctx, &params.filter)
+            .get_history_by(&cc_ctx, filter)
             .await?;
         let lbs = history.local_bookmarks_as_map();
         let rbs = history.remote_bookmarks_as_map();

@@ -19,4 +19,6 @@ pub use references::WorkspaceLocalBookmark;
 pub use references::WorkspaceRemoteBookmark;
 pub use references::WorkspaceSnapshot;
 pub use smartlog::SmartlogData;
+pub use smartlog::SmartlogFilter;
+pub use smartlog::SmartlogFlag;
 pub use smartlog::SmartlogNode;

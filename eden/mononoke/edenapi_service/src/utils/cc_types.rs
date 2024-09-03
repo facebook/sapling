@@ -8,12 +8,16 @@
 use commit_cloud_types::ClientInfo as CCClientInfo;
 use commit_cloud_types::ReferencesData as CCReferencesData;
 use commit_cloud_types::SmartlogData as CCSmartlogData;
+use commit_cloud_types::SmartlogFilter as CCSmartlogFilter;
+use commit_cloud_types::SmartlogFlag;
 use commit_cloud_types::SmartlogNode as CCSmartlogNode;
 use commit_cloud_types::UpdateReferencesParams as CCUpdateReferencesParams;
 use commit_cloud_types::WorkspaceRemoteBookmark;
 use edenapi_types::cloud::ClientInfo;
 use edenapi_types::cloud::ReferencesData;
 use edenapi_types::cloud::RemoteBookmark;
+use edenapi_types::cloud::SmartlogFilter;
+use edenapi_types::GetSmartlogFlag;
 use edenapi_types::HgId;
 use edenapi_types::SmartlogData;
 use edenapi_types::SmartlogNode;
@@ -72,6 +76,25 @@ impl IntoCommitCloudType<CCClientInfo> for ClientInfo {
 impl IntoCommitCloudType<WorkspaceRemoteBookmark> for RemoteBookmark {
     fn into_cc_type(self) -> anyhow::Result<WorkspaceRemoteBookmark> {
         WorkspaceRemoteBookmark::new(self.remote, self.name, self.node.unwrap_or_default().into())
+    }
+}
+
+impl IntoCommitCloudType<SmartlogFlag> for GetSmartlogFlag {
+    fn into_cc_type(self) -> anyhow::Result<SmartlogFlag> {
+        Ok(match self {
+            GetSmartlogFlag::AddAllBookmarks => SmartlogFlag::AddAllBookmarks,
+            GetSmartlogFlag::AddRemoteBookmarks => SmartlogFlag::AddRemoteBookmarks,
+            GetSmartlogFlag::SkipPublicCommitsMetadata => SmartlogFlag::SkipPublicCommitsMetadata,
+        })
+    }
+}
+
+impl IntoCommitCloudType<CCSmartlogFilter> for SmartlogFilter {
+    fn into_cc_type(self) -> anyhow::Result<CCSmartlogFilter> {
+        Ok(match self {
+            SmartlogFilter::Timestamp(timestamp) => CCSmartlogFilter::Timestamp(timestamp),
+            SmartlogFilter::Version(version) => CCSmartlogFilter::Version(version),
+        })
     }
 }
 
