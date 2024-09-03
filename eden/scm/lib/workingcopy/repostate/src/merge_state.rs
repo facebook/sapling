@@ -23,38 +23,6 @@ use types::HgId;
 use types::RepoPath;
 use types::RepoPathBuf;
 
-#[derive(Default)]
-pub struct MergeState {
-    // commits being merged
-    local: Option<HgId>,
-    other: Option<HgId>,
-
-    // contextual labels for local/other/base
-    labels: Vec<String>,
-
-    // conflicting files
-    files: HashMap<RepoPathBuf, FileInfo>,
-
-    // merge driver definition at start of merge so we can detect merge driver
-    // config changing during merge.
-    merge_driver: Option<(String, MergeDriverState)>,
-
-    // list of unsupported record types and accompanying record data, if any
-    unsupported_records: Vec<(String, Vec<String>)>,
-
-    // allows writing arbitrary records for testing purposes
-    raw_records: Vec<(u8, Vec<String>)>,
-}
-
-#[derive(Debug)]
-pub struct UnsupportedMergeRecords(pub MergeState);
-
-impl std::fmt::Display for UnsupportedMergeRecords {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self.0.unsupported_records)
-    }
-}
-
 /// MergeState represents the repo state when merging two commits.
 ///
 /// Basically, MergeState records which commits are being merged, and the state
@@ -94,6 +62,37 @@ impl std::fmt::Display for UnsupportedMergeRecords {
 /// pu: unresolved path conflict (file conflicts with directory)
 /// pr: resolved path conflict
 /// d: driver-resolved conflict
+#[derive(Default)]
+pub struct MergeState {
+    // commits being merged
+    local: Option<HgId>,
+    other: Option<HgId>,
+
+    // contextual labels for local/other/base
+    labels: Vec<String>,
+
+    // conflicting files
+    files: HashMap<RepoPathBuf, FileInfo>,
+
+    // merge driver definition at start of merge so we can detect merge driver
+    // config changing during merge.
+    merge_driver: Option<(String, MergeDriverState)>,
+
+    // list of unsupported record types and accompanying record data, if any
+    unsupported_records: Vec<(String, Vec<String>)>,
+
+    // allows writing arbitrary records for testing purposes
+    raw_records: Vec<(u8, Vec<String>)>,
+}
+
+#[derive(Debug)]
+pub struct UnsupportedMergeRecords(pub MergeState);
+
+impl std::fmt::Display for UnsupportedMergeRecords {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.0.unsupported_records)
+    }
+}
 
 impl MergeState {
     pub fn new(local: Option<HgId>, other: Option<HgId>, labels: Vec<String>) -> Self {

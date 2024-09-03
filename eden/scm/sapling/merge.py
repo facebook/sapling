@@ -56,7 +56,7 @@ class mergestate:
     """track 3-way merge state of individual files
 
     The merge state is stored on disk when needed. See the
-    repostate::merge_state module for details on the format.
+    `repostate::MergeState` Rust type for details on the format.
 
     Merge driver run states (experimental):
     u: driver-resolved files unmarked -- needs to be run next time we're about
