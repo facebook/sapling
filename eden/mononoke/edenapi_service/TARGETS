@@ -41,6 +41,7 @@ rust_library(
         "//eden/mononoke/blobstore:ephemeral_blobstore",
         "//eden/mononoke/bookmarks:bookmarks",
         "//eden/mononoke/bookmarks:bookmarks_movement",
+        "//eden/mononoke/commit_cloud/types:commit_cloud_types",
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/filestore:filestore",
         "//eden/mononoke/gotham_ext:gotham_ext",

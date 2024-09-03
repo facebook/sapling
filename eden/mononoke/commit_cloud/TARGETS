@@ -16,7 +16,6 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
-        "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:serde_json",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/futures_stats:futures_stats",

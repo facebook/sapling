@@ -5,76 +5,24 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
 use std::str::FromStr;
 
 use anyhow::ensure;
 use clientinfo::ClientRequestInfo;
+use commit_cloud_types::WorkspaceRemoteBookmark;
 use mercurial_types::HgChangesetId;
-use serde::Deserialize;
-use serde::Serialize;
 use sql::Transaction;
 
-use crate::references::RemoteBookmark;
 use crate::sql::ops::Delete;
 use crate::sql::ops::Insert;
 use crate::sql::ops::SqlCommitCloud;
 use crate::sql::remote_bookmarks_ops::DeleteArgs;
 use crate::CommitCloudContext;
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct WorkspaceRemoteBookmark {
-    name: String,
-    commit: HgChangesetId,
-    remote: String,
-}
-
-impl WorkspaceRemoteBookmark {
-    pub fn new(remote: String, name: String, commit: HgChangesetId) -> anyhow::Result<Self> {
-        ensure!(
-            !name.is_empty(),
-            "'commit cloud' failed: remote bookmark name cannot be empty"
-        );
-        ensure!(
-            !remote.is_empty(),
-            "'commit cloud' failed: remote bookmark 'remote' part cannot be empty"
-        );
-        Ok(Self {
-            name,
-            commit,
-            remote,
-        })
-    }
-
-    pub fn name(&self) -> &String {
-        &self.name
-    }
-
-    pub fn commit(&self) -> &HgChangesetId {
-        &self.commit
-    }
-
-    pub fn remote(&self) -> &String {
-        &self.remote
-    }
-}
-
-pub type RemoteBookmarksMap = HashMap<HgChangesetId, Vec<RemoteBookmark>>;
-
-impl From<RemoteBookmark> for WorkspaceRemoteBookmark {
-    fn from(bookmark: RemoteBookmark) -> Self {
-        Self {
-            name: bookmark.name,
-            commit: bookmark.node.unwrap_or_default().into(),
-            remote: bookmark.remote,
-        }
-    }
-}
-
 // This must stay as-is to work with serde
 #[allow(clippy::ptr_arg)]
 pub fn rbs_from_list(bookmarks: &Vec<Vec<String>>) -> anyhow::Result<Vec<WorkspaceRemoteBookmark>> {
-    bookmarks
+    let bookmarks: anyhow::Result<Vec<WorkspaceRemoteBookmark>> = bookmarks
         .iter()
         .map(|bookmark| {
             ensure!(
@@ -82,18 +30,23 @@ pub fn rbs_from_list(bookmarks: &Vec<Vec<String>>) -> anyhow::Result<Vec<Workspa
                 "'commit cloud' failed: Invalid remote bookmark format for {}",
                 bookmark.join(" ")
             );
-            HgChangesetId::from_str(&bookmark[2]).map(|commit_id| WorkspaceRemoteBookmark {
-                remote: bookmark[0].clone(),
-                name: bookmark[1].clone(),
-                commit: commit_id,
+            HgChangesetId::from_str(&bookmark[2]).and_then(|commit_id| {
+                WorkspaceRemoteBookmark::new(bookmark[0].clone(), bookmark[1].clone(), commit_id)
             })
         })
-        .collect()
+        .collect();
+    bookmarks
 }
 
 pub fn rbs_to_list(lbs: Vec<WorkspaceRemoteBookmark>) -> Vec<Vec<String>> {
     lbs.into_iter()
-        .map(|lb| vec![lb.remote, lb.name, lb.commit.to_string()])
+        .map(|lb| {
+            vec![
+                lb.remote().clone(),
+                lb.name().clone(),
+                lb.commit().to_string(),
+            ]
+        })
         .collect()
 }
 
@@ -102,8 +55,8 @@ pub async fn update_remote_bookmarks(
     mut txn: Transaction,
     cri: Option<&ClientRequestInfo>,
     ctx: &CommitCloudContext,
-    updated_remote_bookmarks: Option<Vec<RemoteBookmark>>,
-    removed_remote_bookmarks: Option<Vec<RemoteBookmark>>,
+    updated_remote_bookmarks: Option<Vec<WorkspaceRemoteBookmark>>,
+    removed_remote_bookmarks: Option<Vec<WorkspaceRemoteBookmark>>,
 ) -> anyhow::Result<Transaction> {
     if removed_remote_bookmarks
         .clone()
@@ -136,11 +89,7 @@ pub async fn update_remote_bookmarks(
             cri,
             ctx.reponame.clone(),
             ctx.workspace.clone(),
-            WorkspaceRemoteBookmark {
-                name: book.name,
-                commit: book.node.unwrap_or_default().into(),
-                remote: book.remote,
-            },
+            book,
         )
         .await?;
     }

@@ -23,13 +23,13 @@ use commit_cloud_intern_utils::acl_check::ACL_LINK;
 use commit_cloud_intern_utils::interngraph_publisher::publish_single_update;
 #[cfg(fbcode_build)]
 use commit_cloud_intern_utils::notification::NotificationData;
+use commit_cloud_types::ReferencesData;
+use commit_cloud_types::UpdateReferencesParams;
 use context::CoreContext;
 use edenapi_types::cloud::SmartlogFilter;
 use edenapi_types::cloud::WorkspaceSharingData;
 use edenapi_types::GetReferencesParams;
 use edenapi_types::HistoricalVersionsData;
-use edenapi_types::ReferencesData;
-use edenapi_types::UpdateReferencesParams;
 use facet::facet;
 use futures_stats::futures03::TimedFutureExt;
 use metaconfig_types::CommitCloudConfig;
@@ -85,13 +85,6 @@ impl CommitCloud {
             config,
         }
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct ClientInfo {
-    pub hostname: String,
-    pub reporoot: String,
-    pub version: u64,
 }
 
 pub enum Phase {

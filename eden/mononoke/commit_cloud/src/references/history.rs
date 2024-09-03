@@ -6,18 +6,17 @@
  */
 
 use anyhow::bail;
+use commit_cloud_types::references::WorkspaceRemoteBookmark;
 use commit_cloud_types::LocalBookmarksMap;
+use commit_cloud_types::RemoteBookmarksMap;
 use commit_cloud_types::WorkspaceHead;
 use commit_cloud_types::WorkspaceLocalBookmark;
 use edenapi_types::cloud::HistoricalVersion;
 use edenapi_types::cloud::HistoricalVersionsData;
-use edenapi_types::cloud::RemoteBookmark;
 use mercurial_types::HgChangesetId;
 use mononoke_types::Timestamp;
 
-use super::remote_bookmarks::RemoteBookmarksMap;
 use super::RawReferencesData;
-use crate::references::remote_bookmarks::WorkspaceRemoteBookmark;
 use crate::sql::history_ops::GetOutput;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -60,13 +59,8 @@ impl WorkspaceHistory {
     pub fn remote_bookmarks_as_map(&self) -> RemoteBookmarksMap {
         let mut map = RemoteBookmarksMap::new();
         self.remote_bookmarks.iter().for_each(|bookmark| {
-            let rb = RemoteBookmark {
-                name: bookmark.name().clone(),
-                node: Some((*bookmark.commit()).into()),
-                remote: bookmark.remote().clone(),
-            };
             let value = map.entry(*bookmark.commit()).or_insert(vec![]);
-            value.push(rb)
+            value.push(bookmark.clone())
         });
         map
     }

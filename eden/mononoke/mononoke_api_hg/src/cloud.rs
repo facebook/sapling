@@ -7,25 +7,24 @@
 
 use borrowed::borrowed;
 use commit_cloud::ctx::CommitCloudContext;
-use commit_cloud::references::remote_bookmarks::RemoteBookmarksMap;
 use commit_cloud::CommitCloudRef;
 use commit_cloud::Phase;
 use commit_cloud_types::LocalBookmarksMap;
+use commit_cloud_types::ReferencesData;
+use commit_cloud_types::RemoteBookmarksMap;
+use commit_cloud_types::SmartlogData;
+use commit_cloud_types::SmartlogNode;
+use commit_cloud_types::UpdateReferencesParams;
 use commit_graph::CommitGraphRef;
 use edenapi_types::cloud::CloudShareWorkspaceRequest;
 use edenapi_types::cloud::WorkspaceSharingData;
 use edenapi_types::GetReferencesParams;
 use edenapi_types::GetSmartlogByVersionParams;
 use edenapi_types::GetSmartlogParams;
-use edenapi_types::HgId;
 use edenapi_types::HistoricalVersionsData;
 use edenapi_types::HistoricalVersionsParams;
-use edenapi_types::ReferencesData;
 use edenapi_types::RenameWorkspaceRequest;
-use edenapi_types::SmartlogData;
-use edenapi_types::SmartlogNode;
 use edenapi_types::UpdateArchiveParams;
-use edenapi_types::UpdateReferencesParams;
 use futures::TryStreamExt;
 use futures_util::future::try_join_all;
 use mercurial_types::HgChangesetId;
@@ -192,7 +191,7 @@ impl<R: MononokeRepo> HgRepoContext<R> {
                         .many_changeset_hg_ids(parents)
                         .await?
                         .into_iter()
-                        .map(|(_, hg_id)| HgId::from(hg_id))
+                        .map(|(_, hg_id)| hg_id)
                         .collect();
 
                     nodes.push(self.repo_ctx().repo().commit_cloud().make_smartlog_node(

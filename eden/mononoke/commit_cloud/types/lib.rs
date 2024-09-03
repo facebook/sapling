@@ -6,9 +6,17 @@
  */
 
 pub mod references;
+pub mod smartlog;
 
+pub use references::ClientInfo;
 pub use references::LocalBookmarksMap;
+pub use references::ReferencesData;
+pub use references::RemoteBookmarksMap;
+pub use references::UpdateReferencesParams;
 pub use references::WorkspaceCheckoutLocation;
 pub use references::WorkspaceHead;
 pub use references::WorkspaceLocalBookmark;
+pub use references::WorkspaceRemoteBookmark;
 pub use references::WorkspaceSnapshot;
+pub use smartlog::SmartlogData;
+pub use smartlog::SmartlogNode;

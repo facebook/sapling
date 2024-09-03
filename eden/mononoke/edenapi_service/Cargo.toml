@@ -18,6 +18,7 @@ bookmarks_movement = { version = "0.1.0", path = "../bookmarks/bookmarks_movemen
 bytes = { version = "1.6.0", features = ["serde"] }
 clientinfo = { version = "0.1.0", path = "../../scm/lib/clientinfo" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+commit_cloud_types = { version = "0.1.0", path = "../commit_cloud/types" }
 context = { version = "0.1.0", path = "../server/context" }
 edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
 ephemeral_blobstore = { version = "0.1.0", path = "../blobstore/ephemeral_blobstore" }

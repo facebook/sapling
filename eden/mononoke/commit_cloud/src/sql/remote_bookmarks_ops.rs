@@ -7,13 +7,12 @@
 
 use async_trait::async_trait;
 use clientinfo::ClientRequestInfo;
-use edenapi_types::cloud::RemoteBookmark;
+use commit_cloud_types::RemoteBookmarksMap;
+use commit_cloud_types::WorkspaceRemoteBookmark;
 use sql::Transaction;
 use sql_ext::mononoke_queries;
 
 use crate::ctx::CommitCloudContext;
-use crate::references::remote_bookmarks::RemoteBookmarksMap;
-use crate::references::remote_bookmarks::WorkspaceRemoteBookmark;
 use crate::sql::common::UpdateWorkspaceNameArgs;
 use crate::sql::ops::Delete;
 use crate::sql::ops::Get;
@@ -93,11 +92,7 @@ impl GetAsMap<RemoteBookmarksMap> for SqlCommitCloud {
         for (remote, name, commit) in rows {
             match changeset_from_bytes(&commit, self.uses_mysql) {
                 Ok(hgid) => {
-                    let rb = RemoteBookmark {
-                        name,
-                        node: Some(hgid.into()),
-                        remote,
-                    };
+                    let rb = WorkspaceRemoteBookmark::new(remote, name, hgid)?;
                     if let Some(val) = map.get_mut(&hgid) {
                         val.push(rb);
                     } else {

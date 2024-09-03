@@ -8,6 +8,7 @@
 use ::sql_ext::mononoke_queries;
 use async_trait::async_trait;
 use clientinfo::ClientRequestInfo;
+use commit_cloud_types::references::WorkspaceRemoteBookmark;
 use commit_cloud_types::WorkspaceHead;
 use commit_cloud_types::WorkspaceLocalBookmark;
 use mononoke_types::Timestamp;
@@ -21,7 +22,6 @@ use crate::references::local_bookmarks::lbs_from_map;
 use crate::references::local_bookmarks::lbs_to_map;
 use crate::references::remote_bookmarks::rbs_from_list;
 use crate::references::remote_bookmarks::rbs_to_list;
-use crate::references::remote_bookmarks::WorkspaceRemoteBookmark;
 use crate::sql::common::UpdateWorkspaceNameArgs;
 use crate::sql::ops::Delete;
 use crate::sql::ops::GenericGet;

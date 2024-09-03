@@ -7,15 +7,14 @@
 
 use changeset_info::ChangesetInfo;
 use commit_cloud_types::LocalBookmarksMap;
+use commit_cloud_types::RemoteBookmarksMap;
+use commit_cloud_types::SmartlogNode;
 use commit_cloud_types::WorkspaceHead;
-use edenapi_types::cloud::RemoteBookmark;
+use commit_cloud_types::WorkspaceRemoteBookmark;
 use edenapi_types::GetSmartlogFlag;
-use edenapi_types::HgId;
-use edenapi_types::SmartlogNode;
 use mercurial_types::HgChangesetId;
 
 use crate::ctx::CommitCloudContext;
-use crate::references::remote_bookmarks::RemoteBookmarksMap;
 use crate::sql::ops::Get;
 use crate::sql::ops::GetAsMap;
 use crate::CommitCloud;
@@ -98,10 +97,10 @@ impl CommitCloud {
     pub fn make_smartlog_node(
         &self,
         hgid: &HgChangesetId,
-        parents: &Vec<HgId>,
+        parents: &Vec<HgChangesetId>,
         node: &ChangesetInfo,
         local_bookmarks: &Option<Vec<String>>,
-        remote_bookmarks: &Option<Vec<RemoteBookmark>>,
+        remote_bookmarks: &Option<Vec<WorkspaceRemoteBookmark>>,
         phase: &Phase,
     ) -> anyhow::Result<SmartlogNode> {
         let author = node.author();
@@ -109,7 +108,7 @@ impl CommitCloud {
         let message = node.message();
 
         let node = SmartlogNode {
-            node: (*hgid).into(),
+            node: *hgid,
             phase: phase.to_string(),
             author: author.to_string(),
             date,

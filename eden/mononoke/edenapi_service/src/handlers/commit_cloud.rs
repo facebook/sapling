@@ -15,10 +15,13 @@ use edenapi_types::GetReferencesParams;
 use edenapi_types::GetSmartlogByVersionParams;
 use edenapi_types::GetSmartlogParams;
 use edenapi_types::HistoricalVersionsParams;
+use edenapi_types::HistoricalVersionsResponse;
+use edenapi_types::ReferencesData;
 use edenapi_types::ReferencesDataResponse;
 use edenapi_types::RenameWorkspaceRequest;
 use edenapi_types::RenameWorkspaceResponse;
 use edenapi_types::ServerError;
+use edenapi_types::SmartlogData;
 use edenapi_types::SmartlogDataResponse;
 use edenapi_types::UpdateArchiveParams;
 use edenapi_types::UpdateArchiveResponse;
@@ -38,6 +41,8 @@ use super::handler::SaplingRemoteApiContext;
 use super::HandlerResult;
 use super::SaplingRemoteApiHandler;
 use super::SaplingRemoteApiMethod;
+use crate::utils::cc_types::FromCommitCloudType;
+use crate::utils::cc_types::IntoCommitCloudType;
 pub struct CommitCloudWorkspace;
 pub struct CommitCloudWorkspaces;
 pub struct CommitCloudReferences;
@@ -48,7 +53,6 @@ pub struct CommitCloudShareWorkspace;
 pub struct CommitCloudRenameWorkspace;
 pub struct CommitCloudUpdateArchive;
 pub struct CommitCloudHistoricalVersions;
-use edenapi_types::HistoricalVersionsResponse;
 
 #[async_trait]
 impl SaplingRemoteApiHandler for CommitCloudWorkspace {
@@ -137,11 +141,13 @@ async fn get_references<R: MononokeRepo>(
     request: GetReferencesParams,
     repo: HgRepoContext<R>,
 ) -> anyhow::Result<ReferencesDataResponse, Error> {
+    let cc_res = repo.cloud_references(&request).await;
+    let res = match cc_res {
+        Ok(res) => Ok(ReferencesData::from_cc_type(res)?),
+        Err(e) => Err(e),
+    };
     Ok(ReferencesDataResponse {
-        data: repo
-            .cloud_references(&request)
-            .await
-            .map_err(ServerError::from),
+        data: res.map_err(ServerError::from),
     })
 }
 
@@ -168,11 +174,14 @@ async fn update_references<R: MononokeRepo>(
     request: UpdateReferencesParams,
     repo: HgRepoContext<R>,
 ) -> anyhow::Result<ReferencesDataResponse, Error> {
+    let cc_params = request.into_cc_type()?;
+    let cc_res = repo.cloud_update_references(&cc_params).await;
+    let res = match cc_res {
+        Ok(res) => Ok(ReferencesData::from_cc_type(res)?),
+        Err(e) => Err(e),
+    };
     Ok(ReferencesDataResponse {
-        data: repo
-            .cloud_update_references(&request)
-            .await
-            .map_err(ServerError::from),
+        data: res.map_err(ServerError::from),
     })
 }
 
@@ -199,11 +208,13 @@ async fn get_smartlog<R: MononokeRepo>(
     request: GetSmartlogParams,
     repo: HgRepoContext<R>,
 ) -> anyhow::Result<SmartlogDataResponse, Error> {
+    let cc_res = repo.cloud_smartlog(&request).await;
+    let res = match cc_res {
+        Ok(res) => Ok(SmartlogData::from_cc_type(res)?),
+        Err(e) => Err(e),
+    };
     Ok(SmartlogDataResponse {
-        data: repo
-            .cloud_smartlog(&request)
-            .await
-            .map_err(ServerError::from),
+        data: res.map_err(ServerError::from),
     })
 }
 
@@ -323,11 +334,13 @@ async fn get_smartlog_by_version<R: MononokeRepo>(
     request: GetSmartlogByVersionParams,
     repo: HgRepoContext<R>,
 ) -> anyhow::Result<SmartlogDataResponse, Error> {
+    let cc_res = repo.cloud_smartlog_by_version(&request).await;
+    let res = match cc_res {
+        Ok(res) => Ok(SmartlogData::from_cc_type(res)?),
+        Err(e) => Err(e),
+    };
     Ok(SmartlogDataResponse {
-        data: repo
-            .cloud_smartlog_by_version(&request)
-            .await
-            .map_err(ServerError::from),
+        data: res.map_err(ServerError::from),
     })
 }
 

@@ -380,9 +380,3 @@ pub struct HistoricalVersionsResponse {
     #[no_default]
     pub data: Result<HistoricalVersionsData, ServerError>,
 }
-
-impl RemoteBookmark {
-    pub fn full_name(&self) -> String {
-        format!("{}/{}", self.remote, self.name)
-    }
-}

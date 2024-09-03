@@ -10,7 +10,6 @@ use std::str::FromStr;
 
 use clientinfo::ClientRequestInfo;
 use commit_cloud_types::WorkspaceLocalBookmark;
-use edenapi_types::HgId;
 use mercurial_types::HgChangesetId;
 use sql::Transaction;
 
@@ -42,7 +41,7 @@ pub async fn update_bookmarks(
     mut txn: Transaction,
     cri: Option<&ClientRequestInfo>,
     ctx: &CommitCloudContext,
-    updated_bookmarks: HashMap<String, HgId>,
+    updated_bookmarks: HashMap<String, HgChangesetId>,
     removed_bookmarks: Vec<String>,
 ) -> anyhow::Result<Transaction> {
     if !removed_bookmarks.is_empty() {
@@ -65,7 +64,7 @@ pub async fn update_bookmarks(
             cri,
             ctx.reponame.clone(),
             ctx.workspace.clone(),
-            WorkspaceLocalBookmark::new(name, book.into())?,
+            WorkspaceLocalBookmark::new(name, book)?,
         )
         .await?;
     }

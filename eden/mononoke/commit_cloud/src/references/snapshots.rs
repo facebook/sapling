@@ -7,7 +7,6 @@
 
 use clientinfo::ClientRequestInfo;
 use commit_cloud_types::WorkspaceSnapshot;
-use edenapi_types::HgId;
 use mercurial_types::HgChangesetId;
 use sql::Transaction;
 
@@ -22,15 +21,12 @@ pub async fn update_snapshots(
     mut txn: Transaction,
     cri: Option<&ClientRequestInfo>,
     ctx: &CommitCloudContext,
-    new_snapshots: Vec<HgId>,
-    removed_snapshots: Vec<HgId>,
+    new_snapshots: Vec<HgChangesetId>,
+    removed_snapshots: Vec<HgChangesetId>,
 ) -> anyhow::Result<Transaction> {
     if !removed_snapshots.is_empty() {
         let delete_args = DeleteArgs {
-            removed_commits: removed_snapshots
-                .into_iter()
-                .map(|id| id.into())
-                .collect::<Vec<HgChangesetId>>(),
+            removed_commits: removed_snapshots,
         };
 
         txn = Delete::<WorkspaceSnapshot>::delete(
@@ -50,9 +46,7 @@ pub async fn update_snapshots(
             cri,
             ctx.reponame.clone(),
             ctx.workspace.clone(),
-            WorkspaceSnapshot {
-                commit: snapshot.into(),
-            },
+            WorkspaceSnapshot { commit: snapshot },
         )
         .await?;
     }

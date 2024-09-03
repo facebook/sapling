@@ -10,13 +10,14 @@ use std::str::FromStr;
 use commit_cloud::ctx::CommitCloudContext;
 use commit_cloud::references::remote_bookmarks::rbs_from_list;
 use commit_cloud::references::remote_bookmarks::rbs_to_list;
-use commit_cloud::references::remote_bookmarks::WorkspaceRemoteBookmark;
 use commit_cloud::sql::builder::SqlCommitCloudBuilder;
 use commit_cloud::sql::common::UpdateWorkspaceNameArgs;
 use commit_cloud::sql::ops::Delete;
 use commit_cloud::sql::ops::GetAsMap;
 use commit_cloud::sql::ops::Insert;
 use commit_cloud::sql::ops::Update;
+use commit_cloud_types::RemoteBookmarksMap;
+use commit_cloud_types::WorkspaceRemoteBookmark;
 use fbinit::FacebookInit;
 use mercurial_types::HgChangesetId;
 use mononoke_macros::mononoke;
@@ -104,7 +105,6 @@ fn test_rbs_to_list() {
 
 #[mononoke::fbinit_test]
 async fn test_remote_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
-    use commit_cloud::references::remote_bookmarks::RemoteBookmarksMap;
     use commit_cloud::sql::ops::Get;
     use commit_cloud::sql::remote_bookmarks_ops::DeleteArgs;
 
@@ -147,22 +147,9 @@ async fn test_remote_bookmarks(_fb: FacebookInit) -> anyhow::Result<()> {
     assert_eq!(res.len(), 2);
 
     let res_map: RemoteBookmarksMap = sql.get_as_map(reponame.clone(), workspace.clone()).await?;
+    assert_eq!(res_map.get(&hgid1).unwrap().to_vec(), vec![bookmark1]);
     assert_eq!(
-        res_map
-            .get(&hgid1)
-            .unwrap()
-            .iter()
-            .map(|b| b.clone().into())
-            .collect::<Vec<WorkspaceRemoteBookmark>>(),
-        vec![bookmark1]
-    );
-    assert_eq!(
-        res_map
-            .get(&hgid2)
-            .unwrap()
-            .iter()
-            .map(|b| b.clone().into())
-            .collect::<Vec<WorkspaceRemoteBookmark>>(),
+        res_map.get(&hgid2).unwrap().to_vec(),
         vec![bookmark2.clone()]
     );
 
