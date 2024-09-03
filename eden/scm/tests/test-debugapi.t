@@ -3,11 +3,10 @@
 
 
   $ configure modern
-  $ setconfig paths.default=test:e1 ui.ssh=false
 
 Test the norepo endpoint (health):
 
-  $ hg debugapi
+  $ hg debugapi --config paths.default=test:e1
   {"server": "EagerRepo",
    "status": 200,
    "version": "HTTP/1.1",
@@ -141,3 +140,10 @@ Test APIs:
                                                     "content_sha256": bin("0000000000000000000000000000000000000000000000000000000000000000"),
                                                     "file_header_metadata": None}}}}],
     "tree_aux_data": None}]
+
+Works outside repo
+  $ hg --cwd .. debugapi test:e1 -e capabilities
+  ["segmented-changelog",
+   "commit-graph-segments",
+   "sha1-only"]
+

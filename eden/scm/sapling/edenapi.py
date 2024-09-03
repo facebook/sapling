@@ -8,6 +8,6 @@ from __future__ import absolute_import
 from bindings import edenapi
 
 
-def getclient(ui):
+def getclient(ui, path=None):
     """Obtain the edenapi client"""
-    return edenapi.client(ui._rcfg)
+    return edenapi.client(ui._rcfg, path=path)

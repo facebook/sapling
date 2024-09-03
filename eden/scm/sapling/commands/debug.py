@@ -152,10 +152,10 @@ def _flattenresponse(response: Sized, sort: bool = False):
         ("f", "input-file", [], _("input file in Python literal format")),
         ("", "sort", False, _("sort list to stabilize output")),
     ],
-    _(""),
+    _("[SERVER]"),
     optionalrepo=True,
 )
-def debugapi(ui, repo=None, **opts) -> None:
+def debugapi(ui, repo, serverpath=None, **opts) -> None:
     """send an SaplingRemoteAPI request and print its output
 
     The endpoint name is the method name defined on the edenapi object.
@@ -176,7 +176,11 @@ def debugapi(ui, repo=None, **opts) -> None:
     # [str] -> [obj]
     params = [ast.literal_eval(s) for s in inputs]
 
-    client = repo and repo.edenapi or edenapi.getclient(ui)
+    if repo and not serverpath:
+        client = repo.edenapi
+    else:
+        client = edenapi.getclient(ui, serverpath)
+
     func = getattr(client, endpoint)
     try:
         response = func(*params)
