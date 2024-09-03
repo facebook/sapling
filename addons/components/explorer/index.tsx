@@ -11,6 +11,8 @@ import ComponentExplorer from './ComponentExplorer';
 import 'react';
 import ReactDOM from 'react-dom/client';
 
+import './index.css';
+
 import '../theme/themeDark.css';
 import '../theme/themeLight.css';
 

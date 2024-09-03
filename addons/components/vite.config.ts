@@ -12,14 +12,5 @@ import styleX from 'vite-plugin-stylex';
 import viteTsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
-  base: '',
   plugins: [react(), styleX(), viteTsconfigPaths()],
-  build: {
-    outDir: 'build',
-  },
-  server: {
-    // No need to open the browser, it's opened by `yarn serve` in `isl-server`.
-    open: false,
-    port: 3005,
-  },
 });
