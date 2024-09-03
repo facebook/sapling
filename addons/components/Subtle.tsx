@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {stylexPropsWithClassName} from './utils';
 import * as stylex from '@stylexjs/stylex';
-import {stylexPropsWithClassName} from 'isl-components/utils';
 
 const styles = stylex.create({
   subtle: {

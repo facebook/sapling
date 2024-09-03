@@ -9,9 +9,9 @@ import type {TypeaheadResult} from './Types';
 import type {ReactProps} from './utils';
 
 import {Icon} from './Icon';
+import {Subtle} from './Subtle';
+import {TextField} from './TextField';
 import {extractTokens, TokensList, tokensToString} from './Tokens';
-import {Subtle} from 'isl-components/Subtle';
-import {TextField} from 'isl-components/TextField';
 import {useRef, useEffect, useState} from 'react';
 
 export function Typeahead({
