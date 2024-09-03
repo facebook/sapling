@@ -10,10 +10,10 @@ import {t, T} from './i18n';
 import {configBackedAtom} from './jotaiUtils';
 import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
+import {isMac} from 'isl-components/OperatingSystem';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom} from 'jotai';
 import {useContextMenu} from 'shared/ContextMenu';
-import {isMac} from 'shared/OperatingSystem';
 
 export type ChangedFilesDisplayType = 'short' | 'fullPaths' | 'tree' | 'fish';
 

@@ -6,7 +6,7 @@
  */
 
 import {KeyCode, Modifier} from './KeyboardShortcuts';
-import {isMac, isWindows} from 'shared/OperatingSystem';
+import {isMac, isWindows} from './OperatingSystem';
 
 import './Kbd.css';
 

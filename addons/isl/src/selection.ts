@@ -27,9 +27,9 @@ import {latestDag} from './serverAPIState';
 import {latestSuccessorUnlessExplicitlyObsolete} from './successionUtils';
 import {exactRevset, type CommitInfo, type Hash} from './types';
 import {firstOfIterable, registerCleanup} from './utils';
+import {isMac} from 'isl-components/OperatingSystem';
 import {atom} from 'jotai';
 import {useCallback} from 'react';
-import {isMac} from 'shared/OperatingSystem';
 
 /**
  * The name of the key to toggle individual selection.

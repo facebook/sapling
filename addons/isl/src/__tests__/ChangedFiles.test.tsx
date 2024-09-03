@@ -24,7 +24,7 @@ import {leftPad} from '../utils';
 import {fireEvent, render, screen, act} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-jest.mock('shared/OperatingSystem', () => ({
+jest.mock('isl-components/OperatingSystem', () => ({
   isMac: true,
 }));
 

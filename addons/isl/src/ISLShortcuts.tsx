@@ -9,8 +9,8 @@ import {t} from './i18n';
 import {useModal} from './useModal';
 import {Kbd} from 'isl-components/Kbd';
 import {makeCommandDispatcher, KeyCode, Modifier} from 'isl-components/KeyboardShortcuts';
+import {isMac} from 'isl-components/OperatingSystem';
 import {useMemo} from 'react';
-import {isMac} from 'shared/OperatingSystem';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
 
 import './ISLShortcuts.css';
