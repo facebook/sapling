@@ -7,10 +7,10 @@
 
 use borrowed::borrowed;
 use commit_cloud::ctx::CommitCloudContext;
-use commit_cloud::references::local_bookmarks::LocalBookmarksMap;
 use commit_cloud::references::remote_bookmarks::RemoteBookmarksMap;
 use commit_cloud::CommitCloudRef;
 use commit_cloud::Phase;
+use commit_cloud_types::LocalBookmarksMap;
 use commit_graph::CommitGraphRef;
 use edenapi_types::cloud::CloudShareWorkspaceRequest;
 use edenapi_types::cloud::WorkspaceSharingData;

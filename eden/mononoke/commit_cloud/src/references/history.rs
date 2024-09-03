@@ -6,17 +6,17 @@
  */
 
 use anyhow::bail;
+use commit_cloud_types::LocalBookmarksMap;
 use commit_cloud_types::WorkspaceHead;
+use commit_cloud_types::WorkspaceLocalBookmark;
 use edenapi_types::cloud::HistoricalVersion;
 use edenapi_types::cloud::HistoricalVersionsData;
 use edenapi_types::cloud::RemoteBookmark;
 use mercurial_types::HgChangesetId;
 use mononoke_types::Timestamp;
 
-use super::local_bookmarks::LocalBookmarksMap;
 use super::remote_bookmarks::RemoteBookmarksMap;
 use super::RawReferencesData;
-use crate::references::local_bookmarks::WorkspaceLocalBookmark;
 use crate::references::remote_bookmarks::WorkspaceRemoteBookmark;
 use crate::sql::history_ops::GetOutput;
 

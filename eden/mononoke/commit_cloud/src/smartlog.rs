@@ -6,6 +6,7 @@
  */
 
 use changeset_info::ChangesetInfo;
+use commit_cloud_types::LocalBookmarksMap;
 use commit_cloud_types::WorkspaceHead;
 use edenapi_types::cloud::RemoteBookmark;
 use edenapi_types::GetSmartlogFlag;
@@ -14,7 +15,6 @@ use edenapi_types::SmartlogNode;
 use mercurial_types::HgChangesetId;
 
 use crate::ctx::CommitCloudContext;
-use crate::references::local_bookmarks::LocalBookmarksMap;
 use crate::references::remote_bookmarks::RemoteBookmarksMap;
 use crate::sql::ops::Get;
 use crate::sql::ops::GetAsMap;

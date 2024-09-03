@@ -5,8 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::path::PathBuf;
 
+use anyhow::ensure;
 use mercurial_types::HgChangesetId;
 use mononoke_types::Timestamp;
 use serde::Deserialize;
@@ -31,3 +33,29 @@ pub struct WorkspaceCheckoutLocation {
 pub struct WorkspaceSnapshot {
     pub commit: HgChangesetId,
 }
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
+pub struct WorkspaceLocalBookmark {
+    name: String,
+    commit: HgChangesetId,
+}
+
+impl WorkspaceLocalBookmark {
+    pub fn new(name: String, commit: HgChangesetId) -> anyhow::Result<Self> {
+        ensure!(
+            !name.is_empty(),
+            "'commit cloud' failed: Local bookmark name cannot be empty"
+        );
+
+        Ok(Self { name, commit })
+    }
+
+    pub fn name(&self) -> &String {
+        &self.name
+    }
+
+    pub fn commit(&self) -> &HgChangesetId {
+        &self.commit
+    }
+}
+
+pub type LocalBookmarksMap = HashMap<HgChangesetId, Vec<String>>;

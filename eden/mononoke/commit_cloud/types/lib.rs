@@ -7,6 +7,8 @@
 
 pub mod references;
 
+pub use references::LocalBookmarksMap;
 pub use references::WorkspaceCheckoutLocation;
 pub use references::WorkspaceHead;
+pub use references::WorkspaceLocalBookmark;
 pub use references::WorkspaceSnapshot;

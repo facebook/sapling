@@ -14,6 +14,7 @@ use changeset_info::ChangesetInfo;
 use clientinfo::ClientRequestInfo;
 use commit_cloud_types::WorkspaceCheckoutLocation;
 use commit_cloud_types::WorkspaceHead;
+use commit_cloud_types::WorkspaceLocalBookmark;
 use commit_cloud_types::WorkspaceSnapshot;
 use context::CoreContext;
 use edenapi_types::cloud::RemoteBookmark;
@@ -27,7 +28,6 @@ use versions::WorkspaceVersion;
 
 use crate::references::heads::update_heads;
 use crate::references::local_bookmarks::update_bookmarks;
-use crate::references::local_bookmarks::WorkspaceLocalBookmark;
 use crate::references::remote_bookmarks::update_remote_bookmarks;
 use crate::references::remote_bookmarks::WorkspaceRemoteBookmark;
 use crate::references::snapshots::update_snapshots;

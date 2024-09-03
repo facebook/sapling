@@ -8,12 +8,12 @@
 use ::sql_ext::mononoke_queries;
 use async_trait::async_trait;
 use clientinfo::ClientRequestInfo;
+use commit_cloud_types::LocalBookmarksMap;
+use commit_cloud_types::WorkspaceLocalBookmark;
 use sql::Connection;
 use sql::Transaction;
 
 use crate::ctx::CommitCloudContext;
-use crate::references::local_bookmarks::LocalBookmarksMap;
-use crate::references::local_bookmarks::WorkspaceLocalBookmark;
 use crate::sql::common::UpdateWorkspaceNameArgs;
 use crate::sql::ops::Delete;
 use crate::sql::ops::Get;
