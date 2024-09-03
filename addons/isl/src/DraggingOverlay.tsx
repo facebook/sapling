@@ -9,8 +9,8 @@ import type {DragHandler} from './DragHandle';
 
 import * as stylex from '@stylexjs/stylex';
 import {ViewportOverlay} from 'isl-components/ViewportOverlay';
+import {getZoomLevel} from 'isl-components/zoom';
 import React, {useEffect, useRef} from 'react';
-import {getZoomLevel} from 'shared/zoom';
 
 const styles = stylex.create({
   draggingElement: {

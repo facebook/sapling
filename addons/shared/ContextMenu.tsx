@@ -5,11 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {findParentWithClassName} from './utils';
-import {getZoomLevel} from './zoom';
 import {Icon} from 'isl-components/Icon';
+import {getZoomLevel} from 'isl-components/zoom';
 import {atom, useAtom, useSetAtom} from 'jotai';
 import {useEffect, useRef, useState} from 'react';
+import {findParentWithClassName} from 'shared/utils';
 
 import './ContextMenu.css';
 
