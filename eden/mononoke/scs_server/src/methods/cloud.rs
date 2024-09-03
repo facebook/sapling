@@ -5,6 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Result;
+use commit_cloud_helpers::sanity_check_workspace_name;
+use commit_cloud_types::SmartlogFlag;
+use commit_cloud_types::SmartlogNode;
+use commit_cloud_types::WorkspaceRemoteBookmark as CCWorkspaceRemoteBookmark;
 use context::CoreContext;
 use mononoke_api_hg::RepoContextHgExt;
 use mononoke_types::commit_cloud::WorkspaceData;
@@ -66,11 +71,87 @@ impl SourceControlServiceImpl {
 
     pub async fn cloud_workspace_smartlog(
         &self,
-        _ctx: CoreContext,
-        _params: thrift::CloudWorkspaceSmartlogParams,
+        ctx: CoreContext,
+        params: thrift::CloudWorkspaceSmartlogParams,
     ) -> Result<thrift::CloudWorkspaceSmartlogResponse, ServiceError> {
-        Err(ServiceError::Request(invalid_request(
-            "'cloud_workspace_smartlog' is not implemented yet".to_string(),
-        )))
+        if !sanity_check_workspace_name(&params.workspace.name) {
+            return Err(ServiceError::Request(invalid_request(format!(
+                "Invalid workspace name: {}",
+                &params.workspace.name
+            ))));
+        }
+        let repo = self.repo(ctx, &params.workspace.repo).await?;
+        repo.clone()
+            .hg()
+            .cloud_workspace(&params.workspace.name, &params.workspace.repo.name)
+            .await
+            .map_err(invalid_request)?;
+
+        let flags = params
+            .flags
+            .into_iter()
+            .map(from_thrift_smartlog_flag)
+            .collect::<Result<Vec<_>>>()
+            .map_err(|e| ServiceError::Request(invalid_request(e.to_string())))?;
+        let smartlog = repo
+            .hg()
+            .cloud_smartlog(&params.workspace.name, &params.workspace.repo.name, &flags)
+            .await?;
+
+        let nodes = smartlog
+            .nodes
+            .into_iter()
+            .map(into_thrift_smartlog_node)
+            .collect();
+
+        Ok(thrift::CloudWorkspaceSmartlogResponse {
+            smartlog: thrift::SmartlogData {
+                nodes,
+                version: smartlog.version,
+                timestamp: smartlog.timestamp,
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+    }
+}
+
+fn from_thrift_smartlog_flag(t: thrift::CloudWorkspaceSmartlogFlags) -> Result<SmartlogFlag> {
+    match t {
+        thrift::CloudWorkspaceSmartlogFlags::SKIP_PUBLIC_COMMITS_METADATA => {
+            Ok(SmartlogFlag::SkipPublicCommitsMetadata)
+        }
+        thrift::CloudWorkspaceSmartlogFlags::ADD_REMOTE_BOOKMARKS => {
+            Ok(SmartlogFlag::AddRemoteBookmarks)
+        }
+        thrift::CloudWorkspaceSmartlogFlags::ADD_ALL_BOOKMARKS => Ok(SmartlogFlag::AddAllBookmarks),
+        _ => Err(anyhow::anyhow!("Invalid smartlog flag")),
+    }
+}
+
+fn into_thrift_smartlog_node(node: SmartlogNode) -> thrift::SmartlogNode {
+    thrift::SmartlogNode {
+        hg_id: node.node.to_string(),
+        phase: node.phase,
+        author: node.author,
+        date: node.date,
+        message: node.message,
+        parents: node.parents.into_iter().map(|p| p.to_string()).collect(),
+        bookmarks: node.bookmarks,
+        remote_bookmarks: node.remote_bookmarks.map(|rbs| {
+            rbs.into_iter()
+                .map(into_thrift_remote_bookmark)
+                .collect::<Vec<thrift::WorkspaceRemoteBookmark>>()
+        }),
+        ..Default::default()
+    }
+}
+
+fn into_thrift_remote_bookmark(b: CCWorkspaceRemoteBookmark) -> thrift::WorkspaceRemoteBookmark {
+    thrift::WorkspaceRemoteBookmark {
+        remote: b.remote().to_string(),
+        name: b.name().to_string(),
+        hg_id: Some(b.commit().to_string()),
+        ..Default::default()
     }
 }

@@ -2181,7 +2181,7 @@ struct WorkspaceRemoteBookmark {
 /// Represents a single commit within a workspace.
 struct SmartlogNode {
   /// Mercurial commit ID.
-  1: string hd_id;
+  1: string hg_id;
   /// Whether the commit is public or draft.
   2: string phase;
   /// The author of the commit.
