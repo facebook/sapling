@@ -12,11 +12,9 @@
 
 from __future__ import absolute_import
 
-import errno
 import hashlib
 import posixpath
 import shutil
-import struct
 from collections import defaultdict
 
 from bindings import (
@@ -37,9 +35,7 @@ from . import (
     filemerge,
     git,
     i18n,
-    json,
     match as matchmod,
-    mutation,
     perftrace,
     progress,
     pycompat,
