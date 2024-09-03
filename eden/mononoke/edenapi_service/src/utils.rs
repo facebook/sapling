@@ -25,7 +25,7 @@ use crate::errors::MononokeErrorExt;
 use crate::middleware::request_dumper::RequestDumper;
 
 pub mod cbor;
-pub mod cc_types;
+pub mod commit_cloud_types;
 pub mod convert;
 pub mod monitor;
 
