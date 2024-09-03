@@ -78,7 +78,7 @@ export function BookmarksManagerMenu() {
           Bookmarks Manager ($shortcut)
         </T>
       }
-      additionalToggles={additionalToggles}>
+      additionalToggles={additionalToggles.asEventTarget()}>
       <Button icon data-testid="bookmarks-manager-button">
         <Icon icon="bookmark" />
       </Button>

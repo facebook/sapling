@@ -32,7 +32,7 @@ export function BulkActionsMenu() {
           Bulk Actions ($shortcut)
         </T>
       }
-      additionalToggles={additionalToggles}>
+      additionalToggles={additionalToggles.asEventTarget()}>
       <Button icon data-testid="bulk-actions-button">
         <Icon icon="run-all" />
       </Button>

@@ -50,7 +50,7 @@ export function ShelvedChangesMenu() {
       component={dismiss => <ShelvedChangesList dismiss={dismiss} />}
       trigger="click"
       placement="bottom"
-      additionalToggles={additionalToggles}
+      additionalToggles={additionalToggles.asEventTarget()}
       group="topbar"
       title={
         <T replace={{$shortcut: <Kbd keycode={KeyCode.S} modifiers={[Modifier.ALT]} />}}>

@@ -12,7 +12,6 @@ import {ViewportOverlay} from './ViewportOverlay';
 import {findParentWithClassName} from './utils';
 import {getZoomLevel} from './zoom';
 import React, {useLayoutEffect, useEffect, useRef, useState} from 'react';
-import {TypedEventEmitter} from 'shared/TypedEventEmitter';
 
 import './Tooltip.css';
 
@@ -23,11 +22,11 @@ export type Placement = 'top' | 'bottom' | 'left' | 'right';
  */
 export const DOCUMENTATION_DELAY = 750;
 
-const tooltipGroups: Map<string, TypedEventEmitter<'change', HTMLDivElement>> = new Map();
-function getTooltipGroup(group: string): TypedEventEmitter<'change', HTMLDivElement> {
+const tooltipGroups: Map<string, EventTarget> = new Map();
+function getTooltipGroup(group: string): EventTarget {
   let found = tooltipGroups.get(group);
   if (found == null) {
-    found = new TypedEventEmitter();
+    found = new EventTarget();
     tooltipGroups.set(group, found);
   }
   return found;
@@ -62,8 +61,9 @@ type TooltipProps = {
     title?: string | React.ReactNode;
     /** If provided, opening this tooltip will close all other tooltips using the same group */
     group?: string;
-    /** TypedEventEmitter that allows external callers to toggle this tooltip */
-    additionalToggles?: TypedEventEmitter<'change', unknown> | TypedEventEmitter<'change', null>;
+    /** Event Emitter that allows external callers to toggle this tooltip.
+     * See also `shared/TypedEventEmitter`'s .asEventTarget() to get a typed API. */
+    additionalToggles?: EventTarget;
   }
 >;
 
@@ -71,6 +71,12 @@ type VisibleState =
   | true /* primary content (prefers component) is visible */
   | false
   | 'title' /* 'title', not 'component' is visible */;
+
+class TooltipChangeEvent<T> extends Event {
+  constructor(type: string, public data: T | Error) {
+    super(type);
+  }
+}
 
 /**
  * Enables child elements to render a tooltip when hovered/clicked.
@@ -154,25 +160,25 @@ export function Tooltip({
 
   useEffect(() => {
     const cb = () => setVisible(last => !last);
-    additionalToggles?.on('change', cb);
+    additionalToggles?.addEventListener('change', cb);
     return () => {
-      additionalToggles?.off('change', cb);
+      additionalToggles?.removeEventListener('change', cb);
     };
   }, [additionalToggles]);
 
   useEffect(() => {
     if (group) {
-      const hide = (clickedOn: HTMLDivElement) => {
-        if (clickedOn === ref.current) {
+      const hide = (event: Event) => {
+        if ((event as TooltipChangeEvent<HTMLElement>).data === ref.current) {
           // don't hide the tooltip we're trying to show right now
           return;
         }
         setVisible(false);
       };
       const found = getTooltipGroup(group);
-      found.on('change', hide);
+      found.addEventListener('change', hide);
       return () => {
-        found?.off('change', hide);
+        found?.removeEventListener('change', hide);
       };
     }
   }, [group]);
@@ -235,7 +241,7 @@ export function Tooltip({
                 if (group != null) {
                   // close other tooltips in the same group before opening
                   const found = getTooltipGroup(group);
-                  found.emit('change', ref.current as HTMLDivElement);
+                  found.dispatchEvent(new TooltipChangeEvent('change', ref.current));
                 }
                 setVisible(vis => vis !== true);
                 // don't trigger global click listener in the same tick

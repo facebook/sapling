@@ -42,7 +42,7 @@ export function DownloadCommitsTooltipButton() {
       trigger="click"
       component={dismiss => <DownloadCommitsTooltip dismiss={dismiss} />}
       placement="bottom"
-      additionalToggles={additionalToggles}
+      additionalToggles={additionalToggles.asEventTarget()}
       group="topbar"
       title={
         <div>

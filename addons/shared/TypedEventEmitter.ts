@@ -82,4 +82,27 @@ export class TypedEventEmitter<EventName extends string, EventType> {
       map.clear();
     }
   }
+
+  /** Get an EventTarget-compatible object while still being able to use the typed APIs */
+  asEventTarget(): EventTarget {
+    const listeners = new Map<(event: Event) => void, (data: EventType) => void>();
+    return {
+      addEventListener: (type: EventName, handler: (event: Event) => void) => {
+        const wrapped = (data: EventType) => {
+          handler(new EventWithPayload<EventType>(type, data));
+        };
+        listeners.set(handler, wrapped);
+        this.on(type as EventName, wrapped);
+      },
+      removeEventListener: (type: EventName, handler: (event: Event) => void) => {
+        const existing = listeners.get(handler);
+        if (existing) {
+          this.off(type as EventName, existing);
+          listeners.delete(handler);
+        }
+      },
+      dispatchEvent: (event: EventWithPayload<EventType>) =>
+        this.emit(event.type as EventName, event.data as EventType),
+    } as EventTarget;
+  }
 }

@@ -95,7 +95,7 @@ export function CwdSelector() {
     <Tooltip
       trigger="click"
       component={dismiss => <CwdDetails dismiss={dismiss} />}
-      additionalToggles={additionalToggles}
+      additionalToggles={additionalToggles.asEventTarget()}
       group="topbar"
       placement="bottom"
       title={
