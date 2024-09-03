@@ -6,11 +6,11 @@
  */
 
 import type {ReactNode} from 'react';
-import type {Writable} from 'shared/typeUtils';
 
 import {light} from './theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 
+type Writable<T> = {-readonly [P in keyof T]: T[P]};
 export function ThemedComponentsRoot({
   theme,
   className,

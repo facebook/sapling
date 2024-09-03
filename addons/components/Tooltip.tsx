@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ExclusiveOr} from './Types';
 import type {MouseEvent, ReactNode} from 'react';
-import type {ExclusiveOr} from 'shared/typeUtils';
 
 import {ViewportOverlay} from './ViewportOverlay';
 import {findParentWithClassName} from './utils';

@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ExclusiveOr} from './Types';
 import type {ReactProps} from './utils';
 import type {ForwardedRef} from 'react';
-import type {ExclusiveOr} from 'shared/typeUtils';
 
 import {layout} from './theme/layout';
 import {colors} from './theme/tokens.stylex';

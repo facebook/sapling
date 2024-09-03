@@ -26,3 +26,21 @@ export type TypeaheadResult = {
    */
   image?: string;
 };
+
+/**
+ * Remove particular keys from an object type:
+ * ```
+ * Without<{foo: string, bar: string, baz: number}, 'bar' | 'baz'> => {foo: string}
+ * ```
+ */
+export type Without<T, U> = {[P in Exclude<keyof T, keyof U>]?: never};
+
+/**
+ * Given two object types, return a type allowing keys from either one but not both
+ * ```
+ * ExclusiveOr({foo: string}, {bar: number}) -> allows {foo: 'a'}, {bar: 1}, but not {foo: 'a', bar: 1} or {}
+ * ```
+ */
+export type ExclusiveOr<T, U> = T | U extends object
+  ? (Without<T, U> & U) | (Without<U, T> & T)
+  : T | U;
