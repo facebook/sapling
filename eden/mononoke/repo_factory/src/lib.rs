@@ -186,6 +186,7 @@ use sqlphases::SqlPhasesBuilder;
 use streaming_clone::ArcStreamingClone;
 use streaming_clone::StreamingCloneBuilder;
 use synced_commit_mapping::ArcSyncedCommitMapping;
+use synced_commit_mapping::CachingSyncedCommitMapping;
 use synced_commit_mapping::SqlSyncedCommitMappingBuilder;
 use thiserror::Error;
 use virtually_sharded_blobstore::VirtuallyShardedBlobstore;
@@ -1298,11 +1299,22 @@ impl RepoFactory {
         &self,
         repo_config: &ArcRepoConfig,
     ) -> Result<ArcSyncedCommitMapping> {
-        Ok(Arc::new(
+        let sql_mapping = Arc::new(
             self.open_sql::<SqlSyncedCommitMappingBuilder>(repo_config)
                 .await?
                 .build(self.env.rendezvous_options),
-        ))
+        );
+        let maybe_cached_mapping: ArcSyncedCommitMapping = if let Some(cache_handler_factory) =
+            self.cache_handler_factory("synced_commit_mapping")?
+        {
+            Arc::new(CachingSyncedCommitMapping::new(
+                sql_mapping,
+                cache_handler_factory,
+            )?)
+        } else {
+            sql_mapping
+        };
+        Ok(maybe_cached_mapping)
     }
 
     /// Cross-repo sync manager for this repo

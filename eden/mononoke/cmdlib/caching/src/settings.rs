@@ -33,6 +33,7 @@ pub struct CachelibSettings {
     pub segmented_changelog_cache_size: Option<usize>,
     pub mutable_renames_cache_size: Option<usize>,
     pub sql_cache_size: Option<usize>,
+    pub synced_commit_mapping_cache_size: Option<usize>,
     pub expected_item_size_bytes: Option<usize>,
     pub rebalancing_use_lru: bool,
     pub rebalancing_interval: Duration,
@@ -128,6 +129,11 @@ impl CachelibSettings {
             &self.mutable_renames_cache_size,
         );
         set_default(&mut defaults, "sql-cache-size", &self.sql_cache_size);
+        set_default(
+            &mut defaults,
+            "synced-commit-mapping-cache-size",
+            &self.synced_commit_mapping_cache_size,
+        );
 
         defaults
     }
@@ -180,6 +186,10 @@ impl CachelibSettings {
             &args.mutable_renames_cache_size,
         );
         replace(&mut self.sql_cache_size, &args.sql_cache_size);
+        replace(
+            &mut self.synced_commit_mapping_cache_size,
+            &args.synced_commit_mapping_cache_size,
+        );
     }
 }
 
@@ -206,6 +216,7 @@ impl Default for CachelibSettings {
             segmented_changelog_cache_size: None,
             mutable_renames_cache_size: None,
             sql_cache_size: None,
+            synced_commit_mapping_cache_size: None,
             expected_item_size_bytes: None,
             rebalancing_use_lru: false,
             rebalancing_interval: Duration::from_secs(300),

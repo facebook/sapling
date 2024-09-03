@@ -172,6 +172,13 @@ pub fn init_cachelib_from_settings(
     )?;
 
     cachelib::get_or_create_volatile_pool(
+        "synced_commit_mapping",
+        settings
+            .synced_commit_mapping_cache_size
+            .unwrap_or(32 * 1024 * 1024),
+    )?;
+
+    cachelib::get_or_create_volatile_pool(
         "blobstore-blobs",
         settings
             .blob_cache_size
