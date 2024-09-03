@@ -123,10 +123,17 @@ impl RepoChangesetsPushrebaseHistory {
         let mut iter = bcs_ids.iter();
         match (iter.next(), iter.next()) {
             (None, _) => Ok(false),
-            (Some(bcs_id), None) => {
-                self.changesets
-                    .push(RepoChangeset(repo_name.clone(), *bcs_id));
-                Ok(true)
+            (Some(prepushrebase_bcs_id), None) => {
+                if *prepushrebase_bcs_id == bcs_id {
+                    // When no actual pushrebase is performed, we have the situation where the
+                    // prepushrebase commit is the same as the landed commit. We should report that
+                    // there was no pushrebase performed to be correct.
+                    Ok(false)
+                } else {
+                    self.changesets
+                        .push(RepoChangeset(repo_name.clone(), *prepushrebase_bcs_id));
+                    Ok(true)
+                }
             }
             (Some(_), Some(_)) => Err(errors::internal_error(format!(
                 "pushrebase mapping is ambiguous in repo {} for {}: {:?} (expected only one)",
@@ -264,10 +271,9 @@ impl SourceControlServiceImpl {
         if pushrebased {
             if !history.try_traverse_commit_sync(None).await? {
                 // In some scenarios, like the forward sync, we do not add the mapping for `small
-                // repository commit -> prepushrebase commit in large repository`. Fixing that, as
-                // in D59961713, by adding the relevant mapping is potentially risky. So, we just
-                // use a workaround here which is to look for the `small repository commit ->
-                // synced large repository commit` mapping which does always exist.
+                // repository commit -> prepushrebase commit in large repository`. So, we just use
+                // a workaround here which is to look for the `small repository commit -> synced
+                // large repository commit` mapping which does always exist.
                 history
                     .try_traverse_commit_sync(history.second_last())
                     .await?;
