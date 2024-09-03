@@ -93,7 +93,7 @@ def subtree_copy(ui, repo, *args, **opts):
     + diffgraftopts,
     _("[OPTION]... --from-path PATH --to-path PATH ..."),
 )
-def subtree_graft(ui, repo, *revs, **opts):
+def subtree_graft(ui, repo, **opts):
     """move commits from one path to another"""
     from sapling.commands import _dograft
 
@@ -104,7 +104,7 @@ def subtree_graft(ui, repo, *revs, **opts):
             raise error.Abort(_("must provide --from-path and --to-path"))
 
     with repo.wlock():
-        return _dograft(ui, repo, *revs, **opts)
+        return _dograft(ui, repo, **opts)
 
 
 def copy(ui, repo, *args, **opts):
