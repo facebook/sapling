@@ -122,7 +122,12 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         let hg_ids = raw_data.collapse_into_vec(flags);
 
         let nodes = self
-            .form_smartlog_with_info(hg_ids, raw_data.local_bookmarks, raw_data.remote_bookmarks)
+            .form_smartlog_with_info(
+                hg_ids,
+                raw_data.local_bookmarks,
+                raw_data.remote_bookmarks,
+                flags,
+            )
             .await?;
 
         Ok(SmartlogData {
@@ -137,6 +142,7 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         hg_ids: Vec<HgChangesetId>,
         local_bookmarks: LocalBookmarksMap,
         remote_bookmarks: RemoteBookmarksMap,
+        flags: &[SmartlogFlag],
     ) -> anyhow::Result<Vec<SmartlogNode>> {
         let ctx = self.ctx();
         let repo = self.repo_ctx().repo();
@@ -171,12 +177,16 @@ impl<R: MononokeRepo> HgRepoContext<R> {
             .try_collect::<Vec<Option<ChangesetContext<R>>>>()
             .await?;
 
-        let public_commits_ctx = try_join_all(
-            public_frontier
-                .into_iter()
-                .map(|cs_id| self.repo_ctx().changeset(ChangesetSpecifier::Bonsai(cs_id))),
-        )
-        .await?;
+        let public_commits_ctx = if !flags.contains(&SmartlogFlag::SkipPublicCommitsMetadata) {
+            try_join_all(
+                public_frontier
+                    .into_iter()
+                    .map(|cs_id| self.repo_ctx().changeset(ChangesetSpecifier::Bonsai(cs_id))),
+            )
+            .await?
+        } else {
+            Vec::new()
+        };
         let mut nodes = Vec::new();
 
         for (phase, changesets) in [
@@ -280,7 +290,7 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         workspace: &str,
         reponame: &str,
         filter: &SmartlogFilter,
-        _flags: &[SmartlogFlag],
+        flags: &[SmartlogFlag],
     ) -> Result<SmartlogData, MononokeError> {
         let mut cc_ctx = CommitCloudContext::new(workspace, reponame)?;
 
@@ -299,7 +309,9 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         let rbs = history.remote_bookmarks_as_map();
         let hg_ids = history.collapse_into_vec(&rbs, &lbs);
 
-        let nodes = self.form_smartlog_with_info(hg_ids, lbs, rbs).await?;
+        let nodes = self
+            .form_smartlog_with_info(hg_ids, lbs, rbs, flags)
+            .await?;
 
         Ok(SmartlogData {
             nodes,
