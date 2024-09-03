@@ -13,7 +13,7 @@ pub mod blame_v2;
 pub mod blob;
 pub mod bonsai_changeset;
 pub mod case_conflict_skeleton_manifest;
-pub mod commit_cloud;
+
 pub mod content_chunk;
 pub mod content_metadata_v2;
 pub mod datetime;

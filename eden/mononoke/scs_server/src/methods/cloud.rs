@@ -9,10 +9,10 @@ use anyhow::Result;
 use commit_cloud_helpers::sanity_check_workspace_name;
 use commit_cloud_types::SmartlogFlag;
 use commit_cloud_types::SmartlogNode;
+use commit_cloud_types::WorkspaceData;
 use commit_cloud_types::WorkspaceRemoteBookmark as CCWorkspaceRemoteBookmark;
 use context::CoreContext;
 use mononoke_api_hg::RepoContextHgExt;
-use mononoke_types::commit_cloud::WorkspaceData;
 
 use crate::errors::invalid_request;
 use crate::errors::ServiceError;

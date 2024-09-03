@@ -19,6 +19,7 @@ use commit_cloud_types::SmartlogFilter;
 use commit_cloud_types::SmartlogFlag;
 use commit_cloud_types::SmartlogNode;
 use commit_cloud_types::UpdateReferencesParams;
+use commit_cloud_types::WorkspaceData;
 use commit_cloud_types::WorkspaceSharingData;
 use commit_graph::CommitGraphRef;
 use futures::TryStreamExt;
@@ -28,7 +29,6 @@ use mononoke_api::ChangesetContext;
 use mononoke_api::ChangesetSpecifier;
 use mononoke_api::MononokeError;
 use mononoke_api::MononokeRepo;
-use mononoke_types::commit_cloud::WorkspaceData;
 use phases::PhasesRef;
 
 use crate::HgRepoContext;

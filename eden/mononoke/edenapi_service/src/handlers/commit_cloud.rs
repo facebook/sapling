@@ -40,7 +40,6 @@ use futures::StreamExt;
 use mononoke_api::MononokeRepo;
 use mononoke_api::Repo;
 use mononoke_api_hg::HgRepoContext;
-use mononoke_types::commit_cloud::WorkspaceData as CCWorkspaceData;
 
 use super::handler::SaplingRemoteApiContext;
 use super::HandlerResult;
@@ -82,12 +81,16 @@ async fn get_workspace<R: MononokeRepo>(
     request: CloudWorkspaceRequest,
     repo: HgRepoContext<R>,
 ) -> anyhow::Result<WorkspaceDataResponse> {
+    let cc_res = repo
+        .cloud_workspace(&request.workspace, &request.reponame)
+        .await;
+
+    let res = match cc_res {
+        Ok(res) => Ok(WorkspaceData::from_cc_type(res)?),
+        Err(e) => Err(e),
+    };
     Ok(WorkspaceDataResponse {
-        data: repo
-            .cloud_workspace(&request.workspace, &request.reponame)
-            .await
-            .map(cast_workspace_data)
-            .map_err(ServerError::from),
+        data: res.map_err(ServerError::from),
     })
 }
 
@@ -114,12 +117,19 @@ async fn get_workspaces<R: MononokeRepo>(
     request: CloudWorkspacesRequest,
     repo: HgRepoContext<R>,
 ) -> anyhow::Result<WorkspacesDataResponse> {
+    let cc_res = repo
+        .cloud_workspaces(&request.prefix, &request.reponame)
+        .await;
+    let res = match cc_res {
+        Ok(res) => Ok(res
+            .into_iter()
+            .map(WorkspaceData::from_cc_type)
+            .collect::<anyhow::Result<Vec<_>>>()?),
+        Err(e) => Err(e),
+    };
+
     Ok(WorkspacesDataResponse {
-        data: repo
-            .cloud_workspaces(&request.prefix, &request.reponame)
-            .await
-            .map(|workspaces| workspaces.into_iter().map(cast_workspace_data).collect())
-            .map_err(ServerError::from),
+        data: res.map_err(ServerError::from),
     })
 }
 
@@ -417,14 +427,4 @@ async fn historical_versions<R: MononokeRepo>(
     Ok(HistoricalVersionsResponse {
         data: res.map_err(ServerError::from),
     })
-}
-
-fn cast_workspace_data(data: CCWorkspaceData) -> WorkspaceData {
-    WorkspaceData {
-        name: data.name,
-        reponame: data.reponame,
-        version: data.version,
-        archived: data.archived,
-        timestamp: data.timestamp,
-    }
 }

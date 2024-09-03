@@ -10,6 +10,7 @@ use std::collections::BTreeSet;
 use std::collections::HashSet;
 
 use async_trait::async_trait;
+use commit_cloud_types::WorkspaceData;
 use futures::future::try_join_all;
 use futures::try_join;
 use itertools::Itertools;
@@ -35,7 +36,6 @@ use mononoke_api::TreeEntry;
 use mononoke_api::TreeId;
 use mononoke_api::TreeSummary;
 use mononoke_api::UnifiedDiff;
-use mononoke_types::commit_cloud::WorkspaceData;
 use source_control as thrift;
 
 use crate::commit_id::map_commit_identities;

@@ -13,6 +13,7 @@ use commit_cloud_types::SmartlogFilter as CCSmartlogFilter;
 use commit_cloud_types::SmartlogFlag;
 use commit_cloud_types::SmartlogNode as CCSmartlogNode;
 use commit_cloud_types::UpdateReferencesParams as CCUpdateReferencesParams;
+use commit_cloud_types::WorkspaceData as CCWorkspaceData;
 use commit_cloud_types::WorkspaceRemoteBookmark;
 use commit_cloud_types::WorkspaceSharingData as CCWorkspaceSharingData;
 use edenapi_types::cloud::ClientInfo;
@@ -25,6 +26,7 @@ use edenapi_types::HistoricalVersion;
 use edenapi_types::SmartlogData;
 use edenapi_types::SmartlogNode;
 use edenapi_types::UpdateReferencesParams;
+use edenapi_types::WorkspaceData;
 use edenapi_types::WorkspaceSharingData;
 use mercurial_types::HgChangesetId;
 
@@ -177,6 +179,18 @@ impl FromCommitCloudType<CCHistoricalVersion> for HistoricalVersion {
     fn from_cc_type(cc: CCHistoricalVersion) -> anyhow::Result<Self> {
         Ok(HistoricalVersion {
             version_number: cc.version_number,
+            timestamp: cc.timestamp,
+        })
+    }
+}
+
+impl FromCommitCloudType<CCWorkspaceData> for WorkspaceData {
+    fn from_cc_type(cc: CCWorkspaceData) -> anyhow::Result<Self> {
+        Ok(WorkspaceData {
+            name: cc.name,
+            reponame: cc.reponame,
+            version: cc.version,
+            archived: cc.archived,
             timestamp: cc.timestamp,
         })
     }

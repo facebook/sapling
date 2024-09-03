@@ -32,3 +32,11 @@ pub struct HistoricalVersion {
     pub version_number: i64,
     pub timestamp: i64,
 }
+
+pub struct WorkspaceData {
+    pub name: String,
+    pub reponame: String,
+    pub version: u64,
+    pub archived: bool,
+    pub timestamp: i64,
+}
