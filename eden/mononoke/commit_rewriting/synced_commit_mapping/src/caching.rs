@@ -157,8 +157,12 @@ impl EntityStore<CacheEntry> for CacheRequest<'_> {
         &mapping.memcache
     }
 
-    fn cache_determinator(&self, _: &CacheEntry) -> CacheDisposition {
-        CacheDisposition::Cache(CacheTtl::NoTtl)
+    fn cache_determinator(&self, entry: &CacheEntry) -> CacheDisposition {
+        if entry.mapping_entries.is_empty() {
+            CacheDisposition::Ignore
+        } else {
+            CacheDisposition::Cache(CacheTtl::NoTtl)
+        }
     }
 
     caching_ext::impl_singleton_stats!("synced_commit_mapping");
@@ -201,19 +205,16 @@ impl KeyedEntityStore<CacheKey, CacheEntry> for CacheRequest<'_> {
             };
 
             for (bcs_id, entries) in entries {
-                // Only cache non-empty entries
-                if !entries.is_empty() {
-                    res.insert(
-                        CacheKey {
-                            source_repo_id,
-                            target_repo_id,
-                            bcs_id,
-                        },
-                        CacheEntry {
-                            mapping_entries: entries,
-                        },
-                    );
-                }
+                res.insert(
+                    CacheKey {
+                        source_repo_id,
+                        target_repo_id,
+                        bcs_id,
+                    },
+                    CacheEntry {
+                        mapping_entries: entries,
+                    },
+                );
             }
         }
 

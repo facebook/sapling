@@ -63,9 +63,7 @@ async fn test_get_many_no_mappings_caching(fb: FacebookInit) {
         .get_many(&ctx, REPO_ZERO, REPO_ONE, &[bonsai::ONES_CSID])
         .await
         .expect("Get failed");
-    // BUG: The returned map should contain all requested changesets, not just the ones that
-    // have mappings.
-    assert!(!result.contains_key(&bonsai::ONES_CSID));
+    assert!(result.contains_key(&bonsai::ONES_CSID));
 }
 
 #[mononoke::fbinit_test]

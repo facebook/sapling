@@ -38,7 +38,6 @@ use crate::SyncedCommitMappingEntry;
 use crate::SyncedCommitSourceRepo;
 use crate::WorkingCopyEquivalence;
 
-// TODO(simonfar): Once we've proven the concept, we want to cache these
 define_stats! {
     prefix = "mononoke.synced_commit_mapping";
     gets: timeseries(Rate, Sum),
