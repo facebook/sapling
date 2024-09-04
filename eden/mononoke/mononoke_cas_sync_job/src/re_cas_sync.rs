@@ -42,15 +42,22 @@ pub async fn try_expand_bookmark_creation_entry<'a>(
     repo: &'a Repo,
     ctx: &'a CoreContext,
     to_bcs_id: ChangesetId,
+    main_bookmark: &'a str,
     bookmark: BookmarkKey,
 ) -> Result<Vec<ChangesetId>, Error> {
+    let bookmark_name = bookmark.as_str();
     let frontier = repo
         .commit_graph()
         .ancestors_frontier_with(ctx, vec![to_bcs_id], move |bcs_id| async move {
-            re_cas_client
-                .is_changeset_uploaded(ctx, repo, &bcs_id)
-                .await
-                .map_err(Error::from)
+            if bookmark_name != main_bookmark {
+                re_cas_client
+                    .is_changeset_uploaded(ctx, repo, &bcs_id)
+                    .await
+                    .map_err(Error::from)
+            } else {
+                // Do not rely on the lookups for the main bookmark.
+                Ok(false)
+            }
         })
         .await?;
 
@@ -164,8 +171,15 @@ pub async fn try_expand_entry<'a>(
             "log entry {:?} is a creation of bookmark", &entry
         );
         return Ok(Some(
-            try_expand_bookmark_creation_entry(re_cas_client, repo, ctx, to, entry.bookmark_name)
-                .await?,
+            try_expand_bookmark_creation_entry(
+                re_cas_client,
+                repo,
+                ctx,
+                to,
+                main_bookmark,
+                entry.bookmark_name,
+            )
+            .await?,
         ));
     }
 
@@ -185,8 +199,15 @@ pub async fn try_expand_entry<'a>(
             &entry
         );
         return Ok(Some(
-            try_expand_bookmark_creation_entry(re_cas_client, repo, ctx, to, entry.bookmark_name)
-                .await?,
+            try_expand_bookmark_creation_entry(
+                re_cas_client,
+                repo,
+                ctx,
+                to,
+                main_bookmark,
+                entry.bookmark_name,
+            )
+            .await?,
         ));
     }
 
