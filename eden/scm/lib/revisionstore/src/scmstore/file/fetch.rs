@@ -827,12 +827,9 @@ impl FetchState {
                 }
                 Err(err) => {
                     tracing::error!(?err, "overall CAS error");
-                    let err = ClonableError::new(err);
-                    for digest in chunk {
-                        if let Some(key) = digest_to_key.get(digest) {
-                            self.errors.keyed_error(key.clone(), err.clone().into());
-                        }
-                    }
+
+                    // Don't propagate CAS error - we want to fall back to SLAPI.
+                    error += 1;
                 }
             }
         }
