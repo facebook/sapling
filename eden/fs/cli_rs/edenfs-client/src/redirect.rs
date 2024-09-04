@@ -221,9 +221,6 @@ pub enum RedirectionState {
     #[serde(rename = "symlink-incorrect")]
     /// The Symlink Is Present but points to the wrong place
     SymlinkIncorrect,
-    #[serde(rename = "real-dir-with-data")]
-    /// There's a directory and it contains data,
-    RealDirWithData,
 }
 
 impl fmt::Display for RedirectionState {
@@ -237,7 +234,6 @@ impl fmt::Display for RedirectionState {
                 Self::NotMounted => "not-mounted",
                 Self::SymlinkMissing => "symlink-missing",
                 Self::SymlinkIncorrect => "symlink-incorrect",
-                Self::RealDirWithData => "real-dir-with-data",
             }
         )
     }
