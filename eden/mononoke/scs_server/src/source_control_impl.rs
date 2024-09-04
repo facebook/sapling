@@ -663,7 +663,7 @@ fn log_result<T: AddScubaResponse>(
         }
     };
     if let Ok(true) = justknobs::eval("scm/mononoke:scs_alert_on_methods", None, Some(method)) {
-        STATS::total_method_requests.add_value(0, (method.to_string(),));
+        STATS::total_method_requests.add_value(1, (method.to_string(),));
         if status == "INTERNAL_ERROR" {
             STATS::total_method_internal_failure.add_value(1, (method.to_string(),));
         } else {
