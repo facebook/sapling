@@ -44,6 +44,9 @@ pub struct Redirections {
     #[stack(default)]
     pub darwin_redirection_type: String,
 
+    #[stack(default)]
+    pub redirect_fixup_deletable_paths: Vec<String>,
+
     #[stack(merge = "merge_table", default)]
     #[serde(flatten)]
     pub other: toml::value::Table,
@@ -53,6 +56,7 @@ impl Default for Redirections {
     fn default() -> Self {
         Redirections {
             darwin_redirection_type: "apfs".to_string(),
+            redirect_fixup_deletable_paths: vec![],
             other: Default::default(),
         }
     }

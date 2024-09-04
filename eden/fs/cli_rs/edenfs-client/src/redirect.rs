@@ -42,7 +42,6 @@ use util::path::absolute;
 use crate::checkout::CheckoutConfig;
 use crate::checkout::EdenFsCheckout;
 use crate::fsutil::forcefully_remove_dir_all;
-#[cfg(unix)]
 use crate::instance::EdenFsInstance;
 use crate::mounttable::read_mount_table;
 
@@ -803,6 +802,24 @@ impl Redirection {
         Ok(())
     }
 
+    fn _is_deletable_path(&self, path: &Path) -> bool {
+        let deletable_paths = EdenFsInstance::global().get_config().map_or_else(
+            |_| Vec::new(),
+            |config| config.redirections.redirect_fixup_deletable_paths,
+        );
+
+        let is_deletable_path = deletable_paths.contains(&path.display().to_string());
+        if is_deletable_path {
+            println!(
+                "`{}` is a path that should only have auto-generated content hence should be safe to delete it to recover your redirections.
+If this path should not be deleted automatically, please reach out to 'EdenFS Windows Users' (https://fb.workplace.com/groups/edenfswindows) to correct this.",
+                path.display()
+            );
+        }
+
+        is_deletable_path
+    }
+
     #[async_recursion]
     pub async fn remove_existing(
         &self,
@@ -849,7 +866,7 @@ impl Redirection {
         }
 
         if disposition == RepoPathDisposition::IsNonEmptyDir {
-            if force_remove {
+            if force_remove || self._is_deletable_path(&self.repo_path) {
                 println!("Attempting to forcefully remove the directory.");
                 match forcefully_remove_dir_all(&self.expand_repo_path(checkout)) {
                     Ok(_) => {
