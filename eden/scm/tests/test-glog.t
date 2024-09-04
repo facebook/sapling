@@ -1371,7 +1371,7 @@
   $ echo ee > e
   $ hg ci -Am 'add another e' e
   $ hg merge --tool 'internal:other' 4
-  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 1 files merged, 1 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ echo merge > e
   $ hg ci -m 'merge 5 and 4'
@@ -1529,7 +1529,7 @@
 
   $ hg up -q 6
   $ hg log -G --git --patch --follow-first e
-  @    commit:      2db6fee45a05
+  @    commit:      36921220a3d9
   ├─╮  user:        test
   │ │  date:        Thu Jan 01 00:00:00 1970 +0000
   │ ~  summary:     merge 5 and 4
@@ -1730,12 +1730,17 @@
   # User test
   # Date 0 0
   #      Thu Jan 01 00:00:00 1970 +0000
-  # Node ID 2db6fee45a05affa756da717b122a27ceb16b7d1
+  # Node ID 36921220a3d9820aae9def32a3372a87a6c866e5
   # Parent  303e395907af014f67745883c70049a6f69a707d
   # Parent  e44ebe41bd2f734e8515763f44049e838d74d725
   merge 5 and 4
   
-  diff -r 303e395907af -r 2db6fee45a05 e
+  diff -r 303e395907af -r 36921220a3d9 dir/b
+  --- a/dir/b	Thu Jan 01 00:00:00 1970 +0000
+  +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +0,0 @@
+  -a
+  diff -r 303e395907af -r 36921220a3d9 e
   --- a/e	Thu Jan 01 00:00:00 1970 +0000
   +++ b/e	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +1,1 @@
@@ -1745,11 +1750,11 @@
   # User test
   # Date 0 0
   #      Thu Jan 01 00:00:00 1970 +0000
-  # Node ID 6535707b1ed0455e29dc3d8911cc57fb3226d202
-  # Parent  2db6fee45a05affa756da717b122a27ceb16b7d1
+  # Node ID 71adb5c4f02f067755963d8087e45153bb0b466f
+  # Parent  36921220a3d9820aae9def32a3372a87a6c866e5
   Added tag foo-bar for changeset fc281d8ff18d
   
-  diff -r 2db6fee45a05 -r 6535707b1ed0 .hgtags
+  diff -r 36921220a3d9 -r 71adb5c4f02f .hgtags
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/.hgtags	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
@@ -1758,11 +1763,11 @@
   # User test
   # Date 0 0
   #      Thu Jan 01 00:00:00 1970 +0000
-  # Node ID c221bd937134f1592182ffb30e6dbef782c7fac5
-  # Parent  2db6fee45a05affa756da717b122a27ceb16b7d1
+  # Node ID 6f6118f7da5a0ca1b1f17f12fa70f17c5960d3c8
+  # Parent  36921220a3d9820aae9def32a3372a87a6c866e5
   add g
   
-  diff -r 2db6fee45a05 -r c221bd937134 g
+  diff -r 36921220a3d9 -r 6f6118f7da5a g
   --- a/g	Thu Jan 01 00:00:00 1970 +0000
   +++ b/g	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,2 +1,1 @@
@@ -1887,9 +1892,9 @@
 # node template with changeset_printer:
 
   $ hg log -Gqr '5:7' --config 'ui.graphnodetemplate="{rev}"'
-  7  6535707b1ed0
+  7  71adb5c4f02f
   │
-  6    2db6fee45a05
+  6    36921220a3d9
   ├─╮
   │ │
   │ ~
@@ -1901,7 +1906,7 @@
 # label() should just work in node template:
 
   $ hg log -Gqr 7 --config 'extensions.color=' '--color=debug' --config 'ui.graphnodetemplate={label("branch.{branch}", rev)}'
-  [branch.default|7]  [log.node|6535707b1ed0]
+  [branch.default|7]  [log.node|71adb5c4f02f]
   │
   ~
 

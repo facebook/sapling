@@ -498,11 +498,10 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   my rev@59318016310c+ other rev@bdb19105162a ancestor rev@924404dff337
   launching merge tool: * ../merge *$TESTTMP/*/rev* * * (glob)
   merge tool returned: 0
-  0 files updated, 2 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 2 files merged, 1 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   --------------
   M b
-  C a
   --------------
   
   $ tm "nc a b" "up a b" "      " "14 merge b no ancestor"
@@ -583,11 +582,10 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   my rev@59318016310c+ other rev@bdb19105162a ancestor rev@924404dff337
   launching merge tool: * ../merge *$TESTTMP/*/rev* * * (glob)
   merge tool returned: 0
-  0 files updated, 2 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 2 files merged, 1 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   --------------
   M b
-  C a
   --------------
   
   $ tm "nc a b" "up a b" "      " "16 get a, merge b no ancestor"
@@ -684,6 +682,14 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
    ancestor: 924404dff337, local: 02963e448370+, remote: 8dbce441892a
    preserving b for resolve of b
    preserving rev for resolve of rev
+   a: prompt deleted/changed -> m (premerge)
+  picktool() ignoring eval error ('invalid token', *) (glob)
+  merge tool script: * ../merge (glob)
+  picktool() forcemerge :prompt
+  picked tool ':prompt' for path=a binary=False symlink=False changedelete=True
+  other [merge rev] changed a which local [working copy] is missing
+  hint: if this is due to a renamed file, you can manually input the renamed path
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
    b: both renamed from a -> m (premerge)
   picktool() ignoring eval error ('invalid token', *) (glob)
   merge tool script: * ../merge (glob)
@@ -707,10 +713,14 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   my rev@02963e448370+ other rev@8dbce441892a ancestor rev@924404dff337
   launching merge tool: * ../merge *$TESTTMP/*/rev* * * (glob)
   merge tool returned: 0
-  0 files updated, 2 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
+  0 files updated, 2 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   --------------
+  M a
   M b
+  abort: unresolved merge state
+  (use 'hg resolve' to continue or
+       'hg goto --clean' to abort - WARNING: will destroy uncommitted changes)
   --------------
   
   $ tm "up a b" "nm a b" "      " "19 merge b no ancestor, prompt remove a"
@@ -720,8 +730,16 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   resolving manifests
    branchmerge: True, force: False
    ancestor: 924404dff337, local: 0b76e65c8289+, remote: bdb19105162a
+   preserving a for resolve of a
    preserving b for resolve of b
    preserving rev for resolve of rev
+   a: prompt changed/deleted -> m (premerge)
+  picktool() ignoring eval error ('invalid token', *) (glob)
+  merge tool script: * ../merge (glob)
+  picktool() forcemerge :prompt
+  picked tool ':prompt' for path=a binary=False symlink=False changedelete=True
+  local [working copy] changed a which other [merge rev] deleted
+  use (c)hanged version, (d)elete, or leave (u)nresolved? u
    b: both renamed from a -> m (premerge)
   picktool() ignoring eval error ('invalid token', *) (glob)
   merge tool script: * ../merge (glob)
@@ -745,11 +763,14 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   my rev@0b76e65c8289+ other rev@bdb19105162a ancestor rev@924404dff337
   launching merge tool: * ../merge *$TESTTMP/*/rev* * * (glob)
   merge tool returned: 0
-  0 files updated, 2 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
+  0 files updated, 2 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   --------------
   M b
   C a
+  abort: unresolved merge state
+  (use 'hg resolve' to continue or
+       'hg goto --clean' to abort - WARNING: will destroy uncommitted changes)
   --------------
   
   $ tm "up a  " "um a b" "      " "20 merge a and b to b, remove a"

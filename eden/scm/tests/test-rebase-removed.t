@@ -147,17 +147,11 @@ A similar setup. C/C is marked as copied from A.
   > A   # A/A=1\n2\n3\n
   > EOS
 
-BUG: Changes to the file "C" made in commit "E" shouldn't get lost:
+Changes to the file "C" made in commit "E" shouldn't get lost:
   $ hg rebase -r $E -d $D
   rebasing a0b6e0c8e32c "E"
-
-  $ hg log -r tip -T '{desc}\n' -p --git
-  E
-  diff --git a/E b/E
-  new file mode 100644
-  --- /dev/null
-  +++ b/E
-  @@ -0,0 +1,1 @@
-  +E
-  \ No newline at end of file
-  
+  other [source] changed C which local [dest] is missing
+  hint: if this is due to a renamed file, you can manually input the renamed path
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved, or input (r)enamed path? u
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]

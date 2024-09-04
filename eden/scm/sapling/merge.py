@@ -844,6 +844,30 @@ def manifestmerge(
     branchmerge and force are as passed in to update
     acceptremote = accept the incoming changes without prompting
     """
+
+    def handle_file_on_other_side(f, diff, reverse_copies):
+        """check if file `f` should be handled on other side.
+
+        For example, if file `f` is moved to `f1`, then there will be
+        two entries the in the manifest diff:
+            - (f, ((n, ""), (None, "")))
+            - (f1, ((None, ""), (n1, "")))
+        For this case, we only need to generate one action for `f1`.
+        """
+        if f not in reverse_copies:
+            return False
+        for f1 in reverse_copies[f]:
+            try:
+                ((n1, _fl1), (n2, _fl2)) = diff[f1]
+                # Ensures that `f1` is not processed by the 'if n1 and n2:' branch
+                # in the main `for` loop over `diff.items()` below. Otherwise,
+                # the conflict for file `f` would be overlooked.
+                if not (n1 and n2):
+                    return True
+            except KeyError:
+                continue
+        return False
+
     copy = {}
 
     # manifests fetched in order are going to be faster, so prime the caches
@@ -925,7 +949,6 @@ def manifestmerge(
     if matcher is None:
         matcher = matchmod.always("", "")
 
-    diff_files = set(diff.keys())
     reverse_copies = defaultdict(list)
     for k, v in copy.items():
         reverse_copies[v].append(k)
@@ -981,10 +1004,8 @@ def manifestmerge(
                         "versions differ",
                     )
         elif n1:  # file exists only on local side
-            if f1 in reverse_copies and any(
-                f in diff_files for f in reverse_copies[f1]
-            ):
-                pass  # we'll deal with it on m2 side
+            if handle_file_on_other_side(f1, diff, reverse_copies):
+                pass  # we'll deal with it on `elif n2` side
             elif f1 in copy:
                 f1prev = copy[f1]
                 f2 = m2.ungraftedpath(f1prev) or f1prev
@@ -1020,10 +1041,8 @@ def manifestmerge(
                 else:
                     actions[f1] = (ACTION_REMOVE, None, "other deleted")
         elif n2:  # file exists only on remote side
-            if f1 in reverse_copies and any(
-                f in diff_files for f in reverse_copies[f1]
-            ):
-                pass  # we'll deal with it on m1 side
+            if handle_file_on_other_side(f1, diff, reverse_copies):
+                pass  # we'll deal with it on `elif n1` side
             elif f1 in copy:
                 f1prev = copy[f1]
                 f2prev = m2.ungraftedpath(f1prev) or f1prev
