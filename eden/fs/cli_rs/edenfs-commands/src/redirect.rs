@@ -27,7 +27,6 @@ use clap::Parser;
 use dialoguer::Confirm;
 use edenfs_client::checkout::find_checkout;
 use edenfs_client::checkout::CheckoutConfig;
-use edenfs_client::fsutil::forcefully_remove_dir_all;
 use edenfs_client::redirect::get_configured_redirections;
 use edenfs_client::redirect::get_effective_redirections;
 use edenfs_client::redirect::try_add_redirection;
@@ -395,23 +394,6 @@ impl RedirectCmd {
                 redir.repo_path.display(),
                 redir.state
             );
-
-            if redir.state == Some(RedirectionState::RealDirWithData) && force {
-                // This is the case in which instead of having a symlink pointing to the target we have a real
-                // directory with data.
-                if forcefully_remove_dir_all(&redir.repo_path).is_err() {
-                    eprintln!("{:?}, failed to fix; unable to remove directory", redir);
-                    continue;
-                }
-            }
-
-            if let Err(e) = redir.remove_existing(&checkout, false, force).await {
-                eprintln!(
-                    "Unable to remove redirection {}... this isn't necessarily an error: {}",
-                    redir.repo_path.display(),
-                    e
-                )
-            }
 
             if redir.redir_type == RedirectionType::Unknown {
                 tracing::debug!(?redir, "not fixing due to unknown redirection type");
