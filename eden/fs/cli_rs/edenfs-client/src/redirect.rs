@@ -855,7 +855,8 @@ impl Redirection {
                     Ok(_) => {
                         return Ok(RepoPathDisposition::DoesNotExist);
                     }
-                    Err(_) => {
+                    Err(e) => {
+                        println!("System error occured while removing directory: {}", e);
                         return Err(EdenFsError::Other(anyhow!(
                             "Failed to delete a non-empty directory (full path `{}`).
  This happens mostly when some of its files are in use by another process.
