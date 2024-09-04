@@ -22,6 +22,8 @@ use clap::ValueEnum;
 use cmdlib_displaying::hexdump;
 use context::CoreContext;
 use futures::TryStreamExt;
+use git_types::GDMV2Entry;
+use git_types::GitDeltaManifestV2;
 use git_types::Tree as GitTree;
 use mercurial_types::HgAugmentedManifestEntry;
 use mercurial_types::HgAugmentedManifestEnvelope;
@@ -87,6 +89,8 @@ pub enum DecodeAs {
     ShardedHgAugmentedManifestMapNode,
     ShardedHgAugmentedManifest,
     GitTree,
+    GitDeltaManifestV2MapNode,
+    GitDeltaManifestV2,
     SkeletonManifest,
     Fsnode,
     ContentMetadataV2,
@@ -124,6 +128,8 @@ impl DecodeAs {
                 ),
                 ("hgaugmentedmanifest.", DecodeAs::HgAugmentedManifest),
                 ("git.tree.", DecodeAs::GitTree),
+                ("gdm2.map2node.", DecodeAs::GitDeltaManifestV2MapNode),
+                ("gdm2.", DecodeAs::GitDeltaManifestV2),
                 ("skeletonmanifest.", DecodeAs::SkeletonManifest),
                 ("fsnode.", DecodeAs::Fsnode),
                 ("content_metadata2.", DecodeAs::ContentMetadataV2),
@@ -233,6 +239,12 @@ async fn decode(
             }
         }
         DecodeAs::GitTree => Decoded::try_display(GitTree::try_from(data)),
+        DecodeAs::GitDeltaManifestV2 => {
+            Decoded::try_debug(GitDeltaManifestV2::from_bytes(&data.into_raw_bytes()))
+        }
+        DecodeAs::GitDeltaManifestV2MapNode => Decoded::try_debug(
+            ShardedMapV2Node::<GDMV2Entry>::from_bytes(&data.into_raw_bytes()),
+        ),
         DecodeAs::SkeletonManifest => {
             Decoded::try_debug(SkeletonManifest::from_bytes(data.into_raw_bytes().as_ref()))
         }
