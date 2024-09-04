@@ -86,6 +86,15 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
       </span>
     );
   };
+
+  getRemoteTrackingBranch(): string | null {
+    return null;
+  }
+
+  getRemoteTrackingBranchFromDiffSummary(): string | null {
+    return null;
+  }
+
   isSplitSuggestionSupported(): boolean {
     return false;
   }

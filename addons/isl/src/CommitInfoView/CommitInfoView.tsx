@@ -248,6 +248,12 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
     previousFieldsBeingEdited,
   );
 
+  const diffSummaries = useAtomValue(allDiffSummaries);
+  const remoteTrackingBranch = provider?.getRemoteTrackingBranch(
+    diffSummaries?.value ?? null,
+    commit.diffId ?? null,
+  );
+
   const isSplitSuggestionSupported = provider?.isSplitSuggestionSupported() ?? false;
   const selectedFiles = uncommittedChanges.filter(f =>
     selection.isFullyOrPartiallySelected(f.path),
@@ -344,6 +350,17 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
               />
             );
           })}
+        {remoteTrackingBranch !== null ? (
+          <Section>
+            <SmallCapsTitle>
+              <Icon icon="source-control"></Icon>
+              <T>Remote Tracking Branch</T>
+            </SmallCapsTitle>
+            <div className="commit-info-tokenized-field">
+              <span className="token">{remoteTrackingBranch}</span>
+            </div>
+          </Section>
+        ) : null}
         <Divider />
         {commit.isDot && !isAmendDisabled ? (
           <Section data-testid="changes-to-amend">
