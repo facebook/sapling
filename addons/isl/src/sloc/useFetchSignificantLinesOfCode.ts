@@ -70,6 +70,9 @@ const commitSloc = atomFamilyWeak((_hash: string) => {
     if (commit.totalFileCount > MAX_FILES_ALLOWED_FOR_DIFF_STAT) {
       return undefined;
     }
+    if (commit.optimisticRevset != null) {
+      return undefined;
+    }
     const sloc = await fetchSignificantLinesOfCode(commit);
     return sloc;
   }, undefined);
@@ -102,7 +105,7 @@ const fetchPendingAmendSloc = async (
     return undefined;
   }
   const [commit] = commits;
-  if (commit.totalFileCount > MAX_FILES_ALLOWED_FOR_DIFF_STAT) {
+  if (commit.totalFileCount > MAX_FILES_ALLOWED_FOR_DIFF_STAT || commit.optimisticRevset != null) {
     return undefined;
   }
 
