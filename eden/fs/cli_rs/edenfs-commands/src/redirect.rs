@@ -402,7 +402,7 @@ impl RedirectCmd {
 
             if let Err(e) = redir.apply(&checkout, force).await {
                 eprintln!(
-                    "Unable to apply redirection {}: {}",
+                    "Unable to apply redirection `{}`: {}",
                     redir.repo_path.display(),
                     e
                 );
