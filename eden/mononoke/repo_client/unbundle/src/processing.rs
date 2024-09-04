@@ -617,6 +617,7 @@ async fn infinitepush_scratch_bookmark(
             None,
         )
         .only_if_scratch()
+        .with_checks_bypassed()
         .with_push_source(cross_repo_push_source)
         .only_log_acl_checks(only_log_acl_checks)
         .run(ctx, &authz, repo, hook_manager)
@@ -644,6 +645,7 @@ async fn infinitepush_scratch_bookmark(
             None,
         )
         .only_if_scratch()
+        .with_checks_bypassed()
         .with_push_source(cross_repo_push_source)
         .only_log_acl_checks(only_log_acl_checks)
         .run(ctx, &authz, repo, hook_manager)

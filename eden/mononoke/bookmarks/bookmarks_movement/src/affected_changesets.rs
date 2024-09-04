@@ -68,6 +68,9 @@ pub(crate) struct AffectedChangesets {
     /// This avoids performing the same checks twice, but more importantly, reloading the same
     /// changesets over and over again in the case of additional changesets.
     already_checked_changesets: HashSet<ChangesetId>,
+
+    /// Checks should not run on additional changesets
+    should_bypass_checks_on_additional_changesets: bool,
 }
 
 impl AffectedChangesets {
@@ -77,6 +80,7 @@ impl AffectedChangesets {
             source_changesets: HashSet::new(),
             additional_changesets_limit: limit.unwrap_or(DEFAULT_ADDITIONAL_CHANGESETS_LIMIT),
             already_checked_changesets: HashSet::new(),
+            should_bypass_checks_on_additional_changesets: false,
         }
     }
 
@@ -86,6 +90,7 @@ impl AffectedChangesets {
             source_changesets,
             additional_changesets_limit: DEFAULT_ADDITIONAL_CHANGESETS_LIMIT,
             already_checked_changesets: HashSet::new(),
+            should_bypass_checks_on_additional_changesets: false,
         }
     }
 
@@ -106,6 +111,10 @@ impl AffectedChangesets {
 
     pub(crate) fn source_changesets(&self) -> &HashSet<BonsaiChangeset> {
         &self.source_changesets
+    }
+
+    pub(crate) fn bypass_checks_on_additional_changesets(&mut self) {
+        self.should_bypass_checks_on_additional_changesets = true;
     }
 
     fn adding_new_changesets_to_repo(&self) -> bool {
@@ -323,7 +332,9 @@ impl AffectedChangesets {
         bookmark: &BookmarkKey,
         additional_changesets: AdditionalChangesets,
     ) -> Result<BoxStream<'a, Result<BonsaiChangeset, BookmarkMovementError>>> {
-        let additional_changesets = if justknobs::eval(
+        let additional_changesets = if self.should_bypass_checks_on_additional_changesets {
+            stream::empty().boxed()
+        } else if justknobs::eval(
             "scm/mononoke:bookmarks_movement_load_changesets_aggressive_simplification",
             None,
             Some(repo.repo_identity().name()),

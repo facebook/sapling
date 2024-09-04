@@ -93,6 +93,12 @@ impl<'op> CreateBookmarkOp<'op> {
         self
     }
 
+    pub fn with_checks_bypassed(mut self) -> Self {
+        self.affected_changesets
+            .bypass_checks_on_additional_changesets();
+        self
+    }
+
     /// Include bonsai changesets for changesets that have just been added to
     /// the repository.
     pub fn with_new_changesets(
