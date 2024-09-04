@@ -73,7 +73,6 @@ rust_binary(
         "//eden/mononoke/facebook/bookmark_service/if:bookmark_service_if-rust",
         "//eden/mononoke/facebook/bookmark_service/if:bookmark_service_if-rust-services",
         "//eden/mononoke/metaconfig:metaconfig_types",
-        "//eden/mononoke/mononoke_repos:mononoke_repos",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/server/context:context",
         "//eden/mononoke/server/metadata:metadata",
