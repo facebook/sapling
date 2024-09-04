@@ -812,6 +812,7 @@ impl Redirection {
         &self,
         checkout: &EdenFsCheckout,
         fail_if_bind_mount: bool,
+        force_remove: bool,
     ) -> Result<RepoPathDisposition> {
         let repo_path = self.expand_repo_path(checkout);
         let disposition = RepoPathDisposition::analyze(&repo_path)
@@ -841,7 +842,7 @@ impl Redirection {
             // remove the empty directory that was the mount point
             // To avoid infinite recursion, tell the next call to fail if
             // the disposition is still a bind mount
-            return self.remove_existing(checkout, true).await;
+            return self.remove_existing(checkout, true, force_remove).await;
         }
 
         if disposition == RepoPathDisposition::IsEmptyDir {
@@ -850,13 +851,40 @@ impl Redirection {
                 Err(_) => return Ok(disposition),
             }
         }
+
+        if disposition == RepoPathDisposition::IsNonEmptyDir {
+            if force_remove {
+                println!("Attempting to forcefully remove the directory.");
+                match forcefully_remove_dir_all(&self.expand_repo_path(checkout)) {
+                    Ok(_) => {
+                        return Ok(RepoPathDisposition::DoesNotExist);
+                    }
+                    Err(_) => {
+                        return Err(EdenFsError::Other(anyhow!(
+                            "Failed to delete a non-empty directory (full path `{}`).
+ This happens mostly when some of its files are in use by another process.
+ To detect and kill such processes, follow https://fburl.com/edenfs-redirection-non-empty-directory.",
+                            self.expand_repo_path(checkout).display()
+                        )));
+                    }
+                }
+            } else {
+                return Err(EdenFsError::Other(anyhow!(
+                    "A non-empty directory (full path `{}`) found. Either-
+- Try again after reviewing and manually deleting the directory, or 
+- Use `--force` parameter in this command to attempt inline deletion of the directory if none of its files are in use.",
+                    self.expand_repo_path(checkout).display()
+                )));
+            }
+        }
+
         Ok(disposition)
     }
 
     pub async fn apply(&self, checkout: &EdenFsCheckout, force: bool) -> Result<()> {
         // Check for non-empty directory. We only care about this if we are creating a symlink type redirection or bind type redirection on Windows.
         let disposition = self
-            .remove_existing(checkout, false)
+            .remove_existing(checkout, false, force)
             .await
             .with_context(|| {
                 format!(
