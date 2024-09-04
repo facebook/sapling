@@ -26,14 +26,6 @@
   > config_json='{}'
   > EOF
 
-  $ merge_just_knobs <<EOF
-  > {
-  >   "bools": {
-  >     "scm/mononoke:bookmarks_movement_load_changesets_aggressive_simplification": true
-  >   }
-  > }
-  > EOF
-
 # Setup git repository
   $ mkdir -p "$GIT_REPO_ORIGIN"
   $ cd "$GIT_REPO_ORIGIN"

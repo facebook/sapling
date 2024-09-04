@@ -37,13 +37,6 @@
   $ cd "$TESTTMP"
   $ quiet gitimport "$GIT_REPO" --derive-hg --generate-bookmarks full-repo
 
-  $ merge_just_knobs <<EOF
-  > {
-  >   "bools": {
-  >     "scm/mononoke:bookmarks_movement_load_changesets_aggressive_simplification": true
-  >   }
-  > }
-  > EOF
   $ cd "$TESTTMP"/mononoke-config
   $ cat >> repos/repo/server.toml <<EOF
   > [[bookmarks]]

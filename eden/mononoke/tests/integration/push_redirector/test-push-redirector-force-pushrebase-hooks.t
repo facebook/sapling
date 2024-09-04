@@ -122,15 +122,10 @@ Commit has been backsynced
   │
   ~
 
-Attempt to move test_bookmark to the new master_bookmark commit.  It fails because of the
-hook in the large repo.
-Note that since the large repo commit doesn't map to the small repo, we see the large repo
-changeset id.
+Attempt to move test_bookmark to the new master_bookmark commit.
+No hook runs because the hooks already ran for this changeset.
 
   $ hg up -q master_bookmark
   $ hg push -r . --to test_bookmark --pushvar NON_FAST_FORWARD=true
   pushing rev cd9bfa9f25eb to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark test_bookmark
   moving remote bookmark test_bookmark from ce81c7d38286 to cd9bfa9f25eb
-  abort: server error: hooks failed:
-    deny_files for df2c680c0ed6920fdfde5c9b67edf6272517fae607109ef7e9adaa33a3da113a: Denied filename 'x/.git/HEAD' matched name pattern '/[.]git/'. Rename or remove this file and try again.
-  [255]

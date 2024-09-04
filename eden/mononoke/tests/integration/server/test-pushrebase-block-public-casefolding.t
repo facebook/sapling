@@ -116,12 +116,10 @@ again, it's ok to push this to a scratch branch
   pushing to mono:repo
   searching for changes
 
-we can't move the bookmark to a commit with a pre-existing case conflict via bookmark-only pushrebase
+we can move the bookmark to a commit with a pre-existing case conflict via bookmark-only pushrebase
   $ hg push -r other --to main --pushvar NON_FAST_FORWARD=true
   pushing rev 2b2f2fedc926 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
   moving remote bookmark main from 8c2a70bb0c78 to 2b2f2fedc926
-  abort: server error: invalid request: Case conflict found in 34931495583238beb776a43e216288f3d2a73946ef3b9e72d77f83e2aafe04c9: existing/CaseConflict conflicts with existing/caseconflict
-  [255]
 
 we can't land to the other if we introduce a new case conflict
   $ hg up -q other
