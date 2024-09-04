@@ -45,6 +45,30 @@ fn caching_synced_commit_mapping() -> CachingSyncedCommitMapping {
 }
 
 #[mononoke::fbinit_test]
+async fn test_get_many_no_mappings_sql(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
+    let synced_commit_mapping = sql_synced_commit_mapping();
+    let result = synced_commit_mapping
+        .get_many(&ctx, REPO_ZERO, REPO_ONE, &[bonsai::ONES_CSID])
+        .await
+        .expect("Get failed");
+    assert!(result.contains_key(&bonsai::ONES_CSID));
+}
+
+#[mononoke::fbinit_test]
+async fn test_get_many_no_mappings_caching(fb: FacebookInit) {
+    let ctx = CoreContext::test_mock(fb);
+    let synced_commit_mapping = caching_synced_commit_mapping();
+    let result = synced_commit_mapping
+        .get_many(&ctx, REPO_ZERO, REPO_ONE, &[bonsai::ONES_CSID])
+        .await
+        .expect("Get failed");
+    // BUG: The returned map should contain all requested changesets, not just the ones that
+    // have mappings.
+    assert!(!result.contains_key(&bonsai::ONES_CSID));
+}
+
+#[mononoke::fbinit_test]
 async fn test_add_and_get_sql(fb: FacebookInit) {
     test_add_and_get_impl(fb, sql_synced_commit_mapping()).await;
 }
