@@ -54,6 +54,7 @@ impl $crate::CasClient for $struct {
 
         let request = DownloadRequest {
             inlined_digests: Some(digests.iter().map(to_re_digest).collect()),
+            throw_on_error: false,
             ..Default::default()
         };
 
