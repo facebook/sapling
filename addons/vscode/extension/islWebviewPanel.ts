@@ -456,28 +456,27 @@ function getInitialStateJs(context: vscode.ExtensionContext, logger: Logger) {
  * use any user-controlled data that could be used maliciously.
  */
 function getExtraStyles(): string {
+  const globalStyles = new Map();
   const fontFeatureSettings = vscode.workspace
     .getConfiguration('editor')
     .get<string | boolean>('fontLigatures');
   const validFontFeaturesRegex = /^[0-9a-zA-Z"',\-_ ]*$/;
   if (fontFeatureSettings === true) {
-    return ''; // no need to specify specific additional settings
-  }
-  if (
+    // no need to specify specific additional settings
+  } else if (
     !fontFeatureSettings ||
     typeof fontFeatureSettings !== 'string' ||
     !validFontFeaturesRegex.test(fontFeatureSettings)
   ) {
-    return `
-    html {
-      font-variant-ligatures: none;
-    }`;
+    globalStyles.set('font-variant-ligatures', 'none');
+  } else {
+    globalStyles.set('font-feature-settings', fontFeatureSettings);
   }
+  const globalStylesFlat = Array.from(globalStyles, ([k, v]) => `${k}: ${v};`);
   return `
   html {
-    font-feature-settings: ${fontFeatureSettings};
-  }
-  `;
+    ${globalStylesFlat.join('\n')};
+  }`;
 }
 
 /**
