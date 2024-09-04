@@ -1704,6 +1704,13 @@ def cloudimport(ui, repo, **opts):
     sourceworkspace, destinationworkspace, sourcerepo, destinationrepo = (
         megarepoimport.validateimportparams(ui, repo, opts)
     )
+
+    currentworkspace = workspace.currentworkspace(repo)
+    currentrepo = ccutil.getreponame(repo)
+    if currentrepo != destinationrepo or currentworkspace != destinationworkspace:
+        raise error.Abort(
+            "workspace import must be ran from destination repo and destination workspace"
+        )
     serv = service.get(ui, repo)
     megarepoimport.fetchworkspaces(
         ui,
@@ -1714,8 +1721,7 @@ def cloudimport(ui, repo, **opts):
         destinationrepo,
         serv,
     )
-    currentworkspace = workspace.currentworkspace(repo)
-    currentrepo = ccutil.getreponame(repo)
+
     start = util.timer()
     # Translate heads and bookmarks
     full = opts.get("full")
@@ -1731,19 +1737,25 @@ def cloudimport(ui, repo, **opts):
         serv,
         full,
     )
-    # update the destination workspace
+
+    # verify we have the latest version of the destination workspace
     destcloudrefs = serv.getreferences(destinationrepo, destinationworkspace, 0)
+    state = syncstate.SyncState(repo, destinationworkspace)
+
+    if state.version != destcloudrefs.version:
+        cloudsync(ui, repo, workspace=currentworkspace)
+
     # Dedupe changes to avoid unnecessary updates
     uniquenewheads, uniquenewbookmarks, bookmarkstodelete = (
         megarepoimport.dedupechanges(
-            ui, destcloudrefs.heads, newheads, destcloudrefs.bookmarks, newbookmarks
+            ui, state.heads, newheads, state.bookmarks, newbookmarks
         )
     )
 
     serv.updatereferences(
         destinationrepo,
         destinationworkspace,
-        destcloudrefs.version,
+        state.version,
         newheads=uniquenewheads,
         newbookmarks=uniquenewbookmarks,
         oldbookmarks=bookmarkstodelete,
