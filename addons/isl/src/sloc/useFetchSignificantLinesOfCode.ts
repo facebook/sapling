@@ -16,6 +16,7 @@ import {pageVisibility} from '../codeReview/CodeReviewInfo';
 import {atomFamilyWeak, lazyAtom} from '../jotaiUtils';
 import {isFullyOrPartiallySelected} from '../partialSelection';
 import {uncommittedChangesWithPreviews} from '../previews';
+import {commitByHash} from '../serverAPIState';
 import {GeneratedStatus} from '../types';
 import {MAX_FILES_ALLOWED_FOR_DIFF_STAT} from './diffStatConstants';
 import {atom, useAtomValue} from 'jotai';
@@ -60,13 +61,12 @@ async function fetchSignificantLinesOfCode(
   return slocData;
 }
 
-const commitSloc = atomFamilyWeak((_hash: string) => {
+const commitSloc = atomFamilyWeak((hash: string) => {
   return lazyAtom(async get => {
-    const commits = get(commitInfoViewCurrentCommits);
-    if (commits == null || commits.length > 1) {
+    const commit = get(commitByHash(hash));
+    if (commit == null) {
       return undefined;
     }
-    const [commit] = commits;
     if (commit.totalFileCount > MAX_FILES_ALLOWED_FOR_DIFF_STAT) {
       return undefined;
     }
