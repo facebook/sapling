@@ -808,7 +808,7 @@ impl FetchState {
                                 self.errors.keyed_error(key, err);
                             }
                             Ok(None) => {
-                                tracing::error!(target: "cas", ?key, ?digest, "file not in cas");
+                                tracing::trace!(target: "cas", ?key, ?digest, "file not in cas");
                                 // miss
                             }
                             Ok(Some(data)) => {

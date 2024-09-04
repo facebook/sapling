@@ -232,7 +232,7 @@ impl FetchState {
                                 self.errors.keyed_error(key, err);
                             }
                             Ok(None) => {
-                                tracing::error!(target: "cas", ?key, ?digest, "tree not in cas");
+                                tracing::trace!(target: "cas", ?key, ?digest, "tree not in cas");
                                 // miss
                             }
                             Ok(Some(data)) => match AugmentedTree::try_deserialize(&*data) {
