@@ -40,6 +40,8 @@ use mononoke_types::fsnode::Fsnode;
 use mononoke_types::sharded_map::ShardedMapNode;
 use mononoke_types::sharded_map_v2::ShardedMapV2Node;
 use mononoke_types::skeleton_manifest::SkeletonManifest;
+use mononoke_types::skeleton_manifest_v2::SkeletonManifestV2;
+use mononoke_types::skeleton_manifest_v2::SkeletonManifestV2Entry;
 use mononoke_types::test_manifest::TestManifest;
 use mononoke_types::test_sharded_manifest::TestShardedManifest;
 use mononoke_types::test_sharded_manifest::TestShardedManifestEntry;
@@ -92,6 +94,8 @@ pub enum DecodeAs {
     GitDeltaManifestV2MapNode,
     GitDeltaManifestV2,
     SkeletonManifest,
+    SkeletonManifestV2MapNode,
+    SkeletonManifestV2,
     Fsnode,
     ContentMetadataV2,
     Alias,
@@ -131,6 +135,8 @@ impl DecodeAs {
                 ("gdm2.map2node.", DecodeAs::GitDeltaManifestV2MapNode),
                 ("gdm2.", DecodeAs::GitDeltaManifestV2),
                 ("skeletonmanifest.", DecodeAs::SkeletonManifest),
+                ("skmf2.map2node.", DecodeAs::SkeletonManifestV2MapNode),
+                ("skmf2.", DecodeAs::SkeletonManifestV2),
                 ("fsnode.", DecodeAs::Fsnode),
                 ("content_metadata2.", DecodeAs::ContentMetadataV2),
                 ("alias.", DecodeAs::Alias),
@@ -245,6 +251,14 @@ async fn decode(
         DecodeAs::GitDeltaManifestV2MapNode => Decoded::try_debug(
             ShardedMapV2Node::<GDMV2Entry>::from_bytes(&data.into_raw_bytes()),
         ),
+        DecodeAs::SkeletonManifestV2 => {
+            Decoded::try_debug(SkeletonManifestV2::from_bytes(&data.into_raw_bytes()))
+        }
+        DecodeAs::SkeletonManifestV2MapNode => {
+            Decoded::try_debug(ShardedMapV2Node::<SkeletonManifestV2Entry>::from_bytes(
+                &data.into_raw_bytes(),
+            ))
+        }
         DecodeAs::SkeletonManifest => {
             Decoded::try_debug(SkeletonManifest::from_bytes(data.into_raw_bytes().as_ref()))
         }
