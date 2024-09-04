@@ -10,6 +10,7 @@
   border-radius: 2px;
   color: var(--diffEditor-foreground);
   font-family: var(--monospace-fontFamily);
+  tab-size: var(--tab-size);
 }
 
 .split-diff-view-file-header {

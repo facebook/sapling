@@ -457,6 +457,7 @@ function getInitialStateJs(context: vscode.ExtensionContext, logger: Logger) {
  */
 function getExtraStyles(): string {
   const globalStyles = new Map();
+
   const fontFeatureSettings = vscode.workspace
     .getConfiguration('editor')
     .get<string | boolean>('fontLigatures');
@@ -472,6 +473,12 @@ function getExtraStyles(): string {
   } else {
     globalStyles.set('font-feature-settings', fontFeatureSettings);
   }
+
+  const tabSizeSettings = vscode.workspace.getConfiguration('editor').get<number>('tabSize');
+  if (typeof tabSizeSettings === 'number') {
+    globalStyles.set('--tab-size', tabSizeSettings);
+  }
+
   const globalStylesFlat = Array.from(globalStyles, ([k, v]) => `${k}: ${v};`);
   return `
   html {
