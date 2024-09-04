@@ -45,6 +45,7 @@ use super::handler::SaplingRemoteApiContext;
 use super::HandlerResult;
 use super::SaplingRemoteApiHandler;
 use super::SaplingRemoteApiMethod;
+use crate::handlers::handler::PathExtractorWithRepo;
 use crate::utils::commit_cloud_types::FromCommitCloudType;
 use crate::utils::commit_cloud_types::IntoCommitCloudType;
 pub struct CommitCloudWorkspace;
@@ -146,7 +147,11 @@ impl SaplingRemoteApiHandler for CommitCloudReferences {
         ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
-        let repo = ectx.repo();
+        let repo = if ectx.path().repo() == request.reponame {
+            ectx.repo()
+        } else {
+            ectx.other_repo(&request.reponame).await?
+        };
         let res = get_references(request, repo).boxed();
         Ok(stream::once(res).boxed())
     }
