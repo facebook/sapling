@@ -503,7 +503,6 @@ async fn plain_push_bookmark(
                 bookmark_push.name.clone(),
                 new_target,
                 reason,
-                None,
             )
             .only_if_public()
             .with_new_changesets(new_changesets)
@@ -542,7 +541,6 @@ async fn plain_push_bookmark(
                     BookmarkUpdatePolicy::FastForwardOnly
                 },
                 reason,
-                None,
             )
             .only_if_public()
             .with_new_changesets(new_changesets)
@@ -614,7 +612,6 @@ async fn infinitepush_scratch_bookmark(
             bookmark_push.name.clone(),
             bookmark_push.new,
             BookmarkUpdateReason::Push,
-            None,
         )
         .only_if_scratch()
         .with_checks_bypassed()
@@ -642,7 +639,6 @@ async fn infinitepush_scratch_bookmark(
                 BookmarkUpdatePolicy::FastForwardOnly
             },
             BookmarkUpdateReason::Push,
-            None,
         )
         .only_if_scratch()
         .with_checks_bypassed()

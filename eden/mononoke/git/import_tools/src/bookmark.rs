@@ -102,7 +102,6 @@ pub async fn set_bookmark<R: MononokeRepo>(
     bookmark_operation: &BookmarkOperation,
     pushvars: Option<&HashMap<String, Bytes>>,
     allow_non_fast_forward: bool,
-    affected_changesets_limit: Option<usize>,
     error_reporting: BookmarkOperationErrorReporting,
 ) -> Result<(), MononokeError> {
     let bookmark_key = &bookmark_operation.bookmark_key;
@@ -110,12 +109,7 @@ pub async fn set_bookmark<R: MononokeRepo>(
     match bookmark_operation.operation_type {
         BookmarkOperationType::Create(new_changeset) => {
             let op_result = repo_context
-                .create_bookmark(
-                    bookmark_key,
-                    new_changeset,
-                    pushvars,
-                    affected_changesets_limit,
-                )
+                .create_bookmark(bookmark_key, new_changeset, pushvars)
                 .await;
             if error_reporting == BookmarkOperationErrorReporting::WithContext {
                 op_result.with_context(|| format!("failed to create bookmark {name}"))?;
@@ -136,7 +130,6 @@ pub async fn set_bookmark<R: MononokeRepo>(
                         Some(old_changeset),
                         allow_non_fast_forward,
                         pushvars,
-                        affected_changesets_limit,
                     )
                     .await;
                 if error_reporting == BookmarkOperationErrorReporting::WithContext {
@@ -185,7 +178,6 @@ pub async fn set_bookmarks<R: MononokeRepo>(
     bookmark_operations: Vec<BookmarkOperation>,
     pushvars: Option<&HashMap<String, Bytes>>,
     allow_non_fast_forward: bool,
-    affected_changesets_limit: Option<usize>,
     error_reporting: BookmarkOperationErrorReporting,
 ) -> Result<(), MononokeError> {
     let mut bookmark_transaction = None;
@@ -197,7 +189,6 @@ pub async fn set_bookmarks<R: MononokeRepo>(
             bookmark_operation,
             pushvars,
             allow_non_fast_forward,
-            affected_changesets_limit,
             bookmark_transaction,
             transaction_hooks,
             error_reporting,
@@ -231,7 +222,6 @@ async fn move_bookmark<R: MononokeRepo>(
     bookmark_operation: BookmarkOperation,
     pushvars: Option<&HashMap<String, Bytes>>,
     allow_non_fast_forward: bool,
-    affected_changesets_limit: Option<usize>,
     bookmark_transaction: Option<Box<dyn BookmarkTransaction>>,
     transaction_hooks: Vec<BookmarkTransactionHook>,
     error_reporting: BookmarkOperationErrorReporting,
@@ -245,7 +235,6 @@ async fn move_bookmark<R: MononokeRepo>(
                     bookmark_key,
                     new_changeset,
                     pushvars,
-                    affected_changesets_limit,
                     bookmark_transaction,
                     transaction_hooks,
                 )
@@ -265,7 +254,6 @@ async fn move_bookmark<R: MononokeRepo>(
                         Some(old_changeset),
                         allow_non_fast_forward,
                         pushvars,
-                        affected_changesets_limit,
                         bookmark_transaction,
                         transaction_hooks,
                     )

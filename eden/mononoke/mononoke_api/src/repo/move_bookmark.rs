@@ -38,7 +38,6 @@ impl<R: MononokeRepo> RepoContext<R> {
         old_target: Option<ChangesetId>,
         allow_non_fast_forward: bool,
         pushvars: Option<&'a HashMap<String, Bytes>>,
-        affected_changesets_limit: Option<usize>,
     ) -> Result<UpdateBookmarkOp<'a>, MononokeError> {
         self.start_write()?;
 
@@ -63,7 +62,6 @@ impl<R: MononokeRepo> RepoContext<R> {
             old_target: ChangesetId,
             allow_non_fast_forward: bool,
             pushvars: Option<&'a HashMap<String, Bytes>>,
-            affected_changesets_limit: Option<usize>,
         ) -> UpdateBookmarkOp<'a> {
             let op = UpdateBookmarkOp::new(
                 bookmark.clone(),
@@ -77,7 +75,6 @@ impl<R: MononokeRepo> RepoContext<R> {
                     BookmarkUpdatePolicy::FastForwardOnly
                 },
                 BookmarkUpdateReason::ApiRequest,
-                affected_changesets_limit,
             )
             .with_pushvars(pushvars);
             op.log_new_public_commits_to_scribe()
@@ -116,7 +113,6 @@ impl<R: MononokeRepo> RepoContext<R> {
                 old_target,
                 allow_non_fast_forward,
                 pushvars,
-                affected_changesets_limit,
             )
         } else {
             make_move_op(
@@ -125,7 +121,6 @@ impl<R: MononokeRepo> RepoContext<R> {
                 old_target,
                 allow_non_fast_forward,
                 pushvars,
-                affected_changesets_limit,
             )
         };
         Ok(op)
@@ -139,7 +134,6 @@ impl<R: MononokeRepo> RepoContext<R> {
         old_target: Option<ChangesetId>,
         allow_non_fast_forward: bool,
         pushvars: Option<&HashMap<String, Bytes>>,
-        affected_changesets_limit: Option<usize>,
     ) -> Result<(), MononokeError> {
         let update_op = self
             .move_bookmark_op(
@@ -148,7 +142,6 @@ impl<R: MononokeRepo> RepoContext<R> {
                 old_target,
                 allow_non_fast_forward,
                 pushvars,
-                affected_changesets_limit,
             )
             .await?;
         if let Some(redirector) = self.push_redirector.as_ref() {
@@ -184,7 +177,6 @@ impl<R: MononokeRepo> RepoContext<R> {
         old_target: Option<ChangesetId>,
         allow_non_fast_forward: bool,
         pushvars: Option<&HashMap<String, Bytes>>,
-        affected_changesets_limit: Option<usize>,
         txn: Option<Box<dyn BookmarkTransaction>>,
         txn_hooks: Vec<BookmarkTransactionHook>,
     ) -> Result<BookmarkInfoTransaction, MononokeError> {
@@ -200,7 +192,6 @@ impl<R: MononokeRepo> RepoContext<R> {
                 old_target,
                 allow_non_fast_forward,
                 pushvars,
-                affected_changesets_limit,
             )
             .await?;
         let bookmark_info_transaction = update_op

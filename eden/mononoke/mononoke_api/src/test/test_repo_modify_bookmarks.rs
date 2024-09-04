@@ -62,7 +62,7 @@ async fn create_bookmark(fb: FacebookInit) -> Result<()> {
     // Can create public bookmarks on existing changesets (ancestors of trunk).
     let key = BookmarkKey::new("bookmark1")?;
     repo_ctx
-        .create_bookmark(&key, changesets["A"], None, None)
+        .create_bookmark(&key, changesets["A"], None)
         .await?;
     let bookmark1 = repo_ctx
         .resolve_bookmark(&key, BookmarkFreshness::MostRecent)
@@ -73,7 +73,7 @@ async fn create_bookmark(fb: FacebookInit) -> Result<()> {
     // Can create public bookmarks on other changesets (not ancestors of trunk).
     let key = BookmarkKey::new("bookmark2")?;
     repo_ctx
-        .create_bookmark(&key, changesets["F"], None, None)
+        .create_bookmark(&key, changesets["F"], None)
         .await?;
     let bookmark2 = repo_ctx
         .resolve_bookmark(&key, BookmarkFreshness::MostRecent)
@@ -84,7 +84,7 @@ async fn create_bookmark(fb: FacebookInit) -> Result<()> {
     // Can create scratch bookmarks.
     let key = BookmarkKey::new("scratch/bookmark3")?;
     repo_ctx
-        .create_bookmark(&key, changesets["G"], None, None)
+        .create_bookmark(&key, changesets["G"], None)
         .await?;
     let bookmark3 = repo_ctx
         .resolve_bookmark(&key, BookmarkFreshness::MostRecent)
@@ -96,7 +96,7 @@ async fn create_bookmark(fb: FacebookInit) -> Result<()> {
     let key =
         BookmarkKey::with_name_and_category(BookmarkName::new("tag1")?, BookmarkCategory::Tag);
     repo_ctx
-        .create_bookmark(&key, changesets["B"], None, None)
+        .create_bookmark(&key, changesets["B"], None)
         .await?;
     let tag = repo_ctx
         .resolve_bookmark(&key, BookmarkFreshness::MostRecent)
@@ -108,7 +108,7 @@ async fn create_bookmark(fb: FacebookInit) -> Result<()> {
     let key =
         BookmarkKey::with_name_and_category(BookmarkName::new("note1")?, BookmarkCategory::Note);
     repo_ctx
-        .create_bookmark(&key, changesets["D"], None, None)
+        .create_bookmark(&key, changesets["D"], None)
         .await?;
     let note = repo_ctx
         .resolve_bookmark(&key, BookmarkFreshness::MostRecent)
@@ -131,7 +131,7 @@ async fn move_bookmark(fb: FacebookInit) -> Result<()> {
 
     let key = BookmarkKey::new("trunk")?;
     repo_ctx
-        .move_bookmark(&key, changesets["E"], None, false, None, None)
+        .move_bookmark(&key, changesets["E"], None, false, None)
         .await?;
     let trunk = repo_ctx
         .resolve_bookmark(&key, BookmarkFreshness::MostRecent)
@@ -143,12 +143,12 @@ async fn move_bookmark(fb: FacebookInit) -> Result<()> {
     // non-fast-forward moves should fail.
     assert!(
         repo_ctx
-            .move_bookmark(&key, changesets["G"], None, false, None, None)
+            .move_bookmark(&key, changesets["G"], None, false, None)
             .await
             .is_err()
     );
     repo_ctx
-        .move_bookmark(&key, changesets["G"], None, true, None, None)
+        .move_bookmark(&key, changesets["G"], None, true, None)
         .await?;
     let trunk = repo_ctx
         .resolve_bookmark(&key, BookmarkFreshness::MostRecent)
@@ -177,10 +177,10 @@ async fn move_bookmark(fb: FacebookInit) -> Result<()> {
     let key =
         BookmarkKey::with_name_and_category(BookmarkName::new("tag1")?, BookmarkCategory::Tag);
     repo_ctx
-        .create_bookmark(&key, changesets["C"], None, None)
+        .create_bookmark(&key, changesets["C"], None)
         .await?;
     repo_ctx
-        .move_bookmark(&key, changesets["D"], None, false, None, None)
+        .move_bookmark(&key, changesets["D"], None, false, None)
         .await?;
     let entries = repo_ctx
         .repo()
@@ -204,25 +204,25 @@ async fn delete_bookmark(fb: FacebookInit) -> Result<()> {
 
     let bookmark1_key = BookmarkKey::new("bookmark1")?;
     repo_ctx
-        .create_bookmark(&bookmark1_key, changesets["A"], None, None)
+        .create_bookmark(&bookmark1_key, changesets["A"], None)
         .await?;
     let bookmark2_key = BookmarkKey::new("bookmark2")?;
     repo_ctx
-        .create_bookmark(&bookmark2_key, changesets["F"], None, None)
+        .create_bookmark(&bookmark2_key, changesets["F"], None)
         .await?;
     let bookmark3_key = BookmarkKey::new("scratch/bookmark3")?;
     repo_ctx
-        .create_bookmark(&bookmark3_key, changesets["G"], None, None)
+        .create_bookmark(&bookmark3_key, changesets["G"], None)
         .await?;
     let tag_key =
         BookmarkKey::with_name_and_category(BookmarkName::new("tag1")?, BookmarkCategory::Tag);
     repo_ctx
-        .create_bookmark(&tag_key, changesets["B"], None, None)
+        .create_bookmark(&tag_key, changesets["B"], None)
         .await?;
     let note_key =
         BookmarkKey::with_name_and_category(BookmarkName::new("note1")?, BookmarkCategory::Note);
     repo_ctx
-        .create_bookmark(&note_key, changesets["D"], None, None)
+        .create_bookmark(&note_key, changesets["D"], None)
         .await?;
 
     // Can delete public bookmarks (of any category).

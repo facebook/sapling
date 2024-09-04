@@ -83,10 +83,6 @@ impl RefMap {
         self.tags_to_bonsai.insert(*oid, cs_id);
         self.bonsai_to_tags.insert(cs_id, *oid);
     }
-
-    pub(crate) fn len(&self) -> usize {
-        self.commits_to_bonsai.len() + self.tags_to_bonsai.len()
-    }
 }
 
 impl TagMetadata {

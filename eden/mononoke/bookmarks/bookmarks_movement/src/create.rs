@@ -53,7 +53,6 @@ impl<'op> CreateBookmarkOp<'op> {
         bookmark: BookmarkKey,
         target: ChangesetId,
         reason: BookmarkUpdateReason,
-        affected_changesets_limit: Option<usize>,
     ) -> CreateBookmarkOp<'op> {
         CreateBookmarkOp {
             bookmark,
@@ -61,7 +60,7 @@ impl<'op> CreateBookmarkOp<'op> {
             reason,
             kind_restrictions: BookmarkKindRestrictions::AnyKind,
             cross_repo_push_source: CrossRepoPushSource::NativeToThisRepo,
-            affected_changesets: AffectedChangesets::with_limit(affected_changesets_limit),
+            affected_changesets: AffectedChangesets::new(),
             pushvars: None,
             log_new_public_commits_to_scribe: false,
             only_log_acl_checks: false,

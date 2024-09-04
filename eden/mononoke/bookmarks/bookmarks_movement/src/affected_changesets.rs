@@ -41,7 +41,6 @@ use crate::BookmarkMovementError;
 use crate::Repo;
 
 const N_CHANGESETS_TO_LOAD_AT_ONCE: usize = 1000;
-const DEFAULT_ADDITIONAL_CHANGESETS_LIMIT: usize = 200000;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub(crate) enum AdditionalChangesets {
@@ -60,9 +59,6 @@ pub(crate) struct AffectedChangesets {
     /// Changesets that are being used as a source for pushrebase.
     source_changesets: HashSet<BonsaiChangeset>,
 
-    /// Max limit on how many additional changesets to load
-    additional_changesets_limit: usize,
-
     /// Changesets that we have already checked.
     /// This could be a large number, but we only store hashes.
     /// This avoids performing the same checks twice, but more importantly, reloading the same
@@ -74,11 +70,10 @@ pub(crate) struct AffectedChangesets {
 }
 
 impl AffectedChangesets {
-    pub(crate) fn with_limit(limit: Option<usize>) -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             new_changesets: HashMap::new(),
             source_changesets: HashSet::new(),
-            additional_changesets_limit: limit.unwrap_or(DEFAULT_ADDITIONAL_CHANGESETS_LIMIT),
             already_checked_changesets: HashSet::new(),
             should_bypass_checks_on_additional_changesets: false,
         }
@@ -88,7 +83,6 @@ impl AffectedChangesets {
         Self {
             new_changesets: HashMap::new(),
             source_changesets,
-            additional_changesets_limit: DEFAULT_ADDITIONAL_CHANGESETS_LIMIT,
             already_checked_changesets: HashSet::new(),
             should_bypass_checks_on_additional_changesets: false,
         }
@@ -127,7 +121,7 @@ impl AffectedChangesets {
     ///
     /// These are the additional bonsais that we need to run hooks on for
     /// bookmark moves.
-    async fn load_additional_changesets_aggressive_simplification<'a>(
+    async fn load_additional_changesets<'a>(
         &'a self,
         ctx: &'a CoreContext,
         repo: &'a impl Repo,
@@ -179,176 +173,16 @@ impl AffectedChangesets {
             .boxed())
     }
 
-    /// Load bonsais in the additional changeset range that are not already in
-    /// `new_changesets` and are ancestors of `head` but not ancestors of `base`
-    /// or any of the `hooks_skip_ancestors_of` bookmarks for the named
-    /// bookmark.
-    ///
-    /// These are the additional bonsais that we need to run hooks on for
-    /// bookmark moves.
-    async fn load_additional_changesets<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        repo: &'a impl Repo,
-        bookmark: &BookmarkKey,
-        additional_changesets: AdditionalChangesets,
-    ) -> Result<BoxStream<'a, Result<BonsaiChangeset, BookmarkMovementError>>> {
-        let (head, base) = match additional_changesets {
-            AdditionalChangesets::None => {
-                return Ok(stream::empty().boxed());
-            }
-            AdditionalChangesets::Ancestors(head) => (head, None),
-            AdditionalChangesets::Range { head, base } => (head, Some(base)),
-        };
-
-        let mut exclude_bookmarks: HashSet<_> = repo
-            .repo_bookmark_attrs()
-            .select(bookmark)
-            .flat_map(|attr| attr.params().hooks_skip_ancestors_of.iter())
-            .cloned()
-            .collect();
-        exclude_bookmarks.remove(bookmark);
-
-        let mut excludes: HashSet<_> = stream::iter(exclude_bookmarks)
-            .map(|bookmark| repo.bookmarks().get(ctx.clone(), &bookmark))
-            .buffered(100)
-            .try_filter_map(|maybe_cs_id| async move { Ok(maybe_cs_id) })
-            .try_collect()
-            .await?;
-        excludes.extend(base);
-
-        if justknobs::eval(
-            "scm/mononoke:bookmarks_movement_use_precise_boundary",
-            None,
-            Some(repo.repo_identity().name()),
-        )
-        .unwrap_or(false)
-        {
-            // Optimization: instead of finding the difference between the head of the bookmark being
-            // pushed and the hooks_skip_ancestors of this bookmark, also exclude any public bookmark
-            // by adding the public frontier to the excludes.
-            // This optimization is necessary for pushes to long branches that are far away from
-            // their hooks_skip_ancestors.
-            // That is a scenario that happens since we imported some large git repos such as
-            // "chromium/src"
-            let public_frontier = repo
-                .commit_graph()
-                .ancestors_frontier_with(ctx, vec![head], |csid| {
-                    borrowed!(ctx, repo);
-                    async move {
-                        Ok(repo
-                            .phases()
-                            .get_cached_public(ctx, vec![csid])
-                            .await?
-                            .contains(&csid))
-                    }
-                })
-                .await?
-                .into_iter()
-                .filter(|csid| {
-                    // We still want to run checks on head, for instance to check write permissions
-                    *csid != head
-                })
-                .collect::<HashSet<_>>();
-            excludes.extend(public_frontier);
-        }
-
-        let range = repo
-            .commit_graph()
-            .ancestors_difference_stream(ctx, vec![head], excludes.into_iter().collect())
-            .await?
-            .yield_periodically()
-            .try_filter(|bcs_id| {
-                let exists = self.new_changesets.contains_key(bcs_id);
-                let already_checked = self.already_checked_changesets.contains(bcs_id);
-                future::ready(!exists && !already_checked)
-            });
-
-        let additional_changesets_limit = self.additional_changesets_limit;
-
-        let additional_changesets = if justknobs::eval(
-            "scm/mononoke:run_hooks_on_additional_changesets",
-            None,
-            None,
-        )
-        .unwrap_or(true)
-        {
-            let bonsais = range
-                .and_then({
-                    let mut count = 0;
-                    move |bcs_id| {
-                        count += 1;
-                        if count > additional_changesets_limit {
-                            future::ready(Err(anyhow!(
-                                "bookmark movement additional changesets limit reached at {}",
-                                bcs_id
-                            )))
-                        } else {
-                            future::ready(Ok(bcs_id))
-                        }
-                    }
-                })
-                .map(move |res| async move {
-                    match res {
-                        Ok(bcs_id) => Ok(bcs_id
-                            .load(ctx, repo.repo_blobstore())
-                            .await
-                            .map_err(|e| BookmarkMovementError::Error(e.into()))?),
-                        Err(e) => Err(e.into()),
-                    }
-                })
-                .buffered(N_CHANGESETS_TO_LOAD_AT_ONCE)
-                .boxed();
-
-            ctx.scuba()
-                .clone()
-                .add("hook_running_additional_changesets", None::<usize>)
-                .log_with_msg("Running hooks for additional changesets", None);
-            bonsais
-        } else {
-            // Logging-only mode.  Work out how many changesets we would have run
-            // on, and whether the limit would have been reached.
-            let count = range
-                .take(additional_changesets_limit)
-                .try_fold(0usize, |acc, _| async move { Ok(acc + 1) })
-                .await?;
-
-            let mut scuba = ctx.scuba().clone();
-            scuba.add("hook_running_additional_changesets", count);
-            if count >= additional_changesets_limit {
-                scuba.add("hook_running_additional_changesets_limit_reached", true);
-            }
-            scuba.log_with_msg("Hook running skipping additional changesets", None);
-            stream::empty().boxed()
-        };
-
-        Ok(additional_changesets)
-    }
-
     async fn changesets_stream<'a>(
         &'a self,
         ctx: &'a CoreContext,
         repo: &'a impl Repo,
-        bookmark: &BookmarkKey,
         additional_changesets: AdditionalChangesets,
     ) -> Result<BoxStream<'a, Result<BonsaiChangeset, BookmarkMovementError>>> {
         let additional_changesets = if self.should_bypass_checks_on_additional_changesets {
             stream::empty().boxed()
-        } else if justknobs::eval(
-            "scm/mononoke:bookmarks_movement_load_changesets_aggressive_simplification",
-            None,
-            Some(repo.repo_identity().name()),
-        )
-        .unwrap_or(false)
-        {
-            self.load_additional_changesets_aggressive_simplification(
-                ctx,
-                repo,
-                additional_changesets,
-            )
-            .await?
         } else {
-            self.load_additional_changesets(ctx, repo, bookmark, additional_changesets)
+            self.load_additional_changesets(ctx, repo, additional_changesets)
                 .await?
         };
         Ok(stream::iter(
@@ -395,7 +229,7 @@ impl AffectedChangesets {
             || needs_hooks_check
             || needs_path_permissions_check
         {
-            self.changesets_stream(ctx, repo, bookmark, additional_changesets)
+            self.changesets_stream(ctx, repo, additional_changesets)
                 .await
                 .context("Failed to load additional affected changesets to check restrictions")?
         } else {

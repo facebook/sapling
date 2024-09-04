@@ -471,7 +471,6 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     .with_context(|| format!("failed to resolve bookmark {name}"))?
                     .map(|context| context.id());
                 let allow_non_fast_forward = true;
-                let affected_changesets_limit = Some(gitimport_result.len());
                 let operation =
                     BookmarkOperation::new(bookmark_key, old_changeset, Some(final_changeset))?;
                 set_bookmark(
@@ -480,7 +479,6 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     &operation,
                     pushvars.as_ref(),
                     allow_non_fast_forward,
-                    affected_changesets_limit,
                     BookmarkOperationErrorReporting::WithContext,
                 )
                 .await?;
