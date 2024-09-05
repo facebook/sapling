@@ -36,6 +36,7 @@ from eden.fs.cli.doctor.check_filesystems import (
     check_materialized_are_accessible,
 )
 from eden.fs.cli.doctor.check_redirections import check_redirections
+from eden.fs.cli.doctor.facebook.internal_consts import get_netinfo_link
 from eden.fs.cli.doctor.problem import ProblemSeverity
 from eden.fs.cli.doctor.test.lib.fake_client import ResetParentsCommitsArgs
 from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
@@ -158,6 +159,58 @@ class DoctorTest(DoctorTestBase):
             FakeNetworkChecker(),
             True,
             True,
+        )
+        return fixer, out, checkout
+
+    @patch("eden.fs.cli.doctor.check_filesystems.check_inode_counts")
+    @patch("eden.fs.cli.doctor.check_filesystems.check_using_nfs_path")
+    @patch("eden.fs.cli.doctor.check_hg.check_hg")
+    @patch("eden.fs.cli.doctor.check_filesystems.check_hg_status_match_hg_diff")
+    @patch("eden.fs.cli.config.EdenCheckout.get_config")
+    def setUpEdenNetworkTest(
+        self,
+        mock_get_config: MagicMock,
+        mock_check_hg_status: MagicMock,
+        mock_check_hg: MagicMock,
+        mock_check_nfs: MagicMock,
+        mock_check_inode: MagicMock,
+    ) -> Tuple[doctor.ProblemFixer, TestOutput, EdenCheckout]:
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout = instance.create_test_mount("path1")
+        checkout_config = instance._checkouts_by_path[str(checkout.path)].config
+
+        mock_get_config.return_value = checkout_config
+        path = checkout.path
+        checkout_info = CheckoutInfo(
+            # pyre-fixme[6]: For 3rd param expected `EdenInstance` but got
+            # `FakeEdenInstance`.
+            instance,
+            path,
+            state=None,
+            backing_repo=checkout.get_backing_repo_path(),
+            running_state_dir=path,
+            configured_state_dir=path,
+        )
+
+        fixer, out = self.create_fixer(dry_run=False)
+        mount_table = instance.mount_table
+
+        edenfs_path = "/path/to/eden-mount"
+        watchman_roots = {edenfs_path}
+        watchman_info = check_watchman.WatchmanCheckInfo(watchman_roots)
+
+        check_running_mount(
+            fixer,
+            # pyre-fixme[6]: For 2rd param expected `EdenInstance` but got
+            # `FakeEdenInstance`.
+            instance,
+            checkout_info,
+            mount_table,
+            watchman_info,
+            set(),
+            check_network.NetworkChecker(),
+            False,
+            False,
         )
         return fixer, out, checkout
 
@@ -2672,69 +2725,16 @@ To reclone the corrupted repo, run: `fbclone $REPO --reclone --eden`"""
         self.assertEqual(fixer.num_fixed_problems, 0)
         self.assertEqual(fixer.num_manual_fixes, 1)
 
-    @patch("eden.fs.cli.doctor.check_filesystems.check_inode_counts")
-    @patch("eden.fs.cli.doctor.check_filesystems.check_using_nfs_path")
-    @patch("eden.fs.cli.doctor.check_hg.check_hg")
-    @patch("eden.fs.cli.doctor.check_filesystems.check_hg_status_match_hg_diff")
     @patch("subprocess.run")
-    @patch("eden.fs.cli.config.EdenCheckout.get_config")
-    def test_network_fail(
+    def test_network_fail_command_doctor(
         self,
-        mock_get_config: MagicMock,
         mock_subprocess_run: MagicMock,
-        mock_check_hg_status: MagicMock,
-        mock_check_hg: MagicMock,
-        mock_check_nfs: MagicMock,
-        mock_check_inode: MagicMock,
     ) -> None:
-        instance = FakeEdenInstance(self.make_temporary_directory())
-        checkout = instance.create_test_mount("path1")
-        checkout_config = instance._checkouts_by_path[str(checkout.path)].config
-
-        mock_get_config.return_value = checkout_config
         mock_subprocess_run.side_effect = subprocess.CalledProcessError(
             1, "test", output="stdout", stderr="stderror"
         )
-        path = checkout.path
-        checkout_info = CheckoutInfo(
-            # pyre-fixme[6]: For 3rd param expected `EdenInstance` but got
-            # `FakeEdenInstance`.
-            instance,
-            path,
-            state=None,
-            backing_repo=checkout.get_backing_repo_path(),
-            running_state_dir=path,
-            configured_state_dir=path,
-        )
 
-        fixer, out = self.create_fixer(dry_run=False)
-        mount_table = instance.mount_table
-
-        edenfs_path = "/path/to/eden-mount"
-        watchman_roots = {edenfs_path}
-        watchman_info = check_watchman.WatchmanCheckInfo(watchman_roots)
-
-        check_running_mount(
-            fixer,
-            # pyre-fixme[6]: For 2rd param expected `EdenInstance` but got
-            # `FakeEdenInstance`.
-            instance,
-            checkout_info,
-            mount_table,
-            watchman_info,
-            set(),
-            check_network.NetworkChecker(),
-            False,
-            False,
-        )
-
-        self.assertEqual(mock_subprocess_run.call_count, 1)
-        self.assertEqual(len(fixer.problem_types), 1)
-        self.assertEqual(fixer.num_fixed_problems, 0)
-        self.assertEqual(fixer.num_manual_fixes, 1)
-        problems = sorted(fixer.problem_manual_fixes)
-        # 2 problems both ConnecttivityProblem
-        self.assertEqual(problems[0], "ConnectivityProblem")
+        fixer, out, checkout = self.setUpEdenNetworkTest()
         self.assertEqual(
             out.getvalue(),
             """\
@@ -2747,78 +2747,242 @@ Please check your network connection. If you are connected to the VPN, please tr
 
 """,
         )
-
-    @patch("eden.fs.cli.doctor.check_filesystems.check_inode_counts")
-    @patch("eden.fs.cli.doctor.check_filesystems.check_using_nfs_path")
-    @patch("eden.fs.cli.doctor.check_hg.check_hg")
-    @patch("eden.fs.cli.doctor.check_filesystems.check_hg_status_match_hg_diff")
-    @patch("subprocess.run")
-    @patch("eden.fs.cli.config.EdenCheckout.get_config")
-    def test_network_timeout(
-        self,
-        mock_get_config: MagicMock,
-        mock_subprocess_run: MagicMock,
-        mock_check_hg_status: MagicMock,
-        mock_check_hg: MagicMock,
-        mock_check_nfs: MagicMock,
-        mock_check_inode: MagicMock,
-    ) -> None:
-        instance = FakeEdenInstance(self.make_temporary_directory())
-        checkout = instance.create_test_mount("path1")
-        checkout_config = instance._checkouts_by_path[str(checkout.path)].config
-
-        mock_get_config.return_value = checkout_config
-        mock_subprocess_run.side_effect = subprocess.TimeoutExpired(
-            "test", timeout=1, output="stdout", stderr="stderror"
-        )
-        path = checkout.path
-        checkout_info = CheckoutInfo(
-            # pyre-fixme[6]: For 3rd param expected `EdenInstance` but got
-            # `FakeEdenInstance`.
-            instance,
-            path,
-            state=None,
-            backing_repo=checkout.get_backing_repo_path(),
-            running_state_dir=path,
-            configured_state_dir=path,
-        )
-
-        fixer, out = self.create_fixer(dry_run=False)
-        mount_table = instance.mount_table
-
-        edenfs_path = "/path/to/eden-mount"
-        watchman_roots = {edenfs_path}
-        watchman_info = check_watchman.WatchmanCheckInfo(watchman_roots)
-
-        check_running_mount(
-            fixer,
-            # pyre-fixme[6]: For 2rd param expected `EdenInstance` but got
-            # `FakeEdenInstance`.
-            instance,
-            checkout_info,
-            mount_table,
-            watchman_info,
-            set(),
-            check_network.NetworkChecker(),
-            False,
-            False,
-        )
-
         self.assertEqual(mock_subprocess_run.call_count, 1)
         self.assertEqual(len(fixer.problem_types), 1)
         self.assertEqual(fixer.num_fixed_problems, 0)
         self.assertEqual(fixer.num_manual_fixes, 1)
-        self.assertEqual(list(fixer.problem_manual_fixes)[0], "ConnectivityProblem")
+        problems = sorted(fixer.problem_manual_fixes)
+        self.assertEqual(problems[0], "ConnectivityProblem")
+
+    @patch("subprocess.run")
+    def test_network_fail_command_connection(
+        self,
+        mock_subprocess_run: MagicMock,
+    ) -> None:
+        mock_subprocess_run.side_effect = [
+            None,
+            subprocess.CalledProcessError(
+                1, "test", output="stdout", stderr="stderror"
+            ),
+        ]
+
+        fixer, out, checkout = self.setUpEdenNetworkTest()
         self.assertEqual(
             out.getvalue(),
             """\
 <yellow>- Found problem:<reset>
-Encountered an error checking connection to Source Control Servers: command 'hg debugnetworkdoctor' timed out.
+Encountered an error checking connection to Source Control Servers: hg debugnetwork --connection reported an error:
+stdout
+stderror
 
 Please check your network connection. If you are connected to the VPN, please try reconnecting.
 
 """,
         )
+        self.assertEqual(mock_subprocess_run.call_count, 2)
+        self.assertEqual(len(fixer.problem_types), 1)
+        self.assertEqual(fixer.num_fixed_problems, 0)
+        self.assertEqual(fixer.num_manual_fixes, 1)
+        problems = sorted(fixer.problem_manual_fixes)
+        self.assertEqual(problems[0], "ConnectivityProblem")
+
+    @patch("subprocess.run")
+    def test_network_fail_command_speed(
+        self,
+        mock_subprocess_run: MagicMock,
+    ) -> None:
+        mock_subprocess_run.side_effect = [
+            None,
+            None,
+            subprocess.CalledProcessError(
+                1, "test", output="stdout", stderr="stderror"
+            ),
+        ]
+
+        fixer, out, checkout = self.setUpEdenNetworkTest()
+        self.assertEqual(
+            out.getvalue(),
+            """\
+<yellow>- Found problem:<reset>
+Failed to verify speed of connection to eden services: 
+stdout
+stderror
+
+Check the speed report in hg debugnetwork --speed
+
+""",
+        )
+        self.assertEqual(mock_subprocess_run.call_count, 3)
+        self.assertEqual(len(fixer.problem_types), 1)
+        self.assertEqual(fixer.num_fixed_problems, 0)
+        self.assertEqual(fixer.num_manual_fixes, 1)
+        problems = sorted(fixer.problem_manual_fixes)
+        self.assertEqual(problems[0], "NetworkSpeedProblem")
+
+    @patch("subprocess.run")
+    def test_network_timeout(
+        self,
+        mock_subprocess_run: MagicMock,
+    ) -> None:
+        timeout = subprocess.TimeoutExpired(
+            "test", timeout=1, output="stdout", stderr="stderror"
+        )
+        mock_subprocess_run.side_effect = [timeout, None, timeout, None, None, timeout]
+        for method in [
+            "debugnetworkdoctor",
+            "debugnetwork --connection",
+            "debugnetwork --speed",
+        ]:
+            fixer, out, checkout = self.setUpEdenNetworkTest()
+
+            self.assertEqual(len(fixer.problem_types), 1)
+            self.assertEqual(fixer.num_fixed_problems, 0)
+            self.assertEqual(fixer.num_manual_fixes, 1)
+            self.assertEqual(list(fixer.problem_manual_fixes)[0], "ConnectivityProblem")
+            self.assertEqual(
+                out.getvalue(),
+                f"""\
+<yellow>- Found problem:<reset>
+Encountered an error checking connection to Source Control Servers: command 'hg {method}' timed out.
+
+Please check your network connection. If you are connected to the VPN, please try reconnecting.
+
+""",
+            )
+
+    @patch("subprocess.run")
+    def test_network_speed_fail_check(
+        self,
+        mock_subprocess_run: MagicMock,
+    ) -> None:
+        mock_subprocess_run.side_effect = [
+            None,
+            None,
+            subprocess.CalledProcessError(
+                1, "test", output="stdout", stderr="stderror"
+            ),
+        ]
+        fixer, out, checkout = self.setUpEdenNetworkTest()
+
+        self.assertEqual(mock_subprocess_run.call_count, 3)
+        self.assertEqual(len(fixer.problem_types), 1)
+        self.assertEqual(fixer.num_fixed_problems, 0)
+        self.assertEqual(fixer.num_manual_fixes, 1)
+        problems = sorted(fixer.problem_manual_fixes)
+        self.assertEqual(problems[0], "NetworkSpeedProblem")
+        self.assertEqual(
+            out.getvalue(),
+            """\
+<yellow>- Found problem:<reset>
+Failed to verify speed of connection to eden services: 
+stdout
+stderror
+
+Check the speed report in hg debugnetwork --speed
+
+""",
+        )
+
+    @patch("subprocess.run")
+    def test_network_speed_pass(
+        self,
+        mock_subprocess_run: MagicMock,
+    ) -> None:
+        mock_subprocess_run.side_effect = [
+            None,
+            None,
+            subprocess.CompletedProcess(
+                "",
+                0,
+                stdout="""
+debugnetwork: Latency: 646.2 us (average of 5 round-trips)
+debugnetwork: Speed: (round 1) downloaded 250 MB in 437.5 ms (4793.85 Mbit/s, 571.47 MiB/s)
+debugnetwork: Speed: (round 2) downloaded 250 MB in 446.1 ms (4700.91 Mbit/s, 560.39 MiB/s)
+debugnetwork: Speed: (round 1) uploaded 50.0 MB in 134.6 ms (3116.99 Mbit/s, 371.57 MiB/s)
+debugnetwork: Speed: (round 2) uploaded 50.0 MB in 132.3 ms (3170.47 Mbit/s, 377.95 MiB/s)
+""",
+            ),
+        ]
+        fixer, out, checkout = self.setUpEdenNetworkTest()
+
+        self.assertEqual(out.getvalue(), "")
+        self.assertEqual(len(fixer.problem_types), 0)
+
+    @patch("subprocess.run")
+    def test_network_latency_fail(
+        self,
+        mock_subprocess_run: MagicMock,
+    ) -> None:
+        mock_subprocess_run.side_effect = [
+            None,
+            None,
+            subprocess.CompletedProcess(
+                "",
+                0,
+                stdout="""
+debugnetwork: Latency: 646.2 ms (average of 5 round-trips)
+debugnetwork: Speed: (round 1) downloaded 250 MB in 437.5 ms (4793.85 Mbit/s, 571.47 MiB/s)
+debugnetwork: Speed: (round 2) downloaded 250 MB in 446.1 ms (4700.91 Mbit/s, 560.39 MiB/s)
+debugnetwork: Speed: (round 1) uploaded 50.0 MB in 134.6 ms (3116.99 Mbit/s, 371.57 MiB/s)
+debugnetwork: Speed: (round 2) uploaded 50.0 MB in 132.3 ms (3170.47 Mbit/s, 377.95 MiB/s)
+""",
+            ),
+        ]
+        fixer, out, checkout = self.setUpEdenNetworkTest()
+
+        self.assertEqual(
+            out.getvalue(),
+            f"""\
+<yellow>- Found problem:<reset>
+High network latency detected: Latency 646.2 ms higher than 250ms
+Please check if anything is causing high ping on your network.{get_netinfo_link()}
+
+""",
+        )
+        self.assertEqual(mock_subprocess_run.call_count, 3)
+        self.assertEqual(len(fixer.problem_types), 1)
+        self.assertEqual(fixer.num_fixed_problems, 0)
+        self.assertEqual(fixer.num_manual_fixes, 1)
+        problems = sorted(fixer.problem_manual_fixes)
+        self.assertEqual(problems[0], "NetworkLatencyProblem")
+
+    @patch("subprocess.run")
+    def test_network_speed_fail(
+        self,
+        mock_subprocess_run: MagicMock,
+    ) -> None:
+        mock_subprocess_run.side_effect = [
+            None,
+            None,
+            subprocess.CompletedProcess(
+                "",
+                0,
+                stdout="""
+debugnetwork: Latency: 646.2 us (average of 5 round-trips)
+debugnetwork: Speed: (round 1) downloaded 250 MB in 437.5 ms (47.9385 Mbit/s, 57.147 MiB/s)
+debugnetwork: Speed: (round 2) downloaded 250 MB in 446.1 ms (47.0091 Mbit/s, 56.039 MiB/s)
+debugnetwork: Speed: (round 1) uploaded 50.0 MB in 134.6 ms (31.1699 Mbit/s, 37.157 MiB/s)
+debugnetwork: Speed: (round 2) uploaded 50.0 MB in 132.3 ms (31.7047 Mbit/s, 37.795 MiB/s)
+""",
+            ),
+        ]
+        fixer, out, checkout = self.setUpEdenNetworkTest()
+
+        self.assertEqual(
+            out.getvalue(),
+            f"""\
+<yellow>- Found problem:<reset>
+Slow network speed detected: Average download speed 47.4738Mbit/s slower than 50 Mbit/s, or average upload speed 31.4373Mbit/s slower than 10 Mbit/s
+Please check if anything is consuming an excess amount of bandwidth on your network.{get_netinfo_link()}
+
+""",
+        )
+        self.assertEqual(mock_subprocess_run.call_count, 3)
+        self.assertEqual(len(fixer.problem_types), 1)
+        self.assertEqual(fixer.num_fixed_problems, 0)
+        self.assertEqual(fixer.num_manual_fixes, 1)
+        problems = sorted(fixer.problem_manual_fixes)
+        self.assertEqual(problems[0], "NetworkSlowSpeedProblem")
 
 
 def _create_watchman_subscription(
