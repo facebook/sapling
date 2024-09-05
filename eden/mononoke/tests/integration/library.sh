@@ -2534,3 +2534,23 @@ function x_repo_lookup() {
 print(hex(${TRANSLATED}[0]["translated"]["Hg"]))
 EOF
 }
+
+function async_worker_enqueue() {
+  local repo_id bookmark request_type args_blobstore_key
+  repo_id=$1
+  bookmark=$2
+  request_type=$3
+  args_blobstore_key=$4
+  status=${5:-new}
+
+  sqlite3 "$TESTTMP/monsql/sqlite_dbs" << EOF
+insert into long_running_request_queue
+  (repo_id, bookmark, request_type, args_blobstore_key, created_at, inprogress_last_updated_at, status)
+values
+  ($repo_id, '$bookmark', '$request_type', '$args_blobstore_key', strftime('%s', 'now') * 1000000000, strftime('%s', 'now') * 1000000000, '$status');
+EOF
+}
+
+function async_worker_clear() {
+  sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'delete from long_running_request_queue;'
+}
