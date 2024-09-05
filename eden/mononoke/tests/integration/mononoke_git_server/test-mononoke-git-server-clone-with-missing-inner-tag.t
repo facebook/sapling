@@ -42,7 +42,8 @@
   $ cat $TESTTMP/object_list | grep first_tag
   8963e1f55d1346a07c3aec8c8fc72bf87d0452b1 tag first_tag
   $ ls $TESTTMP/blobstore/blobs | grep 8963e1f55d1346a07c3aec8c8fc72bf87d0452b1
-  [1]
+  blob-repo0000.git_object.8963e1f55d1346a07c3aec8c8fc72bf87d0452b1
+  blob-repo0000.git_packfile_base_item.8963e1f55d1346a07c3aec8c8fc72bf87d0452b1
 
 # Start up the Mononoke Git Service
   $ mononoke_git_service

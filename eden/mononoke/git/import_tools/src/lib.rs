@@ -30,8 +30,10 @@ use anyhow::Result;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
+use futures::future::BoxFuture;
 use futures::stream;
 use futures::try_join;
+use futures::FutureExt;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryFutureExt;
@@ -39,6 +41,7 @@ use futures::TryStreamExt;
 use git_symbolic_refs::GitSymbolicRefsEntry;
 pub use git_types::git_lfs::LfsPointerData;
 use gix_hash::ObjectId;
+use gix_object::Kind;
 use gix_object::Object;
 use linked_hash_map::LinkedHashMap;
 use manifest::BonsaiDiffFileChange;
@@ -225,33 +228,49 @@ pub async fn create_changeset_for_annotated_tag<Uploader: GitUploader, Reader: G
     Ok(changeset_id)
 }
 
-pub async fn upload_git_tag<Uploader: GitUploader, Reader: GitReader>(
-    ctx: &CoreContext,
+pub fn upload_git_tag<'a, Uploader: GitUploader, Reader: GitReader>(
+    ctx: &'a CoreContext,
     uploader: Arc<Uploader>,
     reader: Arc<Reader>,
-    tag_id: &ObjectId,
-) -> Result<()> {
-    let tag_bytes = reader
-        .read_raw_object(tag_id)
-        .await
-        .with_context(|| format_err!("Failed to fetch git tag {}", tag_id))?;
-    let raw_tag_bytes = tag_bytes.clone();
-    // Upload Packfile Item for the Git Tag
-    let upload_packfile = async {
-        uploader
-            .upload_packfile_base_item(ctx, *tag_id, tag_bytes)
+    tag_id: &'a ObjectId,
+) -> BoxFuture<'a, Result<()>> {
+    async move {
+        let tag = reader
+            .read_tag(tag_id)
             .await
-            .with_context(|| format_err!("Failed to upload packfile item for git tag {}", tag_id))
-    };
-    // Upload Git Tag
-    let upload_git_tag = async {
-        uploader
-            .upload_object(ctx, *tag_id, raw_tag_bytes)
+            .with_context(|| format_err!("Invalid tag {:?}", tag_id))?;
+        // Note: If we support tags pointing to blobs and trees later, we'll need to upload the
+        // appropriate git objects here too
+        if tag.target_kind == Kind::Tag {
+            let target = tag.target;
+            upload_git_tag(ctx, uploader.clone(), reader.clone(), &target).await?;
+        }
+
+        let tag_bytes = reader
+            .read_raw_object(tag_id)
             .await
-            .with_context(|| format_err!("Failed to upload raw git tag {}", tag_id))
-    };
-    try_join!(upload_packfile, upload_git_tag)?;
-    Ok(())
+            .with_context(|| format_err!("Failed to fetch git tag {}", tag_id))?;
+        let raw_tag_bytes = tag_bytes.clone();
+        // Upload Packfile Item for the Git Tag
+        let upload_packfile = async {
+            uploader
+                .upload_packfile_base_item(ctx, *tag_id, tag_bytes)
+                .await
+                .with_context(|| {
+                    format_err!("Failed to upload packfile item for git tag {}", tag_id)
+                })
+        };
+        // Upload Git Tag
+        let upload_git_tag = async {
+            uploader
+                .upload_object(ctx, *tag_id, raw_tag_bytes)
+                .await
+                .with_context(|| format_err!("Failed to upload raw git tag {}", tag_id))
+        };
+        try_join!(upload_packfile, upload_git_tag)?;
+        Ok(())
+    }
+    .boxed()
 }
 
 fn repo_name(prefs: &GitimportPreferences, path: &Path) -> String {
