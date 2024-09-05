@@ -22,7 +22,7 @@ const styles = stylex.create({
       minWidth: '1em',
       content: 'attr(data-value)',
       visibility: 'hidden',
-      whitespace: 'pre-wrap',
+      whiteSpace: 'pre-wrap',
       gridArea: '1 / 2',
       height: '26px',
       padding: '0 9px',
