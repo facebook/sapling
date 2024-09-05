@@ -2732,7 +2732,9 @@ To reclone the corrupted repo, run: `fbclone $REPO --reclone --eden`"""
         self.assertEqual(len(fixer.problem_types), 1)
         self.assertEqual(fixer.num_fixed_problems, 0)
         self.assertEqual(fixer.num_manual_fixes, 1)
-        self.assertEqual(list(fixer.problem_manual_fixes)[0], "ConnectivityProblem")
+        problems = sorted(fixer.problem_manual_fixes)
+        # 2 problems both ConnecttivityProblem
+        self.assertEqual(problems[0], "ConnectivityProblem")
         self.assertEqual(
             out.getvalue(),
             """\
