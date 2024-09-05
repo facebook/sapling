@@ -13,6 +13,7 @@ from unittest.mock import MagicMock, patch
 import eden.fs.cli.doctor as doctor
 from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
 from eden.fs.cli.doctor.test.lib.fake_fs_util import FakeFsUtil
+from eden.fs.cli.doctor.test.lib.fake_network_checker import FakeNetworkChecker
 from eden.fs.cli.doctor.test.lib.fake_vscode_extensions_checker import (
     getFakeVSCodeExtensionsChecker,
 )
@@ -59,6 +60,7 @@ class DoctorUnixTest(DoctorTestBase):
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
+            network_checker=FakeNetworkChecker(),
             out=out,
         )
 
@@ -96,6 +98,7 @@ Checking {mount}
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
+            network_checker=FakeNetworkChecker(),
             out=out,
         )
 

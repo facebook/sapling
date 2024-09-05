@@ -14,6 +14,7 @@ import eden.fs.cli.doctor as doctor
 from eden.fs.cli.config import EdenInstance
 from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
 from eden.fs.cli.doctor.test.lib.fake_fs_util import FakeFsUtil
+from eden.fs.cli.doctor.test.lib.fake_network_checker import FakeNetworkChecker
 from eden.fs.cli.doctor.test.lib.fake_vscode_extensions_checker import (
     getFakeVSCodeExtensionsChecker,
 )
@@ -49,6 +50,7 @@ class NfsTest(DoctorTestBase):
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
+            network_checker=FakeNetworkChecker(),
             out=out,
         )
         expected = f"""<yellow>- Found problem:<reset>
@@ -158,6 +160,7 @@ To fix this, move the Mercurial data directory to a non-NFS filesystem.
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
+            network_checker=FakeNetworkChecker(),
             out=out,
         )
         return NfsDoctorResult(

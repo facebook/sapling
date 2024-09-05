@@ -20,11 +20,11 @@ from unittest.mock import call, MagicMock, patch
 
 import eden.fs.cli.doctor as doctor
 
-import facebook.eden.ttypes as eden_ttypes
-from eden.fs.cli.config import EdenCheckout, EdenInstance, HealthStatus, SnapshotState
+from eden.fs.cli.config import EdenCheckout, EdenInstance, SnapshotState
 from eden.fs.cli.doctor import (
     check_hg,
     check_mount,
+    check_network,
     check_running_mount,
     check_watchman,
     get_doctor_link,
@@ -42,6 +42,7 @@ from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
 from eden.fs.cli.doctor.test.lib.fake_fs_util import FakeFsUtil
 from eden.fs.cli.doctor.test.lib.fake_hg_repo import FakeHgRepo
 from eden.fs.cli.doctor.test.lib.fake_mount_table import FakeMountTable
+from eden.fs.cli.doctor.test.lib.fake_network_checker import FakeNetworkChecker
 from eden.fs.cli.doctor.test.lib.fake_vscode_extensions_checker import (
     getFakeVSCodeExtensionsChecker,
     getFakeVSCodeExtensionsCheckerWithExtensions,
@@ -52,8 +53,10 @@ from eden.fs.cli.doctor.util import CheckoutInfo
 from eden.fs.cli.prjfs import PRJ_FILE_STATE
 from eden.fs.cli.redirect import Redirection, RedirectionState, RedirectionType
 from eden.fs.cli.test.lib.output import TestOutput
+
 from facebook.eden.ttypes import (
     GetScmStatusResult,
+    InternalStats,
     MountInodeInfo,
     MountState,
     ScmFileStatus,
@@ -151,14 +154,17 @@ class DoctorTest(DoctorTestBase):
             watchman_info,
             [checkout_info],
             set(),
+            set(),
+            FakeNetworkChecker(),
             True,
             True,
         )
         return fixer, out, checkout
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
-    # pyre-fixme[2]: Parameter must be annotated.
-    def test_end_to_end_test_with_various_scenarios(self, mock_watchman) -> None:
+    def test_end_to_end_test_with_various_scenarios(
+        self, mock_watchman: MagicMock
+    ) -> None:
         side_effects: List[Dict[str, Any]] = []
         calls = []
         instance = FakeEdenInstance(self.make_temporary_directory())
@@ -216,6 +222,7 @@ class DoctorTest(DoctorTestBase):
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
+            network_checker=FakeNetworkChecker(),
             out=out,
         )
 
@@ -275,6 +282,7 @@ Repairing hg directory contents for {edenfs_path3}...<green>fixed<reset>
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
+            network_checker=FakeNetworkChecker(),
             out=out,
         )
 
@@ -306,6 +314,7 @@ Repairing hg directory contents for {edenfs_path3}...<green>fixed<reset>
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
+            network_checker=FakeNetworkChecker(),
             out=out,
         )
 
@@ -342,6 +351,7 @@ Repairing hg directory contents for {edenfs_path3}...<green>fixed<reset>
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
+            network_checker=FakeNetworkChecker(),
             out=out,
         )
 
@@ -418,6 +428,7 @@ Running `eden start` to start EdenFS......<yellow>EdenFS still starting, use `ed
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
+            network_checker=FakeNetworkChecker(),
             out=out,
         )
 
@@ -479,6 +490,8 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
             watchman_info,
             [checkout_info],
             set(),
+            set(),
+            FakeNetworkChecker(),
             True,
             True,
         )
@@ -522,6 +535,7 @@ For additional info see the wiki at https://www.internalfb.com/intern/wiki/EdenF
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
+            network_checker=FakeNetworkChecker(),
             out=out,
         )
 
@@ -551,6 +565,7 @@ For additional info see the wiki at https://www.internalfb.com/intern/wiki/EdenF
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
+            network_checker=FakeNetworkChecker(),
             out=out,
         )
 
@@ -1097,6 +1112,7 @@ Would remount {mounts[1]}
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
+            network_checker=FakeNetworkChecker(),
             out=out,
         )
         return exit_code, out.getvalue(), mounts
@@ -1122,6 +1138,7 @@ Would remount {mounts[1]}
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
+            network_checker=FakeNetworkChecker(),
             out=out,
         )
 
@@ -1198,6 +1215,7 @@ Checking {mount}
                 fs_util=FakeFsUtil(),
                 proc_utils=self.make_proc_utils(),
                 vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
+                network_checker=FakeNetworkChecker(),
                 out=out,
             )
             return exit_code, out.getvalue()
@@ -1228,6 +1246,7 @@ Checking {mount}
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
+            network_checker=FakeNetworkChecker(),
             out=out,
         )
 
@@ -2003,8 +2022,8 @@ Running chef may fix this.*""",
         out = TestOutput()
         dry_run = False
         mock_get_stat_info.side_effect = [
-            eden_ttypes.InternalStats(mountPointInfo=before_mount_point_info),
-            eden_ttypes.InternalStats(mountPointInfo=after_mount_point_info),
+            InternalStats(mountPointInfo=before_mount_point_info),
+            InternalStats(mountPointInfo=after_mount_point_info),
         ]
 
         exit_code = doctor.cure_what_ails_you(
@@ -2017,6 +2036,7 @@ Running chef may fix this.*""",
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
+            network_checker=FakeNetworkChecker(),
             out=out,
         )
 
@@ -2057,6 +2077,7 @@ Starting background invalidation of not recently used files and directories in {
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
+            network_checker=FakeNetworkChecker(),
             out=out,
         )
 
@@ -2158,6 +2179,7 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
+            network_checker=FakeNetworkChecker(),
             out=out,
         )
 
@@ -2187,6 +2209,7 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
+            network_checker=FakeNetworkChecker(),
             out=out,
         )
 
@@ -2225,6 +2248,7 @@ Please consider the effects of this extension.
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
+            network_checker=FakeNetworkChecker(),
             out=out,
         )
 
@@ -2265,6 +2289,7 @@ Please uninstall this extension.
             vscode_extensions_checker=getFakeVSCodeExtensionsCheckerWithExtensions(
                 ["randomdev.unknownextension"]
             ),
+            network_checker=FakeNetworkChecker(),
             out=out,
         )
 
@@ -2292,6 +2317,7 @@ Please uninstall this extension.
             vscode_extensions_checker=getFakeVSCodeExtensionsCheckerWithExtensions(
                 ["randomdev.unknownextension"]
             ),
+            network_checker=FakeNetworkChecker(),
             out=out,
         )
 
@@ -2481,6 +2507,8 @@ Attempted and failed to fix problem CheckoutNotMounted
             checkout_info,
             mount_table,
             watchman_info,
+            set(),
+            FakeNetworkChecker(),
             False,
             False,
         )
@@ -2553,6 +2581,8 @@ To reclone the corrupted repo, run: `fbclone $REPO --reclone --eden`"""
             checkout_info,
             mount_table,
             watchman_info,
+            set(),
+            FakeNetworkChecker(),
             False,
             False,
         )
@@ -2615,6 +2645,8 @@ To remove the corrupted repo, run: `eden rm {checkout.path}`
             checkout_info,
             mount_table,
             watchman_info,
+            set(),
+            FakeNetworkChecker(),
             False,
             False,
         )
@@ -2639,6 +2671,152 @@ To reclone the corrupted repo, run: `fbclone $REPO --reclone --eden`"""
         self.assertEqual(len(fixer.problem_types), 1)
         self.assertEqual(fixer.num_fixed_problems, 0)
         self.assertEqual(fixer.num_manual_fixes, 1)
+
+    @patch("eden.fs.cli.doctor.check_filesystems.check_inode_counts")
+    @patch("eden.fs.cli.doctor.check_filesystems.check_using_nfs_path")
+    @patch("eden.fs.cli.doctor.check_hg.check_hg")
+    @patch("eden.fs.cli.doctor.check_filesystems.check_hg_status_match_hg_diff")
+    @patch("subprocess.run")
+    @patch("eden.fs.cli.config.EdenCheckout.get_config")
+    def test_network_fail(
+        self,
+        mock_get_config: MagicMock,
+        mock_subprocess_run: MagicMock,
+        mock_check_hg_status: MagicMock,
+        mock_check_hg: MagicMock,
+        mock_check_nfs: MagicMock,
+        mock_check_inode: MagicMock,
+    ) -> None:
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout = instance.create_test_mount("path1")
+        checkout_config = instance._checkouts_by_path[str(checkout.path)].config
+
+        mock_get_config.return_value = checkout_config
+        mock_subprocess_run.side_effect = subprocess.CalledProcessError(
+            1, "test", output="stdout", stderr="stderror"
+        )
+        path = checkout.path
+        checkout_info = CheckoutInfo(
+            # pyre-fixme[6]: For 3rd param expected `EdenInstance` but got
+            # `FakeEdenInstance`.
+            instance,
+            path,
+            state=None,
+            backing_repo=checkout.get_backing_repo_path(),
+            running_state_dir=path,
+            configured_state_dir=path,
+        )
+
+        fixer, out = self.create_fixer(dry_run=False)
+        mount_table = instance.mount_table
+
+        edenfs_path = "/path/to/eden-mount"
+        watchman_roots = {edenfs_path}
+        watchman_info = check_watchman.WatchmanCheckInfo(watchman_roots)
+
+        check_running_mount(
+            fixer,
+            # pyre-fixme[6]: For 2rd param expected `EdenInstance` but got
+            # `FakeEdenInstance`.
+            instance,
+            checkout_info,
+            mount_table,
+            watchman_info,
+            set(),
+            check_network.NetworkChecker(),
+            False,
+            False,
+        )
+
+        self.assertEqual(mock_subprocess_run.call_count, 1)
+        self.assertEqual(len(fixer.problem_types), 1)
+        self.assertEqual(fixer.num_fixed_problems, 0)
+        self.assertEqual(fixer.num_manual_fixes, 1)
+        self.assertEqual(list(fixer.problem_manual_fixes)[0], "ConnectivityProblem")
+        self.assertEqual(
+            out.getvalue(),
+            """\
+<yellow>- Found problem:<reset>
+Encountered an error checking connection to Source Control Servers: command 'hg debugnetworkdoctor' reported an error:
+stdout
+stderror
+
+Please check your network connection. If you are connected to the VPN, please try reconnecting.
+
+""",
+        )
+
+    @patch("eden.fs.cli.doctor.check_filesystems.check_inode_counts")
+    @patch("eden.fs.cli.doctor.check_filesystems.check_using_nfs_path")
+    @patch("eden.fs.cli.doctor.check_hg.check_hg")
+    @patch("eden.fs.cli.doctor.check_filesystems.check_hg_status_match_hg_diff")
+    @patch("subprocess.run")
+    @patch("eden.fs.cli.config.EdenCheckout.get_config")
+    def test_network_timeout(
+        self,
+        mock_get_config: MagicMock,
+        mock_subprocess_run: MagicMock,
+        mock_check_hg_status: MagicMock,
+        mock_check_hg: MagicMock,
+        mock_check_nfs: MagicMock,
+        mock_check_inode: MagicMock,
+    ) -> None:
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout = instance.create_test_mount("path1")
+        checkout_config = instance._checkouts_by_path[str(checkout.path)].config
+
+        mock_get_config.return_value = checkout_config
+        mock_subprocess_run.side_effect = subprocess.TimeoutExpired(
+            "test", timeout=1, output="stdout", stderr="stderror"
+        )
+        path = checkout.path
+        checkout_info = CheckoutInfo(
+            # pyre-fixme[6]: For 3rd param expected `EdenInstance` but got
+            # `FakeEdenInstance`.
+            instance,
+            path,
+            state=None,
+            backing_repo=checkout.get_backing_repo_path(),
+            running_state_dir=path,
+            configured_state_dir=path,
+        )
+
+        fixer, out = self.create_fixer(dry_run=False)
+        mount_table = instance.mount_table
+
+        edenfs_path = "/path/to/eden-mount"
+        watchman_roots = {edenfs_path}
+        watchman_info = check_watchman.WatchmanCheckInfo(watchman_roots)
+
+        check_running_mount(
+            fixer,
+            # pyre-fixme[6]: For 2rd param expected `EdenInstance` but got
+            # `FakeEdenInstance`.
+            instance,
+            checkout_info,
+            mount_table,
+            watchman_info,
+            set(),
+            check_network.NetworkChecker(),
+            False,
+            False,
+        )
+
+        self.assertEqual(mock_subprocess_run.call_count, 1)
+        self.assertEqual(len(fixer.problem_types), 1)
+        self.assertEqual(fixer.num_fixed_problems, 0)
+        self.assertEqual(fixer.num_manual_fixes, 1)
+        self.assertEqual(list(fixer.problem_manual_fixes)[0], "ConnectivityProblem")
+        self.assertEqual(
+            out.getvalue(),
+            """\
+<yellow>- Found problem:<reset>
+Encountered an error checking connection to Source Control Servers: command 'hg debugnetworkdoctor' timed out.
+
+Please check your network connection. If you are connected to the VPN, please try reconnecting.
+
+""",
+        )
 
 
 def _create_watchman_subscription(

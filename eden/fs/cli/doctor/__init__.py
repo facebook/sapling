@@ -127,6 +127,7 @@ def cure_what_ails_you(
     fs_util: Optional[filesystem.FsUtil] = None,
     proc_utils: Optional[proc_utils_mod.ProcUtils] = None,
     vscode_extensions_checker: Optional[VSCodeExtensionsChecker] = None,
+    network_checker: Optional[check_network.NetworkChecker] = None,
     out: Optional[ui.Output] = None,
 ) -> int:
     return EdenDoctor(
@@ -139,6 +140,7 @@ def cure_what_ails_you(
         fs_util,
         proc_utils,
         vscode_extensions_checker,
+        network_checker,
         out,
     ).cure_what_ails_you()
 
@@ -178,6 +180,7 @@ class EdenDoctorChecker:
     fs_util: filesystem.FsUtil
     proc_utils: proc_utils_mod.ProcUtils
     vscode_extensions_checker: VSCodeExtensionsChecker
+    network_checker: check_network.NetworkChecker
     tracker: ProblemTracker
     out: ui.Output
     # Setting run_system_wide_checks to False causes EdenDoctor to skip checks that
@@ -197,6 +200,7 @@ class EdenDoctorChecker:
         fs_util: Optional[filesystem.FsUtil] = None,
         proc_utils: Optional[proc_utils_mod.ProcUtils] = None,
         vscode_extensions_checker: Optional[VSCodeExtensionsChecker] = None,
+        network_checker: Optional[check_network.NetworkChecker] = None,
         out: Optional[ui.Output] = None,
     ) -> None:
         self.instance = instance
@@ -210,6 +214,11 @@ class EdenDoctorChecker:
             vscode_extensions_checker
             if vscode_extensions_checker is not None
             else VSCodeExtensionsChecker()
+        )
+        self.network_checker = (
+            network_checker
+            if network_checker is not None
+            else check_network.NetworkChecker()
         )
         self.out = out if out is not None else ui.get_output()
 
@@ -362,6 +371,7 @@ class EdenDoctorChecker:
             self.tracker.add_problem(EdenCheckoutInfosCorruption(ex))
             return
         checked_backing_repos = set()
+        checked_network_backing_repos = set()
 
         if sys.platform == "win32":
             self.check_running_elevated()
@@ -400,6 +410,8 @@ class EdenDoctorChecker:
                     watchman_info,
                     list(checkouts.values()),
                     checked_backing_repos,
+                    checked_network_backing_repos,
+                    self.network_checker,
                     self.debug,
                     self.fast,
                 )
@@ -423,6 +435,7 @@ class EdenDoctor(EdenDoctorChecker):
         fs_util: Optional[filesystem.FsUtil] = None,
         proc_utils: Optional[proc_utils_mod.ProcUtils] = None,
         vscode_extensions_checker: Optional[VSCodeExtensionsChecker] = None,
+        network_checker: Optional[check_network.NetworkChecker] = None,
         out: Optional[ui.Output] = None,
     ) -> None:
         self.dry_run = dry_run
@@ -452,6 +465,7 @@ class EdenDoctor(EdenDoctorChecker):
             fs_util=fs_util,
             proc_utils=proc_utils,
             vscode_extensions_checker=vscode_extensions_checker,
+            network_checker=network_checker,
             out=out,
         )
 
@@ -738,6 +752,8 @@ def check_mount(
     watchman_info: check_watchman.WatchmanCheckInfo,
     all_checkouts: List[CheckoutInfo],
     checked_backing_repos: Set[str],
+    checked_network_backing_repos: Set[str],
+    network_checker: check_network.NetworkChecker,
     debug: bool,
     fast: bool,
 ) -> None:
@@ -754,6 +770,8 @@ def check_mount(
                 checkout,
                 mount_table,
                 watchman_info,
+                checked_network_backing_repos,
+                network_checker,
                 debug,
                 fast,
             )
@@ -841,6 +859,8 @@ def check_running_mount(
     checkout_info: CheckoutInfo,
     mount_table: mtab.MountTable,
     watchman_info: check_watchman.WatchmanCheckInfo,
+    checked_network_backing_repos: Set[str],
+    network_checker: check_network.NetworkChecker,
     debug: bool,
     fast: bool,
 ) -> None:
@@ -925,11 +945,13 @@ def check_running_mount(
         except Exception as ex:
             raise RuntimeError("Failed to compare `hg status` with `hg diff`") from ex
 
-        try:
-            if not fast:
-                check_network.check_network(tracker, checkout)
-        except Exception as ex:
-            raise RuntimeError("Failed to check network for mount") from ex
+        if not fast:
+            try:
+                network_checker.check_network(
+                    tracker, checkout, checked_network_backing_repos
+                )
+            except Exception as ex:
+                raise RuntimeError("Failed to check network for mount") from ex
 
 
 class CheckoutNotConfigured(Problem):

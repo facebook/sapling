@@ -16,6 +16,7 @@ import eden.fs.cli.doctor as doctor
 from eden.fs.cli.config import EdenInstance
 from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
 from eden.fs.cli.doctor.test.lib.fake_fs_util import FakeFsUtil
+from eden.fs.cli.doctor.test.lib.fake_network_checker import FakeNetworkChecker
 from eden.fs.cli.doctor.test.lib.fake_vscode_extensions_checker import (
     getFakeVSCodeExtensionsChecker,
 )
@@ -34,7 +35,9 @@ class CorruptHgTest(DoctorTestBase):
             FakeEdenInstance, self.checkout.instance
         ).default_backing_repo
 
-    def test_truncated_hg_dirstate_is_a_problem(self) -> None:
+    def test_truncated_hg_dirstate_is_a_problem(
+        self,
+    ) -> None:
         dirstate_path = self.checkout.path / ".hg" / "dirstate"
         os.truncate(dirstate_path, dirstate_path.stat().st_size - 1)
 
@@ -169,6 +172,7 @@ Repairing hg directory contents for {self.checkout.path}...<green>fixed<reset>
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
+            network_checker=FakeNetworkChecker(),
             out=out,
         )
         return out
