@@ -39,6 +39,11 @@
   $ cd "$TESTTMP"
   $ quiet gitimport "$GIT_REPO_ORIGIN" --derive-hg --generate-bookmarks full-repo
 
+  $ cat $TESTTMP/object_list | grep first_tag
+  8963e1f55d1346a07c3aec8c8fc72bf87d0452b1 tag first_tag
+  $ ls $TESTTMP/blobstore/blobs | grep 8963e1f55d1346a07c3aec8c8fc72bf87d0452b1
+  [1]
+
 # Start up the Mononoke Git Service
   $ mononoke_git_service
 # Clone the Git repo from Mononoke
