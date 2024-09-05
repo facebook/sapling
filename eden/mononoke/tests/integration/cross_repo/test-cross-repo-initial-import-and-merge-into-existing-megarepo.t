@@ -434,9 +434,14 @@ so they'll be dumped to files to keep this (already long) integration test short
   > "INSERT INTO mutable_counters (repo_id, name, value) \
   > VALUES ($LARGE_REPO_ID, 'xreposync_from_$SUBMODULE_REPO_ID', 1)";
 
-  $ ENABLE_API_WRITES=1 REPOID="$SUBMODULE_REPO_ID" REPONAME="$SUBMODULE_REPO_NAME" setup_common_config "$REPOTYPE"
-  $ ENABLE_API_WRITES=1 REPOID="$REPO_C_ID" REPONAME="repo_c" setup_common_config "$REPOTYPE"
-  $ ENABLE_API_WRITES=1 REPOID="$REPO_B_ID" REPONAME="repo_b" setup_common_config "$REPOTYPE"
+  $ ENABLE_API_WRITES=1 REPOID="$SUBMODULE_REPO_ID" REPONAME="$SUBMODULE_REPO_NAME" \
+  > COMMIT_IDENTITY_SCHEME=3 setup_common_config "$REPOTYPE"
+
+  $ ENABLE_API_WRITES=1 REPOID="$REPO_C_ID" REPONAME="repo_c" \
+  > COMMIT_IDENTITY_SCHEME=3  setup_common_config "$REPOTYPE"
+
+  $ ENABLE_API_WRITES=1 REPOID="$REPO_B_ID" REPONAME="repo_b" \
+  > COMMIT_IDENTITY_SCHEME=3 setup_common_config "$REPOTYPE"
 
 -- Setup git repos A, B and C
   $ setup_git_repos_a_b_c &> $TESTTMP/setup_git_repos_a_b_c.out

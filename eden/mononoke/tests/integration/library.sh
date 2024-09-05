@@ -1046,6 +1046,12 @@ readonly=true
 CONFIG
 fi
 
+if [[ -n "${COMMIT_IDENTITY_SCHEME:-}" ]]; then
+  cat >> "repo_definitions/$reponame_urlencoded/server.toml" <<CONFIG
+default_commit_identity_scheme=$COMMIT_IDENTITY_SCHEME
+CONFIG
+fi
+
 if [[ -n "${SCUBA_LOGGING_PATH:-}" ]]; then
   cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 scuba_local_path="$SCUBA_LOGGING_PATH"
