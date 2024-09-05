@@ -51,7 +51,7 @@ commandserver = { version = "0.1.0", path = "../commandserver" }
 configloader = { version = "0.1.0", path = "../config/loader" }
 configmodel = { version = "0.1.0", path = "../config/model" }
 constructors = { version = "0.1.0", path = "../constructors", features = ["git"] }
-ctrlc = { version = "3.1", features = ["termination"] }
+ctrlc = { version = "3.4.5", features = ["termination"] }
 fail = { version = "0.4", features = ["failpoints"] }
 flate2 = { version = "1.0.33", features = ["rust_backend"], default-features = false }
 hg-http = { version = "0.1.0", path = "../hg-http" }
