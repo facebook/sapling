@@ -258,3 +258,31 @@ pub fn execute_par(par: PathBuf) -> anyhow::Result<Command> {
     python.arg(par);
     Ok(python)
 }
+
+/// Prompt the user to receive an answer of yes or no.
+pub fn prompt_user(prompt: &str) -> bool {
+    // Dialoguer crate does not work on Windows at this time. We'll implement
+    // our own prompt function.
+    fn check_valid_input() -> Result<bool, anyhow::Error> {
+        let mut input = String::new();
+        match std::io::stdin().read_line(&mut input) {
+            Ok(_goes_into_input_above) => match input.trim().to_string().to_lowercase().as_str() {
+                "y" => Ok(true),
+                "yes" => Ok(true),
+                "n" => Ok(false),
+                "no" => Ok(false),
+                _ => Err(anyhow!("no valid response")),
+            },
+            Err(_no_input) => Err(anyhow!("no valid response")),
+        }
+    }
+
+    println!("{}\n", prompt);
+    loop {
+        println!("Proceed? [y/N]");
+        match check_valid_input() {
+            Ok(res) => return res,
+            Err(_) => {}
+        }
+    }
+}

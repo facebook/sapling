@@ -11,6 +11,7 @@ use anyhow::anyhow;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
+use edenfs_utils::prompt_user;
 
 use crate::ExitCode;
 use crate::Subcommand;
@@ -40,6 +41,9 @@ pub struct RemoveCmd {
 #[async_trait]
 impl Subcommand for RemoveCmd {
     async fn run(&self) -> Result<ExitCode> {
-        Err(anyhow!("Rust remove is unimplemented!"))
+        match prompt_user("This command is not ready... yet") {
+            false => Ok(0),
+            true => Err(anyhow!("Rust remove is unimplemented!")),
+        }
     }
 }
