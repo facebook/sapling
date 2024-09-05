@@ -2060,7 +2060,8 @@ folly::SemiFuture<Unit> EdenServer::createThriftServer() {
   auto edenConfig = config_->getEdenConfig();
   server_ = make_shared<ThriftServer>();
 #ifdef EDEN_HAVE_SERVER_OBSERVER
-  server_->setObserver(createServerObserver(kServiceName));
+  server_->setObserver(createServerObserver(
+      kServiceName, edenConfig->thriftServerObserverSamplingRate.getValue()));
 #endif
   server_->setMaxRequests(edenConfig->thriftMaxRequests.getValue());
 
