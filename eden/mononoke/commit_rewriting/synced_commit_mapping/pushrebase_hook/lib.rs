@@ -126,25 +126,14 @@ impl<M: SyncedCommitMapping + Clone + 'static> PushrebaseHook for CrossRepoSyncP
         ctx: &CoreContext,
         old_bookmark_value: Option<ChangesetId>,
     ) -> Result<Box<dyn PushrebaseCommitHook>, Error> {
-        // TODO(mitrandir): cleanup this justknob once rolled out
-        let old_version = if justknobs::eval(
-            "scm/mononoke:xrepo_assign_large_repo_version_on_pushrebase",
-            None,
-            None,
-        )
-        .unwrap_or(true)
-        {
-            if let Some(old_bookmark_value) = old_bookmark_value {
-                self.synced_commit_mapping
-                    .get_large_repo_commit_version(ctx, self.large_repo_id, old_bookmark_value)
-                    .await?
-            } else {
-                return Err(format_err!(
-                    "all pushrebase bookmarks need to be initialized when cross-repo-sync is enabled"
-                ));
-            }
+        let old_version = if let Some(old_bookmark_value) = old_bookmark_value {
+            self.synced_commit_mapping
+                .get_large_repo_commit_version(ctx, self.large_repo_id, old_bookmark_value)
+                .await?
         } else {
-            None
+            return Err(format_err!(
+                "all pushrebase bookmarks need to be initialized when cross-repo-sync is enabled"
+            ));
         };
 
         let hook = Box::new(CrossRepoSyncPushrebaseCommitHook {
