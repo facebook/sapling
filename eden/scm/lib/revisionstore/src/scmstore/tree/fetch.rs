@@ -24,7 +24,6 @@ use types::NodeInfo;
 use super::metrics::TreeStoreFetchMetrics;
 use super::types::StoreTree;
 use super::types::TreeAttributes;
-use crate::error::ClonableError;
 use crate::indexedlogtreeauxstore::TreeAuxStore;
 use crate::scmstore::fetch::CommonFetchState;
 use crate::scmstore::fetch::FetchErrors;
