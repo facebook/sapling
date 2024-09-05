@@ -402,7 +402,7 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
         async move {
             while let Some(incoming) = rx.recv().await {
                 cloned!(backfill_derivation, ctx, acc, uploader, repo_name,);
-                task::spawn(async move {
+                async move {
                     let finalized_chunk_res = uploader
                         .finalize_batch(&ctx, dry_run, backfill_derivation, incoming, &acc)
                         .await
@@ -428,8 +428,8 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
                         );
                     }
                     anyhow::Ok(())
-                })
-                .await??;
+                }
+                .await?;
             }
             anyhow::Ok(())
         }
