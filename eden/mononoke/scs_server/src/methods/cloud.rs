@@ -54,7 +54,7 @@ impl SourceControlServiceImpl {
         }
 
         let repo = self.repo(ctx, &params.repo).await?;
-        let prefix = format!("{}{}", USER_WORKSPACE_PREFIX, &params.user);
+        let prefix = format!("{}{}/", USER_WORKSPACE_PREFIX, &params.user);
         let info = repo
             .hg()
             .cloud_workspaces(&prefix, &params.repo.name)
