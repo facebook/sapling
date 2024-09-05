@@ -41,7 +41,7 @@
 # Clone the Git repo from Mononoke
   $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
   Cloning into 'repo'...
-  error: inflate: data stream error (incorrect header check)
-  fatal: pack has bad object at offset 647: inflate returned -3
-  fatal: fetch-pack: invalid index-pack output
-  [128]
+# Verify that we get the same Git repo back that we started with
+  $ cd $REPONAME  
+  $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list
+  $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list  

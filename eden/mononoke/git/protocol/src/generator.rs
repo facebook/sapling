@@ -12,7 +12,6 @@ use std::task::Poll;
 use anyhow::Context;
 use anyhow::Ok;
 use anyhow::Result;
-use bonsai_tag_mapping::BonsaiTagMappingEntry;
 use bookmarks::BookmarkKey;
 use buffered_weighted::MemoryBound;
 use cloned::cloned;
@@ -492,7 +491,7 @@ async fn commit_packfile_stream<'a>(
 /// Convert the provided tag entries into a stream of packfile items
 fn tag_entries_to_stream<'a>(
     fetch_container: FetchContainer,
-    tag_entries: Vec<BonsaiTagMappingEntry>,
+    tag_entries: FxHashSet<GitSha1>,
 ) -> BoxStream<'a, Result<PackfileItem>> {
     let FetchContainer {
         ctx,
@@ -502,11 +501,11 @@ fn tag_entries_to_stream<'a>(
         ..
     } = fetch_container;
     stream::iter(tag_entries.into_iter().map(Ok))
-        .map_ok(move |entry| {
+        .map_ok(move |tag_hash| {
             let blobstore = blobstore.clone();
             let ctx = ctx.clone();
             async move {
-                let git_objectid = entry.tag_hash.to_object_id()?;
+                let git_objectid = tag_hash.to_object_id()?;
                 base_packfile_item(
                     ctx,
                     blobstore.clone(),
@@ -546,11 +545,12 @@ async fn tag_packfile_stream<'a>(
                         )
                     })
                     .transpose()
+                    .map(|fallible_entry| fallible_entry.map(|entry| entry.tag_hash))
             } else {
                 None
             }
         })
-        .try_collect::<Vec<_>>()
+        .try_collect::<FxHashSet<_>>()
         .await?;
     let tags_count = annotated_tags.len();
     let tag_stream = tag_entries_to_stream(fetch_container, annotated_tags);
@@ -602,11 +602,16 @@ async fn tags_packfile_stream<'a>(
         .await
         .context("Error in getting tags during fetch")?
         .into_iter()
-        .filter(|entry| {
-            required_tag_names.contains(&entry.tag_name)
+        .filter_map(|entry| {
+            if required_tag_names.contains(&entry.tag_name)
                 || requested_tag_names.contains(&entry.tag_name)
+            {
+                Some(entry.tag_hash)
+            } else {
+                None
+            }
         })
-        .collect::<Vec<_>>();
+        .collect::<FxHashSet<_>>(); // Dedupe based on tag hashes so we don't double count
     let tags_count = tag_entries.len();
     let tag_stream = tag_entries_to_stream(fetch_container, tag_entries);
     Ok((tag_stream, tags_count))
