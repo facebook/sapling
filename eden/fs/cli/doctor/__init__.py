@@ -41,7 +41,6 @@ from fb303_core.ttypes import fb303_status
 from . import (
     check_filesystems,
     check_hg,
-    check_kerberos,
     check_network,
     check_os,
     check_recent_writes,
@@ -127,7 +126,6 @@ def cure_what_ails_you(
     mount_table: Optional[mtab.MountTable] = None,
     fs_util: Optional[filesystem.FsUtil] = None,
     proc_utils: Optional[proc_utils_mod.ProcUtils] = None,
-    kerberos_checker: Optional[check_kerberos.KerberosChecker] = None,
     vscode_extensions_checker: Optional[VSCodeExtensionsChecker] = None,
     out: Optional[ui.Output] = None,
 ) -> int:
@@ -140,7 +138,6 @@ def cure_what_ails_you(
         mount_table,
         fs_util,
         proc_utils,
-        kerberos_checker,
         vscode_extensions_checker,
         out,
     ).cure_what_ails_you()
@@ -180,7 +177,6 @@ class EdenDoctorChecker:
     mount_table: mtab.MountTable
     fs_util: filesystem.FsUtil
     proc_utils: proc_utils_mod.ProcUtils
-    kerberos_checker: check_kerberos.KerberosChecker
     vscode_extensions_checker: VSCodeExtensionsChecker
     tracker: ProblemTracker
     out: ui.Output
@@ -200,7 +196,6 @@ class EdenDoctorChecker:
         mount_table: Optional[mtab.MountTable] = None,
         fs_util: Optional[filesystem.FsUtil] = None,
         proc_utils: Optional[proc_utils_mod.ProcUtils] = None,
-        kerberos_checker: Optional[check_kerberos.KerberosChecker] = None,
         vscode_extensions_checker: Optional[VSCodeExtensionsChecker] = None,
         out: Optional[ui.Output] = None,
     ) -> None:
@@ -211,11 +206,6 @@ class EdenDoctorChecker:
         self.mount_table = mount_table if mount_table is not None else mtab.new()
         self.fs_util = fs_util if fs_util is not None else filesystem.new()
         self.proc_utils = proc_utils if proc_utils is not None else proc_utils_mod.new()
-        self.kerberos_checker = (
-            kerberos_checker
-            if kerberos_checker is not None
-            else check_kerberos.KerberosChecker()
-        )
         self.vscode_extensions_checker = (
             vscode_extensions_checker
             if vscode_extensions_checker is not None
@@ -233,10 +223,6 @@ class EdenDoctorChecker:
             # check multiple edenfs running with some rogue stale PIDs
             check_rogue_edenfs.check_many_edenfs_are_running(
                 self.tracker, self.proc_utils
-            )
-
-            self.kerberos_checker.run_kerberos_certificate_checks(
-                self.instance, self.tracker
             )
 
         status = self.instance.check_health()
@@ -436,7 +422,6 @@ class EdenDoctor(EdenDoctorChecker):
         mount_table: Optional[mtab.MountTable] = None,
         fs_util: Optional[filesystem.FsUtil] = None,
         proc_utils: Optional[proc_utils_mod.ProcUtils] = None,
-        kerberos_checker: Optional[check_kerberos.KerberosChecker] = None,
         vscode_extensions_checker: Optional[VSCodeExtensionsChecker] = None,
         out: Optional[ui.Output] = None,
     ) -> None:
@@ -466,7 +451,6 @@ class EdenDoctor(EdenDoctorChecker):
             mount_table=mount_table,
             fs_util=fs_util,
             proc_utils=proc_utils,
-            kerberos_checker=kerberos_checker,
             vscode_extensions_checker=vscode_extensions_checker,
             out=out,
         )

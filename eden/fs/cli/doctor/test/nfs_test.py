@@ -14,7 +14,6 @@ import eden.fs.cli.doctor as doctor
 from eden.fs.cli.config import EdenInstance
 from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
 from eden.fs.cli.doctor.test.lib.fake_fs_util import FakeFsUtil
-from eden.fs.cli.doctor.test.lib.fake_kerberos_checker import FakeKerberosChecker
 from eden.fs.cli.doctor.test.lib.fake_vscode_extensions_checker import (
     getFakeVSCodeExtensionsChecker,
 )
@@ -49,7 +48,6 @@ class NfsTest(DoctorTestBase):
             mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
-            kerberos_checker=FakeKerberosChecker(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
@@ -159,7 +157,6 @@ To fix this, move the Mercurial data directory to a non-NFS filesystem.
             mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
-            kerberos_checker=FakeKerberosChecker(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )

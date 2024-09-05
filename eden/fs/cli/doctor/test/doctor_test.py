@@ -41,7 +41,6 @@ from eden.fs.cli.doctor.test.lib.fake_client import ResetParentsCommitsArgs
 from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
 from eden.fs.cli.doctor.test.lib.fake_fs_util import FakeFsUtil
 from eden.fs.cli.doctor.test.lib.fake_hg_repo import FakeHgRepo
-from eden.fs.cli.doctor.test.lib.fake_kerberos_checker import FakeKerberosChecker
 from eden.fs.cli.doctor.test.lib.fake_mount_table import FakeMountTable
 from eden.fs.cli.doctor.test.lib.fake_vscode_extensions_checker import (
     getFakeVSCodeExtensionsChecker,
@@ -216,7 +215,6 @@ class DoctorTest(DoctorTestBase):
             mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
-            kerberos_checker=FakeKerberosChecker(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
@@ -276,7 +274,6 @@ Repairing hg directory contents for {edenfs_path3}...<green>fixed<reset>
             mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
-            kerberos_checker=FakeKerberosChecker(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
@@ -308,7 +305,6 @@ Repairing hg directory contents for {edenfs_path3}...<green>fixed<reset>
             mount_table=FakeMountTable(),
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
-            kerberos_checker=FakeKerberosChecker(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
@@ -345,7 +341,6 @@ Repairing hg directory contents for {edenfs_path3}...<green>fixed<reset>
             mount_table=FakeMountTable(),
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
-            kerberos_checker=FakeKerberosChecker(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
@@ -390,7 +385,6 @@ Running `eden start` to start EdenFS......<green>fixed<reset>
             mount_table=FakeMountTable(),
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
-            kerberos_checker=FakeKerberosChecker(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
@@ -423,7 +417,6 @@ Running `eden start` to start EdenFS......<yellow>EdenFS still starting, use `ed
             mount_table=FakeMountTable(),
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
-            kerberos_checker=FakeKerberosChecker(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
@@ -528,7 +521,6 @@ For additional info see the wiki at https://www.internalfb.com/intern/wiki/EdenF
             mount_table=FakeMountTable(),
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
-            kerberos_checker=FakeKerberosChecker(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
@@ -558,7 +550,6 @@ For additional info see the wiki at https://www.internalfb.com/intern/wiki/EdenF
             mount_table=FakeMountTable(),
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
-            kerberos_checker=FakeKerberosChecker(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
@@ -1105,7 +1096,6 @@ Would remount {mounts[1]}
             mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
-            kerberos_checker=FakeKerberosChecker(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
@@ -1131,7 +1121,6 @@ Would remount {mounts[1]}
             mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
-            kerberos_checker=FakeKerberosChecker(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
@@ -1208,7 +1197,6 @@ Checking {mount}
                 mount_table=instance.mount_table,
                 fs_util=FakeFsUtil(),
                 proc_utils=self.make_proc_utils(),
-                kerberos_checker=FakeKerberosChecker(),
                 vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
                 out=out,
             )
@@ -1239,7 +1227,6 @@ Checking {mount}
             mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
-            kerberos_checker=FakeKerberosChecker(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
@@ -2029,7 +2016,6 @@ Running chef may fix this.*""",
             mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
-            kerberos_checker=FakeKerberosChecker(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
@@ -2070,7 +2056,6 @@ Starting background invalidation of not recently used files and directories in {
             mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
-            kerberos_checker=FakeKerberosChecker(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
@@ -2172,7 +2157,6 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
             mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
-            kerberos_checker=FakeKerberosChecker(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
@@ -2202,7 +2186,6 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
             mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
-            kerberos_checker=FakeKerberosChecker(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
@@ -2241,7 +2224,6 @@ Please consider the effects of this extension.
             mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
-            kerberos_checker=FakeKerberosChecker(),
             vscode_extensions_checker=getFakeVSCodeExtensionsChecker(),
             out=out,
         )
@@ -2280,7 +2262,6 @@ Please uninstall this extension.
             mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
-            kerberos_checker=FakeKerberosChecker(),
             vscode_extensions_checker=getFakeVSCodeExtensionsCheckerWithExtensions(
                 ["randomdev.unknownextension"]
             ),
@@ -2308,7 +2289,6 @@ Please uninstall this extension.
             mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
-            kerberos_checker=FakeKerberosChecker(),
             vscode_extensions_checker=getFakeVSCodeExtensionsCheckerWithExtensions(
                 ["randomdev.unknownextension"]
             ),
