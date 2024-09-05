@@ -197,7 +197,7 @@ function Reactions({reactions}: {reactions: Array<DiffCommentReaction>}) {
   );
 }
 
-export function DiffCommentsDetails({diffId}: {diffId: DiffId}) {
+export default function DiffCommentsDetails({diffId}: {diffId: DiffId}) {
   const [comments, refresh] = useAtom(diffCommentData(diffId));
   useEffect(() => {
     // make sure we fetch whenever loading the UI again

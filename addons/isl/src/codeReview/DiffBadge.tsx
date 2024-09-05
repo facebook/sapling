@@ -22,7 +22,6 @@ import {useRunOperation} from '../operationsState';
 import platform from '../platform';
 import {exactRevset} from '../types';
 import {codeReviewProvider, diffSummary} from './CodeReviewInfo';
-import {DiffCommentsDetails} from './DiffComments';
 import {openerUrlForDiffUrl} from './github/GitHubUrlOpener';
 import {SyncStatus, syncStatusAtom} from './syncStatus';
 import * as stylex from '@stylexjs/stylex';
@@ -30,9 +29,11 @@ import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtomValue} from 'jotai';
-import {Component, Suspense, useState} from 'react';
+import {Component, lazy, Suspense, useState} from 'react';
 
 import './DiffBadge.css';
+
+const DiffCommentsDetails = lazy(() => import('./DiffComments'));
 
 export const showDiffNumberConfig = configBackedAtom<boolean>('isl.show-diff-number', false);
 
@@ -282,7 +283,13 @@ function DiffComments({diff, diffId}: {diff: DiffSummary; diffId: DiffId}) {
     return null;
   }
   return (
-    <Tooltip trigger="click" component={() => <DiffCommentsDetails diffId={diffId} />}>
+    <Tooltip
+      trigger="click"
+      component={() => (
+        <Suspense>
+          <DiffCommentsDetails diffId={diffId} />
+        </Suspense>
+      )}>
       <Button icon>
         <span className="diff-comments-count">
           {diff.commentCount}
