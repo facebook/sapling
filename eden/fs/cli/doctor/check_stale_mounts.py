@@ -66,7 +66,10 @@ def get_sudo_perms() -> bool:
             return True
         return False
     except Exception as ex:
-        print(f"Error checking sudo permissions: {ex}")
+        print(
+            f"Sudo is not available to the current user: {ex} \n"
+            "Note: this is not necessarily an error. Some platforms restrict users to have super user permissions, Eg: On Demand"
+        )
         return False
 
 
