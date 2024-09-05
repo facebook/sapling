@@ -344,18 +344,16 @@ Usually, you can tell the version by the path in the stack trace.
 
 ## Profiling bundle sizes and dependencies
 
-You can visualize what modules are being bundled when bundling for different entry points:
-
-- `cd isl-server`
-- `yarn --silent webpack --profile --json > webpack_stats.json`
-- Upload that file to <https://chrisbateman.github.io/webpack-visualizer/> to see an easy to understand breakdown of your bundle size
-- Upload that file to <https://webpack.github.io/analyse/#modules> to see the exact dependency graph. This is useful for debugging why code is being included by a certain entry point, for example isl-server somehow including something from isl.
-- This also works for vscode, but you need to pass the config or use e.g. `yarn build-extension --profile --json`.
-
-Due to Create React App, this is slightly different on reviewstack:
+**Client:**
+To analyze the client bundle size (code splitting and dependencies, etc):
 
 - `cd isl`
-- [`npx source-map-explorer build/static/js/*.js`](https://create-react-app.dev/docs/analyzing-the-bundle-size/), which opens a browser visualization of your dependencies.
+- `npx vite-bundle-visualizer`
 
-TODO: We haven't tried this with the isl client now that it uses vite.
-Consider trying <https://github.com/btd/rollup-plugin-visualizer>.
+Should also work in `vscode/` for the webview code.
+
+**Server:**
+Install [rollup-plugin-visualizer](https://www.npmjs.com/package/rollup-plugin-visualizer)
+and add it to the server's rollup.config.mjs, then `yarn build` and inspect the stats.html file.
+
+Should also work for the vscode extension config.
