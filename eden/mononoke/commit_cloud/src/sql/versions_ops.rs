@@ -22,12 +22,12 @@ use crate::sql::ops::Update;
 use crate::sql::utils::prepare_prefix;
 
 mononoke_queries! {
-    read GetVersion(reponame: String, workspace: String) -> (String, u64, bool, i64){
+    read GetVersion(reponame: String, workspace: String) -> (String, u64, bool,  Option<i64>){
         mysql("SELECT `workspace`, `version`, `archived`, UNIX_TIMESTAMP(`timestamp`) FROM `versions` WHERE `reponame`={reponame} AND `workspace`={workspace}")
         sqlite("SELECT `workspace`, `version`, `archived`, `timestamp` FROM `versions` WHERE `reponame`={reponame} AND `workspace`={workspace}")
     }
 
-    read GetVersionByPrefix(reponame: String, prefix: String) -> (String,  u64, bool, i64){
+    read GetVersionByPrefix(reponame: String, prefix: String) -> (String,  u64, bool, Option<i64>){
         mysql("SELECT `workspace`, `version`, `archived`, UNIX_TIMESTAMP(`timestamp`) FROM `versions` WHERE `reponame`={reponame} AND `workspace` LIKE {prefix}")
         sqlite("SELECT `workspace`,  `version`, `archived`, `timestamp` FROM `versions` WHERE `reponame`={reponame} AND `workspace` LIKE {prefix}")
     }
@@ -82,7 +82,7 @@ impl Get<WorkspaceVersion> for SqlCommitCloud {
                     workspace,
                     version,
                     archived,
-                    timestamp: Timestamp::from_timestamp_secs(timestamp),
+                    timestamp: Timestamp::from_timestamp_secs(timestamp.unwrap_or(0)),
                 })
             })
             .collect::<anyhow::Result<Vec<WorkspaceVersion>>>()
@@ -172,7 +172,7 @@ pub async fn get_version_by_prefix(
                 workspace,
                 version,
                 archived,
-                timestamp: Timestamp::from_timestamp_secs(timestamp),
+                timestamp: Timestamp::from_timestamp_secs(timestamp.unwrap_or(0)),
             })
         })
         .collect::<anyhow::Result<Vec<WorkspaceVersion>>>()
