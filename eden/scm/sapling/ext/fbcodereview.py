@@ -741,7 +741,9 @@ def uisetup(ui) -> None:
 
         extensions.wrapfunction(uimod, "_auto_username", _auto_username)
 
-    ui.setconfig("hooks", "post-pull.marklanded", _("@prog@ debugmarklanded"))
+    ui.setconfig(
+        "hooks", "post-pull.marklanded", _get_shell_cmd(ui, ["debugmarklanded"])
+    )
 
 
 @templater.templatefunc("mirrornode")
@@ -1319,3 +1321,15 @@ def _matchreponames(diffreponame: Optional[str], localreponame: Optional[str]) -
     dilen = len(diffreponame)
     lolen = len(localreponame)
     return dilen <= lolen and diffreponame[-dilen:] == localreponame[-dilen:]
+
+
+def _get_shell_cmd(ui, args: List[str]) -> str:
+    full_args = util.hgcmd()
+    if ui.quiet:
+        full_args.append("-q")
+    if ui.verbose:
+        full_args.append("-v")
+    if ui.debugflag:
+        full_args.append("--debug")
+    full_args += args
+    return " ".join(map(util.shellquote, full_args))
