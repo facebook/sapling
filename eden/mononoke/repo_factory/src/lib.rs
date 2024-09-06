@@ -180,6 +180,7 @@ use sql_commit_graph_storage::CommitGraphBulkFetcher;
 use sql_commit_graph_storage::SqlCommitGraphStorageBuilder;
 use sql_construct::SqlConstructFromDatabaseConfig;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
+use sql_construct::SqlShardableConstructFromMetadataDatabaseConfig;
 use sql_query_config::ArcSqlQueryConfig;
 use sql_query_config::SqlQueryConfig;
 use sqlphases::SqlPhasesBuilder;
@@ -360,6 +361,15 @@ impl RepoFactory {
     ) -> Result<T> {
         let sql_factory = self.sql_factory(&config.storage_config.metadata).await?;
         sql_factory.open::<T>().await
+    }
+
+    async fn open_sql_shardable<T: SqlShardableConstructFromMetadataDatabaseConfig>(
+        &self,
+        config: &RepoConfig,
+    ) -> Result<(Arc<MetadataSqlFactory>, T)> {
+        let sql_factory = self.sql_factory(&config.storage_config.metadata).await?;
+        let db = sql_factory.open_shardable::<T>().await?;
+        Ok((sql_factory, db))
     }
 
     async fn blobstore_no_cache(&self, config: &BlobConfig) -> Result<Arc<dyn Blobstore>> {
@@ -1067,11 +1077,8 @@ impl RepoFactory {
         repo_config: &ArcRepoConfig,
         repo_identity: &ArcRepoIdentity,
     ) -> Result<ArcFilenodes> {
-        let sql_factory = self
-            .sql_factory(&repo_config.storage_config.metadata)
-            .await?;
-        let mut filenodes_builder = sql_factory
-            .open_shardable::<NewFilenodesBuilder>()
+        let (sql_factory, mut filenodes_builder) = self
+            .open_sql_shardable::<NewFilenodesBuilder>(repo_config)
             .await
             .context(RepoFactoryError::Filenodes)?;
         if let (Some(filenodes_cache_handler_factory), Some(history_cache_handler_factory)) = (
@@ -1760,11 +1767,8 @@ impl RepoFactory {
         &self,
         repo_config: &ArcRepoConfig,
     ) -> Result<ArcBonsaiBlobMapping> {
-        let sql_factory = self
-            .sql_factory(&repo_config.storage_config.metadata)
-            .await?;
-        let sql_bonsai_blob_mapping = sql_factory
-            .open_shardable::<SqlBonsaiBlobMapping>()
+        let (_, sql_bonsai_blob_mapping) = self
+            .open_sql_shardable::<SqlBonsaiBlobMapping>(repo_config)
             .await
             .context(RepoFactoryError::BonsaiBlobMapping)?;
         Ok(Arc::new(BonsaiBlobMapping {
