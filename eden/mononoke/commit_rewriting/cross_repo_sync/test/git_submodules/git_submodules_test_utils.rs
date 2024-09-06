@@ -434,10 +434,10 @@ pub(crate) fn create_small_repo_to_large_repo_commit_syncer(
     // all_submodule_deps.insert(NonRootMPath::new("submodules/repo_b")?, repo_b.clone());
     let submodule_deps = SubmoduleDeps::ForSync(all_submodule_deps);
 
-    let repos = CommitSyncRepos::new(small_repo, large_repo, submodule_deps, &common_config)?;
-
     test_sync_config_source.add_config(commit_sync_config);
     test_sync_config_source.add_common_config(common_config);
+
+    let repos = CommitSyncRepos::new(small_repo, large_repo, submodule_deps)?;
 
     let lease = Arc::new(InProcessLease::new());
     Ok(CommitSyncer::new(

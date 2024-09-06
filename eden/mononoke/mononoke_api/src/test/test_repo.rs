@@ -9,7 +9,6 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
 use blobstore::Loadable;
@@ -793,9 +792,6 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
             &CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
         )?
         .unwrap();
-    let common_config = cfg_src
-        .get_common_config_if_exists(large_repo_id)?
-        .ok_or_else(|| anyhow!("common config doesn't exist"))?;
     cfg.small_repos
         .get_mut(&small_repo_id)
         .unwrap()
@@ -819,7 +815,6 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
         largerepo.repo().clone(),
         smallrepo.repo().clone(),
         SubmoduleDeps::ForSync(HashMap::new()),
-        &common_config,
     )?;
 
     let commit_syncer = CommitSyncer::new(

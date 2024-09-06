@@ -245,10 +245,7 @@ async fn create_commit_syncer<'a, R: Repo>(
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     x_repo_syncer_lease: Arc<dyn LeaseOps>,
 ) -> Result<CommitSyncer<SqlSyncedCommitMapping, R>, Error> {
-    let common_config =
-        live_commit_sync_config.get_common_config(source_repo.0.repo_identity().id())?;
-
-    let repos = CommitSyncRepos::new(source_repo.0, target_repo.0, submodule_deps, &common_config)?;
+    let repos = CommitSyncRepos::new(source_repo.0, target_repo.0, submodule_deps)?;
     let commit_syncer = CommitSyncer::new(
         ctx,
         mapping,

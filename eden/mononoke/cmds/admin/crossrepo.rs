@@ -240,10 +240,7 @@ pub async fn subcommand_crossrepo<'a>(
             let live_commit_sync_config =
                 get_live_commit_sync_config(&ctx, fb, matches, source_repo.repo_identity().id())
                     .await?;
-            let common_config =
-                live_commit_sync_config.get_common_config(source_repo.repo_identity().id())?;
-            let commit_sync_repos =
-                CommitSyncRepos::new(source_repo, target_repo, submodule_deps, &common_config)?;
+            let commit_sync_repos = CommitSyncRepos::new(source_repo, target_repo, submodule_deps)?;
             let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
                 Arc::new(live_commit_sync_config);
 
@@ -1719,16 +1716,12 @@ mod test {
     use synced_commit_mapping::SqlSyncedCommitMappingBuilder;
     use synced_commit_mapping::SyncedCommitMappingEntry;
     use synced_commit_mapping::SyncedCommitSourceRepo;
+    use test_repo_factory::TestRepoFactory;
 
     use super::*;
 
     #[mononoke::fbinit_test]
-    fn test_bookmark_diff(fb: FacebookInit) -> Result<(), Error> {
-        let runtime = tokio::runtime::Runtime::new()?;
-        runtime.block_on(test_bookmark_diff_impl(fb))
-    }
-
-    async fn test_bookmark_diff_impl(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_bookmark_diff(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let syncers = init_syncers(fb).await?;
 
@@ -1844,8 +1837,28 @@ mod test {
         fb: FacebookInit,
     ) -> Result<Syncers<SqlSyncedCommitMapping, Repo>, Error> {
         let ctx = CoreContext::test_mock(fb);
-        let small_repo: Repo = Linear::get_repo_with_id(fb, RepositoryId::new(0)).await;
-        let large_repo: Repo = Linear::get_repo_with_id(fb, RepositoryId::new(1)).await;
+
+        let mut factory = TestRepoFactory::new(fb)?;
+
+        let (lv_cfg, lv_cfg_src) = TestLiveCommitSyncConfig::new_with_source();
+        let live_commit_sync_config = Arc::new(lv_cfg);
+
+        let mapping =
+            SqlSyncedCommitMappingBuilder::from_sql_connections(factory.metadata_db().clone())
+                .build(RendezVousOptions::for_test());
+
+        let small_repo: Repo = factory
+            .with_live_commit_sync_config(live_commit_sync_config.clone())
+            .with_id(RepositoryId::new(0))
+            .build()
+            .await?;
+        Linear::init_repo(fb, &small_repo).await?;
+        let large_repo: Repo = factory
+            .with_live_commit_sync_config(live_commit_sync_config.clone())
+            .with_id(RepositoryId::new(1))
+            .build()
+            .await?;
+        Linear::init_repo(fb, &large_repo).await?;
 
         let master = BookmarkKey::new("master")?;
         let maybe_master_val = small_repo.bookmarks().get(ctx.clone(), &master).await?;
@@ -1858,8 +1871,6 @@ mod test {
 
         let current_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
 
-        let mapping = SqlSyncedCommitMappingBuilder::with_sqlite_in_memory()?
-            .build(RendezVousOptions::for_test());
         for cs_id in changesets {
             mapping
                 .add(
@@ -1875,8 +1886,6 @@ mod test {
                 )
                 .await?;
         }
-
-        let (lv_cfg, lv_cfg_src) = TestLiveCommitSyncConfig::new_with_source();
 
         let common_config = CommonCommitSyncConfig {
             common_pushrebase_bookmarks: vec![BookmarkKey::new("master")?],
@@ -1905,7 +1914,6 @@ mod test {
         lv_cfg_src.add_common_config(common_config);
         lv_cfg_src.add_config(current_version_config);
         let x_repo_sync_lease = Arc::new(InProcessLease::new());
-        let live_commit_sync_config = Arc::new(lv_cfg);
 
         create_commit_syncers(
             &ctx,

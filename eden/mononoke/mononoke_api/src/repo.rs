@@ -1529,23 +1529,12 @@ impl<R: MononokeRepo> RepoContext<R> {
     where
         R: Clone,
     {
-        let common_config = self
-            .live_commit_sync_config()
-            .get_common_config(self.repo().repo_identity().id())
-            .map_err(|e| {
-                MononokeError::InvalidRequest(format!(
-                    "Commits from {} are not configured to be remapped to another repo: {}",
-                    self.name(),
-                    e
-                ))
-            })?;
-
         let candidate_selection_hint: CandidateSelectionHint<R> = self
             .build_candidate_selection_hint(maybe_candidate_selection_hint_args, other)
             .await?;
 
         let (_small_repo, _large_repo) =
-            get_small_and_large_repos(self.repo.as_ref(), other.repo.as_ref(), &common_config)?;
+            get_small_and_large_repos(self.repo.as_ref(), other.repo.as_ref())?;
 
         let repo_provider: RepoProvider<'a, R> = Arc::new(move |repo_id| {
             Box::pin({
@@ -1568,12 +1557,8 @@ impl<R: MononokeRepo> RepoContext<R> {
         )
         .await?;
 
-        let commit_sync_repos = CommitSyncRepos::new(
-            self.repo().clone(),
-            other.repo().clone(),
-            submodule_deps,
-            &common_config,
-        )?;
+        let commit_sync_repos =
+            CommitSyncRepos::new(self.repo().clone(), other.repo().clone(), submodule_deps)?;
 
         let specifier = specifier.into();
         let changeset = self.resolve_specifier(specifier).await?.ok_or_else(|| {

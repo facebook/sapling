@@ -330,15 +330,8 @@ fn create_small_to_large_commit_syncer(
     mapping: SqlSyncedCommitMapping,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<CommitSyncer<SqlSyncedCommitMapping, TestRepo>, Error> {
-    let large_repo_id = large_repo.repo_identity().id();
-
     let submodule_deps = SubmoduleDeps::ForSync(HashMap::new());
-    let repos = CommitSyncRepos::new(
-        small_repo,
-        large_repo,
-        submodule_deps,
-        &live_commit_sync_config.get_common_config(large_repo_id)?,
-    )?;
+    let repos = CommitSyncRepos::new(small_repo, large_repo, submodule_deps)?;
 
     let lease = Arc::new(InProcessLease::new());
     Ok(CommitSyncer::new(
@@ -357,16 +350,9 @@ fn create_large_to_small_commit_syncer(
     mapping: SqlSyncedCommitMapping,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<CommitSyncer<SqlSyncedCommitMapping, TestRepo>, Error> {
-    let large_repo_id = large_repo.repo_identity().id();
-
     // Large to small has no submodule_deps
     let submodule_deps = SubmoduleDeps::NotNeeded;
-    let repos = CommitSyncRepos::new(
-        large_repo,
-        small_repo,
-        submodule_deps,
-        &live_commit_sync_config.get_common_config(large_repo_id)?,
-    )?;
+    let repos = CommitSyncRepos::new(large_repo, small_repo, submodule_deps)?;
 
     let lease = Arc::new(InProcessLease::new());
     Ok(CommitSyncer::new(
@@ -471,22 +457,36 @@ async fn update_master_file(ctx: CoreContext, repo: &TestRepo) -> ChangesetId {
 #[mononoke::fbinit_test]
 async fn test_sync_causes_conflict(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let megarepo: TestRepo = TestRepoFactory::new(fb)?
+
+    let mut factory = TestRepoFactory::new(fb)?;
+
+    let mapping =
+        SqlSyncedCommitMappingBuilder::from_sql_connections(factory.metadata_db().clone())
+            .build(RendezVousOptions::for_test());
+
+    let (live_commit_sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
+    let live_commit_sync_config = Arc::new(live_commit_sync_config);
+
+    let megarepo: TestRepo = factory
+        .with_live_commit_sync_config(live_commit_sync_config.clone())
         .with_id(RepositoryId::new(1))
         .build()
         .await?;
+    let linear: TestRepo = factory
+        .with_live_commit_sync_config(live_commit_sync_config.clone())
+        .with_id(RepositoryId::new(0))
+        .build()
+        .await?;
+    Linear::init_repo(fb, &linear).await?;
 
-    let mapping = SqlSyncedCommitMappingBuilder::with_sqlite_in_memory()?
-        .build(RendezVousOptions::for_test());
-    let linear: TestRepo = Linear::get_repo(fb).await;
-    let (live_commit_sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
     populate_config(&linear, &megarepo, "linear", &source)?;
+
     let linear_config = create_small_to_large_commit_syncer(
         &ctx,
         linear.clone(),
         megarepo.clone(),
         mapping.clone(),
-        Arc::new(live_commit_sync_config),
+        live_commit_sync_config,
     )?;
 
     let (live_commit_sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
@@ -1879,15 +1879,27 @@ async fn merge_test_setup(
     let ctx = CoreContext::test_mock(fb);
     // Set up various structures
     let mut factory = TestRepoFactory::new(fb)?;
-    let large_repo: TestRepo = factory.with_id(RepositoryId::new(0)).build().await?;
-    let small_repo: TestRepo = factory.with_id(RepositoryId::new(1)).build().await?;
-    let mapping = SqlSyncedCommitMappingBuilder::with_sqlite_in_memory()?
-        .build(RendezVousOptions::for_test());
+    let mapping =
+        SqlSyncedCommitMappingBuilder::from_sql_connections(factory.metadata_db().clone())
+            .build(RendezVousOptions::for_test());
+    let (live_commit_sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
+    let live_commit_sync_config = Arc::new(live_commit_sync_config);
+
+    let large_repo: TestRepo = factory
+        .with_live_commit_sync_config(live_commit_sync_config.clone())
+        .with_id(RepositoryId::new(0))
+        .build()
+        .await?;
+    let small_repo: TestRepo = factory
+        .with_live_commit_sync_config(live_commit_sync_config.clone())
+        .with_id(RepositoryId::new(1))
+        .build()
+        .await?;
+
     let v1 = CommitSyncConfigVersion("v1".to_string());
     let v2 = CommitSyncConfigVersion("v2".to_string());
-    let (live_commit_sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
+
     populate_config(&small_repo, &large_repo, "-", &source)?;
-    let live_commit_sync_config = Arc::new(live_commit_sync_config);
 
     let lts_syncer = {
         let mut lts_syncer = create_large_to_small_commit_syncer(

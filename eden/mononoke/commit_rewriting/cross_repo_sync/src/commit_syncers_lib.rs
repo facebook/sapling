@@ -42,7 +42,6 @@ use live_commit_sync_config::LiveCommitSyncConfig;
 use maplit::hashset;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommitSyncDirection;
-use metaconfig_types::CommonCommitSyncConfig;
 use metaconfig_types::GitSubmodulesChangesAction;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::BonsaiChangesetMut;
@@ -745,13 +744,8 @@ impl<R: Repo> CommitSyncRepos<R> {
         source_repo: R,
         target_repo: R,
         submodule_deps: SubmoduleDeps<R>,
-        common_commit_sync_config: &CommonCommitSyncConfig,
     ) -> Result<Self, Error> {
-        let sync_direction = commit_sync_direction_from_config(
-            &source_repo,
-            &target_repo,
-            common_commit_sync_config,
-        )?;
+        let sync_direction = commit_sync_direction_from_config(&source_repo, &target_repo)?;
         match sync_direction {
             CommitSyncDirection::SmallToLarge => Ok(CommitSyncRepos::SmallToLarge {
                 large_repo: target_repo,
@@ -847,8 +841,12 @@ impl<R: Repo> CommitSyncRepos<R> {
 pub fn commit_sync_direction_from_config<R: Repo>(
     source_repo: &R,
     target_repo: &R,
-    common_commit_sync_config: &CommonCommitSyncConfig,
 ) -> Result<CommitSyncDirection> {
+    let common_commit_sync_config = source_repo
+        .repo_cross_repo()
+        .live_commit_sync_config()
+        .get_common_config(source_repo.repo_identity().id())?;
+
     let is_small_repo = |repo: &R| {
         common_commit_sync_config
             .small_repos
@@ -875,10 +873,8 @@ pub fn commit_sync_direction_from_config<R: Repo>(
 pub fn get_small_and_large_repos<'a, R: Repo>(
     source_repo: &'a R,
     target_repo: &'a R,
-    common_commit_sync_config: &'a CommonCommitSyncConfig,
 ) -> Result<(&'a R, &'a R)> {
-    let sync_direction =
-        commit_sync_direction_from_config(source_repo, target_repo, common_commit_sync_config)?;
+    let sync_direction = commit_sync_direction_from_config(source_repo, target_repo)?;
     match sync_direction {
         CommitSyncDirection::SmallToLarge => Ok((source_repo, target_repo)),
         CommitSyncDirection::LargeToSmall => Ok((target_repo, source_repo)),
@@ -1026,17 +1022,13 @@ where
     M: SyncedCommitMapping + Clone + 'static,
     R: Repo,
 {
-    let common_config =
-        live_commit_sync_config.get_common_config(large_repo.repo_identity().id())?;
-
     let small_to_large_commit_sync_repos = CommitSyncRepos::new(
         small_repo.clone(),
         large_repo.clone(),
         submodule_deps.clone(),
-        &common_config,
     )?;
     let large_to_small_commit_sync_repos =
-        CommitSyncRepos::new(large_repo, small_repo, submodule_deps, &common_config)?;
+        CommitSyncRepos::new(large_repo, small_repo, submodule_deps)?;
 
     let large_to_small_commit_syncer = CommitSyncer::new(
         ctx,
