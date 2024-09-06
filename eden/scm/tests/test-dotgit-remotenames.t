@@ -50,10 +50,12 @@ Push creates remote bookmarks:
   To $TESTTMP/server-repo
    * [new branch]      3b0ae0a27e72b7be322cc30dd57eaf88f9ddfa2d -> b3
 
-FIXME: b3 should be listed:
+b3 should be listed:
   $ sl log -r $C1 -T '{remotenames}\n'
+  origin/b3
 
   $ sl bookmarks --list-subscriptions
+     origin/b3                 3b0ae0a27e72
      origin/main               5d045cb6dd86
 
 Re-sync an existing remote bookmark:
@@ -63,11 +65,9 @@ Re-sync an existing remote bookmark:
   From $TESTTMP/server-repo
    + 3b0ae0a...b1eae93 b3         -> origin/b3  (forced update)
 
-FIXME: b3 should be updated to S2:
+b3 should be updated to S2:
   $ sl log -r origin/b3 -T '{desc}\n'
-  pulling 'b3' from '$TESTTMP/server-repo'
-  abort: unknown revision 'origin/b3'!
-  [255]
+  S2
 
 Auto pull a remote name that exists in the local Git repo works:
 FIXME: This does not work right now:

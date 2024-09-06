@@ -12,7 +12,6 @@ use std::path::PathBuf;
 
 use commits_trait::DagCommits;
 use fs_err as fs;
-use gitdag::GitDagOptions;
 use storemodel::StoreInfo;
 
 use crate::git::GitSegmentedCommits;
@@ -41,13 +40,12 @@ fn maybe_construct_commits(
     info: &dyn StoreInfo,
 ) -> anyhow::Result<Option<Box<dyn DagCommits + Send + 'static>>> {
     if info.has_requirement(GIT_STORE_REQUIREMENT) {
-        let opts = GitDagOptions {
-            // If the repo is cloned by `git`, not `sl`, then all references are cloned by default,
-            // which hurts perf. Do not import all references in that case.
-            import_all_references: !info.has_requirement(DOTGIT_REQUIREMENT),
-        };
+        // If the repo is cloned by `git`, not `sl`, then all references are cloned by default,
+        // which hurts perf. Do not import all references in that case.
+        let is_dotgit = info.has_requirement(DOTGIT_REQUIREMENT);
         tracing::info!(target: "changelog_info", changelog_backend="git");
-        Ok(Some(open_git(info, opts)?))
+        let git_dag = open_git(info, is_dotgit)?;
+        Ok(Some(git_dag))
     } else {
         Ok(None)
     }
@@ -55,21 +53,17 @@ fn maybe_construct_commits(
 
 fn open_git(
     info: &dyn StoreInfo,
-    opts: GitDagOptions,
+    is_dotgit: bool,
 ) -> anyhow::Result<Box<dyn DagCommits + Send + 'static>> {
     let store_path = info.store_path();
     let metalog = info.metalog()?;
     let mut metalog = metalog.write();
-    // This is a hacky way to sync back from git references to metalog so we
-    // pick up effects after git commands like `push` or `fetch`, or if the
-    // user manually run git commands in the repo.
-    //
-    // Ideally we do this after running the git commands, or just use our own
-    // store without needing to sync with git references.
     let git_path = calculate_git_path(store_path)?;
     let segments_path = calculate_segments_path(store_path);
-    let git_segmented_commits = GitSegmentedCommits::new(&git_path, &segments_path, opts)?;
-    git_segmented_commits.git_references_to_metalog(&mut metalog)?;
+    let mut git_segmented_commits = GitSegmentedCommits::new(&git_path, &segments_path)?;
+    // Import (maybe changed) git references on construction.
+    let config = info.config();
+    git_segmented_commits.import_from_git(&mut metalog, config, is_dotgit)?;
     Ok(Box::new(git_segmented_commits))
 }
 

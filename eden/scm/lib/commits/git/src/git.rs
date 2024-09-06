@@ -25,6 +25,7 @@ use commits_trait::ParentlessHgCommit;
 use commits_trait::ReadCommitText;
 use commits_trait::StreamCommitText;
 use commits_trait::StripCommits;
+use configmodel::Config;
 use dag::delegate;
 use dag::errors::NotFoundError;
 use dag::ops::DagPersistent;
@@ -33,33 +34,72 @@ use dag::Group;
 use dag::Set;
 use dag::Vertex;
 use dag::VertexListWithOptions;
+use dag::VertexOptions;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
+use gitcompat::BareGit;
+use gitcompat::ReferenceValue;
 use gitdag::git2;
 use gitdag::GitDag;
-use gitdag::GitDagOptions;
 use metalog::MetaLog;
 use minibytes::Bytes;
 use parking_lot::Mutex;
 use storemodel::ReadRootTreeIds;
 use types::HgId;
 
+use crate::ref_filter::GitRefFilter;
+use crate::ref_matcher::GitRefMatcher;
 use crate::utils;
 
-/// Git Commits with segments index.
+/// Git commits with segments index.
 ///
 /// Use segmented changelog for the commit graph algorithms and IdMap.
 /// Use libgit2 for commit messages.
 ///
+/// ## Integration with metalog
+///
+/// Coupled with metalog to support bi-directional sync from and to Git.
+/// Supports 2 sync modes:
+/// - "Full" sync for "managed git". In this mode, the repo is created
+///   by `sl` and selective pull is enabled. There is no
+///   `fetch = +refs/heads/*:refs/remotes/origin/*` in the repo config.
+///   We do not use the default `git clone` or `git fetch` to fetch all
+///   references but always `fetch X:Y` to fetch "selected" references.
+///   Both Git referencesa and Sapling metalog have O(1) entries.
+///   Selecting more remote refs (to pull/push) requires explicit
+///   commands.
+///   In this mode, we can simply sync all git references without much
+///   filtering.
+/// - "Partial" sync for "transparent git". In this mode, the repo is
+///   created by `git` and all remote branches and tags are synced to
+///   local by default. We still want the "selective pull" behavior.
+///   So unlike the above mode, we will apply extra filtering
+///   (GitRefFilter) to only select a (hopefully O(1)) subset of Git
+///   refs to sync.
+///
+/// About tags:
+/// - Tags are treated as remote bookmarks, like "origin/tags/v1".
+/// - There is no local tags. Local Git tags are simply ignored.
+///
+/// ## Integration with autopull
+///
+/// Autopull might run `git fetch ... ...:refs/visibleheads/...`.
+/// Read the `refs/visibleheads` namespace to pick up changes.
+///
+/// ## No read write access
+///
 /// This is currently read-only, because the `add_commits` API is
 /// coupled with the HG SHA1 implementation details and Git does not
-/// use HG's SHA1.
+/// use HG's SHA1. It would be nice to abstract the `add_commits`
+/// API so it does not require using the HG format.
 ///
-/// It does not support migrating to other formats, because of SHA1
-/// incompatibility.
+/// To create commits, create the underlying Git objects directly,
+/// then sync the Git references.
 ///
-/// In the future when we abstract away the HG SHA1 logic, we can
-/// revisit and build something writable based on this.
+/// ## No format migration
+///
+/// It does not support migrating to other formats via
+/// `debugchangelog --migrate`, because of SHA1 incompatibility.
 pub struct GitSegmentedCommits {
     git_repo: Arc<Mutex<git2::Repository>>,
     dag: GitDag,
@@ -70,10 +110,9 @@ pub struct GitSegmentedCommits {
 impl DagCommits for GitSegmentedCommits {}
 
 impl GitSegmentedCommits {
-    pub fn new(git_dir: &Path, dag_dir: &Path, opts: GitDagOptions) -> Result<Self> {
+    pub fn new(git_dir: &Path, dag_dir: &Path) -> Result<Self> {
         let git_repo = git2::Repository::open(git_dir)?;
-        // open_git_repo has side effect building up the segments
-        let dag = GitDag::open_git_repo(&git_repo, dag_dir, opts)?;
+        let dag = GitDag::open(dag_dir, git_dir)?;
         let dag_path = dag_dir.to_path_buf();
         let git_path = git_dir.to_path_buf();
         Ok(Self {
@@ -85,76 +124,113 @@ impl GitSegmentedCommits {
     }
 
     /// Rewrite metalog bookmarks, remotenames to match git references.
-    /// The reverse of `metalog_to_git_references`, used at the start of a transaction.
-    pub fn git_references_to_metalog(&self, metalog: &mut MetaLog) -> Result<()> {
+    /// Import related commits to segments.
+    /// This is the reverse of `metalog_to_git_references`.
+    /// Intended to be used at "open" time and at the start of a transaction.
+    ///
+    /// If `is_dotgit` is true, then the sync rules are a bit different:
+    /// - Bookmarks: if name matches a remote branch, or "main", "master", they
+    ///   will be skipped.
+    /// - Remote names: if they don't already exist in metalog, and don't match
+    ///   the remote "HEAD", they will be skipped.
+    pub fn import_from_git(
+        &mut self,
+        metalog: &mut MetaLog,
+        config: &dyn Config,
+        is_dotgit: bool,
+    ) -> Result<()> {
         tracing::info!("updating metalog from git refs");
-        // Note: dag.git_references only have a subset of all refs. Filtering was
-        // done by GitDag without the knowledge of metalog.
-        let refs = self.dag.git_references();
 
-        // If `import_all_references` is true, it means the references is fully matintained by us
-        // (ex. "sl clone"-ed). If false, it means the references are from Git (ex. "git clone"),
-        // and it is a "dotgit" repo.
-        let opts = &self.dag.opts;
-        let is_dotgit = !opts.import_all_references;
+        let git = BareGit::from_git_dir_and_config(self.git_path.clone(), config);
+        let matcher = GitRefMatcher::new();
 
+        let refs: BTreeMap<String, ReferenceValue> = git.list_references(Some(&matcher))?;
+
+        // Bookmarks and remotenames are built from scratch.
         let mut bookmarks = BTreeMap::new();
         let mut remotenames = BTreeMap::new();
         let mut visibleheads = Vec::new();
 
-        for (name, vertex) in refs {
-            let names: Vec<&str> = name.splitn(3, '/').collect();
-            let id = match HgId::from_slice(vertex.as_ref()) {
-                Ok(id) => id,
-                Err(_) => continue,
+        let existing_visibleheads: HashSet<_> = metalog.get_visibleheads()?.into_iter().collect();
+        let existing_remotenames = metalog.get_remotenames()?;
+        let existing_bookmarks = metalog.get_bookmarks()?;
+
+        // Heads (vertexes) to import to dag.
+        let mut heads = Vec::new();
+        let head_opts = VertexOptions::default();
+
+        let remote_name_filter: GitRefFilter = if is_dotgit {
+            GitRefFilter::new_for_dotgit(&refs, &existing_remotenames, config)?
+        } else {
+            GitRefFilter::new_for_dotsl(&refs)?
+        };
+
+        for (name, value) in &refs {
+            // Ignore symlink refs (usually just "*/HEAD"). They are handled elsewhere.
+            let id = match value {
+                ReferenceValue::Sym(_) => continue,
+                ReferenceValue::Id(id) => *id,
             };
+            let names: Vec<&str> = name.splitn(3, '/').collect();
             match &names[..] {
                 ["refs", "remotes", name] => {
-                    // Treat as a remotename
-                    if name.contains('/') && !name.ends_with("/HEAD") && !name.starts_with("tags/")
-                    {
+                    if remote_name_filter.should_import_remote_name(name) {
+                        let should_import_to_dag = match existing_remotenames.get(*name) {
+                            Some(&existing_id) => existing_id != id,
+                            None => true,
+                        };
+                        if should_import_to_dag {
+                            let mut opts = head_opts.clone();
+                            if remote_name_filter.is_main_remote_name(name) {
+                                opts.desired_group = Group::MASTER;
+                            }
+                            heads.push((Vertex::copy_from(id.as_ref()), opts));
+                        }
                         remotenames.insert(name.to_string(), id);
                     }
                 }
                 ["refs", "heads", name] => {
-                    // Turn bookmarks like "master" to visible heads for dotgit support, for
-                    // "git clone/init" repos (is_dotgit is true).
-                    //
-                    // Those "master" bookmarks are created by "git clone" by default, out of our
-                    // control, and our desired UX is that "master" always refers to
-                    // "remote/master", and there is no (confusing) local "master".
-                    //
-                    // For non-dotgit repos cloned by "sl clone", references are fully maintained
-                    // by us, there is no default "master" local bookmark and the extra filtering
-                    // should be skipped.
-                    if is_dotgit && DISALLOW_BOOKMARK_NAMES.contains(name) {
-                        // Treat as a visible head.
+                    let should_import_to_dag = match existing_bookmarks.get(*name) {
+                        Some(&existing_id) => existing_id == id,
+                        None => !existing_visibleheads.contains(&id),
+                    };
+                    if should_import_to_dag {
+                        heads.push((Vertex::copy_from(id.as_ref()), head_opts.clone()));
+                    }
+                    if remote_name_filter.should_treat_local_ref_as_visible_head(name) {
                         visibleheads.push(id);
                     } else {
-                        // Treat as a local bookmark.
                         bookmarks.insert(name.to_string(), id);
                     }
                 }
-                ["refs", "tags", name] => {
-                    // Treat as a remotename prefixed with `tags/`.
-                    if name != &"HEAD" {
-                        let name = format!("tags/{}", name);
-                        remotenames.insert(name, id);
-                    }
-                }
                 ["refs", "visibleheads", _name] => {
+                    if !existing_visibleheads.contains(&id) {
+                        heads.push((Vertex::copy_from(id.as_ref()), head_opts.clone()));
+                    }
                     visibleheads.push(id);
+                }
+                ["HEAD"] => {
+                    heads.push((Vertex::copy_from(id.as_ref()), head_opts.clone()));
                 }
                 _ => {}
             }
         }
-        if tracing::enabled!(tracing::Level::TRACE) {
-            tracing::trace!(remotenames=?remotenames, bookmarks=?bookmarks, visibleheads=?visibleheads, "metalog (old)");
-            let remotenames = metalog.get_remotenames()?;
-            let bookmarks = metalog.get_bookmarks()?;
-            let visibleheads = metalog.get_visibleheads()?;
-            tracing::trace!(remotenames=?remotenames, bookmarks=?bookmarks, visibleheads=?visibleheads, "metalog (new, from git refs)");
-        }
+
+        let heads = VertexListWithOptions::from(heads).sort_by_group();
+
+        tracing::trace!(
+            ?remotenames,
+            ?bookmarks,
+            ?visibleheads,
+            ?existing_remotenames,
+            ?existing_bookmarks,
+            ?existing_visibleheads,
+            ?heads,
+            "git import"
+        );
+
+        let git_repo = self.git_repo.lock();
+        self.dag.import_from_git(Some(&*git_repo), heads)?;
 
         let encoded_bookmarks = refencode::encode_bookmarks(&bookmarks);
         let encoded_remotenames = refencode::encode_remotenames(&remotenames);
@@ -172,6 +248,7 @@ impl GitSegmentedCommits {
     /// Update git references to match metalog changes.
     /// - remotenames, bookmarks: changes will be applied to Git references.
     /// - visibleheads: current state will replace refs/visibleheads/ namespace.
+    ///
     /// The reverse of `git_references_to_metalog`, used at the end of a transaction.
     pub fn metalog_to_git_references(&self, metalog: &MetaLog) -> Result<()> {
         tracing::info!("updating git refs from metalog");
@@ -588,6 +665,3 @@ fn get_hard_coded_commit_text(vertex: &Vertex) -> Option<Bytes> {
         None
     }
 }
-
-// Disallow local bookmarks with these names. Turn them into visibleheads.
-const DISALLOW_BOOKMARK_NAMES: &[&str] = &["main", "master", "HEAD"];

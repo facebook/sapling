@@ -11,4 +11,3 @@ mod gitdag;
 pub use git2;
 
 pub use self::gitdag::GitDag;
-pub use self::gitdag::GitDagOptions;
