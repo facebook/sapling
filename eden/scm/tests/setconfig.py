@@ -21,7 +21,11 @@ else:
 content = ""
 
 for config in sys.argv[1:]:
-    section, namevalue = config.split(".", 1)
+    try:
+        section, namevalue = config.split(".", 1)
+    except ValueError:
+        print("Invalid config: '%s', expecting '.' in the config" % config)
+        raise
     content += "[%s]\n%s\n" % (section, namevalue)
 
 with open(hgrcpath, "a") as f:
