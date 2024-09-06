@@ -104,22 +104,23 @@ pub struct GitSegmentedCommits {
     git_repo: Arc<Mutex<git2::Repository>>,
     dag: GitDag,
     dag_path: PathBuf,
-    git_path: PathBuf,
+    git: BareGit,
 }
 
 impl DagCommits for GitSegmentedCommits {}
 
 impl GitSegmentedCommits {
-    pub fn new(git_dir: &Path, dag_dir: &Path) -> Result<Self> {
+    pub fn new(git_dir: &Path, dag_dir: &Path, config: &dyn Config) -> Result<Self> {
         let git_repo = git2::Repository::open(git_dir)?;
         let dag = GitDag::open(dag_dir, git_dir)?;
         let dag_path = dag_dir.to_path_buf();
         let git_path = git_dir.to_path_buf();
+        let git = BareGit::from_git_dir_and_config(git_path, config);
         Ok(Self {
             git_repo: Arc::new(Mutex::new(git_repo)),
             dag,
             dag_path,
-            git_path,
+            git,
         })
     }
 
@@ -141,10 +142,9 @@ impl GitSegmentedCommits {
     ) -> Result<()> {
         tracing::info!("updating metalog from git refs");
 
-        let git = BareGit::from_git_dir_and_config(self.git_path.clone(), config);
         let matcher = GitRefMatcher::new();
 
-        let refs: BTreeMap<String, ReferenceValue> = git.list_references(Some(&matcher))?;
+        let refs: BTreeMap<String, ReferenceValue> = self.git.list_references(Some(&matcher))?;
 
         // Bookmarks and remotenames are built from scratch.
         let mut bookmarks = BTreeMap::new();
@@ -513,7 +513,7 @@ impl StreamCommitText for GitSegmentedCommits {
         &self,
         stream: BoxStream<'static, anyhow::Result<Vertex>>,
     ) -> Result<BoxStream<'static, anyhow::Result<ParentlessHgCommit>>> {
-        let git_repo = git2::Repository::open(&self.git_path)?;
+        let git_repo = git2::Repository::open(self.git.git_dir())?;
         let stream = stream.map(move |item| {
             let vertex = item?;
             let oid = match git2::Oid::from_bytes(vertex.as_ref()) {
@@ -557,7 +557,7 @@ Feature Providers:
     Git
 "#,
             self.dag_path.display(),
-            self.git_path.display(),
+            self.git.git_dir().display(),
         )
     }
 
