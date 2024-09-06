@@ -6,6 +6,8 @@
  */
 
 use std::borrow::Cow;
+use std::collections::HashSet;
+use std::hash::Hash;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -195,6 +197,13 @@ impl FromConfigValue for Duration {
 }
 
 impl<T: FromConfigValue> FromConfigValue for Vec<T> {
+    fn try_from_str(s: &str) -> Result<Self> {
+        let items = parse_list(s);
+        items.into_iter().map(|s| T::try_from_str(&s)).collect()
+    }
+}
+
+impl<T: FromConfigValue + Eq + Hash> FromConfigValue for HashSet<T> {
     fn try_from_str(s: &str) -> Result<Self> {
         let items = parse_list(s);
         items.into_iter().map(|s| T::try_from_str(&s)).collect()
