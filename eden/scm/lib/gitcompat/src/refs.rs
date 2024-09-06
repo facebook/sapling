@@ -6,6 +6,7 @@
  */
 
 use std::borrow::Cow;
+use std::cell::Cell;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::path::Component;
@@ -88,6 +89,44 @@ impl BareGit {
 
         let str_out = String::from_utf8_lossy(&out.stdout);
         anyhow::bail!("Cannot resolve HEAD from {:?}", str_out);
+    }
+
+    /// Lookup a reference by full name like "refs/heads/main".
+    /// Returns `None` if the reference does not exist.
+    pub fn lookup_reference(&self, name: &str) -> Result<Option<ReferenceValue>> {
+        let mut result = None;
+        // Access to "result.is_empty()" without offending borrowck.
+        let has_result = Cell::new(false);
+        let insert = &mut |n, v| {
+            if n == name {
+                has_result.set(true);
+                result = Some(v);
+            }
+        };
+        let matcher = AlwaysMatcher::new();
+        self.populate_loose_file_reference(&matcher, Cow::Borrowed(name), insert)?;
+        if !has_result.get() {
+            self.populate_packed_references(&matcher, insert)?;
+        }
+        Ok(result)
+    }
+
+    /// Lookup a reference by full name like "refs/heads/main". Follow symlinks to resolve
+    /// to an object id.
+    ///
+    /// Returns `None` if the reference or its referred reference does not exist.
+    /// For example, a newly created Git repo will have `HEAD` pointing to `refs/heads/main`,
+    /// but the `refs/heads/main` does not exist.
+    pub fn lookup_reference_follow_links(&self, name: &str) -> Result<Option<HgId>> {
+        let mut value = self.lookup_reference(name)?;
+        loop {
+            match value {
+                // NOTE: This does not yet check circular references.
+                Some(ReferenceValue::Sym(target)) => value = self.lookup_reference(&target)?,
+                Some(ReferenceValue::Id(id)) => return Ok(Some(id)),
+                None => return Ok(None),
+            }
+        }
     }
 
     /// Read and list Git references.
@@ -285,6 +324,26 @@ mod tests {
                 Err(e) => vec![e.to_string()],
             }
         }
+
+        // Show both raw value and symlink target
+        fn debug_lookup_reference(&self, name: &str) -> String {
+            let value = self.lookup_reference(name).unwrap();
+            let resolved_id = self.lookup_reference_follow_links(name).unwrap();
+            match value {
+                Some(ReferenceValue::Id(value_id)) => {
+                    assert_eq!(Some(value_id), resolved_id);
+                    value_id.to_hex()
+                }
+                Some(ReferenceValue::Sym(name)) => {
+                    let resolved = match resolved_id {
+                        Some(id) => id.to_hex(),
+                        None => "None".to_owned(),
+                    };
+                    format!("{} => {}", name, resolved)
+                }
+                None => "None".to_owned(),
+            }
+        }
     }
 
     #[test]
@@ -356,6 +415,38 @@ mod tests {
                 "refs/remotes/origin/dev 4444444444444444444444444444444444444444",
                 "refs/remotes/origin/main 3333333333333333333333333333333333333333"
             ]
+        );
+
+        // Test lookup_reference
+        // from loose files
+        assert_eq!(
+            git.debug_lookup_reference("refs/tags/v1"),
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        );
+        // from packed refs
+        assert_eq!(
+            git.debug_lookup_reference("refs/tags/v3"),
+            "cccccccccccccccccccccccccccccccccccccccc"
+        );
+        // from loose files, ignore conflicting packed refs
+        assert_eq!(
+            git.debug_lookup_reference("refs/heads/foo"),
+            "2222222222222222222222222222222222222222"
+        );
+        // dancling symlink
+        assert_eq!(
+            git.debug_lookup_reference("HEAD"),
+            "refs/heads/main => None"
+        );
+        // follow symlink and peel
+        assert_eq!(
+            git.debug_lookup_reference("refs/heads/bar"),
+            "refs/tags/v4 => dddddddddddddddddddddddddddddddddddddddd"
+        );
+        // not found
+        assert_eq!(
+            git.debug_lookup_reference("refs/not-found/not-found"),
+            "None"
         );
     }
 
