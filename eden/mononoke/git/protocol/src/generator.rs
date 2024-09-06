@@ -65,6 +65,7 @@ use crate::utils::commits;
 use crate::utils::delta_base;
 use crate::utils::entry_weight;
 use crate::utils::filter_object;
+use crate::utils::tag_entries_to_hashes;
 use crate::utils::to_commit_stream;
 use crate::Repo;
 
@@ -545,13 +546,19 @@ async fn tag_packfile_stream<'a>(
                         )
                     })
                     .transpose()
-                    .map(|fallible_entry| fallible_entry.map(|entry| entry.tag_hash))
             } else {
                 None
             }
         })
-        .try_collect::<FxHashSet<_>>()
+        .try_collect::<Vec<_>>()
         .await?;
+    let annotated_tags = tag_entries_to_hashes(
+        annotated_tags,
+        fetch_container.ctx.clone(),
+        fetch_container.blobstore.clone(),
+        fetch_container.concurrency.tags,
+    )
+    .await?;
     let tags_count = annotated_tags.len();
     let tag_stream = tag_entries_to_stream(fetch_container, annotated_tags);
     Ok((tag_stream, tags_count))
@@ -565,7 +572,12 @@ async fn tags_packfile_stream<'a>(
     requested_commits: Vec<ChangesetId>,
     requested_tag_names: Arc<FxHashSet<String>>,
 ) -> Result<(BoxStream<'a, Result<PackfileItem>>, usize)> {
-    let (ctx, filter) = (fetch_container.ctx.clone(), fetch_container.filter.clone());
+    let (ctx, filter, blobstore, concurrency) = (
+        fetch_container.ctx.clone(),
+        fetch_container.filter.clone(),
+        fetch_container.blobstore.clone(),
+        fetch_container.concurrency,
+    );
     let include_tags = if let Some(filter) = filter.as_ref() {
         filter.include_tags()
     } else {
@@ -602,18 +614,16 @@ async fn tags_packfile_stream<'a>(
         .await
         .context("Error in getting tags during fetch")?
         .into_iter()
-        .filter_map(|entry| {
-            if required_tag_names.contains(&entry.tag_name)
+        .filter(|entry| {
+            required_tag_names.contains(&entry.tag_name)
                 || requested_tag_names.contains(&entry.tag_name)
-            {
-                Some(entry.tag_hash)
-            } else {
-                None
-            }
         })
-        .collect::<FxHashSet<_>>(); // Dedupe based on tag hashes so we don't double count
-    let tags_count = tag_entries.len();
-    let tag_stream = tag_entries_to_stream(fetch_container, tag_entries);
+        .collect::<Vec<_>>();
+    let exhaustive_tag_entries =
+        tag_entries_to_hashes(tag_entries, ctx, blobstore, concurrency.tags).await?;
+
+    let tags_count = exhaustive_tag_entries.len();
+    let tag_stream = tag_entries_to_stream(fetch_container, exhaustive_tag_entries);
     Ok((tag_stream, tags_count))
 }
 

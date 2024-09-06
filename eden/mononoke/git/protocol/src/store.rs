@@ -14,6 +14,7 @@ use context::CoreContext;
 use futures::TryStreamExt;
 use git_types::fetch_git_delta_manifest;
 use git_types::fetch_git_object_bytes;
+use git_types::fetch_non_blob_git_object;
 use git_types::fetch_non_blob_git_object_bytes;
 use git_types::fetch_packfile_base_item;
 use git_types::fetch_packfile_base_item_if_exists;
@@ -262,4 +263,26 @@ pub(crate) async fn packfile_item_for_delta_manifest_entry(
             }
         }
     }
+}
+
+/// Method for fetching the entire hierarchy of nested tags
+pub(crate) async fn fetch_nested_tags(
+    ctx: &CoreContext,
+    blobstore: &ArcRepoBlobstore,
+    tag_hash: ObjectId,
+) -> Result<Vec<ObjectId>> {
+    let mut maybe_target = Some(tag_hash);
+    let mut nested_tags = vec![];
+    while let Some(target_hash) = maybe_target {
+        let target_object = fetch_non_blob_git_object(ctx, blobstore, target_hash.as_ref()).await?;
+        if let Some(next_target) = target_object.as_tag().map(|tag| tag.target) {
+            // The current object is tag so add it to the list of nested tags
+            nested_tags.push(target_hash.clone());
+            // The target of the tag is the next object to be fetched
+            maybe_target = Some(next_target);
+        } else {
+            maybe_target = None;
+        }
+    }
+    Ok(nested_tags)
 }

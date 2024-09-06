@@ -9,6 +9,8 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
+use bonsai_tag_mapping::BonsaiTagMappingEntry;
+use cloned::cloned;
 use context::CoreContext;
 use futures::stream;
 use futures::stream::BoxStream;
@@ -18,9 +20,13 @@ use git_types::DeltaObjectKind;
 use git_types::GitDeltaManifestEntryOps;
 use git_types::ObjectDeltaOps;
 use gix_hash::ObjectId;
+use mononoke_types::hash::GitSha1;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
+use repo_blobstore::ArcRepoBlobstore;
+use rustc_hash::FxHashSet;
 
+use crate::store::fetch_nested_tags;
 use crate::types::DeltaInclusion;
 use crate::types::FetchFilter;
 use crate::types::RefTarget;
@@ -150,4 +156,45 @@ pub(crate) async fn commits(
                 .await
         }
     }
+}
+
+/// Function responsible for converting the input vec of BonsaiTagMappingEntries
+/// into unique set of tag hashes while also extending the output with nested tags
+/// if applicable
+pub(crate) async fn tag_entries_to_hashes(
+    tag_entries: Vec<BonsaiTagMappingEntry>,
+    ctx: Arc<CoreContext>,
+    blobstore: ArcRepoBlobstore,
+    tag_concurrency: usize,
+) -> Result<FxHashSet<GitSha1>> {
+    stream::iter(tag_entries)
+        .map(Ok)
+        .map_ok(|entry| {
+            cloned!(ctx, blobstore);
+            async move {
+                let tag_hash = entry.tag_hash.to_object_id()?;
+                // If the target is tag, make sure to fetch all the nested tags
+                if entry.target_is_tag {
+                    fetch_nested_tags(&ctx, &blobstore, tag_hash.clone())
+                        .await
+                        .with_context(|| {
+                            format!("Error in fetching nested tags for entry {:?}", entry)
+                        })
+                } else {
+                    Ok(vec![tag_hash])
+                }
+            }
+        })
+        .try_buffer_unordered(tag_concurrency)
+        .try_fold(
+            FxHashSet::default(), // Dedupe based on tag hashes so we don't double count
+            |mut output_hashes, tag_hashes| async move {
+                for tag_hash in tag_hashes.into_iter() {
+                    let tag_sha = GitSha1::from_object_id(tag_hash.as_ref())?;
+                    output_hashes.insert(tag_sha);
+                }
+                anyhow::Ok(output_hashes)
+            },
+        )
+        .await
 }
