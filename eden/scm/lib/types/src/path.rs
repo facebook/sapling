@@ -308,8 +308,24 @@ impl RepoPath {
         Ok(RepoPath::from_str_unchecked(s))
     }
 
+    /// `const_fn` version of `from_str`.
+    ///
+    /// Path validation happens at compile time. For example, the code below
+    /// will fail to compile because of the trailing slash:
+    ///
+    /// ```compile_fail
+    /// # use types::RepoPath;
+    /// static STATIC_PATH: &RepoPath = RepoPath::from_static_str("foo/");
+    /// ```
+    pub const fn from_static_str(s: &'static str) -> &'static RepoPath {
+        if validate_path(s).is_err() {
+            panic!("invalid RepoPath::from_static_str");
+        }
+        RepoPath::from_str_unchecked(s)
+    }
+
     #[ref_cast_custom]
-    fn from_str_unchecked(s: &str) -> &RepoPath;
+    const fn from_str_unchecked(s: &str) -> &RepoPath;
 
     /// Returns the underlying bytes of the `RepoPath`.
     pub fn as_byte_slice(&self) -> &[u8] {
@@ -1134,6 +1150,14 @@ mod tests {
 
     #[test]
     fn test_validate_path() {
+        let from_str = |s: &'static str| {
+            let result = RepoPath::from_str(s);
+            if let Ok(path1) = &result {
+                let path2 = RepoPath::from_static_str(s);
+                assert_eq!(*path1, path2);
+            }
+            result
+        };
         assert_eq!(
             format!("{}", validate_path("\n").unwrap_err()),
             "Invalid byte: 10."
@@ -1143,7 +1167,7 @@ mod tests {
             "Invalid byte: 13."
         );
         assert_eq!(
-            format!("{}", RepoPath::from_str("\n").unwrap_err()),
+            format!("{}", from_str("\n").unwrap_err()),
             "Failed to validate \"\\n\". Invalid byte: 10."
         );
         assert_eq!(
@@ -1151,9 +1175,16 @@ mod tests {
             "Trailing slash."
         );
         assert_eq!(
-            format!("{}", RepoPath::from_str("boo/").unwrap_err()),
+            format!("{}", from_str("boo/").unwrap_err()),
             "Failed to validate \"boo/\". Trailing slash."
         );
+    }
+
+    #[test]
+    fn test_const_repo_path() {
+        const PATH_STR: &str = "foo/bar";
+        static STATIC_PATH: &RepoPath = RepoPath::from_static_str(PATH_STR);
+        assert_eq!(STATIC_PATH.as_str(), PATH_STR);
     }
 
     #[test]
