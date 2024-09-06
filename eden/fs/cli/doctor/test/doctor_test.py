@@ -2107,7 +2107,15 @@ Starting background invalidation of not recently used files and directories in {
 """,
                 out.getvalue(),
             )
-        self.assertEqual(exit_code, 0)
+        elif sys.platform == "darwin":
+            self.assertRegex(
+                out.getvalue(),
+                rf"""Checking {checkout.path}
+<yellow>- Found problem:<reset>
+Mount point {checkout.path} has 9000000 loaded files, which may impact EdenFS performance.*
+""",
+            )
+        self.assertEqual(exit_code, 1 if sys.platform == "darwin" else 0)
 
     def test_slow_hg_import(self) -> None:
         tmp_dir = self.make_temporary_directory()

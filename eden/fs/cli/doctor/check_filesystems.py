@@ -47,6 +47,15 @@ from facebook.eden.ttypes import (
     TimeSpec,
 )
 
+try:
+    from eden.fs.cli.doctor.facebook.internal_error_messages import (
+        get_inode_count_advice,
+    )
+except ImportError:
+
+    def get_inode_count_advice() -> str:
+        return ""
+
 
 def check_using_nfs_path(tracker: ProblemTracker, mount_path: Path) -> None:
     check_shared_path(tracker, mount_path)
@@ -889,7 +898,18 @@ def check_loaded_content(
         tracker.add_problem(SHA1ComputationFailedForLoadedInode(sha1_errors))
 
 
-class HighInodeCountProblem(Problem, FixableProblem):
+class HighInodeCountProblemDarwin(Problem):
+    def __init__(self, info: CheckoutInfo, inode_count: int) -> None:
+        self._info = info
+        self.fix_result: Optional[DebugInvalidateResponse] = None
+        super().__init__(
+            description=f"Mount point {self._info.path} has {inode_count} loaded files, which may impact EdenFS performance.\n",
+            severity=ProblemSeverity.ADVICE,
+        )
+        self._remediation: str = get_inode_count_advice()
+
+
+class HighInodeCountProblemWindows(Problem, FixableProblem):
     def __init__(self, info: CheckoutInfo, inode_count: int, threshold: int) -> None:
         self._info = info
         self._threshold = threshold
@@ -948,12 +968,15 @@ class UnknownInodeCountProblem(Problem):
 def check_inode_counts(
     tracker: ProblemTracker, instance: EdenInstance, checkout: CheckoutInfo
 ) -> None:
-    # This check is specific to the Windows implementation.
-    if sys.platform != "win32":
+    # This check is specific to PrjFS and NFS
+    if sys.platform == "linux":
         return
 
+    (platform, default_threshold) = (
+        ("windows", 1_000_000) if sys.platform == "win32" else ("darwin", 3_000_000)
+    )
     threshold = instance.get_config_int(
-        "doctor.windows-inode-count-problem-threshold", 1_000_000
+        f"doctor.{platform}-inode-count-problem-threshold", default_threshold
     )
 
     inode_info = checkout.mount_inode_info
@@ -963,7 +986,12 @@ def check_inode_counts(
 
     inode_count = total_inode_count(inode_info)
     if inode_count > threshold:
-        tracker.add_problem(HighInodeCountProblem(checkout, inode_count, threshold))
+        if sys.platform == "win32":
+            tracker.add_problem(
+                HighInodeCountProblemWindows(checkout, inode_count, threshold)
+            )
+        else:
+            tracker.add_problem(HighInodeCountProblemDarwin(checkout, inode_count))
 
 
 class HgStatusAndDiffMismatch(PathsProblem):
