@@ -490,3 +490,16 @@ Support file names with dashes:
   $ hg st --change $A
   A A
   A hi-there
+
+Support binary, base85 data and works for merge:
+  $ newrepo
+  $ drawdag << 'EOS'
+  > C    # B/B has 20 bytes.
+  > |\   # B/B=base85:e#pZ!R^O0GSDo$oDHiT8&d*Cs
+  > A B  # A/A=random:30
+  > EOS
+  $ hg up -q $C
+  $ wc -c A
+  30
+  $ wc -c B
+  20

@@ -582,7 +582,8 @@ def _drawdagintransaction(repo, text: str, tr, **opts) -> None:
                 # If it's a merge, take the files and contents from the parents
                 for f in pctxs[1].manifest():
                     if f not in pctxs[0].manifest():
-                        added[f] = pycompat.decodeutf8(pctxs[1][f].data())
+                        data = pctxs[1][f].data()
+                        added[f] = f"base85:{base64.b85encode(data).decode()}"
             else:
                 # If it's not a merge, add a single file, if defaultfiles is set
                 if defaultfiles:
