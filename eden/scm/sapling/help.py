@@ -607,6 +607,13 @@ class _helpdispatch:
         doc = self._helpcmddoc(cmd[0], pycompat.getdoc(cmd[0]))
         return " :%s: %s\n" % (name, doc)
 
+    def _helpaliasitem(self, name):
+        doc = self.ui.config("alias", f"{name}:doc")
+        if not doc:
+            return None
+        doc = doc.splitlines()[0].strip()
+        return " :%s: %s\n" % (name, doc)
+
     def helplist(self, name, select=None, **opts):
         h = {}
         cmds = {}
@@ -658,9 +665,10 @@ class _helpdispatch:
 
             sectionrst = []
             for command in commands:
-                cmdrst = self._helpcmditem(command)
-                if cmdrst:
+                if cmdrst := self._helpcmditem(command):
                     sectionrst.append(cmdrst)
+                elif aliasrst := self._helpaliasitem(command):
+                    sectionrst.append(aliasrst)
 
             if sectionrst:
                 rst.append(desc + ":\n\n")

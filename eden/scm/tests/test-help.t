@@ -2,6 +2,7 @@
 #require no-fsmonitor
 #debugruntest-incompatible
 
+  $ setconfig alias.ssl:doc="show a graph of your commits and associated Diff information"
 Short help:
 
   $ hg
@@ -18,6 +19,7 @@ Short help:
   
   View commits:
   
+   ssl           show a graph of your commits and associated Diff information
    show          show commit in detail
    diff          show differences between commits
   
@@ -75,6 +77,7 @@ Short help:
   
   View commits:
   
+   ssl           show a graph of your commits and associated Diff information
    show          show commit in detail
    diff          show differences between commits
   
@@ -132,6 +135,7 @@ Short help:
   
   View commits:
   
+   ssl           show a graph of your commits and associated Diff information
    show          show commit in detail
    diff          show differences between commits
   
@@ -189,6 +193,7 @@ Short help:
   
   View commits:
   
+   ssl           show a graph of your commits and associated Diff information
    show          show commit in detail
    diff          show differences between commits
   
@@ -850,6 +855,7 @@ Test that default list of commands omits extension commands
   
   View commits:
   
+   ssl           show a graph of your commits and associated Diff information
    show          show commit in detail
    diff          show differences between commits
   
