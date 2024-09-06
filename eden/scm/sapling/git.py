@@ -731,8 +731,11 @@ def pullrefspecs(repo, url, refspecs):
     if _supportwritefetchhead(repo):
         args.append("--no-write-fetch-head")
     args += [url] + refspecs
-    ret = rungit(repo, args)
-    _syncfromgit(repo)
+    with repo.lock(), repo.transaction("pull"):
+        ret = rungit(repo, args)
+        if ret == 0:
+            refnames = [s.split(":", 1)[1] for s in refspecs if ":" in s]
+            _syncfromgit(repo, refnames)
     return ret
 
 

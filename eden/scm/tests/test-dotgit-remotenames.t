@@ -70,8 +70,7 @@ b3 should be updated to S2:
   S2
 
 Auto pull a remote name that exists in the local Git repo works:
-FIXME: This does not work right now:
+
   $ sl log -r origin/b1 -T '{desc}\n'
   pulling 'b1' from '$TESTTMP/server-repo'
-  abort: unknown revision 'origin/b1'!
-  [255]
+  S1
