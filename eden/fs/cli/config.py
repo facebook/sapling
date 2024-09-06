@@ -171,6 +171,10 @@ class InProgressCheckoutError(Exception):
         )
 
 
+class CheckoutConfigCorruptedError(Exception):
+    pass
+
+
 class CheckoutConfig(typing.NamedTuple):
     """Configuration for an EdenFS checkout. A checkout stores its config in config.toml
     it its state directory (.eden/clients/<checkout_name>/config.toml)
@@ -1358,22 +1362,31 @@ class EdenCheckout:
         under self.state_dir is not properly formatted or does not exist.
         """
         config_path: Path = self._config_path()
-        config = load_toml_config(config_path)
+        try:
+            config = load_toml_config(config_path)
+        except FileNotFoundError as e:
+            raise CheckoutConfigCorruptedError(
+                f"{config_path} does not exist. {e}"
+            ) from e
+        except FileError as e:
+            raise CheckoutConfigCorruptedError(f"{e}") from e
         repo_field = config.get("repository")
         if isinstance(repo_field, dict):
             repository: typing.Mapping[str, str] = repo_field
         else:
-            raise Exception(f"{config_path} is missing [repository]")
+            raise CheckoutConfigCorruptedError(f"{config_path} is missing [repository]")
 
         def get_field(key: str) -> str:
             value = repository.get(key)
             if isinstance(value, str):
                 return value
-            raise Exception(f"{config_path} is missing {key} in " "[repository]")
+            raise CheckoutConfigCorruptedError(
+                f"{config_path} is missing {key} in " "[repository]"
+            )
 
         scm_type = get_field("type")
         if scm_type not in SUPPORTED_REPOS:
-            raise Exception(
+            raise CheckoutConfigCorruptedError(
                 f'repository "{config_path}" has unsupported type ' f'"{scm_type}"'
             )
 
@@ -1381,7 +1394,7 @@ class EdenCheckout:
         if not isinstance(mount_protocol, str):
             mount_protocol = "prjfs" if sys.platform == "win32" else "fuse"
         if mount_protocol not in SUPPORTED_MOUNT_PROTOCOLS:
-            raise Exception(
+            raise CheckoutConfigCorruptedError(
                 f'repository "{config_path}" has unsupported mount protocol '
                 f'"{mount_protocol}"'
             )
@@ -1407,10 +1420,12 @@ class EdenCheckout:
             from eden.fs.cli.redirect import RedirectionType  # noqa: F811
 
             if not isinstance(redirections_dict, dict):
-                raise Exception(f"{config_path} has an invalid [redirections] section")
+                raise CheckoutConfigCorruptedError(
+                    f"{config_path} has an invalid [redirections] section"
+                )
             for key, value in redirections_dict.items():
                 if not isinstance(value, str):
-                    raise Exception(
+                    raise CheckoutConfigCorruptedError(
                         f"{config_path} has invalid value in "
                         f"[redirections] for {key}: {value} "
                         "(string expected)"
@@ -1418,7 +1433,7 @@ class EdenCheckout:
                 try:
                     redirections[key] = RedirectionType.from_arg_str(value)
                 except ValueError as exc:
-                    raise Exception(
+                    raise CheckoutConfigCorruptedError(
                         f"{config_path} has invalid value in "
                         f"[redirections] for {key}: {value} "
                         f"{str(exc)}"
@@ -1431,10 +1446,12 @@ class EdenCheckout:
             prefetch_profiles_list = prefetch_profiles_list.get("active")
             if prefetch_profiles_list is not None:
                 if not isinstance(prefetch_profiles_list, list):
-                    raise Exception(f"{config_path} has an invalid [profiles] section")
+                    raise CheckoutConfigCorruptedError(
+                        f"{config_path} has an invalid [profiles] section"
+                    )
                 for profile in prefetch_profiles_list:
                     if not isinstance(profile, str):
-                        raise Exception(
+                        raise CheckoutConfigCorruptedError(
                             f"{config_path} has invalid value in "
                             f"[profiles] {profile} (string expected)"
                         )
@@ -1485,19 +1502,19 @@ class EdenCheckout:
                 not isinstance(inode_catalog_type, str)
                 or inode_catalog_type.lower() not in SUPPORTED_INODE_CATALOG_TYPES
             ):
-                raise Exception(
+                raise CheckoutConfigCorruptedError(
                     f'repository "{config_path}" has unsupported inode catalog (overlay) type '
                     f'"{inode_catalog_type}". Supported inode catalog (overlay) types are: '
                     f'{", ".join(sorted(SUPPORTED_INODE_CATALOG_TYPES))}.'
                 )
             inode_catalog_type = inode_catalog_type.lower()
             if sys.platform == "win32" and inode_catalog_type == "legacy":
-                raise Exception(
+                raise CheckoutConfigCorruptedError(
                     "Legacy inode catalog (overlay) type not supported on Windows. "
                     "Use Sqlite or InMemory on Windows."
                 )
             elif sys.platform != "win32" and inode_catalog_type == "inmemory":
-                raise Exception(
+                raise CheckoutConfigCorruptedError(
                     "InMemory inode catalog (overlay) type is only supported on Windows. "
                     "Use Legacy or Sqlite on Linux and MacOS."
                 )
