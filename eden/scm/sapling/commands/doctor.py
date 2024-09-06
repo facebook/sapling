@@ -31,6 +31,7 @@ from .. import (
     localrepo,
     progress,
     revlog,
+    revsetlang,
     scmutil,
     treestate,
     util,
@@ -519,7 +520,10 @@ def checknoisybranches(repo):
         if predecessors:
             # The stack has local modifications. Skip it.
             continue
-        authored = len(repo.revs("%ln & user(%s)", x, ui.username()))
+        username = ui.username()
+        usernames = {username, util.username(), util.shortuser(username)}
+        user_revsets = [revsetlang.formatspec("user(%s)", s) for s in usernames]
+        authored = len(repo.revs("%ln & %lr", x, user_revsets))
         if authored * 2 >= len(x):
             # The stack is authored. Skip it.
             continue
