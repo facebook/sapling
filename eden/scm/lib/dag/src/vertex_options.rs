@@ -103,6 +103,12 @@ impl VertexListWithOptions {
         self.list.iter().map(|i| i.0.clone()).collect()
     }
 
+    /// Sort the heads. Lower desired group first.
+    pub fn sort_by_group(mut self) -> Self {
+        self.list.sort_by_key(|(_v, opts)| opts.desired_group.0);
+        self
+    }
+
     /// Get the vertexes, filter by the `desired_group` option.
     pub fn vertexes_by_group(&self, group: Group) -> Vec<Vertex> {
         self.list
