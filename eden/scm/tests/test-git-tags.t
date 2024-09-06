@@ -35,7 +35,7 @@ Pull tags explicitly
   $ hg pull -B tags/v1
   pulling from $TESTTMP/git-repo
   From $TESTTMP/git-repo
-   * [new ref]         bfff4215bb0ba84b76577621c9974de957610ecb -> remote/tags/v1
+   * [new ref]         bfff4215bb0ba84b76577621c9974de957610ecb -> refs/remotetags/remote/v1
 
 Pull implicitly via autopull
 

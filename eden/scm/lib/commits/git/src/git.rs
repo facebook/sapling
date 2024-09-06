@@ -189,6 +189,21 @@ impl GitSegmentedCommits {
                         remotenames.insert(name.to_string(), id);
                     }
                 }
+                ["refs", "remotetags", name] => {
+                    // origin/v1 (name) => origin/tags/v1 (remotename in metalog)
+                    let remotename = match name.split_once('/') {
+                        Some((remote, name)) => format!("{}/tags/{}", remote, name),
+                        None => continue,
+                    };
+                    let should_import_to_dag = match existing_remotenames.get(&remotename) {
+                        Some(&existing_id) => existing_id != id,
+                        None => true,
+                    };
+                    if should_import_to_dag {
+                        heads.push((Vertex::copy_from(id.as_ref()), head_opts.clone()));
+                    }
+                    remotenames.insert(remotename, id);
+                }
                 ["refs", "heads", name] => {
                     let should_import_to_dag = match existing_bookmarks.get(*name) {
                         Some(&existing_id) => existing_id == id,
@@ -316,10 +331,11 @@ impl GitSegmentedCommits {
             let new_remotenames = metalog.get_remotenames()?;
 
             for (name, optional_id) in find_changes(&old_remotenames, &new_remotenames) {
-                let ref_name = if let Some(tag) = name.strip_prefix("tags/") {
-                    format!("refs/tags/{}", tag)
-                } else {
-                    format!("refs/remotes/{}", name)
+                let ref_name = match name.split_once("/tags/") {
+                    Some((remote, tag)) if !remote.contains('/') => {
+                        format!("refs/remotetags/{}/{}", remote, tag)
+                    }
+                    _ => format!("refs/remotes/{}", name),
                 };
                 tracing::debug!(ref_name=&ref_name, id=?optional_id, "updating remotename ref");
                 ref_to_change.insert(ref_name, optional_id.map(hgid_to_git_oid));

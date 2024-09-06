@@ -492,9 +492,11 @@ class RefName:
     - refs/tags/v1.0           # tag "v1.0"
     - refs/remotes/origin/foo  # branch "foo" in "origin" (note: no "heads/")
 
-    Note that tags are special. Git writes remote tags to "refs/tags/" and do
-    not keep tags under "refs/remotes". But here we put tags in "refs/remotes"
-    so they can be used like other remote names.
+    Note that tags are special. Git writes remote tags to "refs/tags/<tagname>"
+    and do not keep tags under "refs/remotes". But the tags are more like remote
+    names (immutable, different remotes might have different tags). So we put
+    tags in "refs/remotetags/<remote>/<tagname>" and sync them in metalog as
+    "<remote>/tags/<tagname>".
     """
 
     name: str
@@ -502,11 +504,19 @@ class RefName:
 
     def __str__(self):
         components = ["refs"]
+        name = self.name
         if self.remote:
-            components += ["remotes", self.remote]
-        elif all(not self.name.startswith(p) for p in ("visibleheads/", "tags/")):
+            if self.name.startswith("tags/"):
+                components += ["remotetags", self.remote]
+                name = name[len("tags/") :]
+            else:
+                components += ["remotes", self.remote]
+        elif all(
+            not self.name.startswith(p)
+            for p in ("visibleheads/", "remotetags/", "tags/")
+        ):
             components.append("heads")
-        components.append(self.name)
+        components.append(name)
         return "/".join(components)
 
     def withremote(self, remote):
