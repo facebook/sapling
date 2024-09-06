@@ -39,9 +39,15 @@ export function LoadingDiffStatsView() {
   );
 }
 export function DiffStats({commit}: Props) {
-  const slocInfo = useFetchSignificantLinesOfCode(commit);
+  const {slocInfo, isLoading} = useFetchSignificantLinesOfCode(commit);
   const significantLinesOfCode = slocInfo?.sloc;
   const strictSignificantLinesOfCode = slocInfo?.strictSloc;
+
+  if (isLoading && significantLinesOfCode == null) {
+    return <LoadingDiffStatsView />;
+  } else if (!isLoading && significantLinesOfCode == null) {
+    return null;
+  }
 
   return (
     <ResolvedDiffStatsView
@@ -60,13 +66,16 @@ export function PendingDiffStats({showWarning = false}: {showWarning?: boolean})
 }
 
 export function PendingDiffStatsView({showWarning = false}: {showWarning?: boolean}) {
-  const slocInfo = useFetchPendingSignificantLinesOfCode();
+  const {slocInfo, isLoading} = useFetchPendingSignificantLinesOfCode();
   const significantLinesOfCode = slocInfo?.sloc;
   const strictSignificantLinesOfCode = slocInfo?.strictSloc;
 
-  if (significantLinesOfCode == null) {
+  if (isLoading && significantLinesOfCode == null) {
     return <LoadingDiffStatsView />;
+  } else if (!isLoading && significantLinesOfCode == null) {
+    return null;
   }
+
   return (
     <ResolvedDiffStatsView
       significantLinesOfCode={significantLinesOfCode}

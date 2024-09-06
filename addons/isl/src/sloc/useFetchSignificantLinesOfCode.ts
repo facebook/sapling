@@ -61,7 +61,7 @@ async function fetchSignificantLinesOfCode(
   return slocData;
 }
 
-const commitSloc = atomFamilyWeak((hash: string) => {
+const commitSlocFamily = atomFamilyWeak((hash: string) => {
   return lazyAtom(async get => {
     const commit = get(commitByHash(hash));
     if (commit == null) {
@@ -229,12 +229,13 @@ const pendingChangesSlocAtom = atom(async get => {
   return fetchPendingSloc(get, selectedFiles, pendingRequestId++);
 });
 
-const pendingAmendChangesSloc = loadable(pendingAmendSlocAtom);
-const pendingChangesSloc = loadable(pendingChangesSlocAtom);
+const pendingAmendSlocLoadableAtom = loadable(pendingAmendSlocAtom);
+const pendingChangesSlocLoadableAtom = loadable(pendingChangesSlocAtom);
 
-function useFetchWithPrevious(
-  atom: Atom<Loadable<Promise<SlocInfo | undefined>>>,
-): SlocInfo | undefined {
+function useFetchWithPrevious(atom: Atom<Loadable<Promise<SlocInfo | undefined>>>): {
+  slocInfo: SlocInfo | undefined;
+  isLoading: boolean;
+} {
   const previous = useRef<SlocInfo | undefined>(undefined);
   const results = useAtomValue(atom);
   if (results.state === 'hasError') {
@@ -242,22 +243,33 @@ function useFetchWithPrevious(
   }
   if (results.state === 'loading') {
     //using the previous value in the loading state to avoid flickering / jankiness in the UI
-    return previous.current;
+    return {slocInfo: previous.current, isLoading: true};
   }
 
   previous.current = results.data;
 
-  return results.data;
+  return {slocInfo: results.data, isLoading: false};
 }
 
 export function useFetchSignificantLinesOfCode(commit: CommitInfo) {
-  return useAtomValue(commitSloc(commit.hash));
+  const loadableAtom = loadable(commitSlocFamily(commit.hash));
+  const result = useAtomValue(loadableAtom);
+
+  if (result.state === 'hasError') {
+    throw result.error;
+  }
+
+  if (result.state === 'loading') {
+    return {slocInfo: undefined, isLoading: true};
+  }
+
+  return {slocInfo: result.data, isLoading: false};
 }
 
 export function useFetchPendingSignificantLinesOfCode() {
-  return useFetchWithPrevious(pendingChangesSloc);
+  return useFetchWithPrevious(pendingChangesSlocLoadableAtom);
 }
 
 export function useFetchPendingAmendSignificantLinesOfCode() {
-  return useFetchWithPrevious(pendingAmendChangesSloc);
+  return useFetchWithPrevious(pendingAmendSlocLoadableAtom);
 }

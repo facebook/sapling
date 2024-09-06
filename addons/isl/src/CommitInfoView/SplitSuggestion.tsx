@@ -103,7 +103,8 @@ function SuggestionBanner({
 }
 
 function NewCommitSuggestion() {
-  const pendingSignificantLinesOfCode = useFetchPendingSignificantLinesOfCode()?.strictSloc;
+  const {slocInfo} = useFetchPendingSignificantLinesOfCode() ?? {};
+  const pendingSignificantLinesOfCode = slocInfo?.strictSloc;
 
   if (pendingSignificantLinesOfCode == null) {
     return null;
@@ -125,8 +126,8 @@ function NewCommitSuggestion() {
 }
 
 function AmendSuggestion() {
-  const pendingAmendSignificantLinesOfCode =
-    useFetchPendingAmendSignificantLinesOfCode()?.strictSloc;
+  const {slocInfo} = useFetchPendingAmendSignificantLinesOfCode();
+  const pendingAmendSignificantLinesOfCode = slocInfo?.strictSloc;
 
   if (pendingAmendSignificantLinesOfCode == null) {
     return null;
@@ -149,7 +150,8 @@ function AmendSuggestion() {
 
 function SplitSuggestionImpl({commit}: {commit: CommitInfo}) {
   const mode = useAtomValue(commitMode);
-  const significantLinesOfCode = useFetchSignificantLinesOfCode(commit)?.strictSloc ?? -1;
+  const {slocInfo} = useFetchSignificantLinesOfCode(commit);
+  const significantLinesOfCode = slocInfo?.strictSloc ?? -1;
   const uncommittedChanges = useAtomValue(uncommittedChangesWithPreviews);
 
   // no matter what if the commit is over the threshold, we show the split suggestion
