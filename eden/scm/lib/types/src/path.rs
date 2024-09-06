@@ -84,6 +84,7 @@ pub struct PathComponent(str);
 
 /// The One. The One Character We Use To Separate Paths Into Components.
 pub const SEPARATOR: char = '/';
+const SEPARATOR_BYTE: u8 = SEPARATOR as u8;
 
 #[derive(Error, Debug)]
 pub enum ParseError {
@@ -534,7 +535,7 @@ impl PathComponentBuf {
     /// Constructs an from a `String`. It can fail when the contents of `String` is deemed invalid.
     /// See `PathComponent` for validation rules.
     pub fn from_string(s: String) -> Result<Self, ParseError> {
-        match validate_component(&s) {
+        match validate_component(s.as_bytes()) {
             Ok(()) => Ok(PathComponentBuf(s)),
             Err(e) => Err(ParseError::ValidationError(s, e)),
         }
@@ -594,7 +595,8 @@ impl PathComponent {
     /// Constructs a `PathComponent` from a `str` slice. It will fail when the string does not
     /// respect the `PathComponent` rules.
     pub fn from_str(s: &str) -> Result<&PathComponent, ParseError> {
-        validate_component(s).map_err(|e| ParseError::ValidationError(s.to_string(), e))?;
+        validate_component(s.as_bytes())
+            .map_err(|e| ParseError::ValidationError(s.to_string(), e))?;
         Ok(PathComponent::from_str_unchecked(s))
     }
 
@@ -643,34 +645,61 @@ impl fmt::Display for PathComponent {
     }
 }
 
-fn validate_path(s: &str) -> Result<(), ValidationError> {
+const fn validate_path(s: &str) -> Result<(), ValidationError> {
     if s.is_empty() {
         return Ok(());
     }
-    if s.bytes().next_back() == Some(b'/') {
+
+    let bytes = s.as_bytes();
+    if !bytes.is_empty() && bytes[bytes.len() - 1] == SEPARATOR_BYTE {
         return Err(ValidationError::TrailingSlash);
     }
-    for component in s.split(SEPARATOR) {
-        validate_component(component)?;
+
+    let mut i = 0;
+    let mut start = 0;
+    while i <= bytes.len() {
+        if i == bytes.len() || bytes[i] == SEPARATOR_BYTE {
+            let component = bytes.split_at(start).1.split_at(i - start).0;
+            if let Err(e) = validate_component(component) {
+                return Err(e);
+            }
+            start = i + 1;
+        }
+        i += 1;
     }
+
     Ok(())
 }
 
-fn validate_component(s: &str) -> Result<(), ValidationError> {
-    if s.is_empty() {
-        return Err(InvalidPathComponent::Empty.into());
+const fn validate_component(bytes: &[u8]) -> Result<(), ValidationError> {
+    match bytes.len() {
+        0 => {
+            return Err(ValidationError::InvalidPathComponent(
+                InvalidPathComponent::Empty,
+            ));
+        }
+        1 if bytes[0] == b'.' => {
+            return Err(ValidationError::InvalidPathComponent(
+                InvalidPathComponent::Current,
+            ));
+        }
+        2 if bytes[0] == b'.' && bytes[1] == b'.' => {
+            return Err(ValidationError::InvalidPathComponent(
+                InvalidPathComponent::Parent,
+            ));
+        }
+        _ => {}
     }
-    if s == "." {
-        return Err(InvalidPathComponent::Current.into());
-    }
-    if s == ".." {
-        return Err(InvalidPathComponent::Parent.into());
-    }
-    for b in s.bytes() {
+
+    let mut i = 0;
+    while i < bytes.len() {
+        let b = bytes[i];
         if b == 0u8 || b == 1u8 || b == b'\n' || b == b'\r' || b == b'/' {
             return Err(ValidationError::InvalidByte(b));
         }
+        i += 1;
     }
+
     Ok(())
 }
 
@@ -1130,7 +1159,7 @@ mod tests {
     #[test]
     fn test_validate_component() {
         assert_eq!(
-            format!("{}", validate_component("foo/bar").unwrap_err()),
+            format!("{}", validate_component(b"foo/bar").unwrap_err()),
             "Invalid byte: 47."
         );
         assert_eq!(
@@ -1138,7 +1167,7 @@ mod tests {
             "Failed to validate \"\\n\". Invalid byte: 10."
         );
         assert_eq!(
-            format!("{}", validate_component("").unwrap_err()),
+            format!("{}", validate_component(b"").unwrap_err()),
             "Invalid component: \"\"."
         );
         assert_eq!(
