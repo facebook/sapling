@@ -183,6 +183,7 @@ use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_query_config::ArcSqlQueryConfig;
 use sql_query_config::SqlQueryConfig;
 use sqlphases::SqlPhasesBuilder;
+use stats::prelude::*;
 use streaming_clone::ArcStreamingClone;
 use streaming_clone::StreamingCloneBuilder;
 use synced_commit_mapping::ArcSyncedCommitMapping;
@@ -210,14 +211,30 @@ use zeus_client::ZeusClient;
 const DERIVED_DATA_LEASE: &str = "derived-data-lease";
 const ZEUS_CLIENT_ID: &str = "mononoke";
 
+define_stats! {
+    prefix = "mononoke.repo_factory";
+    cache_miss: dynamic_singleton_counter(
+        "cache.miss.{}",
+        (cache_name: String)
+    ),
+    cache_hit: dynamic_singleton_counter(
+        "cache.hit.{}",
+        (cache_name: String)
+    ),
+}
+
 #[derive(Clone)]
 struct RepoFactoryCache<K: Clone + Eq + Hash, V: Clone> {
+    fb: FacebookInit,
+    name: String,
     cache: Arc<Mutex<HashMap<K, Arc<AsyncOnceCell<V>>>>>,
 }
 
 impl<K: Clone + Eq + Hash, V: Clone> RepoFactoryCache<K, V> {
-    fn new() -> Self {
+    fn new(fb: FacebookInit, name: &str) -> Self {
         RepoFactoryCache {
+            fb,
+            name: name.to_string(),
             cache: Arc::new(Mutex::new(HashMap::new())),
         }
     }
@@ -232,11 +249,13 @@ impl<K: Clone + Eq + Hash, V: Clone> RepoFactoryCache<K, V> {
             match cache.get(key) {
                 Some(cell) => {
                     if let Some(value) = cell.get() {
+                        STATS::cache_hit.increment_value(self.fb, 1, (self.name.clone(),));
                         return Ok(value.clone());
                     }
                     cell.clone()
                 }
                 None => {
+                    STATS::cache_miss.increment_value(self.fb, 1, (self.name.clone(),));
                     let cell = Arc::new(AsyncOnceCell::new());
                     cache.insert(key.clone(), cell.clone());
                     cell
@@ -268,11 +287,11 @@ pub struct RepoFactory {
 impl RepoFactory {
     pub fn new(env: Arc<MononokeEnvironment>) -> RepoFactory {
         RepoFactory {
-            sql_factories: RepoFactoryCache::new(),
-            blobstores: RepoFactoryCache::new(),
-            redacted_blobs: RepoFactoryCache::new(),
+            sql_factories: RepoFactoryCache::new(env.fb, "sql_factories"),
+            blobstores: RepoFactoryCache::new(env.fb, "blobstore"),
+            redacted_blobs: RepoFactoryCache::new(env.fb, "redacted_blobs"),
             #[cfg(fbcode_build)]
-            zelos_clients: RepoFactoryCache::new(),
+            zelos_clients: RepoFactoryCache::new(env.fb, "zelos_clients"),
             blobstore_override: None,
             lease_override: None,
             scrub_handler: default_scrub_handler(),
