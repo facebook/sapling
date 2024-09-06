@@ -10,7 +10,8 @@ use std::collections::BTreeMap;
 
 use anyhow::bail;
 use anyhow::Result;
-use gitcompat::rungit::RunGitOptions;
+use gitcompat::rungit::RepoGit;
+use gitcompat::GitCmd;
 use types::workingcopy_client::CheckoutConflict;
 use types::workingcopy_client::CheckoutMode;
 use types::workingcopy_client::FileStatus;
@@ -88,7 +89,7 @@ impl WorkingCopyClient for edenfs_client::EdenFsClient {
     }
 }
 
-impl WorkingCopyClient for RunGitOptions {
+impl WorkingCopyClient for RepoGit {
     fn get_status(
         &self,
         node: HgId,

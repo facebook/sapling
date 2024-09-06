@@ -19,7 +19,7 @@ use identity::Identity;
 use tracing::debug;
 use types::HgId;
 
-use crate::rungit::RunGitOptions;
+use crate::rungit::GlobalGit;
 use crate::utils::follow_dotgit_path;
 
 /// Initialize Sapling's dotdir inside `.git/`. Write requirements. Update config files from
@@ -66,7 +66,7 @@ pub fn maybe_init_inside_dotgit(root_path: &Path, ident: Identity) -> Result<()>
     {
         debug!("translating git configs");
         // NOTE: At this point no sapling config is loaded. For simplicity, this does not respect `ui.git`.
-        let git = RunGitOptions::from_config(&BTreeMap::<String, String>::new());
+        let git = GlobalGit::from_config(&BTreeMap::<String, String>::new());
         let (user_config, repo_config) = git.translate_git_config()?;
         fs::write(&user_config_path, user_config)?;
         fs::write(&repo_config_path, repo_config)?;

@@ -17,7 +17,8 @@ use std::process::Stdio;
 
 use anyhow::Result;
 use configmodel::Config;
-use gitcompat::rungit::RunGitOptions;
+use gitcompat::BareGit;
+use gitcompat::GitCmd;
 use progress_model::ProgressBar;
 use spawn_ext::CommandError;
 use tracing::debug;
@@ -28,7 +29,7 @@ use types::HgId;
 pub struct GitStore {
     odb: git2::Odb<'static>,
 
-    git: RunGitOptions,
+    git: BareGit,
 
     /// If set, fetch missing objects on demand from the URL.
     fetch_url: Option<String>,
@@ -50,8 +51,7 @@ impl GitStore {
         let git_repo = git2::Repository::open(git_dir)?;
         let odb = git_repo.odb()?;
 
-        let mut git = RunGitOptions::from_config(config);
-        git.set_git_dir(git_repo.path().to_owned());
+        let mut git = BareGit::from_git_dir_and_config(git_dir.to_owned(), config);
 
         // Git's negotiation algorithm works on commit reference level and can add significant
         // overhead if we simply want to fetch trees or blobs.

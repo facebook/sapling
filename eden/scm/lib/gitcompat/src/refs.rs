@@ -13,31 +13,31 @@ use fs_err as fs;
 use tracing::debug;
 use types::HgId;
 
-use crate::rungit::RunGitOptions;
+use crate::rungit::BareGit;
+use crate::rungit::GitCmd;
 
-impl RunGitOptions {
+impl BareGit {
     /// Resolve the hash of Git "HEAD", aka, ".".
     pub fn resolve_head(&self) -> Result<HgId> {
-        // Whether HEAD might be a dancling pointer, like "ref: refs/heads/...".
-        // Used to appromiately detect the "null" case.
-        let mut maybe_dancling = false;
         // Attempt to look at ".git/HEAD" directly for performance.
-        if let Some(git_dir) = self.git_dir.as_ref() {
-            let data = fs::read_to_string(git_dir.join("HEAD"))?;
-            let data = data.trim_end();
-            if let Ok(id) = HgId::from_hex(data.as_bytes()) {
-                debug!("HEAD is a hash: {}", data);
+        let git_dir = self.git_dir();
+        let data = fs::read_to_string(git_dir.join("HEAD"))?;
+        let data = data.trim_end();
+        if let Ok(id) = HgId::from_hex(data.as_bytes()) {
+            debug!("HEAD is a hash: {}", data);
+            return Ok(id);
+        }
+        if let Some(ref_name) = data.strip_prefix("ref: ") {
+            // Attempt to resolve the reference directly by reading files.
+            if let Some(id) = resolve_ref(git_dir, ref_name) {
+                debug!("HEAD is a ref: {} -> {}", ref_name, id);
                 return Ok(id);
             }
-            if let Some(ref_name) = data.strip_prefix("ref: ") {
-                // Attempt to resolve the reference directly by reading files.
-                if let Some(id) = resolve_ref(git_dir, ref_name) {
-                    debug!("HEAD is a ref: {} -> {}", ref_name, id);
-                    return Ok(id);
-                }
-            }
-            maybe_dancling = data.starts_with("ref: refs/heads/");
         }
+
+        // Whether HEAD might be a dancling pointer, like "ref: refs/heads/...".
+        // Used to appromiately detect the "null" case.
+        let maybe_dancling = data.starts_with("ref: refs/heads/");
 
         // Fallback to `git show-ref`, the authentic way to resolve the ref.
         let out = match self.call("show-ref", &["--head", "--hash", "HEAD"]) {

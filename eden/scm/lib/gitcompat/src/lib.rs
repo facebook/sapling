@@ -62,3 +62,9 @@ mod config;
 
 /// Misc functions.
 pub mod utils;
+
+// Re-exports
+pub use crate::rungit::BareGit;
+pub use crate::rungit::GitCmd;
+pub use crate::rungit::GlobalGit;
+pub use crate::rungit::RepoGit;

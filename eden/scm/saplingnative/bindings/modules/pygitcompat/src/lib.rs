@@ -15,7 +15,8 @@ use cpython::*;
 use cpython_ext::convert::ImplInto;
 use cpython_ext::convert::Serde;
 use cpython_ext::ResultPyErrExt;
-use gitcompat::rungit::RunGitOptions;
+use gitcompat::rungit::BareGit as RustBareGit;
+use gitcompat::rungit::GitCmd;
 use pyprocess::Command as PyCommand;
 use pyprocess::ExitStatus as PyExitStatus;
 use pyprocess::Output as PyOutput;
@@ -24,18 +25,15 @@ use types::HgId;
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "gitcompat"].join(".");
     let m = PyModule::new(py, &name)?;
-    m.add_class::<RunGit>(py)?;
+    m.add_class::<BareGit>(py)?;
     Ok(m)
 }
 
-py_class!(pub class RunGit |py| {
-    data inner: RunGitOptions;
+py_class!(pub class BareGit |py| {
+    data inner: RustBareGit;
 
-    def __new__(_cls, config: ImplInto<Arc<dyn Config>>, gitdir: Option<String> = None) -> PyResult<Self> {
-        let mut git = RunGitOptions::from_config(&config.into());
-        if let Some(gitdir) = gitdir {
-            git.set_git_dir(PathBuf::from(gitdir));
-        }
+    def __new__(_cls, gitdir: String, config: ImplInto<Arc<dyn Config>>) -> PyResult<Self> {
+        let git = RustBareGit::from_git_dir_and_config(gitdir.into(), &config.into());
         Self::create_instance(py, git)
     }
 

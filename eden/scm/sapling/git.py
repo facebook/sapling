@@ -1076,7 +1076,7 @@ class Submodule:
         ):
             # dotgit repo, .git/sl not yet initialized.
             # read git HEAD directly.
-            git = bindings.gitcompat.RunGit(self.parentrepo.ui._rcfg, dotgit_path)
+            git = bindings.gitcompat.BareGit(dotgit_path, self.parentrepo.ui._rcfg)
 
             return git.resolve_head()
         else:

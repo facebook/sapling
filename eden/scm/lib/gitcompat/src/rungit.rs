@@ -6,6 +6,8 @@
  */
 
 use std::io;
+use std::ops::Deref;
+use std::ops::DerefMut;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
@@ -18,9 +20,9 @@ use spawn_ext::CommandExt;
 
 use crate::utils::follow_dotgit_path;
 
-/// Options used by `run_git`.
+/// Run `git` outside a repo.
 #[derive(Default, Clone)]
-pub struct RunGitOptions {
+pub struct GlobalGit {
     /// Path to the "git" command.
     pub git_binary: String,
 
@@ -30,17 +32,28 @@ pub struct RunGitOptions {
     /// Whether to use --quiet.
     pub quiet: bool,
 
-    /// The `GIT_DIR`.
-    pub(crate) git_dir: Option<PathBuf>,
-
-    /// cwd used when running commands.
-    root: Option<PathBuf>,
-
     /// Extra Git configs, "foo.bar=baz".
     pub extra_git_configs: Vec<String>,
 }
 
-impl RunGitOptions {
+/// Run `git` in a "bare" git repo, without a working copy.
+pub struct BareGit {
+    /// The `GIT_DIR`.
+    /// This is usually `root/.git`. When `.git` is a "symlink" ("gitdir: ..."),
+    /// this is the "symlink" destination.
+    pub(crate) git_dir: PathBuf,
+    pub(crate) parent: GlobalGit,
+}
+
+/// Run `git` in a "regular" repo with a working copy.
+pub struct RepoGit {
+    /// cwd used when running commands.
+    /// This is the working copy root.
+    root: PathBuf,
+    pub(crate) parent: BareGit,
+}
+
+impl GlobalGit {
     /// Construct from config.
     pub fn from_config(config: &dyn Config) -> Self {
         let (git_binary, verbose, quiet) = (
@@ -58,40 +71,130 @@ impl RunGitOptions {
         }
     }
 
-    /// Update git_dir. Follow "gitdir: " link. Best-effort.
-    pub fn set_git_dir(&mut self, git_dir: PathBuf) {
-        self.root = git_dir.parent().map(|p| p.to_path_buf());
-        self.git_dir = Some(follow_dotgit_path(git_dir));
+    /// Associate with a bare repo.
+    pub fn with_bare(self, git_dir: PathBuf) -> BareGit {
+        BareGit {
+            git_dir: follow_dotgit_path(git_dir),
+            parent: self,
+        }
     }
 
-    pub fn git_dir(&self) -> Option<&Path> {
-        self.git_dir.as_deref()
+    /// Associate with a regular repo.
+    pub fn with_repo(self, root: PathBuf) -> RepoGit {
+        let git_dir = root.join(".git");
+        self.with_bare(git_dir).with_working_copy(root)
+    }
+}
+
+impl BareGit {
+    /// Construct from git_dir (".git" path) and config.
+    pub fn from_git_dir_and_config(git_dir: PathBuf, config: &dyn Config) -> Self {
+        Self {
+            git_dir: follow_dotgit_path(git_dir),
+            parent: GlobalGit::from_config(config),
+        }
     }
 
-    pub fn root(&self) -> Option<&Path> {
-        self.root.as_deref()
+    /// Associate with a working copy.
+    pub fn with_working_copy(self, root: PathBuf) -> RepoGit {
+        RepoGit { root, parent: self }
     }
 
+    /// The bare repo root, usually ".git" or "<name>.git".
+    pub fn git_dir(&self) -> &Path {
+        &self.git_dir
+    }
+}
+
+impl RepoGit {
+    /// Construct from root (parent of ".git") and config.
+    pub fn from_root_and_config(root: PathBuf, config: &dyn Config) -> Self {
+        let git_dir = root.join(".git");
+        Self {
+            root,
+            parent: BareGit::from_git_dir_and_config(git_dir, config),
+        }
+    }
+
+    /// The working copy root, without ".git".
+    pub fn root(&self) -> &Path {
+        &self.root
+    }
+}
+
+impl Deref for BareGit {
+    type Target = GlobalGit;
+
+    fn deref(&self) -> &Self::Target {
+        &self.parent
+    }
+}
+
+impl Deref for RepoGit {
+    type Target = BareGit;
+
+    fn deref(&self) -> &Self::Target {
+        &self.parent
+    }
+}
+
+impl DerefMut for BareGit {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.parent
+    }
+}
+
+impl DerefMut for RepoGit {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.parent
+    }
+}
+
+pub trait GitCmd {
     /// Prepare the `Command` for `git`.
     ///
     /// `cmd_name` is the "main" git command, like "fetch", "bundle crate".
     /// `args` contains the git command arguments.
     /// `opts` provides extra configs, like what is the `git`, verbose, and quiet.
-    pub fn git_cmd(&self, cmd_name: &str, args: &[impl ToString]) -> Command {
-        let args = args.iter().map(ToString::to_string).collect();
-        git_cmd_impl(cmd_name, args, self)
-    }
+    fn git_cmd(&self, cmd_name: &str, args: &[impl ToString]) -> Command;
 
     /// Call `git`. Check exit code. Capture output.
-    pub fn call(&self, cmd_name: &str, args: &[impl ToString]) -> io::Result<Output> {
+    fn call(&self, cmd_name: &str, args: &[impl ToString]) -> io::Result<Output> {
         let mut cmd = self.git_cmd(cmd_name, args);
         cmd.checked_output()
     }
 
     /// Run `git`. Check exit code.
-    pub fn run(&self, cmd_name: &str, args: &[impl ToString]) -> io::Result<ExitStatus> {
+    fn run(&self, cmd_name: &str, args: &[impl ToString]) -> io::Result<ExitStatus> {
         let mut cmd = self.git_cmd(cmd_name, args);
         cmd.checked_run()
+    }
+}
+
+impl GitCmd for GlobalGit {
+    fn git_cmd(&self, cmd_name: &str, args: &[impl ToString]) -> Command {
+        let args = args.iter().map(ToString::to_string).collect();
+        git_cmd_impl(cmd_name, args, self, None, None)
+    }
+}
+
+impl GitCmd for BareGit {
+    fn git_cmd(&self, cmd_name: &str, args: &[impl ToString]) -> Command {
+        let args = args.iter().map(ToString::to_string).collect();
+        git_cmd_impl(cmd_name, args, self, Some(self.git_dir()), None)
+    }
+}
+
+impl GitCmd for RepoGit {
+    fn git_cmd(&self, cmd_name: &str, args: &[impl ToString]) -> Command {
+        let args = args.iter().map(ToString::to_string).collect();
+        git_cmd_impl(
+            cmd_name,
+            args,
+            self,
+            Some(self.git_dir()),
+            Some(self.root()),
+        )
     }
 }
 
@@ -103,7 +206,13 @@ fn is_global_flag(arg: &str) -> bool {
     arg == "--no-optional-locks"
 }
 
-fn git_cmd_impl(cmd_name: &str, args: Vec<String>, opts: &RunGitOptions) -> Command {
+fn git_cmd_impl(
+    cmd_name: &str,
+    args: Vec<String>,
+    opts: &GlobalGit,
+    git_dir: Option<&Path>,
+    root: Option<&Path>,
+) -> Command {
     let mut cmd = Command::new(&opts.git_binary);
 
     // -c foo.bar=baz ...
@@ -113,12 +222,12 @@ fn git_cmd_impl(cmd_name: &str, args: Vec<String>, opts: &RunGitOptions) -> Comm
     }
 
     // --git-dir=...
-    if let Some(git_dir) = &opts.git_dir {
+    if let Some(git_dir) = git_dir {
         cmd.arg(format!("--git-dir={}", git_dir.display()));
         if git_dir.file_name().unwrap_or_default() == ".git" {
             // Run `git` from the repo root. This avoids issues like `git status` being over smart
             // and uses relative paths.
-            if let Some(cwd) = opts.root.as_ref() {
+            if let Some(cwd) = root.as_ref() {
                 cmd.current_dir(cwd);
             }
         }

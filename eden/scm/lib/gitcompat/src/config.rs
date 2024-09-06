@@ -9,9 +9,10 @@ use std::borrow::Cow;
 
 use anyhow::Result;
 
-use crate::rungit::RunGitOptions;
+use crate::rungit::GitCmd;
+use crate::rungit::GlobalGit;
 
-impl RunGitOptions {
+impl GlobalGit {
     /// Translate Git config to Sapling config. Includes remotes, and username.
     /// Return (system-user-level-config, repo-level-config).
     pub fn translate_git_config(&self) -> Result<(String, String)> {
