@@ -23,7 +23,6 @@ use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarksRef;
 use bulk_derivation::BulkDerivation;
-use cacheblob::InProcessLease;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use cross_repo_sync::CommitSyncRepos;
@@ -439,13 +438,11 @@ pub(crate) fn create_small_repo_to_large_repo_commit_syncer(
 
     let repos = CommitSyncRepos::new(small_repo, large_repo, submodule_deps)?;
 
-    let lease = Arc::new(InProcessLease::new());
     Ok(CommitSyncer::new(
         ctx,
         mapping,
         repos,
         live_commit_sync_config,
-        lease,
     ))
 }
 

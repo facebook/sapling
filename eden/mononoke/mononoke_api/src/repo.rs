@@ -346,11 +346,7 @@ async fn maybe_push_redirector<R: MononokeRepo>(
                 base.synced_commit_mapping.clone(),
                 base.target_repo_dbs.clone(),
             )
-            .into_push_redirector(
-                ctx,
-                live_commit_sync_config.clone(),
-                repo.repo_cross_repo().sync_lease().clone(),
-            )
+            .into_push_redirector(ctx, live_commit_sync_config.clone())
             .map_err(|e| MononokeError::InvalidRequest(e.to_string()))?,
         ))
     } else {
@@ -1570,7 +1566,6 @@ impl<R: MononokeRepo> RepoContext<R> {
             self.synced_commit_mapping().clone(),
             commit_sync_repos,
             self.live_commit_sync_config(),
-            self.repo.repo_cross_repo().sync_lease().clone(),
         );
 
         if sync_behaviour == XRepoLookupSyncBehaviour::SyncIfAbsent {

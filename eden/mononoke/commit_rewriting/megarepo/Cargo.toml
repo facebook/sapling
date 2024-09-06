@@ -21,7 +21,6 @@ bonsai_globalrev_mapping = { version = "0.1.0", path = "../../bonsai_globalrev_m
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 changesets_creation = { version = "0.1.0", path = "../../changesets/changesets_creation" }
 clap = "2.34.0"

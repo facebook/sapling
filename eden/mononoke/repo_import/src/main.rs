@@ -31,7 +31,6 @@ use bulk_derivation::BulkDerivation;
 use changesets_creation::save_changesets;
 use cmdlib_cross_repo::repo_provider_from_mononoke_app;
 use context::CoreContext;
-use cross_repo_sync::create_commit_syncer_lease;
 use cross_repo_sync::create_commit_syncers;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
 use cross_repo_sync::get_all_submodule_deps;
@@ -939,8 +938,6 @@ async fn get_pushredirected_vars(
     ),
     Error,
 > {
-    let x_repo_syncer_lease = create_commit_syncer_lease(ctx.fb, env.caching)?;
-
     let large_repo_id = large_repo_config.repoid;
 
     let repo_args = RepoArgs::from_repo_id(large_repo_id.id());
@@ -976,7 +973,6 @@ async fn get_pushredirected_vars(
         submodule_deps,
         mapping.clone(),
         live_commit_sync_config,
-        x_repo_syncer_lease,
     )?;
 
     let large_repo_import_setting =

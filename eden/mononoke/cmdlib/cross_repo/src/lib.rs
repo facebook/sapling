@@ -15,7 +15,6 @@ use anyhow::Error;
 use anyhow::Result;
 use blobstore_factory::MetadataSqlFactory;
 use context::CoreContext;
-use cross_repo_sync::create_commit_syncer_lease;
 use cross_repo_sync::create_commit_syncers;
 use cross_repo_sync::get_all_submodule_deps;
 use cross_repo_sync::RepoProvider;
@@ -68,9 +67,6 @@ async fn create_commit_syncers_from_app_impl<R: CrossRepo>(
     let common_config =
         live_commit_sync_config.get_common_config(source_repo.0.repo_identity().id())?;
 
-    let caching = app.environment().caching;
-    let x_repo_syncer_lease = create_commit_syncer_lease(app.fb, caching)?;
-
     let repo_provider = repo_provider_from_mononoke_app(app);
 
     let source_repo_arc = Arc::new(source_repo.0.clone());
@@ -103,7 +99,6 @@ async fn create_commit_syncers_from_app_impl<R: CrossRepo>(
         submodule_deps,
         mapping,
         live_commit_sync_config,
-        x_repo_syncer_lease,
     )
 }
 

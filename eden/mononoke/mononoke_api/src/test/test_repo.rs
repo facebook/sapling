@@ -7,14 +7,12 @@
 
 use std::collections::HashMap;
 use std::str::FromStr;
-use std::sync::Arc;
 
 use anyhow::Error;
 use anyhow::Result;
 use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use bytes::Bytes;
-use cacheblob::InProcessLease;
 use chrono::FixedOffset;
 use chrono::TimeZone;
 use cross_repo_sync::update_mapping_with_version;
@@ -822,7 +820,6 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
         largerepo.synced_commit_mapping().clone(),
         commit_sync_repos,
         largerepo.live_commit_sync_config(),
-        Arc::new(InProcessLease::new()),
     );
 
     update_mapping_with_version(

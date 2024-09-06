@@ -19,7 +19,6 @@ use anyhow::Result;
 use blobstore::Loadable;
 use bookmark_renaming::BookmarkRenamer;
 use bookmarks::BookmarkKey;
-use cacheblob::InProcessLease;
 use cacheblob::LeaseOps;
 use commit_transformation::upload_commits;
 use context::CoreContext;
@@ -97,7 +96,6 @@ pub struct CommitSyncer<M, R> {
     pub repos: CommitSyncRepos<R>,
     pub live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     pub scuba_sample: MononokeScubaSampleBuilder,
-    pub x_repo_sync_lease: Arc<dyn LeaseOps>,
 }
 
 impl<M, R> fmt::Debug for CommitSyncer<M, R>
@@ -125,15 +123,8 @@ where
         mapping: M,
         repos: CommitSyncRepos<R>,
         live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
-        lease: Arc<dyn LeaseOps>,
     ) -> Self {
-        Self::new_with_live_commit_sync_config_impl(
-            ctx,
-            mapping,
-            repos,
-            live_commit_sync_config,
-            lease,
-        )
+        Self::new_with_live_commit_sync_config_impl(ctx, mapping, repos, live_commit_sync_config)
     }
 
     pub fn new_with_live_commit_sync_config(
@@ -142,13 +133,7 @@ where
         repos: CommitSyncRepos<R>,
         live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     ) -> Self {
-        Self::new_with_live_commit_sync_config_impl(
-            ctx,
-            mapping,
-            repos,
-            live_commit_sync_config,
-            Arc::new(InProcessLease::new()),
-        )
+        Self::new_with_live_commit_sync_config_impl(ctx, mapping, repos, live_commit_sync_config)
     }
 
     fn new_with_live_commit_sync_config_impl(
@@ -156,7 +141,6 @@ where
         mapping: M,
         repos: CommitSyncRepos<R>,
         live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
-        x_repo_sync_lease: Arc<dyn LeaseOps>,
     ) -> Self {
         let scuba_sample = reporting::get_scuba_sample(
             ctx,
@@ -169,7 +153,6 @@ where
             repos,
             live_commit_sync_config,
             scuba_sample,
-            x_repo_sync_lease,
         }
     }
 
@@ -181,7 +164,6 @@ where
             repos: self.repos.reverse()?,
             live_commit_sync_config: self.live_commit_sync_config.clone(),
             scuba_sample: self.scuba_sample.clone(),
-            x_repo_sync_lease: self.x_repo_sync_lease.clone(),
         })
     }
 
@@ -415,6 +397,10 @@ where
 
     pub fn get_mapping(&self) -> &M {
         &self.mapping
+    }
+
+    pub fn get_x_repo_sync_lease(&self) -> &Arc<dyn LeaseOps> {
+        self.repos.get_x_repo_sync_lease()
     }
 
     pub async fn get_movers_by_version(
@@ -780,7 +766,7 @@ where
             if xrepo_disable_commit_sync_lease || disable_lease {
                 sync().await?;
             } else {
-                run_with_lease(ctx, &self.x_repo_sync_lease, lease_key, checker, sync).await?;
+                run_with_lease(ctx, self.get_x_repo_sync_lease(), lease_key, checker, sync).await?;
             }
         }
 

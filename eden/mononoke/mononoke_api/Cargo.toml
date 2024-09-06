@@ -110,7 +110,6 @@ xdiff = { version = "0.1.0", path = "../../scm/lib/xdiff" }
 
 [dev-dependencies]
 assert_matches = "1.5"
-cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
 commit_graph_testlib = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph_testlib" }
 cross_repo_sync_test_utils = { version = "0.1.0", path = "../commit_rewriting/cross_repo_sync/test_utils" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

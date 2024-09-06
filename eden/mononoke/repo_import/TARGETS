@@ -12,7 +12,6 @@ rust_binary(
         "//common/rust/shed/cached_config:cached_config",
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/blobstore:blobstore",
-        "//eden/mononoke/blobstore:cacheblob",
         "//eden/mononoke/common/rendezvous:rendezvous",
         "//eden/mononoke/common/sql_construct:sql_construct",
         "//eden/mononoke/derived_data:derived_data_manager",

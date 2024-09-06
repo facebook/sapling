@@ -19,7 +19,6 @@ use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
-use cacheblob::InProcessLease;
 use changesets_creation::save_changesets;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
@@ -333,13 +332,11 @@ fn create_small_to_large_commit_syncer(
     let submodule_deps = SubmoduleDeps::ForSync(HashMap::new());
     let repos = CommitSyncRepos::new(small_repo, large_repo, submodule_deps)?;
 
-    let lease = Arc::new(InProcessLease::new());
     Ok(CommitSyncer::new(
         ctx,
         mapping,
         repos,
         live_commit_sync_config,
-        lease,
     ))
 }
 
@@ -354,13 +351,11 @@ fn create_large_to_small_commit_syncer(
     let submodule_deps = SubmoduleDeps::NotNeeded;
     let repos = CommitSyncRepos::new(large_repo, small_repo, submodule_deps)?;
 
-    let lease = Arc::new(InProcessLease::new());
     Ok(CommitSyncer::new(
         ctx,
         mapping,
         repos,
         live_commit_sync_config,
-        lease,
     ))
 }
 

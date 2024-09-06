@@ -42,7 +42,6 @@ use cmdlib_x_repo::create_commit_syncers_from_matches;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
 use context::CoreContext;
-use cross_repo_sync::create_commit_syncer_lease;
 use cross_repo_sync::create_commit_syncers;
 use cross_repo_sync::find_bookmark_diff;
 use cross_repo_sync::verify_working_copy;
@@ -244,16 +243,8 @@ pub async fn subcommand_crossrepo<'a>(
             let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
                 Arc::new(live_commit_sync_config);
 
-            let caching = matches.caching();
-            let x_repo_syncer_lease = create_commit_syncer_lease(ctx.fb, caching)?;
-
-            let commit_syncer = CommitSyncer::new(
-                &ctx,
-                mapping,
-                commit_sync_repos,
-                live_commit_sync_config,
-                x_repo_syncer_lease,
-            );
+            let commit_syncer =
+                CommitSyncer::new(&ctx, mapping, commit_sync_repos, live_commit_sync_config);
             let hash = sub_sub_m.value_of(HASH_ARG).unwrap().to_owned();
             subcommand_map(ctx, commit_syncer, hash).await
         }
@@ -317,7 +308,6 @@ pub async fn subcommand_crossrepo<'a>(
                 mapping,
                 mode,
                 Arc::new(live_commit_sync_config),
-                matches,
             )
             .await
         }
@@ -398,7 +388,6 @@ async fn run_pushredirection_subcommand<'a>(
                 target_repo,
                 live_commit_sync_config.clone(),
                 mapping,
-                matches,
             )
             .await?;
 
@@ -456,7 +445,6 @@ async fn run_pushredirection_subcommand<'a>(
                 target_repo,
                 live_commit_sync_config.clone(),
                 mapping,
-                matches,
             )
             .await?;
 
@@ -688,7 +676,6 @@ async fn run_insert_subcommand<'a>(
         target_repo.clone(),
         live_commit_sync_config.clone(),
         mapping.clone(),
-        matches,
     )
     .await?;
 
@@ -1168,7 +1155,6 @@ async fn subcommand_verify_bookmarks(
     mapping: SqlSyncedCommitMapping,
     run_mode: VerifyRunMode,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
-    matches: &MononokeMatches<'_>,
 ) -> Result<(), SubcommandError> {
     let common_config =
         live_commit_sync_config.get_common_config(target_repo.repo_identity().id())?;
@@ -1178,7 +1164,6 @@ async fn subcommand_verify_bookmarks(
         target_repo.clone(),
         live_commit_sync_config,
         mapping.clone(),
-        matches,
     )
     .await?;
 
@@ -1601,11 +1586,7 @@ async fn get_syncers<'a>(
     target_repo: Repo,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     mapping: SqlSyncedCommitMapping,
-    matches: &'a MononokeMatches<'a>,
 ) -> Result<Syncers<SqlSyncedCommitMapping, Repo>, Error> {
-    let caching = matches.caching();
-    let x_repo_sync_lease = create_commit_syncer_lease(ctx.fb, caching)?;
-
     let common_sync_config =
         live_commit_sync_config.get_common_config(source_repo.repo_identity().id())?;
 
@@ -1639,7 +1620,6 @@ async fn get_syncers<'a>(
         submodule_deps,
         mapping,
         live_commit_sync_config,
-        x_repo_sync_lease,
     )
 }
 
@@ -1649,7 +1629,6 @@ async fn get_large_to_small_commit_syncer<'a>(
     target_repo: Repo,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     mapping: SqlSyncedCommitMapping,
-    matches: &'a MononokeMatches<'a>,
 ) -> Result<CommitSyncer<SqlSyncedCommitMapping, Repo>, Error> {
     Ok(get_syncers(
         ctx,
@@ -1657,7 +1636,6 @@ async fn get_large_to_small_commit_syncer<'a>(
         target_repo,
         live_commit_sync_config,
         mapping,
-        matches,
     )
     .await?
     .large_to_small)
@@ -1695,7 +1673,6 @@ mod test {
 
     use ascii::AsciiString;
     use bookmarks::BookmarkKey;
-    use cacheblob::InProcessLease;
     use commit_graph::CommitGraphRef;
     use cross_repo_sync::find_bookmark_diff;
     use fixtures::set_bookmark;
@@ -1913,7 +1890,6 @@ mod test {
 
         lv_cfg_src.add_common_config(common_config);
         lv_cfg_src.add_config(current_version_config);
-        let x_repo_sync_lease = Arc::new(InProcessLease::new());
 
         create_commit_syncers(
             &ctx,
@@ -1922,7 +1898,6 @@ mod test {
             SubmoduleDeps::ForSync(HashMap::new()),
             mapping,
             live_commit_sync_config,
-            x_repo_sync_lease,
         )
     }
 }

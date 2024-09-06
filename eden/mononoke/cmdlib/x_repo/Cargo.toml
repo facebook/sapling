@@ -10,7 +10,6 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.86"
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
-cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
 cmdlib = { version = "0.1.0", path = ".." }
 context = { version = "0.1.0", path = "../../server/context" }
 cross_repo_sync = { version = "0.1.0", path = "../../commit_rewriting/cross_repo_sync" }

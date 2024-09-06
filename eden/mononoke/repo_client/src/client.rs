@@ -912,11 +912,9 @@ impl<R: Repo> RepoClient<R> {
                 ctx.logger(),
                 "live_commit_sync_config says push redirection is on"
             );
-            Ok(Some(push_redirector_args.into_push_redirector(
-                ctx,
-                live_commit_sync_config,
-                self.repo.repo_cross_repo().sync_lease().clone(),
-            )?))
+            Ok(Some(
+                push_redirector_args.into_push_redirector(ctx, live_commit_sync_config)?,
+            ))
         } else {
             debug!(
                 ctx.logger(),

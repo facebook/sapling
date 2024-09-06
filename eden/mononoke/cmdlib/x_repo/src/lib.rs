@@ -15,11 +15,9 @@ use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
 use blobstore_factory::MetadataSqlFactory;
-use cacheblob::LeaseOps;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use context::CoreContext;
-use cross_repo_sync::create_commit_syncer_lease;
 use cross_repo_sync::create_commit_syncers;
 use cross_repo_sync::get_all_submodule_deps;
 use cross_repo_sync::CommitSyncRepos;
@@ -55,9 +53,6 @@ pub async fn create_commit_syncers_from_matches<R: Repo>(
     let common_config =
         live_commit_sync_config.get_common_config(source_repo.0.repo_identity().id())?;
 
-    let caching = matches.caching();
-    let x_repo_syncer_lease = create_commit_syncer_lease(ctx.fb, caching)?;
-
     let repo_provider = repo_provider_from_matches(ctx, matches);
 
     let submodule_deps = get_all_submodule_deps(
@@ -91,7 +86,6 @@ pub async fn create_commit_syncers_from_matches<R: Repo>(
         submodule_deps,
         mapping,
         live_commit_sync_config,
-        x_repo_syncer_lease,
     )
 }
 
@@ -211,9 +205,6 @@ async fn create_commit_syncer_from_matches_impl<R: Repo>(
         (source_repo, target_repo)
     };
 
-    let caching = matches.caching();
-    let x_repo_syncer_lease = create_commit_syncer_lease(ctx.fb, caching)?;
-
     let repo_provider = repo_provider_from_matches(ctx, matches);
 
     let submodule_deps = get_all_submodule_deps(
@@ -231,7 +222,6 @@ async fn create_commit_syncer_from_matches_impl<R: Repo>(
         submodule_deps,
         mapping,
         live_commit_sync_config,
-        x_repo_syncer_lease,
     )
     .await
 }
@@ -243,16 +233,9 @@ async fn create_commit_syncer<'a, R: Repo>(
     submodule_deps: SubmoduleDeps<R>,
     mapping: SqlSyncedCommitMapping,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
-    x_repo_syncer_lease: Arc<dyn LeaseOps>,
 ) -> Result<CommitSyncer<SqlSyncedCommitMapping, R>, Error> {
     let repos = CommitSyncRepos::new(source_repo.0, target_repo.0, submodule_deps)?;
-    let commit_syncer = CommitSyncer::new(
-        ctx,
-        mapping,
-        repos,
-        live_commit_sync_config,
-        x_repo_syncer_lease,
-    );
+    let commit_syncer = CommitSyncer::new(ctx, mapping, repos, live_commit_sync_config);
     Ok(commit_syncer)
 }
 

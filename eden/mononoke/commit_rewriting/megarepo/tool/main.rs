@@ -33,7 +33,6 @@ use cmdlib_x_repo::repo_provider_from_matches;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
 use context::CoreContext;
-use cross_repo_sync::create_commit_syncer_lease;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
 use cross_repo_sync::get_all_submodule_deps;
 use cross_repo_sync::verify_working_copy_with_version;
@@ -343,9 +342,6 @@ async fn run_sync_diamond_merge<'a>(
     .await
     .context("building live_commit_sync_config")?;
 
-    let caching = matches.caching();
-    let x_repo_syncer_lease = create_commit_syncer_lease(ctx.fb, caching)?;
-
     let live_commit_sync_config = Arc::new(live_commit_sync_config);
 
     let repo_provider = repo_provider_from_matches(ctx, matches);
@@ -369,7 +365,6 @@ async fn run_sync_diamond_merge<'a>(
         mapping,
         bookmark,
         live_commit_sync_config,
-        x_repo_syncer_lease,
     )
     .await
     .map(|_| ())

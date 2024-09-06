@@ -23,7 +23,6 @@ use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
-use cacheblob::LeaseOps;
 use cloned::cloned;
 use commit_graph::CommitGraphRef;
 use commit_transformation::upload_commits;
@@ -121,7 +120,6 @@ pub async fn do_sync_diamond_merge(
     mapping: SqlSyncedCommitMapping,
     onto_bookmark: BookmarkKey,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
-    lease: Arc<dyn LeaseOps>,
 ) -> Result<(), Error> {
     info!(
         ctx.logger(),
@@ -144,7 +142,6 @@ pub async fn do_sync_diamond_merge(
         submodule_deps,
         mapping,
         live_commit_sync_config,
-        lease,
     )?;
 
     let small_root = find_root(&new_branch)?;

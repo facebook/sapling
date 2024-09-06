@@ -21,7 +21,6 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogId;
 use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::Freshness;
-use cacheblob::LeaseOps;
 use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncers;
@@ -115,7 +114,6 @@ impl<R: Repo> PushRedirectorArgs<R> {
         self,
         ctx: &CoreContext,
         live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
-        x_repo_sync_lease: Arc<dyn LeaseOps>,
     ) -> Result<PushRedirector<R>, Error> {
         // TODO: This function needs to be extended
         //       and query configerator for the fresh
@@ -142,7 +140,6 @@ impl<R: Repo> PushRedirectorArgs<R> {
             submodule_deps,
             synced_commit_mapping,
             live_commit_sync_config,
-            x_repo_sync_lease,
         )?;
 
         let small_to_large_commit_syncer = syncers.small_to_large;

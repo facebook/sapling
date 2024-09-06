@@ -21,7 +21,6 @@ mod tests {
     use bookmarks::BookmarksRef;
     use bookmarks::Freshness;
     use bulk_derivation::BulkDerivation;
-    use cacheblob::InProcessLease;
     use cached_config::ConfigStore;
     use cached_config::ModificationTime;
     use cached_config::TestSource;
@@ -665,7 +664,6 @@ mod tests {
             SubmoduleDeps::ForSync(HashMap::new()),
             mapping.clone(),
             live_commit_sync_config.clone(),
-            Arc::new(InProcessLease::new()),
         )?;
 
         let large_repo_setting_1 =
@@ -694,7 +692,6 @@ mod tests {
             SubmoduleDeps::ForSync(HashMap::new()),
             mapping.clone(),
             live_commit_sync_config,
-            Arc::new(InProcessLease::new()),
         )?;
 
         let large_repo_setting_2 =
@@ -754,7 +751,6 @@ mod tests {
             SubmoduleDeps::ForSync(HashMap::new()),
             mapping.clone(),
             live_commit_sync_config,
-            Arc::new(InProcessLease::new()),
         )?;
 
         let large_to_small_syncer = syncers.large_to_small;
@@ -931,7 +927,6 @@ mod tests {
             SubmoduleDeps::ForSync(HashMap::new()),
             mapping.clone(),
             live_commit_sync_config,
-            Arc::new(InProcessLease::new()),
         )?;
 
         let large_to_small_syncer = syncers.large_to_small;
@@ -1025,7 +1020,6 @@ mod tests {
             SubmoduleDeps::ForSync(HashMap::new()),
             mapping.clone(),
             live_commit_sync_config,
-            Arc::new(InProcessLease::new()),
         )?;
 
         let large_to_small_syncer = syncers.large_to_small;

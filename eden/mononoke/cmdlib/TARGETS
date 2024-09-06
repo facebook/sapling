@@ -129,7 +129,6 @@ rust_library(
         ":cmdlib",
         "//common/rust/shed/facet:facet",
         "//eden/mononoke/blobstore:blobstore_factory",
-        "//eden/mononoke/blobstore:cacheblob",
         "//eden/mononoke/commit_rewriting/cross_repo_sync:cross_repo_sync",
         "//eden/mononoke/commit_rewriting/live_commit_sync_config:live_commit_sync_config",
         "//eden/mononoke/commit_rewriting/synced_commit_mapping:synced_commit_mapping",

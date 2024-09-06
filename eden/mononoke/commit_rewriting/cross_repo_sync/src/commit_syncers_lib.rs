@@ -833,6 +833,10 @@ impl<R: Repo> CommitSyncRepos<R> {
             CommitSyncRepos::SmallToLarge { .. } => CommitSyncDirection::SmallToLarge,
         }
     }
+
+    pub(crate) fn get_x_repo_sync_lease(&self) -> &Arc<dyn LeaseOps> {
+        self.get_large_repo().repo_cross_repo().sync_lease()
+    }
 }
 
 /// Get the direction of the sync based on the common commit sync config.
@@ -1016,7 +1020,6 @@ pub fn create_commit_syncers<M, R>(
     submodule_deps: SubmoduleDeps<R>,
     mapping: M,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
-    x_repo_sync_lease: Arc<dyn LeaseOps>,
 ) -> Result<Syncers<M, R>, Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
@@ -1035,14 +1038,12 @@ where
         mapping.clone(),
         large_to_small_commit_sync_repos,
         live_commit_sync_config.clone(),
-        x_repo_sync_lease.clone(),
     );
     let small_to_large_commit_syncer = CommitSyncer::new(
         ctx,
         mapping,
         small_to_large_commit_sync_repos,
         live_commit_sync_config,
-        x_repo_sync_lease,
     );
 
     Ok(Syncers {
