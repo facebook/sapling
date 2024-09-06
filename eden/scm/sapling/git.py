@@ -755,11 +755,11 @@ def push(repo, dest, pushnode, to, force=False):
     url, remote = urlremote(repo.ui, dest)
     refname = RefName(name=to)
     refspec = "%s:%s" % (fromspec, refname)
-    ret = rungit(repo, ["push", url, refspec])
-    # update remotenames
-    if ret == 0:
-        name = refname.withremote(remote).remotename
-        with repo.lock(), repo.transaction("push"):
+    with repo.lock(), repo.transaction("push"):
+        ret = rungit(repo, ["push", url, refspec])
+        # update remotenames
+        if ret == 0:
+            name = refname.withremote(remote).remotename
             metalog = repo.metalog()
             namenodes = bookmod.decoderemotenames(metalog["remotenames"])
             if pushnode is None:
