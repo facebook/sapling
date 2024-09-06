@@ -357,7 +357,6 @@ async fn run_sync_diamond_merge<'a>(
         source_repo_arc.clone(),
         target_repo_arc.clone(),
         repo_provider,
-        live_commit_sync_config.clone(),
     )
     .await?;
 

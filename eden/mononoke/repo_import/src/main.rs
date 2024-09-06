@@ -963,14 +963,8 @@ async fn get_pushredirected_vars(
     let repo_arc = Arc::new(repo.clone());
     let large_repo_arc = Arc::new(large_repo.clone());
 
-    let submodule_deps = get_all_submodule_deps(
-        ctx,
-        repo_arc,
-        large_repo_arc,
-        repo_provider,
-        live_commit_sync_config.clone(),
-    )
-    .await?;
+    let submodule_deps =
+        get_all_submodule_deps(ctx, repo_arc, large_repo_arc, repo_provider).await?;
 
     let mapping = open_sql::<SqlSyncedCommitMappingBuilder>(ctx.fb, repo.repo_id(), configs, env)
         .await?

@@ -28,7 +28,6 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use git_types::ObjectKind;
 use itertools::Itertools;
-use live_commit_sync_config::LiveCommitSyncConfig;
 use manifest::bonsai_diff;
 use manifest::BonsaiDiffFileChange;
 use manifest::Entry;
@@ -503,26 +502,15 @@ pub async fn get_all_submodule_deps<R>(
     source_repo: Arc<R>,
     target_repo: Arc<R>,
     repo_provider: RepoProvider<'_, R>,
-    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<SubmoduleDeps<R>>
 where
     R: Repo,
 {
-    let source_repo_deps = get_all_possible_repo_submodule_deps(
-        ctx,
-        source_repo,
-        repo_provider.clone(),
-        live_commit_sync_config.clone(),
-    )
-    .await?;
+    let source_repo_deps =
+        get_all_possible_repo_submodule_deps(ctx, source_repo, repo_provider.clone()).await?;
 
-    let target_repo_deps = get_all_possible_repo_submodule_deps(
-        ctx,
-        target_repo,
-        repo_provider,
-        live_commit_sync_config,
-    )
-    .await?;
+    let target_repo_deps =
+        get_all_possible_repo_submodule_deps(ctx, target_repo, repo_provider).await?;
 
     let final_submodule_deps = match (source_repo_deps.dep_map(), target_repo_deps.dep_map()) {
         (Some(dep_map), None) => SubmoduleDeps::ForSync(dep_map.clone()),
@@ -554,14 +542,15 @@ async fn get_all_possible_repo_submodule_deps<R>(
     ctx: &CoreContext,
     repo: Arc<R>,
     repo_provider: RepoProvider<'_, R>,
-    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<SubmoduleDeps<R>>
 where
     R: Repo,
 {
     let source_repo_id = repo.repo_identity().id();
 
-    let source_repo_sync_configs = live_commit_sync_config
+    let source_repo_sync_configs = repo
+        .repo_cross_repo()
+        .live_commit_sync_config()
         .get_all_commit_sync_config_versions(source_repo_id)
         .await?;
 

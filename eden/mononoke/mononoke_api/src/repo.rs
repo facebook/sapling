@@ -1547,11 +1547,6 @@ impl<R: MononokeRepo> RepoContext<R> {
         let (_small_repo, _large_repo) =
             get_small_and_large_repos(self.repo.as_ref(), other.repo.as_ref(), &common_config)?;
 
-        let live_commit_sync_config = self
-            .repo
-            .repo_cross_repo()
-            .live_commit_sync_config()
-            .clone();
         let repo_provider: RepoProvider<'a, R> = Arc::new(move |repo_id| {
             Box::pin({
                 let repos = self.repos.clone();
@@ -1570,7 +1565,6 @@ impl<R: MononokeRepo> RepoContext<R> {
             self.repo.clone(),
             other.repo.clone(),
             repo_provider,
-            live_commit_sync_config,
         )
         .await?;
 

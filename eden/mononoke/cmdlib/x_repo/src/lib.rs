@@ -65,7 +65,6 @@ pub async fn create_commit_syncers_from_matches<R: Repo>(
         Arc::new(source_repo.0.clone()),
         Arc::new(target_repo.0.clone()),
         repo_provider,
-        live_commit_sync_config.clone(),
     )
     .await?;
 
@@ -222,7 +221,6 @@ async fn create_commit_syncer_from_matches_impl<R: Repo>(
         Arc::new(source_repo.0.clone()),
         Arc::new(target_repo.0.clone()),
         repo_provider,
-        live_commit_sync_config.clone(),
     )
     .await?;
 

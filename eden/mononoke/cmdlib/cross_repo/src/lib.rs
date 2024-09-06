@@ -76,14 +76,8 @@ async fn create_commit_syncers_from_app_impl<R: CrossRepo>(
     let source_repo_arc = Arc::new(source_repo.0.clone());
     let target_repo_arc = Arc::new(target_repo.0.clone());
 
-    let submodule_deps = get_all_submodule_deps(
-        ctx,
-        source_repo_arc,
-        target_repo_arc,
-        repo_provider,
-        live_commit_sync_config.clone(),
-    )
-    .await?;
+    let submodule_deps =
+        get_all_submodule_deps(ctx, source_repo_arc, target_repo_arc, repo_provider).await?;
 
     let large_repo_id = common_config.large_repo_id;
     let source_repo_id = source_repo.0.repo_identity().id();
