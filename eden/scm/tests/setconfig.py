@@ -13,10 +13,11 @@ if os.path.exists(".hg"):
     hgrcpath = ".hg/hgrc"
 elif os.path.exists(".sl"):
     hgrcpath = ".sl/config"
-else:
-    hgrcpath = os.getenv("HGRCPATH")
+elif hgrcpath := os.getenv("HGRCPATH"):
     if os.pathsep in hgrcpath:
         hgrcpath = hgrcpath.split(os.pathsep)[-1]
+else:
+    raise Exception("No hgrcpath found")
 
 content = ""
 
