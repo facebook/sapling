@@ -108,6 +108,7 @@ pub struct GitSegmentedCommits {
     dag: GitDag,
     dag_path: PathBuf,
     git: BareGit,
+    is_dotgit: bool,
     // Read from config
     config_hoist: Option<Text>,
     config_selective_pull_default: HashSet<String>,
@@ -116,7 +117,12 @@ pub struct GitSegmentedCommits {
 impl DagCommits for GitSegmentedCommits {}
 
 impl GitSegmentedCommits {
-    pub fn new(git_dir: &Path, dag_dir: &Path, config: &dyn Config) -> Result<Self> {
+    pub fn new(
+        git_dir: &Path,
+        dag_dir: &Path,
+        config: &dyn Config,
+        is_dotgit: bool,
+    ) -> Result<Self> {
         let git_repo = git2::Repository::open(git_dir)?;
         let dag = GitDag::open(dag_dir, git_dir)?;
         let dag_path = dag_dir.to_path_buf();
@@ -129,6 +135,7 @@ impl GitSegmentedCommits {
             git_repo: Arc::new(Mutex::new(git_repo)),
             dag,
             dag_path,
+            is_dotgit,
             git,
             config_hoist,
             config_selective_pull_default,
@@ -140,12 +147,12 @@ impl GitSegmentedCommits {
     /// This is the reverse of `metalog_to_git_references`.
     /// Intended to be used at "open" time and at the start of a transaction.
     ///
-    /// If `is_dotgit` is true, then the sync rules are a bit different:
+    /// If `self.is_dotgit` is true, then the sync rules are a bit different:
     /// - Bookmarks: if name matches a remote branch, or "main", "master", they
     ///   will be skipped.
     /// - Remote names: if they don't already exist in metalog, and don't match
     ///   the remote "HEAD", they will be skipped.
-    pub fn import_from_git(&mut self, metalog: &mut MetaLog, is_dotgit: bool) -> Result<()> {
+    pub fn import_from_git(&mut self, metalog: &mut MetaLog) -> Result<()> {
         tracing::info!("updating metalog from git refs");
 
         let matcher = GitRefMatcher::new();
@@ -165,7 +172,7 @@ impl GitSegmentedCommits {
         let mut heads = Vec::new();
         let head_opts = VertexOptions::default();
 
-        let remote_name_filter: GitRefFilter = if is_dotgit {
+        let remote_name_filter: GitRefFilter = if self.is_dotgit {
             GitRefFilter::new_for_dotgit(
                 &refs,
                 &existing_remotenames,
