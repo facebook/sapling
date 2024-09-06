@@ -7,11 +7,9 @@
 
 use std::collections::BTreeMap;
 use std::collections::HashSet;
+use std::sync::LazyLock;
 
 use anyhow::Result;
-use configmodel::Config;
-use configmodel::ConfigExt;
-use configmodel::Text;
 use gitcompat::ReferenceValue;
 use types::HgId;
 
@@ -23,9 +21,9 @@ pub(crate) struct GitRefFilter<'a> {
     // e.g. "origin/main"
     existing_remotenames: &'a BTreeMap<String, HgId>,
     // e.g. "main", without "origin".
-    selective_pull_default: HashSet<String>,
+    selective_pull_default: &'a HashSet<String>,
     // e.g. "origin"
-    hoist: Text,
+    hoist: &'a str,
     is_dotgit: bool,
 }
 
@@ -34,30 +32,33 @@ impl<'a> GitRefFilter<'a> {
     pub(crate) fn new_for_dotgit(
         refs: &'a BTreeMap<String, ReferenceValue>,
         existing_remotenames: &'a BTreeMap<String, HgId>,
-        config: &dyn Config,
+        hoist: Option<&'a str>,
+        selective_pull_default: &'a HashSet<String>,
     ) -> Result<Self> {
-        Self::new(refs, existing_remotenames, config, true)
+        Self::new(
+            refs,
+            existing_remotenames,
+            hoist.unwrap_or("origin"),
+            selective_pull_default,
+            true,
+        )
     }
 
     /// Initialize for non-dotgit use-case.
     pub(crate) fn new_for_dotsl(refs: &'a BTreeMap<String, ReferenceValue>) -> Result<Self> {
         // No need to use "existing_remotenames" for non-dotgit.
-        let config = BTreeMap::<&str, &str>::new();
-        static EMPTY: BTreeMap<String, HgId> = BTreeMap::new();
-        Self::new(refs, &EMPTY, &config, false)
+        static EMPTY_MAP: BTreeMap<String, HgId> = BTreeMap::new();
+        static EMPTY_SET: LazyLock<HashSet<String>> = LazyLock::new(Default::default);
+        Self::new(refs, &EMPTY_MAP, "remote", &EMPTY_SET, false)
     }
 
     fn new(
         refs: &'a BTreeMap<String, ReferenceValue>,
         existing_remotenames: &'a BTreeMap<String, HgId>,
-        config: &dyn Config,
+        hoist: &'a str,
+        selective_pull_default: &'a HashSet<String>,
         is_dotgit: bool,
     ) -> Result<Self> {
-        let hoist = match config.get("remotenames", "hoist") {
-            Some(hoist) => hoist,
-            None => Text::from_static("origin"),
-        };
-
         // e.g. "origin/main"
         let mut head_remotenames = HashSet::new();
         // Select "default" remote branches. Some remote repos might have
@@ -79,10 +80,6 @@ impl<'a> GitRefFilter<'a> {
                 }
             }
         }
-
-        // e.g. "main"
-        let selective_pull_default: HashSet<String> =
-            config.get_or_default("remotenames", "selectivepulldefault")?;
 
         Ok(Self {
             refs,
@@ -154,10 +151,11 @@ mod tests {
         let mut existing_remotenames = BTreeMap::new();
         existing_remotenames.insert("origin/b2".to_string(), *HgId::null_id());
 
-        let mut config = BTreeMap::new();
-        config.insert("remotenames.selectivepulldefault", "b3");
+        let mut selected = HashSet::new();
+        selected.insert("b3".to_string());
 
-        let filter = GitRefFilter::new_for_dotgit(&refs, &existing_remotenames, &config).unwrap();
+        let filter =
+            GitRefFilter::new_for_dotgit(&refs, &existing_remotenames, None, &selected).unwrap();
         // referred by HEAD (default)
         assert!(filter.should_import_remote_name("origin/b1"));
         // matches existing

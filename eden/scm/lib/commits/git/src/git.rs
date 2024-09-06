@@ -26,6 +26,8 @@ use commits_trait::ReadCommitText;
 use commits_trait::StreamCommitText;
 use commits_trait::StripCommits;
 use configmodel::Config;
+use configmodel::ConfigExt;
+use configmodel::Text;
 use dag::delegate;
 use dag::errors::NotFoundError;
 use dag::ops::DagPersistent;
@@ -105,6 +107,9 @@ pub struct GitSegmentedCommits {
     dag: GitDag,
     dag_path: PathBuf,
     git: BareGit,
+    // Read from config
+    config_hoist: Option<Text>,
+    config_selective_pull_default: HashSet<String>,
 }
 
 impl DagCommits for GitSegmentedCommits {}
@@ -116,11 +121,16 @@ impl GitSegmentedCommits {
         let dag_path = dag_dir.to_path_buf();
         let git_path = git_dir.to_path_buf();
         let git = BareGit::from_git_dir_and_config(git_path, config);
+        let config_hoist = config.get("remotenames", "hoist");
+        let config_selective_pull_default =
+            config.get_or_default("remotenames", "selectivepulldefault")?;
         Ok(Self {
             git_repo: Arc::new(Mutex::new(git_repo)),
             dag,
             dag_path,
             git,
+            config_hoist,
+            config_selective_pull_default,
         })
     }
 
@@ -134,12 +144,7 @@ impl GitSegmentedCommits {
     ///   will be skipped.
     /// - Remote names: if they don't already exist in metalog, and don't match
     ///   the remote "HEAD", they will be skipped.
-    pub fn import_from_git(
-        &mut self,
-        metalog: &mut MetaLog,
-        config: &dyn Config,
-        is_dotgit: bool,
-    ) -> Result<()> {
+    pub fn import_from_git(&mut self, metalog: &mut MetaLog, is_dotgit: bool) -> Result<()> {
         tracing::info!("updating metalog from git refs");
 
         let matcher = GitRefMatcher::new();
@@ -160,7 +165,12 @@ impl GitSegmentedCommits {
         let head_opts = VertexOptions::default();
 
         let remote_name_filter: GitRefFilter = if is_dotgit {
-            GitRefFilter::new_for_dotgit(&refs, &existing_remotenames, config)?
+            GitRefFilter::new_for_dotgit(
+                &refs,
+                &existing_remotenames,
+                self.config_hoist.as_deref(),
+                &self.config_selective_pull_default,
+            )?
         } else {
             GitRefFilter::new_for_dotsl(&refs)?
         };

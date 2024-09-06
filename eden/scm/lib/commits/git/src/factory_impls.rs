@@ -63,7 +63,7 @@ fn open_git(
     let config = info.config();
     let mut git_segmented_commits = GitSegmentedCommits::new(&git_path, &segments_path, config)?;
     // Import (maybe changed) git references on construction.
-    git_segmented_commits.import_from_git(&mut metalog, config, is_dotgit)?;
+    git_segmented_commits.import_from_git(&mut metalog, is_dotgit)?;
     Ok(Box::new(git_segmented_commits))
 }
 
