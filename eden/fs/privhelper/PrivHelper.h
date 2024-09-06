@@ -184,6 +184,12 @@ class PrivHelper {
    * Returns true if so, false if not.
    */
   virtual bool checkConnection() = 0;
+
+  /**
+   * Returns the pid of the privhelper process.
+   * If there is no privhelper process, returns -1
+   */
+  virtual int getPid() = 0;
 };
 
 } // namespace facebook::eden

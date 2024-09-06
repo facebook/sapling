@@ -71,7 +71,18 @@ class PrivHelperClientImpl : public PrivHelper,
         state_{ThreadSafeData{
             Status::NOT_STARTED,
             nullptr,
-            UnixSocket::makeUnique(nullptr, std::move(conn))}} {}
+            UnixSocket::makeUnique(nullptr, std::move(conn))}} {
+    pid_ = -1;
+    if (helperProc_.has_value()) {
+      pid_ = helperProc_->pid();
+    } else if (checkConnection()) {
+      // Sometimes helperProc is not set if an existing privhelper
+      // is passed in via --privhelper_fd. If the connection is open,
+      // retrieve it via request
+
+      // TODO: Implement request
+    }
+  }
   ~PrivHelperClientImpl() override {
     cleanup();
     XDCHECK_EQ(sendPending_, 0ul);
@@ -128,6 +139,7 @@ class PrivHelperClientImpl : public PrivHelper,
     return state->conn_->getRawFd();
   }
   bool checkConnection() override;
+  int getPid() override;
 
  private:
   using PendingRequestMap =
@@ -358,6 +370,7 @@ class PrivHelperClientImpl : public PrivHelper,
   std::optional<SpawnedProcess> helperProc_;
   std::atomic<uint32_t> nextXid_{1};
   folly::Synchronized<ThreadSafeData> state_;
+  pid_t pid_;
 
   // sendPending_, and pendingRequests_ are only accessed from the
   // EventBase thread.
@@ -558,6 +571,10 @@ int PrivHelperClientImpl::stop() {
 bool PrivHelperClientImpl::checkConnection() {
   auto state = state_.rlock();
   return state->status == Status::RUNNING && state->conn_;
+}
+
+int PrivHelperClientImpl::getPid() {
+  return pid_;
 }
 
 } // unnamed namespace
@@ -838,6 +855,11 @@ class StubPrivHelper final : public PrivHelper {
     // in `eden doctor`. The Windows privhelper stub is always healthy, so
     // return true.
     return true;
+  }
+
+  int getPid() override {
+    // Since we don't have a privhelper process return -1 to mark no process
+    return -1;
   }
 };
 

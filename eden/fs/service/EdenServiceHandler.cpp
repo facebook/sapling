@@ -5471,6 +5471,7 @@ EdenServiceHandler::streamStartStatus() {
 void EdenServiceHandler::checkPrivHelper(PrivHelperInfo& result) {
   auto privhelper = server_->getServerState()->getPrivHelper();
   result.connected_ref() = privhelper->checkConnection();
+  result.pid_ref() = privhelper->getPid();
 }
 
 int64_t EdenServiceHandler::getPid() {

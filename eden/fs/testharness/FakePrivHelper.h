@@ -82,6 +82,9 @@ class FakePrivHelper final : public PrivHelper {
   bool checkConnection() override {
     return true;
   }
+  int getPid() override {
+    return 0;
+  }
 
  private:
   FakePrivHelper(FakePrivHelper const&) = delete;
