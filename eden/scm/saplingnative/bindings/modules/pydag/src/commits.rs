@@ -244,6 +244,18 @@ py_class!(pub class commits |py| {
         Ok(PyNone)
     }
 
+    /// import_external_reference(metalog, names: List[str])
+    ///
+    /// Import a single external reference to metalog. Optinally build up DAG
+    /// indexes. For Git, `name` is a full reference name, like
+    /// "refs/remotes/origin/foo".
+    def import_external_references(&self, metalog: PyMetaLog, names: Vec<String>) -> PyResult<PyNone> {
+        let meta = metalog.metalog_rwlock(py);
+        let mut inner = self.inner(py).write();
+        inner.import_external_references(&mut meta.write(), &names).map_pyerr(py)?;
+        Ok(PyNone)
+    }
+
     /// migratesparsesegments(src, dst, heads=[]).
     ///
     /// Load full Dag from src directory, migrate a subset of dag to dst directory.
