@@ -438,23 +438,6 @@ struct ManyLiveFsChannelRequests {
 };
 
 /**
- * Used to log sapling blob download events from Sapling Backing Store
- */
-struct SaplingBlobDownloadEvent {
-  static constexpr const char* type = "sl_blob_download_events";
-
-  size_t sizeInBytes;
-  long timeToDownloadInMs;
-  std::string fetchMode;
-
-  void populate(DynamicEvent& event) const {
-    event.addInt("size_in_bytes", sizeInBytes);
-    event.addInt("time_to_download_in_ms", timeToDownloadInMs);
-    event.addString("fetch_mode", fetchMode);
-  }
-};
-
-/**
  * Used to log user actions on e-Menu
  */
 struct EMenuActionEvent {

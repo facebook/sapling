@@ -423,10 +423,10 @@ void SaplingBackingStore::processBlobImportRequests(
   std::vector<std::shared_ptr<SaplingImportRequest>> retryRequest;
   retryRequest.reserve(requests.size());
   if (config_->getEdenConfig()->allowRemoteGetBatch.getValue()) {
-    getBlobBatch(requests, watch, sapling::FetchMode::AllowRemote);
+    getBlobBatch(requests, sapling::FetchMode::AllowRemote);
     retryRequest = std::move(requests);
   } else {
-    getBlobBatch(requests, watch, sapling::FetchMode::LocalOnly);
+    getBlobBatch(requests, sapling::FetchMode::LocalOnly);
 
     for (auto& request : requests) {
       auto* promise = request->getPromise<BlobPtr>();
@@ -460,7 +460,7 @@ void SaplingBackingStore::processBlobImportRequests(
       }
     }
 
-    getBlobBatch(retryRequest, watch, sapling::FetchMode::RemoteOnly);
+    getBlobBatch(retryRequest, sapling::FetchMode::RemoteOnly);
   }
 
   {
@@ -656,24 +656,8 @@ folly::SemiFuture<BlobPtr> SaplingBackingStore::retryGetBlob(
       });
 }
 
-std::string getFetchModeStr(sapling::FetchMode fetchMode) {
-  switch (fetchMode) {
-    case sapling::FetchMode::LocalOnly:
-      return "local_only";
-    case sapling::FetchMode::RemoteOnly:
-      return "remote_only";
-    case sapling::FetchMode::AllowRemotePrefetch:
-      return "allow_remote_prefetch";
-    case sapling::FetchMode::AllowRemote:
-      return "allow_remote";
-  }
-
-  EDEN_BUG() << "Unknown fetchmode: " << enumValue(fetchMode);
-}
-
 void SaplingBackingStore::getBlobBatch(
     const ImportRequestsList& importRequests,
-    const folly::stop_watch<std::chrono::milliseconds>& getBlobWatch,
     sapling::FetchMode fetchMode) {
   auto preparedRequests = prepareRequests<SaplingImportRequest::BlobImport>(
       importRequests, SaplingImportObject::BLOB);
@@ -710,13 +694,6 @@ void SaplingBackingStore::getBlobBatch(
             ? folly::Try<BlobPtr>{content.exception()}
             : folly::Try{
                   std::make_shared<BlobPtr::element_type>(*content.value())};
-        if (structuredLogger_) {
-          size_t blobSizeInBytes = result->get()->getSizeBytes();
-          structuredLogger_->logEvent(SaplingBlobDownloadEvent{
-              blobSizeInBytes,
-              static_cast<long>(getBlobWatch.elapsed().count()),
-              getFetchModeStr(fetchMode)});
-        }
         for (auto& importRequest : importRequestList) {
           importRequest->getPromise<BlobPtr>()->setWith(
               [&]() -> folly::Try<BlobPtr> { return result; });

@@ -453,7 +453,6 @@ class SaplingBackingStore final : public BackingStore {
    */
   void getBlobBatch(
       const ImportRequestsList& requests,
-      const folly::stop_watch<std::chrono::milliseconds>& getBlobWatch,
       sapling::FetchMode fetchMode);
 
   /**
