@@ -414,7 +414,7 @@ impl GitSegmentedCommits {
     /// - visibleheads: current state will replace refs/visibleheads/ namespace.
     ///
     /// The reverse of `git_references_to_metalog`, used at the end of a transaction.
-    pub fn metalog_to_git_references(&self, metalog: &MetaLog) -> Result<()> {
+    fn export_to_git(&self, metalog: &MetaLog) -> Result<()> {
         tracing::info!("updating git refs from metalog");
         if tracing::enabled!(tracing::Level::TRACE) {
             let remotenames = metalog.get_remotenames()?;
@@ -563,7 +563,7 @@ impl AppendCommits for GitSegmentedCommits {
     }
 
     fn update_references_to_match_metalog(&mut self, metalog: &MetaLog) -> Result<()> {
-        self.metalog_to_git_references(metalog)
+        self.export_to_git(metalog)
     }
 
     fn import_external_references(
