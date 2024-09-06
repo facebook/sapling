@@ -59,7 +59,6 @@ repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 sql_query_config = { version = "0.1.0", path = "../repo_attributes/sql_query_config" }
 synced_commit_mapping = { version = "0.1.0", path = "../commit_rewriting/synced_commit_mapping" }
 tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
@@ -75,6 +74,5 @@ git_types = { version = "0.1.0", path = "../git/git_types" }
 mercurial_types-mocks = { version = "0.1.0", path = "../mercurial/types/mocks" }
 mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }
 mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
-rendezvous = { version = "0.1.0", path = "../common/rendezvous" }
 test_repo_factory = { version = "0.1.0", path = "../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../tests/utils" }

@@ -16,7 +16,6 @@ use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::Repo as CrossRepo;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::ChangesetId;
-use synced_commit_mapping::SyncedCommitMapping;
 
 /// This operation is useful immediately after a small repo is merged into a large repo.
 /// See example below
@@ -35,9 +34,9 @@ use synced_commit_mapping::SyncedCommitMapping;
 /// commit A.
 /// The function below can be used to achieve exactly that.
 /// ```
-pub async fn manual_commit_sync<M: SyncedCommitMapping + Clone + 'static, R: CrossRepo>(
+pub async fn manual_commit_sync<R: CrossRepo>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<M, R>,
+    commit_syncer: &CommitSyncer<R>,
     source_cs_id: ChangesetId,
     target_repo_parents: Option<Vec<ChangesetId>>,
     mapping_version: CommitSyncConfigVersion,

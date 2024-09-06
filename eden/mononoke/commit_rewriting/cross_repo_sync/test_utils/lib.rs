@@ -59,17 +59,13 @@ use mononoke_types::RepositoryId;
 use mutable_counters::MutableCounters;
 use phases::Phases;
 use pushrebase_mutation_mapping::PushrebaseMutationMapping;
-use rendezvous::RendezVousOptions;
 use repo_blobstore::RepoBlobstore;
 use repo_bookmark_attrs::RepoBookmarkAttrs;
 use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
-use sql_construct::SqlConstruct;
 use sql_query_config::SqlQueryConfig;
-use synced_commit_mapping::SqlSyncedCommitMapping;
-use synced_commit_mapping::SqlSyncedCommitMappingBuilder;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMappingEntry;
 use test_repo_factory::TestRepoFactory;
@@ -144,13 +140,12 @@ pub fn xrepo_mapping_version_with_small_repo() -> CommitSyncConfigVersion {
 
 // Helper function that takes a root commit from source repo and rebases it on master bookmark
 // in target repo
-pub async fn rebase_root_on_master<M, R>(
+pub async fn rebase_root_on_master<R>(
     ctx: CoreContext,
-    commit_syncer: &CommitSyncer<M, R>,
+    commit_syncer: &CommitSyncer<R>,
     source_bcs_id: ChangesetId,
 ) -> Result<ChangesetId, Error>
 where
-    M: SyncedCommitMapping + Clone + 'static,
     R: Repo,
 {
     let bookmark_name =
@@ -264,7 +259,7 @@ pub async fn init_small_large_repo<Repo>(
     ctx: &CoreContext,
 ) -> Result<
     (
-        Syncers<SqlSyncedCommitMapping, Repo>,
+        Syncers<Repo>,
         CommitSyncConfig,
         Arc<dyn LiveCommitSyncConfig>,
         TestLiveCommitSyncConfigSource,
@@ -284,9 +279,6 @@ where
         .with_live_commit_sync_config(sync_config.clone())
         .build()
         .await?;
-    let mapping =
-        SqlSyncedCommitMappingBuilder::from_sql_connections(factory.metadata_db().clone())
-            .build(RendezVousOptions::for_test());
     let smallrepo: Repo = factory
         .with_id(RepositoryId::new(0))
         .with_name("smallrepo")
@@ -337,12 +329,8 @@ where
 
     let live_commit_sync_config = sync_config.clone();
 
-    let small_to_large_commit_syncer = CommitSyncer::new_with_live_commit_sync_config(
-        ctx,
-        mapping.clone(),
-        repos.clone(),
-        live_commit_sync_config.clone(),
-    );
+    let small_to_large_commit_syncer =
+        CommitSyncer::new(ctx, repos.clone(), live_commit_sync_config.clone());
 
     let repos = CommitSyncRepos::LargeToSmall {
         small_repo: smallrepo.clone(),
@@ -350,12 +338,8 @@ where
         submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
     };
 
-    let large_to_small_commit_syncer = CommitSyncer::new_with_live_commit_sync_config(
-        ctx,
-        mapping.clone(),
-        repos.clone(),
-        live_commit_sync_config,
-    );
+    let large_to_small_commit_syncer =
+        CommitSyncer::new(ctx, repos.clone(), live_commit_sync_config);
 
     let first_bcs_id = CreateCommitContext::new_root(ctx, &smallrepo)
         .add_file("file", "content")

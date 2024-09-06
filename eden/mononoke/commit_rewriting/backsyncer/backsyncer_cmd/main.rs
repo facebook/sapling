@@ -65,8 +65,6 @@ use slog::debug;
 use slog::error;
 use slog::info;
 use stats::prelude::*;
-use synced_commit_mapping::SqlSyncedCommitMapping;
-use synced_commit_mapping::SyncedCommitMapping;
 use tokio::runtime::Runtime;
 use wireproto_handler::TargetRepoDbs;
 
@@ -274,7 +272,7 @@ fn extract_cs_id_from_sync_outcome(
 async fn derive_target_hg_changesets(
     ctx: &CoreContext,
     maybe_target_cs_id: Option<ChangesetId>,
-    commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, Repo>,
+    commit_syncer: &CommitSyncer<Repo>,
 ) -> Result<(), Error> {
     match maybe_target_cs_id {
         Some(target_cs_id) => {
@@ -292,18 +290,15 @@ async fn derive_target_hg_changesets(
     }
 }
 
-pub async fn backsync_forever<M>(
+pub async fn backsync_forever(
     ctx: CoreContext,
-    commit_syncer: CommitSyncer<M, Repo>,
+    commit_syncer: CommitSyncer<Repo>,
     target_repo_dbs: Arc<TargetRepoDbs>,
     source_repo_name: String,
     target_repo_name: String,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     cancellation_requested: Arc<AtomicBool>,
-) -> Result<(), Error>
-where
-    M: SyncedCommitMapping + Clone + 'static,
-{
+) -> Result<(), Error> {
     let target_repo_id = commit_syncer.get_target_repo_id();
     let mut commit_only_backsync_future: Box<dyn futures::Future<Output = ()> + Send + Unpin> =
         Box::new(future::ready(()));
@@ -366,14 +361,11 @@ impl Delay {
 }
 
 // Returns logs delay and returns the number of remaining bookmark update log entries
-async fn calculate_delay<M>(
+async fn calculate_delay(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<M, Repo>,
+    commit_syncer: &CommitSyncer<Repo>,
     target_repo_dbs: &TargetRepoDbs,
-) -> Result<Delay, Error>
-where
-    M: SyncedCommitMapping + Clone + 'static,
-{
+) -> Result<Delay, Error> {
     let TargetRepoDbs { ref counters, .. } = target_repo_dbs;
     let source_repo_id = commit_syncer.get_source_repo().repo_identity().id();
 

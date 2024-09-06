@@ -31,7 +31,6 @@ rust_binary(
         "//eden/mononoke/cmdlib/sharding:executor_lib",
         "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
         "//eden/mononoke/commit_rewriting/cross_repo_sync:cross_repo_sync",
-        "//eden/mononoke/commit_rewriting/synced_commit_mapping:synced_commit_mapping",
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/megarepo_api:pushredirect",
         "//eden/mononoke/mononoke_types:mononoke_types",

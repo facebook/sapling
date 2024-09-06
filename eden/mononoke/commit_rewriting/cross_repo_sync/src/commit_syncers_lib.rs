@@ -54,6 +54,7 @@ use mononoke_types::RepositoryId;
 use movers::Mover;
 use movers::Movers;
 use slog::info;
+use synced_commit_mapping::ArcSyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMappingEntry;
 use synced_commit_mapping::SyncedCommitSourceRepo;
@@ -197,10 +198,10 @@ pub fn mover_to_multi_mover(mover: Mover) -> MultiMover<'static> {
     )
 }
 
-pub(crate) async fn remap_parents<'a, M: SyncedCommitMapping + Clone + 'static, R: Repo>(
+pub(crate) async fn remap_parents<'a, R: Repo>(
     ctx: &CoreContext,
     cs: &BonsaiChangesetMut,
-    commit_syncer: &'a CommitSyncer<M, R>,
+    commit_syncer: &'a CommitSyncer<R>,
     hint: CandidateSelectionHint<R>,
 ) -> Result<HashMap<ChangesetId, ChangesetId>, Error> {
     let mut remapped_parents = HashMap::new();
@@ -265,14 +266,13 @@ impl SyncedAncestorsVersions {
 /// ```
 ///
 /// In this case we'll return [U1, U2] and \[V1\]
-pub async fn find_toposorted_unsynced_ancestors<M, R>(
+pub async fn find_toposorted_unsynced_ancestors<R>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<M, R>,
+    commit_syncer: &CommitSyncer<R>,
     start_cs_id: ChangesetId,
     desired_relationship: Option<DesiredRelationship<R>>,
 ) -> Result<(Vec<ChangesetId>, SyncedAncestorsVersions), Error>
 where
-    M: SyncedCommitMapping + Clone + 'static,
     R: Repo,
 {
     let mut synced_ancestors_versions = SyncedAncestorsVersions::default();
@@ -375,9 +375,9 @@ where
 /// NOTE: because this is used to run initial imports of small repos into large
 /// repos, this function DOES NOT take into account hardcoded mappings in
 /// hg extra metadata, as `find_toposorted_unsynced_ancestors` does.
-pub async fn find_toposorted_unsynced_ancestors_with_commit_graph<'a, M, R>(
+pub async fn find_toposorted_unsynced_ancestors_with_commit_graph<'a, R>(
     ctx: &'a CoreContext,
-    commit_syncer: &'a CommitSyncer<M, R>,
+    commit_syncer: &'a CommitSyncer<R>,
     start_cs_id: ChangesetId,
 ) -> Result<(
     Vec<ChangesetId>,
@@ -386,7 +386,6 @@ pub async fn find_toposorted_unsynced_ancestors_with_commit_graph<'a, M, R>(
     Vec<ChangesetId>,
 )>
 where
-    M: SyncedCommitMapping + Clone + 'static,
     R: Repo,
 {
     let source_repo = commit_syncer.get_source_repo();
@@ -491,13 +490,9 @@ where
 /// This is written with assumption of no diamond merges (which are not supported by other parts of
 /// x_repo_sync) and that small repo bookmark is never moving backwards (which is not supported by
 /// other pieces of the infra).
-pub async fn get_version_and_parent_map_for_sync_via_pushrebase<
-    'a,
-    M: SyncedCommitMapping + Clone + 'static,
-    R,
->(
+pub async fn get_version_and_parent_map_for_sync_via_pushrebase<'a, R>(
     ctx: &'a CoreContext,
-    commit_syncer: &CommitSyncer<M, R>,
+    commit_syncer: &CommitSyncer<R>,
     target_bookmark: &Target<BookmarkKey>,
     parent_version: CommitSyncConfigVersion,
     synced_ancestors_versions: &SyncedAncestorsVersions,
@@ -646,13 +641,9 @@ where
 /// be used in **VERY SPECIFIC** situations (e.g. repo merges) where we want
 /// to change the mapping version AND **WE ARE SURE THAT THE TARGET BOOKMARK IS
 /// WORKING COPY EQUIVALENT TO THE COMMIT WE'RE SYNCING**.
-pub async fn unsafe_get_parent_map_for_target_bookmark_rewrite<
-    'a,
-    M: SyncedCommitMapping + Clone + 'static,
-    R,
->(
+pub async fn unsafe_get_parent_map_for_target_bookmark_rewrite<'a, R>(
     ctx: &'a CoreContext,
-    commit_syncer: &CommitSyncer<M, R>,
+    commit_syncer: &CommitSyncer<R>,
     target_bookmark: &Target<BookmarkKey>,
     synced_ancestors_versions: &SyncedAncestorsVersions,
 ) -> Result<HashMap<ChangesetId, ChangesetId>, Error>
@@ -837,6 +828,12 @@ impl<R: Repo> CommitSyncRepos<R> {
     pub(crate) fn get_x_repo_sync_lease(&self) -> &Arc<dyn LeaseOps> {
         self.get_large_repo().repo_cross_repo().sync_lease()
     }
+
+    pub(crate) fn get_mapping(&self) -> &ArcSyncedCommitMapping {
+        self.get_large_repo()
+            .repo_cross_repo()
+            .synced_commit_mapping()
+    }
 }
 
 /// Get the direction of the sync based on the common commit sync config.
@@ -938,10 +935,10 @@ pub(crate) async fn get_movers_by_version(
     .await
 }
 
-pub async fn update_mapping_with_version<'a, M: SyncedCommitMapping + Clone + 'static, R: Repo>(
+pub async fn update_mapping_with_version<'a, R: Repo>(
     ctx: &'a CoreContext,
     mapped: HashMap<ChangesetId, ChangesetId>,
-    syncer: &'a CommitSyncer<M, R>,
+    syncer: &'a CommitSyncer<R>,
     version_name: &CommitSyncConfigVersion,
 ) -> Result<(), Error> {
     let xrepo_sync_disable_all_syncs =
@@ -958,7 +955,7 @@ pub async fn update_mapping_with_version<'a, M: SyncedCommitMapping + Clone + 's
         })
         .collect();
 
-    syncer.mapping.add_bulk(ctx, entries).await?;
+    syncer.get_mapping().add_bulk(ctx, entries).await?;
     Ok(())
 }
 
@@ -1006,23 +1003,21 @@ pub fn create_synced_commit_mapping_entry<R: Repo>(
 }
 
 #[derive(Clone)]
-pub struct Syncers<M: SyncedCommitMapping + Clone + 'static, R: Repo> {
-    pub large_to_small: CommitSyncer<M, R>,
-    pub small_to_large: CommitSyncer<M, R>,
+pub struct Syncers<R: Repo> {
+    pub large_to_small: CommitSyncer<R>,
+    pub small_to_large: CommitSyncer<R>,
 }
 
-pub fn create_commit_syncers<M, R>(
+pub fn create_commit_syncers<R>(
     ctx: &CoreContext,
     small_repo: R,
     large_repo: R,
     // Map from submodule path in the repo to the submodule's Mononoke repo
     // instance.
     submodule_deps: SubmoduleDeps<R>,
-    mapping: M,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
-) -> Result<Syncers<M, R>, Error>
+) -> Result<Syncers<R>, Error>
 where
-    M: SyncedCommitMapping + Clone + 'static,
     R: Repo,
 {
     let small_to_large_commit_sync_repos = CommitSyncRepos::new(
@@ -1035,13 +1030,11 @@ where
 
     let large_to_small_commit_syncer = CommitSyncer::new(
         ctx,
-        mapping.clone(),
         large_to_small_commit_sync_repos,
         live_commit_sync_config.clone(),
     );
     let small_to_large_commit_syncer = CommitSyncer::new(
         ctx,
-        mapping,
         small_to_large_commit_sync_repos,
         live_commit_sync_config,
     );

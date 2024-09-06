@@ -714,8 +714,6 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
     };
     init_target_repo(&ctx, &target_repo_dbs, source_repo_id).await?;
     let target_repo_dbs = Arc::new(target_repo_dbs);
-    let mapping = SqlSyncedCommitMappingBuilder::with_sqlite_in_memory()?
-        .build(RendezVousOptions::for_test());
 
     let repos = CommitSyncRepos::LargeToSmall {
         large_repo: source_repo.clone(),
@@ -771,12 +769,7 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
 
     let live_commit_sync_config = Arc::new(lv_cfg);
 
-    let commit_syncer = CommitSyncer::new_with_live_commit_sync_config(
-        &ctx,
-        mapping.clone(),
-        repos,
-        live_commit_sync_config,
-    );
+    let commit_syncer = CommitSyncer::new(&ctx, repos, live_commit_sync_config);
 
     // Rewrite root commit with current version
     let root_cs_id = CreateCommitContext::new_root(&ctx, &source_repo)
@@ -921,7 +914,7 @@ async fn new_commit<T: AsRef<str>>(
 
 async fn backsync_and_verify_master_wc(
     fb: FacebookInit,
-    commit_syncer: CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
+    commit_syncer: CommitSyncer<TestRepo>,
     target_repo_dbs: TargetRepoDbs,
 ) -> Result<(), Error> {
     let source_repo = commit_syncer.get_source_repo();
@@ -973,7 +966,7 @@ async fn backsync_and_verify_master_wc(
 
 async fn verify_mapping_and_all_wc(
     ctx: CoreContext,
-    commit_syncer: CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
+    commit_syncer: CommitSyncer<TestRepo>,
     dont_verify_commits: Vec<ChangesetId>,
 ) -> Result<(), Error> {
     let source_repo = commit_syncer.get_source_repo();
@@ -1055,7 +1048,7 @@ async fn verify_mapping_and_all_wc(
 
 async fn verify_bookmarks(
     ctx: CoreContext,
-    commit_syncer: CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
+    commit_syncer: CommitSyncer<TestRepo>,
 ) -> Result<(), Error> {
     let source_repo = commit_syncer.get_source_repo();
     let target_repo = commit_syncer.get_target_repo();
@@ -1141,7 +1134,7 @@ async fn compare_contents(
     ctx: &CoreContext,
     source_hg_cs_id: HgChangesetId,
     target_hg_cs_id: HgChangesetId,
-    commit_syncer: CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
+    commit_syncer: CommitSyncer<TestRepo>,
     movers: Movers,
 ) -> Result<(), Error> {
     let source_content =
@@ -1312,25 +1305,31 @@ async fn init_repos(
     fb: FacebookInit,
     mover_type: MoverType,
     bookmark_renamer_type: BookmarkRenamerType,
-) -> Result<
-    (
-        CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
-        TargetRepoDbs,
-    ),
-    Error,
-> {
+) -> Result<(CommitSyncer<TestRepo>, TargetRepoDbs), Error> {
     override_just_knobs(JustKnobsInMemory::new(hashmap! {
         "scm/mononoke:cross_repo_skip_backsyncing_ordinary_empty_commits".to_string() => KnobVal::Bool(false),
         "scm/mononoke:ignore_change_xrepo_mapping_extra".to_string() => KnobVal::Bool(false),
     }));
     let ctx = CoreContext::test_mock(fb);
     let mut factory = TestRepoFactory::new(fb)?;
+
+    let (lv_cfg, lv_cfg_src) = TestLiveCommitSyncConfig::new_with_source();
+    let live_commit_sync_config = Arc::new(lv_cfg);
+
     let source_repo_id = RepositoryId::new(1);
-    let source_repo: TestRepo = factory.with_id(source_repo_id).build().await?;
+    let source_repo: TestRepo = factory
+        .with_id(source_repo_id)
+        .with_live_commit_sync_config(live_commit_sync_config.clone())
+        .build()
+        .await?;
     Linear::init_repo(fb, &source_repo).await?;
 
     let target_repo_id = RepositoryId::new(2);
-    let target_repo: TestRepo = factory.with_id(target_repo_id).build().await?;
+    let target_repo: TestRepo = factory
+        .with_id(target_repo_id)
+        .with_live_commit_sync_config(live_commit_sync_config.clone())
+        .build()
+        .await?;
 
     let target_repo_dbs = TargetRepoDbs {
         bookmarks: target_repo.bookmarks_arc(),
@@ -1338,9 +1337,6 @@ async fn init_repos(
         counters: target_repo.mutable_counters_arc(),
     };
     init_target_repo(&ctx, &target_repo_dbs, source_repo_id).await?;
-
-    let mapping = SqlSyncedCommitMappingBuilder::with_sqlite_in_memory()?
-        .build(RendezVousOptions::for_test());
 
     let repos = CommitSyncRepos::LargeToSmall {
         large_repo: source_repo.clone(),
@@ -1357,8 +1353,6 @@ async fn init_repos(
         store_files(&ctx, empty.clone(), &source_repo).await,
     )
     .await;
-
-    let (lv_cfg, lv_cfg_src) = TestLiveCommitSyncConfig::new_with_source();
 
     let version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
     let version_config = CommitSyncConfig {
@@ -1377,8 +1371,6 @@ async fn init_repos(
     );
     lv_cfg_src.add_common_config(common);
 
-    let live_commit_sync_config = Arc::new(lv_cfg);
-
     let git_submodules_action = get_git_submodule_action_by_version(
         &ctx,
         live_commit_sync_config.clone(),
@@ -1388,12 +1380,7 @@ async fn init_repos(
     )
     .await?;
 
-    let commit_syncer = CommitSyncer::new_with_live_commit_sync_config(
-        &ctx,
-        mapping.clone(),
-        repos,
-        live_commit_sync_config.clone(),
-    );
+    let commit_syncer = CommitSyncer::new(&ctx, repos, live_commit_sync_config.clone());
 
     // Sync first commit manually
     let initial_bcs_id = source_repo
@@ -1455,7 +1442,7 @@ async fn init_repos(
         CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
         commit_syncer.get_source_repo_type(),
     );
-    mapping.add(&ctx, first_entry).await?;
+    commit_syncer.get_mapping().add(&ctx, first_entry).await?;
 
     // Create a few new commits on top of master
 
@@ -1634,10 +1621,7 @@ async fn init_merged_repos(
     num_repos: usize,
 ) -> Result<
     (
-        Vec<(
-            CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
-            TargetRepoDbs,
-        )>,
+        Vec<(CommitSyncer<TestRepo>, TargetRepoDbs)>,
         TestRepo,
         i64,
         Vec<ChangesetId>,
@@ -1724,12 +1708,7 @@ async fn init_merged_repos(
             submodule_deps: SubmoduleDeps::ForSync(HashMap::new()),
         };
 
-        let commit_syncer = CommitSyncer::new_with_live_commit_sync_config(
-            &ctx,
-            mapping.clone(),
-            repos,
-            live_commit_sync_config,
-        );
+        let commit_syncer = CommitSyncer::new(&ctx, repos, live_commit_sync_config);
         output.push((commit_syncer, small_repo_dbs));
 
         let filename = format!("file_in_smallrepo{}", small_repo.repo_identity().id().id());
@@ -2002,12 +1981,7 @@ async fn preserve_premerge_commit(
         lv_cfg_src.add_common_config(common);
 
         let live_commit_sync_config = Arc::new(lv_cfg);
-        CommitSyncer::new_with_live_commit_sync_config(
-            &ctx,
-            mapping.clone(),
-            repos,
-            live_commit_sync_config,
-        )
+        CommitSyncer::new(&ctx, repos, live_commit_sync_config)
     };
 
     small_to_large_sync_config

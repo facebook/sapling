@@ -112,8 +112,6 @@ rust_library(
         "//eden/mononoke/commit_rewriting/live_commit_sync_config:live_commit_sync_config",
         "//eden/mononoke/commit_rewriting/megarepo:megarepolib",
         "//eden/mononoke/commit_rewriting/synced_commit_mapping:synced_commit_mapping",
-        "//eden/mononoke/common/rendezvous:rendezvous",
-        "//eden/mononoke/common/sql_construct:sql_construct",
         "//eden/mononoke/filenodes:filenodes",
         "//eden/mononoke/filestore:filestore",
         "//eden/mononoke/megarepo_api:commit_transformation",

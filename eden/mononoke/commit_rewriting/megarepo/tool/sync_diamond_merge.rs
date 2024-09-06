@@ -62,7 +62,6 @@ use repo_identity::RepoIdentityRef;
 use slog::info;
 use slog::warn;
 use sorted_vector_map::SortedVectorMap;
-use synced_commit_mapping::SqlSyncedCommitMapping;
 
 use crate::Repo;
 
@@ -117,7 +116,6 @@ pub async fn do_sync_diamond_merge(
     large_repo: &Repo,
     submodule_deps: SubmoduleDeps<Repo>,
     small_merge_cs_id: ChangesetId,
-    mapping: SqlSyncedCommitMapping,
     onto_bookmark: BookmarkKey,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<(), Error> {
@@ -140,7 +138,6 @@ pub async fn do_sync_diamond_merge(
         small_repo.clone(),
         large_repo.clone(),
         submodule_deps,
-        mapping,
         live_commit_sync_config,
     )?;
 
@@ -236,7 +233,7 @@ async fn create_rewritten_merge_commit(
     small_merge_cs_id: ChangesetId,
     small_repo: &Repo,
     large_repo: &Repo,
-    syncers: &Syncers<SqlSyncedCommitMapping, Repo>,
+    syncers: &Syncers<Repo>,
     small_root: ChangesetId,
     onto_value: ChangesetId,
 ) -> Result<(BonsaiChangeset, CommitSyncConfigVersion), Error> {
@@ -353,7 +350,7 @@ async fn generate_additional_file_changes(
     ctx: CoreContext,
     root: ChangesetId,
     large_repo: &Repo,
-    large_to_small: &CommitSyncer<SqlSyncedCommitMapping, Repo>,
+    large_to_small: &CommitSyncer<Repo>,
     onto_value: ChangesetId,
     version: &CommitSyncConfigVersion,
 ) -> Result<SortedVectorMap<NonRootMPath, FileChange>, Error> {
@@ -386,7 +383,7 @@ async fn generate_additional_file_changes(
 
 async fn remap_commit(
     ctx: CoreContext,
-    small_to_large_commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, Repo>,
+    small_to_large_commit_syncer: &CommitSyncer<Repo>,
     cs_id: ChangesetId,
 ) -> Result<(ChangesetId, CommitSyncConfigVersion), Error> {
     let maybe_sync_outcome = small_to_large_commit_syncer

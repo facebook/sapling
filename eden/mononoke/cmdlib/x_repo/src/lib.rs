@@ -46,8 +46,8 @@ pub async fn create_commit_syncers_from_matches<R: Repo>(
     ctx: &CoreContext,
     matches: &MononokeMatches<'_>,
     repo_pair: Option<(RepositoryId, RepositoryId)>,
-) -> Result<Syncers<SqlSyncedCommitMapping, R>, Error> {
-    let (source_repo, target_repo, mapping, live_commit_sync_config) =
+) -> Result<Syncers<R>, Error> {
+    let (source_repo, target_repo, _mapping, live_commit_sync_config) =
         get_things_from_matches::<R>(ctx, matches, repo_pair).await?;
 
     let common_config =
@@ -84,7 +84,6 @@ pub async fn create_commit_syncers_from_matches<R: Repo>(
         small_repo,
         large_repo,
         submodule_deps,
-        mapping,
         live_commit_sync_config,
     )
 }
@@ -94,7 +93,7 @@ pub async fn create_commit_syncer_from_matches<R: Repo>(
     ctx: &CoreContext,
     matches: &MononokeMatches<'_>,
     repo_pair: Option<(RepositoryId, RepositoryId)>,
-) -> Result<CommitSyncer<SqlSyncedCommitMapping, R>, Error> {
+) -> Result<CommitSyncer<R>, Error> {
     create_commit_syncer_from_matches_impl(ctx, matches, false /* reverse */, repo_pair).await
 }
 
@@ -103,7 +102,7 @@ pub async fn create_reverse_commit_syncer_from_matches<R: Repo>(
     ctx: &CoreContext,
     matches: &MononokeMatches<'_>,
     repo_pair: Option<(RepositoryId, RepositoryId)>,
-) -> Result<CommitSyncer<SqlSyncedCommitMapping, R>, Error> {
+) -> Result<CommitSyncer<R>, Error> {
     create_commit_syncer_from_matches_impl(ctx, matches, true /* reverse */, repo_pair).await
 }
 
@@ -195,9 +194,13 @@ async fn create_commit_syncer_from_matches_impl<R: Repo>(
     matches: &MononokeMatches<'_>,
     reverse: bool,
     repo_pair: Option<(RepositoryId, RepositoryId)>,
-) -> Result<CommitSyncer<SqlSyncedCommitMapping, R>, Error> {
-    let (source_repo, target_repo, mapping, live_commit_sync_config): (Source<R>, Target<R>, _, _) =
-        get_things_from_matches(ctx, matches, repo_pair).await?;
+) -> Result<CommitSyncer<R>, Error> {
+    let (source_repo, target_repo, _mapping, live_commit_sync_config): (
+        Source<R>,
+        Target<R>,
+        _,
+        _,
+    ) = get_things_from_matches(ctx, matches, repo_pair).await?;
 
     let (source_repo, target_repo) = if reverse {
         flip_direction(source_repo, target_repo)
@@ -220,7 +223,6 @@ async fn create_commit_syncer_from_matches_impl<R: Repo>(
         source_repo,
         target_repo,
         submodule_deps,
-        mapping,
         live_commit_sync_config,
     )
     .await
@@ -231,11 +233,10 @@ async fn create_commit_syncer<'a, R: Repo>(
     source_repo: Source<R>,
     target_repo: Target<R>,
     submodule_deps: SubmoduleDeps<R>,
-    mapping: SqlSyncedCommitMapping,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
-) -> Result<CommitSyncer<SqlSyncedCommitMapping, R>, Error> {
+) -> Result<CommitSyncer<R>, Error> {
     let repos = CommitSyncRepos::new(source_repo.0, target_repo.0, submodule_deps)?;
-    let commit_syncer = CommitSyncer::new(ctx, mapping, repos, live_commit_sync_config);
+    let commit_syncer = CommitSyncer::new(ctx, repos, live_commit_sync_config);
     Ok(commit_syncer)
 }
 

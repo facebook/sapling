@@ -100,7 +100,6 @@ use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sharding::XRepoSyncProcess;
 use sharding::XRepoSyncProcessExecutor;
-use synced_commit_mapping::SyncedCommitMapping;
 
 use crate::cli::ForwardSyncerArgs;
 use crate::cli::TailCommandArgs;
@@ -122,10 +121,10 @@ const SM_CLEANUP_TIMEOUT_SECS: u64 = 60;
 
 /// Sync and all of its unsynced ancestors **if the given commit has at least
 /// one synced ancestor**.
-async fn run_in_single_commit_mode<M: SyncedCommitMapping + Clone + 'static>(
+async fn run_in_single_commit_mode(
     ctx: &CoreContext,
     bcs: ChangesetId,
-    commit_syncer: CommitSyncer<M, Repo>,
+    commit_syncer: CommitSyncer<Repo>,
     scuba_sample: MononokeScubaSampleBuilder,
     maybe_bookmark: Option<BookmarkKey>,
     common_bookmarks: HashSet<BookmarkKey>,
@@ -171,10 +170,10 @@ async fn run_in_single_commit_mode<M: SyncedCommitMapping + Clone + 'static>(
     res.map(|_| ())
 }
 
-async fn run_in_initial_import_mode_for_single_head<M: SyncedCommitMapping + Clone + 'static>(
+async fn run_in_initial_import_mode_for_single_head(
     ctx: &CoreContext,
     bcs: ChangesetId,
-    commit_syncer: &CommitSyncer<M, Repo>,
+    commit_syncer: &CommitSyncer<Repo>,
     config_version: CommitSyncConfigVersion,
     scuba_sample: MononokeScubaSampleBuilder,
     disable_progress_bar: bool,
@@ -221,10 +220,10 @@ async fn run_in_initial_import_mode_for_single_head<M: SyncedCommitMapping + Clo
 /// Run the initial import of a small repo into a large repo.
 /// It will sync a specific commit (i.e. head commit) and all of its ancestors
 /// if commit is notprovided
-async fn run_in_initial_import_mode<M: SyncedCommitMapping + Clone + 'static>(
+async fn run_in_initial_import_mode(
     ctx: &CoreContext,
     bcs_ids: Vec<ChangesetId>,
-    commit_syncer: CommitSyncer<M, Repo>,
+    commit_syncer: CommitSyncer<Repo>,
     config_version: CommitSyncConfigVersion,
     scuba_sample: MononokeScubaSampleBuilder,
     disable_progress_bar: bool,
@@ -247,19 +246,19 @@ async fn run_in_initial_import_mode<M: SyncedCommitMapping + Clone + 'static>(
     Ok(())
 }
 
-enum TailingArgs<M, R> {
-    CatchUpOnce(CommitSyncer<M, R>),
-    LoopForever(CommitSyncer<M, R>),
+enum TailingArgs<R> {
+    CatchUpOnce(CommitSyncer<R>),
+    LoopForever(CommitSyncer<R>),
 }
 
-async fn run_in_tailing_mode<M: SyncedCommitMapping + Clone + 'static>(
+async fn run_in_tailing_mode(
     ctx: &CoreContext,
     target_mutable_counters: ArcMutableCounters,
     common_pushrebase_bookmarks: HashSet<BookmarkKey>,
     base_scuba_sample: MononokeScubaSampleBuilder,
     backpressure_params: BackpressureParams,
     derived_data_types: Vec<DerivableType>,
-    tailing_args: TailingArgs<M, Repo>,
+    tailing_args: TailingArgs<Repo>,
     sleep_duration: Duration,
     maybe_bookmark_regex: Option<Regex>,
     pushrebase_rewrite_dates: PushrebaseRewriteDates,
@@ -352,9 +351,9 @@ async fn run_in_tailing_mode<M: SyncedCommitMapping + Clone + 'static>(
     Ok(())
 }
 
-async fn tail<M: SyncedCommitMapping + Clone + 'static>(
+async fn tail(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<M, Repo>,
+    commit_syncer: &CommitSyncer<Repo>,
     target_mutable_counters: &ArcMutableCounters,
     mut scuba_sample: MononokeScubaSampleBuilder,
     common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
@@ -529,9 +528,7 @@ async fn maybe_apply_backpressure(
     Ok(())
 }
 
-fn format_counter<M: SyncedCommitMapping + Clone + 'static, R>(
-    commit_syncer: &CommitSyncer<M, R>,
-) -> String
+fn format_counter<R>(commit_syncer: &CommitSyncer<R>) -> String
 where
     R: RepoIdentityRef + cross_repo_sync::Repo,
 {

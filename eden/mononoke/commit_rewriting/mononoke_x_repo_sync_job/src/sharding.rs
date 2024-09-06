@@ -40,7 +40,6 @@ use sharding_ext::encode_repo_name;
 use sharding_ext::RepoShard;
 use slog::info;
 use sql_query_config::SqlQueryConfigArc;
-use synced_commit_mapping::SqlSyncedCommitMapping;
 use zk_leader_election::LeaderElection;
 use zk_leader_election::ZkMode;
 
@@ -115,7 +114,7 @@ pub struct XRepoSyncProcessExecutor {
     common_bookmarks: HashSet<BookmarkKey>,
     target_mutable_counters: Arc<dyn MutableCounters + Send + Sync>,
     pushrebase_rewrite_dates: PushrebaseRewriteDates,
-    commit_syncer: CommitSyncer<SqlSyncedCommitMapping, Repo>,
+    commit_syncer: CommitSyncer<Repo>,
     live_commit_sync_config: Arc<CfgrLiveCommitSyncConfig>,
 }
 

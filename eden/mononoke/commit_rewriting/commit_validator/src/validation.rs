@@ -64,6 +64,7 @@ use slog::error;
 use slog::info;
 use stats::prelude::*;
 use synced_commit_mapping::SqlSyncedCommitMapping;
+use synced_commit_mapping::SyncedCommitMapping;
 
 use crate::repo::Repo;
 use crate::reporting::log_validation_result_to_scuba;
@@ -972,7 +973,7 @@ async fn validate_topological_order<'a, R: RepoIdentityRef + CommitGraphRef + Co
     large_cs_id: Large<ChangesetId>,
     small_repo: &'a Small<R>,
     small_cs_id: Small<ChangesetId>,
-    mapping: &'a SqlSyncedCommitMapping,
+    mapping: Arc<dyn SyncedCommitMapping>,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<(), Error> {
     debug!(
@@ -990,14 +991,14 @@ async fn validate_topological_order<'a, R: RepoIdentityRef + CommitGraphRef + Co
 
     let remapped_small_parents: Vec<(ChangesetId, ChangesetId)> =
         try_join_all(small_parents.into_iter().map(|small_parent| {
-            cloned!(ctx, live_commit_sync_config);
+            cloned!(ctx, live_commit_sync_config, mapping);
             async move {
                 let maybe_commit_sync_outcome = get_commit_sync_outcome(
                     &ctx,
                     Source(small_repo_id),
                     Target(large_repo_id),
                     Source(small_parent),
-                    mapping,
+                    &mapping,
                     CommitSyncDirection::SmallToLarge,
                     live_commit_sync_config,
                 )
@@ -1378,7 +1379,7 @@ async fn validate_in_a_single_repo(
         large_cs_id,
         &validation_helper.small_repo,
         small_cs_id,
-        &mapping,
+        Arc::new(mapping),
         Arc::new(validation_helper.live_commit_sync_config.clone()),
     )
     .await
@@ -1659,7 +1660,7 @@ mod tests {
             Large(large_commits[large_index_to_test].clone()),
             &small_repo,
             Small(small_commits[small_index_to_test].clone()),
-            &small_to_large_commit_syncer.mapping,
+            small_to_large_commit_syncer.get_mapping().clone(),
             small_to_large_commit_syncer.live_commit_sync_config,
         )
         .await?;

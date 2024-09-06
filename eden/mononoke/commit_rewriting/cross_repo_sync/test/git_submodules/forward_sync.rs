@@ -1121,7 +1121,6 @@ async fn test_implicitly_deleting_file_with_submodule(fb: FacebookInit) -> Resul
     let SubmoduleSyncTestData {
         small_repo_info: (small_repo, small_repo_cs_map),
         large_repo_info: (large_repo, _large_repo_master),
-        mapping,
         live_commit_sync_config,
         test_sync_config_source,
         ..
@@ -1148,7 +1147,6 @@ async fn test_implicitly_deleting_file_with_submodule(fb: FacebookInit) -> Resul
             // Add it as a submdule in the path of the existing `A_A` file.
             (NonRootMPath::new("A_A").unwrap(), repo_c.clone()),
         ],
-        mapping,
         live_commit_sync_config,
         test_sync_config_source,
     )?;
@@ -1216,7 +1214,6 @@ async fn test_adding_submodule_on_existing_directory(fb: FacebookInit) -> Result
         small_repo_info: (small_repo, small_repo_cs_map),
         large_repo_info: (large_repo, _large_repo_master),
         commit_syncer,
-        mapping,
         live_commit_sync_config,
         test_sync_config_source,
         ..
@@ -1260,7 +1257,6 @@ async fn test_adding_submodule_on_existing_directory(fb: FacebookInit) -> Result
             // Add the submodule path to the config
             (dir_path.clone(), repo_c.clone()),
         ],
-        mapping,
         live_commit_sync_config,
         test_sync_config_source,
     )?;

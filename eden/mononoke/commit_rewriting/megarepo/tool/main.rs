@@ -104,8 +104,6 @@ use sql_ext::replication::ReplicaLagMonitor;
 use sql_ext::replication::WaitForReplicationConfig;
 use sql_query_config::SqlQueryConfig;
 use synced_commit_mapping::EquivalentWorkingCopyEntry;
-use synced_commit_mapping::SqlSyncedCommitMapping;
-use synced_commit_mapping::SqlSyncedCommitMappingBuilder;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMappingEntry;
 use synced_commit_mapping::WorkingCopyEquivalence;
@@ -318,14 +316,6 @@ async fn run_sync_diamond_merge<'a>(
 
     let source_repo = args::open_repo_with_repo_id(ctx.fb, ctx.logger(), source_repo_id, matches);
     let target_repo = args::open_repo_with_repo_id(ctx.fb, ctx.logger(), target_repo_id, matches);
-    let mapping =
-        args::not_shardmanager_compatible::open_source_sql::<SqlSyncedCommitMappingBuilder>(
-            ctx.fb,
-            config_store,
-            matches,
-        )
-        .await?
-        .build(matches.environment().rendezvous_options);
 
     let merge_commit_hash = sub_m.value_of(COMMIT_HASH).unwrap().to_owned();
     let (source_repo, target_repo): (Repo, Repo) = try_join(source_repo, target_repo).await?;
@@ -362,7 +352,6 @@ async fn run_sync_diamond_merge<'a>(
         target_repo_arc.as_ref(),
         submodule_deps,
         source_merge_cs_id,
-        mapping,
         bookmark,
         live_commit_sync_config,
     )
@@ -1056,7 +1045,7 @@ async fn run_backfill_noop_mapping<'a>(
         .then({
             borrowed!(commit_syncer, ctx);
             move |chunk| async move {
-                let mapping = &commit_syncer.mapping;
+                let mapping = commit_syncer.get_mapping();
                 let chunk: Result<Vec<_>, Error> = chunk.into_iter().collect();
                 let chunk = chunk?;
                 let len = chunk.len();
@@ -1184,7 +1173,7 @@ async fn run_diff_mapping_versions<'a>(
 async fn process_stream_and_wait_for_replication<'a, R: cross_repo_sync::Repo>(
     ctx: &CoreContext,
     matches: &MononokeMatches<'a>,
-    commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, R>,
+    commit_syncer: &CommitSyncer<R>,
     mut s: impl Stream<Item = Result<u64>> + std::marker::Unpin,
 ) -> Result<(), Error> {
     let config_store = matches.config_store();
@@ -1369,7 +1358,7 @@ async fn run_delete_no_longer_bound_files_from_large_repo<'a>(
 
 async fn find_mover_for_commit<R: cross_repo_sync::Repo>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, R>,
+    commit_syncer: &CommitSyncer<R>,
     cs_id: ChangesetId,
 ) -> Result<Mover, Error> {
     let maybe_sync_outcome = commit_syncer.get_commit_sync_outcome(ctx, cs_id).await?;

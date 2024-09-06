@@ -815,12 +815,8 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
         SubmoduleDeps::ForSync(HashMap::new()),
     )?;
 
-    let commit_syncer = CommitSyncer::new(
-        &ctx,
-        largerepo.synced_commit_mapping().clone(),
-        commit_sync_repos,
-        largerepo.live_commit_sync_config(),
-    );
+    let commit_syncer =
+        CommitSyncer::new(&ctx, commit_sync_repos, largerepo.live_commit_sync_config());
 
     update_mapping_with_version(
         &ctx,

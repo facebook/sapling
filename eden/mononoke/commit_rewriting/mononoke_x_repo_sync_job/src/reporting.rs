@@ -18,7 +18,6 @@ use slog::error;
 use slog::info;
 use slog::warn;
 use slog::Logger;
-use synced_commit_mapping::SyncedCommitMapping;
 
 use crate::sync::SyncResult;
 
@@ -36,9 +35,9 @@ const SUCCESS: &str = "success";
 
 /// Populate the `scuba_sample` with fields, common for
 /// this tailer run
-pub fn add_common_fields<M: SyncedCommitMapping + Clone + 'static, R: CrossRepo>(
+pub fn add_common_fields<R: CrossRepo>(
     scuba_sample: &mut MononokeScubaSampleBuilder,
-    commit_syncer: &CommitSyncer<M, R>,
+    commit_syncer: &CommitSyncer<R>,
 ) {
     scuba_sample
         .add(SOURCE_REPO, commit_syncer.get_source_repo_id().id())

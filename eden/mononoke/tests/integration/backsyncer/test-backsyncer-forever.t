@@ -72,6 +72,10 @@ Config change
   $ SMALL_MASTER_BONSAI=$(mononoke_newadmin bookmarks --repo-id $REPOIDSMALL get master_bookmark)
   $ update_mapping_version "$REPOIDSMALL" "$SMALL_MASTER_BONSAI" "$REPOIDLARGE" "$LARGE_MASTER_BONSAI" "new_version"
 
+-- restart the backsyncer to empty the synced commit mapping cache
+  $ killandwait $BACKSYNCER_PID
+  $ backsync_large_to_small_forever
+
 -- push to a large repo, using new path mapping
   $ cd "$TESTTMP"/large-hg-client
   $ hg up -q master_bookmark

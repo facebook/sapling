@@ -66,11 +66,8 @@ mod tests {
     use mutable_counters::MutableCountersRef;
     use pushredirect::PushRedirectionConfig;
     use pushredirect::TestPushRedirectionConfig;
-    use rendezvous::RendezVousOptions;
     use repo_blobstore::RepoBlobstoreRef;
     use repo_derived_data::RepoDerivedDataRef;
-    use sql_construct::SqlConstruct;
-    use synced_commit_mapping::SqlSyncedCommitMappingBuilder;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::bookmark;
     use tests_utils::drawdag::create_from_dag;
@@ -642,9 +639,6 @@ mod tests {
     async fn test_get_large_repo_setting(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let live_commit_sync_config = get_large_repo_live_commit_sync_config();
-        let mapping = SqlSyncedCommitMappingBuilder::with_sqlite_in_memory()
-            .unwrap()
-            .build(RendezVousOptions::for_test());
         let large_repo =
             create_repo_with_live_commit_sync_config(fb, 0, live_commit_sync_config.clone())
                 .await?;
@@ -662,7 +656,6 @@ mod tests {
             small_repo_1.clone(),
             large_repo.clone(),
             SubmoduleDeps::ForSync(HashMap::new()),
-            mapping.clone(),
             live_commit_sync_config.clone(),
         )?;
 
@@ -690,7 +683,6 @@ mod tests {
             small_repo_2.clone(),
             large_repo.clone(),
             SubmoduleDeps::ForSync(HashMap::new()),
-            mapping.clone(),
             live_commit_sync_config,
         )?;
 
@@ -741,15 +733,11 @@ mod tests {
         .await?;
         let cs_ids: Vec<ChangesetId> = changesets.values().copied().collect();
 
-        let mapping = SqlSyncedCommitMappingBuilder::with_sqlite_in_memory()
-            .unwrap()
-            .build(RendezVousOptions::for_test());
         let syncers = create_commit_syncers(
             &ctx,
             small_repo.clone(),
             large_repo.clone(),
             SubmoduleDeps::ForSync(HashMap::new()),
-            mapping.clone(),
             live_commit_sync_config,
         )?;
 
@@ -918,14 +906,11 @@ mod tests {
 
         let cs_ids: Vec<ChangesetId> = changesets.values().copied().collect();
 
-        let mapping = SqlSyncedCommitMappingBuilder::with_sqlite_in_memory()?
-            .build(RendezVousOptions::for_test());
         let syncers = create_commit_syncers(
             &ctx,
             small_repo.clone(),
             large_repo.clone(),
             SubmoduleDeps::ForSync(HashMap::new()),
-            mapping.clone(),
             live_commit_sync_config,
         )?;
 
@@ -1010,15 +995,11 @@ mod tests {
             .set_to(first_commit)
             .await?;
 
-        let mapping = SqlSyncedCommitMappingBuilder::with_sqlite_in_memory()?
-            .build(RendezVousOptions::for_test());
-
         let syncers = create_commit_syncers(
             &ctx,
             small_repo.clone(),
             large_repo.clone(),
             SubmoduleDeps::ForSync(HashMap::new()),
-            mapping.clone(),
             live_commit_sync_config,
         )?;
 

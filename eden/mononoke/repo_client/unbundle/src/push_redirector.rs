@@ -121,7 +121,6 @@ impl<R: Repo> PushRedirectorArgs<R> {
         let PushRedirectorArgs {
             target_repo,
             source_repo,
-            synced_commit_mapping,
             target_repo_dbs,
             ..
         } = self;
@@ -138,7 +137,6 @@ impl<R: Repo> PushRedirectorArgs<R> {
             small_repo,
             large_repo,
             submodule_deps,
-            synced_commit_mapping,
             live_commit_sync_config,
         )?;
 
@@ -164,9 +162,9 @@ pub struct PushRedirector<R> {
     // small repo to sync from
     pub small_repo: Arc<R>,
     // `CommitSyncer` struct to do push redirecion
-    pub small_to_large_commit_syncer: CommitSyncer<Arc<dyn SyncedCommitMapping>, R>,
+    pub small_to_large_commit_syncer: CommitSyncer<R>,
     // `CommitSyncer` struct for the backsyncer
-    pub large_to_small_commit_syncer: CommitSyncer<Arc<dyn SyncedCommitMapping>, R>,
+    pub large_to_small_commit_syncer: CommitSyncer<R>,
     // A struct, needed to backsync commits
     pub target_repo_dbs: Arc<TargetRepoDbs>,
 }
@@ -703,7 +701,7 @@ impl<R: Repo> PushRedirector<R> {
     async fn remap_changeset_expect_rewritten_or_preserved(
         &self,
         ctx: &CoreContext,
-        syncer: &CommitSyncer<Arc<dyn SyncedCommitMapping>, R>,
+        syncer: &CommitSyncer<R>,
         cs_id: ChangesetId,
     ) -> Result<ChangesetId, Error> {
         let maybe_commit_sync_outcome = syncer.get_commit_sync_outcome(ctx, cs_id).await?;

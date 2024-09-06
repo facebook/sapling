@@ -26,7 +26,6 @@ use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use movers::Movers;
-use synced_commit_mapping::SyncedCommitMapping;
 
 use crate::commit_sync_config_utils::get_git_submodule_action_by_version;
 use crate::commit_sync_outcome::CommitSyncOutcome;
@@ -74,10 +73,10 @@ pub(crate) enum CommitSyncInMemoryResult {
 
 impl CommitSyncInMemoryResult {
     /// Write the changes to blobstores and mappings
-    pub(crate) async fn write<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
+    pub(crate) async fn write<R: Repo>(
         self,
         ctx: &CoreContext,
-        syncer: &CommitSyncer<M, R>,
+        syncer: &CommitSyncer<R>,
     ) -> Result<Option<ChangesetId>, Error> {
         use CommitSyncInMemoryResult::*;
         match self {

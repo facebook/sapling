@@ -66,7 +66,6 @@ use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use sorted_vector_map::SortedVectorMap;
 use strum::IntoEnumIterator;
-use synced_commit_mapping::SqlSyncedCommitMapping;
 use test_repo_factory::default_test_repo_derived_data_types_config;
 use test_repo_factory::TestRepoFactory;
 use tests_utils::bookmark;
@@ -84,10 +83,9 @@ pub const REPO_C_DANGLING_GIT_COMMIT_HASH: &str = "408dc1a8d40f13a0b8eee162411db
 pub(crate) struct SubmoduleSyncTestData {
     pub(crate) small_repo_info: (TestRepo, BTreeMap<String, ChangesetId>),
     pub(crate) large_repo_info: (TestRepo, ChangesetId),
-    pub(crate) commit_syncer: CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
+    pub(crate) commit_syncer: CommitSyncer<TestRepo>,
     pub(crate) live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     pub(crate) test_sync_config_source: TestLiveCommitSyncConfigSource,
-    pub(crate) mapping: SqlSyncedCommitMapping,
 }
 
 /// Simplified version of `FileChange` that allows to quickly create file change
@@ -200,7 +198,7 @@ pub(crate) async fn build_submodule_sync_test_data(
 
     let small_repo_ddt_cfg = submodule_repo_derived_data_types_config();
 
-    let (small_repo, large_repo, mapping, live_commit_sync_config, test_sync_config_source) =
+    let (small_repo, large_repo, _mapping, live_commit_sync_config, test_sync_config_source) =
         prepare_repos_mapping_and_config_with_repo_config_overrides(
             fb,
             |cfg| {
@@ -242,7 +240,6 @@ pub(crate) async fn build_submodule_sync_test_data(
         small_repo.clone(),
         large_repo.clone(),
         "small_repo",
-        mapping.clone(),
         live_commit_sync_config.clone(),
         test_sync_config_source.clone(),
         submodule_deps,
@@ -276,7 +273,6 @@ pub(crate) async fn build_submodule_sync_test_data(
         small_repo_info: (small_repo, small_repo_cs_map),
         large_repo_info: (large_repo, large_repo_master),
         commit_syncer,
-        mapping,
         live_commit_sync_config,
         test_sync_config_source,
     })
@@ -401,12 +397,11 @@ pub(crate) fn create_small_repo_to_large_repo_commit_syncer(
     small_repo: TestRepo,
     large_repo: TestRepo,
     prefix: &str,
-    mapping: SqlSyncedCommitMapping,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     test_sync_config_source: TestLiveCommitSyncConfigSource,
     // The submodules dependency map that should be used in the commit syncer
     submodule_deps: Vec<(NonRootMPath, TestRepo)>,
-) -> Result<CommitSyncer<SqlSyncedCommitMapping, TestRepo>, Error> {
+) -> Result<CommitSyncer<TestRepo>, Error> {
     let small_repo_id = small_repo.repo_identity().id();
     let large_repo_id = large_repo.repo_identity().id();
 
@@ -438,12 +433,7 @@ pub(crate) fn create_small_repo_to_large_repo_commit_syncer(
 
     let repos = CommitSyncRepos::new(small_repo, large_repo, submodule_deps)?;
 
-    Ok(CommitSyncer::new(
-        ctx,
-        mapping,
-        repos,
-        live_commit_sync_config,
-    ))
+    Ok(CommitSyncer::new(ctx, repos, live_commit_sync_config))
 }
 
 /// Creates the commit sync config to setup the sync from repo A to the large repo,
@@ -501,10 +491,9 @@ pub(crate) fn add_new_commit_sync_config_version_with_submodule_deps(
     large_repo: &TestRepo,
     prefix: &str,
     submodule_deps: Vec<(NonRootMPath, TestRepo)>,
-    mapping: SqlSyncedCommitMapping,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     test_sync_config_source: TestLiveCommitSyncConfigSource,
-) -> Result<CommitSyncer<SqlSyncedCommitMapping, TestRepo>, Error> {
+) -> Result<CommitSyncer<TestRepo>, Error> {
     let commit_sync_config = create_commit_sync_config(
         large_repo.repo_identity().id(),
         small_repo.repo_identity().id(),
@@ -517,7 +506,6 @@ pub(crate) fn add_new_commit_sync_config_version_with_submodule_deps(
         small_repo.clone(),
         large_repo.clone(),
         "small_repo",
-        mapping.clone(),
         live_commit_sync_config.clone(),
         test_sync_config_source.clone(),
         submodule_deps,
@@ -807,7 +795,7 @@ pub(crate) async fn sync_changeset_and_derive_all_types(
     ctx: CoreContext,
     cs_id: ChangesetId,
     target_repo: &TestRepo,
-    commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
+    commit_syncer: &CommitSyncer<TestRepo>,
 ) -> Result<(ChangesetId, Vec<ChangesetData>)> {
     let target_repo_cs_id = sync_to_master(ctx.clone(), commit_syncer, cs_id)
         .await

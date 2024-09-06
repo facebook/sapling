@@ -48,7 +48,6 @@ use slog::debug;
 use slog::error;
 use slog::info;
 use sorted_vector_map::SortedVectorMap;
-use synced_commit_mapping::SyncedCommitMapping;
 
 use crate::commit_syncer::CommitSyncer;
 use crate::get_git_submodule_action_by_version;
@@ -80,9 +79,9 @@ use crate::SubmoduleExpansionData;
 /// NOTE: The implementation is a bit hacky due to the path mover functions
 /// being orignally designed with moving file paths not, directory paths. The
 /// hack is mostly contained to wrap_mover_result functiton.
-pub async fn verify_working_copy<'a, M: SyncedCommitMapping + Clone + 'static, R: Repo>(
+pub async fn verify_working_copy<'a, R: Repo>(
     ctx: &'a CoreContext,
-    commit_syncer: &'a CommitSyncer<M, R>,
+    commit_syncer: &'a CommitSyncer<R>,
     source_hash: ChangesetId,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<(), Error> {
@@ -98,13 +97,9 @@ pub async fn verify_working_copy<'a, M: SyncedCommitMapping + Clone + 'static, R
     .await
 }
 
-pub async fn verify_working_copy_with_version<
-    'a,
-    M: SyncedCommitMapping + Clone + 'static,
-    R: Repo,
->(
+pub async fn verify_working_copy_with_version<'a, R: Repo>(
     ctx: &'a CoreContext,
-    commit_syncer: &'a CommitSyncer<M, R>,
+    commit_syncer: &'a CommitSyncer<R>,
     source_hash: Source<ChangesetId>,
     target_hash: Target<ChangesetId>,
     version: &'a CommitSyncConfigVersion,
@@ -1125,8 +1120,8 @@ async fn verify_dir<'a>(
 
 // Returns list of prefixes that need to be visited in both large and small
 // repositories to establish working copy equivalence.
-async fn get_large_repo_prefixes_to_visit<'a, M: SyncedCommitMapping + Clone + 'static, R: Repo>(
-    commit_syncer: &'a CommitSyncer<M, R>,
+async fn get_large_repo_prefixes_to_visit<'a, R: Repo>(
+    commit_syncer: &'a CommitSyncer<R>,
     version: &'a CommitSyncConfigVersion,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<Vec<Option<NonRootMPath>>, Error> {
@@ -1176,9 +1171,9 @@ async fn get_large_repo_prefixes_to_visit<'a, M: SyncedCommitMapping + Clone + '
 ///   |                           |
 ///  ...                         ...
 /// ```
-pub async fn find_bookmark_diff<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
+pub async fn find_bookmark_diff<R: Repo>(
     ctx: CoreContext,
-    commit_syncer: &CommitSyncer<M, R>,
+    commit_syncer: &CommitSyncer<R>,
 ) -> Result<Vec<BookmarkDiff>, Error> {
     let source_repo = commit_syncer.get_source_repo();
     let target_repo = commit_syncer.get_target_repo();
@@ -1307,9 +1302,9 @@ pub fn report_different<
     }
 }
 
-async fn get_synced_commit<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
+async fn get_synced_commit<R: Repo>(
     ctx: CoreContext,
-    commit_syncer: &CommitSyncer<M, R>,
+    commit_syncer: &CommitSyncer<R>,
     hash: ChangesetId,
 ) -> Result<(ChangesetId, CommitSyncConfigVersion), Error> {
     let maybe_sync_outcome = commit_syncer.get_commit_sync_outcome(&ctx, hash).await?;
@@ -1360,9 +1355,9 @@ struct CorrespondingChangesets {
     target_cs_id: ChangesetId,
 }
 
-async fn rename_and_remap_bookmarks<M: SyncedCommitMapping + Clone + 'static, R: Repo>(
+async fn rename_and_remap_bookmarks<R: Repo>(
     ctx: CoreContext,
-    commit_syncer: &CommitSyncer<M, R>,
+    commit_syncer: &CommitSyncer<R>,
     bookmarks: impl IntoIterator<Item = (BookmarkKey, ChangesetId)>,
 ) -> Result<
     (
@@ -1445,10 +1440,7 @@ mod test {
     use mononoke_macros::mononoke;
     use mononoke_types::NonRootMPath;
     use mononoke_types::RepositoryId;
-    use rendezvous::RendezVousOptions;
-    use sql_construct::SqlConstruct;
-    use synced_commit_mapping::SqlSyncedCommitMapping;
-    use synced_commit_mapping::SqlSyncedCommitMappingBuilder;
+    use synced_commit_mapping::SyncedCommitMapping;
     use synced_commit_mapping::SyncedCommitMappingEntry;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::bookmark;
@@ -1459,12 +1451,7 @@ mod test {
     use crate::SubmoduleDeps;
 
     #[mononoke::fbinit_test]
-    fn test_bookmark_diff_with_renamer(fb: FacebookInit) -> Result<(), Error> {
-        let runtime = tokio::runtime::Runtime::new()?;
-        runtime.block_on(test_bookmark_diff_with_renamer_impl(fb))
-    }
-
-    async fn test_bookmark_diff_with_renamer_impl(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_bookmark_diff_with_renamer(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (commit_syncer, _config) = init(fb, CommitSyncDirection::LargeToSmall).await?;
 
@@ -1645,8 +1632,6 @@ mod test {
             .commit()
             .await?;
 
-        let mapping = SqlSyncedCommitMappingBuilder::with_sqlite_in_memory()?
-            .build(RendezVousOptions::for_test());
         let repos = CommitSyncRepos::LargeToSmall {
             small_repo: target,
             large_repo: source,
@@ -1655,12 +1640,7 @@ mod test {
 
         let live_commit_sync_config = get_live_commit_sync_config();
 
-        let commit_syncer = CommitSyncer::new_with_live_commit_sync_config(
-            &ctx,
-            mapping,
-            repos,
-            live_commit_sync_config.clone(),
-        );
+        let commit_syncer = CommitSyncer::new(&ctx, repos, live_commit_sync_config.clone());
 
         println!("checking root commit");
         for version in &["first_version", "second_version"] {
@@ -1734,25 +1714,27 @@ mod test {
     async fn init(
         fb: FacebookInit,
         direction: CommitSyncDirection,
-    ) -> Result<
-        (
-            CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
-            Arc<TestLiveCommitSyncConfig>,
-        ),
-        Error,
-    > {
+    ) -> Result<(CommitSyncer<TestRepo>, Arc<TestLiveCommitSyncConfig>), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let small_repo: TestRepo = Linear::get_repo_with_id(fb, RepositoryId::new(0)).await;
-        let large_repo: TestRepo = Linear::get_repo_with_id(fb, RepositoryId::new(1)).await;
+
+        let (lv_cfg, lv_cfg_src) = TestLiveCommitSyncConfig::new_with_source();
+        let live_commit_sync_config = Arc::new(lv_cfg);
+
+        let mut factory = TestRepoFactory::new(fb)?;
+        let small_repo: TestRepo = factory
+            .with_id(RepositoryId::new(0))
+            .with_live_commit_sync_config(live_commit_sync_config.clone())
+            .build()
+            .await?;
+        Linear::init_repo(fb, &small_repo).await?;
+        let large_repo: TestRepo = factory
+            .with_id(RepositoryId::new(1))
+            .with_live_commit_sync_config(live_commit_sync_config.clone())
+            .build()
+            .await?;
+        Linear::init_repo(fb, &large_repo).await?;
 
         let master = BookmarkKey::new("master")?;
-        let maybe_master_val = small_repo.bookmarks().get(ctx.clone(), &master).await?;
-
-        let master_val = maybe_master_val.ok_or_else(|| Error::msg("master not found"))?;
-        let changesets = small_repo
-            .commit_graph()
-            .ancestors_difference(&ctx, vec![master_val], vec![])
-            .await?;
 
         let current_version = CommitSyncConfigVersion("noop".to_string());
 
@@ -1769,11 +1751,19 @@ mod test {
             },
         };
 
-        let mapping = SqlSyncedCommitMappingBuilder::with_sqlite_in_memory()
-            .unwrap()
-            .build(RendezVousOptions::for_test());
+        let commit_syncer = CommitSyncer::new(&ctx, repos.clone(), live_commit_sync_config.clone());
+
+        let maybe_master_val = small_repo.bookmarks().get(ctx.clone(), &master).await?;
+
+        let master_val = maybe_master_val.ok_or_else(|| Error::msg("master not found"))?;
+        let changesets = small_repo
+            .commit_graph()
+            .ancestors_difference(&ctx, vec![master_val], vec![])
+            .await?;
+
         for cs_id in changesets {
-            mapping
+            commit_syncer
+                .get_mapping()
                 .add(
                     &ctx,
                     SyncedCommitMappingEntry {
@@ -1787,8 +1777,6 @@ mod test {
                 )
                 .await?;
         }
-
-        let (lv_cfg, lv_cfg_src) = TestLiveCommitSyncConfig::new_with_source();
 
         let common_config = CommonCommitSyncConfig {
             common_pushrebase_bookmarks: vec![BookmarkKey::new("master")?],
@@ -1830,16 +1818,6 @@ mod test {
         lv_cfg_src.add_config(current_version_config);
         lv_cfg_src.add_config(config_with_prefix);
 
-        let live_commit_sync_config = Arc::new(lv_cfg);
-
-        Ok((
-            CommitSyncer::new_with_live_commit_sync_config(
-                &ctx,
-                mapping,
-                repos,
-                live_commit_sync_config.clone(),
-            ),
-            live_commit_sync_config,
-        ))
+        Ok((commit_syncer, live_commit_sync_config))
     }
 }

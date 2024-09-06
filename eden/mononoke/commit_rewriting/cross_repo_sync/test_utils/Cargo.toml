@@ -33,13 +33,11 @@ mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../../../mutable_counters" }
 phases = { version = "0.1.0", path = "../../../phases" }
 pushrebase_mutation_mapping = { version = "0.1.0", path = "../../../pushrebase_mutation_mapping" }
-rendezvous = { version = "0.1.0", path = "../../../common/rendezvous" }
 repo_blobstore = { version = "0.1.0", path = "../../../blobrepo/repo_blobstore" }
 repo_bookmark_attrs = { version = "0.1.0", path = "../../../repo_attributes/repo_bookmark_attrs" }
 repo_cross_repo = { version = "0.1.0", path = "../../../repo_attributes/repo_cross_repo" }
 repo_derived_data = { version = "0.1.0", path = "../../../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../../../repo_attributes/repo_identity" }
-sql_construct = { version = "0.1.0", path = "../../../common/sql_construct" }
 sql_query_config = { version = "0.1.0", path = "../../../repo_attributes/sql_query_config" }
 synced_commit_mapping = { version = "0.1.0", path = "../../synced_commit_mapping" }
 test_repo_factory = { version = "0.1.0", path = "../../../repo_factory/test_repo_factory" }

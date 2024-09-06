@@ -102,7 +102,6 @@ use slog::Logger;
 use sorted_vector_map::sorted_vector_map;
 use sql_query_config::SqlQueryConfig;
 use synced_commit_mapping::EquivalentWorkingCopyEntry;
-use synced_commit_mapping::SqlSyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMappingEntry;
 
@@ -231,7 +230,7 @@ pub async fn subcommand_crossrepo<'a>(
     );
     match sub_m.subcommand() {
         (MAP_SUBCOMMAND, Some(sub_sub_m)) => {
-            let (source_repo, target_repo, mapping) =
+            let (source_repo, target_repo, _mapping) =
                 get_source_target_repos_and_mapping::<Repo>(fb, logger, matches).await?;
 
             let submodule_deps = SubmoduleDeps::NotNeeded;
@@ -243,8 +242,7 @@ pub async fn subcommand_crossrepo<'a>(
             let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
                 Arc::new(live_commit_sync_config);
 
-            let commit_syncer =
-                CommitSyncer::new(&ctx, mapping, commit_sync_repos, live_commit_sync_config);
+            let commit_syncer = CommitSyncer::new(&ctx, commit_sync_repos, live_commit_sync_config);
             let hash = sub_sub_m.value_of(HASH_ARG).unwrap().to_owned();
             subcommand_map(ctx, commit_syncer, hash).await
         }
@@ -278,7 +276,7 @@ pub async fn subcommand_crossrepo<'a>(
             .map_err(|e| e.into())
         }
         (VERIFY_BOOKMARKS_SUBCOMMAND, Some(sub_sub_m)) => {
-            let (source_repo, target_repo, mapping) =
+            let (source_repo, target_repo, _mapping) =
                 get_source_target_repos_and_mapping::<Repo>(fb, logger, matches).await?;
 
             let mode = if sub_sub_m.is_present(UPDATE_LARGE_REPO_BOOKMARKS) {
@@ -305,7 +303,6 @@ pub async fn subcommand_crossrepo<'a>(
                 ctx,
                 source_repo,
                 target_repo,
-                mapping,
                 mode,
                 Arc::new(live_commit_sync_config),
             )
@@ -375,7 +372,7 @@ async fn run_pushredirection_subcommand<'a>(
     config_store: &ConfigStore,
     live_commit_sync_config: CfgrLiveCommitSyncConfig,
 ) -> Result<(), SubcommandError> {
-    let (source_repo, target_repo, mapping) =
+    let (source_repo, target_repo, _mapping) =
         get_source_target_repos_and_mapping(fb, ctx.logger().clone(), matches).await?;
 
     let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> = Arc::new(live_commit_sync_config);
@@ -387,7 +384,6 @@ async fn run_pushredirection_subcommand<'a>(
                 source_repo,
                 target_repo,
                 live_commit_sync_config.clone(),
-                mapping,
             )
             .await?;
 
@@ -444,7 +440,6 @@ async fn run_pushredirection_subcommand<'a>(
                 source_repo,
                 target_repo,
                 live_commit_sync_config.clone(),
-                mapping,
             )
             .await?;
 
@@ -568,7 +563,7 @@ async fn change_mapping_via_extras<'a>(
     ctx: &CoreContext,
     matches: &'a MononokeMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
-    commit_syncer: &'a CommitSyncer<SqlSyncedCommitMapping, Repo>,
+    commit_syncer: &'a CommitSyncer<Repo>,
     config_store: &ConfigStore,
     live_commit_sync_config: &Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<(), Error> {
@@ -675,7 +670,6 @@ async fn run_insert_subcommand<'a>(
         source_repo.clone(),
         target_repo.clone(),
         live_commit_sync_config.clone(),
-        mapping.clone(),
     )
     .await?;
 
@@ -806,7 +800,7 @@ async fn run_insert_subcommand<'a>(
 async fn get_source_target_cs_ids_and_version(
     ctx: &CoreContext,
     sub_m: &ArgMatches<'_>,
-    commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, Repo>,
+    commit_syncer: &CommitSyncer<Repo>,
 ) -> Result<(ChangesetId, ChangesetId, CommitSyncConfigVersion), Error> {
     async fn fetch_cs_id(
         ctx: &CoreContext,
@@ -851,7 +845,7 @@ async fn create_commit_for_mapping_change(
     parent: &Large<ChangesetId>,
     mapping_version: &CommitSyncConfigVersion,
     options: MappingCommitOptions,
-    commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, Repo>,
+    commit_syncer: &CommitSyncer<Repo>,
     live_commit_sync_config: &Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<Large<ChangesetId>, Error> {
     let author = sub_m
@@ -923,7 +917,7 @@ async fn create_file_changes(
     large_repo: &Large<&Repo>,
     mapping_version: &CommitSyncConfigVersion,
     options: MappingCommitOptions,
-    commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, Repo>,
+    commit_syncer: &CommitSyncer<Repo>,
     live_commit_sync_config: &Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<BTreeMap<NonRootMPath, FileChange>, Error> {
     let mut file_changes = btreemap! {};
@@ -1127,7 +1121,7 @@ async fn subcommand_by_version<'a, L: LiveCommitSyncConfig>(
 
 async fn subcommand_map(
     ctx: CoreContext,
-    commit_syncer: CommitSyncer<SqlSyncedCommitMapping, Repo>,
+    commit_syncer: CommitSyncer<Repo>,
     hash: String,
 ) -> Result<(), SubcommandError> {
     let source_repo = commit_syncer.get_source_repo();
@@ -1152,7 +1146,6 @@ async fn subcommand_verify_bookmarks(
     ctx: CoreContext,
     source_repo: Repo,
     target_repo: Repo,
-    mapping: SqlSyncedCommitMapping,
     run_mode: VerifyRunMode,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<(), SubcommandError> {
@@ -1163,7 +1156,6 @@ async fn subcommand_verify_bookmarks(
         source_repo.clone(),
         target_repo.clone(),
         live_commit_sync_config,
-        mapping.clone(),
     )
     .await?;
 
@@ -1233,7 +1225,7 @@ async fn subcommand_verify_bookmarks(
 async fn update_large_repo_bookmarks(
     ctx: CoreContext,
     diff: &[BookmarkDiff],
-    syncers: &Syncers<SqlSyncedCommitMapping, Repo>,
+    syncers: &Syncers<Repo>,
     common_commit_sync_config: &CommonCommitSyncConfig,
     update_mode: UpdateLargeRepoBookmarksMode,
     limit: Option<usize>,
@@ -1585,8 +1577,7 @@ async fn get_syncers<'a>(
     source_repo: Repo,
     target_repo: Repo,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
-    mapping: SqlSyncedCommitMapping,
-) -> Result<Syncers<SqlSyncedCommitMapping, Repo>, Error> {
+) -> Result<Syncers<Repo>, Error> {
     let common_sync_config =
         live_commit_sync_config.get_common_config(source_repo.repo_identity().id())?;
 
@@ -1618,7 +1609,6 @@ async fn get_syncers<'a>(
         small_repo,
         large_repo,
         submodule_deps,
-        mapping,
         live_commit_sync_config,
     )
 }
@@ -1628,17 +1618,12 @@ async fn get_large_to_small_commit_syncer<'a>(
     source_repo: Repo,
     target_repo: Repo,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
-    mapping: SqlSyncedCommitMapping,
-) -> Result<CommitSyncer<SqlSyncedCommitMapping, Repo>, Error> {
-    Ok(get_syncers(
-        ctx,
-        source_repo,
-        target_repo,
-        live_commit_sync_config,
-        mapping,
+) -> Result<CommitSyncer<Repo>, Error> {
+    Ok(
+        get_syncers(ctx, source_repo, target_repo, live_commit_sync_config)
+            .await?
+            .large_to_small,
     )
-    .await?
-    .large_to_small)
 }
 
 async fn get_live_commit_sync_config<'a>(
@@ -1810,9 +1795,7 @@ mod test {
         Ok(())
     }
 
-    async fn init_syncers(
-        fb: FacebookInit,
-    ) -> Result<Syncers<SqlSyncedCommitMapping, Repo>, Error> {
+    async fn init_syncers(fb: FacebookInit) -> Result<Syncers<Repo>, Error> {
         let ctx = CoreContext::test_mock(fb);
 
         let mut factory = TestRepoFactory::new(fb)?;
@@ -1896,7 +1879,6 @@ mod test {
             small_repo,
             large_repo,
             SubmoduleDeps::ForSync(HashMap::new()),
-            mapping,
             live_commit_sync_config,
         )
     }

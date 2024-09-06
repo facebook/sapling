@@ -43,7 +43,7 @@ pub async fn create_commit_syncers_from_app<R: CrossRepo>(
     ctx: &CoreContext,
     app: &MononokeApp,
     repo_args: &SourceAndTargetRepoArgs,
-) -> Result<Syncers<SqlSyncedCommitMapping, R>, Error> {
+) -> Result<Syncers<R>, Error> {
     create_commit_syncers_from_app_impl(ctx, app, repo_args, false).await
 }
 
@@ -51,7 +51,7 @@ pub async fn create_commit_syncers_from_app_unredacted<R: CrossRepo>(
     ctx: &CoreContext,
     app: &MononokeApp,
     repo_args: &SourceAndTargetRepoArgs,
-) -> Result<Syncers<SqlSyncedCommitMapping, R>, Error> {
+) -> Result<Syncers<R>, Error> {
     create_commit_syncers_from_app_impl(ctx, app, repo_args, true).await
 }
 
@@ -60,8 +60,8 @@ async fn create_commit_syncers_from_app_impl<R: CrossRepo>(
     app: &MononokeApp,
     repo_args: &SourceAndTargetRepoArgs,
     unredacted: bool,
-) -> Result<Syncers<SqlSyncedCommitMapping, R>, Error> {
-    let (source_repo, target_repo, mapping, live_commit_sync_config) =
+) -> Result<Syncers<R>, Error> {
+    let (source_repo, target_repo, _mapping, live_commit_sync_config) =
         get_things_from_app::<R>(ctx, app, repo_args, unredacted).await?;
 
     let common_config =
@@ -97,7 +97,6 @@ async fn create_commit_syncers_from_app_impl<R: CrossRepo>(
         small_repo,
         large_repo,
         submodule_deps,
-        mapping,
         live_commit_sync_config,
     )
 }

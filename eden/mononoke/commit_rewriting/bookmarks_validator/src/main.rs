@@ -51,8 +51,6 @@ use slog::error;
 use slog::info;
 use slog::Logger;
 use stats::prelude::*;
-use synced_commit_mapping::SqlSyncedCommitMapping;
-use synced_commit_mapping::SyncedCommitMapping;
 use tokio::runtime::Runtime;
 
 define_stats! {
@@ -160,7 +158,7 @@ impl RepoShardedProcess for BookmarkValidateProcess {
 /// Struct representing the execution of the Bookmark Validate
 /// BP over the context of a provided repos.
 pub struct BookmarkValidateProcessExecutor {
-    syncers: Syncers<SqlSyncedCommitMapping, Repo>,
+    syncers: Syncers<Repo>,
     ctx: CoreContext,
     env: Arc<MononokeEnvironment>,
     config_store: ConfigStore,
@@ -171,7 +169,7 @@ pub struct BookmarkValidateProcessExecutor {
 
 impl BookmarkValidateProcessExecutor {
     fn new(
-        syncers: Syncers<SqlSyncedCommitMapping, Repo>,
+        syncers: Syncers<Repo>,
         ctx: CoreContext,
         env: Arc<MononokeEnvironment>,
         config_store: ConfigStore,
@@ -308,10 +306,10 @@ fn create_core_context(fb: FacebookInit, logger: Logger) -> CoreContext {
     session_container.new_context(logger, scuba_sample)
 }
 
-async fn loop_forever<M: SyncedCommitMapping + Clone + 'static, R: CrossRepo>(
+async fn loop_forever<R: CrossRepo>(
     ctx: CoreContext,
     env: &Arc<MononokeEnvironment>,
-    syncers: Syncers<M, R>,
+    syncers: Syncers<R>,
     _config_store: &ConfigStore,
     cancellation_requested: Arc<AtomicBool>,
 ) -> Result<(), Error> {
@@ -401,9 +399,9 @@ impl From<Error> for ValidationError {
     }
 }
 
-async fn validate<M: SyncedCommitMapping + Clone + 'static, R: CrossRepo>(
+async fn validate<R: CrossRepo>(
     ctx: &CoreContext,
-    syncers: &Syncers<M, R>,
+    syncers: &Syncers<R>,
     large_repo_name: &str,
     small_repo_name: &str,
 ) -> Result<(), ValidationError> {
@@ -463,9 +461,9 @@ async fn validate<M: SyncedCommitMapping + Clone + 'static, R: CrossRepo>(
 }
 
 // Check that commit equivalent to maybe_small_cs_id was in large_bookmark log recently
-async fn check_large_bookmark_history<M: SyncedCommitMapping + Clone + 'static, R: CrossRepo>(
+async fn check_large_bookmark_history<R: CrossRepo>(
     ctx: &CoreContext,
-    syncers: &Syncers<M, R>,
+    syncers: &Syncers<R>,
     large_bookmark: &BookmarkKey,
     maybe_large_cs_id: &Option<ChangesetId>,
     maybe_small_cs_id: &Option<ChangesetId>,
@@ -557,9 +555,9 @@ async fn check_large_bookmark_history<M: SyncedCommitMapping + Clone + 'static, 
     }
 }
 
-async fn remap<M: SyncedCommitMapping + Clone + 'static, R: CrossRepo>(
+async fn remap<R: CrossRepo>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<M, R>,
+    commit_syncer: &CommitSyncer<R>,
     source_cs_id: &ChangesetId,
 ) -> Result<Option<ChangesetId>, Error> {
     let maybe_commit_sync_outcome = commit_syncer

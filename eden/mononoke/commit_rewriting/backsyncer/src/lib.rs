@@ -97,7 +97,6 @@ use slog::warn;
 use sql::Transaction;
 use sql_ext::TransactionResult;
 use sql_query_config::SqlQueryConfig;
-use synced_commit_mapping::SyncedCommitMapping;
 use thiserror::Error;
 use wireproto_handler::TargetRepoDbs;
 
@@ -155,14 +154,13 @@ pub enum BacksyncLimit {
 ///
 /// We also use a hard-coded timeout to avoid being stuck forever waiting for the backsync if it is
 /// lagging. Not having this timeout has caused SEVs in the past, blocking lands.
-pub async fn ensure_backsynced<M, R>(
+pub async fn ensure_backsynced<R>(
     ctx: CoreContext,
-    commit_syncer: CommitSyncer<M, R>,
+    commit_syncer: CommitSyncer<R>,
     target_repo_dbs: Arc<TargetRepoDbs>,
     log_id: BookmarkUpdateLogId,
 ) -> Result<(), Error>
 where
-    M: SyncedCommitMapping + Clone + 'static,
     R: RepoLike + Send + Sync + Clone + 'static,
 {
     let timeout = Duration::from_secs(
@@ -201,9 +199,9 @@ where
     bail!("Timeout expired while waiting for backsyncing")
 }
 
-pub async fn backsync_latest<M, R>(
+pub async fn backsync_latest<R>(
     ctx: CoreContext,
-    commit_syncer: CommitSyncer<M, R>,
+    commit_syncer: CommitSyncer<R>,
     target_repo_dbs: Arc<TargetRepoDbs>,
     limit: BacksyncLimit,
     cancellation_requested: Arc<AtomicBool>,
@@ -212,7 +210,6 @@ pub async fn backsync_latest<M, R>(
     commit_only_backsync_future: Box<dyn Future<Output = ()> + Send + Unpin>,
 ) -> Result<Box<dyn Future<Output = ()> + Send + Unpin>, Error>
 where
-    M: SyncedCommitMapping + Clone + 'static,
     R: RepoLike + Send + Sync + Clone + 'static,
 {
     // TODO(ikostia): start borrowing `CommitSyncer`, no reason to consume it
@@ -275,9 +272,9 @@ where
     }
 }
 
-async fn sync_entries<M, R>(
+async fn sync_entries<R>(
     mut ctx: CoreContext,
-    commit_syncer: &CommitSyncer<M, R>,
+    commit_syncer: &CommitSyncer<R>,
     target_repo_dbs: Arc<TargetRepoDbs>,
     entries: Vec<BookmarkUpdateLogEntry>,
     mut counter: BookmarkUpdateLogId,
@@ -287,7 +284,6 @@ async fn sync_entries<M, R>(
     mut commit_only_backsync_future: Box<dyn Future<Output = ()> + Send + Unpin>,
 ) -> Result<Box<dyn Future<Output = ()> + Send + Unpin>, Error>
 where
-    M: SyncedCommitMapping + Clone + 'static,
     R: RepoLike + Send + Sync + Clone + 'static,
 {
     for entry in entries {
@@ -326,9 +322,9 @@ where
 // This function is the inner function for sync_entries and shouldn't be called by other callers.
 // It encapsulates of what we consider as doing a single "backsyncing" for bookmark entry: an
 // activity that we want to time and log.
-async fn do_sync_entry<M, R>(
+async fn do_sync_entry<R>(
     ctx: CoreContext,
-    commit_syncer: &CommitSyncer<M, R>,
+    commit_syncer: &CommitSyncer<R>,
     target_repo_dbs: &Arc<TargetRepoDbs>,
     entry: BookmarkUpdateLogEntry,
     counter: &mut BookmarkUpdateLogId,
@@ -339,7 +335,6 @@ async fn do_sync_entry<M, R>(
     scuba_log_tag: &mut String,
 ) -> Result<Box<dyn Future<Output = ()> + Send + Unpin>, Error>
 where
-    M: SyncedCommitMapping + Clone + 'static,
     R: RepoLike + Send + Sync + Clone + 'static,
 {
     let entry_id = entry.id;
@@ -533,15 +528,14 @@ async fn commits_added_by_bookmark_move(
     }
 }
 
-async fn backsync_bookmark<M, R>(
+async fn backsync_bookmark<R>(
     ctx: CoreContext,
-    commit_syncer: &CommitSyncer<M, R>,
+    commit_syncer: &CommitSyncer<R>,
     target_repo_dbs: Arc<TargetRepoDbs>,
     prev_counter: Option<BookmarkUpdateLogId>,
     log_entry: &BookmarkUpdateLogEntry,
 ) -> Result<Option<BookmarkUpdateLogId>, Error>
 where
-    M: SyncedCommitMapping + Clone + 'static,
     R: RepoLike + Send + Sync + Clone + 'static,
 {
     let prev_counter: Option<i64> = prev_counter.map(|x| x.try_into()).transpose()?;

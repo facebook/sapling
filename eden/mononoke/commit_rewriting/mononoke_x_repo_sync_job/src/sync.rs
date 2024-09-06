@@ -53,7 +53,6 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::FutureStatsScubaExt;
 use scuba_ext::MononokeScubaSampleBuilder;
-use synced_commit_mapping::SyncedCommitMapping;
 
 use crate::reporting::log_bookmark_deletion_result;
 use crate::reporting::log_non_pushrebase_sync_single_changeset_result;
@@ -84,9 +83,9 @@ pub enum SyncResult {
 /// in a target repo. This depends on which bookmark introduced a commit - if it's a
 /// common_pushrebase_bookmark (usually "master"), then a commit will be pushrebased.
 /// Otherwise it will be synced without pushrebase.
-pub async fn sync_single_bookmark_update_log<M: SyncedCommitMapping + Clone + 'static, R>(
+pub async fn sync_single_bookmark_update_log<R>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<M, R>,
+    commit_syncer: &CommitSyncer<R>,
     entry: BookmarkUpdateLogEntry,
     common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
     mut scuba_sample: MononokeScubaSampleBuilder,
@@ -149,9 +148,9 @@ where
 /// Unsafe_change_mapping_version allows for changing the mapping version used when pushrebasing the
 /// commit. Should be only used when we know that the new mapping version is safe to use on common
 /// pushrebase bookmark.
-pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static, R>(
+pub async fn sync_commit_and_ancestors<R>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<M, R>,
+    commit_syncer: &CommitSyncer<R>,
     from_cs_id: Option<ChangesetId>,
     to_cs_id: ChangesetId,
     target_bookmark: &Option<Target<BookmarkKey>>,
@@ -340,9 +339,9 @@ where
 /// for setting up the initial configuration for the sync. The validation of the version
 /// applicability to pushrebased bookmarks belongs to caller.
 /// ```
-async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'static, R>(
+async fn sync_commits_via_pushrebase<R>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<M, R>,
+    commit_syncer: &CommitSyncer<R>,
     target_bookmark: &Target<BookmarkKey>,
     common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
     scuba_sample: MononokeScubaSampleBuilder,
@@ -444,9 +443,9 @@ where
     Ok(res)
 }
 
-pub async fn sync_commit_without_pushrebase<M: SyncedCommitMapping + Clone + 'static, R>(
+pub async fn sync_commit_without_pushrebase<R>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<M, R>,
+    commit_syncer: &CommitSyncer<R>,
     scuba_sample: MononokeScubaSampleBuilder,
     cs_id: ChangesetId,
     common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
@@ -553,9 +552,9 @@ where
 /// Run the initial import of a small repo into a large repo.
 /// It will sync a specific commit (i.e. head commit) and all of its ancestors
 /// and optionally bookmark the head commit.
-pub async fn sync_commits_for_initial_import<M: SyncedCommitMapping + Clone + 'static, R>(
+pub async fn sync_commits_for_initial_import<R>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<M, R>,
+    commit_syncer: &CommitSyncer<R>,
     scuba_sample: MononokeScubaSampleBuilder,
     // Head commit to sync. All of its unsynced ancestors will be synced as well.
     cs_id: ChangesetId,
@@ -763,9 +762,9 @@ where
     Ok(res)
 }
 
-async fn process_bookmark_deletion<M: SyncedCommitMapping + Clone + 'static, R>(
+async fn process_bookmark_deletion<R>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<M, R>,
+    commit_syncer: &CommitSyncer<R>,
     scuba_sample: MononokeScubaSampleBuilder,
     source_bookmark: &Source<BookmarkKey>,
     target_bookmark: &Target<BookmarkKey>,
@@ -794,9 +793,9 @@ where
     }
 }
 
-async fn check_forward_move<M: SyncedCommitMapping + Clone + 'static, R>(
+async fn check_forward_move<R>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<M, R>,
+    commit_syncer: &CommitSyncer<R>,
     to_cs_id: ChangesetId,
     from_cs_id: ChangesetId,
 ) -> Result<(), Error>
@@ -816,9 +815,9 @@ where
     Ok(())
 }
 
-async fn find_remapped_cs_id<M: SyncedCommitMapping + Clone + 'static, R>(
+async fn find_remapped_cs_id<R>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<M, R>,
+    commit_syncer: &CommitSyncer<R>,
     orig_cs_id: ChangesetId,
 ) -> Result<Option<ChangesetId>, Error>
 where
@@ -837,9 +836,9 @@ where
     }
 }
 
-async fn pushrebase_commit<M: SyncedCommitMapping + Clone + 'static, R>(
+async fn pushrebase_commit<R>(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<M, R>,
+    commit_syncer: &CommitSyncer<R>,
     target_bookmark: &Target<BookmarkKey>,
     cs_id: ChangesetId,
     pushrebase_rewrite_dates: PushrebaseRewriteDates,
@@ -1052,7 +1051,6 @@ mod test {
     use maplit::hashset;
     use mononoke_macros::mononoke;
     use mutable_counters::MutableCountersRef;
-    use synced_commit_mapping::SqlSyncedCommitMapping;
     use tests_utils::bookmark;
     use tests_utils::resolve_cs_id;
     use tests_utils::CreateCommitContext;
@@ -1418,7 +1416,7 @@ mod test {
 
     async fn sync_and_validate(
         ctx: &CoreContext,
-        commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
+        commit_syncer: &CommitSyncer<TestRepo>,
     ) -> Result<(), Error> {
         sync_and_validate_with_common_bookmarks(
             ctx,
@@ -1432,7 +1430,7 @@ mod test {
 
     async fn sync_and_validate_with_common_bookmarks(
         ctx: &CoreContext,
-        commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
+        commit_syncer: &CommitSyncer<TestRepo>,
         common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
         should_be_missing: &HashSet<BookmarkKey>,
         pushrebase_rewrite_dates: PushrebaseRewriteDates,
@@ -1475,7 +1473,7 @@ mod test {
 
     async fn sync(
         ctx: &CoreContext,
-        commit_syncer: &CommitSyncer<SqlSyncedCommitMapping, TestRepo>,
+        commit_syncer: &CommitSyncer<TestRepo>,
         common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
         pushrebase_rewrite_dates: PushrebaseRewriteDates,
     ) -> Result<Vec<SyncResult>, Error> {
