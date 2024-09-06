@@ -46,6 +46,7 @@ use gitdag::GitDag;
 use metalog::MetaLog;
 use minibytes::Bytes;
 use parking_lot::Mutex;
+use paste::paste;
 use storemodel::ReadRootTreeIds;
 use types::HgId;
 
@@ -270,6 +271,137 @@ impl GitSegmentedCommits {
         Ok(())
     }
 
+    /// Import specific Git refs to metalog and the dag.
+    ///
+    /// Unlike `import_from_git` this is incremental,
+    /// nothing outside the specified refs will be changed.
+    fn import_specified_refs_from_git(
+        &mut self,
+        metalog: &mut MetaLog,
+        ref_names: &[String],
+    ) -> Result<()> {
+        tracing::info!(?ref_names, "import git refs");
+
+        #[derive(Default)]
+        struct State {
+            // state (lazy loaded)
+            bookmarks: Option<BTreeMap<String, HgId>>,
+            remotenames: Option<BTreeMap<String, HgId>>,
+            visibleheads: Option<Vec<HgId>>,
+            // heads to import to dag
+            heads: Vec<Vertex>,
+        }
+
+        macro_rules! load {
+            ($self:ident, $field:ident, $metalog:ident) => {
+                paste! {
+                    if let Some(ref mut v) = $self.$field {
+                        v
+                    } else {
+                        $self.$field = Some($metalog.[<get_$field>]()?);
+                        $self.$field.as_mut().unwrap()
+                    }
+                }
+            };
+        }
+
+        macro_rules! update_map {
+            ($field:ident) => {
+                paste! {
+                    fn [<update_ $field>](&mut self, metalog: &MetaLog, name: String, value: Option<HgId>) -> Result<()> {
+                        let map = load!(self, $field, metalog);
+                        match value {
+                            None => { map.remove(&name); }
+                            Some(id) => {
+                                let orig_id = map.insert(name, id);
+                                if orig_id != Some(id) { self.mark_add_head(id); }
+                            }
+                        }
+                        Ok(())
+                    }
+                }
+            };
+        }
+
+        impl State {
+            update_map!(bookmarks);
+            update_map!(remotenames);
+
+            fn insert_visiblehead(&mut self, metalog: &MetaLog, id: HgId) -> Result<()> {
+                let list = load!(self, visibleheads, metalog);
+                if list.contains(&id) {
+                    return Ok(());
+                }
+                list.push(id);
+                self.mark_add_head(id);
+                Ok(())
+            }
+
+            fn mark_add_head(&mut self, id: HgId) {
+                self.heads.push(Vertex::copy_from(id.as_ref()));
+            }
+        }
+
+        let mut state = State::default();
+        for ref_name in ref_names {
+            let ref_value = self.git.lookup_reference_follow_links(ref_name)?;
+            if let Some(name) = ref_name.strip_prefix("refs/heads/") {
+                state.update_bookmarks(metalog, name.into(), ref_value)?;
+            } else if let Some(name) = ref_name.strip_prefix("refs/remotes/") {
+                state.update_remotenames(metalog, name.into(), ref_value)?;
+            } else if let Some(rest) = ref_name.strip_prefix("refs/remotetags/") {
+                let name = match rest.split_once('/') {
+                    Some((remote, name)) => format!("{}/tags/{}", remote, name),
+                    None => bail!("illformed ref_name: {}", ref_name),
+                };
+                state.update_remotenames(metalog, name, ref_value)?;
+            } else if ref_name.starts_with("refs/visibleheads/") {
+                if let Some(id) = ref_value {
+                    state.insert_visiblehead(metalog, id)?;
+                }
+            } else if let Some(id) = ref_value {
+                state.mark_add_head(id);
+            };
+        }
+
+        let State {
+            bookmarks,
+            remotenames,
+            visibleheads,
+            heads,
+        } = state;
+
+        tracing::trace!(
+            ?heads,
+            ?bookmarks,
+            ?remotenames,
+            ?visibleheads,
+            "calculated import git refs"
+        );
+
+        if !heads.is_empty() {
+            let git_repo = self.git_repo.lock();
+            self.dag.import_from_git(Some(&*git_repo), heads.into())?;
+        }
+
+        if let Some(v) = bookmarks {
+            metalog.set_bookmarks(&v)?;
+        }
+        if let Some(v) = remotenames {
+            metalog.set_remotenames(&v)?;
+        }
+        if let Some(v) = visibleheads {
+            metalog.set_visibleheads(&v)?;
+        }
+
+        let mut opts = metalog::CommitOptions::default();
+        let message = format!("sync from git refs: {:?}", ref_names);
+        opts.message = &message;
+        metalog.commit(opts)?;
+
+        Ok(())
+    }
+
     /// Update git references to match metalog changes.
     /// - remotenames, bookmarks: changes will be applied to Git references.
     /// - visibleheads: current state will replace refs/visibleheads/ namespace.
@@ -425,6 +557,14 @@ impl AppendCommits for GitSegmentedCommits {
 
     fn update_references_to_match_metalog(&mut self, metalog: &MetaLog) -> Result<()> {
         self.metalog_to_git_references(metalog)
+    }
+
+    fn import_external_references(
+        &mut self,
+        metalog: &mut MetaLog,
+        names: &[String],
+    ) -> Result<()> {
+        self.import_specified_refs_from_git(metalog, names)
     }
 
     async fn update_virtual_nodes(&mut self, wdir_parents: Vec<Vertex>) -> Result<()> {

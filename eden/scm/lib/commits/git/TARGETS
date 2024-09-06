@@ -12,6 +12,7 @@ rust_library(
         "fbsource//third-party/rust:fs-err",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:paste",
         "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/commits/trait:commits-trait",
         "//eden/scm/lib/config/model:configmodel",
