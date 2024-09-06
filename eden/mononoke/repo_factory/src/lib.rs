@@ -214,12 +214,16 @@ const ZEUS_CLIENT_ID: &str = "mononoke";
 
 define_stats! {
     prefix = "mononoke.repo_factory";
-    cache_miss: dynamic_singleton_counter(
-        "cache.miss.{}",
+    cache_hit: dynamic_singleton_counter(
+        "cache.{}.hit",
         (cache_name: String)
     ),
-    cache_hit: dynamic_singleton_counter(
-        "cache.hit.{}",
+    cache_init_error: dynamic_singleton_counter(
+        "cache.{}.init.error",
+        (cache_name: String)
+    ),
+    cache_miss: dynamic_singleton_counter(
+        "cache.{}.miss",
         (cache_name: String)
     ),
 }
@@ -263,8 +267,13 @@ impl<K: Clone + Eq + Hash, V: Clone> RepoFactoryCache<K, V> {
                 }
             }
         };
-        let value = cell.get_or_try_init(init).await?;
-        Ok(value.clone())
+        match cell.get_or_try_init(init).await {
+            Ok(value) => Ok(value.clone()),
+            Err(e) => {
+                STATS::cache_init_error.increment_value(self.fb, 1, (self.name.clone(),));
+                Err(e)
+            }
+        }
     }
 }
 
