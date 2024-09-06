@@ -616,8 +616,18 @@ impl PathComponent {
         Ok(PathComponent::from_str_unchecked(s))
     }
 
+    /// `const_fn` version of `from_str`.
+    ///
+    /// Path validation happens at compile time.
+    pub const fn from_static_str(s: &'static str) -> &PathComponent {
+        if validate_component(s.as_bytes()).is_err() {
+            panic!("invalid PathComponent::from_static_str");
+        }
+        Self::from_str_unchecked(s)
+    }
+
     #[ref_cast_custom]
-    fn from_str_unchecked(s: &str) -> &PathComponent;
+    const fn from_str_unchecked(s: &str) -> &PathComponent;
 
     /// Returns the underlying bytes of the `PathComponent`.
     pub fn as_byte_slice(&self) -> &[u8] {
@@ -1205,6 +1215,13 @@ mod tests {
             format!("{}", PathComponent::from_str("").unwrap_err()),
             "Failed to validate \"\". Invalid component: \"\"."
         );
+    }
+
+    #[test]
+    fn test_const_path_component() {
+        const COMPONENT_STR: &str = "foo";
+        static STATIC_COMPONENT: &PathComponent = PathComponent::from_static_str(COMPONENT_STR);
+        assert_eq!(STATIC_COMPONENT.as_str(), COMPONENT_STR);
     }
 
     #[test]
