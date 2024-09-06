@@ -38,6 +38,10 @@ if sys.platform != "win32":
     import pwd
 
 
+class RepoError(Exception):
+    pass
+
+
 # These paths are relative to the user's client directory.
 LOCK_FILE = "lock"
 PID_FILE = "pid"
@@ -882,3 +886,11 @@ def create_filtered_rootid(root_id: str, filter_path: Optional[str] = None) -> b
     filter_id = f"{filter_path}:{root_id}" if filter_path is not None else "null"
     varint = encode_varint(original_len)
     return varint + root_id.encode() + filter_id.encode()
+
+
+def get_enable_sqlite_overlay(overlay_type: Optional[str]) -> bool:
+    if overlay_type is None:
+        # The sqlite backed overlay is default only on Windows
+        return sys.platform == "win32"
+
+    return overlay_type == "sqlite"

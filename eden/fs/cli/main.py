@@ -23,7 +23,6 @@ import subprocess
 import sys
 import traceback
 import typing
-import uuid
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple, Type
 
@@ -36,7 +35,6 @@ from eden.fs.cli.telemetry import TelemetrySample
 from eden.fs.cli.util import (
     check_health_using_lockfile,
     EdenStartError,
-    get_protocol,
     is_apple_silicon,
     wait_for_instance_healthy,
 )
@@ -758,10 +756,6 @@ class ListCmd(Subcmd):
             out.writeln(f"{path.as_posix()}{state_str}{suffix}")
 
 
-class RepoError(Exception):
-    pass
-
-
 @subcmd("clone", "Create a clone of a specific repo and check it out")
 class CloneCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
@@ -950,7 +944,7 @@ is case-sensitive. This is not recommended and is intended only for testing."""
 
         # Find the repository information
         try:
-            repo, repo_config = self._get_repo_info(
+            repo, repo_config = config_mod.get_repo_info(
                 instance,
                 args.repo,
                 args.rev,
@@ -962,7 +956,7 @@ is case-sensitive. This is not recommended and is intended only for testing."""
                 args.enable_windows_symlinks
                 or instance.get_config_bool("experimental.windows-symlinks", False),
             )
-        except RepoError as ex:
+        except util.RepoError as ex:
             print_stderr("error: {}", ex)
             return 1
 
@@ -1029,7 +1023,7 @@ is case-sensitive. This is not recommended and is intended only for testing."""
                     )
                     return 1
         else:
-            raise RepoError(f"Unsupported backing store {args.backing_store}.")
+            raise util.RepoError(f"Unsupported backing store {args.backing_store}.")
 
         # Attempt to start the daemon if it is not already running.
         health_info = instance.check_health()
@@ -1063,104 +1057,6 @@ is case-sensitive. This is not recommended and is intended only for testing."""
         except Exception as ex:
             print_stderr("error: {}", ex)
             return 1
-
-    def _get_enable_sqlite_overlay(
-        self, instance: EdenInstance, overlay_type: Optional[str]
-    ) -> bool:
-        if overlay_type is None:
-            # The sqlite backed overlay is default only on Windows
-            return sys.platform == "win32"
-
-        return overlay_type == "sqlite"
-
-    def _get_repo_info(
-        self,
-        instance: EdenInstance,
-        repo_arg: str,
-        rev: Optional[str],
-        nfs: bool,
-        case_sensitive: bool,
-        overlay_type: Optional[str],
-        backing_store_type: Optional[str] = None,
-        re_use_case: Optional[str] = None,
-        enable_windows_symlinks: bool = False,
-    ) -> Tuple[util.Repo, config_mod.CheckoutConfig]:
-        # Check to see if repo_arg points to an existing EdenFS mount
-        checkout_config = instance.get_checkout_config_for_path(repo_arg)
-        if checkout_config is not None:
-            if backing_store_type is not None:
-                # If the user specified a backing store type, make sure it takes
-                # priority over the existing checkout config.
-                if backing_store_type != checkout_config.scm_type:
-                    checkout_config = checkout_config._replace(
-                        scm_type=backing_store_type
-                    )
-
-            repo = util.get_repo(str(checkout_config.backing_repo), backing_store_type)
-            if repo is None:
-                raise RepoError(
-                    "EdenFS mount is configured to use repository "
-                    f"{checkout_config.backing_repo} but unable to find a "
-                    "repository at that location"
-                )
-            return repo, checkout_config
-
-        # Confirm that repo_arg looks like an existing repository path.
-        repo = util.get_repo(repo_arg, backing_store_type)
-        if repo is None:
-            raise RepoError(f"{repo_arg!r} does not look like a valid repository")
-
-        mount_protocol = get_protocol(nfs)
-
-        enable_sqlite_overlay = self._get_enable_sqlite_overlay(instance, overlay_type)
-
-        if overlay_type is None:
-            # Not specified - read from EdenConfig, fallback to default.
-            overlay_type = instance.get_config_value(
-                "overlay.inode-catalog-type",
-                # SqliteOverlay is default on Windows
-                "sqlite" if sys.platform == "win32" else "legacy",
-            )
-            if overlay_type not in config_mod.SUPPORTED_INODE_CATALOG_TYPES:
-                raise Exception(
-                    f"Eden config has unsupported overlay (inode catalog) type "
-                    f'"{overlay_type}". Supported overlay (inode catalog) types are: '
-                    f'{", ".join(sorted(config_mod.SUPPORTED_INODE_CATALOG_TYPES))}.'
-                )
-        overlay_type = overlay_type.lower()
-        if sys.platform == "win32" and overlay_type == "legacy":
-            raise Exception(
-                "Legacy overlay (inode catalog) type not supported on Windows. "
-                "Use Sqlite or InMemory on Windows."
-            )
-        elif sys.platform != "win32" and overlay_type == "inmemory":
-            raise Exception(
-                "InMemory overlay (inode catalog) type is only supported on Windows. "
-                "Use Legacy or Sqlite on Linux and MacOS."
-            )
-
-        # This is a valid repository path.
-        # Prepare a CheckoutConfig object for it.
-        repo_config = config_mod.CheckoutConfig(
-            backing_repo=Path(repo.source),
-            scm_type=repo.type,
-            guid=str(uuid.uuid4()),
-            mount_protocol=mount_protocol,
-            case_sensitive=case_sensitive,
-            require_utf8_path=True,
-            default_revision=config_mod.DEFAULT_REVISION[repo.type],
-            redirections={},
-            active_prefetch_profiles=[],
-            predictive_prefetch_profiles_active=False,
-            predictive_prefetch_num_dirs=0,
-            enable_sqlite_overlay=enable_sqlite_overlay,
-            use_write_back_cache=False,
-            re_use_case=re_use_case or "buck2-default",
-            enable_windows_symlinks=enable_windows_symlinks,
-            inode_catalog_type=overlay_type,
-        )
-
-        return repo, repo_config
 
 
 @subcmd("config", "Query EdenFS CLI configuration")

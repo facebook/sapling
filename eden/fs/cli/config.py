@@ -2038,3 +2038,113 @@ def load_toml_config(path: Path) -> TomlConfigDict:
         raise FileError(
             f"toml config file {str(path)} is either missing or corrupted: {str(e)}"
         )
+
+
+def get_repo_info(
+    instance: EdenInstance,
+    repo_arg: str,
+    rev: Optional[str],
+    nfs: bool,
+    case_sensitive: bool,
+    overlay_type: Optional[str],
+    backing_store_type: Optional[str] = None,
+    re_use_case: Optional[str] = None,
+    enable_windows_symlinks: bool = False,
+) -> Tuple[util.Repo, CheckoutConfig]:
+    # Check to see if repo_arg points to an existing EdenFS mount
+    checkout_config = instance.get_checkout_config_for_path(repo_arg)
+    if checkout_config is not None:
+        if backing_store_type is not None:
+            # If the user specified a backing store type, make sure it takes
+            # priority over the existing checkout config.
+            if backing_store_type != checkout_config.scm_type:
+                checkout_config = checkout_config._replace(scm_type=backing_store_type)
+
+        repo = util.get_repo(str(checkout_config.backing_repo), backing_store_type)
+        if repo is None:
+            raise util.RepoError(
+                "EdenFS mount is configured to use repository "
+                f"{checkout_config.backing_repo} but unable to find a "
+                "repository at that location"
+            )
+        return repo, checkout_config
+
+    # Confirm that repo_arg looks like an existing repository path.
+    repo = util.get_repo(repo_arg, backing_store_type)
+    if repo is None:
+        raise util.RepoError(f"{repo_arg!r} does not look like a valid repository")
+    checkout_config = create_checkout_config(
+        repo,
+        instance,
+        nfs,
+        case_sensitive,
+        overlay_type,
+        backing_store_type,
+        re_use_case,
+        enable_windows_symlinks,
+    )
+
+    return repo, checkout_config
+
+
+def create_checkout_config(
+    repo: util.Repo,
+    instance: EdenInstance,
+    nfs: bool,
+    case_sensitive: bool,
+    overlay_type: Optional[str],
+    backing_store_type: Optional[str] = None,
+    re_use_case: Optional[str] = None,
+    enable_windows_symlinks: bool = False,
+) -> CheckoutConfig:
+    mount_protocol = util.get_protocol(nfs)
+
+    enable_sqlite_overlay = util.get_enable_sqlite_overlay(overlay_type)
+
+    if overlay_type is None:
+        # Not specified - read from EdenConfig, fallback to default.
+        overlay_type = instance.get_config_value(
+            "overlay.inode-catalog-type",
+            # SqliteOverlay is default on Windows
+            "sqlite" if sys.platform == "win32" else "legacy",
+        )
+        if overlay_type not in SUPPORTED_INODE_CATALOG_TYPES:
+            raise Exception(
+                f"Eden config has unsupported overlay (inode catalog) type "
+                f'"{overlay_type}". Supported overlay (inode catalog) types are: '
+                f'{", ".join(sorted(SUPPORTED_INODE_CATALOG_TYPES))}.'
+            )
+    overlay_type = overlay_type.lower()
+    if sys.platform == "win32" and overlay_type == "legacy":
+        raise Exception(
+            "Legacy overlay (inode catalog) type not supported on Windows. "
+            "Use Sqlite or InMemory on Windows."
+        )
+    elif sys.platform != "win32" and overlay_type == "inmemory":
+        raise Exception(
+            "InMemory overlay (inode catalog) type is only supported on Windows. "
+            "Use Legacy or Sqlite on Linux and MacOS."
+        )
+
+    # This is a valid repository path.
+    # Prepare a CheckoutConfig object for it.
+    repo_config = CheckoutConfig(
+        backing_repo=Path(repo.source),
+        scm_type=repo.type,
+        guid=str(uuid.uuid4()),
+        mount_protocol=mount_protocol,
+        case_sensitive=case_sensitive,
+        require_utf8_path=True,
+        default_revision=DEFAULT_REVISION[repo.type],
+        redirections={},
+        active_prefetch_profiles=[],
+        predictive_prefetch_profiles_active=False,
+        predictive_prefetch_num_dirs=0,
+        enable_sqlite_overlay=enable_sqlite_overlay,
+        use_write_back_cache=False,
+        re_use_case=re_use_case or "buck2-default",
+        enable_windows_symlinks=enable_windows_symlinks,
+        inode_catalog_type=overlay_type,
+    )
+
+    return repo_config
