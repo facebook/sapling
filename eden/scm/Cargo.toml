@@ -139,6 +139,7 @@ members = [
   "lib/nonblocking",
   "lib/pathhistory",
   "lib/pathmatcher",
+  "lib/pathmatcher/types",
   "lib/pprint",
   "lib/procinfo",
   "lib/progress/model",

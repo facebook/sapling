@@ -22,6 +22,7 @@ rust_library(
         "fbsource//third-party/rust:regex-automata",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/pathmatcher/types:pathmatcher-types",
         "//eden/scm/lib/types:types",
         "//eden/scm/lib/util:util",
     ],
