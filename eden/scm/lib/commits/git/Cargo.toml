@@ -17,6 +17,7 @@ gitdag = { version = "0.1.0", path = "../../dag/gitdag" }
 metalog = { version = "0.1.0", path = "../../metalog" }
 minibytes = { version = "0.1.0", path = "../../minibytes" }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
+pathmatcher-types = { version = "0.1.0", path = "../../pathmatcher/types" }
 refencode = { version = "0.1.0", path = "../../refencode" }
 storemodel = { version = "0.1.0", path = "../../storemodel" }
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }

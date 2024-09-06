@@ -18,6 +18,7 @@ rust_library(
         "//eden/scm/lib/dag/gitdag:gitdag",
         "//eden/scm/lib/metalog:metalog",
         "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/pathmatcher/types:pathmatcher-types",
         "//eden/scm/lib/refencode:refencode",
         "//eden/scm/lib/storemodel:storemodel",
         "//eden/scm/lib/types:types",
