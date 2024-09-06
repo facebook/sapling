@@ -8,6 +8,7 @@
 mod errors;
 mod factory_impls;
 mod git;
+pub(crate) mod ref_filter;
 pub(crate) mod ref_matcher;
 mod utils;
 
