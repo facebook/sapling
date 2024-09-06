@@ -174,6 +174,8 @@ use repo_sparse_profiles::SqlSparseProfilesSizes;
 use repo_stats_logger::ArcRepoStatsLogger;
 use repo_stats_logger::RepoStatsLogger;
 use scuba_ext::MononokeScubaSampleBuilder;
+use slog::debug;
+use slog::error;
 use slog::o;
 use sql_commit_graph_storage::ArcCommitGraphBulkFetcher;
 use sql_commit_graph_storage::CommitGraphBulkFetcher;
@@ -358,7 +360,22 @@ impl RepoFactory {
                     self.env.readonly_storage,
                 )
                 .watched(&self.env.logger)
-                .await?;
+                .await
+                .inspect_err(|e| {
+                    error!(
+                        self.env.logger,
+                        "initializing DB connection failed for config: {:?}: {}", config, e
+                    )
+                })
+                .context("initializing DB connection")?;
+
+                if justknobs::eval("scm/mononoke:log_sql_factory_init", None, None).unwrap_or(false)
+                {
+                    debug!(
+                        self.env.logger,
+                        "initializing DB connection succeeded for config: {:?}", config
+                    )
+                }
                 Ok(Arc::new(sql_factory))
             })
             .await
