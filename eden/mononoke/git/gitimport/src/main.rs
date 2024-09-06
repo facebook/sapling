@@ -440,7 +440,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                         }
                     });
                     // Only upload the tag if it's new or has changed.
-                    if new_or_updated_tag {
+                    if new_or_updated_tag || reupload.reupload_commit() {
                         // The ref getting imported is a tag, so store the raw git Tag object.
                         upload_git_tag(&ctx, uploader.clone(), reader.clone(), tag_id).await?;
                         // Create the changeset corresponding to the commit pointed to by the tag.
