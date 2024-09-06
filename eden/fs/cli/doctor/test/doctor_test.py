@@ -186,7 +186,7 @@ class DoctorTest(DoctorTestBase):
             # `FakeEdenInstance`.
             instance,
             path,
-            state=None,
+            state=MountState.RUNNING,
             backing_repo=checkout.get_backing_repo_path(),
             running_state_dir=path,
             configured_state_dir=path,
@@ -199,14 +199,17 @@ class DoctorTest(DoctorTestBase):
         watchman_roots = {edenfs_path}
         watchman_info = check_watchman.WatchmanCheckInfo(watchman_roots)
 
-        check_running_mount(
+        check_mount(
+            out,
             fixer,
-            # pyre-fixme[6]: For 2rd param expected `EdenInstance` but got
+            # pyre-fixme[6]: For 3rd param expected `EdenInstance` but got
             # `FakeEdenInstance`.
             instance,
             checkout_info,
             mount_table,
             watchman_info,
+            [],
+            set(),
             set(),
             check_network.NetworkChecker(),
             False,
@@ -2568,8 +2571,6 @@ Attempted and failed to fix problem CheckoutNotMounted
             checkout_info,
             mount_table,
             watchman_info,
-            set(),
-            FakeNetworkChecker(),
             False,
             False,
         )
@@ -2642,8 +2643,6 @@ To reclone the corrupted repo, run: `fbclone $REPO --reclone --eden`"""
             checkout_info,
             mount_table,
             watchman_info,
-            set(),
-            FakeNetworkChecker(),
             False,
             False,
         )
@@ -2706,8 +2705,6 @@ To remove the corrupted repo, run: `eden rm {checkout.path}`
             checkout_info,
             mount_table,
             watchman_info,
-            set(),
-            FakeNetworkChecker(),
             False,
             False,
         )

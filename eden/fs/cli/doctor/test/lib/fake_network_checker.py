@@ -5,6 +5,7 @@
 # GNU General Public License version 2.
 
 # pyre-strict
+from pathlib import Path
 
 from eden.fs.cli.config import EdenCheckout
 from eden.fs.cli.doctor.check_network import NetworkChecker
@@ -15,7 +16,8 @@ class FakeNetworkChecker(NetworkChecker):
     def check_network(
         self,
         tracker: ProblemTracker,
-        checkout: EdenCheckout,
+        checkout_backing_repo: Path,
         checked_network_backing_repos: set[str],
+        run_repo_checks: bool = True,
     ) -> None:
         return None

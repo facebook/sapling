@@ -17,7 +17,6 @@ from typing import Dict, List, Optional, Set
 from eden.fs.cli import (
     config as config_mod,
     daemon,
-    daemon_util,
     filesystem,
     mtab,
     prjfs,
@@ -256,6 +255,15 @@ class EdenDoctorChecker:
     def run_edenfs_not_healthy_checks(self) -> None:
         configured_mounts = self.instance.get_mount_paths()
         if configured_mounts:
+            if not self.fast:
+                # Run network checks without a backing repo
+                try:
+                    self.network_checker.check_network(
+                        self.tracker, Path(os.getcwd()), set(), False
+                    )
+                except Exception as ex:
+                    raise RuntimeError("Failed to check network for mount") from ex
+
             self.tracker.add_problem(EdenfsNotHealthy(self.instance, self.out))
         else:
             self.tracker.using_edenfs = False
@@ -770,8 +778,6 @@ def check_mount(
                 checkout,
                 mount_table,
                 watchman_info,
-                checked_network_backing_repos,
-                network_checker,
                 debug,
                 fast,
             )
@@ -826,6 +832,25 @@ def check_mount(
     except Exception as ex:
         raise RuntimeError("Failed to detect nested checkout") from ex
 
+    # Network issues could prevent a mount from starting
+    if not fast:
+        try:
+            backing_repo = checkout.get_backing_repo()
+            run_repo_check = True
+        except AssertionError:
+            # This can happen if the backing repo is not yet configured
+            backing_repo = Path(os.getcwd())
+            run_repo_check = False
+        try:
+            network_checker.check_network(
+                tracker,
+                backing_repo,
+                checked_network_backing_repos,
+                run_repo_check,
+            )
+        except Exception as ex:
+            raise RuntimeError("Failed to check network for mount") from ex
+
 
 def check_starting_mount(
     tracker: ProblemTracker,
@@ -859,8 +884,6 @@ def check_running_mount(
     checkout_info: CheckoutInfo,
     mount_table: mtab.MountTable,
     watchman_info: check_watchman.WatchmanCheckInfo,
-    checked_network_backing_repos: Set[str],
-    network_checker: check_network.NetworkChecker,
     debug: bool,
     fast: bool,
 ) -> None:
@@ -944,14 +967,6 @@ def check_running_mount(
             check_filesystems.check_hg_status_match_hg_diff(tracker, instance, checkout)
         except Exception as ex:
             raise RuntimeError("Failed to compare `hg status` with `hg diff`") from ex
-
-        if not fast:
-            try:
-                network_checker.check_network(
-                    tracker, checkout, checked_network_backing_repos
-                )
-            except Exception as ex:
-                raise RuntimeError("Failed to check network for mount") from ex
 
 
 class CheckoutNotConfigured(Problem):

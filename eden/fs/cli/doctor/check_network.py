@@ -25,7 +25,7 @@ except ImportError:
         return ""
 
 
-NETWORK_TIMEOUT = 5.0
+NETWORK_TIMEOUT = 10.0
 MIN_DOWNLOAD_SPEED = 50.0
 MIN_UPLOAD_SPEED = 10.0
 
@@ -94,16 +94,16 @@ class NetworkChecker:
     def check_network(
         self,
         tracker: ProblemTracker,
-        checkout: EdenCheckout,
+        checkout_backing_repo: Path,
         checked_network_backing_repos: set[str],
+        run_repo_checks: bool = True,
     ) -> None:
-        if str(checkout.get_backing_repo_path()) in checked_network_backing_repos:
+        if str(checkout_backing_repo) in checked_network_backing_repos:
             return
-        checked_network_backing_repos.add(str(checkout.get_backing_repo_path()))
+        checked_network_backing_repos.add(str(checkout_backing_repo))
         hg = os.environ.get("EDEN_HG_BINARY", "hg")
-        cwd = checkout.path
         try:
-            self.run_command([hg, "debugnetwork"], cwd)
+            self.run_command([hg, "debugnetworkdoctor"], checkout_backing_repo)
         except subprocess.CalledProcessError as ex:
             tracker.add_problem(
                 ConnectivityProblem(
@@ -117,74 +117,85 @@ class NetworkChecker:
             )
             return
 
-        try:
-            self.run_command([hg, "debugnetwork", "--connection"], cwd)
-        except subprocess.CalledProcessError as ex:
-            # TODO: debugnetwork returns a variety of error numbers depending on the specific failure
-            # but it should be covered by stdout. Noting in case we want to try to fix any of them
-            # in the future.
-            tracker.add_problem(
-                ConnectivityProblem(
-                    f"hg debugnetwork --connection reported an error:\n{ex.stdout}\n{ex.stderr}\n"
+        if run_repo_checks:
+            try:
+                self.run_command(
+                    [hg, "debugnetwork", "--connection"], checkout_backing_repo
                 )
-            )
-            return
-        except subprocess.TimeoutExpired:
-            tracker.add_problem(
-                ConnectivityProblem(
-                    "command 'hg debugnetwork --connection' timed out.\n"
-                )
-            )
-            return
-
-        try:
-            speed_result = self.run_command([hg, "debugnetwork", "--speed"], cwd)
-        except subprocess.CalledProcessError as ex:
-            # TODO: debugnetwork returns a variety of error numbers depending on the specific failure
-            # but it should be covered by stdout. Noting in case we want to try to fix any of them
-            # in the future.
-            tracker.add_problem(NetworkSpeedProblem(f"\n{ex.stdout}\n{ex.stderr}\n"))
-            return
-        except subprocess.TimeoutExpired:
-            tracker.add_problem(
-                ConnectivityProblem("command 'hg debugnetwork --speed' timed out.\n")
-            )
-            return
-
-        # Latency + 4 speed entries, last entry is empty newline
-        speed_values = speed_result.stdout.split("\n")[-6:-1]
-        latency_str = re.search(
-            r"Latency: (.*) \(average of (\d+) round-trips\)", speed_values[0]
-        )
-        if not latency_str:
-            tracker.add_problem(NetworkSpeedProblem("Could not get latency statistics"))
-            return
-
-        latency = parse_latency(latency_str.group(1))
-        # 250ms
-        if latency > 250:
-            tracker.add_problem(NetworkLatencyProblem(latency))
-            return
-
-        speed_regex = r"Speed: \(round \d\) (uploaded|downloaded) (.*) MB in (.*) (s|ms|us) \((.*) Mbit/s, (.*) MiB/s\)"
-        speed_outputs = []
-        for entry in speed_values[1:5]:
-            speed_str = re.search(speed_regex, entry)
-            if not speed_str:
+            except subprocess.CalledProcessError as ex:
+                # TODO: debugnetwork returns a variety of error numbers depending on the specific failure
+                # but it should be covered by stdout. Noting in case we want to try to fix any of them
+                # in the future.
                 tracker.add_problem(
-                    NetworkSpeedProblem("Could not get speed statistics")
+                    ConnectivityProblem(
+                        f"hg debugnetwork --connection reported an error:\n{ex.stdout}\n{ex.stderr}\n"
+                    )
                 )
                 return
-            speed_outputs.append(float(speed_str.group(5)))
+            except subprocess.TimeoutExpired:
+                tracker.add_problem(
+                    ConnectivityProblem(
+                        "command 'hg debugnetwork --connection' timed out.\n"
+                    )
+                )
+                return
 
-        # speed numbers taken from fixmywindows
-        avg_download_speed = (speed_outputs[0] + speed_outputs[1]) / 2.0
-        avg_upload_speed = (speed_outputs[2] + speed_outputs[3]) / 2.0
-        if (
-            avg_download_speed < MIN_DOWNLOAD_SPEED
-            or avg_upload_speed < MIN_UPLOAD_SPEED
-        ):
-            tracker.add_problem(
-                NetworkSlowSpeedProblem([avg_download_speed, avg_upload_speed])
+            try:
+                speed_result = self.run_command(
+                    [hg, "debugnetwork", "--speed"], checkout_backing_repo
+                )
+            except subprocess.CalledProcessError as ex:
+                # TODO: debugnetwork returns a variety of error numbers depending on the specific failure
+                # but it should be covered by stdout. Noting in case we want to try to fix any of them
+                # in the future.
+                tracker.add_problem(
+                    NetworkSpeedProblem(f"\n{ex.stdout}\n{ex.stderr}\n")
+                )
+                return
+            except subprocess.TimeoutExpired:
+                tracker.add_problem(
+                    ConnectivityProblem(
+                        "command 'hg debugnetwork --speed' timed out.\n"
+                    )
+                )
+                return
+
+            # Latency + 4 speed entries, last entry is empty newline
+            speed_values = speed_result.stdout.split("\n")[-6:-1]
+            latency_str = re.search(
+                r"Latency: (.*) \(average of (\d+) round-trips\)", speed_values[0]
             )
-            return
+            if not latency_str:
+                tracker.add_problem(
+                    NetworkSpeedProblem("Could not get latency statistics")
+                )
+                return
+
+            latency = parse_latency(latency_str.group(1))
+            # 250ms
+            if latency > 250:
+                tracker.add_problem(NetworkLatencyProblem(latency))
+                return
+
+            speed_regex = r"Speed: \(round \d\) (uploaded|downloaded) (.*) MB in (.*) (s|ms|us) \((.*) Mbit/s, (.*) MiB/s\)"
+            speed_outputs = []
+            for entry in speed_values[1:5]:
+                speed_str = re.search(speed_regex, entry)
+                if not speed_str:
+                    tracker.add_problem(
+                        NetworkSpeedProblem("Could not get speed statistics")
+                    )
+                    return
+                speed_outputs.append(float(speed_str.group(5)))
+
+            # speed numbers taken from fixmywindows
+            avg_download_speed = (speed_outputs[0] + speed_outputs[1]) / 2.0
+            avg_upload_speed = (speed_outputs[2] + speed_outputs[3]) / 2.0
+            if (
+                avg_download_speed < MIN_DOWNLOAD_SPEED
+                or avg_upload_speed < MIN_UPLOAD_SPEED
+            ):
+                tracker.add_problem(
+                    NetworkSlowSpeedProblem([avg_download_speed, avg_upload_speed])
+                )
+                return
