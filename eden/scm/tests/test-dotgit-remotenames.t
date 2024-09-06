@@ -74,3 +74,55 @@ Auto pull a remote name that exists in the local Git repo works:
   $ sl log -r origin/b1 -T '{desc}\n'
   pulling 'b1' from '$TESTTMP/server-repo'
   S1
+
+Test remote tags. Prepare it:
+
+  $ git --git-dir=$TESTTMP/server-repo/.git update-ref refs/tags/t1 $S1
+  $ git --git-dir=$TESTTMP/server-repo/.git update-ref refs/tags/t2 $S2
+
+Auto pull tags:
+
+  $ sl log -r origin/tags/t1 -T '{desc}\n'
+  pulling 'origin/tags/t1', 'tags/t1' from '$TESTTMP/server-repo'
+  S1
+  $ sl log -r tags/t2 -T '{desc}\n'
+  pulling 'tags/t2' from '$TESTTMP/server-repo'
+  S2
+
+Explicit pull:
+
+  $ git --git-dir=$TESTTMP/server-repo/.git update-ref refs/tags/t2 $S3
+  $ sl pull -B tags/t2
+  pulling from $TESTTMP/server-repo
+  From $TESTTMP/server-repo
+     b1eae93..dd5bc68  dd5bc68f3407e7a490e04ed4c274dbe1bc0e0026 -> refs/remotetags/origin/t2
+
+Push a tag to remote:
+
+  $ sl push -r $S3 --to tags/t3
+  To $TESTTMP/server-repo
+   * [new tag]         dd5bc68f3407e7a490e04ed4c274dbe1bc0e0026 -> t3
+  $ git --git-dir=$TESTTMP/server-repo/.git show-ref --tags
+  5d045cb6dd867debc8828c96e248804f892cf171 refs/tags/t1
+  dd5bc68f3407e7a490e04ed4c274dbe1bc0e0026 refs/tags/t2
+  dd5bc68f3407e7a490e04ed4c274dbe1bc0e0026 refs/tags/t3
+
+Already pulled tags have "<remote>/tags/<tag_name>" remotename and can be resolved via remotename:
+
+  $ sl log -r origin/tags/t2 -r tags/t1 -T '{desc} {remotenames}\n'
+  S3 origin/tags/t2 origin/tags/t3
+  S1 origin/b1 origin/main origin/tags/t1
+
+The remote tags (refs/remotetags/) and Git tags (refs/tags/) live in two different ref namespaces.
+Remote tags do not leak to Git local tags:
+
+  $ git tag --list
+
+Git local tags do not leak to remote tags:
+
+  $ git tag gt1 $S3
+  $ sl log -r tags/gt1
+  pulling 'tags/gt1' from '$TESTTMP/server-repo'
+  abort: unknown revision 'tags/gt1'!
+  [255]
+
