@@ -1030,6 +1030,17 @@ UnixSocket::Message PrivHelperServer::processSetUseEdenFs(
   return makeResponse();
 }
 
+UnixSocket::Message PrivHelperServer::processGetPid() {
+  XLOG(DBG3, "get privhelper pid");
+
+  pid_t pid = getpid();
+  auto response = makeResponse();
+  response.data.unshare();
+  folly::io::Appender cursor{&response.data, 0};
+  cursor.writeBE<pid_t>(pid);
+  return response;
+}
+
 namespace {
 /// Get the file system ID, or an errno value on error
 folly::Expected<unsigned long, int> getFSID(const char* path) {
@@ -1221,6 +1232,8 @@ UnixSocket::Message PrivHelperServer::processMessage(
       return processSetDaemonTimeout(cursor, request);
     case PrivHelperConn::REQ_SET_USE_EDENFS:
       return processSetUseEdenFs(cursor, request);
+    case PrivHelperConn::REQ_GET_PID:
+      return processGetPid();
     case PrivHelperConn::MSG_TYPE_NONE:
     case PrivHelperConn::RESP_ERROR:
       break;

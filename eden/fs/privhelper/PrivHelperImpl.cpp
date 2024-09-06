@@ -75,13 +75,9 @@ class PrivHelperClientImpl : public PrivHelper,
     pid_ = -1;
     if (helperProc_.has_value()) {
       pid_ = helperProc_->pid();
-    } else if (checkConnection()) {
-      // Sometimes helperProc is not set if an existing privhelper
-      // is passed in via --privhelper_fd. If the connection is open,
-      // retrieve it via request
-
-      // TODO: Implement request
     }
+    // If we need to get the pid from the server, we need to
+    // wait until the connection is started
   }
   ~PrivHelperClientImpl() override {
     cleanup();
@@ -133,6 +129,7 @@ class PrivHelperClientImpl : public PrivHelper,
   Future<folly::Unit> setDaemonTimeout(
       std::chrono::nanoseconds duration) override;
   Future<folly::Unit> setUseEdenFs(bool useEdenFs) override;
+  Future<pid_t> getServerPid() override;
   int stop() override;
   int getRawClientFd() const override {
     auto state = state_.rlock();
@@ -555,6 +552,16 @@ Future<Unit> PrivHelperClientImpl::setUseEdenFs(bool useEdenFs) {
       });
 }
 
+Future<pid_t> PrivHelperClientImpl::getServerPid() {
+  auto xid = getNextXid();
+  auto request = PrivHelperConn::serializeGetPidRequest(xid);
+
+  return sendAndRecv(xid, std::move(request))
+      .thenValue([](UnixSocket::Message&& response) {
+        return PrivHelperConn::parseGetPidResponse(response);
+      });
+}
+
 int PrivHelperClientImpl::stop() {
   const auto result = cleanup();
   if (result.hasError()) {
@@ -574,6 +581,15 @@ bool PrivHelperClientImpl::checkConnection() {
 }
 
 int PrivHelperClientImpl::getPid() {
+  if (pid_ == -1 && checkConnection()) {
+    // Get pid from server after connection is made
+    try {
+      pid_ = getServerPid().get();
+    } catch (const facebook::eden::PrivHelperError& ex) {
+      XLOG(ERR) << "Failed to get pid from privhelper: " << ex.what();
+      return -1;
+    }
+  }
   return pid_;
 }
 
@@ -840,6 +856,10 @@ class StubPrivHelper final : public PrivHelper {
   folly::Future<folly::Unit> setUseEdenFs(bool useEdenFs) override {
     (void)useEdenFs;
     return folly::unit;
+  }
+
+  folly::Future<pid_t> getServerPid() override {
+    return -1;
   }
 
   int stop() override {

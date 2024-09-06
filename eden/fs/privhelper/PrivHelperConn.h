@@ -48,6 +48,7 @@ class PrivHelperConn {
     REQ_SET_USE_EDENFS = 10,
     REQ_MOUNT_NFS = 11,
     REQ_UNMOUNT_NFS = 12,
+    REQ_GET_PID = 13,
   };
 
   // This structure should never change. If fields need to be added to the
@@ -180,6 +181,9 @@ class PrivHelperConn {
   static void parseSetUseEdenFsRequest(
       folly::io::Cursor& cursor,
       bool& useEdenFs);
+
+  static UnixSocket::Message serializeGetPidRequest(uint32_t xid);
+  static pid_t parseGetPidResponse(const UnixSocket::Message& msg);
 
   /**
    * Parse a response that is expected to be empty.

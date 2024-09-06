@@ -97,6 +97,7 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   UnixSocket::Message processSetUseEdenFs(
       folly::io::Cursor& cursor,
       UnixSocket::Message& request);
+  UnixSocket::Message processGetPid();
 
   /**
    * Verify that the user has the right credentials to mount/unmount this path.

@@ -175,4 +175,8 @@ folly::Future<folly::Unit> FakePrivHelper::setUseEdenFs(bool /* useEdenFs */) {
   return folly::unit;
 }
 
+folly::Future<pid_t> FakePrivHelper::getServerPid() {
+  return -1;
+}
+
 } // namespace facebook::eden

@@ -360,6 +360,30 @@ void PrivHelperConn::parseTakeoverStartupRequest(
   checkAtEnd(cursor, "takeover startup request");
 }
 
+pid_t PrivHelperConn::parseGetPidResponse(const UnixSocket::Message& msg) {
+  Cursor cursor(&msg.data);
+  PrivHelperPacket packet = parsePacket(cursor);
+  if (packet.metadata.msg_type == RESP_ERROR) {
+    rethrowErrorResponse(cursor);
+  } else if (packet.metadata.msg_type != REQ_GET_PID) {
+    throwf<std::runtime_error>(
+        "unexpected response type {} for request {} of type {} for version v{}",
+        packet.metadata.msg_type,
+        packet.metadata.transaction_id,
+        REQ_GET_PID,
+        packet.header.version);
+  }
+  pid_t pid;
+  bool valid = cursor.tryReadBE<pid_t>(pid);
+  if (!valid) {
+    throwf<std::runtime_error>(
+        "Failed to read pid from privhelper server for request {} for version v{}",
+        packet.metadata.transaction_id,
+        packet.header.version);
+  }
+  return pid;
+}
+
 void PrivHelperConn::parseEmptyResponse(
     MsgType reqType,
     const UnixSocket::Message& msg) {
@@ -433,6 +457,10 @@ UnixSocket::Message PrivHelperConn::serializeSetUseEdenFsRequest(
 void PrivHelperConn::parseSetUseEdenFsRequest(Cursor& cursor, bool& useEdenFs) {
   useEdenFs = bool(cursor.read<uint64_t>());
   checkAtEnd(cursor, "set use /dev/edenfs");
+}
+
+UnixSocket::Message PrivHelperConn::serializeGetPidRequest(uint32_t xid) {
+  return serializeRequestPacket(xid, REQ_GET_PID);
 }
 
 UnixSocket::Message PrivHelperConn::serializeBindUnMountRequest(
