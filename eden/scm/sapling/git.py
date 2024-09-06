@@ -678,9 +678,16 @@ def _writerefs(repo, refnodes):
         callgit(repo, ["update-ref", str(ref), hex(node)])
 
 
-def _syncfromgit(repo):
-    repo.invalidate(clearfilecache=True)
-    repo.changelog  # trigger updating metalog
+def _syncfromgit(repo, refnames=None):
+    """If refnames is set, sync just the given references.
+    Otherwise, invalidate everything and reload changelog+metalog.
+    """
+    if refnames is not None:
+        metalog = repo.metalog()
+        repo.changelog.inner.import_external_references(metalog, refnames)
+    else:
+        repo.invalidate(clearfilecache=True)
+        repo.changelog  # trigger updating metalog
 
 
 def urlremote(ui, source):
