@@ -677,6 +677,7 @@ hg=ssh://user@dummy/{1}
 
 [cas]
 use-case=source-control-testing
+log-dir=$TESTTMP
 EOF
 
   # Only set the dummy ssh "mono" scheme the first time. If we are called again after

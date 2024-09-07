@@ -24,6 +24,7 @@ pub struct ThinCasClient {
     port: Option<i32>,
     uds_path: Option<String>,
     verbose: bool,
+    log_dir: Option<String>,
 }
 
 pub fn init() {
@@ -50,16 +51,32 @@ impl ThinCasClient {
             ),
         };
 
+        let verbose: bool = config.get_or_default("cas", "verbose")?;
+        let mut log_dir = None;
+        if !verbose {
+            // If we're not verbose, we don't want to log to stderr.
+            log_dir = config.get_opt("cas", "log-dir")?;
+            if let Some(ref log_dir_path) = log_dir {
+                if !std::path::Path::new(log_dir_path).exists() {
+                    if let Err(err) = std::fs::create_dir(log_dir_path) {
+                        tracing::warn!(target: "cas", "failed to create log dir: {}", err);
+                        log_dir = Some(std::env::temp_dir().to_string_lossy().to_string());
+                    }
+                }
+            }
+        }
+
         Ok(Self {
             client: Default::default(),
             connection_count: config.get_or("cas", "connection-count", || 1)?,
             port: config.get_opt::<i32>("cas", "port")?,
             uds_path: config.get_opt("cas", "uds-path")?,
-            verbose: config.get_or_default("cas", "verbose")?,
+            verbose,
             metadata: RemoteExecutionMetadata {
                 use_case_id: use_case,
                 ..Default::default()
             },
+            log_dir,
         })
     }
 
@@ -68,7 +85,10 @@ impl ThinCasClient {
 
         re_config.client_name = Some("sapling".to_string());
         re_config.quiet_mode = !self.verbose;
+        re_config.log_file_location = self.log_dir.clone();
         re_config.features_config_path = "remote_execution/features/client_sapling".to_string();
+        re_config.enable_ods_logging = false;
+        re_config.enable_scuba_logging = false;
 
         let mut builder = REClientBuilder::new(fbinit::expect_init()).with_config(re_config);
 
