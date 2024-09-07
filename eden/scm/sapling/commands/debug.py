@@ -3334,7 +3334,7 @@ def debugwireargs(ui, repopath, *vals, **opts) -> None:
         ("", "write-env", "", _("write NAME=HEX per line to a given file (ADVANCED)")),
     ],
 )
-def debugdrawdag(ui, repo, **opts) -> None:
+def debugdrawdag(ui, repo, *args, **opts) -> None:
     r"""read an ASCII graph from stdin and create changesets
 
     Create commits to match the graph described using the drawdag language.
@@ -3343,7 +3343,11 @@ def debugdrawdag(ui, repo, **opts) -> None:
     This command can execute Python logic from input. Therefore, never feed
     it with untrusted input!
     """
-    text = decodeutf8(ui.fin.read())
+    if args:
+        data = b"".join(open(path, "rb").read() for path in args)
+    else:
+        data = ui.fin.read()
+    text = decodeutf8(data)
     return drawdag.drawdag(repo, text, **opts)
 
 
