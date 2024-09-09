@@ -27,7 +27,6 @@ rust_python_library(
     deps = [
         "fbsource//third-party/rust:parking_lot",
         "//eden/scm/lib/checkout:checkout",
-        "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/context:context",
         "//eden/scm/lib/cpython-ext:cpython-ext",
         "//eden/scm/lib/repo:repo",

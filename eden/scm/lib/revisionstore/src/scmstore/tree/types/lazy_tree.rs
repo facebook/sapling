@@ -29,9 +29,6 @@ use crate::Metadata;
 /// with no processing.
 #[derive(Debug)]
 pub(crate) enum LazyTree {
-    /// A response from calling into the legacy storage API
-    ContentStore(Bytes),
-
     /// An entry from a local IndexedLog. The contained Key's path might not match the requested Key's path.
     IndexedLog(Entry),
 
@@ -53,7 +50,6 @@ impl LazyTree {
     fn hgid(&self) -> Option<HgId> {
         use LazyTree::*;
         match self {
-            ContentStore(_) => None,
             IndexedLog(entry) => Some(entry.key().hgid),
             SaplingRemoteApi(entry) => Some(entry.key().hgid),
             Cas(entry) => Some(entry.augmented_tree.hg_node_id),
@@ -65,7 +61,6 @@ impl LazyTree {
         use LazyTree::*;
         Ok(match self {
             IndexedLog(entry) => entry.content()?,
-            ContentStore(blob) => blob.clone(),
             SaplingRemoteApi(entry) => entry.data()?,
             Cas(entry) => {
                 let tree = &entry.augmented_tree;
@@ -85,7 +80,6 @@ impl LazyTree {
                 Some(Entry::new(key, entry.data()?, Metadata::default()))
             }
             // ContentStore handles caching internally
-            ContentStore(_) => None,
             // Don't write CAS entries to local cache.
             Cas(_) => None,
         })

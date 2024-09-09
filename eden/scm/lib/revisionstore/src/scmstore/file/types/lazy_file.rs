@@ -24,9 +24,6 @@ use crate::Metadata;
 /// with no processing (so Entry might have the wrong Key.path, etc.)
 #[derive(Debug)]
 pub(crate) enum LazyFile {
-    /// A response from calling into the legacy storage API
-    ContentStore(Bytes, Metadata),
-
     /// An entry from a local IndexedLog. The contained Key's path might not match the requested Key's path.
     IndexedLog(Entry),
 
@@ -45,7 +42,6 @@ impl LazyFile {
     fn hgid(&self) -> Option<HgId> {
         use LazyFile::*;
         match self {
-            ContentStore(_, _) => None,
             IndexedLog(ref entry) => Some(entry.key().hgid),
             Lfs(_, ref ptr) => Some(ptr.hgid()),
             SaplingRemoteApi(ref entry) => Some(entry.key().hgid),
@@ -76,7 +72,6 @@ impl LazyFile {
         Ok(match self {
             IndexedLog(ref mut entry) => strip_hg_file_metadata(&entry.content()?)?.0,
             Lfs(ref blob, _) => blob.clone(),
-            ContentStore(ref blob, _) => strip_hg_file_metadata(blob)?.0,
             // TODO(meyer): Convert SaplingRemoteApi to use minibytes
             SaplingRemoteApi(ref entry) => strip_hg_file_metadata(&entry.data()?.into())?.0,
             Cas(data) => data.clone(),
@@ -89,7 +84,6 @@ impl LazyFile {
         Ok(match self {
             IndexedLog(ref mut entry) => strip_hg_file_metadata(&entry.content()?)?,
             Lfs(ref blob, ref ptr) => (blob.clone(), ptr.copy_from().clone()),
-            ContentStore(ref blob, _) => strip_hg_file_metadata(blob)?,
             SaplingRemoteApi(ref entry) => strip_hg_file_metadata(&entry.data()?.into())?,
             Cas(_) => bail!("CAS data has no copy info"),
         })
@@ -101,7 +95,6 @@ impl LazyFile {
         Ok(match self {
             IndexedLog(ref entry) => entry.content()?,
             Lfs(ref blob, ref ptr) => rebuild_metadata(blob.clone(), ptr),
-            ContentStore(ref blob, _) => blob.clone(),
             SaplingRemoteApi(ref entry) => entry.data()?.into(),
             Cas(_) => bail!("CAS data has no copy info"),
         })
@@ -115,7 +108,6 @@ impl LazyFile {
                 size: Some(ptr.size()),
                 flags: None,
             },
-            ContentStore(_, ref meta) => meta.clone(),
             SaplingRemoteApi(ref entry) => entry.metadata()?.clone(),
             Cas(data) => Metadata {
                 size: Some(data.len() as u64),
@@ -136,8 +128,6 @@ impl LazyFile {
             )),
             // LFS Files should be written to LfsCache instead
             Lfs(_, _) => None,
-            // ContentStore handles caching internally
-            ContentStore(_, _) => None,
             Cas(_) => None,
         })
     }

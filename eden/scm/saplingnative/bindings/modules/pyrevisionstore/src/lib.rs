@@ -1091,10 +1091,6 @@ py_class!(pub class filescmstore |py| {
     data store: Arc<FileStore>;
     data contentstore: Arc<ContentStore>;
 
-    def get_contentstore(&self) -> PyResult<contentstore> {
-        contentstore::create_instance(py, self.contentstore(py).clone())
-    }
-
     def fetch_content_blake3(&self, keys: PyList) -> PyResult<PyList> {
         let keys = keys
             .iter(py)
@@ -1272,11 +1268,7 @@ fn make_treescmstore<'a>(
     }
 
     let contentstore = Arc::new(builder.build()?);
-
-    treestore_builder = treestore_builder.contentstore(contentstore.clone());
-
     let treestore = Arc::new(treestore_builder.build()?);
-
     Ok((treestore, contentstore))
 }
 
@@ -1322,10 +1314,6 @@ py_class!(pub class treescmstore |py| {
         let (treestore, contentstore) = make_treescmstore(path, &config, remote, edenapi, filestore, suffix).map_pyerr(py)?;
 
         Self::create_instance(py, treestore, None, contentstore)
-    }
-
-    def get_contentstore(&self) -> PyResult<contentstore> {
-        contentstore::create_instance(py, self.contentstore(py).clone())
     }
 
     def get(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyBytes> {

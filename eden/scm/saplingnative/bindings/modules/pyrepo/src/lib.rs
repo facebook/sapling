@@ -19,7 +19,6 @@ use std::sync::Arc;
 use checkout::BookmarkAction;
 use checkout::CheckoutMode;
 use checkout::ReportMode;
-use configmodel::config::ConfigExt;
 use context::CoreContext;
 use cpython::*;
 use cpython_ext::convert::ImplInto;
@@ -137,7 +136,7 @@ py_class!(pub class repo |py| {
     def filescmstore(&self, remote: PyRemoteStore) -> PyResult<PyFileScmStore> {
         let repo = self.inner(py).write();
         let _ = repo.file_store().map_pyerr(py)?;
-        let mut file_scm_store = repo.file_scm_store().unwrap();
+        let file_scm_store = repo.file_scm_store().unwrap();
 
         let mut builder = ContentStoreBuilder::new(repo.config())
             .remotestore(remote.extract_inner(py))
@@ -153,17 +152,13 @@ py_class!(pub class repo |py| {
 
         let contentstore = Arc::new(builder.build().map_pyerr(py)?);
 
-        if repo.config().get_or_default("scmstore", "contentstorefallback").map_pyerr(py)? {
-            file_scm_store = Arc::new(file_scm_store.with_content_store(contentstore.clone()));
-        }
-
         PyFileScmStore::create_instance(py, file_scm_store, contentstore)
     }
 
     def treescmstore(&self, remote: PyRemoteStore) -> PyResult<PyTreeScmStore> {
         let repo = self.inner(py).write();
         let _ = repo.tree_store().map_pyerr(py)?;
-        let mut tree_scm_store = repo.tree_scm_store().unwrap();
+        let tree_scm_store = repo.tree_scm_store().unwrap();
 
         let mut builder = ContentStoreBuilder::new(repo.config())
             .remotestore(remote.extract_inner(py))
@@ -179,16 +174,7 @@ py_class!(pub class repo |py| {
         }
 
         let contentstore = Arc::new(builder.build().map_pyerr(py)?);
-        let mut caching_store = Some(repo.caching_tree_store().map_pyerr(py)?);
-
-        if repo.config().get_or_default("scmstore", "contentstorefallback").map_pyerr(py)? {
-            tree_scm_store = Arc::new(tree_scm_store.with_content_store(contentstore.clone()));
-
-            // Disable cache if contentstore is in play. This is only the case for legacy
-            // tests. The repo's caching store does not include the contentstore, so the
-            // caching store can not answer queries authoritatively.
-            caching_store = None;
-        }
+        let caching_store = Some(repo.caching_tree_store().map_pyerr(py)?);
 
         PyTreeScmStore::create_instance(py, tree_scm_store, caching_store, contentstore)
     }

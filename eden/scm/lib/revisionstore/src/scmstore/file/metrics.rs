@@ -19,62 +19,10 @@ use crate::scmstore::metrics::LocalAndCacheFetchMetrics;
 use crate::scmstore::metrics::WriteMetrics;
 
 #[derive(Clone, Debug, Default)]
-pub struct ContentStoreFetchMetrics {
-    /// Only content hits are counted by common.hits, LFS pointer hits are only counted below.
-    common: FetchMetrics,
-
-    /// ContentStore returned a serialized LFS pointer instead of file content.
-    lfsptr_hits: usize,
-}
-
-impl ContentStoreFetchMetrics {
-    pub(crate) fn fetch(&mut self, keys: usize) {
-        self.common.fetch(keys)
-    }
-
-    pub(crate) fn hit(&mut self, keys: usize) {
-        self.common.hit(keys)
-    }
-
-    pub(crate) fn miss(&mut self, keys: usize) {
-        self.common.miss(keys)
-    }
-
-    pub(crate) fn err(&mut self, keys: usize) {
-        self.common.err(keys)
-    }
-
-    pub(crate) fn hit_lfsptr(&mut self, keys: usize) {
-        self.lfsptr_hits += keys;
-    }
-
-    pub(crate) fn time_from_duration(
-        &mut self,
-        keys: std::time::Duration,
-    ) -> Result<(), anyhow::Error> {
-        self.common.time_from_duration(keys)
-    }
-
-    fn metrics(&self) -> impl Iterator<Item = (&'static str, usize)> {
-        std::iter::once(("lfsptrhits", self.lfsptr_hits))
-            .filter(|&(_, v)| v != 0)
-            .chain(self.common.metrics())
-    }
-}
-
-impl AddAssign for ContentStoreFetchMetrics {
-    fn add_assign(&mut self, rhs: Self) {
-        self.common += rhs.common;
-        self.lfsptr_hits += rhs.lfsptr_hits;
-    }
-}
-
-#[derive(Clone, Debug, Default)]
 pub struct FileStoreFetchMetrics {
     pub(crate) indexedlog: LocalAndCacheFetchMetrics,
     pub(crate) lfs: LocalAndCacheFetchMetrics,
     pub(crate) aux: LocalAndCacheFetchMetrics,
-    pub(crate) contentstore: ContentStoreFetchMetrics,
     pub(crate) edenapi: FetchMetrics,
     pub(crate) cas: FetchMetrics,
 }
@@ -84,7 +32,6 @@ impl AddAssign for FileStoreFetchMetrics {
         self.indexedlog += rhs.indexedlog;
         self.lfs += rhs.lfs;
         self.aux += rhs.aux;
-        self.contentstore += rhs.contentstore;
         self.edenapi += rhs.edenapi;
         self.cas += rhs.cas;
     }
@@ -95,7 +42,6 @@ impl FileStoreFetchMetrics {
         namespaced("indexedlog", self.indexedlog.metrics())
             .chain(namespaced("lfs", self.lfs.metrics()))
             .chain(namespaced("aux", self.aux.metrics()))
-            .chain(namespaced("contentstore", self.contentstore.metrics()))
             .chain(namespaced("edenapi", self.edenapi.metrics()))
             .chain(namespaced("cas", self.cas.metrics()))
     }

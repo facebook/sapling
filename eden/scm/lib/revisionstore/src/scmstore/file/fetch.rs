@@ -33,8 +33,6 @@ use types::CasDigest;
 use types::Key;
 use types::Sha256;
 
-use crate::datastore::HgIdDataStore;
-use crate::datastore::RemoteDataStore;
 use crate::error::ClonableError;
 use crate::indexedlogauxstore::AuxStore;
 use crate::indexedlogdatastore::Entry;
@@ -57,7 +55,6 @@ use crate::scmstore::FileStore;
 use crate::scmstore::StoreFile;
 use crate::util;
 use crate::ContentHash;
-use crate::ContentStore;
 use crate::ExtStoredPolicy;
 use crate::Metadata;
 use crate::SaplingRemoteApiFileStore;
@@ -932,117 +929,6 @@ impl FetchState {
         }
         for error in other_errors.into_iter() {
             self.errors.other_error(error);
-        }
-    }
-
-    fn found_contentstore(&mut self, key: Key, bytes: Vec<u8>, meta: Metadata) {
-        if meta.is_lfs() {
-            self.metrics.contentstore.hit_lfsptr(1);
-            // Do nothing. We're trying to avoid exposing LFS pointers to the consumer of this API.
-            // We very well may need to expose LFS Pointers to the caller in the end (to match ContentStore's
-            // ExtStoredPolicy behavior), but hopefully not, and if so we'll need to make it type safe.
-            tracing::warn!("contentstore fallback returned serialized lfs pointer");
-        } else {
-            tracing::warn!(
-                "contentstore fetched a file scmstore couldn't, \
-                this indicates a bug or unsupported configuration: \
-                fetched key '{}', found {} bytes of content with metadata {:?}.",
-                key,
-                bytes.len(),
-                meta,
-            );
-            self.metrics.contentstore.hit(1);
-            self.found_attributes(key, LazyFile::ContentStore(bytes.into(), meta).into())
-        }
-    }
-
-    fn fetch_contentstore_inner(
-        &mut self,
-        store: &ContentStore,
-        pending: &mut Vec<StoreKey>,
-    ) -> Result<()> {
-        let fetch_start = std::time::Instant::now();
-
-        debug!(
-            "ContentStore Fallback  - Count = {count}",
-            count = pending.len()
-        );
-        let mut found = 0;
-        let mut errors = 0;
-        let mut error: Option<String> = None;
-
-        store.prefetch(pending)?;
-
-        for store_key in pending.drain(..) {
-            let key = store_key.clone().maybe_into_key().expect(
-                "no Key present in StoreKey, even though this should be guaranteed by pending_storekey",
-            );
-            // Using the ContentStore API, fetch the hg file blob, then, if it's found, also fetch the file metadata.
-            // Returns the requested file as Result<(Option<Vec<u8>>, Option<Metadata>)>
-            // Produces a Result::Err if either the blob or metadata get returned an error
-            let res = store
-                .get(store_key.clone())
-                .map(|store_result| store_result.into())
-                .and_then({
-                    let store_key = store_key.clone();
-                    |maybe_blob| {
-                        Ok((
-                            maybe_blob,
-                            store
-                                .get_meta(store_key)
-                                .map(|store_result| store_result.into())?,
-                        ))
-                    }
-                });
-
-            match res {
-                Ok((Some(blob), Some(meta))) => {
-                    found += 1;
-                    self.found_contentstore(key, blob, meta)
-                }
-                Err(err) => {
-                    self.metrics.contentstore.err(1);
-                    errors += 1;
-                    if error.is_none() {
-                        error.replace(format!("{}: {}", key, err));
-                    }
-                    self.errors.keyed_error(key, err)
-                }
-                _ => {
-                    self.metrics.contentstore.miss(1);
-                }
-            }
-        }
-
-        self.metrics
-            .contentstore
-            .time_from_duration(fetch_start.elapsed())
-            .ok();
-
-        if found != 0 {
-            debug!("    Found = {found}", found = found);
-        }
-        if errors != 0 {
-            debug!(
-                "    Errors = {errors}, Error = {error:?}",
-                errors = errors,
-                error = error
-            );
-        }
-
-        Ok(())
-    }
-
-    pub(crate) fn fetch_contentstore(&mut self, store: &ContentStore) {
-        let mut pending = self.pending_storekey(FileAttributes::CONTENT);
-        if pending.is_empty() {
-            return;
-        }
-        self.metrics.contentstore.fetch(pending.len());
-        if let Err(err) = self.fetch_contentstore_inner(store, &mut pending) {
-            debug!("ContentStore upper error - Error = {err:?}", err = err);
-            self.errors.other_error(err);
-            self.metrics.contentstore.err(pending.len());
         }
     }
 

@@ -56,7 +56,6 @@ use crate::scmstore::fetch::FetchResults;
 use crate::scmstore::metrics::StoreLocation;
 use crate::ContentDataStore;
 use crate::ContentMetadata;
-use crate::ContentStore;
 use crate::Delta;
 use crate::ExtStoredPolicy;
 use crate::LegacyStore;
@@ -100,9 +99,6 @@ pub struct FileStore {
     // Remote stores
     pub(crate) lfs_remote: Option<Arc<LfsClient>>,
     pub(crate) edenapi: Option<Arc<SaplingRemoteApiFileStore>>,
-
-    // Legacy ContentStore fallback
-    pub(crate) contentstore: Option<Arc<ContentStore>>,
 
     // Aux Data Store
     pub(crate) aux_cache: Option<Arc<AuxStore>>,
@@ -180,7 +176,6 @@ impl FileStore {
         let edenapi = self.edenapi.clone();
         let cas_client = self.cas_client.clone();
         let lfs_remote = self.lfs_remote.clone();
-        let contentstore = self.contentstore.clone();
         let metrics = self.metrics.clone();
         let activity_logger = self.activity_logger.clone();
 
@@ -260,10 +255,6 @@ impl FileStore {
                         lfs_local.clone(),
                         lfs_cache.clone(),
                     );
-                }
-
-                if let Some(ref contentstore) = contentstore {
-                    state.fetch_contentstore(contentstore);
                 }
             }
 
@@ -416,9 +407,6 @@ impl FileStore {
 
     pub fn refresh(&self) -> Result<()> {
         self.metrics.write().api.hg_refresh.call(0);
-        if let Some(contentstore) = self.contentstore.as_ref() {
-            contentstore.refresh()?;
-        }
         self.flush()
     }
 
@@ -447,7 +435,6 @@ impl FileStore {
             lfs_remote: None,
             cas_client: None,
 
-            contentstore: None,
             metrics: FileStoreMetrics::new(),
             activity_logger: None,
 
@@ -464,12 +451,6 @@ impl FileStore {
 
     pub fn indexedlog_cache(&self) -> Option<Arc<IndexedLogHgIdDataStore>> {
         self.indexedlog_cache.clone()
-    }
-
-    pub fn with_content_store(&self, cs: Arc<ContentStore>) -> Self {
-        let mut clone = self.clone();
-        clone.contentstore = Some(cs);
-        clone
     }
 
     /// Returns only the local cache / shared stores, in place of the local-only stores,
@@ -501,7 +482,6 @@ impl FileStore {
             lfs_remote: None,
             cas_client: None,
 
-            contentstore: None,
             metrics: self.metrics.clone(),
             activity_logger: self.activity_logger.clone(),
 
@@ -543,8 +523,6 @@ impl LegacyStore for FileStore {
         self.get_file_content_impl(key, FetchMode::AllowRemote)
     }
 
-    // If ContentStore is available, these call into ContentStore. Otherwise, implement these
-    // methods on top of scmstore (though they should still eventaully be removed).
     fn add_pending(
         &self,
         key: &Key,
@@ -553,30 +531,22 @@ impl LegacyStore for FileStore {
         location: RepackLocation,
     ) -> Result<()> {
         self.metrics.write().api.hg_addpending.call(0);
-        if let Some(contentstore) = self.contentstore.as_ref() {
-            contentstore.add_pending(key, data, meta, location)
-        } else {
-            let delta = Delta {
-                data,
-                base: None,
-                key: key.clone(),
-            };
+        let delta = Delta {
+            data,
+            base: None,
+            key: key.clone(),
+        };
 
-            match location {
-                RepackLocation::Local => self.add(&delta, &meta),
-                RepackLocation::Shared => self.get_shared_mutable().add(&delta, &meta),
-            }
+        match location {
+            RepackLocation::Local => self.add(&delta, &meta),
+            RepackLocation::Shared => self.get_shared_mutable().add(&delta, &meta),
         }
     }
 
-    fn commit_pending(&self, location: RepackLocation) -> Result<Option<Vec<PathBuf>>> {
+    fn commit_pending(&self, _location: RepackLocation) -> Result<Option<Vec<PathBuf>>> {
         self.metrics.write().api.hg_commitpending.call(0);
-        if let Some(contentstore) = self.contentstore.as_ref() {
-            contentstore.commit_pending(location)
-        } else {
-            self.flush()?;
-            Ok(None)
-        }
+        self.flush()?;
+        Ok(None)
     }
 }
 

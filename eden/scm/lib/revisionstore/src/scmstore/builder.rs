@@ -38,7 +38,6 @@ use crate::util::get_indexedlogdatastore_path;
 use crate::util::get_indexedloghistorystore_path;
 use crate::util::get_local_path;
 use crate::util::get_tree_aux_store_path;
-use crate::ContentStore;
 use crate::ExtStoredPolicy;
 use crate::IndexedLogHgIdHistoryStore;
 use crate::SaplingRemoteApiFileStore;
@@ -56,7 +55,6 @@ pub struct FileStoreBuilder<'a> {
     lfs_cache: Option<Arc<LfsStore>>,
 
     edenapi: Option<Arc<SaplingRemoteApiFileStore>>,
-    contentstore: Option<Arc<ContentStore>>,
     cas_client: Option<Arc<dyn CasClient>>,
 }
 
@@ -72,7 +70,6 @@ impl<'a> FileStoreBuilder<'a> {
             lfs_local: None,
             lfs_cache: None,
             edenapi: None,
-            contentstore: None,
             cas_client: None,
         }
     }
@@ -122,12 +119,6 @@ impl<'a> FileStoreBuilder<'a> {
         self
     }
 
-    pub fn contentstore(mut self, contentstore: Arc<ContentStore>) -> Self {
-        self.contentstore = Some(contentstore);
-        self
-    }
-
-    #[context("Get ExtStored Policy somehow failed")]
     fn get_extstored_policy(&self) -> Result<ExtStoredPolicy> {
         // This is to keep compatibility w/ the Python lfs extension.
         // Contentstore would "upgrade" Python LFS pointers from the pack store
@@ -273,10 +264,8 @@ impl<'a> FileStoreBuilder<'a> {
     #[context("failed to build config revisionstore")]
     pub fn build(mut self) -> Result<FileStore> {
         tracing::trace!(target: "revisionstore::filestore", "checking cache");
-        if self.contentstore.is_none() {
-            if let Some(cache_path) = get_cache_path(self.config, &self.suffix)? {
-                check_cache_buster(&self.config, &cache_path);
-            }
+        if let Some(cache_path) = get_cache_path(self.config, &self.suffix)? {
+            check_cache_buster(&self.config, &cache_path);
         }
 
         tracing::trace!(target: "revisionstore::filestore", "processing extstored policy");
@@ -346,16 +335,6 @@ impl<'a> FileStoreBuilder<'a> {
             None
         };
 
-        tracing::trace!(target: "revisionstore::filestore", "processing contentstore");
-        let contentstore = if self
-            .config
-            .get_or_default::<bool>("scmstore", "contentstorefallback")?
-        {
-            self.contentstore
-        } else {
-            None
-        };
-
         let allow_write_lfs_ptrs = self
             .config
             .get_or_default::<bool>("scmstore", "lfsptrwrites")?;
@@ -417,7 +396,6 @@ impl<'a> FileStoreBuilder<'a> {
             cas_client,
 
             activity_logger,
-            contentstore,
             metrics: FileStoreMetrics::new(),
 
             aux_cache,
@@ -437,7 +415,6 @@ pub struct TreeStoreBuilder<'a> {
     indexedlog_local: Option<Arc<IndexedLogHgIdDataStore>>,
     indexedlog_cache: Option<Arc<IndexedLogHgIdDataStore>>,
     edenapi: Option<Arc<SaplingRemoteApiTreeStore>>,
-    contentstore: Option<Arc<ContentStore>>,
     tree_aux_store: Option<Arc<TreeAuxStore>>,
     filestore: Option<Arc<FileStore>>,
     cas_client: Option<Arc<dyn CasClient>>,
@@ -453,7 +430,6 @@ impl<'a> TreeStoreBuilder<'a> {
             indexedlog_local: None,
             indexedlog_cache: None,
             edenapi: None,
-            contentstore: None,
             tree_aux_store: None,
             filestore: None,
             cas_client: None,
@@ -492,11 +468,6 @@ impl<'a> TreeStoreBuilder<'a> {
 
     pub fn indexedlog_local(mut self, indexedlog: Arc<IndexedLogHgIdDataStore>) -> Self {
         self.indexedlog_local = Some(indexedlog);
-        self
-    }
-
-    pub fn contentstore(mut self, contentstore: Arc<ContentStore>) -> Self {
-        self.contentstore = Some(contentstore);
         self
     }
 
@@ -638,10 +609,8 @@ impl<'a> TreeStoreBuilder<'a> {
         // TODO(meyer): Clean this up, just copied and pasted from the other version & did some ugly hacks to get this
         // (the SaplingRemoteApiAdapter stuff needs to be fixed in particular)
         tracing::trace!(target: "revisionstore::treestore", "checking cache");
-        if self.contentstore.is_none() {
-            if let Some(cache_path) = get_cache_path(self.config, &self.suffix)? {
-                check_cache_buster(&self.config, &cache_path);
-            }
+        if let Some(cache_path) = get_cache_path(self.config, &self.suffix)? {
+            check_cache_buster(&self.config, &cache_path);
         }
 
         tracing::trace!(target: "revisionstore::treestore", "processing local");
@@ -700,16 +669,6 @@ impl<'a> TreeStoreBuilder<'a> {
             .config
             .get_or_default("scmstore", "prefetch-tree-parents")?;
 
-        tracing::trace!(target: "revisionstore::treestore", "processing contentstore");
-        let contentstore = if self
-            .config
-            .get_or_default::<bool>("scmstore", "contentstorefallback")?
-        {
-            self.contentstore
-        } else {
-            None
-        };
-
         let tree_metadata_mode = match self.config.get("scmstore", "tree-metadata-mode").as_deref()
         {
             Some("always") => TreeMetadataMode::Always,
@@ -750,7 +709,6 @@ impl<'a> TreeStoreBuilder<'a> {
             cache_to_local_cache: true,
             edenapi,
             cas_client,
-            contentstore,
             tree_aux_store,
             historystore_local,
             historystore_cache,

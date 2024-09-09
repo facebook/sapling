@@ -54,7 +54,6 @@ use crate::scmstore::tree::types::StoreTree;
 use crate::scmstore::tree::types::TreeAttributes;
 use crate::ContentDataStore;
 use crate::ContentMetadata;
-use crate::ContentStore;
 use crate::Delta;
 use crate::HgIdHistoryStore;
 use crate::HgIdMutableDeltaStore;
@@ -95,11 +94,6 @@ pub struct TreeStore {
     /// An SaplingRemoteApi Client, SaplingRemoteApiTreeStore provides the tree-specific subset of SaplingRemoteApi functionality
     /// used by TreeStore.
     pub edenapi: Option<Arc<SaplingRemoteApiTreeStore>>,
-
-    /// Hook into the legacy storage architecture, if we fall back to this and succeed, we
-    /// should alert / log something, as this should never happen if TreeStore is implemented
-    /// correctly.
-    pub contentstore: Option<Arc<ContentStore>>,
 
     /// A FileStore, which can be used for fetching and caching file aux data for a tree.
     pub filestore: Option<Arc<FileStore>>,
@@ -155,7 +149,6 @@ impl TreeStore {
         let historystore_cache = self.historystore_cache.clone();
         let historystore_local = self.historystore_local.clone();
 
-        let contentstore = self.contentstore.clone();
         let cache_to_local_cache = self.cache_to_local_cache;
         let aux_cache = self.filestore.as_ref().and_then(|fs| fs.aux_cache.clone());
         let tree_aux_store = self.tree_aux_store.clone();
@@ -318,49 +311,6 @@ impl TreeStore {
                 }
             }
 
-            // Contentstore is the legacy pathway and shouldn't be needed if TreeStore is implemented correctly
-            // TODO: Not handling RemoteOnly for now due to legacy, reinvestigate when refactoring the datastores
-            if let FetchMode::AllowRemote = fetch_mode {
-                if let Some(ref contentstore) = contentstore {
-                    let pending: Vec<_> = state
-                        .common
-                        .pending(TreeAttributes::CONTENT, false)
-                        .map(|(key, _attrs)| StoreKey::HgId(key.clone()))
-                        .collect();
-                    if !pending.is_empty() {
-                        tracing::debug!(
-                            "attempt to fetch {} keys from contentstore",
-                            pending.len()
-                        );
-                        contentstore.prefetch(&pending)?;
-
-                        let pending = pending.into_iter().map(|key| match key {
-                            StoreKey::HgId(key) => key,
-                            // Safe because we constructed pending with only StoreKey::HgId above
-                            // we're just re-using the already allocated paths in the keys
-                            _ => unreachable!("unexpected non-HgId StoreKey"),
-                        });
-
-                        for key in pending {
-                            let store_key = StoreKey::HgId(key.clone());
-                            let blob = match contentstore.get(store_key.clone())? {
-                                StoreResult::Found(v) => Some(v),
-                                StoreResult::NotFound(_k) => None,
-                            };
-
-                            if let Some(blob) = blob {
-                                // We don't write to local indexedlog for contentstore fallbacks because
-                                // contentstore handles that internally.
-                                tracing::trace!("{:?} found in contentstore", &key);
-                                state
-                                    .common
-                                    .found(key, LazyTree::ContentStore(blob.into()).into());
-                            }
-                        }
-                    }
-                }
-            }
-
             // TODO(meyer): Report incomplete / not found, handle errors better instead of just always failing the batch, etc
             state.common.results(state.errors);
 
@@ -410,7 +360,6 @@ impl TreeStore {
             cache_to_local_cache: true,
             edenapi: None,
             cas_client: None,
-            contentstore: None,
             historystore_cache: None,
             historystore_local: None,
             filestore: None,
@@ -461,16 +410,7 @@ impl TreeStore {
     }
 
     pub fn refresh(&self) -> Result<()> {
-        if let Some(contentstore) = self.contentstore.as_ref() {
-            contentstore.refresh()?;
-        }
         self.flush()
-    }
-
-    pub fn with_content_store(&self, cs: Arc<ContentStore>) -> Self {
-        let mut clone = self.clone();
-        clone.contentstore = Some(cs);
-        clone
     }
 }
 
@@ -491,7 +431,6 @@ impl LegacyStore for TreeStore {
             cache_to_local_cache: false,
             edenapi: None,
             cas_client: None,
-            contentstore: None,
             filestore: None,
             tree_aux_store: None,
             flush_on_drop: true,
@@ -508,8 +447,6 @@ impl LegacyStore for TreeStore {
         );
     }
 
-    // If ContentStore is available, these call into ContentStore. Otherwise, implement these
-    // methods on top of scmstore (though they should still eventaully be removed).
     fn add_pending(
         &self,
         key: &Key,
@@ -517,29 +454,21 @@ impl LegacyStore for TreeStore {
         meta: Metadata,
         location: RepackLocation,
     ) -> Result<()> {
-        if let Some(contentstore) = self.contentstore.as_ref() {
-            contentstore.add_pending(key, data, meta, location)
-        } else {
-            let delta = Delta {
-                data,
-                base: None,
-                key: key.clone(),
-            };
+        let delta = Delta {
+            data,
+            base: None,
+            key: key.clone(),
+        };
 
-            match location {
-                RepackLocation::Local => HgIdMutableDeltaStore::add(self, &delta, &meta),
-                RepackLocation::Shared => self.get_shared_mutable().add(&delta, &meta),
-            }
+        match location {
+            RepackLocation::Local => HgIdMutableDeltaStore::add(self, &delta, &meta),
+            RepackLocation::Shared => self.get_shared_mutable().add(&delta, &meta),
         }
     }
 
-    fn commit_pending(&self, location: RepackLocation) -> Result<Option<Vec<PathBuf>>> {
-        if let Some(contentstore) = self.contentstore.as_ref() {
-            contentstore.commit_pending(location)
-        } else {
-            self.flush()?;
-            Ok(None)
-        }
+    fn commit_pending(&self, _location: RepackLocation) -> Result<Option<Vec<PathBuf>>> {
+        self.flush()?;
+        Ok(None)
     }
 }
 
