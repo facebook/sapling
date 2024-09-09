@@ -29,7 +29,7 @@ class mutabledatastore(mutablebasestore):
     @staticmethod
     def makestore(repo, path):
         shallowutil.mkstickygroupdir(repo.ui, path)
-        return revisionstore.mutabledeltastore(indexedlogpath=path)
+        return revisionstore.mutabledeltastore(path)
 
     def __init__(self, repo, path):
         super(mutabledatastore, self).__init__()
@@ -41,7 +41,7 @@ class mutablehistorystore(mutablebasestore):
     @staticmethod
     def makestore(repo, path):
         shallowutil.mkstickygroupdir(repo.ui, path)
-        return revisionstore.mutablehistorystore(indexedlogpath=path)
+        return revisionstore.mutablehistorystore(path)
 
     def __init__(self, repo, path):
         super(mutablehistorystore, self).__init__()

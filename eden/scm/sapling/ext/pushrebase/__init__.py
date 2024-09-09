@@ -1268,8 +1268,8 @@ def resolveonto(repo, ontoarg):
 
 
 def _createpackstore(path):
-    datastore = revisionstore.mutabledeltastore(indexedlogpath=path)
-    histstore = revisionstore.mutablehistorystore(indexedlogpath=path)
+    datastore = revisionstore.mutabledeltastore(path)
+    histstore = revisionstore.mutablehistorystore(path)
     return datastore, histstore
 
 

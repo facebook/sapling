@@ -14,7 +14,6 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::format_err;
 use anyhow::Error;
 use configmodel::Config;
 use cpython::*;
@@ -32,10 +31,6 @@ use revisionstore::scmstore::FileAttributes;
 use revisionstore::scmstore::FileStore;
 use revisionstore::scmstore::TreeStore;
 use revisionstore::scmstore::TreeStoreBuilder;
-use revisionstore::CorruptionPolicy;
-use revisionstore::DataPack;
-use revisionstore::DataPackStore;
-use revisionstore::DataPackVersion;
 use revisionstore::Delta;
 use revisionstore::ExtStoredPolicy;
 use revisionstore::HgIdDataStore;
@@ -43,8 +38,6 @@ use revisionstore::HgIdHistoryStore;
 use revisionstore::HgIdMutableDeltaStore;
 use revisionstore::HgIdMutableHistoryStore;
 use revisionstore::HgIdRemoteStore;
-use revisionstore::HistoryPack;
-use revisionstore::HistoryPackStore;
 use revisionstore::IndexedLogHgIdDataStore;
 use revisionstore::IndexedLogHgIdDataStoreConfig;
 use revisionstore::IndexedLogHgIdHistoryStore;
@@ -53,7 +46,6 @@ use revisionstore::LocalStore;
 use revisionstore::Metadata;
 use revisionstore::MetadataStore;
 use revisionstore::MetadataStoreBuilder;
-use revisionstore::MutableDataPack;
 use revisionstore::RemoteDataStore;
 use revisionstore::RemoteHistoryStore;
 use revisionstore::SaplingRemoteApiFileStore;
@@ -94,10 +86,6 @@ pub use crate::pythonutil::as_legacystore;
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "revisionstore"].join(".");
     let m = PyModule::new(py, &name)?;
-    m.add_class::<datapack>(py)?;
-    m.add_class::<datapackstore>(py)?;
-    m.add_class::<historypack>(py)?;
-    m.add_class::<historypackstore>(py)?;
     m.add_class::<indexedlogdatastore>(py)?;
     m.add_class::<indexedloghistorystore>(py)?;
     m.add_class::<mutabledeltastore>(py)?;
@@ -153,171 +141,6 @@ fn repair(
     })
     .map_pyerr(py)
 }
-
-py_class!(class datapack |py| {
-    data store: Box<DataPack>;
-
-    def __new__(
-        _cls,
-        path: &PyPath
-    ) -> PyResult<datapack> {
-        datapack::create_instance(
-            py,
-            Box::new(DataPack::new(path, ExtStoredPolicy::Ignore).map_pyerr(py)?),
-        )
-    }
-
-    def path(&self) -> PyResult<PyPathBuf> {
-        self.store(py).base_path().try_into().map_pyerr(py)
-    }
-
-    def packpath(&self) -> PyResult<PyPathBuf> {
-        self.store(py).pack_path().try_into().map_pyerr(py)
-    }
-
-    def indexpath(&self) -> PyResult<PyPathBuf> {
-        self.store(py).index_path().try_into().map_pyerr(py)
-    }
-
-    def get(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyBytes> {
-        let store = self.store(py);
-        store.get_py(py, &name, node)
-    }
-
-    def getdelta(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyObject> {
-        let store = self.store(py);
-        store.get_delta_py(py, &name, node)
-    }
-
-    def getdeltachain(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyList> {
-        let store = self.store(py);
-        store.get_delta_chain_py(py, &name, node)
-    }
-
-    def getmeta(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyDict> {
-        let store = self.store(py);
-        store.get_meta_py(py, &name, node)
-    }
-
-    def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
-        let store = self.store(py);
-        store.get_missing_py(py, &mut keys.iter(py)?)
-    }
-
-    def iterentries(&self) -> PyResult<Vec<PyTuple>> {
-        let store = self.store(py);
-        store.iter_py(py)
-    }
-});
-
-py_class!(class datapackstore |py| {
-    data store: Box<DataPackStore>;
-    data path: PathBuf;
-
-    def __new__(_cls, path: &PyPath, deletecorruptpacks: bool = false, maxbytes: Option<u64> = None) -> PyResult<datapackstore> {
-        let corruption_policy = if deletecorruptpacks {
-            CorruptionPolicy::REMOVE
-        } else {
-            CorruptionPolicy::IGNORE
-        };
-
-        datapackstore::create_instance(py, Box::new(DataPackStore::new(path, corruption_policy, maxbytes, ExtStoredPolicy::Ignore)), path.to_path_buf())
-    }
-
-    def get(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyBytes> {
-        self.store(py).get_py(py, &name, node)
-    }
-
-    def getmeta(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyDict> {
-        self.store(py).get_meta_py(py, &name, node)
-    }
-
-    def getdelta(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyObject> {
-        self.store(py).get_delta_py(py, &name, node)
-    }
-
-    def getdeltachain(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyList> {
-        self.store(py).get_delta_chain_py(py, &name, node)
-    }
-
-    def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
-        self.store(py).get_missing_py(py, &mut keys.iter(py)?)
-    }
-
-    def markforrefresh(&self) -> PyResult<PyObject> {
-        self.store(py).force_rescan();
-        Ok(Python::None(py))
-    }
-});
-
-py_class!(class historypack |py| {
-    data store: Box<HistoryPack>;
-
-    def __new__(
-        _cls,
-        path: &PyPath
-    ) -> PyResult<historypack> {
-        historypack::create_instance(
-            py,
-            Box::new(HistoryPack::new(path.as_path()).map_pyerr(py)?),
-        )
-    }
-
-    def path(&self) -> PyResult<PyPathBuf> {
-        self.store(py).base_path().try_into().map_pyerr(py)
-    }
-
-    def packpath(&self) -> PyResult<PyPathBuf> {
-        self.store(py).pack_path().try_into().map_pyerr(py)
-    }
-
-    def indexpath(&self) -> PyResult<PyPathBuf> {
-        self.store(py).index_path().try_into().map_pyerr(py)
-    }
-
-    def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
-        let store = self.store(py);
-        store.get_missing_py(py, &mut keys.iter(py)?)
-    }
-
-    def getnodeinfo(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyTuple> {
-        let store = self.store(py);
-        store.get_node_info_py(py, &name, node)
-    }
-
-    def iterentries(&self) -> PyResult<Vec<PyTuple>> {
-        let store = self.store(py);
-        store.iter_py(py)
-    }
-});
-
-py_class!(class historypackstore |py| {
-    data store: Box<HistoryPackStore>;
-    data path: PathBuf;
-
-    def __new__(_cls, path: PyPathBuf, deletecorruptpacks: bool = false, maxbytes: Option<u64> = None) -> PyResult<historypackstore> {
-        let corruption_policy = if deletecorruptpacks {
-            CorruptionPolicy::REMOVE
-        } else {
-            CorruptionPolicy::IGNORE
-        };
-
-        historypackstore::create_instance(py, Box::new(HistoryPackStore::new(path.as_path(), corruption_policy, maxbytes)), path.to_path_buf())
-    }
-
-    def getnodeinfo(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyTuple> {
-        self.store(py).get_node_info_py(py, &name, node)
-    }
-
-    def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
-        self.store(py).get_missing_py(py, &mut keys.iter(py)?)
-    }
-
-    def markforrefresh(&self) -> PyResult<PyObject> {
-        self.store(py).force_rescan();
-        Ok(Python::None(py))
-    }
-});
 
 py_class!(class indexedlogdatastore |py| {
     data store: Box<IndexedLogHgIdDataStore>;
@@ -402,38 +225,27 @@ py_class!(class indexedloghistorystore |py| {
 });
 
 fn make_mutabledeltastore(
-    packfilepath: Option<PyPathBuf>,
-    indexedlogpath: Option<PyPathBuf>,
+    indexedlogpath: PyPathBuf,
 ) -> Result<Arc<dyn HgIdMutableDeltaStore + Send>> {
-    let store: Arc<dyn HgIdMutableDeltaStore + Send> = if let Some(packfilepath) = packfilepath {
-        Arc::new(MutableDataPack::new(
-            packfilepath.as_path(),
-            DataPackVersion::One,
-        ))
-    } else if let Some(indexedlogpath) = indexedlogpath {
-        let config = IndexedLogHgIdDataStoreConfig {
-            max_log_count: None,
-            max_bytes_per_log: None,
-            max_bytes: None,
-        };
-        Arc::new(IndexedLogHgIdDataStore::new(
-            &BTreeMap::<&str, &str>::new(),
-            indexedlogpath.as_path(),
-            ExtStoredPolicy::Ignore,
-            &config,
-            StoreType::Permanent,
-        )?)
-    } else {
-        return Err(format_err!("Foo"));
+    let config = IndexedLogHgIdDataStoreConfig {
+        max_log_count: None,
+        max_bytes_per_log: None,
+        max_bytes: None,
     };
-    Ok(store)
+    Ok(Arc::new(IndexedLogHgIdDataStore::new(
+        &BTreeMap::<&str, &str>::new(),
+        indexedlogpath.as_path(),
+        ExtStoredPolicy::Ignore,
+        &config,
+        StoreType::Permanent,
+    )?))
 }
 
 py_class!(pub class mutabledeltastore |py| {
     data store: Arc<dyn HgIdMutableDeltaStore>;
 
-    def __new__(_cls, packfilepath: Option<PyPathBuf> = None, indexedlogpath: Option<PyPathBuf> = None) -> PyResult<mutabledeltastore> {
-        let store = make_mutabledeltastore(packfilepath, indexedlogpath).map_pyerr(py)?;
+    def __new__(_cls, indexedlogpath: PyPathBuf) -> PyResult<mutabledeltastore> {
+        let store = make_mutabledeltastore(indexedlogpath).map_pyerr(py)?;
         mutabledeltastore::create_instance(py, store)
     }
 
