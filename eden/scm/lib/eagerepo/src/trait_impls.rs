@@ -18,6 +18,7 @@ use storemodel::KeyStore;
 use storemodel::SerializationFormat;
 use storemodel::TreeStore;
 use types::CasDigest;
+use types::CasDigestType;
 use types::HgId;
 use types::Key;
 use types::RepoPath;
@@ -132,8 +133,9 @@ impl CasClient for EagerRepoStore {
     async fn fetch(
         &self,
         digests: &[CasDigest],
+        log_name: CasDigestType,
     ) -> anyhow::Result<Vec<(CasDigest, anyhow::Result<Option<Vec<u8>>>)>> {
-        tracing::debug!(target: "cas", "EagerRepoStore fetching {} digest(s)", digests.len());
+        tracing::debug!(target: "cas", "EagerRepoStore fetching {} {}(s)", digests.len(), log_name);
 
         Ok(digests
             .iter()

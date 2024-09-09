@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use configmodel::Config;
 pub use types::CasDigest;
+pub use types::CasDigestType;
 
 pub fn new(config: Arc<dyn Config>) -> anyhow::Result<Option<Arc<dyn CasClient>>> {
     match factory::call_constructor::<_, Arc<dyn CasClient>>(&config as &dyn Config) {
@@ -35,5 +36,6 @@ pub trait CasClient: Sync + Send {
     async fn fetch(
         &self,
         digests: &[CasDigest],
+        log_name: CasDigestType,
     ) -> anyhow::Result<Vec<(CasDigest, anyhow::Result<Option<Vec<u8>>>)>>;
 }

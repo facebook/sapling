@@ -18,6 +18,7 @@ use types::hgid::NULL_ID;
 use types::AugmentedTree;
 use types::AugmentedTreeWithDigest;
 use types::CasDigest;
+use types::CasDigestType;
 use types::Key;
 use types::NodeInfo;
 
@@ -215,7 +216,7 @@ impl FetchState {
             reqs += 1;
 
             // TODO: should we fan out here into multiple requests?
-            match block_on(cas_client.fetch(chunk)) {
+            match block_on(cas_client.fetch(chunk, CasDigestType::Tree)) {
                 Ok(results) => {
                     for (digest, data) in results {
                         let Some(key) = digest_to_key.remove(&digest) else {

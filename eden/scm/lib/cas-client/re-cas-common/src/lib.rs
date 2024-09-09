@@ -13,6 +13,7 @@ pub use once_cell::sync::OnceCell;
 pub use tracing;
 pub use types::Blake3;
 pub use types::CasDigest;
+pub use types::CasDigestType;
 
 #[macro_export]
 macro_rules! re_client {
@@ -49,8 +50,10 @@ impl $crate::CasClient for $struct {
     async fn fetch(
         &self,
         digests: &[$crate::CasDigest],
+        log_name: $crate::CasDigestType,
     ) -> $crate::Result<Vec<($crate::CasDigest, Result<Option<Vec<u8>>>)>> {
-        $crate::tracing::debug!(target: "cas", concat!(stringify!($struct), " fetching {} digest(s)"), digests.len());
+
+        $crate::tracing::debug!(target: "cas", concat!(stringify!($struct), " fetching {} {}(s)"), digests.len(), log_name);
 
         let request = DownloadRequest {
             inlined_digests: Some(digests.iter().map(to_re_digest).collect()),
@@ -83,5 +86,5 @@ impl $crate::CasClient for $struct {
             .collect::<$crate::Result<Vec<_>>>()
     }
 }
-    };
+};
 }

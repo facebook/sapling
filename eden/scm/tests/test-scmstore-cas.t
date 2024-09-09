@@ -144,9 +144,9 @@ Make sure prefetch uses CAS:
   $ LOG=cas=debug,eagerepo=debug hg prefetch -r $A .
   DEBUG cas: creating eager remote client
   DEBUG cas: created client
-  DEBUG cas: EagerRepoStore fetching 1 digest(s)
-  DEBUG cas: EagerRepoStore fetching 1 digest(s)
-  DEBUG cas: EagerRepoStore fetching 2 digest(s)
+  DEBUG cas: EagerRepoStore fetching 1 tree(s)
+  DEBUG cas: EagerRepoStore fetching 1 tree(s)
+  DEBUG cas: EagerRepoStore fetching 2 file(s)
 
 Don't rewrite aux data to cache:
   $ LOG=revisionstore=trace hg prefetch -r $A . 2>&1 | grep "writing to"

@@ -30,6 +30,7 @@ use tracing::field;
 use types::errors::NetworkError;
 use types::fetch_mode::FetchMode;
 use types::CasDigest;
+use types::CasDigestType;
 use types::Key;
 use types::Sha256;
 
@@ -789,7 +790,7 @@ impl FetchState {
             reqs += 1;
 
             // TODO: should we fan out here into multiple requests?
-            match block_on(cas_client.fetch(chunk)) {
+            match block_on(cas_client.fetch(chunk, CasDigestType::File)) {
                 Ok(results) => {
                     for (digest, data) in results {
                         let Some(key) = digest_to_key.remove(&digest) else {
