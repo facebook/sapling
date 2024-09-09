@@ -170,6 +170,8 @@ export function CommandHistoryAndProgress() {
 
   const processedLines = processTerminalLines(progress.commandOutput ?? []);
 
+  const MAX_VISIBLE_NEXT_TO_RUN = 10;
+
   return (
     <div className="progress-container" data-testid="progress-container">
       <Tooltip
@@ -216,11 +218,21 @@ export function CommandHistoryAndProgress() {
                 <T count={queued.length}>moreCommandsToRun</T>
               </div>
             ) : (
-              queued.map(op => (
-                <div key={op.id} id={op.id} className="queued-operation">
-                  <OperationDescription info={info} operation={op} />
-                </div>
-              ))
+              <>
+                {(queued.length > MAX_VISIBLE_NEXT_TO_RUN
+                  ? queued.slice(0, MAX_VISIBLE_NEXT_TO_RUN)
+                  : queued
+                ).map(op => (
+                  <div key={op.id} id={op.id} className="queued-operation">
+                    <OperationDescription info={info} operation={op} />
+                  </div>
+                ))}
+                {queued.length > MAX_VISIBLE_NEXT_TO_RUN && (
+                  <div>
+                    <T replace={{$count: queued.length - MAX_VISIBLE_NEXT_TO_RUN}}>+$count more</T>
+                  </div>
+                )}
+              </>
             )}
           </div>
         ) : null}
