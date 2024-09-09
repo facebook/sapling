@@ -1469,14 +1469,6 @@ def pull(
             ) % (", ".join(sorted(missing)))
             raise error.Abort(msg)
 
-    if (
-        not pullop.repo.ui.configbool("treemanifest", "treeonly")
-        and "treeonly" in pullop.remote.capabilities()
-    ):
-        raise error.Abort(
-            _("non-treemanifest clients cannot pull from " "treemanifest-only servers")
-        )
-
     wlock = lock = None
     try:
         wlock = pullop.repo.wlock()

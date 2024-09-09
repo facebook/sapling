@@ -53,12 +53,6 @@ rust-checkout=True
 [extensions]
 treemanifest=
 
-[treemanifest]
-sendtrees=True
-treeonly=True
-rustmanifest=True
-useruststore=True
-
 [remotefilelog]
 cachepath=$TESTTMP/default-hgcache
 

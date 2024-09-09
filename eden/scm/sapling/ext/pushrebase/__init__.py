@@ -262,14 +262,7 @@ def repository(orig, ui, path, create=False, **kwargs):
     bundlepath = encoding.environ.get("HG_HOOK_BUNDLEPATH")
     if bundlepath:
         packpaths = encoding.environ.get("HG_HOOK_PACKPATHS")
-        if packpaths:
-            # Temporarily set the overall setting, then set it directly on the
-            # repository.
-            with ui.configoverride({("treemanifest", "treeonly"): True}):
-                repo = orig(ui, bundlepath, create=create, **kwargs)
-            repo.ui.setconfig("treemanifest", "treeonly", True)
-        else:
-            repo = orig(ui, bundlepath, create=create, **kwargs)
+        repo = orig(ui, bundlepath, create=create, **kwargs)
 
         # Add hook pack paths to the store
         if packpaths:

@@ -200,16 +200,13 @@ TREE_DEPTH_MAX = 2**16
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem("treemanifest", "sendtrees", default=False)
 configitem("treemanifest", "server", default=False)
 configitem("treemanifest", "cacheserverstore", default=True)
 configitem("treemanifest", "servermaxcachesize", default=1000000)
 configitem("treemanifest", "servercacheevictionpercent", default=50)
 configitem("treemanifest", "fetchdepth", default=TREE_DEPTH_MAX)
 configitem("treemanifest", "stickypushpath", default=True)
-configitem("treemanifest", "treeonly", default=True)
 configitem("treemanifest", "prefetchdraftparents", default=True)
-configitem("treemanifest", "useruststore", default=True)
 configitem("treemanifest", "http", default=False)
 
 PACK_CATEGORY = "manifests"
@@ -222,23 +219,6 @@ RECEIVEDNODE_RECORD = "receivednodes"
 # When looking for a recent manifest to consider our base during tree
 # prefetches, this constant defines how far back we should search.
 BASENODESEARCHMAX = 25000
-
-
-def treeenabled(ui):
-    for name in ["treemanifest", "treemanifestserver"]:
-        if (
-            ui.config("extensions", name) not in (None, "!")
-            or name in extensions.DEFAULT_EXTENSIONS
-            or name in extensions.ALWAYS_ON_EXTENSIONS
-        ):
-            return True
-    return False
-
-
-def useruststore(ui):
-    return ui.configbool("treemanifest", "useruststore") and not ui.configbool(
-        "treemanifest", "server"
-    )
 
 
 def usehttpfetching(repo):
@@ -407,26 +387,19 @@ def showmanifest(orig, **args):
 
 def getrepocaps(orig, repo, *args, **kwargs):
     caps = orig(repo, *args, **kwargs)
-    if treeenabled(repo.ui):
-        caps["treemanifest"] = ("True",)
-        if repo.ui.configbool("treemanifest", "treeonly"):
-            caps["treeonly"] = ("True",)
-        if repo.svfs.treemanifestserver:
-            caps["treemanifestserver"] = ("True",)
+    caps["treemanifest"] = ("True",)
+    caps["treeonly"] = ("True",)
+    if repo.svfs.treemanifestserver:
+        caps["treemanifestserver"] = ("True",)
     return caps
 
 
 def _collectmanifest(orig, repo, striprev):
-    if treeenabled(repo.ui) and repo.ui.configbool("treemanifest", "treeonly"):
-        return []
-    return orig(repo, striprev)
+    return []
 
 
 def stripmanifest(orig, repo, striprev, tr, files):
-    if treeenabled(repo.ui) and repo.ui.configbool("treemanifest", "treeonly"):
-        repair.striptrees(repo, tr, striprev, files)
-        return
-    orig(repo, striprev, tr, files)
+    repair.striptrees(repo, tr, striprev, files)
 
 
 def reposetup(ui, repo):
@@ -499,9 +472,6 @@ def wraprepo(repo):
 
         @perftrace.tracefunc("Prefetch Trees")
         def prefetchtrees(self, mfnodes, basemfnodes=None):
-            if not treeenabled(self.ui):
-                return
-
             mfnodes = list(mfnodes)
             perftrace.tracevalue("Keys", len(mfnodes))
 
@@ -521,15 +491,7 @@ def wraprepo(repo):
                     (("", n) for n in mfnodes), "tree nodes missing on server"
                 )
 
-            if useruststore(self.ui):
-                self.manifestlog.datastore.prefetch(
-                    list(("", node) for node in mfnodes)
-                )
-            else:
-                # If we have no base nodes, scan the changelog looking for a
-                # semi-recent manifest node to treat as the base.
-                if not basemfnodes:
-                    basemfnodes = _findrecenttree(self, self["tip"].node(), mfnodes)
+            self.manifestlog.datastore.prefetch(list(("", node) for node in mfnodes))
 
         def resettreefetches(self):
             fetches = self._treefetches
@@ -667,86 +629,11 @@ def setuptreestores(repo, mfl):
         mfl.localhistorystores = []
         return
 
-    if useruststore(ui):
-        mfl.makeruststore()
-        return
-
-    if not hasattr(repo, "name"):
-        repo.name = ui.config("remotefilelog", "reponame", "unknown")
-    packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
-    _prunesharedpacks(repo, packpath)
-
-    localpackpath = shallowutil.getlocalpackpath(repo.svfs.base, PACK_CATEGORY)
-
-    demanddownload = ui.configbool("treemanifest", "demanddownload", True)
-    demandgenerate = (
-        ui.configbool("treemanifest", "treeonly")
-        or ui.configbool("treemanifest", "sendtrees")
-    ) and ui.configbool("treemanifest", "demandgenerate", True)
-    remotestore = remotetreestore(repo)
-    ondemandstore = ondemandtreedatastore(repo)
-
-    mutablelocalstore = mutablestores.mutabledatahistorystore(
-        lambda: mfl._mutablelocalpacks
-    )
-    mutablesharedstore = mutablestores.mutabledatahistorystore(
-        lambda: mfl._mutablesharedpacks
-    )
-
-    # Data store
-    datastore = makedatapackstore(ui, packpath, True, deletecorruptpacks=True)
-    localdatastore = makedatapackstore(ui, localpackpath, False)
-    datastores = [datastore, localdatastore, mutablelocalstore, mutablesharedstore]
-    if demanddownload:
-        datastores.append(remotestore)
-
-    if demandgenerate:
-        datastores.append(ondemandstore)
-
-    mfl.datastore = unioncontentstore(*datastores)
-
-    mfl.shareddatastores = [datastore]
-    # Local stores are stores that contain data not on the main server
-    mfl.localdatastores = [localdatastore]
-
-    # History store
-    sharedhistorystore = makehistorypackstore(
-        ui, packpath, True, deletecorruptpacks=True
-    )
-    localhistorystore = makehistorypackstore(ui, localpackpath, False)
-    mfl.sharedhistorystores = [sharedhistorystore]
-    mfl.localhistorystores = [localhistorystore]
-
-    histstores = [
-        sharedhistorystore,
-        localhistorystore,
-        mutablelocalstore,
-        mutablesharedstore,
-    ]
-    if demanddownload:
-        histstores.append(remotestore)
-
-    if demandgenerate:
-        histstores.append(ondemandstore)
-
-    mfl.historystore = unionmetadatastore(*histstores)
-
-    remotestore.setshared(mfl.datastore, mfl.historystore)
-    ondemandstore.setshared(mfl.datastore, mfl.historystore)
+    mfl.makeruststore()
 
 
 class basetreemanifestlog:
     def __init__(self, repo):
-        if not useruststore(self._repo.ui):
-            self._mutablelocalpacks = mutablestores.pendingmutablepack(
-                repo,
-                lambda: shallowutil.getlocalpackpath(
-                    self._opener.vfs.base, "manifests"
-                ),
-            )
-            self._mutablesharedpacks = mutablestores.pendingmutablepack(
-                repo, lambda: shallowutil.getcachepackpath(self._repo, PACK_CATEGORY)
-            )
         self.recentlinknode = None
         cachesize = 4
         self._treemanifestcache = util.lrucachedict(cachesize)
@@ -794,19 +681,13 @@ class basetreemanifestlog:
 
     def _getmutablelocalpacks(self):
         """Returns a tuple containing a data pack and a history pack."""
-        if useruststore(self._repo.ui):
-            return (self.datastore, self.historystore)
-        else:
-            return self._mutablelocalpacks.getmutablepack()
+        return (self.datastore, self.historystore)
 
     def getmutablesharedpacks(self):
-        if useruststore(self._repo.ui):
-            return (
-                self.datastore.getsharedmutable(),
-                self.historystore.getsharedmutable(),
-            )
-
-        return self._mutablesharedpacks.getmutablepack()
+        return (
+            self.datastore.getsharedmutable(),
+            self.historystore.getsharedmutable(),
+        )
 
     def _addtreeentry(
         self, dpack, hpack, nname, nnode, ntext, np1, np2, linknode, linkrev=None
@@ -894,20 +775,13 @@ class basetreemanifestlog:
 
         self.datastore.markforrefresh()
         self.historystore.markforrefresh()
-        if useruststore(self.ui):
-            self.datastore.flush()
-            self.historystore.flush()
-        else:
-            self._mutablesharedpacks.commit()
+        self.datastore.flush()
+        self.historystore.flush()
 
     def commitpending(self):
-        if not useruststore(self._repo.ui):
-            self._mutablelocalpacks.commit()
         self.commitsharedpacks()
 
     def abortpending(self):
-        if not useruststore(self._repo.ui):
-            self._mutablelocalpacks.abort()
         self.commitsharedpacks()
 
     def __nonzero__(self):
@@ -954,7 +828,7 @@ class basetreemanifestlog:
             # TODO(meyer): Is there a reason no edenapi is used here?
             # Do all reads fall back through _httpgetdesignatednodes instead
             # Of the normal contentstore fallback path?
-            self.treescmstore = revisionstore.treescmstore(
+            self.datastore = revisionstore.treescmstore(
                 self._repo.svfs.base,
                 self.ui._rcfg,
                 remotestore,
@@ -962,7 +836,6 @@ class basetreemanifestlog:
                 None,
                 "manifests",
             )
-            self.datastore = self.treescmstore.get_contentstore()
             self.historystore = revisionstore.metadatastore(
                 self._repo.svfs.base,
                 self.ui._rcfg,
@@ -1031,16 +904,8 @@ class hybridmanifestlog(manifest.manifestlog):
 
         self.treemanifestlog = treemanifestlog(opener, repo)
         setuptreestores(repo, self.treemanifestlog)
-        if useruststore(self.ui):
-            self.treescmstore = self.treemanifestlog.treescmstore
-        self.datastore = self.treemanifestlog.datastore
+        self.datastore = self.treemanifestlog.treescmstore
         self.historystore = self.treemanifestlog.historystore
-
-        if hasattr(self.treemanifestlog, "shareddatastores"):
-            self.shareddatastores = self.treemanifestlog.shareddatastores
-            self.localdatastores = self.treemanifestlog.localdatastores
-            self.sharedhistorystores = self.treemanifestlog.sharedhistorystores
-            self.localhistorystores = self.treemanifestlog.localhistorystores
 
     def commitpending(self):
         super(hybridmanifestlog, self).commitpending()
@@ -1194,8 +1059,7 @@ def _addservercaps(repo, caps):
     caps = set(caps)
     caps.add("gettreepack")
     caps.add("designatednodes")
-    if repo.ui.configbool("treemanifest", "treeonly"):
-        caps.add("treeonly")
+    caps.add("treeonly")
     # other code expects caps to be a list, not a set
     return list(caps)
 
@@ -1242,25 +1106,17 @@ def verifymanifesthook(ui, repo, **kwargs):
 
 
 def getmanifestlog(orig, self):
-    if not treeenabled(self.ui):
-        return orig(self)
-
-    if self.ui.configbool("treemanifest", "treeonly"):
-        if self.ui.configbool("treemanifest", "server"):
-            mfl = treemanifestlog(self.svfs, self)
-        else:
-            mfl = treeonlymanifestlog(self.svfs, self)
-        setuptreestores(self, mfl)
+    if self.ui.configbool("treemanifest", "server"):
+        mfl = treemanifestlog(self.svfs, self)
     else:
-        mfl = hybridmanifestlog(self.svfs, self)
+        mfl = treeonlymanifestlog(self.svfs, self)
+    setuptreestores(self, mfl)
 
     return mfl
 
 
 def getbundlemanifestlog(orig, self):
     mfl = orig(self)
-    if not treeenabled(self.ui):
-        return mfl
 
     wrapmfl = mfl
     if isinstance(mfl, hybridmanifestlog):
@@ -1591,58 +1447,20 @@ def _getflatdiff(mfl, mfctx):
 
 
 def _unpackmanifestscg3(orig, self, repo, *args, **kwargs):
-    if not treeenabled(repo.ui):
-        return orig(self, repo, *args, **kwargs)
-
-    if repo.ui.configbool("treemanifest", "treeonly"):
-        self.manifestheader()
-        _convertdeltastotrees(repo, self.deltaiter())
-        # Handle sub-tree manifests
-        for chunkdata in iter(self.filelogheader, {}):
-            raise error.ProgrammingError(
-                "sub-trees are not supported in a " "changegroup"
-            )
-        return
-    return orig(self, repo, *args, **kwargs)
+    self.manifestheader()
+    _convertdeltastotrees(repo, self.deltaiter())
+    # Handle sub-tree manifests
+    for chunkdata in iter(self.filelogheader, {}):
+        raise error.ProgrammingError("sub-trees are not supported in a " "changegroup")
 
 
 def _unpackmanifestscg1(orig, self, repo, revmap, trp, numchanges):
-    if not treeenabled(repo.ui):
-        return orig(self, repo, revmap, trp, numchanges)
-
-    if repo.ui.configbool("treemanifest", "treeonly"):
-        self.manifestheader()
-        if repo.svfs.treemanifestserver:
-            for chunkdata in self.deltaiter():
-                raise error.Abort(_("treeonly server cannot receive flat " "manifests"))
-        else:
-            _convertdeltastotrees(repo, self.deltaiter())
-        return
-
-    mfrevlog = repo.manifestlog._revlog
-    oldtip = len(mfrevlog)
-
-    mfnodes = orig(self, repo, revmap, trp, numchanges)
-
+    self.manifestheader()
     if repo.svfs.treemanifestserver:
-        mfl = repo.manifestlog
-        tmfl = repo.manifestlog.treemanifestlog
-        for mfnode in mfnodes:
-            linkrev = mfrevlog.linkrev(mfrevlog.rev(mfnode))
-            _converttotree(trp, mfl, tmfl, mfl[mfnode], linkrev=linkrev, torevlog=True)
-
-    if hasattr(repo.manifestlog, "datastore") and repo.ui.configbool(
-        "treemanifest", "autocreatetrees"
-    ):
-
-        # TODO: only put in cache if pulling from main server
-        packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
-        with mutablestores.mutabledatastore(repo, packpath) as dpack:
-            with mutablestores.mutablehistorystore(repo, packpath) as hpack:
-                recordmanifest(dpack, hpack, repo, oldtip, len(mfrevlog))
-
-        # Alert the store that there may be new packs
-        repo.manifestlog.datastore.markforrefresh()
+        for chunkdata in self.deltaiter():
+            raise error.Abort(_("treeonly server cannot receive flat " "manifests"))
+    else:
+        _convertdeltastotrees(repo, self.deltaiter())
 
 
 def _convertdeltastotrees(repo, deltas):
@@ -2008,13 +1826,6 @@ def _registerbundle2parts():
         # Treemanifest servers don't accept trees directly. They must either go
         # through pushrebase, or be processed manually.
         if repo.svfs.treemanifestserver:
-            if not repo.ui.configbool("treemanifest", "treeonly"):
-                # We can't accept non-pushrebase treeonly pushes to a hybrid
-                # server because the hashes will be wrong and we have no way of
-                # returning the new commits to the server.
-                raise error.Abort(
-                    _("cannot push only trees to a hybrid server " "without pushrebase")
-                )
             data = part.read()
             wirepackstore = wirepack.wirepackstore(data, version=version)
             datastore = unioncontentstore(wirepackstore, mfl.datastore)
@@ -2062,7 +1873,7 @@ def _registerbundle2parts():
     @perftrace.tracefunc("gettreepackpart2")
     def gettreepackpart2(pushop, bundler):
         """add parts containing trees being pushed"""
-        if "treepack" in pushop.stepsdone or not treeenabled(pushop.repo.ui):
+        if "treepack" in pushop.stepsdone:
             return
         pushop.stepsdone.add("treepack")
 
@@ -2093,7 +1904,6 @@ def _registerbundle2parts():
         if client_shallow:
             if (
                 "True" not in b2caps.get("treemanifest", [])
-                or not treeenabled(repo.ui)
                 or repo.svfs.treemanifestserver
                 or not kwargs.get("cg", True)
             ):
@@ -2168,31 +1978,18 @@ def getfallbackpath(repo):
 
 
 def pull(orig, ui, repo, *pats, **opts):
-    # If we're not in treeonly mode, and we're missing public commits from the
-    # revlog, backfill them.
-    if treeenabled(ui) and not ui.configbool("treemanifest", "treeonly"):
-        tippublicrevs = repo.revs("last(public())")
-        if tippublicrevs:
-            ctx = repo[tippublicrevs.first()]
-            mfnode = ctx.manifestnode()
-            mfrevlog = repo.manifestlog._revlog
-            if mfnode not in mfrevlog.nodemap:
-                ui.status(_("backfilling missing flat manifests\n"))
-                backfillmanifestrevlog(ui, repo)
-
     result = orig(ui, repo, *pats, **opts)
-    if treeenabled(repo.ui):
-        try:
-            _postpullprefetch(ui, repo)
-        except Exception as ex:
-            # Errors are not fatal.
-            ui.warn(_("failed to prefetch trees after pull: %s\n") % ex)
-            ui.log_exception(
-                exception_type=type(ex).__name__,
-                exception_msg=str(ex),
-                fatal="false",
-                source="post_pull_prefetch",
-            )
+    try:
+        _postpullprefetch(ui, repo)
+    except Exception as ex:
+        # Errors are not fatal.
+        ui.warn(_("failed to prefetch trees after pull: %s\n") % ex)
+        ui.log_exception(
+            exception_type=type(ex).__name__,
+            exception_msg=str(ex),
+            fatal="false",
+            source="post_pull_prefetch",
+        )
     return result
 
 
@@ -2585,10 +2382,7 @@ class remotetreestore(generatingdatastore):
     def __init__(self, repo):
         super(remotetreestore, self).__init__(repo)
 
-        if useruststore(self._repo.ui):
-            self.prefetch = self._rustprefetch
-        else:
-            self.prefetch = self._pythonprefetch
+        self.prefetch = self._rustprefetch
 
     def _generatetrees(self, name, node):
         self._prefetchtrees([(name, node)])
@@ -2688,9 +2482,6 @@ def _debugbundle2part(orig, ui, part, all, **opts):
 
 def collectfiles(orig, repo, striprev):
     """find out the filelogs affected by the strip"""
-    if not treeenabled(repo.ui):
-        return orig(repo, striprev)
-
     files = set()
 
     for x in range(striprev, len(repo)):
@@ -2714,9 +2505,6 @@ def collectfiles(orig, repo, striprev):
 
 
 def striptrees(orig, repo, tr, striprev, files):
-    if not treeenabled(repo.ui):
-        return orig(repo, tr, striprev, files)
-
     if repo.ui.configbool("treemanifest", "server"):
         mfl = repo.manifestlog
         if isinstance(mfl, hybridmanifestlog):
@@ -2741,7 +2529,7 @@ def _addpartsfromopts(orig, ui, repo, bundler, source, outgoing, *args, **kwargs
 
     # Only add trees to bundles for tree enabled clients. Servers use revlogs
     # and therefore will use changegroup tree storage.
-    if treeenabled(repo.ui) and not repo.svfs.treemanifestserver:
+    if not repo.svfs.treemanifestserver:
         # Only add trees if we have them
         sendtrees = shallowbundle.cansendtrees(
             repo, outgoing.missing, b2caps=bundler.capabilities
@@ -2952,7 +2740,5 @@ class vfscachestore(cachestorecommon):
 
 
 def pullbundle2extraprepare(orig, pullop, kwargs):
-    repo = pullop.repo
-    if treeenabled(repo.ui) and repo.ui.configbool("treemanifest", "treeonly"):
-        bundlecaps = kwargs.get("bundlecaps", set())
-        bundlecaps.add("treeonly")
+    bundlecaps = kwargs.get("bundlecaps", set())
+    bundlecaps.add("treeonly")

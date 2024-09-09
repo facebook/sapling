@@ -642,11 +642,6 @@ clienttelemetry=
 cachepath=$TESTTMP/cachepath
 shallowtrees=True
 
-[treemanifest]
-flatcompat=False
-sendtrees=True
-treeonly=True
-
 [hint]
 ack=*
 

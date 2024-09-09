@@ -1,4 +1,5 @@
 #modern-config-incompatible
+#inprocess-hg-incompatible
 
 #require no-eden
 
@@ -30,7 +31,6 @@ Set up server repository
 Clone client repository
   $ cd ..
   $ hg clone ssh://user@dummy/server client -q
-  1 trees fetched over 0.00s
   $ cd client
   $ setconfig extensions.pushrebase=
   $ setconfig extensions.remotenames=
@@ -58,7 +58,6 @@ Create a merge commit that merges executable file in
   $ hg merge -q db9ca4f4d8f9
   $ hg ci -m merge
   $ hg push -r . --to master -q
-  1 trees fetched over 0.00s
 
 Check that file list contains no changed files, because a file were just merged in
   $ hg up -q tip
@@ -82,7 +81,6 @@ Create a merge commit that merges a file and then makes it executable
   $ hg ci -m merge
 
   $ hg push -r . --to master -q
-  1 trees fetched over 0.00s
   $ hg up -q tip
   $ hg log -r . -T '{files}'
   no_exec (no-eol)
@@ -109,7 +107,6 @@ File list should be empty because we are keeping p1 flags
 
   $ hg ci -m merge
   $ hg push -q -r . --to master
-  1 trees fetched over 0.00s
   $ hg up -q tip
   $ hg log -r . -T '{files}'
 
@@ -136,7 +133,6 @@ File list should be non-empty because we are keeping p2 flags
 
   $ hg ci -m merge
   $ hg push -q -r . --to master
-  1 trees fetched over 0.00s
   $ hg up -q tip
   $ hg log -r . -T '{files}'
   no_exec_3 (no-eol)

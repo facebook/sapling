@@ -1,5 +1,5 @@
 #modern-config-incompatible
-#modern-config-incompatible
+#inprocess-hg-incompatible
 
 #require no-eden
 

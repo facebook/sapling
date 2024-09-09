@@ -385,8 +385,7 @@ class wirepeer(repository.legacypeer):
             )
         if shallow and self.capable("remotefilelog"):
             opts = {}
-            if self.ui.configbool("treemanifest", "treeonly"):
-                opts["noflatmanifest"] = "True"
+            opts["noflatmanifest"] = "True"
             tag = self.ui.config("stream_out_shallow", "tag")
             if tag:
                 opts["tag"] = tag

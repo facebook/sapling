@@ -71,31 +71,7 @@ class shallowcg1packer(changegroup.cg1packer):
         return shallowgroup(shallowcg1packer, self, nodelist, revlog, lookup, prog=prog)
 
     def _cansendflat(self, mfnodes):
-        repo = self._repo
-        if "treeonly" in self._bundlecaps or "True" in self._b2caps.get("treeonly", []):
-            return False
-
-        if not hasattr(repo.manifestlog, "_revlog"):
-            return False
-
-        if treeonly(repo):
-            return False
-
-        revlog = repo.manifestlog._revlog
-        for mfnode in mfnodes:
-            if mfnode not in revlog.nodemap:
-                return False
-
-        allowflat = (
-            "allowflatmanifest" in self._bundlecaps
-            or "True" in self._b2caps.get("allowflatmanifest", [])
-        )
-        if repo.ui.configbool("treemanifest", "blocksendflat") and not allowflat:
-            raise error.Abort(
-                "must produce treeonly changegroups in a treeonly repository"
-            )
-
-        return True
+        return False
 
     def generatemanifests(
         self,
@@ -147,20 +123,10 @@ class shallowcg1packer(changegroup.cg1packer):
                             and repo[clnode].phase() == phases.public
                         ):
                             continue
-                        try:
-                            mfctx = mflog[mfnode]
-                            clp1node = clparents(clnode)[0]
-                            p1node = clrevision(clp1node).manifest
-                            p1ctx = mflog[p1node]
-                        except LookupError:
-                            if not repo.svfs.treemanifestserver or treeonly(repo):
-                                raise
-                            # If we can't find the flat version, look for trees
-                            tmfl = mflog.treemanifestlog
-                            mfctx = tmfl[mfnode]
-                            clp1node = clparents(clnode)[0]
-                            p1node = clrevision(clp1node).manifest
-                            p1ctx = tmfl[p1node]
+                        mfctx = mflog[mfnode]
+                        clp1node = clparents(clnode)[0]
+                        p1node = clrevision(clp1node).manifest
+                        p1ctx = mflog[p1node]
 
                         diff = p1ctx.read().diff(mfctx.read()).items()
                         for filename, ((anode, aflag), (bnode, bflag)) in diff:
@@ -542,11 +508,6 @@ def cansendtrees(repo, nodes, source=None, bundlecaps=None, b2caps=None):
         # they're doing a push, but that should almost never happen.
         result = LocalTrees
         prefetch = LocalTrees
-        if not treeonly(repo):
-            # If we're sending trees and flats, then we need to prefetch
-            # everything, since when it inspects the flat manifests it will
-            # attempt to access the tree equivalent.
-            prefetch = AllTrees
 
     ctxs = [repo[node] for node in nodes]
 
@@ -565,7 +526,3 @@ def cansendtrees(repo, nodes, source=None, bundlecaps=None, b2caps=None):
         pass
 
     return result
-
-
-def treeonly(repo):
-    return repo.ui.configbool("treemanifest", "treeonly")
