@@ -248,13 +248,13 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
         PathError{errorCode, path, additionalErrorContext}};
   }
 
-  std::optional<folly::Try<Hash32>> digestHash;
-  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_HASH)) {
-    digestHash =
+  std::optional<folly::Try<Hash32>> blake3;
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_BLAKE3)) {
+    blake3 =
         folly::Try<Hash32>{PathError{errorCode, path, additionalErrorContext}};
   }
 
-  std::optional<folly::Try<Hash32>> blake3;
+  std::optional<folly::Try<Hash32>> digestHash;
   std::optional<folly::Try<uint64_t>> digestSize;
 
   // The entry is a symlink, socket, or other unsupported type. We return
@@ -267,8 +267,8 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
           PathError{errorCode, path, additionalErrorContext}};
     }
 
-    if (requestedAttributes.contains(ENTRY_ATTRIBUTE_BLAKE3)) {
-      blake3 = folly::Try<Hash32>{
+    if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_HASH)) {
+      digestHash = folly::Try<Hash32>{
           PathError{errorCode, path, std::move(additionalErrorContext)}};
     }
   } else {
@@ -277,7 +277,7 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
     // of trees that have ObjectIds. In other words, the tree must be
     // unmaterialized.
     if (shouldFetchTreeMetadata &&
-        (requestedAttributes.contains(ENTRY_ATTRIBUTE_BLAKE3) ||
+        (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_HASH) ||
          requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_SIZE)) &&
         oid.has_value()) {
       auto treeMetaFut =
@@ -290,8 +290,9 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
                           size,
                           digestSize,
                           digestHash](TreeMetadata treeMeta) mutable {
-                if (requestedAttributes.contains(ENTRY_ATTRIBUTE_BLAKE3)) {
-                  blake3 = std::optional<folly::Try<Hash32>>{treeMeta.blake3};
+                if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_HASH)) {
+                  digestHash =
+                      std::optional<folly::Try<Hash32>>{treeMeta.blake3};
                 }
                 if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_SIZE)) {
                   digestSize = std::optional<folly::Try<uint64_t>>{
@@ -319,8 +320,8 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
             // We failed to get tree aux data. This shouldn't cause the
             // entire result to be an error. We can return whichever
             // attributes we successfully fetched.
-            if (requestedAttributes.contains(ENTRY_ATTRIBUTE_BLAKE3)) {
-              treeBlake3 = folly::Try<Hash32>{ex};
+            if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_HASH)) {
+              treeDigestHash = folly::Try<Hash32>{ex};
             }
 
             if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_SIZE)) {
@@ -412,12 +413,13 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
   // them up
   if (requestedAttributes.containsAnyOf(
           ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 | ENTRY_ATTRIBUTE_BLAKE3 |
-          ENTRY_ATTRIBUTE_DIGEST_SIZE)) {
+          ENTRY_ATTRIBUTE_DIGEST_SIZE | ENTRY_ATTRIBUTE_DIGEST_HASH)) {
     blobMetadataFuture = getBlobMetadata(
         path,
         objectStore,
         fetchContext,
-        requestedAttributes.contains(ENTRY_ATTRIBUTE_BLAKE3));
+        requestedAttributes.containsAnyOf(
+            ENTRY_ATTRIBUTE_BLAKE3 | ENTRY_ATTRIBUTE_DIGEST_HASH));
   }
 
   std::optional<ObjectId> objectId;
@@ -448,13 +450,6 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
               if (blobMetadata.hasException()) {
                 blake3 = folly::Try<Hash32>(blobMetadata.exception());
               } else {
-                if (blobMetadata.value().blake3) {
-                  blake3 =
-                      folly::Try<Hash32>(blobMetadata.value().blake3.value());
-                } else {
-                  blake3 =
-                      folly::Try<Hash32>(blobMetadata.value().blake3.value());
-                }
                 blake3 = blobMetadata.value().blake3
                     ? folly::Try<Hash32>(blobMetadata.value().blake3.value())
                     : folly::Try<Hash32>(
@@ -491,8 +486,15 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
 
             std::optional<folly::Try<Hash32>> digestHash;
             if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_HASH)) {
-              digestHash = folly::Try<Hash32>{PathError{
-                  ENOTDIR, filePath, "digestHash not supported for files"}};
+              if (blobMetadata.hasException()) {
+                digestHash = folly::Try<Hash32>(blobMetadata.exception());
+              } else {
+                digestHash = blobMetadata.value().blake3
+                    ? folly::Try<Hash32>(blobMetadata.value().blake3.value())
+                    : folly::Try<Hash32>(
+                          folly::make_exception_wrapper<std::runtime_error>(
+                              "no blake3 available"));
+              }
             }
 
             return EntryAttributes{

@@ -83,10 +83,10 @@ class ReaddirTest(testcase.EdenRepoTest):
     slink_id: bytes = b""
     adir_id: bytes = b""
     adir_digest_size_result: DigestSizeOrError = DigestSizeOrError()
-    adir_blake3_result: Blake3OrError = Blake3OrError()
+    adir_digest_hash_result: DigestHashOrError = DigestHashOrError()
     cdir_subdir_id: bytes = b""
     cdir_subdir_digest_size_result: DigestSizeOrError = DigestSizeOrError()
-    cdir_subdir_blake3_result: Blake3OrError = Blake3OrError()
+    cdir_subdir_digest_hash_result: DigestHashOrError = DigestHashOrError()
 
     def setup_eden_test(self) -> None:
         self.enable_windows_symlinks = True
@@ -244,10 +244,10 @@ class ReaddirTest(testcase.EdenRepoTest):
             ),
         }[self.repo_type]
 
-        self.adir_blake3_result = {
-            "hg": Blake3OrError(adir_blake3),
-            "filteredhg": Blake3OrError(adir_blake3),
-            "git": Blake3OrError(
+        self.adir_digest_hash_result = {
+            "hg": DigestHashOrError(adir_blake3),
+            "filteredhg": DigestHashOrError(adir_blake3),
+            "git": DigestHashOrError(
                 error=EdenError(
                     message="std::domain_error: getTreeMetadata is not implemented for GitBackingStores",
                     errorType=EdenErrorType.GENERIC_ERROR,
@@ -280,10 +280,10 @@ class ReaddirTest(testcase.EdenRepoTest):
             ),
         }[self.repo_type]
 
-        self.cdir_subdir_blake3_result = {
-            "hg": Blake3OrError(cdir_subdir_blake3),
-            "filteredhg": Blake3OrError(cdir_subdir_blake3),
-            "git": Blake3OrError(
+        self.cdir_subdir_digest_hash_result = {
+            "hg": DigestHashOrError(cdir_subdir_blake3),
+            "filteredhg": DigestHashOrError(cdir_subdir_blake3),
+            "git": DigestHashOrError(
                 error=EdenError(
                     message="std::domain_error: getTreeMetadata is not implemented for GitBackingStores",
                     errorType=EdenErrorType.GENERIC_ERROR,
@@ -340,7 +340,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             Optional[bytes],
             Optional[bytes],
             Optional[int],
-            Optional[DigestHashOrError],
+            Optional[bytes],
         ],
     ) -> Tuple[FileAttributeDataOrError, FileAttributeDataOrErrorV2]:
         (
@@ -350,7 +350,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             raw_object_id,
             raw_blake3,
             digest_size,
-            digest_hash_result,
+            digest_hash,
         ) = raw_attributes
         data = FileAttributeData()
         data_v2 = FileAttributeDataV2()
@@ -376,8 +376,8 @@ class ReaddirTest(testcase.EdenRepoTest):
         if digest_size is not None:
             data_v2.digestSize = DigestSizeOrError(digest_size)
 
-        if digest_hash_result is not None:
-            data_v2.digestHash = digest_hash_result
+        if digest_hash is not None:
+            data_v2.digestHash = DigestHashOrError(digest_hash)
 
         return (
             FileAttributeDataOrError(data),
@@ -418,13 +418,6 @@ class ReaddirTest(testcase.EdenRepoTest):
             self.get_expected_file_attributes(
                 "hello",
                 self.hello_id,
-                DigestHashOrError(
-                    error=EdenError(
-                        message="hello: digestHash not supported for files: Not a directory",
-                        errorCode=20,
-                        errorType=EdenErrorType.POSIX_ERROR,
-                    )
-                ),
             )
         )
 
@@ -433,13 +426,6 @@ class ReaddirTest(testcase.EdenRepoTest):
             self.get_expected_file_attributes(
                 "adir/file",
                 self.adir_file_id,
-                DigestHashOrError(
-                    error=EdenError(
-                        message="adir/file: digestHash not supported for files: Not a directory",
-                        errorCode=20,
-                        errorType=EdenErrorType.POSIX_ERROR,
-                    )
-                ),
             )
         )
 
@@ -636,15 +622,15 @@ class ReaddirTest(testcase.EdenRepoTest):
                 ),
                 SourceControlTypeOrError(SourceControlType.TREE),
                 ObjectIdOrError(self.adir_id),
-                self.adir_blake3_result,
-                self.adir_digest_size_result,
-                DigestHashOrError(
+                Blake3OrError(
                     error=EdenError(
                         message="adir: Is a directory",
                         errorCode=21,
                         errorType=EdenErrorType.POSIX_ERROR,
                     )
                 ),
+                self.adir_digest_size_result,
+                self.adir_digest_hash_result,
             )
         )
 
@@ -844,7 +830,6 @@ class ReaddirTest(testcase.EdenRepoTest):
         self,
         path: str,
         object_id: Optional[bytes],
-        digest_hash_result: Optional[DigestHashOrError] = None,
     ) -> Tuple[
         bytes,
         int,
@@ -852,7 +837,7 @@ class ReaddirTest(testcase.EdenRepoTest):
         Optional[bytes],
         bytes,
         int,
-        Optional[DigestHashOrError],
+        bytes,
     ]:
         """Get attributes for the file with the specified path inside
         the eden repository. For now, just sha1 and file size.
@@ -868,7 +853,7 @@ class ReaddirTest(testcase.EdenRepoTest):
                 object_id,
                 (0).to_bytes(32, byteorder="big"),
                 0,
-                digest_hash_result,
+                (0).to_bytes(32, byteorder="big"),
             )
         if stat.S_ISLNK(file_stat.st_mode):
             return (
@@ -878,7 +863,7 @@ class ReaddirTest(testcase.EdenRepoTest):
                 object_id,
                 (0).to_bytes(32, byteorder="big"),
                 0,
-                digest_hash_result,
+                (0).to_bytes(32, byteorder="big"),
             )
         if not stat.S_ISREG(file_stat.st_mode):
             return (
@@ -888,7 +873,7 @@ class ReaddirTest(testcase.EdenRepoTest):
                 object_id,
                 (0).to_bytes(32, byteorder="big"),
                 0,
-                digest_hash_result,
+                (0).to_bytes(32, byteorder="big"),
             )
         if stat.S_IXUSR & file_stat.st_mode:
             file_type = SourceControlType.EXECUTABLE_FILE
@@ -897,15 +882,16 @@ class ReaddirTest(testcase.EdenRepoTest):
         file_contents = ifile.read()
         sha1_hash = hashlib.sha1(file_contents).digest()
         ifile.close()
+        blake3 = self.blake3_hash(fullpath)
 
         return (
             sha1_hash,
             file_size,
             file_type,
             object_id,
-            self.blake3_hash(fullpath),
+            blake3,
             file_size,
-            digest_hash_result,
+            blake3,
         )
 
     def get_counter(self, name: str) -> float:
@@ -920,7 +906,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             Optional[bytes],
             Optional[bytes],
             int,
-            Optional[DigestHashOrError],
+            Optional[bytes],
         ],
         req_attr: int = ALL_ATTRIBUTES,
     ) -> FileAttributeDataOrErrorV2:
@@ -956,7 +942,7 @@ class ReaddirTest(testcase.EdenRepoTest):
         if (req_attr & FileAttributes.DIGEST_HASH) and expected_attributes[
             6
         ] is not None:
-            digestHash = expected_attributes[6]
+            digestHash = DigestHashOrError(expected_attributes[6])
 
         return FileAttributeDataOrErrorV2(
             fileAttributeData=FileAttributeDataV2(
@@ -982,13 +968,6 @@ class ReaddirTest(testcase.EdenRepoTest):
                         self.get_expected_file_attributes(
                             "adir/file",
                             self.adir_file_id,
-                            DigestHashOrError(
-                                error=EdenError(
-                                    message="adir/file: digestHash not supported for files: Not a directory",
-                                    errorCode=20,
-                                    errorType=EdenErrorType.POSIX_ERROR,
-                                )
-                            ),
                         )
                     )
                 }
@@ -999,13 +978,6 @@ class ReaddirTest(testcase.EdenRepoTest):
                         self.get_expected_file_attributes(
                             "bdir/file",
                             self.bdir_file_id,
-                            DigestHashOrError(
-                                error=EdenError(
-                                    message="bdir/file: digestHash not supported for files: Not a directory",
-                                    errorCode=20,
-                                    errorType=EdenErrorType.POSIX_ERROR,
-                                )
-                            ),
                         )
                     )
                 }
@@ -1243,7 +1215,13 @@ class ReaddirTest(testcase.EdenRepoTest):
                     errorType=EdenErrorType.POSIX_ERROR,
                 )
             ),
-            blake3_result=self.cdir_subdir_blake3_result,
+            blake3_result=Blake3OrError(
+                error=EdenError(
+                    message="cdir/subdir: Is a directory",
+                    errorCode=21,
+                    errorType=EdenErrorType.POSIX_ERROR,
+                )
+            ),
             size_result=SizeOrError(
                 error=EdenError(
                     message="cdir/subdir: Is a directory",
@@ -1253,13 +1231,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             ),
             object_id=self.cdir_subdir_id,
             digest_size_result=self.cdir_subdir_digest_size_result,
-            digest_hash_result=DigestHashOrError(
-                error=EdenError(
-                    message="cdir/subdir: Is a directory",
-                    errorCode=21,
-                    errorType=EdenErrorType.POSIX_ERROR,
-                )
-            ),
+            digest_hash_result=self.cdir_subdir_digest_hash_result,
         )
 
         if sys.platform != "win32":
