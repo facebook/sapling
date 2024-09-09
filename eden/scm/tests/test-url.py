@@ -406,6 +406,34 @@ def test_url():
     'file:foo/bar/baz'
     >>> u.localpath()
     'foo/bar/baz'
+
+    >>> u = url(r"eager:C:\\foo\\bar")
+    >>> u
+    <url scheme: 'eager', path: 'C:\\\\foo\\\\bar'>
+    >>> print(u.localpath())
+    C:\\foo\\bar
+
+    >>> u = url(r"eager://C:\\foo\\bar")
+    >>> u
+    <url scheme: 'eager', path: 'C:\\\\foo\\\\bar'>
+    >>> print(u.localpath())
+    C:\\foo\\bar
+
+    >>> u = url(r"eager:\\\\?\\C:\\foo\\bar")
+    >>> u
+    <url scheme: 'eager', path: '\\\\\\\\?\\\\C:\\\\foo\\\\bar'>
+    >>> print(str(u))
+    eager://\\\\?\\C:\\foo\\bar
+    >>> print(u.localpath())
+    \\\\?\\C:\\foo\\bar
+
+    >>> u = url(r"eager://\\\\?\\C:\\foo\\bar")
+    >>> u
+    <url scheme: 'eager', path: '\\\\\\\\?\\\\C:\\\\foo\\\\bar'>
+    >>> print(str(u))
+    eager://\\\\?\\C:\\foo\\bar
+    >>> print(u.localpath())
+    \\\\?\\C:\\foo\\bar
     """
 
 
