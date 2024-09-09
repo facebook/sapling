@@ -20,7 +20,7 @@ use url::Url;
 
 pub struct RepoUrl {
     // What should be saved as paths.default.
-    clean_path: String,
+    clean_input: String,
     // URL with custom scheme resolved.
     url: Url,
     // Repo name derived from URL.
@@ -30,14 +30,40 @@ pub struct RepoUrl {
 }
 
 impl RepoUrl {
-    #[context("parsing repo URL {url_str}")]
-    pub fn from_str(config: &dyn Config, url_str: &str) -> Result<Self> {
+    #[context("parsing repo URL {input_url}")]
+    pub fn from_str(config: &dyn Config, input_url: &str) -> Result<Self> {
+        // If input_url looks like a plain Windows path, first normalize with "file://" scheme.
+        let url_string = if looks_like_windows_path(input_url) {
+            format!("file://{input_url}")
+        } else {
+            input_url.to_string()
+        };
+
+        // Do some file path normalization on Windows for schemes referencing fs paths.
+        let url_string = match (cfg!(windows), url_string.split_once(':')) {
+            (true, Some((scheme @ ("file" | "eager"), path))) => {
+                let path = path.trim_start_matches('/');
+
+                // URLs don't like the "?" from UNC path. We will add
+                // it back later in the `path()` method.
+                let path = path.trim_start_matches(r"\\?");
+
+                // URLs are happier with forward slashes.
+                let path = path.replace(r"\", "/");
+
+                // Adding an extra forward slash seems to do the best job. It avoids "C:"
+                // from getting interpreted as the host.
+                format!("{scheme}:///{path}")
+            }
+            _ => url_string,
+        };
+
         let base_url = Url::parse("file:///.").unwrap();
         let parse_opts = Url::options().base_url(Some(&base_url));
-        let mut url = match parse_opts.parse(url_str) {
+        let mut url = match parse_opts.parse(&url_string) {
             Ok(url) => url,
             Err(err) => {
-                tracing::warn!("error parsing repo URL {url_str}: {err:?}");
+                tracing::warn!("error parsing repo URL {url_string}: {err:?}");
                 return Err(err.into());
             }
         };
@@ -47,19 +73,20 @@ impl RepoUrl {
         let frag = url.fragment().map(|f| f.to_string());
         url.set_fragment(None);
 
-        let clean_path = if frag.is_some() {
+        // Prefer to keep the exact input_url when possible.
+        let clean_input = if frag.is_some() {
             url.as_str().to_string()
         } else {
-            url_str.to_string()
+            input_url.to_string()
         };
 
         let url = resolve_custom_scheme(config, url)?;
 
         let repo_name = repo_name_from_resolved_url(config, &url);
-        tracing::debug!(input_url=url_str, output_url=%url, ?repo_name, "parsed repo URL");
+        tracing::debug!(input_url, output_url=%url, ?repo_name, "parsed repo URL");
 
         Ok(Self {
-            clean_path,
+            clean_input,
             url,
             repo_name,
             default_bookmark: frag,
@@ -70,8 +97,16 @@ impl RepoUrl {
         self.url.scheme()
     }
 
-    pub fn path(&self) -> &str {
-        self.url.path()
+    // URL path. Useful for "file" and "eager" schemes to get the file system path.
+    pub fn path(&self) -> String {
+        match (cfg!(windows), self.scheme()) {
+            // Convert Windows path to UNC format.
+            (true, "file" | "eager") => {
+                let path = self.url.path().trim_start_matches('/');
+                format!(r"\\?\{}", path.replace('/', r"\"))
+            }
+            _ => self.url.path().to_string(),
+        }
     }
 
     pub fn repo_name(&self) -> Option<&str> {
@@ -85,13 +120,28 @@ impl RepoUrl {
     /// Input string sans URL fragment.
     /// What "clone" should persist as paths.default.
     pub fn clean_str(&self) -> &str {
-        &self.clean_path
+        &self.clean_input
     }
 
     /// URL with schemes resolved and fragment trimmed.
     pub fn resolved_str(&self) -> &str {
         self.url.as_str()
     }
+}
+
+fn looks_like_windows_path(s: &str) -> bool {
+    if !cfg!(windows) {
+        return false;
+    }
+
+    // UNC prefix
+    if s.starts_with(r"\\") {
+        return true;
+    }
+
+    // Drive prefix (e.g. "c:")
+    let bytes = s.as_bytes();
+    bytes.len() >= 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':'
 }
 
 /// Using custom "schemes" from config, resolve given url.
@@ -130,22 +180,6 @@ fn repo_name_from_resolved_url(config: &dyn Config, url: &Url) -> Option<String>
             let path = url.path().trim_matches('/');
             if !path.is_empty() {
                 return Some(path.to_string());
-            }
-        }
-        "eager" => {
-            // eager URLs such as eager://C:\some\path don't work with the default
-            // URL logic, so special case to always take the last path component.
-            if let Some((_, path)) = url.as_str().split_once(':') {
-                let delims = if cfg!(windows) {
-                    &['/', '\\'][..]
-                } else {
-                    &['/'][..]
-                };
-                if let Some((_, last)) = path.trim_end_matches(delims).rsplit_once(delims) {
-                    if !last.is_empty() {
-                        return Some(last.to_string());
-                    }
-                }
             }
         }
         _ => {
@@ -265,14 +299,38 @@ mod test {
             ("schemes.subst", "substd://bar/{1}/baz"),
         ]);
 
-        let check = |url, resolved| {
+        let check = |url, scheme, path| {
             let repo_url = RepoUrl::from_str(&config, url).unwrap();
-
-            assert_eq!(repo_url.resolved_str(), resolved);
+            assert_eq!(repo_url.scheme(), scheme);
+            assert_eq!(repo_url.path(), path);
         };
 
-        check("other://foo", "other://foo");
-        check("append:one/two", "appended://bar/one/two");
-        check("subst://one/two", "substd://bar/one/two/baz");
+        check("other:foo", "other", "foo");
+        check("append:one/two", "appended", "/one/two");
+        check("subst://one/two", "substd", "/one/two/baz");
+    }
+
+    #[test]
+    fn test_path() {
+        let config = BTreeMap::<&str, &str>::new();
+
+        let check = |url, scheme, path| {
+            let repo_url = RepoUrl::from_str(&config, url).unwrap();
+            assert_eq!(repo_url.scheme(), scheme);
+            assert_eq!(repo_url.path(), path);
+            assert_eq!(repo_url.clean_str(), url);
+        };
+
+        if cfg!(windows) {
+            check(r"C:\foo\bar", "file", r"\\?\C:\foo\bar");
+            check(r"\\?\C:\foo\bar", "file", r"\\?\C:\foo\bar");
+            check(r"\\?\C:foo/bar", "file", r"\\?\C:foo\bar");
+            check(r"eager://C:\foo\bar", "eager", r"\\?\C:\foo\bar");
+            check(r"eager://\\?\C:\foo/bar", "eager", r"\\?\C:\foo\bar");
+            check(r"test:foo\bar", "test", r"foo\bar");
+        } else {
+            check("file:///foo/bar", "file", "/foo/bar");
+            check("eager:///foo/bar", "eager", "/foo/bar");
+        }
     }
 }
