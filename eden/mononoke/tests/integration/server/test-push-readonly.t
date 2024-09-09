@@ -126,7 +126,7 @@ Check that a push which doesn't move a bookmark is allowed
   query 1; heads
   sending heads command
   searching for changes
-  local heads: 1; remote heads: 1 (explicit: 0); initial common: 1
+  local heads: 2; remote heads: 1 (explicit: 0); initial common: 1
   all local heads known remotely
   checking for updated bookmarks
   preparing listkeys for "bookmarks"

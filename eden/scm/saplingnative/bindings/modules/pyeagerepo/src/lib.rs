@@ -19,6 +19,7 @@ use dag::ops::DagAlgorithm;
 use eagerepo::EagerRepo as RustEagerRepo;
 use eagerepo::EagerRepoStore as RustEagerRepoStore;
 use edenapi_types::HgId;
+use pyconfigloader::config;
 use pydag::dagalgo::dagalgo as PyDag;
 use pyedenapi::PyClient;
 
@@ -47,8 +48,10 @@ py_class!(class EagerRepo |py| {
 
     /// Construct `EagerRepo` from a URL.
     @staticmethod
-    def openurl(url: &str) -> PyResult<Self> {
-        let dir = match RustEagerRepo::url_to_dir(url) {
+    def openurl(config: &config, url: &str) -> PyResult<Self> {
+        let config = config.get_cfg(py);
+        let url = repourl::RepoUrl::from_str(&config, url).map_pyerr(py)?;
+        let dir = match RustEagerRepo::url_to_dir(&url) {
             Some(dir) => dir,
             None => return Err(PyErr::new::<exc::ValueError, _>(py, "invalid url")),
         };

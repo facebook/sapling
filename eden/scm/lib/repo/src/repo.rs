@@ -34,6 +34,7 @@ pub use repo_minimal_info::read_sharedpath;
 use repo_minimal_info::RepoMinimalInfo;
 use repo_minimal_info::Requirements;
 use repolock::RepoLocker;
+use repourl::RepoUrl;
 use revisionstore::scmstore;
 use revisionstore::scmstore::FileStoreBuilder;
 use revisionstore::scmstore::TreeStoreBuilder;
@@ -326,13 +327,16 @@ impl Repo {
             tracing::trace!(target: "repo::eden_api", "disabled because edenapi.enable is false");
             return Ok(None);
         }
-        let path = self.config.get("paths", "default");
-        match path {
-            None => {
+        match self.config.get_nonempty_opt::<RepoUrl>("paths", "default") {
+            Err(err) => {
+                tracing::warn!(target: "repo::eden_api", ?err, "disabled because error parsing paths.default");
+                return Ok(None);
+            }
+            Ok(None) => {
                 tracing::trace!(target: "repo::eden_api", "disabled because paths.default is not set");
                 return Ok(None);
             }
-            Some(path) => {
+            Ok(Some(path)) => {
                 // EagerRepo URLs (test:, eager: file path, dummyssh).
                 if EagerRepo::url_to_dir(&path).is_some() {
                     tracing::trace!(target: "repo::eden_api", "using EagerRepo at {}", &path);
@@ -340,10 +344,10 @@ impl Repo {
                 }
                 // Legacy tests are incompatible with SaplingRemoteAPI.
                 // They use None or file or ssh scheme with dummyssh.
-                if path.starts_with("file:") {
+                if path.scheme() == "file" {
                     tracing::trace!(target: "repo::eden_api", "disabled because paths.default is not set");
                     return Ok(None);
-                } else if path.starts_with("ssh:") {
+                } else if path.scheme() == "ssh" {
                     if let Some(ssh) = self.config.get("ui", "ssh") {
                         if ssh.contains("dummyssh") {
                             tracing::trace!(target: "repo::eden_api", "disabled because paths.default uses ssh scheme and dummyssh is in use");

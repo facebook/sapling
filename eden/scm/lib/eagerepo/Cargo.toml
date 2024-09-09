@@ -24,6 +24,7 @@ minibytes = { version = "0.1.0", path = "../minibytes" }
 mutationstore = { version = "0.1.0", path = "../mutationstore" }
 nonblocking = { version = "0.1.0", path = "../nonblocking" }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
+repourl = { version = "0.1.0", path = "../repo/url" }
 sha1 = "0.10.5"
 storemodel = { version = "0.1.0", path = "../storemodel" }
 thiserror = "1.0.49"

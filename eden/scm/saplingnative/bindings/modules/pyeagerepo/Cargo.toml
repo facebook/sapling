@@ -12,6 +12,8 @@ cpython_ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 dag = { version = "0.1.0", path = "../../../../lib/dag" }
 eagerepo = { version = "0.1.0", path = "../../../../lib/eagerepo" }
 edenapi_types = { version = "0.1.0", path = "../../../../lib/edenapi/types" }
+pyconfigloader = { version = "0.1.0", path = "../pyconfigloader" }
 pydag = { version = "0.1.0", path = "../pydag" }
 pyedenapi = { version = "0.1.0", path = "../pyedenapi" }
+repourl = { version = "0.1.0", path = "../../../../lib/repo/url" }
 storemodel = { version = "0.1.0", path = "../../../../lib/storemodel" }

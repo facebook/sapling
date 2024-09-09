@@ -87,6 +87,7 @@ use manifest_tree::Flag;
 use minibytes::Bytes;
 use mutationstore::MutationEntry;
 use nonblocking::non_blocking_result;
+use repourl::RepoUrl;
 use storemodel::types::AugmentedTreeWithDigest;
 use storemodel::SerializationFormat;
 use tracing::debug;
@@ -1424,15 +1425,12 @@ pub fn edenapi_from_config(
     config: &dyn Config,
 ) -> edenapi::Result<Option<Arc<dyn SaplingRemoteApi>>> {
     for (section, name) in [("paths", "default"), ("edenapi", "url")] {
-        if let Ok(value) = config.get_or_default::<String>(section, name) {
+        if let Ok(url) = config.must_get::<RepoUrl>(section, name) {
             trace!(
                 target: "eagerepo::edenapi_from_config",
-                "attempt to create EagerRepo as SaplingRemoteApi from config {}.{}={}",
-                section,
-                name,
-                &value
+                "attempt to create EagerRepo as SaplingRemoteApi from config {section}.{name}={url}",
             );
-            if let Some(path) = EagerRepo::url_to_dir(&value) {
+            if let Some(path) = EagerRepo::url_to_dir(&url) {
                 let repo = EagerRepo::open(&path)
                     .map_err(|e| edenapi::SaplingRemoteApiError::Other(e.into()))?;
                 return Ok(Some(Arc::new(repo)));

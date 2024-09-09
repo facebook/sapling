@@ -36,6 +36,7 @@ use mutationstore::MutationStore;
 use parking_lot::lock_api::RwLockReadGuard;
 use parking_lot::RawRwLock;
 use parking_lot::RwLock;
+use repourl::RepoUrl;
 use sha1::Digest;
 use sha1::Sha1;
 use storemodel::types::AugmentedDirectoryNode;
@@ -330,35 +331,24 @@ impl EagerRepo {
     /// - `eager:dir_path`, `eager://dir_path`
     /// - `test:name`, `test://name`: same as `eager:$TESTTMP/name`
     /// - `/path/to/dir` where the path is a EagerRepo.
-    pub fn url_to_dir(value: &str) -> Option<PathBuf> {
-        if let Some(path) = value.strip_prefix("eager:") {
-            let path: PathBuf = if cfg!(windows) {
-                // Remove '//' prefix from Windows file path. This makes it
-                // possible to use paths like 'eager://C:\foo\bar'.
-                let path = path.trim_start_matches('/');
-                // Replace '/' with '\' on Windows so one can write code like
-                // eager://$TESTTMP/foo/bar in test. This is important if
-                // $TESTTMP is a UNC path, since / won't work with a UNC path.
-                let path = path.replace('/', "\\");
-                Path::new(&path).to_path_buf()
-            } else {
-                Path::new(path).to_path_buf()
-            };
-            tracing::trace!("url_to_dir {} => {}", value, path.display());
-            return Some(path);
+    pub fn url_to_dir(url: &RepoUrl) -> Option<PathBuf> {
+        if url.scheme() == "eager" {
+            tracing::trace!("url_to_dir {} => {}", url, url.path());
+            return Some(url.path().to_string().into());
         }
 
-        if let Some(path) = value.strip_prefix("test:") {
+        if url.scheme() == "test" {
+            let path = url.path();
             let path = path.trim_start_matches('/');
             if let Ok(tmp) = std::env::var("TESTTMP") {
                 let tmp: &Path = Path::new(&tmp);
                 let path = tmp.join(path);
-                tracing::trace!("url_to_dir {} => {}", value, path.display());
+                tracing::trace!("url_to_dir {} => {}", url, path.display());
                 return Some(path);
             }
         }
 
-        if let Some(path) = value.strip_prefix("ssh://user@dummy/") {
+        if let Some(path) = url.resolved_str().strip_prefix("ssh://user@dummy/") {
             // Allow instantiating EagerRepo for dummyssh servers. This is so we can get a
             // working SaplingRemoteApi for server repos in legacy tests.
             if let Ok(tmp) = std::env::var("TESTTMP") {
@@ -368,17 +358,19 @@ impl EagerRepo {
                     store_path.push(ident.dot_dir());
                     store_path.push("store");
                     if has_eagercompat_requirement(&store_path) {
-                        tracing::trace!("url_to_dir {} => {}", value, path.display());
+                        tracing::trace!("url_to_dir {} => {}", url, path.display());
                         return Some(path);
                     }
                 }
             }
         }
 
-        let path = Path::new(value);
-        if is_eager_repo(path) {
-            tracing::trace!("url_to_dir {} => {}", value, path.display());
-            return Some(path.to_path_buf());
+        if url.scheme() == "file" {
+            let path = PathBuf::from(url.path());
+            if is_eager_repo(&path) {
+                tracing::trace!("url_to_dir {} => {}", url, path.display());
+                return Some(path.to_path_buf());
+            }
         }
 
         None

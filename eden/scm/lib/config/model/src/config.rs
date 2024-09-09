@@ -124,7 +124,7 @@ pub trait ConfigExt: Config {
     /// Get a config item. Convert to type `T`.
     ///
     /// If the config item is not set, return Error::NotSet.
-    fn must_get<T: Default + FromConfig>(&self, section: &str, name: &str) -> Result<T> {
+    fn must_get<T: FromConfig>(&self, section: &str, name: &str) -> Result<T> {
         match self.get_nonempty_opt(section, name)? {
             Some(val) => Ok(val),
             None => Err(Error::NotSet(section.to_string(), name.to_string())),

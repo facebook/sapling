@@ -6,9 +6,11 @@
  */
 
 use std::convert::AsRef;
+use std::fmt::Display;
 
 use anyhow::Context;
 use anyhow::Result;
+use configmodel::convert::FromConfig;
 use configmodel::Config;
 use fn_error_context::context;
 use percent_encoding::percent_decode_str;
@@ -142,6 +144,18 @@ fn looks_like_windows_path(s: &str) -> bool {
     // Drive prefix (e.g. "c:")
     let bytes = s.as_bytes();
     bytes.len() >= 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':'
+}
+
+impl Display for RepoUrl {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.url)
+    }
+}
+
+impl FromConfig for RepoUrl {
+    fn try_from_str_with_config(c: &dyn Config, s: &str) -> configmodel::Result<Self> {
+        Self::from_str(c, s).map_err(|err| configmodel::Error::Convert(format!("{:?}", err)))
+    }
 }
 
 /// Using custom "schemes" from config, resolve given url.

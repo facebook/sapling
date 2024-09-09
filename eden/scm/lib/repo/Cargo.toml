@@ -28,6 +28,7 @@ parking_lot = { version = "0.12.1", features = ["send_guard"] }
 refencode = { version = "0.1.0", path = "../refencode" }
 repo-minimal-info = { version = "0.1.0", path = "repo-minimal-info" }
 repolock = { version = "0.1.0", path = "../repolock" }
+repourl = { version = "0.1.0", path = "url" }
 revisionstore = { version = "0.1.0", path = "../revisionstore" }
 revsets = { version = "0.1.0", path = "../revsets" }
 rewrite-macros = { version = "0.1.0", path = "../util/rewrite-macros" }

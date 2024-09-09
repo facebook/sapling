@@ -39,7 +39,7 @@ class eagerpeer(repository.peer):
         self._reload()
 
     def _reload(self):
-        self._inner = EagerRepo.openurl(self._url)
+        self._inner = EagerRepo.openurl(self._ui._rcfg, self._url)
         # Invalidate propertycache.
         for name in ("dag", "edenapi"):
             self.__dict__.pop(name, None)

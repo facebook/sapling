@@ -9,6 +9,8 @@ use std::sync::Arc;
 
 use cas_client::CasClient;
 use configmodel::Config;
+use configmodel::ConfigExt;
+use repourl::RepoUrl;
 
 use crate::EagerRepo;
 
@@ -16,7 +18,7 @@ use crate::EagerRepo;
 ///
 /// If the config does not specify eagerepo-based remote, return `Ok(None)`.
 pub fn cas_client_from_config(config: &dyn Config) -> anyhow::Result<Option<Arc<dyn CasClient>>> {
-    if let Some(url) = config.get("paths", "default") {
+    if let Ok(url) = config.must_get::<RepoUrl>("paths", "default") {
         if let Some(path) = EagerRepo::url_to_dir(&url) {
             tracing::debug!(target: "cas", "creating eager remote client");
             let repo = EagerRepo::open(&path)?;

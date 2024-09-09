@@ -579,7 +579,7 @@ fn eager_clone(
     source: RepoUrl,
     dest: &Path,
 ) -> Result<Repo> {
-    let source_path = eagerepo::EagerRepo::url_to_dir(source.clean_str())
+    let source_path = eagerepo::EagerRepo::url_to_dir(&source)
         .ok_or_else(|| anyhow!("no eagerepo at {}", source.clean_str()))?;
     let source_dot_dir = source_path.join(identity::must_sniff_dir(&source_path)?.dot_dir());
 
