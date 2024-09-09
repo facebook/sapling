@@ -93,7 +93,6 @@ from sapling.i18n import _, _n
 from sapling.node import bin, hex, nullid, short
 from sapling.pycompat import range
 
-from .. import clienttelemetry
 from ..remotefilelog import (
     cmdtable as remotefilelogcmdtable,
     resolveprefetchopts,

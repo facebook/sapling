@@ -827,20 +827,6 @@ def verifyremotefilelog(ui, path, **opts):
 
 
 @command(
-    "debugdatapack",
-    [
-        ("", "long", None, _("print the long hashes")),
-        ("", "node", "", _("dump the contents of node"), "NODE"),
-        ("", "node-delta", "", _("dump the delta chain info of node"), "NODE"),
-    ],
-    _("@prog@ debugdatapack <paths>"),
-    norepo=True,
-)
-def debugdatapack(ui, *paths, **opts):
-    return debugcommands.debugdatapack(ui, *paths, **opts)
-
-
-@command(
     "debugindexedlogdatastore",
     [
         ("", "long", None, _("print the long hashes")),
@@ -852,16 +838,6 @@ def debugdatapack(ui, *paths, **opts):
 )
 def debugindexedlogdatastore(ui, *paths, **opts):
     return debugcommands.debugindexedlogdatastore(ui, *paths, **opts)
-
-
-@command(
-    "debughistorypack",
-    [("", "long", None, _("print the long hashes"))],
-    _("@prog@ debughistorypack <path>"),
-    norepo=True,
-)
-def debughistorypack(ui, *paths, **opts):
-    return debugcommands.debughistorypack(ui, paths, **opts)
 
 
 @command(

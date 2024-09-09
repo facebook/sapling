@@ -44,6 +44,8 @@ import mmap
 import os
 import tempfile
 
+from bindings import revisionstore
+
 from sapling import (
     bundle2,
     changegroup,
@@ -1265,9 +1267,9 @@ def resolveonto(repo, ontoarg):
     return None
 
 
-def _createpackstore(ui, packpath):
-    datastore = datapack.makedatapackstore(ui, packpath, True)
-    histstore = historypack.makehistorypackstore(ui, packpath, True)
+def _createpackstore(path):
+    datastore = revisionstore.mutabledeltastore(indexedlogpath=path)
+    histstore = revisionstore.mutablehistorystore(indexedlogpath=path)
     return datastore, histstore
 
 
@@ -1285,7 +1287,7 @@ def _addbundlepacks(ui, mfl, packpaths):
     bundledatastores = []
     bundlehiststores = []
     for path in packpaths:
-        datastore, histstore = _createpackstore(ui, path)
+        datastore, histstore = _createpackstore(path)
         bundledatastores.append(datastore)
         bundlehiststores.append(histstore)
 

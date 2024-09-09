@@ -7,12 +7,6 @@ from __future__ import absolute_import
 
 import struct
 
-from bindings import revisionstore
-from sapling.node import hex
-
-from . import basepack
-
-
 # (filename hash, offset, size)
 INDEXFORMAT0 = "!20sQQ"
 INDEXENTRYLENGTH0: int = struct.calcsize(INDEXFORMAT0)
@@ -37,40 +31,6 @@ ANC_P1NODE = 1
 ANC_P2NODE = 2
 ANC_LINKNODE = 3
 ANC_COPYFROM = 4
-
-
-class historypackstore(basepack.basepackstore):
-    INDEXSUFFIX = INDEXSUFFIX
-    PACKSUFFIX = PACKSUFFIX
-
-    def __init__(self, ui, path, shared, deletecorruptpacks=False):
-        super(historypackstore, self).__init__(
-            ui, path, shared, deletecorruptpacks=deletecorruptpacks
-        )
-
-    def getpack(self, path):
-        return revisionstore.historypack(path)
-
-    def getnodeinfo(self, name, node):
-        def func(pack):
-            return pack.getnodeinfo(name, node)
-
-        for nodeinfo in self.runonpacks(func):
-            return nodeinfo
-
-        raise KeyError((name, hex(node)))
-
-    def add(self, filename, node, p1, p2, linknode, copyfrom):
-        raise RuntimeError(
-            "cannot add to historypackstore (%s:%s)" % (filename, hex(node))
-        )
-
-
-def makehistorypackstore(ui, path, shared, deletecorruptpacks: bool = False):
-    if ui.configbool("remotefilelog", "userustpackstore", False):
-        return revisionstore.historypackstore(path, deletecorruptpacks)
-    else:
-        return historypackstore(ui, path, shared, deletecorruptpacks=deletecorruptpacks)
 
 
 class memhistorypack:

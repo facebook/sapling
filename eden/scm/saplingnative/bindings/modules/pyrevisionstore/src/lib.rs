@@ -45,7 +45,6 @@ use revisionstore::HgIdMutableHistoryStore;
 use revisionstore::HgIdRemoteStore;
 use revisionstore::HistoryPack;
 use revisionstore::HistoryPackStore;
-use revisionstore::HistoryPackVersion;
 use revisionstore::IndexedLogHgIdDataStore;
 use revisionstore::IndexedLogHgIdDataStoreConfig;
 use revisionstore::IndexedLogHgIdHistoryStore;
@@ -55,7 +54,6 @@ use revisionstore::Metadata;
 use revisionstore::MetadataStore;
 use revisionstore::MetadataStoreBuilder;
 use revisionstore::MutableDataPack;
-use revisionstore::MutableHistoryPack;
 use revisionstore::RemoteDataStore;
 use revisionstore::RemoteHistoryStore;
 use revisionstore::SaplingRemoteApiFileStore;
@@ -527,25 +525,20 @@ impl HgIdMutableDeltaStore for mutabledeltastore {
 }
 
 fn make_mutablehistorystore(
-    packfilepath: Option<PyPathBuf>,
+    indexedlogpath: PyPathBuf,
 ) -> Result<Arc<dyn HgIdMutableHistoryStore + Send>> {
-    let store: Arc<dyn HgIdMutableHistoryStore + Send> = if let Some(packfilepath) = packfilepath {
-        Arc::new(MutableHistoryPack::new(
-            packfilepath.as_path(),
-            HistoryPackVersion::One,
-        ))
-    } else {
-        return Err(format_err!("No packfile path passed in"));
-    };
-
-    Ok(store)
+    Ok(Arc::new(IndexedLogHgIdHistoryStore::new(
+        indexedlogpath.as_path(),
+        &BTreeMap::<&str, &str>::new(),
+        StoreType::Permanent,
+    )?))
 }
 
 py_class!(pub class mutablehistorystore |py| {
     data store: Arc<dyn HgIdMutableHistoryStore>;
 
-    def __new__(_cls, packfilepath: Option<PyPathBuf>) -> PyResult<mutablehistorystore> {
-        let store = make_mutablehistorystore(packfilepath).map_pyerr(py)?;
+    def __new__(_cls, indexedlogpath: PyPathBuf) -> PyResult<mutablehistorystore> {
+        let store = make_mutablehistorystore(indexedlogpath).map_pyerr(py)?;
         mutablehistorystore::create_instance(py, store)
     }
 

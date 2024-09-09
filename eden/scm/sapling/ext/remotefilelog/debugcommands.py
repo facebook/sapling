@@ -346,15 +346,6 @@ def debugdatastore(ui, store, verifynoduplicate=True, **opts):
         return 1
 
 
-def debugdatapack(ui, *paths, **opts):
-    for path in paths:
-        if ".data" in path:
-            path = path[: path.index(".data")]
-        ui.write("%s:\n" % path)
-        dpack = revisionstore.datapack(path)
-        debugdatastore(ui, dpack, **opts)
-
-
 def debugindexedlogdatastore(ui, *paths, **opts):
     for path in paths:
         ui.write("%s:\n" % path)
@@ -470,14 +461,6 @@ def debughistorystore(ui, store, **opts):
                 copyfrom,
             )
         )
-
-
-def debughistorypack(ui, paths, **opts):
-    for path in paths:
-        if ".hist" in path:
-            path = path[: path.index(".hist")]
-        hpack = revisionstore.historypack(path)
-        debughistorystore(ui, hpack, **opts)
 
 
 def debugindexedloghistorystore(ui, paths, **opts):
