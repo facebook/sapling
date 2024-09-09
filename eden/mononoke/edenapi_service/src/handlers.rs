@@ -365,7 +365,7 @@ where
             ctx.perf_counters().insert_perf_counters(&mut scuba);
             scuba.log_with_msg(
                 "Long running SaplingRemoteAPI request",
-                format!("{}", start.elapsed().as_micros_unchecked()),
+                format!("{} μs", start.elapsed().as_micros_unchecked()),
             );
         }
     };
