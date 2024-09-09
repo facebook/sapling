@@ -24,8 +24,8 @@ impl From<ScmStoreFileAuxData> for FileAuxData {
 impl From<ScmStoreTreeAuxData> for TreeAuxData {
     fn from(v: ScmStoreTreeAuxData) -> Self {
         TreeAuxData {
-            total_size: v.augmented_manifest_size,
-            content_blake3: v.augmented_manifest_id.into_byte_array(),
+            digest_size: v.augmented_manifest_size,
+            digest_blake3: v.augmented_manifest_id.into_byte_array(),
         }
     }
 }

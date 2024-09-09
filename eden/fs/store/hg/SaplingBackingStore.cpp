@@ -1210,7 +1210,7 @@ void SaplingBackingStore::getTreeMetadataBatch(
         } else {
           auto& aux = auxTry.value();
           result = folly::Try{std::make_shared<TreeMetadataPtr::element_type>(
-              Hash32{std::move(aux->content_blake3)}, aux->total_size)};
+              Hash32{std::move(aux->digest_blake3)}, aux->digest_size)};
         }
         for (auto& importRequest : importRequestList) {
           importRequest->getPromise<TreeMetadataPtr>()->setWith(
@@ -1501,8 +1501,8 @@ folly::Try<TreeMetadataPtr> SaplingBackingStore::getLocalTreeMetadata(
   if (metadata.hasValue()) {
     return GetTreeMetadataResult{
         std::make_shared<TreeMetadataPtr::element_type>(TreeMetadata{
-            Hash32{std::move(metadata.value()->content_blake3)},
-            metadata.value()->total_size})};
+            Hash32{std::move(metadata.value()->digest_blake3)},
+            metadata.value()->digest_size})};
   } else {
     return GetTreeMetadataResult{metadata.exception()};
   }

@@ -288,7 +288,7 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
                 }
                 if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_SIZE)) {
                   digestSize = std::optional<folly::Try<uint64_t>>{
-                      std::move(treeMeta.size)};
+                      std::move(treeMeta.digestSize)};
                 }
                 return EntryAttributes{
                     std::move(sha1),

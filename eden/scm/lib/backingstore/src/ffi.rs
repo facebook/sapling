@@ -87,8 +87,8 @@ pub(crate) mod ffi {
 
     #[derive(Debug)]
     pub struct TreeAuxData {
-        total_size: u64,
-        content_blake3: [u8; 32],
+        digest_size: u64,
+        digest_blake3: [u8; 32],
     }
 
     pub struct Request {
