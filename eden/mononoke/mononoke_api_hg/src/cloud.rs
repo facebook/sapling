@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use blobrepo_hg::BlobRepoHg;
 use borrowed::borrowed;
 use commit_cloud::ctx::CommitCloudContext;
 use commit_cloud::CommitCloudRef;
@@ -194,25 +195,20 @@ impl<R: MononokeRepo> HgRepoContext<R> {
             (Phase::Draft, draft_commits_ctx),
         ] {
             for changeset in changesets.into_iter().flatten() {
-                if let Some(hgid) = changeset.hg_id().await? {
-                    let parents = changeset.parents().await?;
-                    let hg_parents = self
-                        .repo_ctx()
-                        .many_changeset_hg_ids(parents)
-                        .await?
-                        .into_iter()
-                        .map(|(_, hg_id)| hg_id)
-                        .collect();
+                let (hg_id, hg_parents) = self
+                    .repo_ctx()
+                    .repo()
+                    .get_hg_changeset_and_parents_from_bonsai(self.ctx().clone(), changeset.id())
+                    .await?;
 
-                    nodes.push(self.repo_ctx().repo().commit_cloud().make_smartlog_node(
-                        &hgid,
-                        &hg_parents,
-                        &changeset.changeset_info().await?,
-                        &local_bookmarks.get(&hgid).cloned(),
-                        &remote_bookmarks.get(&hgid).cloned(),
-                        &phase,
-                    )?)
-                }
+                nodes.push(self.repo_ctx().repo().commit_cloud().make_smartlog_node(
+                    &hg_id,
+                    &hg_parents,
+                    &changeset.changeset_info().await?,
+                    &local_bookmarks.get(&hg_id).cloned(),
+                    &remote_bookmarks.get(&hg_id).cloned(),
+                    &phase,
+                )?)
             }
         }
         Ok(nodes)
