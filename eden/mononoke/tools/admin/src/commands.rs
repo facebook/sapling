@@ -35,6 +35,7 @@ mononoke_app::subcommands! {
     mod commit;
     mod commit_graph;
     mod convert;
+    mod cross_repo;
     mod cross_repo_config;
     mod derivation_queue;
     mod derived_data;

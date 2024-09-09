@@ -16,6 +16,8 @@ use anyhow::Result;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncers;
 use cross_repo_sync::get_all_submodule_deps;
+use cross_repo_sync::CommitSyncRepos;
+use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::RepoProvider;
 use cross_repo_sync::Syncers;
 use futures::future;
@@ -103,6 +105,35 @@ async fn create_commit_syncers_from_app_impl<R: CrossRepo>(
         submodule_deps,
         live_commit_sync_config,
     )
+}
+
+pub async fn create_single_direction_commit_syncer<R: CrossRepo>(
+    ctx: &CoreContext,
+    app: &MononokeApp,
+    source_repo: R,
+    target_repo: R,
+) -> Result<CommitSyncer<R>, Error> {
+    let repo_provider = repo_provider_from_mononoke_app(app);
+
+    let submodule_deps = get_all_submodule_deps(
+        ctx,
+        Arc::new(source_repo.clone()),
+        Arc::new(target_repo.clone()),
+        repo_provider,
+    )
+    .await?;
+
+    let live_commit_sync_config = source_repo
+        .repo_cross_repo()
+        .live_commit_sync_config()
+        .clone();
+    let commit_sync_repos = CommitSyncRepos::new(source_repo, target_repo, submodule_deps)?;
+
+    Ok(CommitSyncer::new(
+        ctx,
+        commit_sync_repos,
+        live_commit_sync_config,
+    ))
 }
 
 pub fn repo_provider_from_mononoke_app<'a, R: CrossRepo>(

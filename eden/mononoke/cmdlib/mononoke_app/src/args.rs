@@ -43,6 +43,8 @@ pub use repo::OptSourceAndTargetRepoArgs;
 pub use repo::RepoArg;
 pub use repo::RepoArgs;
 pub use repo::SourceAndTargetRepoArgs;
+pub use repo::SourceRepoArgs;
+pub use repo::TargetRepoArgs;
 pub use repo_blobstore::RepoBlobstoreArgs;
 pub use repo_filter::RepoFilterAppExtension;
 pub use runtime::RuntimeArgs;
