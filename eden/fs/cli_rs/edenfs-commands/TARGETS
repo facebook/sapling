@@ -22,12 +22,6 @@ rust_library(
                 "fbsource//third-party/rust:shlex",
             ],
         ),
-        (
-            "macos",
-            [
-                "fbsource//third-party/rust:dialoguer",
-            ],
-        ),
     ],
     test_deps = [
         "fbsource//third-party/rust:tempfile",
@@ -39,6 +33,7 @@ rust_library(
         "fbsource//third-party/rust:colored",
         "fbsource//third-party/rust:comfy-table",
         "fbsource//third-party/rust:crossterm",
+        "fbsource//third-party/rust:dialoguer",
         "fbsource//third-party/rust:dirs",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:hex",

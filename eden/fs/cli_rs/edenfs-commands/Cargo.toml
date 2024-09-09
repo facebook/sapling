@@ -14,6 +14,7 @@ clap = { version = "3.2.25", features = ["derive", "env", "regex", "unicode", "w
 colored = "2.1.0"
 comfy-table = "7.1.0"
 crossterm = { version = "0.27.0", features = ["event-stream"] }
+dialoguer = { version = "0.10.4", features = ["fuzzy-select"] }
 dirs = "2.0"
 edenfs-client = { version = "0.1.0", path = "../edenfs-client" }
 edenfs-error = { version = "0.1.0", path = "../edenfs-error" }
@@ -40,5 +41,4 @@ tempfile = "3.8"
 shlex = "1.3"
 
 [target.'cfg(target_os = "macos")'.dependencies]
-dialoguer = { version = "0.10.4", features = ["fuzzy-select"] }
 shlex = "1.3"
