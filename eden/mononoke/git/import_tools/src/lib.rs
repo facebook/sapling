@@ -19,6 +19,8 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::process::Stdio;
 use std::str;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::sync::RwLock;
 
@@ -364,13 +366,111 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
             nb_commits_to_import,
         );
     }
+    let count = Arc::new(AtomicUsize::new(n_existing_commits));
     // Filter out the commits that we have already synced in the past
     let relevant_commits = all_commits
         .into_iter()
         .filter(|oid| acc.get(oid).is_none())
         .collect::<Vec<_>>();
+    // Create a channel to send the commits that have been converted into bonsais. Asynchronously, we will receive the commits
+    // and call finalize batch on them (for deriving data) without blocking the import of commits
+    let (finalize_sender, mut finalize_receiver) = mpsc::channel(prefs.concurrency);
+    // Spawn off an async consumer that would finalize batches of commits which have been imported into Mononoke
+    let batch_finalizer = tokio::spawn({
+        cloned!(backfill_derivation, ctx, acc, uploader, repo_name, count,);
+        async move {
+            while let Some(incoming) = finalize_receiver.recv().await {
+                cloned!(backfill_derivation, ctx, acc, uploader, repo_name, count);
+                async move {
+                    let finalized_chunk_res = uploader
+                        .finalize_batch(&ctx, dry_run, backfill_derivation, incoming, &acc)
+                        .await
+                        .context("finalize_batch");
+                    let finalized_chunk = match finalized_chunk_res {
+                        Err(e) => {
+                            // Log the error if any
+                            info!(ctx.logger(), "{:?}", e);
+                            anyhow::bail!(e);
+                        }
+                        Ok(chunk) => chunk,
+                    };
+                    let processed_count = finalized_chunk.len();
+                    // Only log progress after every batch to avoid log-spew and wasted time
+                    if let Some((last_git_sha1, last_bcs_id)) = finalized_chunk.last() {
+                        count.fetch_add(processed_count, Ordering::Relaxed);
+                        info!(
+                            ctx.logger(),
+                            "GitRepo:{} commit {} of {} - Oid:{} => Bid:{}",
+                            &repo_name,
+                            count.load(Ordering::Relaxed),
+                            nb_commits_to_import,
+                            last_git_sha1.to_brief(),
+                            last_bcs_id.to_brief()
+                        );
+                    }
+                    anyhow::Ok(())
+                }
+                .await?;
+            }
+            anyhow::Ok(())
+        }
+    });
+    // Create a channel to send the commits that have had their Git data uploaded and file changes identified. Asynchronously, we will
+    // receive these commits and derive bonsai for them without blocking the import pipeline
+    let (bonsai_sender, mut bonsai_receiver) = mpsc::channel(prefs.concurrency);
+    // Spawn off an async consumer that would generate bonsai commits for Git commits that have had their Git data and file changes uploaded
+    // to Mononoke
+    let bonsai_creator = tokio::spawn({
+        cloned!(ctx, uploader, acc);
+        let concurrency = prefs.concurrency;
+        async move {
+            let mut batch_buffer = Vec::with_capacity(concurrency);
+            while let Some((extracted_commit, file_changes)) = bonsai_receiver.recv().await {
+                let extracted_commit: ExtractedCommit = extracted_commit;
+                let oid = extracted_commit.metadata.oid;
+                let int_cs_result = uploader
+                    .generate_intermediate_changeset_for_commit(
+                        &ctx,
+                        extracted_commit.metadata,
+                        file_changes,
+                        &acc,
+                        dry_run,
+                    )
+                    .await
+                    .context("generate_changeset_for_commit");
+                let int_cs = match int_cs_result {
+                    Err(e) => {
+                        // Log the error if any
+                        info!(ctx.logger(), "{:?}", e);
+                        anyhow::bail!(e);
+                    }
+                    Ok(int_cs) => int_cs,
+                };
+                let git_sha1 = oid_to_sha1(&oid)?;
+                batch_buffer.push((git_sha1, int_cs));
+                if batch_buffer.len() == concurrency {
+                    // We have the required batch size of commits, send it for finalization
+                    finalize_sender
+                        .send(batch_buffer)
+                        .await
+                        .context("Receiver dropped while sending Vec<(bonsai_id, git_sha1)>")?;
+                    batch_buffer = Vec::with_capacity(concurrency);
+                }
+            }
+            // If there are still changesets pending to be processed, send them through
+            if !batch_buffer.is_empty() {
+                finalize_sender
+                    .send(batch_buffer)
+                    .await
+                    .context("Receiver dropped while sending Vec<(bonsai_id, git_sha1)>")?;
+            }
+            // Drop the sender since we finished sending all the changesets to the finalizer
+            drop(finalize_sender);
+            anyhow::Ok(())
+        }
+    });
     // Kick off a stream that consumes the walk and prepared commits. Then, produce the Bonsais.
-    let mut commits_with_file_changes_stream = stream::iter(relevant_commits)
+    let mut commits_with_file_changes = stream::iter(relevant_commits)
         .map(Ok)
         .map_ok(|oid| {
             cloned!(ctx, reader, uploader, prefs.lfs, prefs.submodules);
@@ -386,6 +486,74 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
                             find_file_changes(&ctx, &lfs, reader.clone(), uploader.clone(), diff)
                                 .await
                                 .context("find_file_changes")?;
+                        let oid = extracted_commit.metadata.oid;
+                        // Before generating the corresponding changeset at Mononoke end, upload the raw git commit
+                        // and the git tree pointed to by the git commit.
+                        extracted_commit
+                            .changed_trees(&ctx, &reader)
+                            .map_ok(|entry| {
+                                cloned!(oid, uploader, reader, ctx);
+                                async move {
+                                    tokio::spawn(async move {
+                                        let tree_for_commit =
+                                            reader.read_raw_object(&entry.0).await.with_context(|| {
+                                                format_err!(
+                                                    "Failed to fetch git tree {} for commit {}",
+                                                    entry.0,
+                                                    oid
+                                                )
+                                            })?;
+                                        let tree_bytes = tree_for_commit.clone();
+                                        // Upload packfile base item for given tree object and the raw Git tree
+                                        let packfile_item_upload = async {
+                                            uploader
+                                            .upload_packfile_base_item(&ctx, entry.0, tree_for_commit)
+                                            .await
+                                            .with_context(|| {
+                                                format_err!(
+                                                    "Failed to upload packfile item for git tree {} for commit {}",
+                                                    entry.0,
+                                                    oid
+                                                )
+                                            })
+                                        };
+                                        let git_tree_upload = async {
+                                            uploader
+                                                .upload_object(&ctx, entry.0, tree_bytes)
+                                                .await
+                                                .with_context(|| {
+                                                    format_err!(
+                                                        "Failed to upload raw git tree {} for commit {}",
+                                                        entry.0,
+                                                        oid
+                                                    )
+                                                })
+                                        };
+                                        try_join!(packfile_item_upload, git_tree_upload)?;
+                                        anyhow::Ok(())
+                                    })
+                                    .await?
+                                }
+                            })
+                            .try_buffer_unordered(100)
+                            .try_collect()
+                            .await?;
+                        // Upload packfile base item for Git commit and the raw Git commit
+                        let packfile_item_upload = async {
+                            uploader
+                                .upload_packfile_base_item(&ctx, oid, extracted_commit.original_commit.clone())
+                                .await
+                                .with_context(|| {
+                                    format_err!("Failed to upload packfile item for git commit {}", oid)
+                                })
+                        };
+                        let git_commit_upload = async {
+                            uploader
+                                .upload_object(&ctx, oid, extracted_commit.original_commit.clone())
+                                .await
+                                .with_context(|| format_err!("Failed to upload raw git commit {}", oid))
+                        };
+                        try_join!(packfile_item_upload, git_commit_upload)?;
                         Result::<_, Error>::Ok((extracted_commit, file_changes))
                     }
                 })
@@ -393,150 +561,19 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
             }
         })
         .try_buffered(prefs.concurrency);
-    // Create a channel to send the commits that have been converted into bonsais. Asynchronously, we will receive the commits
-    // and call finalize batch on them (for deriving data) without blocking the import of commits
-    let (tx, mut rx) = mpsc::channel(prefs.concurrency);
-    // Spawn off an async consumer that would finalize batches of commits which have been imported into Mononoke
-    let batch_finalizer = tokio::spawn({
-        cloned!(backfill_derivation, ctx, acc, uploader, repo_name,);
-        async move {
-            while let Some(incoming) = rx.recv().await {
-                cloned!(backfill_derivation, ctx, acc, uploader, repo_name,);
-                async move {
-                    let finalized_chunk_res = uploader
-                        .finalize_batch(&ctx, dry_run, backfill_derivation, incoming, &acc)
-                        .await
-                        .context("finalize_batch");
-                    let finalized_chunk = match finalized_chunk_res {
-                        Err(e) => {
-                            // Log the error if any
-                            info!(ctx.logger(), "{:?}", e);
-                            anyhow::bail!(e);
-                        }
-                        Ok(chunk) => chunk,
-                    };
-                    // Only log progress after every batch to avoid log-spew and wasted time
-                    if let Some((last_git_sha1, last_bcs_id)) = finalized_chunk.last() {
-                        info!(
-                            ctx.logger(),
-                            "GitRepo:{} commit {} of {} - Oid:{} => Bid:{}",
-                            &repo_name,
-                            acc.len(),
-                            nb_commits_to_import,
-                            last_git_sha1.to_brief(),
-                            last_bcs_id.to_brief()
-                        );
-                    }
-                    anyhow::Ok(())
-                }
-                .await?;
-            }
-            anyhow::Ok(())
-        }
-    });
-    let mut batch_buffer = Vec::with_capacity(prefs.concurrency);
-    // Sequentially consume the stream of commits and their associated file changes by uploading them to Mononoke, storing
-    // the raw git commit and trees and adding the bonsai git mapping.
-    while let Some((extracted_commit, file_changes)) =
-        commits_with_file_changes_stream.try_next().await?
-    {
-        let oid = extracted_commit.metadata.oid;
-        // Before generating the corresponding changeset at Mononoke end, upload the raw git commit
-        // and the git tree pointed to by the git commit.
-        extracted_commit
-            .changed_trees(ctx, &reader)
-            .map_ok(|entry| {
-                cloned!(oid, uploader, reader, ctx);
-                async move {
-                    tokio::spawn(async move {
-                        let tree_for_commit =
-                            reader.read_raw_object(&entry.0).await.with_context(|| {
-                                format_err!(
-                                    "Failed to fetch git tree {} for commit {}",
-                                    entry.0,
-                                    oid
-                                )
-                            })?;
-                        let tree_bytes = tree_for_commit.clone();
-                        // Upload packfile base item for given tree object and the raw Git tree
-                        let packfile_item_upload = async {
-                            uploader
-                            .upload_packfile_base_item(&ctx, entry.0, tree_for_commit)
-                            .await
-                            .with_context(|| {
-                                format_err!(
-                                    "Failed to upload packfile item for git tree {} for commit {}",
-                                    entry.0,
-                                    oid
-                                )
-                            })
-                        };
-                        let git_tree_upload = async {
-                            uploader
-                                .upload_object(&ctx, entry.0, tree_bytes)
-                                .await
-                                .with_context(|| {
-                                    format_err!(
-                                        "Failed to upload raw git tree {} for commit {}",
-                                        entry.0,
-                                        oid
-                                    )
-                                })
-                        };
-                        try_join!(packfile_item_upload, git_tree_upload)?;
-                        anyhow::Ok(())
-                    })
-                    .await?
-                }
-            })
-            .try_buffer_unordered(100)
-            .try_collect()
-            .await?;
-        // Upload packfile base item for Git commit and the raw Git commit
-        let packfile_item_upload = async {
-            uploader
-                .upload_packfile_base_item(ctx, oid, extracted_commit.original_commit.clone())
-                .await
-                .with_context(|| {
-                    format_err!("Failed to upload packfile item for git commit {}", oid)
-                })
-        };
-        let git_commit_upload = async {
-            uploader
-                .upload_object(ctx, oid, extracted_commit.original_commit.clone())
-                .await
-                .with_context(|| format_err!("Failed to upload raw git commit {}", oid))
-        };
-        try_join!(packfile_item_upload, git_commit_upload)?;
-        // Upload Git commit
-        let int_cs = uploader
-            .generate_intermediate_changeset_for_commit(
-                ctx,
-                extracted_commit.metadata,
-                file_changes,
-                &acc,
-                dry_run,
-            )
+    while let Some((extracted_commit, file_changes)) = commits_with_file_changes.try_next().await? {
+        bonsai_sender
+            .send((extracted_commit, file_changes))
             .await
-            .context("generate_changeset_for_commit")?;
-        let git_sha1 = oid_to_sha1(&oid)?;
-        batch_buffer.push((git_sha1, int_cs));
-        if batch_buffer.len() == prefs.concurrency {
-            // We have the required batch size of commits, send it for finalization
-            tx.send(batch_buffer)
-                .await
-                .context("Receiver dropped while sending Vec<(bonsai_id, git_sha1)>")?;
-            batch_buffer = Vec::with_capacity(prefs.concurrency);
-        }
+            .context("Receiver dropped while sending Vec<(ExtractedCommit, FileChanges)>")?;
     }
-    // If there are still changesets pending to be processed, send them through
-    if !batch_buffer.is_empty() {
-        tx.send(batch_buffer)
-            .await
-            .context("Receiver dropped while sending Vec<(bonsai_id, git_sha1)>")?;
-    }
-    // Drop the sender since we finished sending all the changesets to the finalizer
-    drop(tx);
+    // Drop the sender since we finished sending all the commits to the bonsai creator
+    drop(bonsai_sender);
+    // Ensure that the bonsai creator has completed before we exit
+    bonsai_creator
+        .await
+        .context("Error while running bonsai_creator for commits")?
+        .context("Panic while running bonsai_creator for commits")?;
     // Ensure that the batch finalization has completed before we exit
     batch_finalizer
         .await

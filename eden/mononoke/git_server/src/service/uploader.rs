@@ -197,6 +197,7 @@ pub async fn upload_objects(
         backfill_derivation: BackfillDerivation::OnlySpecificTypes(vec![
             DerivableType::GitDeltaManifestsV2,
         ]),
+        concurrency: 100,
         ..Default::default()
     };
     let acc = GitimportAccumulator::from_roots(HashMap::new());

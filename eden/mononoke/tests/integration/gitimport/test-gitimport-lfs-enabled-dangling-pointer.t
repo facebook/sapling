@@ -35,7 +35,7 @@ But it's available on the separate lfs server
   laaaaaaaaaarge file
 
 Git Import without extra option will fail
-  $ with_stripped_logs gitimport "$GIT_REPO_SERVER" --lfs-import-max-attempts 1 --generate-bookmarks --concurrency 100 --lfs-server "$LEGACY_LFS_URL/download_sha256" full-repo | grep failed
+  $ with_stripped_logs gitimport "$GIT_REPO_SERVER" --lfs-import-max-attempts 1 --generate-bookmarks --concurrency 100 --lfs-server "$LEGACY_LFS_URL/download_sha256" full-repo | grep -e error -e Execution
   Execution error: gitimport failed
   Error: Execution failed
 
