@@ -9,6 +9,8 @@ pub use blobstore::StoreLoadable;
 
 pub use crate::bonsai::bonsai_diff;
 pub use crate::bonsai::BonsaiDiffFileChange;
+pub use crate::combined::Combined;
+pub use crate::combined::CombinedId;
 pub use crate::comparison::compare_manifest;
 pub use crate::comparison::compare_manifest_tree;
 pub use crate::comparison::Comparison;
@@ -37,13 +39,12 @@ pub use crate::traced::Traced;
 pub use crate::trie_map_ops::TrieMapOps;
 pub use crate::types::AsyncManifest;
 pub use crate::types::AsyncOrderedManifest;
-pub use crate::types::Combined;
-pub use crate::types::CombinedId;
 pub use crate::types::Entry;
 pub use crate::types::Manifest;
 pub use crate::types::OrderedManifest;
 
 mod bonsai;
+mod combined;
 mod comparison;
 mod derive;
 mod derive_batch;
