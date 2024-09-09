@@ -24,25 +24,26 @@ BackingStoreType toBackingStoreType(std::string_view type) {
   } else if (type.empty()) {
     return BackingStoreType::EMPTY;
   } else {
-    throwf<std::domain_error>("unsupported backing store type: ", type);
+    throw_<std::domain_error>("unsupported backing store type");
   }
 }
 
 std::string_view toBackingStoreString(BackingStoreType type) {
-  if (type == BackingStoreType::GIT) {
-    return "git";
-  } else if (type == BackingStoreType::HG) {
-    return "hg";
-  } else if (type == BackingStoreType::FILTEREDHG) {
-    return "filteredhg";
-  } else if (type == BackingStoreType::RECAS) {
-    return "recas";
-  } else if (type == BackingStoreType::HTTP) {
-    return "http";
-  } else if (type == BackingStoreType::EMPTY) {
-    return "";
-  } else {
-    throwf<std::domain_error>("unsupported backing store type: ", type);
+  switch (type) {
+    case BackingStoreType::GIT:
+      return "git";
+    case BackingStoreType::HG:
+      return "hg";
+    case BackingStoreType::FILTEREDHG:
+      return "filteredhg";
+    case BackingStoreType::RECAS:
+      return "recas";
+    case BackingStoreType::HTTP:
+      return "http";
+    case BackingStoreType::EMPTY:
+      return "";
+    default:
+      throw_<std::domain_error>("unsupported backing store type");
   }
 }
 
