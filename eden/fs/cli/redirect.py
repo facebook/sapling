@@ -23,7 +23,7 @@ from typing import Dict, Iterable, Optional, Set
 
 from thrift.Thrift import TApplicationException
 
-from . import cmd_util, mtab, subcmd as subcmd_mod, tabulate
+from . import cmd_util, configutil, mtab, subcmd as subcmd_mod, tabulate
 
 from .buck import stop_buckd_for_repo
 from .config import CheckoutConfig, EdenCheckout, EdenInstance, load_toml_config
@@ -531,7 +531,45 @@ class Redirection:
                     return disposition
                 else:
                     raise
+        if disposition == RepoPathDisposition.IS_NON_EMPTY_DIR:
+            if self.is_deletable_path(checkout, self.expand_repo_path(checkout)):
+                print("Attempting to forcefully remove the directory.")
+                if self.forcefully_remove_dir_all(self.expand_repo_path(checkout)):
+                    return RepoPathDisposition.DOES_NOT_EXIST
+                else:
+                    print(
+                        f"Failed to delete a non-empty directory (full path `{self.expand_repo_path(checkout)}`)."
+                        "\n This happens mostly when some of its files are in use by another process."
+                        "\n To detect and kill such processes, follow https://fburl.com/edenfs-redirection-non-empty-directory."
+                    )
+            else:
+                print(
+                    f"A non-empty directory (full path `{self.expand_repo_path(checkout)}`) found. Either-"
+                    "\n - Try again after reviewing and manually deleting the directory, or "
+                    "\n - Use `--force` parameter in this command to attempt inline deletion of the directory if none of its files are in use.",
+                )
         return disposition
+
+    def forcefully_remove_dir_all(self, path: Path) -> bool:
+        try:
+            shutil.rmtree(path)
+            return True
+        except Exception as e:
+            print(f"An error occurred while removing directory `{path}`: {e}")
+            return False
+
+    def is_deletable_path(self, checkout: EdenCheckout, path: Path) -> bool:
+        deletable_paths = checkout.instance.get_config_strs(
+            "redirections.redirect-fixup-deletable-paths", default=configutil.Strs()
+        )
+        for deletable_path in deletable_paths:
+            if path.match(deletable_path):
+                print(
+                    f"\n'{path}' is a path that should only have auto-generated content hence should be safe to delete it to recover your redirections."
+                    "\n If this path should not be deleted automatically, please reach out to 'EdenFS Windows Users' (https://fb.workplace.com/groups/edenfswindows) to correct this."
+                )
+                return True
+        return False
 
     def _apply_symlink(self, checkout_path: Path, target: Path) -> None:
         symlink_path = Path(checkout_path / self.repo_path)
