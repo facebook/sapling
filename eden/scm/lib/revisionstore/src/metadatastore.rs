@@ -286,7 +286,6 @@ mod tests {
 
     use super::*;
     use crate::testutil::make_config;
-    use crate::testutil::setconfig;
     use crate::testutil::FakeHgIdRemoteStore;
 
     #[test]
@@ -530,13 +529,7 @@ mod tests {
     fn test_local_indexedlog_write() -> Result<()> {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
-        let mut config = make_config(&cachedir);
-        setconfig(
-            &mut config,
-            "remotefilelog",
-            "write-local-to-indexedlog",
-            "True",
-        );
+        let config = make_config(&cachedir);
 
         let store = MetadataStoreBuilder::new(&config)
             .local_path(&localdir)

@@ -217,8 +217,6 @@ http=True
 retryprefetch=True
 fetchpacks=True
 getpackversion=2
-write-hgcache-to-indexedlog=True
-write-local-to-indexedlog=True
 
 [remotenames]
 autopullpattern=re:^remote/[A-Za-z0-9._/-]+$

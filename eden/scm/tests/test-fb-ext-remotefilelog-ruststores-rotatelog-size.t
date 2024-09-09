@@ -5,7 +5,6 @@
   $ setconfig experimental.allowfilepeer=True
 
   $ . "$TESTDIR/library.sh"
-  $ setconfig remotefilelog.write-hgcache-to-indexedlog=True
   $ setconfig remotefilelog.debug=False
   $ setconfig workingcopy.rust-checkout=true
 

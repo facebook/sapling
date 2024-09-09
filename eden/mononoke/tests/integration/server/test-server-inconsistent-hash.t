@@ -6,10 +6,6 @@
 
   $ CACHEDIR=$PWD/cachepath
   $ . "${TEST_FIXTURES}/library.sh"
-# For now this test requires packfiles as there's no existing config option for disabling indexedlog integrity checks
-# to force the client to try to push corrupted data
-  $ setconfig remotefilelog.write-hgcache-to-indexedlog=False remotefilelog.write-local-to-indexedlog=False
-  $ setconfig scmstore.enableshim=False
 
 # setup config repo
 
