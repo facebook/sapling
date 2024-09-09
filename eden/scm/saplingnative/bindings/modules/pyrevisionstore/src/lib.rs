@@ -28,7 +28,6 @@ use cpython_ext::ResultPyErrExt;
 use parking_lot::RwLock;
 use pyconfigloader::config;
 use pythonutil::to_node;
-use revisionstore::repack;
 use revisionstore::scmstore::FileAttributes;
 use revisionstore::scmstore::FileStore;
 use revisionstore::scmstore::TreeStore;
@@ -59,8 +58,6 @@ use revisionstore::MutableDataPack;
 use revisionstore::MutableHistoryPack;
 use revisionstore::RemoteDataStore;
 use revisionstore::RemoteHistoryStore;
-use revisionstore::RepackKind;
-use revisionstore::RepackLocation;
 use revisionstore::SaplingRemoteApiFileStore;
 use revisionstore::SaplingRemoteApiTreeStore;
 use revisionstore::StoreKey;
@@ -114,20 +111,6 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<pyfilescmstore>(py)?;
     m.add(
         py,
-        "repack",
-        py_fn!(
-            py,
-            repack_py(
-                packpath: &PyPath,
-                stores: Option<(PyObject, metadatastore)>,
-                full: bool,
-                shared: bool,
-                config: config
-            )
-        ),
-    )?;
-    m.add(
-        py,
         "repair",
         py_fn!(
             py,
@@ -142,44 +125,6 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 
     impl_into::register(py);
     Ok(m)
-}
-
-fn repack_py(
-    py: Python,
-    packpath: &PyPath,
-    stores: Option<(PyObject, metadatastore)>,
-    full: bool,
-    shared: bool,
-    config: config,
-) -> PyResult<PyNone> {
-    let stores = if let Some((content, metadata)) = stores {
-        Some((as_legacystore(py, content)?, metadata.extract_inner(py)))
-    } else {
-        None
-    };
-
-    let kind = if full {
-        RepackKind::Full
-    } else {
-        RepackKind::Incremental
-    };
-
-    let location = if shared {
-        RepackLocation::Shared
-    } else {
-        RepackLocation::Local
-    };
-
-    repack(
-        packpath.to_path_buf(),
-        stores,
-        kind,
-        location,
-        &config.get_cfg(py),
-    )
-    .map_pyerr(py)?;
-
-    Ok(PyNone)
 }
 
 fn repair(

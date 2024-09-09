@@ -35,9 +35,9 @@ use crate::indexedlogutil::Store;
 use crate::indexedlogutil::StoreOpenOptions;
 use crate::indexedlogutil::StoreType;
 use crate::localstore::LocalStore;
-use crate::repack::ToKeys;
 use crate::sliceext::SliceExt;
 use crate::types::StoreKey;
+use crate::ToKeys;
 
 pub struct IndexedLogHgIdHistoryStore {
     log: Store,

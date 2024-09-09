@@ -27,7 +27,6 @@ use crate::localstore::LocalStore;
 use crate::packstore::CorruptionPolicy;
 use crate::packstore::MutableHistoryPackStore;
 use crate::remotestore::HgIdRemoteStore;
-use crate::repack::RepackLocation;
 use crate::types::StoreKey;
 use crate::unionhistorystore::UnionHgIdHistoryStore;
 use crate::util::get_cache_packs_path;
@@ -89,27 +88,7 @@ impl MetadataStore {
     }
 }
 
-// Repack specific methods, not to be used directly but by the repack code.
 impl MetadataStore {
-    pub(crate) fn add_pending(
-        &self,
-        key: &Key,
-        info: NodeInfo,
-        location: RepackLocation,
-    ) -> Result<()> {
-        match location {
-            RepackLocation::Local => self.add(key, &info),
-            RepackLocation::Shared => self.shared_mutablehistorystore.add(key, &info),
-        }
-    }
-
-    pub(crate) fn commit_pending(&self, location: RepackLocation) -> Result<Option<Vec<PathBuf>>> {
-        match location {
-            RepackLocation::Local => self.flush(),
-            RepackLocation::Shared => self.shared_mutablehistorystore.flush(),
-        }
-    }
-
     pub fn get_shared_mutable(&self) -> Arc<dyn HgIdMutableHistoryStore> {
         self.shared_mutablehistorystore.clone()
     }

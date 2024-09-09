@@ -14,8 +14,8 @@ use anyhow::Result;
 use types::Key;
 
 use crate::localstore::LocalStore;
-use crate::repack::ToKeys;
 use crate::types::StoreKey;
+use crate::ToKeys;
 
 pub struct UnionStore<T> {
     stores: Vec<T>,

@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -16,10 +17,10 @@ use configmodel::Config;
 use configmodel::ConfigExt;
 use edenapi::Builder;
 use fn_error_context::context;
+use hgtime::HgTime;
 use parking_lot::Mutex;
 use progress_model::AggregatingProgressBar;
 
-use crate::contentstore::check_cache_buster;
 use crate::indexedlogauxstore::AuxStore;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStoreConfig;
@@ -32,12 +33,14 @@ use crate::scmstore::file::FileStoreMetrics;
 use crate::scmstore::tree::TreeMetadataMode;
 use crate::scmstore::FileStore;
 use crate::scmstore::TreeStore;
+use crate::util::check_run_once;
 use crate::util::get_cache_path;
 use crate::util::get_indexedlogdatastore_aux_path;
 use crate::util::get_indexedlogdatastore_path;
 use crate::util::get_indexedloghistorystore_path;
 use crate::util::get_local_path;
 use crate::util::get_tree_aux_store_path;
+use crate::util::RUN_ONCE_FILENAME;
 use crate::ExtStoredPolicy;
 use crate::IndexedLogHgIdHistoryStore;
 use crate::SaplingRemoteApiFileStore;
@@ -734,4 +737,43 @@ fn use_edenapi_via_config(config: &dyn Config) -> Result<bool> {
         }
     }
     Ok(use_edenapi)
+}
+
+/// Reads the configs and deletes the hgcache if a hgcache-purge.$KEY=$DATE value hasn't already
+/// been processed.
+pub fn check_cache_buster(config: &dyn Config, store_path: &Path) {
+    for key in config.keys("hgcache-purge").into_iter() {
+        if let Some(cutoff) = config
+            .get("hgcache-purge", &key)
+            .and_then(|c| HgTime::parse(&c))
+        {
+            if check_run_once(store_path, &key, cutoff) {
+                let _ = delete_hgcache(store_path);
+                break;
+            }
+        }
+    }
+}
+
+/// Recursively deletes the contents of the path, excluding the run-once marker file.
+/// Ignores errors on individual files or directories.
+fn delete_hgcache(store_path: &Path) -> Result<()> {
+    for file in fs::read_dir(store_path)? {
+        let _ = (|| -> Result<()> {
+            let file = file?;
+            if file.file_name() == RUN_ONCE_FILENAME {
+                return Ok(());
+            }
+
+            let path = file.path();
+            let file_type = file.file_type()?;
+            if file_type.is_dir() {
+                fs::remove_dir_all(path)?;
+            } else if file_type.is_file() || file_type.is_symlink() {
+                fs::remove_file(path)?;
+            }
+            Ok(())
+        })();
+    }
+    Ok(())
 }

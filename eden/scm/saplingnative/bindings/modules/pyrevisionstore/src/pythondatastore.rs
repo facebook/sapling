@@ -29,7 +29,6 @@ use revisionstore::LegacyStore;
 use revisionstore::LocalStore;
 use revisionstore::Metadata;
 use revisionstore::RemoteDataStore;
-use revisionstore::RepackLocation;
 use revisionstore::StoreKey;
 use revisionstore::StoreResult;
 use types::Key;
@@ -190,20 +189,6 @@ impl LegacyStore for PythonHgIdDataStore {
     }
 
     fn get_shared_mutable(&self) -> Arc<dyn HgIdMutableDeltaStore> {
-        unimplemented!("")
-    }
-
-    fn add_pending(
-        &self,
-        _key: &Key,
-        _data: minibytes::Bytes,
-        _meta: Metadata,
-        _location: RepackLocation,
-    ) -> Result<()> {
-        unimplemented!("")
-    }
-
-    fn commit_pending(&self, _location: RepackLocation) -> Result<Option<Vec<PathBuf>>> {
         unimplemented!("")
     }
 }

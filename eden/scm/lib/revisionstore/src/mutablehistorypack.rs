@@ -378,7 +378,7 @@ mod tests {
 
     use super::*;
     use crate::historypack::HistoryPack;
-    use crate::repack::ToKeys;
+    use crate::ToKeys;
 
     #[test]
     fn test_topo_order() {

@@ -62,7 +62,6 @@ use crate::LegacyStore;
 use crate::LocalStore;
 use crate::Metadata;
 use crate::MultiplexDeltaStore;
-use crate::RepackLocation;
 use crate::SaplingRemoteApiFileStore;
 use crate::StoreKey;
 use crate::StoreResult;
@@ -521,32 +520,6 @@ impl LegacyStore for FileStore {
 
     fn get_file_content(&self, key: &Key) -> Result<Option<Bytes>> {
         self.get_file_content_impl(key, FetchMode::AllowRemote)
-    }
-
-    fn add_pending(
-        &self,
-        key: &Key,
-        data: Bytes,
-        meta: Metadata,
-        location: RepackLocation,
-    ) -> Result<()> {
-        self.metrics.write().api.hg_addpending.call(0);
-        let delta = Delta {
-            data,
-            base: None,
-            key: key.clone(),
-        };
-
-        match location {
-            RepackLocation::Local => self.add(&delta, &meta),
-            RepackLocation::Shared => self.get_shared_mutable().add(&delta, &meta),
-        }
-    }
-
-    fn commit_pending(&self, _location: RepackLocation) -> Result<Option<Vec<PathBuf>>> {
-        self.metrics.write().api.hg_commitpending.call(0);
-        self.flush()?;
-        Ok(None)
     }
 }
 

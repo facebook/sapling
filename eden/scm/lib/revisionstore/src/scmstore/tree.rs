@@ -62,7 +62,6 @@ use crate::IndexedLogHgIdHistoryStore;
 use crate::LegacyStore;
 use crate::LocalStore;
 use crate::Metadata;
-use crate::RepackLocation;
 use crate::SaplingRemoteApiTreeStore;
 use crate::StoreKey;
 use crate::StoreResult;
@@ -445,30 +444,6 @@ impl LegacyStore for TreeStore {
         unimplemented!(
             "get_file_content is not implemented for trees, it should only ever be falled for files"
         );
-    }
-
-    fn add_pending(
-        &self,
-        key: &Key,
-        data: Bytes,
-        meta: Metadata,
-        location: RepackLocation,
-    ) -> Result<()> {
-        let delta = Delta {
-            data,
-            base: None,
-            key: key.clone(),
-        };
-
-        match location {
-            RepackLocation::Local => HgIdMutableDeltaStore::add(self, &delta, &meta),
-            RepackLocation::Shared => self.get_shared_mutable().add(&delta, &meta),
-        }
-    }
-
-    fn commit_pending(&self, _location: RepackLocation) -> Result<Option<Vec<PathBuf>>> {
-        self.flush()?;
-        Ok(None)
     }
 }
 

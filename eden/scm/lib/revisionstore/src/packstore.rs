@@ -41,7 +41,6 @@ use crate::localstore::LocalStore;
 use crate::localstore::StoreFromPath;
 use crate::mutabledatapack::MutableDataPack;
 use crate::mutablehistorypack::MutableHistoryPack;
-use crate::repack::Repackable;
 use crate::types::StoreKey;
 use crate::uniondatastore::UnionHgIdDataStore;
 use crate::unionhistorystore::UnionHgIdHistoryStore;
@@ -210,6 +209,11 @@ impl PackStoreOptions {
             }),
         }
     }
+}
+
+pub trait Repackable {
+    fn delete(self) -> Result<()>;
+    fn size(&self) -> u64;
 }
 
 impl<T: LocalStore + Repackable + StoreFromPath> PackStore<T> {

@@ -112,10 +112,10 @@ use crate::datastore::StoreResult;
 use crate::localstore::ExtStoredPolicy;
 use crate::localstore::LocalStore;
 use crate::localstore::StoreFromPath;
-use crate::repack::Repackable;
-use crate::repack::ToKeys;
+use crate::packstore::Repackable;
 use crate::sliceext::SliceExt;
 use crate::types::StoreKey;
+use crate::ToKeys;
 
 #[derive(Debug, Error)]
 #[error("Datapack Error: {0:?}")]

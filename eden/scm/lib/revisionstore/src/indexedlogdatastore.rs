@@ -42,9 +42,9 @@ use crate::indexedlogutil::StoreType;
 use crate::localstore::ExtStoredPolicy;
 use crate::localstore::LocalStore;
 use crate::missing::MissingInjection;
-use crate::repack::ToKeys;
 use crate::sliceext::SliceExt;
 use crate::types::StoreKey;
+use crate::ToKeys;
 
 pub struct IndexedLogHgIdDataStoreConfig {
     pub max_log_count: Option<u8>,

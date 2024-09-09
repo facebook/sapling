@@ -21,7 +21,6 @@ use crate::localstore::LocalStore;
 use crate::types::ContentHash;
 use crate::types::StoreKey;
 pub use crate::Metadata;
-use crate::RepackLocation;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Delta {
@@ -100,14 +99,6 @@ pub trait HgIdMutableDeltaStore: HgIdDataStore + Send + Sync {
 pub trait LegacyStore: HgIdMutableDeltaStore + RemoteDataStore + Send + Sync {
     fn get_file_content(&self, key: &Key) -> Result<Option<Bytes>>;
     fn get_shared_mutable(&self) -> Arc<dyn HgIdMutableDeltaStore>;
-    fn add_pending(
-        &self,
-        key: &Key,
-        data: Bytes,
-        meta: Metadata,
-        location: RepackLocation,
-    ) -> Result<()>;
-    fn commit_pending(&self, location: RepackLocation) -> Result<Option<Vec<PathBuf>>>;
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

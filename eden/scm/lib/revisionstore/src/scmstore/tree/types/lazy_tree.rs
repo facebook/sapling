@@ -79,7 +79,6 @@ impl LazyTree {
             SaplingRemoteApi(ref entry) => {
                 Some(Entry::new(key, entry.data()?, Metadata::default()))
             }
-            // ContentStore handles caching internally
             // Don't write CAS entries to local cache.
             Cas(_) => None,
         })
