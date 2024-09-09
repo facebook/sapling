@@ -20,6 +20,7 @@ module.exports = {
     project: [
       workspaceRelative('isl/tsconfig.json'),
       workspaceRelative('isl-server/tsconfig.json'),
+      workspaceRelative('screenshot-tool/tsconfig.json'),
       workspaceRelative('shared/tsconfig.json'),
       workspaceRelative('components/tsconfig.json'),
       workspaceRelative('textmate/tsconfig.json'),
