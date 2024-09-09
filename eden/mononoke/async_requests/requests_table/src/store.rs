@@ -219,7 +219,7 @@ mononoke_queries! {
         "
     }
 
-    read ListRequests(last_udate_newer_than: Timestamp, >list repo_ids: RepositoryId) -> (
+    read ListRequests(last_update_newer_than: Timestamp, >list repo_ids: RepositoryId) -> (
         RowId,
         RequestType,
         RepositoryId,
@@ -248,7 +248,10 @@ mononoke_queries! {
             status,
             claimed_by
         FROM long_running_request_queue
-        WHERE repo_id IN {repo_ids} AND inprogress_last_updated_at > {last_udate_newer_than}"
+        WHERE repo_id IN {repo_ids} AND (
+            inprogress_last_updated_at > {last_update_newer_than} OR
+            (status = 'new' AND created_at > {last_update_newer_than})
+        )"
     }
 }
 
