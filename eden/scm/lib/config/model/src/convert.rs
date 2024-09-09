@@ -14,11 +14,22 @@ use std::time::Duration;
 use minibytes::Text;
 use util::path::expand_path;
 
+use crate::Config;
 use crate::Error;
 use crate::Result;
 
+pub trait FromConfig: Sized {
+    fn try_from_str_with_config(c: &dyn Config, s: &str) -> Result<Self>;
+}
+
 pub trait FromConfigValue: Sized {
     fn try_from_str(s: &str) -> Result<Self>;
+}
+
+impl<T: FromConfigValue> FromConfig for T {
+    fn try_from_str_with_config(_c: &dyn Config, s: &str) -> Result<Self> {
+        Self::try_from_str(s)
+    }
 }
 
 impl FromConfigValue for bool {

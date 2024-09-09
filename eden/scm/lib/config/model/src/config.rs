@@ -15,7 +15,7 @@ use std::sync::Arc;
 
 use minibytes::Text;
 
-use crate::convert::FromConfigValue;
+use crate::convert::FromConfig;
 use crate::Error;
 use crate::Result;
 
@@ -89,23 +89,23 @@ pub trait Config: Send + Sync {
 /// Extra APIs (incompatible with trait objects) around reading config.
 pub trait ConfigExt: Config {
     /// Get a config item. Convert to type `T`.
-    fn get_opt<T: FromConfigValue>(&self, section: &str, name: &str) -> Result<Option<T>> {
+    fn get_opt<T: FromConfig>(&self, section: &str, name: &str) -> Result<Option<T>> {
         self.get(section, name)
-            .map(|bytes| T::try_from_str(&bytes))
+            .map(|bytes| T::try_from_str_with_config(&self, &bytes))
             .transpose()
     }
 
     /// Get a nonempty config item. Convert to type `T`.
-    fn get_nonempty_opt<T: FromConfigValue>(&self, section: &str, name: &str) -> Result<Option<T>> {
+    fn get_nonempty_opt<T: FromConfig>(&self, section: &str, name: &str) -> Result<Option<T>> {
         self.get_nonempty(section, name)
-            .map(|bytes| T::try_from_str(&bytes))
+            .map(|bytes| T::try_from_str_with_config(&self, &bytes))
             .transpose()
     }
 
     /// Get a config item. Convert to type `T`.
     ///
     /// If the config item is not set, calculate it using `default_func`.
-    fn get_or<T: FromConfigValue>(
+    fn get_or<T: FromConfig>(
         &self,
         section: &str,
         name: &str,
@@ -117,14 +117,14 @@ pub trait ConfigExt: Config {
     /// Get a config item. Convert to type `T`.
     ///
     /// If the config item is not set, return `T::default()`.
-    fn get_or_default<T: Default + FromConfigValue>(&self, section: &str, name: &str) -> Result<T> {
+    fn get_or_default<T: Default + FromConfig>(&self, section: &str, name: &str) -> Result<T> {
         self.get_or(section, name, Default::default)
     }
 
     /// Get a config item. Convert to type `T`.
     ///
     /// If the config item is not set, return Error::NotSet.
-    fn must_get<T: Default + FromConfigValue>(&self, section: &str, name: &str) -> Result<T> {
+    fn must_get<T: Default + FromConfig>(&self, section: &str, name: &str) -> Result<T> {
         match self.get_nonempty_opt(section, name)? {
             Some(val) => Ok(val),
             None => Err(Error::NotSet(section.to_string(), name.to_string())),
