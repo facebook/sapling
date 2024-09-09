@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.57
+
+### Sep 9 2024
+
+- Unsaved edited commit messages are persisted across restarts
+- Deemphasize commits that only change files outside your cwd. Useful for large repos where you want to focus on changes in a specific subfolder.
+- Show the Uncommit button on commits in the middle of the stack, and warn about how it won't hide the original.
+- Add opt-r shortcut for quickly rebasing selected commit onto the current stack base
+- Scroll dropdown menus that would have gone off screen, like the settings dropdown
+- Allow collapsing the list of queued commands, and truncate extremely long lists
+
 ## 0.1.56
 
 ### Aug 26 2024
