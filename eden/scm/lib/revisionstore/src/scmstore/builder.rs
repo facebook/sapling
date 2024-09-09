@@ -370,10 +370,14 @@ impl<'a> FileStoreBuilder<'a> {
             .config
             .get_or("scmstore", "max-prefetch-size", || 100_000)?;
 
-        let cas_client = if self.config.get_or_default("scmstore", "fetch-from-cas")? {
+        let cas_client = if self.config.get_or_default("scmstore", "fetch-from-cas")?
+            || self
+                .config
+                .get_or_default("scmstore", "fetch-files-from-cas")?
+        {
             self.cas_client
         } else {
-            tracing::debug!(target: "cas", "scmstore disabled (scmstore.fetch-from-cas=false)");
+            tracing::debug!(target: "cas", "scmstore disabled (scmstore.fetch-from-cas=false and scmstore.fetch-files-from-cas=false)");
             None
         };
 
@@ -689,7 +693,11 @@ impl<'a> TreeStoreBuilder<'a> {
             );
         }
 
-        let cas_client = if self.config.get_or_default("scmstore", "fetch-from-cas")? {
+        let cas_client = if self.config.get_or_default("scmstore", "fetch-from-cas")?
+            || self
+                .config
+                .get_or_default("scmstore", "fetch-trees-from-cas")?
+        {
             if self.cas_client.is_some() {
                 if !fetch_tree_aux_data {
                     tracing::warn!(target: "cas", "augmented tree fetching disabled (scmstore.fetch-tree-aux-data=false)");
@@ -701,7 +709,7 @@ impl<'a> TreeStoreBuilder<'a> {
 
             self.cas_client
         } else {
-            tracing::debug!(target: "cas", "scmstore disabled (scmstore.fetch-from-cas=false)");
+            tracing::debug!(target: "cas", "scmstore disabled (scmstore.fetch-from-cas=false and scmstore.fetch-trees-from-cas=false)");
             None
         };
 
