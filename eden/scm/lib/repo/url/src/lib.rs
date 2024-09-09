@@ -7,7 +7,6 @@
 
 use std::convert::AsRef;
 
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use configmodel::Config;
@@ -38,6 +37,9 @@ impl RepoUrl {
         } else {
             input_url.to_string()
         };
+
+        // Resolve scheme first, before special "file"/"eager" handling for Windows.
+        let url_string = resolve_custom_scheme(config, url_string);
 
         // Do some file path normalization on Windows for schemes referencing fs paths.
         let url_string = match (cfg!(windows), url_string.split_once(':')) {
@@ -79,8 +81,6 @@ impl RepoUrl {
         } else {
             input_url.to_string()
         };
-
-        let url = resolve_custom_scheme(config, url)?;
 
         let repo_name = repo_name_from_resolved_url(config, &url);
         tracing::debug!(input_url, output_url=%url, ?repo_name, "parsed repo URL");
@@ -145,24 +145,20 @@ fn looks_like_windows_path(s: &str) -> bool {
 }
 
 /// Using custom "schemes" from config, resolve given url.
-pub fn resolve_custom_scheme(config: &dyn Config, url: Url) -> Result<Url> {
-    if let Some(tmpl) = config.get_nonempty("schemes", url.scheme()) {
-        let non_scheme = match url.as_str().split_once(':') {
-            Some((_, after)) => after.trim_start_matches('/'),
-            None => bail!("url {url} has no scheme"),
-        };
+fn resolve_custom_scheme(config: &dyn Config, url: String) -> String {
+    if let Some((scheme, rest)) = url.split_once(':') {
+        if let Some(tmpl) = config.get_nonempty("schemes", scheme) {
+            let rest = rest.trim_start_matches('/');
 
-        let resolved_url = if tmpl.contains("{1}") {
-            tmpl.replace("{1}", non_scheme)
-        } else {
-            format!("{tmpl}{non_scheme}")
-        };
-
-        return Url::parse(&resolved_url)
-            .with_context(|| format!("parsing resolved custom scheme URL {resolved_url}"));
+            return if tmpl.contains("{1}") {
+                tmpl.replace("{1}", rest)
+            } else {
+                format!("{tmpl}{rest}")
+            };
+        }
     }
 
-    Ok(url)
+    url
 }
 
 pub fn repo_name_from_url(config: &dyn Config, s: &str) -> Option<String> {
@@ -312,7 +308,7 @@ mod test {
 
     #[test]
     fn test_path() {
-        let config = BTreeMap::<&str, &str>::new();
+        let config = BTreeMap::<&str, &str>::from([("schemes.myeager", "eager:///")]);
 
         let check = |url, scheme, path| {
             let repo_url = RepoUrl::from_str(&config, url).unwrap();
@@ -326,11 +322,12 @@ mod test {
             check(r"\\?\C:\foo\bar", "file", r"\\?\C:\foo\bar");
             check(r"\\?\C:foo/bar", "file", r"\\?\C:foo\bar");
             check(r"eager://C:\foo\bar", "eager", r"\\?\C:\foo\bar");
-            check(r"eager://\\?\C:\foo/bar", "eager", r"\\?\C:\foo\bar");
+            check(r"myeager://\\?\C:\foo/bar", "eager", r"\\?\C:\foo\bar");
             check(r"test:foo\bar", "test", r"foo\bar");
         } else {
             check("file:///foo/bar", "file", "/foo/bar");
             check("eager:///foo/bar", "eager", "/foo/bar");
+            check("myeager:/foo/bar", "eager", "/foo/bar");
         }
     }
 }
