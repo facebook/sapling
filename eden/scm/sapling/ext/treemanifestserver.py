@@ -176,8 +176,8 @@ from sapling.ext.remotefilelog.contentstore import (
     manifestrevlogstore,
     unioncontentstore,
 )
-from sapling.ext.remotefilelog.datapack import makedatapackstore, memdatapack
-from sapling.ext.remotefilelog.historypack import makehistorypackstore, memhistorypack
+from sapling.ext.remotefilelog.datapack import memdatapack
+from sapling.ext.remotefilelog.historypack import memhistorypack
 from sapling.ext.remotefilelog.metadatastore import unionmetadatastore
 from sapling.i18n import _, _n
 from sapling.node import bin, hex, nullid, short
@@ -580,26 +580,15 @@ def wraprepo(repo):
     repo._treefetches = 0
 
 
-def _prunesharedpacks(repo, packpath):
-    """Repack the packpath if it has too many packs in it"""
-    try:
-        numentries = len(os.listdir(packpath))
-    except OSError:
-        return
-
-
 def setuptreestores(repo, mfl):
     ui = repo.ui
     if ui.configbool("treemanifest", "server"):
-        packpath = repo.localvfs.join("cache/packs/%s" % PACK_CATEGORY)
-
         mutablelocalstore = mutablestores.mutabledatahistorystore(
             lambda: mfl._mutablelocalpacks
         )
         ondemandstore = ondemandtreedatastore(repo)
 
         # Data store
-        datastore = makedatapackstore(ui, packpath, False)
         revlogstore = manifestrevlogstore(repo)
         mfl.revlogstore = revlogstore
 
@@ -610,22 +599,18 @@ def setuptreestores(repo, mfl):
                 revlogstore, repo.cachevfs, maxcachesize, evictionrate
             )
 
-        mfl.datastore = unioncontentstore(
-            datastore, revlogstore, mutablelocalstore, ondemandstore
-        )
+        mfl.datastore = unioncontentstore(revlogstore, mutablelocalstore, ondemandstore)
 
         # History store
-        historystore = makehistorypackstore(ui, packpath, False)
         mfl.historystore = unionmetadatastore(
-            historystore, revlogstore, mutablelocalstore, ondemandstore
+            revlogstore, mutablelocalstore, ondemandstore
         )
-        _prunesharedpacks(repo, packpath)
         ondemandstore.setshared(mfl.datastore, mfl.historystore)
 
-        mfl.shareddatastores = [datastore, revlogstore]
+        mfl.shareddatastores = [revlogstore]
         # Local stores are stores that contain data not on the main server
         mfl.localdatastores = []
-        mfl.sharedhistorystores = [historystore, revlogstore]
+        mfl.sharedhistorystores = [revlogstore]
         mfl.localhistorystores = []
         return
 

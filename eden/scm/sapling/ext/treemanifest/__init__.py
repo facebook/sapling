@@ -394,14 +394,6 @@ def wraprepo(repo):
     repo._treefetches = 0
 
 
-def _prunesharedpacks(repo, packpath):
-    """Repack the packpath if it has too many packs in it"""
-    try:
-        numentries = len(os.listdir(packpath))
-    except OSError:
-        return
-
-
 def setuptreestores(repo, mfl):
     if git.isgitstore(repo):
         mfl._isgit = True
