@@ -39,5 +39,7 @@ inline constexpr auto ENTRY_ATTRIBUTE_OBJECT_ID =
     EntryAttributeFlags::raw(FileAttributes::OBJECT_ID);
 inline constexpr auto ENTRY_ATTRIBUTE_DIGEST_SIZE =
     EntryAttributeFlags::raw(FileAttributes::DIGEST_SIZE);
+inline constexpr auto ENTRY_ATTRIBUTE_DIGEST_HASH =
+    EntryAttributeFlags::raw(FileAttributes::DIGEST_HASH);
 
 } // namespace facebook::eden

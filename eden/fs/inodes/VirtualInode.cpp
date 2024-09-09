@@ -248,6 +248,12 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
         PathError{errorCode, path, additionalErrorContext}};
   }
 
+  std::optional<folly::Try<Hash32>> digestHash;
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_HASH)) {
+    digestHash =
+        folly::Try<Hash32>{PathError{errorCode, path, additionalErrorContext}};
+  }
+
   std::optional<folly::Try<Hash32>> blake3;
   std::optional<folly::Try<uint64_t>> digestSize;
 
@@ -282,7 +288,8 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
                           objectId,
                           blake3,
                           size,
-                          digestSize](TreeMetadata treeMeta) mutable {
+                          digestSize,
+                          digestHash](TreeMetadata treeMeta) mutable {
                 if (requestedAttributes.contains(ENTRY_ATTRIBUTE_BLAKE3)) {
                   blake3 = std::optional<folly::Try<Hash32>>{treeMeta.blake3};
                 }
@@ -296,7 +303,8 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
                     std::move(size),
                     std::move(type),
                     std::move(objectId),
-                    std::move(digestSize)};
+                    std::move(digestSize),
+                    std::move(digestHash)};
               });
       return std::move(treeMetaFut)
           .thenError([requestedAttributes,
@@ -305,7 +313,8 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
                       treeObjectId = std::move(objectId),
                       treeBlake3 = std::move(blake3),
                       treeSize = std::move(size),
-                      treeDigestSize = std::move(digestSize)](
+                      treeDigestSize = std::move(digestSize),
+                      treeDigestHash = std::move(digestHash)](
                          const folly::exception_wrapper& ex) mutable {
             // We failed to get tree aux data. This shouldn't cause the
             // entire result to be an error. We can return whichever
@@ -324,7 +333,8 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
                 std::move(treeSize),
                 std::move(treeType),
                 std::move(treeObjectId),
-                std::move(treeDigestSize)};
+                std::move(treeDigestSize),
+                std::move(treeDigestHash)};
           });
     }
     // We return empty tree metadata attributes for materialized directories
@@ -336,7 +346,8 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
       std::move(size),
       std::move(type),
       std::move(objectId),
-      std::move(digestSize)};
+      std::move(digestSize),
+      std::move(digestHash)};
 }
 
 ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
@@ -478,13 +489,20 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
                   : folly::Try<uint64_t>(blobMetadata.value().size);
             }
 
+            std::optional<folly::Try<Hash32>> digestHash;
+            if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_HASH)) {
+              digestHash = folly::Try<Hash32>{PathError{
+                  ENOTDIR, filePath, "digestHash not supported for files"}};
+            }
+
             return EntryAttributes{
                 std::move(sha1),
                 std::move(blake3),
                 std::move(size),
                 std::move(type),
                 std::move(objectId),
-                std::move(digestSize)};
+                std::move(digestSize),
+                std::move(digestHash)};
           });
 }
 

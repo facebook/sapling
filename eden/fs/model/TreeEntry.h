@@ -47,6 +47,7 @@ struct EntryAttributes {
   std::optional<folly::Try<std::optional<TreeEntryType>>> type;
   std::optional<folly::Try<std::optional<ObjectId>>> objectId;
   std::optional<folly::Try<uint64_t>> digestSize;
+  std::optional<folly::Try<Hash32>> digestHash;
 };
 
 /**

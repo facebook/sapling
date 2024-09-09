@@ -2641,6 +2641,16 @@ FileAttributeDataOrErrorV2 serializeEntryAttributes(
     fileData.digestSize() = std::move(digestSize);
   }
 
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_HASH)) {
+    DigestHashOrError digestHash;
+    if (!fillErrorRef(
+            digestHash, attributes->digestHash, entryPath, "digesthash")) {
+      digestHash.digestHash_ref() =
+          thriftHash32(attributes->digestHash.value().value());
+    }
+    fileData.digestHash() = std::move(digestHash);
+  }
+
   fileResult.fileAttributeData_ref() = fileData;
   return fileResult;
 }
