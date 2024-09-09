@@ -797,7 +797,7 @@ def _dobackout(ui, repo, node=None, rev=None, **opts):
             _replayrenames(repo, node)
 
             dsguard.close()
-            hg._showstats(repo, stats)
+            hg.showstats(repo, stats)
             if stats[3]:
                 repo.ui.status(
                     _("use '@prog@ resolve' to retry unresolved " "file merges\n")

@@ -859,7 +859,7 @@ def clonepreclose(
     return srcpeer, destpeer
 
 
-def _showstats(repo, stats: Iterable[object], quietempty: bool = False) -> None:
+def showstats(repo, stats: Iterable[object], quietempty: bool = False) -> None:
     if (
         edenfs.requirement in repo.requirements
         or git.DOTGIT_REQUIREMENT in repo.requirements
@@ -911,7 +911,7 @@ def update(repo, node, quietempty: bool = False, updatecheck=None):
     Returns if any files were unresolved.
     """
     stats = updaterepo(repo, node, False, updatecheck=updatecheck)
-    _showstats(repo, stats, quietempty)
+    showstats(repo, stats, quietempty)
     if stats[3]:
         repo.ui.status(_("use '@prog@ resolve' to retry unresolved file merges\n"))
     return stats[3] > 0
@@ -929,7 +929,7 @@ def clean(repo, node, show_stats: bool = True, quietempty: bool = False):
     stats = updaterepo(repo, node, True)
     repo.localvfs.unlinkpath("graftstate", ignoremissing=True)
     if show_stats:
-        _showstats(repo, stats, quietempty)
+        showstats(repo, stats, quietempty)
     return stats[3] > 0
 
 
@@ -994,7 +994,7 @@ def merge(repo, node, force=False, remind: bool = True, labels=None):
     """Branch merge with node, resolving changes. Return true if any
     unresolved conflicts."""
     stats = mergemod.merge(repo, node, force=force, labels=labels)
-    _showstats(repo, stats)
+    showstats(repo, stats)
     if stats[3]:
         repo.ui.status(
             _(
