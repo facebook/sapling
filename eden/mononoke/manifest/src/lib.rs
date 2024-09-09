@@ -33,6 +33,7 @@ pub use crate::ordered_ops::After;
 pub use crate::ordered_ops::ManifestOrderedOps;
 pub use crate::path_tree::PathTree;
 pub use crate::select::PathOrPrefix;
+pub use crate::traced::Traced;
 pub use crate::trie_map_ops::TrieMapOps;
 pub use crate::types::AsyncManifest;
 pub use crate::types::AsyncOrderedManifest;
@@ -41,7 +42,6 @@ pub use crate::types::CombinedId;
 pub use crate::types::Entry;
 pub use crate::types::Manifest;
 pub use crate::types::OrderedManifest;
-pub use crate::types::Traced;
 
 mod bonsai;
 mod comparison;
@@ -53,6 +53,7 @@ mod ops;
 mod ordered_ops;
 mod path_tree;
 mod select;
+mod traced;
 mod trie_map_ops;
 mod types;
 
