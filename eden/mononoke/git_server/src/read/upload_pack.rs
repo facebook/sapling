@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::Result;
 use async_stream::try_stream;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_git_mapping::BonsaisOrGitShas;
@@ -32,6 +33,7 @@ use mononoke_types::ChangesetId;
 use packetline::encode::delim_to_write;
 use packetline::encode::flush_to_write;
 use packetline::encode::write_data_channel;
+use packetline::encode::write_progress_channel;
 use packetline::encode::write_text_packetline;
 use packetline::FLUSH_LINE;
 use packfile::pack::DeltaForm;
@@ -375,6 +377,10 @@ pub async fn fetch(
         FetchResponseHeaders::from_request(request_context.clone(), args.clone()).await?;
     let include_pack = fetch_response_headers.include_pack();
     let shallow_response = fetch_response_headers.shallow_response.take();
+
+    // Some repos might be configured to display a message to users when they
+    // run `git pull`.
+    let mb_fetch_msg = git_fetch_message(request_context).await?;
     let bytes_stream = ResponseStream::new(try_stream! {
         for header in fetch_response_headers {
             yield header;
@@ -382,6 +388,11 @@ pub async fn fetch(
         // Only include the packfile if it is requested by client
         if include_pack {
             let mut pack_reader = tokio_stream::wrappers::ReceiverStream::new(reader).ready_chunks(100_000_000);
+            if let Some(fetch_msg) = mb_fetch_msg {
+                let mut buf = Vec::with_capacity(fetch_msg.len());
+                write_progress_channel(fetch_msg.as_ref(), &mut buf).await?;
+                yield Bytes::from(buf);
+            }
             while let Some(chunks) = pack_reader.next().await {
                 for chunk in chunks {
                     let mut buf = Vec::with_capacity(chunk.len());
@@ -419,4 +430,23 @@ pub async fn fetch(
 
     let body = StreamBody::new(bytes_stream, mime::APPLICATION_OCTET_STREAM);
     Ok(body)
+}
+
+/// Checks if there are any messages that should be displayed to the user when
+/// running `git pull` on this repo.
+async fn git_fetch_message(request_context: &RepositoryRequestContext) -> Result<Option<String>> {
+    let repo = &request_context.repo;
+    let repo_name = repo.repo_identity().name();
+
+    let should_display_message = justknobs::eval(
+        "scm/mononoke:display_repo_fetch_message_on_git_server",
+        None,
+        Some(repo_name),
+    )?;
+
+    if should_display_message {
+        Ok(repo.repo_config.git_configs.fetch_message.clone())
+    } else {
+        Ok(None)
+    }
 }
