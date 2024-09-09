@@ -80,10 +80,10 @@ class ReaddirTest(testcase.EdenRepoTest):
     hello_id: bytes = b""
     slink_id: bytes = b""
     adir_id: bytes = b""
-    adir_size_result: SizeOrError = SizeOrError()
+    adir_digest_size_result: DigestSizeOrError = DigestSizeOrError()
     adir_blake3_result: Blake3OrError = Blake3OrError()
     cdir_subdir_id: bytes = b""
-    cdir_subdir_size_result: SizeOrError = SizeOrError()
+    cdir_subdir_digest_size_result: DigestSizeOrError = DigestSizeOrError()
     cdir_subdir_blake3_result: Blake3OrError = Blake3OrError()
 
     def setup_eden_test(self) -> None:
@@ -229,12 +229,12 @@ class ReaddirTest(testcase.EdenRepoTest):
 
         # There is no easy way to compute the blake3/size of a directory on the fly (in Python)
         # Since these hashes/sizes should stay constant, we can just hardcode the expected result
-        adir_size = 207
+        adir_digest_size = 207
         adir_blake3 = b"\x73\xf0\xc6\xe3\x6b\x3c\xb9\xfc\x64\xa8\xa3\x39\x24\x57\xd3\xc9\xd0\x2d\x11\xfd\x22\xe5\x36\x71\x94\x5d\x95\x3f\xfa\xc3\x8c\x92"
-        self.adir_size_result = {
-            "hg": SizeOrError(adir_size),
-            "filteredhg": SizeOrError(adir_size),
-            "git": SizeOrError(
+        self.adir_digest_size_result = {
+            "hg": DigestSizeOrError(adir_digest_size),
+            "filteredhg": DigestSizeOrError(adir_digest_size),
+            "git": DigestSizeOrError(
                 error=EdenError(
                     message="std::domain_error: getTreeMetadata is not implemented for GitBackingStores",
                     errorType=EdenErrorType.GENERIC_ERROR,
@@ -265,12 +265,12 @@ class ReaddirTest(testcase.EdenRepoTest):
 
         # There is no easy way to compute the blake3/size of a directory on the fly (in Python)
         # Since these hashes/sizes should stay constant, we can just hardcode the expected result
-        cdir_subdir_size = 211
+        cdir_subdir_digest_size = 211
         cdir_subdir_blake3 = b"\x2f\xe0\x36\xd6\xf0\x6a\xf6\xb5\x60\xe7\xe1\xf4\x95\x1c\x9c\xd7\xf1\x62\x08\x32\xa2\xee\xb8\x42\x16\x9b\xd4\xe7\x7b\x83\x0a\x94"
-        self.cdir_subdir_size_result = {
-            "hg": SizeOrError(cdir_subdir_size),
-            "filteredhg": SizeOrError(cdir_subdir_size),
-            "git": SizeOrError(
+        self.cdir_subdir_digest_size_result = {
+            "hg": DigestSizeOrError(cdir_subdir_digest_size),
+            "filteredhg": DigestSizeOrError(cdir_subdir_digest_size),
+            "git": DigestSizeOrError(
                 error=EdenError(
                     message="std::domain_error: getTreeMetadata is not implemented for GitBackingStores",
                     errorType=EdenErrorType.GENERIC_ERROR,
@@ -337,7 +337,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             Optional[SourceControlType],
             Optional[bytes],
             Optional[bytes],
-            Optional[DigestSizeOrError],
+            Optional[int],
         ],
     ) -> Tuple[FileAttributeDataOrError, FileAttributeDataOrErrorV2]:
         (
@@ -346,7 +346,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             raw_type,
             raw_object_id,
             raw_blake3,
-            digest_size_result,
+            digest_size,
         ) = raw_attributes
         data = FileAttributeData()
         data_v2 = FileAttributeDataV2()
@@ -369,8 +369,8 @@ class ReaddirTest(testcase.EdenRepoTest):
         if raw_object_id is not None:
             data_v2.objectId = ObjectIdOrError(raw_object_id)
 
-        if digest_size_result is not None:
-            data_v2.digestSize = digest_size_result
+        if digest_size is not None:
+            data_v2.digestSize = DigestSizeOrError(digest_size)
 
         return (
             FileAttributeDataOrError(data),
@@ -411,13 +411,6 @@ class ReaddirTest(testcase.EdenRepoTest):
             self.get_expected_file_attributes(
                 "hello",
                 self.hello_id,
-                DigestSizeOrError(
-                    error=EdenError(
-                        message="hello: digestSize not supported for files: Not a directory",
-                        errorCode=20,
-                        errorType=EdenErrorType.POSIX_ERROR,
-                    )
-                ),
             )
         )
 
@@ -426,13 +419,6 @@ class ReaddirTest(testcase.EdenRepoTest):
             self.get_expected_file_attributes(
                 "adir/file",
                 self.adir_file_id,
-                DigestSizeOrError(
-                    error=EdenError(
-                        message="adir/file: digestSize not supported for files: Not a directory",
-                        errorCode=20,
-                        errorType=EdenErrorType.POSIX_ERROR,
-                    )
-                ),
             )
         )
 
@@ -620,17 +606,17 @@ class ReaddirTest(testcase.EdenRepoTest):
                         errorType=EdenErrorType.POSIX_ERROR,
                     )
                 ),
-                self.adir_size_result,
-                SourceControlTypeOrError(SourceControlType.TREE),
-                ObjectIdOrError(self.adir_id),
-                self.adir_blake3_result,
-                DigestSizeOrError(
+                SizeOrError(
                     error=EdenError(
                         message="adir: Is a directory",
                         errorCode=21,
                         errorType=EdenErrorType.POSIX_ERROR,
                     )
                 ),
+                SourceControlTypeOrError(SourceControlType.TREE),
+                ObjectIdOrError(self.adir_id),
+                self.adir_blake3_result,
+                self.adir_digest_size_result,
             )
         )
 
@@ -816,14 +802,13 @@ class ReaddirTest(testcase.EdenRepoTest):
         self,
         path: str,
         object_id: Optional[bytes],
-        digest_size_result: Optional[DigestSizeOrError] = None,
     ) -> Tuple[
         bytes,
         int,
         SourceControlType,
         Optional[bytes],
         bytes,
-        Optional[DigestSizeOrError],
+        int,
     ]:
         """Get attributes for the file with the specified path inside
         the eden repository. For now, just sha1 and file size.
@@ -838,7 +823,7 @@ class ReaddirTest(testcase.EdenRepoTest):
                 SourceControlType.TREE,
                 object_id,
                 (0).to_bytes(32, byteorder="big"),
-                digest_size_result,
+                0,
             )
         if stat.S_ISLNK(file_stat.st_mode):
             return (
@@ -847,7 +832,7 @@ class ReaddirTest(testcase.EdenRepoTest):
                 SourceControlType.SYMLINK,
                 object_id,
                 (0).to_bytes(32, byteorder="big"),
-                digest_size_result,
+                0,
             )
         if not stat.S_ISREG(file_stat.st_mode):
             return (
@@ -856,7 +841,7 @@ class ReaddirTest(testcase.EdenRepoTest):
                 SourceControlType.UNKNOWN,
                 object_id,
                 (0).to_bytes(32, byteorder="big"),
-                digest_size_result,
+                0,
             )
         if stat.S_IXUSR & file_stat.st_mode:
             file_type = SourceControlType.EXECUTABLE_FILE
@@ -872,7 +857,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             file_type,
             object_id,
             self.blake3_hash(fullpath),
-            digest_size_result,
+            file_size,
         )
 
     def get_counter(self, name: str) -> float:
@@ -886,7 +871,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             SourceControlType,
             Optional[bytes],
             Optional[bytes],
-            Optional[DigestSizeOrError],
+            int,
         ],
         req_attr: int = ALL_ATTRIBUTES,
     ) -> FileAttributeDataOrErrorV2:
@@ -915,10 +900,8 @@ class ReaddirTest(testcase.EdenRepoTest):
             blake3 = Blake3OrError(blake3=expected_attributes[4])
 
         digestSize = None
-        if (req_attr & FileAttributes.DIGEST_SIZE) and expected_attributes[
-            5
-        ] is not None:
-            digestSize = expected_attributes[5]
+        if (req_attr & FileAttributes.DIGEST_SIZE) and expected_attributes[5]:
+            digestSize = DigestSizeOrError(digestSize=expected_attributes[5])
 
         return FileAttributeDataOrErrorV2(
             fileAttributeData=FileAttributeDataV2(
@@ -943,13 +926,6 @@ class ReaddirTest(testcase.EdenRepoTest):
                         self.get_expected_file_attributes(
                             "adir/file",
                             self.adir_file_id,
-                            DigestSizeOrError(
-                                error=EdenError(
-                                    message="adir/file: digestSize not supported for files: Not a directory",
-                                    errorCode=20,
-                                    errorType=EdenErrorType.POSIX_ERROR,
-                                )
-                            ),
                         )
                     )
                 }
@@ -960,13 +936,6 @@ class ReaddirTest(testcase.EdenRepoTest):
                         self.get_expected_file_attributes(
                             "bdir/file",
                             self.bdir_file_id,
-                            DigestSizeOrError(
-                                error=EdenError(
-                                    message="bdir/file: digestSize not supported for files: Not a directory",
-                                    errorCode=20,
-                                    errorType=EdenErrorType.POSIX_ERROR,
-                                )
-                            ),
                         )
                     )
                 }
@@ -1202,15 +1171,15 @@ class ReaddirTest(testcase.EdenRepoTest):
                 )
             ),
             blake3_result=self.cdir_subdir_blake3_result,
-            size_result=self.cdir_subdir_size_result,
-            object_id=self.cdir_subdir_id,
-            digest_size_result=DigestSizeOrError(
+            size_result=SizeOrError(
                 error=EdenError(
                     message="cdir/subdir: Is a directory",
                     errorCode=21,
                     errorType=EdenErrorType.POSIX_ERROR,
                 )
             ),
+            object_id=self.cdir_subdir_id,
+            digest_size_result=self.cdir_subdir_digest_size_result,
         )
 
         if sys.platform != "win32":

@@ -242,22 +242,22 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
     objectId = folly::Try<std::optional<ObjectId>>{oid};
   }
 
-  std::optional<folly::Try<uint64_t>> digestSize;
-  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_SIZE)) {
-    digestSize = folly::Try<uint64_t>{
+  std::optional<folly::Try<uint64_t>> size;
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SIZE)) {
+    size = folly::Try<uint64_t>{
         PathError{errorCode, path, additionalErrorContext}};
   }
 
   std::optional<folly::Try<Hash32>> blake3;
-  std::optional<folly::Try<uint64_t>> size;
+  std::optional<folly::Try<uint64_t>> digestSize;
 
   // The entry is a symlink, socket, or other unsupported type. We return
   // error values for these entry types if they were requested.
   //
   // entryType is std::nullopt if the entry is a socket or other non-scm type
   if (entryType.value_or(TreeEntryType::SYMLINK) != TreeEntryType::TREE) {
-    if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SIZE)) {
-      size = folly::Try<uint64_t>{
+    if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_SIZE)) {
+      digestSize = folly::Try<uint64_t>{
           PathError{errorCode, path, additionalErrorContext}};
     }
 
@@ -272,7 +272,7 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
     // unmaterialized.
     if (shouldFetchTreeMetadata &&
         (requestedAttributes.contains(ENTRY_ATTRIBUTE_BLAKE3) ||
-         requestedAttributes.contains(ENTRY_ATTRIBUTE_SIZE)) &&
+         requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_SIZE)) &&
         oid.has_value()) {
       auto treeMetaFut =
           objectStore->getTreeMetadata(oid.value(), fetchContext)
@@ -286,8 +286,8 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
                 if (requestedAttributes.contains(ENTRY_ATTRIBUTE_BLAKE3)) {
                   blake3 = std::optional<folly::Try<Hash32>>{treeMeta.blake3};
                 }
-                if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SIZE)) {
-                  size = std::optional<folly::Try<uint64_t>>{
+                if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_SIZE)) {
+                  digestSize = std::optional<folly::Try<uint64_t>>{
                       std::move(treeMeta.size)};
                 }
                 return EntryAttributes{
@@ -314,8 +314,8 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
               treeBlake3 = folly::Try<Hash32>{ex};
             }
 
-            if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SIZE)) {
-              treeSize = folly::Try<uint64_t>{ex};
+            if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_SIZE)) {
+              treeDigestSize = folly::Try<uint64_t>{ex};
             }
 
             return EntryAttributes{
@@ -400,8 +400,8 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
   // sha1, blake3 and size come together so, there isn't much point of splitting
   // them up
   if (requestedAttributes.containsAnyOf(
-          ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 |
-          ENTRY_ATTRIBUTE_BLAKE3)) {
+          ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 | ENTRY_ATTRIBUTE_BLAKE3 |
+          ENTRY_ATTRIBUTE_DIGEST_SIZE)) {
     blobMetadataFuture = getBlobMetadata(
         path,
         objectStore,
@@ -473,8 +473,9 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
 
             std::optional<folly::Try<uint64_t>> digestSize;
             if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_SIZE)) {
-              digestSize = folly::Try<uint64_t>{PathError{
-                  ENOTDIR, filePath, "digestSize not supported for files"}};
+              digestSize = blobMetadata.hasException()
+                  ? folly::Try<uint64_t>(blobMetadata.exception())
+                  : folly::Try<uint64_t>(blobMetadata.value().size);
             }
 
             return EntryAttributes{
