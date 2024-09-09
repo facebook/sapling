@@ -5,7 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {TestRepo} from './testRepo';
+/* eslint-disable no-await-in-loop */
+
+import type * as testRepo from './testRepo';
 import type {Browser, Page} from 'puppeteer-core';
 
 import fs from 'node:fs';
@@ -14,6 +16,11 @@ import puppeteer from 'puppeteer-core';
 type PageOptions = {
   width?: number;
   height?: number;
+};
+
+export type OpenISLOptions = {
+  lightTheme: boolean;
+  sidebarOpen: boolean;
 };
 
 const logger = console;
@@ -68,11 +75,43 @@ export class TestBrowser {
   }
 
   /** Open the ISL page for a repo. */
-  async openISL(repo: TestRepo): Promise<void> {
+  async openISL(repo: testRepo.TestRepo, options: OpenISLOptions): Promise<void> {
     const url = await repo.serveUrl();
     logger.info(`Opening ${url}`);
     await this.page.goto(url, {waitUntil: 'networkidle2'});
     await this.waitForSpinners();
+    await this.setSidebarOpen(options.sidebarOpen);
+    await this.setLightTheme(options.lightTheme);
+  }
+
+  /** Toggle light/dark theme by pressing 'T' */
+  async setLightTheme(lightTheme: boolean): Promise<void> {
+    // Sometimes the first key press doesn't work, so try again once.
+    for (let i = 0; i < 2; i++) {
+      const current = await this.hasElement('.light-theme');
+      if (current === lightTheme) {
+        return;
+      }
+      logger.debug('Setting lightTheme', lightTheme);
+      const keyboard = this.page.keyboard;
+      await keyboard.down('AltLeft');
+      await keyboard.press('T');
+      await keyboard.up('AltLeft');
+    }
+  }
+
+  /** Toggle sidebar. */
+  async setSidebarOpen(sidebarOpen: boolean): Promise<void> {
+    const current = await this.hasElement('.drawer-right.drawer-expanded');
+    if (current === sidebarOpen) {
+      return;
+    }
+    logger.debug('Setting sidebarOpen', sidebarOpen);
+    await this.page.click('.drawer-label');
+  }
+
+  async hasElement(selector: string): Promise<boolean> {
+    return (await this.page.$(selector)) != null;
   }
 
   constructor(public browser: Browser, public page: Page) {}

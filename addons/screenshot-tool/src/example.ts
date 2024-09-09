@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {TestBrowser} from './testBrowser';
+import type {OpenISLOptions, TestBrowser} from './testBrowser';
 import type {TestRepo} from './testRepo';
 
 /** Reexport for convenience. */
@@ -18,6 +18,9 @@ export interface Example {
 
   /** Logic to run after opening the ISL page. */
   postOpenISL(browser: TestBrowser, _repo: TestRepo): Promise<void>;
+
+  /** Initial ISL options. */
+  openISLOptions: OpenISLOptions;
 }
 
 export const BASE_EXAMPLE: Example = {
@@ -26,5 +29,9 @@ export const BASE_EXAMPLE: Example = {
   },
   async postOpenISL(browser: TestBrowser, _repo: TestRepo): Promise<void> {
     await browser.page.screenshot({path: 'example.png'});
+  },
+  openISLOptions: {
+    lightTheme: true,
+    sidebarOpen: false,
   },
 };

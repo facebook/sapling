@@ -32,7 +32,7 @@ export async function main() {
   const [repo, browser] = await Promise.all([createTestRepo(), TestBrowser.new()]);
 
   // Open ISL after the repo is populated.
-  await browser.openISL(repo);
+  await browser.openISL(repo, example.openISLOptions);
 
   // Run example-defined extra logic.
   await example.postOpenISL(browser, repo);
