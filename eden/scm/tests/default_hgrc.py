@@ -73,7 +73,7 @@ ack-match-full-traversal=True
 ack = smartlog-default-command
 
 [scmstore]
-contentstorefallback=True
+contentstorefallback=False
 
 [experimental]
 use-rust-changelog=True
