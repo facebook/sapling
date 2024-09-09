@@ -812,9 +812,13 @@ impl Convert for RawGitConfigs {
     fn convert(self) -> Result<Self::Output> {
         let git_concurrency = self.git_concurrency.convert()?;
         let git_lfs_interpret_pointers = self.git_lfs_interpret_pointers.unwrap_or(false);
+
+        let fetch_message = self.fetch_message;
+
         Ok(GitConfigs {
             git_concurrency,
             git_lfs_interpret_pointers,
+            fetch_message,
         })
     }
 }

@@ -1383,6 +1383,7 @@ mod test {
                         tags: 1000,
                     }),
                     git_lfs_interpret_pointers: false,
+                    fetch_message: None,
                 },
             },
         );
@@ -1458,6 +1459,7 @@ mod test {
                 git_configs: GitConfigs {
                     git_concurrency: None,
                     git_lfs_interpret_pointers: false,
+                    fetch_message: None,
                 },
             },
         );

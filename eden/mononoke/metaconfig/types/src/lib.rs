@@ -1886,6 +1886,12 @@ pub struct GitConfigs {
     ///    be stored. File contents have to be available in Mononoke.
     ///  - With this flag OFF the git lfs pointers are treated like any other file in the repo.
     pub git_lfs_interpret_pointers: bool,
+    /// Optional messages to display to users after they run fetch commands (e.g.
+    /// pull, clone).
+    ///
+    /// NOTE: Adding a message is not enough! The message will only be displayed
+    /// if the repo enables this feature through a JK.
+    pub fetch_message: Option<String>,
 }
 
 /// Configuration for x repo syncs
