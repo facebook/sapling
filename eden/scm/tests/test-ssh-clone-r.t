@@ -13,7 +13,6 @@ creating 'remote' repo
 
   $ hg init remote
   $ cd remote
-  $ disable treemanifest
   $ hg unbundle "$TESTDIR/bundles/remote.hg"
   adding changesets
   adding manifests
