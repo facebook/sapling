@@ -299,6 +299,8 @@ impl ToKeys for IndexedLogHgIdHistoryStore {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use fs_err::remove_file;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
@@ -306,7 +308,6 @@ mod tests {
     use types::testutil::*;
 
     use super::*;
-    use crate::historypack::tests::get_nodes;
     use crate::testutil::empty_config;
 
     #[test]
@@ -392,5 +393,51 @@ mod tests {
 
         assert!(log.to_keys().into_iter().all(|e| e.unwrap() == k));
         Ok(())
+    }
+
+    fn get_nodes(mut rng: &mut ChaChaRng) -> HashMap<Key, NodeInfo> {
+        let file1 = RepoPath::from_str("path").unwrap();
+        let file2 = RepoPath::from_str("path/file").unwrap();
+        let null = HgId::null_id();
+        let node1 = HgId::random(&mut rng);
+        let node2 = HgId::random(&mut rng);
+        let node3 = HgId::random(&mut rng);
+        let node4 = HgId::random(&mut rng);
+        let node5 = HgId::random(&mut rng);
+        let node6 = HgId::random(&mut rng);
+
+        let mut nodes = HashMap::new();
+
+        // Insert key 1
+        let key1 = Key::new(file1.to_owned(), node2.clone());
+        let info = NodeInfo {
+            parents: [
+                Key::new(file1.to_owned(), node1.clone()),
+                Key::new(file1.to_owned(), null.clone()),
+            ],
+            linknode: HgId::random(&mut rng),
+        };
+        nodes.insert(key1.clone(), info);
+
+        // Insert key 2
+        let key2 = Key::new(file2.to_owned(), node3.clone());
+        let info = NodeInfo {
+            parents: [
+                Key::new(file2.to_owned(), node5.clone()),
+                Key::new(file2.to_owned(), node6.clone()),
+            ],
+            linknode: HgId::random(&mut rng),
+        };
+        nodes.insert(key2.clone(), info);
+
+        // Insert key 3
+        let key3 = Key::new(file1.to_owned(), node4.clone());
+        let info = NodeInfo {
+            parents: [key2, key1],
+            linknode: HgId::random(&mut rng),
+        };
+        nodes.insert(key3, info);
+
+        nodes
     }
 }

@@ -22,7 +22,6 @@ fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rus
 fn-error-context = "0.2"
 fs-err = { version = "2.6.0", features = ["tokio"] }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
-hex = "0.4.3"
 hg-http = { version = "0.1.0", path = "../hg-http" }
 hg-metrics = { version = "0.1.0", path = "../hg-metrics" }
 hgstore = { version = "0.1.0", path = "../storemodel/hgstore" }
@@ -34,10 +33,8 @@ itertools = "0.11.0"
 lfs_protocol = { version = "0.1.0", path = "../../../mononoke/lfs_protocol" }
 lz4-pyframe = { version = "0.1.0", path = "../lz4-pyframe" }
 manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
-memmap2 = "0.5.10"
 mincode = { version = "0.1.0", path = "../mincode" }
 minibytes = { version = "0.1.0", path = "../minibytes", features = ["frombytes"] }
-mpatch = { version = "0.1.0", path = "../mpatch" }
 once_cell = "1.12"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 progress-model = { version = "0.1.0", path = "../progress/model" }
@@ -53,7 +50,6 @@ sha1 = "0.10.5"
 sha2 = "0.10.6"
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main", optional = true }
 storemodel = { version = "0.1.0", path = "../storemodel" }
-tempfile = "3.8"
 thiserror = "1.0.49"
 tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.14", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
@@ -68,6 +64,7 @@ vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
 maplit = "1.0"
 mockito = "1.4.0"
 rand_chacha = "0.3"
+tempfile = "3.8"
 
 [features]
 default = []

@@ -110,9 +110,6 @@
 //!
 //! The produced stores must implement the `HgIdDataStore` trait.
 
-mod dataindex;
-mod fanouttable;
-mod historyindex;
 mod indexedloghistorystore;
 mod indexedlogutil;
 mod lfs;
@@ -125,22 +122,15 @@ mod sliceext;
 mod types;
 mod unionstore;
 
-pub mod datapack;
 pub mod datastore;
 pub mod edenapi;
 pub mod error;
-pub mod historypack;
 pub mod historystore;
 pub mod indexedlogauxstore;
 pub mod indexedlogdatastore;
 pub mod indexedlogtreeauxstore;
 pub mod localstore;
 pub mod multiplexstore;
-pub mod mutabledatapack;
-pub mod mutablehistorypack;
-pub mod mutablepack;
-pub mod packstore;
-pub mod packwriter;
 pub mod scmstore;
 pub mod trait_impls;
 pub mod uniondatastore;
@@ -150,9 +140,6 @@ pub mod util;
 use ::types::Key;
 pub use revisionstore_types::*;
 
-pub use crate::datapack::DataEntry;
-pub use crate::datapack::DataPack;
-pub use crate::datapack::DataPackVersion;
 pub use crate::datastore::ContentDataStore;
 pub use crate::datastore::ContentMetadata;
 pub use crate::datastore::Delta;
@@ -164,9 +151,6 @@ pub use crate::datastore::StoreResult;
 pub use crate::edenapi::SaplingRemoteApiFileStore;
 pub use crate::edenapi::SaplingRemoteApiRemoteStore;
 pub use crate::edenapi::SaplingRemoteApiTreeStore;
-pub use crate::historypack::HistoryEntry;
-pub use crate::historypack::HistoryPack;
-pub use crate::historypack::HistoryPackVersion;
 pub use crate::historystore::HgIdHistoryStore;
 pub use crate::historystore::HgIdMutableHistoryStore;
 pub use crate::historystore::RemoteHistoryStore;
@@ -182,13 +166,6 @@ pub use crate::metadatastore::MetadataStore;
 pub use crate::metadatastore::MetadataStoreBuilder;
 pub use crate::multiplexstore::MultiplexDeltaStore;
 pub use crate::multiplexstore::MultiplexHgIdHistoryStore;
-pub use crate::mutabledatapack::MutableDataPack;
-pub use crate::mutablehistorypack::MutableHistoryPack;
-pub use crate::packstore::CorruptionPolicy;
-pub use crate::packstore::DataPackStore;
-pub use crate::packstore::HistoryPackStore;
-pub use crate::packstore::MutableDataPackStore;
-pub use crate::packstore::MutableHistoryPackStore;
 pub use crate::redacted::redact_if_needed;
 pub use crate::remotestore::HgIdRemoteStore;
 pub use crate::repair::repair;

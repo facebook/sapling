@@ -183,16 +183,12 @@ mod tests {
     use types::testutil::*;
 
     use super::*;
-    use crate::datapack::DataPackVersion;
     use crate::datastore::HgIdDataStore;
-    use crate::historypack::HistoryPackVersion;
-    use crate::historystore::HgIdHistoryStore;
     use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
     use crate::indexedlogdatastore::IndexedLogHgIdDataStoreConfig;
     use crate::indexedlogutil::StoreType;
     use crate::localstore::ExtStoredPolicy;
-    use crate::mutabledatapack::MutableDataPack;
-    use crate::mutablehistorypack::MutableHistoryPack;
+    use crate::IndexedLogHgIdHistoryStore;
 
     #[test]
     fn test_delta_add_static() -> Result<()> {
@@ -242,11 +238,9 @@ mod tests {
             &config,
             StoreType::Rotated,
         )?;
-        let mut pack = MutableDataPack::new(&tempdir, DataPackVersion::One);
         let mut multiplex: MultiplexDeltaStore<Box<dyn HgIdMutableDeltaStore>> =
             MultiplexDeltaStore::new();
         multiplex.add_store(Box::new(&mut log));
-        multiplex.add_store(Box::new(&mut pack));
 
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
@@ -262,20 +256,21 @@ mod tests {
         let read_data = log.get(k.clone())?;
         assert_eq!(StoreResult::Found(delta.data.as_ref().to_vec()), read_data);
 
-        let read_data = pack.get(k)?;
-        assert_eq!(StoreResult::Found(delta.data.as_ref().to_vec()), read_data);
-
         log.flush()?;
-        pack.flush()?;
         Ok(())
     }
 
     #[test]
     fn test_history_add_static() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let mut pack = MutableHistoryPack::new(&tempdir, HistoryPackVersion::One);
+
+        let mut log = IndexedLogHgIdHistoryStore::new(
+            &tempdir,
+            &BTreeMap::<&str, &str>::new(),
+            StoreType::Rotated,
+        )?;
         let mut multiplex = MultiplexHgIdHistoryStore::new();
-        multiplex.add_store(Box::new(&mut pack));
+        multiplex.add_store(Box::new(&mut log));
 
         let k = key("a", "1");
         let nodeinfo = NodeInfo {
@@ -286,21 +281,30 @@ mod tests {
         multiplex.add(&k, &nodeinfo)?;
         drop(multiplex);
 
-        let read_hgid = pack.get_node_info(&k)?;
+        let read_hgid = log.get_node_info(&k)?;
         assert_eq!(Some(nodeinfo), read_hgid);
 
-        pack.flush()?;
+        log.flush()?;
         Ok(())
     }
 
     #[test]
     fn test_history_add_dynamic() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let mut pack1 = MutableHistoryPack::new(&tempdir, HistoryPackVersion::One);
-        let mut pack2 = MutableHistoryPack::new(&tempdir, HistoryPackVersion::One);
+        let mut log1 = IndexedLogHgIdHistoryStore::new(
+            &tempdir,
+            &BTreeMap::<&str, &str>::new(),
+            StoreType::Rotated,
+        )?;
+        let mut log2 = IndexedLogHgIdHistoryStore::new(
+            &tempdir,
+            &BTreeMap::<&str, &str>::new(),
+            StoreType::Rotated,
+        )?;
+
         let mut multiplex = MultiplexHgIdHistoryStore::new();
-        multiplex.add_store(Box::new(&mut pack1));
-        multiplex.add_store(Box::new(&mut pack2));
+        multiplex.add_store(Box::new(&mut log1));
+        multiplex.add_store(Box::new(&mut log2));
 
         let k = key("a", "1");
         let nodeinfo = NodeInfo {
@@ -311,14 +315,14 @@ mod tests {
         multiplex.add(&k, &nodeinfo)?;
         drop(multiplex);
 
-        let read_hgid = pack1.get_node_info(&k)?;
+        let read_hgid = log1.get_node_info(&k)?;
         assert_eq!(Some(nodeinfo.clone()), read_hgid);
 
-        let read_hgid = pack2.get_node_info(&k)?;
+        let read_hgid = log2.get_node_info(&k)?;
         assert_eq!(Some(nodeinfo), read_hgid);
 
-        pack1.flush()?;
-        pack2.flush()?;
+        log1.flush()?;
+        log2.flush()?;
         Ok(())
     }
 }

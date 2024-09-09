@@ -13,8 +13,6 @@ use cmdutil::ConfigExt;
 use cmdutil::Result;
 use configloader::convert::ByteCount;
 use repo::repo::Repo;
-use revisionstore::CorruptionPolicy;
-use revisionstore::DataPackStore;
 use revisionstore::ExtStoredPolicy;
 use revisionstore::HgIdDataStore;
 use revisionstore::IndexedLogHgIdDataStore;
@@ -45,14 +43,6 @@ pub fn run(ctx: ReqCtx<DebugstoreOpts>, repo: &Repo) -> Result<u8> {
     let hgid = HgId::from_str(&ctx.opts.hgid)?;
     let config = repo.config();
 
-    let packs_path = revisionstore::util::get_cache_path(config, &Some("packs"))?.unwrap();
-    let packstore = Box::new(DataPackStore::new(
-        packs_path,
-        CorruptionPolicy::IGNORE,
-        None,
-        ExtStoredPolicy::Use,
-    ));
-
     let datastore_path =
         revisionstore::util::get_cache_path(config, &Some("indexedlogdatastore"))?.unwrap();
 
@@ -76,7 +66,6 @@ pub fn run(ctx: ReqCtx<DebugstoreOpts>, repo: &Repo) -> Result<u8> {
         .unwrap(),
     );
     let mut unionstore: UnionHgIdDataStore<Box<dyn HgIdDataStore>> = UnionHgIdDataStore::new();
-    unionstore.add(packstore);
     unionstore.add(indexedstore);
     let k = Key::new(path, hgid);
     if let StoreResult::Found(content) = unionstore.get(StoreKey::hgid(k))? {
