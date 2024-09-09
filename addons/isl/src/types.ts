@@ -609,6 +609,10 @@ export type CodeReviewProviderSpecificClientToServerMessages =
   | never
   | InternalTypes['PhabricatorClientToServerMessages'];
 
+export type CodeReviewProviderSpecificServerToClientMessages =
+  | never
+  | InternalTypes['PhabricatorServerToClientMessages'];
+
 export type PageVisibility = 'focused' | 'visible' | 'hidden';
 
 export type FileABugFields = {title: string; description: string; repro: string};
@@ -859,6 +863,7 @@ export type ServerToClientMessage =
   | {type: 'getUiState'}
   | OperationProgressEvent
   | PlatformSpecificServerToClientMessages
+  | CodeReviewProviderSpecificServerToClientMessages
   | {
       type: 'fetchedSignificantLinesOfCode';
       hash: Hash;

@@ -18,6 +18,7 @@ import type {
   CodeReviewProviderSpecificClientToServerMessages,
   ClientToServerMessage,
   DiffComment,
+  ServerToClientMessage,
 } from 'isl/src/types';
 
 type DiffSummaries = Map<DiffId, DiffSummary>;
@@ -71,5 +72,6 @@ export interface CodeReviewProvider {
 
   handleClientToServerMessage?(
     message: ClientToServerMessage,
+    postMessage: (message: ServerToClientMessage) => void,
   ): message is CodeReviewProviderSpecificClientToServerMessages;
 }

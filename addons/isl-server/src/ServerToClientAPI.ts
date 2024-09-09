@@ -961,7 +961,11 @@ export default class ServerToClientAPI {
         break;
       }
       default: {
-        if (repo.codeReviewProvider?.handleClientToServerMessage?.(data) === true) {
+        if (
+          repo.codeReviewProvider?.handleClientToServerMessage?.(data, message =>
+            this.postMessage(message),
+          ) === true
+        ) {
           break;
         }
         this.platform.handleMessageFromClient(
