@@ -156,6 +156,10 @@ async fn fetch_tree<R: MononokeRepo>(
             }
 
             if attributes.child_metadata {
+                repo.ctx()
+                    .perf_counters()
+                    .increment_counter(PerfCounterType::EdenapiTreesAuxData);
+
                 entry.with_children(Some(
                     ctx.augmented_children_entries()
                         .map(|(path, augmented_entry)| match augmented_entry {
