@@ -57,6 +57,7 @@
   border: 1px solid var(--dropdown-border);
   max-width: 90%;
   border-right-width: 0;
+  min-width: 150px;
 }
 
 .queued-operation {

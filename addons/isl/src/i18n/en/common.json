@@ -20,6 +20,8 @@
   "commitsBeingBackedUp_other": "$count commits being backed up...",
   "commitsFailedBackingUp_one": "1 commit failed to back up",
   "commitsFailedBackingUp_other": "$count commits failed to back up",
+  "moreCommandsToRun_one": "1 more command",
+  "moreCommandsToRun_other": "$count more commands",
   "whetherToSubmitDiffAsDraft_one": "Whether to submit this diff as a draft",
   "whetherToSubmitDiffAsDraft_other": "Whether to submit these $count diffs as a draft"
 }
