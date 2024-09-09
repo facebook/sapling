@@ -6,8 +6,6 @@
  */
 
 pub use blobstore::StoreLoadable;
-pub use derive_batch::derive_manifests_for_simple_stack_of_commits;
-pub use derive_batch::ManifestChanges;
 
 pub use crate::bonsai::bonsai_diff;
 pub use crate::bonsai::BonsaiDiffFileChange;
@@ -21,6 +19,8 @@ pub use crate::derive::flatten_subentries;
 pub use crate::derive::LeafInfo;
 pub use crate::derive::TreeInfo;
 pub use crate::derive::TreeInfoSubentries;
+pub use crate::derive_batch::derive_manifests_for_simple_stack_of_commits;
+pub use crate::derive_batch::ManifestChanges;
 pub use crate::derive_from_predecessor::derive_manifest_from_predecessor;
 pub use crate::derive_from_predecessor::FromPredecessorLeafInfo;
 pub use crate::derive_from_predecessor::FromPredecessorTreeInfo;
@@ -33,6 +33,7 @@ pub use crate::ordered_ops::After;
 pub use crate::ordered_ops::ManifestOrderedOps;
 pub use crate::path_tree::PathTree;
 pub use crate::select::PathOrPrefix;
+pub use crate::trie_map_ops::TrieMapOps;
 pub use crate::types::AsyncManifest;
 pub use crate::types::AsyncOrderedManifest;
 pub use crate::types::Combined;
@@ -41,7 +42,6 @@ pub use crate::types::Entry;
 pub use crate::types::Manifest;
 pub use crate::types::OrderedManifest;
 pub use crate::types::Traced;
-pub use crate::types::TrieMapOps;
 
 mod bonsai;
 mod comparison;
@@ -53,6 +53,7 @@ mod ops;
 mod ordered_ops;
 mod path_tree;
 mod select;
+mod trie_map_ops;
 mod types;
 
 #[cfg(test)]
