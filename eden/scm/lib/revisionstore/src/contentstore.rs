@@ -74,54 +74,6 @@ impl ContentStore {
             .local_path(&local_path)
             .build()
     }
-
-    /// Attempt to repair the underlying stores that the `ContentStore` is comprised of.
-    ///
-    /// As this may violate some of the stores asumptions, care must be taken to call this only
-    /// when no other `ContentStore` have been created for the `shared_path`.
-    pub fn repair(
-        shared_path: impl AsRef<Path>,
-        local_path: Option<impl AsRef<Path>>,
-        suffix: Option<impl AsRef<Path>>,
-        config: &dyn Config,
-    ) -> Result<String> {
-        let mut repair_str = String::new();
-        let mut shared_path = shared_path.as_ref().to_path_buf();
-        if let Some(suffix) = suffix.as_ref() {
-            shared_path.push(suffix);
-        }
-        let local_path = local_path
-            .map(|p| get_local_path(p.as_ref().to_path_buf(), &suffix))
-            .transpose()?;
-
-        let max_log_count = config.get_opt::<u8>("indexedlog", "data.max-log-count")?;
-        let max_bytes_per_log =
-            config.get_opt::<ByteCount>("indexedlog", "data.max-bytes-per-log")?;
-        let max_bytes = config.get_opt::<ByteCount>("remotefilelog", "cachelimit")?;
-        let log_config = IndexedLogHgIdDataStoreConfig {
-            max_log_count,
-            max_bytes_per_log,
-            max_bytes,
-        };
-
-        repair_str += &IndexedLogHgIdDataStore::repair(
-            config,
-            get_indexedlogdatastore_path(&shared_path)?,
-            &log_config,
-            StoreType::Rotated,
-        )?;
-        if let Some(local_path) = local_path {
-            repair_str += &IndexedLogHgIdDataStore::repair(
-                config,
-                get_indexedlogdatastore_path(local_path)?,
-                &log_config,
-                StoreType::Permanent,
-            )?;
-        }
-        repair_str += &LfsStore::repair(shared_path)?;
-
-        Ok(repair_str)
-    }
 }
 
 impl LegacyStore for ContentStore {

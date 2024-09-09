@@ -33,8 +33,6 @@ use revisionstore::scmstore::FileAttributes;
 use revisionstore::scmstore::FileStore;
 use revisionstore::scmstore::TreeStore;
 use revisionstore::scmstore::TreeStoreBuilder;
-use revisionstore::ContentStore;
-use revisionstore::ContentStoreBuilder;
 use revisionstore::CorruptionPolicy;
 use revisionstore::DataPack;
 use revisionstore::DataPackStore;
@@ -110,7 +108,6 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<mutabledeltastore>(py)?;
     m.add_class::<mutablehistorystore>(py)?;
     m.add_class::<pyremotestore>(py)?;
-    m.add_class::<contentstore>(py)?;
     m.add_class::<metadatastore>(py)?;
     m.add_class::<filescmstore>(py)?;
     m.add_class::<treescmstore>(py)?;
@@ -194,7 +191,7 @@ fn repair(
 ) -> PyResult<String> {
     let config = config.get_cfg(py);
     py.allow_threads::<Result<String>, _>(|| {
-        let mut message = ContentStore::repair(
+        let mut message = revisionstore::repair(
             shared_path.as_path(),
             local_path.map(|p| p.as_path()),
             suffix.map(|p| p.as_path()),
@@ -893,117 +890,6 @@ impl ExtractInnerRef for edenapitreestore {
     }
 }
 
-py_class!(pub class contentstore |py| {
-    data store: Arc<ContentStore>;
-
-    def __new__(_cls,
-        path: Option<PyPathBuf>,
-        config: config,
-        remote: pyremotestore,
-        edenapi: Option<edenapifilestore> = None,
-        suffix: Option<String> = None,
-    ) -> PyResult<contentstore> {
-        let remotestore = remote.extract_inner(py);
-        let config = config.get_cfg(py);
-
-        let mut builder = ContentStoreBuilder::new(&config);
-
-        builder = if let Some(edenapi) = edenapi {
-            builder.remotestore(edenapi.extract_inner(py))
-        } else {
-            builder.remotestore(remotestore)
-        };
-
-        builder = if let Some(path) = path {
-            builder.local_path(path.as_path())
-        } else {
-            builder.no_local_store()
-        };
-
-        builder = if let Some(suffix) = suffix {
-            builder.suffix(suffix)
-        } else {
-            builder
-        };
-
-        let contentstore = builder.build().map_pyerr(py)?;
-        contentstore::create_instance(py, Arc::new(contentstore))
-    }
-
-    def get(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyBytes> {
-        let store = self.store(py);
-        store.get_py(py, &name, node)
-    }
-
-    def getdelta(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyObject> {
-        let store = self.store(py);
-        store.get_delta_py(py, &name, node)
-    }
-
-    def getdeltachain(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyList> {
-        let store = self.store(py);
-        store.get_delta_chain_py(py, &name, node)
-    }
-
-    def getmeta(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyDict> {
-        let store = self.store(py);
-        store.get_meta_py(py, &name, node)
-    }
-
-    def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
-        let store = self.store(py);
-        store.get_missing_py(py, &mut keys.iter(py)?)
-    }
-
-    def add(&self, name: PyPathBuf, node: &PyBytes, deltabasenode: &PyBytes, delta: &PyBytes, metadata: Option<PyDict> = None) -> PyResult<PyObject> {
-        let store = self.store(py);
-        store.add_py(py, &name, node, deltabasenode, delta, metadata)
-    }
-
-    def flush(&self) -> PyResult<Option<Vec<PyPathBuf>>> {
-        let store = self.store(py);
-        store.flush_py(py)
-    }
-
-    def prefetch(&self, keys: PyList) -> PyResult<PyObject> {
-        let store = self.store(py);
-        store.prefetch_py(py, keys)
-    }
-
-    def markforrefresh(&self) -> PyResult<PyNone> {
-        let store = self.store(py);
-        store.refresh_py(py)
-    }
-
-    def upload(&self, keys: PyList) -> PyResult<PyList> {
-        let store = self.store(py);
-        store.upload_py(py, keys)
-    }
-
-    def blob(&self, name: &PyPath, node: &PyBytes) -> PyResult<PyBytes> {
-        let store = self.store(py);
-        store.blob_py(py, name, node)
-    }
-
-    def metadata(&self, name: &PyPath, node: &PyBytes) -> PyResult<PyDict> {
-        let store = self.store(py);
-        store.metadata_py(py, name, node)
-    }
-
-    def getsharedmutable(&self) -> PyResult<mutabledeltastore> {
-        let store = self.store(py);
-        mutabledeltastore::create_instance(py, store.get_shared_mutable())
-    }
-});
-
-impl ExtractInnerRef for contentstore {
-    type Inner = Arc<ContentStore>;
-
-    fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
-        self.store(py)
-    }
-}
-
 py_class!(class metadatastore |py| {
     data store: Arc<MetadataStore>;
 
@@ -1089,7 +975,6 @@ impl ExtractInnerRef for metadatastore {
 
 py_class!(pub class filescmstore |py| {
     data store: Arc<FileStore>;
-    data contentstore: Arc<ContentStore>;
 
     def fetch_content_blake3(&self, keys: PyList) -> PyResult<PyList> {
         let keys = keys
@@ -1203,7 +1088,7 @@ py_class!(pub class filescmstore |py| {
 
     def getsharedmutable(&self) -> PyResult<Self> {
         let store = self.store(py);
-        Self::create_instance(py, Arc::new(store.with_shared_only()), self.contentstore(py).clone())
+        Self::create_instance(py, Arc::new(store.with_shared_only()))
     }
 });
 
@@ -1222,33 +1107,24 @@ impl ExtractInnerRef for filescmstore {
 fn make_treescmstore<'a>(
     path: Option<&'a Path>,
     config: &'a dyn Config,
-    remote: Arc<PyHgIdRemoteStore>,
     edenapi_treestore: Option<Arc<SaplingRemoteApiTreeStore>>,
     filestore: Option<Arc<FileStore>>,
     suffix: Option<String>,
-) -> Result<(Arc<TreeStore>, Arc<ContentStore>)> {
-    let mut builder = ContentStoreBuilder::new(&config);
+) -> Result<Arc<TreeStore>> {
     let mut treestore_builder = TreeStoreBuilder::new(&config);
 
-    builder = if let Some(path) = path {
+    if let Some(path) = path {
         treestore_builder = treestore_builder.local_path(path);
-        builder.local_path(path)
-    } else {
-        builder.no_local_store()
-    };
+    }
 
     if let Some(ref suffix) = suffix {
-        builder = builder.suffix(suffix);
         treestore_builder = treestore_builder.suffix(suffix);
     }
 
     // Extract SaplingRemoteApiAdapter for scmstore construction later on
-    builder = if let Some(edenapi) = edenapi_treestore {
+    if let Some(edenapi) = edenapi_treestore {
         treestore_builder = treestore_builder.edenapi(edenapi.clone());
-        builder.remotestore(edenapi)
-    } else {
-        builder.remotestore(remote)
-    };
+    }
 
     if let Some(filestore) = filestore {
         treestore_builder = treestore_builder.filestore(filestore);
@@ -1259,17 +1135,13 @@ fn make_treescmstore<'a>(
 
     if let Some(indexedlog_local) = indexedlog_local {
         treestore_builder = treestore_builder.indexedlog_local(indexedlog_local.clone());
-        builder = builder.shared_indexedlog_local(indexedlog_local);
     }
 
     if let Some(ref cache) = indexedlog_cache {
         treestore_builder = treestore_builder.indexedlog_cache(cache.clone());
-        builder = builder.shared_indexedlog_shared(cache.clone());
     }
 
-    let contentstore = Arc::new(builder.build()?);
-    let treestore = Arc::new(treestore_builder.build()?);
-    Ok((treestore, contentstore))
+    Ok(Arc::new(treestore_builder.build()?))
 }
 
 py_class!(pub class pyfilescmstore |py| {
@@ -1294,12 +1166,10 @@ py_class!(pub class treescmstore |py| {
     data store: Arc<TreeStore>;
     // Caching wrapper around store.
     data caching_store: Option<Arc<dyn storemodel::TreeStore>>;
-    data contentstore: Arc<ContentStore>;
 
     def __new__(_cls,
         path: Option<PyPathBuf>,
         config: config,
-        remote: pyremotestore,
         edenapi: Option<edenapitreestore> = None,
         filestore: Option<filescmstore> = None,
         suffix: Option<String> = None,
@@ -1307,13 +1177,12 @@ py_class!(pub class treescmstore |py| {
         // Extract Rust Values
         let path = path.as_ref().map(|v| v.as_path());
         let config = config.get_cfg(py);
-        let remote = remote.extract_inner(py);
         let edenapi = edenapi.map(|v| v.extract_inner(py));
         let filestore = filestore.map(|v| v.extract_inner(py));
 
-        let (treestore, contentstore) = make_treescmstore(path, &config, remote, edenapi, filestore, suffix).map_pyerr(py)?;
+        let treestore = make_treescmstore(path, &config, edenapi, filestore, suffix).map_pyerr(py)?;
 
-        Self::create_instance(py, treestore, None, contentstore)
+        Self::create_instance(py, treestore, None)
     }
 
     def get(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyBytes> {

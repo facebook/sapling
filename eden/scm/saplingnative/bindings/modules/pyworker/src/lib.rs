@@ -28,7 +28,6 @@ use cpython_ext::ResultPyErrExt;
 use crossbeam::channel::bounded;
 use crossbeam::channel::Receiver;
 use crossbeam::channel::Sender;
-use pyrevisionstore::contentstore;
 use pyrevisionstore::filescmstore;
 use revisionstore::datastore::RemoteDataStore;
 use revisionstore::localstore::LocalStore;
@@ -228,8 +227,7 @@ py_class!(class writerworker |py| {
     data inner: RefCell<Option<Worker<(usize, Vec<(RepoPathBuf, UpdateFlag)>), (Key, UpdateFlag)>>>;
 
     def __new__(_cls, store: PyObject, root: &PyPath, numthreads: usize) -> PyResult<writerworker> {
-        let store = contentstore::downcast_from(py, store.clone_ref(py)).map(|s| s.extract_inner(py) as Arc<dyn LegacyStore>)
-            .or_else(|_| filescmstore::downcast_from(py, store).map(|s|  s.extract_inner(py) as Arc<dyn LegacyStore>))?;
+        let store = filescmstore::downcast_from(py, store).map(|s|  s.extract_inner(py) as Arc<dyn LegacyStore>)?;
 
         let root = root.to_path_buf();
         let writer_state = WriterState::new(root, store).map_pyerr(py)?;
@@ -367,8 +365,8 @@ mod tests {
     use quickcheck::TestResult;
     use revisionstore::datastore::Delta;
     use revisionstore::datastore::HgIdMutableDeltaStore;
+    use revisionstore::scmstore::FileStoreBuilder;
     use revisionstore::testutil::make_config;
-    use revisionstore::ContentStore;
     use tempfile::TempDir;
     use types::testutil::key;
     use types::RepoPath;
@@ -381,7 +379,11 @@ mod tests {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
-        let store = Arc::new(ContentStore::new(&localdir, &config)?);
+        let store = Arc::new(
+            FileStoreBuilder::new(&config)
+                .local_path(&localdir)
+                .build()?,
+        );
 
         let k = key("a", "2");
         let delta = Delta {
@@ -406,7 +408,11 @@ mod tests {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
-        let store = Arc::new(ContentStore::new(&localdir, &config)?);
+        let store = Arc::new(
+            FileStoreBuilder::new(&config)
+                .local_path(&localdir)
+                .build()?,
+        );
 
         let k = key("a", "2");
         let delta = Delta {
@@ -439,7 +445,11 @@ mod tests {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
-        let store = Arc::new(ContentStore::new(&localdir, &config)?);
+        let store = Arc::new(
+            FileStoreBuilder::new(&config)
+                .local_path(&localdir)
+                .build()?,
+        );
 
         let k = key("a", "2");
         let delta = Delta {
@@ -473,7 +483,11 @@ mod tests {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
-        let store = Arc::new(ContentStore::new(&localdir, &config)?);
+        let store = Arc::new(
+            FileStoreBuilder::new(&config)
+                .local_path(&localdir)
+                .build()?,
+        );
 
         let k = key("a/b/c/d/e", "2");
         let delta = Delta {
@@ -497,7 +511,11 @@ mod tests {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
-        let store = Arc::new(ContentStore::new(&localdir, &config)?);
+        let store = Arc::new(
+            FileStoreBuilder::new(&config)
+                .local_path(&localdir)
+                .build()?,
+        );
 
         let k = key("a/b/c/d/e", "2");
         let delta = Delta {
@@ -532,7 +550,11 @@ mod tests {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
-        let store = Arc::new(ContentStore::new(&localdir, &config)?);
+        let store = Arc::new(
+            FileStoreBuilder::new(&config)
+                .local_path(&localdir)
+                .build()?,
+        );
 
         let k = key("a/b/c/d/e", "2");
         let delta = Delta {
@@ -565,7 +587,11 @@ mod tests {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
-        let store = Arc::new(ContentStore::new(&localdir, &config)?);
+        let store = Arc::new(
+            FileStoreBuilder::new(&config)
+                .local_path(&localdir)
+                .build()?,
+        );
 
         let k = key("a/b/c/d/e", "2");
         let delta = Delta {
@@ -747,7 +773,7 @@ mod tests {
             let cachedir = TempDir::new()?;
             let localdir = TempDir::new()?;
             let config = make_config(&cachedir);
-            let store = Arc::new(ContentStore::new(&localdir, &config)?);
+            let store = Arc::new(FileStoreBuilder::new(&config).local_path(&localdir).build()?);
 
             if !validate_paths(keys.iter().map(|k| k.path.as_ref())) {
                 return Ok(TestResult::discard());
@@ -815,7 +841,7 @@ mod tests {
             let cachedir = TempDir::new()?;
             let localdir = TempDir::new()?;
             let config = make_config(&cachedir);
-            let store = Arc::new(ContentStore::new(&localdir, &config)?);
+            let store = Arc::new(FileStoreBuilder::new(&config).local_path(&localdir).build()?);
 
             if !validate_paths(keys.iter().map(|k| k.path.as_ref())) {
                 return Ok(TestResult::discard());

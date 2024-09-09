@@ -21,6 +21,8 @@
 
   $ hg doctor --config doctor.check-lag-threshold=1
   checking internal storage
+  revisionstore: repaired
+  revisionstore: repaired
   checking commit references
   checking irrelevant draft branches for the workspace 'user/test/default'
 

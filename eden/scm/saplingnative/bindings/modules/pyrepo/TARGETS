@@ -16,11 +16,6 @@ rust_python_library(
                     },
                 },
             },
-            "extra_buck_dependencies": {
-                "dependencies": [
-                    "//eden/scm/lib/revisionstore:revisionstore",
-                ],
-            },
         },
     },
     crate_root = "src/lib.rs",
@@ -31,7 +26,6 @@ rust_python_library(
         "//eden/scm/lib/cpython-ext:cpython-ext",
         "//eden/scm/lib/repo:repo",
         "//eden/scm/lib/repolock:repolock",
-        "//eden/scm/lib/revisionstore:revisionstore",
         "//eden/scm/lib/types:types",
         "//eden/scm/lib/util:util",
         "//eden/scm/lib/workingcopy:workingcopy",

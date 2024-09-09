@@ -542,7 +542,7 @@ class remotefileslog(filelog.fileslog):
 
         mask = os.umask(0o002)
         try:
-            self.filestore = repo._rsrepo.filescmstore(remotestore)
+            self.filestore = repo._rsrepo.filescmstore()
             self.metadatastore = revisionstore.metadatastore(
                 repo.svfs.base,
                 repo.ui._rcfg,

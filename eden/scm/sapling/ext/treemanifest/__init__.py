@@ -581,9 +581,7 @@ class basetreemanifestlog:
         remotestore = revisionstore.pyremotestore(remotetreestore(self._repo))
         mask = os.umask(0o002)
         try:
-            self.treescmstore = self._repo._rsrepo.treescmstore(
-                remotestore,
-            )
+            self.treescmstore = self._repo._rsrepo.treescmstore()
             self.datastore = self.treescmstore
             self.historystore = revisionstore.metadatastore(
                 self._repo.svfs.base,

@@ -32,7 +32,6 @@ use types::Key;
 use types::Node;
 use types::RepoPathBuf;
 
-use crate::contentstore;
 use crate::filescmstore;
 use crate::treescmstore;
 
@@ -82,12 +81,8 @@ pub fn to_delta(
 }
 
 pub fn as_legacystore(py: Python, store: PyObject) -> PyResult<Arc<dyn LegacyStore>> {
-    Ok(contentstore::downcast_from(py, store.clone_ref(py))
+    Ok(filescmstore::downcast_from(py, store.clone_ref(py))
         .map(|s| s.extract_inner(py) as Arc<dyn LegacyStore>)
-        .or_else(|_| {
-            filescmstore::downcast_from(py, store.clone_ref(py))
-                .map(|s| s.extract_inner(py) as Arc<dyn LegacyStore>)
-        })
         .or_else(|_| {
             treescmstore::downcast_from(py, store)
                 .map(|s| s.extract_inner(py) as Arc<dyn LegacyStore>)

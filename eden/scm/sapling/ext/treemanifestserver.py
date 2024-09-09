@@ -816,7 +816,6 @@ class basetreemanifestlog:
             self.datastore = revisionstore.treescmstore(
                 self._repo.svfs.base,
                 self.ui._rcfg,
-                remotestore,
                 edenapistore,
                 None,
                 "manifests",

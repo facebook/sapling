@@ -30,8 +30,13 @@ Make some commits
 
 When everything looks okay:
 
+These "repaired" messages are due to the "latest" indexedlog file showing up for the LFS
+store. It would be nice if the "repaired" message was emitted by explicitly propagating
+the repairs instead of trying to infer by looking for fs changes.
   $ hg doctor
   checking internal storage
+  revisionstore: repaired
+  revisionstore: repaired
   checking commit references
 
 Break the repo in various ways:
@@ -181,17 +186,8 @@ Test that 'hg doctor' can fix them:
     Verified 3 entries, 153 bytes in log
     Index "node" passed integrity check
     Processing RotateLog: "*" (glob)
-    Attempt to repair log "0"
-    Processing IndexedLog: * (glob)
-    Verified 0 entries, 12 bytes in log
-    Index "node" passed integrity check
-    Index "sha256" passed integrity check
     Latest = 0
     Processing RotateLog: "*" (glob)
-    Attempt to repair log "0"
-    Processing IndexedLog: * (glob)
-    Verified 0 entries, 12 bytes in log
-    Index "sha256" passed integrity check
     Latest = 0
     Processing RotateLog: "*" (glob)
     Attempt to repair log "0"
@@ -215,17 +211,8 @@ Test that 'hg doctor' can fix them:
     Verified 3 entries, 373 bytes in log
     Index "node" passed integrity check
     Processing RotateLog: "*" (glob)
-    Attempt to repair log "0"
-    Processing IndexedLog: * (glob)
-    Verified 0 entries, 12 bytes in log
-    Index "node" passed integrity check
-    Index "sha256" passed integrity check
     Latest = 0
     Processing RotateLog: "*" (glob)
-    Attempt to repair log "0"
-    Processing IndexedLog: * (glob)
-    Verified 0 entries, 12 bytes in log
-    Index "sha256" passed integrity check
     Latest = 0
     Processing RotateLog: "*" (glob)
     Attempt to repair log "0"
@@ -336,6 +323,8 @@ in the new repo, while keeping changelog unchanged.
   $ cd client2
   $ hg doctor
   checking internal storage
+  revisionstore: repaired
+  revisionstore: repaired
   checking commit references
   remote/master points to an unknown commit - trying to move it to a known commit
   setting remote/master to 426bada5c67598ca65036d57d9e4b64b0c1ce7a0

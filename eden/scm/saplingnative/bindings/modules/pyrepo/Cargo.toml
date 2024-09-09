@@ -20,7 +20,6 @@ pyrevisionstore = { version = "0.1.0", path = "../pyrevisionstore" }
 pyworkingcopy = { version = "0.1.0", path = "../pyworkingcopy" }
 repo = { version = "0.1.0", path = "../../../../lib/repo" }
 repolock = { version = "0.1.0", path = "../../../../lib/repolock" }
-revisionstore = { version = "0.1.0", path = "../../../../lib/revisionstore" }
 types = { version = "0.1.0", path = "../../../../lib/types" }
 util = { version = "0.1.0", path = "../../../../lib/util" }
 workingcopy = { version = "0.1.0", path = "../../../../lib/workingcopy" }
