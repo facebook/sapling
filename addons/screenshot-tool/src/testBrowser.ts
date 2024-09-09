@@ -9,8 +9,13 @@
 
 import type * as testRepo from './testRepo';
 import type {Browser, Page} from 'puppeteer-core';
+import type * as Rrweb from 'rrweb';
 
+import crypto from 'node:crypto';
 import fs from 'node:fs';
+import {homedir} from 'node:os';
+import {dirname, join} from 'node:path';
+import {fileURLToPath} from 'node:url';
 import puppeteer from 'puppeteer-core';
 
 type PageOptions = {
@@ -24,6 +29,9 @@ export type OpenISLOptions = {
 };
 
 const logger = console;
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const nodeModulesDir = join(__dirname, '..', 'node_modules');
 
 /**
  * Controls a test browser via Puppeteer.
@@ -114,9 +122,127 @@ export class TestBrowser {
     return (await this.page.$(selector)) != null;
   }
 
+  async prepareRecording(): Promise<void> {
+    await this.page.addScriptTag({
+      path: join(nodeModulesDir, 'rrweb', 'dist', 'rrweb.umd.cjs'),
+    });
+    // No need to prepare again.
+    this.prepareRecording = () => Promise.resolve();
+  }
+
+  /**
+   * Start recording using rrweb.
+   * Use `stopRecording` to stop and obtain recorded events.
+   */
+  async startRecording(): Promise<void> {
+    await this.prepareRecording();
+    await this.page.evaluate(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const browserWindow = window as any as BrowserWindow;
+      const rrweb = browserWindow.rrweb;
+      const events: Array<Rrweb.eventWithTime> = [];
+      browserWindow.recordedEvents = events;
+      browserWindow.stopRecording = rrweb.record({
+        emit(event) {
+          events.push(event);
+        },
+        inlineImages: true,
+        collectFonts: true,
+        slimDOMOptions: {
+          script: true,
+          comment: true,
+          headFavicon: true,
+        },
+      });
+    });
+  }
+
+  /** Stop recording. Return the recorded objects for reply. */
+  async stopRecording(): Promise<Array<Rrweb.eventWithTime>> {
+    const events = await this.page.evaluate(() => {
+      const browserWindow = window as unknown as BrowserWindow;
+      browserWindow.stopRecording?.();
+      return browserWindow.recordedEvents ?? [];
+    });
+    // https://cdn.jsdelivr.net/npm/@vscode/codicons@0.0.36/dist/codicon.ttf
+    // Also backup the events to a local file.
+    const eventsDir = await getCacheDir('events');
+    const data = JSON.stringify(events);
+    const eventsPath = `${eventsDir}/${Date.now()}-${sha1(data).substring(0, 6)}.json`;
+    logger.info(`Backing up events to ${eventsPath}`);
+    await fs.promises.writeFile(eventsPath, data);
+    return events;
+  }
+
+  /** Open a new tab to replay recorded events. */
+  async replayInNewTab(
+    events: Array<Rrweb.eventWithTime>,
+    options?: Partial<Rrweb.playerConfig>,
+  ): Promise<void> {
+    const page = await this.browser.newPage();
+    let eventsStr = JSON.stringify(events);
+    // Fix up URL to codicon.ttf.
+    eventsStr = eventsStr.replace(
+      /http:\/\/localhost:[0-9]*\/assets\/codicon-[a-zA-Z0-9]*\.ttf/,
+      'https://cdn.jsdelivr.net/npm/@vscode/codicons@0.0.36/dist/codicon.ttf',
+    );
+    const html = `
+<!DOCTYPE html>
+<html>
+  <head><title>rrweb replay</title></head>
+  <body></body>
+  <script>
+    function startReplay() {
+      const events = ${eventsStr};
+      const player = new rrwebPlayer({
+        target: document.body,
+        props: {
+          events,
+          mouseTail: false,
+          skipInactive: true,
+          inactivePeriodThreshold: 2000,
+          ...${JSON.stringify(options ?? {})}
+        }
+      });
+    }
+  </script>
+</html>
+    `;
+    const width = 1600;
+    const height = 1200;
+    await page.setViewport({width, height});
+    await page.setContent(html);
+    await page.addStyleTag({
+      path: join(nodeModulesDir, 'rrweb-player', 'dist', 'style.css'),
+    });
+    await page.addScriptTag({
+      path: join(nodeModulesDir, 'rrweb-player', 'dist', 'index.js'),
+    });
+    await page.evaluate('startReplay()');
+  }
+
   constructor(public browser: Browser, public page: Page) {}
+}
+
+async function getCacheDir(subdir?: string): Promise<string> {
+  let dir = join(homedir(), '.cache', 'isl-screenshot');
+  if (subdir != null) {
+    dir = join(dir, subdir);
+  }
+  await fs.promises.mkdir(dir, {recursive: true});
+  return dir;
 }
 
 function sleep(ms: number): Promise<void> {
   return new Promise(r => setTimeout(r, ms));
 }
+
+function sha1(str: string): string {
+  return crypto.createHash('sha1').update(str).digest('hex');
+}
+
+type BrowserWindow = {
+  rrweb: typeof Rrweb;
+  stopRecording?: () => void;
+  recordedEvents?: Array<Rrweb.eventWithTime>;
+};

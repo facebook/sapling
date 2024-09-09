@@ -10,8 +10,10 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
+    "@rrweb/all": "^2.0.0-alpha.17",
     "execa": "^8.0.1",
     "puppeteer-core": "^21.6.1",
+    "rrweb-player": "1.0.0-alpha.4",
     "tmp": "^0.2.1"
   },
   "type": "module",
