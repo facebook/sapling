@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.86"
 configmodel = { version = "0.1.0", path = "../../config/model" }
+fn-error-context = "0.2"
 percent-encoding = "2.1"
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 url = "2.5.2"

@@ -8,6 +8,7 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     deps = [
         "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:fn-error-context",
         "fbsource//third-party/rust:percent-encoding",
         "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:url",
