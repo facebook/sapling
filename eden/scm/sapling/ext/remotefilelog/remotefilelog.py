@@ -535,35 +535,6 @@ class remotefileslog(filelog.fileslog):
 
         return self._edenapistore
 
-    def makesharedonlyruststore(self, repo):
-        """Build non-local stores.
-
-        There are handful of cases where we need to force prefetch data
-        that is present in the local store, for this specific case, let's
-        build shared-only stores.
-
-        Do not use it except in the fileserverclient.prefetch method!
-        """
-
-        sharedonlyremotestore = revisionstore.pyremotestore(
-            fileserverclient.getpackclient(repo)
-        )
-        edenapistore = self.edenapistore(repo)
-
-        mask = os.umask(0o002)
-        try:
-            sharedonlycontentstore = self.filestore.getsharedmutable()
-            sharedonlymetadatastore = revisionstore.metadatastore(
-                None,
-                repo.ui._rcfg,
-                sharedonlyremotestore,
-                edenapistore,
-            )
-        finally:
-            os.umask(mask)
-
-        return sharedonlycontentstore, sharedonlymetadatastore
-
     def makeruststore(self, repo):
         remotestore = revisionstore.pyremotestore(fileserverclient.getpackclient(repo))
 

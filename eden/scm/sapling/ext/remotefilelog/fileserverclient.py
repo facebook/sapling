@@ -199,12 +199,16 @@ class fileserverclient:
         """downloads the given file versions to the cache"""
         repo = self.repo
 
-        if not force:
-            contentstore = repo.fileslog.filestore
-            metadatastore = repo.fileslog.metadatastore
-        else:
-            # TODO(meyer): Convert this to support scmstore.
-            contentstore, metadatastore = repo.fileslog.makesharedonlyruststore(repo)
+        contentstore = repo.fileslog.filestore
+        metadatastore = repo.fileslog.metadatastore
+
+        if force:
+            # There are handful of cases (such as fetching up-to-date linkrev after
+            # pushrebase) where we need to force prefetch data that is present in the
+            # local store, for this specific case, let's build shared-only stores. See
+            # D19412620.
+            contentstore = contentstore.getsharedmutable()
+            metadatastore = metadatastore.getsharedmutable()
 
         if type(fileids) is not list:
             fileids = list(fileids)
@@ -213,15 +217,6 @@ class fileserverclient:
             contentstore.prefetch(fileids)
         if fetchhistory:
             metadatastore.prefetch(fileids)
-
-        if force:
-            # Yay, since the shared-only stores and the regular ones aren't
-            # shared, we need to commit data to force the stores to be
-            # rebuilt. Forced prefetch are very rare and thus it is most
-            # likely OK to do this.
-            contentstore = None
-            metadatastore = None
-            repo.commitpending()
 
     def logstacktrace(self):
         self.ui.log(
