@@ -37,7 +37,7 @@ subtree copy and push
   aaa
 
   $ hg log -G -T '{node|short} {desc|firstline} {remotebookmarks}\n'
-  @  bd0866acb901 Subtree copy from 8174a01c532cd975ecb875fb1556590dd776b29e
+  @  6c8bfea34e65 Subtree copy from 8174a01c532cd975ecb875fb1556590dd776b29e
   │
   o  64a6d9b95dad update foo/file2
   │
@@ -53,14 +53,14 @@ subtree copy and push
   
 tofix: push should be succeeded after Mononoke support subtree copy metadata
   $ hg push -r . --to master_bookmark
-  pushing rev bd0866acb901 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  pushing rev 6c8bfea34e65 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 4 commits for upload
   edenapi: queue 3 files for upload
   edenapi: uploaded 3 files
   edenapi: queue 8 trees for upload
   edenapi: uploaded 8 trees
   edenapi: uploaded 3 changesets
-  abort: failed to upload commits to server: ['bd0866acb901221ac9e8cacf82acb921fba3a4b5']
+  abort: failed to upload commits to server: ['6c8bfea34e6524c98e83ad375ad485320fa06b04']
   [255]
 
   $ rg "Incorrect copy info" $TESTTMP/log.json --no-filename | jq '.normal.edenapi_error'

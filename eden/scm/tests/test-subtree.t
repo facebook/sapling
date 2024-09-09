@@ -33,20 +33,20 @@ test subtree copy
   $ hg subtree cp -r $A --from-path foo --to-path bar -m "subtree copy foo -> bar"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G -T '{node|short} {desc|firstline}\n'
-  @  bfc51ae2a942 subtree copy foo -> bar
+  @  04b520c8a658 subtree copy foo -> bar
   │
   o  b9450a0e6ae4 B
   │
   o  d908813f0f7c A
   $ hg show --git
-  commit:      bfc51ae2a942
+  commit:      04b520c8a658
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   description:
   subtree copy foo -> bar
   
   Subtree copy from d908813f0f7c9078810e26aad1e37bdb32013d4b
-    Copied path foo to bar
+  - Copied path foo to bar
   
   
   diff --git a/bar/x b/bar/x
@@ -103,9 +103,9 @@ test subtree graft
   $ hg subtree graft -r $C --from-path foo --to-path bar
   grafting 78072751cf70 "C"
   $ hg log -G -T '{node|short} {desc|firstline}\n'
-  @  0104513073ef C
+  @  0eda80132ca9 C
   │
-  o  2b14f595f5b5 subtree copy foo -> bar
+  o  e201af41baa5 subtree copy foo -> bar
   │
   o  78072751cf70 C
   │
@@ -113,7 +113,7 @@ test subtree graft
   │
   o  2f10237b4399 A
   $ hg show
-  commit:      0104513073ef
+  commit:      0eda80132ca9
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/x

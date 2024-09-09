@@ -179,5 +179,5 @@ def _gen_prepopulated_commit_msg(from_commit, from_paths, to_paths):
     full_commit_hash = from_commit.hex()
     msgs = [f"Subtree copy from {full_commit_hash}"]
     for from_path, to_path in zip(from_paths, to_paths):
-        msgs.append(f"  Copied path {from_path} to {to_path}")
+        msgs.append(f"- Copied path {from_path} to {to_path}")
     return "\n".join(msgs)
