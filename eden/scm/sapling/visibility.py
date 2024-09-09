@@ -160,7 +160,7 @@ class visibleheads:
         newheads = set()
         candidates = set(self.heads)
         obsolete = set(repo.nodes("obsolete()"))
-        oldnodes = set(oldnodes)
+        oldnodes = set(unfi.changelog.filternodes(list(oldnodes)))
 
         from . import phases  # avoid circular import
 
@@ -170,7 +170,7 @@ class visibleheads:
             if n in seen:
                 continue
             seen.add(n)
-            if n not in unfi or phasecache.phase(unfi, clrev(n)) == phases.public:
+            if phasecache.phase(unfi, clrev(n)) == phases.public:
                 pass
             elif n in oldnodes:
                 for p in clparents(n):
