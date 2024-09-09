@@ -531,6 +531,7 @@ void verifyTreeState(
                                             << expected.getContents() << "\"";
       }
 
+      // TODO(cuev): This is no longer true. We should test directories as well.
       // Blake3 is only computed for files
       if ((verify_flags & VERIFY_BLAKE3) &&
           virtualInode.getDtype() == dtype_t::Regular) {

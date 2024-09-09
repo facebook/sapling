@@ -40,7 +40,8 @@ bool operator==(const EntryAttributes& lhs, const EntryAttributes& rhs) {
   return checkValueEqual(lhs.sha1, rhs.sha1) &&
       checkValueEqual(lhs.size, rhs.size) &&
       checkValueEqual(lhs.type, rhs.type) &&
-      checkValueEqual(lhs.objectId, rhs.objectId);
+      checkValueEqual(lhs.objectId, rhs.objectId) &&
+      checkValueEqual(lhs.digestSize, rhs.digestSize);
 }
 
 bool operator!=(const EntryAttributes& lhs, const EntryAttributes& rhs) {

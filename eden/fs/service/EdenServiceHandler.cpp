@@ -2632,6 +2632,15 @@ FileAttributeDataOrErrorV2 serializeEntryAttributes(
     fileData.objectId() = std::move(objectId);
   }
 
+  if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_SIZE)) {
+    DigestSizeOrError digestSize;
+    if (!fillErrorRef(
+            digestSize, attributes->digestSize, entryPath, "digestsize")) {
+      digestSize.digestSize_ref() = attributes->digestSize.value().value();
+    }
+    fileData.digestSize() = std::move(digestSize);
+  }
+
   fileResult.fileAttributeData_ref() = fileData;
   return fileResult;
 }
