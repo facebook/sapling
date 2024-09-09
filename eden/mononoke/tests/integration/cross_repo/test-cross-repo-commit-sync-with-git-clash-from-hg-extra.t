@@ -205,7 +205,7 @@ Create small repo commits
   >   rg '.+"translated": \{"Bonsai": bin\("(\w+)"\)\}\}\]' -or '$1')
 
   $ echo "SMALL_REPO_COMMIT_B: $SMALL_REPO_COMMIT_B"
-  SMALL_REPO_COMMIT_B: d45d7c444a33991153afbe621f418b679d391fd1c8108ec5f701b1c6d5e96017
+  SMALL_REPO_COMMIT_B: 86097c1de278a997c434c78f0227e0be9f307ac3c66d39a7a167435d1a4e292c
 
 
 -- Now fetch both changeset blobs
@@ -224,8 +224,6 @@ Create small repo commits
   $ mononoke_newadmin derived-data -R $SUBMODULE_REPO_NAME \
   >   derive -T git_commits -i "$SMALL_REPO_COMMIT_A"
 
--- Derivation of commit B will fail due to conflicting mapping
+-- Derivation of commit B will succeed because hg extra is stripped
   $ mononoke_newadmin derived-data -R $SUBMODULE_REPO_NAME \
   >   derive -T git_commits -i "$SMALL_REPO_COMMIT_B"
-  Error: Conflicting mapping Some(BonsaiGitMappingEntry { git_sha1: GitSha1(efaf8946df1d57e79319a1f3cad616774592a585), bcs_id: ChangesetId(Blake2(86097c1de278a997c434c78f0227e0be9f307ac3c66d39a7a167435d1a4e292c)) }) detected while inserting git mappings (tried inserting: [BonsaiGitMappingEntry { git_sha1: GitSha1(efaf8946df1d57e79319a1f3cad616774592a585), bcs_id: ChangesetId(Blake2(d45d7c444a33991153afbe621f418b679d391fd1c8108ec5f701b1c6d5e96017)) }])
-  [1]

@@ -144,7 +144,7 @@ Run the x-repo with submodules setup
   $ ATTEMPTS=20 wait_for_bookmark_move_away_bonsai "$SUBMODULE_REPO_NAME" "heads/master" "$PREV_BOOK_VALUE"
 
   $ mononoke_newadmin fetch -R $SUBMODULE_REPO_NAME -B heads/master
-  BonsaiChangesetId: 81ac5660c1b48fb057a045857e893e7ba18546fba0b18e3277329a0969bb8064
+  BonsaiChangesetId: 13715279cffa4966ef3572ed60d1779e42a103911c360618611a36b1c08ecd2e
   Author: test
   Message: Change submodule repo from large repo
   FileChanges:
@@ -154,7 +154,7 @@ Run the x-repo with submodules setup
 # NOTE: If I don't manually derive the git object, git pull gets a 500 error code.
 # Mononoke Git logs show this: P1535517841
   $ mononoke_newadmin convert -R $SUBMODULE_REPO_NAME --derive \
-  > -f bonsai -t git 81ac5660c1b48fb057a045857e893e7ba18546fba0b18e3277329a0969bb8064
+  > -f bonsai -t git 13715279cffa4966ef3572ed60d1779e42a103911c360618611a36b1c08ecd2e
   b0bf2974fb9bfd512e54939869465847f49f9131
 
 # Pull changes in the git repo to show that the commit was synced

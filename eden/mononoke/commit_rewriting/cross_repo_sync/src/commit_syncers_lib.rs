@@ -13,6 +13,7 @@ use std::time::Duration;
 use std::time::Instant;
 
 use anyhow::anyhow;
+use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
@@ -29,6 +30,7 @@ use commit_transformation::FileChangeFilterApplication;
 use commit_transformation::FileChangeFilterFunc;
 use commit_transformation::MultiMover;
 use commit_transformation::RewriteOpts;
+use commit_transformation::StripCommitExtras;
 use context::CoreContext;
 use environment::Caching;
 use fbinit::FacebookInit;
@@ -40,6 +42,7 @@ use futures::stream::TryStreamExt;
 use futures::FutureExt;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use maplit::hashset;
+use metaconfig_types::CommitIdentityScheme;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommitSyncDirection;
 use metaconfig_types::GitSubmodulesChangesAction;
@@ -833,6 +836,33 @@ impl<R: Repo> CommitSyncRepos<R> {
         self.get_large_repo()
             .repo_cross_repo()
             .synced_commit_mapping()
+    }
+    /// Whether Hg or Git extras should be stripped from the commit when rewriting
+    /// it for this source and target repo pair, to avoid creating many to one
+    /// mappings between repos.
+    ///
+    /// For example: if the source repo is Hg and the target repo is Git, two
+    /// commits that differ only by hg extra would be mapped to the same git commit.
+    /// In this case, hg extras have to be stripped when syncing from Hg to Git.
+    pub(crate) fn get_strip_commit_extras(&self) -> Result<StripCommitExtras> {
+        let source_scheme = &self
+            .get_source_repo()
+            .repo_config()
+            .default_commit_identity_scheme;
+        let target_scheme = &self
+            .get_target_repo()
+            .repo_config()
+            .default_commit_identity_scheme;
+
+        match (source_scheme, target_scheme) {
+            (CommitIdentityScheme::HG, CommitIdentityScheme::GIT) => Ok(StripCommitExtras::Hg),
+            (CommitIdentityScheme::GIT, CommitIdentityScheme::HG) => Ok(StripCommitExtras::Git),
+            (CommitIdentityScheme::BONSAI, _) | (_, CommitIdentityScheme::BONSAI) => {
+                bail!("No repos should use bonsai as default scheme")
+            }
+
+            _ => Ok(StripCommitExtras::None),
+        }
     }
 }
 

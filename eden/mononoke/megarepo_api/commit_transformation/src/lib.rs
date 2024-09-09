@@ -288,10 +288,26 @@ pub enum EmptyCommitFromLargeRepo {
     Discard,
 }
 
+/// Whether Hg or Git extras should be stripped from the commit when rewriting
+/// it, to avoid creating many to one mappings between repos.
+/// This will depend on the default commit scheme of the source and target repos.
+///
+/// For example: if the source repo is Hg and the target repo is Git, two
+/// commits that differ only by hg extra would be mapped to the same git commit.
+/// In this case, hg extras have to be stripped when syncing from Hg to Git.
+#[derive(PartialEq, Debug, Copy, Clone, Default)]
+pub enum StripCommitExtras {
+    #[default]
+    None,
+    Hg,
+    Git,
+}
+
 #[derive(PartialEq, Debug, Copy, Clone, Default)]
 pub struct RewriteOpts {
     pub commit_rewritten_to_empty: CommitRewrittenToEmpty,
     pub empty_commit_from_large_repo: EmptyCommitFromLargeRepo,
+    pub strip_commit_extras: StripCommitExtras,
 }
 
 /// Create a version of `cs` with `Mover` applied to all changes
@@ -705,6 +721,23 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
         let mut new_parents = vec![first_parent];
         new_parents.extend(cs.parents.into_iter().filter(|cs| *cs != first_parent));
         cs.parents = new_parents
+    }
+
+    let enable_commit_extra_stripping =
+        justknobs::eval("scm/mononoke:strip_commit_extras_in_xrepo_sync", None, None)?;
+
+    if enable_commit_extra_stripping {
+        match rewrite_opts.strip_commit_extras {
+            StripCommitExtras::Hg => {
+                // Set to an empty map to strip the hg extras
+                cs.hg_extra = Default::default();
+            }
+            StripCommitExtras::Git => {
+                // Set to an empty map to strip the git extras
+                cs.git_extra_headers = None;
+            }
+            StripCommitExtras::None => {}
+        };
     }
 
     Ok(Some(cs))

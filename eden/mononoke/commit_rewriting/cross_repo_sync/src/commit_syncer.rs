@@ -802,6 +802,7 @@ where
             .collect::<Vec<_>>();
         let large_repo = self.get_large_repo();
         let large_in_memory_repo = InMemoryRepo::from_repo(large_repo, fallback_repos)?;
+        let strip_commit_extras = self.repos.get_strip_commit_extras()?;
 
         CommitInMemorySyncer {
             ctx,
@@ -812,6 +813,7 @@ where
             small_to_large: matches!(self.repos, CommitSyncRepos::SmallToLarge { .. }),
             submodule_deps,
             large_repo: large_in_memory_repo,
+            strip_commit_extras,
         }
         .unsafe_sync_commit_in_memory(ctx, cs, commit_sync_context, expected_version)
         .await?

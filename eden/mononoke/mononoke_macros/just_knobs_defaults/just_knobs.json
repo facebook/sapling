@@ -31,7 +31,8 @@
     "scm/mononoke:xrepo_disable_commit_sync_lease": false,
     "scm/mononoke:commit_graph_prefetch_store_in_memcache": false,
     "scm/mononoke:disable_commit_graph_memcache_for_prefetch": false,
-    "scm/mononoke:disable_commit_graph_prefetch": false
+    "scm/mononoke:disable_commit_graph_prefetch": false,
+    "scm/mononoke:strip_commit_extras_in_xrepo_sync": true
   },
   "ints": {
     "scm/mononoke_timeouts:repo_client_clone_timeout_secs": 14400,
