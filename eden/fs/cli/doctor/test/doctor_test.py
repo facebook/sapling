@@ -1949,10 +1949,9 @@ Fixing files present on disk but not known to EdenFS in {Path(mount)}...<green>f
             )
 
         @patch("eden.fs.cli.redirect.Redirection.apply")
-        @patch("eden.fs.cli.redirect.Redirection.remove_existing")
         @patch("eden.fs.cli.doctor.check_redirections.get_effective_redirections")
         def test_redirection_failed_symlink(
-            self, mock_get_effective_redirections, mock_remove_existing, mock_apply
+            self, mock_get_effective_redirections, mock_apply
         ) -> None:
             instance = FakeEdenInstance(self.make_temporary_directory())
             checkout = instance.create_test_mount("path1")
@@ -1966,7 +1965,6 @@ Fixing files present on disk but not known to EdenFS in {Path(mount)}...<green>f
                     RedirectionState.SYMLINK_MISSING,
                 )
             }
-            mock_remove_existing.return_value = None
             mock_apply.side_effect = OSError(0, "Test error", "a", 1314, "b")
 
             fixer, out = self.create_fixer(dry_run=False)
@@ -1978,7 +1976,6 @@ Fixing files present on disk but not known to EdenFS in {Path(mount)}...<green>f
                 checkout,
                 mount_table,
             )
-            mock_remove_existing.assert_called_once()
             mock_apply.assert_called_once()
             self.assertRegex(
                 "\n".join(out.getvalue().splitlines()[:7]),

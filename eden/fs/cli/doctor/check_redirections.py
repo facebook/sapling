@@ -56,7 +56,6 @@ class MisconfiguredRedirection(FixableProblem):
         return f"Fixing redirection at {self._redir.repo_path}"
 
     def perform_fix(self) -> None:
-        self._redir.remove_existing(self._checkout)
         if self._redir.type == RedirectionType.UNKNOWN:
             return
         try:
