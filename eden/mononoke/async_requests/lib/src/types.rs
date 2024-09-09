@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt::Debug;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -96,7 +97,7 @@ pub trait Request: Sized + Send + Sync {
 }
 
 /// Thrift type representing async service method parameters
-pub trait ThriftParams: Sized + Send + Sync + Into<AsynchronousRequestParams> {
+pub trait ThriftParams: Sized + Send + Sync + Into<AsynchronousRequestParams> + Debug {
     type R: Request<ThriftParams = Self>;
 
     /// Every *Params argument referes to some Target
@@ -111,7 +112,7 @@ pub trait ThriftResult:
 }
 
 /// Polling token for an async service method
-pub trait Token: Clone + Sized + Send + Sync {
+pub trait Token: Clone + Sized + Send + Sync + Debug {
     type R: Request<Token = Self>;
     type ThriftToken;
 
@@ -293,7 +294,7 @@ macro_rules! impl_async_svc_method_types {
             }
         }
 
-        #[derive(Clone)]
+        #[derive(Clone, Debug)]
         pub struct $token_type(pub $token_thrift_type);
 
         impl Token for $token_type {
