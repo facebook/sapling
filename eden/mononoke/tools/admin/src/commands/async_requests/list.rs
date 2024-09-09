@@ -85,15 +85,15 @@ pub async fn list_requests<R: MononokeRepo>(
                 "Not finished".to_string()
             };
             table.add_row(row![
-                req_id.0,
-                req_id.1,
-                entry.status,
-                params.target().context("decoding target")?.bookmark,
-                &source_name,
-                &changeset_id,
-                &created_at,
-                &ready_at_str,
-                duration,
+                req_id.0,                                             // Request id
+                req_id.1,                                             // Method
+                entry.status,                                         // Status
+                params.target().context("decoding target")?.bookmark, // Bookmark
+                &source_name,                                         // Source name
+                &changeset_id,                                        // Source Changeset
+                &created_at,                                          // Created at
+                &ready_at_str,                                        // Ready at
+                duration,                                             // Duration
             ]);
         }
     }
