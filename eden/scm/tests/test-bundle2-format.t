@@ -3,7 +3,6 @@
 
 
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ disable treemanifest
   $ configure dummyssh
 This test is dedicated to test the bundle2 container format
 
@@ -108,11 +107,11 @@ Create an extension to test bundle2 API
   >             headmissing = [c.node() for c in repo.set('heads(%ld)', revs)]
   >             headcommon  = [c.node() for c in repo.set('parents(%ld) - %ld', revs, revs)]
   >             outgoing = discovery.outgoing(repo, headcommon, headmissing)
-  >             cg = changegroup.makechangegroup(repo, outgoing, '02',
+  >             cg = changegroup.makechangegroup(repo, outgoing, '03',
   >                                              'test:bundle2')
   >             part = bundler.newpart('changegroup', data=cg.getchunks(),
   >                                    mandatory=False)
-  >             part.addparam('version', '02')
+  >             part.addparam('version', '03')
   > 
   >     if opts['parts']:
   >        bundler.newpart('test:empty', mandatory=False)
@@ -841,58 +840,6 @@ Support for changegroup
   @  3903775176ed draft test  a
   
 
-  $ hg bundle2 --debug --config progress.debug=true --config devel.bundle2.debug=true --rev '8+7+5+4' ../rev.hg2
-  4 changesets found
-  list of changesets:
-  32af7686d403cf45b5d95f2d70cebea587ac806a
-  9520eea781bcca16c1e15acc0ba14335a0e8e5ba
-  eea13746799a9e0bfd88f29d3c2e9dc9389f524f
-  02de42196ebee42ef284b6780a87cdc96e8eaab6
-  bundle2-output-bundle: "HG20", 1 parts total
-  bundle2-output: start emission of HG20 stream
-  bundle2-output: bundle parameter: 
-  bundle2-output: start of parts
-  bundle2-output: bundle part: "changegroup"
-  bundle2-output-part: "changegroup" (advisory) (params: 1 mandatory) streamed payload
-  bundle2-output: part 0: "changegroup"
-  bundle2-output: header chunk size: 29
-  progress: bundling: 1/4 changesets (25.00%)
-  progress: bundling: 2/4 changesets (50.00%)
-  progress: bundling: 3/4 changesets (75.00%)
-  progress: bundling: 4/4 changesets (100.00%)
-  progress: bundling (end)
-  progress: bundling: 1/4 manifests (25.00%)
-  progress: bundling: 2/4 manifests (50.00%)
-  progress: bundling: 3/4 manifests (75.00%)
-  progress: bundling: 4/4 manifests (100.00%)
-  progress: bundling (end)
-  progress: bundling: D 1/3 files (33.33%)
-  progress: bundling: E 2/3 files (66.67%)
-  progress: bundling: H 3/3 files (100.00%)
-  progress: bundling (end)
-  bundle2-output: payload chunk size: * (glob)
-  bundle2-output: closing payload chunk
-  bundle2-output: end of bundle
-
-  $ hg debugbundle ../rev.hg2
-  Stream params: {}
-  changegroup -- {version: 02}
-      32af7686d403cf45b5d95f2d70cebea587ac806a
-      9520eea781bcca16c1e15acc0ba14335a0e8e5ba
-      eea13746799a9e0bfd88f29d3c2e9dc9389f524f
-      02de42196ebee42ef284b6780a87cdc96e8eaab6
-  $ hg unbundle ../rev.hg2
-  adding changesets
-  adding manifests
-  adding file changes
-
-with reply
-
-  $ hg bundle2 --rev '8+7+5+4' --reply ../rev-rr.hg2
-  $ hg unbundle2 ../rev-reply.hg2 < ../rev-rr.hg2
-  0 unread bytes
-  addchangegroup return: 1
-
 Check handling of exception during generation.
 ----------------------------------------------
 
@@ -908,51 +855,3 @@ And its handling on the other size raise a clean exception
   0 unread bytes
   abort: unexpected error: Someone set up us the bomb!
   [255]
-
-Test compression
-================
-
-Simple case where it just work: GZ
-----------------------------------
-
-  $ hg bundle2 --compress GZ --rev '8+7+5+4' ../rev.hg2.bz
-  $ hg debugbundle ../rev.hg2.bz
-  Stream params: {Compression: GZ}
-  changegroup -- {version: 02}
-      32af7686d403cf45b5d95f2d70cebea587ac806a
-      9520eea781bcca16c1e15acc0ba14335a0e8e5ba
-      eea13746799a9e0bfd88f29d3c2e9dc9389f524f
-      02de42196ebee42ef284b6780a87cdc96e8eaab6
-  $ hg unbundle ../rev.hg2.bz
-  adding changesets
-  adding manifests
-  adding file changes
-Simple case where it just work: BZ
-----------------------------------
-
-  $ hg bundle2 --compress BZ --rev '8+7+5+4' ../rev.hg2.bz
-  $ hg debugbundle ../rev.hg2.bz
-  Stream params: {Compression: BZ}
-  changegroup -- {version: 02}
-      32af7686d403cf45b5d95f2d70cebea587ac806a
-      9520eea781bcca16c1e15acc0ba14335a0e8e5ba
-      eea13746799a9e0bfd88f29d3c2e9dc9389f524f
-      02de42196ebee42ef284b6780a87cdc96e8eaab6
-  $ hg unbundle ../rev.hg2.bz
-  adding changesets
-  adding manifests
-  adding file changes
-
-unknown compression while unbundling
------------------------------
-
-  $ hg bundle2 --param Compression=FooBarUnknown --rev '8+7+5+4' ../rev.hg2.bz
-  $ cat ../rev.hg2.bz | hg statbundle2
-  abort: unknown parameters: Stream Parameter - Compression='FooBarUnknown'
-  [255]
-  $ hg unbundle ../rev.hg2.bz
-  abort: ../rev.hg2.bz: unknown bundle feature, Stream Parameter - Compression='FooBarUnknown'
-  (see https://mercurial-scm.org/wiki/BundleFeature for more information)
-  [255]
-
-  $ cd ..

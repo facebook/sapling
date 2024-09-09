@@ -2,8 +2,9 @@
 
 #require no-fsmonitor no-eden
 
-  $ disable treemanifest copytrace
+  $ disable copytrace
   $ hg debugextensions --excludedefault
+  treemanifest (untested!)
 
   $ enable histedit rebase
   $ newext ext1 <<EOF
@@ -21,6 +22,7 @@
   histedit
   hotfix1 (untested!)
   rebase
+  treemanifest (untested!)
 
   $ hg debugextensions -v --excludedefault
   ext1
@@ -40,6 +42,9 @@
   rebase
     location: *rebase* (glob)
     bundled: yes
+  treemanifest
+    location: *treemanifest* (glob)
+    bundled: no
 
   $ hg debugextensions --excludedefault -Tjson | sed 's|\\\\|/|g'
   [
@@ -76,6 +81,13 @@
     "bundled": true,
     "name": "rebase",
     "source": "*rebase*", (glob)
+    "testedwith": []
+   },
+   {
+    "buglink": "",
+    "bundled": false,
+    "name": "treemanifest",
+    "source": "*treemanifest*", (glob)
     "testedwith": []
    }
   ]
