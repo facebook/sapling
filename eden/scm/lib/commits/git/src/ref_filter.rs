@@ -175,7 +175,7 @@ mod tests {
     #[test]
     fn test_ref_filter_non_dotgit() {
         let refs = get_test_refs("remote");
-        let filter = GitRefFilter::new_for_sapling(&refs).unwrap();
+        let filter = GitRefFilter::new_for_dotsl(&refs).unwrap();
         // all local refs should be treated as bookmarks since Git does not write
         assert!(!filter.should_treat_local_ref_as_visible_head("main"));
         assert!(!filter.should_treat_local_ref_as_visible_head("foo"));
