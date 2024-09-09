@@ -12,6 +12,10 @@ from ..i18n import _
 from .cmdtable import command
 
 
+# todo: remove the 'test_' prefix when this feature is stable
+SUBTREE_BRANCH_INFO_KEY = "test_branch_info"
+
+
 @command(
     "subtree",
     [],
@@ -157,8 +161,6 @@ def _docopy(ui, repo, *args, **opts):
 
 
 def _gen_branch_info(from_commit, from_paths, to_paths):
-    # todo: remove the 'test_' prefix when this feature is stable
-    key = "test_branch_info"
     value = {
         "v": 1,
         "branches": [
@@ -172,7 +174,7 @@ def _gen_branch_info(from_commit, from_paths, to_paths):
     }
     # compact JSON representation
     str_val = json.dumps(value, separators=(",", ":"))
-    return {key: str_val}
+    return {SUBTREE_BRANCH_INFO_KEY: str_val}
 
 
 def _gen_prepopulated_commit_msg(from_commit, from_paths, to_paths):
