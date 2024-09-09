@@ -389,7 +389,7 @@ mod test {
             target_location: vec![],
             ..Default::default()
         };
-        q.enqueue(ctx.clone(), &mononoke, params).await?;
+        q.enqueue(&ctx, &mononoke, params).await?;
 
         let will_exit = Arc::new(AtomicBool::new(false));
         let s = AsyncMethodRequestWorker::<Repo>::request_stream_inner(
@@ -431,7 +431,7 @@ mod test {
             target_location: vec![],
             ..Default::default()
         };
-        q.enqueue(ctx.clone(), &mononoke, params).await?;
+        q.enqueue(&ctx, &mononoke, params).await?;
 
         // Grab it from the queue...
         let dequed = q

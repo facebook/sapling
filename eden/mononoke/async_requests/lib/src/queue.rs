@@ -69,7 +69,7 @@ impl AsyncMethodRequestQueue {
 
     pub async fn enqueue<P: ThriftParams, R: MononokeRepo>(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         mononoke: &Mononoke<R>,
         thrift_params: P,
     ) -> Result<<P::R as Request>::Token, Error> {
@@ -79,12 +79,12 @@ impl AsyncMethodRequestQueue {
             .clone()
             .into_config_format(mononoke)?;
         let rust_params: AsynchronousRequestParams = thrift_params.into();
-        let params_object_id = rust_params.store(&ctx, &self.blobstore).await?;
+        let params_object_id = rust_params.store(ctx, &self.blobstore).await?;
         let blobstore_key = BlobstoreKey(params_object_id.blobstore_key());
         let table_id = self
             .table
             .add_request(
-                &ctx,
+                ctx,
                 &request_type,
                 &RepositoryId::new(i32::try_from(target.repo_id)?),
                 &BookmarkKey::new(&target.bookmark)?,
@@ -163,7 +163,7 @@ impl AsyncMethodRequestQueue {
 
     pub async fn poll<T: Token>(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         token: T,
     ) -> Result<<T::R as Request>::PollResponse, AsyncRequestsError> {
         let mut backoff_ms = INITIAL_POLL_DELAY_MS;
@@ -173,7 +173,7 @@ impl AsyncMethodRequestQueue {
 
         loop {
             let maybe_thrift_result: Option<<T::R as Request>::ThriftResult> =
-                self.poll_once::<T::R>(&ctx, &req_id).await?;
+                self.poll_once::<T::R>(ctx, &req_id).await?;
             let next_sleep = Duration::from_millis(rand::random::<u64>() % backoff_ms);
 
             match maybe_thrift_result {
@@ -377,7 +377,7 @@ mod tests {
 
                 // Enqueue a request
                 let params = $thrift_params;
-                let token = q.enqueue(ctx.clone(), &mononoke, params.clone()).await?;
+                let token = q.enqueue(&ctx, &mononoke, params.clone()).await?;
 
                 // Verify that request metadata is in the db and has expected values
                 let (row_id, _) = token.to_db_id_and_target()?;

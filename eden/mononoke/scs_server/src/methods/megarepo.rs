@@ -205,7 +205,7 @@ impl SourceControlServiceImpl {
             .queues_client
             .async_method_request_queue(&ctx, &target)
             .await?
-            .enqueue(ctx, &self.mononoke, params)
+            .enqueue(&ctx, &self.mononoke, params)
             .await
             .map_err(|e| errors::internal_error(format!("Failed to enqueue the request: {}", e)))?;
 
@@ -226,7 +226,7 @@ impl SourceControlServiceImpl {
             .queues_client
             .async_method_request_queue(&ctx, &target)
             .await?
-            .poll(ctx, token)
+            .poll(&ctx, token)
             .await?;
 
         Ok(poll_response)
@@ -245,7 +245,7 @@ impl SourceControlServiceImpl {
             .queues_client
             .async_method_request_queue(&ctx, &target)
             .await?
-            .enqueue(ctx, &self.mononoke, params)
+            .enqueue(&ctx, &self.mononoke, params)
             .await
             .map_err(|e| errors::internal_error(format!("Failed to enqueue the request: {}", e)))?;
 
@@ -266,7 +266,7 @@ impl SourceControlServiceImpl {
             .queues_client
             .async_method_request_queue(&ctx, &target)
             .await?
-            .poll(ctx, token)
+            .poll(&ctx, token)
             .await?;
 
         Ok(poll_response)
@@ -285,7 +285,7 @@ impl SourceControlServiceImpl {
             .queues_client
             .async_method_request_queue(&ctx, &target)
             .await?
-            .enqueue(ctx, &self.mononoke, params)
+            .enqueue(&ctx, &self.mononoke, params)
             .await
             .map_err(|e| errors::internal_error(format!("Failed to enqueue the request: {}", e)))?;
 
@@ -306,7 +306,7 @@ impl SourceControlServiceImpl {
             .queues_client
             .async_method_request_queue(&ctx, &target)
             .await?
-            .poll(ctx, token)
+            .poll(&ctx, token)
             .await?;
 
         Ok(poll_response)
@@ -325,7 +325,7 @@ impl SourceControlServiceImpl {
             .queues_client
             .async_method_request_queue(&ctx, &target)
             .await?
-            .enqueue(ctx, &self.mononoke, params)
+            .enqueue(&ctx, &self.mononoke, params)
             .await
             .map_err(|e| errors::internal_error(format!("Failed to enqueue the request: {}", e)))?;
 
@@ -345,7 +345,7 @@ impl SourceControlServiceImpl {
             .queues_client
             .async_method_request_queue(&ctx, &target)
             .await?
-            .poll(ctx, token)
+            .poll(&ctx, token)
             .await?;
 
         Ok(poll_response)
@@ -364,7 +364,7 @@ impl SourceControlServiceImpl {
             .queues_client
             .async_method_request_queue(&ctx, &target)
             .await?
-            .enqueue(ctx, &self.mononoke, params)
+            .enqueue(&ctx, &self.mononoke, params)
             .await
             .map_err(|e| errors::internal_error(format!("Failed to enqueue the request: {}", e)))?;
 
@@ -385,7 +385,7 @@ impl SourceControlServiceImpl {
             .queues_client
             .async_method_request_queue(&ctx, &target)
             .await?
-            .poll(ctx, token)
+            .poll(&ctx, token)
             .await?;
 
         Ok(poll_response)
