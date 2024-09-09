@@ -102,7 +102,7 @@ pub trait ThriftParams: Sized + Send + Sync + Into<AsynchronousRequestParams> {
     /// Every *Params argument referes to some Target
     /// This method is needed to extract it from the
     /// implementor of this trait
-    fn target(&self) -> &ThriftMegarepoTarget;
+    fn target(&self) -> Result<&ThriftMegarepoTarget, AsyncRequestsError>;
 }
 pub trait ThriftResult:
     Sized + Send + Sync + TryFrom<AsynchronousRequestResult, Error = AsyncRequestsError>
@@ -116,13 +116,16 @@ pub trait Token: Clone + Sized + Send + Sync {
     type ThriftToken;
 
     fn into_thrift(self) -> Self::ThriftToken;
-    fn from_db_id_and_target(id: RowId, target: ThriftMegarepoTarget) -> Self;
+    fn from_db_id_and_target(
+        id: RowId,
+        target: ThriftMegarepoTarget,
+    ) -> Result<Self, AsyncRequestsError>;
     fn to_db_id_and_target(&self) -> Result<(RowId, ThriftMegarepoTarget), AsyncRequestsError>;
 
     /// Every Token referes to some Target
     /// This method is needed to extract it from the
     /// implementor of this trait
-    fn target(&self) -> &ThriftMegarepoTarget;
+    fn target(&self) -> Result<&ThriftMegarepoTarget, AsyncRequestsError>;
 }
 
 /// This macro implements an async service method type,
@@ -285,7 +288,7 @@ macro_rules! impl_async_svc_method_types {
         impl ThriftParams for $params_value_thrift_type {
             type R = $request_struct;
 
-            fn target(&$self_ident) -> &ThriftMegarepoTarget {
+            fn target(&$self_ident) -> Result<&ThriftMegarepoTarget, AsyncRequestsError> {
                 $target_in_params
             }
         }
@@ -297,7 +300,7 @@ macro_rules! impl_async_svc_method_types {
             type ThriftToken = $token_thrift_type;
             type R = $request_struct;
 
-            fn from_db_id_and_target(id: RowId, target: ThriftMegarepoTarget) -> Self {
+            fn from_db_id_and_target(id: RowId, target: ThriftMegarepoTarget) -> Result<Self, AsyncRequestsError> {
                 // Thrift token is a string alias
                 // but's guard ourselves here against
                 // it changing unexpectedly.
@@ -306,7 +309,7 @@ macro_rules! impl_async_svc_method_types {
                     id: id.0 as i64,
                     ..Default::default()
                 };
-                Self(thrift_token)
+                Ok(Self(thrift_token))
             }
 
             fn to_db_id_and_target(&self) -> Result<(RowId, ThriftMegarepoTarget), AsyncRequestsError> {
@@ -321,8 +324,8 @@ macro_rules! impl_async_svc_method_types {
                 self.0
             }
 
-            fn target(&self) -> &ThriftMegarepoTarget {
-                &self.0.target
+            fn target(&self) -> Result<&ThriftMegarepoTarget, AsyncRequestsError> {
+                Ok(&self.0.target)
             }
         }
 
@@ -429,7 +432,7 @@ impl_async_svc_method_types! {
     token_thrift_type => ThriftMegarepoAddTargetToken,
 
     fn target(&self: ThriftParams) -> &ThriftMegarepoTarget {
-        &self.config_with_new_target.target
+        Ok(&self.config_with_new_target.target)
     }
 }
 
@@ -451,7 +454,7 @@ impl_async_svc_method_types! {
     token_thrift_type => ThriftMegarepoAddBranchingTargetToken,
 
     fn target(&self: ThriftParams) -> &ThriftMegarepoTarget {
-        &self.target
+        Ok(&self.target)
     }
 }
 
@@ -473,7 +476,7 @@ impl_async_svc_method_types! {
     token_thrift_type => ThriftMegarepoChangeConfigToken,
 
     fn target(&self: ThriftParams) -> &ThriftMegarepoTarget {
-        &self.target
+        Ok(&self.target)
     }
 }
 
@@ -495,7 +498,7 @@ impl_async_svc_method_types! {
     token_thrift_type => ThriftMegarepoSyncChangesetToken,
 
     fn target(&self: ThriftParams) -> &ThriftMegarepoTarget {
-        &self.target
+        Ok(&self.target)
     }
 }
 
@@ -517,7 +520,7 @@ impl_async_svc_method_types! {
     token_thrift_type => ThriftMegarepoRemergeSourceToken,
 
     fn target(&self: ThriftParams) -> &ThriftMegarepoTarget {
-        &self.target
+        Ok(&self.target)
     }
 }
 
@@ -540,20 +543,18 @@ impl_async_svc_stored_type! {
 impl AsynchronousRequestParams {
     pub fn target(&self) -> Result<&ThriftMegarepoTarget, AsyncRequestsError> {
         match &self.thrift {
-            ThriftAsynchronousRequestParams::megarepo_add_target_params(params) => {
-                Ok(params.target())
-            }
+            ThriftAsynchronousRequestParams::megarepo_add_target_params(params) => params.target(),
             ThriftAsynchronousRequestParams::megarepo_add_branching_target_params(params) => {
-                Ok(params.target())
+                params.target()
             }
             ThriftAsynchronousRequestParams::megarepo_change_target_params(params) => {
-                Ok(params.target())
+                params.target()
             }
             ThriftAsynchronousRequestParams::megarepo_remerge_source_params(params) => {
-                Ok(params.target())
+                params.target()
             }
             ThriftAsynchronousRequestParams::megarepo_sync_changeset_params(params) => {
-                Ok(params.target())
+                params.target()
             }
             ThriftAsynchronousRequestParams::UnknownField(union_tag) => {
                 Err(AsyncRequestsError::internal(anyhow!(

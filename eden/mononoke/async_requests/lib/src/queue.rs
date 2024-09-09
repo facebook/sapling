@@ -75,7 +75,7 @@ impl AsyncMethodRequestQueue {
     ) -> Result<<P::R as Request>::Token, Error> {
         let request_type = RequestType(P::R::NAME.to_owned());
         let target = thrift_params
-            .target()
+            .target()?
             .clone()
             .into_config_format(mononoke)?;
         let rust_params: AsynchronousRequestParams = thrift_params.into();
@@ -94,7 +94,7 @@ impl AsyncMethodRequestQueue {
         let token = <P::R as Request>::Token::from_db_id_and_target(
             table_id,
             target.into_api_format(mononoke)?,
-        );
+        )?;
         Ok(token)
     }
 
