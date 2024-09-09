@@ -125,6 +125,10 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
     return diff.state === PullRequestState.Closed;
   }
 
+  getUpdateDiffActions(_summary: DiffSummary) {
+    return [];
+  }
+
   commitMessageFieldsSchema =
     Internal.CommitMessageFieldSchemaForGitHub ?? OSSCommitMessageFieldSchema;
 

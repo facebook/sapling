@@ -204,6 +204,20 @@ export const Commit = memo(
           });
         }
       }
+      if (!isPublic && commit.diffId != null) {
+        const provider = readAtom(codeReviewProvider);
+        const summary = readAtom(diffSummary(commit.diffId));
+        if (summary.value) {
+          const actions = provider?.getUpdateDiffActions(summary.value);
+          if (actions != null && actions.length > 0) {
+            items.push({
+              label: <T replace={{$number: commit.diffId}}>Update Diff $number</T>,
+              type: 'submenu',
+              children: actions,
+            });
+          }
+        }
+      }
       if (!isPublic && !actionsPrevented && !inConflicts) {
         const suggestedRebases = readAtom(suggestedRebaseDestinations);
         items.push({

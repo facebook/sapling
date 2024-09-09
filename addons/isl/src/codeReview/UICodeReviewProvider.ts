@@ -92,6 +92,8 @@ export interface UICodeReviewProvider {
     allDiffSummaries: Map<string, DiffSummary>,
   ): Array<CommitInfo>;
 
+  getUpdateDiffActions(summary: DiffSummary): Array<{label: ReactNode; onClick: () => void}>;
+
   commitMessageFieldsSchema: Array<FieldConfig>;
 
   enableMessageSyncing: boolean;
