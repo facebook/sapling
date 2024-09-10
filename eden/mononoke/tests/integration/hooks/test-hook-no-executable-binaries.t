@@ -112,7 +112,8 @@ Executable binary under specific directory - should fail
   >   cat <<CONF
   > config_json='''{
   >   "illegal_executable_binary_message": "Executable file \${filename} can't be committed.",
-  >   "allow_list_paths": ["some_dir"]
+  >   "allow_list_paths": ["some_dir"],
+  >   "allow_list_files": [["560a153deec1d4cda8481e96756e53c466f3c8eb2dabaf93f9e167c986bb77c4",3]]
   > }'''
   > CONF
   > )
@@ -124,6 +125,21 @@ Executable binary under allow-listed directory - should pass
 
   $ hg push -r . --to master_bookmark
   pushing rev 03e66567b425 to destination mono:repo bookmark master_bookmark
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  updating bookmark master_bookmark
+
+
+Executable binary allow-listed by sha256 and size that can be on any path -- should fail initially
+  $ hg up -q "min(all())"
+  $ mkdir some_dir
+  $ echo "3030384435460a" > foo
+  $ chmod +x foo
+  $ hg ci -Aqm 2
+  $ hg push -r . --to master_bookmark
+  pushing rev 8a7b81d5132c to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
