@@ -89,6 +89,7 @@ impl CommitCloud {
     }
 }
 
+#[derive(Clone)]
 pub enum Phase {
     Public,
     Draft,

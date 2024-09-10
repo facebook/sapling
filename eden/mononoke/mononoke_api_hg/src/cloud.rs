@@ -5,8 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use blobrepo_hg::BlobRepoHg;
 use borrowed::borrowed;
+use cloned::cloned;
 use commit_cloud::ctx::CommitCloudContext;
 use commit_cloud::CommitCloudRef;
 use commit_cloud::Phase;
@@ -23,6 +26,8 @@ use commit_cloud_types::UpdateReferencesParams;
 use commit_cloud_types::WorkspaceData;
 use commit_cloud_types::WorkspaceSharingData;
 use commit_graph::CommitGraphRef;
+use futures::stream;
+use futures::StreamExt;
 use futures::TryStreamExt;
 use futures_util::future::try_join_all;
 use mercurial_types::HgChangesetId;
@@ -190,26 +195,41 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         };
         let mut nodes = Vec::new();
 
+        let rbs = Arc::new(remote_bookmarks);
+        let lbs = Arc::new(local_bookmarks);
         for (phase, changesets) in [
             (Phase::Public, public_commits_ctx),
             (Phase::Draft, draft_commits_ctx),
         ] {
-            for changeset in changesets.into_iter().flatten() {
-                let (hg_id, hg_parents) = self
-                    .repo_ctx()
-                    .repo()
-                    .get_hg_changeset_and_parents_from_bonsai(self.ctx().clone(), changeset.id())
-                    .await?;
-
-                nodes.push(self.repo_ctx().repo().commit_cloud().make_smartlog_node(
-                    &hg_id,
-                    &hg_parents,
-                    &changeset.changeset_info().await?,
-                    &local_bookmarks.get(&hg_id).cloned(),
-                    &remote_bookmarks.get(&hg_id).cloned(),
-                    &phase,
-                )?)
-            }
+            let changesets = stream::iter(changesets.into_iter().flatten())
+                .map(|changeset| {
+                    cloned!(rbs, lbs, phase);
+                    async move {
+                        let res = repo
+                            .get_hg_changeset_and_parents_from_bonsai(
+                                self.ctx().clone(),
+                                changeset.id(),
+                            )
+                            .await;
+                        match res {
+                            Ok((hg_id, hg_parents)) => {
+                                self.repo_ctx().repo().commit_cloud().make_smartlog_node(
+                                    &hg_id,
+                                    &hg_parents,
+                                    &changeset.changeset_info().await?,
+                                    &lbs.get(&hg_id).cloned(),
+                                    &rbs.get(&hg_id).cloned(),
+                                    &phase,
+                                )
+                            }
+                            Err(e) => Err(e),
+                        }
+                    }
+                })
+                .buffer_unordered(100)
+                .try_collect::<Vec<SmartlogNode>>()
+                .await?;
+            nodes.extend(changesets);
         }
         Ok(nodes)
     }
