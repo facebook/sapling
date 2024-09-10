@@ -94,7 +94,8 @@ void DefaultBackingStoreFactory::registerFactory(
     DefaultBackingStoreFactory::Factory factory) {
   auto [it, inserted] = registered_.emplace(type, std::move(factory));
   if (!inserted) {
-    EDEN_BUG() << "attempted to register BackingStore " << type << " twice";
+    EDEN_BUG() << "attempted to register BackingStore "
+               << toBackingStoreString(type) << " twice";
   }
 }
 
