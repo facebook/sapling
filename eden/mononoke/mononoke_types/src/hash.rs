@@ -34,8 +34,6 @@ use gix_hash::ObjectId;
 use quickcheck::empty_shrinker;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
-use serde_derive::Deserialize;
-use serde_derive::Serialize;
 use sql::mysql;
 
 use crate::errors::MononokeTypeError;
@@ -43,6 +41,10 @@ use crate::thrift;
 
 // There is no NULL_HASH for Blake2 hashes. Any places that need a null hash should use an
 // Option type, or perhaps a list as desired.
+
+// Hash types deliberately do not derive serde `Serialize` or `Deserialize`,
+// as the default implementation uses a list of integers.  If you need to
+// serialize or deserialize these hashes, implement the traits directly.
 
 /// Raw BLAKE2b hash.
 ///
@@ -66,8 +68,6 @@ pub const BLAKE2_HASH_LENGTH_HEX: usize = BLAKE2_HASH_LENGTH_BYTES * 2;
     Ord,
     PartialOrd,
     Hash,
-    Serialize,
-    Deserialize,
     mysql::OptTryFromRowField
 )]
 pub struct Blake2([u8; BLAKE2_HASH_LENGTH_BYTES]);
@@ -230,18 +230,7 @@ impl Debug for Blake2 {
     }
 }
 
-#[derive(
-    Abomonation,
-    Clone,
-    Copy,
-    Eq,
-    PartialEq,
-    Ord,
-    PartialOrd,
-    Hash,
-    Serialize,
-    Deserialize
-)]
+#[derive(Abomonation, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Blake2Prefix(Blake2, Blake2);
 
 impl Blake2Prefix {
@@ -345,18 +334,7 @@ impl Debug for Blake2Prefix {
 
 macro_rules! impl_hash {
     ($type:ident, $size:literal, $error:ident) => {
-        #[derive(
-            Abomonation,
-            Clone,
-            Copy,
-            Eq,
-            PartialEq,
-            Ord,
-            PartialOrd,
-            Hash,
-            Serialize,
-            Deserialize
-        )]
+        #[derive(Abomonation, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
         pub struct $type([u8; $size]);
 
         impl $type {
@@ -546,17 +524,7 @@ impl From<EdenapiBlake3> for Blake3 {
 /// where <type> is the object type (blob, tree, etc), and NNNN is the blob size as a decimal
 /// string. Given that we know what the prefix is, we never explicitly store it so the objects
 /// can be shared with non-Git uses.
-#[derive(
-    Clone,
-    Copy,
-    Eq,
-    PartialEq,
-    Ord,
-    PartialOrd,
-    Hash,
-    Serialize,
-    Deserialize
-)]
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct RichGitSha1 {
     sha1: GitSha1,
     ty: &'static str,

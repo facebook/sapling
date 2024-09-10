@@ -9,11 +9,13 @@ use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use bytes::Bytes;
 use changesets_creation::save_changesets;
 use clap::Parser;
 use mercurial_derivation::MappedHgChangesetId;
@@ -29,6 +31,7 @@ use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use serde_derive::Deserialize;
+use smallvec::SmallVec;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::repo::Repo;
@@ -113,19 +116,30 @@ pub struct DeserializableBonsaiChangeset {
     pub message: String,
     pub hg_extra: BTreeMap<String, Vec<u8>>,
     pub git_extra_headers: Option<BTreeMap<Vec<u8>, Vec<u8>>>,
-    pub git_tree_hash: Option<GitSha1>,
+    pub git_tree_hash: Option<String>, // hex-encoded
     pub file_changes: BTreeMap<String, FileChange>,
 }
 
 impl DeserializableBonsaiChangeset {
     pub fn into_bonsai(self) -> Result<BonsaiChangesetMut, Error> {
-        let files = self
+        let file_changes = self
             .file_changes
             .into_iter()
             .map::<Result<_, Error>, _>(|(path, changes)| {
                 Ok((NonRootMPath::new(path.as_bytes())?, changes))
             })
             .collect::<Result<SortedVectorMap<_, _>, _>>()?;
+        let git_extra_headers = self.git_extra_headers.map(|extra| {
+            extra
+                .into_iter()
+                .map(|(k, v)| (SmallVec::from(k), Bytes::from(v)))
+                .collect()
+        });
+        let git_tree_hash = self
+            .git_tree_hash
+            .as_deref()
+            .map(GitSha1::from_str)
+            .transpose()?;
         Ok(BonsaiChangesetMut {
             parents: self.parents,
             author: self.author,
@@ -134,16 +148,11 @@ impl DeserializableBonsaiChangeset {
             committer_date: self.committer_date,
             message: self.message,
             hg_extra: self.hg_extra.into(),
-            git_extra_headers: self.git_extra_headers.map(|extra| {
-                extra
-                    .into_iter()
-                    .map(|(k, v)| (smallvec::SmallVec::from(k), bytes::Bytes::from(v)))
-                    .collect()
-            }),
-            file_changes: files,
+            git_extra_headers,
+            file_changes,
             is_snapshot: false,
             git_annotated_tag: None,
-            git_tree_hash: self.git_tree_hash,
+            git_tree_hash,
         })
     }
 }
