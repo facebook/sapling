@@ -116,7 +116,6 @@ pub(crate) struct SourceControlServiceImpl {
     pub(crate) factory_group: Option<Arc<FactoryGroup<2>>>,
     pub(crate) queues_client: Arc<AsyncRequestsQueue<Repo>>,
     identity_proxy_checker: Arc<ConnectionSecurityChecker>,
-    #[allow(dead_code)]
     pub(crate) acl_provider: Arc<dyn AclProvider>,
 }
 
@@ -1078,6 +1077,14 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             repo: thrift::RepoSpecifier,
             params: thrift::RepoUploadFileContentParams,
         ) -> Result<thrift::RepoUploadFileContentResponse, service::RepoUploadFileContentExn>;
+
+        async fn create_repos(
+            params: thrift::CreateReposParams,
+        ) -> Result<thrift::CreateReposToken, service::CreateReposExn>;
+
+        async fn create_repos_poll(
+            params: thrift::CreateReposToken,
+        ) -> Result<thrift::CreateReposPollResponse, service::CreateReposPollExn>;
 
         async fn megarepo_add_sync_target_config(
             params: thrift::MegarepoAddConfigParams,

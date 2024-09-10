@@ -1559,6 +1559,49 @@ struct CommitLookupXRepoParams {
   5: bool exact;
 }
 
+struct CustomAclParams {
+  1: string hipster_group;
+}
+
+enum RepoSizeBucket {
+  /// <100MB
+  EXTRA_SMALL = 0,
+  /// <1GB
+  SMALL = 1,
+  /// <10GB
+  MEDIUM = 2,
+  /// <100GB
+  LARGE = 3,
+  /// >100GB
+  EXTRA_LARGE = 4,
+}
+
+enum RepoScmType {
+  // Only git repos can be created via this API now.
+  GIT = 0,
+}
+
+struct RepoCreationRequest {
+  1: string repo_name;
+  /// What kind of repo should it be? (sl or git)
+  2: RepoScmType scm_type;
+  /// Oncall Owning he repo
+  3: string oncall_name;
+  /// Hipster group owning a custom ACL (if custom ACL is required)
+  4: optional CustomAclParams custom_acl;
+  /// Size bucket (allows for provisioning the right amount of resources for the new repo)
+  5: RepoSizeBucket size_bucket;
+}
+
+struct CreateReposParams {
+  /// Lists of repos to create
+  1: list<RepoCreationRequest> repos;
+  /// Dry run:
+  2: bool dry_run;
+}
+
+struct CreateReposToken {}
+
 /// Synchronization target
 struct MegarepoTarget {
   /// Mononoke repository id, where the target is located
@@ -2050,6 +2093,15 @@ struct TreeListResponse {
 struct FileDiffResponse {
   /// The differences between the two files.
   1: Diff diff;
+}
+
+struct CreateReposResponse {
+/// Indicates successfull repo creation.
+}
+
+struct CreateReposPollResponse {
+  /// Maybe a response to an underlying call, if it is ready
+  1: optional CreateReposResponse result;
 }
 
 struct MegarepoAddConfigResponse {}
@@ -2810,7 +2862,7 @@ service SourceControlService extends fb303_core.BaseService {
     3: OverloadError overload_error,
   );
 
-  /// Old-style Cross-Repo Methods (used for ovrsource merge into fbsource)
+  /// Cross-Repo Methods
   /// ============================
 
   /// Look-up a commit to find its identity (if any) in another repo
@@ -2818,6 +2870,21 @@ service SourceControlService extends fb303_core.BaseService {
     1: CommitSpecifier commit,
     2: CommitLookupXRepoParams params,
   ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
+
+  /// Repository management methods
+  /// ==============================
+
+  CreateReposToken create_repos(1: CreateReposParams params) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
+
+  CreateReposPollResponse create_repos_poll(1: CreateReposToken token) throws (
     1: RequestError request_error,
     2: InternalError internal_error,
     3: OverloadError overload_error,

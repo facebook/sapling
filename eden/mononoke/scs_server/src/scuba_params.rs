@@ -519,6 +519,20 @@ impl AddScubaParams for thrift::TreeListParams {
     }
 }
 
+impl AddScubaParams for thrift::CreateReposParams {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add(
+            "param_repos",
+            self.repos
+                .iter()
+                .map(|repo| repo.repo_name.clone())
+                .collect_vec(),
+        );
+    }
+}
+
+impl AddScubaParams for thrift::CreateReposToken {}
+
 impl AddScubaParams for thrift::MegarepoAddTargetToken {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_megarepo_token", self.id);
