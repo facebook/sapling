@@ -63,8 +63,8 @@ Now insert with valid version name
   EquivalentWorkingCopyAncestor(ChangesetId(Blake2(a246023ccc3b1dc56076a2524cd644fb4cb4a99ee2141b2277677f9ce82f0f13)), CommitSyncConfigVersion("TEST_VERSION_NAME"))
 
 Now insert not sync candidate entry
-  $ mononoke_admin_source_target 0 1 crossrepo insert not-sync-candidate \
-  > --large-repo-hash "$NOT_SYNC_CANDIDATE_HASH" --version-name TEST_VERSION_NAME 2>&1 | grep 'successfully inserted'
+  $ mononoke_newadmin cross-repo --source-repo-name large --target-repo-name small insert not-sync-candidate \
+  > --large-commit-id "$NOT_SYNC_CANDIDATE_HASH" --version-name TEST_VERSION_NAME 2>&1 | grep 'successfully inserted'
   * successfully inserted not sync candidate entry (glob)
   $ mononoke_newadmin cross-repo --source-repo-name large --target-repo-name small map -i "$NOT_SYNC_CANDIDATE_HASH" 2>&1 | grep NotSyncCandidate
   NotSyncCandidate(CommitSyncConfigVersion("TEST_VERSION_NAME"))

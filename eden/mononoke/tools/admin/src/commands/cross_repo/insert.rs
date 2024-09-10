@@ -38,6 +38,8 @@ pub enum InsertSubcommand {
     Rewritten(RewrittenArgs),
     /// Mark a pair of commits as having an equivalent working copy
     EquivalentWorkingCopy(EquivalentWorkingCopyArgs),
+    /// Mark a source commit in the large repo as not having a synced commit
+    NotSyncCandidate(NotSyncCandidateArgs),
 }
 
 #[derive(Args)]
@@ -70,6 +72,17 @@ pub struct EquivalentWorkingCopyArgs {
     version_name: String,
 }
 
+#[derive(Args)]
+pub struct NotSyncCandidateArgs {
+    /// Commit id in the large repo
+    #[clap(long)]
+    large_commit_id: String,
+
+    /// Optional mapping version name to write to the DB
+    #[clap(long)]
+    version_name: Option<String>,
+}
+
 pub async fn insert(
     ctx: &CoreContext,
     app: &MononokeApp,
@@ -90,6 +103,9 @@ pub async fn insert(
         InsertSubcommand::EquivalentWorkingCopy(args) => {
             insert_equivalent_working_copy(ctx, source_repo, target_repo, commit_syncers, args)
                 .await
+        }
+        InsertSubcommand::NotSyncCandidate(args) => {
+            insert_not_sync_candidate(ctx, commit_syncers, args).await
         }
     }
 }
@@ -196,6 +212,52 @@ async fn insert_equivalent_working_copy(
         info!(
             ctx.logger(),
             "successfully inserted equivalent working copy"
+        );
+        Ok(())
+    } else {
+        Err(anyhow!("failed to insert entry"))
+    }
+}
+
+async fn insert_not_sync_candidate(
+    ctx: &CoreContext,
+    commit_syncers: Syncers<Arc<Repo>>,
+    args: NotSyncCandidateArgs,
+) -> Result<()> {
+    let commit_syncer = commit_syncers.large_to_small;
+
+    let large_repo = commit_syncer.get_large_repo();
+    let large_cs_id = parse_commit_id(ctx, large_repo, &args.large_commit_id).await?;
+
+    let small_repo_id = commit_syncer.get_small_repo().repo_identity().id();
+    let large_repo_id = commit_syncer.get_large_repo().repo_identity().id();
+
+    let maybe_mapping_version = if let Some(version_name) = args.version_name {
+        let mapping_version = CommitSyncConfigVersion(version_name);
+        if !commit_syncer.version_exists(&mapping_version).await? {
+            return Err(anyhow!("{} version does not exist", mapping_version));
+        }
+        Some(mapping_version)
+    } else {
+        None
+    };
+
+    let mapping_entry = EquivalentWorkingCopyEntry {
+        large_repo_id,
+        small_repo_id,
+        small_bcs_id: None,
+        large_bcs_id: large_cs_id,
+        version_name: maybe_mapping_version,
+    };
+
+    let res = commit_syncer
+        .get_mapping()
+        .insert_equivalent_working_copy(ctx, mapping_entry)
+        .await?;
+    if res {
+        info!(
+            ctx.logger(),
+            "successfully inserted not sync candidate entry"
         );
         Ok(())
     } else {
