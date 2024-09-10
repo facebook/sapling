@@ -18,8 +18,8 @@ use std::sync::Arc;
 #[cfg(fbcode_build)]
 use std::time::Duration;
 
-use ::manifest::AsyncManifest;
 use ::manifest::Entry;
+use ::manifest::Manifest;
 use ::manifest::ManifestOps;
 use anyhow::Error;
 #[cfg(fbcode_build)]
@@ -760,7 +760,7 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
             cloned!(ctx, repo);
             async move {
                 let ms = ms_hash.load(&ctx, repo.repo_blobstore()).await?;
-                let result = AsyncManifest::list(&ms, &ctx, repo.repo_blobstore())
+                let result = Manifest::list(&ms, &ctx, repo.repo_blobstore())
                     .await?
                     .map_ok(|(name, entry)| {
                         (String::from_utf8(Vec::from(name.as_ref())).unwrap(), entry)
@@ -1398,7 +1398,7 @@ mod octopus_merges {
         let hg_manifest = hg_cs.manifestid().load(&ctx, repo.repo_blobstore()).await?;
 
         // Do we get the same files?
-        let files = AsyncManifest::list(&hg_manifest, &ctx, repo.repo_blobstore()).await?;
+        let files = Manifest::list(&hg_manifest, &ctx, repo.repo_blobstore()).await?;
         assert_eq!(files.count().await, 3);
 
         Ok(())

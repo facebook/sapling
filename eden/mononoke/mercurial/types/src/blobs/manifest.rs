@@ -22,8 +22,8 @@ use context::CoreContext;
 use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
-use manifest::AsyncManifest;
 use manifest::Entry;
+use manifest::Manifest;
 use mononoke_types::SortedVectorTrieMap;
 use sorted_vector_map::SortedVectorMap;
 
@@ -263,7 +263,7 @@ impl Loadable for HgManifestId {
 }
 
 #[async_trait]
-impl<Store: Send + Sync> AsyncManifest<Store> for HgBlobManifest {
+impl<Store: Send + Sync> Manifest<Store> for HgBlobManifest {
     type TreeId = HgManifestId;
     type LeafId = (FileType, HgFileNodeId);
     type TrieMapType = SortedVectorTrieMap<Entry<HgManifestId, (FileType, HgFileNodeId)>>;

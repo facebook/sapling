@@ -17,9 +17,9 @@ use mononoke_types::basename_suffix_skeleton_manifest_v3::BssmV3Entry;
 use mononoke_types::sharded_map_v2::LoadableShardedMapV2Node;
 use mononoke_types::MPathElement;
 
-use super::AsyncManifest;
-use super::AsyncOrderedManifest;
 use super::Entry;
+use super::Manifest;
+use super::OrderedManifest;
 use super::Weight;
 
 pub(crate) fn bssm_v3_to_mf_entry(entry: BssmV3Entry) -> Entry<BssmV3Directory, ()> {
@@ -30,7 +30,7 @@ pub(crate) fn bssm_v3_to_mf_entry(entry: BssmV3Entry) -> Entry<BssmV3Directory, 
 }
 
 #[async_trait]
-impl<Store: Blobstore> AsyncManifest<Store> for BssmV3Directory {
+impl<Store: Blobstore> Manifest<Store> for BssmV3Directory {
     type TreeId = BssmV3Directory;
     type LeafId = ();
     type TrieMapType = LoadableShardedMapV2Node<BssmV3Entry>;
@@ -132,7 +132,7 @@ fn convert_bssm_v3_to_weighted(
 }
 
 #[async_trait]
-impl<Store: Blobstore> AsyncOrderedManifest<Store> for BssmV3Directory {
+impl<Store: Blobstore> OrderedManifest<Store> for BssmV3Directory {
     async fn list_weighted(
         &self,
         ctx: &CoreContext,
@@ -156,7 +156,7 @@ impl<Store: Blobstore> AsyncOrderedManifest<Store> for BssmV3Directory {
         blobstore: &Store,
         name: &MPathElement,
     ) -> Result<Option<Entry<(Weight, Self::TreeId), Self::LeafId>>> {
-        AsyncManifest::lookup(self, ctx, blobstore, name)
+        Manifest::lookup(self, ctx, blobstore, name)
             .await
             .map(|opt| opt.map(convert_bssm_v3_to_weighted))
     }

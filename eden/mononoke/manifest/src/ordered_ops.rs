@@ -25,9 +25,9 @@ use nonzero_ext::nonzero;
 
 use crate::ops::Diff;
 use crate::select::select_path_tree;
-use crate::AsyncManifest as Manifest;
-use crate::AsyncOrderedManifest as OrderedManifest;
 use crate::Entry;
+use crate::Manifest;
+use crate::OrderedManifest;
 use crate::PathOrPrefix;
 use crate::StoreLoadable;
 

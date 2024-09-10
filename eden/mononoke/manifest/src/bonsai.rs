@@ -29,8 +29,8 @@ use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 use tokio::task;
 
-use crate::AsyncManifest;
 use crate::Entry;
+use crate::Manifest;
 
 pub(crate) type BonsaiEntry<ManifestId, FileId> = Entry<ManifestId, (FileType, FileId)>;
 
@@ -152,7 +152,7 @@ where
     FileId: Hash + Eq,
     ManifestId: Hash + Eq + StoreLoadable<Store>,
     <ManifestId as StoreLoadable<Store>>::Value:
-        AsyncManifest<Store, TreeId = ManifestId, LeafId = Leaf> + Send + Sync,
+        Manifest<Store, TreeId = ManifestId, LeafId = Leaf> + Send + Sync,
     Leaf: ManifestLeafId<FileId = FileId>,
 {
     // If there is a single parent, and it's unchanged, then we don't need to recurse.
@@ -260,7 +260,7 @@ where
     FileId: Hash + Eq,
     ManifestId: Hash + Eq + StoreLoadable<Store>,
     <ManifestId as StoreLoadable<Store>>::Value:
-        AsyncManifest<Store, TreeId = ManifestId, LeafId = Leaf> + Send + Sync,
+        Manifest<Store, TreeId = ManifestId, LeafId = Leaf> + Send + Sync,
     Leaf: ManifestLeafId<FileId = FileId>,
 {
     let res = match node {
@@ -340,7 +340,7 @@ where
     ManifestId: Hash + Eq + StoreLoadable<Store> + Send + Sync + 'static,
     Store: Send + Sync + Clone + 'static,
     <ManifestId as StoreLoadable<Store>>::Value:
-        AsyncManifest<Store, TreeId = ManifestId, LeafId = Leaf> + Send + Sync,
+        Manifest<Store, TreeId = ManifestId, LeafId = Leaf> + Send + Sync,
     Leaf: ManifestLeafId<FileId = FileId>,
 {
     // NOTE: `async move` blocks are used below to own CoreContext and Store for the (static)

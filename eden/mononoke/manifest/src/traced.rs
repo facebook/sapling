@@ -19,8 +19,8 @@ use futures::stream::TryStreamExt;
 use mononoke_types::MPathElement;
 use mononoke_types::SortedVectorTrieMap;
 
-use crate::types::AsyncManifest;
 use crate::types::Entry;
+use crate::types::Manifest;
 
 /// Traced allows you to trace a given parent through manifest derivation. For example, if you
 /// assign ID 1 to a tree, then perform manifest derivation, then further entries you presented to
@@ -96,14 +96,14 @@ impl<I, TreeId, LeafId> From<Entry<Traced<I, TreeId>, Traced<I, LeafId>>>
 }
 
 #[async_trait]
-impl<Store, I, M> AsyncManifest<Store> for Traced<I, M>
+impl<Store, I, M> Manifest<Store> for Traced<I, M>
 where
     Store: Send + Sync,
     I: Send + Sync + Copy + 'static,
-    M: AsyncManifest<Store> + Send + Sync,
+    M: Manifest<Store> + Send + Sync,
 {
-    type TreeId = Traced<I, <M as AsyncManifest<Store>>::TreeId>;
-    type LeafId = Traced<I, <M as AsyncManifest<Store>>::LeafId>;
+    type TreeId = Traced<I, <M as Manifest<Store>>::TreeId>;
+    type LeafId = Traced<I, <M as Manifest<Store>>::LeafId>;
     type TrieMapType = SortedVectorTrieMap<Entry<Self::TreeId, Self::LeafId>>;
 
     async fn list(

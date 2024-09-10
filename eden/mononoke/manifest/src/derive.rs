@@ -33,8 +33,8 @@ use mononoke_types::TrieMap;
 use smallvec::smallvec;
 use smallvec::SmallVec;
 
-use crate::AsyncManifest as Manifest;
 use crate::Entry;
+use crate::Manifest;
 use crate::PathTree;
 use crate::StoreLoadable;
 use crate::TrieMapOps;

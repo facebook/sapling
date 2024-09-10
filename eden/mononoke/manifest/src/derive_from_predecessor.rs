@@ -20,8 +20,8 @@ use futures::stream::TryStreamExt;
 use mononoke_types::MPathElement;
 use sorted_vector_map::SortedVectorMap;
 
-use crate::AsyncManifest as Manifest;
 use crate::Entry;
+use crate::Manifest;
 use crate::StoreLoadable;
 
 /// Information passed to the `create_tree` function when a tree node is constructed.

@@ -20,7 +20,7 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use itertools::EitherOrBoth;
 use manifest::After;
-use manifest::AsyncManifest;
+use manifest::Manifest;
 use manifest::ManifestOps;
 use manifest::ManifestOrderedOps;
 use manifest::PathOrPrefix;

@@ -19,8 +19,8 @@ use futures::try_join;
 use mononoke_types::MPathElement;
 use mononoke_types::TrieMap;
 
-use crate::types::AsyncManifest;
 use crate::types::Entry;
+use crate::types::Manifest;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct CombinedId<M, N>(pub M, pub N);
@@ -28,8 +28,8 @@ pub struct CombinedId<M, N>(pub M, pub N);
 pub struct Combined<M, N>(pub M, pub N);
 
 fn combine_entries<
-    M: AsyncManifest<Store> + Send + Sync,
-    N: AsyncManifest<Store> + Send + Sync,
+    M: Manifest<Store> + Send + Sync,
+    N: Manifest<Store> + Send + Sync,
     Store: Send + Sync,
 >(
     (m_result, n_result): (
@@ -38,10 +38,7 @@ fn combine_entries<
     ),
 ) -> Result<(
     MPathElement,
-    Entry<
-        <Combined<M, N> as AsyncManifest<Store>>::TreeId,
-        <Combined<M, N> as AsyncManifest<Store>>::LeafId,
-    >,
+    Entry<<Combined<M, N> as Manifest<Store>>::TreeId, <Combined<M, N> as Manifest<Store>>::LeafId>,
 )> {
     let (m_elem, m_entry) = m_result?;
     let (n_elem, n_entry) = n_result?;
@@ -84,16 +81,11 @@ where
 }
 
 #[async_trait]
-impl<
-    M: AsyncManifest<Store> + Send + Sync,
-    N: AsyncManifest<Store> + Send + Sync,
-    Store: Send + Sync,
-> AsyncManifest<Store> for Combined<M, N>
+impl<M: Manifest<Store> + Send + Sync, N: Manifest<Store> + Send + Sync, Store: Send + Sync>
+    Manifest<Store> for Combined<M, N>
 {
-    type TreeId =
-        CombinedId<<M as AsyncManifest<Store>>::TreeId, <N as AsyncManifest<Store>>::TreeId>;
-    type LeafId =
-        CombinedId<<M as AsyncManifest<Store>>::LeafId, <N as AsyncManifest<Store>>::LeafId>;
+    type TreeId = CombinedId<<M as Manifest<Store>>::TreeId, <N as Manifest<Store>>::TreeId>;
+    type LeafId = CombinedId<<M as Manifest<Store>>::LeafId, <N as Manifest<Store>>::LeafId>;
     type TrieMapType = TrieMap<Entry<Self::TreeId, Self::LeafId>>;
 
     async fn list(
@@ -188,16 +180,13 @@ impl<
 }
 
 #[async_trait]
-impl<
-    M: AsyncManifest<Store> + Send + Sync,
-    N: AsyncManifest<Store> + Send + Sync,
-    Store: Send + Sync,
-> AsyncManifest<Store> for Either<M, N>
+impl<M: Manifest<Store> + Send + Sync, N: Manifest<Store> + Send + Sync, Store: Send + Sync>
+    Manifest<Store> for Either<M, N>
 {
-    type TreeId = Either<<M as AsyncManifest<Store>>::TreeId, <N as AsyncManifest<Store>>::TreeId>;
-    type LeafId = Either<<M as AsyncManifest<Store>>::LeafId, <N as AsyncManifest<Store>>::LeafId>;
+    type TreeId = Either<<M as Manifest<Store>>::TreeId, <N as Manifest<Store>>::TreeId>;
+    type LeafId = Either<<M as Manifest<Store>>::LeafId, <N as Manifest<Store>>::LeafId>;
     type TrieMapType =
-        Either<<M as AsyncManifest<Store>>::TrieMapType, <N as AsyncManifest<Store>>::TrieMapType>;
+        Either<<M as Manifest<Store>>::TrieMapType, <N as Manifest<Store>>::TrieMapType>;
 
     async fn list(
         &self,

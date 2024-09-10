@@ -23,8 +23,8 @@ use mononoke_types::MPathElement;
 use mononoke_types::MPathElementPrefix;
 use mononoke_types::NonRootMPath;
 
-use crate::AsyncManifest;
 use crate::Entry;
+use crate::Manifest;
 use crate::TrieMapOps;
 
 /// Result of a multi-way comparison between a manifest tree and the merge of
@@ -89,7 +89,7 @@ pub async fn compare_manifest<'a, M, Store>(
     impl Stream<Item = Result<ManifestComparison<M::TrieMapType, Entry<M::TreeId, M::LeafId>>>> + 'a,
 >
 where
-    M: AsyncManifest<Store>,
+    M: Manifest<Store>,
     M::TreeId: Send + Sync + Eq + 'static,
     M::LeafId: Send + Sync + Eq + 'static,
     M::TrieMapType: TrieMapOps<Store, Entry<M::TreeId, M::LeafId>> + Eq,
@@ -286,7 +286,7 @@ pub fn compare_manifest_tree<'a, M, Store>(
 ) -> impl Stream<Item = Result<Comparison<M::TrieMapType, Entry<M::TreeId, M::LeafId>>>> + 'a
 where
     Store: Send + Sync + 'static,
-    M: AsyncManifest<Store> + Send + Sync + 'static,
+    M: Manifest<Store> + Send + Sync + 'static,
     M::TreeId: StoreLoadable<Store, Value = M> + Clone + Send + Sync + Eq + 'static,
     M::LeafId: Send + Sync + Eq + 'static,
     M::TrieMapType: TrieMapOps<Store, Entry<M::TreeId, M::LeafId>> + Eq,

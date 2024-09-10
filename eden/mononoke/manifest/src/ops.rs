@@ -26,8 +26,8 @@ use mononoke_types::path::MPath;
 use mononoke_types::NonRootMPath;
 
 use crate::select::select_path_tree;
-use crate::AsyncManifest as Manifest;
 use crate::Entry;
+use crate::Manifest;
 use crate::PathOrPrefix;
 use crate::StoreLoadable;
 

@@ -27,9 +27,9 @@ use futures::stream::TryStreamExt;
 use futures::try_join;
 use futures::FutureExt;
 use futures_watchdog::WatchdogExt;
-use manifest::AsyncManifest;
 use manifest::Diff;
 use manifest::Entry;
+use manifest::Manifest;
 use manifest::ManifestOps;
 use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgChangesetId;
@@ -401,7 +401,7 @@ where
             HgAugmentedManifestId::new(hg_manifest_id.into_nodehash());
 
         // We will traverse over Mercurial manifests for now, as augmented manifests haven't been
-        // derived yet and don't yet implement AsyncManifest.  This will be trivial to swap in later.
+        // derived yet and don't yet implement Manifest.  This will be trivial to swap in later.
         let max_concurrent_manifests = if matches!(upload_policy, UploadPolicy::TreesOnly) {
             MAX_CONCURRENT_MANIFESTS_TREES_ONLY
         } else {

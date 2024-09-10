@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use ::manifest::AsyncManifest;
 use ::manifest::Entry;
+use ::manifest::Manifest;
 use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
@@ -22,7 +22,7 @@ use crate::TreeHandle;
 use crate::Treeish;
 
 #[async_trait]
-impl<Store: Send + Sync> AsyncManifest<Store> for Tree {
+impl<Store: Send + Sync> Manifest<Store> for Tree {
     type TreeId = TreeHandle;
     type LeafId = BlobHandle;
     type TrieMapType = SortedVectorTrieMap<Entry<TreeHandle, BlobHandle>>;

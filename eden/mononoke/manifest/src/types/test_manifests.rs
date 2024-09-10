@@ -23,11 +23,11 @@ use mononoke_types::test_sharded_manifest::TestShardedManifestEntry;
 use mononoke_types::MPathElement;
 use mononoke_types::SortedVectorTrieMap;
 
-use super::AsyncManifest;
 use super::Entry;
+use super::Manifest;
 
 #[async_trait]
-impl<Store: Blobstore> AsyncManifest<Store> for TestManifest {
+impl<Store: Blobstore> Manifest<Store> for TestManifest {
     type TreeId = TestManifestDirectory;
     type LeafId = ();
     type TrieMapType = SortedVectorTrieMap<Entry<TestManifestDirectory, ()>>;
@@ -78,7 +78,7 @@ fn convert_test_manifest(
 }
 
 #[async_trait]
-impl<Store: Blobstore> AsyncManifest<Store> for TestShardedManifest {
+impl<Store: Blobstore> Manifest<Store> for TestShardedManifest {
     type TreeId = TestShardedManifestDirectory;
     type LeafId = ();
     type TrieMapType = LoadableShardedMapV2Node<TestShardedManifestEntry>;

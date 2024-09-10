@@ -377,8 +377,8 @@ mod test {
     use assert_matches::assert_matches;
     use borrowed::borrowed;
     use fbinit::FacebookInit;
-    use manifest::AsyncManifest;
     use manifest::Entry;
+    use manifest::Manifest;
     use mercurial_derivation::DeriveHgChangeset;
     use metaconfig_types::FilestoreParams;
     use mononoke_macros::mononoke;

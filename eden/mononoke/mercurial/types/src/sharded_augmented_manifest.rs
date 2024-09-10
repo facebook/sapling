@@ -27,8 +27,8 @@ use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures_ext::FbStreamExt;
-use manifest::AsyncManifest;
 use manifest::Entry;
+use manifest::Manifest;
 use mononoke_types::hash::Blake2;
 use mononoke_types::hash::Blake3;
 use mononoke_types::hash::Sha1;
@@ -704,7 +704,7 @@ fn convert_hg_augmented_manifest_entry(
 }
 
 #[async_trait]
-impl<Store: Blobstore> AsyncManifest<Store> for HgAugmentedManifestEnvelope {
+impl<Store: Blobstore> Manifest<Store> for HgAugmentedManifestEnvelope {
     type TreeId = HgAugmentedManifestId;
 
     type LeafId = HgAugmentedFileLeafNode;

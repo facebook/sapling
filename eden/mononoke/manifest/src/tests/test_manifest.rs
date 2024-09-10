@@ -42,9 +42,9 @@ pub(crate) use crate::derive_batch::ManifestChanges;
 pub(crate) use crate::derive_manifest;
 pub(crate) use crate::flatten_subentries;
 pub(crate) use crate::types::Weight;
-pub(crate) use crate::AsyncManifest;
-pub(crate) use crate::AsyncOrderedManifest;
 pub(crate) use crate::Entry;
+pub(crate) use crate::Manifest;
+pub(crate) use crate::OrderedManifest;
 pub(crate) use crate::TreeInfo;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -165,7 +165,7 @@ impl Storable for TestManifest {
 }
 
 #[async_trait]
-impl<Store: Blobstore> AsyncManifest<Store> for TestManifest {
+impl<Store: Blobstore> Manifest<Store> for TestManifest {
     type LeafId = (FileType, TestLeafId);
     type TreeId = TestManifestId;
     type TrieMapType = SortedVectorTrieMap<Entry<Self::TreeId, Self::LeafId>>;
@@ -207,7 +207,7 @@ impl<Store: Blobstore> AsyncManifest<Store> for TestManifest {
 // code still works if this estimate is wrong, but it may schedule the
 // wrong number of child manifest expansions when this happens.
 #[async_trait]
-impl<Store: Blobstore> AsyncOrderedManifest<Store> for TestManifest {
+impl<Store: Blobstore> OrderedManifest<Store> for TestManifest {
     async fn list_weighted(
         &self,
         _ctx: &CoreContext,

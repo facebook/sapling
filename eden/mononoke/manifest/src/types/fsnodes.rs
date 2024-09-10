@@ -19,13 +19,13 @@ use mononoke_types::FsnodeId;
 use mononoke_types::MPathElement;
 use mononoke_types::SortedVectorTrieMap;
 
-use super::AsyncManifest;
-use super::AsyncOrderedManifest;
 use super::Entry;
+use super::Manifest;
+use super::OrderedManifest;
 use super::Weight;
 
 #[async_trait]
-impl<Store: Blobstore> AsyncManifest<Store> for Fsnode {
+impl<Store: Blobstore> Manifest<Store> for Fsnode {
     type TreeId = FsnodeId;
     type LeafId = FsnodeFile;
     type TrieMapType = SortedVectorTrieMap<Entry<FsnodeId, FsnodeFile>>;
@@ -74,7 +74,7 @@ fn convert_fsnode(fsnode_entry: &FsnodeEntry) -> Entry<FsnodeId, FsnodeFile> {
 }
 
 #[async_trait]
-impl<Store: Blobstore> AsyncOrderedManifest<Store> for Fsnode {
+impl<Store: Blobstore> OrderedManifest<Store> for Fsnode {
     async fn lookup_weighted(
         &self,
         _ctx: &CoreContext,

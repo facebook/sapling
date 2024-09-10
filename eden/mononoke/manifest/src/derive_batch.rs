@@ -25,9 +25,9 @@ use mononoke_types::ChangesetId;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 
-use crate::AsyncManifest as Manifest;
 use crate::Entry;
 use crate::LeafInfo;
+use crate::Manifest;
 use crate::PathTree;
 use crate::TreeInfo;
 

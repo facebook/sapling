@@ -34,9 +34,9 @@ use gix_object::Commit;
 use gix_object::Tag;
 use manifest::bonsai_diff;
 use manifest::find_intersection_of_diffs;
-use manifest::AsyncManifest;
 use manifest::BonsaiDiffFileChange;
 use manifest::Entry;
+use manifest::Manifest;
 use manifest::StoreLoadable;
 use mononoke_types::hash;
 use mononoke_types::ChangesetId;
@@ -80,7 +80,7 @@ pub struct GitManifest<const SUBMODULES: bool>(
 );
 
 #[async_trait]
-impl<const SUBMODULES: bool, Store: Send + Sync> AsyncManifest<Store> for GitManifest<SUBMODULES> {
+impl<const SUBMODULES: bool, Store: Send + Sync> Manifest<Store> for GitManifest<SUBMODULES> {
     type TreeId = GitTree<SUBMODULES>;
     type LeafId = (FileType, GitLeaf);
     type TrieMapType = SortedVectorTrieMap<Entry<GitTree<SUBMODULES>, (FileType, GitLeaf)>>;

@@ -19,11 +19,11 @@ use mononoke_types::MPathElement;
 use mononoke_types::ManifestUnodeId;
 use mononoke_types::SortedVectorTrieMap;
 
-use super::AsyncManifest;
 use super::Entry;
+use super::Manifest;
 
 #[async_trait]
-impl<Store: Blobstore> AsyncManifest<Store> for ManifestUnode {
+impl<Store: Blobstore> Manifest<Store> for ManifestUnode {
     type TreeId = ManifestUnodeId;
     type LeafId = FileUnodeId;
     type TrieMapType = SortedVectorTrieMap<Entry<ManifestUnodeId, FileUnodeId>>;

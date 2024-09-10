@@ -16,8 +16,8 @@ use futures::future::FutureExt;
 use futures::stream;
 use futures::stream::Stream;
 use futures::stream::TryStreamExt;
-use manifest::AsyncManifest;
 use manifest::Entry;
+use manifest::Manifest;
 use mercurial_types::HgChangesetId;
 use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangeset;
@@ -48,8 +48,7 @@ pub fn iterate_all_manifest_entries<'a, MfId, LId>(
 where
     MfId: Loadable + Send + Sync + Clone + 'a,
     LId: Send + Clone + 'static,
-    <MfId as Loadable>::Value:
-        AsyncManifest<RepoBlobstore, TreeId = MfId, LeafId = LId> + Send + Sync,
+    <MfId as Loadable>::Value: Manifest<RepoBlobstore, TreeId = MfId, LeafId = LId> + Send + Sync,
 {
     bounded_traversal_stream(256, Some((MPath::ROOT, entry)), move |(path, entry)| {
         async move {

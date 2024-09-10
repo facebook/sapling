@@ -22,9 +22,9 @@ use mononoke_types::MPathElement;
 use mononoke_types::SkeletonManifestId;
 use mononoke_types::SortedVectorTrieMap;
 
-use super::AsyncManifest;
-use super::AsyncOrderedManifest;
 use super::Entry;
+use super::Manifest;
+use super::OrderedManifest;
 use super::Weight;
 
 pub(crate) fn skeleton_manifest_v2_to_mf_entry(
@@ -37,7 +37,7 @@ pub(crate) fn skeleton_manifest_v2_to_mf_entry(
 }
 
 #[async_trait]
-impl<Store: Blobstore> AsyncManifest<Store> for SkeletonManifestV2 {
+impl<Store: Blobstore> Manifest<Store> for SkeletonManifestV2 {
     type TreeId = SkeletonManifestV2;
     type LeafId = ();
     type TrieMapType = LoadableShardedMapV2Node<SkeletonManifestV2Entry>;
@@ -124,7 +124,7 @@ impl<Store: Blobstore> AsyncManifest<Store> for SkeletonManifestV2 {
 }
 
 #[async_trait]
-impl<Store: Blobstore> AsyncManifest<Store> for SkeletonManifest {
+impl<Store: Blobstore> Manifest<Store> for SkeletonManifest {
     type TreeId = SkeletonManifestId;
     type LeafId = ();
     type TrieMapType = SortedVectorTrieMap<Entry<SkeletonManifestId, ()>>;
@@ -192,7 +192,7 @@ fn convert_skeleton_manifest_v2_to_weighted(
 }
 
 #[async_trait]
-impl<Store: Blobstore> AsyncOrderedManifest<Store> for SkeletonManifestV2 {
+impl<Store: Blobstore> OrderedManifest<Store> for SkeletonManifestV2 {
     async fn list_weighted(
         &self,
         ctx: &CoreContext,
@@ -216,14 +216,14 @@ impl<Store: Blobstore> AsyncOrderedManifest<Store> for SkeletonManifestV2 {
         blobstore: &Store,
         name: &MPathElement,
     ) -> Result<Option<Entry<(Weight, Self::TreeId), Self::LeafId>>> {
-        AsyncManifest::lookup(self, ctx, blobstore, name)
+        Manifest::lookup(self, ctx, blobstore, name)
             .await
             .map(|opt| opt.map(convert_skeleton_manifest_v2_to_weighted))
     }
 }
 
 #[async_trait]
-impl<Store: Blobstore> AsyncOrderedManifest<Store> for SkeletonManifest {
+impl<Store: Blobstore> OrderedManifest<Store> for SkeletonManifest {
     async fn lookup_weighted(
         &self,
         _ctx: &CoreContext,

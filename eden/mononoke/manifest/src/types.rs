@@ -34,7 +34,7 @@ mod test_manifests;
 mod unodes;
 
 #[async_trait]
-pub trait AsyncManifest<Store: Send + Sync>: Sized + 'static {
+pub trait Manifest<Store: Send + Sync>: Sized + 'static {
     type TreeId: Send + Sync;
     type LeafId: Send + Sync;
     type TrieMapType: Send + Sync;
@@ -104,7 +104,7 @@ pub trait AsyncManifest<Store: Send + Sync>: Sized + 'static {
 pub type Weight = usize;
 
 #[async_trait]
-pub trait AsyncOrderedManifest<Store: Send + Sync>: AsyncManifest<Store> {
+pub trait OrderedManifest<Store: Send + Sync>: Manifest<Store> {
     async fn list_weighted(
         &self,
         ctx: &CoreContext,
