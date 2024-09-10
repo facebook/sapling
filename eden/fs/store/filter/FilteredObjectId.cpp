@@ -10,6 +10,7 @@
 #include <folly/Varint.h>
 #include <folly/logging/xlog.h>
 
+#include "eden/common/utils/EnumValue.h"
 #include "eden/common/utils/Throw.h"
 #include "eden/fs/store/BackingStore.h"
 
@@ -29,7 +30,7 @@ std::string foidTypeToString(FilteredObjectIdType foidType) {
     case FilteredObjectIdType::OBJECT_TYPE_UNFILTERED_TREE:
       return "unfiltered_tree";
   }
-  XLOGF(FATAL, "Invalid FilteredObjectIdType: {}", foidType);
+  XLOGF(FATAL, "Invalid FilteredObjectIdType: {}", enumValue(foidType));
 }
 
 namespace {

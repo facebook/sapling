@@ -7,10 +7,11 @@ cpp_library(
     srcs = ["FilteredObjectId.cpp"],
     headers = ["FilteredObjectId.h"],
     deps = [
-        "//eden/common/utils:throw",
-        "//eden/fs/store:backing_store_interface",
-        "//folly:varint",
-        "//folly/logging:logging",
+        "fbcode//eden/common/utils:enum",
+        "fbcode//eden/common/utils:throw",
+        "fbcode//eden/fs/store:backing_store_interface",
+        "fbcode//folly:varint",
+        "fbcode//folly/logging:logging",
     ],
     exported_deps = [
         "//eden/common/utils:path",
