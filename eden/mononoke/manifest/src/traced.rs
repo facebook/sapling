@@ -14,10 +14,13 @@ use blobstore::Blobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use context::CoreContext;
+use futures::stream::BoxStream;
+use futures::stream::TryStreamExt;
 use mononoke_types::MPathElement;
+use mononoke_types::SortedVectorTrieMap;
 
+use crate::types::AsyncManifest;
 use crate::types::Entry;
-use crate::types::Manifest;
 
 /// Traced allows you to trace a given parent through manifest derivation. For example, if you
 /// assign ID 1 to a tree, then perform manifest derivation, then further entries you presented to
@@ -92,22 +95,100 @@ impl<I, TreeId, LeafId> From<Entry<Traced<I, TreeId>, Traced<I, LeafId>>>
     }
 }
 
-impl<I: Send + Sync + Copy + 'static, M: Manifest> Manifest for Traced<I, M> {
-    type TreeId = Traced<I, <M as Manifest>::TreeId>;
-    type LeafId = Traced<I, <M as Manifest>::LeafId>;
+#[async_trait]
+impl<Store, I, M> AsyncManifest<Store> for Traced<I, M>
+where
+    Store: Send + Sync,
+    I: Send + Sync + Copy + 'static,
+    M: AsyncManifest<Store> + Send + Sync,
+{
+    type TreeId = Traced<I, <M as AsyncManifest<Store>>::TreeId>;
+    type LeafId = Traced<I, <M as AsyncManifest<Store>>::LeafId>;
+    type TrieMapType = SortedVectorTrieMap<Entry<Self::TreeId, Self::LeafId>>;
 
-    fn list(&self) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)>> {
-        Box::new(
-            self.1
-                .list()
-                .map(|(path, entry)| (path, self.inherit_into_entry(entry)))
-                .collect::<Vec<_>>()
-                .into_iter(),
-        )
+    async fn list(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        let stream = self
+            .1
+            .list(ctx, blobstore)
+            .await?
+            .map_ok(|(path, entry)| (path, self.inherit_into_entry(entry)));
+        Ok(Box::pin(stream))
     }
 
-    fn lookup(&self, name: &MPathElement) -> Option<Entry<Self::TreeId, Self::LeafId>> {
-        self.1.lookup(name).map(|e| self.inherit_into_entry(e))
+    async fn list_prefix(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        prefix: &[u8],
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        let stream = self
+            .1
+            .list_prefix(ctx, blobstore, prefix)
+            .await?
+            .map_ok(|(path, entry)| (path, self.inherit_into_entry(entry)));
+        Ok(Box::pin(stream))
+    }
+
+    async fn list_prefix_after(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        prefix: &[u8],
+        after: &[u8],
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        let stream = self
+            .1
+            .list_prefix_after(ctx, blobstore, prefix, after)
+            .await?
+            .map_ok(|(path, entry)| (path, self.inherit_into_entry(entry)));
+        Ok(Box::pin(stream))
+    }
+
+    async fn list_skip(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        skip: usize,
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        let stream = self
+            .1
+            .list_skip(ctx, blobstore, skip)
+            .await?
+            .map_ok(|(path, entry)| (path, self.inherit_into_entry(entry)));
+        Ok(Box::pin(stream))
+    }
+
+    async fn lookup(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        name: &MPathElement,
+    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
+        let entry = self.1.lookup(ctx, blobstore, name).await?;
+        Ok(entry.map(|e| self.inherit_into_entry(e)))
+    }
+
+    async fn into_trie_map(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<Self::TrieMapType> {
+        let entries = self
+            .1
+            .list(ctx, blobstore)
+            .await?
+            .map_ok(|(k, v)| (k.to_smallvec(), self.inherit_into_entry(v)))
+            .try_collect()
+            .await?;
+        Ok(SortedVectorTrieMap::new(entries))
     }
 }
 
