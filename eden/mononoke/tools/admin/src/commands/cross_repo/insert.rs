@@ -20,6 +20,7 @@ use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_app::MononokeApp;
 use repo_identity::RepoIdentityRef;
 use slog::info;
+use synced_commit_mapping::EquivalentWorkingCopyEntry;
 use synced_commit_mapping::SyncedCommitMappingEntry;
 
 use super::Repo;
@@ -35,10 +36,27 @@ pub struct InsertArgs {
 pub enum InsertSubcommand {
     /// Mark a pair of commits as rewritten
     Rewritten(RewrittenArgs),
+    /// Mark a pair of commits as having an equivalent working copy
+    EquivalentWorkingCopy(EquivalentWorkingCopyArgs),
 }
 
 #[derive(Args)]
 pub struct RewrittenArgs {
+    /// Commit id in the source repo
+    #[clap(long)]
+    source_commit_id: String,
+
+    /// Commit id in the target repo
+    #[clap(long)]
+    target_commit_id: String,
+
+    /// Mapping version name to write to the DB
+    #[clap(long)]
+    version_name: String,
+}
+
+#[derive(Args)]
+pub struct EquivalentWorkingCopyArgs {
     /// Commit id in the source repo
     #[clap(long)]
     source_commit_id: String,
@@ -68,6 +86,10 @@ pub async fn insert(
     match args.subcommand {
         InsertSubcommand::Rewritten(args) => {
             insert_rewritten(ctx, source_repo, target_repo, commit_syncers, args).await
+        }
+        InsertSubcommand::EquivalentWorkingCopy(args) => {
+            insert_equivalent_working_copy(ctx, source_repo, target_repo, commit_syncers, args)
+                .await
         }
     }
 }
@@ -119,6 +141,61 @@ async fn insert_rewritten(
         info!(
             ctx.logger(),
             "successfully inserted rewritten mapping entry"
+        );
+        Ok(())
+    } else {
+        Err(anyhow!("failed to insert entry"))
+    }
+}
+
+async fn insert_equivalent_working_copy(
+    ctx: &CoreContext,
+    source_repo: Arc<Repo>,
+    target_repo: Arc<Repo>,
+    commit_syncers: Syncers<Arc<Repo>>,
+    args: EquivalentWorkingCopyArgs,
+) -> Result<()> {
+    let (source_cs_id, target_cs_id) = try_join!(
+        parse_commit_id(ctx, &source_repo, &args.source_commit_id),
+        parse_commit_id(ctx, &target_repo, &args.target_commit_id)
+    )?;
+
+    let commit_syncer = commit_syncers.large_to_small;
+
+    let small_repo_id = commit_syncer.get_small_repo().repo_identity().id();
+    let large_repo_id = commit_syncer.get_large_repo().repo_identity().id();
+
+    let mapping_version = CommitSyncConfigVersion(args.version_name);
+    if !commit_syncer.version_exists(&mapping_version).await? {
+        return Err(anyhow!("{} version does not exist", mapping_version));
+    }
+
+    let mapping_entry = if small_repo_id == source_repo.repo_identity().id() {
+        EquivalentWorkingCopyEntry {
+            large_repo_id,
+            small_repo_id,
+            small_bcs_id: Some(source_cs_id),
+            large_bcs_id: target_cs_id,
+            version_name: Some(mapping_version),
+        }
+    } else {
+        EquivalentWorkingCopyEntry {
+            large_repo_id,
+            small_repo_id,
+            small_bcs_id: Some(target_cs_id),
+            large_bcs_id: source_cs_id,
+            version_name: Some(mapping_version),
+        }
+    };
+
+    let res = commit_syncer
+        .get_mapping()
+        .insert_equivalent_working_copy(ctx, mapping_entry)
+        .await?;
+    if res {
+        info!(
+            ctx.logger(),
+            "successfully inserted equivalent working copy"
         );
         Ok(())
     } else {

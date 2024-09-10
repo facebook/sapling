@@ -51,13 +51,13 @@ blobimport hg servers repos into Mononoke repos
   $ REPOID=1 blobimport small/.hg small
 
 Try to insert with invalid version name
-  $ mononoke_admin_source_target 0 1 crossrepo insert equivalent-working-copy \
-  > --source-hash "$LARGE_EQ_WC_HASH" --target-hash "$SMALL_EQ_WC_HASH" --version-name invalid  2>&1 | grep 'invalid version'
+  $ mononoke_newadmin cross-repo --source-repo-name large --target-repo-name small insert equivalent-working-copy \
+  > --source-commit-id "$LARGE_EQ_WC_HASH" --target-commit-id "$SMALL_EQ_WC_HASH" --version-name invalid  2>&1 | grep 'invalid version'
   * invalid version does not exist (glob)
 
 Now insert with valid version name
-  $ mononoke_admin_source_target 0 1 crossrepo insert equivalent-working-copy \
-  > --source-hash "$LARGE_EQ_WC_HASH" --target-hash "$SMALL_EQ_WC_HASH" --version-name TEST_VERSION_NAME 2>&1 | grep 'successfully inserted'
+  $ mononoke_newadmin cross-repo --source-repo-name large --target-repo-name small insert equivalent-working-copy \
+  > --source-commit-id "$LARGE_EQ_WC_HASH" --target-commit-id "$SMALL_EQ_WC_HASH" --version-name TEST_VERSION_NAME 2>&1 | grep 'successfully inserted'
   * successfully inserted equivalent working copy (glob)
   $ mononoke_newadmin cross-repo --source-repo-name large --target-repo-name small map -i "$LARGE_EQ_WC_HASH" 2>&1 | grep EquivalentWorking
   EquivalentWorkingCopyAncestor(ChangesetId(Blake2(a246023ccc3b1dc56076a2524cd644fb4cb4a99ee2141b2277677f9ce82f0f13)), CommitSyncConfigVersion("TEST_VERSION_NAME"))
