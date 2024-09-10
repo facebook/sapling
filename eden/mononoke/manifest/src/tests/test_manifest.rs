@@ -23,6 +23,9 @@ use cloned::cloned;
 use context::CoreContext;
 use futures::future;
 use futures::future::FutureExt;
+use futures::stream;
+use futures::stream::BoxStream;
+use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use mononoke_types::path::MPath;
 use mononoke_types::BlobstoreBytes;
@@ -30,6 +33,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::FileType;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
+use mononoke_types::SortedVectorTrieMap;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 
@@ -37,9 +41,10 @@ pub(crate) use crate::derive_batch::derive_manifests_for_simple_stack_of_commits
 pub(crate) use crate::derive_batch::ManifestChanges;
 pub(crate) use crate::derive_manifest;
 pub(crate) use crate::flatten_subentries;
+pub(crate) use crate::types::Weight;
+pub(crate) use crate::AsyncManifest;
+pub(crate) use crate::AsyncOrderedManifest;
 pub(crate) use crate::Entry;
-pub(crate) use crate::Manifest;
-pub(crate) use crate::OrderedManifest;
 pub(crate) use crate::TreeInfo;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -159,16 +164,41 @@ impl Storable for TestManifest {
     }
 }
 
-impl Manifest for TestManifest {
+#[async_trait]
+impl<Store: Blobstore> AsyncManifest<Store> for TestManifest {
     type LeafId = (FileType, TestLeafId);
     type TreeId = TestManifestId;
+    type TrieMapType = SortedVectorTrieMap<Entry<Self::TreeId, Self::LeafId>>;
 
-    fn list(&self) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)>> {
-        let iter = self.0.clone().into_iter();
-        Box::new(iter)
+    async fn lookup(
+        &self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+        name: &MPathElement,
+    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
+        Ok(self.0.get(name).cloned())
     }
-    fn lookup(&self, name: &MPathElement) -> Option<Entry<Self::TreeId, Self::LeafId>> {
-        self.0.get(name).cloned()
+
+    async fn list(
+        &self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        Ok(stream::iter(self.0.clone()).map(Ok).boxed())
+    }
+
+    async fn into_trie_map(
+        self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<Self::TrieMapType> {
+        let entries = self
+            .0
+            .iter()
+            .map(|(k, v)| (k.clone().to_smallvec(), v.clone()))
+            .collect();
+        Ok(SortedVectorTrieMap::new(entries))
     }
 }
 
@@ -176,24 +206,35 @@ impl Manifest for TestManifest {
 // descendant count, but since we don't, just make something up (10).  The
 // code still works if this estimate is wrong, but it may schedule the
 // wrong number of child manifest expansions when this happens.
-impl OrderedManifest for TestManifest {
-    fn list_weighted(
+#[async_trait]
+impl<Store: Blobstore> AsyncOrderedManifest<Store> for TestManifest {
+    async fn list_weighted(
         &self,
-    ) -> Box<dyn Iterator<Item = (MPathElement, Entry<(usize, Self::TreeId), Self::LeafId>)>> {
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<
+        BoxStream<
+            'async_trait,
+            Result<(MPathElement, Entry<(Weight, Self::TreeId), Self::LeafId>)>,
+        >,
+    > {
         let iter = self.0.clone().into_iter().map(|entry| match entry {
             (elem, Entry::Leaf(leaf)) => (elem, Entry::Leaf(leaf)),
             (elem, Entry::Tree(tree)) => (elem, Entry::Tree((10, tree))),
         });
-        Box::new(iter)
+        Ok(stream::iter(iter).map(Ok).boxed())
     }
-    fn lookup_weighted(
+
+    async fn lookup_weighted(
         &self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
         name: &MPathElement,
-    ) -> Option<Entry<(usize, Self::TreeId), Self::LeafId>> {
-        self.0.get(name).cloned().map(|entry| match entry {
+    ) -> Result<Option<Entry<(Weight, Self::TreeId), Self::LeafId>>> {
+        Ok(self.0.get(name).cloned().map(|entry| match entry {
             Entry::Leaf(leaf) => Entry::Leaf(leaf),
             Entry::Tree(tree) => Entry::Tree((10, tree)),
-        })
+        }))
     }
 }
 
@@ -333,9 +374,11 @@ pub(crate) async fn list_test_manifest<'a, B: Blobstore>(
                     Entry::Leaf(leaf) => (Some((path, leaf)), Vec::new()),
                     Entry::Tree(tree) => {
                         let recurse = tree
-                            .list()
-                            .map(|(name, entry)| (path.join(&name), entry))
-                            .collect();
+                            .list(ctx, blobstore)
+                            .await?
+                            .map_ok(|(name, entry)| (path.join(&name), entry))
+                            .try_collect()
+                            .await?;
                         (None, recurse)
                     }
                 })

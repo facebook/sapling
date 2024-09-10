@@ -19,8 +19,8 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use mononoke_types::NonRootMPath;
 
+use crate::AsyncManifest;
 use crate::Entry;
-use crate::Manifest;
 use crate::ManifestOps;
 
 /// Get implicit directory deletes from a single parent manifest,
@@ -54,8 +54,8 @@ where
     ManifestId: Hash + Eq + StoreLoadable<Store> + Send + Sync + ManifestOps<Store> + 'static,
     Store: Send + Sync + Clone + 'static,
     <ManifestId as StoreLoadable<Store>>::Value:
-        Manifest<TreeId = ManifestId, LeafId = L> + Send + Sync,
-    <<ManifestId as StoreLoadable<Store>>::Value as Manifest>::LeafId: Send + Copy + Eq,
+        AsyncManifest<Store, TreeId = ManifestId, LeafId = L> + Send + Sync,
+    <<ManifestId as StoreLoadable<Store>>::Value as AsyncManifest<Store>>::LeafId: Send + Copy + Eq,
     I: IntoIterator<Item = NonRootMPath>,
     L: Unpin,
 {
@@ -105,8 +105,8 @@ where
     ManifestId: Hash + Eq + StoreLoadable<Store> + Send + Sync + ManifestOps<Store> + 'static,
     Store: Send + Sync + Clone + 'static,
     <ManifestId as StoreLoadable<Store>>::Value:
-        Manifest<TreeId = ManifestId, LeafId = L> + Send + Sync,
-    <<ManifestId as StoreLoadable<Store>>::Value as Manifest>::LeafId: Send + Copy + Eq,
+        AsyncManifest<Store, TreeId = ManifestId, LeafId = L> + Send + Sync,
+    <<ManifestId as StoreLoadable<Store>>::Value as AsyncManifest<Store>>::LeafId: Send + Copy + Eq,
     I: IntoIterator<Item = NonRootMPath> + Clone + 'a,
     M: IntoIterator<Item = ManifestId> + 'a,
     L: Unpin,

@@ -15,9 +15,11 @@ use blobstore::LoadableError;
 use blobstore::Storable;
 use context::CoreContext;
 use either::Either;
+use futures::future;
 use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
 use mononoke_types::MPathElement;
 use mononoke_types::SortedVectorTrieMap;
 use serde_derive::Deserialize;
@@ -39,18 +41,36 @@ pub trait AsyncManifest<Store: Send + Sync>: Sized + 'static {
     type LeafId: Send + Sync;
     type TrieMapType: Send + Sync;
 
+    /// Lookup an entry in this manifest.
+    async fn lookup(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+        name: &MPathElement,
+    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>>;
+
+    /// List all entries of this manifest.
     async fn list(
         &self,
         ctx: &CoreContext,
         blobstore: &Store,
     ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>;
-    /// List all subentries with a given prefix
+
+    /// List all entries with a given prefix
     async fn list_prefix(
         &self,
         ctx: &CoreContext,
         blobstore: &Store,
         prefix: &[u8],
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>;
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        Ok(self
+            .list(ctx, blobstore)
+            .await?
+            .try_filter(|(k, _)| future::ready(k.starts_with(prefix)))
+            .boxed())
+    }
+
     /// List all subentries with a given prefix after a specific key
     async fn list_prefix_after(
         &self,
@@ -58,20 +78,27 @@ pub trait AsyncManifest<Store: Send + Sync>: Sized + 'static {
         blobstore: &Store,
         prefix: &[u8],
         after: &[u8],
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>;
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        Ok(self
+            .list(ctx, blobstore)
+            .await?
+            .try_filter(move |(k, _)| future::ready(k.as_ref() > after && k.starts_with(prefix)))
+            .boxed())
+    }
+
     /// List all subentries, skipping the first N
     async fn list_skip(
         &self,
         ctx: &CoreContext,
         blobstore: &Store,
         skip: usize,
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>;
-    async fn lookup(
-        &self,
-        ctx: &CoreContext,
-        blobstore: &Store,
-        name: &MPathElement,
-    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>>;
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        Ok(self.list(ctx, blobstore).await?.skip(skip).boxed())
+    }
+
+    /// Convert this manifest into a trie-map from path element to entry.
     async fn into_trie_map(self, ctx: &CoreContext, blobstore: &Store)
     -> Result<Self::TrieMapType>;
 }
