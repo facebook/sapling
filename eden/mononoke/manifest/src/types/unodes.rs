@@ -5,29 +5,62 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Result;
+use async_trait::async_trait;
+use blobstore::Blobstore;
+use context::CoreContext;
+use futures::stream;
+use futures::stream::BoxStream;
+use futures::stream::StreamExt;
 use mononoke_types::unode::ManifestUnode;
 use mononoke_types::unode::UnodeEntry;
 use mononoke_types::FileUnodeId;
 use mononoke_types::MPathElement;
 use mononoke_types::ManifestUnodeId;
+use mononoke_types::SortedVectorTrieMap;
 
+use super::AsyncManifest;
 use super::Entry;
-use super::Manifest;
 
-impl Manifest for ManifestUnode {
+#[async_trait]
+impl<Store: Blobstore> AsyncManifest<Store> for ManifestUnode {
     type TreeId = ManifestUnodeId;
     type LeafId = FileUnodeId;
+    type TrieMapType = SortedVectorTrieMap<Entry<ManifestUnodeId, FileUnodeId>>;
 
-    fn lookup(&self, name: &MPathElement) -> Option<Entry<Self::TreeId, Self::LeafId>> {
-        self.lookup(name).map(convert_unode)
+    async fn lookup(
+        &self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+        name: &MPathElement,
+    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
+        Ok(self.lookup(name).map(convert_unode))
     }
 
-    fn list(&self) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)>> {
-        let v: Vec<_> = self
+    async fn list(
+        &self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        let values = self
             .list()
             .map(|(basename, entry)| (basename.clone(), convert_unode(entry)))
+            .collect::<Vec<_>>();
+        Ok(stream::iter(values).map(Ok).boxed())
+    }
+
+    async fn into_trie_map(
+        self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<Self::TrieMapType> {
+        let entries = self
+            .subentries()
+            .iter()
+            .map(|(k, v)| (k.clone().to_smallvec(), convert_unode(v)))
             .collect();
-        Box::new(v.into_iter())
+        Ok(SortedVectorTrieMap::new(entries))
     }
 }
 

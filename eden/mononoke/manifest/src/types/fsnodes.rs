@@ -5,31 +5,64 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Result;
+use async_trait::async_trait;
+use blobstore::Blobstore;
+use context::CoreContext;
+use futures::stream;
+use futures::stream::BoxStream;
+use futures::stream::StreamExt;
 use mononoke_types::fsnode::Fsnode;
 use mononoke_types::fsnode::FsnodeEntry;
 use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::FsnodeId;
 use mononoke_types::MPathElement;
+use mononoke_types::SortedVectorTrieMap;
 
+use super::AsyncManifest;
+use super::AsyncOrderedManifest;
 use super::Entry;
-use super::Manifest;
-use super::OrderedManifest;
 use super::Weight;
 
-impl Manifest for Fsnode {
+#[async_trait]
+impl<Store: Blobstore> AsyncManifest<Store> for Fsnode {
     type TreeId = FsnodeId;
     type LeafId = FsnodeFile;
+    type TrieMapType = SortedVectorTrieMap<Entry<FsnodeId, FsnodeFile>>;
 
-    fn lookup(&self, name: &MPathElement) -> Option<Entry<Self::TreeId, Self::LeafId>> {
-        self.lookup(name).map(convert_fsnode)
+    async fn lookup(
+        &self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+        name: &MPathElement,
+    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
+        Ok(self.lookup(name).map(convert_fsnode))
     }
 
-    fn list(&self) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)>> {
-        let v: Vec<_> = self
+    async fn list(
+        &self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        let values = self
             .list()
             .map(|(basename, entry)| (basename.clone(), convert_fsnode(entry)))
+            .collect::<Vec<_>>();
+        Ok(stream::iter(values).map(Ok).boxed())
+    }
+
+    async fn into_trie_map(
+        self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<Self::TrieMapType> {
+        let entries = self
+            .into_subentries()
+            .iter()
+            .map(|(k, v)| (k.clone().to_smallvec(), convert_fsnode(v)))
             .collect();
-        Box::new(v.into_iter())
+        Ok(SortedVectorTrieMap::new(entries))
     }
 }
 
@@ -40,29 +73,32 @@ fn convert_fsnode(fsnode_entry: &FsnodeEntry) -> Entry<FsnodeId, FsnodeFile> {
     }
 }
 
-impl OrderedManifest for Fsnode {
-    fn lookup_weighted(
+#[async_trait]
+impl<Store: Blobstore> AsyncOrderedManifest<Store> for Fsnode {
+    async fn lookup_weighted(
         &self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
         name: &MPathElement,
-    ) -> Option<Entry<(Weight, <Self as Manifest>::TreeId), <Self as Manifest>::LeafId>> {
-        self.lookup(name).map(convert_fsnode_weighted)
+    ) -> Result<Option<Entry<(Weight, Self::TreeId), Self::LeafId>>> {
+        Ok(self.lookup(name).map(convert_fsnode_weighted))
     }
 
-    fn list_weighted(
+    async fn list_weighted(
         &self,
-    ) -> Box<
-        dyn Iterator<
-            Item = (
-                MPathElement,
-                Entry<(Weight, <Self as Manifest>::TreeId), <Self as Manifest>::LeafId>,
-            ),
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<
+        BoxStream<
+            'async_trait,
+            Result<(MPathElement, Entry<(Weight, Self::TreeId), Self::LeafId>)>,
         >,
     > {
         let v: Vec<_> = self
             .list()
             .map(|(basename, entry)| (basename.clone(), convert_fsnode_weighted(entry)))
             .collect();
-        Box::new(v.into_iter())
+        Ok(stream::iter(v).map(Ok).boxed())
     }
 }
 
