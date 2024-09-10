@@ -914,7 +914,7 @@ SaplingBackingStore::prepareRequests(
           DBG9,
           "Duplicate {} fetch request with proxyHash: {}",
           stringOfSaplingImportObject(requestType),
-          nodeId);
+          folly::StringPiece{nodeId});
       auto& importRequestList = importRequestsEntry->second.first;
 
       // Only look for mismatched requests if logging level is high enough.
