@@ -16,12 +16,10 @@ use blobstore::Storable;
 use context::CoreContext;
 use either::Either;
 use futures::future;
-use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use mononoke_types::MPathElement;
-use mononoke_types::SortedVectorTrieMap;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 
@@ -103,136 +101,7 @@ pub trait AsyncManifest<Store: Send + Sync>: Sized + 'static {
     -> Result<Self::TrieMapType>;
 }
 
-pub trait Manifest: Sync + Sized + 'static {
-    type TreeId: Send + Sync;
-    type LeafId: Send + Sync;
-    fn list(&self) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)>>;
-    /// List all subentries with a given prefix
-    fn list_prefix<'a>(
-        &'a self,
-        prefix: &'a [u8],
-    ) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)> + 'a> {
-        Box::new(self.list().filter(|(k, _)| k.starts_with(prefix)))
-    }
-    fn list_prefix_after<'a>(
-        &'a self,
-        prefix: &'a [u8],
-        after: &'a [u8],
-    ) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)> + 'a> {
-        Box::new(
-            self.list()
-                .filter(move |(k, _)| k.as_ref() > after && k.starts_with(prefix)),
-        )
-    }
-    fn list_skip<'a>(
-        &'a self,
-        skip: usize,
-    ) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)> + 'a> {
-        Box::new(self.list().skip(skip))
-    }
-    fn lookup(&self, name: &MPathElement) -> Option<Entry<Self::TreeId, Self::LeafId>>;
-}
-
-#[async_trait]
-impl<M: Manifest + Send, Store: Send + Sync> AsyncManifest<Store> for M {
-    type TreeId = <Self as Manifest>::TreeId;
-    type LeafId = <Self as Manifest>::LeafId;
-    type TrieMapType = SortedVectorTrieMap<Entry<Self::TreeId, Self::LeafId>>;
-
-    async fn list(
-        &self,
-        _ctx: &CoreContext,
-        _blobstore: &Store,
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
-    {
-        Ok(stream::iter(Manifest::list(self).map(anyhow::Ok).collect::<Vec<_>>()).boxed())
-    }
-
-    async fn list_prefix(
-        &self,
-        _ctx: &CoreContext,
-        _blobstore: &Store,
-        prefix: &[u8],
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
-    {
-        Ok(stream::iter(
-            Manifest::list_prefix(self, prefix)
-                .map(anyhow::Ok)
-                .collect::<Vec<_>>(),
-        )
-        .boxed())
-    }
-
-    async fn list_prefix_after(
-        &self,
-        _ctx: &CoreContext,
-        _blobstore: &Store,
-        prefix: &[u8],
-        after: &[u8],
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
-    {
-        Ok(stream::iter(
-            Manifest::list_prefix_after(self, prefix, after)
-                .map(anyhow::Ok)
-                .collect::<Vec<_>>(),
-        )
-        .boxed())
-    }
-
-    async fn list_skip(
-        &self,
-        _ctx: &CoreContext,
-        _blobstore: &Store,
-        skip: usize,
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
-    {
-        Ok(stream::iter(
-            Manifest::list_skip(self, skip)
-                .map(anyhow::Ok)
-                .collect::<Vec<_>>(),
-        )
-        .boxed())
-    }
-
-    async fn lookup(
-        &self,
-        _ctx: &CoreContext,
-        _blobstore: &Store,
-        name: &MPathElement,
-    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
-        anyhow::Ok(Manifest::lookup(self, name))
-    }
-
-    async fn into_trie_map(
-        self,
-        _ctx: &CoreContext,
-        _blobstore: &Store,
-    ) -> Result<Self::TrieMapType> {
-        let entries = Manifest::list(&self)
-            .map(|(k, v)| (k.to_smallvec(), v))
-            .collect();
-        Ok(SortedVectorTrieMap::new(entries))
-    }
-}
-
 pub type Weight = usize;
-
-pub trait OrderedManifest: Manifest {
-    fn lookup_weighted(
-        &self,
-        name: &MPathElement,
-    ) -> Option<Entry<(Weight, <Self as Manifest>::TreeId), <Self as Manifest>::LeafId>>;
-    fn list_weighted(
-        &self,
-    ) -> Box<
-        dyn Iterator<
-            Item = (
-                MPathElement,
-                Entry<(Weight, <Self as Manifest>::TreeId), <Self as Manifest>::LeafId>,
-            ),
-        >,
-    >;
-}
 
 #[async_trait]
 pub trait AsyncOrderedManifest<Store: Send + Sync>: AsyncManifest<Store> {
@@ -252,35 +121,6 @@ pub trait AsyncOrderedManifest<Store: Send + Sync>: AsyncManifest<Store> {
         blobstore: &Store,
         name: &MPathElement,
     ) -> Result<Option<Entry<(Weight, Self::TreeId), Self::LeafId>>>;
-}
-
-#[async_trait]
-impl<M: OrderedManifest + Send, Store: Send + Sync> AsyncOrderedManifest<Store> for M {
-    async fn list_weighted(
-        &self,
-        _ctx: &CoreContext,
-        _blobstore: &Store,
-    ) -> Result<
-        BoxStream<
-            'async_trait,
-            Result<(MPathElement, Entry<(Weight, Self::TreeId), Self::LeafId>)>,
-        >,
-    > {
-        Ok(stream::iter(
-            OrderedManifest::list_weighted(self)
-                .map(anyhow::Ok)
-                .collect::<Vec<_>>(),
-        )
-        .boxed())
-    }
-    async fn lookup_weighted(
-        &self,
-        _ctx: &CoreContext,
-        _blobstore: &Store,
-        name: &MPathElement,
-    ) -> Result<Option<Entry<(Weight, Self::TreeId), Self::LeafId>>> {
-        anyhow::Ok(OrderedManifest::lookup_weighted(self, name))
-    }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]

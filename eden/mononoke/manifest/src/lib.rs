@@ -40,8 +40,6 @@ pub use crate::trie_map_ops::TrieMapOps;
 pub use crate::types::AsyncManifest;
 pub use crate::types::AsyncOrderedManifest;
 pub use crate::types::Entry;
-pub use crate::types::Manifest;
-pub use crate::types::OrderedManifest;
 
 mod bonsai;
 mod combined;
