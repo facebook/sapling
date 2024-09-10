@@ -33,7 +33,8 @@
     "scm/mononoke:disable_commit_graph_memcache_for_prefetch": false,
     "scm/mononoke:disable_commit_graph_prefetch": false,
     "scm/mononoke:strip_commit_extras_in_xrepo_sync": true,
-    "scm/mononoke:display_repo_fetch_message_on_git_server": false
+    "scm/mononoke:display_repo_fetch_message_on_git_server": false,
+    "scm/mononoke:pushrebase_rewrite_committer_date": true
   },
   "ints": {
     "scm/mononoke_timeouts:repo_client_clone_timeout_secs": 14400,

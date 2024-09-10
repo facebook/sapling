@@ -944,7 +944,7 @@ async fn create_rebased_changesets(
 }
 
 async fn rebase_changeset(
-    ctx: CoreContext, // TODO
+    ctx: CoreContext,
     bcs: BonsaiChangeset,
     remapping: &HashMap<ChangesetId, (ChangesetId, Timestamp)>,
     timestamp: Option<&Timestamp>,
@@ -967,9 +967,19 @@ async fn rebase_changeset(
 
     match timestamp {
         Some(timestamp) => {
-            let tz_offset_secs = bcs.author_date.tz_offset_secs();
-            let newdate = DateTime::from_timestamp(timestamp.timestamp_seconds(), tz_offset_secs)?;
-            bcs.author_date = newdate;
+            let author_tz = bcs.author_date.tz_offset_secs();
+            bcs.author_date = DateTime::from_timestamp(timestamp.timestamp_seconds(), author_tz)?;
+            if let Ok(true) = justknobs::eval(
+                "scm/mononoke:pushrebase_rewrite_committer_date",
+                None,
+                Some(repo.repo_identity().name()),
+            ) {
+                if let Some(committer_date) = &mut bcs.committer_date {
+                    let committer_tz = committer_date.tz_offset_secs();
+                    *committer_date =
+                        DateTime::from_timestamp(timestamp.timestamp_seconds(), committer_tz)?;
+                }
+            }
         }
         None => {}
     }
@@ -1307,6 +1317,7 @@ mod tests {
     use sql_ext::TransactionResult;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::bookmark;
+    use tests_utils::drawdag::extend_from_dag_with_actions;
     use tests_utils::resolve_cs_id;
     use tests_utils::CreateCommitContext;
 
@@ -2068,64 +2079,80 @@ mod tests {
     }
 
     #[mononoke::fbinit_test]
-    fn pushrebase_rewritedates(fb: FacebookInit) -> Result<(), Error> {
-        let runtime = tokio::runtime::Runtime::new().unwrap();
-        runtime.block_on(async move {
-            let ctx = CoreContext::test_mock(fb);
-            let repo: PushrebaseTestRepo = Linear::get_repo(fb).await;
-            let root = repo
-                .bonsai_hg_mapping()
-                .get_bonsai_from_hg(
-                    &ctx,
-                    HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
-                )
-                .await?
-                .ok_or_else(|| Error::msg("Root is missing"))?;
-            let book = master_bookmark();
-            let bcs = CreateCommitContext::new(&ctx, &repo, vec![root])
-                .add_file("file", "data")
-                .commit()
-                .await?;
-            let hgcss = hashset![repo.derive_hg_changeset(&ctx, bcs).await?];
+    async fn pushrebase_rewritedates(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: PushrebaseTestRepo = test_repo_factory::build_empty(fb).await?;
+        let (commits, _dag) = extend_from_dag_with_actions(
+            &ctx,
+            &repo,
+            r#"
+                A-B-C
+                   \
+                    D
+                # author_date: D "2020-01-01 01:00:00+04:00"
+                # committer: D "Committer <committer@example.test>"
+                # committer_date: D "2020-01-01 09:00:00-02:00"
+                # bookmark: C keep
+                # bookmark: C rewrite
+            "#,
+        )
+        .await?;
 
-            set_bookmark(
-                ctx.clone(),
-                &repo,
-                &book,
-                "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
-            )
+        let config = PushrebaseFlags {
+            rewritedates: false,
+            ..Default::default()
+        };
+        let source = hashset![commits["D"].load(&ctx, repo.repo_blobstore()).await?];
+        let bcs_keep_date = do_pushrebase_bonsai(
+            &ctx,
+            &repo,
+            &config,
+            &BookmarkKey::new("keep")?,
+            &source,
+            &[],
+        )
+        .await?;
+
+        let config = PushrebaseFlags {
+            rewritedates: true,
+            ..Default::default()
+        };
+        let bcs_rewrite_date = do_pushrebase_bonsai(
+            &ctx,
+            &repo,
+            &config,
+            &BookmarkKey::new("rewrite")?,
+            &source,
+            &[],
+        )
+        .await?;
+
+        let bcs = commits["D"].load(&ctx, repo.repo_blobstore()).await?;
+        let bcs_keep_date = bcs_keep_date.head.load(&ctx, repo.repo_blobstore()).await?;
+        let bcs_rewrite_date = bcs_rewrite_date
+            .head
+            .load(&ctx, repo.repo_blobstore())
             .await?;
-            let config = PushrebaseFlags {
-                rewritedates: false,
-                ..Default::default()
-            };
-            let bcs_keep_date = do_pushrebase(&ctx, &repo, &config, &book, &hgcss).await?;
 
-            set_bookmark(
-                ctx.clone(),
-                &repo,
-                &book,
-                "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
-            )
-            .await?;
-            let config = PushrebaseFlags {
-                rewritedates: true,
-                ..Default::default()
-            };
-            let bcs_rewrite_date = do_pushrebase(&ctx, &repo, &config, &book, &hgcss).await?;
+        // For the keep variant, the time should not have changed.
+        assert_eq!(bcs.author_date(), bcs_keep_date.author_date());
+        assert_eq!(bcs.committer_date(), bcs_keep_date.committer_date());
 
-            let bcs = bcs.load(&ctx, repo.repo_blobstore()).await?;
-            let bcs_keep_date = bcs_keep_date.head.load(&ctx, repo.repo_blobstore()).await?;
-            let bcs_rewrite_date = bcs_rewrite_date
-                .head
-                .load(&ctx, repo.repo_blobstore())
-                .await?;
+        // For the rewrite variant, the time should be updated.
+        assert!(bcs.author_date() < bcs_rewrite_date.author_date());
+        assert!(bcs.committer_date() < bcs_rewrite_date.committer_date());
 
-            assert_eq!(bcs.author_date(), bcs_keep_date.author_date());
-            assert!(bcs.author_date() < bcs_rewrite_date.author_date());
+        // Timezone shouldn't have changed for either author or committer.
+        assert_eq!(
+            bcs.author_date().tz_offset_secs(),
+            bcs_rewrite_date.author_date().tz_offset_secs()
+        );
+        assert_eq!(
+            bcs.committer_date().unwrap().tz_offset_secs(),
+            bcs_rewrite_date.committer_date().unwrap().tz_offset_secs()
+        );
 
-            Ok(())
-        })
+        Ok(())
     }
 
     #[mononoke::fbinit_test]
@@ -2684,61 +2711,6 @@ mod tests {
             .await?;
 
             do_pushrebase(&ctx, &repo, &Default::default(), &book, &hashset![hg_cs]).await?;
-
-            Ok(())
-        })
-    }
-
-    #[mononoke::fbinit_test]
-    fn pushrebase_timezone(fb: FacebookInit) -> Result<(), Error> {
-        // We shouldn't change timezone even if timestamp changes
-
-        let runtime = tokio::runtime::Runtime::new().unwrap();
-        runtime.block_on(async move {
-            let ctx = CoreContext::test_mock(fb);
-            let repo: PushrebaseTestRepo = Linear::get_repo(fb).await;
-            // Bottom commit of the repo
-            let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
-            let p = repo
-                .bonsai_hg_mapping()
-                .get_bonsai_from_hg(&ctx, root)
-                .await?
-                .ok_or_else(|| Error::msg("Root is missing"))?;
-            let parents = vec![p];
-
-            let tz_offset_secs = 100;
-            let bcs_id = CreateCommitContext::new(&ctx, &repo, parents)
-                .add_file("file", "content")
-                .set_author_date(DateTime::from_timestamp(0, 100)?)
-                .commit()
-                .await?;
-            let hg_cs = repo.derive_hg_changeset(&ctx, bcs_id).await?;
-
-            let book = master_bookmark();
-            set_bookmark(
-                ctx.clone(),
-                &repo,
-                &book,
-                "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
-            )
-            .await?;
-
-            let config = PushrebaseFlags {
-                rewritedates: true,
-                ..Default::default()
-            };
-            let bcs_rewrite_date =
-                do_pushrebase(&ctx, &repo, &config, &book, &hashset![hg_cs]).await?;
-
-            let bcs_rewrite_date = bcs_rewrite_date
-                .head
-                .load(&ctx, repo.repo_blobstore())
-                .await?;
-
-            assert_eq!(
-                bcs_rewrite_date.author_date().tz_offset_secs(),
-                tz_offset_secs
-            );
 
             Ok(())
         })
