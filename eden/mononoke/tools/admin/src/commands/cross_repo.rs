@@ -18,6 +18,7 @@ use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
+use insert::InsertArgs;
 use map::MapArgs;
 use metaconfig_types::RepoConfig;
 use mononoke_app::args::SourceRepoArgs;
@@ -33,6 +34,7 @@ use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 use sql_query_config::SqlQueryConfig;
 
+mod insert;
 mod map;
 
 /// Query and manage cross repo syncs
@@ -50,6 +52,7 @@ pub struct CommandArgs {
 
 #[derive(Subcommand)]
 pub enum CrossRepoSubcommand {
+    Insert(InsertArgs),
     Map(MapArgs),
 }
 
@@ -126,6 +129,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     match args.subcommand {
         CrossRepoSubcommand::Map(args) => {
             map::map(&ctx, &app, source_repo, target_repo, args).await
+        }
+        CrossRepoSubcommand::Insert(args) => {
+            insert::insert(&ctx, &app, source_repo, target_repo, args).await
         }
     }
 }

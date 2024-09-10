@@ -2119,8 +2119,8 @@ function add_synced_commit_mapping_entry() {
   large_repo_id="$3"
   large_bcs_id="$4"
   version="$5"
-  quiet mononoke_admin_source_target "$small_repo_id" "$large_repo_id" crossrepo insert rewritten --source-hash "$small_bcs_id" \
-    --target-hash "$large_bcs_id" \
+  quiet mononoke_newadmin cross-repo --source-repo-id "$small_repo_id" --target-repo-id "$large_repo_id" insert rewritten --source-commit-id "$small_bcs_id" \
+    --target-commit-id "$large_bcs_id" \
     --version-name "$version"
 }
 

@@ -42,6 +42,7 @@ commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/c
 commit_graph_types = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph_types" }
 commit_id = { version = "0.1.0", path = "../../cmdlib/commit_id" }
 context = { version = "0.1.0", path = "../../server/context" }
+cross_repo_sync = { version = "0.1.0", path = "../../commit_rewriting/cross_repo_sync" }
 dag = { version = "0.1.0", path = "../../../scm/lib/dag" }
 dag-types = { version = "0.1.0", path = "../../../scm/lib/dag/dag-types", features = ["for-tests", "serialize-abomonation"] }
 deleted_manifest = { version = "0.1.0", path = "../../derived_data/deleted_manifest" }
@@ -101,6 +102,7 @@ slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 source_control = { version = "0.1.0", path = "../../scs/if" }
 sql_commit_graph_storage = { version = "0.1.0", path = "../../repo_attributes/commit_graph/sql_commit_graph_storage" }
 sql_query_config = { version = "0.1.0", path = "../../repo_attributes/sql_query_config" }
+synced_commit_mapping = { version = "0.1.0", path = "../../commit_rewriting/synced_commit_mapping" }
 tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
 tokio-util = { version = "0.7.10", features = ["full"] }
 unodes = { version = "0.1.0", path = "../../derived_data/unodes" }

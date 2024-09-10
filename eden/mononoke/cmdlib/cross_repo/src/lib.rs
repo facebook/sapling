@@ -20,9 +20,7 @@ use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::RepoProvider;
 use cross_repo_sync::Syncers;
-use futures::future;
 use mononoke_app::args::RepoArg;
-use mononoke_app::args::SourceAndTargetRepoArgs;
 use mononoke_app::MononokeApp;
 use sql_query_config::SqlQueryConfigArc;
 
@@ -30,39 +28,12 @@ pub trait CrossRepo = cross_repo_sync::Repo
     + SqlQueryConfigArc
     + for<'a> facet::AsyncBuildable<'a, repo_factory::RepoFactoryBuilder<'a>>;
 
-/// Instantiate the `Syncers` struct by parsing `app`
 pub async fn create_commit_syncers_from_app<R: CrossRepo>(
     ctx: &CoreContext,
     app: &MononokeApp,
-    repo_args: &SourceAndTargetRepoArgs,
+    source_repo: R,
+    target_repo: R,
 ) -> Result<Syncers<R>, Error> {
-    create_commit_syncers_from_app_impl(ctx, app, repo_args, false).await
-}
-
-pub async fn create_commit_syncers_from_app_unredacted<R: CrossRepo>(
-    ctx: &CoreContext,
-    app: &MononokeApp,
-    repo_args: &SourceAndTargetRepoArgs,
-) -> Result<Syncers<R>, Error> {
-    create_commit_syncers_from_app_impl(ctx, app, repo_args, true).await
-}
-
-async fn create_commit_syncers_from_app_impl<R: CrossRepo>(
-    ctx: &CoreContext,
-    app: &MononokeApp,
-    repo_args: &SourceAndTargetRepoArgs,
-    unredacted: bool,
-) -> Result<Syncers<R>, Error> {
-    let (source_repo, target_repo): (R, R) = if !unredacted {
-        app.open_source_and_target_repos(repo_args).await?
-    } else {
-        future::try_join(
-            app.open_repo_unredacted(&repo_args.source_repo),
-            app.open_repo_unredacted(&repo_args.target_repo),
-        )
-        .await?
-    };
-
     let repo_provider = repo_provider_from_mononoke_app(app);
 
     let submodule_deps = get_all_submodule_deps(

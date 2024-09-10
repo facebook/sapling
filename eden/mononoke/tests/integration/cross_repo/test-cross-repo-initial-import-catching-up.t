@@ -45,7 +45,6 @@ Create small repo commits
   > rg -v "nitializ" | rg -v "derive" | rg -v "Upload" | tee $TESTTMP/initial_import.out
   enabled stdlog with level: Error (set RUST_LOG to configure)
   Starting session with id * (glob)
-  Reloading redacted config from configerator
   Starting up X Repo Sync from small repo small_repo to large repo large_repo
   Checking if 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3 is already synced 11->10
   Syncing 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3 for inital import
@@ -119,7 +118,6 @@ Add more commits to small repo
   > rg -v "nitializ" | rg -v "derive" | rg -v "Upload"
   enabled stdlog with level: Error (set RUST_LOG to configure)
   Starting session with id * (glob)
-  Reloading redacted config from configerator
   Starting up X Repo Sync from small repo small_repo to large repo large_repo
   Checking if d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a is already synced 11->10
   Syncing d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a for inital import

@@ -124,7 +124,7 @@ const SM_CLEANUP_TIMEOUT_SECS: u64 = 60;
 async fn run_in_single_commit_mode(
     ctx: &CoreContext,
     bcs: ChangesetId,
-    commit_syncer: CommitSyncer<Repo>,
+    commit_syncer: CommitSyncer<Arc<Repo>>,
     scuba_sample: MononokeScubaSampleBuilder,
     maybe_bookmark: Option<BookmarkKey>,
     common_bookmarks: HashSet<BookmarkKey>,
@@ -173,7 +173,7 @@ async fn run_in_single_commit_mode(
 async fn run_in_initial_import_mode_for_single_head(
     ctx: &CoreContext,
     bcs: ChangesetId,
-    commit_syncer: &CommitSyncer<Repo>,
+    commit_syncer: &CommitSyncer<Arc<Repo>>,
     config_version: CommitSyncConfigVersion,
     scuba_sample: MononokeScubaSampleBuilder,
     disable_progress_bar: bool,
@@ -223,7 +223,7 @@ async fn run_in_initial_import_mode_for_single_head(
 async fn run_in_initial_import_mode(
     ctx: &CoreContext,
     bcs_ids: Vec<ChangesetId>,
-    commit_syncer: CommitSyncer<Repo>,
+    commit_syncer: CommitSyncer<Arc<Repo>>,
     config_version: CommitSyncConfigVersion,
     scuba_sample: MononokeScubaSampleBuilder,
     disable_progress_bar: bool,
@@ -258,7 +258,7 @@ async fn run_in_tailing_mode(
     base_scuba_sample: MononokeScubaSampleBuilder,
     backpressure_params: BackpressureParams,
     derived_data_types: Vec<DerivableType>,
-    tailing_args: TailingArgs<Repo>,
+    tailing_args: TailingArgs<Arc<Repo>>,
     sleep_duration: Duration,
     maybe_bookmark_regex: Option<Regex>,
     pushrebase_rewrite_dates: PushrebaseRewriteDates,
@@ -353,7 +353,7 @@ async fn run_in_tailing_mode(
 
 async fn tail(
     ctx: &CoreContext,
-    commit_syncer: &CommitSyncer<Repo>,
+    commit_syncer: &CommitSyncer<Arc<Repo>>,
     target_mutable_counters: &ArcMutableCounters,
     mut scuba_sample: MononokeScubaSampleBuilder,
     common_pushrebase_bookmarks: &HashSet<BookmarkKey>,

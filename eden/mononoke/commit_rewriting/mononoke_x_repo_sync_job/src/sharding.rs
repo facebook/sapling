@@ -15,7 +15,7 @@ use async_trait::async_trait;
 use blobstore_factory::MetadataSqlFactory;
 use bookmarks::BookmarkKey;
 use cmdlib::helpers;
-use cmdlib_cross_repo::create_commit_syncers_from_app_unredacted;
+use cmdlib_cross_repo::create_commit_syncers_from_app;
 use context::CoreContext;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::PushrebaseRewriteDates;
@@ -114,7 +114,7 @@ pub struct XRepoSyncProcessExecutor {
     common_bookmarks: HashSet<BookmarkKey>,
     target_mutable_counters: Arc<dyn MutableCounters + Send + Sync>,
     pushrebase_rewrite_dates: PushrebaseRewriteDates,
-    commit_syncer: CommitSyncer<Repo>,
+    commit_syncer: CommitSyncer<Arc<Repo>>,
     live_commit_sync_config: Arc<CfgrLiveCommitSyncConfig>,
 }
 
@@ -125,9 +125,11 @@ impl XRepoSyncProcessExecutor {
         args: Arc<ForwardSyncerArgs>,
         repo_args: &SourceAndTargetRepoArgs,
     ) -> Result<Self> {
-        let small_repo: Arc<Repo> = app.open_repo(&repo_args.source_repo).await?;
-        let large_repo: Arc<Repo> = app.open_repo(&repo_args.target_repo).await?;
-        let syncers = create_commit_syncers_from_app_unredacted(&ctx, &app, repo_args).await?;
+        let small_repo: Arc<Repo> = app.open_repo_unredacted(&repo_args.source_repo).await?;
+        let large_repo: Arc<Repo> = app.open_repo_unredacted(&repo_args.target_repo).await?;
+        let syncers =
+            create_commit_syncers_from_app(&ctx, &app, small_repo.clone(), large_repo.clone())
+                .await?;
         let config_store = app.environment().config_store.clone();
         let commit_syncer = syncers.small_to_large;
         let mut scuba_sample = ctx.scuba().clone();

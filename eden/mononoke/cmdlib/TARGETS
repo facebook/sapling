@@ -147,7 +147,6 @@ rust_library(
     autocargo = {"cargo_toml_dir": "cross_repo"},
     deps = [
         "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:futures",
         "//common/rust/shed/facet:facet",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
         "//eden/mononoke/commit_rewriting/cross_repo_sync:cross_repo_sync",
