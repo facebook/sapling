@@ -157,7 +157,8 @@ ObjectComparison FilteredBackingStore::compareObjectsById(
     }
   } else {
     // We received something other than a tree, blob, or filtered tree. Throw.
-    throwf<std::runtime_error>("Unknown object type: {}", typeOne);
+    throwf<std::runtime_error>(
+        "Unknown object type: {}", foidTypeToString(typeOne));
   }
 }
 
@@ -197,7 +198,8 @@ FilteredBackingStore::filterImpl(
     } else {
       // OBJECT_TYPE_BLOB should never be passed to filterImpl
       throwf<std::invalid_argument>(
-          "FilterImpl() received an unexpected tree type: {}", treeType);
+          "FilterImpl() received an unexpected tree type: {}",
+          foidTypeToString(treeType));
     }
   }
 
