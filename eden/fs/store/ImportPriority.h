@@ -178,8 +178,9 @@ inline std::ostream& operator<<(
 }
 } // namespace std
 
+namespace fmt {
 template <>
-struct fmt::formatter<facebook::eden::ImportPriority> {
+struct formatter<facebook::eden::ImportPriority> : formatter<std::string> {
   template <typename Context>
   auto format(facebook::eden::ImportPriority priority, Context& ctx) const {
     return format_to(
@@ -189,3 +190,4 @@ struct fmt::formatter<facebook::eden::ImportPriority> {
         priority.getAdjustment());
   }
 };
+} // namespace fmt
