@@ -16,12 +16,13 @@ use futures::future::FutureExt;
 use futures::stream;
 use futures::stream::Stream;
 use futures::stream::TryStreamExt;
+use manifest::AsyncManifest;
 use manifest::Entry;
-use manifest::Manifest;
 use mercurial_types::HgChangesetId;
 use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
+use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 
 pub async fn bonsai_changeset_from_hg(
@@ -47,7 +48,8 @@ pub fn iterate_all_manifest_entries<'a, MfId, LId>(
 where
     MfId: Loadable + Send + Sync + Clone + 'a,
     LId: Send + Clone + 'static,
-    <MfId as Loadable>::Value: Manifest<TreeId = MfId, LeafId = LId>,
+    <MfId as Loadable>::Value:
+        AsyncManifest<RepoBlobstore, TreeId = MfId, LeafId = LId> + Send + Sync,
 {
     bounded_traversal_stream(256, Some((MPath::ROOT, entry)), move |(path, entry)| {
         async move {
@@ -56,12 +58,14 @@ where
                 Entry::Tree(tree) => {
                     let mf = tree.load(ctx, repo.repo_blobstore()).await?;
                     let recurse = mf
-                        .list()
-                        .map(|(basename, new_entry)| {
+                        .list(ctx, repo.repo_blobstore())
+                        .await?
+                        .map_ok(|(basename, new_entry)| {
                             let path = path.join_element(Some(&basename));
                             (path, new_entry)
                         })
-                        .collect();
+                        .try_collect()
+                        .await?;
 
                     Ok::<_, Error>((vec![(path, Entry::Tree(tree))], recurse))
                 }

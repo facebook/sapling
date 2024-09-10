@@ -110,7 +110,7 @@ impl<R: MononokeRepo> HgRepoContext<R> {
     }
 
     /// The underlying Mononoke `Repo` backing this `HgRepoContext`.
-    pub(crate) fn repo(&self) -> &R {
+    pub fn repo(&self) -> &R {
         self.repo_ctx().repo()
     }
 

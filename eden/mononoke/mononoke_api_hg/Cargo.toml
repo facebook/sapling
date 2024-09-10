@@ -28,7 +28,6 @@ futures = { version = "0.3.30", features = ["async-await", "compat"] }
 futures-util = "0.3.30"
 getbundle_response = { version = "0.1.0", path = "../repo_client/getbundle_response" }
 hgproto = { version = "0.1.0", path = "../hgproto" }
-manifest = { version = "0.1.0", path = "../manifest" }
 mercurial_derivation = { version = "0.1.0", path = "../derived_data/mercurial_derivation" }
 mercurial_mutation = { version = "0.1.0", path = "../mercurial/mutation" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }

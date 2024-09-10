@@ -22,6 +22,8 @@ use bytes::Bytes;
 use context::CoreContext;
 use derived_data_manager::DerivableType;
 use encoding_rs::Encoding;
+use futures::stream;
+use futures::stream::BoxStream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
@@ -32,15 +34,16 @@ use gix_object::Commit;
 use gix_object::Tag;
 use manifest::bonsai_diff;
 use manifest::find_intersection_of_diffs;
+use manifest::AsyncManifest;
 use manifest::BonsaiDiffFileChange;
 use manifest::Entry;
-use manifest::Manifest;
 use manifest::StoreLoadable;
 use mononoke_types::hash;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileType;
 use mononoke_types::MPathElement;
+use mononoke_types::SortedVectorTrieMap;
 use slog::debug;
 use slog::Logger;
 use smallvec::SmallVec;
@@ -76,16 +79,41 @@ pub struct GitManifest<const SUBMODULES: bool>(
     HashMap<MPathElement, Entry<GitTree<SUBMODULES>, (FileType, GitLeaf)>>,
 );
 
-impl<const SUBMODULES: bool> Manifest for GitManifest<SUBMODULES> {
+#[async_trait]
+impl<const SUBMODULES: bool, Store: Send + Sync> AsyncManifest<Store> for GitManifest<SUBMODULES> {
     type TreeId = GitTree<SUBMODULES>;
     type LeafId = (FileType, GitLeaf);
+    type TrieMapType = SortedVectorTrieMap<Entry<GitTree<SUBMODULES>, (FileType, GitLeaf)>>;
 
-    fn lookup(&self, name: &MPathElement) -> Option<Entry<Self::TreeId, Self::LeafId>> {
-        self.0.get(name).cloned()
+    async fn lookup(
+        &self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+        name: &MPathElement,
+    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
+        Ok(self.0.get(name).cloned())
     }
 
-    fn list(&self) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)>> {
-        Box::new(self.0.clone().into_iter())
+    async fn list(
+        &self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
+        Ok(stream::iter(self.0.clone().into_iter()).map(Ok).boxed())
+    }
+
+    async fn into_trie_map(
+        self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<Self::TrieMapType> {
+        let entries = self
+            .0
+            .iter()
+            .map(|(k, v)| (k.clone().to_smallvec(), v.clone()))
+            .collect();
+        Ok(SortedVectorTrieMap::new(entries))
     }
 }
 

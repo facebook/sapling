@@ -8,19 +8,29 @@
 use std::io::Write;
 
 use anyhow::Result;
+use blobstore::Blobstore;
+use context::CoreContext;
+use futures::stream::TryStreamExt;
+use manifest::AsyncManifest;
 use manifest::Entry;
-use manifest::Manifest;
 use mercurial_types::blobs::HgBlobManifest;
 use unicode_truncate::Alignment;
 use unicode_truncate::UnicodeTruncateStr;
 use unicode_width::UnicodeWidthStr;
 
 /// Displays a Mercurial manifest, one entry per line.
-pub fn display_hg_manifest(mut w: impl Write, manifest: &HgBlobManifest) -> Result<()> {
+pub async fn display_hg_manifest(
+    ctx: &CoreContext,
+    blobstore: &impl Blobstore,
+    mut w: impl Write,
+    manifest: &HgBlobManifest,
+) -> Result<()> {
     let entries = manifest
-        .list()
-        .map(|(name, entry)| (String::from_utf8_lossy(name.as_ref()).into_owned(), entry))
-        .collect::<Vec<_>>();
+        .list(ctx, blobstore)
+        .await?
+        .map_ok(|(name, entry)| (String::from_utf8_lossy(name.as_ref()).into_owned(), entry))
+        .try_collect::<Vec<_>>()
+        .await?;
     let max_width = entries
         .iter()
         .map(|(name, _)| name.width())

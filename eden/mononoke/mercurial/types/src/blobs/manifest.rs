@@ -19,8 +19,12 @@ use blobstore::Blobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use context::CoreContext;
+use futures::stream;
+use futures::stream::BoxStream;
+use futures::stream::StreamExt;
+use manifest::AsyncManifest;
 use manifest::Entry;
-use manifest::Manifest;
+use mononoke_types::SortedVectorTrieMap;
 use sorted_vector_map::SortedVectorMap;
 
 use super::errors::MononokeHgBlobError;
@@ -258,17 +262,43 @@ impl Loadable for HgManifestId {
     }
 }
 
-impl Manifest for HgBlobManifest {
+#[async_trait]
+impl<Store: Send + Sync> AsyncManifest<Store> for HgBlobManifest {
     type TreeId = HgManifestId;
     type LeafId = (FileType, HgFileNodeId);
+    type TrieMapType = SortedVectorTrieMap<Entry<HgManifestId, (FileType, HgFileNodeId)>>;
 
-    fn lookup(&self, name: &MPathElement) -> Option<Entry<Self::TreeId, Self::LeafId>> {
-        self.content.files.get(name).copied()
+    async fn lookup(
+        &self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+        name: &MPathElement,
+    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
+        Ok(self.content.files.get(name).copied())
     }
 
-    fn list(&self) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)>> {
+    async fn list(
+        &self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
         let iter = self.content.files.clone().into_iter();
-        Box::new(iter)
+        Ok(stream::iter(iter).map(Ok).boxed())
+    }
+
+    async fn into_trie_map(
+        self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<Self::TrieMapType> {
+        let entries = self
+            .content
+            .files
+            .iter()
+            .map(|(k, v)| (k.clone().to_smallvec(), v.clone()))
+            .collect();
+        Ok(SortedVectorTrieMap::new(entries))
     }
 }
 

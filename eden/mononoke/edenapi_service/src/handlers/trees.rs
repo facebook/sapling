@@ -37,8 +37,8 @@ use gotham_ext::error::HttpError;
 use gotham_ext::middleware::request_context::RequestContext;
 use gotham_ext::middleware::scuba::ScubaMiddlewareState;
 use gotham_ext::response::TryIntoResponse;
+use manifest::AsyncManifest;
 use manifest::Entry;
-use manifest::Manifest;
 use mercurial_types::HgAugmentedManifestEntry;
 use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgFileNodeId;
@@ -51,6 +51,7 @@ use mononoke_api_hg::HgDataId;
 use mononoke_api_hg::HgRepoContext;
 use mononoke_api_hg::HgTreeContext;
 use rate_limiting::Metric;
+use repo_blobstore::RepoBlobstoreRef;
 use serde::Deserialize;
 use types::Key;
 use types::RepoPathBuf;
@@ -293,18 +294,19 @@ async fn fetch_child_file_metadata_entries<'a, R: MononokeRepo>(
     if manifest.content().files.len() > LARGE_TREE_METADATA_LIMIT {
         return Ok(None);
     }
-    let file_entries =
-        manifest
-            .list()
-            .collect::<Vec<_>>()
-            .into_iter()
-            .filter_map(|(name, entry)| {
-                if let Entry::Leaf((_, child_id)) = entry {
-                    Some((name, child_id))
-                } else {
-                    None
-                }
-            });
+    let file_entries = manifest
+        .list(repo.ctx(), repo.repo().repo_blobstore())
+        .await?
+        .try_collect::<Vec<_>>()
+        .await?
+        .into_iter()
+        .filter_map(|(name, entry)| {
+            if let Entry::Leaf((_, child_id)) = entry {
+                Some((name, child_id))
+            } else {
+                None
+            }
+        });
 
     Ok(Some(
         stream::iter(file_entries)

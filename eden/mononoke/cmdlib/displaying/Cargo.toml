@@ -9,6 +9,9 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.86"
+blobstore = { version = "0.1.0", path = "../../blobstore" }
+context = { version = "0.1.0", path = "../../server/context" }
+futures = { version = "0.3.30", features = ["async-await", "compat"] }
 hex = "0.4.3"
 manifest = { version = "0.1.0", path = "../../manifest" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }

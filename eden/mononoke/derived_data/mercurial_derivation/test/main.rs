@@ -18,8 +18,8 @@ use std::sync::Arc;
 #[cfg(fbcode_build)]
 use std::time::Duration;
 
+use ::manifest::AsyncManifest;
 use ::manifest::Entry;
-use ::manifest::Manifest;
 use ::manifest::ManifestOps;
 use anyhow::Error;
 #[cfg(fbcode_build)]
@@ -48,6 +48,8 @@ use fixtures::TestRepoFixture;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::future::TryFutureExt;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
 use memblob::Memblob;
 use mercurial_derivation::get_manifest_from_bonsai;
 use mercurial_derivation::DeriveHgChangeset;
@@ -758,11 +760,13 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
             cloned!(ctx, repo);
             async move {
                 let ms = ms_hash.load(&ctx, repo.repo_blobstore()).await?;
-                let result = Manifest::list(&ms)
-                    .map(|(name, entry)| {
+                let result = AsyncManifest::list(&ms, &ctx, repo.repo_blobstore())
+                    .await?
+                    .map_ok(|(name, entry)| {
                         (String::from_utf8(Vec::from(name.as_ref())).unwrap(), entry)
                     })
-                    .collect::<HashMap<_, _>>();
+                    .try_collect::<HashMap<_, _>>()
+                    .await?;
                 Ok(result)
             }
             .boxed()
@@ -1394,8 +1398,8 @@ mod octopus_merges {
         let hg_manifest = hg_cs.manifestid().load(&ctx, repo.repo_blobstore()).await?;
 
         // Do we get the same files?
-        let files = Manifest::list(&hg_manifest);
-        assert_eq!(files.count(), 3);
+        let files = AsyncManifest::list(&hg_manifest, &ctx, repo.repo_blobstore()).await?;
+        assert_eq!(files.count().await, 3);
 
         Ok(())
     }

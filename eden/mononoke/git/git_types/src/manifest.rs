@@ -5,30 +5,61 @@
  * GNU General Public License version 2.
  */
 
+use ::manifest::AsyncManifest;
 use ::manifest::Entry;
-use ::manifest::Manifest;
+use anyhow::Result;
+use async_trait::async_trait;
+use context::CoreContext;
+use futures::stream;
+use futures::stream::BoxStream;
+use futures::stream::StreamExt;
 use mononoke_types::MPathElement;
+use mononoke_types::SortedVectorTrieMap;
 
 use crate::BlobHandle;
 use crate::Tree;
 use crate::TreeHandle;
 use crate::Treeish;
 
-impl Manifest for Tree {
+#[async_trait]
+impl<Store: Send + Sync> AsyncManifest<Store> for Tree {
     type TreeId = TreeHandle;
     type LeafId = BlobHandle;
+    type TrieMapType = SortedVectorTrieMap<Entry<TreeHandle, BlobHandle>>;
 
-    fn list(&self) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)>> {
+    async fn lookup(
+        &self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+        name: &MPathElement,
+    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
+        Ok(self.members().get(name).map(|e| e.clone().into()))
+    }
+
+    async fn list(
+        &self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    {
         let members: Vec<_> = self
             .members()
             .iter()
             .map(|(k, v)| (k.clone(), v.clone().into()))
             .collect();
-
-        Box::new(members.into_iter())
+        Ok(stream::iter(members).map(Ok).boxed())
     }
 
-    fn lookup(&self, name: &MPathElement) -> Option<Entry<Self::TreeId, Self::LeafId>> {
-        self.members().get(name).map(|e| e.clone().into())
+    async fn into_trie_map(
+        self,
+        _ctx: &CoreContext,
+        _blobstore: &Store,
+    ) -> Result<Self::TrieMapType> {
+        let members = self
+            .members()
+            .iter()
+            .map(|(k, v)| (k.clone().to_smallvec(), v.clone().into()))
+            .collect();
+        Ok(SortedVectorTrieMap::new(members))
     }
 }

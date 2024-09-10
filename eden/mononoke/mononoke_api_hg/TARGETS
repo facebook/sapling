@@ -36,7 +36,6 @@ rust_library(
         "//eden/mononoke/features/repo_update_logger:repo_update_logger",
         "//eden/mononoke/filestore:filestore",
         "//eden/mononoke/hgproto:hgproto",
-        "//eden/mononoke/manifest:manifest",
         "//eden/mononoke/mercurial:mercurial_mutation",
         "//eden/mononoke/mercurial:mercurial_types",
         "//eden/mononoke/metaconfig:metaconfig_types",

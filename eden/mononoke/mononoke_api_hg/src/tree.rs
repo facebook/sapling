@@ -5,17 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Result;
 use async_trait::async_trait;
 use bytes::Bytes;
-use manifest::Entry;
-use manifest::Manifest;
 use mercurial_types::fetch_augmented_manifest_envelope_opt;
 use mercurial_types::fetch_manifest_envelope;
 use mercurial_types::fetch_manifest_envelope_opt;
 use mercurial_types::HgAugmentedManifestEntry;
 use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgBlobEnvelope;
-use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestEnvelope;
 use mercurial_types::HgManifestId;
 use mercurial_types::HgNodeHash;
@@ -23,7 +21,6 @@ use mercurial_types::HgParents;
 use mercurial_types::HgPreloadedAugmentedManifest;
 use mononoke_api::errors::MononokeError;
 use mononoke_api::MononokeRepo;
-use mononoke_types::file_change::FileType;
 use mononoke_types::hash::Blake3;
 use mononoke_types::MPathElement;
 use repo_blobstore::RepoBlobstoreRef;
@@ -73,14 +70,6 @@ impl<R: MononokeRepo> HgTreeContext<R> {
 
     pub fn into_blob_manifest(self) -> anyhow::Result<mercurial_types::blobs::HgBlobManifest> {
         mercurial_types::blobs::HgBlobManifest::parse(self.envelope)
-    }
-
-    pub fn entries(
-        &self,
-    ) -> anyhow::Result<
-        impl Iterator<Item = (MPathElement, Entry<HgManifestId, (FileType, HgFileNodeId)>)>,
-    > {
-        Ok(self.clone().into_blob_manifest()?.list())
     }
 }
 

@@ -247,7 +247,7 @@ async fn display_hg_entry(
                 .load(ctx, blobstore)
                 .await
                 .context("Failed to load manifest")?;
-            display_hg_manifest(std::io::stdout(), &manifest)?;
+            display_hg_manifest(ctx, blobstore, std::io::stdout(), &manifest).await?;
         }
     }
     Ok(())

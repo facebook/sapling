@@ -377,8 +377,8 @@ mod test {
     use assert_matches::assert_matches;
     use borrowed::borrowed;
     use fbinit::FacebookInit;
+    use manifest::AsyncManifest;
     use manifest::Entry;
-    use manifest::Manifest;
     use mercurial_derivation::DeriveHgChangeset;
     use metaconfig_types::FilestoreParams;
     use mononoke_macros::mononoke;
@@ -415,7 +415,12 @@ mod test {
             .await?;
 
         let entry = hg_manifest
-            .lookup(&MPathElement::new(filename.as_bytes().to_vec())?)
+            .lookup(
+                ctx,
+                repo.repo_blobstore(),
+                &MPathElement::new(filename.as_bytes().to_vec())?,
+            )
+            .await?
             .ok_or_else(|| Error::msg("file is missing"))?;
 
         let filenode = match entry {
