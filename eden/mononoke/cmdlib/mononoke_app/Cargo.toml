@@ -14,13 +14,17 @@ async-trait = "0.1.71"
 base_app = { version = "0.1.0", path = "../base_app" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
+bonsai_git_mapping = { version = "0.1.0", path = "../../bonsai_git_mapping" }
+bonsai_globalrev_mapping = { version = "0.1.0", path = "../../bonsai_globalrev_mapping" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
+bonsai_svnrev_mapping = { version = "0.1.0", path = "../../bonsai_svnrev_mapping" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 clap = { version = "4.5.11", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 cmdlib_caching = { version = "0.1.0", path = "../caching" }
 cmdlib_logging = { version = "0.1.0", path = "../log" }
 commit_graph_types = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph_types" }
+commit_id = { version = "0.1.0", path = "../commit_id" }
 config_args = { version = "0.1.0", path = "../config_args" }
 context = { version = "0.1.0", path = "../../server/context" }
 derived_data_remote = { version = "0.1.0", path = "../../derived_data/remote" }
@@ -33,7 +37,6 @@ itertools = "0.11.0"
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 megarepo_config = { version = "0.1.0", path = "../../megarepo_api/megarepo_config" }
 memcache = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 metaconfig_parser = { version = "0.1.0", path = "../../metaconfig/parser" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }

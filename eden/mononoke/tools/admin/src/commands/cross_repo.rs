@@ -9,6 +9,7 @@ use anyhow::Result;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use bookmarks::BookmarkUpdateLog;
 use bookmarks::Bookmarks;
 use clap::Parser;
@@ -63,6 +64,9 @@ pub struct Repo {
 
     #[facet]
     bonsai_globalrev_mapping: dyn BonsaiGlobalrevMapping,
+
+    #[facet]
+    bonsai_svnrev_mapping: dyn BonsaiSvnrevMapping,
 
     #[facet]
     pushrebase_mutation_mapping: dyn PushrebaseMutationMapping,

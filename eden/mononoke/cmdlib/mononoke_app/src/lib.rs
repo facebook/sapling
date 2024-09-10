@@ -6,6 +6,7 @@
  */
 
 #![feature(let_chains)]
+#![feature(trait_alias)]
 
 mod app;
 pub mod args;

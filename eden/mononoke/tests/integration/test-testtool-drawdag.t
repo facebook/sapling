@@ -148,7 +148,7 @@ Test HG hashes and setting the commit message and author:
   BB=d005ae50b8698478630ac396568f337d3c24063c
   CC=2d21fd53ce56b2c798dab5af7f2fce72411fcb6e
 
-  $ mononoke_newadmin fetch -R repo --hg-id $AA -p file
+  $ mononoke_newadmin fetch -R repo -i $AA -p file
   File-Type: regular
   Size: 7
   Content-Id: 95b845f64a4cb04cf60a55e9715210fcea6e187813221ab49e766b1478dbaa13
@@ -158,7 +158,7 @@ Test HG hashes and setting the commit message and author:
   
   content
 
-  $ mononoke_newadmin fetch -R repo --hg-id $CC
+  $ mononoke_newadmin fetch -R repo -i $CC
   BonsaiChangesetId: 3a29cc35f0e5cdfe1305159710f1baf48c08034a1964e871b24559d9ef5fcbee
   Author: Test Y. Testovich <test@meta.com>
   Message: just a commit message

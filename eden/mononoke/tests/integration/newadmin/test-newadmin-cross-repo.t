@@ -59,12 +59,12 @@ Now insert with valid version name
   $ mononoke_admin_source_target 0 1 crossrepo insert equivalent-working-copy \
   > --source-hash "$LARGE_EQ_WC_HASH" --target-hash "$SMALL_EQ_WC_HASH" --version-name TEST_VERSION_NAME 2>&1 | grep 'successfully inserted'
   * successfully inserted equivalent working copy (glob)
-  $ mononoke_newadmin cross-repo --source-repo-name large --target-repo-name small map --hg-id "$LARGE_EQ_WC_HASH" 2>&1 | grep EquivalentWorking
+  $ mononoke_newadmin cross-repo --source-repo-name large --target-repo-name small map -i "$LARGE_EQ_WC_HASH" 2>&1 | grep EquivalentWorking
   EquivalentWorkingCopyAncestor(ChangesetId(Blake2(a246023ccc3b1dc56076a2524cd644fb4cb4a99ee2141b2277677f9ce82f0f13)), CommitSyncConfigVersion("TEST_VERSION_NAME"))
 
 Now insert not sync candidate entry
   $ mononoke_admin_source_target 0 1 crossrepo insert not-sync-candidate \
   > --large-repo-hash "$NOT_SYNC_CANDIDATE_HASH" --version-name TEST_VERSION_NAME 2>&1 | grep 'successfully inserted'
   * successfully inserted not sync candidate entry (glob)
-  $ mononoke_newadmin cross-repo --source-repo-name large --target-repo-name small map --hg-id "$NOT_SYNC_CANDIDATE_HASH" 2>&1 | grep NotSyncCandidate
+  $ mononoke_newadmin cross-repo --source-repo-name large --target-repo-name small map -i "$NOT_SYNC_CANDIDATE_HASH" 2>&1 | grep NotSyncCandidate
   NotSyncCandidate(CommitSyncConfigVersion("TEST_VERSION_NAME"))
