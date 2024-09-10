@@ -76,6 +76,7 @@ rust_library(
         "//eden/mononoke/bookmarks:bookmarks_movement",
         "//eden/mononoke/changesets/changesets_creation:changesets_creation",
         "//eden/mononoke/commit_cloud:commit_cloud",
+        "//eden/mononoke/commit_cloud/types:commit_cloud_types",
         "//eden/mononoke/commit_rewriting/cross_repo_sync:cross_repo_sync",
         "//eden/mononoke/commit_rewriting/live_commit_sync_config:live_commit_sync_config",
         "//eden/mononoke/commit_rewriting/synced_commit_mapping:synced_commit_mapping",

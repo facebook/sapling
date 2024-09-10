@@ -18,6 +18,7 @@ use bookmarks::BookmarkKey;
 use bookmarks_movement::describe_hook_rejections;
 use bookmarks_movement::BookmarkMovementError;
 use bookmarks_movement::HookRejection;
+use commit_cloud_types::CommitCloudError;
 use derived_data::DerivationError;
 use derived_data::SharedDerivationError;
 use itertools::Itertools;
@@ -199,5 +200,16 @@ impl From<&MononokeError> for edenapi_types::ServerError {
 impl From<MononokeError> for MegarepoError {
     fn from(e: MononokeError) -> Self {
         MegarepoError::internal(e)
+    }
+}
+
+impl From<CommitCloudError> for MononokeError {
+    fn from(e: CommitCloudError) -> Self {
+        match e {
+            CommitCloudError::InternalError(e) => {
+                MononokeError::InternalError(InternalError(Arc::new(e.into())))
+            }
+            CommitCloudError::UserError(e) => MononokeError::InvalidRequest(e.to_string()),
+        }
     }
 }

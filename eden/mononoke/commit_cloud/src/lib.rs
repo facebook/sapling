@@ -23,6 +23,9 @@ use commit_cloud_intern_utils::acl_check::ACL_LINK;
 use commit_cloud_intern_utils::interngraph_publisher::publish_single_update;
 #[cfg(fbcode_build)]
 use commit_cloud_intern_utils::notification::NotificationData;
+use commit_cloud_types::CommitCloudError;
+use commit_cloud_types::CommitCloudInternalError;
+use commit_cloud_types::CommitCloudUserError;
 use commit_cloud_types::HistoricalVersion;
 use commit_cloud_types::ReferencesData;
 use commit_cloud_types::SmartlogFilter;
@@ -104,17 +107,19 @@ impl CommitCloud {
     pub async fn get_workspace(
         &self,
         cc_ctx: &CommitCloudContext,
-    ) -> anyhow::Result<WorkspaceData> {
+    ) -> Result<WorkspaceData, CommitCloudError> {
         let maybeworkspace =
             WorkspaceVersion::fetch_from_db(&self.storage, &cc_ctx.workspace, &cc_ctx.reponame)
-                .await?;
+                .await
+                .map_err(CommitCloudInternalError::Error)?;
         if let Some(res) = maybeworkspace {
             return Ok(res.into_workspace_data(&cc_ctx.reponame));
         }
-        Err(anyhow::anyhow!(
-            "'get_workspace' failed: workspace {} does not exist",
-            cc_ctx.workspace
-        ))
+        Err(CommitCloudUserError::NonexistantWorkspace(
+            cc_ctx.workspace.clone(),
+            cc_ctx.reponame.clone(),
+        )
+        .into())
     }
 
     pub async fn get_workspaces(

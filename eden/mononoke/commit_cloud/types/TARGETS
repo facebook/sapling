@@ -8,6 +8,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:thiserror",
         "//eden/mononoke/mercurial:mercurial_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
     ],
