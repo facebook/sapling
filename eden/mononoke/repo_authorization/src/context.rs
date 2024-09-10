@@ -21,6 +21,7 @@ use metaconfig_types::RepoConfigRef;
 use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
+use permission_checker::AclProvider;
 use repo_bookmark_attrs::RepoBookmarkAttrsRef;
 use repo_permission_checker::RepoPermissionCheckerRef;
 
@@ -516,6 +517,57 @@ impl AuthorizationContext {
         self.check_git_import_operations(ctx, repo)
             .await
             .permitted_or_else(|| self.permission_denied(ctx, DeniedAction::GitImportOperation))
+    }
+
+    /// Check whether the caller is allowed to create a repo.
+    pub async fn check_repo_create(
+        &self,
+        ctx: &CoreContext,
+        repo_name: &str,
+        acl_provider: &dyn AclProvider,
+    ) -> AuthorizationCheckOutcome {
+        let permitted = match self {
+            AuthorizationContext::FullAccess => true,
+            AuthorizationContext::Service(_service_name) => {
+                // Services should use the normal "identity" access for this
+                // (because service-level permissions are configured on existing repos)
+                // Services are allowed to do this if they are configured to
+                // allow the method.
+                false
+            }
+            AuthorizationContext::Identity => {
+                // Here we're replicating current logic used on our Git servers. Once we get rid of them
+                // let's make this more generic.
+                let acl_name = if repo_name.starts_with("aosp/") {
+                    "repos/git/aosp"
+                } else {
+                    "repos"
+                };
+                let acl = acl_provider.repo_acl(acl_name).await;
+                if let Ok(acl) = acl {
+                    acl.check_set(ctx.metadata().identities(), &["create"])
+                        .await
+                } else {
+                    false
+                }
+            }
+            AuthorizationContext::ReadOnlyIdentity | AuthorizationContext::DraftOnlyIdentity => {
+                false
+            }
+        };
+        AuthorizationCheckOutcome::from_permitted(permitted)
+    }
+
+    /// Require that the caller is allowed to create given repo.
+    pub async fn require_repo_create(
+        &self,
+        ctx: &CoreContext,
+        repo_name: &str,
+        acl_provider: &dyn AclProvider,
+    ) -> Result<(), AuthorizationError> {
+        self.check_repo_create(ctx, repo_name, acl_provider)
+            .await
+            .permitted_or_else(|| self.permission_denied(ctx, DeniedAction::CreateRepo))
     }
 
     /// Check whether the caller is allowed to operate on certain commit cloud workspace.

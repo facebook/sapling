@@ -50,6 +50,7 @@ use mononoke_app::MononokeApp;
 use mononoke_configs::MononokeConfigs;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
+use permission_checker::AclProvider;
 use permission_checker::MononokeIdentity;
 use permission_checker::MononokeIdentitySet;
 use repo_authorization::AuthorizationContext;
@@ -115,6 +116,8 @@ pub(crate) struct SourceControlServiceImpl {
     pub(crate) factory_group: Option<Arc<FactoryGroup<2>>>,
     pub(crate) queues_client: Arc<AsyncRequestsQueue<Repo>>,
     identity_proxy_checker: Arc<ConnectionSecurityChecker>,
+    #[allow(dead_code)]
+    pub(crate) acl_provider: Arc<dyn AclProvider>,
 }
 
 pub(crate) struct SourceControlServiceThriftImpl(Arc<SourceControlServiceImpl>);
@@ -150,6 +153,7 @@ impl SourceControlServiceImpl {
             identity_proxy_checker: Arc::new(identity_proxy_checker),
             factory_group,
             queues_client: Arc::new(AsyncRequestsQueue::new(app, mononoke)),
+            acl_provider: app.environment().acl_provider.clone(),
         }
     }
 

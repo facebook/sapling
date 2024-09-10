@@ -42,7 +42,6 @@ use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_app::MononokeReposManager;
 use panichandler::Fate;
-use permission_checker::DefaultAclProvider;
 use sharding_ext::RepoShard;
 use slog::info;
 use slog::Logger;
@@ -263,9 +262,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         memory::set_max_memory(max_memory);
     }
 
-    let acl_provider = DefaultAclProvider::new(fb);
     let security_checker = runtime.block_on(ConnectionSecurityChecker::new(
-        acl_provider.as_ref(),
+        app.environment().acl_provider.as_ref(),
         &app.repo_configs().common,
     ))?;
 

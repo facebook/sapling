@@ -30,6 +30,7 @@ pub enum DeniedAction {
     OverrideGitMapping,
     GitImportOperation,
     CommitCloudOperation(String, String),
+    CreateRepo,
 }
 
 impl fmt::Display for DeniedAction {
@@ -65,6 +66,7 @@ impl fmt::Display for DeniedAction {
                 )
                 .as_str(),
             ),
+            DeniedAction::CreateRepo => f.write_str("Repository creation"),
         }
     }
 }
