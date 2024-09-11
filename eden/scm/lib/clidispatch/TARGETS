@@ -43,6 +43,7 @@ rust_library(
         "//eden/scm/lib/context:context",
         "//eden/scm/lib/doctor/network:network-doctor",
         "//eden/scm/lib/gitcompat:gitcompat",
+        "//eden/scm/lib/hgtime:hgtime",
         "//eden/scm/lib/hook:hook",
         "//eden/scm/lib/identity:identity",
         "//eden/scm/lib/indexedlog:indexedlog",

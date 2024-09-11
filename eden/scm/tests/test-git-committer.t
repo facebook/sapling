@@ -65,14 +65,15 @@ Metaedit with `-d` does not update committer date to the specified value:
   >>> assert 'committer date: 4800' not in _
 
 If committer and date are not explicitly set, the current author ('test', set
-by the test runner via HGUSER) and the current wall time are used:
+by the test runner via HGUSER) and the current wall time are used. The author
+date is unchanged:
 
-  $ sl metaedit -m A3 --config git.committer= --config git.committer-date=
+  $ sl metaedit -m A3 --config git.committer= --config git.committer-date= --config devel.default-date=
   $ dump_commits
   A3:
    date: * (glob)
    author: user22 <>
-   author date: 0 0
+   author date: 4800 -240
    committer: test <>
    committer date: [1-9][0-9]+ 0 (re)
 

@@ -61,38 +61,38 @@ Basic test
 With commit info
   $ echo "hello" >c2 && hg ci --amend
   $ USER=test HGRCPATH="$HGRCPATH;fb=static" hg smartlog -T '{sl}' --commit-info --config extensions.commitcloud=!
-    @  05d102502  1970-01-01 00:00  test  feature2*
+    @  05d102502  Today at 00:00  test  feature2*
   ╭─╯  d
   │
   │     M c2
   │     A d
   │
-  o  38d85b506  1970-01-01 00:00  test  master public/38d85b50675416788125247211034703776317bd
+  o  38d85b506  Today at 00:00  test  master public/38d85b50675416788125247211034703776317bd
   ╷  c2
   ╷
-  ╷ o  49cdb4091  1970-01-01 00:00  test  feature1
+  ╷ o  49cdb4091  Today at 00:00  test  feature1
   ╭─╯  b
   │
-  o  b68836a6e  1970-01-01 00:00  test
+  o  b68836a6e  Today at 00:00  test
   │  a2
   ~
 
   $ USER=test HGRCPATH="$HGRCPATH;fb=static" hg smartlog -v -T '{sl}' --commit-info --config extensions.commitcloud=!
-    @  05d102502  1970-01-01 00:00  test  feature2*
+    @  05d102502  Today at 00:00  test  feature2*
   ╭─╯  d
   │
   │     M c2
   │     A d
   │
-  o  38d85b506  1970-01-01 00:00  test  master public/38d85b50675416788125247211034703776317bd
+  o  38d85b506  Today at 00:00  test  master public/38d85b50675416788125247211034703776317bd
   ╷  c2
   ╷
-  ╷ o  49cdb4091  1970-01-01 00:00  test  feature1
+  ╷ o  49cdb4091  Today at 00:00  test  feature1
   ╭─╯  b
   │
   │     A b
   │
-  o  b68836a6e  1970-01-01 00:00  test
+  o  b68836a6e  Today at 00:00  test
   │  a2
   ~
 
@@ -352,8 +352,8 @@ Limit by threshold
 
 Recent arg select days correctly
   $ echo 1 >> b
-  $ myday=`hg debugsh -c 'import time; ui.write(str(int(time.time()) - 24 * 3600 * 20))'`
-  $ hg commit --date "$myday 0" -m test2
+  $ setconfig devel.default-date='2020-5-30'
+  $ hg commit --date "20 days ago" -m test2
   $ hg goto 'desc(r0)' -q
   $ hg log -Gr 'smartlog(master="master", heads=((date(-15) & draft()) + .))' -T '{node|short} {bookmarks} {desc}'
   o  66f7d451a68b master r1

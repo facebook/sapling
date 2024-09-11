@@ -2250,7 +2250,7 @@ def makedate(timestamp=None):
     """Return a unix timestamp (or the current time) as a (unixtime,
     offset) tuple based off the local timezone."""
     if timestamp is None:
-        timestamp = time.time()
+        timestamp = bindings.hgtime.parse("now")[0]
     if timestamp < 0:
         hint = _("check your clock")
         raise Abort(_("negative timestamp: %d") % timestamp, hint=hint)

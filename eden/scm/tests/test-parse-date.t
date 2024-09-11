@@ -105,6 +105,10 @@ Test issue1014 (fractional timezones)
   internal: 1000000000 16200
   standard: Sat Sep 08 21:16:40 2001 -0430
 
+Tests below use relative dates and expect "now" to not be unix epoch.
+
+  $ setconfig devel.default-date='2020-01-01 05:00:00'
+
 Test 12-hours times
 
   $ hg debugdate "2006-02-01 1:00:30PM +0000"
@@ -262,8 +266,9 @@ Test that '<' and '>' are inclusive
 Test issue 3764 (interpreting 'today' and 'yesterday')
   $ echo "hello" >> a
   >>> import datetime
-  >>> today = datetime.date.today().strftime("%b %d")
-  >>> yesterday = (datetime.date.today() - datetime.timedelta(days=1)).strftime("%b %d %Y")
+  >>> today_date = datetime.date(2020,1,1)
+  >>> today = today_date.strftime("%b %d")
+  >>> yesterday = (today_date - datetime.timedelta(days=1)).strftime("%b %d %Y")
   >>> dates = open('dates', 'w')
   >>> _ = dates.write(today + '\n')
   >>> _ = dates.write(yesterday + '\n')
@@ -317,7 +322,7 @@ Test parsing various ISO8601 forms
 
 Test parsing extra forms
 
-  $ setconfig extensions.fakedate="$TESTDIR/fakedate.py"
+  $ setconfig devel.default-date="1996-03-07 14:00:01Z"
   $ hg debugdate 'now'
   internal: 826207201 0
   standard: Thu Mar 07 14:00:01 1996 +0000

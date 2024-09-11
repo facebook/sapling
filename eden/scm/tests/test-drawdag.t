@@ -415,6 +415,8 @@ for documentation:
   $ cat >> "$HGRCPATH" <<EOF
   > [templatealias]
   > mutation_descs = "{join(mutations % '({operation} to {join(successors % \'{node|short}\', \', \')})', ' ')}"
+  > [devel]
+  > default-date=2000-7-28 12:00 UTC
   > EOF
   $ hg sl -T '{node|shortest} {ifeq(phase,"public","{remotenames}","{mutation_descs} {author} {date|simpledate}\n{desc|firstline}\n ")}'
   o  1313 remote/master

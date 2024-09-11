@@ -22,6 +22,7 @@ use configloader::config::ConfigSet;
 use configloader::hg::set_pinned;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use hgtime::HgTime;
 use repo::repo::Repo;
 
 use crate::abort_if;
@@ -128,6 +129,25 @@ fn initialize_blackbox(optional_repo: &OptionalRepo) -> Result<()> {
         {
             ::blackbox::init(blackbox);
         }
+    }
+    Ok(())
+}
+
+fn initialize_hgtime(config: &dyn Config) -> Result<()> {
+    let mut should_clear = true;
+    if let Some(now_str) = config.get("devel", "default-date") {
+        let now_str = now_str.trim();
+        if !now_str.is_empty() {
+            if let Some(now) = HgTime::parse(now_str) {
+                tracing::info!(?now, "set 'now' for testing");
+                now.set_as_now_for_testing();
+                should_clear = false;
+            }
+        }
+    }
+    if should_clear {
+        tracing::debug!("unset 'now' for testing");
+        HgTime::clear_now_for_testing();
     }
     Ok(())
 }
@@ -278,6 +298,7 @@ impl Dispatcher {
         }
 
         initialize_indexedlog(config)?;
+        initialize_hgtime(config)?;
 
         // Prepare alias handling.
         let alias_lookup = |name: &str| {
