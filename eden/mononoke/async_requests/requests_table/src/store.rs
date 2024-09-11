@@ -263,7 +263,42 @@ mononoke_queries! {
         "
     }
 
-    read ListRequests(last_update_newer_than: Timestamp, >list repo_ids: RepositoryId) -> (
+    read ListRequestsForAnyRepo(last_update_newer_than: Timestamp) -> (
+        RowId,
+        RequestType,
+        RepositoryId,
+        BookmarkName,
+        BlobstoreKey,
+        Option<BlobstoreKey>,
+        Timestamp,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        RequestStatus,
+        Option<ClaimedBy>,
+    ) {
+        "SELECT id,
+            request_type,
+            repo_id,
+            bookmark,
+            args_blobstore_key,
+            result_blobstore_key,
+            created_at,
+            started_processing_at,
+            inprogress_last_updated_at,
+            ready_at,
+            polled_at,
+            status,
+            claimed_by
+        FROM long_running_request_queue
+        WHERE (
+            inprogress_last_updated_at > {last_update_newer_than} OR
+            (status = 'new' AND created_at > {last_update_newer_than})
+        )"
+    }
+
+    read ListRequestsForRepos(last_update_newer_than: Timestamp, >list repo_ids: RepositoryId) -> (
         RowId,
         RequestType,
         RepositoryId,
@@ -590,15 +625,27 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
     async fn list_requests(
         &self,
         _ctx: &CoreContext,
-        repo_ids: &[RepositoryId],
+        repo_ids: Option<&[RepositoryId]>,
         last_update_newer_than: Option<&Timestamp>,
     ) -> Result<Vec<LongRunningRequestEntry>> {
-        let entries = ListRequests::query(
-            &self.connections.read_connection,
-            last_update_newer_than.unwrap_or(&Timestamp::from_timestamp_nanos(0)),
-            repo_ids,
-        )
-        .await?
+        let entries = match repo_ids {
+            Some(repos) => {
+                ListRequestsForRepos::query(
+                    &self.connections.read_connection,
+                    last_update_newer_than.unwrap_or(&Timestamp::from_timestamp_nanos(0)),
+                    repos,
+                )
+                .await
+            }
+            None => {
+                ListRequestsForAnyRepo::query(
+                    &self.connections.read_connection,
+                    last_update_newer_than.unwrap_or(&Timestamp::from_timestamp_nanos(0)),
+                )
+                .await
+            }
+        }
+        .context("listing requests")?
         .into_iter()
         .map(row_to_entry)
         .collect();

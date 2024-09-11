@@ -133,7 +133,7 @@ pub trait LongRunningRequestsQueue: Send + Sync {
     async fn list_requests(
         &self,
         ctx: &CoreContext,
-        repo_ids: &[RepositoryId],
+        repo_ids: Option<&[RepositoryId]>,
         last_update_newer_than: Option<&Timestamp>,
     ) -> Result<Vec<LongRunningRequestEntry>>;
 }

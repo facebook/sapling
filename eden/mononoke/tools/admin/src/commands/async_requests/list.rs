@@ -52,11 +52,11 @@ pub async fn list_requests<R: MononokeRepo>(
         "Ready at",
         "Duration",
     ]);
-    for (repo_ids, queue) in repos_and_queues {
+    for (_repo_ids, queue) in repos_and_queues {
         let res = queue
             .list_requests(
                 &ctx,
-                &repo_ids,
+                None,
                 Some(&Timestamp::from_timestamp_secs(
                     Timestamp::now().timestamp_seconds() - lookback,
                 )),
