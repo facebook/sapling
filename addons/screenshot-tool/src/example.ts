@@ -28,7 +28,7 @@ export interface Example {
 
 export const BASE_EXAMPLE: Example = {
   async populateRepo(repo: TestRepo): Promise<void> {
-    await repo.drawdag('A..D', `goto('D')`);
+    await repo.cached(repo => repo.drawdag('A..D', `goto('D')`));
   },
   async postOpenISL(browser: TestBrowser, _repo: TestRepo): Promise<void> {
     await browser.page.screenshot({path: 'example.png'});

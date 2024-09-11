@@ -5,8 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {getCacheDir, sha1} from './utils';
 import {execa} from 'execa';
-import * as fs from 'node:fs';
+import * as fs from 'node:fs/promises';
 import {join} from 'node:path';
 import {dirSync} from 'tmp';
 
@@ -26,10 +27,36 @@ export class TestRepo {
     }
     const repoPath = join(tmpDir.name, repoName);
     logger.info(keepTmp ? '' : 'Temporary', 'repo path:', repoPath);
-    fs.mkdirSync(repoPath);
+    await fs.mkdir(repoPath);
     const repo = new TestRepo(repoPath, command);
     await repo.run(['init', '--git']);
     return repo;
+  }
+
+  /**
+   * Cache the side effect of `func` to this repo.
+   * After executing `func`, the files in the repo will be copied to a cache directory.
+   * The next time the same `func` is passed here, restore the files from the cache
+   * directory without running `func`.
+   */
+  async cached(func: (repo: TestRepo) => Promise<void>): Promise<void> {
+    const hash = sha1(func.toString());
+    const cacheDir = join(await getCacheDir('repos'), hash.substring(0, 8));
+    let cacheExists: boolean;
+    try {
+      const stat = await fs.stat(cacheDir);
+      cacheExists = stat.isDirectory();
+    } catch {
+      cacheExists = false;
+    }
+    if (cacheExists) {
+      logger.info(`Reusing cached repo at ${cacheDir}`);
+      await copyRecursive(cacheDir, this.repoPath);
+    } else {
+      await func(this);
+      logger.info(`Backing up repo to ${cacheDir}`);
+      await copyRecursive(this.repoPath, cacheDir);
+    }
   }
 
   /** Adds commits via the `debugdrawdag` command. */
@@ -69,4 +96,21 @@ export class TestRepo {
   }
 
   constructor(private repoPath: string, private command: string) {}
+}
+
+async function copyRecursive(src: string, dst: string): Promise<void> {
+  const srcStats = await fs.lstat(src);
+  if (srcStats.isDirectory()) {
+    await fs.mkdir(dst, {recursive: true});
+    const items = await fs.readdir(src);
+    await Promise.all(
+      items.map(async item => {
+        const srcItemPath = join(src, item);
+        const dstItemPath = join(dst, item);
+        await copyRecursive(srcItemPath, dstItemPath);
+      }),
+    );
+  } else if (srcStats.isFile()) {
+    await fs.copyFile(src, dst);
+  }
 }
