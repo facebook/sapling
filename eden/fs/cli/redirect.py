@@ -546,7 +546,7 @@ class Redirection:
                 print(
                     f"A non-empty directory (full path `{self.expand_repo_path(checkout)}`) found. Either-"
                     "\n - Try again after reviewing and manually deleting the directory, or "
-                    "\n - Use `--force` parameter in this command to attempt inline deletion of the directory if none of its files are in use.",
+                    "\n - Run `eden redirect fixup --force` to attempt inline deletion of the directory if none of its files are in use.",
                 )
         return disposition
 
