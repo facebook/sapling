@@ -18,7 +18,7 @@ import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import puppeteer from 'puppeteer-core';
 
-type PageOptions = {
+export type PageOptions = {
   width?: number;
   height?: number;
 };

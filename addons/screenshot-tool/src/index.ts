@@ -29,7 +29,10 @@ export async function main() {
   };
 
   // Both operations are slow. Run them in parallel.
-  const [repo, browser] = await Promise.all([createTestRepo(), TestBrowser.new()]);
+  const [repo, browser] = await Promise.all([
+    createTestRepo(),
+    TestBrowser.new(example.pageOptions()),
+  ]);
 
   // Open ISL after the repo is populated.
   await browser.openISL(repo, example.openISLOptions);
