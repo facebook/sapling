@@ -11,9 +11,8 @@ import type * as testRepo from './testRepo';
 import type {Browser, Page} from 'puppeteer-core';
 import type * as Rrweb from 'rrweb';
 
-import crypto from 'node:crypto';
+import {getCacheDir, sha1} from './utils';
 import fs from 'node:fs';
-import {homedir} from 'node:os';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import puppeteer from 'puppeteer-core';
@@ -223,21 +222,8 @@ export class TestBrowser {
   constructor(public browser: Browser, public page: Page) {}
 }
 
-async function getCacheDir(subdir?: string): Promise<string> {
-  let dir = join(homedir(), '.cache', 'isl-screenshot');
-  if (subdir != null) {
-    dir = join(dir, subdir);
-  }
-  await fs.promises.mkdir(dir, {recursive: true});
-  return dir;
-}
-
 function sleep(ms: number): Promise<void> {
   return new Promise(r => setTimeout(r, ms));
-}
-
-function sha1(str: string): string {
-  return crypto.createHash('sha1').update(str).digest('hex');
 }
 
 type BrowserWindow = {
