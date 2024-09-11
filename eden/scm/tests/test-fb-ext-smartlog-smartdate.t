@@ -6,11 +6,6 @@
 
   $ setconfig commitcloud.enablestatus=false
 
-#testcases withpytz withoutpytz
-#if withpytz
-  $ eagerepo
-  $ hg debugshell -c "import pytz; pytz.__name__" || exit 80
-#endif
   $ enable smartlog
   $ TZ=UTC
   $ export TZ
@@ -76,7 +71,6 @@ Test smartlog with smartdate.
   │
   o  1969-12-31 16:00 "1970-01-01T00:00"
   
-#if withpytz
   $ hg smartlog -r 'all()' -T '{smartdate(date, 5400, age(date), simpledate(date, "Australia/Sydney"))} "{desc}"' --config extensions.fakedate=$TESTDIR/fakedate.py
   @  1996-03-08 10:59 "1996-03-07T23:59"
   │
@@ -94,4 +88,3 @@ Test smartlog with smartdate.
   │
   o  1970-01-01 10:00 "1970-01-01T00:00"
   
-#endif
