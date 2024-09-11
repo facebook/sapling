@@ -79,7 +79,7 @@ pub enum RedirectCmd {
         strict: bool,
         #[clap(
             long,
-            help = "Forcefully add redirection, removing files in order to remove directories that should be redirections and killing processes preventing it if needed."
+            help = "Forcefully add redirection, removing any existing files/directories that are present at the redirection location."
         )]
         force: bool,
     },
@@ -90,6 +90,11 @@ pub enum RedirectCmd {
     Unmount {
         #[clap(long, parse(from_str = expand_path), help = "The EdenFS mount point path.")]
         mount: Option<PathBuf>,
+        #[clap(
+            long,
+            help = "Forcefully unmount redirection, removing any existing files/directories that are present at the redirection location."
+        )]
+        force: bool,
     },
     #[clap(about = "Delete a redirection")]
     Del {
@@ -97,6 +102,11 @@ pub enum RedirectCmd {
         mount: Option<PathBuf>,
         #[clap(parse(from_str = expand_path), index = 1, help = "The path in the repo which should no longer be redirected")]
         repo_path: PathBuf,
+        #[clap(
+            long,
+            help = "Forcefully delete redirection, removing any existing files/directories that are present at the redirection location."
+        )]
+        force: bool,
     },
     #[clap(
         about = "Fixup redirection configuration; redirect things that should be redirected and \
@@ -120,7 +130,7 @@ pub enum RedirectCmd {
         only_repo_source: bool,
         #[clap(
             long,
-            help = "Forcefully fix redirections, removing files in order to remove directories that should be redirections and killing processes preventing it if needed."
+            help = "Forcefully fix redirections, removing any existing files/directories that are present at the redirection location."
         )]
         force: bool,
     },
@@ -231,7 +241,7 @@ impl RedirectCmd {
         Ok(0)
     }
 
-    async fn unmount(&self, mount: Option<PathBuf>) -> Result<ExitCode> {
+    async fn unmount(&self, mount: Option<PathBuf>, force: bool) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
         let mount = match mount {
             Some(provided) => provided,
@@ -248,7 +258,7 @@ impl RedirectCmd {
         })?;
         for redir in redirs.values() {
             redir
-                .remove_existing(&checkout, false, false)
+                .remove_existing(&checkout, false, force)
                 .await
                 .with_context(|| {
                     anyhow!(
@@ -279,7 +289,7 @@ impl RedirectCmd {
         Ok(0)
     }
 
-    async fn del(&self, mount: Option<PathBuf>, repo_path: &Path) -> Result<ExitCode> {
+    async fn del(&self, mount: Option<PathBuf>, repo_path: &Path, force: bool) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
         let mount = match mount {
             Some(provided) => provided,
@@ -303,7 +313,7 @@ impl RedirectCmd {
         // the improved `add` validation for a while, we can use it here also.
         if let Some(redir) = redirs.get(repo_path) {
             redir
-                .remove_existing(&checkout, false, false)
+                .remove_existing(&checkout, false, force)
                 .await
                 .with_context(|| {
                     format!(
@@ -562,8 +572,12 @@ impl Subcommand for RedirectCmd {
                 )
                 .await
             }
-            Self::Unmount { mount } => self.unmount(mount.to_owned()).await,
-            Self::Del { mount, repo_path } => self.del(mount.to_owned(), repo_path).await,
+            Self::Unmount { mount, force } => self.unmount(mount.to_owned(), *force).await,
+            Self::Del {
+                mount,
+                repo_path,
+                force,
+            } => self.del(mount.to_owned(), repo_path, *force).await,
             Self::Fixup {
                 mount,
                 force_remount_bind_mounts,
@@ -586,7 +600,7 @@ impl Subcommand for RedirectCmd {
         match self {
             Self::List { mount, .. }
             | Self::Add { mount, .. }
-            | Self::Unmount { mount }
+            | Self::Unmount { mount, .. }
             | Self::Del { mount, .. }
             | Self::Fixup { mount, .. } => mount.to_owned(),
             Self::CleanupApfs {} => None,
