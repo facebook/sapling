@@ -8,17 +8,11 @@
 //! Tests involving cycles.
 //!
 //! Ordinarily, cycles in mutation data is invalid, however they can occur
-//! with synthetic mutation data backfilled from obsmarkers.  The mutation
-//! store deals with cycles in two ways:
+//! with synthetic mutation data backfilled from obsmarkers.
 //!
-//! * Self-referential entries (where the successor is one of the
-//!   predecessors) have been converted from revive obsmarkers and are
-//!   dropped.
-//!
-//! * For larger cycles, the mutation store is mostly unaffected, except for
-//!   one case: primordial determination.  If the mutation store cannot
-//!   determine a primordial commit because of cycles, those entries that
-//!   create the cycle will be dropped.
+//! The mutation store drops self-referential entries (where the successor
+//! is one of the predecessors).  These will have been converted from revive
+//! obsmarkers.
 //!
 //! If a cycle is formed within the store itself (via multiple additions that
 //! eventually form a cycle), this is not a problem for the store.  Any
@@ -204,15 +198,6 @@ fn create_entries() -> HashMap<usize, HgMutationEntry> {
 
 #[mononoke::fbinit_test]
 async fn add_entries_and_fetch_predecessors(fb: FacebookInit) -> Result<()> {
-    // The cycles test changes behaviour when this knob is turned off.  The
-    // new behaviour is also fine, it's just different.  For now we continue
-    // testing the old behaviour.
-    justknobs::test_helpers::override_just_knobs(justknobs::test_helpers::JustKnobsInMemory::new(
-        hashmap! {
-            String::from("scm/mononoke:mutation_find_missing_primordials") => justknobs::test_helpers::KnobVal::Bool(true),
-        },
-    ));
-
     let ctx = CoreContext::test_mock(fb);
     let store = SqlHgMutationStoreBuilder::with_sqlite_in_memory()
         .unwrap()
@@ -237,11 +222,17 @@ async fn add_entries_and_fetch_predecessors(fb: FacebookInit) -> Result<()> {
     // was stored.
     check_entries(&store, &ctx, hashset![make_hg_cs_id(2)], &entries, &[2]).await?;
 
-    // The entries for 3, 4 and 5 were all dropped due to the loop.
-    check_entries(&store, &ctx, hashset![make_hg_cs_id(5)], &entries, &[]).await?;
+    // The entries for 3, 4 and 5 were stored even though they are a loop.
+    check_entries(
+        &store,
+        &ctx,
+        hashset![make_hg_cs_id(5)],
+        &entries,
+        &[3, 4, 5],
+    )
+    .await?;
 
-    // The entries for 7, 8 and 9 were stored ok as the loop did not affect the
-    // primordial search.
+    // The entries for 7, 8 and 9 were stored ok.
     check_entries(
         &store,
         &ctx,
@@ -251,10 +242,18 @@ async fn add_entries_and_fetch_predecessors(fb: FacebookInit) -> Result<()> {
     )
     .await?;
 
-    // The history for 15 was cut at the fold as it has a cyclic predecessor.
-    check_entries(&store, &ctx, hashset![make_hg_cs_id(15)], &entries, &[15]).await?;
+    // The history for 15 includes the full cycle.
+    check_entries(
+        &store,
+        &ctx,
+        hashset![make_hg_cs_id(15)],
+        &entries,
+        &[11, 12, 13, 14, 15],
+    )
+    .await?;
 
-    // A different client pushes without the cycle.
+    // A different client pushes without the cycle, but it's ignored as it was
+    // not first.
     store
         .add_entries(
             &ctx,
@@ -263,13 +262,13 @@ async fn add_entries_and_fetch_predecessors(fb: FacebookInit) -> Result<()> {
         )
         .await?;
 
-    // The history for 15 now goes back to 11.
+    // The history for 15 still has the cycle.
     check_entries(
         &store,
         &ctx,
         hashset![make_hg_cs_id(15)],
         &entries,
-        &[11, 13, 14, 15],
+        &[11, 12, 13, 14, 15],
     )
     .await?;
 
@@ -302,16 +301,23 @@ async fn add_entries_and_fetch_predecessors(fb: FacebookInit) -> Result<()> {
         .await?;
     entries.extend(vec![16, 1].into_iter().zip(new_entries));
 
-    // The replacement entry for 1 was ignored.
-    check_entries(&store, &ctx, hashset![make_hg_cs_id(2)], &entries, &[2]).await?;
+    // The replacement entry for 1 was accepted and now shows the cycle.
+    check_entries(
+        &store,
+        &ctx,
+        hashset![make_hg_cs_id(2)],
+        &entries,
+        &[1, 2, 16],
+    )
+    .await?;
 
-    // But the entry for 16 was accepted.
+    // The entry for 16 was also accepted and shows the cycle, too.
     check_entries(
         &store,
         &ctx,
         hashset![make_hg_cs_id(16)],
         &entries,
-        &[2, 16],
+        &[1, 2, 16],
     )
     .await?;
 

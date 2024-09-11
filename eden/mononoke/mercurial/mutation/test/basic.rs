@@ -168,9 +168,9 @@ async fn add_entries_and_fetch_predecessors(fb: FacebookInit) -> Result<()> {
     )
     .await?;
 
-    // Add a more complex fold with some gaps and a new primordial.  This is
-    // somewhat artificial as this kind of entry is unlikely to happen in normal
-    // use, however it will exercise some edge cases.
+    // Add a more complex fold with some gaps.  This is somewhat artificial
+    // as this kind of entry is unlikely to happen in normal use, however
+    // it will exercise some edge cases.
     //
     // Current graph is:
     //

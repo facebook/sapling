@@ -25,7 +25,6 @@ mod aligned_hg_changeset_id;
 mod builder;
 mod caching;
 mod entry;
-mod grouper;
 mod store;
 
 pub use crate::builder::SqlHgMutationStoreBuilder;

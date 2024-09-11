@@ -24,7 +24,6 @@
     "scm/mononoke:disable_running_hooks_in_pushredirected_repo": false,
     "scm/mononoke:xrepo_disable_forward_sync_over_mapping_change": false,
     "scm/mononoke:bookmarks_movement_use_precise_boundary": true,
-    "scm/mononoke:mutation_find_missing_primordials": true,
     "scm/mononoke:enable_hooks_on_service_pushrebase": false,
     "scm/mononoke:fastlog_disable_mutable_renames": false,
     "scm/mononoke:derived_data_use_background_session_class": false,
