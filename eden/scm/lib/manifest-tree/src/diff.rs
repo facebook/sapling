@@ -100,9 +100,9 @@ pub struct Diff<'a> {
     matcher: &'a dyn Matcher,
     progress_bar: ActiveProgressBar,
     #[allow(dead_code)]
-    fetch_thread: JoinHandle<()>,
-    sender: Sender<DiffItem>,
-    receiver: Receiver<DiffItem>,
+    fetch_thread: Option<JoinHandle<()>>,
+    sender: Option<Sender<DiffItem>>,
+    receiver: Option<Receiver<DiffItem>>,
     pending: u64,
 }
 
@@ -139,9 +139,9 @@ impl<'a> Diff<'a> {
             store: &left.store,
             matcher,
             progress_bar: ProgressBar::new_adhoc("diffing tree", 18, "depth"),
-            fetch_thread,
-            sender: send_prefetch,
-            receiver: receive_done,
+            fetch_thread: Some(fetch_thread),
+            sender: Some(send_prefetch),
+            receiver: Some(receive_done),
             pending,
         })
     }
@@ -171,7 +171,7 @@ impl<'a> Diff<'a> {
             return Ok(false);
         }
 
-        let item = self.receiver.recv()?;
+        let item = self.receiver.as_ref().unwrap().recv()?;
         self.pending -= 1;
 
         // Set "depth" according to item depth.
@@ -179,7 +179,7 @@ impl<'a> Diff<'a> {
             .set_position(item.path().ancestors().count() as u64);
 
         let entries = item.process(
-            &mut self.sender,
+            self.sender.as_mut().unwrap(),
             self.store,
             self.matcher,
             &mut self.pending,
@@ -257,20 +257,29 @@ impl<'a> Iterator for Diff<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         let span = tracing::debug_span!("tree::diff::next", path = "");
         let _scope = span.enter();
-        while self.output.is_empty() {
-            match self.process_next_item(None) {
-                Ok(true) => continue,
-                Ok(false) => break,
-                Err(e) => return Some(Err(e)),
+
+        loop {
+            let res = match self.process_next_item(None) {
+                Ok(true) if self.output.is_empty() => continue,
+                Ok(_) => Ok(self.output.pop_front()),
+                Err(err) => Err(err),
+            };
+
+            if !span.is_disabled() {
+                if let Ok(Some(ref result)) = res {
+                    span.record("path", result.path.as_repo_path().as_str());
+                }
             }
-        }
-        let result = self.output.pop_front();
-        if !span.is_disabled() {
-            if let Some(ref result) = result {
-                span.record("path", result.path.as_repo_path().as_str());
+
+            if matches!(res, Err(_) | Ok(None)) {
+                // Clean up fetch thread as we finish the iterator.
+                self.sender.take();
+                self.receiver.take();
+                let _ = self.fetch_thread.take().unwrap().join();
             }
+
+            return res.transpose();
         }
-        result.map(Ok)
     }
 }
 
