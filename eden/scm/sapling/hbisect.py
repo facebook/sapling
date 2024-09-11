@@ -135,22 +135,21 @@ def checksparsebisectskip(repo, candidatenode, badnode, goodnode) -> str:
     "bad" if the node can be skipped as it's the same as badnode, "check" otherwise.
     """
 
-    def diffsparsematch(node, diff):
-        shouldsparsematch = hasattr(repo, "sparsematch") and (
-            "eden" not in repo.requirements or "edensparse" in repo.requirements
-        )
-        if not shouldsparsematch:
-            return True
-        rev = repo.changelog.rev(node)
-        sparsematch = repo.sparsematch(rev)
-        return any(f for f in diff.keys() if sparsematch(f))
+    shouldsparsematch = hasattr(repo, "sparsematch") and (
+        "eden" not in repo.requirements or "edensparse" in repo.requirements
+    )
+    if not shouldsparsematch:
+        return "check"
+
+    rev = repo.changelog.rev(candidatenode)
+    sparsematch = repo.sparsematch(rev)
 
     badmanifest = repo[badnode].manifest()
     bestmanifest = repo[candidatenode].manifest()
     goodmanifest = repo[goodnode].manifest()
 
-    baddiff = diffsparsematch(candidatenode, badmanifest.diff(bestmanifest))
-    gooddiff = diffsparsematch(candidatenode, bestmanifest.diff(goodmanifest))
+    baddiff = badmanifest.diff(bestmanifest, sparsematch)
+    gooddiff = bestmanifest.diff(goodmanifest, sparsematch)
     if baddiff and not gooddiff:
         return "good"
     if not baddiff and gooddiff:
