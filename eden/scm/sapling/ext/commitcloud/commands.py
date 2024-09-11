@@ -1695,6 +1695,12 @@ def cloudtidyup(ui, repo, **opts):
             "",
             _("repo associated with the workspace to import to"),
         ),
+        (
+            "",
+            "wipe-source",
+            None,
+            _("empty the source workspace after the import is complete (ADVANCED)"),
+        ),
     ]
     + move.srcdstworkspaceopts
     + pullopts,
@@ -1723,8 +1729,16 @@ def cloudimport(ui, repo, **opts):
     )
 
     start = util.timer()
-    # Translate heads and bookmarks
+
     full = opts.get("full")
+    cloudrefs = serv.getreferences(
+        sourcerepo,
+        sourceworkspace,
+        0,
+        clientinfo=service.makeclientinfo(
+            repo, syncstate.SyncState(repo, sourceworkspace)
+        ),
+    )
     newheads, newbookmarks = megarepoimport.translateandpull(
         ui,
         repo,
@@ -1736,6 +1750,7 @@ def cloudimport(ui, repo, **opts):
         destinationrepo,
         serv,
         full,
+        cloudrefs,
     )
 
     # verify we have the latest version of the destination workspace
@@ -1761,9 +1776,22 @@ def cloudimport(ui, repo, **opts):
         oldbookmarks=bookmarkstodelete,
     )
 
-    # update local workspace
     if currentrepo == destinationrepo and currentworkspace == destinationworkspace:
         cloudsync(ui, repo, workspace=currentworkspace)
+
+    if opts.get("wipe_source"):
+        heads = cloudrefs.heads if cloudrefs.heads else []
+        bookmarks = list(cloudrefs.bookmarks.keys()) if cloudrefs.bookmarks else []
+        with progress.spinner(ui, _("wiping source workspace contents")):
+            synced, cloudrefs = serv.updatereferences(
+                sourcerepo,
+                sourceworkspace,
+                cloudrefs.version,
+                oldheads=heads,
+                newheads=None,
+                oldbookmarks=bookmarks,
+                newbookmarks=None,
+            )
 
     elapsed = util.timer() - start
     ui.status_err(_("finished in %0.2f sec\n") % elapsed)

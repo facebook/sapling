@@ -89,16 +89,8 @@ def translateandpull(
     destinationrepo,
     serv,
     full,
+    cloudrefs,
 ):
-
-    cloudrefs = serv.getreferences(
-        sourcerepo,
-        sourceworkspace,
-        0,
-        clientinfo=service.makeclientinfo(
-            repo, syncstate.SyncState(repo, sourceworkspace)
-        ),
-    )
 
     # Get the list of heads to pull
     headdates = cloudrefs.headdates
