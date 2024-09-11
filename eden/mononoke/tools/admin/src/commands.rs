@@ -45,7 +45,6 @@ mononoke_app::subcommands! {
     mod git_bundle;
     mod git_objects;
     mod git_symref;
-    mod git_source_of_truth;
     mod hg_sync;
     mod list_repos;
     mod locking;
