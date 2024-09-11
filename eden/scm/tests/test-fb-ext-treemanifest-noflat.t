@@ -28,8 +28,6 @@ This file tests that normal mercurial operations never read the flat manifests
   $ hginit master
   $ cd master
   $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > treemanifest=
   > [remotefilelog]
   > server=True
   > shallowtrees=True

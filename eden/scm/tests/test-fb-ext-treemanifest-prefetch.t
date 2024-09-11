@@ -13,8 +13,6 @@
   $ hginit master
   $ cd master
   $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > treemanifest=
   > [remotefilelog]
   > server=True
   > EOF

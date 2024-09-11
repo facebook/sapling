@@ -12,7 +12,6 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > sparse=
-  > treemanifest=
   > [remotefilelog]
   > reponame = master
   > cachepath = $PWD/hgcache

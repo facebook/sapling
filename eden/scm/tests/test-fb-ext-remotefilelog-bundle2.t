@@ -10,8 +10,6 @@
   $ cd master
 preferuncompressed = False so that we can make both generaldelta and non-generaldelta clones
   $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > treemanifest=
   > [remotefilelog]
   > server=True
   > [experimental]

@@ -19,10 +19,6 @@ BUNDLEPATH = os.path.join(TESTDIR, "bundles", "test-no-symlinks.hg")
 if not getattr(os, "symlink", False):
     sys.exit(80)  # SKIPPED_STATUS defined in run-tests.py
 
-with open(os.environ["HGRCPATH"], "a+") as f:
-    f.write("[extensions]\n")
-    f.write("treemanifest=!\n")
-
 u = uimod.ui.load()
 # hide outer repo
 hg.peer(u, {}, ".", create=True)

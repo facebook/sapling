@@ -5,7 +5,7 @@
 #inprocess-hg-incompatible
   $ setconfig experimental.allowfilepeer=True
 
-  $ enable infinitepush remotefilelog remotenames schemes treemanifest
+  $ enable infinitepush remotenames
   $ . "$TESTDIR/library.sh"
 
   $ mkcommit() {

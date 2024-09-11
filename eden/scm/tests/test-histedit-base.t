@@ -11,7 +11,6 @@ Create repo a:
 
   $ hg init a
   $ cd a
-  $ setconfig extensions.treemanifest=
   $ setconfig ui.allowemptycommit=True
   $ hg commit -qm "A"
   $ hg commit -qm "B"

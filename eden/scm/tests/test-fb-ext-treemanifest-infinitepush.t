@@ -17,7 +17,6 @@
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase=
-  > treemanifest=
   > [remotefilelog]
   > server=True
   > shallowtrees=True

@@ -9,8 +9,6 @@
 
   $ cd master
   $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > treemanifest=
   > [remotefilelog]
   > server=True
   > EOF
@@ -23,9 +21,6 @@ Populate the second repository
 
   $ cd sane
   $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > treemanifest=
-  > [extensions]
   > [remotefilelog]
   > server=True
   > EOF

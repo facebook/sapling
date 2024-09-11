@@ -9,7 +9,6 @@
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase=
-  > treemanifest=
   > [remotefilelog]
   > server=True
   > EOF
@@ -18,14 +17,9 @@
 
 Clone it
   $ cd ..
-  $ hgcloneshallow ssh://user@dummy/master client1 -q --config extensions.treemanifest=
+  $ hgcloneshallow ssh://user@dummy/master client1 -q
   1 files fetched over * (glob) (?)
   $ cd client1
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > treemanifest=
-  > 
-  > EOF
 
   $ hg debugdrawdag <<EOS
   >   F      # A/dir1/file = A

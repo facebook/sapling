@@ -28,10 +28,6 @@
 # Setup a matching hg repo, and import it
   $ hg init "$HG_REPO"
   $ cd "$HG_REPO"
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > treemanifest=
-  > EOF
   $ echo "this is file1" > file1
   $ hg add file1
   $ mkdir dir

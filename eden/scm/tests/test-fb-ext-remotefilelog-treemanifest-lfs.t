@@ -5,12 +5,11 @@
 
   $ . "$TESTDIR/library.sh"
 
-  $ enable lfs treemanifest pushrebase
-  $ hginit master --config extensions.treemanifest=
+  $ enable lfs pushrebase
+  $ hginit master
 
   $ cd master
   $ setconfig remotefilelog.server=True remotefilelog.shallowtrees=True
-  $ setconfig extensions.treemanifest=
   $ mkdir dir
   $ echo x > dir/x
   $ hg commit -qAm x1

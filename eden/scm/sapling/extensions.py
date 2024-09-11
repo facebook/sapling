@@ -111,14 +111,16 @@ DEFAULT_EXTENSIONS = {
 }
 
 # Similar to DEFAULT_EXTENSIONS. But cannot be disabled.
-ALWAYS_ON_EXTENSIONS = ()
+ALWAYS_ON_EXTENSIONS = {
+    "treemanifest",
+}
 
 
 def isenabled(ui, name):
+    if name in ALWAYS_ON_EXTENSIONS:
+        return True
     for format in ["%s", "ext.%s"]:
         conf = ui.config("extensions", format % name)
-        if name in ALWAYS_ON_EXTENSIONS:
-            return True
         if conf is not None and not conf.startswith("!"):
             return True
         # Check DEFAULT_EXTENSIONS if no config for this extension was

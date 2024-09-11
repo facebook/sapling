@@ -15,8 +15,6 @@
   $ hg init server
   $ cd server
   $ cat >> .hg/hgrc << EOF
-  > [extensions]
-  > treemanifest=
   > [infinitepush]
   > server = yes
   > indextype = disk

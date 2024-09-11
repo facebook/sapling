@@ -35,10 +35,9 @@
   $ setconfig experimental.narrow-heads=true
   $ setconfig visibility.enabled=true
 
-  $ newrepo server --config extensions.treemanifest=
+  $ newrepo server
   $ setconfig infinitepush.server=yes infinitepush.reponame=testrepo
   $ setconfig infinitepush.indextype=disk infinitepush.storetype=disk
-  $ setconfig extensions.treemanifest=
   $ touch base
   $ hg commit -Aqm base
   $ hg bookmark master

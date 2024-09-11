@@ -75,7 +75,7 @@ newclientrepo() {
 newremoterepo() {
   newrepo "$@"
   echo remotefilelog >> .hg/requires
-  enable treemanifest remotefilelog pushrebase remotenames
+  enable pushrebase remotenames
   if [ -n "$USE_MONONOKE" ] ; then
     setconfig paths.default=mononoke://$(mononoke_address)/server
   else
@@ -95,11 +95,10 @@ newserver() {
   else
     mkdir "$TESTTMP/$reponame"
     cd "$TESTTMP/$reponame"
-    hg --config extensions.treemanifest= \
-      --config experimental.narrow-heads=false \
+    hg --config experimental.narrow-heads=false \
       --config visibility.enabled=false \
       init
-    enable remotefilelog remotenames treemanifest
+    enable remotenames
     setconfig \
        remotefilelog.reponame="$reponame" remotefilelog.server=True \
        infinitepush.server=yes infinitepush.reponame="$reponame" \
@@ -123,9 +122,7 @@ clone() {
   fi
 
   hg clone -q --shallow "$serverurl" "$clientname" "$@" \
-    --config "extensions.remotefilelog=" \
     --config "extensions.remotenames=" \
-    --config "extensions.treemanifest=" \
     --config "remotefilelog.reponame=$servername" \
     --config "ui.ssh=$(dummysshcmd)" \
     --config "ui.remotecmd=$remotecmd"
@@ -133,7 +130,6 @@ clone() {
   cat >> $clientname/.hg/hgrc <<EOF
 [extensions]
 remotenames=
-treemanifest=
 
 [phases]
 publish=False

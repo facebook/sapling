@@ -50,9 +50,6 @@ use-rust=True
 [workingcopy]
 rust-checkout=True
 
-[extensions]
-treemanifest=
-
 [remotefilelog]
 cachepath=$TESTTMP/default-hgcache
 

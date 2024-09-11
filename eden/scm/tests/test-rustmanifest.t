@@ -24,7 +24,7 @@
   $ . "$TESTDIR/library.sh"
 
   $ configure dummyssh
-  $ enable treemanifest remotenames remotefilelog pushrebase
+  $ enable remotenames pushrebase
 
 # Check manifest behavior with empty commit
 
@@ -86,7 +86,6 @@
   $ cat >> .hg/hgrc << 'EOF'
   > [extensions]
   > pushrebase=
-  > treemanifest=
   > [remotefilelog]
   > server=True
   > EOF

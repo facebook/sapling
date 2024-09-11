@@ -631,9 +631,7 @@ ssh="$DUMMYSSH"
 segmented-changelog-rev-compat=True
 
 [extensions]
-remotefilelog=
 commitextras=
-treemanifest=
 remotenames=
 smartlog=
 clienttelemetry=

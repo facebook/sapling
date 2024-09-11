@@ -137,9 +137,7 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
         return hgrc
 
     def apply_hg_config_variant(self, hgrc: configparser.ConfigParser) -> None:
-        hgrc["extensions"]["treemanifest"] = ""
         hgrc["extensions"]["pushrebase"] = ""
-        hgrc["treemanifest"] = {"treeonly": "True"}
         hgrc["remotefilelog"] = {
             "reponame": "eden_integration_tests",
             "cachepath": os.path.join(self.tmp_dir, "hgcache"),

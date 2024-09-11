@@ -5,8 +5,7 @@
   $ configure modern
   $ enable shelve
 
-  $ newrepo server --config extensions.treemanifest=
-  $ setconfig extensions.treemanifest=
+  $ newrepo server
   $ drawdag << 'EOS'
   > C
   > |

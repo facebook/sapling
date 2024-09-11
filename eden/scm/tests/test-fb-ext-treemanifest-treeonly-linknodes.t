@@ -15,7 +15,6 @@ Set up the server
   > [extensions]
   > pushrebase=
   > remotenames=
-  > treemanifest=
   > [remotefilelog]
   > server=true
   > shallowtrees=true
@@ -26,7 +25,7 @@ Set up the server
 
 Create client
   $ cd ..
-  $ hgcloneshallow ssh://user@dummy/master client -q --config extensions.treemanifest=
+  $ hgcloneshallow ssh://user@dummy/master client -q
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ cd client
   $ cat >> .hg/hgrc <<EOF
@@ -34,7 +33,6 @@ Create client
   > amend=
   > pushrebase=
   > remotenames=
-  > treemanifest=
   > EOF
 
 Create a commit, and then amend the message twice.  All three should share a manifest.

@@ -8,16 +8,13 @@
   > [extensions]
   > pushrebase=
   > remotenames=
-  > treemanifest=
   > EOF
 
 # Setup repo
 
-  $ hg init repo --config remotefilelog.reponame=repo --config extensions.treemanifest=
+  $ hg init repo --config remotefilelog.reponame=repo
   $ cd repo
   $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > treemanifest=
   > [remotefilelog]
   > reponame=repo
   > server=True

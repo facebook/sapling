@@ -31,10 +31,10 @@ the server supports our custom getfiles method.
   $ cd master
   $ echo 'hello' | hg -R . serve --stdio
   * (glob)
-  capabilities: *lookup *remotefilelog *getfile* (glob)
+  capabilities: *getfile* (glob)
   $ echo 'capabilities' | hg -R . serve --stdio ; echo
   * (glob)
-  * remotefilelog getfile (glob)
+  *getfile* (glob)
 
 # pull to shallow from full
 
