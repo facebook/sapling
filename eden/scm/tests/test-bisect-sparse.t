@@ -21,7 +21,7 @@
 #  0 <- known good - -
 
   $ eagerepo
-  $ enable sparse
+  $ enable sparse amend
   $ setconfig clone.use-rust=true
 
 test bisect-sparse
@@ -68,12 +68,6 @@ verify bisect skips empty sparse commits (2,3)
   $ hg up $J
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-#if eden
-FIXME - not skipping things
-   $ hg bisect --bad
-   Testing changeset 61165d92eeb6 (9 changesets remaining, ~3 tests)
-   update complete
-#else
   $ hg bisect --bad
   Skipping changeset 61165d92eeb6 as there are no changes inside
   the sparse profile from the known good changeset 67d16e36726d
@@ -249,7 +243,7 @@ Empty case with --command flag: all commits are skipped
 
   $ echo "known good" > sparse-new-excluded-file
   $ echo "known good" > sparse-included-file
-  $ hg sparse include sparse-new-excluded-file
+  $ echo sparse-new-excluded-file >> profile
   $ hg ci -Aqm 'known good - 15'
 
   $ echo "empty good" > sparse-new-excluded-file
@@ -262,19 +256,19 @@ Empty case with --command flag: all commits are skipped
   $ echo "known bad" > sparse-new-excluded-file
   $ hg ci -Aqm 'known bad - 18'
 
-  $ hg sparse exclude sparse-new-excluded-file
+  $ sed -i '/sparse-new-excluded-file/d' profile
+  $ hg amend --to "desc('known good - 15')"
 
   $ hg bisect --reset
   $ hg bisect -g "desc('known good - 15')"
   $ hg bisect -c "test $(hg log -r . -T '{rev}') -lt 17"
-  changeset 4d85fc6c4c8d: bad
-  Skipping changeset e3e04fc9ea83 as there are no changes inside
-  the sparse profile from the known good changeset 239a9c44ed40
-  Skipping changeset f7a3e2d90dcf as there are no changes inside
-  the sparse profile from the known bad changeset 4d85fc6c4c8d
+  changeset 03845d757c47: bad
+  Skipping changeset 3fd59de51436 as there are no changes inside
+  the sparse profile from the known good changeset 8f072b3c6011
+  Skipping changeset 0ed3490f5393 as there are no changes inside
+  the sparse profile from the known bad changeset 03845d757c47
   The first bad revision is:
-  commit:      f7a3e2d90dcf
+  commit:      0ed3490f5393
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     empty bad - 17
-#endif

@@ -1057,9 +1057,6 @@ the sparse profile from the known %s changeset %s\n"
         return (node, changesets, bgood)
 
     displayer = cmdutil.show_changeset(ui, repo, {})
-    if "eden" in repo.requirements:
-        # skip the sparseskip logic if it's an Eden repo
-        nosparseskip = True
 
     if command:
         changesets = 1
