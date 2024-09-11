@@ -28,14 +28,14 @@ use crate::StoreLoadable;
 ///
 /// `Ctx` is any additional data which is useful for particular implementation
 /// of manifest.
-pub struct FromPredecessorTreeInfo<NewTreeId, NewLeafId, OldTreeId, Ctx> {
+pub struct FromPredecessorTreeInfo<NewTreeId, NewLeaf, OldTreeId, Ctx> {
     pub predecessor: OldTreeId,
-    pub subentries: SortedVectorMap<MPathElement, (Ctx, Entry<NewTreeId, NewLeafId>)>,
+    pub subentries: SortedVectorMap<MPathElement, (Ctx, Entry<NewTreeId, NewLeaf>)>,
 }
 
 /// Information passed to the `create_leaf` function when a leaf node is constructed.
-pub struct FromPredecessorLeafInfo<OldLeafId> {
-    pub predecessor: OldLeafId,
+pub struct FromPredecessorLeafInfo<OldLeaf> {
+    pub predecessor: OldLeaf,
 }
 
 /// Derive a new manifest type from an old manifest type (e.g. creating a sharded manifest from
@@ -46,7 +46,7 @@ pub async fn derive_manifest_from_predecessor<
     NewTreeId,
     NewLeafId,
     OldTreeId,
-    OldLeafId,
+    OldLeaf,
     T,
     TFut,
     L,
@@ -62,10 +62,10 @@ pub async fn derive_manifest_from_predecessor<
 ) -> Result<NewTreeId>
 where
     Store: Sync + Send + Clone + 'static,
-    OldLeafId: Send + Clone + Eq + Hash + fmt::Debug + 'static,
+    OldLeaf: Send + Clone + Eq + Hash + fmt::Debug + 'static,
     NewLeafId: Send + Clone + Eq + Hash + fmt::Debug + 'static,
     OldTreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug + Send + Sync + 'static,
-    OldTreeId::Value: Manifest<Store, TreeId = OldTreeId, LeafId = OldLeafId>,
+    OldTreeId::Value: Manifest<Store, TreeId = OldTreeId, Leaf = OldLeaf>,
     <OldTreeId as StoreLoadable<Store>>::Value: Send + Sync,
     NewTreeId: Send + Clone + Eq + Hash + fmt::Debug + 'static,
     T: Fn(FromPredecessorTreeInfo<NewTreeId, NewLeafId, OldTreeId, Ctx>) -> TFut
@@ -73,7 +73,7 @@ where
         + Sync
         + 'static,
     TFut: Future<Output = Result<(Ctx, NewTreeId)>> + Send + 'static,
-    L: Fn(FromPredecessorLeafInfo<OldLeafId>) -> LFut + Send + Sync + 'static,
+    L: Fn(FromPredecessorLeafInfo<OldLeaf>) -> LFut + Send + Sync + 'static,
     LFut: Future<Output = Result<(Ctx, NewLeafId)>> + Send + 'static,
     Ctx: Send + 'static,
 {
@@ -105,7 +105,7 @@ where
             predecessor,
             parent_path_element: None,
         },
-        move |unfold_node: UnfoldNode<OldTreeId, OldLeafId>| {
+        move |unfold_node: UnfoldNode<OldTreeId, OldLeaf>| {
             cloned!(ctx, store);
             async move {
                 cloned!(ctx, store);
@@ -156,7 +156,7 @@ where
         {
             let create_tree = Arc::new(create_tree);
             let create_leaf = Arc::new(create_leaf);
-            move |fold_node: FoldNode<OldTreeId, OldLeafId>, subentries| {
+            move |fold_node: FoldNode<OldTreeId, OldLeaf>, subentries| {
                 let create_tree = create_tree.clone();
                 let create_leaf = create_leaf.clone();
                 async move {

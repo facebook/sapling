@@ -86,13 +86,13 @@ pub async fn compare_manifest<'a, M, Store>(
     mf: M,
     base_mfs: Vec<Option<M>>,
 ) -> Result<
-    impl Stream<Item = Result<ManifestComparison<M::TrieMapType, Entry<M::TreeId, M::LeafId>>>> + 'a,
+    impl Stream<Item = Result<ManifestComparison<M::TrieMapType, Entry<M::TreeId, M::Leaf>>>> + 'a,
 >
 where
     M: Manifest<Store>,
     M::TreeId: Send + Sync + Eq + 'static,
-    M::LeafId: Send + Sync + Eq + 'static,
-    M::TrieMapType: TrieMapOps<Store, Entry<M::TreeId, M::LeafId>> + Eq,
+    M::Leaf: Send + Sync + Eq + 'static,
+    M::TrieMapType: TrieMapOps<Store, Entry<M::TreeId, M::Leaf>> + Eq,
     Store: Send + Sync + 'static,
 {
     let (mf_trie_map, base_mf_trie_maps) = future::try_join(
@@ -283,13 +283,13 @@ pub fn compare_manifest_tree<'a, M, Store>(
     blobstore: &'a Store,
     manifest_id: M::TreeId,
     base_manifest_ids: Vec<M::TreeId>,
-) -> impl Stream<Item = Result<Comparison<M::TrieMapType, Entry<M::TreeId, M::LeafId>>>> + 'a
+) -> impl Stream<Item = Result<Comparison<M::TrieMapType, Entry<M::TreeId, M::Leaf>>>> + 'a
 where
     Store: Send + Sync + 'static,
     M: Manifest<Store> + Send + Sync + 'static,
     M::TreeId: StoreLoadable<Store, Value = M> + Clone + Send + Sync + Eq + 'static,
-    M::LeafId: Send + Sync + Eq + 'static,
-    M::TrieMapType: TrieMapOps<Store, Entry<M::TreeId, M::LeafId>> + Eq,
+    M::Leaf: Send + Sync + Eq + 'static,
+    M::TrieMapType: TrieMapOps<Store, Entry<M::TreeId, M::Leaf>> + Eq,
 {
     let base_manifest_ids: Vec<_> = base_manifest_ids.into_iter().map(Some).collect();
     bounded_traversal::bounded_traversal_stream(
@@ -421,6 +421,7 @@ mod tests {
     use super::*;
     use crate::ops::ManifestOps;
     use crate::tests::test_manifest::derive_test_manifest;
+    // use crate::tests::test_manifest::TestLeaf;
     use crate::tests::test_manifest::TestLeafId;
     use crate::tests::test_manifest::TestManifestId;
 

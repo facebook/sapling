@@ -91,9 +91,9 @@ enum ListItem {
 }
 
 impl ListItem {
-    fn new<TreeId, LeafId>(path: MPath, entry: Entry<TreeId, LeafId>) -> Self
+    fn new<TreeId, Leaf>(path: MPath, entry: Entry<TreeId, Leaf>) -> Self
     where
-        Entry<TreeId, LeafId>: Listable,
+        Entry<TreeId, Leaf>: Listable,
     {
         match entry {
             Entry::Tree(..) => ListItem::Directory(path, entry.list_item()),
@@ -206,11 +206,11 @@ where
     TreeId: StoreLoadable<RepoBlobstore> + Clone + Send + Sync + Eq + Unpin + 'static,
     <TreeId as StoreLoadable<RepoBlobstore>>::Value:
         Manifest<RepoBlobstore, TreeId = TreeId> + Send + Sync,
-    <<TreeId as StoreLoadable<RepoBlobstore>>::Value as Manifest<RepoBlobstore>>::LeafId:
+    <<TreeId as StoreLoadable<RepoBlobstore>>::Value as Manifest<RepoBlobstore>>::Leaf:
         Clone + Send + Eq + Unpin,
     Entry<
         TreeId,
-        <<TreeId as StoreLoadable<RepoBlobstore>>::Value as Manifest<RepoBlobstore>>::LeafId,
+        <<TreeId as StoreLoadable<RepoBlobstore>>::Value as Manifest<RepoBlobstore>>::Leaf,
     >: Listable,
 {
     if directory {

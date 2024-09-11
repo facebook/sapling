@@ -73,10 +73,10 @@ impl<I, E> Traced<I, E> {
 }
 
 impl<I: Copy, E> Traced<I, E> {
-    fn inherit_into_entry<TreeId, LeafId>(
+    fn inherit_into_entry<TreeId, Leaf>(
         &self,
-        e: Entry<TreeId, LeafId>,
-    ) -> Entry<Traced<I, TreeId>, Traced<I, LeafId>> {
+        e: Entry<TreeId, Leaf>,
+    ) -> Entry<Traced<I, TreeId>, Traced<I, Leaf>> {
         match e {
             Entry::Tree(t) => Entry::Tree(Traced(self.0, t)),
             Entry::Leaf(l) => Entry::Leaf(Traced(self.0, l)),
@@ -84,10 +84,8 @@ impl<I: Copy, E> Traced<I, E> {
     }
 }
 
-impl<I, TreeId, LeafId> From<Entry<Traced<I, TreeId>, Traced<I, LeafId>>>
-    for Entry<TreeId, LeafId>
-{
-    fn from(entry: Entry<Traced<I, TreeId>, Traced<I, LeafId>>) -> Self {
+impl<I, TreeId, Leaf> From<Entry<Traced<I, TreeId>, Traced<I, Leaf>>> for Entry<TreeId, Leaf> {
+    fn from(entry: Entry<Traced<I, TreeId>, Traced<I, Leaf>>) -> Self {
         match entry {
             Entry::Tree(Traced(_, t)) => Entry::Tree(t),
             Entry::Leaf(Traced(_, l)) => Entry::Leaf(l),
@@ -103,14 +101,14 @@ where
     M: Manifest<Store> + Send + Sync,
 {
     type TreeId = Traced<I, <M as Manifest<Store>>::TreeId>;
-    type LeafId = Traced<I, <M as Manifest<Store>>::LeafId>;
-    type TrieMapType = SortedVectorTrieMap<Entry<Self::TreeId, Self::LeafId>>;
+    type Leaf = Traced<I, <M as Manifest<Store>>::Leaf>;
+    type TrieMapType = SortedVectorTrieMap<Entry<Self::TreeId, Self::Leaf>>;
 
     async fn list(
         &self,
         ctx: &CoreContext,
         blobstore: &Store,
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         let stream = self
             .1
@@ -125,7 +123,7 @@ where
         ctx: &CoreContext,
         blobstore: &Store,
         prefix: &[u8],
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         let stream = self
             .1
@@ -141,7 +139,7 @@ where
         blobstore: &Store,
         prefix: &[u8],
         after: &[u8],
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         let stream = self
             .1
@@ -156,7 +154,7 @@ where
         ctx: &CoreContext,
         blobstore: &Store,
         skip: usize,
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         let stream = self
             .1
@@ -171,7 +169,7 @@ where
         ctx: &CoreContext,
         blobstore: &Store,
         name: &MPathElement,
-    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
+    ) -> Result<Option<Entry<Self::TreeId, Self::Leaf>>> {
         let entry = self.1.lookup(ctx, blobstore, name).await?;
         Ok(entry.map(|e| self.inherit_into_entry(e)))
     }

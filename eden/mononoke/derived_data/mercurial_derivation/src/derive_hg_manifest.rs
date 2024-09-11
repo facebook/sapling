@@ -83,7 +83,7 @@ pub async fn derive_simple_hg_manifest_stack_without_copy_info(
                 cloned!(blobstore, ctx);
                 async move {
                     let LeafInfo {
-                        leaf,
+                        change,
                         path,
                         parents,
                     } = leaf_info;
@@ -92,14 +92,14 @@ pub async fn derive_simple_hg_manifest_stack_without_copy_info(
                         .into_iter()
                         .map(|p| Traced::assign(ParentIndex(0), p.into_untraced()))
                         .collect();
-                    match leaf {
-                        Some(leaf) => {
-                            if leaf.copy_from().is_some() {
+                    match change {
+                        Some(change) => {
+                            if change.copy_from().is_some() {
                                 return Err(
                                     format_err!(
                                         "unsupported generation of stack of hg manifests: leaf {} has copy info {:?}",
                                         path,
-                                        leaf.copy_from(),
+                                        change.copy_from(),
                                     )
                                 );
                             }
@@ -109,7 +109,7 @@ pub async fn derive_simple_hg_manifest_stack_without_copy_info(
                                 parents.first().map(|p| p.untraced().1),
                                 None,
                                 &path,
-                                &leaf,
+                                &change,
                                 None, // copy_from should be empty
                             )
                             .map_ok(|res| ((), Traced::generate(res)))
@@ -308,14 +308,14 @@ async fn create_hg_file(
     leaf_info: LeafInfo<Traced<ParentIndex, (FileType, HgFileNodeId)>, (FileType, HgFileNodeId)>,
 ) -> Result<((), Traced<ParentIndex, (FileType, HgFileNodeId)>), Error> {
     let LeafInfo {
-        leaf,
+        change,
         path,
         parents,
     } = leaf_info;
 
     // TODO: move `Blobrepo::store_file_changes` logic in here
-    match leaf {
-        Some(leaf) => Ok(((), Traced::generate(leaf))),
+    match change {
+        Some(change) => Ok(((), Traced::generate(change))),
         None => {
             // Leaf was not provided, try to resolve same-content different parents leaf. Since filenode
             // hashes include ancestry, this can be necessary if two identical files were created through

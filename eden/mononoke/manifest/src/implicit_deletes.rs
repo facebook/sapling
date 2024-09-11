@@ -54,8 +54,8 @@ where
     ManifestId: Hash + Eq + StoreLoadable<Store> + Send + Sync + ManifestOps<Store> + 'static,
     Store: Send + Sync + Clone + 'static,
     <ManifestId as StoreLoadable<Store>>::Value:
-        Manifest<Store, TreeId = ManifestId, LeafId = L> + Send + Sync,
-    <<ManifestId as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId: Send + Copy + Eq,
+        Manifest<Store, TreeId = ManifestId, Leaf = L> + Send + Sync,
+    <<ManifestId as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf: Send + Copy + Eq,
     I: IntoIterator<Item = NonRootMPath>,
     L: Unpin,
 {
@@ -105,8 +105,8 @@ where
     ManifestId: Hash + Eq + StoreLoadable<Store> + Send + Sync + ManifestOps<Store> + 'static,
     Store: Send + Sync + Clone + 'static,
     <ManifestId as StoreLoadable<Store>>::Value:
-        Manifest<Store, TreeId = ManifestId, LeafId = L> + Send + Sync,
-    <<ManifestId as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId: Send + Copy + Eq,
+        Manifest<Store, TreeId = ManifestId, Leaf = L> + Send + Sync,
+    <<ManifestId as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf: Send + Copy + Eq,
     I: IntoIterator<Item = NonRootMPath> + Clone + 'a,
     M: IntoIterator<Item = ManifestId> + 'a,
     L: Unpin,

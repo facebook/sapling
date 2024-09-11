@@ -27,7 +27,7 @@ use super::Weight;
 #[async_trait]
 impl<Store: Blobstore> Manifest<Store> for Fsnode {
     type TreeId = FsnodeId;
-    type LeafId = FsnodeFile;
+    type Leaf = FsnodeFile;
     type TrieMapType = SortedVectorTrieMap<Entry<FsnodeId, FsnodeFile>>;
 
     async fn lookup(
@@ -35,7 +35,7 @@ impl<Store: Blobstore> Manifest<Store> for Fsnode {
         _ctx: &CoreContext,
         _blobstore: &Store,
         name: &MPathElement,
-    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
+    ) -> Result<Option<Entry<Self::TreeId, Self::Leaf>>> {
         Ok(self.lookup(name).map(convert_fsnode))
     }
 
@@ -43,7 +43,7 @@ impl<Store: Blobstore> Manifest<Store> for Fsnode {
         &self,
         _ctx: &CoreContext,
         _blobstore: &Store,
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         let values = self
             .list()
@@ -80,7 +80,7 @@ impl<Store: Blobstore> OrderedManifest<Store> for Fsnode {
         _ctx: &CoreContext,
         _blobstore: &Store,
         name: &MPathElement,
-    ) -> Result<Option<Entry<(Weight, Self::TreeId), Self::LeafId>>> {
+    ) -> Result<Option<Entry<(Weight, Self::TreeId), Self::Leaf>>> {
         Ok(self.lookup(name).map(convert_fsnode_weighted))
     }
 
@@ -89,10 +89,7 @@ impl<Store: Blobstore> OrderedManifest<Store> for Fsnode {
         _ctx: &CoreContext,
         _blobstore: &Store,
     ) -> Result<
-        BoxStream<
-            'async_trait,
-            Result<(MPathElement, Entry<(Weight, Self::TreeId), Self::LeafId>)>,
-        >,
+        BoxStream<'async_trait, Result<(MPathElement, Entry<(Weight, Self::TreeId), Self::Leaf>)>>,
     > {
         let v: Vec<_> = self
             .list()

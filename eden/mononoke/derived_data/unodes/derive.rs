@@ -273,12 +273,12 @@ async fn create_unode_file(
     }
 
     let LeafInfo {
-        leaf,
+        change,
         path,
         parents,
     } = leaf_info;
 
-    let leaf_id = if let Some((content_id, file_type)) = leaf {
+    let leaf = if let Some((content_id, file_type)) = change {
         save_unode(
             ctx,
             blobstore,
@@ -350,7 +350,7 @@ async fn create_unode_file(
         }
     };
 
-    Ok(((), leaf_id))
+    Ok(((), leaf))
 }
 
 // reuse_manifest_parent() and reuse_file_parent() are used in unodes v2 in order to avoid

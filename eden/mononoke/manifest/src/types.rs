@@ -36,7 +36,7 @@ mod unodes;
 #[async_trait]
 pub trait Manifest<Store: Send + Sync>: Sized + 'static {
     type TreeId: Send + Sync;
-    type LeafId: Send + Sync;
+    type Leaf: Send + Sync;
     type TrieMapType: Send + Sync;
 
     /// Lookup an entry in this manifest.
@@ -45,14 +45,14 @@ pub trait Manifest<Store: Send + Sync>: Sized + 'static {
         ctx: &CoreContext,
         blobstore: &Store,
         name: &MPathElement,
-    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>>;
+    ) -> Result<Option<Entry<Self::TreeId, Self::Leaf>>>;
 
     /// List all entries of this manifest.
     async fn list(
         &self,
         ctx: &CoreContext,
         blobstore: &Store,
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>;
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>;
 
     /// List all entries with a given prefix
     async fn list_prefix(
@@ -60,7 +60,7 @@ pub trait Manifest<Store: Send + Sync>: Sized + 'static {
         ctx: &CoreContext,
         blobstore: &Store,
         prefix: &[u8],
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         Ok(self
             .list(ctx, blobstore)
@@ -76,7 +76,7 @@ pub trait Manifest<Store: Send + Sync>: Sized + 'static {
         blobstore: &Store,
         prefix: &[u8],
         after: &[u8],
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         Ok(self
             .list(ctx, blobstore)
@@ -91,7 +91,7 @@ pub trait Manifest<Store: Send + Sync>: Sized + 'static {
         ctx: &CoreContext,
         blobstore: &Store,
         skip: usize,
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         Ok(self.list(ctx, blobstore).await?.skip(skip).boxed())
     }
@@ -110,17 +110,14 @@ pub trait OrderedManifest<Store: Send + Sync>: Manifest<Store> {
         ctx: &CoreContext,
         blobstore: &Store,
     ) -> Result<
-        BoxStream<
-            'async_trait,
-            Result<(MPathElement, Entry<(Weight, Self::TreeId), Self::LeafId>)>,
-        >,
+        BoxStream<'async_trait, Result<(MPathElement, Entry<(Weight, Self::TreeId), Self::Leaf>)>>,
     >;
     async fn lookup_weighted(
         &self,
         ctx: &CoreContext,
         blobstore: &Store,
         name: &MPathElement,
-    ) -> Result<Option<Entry<(Weight, Self::TreeId), Self::LeafId>>>;
+    ) -> Result<Option<Entry<(Weight, Self::TreeId), Self::Leaf>>>;
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]

@@ -40,15 +40,15 @@ pub async fn bonsai_changeset_from_hg(
     Ok((bcs_id, bcs))
 }
 
-pub fn iterate_all_manifest_entries<'a, MfId, LId>(
+pub fn iterate_all_manifest_entries<'a, MfId, L>(
     ctx: &'a CoreContext,
     repo: &'a (impl RepoBlobstoreRef + Send + Sync),
-    entry: Entry<MfId, LId>,
-) -> impl Stream<Item = Result<(MPath, Entry<MfId, LId>)>> + 'a
+    entry: Entry<MfId, L>,
+) -> impl Stream<Item = Result<(MPath, Entry<MfId, L>)>> + 'a
 where
     MfId: Loadable + Send + Sync + Clone + 'a,
-    LId: Send + Clone + 'static,
-    <MfId as Loadable>::Value: Manifest<RepoBlobstore, TreeId = MfId, LeafId = LId> + Send + Sync,
+    L: Send + Clone + 'static,
+    <MfId as Loadable>::Value: Manifest<RepoBlobstore, TreeId = MfId, Leaf = L> + Send + Sync,
 {
     bounded_traversal_stream(256, Some((MPath::ROOT, entry)), move |(path, entry)| {
         async move {

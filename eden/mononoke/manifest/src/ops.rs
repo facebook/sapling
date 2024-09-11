@@ -43,7 +43,7 @@ where
     Store: Sync + Send + Clone + 'static,
     Self: StoreLoadable<Store> + Clone + Send + Sync + Eq + Unpin + 'static,
     <Self as StoreLoadable<Store>>::Value: Manifest<Store, TreeId = Self> + Send + Sync,
-    <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId: Clone + Send + Eq + Unpin,
+    <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf: Clone + Send + Eq + Unpin,
 {
     fn find_entries<I, P>(
         &self,
@@ -55,7 +55,7 @@ where
         Result<
             (
                 MPath,
-                Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId>,
+                Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf>,
             ),
             Error,
         >,
@@ -140,7 +140,7 @@ where
     ) -> BoxFuture<
         'static,
         Result<
-            Option<Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId>>,
+            Option<Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf>>,
             Error,
         >,
     > {
@@ -159,7 +159,7 @@ where
         Result<
             (
                 MPath,
-                Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId>,
+                Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf>,
             ),
             Error,
         >,
@@ -176,7 +176,7 @@ where
         Result<
             (
                 NonRootMPath,
-                <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId,
+                <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf,
             ),
             Error,
         >,
@@ -206,7 +206,7 @@ where
         Result<
             (
                 NonRootMPath,
-                <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId,
+                <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf,
             ),
             Error,
         >,
@@ -270,7 +270,7 @@ where
     ) -> BoxStream<
         'static,
         Result<
-            Diff<Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId>>,
+            Diff<Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf>>,
             Error,
         >,
     > {
@@ -292,9 +292,7 @@ where
     ) -> BoxStream<'static, Result<Out, Error>>
     where
         FilterMap: Fn(
-                Diff<
-                    Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId>,
-                >,
+                Diff<Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf>>,
             ) -> Option<Out>
             + Clone
             + Send
@@ -472,18 +470,18 @@ where
 /// be returned. But if file 'A' has HASH_2 then it wont' be returned because it matches
 /// HASH_2 in diff_against.
 /// This implementation is more efficient for merges.
-pub fn find_intersection_of_diffs<TreeId, LeafId, Store>(
+pub fn find_intersection_of_diffs<TreeId, Leaf, Store>(
     ctx: CoreContext,
     store: Store,
     mf_id: TreeId,
     diff_against: Vec<TreeId>,
-) -> impl Stream<Item = Result<(MPath, Entry<TreeId, LeafId>), Error>> + 'static
+) -> impl Stream<Item = Result<(MPath, Entry<TreeId, Leaf>), Error>> + 'static
 where
     Store: Sync + Send + Clone + 'static,
     TreeId: StoreLoadable<Store> + Clone + Send + Sync + Eq + Unpin + 'static,
     <TreeId as StoreLoadable<Store>>::Value:
-        Manifest<Store, TreeId = TreeId, LeafId = LeafId> + Send + Sync,
-    LeafId: Clone + Send + Eq + Unpin + 'static,
+        Manifest<Store, TreeId = TreeId, Leaf = Leaf> + Send + Sync,
+    Leaf: Clone + Send + Eq + Unpin + 'static,
 {
     find_intersection_of_diffs_and_parents(ctx, store, mf_id, diff_against)
         .map_ok(|(path, entry, _)| (path, entry))
@@ -491,19 +489,18 @@ where
 
 /// Like `find_intersection_of_diffs` but for each returned entry it also returns diff_against
 /// entries with the same path.
-pub fn find_intersection_of_diffs_and_parents<TreeId, LeafId, Store>(
+pub fn find_intersection_of_diffs_and_parents<TreeId, Leaf, Store>(
     ctx: CoreContext,
     store: Store,
     mf_id: TreeId,
     diff_against: Vec<TreeId>,
-) -> impl Stream<Item = Result<(MPath, Entry<TreeId, LeafId>, Vec<Entry<TreeId, LeafId>>), Error>>
-+ 'static
+) -> impl Stream<Item = Result<(MPath, Entry<TreeId, Leaf>, Vec<Entry<TreeId, Leaf>>), Error>> + 'static
 where
     Store: Sync + Send + Clone + 'static,
     TreeId: StoreLoadable<Store> + Clone + Send + Sync + Eq + Unpin + 'static,
     <TreeId as StoreLoadable<Store>>::Value:
-        Manifest<Store, TreeId = TreeId, LeafId = LeafId> + Send + Sync,
-    LeafId: Clone + Send + Eq + Unpin + 'static,
+        Manifest<Store, TreeId = TreeId, Leaf = Leaf> + Send + Sync,
+    Leaf: Clone + Send + Eq + Unpin + 'static,
 {
     match diff_against.first().cloned() {
         Some(parent) => async move {
@@ -569,6 +566,6 @@ where
     Store: Sync + Send + Clone + 'static,
     Self: StoreLoadable<Store> + Clone + Send + Sync + Eq + Unpin + 'static,
     <Self as StoreLoadable<Store>>::Value: Manifest<Store, TreeId = Self> + Send + Sync,
-    <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId: Send + Clone + Eq + Unpin,
+    <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf: Send + Clone + Eq + Unpin,
 {
 }

@@ -32,14 +32,14 @@ pub(crate) fn bssm_v3_to_mf_entry(entry: BssmV3Entry) -> Entry<BssmV3Directory, 
 #[async_trait]
 impl<Store: Blobstore> Manifest<Store> for BssmV3Directory {
     type TreeId = BssmV3Directory;
-    type LeafId = ();
+    type Leaf = ();
     type TrieMapType = LoadableShardedMapV2Node<BssmV3Entry>;
 
     async fn list(
         &self,
         ctx: &CoreContext,
         blobstore: &Store,
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         anyhow::Ok(
             self.clone()
@@ -54,7 +54,7 @@ impl<Store: Blobstore> Manifest<Store> for BssmV3Directory {
         ctx: &CoreContext,
         blobstore: &Store,
         prefix: &[u8],
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         anyhow::Ok(
             self.clone()
@@ -70,7 +70,7 @@ impl<Store: Blobstore> Manifest<Store> for BssmV3Directory {
         blobstore: &Store,
         prefix: &[u8],
         after: &[u8],
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         anyhow::Ok(
             self.clone()
@@ -85,7 +85,7 @@ impl<Store: Blobstore> Manifest<Store> for BssmV3Directory {
         ctx: &CoreContext,
         blobstore: &Store,
         skip: usize,
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         anyhow::Ok(
             self.clone()
@@ -100,7 +100,7 @@ impl<Store: Blobstore> Manifest<Store> for BssmV3Directory {
         ctx: &CoreContext,
         blobstore: &Store,
         name: &MPathElement,
-    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
+    ) -> Result<Option<Entry<Self::TreeId, Self::Leaf>>> {
         Ok(self
             .lookup(ctx, blobstore, name)
             .await?
@@ -138,10 +138,7 @@ impl<Store: Blobstore> OrderedManifest<Store> for BssmV3Directory {
         ctx: &CoreContext,
         blobstore: &Store,
     ) -> Result<
-        BoxStream<
-            'async_trait,
-            Result<(MPathElement, Entry<(Weight, Self::TreeId), Self::LeafId>)>,
-        >,
+        BoxStream<'async_trait, Result<(MPathElement, Entry<(Weight, Self::TreeId), Self::Leaf>)>>,
     > {
         self.list(ctx, blobstore).await.map(|stream| {
             stream
@@ -155,7 +152,7 @@ impl<Store: Blobstore> OrderedManifest<Store> for BssmV3Directory {
         ctx: &CoreContext,
         blobstore: &Store,
         name: &MPathElement,
-    ) -> Result<Option<Entry<(Weight, Self::TreeId), Self::LeafId>>> {
+    ) -> Result<Option<Entry<(Weight, Self::TreeId), Self::Leaf>>> {
         Manifest::lookup(self, ctx, blobstore, name)
             .await
             .map(|opt| opt.map(convert_bssm_v3_to_weighted))

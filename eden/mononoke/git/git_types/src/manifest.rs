@@ -24,7 +24,7 @@ use crate::Treeish;
 #[async_trait]
 impl<Store: Send + Sync> Manifest<Store> for Tree {
     type TreeId = TreeHandle;
-    type LeafId = BlobHandle;
+    type Leaf = BlobHandle;
     type TrieMapType = SortedVectorTrieMap<Entry<TreeHandle, BlobHandle>>;
 
     async fn lookup(
@@ -32,7 +32,7 @@ impl<Store: Send + Sync> Manifest<Store> for Tree {
         _ctx: &CoreContext,
         _blobstore: &Store,
         name: &MPathElement,
-    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
+    ) -> Result<Option<Entry<Self::TreeId, Self::Leaf>>> {
         Ok(self.members().get(name).map(|e| e.clone().into()))
     }
 
@@ -40,7 +40,7 @@ impl<Store: Send + Sync> Manifest<Store> for Tree {
         &self,
         _ctx: &CoreContext,
         _blobstore: &Store,
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         let members: Vec<_> = self
             .members()

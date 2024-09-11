@@ -50,7 +50,7 @@ pub(crate) use crate::TreeInfo;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub(crate) struct TestLeafId(u64);
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) struct TestLeaf(String);
 
 impl TestLeaf {
@@ -166,16 +166,16 @@ impl Storable for TestManifest {
 
 #[async_trait]
 impl<Store: Blobstore> Manifest<Store> for TestManifest {
-    type LeafId = (FileType, TestLeafId);
+    type Leaf = (FileType, TestLeafId);
     type TreeId = TestManifestId;
-    type TrieMapType = SortedVectorTrieMap<Entry<Self::TreeId, Self::LeafId>>;
+    type TrieMapType = SortedVectorTrieMap<Entry<Self::TreeId, Self::Leaf>>;
 
     async fn lookup(
         &self,
         _ctx: &CoreContext,
         _blobstore: &Store,
         name: &MPathElement,
-    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
+    ) -> Result<Option<Entry<Self::TreeId, Self::Leaf>>> {
         Ok(self.0.get(name).cloned())
     }
 
@@ -183,7 +183,7 @@ impl<Store: Blobstore> Manifest<Store> for TestManifest {
         &self,
         _ctx: &CoreContext,
         _blobstore: &Store,
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         Ok(stream::iter(self.0.clone()).map(Ok).boxed())
     }
@@ -213,10 +213,7 @@ impl<Store: Blobstore> OrderedManifest<Store> for TestManifest {
         _ctx: &CoreContext,
         _blobstore: &Store,
     ) -> Result<
-        BoxStream<
-            'async_trait,
-            Result<(MPathElement, Entry<(Weight, Self::TreeId), Self::LeafId>)>,
-        >,
+        BoxStream<'async_trait, Result<(MPathElement, Entry<(Weight, Self::TreeId), Self::Leaf>)>>,
     > {
         let iter = self.0.clone().into_iter().map(|entry| match entry {
             (elem, Entry::Leaf(leaf)) => (elem, Entry::Leaf(leaf)),
@@ -230,7 +227,7 @@ impl<Store: Blobstore> OrderedManifest<Store> for TestManifest {
         _ctx: &CoreContext,
         _blobstore: &Store,
         name: &MPathElement,
-    ) -> Result<Option<Entry<(Weight, Self::TreeId), Self::LeafId>>> {
+    ) -> Result<Option<Entry<(Weight, Self::TreeId), Self::Leaf>>> {
         Ok(self.0.get(name).cloned().map(|entry| match entry {
             Entry::Leaf(leaf) => Entry::Leaf(leaf),
             Entry::Tree(tree) => Entry::Tree((10, tree)),
@@ -279,10 +276,10 @@ pub(crate) async fn derive_test_manifest(
             move |leaf_info| {
                 cloned!(ctx, blobstore);
                 async move {
-                    match leaf_info.leaf {
+                    match leaf_info.change {
                         None => Err(Error::msg("leaf only conflict")),
-                        Some(leaf) => {
-                            let id = leaf.store(&ctx, &blobstore).await?;
+                        Some(change) => {
+                            let id = change.store(&ctx, &blobstore).await?;
                             Ok(((), (FileType::Regular, id)))
                         }
                     }
@@ -339,10 +336,10 @@ pub(crate) async fn derive_stack_of_test_manifests(
             move |leaf_info, _| {
                 cloned!(ctx, blobstore);
                 async move {
-                    match leaf_info.leaf {
+                    match leaf_info.change {
                         None => Err(Error::msg("leaf only conflict")),
-                        Some(leaf) => {
-                            let id = leaf.store(&ctx, &blobstore).await?;
+                        Some(change) => {
+                            let id = change.store(&ctx, &blobstore).await?;
                             Ok(((), (FileType::Regular, id)))
                         }
                     }

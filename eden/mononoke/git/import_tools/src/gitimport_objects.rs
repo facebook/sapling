@@ -82,7 +82,7 @@ pub struct GitManifest<const SUBMODULES: bool>(
 #[async_trait]
 impl<const SUBMODULES: bool, Store: Send + Sync> Manifest<Store> for GitManifest<SUBMODULES> {
     type TreeId = GitTree<SUBMODULES>;
-    type LeafId = (FileType, GitLeaf);
+    type Leaf = (FileType, GitLeaf);
     type TrieMapType = SortedVectorTrieMap<Entry<GitTree<SUBMODULES>, (FileType, GitLeaf)>>;
 
     async fn lookup(
@@ -90,7 +90,7 @@ impl<const SUBMODULES: bool, Store: Send + Sync> Manifest<Store> for GitManifest
         _ctx: &CoreContext,
         _blobstore: &Store,
         name: &MPathElement,
-    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
+    ) -> Result<Option<Entry<Self::TreeId, Self::Leaf>>> {
         Ok(self.0.get(name).cloned())
     }
 
@@ -98,7 +98,7 @@ impl<const SUBMODULES: bool, Store: Send + Sync> Manifest<Store> for GitManifest
         &self,
         _ctx: &CoreContext,
         _blobstore: &Store,
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         Ok(stream::iter(self.0.clone().into_iter()).map(Ok).boxed())
     }

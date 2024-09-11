@@ -111,7 +111,7 @@ where
     Self: StoreLoadable<Store> + Clone + Send + Sync + Eq + Unpin + 'static,
     <Self as StoreLoadable<Store>>::Value:
         Manifest<Store, TreeId = Self> + OrderedManifest<Store> + Send + Sync,
-    <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId: Clone + Send + Eq + Unpin,
+    <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf: Clone + Send + Eq + Unpin,
 {
     fn find_entries_ordered<I, P>(
         &self,
@@ -124,7 +124,7 @@ where
         Result<
             (
                 MPath,
-                Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId>,
+                Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf>,
             ),
             Error,
         >,
@@ -268,7 +268,7 @@ where
     ) -> BoxStream<
         'static,
         Result<
-            Diff<Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId>>,
+            Diff<Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf>>,
             Error,
         >,
     > {
@@ -291,9 +291,7 @@ where
     ) -> BoxStream<'static, Result<Out, Error>>
     where
         FilterMap: Fn(
-                Diff<
-                    Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId>,
-                >,
+                Diff<Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf>>,
             ) -> Option<Out>
             + Send
             + Sync
@@ -634,6 +632,6 @@ where
     Self: StoreLoadable<Store> + Clone + Send + Sync + Eq + Unpin + 'static,
     <Self as StoreLoadable<Store>>::Value:
         Manifest<Store, TreeId = Self> + OrderedManifest<Store> + Send + Sync,
-    <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::LeafId: Send + Clone + Eq + Unpin,
+    <<Self as StoreLoadable<Store>>::Value as Manifest<Store>>::Leaf: Send + Clone + Eq + Unpin,
 {
 }

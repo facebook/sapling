@@ -29,7 +29,7 @@ use super::Manifest;
 #[async_trait]
 impl<Store: Blobstore> Manifest<Store> for TestManifest {
     type TreeId = TestManifestDirectory;
-    type LeafId = ();
+    type Leaf = ();
     type TrieMapType = SortedVectorTrieMap<Entry<TestManifestDirectory, ()>>;
 
     async fn lookup(
@@ -37,7 +37,7 @@ impl<Store: Blobstore> Manifest<Store> for TestManifest {
         _ctx: &CoreContext,
         _blobstore: &Store,
         name: &MPathElement,
-    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
+    ) -> Result<Option<Entry<Self::TreeId, Self::Leaf>>> {
         Ok(self.lookup(name).map(convert_test_manifest))
     }
 
@@ -45,7 +45,7 @@ impl<Store: Blobstore> Manifest<Store> for TestManifest {
         &self,
         _ctx: &CoreContext,
         _blobstore: &Store,
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         let values = self
             .list()
@@ -80,14 +80,14 @@ fn convert_test_manifest(
 #[async_trait]
 impl<Store: Blobstore> Manifest<Store> for TestShardedManifest {
     type TreeId = TestShardedManifestDirectory;
-    type LeafId = ();
+    type Leaf = ();
     type TrieMapType = LoadableShardedMapV2Node<TestShardedManifestEntry>;
 
     async fn list(
         &self,
         ctx: &CoreContext,
         blobstore: &Store,
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         anyhow::Ok(
             self.clone()
@@ -102,7 +102,7 @@ impl<Store: Blobstore> Manifest<Store> for TestShardedManifest {
         ctx: &CoreContext,
         blobstore: &Store,
         prefix: &[u8],
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         anyhow::Ok(
             self.clone()
@@ -118,7 +118,7 @@ impl<Store: Blobstore> Manifest<Store> for TestShardedManifest {
         blobstore: &Store,
         prefix: &[u8],
         after: &[u8],
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         anyhow::Ok(
             self.clone()
@@ -133,7 +133,7 @@ impl<Store: Blobstore> Manifest<Store> for TestShardedManifest {
         ctx: &CoreContext,
         blobstore: &Store,
         skip: usize,
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         anyhow::Ok(
             self.clone()
@@ -148,7 +148,7 @@ impl<Store: Blobstore> Manifest<Store> for TestShardedManifest {
         ctx: &CoreContext,
         blobstore: &Store,
         name: &MPathElement,
-    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
+    ) -> Result<Option<Entry<Self::TreeId, Self::Leaf>>> {
         Ok(self
             .lookup(ctx, blobstore, name)
             .await?

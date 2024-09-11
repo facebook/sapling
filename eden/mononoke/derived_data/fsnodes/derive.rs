@@ -97,22 +97,16 @@ pub(crate) async fn derive_fsnodes_stack(
         parent,
         manifest_changes,
         {
-            cloned!(blobstore, ctx, prefetched_content_metadata);
+            cloned!(blobstore, ctx);
             move |tree_info, _cs_id| {
-                cloned!(blobstore, ctx, prefetched_content_metadata);
-                async move {
-                    create_fsnode(
-                        &ctx,
-                        &blobstore,
-                        None,
-                        prefetched_content_metadata,
-                        tree_info,
-                    )
-                    .await
-                }
+                cloned!(blobstore, ctx);
+                async move { create_fsnode(&ctx, &blobstore, None, tree_info).await }
             }
         },
-        |leaf_info, _cs_id| check_fsnode_leaf(leaf_info),
+        move |leaf_info, _cs_id| {
+            cloned!(prefetched_content_metadata);
+            async move { check_fsnode_leaf(prefetched_content_metadata, leaf_info).await }
+        },
     )
     .await?;
 
@@ -149,22 +143,16 @@ pub(crate) async fn derive_fsnode(
         parents.clone(),
         changes,
         {
-            cloned!(blobstore, ctx, prefetched_content_metadata);
+            cloned!(blobstore, ctx);
             move |tree_info, sender| {
-                cloned!(blobstore, ctx, prefetched_content_metadata);
-                async move {
-                    create_fsnode(
-                        &ctx,
-                        &blobstore,
-                        Some(sender),
-                        prefetched_content_metadata,
-                        tree_info,
-                    )
-                    .await
-                }
+                cloned!(blobstore, ctx);
+                async move { create_fsnode(&ctx, &blobstore, Some(sender), tree_info).await }
             }
         },
-        |leaf_info, _sender| check_fsnode_leaf(leaf_info),
+        move |leaf_info, _sender| {
+            cloned!(prefetched_content_metadata);
+            async move { check_fsnode_leaf(prefetched_content_metadata, leaf_info).await }
+        },
     )
     .boxed();
     let maybe_tree_id = derive_fut.await?;
@@ -178,8 +166,7 @@ pub(crate) async fn derive_fsnode(
                 parents,
                 subentries: Default::default(),
             };
-            let (_, tree_id) =
-                create_fsnode(ctx, blobstore, None, prefetched_content_metadata, tree_info).await?;
+            let (_, tree_id) = create_fsnode(ctx, blobstore, None, tree_info).await?;
             Ok(tree_id)
         }
     }
@@ -190,18 +177,13 @@ pub(crate) async fn derive_fsnode(
 async fn collect_fsnode_subentries(
     ctx: &CoreContext,
     blobstore: &impl Blobstore,
-    prefetched_content_metadata: &HashMap<ContentId, ContentMetadataV2>,
     parents: Vec<FsnodeId>,
     subentries: BTreeMap<
         MPathElement,
-        (
-            Option<Option<FsnodeSummary>>,
-            Entry<FsnodeId, (ContentId, FileType)>,
-        ),
+        (Option<Option<FsnodeSummary>>, Entry<FsnodeId, FsnodeFile>),
     >,
 ) -> Result<Vec<(MPathElement, FsnodeEntry)>> {
     // Load the parent fsnodes and collect their entries into a cache
-    let mut file_cache = HashMap::new();
     let mut dir_cache = HashMap::new();
     let mut parent_fsnodes = parents
         .into_iter()
@@ -216,22 +198,15 @@ async fn collect_fsnode_subentries(
         .collect::<FuturesUnordered<_>>();
     while let Some(parent_fsnode) = parent_fsnodes.try_next().await? {
         for (_elem, entry) in parent_fsnode.list() {
-            match entry {
-                FsnodeEntry::File(file) => {
-                    file_cache
-                        .entry((*file.content_id(), *file.file_type()))
-                        .or_insert_with(|| file.clone());
-                }
-                FsnodeEntry::Directory(dir) => {
-                    dir_cache.entry(*dir.id()).or_insert_with(|| dir.clone());
-                }
+            if let FsnodeEntry::Directory(dir) = entry {
+                dir_cache.entry(*dir.id()).or_insert_with(|| dir.clone());
             }
         }
     }
 
     // Find (from the traversal or the cache) or fetch (from the blobstore)
     // the `FsnodeEntry` for each of the subentries.
-    borrowed!(file_cache, dir_cache);
+    borrowed!(dir_cache);
     subentries
         .into_iter()
         .map(move |(elem, (summary, entry))| {
@@ -268,29 +243,7 @@ async fn collect_fsnode_subentries(
                             Ok((elem.clone(), entry))
                         }
                     }
-                    Entry::Leaf(content_id_and_file_type) => {
-                        if let Some(entry) = file_cache.get(&content_id_and_file_type) {
-                            // The file was already in this directory. Use
-                            // the cached entry.
-                            Ok((elem.clone(), FsnodeEntry::File(entry.clone())))
-                        } else {
-                            // Some other file is being used. Use the
-                            // metadata we prefetched to create a new entry.
-                            let (content_id, file_type) = content_id_and_file_type.clone();
-                            if let Some(metadata) = prefetched_content_metadata.get(&content_id) {
-                                let entry = FsnodeEntry::File(FsnodeFile::new(
-                                    content_id,
-                                    file_type,
-                                    metadata.total_size,
-                                    metadata.sha1,
-                                    metadata.sha256,
-                                ));
-                                Ok((elem.clone(), entry))
-                            } else {
-                                Err(FsnodeDerivationError::MissingContent(content_id).into())
-                            }
-                        }
-                    }
+                    Entry::Leaf(fsnode_file) => Ok((elem.clone(), FsnodeEntry::File(fsnode_file))),
                 }
             }
         })
@@ -304,10 +257,9 @@ async fn create_fsnode(
     ctx: &CoreContext,
     blobstore: &Arc<dyn Blobstore>,
     sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
-    prefetched_content_metadata: Arc<HashMap<ContentId, ContentMetadataV2>>,
     tree_info: TreeInfo<
         FsnodeId,
-        (ContentId, FileType),
+        FsnodeFile,
         Option<FsnodeSummary>,
         SortedVectorTrieMap<Entry<FsnodeId, FsnodeFile>>,
     >,
@@ -315,7 +267,6 @@ async fn create_fsnode(
     let entries = collect_fsnode_subentries(
         ctx,
         &blobstore,
-        prefetched_content_metadata.as_ref(),
         tree_info.parents,
         flatten_subentries(ctx, &(), tree_info.subentries)
             .await?
@@ -428,10 +379,23 @@ where
 /// file, either all the parents have the same file contents, or the
 /// changeset includes a change for that file.
 async fn check_fsnode_leaf(
-    leaf_info: LeafInfo<(ContentId, FileType), (ContentId, FileType)>,
-) -> Result<(Option<FsnodeSummary>, (ContentId, FileType))> {
-    if let Some(content_id_and_file_type) = leaf_info.leaf {
-        Ok((None, content_id_and_file_type))
+    prefetched_content_metadata: Arc<HashMap<ContentId, ContentMetadataV2>>,
+    leaf_info: LeafInfo<FsnodeFile, (ContentId, FileType)>,
+) -> Result<(Option<FsnodeSummary>, FsnodeFile)> {
+    if let Some(content_id_and_file_type) = leaf_info.change {
+        let (content_id, file_type) = content_id_and_file_type;
+        if let Some(metadata) = prefetched_content_metadata.get(&content_id) {
+            let fsnode_file = FsnodeFile::new(
+                content_id,
+                file_type,
+                metadata.total_size,
+                metadata.sha1,
+                metadata.sha256,
+            );
+            Ok((None, fsnode_file))
+        } else {
+            Err(FsnodeDerivationError::MissingContent(content_id).into())
+        }
     } else {
         // This bonsai changeset is a merge. If all content IDs and file
         // types match for this file, then the content ID is valid. Check

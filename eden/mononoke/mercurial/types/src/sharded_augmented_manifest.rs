@@ -707,7 +707,7 @@ fn convert_hg_augmented_manifest_entry(
 impl<Store: Blobstore> Manifest<Store> for HgAugmentedManifestEnvelope {
     type TreeId = HgAugmentedManifestId;
 
-    type LeafId = HgAugmentedFileLeafNode;
+    type Leaf = HgAugmentedFileLeafNode;
 
     type TrieMapType = LoadableShardedMapV2Node<HgAugmentedManifestEntry>;
 
@@ -715,7 +715,7 @@ impl<Store: Blobstore> Manifest<Store> for HgAugmentedManifestEnvelope {
         &self,
         ctx: &CoreContext,
         blobstore: &Store,
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         anyhow::Ok(
             self.augmented_manifest
@@ -731,7 +731,7 @@ impl<Store: Blobstore> Manifest<Store> for HgAugmentedManifestEnvelope {
         ctx: &CoreContext,
         blobstore: &Store,
         prefix: &[u8],
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         anyhow::Ok(
             self.augmented_manifest
@@ -748,7 +748,7 @@ impl<Store: Blobstore> Manifest<Store> for HgAugmentedManifestEnvelope {
         blobstore: &Store,
         prefix: &[u8],
         after: &[u8],
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         anyhow::Ok(
             self.augmented_manifest
@@ -764,7 +764,7 @@ impl<Store: Blobstore> Manifest<Store> for HgAugmentedManifestEnvelope {
         ctx: &CoreContext,
         blobstore: &Store,
         skip: usize,
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         anyhow::Ok(
             self.augmented_manifest
@@ -780,7 +780,7 @@ impl<Store: Blobstore> Manifest<Store> for HgAugmentedManifestEnvelope {
         ctx: &CoreContext,
         blobstore: &Store,
         name: &MPathElement,
-    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
+    ) -> Result<Option<Entry<Self::TreeId, Self::Leaf>>> {
         Ok(self
             .augmented_manifest
             .lookup(ctx, blobstore, name)

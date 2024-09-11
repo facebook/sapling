@@ -44,33 +44,25 @@ use crate::TrieMapOps;
 /// `Ctx` is any additional data which is useful for particular implementation of
 /// manifest. It is `Some` for subentries for which `create_{tree|leaf}` was called to
 /// generate them, and `None` if subentry was reused from one of its parents.
-pub struct TreeInfo<TreeId, LeafId, Ctx, TrieMapType> {
+pub struct TreeInfo<TreeId, Leaf, Ctx, TrieMapType> {
     pub path: MPath,
     pub parents: Vec<TreeId>,
-    pub subentries: TreeInfoSubentries<TreeId, LeafId, Ctx, TrieMapType>,
+    pub subentries: TreeInfoSubentries<TreeId, Leaf, Ctx, TrieMapType>,
 }
 
 /// Represents the subentries of a tree node as a combination of singular subentries and
 /// reused parent maps. The key for singular subentries is their name, while the key for
 /// reused maps is a prefix that's prepended to all of the keys of the map.
-pub type TreeInfoSubentries<TreeId, LeafId, Ctx, TrieMapType> =
-    BTreeMap<SmallVec<[u8; 24]>, Either<(Option<Ctx>, Entry<TreeId, LeafId>), TrieMapType>>;
+pub type TreeInfoSubentries<TreeId, Leaf, Ctx, TrieMapType> =
+    BTreeMap<SmallVec<[u8; 24]>, Either<(Option<Ctx>, Entry<TreeId, Leaf>), TrieMapType>>;
 
-pub async fn flatten_subentries<Store, TreeId, IntermediateLeafId, LeafId, Ctx, TrieMapType>(
+pub async fn flatten_subentries<Store, TreeId, Leaf, Ctx, TrieMapType>(
     ctx: &CoreContext,
     blobstore: &Store,
-    subentries: TreeInfoSubentries<TreeId, IntermediateLeafId, Ctx, TrieMapType>,
-) -> Result<
-    impl Iterator<
-        Item = (
-            MPathElement,
-            (Option<Ctx>, Entry<TreeId, IntermediateLeafId>),
-        ),
-    >,
->
+    subentries: TreeInfoSubentries<TreeId, Leaf, Ctx, TrieMapType>,
+) -> Result<impl Iterator<Item = (MPathElement, (Option<Ctx>, Entry<TreeId, Leaf>))>>
 where
-    TrieMapType: TrieMapOps<Store, Entry<TreeId, LeafId>>,
-    IntermediateLeafId: From<LeafId>,
+    TrieMapType: TrieMapOps<Store, Entry<TreeId, Leaf>>,
 {
     Ok(stream::iter(subentries)
         .map(|(prefix, entry_or_map)| async move {
@@ -83,10 +75,7 @@ where
                     .await?
                     .map_ok(|(mut path, entry)| {
                         path.insert_from_slice(0, prefix.as_ref());
-                        Ok((
-                            MPathElement::from_smallvec(path)?,
-                            (None, convert_to_intermediate_entry(entry)),
-                        ))
+                        Ok((MPathElement::from_smallvec(path)?, (None, entry)))
                     })
                     .try_collect::<Vec<_>>()
                     .await?
@@ -102,65 +91,48 @@ where
 }
 
 /// Information passed to `create_leaf` function when leaf node is constructed
-pub struct LeafInfo<LeafId, Leaf> {
+pub struct LeafInfo<Leaf, LeafChange> {
     pub path: NonRootMPath,
-    pub parents: Vec<LeafId>,
+    pub parents: Vec<Leaf>,
     /// Leaf value, if it is not provided it means we have leaves only conflict
     /// which can potentially be resolved by `create_leaf`, in case of mercurial
     /// multiple leaves with the same content can be successfully resolved.
-    pub leaf: Option<Leaf>,
+    pub change: Option<LeafChange>,
 }
 
 /// Derive a new manifest from parents and a set of changes. The types have to match in the
 /// following way here:
 ///
 /// - We'll walk and merge the manifests from the parents. Those must be Manifests where trees are
-///   `TreeId` and leaves are `LeafId`.
+///   `TreeId` and leaves are `Leaf`.
 /// - We'll create new leaves (for the diff) through create_leaf (which should merge changes), and
 ///   new trees through create_tree, which will receive entries consisting of existing trees and
 ///   trees merged with new leaves and trees (and should produce a new tree).
-/// - To make this work, create_tree must return the same kind of `TreeId` as the ones that exist in
-///   the tree currently. That said, this constraint is marginally relaxed for leaves: create_leaf
-///   can return an `IntermediateLeafId`, and that is the also the type that create_tree
-///   will receive for leaves (to make this work, `IntermediateLeafId` must implement `From<LeafId>`
-///   so that leaves that are to be reused from the existing tree can be turned into
-///   `IntermediateLeafId`).
-///
-/// Note that for most use cases, IntermediateLeafId and LeafId should probably be the same type.
-/// That said, this distinction can be useful in cases where the leaves aren't actually objects
-/// that exist in the blobstore, and are just contained in trees. This is notably the case with
-/// Fsnodes, where leaves are FsnodeFiles and are actually stored in their parent manifest.
-pub fn derive_manifest<TreeId, LeafId, IntermediateLeafId, Leaf, T, TFut, L, LFut, Ctx, Store>(
+/// - To make this work, `create_tree` must return the same kind of `TreeId` as the ones that exist in
+///   the tree currently, and `create_leaf` must return the same kind of `Leaf`.
+pub fn derive_manifest<LeafChange, TreeId, Leaf, T, TFut, L, LFut, Ctx, Store>(
     ctx: CoreContext,
     store: Store,
     parents: impl IntoIterator<Item = TreeId>,
-    changes: impl IntoIterator<Item = (NonRootMPath, Option<Leaf>)>,
+    changes: impl IntoIterator<Item = (NonRootMPath, Option<LeafChange>)>,
     create_tree: T,
     create_leaf: L,
 ) -> impl Future<Output = Result<Option<TreeId>>>
 where
     Store: Sync + Send + Clone + 'static,
-    LeafId: Send + Clone + Eq + Hash + fmt::Debug + 'static,
-    Leaf: Send + 'static,
-    IntermediateLeafId: Send + From<LeafId> + 'static + fmt::Debug + Clone + Eq + Hash,
+    LeafChange: Send + Clone + Eq + Hash + fmt::Debug + 'static,
+    Leaf: Send + Clone + Eq + Hash + fmt::Debug + 'static,
     TreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug + Send + Sync + 'static,
-    TreeId::Value: Manifest<Store, TreeId = TreeId, LeafId = LeafId> + Send + Sync,
-    T: Fn(
-            TreeInfo<
-                TreeId,
-                IntermediateLeafId,
-                Ctx,
-                <TreeId::Value as Manifest<Store>>::TrieMapType,
-            >,
-        ) -> TFut
+    TreeId::Value: Manifest<Store, TreeId = TreeId, Leaf = Leaf> + Send + Sync,
+    T: Fn(TreeInfo<TreeId, Leaf, Ctx, <TreeId::Value as Manifest<Store>>::TrieMapType>) -> TFut
         + Send
         + Sync
         + 'static,
     TFut: Future<Output = Result<(Ctx, TreeId)>> + Send + 'static,
-    L: Fn(LeafInfo<IntermediateLeafId, Leaf>) -> LFut + Send + Sync + 'static,
-    LFut: Future<Output = Result<(Ctx, IntermediateLeafId)>> + Send + 'static,
+    L: Fn(LeafInfo<Leaf, LeafChange>) -> LFut + Send + Sync + 'static,
+    LFut: Future<Output = Result<(Ctx, Leaf)>> + Send + 'static,
     <TreeId::Value as Manifest<Store>>::TrieMapType:
-        TrieMapOps<Store, Entry<TreeId, LeafId>> + Send + Sync + 'static,
+        TrieMapOps<Store, Entry<TreeId, Leaf>> + Send + Sync + 'static,
     Ctx: Send + 'static,
 {
     derive_manifest_inner(ctx, store, parents, changes, create_tree, create_leaf)
@@ -210,48 +182,29 @@ where
 ///   - Mix of leaves/trees: all leaves are removed, recurse into the trees.
 /// 4. Current path have `Some(leaf)` change associated with it.
 ///   - _: all the trees are removed in favour of this leaf.
-pub fn derive_manifest_inner<
-    TreeId,
-    LeafId,
-    IntermediateLeafId,
-    Leaf,
-    T,
-    TFut,
-    L,
-    LFut,
-    Ctx,
-    Store,
->(
+pub fn derive_manifest_inner<LeafChange, TreeId, Leaf, T, TFut, L, LFut, Ctx, Store>(
     ctx: CoreContext,
     store: Store,
     parents: impl IntoIterator<Item = TreeId>,
-    changes: impl IntoIterator<Item = (NonRootMPath, Option<Leaf>)>,
+    changes: impl IntoIterator<Item = (NonRootMPath, Option<LeafChange>)>,
     create_tree: T,
     create_leaf: L,
 ) -> impl Future<Output = Result<Option<TreeId>>>
 where
     Store: Sync + Send + Clone + 'static,
-    LeafId: Send + Clone + Eq + Hash + fmt::Debug + 'static,
-    Leaf: Send + 'static,
-    IntermediateLeafId: Send + From<LeafId> + 'static + Eq + Hash + Clone + fmt::Debug,
+    LeafChange: Send + Clone + Eq + Hash + fmt::Debug + 'static,
+    Leaf: Send + Clone + Eq + Hash + fmt::Debug + 'static,
     TreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug + Send + Sync + 'static,
-    TreeId::Value: Manifest<Store, TreeId = TreeId, LeafId = LeafId> + Send + Sync,
-    T: Fn(
-            TreeInfo<
-                TreeId,
-                IntermediateLeafId,
-                Ctx,
-                <TreeId::Value as Manifest<Store>>::TrieMapType,
-            >,
-        ) -> TFut
+    TreeId::Value: Manifest<Store, TreeId = TreeId, Leaf = Leaf> + Send + Sync,
+    T: Fn(TreeInfo<TreeId, Leaf, Ctx, <TreeId::Value as Manifest<Store>>::TrieMapType>) -> TFut
         + Send
         + Sync
         + 'static,
     TFut: Future<Output = Result<(Ctx, TreeId)>> + Send + 'static,
-    L: Fn(LeafInfo<IntermediateLeafId, Leaf>) -> LFut + Send + Sync + 'static,
-    LFut: Future<Output = Result<(Ctx, IntermediateLeafId)>> + Send + 'static,
+    L: Fn(LeafInfo<Leaf, LeafChange>) -> LFut + Send + Sync + 'static,
+    LFut: Future<Output = Result<(Ctx, Leaf)>> + Send + 'static,
     <TreeId::Value as Manifest<Store>>::TrieMapType:
-        TrieMapOps<Store, Entry<TreeId, LeafId>> + Send + 'static,
+        TrieMapOps<Store, Entry<TreeId, Leaf>> + Send + 'static,
     Ctx: Send + 'static,
 {
     bounded_traversal::bounded_traversal(
@@ -267,22 +220,20 @@ where
             parents: parents.into_iter().map(Entry::Tree).collect(),
         },
         // unfold, all merge logic happens in this unfold function
-        move |merge_node: MergeNode<_, IntermediateLeafId, _>| {
+        move |merge_node: MergeNode<_, Leaf, LeafChange>| {
             merge(ctx.clone(), store.clone(), merge_node).boxed()
         },
         // fold, this function only creates entries from merge result and already merged subentries
         {
             let create_tree = Arc::new(create_tree);
             let create_leaf = Arc::new(create_leaf);
-            move |merge_result: MergeResult<_, IntermediateLeafId, _, _>, subentries| {
+            move |merge_result: MergeResult<_, Leaf, LeafChange, _>, subentries| {
                 let create_tree = create_tree.clone();
                 let create_leaf = create_leaf.clone();
                 async move {
                     tokio::spawn(async move {
                         match merge_result {
-                            MergeResult::Reuse { name, entry } => {
-                                Ok(Some((name, None, convert_to_intermediate_entry(entry))))
-                            }
+                            MergeResult::Reuse { name, entry } => Ok(Some((name, None, entry))),
                             MergeResult::Delete => Ok(None),
                             MergeResult::CreateTree {
                                 name,
@@ -296,7 +247,7 @@ where
                                         |(name, context, entry): (
                                             Option<MPathElement>,
                                             Option<Ctx>,
-                                            Entry<TreeId, IntermediateLeafId>,
+                                            Entry<TreeId, Leaf>,
                                         )| {
                                             name.map(move |name| (name, (context, entry)))
                                         },
@@ -327,13 +278,13 @@ where
                                 }
                             }
                             MergeResult::CreateLeaf {
-                                leaf,
+                                change,
                                 name,
                                 path,
                                 parents,
                             } => {
                                 let (context, leaf_id) = create_leaf(LeafInfo {
-                                    leaf,
+                                    change,
                                     path: path.clone(),
                                     parents,
                                 })
@@ -351,18 +302,6 @@ where
     .map_ok(|result: Option<_>| result.and_then(|(_, _, entry)| entry.into_tree()))
 }
 
-fn convert_to_intermediate_entry<TreeId, LeafId, IntermediateLeafId>(
-    e: Entry<TreeId, LeafId>,
-) -> Entry<TreeId, IntermediateLeafId>
-where
-    IntermediateLeafId: From<LeafId>,
-{
-    match e {
-        Entry::Tree(t) => Entry::Tree(t),
-        Entry::Leaf(l) => Entry::Leaf(l.into()),
-    }
-}
-
 type BoxFuture<T> = future::BoxFuture<'static, Result<T>>;
 
 /// A convenience wrapper around `derive_manifest` that allows for the tree and leaf creation
@@ -373,52 +312,35 @@ type BoxFuture<T> = future::BoxFuture<'static, Result<T>>;
 ///
 /// `derive_manifest_with_work_sender` guarantees that all work is completed before it returns, but
 /// it does not guarantee the order in which the work is completed.
-pub fn derive_manifest_with_io_sender<
-    TreeId,
-    LeafId,
-    IntermediateLeafId,
-    Leaf,
-    T,
-    TFut,
-    L,
-    LFut,
-    Ctx,
-    Store,
->(
+pub fn derive_manifest_with_io_sender<LeafChange, TreeId, Leaf, T, TFut, L, LFut, Ctx, Store>(
     ctx: CoreContext,
     store: Store,
     parents: impl IntoIterator<Item = TreeId>,
-    changes: impl IntoIterator<Item = (NonRootMPath, Option<Leaf>)>,
+    changes: impl IntoIterator<Item = (NonRootMPath, Option<LeafChange>)>,
     create_tree_with_sender: T,
     create_leaf_with_sender: L,
 ) -> impl Future<Output = Result<Option<TreeId>>>
 where
-    LeafId: Send + Clone + Eq + Hash + fmt::Debug + 'static,
-    Leaf: Send + 'static,
-    IntermediateLeafId: Send + From<LeafId> + 'static + Eq + Hash + fmt::Debug + Clone,
+    LeafChange: Send + Clone + Eq + Hash + fmt::Debug + 'static,
+    Leaf: Send + Clone + Eq + Hash + fmt::Debug + 'static,
     Store: Sync + Send + Clone + 'static,
     TreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug + Send + Sync + 'static,
-    TreeId::Value: Manifest<Store, TreeId = TreeId, LeafId = LeafId> + Send + Sync,
+    TreeId::Value: Manifest<Store, TreeId = TreeId, Leaf = Leaf> + Send + Sync,
     T: Fn(
-            TreeInfo<
-                TreeId,
-                IntermediateLeafId,
-                Ctx,
-                <TreeId::Value as Manifest<Store>>::TrieMapType,
-            >,
+            TreeInfo<TreeId, Leaf, Ctx, <TreeId::Value as Manifest<Store>>::TrieMapType>,
             mpsc::UnboundedSender<BoxFuture<()>>,
         ) -> TFut
         + Send
         + Sync
         + 'static,
     TFut: Future<Output = Result<(Ctx, TreeId)>> + Send + 'static,
-    L: Fn(LeafInfo<IntermediateLeafId, Leaf>, mpsc::UnboundedSender<BoxFuture<()>>) -> LFut
+    L: Fn(LeafInfo<Leaf, LeafChange>, mpsc::UnboundedSender<BoxFuture<()>>) -> LFut
         + Send
         + Sync
         + 'static,
-    LFut: Future<Output = Result<(Ctx, IntermediateLeafId)>> + Send + 'static,
+    LFut: Future<Output = Result<(Ctx, Leaf)>> + Send + 'static,
     <TreeId::Value as Manifest<Store>>::TrieMapType:
-        TrieMapOps<Store, Entry<TreeId, LeafId>> + Send + 'static,
+        TrieMapOps<Store, Entry<TreeId, Leaf>> + Send + 'static,
     Ctx: Send + 'static,
 {
     let (sender, receiver) = mpsc::unbounded();
@@ -445,8 +367,8 @@ where
 }
 
 // Change is isomorphic to Option, but it makes it easier to understand merge logic
-enum Change<LeafId> {
-    Add(LeafId),
+enum Change<LeafChange> {
+    Add(LeafChange),
     Remove,
 }
 
@@ -456,17 +378,17 @@ impl<Leaf> From<Option<Leaf>> for Change<Leaf> {
     }
 }
 
-enum MergeResult<TreeId, LeafId, Leaf, TrieMapType> {
+enum MergeResult<TreeId, Leaf, LeafChange, TrieMapType> {
     Delete,
     Reuse {
         name: Option<MPathElement>,
-        entry: Entry<TreeId, LeafId>,
+        entry: Entry<TreeId, Leaf>,
     },
     CreateLeaf {
-        leaf: Option<Leaf>,
+        change: Option<LeafChange>,
         name: Option<MPathElement>,
         path: NonRootMPath,
-        parents: Vec<LeafId>,
+        parents: Vec<Leaf>,
     },
     CreateTree {
         name: Option<MPathElement>,
@@ -478,29 +400,28 @@ enum MergeResult<TreeId, LeafId, Leaf, TrieMapType> {
 
 /// This node represents unmerged state of `parents.len() + 1` way merge
 /// between changes and parents.
-struct MergeNode<TreeId, LeafId, Leaf> {
+struct MergeNode<TreeId, Leaf, LeafChange> {
     name: Option<MPathElement>, // name of this node in parent manifest
     path: MPath,                // path to this node from root of the manifest
-    changes: PathTree<Option<Change<Leaf>>>, // changes associated with current subtree
-    parents: Vec<Entry<TreeId, LeafId>>, // unmerged parents of current node
+    changes: PathTree<Option<Change<LeafChange>>>, // changes associated with current subtree
+    parents: Vec<Entry<TreeId, Leaf>>, // unmerged parents of current node
 }
 
-async fn merge<TreeId, LeafId, IntermediateLeafId, Leaf, Store>(
+async fn merge<TreeId, Leaf, LeafChange, Store>(
     ctx: CoreContext,
     store: Store,
-    node: MergeNode<TreeId, IntermediateLeafId, Leaf>,
+    node: MergeNode<TreeId, Leaf, LeafChange>,
 ) -> Result<(
-    MergeResult<TreeId, IntermediateLeafId, Leaf, <TreeId::Value as Manifest<Store>>::TrieMapType>,
-    Vec<MergeNode<TreeId, IntermediateLeafId, Leaf>>,
+    MergeResult<TreeId, Leaf, LeafChange, <TreeId::Value as Manifest<Store>>::TrieMapType>,
+    Vec<MergeNode<TreeId, Leaf, LeafChange>>,
 )>
 where
     Store: Sync + Send + Clone + 'static,
-    IntermediateLeafId: Send + From<LeafId> + 'static + fmt::Debug + Clone + Eq + Hash,
-    LeafId: Send + Clone + Eq + Hash + fmt::Debug,
-    Leaf: Send,
+    LeafChange: Send + Clone + Eq + Hash + fmt::Debug,
+    Leaf: Send + Clone + Eq + Hash + fmt::Debug,
     TreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug + Send + Sync,
-    TreeId::Value: Manifest<Store, TreeId = TreeId, LeafId = LeafId>,
-    <TreeId::Value as Manifest<Store>>::TrieMapType: TrieMapOps<Store, Entry<TreeId, LeafId>>,
+    TreeId::Value: Manifest<Store, TreeId = TreeId, Leaf = Leaf>,
+    <TreeId::Value as Manifest<Store>>::TrieMapType: TrieMapOps<Store, Entry<TreeId, Leaf>>,
 {
     let MergeNode {
         name,
@@ -578,7 +499,7 @@ where
                     // merge these leaves if they have identical content.
                     return Ok((
                         MergeResult::CreateLeaf {
-                            leaf: None,
+                            change: None,
                             name,
                             path: path
                                 .into_optional_non_root_path()
@@ -614,7 +535,7 @@ where
             // in favour or file.
             return Ok((
                 MergeResult::CreateLeaf {
-                    leaf: Some(leaf),
+                    change: Some(leaf),
                     name,
                     path: path
                         .into_optional_non_root_path()
@@ -671,25 +592,24 @@ struct MergeSubentriesNode<'a, Leaf, TrieMapType> {
     parents: Vec<TrieMapType>,
 }
 
-struct MergeSubentriesResult<TreeId, IntermediateLeafId, Leaf, TrieMapType> {
+struct MergeSubentriesResult<TreeId, Leaf, LeafChange, TrieMapType> {
     reused_maps: Vec<(SmallVec<[u8; 24]>, TrieMapType)>,
-    merge_nodes: Vec<MergeNode<TreeId, IntermediateLeafId, Leaf>>,
+    merge_nodes: Vec<MergeNode<TreeId, Leaf, LeafChange>>,
 }
 
-async fn merge_subentries<TreeId, LeafId, IntermediateLeafId, Leaf, TrieMapType, Store>(
+async fn merge_subentries<TreeId, Leaf, LeafChange, TrieMapType, Store>(
     ctx: &CoreContext,
     store: &Store,
     path: &MPath,
-    changes: TrieMap<PathTree<Option<Change<Leaf>>>>,
+    changes: TrieMap<PathTree<Option<Change<LeafChange>>>>,
     parents: Vec<TrieMapType>,
-) -> Result<MergeSubentriesResult<TreeId, IntermediateLeafId, Leaf, TrieMapType>>
+) -> Result<MergeSubentriesResult<TreeId, Leaf, LeafChange, TrieMapType>>
 where
-    TrieMapType: TrieMapOps<Store, Entry<TreeId, LeafId>> + Send,
+    TrieMapType: TrieMapOps<Store, Entry<TreeId, Leaf>> + Send,
     Store: Sync + Send,
-    IntermediateLeafId: Send + From<LeafId> + Clone,
     TreeId: Send + Clone,
-    LeafId: Send,
-    Leaf: Send,
+    Leaf: Send + Clone,
+    LeafChange: Send + Clone,
 {
     bounded_traversal::bounded_traversal(
         256,
@@ -765,7 +685,6 @@ where
 
                     if let Some(current_entry) = current_entry {
                         let name = MPathElement::new_from_slice(&prefix)?;
-                        let current_entry = convert_to_intermediate_entry(current_entry);
 
                         current_merge_node
                             .get_or_insert_with(|| MergeNode {

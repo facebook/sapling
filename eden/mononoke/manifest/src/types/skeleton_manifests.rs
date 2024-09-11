@@ -39,14 +39,14 @@ pub(crate) fn skeleton_manifest_v2_to_mf_entry(
 #[async_trait]
 impl<Store: Blobstore> Manifest<Store> for SkeletonManifestV2 {
     type TreeId = SkeletonManifestV2;
-    type LeafId = ();
+    type Leaf = ();
     type TrieMapType = LoadableShardedMapV2Node<SkeletonManifestV2Entry>;
 
     async fn list(
         &self,
         ctx: &CoreContext,
         blobstore: &Store,
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         anyhow::Ok(
             self.clone()
@@ -61,7 +61,7 @@ impl<Store: Blobstore> Manifest<Store> for SkeletonManifestV2 {
         ctx: &CoreContext,
         blobstore: &Store,
         prefix: &[u8],
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         anyhow::Ok(
             self.clone()
@@ -77,7 +77,7 @@ impl<Store: Blobstore> Manifest<Store> for SkeletonManifestV2 {
         blobstore: &Store,
         prefix: &[u8],
         after: &[u8],
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         anyhow::Ok(
             self.clone()
@@ -92,7 +92,7 @@ impl<Store: Blobstore> Manifest<Store> for SkeletonManifestV2 {
         ctx: &CoreContext,
         blobstore: &Store,
         skip: usize,
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         anyhow::Ok(
             self.clone()
@@ -107,7 +107,7 @@ impl<Store: Blobstore> Manifest<Store> for SkeletonManifestV2 {
         ctx: &CoreContext,
         blobstore: &Store,
         name: &MPathElement,
-    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
+    ) -> Result<Option<Entry<Self::TreeId, Self::Leaf>>> {
         Ok(self
             .lookup(ctx, blobstore, name)
             .await?
@@ -126,7 +126,7 @@ impl<Store: Blobstore> Manifest<Store> for SkeletonManifestV2 {
 #[async_trait]
 impl<Store: Blobstore> Manifest<Store> for SkeletonManifest {
     type TreeId = SkeletonManifestId;
-    type LeafId = ();
+    type Leaf = ();
     type TrieMapType = SortedVectorTrieMap<Entry<SkeletonManifestId, ()>>;
 
     async fn lookup(
@@ -134,7 +134,7 @@ impl<Store: Blobstore> Manifest<Store> for SkeletonManifest {
         _ctx: &CoreContext,
         _blobstore: &Store,
         name: &MPathElement,
-    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
+    ) -> Result<Option<Entry<Self::TreeId, Self::Leaf>>> {
         Ok(self.lookup(name).map(convert_skeleton_manifest))
     }
 
@@ -142,7 +142,7 @@ impl<Store: Blobstore> Manifest<Store> for SkeletonManifest {
         &self,
         _ctx: &CoreContext,
         _blobstore: &Store,
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         let values = self
             .list()
@@ -198,10 +198,7 @@ impl<Store: Blobstore> OrderedManifest<Store> for SkeletonManifestV2 {
         ctx: &CoreContext,
         blobstore: &Store,
     ) -> Result<
-        BoxStream<
-            'async_trait,
-            Result<(MPathElement, Entry<(Weight, Self::TreeId), Self::LeafId>)>,
-        >,
+        BoxStream<'async_trait, Result<(MPathElement, Entry<(Weight, Self::TreeId), Self::Leaf>)>>,
     > {
         self.list(ctx, blobstore).await.map(|stream| {
             stream
@@ -215,7 +212,7 @@ impl<Store: Blobstore> OrderedManifest<Store> for SkeletonManifestV2 {
         ctx: &CoreContext,
         blobstore: &Store,
         name: &MPathElement,
-    ) -> Result<Option<Entry<(Weight, Self::TreeId), Self::LeafId>>> {
+    ) -> Result<Option<Entry<(Weight, Self::TreeId), Self::Leaf>>> {
         Manifest::lookup(self, ctx, blobstore, name)
             .await
             .map(|opt| opt.map(convert_skeleton_manifest_v2_to_weighted))
@@ -229,7 +226,7 @@ impl<Store: Blobstore> OrderedManifest<Store> for SkeletonManifest {
         _ctx: &CoreContext,
         _blobstore: &Store,
         name: &MPathElement,
-    ) -> Result<Option<Entry<(Weight, Self::TreeId), Self::LeafId>>> {
+    ) -> Result<Option<Entry<(Weight, Self::TreeId), Self::Leaf>>> {
         Ok(self.lookup(name).map(convert_skeleton_manifest_weighted))
     }
 
@@ -238,10 +235,7 @@ impl<Store: Blobstore> OrderedManifest<Store> for SkeletonManifest {
         _ctx: &CoreContext,
         _blobstore: &Store,
     ) -> Result<
-        BoxStream<
-            'async_trait,
-            Result<(MPathElement, Entry<(Weight, Self::TreeId), Self::LeafId>)>,
-        >,
+        BoxStream<'async_trait, Result<(MPathElement, Entry<(Weight, Self::TreeId), Self::Leaf>)>>,
     > {
         let v: Vec<_> = self
             .list()

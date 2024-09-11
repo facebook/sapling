@@ -265,7 +265,7 @@ impl Loadable for HgManifestId {
 #[async_trait]
 impl<Store: Send + Sync> Manifest<Store> for HgBlobManifest {
     type TreeId = HgManifestId;
-    type LeafId = (FileType, HgFileNodeId);
+    type Leaf = (FileType, HgFileNodeId);
     type TrieMapType = SortedVectorTrieMap<Entry<HgManifestId, (FileType, HgFileNodeId)>>;
 
     async fn lookup(
@@ -273,7 +273,7 @@ impl<Store: Send + Sync> Manifest<Store> for HgBlobManifest {
         _ctx: &CoreContext,
         _blobstore: &Store,
         name: &MPathElement,
-    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
+    ) -> Result<Option<Entry<Self::TreeId, Self::Leaf>>> {
         Ok(self.content.files.get(name).copied())
     }
 
@@ -281,7 +281,7 @@ impl<Store: Send + Sync> Manifest<Store> for HgBlobManifest {
         &self,
         _ctx: &CoreContext,
         _blobstore: &Store,
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         let iter = self.content.files.clone().into_iter();
         Ok(stream::iter(iter).map(Ok).boxed())

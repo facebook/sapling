@@ -93,40 +93,34 @@ pub(crate) async fn inner_derive(
     changes: Vec<(NonRootMPath, Option<()>)>,
 ) -> Result<Option<SkeletonManifestV2>> {
     type Leaf = ();
-    type LeafId = ();
+    type LeafChange = ();
     type TreeId = SkeletonManifestV2;
-    type IntermediateLeafId = LeafId;
     type Ctx = ();
 
     derive_manifest(
-         ctx.clone(),
-         blobstore.clone(),
-         parents,
-         changes,
-         {
-             cloned!(ctx, blobstore);
-             move |info: TreeInfo<
-                 TreeId,
-                 IntermediateLeafId,
-                 Ctx,
-                 LoadableShardedMapV2Node<SkeletonManifestV2Entry>,
-             >| {
-                 cloned!(ctx, blobstore);
-                 async move {
-                     let manifest =
-                         create_skeleton_manifest_v2(ctx, blobstore, info.subentries)
-                             .await?;
-                     Ok(((), manifest))
-                 }
-             }
-         },
-         {
-             move |_leaf_info: LeafInfo<IntermediateLeafId, Leaf>| async move {
-                 anyhow::Ok(((), ()))
-             }
-         },
-     )
-     .await
+        ctx.clone(),
+        blobstore.clone(),
+        parents,
+        changes,
+        {
+            cloned!(ctx, blobstore);
+            move |info: TreeInfo<
+                TreeId,
+                Leaf,
+                Ctx,
+                LoadableShardedMapV2Node<SkeletonManifestV2Entry>,
+            >| {
+                cloned!(ctx, blobstore);
+                async move {
+                    let manifest =
+                        create_skeleton_manifest_v2(ctx, blobstore, info.subentries).await?;
+                    Ok(((), manifest))
+                }
+            }
+        },
+        move |_leaf_info: LeafInfo<Leaf, LeafChange>| async move { anyhow::Ok(((), ())) },
+    )
+    .await
 }
 
 pub(crate) async fn derive_single(

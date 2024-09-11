@@ -188,7 +188,7 @@ async fn derive_git_manifest<B: Blobstore + Clone + 'static>(
             // representation, that won't happen.
             |leaf_info| {
                 let leaf = leaf_info
-                    .leaf
+                    .change
                     .ok_or_else(|| MononokeGitError::TreeDerivationFailed.into())
                     .map(|l| ((), l));
                 ready(leaf)

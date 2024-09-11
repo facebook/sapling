@@ -25,7 +25,7 @@ use super::Manifest;
 #[async_trait]
 impl<Store: Blobstore> Manifest<Store> for ManifestUnode {
     type TreeId = ManifestUnodeId;
-    type LeafId = FileUnodeId;
+    type Leaf = FileUnodeId;
     type TrieMapType = SortedVectorTrieMap<Entry<ManifestUnodeId, FileUnodeId>>;
 
     async fn lookup(
@@ -33,7 +33,7 @@ impl<Store: Blobstore> Manifest<Store> for ManifestUnode {
         _ctx: &CoreContext,
         _blobstore: &Store,
         name: &MPathElement,
-    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
+    ) -> Result<Option<Entry<Self::TreeId, Self::Leaf>>> {
         Ok(self.lookup(name).map(convert_unode))
     }
 
@@ -41,7 +41,7 @@ impl<Store: Blobstore> Manifest<Store> for ManifestUnode {
         &self,
         _ctx: &CoreContext,
         _blobstore: &Store,
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         let values = self
             .list()

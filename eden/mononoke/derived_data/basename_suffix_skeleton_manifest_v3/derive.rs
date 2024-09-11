@@ -132,9 +132,8 @@ pub(crate) async fn inner_derive(
     changes: Vec<(NonRootMPath, Option<()>)>,
 ) -> Result<Option<BssmV3Directory>> {
     type Leaf = ();
-    type LeafId = ();
+    type LeafChange = ();
     type TreeId = BssmV3Directory;
-    type IntermediateLeafId = LeafId;
     type Ctx = ();
 
     derive_manifest(
@@ -144,26 +143,16 @@ pub(crate) async fn inner_derive(
         changes,
         {
             cloned!(ctx, blobstore);
-            move |info: TreeInfo<
-                TreeId,
-                IntermediateLeafId,
-                Ctx,
-                LoadableShardedMapV2Node<BssmV3Entry>,
-            >| {
+            move |info: TreeInfo<TreeId, Leaf, Ctx, LoadableShardedMapV2Node<BssmV3Entry>>| {
                 cloned!(ctx, blobstore);
                 async move {
                     let directory =
-                        create_bssm_v3_directory(ctx, blobstore, info.subentries)
-                            .await?;
+                        create_bssm_v3_directory(ctx, blobstore, info.subentries).await?;
                     Ok(((), directory))
                 }
             }
         },
-        {
-            move |_leaf_info: LeafInfo<IntermediateLeafId, Leaf>| async move {
-                anyhow::Ok(((), ()))
-            }
-        },
+        move |_leaf_info: LeafInfo<Leaf, LeafChange>| async move { anyhow::Ok(((), ())) },
     )
     .await
 }

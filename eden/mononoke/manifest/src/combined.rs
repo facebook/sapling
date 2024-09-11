@@ -33,12 +33,12 @@ fn combine_entries<
     Store: Send + Sync,
 >(
     (m_result, n_result): (
-        Result<(MPathElement, Entry<M::TreeId, M::LeafId>)>,
-        Result<(MPathElement, Entry<N::TreeId, N::LeafId>)>,
+        Result<(MPathElement, Entry<M::TreeId, M::Leaf>)>,
+        Result<(MPathElement, Entry<N::TreeId, N::Leaf>)>,
     ),
 ) -> Result<(
     MPathElement,
-    Entry<<Combined<M, N> as Manifest<Store>>::TreeId, <Combined<M, N> as Manifest<Store>>::LeafId>,
+    Entry<<Combined<M, N> as Manifest<Store>>::TreeId, <Combined<M, N> as Manifest<Store>>::Leaf>,
 )> {
     let (m_elem, m_entry) = m_result?;
     let (n_elem, n_entry) = n_result?;
@@ -85,14 +85,14 @@ impl<M: Manifest<Store> + Send + Sync, N: Manifest<Store> + Send + Sync, Store: 
     Manifest<Store> for Combined<M, N>
 {
     type TreeId = CombinedId<<M as Manifest<Store>>::TreeId, <N as Manifest<Store>>::TreeId>;
-    type LeafId = CombinedId<<M as Manifest<Store>>::LeafId, <N as Manifest<Store>>::LeafId>;
-    type TrieMapType = TrieMap<Entry<Self::TreeId, Self::LeafId>>;
+    type Leaf = CombinedId<<M as Manifest<Store>>::Leaf, <N as Manifest<Store>>::Leaf>;
+    type TrieMapType = TrieMap<Entry<Self::TreeId, Self::Leaf>>;
 
     async fn list(
         &self,
         ctx: &CoreContext,
         blobstore: &Store,
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         let Combined(m, n) = self;
         Ok(m.list(ctx, blobstore)
@@ -107,7 +107,7 @@ impl<M: Manifest<Store> + Send + Sync, N: Manifest<Store> + Send + Sync, Store: 
         ctx: &CoreContext,
         blobstore: &Store,
         prefix: &[u8],
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         let Combined(m, n) = self;
         Ok(m.list_prefix(ctx, blobstore, prefix)
@@ -123,7 +123,7 @@ impl<M: Manifest<Store> + Send + Sync, N: Manifest<Store> + Send + Sync, Store: 
         blobstore: &Store,
         prefix: &[u8],
         after: &[u8],
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         let Combined(m, n) = self;
         Ok(m.list_prefix_after(ctx, blobstore, prefix, after)
@@ -138,7 +138,7 @@ impl<M: Manifest<Store> + Send + Sync, N: Manifest<Store> + Send + Sync, Store: 
         ctx: &CoreContext,
         blobstore: &Store,
         skip: usize,
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         let Combined(m, n) = self;
         Ok(m.list_skip(ctx, blobstore, skip)
@@ -153,7 +153,7 @@ impl<M: Manifest<Store> + Send + Sync, N: Manifest<Store> + Send + Sync, Store: 
         ctx: &CoreContext,
         blobstore: &Store,
         name: &MPathElement,
-    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
+    ) -> Result<Option<Entry<Self::TreeId, Self::Leaf>>> {
         let Combined(m, n) = self;
         match (
             m.lookup(ctx, blobstore, name).await?,
@@ -184,7 +184,7 @@ impl<M: Manifest<Store> + Send + Sync, N: Manifest<Store> + Send + Sync, Store: 
     Manifest<Store> for Either<M, N>
 {
     type TreeId = Either<<M as Manifest<Store>>::TreeId, <N as Manifest<Store>>::TreeId>;
-    type LeafId = Either<<M as Manifest<Store>>::LeafId, <N as Manifest<Store>>::LeafId>;
+    type Leaf = Either<<M as Manifest<Store>>::Leaf, <N as Manifest<Store>>::Leaf>;
     type TrieMapType =
         Either<<M as Manifest<Store>>::TrieMapType, <N as Manifest<Store>>::TrieMapType>;
 
@@ -192,7 +192,7 @@ impl<M: Manifest<Store> + Send + Sync, N: Manifest<Store> + Send + Sync, Store: 
         &self,
         ctx: &CoreContext,
         blobstore: &Store,
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         let stream = match self {
             Either::Left(m) => m
@@ -214,7 +214,7 @@ impl<M: Manifest<Store> + Send + Sync, N: Manifest<Store> + Send + Sync, Store: 
         ctx: &CoreContext,
         blobstore: &Store,
         prefix: &[u8],
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         let stream = match self {
             Either::Left(m) => m
@@ -237,7 +237,7 @@ impl<M: Manifest<Store> + Send + Sync, N: Manifest<Store> + Send + Sync, Store: 
         blobstore: &Store,
         prefix: &[u8],
         after: &[u8],
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         let stream = match self {
             Either::Left(m) => m
@@ -259,7 +259,7 @@ impl<M: Manifest<Store> + Send + Sync, N: Manifest<Store> + Send + Sync, Store: 
         ctx: &CoreContext,
         blobstore: &Store,
         skip: usize,
-    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::LeafId>)>>>
+    ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
         let stream = match self {
             Either::Left(m) => m
@@ -281,7 +281,7 @@ impl<M: Manifest<Store> + Send + Sync, N: Manifest<Store> + Send + Sync, Store: 
         ctx: &CoreContext,
         blobstore: &Store,
         name: &MPathElement,
-    ) -> Result<Option<Entry<Self::TreeId, Self::LeafId>>> {
+    ) -> Result<Option<Entry<Self::TreeId, Self::Leaf>>> {
         match self {
             Either::Left(m) => Ok(m.lookup(ctx, blobstore, name).await?.map(Entry::left_entry)),
             Either::Right(n) => Ok(n
