@@ -137,8 +137,7 @@ export class TestBrowser {
   async startRecording(): Promise<void> {
     await this.prepareRecording();
     await this.page.evaluate(() => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const browserWindow = window as any as BrowserWindow;
+      const browserWindow = window as unknown as BrowserWindow;
       const rrweb = browserWindow.rrweb;
       const events: Array<Rrweb.eventWithTime> = [];
       browserWindow.recordedEvents = events;
