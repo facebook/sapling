@@ -24,90 +24,86 @@
 #  |                  |
 #  0 <- known good - -
 
-  $ setconfig devel.segmented-changelog-rev-compat=true
-test bisect-sparse
+  $ eagerepo
   $ enable sparse
-  $ hg init myrepo
-  $ cd myrepo
+  $ setconfig clone.use-rust=true
 
-  $ echo a > sparse-included-file
-  $ echo x > sparse-excluded-file
-  $ hg ci -Aqm 'good 0'
+test bisect-sparse
+  $ hg init server
+  $ cd server
 
-  $ echo y > sparse-excluded-file
-  $ hg ci -Aqm 'good 1'
+  $ drawdag <<EOS
+  > J  # J/sparse-excluded-file = y
+  > |
+  > I  # I/sparse-excluded-file = x
+  > |
+  > H  # H/sparse-excluded-file = y
+  > |
+  > G  # G/sparse-included-file = a
+  > |  # G/sparse-excluded-file = x
+  > |
+  > F  # F/sparse-included-file = b
+  > |  # F/sparse-excluded-file = y
+  > |
+  > E  # E/sparse-excluded-file = x
+  > |
+  > D  # D/sparse-excluded-file = y
+  > |
+  > C  # C/sparse-excluded-file = x
+  > |
+  > B  # B/sparse-excluded-file = y
+  > |
+  > A  # A/sparse-included-file = a
+  >    # A/sparse-excluded-file = x
+  >    # A/profile = profile\nsparse-included-file\n
+  > python:
+  > commit('G', 'introducing bug')
+  > EOS
 
-  $ echo x > sparse-excluded-file
-  $ hg ci -Aqm 'good 2'
-
-  $ echo y > sparse-excluded-file
-  $ hg ci -Aqm 'good 3'
-
-  $ echo x > sparse-excluded-file
-  $ hg ci -Aqm 'good 4'
-
-  $ echo b > sparse-included-file
-  $ echo y > sparse-excluded-file
-  $ hg ci -Aqm 'good 5'
-
-  $ echo a > sparse-included-file
-  $ echo x > sparse-excluded-file
-  $ hg ci -Aqm 'bad  6 - introducing bug'
-
-  $ echo y > sparse-excluded-file
-  $ hg ci -Aqm 'bad  7'
-
-  $ echo x > sparse-excluded-file
-  $ hg ci -Aqm 'bad  8'
-
-  $ echo y > sparse-excluded-file
-  $ hg ci -Aqm 'bad  9'
-
-  $ hg sparse include sparse-included-file
-  $ hg sparse exclude sparse-excluded-file
+  $ cd
+  $ hg clone -q test:server client --enable-profile profile
+  $ cd client
 
 verify bisect skips empty sparse commits (2,3)
 
-  $ hg up -r a75e20cc7b2a2582473ff9b3ca5abcb67e095734
+  $ hg up -r $A
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect --good
-  $ hg up 'max(desc(bad))'
+  $ hg up $J
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect --bad
-  Skipping changeset e116419d642b as there are no changes inside
-  the sparse profile from the known good changeset a75e20cc7b2a
-  Skipping changeset 6b9461e31152 as there are no changes inside
-  the sparse profile from the known bad changeset d910e57b873b
-  Testing changeset 2ecc2db0df15 (2 changesets remaining, ~1 tests)
+  Skipping changeset 61165d92eeb6 as there are no changes inside
+  the sparse profile from the known good changeset 67d16e36726d
+  Skipping changeset b81af7b7acae as there are no changes inside
+  the sparse profile from the known bad changeset 96593dec1c75
+  Testing changeset cb60aec397f6 (2 changesets remaining, ~1 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect --good
   The first bad revision is:
-  commit:      6b9461e31152
+  commit:      b81af7b7acae
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     bad  6 - introducing bug
-  
+  summary:     introducing bug
 
 check --nosparseskip flag
 
   $ hg bisect --reset
-  $ hg bisect -g a75e20cc7b2a2582473ff9b3ca5abcb67e095734
-  $ hg bisect -b 'max(desc(bad))' -S
-  Testing changeset e116419d642b (9 changesets remaining, ~3 tests)
+  $ hg bisect -g $A
+  $ hg bisect -b $J -S
+  Testing changeset 61165d92eeb6 (9 changesets remaining, ~3 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect --good --nosparseskip
-  Testing changeset 6b9461e31152 (5 changesets remaining, ~2 tests)
+  Testing changeset b81af7b7acae (5 changesets remaining, ~2 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect --bad --nosparseskip
-  Testing changeset 2ecc2db0df15 (2 changesets remaining, ~1 tests)
+  Testing changeset cb60aec397f6 (2 changesets remaining, ~1 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect --good
   The first bad revision is:
-  commit:      6b9461e31152
+  commit:      b81af7b7acae
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     bad  6 - introducing bug
-  
+  summary:     introducing bug
 
 
 verify skipping works with --command flag
@@ -115,32 +111,31 @@ verify skipping works with --command flag
   $ cat > script.py <<EOF
   > from __future__ import absolute_import
   > import sys
-  > from sapling import hg, ui as uimod
+  > from sapling import hg, node, ui as uimod
   > repo = hg.repository(uimod.ui.load(), '.')
-  > if repo['.'].rev() >= 6: # where the bug was introduced
+  > if repo.changelog.isancestor(node.bin("$G"), repo['.'].node()): # where the bug was introduced
   >     sys.exit(1)
   > EOF
   $ chmod +x script.py
 
   $ hg bisect --reset
-  $ hg bisect -g a75e20cc7b2a2582473ff9b3ca5abcb67e095734
-  $ hg up 'max(desc(bad))'
+  $ hg bisect -g $A
+  $ hg up $J
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect --command "hg debugpython -- script.py"
-  changeset d910e57b873b: bad
-  Skipping changeset e116419d642b as there are no changes inside
-  the sparse profile from the known good changeset a75e20cc7b2a
-  Skipping changeset 6b9461e31152 as there are no changes inside
-  the sparse profile from the known bad changeset d910e57b873b
-  Testing changeset 2ecc2db0df15 (2 changesets remaining, ~1 tests)
-  changeset 2ecc2db0df15: good
-  Testing changeset 6b9461e31152 (0 changesets remaining, ~0 tests)
+  changeset 96593dec1c75: bad
+  Skipping changeset 61165d92eeb6 as there are no changes inside
+  the sparse profile from the known good changeset 67d16e36726d
+  Skipping changeset b81af7b7acae as there are no changes inside
+  the sparse profile from the known bad changeset 96593dec1c75
+  Testing changeset cb60aec397f6 (2 changesets remaining, ~1 tests)
+  changeset cb60aec397f6: good
+  Testing changeset b81af7b7acae (0 changesets remaining, ~0 tests)
   The first bad revision is:
-  commit:      6b9461e31152
+  commit:      b81af7b7acae
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     bad  6 - introducing bug
-  
+  summary:     introducing bug
 
 
 
@@ -165,7 +160,7 @@ verify skipping works with --command flag
 New test set
 
   $ hg bisect --reset
-  $ hg up 94c6ab768effbbaded05574a85dea765cebf25b4
+  $ hg up $H
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ echo r > sparse-included-file
@@ -181,7 +176,7 @@ New test set
   $ echo z > sparse-excluded-file
   $ hg ci -Aqm '12'
 
-  $ hg merge -r 'max(desc(bad))'
+  $ hg merge -r $J
   temporarily included 1 file(s) in the sparse checkout for merging
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -191,42 +186,41 @@ New test set
   $ echo v > sparse-excluded-file
   $ hg ci -Aqm '14'
 
-  $ hg bisect -g a6b1a23ad56a41a184666a5c633a51117fec5208
+  $ hg bisect -g $I
   $ hg bisect -b 'desc(14)'
-  Skipping changeset d910e57b873b as there are no changes inside
-  the sparse profile from the known good changeset a6b1a23ad56a
-  Testing changeset a41c9f2666a8 (2 changesets remaining, ~1 tests)
+  Skipping changeset 96593dec1c75 as there are no changes inside
+  the sparse profile from the known good changeset a1deef3f19b6
+  Testing changeset 5208d98c5d2e (2 changesets remaining, ~1 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect --bad
   The first bad revision is:
-  commit:      a41c9f2666a8
+  commit:      5208d98c5d2e
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     13: merge(9,12)
   
   Not all ancestors of this changeset have been checked.
   Use bisect --extend to continue the bisection from
-  the common ancestor, 94c6ab768eff.
+  the common ancestor, bef5da0179e1.
 
 
 
 
 
   $ hg bisect --extend
-  Extending search to changeset 94c6ab768eff
-  Skipping changeset 94c6ab768eff as there are no changes inside
-  the sparse profile from the known good changeset d910e57b873b
-  Testing changeset 7038c7a4f757 (4 changesets remaining, ~2 tests)
+  Extending search to changeset bef5da0179e1
+  Skipping changeset bef5da0179e1 as there are no changes inside
+  the sparse profile from the known good changeset 96593dec1c75
+  Testing changeset 9351b91f8f7a (4 changesets remaining, ~2 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect --good
-  Skipping changeset e694d9484bb8 as there are no changes inside
-  the sparse profile from the known bad changeset a41c9f2666a8
+  Skipping changeset 8a99ef081954 as there are no changes inside
+  the sparse profile from the known bad changeset 5208d98c5d2e
   The first bad revision is:
-  commit:      e694d9484bb8
+  commit:      8a99ef081954
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     12
-  
 
 
 
@@ -268,19 +262,18 @@ Empty case with --command flag: all commits are skipped
   $ hg sparse exclude sparse-new-excluded-file
 
   $ hg bisect --reset
-  $ hg bisect -g 6e74f05c0613d7861ac62eefb6974abf63ecce4f
+  $ hg bisect -g "desc('known good - 15')"
   $ hg bisect -c "test $(hg log -r . -T '{rev}') -lt 17"
-  changeset ddea298cfd5a: bad
-  Skipping changeset 8654dd939818 as there are no changes inside
-  the sparse profile from the known good changeset 6e74f05c0613
-  Skipping changeset 9ca8d13c5161 as there are no changes inside
-  the sparse profile from the known bad changeset ddea298cfd5a
+  changeset 4d85fc6c4c8d: bad
+  Skipping changeset e3e04fc9ea83 as there are no changes inside
+  the sparse profile from the known good changeset 239a9c44ed40
+  Skipping changeset f7a3e2d90dcf as there are no changes inside
+  the sparse profile from the known bad changeset 4d85fc6c4c8d
   The first bad revision is:
-  commit:      9ca8d13c5161
+  commit:      f7a3e2d90dcf
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     empty bad - 17
-  
 
 
 
