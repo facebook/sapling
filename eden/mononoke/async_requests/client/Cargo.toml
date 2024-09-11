@@ -15,7 +15,6 @@ blobstore = { version = "0.1.0", path = "../../blobstore" }
 context = { version = "0.1.0", path = "../../server/context" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 megarepo_config = { version = "0.1.0", path = "../../megarepo_api/megarepo_config" }
-megarepo_error = { version = "0.1.0", path = "../../megarepo_api/megarepo_error" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }

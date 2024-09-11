@@ -54,7 +54,6 @@ rust_library(
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
         "//eden/mononoke/megarepo_api:megarepo_config",
-        "//eden/mononoke/megarepo_api:megarepo_error",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_api:mononoke_api",
         "//eden/mononoke/mononoke_types:mononoke_types",

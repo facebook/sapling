@@ -15,11 +15,11 @@ use anyhow::bail;
 use anyhow::Error;
 use async_once_cell::AsyncOnceCell;
 use async_requests::AsyncMethodRequestQueue;
+use async_requests::AsyncRequestsError;
 use blobstore::Blobstore;
 use context::CoreContext;
 use futures::future::try_join_all;
 use megarepo_config::Target;
-use megarepo_error::MegarepoError;
 use metaconfig_types::ArcRepoConfig;
 use metaconfig_types::RepoConfigArc;
 use metaconfig_types::RepoConfigRef;
@@ -103,7 +103,7 @@ impl<R: MononokeRepo> AsyncRequestsQueue<R> {
         &self,
         ctx: &CoreContext,
         target: &Target,
-    ) -> Result<AsyncMethodRequestQueue, MegarepoError> {
+    ) -> Result<AsyncMethodRequestQueue, AsyncRequestsError> {
         let (repo_config, repo_identity) = self.target_repo_config_and_id(ctx, target).await?;
         self.async_method_request_queue_for_repo(ctx, &repo_identity, &repo_config)
             .await
@@ -115,7 +115,7 @@ impl<R: MononokeRepo> AsyncRequestsQueue<R> {
         ctx: &CoreContext,
         repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
-    ) -> Result<AsyncMethodRequestQueue, MegarepoError> {
+    ) -> Result<AsyncMethodRequestQueue, AsyncRequestsError> {
         let queue = self
             .queue_cache
             .get_or_try_init(&repo_identity.clone(), || async move {
@@ -131,7 +131,7 @@ impl<R: MononokeRepo> AsyncRequestsQueue<R> {
     pub async fn all_async_method_request_queues(
         &self,
         ctx: &CoreContext,
-    ) -> Result<Vec<(Vec<RepositoryId>, AsyncMethodRequestQueue)>, MegarepoError> {
+    ) -> Result<Vec<(Vec<RepositoryId>, AsyncMethodRequestQueue)>, AsyncRequestsError> {
         // TODO(mitrandir): instead of creating a queue per repo create a queue
         // per group of repos with exactly same storage configs. This way even with
         // a lot of repos we'll have few queues.
@@ -147,7 +147,7 @@ impl<R: MononokeRepo> AsyncRequestsQueue<R> {
                         &Arc::new(repo_config),
                     )
                     .await?;
-                Ok::<_, MegarepoError>((vec![repo_id], queue))
+                Ok::<_, AsyncRequestsError>((vec![repo_id], queue))
             }
         }))
         .await?;
@@ -203,7 +203,7 @@ impl<R: MononokeRepo> AsyncRequestsQueue<R> {
             .mononoke
             .raw_repo(repo_identity.name())
             .ok_or_else(|| {
-                MegarepoError::request(anyhow!("repo not found {}", repo_identity.name()))
+                AsyncRequestsError::request(anyhow!("repo not found {}", repo_identity.name()))
             })?;
         Ok(repo.repo_blobstore_arc())
     }
