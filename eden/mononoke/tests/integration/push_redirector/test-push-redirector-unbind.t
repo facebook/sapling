@@ -127,7 +127,7 @@
   * successfully inserted rewritten mapping entry (glob)
 
 -- Step 6. Rebind repositories and wait until it propagates
-  $ mononoke_admin_source_target 0 1 crossrepo pushredirection prepare-rollout &> /dev/null
+  $ mononoke_newadmin cross-repo --source-repo-name large-mon --target-repo-name small-mon pushredirection prepare-rollout &> /dev/null
   $ enable_pushredirect 1
   $ force_update_configerator
 

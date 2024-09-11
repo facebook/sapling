@@ -27,6 +27,7 @@ use mononoke_app::MononokeApp;
 use mutable_counters::MutableCounters;
 use phases::Phases;
 use pushrebase_mutation_mapping::PushrebaseMutationMapping;
+use pushredirection::PushredirectionArgs;
 use repo_blobstore::RepoBlobstore;
 use repo_bookmark_attrs::RepoBookmarkAttrs;
 use repo_cross_repo::RepoCrossRepo;
@@ -36,6 +37,7 @@ use sql_query_config::SqlQueryConfig;
 
 mod insert;
 mod map;
+mod pushredirection;
 
 /// Query and manage cross repo syncs
 #[derive(Parser)]
@@ -54,6 +56,7 @@ pub struct CommandArgs {
 pub enum CrossRepoSubcommand {
     Insert(InsertArgs),
     Map(MapArgs),
+    Pushredirection(PushredirectionArgs),
 }
 
 #[facet::container]
@@ -132,6 +135,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         }
         CrossRepoSubcommand::Insert(args) => {
             insert::insert(&ctx, &app, source_repo, target_repo, args).await
+        }
+        CrossRepoSubcommand::Pushredirection(args) => {
+            pushredirection::pushredirection(&ctx, &app, source_repo, target_repo, args).await
         }
     }
 }

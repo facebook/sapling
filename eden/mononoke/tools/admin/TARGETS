@@ -83,6 +83,7 @@ rust_binary(
         "//eden/mononoke/cmdlib/displaying/graph:print_graph",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
         "//eden/mononoke/cmdlib/scrubbing:cmdlib_scrubbing",
+        "//eden/mononoke/commit_rewriting/backsyncer:backsyncer",
         "//eden/mononoke/commit_rewriting/cross_repo_sync:cross_repo_sync",
         "//eden/mononoke/commit_rewriting/synced_commit_mapping:synced_commit_mapping",
         "//eden/mononoke/derived_data:bulk_derivation",

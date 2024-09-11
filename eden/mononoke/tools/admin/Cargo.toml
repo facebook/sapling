@@ -11,6 +11,7 @@ license = "GPLv2+"
 anyhow = "1.0.86"
 async-stream = "0.3"
 async_requests = { version = "0.1.0", path = "../../async_requests/lib" }
+backsyncer = { version = "0.1.0", path = "../../commit_rewriting/backsyncer" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
 bonsai_blob_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_blob_mapping" }

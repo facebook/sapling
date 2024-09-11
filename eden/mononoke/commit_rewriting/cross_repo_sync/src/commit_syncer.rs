@@ -379,6 +379,10 @@ where
         self.repos.get_x_repo_sync_lease()
     }
 
+    pub fn get_live_commit_sync_config(&self) -> &Arc<dyn LiveCommitSyncConfig> {
+        &self.live_commit_sync_config
+    }
+
     pub async fn get_movers_by_version(
         &self,
         version: &CommitSyncConfigVersion,
