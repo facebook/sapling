@@ -185,22 +185,9 @@ pub fn eden_clone(backing_repo: &Repo, working_copy: &Path, target: Option<HgId>
         clone_command.arg("--allow-empty-repo");
     }
 
-    // The old config value was a bool while the new config value is a String. We need to support
-    // both values until we can deprecate the old one.
-    let eden_sparse_filter = match config.must_get::<String>("clone", "eden-sparse-filter") {
-        // A non-empty string means we should activate this filter after cloning the repo.
-        // An empty string means the repo should be cloned without activating a filter.
-        Ok(val) => Some(val),
-        Err(_) => {
-            // If the old config value is true, we should use eden sparse but not activate a filter
-            if config.get_or_default::<bool>("clone", "use-eden-sparse")? {
-                Some("".to_owned())
-            } else {
-                // Otherwise we don't want to use eden sparse or activate any filters
-                None
-            }
-        }
-    };
+    // A non-empty string means we should activate this filter after cloning the repo.
+    // An empty string means the repo should be cloned without activating a filter.
+    let eden_sparse_filter = config.get("clone", "eden-sparse-filter");
 
     // The current Eden installation may not yet support the --filter-path option. We will back-up
     // the clone arguments and retry without --filter-path if our first clone attempt fails.

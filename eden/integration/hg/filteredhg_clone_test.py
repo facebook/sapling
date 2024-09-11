@@ -84,21 +84,6 @@ filtered
                 "filtered path should not be present in the repo",
             )
 
-    def hg_clone_filteredhg_repo_legacy(
-        self, repo_name: str, filter_path: Optional[str] = None
-    ) -> hgrepo.HgRepository:
-        """
-        Uses the old method of cloning FilteredFS repositories (setting a config value to true).
-        Takes an optional filter_path to test using both FilteredFS cloning methods at once.
-        """
-        args = ["--config", "clone.use-eden-sparse=true"]
-        if filter_path is not None:
-            args.extend(["--config", f"clone.eden-sparse-filter={filter_path}"])
-
-        return self.hg_clone_additional_repo(
-            *args, backing_repo=self.backing_repo, client_name=repo_name
-        )
-
     def hg_clone_filteredhg_repo(
         self, repo_name: str, filter_path: Optional[str] = ""
     ) -> hgrepo.HgRepository:
@@ -121,16 +106,6 @@ filtered
             client_name=repo_name,
         )
 
-    def test_legacy_filteredhg_clone_succeeds(self) -> None:
-        ffs_repo = self.hg_clone_filteredhg_repo_legacy(repo_name="ffs")
-        self.assert_paths_filtered_unfiltered(
-            Path(ffs_repo.path), [], ["foo", "bar", "filtered"]
-        )
-        ffs_repo.hg("filteredfs", "enable", "filter0")
-        self.assert_paths_filtered_unfiltered(
-            Path(ffs_repo.path), ["foo", "filtered"], ["bar"]
-        )
-
     def test_filteredhg_clone_succeeds(self) -> None:
         ffs_repo = self.hg_clone_filteredhg_repo(repo_name="ffs", filter_path="filter0")
         self.assert_paths_filtered_unfiltered(
@@ -141,14 +116,6 @@ filtered
         ffs_repo = self.hg_clone_filteredhg_repo(repo_name="ffs")
         self.assert_paths_filtered_unfiltered(
             Path(ffs_repo.path), [], ["bar", "foo", "filtered"]
-        )
-
-    def test_legacy_filteredhg_clone_with_filter(self) -> None:
-        ffs_repo = self.hg_clone_filteredhg_repo_legacy(
-            repo_name="ffs", filter_path="tools/scm/filter/filter2"
-        )
-        self.assert_paths_filtered_unfiltered(
-            Path(ffs_repo.path), ["filtered"], ["foo", "bar"]
         )
 
     def test_eden_clone_succeeds(self) -> None:
