@@ -15,7 +15,7 @@ const INITIAL_PARAMS_LOCAL_STORAGE_KEY = 'ISLInitialParams';
 /**
  * Extract parameters from URL, then remove from URL to be cleaner (and hide sensitive tokens)
  */
-function computeInitialParams() {
+function computeInitialParams(): Map<InitialParamKeys, string> {
   let initialParams: Map<InitialParamKeys, string> | undefined;
   if (typeof window === 'undefined') {
     return new Map();
