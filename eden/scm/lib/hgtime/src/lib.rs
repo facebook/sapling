@@ -140,6 +140,11 @@ impl HgTime {
         FORCED_NOW.store(self.to_lossy_compact_u64(), Ordering::SeqCst);
     }
 
+    /// Remove faked "now". Reverts "set_as_now_for_testing" effect.
+    pub fn clear_now_for_testing() {
+        FORCED_NOW.store(0, Ordering::Release);
+    }
+
     /// Parse a date string.
     ///
     /// Return `None` if it cannot be parsed.
