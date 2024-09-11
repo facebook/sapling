@@ -890,7 +890,7 @@ UnixSocket::Message PrivHelperServer::processMountNfsMsg(Cursor& cursor) {
       useReaddirplus);
   XLOGF(DBG3, "mount.nfs \"{}\"", mountPath);
 
-  sanityCheckMountPoint(mountPath);
+  sanityCheckMountPoint(mountPath, true /* isNfs */);
 
   nfsMount(mountPath, mountdAddr, nfsdAddr, readOnly, iosize, useReaddirplus);
   mountPoints_.insert(mountPath);
