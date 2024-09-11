@@ -332,7 +332,6 @@ members = [
   "git/packfile/if/mocks",
   "git/packfile/if/services",
   "git/protocol",
-  "git/pushrebase",
   "git_server",
   "git_source_of_truth",
   "git_symbolic_refs",

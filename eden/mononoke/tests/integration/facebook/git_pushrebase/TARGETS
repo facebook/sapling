@@ -9,6 +9,6 @@ dott_test(
     name = "git-pushrebase",
     dott_files = glob(["*.t"]),
     deps = [
-        "//eden/mononoke/git/pushrebase:git_pushrebase",
+        "//eden/mononoke/git/facebook/pushrebase:git_pushrebase",
     ],
 )
