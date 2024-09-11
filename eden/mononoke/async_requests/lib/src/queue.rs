@@ -102,7 +102,7 @@ impl AsyncMethodRequestQueue {
         &self,
         ctx: &CoreContext,
         claimed_by: &ClaimedBy,
-        supported_repos: &[RepositoryId],
+        supported_repos: Option<&[RepositoryId]>,
     ) -> Result<Option<(RequestId, AsynchronousRequestParams)>, AsyncRequestsError> {
         let entry = self
             .table
@@ -404,7 +404,7 @@ mod tests {
 
                 // Simulate the tailer and grab the element from the queue, this should return the params
                 // back and flip its state back to "in_progress"
-                let (req_id, params_from_store) = q.dequeue(&ctx, &ClaimedBy("tests".to_string()), &[entry.repo_id]).await?.unwrap();
+                let (req_id, params_from_store) = q.dequeue(&ctx, &ClaimedBy("tests".to_string()), None).await?.unwrap();
 
                 // Verify that request params from blobstore match what we put there
                 assert_eq!(params_from_store, params.into());

@@ -51,7 +51,7 @@ pub trait LongRunningRequestsQueue: Send + Sync {
         &self,
         ctx: &CoreContext,
         claimed_by: &ClaimedBy,
-        supported_repos: &[RepositoryId],
+        supported_repos: Option<&[RepositoryId]>,
     ) -> Result<Option<LongRunningRequestEntry>>;
 
     /// Get the full request object entry by id

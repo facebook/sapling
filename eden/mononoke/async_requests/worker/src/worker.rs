@@ -167,7 +167,7 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
                     if will_exit.load(Ordering::Relaxed) {
                         break 'outer;
                     }
-                    if let Some((request_id, params)) = queue.dequeue(&ctx, &claimed_by, repo_ids).await? {
+                    if let Some((request_id, params)) = queue.dequeue(&ctx, &claimed_by, None).await? {
                         yield (request_id, params);
                         yielded = true;
                     }
@@ -435,11 +435,7 @@ mod test {
 
         // Grab it from the queue...
         let dequed = q
-            .dequeue(
-                &ctx,
-                &ClaimedBy("name".to_string()),
-                &[RepositoryId::new(0)],
-            )
+            .dequeue(&ctx, &ClaimedBy("name".to_string()), None)
             .await?;
         assert!(dequed.is_some());
 

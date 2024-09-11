@@ -6,6 +6,7 @@
  */
 
 use anyhow::bail;
+use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use bookmarks::BookmarkKey;
@@ -90,6 +91,41 @@ mononoke_queries! {
             claimed_by
         FROM long_running_request_queue
         WHERE id = {id} AND request_type = {request_type}"
+    }
+
+    read GetOneNewRequestForAnyRepo() -> (
+        RowId,
+        RequestType,
+        RepositoryId,
+        BookmarkName,
+        BlobstoreKey,
+        Option<BlobstoreKey>,
+        Timestamp,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        RequestStatus,
+        Option<ClaimedBy>,
+    ) {
+        "SELECT id,
+            request_type,
+            repo_id,
+            bookmark,
+            args_blobstore_key,
+            result_blobstore_key,
+            created_at,
+            started_processing_at,
+            inprogress_last_updated_at,
+            ready_at,
+            polled_at,
+            status,
+            claimed_by
+        FROM long_running_request_queue
+        WHERE status = 'new'
+        ORDER BY created_at ASC
+        LIMIT 1
+        "
     }
 
     read GetOneNewRequestForRepos(>list supported_repo_ids: RepositoryId) -> (
@@ -340,15 +376,16 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
         &self,
         ctx: &CoreContext,
         claimed_by: &ClaimedBy,
-        supported_repos: &[RepositoryId],
+        supported_repos: Option<&[RepositoryId]>,
     ) -> Result<Option<LongRunningRequestEntry>> {
         // Spin until we win the race or there's nothing to do.
         loop {
-            let rows = GetOneNewRequestForRepos::query(
-                &self.connections.read_master_connection, // reaching DB master improves our chances.
-                supported_repos,
-            )
-            .await?;
+            let connection = &self.connections.read_master_connection; // reaching DB master improves our chances.
+            let rows = match supported_repos {
+                Some(repos) => GetOneNewRequestForRepos::query(connection, repos).await,
+                None => GetOneNewRequestForAnyRepo::query(connection).await,
+            }
+            .context("claiming new request")?;
             let mut entry = match rows.into_iter().next() {
                 None => {
                     return Ok(None);
@@ -572,6 +609,89 @@ mod test {
     use super::*;
 
     #[mononoke::fbinit_test]
+    async fn test_claim_and_get_new_request(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let queue = SqlLongRunningRequestsQueue::with_sqlite_in_memory()?;
+        let id = queue
+            .add_request(
+                &ctx,
+                &RequestType("type".to_string()),
+                &RepositoryId::new(0),
+                &BookmarkKey::new("book")?,
+                &BlobstoreKey("key".to_string()),
+            )
+            .await?;
+
+        let request = queue.test_get_request_entry_by_id(&ctx, &id).await?;
+        assert!(request.is_some());
+        let request = request.unwrap();
+        assert!(request.inprogress_last_updated_at.is_none());
+
+        let result = queue
+            .claim_and_get_new_request(&ctx, &ClaimedBy("me".to_string()), None)
+            .await;
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert!(result.is_some());
+        let result = result.unwrap();
+        assert!(result.id == id);
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_claim_and_get_new_request_by_repo_id(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let queue = SqlLongRunningRequestsQueue::with_sqlite_in_memory()?;
+        let id = queue
+            .add_request(
+                &ctx,
+                &RequestType("type".to_string()),
+                &RepositoryId::new(0),
+                &BookmarkKey::new("book")?,
+                &BlobstoreKey("key".to_string()),
+            )
+            .await?;
+
+        let request = queue.test_get_request_entry_by_id(&ctx, &id).await?;
+        assert!(request.is_some());
+        let request = request.unwrap();
+        assert!(request.inprogress_last_updated_at.is_none());
+
+        // different repo id
+        let result = queue
+            .claim_and_get_new_request(
+                &ctx,
+                &ClaimedBy("me".to_string()),
+                Some(&[RepositoryId::new(1)]),
+            )
+            .await;
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert!(result.is_none());
+
+        // correct repo id
+        let result = queue
+            .claim_and_get_new_request(
+                &ctx,
+                &ClaimedBy("me".to_string()),
+                Some(&[
+                    RepositoryId::new(0),
+                    RepositoryId::new(1),
+                    RepositoryId::new(2),
+                ]),
+            )
+            .await;
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert!(result.is_some());
+        let result = result.unwrap();
+        assert!(result.id == id);
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
     async fn test_mark_inprogress(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let queue = SqlLongRunningRequestsQueue::with_sqlite_in_memory()?;
@@ -591,7 +711,7 @@ mod test {
         assert!(request.inprogress_last_updated_at.is_none());
 
         queue
-            .claim_and_get_new_request(&ctx, &ClaimedBy("me".to_string()), &[RepositoryId::new(0)])
+            .claim_and_get_new_request(&ctx, &ClaimedBy("me".to_string()), None)
             .await?;
 
         let request = queue.test_get_request_entry_by_id(&ctx, &id).await?;
@@ -631,7 +751,7 @@ mod test {
 
         // This claims new request from queue and makes it inprogress
         let req = queue
-            .claim_and_get_new_request(&ctx, &ClaimedBy("me".to_string()), &[RepositoryId::new(0)])
+            .claim_and_get_new_request(&ctx, &ClaimedBy("me".to_string()), None)
             .await?;
         assert!(req.is_some());
 
@@ -699,7 +819,7 @@ mod test {
 
         // This claims new request from queue and makes it inprogress
         let req = queue
-            .claim_and_get_new_request(&ctx, &ClaimedBy("me".to_string()), &[RepositoryId::new(0)])
+            .claim_and_get_new_request(&ctx, &ClaimedBy("me".to_string()), None)
             .await?;
         assert!(req.is_some());
 
