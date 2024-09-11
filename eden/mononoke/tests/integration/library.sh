@@ -1896,12 +1896,7 @@ function hginit_treemanifest() {
   hg init "$@"
   cat >> "$1"/.hg/hgrc <<EOF
 [extensions]
-treemanifest=!
-treemanifestserver=
 commitextras=
-
-[treemanifest]
-server=True
 
 [remotefilelog]
 reponame=$1

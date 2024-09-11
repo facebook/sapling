@@ -17,12 +17,10 @@
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase=
-  > treemanifest=$TESTDIR/../sapling/ext/treemanifestserver.py
+  > treemanifest=
   > [remotefilelog]
   > server=True
   > shallowtrees=True
-  > [treemanifest]
-  > server=True
   > EOF
   $ echo x > x
   $ hg commit -qAm 'add x'

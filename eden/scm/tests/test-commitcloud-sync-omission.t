@@ -16,14 +16,12 @@
   $ cd server
   $ cat >> .hg/hgrc << EOF
   > [extensions]
-  > treemanifest=$TESTDIR/../sapling/ext/treemanifestserver.py
+  > treemanifest=
   > [infinitepush]
   > server = yes
   > indextype = disk
   > storetype = disk
   > reponame = testrepo
-  > [treemanifest]
-  > server = True
   > EOF
   $ touch base
   $ hg commit -Aqm base

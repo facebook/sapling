@@ -9,10 +9,8 @@
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase=
-  > treemanifest=$TESTDIR/../sapling/ext/treemanifestserver.py
+  > treemanifest=
   > [remotefilelog]
-  > server=True
-  > [treemanifest]
   > server=True
   > EOF
   $ mkcommit root
@@ -20,16 +18,13 @@
 
 Clone it
   $ cd ..
-  $ hgcloneshallow ssh://user@dummy/master client1 -q --config extensions.treemanifest= --config treemanifest.treeonly=True
+  $ hgcloneshallow ssh://user@dummy/master client1 -q --config extensions.treemanifest=
   1 files fetched over * (glob) (?)
   $ cd client1
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > treemanifest=
   > 
-  > [treemanifest]
-  > treeonly=True
-  > sendtrees=True
   > EOF
 
   $ hg debugdrawdag <<EOS

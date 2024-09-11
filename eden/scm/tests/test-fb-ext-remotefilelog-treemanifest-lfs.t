@@ -6,11 +6,11 @@
   $ . "$TESTDIR/library.sh"
 
   $ enable lfs treemanifest pushrebase
-  $ hginit master --config extensions.treemanifest=$TESTDIR/../sapling/ext/treemanifestserver.py
+  $ hginit master --config extensions.treemanifest=
 
   $ cd master
-  $ setconfig remotefilelog.server=True treemanifest.server=True remotefilelog.shallowtrees=True
-  $ setconfig extensions.treemanifest=$TESTDIR/../sapling/ext/treemanifestserver.py
+  $ setconfig remotefilelog.server=True remotefilelog.shallowtrees=True
+  $ setconfig extensions.treemanifest=
   $ mkdir dir
   $ echo x > dir/x
   $ hg commit -qAm x1

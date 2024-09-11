@@ -29,9 +29,7 @@ This file tests that normal mercurial operations never read the flat manifests
   $ cd master
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > treemanifest=$TESTDIR/../sapling/ext/treemanifestserver.py
-  > [treemanifest]
-  > server=True
+  > treemanifest=
   > [remotefilelog]
   > server=True
   > shallowtrees=True

@@ -76,7 +76,6 @@ newremoterepo() {
   newrepo "$@"
   echo remotefilelog >> .hg/requires
   enable treemanifest remotefilelog pushrebase remotenames
-  setconfig treemanifest.sendtrees=True treemanifest.treeonly=True
   if [ -n "$USE_MONONOKE" ] ; then
     setconfig paths.default=mononoke://$(mononoke_address)/server
   else
@@ -96,19 +95,16 @@ newserver() {
   else
     mkdir "$TESTTMP/$reponame"
     cd "$TESTTMP/$reponame"
-    hg --config extensions.treemanifest=$TESTDIR/../sapling/ext/treemanifestserver.py \
+    hg --config extensions.treemanifest= \
       --config experimental.narrow-heads=false \
       --config visibility.enabled=false \
       init
-    enable remotefilelog remotenames
+    enable remotefilelog remotenames treemanifest
     setconfig \
        remotefilelog.reponame="$reponame" remotefilelog.server=True \
-       treemanifest.rustmanifest=True \
-       treemanifest.server=True treemanifest.treeonly=True \
        infinitepush.server=yes infinitepush.reponame="$reponame" \
        infinitepush.indextype=disk infinitepush.storetype=disk \
-       experimental.narrow-heads=false \
-       extensions.treemanifest=$TESTDIR/../sapling/ext/treemanifestserver.py
+       experimental.narrow-heads=false
   fi
 }
 
@@ -131,7 +127,6 @@ clone() {
     --config "extensions.remotenames=" \
     --config "extensions.treemanifest=" \
     --config "remotefilelog.reponame=$servername" \
-    --config "treemanifest.treeonly=True" \
     --config "ui.ssh=$(dummysshcmd)" \
     --config "ui.remotecmd=$remotecmd"
 
@@ -145,11 +140,6 @@ publish=False
 
 [remotefilelog]
 reponame=$servername
-
-[treemanifest]
-rustmanifest=True
-sendtrees=True
-treeonly=True
 
 [ui]
 ssh=$(dummysshcmd)

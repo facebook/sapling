@@ -8,14 +8,13 @@ Push merge commits from a treeonly shallow repo to a hybrid treemanifest server
   $ setconfig format.aggressivemergedeltas=True
   $ configure dummyssh
 
-  $ newrepo server --config extensions.treemanifest=$TESTDIR/../sapling/ext/treemanifestserver.py
-  $ setconfig treemanifest.server=True extensions.treemanifest=$TESTDIR/../sapling/ext/treemanifestserver.py
+  $ newrepo server --config extensions.treemanifest=
+  $ setconfig extensions.treemanifest=
   $ enable pushrebase
 
   $ newrepo client
   $ echo remotefilelog >> .hg/requires
   $ enable treemanifest remotefilelog pushrebase remotenames
-  $ setconfig treemanifest.sendtrees=True treemanifest.treeonly=True
   $ setconfig paths.default=ssh://user@dummy/server
   $ drawdag <<'EOS'
   > D
@@ -51,14 +50,12 @@ Verify the renames are preserved (commit hashes did not change)
   │
   o  A
   
-  $ setconfig treemanifest.treeonly=True
 
 Push a commit that client1 doesnt have
   $ cd ..
   $ newrepo client2
   $ echo remotefilelog >> .hg/requires
   $ enable treemanifest remotefilelog pushrebase remotenames
-  $ setconfig treemanifest.sendtrees=True treemanifest.treeonly=True
   $ setconfig paths.default=ssh://user@dummy/server
   $ hg pull
   pulling from ssh://user@dummy/server

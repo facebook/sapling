@@ -646,6 +646,8 @@ class localrepository:
 
         self._eventreporting = True
 
+        self.svfs._reporef = weakref.ref(self)
+
         # needed by revlog2
         sfmt = self.storage_format()
         if not create and (
@@ -654,8 +656,6 @@ class localrepository:
             from . import revlog2
 
             revlog2.patch_types()
-
-            self.svfs._reporef = weakref.ref(self)
 
             if "eagercompat" not in self.storerequirements:
                 with self.lock(wait=False):
@@ -969,9 +969,6 @@ class localrepository:
         for r in self.requirements:
             if r.startswith("exp-compression-"):
                 self.svfs.options["compengine"] = r[len("exp-compression-") :]
-
-        treemanifestserver = self.ui.configbool("treemanifest", "server")
-        self.svfs.options["treemanifest-server"] = treemanifestserver
 
         bypassrevlogtransaction = self.ui.configbool(
             "experimental", "narrow-heads"

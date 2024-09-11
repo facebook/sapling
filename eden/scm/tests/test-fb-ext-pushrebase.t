@@ -80,7 +80,7 @@ Stack of non-conflicting commits should be accepted
   running * (glob)
   sending hello command
   sending between command
-  remote: 542
+  remote: * (glob)
   remote: capabilities: * (glob)
   remote: 1
   pushing rev 0e3997dc0733 to destination ssh://user@dummy/server bookmark main

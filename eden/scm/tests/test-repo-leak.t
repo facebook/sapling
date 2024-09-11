@@ -59,7 +59,7 @@ Fine extension: treemanifest
 Fine extension: treemanifest only
 
   $ newclientrepo >/dev/null
-  $ setconfig extensions.treemanifest= treemanifest.treeonly=1 remotefilelog.reponame=x
+  $ setconfig extensions.treemanifest= remotefilelog.reponame=x
   $ hg log -r . -T '{manifest % "{node}"}\n'
   0000000000000000000000000000000000000000
   __del__ called
@@ -161,9 +161,6 @@ Somehow problematic: With many extensions
   > [remotefilelog]
   > reponame = x
   > cachepath = $TESTTMP/cache
-  > 
-  > [treemanifest]
-  > treeonly=True
   > 
   > [fbscmquery]
   > host=example.com

@@ -12,7 +12,6 @@ from sapling import (
     bundlerepo,
     changegroup,
     error,
-    match,
     mdiff,
     phases,
     progress,
@@ -487,16 +486,6 @@ def cansendtrees(repo, nodes, source=None, bundlecaps=None, b2caps=None):
     def clienthascap(cap):
         return cap in bundlecaps or "True" in b2caps.get(cap, [])
 
-    result = AllTrees
-    prefetch = AllTrees
-
-    if repo.svfs.treemanifestserver:
-        if clienthascap("treemanifest"):
-            return LocalTrees
-        else:
-            return NoTrees
-
-    # Else, is a client
     if clienthascap("treemanifestserver"):
         # If we're talking to the main server, always send everything.
         result = AllTrees

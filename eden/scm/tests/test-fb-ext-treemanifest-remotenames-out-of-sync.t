@@ -9,20 +9,15 @@
   > pushrebase=
   > remotenames=
   > treemanifest=
-  > [treemanifest]
-  > sendtrees=True
-  > treeonly=True
   > EOF
 
 # Setup repo
 
-  $ hg init repo --config remotefilelog.reponame=repo --config extensions.treemanifest=$TESTDIR/../sapling/ext/treemanifestserver.py
+  $ hg init repo --config remotefilelog.reponame=repo --config extensions.treemanifest=
   $ cd repo
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > treemanifest=$TESTDIR/../sapling/ext/treemanifestserver.py
-  > [treemanifest]
-  > server=True
+  > treemanifest=
   > [remotefilelog]
   > reponame=repo
   > server=True
@@ -52,7 +47,7 @@
 
   $ cd client_concurrent
   $ setconfig remotefilelog.cachepath=$ROOTDIR/cache_client_concurrent
-  $ setconfig treemanifest.pullprefetchrevs=master treemanifest.sendtrees=True treemanifest.treeonly=True
+  $ setconfig treemanifest.pullprefetchrevs=master
   $ echo x >> y
   $ hg commit -qAm x3
   $ hg push --to master
@@ -76,7 +71,7 @@
 
   $ cd client
   $ setconfig remotefilelog.cachepath=$ROOTDIR/cache_client
-  $ setconfig treemanifest.pullprefetchrevs=master treemanifest.sendtrees=True treemanifest.treeonly=True
+  $ setconfig treemanifest.pullprefetchrevs=master
   $ setconfig paths.default=ssh://user@dummy/repo?read_copy
   $ setconfig paths.default-push=ssh://user@dummy/repo?write
   $ hg path

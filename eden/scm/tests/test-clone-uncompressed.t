@@ -35,8 +35,8 @@ Clone with background file closing enabled
   running * 'user@dummy' 'hg -R server serve --stdio' (glob)
   sending hello command
   sending between command
-  remote: 438
-  remote: capabilities: lookup changegroupsubset branchmap pushkey known getbundle unbundlehash unbundlereplay batch streamreqs=generaldelta,revlogv1 stream_option $USUAL_BUNDLE2_CAPS$%0Atreemanifest%3DTrue%0Atreeonly%3DTrue unbundle=HG10GZ,HG10BZ,HG10UN
+  remote: * (glob)
+  remote: capabilities: * (glob)
   remote: 1
   streaming all changes
   sending stream_out_option command

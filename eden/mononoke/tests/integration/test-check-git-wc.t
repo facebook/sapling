@@ -30,10 +30,7 @@
   $ cd "$HG_REPO"
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > treemanifest=!
-  > treemanifestserver=
-  > [treemanifest]
-  > server=True
+  > treemanifest=
   > EOF
   $ echo "this is file1" > file1
   $ hg add file1

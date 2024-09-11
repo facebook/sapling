@@ -328,6 +328,14 @@ def stripmanifest(orig, repo, striprev, tr, files):
     orig(repo, striprev, tr, files)
 
 
+def _addtreecaps(caps):
+    caps = set(caps)
+    caps.add("gettreepack")
+    caps.add("designatednodes")
+    caps.add("treeonly")
+    return list(caps)
+
+
 def reposetup(ui, repo):
     # Update "{manifest}" again since it might be rewritten by templatekw.init.
     templatekw.defaulttempl["manifest"] = "{node}"
@@ -335,14 +343,14 @@ def reposetup(ui, repo):
     if not isinstance(repo, localrepo.localrepository):
         return
 
-    repo.svfs.treemanifestserver = False
-    clientreposetup(repo)
+    repo.name = repo.ui.config("remotefilelog", "reponame", "unknown")
+
+    def _capabilities(orig, repo, proto):
+        return _addtreecaps(orig(repo, proto))
+
+    extensions.wrapfunction(wireproto, "_capabilities", _capabilities)
 
     wraprepo(repo)
-
-
-def clientreposetup(repo):
-    repo.name = repo.ui.config("remotefilelog", "reponame", "unknown")
 
 
 def wraprepo(repo):
@@ -373,10 +381,7 @@ def wraprepo(repo):
 
         def _restrictcapabilities(self, caps):
             caps = super(treerepository, self)._restrictcapabilities(caps)
-            caps.add("designatednodes")
-            caps.add("gettreepack")
-            caps.add("treeonly")
-            return caps
+            return _addtreecaps(caps)
 
         def forcebfsprefetch(self, mfnodes):
             self._bfsprefetch(mfnodes)
@@ -1428,6 +1433,9 @@ class EagerHistoryStore:
     def add(self, filename, node, p1, p2, linknode, copyfrom):
         self._added[(filename, node)] = (p1, p2, linknode, copyfrom)
 
+    def getsharedmutable(self):
+        return self
+
 
 class EagerDataStore:
     def __init__(self, store):
@@ -1481,6 +1489,9 @@ class EagerDataStore:
     def prefetch(self, items):
         # EagerRepoStore is not lazy.
         pass
+
+    def getsharedmutable(self):
+        return self
 
     def __getattr__(self, name):
         return getattr(self._store, name)

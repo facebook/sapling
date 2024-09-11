@@ -26,6 +26,7 @@ from . import (
     changegroup,
     discovery,
     error,
+    extensions,
     git,
     lock as lockmod,
     mutation,

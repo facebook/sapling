@@ -16,7 +16,6 @@ from sapling import (
     extensions,
     mutation,
     perftrace,
-    pycompat,
     revsetlang,
     util,
 )

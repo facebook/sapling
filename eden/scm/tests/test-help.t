@@ -357,7 +357,6 @@ Test extension help:
        sparse        allow sparse checkouts of the working directory
        stablerev     provide a way to expose the "stable" commit via a revset
        traceprof     (no help text available)
-       treemanifestserver
        undo          (no help text available)
        win32mbcs     allow the use of MBCS paths with problematic encodings
 

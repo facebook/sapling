@@ -12,10 +12,8 @@
   $ cd master
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > treemanifest=$TESTDIR/../sapling/ext/treemanifestserver.py
+  > treemanifest=
   > [remotefilelog]
-  > server=True
-  > [treemanifest]
   > server=True
   > EOF
   $ echo x > x
