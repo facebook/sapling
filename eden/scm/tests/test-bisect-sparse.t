@@ -1,7 +1,3 @@
-
-#require no-eden
-
-
 #  Linear tree case
 #
 #  9 <- known bad - - -
@@ -71,6 +67,13 @@ verify bisect skips empty sparse commits (2,3)
   $ hg bisect --good
   $ hg up $J
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+#if eden
+FIXME - not skipping things
+   $ hg bisect --bad
+   Testing changeset 61165d92eeb6 (9 changesets remaining, ~3 tests)
+   update complete
+#else
   $ hg bisect --bad
   Skipping changeset 61165d92eeb6 as there are no changes inside
   the sparse profile from the known good changeset 67d16e36726d
@@ -274,7 +277,4 @@ Empty case with --command flag: all commits are skipped
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     empty bad - 17
-
-
-
-
+#endif
