@@ -187,11 +187,6 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
     );
 
     abort_if!(
-        !ctx.opts.enable_profile.is_empty() && use_eden,
-        "--enable-profile is not compatible with --eden",
-    );
-
-    abort_if!(
         use_eden && ctx.opts.noupdate,
         "--noupdate is not compatible with --eden",
     );
@@ -289,8 +284,26 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
         destination.display(),
     ));
 
+    let edenfs_filter = match (
+        use_eden,
+        ctx.opts.enable_profile.len(),
+        config.get("clone", "eden-sparse-filter"),
+    ) {
+        (true, len, _) if len > 1 => abort!("EdenFS only supports a single profile"),
+        (true, 0, config_filter) => config_filter,
+        (true, 1, config_filter) => {
+            if config_filter.is_some() {
+                logger.info(
+                    "Ignoring clone.eden-sparse-filter because --enable-profile was specified",
+                );
+            }
+            Some(ctx.opts.enable_profile[0].clone().into())
+        }
+        _ => None,
+    };
+
     let clone_type_str = if use_eden {
-        if config.get("clone", "eden-sparse-filter").is_some() {
+        if edenfs_filter.is_some() {
             "eden_sparse"
         } else {
             "eden_fs"
@@ -352,11 +365,11 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
                 destination.display(),
             )
         });
-        clone::eden_clone(&backing_repo, &destination, target_rev)?;
+        clone::eden_clone(&backing_repo, &destination, target_rev, edenfs_filter)?;
     } else {
         let mut repo = try_clone_metadata(&ctx, &logger, &mut config, &reponame, &destination)?;
 
-        let target_rev = match get_update_target(&logger, &mut repo, &ctx.opts)? {
+        let target_rev = match get_update_target(&logger, &repo, &ctx.opts)? {
             Some((id, name)) => {
                 logger.info(format!("Checking out '{}'", name));
 

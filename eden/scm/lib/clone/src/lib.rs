@@ -16,6 +16,7 @@ use anyhow::Context;
 use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use configmodel::Text;
 use context::CoreContext;
 use repo::repo::Repo;
 use tracing::instrument;
@@ -143,7 +144,12 @@ fn run_eden_clone_command(clone_command: &mut Command) -> Result<()> {
 }
 
 #[instrument(err)]
-pub fn eden_clone(backing_repo: &Repo, working_copy: &Path, target: Option<HgId>) -> Result<()> {
+pub fn eden_clone(
+    backing_repo: &Repo,
+    working_copy: &Path,
+    target: Option<HgId>,
+    filter: Option<Text>,
+) -> Result<()> {
     let config = backing_repo.config();
 
     let mut clone_command = get_eden_clone_command(config)?;
@@ -185,13 +191,9 @@ pub fn eden_clone(backing_repo: &Repo, working_copy: &Path, target: Option<HgId>
         clone_command.arg("--allow-empty-repo");
     }
 
-    // A non-empty string means we should activate this filter after cloning the repo.
-    // An empty string means the repo should be cloned without activating a filter.
-    let eden_sparse_filter = config.get("clone", "eden-sparse-filter");
-
     // The current Eden installation may not yet support the --filter-path option. We will back-up
     // the clone arguments and retry without --filter-path if our first clone attempt fails.
-    let args_without_filter = match eden_sparse_filter {
+    let args_without_filter = match filter {
         Some(filter) if !filter.is_empty() => {
             clone_command.args(["--backing-store", "filteredhg"]);
             let args_without_filter = clone_command

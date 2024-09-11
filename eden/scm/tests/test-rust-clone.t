@@ -180,9 +180,6 @@ Test various --eden errors:
   $ hg clone -Uq test:e1 --eden-backing-repo /foo/bar
   abort: --eden-backing-repo requires --eden
   [255]
-  $ hg clone -q test:e1 --eden --enable-profile foo
-  abort: --enable-profile is not compatible with --eden
-  [255]
   $ hg clone -q test:e1 -u foo --eden
   abort: some specified options are not compatible with --eden
   [255]
