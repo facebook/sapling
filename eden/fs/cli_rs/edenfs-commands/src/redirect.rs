@@ -258,7 +258,7 @@ impl RedirectCmd {
         })?;
         for redir in redirs.values() {
             redir
-                .remove_existing(&checkout, false, force)
+                .remove_existing(&checkout, false, force, "unmount")
                 .await
                 .with_context(|| {
                     anyhow!(
@@ -313,7 +313,7 @@ impl RedirectCmd {
         // the improved `add` validation for a while, we can use it here also.
         if let Some(redir) = redirs.get(repo_path) {
             redir
-                .remove_existing(&checkout, false, force)
+                .remove_existing(&checkout, false, force, "del")
                 .await
                 .with_context(|| {
                     format!(
@@ -410,7 +410,7 @@ impl RedirectCmd {
                 continue;
             }
 
-            if let Err(e) = redir.apply(&checkout, force).await {
+            if let Err(e) = redir.apply(&checkout, force, "fixup").await {
                 eprintln!(
                     "Unable to apply redirection `{}`: {}",
                     redir.repo_path.display(),

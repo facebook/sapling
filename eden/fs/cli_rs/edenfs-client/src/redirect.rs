@@ -826,6 +826,7 @@ If this path should not be deleted automatically, please reach out to 'EdenFS Wi
         checkout: &EdenFsCheckout,
         fail_if_bind_mount: bool,
         force_remove: bool,
+        cli_name: &str,
     ) -> Result<RepoPathDisposition> {
         let repo_path = self.expand_repo_path(checkout);
         let disposition = RepoPathDisposition::analyze(&repo_path)
@@ -855,7 +856,9 @@ If this path should not be deleted automatically, please reach out to 'EdenFS Wi
             // remove the empty directory that was the mount point
             // To avoid infinite recursion, tell the next call to fail if
             // the disposition is still a bind mount
-            return self.remove_existing(checkout, true, force_remove).await;
+            return self
+                .remove_existing(checkout, true, force_remove, cli_name)
+                .await;
         }
 
         if disposition == RepoPathDisposition::IsEmptyDir {
@@ -886,8 +889,9 @@ If this path should not be deleted automatically, please reach out to 'EdenFS Wi
                 return Err(EdenFsError::Other(anyhow!(
                     "A non-empty directory (full path `{}`) found. Either-
 - Try again after reviewing and manually deleting the directory, or 
-- Use `--force` parameter in this command to attempt inline deletion of the directory if none of its files are in use.",
-                    self.expand_repo_path(checkout).display()
+- Use `eden redirect {} --force` with relevant params (if any) to attempt inline deletion of the directory if none of its files are in use.",
+                    self.expand_repo_path(checkout).display(),
+                    cli_name
                 )));
             }
         }
@@ -895,8 +899,13 @@ If this path should not be deleted automatically, please reach out to 'EdenFS Wi
         Ok(disposition)
     }
 
-    pub async fn apply(&self, checkout: &EdenFsCheckout, force: bool) -> Result<()> {
-        let disposition = match self.remove_existing(checkout, false, force).await {
+    pub async fn apply(
+        &self,
+        checkout: &EdenFsCheckout,
+        force: bool,
+        cli_name: &str,
+    ) -> Result<()> {
+        let disposition = match self.remove_existing(checkout, false, force, cli_name).await {
             Ok(d) => d,
             Err(e) => {
                 return Err(EdenFsError::Other(anyhow!(
@@ -1504,7 +1513,7 @@ pub async fn try_add_redirection(
         }
     }
 
-    redir.apply(checkout, force).await.with_context(|| {
+    redir.apply(checkout, force, "add").await.with_context(|| {
         format!(
             "Failed to apply redirection '{}' for checkout {}",
             redir.repo_path.display(),
