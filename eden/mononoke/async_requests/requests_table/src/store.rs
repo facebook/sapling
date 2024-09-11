@@ -171,7 +171,15 @@ mononoke_queries! {
         "
     }
 
-    read FindAbandonedRequests(
+    read FindAbandonedRequestsForAnyRepo(abandoned_timestamp: Timestamp) -> (RowId, RequestType) {
+        "
+        SELECT id, request_type
+        FROM long_running_request_queue
+        WHERE status = 'inprogress' AND inprogress_last_updated_at <= {abandoned_timestamp}
+        "
+    }
+
+    read FindAbandonedRequestsForRepos(
         abandoned_timestamp: Timestamp,
         >list repo_ids: RepositoryId
     ) -> (RowId, RequestType) {
@@ -455,15 +463,27 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
     async fn find_abandoned_requests(
         &self,
         _ctx: &CoreContext,
-        repo_ids: &[RepositoryId],
+        repo_ids: Option<&[RepositoryId]>,
         abandoned_timestamp: Timestamp,
     ) -> Result<Vec<RequestId>> {
-        let rows = FindAbandonedRequests::query(
-            &self.connections.write_connection,
-            &abandoned_timestamp,
-            repo_ids,
-        )
-        .await?;
+        let rows = match repo_ids {
+            Some(repos) => {
+                FindAbandonedRequestsForRepos::query(
+                    &self.connections.write_connection,
+                    &abandoned_timestamp,
+                    repos,
+                )
+                .await
+            }
+            None => {
+                FindAbandonedRequestsForAnyRepo::query(
+                    &self.connections.write_connection,
+                    &abandoned_timestamp,
+                )
+                .await
+            }
+        }
+        .context("finding abandoned requests")?;
         Ok(rows.into_iter().map(|(id, ty)| RequestId(id, ty)).collect())
     }
 
@@ -738,7 +758,7 @@ mod test {
     async fn test_find_abandoned_requests(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let queue = SqlLongRunningRequestsQueue::with_sqlite_in_memory()?;
-        let repo_id = RepositoryId::new(0);
+        let repo_id = RepositoryId::new(1);
         let id = queue
             .add_request(
                 &ctx,
@@ -756,10 +776,38 @@ mod test {
         assert!(req.is_some());
 
         tokio::time::sleep(Duration::from_secs(3)).await;
+
+        let now = Timestamp::now();
+        let abandoned_timestamp = Timestamp::from_timestamp_secs(now.timestamp_seconds() - 1);
+        // Search in any repo
+        let abandoned = queue
+            .find_abandoned_requests(&ctx, None, abandoned_timestamp)
+            .await?;
+        assert_eq!(abandoned.len(), 1);
+        assert_eq!(abandoned[0].0, id);
+
+        // Search in the wrong repo
         let now = Timestamp::now();
         let abandoned_timestamp = Timestamp::from_timestamp_secs(now.timestamp_seconds() - 1);
         let abandoned = queue
-            .find_abandoned_requests(&ctx, &[repo_id], abandoned_timestamp)
+            .find_abandoned_requests(&ctx, Some(&[RepositoryId::new(1)]), abandoned_timestamp)
+            .await?;
+        assert_eq!(abandoned.len(), 1);
+        assert_eq!(abandoned[0].0, id);
+
+        // Search in a set of repos
+        let now = Timestamp::now();
+        let abandoned_timestamp = Timestamp::from_timestamp_secs(now.timestamp_seconds() - 1);
+        let abandoned = queue
+            .find_abandoned_requests(
+                &ctx,
+                Some(&[
+                    RepositoryId::new(1),
+                    RepositoryId::new(2),
+                    RepositoryId::new(5),
+                ]),
+                abandoned_timestamp,
+            )
             .await?;
         assert_eq!(abandoned.len(), 1);
         assert_eq!(abandoned[0].0, id);
@@ -772,7 +820,7 @@ mod test {
         assert!(updated);
         assert_eq!(
             queue
-                .find_abandoned_requests(&ctx, &[repo_id], abandoned_timestamp)
+                .find_abandoned_requests(&ctx, None, abandoned_timestamp)
                 .await?,
             vec![]
         );
@@ -827,7 +875,7 @@ mod test {
         let now = Timestamp::now();
         let abandoned_timestamp = Timestamp::from_timestamp_secs(now.timestamp_seconds() - 1);
         let abandoned = queue
-            .find_abandoned_requests(&ctx, &[repo_id], abandoned_timestamp)
+            .find_abandoned_requests(&ctx, Some(&[repo_id]), abandoned_timestamp)
             .await?;
         assert_eq!(abandoned.len(), 1);
         assert_eq!(abandoned[0].0, id);

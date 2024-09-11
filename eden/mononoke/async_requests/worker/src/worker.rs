@@ -157,10 +157,9 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
         try_stream! {
             'outer: loop {
                 let mut yielded = false;
-                for (repo_ids, queue) in &queues_with_repos {
+                for (_repo_ids, queue) in &queues_with_repos {
                     Self::cleanup_abandoned_requests(
                         &ctx,
-                        repo_ids,
                         queue,
                         abandoned_threshold_secs
                     ).await?;
@@ -187,7 +186,6 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
 
     async fn cleanup_abandoned_requests(
         ctx: &CoreContext,
-        repo_ids: &[RepositoryId],
         queue: &AsyncMethodRequestQueue,
         abandoned_threshold_secs: i64,
     ) -> Result<(), AsyncRequestsError> {
@@ -195,7 +193,7 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
         let abandoned_timestamp =
             Timestamp::from_timestamp_secs(now.timestamp_seconds() - abandoned_threshold_secs);
         let requests = queue
-            .find_abandoned_requests(ctx, repo_ids, abandoned_timestamp)
+            .find_abandoned_requests(ctx, None, abandoned_timestamp)
             .await?;
         if !requests.is_empty() {
             ctx.scuba().clone().log_with_msg(

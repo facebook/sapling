@@ -207,7 +207,7 @@ impl AsyncMethodRequestQueue {
     pub async fn find_abandoned_requests(
         &self,
         ctx: &CoreContext,
-        repo_ids: &[RepositoryId],
+        repo_ids: Option<&[RepositoryId]>,
         abandoned_timestamp: Timestamp,
     ) -> Result<Vec<RequestId>, AsyncRequestsError> {
         Ok(self
