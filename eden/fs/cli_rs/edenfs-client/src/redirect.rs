@@ -42,6 +42,7 @@ use util::path::absolute;
 use crate::checkout::CheckoutConfig;
 use crate::checkout::EdenFsCheckout;
 use crate::fsutil::forcefully_remove_dir_all;
+use crate::fsutil::remove_file;
 use crate::instance::EdenFsInstance;
 use crate::mounttable::read_mount_table;
 
@@ -820,6 +821,70 @@ If this path should not be deleted automatically, please reach out to 'EdenFS Wi
         is_deletable_path
     }
 
+    fn _handle_non_empty_dir(
+        &self,
+        checkout: &EdenFsCheckout,
+        force_remove: bool,
+        cli_name: &str,
+    ) -> Result<RepoPathDisposition> {
+        if force_remove || self._is_deletable_path(&self.repo_path) {
+            println!(
+                "Redirection path found to be a non-empty directory. Attempting to remove this directory and its content."
+            );
+            match forcefully_remove_dir_all(&self.expand_repo_path(checkout)) {
+                Ok(_) => Ok(RepoPathDisposition::DoesNotExist),
+                Err(e) => {
+                    println!("System error occured while removing directory: {}", e);
+                    Err(EdenFsError::Other(anyhow!(
+                        "Failed to delete a non-empty directory (full path `{}`).
+This happens mostly when some of its files are in use by another process.
+To detect and kill such processes, follow https://fburl.com/edenfs-redirection-non-empty-directory.",
+                        self.expand_repo_path(checkout).display()
+                    )))
+                }
+            }
+        } else {
+            Err(EdenFsError::Other(anyhow!(
+                "A non-empty directory (full path `{}`) found. Either-
+- Try again after reviewing and manually deleting the directory, or 
+- Run `eden redirect {} --force` with relevant params (if any) to attempt inline deletion of the directory if none of its files are in use.",
+                self.expand_repo_path(checkout).display(),
+                cli_name
+            )))
+        }
+    }
+
+    fn _handle_file_repo_path(
+        &self,
+        checkout: &EdenFsCheckout,
+        force_remove: bool,
+        cli_name: &str,
+    ) -> Result<RepoPathDisposition> {
+        if force_remove || self._is_deletable_path(&self.repo_path) {
+            println!("Redirection path found to be a file. Attempting to remove this file.");
+            match remove_file(&self.expand_repo_path(checkout)) {
+                Ok(_) => Ok(RepoPathDisposition::DoesNotExist),
+                Err(e) => {
+                    println!("System error occured while removing file: {}", e);
+                    Err(EdenFsError::Other(anyhow!(
+                        "Failed to delete the file (full path `{}`).
+This happens mostly when the file is being used by another process.
+To detect and kill such processes, follow https://fburl.com/edenfs-redirection-non-empty-directory.",
+                        self.expand_repo_path(checkout).display()
+                    )))
+                }
+            }
+        } else {
+            Err(EdenFsError::Other(anyhow!(
+                "Redirection path found to be a file (full path `{}`). Either-
+- Try again after reviewing and manually deleting the file, or 
+- Run `eden redirect {} --force` with relevant params (if any) to attempt inline deletion of the file if it is not in use by another process.",
+                self.expand_repo_path(checkout).display(),
+                cli_name
+            )))
+        }
+    }
+
     #[async_recursion]
     pub async fn remove_existing(
         &self,
@@ -869,31 +934,11 @@ If this path should not be deleted automatically, please reach out to 'EdenFS Wi
         }
 
         if disposition == RepoPathDisposition::IsNonEmptyDir {
-            if force_remove || self._is_deletable_path(&self.repo_path) {
-                println!("Attempting to forcefully remove the directory.");
-                match forcefully_remove_dir_all(&self.expand_repo_path(checkout)) {
-                    Ok(_) => {
-                        return Ok(RepoPathDisposition::DoesNotExist);
-                    }
-                    Err(e) => {
-                        println!("System error occured while removing directory: {}", e);
-                        return Err(EdenFsError::Other(anyhow!(
-                            "Failed to delete a non-empty directory (full path `{}`).
- This happens mostly when some of its files are in use by another process.
- To detect and kill such processes, follow https://fburl.com/edenfs-redirection-non-empty-directory.",
-                            self.expand_repo_path(checkout).display()
-                        )));
-                    }
-                }
-            } else {
-                return Err(EdenFsError::Other(anyhow!(
-                    "A non-empty directory (full path `{}`) found. Either-
-- Try again after reviewing and manually deleting the directory, or 
-- Use `eden redirect {} --force` with relevant params (if any) to attempt inline deletion of the directory if none of its files are in use.",
-                    self.expand_repo_path(checkout).display(),
-                    cli_name
-                )));
-            }
+            return self._handle_non_empty_dir(checkout, force_remove, cli_name);
+        }
+
+        if disposition == RepoPathDisposition::IsFile {
+            return self._handle_file_repo_path(checkout, force_remove, cli_name);
         }
 
         Ok(disposition)

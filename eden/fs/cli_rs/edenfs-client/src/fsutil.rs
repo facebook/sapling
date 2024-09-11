@@ -150,6 +150,14 @@ pub fn forcefully_remove_dir_all(directory: &Path) -> std::io::Result<()> {
     }
 }
 
+pub fn remove_file(path: &Path) -> std::io::Result<()> {
+    if !path.try_exists()? {
+        // Path doesn't exist, either as a result of a previous work or it never did, so we're done.
+        return Ok(());
+    }
+    fs::remove_file(path)
+}
+
 #[test]
 fn test_parse_handler_output_ignores_rubbish() {
     let output = "sdjkslfhslkfhsdlfkhs";
