@@ -74,7 +74,6 @@ mod into_response;
 mod metadata;
 mod methods;
 mod monitoring;
-mod scuba_common;
 mod scuba_params;
 mod scuba_response;
 mod source_control_impl;

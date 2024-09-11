@@ -5,13 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use faster_hex::hex_string;
 use scuba_ext::MononokeScubaSampleBuilder;
 use source_control as thrift;
 
 use crate::commit_id::CommitIdExt;
-use crate::scuba_common::hex;
-use crate::scuba_common::report_megarepo_target;
-use crate::scuba_common::Reported;
 
 /// A trait for logging a thrift `Response` struct to scuba.
 pub(crate) trait AddScubaResponse: Send + Sync {
@@ -69,7 +67,7 @@ impl AddScubaResponse for thrift::RepoPrepareCommitsResponse {}
 
 impl AddScubaResponse for thrift::RepoUploadFileContentResponse {
     fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
-        scuba.add("response_id", hex(&self.id));
+        scuba.add("response_id", hex_string(&self.id));
     }
 }
 
@@ -214,7 +212,6 @@ impl AddScubaResponse for thrift::MegarepoAddTargetPollResponse {
 impl AddScubaResponse for thrift::MegarepoAddTargetToken {
     fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("megarepo_token", self.id);
-        report_megarepo_target(&self.target, scuba, Reported::Response);
     }
 }
 
@@ -227,28 +224,24 @@ impl AddScubaResponse for thrift::MegarepoAddBranchingTargetPollResponse {
 impl AddScubaResponse for thrift::MegarepoAddBranchingTargetToken {
     fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("megarepo_token", self.id);
-        report_megarepo_target(&self.target, scuba, Reported::Response);
     }
 }
 
 impl AddScubaResponse for thrift::MegarepoChangeConfigToken {
     fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("megarepo_token", self.id);
-        report_megarepo_target(&self.target, scuba, Reported::Response);
     }
 }
 
 impl AddScubaResponse for thrift::MegarepoRemergeSourceToken {
     fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("megarepo_token", self.id);
-        report_megarepo_target(&self.target, scuba, Reported::Response);
     }
 }
 
 impl AddScubaResponse for thrift::MegarepoSyncChangesetToken {
     fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("megarepo_token", self.id);
-        report_megarepo_target(&self.target, scuba, Reported::Response);
     }
 }
 

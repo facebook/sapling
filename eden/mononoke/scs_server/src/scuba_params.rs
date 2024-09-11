@@ -7,15 +7,13 @@
 
 use std::collections::BTreeSet;
 
+use faster_hex::hex_string;
 use itertools::Itertools;
 use scuba_ext::MononokeScubaSampleBuilder;
 use scuba_ext::ScubaValue;
 use source_control as thrift;
 
 use crate::commit_id::CommitIdExt;
-use crate::scuba_common::hex;
-use crate::scuba_common::report_megarepo_target;
-use crate::scuba_common::Reported;
 
 /// To avoid logging very large numbers of commit ids to scuba, we limit
 /// requests that potentially involve unbounded numbers of commits to logging
@@ -504,7 +502,7 @@ impl AddScubaParams for thrift::FileInfoParams {}
 
 impl AddScubaParams for thrift::FileDiffParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
-        scuba.add("other_file", hex(&self.other_file_id));
+        scuba.add("other_file", hex_string(&self.other_file_id));
         scuba.add("param_format", self.format.to_string());
         scuba.add("param_context", self.context);
     }
@@ -536,53 +534,51 @@ impl AddScubaParams for thrift::CreateReposToken {}
 impl AddScubaParams for thrift::MegarepoAddTargetToken {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_megarepo_token", self.id);
-        report_megarepo_target(&self.target, scuba, Reported::Param);
     }
 }
 
 impl AddScubaParams for thrift::MegarepoAddBranchingTargetToken {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_megarepo_token", self.id);
-        report_megarepo_target(&self.target, scuba, Reported::Param);
     }
 }
 
 impl AddScubaParams for thrift::MegarepoChangeConfigToken {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_megarepo_token", self.id);
-        report_megarepo_target(&self.target, scuba, Reported::Param);
     }
 }
 
 impl AddScubaParams for thrift::MegarepoRemergeSourceToken {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_megarepo_token", self.id);
-        report_megarepo_target(&self.target, scuba, Reported::Param);
     }
 }
 
 impl AddScubaParams for thrift::MegarepoSyncChangesetToken {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_megarepo_token", self.id);
-        report_megarepo_target(&self.target, scuba, Reported::Param);
     }
 }
 
 impl AddScubaParams for thrift::MegarepoSyncChangesetParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_megarepo_source_name", self.source_name.clone());
-        scuba.add("param_megarepo_cs_id", hex(&self.cs_id));
-        report_megarepo_target(&self.target, scuba, Reported::Param);
+        scuba.add("param_megarepo_cs_id", hex_string(&self.cs_id));
+        report_megarepo_target(&self.target, scuba);
     }
 }
 
 impl AddScubaParams for thrift::MegarepoRemergeSourceParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_megarepo_source_name", self.source_name.clone());
-        scuba.add("param_megarepo_cs_id", hex(&self.cs_id));
-        scuba.add("param_megarepo_target_location", hex(&self.target_location));
+        scuba.add("param_megarepo_cs_id", hex_string(&self.cs_id));
+        scuba.add(
+            "param_megarepo_target_location",
+            hex_string(&self.target_location),
+        );
         scuba.add("param_megarepo_message", self.message.clone());
-        report_megarepo_target(&self.target, scuba, Reported::Param);
+        report_megarepo_target(&self.target, scuba);
     }
 }
 
@@ -590,8 +586,11 @@ impl AddScubaParams for thrift::MegarepoChangeTargetConfigParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_megarepo_version", self.new_version.clone());
         scuba.add("param_megarepo_message", self.message.clone());
-        scuba.add("param_megarepo_target_location", hex(&self.target_location));
-        report_megarepo_target(&self.target, scuba, Reported::Param);
+        scuba.add(
+            "param_megarepo_target_location",
+            hex_string(&self.target_location),
+        );
+        report_megarepo_target(&self.target, scuba);
     }
 }
 
@@ -602,27 +601,30 @@ impl AddScubaParams for thrift::MegarepoAddTargetParams {
             self.config_with_new_target.version.clone(),
         );
         scuba.add("param_megarepo_message", self.message.clone());
-        report_megarepo_target(&self.config_with_new_target.target, scuba, Reported::Param);
+        report_megarepo_target(&self.config_with_new_target.target, scuba);
     }
 }
 
 impl AddScubaParams for thrift::MegarepoAddBranchingTargetParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
-        scuba.add("param_megarepo_branching_point", hex(&self.branching_point));
-        report_megarepo_target(&self.target, scuba, Reported::Param);
+        scuba.add(
+            "param_megarepo_branching_point",
+            hex_string(&self.branching_point),
+        );
+        report_megarepo_target(&self.target, scuba);
     }
 }
 
 impl AddScubaParams for thrift::MegarepoAddConfigParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_megarepo_version", self.new_config.version.clone());
-        report_megarepo_target(&self.new_config.target, scuba, Reported::Param);
+        report_megarepo_target(&self.new_config.target, scuba);
     }
 }
 
 impl AddScubaParams for thrift::MegarepoReadConfigParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
-        report_megarepo_target(&self.target, scuba, Reported::Param);
+        report_megarepo_target(&self.target, scuba);
     }
 }
 
@@ -631,19 +633,22 @@ impl AddScubaParams for thrift::RepoUpdateSubmoduleExpansionParams {}
 
 impl AddScubaParams for thrift::RepoUploadNonBlobGitObjectParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
-        scuba.add("param_git_object_id", hex(&self.git_hash));
+        scuba.add("param_git_object_id", hex_string(&self.git_hash));
     }
 }
 
 impl AddScubaParams for thrift::CreateGitTreeParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
-        scuba.add("param_git_object_id", hex(&self.git_tree_hash));
+        scuba.add("param_git_object_id", hex_string(&self.git_tree_hash));
     }
 }
 
 impl AddScubaParams for thrift::CreateGitTagParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
-        scuba.add("param_tagged_changeset_id", hex(&self.target_changeset));
+        scuba.add(
+            "param_tagged_changeset_id",
+            hex_string(&self.target_changeset),
+        );
     }
 }
 
@@ -656,7 +661,7 @@ impl AddScubaParams for thrift::RepoStackGitBundleStoreParams {
 
 impl AddScubaParams for thrift::RepoUploadPackfileBaseItemParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
-        scuba.add("param_git_object_id", hex(&self.git_hash));
+        scuba.add("param_git_object_id", hex_string(&self.git_hash));
     }
 }
 
@@ -676,4 +681,12 @@ impl AddScubaParams for thrift::CloudWorkspaceSmartlogParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_workspace", self.workspace.name.clone());
     }
+}
+
+pub(crate) fn report_megarepo_target(
+    target: &thrift::MegarepoTarget,
+    scuba: &mut MononokeScubaSampleBuilder,
+) {
+    scuba.add("param_megarepo_target_bookmark", target.bookmark.clone());
+    scuba.add("param_megarepo_target_repo_id", target.repo_id);
 }
