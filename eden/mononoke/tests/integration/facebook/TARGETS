@@ -32,6 +32,7 @@ buck_filegroup(
     name = "facebook_test_fixtures",
     srcs = [
         "fb_library.sh",
+        "git_pushrebase/library-git-pushrebase.sh",
         "verify_integrity_mocked_diff_info.json",
     ],
 )
