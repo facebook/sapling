@@ -1,8 +1,7 @@
-
 #require no-eden
 
-
   $ configure modern
+  $ setconfig diff.git=1
 
   $ reinit () {
   >   newrepo
@@ -279,7 +278,7 @@ Special comments: "(removed)", "(copied from X)", "(renamed from X)"
   >     # A/Y = Y\n
   > EOS
 
-  $ hg log -p -G -r 'all()' --config diff.git=1 -T '{desc}\n'
+  $ hg log -p -G -r 'all()' -T '{desc}\n'
   o  C
   │  diff --git a/X1 b/X1
   │  deleted file mode 100644
@@ -320,7 +319,7 @@ Special comments: "(removed)", "(copied from X)", "(renamed from X)"
      +++ b/Y
      @@ -0,0 +1,1 @@
      +Y
-  
+
 Special comments: "X has date 1 0"
 
   $ newrepo
@@ -456,7 +455,7 @@ for documentation:
   │
   ~
 
-  $ hg log --config diff.git=true -T '{desc}\n' -p -r 'desc(debug)'
+  $ hg log -T '{desc}\n' -p -r 'desc(debug)'
   debug
   diff --git a/1 b/1
   new file mode 100644
@@ -505,3 +504,33 @@ Support binary, base85 data and works for merge:
   30
   $ wc -c B
   20
+
+
+Can combine comment files with commit():
+  $ newrepo
+  $ drawdag << 'EOS'
+  > A  # A/comment = foo\n
+  > python:
+  > commit("A", "message", files={"python": "bar\n"})
+  > EOS
+  $ hg show $A
+  commit:      b501648cc37d
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       comment python
+  description:
+  message
+  
+  
+  diff --git a/comment b/comment
+  new file mode 100644
+  --- /dev/null
+  +++ b/comment
+  @@ -0,0 +1,1 @@
+  +foo
+  diff --git a/python b/python
+  new file mode 100644
+  --- /dev/null
+  +++ b/python
+  @@ -0,0 +1,1 @@
+  +bar
