@@ -113,6 +113,13 @@ pub struct RedactionConfig {
     pub redaction_sets_location: String,
 }
 
+/// Configuration for the async requests system
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct AsyncRequestsConfig {
+    /// The database used for the queue table
+    pub db_config: Option<DatabaseConfig>,
+}
+
 /// Configuration for all repos
 #[facet::facet]
 #[derive(Clone, Default, Debug, Eq, PartialEq)]
@@ -139,6 +146,8 @@ pub struct CommonConfig {
     pub git_memory_upper_bound: Option<u64>,
     /// Scuba table to dump edenapi requests to (for replay).
     pub edenapi_dumper_scuba_table: Option<String>,
+    /// Configuration for the async requests system.
+    pub async_requests_config: AsyncRequestsConfig,
 }
 
 /// Configuration for logging of censored blobstore accesses

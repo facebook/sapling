@@ -17,6 +17,7 @@ use anyhow::Context;
 use anyhow::Result;
 use cached_config::ConfigHandle;
 use cached_config::ConfigStore;
+use metaconfig_types::AsyncRequestsConfig;
 use metaconfig_types::BackupRepoConfig;
 use metaconfig_types::BlobConfig;
 use metaconfig_types::CensoredScubaParams;
@@ -490,6 +491,13 @@ fn parse_common_config(
         redaction_sets_location: redaction_config.redaction_sets_location,
     };
 
+    let async_requests_config = AsyncRequestsConfig {
+        db_config: match &common.async_requests_config {
+            Some(config) => Some(config.db_config.clone().convert()?),
+            None => None,
+        },
+    };
+
     Ok(CommonConfig {
         trusted_parties_hipster_tier,
         trusted_parties_allowlist,
@@ -501,6 +509,7 @@ fn parse_common_config(
         internal_identity,
         git_memory_upper_bound,
         edenapi_dumper_scuba_table,
+        async_requests_config,
     })
 }
 
@@ -1489,6 +1498,7 @@ mod test {
                 },
                 git_memory_upper_bound: Some(100),
                 edenapi_dumper_scuba_table: Some("dumped_requests".to_string()),
+                async_requests_config: AsyncRequestsConfig { db_config: None },
             }
         );
         assert_eq!(
