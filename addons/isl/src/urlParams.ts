@@ -17,6 +17,9 @@ const INITIAL_PARAMS_LOCAL_STORAGE_KEY = 'ISLInitialParams';
  */
 function computeInitialParams() {
   let initialParams: Map<InitialParamKeys, string> | undefined;
+  if (typeof window === 'undefined') {
+    return new Map();
+  }
   if (window.location.search) {
     initialParams = new Map([...new URLSearchParams(window.location.search).entries()]);
     logger.log('Loaded initial params from URL: ', initialParams);
