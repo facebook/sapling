@@ -6,7 +6,6 @@ oncall("mononoke")
 rust_binary(
     name = "git_server_push_poller",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"ignore_rule": True},
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:clap",
@@ -16,6 +15,6 @@ rust_binary(
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//common/rust/shed/slog_glog_fmt:slog_glog_fmt",
-        "//eden/mononoke/git_server/push_poller/lib/poller:poller",
+        "//eden/mononoke/facebook/git_server/push_poller/lib/poller:poller",
     ],
 )

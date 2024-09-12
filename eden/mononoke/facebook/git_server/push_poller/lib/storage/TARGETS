@@ -6,7 +6,6 @@ oncall("mononoke")
 rust_library(
     name = "storage",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"ignore_rule": True},
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:maplit",
@@ -16,6 +15,6 @@ rust_library(
         "//common/rust/shed/sql:sql_common",
         "//dba/rust/common/smc_models:smc_models",
         "//eden/mononoke/common/rust/sql_ext:sql_ext",
-        "//eden/mononoke/git_server/push_poller/lib/ephemeral_shard:ephemeral_shard",
+        "//eden/mononoke/facebook/git_server/push_poller/lib/ephemeral_shard:ephemeral_shard",
     ],
 )

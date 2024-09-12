@@ -248,7 +248,7 @@ tw.container(
             mononoke_fbpkg(
                 name = "mononoke.git_server_push_poller",
                 path_actions = {
-                    "git_server_push_poller": "//eden/mononoke/git_server/push_poller:git_server_push_poller",
+                    "git_server_push_poller": "//eden/mononoke/facebook/git_server/push_poller:git_server_push_poller",
                 },
             ),
         ),
