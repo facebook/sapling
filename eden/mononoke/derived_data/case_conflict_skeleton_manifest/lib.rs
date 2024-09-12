@@ -6,6 +6,8 @@
  */
 
 mod mapping;
+mod path;
 
 pub use mapping::format_key;
 pub use mapping::RootCaseConflictSkeletonManifestId;
+pub use path::CcsmPath;

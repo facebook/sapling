@@ -515,6 +515,11 @@ rust_library(
     name = "case_conflict_skeleton_manifest",
     srcs = glob(["case_conflict_skeleton_manifest/*.rs"]),
     autocargo = {"cargo_toml_dir": "case_conflict_skeleton_manifest"},
+    test_deps = [
+        "fbsource//third-party/rust:itertools",
+        "fbsource//third-party/rust:quickcheck",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",

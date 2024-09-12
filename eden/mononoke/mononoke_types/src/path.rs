@@ -381,6 +381,10 @@ impl MPath {
             .map(|(first, rest)| (first, Self::from_elements(rest.iter())))
     }
 
+    pub fn iter(&self) -> Iter<MPathElement> {
+        self.elements.iter()
+    }
+
     pub fn get_path_hash(&self) -> MPathHash {
         let mut context = MPathHashContext::new();
         let num_el = self.elements.len();
@@ -715,6 +719,10 @@ impl NonRootMPath {
             Some(path) => path.into_iter(),
             None => [].iter(),
         }
+    }
+
+    pub fn iter(&self) -> Iter<MPathElement> {
+        self.0.iter()
     }
 
     pub fn into_iter_opt(path: Option<Self>) -> ::std::vec::IntoIter<MPathElement> {
