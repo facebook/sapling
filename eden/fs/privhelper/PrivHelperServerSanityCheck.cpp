@@ -161,7 +161,7 @@ void PrivHelperServer::sanityCheckMountPoint(
   }
 
   struct stat st;
-  // Stat the mount point to determine it's status. If the error is type
+  // Stat the mount point to determine its status. If the error is type
   // ENOTCONN: The mount is hanging. We'll try to unmount it, but if
   // that fails, we'll just mount over it.
   // On any other error, we throw.
