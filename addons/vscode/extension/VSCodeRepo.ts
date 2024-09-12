@@ -80,6 +80,8 @@ export class VSCodeReposList {
             vscodeRepo.dispose();
             this.vscodeRepos.delete(root);
           });
+
+          this.emitActiveRepos();
         }
       });
     }
@@ -111,6 +113,23 @@ export class VSCodeReposList {
       }
     }
     return undefined;
+  }
+
+  private emitActiveRepos() {
+    for (const cb of this.updateCallbacks) {
+      cb(Array.from(this.vscodeRepos.values()));
+    }
+  }
+
+  private updateCallbacks: Array<(repos: Array<VSCodeRepo>) => void> = [];
+  /** Subscribe to the list of active repositories */
+  public observeActiveRepos(cb: (repos: Array<VSCodeRepo>) => void): vscode.Disposable {
+    this.updateCallbacks.push(cb);
+    return {
+      dispose: () => {
+        this.updateCallbacks = this.updateCallbacks.filter(c => c !== cb);
+      },
+    };
   }
 
   public dispose() {
