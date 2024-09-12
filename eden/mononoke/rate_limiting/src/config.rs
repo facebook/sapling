@@ -55,7 +55,7 @@ impl TryFrom<rate_limiting_config::Target> for Target {
                     nonce: s.nonce,
                 }))
             }
-            rate_limiting_config::Target::main_client_id(i) => {
+            rate_limiting_config::Target::client_main_id(i) => {
                 Ok(Target::MainClientId(FromStr::from_str(&i)?))
             }
             _ => Err(anyhow!("Invalid target")),
