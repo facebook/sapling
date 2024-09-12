@@ -129,35 +129,53 @@ function getTheme(): ThemeColor {
 
 /**
  * VS Code has a bug where it will lose focus on webview elements (notably text areas) when tabbing out and back in.
- * To mitigate, we save the currently focused element on window blur, and refocus it on window focus.
+ * To mitigate, we save the currently focused element as elements are focused, and refocus it on window focus.
+ * We limit this to text areas, as in some cases it seems certain keypresses are passed through
+ * if ISL is visible with a modal input above it, and we don't want to accidentally click buttons.
  */
-let lastTextAreaBeforeBlur: HTMLElement | null = null;
+
+let lastFocused: HTMLElement | null = null;
 
 const handleWindowFocus = () => {
-  const lastTextArea = lastTextAreaBeforeBlur;
-  lastTextArea?.focus?.();
-};
-const handleWindowBlur = () => {
-  if (document.activeElement == document.body) {
-    // Blur can get called with document.body as document.activeElement after focusing an inner element.
-    // Ignore these, as refocusing document.body is not useful.
-    return;
-  }
-  // Save the last thing that had focus, which is focusable
-  if (
-    document.activeElement == null ||
-    (document.activeElement as HTMLElement | null)?.focus != null
-  ) {
-    lastTextAreaBeforeBlur = document.activeElement as HTMLElement | null;
+  const lastTextArea = lastFocused;
+  if (isTextInputToPreserveFocusFor(lastTextArea)) {
+    lastTextArea?.focus?.({preventScroll: true});
   }
 };
+
+const handleDocFocus = (e: FocusEvent) => {
+  // Note: we don't clear this in document's blur. This means you could blur the element,
+  // then blur and refocus the window, and refocus the previous element.
+  // This is weird, but preferred to losing focus.
+  lastFocused = e.target as HTMLElement;
+};
+
+// window focus is when we may need to refocus a previously focused element
 window.addEventListener('focus', handleWindowFocus);
-window.addEventListener('blur', handleWindowBlur);
+// document focus change lets us track what element needs to be refocused.
+document.addEventListener('focus', handleDocFocus, {capture: true});
+
 registerCleanup(
   vscodeWebviewPlatform,
   () => {
     window.removeEventListener('focus', handleWindowFocus);
-    window.removeEventListener('blur', handleWindowBlur);
+    document.removeEventListener('focus', handleDocFocus);
   },
   import.meta.hot,
 );
+
+function isTextInputToPreserveFocusFor(el: Element | null) {
+  if (el == null) {
+    return false;
+  }
+  if (el.tagName === 'INPUT') {
+    const input = el as HTMLInputElement;
+    // Don't preserve focus for non-text elements (they may get interacted unexpectedly).
+    // Also skip for quick commit title, which might cause a quick commit if the Enter key is sent
+    return input.type === 'text' && input.dataset.testId !== 'quick-commit-title';
+  }
+  if (el.tagName === 'TEXTAREA') {
+    return true;
+  }
+  return false;
+}
