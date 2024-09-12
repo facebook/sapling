@@ -15,6 +15,13 @@
   font-size: var(--editor-font-size);
 }
 
+.modal .edit-stack-modal-contents {
+  --split-vertical-overhead: 210px;
+}
+.modal .split-single-commit-modal-contents {
+  --split-vertical-overhead: 150px;
+}
+
 .split-commit-column {
   margin-inline: var(--pad);
   background-color: var(--tooltip-background);

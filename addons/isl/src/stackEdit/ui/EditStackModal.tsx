@@ -74,7 +74,7 @@ export function MaybeEditStackModal() {
 /** A Modal for dedicated split UI. Subset of `LoadedEditStackModal`. */
 function LoadedSplitModal() {
   return (
-    <Modal dataTestId="interactive-split-modal">
+    <Modal dataTestId="interactive-split-modal" className="split-single-commit-modal-contents">
       <SplitStackEditPanel />
       <Row style={{padding: 'var(--pad) 0', justifyContent: 'flex-end', zIndex: 1}}>
         <StackEditConfirmButtons />
@@ -110,7 +110,7 @@ function LoadedEditStackModal() {
   const [activeTab, setActiveTab] = useState<Tab>('commits');
 
   return (
-    <Modal>
+    <Modal className="edit-stack-modal-contents">
       <Panels
         active={activeTab}
         panels={panels}
