@@ -59,7 +59,7 @@ impl From<ManifoldArgs> for ManifoldOptions {
     }
 }
 
-pub fn make_manifold_blobstore(
+pub fn make_manifold_blobstore_enumerable_with_unlink(
     fb: FacebookInit,
     prefix: &str,
     bucket: &str,

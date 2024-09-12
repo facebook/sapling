@@ -381,7 +381,7 @@ pub async fn make_packblob<'a>(
 }
 
 #[cfg(fbcode_build)]
-pub async fn make_manifold_blobstore(
+pub async fn make_manifold_blobstore_enumerable_with_unlink(
     fb: FacebookInit,
     blobconfig: BlobConfig,
     blobstore_options: &BlobstoreOptions,
@@ -396,7 +396,7 @@ pub async fn make_manifold_blobstore(
         } => (bucket, prefix, Some(ttl)),
         _ => bail!("Not a Manifold blobstore"),
     };
-    crate::facebook::make_manifold_blobstore(
+    crate::facebook::make_manifold_blobstore_enumerable_with_unlink(
         fb,
         &prefix,
         &bucket,
@@ -407,7 +407,7 @@ pub async fn make_manifold_blobstore(
 }
 
 #[cfg(not(fbcode_build))]
-pub async fn make_manifold_blobstore(
+pub async fn make_manifold_blobstore_enumerable_with_unlink(
     _fb: FacebookInit,
     _blobconfig: BlobConfig,
     _blobstore_options: &BlobstoreOptions,
@@ -448,7 +448,7 @@ async fn make_physical_blobstore_unlink_ops<'a>(
         .await
         .map(|store| Arc::new(store) as Arc<dyn BlobstoreUnlinkOps>),
         Manifold { .. } | ManifoldWithTtl { .. } => {
-            make_manifold_blobstore(fb, blobconfig, blobstore_options)
+            make_manifold_blobstore_enumerable_with_unlink(fb, blobconfig, blobstore_options)
                 .watched(logger)
                 .await
                 .map(|store| Arc::new(store) as Arc<dyn BlobstoreUnlinkOps>)
@@ -512,7 +512,7 @@ pub async fn raw_blobstore_enumerable_with_unlink<'a>(
     use BlobConfig::*;
     match blobconfig {
         Manifold { .. } | ManifoldWithTtl { .. } => {
-            make_manifold_blobstore(fb, blobconfig, blobstore_options)
+            make_manifold_blobstore_enumerable_with_unlink(fb, blobconfig, blobstore_options)
                 .watched(logger)
                 .await
         }
