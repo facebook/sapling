@@ -85,7 +85,9 @@ export function DraggingOverlay(props: DraggingOverlayProps) {
         </div>
         {hint != null && (
           <div {...stylex.props(styles.hint)}>
-            <span className="tooltip">{hint}</span>
+            <span className="tooltip" style={{height: 'fit-content'}}>
+              {hint}
+            </span>
           </div>
         )}
       </div>
