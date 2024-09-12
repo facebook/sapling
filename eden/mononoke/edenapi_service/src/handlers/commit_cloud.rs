@@ -37,6 +37,7 @@ use edenapi_types::WorkspacesDataResponse;
 use futures::stream;
 use futures::FutureExt;
 use futures::StreamExt;
+use mononoke_api::MononokeError;
 use mononoke_api::MononokeRepo;
 use mononoke_api::Repo;
 use mononoke_api_hg::HgRepoContext;
@@ -170,7 +171,16 @@ async fn get_references<R: MononokeRepo>(
         .await;
     let res = match cc_res {
         Ok(res) => Ok(ReferencesData::from_cc_type(res)?),
-        Err(e) => Err(e),
+        Err(e) => {
+            match e {
+                MononokeError::InternalError(ref e) => repo.ctx().scuba().clone().log_with_msg(
+                    "commit cloud: 'get references' returned internal error",
+                    Some(e.to_string()),
+                ),
+                _ => (),
+            };
+            Err(e)
+        }
     };
     Ok(ReferencesDataResponse {
         data: res.map_err(ServerError::from),
@@ -204,7 +214,16 @@ async fn update_references<R: MononokeRepo>(
     let cc_res = repo.cloud_update_references(&cc_params).await;
     let res = match cc_res {
         Ok(res) => Ok(ReferencesData::from_cc_type(res)?),
-        Err(e) => Err(e),
+        Err(e) => {
+            match e {
+                MononokeError::InternalError(ref e) => repo.ctx().scuba().clone().log_with_msg(
+                    "commit cloud: 'update references' returned internal error",
+                    Some(e.to_string()),
+                ),
+                _ => (),
+            };
+            Err(e)
+        }
     };
     Ok(ReferencesDataResponse {
         data: res.map_err(ServerError::from),

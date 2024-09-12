@@ -151,33 +151,37 @@ impl CommitCloud {
         &self,
         cc_ctx: &CommitCloudContext,
         version: u64,
-    ) -> anyhow::Result<ReferencesData> {
+    ) -> Result<ReferencesData, CommitCloudError> {
         let base_version = version;
 
         let mut latest_version: u64 = 0;
         let mut version_timestamp: i64 = 0;
         let maybeworkspace =
             WorkspaceVersion::fetch_from_db(&self.storage, &cc_ctx.workspace, &cc_ctx.reponame)
-                .await?;
+                .await
+                .map_err(CommitCloudInternalError::Error)?;
         if let Some(workspace_version) = maybeworkspace {
             latest_version = workspace_version.version;
             version_timestamp = workspace_version.timestamp.timestamp_seconds();
         }
 
-        ensure!(
-            base_version <= latest_version,
-            if latest_version == 0 {
-                format!(
-                    "'get_references' failed: workspace {} has been removed or renamed",
-                    cc_ctx.workspace.clone()
-                )
-            } else {
-                format!(
-                    "'get_references' failed: base version {} is greater than latest version {}",
-                    base_version, latest_version
-                )
-            }
-        );
+        if base_version > latest_version && latest_version == 0 {
+            return Err(CommitCloudUserError::WorkspaceWasRemoved(
+                cc_ctx.workspace.clone(),
+                cc_ctx.reponame.clone(),
+            )
+            .into());
+        }
+
+        if base_version > latest_version {
+            return Err(CommitCloudUserError::InvalidVersions(
+                base_version,
+                latest_version,
+                cc_ctx.workspace.clone(),
+                cc_ctx.reponame.clone(),
+            )
+            .into());
+        }
 
         if base_version == latest_version {
             return Ok(ReferencesData {
@@ -191,7 +195,9 @@ impl CommitCloud {
             });
         }
 
-        let raw_references_data = fetch_references(cc_ctx, &self.storage).await?;
+        let raw_references_data = fetch_references(cc_ctx, &self.storage)
+            .await
+            .map_err(CommitCloudInternalError::Error)?;
 
         let references_data = cast_references_data(
             raw_references_data,
@@ -201,7 +207,8 @@ impl CommitCloud {
             self.repo_derived_data.clone(),
             &self.ctx,
         )
-        .await?;
+        .await
+        .map_err(CommitCloudInternalError::Error)?;
 
         Ok(references_data)
     }
@@ -210,19 +217,22 @@ impl CommitCloud {
         &self,
         cc_ctx: &CommitCloudContext,
         params: &UpdateReferencesParams,
-    ) -> anyhow::Result<ReferencesData> {
+    ) -> Result<ReferencesData, CommitCloudError> {
         let mut latest_version: u64 = 0;
         let mut version_timestamp: i64 = 0;
 
         let maybeworkspace =
             WorkspaceVersion::fetch_from_db(&self.storage, &cc_ctx.workspace, &cc_ctx.reponame)
-                .await?;
+                .await
+                .map_err(CommitCloudInternalError::Error)?;
 
         if let Some(workspace_version) = maybeworkspace {
             latest_version = workspace_version.version;
             version_timestamp = workspace_version.timestamp.timestamp_seconds();
         }
-        let raw_references_data = fetch_references(cc_ctx, &self.storage).await?;
+        let raw_references_data = fetch_references(cc_ctx, &self.storage)
+            .await
+            .map_err(CommitCloudInternalError::Error)?;
         if params.version < latest_version {
             return cast_references_data(
                 raw_references_data,
@@ -232,7 +242,8 @@ impl CommitCloud {
                 self.repo_derived_data.clone(),
                 &self.ctx,
             )
-            .await;
+            .await
+            .map_err(CommitCloudError::internal_error);
         }
 
         let mut txn = self
@@ -240,7 +251,8 @@ impl CommitCloud {
             .connections
             .write_connection
             .start_transaction()
-            .await?;
+            .await
+            .map_err(CommitCloudInternalError::Error)?;
         let cri = self.ctx.client_request_info();
 
         let initiate_workspace = params.version == 0
@@ -252,7 +264,9 @@ impl CommitCloud {
                     .is_some_and(|x| !x.is_empty()));
 
         if !initiate_workspace {
-            txn = update_references_data(&self.storage, txn, cri, params.clone(), cc_ctx).await?;
+            txn = update_references_data(&self.storage, txn, cri, params.clone(), cc_ctx)
+                .await
+                .map_err(CommitCloudInternalError::Error)?;
         }
 
         let new_version_timestamp = Timestamp::now();
@@ -274,7 +288,8 @@ impl CommitCloud {
                 cc_ctx.workspace.clone(),
                 args.clone(),
             )
-            .await?;
+            .await
+            .map_err(CommitCloudInternalError::Error)?;
 
         let history_entry = WorkspaceHistory::from_references(
             raw_references_data,
@@ -291,14 +306,18 @@ impl CommitCloud {
                 cc_ctx.workspace.clone(),
                 history_entry,
             )
-            .await?;
+            .await
+            .map_err(CommitCloudInternalError::Error)?;
 
-        txn.commit().await?;
+        txn.commit()
+            .await
+            .map_err(CommitCloudInternalError::Error)?;
 
         #[cfg(fbcode_build)]
         if !self.config.disable_interngraph_notification && !initiate_workspace {
             let notification =
                 NotificationData::from_update_references_params(params.clone(), new_version);
+
             let (stats, res) = publish_single_update(
                 notification,
                 &cc_ctx.workspace.clone(),
@@ -307,6 +326,7 @@ impl CommitCloud {
             )
             .timed()
             .await;
+
             self.ctx
                 .scuba()
                 .clone()
@@ -315,10 +335,13 @@ impl CommitCloud {
                     "commit cloud: sent interngraph notification",
                     format!(
                         "For workspace {} in repo {} with response {}",
-                        cc_ctx.workspace, cc_ctx.reponame, res?
+                        cc_ctx.workspace,
+                        cc_ctx.reponame,
+                        res.map_err(CommitCloudInternalError::Error)?
                     ),
                 );
         }
+
         Ok(ReferencesData {
             version: new_version,
             heads: None,
