@@ -283,7 +283,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         } else {
             None
         };
-        source_control_impl::SourceControlServiceImpl::new(
+        runtime.block_on(source_control_impl::SourceControlServiceImpl::new(
             fb,
             &app,
             mononoke.clone(),
@@ -295,7 +295,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             app.configs(),
             &app.repo_configs().common,
             maybe_factory_group,
-        )
+        ))?
     };
 
     let monitoring_forever = {

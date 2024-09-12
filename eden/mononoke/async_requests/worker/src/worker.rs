@@ -18,6 +18,8 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
 
+use anyhow::Context;
+use anyhow::Error;
 use async_requests::types::AsynchronousRequestParams;
 use async_requests::types::IntoConfigFormat;
 use async_requests::AsyncMethodRequestQueue;
@@ -28,6 +30,7 @@ use async_stream::try_stream;
 use client::AsyncRequestsQueue;
 use cloned::cloned;
 use context::CoreContext;
+use fbinit::FacebookInit;
 use futures::future::abortable;
 use futures::future::select;
 use futures::future::Either;
@@ -66,18 +69,21 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
     /// The name argument should uniquely identify tailer instance and will be put
     /// in the queue table so it's possible to find out which instance is working on
     /// a given task (for debugging purposes).
-    pub fn new(
+    pub async fn new(
+        fb: FacebookInit,
         app: &MononokeApp,
         mononoke: Arc<Mononoke<R>>,
         megarepo: Arc<MegarepoApi<R>>,
         name: String,
-    ) -> Self {
-        let queues_client = AsyncRequestsQueue::new(app, mononoke);
-        Self {
+    ) -> Result<Self, Error> {
+        let queues_client = AsyncRequestsQueue::new(fb, app, mononoke)
+            .await
+            .context("acquiring the async requests queue")?;
+        Ok(Self {
             megarepo,
             name,
             queues_client,
-        }
+        })
     }
 
     /// Start async request worker.

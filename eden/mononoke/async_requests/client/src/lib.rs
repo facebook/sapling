@@ -18,6 +18,7 @@ use async_requests::AsyncMethodRequestQueue;
 use async_requests::AsyncRequestsError;
 use blobstore::Blobstore;
 use context::CoreContext;
+use fbinit::FacebookInit;
 use futures::future::try_join_all;
 use megarepo_config::Target;
 use metaconfig_types::ArcRepoConfig;
@@ -29,15 +30,18 @@ use mononoke_app::MononokeApp;
 use mononoke_types::RepositoryId;
 use parking_lot::Mutex;
 use repo_blobstore::RepoBlobstoreArc;
-use repo_factory::RepoFactory;
 use repo_identity::ArcRepoIdentity;
 use repo_identity::RepoIdentityArc;
 use repo_identity::RepoIdentityRef;
-use requests_table::ArcLongRunningRequestsQueue;
 use requests_table::LongRunningRequestsQueue;
 use requests_table::SqlLongRunningRequestsQueue;
 use slog::info;
 use slog::warn;
+use sql_construct::SqlConstructFromDatabaseConfig;
+use sql_ext::facebook::MysqlOptions;
+
+// XXX keep using the traditional repo to find the dbconfig. We will move this to a more specific config soon.
+const ASYNC_REQUESTS_REPO: &str = "aosp";
 
 /// A cache for AsyncMethodRequestQueue instances
 #[derive(Clone)]
@@ -80,9 +84,9 @@ impl<K: Clone + Eq + Hash, V: Clone> Cache<K, V> {
 
 #[derive(Clone)]
 pub struct AsyncRequestsQueue<R> {
+    sql_connection: Arc<dyn LongRunningRequestsQueue>,
     queue_cache: Cache<ArcRepoIdentity, AsyncMethodRequestQueue>,
     mononoke: Arc<Mononoke<R>>,
-    repo_factory: Arc<RepoFactory>,
 }
 
 impl<R: MononokeRepo> AsyncRequestsQueue<R> {
@@ -90,12 +94,50 @@ impl<R: MononokeRepo> AsyncRequestsQueue<R> {
     /// The name argument should uniquely identify tailer instance and will be put
     /// in the queue table so it's possible to find out which instance is working on
     /// a given task (for debugging purposes).
-    pub fn new(app: &MononokeApp, mononoke: Arc<Mononoke<R>>) -> Self {
-        Self {
+    pub async fn new(
+        fb: FacebookInit,
+        app: &MononokeApp,
+        mononoke: Arc<Mononoke<R>>,
+    ) -> Result<Self, AsyncRequestsError> {
+        let config = app.repo_configs().common.async_requests_config.clone();
+        let sql_connection = match config.db_config {
+            Some(config) => {
+                info!(
+                    app.logger(),
+                    "Initializing async_requests with an explicit config"
+                );
+                SqlLongRunningRequestsQueue::with_database_config(
+                    fb,
+                    &config,
+                    &MysqlOptions::default(),
+                    false,
+                )?
+            }
+            None => {
+                let repo_factory = app.repo_factory().clone();
+                let repo = mononoke.raw_repo(ASYNC_REQUESTS_REPO).ok_or_else(|| {
+                    AsyncRequestsError::internal(anyhow!(
+                        "could not find the default repo for async requests",
+                    ))
+                })?;
+                let repo_config = repo.repo_config_arc();
+                warn!(
+                    app.logger(),
+                    "Initializing async_requests falling back to the repo config for {}",
+                    ASYNC_REQUESTS_REPO,
+                );
+                let sql_factory = repo_factory
+                    .sql_factory(&repo_config.storage_config.metadata)
+                    .await?;
+                sql_factory.open::<SqlLongRunningRequestsQueue>().await?
+            }
+        };
+
+        Ok(Self {
+            sql_connection: Arc::new(sql_connection),
             queue_cache: Cache::new(),
             mononoke,
-            repo_factory: app.repo_factory().clone(),
-        }
+        })
     }
 
     /// Get an `AsyncMethodRequestQueue` for a given target
@@ -112,16 +154,18 @@ impl<R: MononokeRepo> AsyncRequestsQueue<R> {
     /// Get an `AsyncMethodRequestQueue` for a given repo
     pub async fn async_method_request_queue_for_repo(
         &self,
-        ctx: &CoreContext,
+        _ctx: &CoreContext,
         repo_identity: &ArcRepoIdentity,
-        repo_config: &ArcRepoConfig,
+        _repo_config: &ArcRepoConfig,
     ) -> Result<AsyncMethodRequestQueue, AsyncRequestsError> {
         let queue = self
             .queue_cache
             .get_or_try_init(&repo_identity.clone(), || async move {
-                let table = self.requests_table(ctx, repo_identity, repo_config).await?;
                 let blobstore = self.blobstore(repo_identity.clone()).await?;
-                Ok(AsyncMethodRequestQueue::new(table, blobstore))
+                Ok(AsyncMethodRequestQueue::new(
+                    self.sql_connection.clone(),
+                    blobstore,
+                ))
             })
             .await?;
         Ok(queue)
@@ -154,29 +198,6 @@ impl<R: MononokeRepo> AsyncRequestsQueue<R> {
         Ok(queues)
     }
 
-    /// Build an instance of `LongRunningRequestsQueue` to be embedded
-    /// into `AsyncMethodRequestQueue`.
-    async fn requests_table(
-        &self,
-        ctx: &CoreContext,
-        repo_identity: &ArcRepoIdentity,
-        repo_config: &ArcRepoConfig,
-    ) -> Result<Arc<dyn LongRunningRequestsQueue>, Error> {
-        info!(
-            ctx.logger(),
-            "Opening a long_running_requests_queue table for {}",
-            repo_identity.name()
-        );
-        let table = self.long_running_requests_queue(repo_config).await?;
-        info!(
-            ctx.logger(),
-            "Done opening a long_running_requests_queue table for {}",
-            repo_identity.name()
-        );
-
-        Ok(table)
-    }
-
     /// Get Mononoke repo config and identity by a target
     async fn target_repo_config_and_id(
         &self,
@@ -206,17 +227,5 @@ impl<R: MononokeRepo> AsyncRequestsQueue<R> {
                 AsyncRequestsError::request(anyhow!("repo not found {}", repo_identity.name()))
             })?;
         Ok(repo.repo_blobstore_arc())
-    }
-
-    pub async fn long_running_requests_queue(
-        &self,
-        repo_config: &ArcRepoConfig,
-    ) -> Result<ArcLongRunningRequestsQueue, Error> {
-        let sql_factory = self
-            .repo_factory
-            .sql_factory(&repo_config.storage_config.metadata)
-            .await?;
-        let long_running_requests_queue = sql_factory.open::<SqlLongRunningRequestsQueue>().await?;
-        Ok(Arc::new(long_running_requests_queue))
     }
 }

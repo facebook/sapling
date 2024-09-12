@@ -752,6 +752,12 @@ CONFIG
   fi
 
   cat >> common/common.toml <<CONFIG
+[async_requests_config.db_config.local]
+local_db_path="$TESTTMP/monsql"
+
+CONFIG
+
+  cat >> common/common.toml <<CONFIG
 [internal_identity]
 identity_type = "SERVICE_IDENTITY"
 identity_data = "proxy"

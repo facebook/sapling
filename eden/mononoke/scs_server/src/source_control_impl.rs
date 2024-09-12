@@ -122,7 +122,7 @@ pub(crate) struct SourceControlServiceImpl {
 pub(crate) struct SourceControlServiceThriftImpl(Arc<SourceControlServiceImpl>);
 
 impl SourceControlServiceImpl {
-    pub fn new(
+    pub async fn new(
         fb: FacebookInit,
         app: &MononokeApp,
         mononoke: Arc<Mononoke<Repo>>,
@@ -134,10 +134,10 @@ impl SourceControlServiceImpl {
         configs: Arc<MononokeConfigs>,
         common_config: &CommonConfig,
         factory_group: Option<Arc<FactoryGroup<2>>>,
-    ) -> Self {
+    ) -> Result<Self, anyhow::Error> {
         scuba_builder.add_common_server_data();
 
-        Self {
+        Ok(Self {
             fb,
             mononoke: mononoke.clone(),
             megarepo_api,
@@ -151,9 +151,9 @@ impl SourceControlServiceImpl {
             configs,
             identity_proxy_checker: Arc::new(identity_proxy_checker),
             factory_group,
-            queues_client: Arc::new(AsyncRequestsQueue::new(app, mononoke)),
+            queues_client: Arc::new(AsyncRequestsQueue::new(fb, app, mononoke).await?),
             acl_provider: app.environment().acl_provider.clone(),
-        }
+        })
     }
 
     pub(crate) fn thrift_server(&self) -> SourceControlServiceThriftImpl {
