@@ -131,7 +131,10 @@ impl Metadata {
         self.client_info.as_mut().map(|x| {
             x.request_info.as_mut().map(|client_request_info| {
                 if !client_request_info.has_main_id() {
-                    client_request_info.set_main_id(self.identities.main_client_identity())
+                    client_request_info.set_main_id(
+                        self.identities
+                            .main_client_identity(x.fb.sandcastle_alias()),
+                    )
                 }
             })
         });

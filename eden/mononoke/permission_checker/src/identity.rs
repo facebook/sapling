@@ -98,7 +98,7 @@ pub trait MononokeIdentitySetExt {
 
     fn username(&self) -> Option<&str>;
     fn identity_type_filtered_concat(&self, id_type: &str) -> Option<String>;
-    fn main_client_identity(&self) -> String;
+    fn main_client_identity(&self, sandcastle_alias: Option<&str>) -> String;
 
     fn to_string(&self) -> String;
 }
