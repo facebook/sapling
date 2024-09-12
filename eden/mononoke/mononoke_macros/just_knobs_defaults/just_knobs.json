@@ -1,5 +1,7 @@
 {
   "bools": {
+    "scm/mononoke:async_requests_from_common_config": true,
+    "scm/mononoke:async_requests_legacy_config": false,
     "scm/mononoke:backsync_submodule_expansion_changes": true,
     "scm/mononoke:bssm_enable_optimized_derivation": false,
     "scm/mononoke:cross_repo_skip_backsyncing_ordinary_empty_commits": false,

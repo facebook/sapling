@@ -98,46 +98,69 @@ impl<R: MononokeRepo> AsyncRequestsQueue<R> {
         fb: FacebookInit,
         app: &MononokeApp,
         mononoke: Arc<Mononoke<R>>,
-    ) -> Result<Self, AsyncRequestsError> {
-        let config = app.repo_configs().common.async_requests_config.clone();
-        let sql_connection = match config.db_config {
-            Some(config) => {
-                info!(
-                    app.logger(),
-                    "Initializing async_requests with an explicit config"
-                );
-                SqlLongRunningRequestsQueue::with_database_config(
-                    fb,
-                    &config,
-                    &MysqlOptions::default(),
-                    false,
-                )?
-            }
-            None => {
-                let repo_factory = app.repo_factory().clone();
-                let repo = mononoke.raw_repo(ASYNC_REQUESTS_REPO).ok_or_else(|| {
-                    AsyncRequestsError::internal(anyhow!(
-                        "could not find the default repo for async requests",
-                    ))
-                })?;
-                let repo_config = repo.repo_config_arc();
-                warn!(
-                    app.logger(),
-                    "Initializing async_requests falling back to the repo config for {}",
-                    ASYNC_REQUESTS_REPO,
-                );
-                let sql_factory = repo_factory
-                    .sql_factory(&repo_config.storage_config.metadata)
-                    .await?;
-                sql_factory.open::<SqlLongRunningRequestsQueue>().await?
-            }
-        };
+    ) -> Result<Self, Error> {
+        let sql_connection = Self::open_sql_connection(fb, app, &mononoke).await?;
 
         Ok(Self {
             sql_connection: Arc::new(sql_connection),
             queue_cache: Cache::new(),
             mononoke,
         })
+    }
+
+    async fn open_sql_connection(
+        fb: FacebookInit,
+        app: &MononokeApp,
+        mononoke: &Arc<Mononoke<R>>,
+    ) -> Result<SqlLongRunningRequestsQueue, Error> {
+        let use_common_config =
+            justknobs::eval("scm/mononoke:async_requests_from_common_config", None, None)
+                .unwrap_or(false);
+        let use_legacy_config =
+            justknobs::eval("scm/mononoke:async_requests_legacy_config", None, None)
+                .unwrap_or(true);
+
+        let config = app.repo_configs().common.async_requests_config.clone();
+        if use_common_config {
+            if let Some(config) = config.db_config {
+                info!(
+                    app.logger(),
+                    "Initializing async_requests with an explicit config"
+                );
+                return SqlLongRunningRequestsQueue::with_database_config(
+                    fb,
+                    &config,
+                    &MysqlOptions::default(),
+                    false,
+                );
+            } else {
+                warn!(
+                    app.logger(),
+                    "No db config found in common config; falling back to repo config"
+                );
+            }
+        }
+
+        if use_legacy_config {
+            let repo_factory = app.repo_factory().clone();
+            let repo = mononoke.raw_repo(ASYNC_REQUESTS_REPO).ok_or_else(|| {
+                AsyncRequestsError::internal(anyhow!(
+                    "could not find the default repo for async requests",
+                ))
+            })?;
+            let repo_config = repo.repo_config_arc();
+            warn!(
+                app.logger(),
+                "Initializing async_requests falling back to the repo config for {}",
+                ASYNC_REQUESTS_REPO,
+            );
+            let sql_factory = repo_factory
+                .sql_factory(&repo_config.storage_config.metadata)
+                .await?;
+            return sql_factory.open::<SqlLongRunningRequestsQueue>().await;
+        }
+
+        bail!("No db config found in common config and legacy config is disabled")
     }
 
     /// Get an `AsyncMethodRequestQueue` for a given target
