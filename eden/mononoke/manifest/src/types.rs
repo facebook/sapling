@@ -9,10 +9,6 @@ use std::hash::Hash;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::Blobstore;
-use blobstore::Loadable;
-use blobstore::LoadableError;
-use blobstore::Storable;
 use context::CoreContext;
 use either::Either;
 use futures::future;
@@ -174,45 +170,5 @@ impl<T, L> Entry<T, L> {
             Entry::Tree(_) => true,
             _ => false,
         }
-    }
-}
-
-#[async_trait]
-impl<T, L> Loadable for Entry<T, L>
-where
-    T: Loadable + Sync,
-    L: Loadable + Sync,
-{
-    type Value = Entry<T::Value, L::Value>;
-
-    async fn load<'a, B: Blobstore>(
-        &'a self,
-        ctx: &'a CoreContext,
-        blobstore: &'a B,
-    ) -> Result<Self::Value, LoadableError> {
-        Ok(match self {
-            Entry::Tree(tree_id) => Entry::Tree(tree_id.load(ctx, blobstore).await?),
-            Entry::Leaf(leaf_id) => Entry::Leaf(leaf_id.load(ctx, blobstore).await?),
-        })
-    }
-}
-
-#[async_trait]
-impl<T, L> Storable for Entry<T, L>
-where
-    T: Storable + Send,
-    L: Storable + Send,
-{
-    type Key = Entry<T::Key, L::Key>;
-
-    async fn store<'a, B: Blobstore>(
-        self,
-        ctx: &'a CoreContext,
-        blobstore: &'a B,
-    ) -> Result<Self::Key> {
-        Ok(match self {
-            Entry::Tree(tree) => Entry::Tree(tree.store(ctx, blobstore).await?),
-            Entry::Leaf(leaf) => Entry::Leaf(leaf.store(ctx, blobstore).await?),
-        })
     }
 }

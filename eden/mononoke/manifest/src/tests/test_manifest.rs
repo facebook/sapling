@@ -363,13 +363,16 @@ pub(crate) async fn list_test_manifest<'a, B: Blobstore>(
 ) -> Result<BTreeMap<NonRootMPath, String>, LoadableError> {
     bounded_traversal_stream(
         256,
-        Some((MPath::ROOT, Entry::Tree(mf_id))),
+        Some((MPath::ROOT, Entry::<_, (FileType, TestLeafId)>::Tree(mf_id))),
         move |(path, entry)| {
             async move {
-                let content = Loadable::load(&entry, ctx, blobstore).await?;
-                Ok(match content {
-                    Entry::Leaf(leaf) => (Some((path, leaf)), Vec::new()),
-                    Entry::Tree(tree) => {
+                Ok(match entry {
+                    Entry::Leaf(leaf_id) => {
+                        let leaf = leaf_id.load(ctx, blobstore).await?;
+                        (Some((path, leaf)), Vec::new())
+                    }
+                    Entry::Tree(tree_id) => {
+                        let tree = tree_id.load(ctx, blobstore).await?;
                         let recurse = tree
                             .list(ctx, blobstore)
                             .await?

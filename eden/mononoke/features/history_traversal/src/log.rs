@@ -524,10 +524,15 @@ async fn fetch_linknodes_and_update_graph(
     let linknodes = unode_entries.into_iter().map({
         let path = &path;
         move |entry| async move {
-            let unode = entry.load(ctx, repo.repo_blobstore()).await?;
-            Ok::<_, FastlogError>(match unode {
-                Entry::Tree(mf_unode) => (*mf_unode.linknode(), path.clone()),
-                Entry::Leaf(file_unode) => (*file_unode.linknode(), path.clone()),
+            Ok::<_, FastlogError>(match entry {
+                Entry::Tree(mf_unode_id) => {
+                    let mf_unode = mf_unode_id.load(ctx, repo.repo_blobstore()).await?;
+                    (*mf_unode.linknode(), path.clone())
+                }
+                Entry::Leaf(file_unode_id) => {
+                    let file_unode = file_unode_id.load(ctx, repo.repo_blobstore()).await?;
+                    (*file_unode.linknode(), path.clone())
+                }
             })
         }
     });
@@ -701,10 +706,15 @@ async fn find_mutable_renames(
         .await?
     {
         let src_path = Arc::new(rename.src_path().clone());
-        let src_unode = rename.src_unode().load(ctx, repo.repo_blobstore()).await?;
-        let linknode = match src_unode {
-            Entry::Tree(tree_unode) => *tree_unode.linknode(),
-            Entry::Leaf(leaf_unode) => *leaf_unode.linknode(),
+        let linknode = match rename.src_unode() {
+            Entry::Tree(tree_unode_id) => {
+                let tree_unode = tree_unode_id.load(ctx, repo.repo_blobstore()).await?;
+                *tree_unode.linknode()
+            }
+            Entry::Leaf(leaf_unode_id) => {
+                let leaf_unode = leaf_unode_id.load(ctx, repo.repo_blobstore()).await?;
+                *leaf_unode.linknode()
+            }
         };
         history_graph.insert((linknode, src_path.clone()), None);
         Ok(vec![(linknode, src_path)])
@@ -901,10 +911,15 @@ async fn replace_ancestors_with_mutable_ancestors(
             .get_rename(ctx, *possible_ancestor_cs_id, path.as_ref().clone())
             .await?
         {
-            let src_unode = rename.src_unode().load(ctx, repo.repo_blobstore()).await?;
-            let linknode = match src_unode {
-                Entry::Tree(tree_unode) => *tree_unode.linknode(),
-                Entry::Leaf(leaf_unode) => *leaf_unode.linknode(),
+            let linknode = match rename.src_unode() {
+                Entry::Tree(tree_unode_id) => {
+                    let tree_unode = tree_unode_id.load(ctx, repo.repo_blobstore()).await?;
+                    *tree_unode.linknode()
+                }
+                Entry::Leaf(leaf_unode_id) => {
+                    let leaf_unode = leaf_unode_id.load(ctx, repo.repo_blobstore()).await?;
+                    *leaf_unode.linknode()
+                }
             };
             Ok((
                 vec![(linknode, Arc::new(rename.src_path().clone()))],
@@ -977,13 +992,18 @@ async fn replace_ancestor_with_mutable_ancestor<'a>(
                     .get_rename(ctx, *possible_ancestor_cs_id, path.as_ref().clone())
                     .await?
                 {
-                    let src_unode = rename.src_unode().load(ctx, repo.repo_blobstore()).await?;
                     // The next node in path history doesn't have to be the src
                     // changeset. It needs to be the last commit that modified
                     // the path as of src changeset.
-                    let linknode = match src_unode {
-                        Entry::Tree(tree_unode) => *tree_unode.linknode(),
-                        Entry::Leaf(leaf_unode) => *leaf_unode.linknode(),
+                    let linknode = match rename.src_unode() {
+                        Entry::Tree(tree_unode_id) => {
+                            let tree_unode = tree_unode_id.load(ctx, repo.repo_blobstore()).await?;
+                            *tree_unode.linknode()
+                        }
+                        Entry::Leaf(leaf_unode_id) => {
+                            let leaf_unode = leaf_unode_id.load(ctx, repo.repo_blobstore()).await?;
+                            *leaf_unode.linknode()
+                        }
                     };
                     return Ok((
                         // The extra node in ancestry path where the mutable rename is attached

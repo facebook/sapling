@@ -169,23 +169,25 @@ impl BonsaiDerivable for RootFastlog {
 async fn fetch_unode_parents<B: Blobstore>(
     ctx: &CoreContext,
     blobstore: &B,
-    unode_entry_id: Entry<ManifestUnodeId, FileUnodeId>,
+    unode_entry: Entry<ManifestUnodeId, FileUnodeId>,
 ) -> Result<Vec<Entry<ManifestUnodeId, FileUnodeId>>, Error> {
-    let unode_entry = unode_entry_id.load(ctx, blobstore).await?;
-
     let res = match unode_entry {
-        Entry::Tree(tree) => tree
-            .parents()
-            .clone()
-            .into_iter()
-            .map(Entry::Tree)
-            .collect(),
-        Entry::Leaf(leaf) => leaf
-            .parents()
-            .clone()
-            .into_iter()
-            .map(Entry::Leaf)
-            .collect(),
+        Entry::Tree(tree_id) => {
+            let tree = tree_id.load(ctx, blobstore).await?;
+            tree.parents()
+                .clone()
+                .into_iter()
+                .map(Entry::Tree)
+                .collect()
+        }
+        Entry::Leaf(leaf_id) => {
+            let leaf = leaf_id.load(ctx, blobstore).await?;
+            leaf.parents()
+                .clone()
+                .into_iter()
+                .map(Entry::Leaf)
+                .collect()
+        }
     };
     Ok(res)
 }

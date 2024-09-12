@@ -197,13 +197,15 @@ impl HookStateProvider for RepoHookStateProvider {
             .find_entries(ctx.clone(), self.repo_blobstore.clone(), paths)
             .map_ok(|(path, entry)| async move {
                 if let Some(path) = Option::<NonRootMPath>::from(path) {
-                    let unode = entry
-                        .load(ctx, &self.repo_blobstore)
-                        .await
-                        .with_context(|| format!("Error loading unode entry: {:?}", entry))?;
-                    let linknode = match unode {
-                        Entry::Leaf(file) => file.linknode().clone(),
-                        Entry::Tree(tree) => tree.linknode().clone(),
+                    let linknode = match entry {
+                        Entry::Leaf(file_id) => {
+                            let file = file_id.load(ctx, &self.repo_blobstore).await?;
+                            file.linknode().clone()
+                        }
+                        Entry::Tree(tree_id) => {
+                            let tree = tree_id.load(ctx, &self.repo_blobstore).await?;
+                            tree.linknode().clone()
+                        }
                     };
 
                     let cs_info = self
