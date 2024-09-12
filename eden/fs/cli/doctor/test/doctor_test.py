@@ -552,9 +552,6 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
             True,
         )
 
-        self.assertEqual(len(fixer.problem_types), 1)
-        self.assertEqual(fixer.num_fixed_problems, 0)
-        self.assertEqual(fixer.num_manual_fixes, 1)
         self.assertEqual(
             out.getvalue(),
             f"""<yellow>- Found problem:<reset>
@@ -568,6 +565,9 @@ For additional info see the wiki at https://www.internalfb.com/intern/wiki/EdenF
 
 """,
         )
+        self.assertEqual(len(fixer.problem_types), 1)
+        self.assertEqual(fixer.num_fixed_problems, 0)
+        self.assertEqual(fixer.num_manual_fixes, 1)
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
     # pyre-fixme[2]: Parameter must be annotated.
@@ -2528,8 +2528,132 @@ Attempted and failed to fix problem CheckoutNotMounted
             out.getvalue(),
         )
 
+    @patch("eden.fs.cli.util.get_repo")
+    def test_missing_config_fix(
+        self,
+        mock_get_repo: MagicMock,
+    ) -> None:
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout = instance.create_test_mount("path1")
+        checkout_config = instance._checkouts_by_path[str(checkout.path)].config
+
+        path = checkout.path
+
+        hg_repo = checkout.instance.get_hg_repo(path)
+        mock_get_repo.return_value = hg_repo
+
+        checkout_info = CheckoutInfo(
+            # pyre-fixme[6]: For 3rd param expected `EdenInstance` but got
+            # `FakeEdenInstance`.
+            instance,
+            path,
+            state=None,
+            backing_repo=checkout_config.backing_repo,
+            running_state_dir=checkout.state_dir,
+            configured_state_dir=checkout.state_dir,
+        )
+
+        fixer, out = self.create_fixer(dry_run=False)
+        mount_table = instance.mount_table
+
+        edenfs_path = "/path/to/eden-mount"
+        watchman_roots = {edenfs_path}
+        watchman_info = check_watchman.WatchmanCheckInfo(watchman_roots)
+
+        os.unlink(checkout.state_dir / "config.toml")
+
+        check_running_mount(
+            fixer,
+            # pyre-fixme[6]: For 2rd param expected `EdenInstance` but got
+            # `FakeEdenInstance`.
+            instance,
+            checkout_info,
+            mount_table,
+            watchman_info,
+            False,
+            False,
+        )
+
+        self.assertTrue(os.path.exists(checkout.state_dir / "config.toml"))
+        self.assertEqual(
+            out.getvalue(),
+            f"""\
+<yellow>- Found problem:<reset>
+Eden's checkout state for {checkout.path} has been corrupted: {checkout.state_dir / "config.toml"} does not exist. [Errno 2] No such file or directory: '{self.format_win_path_for_regex(str(checkout.state_dir / "config.toml"))}'
+Reinitialize checkout config.......<green>fixed<reset>
+
+""",
+        )
+        self.assertEqual(len(fixer.problem_types), 1)
+        self.assertEqual(fixer.num_fixed_problems, 1)
+
+    @patch("eden.fs.cli.util.get_repo")
+    def test_corrupted_config_fix(
+        self,
+        mock_get_repo: MagicMock,
+    ) -> None:
+        instance = FakeEdenInstance(self.make_temporary_directory())
+        checkout = instance.create_test_mount("path1")
+        checkout_config = instance._checkouts_by_path[str(checkout.path)].config
+
+        path = checkout.path
+
+        hg_repo = checkout.instance.get_hg_repo(path)
+        mock_get_repo.return_value = hg_repo
+
+        checkout_info = CheckoutInfo(
+            # pyre-fixme[6]: For 3rd param expected `EdenInstance` but got
+            # `FakeEdenInstance`.
+            instance,
+            path,
+            state=None,
+            backing_repo=checkout_config.backing_repo,
+            running_state_dir=checkout.state_dir,
+            configured_state_dir=checkout.state_dir,
+        )
+
+        fixer, out = self.create_fixer(dry_run=False)
+        mount_table = instance.mount_table
+
+        edenfs_path = "/path/to/eden-mount"
+        watchman_roots = {edenfs_path}
+        watchman_info = check_watchman.WatchmanCheckInfo(watchman_roots)
+
+        with open(checkout.state_dir / "config.toml", "w") as f:
+            f.write("corrupted config")
+        with open(checkout.state_dir / "config.toml", "r") as f:
+            print(f.read())
+
+        check_running_mount(
+            fixer,
+            # pyre-fixme[6]: For 2rd param expected `EdenInstance` but got
+            # `FakeEdenInstance`.
+            instance,
+            checkout_info,
+            mount_table,
+            watchman_info,
+            False,
+            False,
+        )
+
+        self.assertTrue(os.path.exists(checkout.state_dir / "config.toml"))
+        self.assertEqual(
+            out.getvalue(),
+            f"""\
+<yellow>- Found problem:<reset>
+Eden's checkout state for {checkout.path} has been corrupted: toml config file {checkout.state_dir / "config.toml"} not valid: Found invalid character in key name: 'c'. Try quoting the key name. (line 1 column 11 char 10)Detected here (line 1): 
+
+corrupted config
+
+Reinitialize checkout config.......<green>fixed<reset>
+
+""",
+        )
+        self.assertEqual(len(fixer.problem_types), 1)
+        self.assertEqual(fixer.num_fixed_problems, 1)
+
     @patch("eden.fs.cli.config.EdenCheckout.get_config")
-    def test_corrupted_config(
+    def test_corrupted_config_fail(
         self,
         mock_get_config: MagicMock,
     ) -> None:
@@ -2539,7 +2663,7 @@ Attempted and failed to fix problem CheckoutNotMounted
 
         mock_get_config.side_effect = [
             checkout_config,
-            FileNotFoundError("FileNotFound"),
+            Exception("GenericOtherException"),
         ]
         path = checkout.path
         checkout_info = CheckoutInfo(
@@ -2579,7 +2703,7 @@ Attempted and failed to fix problem CheckoutNotMounted
         self.assertEqual(
             f"""\
 <yellow>- Found problem:<reset>
-Eden's checkout state for {checkout.path} has been corrupted: FileNotFound
+Eden's checkout state for {checkout.path} has been corrupted: GenericOtherException
 To recover, you will need to remove and reclone the repo.
 Your local commits will be uneffected, but reclones will lose uncommitted work or shelves.
 However, the local changes are manually recoverable before the reclone.
@@ -2596,7 +2720,7 @@ To reclone the corrupted repo, run: `fbclone $REPO --reclone --eden`"""
     @patch("eden.fs.cli.config.EdenCheckout.get_config")
     @patch("eden.fs.cli.doctor.get_doctor_link")
     @patch("eden.fs.cli.doctor.get_local_commit_recovery_link")
-    def test_corrupted_config_oss(
+    def test_corrupted_config_fail_oss(
         self,
         mock_get_recovery_link: MagicMock,
         mock_get_doctor_link: MagicMock,
@@ -2611,7 +2735,7 @@ To reclone the corrupted repo, run: `fbclone $REPO --reclone --eden`"""
 
         mock_get_config.side_effect = [
             checkout_config,
-            FileNotFoundError("FileNotFound"),
+            Exception("GenericOtherException"),
         ]
         path = checkout.path
         checkout_info = CheckoutInfo(
@@ -2651,7 +2775,7 @@ To reclone the corrupted repo, run: `fbclone $REPO --reclone --eden`"""
         self.assertEqual(
             f"""\
 <yellow>- Found problem:<reset>
-Eden's checkout state for {checkout.path} has been corrupted: FileNotFound
+Eden's checkout state for {checkout.path} has been corrupted: GenericOtherException
 To recover, you will need to remove and reclone the repo.
 Your local commits will be uneffected, but reclones will lose uncommitted work or shelves.
 However, the local changes are manually recoverable before the reclone.

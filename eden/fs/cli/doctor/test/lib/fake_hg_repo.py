@@ -14,9 +14,11 @@ from typing import Callable, List, Optional
 class FakeHgRepo:
     commit_checker: Optional[Callable[[str], bool]] = None
     source: str
+    type: str
 
     def __init__(self, source: str) -> None:
         self.source = source
+        self.type = "hg"
 
     # pyre-fixme[2]: Parameter must be annotated.
     def get_commit_hash(self, commit: str, stderr_output=None) -> str:

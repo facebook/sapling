@@ -22,6 +22,7 @@ from eden.fs.cli import (
     prjfs,
     proc_utils as proc_utils_mod,
     ui,
+    util as util_mod,
     version,
 )
 from eden.fs.cli.config import EdenInstance
@@ -89,6 +90,14 @@ except ImportError:
         return ""
 
     def get_local_commit_recovery_link() -> str:
+        return ""
+
+
+try:
+    from .facebook.internal_error_messages import get_reclone_advice_link
+except ImportError:
+
+    def get_reclone_advice_link() -> str:
         return ""
 
 
@@ -325,7 +334,10 @@ class EdenDoctorChecker:
                         configured_checkout.get_config().backing_repo
                     )
                 except Exception as ex:
-                    # Config file is missing or invalid. The string here is formatted to make sense with the remediation message for EdenCheckoutInfosCorruption
+                    # Config file is missing or invalid.
+                    # Without it we can't know what the backing repo is, so
+                    # we collect all checkouts with missing configs and report
+                    # a single error at the end.
                     missing_checkouts.append(
                         f"{configured_checkout.path} (error: {ex})"
                     )
@@ -741,6 +753,124 @@ class EdenCheckoutCorruption(Problem):
         )
 
 
+class EdenCheckoutConfigCorruption(FixableProblem):
+    _checkout_info: CheckoutInfo
+    _ex: Exception
+
+    def __init__(self, checkout_info: CheckoutInfo, ex: Exception) -> None:
+        self._checkout_info = checkout_info
+        self._ex = ex
+
+    def is_nfs_default(self) -> bool:
+        default_protocol = "PrjFS" if sys.platform == "win32" else "FUSE"
+        return (
+            self._checkout_info.instance.get_config_value(
+                "clone.default-mount-protocol", default_protocol
+            ).upper()
+            == "NFS"
+        )
+
+    def description(self) -> str:
+        return f"Eden's checkout state for {self._checkout_info.path} has been corrupted: {self._ex}"
+
+    def dry_run_msg(self) -> str:
+        return "Would reinitialize the checkout config"
+
+    def start_msg(self) -> str:
+        return "Reinitialize checkout config...."
+
+    def get_repo_type(self, state_dir: Path) -> str:
+        hgpath = state_dir / ".hg"
+        if not hgpath.exists():
+            return "other"
+        if (hgpath / "requires").exists():
+            with open(hgpath / "requires", "r") as f:
+                for line in f:
+                    if line.startswith("edensparse"):
+                        return "filteredhg"
+        return "hg"
+
+    def get_backup_path(self, config_path: Path) -> Path:
+        for i in range(1, 9):
+            backup_path = config_path.with_suffix(f".bak{i}")
+            if not backup_path.exists():
+                return backup_path
+        print(
+            f"Maximum number of Eden CheckoutConfig backup files reached. Please delete some of the backup files at {config_path} manually.",
+            file=sys.stderr,
+        )
+        return config_path.with_suffix(".bak_final")
+
+    def perform_fix(self) -> None:
+        """
+        Attempts to regenerate the config.toml file for the checkout from
+        the running state's checkout info. This does not work if eden is not
+        running.
+        """
+        # Get the state dir. This is where the config will be written to.
+        if self._checkout_info.running_state_dir is not None:
+            state_dir = self._checkout_info.running_state_dir
+        elif self._checkout_info.configured_state_dir is not None:
+            state_dir = self._checkout_info.configured_state_dir
+        else:
+            raise Exception("checkout info missing state dir")
+
+        # Determine the repo type from the running mount.
+        # We can regenerate the config for hg and
+        # filteredhg repos.
+        repotype = self.get_repo_type(self._checkout_info.path)
+        if repotype not in config_mod.HG_REPO_TYPES:
+            raise Exception("Cannot fix config for non-hg repo")
+
+        # Get the backing repo. This info links the checkout to the
+        # correct backing repo and is written into the config.
+        if self._checkout_info.backing_repo is None:
+            raise Exception("checkout info missing backing repo")
+
+        repo = util_mod.get_repo(str(self._checkout_info.backing_repo), repotype)
+        if repo is None:
+            raise util_mod.RepoError(
+                f"{self._checkout_info.backing_repo!r} does not look like a valid repository"
+            )
+        # Double check that this repo is hg
+        if repo.type not in config_mod.HG_REPO_TYPES:
+            raise Exception("Cannot fix config for non-hg repo")
+
+        # using defaults
+        checkout_config = config_mod.create_checkout_config(
+            repo,
+            self._checkout_info.instance,
+            nfs=self.is_nfs_default(),
+            case_sensitive=sys.platform == "linux",
+            overlay_type=None,
+            enable_windows_symlinks=self._checkout_info.instance.get_config_bool(
+                "experimental.windows-symlinks", False
+            ),
+        )
+        checkout = config_mod.EdenCheckout(
+            self._checkout_info.instance, self._checkout_info.path, state_dir
+        )
+        config_path = checkout._config_path()
+        backup_path = self.get_backup_path(config_path)
+        print(
+            f"Recreated config for checkout {checkout.path}. Previous config file backed up at {backup_path}\n"
+            f"This config is created using default values. If further issues persist consider recloning {get_reclone_advice_link()}"
+        )
+        if os.path.exists(config_path):
+            os.rename(config_path, backup_path)
+        checkout.save_config(checkout_config)
+
+    def check_fix(self) -> bool:
+        # Tries to read checkout again
+        checkout = self._checkout_info.get_checkout()
+        try:
+            checkout.get_config()
+        except Exception as ex:
+            print("Could not fix corrupted config.toml")
+            raise ex
+        return True
+
+
 class EdenCheckoutInfosCorruption(Problem):
     def __init__(self, ex: Exception) -> None:
         remediation = get_reclone_msg("$CHECKOUT_PATH")
@@ -865,8 +995,14 @@ def check_starting_mount(
     try:
         checkout.get_config()
         checkout.get_snapshot()
-    except Exception as ex:
+    except config_mod.CheckoutConfigCorruptedError as ex:
         # Config file is missing or invalid
+        tracker.add_problem(
+            EdenCheckoutConfigCorruption(checkout_info, ex),
+        )
+        return
+    except Exception as ex:
+        # Other error
         tracker.add_problem(
             EdenCheckoutCorruption(
                 checkout_info,
@@ -897,8 +1033,14 @@ def check_running_mount(
     checkout = checkout_info.get_checkout()
     try:
         config = checkout.get_config()
-    except Exception as ex:
+    except config_mod.CheckoutConfigCorruptedError as ex:
         # Config file is missing or invalid
+        tracker.add_problem(
+            EdenCheckoutConfigCorruption(checkout_info, ex),
+        )
+        return
+    except Exception as ex:
+        # Other error
         tracker.add_problem(
             EdenCheckoutCorruption(
                 checkout_info,
