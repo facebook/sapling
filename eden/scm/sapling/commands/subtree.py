@@ -14,6 +14,7 @@ from .cmdtable import command
 
 # todo: remove the 'test_' prefix when this feature is stable
 SUBTREE_BRANCH_INFO_KEY = "test_branch_info"
+SUBTREE_MERGE_INFO_KEY = "test_subtree_merge_info"
 
 
 @command(
@@ -183,3 +184,23 @@ def _gen_prepopulated_commit_msg(from_commit, from_paths, to_paths):
     for from_path, to_path in zip(from_paths, to_paths):
         msgs.append(f"- Copied path {from_path} to {to_path}")
     return "\n".join(msgs)
+
+
+def get_branch_info(repo, node):
+    return _get_subtree_metadata(repo, node, SUBTREE_BRANCH_INFO_KEY)
+
+
+def get_merge_info(repo, node):
+    return _get_subtree_metadata(repo, node, SUBTREE_MERGE_INFO_KEY)
+
+
+def _get_subtree_metadata(repo, node, key):
+    extra = repo[node].extra()
+    try:
+        val_str = extra[key]
+    except KeyError:
+        return None
+    try:
+        return json.loads(val_str)
+    except json.JSONDecodeError:
+        raise error.Abort(f"invalid {key} metadata: {val_str}")
