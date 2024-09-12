@@ -548,6 +548,25 @@ class Redirection:
                     "\n - Try again after reviewing and manually deleting the directory, or "
                     "\n - Run `eden redirect fixup --force` to attempt inline deletion of the directory if none of its files are in use.",
                 )
+        if disposition == RepoPathDisposition.IS_FILE:
+            if self.is_deletable_path(checkout, self.expand_repo_path(checkout)):
+                print(
+                    "Redirection path found to be a file. Attempting to remove this file."
+                )
+                if self.remove_file(self.expand_repo_path(checkout)):
+                    return RepoPathDisposition.DOES_NOT_EXIST
+                else:
+                    print(
+                        f"Failed to delete the file (full path `{self.expand_repo_path(checkout)}`)."
+                        "\n This happens mostly when the file is being used by another process."
+                        "\n To detect and kill such processes, follow https://fburl.com/edenfs-redirection-non-empty-directory."
+                    )
+            else:
+                print(
+                    f"Redirection path found to be a file (full path `{self.expand_repo_path(checkout)}`). Either-"
+                    "\n - Try again after reviewing and manually deleting the file, or "
+                    "\n - Run `redirect fixup --force` to attempt inline deletion of the file if it is not in use by another process.",
+                )
         return disposition
 
     def forcefully_remove_dir_all(self, path: Path) -> bool:
@@ -556,6 +575,14 @@ class Redirection:
             return True
         except Exception as e:
             print(f"An error occurred while removing directory `{path}`: {e}")
+            return False
+
+    def remove_file(self, path: Path) -> bool:
+        try:
+            os.remove(path)
+            return True
+        except Exception as e:
+            print(f"An error occurred while removing file `{path}`: {e}")
             return False
 
     def is_deletable_path(self, checkout: EdenCheckout, path: Path) -> bool:
