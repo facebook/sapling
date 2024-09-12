@@ -22,7 +22,6 @@ pub struct RichCasClient {
     client: re_cas_common::OnceCell<REClient>,
     verbose: bool,
     metadata: RemoteExecutionMetadata,
-    rich_client: bool,
 }
 
 pub fn init() {
@@ -56,7 +55,6 @@ impl RichCasClient {
                 use_case_id: use_case,
                 ..Default::default()
             },
-            rich_client: config.get_or("cas", "rich-client", || true)?,
         })
     }
 
@@ -75,7 +73,7 @@ impl RichCasClient {
 
         let builder = REClientBuilder::new(fbinit::expect_init())
             .with_config(re_config)
-            .with_rich_client(self.rich_client);
+            .with_rich_client(true);
 
         builder.build()
     }
