@@ -10,6 +10,7 @@ use std::time::Duration;
 
 use anyhow::Context;
 use anyhow::Error;
+use blobstore::Blobstore;
 use blobstore::BlobstoreEnumerableWithUnlink;
 use blobstore::ErrorKind;
 use blobstore::PutBehaviour;
@@ -72,4 +73,18 @@ pub fn make_manifold_blobstore_enumerable_with_unlink(
 
     Ok(Arc::new(PrefixBlobstore::new(manifold, prefix.to_string()))
         as Arc<dyn BlobstoreEnumerableWithUnlink>)
+}
+
+pub fn make_manifold_blobstore(
+    fb: FacebookInit,
+    prefix: &str,
+    bucket: &str,
+    ttl: Option<Duration>,
+    manifold_options: &ManifoldOptions,
+    put_behaviour: PutBehaviour,
+) -> Result<Arc<dyn Blobstore>, Error> {
+    let manifold = ManifoldBlob::new(fb, bucket, ttl, manifold_options.clone(), put_behaviour)
+        .context(ErrorKind::StateOpen)?;
+
+    Ok(Arc::new(PrefixBlobstore::new(manifold, prefix.to_string())) as Arc<dyn Blobstore>)
 }

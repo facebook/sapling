@@ -415,6 +415,41 @@ pub async fn make_manifold_blobstore_enumerable_with_unlink(
     unimplemented!("This is implemented only for fbcode_build")
 }
 
+#[cfg(fbcode_build)]
+pub async fn make_manifold_blobstore(
+    fb: FacebookInit,
+    blobconfig: BlobConfig,
+    blobstore_options: &BlobstoreOptions,
+) -> Result<Arc<dyn Blobstore>, Error> {
+    use BlobConfig::*;
+    let (bucket, prefix, ttl) = match blobconfig {
+        Manifold { bucket, prefix } => (bucket, prefix, None),
+        ManifoldWithTtl {
+            bucket,
+            prefix,
+            ttl,
+        } => (bucket, prefix, Some(ttl)),
+        _ => bail!("Not a Manifold blobstore"),
+    };
+    crate::facebook::make_manifold_blobstore(
+        fb,
+        &prefix,
+        &bucket,
+        ttl,
+        &blobstore_options.manifold_options,
+        blobstore_options.put_behaviour,
+    )
+}
+
+#[cfg(not(fbcode_build))]
+pub async fn make_manifold_blobstore(
+    _fb: FacebookInit,
+    _blobconfig: BlobConfig,
+    _blobstore_options: &BlobstoreOptions,
+) -> Result<Arc<dyn Blobstore>, Error> {
+    unimplemented!("This is implemented only for fbcode_build")
+}
+
 pub async fn make_files_blobstore(
     blobconfig: BlobConfig,
     blobstore_options: &BlobstoreOptions,
