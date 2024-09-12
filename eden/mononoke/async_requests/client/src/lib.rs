@@ -169,14 +169,13 @@ impl<R: MononokeRepo> AsyncRequestsQueue<R> {
         target: &Target,
     ) -> Result<AsyncMethodRequestQueue, AsyncRequestsError> {
         let (_repo_config, repo_identity) = self.target_repo_config_and_id(ctx, target).await?;
-        self.async_method_request_queue_for_repo(ctx, &repo_identity)
+        self.async_method_request_queue_for_repo(&repo_identity)
             .await
     }
 
     /// Get an `AsyncMethodRequestQueue` for a given repo
     async fn async_method_request_queue_for_repo(
         &self,
-        _ctx: &CoreContext,
         repo_identity: &ArcRepoIdentity,
     ) -> Result<AsyncMethodRequestQueue, AsyncRequestsError> {
         let queue = self
@@ -195,7 +194,7 @@ impl<R: MononokeRepo> AsyncRequestsQueue<R> {
     /// Get all queues used by configured repos.
     pub async fn all_async_method_request_queues(
         &self,
-        ctx: &CoreContext,
+        _ctx: &CoreContext,
     ) -> Result<Vec<(Vec<RepositoryId>, AsyncMethodRequestQueue)>, AsyncRequestsError> {
         // TODO(mitrandir): instead of creating a queue per repo create a queue
         // per group of repos with exactly same storage configs. This way even with
@@ -205,7 +204,7 @@ impl<R: MononokeRepo> AsyncRequestsQueue<R> {
             let repo_id = repo_identity.id();
             async move {
                 let queue = self
-                    .async_method_request_queue_for_repo(ctx, &Arc::new(repo_identity))
+                    .async_method_request_queue_for_repo(&Arc::new(repo_identity))
                     .await?;
                 Ok::<_, AsyncRequestsError>((vec![repo_id], queue))
             }
