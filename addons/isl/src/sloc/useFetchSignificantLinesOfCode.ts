@@ -29,12 +29,20 @@ const getGeneratedFiles = (files: string[]): string[] => {
   return files.reduce<string[]>((filtered, path) => {
     // check if the file should be excluded
     // the __generated__ pattern is included in the exclusions, so we don't need to include it here
-    if (path.match(/__generated__/) && generatedStatuses[path] === GeneratedStatus.Manual) {
+    if (path.match(/__generated__/) || generatedStatuses[path] === GeneratedStatus.Generated) {
       filtered.push(path);
     }
 
     return filtered;
   }, []);
+};
+
+const filterGeneratedFiles = (files: string[]): string[] => {
+  const generatedStatuses = getGeneratedFilesFrom(files);
+
+  return files.filter(
+    path => !path.match(/__generated__/) && generatedStatuses[path] !== GeneratedStatus.Generated,
+  );
 };
 
 async function fetchSignificantLinesOfCode(
@@ -109,11 +117,12 @@ const fetchPendingAmendSloc = async (
     return undefined;
   }
 
-  if (includedFiles.length > MAX_FILES_ALLOWED_FOR_DIFF_STAT) {
+  const filteredFiles = filterGeneratedFiles(includedFiles);
+  if (filteredFiles.length > MAX_FILES_ALLOWED_FOR_DIFF_STAT) {
     return undefined;
   }
 
-  if (includedFiles.length === 0) {
+  if (filteredFiles.length === 0) {
     return {sloc: 0, strictSloc: 0};
   }
 
@@ -130,7 +139,7 @@ const fetchPendingAmendSloc = async (
   serverAPI.postMessage({
     type: 'fetchPendingAmendSignificantLinesOfCode',
     hash: commit.hash,
-    includedFiles,
+    includedFiles: filteredFiles,
     requestId,
   });
 
@@ -194,18 +203,19 @@ const fetchPendingSloc = async (
     return undefined;
   }
 
-  if (includedFiles.length > MAX_FILES_ALLOWED_FOR_DIFF_STAT) {
+  const filteredFiles = filterGeneratedFiles(includedFiles);
+  if (filteredFiles.length > MAX_FILES_ALLOWED_FOR_DIFF_STAT) {
     return undefined;
   }
 
-  if (includedFiles.length === 0) {
+  if (filteredFiles.length === 0) {
     return {sloc: 0, strictSloc: 0};
   }
 
   serverAPI.postMessage({
     type: 'fetchPendingSignificantLinesOfCode',
     hash: commit.hash,
-    includedFiles,
+    includedFiles: filteredFiles,
     requestId,
   });
 
