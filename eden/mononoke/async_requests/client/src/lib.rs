@@ -21,7 +21,6 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::future::try_join_all;
 use megarepo_config::Target;
-use metaconfig_types::ArcRepoConfig;
 use metaconfig_types::RepoConfigArc;
 use mononoke_api::Mononoke;
 use mononoke_api::MononokeRepo;
@@ -168,7 +167,7 @@ impl<R: MononokeRepo> AsyncRequestsQueue<R> {
         ctx: &CoreContext,
         target: &Target,
     ) -> Result<AsyncMethodRequestQueue, AsyncRequestsError> {
-        let (_repo_config, repo_identity) = self.target_repo_config_and_id(ctx, target).await?;
+        let repo_identity = self.target_repo_id(ctx, target).await?;
         self.async_method_request_queue_for_repo(&repo_identity)
             .await
     }
@@ -214,11 +213,11 @@ impl<R: MononokeRepo> AsyncRequestsQueue<R> {
     }
 
     /// Get Mononoke repo config and identity by a target
-    async fn target_repo_config_and_id(
+    async fn target_repo_id(
         &self,
         ctx: &CoreContext,
         target: &Target,
-    ) -> Result<(ArcRepoConfig, ArcRepoIdentity), Error> {
+    ) -> Result<ArcRepoIdentity, Error> {
         let repo_id: i32 = TryFrom::<i64>::try_from(target.repo_id)?;
         let repo = match self.mononoke.raw_repo_by_id(repo_id) {
             Some(repo) => repo,
@@ -230,7 +229,7 @@ impl<R: MononokeRepo> AsyncRequestsQueue<R> {
                 bail!("unknown repo in the target: {}", repo_id)
             }
         };
-        Ok((repo.repo_config_arc(), repo.repo_identity_arc()))
+        Ok(repo.repo_identity_arc())
     }
 
     /// Build a blobstore to be embedded into `AsyncMethodRequestQueue`
