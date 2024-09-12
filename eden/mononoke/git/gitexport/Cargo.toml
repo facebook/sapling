@@ -37,7 +37,7 @@ futures = { version = "0.3.30", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 git_symbolic_refs = { version = "0.1.0", path = "../../git_symbolic_refs" }
 git_types = { version = "0.1.0", path = "../git_types" }
-indicatif = { version = "0.17.6", features = ["improved_unicode", "rayon", "tokio"] }
+indicatif = { version = "0.17.6", features = ["futures", "improved_unicode", "rayon", "tokio"] }
 itertools = "0.11.0"
 maplit = "1.0"
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
