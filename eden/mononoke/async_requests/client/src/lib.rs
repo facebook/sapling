@@ -23,7 +23,6 @@ use futures::future::try_join_all;
 use megarepo_config::Target;
 use metaconfig_types::ArcRepoConfig;
 use metaconfig_types::RepoConfigArc;
-use metaconfig_types::RepoConfigRef;
 use mononoke_api::Mononoke;
 use mononoke_api::MononokeRepo;
 use mononoke_app::MononokeApp;
@@ -169,17 +168,16 @@ impl<R: MononokeRepo> AsyncRequestsQueue<R> {
         ctx: &CoreContext,
         target: &Target,
     ) -> Result<AsyncMethodRequestQueue, AsyncRequestsError> {
-        let (repo_config, repo_identity) = self.target_repo_config_and_id(ctx, target).await?;
-        self.async_method_request_queue_for_repo(ctx, &repo_identity, &repo_config)
+        let (_repo_config, repo_identity) = self.target_repo_config_and_id(ctx, target).await?;
+        self.async_method_request_queue_for_repo(ctx, &repo_identity)
             .await
     }
 
     /// Get an `AsyncMethodRequestQueue` for a given repo
-    pub async fn async_method_request_queue_for_repo(
+    async fn async_method_request_queue_for_repo(
         &self,
         _ctx: &CoreContext,
         repo_identity: &ArcRepoIdentity,
-        _repo_config: &ArcRepoConfig,
     ) -> Result<AsyncMethodRequestQueue, AsyncRequestsError> {
         let queue = self
             .queue_cache
@@ -205,14 +203,9 @@ impl<R: MononokeRepo> AsyncRequestsQueue<R> {
         let queues = try_join_all(self.mononoke.repos().map(|repo| {
             let repo_identity = repo.repo_identity().clone();
             let repo_id = repo_identity.id();
-            let repo_config = repo.repo_config().clone();
             async move {
                 let queue = self
-                    .async_method_request_queue_for_repo(
-                        ctx,
-                        &Arc::new(repo_identity),
-                        &Arc::new(repo_config),
-                    )
+                    .async_method_request_queue_for_repo(ctx, &Arc::new(repo_identity))
                     .await?;
                 Ok::<_, AsyncRequestsError>((vec![repo_id], queue))
             }
