@@ -18,6 +18,8 @@
 #include <folly/logging/xlog.h>
 #include <cerrno>
 #include <string>
+
+#include "eden/common/utils/FSDetect.h"
 #include "eden/common/utils/Throw.h"
 
 #ifndef __APPLE__
@@ -43,8 +45,7 @@ bool isOldEdenMount(const std::string& mountPoint) {
     for (const auto& line : lines) {
       // We expect EdenFS mounts to look like the following:
       // edenfs: {mountPoint} fuse ...
-      if (!line.empty() && line.startsWith("edenfs: ") &&
-          line.find(mountPoint) != std::string::npos) {
+      if (is_edenfs_fs_mount(line, mountPoint)) {
         return true;
       }
     }
