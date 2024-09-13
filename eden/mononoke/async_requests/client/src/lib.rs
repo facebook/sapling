@@ -17,10 +17,13 @@ use async_once_cell::AsyncOnceCell;
 use async_requests::AsyncMethodRequestQueue;
 use async_requests::AsyncRequestsError;
 use blobstore::Blobstore;
+use blobstore_factory::make_files_blobstore;
+use blobstore_factory::make_manifold_blobstore;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::future::try_join_all;
 use megarepo_config::Target;
+use metaconfig_types::BlobConfig;
 use metaconfig_types::RepoConfigArc;
 use mononoke_api::Mononoke;
 use mononoke_api::MononokeRepo;
@@ -83,6 +86,7 @@ impl<K: Clone + Eq + Hash, V: Clone> Cache<K, V> {
 #[derive(Clone)]
 pub struct AsyncRequestsQueue<R> {
     sql_connection: Arc<dyn LongRunningRequestsQueue>,
+    blobstore: Arc<dyn Blobstore>,
     queue_cache: Cache<ArcRepoIdentity, AsyncMethodRequestQueue>,
     mononoke: Arc<Mononoke<R>>,
 }
@@ -97,10 +101,12 @@ impl<R: MononokeRepo> AsyncRequestsQueue<R> {
         app: &MononokeApp,
         mononoke: Arc<Mononoke<R>>,
     ) -> Result<Self, Error> {
-        let sql_connection = Self::open_sql_connection(fb, app, &mononoke).await?;
+        let sql_connection = Arc::new(Self::open_sql_connection(fb, app, &mononoke).await?);
+        let blobstore = Arc::new(Self::open_blobstore(fb, app, &mononoke).await?);
 
         Ok(Self {
-            sql_connection: Arc::new(sql_connection),
+            sql_connection,
+            blobstore,
             queue_cache: Cache::new(),
             mononoke,
         })
@@ -161,6 +167,39 @@ impl<R: MononokeRepo> AsyncRequestsQueue<R> {
         bail!("No db config found in common config and legacy config is disabled")
     }
 
+    async fn open_blobstore(
+        fb: FacebookInit,
+        app: &MononokeApp,
+        mononoke: &Arc<Mononoke<R>>,
+    ) -> Result<Arc<dyn Blobstore>, Error> {
+        let config = app.repo_configs().common.async_requests_config.clone();
+        if let Some(config) = config.blobstore {
+            info!(
+                app.logger(),
+                "Initializing async_requests with an explicit config"
+            );
+            let options = app.blobstore_options();
+            match config {
+                BlobConfig::Manifold { .. } => make_manifold_blobstore(fb, config, options).await,
+                BlobConfig::Files { .. } => make_files_blobstore(config, options)
+                    .await
+                    .map(|store| Arc::new(store) as Arc<dyn Blobstore>),
+                _ => {
+                    bail!("Unsupported blobstore type for async requests")
+                }
+            }
+        } else {
+            warn!(
+                app.logger(),
+                "No db config found in common config; falling back to repo config"
+            );
+            let repo = mononoke.raw_repo(ASYNC_REQUESTS_REPO).ok_or_else(|| {
+                AsyncRequestsError::request(anyhow!("repo not found {}", ASYNC_REQUESTS_REPO))
+            })?;
+            Ok(repo.repo_blobstore_arc())
+        }
+    }
+
     /// Get an `AsyncMethodRequestQueue` for a given target
     pub async fn async_method_request_queue(
         &self,
@@ -180,10 +219,9 @@ impl<R: MononokeRepo> AsyncRequestsQueue<R> {
         let queue = self
             .queue_cache
             .get_or_try_init(&repo_identity.clone(), || async move {
-                let blobstore = self.blobstore(repo_identity.clone()).await?;
                 Ok(AsyncMethodRequestQueue::new(
                     self.sql_connection.clone(),
-                    blobstore,
+                    self.blobstore.clone(),
                 ))
             })
             .await?;
@@ -230,16 +268,5 @@ impl<R: MononokeRepo> AsyncRequestsQueue<R> {
             }
         };
         Ok(repo.repo_identity_arc())
-    }
-
-    /// Build a blobstore to be embedded into `AsyncMethodRequestQueue`
-    async fn blobstore(&self, repo_identity: ArcRepoIdentity) -> Result<Arc<dyn Blobstore>, Error> {
-        let repo = self
-            .mononoke
-            .raw_repo(repo_identity.name())
-            .ok_or_else(|| {
-                AsyncRequestsError::request(anyhow!("repo not found {}", repo_identity.name()))
-            })?;
-        Ok(repo.repo_blobstore_arc())
     }
 }
