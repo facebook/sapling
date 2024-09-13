@@ -351,17 +351,24 @@ fn get_conflicts_with_progress(
                 } else {
                     "Updating files"
                 })
-                // TODO(sggutier): This is a placeholder for the actual inode count
-                .total(100000)
                 .unit("files")
                 .adhoc(true)
                 .thread_local_parent()
                 .pending();
             b.spawn_scoped(s, move || -> Result<_> {
+                let mut max_total = 0;
                 let _active = ProgressBar::push_active(pb.clone(), Registry::main());
                 while scope_check.upgrade().is_some() {
                     if let Some(info) = client.checkout_progress()? {
-                        pb.set_position(info);
+                        pb.set_position(info.position);
+                        // From the EdenFS side of things the total of inodes
+                        // can decrease as EdenFS starts invalidating inodes
+                        // (e.g., when updating from master) to null, so we have
+                        // to keep a max. It can also increase if there are
+                        // pending writes, so we cannot just keep the number
+                        // from the beginning.
+                        max_total = std::cmp::max(max_total, info.total);
+                        pb.set_total(max_total);
                     }
                     thread::sleep(Duration::from_millis(interval_ms));
                 }

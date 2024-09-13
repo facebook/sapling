@@ -63,3 +63,9 @@ pub struct CheckoutConflict {
     pub conflict_type: ConflictType,
     pub message: String,
 }
+
+#[derive(Clone, Debug, Serialize)]
+pub struct ProgressInfo {
+    pub position: u64,
+    pub total: u64,
+}

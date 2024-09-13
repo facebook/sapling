@@ -35,6 +35,7 @@ use crate::types::EdenError;
 use crate::types::FileStatus;
 use crate::types::LocalFrom;
 use crate::types::LocalTryFrom;
+use crate::types::ProgressInfo;
 
 /// EdenFS client for Sapling CLI integration.
 pub struct EdenFsClient {
@@ -182,7 +183,7 @@ impl EdenFsClient {
     /// Returns the current progress checkout counter(s) for the current mount.
     /// When a checkout is not ongoing it returns None.
     #[tracing::instrument(skip(self))]
-    pub fn checkout_progress(&self) -> anyhow::Result<Option<u64>> {
+    pub fn checkout_progress(&self) -> anyhow::Result<Option<ProgressInfo>> {
         let thrift_client = block_on(self.get_thrift_client())?;
         let root_vec = self.root_vec();
         let thrift_params = CheckoutProgressInfoRequest {
@@ -194,7 +195,10 @@ impl EdenFsClient {
         ))?;
         Ok(
             if let CheckoutProgressInfoResponse::checkoutProgressInfo(info) = thrift_result {
-                Some(info.updatedInodes as u64)
+                Some(ProgressInfo {
+                    position: info.updatedInodes as u64,
+                    total: info.totalInodes as u64,
+                })
             } else {
                 None
             },

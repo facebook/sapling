@@ -15,6 +15,7 @@ use gitcompat::GitCmd;
 use types::workingcopy_client::CheckoutConflict;
 use types::workingcopy_client::CheckoutMode;
 use types::workingcopy_client::FileStatus;
+use types::workingcopy_client::ProgressInfo;
 use types::HgId;
 use types::RepoPathBuf;
 
@@ -40,7 +41,7 @@ pub trait WorkingCopyClient: Send + Sync {
     /// Progress as reported by the external program (in reported units of
     /// progress, not percentage).
     /// When a checkout is not ongoing it returns None.
-    fn checkout_progress(&self) -> Result<Option<u64>>;
+    fn checkout_progress(&self) -> Result<Option<ProgressInfo>>;
 
     /// Checkout. Set parents and update working copy content.
     fn checkout(
@@ -80,7 +81,7 @@ impl WorkingCopyClient for edenfs_client::EdenFsClient {
         edenfs_client::EdenFsClient::checkout(self, node, tree_node, mode)
     }
 
-    fn checkout_progress(&self) -> Result<Option<u64>> {
+    fn checkout_progress(&self) -> Result<Option<ProgressInfo>> {
         edenfs_client::EdenFsClient::checkout_progress(self)
     }
 
@@ -180,7 +181,7 @@ impl WorkingCopyClient for RepoGit {
         self as &dyn Any
     }
 
-    fn checkout_progress(&self) -> Result<Option<u64>> {
+    fn checkout_progress(&self) -> Result<Option<ProgressInfo>> {
         bail!("Progress for Git checkout not yet implemented!");
     }
 }
