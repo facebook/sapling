@@ -167,14 +167,7 @@ impl SourceControlServiceImpl {
         )
         .unwrap_or(true);
 
-        let force_local_pushrebase_fallback = justknobs::eval(
-            "scm/mononoke:scs_force_local_pushrebase_fallback",
-            None,
-            Some(repo.repo().repo_identity().name()),
-        )
-        .unwrap_or(true);
-
-        let mut pushrebase_outcome = repo
+        let pushrebase_outcome = repo
             .land_stack(
                 &params.bookmark,
                 head.id(),
@@ -184,29 +177,7 @@ impl SourceControlServiceImpl {
                 push_authored_by,
                 force_local_pushrebase,
             )
-            .await;
-
-        // Local fallback.
-        // If pushrebase failed, try to land stack locally if fallback enabled.
-        // This fallback is to ensure that we don't break existing clients while
-        // we work on fixing the pushrebase permission issue and enable redirection for lands to the Land Service
-        // TODO(liubovd): remove after pushrebase permission issue is confirmed to be fixed.
-        if pushrebase_outcome.is_err() && !force_local_pushrebase && force_local_pushrebase_fallback
-        {
-            pushrebase_outcome = repo
-                .land_stack(
-                    &params.bookmark,
-                    head.id(),
-                    base.id(),
-                    pushvars.as_ref(),
-                    bookmark_restrictions,
-                    push_authored_by,
-                    true,
-                )
-                .await;
-        }
-
-        let pushrebase_outcome = pushrebase_outcome?
+            .await?
             .into_response_with(&(
                 repo.clone(),
                 params.identity_schemes,
