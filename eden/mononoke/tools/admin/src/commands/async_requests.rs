@@ -9,6 +9,7 @@ mod abort;
 mod list;
 mod requeue;
 mod show;
+mod submit;
 
 use std::sync::Arc;
 
@@ -21,6 +22,7 @@ use context::SessionContainer;
 use mononoke_api::Repo;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
+use submit::AsyncRequestsSubmitArgs;
 
 use crate::commands::async_requests::abort::AsyncRequestsAbortArgs;
 use crate::commands::async_requests::list::AsyncRequestsListArgs;
@@ -51,6 +53,8 @@ pub enum AsyncRequestsSubcommand {
     /// Changes the request status to ready and put error as result.
     /// (this won't stop any currently running workers immediately)
     Abort(AsyncRequestsAbortArgs),
+    /// Submits an async request. Intended only for development and testing.
+    Submit(AsyncRequestsSubmitArgs),
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -84,6 +88,10 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         }
         AsyncRequestsSubcommand::Abort(abort_args) => {
             abort::abort_request(abort_args, ctx, queues_client).await?
+        }
+        AsyncRequestsSubcommand::Submit(abort_args) => {
+            let repo = app.open_repo(&args.repo).await?;
+            submit::submit_request(abort_args, ctx, queues_client, mononoke, repo).await?
         }
     }
     Ok(())
