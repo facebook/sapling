@@ -1,5 +1,7 @@
 {
   "bools": {
+    "scm/mononoke:async_requests_blobstore_from_common_config": true,
+    "scm/mononoke:async_requests_blobstore_from_legacy_config": false,
     "scm/mononoke:async_requests_from_common_config": true,
     "scm/mononoke:async_requests_legacy_config": false,
     "scm/mononoke:backsync_submodule_expansion_changes": true,
