@@ -16,6 +16,7 @@ python_library(
         ),
     ],
     deps = [
+        "fbcode//fb303/thrift:fb303_core-py",
         "fbsource//third-party/pypi/pexpect:pexpect",
         "//eden/fs/cli:lib",
         "//eden/fs/cli:proc_utils",

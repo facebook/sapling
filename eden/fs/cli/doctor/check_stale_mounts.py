@@ -141,18 +141,18 @@ class StaleMountsFound(FixableProblem):
         return mount_points[0] == [] and mount_points[2] == []
 
 
-def get_all_stale_eden_mount_points(
-    mount_table: mtab.MountTable,
+def get_stale_eden_mount_points(
+    mount_table: mtab.MountTable, mount_points: Set[Tuple[bytes, bytes]]
 ) -> Tuple[List[bytes], List[bytes], List[bytes]]:
     """
-    Check all eden mount points queried
+    Check listed eden mount points queried
     Return [stale mount points, hanging mount points, unknown status mount points]
     """
     log = logging.getLogger("eden.fs.cli.doctor.stale_mounts")
     stale_eden_mount_points: Set[bytes] = set()
     hung_eden_mount_points: Set[bytes] = set()
     unknown_status_eden_mount_points: Set[bytes] = set()
-    for mount_point, mount_type in get_all_eden_mount_points(mount_table):
+    for mount_point, mount_type in mount_points:
         # All eden mounts should have a .eden directory.
         # If the edenfs daemon serving this mount point has died we
         # will get ENOTCONN when trying to access it.  (Simply calling
@@ -178,6 +178,18 @@ def get_all_stale_eden_mount_points(
         sorted(stale_eden_mount_points),
         sorted(hung_eden_mount_points),
         sorted(unknown_status_eden_mount_points),
+    )
+
+
+def get_all_stale_eden_mount_points(
+    mount_table: mtab.MountTable,
+) -> Tuple[List[bytes], List[bytes], List[bytes]]:
+    """
+    Check all eden mount points queried
+    Return [stale mount points, hanging mount points, unknown status mount points]
+    """
+    return get_stale_eden_mount_points(
+        mount_table, get_all_eden_mount_points(mount_table)
     )
 
 

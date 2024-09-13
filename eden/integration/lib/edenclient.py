@@ -17,14 +17,16 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 from pathlib import Path
 from types import TracebackType
 from typing import Any, cast, Dict, List, Optional, TextIO, Tuple, Union
 
 from eden.fs.cli import util
 from eden.thrift import legacy
-from eden.thrift.legacy import create_thrift_client, EdenClient
+from eden.thrift.legacy import EdenClient
 from facebook.eden.ttypes import MountState
+from fb303_core.ttypes import fb303_status
 
 from .find_executables import FindExe
 
@@ -141,6 +143,44 @@ class EdenFS:
         if process is None or process.returncode is not None:
             return
         self.shutdown()
+
+    def kill_dirty(self) -> None:
+        """Kills privhelper and this instance directly, without waiting for cleanup.
+        Used for testing recovery handlers."""
+        process = self._process
+        if process is None or process.returncode is not None:
+            # EdenFS is not running
+            return
+
+        privhelperPid = self.get_privhelper_pid()
+        if privhelperPid != -1:
+            os.kill(privhelperPid, signal.SIGKILL)
+
+        # Before shutting down, get the current pid. This may differ from process.pid when
+        # edenfs is started with sudo.
+        daemon_pid = util.check_health(
+            self.get_thrift_client_legacy, self.eden_dir, timeout=30
+        ).pid
+
+        self._process = None
+
+        if daemon_pid is not None:
+            os.kill(daemon_pid, signal.SIGKILL)
+            # wait for process to exit
+            timeout = 30
+            while (
+                util.check_health(
+                    self.get_thrift_client_legacy, self.eden_dir, timeout=30
+                ).status
+                != fb303_status.DEAD
+            ):
+                time.sleep(5)
+                timeout -= 5
+                if timeout <= 0:
+                    break
+        else:
+            process.kill()
+        process.wait(timeout=10)
 
     def get_thrift_client_legacy(
         self, timeout: Optional[float] = None
@@ -454,6 +494,11 @@ class EdenFS:
     def get_pid_via_thrift(self) -> int:
         with self.get_thrift_client_legacy() as client:
             return client.getDaemonInfo().pid
+
+    def get_privhelper_pid(self) -> int:
+        with self.get_thrift_client_legacy(timeout=5) as client:
+            privHelperInfo = client.checkPrivHelper()
+            return privHelperInfo.pid
 
     def graceful_restart(
         self,
