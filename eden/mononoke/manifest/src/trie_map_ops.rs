@@ -15,6 +15,8 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use mononoke_types::basename_suffix_skeleton_manifest_v3::BssmV3Directory;
 use mononoke_types::basename_suffix_skeleton_manifest_v3::BssmV3Entry;
+use mononoke_types::case_conflict_skeleton_manifest::CaseConflictSkeletonManifest;
+use mononoke_types::case_conflict_skeleton_manifest::CcsmEntry;
 use mononoke_types::sharded_map_v2::LoadableShardedMapV2Node;
 use mononoke_types::skeleton_manifest_v2::SkeletonManifestV2;
 use mononoke_types::skeleton_manifest_v2::SkeletonManifestV2Entry;
@@ -190,6 +192,45 @@ impl<Store: Blobstore> TrieMapOps<Store, Entry<SkeletonManifestV2, ()>>
             .await?
             .into_entries(ctx, blobstore)
             .map_ok(|(k, v)| (k, crate::types::skeleton_manifest_v2_to_mf_entry(v)))
+            .boxed())
+    }
+
+    fn is_empty(&self) -> bool {
+        self.size() == 0
+    }
+}
+
+#[async_trait]
+impl<Store: Blobstore> TrieMapOps<Store, Entry<CaseConflictSkeletonManifest, ()>>
+    for LoadableShardedMapV2Node<CcsmEntry>
+{
+    async fn expand(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<(
+        Option<Entry<CaseConflictSkeletonManifest, ()>>,
+        Vec<(u8, Self)>,
+    )> {
+        let (entry, children) = self.expand(ctx, blobstore).await?;
+        Ok((entry.map(crate::types::ccsm_to_mf_entry), children))
+    }
+
+    async fn into_stream(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<
+        BoxStream<
+            'async_trait,
+            Result<(SmallVec<[u8; 24]>, Entry<CaseConflictSkeletonManifest, ()>)>,
+        >,
+    > {
+        Ok(self
+            .load(ctx, blobstore)
+            .await?
+            .into_entries(ctx, blobstore)
+            .map_ok(|(k, v)| (k, crate::types::ccsm_to_mf_entry(v)))
             .boxed())
     }
 
