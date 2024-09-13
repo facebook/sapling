@@ -200,6 +200,12 @@ ImmediateFuture<InvalidationRequired> CheckoutAction::doAction() {
         // must still run hasConflict() first because we rely on its
         // side-effects.
         if (conflictWasAddedToCtx && !self->ctx_->forceUpdate()) {
+          // Since we aren't doing another checkoutUpdateEntry, the checkout
+          // from this inode won't be executed if it is a tree. In that case, we
+          // add that to our "completed" checkout for all of its descendants
+          auto treeInode = self->inode_.asTreeOrNull();
+          auto increase = treeInode ? treeInode->getInMemoryDescendants() : 0;
+          self->ctx_->increaseCheckoutCounter(1 + increase);
           // We only report conflicts for files, not directories. The only
           // possible conflict that can occur here if this inode is a TreeInode
           // is that the old source control state was for a file. There aren't

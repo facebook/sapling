@@ -3204,6 +3204,7 @@ void TreeInode::computeCheckoutActions(
   if (contents->treeHash.has_value() &&
       canShortCircuitCheckout(
           ctx, contents->treeHash.value(), fromTree, toTree)) {
+    ctx->increaseCheckoutCounter(this->getInMemoryDescendants());
     return;
   }
 
@@ -3295,9 +3296,38 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     TreeInodeState& state,
     const Tree::value_type* oldScmEntry,
     const Tree::value_type* newScmEntry,
+    std::vector<IncompleteInodeLoad>& pendingLoads,
+    bool& wasDirectoryListModified) {
+  auto ret = processCheckoutEntryImpl(
+      ctx,
+      state,
+      oldScmEntry,
+      newScmEntry,
+      pendingLoads,
+      wasDirectoryListModified);
+  if (!ret) {
+    const auto& name = oldScmEntry ? oldScmEntry->first : newScmEntry->first;
+    if (auto it = state.entries.find(name); it != state.entries.end()) {
+      if (auto treeInode = it->second.asTreeOrNull()) {
+        // If we didn't get a checkout action for this entry but still were able
+        // to find a treeInode representing it, it means we won't recurse on it
+        // so we increase our "completed" checkout count by its descendants.
+        auto increase = treeInode ? treeInode->getInMemoryDescendants() : 0;
+        ctx->increaseCheckoutCounter(1 + increase);
+      }
+    }
+  }
+  return ret;
+}
+
+std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
+    CheckoutContext* ctx,
+    TreeInodeState& state,
+    const Tree::value_type* oldScmEntry,
+    const Tree::value_type* newScmEntry,
     vector<IncompleteInodeLoad>& pendingLoads,
     bool& wasDirectoryListModified) {
-  XLOG(DBG5) << "processCheckoutEntry(" << getLogPath() << "): "
+  XLOG(DBG5) << "processCheckoutEntryImpl(" << getLogPath() << "): "
              << (oldScmEntry
                      ? oldScmEntry->second.toLogString(oldScmEntry->first)
                      : "(null)")
@@ -3598,6 +3628,9 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
   auto treeInode = inode.asTreePtrOrNull();
   bool windowsSymlinksEnabled = ctx->getWindowsSymlinksEnabled();
   if (!treeInode) {
+    // Regardless of what we'll do with the inode, we can consider it as "done"
+    // since it isn't a treeInode, so we add that to our counters.
+    ctx->increaseCheckoutCounter(1);
     // If the target of the update is not a directory, then we know we do not
     // need to recurse into it, looking for more conflicts, so we can exit here.
     if (ctx->isDryRun()) {
