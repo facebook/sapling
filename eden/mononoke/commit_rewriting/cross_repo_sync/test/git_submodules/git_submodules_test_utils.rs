@@ -525,7 +525,6 @@ pub(crate) fn submodule_repo_derived_data_types_config() -> HashMap<String, Deri
                 DerivableType::HgChangesets,
                 DerivableType::HgAugmentedManifests,
                 DerivableType::FileNodes,
-                DerivableType::Ccsm,
             ]
             .contains(t)
         })

@@ -10,6 +10,7 @@ use itertools::Itertools;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub struct CcsmPath(NonRootMPath);
 
 impl CcsmPath {

@@ -14,13 +14,30 @@ path = "lib.rs"
 anyhow = "1.0.86"
 async-trait = "0.1.71"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../../server/context" }
 derived_data_manager = { version = "0.1.0", path = "../manager" }
 derived_data_service_if = { version = "0.1.0", path = "../remote/if" }
+futures = { version = "0.3.30", features = ["async-await", "compat"] }
+itertools = "0.11.0"
+manifest = { version = "0.1.0", path = "../../manifest" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 skeleton_manifest = { version = "0.1.0", path = "../skeleton_manifest" }
 
 [dev-dependencies]
-itertools = "0.11.0"
+bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
+bookmarks = { version = "0.1.0", path = "../../bookmarks" }
+commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+filestore = { version = "0.1.0", path = "../../filestore" }
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
+pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }
 quickcheck = "1.0"
+repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
+repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
+repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
+skeleton_manifest_v2 = { version = "0.1.0", path = "../skeleton_manifest_v2" }
+test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
+tests_utils = { version = "0.1.0", path = "../../tests/utils" }
