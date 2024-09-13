@@ -6,7 +6,12 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ REPOTYPE="blob_files"
-  $ ENABLED_DERIVED_DATA='["git_commits", "git_trees", "git_delta_manifests_v2", "unodes", "filenodes", "hgchangesets"]' setup_common_config $REPOTYPE
+  $ ENABLED_DERIVED_DATA='["git_commits", "git_trees", "git_delta_manifests_v2", "unodes", "filenodes", "hgchangesets", "skeleton_manifests"]' setup_common_config $REPOTYPE
+  $ cat >> repos/repo/server.toml <<EOF
+  > [source_control_service]
+  > permit_writes = true
+  > permit_service_writes = true
+  > EOF
   $ testtool_drawdag -R repo << EOF
   > A-B-C
   > # bookmark: C heads/main
@@ -21,6 +26,7 @@
 
 # Start up the Mononoke Git Service
   $ mononoke_git_service
+  $ set_mononoke_as_source_of_truth_for_git
 
 # Clone the Git repo from Mononoke
   $ CLONE_URL="$MONONOKE_GIT_SERVICE_BASE_URL/repo.git"
@@ -51,7 +57,9 @@ $ cd "$TESTTMP"
   $ git lfs install --local
   Updated Git hooks.
   Git LFS initialized.
-  $ git_client -c "lfs.url=$LFS_URL" -c http.extraHeader="x-client-info: {\"request_info\": {\"entry_point\": \"CurlTest\", \"correlator\": \"test\"}}" lfs fetch --all
+  $ git config lfs.url "$LFS_URL"
+  $ git config http.extraHeader "x-client-info: {\"request_info\": {\"entry_point\": \"CurlTest\", \"correlator\": \"test\"}}"
+  $ git_client lfs fetch --all
   fetch: 1 object found, done.
   fetch: Fetching all references...
   $ git lfs checkout
@@ -68,3 +76,21 @@ Inspect bonsai for LFS flag
   	 ADDED/MODIFIED: C 896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d
   	 ADDED/MODIFIED (LFS): large_file eb3b8226bb5383aefd8299990543f1f8588344c3b2c2d25182a2a7d1fb691473
   
+Push a change to LFS file
+  $ git lfs track large_file
+  Tracking "large_file"
+  $ echo contents of LFS file with some extra > large_file
+  $ git commit -aqm "new LFS change"
+  $ quiet git_client push
+  $ mononoke_newadmin fetch -R repo -B heads/main
+  BonsaiChangesetId: 690910fff80c352afe819716bbb90a2e416627c988d87e733f1fa5b7aa3e1c24
+  Author: mononoke <mononoke@mononoke>
+  Message: new LFS change
+  
+  FileChanges:
+  	 ADDED/MODIFIED: large_file 5565e648e1bcd80444cedbfb0d86483e2c2ff1b4798d8114454a5de1f25d2248
+  
+  $ mononoke_newadmin filestore -R repo fetch  --content-id 5565e648e1bcd80444cedbfb0d86483e2c2ff1b4798d8114454a5de1f25d2248
+  version https://git-lfs.github.com/spec/v1
+  oid sha256:59c36b4306da9c142ec8feef7bce1964334161db72886faad535f9e2e3418170
+  size 37
