@@ -5502,9 +5502,16 @@ void EdenServiceHandler::getCheckoutProgressInfo(
     unique_ptr<CheckoutProgressInfoRequest> params) {
   auto mountPath = absolutePathFromThrift(*params->mountPoint());
   auto mountHandle = server_->getMount(mountPath);
-  auto checkoutProgress = mountHandle.getEdenMount().getCheckoutProgress();
+  auto& mount = mountHandle.getEdenMount();
+  auto checkoutProgress = mount.getCheckoutProgress();
   if (checkoutProgress.has_value()) {
     CheckoutProgressInfo progressInfoRet;
+    auto counts = mount.getInodeMap()->getInodeCounts();
+    auto totalInodes =
+        counts.unloadedInodeCount + counts.fileCount + counts.treeCount;
+
+    progressInfoRet.totalInodes_ref() = totalInodes;
+
     progressInfoRet.updatedInodes_ref() = std::move(checkoutProgress.value());
     ret.checkoutProgressInfo_ref() = std::move(progressInfoRet);
   } else {
