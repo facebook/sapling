@@ -4532,6 +4532,20 @@ void TreeInode::childWasStat(bool isFile, const ObjectFetchContext& context) {
   doPrefetch(prefetchSet, context);
 }
 
+uint64_t TreeInode::getInMemoryDescendants() {
+  int64_t inMemoryDescendants =
+      inMemoryDescendants_.load(std::memory_order_relaxed);
+  if (inMemoryDescendants < 0) {
+    // maybe make inMemoryDescendants_ 0?
+    return 0;
+  }
+  return static_cast<uint64_t>(inMemoryDescendants);
+}
+
+void TreeInode::increaseInMemoryDescendants(int64_t inc) {
+  inMemoryDescendants_.fetch_add(inc, std::memory_order_relaxed);
+}
+
 void TreeInode::considerReaddirPrefetch(
     const ObjectFetchContextPtr& /*context*/) {
   auto currentState = prefetchState_.load(std::memory_order_relaxed);

@@ -517,6 +517,10 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    */
   void childWasStat(bool isFile, const ObjectFetchContext& context);
 
+  uint64_t getInMemoryDescendants();
+
+  void increaseInMemoryDescendants(int64_t inc);
+
  private:
   class TreeRenameLocks;
   class IncompleteInodeLoad;
@@ -924,6 +928,13 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * Only prefetch children metadata once.
    */
   std::atomic<PrefetchState> prefetchState_{NeverEnumerated};
+
+  /**
+   * This number is not guarenteed to be completely accurate as it is modified
+   * by the descendant using getParentRacy. It is currently only used for
+   * reporting checkout progress to Sapling, so this is okay for that purpose.
+   */
+  std::atomic<int64_t> inMemoryDescendants_;
 };
 
 /**

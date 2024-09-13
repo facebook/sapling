@@ -64,11 +64,22 @@ InodeBase::InodeBase(
     return metadata;
   });
 #endif
+
+  auto p = getParentRacy();
+  while (p) {
+    p->increaseInMemoryDescendants(1);
+    p = p->getParentRacy();
+  }
 }
 
 InodeBase::~InodeBase() {
   XLOG(DBG5) << "inode " << this << " (" << ino_
              << ") destroyed: " << getLogPath();
+  auto p = getParentRacy();
+  while (p) {
+    p->increaseInMemoryDescendants(-1);
+    p = p->getParentRacy();
+  }
 }
 
 #ifndef _WIN32
