@@ -118,6 +118,8 @@ pub struct RedactionConfig {
 pub struct AsyncRequestsConfig {
     /// The database used for the queue table
     pub db_config: Option<DatabaseConfig>,
+    /// The blobstore used for request params and response
+    pub blobstore: Option<BlobConfig>,
 }
 
 /// Configuration for all repos

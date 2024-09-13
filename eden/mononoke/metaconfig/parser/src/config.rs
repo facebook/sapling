@@ -491,11 +491,12 @@ fn parse_common_config(
         redaction_sets_location: redaction_config.redaction_sets_location,
     };
 
-    let async_requests_config = AsyncRequestsConfig {
-        db_config: match &common.async_requests_config {
-            Some(config) => Some(config.db_config.clone().convert()?),
-            None => None,
+    let async_requests_config = match common.async_requests_config {
+        Some(config) => AsyncRequestsConfig {
+            db_config: Some(config.db_config.convert()?),
+            blobstore: Some(config.blobstore_config.convert()?),
         },
+        None => AsyncRequestsConfig::default(),
     };
 
     Ok(CommonConfig {
@@ -1498,7 +1499,10 @@ mod test {
                 },
                 git_memory_upper_bound: Some(100),
                 edenapi_dumper_scuba_table: Some("dumped_requests".to_string()),
-                async_requests_config: AsyncRequestsConfig { db_config: None },
+                async_requests_config: AsyncRequestsConfig {
+                    db_config: None,
+                    blobstore: None
+                },
             }
         );
         assert_eq!(

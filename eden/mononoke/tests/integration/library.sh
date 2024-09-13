@@ -752,12 +752,10 @@ CONFIG
   fi
 
   cat >> common/common.toml <<CONFIG
-[async_requests_config.db_config.local]
-local_db_path="$TESTTMP/monsql"
+[async_requests_config]
+db_config = { local = { local_db_path="$TESTTMP/monsql" } }
+blobstore_config = { blob_files = { path = "$TESTTMP/async_requests.blobstore" } }
 
-CONFIG
-
-  cat >> common/common.toml <<CONFIG
 [internal_identity]
 identity_type = "SERVICE_IDENTITY"
 identity_data = "proxy"
