@@ -17,7 +17,7 @@ cpp_unittest(
         "//eden/fs/model:testutil",
         "//eden/fs/store/facebook/recas:recas",
         "//eden/fs/store/facebook/recas:recas-digest-util",
-        "//folly/experimental/coro:gmock_helpers",
+        "//folly/coro:gmock_helpers",
         "//folly/portability:gmock",
         "//folly/portability:gtest",
         "//remote_execution/cas/client:cas-client",

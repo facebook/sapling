@@ -11,8 +11,8 @@ cpp_library(
     ],
     deps = [
         "//eden/fs/model:model",
-        "//folly/experimental/coro:future_util",
-        "//folly/experimental/coro:task",
+        "//folly/coro:future_util",
+        "//folly/coro:task",
         "//folly/io/async:event_base_manager",
         "//folly/json:dynamic",
         "//proxygen/facebook/lib/experimental/coro/client:http_client_lib",
