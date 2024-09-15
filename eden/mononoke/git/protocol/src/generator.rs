@@ -537,7 +537,10 @@ async fn tag_packfile_stream<'a>(
             if bookmark.is_tag() {
                 let tag_name = bookmark.name().to_string();
                 repo.bonsai_tag_mapping()
-                    .get_entry_by_tag_name(tag_name.clone())
+                    .get_entry_by_tag_name(
+                        tag_name.clone(),
+                        bonsai_tag_mapping::Freshness::MaybeStale,
+                    )
                     .await
                     .with_context(|| {
                         format!(

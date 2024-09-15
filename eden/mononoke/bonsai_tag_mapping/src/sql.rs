@@ -18,6 +18,7 @@ use sql_ext::SqlConnections;
 
 use super::BonsaiTagMapping;
 use super::BonsaiTagMappingEntry;
+use crate::Freshness;
 
 mononoke_queries! {
     write AddOrUpdateBonsaiTagMapping(values: (
@@ -129,19 +130,21 @@ impl BonsaiTagMapping for SqlBonsaiTagMapping {
     async fn get_entry_by_tag_name(
         &self,
         tag_name: String,
+        freshness: Freshness,
     ) -> Result<Option<BonsaiTagMappingEntry>> {
-        let results = SelectMappingByTagName::query(
-            &self.connections.read_connection,
-            &self.repo_id,
-            &tag_name,
-        )
-        .await
-        .with_context(|| {
-            format!(
-                "Failure in fetching entry for tag {} in repo {}",
-                tag_name, self.repo_id
-            )
-        })?;
+        let connection = if freshness == Freshness::Latest {
+            &self.connections.read_master_connection
+        } else {
+            &self.connections.read_connection
+        };
+        let results = SelectMappingByTagName::query(connection, &self.repo_id, &tag_name)
+            .await
+            .with_context(|| {
+                format!(
+                    "Failure in fetching entry for tag {} in repo {}",
+                    tag_name, self.repo_id
+                )
+            })?;
         // This should not happen but since this is new code, extra checks dont hurt.
         if results.len() > 1 {
             anyhow::bail!(

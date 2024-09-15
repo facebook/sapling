@@ -11,6 +11,7 @@ use std::str::FromStr;
 use anyhow::Error;
 use bonsai_tag_mapping::BonsaiTagMapping;
 use bonsai_tag_mapping::BonsaiTagMappingEntry;
+use bonsai_tag_mapping::Freshness;
 use bonsai_tag_mapping::SqlBonsaiTagMappingBuilder;
 use fbinit::FacebookInit;
 use mononoke_macros::mononoke;
@@ -36,7 +37,7 @@ async fn test_add_and_get(_: FacebookInit) -> Result<(), Error> {
     mapping.add_or_update_mappings(vec![entry.clone()]).await?;
 
     let result = mapping
-        .get_entry_by_tag_name(entry.tag_name.clone())
+        .get_entry_by_tag_name(entry.tag_name.clone(), Freshness::MaybeStale)
         .await?;
     assert_eq!(
         result.as_ref().map(|entry| entry.changeset_id),
@@ -74,7 +75,7 @@ async fn test_update_and_get(_: FacebookInit) -> Result<(), Error> {
     mapping.add_or_update_mappings(vec![entry.clone()]).await?;
 
     let result = mapping
-        .get_entry_by_tag_name(entry.tag_name.clone())
+        .get_entry_by_tag_name(entry.tag_name.clone(), Freshness::Latest)
         .await?;
     assert_eq!(result, Some(entry.clone()));
 
@@ -92,7 +93,7 @@ async fn test_update_and_get(_: FacebookInit) -> Result<(), Error> {
         .add_or_update_mappings(vec![new_entry.clone()])
         .await?;
     let result = mapping
-        .get_entry_by_tag_name(new_entry.tag_name.clone())
+        .get_entry_by_tag_name(new_entry.tag_name.clone(), Freshness::Latest)
         .await?;
     assert_eq!(result, Some(new_entry.clone()));
 
@@ -105,7 +106,7 @@ async fn test_update_and_get(_: FacebookInit) -> Result<(), Error> {
 async fn test_get_without_add(_: FacebookInit) -> Result<(), Error> {
     let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
     let result = mapping
-        .get_entry_by_tag_name("JustATag".to_string())
+        .get_entry_by_tag_name("JustATag".to_string(), Freshness::MaybeStale)
         .await?;
     assert_eq!(result, None);
 

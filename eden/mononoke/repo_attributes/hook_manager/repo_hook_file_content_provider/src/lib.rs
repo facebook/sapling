@@ -18,6 +18,7 @@ use bonsai_git_mapping::ArcBonsaiGitMapping;
 use bonsai_git_mapping::BonsaiGitMappingArc;
 use bonsai_tag_mapping::ArcBonsaiTagMapping;
 use bonsai_tag_mapping::BonsaiTagMappingArc;
+use bonsai_tag_mapping::Freshness;
 use bookmarks::ArcBookmarks;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarksArc;
@@ -288,7 +289,7 @@ impl HookStateProvider for RepoHookStateProvider {
         }
         match self
             .bonsai_tag_mapping
-            .get_entry_by_tag_name(bookmark.to_string())
+            .get_entry_by_tag_name(bookmark.to_string(), Freshness::Latest)
             .await?
         {
             Some(entry) => Ok(TagType::AnnotatedTag(entry.tag_hash)),
