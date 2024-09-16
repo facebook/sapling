@@ -190,7 +190,7 @@ function DownloadNewVersionButton({
   const runOperation = useRunOperation();
   const tooltip = bothChanged
     ? t(
-        'Both remote and local verisons have changed.\n\n$provider has a new version of this Diff, but this commit has also changed locally since it was last submitted. You can download the new remote version, but it may not include your other local changes.',
+        'Both remote and local versions have changed.\n\n$provider has a new version of this Diff, but this commit has also changed locally since it was last submitted. You can download the new remote version, but it may not include your other local changes.',
         {replace: {$provider: provider.label}},
       )
     : t('$provider has a newer version of this Diff. Click to download the newer version.', {
