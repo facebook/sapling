@@ -15,6 +15,7 @@ use gotham::state::State;
 use gotham_derive::StateData;
 use gotham_ext::middleware::request_context::RequestContext;
 use metaconfig_parser::RepoConfigs;
+use mononoke_app::args::TLSArgs;
 use mononoke_repos::MononokeRepos;
 use repo_authorization::AuthorizationContext;
 use repo_permission_checker::RepoPermissionCheckerRef;
@@ -58,15 +59,27 @@ impl RepositoryRequestContext {
 pub struct GitServerContextInner {
     repos: GitRepos,
     enforce_auth: bool,
+    // Upstream LFS server to fetch missing LFS objects from
+    upstream_lfs_server: Option<String>,
+    // Used for communicating with upstream LFS server
+    tls_args: Option<TLSArgs>,
     _logger: Logger,
 }
 
 impl GitServerContextInner {
-    pub fn new(repos: GitRepos, enforce_auth: bool, _logger: Logger) -> Self {
+    pub fn new(
+        repos: GitRepos,
+        enforce_auth: bool,
+        _logger: Logger,
+        upstream_lfs_server: Option<String>,
+        tls_args: Option<TLSArgs>,
+    ) -> Self {
         Self {
             repos,
             enforce_auth,
             _logger,
+            upstream_lfs_server,
+            tls_args,
         }
     }
 }
@@ -77,11 +90,19 @@ pub struct GitServerContext {
 }
 
 impl GitServerContext {
-    pub fn new(repos: GitRepos, enforce_auth: bool, _logger: Logger) -> Self {
+    pub fn new(
+        repos: GitRepos,
+        enforce_auth: bool,
+        _logger: Logger,
+        upstream_lfs_server: Option<String>,
+        tls_args: Option<TLSArgs>,
+    ) -> Self {
         let inner = Arc::new(RwLock::new(GitServerContextInner::new(
             repos,
             enforce_auth,
             _logger,
+            upstream_lfs_server,
+            tls_args,
         )));
         Self { inner }
     }
@@ -119,6 +140,22 @@ impl GitServerContext {
             repo_configs,
             pushvars,
         })
+    }
+
+    pub fn upstream_lfs_server(&self) -> Result<Option<String>> {
+        let inner = self
+            .inner
+            .read()
+            .expect("poisoned lock in git server context");
+        Ok(inner.upstream_lfs_server.clone())
+    }
+
+    pub fn tls_args(&self) -> Result<Option<TLSArgs>> {
+        let inner = self
+            .inner
+            .read()
+            .expect("poisoned lock in git server context");
+        Ok(inner.tls_args.clone())
     }
 }
 

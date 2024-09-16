@@ -25,6 +25,8 @@ use gotham_ext::response::BytesBody;
 use gotham_ext::response::TryIntoResponse;
 use hyper::Body;
 use hyper::Response;
+use import_tools::GitImportLfs;
+use metaconfig_types::RepoConfigRef;
 use mononoke_api::Repo;
 use packetline::encode::flush_to_write;
 use packetline::encode::write_text_packetline;
@@ -37,6 +39,7 @@ use crate::command::PushArgs;
 use crate::command::RefUpdate;
 use crate::command::RequestCommand;
 use crate::model::GitMethodInfo;
+use crate::model::GitServerContext;
 use crate::model::RepositoryParams;
 use crate::model::RepositoryRequestContext;
 use crate::service::set_ref;
@@ -90,12 +93,33 @@ async fn push<'a>(
         let parsed_objects = parse_pack(push_args.pack_file, ctx, blobstore.clone()).await?;
         // Generate the GitObjectStore using the parsed objects
         let object_store = Arc::new(GitObjectStore::new(parsed_objects, ctx, blobstore.clone()));
+        // Instantiate the LFS configuration
+        let git_ctx = GitServerContext::borrow_from(state);
+        let lfs = if request_context
+            .repo
+            .repo_config()
+            .git_configs
+            .git_lfs_interpret_pointers
+        {
+            GitImportLfs::new(
+                git_ctx
+                    .upstream_lfs_server()?
+                    .ok_or_else(|| anyhow::anyhow!("No upstream LFS server specified"))?,
+                false,    // allow_not_found
+                2,        // max attempts
+                Some(50), // conn_limit
+                git_ctx.tls_args()?,
+            )?
+        } else {
+            GitImportLfs::new_disabled()
+        };
         // Upload the objects corresponding to the push to the underlying store
         let ref_map = upload_objects(
             ctx,
             request_context.repo.clone(),
             object_store.clone(),
             &push_args.ref_updates,
+            lfs,
         )
         .await?;
         // We were successful in parsing the pack and uploading the objects to underlying store. Indicate this to the client

@@ -23,6 +23,7 @@ use import_tools::git_reader::GitReader;
 use import_tools::import_commit_contents;
 use import_tools::upload_git_tag;
 use import_tools::BackfillDerivation;
+use import_tools::GitImportLfs;
 use import_tools::GitimportAccumulator;
 use import_tools::GitimportPreferences;
 use import_tools::ReuploadCommits;
@@ -187,6 +188,7 @@ pub async fn upload_objects(
     repo: Arc<Repo>,
     object_store: Arc<GitObjectStore>,
     ref_updates: &[RefUpdate],
+    lfs: GitImportLfs,
 ) -> Result<RefMap> {
     let repo_name = repo.repo_identity().name().to_string();
     let uploader = Arc::new(DirectUploader::with_arc(
@@ -198,6 +200,7 @@ pub async fn upload_objects(
             DerivableType::GitDeltaManifestsV2,
         ]),
         concurrency: 100,
+        lfs,
         ..Default::default()
     };
     let acc = GitimportAccumulator::from_roots(HashMap::new());

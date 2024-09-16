@@ -126,6 +126,13 @@ struct GitServerArgs {
     /// Whether or not to use test-friendly logging
     #[clap(long)]
     test_friendly_logging: bool,
+    /// Lfs server url to use to fetch lfs files from
+    #[clap(long)]
+    upstream_lfs_server: Option<String>,
+    /// How many times to retry fetching LFS files from the server
+    /// before deciding that the file is missing.
+    #[clap(long, default_value_t = 5)]
+    lfs_import_max_attempts: u32,
 }
 
 #[derive(Clone)]
@@ -178,6 +185,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let tls_acceptor = args
         .tls_params
+        .clone()
         .map(|tls_params| {
             secure_utils::SslConfig::new(
                 tls_params.tls_ca,
@@ -213,6 +221,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
     let server = {
         cloned!(logger, will_exit);
+        let tls_args = args.tls_params.clone();
         move |app: MononokeApp| async move {
             let repos_mgr = Arc::new(app.open_managed_repos(service_name).await?);
             let repos = GitRepos::new(repos_mgr.clone())
@@ -233,8 +242,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             // We use the listen_host rather than the ip of listener.local_addr()
             // because the certs user passed will be referencing listen_host
             let bound_addr = format!("{}:{}", listen_host, listener.local_addr()?.port());
-            let git_server_context =
-                GitServerContext::new(repos, enforce_authorization, logger.clone());
+            let git_server_context = GitServerContext::new(
+                repos,
+                enforce_authorization,
+                logger.clone(),
+                args.upstream_lfs_server,
+                tls_args,
+            );
 
             let router = build_router(git_server_context);
 

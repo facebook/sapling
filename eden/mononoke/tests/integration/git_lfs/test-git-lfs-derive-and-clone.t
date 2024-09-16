@@ -6,7 +6,7 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ REPOTYPE="blob_files"
-  $ ENABLED_DERIVED_DATA='["git_commits", "git_trees", "git_delta_manifests_v2", "unodes", "filenodes", "hgchangesets", "skeleton_manifests"]' setup_common_config $REPOTYPE
+  $ GIT_LFS_INTERPRET_POINTERS=1 ENABLED_DERIVED_DATA='["git_commits", "git_trees", "git_delta_manifests_v2", "unodes", "filenodes", "hgchangesets", "skeleton_manifests"]' setup_common_config $REPOTYPE
   $ cat >> repos/repo/server.toml <<EOF
   > [source_control_service]
   > permit_writes = true
@@ -24,8 +24,12 @@
   $ mononoke_newadmin git-symref -R repo create --symref-name HEAD --ref-name main --ref-type branch
   Symbolic ref HEAD pointing to branch main has been added
 
+# Start up the LFS server
+  $ LFS_LOG="${TESTTMP}/lfs.log"
+  $ LFS_URL="$(lfs_server --log "$LFS_LOG")/repo"
+
 # Start up the Mononoke Git Service
-  $ mononoke_git_service
+  $ mononoke_git_service --upstream-lfs-server "$LFS_URL/download_sha256"
   $ set_mononoke_as_source_of_truth_for_git
 
 # Clone the Git repo from Mononoke
@@ -52,8 +56,6 @@
   617601c79811cbbae338512798318b4e5b70c9ac 
 
 $ cd "$TESTTMP"
-  $ LFS_LOG="${TESTTMP}/lfs.log"
-  $ LFS_URL="$(lfs_server --log "$LFS_LOG")/repo"
   $ git lfs install --local
   Updated Git hooks.
   Git LFS initialized.
@@ -83,12 +85,12 @@ Push a change to LFS file
   $ git commit -aqm "new LFS change"
   $ quiet git_client push
   $ mononoke_newadmin fetch -R repo -B heads/main
-  BonsaiChangesetId: 690910fff80c352afe819716bbb90a2e416627c988d87e733f1fa5b7aa3e1c24
+  BonsaiChangesetId: bc0b66e9dda60bc3c73dc3b56f7a0b65e4eb830e76af6ab595bd5c3759e8983b
   Author: mononoke <mononoke@mononoke>
   Message: new LFS change
   
   FileChanges:
-  	 ADDED/MODIFIED: large_file 5565e648e1bcd80444cedbfb0d86483e2c2ff1b4798d8114454a5de1f25d2248
+  	 ADDED/MODIFIED (LFS): large_file 408fae710285e464a70ce854d2bdb3d11cba5c9b8d48b135c212c7760681ec31
   
   $ mononoke_newadmin filestore -R repo fetch  --content-id 5565e648e1bcd80444cedbfb0d86483e2c2ff1b4798d8114454a5de1f25d2248
   version https://git-lfs.github.com/spec/v1
