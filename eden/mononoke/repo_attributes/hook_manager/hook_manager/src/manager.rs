@@ -494,12 +494,14 @@ impl<'a> HookInstance<'a> {
                 }
                 HookExecution::Rejected(info) => {
                     failed_hooks = 1;
+                    errorcode = 1;
                     stderr = Some(info.long_description.clone());
                 }
             },
             Err(e) => {
                 errorcode = 1;
                 stderr = Some(format!("{:?}", e));
+                scuba.add("internal_failure", true);
             }
         };
 
