@@ -183,3 +183,96 @@ test subtree merge
   -3
   +3a
   +4
+
+test subtree merge with normal copy
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > C   # C/foo/x = 1a\n2\n3\n
+  > |
+  > B   # B/bar/x = 1\n2\n3\n (copied from foo/x)
+  > |
+  > A   # A/foo/x = 1\n2\n3\n
+  >     # drawdag.defaultfiles=false
+  > EOS
+  $ hg go $C -q
+  $ hg subtree merge -r $C --from-path foo --to-path bar
+  merging bar/x and foo/x to bar/x
+  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (subtree merge, don't forget to commit)
+  $ hg st
+  M bar/x
+  $ hg diff
+  diff --git a/bar/x b/bar/x
+  --- a/bar/x
+  +++ b/bar/x
+  @@ -1,3 +1,3 @@
+  -1
+  +1a
+   2
+   3
+
+test subtree merge with no copy
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > C   # C/foo/x = 1a\n2\n3\n
+  > |
+  > B   # B/bar/x = 1\n2\n3\n
+  > |
+  > A   # A/foo/x = 1\n2\n3\n
+  >     # drawdag.defaultfiles=false
+  > EOS
+  $ hg go $C -q
+  $ hg subtree merge -r $C --from-path foo --to-path bar
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (subtree merge, don't forget to commit)
+  $ hg st
+  M bar/x
+  $ hg diff
+  diff --git a/bar/x b/bar/x
+  --- a/bar/x
+  +++ b/bar/x
+  @@ -1,3 +1,3 @@
+  -1
+  +1a
+   2
+   3
+  
+test subtree merge with no common base
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > C    # D/bar/x = 1\n2\n3\n 
+  > |    # C/foo/x = 1a\n2\n3a\n
+  > B    # B/foo/x = 1a\n2\n3\n
+  > |
+  > A  D # A/foo/x = 1\n2\n3\n
+  >      # drawdag.defaultfiles=false
+  > EOS
+  $ hg go $D -q
+  $ hg log -G -T '{node|short} {desc}\n'
+  o  78072751cf70 C
+  │
+  o  55ff286fb56f B
+  │
+  │ @  19915b669dd5 D
+  │
+  o  2f10237b4399 A
+  $ zzl=1 hg subtree merge -r $C --from-path foo --to-path bar
+  merging bar/x and foo/x to bar/x
+  warning: 1 conflicts while merging bar/x! (edit, then use 'hg resolve --mark')
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
+  [1]
+  $ hg diff
+  diff --git a/bar/x b/bar/x
+  --- a/bar/x
+  +++ b/bar/x
+  @@ -1,3 +1,9 @@
+  +<<<<<<< working copy: 19915b669dd5 - test: D
+   1
+   2
+   3
+  +=======
+  +1a
+  +2
+  +3a
+  +>>>>>>> merge rev:    78072751cf70 - test: C
