@@ -12,6 +12,7 @@ rust_binary(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:clap",
+        "//cli/rust/cli:cli",
         "//common/rust/shed/fbinit:fbinit",
     ],
 )
