@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.58
+
+### Sep 16 2024
+
+- Fix focus preservation sometimes causing keystrokes in VS Code cmd-p menu to click buttons in ISL
+- Reduce excessive padding on the split modal
+
 ## 0.1.57
 
 ### Sep 9 2024
