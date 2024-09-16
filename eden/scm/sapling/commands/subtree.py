@@ -5,7 +5,8 @@
 
 import json
 
-from .. import cmdutil, context, error, hg, node, scmutil
+from .. import cmdutil, context, error, hg, merge as mergemod, node, scmutil
+
 from ..cmdutil import commitopts, commitopts2, diffgraftopts, dryrunopts, mergetoolopts
 from ..i18n import _
 from .cmdtable import command
@@ -19,7 +20,7 @@ SUBTREE_MERGE_INFO_KEY = "test_subtree_merge_info"
 @command(
     "subtree",
     [],
-    _("<copy|graft>"),
+    _("<copy|graft|merge>"),
 )
 def subtree(ui, repo, *pats, **opts) -> None:
     """subtree (directory or file) branching in monorepo"""
@@ -109,6 +110,53 @@ def subtree_graft(ui, repo, **opts):
 
     with repo.wlock():
         return _dograft(ui, repo, **opts)
+
+
+@subtree_subcmd(
+    "merge",
+    [
+        ("r", "rev", "", _("revisions to merge"), _("REV")),
+    ]
+    + mergetoolopts
+    + diffgraftopts,
+    _("[OPTION]... --from-path PATH --to-path PATH"),
+)
+def subtree_merge(ui, repo, **opts):
+    """merge a path of the specified commit into a different path of the current commit"""
+    ctx = repo["."]
+    from_ctx = scmutil.revsingle(repo, opts.get("rev"))
+    from_paths = scmutil.rootrelpaths(ctx, opts.get("from_path"))
+    to_paths = scmutil.rootrelpaths(ctx, opts.get("to_path"))
+
+    if len(from_paths) != 1 or len(to_paths) != 1:
+        raise error.Abort(_("must provide exactly one --from-path and --to-path"))
+
+    merge_base_commit = _subtree_merge_base(
+        repo, ctx, to_paths[0], from_ctx, from_paths[0]
+    )
+    merge_base_ctx = repo[merge_base_commit]
+    cmdutil.registerdiffgrafts(from_paths, to_paths, ctx, from_ctx, merge_base_ctx)
+
+    labels = ["working copy", "merge rev"]
+    stats = mergemod.merge(
+        repo,
+        from_ctx,
+        force=True,
+        ancestor=merge_base_ctx,
+        mergeancestor=False,
+        labels=labels,
+    )
+    hg.showstats(repo, stats)
+    if stats[3]:
+        repo.ui.status(
+            _(
+                "use '@prog@ resolve' to retry unresolved file merges "
+                "or '@prog@ goto -C .' to abandon\n"
+            )
+        )
+    else:
+        repo.ui.status(_("(subtree merge, don't forget to commit)\n"))
+    return stats[3] > 0
 
 
 def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path):
