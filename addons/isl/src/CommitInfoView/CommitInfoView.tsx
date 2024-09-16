@@ -250,8 +250,8 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
 
   const diffSummaries = useAtomValue(allDiffSummaries);
   const remoteTrackingBranch = provider?.getRemoteTrackingBranch(
-    diffSummaries?.value ?? null,
-    commit.diffId ?? null,
+    diffSummaries?.value,
+    commit.diffId,
   );
 
   const isSplitSuggestionSupported = provider?.isSplitSuggestionSupported() ?? false;
@@ -350,7 +350,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
               />
             );
           })}
-        {remoteTrackingBranch !== null ? (
+        {remoteTrackingBranch == null ? null : (
           <Section>
             <SmallCapsTitle>
               <Icon icon="source-control"></Icon>
@@ -360,7 +360,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
               <span className="token">{remoteTrackingBranch}</span>
             </div>
           </Section>
-        ) : null}
+        )}
         <Divider />
         {commit.isDot && !isAmendDisabled ? (
           <Section data-testid="changes-to-amend">

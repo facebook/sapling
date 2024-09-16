@@ -51,8 +51,8 @@ export interface UICodeReviewProvider {
   RepoInfo(): JSX.Element | null;
 
   getRemoteTrackingBranch(
-    allDiffSummaries: Map<string, DiffSummary> | null,
-    diffId: DiffId | null,
+    allDiffSummaries?: Map<string, DiffSummary> | null,
+    diffId?: DiffId | null,
   ): string | null;
 
   getRemoteTrackingBranchFromDiffSummary(diff: DiffSummary | undefined | null): string | null;
