@@ -250,11 +250,18 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let scuba_builder = env.scuba_sample_builder.clone();
     // Service name is used for shallow or deep sharding. If sharding itself is disabled, provide
     // service name as None while opening repos.
-    let service_name = args
-        .sharded_executor_args
-        .sharded_service_name
-        .as_ref()
-        .map(|_| ShardedService::SourceControlService);
+    let service_name = if args.sharded_executor_args.sharded_service_name.is_some()
+        || justknobs::eval(
+            "scm/mononoke:scs_unsharded_load_only_shallow_sharded",
+            None,
+            None,
+        )
+        .unwrap_or(false)
+    {
+        Some(ShardedService::SourceControlService)
+    } else {
+        None
+    };
     let repos_mgr = runtime.block_on(app.open_managed_repos(service_name))?;
     let mononoke = Arc::new(repos_mgr.make_mononoke_api()?);
     let megarepo_api = Arc::new(MegarepoApi::new(&app, mononoke.clone())?);
