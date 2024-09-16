@@ -5,6 +5,7 @@
 # GNU General Public License version 2.
 
 # shellcheck source=fbcode/eden/mononoke/tests/integration/library.sh
+
 # Test setup for testing Git LFS import scenarios, with:
 #  * two mononoke repos
 #    * "repo" - empty repo ready for import
@@ -15,7 +16,7 @@
 #                                 with lfs setup for pushing to legacy_lfs
 #
 #  The git repo has two files pushed to it, one LFS, one non-LFS.
-function test_repos_for_git_lfs_import {
+function test_repos_for_lfs_with_upstream {
     setup_common_config
     REPOTYPE="blob_files"
     setup_common_config $REPOTYPE
@@ -54,7 +55,20 @@ EOF
     fi
     export MONONOKE_LFS_URL
     MONONOKE_LFS_URL="$BASE_LFS_URL/repo"
+}
 
+function configure_lfs_client_with_legacy_server {
+    # configure LFS
+    quiet git lfs install --local
+    git config --local lfs.url "$LEGACY_LFS_URL"
+    git config --local http.extraHeader "x-client-info: {\"request_info\": {\"entry_point\": \"CurlTest\", \"correlator\": \"test\"}}"
+    git config --local http.sslCAInfo "$TEST_CERTDIR/root-ca.crt"
+    git config --local http.sslCert "$TEST_CERTDIR/client0.crt"
+    git config --local http.sslKey "$TEST_CERTDIR/client0.key"
+}
+
+function test_repos_for_git_lfs_import {
+    test_repos_for_lfs_with_upstream
     # Start SCS
     if [ "$START_SCS" == "1" ]; then
         start_and_wait_for_scs_server --scuba-dataset "file://$TESTTMP/scuba.json"
@@ -74,13 +88,7 @@ EOF
     git add small_file
     git commit -aqm "add small ile"
 
-    # configure LFS
-    quiet git lfs install --local
-    git config --local lfs.url "$LEGACY_LFS_URL"
-    git config --local http.extraHeader "x-client-info: {\"request_info\": {\"entry_point\": \"CurlTest\", \"correlator\": \"test\"}}"
-    git config --local http.sslCAInfo "$TEST_CERTDIR/root-ca.crt"
-    git config --local http.sslCert "$TEST_CERTDIR/client0.crt"
-    git config --local http.sslKey "$TEST_CERTDIR/client0.key"
+    configure_lfs_client_with_legacy_server
     quiet git lfs track large_file
 
     # commit LFS file
