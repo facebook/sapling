@@ -35,10 +35,11 @@ pub async fn list_requests<R: MononokeRepo>(
     ctx: CoreContext,
     queues_client: AsyncRequestsQueue<R>,
 ) -> Result<(), Error> {
-    let repos_and_queues = queues_client
-        .all_async_method_request_queues(&ctx)
+    let queue = queues_client
+        .async_method_request_queue(&ctx)
         .await
-        .context("obtaining all async queues")?;
+        .context("obtaining async queue")?;
+
     let lookback = args.lookback;
     let mut table = Table::new();
     table.set_titles(row![
@@ -52,51 +53,49 @@ pub async fn list_requests<R: MononokeRepo>(
         "Ready at",
         "Duration",
     ]);
-    for (_repo_ids, queue) in repos_and_queues {
-        let res = queue
-            .list_requests(
-                &ctx,
-                None,
-                Some(&Timestamp::from_timestamp_secs(
-                    Timestamp::now().timestamp_seconds() - lookback,
-                )),
-                false,
-            )
-            .await
-            .context("listing queued requests")?;
-        for (req_id, entry, params) in res.into_iter() {
-            let (source_name, changeset_id) = match params.thrift() {
-                ThriftAsynchronousRequestParams::megarepo_sync_changeset_params(params) => (
-                    params.source_name.clone(),
-                    ChangesetId::from_bytes(params.cs_id.clone())
-                        .context("deserializing entry")?
-                        .to_string(),
-                ),
-                _ => ("".to_string(), "".to_string()),
-            };
-            let created_at: DateTime = entry.created_at.into();
-            let ready_at: Option<DateTime> = entry.ready_at.map(|t| t.into());
-            let ready_at_str =
-                ready_at.map_or_else(|| "Not finished".to_string(), |t| t.to_string());
-            let duration = if let Some(ready_at) = ready_at {
-                let duration = ready_at.into_chrono() - created_at.into_chrono();
-                duration.to_string()
-            } else {
-                "Not finished".to_string()
-            };
-            table.add_row(row![
-                req_id.0,                                             // Request id
-                req_id.1,                                             // Method
-                entry.status,                                         // Status
-                params.target().context("decoding target")?.bookmark, // Bookmark
-                &source_name,                                         // Source name
-                &changeset_id,                                        // Source Changeset
-                &created_at,                                          // Created at
-                &ready_at_str,                                        // Ready at
-                duration,                                             // Duration
-            ]);
-        }
+    let res = queue
+        .list_requests(
+            &ctx,
+            None,
+            Some(&Timestamp::from_timestamp_secs(
+                Timestamp::now().timestamp_seconds() - lookback,
+            )),
+            false,
+        )
+        .await
+        .context("listing queued requests")?;
+    for (req_id, entry, params) in res.into_iter() {
+        let (source_name, changeset_id) = match params.thrift() {
+            ThriftAsynchronousRequestParams::megarepo_sync_changeset_params(params) => (
+                params.source_name.clone(),
+                ChangesetId::from_bytes(params.cs_id.clone())
+                    .context("deserializing entry")?
+                    .to_string(),
+            ),
+            _ => ("".to_string(), "".to_string()),
+        };
+        let created_at: DateTime = entry.created_at.into();
+        let ready_at: Option<DateTime> = entry.ready_at.map(|t| t.into());
+        let ready_at_str = ready_at.map_or_else(|| "Not finished".to_string(), |t| t.to_string());
+        let duration = if let Some(ready_at) = ready_at {
+            let duration = ready_at.into_chrono() - created_at.into_chrono();
+            duration.to_string()
+        } else {
+            "Not finished".to_string()
+        };
+        table.add_row(row![
+            req_id.0,                                             // Request id
+            req_id.1,                                             // Method
+            entry.status,                                         // Status
+            params.target().context("decoding target")?.bookmark, // Bookmark
+            &source_name,                                         // Source name
+            &changeset_id,                                        // Source Changeset
+            &created_at,                                          // Created at
+            &ready_at_str,                                        // Ready at
+            duration,                                             // Duration
+        ]);
     }
+
     table.set_format(*format::consts::FORMAT_NO_LINESEP_WITH_TITLE);
     table.printstd();
 

@@ -37,48 +37,47 @@ pub async fn abort_request<R: MononokeRepo>(
     ctx: CoreContext,
     queues_client: AsyncRequestsQueue<R>,
 ) -> Result<(), Error> {
-    let repos_and_queues = queues_client
-        .all_async_method_request_queues(&ctx)
+    let queue = queues_client
+        .async_method_request_queue(&ctx)
         .await
-        .context("obtaining all async queues")?;
+        .context("obtaining async queue")?;
 
     let row_id = args.request_id;
 
-    for (_repo_ids, queue) in repos_and_queues {
-        if let Some((request_id, _entry, params, maybe_result)) = queue
-            .get_request_by_id(&ctx, &RowId(row_id))
-            .await
-            .context("retrieving the request")?
-        {
-            if maybe_result.is_none() {
-                let err = MegarepoError::InternalError(anyhow!("aborted from CLI!").into());
-                let result: AsynchronousRequestResult = match params.thrift() {
-                    ThriftAsynchronousRequestParams::megarepo_sync_changeset_params(_) => {
-                        MegarepoSyncChangesetResult::error(err.into()).into()
-                    }
-                    ThriftAsynchronousRequestParams::megarepo_add_target_params(_) => {
-                        MegarepoAddTargetResult::error(err.into()).into()
-                    }
-                    ThriftAsynchronousRequestParams::megarepo_change_target_params(_) => {
-                        MegarepoChangeTargetConfigResult::error(err.into()).into()
-                    }
-                    ThriftAsynchronousRequestParams::megarepo_remerge_source_params(_) => {
-                        MegarepoRemergeSourceResult::error(err.into()).into()
-                    }
-                    ThriftAsynchronousRequestParams::megarepo_add_branching_target_params(_) => {
-                        MegarepoAddBranchingTargetResult::error(err.into()).into()
-                    }
-                    _ => return Err(anyhow!("unknown request type!")),
-                };
-                queue
-                    .complete(&ctx, &request_id, result)
-                    .await
-                    .context("updating the request")?;
-            } else {
-                return Err(anyhow!("Request already completed."));
-            }
-            return Ok(());
+    if let Some((request_id, _entry, params, maybe_result)) = queue
+        .get_request_by_id(&ctx, &RowId(row_id))
+        .await
+        .context("retrieving the request")?
+    {
+        if maybe_result.is_none() {
+            let err = MegarepoError::InternalError(anyhow!("aborted from CLI!").into());
+            let result: AsynchronousRequestResult = match params.thrift() {
+                ThriftAsynchronousRequestParams::megarepo_sync_changeset_params(_) => {
+                    MegarepoSyncChangesetResult::error(err.into()).into()
+                }
+                ThriftAsynchronousRequestParams::megarepo_add_target_params(_) => {
+                    MegarepoAddTargetResult::error(err.into()).into()
+                }
+                ThriftAsynchronousRequestParams::megarepo_change_target_params(_) => {
+                    MegarepoChangeTargetConfigResult::error(err.into()).into()
+                }
+                ThriftAsynchronousRequestParams::megarepo_remerge_source_params(_) => {
+                    MegarepoRemergeSourceResult::error(err.into()).into()
+                }
+                ThriftAsynchronousRequestParams::megarepo_add_branching_target_params(_) => {
+                    MegarepoAddBranchingTargetResult::error(err.into()).into()
+                }
+                _ => return Err(anyhow!("unknown request type!")),
+            };
+            queue
+                .complete(&ctx, &request_id, result)
+                .await
+                .context("updating the request")?;
+        } else {
+            return Err(anyhow!("Request already completed."));
         }
+        Ok(())
+    } else {
+        Err(anyhow!("Request not found."))
     }
-    Err(anyhow!("Request not found."))
 }

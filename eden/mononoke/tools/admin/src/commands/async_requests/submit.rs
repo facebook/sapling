@@ -24,7 +24,6 @@ use client::AsyncRequestsQueue;
 use context::CoreContext;
 use mononoke_api::Mononoke;
 use mononoke_api::MononokeRepo;
-use repo_identity::RepoIdentityRef;
 
 #[derive(Args)]
 /// Changes the request status to ready and put error as result.
@@ -44,9 +43,12 @@ pub async fn submit_request<R: MononokeRepo>(
     ctx: CoreContext,
     queues_client: AsyncRequestsQueue<R>,
     mononoke: Arc<Mononoke<R>>,
-    repo: R,
+    _repo: R,
 ) -> Result<(), Error> {
-    let queue = get_queue(&ctx, queues_client, repo).await?;
+    let queue = queues_client
+        .async_method_request_queue(&ctx)
+        .await
+        .context("obtaining all async queues")?;
 
     let params = fs::read_to_string(args.params)?;
     match args.method.as_str() {
@@ -81,28 +83,6 @@ pub async fn submit_request<R: MononokeRepo>(
     }?;
 
     Ok(())
-}
-
-async fn get_queue<R: MononokeRepo>(
-    ctx: &CoreContext,
-    queues_client: AsyncRequestsQueue<R>,
-    repo: R,
-) -> Result<AsyncMethodRequestQueue> {
-    let repos_and_queues = queues_client
-        .all_async_method_request_queues(ctx)
-        .await
-        .context("obtaining all async queues")?;
-
-    for (repo_ids, queue) in repos_and_queues {
-        if repo_ids.contains(&repo.repo_identity().id()) {
-            return Ok(queue);
-        }
-    }
-
-    Err(anyhow::anyhow!(
-        "queue not found for repo {}",
-        repo.repo_identity().id()
-    ))
 }
 
 async fn enqueue<P: ThriftParams, R: MononokeRepo>(

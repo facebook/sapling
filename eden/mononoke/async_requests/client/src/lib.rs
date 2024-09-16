@@ -21,17 +21,14 @@ use blobstore_factory::make_files_blobstore;
 use blobstore_factory::make_manifold_blobstore;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::future::try_join_all;
 use metaconfig_types::BlobConfig;
 use metaconfig_types::RepoConfigArc;
 use mononoke_api::Mononoke;
 use mononoke_api::MononokeRepo;
 use mononoke_app::MononokeApp;
-use mononoke_types::RepositoryId;
 use parking_lot::Mutex;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_identity::ArcRepoIdentity;
-use repo_identity::RepoIdentityRef;
 use requests_table::LongRunningRequestsQueue;
 use requests_table::SqlLongRunningRequestsQueue;
 use slog::info;
@@ -44,10 +41,12 @@ const ASYNC_REQUESTS_REPO: &str = "aosp";
 
 /// A cache for AsyncMethodRequestQueue instances
 #[derive(Clone)]
+#[allow(dead_code)]
 struct Cache<K: Clone + Eq + Hash, V: Clone> {
     cache: Arc<Mutex<HashMap<K, Arc<AsyncOnceCell<V>>>>>,
 }
 
+#[allow(dead_code)]
 impl<K: Clone + Eq + Hash, V: Clone> Cache<K, V> {
     fn new() -> Self {
         Cache {
@@ -82,6 +81,7 @@ impl<K: Clone + Eq + Hash, V: Clone> Cache<K, V> {
 }
 
 #[derive(Clone)]
+#[allow(dead_code)]
 pub struct AsyncRequestsQueue<R> {
     sql_connection: Arc<dyn LongRunningRequestsQueue>,
     blobstore: Arc<dyn Blobstore>,
@@ -234,44 +234,5 @@ impl<R: MononokeRepo> AsyncRequestsQueue<R> {
             self.sql_connection.clone(),
             self.blobstore.clone(),
         ))
-    }
-
-    /// Get an `AsyncMethodRequestQueue` for a given repo
-    async fn async_method_request_queue_for_repo(
-        &self,
-        repo_identity: &ArcRepoIdentity,
-    ) -> Result<AsyncMethodRequestQueue, AsyncRequestsError> {
-        let queue = self
-            .queue_cache
-            .get_or_try_init(&repo_identity.clone(), || async move {
-                Ok(AsyncMethodRequestQueue::new(
-                    self.sql_connection.clone(),
-                    self.blobstore.clone(),
-                ))
-            })
-            .await?;
-        Ok(queue)
-    }
-
-    /// Get all queues used by configured repos.
-    pub async fn all_async_method_request_queues(
-        &self,
-        _ctx: &CoreContext,
-    ) -> Result<Vec<(Vec<RepositoryId>, AsyncMethodRequestQueue)>, AsyncRequestsError> {
-        // TODO(mitrandir): instead of creating a queue per repo create a queue
-        // per group of repos with exactly same storage configs. This way even with
-        // a lot of repos we'll have few queues.
-        let queues = try_join_all(self.mononoke.repos().map(|repo| {
-            let repo_identity = repo.repo_identity().clone();
-            let repo_id = repo_identity.id();
-            async move {
-                let queue = self
-                    .async_method_request_queue_for_repo(&Arc::new(repo_identity))
-                    .await?;
-                Ok::<_, AsyncRequestsError>((vec![repo_id], queue))
-            }
-        }))
-        .await?;
-        Ok(queues)
     }
 }

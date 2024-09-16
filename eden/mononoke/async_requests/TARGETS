@@ -44,7 +44,6 @@ rust_library(
     autocargo = {"cargo_toml_dir": "client"},
     deps = [
         "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:slog",
         ":async_requests",
@@ -60,7 +59,6 @@ rust_library(
         "//eden/mononoke/common/sql_construct:sql_construct",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_api:mononoke_api",
-        "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/server/context:context",
     ],

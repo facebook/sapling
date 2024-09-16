@@ -119,27 +119,26 @@ pub async fn show_request<R: MononokeRepo>(
     queues_client: AsyncRequestsQueue<R>,
     mononoke: Arc<Mononoke<R>>,
 ) -> Result<(), Error> {
-    let repos_and_queues = queues_client
-        .all_async_method_request_queues(&ctx)
+    let queue = queues_client
+        .async_method_request_queue(&ctx)
         .await
-        .context("obtaining all async queues")?;
+        .context("obtaining async queue")?;
 
     let row_id = args.request_id;
 
-    for (_repo_ids, queue) in repos_and_queues {
-        if let Some((_request_id, entry, params, maybe_result)) = queue
-            .get_request_by_id(&ctx, &RowId(row_id))
-            .await
-            .context("retrieving the request")?
-        {
-            println!(
-                "Entry: {:#?}\nParams: {:#?}\nResult: {:#?}",
-                entry,
-                ParamsWrapper(&mononoke, params),
-                ResultsWrapper(maybe_result),
-            );
-            return Ok(());
-        }
+    if let Some((_request_id, entry, params, maybe_result)) = queue
+        .get_request_by_id(&ctx, &RowId(row_id))
+        .await
+        .context("retrieving the request")?
+    {
+        println!(
+            "Entry: {:#?}\nParams: {:#?}\nResult: {:#?}",
+            entry,
+            ParamsWrapper(&mononoke, params),
+            ResultsWrapper(maybe_result),
+        );
+        Ok(())
+    } else {
+        Err(anyhow!("Request not found."))
     }
-    Err(anyhow!("Request not found."))
 }

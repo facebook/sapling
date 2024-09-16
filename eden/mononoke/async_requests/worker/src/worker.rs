@@ -43,7 +43,6 @@ use megarepo_config::Target;
 use mononoke_api::Mononoke;
 use mononoke_api::MononokeRepo;
 use mononoke_app::MononokeApp;
-use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 use slog::debug;
 use slog::error;
@@ -98,15 +97,10 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
         limit: Option<usize>,
         concurrency_limit: usize,
     ) -> Result<(), AsyncRequestsError> {
-        let queues_with_repos = self
-            .queues_client
-            .all_async_method_request_queues(ctx)
-            .await?;
+        let queue = self.queues_client.async_method_request_queue(ctx).await?;
 
         // Build stream that pools all the queues
-        let request_stream = self
-            .request_stream(ctx.clone(), queues_with_repos, will_exit)
-            .boxed();
+        let request_stream = self.request_stream(ctx.clone(), queue, will_exit).boxed();
 
         let request_stream = if let Some(limit) = limit {
             request_stream.take(limit).left_stream()
@@ -135,7 +129,7 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
     pub fn request_stream(
         &self,
         ctx: CoreContext,
-        queues_with_repos: Vec<(Vec<RepositoryId>, AsyncMethodRequestQueue)>,
+        queue: AsyncMethodRequestQueue,
         will_exit: Arc<AtomicBool>,
     ) -> impl Stream<Item = Result<(RequestId, AsynchronousRequestParams), AsyncRequestsError>>
     {
@@ -144,7 +138,7 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
         Self::request_stream_inner(
             ctx,
             claimed_by,
-            queues_with_repos,
+            queue,
             will_exit,
             sleep_time,
             ABANDONED_REQUEST_THRESHOLD_SECS,
@@ -154,7 +148,7 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
     fn request_stream_inner(
         ctx: CoreContext,
         claimed_by: ClaimedBy,
-        queues_with_repos: Vec<(Vec<RepositoryId>, AsyncMethodRequestQueue)>,
+        queue: AsyncMethodRequestQueue,
         will_exit: Arc<AtomicBool>,
         sleep_time: Duration,
         abandoned_threshold_secs: i64,
@@ -163,20 +157,20 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
         try_stream! {
             'outer: loop {
                 let mut yielded = false;
-                for (_repo_ids, queue) in &queues_with_repos {
-                    Self::cleanup_abandoned_requests(
-                        &ctx,
-                        queue,
-                        abandoned_threshold_secs
-                    ).await?;
-                    if will_exit.load(Ordering::Relaxed) {
-                        break 'outer;
-                    }
-                    if let Some((request_id, params)) = queue.dequeue(&ctx, &claimed_by, None).await? {
-                        yield (request_id, params);
-                        yielded = true;
-                    }
+                Self::cleanup_abandoned_requests(
+                    &ctx,
+                    &queue,
+                    abandoned_threshold_secs
+                ).await?;
+
+                if will_exit.load(Ordering::Relaxed) {
+                    break 'outer;
                 }
+                if let Some((request_id, params)) = queue.dequeue(&ctx, &claimed_by, None).await? {
+                    yield (request_id, params);
+                    yielded = true;
+                }
+
                 if ! yielded {
                     // No requests in the queues, sleep before trying again.
                     debug!(
@@ -396,7 +390,7 @@ mod test {
         let s = AsyncMethodRequestWorker::<Repo>::request_stream_inner(
             ctx,
             ClaimedBy("name".to_string()),
-            vec![(vec![RepositoryId::new(0)], q)],
+            q,
             will_exit.clone(),
             Duration::from_millis(100),
             ABANDONED_REQUEST_THRESHOLD_SECS,
@@ -445,7 +439,7 @@ mod test {
         let s = AsyncMethodRequestWorker::<Repo>::request_stream_inner(
             ctx.clone(),
             ClaimedBy("name".to_string()),
-            vec![(vec![RepositoryId::new(0)], q.clone())],
+            q.clone(),
             will_exit.clone(),
             Duration::from_millis(100),
             ABANDONED_REQUEST_THRESHOLD_SECS,
@@ -463,7 +457,7 @@ mod test {
         let s = AsyncMethodRequestWorker::<Repo>::request_stream_inner(
             ctx,
             ClaimedBy("name".to_string()),
-            vec![(vec![RepositoryId::new(0)], q)],
+            q,
             will_exit.clone(),
             Duration::from_millis(100),
             1, // 1 second
