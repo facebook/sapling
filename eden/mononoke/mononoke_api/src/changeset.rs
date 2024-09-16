@@ -53,6 +53,7 @@ use manifest::ManifestOrderedOps;
 use manifest::PathOrPrefix;
 use mercurial_types::Globalrev;
 use mononoke_types::path::MPath;
+use mononoke_types::skeleton_manifest_v2::SkeletonManifestV2;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::FileChange;
 pub use mononoke_types::Generation;
@@ -64,6 +65,7 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataArc;
 use repo_derived_data::RepoDerivedDataRef;
 use skeleton_manifest::RootSkeletonManifestId;
+use skeleton_manifest_v2::RootSkeletonManifestV2Id;
 use smallvec::SmallVec;
 use sorted_vector_map::SortedVectorMap;
 use unodes::RootUnodeManifestId;
@@ -125,6 +127,7 @@ pub struct ChangesetContext<R> {
     root_unode_manifest_id: LazyShared<Result<RootUnodeManifestId, MononokeError>>,
     root_fsnode_id: LazyShared<Result<RootFsnodeId, MononokeError>>,
     root_skeleton_manifest_id: LazyShared<Result<RootSkeletonManifestId, MononokeError>>,
+    root_skeleton_manifest_v2_id: LazyShared<Result<RootSkeletonManifestV2Id, MononokeError>>,
     root_deleted_manifest_v2_id: LazyShared<Result<RootDeletedManifestV2Id, MononokeError>>,
     root_bssm_v3_directory_id: LazyShared<Result<RootBssmV3DirectoryId, MononokeError>>,
     /// None if no mutable history, else map from supplied paths to data fetched
@@ -182,6 +185,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
         let root_unode_manifest_id = LazyShared::new_empty();
         let root_fsnode_id = LazyShared::new_empty();
         let root_skeleton_manifest_id = LazyShared::new_empty();
+        let root_skeleton_manifest_v2_id = LazyShared::new_empty();
         let root_deleted_manifest_v2_id = LazyShared::new_empty();
         let root_bssm_v3_directory_id = LazyShared::new_empty();
         Self {
@@ -192,6 +196,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
             root_unode_manifest_id,
             root_fsnode_id,
             root_skeleton_manifest_id,
+            root_skeleton_manifest_v2_id,
             root_deleted_manifest_v2_id,
             root_bssm_v3_directory_id,
             mutable_history: None,
@@ -339,6 +344,14 @@ impl<R: MononokeRepo> ChangesetContext<R> {
     ) -> Result<RootSkeletonManifestId, MononokeError> {
         self.root_skeleton_manifest_id
             .get_or_init(|| self.derive::<RootSkeletonManifestId>())
+            .await
+    }
+
+    pub(crate) async fn root_skeleton_manifest_v2_id(
+        &self,
+    ) -> Result<RootSkeletonManifestV2Id, MononokeError> {
+        self.root_skeleton_manifest_v2_id
+            .get_or_init(|| self.derive::<RootSkeletonManifestV2Id>())
             .await
     }
 
@@ -1135,6 +1148,43 @@ impl<R: MononokeRepo> ChangesetContext<R> {
                 .left_stream(),
             ChangesetFileOrdering::Ordered { after } => root
                 .skeleton_manifest_id()
+                .find_entries_ordered(
+                    self.ctx().clone(),
+                    self.repo_ctx().repo().repo_blobstore().clone(),
+                    prefixes,
+                    after,
+                )
+                .right_stream(),
+        };
+        Ok(entries)
+    }
+
+    async fn find_entries_v2(
+        &self,
+        prefixes: Option<Vec1<MPath>>,
+        ordering: ChangesetFileOrdering,
+    ) -> Result<
+        impl Stream<Item = Result<(MPath, ManifestEntry<SkeletonManifestV2, ()>), anyhow::Error>>,
+        MononokeError,
+    > {
+        let root = self.root_skeleton_manifest_v2_id().await?;
+        let manifest = root
+            .inner_id()
+            .load(self.ctx(), self.repo_ctx().repo().repo_blobstore())
+            .await?;
+        let prefixes = match prefixes {
+            Some(prefixes) => prefixes.into_iter().map(PathOrPrefix::Prefix).collect(),
+            None => vec![PathOrPrefix::Prefix(MPath::ROOT)],
+        };
+        let entries = match ordering {
+            ChangesetFileOrdering::Unordered => manifest
+                .find_entries(
+                    self.ctx().clone(),
+                    self.repo_ctx().repo().repo_blobstore().clone(),
+                    prefixes,
+                )
+                .left_stream(),
+            ChangesetFileOrdering::Ordered { after } => manifest
                 .find_entries_ordered(
                     self.ctx().clone(),
                     self.repo_ctx().repo().repo_blobstore().clone(),

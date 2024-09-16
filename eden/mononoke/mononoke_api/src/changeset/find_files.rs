@@ -134,13 +134,32 @@ impl<R: MononokeRepo> ChangesetContext<R> {
         ordering: ChangesetFileOrdering,
     ) -> Result<impl Stream<Item = Result<MPath, MononokeError>>, MononokeError> {
         // First, find the entries, and filter by file prefix.
-        let entries = self.find_entries(prefixes, ordering).await?;
-        let mpaths = entries.try_filter_map(|(path, entry)| async move {
-            match (path.into_optional_non_root_path(), entry) {
-                (Some(mpath), ManifestEntry::Leaf(_)) => Ok(Some(mpath)),
-                _ => Ok(None),
-            }
-        });
+
+        let mpaths = if justknobs::eval(
+            "scm/mononoke:mononoke_api_find_files_use_skeleton_manifests_v2",
+            None,
+            Some(self.repo_ctx().name()),
+        )? {
+            let entries = self.find_entries_v2(prefixes, ordering).await?;
+            entries
+                .try_filter_map(|(path, entry)| async move {
+                    match (path.into_optional_non_root_path(), entry) {
+                        (Some(mpath), ManifestEntry::Leaf(_)) => Ok(Some(mpath)),
+                        _ => Ok(None),
+                    }
+                })
+                .left_stream()
+        } else {
+            let entries = self.find_entries(prefixes, ordering).await?;
+            entries
+                .try_filter_map(|(path, entry)| async move {
+                    match (path.into_optional_non_root_path(), entry) {
+                        (Some(mpath), ManifestEntry::Leaf(_)) => Ok(Some(mpath)),
+                        _ => Ok(None),
+                    }
+                })
+                .right_stream()
+        };
 
         // Now, construct a set of basenames to include.
         // These basenames are of type MPathElement rather than being strings.
