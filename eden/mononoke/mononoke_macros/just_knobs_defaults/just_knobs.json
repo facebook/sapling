@@ -66,6 +66,7 @@
     "scm/mononoke:bookmarks_cache_ttl_ms": 0,
     "scm/mononoke:derivation_worker_max_concurrent_derivations": 10,
     "scm/mononoke:live_git_sync_batch_size": 50,
+    "scm/mononoke:skeleton_manifest_v2_derive_from_predecessor_chunk_size": 1000,
     "scm/mononoke_memcache_sitevers:bonsai_git_mapping": 0,
     "scm/mononoke_memcache_sitevers:blobstore": 0,
     "scm/mononoke_memcache_sitevers:bonsai_hg_mapping": 0,

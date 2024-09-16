@@ -59,7 +59,11 @@ pub(crate) async fn derive_from_predecessor(
     let blobstore = derivation_ctx.blobstore();
     let predecessor = predecessor.into_skeleton_manifest_id();
 
-    let manifest = inner_derive_from_predecessor(ctx, blobstore, predecessor, 10000).await?;
+    let chunk_size = justknobs::get_as::<usize>(
+        "scm/mononoke:skeleton_manifest_v2_derive_from_predecessor_chunk_size",
+        None,
+    )?;
+    let manifest = inner_derive_from_predecessor(ctx, blobstore, predecessor, chunk_size).await?;
 
     Ok(RootSkeletonManifestV2Id(
         manifest
