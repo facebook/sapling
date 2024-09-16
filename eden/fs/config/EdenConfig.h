@@ -334,6 +334,14 @@ class EdenConfig : private ConfigSettingManager {
       32,
       this};
 
+  /**
+   * How often to publish Thrift server metrics in milliseconds.
+   */
+  ConfigSetting<std::chrono::nanoseconds> thriftServerObserverPublishInterval{
+      "thrift:server-observer-publish-interval",
+      std::chrono::milliseconds(1000),
+      this};
+
   // [ssl]
 
   ConfigSetting<AbsolutePath> clientCertificate{

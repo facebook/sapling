@@ -1344,6 +1344,13 @@ bool EdenServer::performCleanup() {
     XDCHECK_EQ(state->state, RunState::SHUTTING_DOWN);
     state->state = RunState::SHUTTING_DOWN;
   }
+
+#ifdef EDEN_HAVE_SERVER_OBSERVER
+  // Stop the server observer publish thread. If this is a takeover and the
+  // takeover fails, the recovery code will restart the thread again
+  fb303::ThreadCachedServiceData::get()->stopPublishThread();
+#endif
+
   if (!takeover) {
     shutdownFuture = performNormalShutdown().deferValue(
         [](auto&&) -> std::optional<TakeoverData> { return std::nullopt; });
@@ -2062,6 +2069,14 @@ folly::SemiFuture<Unit> EdenServer::createThriftServer() {
 #ifdef EDEN_HAVE_SERVER_OBSERVER
   server_->setObserver(createServerObserver(
       kServiceName, edenConfig->thriftServerObserverSamplingRate.getValue()));
+  // The server observer that is set up above collects its stats via a
+  // ThreadCachedServiceData object rather than directly via the ServiceData
+  // object for efficiency's sake. However, it does require periodically calling
+  // publishStats() in order to flush the stats data cached in each thread to
+  // the underlying ServiceData object.
+  fb303::ThreadCachedServiceData::get()->startPublishThread(
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          edenConfig->thriftServerObserverPublishInterval.getValue()));
 #endif
   server_->setMaxRequests(edenConfig->thriftMaxRequests.getValue());
 
