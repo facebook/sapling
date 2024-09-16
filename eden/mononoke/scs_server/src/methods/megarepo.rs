@@ -206,7 +206,7 @@ impl SourceControlServiceImpl {
 
         let token = self
             .queues_client
-            .async_method_request_queue(&ctx, &target)
+            .async_method_request_queue(&ctx)
             .await?
             .enqueue(&ctx, &self.mononoke, params)
             .await
@@ -227,7 +227,7 @@ impl SourceControlServiceImpl {
 
         let poll_response = self
             .queues_client
-            .async_method_request_queue(&ctx, &target)
+            .async_method_request_queue(&ctx)
             .await?
             .poll(&ctx, token)
             .await?;
@@ -249,7 +249,7 @@ impl SourceControlServiceImpl {
 
         let token = self
             .queues_client
-            .async_method_request_queue(&ctx, &target)
+            .async_method_request_queue(&ctx)
             .await?
             .enqueue(&ctx, &self.mononoke, params)
             .await
@@ -270,7 +270,7 @@ impl SourceControlServiceImpl {
 
         let poll_response = self
             .queues_client
-            .async_method_request_queue(&ctx, &target)
+            .async_method_request_queue(&ctx)
             .await?
             .poll(&ctx, token)
             .await?;
@@ -292,7 +292,7 @@ impl SourceControlServiceImpl {
 
         let token = self
             .queues_client
-            .async_method_request_queue(&ctx, &target)
+            .async_method_request_queue(&ctx)
             .await?
             .enqueue(&ctx, &self.mononoke, params)
             .await
@@ -313,7 +313,7 @@ impl SourceControlServiceImpl {
 
         let poll_response = self
             .queues_client
-            .async_method_request_queue(&ctx, &target)
+            .async_method_request_queue(&ctx)
             .await?
             .poll(&ctx, token)
             .await?;
@@ -335,7 +335,7 @@ impl SourceControlServiceImpl {
 
         let token = self
             .queues_client
-            .async_method_request_queue(&ctx, &target)
+            .async_method_request_queue(&ctx)
             .await?
             .enqueue(&ctx, &self.mononoke, params)
             .await
@@ -355,7 +355,7 @@ impl SourceControlServiceImpl {
         self.check_write_allowed(&ctx, target_repo_id).await?;
         let poll_response = self
             .queues_client
-            .async_method_request_queue(&ctx, &target)
+            .async_method_request_queue(&ctx)
             .await?
             .poll(&ctx, token)
             .await?;
@@ -377,7 +377,7 @@ impl SourceControlServiceImpl {
 
         let token = self
             .queues_client
-            .async_method_request_queue(&ctx, &target)
+            .async_method_request_queue(&ctx)
             .await?
             .enqueue(&ctx, &self.mononoke, params)
             .await
@@ -398,7 +398,7 @@ impl SourceControlServiceImpl {
 
         let poll_response = self
             .queues_client
-            .async_method_request_queue(&ctx, &target)
+            .async_method_request_queue(&ctx)
             .await?
             .poll(&ctx, token)
             .await?;

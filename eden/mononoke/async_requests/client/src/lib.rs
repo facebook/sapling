@@ -22,7 +22,6 @@ use blobstore_factory::make_manifold_blobstore;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::future::try_join_all;
-use megarepo_config::Target;
 use metaconfig_types::BlobConfig;
 use metaconfig_types::RepoConfigArc;
 use mononoke_api::Mononoke;
@@ -32,7 +31,6 @@ use mononoke_types::RepositoryId;
 use parking_lot::Mutex;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_identity::ArcRepoIdentity;
-use repo_identity::RepoIdentityArc;
 use repo_identity::RepoIdentityRef;
 use requests_table::LongRunningRequestsQueue;
 use requests_table::SqlLongRunningRequestsQueue;
@@ -227,15 +225,15 @@ impl<R: MononokeRepo> AsyncRequestsQueue<R> {
         bail!("No db config found in common config and legacy config is disabled")
     }
 
-    /// Get an `AsyncMethodRequestQueue` for a given target
+    /// Get the `AsyncMethodRequestQueue`
     pub async fn async_method_request_queue(
         &self,
-        ctx: &CoreContext,
-        target: &Target,
+        _ctx: &CoreContext,
     ) -> Result<AsyncMethodRequestQueue, AsyncRequestsError> {
-        let repo_identity = self.target_repo_id(ctx, target).await?;
-        self.async_method_request_queue_for_repo(&repo_identity)
-            .await
+        Ok(AsyncMethodRequestQueue::new(
+            self.sql_connection.clone(),
+            self.blobstore.clone(),
+        ))
     }
 
     /// Get an `AsyncMethodRequestQueue` for a given repo
@@ -275,25 +273,5 @@ impl<R: MononokeRepo> AsyncRequestsQueue<R> {
         }))
         .await?;
         Ok(queues)
-    }
-
-    /// Get Mononoke repo config and identity by a target
-    async fn target_repo_id(
-        &self,
-        ctx: &CoreContext,
-        target: &Target,
-    ) -> Result<ArcRepoIdentity, Error> {
-        let repo_id: i32 = TryFrom::<i64>::try_from(target.repo_id)?;
-        let repo = match self.mononoke.raw_repo_by_id(repo_id) {
-            Some(repo) => repo,
-            None => {
-                warn!(
-                    ctx.logger(),
-                    "Unknown repo: {} in target {:?}", repo_id, target
-                );
-                bail!("unknown repo in the target: {}", repo_id)
-            }
-        };
-        Ok(repo.repo_identity_arc())
     }
 }

@@ -235,10 +235,7 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
             .target()?
             .clone()
             .into_config_format(&self.megarepo.mononoke())?;
-        let queue = self
-            .queues_client
-            .async_method_request_queue(&ctx, &target)
-            .await?;
+        let queue = self.queues_client.async_method_request_queue(&ctx).await?;
 
         let ctx = self.prepare_ctx(&ctx, &req_id, &target);
 

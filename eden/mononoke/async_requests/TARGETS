@@ -58,7 +58,6 @@ rust_library(
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
         "//eden/mononoke/common/rust/sql_ext:sql_ext",
         "//eden/mononoke/common/sql_construct:sql_construct",
-        "//eden/mononoke/megarepo_api:megarepo_config",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_api:mononoke_api",
         "//eden/mononoke/mononoke_types:mononoke_types",
