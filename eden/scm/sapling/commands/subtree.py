@@ -5,8 +5,7 @@
 
 import json
 
-from .. import cmdutil, context, error, hg, scmutil
-
+from .. import cmdutil, context, error, hg, node, scmutil
 from ..cmdutil import commitopts, commitopts2, diffgraftopts, dryrunopts, mergetoolopts
 from ..i18n import _
 from .cmdtable import command
@@ -110,6 +109,72 @@ def subtree_graft(ui, repo, **opts):
 
     with repo.wlock():
         return _dograft(ui, repo, **opts)
+
+
+def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path):
+    """get the best merge base for subtree merge
+
+    There are two major use cases for subtree merge:
+    1. merge a dev branch (original copy-to directory) to main branch
+    2. merge a main branch to release branch (original copy-to directory)
+
+    High level idea of the aglorithm:
+    1. try to find the last subtree merge point
+    2. try to find the original subtree copy info
+    3. otherwise, fallback to the parent commit of the creation commit
+    """
+    dag = repo.changelog.dag
+    isancestor = dag.isancestor
+    to_hist = repo.pathhistory([to_path], dag.ancestors([to_ctx.node()]))
+    from_hist = repo.pathhistory([from_path], dag.ancestors([from_ctx.node()]))
+
+    iters = [to_hist, from_hist]
+    paths = [to_path, from_path]
+
+    # we ensure that 'from_path' and 'to_path' exist, so it should be safe to call
+    # next() on both iterators.
+    heads = [next(iters[0]), next(iters[1])]
+    has_ancestor_relation = dag.gcaone(heads) in heads
+    i = 1
+    while True:
+        # check the other one by default
+        i = 1 - i
+        # if they have direct ancestor relationship, then selects the newer one
+        if has_ancestor_relation:
+            if isancestor(heads[0], heads[1]):
+                i = 1
+            elif isancestor(heads[1], heads[0]):
+                i = 0
+
+        # check merge info
+        if merge_info := get_merge_info(repo, heads[i]):
+            if (
+                merge_info["to_path"] == paths[i]
+                and merge_info["from_path"] == paths[1 - i]
+            ):
+                return merge_info["from_commit"]
+
+        # check branch info
+        if branch_info := get_branch_info(repo, heads[i]):
+            for branch in branch_info["branches"]:
+                if (
+                    branch["to_path"] == paths[i]
+                    and branch["from_path"] == paths[1 - i]
+                ):
+                    return branch["from_commit"]
+
+        try:
+            # add next node to the list
+            heads[i] = next(iters[i])
+        except StopIteration:
+            # no branch info, use the first parent
+            try:
+                return dag.parentnames(heads[i])[0]
+            except IndexError:
+                return node.nullid
+
+    # should never reach here
+    raise error.Abort("cannot find a merge base")
 
 
 def copy(ui, repo, *args, **opts):
