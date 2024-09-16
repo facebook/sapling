@@ -321,10 +321,7 @@ Merge with preserved ancestors
   RewrittenAs([(ChangesetId(Blake2(0958bd58a03b8c799664bc0767b095a97003ee41eaa7814343ad9dcc6f90bc16)), CommitSyncConfigVersion("TEST_VERSION_NAME"))])
 
 --verify the working copy
-  $ mononoke_admin_source_target 1 0 crossrepo verify-wc master_bookmark
-  * using repo "with_merge" repoid RepositoryId(1) (glob)
-  * using repo "meg" repoid RepositoryId(0) (glob)
-  * changeset resolved as: ChangesetId(Blake2(0958bd58a03b8c799664bc0767b095a97003ee41eaa7814343ad9dcc6f90bc16)) (glob)
+  $ mononoke_newadmin cross-repo --source-repo-name with_merge --target-repo-name meg verify-working-copy $(mononoke_newadmin bookmarks -R meg get master_bookmark)
   * target repo cs id: 3f71f093fcfbebcc47c981c847cd80c7d0bf063c5022aba53fab95244e4c4f1c, mapping version: TEST_VERSION_NAME (glob)
   * ### (glob)
   * ### Checking that all the paths from the repo meg are properly rewritten to with_merge (glob)

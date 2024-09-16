@@ -623,7 +623,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   0597690a839ce11a250139dae33ee85d9772a47a (no-eol)
 
 -- Also check that our two binaries that can verify working copy are able to deal with expansions
-  $ REPOIDLARGE=$LARGE_REPO_ID REPOIDSMALL=$SUBMODULE_REPO_ID verify_wc master |& strip_glog
+  $ REPOIDLARGE=$LARGE_REPO_ID REPOIDSMALL=$SUBMODULE_REPO_ID verify_wc $(hg log -r master -T '{node}') |& strip_glog
 
 -- The check-push-redirection-prereqs should behave the same both ways but let's verify it (we had bugs where it didn't)
 -- (those outputs are still not correct but that's expected)

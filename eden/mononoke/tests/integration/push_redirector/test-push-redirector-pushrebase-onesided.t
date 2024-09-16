@@ -130,7 +130,7 @@ Verification function
   $ function verify_wc() {
   >   local large_repo_commit
   >   large_repo_commit="$1"
-  >   "$MONONOKE_ADMIN" "${CACHE_ARGS[@]}" "${COMMON_ARGS[@]}" --log-level ERROR --mononoke-config-path "$TESTTMP"/mononoke-config --source-repo-id="$REPOIDLARGE" --target-repo-id="$REPOIDSMALL1" crossrepo verify-wc $large_repo_commit
+  >   "$MONONOKE_NEWADMIN" "${CACHE_ARGS[@]}" "${COMMON_ARGS[@]}" --log-level ERROR --mononoke-config-path "$TESTTMP"/mononoke-config cross-repo --source-repo-id="$REPOIDLARGE" --target-repo-id="$REPOIDSMALL1" verify-working-copy $large_repo_commit
   > }
 
 setup hg server repos
@@ -231,7 +231,7 @@ Normal pushrebase with one commit
   │
   ~
 - compare the working copies
-  $ verify_wc master_bookmark
+  $ verify_wc $(hg log -r master_bookmark -T '{node}')
 
 At the same time, the tailed repo gets new commits
   $ cd "$TESTTMP/small-hg-client-2"
@@ -280,7 +280,7 @@ Bookmark-only pushrebase (Create a new bookmark, do not push commits)
      default/bookprefix1/master_bookmark_non_fast_forward 6b6a308437bb
      default/master_bookmark   bf8e8d65212d
 - compare the working copies
-  $ verify_wc bookprefix1/master_bookmark_2
+  $ verify_wc $(hg log -r bookprefix1/master_bookmark_2 -T '{node}')
 
 Delete a bookmark
   $ cd "$TESTTMP/small-hg-client-1"

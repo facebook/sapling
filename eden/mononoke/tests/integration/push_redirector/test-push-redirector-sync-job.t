@@ -45,7 +45,7 @@
   o  newcommit [public;rev=3;*] default/master_bookmark (glob)
   │
   ~
-  $ verify_wc master_bookmark
+  $ verify_wc $(hg log -r master_bookmark -T '{node}')
 -- do a push to a large repo, then backsync it to a small one
   $ hg up -q master_bookmark
   $ echo test > tolarge

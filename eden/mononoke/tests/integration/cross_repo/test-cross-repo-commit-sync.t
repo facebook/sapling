@@ -89,14 +89,14 @@
   * processing log entry * (glob)
   * processing log entry * (glob)
   * processing log entry * (glob)
-  $ REPOIDLARGE=0 REPOIDSMALL=1 verify_wc master_bookmark
-  $ REPOIDLARGE=0 REPOIDSMALL=1 verify_wc fbsource/somebook
+  $ REPOIDLARGE=0 REPOIDSMALL=1 verify_wc $(mononoke_newadmin bookmarks --repo-id 0 get master_bookmark)
+  $ REPOIDLARGE=0 REPOIDSMALL=1 verify_wc $(mononoke_newadmin bookmarks --repo-id 0 get fbsource/somebook)
 
 -- sync ovrsource
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES (0, 'xreposync_from_2', 2)"
   $ mononoke_x_repo_sync 2 0 tail --catch-up-once |& grep processing
   * processing log entry * (glob)
-  $ REPOIDLARGE=0 REPOIDSMALL=2 verify_wc master_bookmark
+  $ REPOIDLARGE=0 REPOIDSMALL=2 verify_wc $(mononoke_newadmin bookmarks --repo-id 0 get master_bookmark)
 
 -- one more push from fbsource to make sure resuming works
 -- it also tests rewrite dates mode

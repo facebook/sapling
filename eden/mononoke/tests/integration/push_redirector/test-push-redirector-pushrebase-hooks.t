@@ -55,7 +55,7 @@ blocked by deny_files
   │
   ~
 - compare the working copies
-  $ verify_wc master_bookmark
+  $ verify_wc $(hg log -r master_bookmark -T '{node}')
 
 Pushing to the small repo triggers deny_files, even though deny_files is only configured on the large repo
 Note that the node is from the small repo, even though the hook is in the large repo

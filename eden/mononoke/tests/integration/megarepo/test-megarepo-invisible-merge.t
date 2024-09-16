@@ -138,7 +138,7 @@ Perform ovrsource pushrebase, make sure it is push-redirected into Megarepo
   otherfile_ovrsource
   pushredirected_1
 - compare the working copies
-  $ REPOIDLARGE=$MEG_REPOID REPOIDSMALL=$OVR_REPOID verify_wc master_bookmark
+  $ REPOIDLARGE=$MEG_REPOID REPOIDSMALL=$OVR_REPOID verify_wc $(hg log -r master_bookmark -T '{node}')
 
   $ cd "$TESTTMP/ovr-hg-cnt"
   $ hg up -q master_bookmark
@@ -170,7 +170,7 @@ Perform ovrsource pushrebase, make sure it is push-redirected into Megarepo
   pushredirected_1
   pushredirected_2
 - compare the working copies
-  $ REPOIDLARGE=$MEG_REPOID REPOIDSMALL=$OVR_REPOID verify_wc master_bookmark
+  $ REPOIDLARGE=$MEG_REPOID REPOIDSMALL=$OVR_REPOID verify_wc $(hg log -r master_bookmark -T '{node}')
 
 
 Set current version of CommitSyncConfig to have fbsource as large repo,
@@ -376,4 +376,4 @@ Perform ovrsource pushrebase, make sure it is push-redirected into Fbsource
   pushredirected_2
   pushredirected_3
 - compare the working copies
-  $ REPOIDLARGE=$FBS_REPOID REPOIDSMALL=$OVR_REPOID verify_wc master_bookmark
+  $ REPOIDLARGE=$FBS_REPOID REPOIDSMALL=$OVR_REPOID verify_wc $(hg log -r master_bookmark -T '{node}')

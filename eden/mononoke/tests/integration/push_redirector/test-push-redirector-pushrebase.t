@@ -55,7 +55,7 @@ Normal pushrebase with one commit
   │
   ~
 - compare the working copies
-  $ verify_wc master_bookmark
+  $ verify_wc $(hg log -r master_bookmark -T '{node}')
 
 Bookmark-only pushrebase (Create a new bookmark, do not push commits)
   $ cd "$TESTTMP/small-hg-client"
@@ -86,7 +86,7 @@ Noop bookmark-only pushrebase
      default/bookprefix/master_bookmark_2 bfcfb674663c
      default/master_bookmark   819e91b238b7
 - compare the working copies
-  $ verify_wc bookprefix/master_bookmark_2
+  $ verify_wc $(hg log -r bookprefix/master_bookmark_2 -T '{node}')
 
 Delete a bookmark
   $ cd "$TESTTMP/small-hg-client"
@@ -131,7 +131,7 @@ Normal pushrebase with many commits
   o  The staunchest tramp to ply his trade [public;rev=7;34c34be6efde] default/master_bookmark
   │
   ~
-  $ verify_wc master_bookmark
+  $ verify_wc $(hg log -r master_bookmark -T '{node}')
 
 Pushrebase, which copies and removes files
   $ cd "$TESTTMP/small-hg-client"
@@ -153,7 +153,7 @@ Pushrebase, which copies and removes files
   o  Moves, renames and copies [public;rev=8;b4e3e504160c] default/master_bookmark
   │
   ~
-  $ verify_wc master_bookmark
+  $ verify_wc $(hg log -r master_bookmark -T '{node}')
 
 Pushrebase, which replaces a directory with a file
   $ cd "$TESTTMP/small-hg-client"
@@ -174,7 +174,7 @@ Pushrebase, which replaces a directory with a file
   o  Replace a directory with a file [public;rev=9;6ac00e7afd93] default/master_bookmark
   │
   ~
-  $ verify_wc master_bookmark
+  $ verify_wc $(hg log -r master_bookmark -T '{node}')
 
 Normal pushrebase to a prefixed bookmark
 -- push to create a second bookmark
@@ -193,7 +193,7 @@ Normal pushrebase to a prefixed bookmark
   o  The epicness of this fail is great [public;rev=10;030470259cb4] default/bookprefix/master_bookmark_2
   │
   ~
-  $ verify_wc bookprefix/master_bookmark_2
+  $ verify_wc $(hg log -r bookprefix/master_bookmark_2 -T '{node}')
 -- push to update a second bookmark
   $ cd "$TESTTMP/small-hg-client"
   $ hg up -q master_bookmark_2
@@ -211,7 +211,7 @@ Normal pushrebase to a prefixed bookmark
   o  The epicness of this fail is greater [public;rev=11;ccbb367ae93a] default/bookprefix/master_bookmark_2
   │
   ~
-  $ verify_wc bookprefix/master_bookmark_2
+  $ verify_wc $(hg log -r bookprefix/master_bookmark_2 -T '{node}')
 
 Pushrebase with a rename between a shifted and a non-shifted behavior
 -- let's create a file in a non-shifted directory
@@ -227,7 +227,7 @@ Pushrebase with a rename between a shifted and a non-shifted behavior
   $ hg up -q master_bookmark
   $ ls non_path_shifting
   filetomove
-  $ verify_wc master_bookmark
+  $ verify_wc $(hg log -r master_bookmark -T '{node}')
 
 -- let's now move this file to a shifted directory
   $ cd "$TESTTMP/small-hg-client"
@@ -245,7 +245,7 @@ Pushrebase with a rename between a shifted and a non-shifted behavior
   [2]
   $ ls smallrepofolder/filetomove
   smallrepofolder/filetomove
-  $ verify_wc master_bookmark
+  $ verify_wc $(hg log -r master_bookmark -T '{node}')
 
 -- let's now move this file back
   $ cd "$TESTTMP/small-hg-client"
@@ -263,7 +263,7 @@ Pushrebase with a rename between a shifted and a non-shifted behavior
   $ ls smallrepofolder/filetomove
   ls: cannot access *: No such file or directory (glob)
   [2]
-  $ verify_wc master_bookmark
+  $ verify_wc $(hg log -r master_bookmark -T '{node}')
 
 Pushrebase, which replaces a file with a directory
   $ cd "$TESTTMP/small-hg-client"
@@ -287,4 +287,4 @@ Pushrebase, which replaces a file with a directory
   @  Replace a file with a directory [public;rev=15;81b97bd0337e] default/master_bookmark
   │
   ~
-  $ verify_wc master_bookmark
+  $ verify_wc $(hg log -r master_bookmark -T '{node}')

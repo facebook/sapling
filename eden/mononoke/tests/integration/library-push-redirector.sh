@@ -10,12 +10,12 @@
 function verify_wc() {
    local large_repo_commit
    large_repo_commit="$1"
-   "$MONONOKE_ADMIN" \
+   "$MONONOKE_NEWADMIN" \
      "${CACHE_ARGS[@]}" \
      "${COMMON_ARGS[@]}" --log-level ERROR \
      --mononoke-config-path  "$TESTTMP"/mononoke-config \
-     --source-repo-id="$REPOIDLARGE" --target-repo-id="$REPOIDSMALL" \
-     crossrepo verify-wc "$large_repo_commit"
+     cross-repo --source-repo-id="$REPOIDLARGE" --target-repo-id="$REPOIDSMALL" \
+     verify-working-copy "$large_repo_commit"
 }
 
 function validate_commit_sync() {
