@@ -249,7 +249,10 @@ dott_test(
     disable_all_network_access_target = False,
     dott_files = glob(
         ["test-scs*.t"],
-        exclude = ["test-scs-git*.t"],
+        exclude = [
+            "test-scs-git*.t",
+            "test-scs-land-service*.t",
+        ],
     ),
     deps = [
         "//eden/mononoke:admin",
@@ -272,6 +275,21 @@ dott_test(
     deps = [
         "//eden/mononoke:mononoke",
         "//eden/mononoke/git/gitimport:gitimport",
+        "//eden/mononoke/scs/client:scsc",
+        "//eden/mononoke/scs_server:scs_server",
+        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+dott_test(
+    name = "scs-land-service",
+    disable_all_network_access_target = False,
+    dott_files = glob(["test-scs-land-service*.t"]),
+    deps = [
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/git/gitimport:gitimport",
+        "//eden/mononoke/land_service/facebook/server:land_service",
         "//eden/mononoke/scs/client:scsc",
         "//eden/mononoke/scs_server:scs_server",
         "//eden/mononoke/tools/admin:newadmin",
