@@ -18,6 +18,7 @@ use anyhow::Error;
 use async_trait::async_trait;
 use clap::Parser;
 use clap::ValueEnum;
+use client::AsyncRequestsQueue;
 use cloned::cloned;
 use cmdlib_logging::ScribeLoggingArgs;
 use connection_security_checker::ConnectionSecurityChecker;
@@ -122,6 +123,9 @@ struct ScsServerArgs {
     /// Number of Thrift workers for slow methods
     #[clap(long, default_value = "5")]
     thrift_workers_num_slow: usize,
+    /// Some long-running requests are processed asynchronously by default. This flag disables that behavior; requests will fail.
+    #[clap(long, default_value = "false")]
+    disable_async_requests: bool,
 }
 
 #[derive(ValueEnum, Clone, Copy, Debug, PartialEq, Eq)]
@@ -266,6 +270,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         &app.repo_configs().common,
     ))?;
 
+    let async_requests_queue_client = if args.disable_async_requests {
+        None
+    } else {
+        let queue_client = runtime.block_on(AsyncRequestsQueue::new(fb, &app, mononoke.clone()))?;
+        Some(Arc::new(queue_client))
+    };
+
     let source_control_server = {
         let maybe_factory_group = if let ThriftServerMode::FactoryGroup = args.thift_server_mode {
             let worker_counts: [usize; NUM_PRIORITY_QUEUES] =
@@ -295,6 +306,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             app.configs(),
             &app.repo_configs().common,
             maybe_factory_group,
+            async_requests_queue_client,
         ))?
     };
 

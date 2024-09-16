@@ -204,15 +204,21 @@ impl SourceControlServiceImpl {
             .into_config_format(&self.mononoke)?;
         self.verify_repos_by_config(&config_with_new_target)?;
 
-        let token = self
-            .queues_client
-            .async_method_request_queue(&ctx)
-            .await?
-            .enqueue(&ctx, &self.mononoke, params)
-            .await
-            .map_err(|e| errors::internal_error(format!("Failed to enqueue the request: {}", e)))?;
+        match &self.async_requests_queue_client {
+            Some(queue_client) => {
+                let token = queue_client
+                    .async_method_request_queue(&ctx)
+                    .await?
+                    .enqueue(&ctx, &self.mononoke, params)
+                    .await
+                    .map_err(|e| {
+                        errors::internal_error(format!("Failed to enqueue the request: {}", e))
+                    })?;
 
-        Ok(token.into_thrift())
+                Ok(token.into_thrift())
+            }
+            None => Err(async_requests_disabled()),
+        }
     }
 
     pub(crate) async fn megarepo_add_sync_target_poll(
@@ -225,14 +231,18 @@ impl SourceControlServiceImpl {
         let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
-        let poll_response = self
-            .queues_client
-            .async_method_request_queue(&ctx)
-            .await?
-            .poll(&ctx, token)
-            .await?;
+        match &self.async_requests_queue_client {
+            Some(queue_client) => {
+                let poll_response = queue_client
+                    .async_method_request_queue(&ctx)
+                    .await?
+                    .poll(&ctx, token)
+                    .await?;
 
-        Ok(poll_response)
+                Ok(poll_response)
+            }
+            None => Err(async_requests_disabled()),
+        }
     }
 
     pub(crate) async fn megarepo_add_branching_sync_target(
@@ -247,15 +257,21 @@ impl SourceControlServiceImpl {
         let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
-        let token = self
-            .queues_client
-            .async_method_request_queue(&ctx)
-            .await?
-            .enqueue(&ctx, &self.mononoke, params)
-            .await
-            .map_err(|e| errors::internal_error(format!("Failed to enqueue the request: {}", e)))?;
+        match &self.async_requests_queue_client {
+            Some(queue_client) => {
+                let token = queue_client
+                    .async_method_request_queue(&ctx)
+                    .await?
+                    .enqueue(&ctx, &self.mononoke, params)
+                    .await
+                    .map_err(|e| {
+                        errors::internal_error(format!("Failed to enqueue the request: {}", e))
+                    })?;
 
-        Ok(token.into_thrift())
+                Ok(token.into_thrift())
+            }
+            None => Err(async_requests_disabled()),
+        }
     }
 
     pub(crate) async fn megarepo_add_branching_sync_target_poll(
@@ -268,14 +284,21 @@ impl SourceControlServiceImpl {
         let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
-        let poll_response = self
-            .queues_client
-            .async_method_request_queue(&ctx)
-            .await?
-            .poll(&ctx, token)
-            .await?;
+        match &self.async_requests_queue_client {
+            Some(queue_client) => {
+                let poll_response = queue_client
+                    .async_method_request_queue(&ctx)
+                    .await?
+                    .poll(&ctx, token)
+                    .await?;
 
-        Ok(poll_response)
+                Ok(poll_response)
+            }
+            None => Err(errors::internal_error(
+                "Method is not supported when async requests are disabled".to_string(),
+            )
+            .into()),
+        }
     }
 
     pub(crate) async fn megarepo_change_target_config(
@@ -290,15 +313,21 @@ impl SourceControlServiceImpl {
         let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
-        let token = self
-            .queues_client
-            .async_method_request_queue(&ctx)
-            .await?
-            .enqueue(&ctx, &self.mononoke, params)
-            .await
-            .map_err(|e| errors::internal_error(format!("Failed to enqueue the request: {}", e)))?;
+        match &self.async_requests_queue_client {
+            Some(queue_client) => {
+                let token = queue_client
+                    .async_method_request_queue(&ctx)
+                    .await?
+                    .enqueue(&ctx, &self.mononoke, params)
+                    .await
+                    .map_err(|e| {
+                        errors::internal_error(format!("Failed to enqueue the request: {}", e))
+                    })?;
 
-        Ok(token.into_thrift())
+                Ok(token.into_thrift())
+            }
+            None => Err(async_requests_disabled()),
+        }
     }
 
     pub(crate) async fn megarepo_change_target_config_poll(
@@ -311,14 +340,18 @@ impl SourceControlServiceImpl {
         let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
-        let poll_response = self
-            .queues_client
-            .async_method_request_queue(&ctx)
-            .await?
-            .poll(&ctx, token)
-            .await?;
+        match &self.async_requests_queue_client {
+            Some(queue_client) => {
+                let poll_response = queue_client
+                    .async_method_request_queue(&ctx)
+                    .await?
+                    .poll(&ctx, token)
+                    .await?;
 
-        Ok(poll_response)
+                Ok(poll_response)
+            }
+            None => Err(async_requests_disabled()),
+        }
     }
 
     pub(crate) async fn megarepo_sync_changeset(
@@ -333,15 +366,21 @@ impl SourceControlServiceImpl {
         let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
-        let token = self
-            .queues_client
-            .async_method_request_queue(&ctx)
-            .await?
-            .enqueue(&ctx, &self.mononoke, params)
-            .await
-            .map_err(|e| errors::internal_error(format!("Failed to enqueue the request: {}", e)))?;
+        match &self.async_requests_queue_client {
+            Some(queue_client) => {
+                let token = queue_client
+                    .async_method_request_queue(&ctx)
+                    .await?
+                    .enqueue(&ctx, &self.mononoke, params)
+                    .await
+                    .map_err(|e| {
+                        errors::internal_error(format!("Failed to enqueue the request: {}", e))
+                    })?;
 
-        Ok(token.into_thrift())
+                Ok(token.into_thrift())
+            }
+            None => Err(async_requests_disabled()),
+        }
     }
 
     pub(crate) async fn megarepo_sync_changeset_poll(
@@ -353,14 +392,18 @@ impl SourceControlServiceImpl {
         let target = token.target()?.clone().into_config_format(&self.mononoke)?;
         let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
         self.check_write_allowed(&ctx, target_repo_id).await?;
-        let poll_response = self
-            .queues_client
-            .async_method_request_queue(&ctx)
-            .await?
-            .poll(&ctx, token)
-            .await?;
+        match &self.async_requests_queue_client {
+            Some(queue_client) => {
+                let poll_response = queue_client
+                    .async_method_request_queue(&ctx)
+                    .await?
+                    .poll(&ctx, token)
+                    .await?;
 
-        Ok(poll_response)
+                Ok(poll_response)
+            }
+            None => Err(async_requests_disabled()),
+        }
     }
 
     pub(crate) async fn megarepo_remerge_source(
@@ -375,15 +418,21 @@ impl SourceControlServiceImpl {
         let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
-        let token = self
-            .queues_client
-            .async_method_request_queue(&ctx)
-            .await?
-            .enqueue(&ctx, &self.mononoke, params)
-            .await
-            .map_err(|e| errors::internal_error(format!("Failed to enqueue the request: {}", e)))?;
+        match &self.async_requests_queue_client {
+            Some(queue_client) => {
+                let token = queue_client
+                    .async_method_request_queue(&ctx)
+                    .await?
+                    .enqueue(&ctx, &self.mononoke, params)
+                    .await
+                    .map_err(|e| {
+                        errors::internal_error(format!("Failed to enqueue the request: {}", e))
+                    })?;
 
-        Ok(token.into_thrift())
+                Ok(token.into_thrift())
+            }
+            None => Err(async_requests_disabled()),
+        }
     }
 
     pub(crate) async fn megarepo_remerge_source_poll(
@@ -396,13 +445,22 @@ impl SourceControlServiceImpl {
         let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
-        let poll_response = self
-            .queues_client
-            .async_method_request_queue(&ctx)
-            .await?
-            .poll(&ctx, token)
-            .await?;
+        match &self.async_requests_queue_client {
+            Some(queue_client) => {
+                let poll_response = queue_client
+                    .async_method_request_queue(&ctx)
+                    .await?
+                    .poll(&ctx, token)
+                    .await?;
 
-        Ok(poll_response)
+                Ok(poll_response)
+            }
+            None => Err(async_requests_disabled()),
+        }
     }
+}
+
+fn async_requests_disabled() -> errors::ServiceError {
+    errors::internal_error("Method is not supported when async requests are disabled".to_string())
+        .into()
 }
