@@ -1,4 +1,5 @@
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
 
 oncall("sapling")
@@ -15,5 +16,7 @@ rust_library(
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:tracing",
         "//common/rust/shed/hostname:hostname",
-    ],
+    ] + ([] if rust_oss.is_oss_build() else [
+        "//devx_www/cross_env_session_id:cross_env_session_id",
+    ]),
 )

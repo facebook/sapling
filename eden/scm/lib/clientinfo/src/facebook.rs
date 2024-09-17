@@ -2,8 +2,15 @@
 
 use std::env::var;
 
+use cross_env_session_id::CrossEnvironmentSessionId;
 use serde::Deserialize;
 use serde::Serialize;
+
+pub fn log_cross_environment_session_id() -> String {
+    let cesi = CrossEnvironmentSessionId::get().unwrap_or(String::new());
+    tracing::info!(target: "clienttelemetry", cross_environment_session_id=cesi);
+    cesi
+}
 
 #[derive(Default, Clone, Deserialize, Serialize, Debug, PartialEq, Eq)]
 pub struct FbClientInfo {

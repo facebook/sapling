@@ -8,6 +8,10 @@
 use serde::Deserialize;
 use serde::Serialize;
 
+pub fn log_cross_environment_session_id() -> String {
+    String::new()
+}
+
 #[derive(Default, Clone, Deserialize, Serialize, Debug, PartialEq, Eq)]
 pub struct FbClientInfo {}
 
