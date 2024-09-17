@@ -1,9 +1,43 @@
-load("@fbcode//eden/scm/lib/backingstore:defs.bzl", "backing_store")
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:fb_native_wrapper.bzl", "fb_native")
 
 oncall("sapling")
 
-backing_store(
+fb_native.constraint_setting(
+    name = "edenfs-cas",
+)
+
+fb_native.constraint_value(
+    name = "edenfs-include-cas",
+    constraint_setting = ":edenfs-cas",
+    visibility = ["PUBLIC"],
+)
+
+cpp_library(
+    name = "sapling_native_backingstore",
+    srcs = glob(["src/**/*.cpp"]),
+    headers = glob(["include/**/*.h"]),
+    undefined_symbols = True,
+    deps = [
+        "//folly:string",
+        "//folly/io:iobuf",
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        "fbsource//third-party/rust:cxx-core",
+        ":backingstore@header",
+        "//eden/fs/store:context",
+        "//folly:function",
+        "//folly:range",
+        "//folly:try",
+        "//folly/futures:core",
+    ],
+)
+
+rust_library(
     name = "backingstore",
+    srcs = glob(["src/**/*.rs"]),
     autocargo = {
         "cargo_target_config": {
             "crate_type": [
@@ -26,12 +60,49 @@ backing_store(
             },
         },
     },
-)
-
-backing_store(
-    name = "cas_backingstore",
-    allow_oss_build = False,
-    autocargo = {"ignore_rule": True},
-    extra_deps = ["//eden/scm/lib/cas-client/rich-client:rich-cas-client"],
-    features = ["cas"],
+    cpp_deps = [
+        ":sapling_native_backingstore",
+        "//eden/fs/store:context",
+    ],
+    crate_root = "src/lib.rs",
+    cxx_bridge = "src/ffi.rs",
+    features = select({
+        "DEFAULT": [],
+        "fbcode//eden/scm/lib/backingstore:edenfs-include-cas": select({
+            "DEFAULT": [],
+            "ovr_config//os:linux": ["cas"],
+        }),
+    }),
+    # rich-cas-client should be in deps but Autocargo does not support selects
+    # and will ignore fields with them. Since we don't have any OSS named_deps,
+    # we can put the select here and let Autocargo ignore it safely, while
+    # still getting the dep.
+    named_deps = select({
+        "DEFAULT": {},
+        "fbcode//eden/scm/lib/backingstore:edenfs-include-cas": select({
+            "DEFAULT": {},
+            "ovr_config//os:linux": {"rich_cas_client": "//eden/scm/lib/cas-client/rich-client:rich-cas-client"},
+        }),
+    }),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:arc-swap",
+        "fbsource//third-party/rust:cxx",
+        "fbsource//third-party/rust:env_logger",
+        "fbsource//third-party/rust:log",
+        "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:tracing",
+        "fbsource//third-party/rust:tracing-subscriber",
+        "//eden/scm/lib/config/loader:configloader",
+        "//eden/scm/lib/constructors:constructors",
+        "//eden/scm/lib/eagerepo:eagerepo",
+        "//eden/scm/lib/edenapi:edenapi",
+        "//eden/scm/lib/identity:identity",
+        "//eden/scm/lib/indexedlog:indexedlog",
+        "//eden/scm/lib/manifest:manifest",
+        "//eden/scm/lib/repo:repo",
+        "//eden/scm/lib/storemodel:storemodel",
+        "//eden/scm/lib/tracing-collector:tracing-collector",
+        "//eden/scm/lib/types:types",
+    ],
 )
