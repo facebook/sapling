@@ -16,12 +16,17 @@ use re_client_lib::CASDaemonClientCfg;
 use re_client_lib::EmbeddedCASDaemonClientCfg;
 use re_client_lib::REClient;
 use re_client_lib::REClientBuilder;
+use re_client_lib::RemoteCASdAddress;
+use re_client_lib::RemoteCacheConfig;
 use re_client_lib::RemoteExecutionMetadata;
+
+pub const CAS_SOCKET_PATH: &str = "/run/casd/casd.socket";
 
 pub struct RichCasClient {
     client: re_cas_common::OnceCell<REClient>,
     verbose: bool,
     metadata: RemoteExecutionMetadata,
+    use_casd_cache: bool,
 }
 
 pub fn init() {
@@ -48,6 +53,8 @@ impl RichCasClient {
             ),
         };
 
+        let use_casd_cache = config.get_or("cas", "use-shared-cache", || true)?;
+
         Ok(Self {
             client: Default::default(),
             verbose: config.get_or_default("cas", "verbose")?,
@@ -55,6 +62,7 @@ impl RichCasClient {
                 use_case_id: use_case,
                 ..Default::default()
             },
+            use_casd_cache,
         })
     }
 
@@ -65,11 +73,17 @@ impl RichCasClient {
         re_config.quiet_mode = !self.verbose;
         re_config.features_config_path = "remote_execution/features/client_eden".to_string();
 
-        re_config.cas_client_config =
-            CASDaemonClientCfg::embedded_config(EmbeddedCASDaemonClientCfg {
-                name: "source_control".to_string(),
+        let mut embedded_config = EmbeddedCASDaemonClientCfg {
+            name: "source_control".to_string(),
+            ..Default::default()
+        };
+        if self.use_casd_cache {
+            embedded_config.remote_cache_config = Some(RemoteCacheConfig {
+                address: RemoteCASdAddress::uds_path(CAS_SOCKET_PATH.to_string()),
                 ..Default::default()
             });
+        }
+        re_config.cas_client_config = CASDaemonClientCfg::embedded_config(embedded_config);
 
         let builder = REClientBuilder::new(fbinit::expect_init())
             .with_config(re_config)
