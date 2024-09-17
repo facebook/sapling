@@ -557,11 +557,11 @@ Collect an 'eden rage' and ask in the EdenFS (Windows |macOS )?Users group if yo
             f"""<yellow>- Found problem:<reset>
 Eden's checkout state for {path} has been corrupted: [Errno 2] No such file or directory: 'SNAPSHOT'
 To recover, you will need to remove and reclone the repo.
-Your local commits will be uneffected, but reclones will lose uncommitted work or shelves.
+Your local commits will be unaffected, but reclones will lose uncommitted work or shelves.
 However, the local changes are manually recoverable before the reclone.
-If you have local changes you would like to save before reclone, see https://www.internalfb.com/intern/wiki/EdenFS/faq-and-troubleshooting/Recovering_local_changes_after_reclone/, or reachout to the EdenFS team.
+If you have local changes you would like to save before reclone, see {get_local_commit_recovery_link()}, or reachout to the EdenFS team.
 To reclone the corrupted repo, run: `fbclone $REPO --reclone --eden`
-For additional info see the wiki at https://www.internalfb.com/intern/wiki/EdenFS/faq-and-troubleshooting/Eden_Doctor/
+For additional info see the wiki at {get_doctor_link()}
 
 """,
         )
@@ -2454,7 +2454,7 @@ Failed to fix or verify fix for problem CheckoutNotMounted: Exception: is too sh
 {path} appears to have been corrupted.
 This can happen if your machine was hard-rebooted.
 To recover, you will need to remove and reclone the repo.
-Your local commits will be uneffected, but reclones will lose uncommitted work or shelves.
+Your local commits will be unaffected, but reclones will lose uncommitted work or shelves.
 However, the local changes are manually recoverable before the reclone.
 If you have local changes you would like to save before reclone, see {recovery_link}, or reachout to the EdenFS team.
 To reclone the corrupted repo, run: `fbclone \$REPO --reclone --eden`
@@ -2494,7 +2494,7 @@ Failed to fix or verify fix for problem CheckoutNotMounted: Exception: is too sh
 {path} appears to have been corrupted.
 This can happen if your machine was hard-rebooted.
 To recover, you will need to remove and reclone the repo.
-Your local commits will be uneffected, but reclones will lose uncommitted work or shelves.
+Your local commits will be unaffected, but reclones will lose uncommitted work or shelves.
 However, the local changes are manually recoverable before the reclone.
 To remove the corrupted repo, run: `eden rm {path}`
 ((.|\n)*)""".format(
@@ -2705,7 +2705,7 @@ Reinitialize checkout config.......<green>fixed<reset>
 <yellow>- Found problem:<reset>
 Eden's checkout state for {checkout.path} has been corrupted: GenericOtherException
 To recover, you will need to remove and reclone the repo.
-Your local commits will be uneffected, but reclones will lose uncommitted work or shelves.
+Your local commits will be unaffected, but reclones will lose uncommitted work or shelves.
 However, the local changes are manually recoverable before the reclone.
 If you have local changes you would like to save before reclone, see {get_local_commit_recovery_link()}, or reachout to the EdenFS team.
 To reclone the corrupted repo, run: `fbclone $REPO --reclone --eden`"""
@@ -2777,7 +2777,7 @@ To reclone the corrupted repo, run: `fbclone $REPO --reclone --eden`"""
 <yellow>- Found problem:<reset>
 Eden's checkout state for {checkout.path} has been corrupted: GenericOtherException
 To recover, you will need to remove and reclone the repo.
-Your local commits will be uneffected, but reclones will lose uncommitted work or shelves.
+Your local commits will be unaffected, but reclones will lose uncommitted work or shelves.
 However, the local changes are manually recoverable before the reclone.
 To remove the corrupted repo, run: `eden rm {checkout.path}`
 
@@ -2835,9 +2835,9 @@ To remove the corrupted repo, run: `eden rm {checkout.path}`
 <yellow>- Found problem:<reset>
 Eden's checkout state for {checkout.path} has been corrupted: Missing SNAPSHOT file
 To recover, you will need to remove and reclone the repo.
-Your local commits will be uneffected, but reclones will lose uncommitted work or shelves.
+Your local commits will be unaffected, but reclones will lose uncommitted work or shelves.
 However, the local changes are manually recoverable before the reclone.
-If you have local changes you would like to save before reclone, see https://www.internalfb.com/intern/wiki/EdenFS/faq-and-troubleshooting/Recovering_local_changes_after_reclone/, or reachout to the EdenFS team.
+If you have local changes you would like to save before reclone, see {get_local_commit_recovery_link()}, or reachout to the EdenFS team.
 To reclone the corrupted repo, run: `fbclone $REPO --reclone --eden`"""
             + (
                 f"\nFor additional info see the wiki at {get_doctor_link()}\n\n"

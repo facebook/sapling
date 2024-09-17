@@ -108,7 +108,7 @@ working_directory_was_stale = False
 
 def get_reclone_msg(checkout_path: str) -> str:
     reclone_msg = """To recover, you will need to remove and reclone the repo.
-Your local commits will be uneffected, but reclones will lose uncommitted work or shelves.
+Your local commits will be unaffected, but reclones will lose uncommitted work or shelves.
 However, the local changes are manually recoverable before the reclone."""
 
     if get_local_commit_recovery_link():
