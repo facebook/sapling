@@ -7,6 +7,8 @@
 
 use anyhow::ensure;
 use commit_cloud_helpers::sanity_check_workspace_name;
+use commit_cloud_types::CommitCloudError;
+use commit_cloud_types::CommitCloudUserError;
 use permission_checker::MononokeIdentity;
 
 #[derive(Debug, Clone)]
@@ -30,12 +32,14 @@ impl CommitCloudContext {
         })
     }
 
-    pub fn check_workspace_name(&self) -> anyhow::Result<()> {
-        ensure!(
-            sanity_check_workspace_name(&self.workspace),
-            "'commit cloud' failed: creating a new workspace with name '{}' is not allowed",
-            self.workspace
-        );
+    pub fn check_workspace_name(&self) -> Result<(), CommitCloudError> {
+        if !sanity_check_workspace_name(&self.workspace) {
+            return Err(CommitCloudUserError::WorkspaceNameNotAllowed(
+                self.workspace.clone(),
+                self.reponame.clone(),
+            )
+            .into());
+        }
 
         Ok(())
     }

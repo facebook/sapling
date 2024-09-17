@@ -17,6 +17,10 @@ pub enum CommitCloudUserError {
         "Requesting base version {0} greater than latest version {1} for workspace {2} in repo {3}"
     )]
     InvalidVersions(u64, u64, String, String),
+    #[error(
+        "'commit cloud' failed: creating a new workspace with name {0} in repo {1} is not allowed"
+    )]
+    WorkspaceNameNotAllowed(String, String),
 }
 
 #[derive(Debug, Error)]
