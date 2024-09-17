@@ -82,6 +82,7 @@ impl RichCasClient {
                 address: RemoteCASdAddress::uds_path(CAS_SOCKET_PATH.to_string()),
                 ..Default::default()
             });
+            embedded_config.cache_config.writable_cache = false;
         }
         re_config.cas_client_config = CASDaemonClientCfg::embedded_config(embedded_config);
 
