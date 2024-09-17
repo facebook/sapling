@@ -2554,6 +2554,6 @@ values
 EOF
 }
 
-function async_worker_clear() {
+function async_requests_clear_queue() {
   sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'delete from long_running_request_queue;'
 }
