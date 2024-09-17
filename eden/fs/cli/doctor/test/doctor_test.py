@@ -2112,7 +2112,7 @@ Starting background invalidation of not recently used files and directories in {
                 out.getvalue(),
                 rf"""Checking {checkout.path}
 <yellow>- Found problem:<reset>
-Mount point {checkout.path} has 9000000 loaded files, which may impact EdenFS performance.*
+Mount point {checkout.path} has 9000000 loaded files. High inode count may impact EdenFS performance.*
 """,
             )
         self.assertEqual(exit_code, 1 if sys.platform == "darwin" else 0)
