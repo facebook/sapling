@@ -16,6 +16,11 @@ buck_genrule(
         "ovr_config//os:linux",
         "ovr_config//os:macos",
     ],
+    metadata = {
+        "buck.cfg_modifiers": [
+            "fbcode//eden/scm/lib/backingstore:edenfs-include-cas",
+        ],
+    },
 )
 
 fbpkg.builder(
