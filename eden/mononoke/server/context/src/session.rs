@@ -13,8 +13,10 @@ use metadata::Metadata;
 use permission_checker::MononokeIdentitySetExt;
 use rate_limiting::BoxRateLimiter;
 use rate_limiting::LoadCost;
+use rate_limiting::LoadShedResult;
 use rate_limiting::Metric;
 use rate_limiting::RateLimitReason;
+use rate_limiting::RateLimitResult;
 use rate_limiting::RateLimiter;
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -115,7 +117,12 @@ impl SessionContainer {
                     .client_info()
                     .and_then(|client_info| client_info.request_info.clone())
                     .and_then(|request_info| request_info.main_id);
-                limiter.check_load_shed(self.metadata().identities(), main_client_id.as_deref())
+                match limiter
+                    .check_load_shed(self.metadata().identities(), main_client_id.as_deref())
+                {
+                    LoadShedResult::Pass => Ok(()),
+                    LoadShedResult::Fail(reason) => Err(reason),
+                }
             }
             None => Ok(()),
         }
@@ -129,14 +136,18 @@ impl SessionContainer {
                     .client_info()
                     .and_then(|client_info| client_info.request_info.clone())
                     .and_then(|request_info| request_info.main_id);
-                limiter
+                match limiter
                     .check_rate_limit(
                         metric,
                         self.metadata().identities(),
                         main_client_id.as_deref(),
                     )
                     .await
-                    .unwrap_or(Ok(()))
+                    .unwrap_or(RateLimitResult::Pass)
+                {
+                    RateLimitResult::Pass => Ok(()),
+                    RateLimitResult::Fail(reason) => Err(reason),
+                }
             }
             None => Ok(()),
         }

@@ -19,6 +19,7 @@ use gotham_ext::error::HttpError;
 use gotham_ext::middleware::MetadataState;
 use gotham_ext::response::build_error_response;
 use hyper::Uri;
+use rate_limiting::LoadShedResult;
 
 use super::error_formatter::LfsErrorFormatter;
 use crate::config::ServerConfig;
@@ -63,7 +64,8 @@ impl Middleware for ThrottleMiddleware {
         };
 
         for limit in self.handle.get().loadshedding_limits().iter() {
-            if let Err(err) = limit.should_load_shed(self.fb, identities, main_client_id.as_deref())
+            if let LoadShedResult::Fail(err) =
+                limit.should_load_shed(self.fb, identities, main_client_id.as_deref())
             {
                 let err = HttpError::e429(err);
 

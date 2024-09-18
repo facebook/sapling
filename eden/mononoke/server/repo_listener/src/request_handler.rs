@@ -33,6 +33,7 @@ use mononoke_api::Mononoke;
 use mononoke_api::Repo;
 use mononoke_configs::MononokeConfigs;
 use qps::Qps;
+use rate_limiting::LoadShedResult;
 use rate_limiting::Metric;
 use rate_limiting::RateLimitEnvironment;
 use repo_client::RepoClient;
@@ -120,7 +121,7 @@ pub async fn request_handler(
 
     let rate_limiter = rate_limiter.map(|r| r.get_rate_limiter());
     if let Some(ref rate_limiter) = rate_limiter {
-        if let Err(err) = {
+        if let LoadShedResult::Fail(err) = {
             let main_client_id = metadata
                 .client_info()
                 .and_then(|client_info| client_info.request_info.clone())

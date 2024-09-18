@@ -13,15 +13,18 @@ use async_trait::async_trait;
 use fbinit::FacebookInit;
 use fbwhoami::FbWhoAmI;
 use permission_checker::MononokeIdentitySet;
+use rate_limiting_config::RateLimitStatus;
 use ratelim::loadlimiter;
 use ratelim::loadlimiter::LoadCost;
 use ratelim::loadlimiter::LoadLimitCounter;
 
 use crate::BoxRateLimiter;
+use crate::LoadShedResult;
 use crate::Metric;
 use crate::MononokeRateLimitConfig;
 use crate::RateLimitBody;
 use crate::RateLimitReason;
+use crate::RateLimitResult;
 use crate::RateLimiter;
 
 pub fn get_region_capacity(datacenter_capacity: &BTreeMap<String, i32>) -> Option<i32> {
@@ -45,6 +48,19 @@ pub fn create_rate_limiter(
     })
 }
 
+pub fn log_or_enforce_status(body: &RateLimitBody, metric: Metric) -> RateLimitResult {
+    match body.raw_config.status {
+        RateLimitStatus::Disabled => RateLimitResult::Pass,
+        RateLimitStatus::Tracked => RateLimitResult::Pass,
+        RateLimitStatus::Enforced => {
+            RateLimitResult::Fail(RateLimitReason::RateLimitedMetric(metric, body.window))
+        }
+        _ => panic!(
+            "Thrift enums aren't real enums once in Rust. We have to account for other values here."
+        ),
+    }
+}
+
 #[async_trait]
 impl RateLimiter for MononokeRateLimits {
     async fn check_rate_limit(
@@ -52,7 +68,7 @@ impl RateLimiter for MononokeRateLimits {
         metric: Metric,
         identities: &MononokeIdentitySet,
         main_id: Option<&str>,
-    ) -> Result<Result<(), RateLimitReason>, Error> {
+    ) -> Result<RateLimitResult, Error> {
         for limit in &self.config.rate_limits {
             if limit.metric != metric {
                 continue;
@@ -70,26 +86,30 @@ impl RateLimiter for MononokeRateLimits {
             )
             .await?
             {
-                return Ok(Err(RateLimitReason::RateLimitedMetric(
-                    metric,
-                    limit.body.window,
-                )));
+                match log_or_enforce_status(&limit.body, metric) {
+                    RateLimitResult::Pass => {
+                        break;
+                    }
+                    RateLimitResult::Fail(reason) => RateLimitResult::Fail(reason),
+                };
             }
         }
-
-        Ok(Ok(()))
+        Ok(RateLimitResult::Pass)
     }
 
     fn check_load_shed(
         &self,
         identities: &MononokeIdentitySet,
         main_id: Option<&str>,
-    ) -> Result<(), RateLimitReason> {
+    ) -> LoadShedResult {
         for limit in &self.config.load_shed_limits {
-            limit.should_load_shed(self.fb, Some(identities), main_id)?;
+            if let LoadShedResult::Fail(reason) =
+                limit.should_load_shed(self.fb, Some(identities), main_id)
+            {
+                return LoadShedResult::Fail(reason);
+            }
         }
-
-        Ok(())
+        LoadShedResult::Pass
     }
 
     fn bump_load(&self, metric: Metric, load: LoadCost) {
