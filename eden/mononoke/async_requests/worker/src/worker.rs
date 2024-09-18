@@ -164,7 +164,7 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
                 if will_exit.load(Ordering::Relaxed) {
                     break 'outer;
                 }
-                if let Some((request_id, params)) = queue.dequeue(&ctx, &claimed_by, None).await? {
+                if let Some((request_id, params)) = queue.dequeue(&ctx, &claimed_by).await? {
                     yield (request_id, params);
                     yielded = true;
                 }
@@ -191,7 +191,7 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
         let abandoned_timestamp =
             Timestamp::from_timestamp_secs(now.timestamp_seconds() - abandoned_threshold_secs);
         let requests = queue
-            .find_abandoned_requests(ctx, None, abandoned_timestamp)
+            .find_abandoned_requests(ctx, abandoned_timestamp)
             .await?;
         if !requests.is_empty() {
             ctx.scuba().clone().log_with_msg(
@@ -427,9 +427,7 @@ mod test {
         q.enqueue(&ctx, &mononoke, params).await?;
 
         // Grab it from the queue...
-        let dequed = q
-            .dequeue(&ctx, &ClaimedBy("name".to_string()), None)
-            .await?;
+        let dequed = q.dequeue(&ctx, &ClaimedBy("name".to_string())).await?;
         assert!(dequed.is_some());
 
         // ... and check that the queue is empty now...

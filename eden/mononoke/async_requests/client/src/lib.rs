@@ -96,6 +96,7 @@ impl AsyncRequestsQueue {
         Ok(AsyncMethodRequestQueue::new(
             self.sql_connection.clone(),
             self.blobstore.clone(),
+            None,
         ))
     }
 }

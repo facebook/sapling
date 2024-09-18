@@ -56,7 +56,6 @@ pub async fn list_requests(
     let res = queue
         .list_requests(
             &ctx,
-            None,
             Some(&Timestamp::from_timestamp_secs(
                 Timestamp::now().timestamp_seconds() - lookback,
             )),

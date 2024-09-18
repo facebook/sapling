@@ -52,11 +52,20 @@ const MAX_POLL_DURATION: Duration = Duration::from_secs(60);
 pub struct AsyncMethodRequestQueue {
     blobstore: Arc<dyn Blobstore>,
     table: Arc<dyn LongRunningRequestsQueue>,
+    repos: Option<Vec<RepositoryId>>,
 }
 
 impl AsyncMethodRequestQueue {
-    pub fn new(table: Arc<dyn LongRunningRequestsQueue>, blobstore: Arc<dyn Blobstore>) -> Self {
-        Self { blobstore, table }
+    pub fn new(
+        table: Arc<dyn LongRunningRequestsQueue>,
+        blobstore: Arc<dyn Blobstore>,
+        repos: Option<Vec<RepositoryId>>,
+    ) -> Self {
+        Self {
+            blobstore,
+            table,
+            repos,
+        }
     }
 
     pub fn new_test_in_memory() -> Result<Self, Error> {
@@ -64,7 +73,11 @@ impl AsyncMethodRequestQueue {
         let table: Arc<dyn LongRunningRequestsQueue> =
             Arc::new(SqlLongRunningRequestsQueue::with_sqlite_in_memory()?);
 
-        Ok(Self { blobstore, table })
+        Ok(Self {
+            blobstore,
+            table,
+            repos: None,
+        })
     }
 
     pub async fn enqueue<P: ThriftParams, R: MononokeRepo>(
@@ -102,11 +115,10 @@ impl AsyncMethodRequestQueue {
         &self,
         ctx: &CoreContext,
         claimed_by: &ClaimedBy,
-        supported_repos: Option<&[RepositoryId]>,
     ) -> Result<Option<(RequestId, AsynchronousRequestParams)>, AsyncRequestsError> {
         let entry = self
             .table
-            .claim_and_get_new_request(ctx, claimed_by, supported_repos)
+            .claim_and_get_new_request(ctx, claimed_by, self.repos.as_deref())
             .await?;
 
         if let Some(entry) = entry {
@@ -207,12 +219,11 @@ impl AsyncMethodRequestQueue {
     pub async fn find_abandoned_requests(
         &self,
         ctx: &CoreContext,
-        repo_ids: Option<&[RepositoryId]>,
         abandoned_timestamp: Timestamp,
     ) -> Result<Vec<RequestId>, AsyncRequestsError> {
         Ok(self
             .table
-            .find_abandoned_requests(ctx, repo_ids, abandoned_timestamp)
+            .find_abandoned_requests(ctx, self.repos.as_deref(), abandoned_timestamp)
             .await?)
     }
 
@@ -239,7 +250,6 @@ impl AsyncMethodRequestQueue {
     pub async fn list_requests(
         &self,
         ctx: &CoreContext,
-        repo_ids: Option<&[RepositoryId]>,
         last_update_newer_than: Option<&Timestamp>,
         fatal_errors: bool,
     ) -> Result<
@@ -252,7 +262,7 @@ impl AsyncMethodRequestQueue {
     > {
         let entries = self
             .table
-            .list_requests(ctx, repo_ids, last_update_newer_than)
+            .list_requests(ctx, self.repos.as_deref(), last_update_newer_than)
             .await
             .context("listing requests from the DB")?;
 
@@ -404,7 +414,7 @@ mod tests {
 
                 // Simulate the tailer and grab the element from the queue, this should return the params
                 // back and flip its state back to "in_progress"
-                let (req_id, params_from_store) = q.dequeue(&ctx, &ClaimedBy("tests".to_string()), None).await?.unwrap();
+                let (req_id, params_from_store) = q.dequeue(&ctx, &ClaimedBy("tests".to_string())).await?.unwrap();
 
                 // Verify that request params from blobstore match what we put there
                 assert_eq!(params_from_store, params.into());
