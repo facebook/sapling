@@ -1,7 +1,6 @@
 load("@fbcode//eden:defs.bzl", "make_rule_compatible_with")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
-load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
 
 oncall("scm_client_infra")
 

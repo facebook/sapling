@@ -1,5 +1,4 @@
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
-load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
 
 oncall("scm_client_infra")
 

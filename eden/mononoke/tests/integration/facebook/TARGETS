@@ -1,7 +1,6 @@
 load("@fbcode_macros//build_defs:native_rules.bzl", "buck_filegroup", "buck_sh_binary")
 load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
 load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
-load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
 load(
     "//eden/mononoke/tests/integration/facebook:fb_manifest_deps.bzl",
     "dott_test",

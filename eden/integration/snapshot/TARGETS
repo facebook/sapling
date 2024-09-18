@@ -1,7 +1,6 @@
 load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
 load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
 load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
-load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
 load("//eden:defs.bzl", "get_integration_test_env_and_deps")
 
 oncall("scm_client_infra")

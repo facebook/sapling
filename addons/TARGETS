@@ -1,6 +1,5 @@
 load("@fbcode_macros//build_defs:native_rules.bzl", "buck_genrule")
 load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
-load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
 load("@fbsource//xplat/third-party/yarn:yarn_offline_mirror_helper.bzl", "yarn_offline_mirror_path")
 
 oncall("scm_client_infra")

@@ -1,6 +1,5 @@
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
 load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
-load("@fbsource//tools/build_defs:glob_defs.bzl", "glob")
 
 oncall("mononoke")
 
