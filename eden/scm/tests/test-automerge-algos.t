@@ -320,3 +320,28 @@ Unsuccessful sort-inserts merge for normal Python statements:
   =======
   c=3
   >>>>>>> source: a4de9208fa9e - test: C
+
+Successful sort-inserts merge for mobile config schemas:
+
+  $ newrepo
+  $ cat << EOF >> .hg/hgrc
+  > [filetype-patterns]
+  > xplat/mobileconfigschemas/**.schema=mobile-config-schema
+  > [automerge]
+  > mode = accept
+  > merge-algos = sort-inserts
+  > import-pattern:mobile-config-schema=re:^\s*param\(.*$
+  > EOF
+  $ drawdag <<'EOS'
+  > B C # C/xplat/mobileconfigschemas/a.schema=param("1", default = False),\nparam("3", default = False),\n
+  > |/  # B/xplat/mobileconfigschemas/a.schema=param("1", default = False),\nparam("2", default = False),\n
+  > A   # A/xplat/mobileconfigschemas/a.schema=param("1", default = False),\n
+  > EOS
+  $ hg rebase -r $C -d $B
+  rebasing 448e9a10b2b9 "C"
+  merging xplat/mobileconfigschemas/a.schema
+   lines 2-3 have been resolved by automerge algorithms
+  $ hg cat -r tip xplat/mobileconfigschemas/a.schema
+  param("1", default = False),
+  param("2", default = False),
+  param("3", default = False),
