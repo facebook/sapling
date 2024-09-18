@@ -33,14 +33,7 @@ impl MetaLog {
             tracing::debug!("parsing parents");
             let mut parents: HashMap<Id20, Vec<Id20>> = HashMap::new();
 
-            // From the root_id list.
-            for slice in root_ids.windows(2) {
-                if let [parent, child] = slice {
-                    parents.insert(*child, vec![*parent]);
-                }
-            }
-
-            // From the implicit "Parent: " messages.
+            // From the "Parent: " messages.
             // They might include pending changes. See D30970502.
             for root_id in root_ids.iter().copied() {
                 let root = load_root(&self.blobs.read(), root_id)?;
@@ -58,6 +51,22 @@ impl MetaLog {
                     }
                 }
             }
+
+            // If "Parent: " is not present. Use implicit chronological order.
+            for slice in root_ids.windows(2) {
+                if let [parent, child] = slice {
+                    if !parents.contains_key(child) {
+                        // Naive cycle detection.
+                        if matches!(parents.get(parent), Some(v) if v.contains(child)) {
+                            tracing::warn!(?parent, ?child, "ignore cycle");
+                            continue;
+                        }
+                        // Add the implicit chronological parent relation.
+                        parents.entry(*child).or_default().push(*parent);
+                    }
+                }
+            }
+
             parents
         };
 
