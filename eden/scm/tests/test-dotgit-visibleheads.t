@@ -129,3 +129,69 @@ Hiding the obsolete commit:
   @  B2 branch2 branch3
   │
   o  A
+
+Commit rewrite via sl + git:
+
+  $ cd
+  $ git init -qb main client-repo3
+  $ cd client-repo3
+  $ git commit -qm A --allow-empty
+  $ git commit -qm B --allow-empty
+
+  $ sl metaedit -qm B1
+  $ git commit --amend -m B2 --allow-empty
+  [main aa33fad] B2
+   Date: Mon Jan 1 00:00:10 2007 +0000
+
+FIXME: "B1" should ideally be hidden. But it is not because a visible head ref written by metaedit pins it visible.
+
+  $ sl log -Gr 'all()' -T '{desc} {bookmarks}'
+  @  B2
+  │
+  │ o  B1
+  ├─╯
+  o  A
+
+  $ git show-ref
+  aa33fadf0bd8cb2565a4b46af6e5ca3ebc6b15ba refs/heads/main
+  a7d291be0f93e0b331be80d448273b91d699595b refs/visibleheads/a7d291be0f93e0b331be80d448273b91d699595b
+
+Commit rewrite on anonymous (detached, visible) head:
+
+  $ cd
+  $ git init -qb main client-repo4
+  $ cd client-repo4
+
+  $ HGIDENTITY=sl drawdag << 'EOS'
+  > B C
+  > |/
+  > A
+  > EOS
+
+  $ sl go -q $B
+  $ git commit --amend -m B1
+  [detached HEAD 79ade17] B1
+   Author: test <>
+   Date: Thu Jan 1 00:00:00 1970 +0000
+   1 file changed, 1 insertion(+)
+   create mode 100644 B
+
+  $ sl go -q $C
+  $ git commit --amend -m C1
+  [detached HEAD 7777d37] C1
+   Author: test <>
+   Date: Thu Jan 1 00:00:00 1970 +0000
+   1 file changed, 1 insertion(+)
+   create mode 100644 C
+
+FIXME: "B" and "C" should be ideally hidden; "B1" and "C1" should be visible:
+
+  $ sl log -Gr 'all()' -T '{desc|firstline} {bookmarks}'
+  @  C1
+  │
+  │ o  C
+  ├─╯
+  │ o  B
+  ├─╯
+  o  A
+
