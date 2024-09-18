@@ -45,3 +45,37 @@ Folding:
   f99f35f848e008a864277632059e3c45dc7a92e6 refs/visibleheads/f99f35f848e008a864277632059e3c45dc7a92e6
   $ sl log -r 'heads(draft())' -T '{desc|firstline} {node}\n'
   C f99f35f848e008a864277632059e3c45dc7a92e6
+
+Metaediting, should not keep obsoleted commits visible:
+
+  $ sl metaedit -m C1
+  $ sl metaedit -m C2
+  $ sl log -r 'heads(draft())' -T '{desc|firstline} {node}\n'
+  C2 c3755c9e79b57f610a0bc0aa98426723a0145ab8
+  $ git show-ref
+  c3755c9e79b57f610a0bc0aa98426723a0145ab8 refs/visibleheads/c3755c9e79b57f610a0bc0aa98426723a0145ab8
+  $ sl log -Gr 'all()' -T '{desc}'
+  @  C2
+  │
+  o  A
+
+Reviving the obsoleted commit:
+
+  $ sl bookmark -r 'desc(C1)' b1
+  $ sl log -Gr 'all()' -T '{desc|firstline}'
+  @  C2
+  │
+  │ x  C1
+  ├─╯
+  o  A
+
+Hiding the obsoleted commit:
+
+  $ sl hide 'obsolete()'
+  hiding commit f8f3ef7675c7 "C1"
+  1 changeset hidden
+  removing bookmark 'b1' (was at: f8f3ef7675c7)
+  1 bookmark removed
+  $ sl log -r 'heads(draft())' -T '{desc|firstline} {node}\n'
+  C2 c3755c9e79b57f610a0bc0aa98426723a0145ab8
+
