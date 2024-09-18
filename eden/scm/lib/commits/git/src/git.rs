@@ -435,6 +435,16 @@ impl GitSegmentedCommits {
         let repo = self.git_repo.lock();
         let mut ref_to_change = HashMap::<String, Option<git2::Oid>>::new();
 
+        let new_bookmarks = metalog.get_bookmarks()?;
+        let new_git_refs = metalog.get_git_refs()?;
+        let new_remotenames = metalog.get_remotenames()?;
+
+        let new_visible_oids: HashSet<_> = new_bookmarks
+            .values()
+            .chain(new_git_refs.values())
+            .chain(new_remotenames.values())
+            .collect();
+
         // Update visibleheads in refs/visibleheads/.
         {
             let visibleheads = metalog.get_visibleheads()?;
@@ -463,10 +473,14 @@ impl GitSegmentedCommits {
             }
             // Insert new visibleheads.
             for id in visibleheads.difference(&git_visibleheads) {
-                let ref_name = format!("refs/visibleheads/{}", id.to_hex());
-                let oid = hgid_to_git_oid(*id);
-                tracing::debug!(ref_name = &ref_name, "adding visiblehead ref");
-                repo.reference(&ref_name, oid, true, &reflog_message)?;
+                if new_visible_oids.contains(id) {
+                    tracing::debug!(?id, "skipping visiblehead - matches another ref");
+                } else {
+                    let ref_name = format!("refs/visibleheads/{}", id.to_hex());
+                    let oid = hgid_to_git_oid(*id);
+                    tracing::debug!(ref_name = &ref_name, "adding visiblehead ref");
+                    repo.reference(&ref_name, oid, true, &reflog_message)?;
+                }
             }
         }
 
@@ -482,9 +496,6 @@ impl GitSegmentedCommits {
             let old_bookmarks = parent.get_bookmarks()?;
             let old_remotenames = parent.get_remotenames()?;
             let old_git_refs = parent.get_git_refs()?;
-            let new_bookmarks = metalog.get_bookmarks()?;
-            let new_remotenames = metalog.get_remotenames()?;
-            let new_git_refs = metalog.get_git_refs()?;
 
             for (name, optional_id) in find_changes(&old_remotenames, &new_remotenames) {
                 let ref_name = match name.split_once("/tags/") {

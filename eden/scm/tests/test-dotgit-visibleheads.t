@@ -143,18 +143,15 @@ Commit rewrite via sl + git:
   [main aa33fad] B2
    Date: Mon Jan 1 00:00:10 2007 +0000
 
-FIXME: "B1" should ideally be hidden. But it is not because a visible head ref written by metaedit pins it visible.
+"B1" is hidden. No visibleheads ref to keep it alive:
 
   $ sl log -Gr 'all()' -T '{desc} {bookmarks}'
   @  B2
   │
-  │ o  B1
-  ├─╯
   o  A
 
   $ git show-ref
   aa33fadf0bd8cb2565a4b46af6e5ca3ebc6b15ba refs/heads/main
-  a7d291be0f93e0b331be80d448273b91d699595b refs/visibleheads/a7d291be0f93e0b331be80d448273b91d699595b
 
 Commit rewrite on anonymous (detached, visible) head:
 
