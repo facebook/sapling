@@ -65,6 +65,20 @@ fn actionmap_from_eden_conflicts(
     let treestate_binding = wc.treestate();
     let mut treestate = treestate_binding.lock();
 
+    let (pb, _active) = if config.get_or_default("checkout", "progress.eden-enabled")? {
+        let pb = progress_model::ProgressBarBuilder::new()
+            .topic("Processing EdenFS conflicts")
+            .unit("conflicts")
+            .total(conflicts.len() as u64)
+            .adhoc(true)
+            .thread_local_parent()
+            .pending();
+        let active = ProgressBar::push_active(pb.clone(), Registry::main());
+        (Some(pb), Some(active))
+    } else {
+        (None, None)
+    };
+
     let mut map = HashMap::new();
     for conflict in conflicts {
         let action = match conflict.conflict_type {
@@ -138,6 +152,9 @@ fn actionmap_from_eden_conflicts(
         if let Some(action) = action {
             map.insert(conflict.path, action);
         }
+        if let Some(pb) = &pb {
+            pb.increase_position(1);
+        }
     }
 
     // This will generate something mostly equivalent to what one gets
@@ -169,7 +186,7 @@ pub fn edenfs_checkout(
     {
         let pb = progress_model::ProgressBarBuilder::new()
             .topic("EdenFS update".to_owned())
-            .total(if revert_conflicts { 1 } else { 2 })
+            .total(if revert_conflicts { 1 } else { 3 })
             .adhoc(false)
             .thread_local_parent()
             .pending();
@@ -261,7 +278,11 @@ fn edenfs_noconflict_checkout(
     if let Some(parent_pb) = &parent_pb {
         parent_pb.increase_position(1);
     }
+
     let (plan, status) = create_edenfs_plan(wc, repo.config(), &source_mf, &target_mf, conflicts)?;
+    if let Some(parent_pb) = &parent_pb {
+        parent_pb.increase_position(1);
+    }
 
     check_conflicts(repo, wc, &plan, &target_mf, &status)?;
 
