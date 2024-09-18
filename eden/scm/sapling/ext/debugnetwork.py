@@ -162,6 +162,7 @@ def checkspeedhttp(ui, url, opts) -> bool:
         (latencytest, 5),
         (downloadtest, "download", download),
         (uploadtest, "upload", upload),
+        opts.get("stable"),
     )
 
     conn.close()
@@ -200,7 +201,7 @@ def openhttpconn(ui, url, opts) -> httpclient.HTTPConnection:
         )
 
 
-def drivespeedtests(ui, latency: float, upload, download) -> bool:
+def drivespeedtests(ui, latency: float, upload, download, stable: bool = False) -> bool:
     # pyre-fixme[23]: Unable to unpack `float` into 2 values.
     latencytest, latency_ntests = latency
     uploadtest, testname, bytecount = upload
@@ -231,10 +232,12 @@ def drivespeedtests(ui, latency: float, upload, download) -> bool:
 
         for testfunc, testname, bytecount in [upload, download]:
             warmuptime = testfunc("warming up for %s test" % testname, bytecount)
-            if warmuptime < 0.2:
+            if not stable and warmuptime < 0.2:
                 # The network is sufficiently fast that we warmed up in <200ms.
                 # To make the test more meaningful, increase the size of data
                 # 25x (which should give a maximum test time of 5s).
+                # This is very inconsistent behavior so use the stable flag
+                # when strict timing requirements are needed.
                 bytecount *= 25
                 warmuptime = testfunc(
                     "warming up for large %s test" % testname, bytecount
@@ -253,6 +256,7 @@ def drivespeedtests(ui, latency: float, upload, download) -> bool:
     [
         ("", "connection", False, _("run connection tests")),
         ("", "speed", False, _("run speed tests")),
+        ("", "stable", False, _("if set, do not increase test size of speed test")),
     ],
     _("[REMOTE]"),
 )

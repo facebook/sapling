@@ -25,7 +25,7 @@ except ImportError:
         return ""
 
 
-NETWORK_TIMEOUT = 10.0
+NETWORK_TIMEOUT = 15.0
 MIN_DOWNLOAD_SPEED = 50.0
 MIN_UPLOAD_SPEED = 10.0
 
@@ -142,7 +142,7 @@ class NetworkChecker:
 
             try:
                 speed_result = self.run_command(
-                    [hg, "debugnetwork", "--speed"], checkout_backing_repo
+                    [hg, "debugnetwork", "--speed", "--stable"], checkout_backing_repo
                 )
             except subprocess.CalledProcessError as ex:
                 # TODO: debugnetwork returns a variety of error numbers depending on the specific failure
