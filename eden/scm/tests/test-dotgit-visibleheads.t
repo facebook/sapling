@@ -79,3 +79,59 @@ Hiding the obsoleted commit:
   $ sl log -r 'heads(draft())' -T '{desc|firstline} {node}\n'
   C2 c3755c9e79b57f610a0bc0aa98426723a0145ab8
 
+Another repo where the "current commit" is also referred by Git local branches:
+
+  $ cd
+  $ git init -qb main client-repo2
+  $ cd client-repo2
+  $ git commit -qm A --allow-empty
+  $ git commit -qm B --allow-empty
+  $ git checkout -q -b branch2
+  $ git checkout -q -b branch3
+
+  $ sl log -Gr 'all()' -T '{desc|firstline} {bookmarks}'
+  @  B branch2 branch3
+  │
+  o  A
+
+Metaedit:
+
+  $ sl metaedit -m B2
+
+Local bookmarks "branch2", "branch3" are updated.
+FIXME: "B" should be hidden. But it is pinned by the "main" branch
+
+  $ sl log -Gr 'all()' -T '{desc|firstline} {bookmarks}'
+  @  B2 branch2 branch3
+  │
+  │ x  B
+  ├─╯
+  o  A
+
+Adding a bookmark and git "main" ref to the old commit to make it visible:
+
+  $ B=$(sl log -r 'predecessors(.)-.' -T '{node}')
+  $ sl bookmark -r $B revive1
+  $ git update-ref refs/heads/main $B
+  $ sl log -Gr 'all()' -T '{desc|firstline} {bookmarks}'
+  @  B2 branch2 branch3
+  │
+  │ x  B revive1
+  ├─╯
+  o  A
+
+Hiding the obsolete commit:
+
+  $ sl hide 'obsolete()'
+  hiding commit ac23eb7fe089 "B"
+  1 changeset hidden
+  removing bookmark 'revive1' (was at: ac23eb7fe089)
+  1 bookmark removed
+
+FIXME: "B" is still visible
+  $ sl log -Gr 'all()' -T '{desc|firstline} {bookmarks}'
+  @  B2 branch2 branch3
+  │
+  │ x  B
+  ├─╯
+  o  A
