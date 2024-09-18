@@ -21,7 +21,7 @@ import type {
   ServerToClientMessage,
 } from 'isl/src/types';
 
-type DiffSummaries = Map<DiffId, DiffSummary>;
+export type DiffSummaries = Map<DiffId, DiffSummary>;
 /**
  * API to fetch data from Remote Code Review system, like GitHub and Phabricator.
  */
