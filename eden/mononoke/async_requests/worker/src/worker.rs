@@ -41,6 +41,7 @@ use futures::Stream;
 use megarepo_api::MegarepoApi;
 use megarepo_config::Target;
 use mononoke_api::MononokeRepo;
+use mononoke_api::RepositoryId;
 use mononoke_app::MononokeApp;
 use mononoke_types::Timestamp;
 use slog::debug;
@@ -70,10 +71,11 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
     pub async fn new(
         fb: FacebookInit,
         app: &MononokeApp,
+        repos: Option<Vec<RepositoryId>>,
         megarepo: Arc<MegarepoApi<R>>,
         name: String,
     ) -> Result<Self, Error> {
-        let queues_client = AsyncRequestsQueue::new(fb, app, None)
+        let queues_client = AsyncRequestsQueue::new(fb, app, repos)
             .await
             .context("acquiring the async requests queue")?;
         Ok(Self {

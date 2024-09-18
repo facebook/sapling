@@ -76,6 +76,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             .block_on(app.open_managed_repos::<Repo>(Some(ShardedService::AsyncRequestsWorker)))?
             .make_mononoke_api()?,
     );
+    let repos = mononoke.known_repo_ids();
     let megarepo = Arc::new(MegarepoApi::new(&app, mononoke.clone())?);
 
     let tw_job_cluster = std::env::var("TW_JOB_CLUSTER");
@@ -94,7 +95,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let will_exit = Arc::new(AtomicBool::new(false));
     let worker = runtime.block_on(worker::AsyncMethodRequestWorker::new(
-        fb, &app, megarepo, name,
+        fb,
+        &app,
+        Some(repos),
+        megarepo,
+        name,
     ))?;
 
     app.start_monitoring(SERVICE_NAME, AliveService)?;
