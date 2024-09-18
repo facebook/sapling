@@ -7,6 +7,7 @@
 
 #![allow(non_camel_case_types)]
 
+use std::collections::BTreeMap;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -16,6 +17,7 @@ use ::metalog::Id20;
 use ::metalog::MetaLog;
 use ::metalog::Repair;
 use cpython::*;
+use cpython_ext::convert::Serde;
 use cpython_ext::Bytes;
 use cpython_ext::PyNone;
 use cpython_ext::PyPath;
@@ -171,6 +173,56 @@ py_class!(pub class metalog |py| {
     @staticmethod
     def repair(path: &str) -> PyResult<String> {
         py.allow_threads(|| MetaLog::repair(path)).map_pyerr(py)
+    }
+
+    // metalog_ext APIs
+
+    def get_bookmarks(&self) -> PyResult<Serde<BTreeMap<String, Id20>>> {
+        let log = self.log(py).read();
+        let decoded = log.get_bookmarks().map_pyerr(py)?;
+        Ok(Serde(decoded))
+    }
+
+    def get_git_refs(&self) -> PyResult<Serde<BTreeMap<String, Id20>>> {
+        let log = self.log(py).read();
+        let decoded = log.get_git_refs().map_pyerr(py)?;
+        Ok(Serde(decoded))
+    }
+
+    def get_remotenames(&self) -> PyResult<Serde<BTreeMap<String, Id20>>> {
+        let log = self.log(py).read();
+        let decoded = log.get_remotenames().map_pyerr(py)?;
+        Ok(Serde(decoded))
+    }
+
+    def get_visibleheads(&self) -> PyResult<Serde<Vec<Id20>>> {
+        let log = self.log(py).read();
+        let decoded = log.get_visibleheads().map_pyerr(py)?;
+        Ok(Serde(decoded))
+    }
+
+    def set_bookmarks(&self, value: Serde<BTreeMap<String, Id20>>) -> PyResult<PyNone> {
+        let mut log = self.log(py).write();
+        log.set_bookmarks(&value.0).map_pyerr(py)?;
+        Ok(PyNone)
+    }
+
+    def set_git_refs(&self, value: Serde<BTreeMap<String, Id20>>) -> PyResult<PyNone> {
+        let mut log = self.log(py).write();
+        log.set_git_refs(&value.0).map_pyerr(py)?;
+        Ok(PyNone)
+    }
+
+    def set_remotenames(&self, value: Serde<BTreeMap<String, Id20>>) -> PyResult<PyNone> {
+        let mut log = self.log(py).write();
+        log.set_remotenames(&value.0).map_pyerr(py)?;
+        Ok(PyNone)
+    }
+
+    def set_visibleheads(&self, value: Serde<Vec<Id20>>) -> PyResult<PyNone> {
+        let mut log = self.log(py).write();
+        log.set_visibleheads(&value.0).map_pyerr(py)?;
+        Ok(PyNone)
     }
 });
 
