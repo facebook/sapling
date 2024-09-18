@@ -190,6 +190,16 @@ def hide(ui, repo, *revs, **opts):
                 )
                 % len(deletebookmarks)
             )
+
+        # remove (extra, translated to visible heads) git refs
+        metalog = repo.metalog()
+        git_refs = metalog.get_git_refs()
+        to_remove = [name for name, node in git_refs.items() if node in hnodes]
+        if to_remove:
+            for name in to_remove:
+                del git_refs[name]
+            metalog.set_git_refs(git_refs)
+
         # unsubscribe from the remote bookmarks pointing to hidden changesets
         # they always will be remote scratch bookmarks because hidectxs are all draft
         if ui.configbool("remotenames", "selectivepull"):

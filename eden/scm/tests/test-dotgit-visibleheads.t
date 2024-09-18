@@ -125,10 +125,7 @@ Hiding the obsolete commit:
   removing bookmark 'revive1' (was at: ac23eb7fe089)
   1 bookmark removed
 
-FIXME: "B" is still visible
   $ sl log -Gr 'all()' -T '{desc|firstline} {bookmarks}'
   @  B2 branch2 branch3
   │
-  │ x  B
-  ├─╯
   o  A
