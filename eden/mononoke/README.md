@@ -1,6 +1,6 @@
 # Mononoke
 
-Mononoke is a the server built for the [Sapling Source Control
+Mononoke is the server built for the [Sapling Source Control
 System](https://sapling-scm.com/), meant to scale up to accepting thousands of
 commits every hour across millions of files. It is primarily written in the
 [Rust programming language](https://www.rust-lang.org/en-US/).
