@@ -40,7 +40,6 @@ use futures::stream::TryStreamExt;
 use futures::Stream;
 use megarepo_api::MegarepoApi;
 use megarepo_config::Target;
-use mononoke_api::Mononoke;
 use mononoke_api::MononokeRepo;
 use mononoke_app::MononokeApp;
 use mononoke_types::Timestamp;
@@ -60,7 +59,7 @@ const KEEP_ALIVE_INTERVAL: Duration = Duration::from_secs(10);
 pub struct AsyncMethodRequestWorker<R> {
     megarepo: Arc<MegarepoApi<R>>,
     name: String,
-    queues_client: AsyncRequestsQueue<R>,
+    queues_client: AsyncRequestsQueue,
 }
 
 impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
@@ -71,11 +70,10 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
     pub async fn new(
         fb: FacebookInit,
         app: &MononokeApp,
-        mononoke: Arc<Mononoke<R>>,
         megarepo: Arc<MegarepoApi<R>>,
         name: String,
     ) -> Result<Self, Error> {
-        let queues_client = AsyncRequestsQueue::new(fb, app, mononoke)
+        let queues_client = AsyncRequestsQueue::new(fb, app)
             .await
             .context("acquiring the async requests queue")?;
         Ok(Self {

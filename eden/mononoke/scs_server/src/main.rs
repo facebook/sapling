@@ -280,7 +280,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let async_requests_queue_client = if args.disable_async_requests {
         None
     } else {
-        let queue_client = runtime.block_on(AsyncRequestsQueue::new(fb, &app, mononoke.clone()))?;
+        let queue_client = runtime.block_on(AsyncRequestsQueue::new(fb, &app))?;
         Some(Arc::new(queue_client))
     };
 

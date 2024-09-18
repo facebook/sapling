@@ -114,7 +114,7 @@ pub(crate) struct SourceControlServiceImpl {
     pub(crate) scribe: Scribe,
     pub(crate) configs: Arc<MononokeConfigs>,
     pub(crate) factory_group: Option<Arc<FactoryGroup<2>>>,
-    pub(crate) async_requests_queue_client: Option<Arc<AsyncRequestsQueue<Repo>>>,
+    pub(crate) async_requests_queue_client: Option<Arc<AsyncRequestsQueue>>,
     identity_proxy_checker: Arc<ConnectionSecurityChecker>,
     pub(crate) acl_provider: Arc<dyn AclProvider>,
 }
@@ -134,7 +134,7 @@ impl SourceControlServiceImpl {
         configs: Arc<MononokeConfigs>,
         common_config: &CommonConfig,
         factory_group: Option<Arc<FactoryGroup<2>>>,
-        async_requests_queue_client: Option<Arc<AsyncRequestsQueue<Repo>>>,
+        async_requests_queue_client: Option<Arc<AsyncRequestsQueue>>,
     ) -> Result<Self, anyhow::Error> {
         scuba_builder.add_common_server_data();
 

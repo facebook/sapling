@@ -60,15 +60,14 @@ pub enum AsyncRequestsSubcommand {
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let ctx = app.new_basic_context();
     let mononoke = Arc::new(
-        app.open_managed_repo_arg(&args.repo)
+        app.open_managed_repo_arg::<Repo>(&args.repo)
             .await
             .context("Failed to initialize Mononoke API")?
             .make_mononoke_api()?,
     );
-    let queues_client: AsyncRequestsQueue<Repo> =
-        AsyncRequestsQueue::new(ctx.fb, &app, mononoke.clone())
-            .await
-            .context("acquiring the async requests queue")?;
+    let queues_client: AsyncRequestsQueue = AsyncRequestsQueue::new(ctx.fb, &app)
+        .await
+        .context("acquiring the async requests queue")?;
 
     let session = SessionContainer::new_with_defaults(app.environment().fb);
     let ctx = session.new_context(

@@ -32,10 +32,10 @@ pub struct AsyncRequestsAbortArgs {
     request_id: u64,
 }
 
-pub async fn abort_request<R: MononokeRepo>(
+pub async fn abort_request(
     args: AsyncRequestsAbortArgs,
     ctx: CoreContext,
-    queues_client: AsyncRequestsQueue<R>,
+    queues_client: AsyncRequestsQueue,
 ) -> Result<(), Error> {
     let queue = queues_client
         .async_method_request_queue(&ctx)

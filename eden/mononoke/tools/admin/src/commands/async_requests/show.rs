@@ -116,7 +116,7 @@ impl std::fmt::Debug for ResultsWrapper {
 pub async fn show_request<R: MononokeRepo>(
     args: AsyncRequestsShowArgs,
     ctx: CoreContext,
-    queues_client: AsyncRequestsQueue<R>,
+    queues_client: AsyncRequestsQueue,
     mononoke: Arc<Mononoke<R>>,
 ) -> Result<(), Error> {
     let queue = queues_client

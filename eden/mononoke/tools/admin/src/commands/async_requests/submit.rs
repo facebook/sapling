@@ -41,7 +41,7 @@ pub struct AsyncRequestsSubmitArgs {
 pub async fn submit_request<R: MononokeRepo>(
     args: AsyncRequestsSubmitArgs,
     ctx: CoreContext,
-    queues_client: AsyncRequestsQueue<R>,
+    queues_client: AsyncRequestsQueue,
     mononoke: Arc<Mononoke<R>>,
     _repo: R,
 ) -> Result<(), Error> {

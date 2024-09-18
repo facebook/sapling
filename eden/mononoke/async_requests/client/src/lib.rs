@@ -17,7 +17,6 @@ use blobstore_factory::make_manifold_blobstore;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use metaconfig_types::BlobConfig;
-use mononoke_api::Mononoke;
 use mononoke_api::MononokeRepo;
 use mononoke_app::MononokeApp;
 use requests_table::LongRunningRequestsQueue;
@@ -27,30 +26,23 @@ use sql_construct::SqlConstructFromDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 
 #[derive(Clone)]
-#[allow(dead_code)]
-pub struct AsyncRequestsQueue<R> {
+pub struct AsyncRequestsQueue {
     sql_connection: Arc<dyn LongRunningRequestsQueue>,
     blobstore: Arc<dyn Blobstore>,
-    mononoke: Arc<Mononoke<R>>,
 }
 
-impl<R: MononokeRepo> AsyncRequestsQueue<R> {
+impl AsyncRequestsQueue {
     /// Creates a new tailer instance that's going to use provided megarepo API
     /// The name argument should uniquely identify tailer instance and will be put
     /// in the queue table so it's possible to find out which instance is working on
     /// a given task (for debugging purposes).
-    pub async fn new(
-        fb: FacebookInit,
-        app: &MononokeApp,
-        mononoke: Arc<Mononoke<R>>,
-    ) -> Result<Self, Error> {
+    pub async fn new(fb: FacebookInit, app: &MononokeApp) -> Result<Self, Error> {
         let sql_connection = Arc::new(Self::open_sql_connection(fb, app).await?);
         let blobstore = Arc::new(Self::open_blobstore(fb, app).await?);
 
         Ok(Self {
             sql_connection,
             blobstore,
-            mononoke,
         })
     }
 

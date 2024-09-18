@@ -30,10 +30,10 @@ pub struct AsyncRequestsListArgs {
     lookback: i64,
 }
 
-pub async fn list_requests<R: MononokeRepo>(
+pub async fn list_requests(
     args: AsyncRequestsListArgs,
     ctx: CoreContext,
-    queues_client: AsyncRequestsQueue<R>,
+    queues_client: AsyncRequestsQueue,
 ) -> Result<(), Error> {
     let queue = queues_client
         .async_method_request_queue(&ctx)
