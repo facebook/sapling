@@ -17,6 +17,7 @@ import {Internal} from './Internal';
 import {VSCodeReposList} from './VSCodeRepo';
 import {InlineBlameProvider} from './blame/blame';
 import {registerCommands} from './commands';
+import {InlineCommentsProvider} from './comments/InlineCommentsProvider';
 import {getCLICommand} from './config';
 import {ensureTranslationsLoaded} from './i18n';
 import {registerISLCommands} from './islWebviewPanel';
@@ -57,6 +58,9 @@ export async function activate(context: vscode.ExtensionContext) {
     }
     context.subscriptions.push(registerSaplingDiffContentProvider(ctx));
     context.subscriptions.push(new DeletedFileContentProvider());
+    if (enabledSCMApiFeatures.has('comments')) {
+      context.subscriptions.push(new InlineCommentsProvider(reposList, ctx));
+    }
 
     context.subscriptions.push(...registerCommands(ctx));
 
