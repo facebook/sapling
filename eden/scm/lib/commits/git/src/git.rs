@@ -162,6 +162,7 @@ impl GitSegmentedCommits {
         // Bookmarks and remotenames are built from scratch.
         let mut bookmarks = BTreeMap::new();
         let mut remotenames = BTreeMap::new();
+        let mut extra_git_refs = BTreeMap::new();
         let mut visibleheads = Vec::new();
 
         let existing_visibleheads: HashSet<_> = metalog.get_visibleheads()?.into_iter().collect();
@@ -183,13 +184,13 @@ impl GitSegmentedCommits {
             GitRefFilter::new_for_dotsl(&refs)?
         };
 
-        for (name, value) in &refs {
+        for (ref_name, value) in &refs {
             // Ignore symlink refs (usually just "*/HEAD"). They are handled elsewhere.
             let id = match value {
                 ReferenceValue::Sym(_) => continue,
                 ReferenceValue::Id(id) => *id,
             };
-            let names: Vec<&str> = name.splitn(3, '/').collect();
+            let names: Vec<&str> = ref_name.splitn(3, '/').collect();
             match &names[..] {
                 ["refs", "remotes", name] => {
                     if remote_name_filter.should_import_remote_name(name) {
@@ -231,6 +232,7 @@ impl GitSegmentedCommits {
                         heads.push((Vertex::copy_from(id.as_ref()), head_opts.clone()));
                     }
                     if remote_name_filter.should_treat_local_ref_as_visible_head(name) {
+                        extra_git_refs.insert(ref_name.clone(), id);
                         visibleheads.push(id);
                     } else {
                         bookmarks.insert(name.to_string(), id);
@@ -255,6 +257,7 @@ impl GitSegmentedCommits {
             ?remotenames,
             ?bookmarks,
             ?visibleheads,
+            ?extra_git_refs,
             ?existing_remotenames,
             ?existing_bookmarks,
             ?existing_visibleheads,
@@ -271,6 +274,8 @@ impl GitSegmentedCommits {
         metalog.set("bookmarks", encoded_bookmarks.as_ref())?;
         metalog.set("remotenames", encoded_remotenames.as_ref())?;
         metalog.set("visibleheads", encoded_visibleheads.as_ref())?;
+        metalog.set_git_refs(&extra_git_refs)?;
+
         let mut opts = metalog::CommitOptions::default();
         opts.message = "sync from git";
         metalog.commit(opts)?;
@@ -465,7 +470,7 @@ impl GitSegmentedCommits {
             }
         }
 
-        // Incrementally update changed bookmarks, remotenames.
+        // Incrementally update changed bookmarks, remotenames, git_refs.
         'update_changes: {
             let parent = match metalog.parent()? {
                 None => {
@@ -476,8 +481,10 @@ impl GitSegmentedCommits {
             };
             let old_bookmarks = parent.get_bookmarks()?;
             let old_remotenames = parent.get_remotenames()?;
+            let old_git_refs = parent.get_git_refs()?;
             let new_bookmarks = metalog.get_bookmarks()?;
             let new_remotenames = metalog.get_remotenames()?;
+            let new_git_refs = metalog.get_git_refs()?;
 
             for (name, optional_id) in find_changes(&old_remotenames, &new_remotenames) {
                 let ref_name = match name.split_once("/tags/") {
@@ -493,6 +500,10 @@ impl GitSegmentedCommits {
                 let ref_name = format!("refs/heads/{}", name);
                 tracing::debug!(ref_name=&ref_name, id=?optional_id, "updating bookmark ref");
                 ref_to_change.insert(ref_name, optional_id.map(hgid_to_git_oid));
+            }
+            for (ref_name, optional_id) in find_changes(&old_git_refs, &new_git_refs) {
+                tracing::debug!(ref_name=&ref_name, id=?optional_id, "updating git ref");
+                ref_to_change.insert(ref_name.clone(), optional_id.map(hgid_to_git_oid));
             }
 
             if !ref_to_change.is_empty() {
