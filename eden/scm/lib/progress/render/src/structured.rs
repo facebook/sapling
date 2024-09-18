@@ -98,21 +98,21 @@ impl Renderer<'_> {
         depth: usize,
         pop_out: usize,
     ) {
-        let bars = bars.into_iter().collect::<Vec<_>>();
+        let bars = bars
+            .into_iter()
+            // Non-adhoc bars are created in advance and should be shown with no
+            // delay (like a checklist of work).
+            .filter(|bar| {
+                !(bar.adhoc()
+                    && self.config.delay.as_millis() > 0
+                    && bar.since_start().unwrap_or_default() < self.config.delay)
+            })
+            .collect::<Vec<_>>();
 
         // Are we the first bar being rendered (at this depth).
         let mut is_first = true;
 
         for (idx, bar) in bars.iter().enumerate() {
-            // Non-adhoc bars are created in advance and should be shown with no
-            // delay (like a checklist of work).
-            if bar.adhoc()
-                && self.config.delay.as_millis() > 0
-                && bar.since_start().unwrap_or_default() < self.config.delay
-            {
-                continue;
-            }
-
             if self.rendered_so_far >= self.config.max_bar_count {
                 return;
             }
