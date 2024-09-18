@@ -8,8 +8,9 @@
 import type {VSCodeRepo, VSCodeReposList} from '../VSCodeRepo';
 import type {CodeReviewProvider, DiffSummaries} from 'isl-server/src/CodeReviewProvider';
 import type {RepositoryContext} from 'isl-server/src/serverTypes';
-import type {CommitInfo} from 'isl/src/types';
-import type * as vscode from 'vscode';
+import type {CommitInfo, DiffComment} from 'isl/src/types';
+
+import * as vscode from 'vscode';
 
 export class InlineCommentsProvider implements vscode.Disposable {
   private disposables: Array<vscode.Disposable> = [];
@@ -41,8 +42,31 @@ export class InlineCommentsProvider implements vscode.Disposable {
   }
 }
 
+declare module 'vscode' {
+  export interface WebviewEditorInset {
+    readonly editor: TextEditor;
+    readonly line: number;
+    readonly height: number;
+    readonly webview: Webview;
+    readonly onDidDispose: Event<void>;
+    dispose(): void;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-namespace
+  export namespace window {
+    export function createWebviewTextEditorInset(
+      editor: TextEditor,
+      line: number,
+      height: number,
+      options?: WebviewOptions,
+    ): WebviewEditorInset;
+  }
+}
+
 class InlineCommentsForRepo implements vscode.Disposable {
   private disposables: Array<vscode.Disposable> = [];
+  private currentCommentsPerFile: Map<string, Array<DiffComment>> = new Map();
+  private currentDecorations: Array<vscode.Disposable> = [];
   constructor(
     private repo: VSCodeRepo,
     private provider: CodeReviewProvider,
@@ -65,6 +89,12 @@ class InlineCommentsForRepo implements vscode.Disposable {
         this.addCommentsForDiff(currentHead, mostRecentDiffInfos);
       }),
     );
+
+    this.disposables.push(
+      vscode.window.onDidChangeActiveTextEditor(() => {
+        this.updateActiveFileDecorations();
+      }),
+    );
   }
 
   private addCommentsForDiff(head: CommitInfo | undefined, summaries: DiffSummaries | undefined) {
@@ -81,12 +111,76 @@ class InlineCommentsForRepo implements vscode.Disposable {
     if (numComments > 0) {
       this.provider.fetchComments?.(diffId).then(comments => {
         this.ctx.logger.info(`Updating ${comments.length} diff comments for diff ${diffId}`);
-        // TODO: use fetched comments to add gutters to files
+        for (const comment of comments) {
+          if (comment.filename) {
+            const existing = this.currentCommentsPerFile.get(comment.filename) ?? [];
+            existing.push(comment);
+            this.currentCommentsPerFile.set(comment.filename, existing);
+          }
+        }
+        this.ctx.logger.info(
+          `Found comments for files: `,
+          [...this.currentCommentsPerFile.values()].join(', '),
+        );
+        this.updateActiveFileDecorations();
       });
     }
   }
 
+  private disposeActiveFileDecorations() {
+    this.currentDecorations.forEach(d => d.dispose());
+    this.currentDecorations = [];
+  }
+  private updateActiveFileDecorations() {
+    this.disposeActiveFileDecorations();
+    const editor = vscode.window.activeTextEditor;
+    if (editor?.viewColumn == null || editor.document.uri.scheme !== 'file') {
+      // this is not a real editor
+      return;
+    }
+
+    const filepath = editor.document.uri.fsPath;
+    const repoRelative = this.repo.repoRelativeFsPath(editor.document.uri);
+    this.ctx.logger.info('udpate decorations for', filepath, repoRelative);
+    if (repoRelative == null) {
+      return;
+    }
+
+    const comments = this.currentCommentsPerFile.get(repoRelative);
+    if (comments == null) {
+      return;
+    }
+    for (const comment of comments) {
+      if (!comment.line) {
+        continue;
+      }
+      const range = new vscode.Range(comment.line, 0, comment.line, 0);
+
+      const HEIGHT_IN_LINES = 1;
+      const inset = vscode.window.createWebviewTextEditorInset(
+        editor,
+        range.start.line - 1,
+        HEIGHT_IN_LINES,
+        {
+          enableScripts: true,
+        },
+      );
+
+      inset.webview.html = `<html><body style="padding: 0;">${comment.html}</body></html>`;
+      this.currentDecorations.push(inset);
+
+      const decoration = vscode.window.createTextEditorDecorationType({
+        overviewRulerLane: vscode.OverviewRulerLane.Left,
+        overviewRulerColor: '#D6D8E8',
+        rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed,
+      });
+      editor.setDecorations(decoration, [{range}]);
+      this.currentDecorations.push(decoration);
+    }
+  }
+
   dispose(): void {
+    this.disposeActiveFileDecorations();
     this.disposables.forEach(d => d.dispose());
   }
 }
