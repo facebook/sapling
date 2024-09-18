@@ -15,7 +15,7 @@ use anyhow::Error;
 use anyhow::Result;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncers;
-use cross_repo_sync::get_all_submodule_deps;
+use cross_repo_sync::get_all_submodule_deps_from_repo_pair;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::RepoProvider;
@@ -36,7 +36,7 @@ pub async fn create_commit_syncers_from_app<R: CrossRepo>(
 ) -> Result<Syncers<R>, Error> {
     let repo_provider = repo_provider_from_mononoke_app(app);
 
-    let submodule_deps = get_all_submodule_deps(
+    let submodule_deps = get_all_submodule_deps_from_repo_pair(
         ctx,
         Arc::new(source_repo.clone()),
         Arc::new(target_repo.clone()),
@@ -86,7 +86,7 @@ pub async fn create_single_direction_commit_syncer<R: CrossRepo>(
 ) -> Result<CommitSyncer<R>, Error> {
     let repo_provider = repo_provider_from_mononoke_app(app);
 
-    let submodule_deps = get_all_submodule_deps(
+    let submodule_deps = get_all_submodule_deps_from_repo_pair(
         ctx,
         Arc::new(source_repo.clone()),
         Arc::new(target_repo.clone()),

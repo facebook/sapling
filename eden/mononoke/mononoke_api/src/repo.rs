@@ -52,7 +52,7 @@ use commit_graph::CommitGraphArc;
 use commit_graph::CommitGraphRef;
 use commit_graph::CommitGraphWriter;
 use context::CoreContext;
-use cross_repo_sync::get_all_submodule_deps;
+use cross_repo_sync::get_all_submodule_deps_from_repo_pair;
 use cross_repo_sync::get_small_and_large_repos;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
@@ -334,6 +334,7 @@ async fn maybe_push_redirector<R: MononokeRepo>(
     let enabled = live_commit_sync_config
         .push_redirector_enabled_for_public(ctx, repo.repo_identity().id())
         .await?;
+
     if enabled {
         let large_repo_id = base.common_commit_sync_config.large_repo_id;
         let large_repo = repos.get_by_id(large_repo_id.id()).ok_or_else(|| {
@@ -1545,7 +1546,7 @@ impl<R: MononokeRepo> RepoContext<R> {
             })
         });
 
-        let submodule_deps = get_all_submodule_deps(
+        let submodule_deps = get_all_submodule_deps_from_repo_pair(
             &self.ctx,
             self.repo.clone(),
             other.repo.clone(),

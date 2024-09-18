@@ -33,7 +33,7 @@ use cmdlib_cross_repo::repo_provider_from_mononoke_app;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncers;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
-use cross_repo_sync::get_all_submodule_deps;
+use cross_repo_sync::get_all_submodule_deps_from_repo_pair;
 use cross_repo_sync::rewrite_commit;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
@@ -928,7 +928,7 @@ async fn get_pushredirected_vars(
     let large_repo_arc = Arc::new(large_repo.clone());
 
     let submodule_deps =
-        get_all_submodule_deps(ctx, repo_arc, large_repo_arc, repo_provider).await?;
+        get_all_submodule_deps_from_repo_pair(ctx, repo_arc, large_repo_arc, repo_provider).await?;
 
     let syncers = create_commit_syncers(
         ctx,

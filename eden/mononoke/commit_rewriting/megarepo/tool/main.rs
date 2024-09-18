@@ -34,7 +34,7 @@ use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
 use context::CoreContext;
 use cross_repo_sync::find_toposorted_unsynced_ancestors;
-use cross_repo_sync::get_all_submodule_deps;
+use cross_repo_sync::get_all_submodule_deps_from_repo_pair;
 use cross_repo_sync::verify_working_copy_with_version;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
@@ -338,7 +338,7 @@ async fn run_sync_diamond_merge<'a>(
 
     let source_repo_arc = Arc::new(source_repo);
     let target_repo_arc = Arc::new(target_repo);
-    let submodule_deps = get_all_submodule_deps(
+    let submodule_deps = get_all_submodule_deps_from_repo_pair(
         ctx,
         source_repo_arc.clone(),
         target_repo_arc.clone(),

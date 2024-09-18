@@ -497,7 +497,7 @@ pub type RepoProvider<'a, R> = Arc<
 /// TODO(T184633369): stop getting all dependencies from history and
 /// use only the most recent on. Maybe read the most recent commits and use
 /// their versions?
-pub async fn get_all_submodule_deps<R>(
+pub async fn get_all_submodule_deps_from_repo_pair<R>(
     ctx: &CoreContext,
     source_repo: Arc<R>,
     target_repo: Arc<R>,
@@ -507,10 +507,9 @@ where
     R: Repo,
 {
     let source_repo_deps =
-        get_all_possible_repo_submodule_deps(ctx, source_repo, repo_provider.clone()).await?;
+        get_all_repo_submodule_deps(ctx, source_repo, repo_provider.clone()).await?;
 
-    let target_repo_deps =
-        get_all_possible_repo_submodule_deps(ctx, target_repo, repo_provider).await?;
+    let target_repo_deps = get_all_repo_submodule_deps(ctx, target_repo, repo_provider).await?;
 
     let final_submodule_deps = match (source_repo_deps.dep_map(), target_repo_deps.dep_map()) {
         (Some(dep_map), None) => SubmoduleDeps::ForSync(dep_map.clone()),
@@ -538,7 +537,7 @@ where
 /// TODO(T184633369): stop getting all dependencies from history and
 /// use only the most recent on. Maybe read the most recent commits and use
 /// their versions?
-async fn get_all_possible_repo_submodule_deps<R>(
+pub async fn get_all_repo_submodule_deps<R>(
     ctx: &CoreContext,
     repo: Arc<R>,
     repo_provider: RepoProvider<'_, R>,

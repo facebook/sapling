@@ -19,7 +19,7 @@ use cmdlib::args;
 use cmdlib::args::MononokeMatches;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncers;
-use cross_repo_sync::get_all_submodule_deps;
+use cross_repo_sync::get_all_submodule_deps_from_repo_pair;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::RepoProvider;
@@ -55,7 +55,7 @@ pub async fn create_commit_syncers_from_matches<R: Repo>(
 
     let repo_provider = repo_provider_from_matches(ctx, matches);
 
-    let submodule_deps = get_all_submodule_deps(
+    let submodule_deps = get_all_submodule_deps_from_repo_pair(
         ctx,
         Arc::new(source_repo.0.clone()),
         Arc::new(target_repo.0.clone()),
@@ -210,7 +210,7 @@ async fn create_commit_syncer_from_matches_impl<R: Repo>(
 
     let repo_provider = repo_provider_from_matches(ctx, matches);
 
-    let submodule_deps = get_all_submodule_deps(
+    let submodule_deps = get_all_submodule_deps_from_repo_pair(
         ctx,
         Arc::new(source_repo.0.clone()),
         Arc::new(target_repo.0.clone()),
