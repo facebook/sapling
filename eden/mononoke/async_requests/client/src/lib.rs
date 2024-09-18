@@ -5,14 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
-use std::future::Future;
-use std::hash::Hash;
 use std::sync::Arc;
 
 use anyhow::bail;
 use anyhow::Error;
-use async_once_cell::AsyncOnceCell;
 use async_requests::AsyncMethodRequestQueue;
 use async_requests::AsyncRequestsError;
 use blobstore::Blobstore;
@@ -24,61 +20,17 @@ use metaconfig_types::BlobConfig;
 use mononoke_api::Mononoke;
 use mononoke_api::MononokeRepo;
 use mononoke_app::MononokeApp;
-use parking_lot::Mutex;
-use repo_identity::ArcRepoIdentity;
 use requests_table::LongRunningRequestsQueue;
 use requests_table::SqlLongRunningRequestsQueue;
 use slog::info;
 use sql_construct::SqlConstructFromDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 
-/// A cache for AsyncMethodRequestQueue instances
-#[derive(Clone)]
-#[allow(dead_code)]
-struct Cache<K: Clone + Eq + Hash, V: Clone> {
-    cache: Arc<Mutex<HashMap<K, Arc<AsyncOnceCell<V>>>>>,
-}
-
-#[allow(dead_code)]
-impl<K: Clone + Eq + Hash, V: Clone> Cache<K, V> {
-    fn new() -> Self {
-        Cache {
-            cache: Arc::new(Mutex::new(HashMap::new())),
-        }
-    }
-
-    async fn get_or_try_init<F, Fut>(&self, key: &K, init: F) -> Result<V, Error>
-    where
-        F: FnOnce() -> Fut,
-        Fut: Future<Output = Result<V, Error>>,
-    {
-        let cell = {
-            let mut cache = self.cache.lock();
-            match cache.get(key) {
-                Some(cell) => {
-                    if let Some(value) = cell.get() {
-                        return Ok(value.clone());
-                    }
-                    cell.clone()
-                }
-                None => {
-                    let cell = Arc::new(AsyncOnceCell::new());
-                    cache.insert(key.clone(), cell.clone());
-                    cell
-                }
-            }
-        };
-        let value = cell.get_or_try_init(init).await?;
-        Ok(value.clone())
-    }
-}
-
 #[derive(Clone)]
 #[allow(dead_code)]
 pub struct AsyncRequestsQueue<R> {
     sql_connection: Arc<dyn LongRunningRequestsQueue>,
     blobstore: Arc<dyn Blobstore>,
-    queue_cache: Cache<ArcRepoIdentity, AsyncMethodRequestQueue>,
     mononoke: Arc<Mononoke<R>>,
 }
 
@@ -98,7 +50,6 @@ impl<R: MononokeRepo> AsyncRequestsQueue<R> {
         Ok(Self {
             sql_connection,
             blobstore,
-            queue_cache: Cache::new(),
             mononoke,
         })
     }
