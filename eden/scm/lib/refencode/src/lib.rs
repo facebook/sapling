@@ -72,9 +72,9 @@ pub fn decode_bookmarks(bytes: &[u8]) -> io::Result<BTreeMap<String, HgId>> {
 }
 
 /// Encode visible heads.
-pub fn encode_visibleheads(heads: &[HgId]) -> Vec<u8> {
+pub fn encode_visibleheads<'a>(heads: impl IntoIterator<Item = &'a HgId>) -> Vec<u8> {
     let encoded = std::iter::once("v1\n".to_string())
-        .chain(heads.iter().map(|h| format!("{}\n", h.to_hex())))
+        .chain(heads.into_iter().map(|h| format!("{}\n", h.to_hex())))
         .collect::<Vec<_>>()
         .concat();
     encoded.into_bytes()
