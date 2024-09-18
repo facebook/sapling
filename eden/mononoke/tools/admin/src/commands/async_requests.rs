@@ -65,7 +65,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             .context("Failed to initialize Mononoke API")?
             .make_mononoke_api()?,
     );
-    let queues_client: AsyncRequestsQueue = AsyncRequestsQueue::new(ctx.fb, &app)
+    let queues_client: AsyncRequestsQueue = AsyncRequestsQueue::new(ctx.fb, &app, None)
         .await
         .context("acquiring the async requests queue")?;
 

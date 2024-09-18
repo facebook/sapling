@@ -18,6 +18,7 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use metaconfig_types::BlobConfig;
 use mononoke_api::MononokeRepo;
+use mononoke_api::RepositoryId;
 use mononoke_app::MononokeApp;
 use requests_table::LongRunningRequestsQueue;
 use requests_table::SqlLongRunningRequestsQueue;
@@ -29,20 +30,24 @@ use sql_ext::facebook::MysqlOptions;
 pub struct AsyncRequestsQueue {
     sql_connection: Arc<dyn LongRunningRequestsQueue>,
     blobstore: Arc<dyn Blobstore>,
+    repos: Option<Vec<RepositoryId>>,
 }
 
 impl AsyncRequestsQueue {
-    /// Creates a new tailer instance that's going to use provided megarepo API
-    /// The name argument should uniquely identify tailer instance and will be put
-    /// in the queue table so it's possible to find out which instance is working on
-    /// a given task (for debugging purposes).
-    pub async fn new(fb: FacebookInit, app: &MononokeApp) -> Result<Self, Error> {
+    /// Build a new async requests queue client. If the repos argument is specified,
+    /// then the client will only be able to access the repos specified in the argument.
+    pub async fn new(
+        fb: FacebookInit,
+        app: &MononokeApp,
+        repos: Option<Vec<RepositoryId>>,
+    ) -> Result<Self, Error> {
         let sql_connection = Arc::new(Self::open_sql_connection(fb, app).await?);
         let blobstore = Arc::new(Self::open_blobstore(fb, app).await?);
 
         Ok(Self {
             sql_connection,
             blobstore,
+            repos,
         })
     }
 
@@ -96,7 +101,7 @@ impl AsyncRequestsQueue {
         Ok(AsyncMethodRequestQueue::new(
             self.sql_connection.clone(),
             self.blobstore.clone(),
-            None,
+            self.repos.clone(),
         ))
     }
 }

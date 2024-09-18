@@ -73,7 +73,7 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
         megarepo: Arc<MegarepoApi<R>>,
         name: String,
     ) -> Result<Self, Error> {
-        let queues_client = AsyncRequestsQueue::new(fb, app)
+        let queues_client = AsyncRequestsQueue::new(fb, app, None)
             .await
             .context("acquiring the async requests queue")?;
         Ok(Self {
