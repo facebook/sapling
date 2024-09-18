@@ -24,6 +24,21 @@ impl MetaLog {
         Ok(decoded)
     }
 
+    /// Decode (extra) git references like "refs/heads/main" => ...
+    ///
+    /// These are usually entries that are automatically translated to "visible heads" for dotgit
+    /// mode. For dotsl mode, and other non-git configurations, this should be empty.
+    ///
+    /// These are tracked so we can update them during commit rewrites.
+    pub fn get_git_refs(&self) -> Result<BTreeMap<String, HgId>> {
+        let decoded = match self.get("gitrefs")? {
+            // Same format as bookmarks.
+            Some(data) => refencode::decode_bookmarks(&data)?,
+            None => Default::default(),
+        };
+        Ok(decoded)
+    }
+
     /// Decode remotenames.
     pub fn get_remotenames(&self) -> Result<BTreeMap<String, HgId>> {
         let decoded = match self.get("remotenames")? {
@@ -46,6 +61,13 @@ impl MetaLog {
     pub fn set_bookmarks(&mut self, value: &BTreeMap<String, HgId>) -> Result<()> {
         let encoded = refencode::encode_bookmarks(value);
         self.set("bookmarks", &encoded)?;
+        Ok(())
+    }
+
+    /// Update (extra) git references. This does not write to disk until `commit`.
+    pub fn set_git_refs(&mut self, value: &BTreeMap<String, HgId>) -> Result<()> {
+        let encoded = refencode::encode_bookmarks(value);
+        self.set("gitrefs", &encoded)?;
         Ok(())
     }
 
