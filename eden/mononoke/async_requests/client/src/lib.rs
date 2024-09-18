@@ -10,7 +10,6 @@ use std::future::Future;
 use std::hash::Hash;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Error;
 use async_once_cell::AsyncOnceCell;
@@ -22,22 +21,16 @@ use blobstore_factory::make_manifold_blobstore;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use metaconfig_types::BlobConfig;
-use metaconfig_types::RepoConfigArc;
 use mononoke_api::Mononoke;
 use mononoke_api::MononokeRepo;
 use mononoke_app::MononokeApp;
 use parking_lot::Mutex;
-use repo_blobstore::RepoBlobstoreArc;
 use repo_identity::ArcRepoIdentity;
 use requests_table::LongRunningRequestsQueue;
 use requests_table::SqlLongRunningRequestsQueue;
 use slog::info;
-use slog::warn;
 use sql_construct::SqlConstructFromDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
-
-// XXX keep using the traditional repo to find the dbconfig. We will move this to a more specific config soon.
-const ASYNC_REQUESTS_REPO: &str = "aosp";
 
 /// A cache for AsyncMethodRequestQueue instances
 #[derive(Clone)]
@@ -99,8 +92,8 @@ impl<R: MononokeRepo> AsyncRequestsQueue<R> {
         app: &MononokeApp,
         mononoke: Arc<Mononoke<R>>,
     ) -> Result<Self, Error> {
-        let sql_connection = Arc::new(Self::open_sql_connection(fb, app, &mononoke).await?);
-        let blobstore = Arc::new(Self::open_blobstore(fb, app, &mononoke).await?);
+        let sql_connection = Arc::new(Self::open_sql_connection(fb, app).await?);
+        let blobstore = Arc::new(Self::open_blobstore(fb, app).await?);
 
         Ok(Self {
             sql_connection,
@@ -113,116 +106,43 @@ impl<R: MononokeRepo> AsyncRequestsQueue<R> {
     async fn open_sql_connection(
         fb: FacebookInit,
         app: &MononokeApp,
-        mononoke: &Arc<Mononoke<R>>,
     ) -> Result<SqlLongRunningRequestsQueue, Error> {
-        let use_common_config =
-            justknobs::eval("scm/mononoke:async_requests_from_common_config", None, None)
-                .unwrap_or(false);
-        let use_legacy_config =
-            justknobs::eval("scm/mononoke:async_requests_legacy_config", None, None)
-                .unwrap_or(true);
-
         let config = app.repo_configs().common.async_requests_config.clone();
-        if use_common_config {
-            if let Some(config) = config.db_config {
-                info!(
-                    app.logger(),
-                    "Initializing async_requests with an explicit config"
-                );
-                return SqlLongRunningRequestsQueue::with_database_config(
-                    fb,
-                    &config,
-                    &MysqlOptions::default(),
-                    false,
-                );
-            } else {
-                warn!(
-                    app.logger(),
-                    "No db config found in common config; falling back to repo config"
-                );
-            }
-        }
-
-        if use_legacy_config {
-            let repo_factory = app.repo_factory().clone();
-            let repo = mononoke.raw_repo(ASYNC_REQUESTS_REPO).ok_or_else(|| {
-                AsyncRequestsError::internal(anyhow!(
-                    "could not find the default repo for async requests",
-                ))
-            })?;
-            let repo_config = repo.repo_config_arc();
-            warn!(
+        if let Some(config) = config.db_config {
+            info!(
                 app.logger(),
-                "Initializing async_requests falling back to the repo config for {}",
-                ASYNC_REQUESTS_REPO,
+                "Initializing async_requests with an explicit config"
             );
-            let sql_factory = repo_factory
-                .sql_factory(&repo_config.storage_config.metadata)
-                .await?;
-            return sql_factory.open::<SqlLongRunningRequestsQueue>().await;
+            SqlLongRunningRequestsQueue::with_database_config(
+                fb,
+                &config,
+                &MysqlOptions::default(),
+                false,
+            )
+        } else {
+            bail!("async_requests config is missing");
         }
-
-        bail!("No db config found in common config and legacy config is disabled")
     }
 
     async fn open_blobstore(
         fb: FacebookInit,
         app: &MononokeApp,
-        mononoke: &Arc<Mononoke<R>>,
     ) -> Result<Arc<dyn Blobstore>, Error> {
-        let use_common_config = justknobs::eval(
-            "scm/mononoke:async_requests_blobstore_from_common_config",
-            None,
-            None,
-        )
-        .unwrap_or(false);
-        let use_legacy_config = justknobs::eval(
-            "scm/mononoke:async_requests_blobstore_from_legacy_config",
-            None,
-            None,
-        )
-        .unwrap_or(true);
-
         let config = app.repo_configs().common.async_requests_config.clone();
-        if use_common_config {
-            if let Some(config) = config.blobstore {
-                info!(
-                    app.logger(),
-                    "Initializing async_requests with an explicit config for the blobstore"
-                );
-                let options = app.blobstore_options();
-                return match config {
-                    BlobConfig::Manifold { .. } => {
-                        make_manifold_blobstore(fb, config, options).await
-                    }
-                    BlobConfig::Files { .. } => make_files_blobstore(config, options)
-                        .await
-                        .map(|store| Arc::new(store) as Arc<dyn Blobstore>),
-                    _ => {
-                        bail!("Unsupported blobstore type for async requests")
-                    }
-                };
-            } else {
-                warn!(
-                    app.logger(),
-                    "No blobstore config found in common config; falling back to repo config"
-                );
+        if let Some(config) = config.blobstore {
+            let options = app.blobstore_options();
+            match config {
+                BlobConfig::Manifold { .. } => make_manifold_blobstore(fb, config, options).await,
+                BlobConfig::Files { .. } => make_files_blobstore(config, options)
+                    .await
+                    .map(|store| Arc::new(store) as Arc<dyn Blobstore>),
+                _ => {
+                    bail!("Unsupported blobstore type for async requests")
+                }
             }
+        } else {
+            bail!("async_requests config is missing");
         }
-
-        if use_legacy_config {
-            let repo = mononoke.raw_repo(ASYNC_REQUESTS_REPO).ok_or_else(|| {
-                AsyncRequestsError::request(anyhow!("repo not found {}", ASYNC_REQUESTS_REPO))
-            })?;
-            warn!(
-                app.logger(),
-                "Initializing async_requests blobstore falling back to the repo config for {}",
-                ASYNC_REQUESTS_REPO,
-            );
-            return Ok(repo.repo_blobstore_arc());
-        }
-
-        bail!("No db config found in common config and legacy config is disabled")
     }
 
     /// Get the `AsyncMethodRequestQueue`
