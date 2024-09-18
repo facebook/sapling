@@ -36,18 +36,18 @@ export async function activate(context: vscode.ExtensionContext) {
     packageJson.version,
   );
   try {
-    const [, enabledSCMApiFeatures] = await Promise.all([
-      ensureTranslationsLoaded(context),
-      Internal.getEnabledSCMApiFeatures?.() ??
-        new Set<EnabledSCMApiFeature>(['blame', 'sidebar', 'autoresolve']),
-    ]);
-    logger.info('enabled features: ', [...enabledSCMApiFeatures].join(', '));
     const ctx: RepositoryContext = {
       cmd: getCLICommand(),
       cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd(),
       logger,
       tracker: extensionTracker,
     };
+    const [, enabledSCMApiFeatures] = await Promise.all([
+      ensureTranslationsLoaded(context),
+      Internal.getEnabledSCMApiFeatures?.(ctx) ??
+        new Set<EnabledSCMApiFeature>(['blame', 'sidebar', 'autoresolve']),
+    ]);
+    logger.info('enabled features: ', [...enabledSCMApiFeatures].join(', '));
     Internal.maybeOverwriteIslEnabledSetting?.(ctx);
     context.subscriptions.push(registerISLCommands(context, platform, logger));
     context.subscriptions.push(outputChannel);
