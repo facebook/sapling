@@ -163,18 +163,15 @@ impl WorkingCopyClient for RepoGit {
     ) -> Result<Vec<CheckoutConflict>> {
         tracing::debug!(p1=?node, p1_tree=?tree_node, mode=?mode, "checkout");
         // TODO: Conflicts are not reported properly. Are they needed?
+        let flags = match mode {
+            CheckoutMode::Normal => "-d",
+            CheckoutMode::Force => "-fd",
+            CheckoutMode::DryRun => return Ok(Vec::new()),
+        };
+
         let hex = node.to_hex();
-        match mode {
-            CheckoutMode::Normal => {
-                self.run("checkout", &["-d", "--recurse-submodules", &hex])?;
-                Ok(Vec::new())
-            }
-            CheckoutMode::Force => {
-                self.run("checkout", &["-f", "-d", "--recurse-submodules", &hex])?;
-                Ok(Vec::new())
-            }
-            CheckoutMode::DryRun => Ok(Vec::new()),
-        }
+        self.run("checkout", &[flags, "--recurse-submodules", &hex])?;
+        Ok(Vec::new())
     }
 
     fn as_any(&self) -> &dyn Any {
