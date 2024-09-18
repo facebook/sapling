@@ -98,14 +98,11 @@ Metaedit:
 
   $ sl metaedit -m B2
 
-Local bookmarks "branch2", "branch3" are updated.
-FIXME: "B" should be hidden. But it is pinned by the "main" branch
+Local bookmarks "branch2", "branch3", and "refs/heads/main" are updated.
 
   $ sl log -Gr 'all()' -T '{desc|firstline} {bookmarks}'
   @  B2 branch2 branch3
   │
-  │ x  B
-  ├─╯
   o  A
 
 Adding a bookmark and git "main" ref to the old commit to make it visible:

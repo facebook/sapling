@@ -19,6 +19,7 @@ import re
 import socket
 import tempfile
 import time
+from collections import defaultdict
 
 import bindings
 
@@ -875,7 +876,30 @@ def cleanupnodes(repo, replacements, operation, moves=None, metadata=None):
         bmarks = repo._bookmarks
         bmarkchanges = []
         allnewnodes = [n for ns in replacements.values() for n in ns]
+
+        # Move extra Git refs (only used for dotgit mode, git_refs is empty otherwise)
+        metalog = repo.metalog()
+        git_refs = metalog.get_git_refs()  # {name: oid}
+        git_ref_by_oid = {}  # {oid: [name]}
+        git_ref_changed = False
+        for name, oid in git_refs.items():
+            names = git_ref_by_oid.get(oid)
+            if names is None:
+                git_ref_by_oid[oid] = [name]
+            else:
+                names.append(name)
+
         for oldnode, newnode in moves.items():
+            names = git_ref_by_oid.get(oldnode)
+            if names:
+                repo.ui.debug(
+                    "moving git ref %r from %s to %s\n"
+                    % (names, hex(oldnode), hex(newnode))
+                )
+                git_ref_changed = True
+                for name in names:
+                    git_refs[name] = newnode
+
             oldbmarks = repo.nodebookmarks(oldnode)
             if not oldbmarks:
                 continue
@@ -885,6 +909,7 @@ def cleanupnodes(repo, replacements, operation, moves=None, metadata=None):
                 "moving bookmarks %r from %s to %s\n"
                 % (oldbmarks, hex(oldnode), hex(newnode))
             )
+
             # Delete divergent bookmarks being parents of related newnodes
             deleterevs = repo.revs(
                 "parents(roots(%ln & (::%n))) - parents(%n)",
@@ -900,6 +925,8 @@ def cleanupnodes(repo, replacements, operation, moves=None, metadata=None):
 
         if bmarkchanges:
             bmarks.applychanges(repo, tr, bmarkchanges)
+        if git_ref_changed:
+            metalog.set_git_refs(git_refs)
 
         # adjust visibility, or strip nodes
         strip = True
