@@ -15,6 +15,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Context;
+use hgtime::HgTime;
 use indexedlog::lock::ScopedDirLock;
 use indexedlog::log as ilog;
 use indexedlog::OpenWithRepair;
@@ -76,7 +77,9 @@ pub struct MetaLog {
 #[derive(Default)]
 pub struct CommitOptions<'a> {
     pub message: &'a str,
-    pub timestamp: u64,
+
+    /// If None, use the system time during commit.
+    pub timestamp: Option<u64>,
 
     /// Do not write the new root id to the "roots" log.
     /// This is useful for cross-process transactions.
@@ -193,7 +196,7 @@ impl MetaLog {
                 }
             }
             let opts = CommitOptions {
-                timestamp: metalog.root.timestamp,
+                timestamp: Some(metalog.root.timestamp),
                 message: &metalog.root.message,
                 ..Default::default()
             };
@@ -334,7 +337,10 @@ impl MetaLog {
             (resolver)(self, &other, &ancestor)?;
         }
         self.root.message = options.message.to_string();
-        self.root.timestamp = options.timestamp;
+        self.root.timestamp = options.timestamp.unwrap_or_else(|| match HgTime::now() {
+            Some(t) => t.unixtime.max(0) as _,
+            None => 0,
+        });
         let bytes = mincode::serialize(&self.root)?;
         let orig_root_id = self.orig_root_id;
         let mut blobs = self.blobs.write();
@@ -1173,7 +1179,7 @@ mod tests {
     fn commit_opt(message: &str, timestamp: u64) -> CommitOptions {
         let mut opts = CommitOptions::default();
         opts.message = message;
-        opts.timestamp = timestamp;
+        opts.timestamp = Some(timestamp);
         opts
     }
 

@@ -21,6 +21,7 @@ rust_library(
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/hgtime:hgtime",
         "//eden/scm/lib/indexedlog:indexedlog",
         "//eden/scm/lib/mincode:mincode",
         "//eden/scm/lib/minibytes:minibytes",

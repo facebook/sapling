@@ -9,7 +9,6 @@
 
 use std::path::Path;
 use std::sync::Arc;
-use std::time::SystemTime;
 
 use ::metalog::constants::*;
 use ::metalog::CommitOptions;
@@ -118,11 +117,6 @@ py_class!(pub class metalog |py| {
     def commit(&self, message: &str, time: Option<u64> = None, pending: bool = false) -> PyResult<Bytes> {
         let mut opts = CommitOptions::default();
         opts.detached = pending;
-        opts.timestamp = time.unwrap_or_else(|| {
-            SystemTime::now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .map(|d| d.as_secs()).unwrap_or(0)
-        });
         opts.message = message;
         let id = self.log(py).write().commit(opts).map_pyerr(py)?;
         Ok(Bytes::from(id.as_ref().to_vec()))
