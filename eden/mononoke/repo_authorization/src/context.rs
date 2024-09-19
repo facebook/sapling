@@ -669,9 +669,15 @@ impl AuthorizationContext {
                     }
                     Err(_) | Ok(None) => (),
                 }
-                ctx.scuba()
-                    .clone()
-                    .log_with_msg("commit cloud ACL check failed", None);
+                ctx.scuba().clone().log_with_msg(
+                    "commit cloud ACL check failed",
+                    Some(format!(
+                        "No access to workspace {} on repo {} for client with identities {:?}",
+                        cc_ctx.workspace,
+                        cc_ctx.reponame,
+                        ctx.metadata().identities()
+                    )),
+                );
                 false
             }
             AuthorizationContext::Service(_service_name) => false,
