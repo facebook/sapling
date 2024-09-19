@@ -123,6 +123,8 @@ pub trait Token: Clone + Sized + Send + Sync + Debug {
     ) -> Result<Self, AsyncRequestsError>;
     fn to_db_id_and_target(&self) -> Result<(RowId, ThriftMegarepoTarget), AsyncRequestsError>;
 
+    fn id(&self) -> RowId;
+
     /// Every Token referes to some Target
     /// This method is needed to extract it from the
     /// implementor of this trait
@@ -319,6 +321,10 @@ macro_rules! impl_async_svc_method_types {
                 let target = self.0.target.clone();
 
                 Ok((row_id, target))
+            }
+
+            fn id(&self) -> RowId {
+                RowId(self.0.id as u64)
             }
 
             fn into_thrift(self) -> $token_thrift_type {
