@@ -18,6 +18,7 @@ use async_requests::tokens::MegarepoRemergeSourceToken;
 use async_requests::tokens::MegarepoSyncChangesetToken;
 use async_requests::types::IntoApiFormat;
 use async_requests::types::IntoConfigFormat;
+use async_requests::types::Request;
 use async_requests::types::ThriftParams;
 use async_requests::types::Token;
 use async_requests::AsyncMethodRequestQueue;
@@ -25,7 +26,9 @@ use client::AsyncRequestsQueue;
 use context::CoreContext;
 use megarepo_config::SyncTargetConfig;
 use mononoke_api::ChangesetSpecifier;
+use mononoke_api::Mononoke;
 use mononoke_api::MononokeError;
+use mononoke_api::MononokeRepo;
 use mononoke_types::RepositoryId;
 use repo_authorization::RepoWriteOperation;
 use slog::warn;
@@ -207,13 +210,7 @@ impl SourceControlServiceImpl {
             .into_config_format(&self.mononoke)?;
         self.verify_repos_by_config(&config_with_new_target)?;
 
-        queue
-            .enqueue(&ctx, &self.mononoke, params)
-            .await
-            .map(|res| res.into_thrift())
-            .map_err(|e| {
-                errors::internal_error(format!("Failed to enqueue the request: {}", e)).into()
-            })
+        enqueue(&ctx, &queue, &self.mononoke, params).await
     }
 
     pub(crate) async fn megarepo_add_sync_target_poll(
@@ -246,13 +243,7 @@ impl SourceControlServiceImpl {
         let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
-        queue
-            .enqueue(&ctx, &self.mononoke, params)
-            .await
-            .map(|res| res.into_thrift())
-            .map_err(|e| {
-                errors::internal_error(format!("Failed to enqueue the request: {}", e)).into()
-            })
+        enqueue(&ctx, &queue, &self.mononoke, params).await
     }
 
     pub(crate) async fn megarepo_add_branching_sync_target_poll(
@@ -285,13 +276,7 @@ impl SourceControlServiceImpl {
         let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
-        queue
-            .enqueue(&ctx, &self.mononoke, params)
-            .await
-            .map(|res| res.into_thrift())
-            .map_err(|e| {
-                errors::internal_error(format!("Failed to enqueue the request: {}", e)).into()
-            })
+        enqueue(&ctx, &queue, &self.mononoke, params).await
     }
 
     pub(crate) async fn megarepo_change_target_config_poll(
@@ -324,13 +309,7 @@ impl SourceControlServiceImpl {
         let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
-        queue
-            .enqueue(&ctx, &self.mononoke, params)
-            .await
-            .map(|res| res.into_thrift())
-            .map_err(|e| {
-                errors::internal_error(format!("Failed to enqueue the request: {}", e)).into()
-            })
+        enqueue(&ctx, &queue, &self.mononoke, params).await
     }
 
     pub(crate) async fn megarepo_sync_changeset_poll(
@@ -363,13 +342,7 @@ impl SourceControlServiceImpl {
         let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
-        queue
-            .enqueue(&ctx, &self.mononoke, params)
-            .await
-            .map(|res| res.into_thrift())
-            .map_err(|e| {
-                errors::internal_error(format!("Failed to enqueue the request: {}", e)).into()
-            })
+        enqueue(&ctx, &queue, &self.mononoke, params).await
     }
 
     pub(crate) async fn megarepo_remerge_source_poll(
@@ -403,4 +376,17 @@ async fn build_queue(
         Some(queue_client) => Ok(queue_client.async_method_request_queue(ctx).await?),
         None => Err(async_requests_disabled()),
     }
+}
+
+async fn enqueue<P: ThriftParams, R: MononokeRepo>(
+    ctx: &CoreContext,
+    queue: &AsyncMethodRequestQueue,
+    mononoke: &Mononoke<R>,
+    params: P,
+) -> Result<<<P::R as Request>::Token as Token>::ThriftToken, errors::ServiceError> {
+    queue
+        .enqueue(ctx, mononoke, params)
+        .await
+        .map(|res| res.into_thrift())
+        .map_err(|e| errors::internal_error(format!("Failed to enqueue the request: {}", e)).into())
 }
