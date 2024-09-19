@@ -177,14 +177,14 @@ jobs:
     - name: Build rust-shed
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --free-up-disk --no-tests rust-shed
     - name: Build mononoke
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --src-dir=. mononoke  --project-install-prefix mononoke:/usr/local
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --src-dir=. mononoke  --project-install-prefix mononoke:/
     - name: Copy artifacts
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fixup-dyn-deps --strip --src-dir=. mononoke _artifacts/linux  --project-install-prefix mononoke:/usr/local --final-install-prefix /usr/local
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fixup-dyn-deps --strip --src-dir=. mononoke _artifacts/linux  --project-install-prefix mononoke:/ --final-install-prefix /usr/local
     - uses: actions/upload-artifact@v4
       with:
         name: mononoke
         path: _artifacts
     - name: Test mononoke
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages test --src-dir=. mononoke  --project-install-prefix mononoke:/usr/local
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages test --src-dir=. mononoke  --project-install-prefix mononoke:/
     - name: Show disk space at end
       run: df -h
