@@ -15,8 +15,6 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 use blobstore::Loadable;
-use bookmarks::BookmarkKey;
-use bookmarks::BookmarksRef;
 use context::CoreContext;
 use cross_repo_sync::CandidateSelectionHint;
 use cross_repo_sync::CommitSyncContext;
@@ -28,7 +26,6 @@ use mononoke_types::ChangesetId;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
-use repo_identity::RepoIdentityRef;
 use tests_utils::CreateCommitContext;
 
 use crate::check_mapping;
@@ -195,14 +192,7 @@ async fn test_recursive_submodule_expansion_basic(fb: FacebookInit) -> Result<()
     )
     .await?;
 
-    let master_before_change = large_repo
-        .bookmarks()
-        .get(ctx.clone(), &BookmarkKey::new(MASTER_BOOKMARK_NAME)?)
-        .await?
-        .ok_or(anyhow!(
-            "Failed to get master bookmark changeset id of repo {}",
-            large_repo.repo_identity().name()
-        ))?;
+    let master_before_change = master_cs_id(&ctx, &large_repo).await?;
 
     assert_working_copy_matches_expected(
         &ctx,
@@ -2051,6 +2041,150 @@ async fn test_submodule_expansion_and_deletion_on_merge_commits(fb: FacebookInit
             ]),
         ],
     )?;
+
+    Ok(())
+}
+
+/// Test what happens if we accidentally put commits that exist as dangling pointers.
+/// This can lead to a limbo state, where further commits with valid submodule
+/// pointers fail to expand.
+/// This is a known issue and this test is just to document the behavior.
+#[mononoke::fbinit_test]
+async fn test_expanding_existing_submdule_commits_as_dangling_pointers(
+    fb: FacebookInit,
+) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb.clone());
+    let (repo_b, repo_b_cs_map) = build_repo_b(fb).await?;
+
+    // These are the git hashes from the repo_b commits that will be created after
+    // in the tests. They were obtained by running the tests and creating the commits
+    // before, to hardcode them.
+    let B_C_git_sha1 = GitSha1::from_str("f614297935f4abe6132f30f8c2dad26d9a4f5fde")?;
+    let B_D_git_sha1 = GitSha1::from_str("256cf085be052fd8126de1fca2b28c859c56b28d")?;
+
+    // Create repo_a treating the 2 commits that will be created in repo_b as
+    // dangling pointers.
+    let SubmoduleSyncTestData {
+        small_repo_info: (small_repo, small_repo_cs_map),
+        large_repo_info: (large_repo, _large_repo_master),
+        commit_syncer,
+        ..
+    } = build_submodule_sync_test_data(
+        fb,
+        &repo_b,
+        vec![(NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone())],
+        // Known dangling submodule pointers
+        vec![&B_C_git_sha1.to_string(), &B_D_git_sha1.to_string()],
+    )
+    .await?;
+
+    const MESSAGE_1: &str = "Expand FIRST dangling pointers that exists";
+
+    let small_repo_cs_id_1 =
+        CreateCommitContext::new(&ctx, &small_repo, vec![small_repo_cs_map["A_C"]])
+            .set_message(MESSAGE_1)
+            .add_file_with_type(
+                REPO_B_SUBMODULE_PATH,
+                B_C_git_sha1.into_inner(),
+                FileType::GitSubmodule,
+            )
+            .commit()
+            .await?;
+
+    let (large_repo_cs_id, large_repo_changesets) = sync_changeset_and_derive_all_types(
+        ctx.clone(),
+        small_repo_cs_id_1,
+        &large_repo,
+        &commit_syncer,
+    )
+    .await?;
+
+    check_mapping(
+        ctx.clone(),
+        &commit_syncer,
+        small_repo_cs_id_1,
+        Some(large_repo_cs_id),
+    )
+    .await;
+
+    // Since B_C didn't exist, it will be rightfully expanded as a dangling pointer.
+    compare_expected_changesets(
+        large_repo_changesets.last_chunk::<1>().unwrap(),
+        &[ExpectedChangeset::new(MESSAGE_1)
+            .with_regular_changes(vec![
+                // Submodule metadata file is updated
+                "small_repo/submodules/.x-repo-submodule-repo_b",
+                // README file is added with a message informing that this
+                // submodule pointer was dangling.
+                "small_repo/submodules/repo_b/README.TXT",
+            ])
+            .with_deletions(
+                // Should delete everything from previous expansion
+                vec![
+                    "small_repo/submodules/repo_b/B_A",
+                    "small_repo/submodules/repo_b/B_B",
+                ],
+            )],
+    )?;
+
+    // STEP 2: Now create commits B_C and B_D in repo_b. This is equivalent to
+    // making a mistake in the sync config, treating a submodule repo as another,
+    // then updating the config and now the commits exist.
+    let B_C_cs_id = CreateCommitContext::new(&ctx, &repo_b, vec![repo_b_cs_map["B_B"]])
+        .set_message("FIRST commit that exists but will be expanded as dangling")
+        .add_file("repo_b_file", "new file content")
+        .commit()
+        .await?;
+
+    let B_D_cs_id = CreateCommitContext::new(&ctx, &repo_b, vec![B_C_cs_id])
+        .set_message("SECOND commit that exists but will be expanded as dangling")
+        .add_file("repo_b_file", "change file")
+        .commit()
+        .await?;
+
+    let B_C_real_git_sha1 = git_sha1_from_changeset(&ctx, &repo_b, B_C_cs_id).await?;
+    let B_D_real_git_sha1 = git_sha1_from_changeset(&ctx, &repo_b, B_D_cs_id).await?;
+
+    println!("B_C_real_git_sha1: {B_C_real_git_sha1}");
+    println!("B_D_real_git_sha1: {B_D_real_git_sha1}");
+
+    assert_eq!(
+        B_C_real_git_sha1.to_string(),
+        B_C_git_sha1.to_string(),
+        "B_C git hashes don't match. Update hardcoded value!"
+    );
+    assert_eq!(
+        B_D_real_git_sha1.to_string(),
+        B_D_git_sha1.to_string(),
+        "B_D git hashes don't match. Update hardcoded value!"
+    );
+
+    // STEP 3: Now, try to expand commit B_D as danling, even though it exists
+    // and its parent, B_C, also exists but was expanded as dangling.
+    const MESSAGE_2: &str = "Expand SECOND dangling pointers that exists";
+    let small_repo_cs_id_2 = CreateCommitContext::new(&ctx, &small_repo, vec![small_repo_cs_id_1])
+        .set_message(MESSAGE_2)
+        .add_file_with_type(
+            REPO_B_SUBMODULE_PATH,
+            B_D_git_sha1.into_inner(),
+            FileType::GitSubmodule,
+        )
+        .commit()
+        .await?;
+
+    let sync_result = sync_to_master(ctx.clone(), &commit_syncer, small_repo_cs_id_2).await;
+
+    println!("sync_result: {0:#?}", &sync_result);
+
+    assert!(sync_result.is_err_and(|err| {
+        err.chain().any(|e| {
+            // Make sure that we're throwing because the submodule repo is not available
+            e.to_string()
+                .contains("Path B_A is in submodule manifest but not in expansion")
+                || e.to_string()
+                    .contains("Path B_B is in submodule manifest but not in expansion")
+        })
+    }));
 
     Ok(())
 }

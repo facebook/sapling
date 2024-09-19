@@ -484,6 +484,7 @@ pub(crate) fn create_small_repo_sync_config(
         })
         .collect::<Result<Vec<_>>>()?;
 
+    println!("Using known dangling pointers: {known_dangling_pointers:#?}",);
     let small_repo_submodule_config = SmallRepoGitSubmoduleConfig {
         git_submodules_action: GitSubmodulesChangesAction::Expand,
         submodule_dependencies: submodule_deps,
@@ -833,4 +834,14 @@ pub(crate) async fn sync_changeset_and_derive_all_types(
     derive_all_enabled_types_for_repo(&ctx, target_repo, &target_repo_changesets).await?;
 
     Ok((target_repo_cs_id, target_repo_changesets.to_vec()))
+}
+
+pub(crate) async fn master_cs_id(ctx: &CoreContext, repo: &TestRepo) -> Result<ChangesetId> {
+    repo.bookmarks()
+        .get(ctx.clone(), &BookmarkKey::new(MASTER_BOOKMARK_NAME)?)
+        .await?
+        .ok_or(anyhow!(
+            "Failed to get master bookmark changeset id of repo {}",
+            repo.repo_identity().name()
+        ))
 }
