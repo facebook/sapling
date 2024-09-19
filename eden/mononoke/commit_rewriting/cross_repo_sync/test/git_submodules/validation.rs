@@ -38,6 +38,7 @@ async fn test_verify_working_copy_with_submodules(fb: FacebookInit) -> Result<()
         fb,
         &repo_b,
         vec![(NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone())],
+        vec![], // Known dangling submodule pointers
     )
     .await?;
     let small_repo_master = small_repo_cs_map.get("A_C").unwrap();
@@ -75,6 +76,7 @@ async fn test_verify_working_copy_with_submodules_simple_error_case(
         fb,
         &repo_b,
         vec![(NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone())],
+        vec![], // Known dangling submodule pointers
     )
     .await?;
 

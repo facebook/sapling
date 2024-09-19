@@ -61,6 +61,7 @@ async fn test_submodule_expansion_basic(fb: FacebookInit) -> Result<()> {
         fb,
         &repo_b,
         vec![(NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone())],
+        vec![], // Known dangling submodule pointers
     )
     .await?;
 
@@ -190,6 +191,7 @@ async fn test_recursive_submodule_expansion_basic(fb: FacebookInit) -> Result<()
             (NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone()),
             (repo_c_submodule_path, repo_c.clone()),
         ],
+        vec![], // Known dangling submodule pointers
     )
     .await?;
 
@@ -320,6 +322,7 @@ async fn test_submodule_deletion(fb: FacebookInit) -> Result<()> {
         fb,
         &repo_b,
         vec![(NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone())],
+        vec![], // Known dangling submodule pointers
     )
     .await?;
 
@@ -377,6 +380,7 @@ async fn test_recursive_submodule_deletion(fb: FacebookInit) -> Result<()> {
             (NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone()),
             (repo_c_submodule_path, repo_c.clone()),
         ],
+        vec![], // Known dangling submodule pointers
     )
     .await?;
 
@@ -483,6 +487,7 @@ async fn test_submodule_with_recursive_submodule_deletion(fb: FacebookInit) -> R
             (NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone()),
             (repo_c_submodule_path, repo_c.clone()),
         ],
+        vec![], // Known dangling submodule pointers
     )
     .await?;
 
@@ -566,6 +571,7 @@ async fn test_deleting_submodule_but_keeping_directory(fb: FacebookInit) -> Resu
         fb,
         &repo_b,
         vec![(NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone())],
+        vec![], // Known dangling submodule pointers
     )
     .await?;
 
@@ -735,6 +741,7 @@ async fn test_deleting_recursive_submodule_but_keeping_directory(fb: FacebookIni
             (NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone()),
             (repo_c_submodule_path.clone(), repo_c.clone()),
         ],
+        vec![], // Known dangling submodule pointers
     )
     .await?;
 
@@ -950,6 +957,7 @@ async fn test_implicitly_deleting_submodule(fb: FacebookInit) -> Result<()> {
         fb,
         &repo_b,
         vec![(NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone())],
+        vec![], // Known dangling submodule pointers
     )
     .await?;
 
@@ -1020,6 +1028,7 @@ async fn test_implicit_deletions_inside_submodule_repo(fb: FacebookInit) -> Resu
         fb,
         &repo_b,
         vec![(NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone())],
+        vec![], // Known dangling submodule pointers
     )
     .await?;
 
@@ -1130,6 +1139,7 @@ async fn test_implicitly_deleting_file_with_submodule(fb: FacebookInit) -> Resul
         // Initial config should only have repo B as submodule dependency,
         // because the test data setup will create a file in the path `A_A`
         vec![(NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone())],
+        vec![], // Known dangling submodule pointers
     )
     .await?;
 
@@ -1149,6 +1159,7 @@ async fn test_implicitly_deleting_file_with_submodule(fb: FacebookInit) -> Resul
         ],
         live_commit_sync_config,
         test_sync_config_source,
+        vec![], // Known dangling submodule pointers
     )?;
 
     let repo_c_git_commit_hash =
@@ -1222,6 +1233,7 @@ async fn test_adding_submodule_on_existing_directory(fb: FacebookInit) -> Result
         &repo_b,
         // Add it as a submdule in the path of an existing directory.
         vec![(NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone())],
+        vec![], // Known dangling submodule pointers
     )
     .await?;
 
@@ -1259,6 +1271,7 @@ async fn test_adding_submodule_on_existing_directory(fb: FacebookInit) -> Result
         ],
         live_commit_sync_config,
         test_sync_config_source,
+        vec![], // Known dangling submodule pointers
     )?;
 
     let repo_c_git_commit_hash =
@@ -1343,6 +1356,7 @@ async fn test_submodule_expansion_crashes_when_dep_not_available(fb: FacebookIni
         &repo_b,
         // Don't pass repo C as a submodule dependency of repo A
         vec![(NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone())],
+        vec![], // Known dangling submodule pointers
     )
     .await?;
 
@@ -1408,6 +1422,7 @@ async fn test_submodule_validation_fails_with_file_on_metadata_file_path_in_smal
         fb,
         &repo_b,
         vec![(NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone())],
+        vec![], // Known dangling submodule pointers
     )
     .await?;
 
@@ -1521,6 +1536,7 @@ async fn test_submodule_validation_fails_with_file_on_metadata_file_path_in_recu
             (NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone()),
             (repo_c_submodule_path, repo_c.clone()),
         ],
+        vec![], // Known dangling submodule pointers
     )
     .await?;
 
@@ -1581,6 +1597,13 @@ async fn test_submodule_validation_fails_with_file_on_metadata_file_path_in_recu
 /// sync config.
 #[mononoke::fbinit_test]
 async fn test_expanding_known_dangling_submodule_pointers(fb: FacebookInit) -> Result<()> {
+    pub const REPO_B_DANGLING_GIT_COMMIT_HASH: &str = "e957dda44445098cfbaea99e4771e737944e3da4";
+    pub const REPO_C_DANGLING_GIT_COMMIT_HASH: &str = "408dc1a8d40f13a0b8eee162411dba2b8830b1f0";
+
+    let known_dangling_submodule_pointers = vec![
+        REPO_B_DANGLING_GIT_COMMIT_HASH,
+        REPO_C_DANGLING_GIT_COMMIT_HASH,
+    ];
     let ctx = CoreContext::test_mock(fb.clone());
 
     let (repo_c, repo_c_cs_map) = build_repo_c(fb).await?;
@@ -1605,6 +1628,7 @@ async fn test_expanding_known_dangling_submodule_pointers(fb: FacebookInit) -> R
             (NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone()),
             (repo_c_submodule_path, repo_c.clone()),
         ],
+        known_dangling_submodule_pointers,
     )
     .await?;
 
@@ -1923,6 +1947,7 @@ async fn test_submodule_expansion_and_deletion_on_merge_commits(fb: FacebookInit
         fb,
         &repo_b,
         vec![(NonRootMPath::new(REPO_B_SUBMODULE_PATH)?, repo_b.clone())],
+        vec![], // Known dangling submodule pointers
     )
     .await?;
 

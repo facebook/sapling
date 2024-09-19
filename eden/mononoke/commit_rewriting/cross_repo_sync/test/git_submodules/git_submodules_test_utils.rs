@@ -77,9 +77,6 @@ use crate::sync_to_master;
 
 pub const MASTER_BOOKMARK_NAME: &str = "master";
 
-pub const REPO_B_DANGLING_GIT_COMMIT_HASH: &str = "e957dda44445098cfbaea99e4771e737944e3da4";
-pub const REPO_C_DANGLING_GIT_COMMIT_HASH: &str = "408dc1a8d40f13a0b8eee162411dba2b8830b1f0";
-
 pub(crate) struct SubmoduleSyncTestData {
     pub(crate) small_repo_info: (TestRepo, BTreeMap<String, ChangesetId>),
     pub(crate) large_repo_info: (TestRepo, ChangesetId),
@@ -189,6 +186,7 @@ pub(crate) async fn build_submodule_sync_test_data(
     repo_b: &TestRepo,
     // Add more small repo submodule dependencies for the test case
     submodule_deps: Vec<(NonRootMPath, TestRepo)>,
+    known_dangling_pointers: Vec<&str>,
 ) -> Result<SubmoduleSyncTestData> {
     let ctx = CoreContext::test_mock(fb.clone());
     let test_jk = JustKnobsInMemory::new(hashmap! {
@@ -243,6 +241,7 @@ pub(crate) async fn build_submodule_sync_test_data(
         live_commit_sync_config.clone(),
         test_sync_config_source.clone(),
         submodule_deps,
+        known_dangling_pointers,
     )?;
 
     println!("Created commit syncer");
@@ -401,13 +400,19 @@ pub(crate) fn create_small_repo_to_large_repo_commit_syncer(
     test_sync_config_source: TestLiveCommitSyncConfigSource,
     // The submodules dependency map that should be used in the commit syncer
     submodule_deps: Vec<(NonRootMPath, TestRepo)>,
+    known_dangling_pointers: Vec<&str>,
 ) -> Result<CommitSyncer<TestRepo>, Error> {
     let small_repo_id = small_repo.repo_identity().id();
     let large_repo_id = large_repo.repo_identity().id();
 
     println!("Created commit sync config");
-    let commit_sync_config =
-        create_commit_sync_config(large_repo_id, small_repo_id, prefix, submodule_deps.clone())?;
+    let commit_sync_config = create_commit_sync_config(
+        large_repo_id,
+        small_repo_id,
+        prefix,
+        submodule_deps.clone(),
+        known_dangling_pointers,
+    )?;
 
     let common_config = CommonCommitSyncConfig {
         common_pushrebase_bookmarks: vec![],
@@ -443,8 +448,10 @@ pub(crate) fn create_commit_sync_config(
     small_repo_id: RepositoryId,
     prefix: &str,
     submodule_deps: Vec<(NonRootMPath, TestRepo)>,
+    known_dangling_pointers: Vec<&str>,
 ) -> Result<CommitSyncConfig, Error> {
-    let small_repo_config = create_small_repo_sync_config(prefix, submodule_deps)?;
+    let small_repo_config =
+        create_small_repo_sync_config(prefix, submodule_deps, known_dangling_pointers)?;
     Ok(CommitSyncConfig {
         large_repo_id,
         common_pushrebase_bookmarks: vec![],
@@ -459,19 +466,28 @@ pub(crate) fn create_commit_sync_config(
 pub(crate) fn create_small_repo_sync_config(
     prefix: &str,
     submodule_deps: Vec<(NonRootMPath, TestRepo)>,
+    known_dangling_pointers: Vec<&str>,
 ) -> Result<SmallRepoCommitSyncConfig, Error> {
     let submodule_deps = submodule_deps
         .into_iter()
         .map(|(path, repo)| (path, repo.repo_identity().id()))
         .collect::<HashMap<_, _>>();
 
-    let repo_b_dangling_pointer = GitSha1::from_str(REPO_B_DANGLING_GIT_COMMIT_HASH)?;
-    let repo_c_dangling_pointer = GitSha1::from_str(REPO_C_DANGLING_GIT_COMMIT_HASH)?;
+    // let repo_b_dangling_pointer = GitSha1::from_str(REPO_B_DANGLING_GIT_COMMIT_HASH)?;
+    // let repo_c_dangling_pointer = ?;
+    let dangling_submodule_pointers = known_dangling_pointers
+        .clone()
+        .into_iter()
+        .map(|hash_str| {
+            GitSha1::from_str(hash_str)
+                .with_context(|| anyhow!("{hash_str} is not a valid git sha1"))
+        })
+        .collect::<Result<Vec<_>>>()?;
 
     let small_repo_submodule_config = SmallRepoGitSubmoduleConfig {
         git_submodules_action: GitSubmodulesChangesAction::Expand,
         submodule_dependencies: submodule_deps,
-        dangling_submodule_pointers: vec![repo_b_dangling_pointer, repo_c_dangling_pointer],
+        dangling_submodule_pointers,
         ..Default::default()
     };
 
@@ -493,12 +509,14 @@ pub(crate) fn add_new_commit_sync_config_version_with_submodule_deps(
     submodule_deps: Vec<(NonRootMPath, TestRepo)>,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     test_sync_config_source: TestLiveCommitSyncConfigSource,
+    known_dangling_pointers: Vec<&str>,
 ) -> Result<CommitSyncer<TestRepo>, Error> {
     let commit_sync_config = create_commit_sync_config(
         large_repo.repo_identity().id(),
         small_repo.repo_identity().id(),
         prefix,
         submodule_deps.clone(),
+        known_dangling_pointers.clone(),
     )?;
     test_sync_config_source.add_config(commit_sync_config);
     let commit_syncer = create_small_repo_to_large_repo_commit_syncer(
@@ -509,6 +527,7 @@ pub(crate) fn add_new_commit_sync_config_version_with_submodule_deps(
         live_commit_sync_config.clone(),
         test_sync_config_source.clone(),
         submodule_deps,
+        known_dangling_pointers,
     )?;
     Ok(commit_syncer)
 }

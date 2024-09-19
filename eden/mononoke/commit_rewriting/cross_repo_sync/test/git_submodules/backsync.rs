@@ -716,7 +716,13 @@ pub(crate) async fn build_submodule_backsync_test_data(
     // Add more small repo submodule dependencies for the test case
     submodule_deps: Vec<(NonRootMPath, TestRepo)>,
 ) -> Result<SubmoduleSyncTestData> {
-    let test_data = build_submodule_sync_test_data(fb, repo_b, submodule_deps).await?;
+    let test_data = build_submodule_sync_test_data(
+        fb,
+        repo_b,
+        submodule_deps,
+        vec![], // Known dangling submodule pointers
+    )
+    .await?;
     let reverse_syncer = test_data.commit_syncer.reverse()?;
 
     Ok(SubmoduleSyncTestData {
