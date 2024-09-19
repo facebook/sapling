@@ -48,6 +48,9 @@
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/utils/StaticAssert.h"
+#ifdef EDEN_HAVE_SERVER_OBSERVER
+#include "common/fb303/cpp/ThreadPoolExecutorCounters.h" // @manual
+#endif
 
 DEFINE_bool(
     hg_fetch_missing_trees,
@@ -202,6 +205,36 @@ TreePtr fromRawTree(
   return std::make_shared<TreePtr::element_type>(
       std::move(entries), edenTreeId);
 }
+
+std::unique_ptr<folly::Executor> makeRetryThreadPool(
+    AbsolutePathPiece repository,
+    const EdenStatsPtr& stats,
+    std::shared_ptr<StructuredLogger> structuredLogger) {
+  std::unique_ptr<folly::CPUThreadPoolExecutor> retryThreadPool =
+      std::make_unique<folly::CPUThreadPoolExecutor>(
+          FLAGS_num_hg_import_threads,
+          /* Eden performance will degrade when, for example, a status operation
+           * causes a large number of import requests to be scheduled before a
+           * lightweight operation needs to check the RocksDB cache. In that
+           * case, the RocksDB threads can end up all busy inserting work into
+           * the retry queue, preventing future requests that would hit cache
+           * from succeeding.
+           *
+           * Thus, make the retry queue unbounded.
+           *
+           * In the long term, we'll want a more comprehensive approach to
+           * bounding the parallelism of scheduled work.
+           */
+          std::make_unique<folly::UnboundedBlockingQueue<
+              folly::CPUThreadPoolExecutor::CPUTask>>(),
+          std::make_shared<SaplingRetryThreadFactory>(
+              repository, stats.copy(), structuredLogger));
+#ifdef EDEN_HAVE_SERVER_OBSERVER
+  facebook::fb303::installThreadPoolExecutorCounters("", *retryThreadPool);
+#endif
+  return retryThreadPool;
+}
+
 } // namespace
 
 HgImportTraceEvent::HgImportTraceEvent(
@@ -241,26 +274,8 @@ SaplingBackingStore::SaplingBackingStore(
     FaultInjector* FOLLY_NONNULL faultInjector)
     : localStore_(std::move(localStore)),
       stats_(stats.copy()),
-      retryThreadPool_(std::make_unique<folly::CPUThreadPoolExecutor>(
-          FLAGS_num_hg_import_threads,
-          /* Eden performance will degrade when, for example, a status operation
-           * causes a large number of import requests to be scheduled before a
-           * lightweight operation needs to check the RocksDB cache. In that
-           * case, the RocksDB threads can end up all busy inserting work into
-           * the retry queue, preventing future requests that would hit cache
-           * from succeeding.
-           *
-           * Thus, make the retry queue unbounded.
-           *
-           * In the long term, we'll want a more comprehensive approach to
-           * bounding the parallelism of scheduled work.
-           */
-          std::make_unique<folly::UnboundedBlockingQueue<
-              folly::CPUThreadPoolExecutor::CPUTask>>(),
-          std::make_shared<SaplingRetryThreadFactory>(
-              repository,
-              stats.copy(),
-              structuredLogger))),
+      retryThreadPool_(
+          makeRetryThreadPool(repository, stats, structuredLogger)),
       config_(config),
       serverThreadPool_(serverThreadPool),
       queue_(std::move(config)),

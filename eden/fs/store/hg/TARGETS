@@ -45,6 +45,7 @@ cpp_library(
     deps = [
         ":hg_proxy_hash",
         ":sapling_import_request",
+        "//common/fb303/cpp:thread_pool_executor_counters",  # @manual
         "//eden/common/telemetry:structured_logger",
         "//eden/common/utils:enum",
         "//eden/common/utils:fault_injector",
