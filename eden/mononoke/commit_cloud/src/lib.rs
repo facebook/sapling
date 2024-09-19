@@ -15,6 +15,7 @@ use std::sync::Arc;
 
 use anyhow::bail;
 use anyhow::ensure;
+use anyhow::Context;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use commit_cloud_helpers::make_workspace_acl_name;
 #[cfg(fbcode_build)]
@@ -266,6 +267,10 @@ impl CommitCloud {
         if !initiate_workspace {
             txn = update_references_data(&self.storage, txn, cri, params.clone(), cc_ctx)
                 .await
+                .context(format!(
+                    "Failed to update references for request {:?}",
+                    params.clone()
+                ))
                 .map_err(CommitCloudInternalError::Error)?;
         }
 
@@ -289,6 +294,11 @@ impl CommitCloud {
                 args.clone(),
             )
             .await
+            .context(format!(
+                "Failed to update references for request {:?} for new version {:?}",
+                params.clone(),
+                args
+            ))
             .map_err(CommitCloudInternalError::Error)?;
 
         let history_entry = WorkspaceHistory::from_references(

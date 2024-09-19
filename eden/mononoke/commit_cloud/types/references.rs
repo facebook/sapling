@@ -113,7 +113,7 @@ pub struct ReferencesData {
     pub timestamp: Option<i64>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct UpdateReferencesParams {
     pub workspace: String,
     pub reponame: String,
