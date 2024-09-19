@@ -601,7 +601,19 @@ impl AuthorizationContext {
                         );
 
                         match inferred_owner {
-                            Ok(owner) => cc_ctx.set_owner(owner),
+                            Ok(owner) => {
+                                if owner.is_some() {
+                                    cc_ctx.set_owner(owner)
+                                } else {
+                                    // In CI some workspaces don't allow for an owner to be identified,
+                                    // don't block the commit cloud operation in these cases
+                                    ctx.scuba().clone().log_with_msg(
+                                        "commit cloud ACL check fail",
+                                        Some("unidentified owner, granting access".to_owned()),
+                                    );
+                                    return AuthorizationCheckOutcome::from_permitted(true);
+                                }
+                            }
                             Err(_) => {}
                         };
                     }

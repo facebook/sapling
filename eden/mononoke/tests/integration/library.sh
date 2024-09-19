@@ -1139,7 +1139,7 @@ CONFIG
 
   cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [commit_cloud_config]
-mocked_employees=["myusername0@fb.com"]
+mocked_employees=["myusername0@fb.com","anotheruser@fb.com"]
 disable_interngraph_notification=true
 CONFIG
 
