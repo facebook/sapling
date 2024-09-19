@@ -313,29 +313,9 @@ cpp_library(
         "ThriftPermissionChecker.cpp",
     ],
     os_deps = [
-        # TODO: The edenfs_smartplatform_service dependency fans out to a ton
-        # of other dependencies, slowing down OSS builds and tests. We ideally
-        # should move it to facebook/main.cpp to avoid the cost in unit tests
-        # and OSS builds and tests.
-        (
-            "linux",
-            [
-                "//eden/fs/service/facebook:edenfs_smartplatform_service",
-                "//eden/fs/service/facebook:server_observer",
-            ],
-        ),
-        (
-            "macos",
-            [
-                "//eden/fs/service/facebook:edenfs_smartplatform_service",
-                "//eden/fs/service/facebook:server_observer",
-            ],
-        ),
         (
             "windows",
             [
-                "//eden/fs/service/facebook:edenfs_smartplatform_service",
-                "//eden/fs/service/facebook:server_observer",
                 "//eden/fs/notifications:windows_notifier",
             ],
         ),
@@ -351,6 +331,7 @@ cpp_library(
         ":thrift_startup_status_subscriber",
         ":thrift_util",
         ":usage_service",
+        "//common/fb303/cpp:thread_pool_executor_counters",  # @manual
         "//eden/common/telemetry:log_info",
         "//eden/common/telemetry:structured_logger_factory",
         "//eden/common/utils:enum",
@@ -370,6 +351,12 @@ cpp_library(
         "//eden/fs/notifications:null_notifier",
         "//eden/fs/privhelper:interface",
         "//eden/fs/prjfs:prjfs",
+        # TODO: The edenfs_smartplatform_service dependency fans out to a ton
+        # of other dependencies, slowing down OSS builds and tests. We ideally
+        # should move it to facebook/main.cpp to avoid the cost in unit tests
+        # and OSS builds and tests.
+        "//eden/fs/service/facebook:edenfs_smartplatform_service",  # @manual
+        "//eden/fs/service/facebook:server_observer",  # @manual
         "//eden/fs/store:context",
         "//eden/fs/store:filtered_backing_store",
         "//eden/fs/store:rocksdb",

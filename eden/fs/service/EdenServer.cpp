@@ -105,6 +105,7 @@
 #endif
 
 #ifdef EDEN_HAVE_SERVER_OBSERVER
+#include "common/fb303/cpp/ThreadPoolExecutorCounters.h" // @manual
 #include "eden/fs/service/facebook/ServerObserver.h" // @manual
 #endif
 
@@ -304,11 +305,16 @@ std::shared_ptr<folly::Executor> makeFsChannelThreads(
     return std::make_shared<UnboundedQueueExecutor>(
         edenConfig->numFsChannelThreads.getValue(), "FsChannelThreadPool");
   }
-  return std::make_shared<folly::CPUThreadPoolExecutor>(
-      edenConfig->numFsChannelThreads.getValue(),
-      std::make_unique<EdenTaskQueue>(
-          edenConfig->maxFsChannelInflightRequests.getValue()),
-      std::make_unique<folly::NamedThreadFactory>("FsChannelThreadPool"));
+  std::shared_ptr<folly::CPUThreadPoolExecutor> fsChannelThreads =
+      std::make_shared<folly::CPUThreadPoolExecutor>(
+          edenConfig->numFsChannelThreads.getValue(),
+          std::make_unique<EdenTaskQueue>(
+              edenConfig->maxFsChannelInflightRequests.getValue()),
+          std::make_unique<folly::NamedThreadFactory>("FsChannelThreadPool"));
+#ifdef EDEN_HAVE_SERVER_OBSERVER
+  facebook::fb303::installThreadPoolExecutorCounters("", *fsChannelThreads);
+#endif
+  return fsChannelThreads;
 }
 
 } // namespace
