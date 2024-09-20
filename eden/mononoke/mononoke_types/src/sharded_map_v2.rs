@@ -299,7 +299,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
         })
     }
 
-    fn size(&self) -> usize {
+    pub fn size(&self) -> usize {
         *self.size.get_or_init(|| {
             self.value.iter().len()
                 + self

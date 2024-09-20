@@ -10,10 +10,13 @@ use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
+use cloned::cloned;
 use context::CoreContext;
+use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use futures::FutureExt;
 
 use crate::blob::CaseConflictSkeletonManifestBlob;
 use crate::sharded_map_v2::Rollup;
@@ -27,7 +30,10 @@ use crate::typed_hash::ShardedMapV2NodeCcsmContext;
 pub use crate::typed_hash::ShardedMapV2NodeCcsmId;
 use crate::Blob;
 use crate::BlobstoreValue;
+use crate::MPath;
 use crate::MPathElement;
+use crate::NonRootMPath;
+use crate::PrefixTrie;
 use crate::ThriftConvert;
 
 #[derive(ThriftConvert, Debug, Clone, PartialEq, Eq, Hash)]
@@ -46,6 +52,13 @@ pub struct CaseConflictSkeletonManifest {
 
 impl CcsmEntry {
     pub fn into_dir(self) -> Option<CaseConflictSkeletonManifest> {
+        match self {
+            Self::File => None,
+            Self::Directory(dir) => Some(dir),
+        }
+    }
+
+    pub fn dir(&self) -> Option<&CaseConflictSkeletonManifest> {
         match self {
             Self::File => None,
             Self::Directory(dir) => Some(dir),
@@ -182,6 +195,163 @@ impl CaseConflictSkeletonManifest {
             .into_prefix_entries_after(ctx, blobstore, prefix, after)
             .map(|res| res.and_then(|(k, v)| anyhow::Ok((MPathElement::from_smallvec(k)?, v))))
             .boxed()
+    }
+
+    /// Finds two case conflicting paths in the manifest that weren't already
+    /// present in any of the parent manifests. The paths returned will not
+    /// start with any of the prefixes specified by `excluded_paths`.
+    ///
+    /// Returns `None` if no new case conflicts were found.
+    pub async fn find_new_case_conflict(
+        self,
+        ctx: &CoreContext,
+        blobstore: &impl Blobstore,
+        parent_manifests: Vec<Self>,
+        excluded_paths: &PrefixTrie,
+    ) -> Result<Option<(NonRootMPath, NonRootMPath)>> {
+        bounded_traversal::bounded_traversal(
+            100,
+            (MPath::ROOT, self, parent_manifests),
+            |(path, manifest, parent_manifests)| {
+                async move {
+                    // Path is excluded from case conflict checking.
+                    if excluded_paths.contains_prefix(path.as_ref()) {
+                        return Ok((None, vec![]));
+                    }
+
+                    // Diff the current manifest against the parent manifests. This
+                    // diff is happening on the level of the lowercased path elements.
+                    let difference_items = manifest
+                        .subentries
+                        .difference_stream(
+                            ctx,
+                            blobstore,
+                            parent_manifests
+                                .into_iter()
+                                .map(|manifest| manifest.subentries)
+                                .collect(),
+                            100,
+                        )
+                        .try_collect::<Vec<_>>()
+                        .await?;
+
+                    let mut recurse_subentries = vec![];
+
+                    for (_, difference_item) in difference_items {
+                        let child_manifest = match difference_item.current_value {
+                            CcsmEntry::Directory(child_manifest) => child_manifest,
+                            CcsmEntry::File => continue,
+                        };
+
+                        // If this lowercased path element has more than one child, then
+                        // there's a case conflict. If none of the parent manifests have
+                        // more than one child, then this is a new case conflict.
+                        if child_manifest.subentries.size() > 1
+                            && difference_item.previous_values.iter().all(|parent_entry| {
+                                parent_entry
+                                    .dir()
+                                    .map_or(true, |dir| dir.subentries.size() <= 1)
+                            })
+                        {
+                            // Load the first two children of the child manifest as
+                            // any two will form a case conflict.
+                            let mut subentries = child_manifest
+                                .into_subentries(ctx, blobstore)
+                                .take(2)
+                                .try_collect::<Vec<_>>()
+                                .await?
+                                .into_iter();
+
+                            let (first_path_element, _) = subentries.next().unwrap();
+                            let (second_path_element, _) = subentries.next().unwrap();
+
+                            let first_path = path.join_into_non_root_mpath(&first_path_element);
+                            let second_path = path.join_into_non_root_mpath(&second_path_element);
+
+                            return Ok((Some((first_path, second_path)), vec![]));
+                        } else {
+                            recurse_subentries.push((
+                                child_manifest,
+                                difference_item
+                                    .previous_values
+                                    .into_iter()
+                                    .flat_map(|parent_entry| parent_entry.into_dir())
+                                    .collect::<Vec<_>>(),
+                            ));
+                        }
+                    }
+
+                    let recurse_subentries = stream::iter(recurse_subentries)
+                        .map(|(manifest, parent_manifests)| {
+                            cloned!(path);
+                            async move {
+                                // Diff the current manifest against the parent manifests. This diff
+                                // is happening on the level of the original path elements so there
+                                // will usually be only one child as case conflicts are rare.
+                                let difference_items = manifest
+                                    .subentries
+                                    .difference_stream(
+                                        ctx,
+                                        blobstore,
+                                        parent_manifests
+                                            .into_iter()
+                                            .map(|manifest| manifest.subentries)
+                                            .collect(),
+                                        100,
+                                    )
+                                    .try_collect::<Vec<_>>()
+                                    .await?;
+
+                                anyhow::Ok(
+                                    difference_items
+                                        .into_iter()
+                                        .map(|(element, item)| {
+                                            let element = MPathElement::from_smallvec(element)?;
+
+                                            let path = path.join_element(Some(&element));
+                                            let manifest = match item.current_value.into_dir() {
+                                                Some(manifest) => manifest,
+                                                None => return Ok(None),
+                                            };
+
+                                            let parent_manifests = item
+                                                .previous_values
+                                                .into_iter()
+                                                .filter_map(|entry| entry.into_dir())
+                                                .collect::<Vec<_>>();
+
+                                            Ok(Some((path, manifest, parent_manifests)))
+                                        })
+                                        .collect::<Result<Vec<_>>>()?
+                                        .into_iter()
+                                        .flatten()
+                                        .collect::<Vec<_>>(),
+                                )
+                            }
+                        })
+                        .buffered(100)
+                        .try_collect::<Vec<_>>()
+                        .await?
+                        .into_iter()
+                        .flatten()
+                        .collect::<Vec<_>>();
+
+                    Ok((None, recurse_subentries))
+                }
+                .boxed()
+            },
+            |maybe_conflict: Option<(NonRootMPath, NonRootMPath)>, child_conflicts| {
+                async move {
+                    Ok(
+                        child_conflicts.fold(maybe_conflict, |conflict, child_conflict| {
+                            conflict.or(child_conflict)
+                        }),
+                    )
+                }
+                .boxed()
+            },
+        )
+        .await
     }
 
     pub fn rollup_counts(&self) -> CcsmRollupCounts {

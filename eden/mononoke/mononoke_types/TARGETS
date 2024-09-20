@@ -49,6 +49,7 @@ rust_library(
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:vec_map",
         "//common/rust/shed/borrowed:borrowed",
+        "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",
         "//common/rust/shed/sorted_vector_map:sorted_vector_map",
         "//common/rust/shed/sql:sql",

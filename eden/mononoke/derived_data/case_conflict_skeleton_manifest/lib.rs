@@ -10,6 +10,8 @@ mod derive_from_predecessor;
 mod mapping;
 mod path;
 #[cfg(test)]
+mod test_find_conflict;
+#[cfg(test)]
 mod test_fixtures;
 #[cfg(test)]
 mod tests;
