@@ -211,6 +211,23 @@ debugrevlogopts = [
     ("", "dir", "", _("open directory manifest")),
 ]
 
+subtree_path_opts = [
+    (
+        "",
+        "from-path",
+        [],
+        _("the path of source directory or file"),
+        _("PATH"),
+    ),
+    (
+        "",
+        "to-path",
+        [],
+        _("the path of dest directory or file"),
+        _("PATH"),
+    ),
+]
+
 # special string such that everything below this line will be ingored in the
 # editor text
 _linebelow = (

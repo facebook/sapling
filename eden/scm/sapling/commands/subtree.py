@@ -7,7 +7,13 @@ import json
 
 from .. import cmdutil, context, error, hg, merge as mergemod, node, scmutil
 
-from ..cmdutil import commitopts, commitopts2, diffgraftopts, dryrunopts, mergetoolopts
+from ..cmdutil import (
+    commitopts,
+    commitopts2,
+    dryrunopts,
+    mergetoolopts,
+    subtree_path_opts,
+)
 from ..i18n import _
 from .cmdtable import command
 
@@ -51,21 +57,8 @@ subtree_subcmd = subtree.subcommand(
             _("the commit to copy from"),
             _("REV"),
         ),
-        (
-            "",
-            "from-path",
-            [],
-            _("the path of source directory or file"),
-            _("PATH"),
-        ),
-        (
-            "",
-            "to-path",
-            [],
-            _("the path of dest directory or file"),
-            _("PATH"),
-        ),
     ]
+    + subtree_path_opts
     + commitopts
     + commitopts2,
     _("[-r REV] --from-path PATH --to-path PATH ..."),
@@ -95,7 +88,7 @@ def subtree_copy(ui, repo, *args, **opts):
     + commitopts2
     + mergetoolopts
     + dryrunopts
-    + diffgraftopts,
+    + subtree_path_opts,
     _("[OPTION]... --from-path PATH --to-path PATH ..."),
 )
 def subtree_graft(ui, repo, **opts):
@@ -118,7 +111,7 @@ def subtree_graft(ui, repo, **opts):
         ("r", "rev", "", _("revisions to merge"), _("REV")),
     ]
     + mergetoolopts
-    + diffgraftopts,
+    + subtree_path_opts,
     _("[OPTION]... --from-path PATH --to-path PATH"),
 )
 def subtree_merge(ui, repo, **opts):
