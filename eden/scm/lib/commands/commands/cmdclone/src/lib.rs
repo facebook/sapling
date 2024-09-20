@@ -151,6 +151,13 @@ fn looks_like_windows_path(s: &str) -> bool {
     bytes.len() >= 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':'
 }
 
+fn log_clone_info(clone_type_str: &str, reponame: &str, ctx: &ReqCtx<CloneOpts>) {
+    tracing::debug!(target: "clone_info", rust_clone="true", repo=reponame, clone_type=clone_type_str, is_update_clone=!ctx.opts.noupdate);
+    if !ctx.opts.enable_profile.is_empty() {
+        tracing::debug!(target: "clone_info", cloned_sparse_profiles=ctx.opts.enable_profile.join(" "));
+    }
+}
+
 pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
     let logger = ctx.logger();
 
@@ -314,10 +321,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
         "full"
     };
     tracing::trace!("performing rust clone");
-    tracing::debug!(target: "clone_info", rust_clone="true", repo=reponame, clone_type=clone_type_str, is_update_clone=!ctx.opts.noupdate);
-    if !ctx.opts.enable_profile.is_empty() {
-        tracing::debug!(target: "clone_info", cloned_sparse_profiles=ctx.opts.enable_profile.join(" "));
-    }
+    log_clone_info(clone_type_str, reponame.as_str(), &ctx);
 
     if let Some(ident) = identity::sniff_dir(&destination)? {
         abort!(
