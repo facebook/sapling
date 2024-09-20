@@ -40,8 +40,6 @@ use crate::errors;
 use crate::from_request::FromRequest;
 use crate::source_control_impl::SourceControlServiceImpl;
 
-const JK_TARGET_FROM_PARAMS: &str = "scm/mononoke:async_requests_poll_target_from_params";
-
 impl SourceControlServiceImpl {
     fn verify_repos_by_config(
         &self,
@@ -224,16 +222,9 @@ impl SourceControlServiceImpl {
     ) -> Result<thrift::MegarepoAddTargetPollResponse, errors::ServiceError> {
         let queue = build_queue(&ctx, &self.async_requests_queue_client).await?;
         let token = MegarepoAddTargetToken(token);
-        let target_repo_id = if justknobs::eval(JK_TARGET_FROM_PARAMS, None, None).unwrap_or(false)
-        {
-            let params =
-                get_params_from_token::<thrift::MegarepoAddTargetParams>(&ctx, &queue, &token)
-                    .await?;
-            get_repo_id_from_params(&params, &self.mononoke)?
-        } else {
-            let target = token.target()?.clone().into_config_format(&self.mononoke)?;
-            RepositoryId::new(target.repo_id.try_into().unwrap())
-        };
+        let params =
+            get_params_from_token::<thrift::MegarepoAddTargetParams>(&ctx, &queue, &token).await?;
+        let target_repo_id = get_repo_id_from_params(&params, &self.mononoke)?;
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
         Ok(queue
@@ -265,17 +256,10 @@ impl SourceControlServiceImpl {
     ) -> Result<thrift::MegarepoAddBranchingTargetPollResponse, errors::ServiceError> {
         let queue = build_queue(&ctx, &self.async_requests_queue_client).await?;
         let token = MegarepoAddBranchingTargetToken(token);
-        let target_repo_id = if justknobs::eval(JK_TARGET_FROM_PARAMS, None, None).unwrap_or(false)
-        {
-            let params = get_params_from_token::<thrift::MegarepoAddBranchingTargetParams>(
-                &ctx, &queue, &token,
-            )
-            .await?;
-            get_repo_id_from_params(&params, &self.mononoke)?
-        } else {
-            let target = token.target()?.clone().into_config_format(&self.mononoke)?;
-            RepositoryId::new(target.repo_id.try_into().unwrap())
-        };
+        let params =
+            get_params_from_token::<thrift::MegarepoAddBranchingTargetParams>(&ctx, &queue, &token)
+                .await?;
+        let target_repo_id = get_repo_id_from_params(&params, &self.mononoke)?;
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
         Ok(queue
@@ -307,17 +291,10 @@ impl SourceControlServiceImpl {
     ) -> Result<thrift::MegarepoChangeTargetConfigPollResponse, errors::ServiceError> {
         let queue = build_queue(&ctx, &self.async_requests_queue_client).await?;
         let token = MegarepoChangeTargetConfigToken(token);
-        let target_repo_id = if justknobs::eval(JK_TARGET_FROM_PARAMS, None, None).unwrap_or(false)
-        {
-            let params = get_params_from_token::<thrift::MegarepoChangeTargetConfigParams>(
-                &ctx, &queue, &token,
-            )
-            .await?;
-            get_repo_id_from_params(&params, &self.mononoke)?
-        } else {
-            let target = token.target()?.clone().into_config_format(&self.mononoke)?;
-            RepositoryId::new(target.repo_id.try_into().unwrap())
-        };
+        let params =
+            get_params_from_token::<thrift::MegarepoChangeTargetConfigParams>(&ctx, &queue, &token)
+                .await?;
+        let target_repo_id = get_repo_id_from_params(&params, &self.mononoke)?;
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
         Ok(queue
@@ -349,16 +326,10 @@ impl SourceControlServiceImpl {
     ) -> Result<thrift::MegarepoSyncChangesetPollResponse, errors::ServiceError> {
         let queue = build_queue(&ctx, &self.async_requests_queue_client).await?;
         let token = MegarepoSyncChangesetToken(token);
-        let target_repo_id = if justknobs::eval(JK_TARGET_FROM_PARAMS, None, None).unwrap_or(false)
-        {
-            let params =
-                get_params_from_token::<thrift::MegarepoSyncChangesetParams>(&ctx, &queue, &token)
-                    .await?;
-            get_repo_id_from_params(&params, &self.mononoke)?
-        } else {
-            let target = token.target()?.clone().into_config_format(&self.mononoke)?;
-            RepositoryId::new(target.repo_id.try_into().unwrap())
-        };
+        let params =
+            get_params_from_token::<thrift::MegarepoSyncChangesetParams>(&ctx, &queue, &token)
+                .await?;
+        let target_repo_id = get_repo_id_from_params(&params, &self.mononoke)?;
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
         Ok(queue
@@ -390,16 +361,10 @@ impl SourceControlServiceImpl {
     ) -> Result<thrift::MegarepoRemergeSourcePollResponse, errors::ServiceError> {
         let queue = build_queue(&ctx, &self.async_requests_queue_client).await?;
         let token = MegarepoRemergeSourceToken(token);
-        let target_repo_id = if justknobs::eval(JK_TARGET_FROM_PARAMS, None, None).unwrap_or(false)
-        {
-            let params =
-                get_params_from_token::<thrift::MegarepoRemergeSourceParams>(&ctx, &queue, &token)
-                    .await?;
-            get_repo_id_from_params(&params, &self.mononoke)?
-        } else {
-            let target = token.target()?.clone().into_config_format(&self.mononoke)?;
-            RepositoryId::new(target.repo_id.try_into().unwrap())
-        };
+        let params =
+            get_params_from_token::<thrift::MegarepoRemergeSourceParams>(&ctx, &queue, &token)
+                .await?;
+        let target_repo_id = get_repo_id_from_params(&params, &self.mononoke)?;
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
         Ok(queue
