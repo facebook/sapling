@@ -21,11 +21,14 @@ use bounded_traversal::OrderedTraversal;
 use context::CoreContext;
 use derivative::Derivative;
 use futures::stream;
+use futures::stream::FuturesUnordered;
 use futures::stream::Stream;
+use futures::try_join;
 use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use itertools::Either;
+use itertools::Itertools;
 use nonzero_ext::nonzero;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
@@ -272,6 +275,14 @@ impl Arbitrary for LookupKind {
     fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
         Box::new(std::iter::empty())
     }
+}
+
+/// An item in the stream returned by `ShardedMapV2Node::difference_stream` method.
+pub struct DifferenceStreamItem<V> {
+    /// Value of the key in the map.
+    pub current_value: V,
+    /// Values of the key in `other_maps`.
+    pub previous_values: Vec<V>,
 }
 
 impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
@@ -931,6 +942,140 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
         )
         .try_filter_map(futures::future::ok)
     }
+
+    /// Returns an unordered stream over all key-value pairs in this map for which
+    /// the value is different from all corresponding values in all `other_maps`.
+    ///
+    /// For each key we also return the corresponding values in `other_maps`.
+    pub fn difference_stream<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+        other_maps: Vec<Self>,
+        concurrency: usize,
+    ) -> impl Stream<Item = Result<(SmallBinary, DifferenceStreamItem<Value>)>> + 'a
+    where
+        Value: PartialEq,
+    {
+        bounded_traversal::bounded_traversal_stream(
+            concurrency,
+            vec![(
+                SmallBinary::new(),
+                LoadableShardedMapV2Node::Inlined(self),
+                other_maps
+                    .into_iter()
+                    .map(LoadableShardedMapV2Node::Inlined)
+                    .collect::<Vec<_>>(),
+            )],
+            move |(mut accumulated_prefix, current_map, other_maps): (
+                SmallBinary,
+                LoadableShardedMapV2Node<Value>,
+                Vec<LoadableShardedMapV2Node<Value>>,
+            )| {
+                async move {
+                    // If any of the other maps is the same as the current map, then there are no differences.
+                    if other_maps.iter().any(|other_map| other_map == &current_map) {
+                        return Ok((None, Either::Left(std::iter::empty())));
+                    }
+
+                    let (mut current_map, mut other_maps) = try_join!(
+                        current_map.load(ctx, blobstore),
+                        other_maps
+                            .into_iter()
+                            .map(|node| async move { node.load(ctx, blobstore).await })
+                            .collect::<FuturesUnordered<_>>()
+                            .try_collect::<Vec<_>>()
+                    )?;
+
+                    // Find the longest common prefix of all maps.
+                    let lcp: SmallBinary = other_maps
+                        .iter()
+                        .fold(current_map.prefix.as_ref(), |lcp, map| {
+                            common_prefix(lcp, map.prefix.as_ref())
+                        })
+                        .into();
+
+                    // Remove the longest common prefix from all maps.
+                    current_map.prefix = current_map
+                        .prefix
+                        .strip_prefix(lcp.as_ref())
+                        .expect("lcp is a prefix of current_map")
+                        .into();
+                    for other_map in &mut other_maps {
+                        other_map.prefix = other_map
+                            .prefix
+                            .strip_prefix(lcp.as_ref())
+                            .expect("lcp is a prefix of all maps in other_map")
+                            .into();
+                    }
+
+                    // Add the longest common prefix to the accumulated prefix.
+                    accumulated_prefix.extend_from_slice(lcp.as_ref());
+
+                    // Check if there's a value at the current prefix in the map,
+                    // and check that it's different from the values in all `other_maps`.                    
+                    let item = match (current_map.value.take(), current_map.prefix.is_empty()) {
+                        (Some(value), true) => {
+                            let previous_values = other_maps
+                                .iter_mut()
+                                .flat_map(|other_map| {
+                                    match (other_map.value.take(), other_map.prefix.is_empty()) {
+                                        (Some(value), true) => Some(*value),
+                                        _ => None,
+                                    }
+                                })
+                                .collect::<Vec<_>>();
+
+                            if !previous_values.iter().any(|other_value| other_value == value.as_ref()) {
+                                Some(DifferenceStreamItem { current_value: *value, previous_values })
+                            } else {
+                                None
+                            }
+                        }
+                        _ => None,
+                    };
+
+                    // Find the children of the current map corresponding to all possible
+                    // first bytes.
+                    let child_maps = match current_map.prefix.clone().split_first() {
+                        None => current_map.children,
+                        Some((first, rest)) => {
+                            current_map.prefix = rest.into();
+                            sorted_vector_map! { *first => LoadableShardedMapV2Node::Inlined(current_map) }
+                        }
+                    };
+
+                    // Find the children of all `other_maps` corresponding to all possible
+                    // first bytes.
+                    let mut child_other_maps = other_maps
+                        .into_iter()
+                        .flat_map(|mut other_map| {
+                            match other_map.prefix.clone().split_first() {
+                                None => Either::Left(other_map.children.into_iter()),
+                                Some((first, rest)) => {
+                                    other_map.prefix = rest.into();
+                                    Either::Right(std::iter::once((*first, LoadableShardedMapV2Node::Inlined(other_map))))
+                                }
+                            }
+                        })
+                        .into_group_map();
+
+                    Ok((item.map(|item| (accumulated_prefix.clone(), item)), Either::Right(child_maps.into_iter().map(move |(byte, child)| {
+                        // Add the current byte to the accumulated prefix.
+                        let mut accumulated_prefix = accumulated_prefix.clone();
+                        accumulated_prefix.push(byte);
+
+                        // Find children of `other_maps` that correspond to the current byte.
+                        let other_maps = child_other_maps.remove(&byte).unwrap_or_default();
+
+                        (accumulated_prefix, child, other_maps)
+                    }))))
+                }
+                .boxed()
+            },
+        )
+        .try_filter_map(futures::future::ok)
+    }
 }
 
 impl<Value: ShardedMapV2Value> ThriftConvert for ShardedMapV2Node<Value> {
@@ -1232,6 +1377,26 @@ mod test {
                 .and_then(
                     |(key, value)| async move { Ok((String::from_utf8(key.to_vec())?, value.0)) },
                 )
+                .try_collect::<Vec<_>>()
+                .await
+        }
+
+        async fn difference_stream(
+            &self,
+            map: ShardedMapV2Node<TestValue>,
+            other_maps: Vec<ShardedMapV2Node<TestValue>>,
+        ) -> Result<Vec<(String, u32, Vec<u32>)>> {
+            map.difference_stream(&self.0, &self.1, other_maps, 100)
+                .and_then(|(key, item)| async move {
+                    Ok((
+                        String::from_utf8(key.to_vec())?,
+                        item.current_value.0,
+                        item.previous_values
+                            .into_iter()
+                            .map(|value| value.0)
+                            .collect(),
+                    ))
+                })
                 .try_collect::<Vec<_>>()
                 .await
         }
@@ -1956,6 +2121,128 @@ mod test {
                 ])
                 .await
                 .is_ok()
+        );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_sharded_map_v2_difference_stream(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = Memblob::default();
+        let helper = MapHelper(ctx, blobstore);
+
+        let map = helper
+            .from_entries(&[
+                ("aba", 12),
+                ("abacab", 7),
+                ("abacaba", 8),
+                ("abacakkk", 9),
+                ("abacate", 10),
+                ("abacaxi", 11),
+                ("abalaba", 5),
+                ("abalada", 6),
+                ("omiojo", 1),
+                ("omiux", 2),
+                ("omundo", 3),
+                ("omungal", 4),
+            ])
+            .await?;
+
+        let other_map_1 = helper
+            .from_entries(&[("aba", 12), ("abacab", 6), ("omiojo", 1), ("omiux", 9)])
+            .await?;
+
+        let other_map_2 = helper
+            .from_entries(&[
+                ("abacab", 13),
+                ("abacakkk", 9),
+                ("omiojo", 1),
+                ("omungal", 4),
+            ])
+            .await?;
+
+        assert_eq!(
+            helper
+                .difference_stream(map.clone(), vec![])
+                .await?
+                .into_iter()
+                .sorted()
+                .collect::<Vec<_>>(),
+            vec![
+                ("aba".to_string(), 12, vec![]),
+                ("abacab".to_string(), 7, vec![]),
+                ("abacaba".to_string(), 8, vec![]),
+                ("abacakkk".to_string(), 9, vec![]),
+                ("abacate".to_string(), 10, vec![]),
+                ("abacaxi".to_string(), 11, vec![]),
+                ("abalaba".to_string(), 5, vec![]),
+                ("abalada".to_string(), 6, vec![]),
+                ("omiojo".to_string(), 1, vec![]),
+                ("omiux".to_string(), 2, vec![]),
+                ("omundo".to_string(), 3, vec![]),
+                ("omungal".to_string(), 4, vec![])
+            ],
+        );
+
+        assert_eq!(
+            helper
+                .difference_stream(map.clone(), vec![other_map_1.clone()])
+                .await?
+                .into_iter()
+                .sorted()
+                .collect::<Vec<_>>(),
+            vec![
+                ("abacab".to_string(), 7, vec![6]),
+                ("abacaba".to_string(), 8, vec![]),
+                ("abacakkk".to_string(), 9, vec![]),
+                ("abacate".to_string(), 10, vec![]),
+                ("abacaxi".to_string(), 11, vec![]),
+                ("abalaba".to_string(), 5, vec![]),
+                ("abalada".to_string(), 6, vec![]),
+                ("omiux".to_string(), 2, vec![9]),
+                ("omundo".to_string(), 3, vec![]),
+                ("omungal".to_string(), 4, vec![])
+            ]
+        );
+
+        assert_eq!(
+            helper
+                .difference_stream(map.clone(), vec![other_map_2.clone()])
+                .await?
+                .into_iter()
+                .sorted()
+                .collect::<Vec<_>>(),
+            vec![
+                ("aba".to_string(), 12, vec![]),
+                ("abacab".to_string(), 7, vec![13]),
+                ("abacaba".to_string(), 8, vec![]),
+                ("abacate".to_string(), 10, vec![]),
+                ("abacaxi".to_string(), 11, vec![]),
+                ("abalaba".to_string(), 5, vec![]),
+                ("abalada".to_string(), 6, vec![]),
+                ("omiux".to_string(), 2, vec![]),
+                ("omundo".to_string(), 3, vec![])
+            ]
+        );
+
+        assert_eq!(
+            helper
+                .difference_stream(map, vec![other_map_1, other_map_2])
+                .await?
+                .into_iter()
+                .sorted()
+                .collect::<Vec<_>>(),
+            vec![
+                ("abacab".to_string(), 7, vec![6, 13]),
+                ("abacaba".to_string(), 8, vec![]),
+                ("abacate".to_string(), 10, vec![]),
+                ("abacaxi".to_string(), 11, vec![]),
+                ("abalaba".to_string(), 5, vec![]),
+                ("abalada".to_string(), 6, vec![]),
+                ("omiux".to_string(), 2, vec![9]),
+                ("omundo".to_string(), 3, vec![])
+            ]
         );
 
         Ok(())
