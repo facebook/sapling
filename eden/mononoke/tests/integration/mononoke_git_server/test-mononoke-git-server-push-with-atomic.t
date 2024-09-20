@@ -87,13 +87,13 @@
 # Try to do a non-ffwd push on branch_ffonly which should fail
   $ git checkout branch_ffonly
   Switched to a new branch 'branch_ffonly'
-  branch 'branch_ffonly' set up to track 'origin/branch_ffonly'.
+  ?ranch 'branch_ffonly' set up to track *branch_ffonly*. (glob)
   $ git reset --hard $initial_ffonly_commit
   HEAD is now at 3ea0687 Add fwdfile1
 # Try doing a non-ffwd push on non_ffwd_branch branch which should succeed
   $ git checkout non_ffwd_branch
   Switched to a new branch 'non_ffwd_branch'
-  branch 'non_ffwd_branch' set up to track 'origin/non_ffwd_branch'.
+  ?ranch 'non_ffwd_branch' set up to track *non_ffwd_branch*. (glob)
   $ git reset --hard $initial_nonffwd_commit
   HEAD is now at 676bc3c Add nonfwdfile1
 

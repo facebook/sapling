@@ -66,7 +66,7 @@ Check error-as-data-edge-type, should get an error on FileContentMetadataV2ToGit
   
   Caused by:
       alias.gitsha1.96d80cd6c4e7158dbebd0849f4fb7ce513e5828c is missing
-  Could not step to OutgoingEdge { label: FileContentMetadataToSha1Alias, target: AliasContentMapping(AliasKey(Sha1(Sha1(32096c2e0eff33d844ee6d675407ace18289357d)))), path: None }, due to Other(*), via Some(EmptyRoute), repo: repo (glob) (?)
+  Could not step to OutgoingEdge { label: FileContentMetadata*ToSha1Alias, target: AliasContentMapping(AliasKey(Sha1(Sha1(32096c2e0eff33d844ee6d675407ace18289357d)))), path: None }, due to Other(*), via Some(EmptyRoute), repo: repo (glob) (?)
   Error: Execution failed
 
 Check error-as-data-edge-type, should get no errors as FileContentMetadataV2ToGitSha1Alias has its errors converted to data

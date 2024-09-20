@@ -36,7 +36,7 @@ Clone the repo. Enable LFS. Take a different cache path to make sure we have to 
 Initially, unconfigure client certs. This will fail, because certs are required.
 
   $ hg up master -q --config auth.mononoke.schemes=doesntmatch 2>&1 | grep -i 'certificate' -m 1
-  tls error: [60] SSL peer certificate or SSH remote key was not OK (SSL certificate problem: self signed certificate in certificate chain)!
+  tls error: [60] SSL peer certificate or SSH remote key was not OK (SSL certificate problem: self?signed certificate in certificate chain)! (glob)
   $ ! test -f large
 
 Now, with certs. This will work.

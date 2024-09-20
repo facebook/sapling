@@ -140,9 +140,9 @@ Rest of this test won't pass as we failed the previous command so is commented o
   $ hg pull -q
   $ hg up -q master_bookmark
   $ log -r "master_bookmark^::master_bookmark"
-  @  after config change from large [public;rev=7;ad029e9c7735] default/master_bookmark
+  @  after config change from large [public;rev=?;ad029e9c7735] default/master_bookmark (glob)
   │
-  o  after config change from small [public;rev=6;9a1a082f2f8e]
+  o  after config change from small [public;rev=?;9a1a082f2f8e] (glob)
   │
   ~
   $ hg log -r master_bookmark -T "{files % '{file}\n'}"

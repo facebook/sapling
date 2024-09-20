@@ -103,6 +103,9 @@ pub struct MononokeRepoImportArgs {
     /// earlier steps to prepare for merge time.
     #[clap(long)]
     pub no_merge: bool,
+    /// Set the path to the git binary - preset to git.real
+    #[clap(long)]
+    pub git_command_path: Option<String>,
     #[clap(subcommand)]
     pub command: Option<Commands>,
 }

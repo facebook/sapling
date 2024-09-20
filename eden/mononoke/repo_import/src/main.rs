@@ -9,6 +9,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::Path;
+use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
@@ -977,6 +978,7 @@ async fn repo_import(
     configs: &RepoConfigs,
     env: &MononokeEnvironment,
     no_merge: bool,
+    git_command_path: Option<String>,
 ) -> Result<(), Error> {
     let arg_git_repo_path = recovery_fields.git_repo_path.clone();
     let path = Path::new(&arg_git_repo_path);
@@ -1127,10 +1129,15 @@ async fn repo_import(
     // Importing process starts here
     if recovery_fields.import_stage == ImportStage::GitImport {
         // Import without submodules.
-        let prefs = GitimportPreferences {
+        let mut prefs = GitimportPreferences {
             submodules: false,
             ..Default::default()
         };
+
+        if let Some(ref p) = git_command_path {
+            prefs.git_command_path = PathBuf::from(p);
+        }
+
         let target = GitimportTarget::full();
         info!(ctx.logger(), "Started importing git commits to Mononoke");
         let uploader = import_direct::DirectUploader::new(repo.clone(), ReuploadCommits::Never);
@@ -1599,6 +1606,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         &configs,
         env,
         args.no_merge,
+        args.git_command_path,
     )
     .await
     {

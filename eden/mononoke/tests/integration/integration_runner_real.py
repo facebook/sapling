@@ -46,6 +46,7 @@ class TestFlags(NamedTuple):
     keep_tmpdir: bool
     tmpdir: Optional[str]
     disable_all_network_access: bool
+    jobs: Optional[int]
 
     def runner_args(self) -> Args:
         r = []
@@ -68,7 +69,11 @@ class TestFlags(NamedTuple):
         if self.tmpdir:
             r.extend(["--tmpdir", self.tmpdir])
 
-        r.extend(["-j", "%d" % multiprocessing.cpu_count()])
+        jobs = self.jobs
+        if jobs is None:
+            jobs = multiprocessing.cpu_count()
+
+        r.extend(["-j", "%d" % jobs])
 
         return r
 
@@ -156,6 +161,9 @@ def _hg_runner(
             *extra_args,
         ]
 
+        if os.environ.get("GETDEPS_INSTALL_DIR", None):
+            args.append("--getdeps-build")
+
         if chg:
             args.append("--chg")
 
@@ -182,6 +190,7 @@ def _hg_runner(
         stdin = None
         stderr: Any = subprocess.DEVNULL if quiet else sys.stderr.buffer
 
+        print(f"Running {args}")
         subprocess.check_call(
             args,
             cwd=root,
@@ -327,6 +336,13 @@ def run_tests(
     help="Tests that are already known to exist",
     type=click.Path(),
 )
+@click.option(
+    "--jobs",
+    default=None,
+    is_flag=False,
+    help="number of jobs to run in parallel",
+    type=int,
+)
 @click.argument("manifest", type=click.Path())
 @click.argument("tests", nargs=-1, type=click.Path())
 @click.pass_context
@@ -347,6 +363,7 @@ def run(
     mysql_schemas,
     devdb: str,
     discovered_tests,
+    jobs: Optional[int],
 ) -> None:
     manifest = os.path.abspath(manifest)
     if is_libfb_present():
@@ -390,6 +407,7 @@ def run(
             and not mysql_client
             and "DISABLE_ALL_NETWORK_ACCESS" in manifest_env
         ),
+        jobs=jobs,
     )
 
     selected_tests: List[str] = []
