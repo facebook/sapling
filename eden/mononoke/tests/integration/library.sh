@@ -2226,9 +2226,18 @@ function gitexport() {
 function gitimport() {
   log="$TESTTMP/gitimport.out"
 
+  local git_cmd
+  # git.real not present in OSS but mononoke defaults to it, so detect right command
+  if type --path git.real > /dev/null; then
+    git_cmd="git.real"
+  else
+    git_cmd="git"
+  fi
+
   "$MONONOKE_GITIMPORT" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
+    --git-command-path $git_cmd\
     --repo-id "$REPOID" \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
     --tls-ca "$TEST_CERTDIR/root-ca.crt" \
@@ -2242,13 +2251,22 @@ function git() {
   date="01/01/0000 00:00 +0000"
   name="mononoke"
   email="mononoke@mononoke"
+
+  if ! command git config --get uploadpack.allowFilter > /dev/null; then
+    # Need this option in global config for filtering to work
+    # It has to be global unfortunately
+    GIT_AUTHOR_NAME="$name" \
+    GIT_AUTHOR_EMAIL="$email" \
+    command git config --global uploadpack.allowFilter true > /dev/null
+  fi
+
   GIT_COMMITTER_DATE="${GIT_COMMITTER_DATE:-$date}" \
   GIT_COMMITTER_NAME="$name" \
   GIT_COMMITTER_EMAIL="$email" \
   GIT_AUTHOR_DATE="${GIT_AUTHOR_DATE:-$date}" \
   GIT_AUTHOR_NAME="$name" \
   GIT_AUTHOR_EMAIL="$email" \
-  command git -c protocol.file.allow=always "$@"
+  command git -c init.defaultBranch=master -c protocol.file.allow=always "$@"
 }
 
 function git_set_only_author() {
@@ -2259,7 +2277,7 @@ function git_set_only_author() {
   GIT_AUTHOR_DATE="$date" \
   GIT_AUTHOR_NAME="$name" \
   GIT_AUTHOR_EMAIL="$email" \
-  command git -c protocol.file.allow=always "$@"
+  command git -c init.defaultBranch=master -c protocol.file.allow=always "$@"
 }
 
 function summarize_scuba_json() {
@@ -2397,9 +2415,18 @@ function streaming_clone() {
 function repo_import() {
   log="$TESTTMP/repo_import.out"
 
+  local git_cmd
+  # git.real not present in OSS but mononoke defaults to it, so detect right command
+  if type --path git.real > /dev/null; then
+    git_cmd="git.real"
+  else
+    git_cmd="git"
+  fi
+
   "$MONONOKE_REPO_IMPORT" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
+    --git-command-path "$git_cmd"\
     --repo-id "$REPOID" \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
     "$@"

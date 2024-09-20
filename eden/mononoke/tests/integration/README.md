@@ -98,6 +98,28 @@ the value is an environment variable that will be set to the path to this
 binary when the tests execute (if you need to customize the environment
 variable a bit, you can do so in `facebook/generate_manifest.py`).
 
+# Running tests from OSS getdeps build
+
+These examples use the oss github path to getdeps.py.  If running from internal monorepo the path to getdeps is ./opensource/fbcode_builder/getdeps.py
+
+First build dependencies:
+
+```
+python3 ./build/fbcode_builder/getdeps.py build --allow-system-packages --no-facebook-internal --src-dir=. --no-tests sapling
+python3 ./build/fbcode_builder/getdeps.py build --allow-system-packages --no-facebook-internal --src-dir=. --no-tests mononoke
+```
+
+Then build mononoke_integration and repeat if you need .t changes with --no-deps:
+
+```
+python3 ./build/fbcode_builder/getdeps.py build --allow-system-packages --no-facebook-internal --no-deps --src-dir=. mononoke_integration
+```
+
+And run the tests:
+
+```
+python3 ./build/fbcode_builder/getdeps.py test --allow-system-packages --no-facebook-internal --src-dir=. mononoke_integration
+```
 
 # How it works
 

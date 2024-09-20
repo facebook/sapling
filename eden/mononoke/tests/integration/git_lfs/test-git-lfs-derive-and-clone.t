@@ -57,12 +57,12 @@
 
 $ cd "$TESTTMP"
   $ git lfs install --local
-  Updated Git hooks.
+  Updated ?it hooks. (glob)
   Git LFS initialized.
   $ git config lfs.url "$LFS_URL"
   $ git config http.extraHeader "x-client-info: {\"request_info\": {\"entry_point\": \"CurlTest\", \"correlator\": \"test\"}}"
   $ git_client lfs fetch --all
-  fetch: 1 object found, done.
+  fetch: 1 object* found, done. (glob)
   fetch: Fetching all references...
   $ git lfs checkout
   Checking out LFS objects: 100% (1/1), 20 B | 0 B/s, done.

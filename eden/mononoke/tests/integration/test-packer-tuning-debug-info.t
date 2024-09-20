@@ -47,8 +47,8 @@
   $ echo 'repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a' >> $TESTTMP/pack_key_files4/reporepo.store0.part0.keys.txt
 
 # Pack content into a pack
-  $ packer --zstd-level 19 --scuba-dataset file://packed.json --keys-dir $TESTTMP/pack_key_files4/ --print-progress --tuning-info-scuba-table "file://${TESTTMP}/tuning_scuba.json"
-  File $TESTTMP/pack_key_files4/reporepo.store0.part0.keys.txt, which has 3 lines
+  $ packer --zstd-level 19 --scuba-dataset file://packed.json --keys-dir $TESTTMP/pack_key_files4/ --print-progress --tuning-info-scuba-table "file://${TESTTMP}/tuning_scuba.json" 2>&1 | strip_glog
+  File *reporepo.store0.part0.keys.txt, which has 3 lines (glob)
   Progress: 100.000%	processing took * (glob)
 
 # Check the tuning log has the following columns
