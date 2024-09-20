@@ -229,6 +229,12 @@ impl CaseConflictSkeletonManifest {
                         return Ok((None, vec![]));
                     }
 
+                    // If the manifest has no odd depth descendants with more than one child, then
+                    // there are no case conflicts.
+                    if manifest.rollup_counts().odd_depth_conflicts == 0 {
+                        return Ok((None, vec![]));
+                    }
+
                     // Diff the current manifest against the parent manifests. This
                     // diff is happening on the level of the lowercased path elements.
                     let difference_items = manifest
