@@ -121,9 +121,9 @@ class SqliteTreeStore {
       overlay::OverlayEntry entry);
 
   /**
-   * Remove a child from the given parent
+   * Remove a child from the given parent. Return true if the child is removed.
    */
-  void removeChild(InodeNumber parent, PathComponentPiece childName);
+  bool removeChild(InodeNumber parent, PathComponentPiece childName);
 
   /**
    * Has the child for the given parent

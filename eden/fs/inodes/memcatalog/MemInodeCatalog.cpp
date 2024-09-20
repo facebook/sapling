@@ -107,7 +107,7 @@ void MemInodeCatalog::addChild(
   }
 }
 
-void MemInodeCatalog::removeChild(
+bool MemInodeCatalog::removeChild(
     InodeNumber parent,
     PathComponentPiece childName) {
   auto store = store_.wlock();
@@ -115,7 +115,10 @@ void MemInodeCatalog::removeChild(
   if (itr != store->end()) {
     auto entries = itr->second.entries_ref();
     entries->erase(childName.asString());
+    return true;
   }
+  // The child does not exist
+  return false;
 }
 
 bool MemInodeCatalog::hasChild(

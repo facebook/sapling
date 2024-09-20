@@ -494,14 +494,19 @@ void SqliteTreeStore::addChild(
   stmt->step();
 }
 
-void SqliteTreeStore::removeChild(
+bool SqliteTreeStore::removeChild(
     InodeNumber parent,
     PathComponentPiece childName) {
+  if (!hasChild(parent, childName)) {
+    // The child does not exist
+    return false;
+  }
   auto db = db_->lock();
   auto stmt = cache_->deleteChild.get(db);
   stmt->bind(1, parent.get());
   stmt->bind(2, childName.view());
   stmt->step();
+  return true;
 }
 
 bool SqliteTreeStore::hasChild(

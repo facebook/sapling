@@ -134,7 +134,7 @@ class InodeCatalog {
     EDEN_BUG() << "UNIMPLEMENTED";
   }
 
-  virtual void removeChild(
+  virtual bool removeChild(
       InodeNumber /* parent */,
       PathComponentPiece /* childName */) {
     EDEN_BUG() << "UNIMPLEMENTED";

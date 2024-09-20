@@ -68,7 +68,7 @@ void SqliteInodeCatalog::addChild(
   return store_.addChild(parent, name, entry);
 }
 
-void SqliteInodeCatalog::removeChild(
+bool SqliteInodeCatalog::removeChild(
     InodeNumber parent,
     PathComponentPiece childName) {
   return store_.removeChild(parent, childName);

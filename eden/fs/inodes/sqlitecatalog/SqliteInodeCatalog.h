@@ -82,7 +82,7 @@ class SqliteInodeCatalog : public InodeCatalog {
       PathComponentPiece name,
       overlay::OverlayEntry entry) override;
 
-  void removeChild(InodeNumber parent, PathComponentPiece childName) override;
+  bool removeChild(InodeNumber parent, PathComponentPiece childName) override;
 
   bool hasChild(InodeNumber parent, PathComponentPiece childName) override;
 
