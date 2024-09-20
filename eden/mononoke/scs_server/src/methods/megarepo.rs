@@ -407,7 +407,7 @@ async fn get_params_from_token<P: ThriftParams>(
     queue: &AsyncMethodRequestQueue,
     token: &<P::R as Request>::Token,
 ) -> Result<AsynchronousRequestParams, errors::ServiceError> {
-    let token_id = token.id();
+    let token_id = token.to_db_id()?;
     match queue
         .get_request_by_id(ctx, &token_id)
         .await

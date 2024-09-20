@@ -117,18 +117,10 @@ pub trait Token: Clone + Sized + Send + Sync + Debug {
     type ThriftToken;
 
     fn into_thrift(self) -> Self::ThriftToken;
-    fn from_db_id_and_target(
-        id: RowId,
-        target: ThriftMegarepoTarget,
-    ) -> Result<Self, AsyncRequestsError>;
-    fn to_db_id_and_target(&self) -> Result<(RowId, ThriftMegarepoTarget), AsyncRequestsError>;
+    fn from_db_id(id: RowId) -> Result<Self, AsyncRequestsError>;
+    fn to_db_id(&self) -> Result<RowId, AsyncRequestsError>;
 
     fn id(&self) -> RowId;
-
-    /// Every Token referes to some Target
-    /// This method is needed to extract it from the
-    /// implementor of this trait
-    fn target(&self) -> Result<&ThriftMegarepoTarget, AsyncRequestsError>;
 }
 
 /// This macro implements an async service method type,
@@ -303,24 +295,22 @@ macro_rules! impl_async_svc_method_types {
             type ThriftToken = $token_thrift_type;
             type R = $request_struct;
 
-            fn from_db_id_and_target(id: RowId, target: ThriftMegarepoTarget) -> Result<Self, AsyncRequestsError> {
+            fn from_db_id(id: RowId) -> Result<Self, AsyncRequestsError> {
                 // Thrift token is a string alias
                 // but's guard ourselves here against
                 // it changing unexpectedly.
                 let thrift_token = $token_thrift_type {
-                    target,
                     id: id.0 as i64,
                     ..Default::default()
                 };
                 Ok(Self(thrift_token))
             }
 
-            fn to_db_id_and_target(&self) -> Result<(RowId, ThriftMegarepoTarget), AsyncRequestsError> {
+            fn to_db_id(&self) -> Result<RowId, AsyncRequestsError> {
                 let row_id = self.0.id as u64;
                 let row_id = RowId(row_id);
-                let target = self.0.target.clone();
 
-                Ok((row_id, target))
+                Ok(row_id)
             }
 
             fn id(&self) -> RowId {
@@ -329,10 +319,6 @@ macro_rules! impl_async_svc_method_types {
 
             fn into_thrift(self) -> $token_thrift_type {
                 self.0
-            }
-
-            fn target(&self) -> Result<&ThriftMegarepoTarget, AsyncRequestsError> {
-                Ok(&self.0.target)
             }
         }
 

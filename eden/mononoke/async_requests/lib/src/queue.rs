@@ -39,7 +39,6 @@ use sql_construct::SqlConstruct;
 use crate::error::AsyncRequestsError;
 use crate::types::AsynchronousRequestParams;
 use crate::types::AsynchronousRequestResult;
-use crate::types::IntoApiFormat;
 use crate::types::IntoConfigFormat;
 use crate::types::Request;
 use crate::types::ThriftParams;
@@ -104,10 +103,7 @@ impl AsyncMethodRequestQueue {
                 &blobstore_key,
             )
             .await?;
-        let token = <P::R as Request>::Token::from_db_id_and_target(
-            table_id,
-            target.into_api_format(mononoke)?,
-        )?;
+        let token = <P::R as Request>::Token::from_db_id(table_id)?;
         Ok(token)
     }
 
@@ -180,7 +176,7 @@ impl AsyncMethodRequestQueue {
     ) -> Result<<T::R as Request>::PollResponse, AsyncRequestsError> {
         let mut backoff_ms = INITIAL_POLL_DELAY_MS;
         let before = Instant::now();
-        let (row_id, _target) = token.to_db_id_and_target()?;
+        let row_id = token.to_db_id()?;
         let req_id = RequestId(row_id, RequestType(T::R::NAME.to_owned()));
 
         loop {
@@ -390,7 +386,7 @@ mod tests {
                 let token = q.enqueue(&ctx, &mononoke, params.clone()).await?;
 
                 // Verify that request metadata is in the db and has expected values
-                let (row_id, _) = token.to_db_id_and_target()?;
+                let row_id = token.to_db_id()?;
                 let entry = q
                     .table
                     .test_get_request_entry_by_id(&ctx, &row_id)
