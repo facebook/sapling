@@ -336,7 +336,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
             abort!("please specify --eden-backing-repo");
         };
 
-        let mut backing_repo = if identity::sniff_dir(&backing_path)?.is_none() {
+        let backing_repo = if identity::sniff_dir(&backing_path)?.is_none() {
             logger.verbose(|| {
                 format!(
                     "Cloning {} backing repo to {}",
@@ -354,8 +354,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
                 ),
             )?
         };
-        let target_rev =
-            get_update_target(&logger, &mut backing_repo, &ctx.opts)?.map(|(rev, _)| rev);
+        let target_rev = get_update_target(&logger, &backing_repo, &ctx.opts)?.map(|(rev, _)| rev);
         logger.verbose(|| {
             format!(
                 "Performing EdenFS clone {}@{} from {} to {}",
@@ -443,10 +442,12 @@ fn clone_metadata(
         }
     }
 
-    let mut repo_config_file_content = includes
-        .into_iter()
-        .map(|file| format!("%include {}\n", file))
-        .collect::<String>();
+    let mut repo_config_file_content = includes.into_iter().fold(String::new(), |mut out, file| {
+        use std::fmt::Write;
+
+        let _ = write!(out, "%include {}\n", file);
+        out
+    });
 
     if !repo_config_file_content.is_empty() {
         repo_config_file_content.push('\n');
