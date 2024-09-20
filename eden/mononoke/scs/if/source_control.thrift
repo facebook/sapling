@@ -1627,34 +1627,29 @@ struct MegarepoSyncTargetConfig {
 
 /// Polling tokens for async megarepo methods
 struct MegarepoChangeConfigToken {
-  /// A target this token relates to
-  1: MegarepoTarget target;
+  // 1: deprecated
   /// An actual token payload
   2: i64 id;
 }
 
 struct MegarepoSyncChangesetToken {
-  /// A target this token relates to
-  1: MegarepoTarget target;
+  // 1: deprecated
   /// An actual token payload
   2: i64 id;
 }
 struct MegarepoRemergeSourceToken {
-  /// A target this token relates to
-  1: MegarepoTarget target;
+  // 1: deprecated
   /// An actual token payload
   2: i64 id;
 }
 struct MegarepoAddTargetToken {
-  /// A target this token relates to
-  1: MegarepoTarget target;
+  // 1: deprecated
   /// An actual token payload
   2: i64 id;
 }
 
 struct MegarepoAddBranchingTargetToken {
-  /// A target this token relates to
-  1: MegarepoTarget target;
+  // 1: deprecated
   /// An actual token payload
   2: i64 id;
 }
