@@ -1290,6 +1290,7 @@ types=[
   "skeleton_manifests",
   "skeleton_manifests_v2",
   "bssm_v3",
+  "ccsm",
   "test_manifests",
   "test_sharded_manifests"
 ]

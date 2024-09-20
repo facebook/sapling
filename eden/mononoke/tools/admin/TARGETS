@@ -86,6 +86,7 @@ rust_binary(
         "//eden/mononoke/commit_rewriting/cross_repo_sync:cross_repo_sync",
         "//eden/mononoke/commit_rewriting/synced_commit_mapping:synced_commit_mapping",
         "//eden/mononoke/derived_data:bulk_derivation",
+        "//eden/mononoke/derived_data:case_conflict_skeleton_manifest",
         "//eden/mononoke/derived_data:changeset_info",
         "//eden/mononoke/derived_data:deleted_manifest",
         "//eden/mononoke/derived_data:derived_data_manager",
