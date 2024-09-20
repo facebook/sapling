@@ -137,10 +137,11 @@ rpm:
 wheel:
 	FORCE_SETUPTOOLS=1 $(PYTHON) setup.py $(PURE) bdist_wheel $(COMPILERFLAG)
 
+getdepsbuild: HGNAME=$(SL_NAME)
 getdepsbuild:
-	mkdir -p $(GETDEPS_BUILD_DIR)/eden_scm
-	ln -sfn $(GETDEPS_BUILD_DIR)/eden_scm build
-	GETDEPS_BUILD=1 \
+	mkdir -p $(GETDEPS_BUILD_DIR)/sapling
+	ln -sfn $(GETDEPS_BUILD_DIR)/sapling build
+	HGNAME=$(HGNAME) GETDEPS_BUILD=1 \
 		PYTHON_SYS_EXECUTABLE=$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) \
 		THRIFT="$(GETDEPS_INSTALL_DIR)/fbthrift/bin/thrift1" \
 		$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py \
@@ -175,6 +176,13 @@ install-getdeps: getdepsbuild
 	PYTHON_SYS_EXECUTABLE=$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) \
 	    GETDEPS_BUILD=1 $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) \
 		setup.py $(PURE) install --root="$(DESTDIR)/" --prefix="$(PREFIX)" --install-lib="$(PREFIX)/bin" --force
+
+.PHONY: test-getdeps
+test-getdeps:
+	# Run indicative tests to check the binary is minimally good as will be used later in Mononoke getdeps tests
+	# Running all the tests requires a bit of filtering to run the good set (or deleting flaky ones)
+	cd tests && PYTHON_SYS_EXECUTABLE=$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) \
+	    $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) run-tests.py -j2 --getdeps-build --with-hg="$(PREFIX)/bin/$(HGNAME)" test-status.t test-commit.t
 
 check: tests
 
