@@ -16,9 +16,22 @@ query YourPullRequestsQuery($searchQuery: String!, $numToFetch: Int!) {
         mergeQueueEntry {
           estimatedTimeToMerge
         }
-        commits(last: 1) {
+        baseRef {
+          target {
+            oid
+          }
+          name
+        }
+        headRef {
+          target {
+            oid
+          }
+          name
+        }
+        commits(last: 100) {
           nodes {
             commit {
+              oid
               statusCheckRollup {
                 state
               }
