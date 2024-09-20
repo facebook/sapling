@@ -1483,6 +1483,16 @@ void EdenServer::registerStats(std::shared_ptr<EdenMount> edenMount) {
         auto stats = edenMount->getJournal().getStats();
         return stats ? stats->maxFilesAccumulated : 0;
       });
+  counters->registerCallback(
+      edenMount->getCounterName(CounterName::OVERLAY_DIR_COUNT), [edenMount] {
+        auto stats = edenMount->getOverlay()->getOverlayStats();
+        return stats.dirCount;
+      });
+  counters->registerCallback(
+      edenMount->getCounterName(CounterName::OVERLAY_FILE_COUNT), [edenMount] {
+        auto stats = edenMount->getOverlay()->getOverlayStats();
+        return stats.fileCount;
+      });
 #ifndef _WIN32
   if (auto* channel = edenMount->getFuseChannel()) {
     for (auto metric : RequestMetricsScope::requestMetrics) {
@@ -1533,6 +1543,10 @@ void EdenServer::unregisterStats(EdenMount* edenMount) {
       edenMount->getCounterName(CounterName::JOURNAL_DURATION));
   counters->unregisterCallback(
       edenMount->getCounterName(CounterName::JOURNAL_MAX_FILES_ACCUMULATED));
+  counters->unregisterCallback(
+      edenMount->getCounterName(CounterName::OVERLAY_DIR_COUNT));
+  counters->unregisterCallback(
+      edenMount->getCounterName(CounterName::OVERLAY_FILE_COUNT));
 #ifndef _WIN32
   if (edenMount->getFuseChannel()) {
     for (auto metric : RequestMetricsScope::requestMetrics) {

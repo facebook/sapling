@@ -260,6 +260,11 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
     size_t fileCount{0};
   };
 
+  /**
+   * Get stats about how many objects are materialized in Overlay.
+   */
+  InternalOverlayStats getOverlayStats() const;
+
   void addChild(
       InodeNumber parent,
       const std::pair<PathComponent, DirEntry>& childEntry,

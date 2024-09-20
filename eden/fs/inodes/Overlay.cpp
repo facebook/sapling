@@ -758,6 +758,10 @@ OverlayFile Overlay::createOverlayFile(
 
 #endif // !_WIN32
 
+Overlay::InternalOverlayStats Overlay::getOverlayStats() const {
+  return *overlayStats_.rlock();
+}
+
 InodeNumber Overlay::getMaxInodeNumber() {
   auto ino = nextInodeNumber_.load(std::memory_order_relaxed);
   XCHECK_GT(ino, 1u);

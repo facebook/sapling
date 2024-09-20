@@ -2061,6 +2061,10 @@ std::string EdenMount::getCounterName(CounterName name) {
     case CounterName::PERIODIC_UNLINKED_INODE_UNLOAD:
       return folly::to<std::string>(
           "inodemap.", base, ".unloaded_unlinked_inodes");
+    case CounterName::OVERLAY_DIR_COUNT:
+      return folly::to<std::string>("overlay.", base, ".dir_count");
+    case CounterName::OVERLAY_FILE_COUNT:
+      return folly::to<std::string>("overlay.", base, ".file_count");
   }
   EDEN_BUG() << "unknown counter name "
              << static_cast<std::underlying_type_t<CounterName>>(name);

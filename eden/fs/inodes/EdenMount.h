@@ -202,7 +202,17 @@ enum class CounterName {
    * unlinked inode unloading. This is used on NFS mounts to clean up old
    * inodes.
    */
-  PERIODIC_UNLINKED_INODE_UNLOAD
+  PERIODIC_UNLINKED_INODE_UNLOAD,
+
+  /**
+   * Represents the number of directories that were materialized in the overlay.
+   */
+  OVERLAY_DIR_COUNT,
+
+  /**
+   * Represents the number of files that were materialized in the overlay.
+   */
+  OVERLAY_FILE_COUNT
 
 };
 
