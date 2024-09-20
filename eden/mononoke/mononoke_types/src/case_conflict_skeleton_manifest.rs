@@ -69,6 +69,8 @@ impl CcsmEntry {
         match self {
             Self::File => CcsmRollupCounts {
                 descendants_count: 1,
+                odd_depth_conflicts: 0,
+                even_depth_conflicts: 0,
             },
             Self::Directory(dir) => dir.rollup_counts(),
         }
@@ -115,6 +117,10 @@ pub struct CcsmRollupCounts {
     /// The total number of descendant files and directories for this manifest,
     /// including this manifest itself.
     pub descendants_count: u64,
+    /// The number of descendants that have more than one child and have odd depth (i.e. children or 3rd level descendants or ...)
+    pub odd_depth_conflicts: u64,
+    /// The number of descendants that have more than one child and have even depth (i.e. the manifest itself or 2nd level descendants or ...)
+    pub even_depth_conflicts: u64,
 }
 
 impl Rollup<CcsmEntry> for CcsmRollupCounts {
@@ -123,11 +129,15 @@ impl Rollup<CcsmEntry> for CcsmRollupCounts {
             entry.map_or(
                 CcsmRollupCounts {
                     descendants_count: 0,
+                    odd_depth_conflicts: 0,
+                    even_depth_conflicts: 0,
                 },
                 |entry| entry.rollup_counts(),
             ),
             |acc, child| CcsmRollupCounts {
                 descendants_count: acc.descendants_count + child.descendants_count,
+                odd_depth_conflicts: acc.odd_depth_conflicts + child.odd_depth_conflicts,
+                even_depth_conflicts: acc.even_depth_conflicts + child.even_depth_conflicts,
             },
         )
     }
@@ -358,6 +368,15 @@ impl CaseConflictSkeletonManifest {
         let sharded_map_rollup_data = self.subentries.rollup_data();
         CcsmRollupCounts {
             descendants_count: sharded_map_rollup_data.descendants_count + 1,
+            // even depth conflicts for children are odd depth conflicts for this manifest
+            odd_depth_conflicts: sharded_map_rollup_data.even_depth_conflicts,
+            // odd depth conflicts for children are even depth conflicts for this manifest
+            // plus one if this manifest itself has more than one child.
+            even_depth_conflicts: if self.subentries.size() > 1 {
+                sharded_map_rollup_data.odd_depth_conflicts + 1
+            } else {
+                sharded_map_rollup_data.odd_depth_conflicts
+            },
         }
     }
 }

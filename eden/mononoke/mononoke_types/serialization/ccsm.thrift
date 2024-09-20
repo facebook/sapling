@@ -50,4 +50,6 @@ union CcsmEntry {
 
 struct CcsmRollupCounts {
   1: i64 descendants_count;
+  2: i64 odd_depth_conflicts;
+  3: i64 even_depth_conflicts;
 } (rust.exhaustive)

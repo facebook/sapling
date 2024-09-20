@@ -66,14 +66,27 @@ async fn validate(
     }
     visited.write().unwrap().insert(manifest.clone());
 
-    let calculated_rollup_count = AtomicU64::new(1);
-    let calculated_rollup_count = &calculated_rollup_count;
+    let calculated_rollup_count = &AtomicU64::new(1);
+    let calculated_odd_depth_conflicts = &AtomicU64::new(0);
+    let calculated_even_depth_conflicts = &AtomicU64::new(0);
+
+    if manifest.subentries.size() > 1 {
+        calculated_even_depth_conflicts.fetch_add(1, Ordering::Relaxed);
+    }
+
     manifest
         .clone()
         .into_subentries(ctx, blobstore)
         .try_for_each_concurrent(None, |(_path, entry)| async move {
             calculated_rollup_count
                 .fetch_add(entry.rollup_counts().descendants_count, Ordering::Relaxed);
+            calculated_odd_depth_conflicts.fetch_add(
+                entry.rollup_counts().even_depth_conflicts,
+                Ordering::Relaxed,
+            );
+            calculated_even_depth_conflicts
+                .fetch_add(entry.rollup_counts().odd_depth_conflicts, Ordering::Relaxed);
+
             match entry {
                 CcsmEntry::File => {}
                 CcsmEntry::Directory(dir) => validate(visited, ctx, blobstore, dir).await?,
@@ -81,8 +94,21 @@ async fn validate(
             Ok(())
         })
         .await?;
-    let count = calculated_rollup_count.load(Ordering::Relaxed);
-    assert_eq!(manifest.rollup_counts().descendants_count, count);
+
+    let rollup_count = calculated_rollup_count.load(Ordering::Relaxed);
+    assert_eq!(manifest.rollup_counts().descendants_count, rollup_count);
+
+    let odd_depth_conflicts = calculated_odd_depth_conflicts.load(Ordering::Relaxed);
+    assert_eq!(
+        manifest.rollup_counts().odd_depth_conflicts,
+        odd_depth_conflicts
+    );
+
+    let even_depth_conflicts = calculated_even_depth_conflicts.load(Ordering::Relaxed);
+    assert_eq!(
+        manifest.rollup_counts().even_depth_conflicts,
+        even_depth_conflicts
+    );
 
     Ok(())
 }
