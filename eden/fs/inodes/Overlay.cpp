@@ -261,7 +261,9 @@ void Overlay::close() {
   }
 
   // Reset InternalOverlayStats counters
-  overlayStats_.wlock()->dirCount = 0;
+  auto overlayStatsLock = overlayStats_.wlock();
+  overlayStatsLock->dirCount = 0;
+  overlayStatsLock->fileCount = 0;
 }
 
 bool Overlay::isClosed() {
@@ -569,10 +571,11 @@ void Overlay::removeOverlayFile(InodeNumber inodeNumber) {
 
     freeInodeFromMetadataTable(inodeNumber);
     fileContentStore_->removeOverlayFile(inodeNumber);
+    stats_->increment(&OverlayStats::removeOverlayFileSuccessful);
+    overlayStats_.wlock()->fileCount--;
 #else
     (void)inodeNumber;
 #endif
-    stats_->increment(&OverlayStats::removeOverlayFileSuccessful);
   } catch (const std::exception& e) {
     XLOG(ERR) << "Failed to remove overlay file " << inodeNumber << " "
               << e.what();
@@ -721,6 +724,7 @@ OverlayFile Overlay::createOverlayFile(
         fileContentStore_->createOverlayFile(inodeNumber, contents),
         weak_from_this());
     stats_->increment(&OverlayStats::createOverlayFileSuccessful);
+    overlayStats_.wlock()->fileCount++;
     return file;
   } catch (const std::exception& e) {
     XLOG(ERR) << "Failed to create file " << inodeNumber << " " << e.what();
@@ -743,6 +747,7 @@ OverlayFile Overlay::createOverlayFile(
         fileContentStore_->createOverlayFile(inodeNumber, contents),
         weak_from_this());
     stats_->increment(&OverlayStats::createOverlayFileSuccessful);
+    overlayStats_.wlock()->fileCount++;
     return file;
   } catch (const std::exception& e) {
     XLOG(ERR) << "Failed to create file " << inodeNumber << " " << e.what();

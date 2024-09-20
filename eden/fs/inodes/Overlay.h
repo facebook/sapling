@@ -257,6 +257,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
 
   struct InternalOverlayStats {
     size_t dirCount{0};
+    size_t fileCount{0};
   };
 
   void addChild(
