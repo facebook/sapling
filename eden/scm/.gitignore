@@ -85,6 +85,7 @@ target/
 wheelhouse/
 
 *.pc/
+sapling.egg-info/
 
 # hackable windows distribution additions
 hg-python
