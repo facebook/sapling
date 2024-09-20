@@ -52,10 +52,12 @@ impl CcsmEntry {
         }
     }
 
-    pub fn rollup_count(&self) -> CcsmRollupCount {
+    pub fn rollup_counts(&self) -> CcsmRollupCounts {
         match self {
-            Self::File => CcsmRollupCount(1),
-            Self::Directory(dir) => dir.rollup_count(),
+            Self::File => CcsmRollupCounts {
+                descendants_count: 1,
+            },
+            Self::Directory(dir) => dir.rollup_counts(),
         }
     }
 }
@@ -76,7 +78,7 @@ impl Loadable for CaseConflictSkeletonManifest {
 impl ShardedMapV2Value for CcsmEntry {
     type NodeId = ShardedMapV2NodeCcsmId;
     type Context = ShardedMapV2NodeCcsmContext;
-    type RollupData = CcsmRollupCount;
+    type RollupData = CcsmRollupCounts;
 
     const WEIGHT_LIMIT: usize = 1000;
 
@@ -94,33 +96,26 @@ impl ShardedMapV2Value for CcsmEntry {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct CcsmRollupCount(pub u64);
-
-impl CcsmRollupCount {
-    pub fn into_inner(self) -> u64 {
-        self.0
-    }
+#[derive(ThriftConvert, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[thrift(thrift::ccsm::CcsmRollupCounts)]
+pub struct CcsmRollupCounts {
+    /// The total number of descendant files and directories for this manifest,
+    /// including this manifest itself.
+    pub descendants_count: u64,
 }
 
-impl ThriftConvert for CcsmRollupCount {
-    const NAME: &'static str = "CcsmRollupCount";
-    type Thrift = i64;
-
-    fn from_thrift(t: Self::Thrift) -> Result<Self> {
-        Ok(CcsmRollupCount(t as u64))
-    }
-
-    fn into_thrift(self) -> Self::Thrift {
-        self.0 as i64
-    }
-}
-
-impl Rollup<CcsmEntry> for CcsmRollupCount {
-    fn rollup(value: Option<&CcsmEntry>, child_rollup_data: Vec<Self>) -> Self {
+impl Rollup<CcsmEntry> for CcsmRollupCounts {
+    fn rollup(entry: Option<&CcsmEntry>, child_rollup_data: Vec<Self>) -> Self {
         child_rollup_data.into_iter().fold(
-            value.map_or(CcsmRollupCount(0), |value| value.rollup_count()),
-            |acc, child| CcsmRollupCount(acc.0 + child.0),
+            entry.map_or(
+                CcsmRollupCounts {
+                    descendants_count: 0,
+                },
+                |entry| entry.rollup_counts(),
+            ),
+            |acc, child| CcsmRollupCounts {
+                descendants_count: acc.descendants_count + child.descendants_count,
+            },
         )
     }
 }
@@ -189,8 +184,11 @@ impl CaseConflictSkeletonManifest {
             .boxed()
     }
 
-    pub fn rollup_count(&self) -> CcsmRollupCount {
-        CcsmRollupCount(1 + self.subentries.rollup_data().0)
+    pub fn rollup_counts(&self) -> CcsmRollupCounts {
+        let sharded_map_rollup_data = self.subentries.rollup_data();
+        CcsmRollupCounts {
+            descendants_count: sharded_map_rollup_data.descendants_count + 1,
+        }
     }
 }
 

@@ -47,3 +47,7 @@ union CcsmEntry {
   1: CcsmFile file;
   2: CaseConflictSkeletonManifest directory;
 } (rust.exhaustive)
+
+struct CcsmRollupCounts {
+  1: i64 descendants_count;
+} (rust.exhaustive)

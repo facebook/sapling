@@ -121,8 +121,8 @@ fn convert_ccsm_to_weighted(
 ) -> Entry<(Weight, CaseConflictSkeletonManifest), ()> {
     match entry {
         Entry::Tree(dir) => Entry::Tree((
-            dir.rollup_count()
-                .into_inner()
+            dir.rollup_counts()
+                .descendants_count
                 .try_into()
                 .unwrap_or(usize::MAX),
             dir,
