@@ -321,8 +321,6 @@ class WindowsSocketHandle:
     # pyre-fixme[3]: Return type must be annotated.
     def recv_into(self, buffer: Buffer, size: int = 0):
         if size == 0:
-            # pyre-fixme[6]: For 1st argument expected
-            #  `pyre_extensions.ReadOnly[Sized]` but got `Buffer`.
             size = len(buffer)
 
         dest = (ctypes.c_char * size).from_buffer(buffer)
