@@ -178,7 +178,7 @@ will cause materializations in parent inodes until a previously materialized
 parent inode is reached (this may materialize inodes all the way to the root).
 
 Further definitions regarding inodes state changes can be found at
-https://github.com/facebookexperimental/eden/blob/main/eden/fs/docs/Glossary.md
+https://github.com/facebook/sapling/blob/main/eden/fs/docs/Glossary.md
 
 Events for this command are encoded using the following emojis/letters:
 

@@ -50,7 +50,7 @@ const config = {
               'https://www.internalfb.com/code/fbsource/fbcode/eden/website/',
             // This does not exist yet...
             external:
-              'https://github.com/facebookexperimental/eden/tree/main/website',
+              'https://github.com/facebook/sapling/tree/main/website',
           }),
           remarkPlugins: [
             [require('remark-github'), {repository: "facebook/sapling"}],
