@@ -13,9 +13,22 @@ query YourPullRequestsWithoutMergeQueueQuery($searchQuery: String!, $numToFetch:
         comments {
           totalCount
         }
-        commits(last: 1) {
+        baseRef {
+          target {
+            oid
+          }
+          name
+        }
+        headRef {
+          target {
+            oid
+          }
+          name
+        }
+        commits(last: 100) {
           nodes {
             commit {
+              oid
               statusCheckRollup {
                 state
               }
