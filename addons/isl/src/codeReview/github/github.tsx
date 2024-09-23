@@ -141,6 +141,15 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
     Internal.submitForGitHubDisabledReason?.(this.preferredSubmitCommand);
   supportBranchingPrs = true;
 
+  branchNameForRemoteBookmark(bookmark: string) {
+    // TODO: is "origin" really always the prefix for remote bookmarks in git?
+    const originPrefix = 'origin/';
+    const branchName = bookmark.startsWith(originPrefix)
+      ? bookmark.slice(originPrefix.length)
+      : bookmark;
+    return branchName;
+  }
+
   enableMessageSyncing = false;
 
   supportsSuggestedReviewers = false;

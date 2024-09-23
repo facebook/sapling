@@ -76,7 +76,7 @@ import {ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
 import {MS_PER_DAY} from 'shared/constants';
 import {useAutofocusRef} from 'shared/hooks';
-import {notEmpty} from 'shared/utils';
+import {notEmpty, nullthrows} from 'shared/utils';
 
 /**
  * Some preview types should not allow actions on top of them
@@ -474,7 +474,7 @@ export const Commit = memo(
 
 function BranchingPrs({bookmarks}: {bookmarks: ReadonlyArray<string>}) {
   const provider = useAtomValue(codeReviewProvider);
-  if (provider == null) {
+  if (provider == null || !provider.supportBranchingPrs) {
     // If we don't have a provider, just render them as bookmarks so they don't get hidden.
     return <Bookmarks bookmarks={bookmarks} kind="remote" />;
   }
@@ -484,7 +484,8 @@ function BranchingPrs({bookmarks}: {bookmarks: ReadonlyArray<string>}) {
 }
 
 function BranchingPr({bookmark, provider}: {bookmark: string; provider: UICodeReviewProvider}) {
-  const info = useAtomValue(branchingDiffInfos(bookmark));
+  const branchName = nullthrows(provider.branchNameForRemoteBookmark)(bookmark);
+  const info = useAtomValue(branchingDiffInfos(branchName));
   return (
     <>
       <Bookmark kind="remote">{bookmark}</Bookmark>
