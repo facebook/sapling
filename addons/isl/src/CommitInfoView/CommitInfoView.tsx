@@ -31,6 +31,7 @@ import {
   latestCommitMessageFields,
 } from '../codeReview/CodeReviewInfo';
 import {submitAsDraft, SubmitAsDraftCheckbox} from '../codeReview/DraftCheckbox';
+import {showBranchingPrModal} from '../codeReview/github/BranchingPrModal';
 import {overrideDisabledSubmitModes} from '../codeReview/github/branchPrState';
 import GatedComponent from '../components/GatedComponent';
 import {FoldButton, useRunFoldPreview} from '../fold';
@@ -971,21 +972,28 @@ function ActionsBar({
                 const shouldUpdateMessage = !isCommitMode && messageSyncEnabled && anythingToCommit;
 
                 const submitOp = isBranchingPREnabled
-                  ? null /* TODO: await showBranchingPRModal() */
-                  : nullthrows(provider).submitOperation(
-                      commit.isDot ? [] : [commit], // [] means to submit the head commit
-                      {
-                        draft: shouldSubmitAsDraft,
-                        updateFields: shouldUpdateMessage,
-                        updateMessage: updateMessage || undefined,
-                      },
-                    );
+                  ? await showBranchingPrModal(commit)
+                  : [
+                      nullthrows(provider).submitOperation(
+                        commit.isDot ? [] : [commit], // [] means to submit the head commit
+                        {
+                          draft: shouldSubmitAsDraft,
+                          updateFields: shouldUpdateMessage,
+                          updateMessage: updateMessage || undefined,
+                        },
+                      ),
+                    ];
                 // clear out the update message now that we've used it to submit
                 if (updateMessage) {
                   setUpdateMessage('');
                 }
 
-                return [amendOrCommitOp, submitOp].filter(notEmpty);
+                if (submitOp == null) {
+                  // cancelled branch pr push
+                  return;
+                }
+
+                return [amendOrCommitOp, ...submitOp].filter(notEmpty);
               }}>
               {isBranchingPREnabled ? (
                 commit.isDot && anythingToCommit ? (
