@@ -184,7 +184,6 @@ rust_binary(
     },
     test_deps = [
         "fbsource//third-party/rust:ascii",
-        "fbsource//third-party/rust:tokio",
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/common/rendezvous:rendezvous",
         "//eden/mononoke/common/sql_construct:sql_construct",
@@ -204,7 +203,6 @@ rust_binary(
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:slog",
         "fbsource//third-party/rust:thiserror",
-        "fbsource//third-party/rust:tokio",
         "//common/rust/shed/cached_config:cached_config",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/facet:facet",

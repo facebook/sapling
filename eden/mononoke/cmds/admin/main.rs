@@ -29,7 +29,6 @@ mod hg_changeset;
 mod rsync;
 mod subcommand_blame;
 mod subcommand_deleted_manifest;
-mod subcommand_phases;
 
 fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
     args::MononokeAppBuilder::new("Mononoke admin command line tool")
@@ -41,7 +40,6 @@ fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .about("Poke at mononoke internals for debugging and investigating data structures.")
         .subcommand(hg_changeset::build_subcommand())
         .subcommand(filenodes::build_subcommand())
-        .subcommand(subcommand_phases::build_subcommand())
         .subcommand(crossrepo::build_subcommand())
         .subcommand(subcommand_blame::build_subcommand())
         .subcommand(subcommand_deleted_manifest::build_subcommand())
@@ -66,9 +64,6 @@ fn main(fb: FacebookInit) -> ExitCode {
             }
             (filenodes::FILENODES, Some(sub_m)) => {
                 subcommand_filenodes(fb, logger, &matches, sub_m).await
-            }
-            (subcommand_phases::PHASES, Some(sub_m)) => {
-                subcommand_phases::subcommand_phases(fb, logger, &matches, sub_m).await
             }
             (crossrepo::CROSSREPO, Some(sub_m)) => {
                 subcommand_crossrepo(fb, logger, &matches, sub_m).await
