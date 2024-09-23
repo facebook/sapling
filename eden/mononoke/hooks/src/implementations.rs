@@ -26,6 +26,7 @@ pub(crate) mod limit_filesize;
 mod limit_path_length;
 pub(crate) mod limit_submodule_edits;
 pub(crate) mod limit_tag_updates;
+pub(crate) mod missing_lfsconfig;
 pub(crate) mod no_bad_extensions;
 pub(crate) mod no_bad_filenames;
 mod no_executable_binaries;
@@ -96,6 +97,7 @@ pub async fn make_changeset_hook(
         "limit_submodule_edits" => Some(b(limit_submodule_edits::LimitSubmoduleEditsHook::new(
             &params.config,
         )?)),
+        "missing_lfsconfig" => Some(b(missing_lfsconfig::MissingLFSConfigHook::new())),
         "block_commit_message_pattern" => Some(b(
             block_commit_message_pattern::BlockCommitMessagePatternHook::new(&params.config)?,
         )),

@@ -107,6 +107,18 @@ impl HookStateProvider for InMemoryHookStateProvider {
         Err(anyhow!("`find_content` is not implemented for `InMemoryHookStateProvider`").into())
     }
 
+    async fn find_content_by_changeset_id<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        _changeset_id: ChangesetId,
+        _paths: Vec<NonRootMPath>,
+    ) -> Result<HashMap<NonRootMPath, PathContent>, HookStateProviderError> {
+        Err(anyhow!(
+            "`find_content_by_changeset_id` is not implemented for `InMemoryHookStateProvider`"
+        )
+        .into())
+    }
+
     async fn file_changes<'a>(
         &'a self,
         _ctx: &'a CoreContext,

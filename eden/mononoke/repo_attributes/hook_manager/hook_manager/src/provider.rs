@@ -105,6 +105,14 @@ pub trait HookStateProvider: Send + Sync {
         paths: Vec<NonRootMPath>,
     ) -> Result<HashMap<NonRootMPath, PathContent>, HookStateProviderError>;
 
+    /// Find the content of a set of files at a particular changeset.
+    async fn find_content_by_changeset_id<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        changeset_id: ChangesetId,
+        paths: Vec<NonRootMPath>,
+    ) -> Result<HashMap<NonRootMPath, PathContent>, HookStateProviderError>;
+
     /// Find all changes between two changeset ids.
     async fn file_changes<'a>(
         &'a self,

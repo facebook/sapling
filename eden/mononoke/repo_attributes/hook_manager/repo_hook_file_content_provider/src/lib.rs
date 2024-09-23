@@ -100,6 +100,16 @@ impl HookStateProvider for RepoHookStateProvider {
             .with_context(|| format!("Error fetching bookmark: {}", bookmark))?
             .ok_or_else(|| format_err!("Bookmark {} does not exist", bookmark))?;
 
+        self.find_content_by_changeset_id(ctx, changeset_id, paths)
+            .await
+    }
+
+    async fn find_content_by_changeset_id<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        changeset_id: ChangesetId,
+        paths: Vec<NonRootMPath>,
+    ) -> Result<HashMap<NonRootMPath, PathContent>, HookStateProviderError> {
         let fsnode_id = derive_fsnode(ctx, &self.repo_derived_data, changeset_id).await?;
 
         fsnode_id
