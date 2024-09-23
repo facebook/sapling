@@ -884,6 +884,8 @@ function SubmitButton({
   const messageSyncEnabled = useAtomValue(messageSyncingEnabledState);
   const areImageUploadsOngoing = useAtomValue(imageUploadsPendingAtom);
 
+  const runOperation = useRunOperation();
+
   const isBranchingPREnabled =
     repoInfo?.type === 'success' &&
     repoInfo.codeReviewSystem.type === 'github' &&
@@ -896,6 +898,113 @@ function SubmitButton({
     : !canSubmitWithCodeReviewProvider
     ? t('No code review system found for this repository')
     : null;
+
+  const getApplicableOperations = async (): Promise<Array<Operation> | undefined> => {
+    const shouldContinue = await confirmUnsavedFiles();
+    if (!shouldContinue) {
+      return;
+    }
+
+    let amendOrCommitOp;
+    if (commit.isDot && anythingToCommit) {
+      // TODO: we should also amend if there are pending commit message changes, and change the button
+      // to amend message & submit.
+      // Or just remove the submit button if you start editing since we'll update the remote message anyway...
+      amendOrCommitOp = getAmendOrCommitOperation();
+    }
+
+    if (
+      repoInfo?.type === 'success' &&
+      repoInfo.codeReviewSystem.type === 'github' &&
+      repoInfo.preferredSubmitCommand == null
+    ) {
+      const buttons = [t('Cancel') as 'Cancel', 'ghstack', 'pr'] as const;
+      const cancel = buttons[0];
+      const answer = await showOptionModal({
+        type: 'confirm',
+        icon: 'warning',
+        title: t('Preferred Code Review command not yet configured'),
+        message: (
+          <div className="commit-info-confirm-modal-paragraphs">
+            <div>
+              <T replace={{$pr: <code>sl pr</code>, $ghstack: <code>sl ghstack</code>}}>
+                You can configure Sapling to use either $pr or $ghstack to submit for code review on
+                GitHub.
+              </T>
+            </div>
+            <div>
+              <T
+                replace={{
+                  $config: <code>github.preferred_submit_command</code>,
+                }}>
+                Each submit command has tradeoffs, due to how GitHub creates Pull Requests. This can
+                be controlled by the $config config.
+              </T>
+            </div>
+            <div>
+              <T>To continue, select a command to use to submit.</T>
+            </div>
+            <Link href="https://sapling-scm.com/docs/git/intro#pull-requests">
+              <T>Learn More</T>
+            </Link>
+          </div>
+        ),
+        buttons,
+      });
+      if (answer === cancel || answer == null) {
+        return;
+      }
+      const rememberConfigOp = new SetConfigOperation(
+        'local',
+        'github.preferred_submit_command',
+        answer,
+      );
+      setRepoInfo(info => ({
+        ...nullthrows(info),
+        preferredSubmitCommand: answer,
+      }));
+      // setRepoInfo updates `provider`, but we still have a stale reference in this callback.
+      // So this one time, we need to manually run the new submit command.
+      // Future submit calls can delegate to provider.submitOperation();
+      const submitOp =
+        answer === 'ghstack'
+          ? new GhStackSubmitOperation({
+              draft: shouldSubmitAsDraft,
+            })
+          : answer === 'pr'
+          ? new PrSubmitOperation({
+              draft: shouldSubmitAsDraft,
+            })
+          : null;
+
+      // TODO: account for branching PR
+
+      return [amendOrCommitOp, rememberConfigOp, submitOp].filter(notEmpty);
+    }
+
+    // Only do message sync if we're amending the local commit in some way.
+    // If we're just doing a submit, we expect the message to have been synced previously
+    // during another amend or amend message.
+    const shouldUpdateMessage = !isCommitMode && messageSyncEnabled && anythingToCommit;
+
+    const submitOp = isBranchingPREnabled
+      ? null // branching PRs will show a follow-up modal which controls submitting
+      : nullthrows(provider).submitOperation(
+          commit.isDot ? [] : [commit], // [] means to submit the head commit
+          {
+            draft: shouldSubmitAsDraft,
+            updateFields: shouldUpdateMessage,
+            updateMessage: updateMessage || undefined,
+          },
+        );
+
+    // clear out the update message now that we've used it to submit
+    if (updateMessage) {
+      setUpdateMessage('');
+    }
+
+    return [amendOrCommitOp, submitOp].filter(notEmpty);
+  };
 
   return (commit.isDot && (anythingToCommit || !isAnythingBeingEdited)) ||
     (!commit.isDot &&
@@ -911,124 +1020,29 @@ function SubmitButton({
         })
       }
       placement="top">
-      <OperationDisabledButton
-        kind="primary"
-        contextKey={`submit-${commit.isDot ? 'head' : commit.hash}`}
-        disabled={disabledReason != null}
-        runOperation={async () => {
-          const shouldContinue = await confirmUnsavedFiles();
-          if (!shouldContinue) {
-            return;
-          }
-
-          let amendOrCommitOp;
-          if (commit.isDot && anythingToCommit) {
-            // TODO: we should also amend if there are pending commit message changes, and change the button
-            // to amend message & submit.
-            // Or just remove the submit button if you start editing since we'll update the remote message anyway...
-            amendOrCommitOp = getAmendOrCommitOperation();
-          }
-
-          if (
-            repoInfo?.type === 'success' &&
-            repoInfo.codeReviewSystem.type === 'github' &&
-            repoInfo.preferredSubmitCommand == null
-          ) {
-            const buttons = [t('Cancel') as 'Cancel', 'ghstack', 'pr'] as const;
-            const cancel = buttons[0];
-            const answer = await showOptionModal({
-              type: 'confirm',
-              icon: 'warning',
-              title: t('Preferred Code Review command not yet configured'),
-              message: (
-                <div className="commit-info-confirm-modal-paragraphs">
-                  <div>
-                    <T replace={{$pr: <code>sl pr</code>, $ghstack: <code>sl ghstack</code>}}>
-                      You can configure Sapling to use either $pr or $ghstack to submit for code
-                      review on GitHub.
-                    </T>
-                  </div>
-                  <div>
-                    <T
-                      replace={{
-                        $config: <code>github.preferred_submit_command</code>,
-                      }}>
-                      Each submit command has tradeoffs, due to how GitHub creates Pull Requests.
-                      This can be controlled by the $config config.
-                    </T>
-                  </div>
-                  <div>
-                    <T>To continue, select a command to use to submit.</T>
-                  </div>
-                  <Link href="https://sapling-scm.com/docs/git/intro#pull-requests">
-                    <T>Learn More</T>
-                  </Link>
-                </div>
-              ),
-              buttons,
-            });
-            if (answer === cancel || answer == null) {
+      {isBranchingPREnabled ? (
+        <Button
+          primary
+          disabled={disabledReason != null}
+          onClick={async () => {
+            const operations = await getApplicableOperations();
+            if (operations == null || operations.length === 0) {
               return;
             }
-            const rememberConfigOp = new SetConfigOperation(
-              'local',
-              'github.preferred_submit_command',
-              answer,
-            );
-            setRepoInfo(info => ({
-              ...nullthrows(info),
-              preferredSubmitCommand: answer,
-            }));
-            // setRepoInfo updates `provider`, but we still have a stale reference in this callback.
-            // So this one time, we need to manually run the new submit command.
-            // Future submit calls can delegate to provider.submitOperation();
-            const submitOp =
-              answer === 'ghstack'
-                ? new GhStackSubmitOperation({
-                    draft: shouldSubmitAsDraft,
-                  })
-                : answer === 'pr'
-                ? new PrSubmitOperation({
-                    draft: shouldSubmitAsDraft,
-                  })
-                : null;
 
-            // TODO: account for branching PR
+            for (const operation of operations) {
+              runOperation(operation);
+            }
 
-            return [amendOrCommitOp, rememberConfigOp, submitOp].filter(notEmpty);
-          }
-
-          // Only do message sync if we're amending the local commit in some way.
-          // If we're just doing a submit, we expect the message to have been synced previously
-          // during another amend or amend message.
-          const shouldUpdateMessage = !isCommitMode && messageSyncEnabled && anythingToCommit;
-
-          const submitOp = isBranchingPREnabled
-            ? await showBranchingPrModal(commit)
-            : [
-                nullthrows(provider).submitOperation(
-                  commit.isDot ? [] : [commit], // [] means to submit the head commit
-                  {
-                    draft: shouldSubmitAsDraft,
-                    updateFields: shouldUpdateMessage,
-                    updateMessage: updateMessage || undefined,
-                  },
-                ),
-              ];
-          // clear out the update message now that we've used it to submit
-          if (updateMessage) {
-            setUpdateMessage('');
-          }
-
-          if (submitOp == null) {
-            // cancelled branch pr push
-            return;
-          }
-
-          return [amendOrCommitOp, ...submitOp].filter(notEmpty);
-        }}>
-        {isBranchingPREnabled ? (
-          commit.isDot && anythingToCommit ? (
+            const pushOps = await showBranchingPrModal(commit);
+            if (pushOps == null) {
+              return;
+            }
+            for (const pushOp of pushOps) {
+              runOperation(pushOp);
+            }
+          }}>
+          {commit.isDot && anythingToCommit ? (
             isCommitMode ? (
               <T>Commit and Push...</T>
             ) : (
@@ -1036,17 +1050,25 @@ function SubmitButton({
             )
           ) : (
             <T>Push...</T>
-          )
-        ) : commit.isDot && anythingToCommit ? (
-          isCommitMode ? (
-            <T>Commit and Submit</T>
+          )}
+        </Button>
+      ) : (
+        <OperationDisabledButton
+          kind="primary"
+          contextKey={`submit-${commit.isDot ? 'head' : commit.hash}`}
+          disabled={disabledReason != null}
+          runOperation={getApplicableOperations}>
+          {commit.isDot && anythingToCommit ? (
+            isCommitMode ? (
+              <T>Commit and Submit</T>
+            ) : (
+              <T>Amend and Submit</T>
+            )
           ) : (
-            <T>Amend and Submit</T>
-          )
-        ) : (
-          <T>Submit</T>
-        )}
-      </OperationDisabledButton>
+            <T>Submit</T>
+          )}
+        </OperationDisabledButton>
+      )}
     </Tooltip>
   ) : null;
 }
