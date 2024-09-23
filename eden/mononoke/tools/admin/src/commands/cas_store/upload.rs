@@ -16,9 +16,11 @@ use changesets_uploader::PriorLookupPolicy;
 use changesets_uploader::UploadPolicy;
 use clap::Args;
 use context::CoreContext;
+use mercurial_derivation::RootHgAugmentedManifestId;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 use mononoke_types::MPath;
+use repo_derived_data::RepoDerivedDataRef;
 use slog::info;
 
 use super::Repo;
@@ -104,6 +106,11 @@ pub async fn cas_store_upload(
     if let Some(ref spath) = args.path {
         path = Some(MPath::new(spath).with_context(|| anyhow!("Invalid path: {}", spath))?);
     }
+
+    // Derive augmented manifest for this changeset if not yet derived.
+    repo.repo_derived_data()
+        .derive::<RootHgAugmentedManifestId>(ctx, changeset_id)
+        .await?;
 
     let stats = if args.full {
         cas_changesets_uploader
