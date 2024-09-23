@@ -158,6 +158,135 @@ fn log_clone_info(clone_type_str: &str, reponame: &str, ctx: &ReqCtx<CloneOpts>)
     }
 }
 
+fn run_eden(
+    reponame: &str,
+    destination: &Path,
+    ctx: &ReqCtx<CloneOpts>,
+    mut config: ConfigSet,
+) -> Result<()> {
+    let logger = ctx.logger();
+
+    // We don't return an error immediately because we need to log the clone
+    // type before that, yet we might need to log something different if we
+    // were able to clone a backing repo.
+    let backing_clone_result = || -> Result<(PathBuf, Repo)> {
+        let backing_path = if !ctx.opts.eden_backing_repo.is_empty() {
+            PathBuf::from(&ctx.opts.eden_backing_repo)
+        } else if let Some(dir) = clone::get_default_eden_backing_directory(&config)? {
+            dir.join(encode_repo_name(reponame))
+        } else {
+            abort!("please specify --eden-backing-repo");
+        };
+
+        let backing_repo = if identity::sniff_dir(&backing_path)?.is_none() {
+            logger.verbose(|| {
+                format!(
+                    "Cloning {} backing repo to {}",
+                    reponame,
+                    backing_path.display(),
+                )
+            });
+            try_clone_metadata(ctx, &logger, &mut config, reponame, &backing_path)?
+        } else {
+            Repo::load(
+                &backing_path,
+                &PinnedConfig::from_cli_opts(
+                    &ctx.global_opts().config,
+                    &ctx.global_opts().configfile,
+                ),
+            )?
+        };
+
+        Ok((backing_path, backing_repo))
+    }();
+
+    let config_filter = if let Ok((_, ref backing_repo)) = backing_clone_result {
+        backing_repo.config().get("clone", "eden-sparse-filter")
+    } else {
+        config.get("clone", "eden-sparse-filter")
+    };
+
+    let edenfs_filter = match (ctx.opts.enable_profile.len(), config_filter) {
+        (0, config_filter) => config_filter,
+        (1, config_filter) => {
+            if config_filter.is_some() {
+                logger.info(
+                    "Ignoring clone.eden-sparse-filter because --enable-profile was specified",
+                );
+            }
+            Some(ctx.opts.enable_profile[0].clone().into())
+        }
+        _ => None,
+    };
+    let clone_type_str = if edenfs_filter.is_some() {
+        "eden_sparse"
+    } else {
+        "eden_fs"
+    };
+    log_clone_info(clone_type_str, reponame, ctx);
+
+    let (backing_path, backing_repo) = backing_clone_result?;
+
+    let target_rev = get_update_target(&logger, &backing_repo, &ctx.opts)?.map(|(rev, _)| rev);
+    logger.verbose(|| {
+        format!(
+            "Performing EdenFS clone {}@{} from {} to {}",
+            reponame,
+            target_rev.map_or(String::new(), |t| t.to_hex()),
+            backing_path.display(),
+            destination.display(),
+        )
+    });
+    clone::eden_clone(&backing_repo, destination, target_rev, edenfs_filter)?;
+    Ok(())
+}
+
+fn run_non_eden(
+    reponame: &str,
+    destination: &Path,
+    ctx: &ReqCtx<CloneOpts>,
+    mut config: ConfigSet,
+) -> Result<()> {
+    let logger = ctx.logger();
+
+    let clone_type_str = if !ctx.opts.enable_profile.is_empty() {
+        "sparse"
+    } else {
+        "full"
+    };
+    log_clone_info(clone_type_str, reponame, ctx);
+
+    let mut repo = try_clone_metadata(ctx, &logger, &mut config, reponame, destination)?;
+
+    let target_rev = match get_update_target(&logger, &repo, &ctx.opts)? {
+        Some((id, name)) => {
+            logger.info(format!("Checking out '{}'", name));
+
+            logger.verbose(|| {
+                format!(
+                    "Initializing non-EdenFS working copy to commit {}",
+                    id.to_hex(),
+                )
+            });
+
+            Some(id)
+        }
+        None => {
+            logger.verbose("Initializing empty non-EdenFS working copy");
+            None
+        }
+    };
+
+    clone::init_working_copy(
+        &ctx.core,
+        &mut repo,
+        target_rev,
+        ctx.opts.enable_profile.clone(),
+    )?;
+
+    Ok(())
+}
+
 pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
     let logger = ctx.logger();
 
@@ -306,113 +435,9 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
     }
 
     if use_eden {
-        // We don't return an error immediately because we need to log the clone
-        // type before that, yet we might need to log something different if we
-        // were able to clone a backing repo.
-        let backing_clone_result = || -> Result<(PathBuf, Repo)> {
-            let backing_path = if !ctx.opts.eden_backing_repo.is_empty() {
-                PathBuf::from(&ctx.opts.eden_backing_repo)
-            } else if let Some(dir) = clone::get_default_eden_backing_directory(&config)? {
-                dir.join(encode_repo_name(&reponame))
-            } else {
-                abort!("please specify --eden-backing-repo");
-            };
-
-            let backing_repo = if identity::sniff_dir(&backing_path)?.is_none() {
-                logger.verbose(|| {
-                    format!(
-                        "Cloning {} backing repo to {}",
-                        reponame,
-                        backing_path.display(),
-                    )
-                });
-                try_clone_metadata(&ctx, &logger, &mut config, &reponame, &backing_path)?
-            } else {
-                Repo::load(
-                    &backing_path,
-                    &PinnedConfig::from_cli_opts(
-                        &ctx.global_opts().config,
-                        &ctx.global_opts().configfile,
-                    ),
-                )?
-            };
-
-            Ok((backing_path, backing_repo))
-        }();
-
-        let config_filter = if let Ok((_, ref backing_repo)) = backing_clone_result {
-            backing_repo.config().get("clone", "eden-sparse-filter")
-        } else {
-            config.get("clone", "eden-sparse-filter")
-        };
-
-        let edenfs_filter = match (ctx.opts.enable_profile.len(), config_filter) {
-            (0, config_filter) => config_filter,
-            (1, config_filter) => {
-                if config_filter.is_some() {
-                    logger.info(
-                        "Ignoring clone.eden-sparse-filter because --enable-profile was specified",
-                    );
-                }
-                Some(ctx.opts.enable_profile[0].clone().into())
-            }
-            _ => None,
-        };
-        let clone_type_str = if edenfs_filter.is_some() {
-            "eden_sparse"
-        } else {
-            "eden_fs"
-        };
-        log_clone_info(clone_type_str, reponame.as_str(), &ctx);
-
-        let (backing_path, backing_repo) = backing_clone_result?;
-
-        let target_rev = get_update_target(&logger, &backing_repo, &ctx.opts)?.map(|(rev, _)| rev);
-        logger.verbose(|| {
-            format!(
-                "Performing EdenFS clone {}@{} from {} to {}",
-                reponame,
-                target_rev.map_or(String::new(), |t| t.to_hex()),
-                backing_path.display(),
-                destination.display(),
-            )
-        });
-        clone::eden_clone(&backing_repo, &destination, target_rev, edenfs_filter)?;
+        run_eden(reponame.as_str(), destination.as_path(), &ctx, config)?;
     } else {
-        let clone_type_str = if !ctx.opts.enable_profile.is_empty() {
-            "sparse"
-        } else {
-            "full"
-        };
-        log_clone_info(clone_type_str, reponame.as_str(), &ctx);
-
-        let mut repo = try_clone_metadata(&ctx, &logger, &mut config, &reponame, &destination)?;
-
-        let target_rev = match get_update_target(&logger, &repo, &ctx.opts)? {
-            Some((id, name)) => {
-                logger.info(format!("Checking out '{}'", name));
-
-                logger.verbose(|| {
-                    format!(
-                        "Initializing non-EdenFS working copy to commit {}",
-                        id.to_hex(),
-                    )
-                });
-
-                Some(id)
-            }
-            None => {
-                logger.verbose("Initializing empty non-EdenFS working copy");
-                None
-            }
-        };
-
-        clone::init_working_copy(
-            &ctx.core,
-            &mut repo,
-            target_rev,
-            ctx.opts.enable_profile.clone(),
-        )?;
+        run_non_eden(reponame.as_str(), destination.as_path(), &ctx, config)?;
     }
 
     Ok(0)
