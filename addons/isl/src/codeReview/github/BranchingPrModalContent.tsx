@@ -13,7 +13,9 @@ import {Avatar} from '../../Avatar';
 import {Commit} from '../../Commit';
 import {Column, FlexSpacer, Row} from '../../ComponentUtils';
 import {T} from '../../i18n';
+import {PushOperation} from '../../operations/PushOperation';
 import {CommitPreview} from '../../previews';
+import {latestSuccessorUnlessExplicitlyObsolete} from '../../successionUtils';
 import * as stylex from '@stylexjs/stylex';
 import {Badge} from 'isl-components/Badge';
 import {Button} from 'isl-components/Button';
@@ -118,7 +120,19 @@ export default function BranchingPrModalContent({
         <Button onClick={() => returnResultAndDismiss(undefined)}>
           <T>Cancel</T>
         </Button>
-        <Button primary>{createPr ? <T>Push & Create PR</T> : <T>Push</T>}</Button>
+        <Button
+          primary
+          onClick={() => {
+            if (createPr) {
+              throw new Error('not implemented');
+            }
+
+            returnResultAndDismiss([
+              new PushOperation(latestSuccessorUnlessExplicitlyObsolete(stack[0]), branchName),
+            ]);
+          }}>
+          {createPr ? <T>Push & Create PR</T> : <T>Push</T>}
+        </Button>
       </Row>
     </Column>
   );

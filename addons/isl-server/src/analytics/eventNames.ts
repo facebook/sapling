@@ -15,6 +15,7 @@ export type TrackEventName =
   | 'HeadCommitChanged'
   | 'AbortMergeOperation'
   | 'PullOperation'
+  | 'PushOperation'
   | 'AddOperation'
   | 'AddRemoveOperation'
   | 'AlertShown'
