@@ -740,6 +740,11 @@ function ActionsBar({
   const showCommitOrAmend =
     commit.isDot && (isCommitMode || anythingToCommit || !isAnythingBeingEdited);
 
+  const isBranchingPREnabled =
+    repoInfo?.type === 'success' &&
+    repoInfo.codeReviewSystem.type === 'github' &&
+    repoInfo.preferredSubmitCommand === 'push';
+
   return (
     <div className="commit-info-actions-bar" data-testid="commit-info-actions-bar">
       {isCommitMode || commit.diffId == null ? null : (
@@ -949,9 +954,13 @@ function ActionsBar({
                       ? new GhStackSubmitOperation({
                           draft: shouldSubmitAsDraft,
                         })
-                      : new PrSubmitOperation({
+                      : answer === 'pr'
+                      ? new PrSubmitOperation({
                           draft: shouldSubmitAsDraft,
-                        });
+                        })
+                      : null;
+
+                  // TODO: account for branching PR
 
                   return [amendOrCommitOp, rememberConfigOp, submitOp].filter(notEmpty);
                 }
@@ -961,14 +970,16 @@ function ActionsBar({
                 // during another amend or amend message.
                 const shouldUpdateMessage = !isCommitMode && messageSyncEnabled && anythingToCommit;
 
-                const submitOp = nullthrows(provider).submitOperation(
-                  commit.isDot ? [] : [commit], // [] means to submit the head commit
-                  {
-                    draft: shouldSubmitAsDraft,
-                    updateFields: shouldUpdateMessage,
-                    updateMessage: updateMessage || undefined,
-                  },
-                );
+                const submitOp = isBranchingPREnabled
+                  ? null /* TODO: await showBranchingPRModal() */
+                  : nullthrows(provider).submitOperation(
+                      commit.isDot ? [] : [commit], // [] means to submit the head commit
+                      {
+                        draft: shouldSubmitAsDraft,
+                        updateFields: shouldUpdateMessage,
+                        updateMessage: updateMessage || undefined,
+                      },
+                    );
                 // clear out the update message now that we've used it to submit
                 if (updateMessage) {
                   setUpdateMessage('');
@@ -976,7 +987,17 @@ function ActionsBar({
 
                 return [amendOrCommitOp, submitOp].filter(notEmpty);
               }}>
-              {commit.isDot && anythingToCommit ? (
+              {isBranchingPREnabled ? (
+                commit.isDot && anythingToCommit ? (
+                  isCommitMode ? (
+                    <T>Commit and Push...</T>
+                  ) : (
+                    <T>Amend and Push...</T>
+                  )
+                ) : (
+                  <T>Push...</T>
+                )
+              ) : commit.isDot && anythingToCommit ? (
                 isCommitMode ? (
                   <T>Commit and Submit</T>
                 ) : (
