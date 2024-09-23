@@ -52,6 +52,7 @@ mononoke_app::subcommands! {
     mod megarepo;
     mod mutable_counters;
     mod mutable_renames;
+    mod phases;
     mod redaction;
     mod repo_info;
 }

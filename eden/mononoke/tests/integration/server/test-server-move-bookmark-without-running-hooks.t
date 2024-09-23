@@ -62,8 +62,7 @@ Try to pushrebase new commit that fails the hook - push should fail
 We are not uploading a new commit, since it's already in commit cloud, but
 the push should fail nevertheless. But first let's check that commit actually exists on
 mononoke now
-  $ mononoke_admin phases fetch cd415129827add17f8486647dad5f3f84f5df316
-  * using repo "repo" repoid RepositoryId(0) (glob)
+  $ mononoke_newadmin phases -R repo fetch -i cd415129827add17f8486647dad5f3f84f5df316
   draft
   $ hg push -r . --to tag/newtag --create
   pushing rev cd415129827a to destination mono:repo bookmark tag/newtag
@@ -106,8 +105,7 @@ First check that push fail for this bookmark as well
   exporting bookmark another_bookmark
 
 Try the push tag/newtag again. Since this commit is public it should succeed
-  $ mononoke_admin phases fetch cd415129827add17f8486647dad5f3f84f5df316
-  * using repo "repo" repoid RepositoryId(0) (glob)
+  $ mononoke_newadmin phases -R repo fetch -i cd415129827add17f8486647dad5f3f84f5df316
   public
   $ hg push -r . --to tag/newtag --create
   pushing rev cd415129827a to destination mono:repo bookmark tag/newtag
