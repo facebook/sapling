@@ -34,7 +34,7 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
   label = t('GitHub');
 
   constructor(
-    private system: CodeReviewSystem & {type: 'github'},
+    public system: CodeReviewSystem & {type: 'github'},
     private preferredSubmitCommand: PreferredSubmitCommand,
   ) {}
   cliName?: string | undefined;
