@@ -10,6 +10,7 @@ mod upload;
 
 use anyhow::Result;
 use bonsai_hg_mapping::BonsaiHgMapping;
+use bookmarks::Bookmarks;
 use clap::Parser;
 use clap::Subcommand;
 use info::CasStoreInfoArgs;
@@ -42,6 +43,9 @@ pub struct Repo {
 
     #[facet]
     bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+    #[facet]
+    bookmarks: dyn Bookmarks,
 }
 
 #[derive(Subcommand)]
