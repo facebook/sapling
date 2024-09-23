@@ -59,7 +59,7 @@ export type GitHubDiffSummary = {
   /** Head of the Pull Request (topmost commit), as it is on GitHub (may be out of date) */
   head: Hash;
   /** Name of the branch on GitHub, which should match the local bookmark */
-  branchName: string;
+  branchName?: string;
 };
 
 type GitHubCodeReviewSystem = CodeReviewSystem & {type: 'github'};

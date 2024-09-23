@@ -69,11 +69,44 @@ export const diffSummary = atomFamilyWeak((diffId: DiffId | undefined) =>
   }),
 );
 
+export const branchingDiffInfos = atomFamilyWeak((branchName: string) =>
+  atom<Result<DiffSummary | undefined>>(get => {
+    const all = get(allDiffSummaries);
+    if (all == null) {
+      return {value: undefined};
+    }
+    if (all.error) {
+      return {error: all.error};
+    }
+    const idMap = get(diffIdsByBranchName);
+    const idForBranchName = idMap.get(branchName);
+    if (idForBranchName) {
+      return {value: all.value?.get(idForBranchName)};
+    }
+    return {value: undefined};
+  }),
+);
+
 export const allDiffSummaries = atom<Result<Map<DiffId, DiffSummary> | null>>({value: null});
+export const diffIdsByBranchName = atom<Map<string, DiffId>>(new Map());
 
 registerDisposable(
   allDiffSummaries,
   serverAPI.onMessageOfType('fetchedDiffSummaries', event => {
+    writeAtom(diffIdsByBranchName, existing => {
+      if (event.summaries.error) {
+        return existing;
+      }
+
+      const map = new Map<string, DiffId>(existing);
+      for (const [diffId, summary] of event.summaries.value.entries()) {
+        if (summary.branchName) {
+          map.set(summary.branchName, diffId);
+        }
+      }
+      return map;
+    });
+
     writeAtom(allDiffSummaries, existing => {
       if (existing.error) {
         // TODO: if we only fetch one diff, but had an error on the overall fetch... should we still somehow show that error...?

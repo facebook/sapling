@@ -5,13 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {UICodeReviewProvider} from './codeReview/UICodeReviewProvider';
 import type {DagCommitInfo} from './dag/dag';
 import type {CommitInfo, SuccessorInfo} from './types';
 import type {ReactNode} from 'react';
 import type {ContextMenuItem} from 'shared/ContextMenu';
 
 import {spacing} from '../../components/theme/tokens.stylex';
-import {AllBookmarksTruncated, createBookmarkAtCommit} from './Bookmark';
+import {AllBookmarksTruncated, Bookmark, Bookmarks, createBookmarkAtCommit} from './Bookmark';
 import {openBrowseUrlForHash, supportsBrowseUrlForHash} from './BrowseRepo';
 import {hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
 import {showComparison} from './ComparisonView/atoms';
@@ -27,11 +28,12 @@ import {UncommittedChanges} from './UncommittedChanges';
 import {tracker} from './analytics';
 import {clipboardLinkHtml} from './clipboard';
 import {
+  branchingDiffInfos,
   codeReviewProvider,
   diffSummary,
   latestCommitMessageTitle,
 } from './codeReview/CodeReviewInfo';
-import {DiffFollower, DiffInfo} from './codeReview/DiffBadge';
+import {DiffBadge, DiffFollower, DiffInfo} from './codeReview/DiffBadge';
 import {SyncStatus, syncStatusAtom} from './codeReview/syncStatus';
 import {FoldButton, useRunFoldPreview} from './fold';
 import {findPublicBaseAncestor} from './getCommitTree';
@@ -429,9 +431,14 @@ export const Commit = memo(
               </span>
             )}
             <UnsavedEditedMessageIndicator commit={commit} />
+            {!isPublic && <BranchingPrs bookmarks={commit.remoteBookmarks} />}
             <AllBookmarksTruncated
               local={commit.bookmarks}
-              remote={commit.remoteBookmarks}
+              remote={
+                isPublic
+                  ? commit.remoteBookmarks
+                  : /* draft commits with remote bookmarks are probably branching PRs, rendered above. */ []
+              }
               stable={commit?.stableCommitMetadata ?? []}
             />
             {isPublic ? <CommitDate date={commit.date} /> : null}
@@ -464,6 +471,29 @@ export const Commit = memo(
     );
   },
 );
+
+function BranchingPrs({bookmarks}: {bookmarks: ReadonlyArray<string>}) {
+  const provider = useAtomValue(codeReviewProvider);
+  if (provider == null) {
+    // If we don't have a provider, just render them as bookmarks so they don't get hidden.
+    return <Bookmarks bookmarks={bookmarks} kind="remote" />;
+  }
+  return bookmarks.map(bookmark => (
+    <BranchingPr key={bookmark} provider={provider} bookmark={bookmark} />
+  ));
+}
+
+function BranchingPr({bookmark, provider}: {bookmark: string; provider: UICodeReviewProvider}) {
+  const info = useAtomValue(branchingDiffInfos(bookmark));
+  return (
+    <>
+      <Bookmark kind="remote">{bookmark}</Bookmark>
+      {info.value == null ? null : (
+        <DiffBadge diff={info.value} provider={provider} url={info.value.url} />
+      )}
+    </>
+  );
+}
 
 const styles = stylex.create({
   commitLabel: {
