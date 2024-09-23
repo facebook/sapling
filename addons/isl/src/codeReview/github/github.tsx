@@ -101,8 +101,11 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
   submitOperation(_commits: [], options: {draft?: boolean; updateMessage?: string}): Operation {
     if (this.preferredSubmitCommand === 'ghstack') {
       return new GhStackSubmitOperation(options);
+    } else if (this.preferredSubmitCommand === 'pr') {
+      return new PrSubmitOperation(options);
+    } else {
+      throw new Error('Not yet implemented');
     }
-    return new PrSubmitOperation(options);
   }
 
   submitCommandName() {

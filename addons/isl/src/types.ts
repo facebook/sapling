@@ -204,7 +204,7 @@ export type CodeReviewSystem =
       path?: string;
     };
 
-export type PreferredSubmitCommand = 'pr' | 'ghstack';
+export type PreferredSubmitCommand = 'pr' | 'ghstack' | 'push';
 
 export type StableCommitMetadata = {
   value: string;

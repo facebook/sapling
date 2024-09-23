@@ -22,6 +22,7 @@ import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {showDiffNumberConfig} from './codeReview/DiffBadge';
 import {SubmitAsDraftCheckbox} from './codeReview/DraftCheckbox';
 import {
+  branchPRsSupported,
   experimentalBranchPRsEnabled,
   overrideDisabledSubmitModes,
 } from './codeReview/github/branchPrState';
@@ -29,7 +30,7 @@ import GatedComponent from './components/GatedComponent';
 import {debugToolsEnabledState} from './debug/DebugToolsState';
 import {externalMergeToolAtom} from './externalMergeTool';
 import {t, T} from './i18n';
-import {configBackedAtom} from './jotaiUtils';
+import {configBackedAtom, readAtom} from './jotaiUtils';
 import {AutoResolveSettingCheckbox} from './mergeConflicts/state';
 import {SetConfigOperation} from './operations/SetConfigOperation';
 import {useRunOperation} from './operationsState';
@@ -146,10 +147,11 @@ function SettingsDropdown({
         <Icon icon="loading" />
       ) : repoInfo?.codeReviewSystem.type === 'github' ? (
         <Setting
-          title={<T>Preferred Code Review Submit Command</T>}
+          title={<T>Preferred Code Review Submit Method</T>}
           description={
             <>
-              <T>Which command to use to submit code for code review on GitHub.</T>{' '}
+              <T>How to submit code for code review on GitHub.</T>{' '}
+              {/* TODO: update this to document branchign PRs */}
               <Link href="https://sapling-scm.com/docs/git/intro#pull-requests">
                 <T>Learn More</T>
               </Link>
@@ -161,8 +163,11 @@ function SettingsDropdown({
               ? [{value: 'not set', name: '(not set)'}]
               : []
             ).concat([
-              {value: 'ghstack', name: 'sl ghstack'},
-              {value: 'pr', name: 'sl pr'},
+              {value: 'ghstack', name: 'sl ghstack (stacked PRs)'},
+              {value: 'pr', name: 'sl pr (stacked PRs)'},
+              ...(readAtom(branchPRsSupported)
+                ? [{value: 'push', name: 'sl push (branching PR)'}]
+                : []),
             ])}
             onChange={event => {
               const value = (event as React.FormEvent<HTMLSelectElement>).currentTarget.value as
