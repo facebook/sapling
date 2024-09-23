@@ -67,8 +67,7 @@ Now push a commit to infinitepush, then force it to be public and then move book
   $ hg ci -Aqm commit1 --extra hg-git-rename-source=git --extra convert_revision=4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d
   $ hg push -q -r . --to "scratch/123" --create
 
-  $ hg log -r . -T '{node}\n' > "$TESTTMP"/commits_to_make_public
-  $ mononoke_admin phases add-public "$TESTTMP"/commits_to_make_public &> /dev/null
+  $ mononoke_newadmin phases -R repo add-public -i $(hg log -r . -T '{node}\n') &> /dev/null
 
   $ hg push -q -r . --to "master_bookmark"
   $ get_bonsai_git_mapping | sort

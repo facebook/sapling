@@ -5,9 +5,11 @@
  * GNU General Public License version 2.
  */
 
+mod add_public;
 mod fetch;
 mod list_public;
 
+use add_public::AddPublicArgs;
 use anyhow::Result;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
@@ -38,6 +40,8 @@ enum PhasesSubcommand {
     Fetch(FetchArgs),
     /// List all public commits in the repo
     ListPublic(ListPublicArgs),
+    /// Mark commits and their ancestors as public
+    AddPublic(AddPublicArgs),
 }
 
 #[facet::container]
@@ -68,5 +72,6 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     match args.subcommand {
         PhasesSubcommand::Fetch(args) => fetch::fetch(&ctx, &repo, args).await,
         PhasesSubcommand::ListPublic(args) => list_public::list_public(&ctx, &repo, args).await,
+        PhasesSubcommand::AddPublic(args) => add_public::add_public(&ctx, &repo, args).await,
     }
 }
