@@ -14,7 +14,7 @@ import {Commit} from '../../Commit';
 import {Column, FlexSpacer, Row} from '../../ComponentUtils';
 import {T} from '../../i18n';
 import {PushOperation} from '../../operations/PushOperation';
-import {CommitPreview} from '../../previews';
+import {CommitPreview, dagWithPreviews} from '../../previews';
 import {latestSuccessorUnlessExplicitlyObsolete} from '../../successionUtils';
 import * as stylex from '@stylexjs/stylex';
 import {Badge} from 'isl-components/Badge';
@@ -22,6 +22,7 @@ import {Button} from 'isl-components/Button';
 import {Checkbox} from 'isl-components/Checkbox';
 import {Dropdown} from 'isl-components/Dropdown';
 import {HorizontallyGrowingTextField} from 'isl-components/HorizontallyGrowingTextField';
+import {useAtomValue} from 'jotai';
 import {useState} from 'react';
 
 const styles = stylex.create({
@@ -51,15 +52,24 @@ function recommendNewBranchName(stack: Array<CommitInfo>) {
 }
 
 export default function BranchingPrModalContent({
-  stack,
+  topOfStack,
   provider,
   returnResultAndDismiss,
 }: {
-  stack: Array<CommitInfo>;
+  topOfStack: CommitInfo;
   provider: GithubUICodeReviewProvider;
   returnResultAndDismiss: (result: Array<Operation> | undefined) => unknown;
 }) {
   const [createPr, setCreatePr] = useState(false);
+
+  const dag = useAtomValue(dagWithPreviews);
+  // If passed the optimistic isDot commit, we may need to resolve it to a real commit
+  // once the optimistic commit is no longer in the dag.
+  const top =
+    topOfStack.isDot && topOfStack.optimisticRevset != null
+      ? dag.resolve('.') ?? topOfStack
+      : topOfStack;
+  const stack = dag.getBatch(dag.ancestors(top.hash, {within: dag.draft()}).toArray());
 
   const pushChoices = getPushChoices(provider);
   const [pushChoice, setPushChoice] = useState(pushChoices[0]);

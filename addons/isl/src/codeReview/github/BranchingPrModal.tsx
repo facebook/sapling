@@ -10,8 +10,6 @@ import type {CommitInfo} from '../../types';
 import type {GithubUICodeReviewProvider} from './github';
 
 import {T} from '../../i18n';
-import {readAtom} from '../../jotaiUtils';
-import {dagWithPreviews} from '../../previews';
 import {showModal} from '../../useModal';
 import {codeReviewProvider} from '../CodeReviewInfo';
 import {ErrorNotice} from 'isl-components/ErrorNotice';
@@ -22,10 +20,8 @@ import {lazy, Suspense} from 'react';
 const BranchingPrModalContent = lazy(() => import('./BranchingPrModalContent'));
 
 export function showBranchingPrModal(
-  topOfStackToPush: CommitInfo,
+  topOfStack: CommitInfo,
 ): Promise<Array<Operation> | undefined> {
-  const dag = readAtom(dagWithPreviews);
-  const stack = dag.getBatch(dag.ancestors(topOfStackToPush.hash, {within: dag.draft()}).toArray());
   return showModal<Array<Operation> | undefined>({
     maxWidth: 'calc(min(90vw, 800px)',
     maxHeight: 'calc(min(90vw, 600px)',
@@ -34,16 +30,16 @@ export function showBranchingPrModal(
     type: 'custom',
     dataTestId: 'create-pr-modal',
     component: ({returnResultAndDismiss}) => (
-      <CreatePrModal stack={stack} returnResultAndDismiss={returnResultAndDismiss} />
+      <CreatePrModal topOfStack={topOfStack} returnResultAndDismiss={returnResultAndDismiss} />
     ),
   });
 }
 
 export function CreatePrModal({
-  stack,
+  topOfStack,
   returnResultAndDismiss,
 }: {
-  stack: Array<CommitInfo>;
+  topOfStack: CommitInfo;
   returnResultAndDismiss: (operations: Array<Operation> | undefined) => unknown;
 }) {
   const provider = useAtomValue(codeReviewProvider);
@@ -63,7 +59,7 @@ export function CreatePrModal({
       </div>
       <BranchingPrModalContent
         provider={provider as GithubUICodeReviewProvider}
-        stack={stack}
+        topOfStack={topOfStack}
         returnResultAndDismiss={returnResultAndDismiss}
       />
     </Suspense>

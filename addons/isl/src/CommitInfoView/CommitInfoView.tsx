@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {UICodeReviewProvider} from '../codeReview/UICodeReviewProvider';
 import type {Operation} from '../operations/Operation';
 import type {CommitInfo, DiffId} from '../types';
 import type {CommitInfoMode, EditedMessage} from './CommitInfoState';
@@ -55,7 +54,7 @@ import {SetConfigOperation} from '../operations/SetConfigOperation';
 import {useRunOperation} from '../operationsState';
 import {useUncommittedSelection} from '../partialSelection';
 import platform from '../platform';
-import {CommitPreview, uncommittedChangesWithPreviews} from '../previews';
+import {CommitPreview, dagWithPreviews, uncommittedChangesWithPreviews} from '../previews';
 import {repoRelativeCwd, useIsIrrelevantToCwd} from '../repositoryData';
 import {selectedCommits} from '../selection';
 import {commitByHash, latestHeadCommit, repositoryInfo} from '../serverAPIState';
@@ -93,6 +92,7 @@ import {Badge} from 'isl-components/Badge';
 import {Banner, BannerKind, BannerTooltip} from 'isl-components/Banner';
 import {Button} from 'isl-components/Button';
 import {Divider} from 'isl-components/Divider';
+import {ErrorNotice} from 'isl-components/ErrorNotice';
 import {Column} from 'isl-components/Flex';
 import {Icon} from 'isl-components/Icon';
 import {RadioGroup} from 'isl-components/Radio';
@@ -1025,21 +1025,32 @@ function SubmitButton({
           primary
           disabled={disabledReason != null}
           onClick={async () => {
-            const operations = await getApplicableOperations();
-            if (operations == null || operations.length === 0) {
-              return;
-            }
+            try {
+              const operations = await getApplicableOperations();
+              if (operations == null || operations.length === 0) {
+                return;
+              }
 
-            for (const operation of operations) {
-              runOperation(operation);
-            }
-
-            const pushOps = await showBranchingPrModal(commit);
-            if (pushOps == null) {
-              return;
-            }
-            for (const pushOp of pushOps) {
-              runOperation(pushOp);
+              for (const operation of operations) {
+                runOperation(operation);
+              }
+              const dag = readAtom(dagWithPreviews);
+              const topOfStack = commit.isDot && isCommitMode ? dag.resolve('.') : commit;
+              if (topOfStack == null) {
+                throw new Error('could not find commit to push');
+              }
+              const pushOps = await showBranchingPrModal(topOfStack);
+              if (pushOps == null) {
+                return;
+              }
+              for (const pushOp of pushOps) {
+                runOperation(pushOp);
+              }
+            } catch (err) {
+              const error = err as Error;
+              showToast(<ErrorNotice error={error} title={<T>Failed to push commits</T>} />, {
+                durationMs: 10000,
+              });
             }
           }}>
           {commit.isDot && anythingToCommit ? (
