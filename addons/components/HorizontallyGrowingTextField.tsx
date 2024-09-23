@@ -42,6 +42,7 @@ const styles = stylex.create({
 export const HorizontallyGrowingTextField = forwardRef(
   (
     props: ReactProps<HTMLInputElement> & {
+      value?: string;
       placeholder?: string;
     },
     ref: ForwardedRef<HTMLInputElement>,
@@ -49,7 +50,7 @@ export const HorizontallyGrowingTextField = forwardRef(
     const {onInput, ...otherProps} = props;
 
     return (
-      <div {...stylex.props(styles.horizontalGrowContainer)}>
+      <div {...stylex.props(styles.horizontalGrowContainer)} data-value={otherProps.value}>
         <input
           {...stylex.props(textFieldStyles.input, styles.horizontalGrow)}
           type="text"

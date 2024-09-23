@@ -19,6 +19,7 @@ import {Badge} from 'isl-components/Badge';
 import {Button} from 'isl-components/Button';
 import {Checkbox} from 'isl-components/Checkbox';
 import {Dropdown} from 'isl-components/Dropdown';
+import {HorizontallyGrowingTextField} from 'isl-components/HorizontallyGrowingTextField';
 import {useState} from 'react';
 
 const styles = stylex.create({
@@ -36,6 +37,17 @@ function getPushChoices(provider: GithubUICodeReviewProvider) {
   ];
 }
 
+function recommendNewBranchName(stack: Array<CommitInfo>) {
+  // TODO: this format should be configurable
+  return `feature/${stack[0].title
+    .trim()
+    .replace(/\s/g, '-')
+    .replace(/[^a-zA-Z0-9\-_.]/g, '.')
+    .replace(/^\.+/, '') // no leading dots
+    .replace(/\/$/, '') // no trailing slashes
+    .toLowerCase()}`;
+}
+
 export default function BranchingPrModalContent({
   stack,
   provider,
@@ -49,6 +61,8 @@ export default function BranchingPrModalContent({
 
   const pushChoices = getPushChoices(provider);
   const [pushChoice, setPushChoice] = useState(pushChoices[0]);
+
+  const [branchName, setBranchName] = useState(recommendNewBranchName(stack));
 
   return (
     <Column alignStart style={{height: '100%'}}>
@@ -74,13 +88,23 @@ export default function BranchingPrModalContent({
       </div>
       <Row>
         <span>
-          <T>Push to</T>
+          <T>Push to repo</T>
         </span>
         <Dropdown
           options={pushChoices}
           value={pushChoice}
           onChange={e => setPushChoice(e.currentTarget.value)}
         />
+      </Row>
+      <Row>
+        <span>
+          <T>to branch named</T>
+        </span>
+        <HorizontallyGrowingTextField
+          value={branchName}
+          onChange={e => setBranchName(e.currentTarget.value)}
+        />
+        {/* TODO: validate the branch name */}
       </Row>
       <Row>
         <Checkbox checked={createPr} onChange={setCreatePr} disabled /* not implemented yet */>
