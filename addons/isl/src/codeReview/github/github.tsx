@@ -136,6 +136,7 @@ export class GithubUICodeReviewProvider implements UICodeReviewProvider {
   supportsUpdateMessage = false;
   submitDisabledReason = () =>
     Internal.submitForGitHubDisabledReason?.(this.preferredSubmitCommand);
+  supportBranchingPrs = true;
 
   enableMessageSyncing = false;
 

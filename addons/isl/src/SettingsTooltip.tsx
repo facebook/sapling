@@ -21,7 +21,10 @@ import {Setting} from './Setting';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {showDiffNumberConfig} from './codeReview/DiffBadge';
 import {SubmitAsDraftCheckbox} from './codeReview/DraftCheckbox';
-import {overrideDisabledSubmitModes} from './codeReview/github/branchPrState';
+import {
+  experimentalBranchPRsEnabled,
+  overrideDisabledSubmitModes,
+} from './codeReview/github/branchPrState';
 import GatedComponent from './components/GatedComponent';
 import {debugToolsEnabledState} from './debug/DebugToolsState';
 import {externalMergeToolAtom} from './externalMergeTool';
@@ -447,6 +450,8 @@ function DebugToolsField() {
   const [overrideDisabledSubmit, setOverrideDisabledSubmit] = useAtom(overrideDisabledSubmitModes);
   const provider = useAtomValue(codeReviewProvider);
 
+  const [branchPrsEnabled, setBranchPrsEnabled] = useAtom(experimentalBranchPRsEnabled);
+
   return (
     <DropdownField title={t('Debug Tools & Experimental')}>
       <Column alignStart>
@@ -463,6 +468,15 @@ function DebugToolsField() {
             onChange={setOverrideDisabledSubmit}
             data-testid="force-enable-github-submit">
             <T>Force enable `sl pr submit` and `sl ghstack submit`</T>
+          </Checkbox>
+        )}
+        {provider?.supportBranchingPrs === true && (
+          <Checkbox
+            checked={branchPrsEnabled}
+            onChange={checked => {
+              setBranchPrsEnabled(checked);
+            }}>
+            <T>Enable Experimental Branching PRs for GitHub</T>
           </Checkbox>
         )}
       </Column>

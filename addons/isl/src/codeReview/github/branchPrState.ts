@@ -5,7 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {codeReviewProvider} from '../CodeReviewInfo';
 import {atom} from 'jotai';
 
 /** Experimental backdoor setting to get around disabled submit modes. Useful for testing. */
 export const overrideDisabledSubmitModes = atom(process.env.NODE_ENV === 'development');
+
+export const experimentalBranchPRsEnabled = atom(process.env.NODE_ENV === 'development');
+
+export const branchPRsSupported = atom(get => {
+  const supported = get(codeReviewProvider)?.supportBranchingPrs ?? false;
+  const enabled = get(experimentalBranchPRsEnabled);
+  return supported && enabled;
+});
