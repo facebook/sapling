@@ -27,6 +27,7 @@ import type {
   Disposable,
   Result,
   DiffComment,
+  Hash,
 } from 'isl/src/types';
 
 import {
@@ -53,6 +54,12 @@ export type GitHubDiffSummary = {
   anyUnresolvedComments: false;
   signalSummary?: DiffSignalSummary;
   reviewDecision?: PullRequestReviewDecision;
+  /** Base of the Pull Request (public parent), as it is on GitHub (may be out of date) */
+  base: Hash;
+  /** Head of the Pull Request (topmost commit), as it is on GitHub (may be out of date) */
+  head: Hash;
+  /** Name of the branch on GitHub, which should match the local bookmark */
+  branchName: string;
 };
 
 type GitHubCodeReviewSystem = CodeReviewSystem & {type: 'github'};
@@ -127,6 +134,10 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
           if (summary != null && summary.__typename === 'PullRequest') {
             const id = String(summary.number);
             const commitMessage = summary.body.slice(summary.title.length + 1);
+            if (summary.baseRef?.target == null || summary.headRef?.target == null) {
+              this.logger.warn(`PR #${id} is missing base or head ref, skipping.`);
+              continue;
+            }
             map.set(id, {
               type: 'github',
               title: summary.title,
@@ -147,6 +158,9 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
                 summary.commits.nodes?.[0]?.commit.statusCheckRollup?.state,
               ),
               reviewDecision: summary.reviewDecision ?? undefined,
+              base: summary.baseRef.target.oid,
+              head: summary.headRef.target.oid,
+              branchName: summary.headRef.name,
             });
           }
         }
