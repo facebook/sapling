@@ -889,6 +889,14 @@ function SubmitButton({
     repoInfo.codeReviewSystem.type === 'github' &&
     repoInfo.preferredSubmitCommand === 'push';
 
+  const disabledReason = areImageUploadsOngoing
+    ? t('Image uploads are still pending')
+    : submitDisabledReason
+    ? submitDisabledReason
+    : !canSubmitWithCodeReviewProvider
+    ? t('No code review system found for this repository')
+    : null;
+
   return (commit.isDot && (anythingToCommit || !isAnythingBeingEdited)) ||
     (!commit.isDot &&
       canSubmitIndividualDiffs &&
@@ -897,23 +905,16 @@ function SubmitButton({
       !isAnythingBeingEdited) ? (
     <Tooltip
       title={
-        areImageUploadsOngoing
-          ? t('Image uploads are still pending')
-          : submitDisabledReason
-          ? submitDisabledReason
-          : canSubmitWithCodeReviewProvider
-          ? t('Submit for code review with $provider', {
-              replace: {$provider: provider?.label ?? 'remote'},
-            })
-          : t('Submitting for code review is currently only supported for GitHub-backed repos')
+        disabledReason ??
+        t('Submit for code review with $provider', {
+          replace: {$provider: provider?.label ?? 'remote'},
+        })
       }
       placement="top">
       <OperationDisabledButton
         kind="primary"
         contextKey={`submit-${commit.isDot ? 'head' : commit.hash}`}
-        disabled={
-          !canSubmitWithCodeReviewProvider || areImageUploadsOngoing || submitDisabledReason != null
-        }
+        disabled={disabledReason != null}
         runOperation={async () => {
           const shouldContinue = await confirmUnsavedFiles();
           if (!shouldContinue) {
