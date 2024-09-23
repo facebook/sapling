@@ -6,6 +6,7 @@
  */
 
 mod fetch;
+mod list_public;
 
 use anyhow::Result;
 use bonsai_git_mapping::BonsaiGitMapping;
@@ -16,6 +17,7 @@ use bookmarks::Bookmarks;
 use clap::Parser;
 use clap::Subcommand;
 use fetch::FetchArgs;
+use list_public::ListPublicArgs;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
 use phases::Phases;
@@ -34,6 +36,8 @@ pub struct CommandArgs {
 enum PhasesSubcommand {
     /// Fetch the phase of a commit
     Fetch(FetchArgs),
+    /// List all public commits in the repo
+    ListPublic(ListPublicArgs),
 }
 
 #[facet::container]
@@ -63,5 +67,6 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
 
     match args.subcommand {
         PhasesSubcommand::Fetch(args) => fetch::fetch(&ctx, &repo, args).await,
+        PhasesSubcommand::ListPublic(args) => list_public::list_public(&ctx, &repo, args).await,
     }
 }

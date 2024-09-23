@@ -15,6 +15,7 @@ dott_test(
         # TODO(T175880214): remove dependency to admin
         "//eden/mononoke:admin",
         "//eden/mononoke:blobimport",
+        "//eden/mononoke:mononoke",
         "//eden/mononoke/git/gitimport:gitimport",
         "//eden/mononoke/tools/admin:newadmin",
         "//eden/mononoke/tools/testtool:testtool",

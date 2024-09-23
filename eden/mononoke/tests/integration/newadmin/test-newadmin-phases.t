@@ -30,9 +30,8 @@ Create a repo
   $ sleep 10
 
 Show the phases
-From mononoke_admin, we find that A, B and C are public as expected
-  $ mononoke_admin phases list-public -c bonsai | sort
-  * using repo "repo" repoid RepositoryId(0) (glob)
+From mononoke_newadmin, we find that A, B and C are public as expected
+  $ mononoke_newadmin phases -R repo list-public | sort
   aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
   e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
   f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
@@ -42,4 +41,3 @@ From the source of truth (sqlite), we can also see that A, B and C are public as
   0|AA53D24251FF3F54B1B2C29AE02826701B2ABEB0079F1BB13B8434B54CD87675|Public
   0|E32A1E342CDB1E38E88466B4C1A01AE9F410024017AA21DC0A1C5DA6B3963BF2|Public
   0|F8C75E41A0C4D29281DF765F39DE47BCA1DCADFDC55ADA4CCC2F6DF567201658|Public
-
