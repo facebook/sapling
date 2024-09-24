@@ -14,7 +14,7 @@ import {RenderMarkup} from './RenderMarkup';
 import {SeeMoreContainer} from './SeeMoreContainer';
 import {CommitInfoTextArea} from './TextArea';
 import {CommitInfoTextField} from './TextField';
-import {getOnClickToken, Section, SmallCapsTitle} from './utils';
+import {convertFieldNameToKey, getOnClickToken, Section, SmallCapsTitle} from './utils';
 import {Icon} from 'isl-components/Icon';
 import {extractTokens, TokensList} from 'isl-components/Tokens';
 import {Fragment} from 'react';
@@ -186,7 +186,7 @@ function ClickToEditField({
   kind: 'title' | 'field' | 'textarea' | 'read-only';
 }) {
   const editable = startEditingField != null && kind !== 'read-only';
-  const renderKey = fieldKey.toLowerCase().replace(/\s/g, '-');
+  const renderKey = convertFieldNameToKey(fieldKey);
   return (
     <div
       className={`commit-info-rendered-${kind}${editable ? '' : ' non-editable'}`}

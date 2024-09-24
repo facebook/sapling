@@ -10,7 +10,7 @@ import type {TypeaheadResult} from 'isl-components/Types';
 
 import serverApi from '../ClientToServerAPI';
 import {recentReviewers, SuggestedReviewers} from './SuggestedReviewers';
-import {getOnClickToken} from './utils';
+import {convertFieldNameToKey, getOnClickToken} from './utils';
 import {extractTokens} from 'isl-components/Tokens';
 import {Typeahead} from 'isl-components/Typeahead';
 import {randomId} from 'shared/utils';
@@ -27,7 +27,7 @@ export function CommitInfoTextField({
   setEditedCommitMessage: (fieldValue: string) => unknown;
 }) {
   const {key, maxTokens, typeaheadKind} = field;
-  const fieldKey = key.toLowerCase().replace(/\s/g, '-');
+  const fieldKey = convertFieldNameToKey(key);
   const isReviewers = fieldKey === 'reviewers';
 
   const [tokens] = extractTokens(editedMessage);

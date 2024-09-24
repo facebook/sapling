@@ -9,6 +9,7 @@ import type {Hash} from './types';
 
 import {commitMessageFieldsSchema} from './CommitInfoView/CommitMessageFields';
 import {OSSCommitMessageFieldSchema} from './CommitInfoView/OSSCommitMessageFieldsSchema';
+import {convertFieldNameToKey} from './CommitInfoView/utils';
 import {readAtom} from './jotaiUtils';
 import {individualToggleKey} from './selection';
 import {expectMessageSentToServer} from './testUtils';
@@ -157,7 +158,7 @@ export const CommitInfoTestUtils = {
 
   /** Get the input element for a given field's editor, according to the field key in the FieldConfig (actually just a div in tests) */
   getFieldEditor(key: string): HTMLDivElement {
-    const renderKey = key.toLowerCase().replace(/\s/g, '-');
+    const renderKey = convertFieldNameToKey(key);
     const el = screen.getByTestId(`commit-info-${renderKey}-field`) as HTMLDivElement;
     expect(el).toBeInTheDocument();
     return el;

@@ -102,3 +102,7 @@ export function getOnClickToken(
     url && platform.openExternalLink(url);
   };
 }
+
+export function convertFieldNameToKey(fieldName: string): string {
+  return fieldName.toLowerCase().replace(/\s/g, '-');
+}
