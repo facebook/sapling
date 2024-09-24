@@ -53,7 +53,7 @@ pub async fn list_requests(
         "Ready at",
         "Duration",
     ]);
-    let res = queue
+    let mut res = queue
         .list_requests(
             &ctx,
             Some(&Timestamp::from_timestamp_secs(
@@ -63,6 +63,8 @@ pub async fn list_requests(
         )
         .await
         .context("listing queued requests")?;
+    // sort by request id to stabilise output
+    res.sort_by_key(|(req_id, _, _)| req_id.0.0);
     for (req_id, entry, params) in res.into_iter() {
         let (source_name, changeset_id) = match params.thrift() {
             ThriftAsynchronousRequestParams::megarepo_sync_changeset_params(params) => (
