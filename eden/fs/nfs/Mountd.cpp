@@ -205,7 +205,9 @@ void MountdServerProcessor::registerMount(
     InodeNumber ino) {
   auto map = mountPoints_.wlock();
   auto [iter, inserted] = map->emplace(path.copy(), ino);
-  XCHECK_EQ(inserted, true);
+  XCHECK_EQ(inserted, true)
+      << "The mount point " << path << "(ino: " << ino
+      << ") is already inserted into the mount map as " << iter->second;
 }
 
 void MountdServerProcessor::unregisterMount(AbsolutePathPiece path) {
