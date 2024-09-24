@@ -10,14 +10,12 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::anyhow;
-use anyhow::Context;
 use anyhow::Result;
 use async_requests::tokens::MegarepoAddBranchingTargetToken;
 use async_requests::tokens::MegarepoAddTargetToken;
 use async_requests::tokens::MegarepoChangeTargetConfigToken;
 use async_requests::tokens::MegarepoRemergeSourceToken;
 use async_requests::tokens::MegarepoSyncChangesetToken;
-use async_requests::types::AsynchronousRequestParams;
 use async_requests::types::IntoApiFormat;
 use async_requests::types::IntoConfigFormat;
 use async_requests::types::Request;
@@ -222,10 +220,6 @@ impl SourceControlServiceImpl {
     ) -> Result<thrift::MegarepoAddTargetPollResponse, errors::ServiceError> {
         let queue = build_queue(&ctx, &self.async_requests_queue_client).await?;
         let token = MegarepoAddTargetToken(token);
-        let params =
-            get_params_from_token::<thrift::MegarepoAddTargetParams>(&ctx, &queue, &token).await?;
-        let target_repo_id = get_repo_id_from_params(&params, &self.mononoke)?;
-        self.check_write_allowed(&ctx, target_repo_id).await?;
 
         Ok(queue
             .poll(&ctx, token)
@@ -256,11 +250,6 @@ impl SourceControlServiceImpl {
     ) -> Result<thrift::MegarepoAddBranchingTargetPollResponse, errors::ServiceError> {
         let queue = build_queue(&ctx, &self.async_requests_queue_client).await?;
         let token = MegarepoAddBranchingTargetToken(token);
-        let params =
-            get_params_from_token::<thrift::MegarepoAddBranchingTargetParams>(&ctx, &queue, &token)
-                .await?;
-        let target_repo_id = get_repo_id_from_params(&params, &self.mononoke)?;
-        self.check_write_allowed(&ctx, target_repo_id).await?;
 
         Ok(queue
             .poll(&ctx, token)
@@ -291,11 +280,6 @@ impl SourceControlServiceImpl {
     ) -> Result<thrift::MegarepoChangeTargetConfigPollResponse, errors::ServiceError> {
         let queue = build_queue(&ctx, &self.async_requests_queue_client).await?;
         let token = MegarepoChangeTargetConfigToken(token);
-        let params =
-            get_params_from_token::<thrift::MegarepoChangeTargetConfigParams>(&ctx, &queue, &token)
-                .await?;
-        let target_repo_id = get_repo_id_from_params(&params, &self.mononoke)?;
-        self.check_write_allowed(&ctx, target_repo_id).await?;
 
         Ok(queue
             .poll(&ctx, token)
@@ -326,11 +310,6 @@ impl SourceControlServiceImpl {
     ) -> Result<thrift::MegarepoSyncChangesetPollResponse, errors::ServiceError> {
         let queue = build_queue(&ctx, &self.async_requests_queue_client).await?;
         let token = MegarepoSyncChangesetToken(token);
-        let params =
-            get_params_from_token::<thrift::MegarepoSyncChangesetParams>(&ctx, &queue, &token)
-                .await?;
-        let target_repo_id = get_repo_id_from_params(&params, &self.mononoke)?;
-        self.check_write_allowed(&ctx, target_repo_id).await?;
 
         Ok(queue
             .poll(&ctx, token)
@@ -361,11 +340,6 @@ impl SourceControlServiceImpl {
     ) -> Result<thrift::MegarepoRemergeSourcePollResponse, errors::ServiceError> {
         let queue = build_queue(&ctx, &self.async_requests_queue_client).await?;
         let token = MegarepoRemergeSourceToken(token);
-        let params =
-            get_params_from_token::<thrift::MegarepoRemergeSourceParams>(&ctx, &queue, &token)
-                .await?;
-        let target_repo_id = get_repo_id_from_params(&params, &self.mononoke)?;
-        self.check_write_allowed(&ctx, target_repo_id).await?;
 
         Ok(queue
             .poll(&ctx, token)
@@ -400,44 +374,4 @@ async fn enqueue<P: ThriftParams, R: MononokeRepo>(
         .await
         .map(|res| res.into_thrift())
         .map_err(|e| errors::internal_error(format!("Failed to enqueue the request: {}", e)).into())
-}
-
-async fn get_params_from_token<P: ThriftParams>(
-    ctx: &CoreContext,
-    queue: &AsyncMethodRequestQueue,
-    token: &<P::R as Request>::Token,
-) -> Result<AsynchronousRequestParams, errors::ServiceError> {
-    let token_id = token.to_db_id()?;
-    match queue
-        .get_request_by_id(ctx, &token_id)
-        .await
-        .context("fetching the request")
-        .map_err(errors::internal_error)?
-    {
-        Some((_request_id, _entry, params, _maybe_result)) => Ok(params),
-        None => Err(errors::token_not_found(format!("{}", token.id())).into()),
-    }
-}
-
-fn get_repo_id_from_params<R: MononokeRepo>(
-    params: &AsynchronousRequestParams,
-    mononoke: &Mononoke<R>,
-) -> Result<RepositoryId, errors::ServiceError> {
-    let target = params.target()?;
-    match (&target.repo, target.repo_id) {
-        (Some(repo), _) => {
-            let repo = mononoke
-                .repo_id_from_name(repo.name.clone())
-                .ok_or_else(|| {
-                    errors::invalid_request(format!("Invalid repo_name {}", repo.name))
-                })?;
-            Ok(RepositoryId::new(repo.id()))
-        }
-        (_, Some(repo_id)) => Ok(RepositoryId::new(
-            repo_id.try_into().map_err(errors::invalid_request)?,
-        )),
-        (None, None) => Err(errors::invalid_request(
-            "both repo_id and repo_name are None!",
-        ))?,
-    }
 }

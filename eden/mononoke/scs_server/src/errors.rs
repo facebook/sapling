@@ -395,14 +395,6 @@ pub(crate) fn tree_not_found(tree: String) -> thrift::RequestError {
     }
 }
 
-pub(crate) fn token_not_found(token_id: String) -> thrift::RequestError {
-    thrift::RequestError {
-        kind: thrift::RequestErrorKind::INVALID_REQUEST,
-        reason: format!("token not found ({})", token_id),
-        ..Default::default()
-    }
-}
-
 pub(crate) fn limit_too_low(limit: usize) -> thrift::RequestError {
     thrift::RequestError {
         kind: thrift::RequestErrorKind::INVALID_REQUEST,
