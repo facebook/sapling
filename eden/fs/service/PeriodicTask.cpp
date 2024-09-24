@@ -12,12 +12,6 @@
 #include <folly/logging/xlog.h>
 #include <folly/stop_watch.h>
 
-using namespace std::chrono_literals;
-
-namespace {
-constexpr auto kSlowTaskLimit = 50ms;
-}
-
 namespace facebook::eden {
 
 PeriodicTask::PeriodicTask(folly::EventBase* evb, std::string name)
@@ -43,7 +37,7 @@ void PeriodicTask::timeoutExpired() noexcept {
                      .count() /
                  1000.0)
              << "ms";
-  if (duration > kSlowTaskLimit) {
+  if (duration > runDurationThreshold_) {
     // Just in case some task starts frequently running slowly for some reason,
     // put some rate limiting on this log message.
     // Using popcount() give us exponential backoff.
@@ -61,8 +55,12 @@ void PeriodicTask::timeoutExpired() noexcept {
   reschedule();
 }
 
-void PeriodicTask::updateInterval(Duration interval, bool splay) {
+void PeriodicTask::updateInterval(
+    Duration interval,
+    std::chrono::milliseconds runDurationThreshold,
+    bool splay) {
   evb_->dcheckIsInEventBaseThread();
+  runDurationThreshold_ = runDurationThreshold;
 
   auto oldInterval = interval_;
   interval_ = interval;

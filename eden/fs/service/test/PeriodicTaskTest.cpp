@@ -192,7 +192,7 @@ PeriodicTaskTest::MultiTaskResult PeriodicTaskTest::runMultipleTasks(
   runOnServerStart([&] {
     start = TimePoint();
     for (auto& task : tasks) {
-      task.updateInterval(interval, splay);
+      task.updateInterval(interval, 50ms, splay);
     }
   });
 

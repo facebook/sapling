@@ -17,6 +17,10 @@ namespace folly {
 class EventBase;
 }
 
+namespace {
+constexpr auto kSlowTaskLimit = std::chrono::milliseconds(50);
+}
+
 namespace facebook::eden {
 
 /**
@@ -55,6 +59,9 @@ class PeriodicTask : private folly::HHWheelTimer::Callback {
    * If interval is 0 or negative the task will be stopped, otherwise the task
    * will be scheduled to run at the specified interval.
    *
+   * The task is considered to be slow if they exceed the runDurationThreshold.
+   * Task slowness is tracked purely for reporting purposes.
+   *
    * If the task was not previously running and splay is true, a random amount
    * of time between 0 and interval will be added before the task runs for the
    * first time.  Therefore the first run won't happen until somewhere between
@@ -64,7 +71,10 @@ class PeriodicTask : private folly::HHWheelTimer::Callback {
    * interval period.  If the task was already running the splay parameter is
    * ignored.
    */
-  void updateInterval(Duration interval, bool splay = true);
+  void updateInterval(
+      Duration interval,
+      std::chrono::milliseconds runDurationThreshold = kSlowTaskLimit,
+      bool splay = true);
 
  protected:
   /**
@@ -99,6 +109,11 @@ class PeriodicTask : private folly::HHWheelTimer::Callback {
    * This is tracked purely for reporting purposes.
    */
   size_t slowCount_{0};
+
+  /**
+   * Threshold of task run duration to mark it as slow.
+   */
+  std::chrono::milliseconds runDurationThreshold_{kSlowTaskLimit};
 
   /**
    * running_ is set to true while runTask() is running.
