@@ -201,6 +201,7 @@ ci_hint(
 rust_universal_binary(
     name = "hg_universal_binary",
     source = ":hg",
+    visibility = ["PUBLIC"],
 )
 
 cpp_library(
