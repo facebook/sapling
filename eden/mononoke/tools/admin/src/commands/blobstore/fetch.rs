@@ -34,6 +34,8 @@ use mercurial_types::ShardedHgAugmentedManifest;
 use mononoke_types::basename_suffix_skeleton_manifest_v3::BssmV3Directory;
 use mononoke_types::basename_suffix_skeleton_manifest_v3::BssmV3Entry;
 use mononoke_types::blame_v2::BlameV2;
+use mononoke_types::case_conflict_skeleton_manifest::CaseConflictSkeletonManifest;
+use mononoke_types::case_conflict_skeleton_manifest::CcsmEntry;
 use mononoke_types::deleted_manifest_v2::DeletedManifestV2;
 use mononoke_types::fastlog_batch::FastlogBatch;
 use mononoke_types::fsnode::Fsnode;
@@ -107,6 +109,8 @@ pub enum DecodeAs {
     BlameV2,
     BasenameSuffixSkeletonManifestV3MapNode,
     BasenameSuffixSkeletonManifestV3,
+    CaseConflictSkeletonManifestMapNode,
+    CaseConflictSkeletonManifest,
     ChangesetInfo,
     TestManifest,
     TestShardedManifest,
@@ -154,6 +158,11 @@ impl DecodeAs {
                     DecodeAs::BasenameSuffixSkeletonManifestV3MapNode,
                 ),
                 ("bssm3.", DecodeAs::BasenameSuffixSkeletonManifestV3),
+                (
+                    "ccsm.map2node.",
+                    DecodeAs::CaseConflictSkeletonManifestMapNode,
+                ),
+                ("ccsm.", DecodeAs::CaseConflictSkeletonManifest),
                 ("testmanifest.", DecodeAs::TestManifest),
                 (
                     "testshardedmanifest.map2node.",
@@ -293,6 +302,14 @@ async fn decode(
         DecodeAs::BasenameSuffixSkeletonManifestV3MapNode => Decoded::try_debug(
             ShardedMapV2Node::<BssmV3Entry>::from_bytes(&data.into_raw_bytes()),
         ),
+        DecodeAs::CaseConflictSkeletonManifest => Decoded::try_debug(
+            CaseConflictSkeletonManifest::from_bytes(&data.into_raw_bytes()),
+        ),
+        DecodeAs::CaseConflictSkeletonManifestMapNode => {
+            Decoded::try_debug(ShardedMapV2Node::<CcsmEntry>::from_bytes(
+                &data.into_raw_bytes(),
+            ))
+        }
         DecodeAs::ChangesetInfo => {
             Decoded::try_debug(ChangesetInfo::from_bytes(&data.into_raw_bytes()))
         }
