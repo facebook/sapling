@@ -88,7 +88,7 @@ from dataclasses import dataclass
 
 from sapling import error, mdiff, registrar, scmutil
 from sapling.i18n import _
-from sapling.simplemerge import Merge3Text, render_mergediff2, render_minimized
+from sapling.simplemerge import Merge3Text, render_mergediffs, render_minimized
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -133,7 +133,7 @@ def debugsmerge(ui, repo, *args, **opts):
     algos = str_to_tuple(opts.get("algos"))
     desttext, srctext, basetext = [readfile(p) for p in args]
     m3 = gen_3way_merger(ui, basetext, desttext, srctext, args[-1], algos)
-    lines = render_mergediff2(m3, b"dest", b"source", b"base")[0]
+    lines = render_mergediffs(m3, b"dest", b"source", b"base")[0]
     mergedtext = b"".join(lines)
     ui.fout.write(mergedtext)
 
@@ -186,7 +186,7 @@ def sresolve(ui, repo, *args, **opts):
     label_base = gen_label("base", base)
 
     mergedtext = b"".join(
-        render_mergediff2(m3, label_dest, label_source, label_base)[0]
+        render_mergediffs(m3, label_dest, label_source, label_base)[0]
     )
 
     if output := opts.get("output"):

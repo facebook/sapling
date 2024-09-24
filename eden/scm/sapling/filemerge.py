@@ -794,6 +794,31 @@ def _imergediff(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None)
     )
 
 
+@internaltool(
+    "mergediffs",
+    fullmerge,
+    _(
+        "warning: conflicts while merging %s! "
+        "(edit, then use '@prog@ resolve --mark')\n"
+    ),
+    precheck=_ismergeable,
+)
+def _imergediffs(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
+    """
+    Uses the internal non-interactive simple merge algorithm for merging
+    files. It will fail if there are any conflicts and leave markers in
+    the partially merged file. The marker will have two sections, each showing
+    the unified diff between the base and one side of the merge (experimental)
+    """
+    if not labels:
+        labels = _defaultconflictlabels
+    if len(labels) < 3:
+        labels = labels + ["base"]
+    return _merge(
+        repo, mynode, orig, fcd, fco, fca, toolconf, files, labels, "mergediffs"
+    )
+
+
 @internaltool("merge-local", mergeonly, handlesall=True)
 def _imergelocal(*args, labels=None):
     """

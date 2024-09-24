@@ -1494,6 +1494,13 @@ Test dynamic list of merge tools only shows up once
         content from one side of the merge, and one with a diff from the base
         content to the content on the other side. (experimental)
   
+      ":mergediffs"
+        Uses the internal non-interactive simple merge algorithm for merging
+        files. It will fail if there are any conflicts and leave markers in the
+        partially merged file. The marker will have two sections, each showing
+        the unified diff between the base and one side of the merge
+        (experimental)
+  
       ":other"
         Uses the other 'p2()' version of files as the merged version.
   

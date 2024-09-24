@@ -917,7 +917,7 @@ def render_mergediff(m3, name_a, name_b, name_base):
     return _render_mergediff_ext(m3, name_a, name_b, name_base, one_side=True)
 
 
-def render_mergediff2(m3, name_a, name_b, name_base):
+def render_mergediffs(m3, name_a, name_b, name_base):
     return _render_mergediff_ext(m3, name_a, name_b, name_base, one_side=False)
 
 
@@ -1066,6 +1066,8 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
         lines = _resolve(m3, (2,))
     elif mode == "mergediff":
         lines, conflictscount = render_mergediff(m3, name_a, name_b, name_base)
+    elif mode == "mergediffs":
+        lines, conflictscount = render_mergediffs(m3, name_a, name_b, name_base)
     elif mode == "merge3":
         lines, conflictscount = render_merge3(m3, name_a, name_b, name_base)
     else:
