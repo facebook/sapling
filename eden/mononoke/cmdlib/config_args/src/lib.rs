@@ -19,7 +19,7 @@ use slog::Logger;
 use tokio::runtime::Handle;
 
 #[derive(Args, Debug)]
-#[clap(group(ArgGroup::new("config").args(&["config_path", "config_tier", "prod"]).required(true)))]
+#[clap(group(ArgGroup::new("config").args(&["config_path", "config_tier", "prod", "git_config"]).required(true)))]
 pub struct ConfigArgs {
     /// Path to Mononoke config
     #[clap(long, alias = "mononoke-config-path")]
@@ -32,6 +32,10 @@ pub struct ConfigArgs {
     /// Use configerator-based configuration for production
     #[clap(long)]
     pub prod: bool,
+
+    /// Use configerator-based configuration for git repos
+    #[clap(long)]
+    pub git_config: bool,
 
     /// Local path to fetch configerator configs from
     #[clap(long)]
@@ -55,6 +59,8 @@ impl ConfigArgs {
             config_path.clone()
         } else if self.prod {
             configerator_config_path("prod")
+        } else if self.git_config {
+            configerator_config_path("gitimport_content")
         } else if let Some(tier) = &self.config_tier {
             configerator_config_path(tier)
         } else {
