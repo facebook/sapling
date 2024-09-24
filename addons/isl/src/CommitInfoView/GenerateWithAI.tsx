@@ -211,7 +211,7 @@ function GenerateAICommitMessageModal({
   );
 
   return (
-    <div className="generated-ai-commit-message-modal">
+    <div className="generated-ai-modal">
       <Button icon className="dismiss-modal" onClick={dismiss}>
         <Icon icon="x" />
       </Button>

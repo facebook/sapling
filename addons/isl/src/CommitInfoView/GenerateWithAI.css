@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-.generated-ai-commit-message-modal {
+.generated-ai-modal {
   display: flex;
   flex-direction: column;
   gap: var(--pad);
@@ -15,8 +15,8 @@
   padding: var(--pad);
 }
 
-.generated-ai-commit-message-modal vscode-text-area,
-.generated-ai-commit-message-modal .error-notice {
+.generated-ai-modal vscode-text-area,
+.generated-ai-modal .error-notice {
   position: relative;
   height: 100%;
   flex-grow: 1;
@@ -24,19 +24,19 @@
   overflow-y: scroll;
 }
 
-.generated-ai-commit-message-modal vscode-text-area {
+.generated-ai-modal vscode-text-area {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-.generated-ai-commit-message-modal vscode-text-area::-webkit-scrollbar {
+.generated-ai-modal vscode-text-area::-webkit-scrollbar {
   display: none;
 }
 
-.generated-ai-commit-message-modal vscode-text-area {
+.generated-ai-modal vscode-text-area {
   width: 100%;
 }
 
-.generated-ai-commit-message-modal vscode-text-area::part(control) {
+.generated-ai-modal vscode-text-area::part(control) {
   border: unset;
   width: calc(100% - 4px);
   height: calc(100% - 4px);
