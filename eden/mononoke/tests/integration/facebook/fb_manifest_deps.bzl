@@ -1,12 +1,10 @@
 # This needs to use native. to define a UDR.
 # @lint-ignore-every BUCKLINT
 
-load("@fbcode_macros//build_defs:custom_rule.bzl", "custom_rule")
 load("@fbcode_macros//build_defs:custom_unittest.bzl", "custom_unittest")
 load("@fbcode_macros//build_defs/lib:rust_common.bzl", "rust_common")
 load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 load("@fbcode_macros//build_defs/lib:test_utils.bzl", "test_utils")
-load("@fbsource//tools/build_defs/buck2:is_buck2.bzl", "is_buck2")
 load(
     "//eden/mononoke/tests/integration/facebook:symlink.bzl",
     "symlink",
@@ -133,7 +131,7 @@ generate_manifest = native.rule(
         "filename": native.attrs.string(),
         "generator": native.attrs.exec_dep(),
     },
-) if is_buck2() else None
+)
 
 def custom_manifest_rule(name, manifest_file, targets):
     if rust_oss.is_oss_build():
@@ -157,23 +155,12 @@ def custom_manifest_rule(name, manifest_file, targets):
 
     env = {k: "$(location %s)" % v for k, v in targets.items()}
 
-    if is_buck2():
-        generate_manifest(
-            name = name,
-            generator = "//eden/mononoke/tests/integration/facebook:generate_manifest",
-            env = env,
-            filename = manifest_file,
-        )
-    else:
-        custom_rule(
-            name = name,
-            add_install_dir = False,
-            build_args = " ".join([manifest_file] + list(targets.keys())),
-            build_script_dep = "//eden/mononoke/tests/integration/facebook:generate_manifest",
-            env = env,
-            output_gen_files = [manifest_file],
-            strict = True,
-        )
+    generate_manifest(
+        name = name,
+        generator = "//eden/mononoke/tests/integration/facebook:generate_manifest",
+        env = env,
+        filename = manifest_file,
+    )
 
     return list(targets.values())
 
