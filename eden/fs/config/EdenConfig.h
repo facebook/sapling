@@ -1567,6 +1567,14 @@ class EdenConfig : private ConfigSettingManager {
       {},
       this};
 
+  /**
+   * How often to automatically run the eden doctor.
+   */
+  ConfigSetting<std::chrono::nanoseconds> edenDoctorInterval{
+      "core:eden-doctor-interval",
+      std::chrono::hours(24),
+      this};
+
   // [rage]
   /**
    * The tool that will be used to upload eden rages. Only currently used in the
