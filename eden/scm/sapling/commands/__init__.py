@@ -2717,6 +2717,12 @@ def _makegraftmessage(ctx, opts):
             message.append("Grafted from %s" % ctx.hex())
             for f, t in zip(opts.get("from_path"), opts.get("to_path")):
                 message.append("- Grafted path %s to %s" % (f, t))
+
+            try:
+                title, rest = description.split("\n", 1)
+                description = f'Graft "{title}"\n{rest}'
+            except ValueError:
+                description = f'Graft "{description}"'
     else:
         if opts.get("log"):
             message.append("(grafted from %s)" % ctx.hex())

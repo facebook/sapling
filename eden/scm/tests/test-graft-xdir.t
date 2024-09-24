@@ -43,12 +43,12 @@ Basic case merging a file change between directory branches "foo" and "bar".
   $ hg go -q $B
   $ hg graft -qr $C --from-path foo --to-path bar
   $ hg show
-  commit:      a4bf043e97ca
+  commit:      cd8256de564c
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/file
   description:
-  C
+  Graft "C"
   
   Grafted from 09a920923fbb29a6c9977eae526b1730d53c9be6
   - Grafted path foo to bar
@@ -75,12 +75,12 @@ Graft a commit adding a new file:
   $ hg st
   $ hg graft -qr $C --from-path foo --to-path bar
   $ hg show
-  commit:      73f800881fa6
+  commit:      907c256bdc80
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/new
   description:
-  C
+  Graft "C"
   
   Grafted from b7298624ac858378b6227152febcc313c3bfb348
   - Grafted path foo to bar
@@ -105,12 +105,12 @@ Graft a commit deleting a file:
   $ hg go -q $A
   $ hg graft -qr $B --from-path bar --to-path foo
   $ hg show
-  commit:      fb88b5cc8dcd
+  commit:      ba7e33129d7e
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       foo/file
   description:
-  B
+  Graft "B"
   
   Grafted from cf6063bb81125c62e42fd1040b2490659e503e3b
   - Grafted path bar to foo
@@ -136,12 +136,12 @@ Graft a file that was renamed in dest branch:
   $ hg go -q $D
   $ hg graft -qr $C --from-path foo --to-path bar
   $ hg show
-  commit:      45ada74c01d7
+  commit:      57b9ced2ae65
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/rename
   description:
-  C
+  Graft "C"
   
   Grafted from 09a920923fbb29a6c9977eae526b1730d53c9be6
   - Grafted path foo to bar
@@ -167,12 +167,12 @@ Graft a commit renaming a file:
   $ hg go -q $B
   $ hg graft -qr $C --from-path foo --to-path bar
   $ hg show
-  commit:      5a4738920578
+  commit:      7a1836651f05
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/file bar/rename
   description:
-  C
+  Graft "C"
   
   Grafted from 53d1a0c140f97ab323b0d4a1acefa7ed74604e71
   - Grafted path foo to bar
@@ -201,12 +201,12 @@ Graft a commit with rename in "remote" history:
   $ hg go -q $B
   $ hg graft -qr $D --from-path foo --to-path bar
   $ hg show
-  commit:      ea8341b07380
+  commit:      bba3ae846a84
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/file
   description:
-  D
+  Graft "D"
   
   Grafted from f474dcdb45f7579c1ab82a5cfdab40525db086df
   - Grafted path foo to bar
@@ -234,12 +234,12 @@ Graft a commit with rename in "local" history:
   $ hg go -q $D
   $ hg graft -qr $E --from-path bar --to-path foo
   $ hg show
-  commit:      b0f4979359c5
+  commit:      03393fabe6bc
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       foo/rename
   description:
-  E
+  Graft "E"
   
   Grafted from 18e3512650fdf23ebbcf589607dbd700602bee93
   - Grafted path bar to foo
@@ -269,12 +269,12 @@ Graft a commit with renames on both sides:
   $ hg go -q $D
   $ hg graft -qr $F --from-path bar --to-path foo
   $ hg show
-  commit:      da526f4b3b28
+  commit:      6f2074fd2230
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       foo/rename
   description:
-  F
+  Graft "F"
   
   Grafted from 7d4e96ab007e943d7bafd40a5aa67cf493c5d818
   - Grafted path bar to foo
@@ -302,12 +302,12 @@ Grafting individual files also works:
   $ hg go -q $D
   $ hg graft -qr $C --from-path B --to-path A
   $ hg show
-  commit:      4614d505f924
+  commit:      79caadf64171
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       A
   description:
-  C
+  Graft "C"
   
   Grafted from ea0e3d741c410c6984853baacef718860cfc18a5
   - Grafted path B to A
@@ -335,12 +335,12 @@ Can graft between completely unrelated directories:
   $ hg go -q $C
   $ hg graft -qr $B --from-path A --to-path C
   $ hg show
-  commit:      de54b74c0bb1
+  commit:      3762d0046954
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       C
   description:
-  B
+  Graft "B"
   
   Grafted from eb8f2e58912725da3773edc0e24d884469f2bb1c
   - Grafted path A to C
@@ -370,12 +370,12 @@ Can do multiple mappings in a single graft:
   $ hg go -q $C
   $ hg graft -qr $D --from-path dir --to-path dir2 --from-path dir --to-path dir3
   $ hg show
-  commit:      cea65f1f0bd8
+  commit:      05bbe8a03950
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       dir2/file dir3/file
   description:
-  D
+  Graft "D"
   
   Grafted from 08771e12ccbd5547592676e9a972caafcd7b0820
   - Grafted path dir to dir2
@@ -416,12 +416,12 @@ Multiple mappings can all follow renames:
   $ hg go -q $G
   $ hg graft -qr $G --from-path dir --to-path dir2 --from-path dir --to-path dir3
   $ hg show
-  commit:      b4dc750ff25c
+  commit:      97305a980c95
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       dir2/rename2 dir3/rename3
   description:
-  G
+  Graft "G"
   
   Grafted from fab9c6fdbcd0fc0139ace494073efb5c40011ed1
   - Grafted path dir to dir2
@@ -460,12 +460,12 @@ Don't get confused by renames too far in the past on src side:
   $ hg go -q $E
   $ hg graft -qr $F --from-path dir --to-path dir2
   $ hg show
-  commit:      db713b5959de
+  commit:      12e4a802d812
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       dir2/rename2
   description:
-  F
+  Graft "F"
   
   Grafted from dacfc2aa45adb71c3c557083202bd9178b2e7485
   - Grafted path dir to dir2
@@ -651,12 +651,12 @@ Cross-directory graft add graft info as summary footer:
   $ hg go -q $A
   $ hg graft -qr 'desc("Summary")' --from-path B --to-path A --config extensions.fbcodereview=
   $ hg show
-  commit:      6028184b9e0b
+  commit:      f1685a855f51
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       A
   description:
-  B
+  Graft "B"
   
   Summary:
   
@@ -699,12 +699,12 @@ Cross-directory graft removes phabricator tags (excerpt "Summary"):
   $ hg go -q $A
   $ hg graft -qr 'desc("Differential")' --from-path B --to-path A --config extensions.fbcodereview=
   $ hg show
-  commit:      0392e4e5a893
+  commit:      6f59466f17e6
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       A
   description:
-  B
+  Graft "B"
   
   Summary:
   
@@ -732,12 +732,12 @@ Graft supports non-root relative paths
   $ cd my
   $ hg graft -qr $C --from-path foo --to-path bar
   $ hg show
-  commit:      3e70c43a4deb
+  commit:      9f7302d2feef
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       my/bar/file
   description:
-  C
+  Graft "C"
   
   Grafted from 48b96237613e0f4a5fb16198b55dd4a03ca3c527
   - Grafted path foo to bar
