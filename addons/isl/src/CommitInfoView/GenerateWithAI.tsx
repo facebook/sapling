@@ -89,11 +89,12 @@ export function GenerateAIButton({
         trigger="click"
         placement="bottom"
         component={(dismiss: () => void) => (
-          <GenerateAICommitMessageModal
+          <GenerateAIModal
             dismiss={dismiss}
             hashKey={hashKey}
             textArea={textAreaRef.current}
             appendToTextArea={appendToTextArea}
+            fieldName={fieldName}
           />
         )}
         onDismiss={onDismiss}
@@ -170,15 +171,17 @@ const generatedCommitMessages = atomFamilyWeak((hashKey: string | undefined) =>
 
 const hasAcceptedAIMessageSuggestion = atomFamilyWeak((_key: HashKey) => atom<boolean>(false));
 
-function GenerateAICommitMessageModal({
+function GenerateAIModal({
   hashKey,
   dismiss,
   appendToTextArea,
+  fieldName,
 }: {
   hashKey: HashKey;
   textArea: HTMLElement | null;
   dismiss: () => unknown;
   appendToTextArea: (toAdd: string) => unknown;
+  fieldName: string;
 }) {
   const [content, refetch] = useAtom(generatedCommitMessages(hashKey));
 
@@ -215,9 +218,13 @@ function GenerateAICommitMessageModal({
       <Button icon className="dismiss-modal" onClick={dismiss}>
         <Icon icon="x" />
       </Button>
-      <b>Generate Summary</b>
+      <b>{`Generate ${fieldName}`}</b>
       {error ? (
-        <ErrorNotice error={error} title={t('Unable to generate commit message')}></ErrorNotice>
+        <ErrorNotice
+          error={error}
+          title={t('Unable to generate $fieldName', {
+            replace: {$fieldName: fieldName},
+          })}></ErrorNotice>
       ) : (
         <div className="generated-message-textarea-container">
           <TextArea
@@ -254,7 +261,7 @@ function GenerateAICommitMessageModal({
             dismiss();
           }}>
           <Icon icon="check" />
-          <T>Insert into Summary</T>
+          <T replace={{$fieldName: fieldName}}>Insert into $fieldName</T>
         </Button>
       </div>
     </div>
