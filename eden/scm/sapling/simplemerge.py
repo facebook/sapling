@@ -26,6 +26,7 @@ from __future__ import absolute_import
 import functools
 import hashlib
 from contextlib import contextmanager
+from enum import Enum
 from typing import List, Optional, Tuple
 
 from bindings import clientinfo
@@ -760,7 +761,7 @@ def try_automerge_conflict(
                             name_a,
                             name_b,
                             newline=newline,
-                            one_side=False,
+                            diff_type=MergeDiffType.MERGE_DIFFS,
                         )
                     ).decode(),
                     "merged_lines": b" ".join(merged_lines).decode(),
@@ -913,15 +914,26 @@ def _picklabels(overrides):
     return result
 
 
+class MergeDiffType(Enum):
+    # diff on one side
+    MERGE_DIFF = 0
+    # diff on both sides
+    MERGE_DIFFS = 1
+
+
 def render_mergediff(m3, name_a, name_b, name_base):
-    return _render_mergediff_ext(m3, name_a, name_b, name_base, one_side=True)
+    return _render_mergediff_ext(
+        m3, name_a, name_b, name_base, MergeDiffType.MERGE_DIFF
+    )
 
 
 def render_mergediffs(m3, name_a, name_b, name_base):
-    return _render_mergediff_ext(m3, name_a, name_b, name_base, one_side=False)
+    return _render_mergediff_ext(
+        m3, name_a, name_b, name_base, MergeDiffType.MERGE_DIFFS
+    )
 
 
-def _render_mergediff_ext(m3, name_a, name_b, name_base, one_side):
+def _render_mergediff_ext(m3, name_a, name_b, name_base, diff_type):
     newline = _detect_newline(m3)
     render_conflict_fn = functools.partial(
         _render_diff_conflict,
@@ -929,7 +941,7 @@ def _render_mergediff_ext(m3, name_a, name_b, name_base, one_side):
         name_a=name_a,
         name_b=name_b,
         newline=newline,
-        one_side=one_side,
+        diff_type=diff_type,
     )
     return _apply_conflict_render(
         m3, name_a, name_b, name_base, render_conflict_fn, newline
@@ -944,7 +956,7 @@ def _render_diff_conflict(
     name_a=b"",
     name_b=b"",
     newline=b"\n",
-    one_side=True,  # diff on one side of the conflict, other diff on both sides
+    diff_type=MergeDiffType.MERGE_DIFF,
 ):
     basetext = b"".join(base_lines)
     bblocks = list(
@@ -979,7 +991,7 @@ def _render_diff_conflict(
                     yield b"+" + line
 
     lines = []
-    if one_side:
+    if diff_type == MergeDiffType.MERGE_DIFF:
         lines.append(b"<<<<<<<" + newline)
         if matchinglines(ablocks) < matchinglines(bblocks):
             lines.append(b"======= " + name_a + newline)
