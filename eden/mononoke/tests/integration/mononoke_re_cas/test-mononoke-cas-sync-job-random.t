@@ -59,6 +59,10 @@ Validate that all the blobs are now present in CAS for the commit D
   $ with_stripped_logs mononoke_newadmin cas-store --repo-name repo upload --full --hg-id $D
   Upload completed. Upload stats: uploaded digests: 0, already present digests: 5, uploaded bytes: 0 B, the largest uploaded blob: 0 B
 
+Validate that all the blobs are now present in CAS for the commit D (by bookmark name)
+  $ with_stripped_logs mononoke_newadmin cas-store --repo-name repo upload --full -B master
+  Upload completed. Upload stats: uploaded digests: 0, already present digests: 5, uploaded bytes: 0 B, the largest uploaded blob: 0 B
+
 Validate that all the blobs are now present in CAS for the middle commit B
   $ with_stripped_logs mononoke_newadmin cas-store --repo-name repo upload --full --hg-id $B
   Upload completed. Upload stats: uploaded digests: 0, already present digests: 3, uploaded bytes: 0 B, the largest uploaded blob: 0 B
@@ -69,4 +73,8 @@ Validate that all the blobs are now present in CAS for the first commit A
 
 Commit F belongs to a different bookmark, validate that the commit is fully uploaded
   $ with_stripped_logs mononoke_newadmin cas-store --repo-name repo upload --full --hg-id $F
+  Upload completed. Upload stats: uploaded digests: 0, already present digests: 6, uploaded bytes: 0 B, the largest uploaded blob: 0 B
+
+Commit F belongs to a different bookmark, validate that the commit is fully uploaded (by bookmark name)
+  $ with_stripped_logs mononoke_newadmin cas-store --repo-name repo upload --full -B other_bookmark
   Upload completed. Upload stats: uploaded digests: 0, already present digests: 6, uploaded bytes: 0 B, the largest uploaded blob: 0 B
