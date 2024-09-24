@@ -21,6 +21,7 @@ import {
   commitMode,
   latestCommitMessageFieldsWithEdits,
 } from './CommitInfoState';
+import {convertFieldNameToKey} from './utils';
 import {Button} from 'isl-components/Button';
 import {ErrorNotice} from 'isl-components/ErrorNotice';
 import {Icon} from 'isl-components/Icon';
@@ -37,12 +38,14 @@ import './GenerateWithAI.css';
 /** Either a commit hash or "commit/aaaaa" when making a new commit on top of hash aaaaa  */
 type HashKey = `commit/${string}` | string;
 
-export function GenerateAICommitMessageButton({
+export function GenerateAIButton({
   textAreaRef,
   appendToTextArea,
+  fieldName,
 }: {
   textAreaRef: RefObject<HTMLTextAreaElement>;
   appendToTextArea: (toAdd: string) => unknown;
+  fieldName: string;
 }) {
   const currentCommit = useAtomValue(commitInfoViewCurrentCommits)?.[0];
   const mode = useAtomValue(commitMode);
@@ -75,11 +78,13 @@ export function GenerateAICommitMessageButton({
     }
   }, [hashKey]);
 
+  const fieldKey = convertFieldNameToKey(fieldName);
+
   if (hashKey == null || !featureEnabled) {
     return null;
   }
   return (
-    <span key="generate-ai-commit-message-button">
+    <span key={`generate-ai-${fieldKey}-button`}>
       <Tooltip
         trigger="click"
         placement="bottom"
@@ -92,8 +97,8 @@ export function GenerateAICommitMessageButton({
           />
         )}
         onDismiss={onDismiss}
-        title={t('Generate a commit message suggestion with AI')}>
-        <Button icon data-testid="generate-commit-message-button">
+        title={t('Generate a $fieldName suggestion with AI', {replace: {$fieldName: fieldName}})}>
+        <Button icon data-testid={`generate-${fieldKey}-button`}>
           <Icon icon="sparkle" />
         </Button>
       </Tooltip>

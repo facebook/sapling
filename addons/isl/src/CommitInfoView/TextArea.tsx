@@ -16,7 +16,7 @@ import {
 } from '../ImageUpload';
 import {Internal} from '../Internal';
 import {insertAtCursor} from '../textareaUtils';
-import {GenerateAICommitMessageButton} from './GenerateWithAI';
+import {GenerateAIButton} from './GenerateWithAI';
 import {MinHeightTextField} from './MinHeightTextField';
 import {convertFieldNameToKey} from './utils';
 import {TextArea} from 'isl-components/TextArea';
@@ -142,9 +142,10 @@ export function EditorToolbar({
   }
   if (supportsGeneratingAIMessage != null) {
     parts.push(
-      <GenerateAICommitMessageButton
+      <GenerateAIButton
         textAreaRef={textAreaRef}
         appendToTextArea={appendToTextArea}
+        fieldName={fieldName}
         key="gen-ai-message"
       />,
     );
