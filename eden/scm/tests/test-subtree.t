@@ -133,6 +133,42 @@ test subtree graft
   -3
   +3a
 
+test 'subtree graft -m'
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > C   # C/foo/x = 1a\n2\n3a\n
+  > |
+  > B   # B/foo/x = 1a\n2\n3\n
+  > |
+  > A   # A/foo/x = 1\n2\n3\n
+  >     # drawdag.defaultfiles=false
+  > EOS
+  $ hg go $C -q
+  $ hg subtree copy -r $B --from-path foo --to-path bar -m 'subtree copy foo -> bar'
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ hg subtree graft -r $C --from-path foo --to-path bar -m "new C"
+  grafting 78072751cf70 "C"
+  $ hg show
+  commit:      6eac9525eeb2
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       bar/x
+  description:
+  new C
+  
+  Grafted from 78072751cf70f1ca47671c625f3b2d7f86f45f00
+  - Grafted path foo to bar
+  
+  
+  diff --git a/bar/x b/bar/x
+  --- a/bar/x
+  +++ b/bar/x
+  @@ -1,3 +1,3 @@
+   1a
+   2
+  -3
+  +3a
 
 test subtree merge
   $ newclientrepo

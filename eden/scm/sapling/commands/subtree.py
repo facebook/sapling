@@ -85,6 +85,7 @@ def subtree_copy(ui, repo, *args, **opts):
             _("record the current user as committer"),
         ),
     ]
+    + commitopts
     + commitopts2
     + mergetoolopts
     + dryrunopts

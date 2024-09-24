@@ -2691,7 +2691,7 @@ def _dograft(ui, repo, *revs, **opts):
 
         # commit
         editor = cmdutil.getcommiteditor(editform="graft", **opts)
-        message = _makegraftmessage(ctx, opts)
+        message = _makegraftmessage(repo, ctx, opts)
         node = repo.commit(
             text=message, user=user, date=date, extra=extra, editor=editor
         )
@@ -2708,8 +2708,12 @@ def _dograft(ui, repo, *revs, **opts):
     return 0
 
 
-def _makegraftmessage(ctx, opts):
-    description = ctx.description()
+def _makegraftmessage(repo, ctx, opts):
+    if logmessage := cmdutil.logmessage(repo, opts):
+        description, is_from_ctx = logmessage, False
+    else:
+        description, is_from_ctx = ctx.description(), True
+
     message = []
     if opts.get("from_path"):
         # For xdir grafts, include "grafted from" breadcrumb by default.
@@ -2718,11 +2722,14 @@ def _makegraftmessage(ctx, opts):
             for f, t in zip(opts.get("from_path"), opts.get("to_path")):
                 message.append("- Grafted path %s to %s" % (f, t))
 
-            try:
-                title, rest = description.split("\n", 1)
-                description = f'Graft "{title}"\n{rest}'
-            except ValueError:
-                description = f'Graft "{description}"'
+            # only update the title if it is from original change context,
+            # we don't update the user provided title
+            if is_from_ctx:
+                try:
+                    title, rest = description.split("\n", 1)
+                    description = f'Graft "{title}"\n{rest}'
+                except ValueError:
+                    description = f'Graft "{description}"'
     else:
         if opts.get("log"):
             message.append("(grafted from %s)" % ctx.hex())

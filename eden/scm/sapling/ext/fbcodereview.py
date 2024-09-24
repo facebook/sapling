@@ -170,8 +170,8 @@ def makebackoutmessage(orig, repo, message: str, node):
     return message
 
 
-def makegraftmessage(orig, ctx, opts):
-    message = orig(ctx, opts)
+def makegraftmessage(orig, repo, ctx, opts):
+    message = orig(repo, ctx, opts)
     if not opts.get("from_path"):
         return message
 
