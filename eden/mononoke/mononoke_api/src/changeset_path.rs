@@ -50,7 +50,6 @@ use mononoke_types::FileType;
 use mononoke_types::FileUnodeId;
 use mononoke_types::FsnodeId;
 use mononoke_types::ManifestUnodeId;
-use mononoke_types::SkeletonManifestId;
 use repo_blobstore::RepoBlobstoreRef;
 
 use crate::changeset::ChangesetContext;
@@ -82,7 +81,6 @@ pub enum PathEntry<R> {
 
 type UnodeResult = Result<Option<Entry<ManifestUnodeId, FileUnodeId>>, MononokeError>;
 type FsnodeResult = Result<Option<Entry<FsnodeId, FsnodeFile>>, MononokeError>;
-type SkeletonResult = Result<Option<Entry<SkeletonManifestId, ()>>, MononokeError>;
 type LinknodeResult = Result<Option<ChangesetId>, MononokeError>;
 
 /// Context that makes it cheap to fetch content info about a path within a changeset.
@@ -132,7 +130,7 @@ impl<R: MononokeRepo> fmt::Debug for ChangesetPathHistoryContext<R> {
 pub struct ChangesetPathContext<R> {
     changeset: ChangesetContext<R>,
     path: MPath,
-    skeleton_manifest_id: LazyShared<SkeletonResult>,
+    entry_kind: LazyShared<Result<Option<Entry<(), ()>>, MononokeError>>,
 }
 
 impl<R: MononokeRepo> fmt::Debug for ChangesetPathContext<R> {
@@ -746,14 +744,14 @@ impl<R: MononokeRepo> ChangesetPathContext<R> {
         Ok(Self {
             changeset,
             path,
-            skeleton_manifest_id: LazyShared::new_empty(),
+            entry_kind: LazyShared::new_empty(),
         })
     }
 
-    pub(crate) async fn new_with_skeleton_manifest_entry(
+    pub(crate) async fn new_with_entry(
         changeset: ChangesetContext<R>,
         path: impl Into<MPath>,
-        skeleton_manifest_entry: Entry<SkeletonManifestId, ()>,
+        entry: Entry<(), ()>,
     ) -> Result<Self, MononokeError> {
         let path = path.into();
         changeset
@@ -769,7 +767,7 @@ impl<R: MononokeRepo> ChangesetPathContext<R> {
         Ok(Self {
             changeset,
             path,
-            skeleton_manifest_id: LazyShared::new_ready(Ok(Some(skeleton_manifest_entry))),
+            entry_kind: LazyShared::new_ready(Ok(Some(entry))),
         })
     }
 
@@ -788,10 +786,8 @@ impl<R: MononokeRepo> ChangesetPathContext<R> {
         &self.path
     }
 
-    async fn skeleton_manifest_id(
-        &self,
-    ) -> Result<Option<Entry<SkeletonManifestId, ()>>, MononokeError> {
-        self.skeleton_manifest_id
+    async fn entry_kind(&self) -> Result<Option<Entry<(), ()>>, MononokeError> {
+        self.entry_kind
             .get_or_init(|| {
                 cloned!(self.changeset, self.path);
                 async move {
@@ -803,11 +799,10 @@ impl<R: MononokeRepo> ChangesetPathContext<R> {
                             .skeleton_manifest_id()
                             .find_entry(ctx, blobstore, MPath::from(mpath))
                             .await
+                            .map(|maybe_entry| maybe_entry.map(|entry| entry.map_tree(|_| ())))
                             .map_err(MononokeError::from)
                     } else {
-                        Ok(Some(Entry::Tree(
-                            root_skeleton_manifest_id.skeleton_manifest_id().clone(),
-                        )))
+                        Ok(Some(Entry::Tree(())))
                     }
                 }
             })
@@ -817,11 +812,11 @@ impl<R: MononokeRepo> ChangesetPathContext<R> {
     /// Returns `true` if the path exists (as a file or directory) in this commit.
     pub async fn exists(&self) -> Result<bool, MononokeError> {
         // The path exists if there is any kind of skeleton manifest entry.
-        Ok(self.skeleton_manifest_id().await?.is_some())
+        Ok(self.entry_kind().await?.is_some())
     }
 
     pub async fn is_file(&self) -> Result<bool, MononokeError> {
-        let is_file = match self.skeleton_manifest_id().await? {
+        let is_file = match self.entry_kind().await? {
             Some(Entry::Leaf(_)) => true,
             _ => false,
         };
@@ -829,7 +824,7 @@ impl<R: MononokeRepo> ChangesetPathContext<R> {
     }
 
     pub async fn is_tree(&self) -> Result<bool, MononokeError> {
-        let is_tree = match self.skeleton_manifest_id().await? {
+        let is_tree = match self.entry_kind().await? {
             Some(Entry::Tree(_)) => true,
             _ => false,
         };

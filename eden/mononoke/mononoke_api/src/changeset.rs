@@ -523,10 +523,10 @@ impl<R: MononokeRepo> ChangesetContext<R> {
             .and_then({
                 let changeset = self.clone();
                 move |(mpath, entry)| {
-                    ChangesetPathContext::new_with_skeleton_manifest_entry(
+                    ChangesetPathContext::new_with_entry(
                         changeset.clone(),
                         mpath,
-                        entry,
+                        entry.map_tree(|_| ()),
                     )
                 }
             }))
