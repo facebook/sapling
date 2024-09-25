@@ -202,12 +202,15 @@ test subtree merge
   +4
   $ hg ci -m 'subtree merge foo to bar'
   $ hg show
-  commit:      590261cf98e2
+  commit:      1463e94f4a2f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/x
   description:
   subtree merge foo to bar
+  
+  Subtree merge from 907442010f516d83aea80b4382964be22a34214f
+  - Merged path foo to bar
   
   
   diff --git a/bar/x b/bar/x

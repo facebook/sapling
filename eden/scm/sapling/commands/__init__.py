@@ -1759,8 +1759,13 @@ def _docommit(ui, repo, *pats, **opts):
             mutinfo = commitmutinfofunc(extra)
 
         def commitfunc(ui, repo, message, match, opts):
+            ms = mergemod.mergestate.read(repo)
+            summaryfooter = subtree.gen_merge_commit_msg(ms.subtree_merges)
+
             editform = cmdutil.mergeeditform(repo[None], "commit.normal")
-            editor = cmdutil.getcommiteditor(editform=editform, **opts)
+            editor = cmdutil.getcommiteditor(
+                editform=editform, summaryfooter=summaryfooter, **opts
+            )
             return repo.commit(
                 message,
                 opts.get("user"),

@@ -4,6 +4,7 @@
 # GNU General Public License version 2.
 
 import json
+from collections import defaultdict
 
 from .. import cmdutil, context, error, hg, merge as mergemod, node, scmutil
 
@@ -290,6 +291,20 @@ def _gen_prepopulated_commit_msg(from_commit, from_paths, to_paths):
     msgs = [f"Subtree copy from {full_commit_hash}"]
     for from_path, to_path in zip(from_paths, to_paths):
         msgs.append(f"- Copied path {from_path} to {to_path}")
+    return "\n".join(msgs)
+
+
+def gen_merge_commit_msg(subtree_merges):
+    groups = defaultdict(list)
+    for from_node, from_path, to_path in subtree_merges:
+        groups[from_node].append((from_path, to_path))
+
+    msgs = []
+    for from_node, paths in groups.items():
+        from_commit = node.hex(from_node)
+        msgs.append(f"Subtree merge from {from_commit}")
+        for from_path, to_path in paths:
+            msgs.append(f"- Merged path {from_path} to {to_path}")
     return "\n".join(msgs)
 
 
