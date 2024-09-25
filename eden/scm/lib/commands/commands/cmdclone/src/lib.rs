@@ -26,6 +26,7 @@ use cmdutil::define_flags;
 use cmdutil::ConfigSet;
 use cmdutil::Result;
 use configloader::hg::PinnedConfig;
+use configloader::hg::RepoInfo;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use configmodel::ValueSource;
@@ -118,7 +119,7 @@ impl CloneOpts {
         }
     }
 
-    fn eden(&self, config: &ConfigSet) -> Result<bool> {
+    fn eden(&self, config: &dyn Config) -> Result<bool> {
         if let Some(eden) = self.eden {
             return Ok(eden);
         }
@@ -290,7 +291,7 @@ fn run_non_eden(
 pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
     let logger = ctx.logger();
 
-    let mut config = ConfigSet::wrap(ctx.config().clone());
+    let config = ctx.config();
 
     let deprecated_options = [
         ("--rev", "rev-option", ctx.opts.rev.is_empty()),
@@ -315,7 +316,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
         }
     }
 
-    let use_eden = ctx.opts.eden(&config)?;
+    let use_eden = ctx.opts.eden(config)?;
 
     abort_if!(
         !use_eden && !ctx.opts.eden_backing_repo.is_empty(),
@@ -343,7 +344,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
         fallback!("clone.use-rust not set to True");
     }
 
-    let source = match ctx.opts.source(&config) {
+    let source = match ctx.opts.source(config) {
         Err(_) => fallback!("invalid URL"),
         Ok(source) => {
             if source.scheme() == "mononoke" || is_eager(&source) {
@@ -353,6 +354,18 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
             }
         }
     };
+
+    if let Some(name) = source.repo_name() {
+        // Re-load config now that we have repo name. This will include any per-repo
+        // remote configs. Re-assign to ctx.core.config to make extra sure future code
+        // does not get the "wrong" config when using ctx.config().
+        ctx.core.config = Arc::new(configloader::hg::load(
+            RepoInfo::Ephemeral(name),
+            &PinnedConfig::from_cli_opts(&ctx.global_opts().config, &ctx.global_opts().configfile),
+        )?);
+    }
+
+    let mut config = ConfigSet::wrap(ctx.config().clone());
 
     if !ctx.opts.rev.is_empty()
         || ctx.opts.pull

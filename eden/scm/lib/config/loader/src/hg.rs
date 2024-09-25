@@ -807,7 +807,16 @@ pub fn generate_internalconfig(
         &user_name,
     );
 
-    let hgrc_path = config_dir.join("hgrc.dynamic");
+    let hgrc_path = match (info, &repo_name) {
+        // If we have repo name but no on-disk repo, incorporate repo name into file name
+        // to keep config files separate in the global cache dir.
+        (None, Some(repo_name)) => config_dir.join(format!(
+            "{}_hgrc.dynamic",
+            repourl::encode_repo_name(repo_name)
+        )),
+        _ => config_dir.join("hgrc.dynamic"),
+    };
+
     let global_config_dir = get_config_dir(None)?;
 
     let config = calculate_internalconfig(
@@ -859,7 +868,16 @@ fn load_dynamic(
     }
 
     // Compute path
-    let dynamic_path = get_config_dir(info.as_disk())?.join("hgrc.dynamic");
+    let config_dir = get_config_dir(info.as_disk())?;
+    let dynamic_path = match info {
+        // If we have repo name but no on-disk repo, incorporate repo name into file name
+        // to keep config files separate in the global cache dir.
+        RepoInfo::Ephemeral(repo_name) => config_dir.join(format!(
+            "{}_hgrc.dynamic",
+            repourl::encode_repo_name(repo_name)
+        )),
+        _ => config_dir.join("hgrc.dynamic"),
+    };
 
     // Check version
     let content = read_to_string(&dynamic_path).ok();

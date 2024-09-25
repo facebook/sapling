@@ -13,6 +13,5 @@ Test per-repo configs at clone time. Override "remotefilelog.reponame" since clo
   >   ]
   > }
   > EOF
-FIXME: should print repo name as "override"
   $ HGRCPATH=fb=json="$TESTTMP/config.json;$HGRCPATH" hg clone test:my-repo repo | grep override
-  [1]
+  Cloning override into $TESTTMP/repo
