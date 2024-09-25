@@ -13,6 +13,7 @@ rust_library(
         "fbsource//third-party/rust:tokio",
         "//common/rust/logging:logging",
         "//common/rust/mysql:mysql_client",
+        "//common/rust/scuba:scuba",
         "//common/rust/shed/cached_config:cached_config",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/stats:stats",
