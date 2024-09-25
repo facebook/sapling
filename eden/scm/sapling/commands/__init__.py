@@ -1763,6 +1763,9 @@ def _docommit(ui, repo, *pats, **opts):
             subtree_merges = ms.subtree_merges
             extra.update(subtree.gen_merge_info(subtree_merges))
             summaryfooter = subtree.gen_merge_commit_msg(subtree_merges)
+            if subtree_merges:
+                parents = repo[None].parents()
+                repo.setparents(parents[0].node())
 
             editform = cmdutil.mergeeditform(repo[None], "commit.normal")
             editor = cmdutil.getcommiteditor(

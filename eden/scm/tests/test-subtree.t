@@ -204,7 +204,7 @@ test subtree merge
   $ hg dbsh -c 'print(repo["."].extra())'
   {'branch': 'default', 'test_subtree_merge_info': '{"v":1,"merges":[{"from_commit":"907442010f516d83aea80b4382964be22a34214f","from_path":"foo","to_path":"bar"}]}'}
   $ hg show
-  commit:      12a50861656c
+  commit:      ebfd0c61ac81
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/x
@@ -224,12 +224,12 @@ test subtree merge
   -3
   +3a
   +4
-tofix: should have one parent
+should have one parent
   $ hg log -r . -T '{parents}'
-  2983b50fcc5e 907442010f51  (no-eol)
+  2983b50fcc5e  (no-eol)
 tofix: show logs of 'bar' directory
   $ hg log bar
-  commit:      12a50861656c
+  commit:      ebfd0c61ac81
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     subtree merge foo to bar
