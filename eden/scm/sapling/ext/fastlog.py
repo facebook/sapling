@@ -257,7 +257,6 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
     def fastlog(repo, startrev, dirs, files, localmatch):
         if len(dirs) + len(files) != 1:
             raise MultiPathError()
-        filefunc = repo.changelog.readfiles
         draft_revs = []
         for parent in lazyparents(startrev, public, parents):
             # Undo relevant file renames in parent so we end up
@@ -266,7 +265,7 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
             # linear rename history.
             undorenames(repo[parent], files)
 
-            if dirmatches(filefunc(parent), dirs.union(files)):
+            if dirmatches(repo[parent].files(), dirs.union(files)):
                 draft_revs.append(parent)
 
         repo.ui.debug("found common parent at %s\n" % repo[parent].hex())
