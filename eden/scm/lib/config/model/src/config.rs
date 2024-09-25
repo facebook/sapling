@@ -19,7 +19,7 @@ use crate::convert::FromConfig;
 use crate::Error;
 use crate::Result;
 
-#[derive(Copy, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub struct ContentHash(u64);
 
 /// Readable config. This can be used as a trait object.
