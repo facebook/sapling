@@ -202,7 +202,10 @@ class changelogrevision:
 
 
 def readfiles(text: bytes) -> "List[str]":
-    """
+    """Return the list of files from a commit text.
+
+    The format of commit text is documented in `changelogrevision.__new__()`.
+
     >>> d = {'nl': chr(10)}
     >>> withfiles = 'commitnode%(nl)sAuthor%(nl)sMetadata and extras%(nl)sfile1%(nl)sfile2%(nl)sfile3%(nl)s%(nl)s' % d
     >>> readfiles(withfiles.encode("utf8"))
