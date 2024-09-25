@@ -201,36 +201,6 @@ class changelogrevision:
         return encoding.tolocalstr(self._text[self._offsets[3] + 2 :])
 
 
-def readfiles(text: bytes) -> "List[str]":
-    """Return the list of files from a commit text.
-
-    The format of commit text is documented in `changelogrevision.__new__()`.
-
-    >>> d = {'nl': chr(10)}
-    >>> withfiles = 'commitnode%(nl)sAuthor%(nl)sMetadata and extras%(nl)sfile1%(nl)sfile2%(nl)sfile3%(nl)s%(nl)s' % d
-    >>> readfiles(withfiles.encode("utf8"))
-    ['file1', 'file2', 'file3']
-    >>> withoutfiles = 'commitnode%(nl)sAuthor%(nl)sMetadata and extras%(nl)s%(nl)sCommit summary%(nl)s%(nl)sCommit description%(nl)s' % d
-    >>> readfiles(withoutfiles.encode("utf8"))
-    []
-    """
-    if not text:
-        return []
-
-    first = 0
-    last = text.index(b"\n\n")
-
-    n = 3
-    while n != 0:
-        try:
-            first = text.index(b"\n", first, last) + 1
-        except ValueError:
-            return []
-        n -= 1
-
-    return decodeutf8(text[first:last]).split("\n")
-
-
 def hgcommittext(manifest, files, desc, user, date, extra):
     """Generate the 'text' of a commit"""
     # Convert to UTF-8 encoded bytestrings as the very first
