@@ -251,6 +251,11 @@ test subtree merge with normal copy
   (subtree merge, don't forget to commit)
   $ hg st
   M bar/x
+  $ hg debugmergestate | grep -B 1 -A 2 "subtree merges"
+  other: df87606c27154ec2ea14aac8fd294e2a611a2a82
+  subtree merges:
+    from_commit: df87606c27154ec2ea14aac8fd294e2a611a2a82, from: foo, to: bar
+  labels:
   $ hg diff
   diff --git a/bar/x b/bar/x
   --- a/bar/x
