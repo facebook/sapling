@@ -217,7 +217,7 @@ impl Config for BTreeMap<String, String> {
 
 impl ContentHash {
     pub fn from_contents(contents: &[u8]) -> Self {
-        let mut xx = twox_hash::Xxh3Hash64::default();
+        let mut xx = twox_hash::XxHash::default();
         xx.write(contents);
         Self(xx.finish())
     }
