@@ -29,6 +29,7 @@ subtree copy and push
   $ hg ci -m 'foo/file1 -> foo/file2'
   $ echo bbb >> foo/file2
   $ hg ci -m 'update foo/file2'
+  $ hg push -r . --to master_bookmark -q
   $ hg subtree copy -r .^ --from-path foo --to-path bar
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ ls bar
@@ -39,13 +40,13 @@ subtree copy and push
   $ hg log -G -T '{node|short} {desc|firstline} {remotebookmarks}\n'
   @  9db3e1d94c06 Subtree copy from 8174a01c532cd975ecb875fb1556590dd776b29e
   │
-  o  64a6d9b95dad update foo/file2
+  o  64a6d9b95dad update foo/file2 default/master_bookmark
   │
   o  8174a01c532c foo/file1 -> foo/file2
   │
   o  4e1aaf1e01be add foo/file1
   │
-  o  26805aba1e60 C default/master_bookmark
+  o  26805aba1e60 C
   │
   o  112478962961 B
   │
@@ -54,12 +55,11 @@ subtree copy and push
 tofix: push should be succeeded after Mononoke support subtree copy metadata
   $ hg push -r . --to master_bookmark
   pushing rev 9db3e1d94c06 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
-  edenapi: queue 4 commits for upload
-  edenapi: queue 3 files for upload
-  edenapi: uploaded 3 files
-  edenapi: queue 8 trees for upload
-  edenapi: uploaded 8 trees
-  edenapi: uploaded 3 changesets
+  edenapi: queue 1 commit for upload
+  edenapi: queue 0 files for upload
+  edenapi: queue 2 trees for upload
+  edenapi: uploaded 2 trees
+  edenapi: uploaded 0 changesets
   abort: failed to upload commits to server: ['9db3e1d94c064c98d6e8952764de356218e8a6c0']
   [255]
 

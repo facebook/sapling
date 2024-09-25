@@ -42,6 +42,7 @@ test subtree copy
   commit:      ecc461c7d308
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       bar/x
   description:
   subtree copy foo -> bar
   

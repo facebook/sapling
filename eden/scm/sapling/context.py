@@ -35,7 +35,6 @@ from . import (
     pathutil,
     phases,
     progress,
-    pycompat,
     revlog,
     scmutil,
     util,
@@ -55,6 +54,7 @@ from .node import (
     wdirrev,
 )
 from .pycompat import encodeutf8, isint, range
+from .utils.subtreeutil import SUBTREE_BRANCH_KEY
 
 filectx_or_bytes = Union["basefilectx", bytes]
 
@@ -582,9 +582,16 @@ class changectx(basectx):
 
     def files(self):
         files = self._changeset.files
-        # git does not provide "files" in commit message - run diff to get it
-        if not files and git.isgitformat(self._repo):
-            files = sorted(self.manifest().diff(self.p1().manifest()).keys())
+        if not files:
+            # The following cases does not provide "files" in commit message,
+            # run diff to get it:
+            # - git repo
+            # - O(1) subtree copy
+            if (
+                git.isgitformat(self._repo)
+                or SUBTREE_BRANCH_KEY in self._changeset.extra
+            ):
+                files = sorted(self.manifest().diff(self.p1().manifest()).keys())
         return files
 
     def description(self):
