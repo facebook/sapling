@@ -721,6 +721,12 @@ impl FetchState {
     }
 
     pub(crate) fn fetch_cas(&mut self, cas_client: &dyn CasClient) {
+        if self.common.request_attrs == FileAttributes::AUX {
+            // If we are only requesting aux data, don't bother querying CAS. Aux data is
+            // required to query CAS, so CAS cannot possibly help.
+            return;
+        }
+
         let span = tracing::info_span!(
             "fetch_cas",
             keys = field::Empty,

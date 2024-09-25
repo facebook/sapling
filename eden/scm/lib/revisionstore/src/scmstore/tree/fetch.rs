@@ -162,6 +162,12 @@ impl FetchState {
         aux_cache: Option<&AuxStore>,
         tree_aux_store: Option<&TreeAuxStore>,
     ) {
+        if self.common.request_attrs == TreeAttributes::AUX_DATA {
+            // If we are only requesting aux data, don't bother querying CAS. Aux data is
+            // required to query CAS, so CAS cannot possibly help.
+            return;
+        }
+
         let span = tracing::info_span!(
             "fetch_cas",
             keys = field::Empty,
