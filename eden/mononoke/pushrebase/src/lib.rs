@@ -96,6 +96,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::DerivableType;
 use mononoke_types::FileChange;
+use mononoke_types::FileType;
 use mononoke_types::GitLfs;
 use mononoke_types::Timestamp;
 use pushrebase_hook::PushrebaseCommitHook;
@@ -673,11 +674,7 @@ async fn find_changed_files_between_manifests(
 ) -> Result<Vec<NonRootMPath>, PushrebaseError> {
     let paths = find_bonsai_diff(ctx, repo, ancestor, descendant)
         .await?
-        .map_ok(|diff| match diff {
-            BonsaiDiffFileChange::Changed(path, ..)
-            | BonsaiDiffFileChange::ChangedReusedId(path, ..)
-            | BonsaiDiffFileChange::Deleted(path) => path,
-        })
+        .map_ok(|diff| diff.into_path())
         .try_collect()
         .await?;
 
@@ -689,7 +686,7 @@ pub async fn find_bonsai_diff(
     repo: &impl Repo,
     ancestor: ChangesetId,
     descendant: ChangesetId,
-) -> Result<impl TryStream<Ok = BonsaiDiffFileChange<HgFileNodeId>, Error = Error>> {
+) -> Result<impl TryStream<Ok = BonsaiDiffFileChange<(FileType, HgFileNodeId)>, Error = Error>> {
     let (d_mf, a_mf) = try_join(
         id_to_manifestid(ctx, repo, descendant),
         id_to_manifestid(ctx, repo, ancestor),
@@ -1129,15 +1126,7 @@ async fn generate_additional_bonsai_file_changes(
 
     let mut paths = vec![];
     for res in &bonsai_diff {
-        match res {
-            BonsaiDiffFileChange::Changed(path, ..)
-            | BonsaiDiffFileChange::ChangedReusedId(path, ..) => {
-                paths.push(path.clone());
-            }
-            BonsaiDiffFileChange::Deleted(path) => {
-                paths.push(path.clone());
-            }
-        }
+        paths.push(res.path().clone())
     }
 
     // If a file is not present in the parent, then no need to add it to the new_file_changes.
@@ -1176,14 +1165,8 @@ async fn generate_additional_bonsai_file_changes(
 
     let mut new_file_changes = vec![];
     for res in bonsai_diff {
-        match res {
-            BonsaiDiffFileChange::Changed(ref path, ..)
-            | BonsaiDiffFileChange::ChangedReusedId(ref path, ..)
-            | BonsaiDiffFileChange::Deleted(ref path) => {
-                if !stale_entries.contains(path) {
-                    continue;
-                }
-            }
+        if !stale_entries.contains(res.path()) {
+            continue;
         }
 
         new_file_changes.push(convert_diff_result_into_file_change_for_diamond_merge(

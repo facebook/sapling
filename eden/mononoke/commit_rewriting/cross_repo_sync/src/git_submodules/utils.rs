@@ -166,7 +166,7 @@ pub(crate) async fn submodule_diff(
     sm_repo: &impl Repo,
     cs_id: ChangesetId,
     parents: Vec<ChangesetId>,
-) -> Result<impl Stream<Item = Result<BonsaiDiffFileChange<(ContentId, u64)>>>> {
+) -> Result<impl Stream<Item = Result<BonsaiDiffFileChange<(FileType, ContentId, u64)>>>> {
     let fsnode_id = sm_repo
         .repo_derived_data()
         .derive::<RootFsnodeId>(ctx, cs_id)
@@ -198,7 +198,16 @@ pub(crate) async fn submodule_diff(
         sm_repo.repo_blobstore_arc().clone(),
         fsnode_id,
         parent_fsnode_ids,
-    ))
+    )
+    .map_ok(|change| {
+        change.map_leaf(|fsnode| {
+            (
+                fsnode.file_type().clone(),
+                fsnode.content_id().clone(),
+                fsnode.size(),
+            )
+        })
+    }))
 }
 
 /// Returns the content id of the given path if it is a submodule file.

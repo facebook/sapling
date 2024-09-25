@@ -253,8 +253,8 @@ pub trait MegarepoOp<R> {
         )
         .map_ok(|diff| async move {
             match diff {
-                BonsaiDiffFileChange::Changed(path, ty, entry_id)
-                | BonsaiDiffFileChange::ChangedReusedId(path, ty, entry_id) => {
+                BonsaiDiffFileChange::Changed(path, (ty, entry_id))
+                | BonsaiDiffFileChange::ChangedReusedId(path, (ty, entry_id)) => {
                     let file_node_id = HgFileNodeId::new(entry_id.into_nodehash());
                     let envelope = file_node_id.load(ctx, repo.repo_blobstore()).await?;
                     let size = envelope.content_size();

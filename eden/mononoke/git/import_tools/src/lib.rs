@@ -94,7 +94,7 @@ async fn find_file_changes<S, U, R>(
     changes: S,
 ) -> Result<SortedVectorMap<NonRootMPath, U::Change>>
 where
-    S: Stream<Item = Result<BonsaiDiffFileChange<GitLeaf>>>,
+    S: Stream<Item = Result<BonsaiDiffFileChange<(FileType, GitLeaf)>>>,
     U: GitUploader,
     R: GitReader,
 {
@@ -104,8 +104,8 @@ where
             task::spawn({
                 async move {
                     match change {
-                        BonsaiDiffFileChange::Changed(path, ty, GitLeaf(oid))
-                        | BonsaiDiffFileChange::ChangedReusedId(path, ty, GitLeaf(oid)) => {
+                        BonsaiDiffFileChange::Changed(path, (ty, GitLeaf(oid)))
+                        | BonsaiDiffFileChange::ChangedReusedId(path, (ty, GitLeaf(oid))) => {
                             if ty == FileType::GitSubmodule {
                                 // The OID for a submodule is a commit in another repository, so there is no data to
                                 // store.

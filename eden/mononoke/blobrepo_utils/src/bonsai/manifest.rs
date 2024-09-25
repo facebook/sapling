@@ -330,26 +330,14 @@ impl BonsaiMFVerifyVisitor {
 async fn apply_diff(
     ctx: CoreContext,
     repo: impl Repo,
-    diff_result: Vec<BonsaiDiffFileChange<HgFileNodeId>>,
+    diff_result: Vec<BonsaiDiffFileChange<(FileType, HgFileNodeId)>>,
     manifestids: Vec<HgManifestId>,
 ) -> Result<HgNodeHash> {
     let changes: Vec<_> = diff_result
         .into_iter()
-        .map(|result| (result.path().clone(), make_entry(&result)))
+        .map(|result| (result.path().clone(), result.into_leaf()))
         .collect();
     let manifest_id =
         derive_hg_manifest(ctx, repo.repo_blobstore_arc(), manifestids, changes).await?;
     Ok(manifest_id.into_nodehash())
-}
-
-// XXX should this be in a more central place?
-fn make_entry(
-    diff_result: &BonsaiDiffFileChange<HgFileNodeId>,
-) -> Option<(FileType, HgFileNodeId)> {
-    use self::BonsaiDiffFileChange::*;
-
-    match diff_result {
-        Changed(_, ft, entry_id) | ChangedReusedId(_, ft, entry_id) => Some((*ft, *entry_id)),
-        Deleted(_path) => None,
-    }
 }

@@ -420,11 +420,10 @@ where
 
                 async move {
                     match diff {
-                        BonsaiDiffFileChange::Changed(path, file_type, (content_id, size))
+                        BonsaiDiffFileChange::Changed(path, (file_type, content_id, size))
                         | BonsaiDiffFileChange::ChangedReusedId(
                             path,
-                            file_type,
-                            (content_id, size),
+                            (file_type, content_id, size),
                         ) => {
                             if file_type != FileType::GitSubmodule {
                                 // Non-submodule file changes just need to have the submodule

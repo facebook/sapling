@@ -56,6 +56,7 @@ use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
+use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
@@ -360,16 +361,10 @@ async fn generate_additional_file_changes(
 
     let additional_file_changes = FuturesUnordered::new();
     for diff_res in bonsai_diff {
-        match diff_res {
-            BonsaiDiffFileChange::Changed(ref path, ..)
-            | BonsaiDiffFileChange::ChangedReusedId(ref path, ..)
-            | BonsaiDiffFileChange::Deleted(ref path) => {
-                let mover = large_to_small.get_movers_by_version(version).await?.mover;
-                let maybe_new_path = mover(path)?;
-                if maybe_new_path.is_some() {
-                    continue;
-                }
-            }
+        let mover = large_to_small.get_movers_by_version(version).await?.mover;
+        let maybe_new_path = mover(diff_res.path())?;
+        if maybe_new_path.is_some() {
+            continue;
         }
 
         let fc = convert_diff_result_into_file_change_for_diamond_merge(&ctx, large_repo, diff_res);
@@ -483,7 +478,7 @@ fn find_bonsai_diff(
     repo: &Repo,
     ancestor: ChangesetId,
     descendant: ChangesetId,
-) -> BoxStream<'static, Result<BonsaiDiffFileChange<HgFileNodeId>, Error>> {
+) -> BoxStream<'static, Result<BonsaiDiffFileChange<(FileType, HgFileNodeId)>, Error>> {
     stream::once({
         cloned!(ctx, repo);
         async move {

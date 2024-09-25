@@ -25,6 +25,7 @@ use context::CoreContext;
 use manifest::BonsaiDiffFileChange;
 use mercurial_types::HgFileNodeId;
 use mononoke_types::FileChange;
+use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
@@ -53,11 +54,11 @@ pub trait Repo = BonsaiHgMappingRef
 pub async fn convert_diff_result_into_file_change_for_diamond_merge(
     ctx: &CoreContext,
     repo: &impl RepoBlobstoreRef,
-    diff_result: BonsaiDiffFileChange<HgFileNodeId>,
+    diff_result: BonsaiDiffFileChange<(FileType, HgFileNodeId)>,
 ) -> Result<(NonRootMPath, FileChange)> {
     match diff_result {
-        BonsaiDiffFileChange::Changed(path, ty, node_id)
-        | BonsaiDiffFileChange::ChangedReusedId(path, ty, node_id) => {
+        BonsaiDiffFileChange::Changed(path, (ty, node_id))
+        | BonsaiDiffFileChange::ChangedReusedId(path, (ty, node_id)) => {
             let envelope = node_id.load(ctx, repo.repo_blobstore()).await?;
             // Note that we intentionally do not set copy-from info,
             // even if a file has been copied from somewhere.

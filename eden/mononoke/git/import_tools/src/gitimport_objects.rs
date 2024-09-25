@@ -527,7 +527,7 @@ impl ExtractedCommit {
         &self,
         ctx: &CoreContext,
         reader: &Reader,
-    ) -> impl Stream<Item = Result<BonsaiDiffFileChange<GitLeaf>, Error>> {
+    ) -> impl Stream<Item = Result<BonsaiDiffFileChange<(FileType, GitLeaf)>, Error>> {
         let tree = GitTree::<SUBMODULES>(self.tree_oid);
         let parent_trees = self
             .parent_tree_oids
@@ -545,7 +545,7 @@ impl ExtractedCommit {
         ctx: &CoreContext,
         reader: &Reader,
         submodules: bool,
-    ) -> impl Stream<Item = Result<BonsaiDiffFileChange<GitLeaf>, Error>> {
+    ) -> impl Stream<Item = Result<BonsaiDiffFileChange<(FileType, GitLeaf)>, Error>> {
         if submodules {
             self.diff_for_submodules::<true, Reader>(ctx, reader)
                 .left_stream()
@@ -587,7 +587,7 @@ impl ExtractedCommit {
         &self,
         ctx: &CoreContext,
         reader: &GitRepoReader,
-    ) -> impl Stream<Item = Result<BonsaiDiffFileChange<GitLeaf>, Error>> {
+    ) -> impl Stream<Item = Result<BonsaiDiffFileChange<(FileType, GitLeaf)>, Error>> {
         let tree = GitTree::<SUBMODULES>(self.tree_oid);
         bonsai_diff(ctx.clone(), reader.clone(), tree, HashSet::new())
     }
@@ -599,7 +599,7 @@ impl ExtractedCommit {
         ctx: &CoreContext,
         reader: &GitRepoReader,
         submodules: bool,
-    ) -> impl Stream<Item = Result<BonsaiDiffFileChange<GitLeaf>, Error>> {
+    ) -> impl Stream<Item = Result<BonsaiDiffFileChange<(FileType, GitLeaf)>, Error>> {
         if submodules {
             self.diff_root_for_submodules::<true>(ctx, reader)
                 .left_stream()

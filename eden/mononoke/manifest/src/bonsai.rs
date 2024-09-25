@@ -24,7 +24,6 @@ use futures::TryStreamExt;
 use maplit::hashmap;
 use maplit::hashset;
 use mononoke_types::fsnode::FsnodeFile;
-use mononoke_types::ContentId;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 use tokio::task;
@@ -32,12 +31,10 @@ use tokio::task;
 use crate::Entry;
 use crate::Manifest;
 
-pub(crate) type BonsaiEntry<ManifestId, FileId> = Entry<ManifestId, (FileType, FileId)>;
-
 #[derive(Clone, Eq, Debug, Hash, PartialEq, PartialOrd, Ord)]
-pub enum BonsaiDiffFileChange<FileId> {
+pub enum BonsaiDiffFileChange<Leaf> {
     /// This file was changed (was added or modified) in this changeset.
-    Changed(NonRootMPath, FileType, FileId),
+    Changed(NonRootMPath, Leaf),
 
     /// The file was marked changed, but one of the parent file ID was reused. This can happen in
     /// these situations:
@@ -47,46 +44,67 @@ pub enum BonsaiDiffFileChange<FileId> {
     ///
     /// This is separate from `Changed` because in these instances, if copy information is part of
     /// the node it wouldn't be recorded.
-    ChangedReusedId(NonRootMPath, FileType, FileId),
+    ChangedReusedId(NonRootMPath, Leaf),
 
     /// This file was deleted in this changeset.
     Deleted(NonRootMPath),
 }
 
-impl<FileId> BonsaiDiffFileChange<FileId> {
+impl<Leaf> BonsaiDiffFileChange<Leaf> {
     pub fn path(&self) -> &NonRootMPath {
         match self {
             Self::Changed(path, ..) | Self::ChangedReusedId(path, ..) | Self::Deleted(path) => path,
         }
     }
-    pub fn file_id(&self) -> Option<&FileId> {
+
+    pub fn into_path(self) -> NonRootMPath {
         match self {
-            Self::Changed(_, _, fid) | Self::ChangedReusedId(_, _, fid) => Some(fid),
+            Self::Changed(path, ..) | Self::ChangedReusedId(path, ..) | Self::Deleted(path) => path,
+        }
+    }
+
+    pub fn leaf(&self) -> Option<&Leaf> {
+        match self {
+            Self::Changed(_, leaf) | Self::ChangedReusedId(_, leaf) => Some(leaf),
             Self::Deleted(_) => None,
         }
     }
-    pub fn file_type(&self) -> Option<&FileType> {
+
+    pub fn into_leaf(self) -> Option<Leaf> {
         match self {
-            Self::Changed(_, ft, _) | Self::ChangedReusedId(_, ft, _) => Some(ft),
+            Self::Changed(_, leaf) | Self::ChangedReusedId(_, leaf) => Some(leaf),
             Self::Deleted(_) => None,
+        }
+    }
+
+    pub fn map_leaf<NewLeaf>(
+        self,
+        f: impl FnOnce(Leaf) -> NewLeaf,
+    ) -> BonsaiDiffFileChange<NewLeaf> {
+        match self {
+            Self::Changed(path, leaf) => BonsaiDiffFileChange::Changed(path, f(leaf)),
+            Self::ChangedReusedId(path, leaf) => {
+                BonsaiDiffFileChange::ChangedReusedId(path, f(leaf))
+            }
+            Self::Deleted(path) => BonsaiDiffFileChange::Deleted(path),
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct CompositeEntry<ManifestId, FileId>
+struct CompositeEntry<ManifestId, Leaf>
 where
-    FileId: Hash + Eq,
     ManifestId: Hash + Eq,
+    Leaf: Hash + Eq,
 {
     manifests: HashSet<ManifestId>,
-    files: HashSet<(FileType, FileId)>,
+    files: HashSet<Leaf>,
 }
 
-impl<ManifestId, FileId> CompositeEntry<ManifestId, FileId>
+impl<ManifestId, Leaf> CompositeEntry<ManifestId, Leaf>
 where
-    FileId: Hash + Eq,
     ManifestId: Hash + Eq,
+    Leaf: Hash + Eq,
 {
     fn empty() -> Self {
         Self {
@@ -95,10 +113,10 @@ where
         }
     }
 
-    fn insert(&mut self, entry: BonsaiEntry<ManifestId, FileId>) {
+    fn insert(&mut self, entry: Entry<ManifestId, Leaf>) {
         match entry {
-            Entry::Leaf(new_id) => {
-                self.files.insert(new_id);
+            Entry::Leaf(new_leaf) => {
+                self.files.insert(new_leaf);
             }
             Entry::Tree(new_id) => {
                 self.manifests.insert(new_id);
@@ -106,12 +124,7 @@ where
         }
     }
 
-    fn into_parts(
-        self,
-    ) -> (
-        Option<HashSet<ManifestId>>,
-        Option<HashSet<(FileType, FileId)>>,
-    ) {
+    fn into_parts(self) -> (Option<HashSet<ManifestId>>, Option<HashSet<Leaf>>) {
         let manifests = if self.manifests.is_empty() {
             None
         } else {
@@ -131,29 +144,28 @@ where
 /// WorkEntry describes the work to be performed by the bounded_traversal to produce a Bonsai diff.
 /// It maps a path to consider to the contents of the Manifest for which to produce Bonsai changes
 /// at this path and the contents of the parents at this path.
-type WorkEntry<ManifestId, FileId> = HashMap<
+type WorkEntry<ManifestId, Leaf> = HashMap<
     NonRootMPath,
     (
-        Option<BonsaiEntry<ManifestId, FileId>>,
-        CompositeEntry<ManifestId, FileId>,
+        Option<Entry<ManifestId, Leaf>>,
+        CompositeEntry<ManifestId, Leaf>,
     ),
 >;
 
 /// Identify further work to be performed for this Bonsai diff.
-async fn recurse_trees<ManifestId, FileId, Store, Leaf>(
+async fn recurse_trees<ManifestId, Store, Leaf>(
     ctx: &CoreContext,
     store: &Store,
     path: Option<&NonRootMPath>,
     node: Option<ManifestId>,
     parents: HashSet<ManifestId>,
-) -> Result<WorkEntry<ManifestId, FileId>, Error>
+) -> Result<WorkEntry<ManifestId, Leaf>, Error>
 where
     Store: Send + Sync + Clone + 'static,
-    FileId: Hash + Eq,
     ManifestId: Hash + Eq + StoreLoadable<Store>,
     <ManifestId as StoreLoadable<Store>>::Value:
         Manifest<Store, TreeId = ManifestId, Leaf = Leaf> + Send + Sync,
-    Leaf: ManifestLeaf<FileId = FileId>,
+    Leaf: ManifestLeaf + Hash + Eq,
 {
     // If there is a single parent, and it's unchanged, then we don't need to recurse.
     if parents.len() == 1 && node.as_ref() == parents.iter().next() {
@@ -178,16 +190,10 @@ where
 
     let mut ret = HashMap::new();
 
-    let convert_entry = |entry: Entry<ManifestId, Leaf>| match entry {
-        Entry::Leaf(manif_leaf) => Entry::Leaf((manif_leaf.file_type(), manif_leaf.file_id())),
-        Entry::Tree(mid) => Entry::Tree(mid),
-    };
-
     if let Some(node) = node {
         let mut list = node.list(ctx, store).await?;
         while let Some((path, entry)) = list.try_next().await? {
-            ret.entry(path).or_insert((None, CompositeEntry::empty())).0 =
-                Some(convert_entry(entry));
+            ret.entry(path).or_insert((None, CompositeEntry::empty())).0 = Some(entry);
         }
     }
 
@@ -197,7 +203,7 @@ where
             ret.entry(path)
                 .or_insert((None, CompositeEntry::empty()))
                 .1
-                .insert(convert_entry(entry));
+                .insert(entry);
         }
     }
 
@@ -212,13 +218,13 @@ where
     Ok(ret)
 }
 
-fn resolve_file_over_files<FileId>(
+fn resolve_file_over_files<Leaf>(
     path: NonRootMPath,
-    node: (FileType, FileId),
-    parents: HashSet<(FileType, FileId)>,
-) -> Option<BonsaiDiffFileChange<FileId>>
+    node: Leaf,
+    parents: HashSet<Leaf>,
+) -> Option<BonsaiDiffFileChange<Leaf>>
 where
-    FileId: Hash + Eq,
+    Leaf: ManifestLeaf + Hash + Eq,
 {
     if parents.len() == 1 && parents.contains(&node) {
         return None;
@@ -227,41 +233,40 @@ where
     Some(resolve_file_over_mixed(path, node, parents))
 }
 
-fn resolve_file_over_mixed<FileId>(
+fn resolve_file_over_mixed<Leaf>(
     path: NonRootMPath,
-    node: (FileType, FileId),
-    parents: HashSet<(FileType, FileId)>,
-) -> BonsaiDiffFileChange<FileId>
+    node: Leaf,
+    parents: HashSet<Leaf>,
+) -> BonsaiDiffFileChange<Leaf>
 where
-    FileId: Hash + Eq,
+    Leaf: ManifestLeaf + Hash + Eq,
 {
-    if parents.iter().any(|e| e.1 == node.1) {
-        return BonsaiDiffFileChange::ChangedReusedId(path, node.0, node.1);
+    if parents.iter().any(|parent| node.reuses(parent)) {
+        return BonsaiDiffFileChange::ChangedReusedId(path, node);
     }
 
-    BonsaiDiffFileChange::Changed(path, node.0, node.1)
+    BonsaiDiffFileChange::Changed(path, node)
 }
 
-async fn bonsai_diff_unfold<ManifestId, FileId, Store, Leaf>(
+async fn bonsai_diff_unfold<ManifestId, Store, Leaf>(
     ctx: &CoreContext,
     store: &Store,
     path: NonRootMPath,
-    node: Option<BonsaiEntry<ManifestId, FileId>>,
-    parents: CompositeEntry<ManifestId, FileId>,
+    node: Option<Entry<ManifestId, Leaf>>,
+    parents: CompositeEntry<ManifestId, Leaf>,
 ) -> Result<
     (
-        Option<BonsaiDiffFileChange<FileId>>,
-        WorkEntry<ManifestId, FileId>,
+        Option<BonsaiDiffFileChange<Leaf>>,
+        WorkEntry<ManifestId, Leaf>,
     ),
     Error,
 >
 where
     Store: Send + Sync + Clone + 'static,
-    FileId: Hash + Eq,
     ManifestId: Hash + Eq + StoreLoadable<Store>,
     <ManifestId as StoreLoadable<Store>>::Value:
         Manifest<Store, TreeId = ManifestId, Leaf = Leaf> + Send + Sync,
-    Leaf: ManifestLeaf<FileId = FileId>,
+    Leaf: ManifestLeaf + Hash + Eq,
 {
     let res = match node {
         Some(Entry::Tree(node)) => {
@@ -303,7 +308,7 @@ where
                 (None, Some(files)) => resolve_file_over_files(path, node, files),
                 // We don't have files in the parents. Regardless of whether we have manifests, we'll
                 // need to emit this file, so let's do so.
-                (_, None) => Some(BonsaiDiffFileChange::Changed(path, node.0, node.1)),
+                (_, None) => Some(BonsaiDiffFileChange::Changed(path, node)),
             };
 
             (change, recurse)
@@ -329,19 +334,18 @@ where
     Ok(res)
 }
 
-pub fn bonsai_diff<ManifestId, FileId, Store, Leaf>(
+pub fn bonsai_diff<ManifestId, Store, Leaf>(
     ctx: CoreContext,
     store: Store,
     node: ManifestId,
     parents: HashSet<ManifestId>,
-) -> impl Stream<Item = Result<BonsaiDiffFileChange<FileId>, Error>>
+) -> impl Stream<Item = Result<BonsaiDiffFileChange<Leaf>, Error>>
 where
-    FileId: Hash + Eq + Send + Sync + Clone + 'static,
     ManifestId: Hash + Eq + StoreLoadable<Store> + Send + Sync + 'static,
     Store: Send + Sync + Clone + 'static,
     <ManifestId as StoreLoadable<Store>>::Value:
         Manifest<Store, TreeId = ManifestId, Leaf = Leaf> + Send + Sync,
-    Leaf: ManifestLeaf<FileId = FileId>,
+    Leaf: ManifestLeaf + Hash + Eq + Send + Sync + Clone + 'static,
 {
     // NOTE: `async move` blocks are used below to own CoreContext and Store for the (static)
     // lifetime of the stream we're returning here (recurse_trees and bonsai_diff_unfold don't
@@ -366,36 +370,21 @@ where
     .try_filter_map(future::ok)
 }
 
-/// Trait that generalizes the Leaf bound from `bonsai_diff` so that it can be
-/// called with manifests other than the ones that have the leaf `(FileType, _)`.
+/// Trait for manifest leaves.
 pub trait ManifestLeaf: Hash + Eq {
-    type FileId: Hash + Eq;
-
-    fn file_type(&self) -> FileType;
-    fn file_id(self) -> Self::FileId;
+    /// Return true if this leaf can re-use a parent leaf's id.
+    fn reuses(&self, other: &Self) -> bool;
 }
 
-impl<FId: Hash + Eq> ManifestLeaf for (FileType, FId) {
-    type FileId = FId;
-
-    fn file_type(&self) -> FileType {
-        self.0
-    }
-
-    fn file_id(self) -> Self::FileId {
-        self.1
+impl<FileId: Hash + Eq> ManifestLeaf for (FileType, FileId) {
+    fn reuses(&self, other: &Self) -> bool {
+        self.1 == other.1
     }
 }
 
 impl ManifestLeaf for FsnodeFile {
-    type FileId = (ContentId, u64);
-
-    fn file_type(&self) -> FileType {
-        *self.file_type()
-    }
-
-    fn file_id(self) -> Self::FileId {
-        (*self.content_id(), self.size())
+    fn reuses(&self, other: &Self) -> bool {
+        self.content_id() == other.content_id()
     }
 }
 
@@ -414,12 +403,12 @@ mod test {
     use crate::tests::test_manifest::TestManifest;
     use crate::tests::test_manifest::TestManifestId;
 
-    impl<ManifestId, FileId> CompositeEntry<ManifestId, FileId>
+    impl<ManifestId, Leaf> CompositeEntry<ManifestId, Leaf>
     where
-        FileId: Hash + Eq,
         ManifestId: Hash + Eq,
+        Leaf: Hash + Eq,
     {
-        fn files(files: HashSet<(FileType, FileId)>) -> Self {
+        fn files(files: HashSet<Leaf>) -> Self {
             Self {
                 manifests: hashset! {},
                 files,
@@ -441,7 +430,7 @@ mod test {
         let root = NonRootMPath::new("a")?;
 
         let leaf_id = TestLeaf::new("1").store(&ctx, &store).await?;
-        let node = Some(BonsaiEntry::Leaf((FileType::Regular, leaf_id)));
+        let node = Some(Entry::Leaf((FileType::Regular, leaf_id)));
         let mut parents: CompositeEntry<TestManifestId, _> = CompositeEntry::empty();
 
         // Start with no parent. The file should be added.
@@ -451,21 +440,20 @@ mod test {
             change,
             Some(BonsaiDiffFileChange::Changed(
                 root.clone(),
-                FileType::Regular,
-                leaf_id
+                (FileType::Regular, leaf_id)
             ))
         );
         assert_eq!(work, hashmap! {});
 
         // Add the same file in a parent
-        parents.insert(BonsaiEntry::Leaf((FileType::Regular, leaf_id)));
+        parents.insert(Entry::Leaf((FileType::Regular, leaf_id)));
         let (change, work) =
             bonsai_diff_unfold(&ctx, &store, root.clone(), node, parents.clone()).await?;
         assert_eq!(change, None);
         assert_eq!(work, hashmap! {});
 
         // Add the file again in a different parent
-        parents.insert(BonsaiEntry::Leaf((FileType::Regular, leaf_id)));
+        parents.insert(Entry::Leaf((FileType::Regular, leaf_id)));
         let (change, work) =
             bonsai_diff_unfold(&ctx, &store, root.clone(), node, parents.clone()).await?;
         assert_eq!(change, None);
@@ -473,15 +461,14 @@ mod test {
 
         // Add a different file
         let leaf2_id = TestLeaf::new("2").store(&ctx, &store).await?;
-        parents.insert(BonsaiEntry::Leaf((FileType::Regular, leaf2_id)));
+        parents.insert(Entry::Leaf((FileType::Regular, leaf2_id)));
         let (change, work) =
             bonsai_diff_unfold(&ctx, &store, root.clone(), node, parents.clone()).await?;
         assert_eq!(
             change,
             Some(BonsaiDiffFileChange::ChangedReusedId(
                 root.clone(),
-                FileType::Regular,
-                leaf_id,
+                (FileType::Regular, leaf_id)
             ))
         );
         assert_eq!(work, hashmap! {});
@@ -496,19 +483,18 @@ mod test {
         let root = NonRootMPath::new("a")?;
 
         let leaf_id = TestLeaf::new("1").store(&ctx, &store).await?;
-        let node = Some(BonsaiEntry::Leaf((FileType::Regular, leaf_id)));
+        let node = Some(Entry::Leaf((FileType::Regular, leaf_id)));
         let mut parents: CompositeEntry<TestManifestId, _> = CompositeEntry::empty();
 
         // Add a parent with a different mode. We can reuse it.
-        parents.insert(BonsaiEntry::Leaf((FileType::Executable, leaf_id)));
+        parents.insert(Entry::Leaf((FileType::Executable, leaf_id)));
 
         let (change, work) = bonsai_diff_unfold(&ctx, &store, root.clone(), node, parents).await?;
         assert_eq!(
             change,
             Some(BonsaiDiffFileChange::ChangedReusedId(
                 root.clone(),
-                FileType::Regular,
-                leaf_id,
+                (FileType::Regular, leaf_id)
             ))
         );
         assert_eq!(work, hashmap! {});
@@ -523,50 +509,47 @@ mod test {
         let root = NonRootMPath::new("a")?;
 
         let leaf_id = TestLeaf::new("1").store(&ctx, &store).await?;
-        let node = Some(BonsaiEntry::Leaf((FileType::Regular, leaf_id)));
+        let node = Some(Entry::Leaf((FileType::Regular, leaf_id)));
         let mut parents: CompositeEntry<TestManifestId, _> = CompositeEntry::empty();
 
         let tree_id = TestManifest::new().store(&ctx, &store).await?;
 
         // Add a conflicting directory. We need to delete it.
-        parents.insert(BonsaiEntry::Tree(tree_id));
+        parents.insert(Entry::Tree(tree_id));
         let (change, work) =
             bonsai_diff_unfold(&ctx, &store, root.clone(), node, parents.clone()).await?;
         assert_eq!(
             change,
             Some(BonsaiDiffFileChange::Changed(
                 root.clone(),
-                FileType::Regular,
-                leaf_id
+                (FileType::Regular, leaf_id)
             ))
         );
         assert_eq!(work, hashmap! {});
 
         // Add another parent with the same file. We can reuse it but we still need to emit it.
-        parents.insert(BonsaiEntry::Leaf((FileType::Regular, leaf_id)));
+        parents.insert(Entry::Leaf((FileType::Regular, leaf_id)));
         let (change, work) =
             bonsai_diff_unfold(&ctx, &store, root.clone(), node, parents.clone()).await?;
         assert_eq!(
             change,
             Some(BonsaiDiffFileChange::ChangedReusedId(
                 root.clone(),
-                FileType::Regular,
-                leaf_id,
+                (FileType::Regular, leaf_id)
             ))
         );
         assert_eq!(work, hashmap! {});
 
         // Add a different file. Same as above.
         let leaf2_id = TestLeaf::new("2").store(&ctx, &store).await?;
-        parents.insert(BonsaiEntry::Leaf((FileType::Regular, leaf2_id)));
+        parents.insert(Entry::Leaf((FileType::Regular, leaf2_id)));
         let (change, work) =
             bonsai_diff_unfold(&ctx, &store, root.clone(), node, parents.clone()).await?;
         assert_eq!(
             change,
             Some(BonsaiDiffFileChange::ChangedReusedId(
                 root.clone(),
-                FileType::Regular,
-                leaf_id,
+                (FileType::Regular, leaf_id)
             ))
         );
         assert_eq!(work, hashmap! {});
@@ -647,13 +630,13 @@ mod test {
 
         let tree_id = TestManifest::new().store(&ctx, &store).await?;
 
-        let node = Some(BonsaiEntry::Tree(tree_id));
+        let node = Some(Entry::Tree(tree_id));
 
         let mut parents = CompositeEntry::empty();
 
         // Parent has a file. Delete it.
         let leaf_id = TestLeaf::new("1").store(&ctx, &store).await?;
-        parents.insert(BonsaiEntry::Leaf((FileType::Regular, leaf_id)));
+        parents.insert(Entry::Leaf((FileType::Regular, leaf_id)));
 
         let (change, work) =
             bonsai_diff_unfold(&ctx, &store, root.clone(), node, parents.clone()).await?;
@@ -674,7 +657,7 @@ mod test {
 
         // Parent has a file, delete it.
         let leaf_id = TestLeaf::new("1").store(&ctx, &store).await?;
-        parents.insert(BonsaiEntry::Leaf((FileType::Executable, leaf_id)));
+        parents.insert(Entry::Leaf((FileType::Executable, leaf_id)));
 
         let (change, work) =
             bonsai_diff_unfold(&ctx, &store, root.clone(), None, parents.clone()).await?;
@@ -703,7 +686,7 @@ mod test {
         let mut parents = CompositeEntry::empty();
 
         // Parent has a directory, recurse into it.
-        parents.insert(BonsaiEntry::Tree(tree1_id));
+        parents.insert(Entry::Tree(tree1_id));
         let (change, work) =
             bonsai_diff_unfold(&ctx, &store, root.clone(), None, parents.clone()).await?;
         assert_eq!(change, None);
@@ -718,7 +701,7 @@ mod test {
         );
 
         // Multiple parents have multiple directories. Recurse into all of them.
-        parents.insert(BonsaiEntry::Tree(tree2_id));
+        parents.insert(Entry::Tree(tree2_id));
         let (change, work) =
             bonsai_diff_unfold(&ctx, &store, root.clone(), None, parents.clone()).await?;
         assert_eq!(change, None);
