@@ -28,6 +28,7 @@ use tests_utils::CreateCommitContext;
 
 use crate::add_sync_target::AddSyncTarget;
 use crate::common::MegarepoOp;
+use crate::common::SYNC_TARGET_CONFIG_FILE;
 use crate::megarepo_test_utils::MegarepoTest;
 use crate::megarepo_test_utils::SyncTargetConfigBuilder;
 use crate::remerge_source::RemergeSource;
@@ -118,6 +119,10 @@ async fn test_remerge_source_simple(fb: FacebookInit) -> Result<(), Error> {
         wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?)
             .is_some()
     );
+    assert!(
+        wc.remove(&NonRootMPath::new(SYNC_TARGET_CONFIG_FILE)?)
+            .is_some()
+    );
 
     assert_eq!(
         wc,
@@ -178,6 +183,10 @@ async fn test_remerge_source_simple(fb: FacebookInit) -> Result<(), Error> {
     // Remove file with commit remapping state because it's never present in source
     assert!(
         wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?)
+            .is_some()
+    );
+    assert!(
+        wc.remove(&NonRootMPath::new(SYNC_TARGET_CONFIG_FILE)?)
             .is_some()
     );
 

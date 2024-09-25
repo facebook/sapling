@@ -141,7 +141,7 @@ pub trait MegarepoOp<R> {
         additions_merge: &Option<ChangesetContext<R>>,
         old_target_cs: &ChangesetContext<R>,
         state: &CommitRemappingState,
-        new_version: Option<String>,
+        new_config: Option<&SyncTargetConfig>,
     ) -> Result<ChangesetId, MegarepoError>
     where
         R: MononokeRepo,
@@ -165,7 +165,7 @@ pub trait MegarepoOp<R> {
                     repo,
                     old_target_cs,
                     all_removed_files.clone(),
-                    new_version,
+                    new_config.map(|config| config.version.clone()),
                 )
                 .await?,
             )
@@ -193,6 +193,9 @@ pub trait MegarepoOp<R> {
             Default::default(),
         );
         state.save_in_changeset(ctx, repo.repo(), &mut bcs).await?;
+        if let Some(new_config) = new_config {
+            save_sync_target_config_in_changeset(ctx, repo.repo(), new_config, &mut bcs).await?;
+        }
         let merge = bcs.freeze()?;
         save_changesets(ctx, repo.repo(), vec![merge.clone()]).await?;
 
@@ -858,7 +861,7 @@ pub trait MegarepoOp<R> {
         repo: &R,
         moved_commits: Vec<(SourceName, SourceAndMovedChangesets)>,
         write_commit_remapping_state: bool,
-        sync_config_version: SyncConfigVersion,
+        sync_target_config: &SyncTargetConfig,
         message: Option<String>,
         bookmark: String,
     ) -> Result<ChangesetId, MegarepoError>
@@ -876,7 +879,7 @@ pub trait MegarepoOp<R> {
                     .iter()
                     .map(|(source, css)| (source.clone(), css.source))
                     .collect(),
-                sync_config_version.clone(),
+                sync_target_config.version.clone(),
                 Some(bookmark),
             ))
         } else {
@@ -902,7 +905,7 @@ pub trait MegarepoOp<R> {
                 let bcs = self.create_merge_commit(
                     message.clone(),
                     cur_parents,
-                    sync_config_version.clone(),
+                    sync_target_config.version.clone(),
                     source_name,
                 )?;
                 let merge = bcs.freeze()?;
@@ -913,10 +916,16 @@ pub trait MegarepoOp<R> {
 
         let (last_source_name, last_moved_commit) = last_moved_commit;
         cur_parents.push(last_moved_commit.moved.get_changeset_id());
-        let mut final_merge =
-            self.create_merge_commit(message, cur_parents, sync_config_version, last_source_name)?;
+        let mut final_merge = self.create_merge_commit(
+            message,
+            cur_parents,
+            sync_target_config.version.clone(),
+            last_source_name,
+        )?;
         if let Some(state) = state {
             state.save_in_changeset(ctx, repo, &mut final_merge).await?;
+            save_sync_target_config_in_changeset(ctx, repo, sync_target_config, &mut final_merge)
+                .await?;
         }
         let final_merge = final_merge.freeze()?;
         merges.push(final_merge.clone());
@@ -1306,6 +1315,51 @@ pub(crate) fn new_megarepo_automation_commit(
         is_snapshot: false,
         git_annotated_tag: None,
     }
+}
+
+pub const SYNC_TARGET_CONFIG_FILE: &str = ".megarepo/sync_target_config";
+pub async fn save_sync_target_config_in_changeset(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    config: &SyncTargetConfig,
+    bcs: &mut BonsaiChangesetMut,
+) -> Result<(), Error> {
+    if let Ok(false) = justknobs::eval(
+        "scm/mononoke:megarepo_serialize_target_config_into_working_copy",
+        None,
+        Some(repo.repo_identity().name()),
+    ) {
+        return Ok(());
+    }
+
+    let bytes = serde_json::to_vec_pretty(&config).map_err(Error::from)?;
+
+    let ((content_id, size), fut) = filestore::store_bytes(
+        repo.repo_blobstore(),
+        *repo.filestore_config(),
+        ctx,
+        bytes.into(),
+    );
+
+    fut.await?;
+
+    let path = NonRootMPath::new(SYNC_TARGET_CONFIG_FILE)?;
+
+    let fc = FileChange::tracked(
+        content_id,
+        FileType::Regular,
+        size,
+        None,
+        GitLfs::FullContent,
+    );
+    if bcs.file_changes.insert(path, fc).is_some() {
+        return Err(anyhow!(
+            "New bonsai changeset already has {} file",
+            SYNC_TARGET_CONFIG_FILE,
+        ));
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]

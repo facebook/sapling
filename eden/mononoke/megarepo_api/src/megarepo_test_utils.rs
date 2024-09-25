@@ -41,6 +41,8 @@ use tests_utils::list_working_copy_utf8;
 use tests_utils::resolve_cs_id;
 use tests_utils::CreateCommitContext;
 
+use crate::common::save_sync_target_config_in_changeset;
+
 pub struct MegarepoTest<R> {
     pub repo: R,
     pub megarepo_mapping: Arc<MegarepoMapping>,
@@ -101,11 +103,11 @@ impl<R: MononokeRepo> MegarepoTest<R> {
         let mut init_target_cs = CreateCommitContext::new_root(ctx, &self.repo);
 
         let mut remapping_state = btreemap! {};
-        for source in initial_config.sources {
+        for source in &initial_config.sources {
             let mover = create_source_to_target_multi_mover(source.mapping.clone())?;
-            let init_source_cs_id = match source.revision {
+            let init_source_cs_id = match &source.revision {
                 SourceRevision::bookmark(bookmark) => {
-                    resolve_cs_id(ctx, &self.repo, bookmark).await?
+                    resolve_cs_id(ctx, &self.repo, bookmark.clone()).await?
                 }
                 SourceRevision::hash(hash) => {
                     let cs_id = ChangesetId::from_bytes(hash)?;
@@ -123,7 +125,10 @@ impl<R: MononokeRepo> MegarepoTest<R> {
                     init_target_cs = init_target_cs.add_file(target_file, content.clone());
                 }
             }
-            remapping_state.insert(SourceName::new(source.source_name), init_source_cs_id);
+            remapping_state.insert(
+                SourceName::new(source.source_name.clone()),
+                init_source_cs_id,
+            );
         }
 
         let mut init_target_cs = init_target_cs.create_commit_object().await?;
@@ -134,6 +139,8 @@ impl<R: MononokeRepo> MegarepoTest<R> {
         );
         remapping_state
             .save_in_changeset(ctx, &self.repo, &mut init_target_cs)
+            .await?;
+        save_sync_target_config_in_changeset(ctx, &self.repo, &initial_config, &mut init_target_cs)
             .await?;
         let init_target_cs = init_target_cs.freeze()?;
         let init_target_cs_id = init_target_cs.get_changeset_id();

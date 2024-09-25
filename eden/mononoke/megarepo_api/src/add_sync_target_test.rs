@@ -31,6 +31,7 @@ use tests_utils::CreateCommitContext;
 
 use crate::add_sync_target::AddSyncTarget;
 use crate::common::MegarepoOp;
+use crate::common::SYNC_TARGET_CONFIG_FILE;
 use crate::megarepo_test_utils::MegarepoTest;
 use crate::megarepo_test_utils::SyncTargetConfigBuilder;
 use crate::sync_changeset::SyncChangeset;
@@ -117,6 +118,10 @@ async fn test_add_sync_target_simple(fb: FacebookInit) -> Result<(), Error> {
         wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?)
             .is_some()
     );
+    assert!(
+        wc.remove(&NonRootMPath::new(SYNC_TARGET_CONFIG_FILE)?)
+            .is_some()
+    );
 
     assert_eq!(
         wc,
@@ -152,6 +157,10 @@ async fn test_add_sync_target_simple(fb: FacebookInit) -> Result<(), Error> {
     // Remove file with commit remapping state because it's never present in source
     assert!(
         wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?)
+            .is_some()
+    );
+    assert!(
+        wc.remove(&NonRootMPath::new(SYNC_TARGET_CONFIG_FILE)?)
             .is_some()
     );
 
@@ -236,6 +245,10 @@ async fn test_add_sync_target_with_linkfiles(fb: FacebookInit) -> Result<(), Err
     // Remove file with commit remapping state because it's never present in source
     assert!(
         wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?)
+            .is_some()
+    );
+    assert!(
+        wc.remove(&NonRootMPath::new(SYNC_TARGET_CONFIG_FILE)?)
             .is_some()
     );
 
@@ -402,6 +415,10 @@ async fn test_add_sync_target_same_file_different_prefix(fb: FacebookInit) -> Re
     // Remove file with commit remapping state because it's never present in source
     assert!(
         wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?)
+            .is_some()
+    );
+    assert!(
+        wc.remove(&NonRootMPath::new(SYNC_TARGET_CONFIG_FILE)?)
             .is_some()
     );
 
@@ -623,6 +640,10 @@ async fn test_add_sync_target_merge_three_sources(fb: FacebookInit) -> Result<()
     // Remove file with commit remapping state because it's never present in source
     assert!(
         wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?)
+            .is_some()
+    );
+    assert!(
+        wc.remove(&NonRootMPath::new(SYNC_TARGET_CONFIG_FILE)?)
             .is_some()
     );
 

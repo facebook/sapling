@@ -623,6 +623,7 @@ mod test {
     use tests_utils::CreateCommitContext;
 
     use super::*;
+    use crate::common::SYNC_TARGET_CONFIG_FILE;
     use crate::megarepo_test_utils::MegarepoTest;
     use crate::megarepo_test_utils::SyncTargetConfigBuilder;
 
@@ -698,6 +699,7 @@ mod test {
 
         // Remove file with commit remapping state because it's never present in source
         wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?);
+        wc.remove(&NonRootMPath::new(SYNC_TARGET_CONFIG_FILE)?);
 
         assert_eq!(
             wc,
@@ -820,6 +822,7 @@ mod test {
 
         // Remove file with commit remapping state because it's never present in source
         wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?);
+        wc.remove(&NonRootMPath::new(SYNC_TARGET_CONFIG_FILE)?);
 
         assert_eq!(
             wc,
@@ -983,6 +986,7 @@ mod test {
 
         // Remove file with commit remapping state because it's never present in source
         wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?);
+        wc.remove(&NonRootMPath::new(SYNC_TARGET_CONFIG_FILE)?);
 
         assert_eq!(
             wc,
@@ -1162,6 +1166,7 @@ mod test {
 
         // Remove file with commit remapping state because it's never present in source
         wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?);
+        wc.remove(&NonRootMPath::new(SYNC_TARGET_CONFIG_FILE)?);
 
         assert_eq!(parents.len(), 1);
 

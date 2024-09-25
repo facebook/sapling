@@ -119,7 +119,7 @@ impl<'a, R: MononokeRepo> AddSyncTarget<'a, R> {
                 repo.repo(),
                 moved_commits,
                 true, /* write_commit_remapping_state */
-                sync_target_config.version.clone(),
+                &sync_target_config,
                 message,
                 sync_target_config.target.bookmark.clone(),
             )

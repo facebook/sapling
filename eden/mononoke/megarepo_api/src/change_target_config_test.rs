@@ -31,6 +31,7 @@ use tests_utils::CreateCommitContext;
 use crate::add_sync_target::AddSyncTarget;
 use crate::change_target_config::ChangeTargetConfig;
 use crate::common::MegarepoOp;
+use crate::common::SYNC_TARGET_CONFIG_FILE;
 use crate::megarepo_test_utils::MegarepoTest;
 use crate::megarepo_test_utils::SyncTargetConfigBuilder;
 
@@ -91,6 +92,10 @@ async fn test_change_target_config(fb: FacebookInit) -> Result<(), Error> {
         wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?)
             .is_some()
     );
+    assert!(
+        wc.remove(&NonRootMPath::new(SYNC_TARGET_CONFIG_FILE)?)
+            .is_some()
+    );
 
     assert_eq!(
         wc,
@@ -109,6 +114,7 @@ async fn test_change_target_config(fb: FacebookInit) -> Result<(), Error> {
             .collect::<Vec<_>>(),
         vec![
             NonRootMPath::new(".megarepo/remapping_state")?,
+            NonRootMPath::new(".megarepo/sync_target_config")?,
             NonRootMPath::new("linkfiles/first")?,
             NonRootMPath::new("linkfiles/second")?,
             NonRootMPath::new("source_2/second")?
@@ -702,6 +708,10 @@ async fn test_change_target_config_linkfile_to_file_mapped_to_multiple_paths(
     // Remove file with commit remapping state because it's never present in source
     assert!(
         wc.remove(&NonRootMPath::new(REMAPPING_STATE_FILE)?)
+            .is_some()
+    );
+    assert!(
+        wc.remove(&NonRootMPath::new(SYNC_TARGET_CONFIG_FILE)?)
             .is_some()
     );
 
