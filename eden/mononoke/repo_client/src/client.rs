@@ -43,7 +43,6 @@ use context::LoggingContainer;
 use context::PerfCounterType;
 use context::PerfCounters;
 use context::SessionContainer;
-use cross_repo_sync::SubmoduleDeps;
 use filenodes::FilenodeResult;
 use futures::compat::Future01CompatExt;
 use futures::compat::Stream01CompatExt;
@@ -913,11 +912,9 @@ impl<R: Repo> RepoClient<R> {
                 ctx.logger(),
                 "live_commit_sync_config says push redirection is on"
             );
-            Ok(Some(push_redirector_args.into_push_redirector(
-                ctx,
-                live_commit_sync_config,
-                SubmoduleDeps::NotNeeded,
-            )?))
+            Ok(Some(
+                push_redirector_args.into_push_redirector(ctx, live_commit_sync_config)?,
+            ))
         } else {
             debug!(
                 ctx.logger(),

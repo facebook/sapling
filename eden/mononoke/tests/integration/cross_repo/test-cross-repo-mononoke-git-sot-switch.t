@@ -175,6 +175,6 @@ Run the x-repo with submodules setup
   $ git commit -q -am "Git commit that should be pushredirected" 
   $ git_client push origin --all --follow-tags
   To https://localhost:$LOCAL_PORT/repos/git/ro/small_repo.git
-   ! [remote rejected] master -> master (invalid request: Bookmark transaction failed)
+   ! [remote rejected] master -> master (Submodule expansion data not provided when submodules is enabled for small repo)
   error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/small_repo.git'
   [1]

@@ -52,7 +52,6 @@ use commit_graph::CommitGraphArc;
 use commit_graph::CommitGraphRef;
 use commit_graph::CommitGraphWriter;
 use context::CoreContext;
-use cross_repo_sync::get_all_repo_submodule_deps;
 use cross_repo_sync::get_all_submodule_deps_from_repo_pair;
 use cross_repo_sync::get_small_and_large_repos;
 use cross_repo_sync::CandidateSelectionHint;
@@ -322,10 +321,10 @@ pub struct RepoContextBuilder<R> {
     repos: Arc<MononokeRepos<R>>,
 }
 
-async fn maybe_push_redirector<'a, R: MononokeRepo>(
-    ctx: &'a CoreContext,
-    repo: &'a Arc<R>,
-    repos: &'a MononokeRepos<R>,
+async fn maybe_push_redirector<R: MononokeRepo>(
+    ctx: &CoreContext,
+    repo: &Arc<R>,
+    repos: &MononokeRepos<R>,
 ) -> Result<Option<PushRedirector<R>>, MononokeError> {
     let base = match repo.repo_handler_base().maybe_push_redirector_base.as_ref() {
         None => return Ok(None),
@@ -335,19 +334,6 @@ async fn maybe_push_redirector<'a, R: MononokeRepo>(
     let enabled = live_commit_sync_config
         .push_redirector_enabled_for_public(ctx, repo.repo_identity().id())
         .await?;
-
-    let repo_provider: RepoProvider<'a, R> = Arc::new(move |repo_id| {
-        Box::pin({
-            async move {
-                let repo = repos
-                    .get_by_id(repo_id.id())
-                    .ok_or_else(|| anyhow!("Submodule dependency repo with id {repo_id} not available through RepoContext"))?;
-                Ok(repo)
-            }
-        })
-    });
-
-    let submodule_deps = get_all_repo_submodule_deps(ctx, repo.clone(), repo_provider).await?;
 
     if enabled {
         let large_repo_id = base.common_commit_sync_config.large_repo_id;
@@ -361,7 +347,7 @@ async fn maybe_push_redirector<'a, R: MononokeRepo>(
                 base.synced_commit_mapping.clone(),
                 base.target_repo_dbs.clone(),
             )
-            .into_push_redirector(ctx, live_commit_sync_config.clone(), submodule_deps)
+            .into_push_redirector(ctx, live_commit_sync_config.clone())
             .map_err(|e| MononokeError::InvalidRequest(e.to_string()))?,
         ))
     } else {
