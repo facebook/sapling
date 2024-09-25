@@ -106,7 +106,7 @@ pub enum RequestStatus {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct LongRunningRequestEntry {
     pub id: RowId,
-    pub repo_id: RepositoryId,
+    pub repo_id: Option<RepositoryId>,
     pub request_type: RequestType,
     pub args_blobstore_key: BlobstoreKey,
     pub result_blobstore_key: Option<BlobstoreKey>,

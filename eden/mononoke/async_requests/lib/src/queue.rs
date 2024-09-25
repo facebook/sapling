@@ -38,7 +38,6 @@ use sql_construct::SqlConstruct;
 use crate::error::AsyncRequestsError;
 use crate::types::AsynchronousRequestParams;
 use crate::types::AsynchronousRequestResult;
-use crate::types::IntoConfigFormat;
 use crate::types::Request;
 use crate::types::ThriftParams;
 use crate::types::Token;
@@ -81,25 +80,17 @@ impl AsyncMethodRequestQueue {
     pub async fn enqueue<P: ThriftParams, R: MononokeRepo>(
         &self,
         ctx: &CoreContext,
-        mononoke: &Mononoke<R>,
+        _mononoke: &Mononoke<R>,
+        repo_id: Option<&RepositoryId>,
         thrift_params: P,
     ) -> Result<<P::R as Request>::Token, Error> {
         let request_type = RequestType(P::R::NAME.to_owned());
-        let target = thrift_params
-            .target()?
-            .clone()
-            .into_config_format(mononoke)?;
         let rust_params: AsynchronousRequestParams = thrift_params.into();
         let params_object_id = rust_params.store(ctx, &self.blobstore).await?;
         let blobstore_key = BlobstoreKey(params_object_id.blobstore_key());
         let table_id = self
             .table
-            .add_request(
-                ctx,
-                &request_type,
-                &RepositoryId::new(i32::try_from(target.repo_id)?),
-                &blobstore_key,
-            )
+            .add_request(ctx, &request_type, repo_id, &blobstore_key)
             .await?;
         let token = <P::R as Request>::Token::from_db_id(table_id)?;
         Ok(token)
@@ -339,6 +330,7 @@ mod tests {
     use fbinit::FacebookInit;
     use mononoke_api::Repo;
     use mononoke_macros::mononoke;
+    use repo_identity::RepoIdentityRef;
     use requests_table::ClaimedBy;
     use requests_table::RequestStatus;
     use source_control::MegarepoAddBranchingTargetParams as ThriftMegarepoAddBranchingTargetParams;
@@ -376,12 +368,13 @@ mod tests {
                 let q = AsyncMethodRequestQueue::new_test_in_memory().unwrap();
                 let ctx = CoreContext::test_mock(fb);
                 let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
+                let repo_id = repo.repo_identity().id();
                 let mononoke =
                     Mononoke::new_test(vec![("test".to_string(), repo)]).await?;
 
                 // Enqueue a request
                 let params = $thrift_params;
-                let token = q.enqueue(&ctx, &mononoke, params.clone()).await?;
+                let token = q.enqueue(&ctx, &mononoke, Some(&repo_id), params.clone()).await?;
 
                 // Verify that request metadata is in the db and has expected values
                 let row_id = token.to_db_id()?;
@@ -394,7 +387,7 @@ mod tests {
                 assert_eq!(entry.started_processing_at, None);
                 assert_eq!(entry.ready_at, None);
                 assert_eq!(entry.polled_at, None);
-                assert_eq!(entry.repo_id,  RepositoryId::new(0));
+                assert_eq!(entry.repo_id, Some(RepositoryId::new(0)));
                 assert_eq!(
                     entry.request_type,
                     RequestType($request_type.to_string())

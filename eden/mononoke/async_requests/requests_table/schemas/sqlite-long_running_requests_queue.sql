@@ -7,7 +7,7 @@
 
  CREATE TABLE IF NOT EXISTS `long_running_request_queue` (
   `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-  `repo_id` INTEGER NOT NULL,
+  `repo_id` INTEGER DEFAULT NULL,
   `bookmark` VARCHAR(512) DEFAULT NULL,
   `request_type` VARCHAR(255) NOT NULL,
   `args_blobstore_key` VARCHAR(255) NOT NULL,

@@ -30,7 +30,7 @@ mononoke_queries! {
     read TestGetRequest(id: RowId) -> (
         RowId,
         RequestType,
-        RepositoryId,
+        Option<RepositoryId>,
         BlobstoreKey,
         Option<BlobstoreKey>,
         Timestamp,
@@ -60,7 +60,7 @@ mononoke_queries! {
     read GetRequest(id: RowId, request_type: RequestType) -> (
         RowId,
         RequestType,
-        RepositoryId,
+        Option<RepositoryId>,
         BlobstoreKey,
         Option<BlobstoreKey>,
         Timestamp,
@@ -90,7 +90,7 @@ mononoke_queries! {
     read GetOneNewRequestForAnyRepo() -> (
         RowId,
         RequestType,
-        RepositoryId,
+        Option<RepositoryId>,
         BlobstoreKey,
         Option<BlobstoreKey>,
         Timestamp,
@@ -123,7 +123,7 @@ mononoke_queries! {
     read GetOneNewRequestForRepos(>list supported_repo_ids: RepositoryId) -> (
         RowId,
         RequestType,
-        RepositoryId,
+        Option<RepositoryId>,
         BlobstoreKey,
         Option<BlobstoreKey>,
         Timestamp,
@@ -153,11 +153,19 @@ mononoke_queries! {
         "
     }
 
-    write AddRequest(request_type: RequestType, repo_id: RepositoryId, args_blobstore_key: BlobstoreKey, created_at: Timestamp) {
+    write AddRequestWithRepo(request_type: RequestType, repo_id: RepositoryId, args_blobstore_key: BlobstoreKey, created_at: Timestamp) {
         none,
         "INSERT INTO long_running_request_queue
          (request_type, repo_id, args_blobstore_key, status, created_at)
          VALUES ({request_type}, {repo_id}, {args_blobstore_key}, 'new', {created_at})
+        "
+    }
+
+    write AddRequest(request_type: RequestType, args_blobstore_key: BlobstoreKey, created_at: Timestamp) {
+        none,
+        "INSERT INTO long_running_request_queue
+         (request_type, args_blobstore_key, status, created_at)
+         VALUES ({request_type}, {args_blobstore_key}, 'new', {created_at})
         "
     }
 
@@ -256,7 +264,7 @@ mononoke_queries! {
     read ListRequestsForAnyRepo(last_update_newer_than: Timestamp) -> (
         RowId,
         RequestType,
-        RepositoryId,
+        Option<RepositoryId>,
         BlobstoreKey,
         Option<BlobstoreKey>,
         Timestamp,
@@ -289,7 +297,7 @@ mononoke_queries! {
     read ListRequestsForRepos(last_update_newer_than: Timestamp, >list repo_ids: RepositoryId) -> (
         RowId,
         RequestType,
-        RepositoryId,
+        Option<RepositoryId>,
         BlobstoreKey,
         Option<BlobstoreKey>,
         Timestamp,
@@ -324,7 +332,7 @@ fn row_to_entry(
     row: (
         RowId,
         RequestType,
-        RepositoryId,
+        Option<RepositoryId>,
         BlobstoreKey,
         Option<BlobstoreKey>,
         Timestamp,
@@ -377,17 +385,30 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
         &self,
         _ctx: &CoreContext,
         request_type: &RequestType,
-        repo_id: &RepositoryId,
+        repo_id: Option<&RepositoryId>,
         args_blobstore_key: &BlobstoreKey,
     ) -> Result<RowId> {
-        let res = AddRequest::query(
-            &self.connections.write_connection,
-            request_type,
-            repo_id,
-            args_blobstore_key,
-            &Timestamp::now(),
-        )
-        .await?;
+        let res = match &repo_id {
+            Some(repo_id) => {
+                AddRequestWithRepo::query(
+                    &self.connections.write_connection,
+                    request_type,
+                    repo_id,
+                    args_blobstore_key,
+                    &Timestamp::now(),
+                )
+                .await?
+            }
+            None => {
+                AddRequest::query(
+                    &self.connections.write_connection,
+                    request_type,
+                    args_blobstore_key,
+                    &Timestamp::now(),
+                )
+                .await?
+            }
+        };
 
         match res.last_insert_id() {
             Some(last_insert_id) if res.affected_rows() == 1 => Ok(RowId(last_insert_id)),
@@ -664,7 +685,7 @@ mod test {
             .add_request(
                 &ctx,
                 &RequestType("type".to_string()),
-                &RepositoryId::new(0),
+                Some(&RepositoryId::new(0)),
                 &BlobstoreKey("key".to_string()),
             )
             .await?;
@@ -694,7 +715,7 @@ mod test {
             .add_request(
                 &ctx,
                 &RequestType("type".to_string()),
-                &RepositoryId::new(0),
+                Some(&RepositoryId::new(0)),
                 &BlobstoreKey("key".to_string()),
             )
             .await?;
@@ -745,7 +766,7 @@ mod test {
             .add_request(
                 &ctx,
                 &RequestType("type".to_string()),
-                &RepositoryId::new(0),
+                None,
                 &BlobstoreKey("key".to_string()),
             )
             .await?;
@@ -788,7 +809,7 @@ mod test {
             .add_request(
                 &ctx,
                 &RequestType("type".to_string()),
-                &repo_id,
+                Some(&repo_id),
                 &BlobstoreKey("key".to_string()),
             )
             .await?;
@@ -883,7 +904,7 @@ mod test {
             .add_request(
                 &ctx,
                 &RequestType("type".to_string()),
-                &repo_id,
+                Some(&repo_id),
                 &BlobstoreKey("key".to_string()),
             )
             .await?;

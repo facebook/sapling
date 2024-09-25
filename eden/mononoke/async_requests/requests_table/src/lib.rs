@@ -40,7 +40,7 @@ pub trait LongRunningRequestsQueue: Send + Sync {
         &self,
         ctx: &CoreContext,
         request_type: &RequestType,
-        repo_id: &RepositoryId,
+        repo_id: Option<&RepositoryId>,
         args_blobstore_key: &BlobstoreKey,
     ) -> Result<RowId>;
 

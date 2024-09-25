@@ -210,7 +210,7 @@ impl SourceControlServiceImpl {
             .into_config_format(&self.mononoke)?;
         self.verify_repos_by_config(&config_with_new_target)?;
 
-        enqueue(&ctx, &queue, &self.mononoke, params).await
+        enqueue(&ctx, &queue, &self.mononoke, Some(&target_repo_id), params).await
     }
 
     pub(crate) async fn megarepo_add_sync_target_poll(
@@ -240,7 +240,7 @@ impl SourceControlServiceImpl {
         let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
-        enqueue(&ctx, &queue, &self.mononoke, params).await
+        enqueue(&ctx, &queue, &self.mononoke, Some(&target_repo_id), params).await
     }
 
     pub(crate) async fn megarepo_add_branching_sync_target_poll(
@@ -270,7 +270,7 @@ impl SourceControlServiceImpl {
         let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
-        enqueue(&ctx, &queue, &self.mononoke, params).await
+        enqueue(&ctx, &queue, &self.mononoke, Some(&target_repo_id), params).await
     }
 
     pub(crate) async fn megarepo_change_target_config_poll(
@@ -300,7 +300,7 @@ impl SourceControlServiceImpl {
         let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
-        enqueue(&ctx, &queue, &self.mononoke, params).await
+        enqueue(&ctx, &queue, &self.mononoke, Some(&target_repo_id), params).await
     }
 
     pub(crate) async fn megarepo_sync_changeset_poll(
@@ -330,7 +330,7 @@ impl SourceControlServiceImpl {
         let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
-        enqueue(&ctx, &queue, &self.mononoke, params).await
+        enqueue(&ctx, &queue, &self.mononoke, Some(&target_repo_id), params).await
     }
 
     pub(crate) async fn megarepo_remerge_source_poll(
@@ -367,10 +367,11 @@ async fn enqueue<P: ThriftParams, R: MononokeRepo>(
     ctx: &CoreContext,
     queue: &AsyncMethodRequestQueue,
     mononoke: &Mononoke<R>,
+    repo_id: Option<&RepositoryId>,
     params: P,
 ) -> Result<<<P::R as Request>::Token as Token>::ThriftToken, errors::ServiceError> {
     queue
-        .enqueue(ctx, mononoke, params)
+        .enqueue(ctx, mononoke, repo_id, params)
         .await
         .map(|res| res.into_thrift())
         .map_err(|e| errors::internal_error(format!("Failed to enqueue the request: {}", e)).into())
