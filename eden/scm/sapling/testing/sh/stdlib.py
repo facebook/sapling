@@ -838,11 +838,24 @@ def pwd(fs: ShellFS):
 
 @command
 def grep(args: List[str], arg0: str, stdin: BinaryIO, fs: ShellFS, stdout: BinaryIO):
-    import re
+    def expect_arg(typ, args, flag):
+        try:
+            val = typ(args[0])
+        except IndexError:
+            raise RuntimeError(f"{flag} requires an argument")
+        except ValueError:
+            raise NotImplementedError(
+                f"{flag} requires an integer arugment, but got: {args[0]}"
+            )
+        # consume the argument
+        args.pop(0)
+        return val
 
     inverse = False
     only = False
     extended = arg0 == "egrep"
+    before = 0
+    after = 0
 
     while args[0].startswith("-"):
         flag, *args = args
@@ -853,6 +866,16 @@ def grep(args: List[str], arg0: str, stdin: BinaryIO, fs: ShellFS, stdout: Binar
             arg0 = "egrep"
         elif flag == "-o":
             only = True
+        elif flag == "-A" or flag == "--after-context":
+            after = expect_arg(int, args, flag)
+        elif flag == "-B" or flag == "--before-context":
+            before = expect_arg(int, args, flag)
+        elif flag == "-C" or flag == "--context":
+            context = expect_arg(int, args, flag)
+            if not before:
+                before = context
+            if not after:
+                after = context
         elif flag == "--":
             break
         else:
@@ -872,7 +895,15 @@ def grep(args: List[str], arg0: str, stdin: BinaryIO, fs: ShellFS, stdout: Binar
             f"{m.group()}\n" for l, m in line_matches if m and bool(m) != inverse
         )
     else:
-        out = "".join(l for l, m in line_matches if bool(m) != inverse)
+        out_lines = set()
+        for i, (l, m) in enumerate(line_matches):
+            if bool(m) != inverse:
+                for j in range(max(0, i - before), i):
+                    out_lines.add(j)
+                out_lines.add(i)
+                for j in range(i + 1, min(i + 1 + after, len(lines))):
+                    out_lines.add(j)
+        out = "".join(lines[i] for i in sorted(out_lines))
     stdout.write(out.encode())
     if not out:
         return 1

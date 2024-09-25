@@ -322,6 +322,16 @@ grep:
     '1\n3\n'
     >>> t('echo a | grep b')
     '[1]\n'
+    >>> t('seq 20 | grep -B 3 2')
+    '1\n2\n9\n10\n11\n12\n17\n18\n19\n20\n'
+    >>> t('seq 20 | grep -A 3 2')
+    '2\n3\n4\n5\n12\n13\n14\n15\n20\n'
+    >>> t('seq 20 | grep -C 3 2')
+    '1\n2\n3\n4\n5\n9\n10\n11\n12\n13\n14\n15\n17\n18\n19\n20\n'
+    >>> t('seq 20 | grep -A 2 -C 3 2')
+    '1\n2\n3\n4\n9\n10\n11\n12\n13\n14\n17\n18\n19\n20\n'
+    >>> t('seq 20 | grep -B 2 -C 3 2')
+    '1\n2\n3\n4\n5\n10\n11\n12\n13\n14\n15\n18\n19\n20\n'
 
 sort
 
