@@ -20,38 +20,21 @@ include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "eden/mononoke/mononoke_types/serialization/path.thrift"
 include "eden/mononoke/mononoke_types/serialization/time.thrift"
 
-// Parent ordering
-// ---------------
-// "Ordered" parents means that behavior will change if the order of parents
-// changes.
-// Whether parents are ordered varies by source control system.
-// * In Mercurial, parents are stored ordered and the UI is order-dependent,
-//   but are hashed unordered.
-// * In Git, parents are stored and hashed ordered and the UI is also order-
-//   dependent.
-// These data structures will store parents in ordered form, as presented by
-// Mercurial. This does hypothetically mean that a single Mercurial changeset
-// can map to two Mononoke changesets -- those cases are extremely unlikely
-// in practice, and if they're deliberately constructed Mononoke will probably
-// end up rejecting whatever comes later.
-
-// Other notes:
-// * This uses sorted sets and maps to ensure deterministic
-//   serialization.
-// * Added and modified files are both part of file_changes.
-// * file_changes is at the end of the struct so that a deserializer that just
-//   wants to read metadata can stop early.
-// * NonRootMPath, Id and DateTime fields do not have a reasonable default value, so
-//   they must always be either "required" or "optional".
-// * The set of keys in file_changes is path-conflict-free (pcf): no changed
-//   path is a directory prefix of another path. So file_changes can never have
-//   "foo" and "foo/bar" together, but "foo" and "foo1" are OK.
-//   * If a directory is replaced by a file, the bonsai changeset will only
-//     record the file being added. The directory being deleted is implicit.
-//   * This only applies if the potential prefix is changed. Deleted files can
-//     have conflicting subdirectory entries recorded for them.
-//   * Corollary: The file list in Mercurial is not pcf, so the Bonsai diff is
-//     computed separately.
+// Bonsai Changeset is the fundamental commit object of Mononoke's internal
+// representation.
+//
+// * Parents are stored and hashed ordered.  This matches Git, but differs
+//   from Mercurial/Sapling where parents are stored ordered but hashed
+//   unordered.  This means that a single Mercurial/Sapling changeset can
+//   map to two Mononoke changesets, but this is extremely unlikely in
+//   practice and Mononoke will reject whichever order comes later.
+// * Sorted sets and maps are used to ensure deterministic serialization.
+// * There is no distinction between added and modified files in file_changes.
+// * Path conflicts in file_changes have the following meanings:
+//   - A deleted path may be a prefix of changed paths and means a file was
+//     replaced by a directory.
+// * Otherwise, path conflicts are not allowed (a change cannot be a prefix
+//   of a deletion or another change)
 
 struct BonsaiChangeset {
   1: list<id.ChangesetId> parents;
@@ -62,7 +45,7 @@ struct BonsaiChangeset {
   5: optional time.DateTime committer_date;
   6: string message;
   // Extra headers specifically for mercurial
-  7: HgExtra hg_extra;
+  7: HgExtras hg_extra;
   // @lint-ignore THRIFTCHECKS bad-key-type
   8: FileChanges file_changes;
   // Changeset is a snapshot iff this field is present
@@ -109,26 +92,20 @@ enum FileType {
   GitSubmodule = 3,
 }
 
+typedef map<path.NonRootMPath, FileChangeOpt> (
+  rust.type = "sorted_vector_map::SortedVectorMap",
+) FileChanges
+
 struct FileChangeOpt {
   // All values being absent here means that the file was marked as deleted.
   // At most one value can be present.
 
-  // Changes to a tracked file
+  // This is a change to a tracked file.
   1: optional FileChange change;
   // This is a change to an untracked file in a snapshot commit.
   2: optional UntrackedFileChange untracked_change;
-  // Present if this is a missing file in a snapshot commit.
+  // This is a missing file in a snapshot commit.
   3: optional UntrackedDeletion untracked_deletion;
-} (rust.exhaustive)
-
-struct UntrackedDeletion {
-// Additional state (if necessary)
-} (rust.exhaustive)
-
-struct UntrackedFileChange {
-  1: id.ContentId content_id;
-  2: FileType file_type;
-  3: i64 size;
 } (rust.exhaustive)
 
 struct FileChange {
@@ -142,12 +119,29 @@ struct FileChange {
   5: optional GitLfs git_lfs;
 } (rust.exhaustive)
 
-// This is only used optionally so it is OK to use `required` here.
+struct UntrackedFileChange {
+  1: id.ContentId content_id;
+  2: FileType file_type;
+  3: i64 size;
+} (rust.exhaustive)
+
+struct UntrackedDeletion {
+// Additional state (if necessary)
+} (rust.exhaustive)
+
 struct CopyInfo {
   1: path.NonRootMPath file;
   // cs_id must match one of the parents specified in BonsaiChangeset
   2: id.ChangesetId cs_id;
 } (rust.exhaustive)
+
+typedef map<string, binary> (
+  rust.type = "sorted_vector_map::SortedVectorMap",
+) HgExtras
+
+typedef map<data.SmallBinary, data.LargeBinary> (
+  rust.type = "sorted_vector_map::SortedVectorMap",
+) GitExtraHeaders
 
 // Git LFS
 // Just mere presence of this structure is enough to get the file changes
@@ -168,14 +162,3 @@ struct GitLfs {
 // have an enum here to indicate the version number. Right now there's just
 // one version: v1.
 }
-
-// The following were automatically generated and may benefit from renaming.
-typedef map<path.NonRootMPath, FileChangeOpt> (
-  rust.type = "sorted_vector_map::SortedVectorMap",
-) FileChanges
-typedef map<data.SmallBinary, data.LargeBinary> (
-  rust.type = "sorted_vector_map::SortedVectorMap",
-) GitExtraHeaders
-typedef map<string, binary> (
-  rust.type = "sorted_vector_map::SortedVectorMap",
-) HgExtra
