@@ -224,6 +224,15 @@ test subtree merge
   -3
   +3a
   +4
+tofix: should have one parent
+  $ hg log -r . -T '{parents}'
+  2983b50fcc5e 907442010f51  (no-eol)
+tofix: show logs of 'bar' directory
+  $ hg log bar
+  commit:      12a50861656c
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     subtree merge foo to bar
 
 test subtree merge with normal copy
   $ newclientrepo
