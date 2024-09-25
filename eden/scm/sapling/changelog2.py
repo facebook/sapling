@@ -26,7 +26,7 @@ from . import (
     vfs as vfsmod,
     visibility,
 )
-from .changelog import changelogrevision, gitcommittext, hgcommittext, readfiles
+from .changelog import changelogrevision, gitcommittext, hgcommittext
 from .i18n import _
 from .node import bin, hex, nullid, nullrev, wdirid, wdirrev
 
@@ -325,8 +325,8 @@ class changelog:
         # For performance we skip verifying the commit hash, which can trigger
         # remote lookups of the parent hashes. A real-world example is:
         # log -r " reverse(master~1000::master) & not(file(r're:.*'))"
-        text = self.revision(node, verify=False)
-        return readfiles(text)
+        c = changelogrevision(self.revision(node, verify=False))
+        return c.files
 
     def add(
         self,
