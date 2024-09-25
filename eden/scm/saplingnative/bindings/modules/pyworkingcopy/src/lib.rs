@@ -266,6 +266,24 @@ py_class!(pub class mergestate |py| {
         Ok(self.ms(py).borrow().labels().to_vec())
     }
 
+    def add_subtree_merge(&self, from_commit: PyBytes, from_path: PyPathBuf, to_path: PyPathBuf) -> PyResult<PyNone> {
+        let from_commit = HgId::from_slice(from_commit.data(py)).map_pyerr(py)?;
+        let from_path = from_path.to_repo_path_buf().map_pyerr(py)?;
+        let to_path = to_path.to_repo_path_buf().map_pyerr(py)?;
+        self.ms(py).borrow_mut().add_subtree_merge(from_commit, from_path, to_path);
+        Ok(PyNone)
+    }
+
+    def subtree_merges(&self) -> PyResult<Vec<(PyBytes, PyPathBuf, PyPathBuf)>> {
+        Ok(self
+            .ms(py)
+            .borrow()
+            .subtree_merges()
+            .iter()
+            .map(|(a, b, c)| (PyBytes::new(py, a.as_ref()), b.clone().into(), c.clone().into()))
+            .collect())
+    }
+
     def insert(&self, path: PyPathBuf, data: Vec<String>) -> PyResult<PyNone> {
         let mut ms = self.ms(py).borrow_mut();
         ms.insert(path.to_repo_path_buf().map_pyerr(py)?, data).map_pyerr(py)?;
