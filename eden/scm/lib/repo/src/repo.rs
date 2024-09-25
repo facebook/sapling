@@ -17,6 +17,7 @@ use cas_client::CasClient;
 use commits_trait::DagCommits;
 use configloader::config::ConfigSet;
 use configloader::hg::PinnedConfig;
+use configloader::hg::RepoInfo;
 use configloader::Config;
 use configmodel::ConfigExt;
 use eagerepo::EagerRepo;
@@ -146,7 +147,7 @@ impl Repo {
 
         let config = match config {
             Some(config) => config,
-            None => configloader::hg::load(Some(&info), pinned_config)?,
+            None => configloader::hg::load(RepoInfo::Disk(&info), pinned_config)?,
         };
 
         let RepoMinimalInfo {

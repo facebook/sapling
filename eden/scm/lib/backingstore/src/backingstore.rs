@@ -20,6 +20,7 @@ use anyhow::anyhow;
 use anyhow::Result;
 use arc_swap::ArcSwap;
 use configloader::hg::PinnedConfig;
+use configloader::hg::RepoInfo;
 use configloader::Config;
 use edenapi::configmodel::config::ContentHash;
 use edenapi::configmodel::ConfigExt;
@@ -118,7 +119,7 @@ impl BackingStore {
         constructors::init();
 
         let info = RepoMinimalInfo::from_repo_root(root.to_path_buf())?;
-        let mut config = configloader::hg::embedded_load(Some(&info), extra_configs)?;
+        let mut config = configloader::hg::embedded_load(RepoInfo::Disk(&info), extra_configs)?;
 
         let source = "backingstore".into();
         if !allow_retries {
@@ -329,7 +330,7 @@ impl BackingStore {
         if !inner.reload_interval.is_zero() && since_last_reload >= inner.reload_interval {
             if let Ok(info) = RepoMinimalInfo::from_repo_root(inner.repo.path().to_owned()) {
                 if let Ok(config) =
-                    configloader::hg::embedded_load(Some(&info), &inner.extra_configs)
+                    configloader::hg::embedded_load(RepoInfo::Disk(&info), &inner.extra_configs)
                 {
                     if let Some(reason) =
                         diff_config_files(&inner.repo.config().files(), &config.files())

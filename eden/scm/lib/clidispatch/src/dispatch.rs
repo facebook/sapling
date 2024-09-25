@@ -20,6 +20,7 @@ use cliparser::parser::StructFlags;
 use cliparser::parser::Value;
 use configloader::config::ConfigSet;
 use configloader::hg::set_pinned;
+use configloader::hg::RepoInfo;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use hgtime::HgTime;
@@ -215,7 +216,9 @@ impl Dispatcher {
             Err(err) => {
                 // If we failed to load the repo, make one last ditch effort to load a repo-less config.
                 // This might allow us to run the network doctor even if this repo's dynamic config is not loadable.
-                if let Ok(config) = configloader::hg::load(None, &pinned_configs(&global_opts)) {
+                if let Ok(config) =
+                    configloader::hg::load(RepoInfo::NoRepo, &pinned_configs(&global_opts))
+                {
                     Err(errors::triage_error(&config, err, None))
                 } else {
                     Err(err)
@@ -260,7 +263,7 @@ impl Dispatcher {
     }
 
     fn load_repoless_config(&self) -> Result<ConfigSet> {
-        configloader::hg::load(None, &pinned_configs(&self.early_global_opts))
+        configloader::hg::load(RepoInfo::NoRepo, &pinned_configs(&self.early_global_opts))
     }
 
     fn default_command(&self) -> Result<String> {

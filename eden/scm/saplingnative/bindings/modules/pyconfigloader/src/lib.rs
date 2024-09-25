@@ -15,6 +15,7 @@ use configloader::config::Options;
 use configloader::convert::parse_list;
 use configloader::hg::ConfigSetHgExt;
 use configloader::hg::OptionsHgExt;
+use configloader::hg::RepoInfo;
 use configloader::Config;
 use cpython::*;
 use cpython_ext::error::Result;
@@ -140,8 +141,12 @@ py_class!(pub class config |py| {
     @staticmethod
     def load(repopath: Option<PyPathBuf>) -> PyResult<Self> {
         let info = path_to_info(py, repopath)?;
+        let info = match info {
+            Some(ref info) => RepoInfo::Disk(info),
+            None => RepoInfo::NoRepo,
+        };
         let mut cfg = ConfigSet::new();
-        cfg.load(info.as_ref(), Default::default()).map_pyerr(py)?;
+        cfg.load(info, Default::default()).map_pyerr(py)?;
         Self::create_instance(py, RefCell::new(cfg))
     }
 
@@ -150,8 +155,12 @@ py_class!(pub class config |py| {
         repopath: Option<PyPathBuf>,
     ) -> PyResult<PyNone> {
         let info = path_to_info(py, repopath)?;
+        let info = match info {
+            Some(ref info) => RepoInfo::Disk(info),
+            None => RepoInfo::NoRepo,
+        };
         let mut cfg = self.cfg(py).borrow_mut();
-        cfg.load(info.as_ref(), Default::default()).map_pyerr(py)?;
+        cfg.load(info, Default::default()).map_pyerr(py)?;
         Ok(PyNone)
     }
 

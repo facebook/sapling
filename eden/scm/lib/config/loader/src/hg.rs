@@ -58,7 +58,7 @@ pub trait OptionsHgExt {
 }
 
 pub trait ConfigSetHgExt {
-    fn load(&mut self, info: Option<&RepoMinimalInfo>, opts: Options) -> Result<(), Errors>;
+    fn load(&mut self, info: RepoInfo, opts: Options) -> Result<(), Errors>;
 
     /// Load system config files if config environment variable is not set.
     /// Return errors parsing files.
@@ -87,27 +87,23 @@ pub trait ConfigSetHgExt {
 /// Load config from specified "minimal repo", or global config if no path specified.
 /// `extra_values` contains config overrides (i.e. "--config" CLI values).
 /// `extra_files` contains additional config files (i.e. "--configfile" CLI values).
-pub fn load(info: Option<&RepoMinimalInfo>, pinned: &[PinnedConfig]) -> Result<ConfigSet> {
+pub fn load(info: RepoInfo, pinned: &[PinnedConfig]) -> Result<ConfigSet> {
     load_with_options(info, pinned, Options::default())
 }
 
 /// Like `load`, but intended to be used by applications that embed Sapling libraries.
 /// In particular, defer to the system "sl" binary to refresh dynamic config.
-pub fn embedded_load(info: Option<&RepoMinimalInfo>, pinned: &[PinnedConfig]) -> Result<ConfigSet> {
+pub fn embedded_load(info: RepoInfo, pinned: &[PinnedConfig]) -> Result<ConfigSet> {
     let mut opts: Options = Default::default();
     opts.minimize_dynamic_gen = true;
     load_with_options(info, pinned, opts)
 }
 
-fn load_with_options(
-    info: Option<&RepoMinimalInfo>,
-    pinned: &[PinnedConfig],
-    opts: Options,
-) -> Result<ConfigSet> {
+fn load_with_options(info: RepoInfo, pinned: &[PinnedConfig], opts: Options) -> Result<ConfigSet> {
     let mut cfg = ConfigSet::new().named("root");
     let mut errors = Vec::new();
 
-    tracing::debug!(?pinned, repo_path=?info.map(|i| &i.path));
+    tracing::debug!(?pinned, repo_path=?info.path());
 
     // "--configfile" and "--config" values are loaded as "pinned". This lets us load them
     // first so they can inform further config loading, but also make sure they still take
@@ -307,20 +303,50 @@ fn set_override(config: &mut ConfigSet, raw: &Text, opts: Options) -> crate::Res
     Ok(())
 }
 
+#[derive(Clone, Copy)]
+pub enum RepoInfo<'a> {
+    // Information about an on-disk repo.
+    Disk(&'a RepoMinimalInfo),
+    // Repo name for a repo that doesn't exist on disk yet.
+    Ephemeral(&'a str),
+    // No repo specific info available.
+    NoRepo,
+}
+
+impl RepoInfo<'_> {
+    fn as_disk(&self) -> Option<&RepoMinimalInfo> {
+        match self {
+            RepoInfo::Disk(info) => Some(info),
+            _ => None,
+        }
+    }
+
+    fn path(&self) -> Option<&Path> {
+        match self {
+            RepoInfo::Disk(info) => Some(&info.path),
+            _ => None,
+        }
+    }
+
+    fn identity(&self) -> Identity {
+        match self {
+            RepoInfo::Disk(info) => info.ident,
+            _ => identity::default(),
+        }
+    }
+}
+
 impl ConfigSetHgExt for ConfigSet {
     /// Load system, user config files.
-    fn load(&mut self, info: Option<&RepoMinimalInfo>, opts: Options) -> Result<(), Errors> {
-        tracing::info!(repo_path=?info.map(|i| &i.path), "loading config");
+    fn load(&mut self, info: RepoInfo, opts: Options) -> Result<(), Errors> {
+        tracing::info!(repo_path=?info.path(), "loading config");
 
         self.clear_unpinned();
 
-        let ident = match info {
-            None => identity::default(),
-            Some(i) => i.ident,
-        };
+        let ident = info.identity();
 
         // The ".git/sl" path for a dotgit repo. Otherwise None.
-        let dotgit_sl_path = match info {
+        let dotgit_sl_path = match info.as_disk() {
             None => None,
             Some(info) => {
                 if info.ident.dot_dir().starts_with(".git") {
@@ -350,7 +376,8 @@ impl ConfigSetHgExt for ConfigSet {
         // We load things out of order a bit since the dynamic config can depend
         // on system config (namely, auth_proxy.unix_socket_path).
 
-        let mut layers = crate::builtin_static::builtin_system(opts.clone(), &ident, info);
+        let mut layers =
+            crate::builtin_static::builtin_system(opts.clone(), &ident, info.as_disk());
 
         let dynamic_layer_idx = layers.len();
 
@@ -369,7 +396,7 @@ impl ConfigSetHgExt for ConfigSet {
         errors.append(&mut user.load_user(opts.clone(), &ident));
         layers.push(Arc::new(user));
 
-        if let Some(info) = info {
+        if let Some(info) = info.as_disk() {
             if let Some(dotgit_sl_path) = dotgit_sl_path {
                 let mut repo_git = ConfigSet::new().named("repo-git");
                 let path = translated_git_repo_config_path(dotgit_sl_path, ident);
@@ -403,7 +430,7 @@ impl ConfigSetHgExt for ConfigSet {
 
         // Wait until config is fully loaded so maybe_refresh_dynamic() itself sees
         // correct config values.
-        self.maybe_refresh_dynamic(info, &ident)
+        self.maybe_refresh_dynamic(info.as_disk(), &ident)
             .map_err(|e| Errors(vec![Error::Other(e)]))?;
 
         if !errors.is_empty() {
@@ -814,7 +841,7 @@ pub fn generate_internalconfig(
 /// Returns errors parsing, generating, or fetching the configs.
 #[cfg(feature = "fb")]
 fn load_dynamic(
-    info: Option<&RepoMinimalInfo>,
+    info: RepoInfo,
     opts: Options,
     identity: &Identity,
     proxy_sock_path: Option<String>,
@@ -832,7 +859,7 @@ fn load_dynamic(
     }
 
     // Compute path
-    let dynamic_path = get_config_dir(info)?.join("hgrc.dynamic");
+    let dynamic_path = get_config_dir(info.as_disk())?.join("hgrc.dynamic");
 
     // Check version
     let content = read_to_string(&dynamic_path).ok();
@@ -868,7 +895,7 @@ fn load_dynamic(
             }
 
             let repo_name = match info {
-                Some(info) => {
+                RepoInfo::Disk(info) => {
                     let opts = opts.clone().source("temp").process_hgplain();
                     // We need to know the repo name, but that's stored in the repository configs at
                     // the moment. In the long term we need to move that, but for now let's load the
@@ -883,7 +910,8 @@ fn load_dynamic(
                         &info.dot_hg_path,
                     )?)
                 }
-                None => None,
+                RepoInfo::Ephemeral(repo_name) => Some(repo_name.to_string()),
+                RepoInfo::NoRepo => None,
             };
 
             (repo_name, temp_config.get_or_default("ui", "username")?)
@@ -892,7 +920,7 @@ fn load_dynamic(
         // Regen inline
         let res = generate_internalconfig(
             mode,
-            info,
+            info.as_disk(),
             repo_name,
             None,
             user_name,
@@ -1012,7 +1040,7 @@ mod tests {
 
         env.set("TESTTMP", Some("1"));
 
-        let cfg = load(None, &[]).unwrap();
+        let cfg = load(RepoInfo::NoRepo, &[]).unwrap();
 
         // Sanity that we have a test value from static config.
         assert_eq!(
@@ -1025,7 +1053,7 @@ mod tests {
 
         // With HGPLAIN=1, aliases should get dropped.
         env.set(*HGPLAIN, Some("1"));
-        let cfg = load(None, &[]).unwrap();
+        let cfg = load(RepoInfo::NoRepo, &[]).unwrap();
         assert_eq!(cfg.get("alias", "some-command"), None);
     }
 
@@ -1232,7 +1260,7 @@ mod tests {
         env.set("TESTTMP", Some("1"));
 
         let mut cfg = ConfigSet::new();
-        cfg.load(None, Default::default()).unwrap();
+        cfg.load(RepoInfo::NoRepo, Default::default()).unwrap();
         assert_eq!(cfg.get("treestate", "repackfactor").unwrap(), "3");
     }
 
@@ -1256,7 +1284,7 @@ mod tests {
         let repo = RepoMinimalInfo::from_repo_root(dir.path().to_path_buf()).unwrap();
 
         let cfg = load(
-            Some(&repo),
+            RepoInfo::Disk(&repo),
             &[
                 PinnedConfig::File(
                     format!("{}", other_rc.display()).into(),

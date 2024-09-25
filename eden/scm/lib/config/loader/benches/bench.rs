@@ -7,6 +7,7 @@
 
 use configloader::config::ConfigSet;
 use configloader::hg::ConfigSetHgExt;
+use configloader::hg::RepoInfo;
 use configloader::Text;
 use minibench::bench;
 use minibench::elapsed;
@@ -33,7 +34,7 @@ fn main() {
     bench("load system and user", || {
         elapsed(|| {
             let mut cfg = ConfigSet::new();
-            cfg.load(None, Default::default()).unwrap();
+            cfg.load(RepoInfo::NoRepo, Default::default()).unwrap();
         })
     });
 
@@ -45,7 +46,7 @@ fn main() {
         let repo = RepoMinimalInfo::from_repo_root(path.to_path_buf()).unwrap();
         elapsed(|| {
             let mut cfg = ConfigSet::new();
-            cfg.load(Some(&repo), Default::default()).unwrap();
+            cfg.load(RepoInfo::Disk(&repo), Default::default()).unwrap();
         })
     });
 }
