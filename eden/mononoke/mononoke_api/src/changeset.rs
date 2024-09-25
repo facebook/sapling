@@ -510,26 +510,57 @@ impl<R: MononokeRepo> ChangesetContext<R> {
         paths: impl Iterator<Item = MPath>,
     ) -> Result<impl Stream<Item = Result<ChangesetPathContext<R>, MononokeError>>, MononokeError>
     {
-        Ok(self
-            .root_skeleton_manifest_id()
-            .await?
-            .skeleton_manifest_id()
-            .find_entries(
-                self.ctx().clone(),
-                self.repo_ctx().repo().repo_blobstore().clone(),
-                paths,
-            )
-            .map_err(MononokeError::from)
-            .and_then({
-                let changeset = self.clone();
-                move |(mpath, entry)| {
-                    ChangesetPathContext::new_with_entry(
-                        changeset.clone(),
-                        mpath,
-                        entry.map_tree(|_| ()),
-                    )
-                }
-            }))
+        if justknobs::eval(
+            "scm/mononoke:changeset_path_context_use_skeleton_manifest_v2",
+            None,
+            Some(self.repo_ctx().name()),
+        )? {
+            Ok(self
+                .root_skeleton_manifest_v2_id()
+                .await?
+                .into_inner_id()
+                .load(self.ctx(), self.repo_ctx().repo().repo_blobstore())
+                .await?
+                .find_entries(
+                    self.ctx().clone(),
+                    self.repo_ctx().repo().repo_blobstore().clone(),
+                    paths,
+                )
+                .map_err(MononokeError::from)
+                .and_then({
+                    let changeset = self.clone();
+                    move |(mpath, entry)| {
+                        ChangesetPathContext::new_with_entry(
+                            changeset.clone(),
+                            mpath,
+                            entry.map_tree(|_| ()),
+                        )
+                    }
+                })
+                .left_stream())
+        } else {
+            Ok(self
+                .root_skeleton_manifest_id()
+                .await?
+                .skeleton_manifest_id()
+                .find_entries(
+                    self.ctx().clone(),
+                    self.repo_ctx().repo().repo_blobstore().clone(),
+                    paths,
+                )
+                .map_err(MononokeError::from)
+                .and_then({
+                    let changeset = self.clone();
+                    move |(mpath, entry)| {
+                        ChangesetPathContext::new_with_entry(
+                            changeset.clone(),
+                            mpath,
+                            entry.map_tree(|_| ()),
+                        )
+                    }
+                })
+                .right_stream())
+        }
     }
 
     fn deleted_paths_impl<Root: RootDeletedManifestIdCommon>(

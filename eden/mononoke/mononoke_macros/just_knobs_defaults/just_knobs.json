@@ -42,7 +42,8 @@
     "scm/mononoke:mononoke_api_find_files_use_skeleton_manifests_v2": true,
     "scm/mononoke:remote_gitimport_derive_skeleton_manifests": true,
     "scm/mononoke:remote_gitimport_derive_skeleton_manifests_v2": true,
-    "scm/mononoke:remote_gitimport_derive_ccsm": true
+    "scm/mononoke:remote_gitimport_derive_ccsm": true,
+    "scm/mononoke:changeset_path_context_use_skeleton_manifest_v2": true
   },
   "ints": {
     "scm/mononoke_timeouts:repo_client_clone_timeout_secs": 14400,

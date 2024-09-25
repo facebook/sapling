@@ -793,14 +793,34 @@ impl<R: MononokeRepo> ChangesetPathContext<R> {
                 async move {
                     let ctx = changeset.ctx().clone();
                     let blobstore = changeset.repo_ctx().repo().repo_blobstore().clone();
-                    let root_skeleton_manifest_id = changeset.root_skeleton_manifest_id().await?;
+                    let repo_name = changeset.repo_ctx().name().to_string();
+
                     if let Some(mpath) = path.into_optional_non_root_path() {
-                        root_skeleton_manifest_id
-                            .skeleton_manifest_id()
-                            .find_entry(ctx, blobstore, MPath::from(mpath))
-                            .await
-                            .map(|maybe_entry| maybe_entry.map(|entry| entry.map_tree(|_| ())))
-                            .map_err(MononokeError::from)
+                        if justknobs::eval(
+                            "scm/mononoke:changeset_path_context_use_skeleton_manifest_v2",
+                            None,
+                            Some(&repo_name),
+                        )? {
+                            let root_skeleton_manifest_v2_id =
+                                changeset.root_skeleton_manifest_v2_id().await?;
+                            root_skeleton_manifest_v2_id
+                                .into_inner_id()
+                                .load(&ctx, &blobstore)
+                                .await?
+                                .find_entry(ctx, blobstore, MPath::from(mpath))
+                                .await
+                                .map(|maybe_entry| maybe_entry.map(|entry| entry.map_tree(|_| ())))
+                                .map_err(MononokeError::from)
+                        } else {
+                            let root_skeleton_manifest_id =
+                                changeset.root_skeleton_manifest_id().await?;
+                            root_skeleton_manifest_id
+                                .skeleton_manifest_id()
+                                .find_entry(ctx, blobstore, MPath::from(mpath))
+                                .await
+                                .map(|maybe_entry| maybe_entry.map(|entry| entry.map_tree(|_| ())))
+                                .map_err(MononokeError::from)
+                        }
                     } else {
                         Ok(Some(Entry::Tree(())))
                     }

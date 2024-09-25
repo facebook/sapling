@@ -43,7 +43,7 @@ use crate::StoreRequest;
 
 #[mononoke::fbinit_test]
 async fn test_create_commit(fb: FacebookInit) -> Result<(), Error> {
-    create_commit(fb, DerivableType::SkeletonManifests).await?;
+    create_commit(fb, DerivableType::SkeletonManifestsV2).await?;
 
     Ok(())
 }
