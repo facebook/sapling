@@ -43,6 +43,7 @@ use types::RepoPathBuf;
 /// D: a file that the external merge driver will merge internally
 ///    (experimental)
 /// P: a path conflict (file vs directory)
+/// S: subtree merges
 /// m: the external merge driver defined for this merge plus its run state
 ///    (experimental)
 /// f: a (filename, dictionary) tuple of optional values for a given file
@@ -67,6 +68,9 @@ pub struct MergeState {
     // commits being merged
     local: Option<HgId>,
     other: Option<HgId>,
+
+    // subtree merge info: [(from_commit, from_path, to_path)]
+    subtree_merges: Vec<(HgId, RepoPathBuf, RepoPathBuf)>,
 
     // contextual labels for local/other/base
     labels: Vec<String>,
@@ -140,6 +144,19 @@ impl MergeState {
 
     pub fn labels(&self) -> &[String] {
         &self.labels
+    }
+
+    pub fn add_subtree_merge(
+        &mut self,
+        from_commit: HgId,
+        from_path: RepoPathBuf,
+        to_path: RepoPathBuf,
+    ) {
+        self.subtree_merges.push((from_commit, from_path, to_path));
+    }
+
+    pub fn subtree_merges(&self) -> &[(HgId, RepoPathBuf, RepoPathBuf)] {
+        &self.subtree_merges
     }
 
     pub fn insert(&mut self, path: RepoPathBuf, data: Vec<String>) -> Result<()> {
@@ -250,6 +267,22 @@ impl MergeState {
                         },
                     );
                 }
+                b'S' => {
+                    let (first, mut rest) = split_strings(record_data)?;
+
+                    if rest.len() != 2 {
+                        bail!("subtree merge should have two paths: {} {:?}", first, rest);
+                    }
+
+                    let from_commit =
+                        HgId::from_hex(first.as_bytes()).context("subtree merge from-commit")?;
+
+                    if let (Some(to_path), Some(from_path)) = (rest.pop(), rest.pop()) {
+                        let from_path = from_path.try_into().context("subtree from-path")?;
+                        let to_path = to_path.try_into().context("subtree to-path")?;
+                        ms.subtree_merges.push((from_commit, from_path, to_path));
+                    }
+                }
                 b'f' => {
                     let (first, mut rest) = split_strings(record_data)?;
 
@@ -330,6 +363,10 @@ impl MergeState {
             write_record(w, b'O', &other.to_hex(), &Vec::<&str>::new())?;
         }
 
+        for (from_commit, from_path, to_path) in &self.subtree_merges {
+            write_record(w, b'S', &from_commit.to_hex(), &[from_path, to_path])?;
+        }
+
         if let Some((md, mds)) = &self.merge_driver {
             write_record(w, b'm', md, &[mds.to_py_string()])?;
         }
@@ -393,6 +430,17 @@ impl std::fmt::Debug for MergeState {
                 md,
                 mds.to_py_string()
             )?;
+        }
+
+        if !self.subtree_merges.is_empty() {
+            writeln!(f, "subtree merges:")?;
+            for (from_commit, from_path, to_path) in &self.subtree_merges {
+                writeln!(
+                    f,
+                    "  from_commit: {}, from: {}, to: {}",
+                    from_commit, from_path, to_path
+                )?;
+            }
         }
 
         if !self.labels.is_empty() {
@@ -624,6 +672,33 @@ mod test {
         ms.set_merge_driver(Some(("my driver".to_string(), MergeDriverState::Marked)));
         assert!(ms.is_unresolved());
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_subtree_merges() -> Result<()> {
+        let mut ms = MergeState::default();
+        assert!(ms.subtree_merges().is_empty());
+
+        let from_path = RepoPathBuf::from_string("foo/a".to_string())?;
+        let to_path = RepoPathBuf::from_string("foo/b".to_string())?;
+        let from_commit = HgId::from_byte_array([0x11; HgId::len()]);
+
+        ms.add_subtree_merge(from_commit, from_path.clone(), to_path.clone());
+        assert_eq!(
+            ms.subtree_merges(),
+            &[(from_commit, from_path.clone(), to_path.clone())],
+        );
+
+        let mut data = Vec::new();
+        ms.serialize(&mut data)?;
+
+        let mut buffer = &data[..];
+        let ms2 = MergeState::deserialize(&mut buffer)?;
+        assert_eq!(
+            ms2.subtree_merges(),
+            &[(from_commit, from_path.clone(), to_path.clone())],
+        );
         Ok(())
     }
 }
