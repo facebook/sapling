@@ -20,8 +20,8 @@ from .cmdtable import command
 
 
 # todo: remove the 'test_' prefix when this feature is stable
-SUBTREE_BRANCH_INFO_KEY = "test_branch_info"
-SUBTREE_MERGE_INFO_KEY = "test_subtree_merge_info"
+SUBTREE_BRANCH_KEY = "test_subtree_copy"
+SUBTREE_MERGE_KEY = "test_subtree_merge"
 
 
 @command(
@@ -281,7 +281,7 @@ def _gen_branch_info(from_commit, from_paths, to_paths):
     }
     # compact JSON representation
     str_val = json.dumps(value, separators=(",", ":"))
-    return {SUBTREE_BRANCH_INFO_KEY: str_val}
+    return {SUBTREE_BRANCH_KEY: str_val}
 
 
 def _gen_prepopulated_commit_msg(from_commit, from_paths, to_paths):
@@ -308,7 +308,7 @@ def gen_merge_info(subtree_merges):
     }
     # compact JSON representation
     str_val = json.dumps(value, separators=(",", ":"))
-    return {SUBTREE_MERGE_INFO_KEY: str_val}
+    return {SUBTREE_MERGE_KEY: str_val}
 
 
 def gen_merge_commit_msg(subtree_merges):
@@ -326,11 +326,11 @@ def gen_merge_commit_msg(subtree_merges):
 
 
 def get_branch_info(repo, node):
-    return _get_subtree_metadata(repo, node, SUBTREE_BRANCH_INFO_KEY)
+    return _get_subtree_metadata(repo, node, SUBTREE_BRANCH_KEY)
 
 
 def get_merge_info(repo, node):
-    return _get_subtree_metadata(repo, node, SUBTREE_MERGE_INFO_KEY)
+    return _get_subtree_metadata(repo, node, SUBTREE_MERGE_KEY)
 
 
 def _get_subtree_metadata(repo, node, key):
