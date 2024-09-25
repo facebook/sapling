@@ -198,11 +198,8 @@ impl SourceControlServiceImpl {
         params: thrift::MegarepoAddTargetParams,
     ) -> Result<thrift::MegarepoAddTargetToken, errors::ServiceError> {
         let queue = build_queue(&ctx, &self.async_requests_queue_client).await?;
-        let target = params
-            .target()?
-            .clone()
-            .into_config_format(&self.mononoke)?;
-        let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
+        let target_repo_id =
+            get_repo_id_from_target(&params.config_with_new_target.target, &self.mononoke)?;
         self.check_write_allowed(&ctx, target_repo_id).await?;
         let config_with_new_target = params
             .config_with_new_target
@@ -233,11 +230,7 @@ impl SourceControlServiceImpl {
         params: thrift::MegarepoAddBranchingTargetParams,
     ) -> Result<thrift::MegarepoAddBranchingTargetToken, errors::ServiceError> {
         let queue = build_queue(&ctx, &self.async_requests_queue_client).await?;
-        let target = params
-            .target()?
-            .clone()
-            .into_config_format(&self.mononoke)?;
-        let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
+        let target_repo_id = get_repo_id_from_target(&params.target, &self.mononoke)?;
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
         enqueue(&ctx, &queue, &self.mononoke, Some(&target_repo_id), params).await
@@ -263,11 +256,7 @@ impl SourceControlServiceImpl {
         params: thrift::MegarepoChangeTargetConfigParams,
     ) -> Result<thrift::MegarepoChangeConfigToken, errors::ServiceError> {
         let queue = build_queue(&ctx, &self.async_requests_queue_client).await?;
-        let target = params
-            .target()?
-            .clone()
-            .into_config_format(&self.mononoke)?;
-        let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
+        let target_repo_id = get_repo_id_from_target(&params.target, &self.mononoke)?;
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
         enqueue(&ctx, &queue, &self.mononoke, Some(&target_repo_id), params).await
@@ -293,11 +282,7 @@ impl SourceControlServiceImpl {
         params: thrift::MegarepoSyncChangesetParams,
     ) -> Result<thrift::MegarepoSyncChangesetToken, errors::ServiceError> {
         let queue = build_queue(&ctx, &self.async_requests_queue_client).await?;
-        let target = params
-            .target()?
-            .clone()
-            .into_config_format(&self.mononoke)?;
-        let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
+        let target_repo_id = get_repo_id_from_target(&params.target, &self.mononoke)?;
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
         enqueue(&ctx, &queue, &self.mononoke, Some(&target_repo_id), params).await
@@ -323,11 +308,7 @@ impl SourceControlServiceImpl {
         params: thrift::MegarepoRemergeSourceParams,
     ) -> Result<thrift::MegarepoRemergeSourceToken, errors::ServiceError> {
         let queue = build_queue(&ctx, &self.async_requests_queue_client).await?;
-        let target = params
-            .target()?
-            .clone()
-            .into_config_format(&self.mononoke)?;
-        let target_repo_id = RepositoryId::new(target.repo_id.try_into().unwrap());
+        let target_repo_id = get_repo_id_from_target(&params.target, &self.mononoke)?;
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
         enqueue(&ctx, &queue, &self.mononoke, Some(&target_repo_id), params).await
@@ -375,4 +356,27 @@ async fn enqueue<P: ThriftParams, R: MononokeRepo>(
         .await
         .map(|res| res.into_thrift())
         .map_err(|e| errors::internal_error(format!("Failed to enqueue the request: {}", e)).into())
+}
+
+/// Retrieve the repo_id from the `target` field of the original Thrift request.
+fn get_repo_id_from_target<R: MononokeRepo>(
+    target: &thrift::MegarepoTarget,
+    mononoke: &Mononoke<R>,
+) -> Result<RepositoryId, errors::ServiceError> {
+    match (&target.repo, target.repo_id) {
+        (Some(repo), _) => {
+            let repo = mononoke
+                .repo_id_from_name(repo.name.clone())
+                .ok_or_else(|| {
+                    errors::invalid_request(format!("Invalid repo_name {}", repo.name))
+                })?;
+            Ok(RepositoryId::new(repo.id()))
+        }
+        (_, Some(repo_id)) => Ok(RepositoryId::new(
+            repo_id.try_into().map_err(errors::invalid_request)?,
+        )),
+        (None, None) => Err(errors::invalid_request(
+            "both repo_id and repo_name are None!",
+        ))?,
+    }
 }
