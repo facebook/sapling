@@ -503,7 +503,8 @@ impl Client {
             manifest_blob: attrs.manifest_blob,
             parents: attrs.parents,
             child_metadata: attrs.child_metadata,
-            augmented_trees: attrs.augmented_trees || self.config().augmented_trees,
+            augmented_trees: attrs.augmented_trees
+                || (self.config().augmented_trees && attrs.child_metadata),
         };
 
         let try_route_consistently = self.config().try_route_consistently;
