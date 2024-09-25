@@ -157,7 +157,7 @@ we can land something that doesn't introduce a new case conflict
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updated remote bookmark other to 951a1a92f401
 
-we can't land if we try to make an existing case conflict worse
+We can land adding a new file that makes an existing case conflict worse
   $ echo conflict > existing/CASECONFLICT
   $ hg add existing/CASECONFLICT
   warning: possible case-folding collision for existing/CASECONFLICT
@@ -170,20 +170,5 @@ we can't land if we try to make an existing case conflict worse
   edenapi: uploaded 2 trees
   edenapi: uploaded 1 changeset
   pushrebasing stack (951a1a92f401, 13488940ae4f] (1 commit) to remote bookmark other
-  abort: Server error: invalid request: Case conflict found in b6801c5486aaa96f45805ddd8c874a5e602888e94cc2c93e44aacdc106e8ed9d: existing/CASECONFLICT conflicts with existing/CaseConflict
-  [255]
-
-we can land it if we also fix all of the related case conflicts
-  $ hg rm existing/CaseConflict
-  $ hg rm existing/caseconflict
-  $ hg amend -q
-  $ hg push -r . --to other
-  pushing rev f53c362f9b2d to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark other
-  edenapi: queue 1 commit for upload
-  edenapi: queue 0 files for upload
-  edenapi: queue 2 trees for upload
-  edenapi: uploaded 2 trees
-  edenapi: uploaded 1 changeset
-  pushrebasing stack (951a1a92f401, f53c362f9b2d] (1 commit) to remote bookmark other
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updated remote bookmark other to f53c362f9b2d
+  updated remote bookmark other to 13488940ae4f
