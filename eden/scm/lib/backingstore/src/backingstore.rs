@@ -384,6 +384,14 @@ impl BackingStore {
 
         self.inner.store(Arc::new(new_inner));
 
+        if needs_reload {
+            // Flush the old stores again right after the swaperoo. This should help
+            // reduce the window for missed cache writes. This flush is effective even
+            // though we have already created new stores since the scmstore indexedlogs
+            // automatically notice things have changed on disk during the read path.
+            inner.flush();
+        }
+
         self.inner.load()
     }
 }
