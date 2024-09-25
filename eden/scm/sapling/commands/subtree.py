@@ -191,11 +191,9 @@ def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path):
 
         # check merge info
         if merge_info := get_merge_info(repo, heads[i]):
-            if (
-                merge_info["to_path"] == paths[i]
-                and merge_info["from_path"] == paths[1 - i]
-            ):
-                return merge_info["from_commit"]
+            for merge in merge_info["merges"]:
+                if merge["to_path"] == paths[i] and merge["from_path"] == paths[1 - i]:
+                    return merge["from_commit"]
 
         # check branch info
         if branch_info := get_branch_info(repo, heads[i]):
@@ -292,6 +290,25 @@ def _gen_prepopulated_commit_msg(from_commit, from_paths, to_paths):
     for from_path, to_path in zip(from_paths, to_paths):
         msgs.append(f"- Copied path {from_path} to {to_path}")
     return "\n".join(msgs)
+
+
+def gen_merge_info(subtree_merges):
+    if not subtree_merges:
+        return {}
+    value = {
+        "v": 1,
+        "merges": [
+            {
+                "from_commit": node.hex(from_node),
+                "from_path": from_path,
+                "to_path": to_path,
+            }
+            for from_node, from_path, to_path in subtree_merges
+        ],
+    }
+    # compact JSON representation
+    str_val = json.dumps(value, separators=(",", ":"))
+    return {SUBTREE_MERGE_INFO_KEY: str_val}
 
 
 def gen_merge_commit_msg(subtree_merges):
