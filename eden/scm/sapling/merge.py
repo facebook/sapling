@@ -203,6 +203,19 @@ class mergestate:
         # Maintain historical behavior of no labels being `None`, not `[]`.
         return self._rust_ms.labels() or None
 
+    @util.propertycache
+    def subtree_merges(self):
+        """Subtree merge info.
+
+        Return a list of (from_node, from_path, to_path).
+        """
+        return self._rust_ms.subtree_merges()
+
+    def add_subtree_merge(self, from_node, from_path, to_path):
+        """Add a subtree merge record"""
+        self._rust_ms.add_subtree_merge(from_node, from_path, to_path)
+        self._dirty = True
+
     def active(self):
         """Whether mergestate is active.
 
@@ -1358,11 +1371,12 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
     perftrace.tracevalue("Actions", sum(len(v) for k, v in actions.items()))
 
     updated, merged, removed = 0, 0, 0
+    other_node = mctx.node()
 
     ms = mergestate.clean(
         repo,
         node=wctx.p1().node(),
-        other=mctx.node(),
+        other=other_node,
         # Ancestor can include the working copy, so we use this helper:
         ancestors=(
             [scmutil.contextnodesupportingwdir(c) for c in ancestors]
@@ -1371,6 +1385,9 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
         ),
         labels=labels,
     )
+
+    for from_path, to_path in mctx.manifest().diffgrafts():
+        ms.add_subtree_merge(other_node, from_path, to_path)
 
     moves = []
     for m, l in actions.items():
