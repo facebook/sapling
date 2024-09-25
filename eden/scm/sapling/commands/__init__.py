@@ -72,6 +72,7 @@ from .. import (
 from ..i18n import _
 from ..node import bin, hex, nullid, short
 from ..pycompat import isint, range
+from ..utils import subtreeutil
 from . import cmdtable
 
 
@@ -1761,7 +1762,7 @@ def _docommit(ui, repo, *pats, **opts):
         def commitfunc(ui, repo, message, match, opts):
             ms = mergemod.mergestate.read(repo)
             subtree_merges = ms.subtree_merges
-            extra.update(subtree.gen_merge_info(subtree_merges))
+            extra.update(subtreeutil.gen_merge_info(subtree_merges))
             summaryfooter = subtree.gen_merge_commit_msg(subtree_merges)
             if subtree_merges:
                 parents = repo[None].parents()
