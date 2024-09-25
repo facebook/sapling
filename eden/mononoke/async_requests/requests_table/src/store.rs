@@ -9,8 +9,6 @@ use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
-use bookmarks::BookmarkKey;
-use bookmarks::BookmarkName;
 use context::CoreContext;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
@@ -33,7 +31,6 @@ mononoke_queries! {
         RowId,
         RequestType,
         RepositoryId,
-        BookmarkName,
         BlobstoreKey,
         Option<BlobstoreKey>,
         Timestamp,
@@ -47,7 +44,6 @@ mononoke_queries! {
         "SELECT id,
             request_type,
             repo_id,
-            bookmark,
             args_blobstore_key,
             result_blobstore_key,
             created_at,
@@ -65,7 +61,6 @@ mononoke_queries! {
         RowId,
         RequestType,
         RepositoryId,
-        BookmarkName,
         BlobstoreKey,
         Option<BlobstoreKey>,
         Timestamp,
@@ -79,7 +74,6 @@ mononoke_queries! {
         "SELECT id,
             request_type,
             repo_id,
-            bookmark,
             args_blobstore_key,
             result_blobstore_key,
             created_at,
@@ -97,7 +91,6 @@ mononoke_queries! {
         RowId,
         RequestType,
         RepositoryId,
-        BookmarkName,
         BlobstoreKey,
         Option<BlobstoreKey>,
         Timestamp,
@@ -111,7 +104,6 @@ mononoke_queries! {
         "SELECT id,
             request_type,
             repo_id,
-            bookmark,
             args_blobstore_key,
             result_blobstore_key,
             created_at,
@@ -132,7 +124,6 @@ mononoke_queries! {
         RowId,
         RequestType,
         RepositoryId,
-        BookmarkName,
         BlobstoreKey,
         Option<BlobstoreKey>,
         Timestamp,
@@ -146,7 +137,6 @@ mononoke_queries! {
         "SELECT id,
             request_type,
             repo_id,
-            bookmark,
             args_blobstore_key,
             result_blobstore_key,
             created_at,
@@ -163,11 +153,11 @@ mononoke_queries! {
         "
     }
 
-    write AddRequest(request_type: RequestType, repo_id: RepositoryId, bookmark: BookmarkName, args_blobstore_key: BlobstoreKey, created_at: Timestamp) {
+    write AddRequest(request_type: RequestType, repo_id: RepositoryId, args_blobstore_key: BlobstoreKey, created_at: Timestamp) {
         none,
         "INSERT INTO long_running_request_queue
-         (request_type, repo_id, bookmark, args_blobstore_key, status, created_at)
-         VALUES ({request_type}, {repo_id}, {bookmark}, {args_blobstore_key}, 'new', {created_at})
+         (request_type, repo_id, args_blobstore_key, status, created_at)
+         VALUES ({request_type}, {repo_id}, {args_blobstore_key}, 'new', {created_at})
         "
     }
 
@@ -267,7 +257,6 @@ mononoke_queries! {
         RowId,
         RequestType,
         RepositoryId,
-        BookmarkName,
         BlobstoreKey,
         Option<BlobstoreKey>,
         Timestamp,
@@ -281,7 +270,6 @@ mononoke_queries! {
         "SELECT id,
             request_type,
             repo_id,
-            bookmark,
             args_blobstore_key,
             result_blobstore_key,
             created_at,
@@ -302,7 +290,6 @@ mononoke_queries! {
         RowId,
         RequestType,
         RepositoryId,
-        BookmarkName,
         BlobstoreKey,
         Option<BlobstoreKey>,
         Timestamp,
@@ -316,7 +303,6 @@ mononoke_queries! {
         "SELECT id,
             request_type,
             repo_id,
-            bookmark,
             args_blobstore_key,
             result_blobstore_key,
             created_at,
@@ -339,7 +325,6 @@ fn row_to_entry(
         RowId,
         RequestType,
         RepositoryId,
-        BookmarkName,
         BlobstoreKey,
         Option<BlobstoreKey>,
         Timestamp,
@@ -355,7 +340,6 @@ fn row_to_entry(
         id,
         request_type,
         repo_id,
-        bookmark,
         args_blobstore_key,
         result_blobstore_key,
         created_at,
@@ -369,7 +353,6 @@ fn row_to_entry(
     LongRunningRequestEntry {
         id,
         repo_id,
-        bookmark,
         request_type,
         args_blobstore_key,
         result_blobstore_key,
@@ -395,14 +378,12 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
         _ctx: &CoreContext,
         request_type: &RequestType,
         repo_id: &RepositoryId,
-        bookmark: &BookmarkKey,
         args_blobstore_key: &BlobstoreKey,
     ) -> Result<RowId> {
         let res = AddRequest::query(
             &self.connections.write_connection,
             request_type,
             repo_id,
-            bookmark.name(),
             args_blobstore_key,
             &Timestamp::now(),
         )
@@ -684,7 +665,6 @@ mod test {
                 &ctx,
                 &RequestType("type".to_string()),
                 &RepositoryId::new(0),
-                &BookmarkKey::new("book")?,
                 &BlobstoreKey("key".to_string()),
             )
             .await?;
@@ -715,7 +695,6 @@ mod test {
                 &ctx,
                 &RequestType("type".to_string()),
                 &RepositoryId::new(0),
-                &BookmarkKey::new("book")?,
                 &BlobstoreKey("key".to_string()),
             )
             .await?;
@@ -767,7 +746,6 @@ mod test {
                 &ctx,
                 &RequestType("type".to_string()),
                 &RepositoryId::new(0),
-                &BookmarkKey::new("book")?,
                 &BlobstoreKey("key".to_string()),
             )
             .await?;
@@ -811,7 +789,6 @@ mod test {
                 &ctx,
                 &RequestType("type".to_string()),
                 &repo_id,
-                &BookmarkKey::new("book")?,
                 &BlobstoreKey("key".to_string()),
             )
             .await?;
@@ -907,7 +884,6 @@ mod test {
                 &ctx,
                 &RequestType("type".to_string()),
                 &repo_id,
-                &BookmarkKey::new("book")?,
                 &BlobstoreKey("key".to_string()),
             )
             .await?;

@@ -12,7 +12,6 @@ anyhow = "1.0.86"
 async-trait = "0.1.71"
 async_requests_types_thrift = { version = "0.1.0", path = "../if" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
-bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 context = { version = "0.1.0", path = "../../server/context" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }

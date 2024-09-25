@@ -15,7 +15,6 @@ use anyhow::Error;
 use blobstore::Blobstore;
 use blobstore::PutBehaviour;
 use blobstore::Storable;
-use bookmarks::BookmarkKey;
 use context::CoreContext;
 use futures::stream;
 use futures::StreamExt;
@@ -99,7 +98,6 @@ impl AsyncMethodRequestQueue {
                 ctx,
                 &request_type,
                 &RepositoryId::new(i32::try_from(target.repo_id)?),
-                &BookmarkKey::new(&target.bookmark)?,
                 &blobstore_key,
             )
             .await?;
