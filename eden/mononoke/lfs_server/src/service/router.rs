@@ -25,6 +25,7 @@ use gotham_ext::response::build_response;
 use hyper::Body;
 use hyper::Response;
 use hyper::StatusCode;
+use scuba_ext::MononokeScubaSampleBuilder;
 
 use super::error_formatter::LfsErrorFormatter;
 use super::middleware::ThrottleMiddleware;
@@ -100,10 +101,15 @@ fn config_handler(state: State) -> (State, Response<Body>) {
 pub fn build_router(
     fb: FacebookInit,
     lfs_ctx: LfsServerContext,
+    scuba: MononokeScubaSampleBuilder,
     allow_git_blob_upload: bool,
 ) -> Router {
     let pipeline = new_pipeline()
-        .add(ThrottleMiddleware::new(fb, lfs_ctx.get_config_handle()))
+        .add(ThrottleMiddleware::new(
+            fb,
+            lfs_ctx.get_config_handle(),
+            scuba,
+        ))
         .add(StateMiddleware::new(lfs_ctx))
         .build();
 

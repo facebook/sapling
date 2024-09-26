@@ -131,6 +131,7 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_cross_repo::RepoCrossRepoRef;
 use repo_identity::RepoIdentityRef;
 use revisionstore_types::Metadata;
+use scuba_ext::MononokeScubaSampleBuilder;
 use serde::Deserialize;
 use serde_json::json;
 use slog::debug;
@@ -623,6 +624,8 @@ impl<R: Repo> RepoClient<R> {
 
             let getpack_buffer_size = 500;
 
+            let scuba = ctx.scuba().clone();
+
             let request_stream = move || {
                 let content_stream = {
                     cloned!(ctx, getpack_params, lfs_params);
@@ -833,7 +836,14 @@ impl<R: Repo> RepoClient<R> {
                     })
             };
 
-            throttle_stream(&self.session, Metric::GetpackFiles, name, request_stream).boxed()
+            throttle_stream(
+                &self.session,
+                Metric::GetpackFiles,
+                name,
+                request_stream,
+                scuba,
+            )
+            .boxed()
         })
     }
 
@@ -995,6 +1005,7 @@ fn throttle_stream<F, S, V>(
     metric: Metric,
     request_name: &'static str,
     func: F,
+    mut scuba: MononokeScubaSampleBuilder,
 ) -> impl Stream<Item = Result<V, Error>>
 where
     F: FnOnce() -> S + Send + 'static,
@@ -1003,7 +1014,7 @@ where
     let session = session.clone();
     async move {
         session
-            .check_rate_limit(metric)
+            .check_rate_limit(metric, &mut scuba)
             .await
             .map_err(|reason| ErrorKind::RequestThrottled {
                 request_name: request_name.into(),
@@ -1396,7 +1407,7 @@ impl<R: Repo> HgCommands for RepoClient<R> {
     fn getbundle(&self, args: GetbundleArgs) -> BoxStream<'static, Result<Bytes, Error>> {
         self.command_stream(ops::GETBUNDLE, UNSAMPLED, |ctx, command_logger| {
             let s = self
-                .create_bundle(ctx, args)
+                .create_bundle(ctx.clone(), args)
                 .whole_stream_timeout(getbundle_timeout())
                 .yield_periodically()
                 .flatten_err()
@@ -1412,7 +1423,13 @@ impl<R: Repo> HgCommands for RepoClient<R> {
                     }
                 });
 
-            throttle_stream(&self.session, Metric::Commits, ops::GETBUNDLE, move || s)
+            throttle_stream(
+                &self.session,
+                Metric::Commits,
+                ops::GETBUNDLE,
+                move || s,
+                ctx.scuba().clone(),
+            )
         })
     }
 
@@ -1767,6 +1784,7 @@ impl<R: Repo> HgCommands for RepoClient<R> {
                     Metric::TotalManifests,
                     ops::GETTREEPACK,
                     move || s,
+                    ctx.scuba().clone(),
                 )
             },
         )
@@ -1994,12 +2012,12 @@ impl<R: Repo> HgCommands for RepoClient<R> {
                         command_logger.finalize_command(&stats);
                     }
                 });
-
             throttle_stream(
                 &self.session,
                 Metric::Commits,
                 ops::GETCOMMITDATA,
                 move || s,
+                ctx.scuba().clone(),
             )
         })
     }

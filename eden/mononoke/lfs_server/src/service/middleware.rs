@@ -20,6 +20,7 @@ use gotham_ext::middleware::MetadataState;
 use gotham_ext::response::build_error_response;
 use hyper::Uri;
 use rate_limiting::LoadShedResult;
+use scuba_ext::MononokeScubaSampleBuilder;
 
 use super::error_formatter::LfsErrorFormatter;
 use crate::config::ServerConfig;
@@ -33,16 +34,21 @@ use crate::config::ServerConfig;
 pub struct ThrottleMiddleware {
     fb: FacebookInit,
     handle: ConfigHandle<ServerConfig>,
+    scuba: MononokeScubaSampleBuilder,
 }
 
 impl ThrottleMiddleware {
-    pub fn new(fb: FacebookInit, handle: ConfigHandle<ServerConfig>) -> Self {
-        Self { fb, handle }
+    pub fn new(
+        fb: FacebookInit,
+        handle: ConfigHandle<ServerConfig>,
+        scuba: MononokeScubaSampleBuilder,
+    ) -> Self {
+        Self { fb, handle, scuba }
     }
 }
 
 impl Middleware for ThrottleMiddleware {
-    fn call<Chain>(self, state: State, chain: Chain) -> Pin<Box<HandlerFuture>>
+    fn call<Chain>(mut self, state: State, chain: Chain) -> Pin<Box<HandlerFuture>>
     where
         Chain: FnOnce(State) -> Pin<Box<HandlerFuture>>,
     {
@@ -64,9 +70,12 @@ impl Middleware for ThrottleMiddleware {
         };
 
         for limit in self.handle.get().loadshedding_limits().iter() {
-            if let LoadShedResult::Fail(err) =
-                limit.should_load_shed(self.fb, identities, main_client_id.as_deref())
-            {
+            if let LoadShedResult::Fail(err) = limit.should_load_shed(
+                self.fb,
+                identities,
+                main_client_id.as_deref(),
+                &mut self.scuba,
+            ) {
                 let err = HttpError::e429(err);
 
                 let res =

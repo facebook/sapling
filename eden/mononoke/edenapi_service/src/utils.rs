@@ -46,15 +46,19 @@ pub async fn get_repo<R: MononokeRepo>(
     name: impl AsRef<str>,
     throttle_metric: impl Into<Option<Metric>>,
 ) -> Result<HgRepoContext<R>, HttpError> {
-    rctx.ctx.session().check_load_shed()?;
+    let mut scuba = rctx.ctx.scuba().clone();
+    rctx.ctx.session().check_load_shed(&mut scuba)?;
 
     if let Some(throttle_metric) = throttle_metric.into() {
-        rctx.ctx.session().check_rate_limit(throttle_metric).await?;
+        rctx.ctx
+            .session()
+            .check_rate_limit(throttle_metric, &mut scuba)
+            .await?;
     }
 
     let name = name.as_ref();
     sctx.mononoke_api()
-        .repo(rctx.ctx.clone(), name)
+        .repo(rctx.ctx.with_mutated_scuba(|_| scuba), name)
         .await
         .map_err(|e| e.into_http_error(ErrorKind::RepoLoadFailed(name.to_string())))?
         .with_context(|| ErrorKind::RepoDoesNotExist(name.to_string()))

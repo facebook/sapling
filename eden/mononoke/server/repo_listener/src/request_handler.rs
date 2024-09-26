@@ -126,7 +126,11 @@ pub async fn request_handler(
                 .client_info()
                 .and_then(|client_info| client_info.request_info.clone())
                 .and_then(|request_info| request_info.main_id);
-            rate_limiter.check_load_shed(metadata.identities(), main_client_id.as_deref())
+            rate_limiter.check_load_shed(
+                metadata.identities(),
+                main_client_id.as_deref(),
+                &mut scuba,
+            )
         } {
             scuba.log_with_msg("Request rejected due to load shedding", format!("{}", err));
             error!(conn_log, "Request rejected due to load shedding: {}", err; "remote" => "true");

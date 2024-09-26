@@ -109,7 +109,10 @@ impl SessionContainer {
         }
     }
 
-    pub fn check_load_shed(&self) -> Result<(), RateLimitReason> {
+    pub fn check_load_shed(
+        &self,
+        scuba: &mut MononokeScubaSampleBuilder,
+    ) -> Result<(), RateLimitReason> {
         match &self.inner.rate_limiter {
             Some(limiter) => {
                 let main_client_id = self
@@ -117,18 +120,24 @@ impl SessionContainer {
                     .client_info()
                     .and_then(|client_info| client_info.request_info.clone())
                     .and_then(|request_info| request_info.main_id);
-                match limiter
-                    .check_load_shed(self.metadata().identities(), main_client_id.as_deref())
-                {
-                    LoadShedResult::Pass => Ok(()),
+                match limiter.check_load_shed(
+                    self.metadata().identities(),
+                    main_client_id.as_deref(),
+                    scuba,
+                ) {
                     LoadShedResult::Fail(reason) => Err(reason),
+                    LoadShedResult::Pass => Ok(()),
                 }
             }
             None => Ok(()),
         }
     }
 
-    pub async fn check_rate_limit(&self, metric: Metric) -> Result<(), RateLimitReason> {
+    pub async fn check_rate_limit(
+        &self,
+        metric: Metric,
+        scuba: &mut MononokeScubaSampleBuilder,
+    ) -> Result<(), RateLimitReason> {
         match &self.inner.rate_limiter {
             Some(limiter) => {
                 let main_client_id = self
@@ -141,6 +150,7 @@ impl SessionContainer {
                         metric,
                         self.metadata().identities(),
                         main_client_id.as_deref(),
+                        scuba,
                     )
                     .await
                     .unwrap_or(RateLimitResult::Pass)

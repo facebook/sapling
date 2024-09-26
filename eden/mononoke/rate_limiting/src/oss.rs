@@ -12,6 +12,7 @@ use anyhow::Error;
 use async_trait::async_trait;
 use fbinit::FacebookInit;
 use permission_checker::MononokeIdentitySet;
+use scuba_ext::MononokeScubaSampleBuilder;
 
 use crate::BoxRateLimiter;
 use crate::LoadCost;
@@ -47,6 +48,7 @@ impl RateLimiter for FakeLimiter {
         _metric: Metric,
         _identities: &MononokeIdentitySet,
         _main_id: Option<&str>,
+        _scuba: &mut MononokeScubaSampleBuilder,
     ) -> Result<RateLimitResult, Error> {
         Ok(RateLimitResult::Pass)
     }
@@ -55,6 +57,7 @@ impl RateLimiter for FakeLimiter {
         &self,
         _identities: &MononokeIdentitySet,
         _main_id: Option<&str>,
+        _scuba: &mut MononokeScubaSampleBuilder,
     ) -> LoadShedResult {
         LoadShedResult::Pass
     }

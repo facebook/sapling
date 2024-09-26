@@ -19,6 +19,7 @@ rust_library(
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/stats:stats",
         "//configerator/structs/scm/mononoke/ratelimiting:rate_limiting_config-rust",
+        "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/permission_checker:permission_checker",
     ],
 )

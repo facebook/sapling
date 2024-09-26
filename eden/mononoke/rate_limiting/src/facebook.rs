@@ -17,6 +17,7 @@ use rate_limiting_config::RateLimitStatus;
 use ratelim::loadlimiter;
 use ratelim::loadlimiter::LoadCost;
 use ratelim::loadlimiter::LoadLimitCounter;
+use scuba_ext::MononokeScubaSampleBuilder;
 
 use crate::BoxRateLimiter;
 use crate::LoadShedResult;
@@ -48,10 +49,23 @@ pub fn create_rate_limiter(
     })
 }
 
-pub fn log_or_enforce_status(body: &RateLimitBody, metric: Metric) -> RateLimitResult {
+pub fn log_or_enforce_status(
+    body: &RateLimitBody,
+    metric: Metric,
+    scuba: &mut MononokeScubaSampleBuilder,
+) -> RateLimitResult {
     match body.raw_config.status {
         RateLimitStatus::Disabled => RateLimitResult::Pass,
-        RateLimitStatus::Tracked => RateLimitResult::Pass,
+        RateLimitStatus::Tracked => {
+            scuba.log_with_msg(
+                "Would have rate limited",
+                format!(
+                    "{:?}",
+                    (RateLimitReason::RateLimitedMetric(metric, body.window))
+                ),
+            );
+            RateLimitResult::Pass
+        }
         RateLimitStatus::Enforced => {
             RateLimitResult::Fail(RateLimitReason::RateLimitedMetric(metric, body.window))
         }
@@ -68,6 +82,7 @@ impl RateLimiter for MononokeRateLimits {
         metric: Metric,
         identities: &MononokeIdentitySet,
         main_id: Option<&str>,
+        scuba: &mut MononokeScubaSampleBuilder,
     ) -> Result<RateLimitResult, Error> {
         for limit in &self.config.rate_limits {
             if limit.metric != metric {
@@ -86,7 +101,7 @@ impl RateLimiter for MononokeRateLimits {
             )
             .await?
             {
-                match log_or_enforce_status(&limit.body, metric) {
+                match log_or_enforce_status(&limit.body, metric, scuba) {
                     RateLimitResult::Pass => {
                         break;
                     }
@@ -101,10 +116,11 @@ impl RateLimiter for MononokeRateLimits {
         &self,
         identities: &MononokeIdentitySet,
         main_id: Option<&str>,
+        scuba: &mut MononokeScubaSampleBuilder,
     ) -> LoadShedResult {
         for limit in &self.config.load_shed_limits {
             if let LoadShedResult::Fail(reason) =
-                limit.should_load_shed(self.fb, Some(identities), main_id)
+                limit.should_load_shed(self.fb, Some(identities), main_id, scuba)
             {
                 return LoadShedResult::Fail(reason);
             }
