@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.59
+
+### Sep 26 2024
+
+- Automatically check VS Code diagnostics when submitting for review, and warn if there are error signals
+- Performance improvement to fetching commits from sl, reducing timeout errors
+
 ## 0.1.58
 
 ### Sep 16 2024
