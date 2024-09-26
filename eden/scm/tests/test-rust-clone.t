@@ -284,5 +284,11 @@ Can clone legacy repo using Rust clone
   > A # bookmark master = A
   > EOS
   $ cd
-FIXME: not using Rust clone
   $ hg clone -q ssh://user@dummy/legacy legacy_client --shallow
+  TRACE cmdclone: performing rust clone
+   INFO clone_metadata{repo="test-repo"}: cmdclone: enter
+  TRACE clone_metadata{repo="test-repo"}: cmdclone: fetching lazy commit data and bookmarks
+   INFO clone_metadata{repo="test-repo"}: cmdclone: exit
+   INFO get_update_target: cmdclone: enter
+   INFO get_update_target: cmdclone: return=Some((HgId("426bada5c67598ca65036d57d9e4b64b0c1ce7a0"), "master"))
+   INFO get_update_target: cmdclone: exit

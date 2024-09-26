@@ -30,7 +30,7 @@ use configloader::hg::RepoInfo;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use configmodel::ValueSource;
-use eagerepo::is_eager_repo;
+use eagerepo::EagerRepo;
 use exchange::convert_to_remote;
 use migration::feature::deprecate;
 use repo::repo::Repo;
@@ -94,14 +94,6 @@ define_flags! {
 
         #[args]
         args: Vec<String>,
-    }
-}
-
-fn is_eager(url: &RepoUrl) -> bool {
-    match url.scheme() {
-        "eager" | "test" => true,
-        "file" => is_eager_repo(url.path().as_ref()),
-        _ => false,
     }
 }
 
@@ -347,7 +339,8 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
     let source = match ctx.opts.source(config) {
         Err(_) => fallback!("invalid URL"),
         Ok(source) => {
-            if source.scheme() == "mononoke" || is_eager(&source) {
+            // Basically testing whether remote implements SaplingRemoteAPI.
+            if source.scheme() == "mononoke" || EagerRepo::url_to_dir(&source).is_some() {
                 source
             } else {
                 fallback!("unsupported URL scheme");
@@ -465,17 +458,18 @@ fn try_clone_metadata(
 ) -> Result<Repo> {
     let dest_preexists = destination.exists();
     match clone_metadata(ctx, logger, config, reponame, destination) {
-        Err(e) => {
+        Err(err) => {
             let removal_dir = if dest_preexists {
                 let ident = identity::sniff_dir(destination)?.unwrap_or_else(identity::default);
                 destination.join(ident.dot_dir())
             } else {
                 destination.to_path_buf()
             };
+
             if !ctx.global_opts().debug {
                 fs::remove_dir_all(removal_dir)?;
             }
-            Err(e)
+            Err(err)
         }
         Ok(repo) => Ok(repo),
     }
@@ -540,11 +534,12 @@ fn clone_metadata(
     }
 
     let eager_format: bool = config.get_or_default("format", "use-eager-repo")?;
+    let remote_eager_path = EagerRepo::url_to_dir(&source);
 
     let shallow = match ctx.opts.shallow {
         Some(shallow) => shallow,
         // Infer non-shallow for eager->eager clone.
-        None => !eager_format || !is_eager(&source),
+        None => !eager_format || remote_eager_path.is_none(),
     };
 
     if shallow {
@@ -554,13 +549,17 @@ fn clone_metadata(
             fallback!("non-shallow && non-eagerepo");
         }
 
-        abort_if!(
-            !is_eager(&source),
-            "don't know how to clone {} into eagerepo",
-            source.clean_str(),
-        );
-
-        return eager_clone(ctx, config, source, destination);
+        return match remote_eager_path {
+            None => {
+                abort!(
+                    "don't know how to clone {} into eagerepo",
+                    source.clean_str(),
+                );
+            }
+            Some(remote_eager_path) => {
+                eager_clone(ctx, config, source, remote_eager_path, destination)
+            }
+        };
     }
 
     // Enabling segmented changelog too early breaks the revlog_clone that is needed below
@@ -645,11 +644,10 @@ fn eager_clone(
     ctx: &ReqCtx<CloneOpts>,
     config: &ConfigSet,
     source: RepoUrl,
+    eager_path: PathBuf,
     dest: &Path,
 ) -> Result<Repo> {
-    let source_path = eagerepo::EagerRepo::url_to_dir(&source)
-        .ok_or_else(|| anyhow!("no eagerepo at {}", source.clean_str()))?;
-    let source_dot_dir = source_path.join(identity::must_sniff_dir(&source_path)?.dot_dir());
+    let source_dot_dir = eager_path.join(identity::must_sniff_dir(&eager_path)?.dot_dir());
 
     let dest_ident = identity::default();
     let dest_dot_dir = dest.join(dest_ident.dot_dir());
