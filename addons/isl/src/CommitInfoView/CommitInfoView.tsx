@@ -15,6 +15,7 @@ import serverAPI from '../ClientToServerAPI';
 import {Commit} from '../Commit';
 import {OpenComparisonViewButton} from '../ComparisonView/OpenComparisonViewButton';
 import {Center} from '../ComponentUtils';
+import {confirmNoBlockingDiagnostics} from '../Diagnostics';
 import {getCachedGeneratedFileStatuses, useGeneratedFileStatuses} from '../GeneratedFile';
 import {numPendingImageUploads} from '../ImageUpload';
 import {Internal} from '../Internal';
@@ -783,8 +784,14 @@ function ActionsBar({
                   }
                 }
 
-                const shouldContinue = await confirmUnsavedFiles();
-                if (!shouldContinue) {
+                {
+                  const shouldContinue = await confirmUnsavedFiles();
+                  if (!shouldContinue) {
+                    return;
+                  }
+                }
+
+                if (!(await confirmNoBlockingDiagnostics(selection))) {
                   return;
                 }
 
@@ -886,6 +893,8 @@ function SubmitButton({
 
   const runOperation = useRunOperation();
 
+  const selection = useUncommittedSelection();
+
   const isBranchingPREnabled =
     repoInfo?.type === 'success' &&
     repoInfo.codeReviewSystem.type === 'github' &&
@@ -902,6 +911,10 @@ function SubmitButton({
   const getApplicableOperations = async (): Promise<Array<Operation> | undefined> => {
     const shouldContinue = await confirmUnsavedFiles();
     if (!shouldContinue) {
+      return;
+    }
+
+    if (!(await confirmNoBlockingDiagnostics(selection))) {
       return;
     }
 
