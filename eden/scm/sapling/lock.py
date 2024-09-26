@@ -15,6 +15,7 @@ from __future__ import absolute_import
 import errno
 import os
 import socket
+import threading
 import time
 import warnings
 from typing import Optional
@@ -23,7 +24,6 @@ from bindings import lock as nativelock
 
 from . import encoding, error, perftrace, progress, pycompat, util
 from .i18n import _
-
 
 if pycompat.iswindows:
     from . import win32
@@ -302,7 +302,10 @@ class lock:
                         errno.ETIMEDOUT, inst.filename, self.desc, inst.lockinfo
                     )
 
-                if inst.lockinfo.pid == str(util.getpid()):
+                if (
+                    inst.lockinfo.pid == str(util.getpid())
+                    and threading.main_thread().ident == threading.get_ident()
+                ):
                     raise error.ProgrammingError(
                         "deadlock: %s was locked in the same process"
                         % self.vfs.join(self.f)
