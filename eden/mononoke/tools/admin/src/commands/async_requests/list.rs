@@ -46,7 +46,7 @@ pub async fn list_requests(
         "Request id",
         "Method",
         "Status",
-        "Target bookmark",
+        "Target",
         "Source name (sync_changeset)",
         "Source Changeset (sync_changeset)",
         "Created at",
@@ -84,16 +84,20 @@ pub async fn list_requests(
         } else {
             "Not finished".to_string()
         };
+        let target_str = match params.target() {
+            Ok(target) => target.to_string(),
+            Err(_) => "(failed to convert)".to_string(),
+        };
         table.add_row(row![
-            req_id.0,                                             // Request id
-            req_id.1,                                             // Method
-            entry.status,                                         // Status
-            params.target().context("decoding target")?.bookmark, // Bookmark
-            &source_name,                                         // Source name
-            &changeset_id,                                        // Source Changeset
-            &created_at,                                          // Created at
-            &ready_at_str,                                        // Ready at
-            duration,                                             // Duration
+            req_id.0,      // Request id
+            req_id.1,      // Method
+            entry.status,  // Status
+            target_str,    // Target
+            &source_name,  // Source name
+            &changeset_id, // Source Changeset
+            &created_at,   // Created at
+            &ready_at_str, // Ready at
+            duration,      // Duration
         ]);
     }
 

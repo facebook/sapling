@@ -21,7 +21,6 @@ use std::time::Duration;
 use anyhow::Context;
 use anyhow::Error;
 use async_requests::types::AsynchronousRequestParams;
-use async_requests::types::IntoConfigFormat;
 use async_requests::AsyncMethodRequestQueue;
 use async_requests::AsyncRequestsError;
 use async_requests::ClaimedBy;
@@ -39,7 +38,6 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::Stream;
 use megarepo_api::MegarepoApi;
-use megarepo_config::Target;
 use mononoke_api::MononokeRepo;
 use mononoke_api::RepositoryId;
 use mononoke_app::MononokeApp;
@@ -225,10 +223,7 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
         req_id: RequestId,
         params: AsynchronousRequestParams,
     ) -> Result<bool, AsyncRequestsError> {
-        let target = params
-            .target()?
-            .clone()
-            .into_config_format(&self.megarepo.mononoke())?;
+        let target = params.target()?;
         let queue = self.queues_client.async_method_request_queue(&ctx).await?;
 
         let ctx = self.prepare_ctx(&ctx, &req_id, &target);
@@ -294,7 +289,7 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
         }
     }
 
-    fn prepare_ctx(&self, ctx: &CoreContext, req_id: &RequestId, target: &Target) -> CoreContext {
+    fn prepare_ctx(&self, ctx: &CoreContext, req_id: &RequestId, target: &str) -> CoreContext {
         let ctx = ctx.with_mutated_scuba(|mut scuba| {
             scuba.add("request_id", req_id.0.0);
             scuba
@@ -302,12 +297,7 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
 
         info!(
             ctx.logger(),
-            "[{}] new request:  id: {}, type: {}, repo_id: {}, bookmark: {}",
-            &req_id.0,
-            &req_id.0,
-            &req_id.1,
-            &target.repo_id,
-            &target.bookmark,
+            "[{}] new request:  id: {}, type: {}, {}", &req_id.0, &req_id.0, &req_id.1, target,
         );
 
         ctx

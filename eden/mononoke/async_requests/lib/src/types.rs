@@ -103,7 +103,7 @@ pub trait ThriftParams: Sized + Send + Sync + Into<AsynchronousRequestParams> + 
     /// Every *Params argument referes to some Target
     /// This method is needed to extract it from the
     /// implementor of this trait
-    fn target(&self) -> Result<&ThriftMegarepoTarget, AsyncRequestsError>;
+    fn target(&self) -> String;
 }
 pub trait ThriftResult:
     Sized + Send + Sync + TryFrom<AsynchronousRequestResult, Error = AsyncRequestsError>
@@ -277,13 +277,13 @@ macro_rules! impl_async_svc_method_types {
         token_type => $token_type: ident,
         token_thrift_type => $token_thrift_type: ident,
 
-        fn target(&$self_ident: ident: ThriftParams) -> &ThriftMegarepoTarget $target_in_params: tt
+        fn target(&$self_ident: ident: ThriftParams) -> String $target_in_params: tt
 
     } => {
         impl ThriftParams for $params_value_thrift_type {
             type R = $request_struct;
 
-            fn target(&$self_ident) -> Result<&ThriftMegarepoTarget, AsyncRequestsError> {
+            fn target(&$self_ident) -> String {
                 $target_in_params
             }
         }
@@ -424,8 +424,8 @@ impl_async_svc_method_types! {
     token_type => MegarepoAddTargetToken,
     token_thrift_type => ThriftMegarepoAddTargetToken,
 
-    fn target(&self: ThriftParams) -> &ThriftMegarepoTarget {
-        Ok(&self.config_with_new_target.target)
+    fn target(&self: ThriftParams) -> String {
+        render_target(&self.config_with_new_target.target)
     }
 }
 
@@ -446,8 +446,8 @@ impl_async_svc_method_types! {
     token_type => MegarepoAddBranchingTargetToken,
     token_thrift_type => ThriftMegarepoAddBranchingTargetToken,
 
-    fn target(&self: ThriftParams) -> &ThriftMegarepoTarget {
-        Ok(&self.target)
+    fn target(&self: ThriftParams) -> String {
+        render_target(&self.target)
     }
 }
 
@@ -468,8 +468,8 @@ impl_async_svc_method_types! {
     token_type => MegarepoChangeTargetConfigToken,
     token_thrift_type => ThriftMegarepoChangeConfigToken,
 
-    fn target(&self: ThriftParams) -> &ThriftMegarepoTarget {
-        Ok(&self.target)
+    fn target(&self: ThriftParams) -> String {
+        render_target(&self.target)
     }
 }
 
@@ -490,8 +490,8 @@ impl_async_svc_method_types! {
     token_type => MegarepoSyncChangesetToken,
     token_thrift_type => ThriftMegarepoSyncChangesetToken,
 
-    fn target(&self: ThriftParams) -> &ThriftMegarepoTarget {
-        Ok(&self.target)
+    fn target(&self: ThriftParams) -> String {
+        render_target(&self.target)
     }
 }
 
@@ -512,8 +512,8 @@ impl_async_svc_method_types! {
     token_type => MegarepoRemergeSourceToken,
     token_thrift_type => ThriftMegarepoRemergeSourceToken,
 
-    fn target(&self: ThriftParams) -> &ThriftMegarepoTarget {
-        Ok(&self.target)
+    fn target(&self: ThriftParams) -> String {
+        render_target(&self.target)
     }
 }
 
@@ -533,25 +533,42 @@ impl_async_svc_stored_type! {
     context_type => AsynchronousRequestResultIdContext,
 }
 
+fn render_target(target: &ThriftMegarepoTarget) -> String {
+    format!(
+        "{}: {}, bookmark: {}",
+        target
+            .repo
+            .as_ref()
+            .map_or_else(|| "repo_id".to_string(), |_| "repo_name".to_string(),),
+        target.repo.as_ref().map_or_else(
+            || target.repo_id.unwrap_or(0).to_string(),
+            |repo| repo.name.clone()
+        ),
+        target.bookmark
+    )
+}
+
 impl AsynchronousRequestParams {
-    pub fn target(&self) -> Result<&ThriftMegarepoTarget, AsyncRequestsError> {
+    pub fn target(&self) -> Result<String, AsyncRequestsError> {
         match &self.thrift {
-            ThriftAsynchronousRequestParams::megarepo_add_target_params(params) => params.target(),
+            ThriftAsynchronousRequestParams::megarepo_add_target_params(params) => {
+                Ok(params.target())
+            }
             ThriftAsynchronousRequestParams::megarepo_add_branching_target_params(params) => {
-                params.target()
+                Ok(params.target())
             }
             ThriftAsynchronousRequestParams::megarepo_change_target_params(params) => {
-                params.target()
+                Ok(params.target())
             }
             ThriftAsynchronousRequestParams::megarepo_remerge_source_params(params) => {
-                params.target()
+                Ok(params.target())
             }
             ThriftAsynchronousRequestParams::megarepo_sync_changeset_params(params) => {
-                params.target()
+                Ok(params.target())
             }
             ThriftAsynchronousRequestParams::UnknownField(union_tag) => {
                 Err(AsyncRequestsError::internal(anyhow!(
-                    "this type of reuqest (AsynchronousRequestParams tag {}) not supported by this worker!",
+                    "this type of request (AsynchronousRequestParams tag {}) not supported by this worker!",
                     union_tag
                 )))
             }
