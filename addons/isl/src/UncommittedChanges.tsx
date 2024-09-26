@@ -33,6 +33,7 @@ import {PendingDiffStats} from './CommitInfoView/DiffStats';
 import {temporaryCommitTitle} from './CommitTitle';
 import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButton';
 import {Row} from './ComponentUtils';
+import {confirmNoBlockingDiagnostics} from './Diagnostics';
 import {FileTree, FileTreeFolderHeader} from './FileTree';
 import {useGeneratedFileStatuses} from './GeneratedFile';
 import {Internal} from './Internal';
@@ -522,6 +523,10 @@ export function UncommittedChanges({place}: {place: Place}) {
       return;
     }
 
+    if (!(await confirmNoBlockingDiagnostics(selection))) {
+      return;
+    }
+
     const titleEl = commitTitleRef.current;
     const title = titleEl?.value || template?.Title || temporaryCommitTitle();
     // use the template, unless a specific quick title is given
@@ -789,6 +794,10 @@ export function UncommittedChanges({place}: {place: Place}) {
                 onClick={async () => {
                   const shouldContinue = await confirmUnsavedFiles();
                   if (!shouldContinue) {
+                    return;
+                  }
+
+                  if (!(await confirmNoBlockingDiagnostics(selection))) {
                     return;
                   }
 
