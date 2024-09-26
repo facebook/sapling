@@ -17,6 +17,7 @@ rust_library(
         "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/facet:facet",
+        "//common/rust/shed/futures_ext:futures_ext",
         "//common/rust/shed/futures_stats:futures_stats",
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/mononoke_types:mononoke_types",

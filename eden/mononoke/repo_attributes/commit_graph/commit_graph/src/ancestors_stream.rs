@@ -18,6 +18,7 @@ use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::Future;
+use futures_ext::stream::FbStreamExt;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 
@@ -229,6 +230,7 @@ impl AncestorsStreamBuilder {
             },
         )
         .try_flatten()
+        .yield_periodically()
         .boxed())
     }
 }
