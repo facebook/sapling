@@ -73,9 +73,11 @@ export async function confirmNoBlockingDiagnostics(
     });
     const result = await serverAPI.nextMessageMatching('platform/gotDiagnostics', () => true);
     if (result.diagnostics.size > 0) {
-      const totalErrors = [...result.diagnostics.values()]
+      const allDiagnostics = [...result.diagnostics.values()];
+      const totalErrors = allDiagnostics
         .map(value => value.filter(d => d.severity === 'error').length)
         .reduce((a, b) => a + b, 0);
+
       if (totalErrors > 0) {
         const buttons = [{label: 'Cancel'}, {label: 'Continue', primary: true}] as const;
         return (
@@ -88,6 +90,9 @@ export async function confirmNoBlockingDiagnostics(
               <>
                 <Column alignStart xstyle={styles.allDiagnostics}>
                   {[...result.diagnostics.entries()].map(([filepath, diagnostics]) => {
+                    const sortedDiagnostics = [...diagnostics].sort((a, b) => {
+                      return severityComparator(a) - severityComparator(b);
+                    });
                     return (
                       <Column key={filepath} alignStart>
                         <Collapsable
@@ -99,7 +104,7 @@ export async function confirmNoBlockingDiagnostics(
                             </Row>
                           }>
                           <Column alignStart xstyle={styles.diagnosticList}>
-                            {diagnostics.map(d => (
+                            {sortedDiagnostics.map(d => (
                               <Row
                                 role="button"
                                 tabIndex={0}
@@ -137,6 +142,19 @@ export async function confirmNoBlockingDiagnostics(
     }
   }
   return true;
+}
+
+function severityComparator(a: Diagnostic) {
+  switch (a.severity) {
+    case 'error':
+      return 0;
+    case 'warning':
+      return 1;
+    case 'info':
+      return 2;
+    case 'hint':
+      return 3;
+  }
 }
 
 function DontShowDiagnosticsConfirmationCheckbox() {
