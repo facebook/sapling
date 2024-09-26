@@ -1985,9 +1985,10 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
   // The data that contextRef reference to is alive for the duration of the
   // handler function and is deleted when context unique_ptr goes out of the
   // scope at the `ensure` lambda.
+  auto& contextRef = *context;
   return makeImmediateFutureWith([&] {
            return (this->*handlerEntry.handler)(
-               std::move(deser), std::move(ser), *context);
+               std::move(deser), std::move(ser), contextRef);
          })
       .thenTry([this, &handlerEntry](folly::Try<folly::Unit>&& res) {
         if (res.hasException()) {
