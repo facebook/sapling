@@ -20,6 +20,9 @@
   > A C      # A/foo  = random:30
   > EOF
 
+  $ hg log -r "p1($F)" -T "{node}" | grep $D > /dev/null
+  [1]
+  $ hg log -r "p2($F)" -T "{node}" | grep $D > /dev/null
   $ hg push -r $B --to master -q --create
   $ hg push -r $D --allow-anon -q
   $ hg push -r $F --to master -q
