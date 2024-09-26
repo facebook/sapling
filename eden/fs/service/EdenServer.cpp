@@ -1806,7 +1806,7 @@ void EdenServer::mountFinished(
   const auto& mountPath = edenMount->getPath();
   XLOG(INFO) << "mount point \"" << mountPath << "\" stopped";
 
-  // Save the unmount and takover Promises
+  // Save the unmount and takeover Promises
   folly::SharedPromise<Unit> unmountPromise;
   std::optional<folly::Promise<TakeoverData::MountInfo>> takeoverPromise;
   auto shutdownFuture = folly::SemiFuture<SerializedInodeMap>::makeEmpty();
