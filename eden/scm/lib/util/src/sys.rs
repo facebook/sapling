@@ -18,12 +18,12 @@ pub fn hostname() -> String {
     } else {
         std::env::var_os(if cfg!(windows) {
             "COMPUTERNAME"
-        } else if cfg!(macos) {
+        } else if cfg!(target_os = "macos") {
             "HOST"
         } else {
             "HOSTNAME"
         })
-        .map_or(None, |h| h.to_str().map(|s| s.to_string()))
+        .and_then(|h| h.to_str().map(|s| s.to_string()))
         .unwrap_or("".to_owned())
     }
 }
