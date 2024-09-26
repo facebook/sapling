@@ -157,15 +157,9 @@ impl GenManifest {
                     parents: std::mem::take(&mut parents),
                     author: "author".to_string(),
                     author_date: DateTime::from_timestamp(0, 0).unwrap(),
-                    committer: None,
-                    committer_date: None,
                     message: "message".to_string(),
-                    hg_extra: Default::default(),
-                    git_extra_headers: None,
-                    git_tree_hash: None,
                     file_changes: file_changes.into(),
-                    is_snapshot: false,
-                    git_annotated_tag: None,
+                    ..Default::default()
                 }
                 .freeze()
                 .expect("generated bonsai failed to freeze");

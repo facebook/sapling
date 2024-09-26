@@ -152,15 +152,9 @@ mod test {
             parents: vec![ChangesetId::new(Blake2::from_byte_array([0x33; 32]))],
             author: "author".into(),
             author_date: DateTime::from_timestamp(0, 0)?,
-            committer: None,
-            committer_date: None,
             message: "message".into(),
             hg_extra: hg_extra.into_iter().collect(),
-            git_extra_headers: None,
-            git_tree_hash: None,
-            file_changes: Default::default(),
-            is_snapshot: false,
-            git_annotated_tag: None,
+            ..Default::default()
         };
         bcs.freeze()
     }

@@ -33,8 +33,6 @@ use crate::typed_hash::ChangesetId;
 use crate::typed_hash::ChangesetIdContext;
 use crate::ContentId;
 
-const ARBITRARY_SHRINK_FACTOR: usize = 3;
-
 /// A struct callers can use to build up a `BonsaiChangeset`.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct BonsaiChangesetMut {
@@ -470,19 +468,7 @@ impl Arbitrary for BonsaiChangeset {
                     committer_date: cs.committer_date,
                     message: cs.message.clone(),
                     hg_extra,
-                    git_extra_headers: cs.git_extra_headers.clone().map(|extra| {
-                        extra
-                            .into_iter()
-                            .enumerate()
-                            .filter_map(|(idx, val)| {
-                                if idx % ARBITRARY_SHRINK_FACTOR == 0 {
-                                    Some(val)
-                                } else {
-                                    None
-                                }
-                            })
-                            .collect()
-                    }),
+                    git_extra_headers: cs.git_extra_headers.clone(),
                     is_snapshot: cs.is_snapshot,
                     git_tree_hash,
                     git_annotated_tag: cs.git_annotated_tag.clone(),
@@ -619,9 +605,6 @@ mod test {
             committer: Some("bar".into()),
             committer_date: Some(DateTime::from_timestamp(1500000000, -36800).unwrap()),
             message: "Commit message".into(),
-            hg_extra: SortedVectorMap::new(),
-            git_extra_headers: None,
-            git_tree_hash: None,
             file_changes: sorted_vector_map![
                 NonRootMPath::new("a/b").unwrap() => FileChange::tracked(
                     ContentId::from_byte_array([1; 32]),
@@ -643,8 +626,7 @@ mod test {
                 NonRootMPath::new("g/h").unwrap() => FileChange::Deletion,
                 NonRootMPath::new("i/j").unwrap() => FileChange::Deletion,
             ],
-            is_snapshot: false,
-            git_annotated_tag: None,
+            ..Default::default()
         };
         let tc = tc.freeze().expect("fixed bonsai changeset must be valid");
 
@@ -665,15 +647,8 @@ mod test {
             parents: vec![],
             author: "test\nuser".into(),
             author_date: DateTime::from_timestamp(1, 2).unwrap(),
-            committer: None,
-            committer_date: None,
             message: "a".into(),
-            hg_extra: SortedVectorMap::new(),
-            git_extra_headers: None,
-            git_tree_hash: None,
-            file_changes: sorted_vector_map![],
-            is_snapshot: false,
-            git_annotated_tag: None,
+            ..Default::default()
         };
 
         assert!(invalid_author.freeze().is_err());
@@ -685,12 +660,7 @@ mod test {
             committer: Some("test\nuser".into()),
             committer_date: Some(DateTime::from_timestamp(1, 2).unwrap()),
             message: "a".into(),
-            hg_extra: SortedVectorMap::new(),
-            git_extra_headers: None,
-            git_tree_hash: None,
-            file_changes: sorted_vector_map![],
-            is_snapshot: false,
-            git_annotated_tag: None,
+            ..Default::default()
         };
 
         assert!(invalid_committer.freeze().is_err());
@@ -729,15 +699,10 @@ mod test {
                 parents: vec![],
                 author: "foo".into(),
                 author_date: DateTime::from_timestamp(1, 2).unwrap(),
-                committer: None,
-                committer_date: None,
                 message: "a".into(),
-                hg_extra: SortedVectorMap::new(),
-                git_extra_headers: None,
-                git_tree_hash: None,
                 file_changes,
                 is_snapshot,
-                git_annotated_tag: None,
+                ..Default::default()
             }
             .freeze()
         }
@@ -753,35 +718,20 @@ mod test {
     fn invalid_git_tree_bonsai_changeset() {
         let changeset = BonsaiChangesetMut {
             parents: vec![ChangesetId::from_byte_array([3; 32])],
-            author: String::new(),
-            author_date: DateTime::now(),
-            committer: None,
-            committer_date: None,
-            message: String::new(),
-            hg_extra: SortedVectorMap::new(),
-            git_extra_headers: None,
-            file_changes: SortedVectorMap::new(),
-            is_snapshot: false,
-            git_tree_hash: GitSha1::from_bytes([
-                0xda, 0x39, 0xa3, 0xee, 0x5e, 0x6b, 0x4b, 0x0d, 0x32, 0x55, 0xbf, 0xef, 0x95, 0x60,
-                0x18, 0x90, 0xaf, 0xd8, 0x07, 0x09,
-            ])
-            .ok(),
-            git_annotated_tag: None,
+            git_tree_hash: Some(
+                GitSha1::from_bytes([
+                    0xda, 0x39, 0xa3, 0xee, 0x5e, 0x6b, 0x4b, 0x0d, 0x32, 0x55, 0xbf, 0xef, 0x95,
+                    0x60, 0x18, 0x90, 0xaf, 0xd8, 0x07, 0x09,
+                ])
+                .unwrap(),
+            ),
+            ..Default::default()
         };
         changeset
             .freeze()
             .expect_err("Changeset representing Git trees can't have parents");
 
         let changeset = BonsaiChangesetMut {
-            parents: vec![],
-            author: String::new(),
-            author_date: DateTime::now(),
-            committer: None,
-            committer_date: None,
-            message: String::new(),
-            hg_extra: SortedVectorMap::new(),
-            git_extra_headers: None,
             file_changes: sorted_vector_map! [
                 NonRootMPath::new("a").unwrap() => FileChange::tracked(
                     ContentId::from_byte_array([1; 32]),
@@ -792,13 +742,14 @@ mod test {
                 ),
                 NonRootMPath::new("b").unwrap() => FileChange::Deletion,
             ],
-            is_snapshot: false,
-            git_tree_hash: GitSha1::from_bytes([
-                0xda, 0x39, 0xa3, 0xee, 0x5e, 0x6b, 0x4b, 0x0d, 0x32, 0x55, 0xbf, 0xef, 0x95, 0x60,
-                0x18, 0x90, 0xaf, 0xd8, 0x07, 0x09,
-            ])
-            .ok(),
-            git_annotated_tag: None,
+            git_tree_hash: Some(
+                GitSha1::from_bytes([
+                    0xda, 0x39, 0xa3, 0xee, 0x5e, 0x6b, 0x4b, 0x0d, 0x32, 0x55, 0xbf, 0xef, 0x95,
+                    0x60, 0x18, 0x90, 0xaf, 0xd8, 0x07, 0x09,
+                ])
+                .unwrap(),
+            ),
+            ..Default::default()
         };
         changeset
             .freeze()
@@ -808,22 +759,14 @@ mod test {
     #[mononoke::test]
     fn valid_git_tree_bonsai_changeset() {
         let changeset = BonsaiChangesetMut {
-            parents: vec![],
-            author: String::new(),
-            author_date: DateTime::now(),
-            committer: None,
-            committer_date: None,
-            message: String::new(),
-            hg_extra: SortedVectorMap::new(),
-            git_extra_headers: None,
-            file_changes: SortedVectorMap::new(),
-            is_snapshot: false,
-            git_tree_hash: GitSha1::from_bytes([
-                0xda, 0x39, 0xa3, 0xee, 0x5e, 0x6b, 0x4b, 0x0d, 0x32, 0x55, 0xbf, 0xef, 0x95, 0x60,
-                0x18, 0x90, 0xaf, 0xd8, 0x07, 0x09,
-            ])
-            .ok(),
-            git_annotated_tag: None,
+            git_tree_hash: Some(
+                GitSha1::from_bytes([
+                    0xda, 0x39, 0xa3, 0xee, 0x5e, 0x6b, 0x4b, 0x0d, 0x32, 0x55, 0xbf, 0xef, 0x95,
+                    0x60, 0x18, 0x90, 0xaf, 0xd8, 0x07, 0x09,
+                ])
+                .unwrap(),
+            ),
+            ..Default::default()
         };
         changeset.freeze().unwrap();
     }
@@ -832,12 +775,6 @@ mod test {
     fn valid_git_extra_headers_bonsai_changeset() {
         let changeset = BonsaiChangesetMut {
             parents: vec![ChangesetId::from_byte_array([3; 32])],
-            author: String::new(),
-            author_date: DateTime::now(),
-            committer: None,
-            committer_date: None,
-            message: String::new(),
-            hg_extra: SortedVectorMap::new(),
             git_extra_headers: Some(sorted_vector_map! [
                 SmallVec::from_vec(b"JustAHeader".to_vec()) => Bytes::from_static(b"Some Content")
             ]),
@@ -851,9 +788,7 @@ mod test {
                 ),
                 NonRootMPath::new("b").unwrap() => FileChange::Deletion,
             ],
-            is_snapshot: false,
-            git_tree_hash: None,
-            git_annotated_tag: None,
+            ..Default::default()
         };
         changeset.freeze().unwrap();
     }
@@ -862,35 +797,20 @@ mod test {
     fn invalid_git_tag_bonsai_changeset() {
         let changeset = BonsaiChangesetMut {
             parents: vec![ChangesetId::from_byte_array([3; 32])],
-            author: String::new(),
-            author_date: DateTime::now(),
-            committer: None,
-            committer_date: None,
-            message: String::new(),
-            hg_extra: SortedVectorMap::new(),
             git_extra_headers: Some(sorted_vector_map! [
                 SmallVec::from_vec(b"JustAHeader".to_vec()) => Bytes::from_static(b"Some Content")
             ]),
-            file_changes: SortedVectorMap::new(),
-            is_snapshot: false,
-            git_tree_hash: None,
             git_annotated_tag: Some(BonsaiAnnotatedTag {
                 target: BonsaiAnnotatedTagTarget::Changeset(ChangesetId::from_byte_array([4; 32])),
                 pgp_signature: None,
             }),
+            ..Default::default()
         };
         changeset
             .freeze()
             .expect_err("Bonsai changeset representing a git annotated tag cannot have parents");
 
         let changeset = BonsaiChangesetMut {
-            parents: vec![],
-            author: String::new(),
-            author_date: DateTime::now(),
-            committer: None,
-            committer_date: None,
-            message: String::new(),
-            hg_extra: SortedVectorMap::new(),
             git_extra_headers: Some(sorted_vector_map! [
                 SmallVec::from_vec(b"JustAHeader".to_vec()) => Bytes::from_static(b"Some Content")
             ]),
@@ -904,37 +824,29 @@ mod test {
                 ),
                 NonRootMPath::new("b").unwrap() => FileChange::Deletion,
             ],
-            is_snapshot: false,
-            git_tree_hash: None,
             git_annotated_tag: Some(BonsaiAnnotatedTag {
                 target: BonsaiAnnotatedTagTarget::Changeset(ChangesetId::from_byte_array([3; 32])),
                 pgp_signature: None,
             }),
+            ..Default::default()
         };
         changeset.freeze().expect_err(
             "Bonsai changeset representing a git annotated tag cannot have file changes",
         );
 
         let changeset = BonsaiChangesetMut {
-            parents: vec![],
-            author: String::new(),
-            author_date: DateTime::now(),
-            committer: None,
-            committer_date: None,
-            message: String::new(),
-            hg_extra: SortedVectorMap::new(),
-            git_extra_headers: None,
-            file_changes: SortedVectorMap::new(),
-            is_snapshot: false,
-            git_tree_hash: GitSha1::from_bytes([
-                0xda, 0x39, 0xa3, 0xee, 0x5e, 0x6b, 0x4b, 0x0d, 0x32, 0x55, 0xbf, 0xef, 0x95, 0x60,
-                0x18, 0x90, 0xaf, 0xd8, 0x07, 0x09,
-            ])
-            .ok(),
+            git_tree_hash: Some(
+                GitSha1::from_bytes([
+                    0xda, 0x39, 0xa3, 0xee, 0x5e, 0x6b, 0x4b, 0x0d, 0x32, 0x55, 0xbf, 0xef, 0x95,
+                    0x60, 0x18, 0x90, 0xaf, 0xd8, 0x07, 0x09,
+                ])
+                .unwrap(),
+            ),
             git_annotated_tag: Some(BonsaiAnnotatedTag {
                 target: BonsaiAnnotatedTagTarget::Changeset(ChangesetId::from_byte_array([3; 32])),
                 pgp_signature: None,
             }),
+            ..Default::default()
         };
         changeset.freeze().expect_err(
             "Bonsai changeset representing a git annotated tag cannot have a git tree hash (indicating that its a git tree) as part of it",
@@ -944,21 +856,11 @@ mod test {
     #[mononoke::test]
     fn valid_git_tag_bonsai_changeset() {
         let changeset = BonsaiChangesetMut {
-            parents: vec![],
-            author: String::new(),
-            author_date: DateTime::now(),
-            committer: None,
-            committer_date: None,
-            message: String::new(),
-            hg_extra: SortedVectorMap::new(),
-            git_extra_headers: None,
-            file_changes: SortedVectorMap::new(),
-            is_snapshot: false,
-            git_tree_hash: None,
             git_annotated_tag: Some(BonsaiAnnotatedTag {
                 target: BonsaiAnnotatedTagTarget::Changeset(ChangesetId::from_byte_array([3; 32])),
                 pgp_signature: None,
             }),
+            ..Default::default()
         };
         changeset.freeze().unwrap();
     }
@@ -966,21 +868,14 @@ mod test {
     #[mononoke::test]
     fn valid_git_tag_bonsai_changeset_with_author_and_message() {
         let changeset = BonsaiChangesetMut {
-            parents: vec![],
             author: "TagCreator".to_string(),
             author_date: DateTime::now(),
-            committer: None,
-            committer_date: None,
             message: "This is the tag description".to_string(),
-            hg_extra: SortedVectorMap::new(),
-            git_extra_headers: None,
-            file_changes: SortedVectorMap::new(),
-            is_snapshot: false,
-            git_tree_hash: None,
             git_annotated_tag: Some(BonsaiAnnotatedTag {
                 target: BonsaiAnnotatedTagTarget::Changeset(ChangesetId::from_byte_array([3; 32])),
                 pgp_signature: None,
             }),
+            ..Default::default()
         };
         changeset.freeze().unwrap();
     }

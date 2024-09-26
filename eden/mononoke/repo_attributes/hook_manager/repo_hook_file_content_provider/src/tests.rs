@@ -407,22 +407,15 @@ async fn setup_hook_manager(
 
 fn default_changeset() -> BonsaiChangeset {
     BonsaiChangesetMut {
-        parents: Vec::new(),
         author: "Jeremy Fitzhardinge <jsgf@fb.com>".to_string(),
         author_date: DateTime::from_timestamp(1584887580, 0).expect("Getting timestamp"),
-        committer: None,
-        committer_date: None,
         message: "This is a commit message".to_string(),
-        hg_extra: Default::default(),
-        git_extra_headers: None,
-        git_tree_hash: None,
         file_changes: sorted_vector_map!{
             to_mpath("dir1/subdir1/subsubdir1/file_1") => FileChange::tracked(ONES_CTID, FileType::Symlink, 15, None, GitLfs::FullContent),
             to_mpath("dir1/subdir1/subsubdir2/file_1") => FileChange::tracked(TWOS_CTID, FileType::Regular, 17, None, GitLfs::FullContent),
             to_mpath("dir1/subdir1/subsubdir2/file_2") => FileChange::tracked(THREES_CTID, FileType::Regular, 2, None, GitLfs::FullContent),
         },
-        is_snapshot: false,
-        git_annotated_tag: None,
+        ..Default::default()
     }.freeze().expect("Created changeset")
 }
 

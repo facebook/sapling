@@ -276,15 +276,9 @@ pub trait MegarepoOp<R> {
             parents: new_parent_commits,
             author: "svcscm".to_string(),
             author_date: DateTime::now(),
-            committer: None,
-            committer_date: None,
             message: message.unwrap_or_else(|| "target config change".to_string()),
-            hg_extra: SortedVectorMap::new(),
-            git_extra_headers: None,
-            git_tree_hash: None,
             file_changes: file_changes.into_iter().collect(),
-            is_snapshot: false,
-            git_annotated_tag: None,
+            ..Default::default()
         };
         let merge = bcs.freeze()?;
         save_changesets(ctx, repo, vec![merge.clone()]).await?;
@@ -1305,15 +1299,9 @@ pub(crate) fn new_megarepo_automation_commit(
         parents,
         author: "svcscm".to_string(),
         author_date: DateTime::now(),
-        committer: None,
-        committer_date: None,
         message,
-        hg_extra: SortedVectorMap::new(),
-        git_extra_headers: None,
-        git_tree_hash: None,
         file_changes,
-        is_snapshot: false,
-        git_annotated_tag: None,
+        ..Default::default()
     }
 }
 

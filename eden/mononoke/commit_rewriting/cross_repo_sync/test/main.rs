@@ -73,7 +73,6 @@ use pushrebase::PushrebaseError;
 use rendezvous::RendezVousOptions;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
-use sorted_vector_map::sorted_vector_map;
 use sql::rusqlite::Connection as SqliteConnection;
 use sql_construct::SqlConstruct;
 use synced_commit_mapping::SqlSyncedCommitMapping;
@@ -143,15 +142,8 @@ async fn create_empty_commit(ctx: CoreContext, repo: &TestRepo) -> ChangesetId {
         parents: vec![p1],
         author: "Test User <test@fb.com>".to_string(),
         author_date: DateTime::from_timestamp(1504040001, 0).unwrap(),
-        committer: None,
-        committer_date: None,
         message: "Change master_file".to_string(),
-        hg_extra: Default::default(),
-        git_extra_headers: None,
-        git_tree_hash: None,
-        file_changes: sorted_vector_map! {},
-        is_snapshot: false,
-        git_annotated_tag: None,
+        ..Default::default()
     }
     .freeze()
     .unwrap();
@@ -1936,15 +1928,8 @@ async fn create_merge(
         parents,
         author: "Test User <test@fb.com>".to_string(),
         author_date: DateTime::from_timestamp(1504040001, 0).unwrap(),
-        committer: None,
-        committer_date: None,
         message: "Never gonna give you up".to_string(),
-        hg_extra: Default::default(),
-        git_extra_headers: None,
-        git_tree_hash: None,
-        file_changes: Default::default(),
-        is_snapshot: false,
-        git_annotated_tag: None,
+        ..Default::default()
     }
     .freeze()
     .unwrap();

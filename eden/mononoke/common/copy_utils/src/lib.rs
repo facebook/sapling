@@ -343,15 +343,9 @@ fn create_bonsai_changeset(
         parents,
         author,
         author_date: DateTime::now(),
-        committer: None,
-        committer_date: None,
         message,
-        hg_extra: Default::default(),
-        git_extra_headers: None,
-        git_tree_hash: None,
         file_changes,
-        is_snapshot: false,
-        git_annotated_tag: None,
+        ..Default::default()
     }
     .freeze()
 }

@@ -664,18 +664,12 @@ fn make_bonsai_changeset(
         parents: p0.into_iter().chain(p1).collect(),
         author: "aslpavel".to_owned(),
         author_date: DateTime::from_timestamp(1528298184, 0).unwrap(),
-        committer: None,
-        committer_date: None,
         message: "[mononoke] awesome message".to_owned(),
-        hg_extra: Default::default(),
-        git_extra_headers: None,
-        git_tree_hash: None,
         file_changes: changes
             .into_iter()
             .map(|(path, change)| (NonRootMPath::new(path).unwrap(), change))
             .collect(),
-        is_snapshot: false,
-        git_annotated_tag: None,
+        ..Default::default()
     }
     .freeze()
     .unwrap()

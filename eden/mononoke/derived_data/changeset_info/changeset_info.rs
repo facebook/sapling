@@ -337,15 +337,10 @@ mod test {
             parents: vec![],
             author: "author".to_string(),
             author_date: DateTime::now(),
-            committer: None,
-            committer_date: None,
             message: message.to_string(),
-            hg_extra: Default::default(),
             git_extra_headers: Some(sorted_vector_map! { SmallVec::new() => Bytes::from_static(b"world")}),
-            git_tree_hash: None,
             file_changes: sorted_vector_map! { NonRootMPath::new("file").unwrap() => FileChange::Deletion },
-            is_snapshot: false,
-            git_annotated_tag: None,
+            ..Default::default()
         }
         .freeze()
         .unwrap()

@@ -478,8 +478,8 @@ fn generate_bonsai_changeset(
         git_extra_headers,
         git_tree_hash: None,
         file_changes,
-        is_snapshot: false,
         git_annotated_tag: None,
+        ..Default::default()
     }
     .freeze()
 }
