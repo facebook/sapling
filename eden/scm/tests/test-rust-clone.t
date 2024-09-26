@@ -1,5 +1,4 @@
-#chg-compatible
-#debugruntest-incompatible
+#require git no-eden
 
 test rust clone
 
@@ -191,7 +190,7 @@ Test various --eden errors:
   [255]
 
 Don't delete repo on error if --debug:
-  $ FAILPOINTS=run::clone=return hg clone -Uq test:e1 $TESTTMP/debug-failure --debug --shallow &>/dev/null
+  $ FAILPOINTS=run::clone=return hg clone -Uq test:e1 $TESTTMP/debug-failure --debug --shallow 2>/dev/null
   [255]
   $ ls $TESTTMP/debug-failure
 
@@ -277,3 +276,13 @@ Don't perform any queries for null commit id.
   $ LOG=dag::protocol=trace hg status -m 2>trace
   $ grep 0000000000000000000000000000000000000000 trace
   [1]
+
+
+Can clone legacy repo using Rust clone
+  $ newrepo legacy --config format.use-eager-repo=false
+  $ drawdag <<EOS
+  > A # bookmark master = A
+  > EOS
+  $ cd
+FIXME: not using Rust clone
+  $ hg clone -q ssh://user@dummy/legacy legacy_client --shallow
