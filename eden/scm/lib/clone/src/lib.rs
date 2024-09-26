@@ -212,16 +212,17 @@ pub fn eden_clone(
         None => None,
     };
 
-    run_eden_clone_command(&mut clone_command).or_else(|e| {
+    run_eden_clone_command(&mut clone_command).or_else(|err| {
+        tracing::warn!(?err, "error performing eden clone");
         // Retry the clone without the --filter-path argument
         if let Some(args_without_filter) = args_without_filter {
             let mut new_command = get_eden_clone_command(config)?;
             new_command.args(args_without_filter);
             tracing::debug!(target: "clone_info", empty_eden_filter=true);
-            run_eden_clone_command(&mut new_command)?;
+            run_eden_clone_command(&mut new_command).context(err)?;
             Ok(())
         } else {
-            Err(e)
+            Err(err)
         }
     })
 }

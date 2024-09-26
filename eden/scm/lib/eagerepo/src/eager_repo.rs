@@ -10,6 +10,7 @@ use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::fmt;
 use std::fs;
+use std::fs::read_to_string;
 use std::io;
 use std::io::Write;
 use std::path::Path;
@@ -340,8 +341,7 @@ impl EagerRepo {
         if url.scheme() == "test" {
             let path = url.path();
             let path = path.trim_start_matches('/');
-            if let Ok(tmp) = std::env::var("TESTTMP") {
-                let tmp: &Path = Path::new(&tmp);
+            if let Some(tmp) = testtmp() {
                 let path = tmp.join(path);
                 tracing::trace!("url_to_dir {} => {}", url, path.display());
                 return Some(path);
@@ -351,7 +351,7 @@ impl EagerRepo {
         if let Some(path) = url.resolved_str().strip_prefix("ssh://user@dummy/") {
             // Allow instantiating EagerRepo for dummyssh servers. This is so we can get a
             // working SaplingRemoteApi for server repos in legacy tests.
-            if let Ok(tmp) = std::env::var("TESTTMP") {
+            if let Some(tmp) = testtmp() {
                 let path = Path::new(&tmp).join(path);
                 if let Ok(Some(ident)) = identity::sniff_dir(&path) {
                     let mut store_path = path.clone();
@@ -656,6 +656,18 @@ impl EagerRepo {
     pub fn store(&self) -> EagerRepoStore {
         self.store.clone()
     }
+}
+
+fn testtmp() -> Option<PathBuf> {
+    std::env::var("TESTTMP").ok().map(|tmp| {
+        let mut tmp = PathBuf::from(tmp);
+        // Look for ".testtmp" bread crumb. If we are running from EdenFS, our $TESTTMP
+        // env var might not be up to date.
+        if let Ok(bread_crumb) = read_to_string(tmp.join(".testtmp")) {
+            tmp = PathBuf::from(bread_crumb);
+        }
+        tmp
+    })
 }
 
 // Hash something else in to differentiate augmented and non-augmented keys.

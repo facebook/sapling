@@ -434,6 +434,11 @@ class TestTmp:
         tmp = tempfile.mkdtemp(prefix=tmpprefix or "ttesttmp", dir=existing_testtmp)
         path = Path(os.path.realpath(tmp))
 
+        if existing_testtmp:
+            # Write a breadcrumb leading from original $TESTTMP to current one.
+            # This is useful for (persistent) EdenFS to discover the current $TESTTMP.
+            (Path(existing_testtmp) / ".testtmp").write_text(str(path))
+
         fs = OSFS()
         fs.chdir(path)
         envvars = self._initialenvvars(path)
