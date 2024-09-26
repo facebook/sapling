@@ -50,7 +50,6 @@ use crate::lfs::lfs_from_hg_file_blob;
 use crate::lfs::LfsClient;
 use crate::lfs::LfsPointersEntry;
 use crate::lfs::LfsStore;
-use crate::remotestore::HgIdRemoteStore;
 use crate::scmstore::activitylogger::ActivityLogger;
 use crate::scmstore::fetch::FetchResults;
 use crate::scmstore::metrics::StoreLocation;
@@ -486,6 +485,16 @@ impl FileStore {
             flush_on_drop: true,
         }
     }
+
+    // Returns keys that weren't found locally.
+    pub fn upload_lfs(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+        self.metrics.write().api.hg_upload.call(keys.len());
+        if let Some(ref lfs_remote) = self.lfs_remote {
+            lfs_remote.upload(keys)
+        } else {
+            Ok(keys.to_vec())
+        }
+    }
 }
 
 impl HgIdDataStore for FileStore {
@@ -577,16 +586,7 @@ impl RemoteDataStore for FileStore {
     }
 
     fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        self.metrics.write().api.hg_upload.call(keys.len());
-        // TODO(meyer): Eliminate usage of legacy API, or at least minimize it
-        if let Some(ref lfs_remote) = self.lfs_remote {
-            lfs_remote
-                .clone()
-                .datastore(Arc::new(self.with_shared_only()))
-                .upload(keys)
-        } else {
-            Ok(keys.to_vec())
-        }
+        self.upload_lfs(keys)
     }
 }
 

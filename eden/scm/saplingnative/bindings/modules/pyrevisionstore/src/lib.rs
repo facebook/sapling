@@ -14,6 +14,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use anyhow::anyhow;
 use anyhow::Error;
 use configmodel::Config;
 use cpython::*;
@@ -803,9 +804,27 @@ py_class!(pub class filescmstore |py| {
         store.refresh_py(py)
     }
 
-    def upload(&self, keys: PyList) -> PyResult<PyList> {
-        let store = self.store(py);
-        store.upload_py(py, keys)
+    def upload_lfs(&self, keys: PyList) -> PyResult<PyList> {
+        let keys = keys
+            .iter(py)
+            .map(|tuple| Ok(StoreKey::from(from_tuple_to_key(py, &tuple)?)))
+            .collect::<PyResult<Vec<StoreKey>>>()?;
+        let not_uploaded = self.store(py).upload_lfs(&keys).map_pyerr(py)?;
+
+        let results = PyList::new(py, &[]);
+        for key in not_uploaded {
+            match key {
+                StoreKey::HgId(key) => {
+                    let key_tuple = from_key_to_tuple(py, &key);
+                    results.append(py, key_tuple.into_object());
+                }
+                StoreKey::Content(_, _) => {
+                    return Err(anyhow!("Unsupported key: {:?}", key)).map_pyerr(py);
+                }
+            }
+        }
+
+        Ok(results)
     }
 
     def blob(&self, name: &PyPath, node: &PyBytes) -> PyResult<PyBytes> {

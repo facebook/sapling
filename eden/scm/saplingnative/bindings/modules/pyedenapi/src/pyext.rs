@@ -78,7 +78,6 @@ use progress_model::ProgressBar;
 use pyrevisionstore::filescmstore;
 use revisionstore::HgIdDataStore;
 use revisionstore::HgIdMutableDeltaStore;
-use revisionstore::RemoteDataStore;
 use revisionstore::StoreKey;
 use revisionstore::StoreResult;
 use sha1::Digest;
@@ -536,7 +535,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
 
         // Preupload LFS blobs
         store
-            .upload(
+            .upload_lfs(
                 &keys
                     .iter()
                     .map(|(key, _)| StoreKey::hgid(key.clone()))

@@ -88,6 +88,7 @@ Configs:
 
     ``remotefilelog.http`` use HTTP (EdenAPI) instead of SSH to fetch data.
 """
+
 from __future__ import absolute_import
 
 import os
@@ -137,7 +138,6 @@ from . import (
     shallowrepo,
     shallowstore,
 )
-
 
 # ensures debug commands are registered
 hgdebugcommands.command
@@ -256,7 +256,7 @@ def uploadblobs(repo, nodes):
 
             fctx = ctx[f]
             toupload.append((fctx.path(), fctx.filenode()))
-    repo.fileslog.filestore.upload(toupload)
+    repo.fileslog.filestore.upload_lfs(toupload)
 
 
 def prepush(pushop):
