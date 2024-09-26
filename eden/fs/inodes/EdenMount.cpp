@@ -2402,22 +2402,7 @@ void EdenMount::fsChannelInitSuccessful(
   // This state transition could fail if shutdown() was called before we saw
   // the FUSE_INIT message from the kernel.
   transitionState(State::STARTING, State::RUNNING);
-  preparePostFsChannelCompletion(
-      std::move(channelCompleteFuture)
-          .deferValue([this](FsStopDataPtr stopData) {
-            if (isNfsdChannel()) {
-              // TODO: Understand why destroying Nfsd3 here is necessary, and
-              // allowing it to destroy itself when EdenMount dies is not
-              // sufficient. The problem with clearing channel_ is that it
-              // introduces a potential race with every other use of channel_ in
-              // EdenMount.
-              //
-              // In particular, it races with fb303's dynamic counter
-              // aggregation.
-              channel_ = nullptr;
-            }
-            return stopData;
-          }));
+  preparePostFsChannelCompletion(std::move(channelCompleteFuture));
 }
 
 void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
