@@ -150,7 +150,6 @@ pub use crate::indexedlogdatastore::IndexedLogHgIdDataStoreConfig;
 pub use crate::indexedloghistorystore::IndexedLogHgIdHistoryStore;
 pub use crate::indexedlogutil::StoreType;
 pub use crate::lfs::LfsRemote;
-pub use crate::localstore::ExtStoredPolicy;
 pub use crate::localstore::LocalStore;
 pub use crate::metadatastore::MetadataStore;
 pub use crate::metadatastore::MetadataStoreBuilder;

@@ -56,7 +56,6 @@ use crate::scmstore::FileStore;
 use crate::scmstore::StoreFile;
 use crate::util;
 use crate::ContentHash;
-use crate::ExtStoredPolicy;
 use crate::Metadata;
 use crate::SaplingRemoteApiFileStore;
 use crate::StoreKey;
@@ -76,7 +75,6 @@ pub struct FetchState {
     metrics: FileStoreFetchMetrics,
 
     // Config
-    extstored_policy: ExtStoredPolicy,
     compute_aux_data: bool,
 
     lfs_enabled: bool,
@@ -100,7 +98,6 @@ impl FetchState {
 
             lfs_pointers: HashMap::new(),
 
-            extstored_policy: file_store.extstored_policy,
             compute_aux_data: file_store.compute_aux_data,
             lfs_progress: file_store.lfs_progress.clone(),
             lfs_enabled,
@@ -179,34 +176,6 @@ impl FetchState {
         Ok(LazyFile::IndexedLog(mmap_entry))
     }
 
-    fn ugprade_lfs_pointers(&mut self, entries: Vec<(Key, Entry)>, lfs_store: Option<&LfsStore>) {
-        for (key, entry) in entries {
-            match entry.try_into() {
-                Ok(ptr) => {
-                    if let Some(lfs_store) = lfs_store {
-                        // Promote this indexedlog LFS pointer to the
-                        // pointer store if it isn't already present. This
-                        // should only happen when the Python LFS extension
-                        // is in play.
-                        if let Ok(None) = lfs_store
-                            .fetch_available(&key.clone().into(), self.fetch_mode.ignore_result())
-                        {
-                            if let Err(err) = lfs_store.add_pointer(ptr) {
-                                self.errors.keyed_error(key, err);
-                            }
-                        }
-                    } else {
-                        // If we don't have somewhere to upgrade pointer,
-                        // track as a "found" pointer so it will be fetched
-                        // from the remote store subsequently.
-                        self.found_pointer(key, ptr, true)
-                    }
-                }
-                Err(err) => self.errors.keyed_error(key, err),
-            }
-        }
-    }
-
     pub(crate) fn fetch_indexedlog(
         &mut self,
         store: &IndexedLogHgIdDataStore,
@@ -238,7 +207,6 @@ impl FetchState {
         let mut count = 0;
         let mut errors = 0;
         let mut error: Option<String> = None;
-        let mut lfs_pointers_to_upgrade = Vec::new();
 
         self.metrics.indexedlog.store(loc).fetch(pending.len());
 
@@ -265,13 +233,7 @@ impl FetchState {
                         found += 1;
 
                         if entry.metadata().is_lfs() && self.lfs_enabled {
-                            // This is mainly for tests. We are handling the transition
-                            // from the Python lfs extension (which stored pointers in the
-                            // regular file store), the remotefilelog lfs implementation
-                            // (which stores pointers in a separate store).
-                            if self.extstored_policy == ExtStoredPolicy::Use {
-                                lfs_pointers_to_upgrade.push((key.clone(), entry));
-                            }
+                            return None;
                         } else {
                             return Some(LazyFile::IndexedLog(entry).into());
                         }
@@ -291,8 +253,6 @@ impl FetchState {
 
                 None
             });
-
-        self.ugprade_lfs_pointers(lfs_pointers_to_upgrade, lfs_store);
 
         self.metrics
             .indexedlog

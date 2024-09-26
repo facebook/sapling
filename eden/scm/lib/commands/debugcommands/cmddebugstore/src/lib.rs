@@ -13,7 +13,6 @@ use cmdutil::ConfigExt;
 use cmdutil::Result;
 use configloader::convert::ByteCount;
 use repo::repo::Repo;
-use revisionstore::ExtStoredPolicy;
 use revisionstore::HgIdDataStore;
 use revisionstore::IndexedLogHgIdDataStore;
 use revisionstore::IndexedLogHgIdDataStoreConfig;
@@ -59,7 +58,6 @@ pub fn run(ctx: ReqCtx<DebugstoreOpts>, repo: &Repo) -> Result<u8> {
         IndexedLogHgIdDataStore::new(
             config,
             datastore_path,
-            ExtStoredPolicy::Use,
             &indexedlog_config,
             StoreType::Permanent,
         )

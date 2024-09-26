@@ -57,7 +57,6 @@ use crate::scmstore::metrics::StoreLocation;
 use crate::ContentDataStore;
 use crate::ContentMetadata;
 use crate::Delta;
-use crate::ExtStoredPolicy;
 use crate::LocalStore;
 use crate::Metadata;
 use crate::SaplingRemoteApiFileStore;
@@ -68,7 +67,6 @@ use crate::StoreResult;
 pub struct FileStore {
     // Config
     // TODO(meyer): Move these to a separate config struct with default impl, etc.
-    pub(crate) extstored_policy: ExtStoredPolicy,
     pub(crate) lfs_threshold_bytes: Option<u64>,
     pub(crate) edenapi_retries: i32,
     /// Allow explicitly writing serialized LFS pointers outside of tests
@@ -413,7 +411,6 @@ impl FileStore {
 
     pub fn empty() -> Self {
         FileStore {
-            extstored_policy: ExtStoredPolicy::Ignore,
             lfs_threshold_bytes: None,
             edenapi_retries: 0,
             allow_write_lfs_ptrs: false,
@@ -460,7 +457,6 @@ impl FileStore {
         );
 
         Self {
-            extstored_policy: self.extstored_policy.clone(),
             lfs_threshold_bytes: self.lfs_threshold_bytes.clone(),
             edenapi_retries: self.edenapi_retries.clone(),
             allow_write_lfs_ptrs: self.allow_write_lfs_ptrs,

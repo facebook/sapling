@@ -32,7 +32,6 @@ use revisionstore::scmstore::FileStore;
 use revisionstore::scmstore::TreeStore;
 use revisionstore::scmstore::TreeStoreBuilder;
 use revisionstore::Delta;
-use revisionstore::ExtStoredPolicy;
 use revisionstore::HgIdDataStore;
 use revisionstore::HgIdHistoryStore;
 use revisionstore::HgIdMutableDeltaStore;
@@ -150,7 +149,6 @@ py_class!(class indexedlogdatastore |py| {
             Box::new(IndexedLogHgIdDataStore::new(
                 &BTreeMap::<&str, &str>::new(),
                 path.as_path(),
-                ExtStoredPolicy::Ignore,
                 &config,
                 StoreType::Permanent,
             ).map_pyerr(py)?),
@@ -233,7 +231,6 @@ fn make_mutabledeltastore(
     Ok(Arc::new(IndexedLogHgIdDataStore::new(
         &BTreeMap::<&str, &str>::new(),
         indexedlogpath.as_path(),
-        ExtStoredPolicy::Ignore,
         &config,
         StoreType::Permanent,
     )?))

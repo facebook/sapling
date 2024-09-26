@@ -2118,7 +2118,6 @@ mod tests {
     use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
     use crate::indexedlogdatastore::IndexedLogHgIdDataStoreConfig;
     use crate::indexedlogutil::StoreType;
-    use crate::localstore::ExtStoredPolicy;
     use crate::testutil::example_blob;
     #[cfg(feature = "fb")]
     use crate::testutil::example_blob2;
@@ -2513,7 +2512,6 @@ mod tests {
         let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(
             &config,
             &dir,
-            ExtStoredPolicy::Ignore,
             &indexedlog_config,
             StoreType::Rotated,
         )?);
@@ -2552,7 +2550,6 @@ mod tests {
         let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(
             &config,
             &dir,
-            ExtStoredPolicy::Ignore,
             &indexedlog_config,
             StoreType::Rotated,
         )?);
@@ -2591,7 +2588,6 @@ mod tests {
         let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(
             &config,
             &dir,
-            ExtStoredPolicy::Ignore,
             &indexedlog_config,
             StoreType::Rotated,
         )?);
@@ -2670,7 +2666,6 @@ mod tests {
         let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(
             &config,
             &dir,
-            ExtStoredPolicy::Ignore,
             &indexedlog_config,
             StoreType::Rotated,
         )?);
@@ -2752,7 +2747,6 @@ mod tests {
         let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(
             &config,
             &dir,
-            ExtStoredPolicy::Ignore,
             &indexedlog_config,
             StoreType::Rotated,
         )?);

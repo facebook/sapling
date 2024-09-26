@@ -39,7 +39,6 @@ use crate::datastore::StoreResult;
 use crate::indexedlogutil::Store;
 use crate::indexedlogutil::StoreOpenOptions;
 use crate::indexedlogutil::StoreType;
-use crate::localstore::ExtStoredPolicy;
 use crate::localstore::LocalStore;
 use crate::missing::MissingInjection;
 use crate::sliceext::SliceExt;
@@ -54,7 +53,6 @@ pub struct IndexedLogHgIdDataStoreConfig {
 
 pub struct IndexedLogHgIdDataStore {
     store: Store,
-    extstored_policy: ExtStoredPolicy,
     missing: MissingInjection,
 }
 
@@ -207,7 +205,6 @@ impl IndexedLogHgIdDataStore {
     pub fn new(
         config: &dyn Config,
         path: impl AsRef<Path>,
-        extstored_policy: ExtStoredPolicy,
         log_config: &IndexedLogHgIdDataStoreConfig,
         store_type: StoreType,
     ) -> Result<Self> {
@@ -220,7 +217,6 @@ impl IndexedLogHgIdDataStore {
 
         Ok(IndexedLogHgIdDataStore {
             store: log,
-            extstored_policy,
             missing: MissingInjection::new_from_env("MISSING_FILES"),
         })
     }
@@ -385,12 +381,8 @@ impl HgIdDataStore for IndexedLogHgIdDataStore {
             Some(entry) => entry,
         };
 
-        if self.extstored_policy == ExtStoredPolicy::Ignore && entry.metadata().is_lfs() {
-            Ok(StoreResult::NotFound(StoreKey::HgId(key)))
-        } else {
-            let content = entry.content()?;
-            Ok(StoreResult::Found(content.as_ref().to_vec()))
-        }
+        let content = entry.content()?;
+        Ok(StoreResult::Found(content.as_ref().to_vec()))
     }
 
     fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
@@ -405,11 +397,7 @@ impl HgIdDataStore for IndexedLogHgIdDataStore {
         };
 
         let metadata = entry.metadata();
-        if self.extstored_policy == ExtStoredPolicy::Ignore && entry.metadata().is_lfs() {
-            Ok(StoreResult::NotFound(StoreKey::HgId(key)))
-        } else {
-            Ok(StoreResult::Found(metadata.clone()))
-        }
+        Ok(StoreResult::Found(metadata.clone()))
     }
 
     fn refresh(&self) -> Result<()> {
@@ -457,7 +445,6 @@ mod tests {
         let log = IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
             &tempdir,
-            ExtStoredPolicy::Use,
             &config,
             StoreType::Rotated,
         )
@@ -476,7 +463,6 @@ mod tests {
         let log = IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
             &tempdir,
-            ExtStoredPolicy::Use,
             &config,
             StoreType::Rotated,
         )
@@ -504,7 +490,6 @@ mod tests {
         let log = IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
             &tempdir,
-            ExtStoredPolicy::Use,
             &config,
             StoreType::Rotated,
         )
@@ -528,7 +513,6 @@ mod tests {
         let log = IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
             &tempdir,
-            ExtStoredPolicy::Use,
             &config,
             StoreType::Rotated,
         )
@@ -548,7 +532,6 @@ mod tests {
         let log = IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
             &tempdir,
-            ExtStoredPolicy::Use,
             &config,
             StoreType::Rotated,
         )
@@ -569,7 +552,6 @@ mod tests {
         let log = IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
             &tempdir,
-            ExtStoredPolicy::Use,
             &config,
             StoreType::Rotated,
         )?;
@@ -596,7 +578,6 @@ mod tests {
         let log = IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
             &tempdir,
-            ExtStoredPolicy::Use,
             &config,
             StoreType::Rotated,
         )?;
@@ -625,7 +606,6 @@ mod tests {
         let log = IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
             &tempdir,
-            ExtStoredPolicy::Use,
             &config,
             StoreType::Rotated,
         )?;
@@ -656,7 +636,6 @@ mod tests {
         let log = IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
             &tempdir,
-            ExtStoredPolicy::Use,
             &config,
             StoreType::Rotated,
         )?;
@@ -676,42 +655,6 @@ mod tests {
     }
 
     #[test]
-    fn test_extstored_ignore() -> Result<()> {
-        let tempdir = TempDir::new().unwrap();
-        let config = IndexedLogHgIdDataStoreConfig {
-            max_log_count: None,
-            max_bytes_per_log: None,
-            max_bytes: None,
-        };
-        let log = IndexedLogHgIdDataStore::new(
-            &BTreeMap::<&str, &str>::new(),
-            &tempdir,
-            ExtStoredPolicy::Ignore,
-            &config,
-            StoreType::Rotated,
-        )?;
-
-        let delta = Delta {
-            data: Bytes::from(&[1, 2, 3, 4][..]),
-            base: None,
-            key: key("a", "1"),
-        };
-
-        log.add(
-            &delta,
-            &Metadata {
-                size: None,
-                flags: Some(Metadata::LFS_FLAG),
-            },
-        )?;
-
-        let k = StoreKey::hgid(delta.key);
-        assert_eq!(log.get(k.clone())?, StoreResult::NotFound(k));
-
-        Ok(())
-    }
-
-    #[test]
     fn test_extstored_use() -> Result<()> {
         let tempdir = TempDir::new().unwrap();
         let config = IndexedLogHgIdDataStoreConfig {
@@ -722,7 +665,6 @@ mod tests {
         let log = IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
             &tempdir,
-            ExtStoredPolicy::Use,
             &config,
             StoreType::Rotated,
         )?;
@@ -766,7 +708,6 @@ mod tests {
         let local = Arc::new(IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
             &tmp,
-            ExtStoredPolicy::Ignore,
             &config,
             StoreType::Rotated,
         )?);
@@ -808,7 +749,6 @@ mod tests {
         let local = Arc::new(IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
             &tmp,
-            ExtStoredPolicy::Ignore,
             &config,
             StoreType::Rotated,
         )?);
@@ -835,68 +775,6 @@ mod tests {
     }
 
     #[test]
-    fn test_scmstore_extstore_use() -> Result<()> {
-        let tempdir = TempDir::new()?;
-        let config = IndexedLogHgIdDataStoreConfig {
-            max_log_count: None,
-            max_bytes_per_log: None,
-            max_bytes: None,
-        };
-        let log = IndexedLogHgIdDataStore::new(
-            &BTreeMap::<&str, &str>::new(),
-            &tempdir,
-            ExtStoredPolicy::Use,
-            &config,
-            StoreType::Rotated,
-        )?;
-
-        let lfs_key = key("a", "1");
-        let nonlfs_key = key("b", "2");
-        let content = Bytes::from(&[1, 2, 3, 4][..]);
-        let lfs_metadata = Metadata {
-            size: None,
-            flags: Some(Metadata::LFS_FLAG),
-        };
-        let nonlfs_metadata = Metadata {
-            size: None,
-            flags: None,
-        };
-
-        let lfs_entry = Entry::new(lfs_key.clone(), content.clone(), lfs_metadata);
-        let nonlfs_entry = Entry::new(nonlfs_key.clone(), content.clone(), nonlfs_metadata);
-
-        log.put_entry(lfs_entry)?;
-        log.put_entry(nonlfs_entry)?;
-
-        // Set up local-only FileStore
-        let mut store = FileStore::empty();
-        store.indexedlog_local = Some(Arc::new(log));
-        store.extstored_policy = ExtStoredPolicy::Use;
-        store.lfs_threshold_bytes = Some(123);
-
-        let fetched = store.fetch(
-            vec![lfs_key.clone(), nonlfs_key.clone()],
-            FileAttributes::CONTENT,
-            FetchMode::AllowRemote,
-        );
-
-        let (mut found, missing, _errors) = fetched.consume();
-        assert_eq!(
-            found
-                .get_mut(&nonlfs_key)
-                .expect("key not found")
-                .file_content()?,
-            content
-        );
-
-        // Note: We don't fully respect ExtStoredPolicy in scmstore. We try to resolve the pointer,
-        // and if we can't we no longer return the serialized pointer. Thus, this fails with
-        // "unknown metadata" trying to deserialize a malformed LFS pointer.
-        assert!(format!("{:#?}", missing[&lfs_key]).contains("unknown metadata"));
-        Ok(())
-    }
-
-    #[test]
     fn test_scmstore_extstore_ignore() -> Result<()> {
         let tempdir = TempDir::new()?;
         let config = IndexedLogHgIdDataStoreConfig {
@@ -907,7 +785,6 @@ mod tests {
         let log = IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
             &tempdir,
-            ExtStoredPolicy::Ignore,
             &config,
             StoreType::Rotated,
         )?;
@@ -933,7 +810,6 @@ mod tests {
         // Set up local-only FileStore
         let mut store = FileStore::empty();
         store.indexedlog_local = Some(Arc::new(log));
-        store.extstored_policy = ExtStoredPolicy::Ignore;
         store.lfs_threshold_bytes = Some(123);
 
         let fetched = store.fetch(

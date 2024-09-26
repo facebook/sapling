@@ -41,7 +41,6 @@ use crate::util::get_indexedloghistorystore_path;
 use crate::util::get_local_path;
 use crate::util::get_tree_aux_store_path;
 use crate::util::RUN_ONCE_FILENAME;
-use crate::ExtStoredPolicy;
 use crate::IndexedLogHgIdHistoryStore;
 use crate::SaplingRemoteApiFileStore;
 use crate::SaplingRemoteApiTreeStore;
@@ -122,15 +121,6 @@ impl<'a> FileStoreBuilder<'a> {
         self
     }
 
-    fn get_extstored_policy(&self) -> Result<ExtStoredPolicy> {
-        // This is to keep compatibility w/ the Python lfs extension.
-        // Contentstore would "upgrade" Python LFS pointers from the pack store
-        // to indexedlog store during repack, but scmstore doesn't have a repack
-        // notion. It doesn't seem bad to just always allow LFS pointers stored
-        // in the non-LFS pointer storage.
-        Ok(ExtStoredPolicy::Use)
-    }
-
     #[context("unable to get LFS threshold")]
     fn get_lfs_threshold(&self) -> Result<Option<ByteCount>> {
         let enable_lfs = self.config.get_or_default::<bool>("remotefilelog", "lfs")?;
@@ -182,7 +172,6 @@ impl<'a> FileStoreBuilder<'a> {
             Some(Arc::new(IndexedLogHgIdDataStore::new(
                 self.config,
                 get_indexedlogdatastore_path(local_path)?,
-                self.get_extstored_policy()?,
                 &config,
                 StoreType::Permanent,
             )?))
@@ -215,7 +204,6 @@ impl<'a> FileStoreBuilder<'a> {
         Ok(Some(Arc::new(IndexedLogHgIdDataStore::new(
             self.config,
             get_indexedlogdatastore_path(cache_path)?,
-            self.get_extstored_policy()?,
             &config,
             StoreType::Rotated,
         )?)))
@@ -270,9 +258,6 @@ impl<'a> FileStoreBuilder<'a> {
         if let Some(cache_path) = get_cache_path(self.config, &self.suffix)? {
             check_cache_buster(&self.config, &cache_path);
         }
-
-        tracing::trace!(target: "revisionstore::filestore", "processing extstored policy");
-        let extstored_policy = self.get_extstored_policy()?;
 
         tracing::trace!(target: "revisionstore::filestore", "processing lfs threshold");
         let lfs_threshold_bytes = self.get_lfs_threshold()?.map(|b| b.value());
@@ -383,7 +368,6 @@ impl<'a> FileStoreBuilder<'a> {
 
         tracing::trace!(target: "revisionstore::filestore", "constructing FileStore");
         Ok(FileStore {
-            extstored_policy,
             lfs_threshold_bytes,
             edenapi_retries,
             allow_write_lfs_ptrs,
@@ -521,7 +505,6 @@ impl<'a> TreeStoreBuilder<'a> {
             Some(Arc::new(IndexedLogHgIdDataStore::new(
                 self.config,
                 get_indexedlogdatastore_path(local_path)?,
-                ExtStoredPolicy::Use,
                 &config,
                 StoreType::Permanent,
             )?))
@@ -555,7 +538,6 @@ impl<'a> TreeStoreBuilder<'a> {
         Ok(Some(Arc::new(IndexedLogHgIdDataStore::new(
             self.config,
             get_indexedlogdatastore_path(cache_path)?,
-            ExtStoredPolicy::Use,
             &config,
             StoreType::Rotated,
         )?)))

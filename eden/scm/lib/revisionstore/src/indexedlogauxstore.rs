@@ -253,7 +253,6 @@ mod tests {
     use crate::scmstore::FileAttributes;
     use crate::scmstore::FileStore;
     use crate::testutil::*;
-    use crate::ExtStoredPolicy;
     use crate::HgIdMutableDeltaStore;
 
     fn single_byte_sha1(fst: u8) -> Sha1 {
@@ -402,7 +401,6 @@ mod tests {
         let content = Arc::new(IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
             &tmp,
-            ExtStoredPolicy::Ignore,
             &config,
             StoreType::Rotated,
         )?);

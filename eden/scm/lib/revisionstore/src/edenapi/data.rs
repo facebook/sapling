@@ -226,7 +226,6 @@ mod tests {
     use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
     use crate::indexedlogdatastore::IndexedLogHgIdDataStoreConfig;
     use crate::indexedlogutil::StoreType;
-    use crate::localstore::ExtStoredPolicy;
     use crate::scmstore::tree::types::TreeAttributes;
     use crate::scmstore::FileAttributes;
     use crate::scmstore::FileAuxData;
@@ -256,7 +255,6 @@ mod tests {
         let cache = Arc::new(IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
             &tmp,
-            ExtStoredPolicy::Ignore,
             &config,
             StoreType::Rotated,
         )?);
@@ -303,7 +301,6 @@ mod tests {
         let cache = Arc::new(IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
             &tmp,
-            ExtStoredPolicy::Ignore,
             &config,
             StoreType::Rotated,
         )?);
@@ -350,7 +347,6 @@ mod tests {
         let cache = Arc::new(IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
             &tmp,
-            ExtStoredPolicy::Ignore,
             &config,
             StoreType::Rotated,
         )?);
@@ -400,7 +396,6 @@ mod tests {
         let cache = Arc::new(IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
             &tmp,
-            ExtStoredPolicy::Ignore,
             &config,
             StoreType::Rotated,
         )?);
@@ -481,7 +476,6 @@ mod tests {
         let cache = Arc::new(IndexedLogHgIdDataStore::new(
             &BTreeMap::<&str, &str>::new(),
             &tmp,
-            ExtStoredPolicy::Ignore,
             &config,
             StoreType::Rotated,
         )?);

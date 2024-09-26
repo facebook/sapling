@@ -14,19 +14,9 @@ use anyhow::Result;
 
 use crate::types::StoreKey;
 
-/// Defines the behavior of the datapack code when encountering blobs that are externally stored.
-/// This is typically found for LFS pointers stored in packfiles.
-#[derive(Debug, PartialEq, Copy, Clone)]
-pub enum ExtStoredPolicy {
-    /// The datapack code will return it
-    Use,
-    /// The datapack code will pretend the blob isn't present
-    Ignore,
-}
-
 pub trait StoreFromPath {
     /// Builds a Store from a filepath. The default implementation panics.
-    fn from_path(_path: &Path, _extstored: ExtStoredPolicy) -> Result<Self>
+    fn from_path(_path: &Path) -> Result<Self>
     where
         Self: Sized;
 }
