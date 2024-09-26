@@ -10,7 +10,6 @@
 
   $ eagerepo
   $ configure dummyssh
-  $ setconfig experimental.allowfilepeer=True
   $ enable commitcloud infinitepush
 
   $ cat >> $HGRCPATH << EOF

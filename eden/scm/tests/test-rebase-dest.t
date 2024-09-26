@@ -3,7 +3,6 @@
 
 #chg-compatible
   $ eagerepo
-  $ setconfig experimental.allowfilepeer=True
 
 Require a destination
   $ enable rebase

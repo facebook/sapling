@@ -1,6 +1,5 @@
 #chg-compatible
 #debugruntest-incompatible
-  $ setconfig experimental.allowfilepeer=True
 
 Set up extension and repos
 

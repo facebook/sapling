@@ -1,6 +1,5 @@
 #chg-compatible
 #require bash no-eden
-  $ setconfig experimental.allowfilepeer=True
 
   $ enable amend rebase histedit fbhistedit remotenames
   $ setconfig experimental.evolution=obsolete

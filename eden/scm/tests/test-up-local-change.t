@@ -1,7 +1,6 @@
 
 #require no-eden
 
-  $ setconfig experimental.allowfilepeer=True
   $ setconfig commands.update.check=none
 
   $ HGMERGE=true; export HGMERGE

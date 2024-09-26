@@ -2,7 +2,6 @@
 
 #require no-eden
 
-  $ setconfig experimental.allowfilepeer=True
 
   $ enable rebase
 

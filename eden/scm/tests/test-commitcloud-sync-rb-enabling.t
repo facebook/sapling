@@ -3,7 +3,6 @@
 
 #require no-eden
 
-  $ setconfig experimental.allowfilepeer=True
 
   $ enable amend commitcloud infinitepush remotenames
   $ configure dummyssh

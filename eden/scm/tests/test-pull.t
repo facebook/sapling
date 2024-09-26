@@ -1,6 +1,5 @@
 #modern-config-incompatible
 #inprocess-hg-incompatible
-  $ setconfig experimental.allowfilepeer=True
 
   $ configure dummyssh
 #require serve no-eden

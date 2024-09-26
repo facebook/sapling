@@ -19,7 +19,6 @@
   ...     cmd = f"hg log -T '{template}' -r {rev}"
   ...     return list(tuple(line.split()) for line in sheval(cmd).splitlines())
 
-  $ setconfig experimental.allowfilepeer=True
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ . "$TESTDIR/library.sh"
 

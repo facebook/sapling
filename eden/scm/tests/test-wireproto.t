@@ -2,7 +2,6 @@
 #require no-eden
 
   $ eagerepo
-  $ setconfig experimental.allowfilepeer=True
 
 Test wire protocol argument passing
 

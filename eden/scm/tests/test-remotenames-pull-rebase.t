@@ -1,6 +1,5 @@
 #chg-compatible
 #debugruntest-incompatible
-  $ setconfig experimental.allowfilepeer=True
 
   $ eagerepo
   $ setconfig remotenames.rename.default=

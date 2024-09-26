@@ -8,7 +8,6 @@
 
   $ eagerepo
   $ configure dummyssh
-  $ setconfig experimental.allowfilepeer=True
   $ enable amend commitcloud infinitepush rebase remotenames share
 
   $ cat >> $HGRCPATH << 'EOF'

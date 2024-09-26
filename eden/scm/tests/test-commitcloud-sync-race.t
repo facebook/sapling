@@ -4,7 +4,6 @@
 #require no-eden
 
 #inprocess-hg-incompatible
-  $ setconfig experimental.allowfilepeer=True
 
   $ cat >>$TESTTMP/ccdelay.py <<EOF
   > 

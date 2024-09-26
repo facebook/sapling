@@ -3,7 +3,6 @@
 
 #require no-eden
 
-  $ setconfig experimental.allowfilepeer=True
 
   $ configure modern
   $ setconfig infinitepush.branchpattern=re:scratch/.+

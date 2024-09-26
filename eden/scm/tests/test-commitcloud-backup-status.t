@@ -1,5 +1,4 @@
 #modern-config-incompatible
-  $ setconfig experimental.allowfilepeer=True
 
 #require symlink no-eden
 

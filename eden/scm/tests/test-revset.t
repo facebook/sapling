@@ -9,7 +9,6 @@
 # GNU General Public License version 2 or any later version.
 
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ setconfig experimental.allowfilepeer=True
   $ enable commitextras
   $ setconfig 'ui.allowemptycommit=1'
   $ setconfig checkout.use-rust=false

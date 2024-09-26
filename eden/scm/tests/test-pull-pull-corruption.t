@@ -5,7 +5,6 @@
 #inprocess-hg-incompatible
 
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ setconfig experimental.allowfilepeer=True
 
 Corrupt an hg repo with two pulls.
 create one repo with a long history

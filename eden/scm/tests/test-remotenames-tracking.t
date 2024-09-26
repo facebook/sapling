@@ -1,7 +1,6 @@
 #chg-compatible
 #debugruntest-incompatible
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ setconfig experimental.allowfilepeer=True
   $ setconfig ui.ignorerevnum=true
 
 Set up extension and repos

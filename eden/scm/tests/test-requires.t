@@ -8,7 +8,6 @@
 # GNU General Public License version 2 or any later version.
 
   $ eagerepo
-  $ setconfig experimental.allowfilepeer=True
   $ hg init t
   $ cd t
   $ echo a > a

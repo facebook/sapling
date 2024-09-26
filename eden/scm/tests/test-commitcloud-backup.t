@@ -4,7 +4,6 @@
 
 #inprocess-hg-incompatible
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ setconfig experimental.allowfilepeer=True
 
   $ enable amend
   $ setconfig infinitepushbackup.hostname=testhost

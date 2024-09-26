@@ -1,7 +1,6 @@
 #require symlink no-eden
 
   $ eagerepo
-  $ setconfig experimental.allowfilepeer=True
 
 == tests added in 0.7 ==
 

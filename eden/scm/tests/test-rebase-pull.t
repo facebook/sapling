@@ -12,7 +12,6 @@
 # GNU General Public License version 2 or any later version.
 
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ setconfig experimental.allowfilepeer=True
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]
   > rebase=

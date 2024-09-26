@@ -3,7 +3,6 @@
 #require no-eden
 
 #inprocess-hg-incompatible
-  $ setconfig experimental.allowfilepeer=True
 
   $ enable amend commitcloud infinitepush rebase remotenames fbcodereview
   $ configure dummyssh

@@ -3,7 +3,6 @@
 #require no-eden
 
 #inprocess-hg-incompatible
-  $ setconfig experimental.allowfilepeer=True
 
   $ enable infinitepush remotenames
   $ . "$TESTDIR/library.sh"

@@ -1,6 +1,5 @@
 #chg-compatible
 #debugruntest-incompatible
-  $ setconfig experimental.allowfilepeer=True
 
   $ configure modern
   $ setconfig remotefilelog.debug=True

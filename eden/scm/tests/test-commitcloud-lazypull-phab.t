@@ -2,7 +2,6 @@
 
 #require no-eden
 
-  $ setconfig experimental.allowfilepeer=True
 
   $ configure dummyssh mutation-norecord
   $ enable amend arcdiff commitcloud infinitepush rebase remotenames share

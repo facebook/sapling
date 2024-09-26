@@ -3,7 +3,6 @@
 #require no-eden
 
 #inprocess-hg-incompatible
-  $ setconfig experimental.allowfilepeer=True
 
   $ hg init test
   $ cd test

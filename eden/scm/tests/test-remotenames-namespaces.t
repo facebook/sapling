@@ -8,7 +8,6 @@
 
   $ eagerepo
 
-  $ setconfig experimental.allowfilepeer=True
   $ setconfig remotenames.hoist=default
   $ setconfig remotenames.rename.default=
 

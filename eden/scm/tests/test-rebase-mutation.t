@@ -2,7 +2,6 @@
 #require no-eden
 
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
   $ setconfig devel.segmented-changelog-rev-compat=true
 
   $ eagerepo

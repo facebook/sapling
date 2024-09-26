@@ -1,7 +1,6 @@
 #chg-compatible
 #debugruntest-incompatible
   $ eagerepo
-  $ setconfig experimental.allowfilepeer=True
 
   $ . "$TESTDIR/library.sh"
 

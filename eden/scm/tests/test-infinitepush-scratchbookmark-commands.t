@@ -4,7 +4,6 @@
 #require no-eden
 
 #inprocess-hg-incompatible
-  $ setconfig experimental.allowfilepeer=True
 
   $ configure dummyssh
 Common configuration for both the server and client.

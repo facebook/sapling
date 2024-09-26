@@ -1,6 +1,5 @@
 #debugruntest-incompatible
   $ setconfig devel.legacy.exchange=bookmarks
-  $ setconfig experimental.allowfilepeer=True
 
 Setup
 

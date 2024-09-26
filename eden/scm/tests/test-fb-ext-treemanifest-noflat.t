@@ -3,7 +3,6 @@
 
 
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ setconfig experimental.allowfilepeer=True
 
   $ configure mutation-norecord
   $ . "$TESTDIR/library.sh"

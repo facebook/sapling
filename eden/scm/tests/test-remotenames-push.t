@@ -3,8 +3,7 @@
 #require no-eden
 
 #inprocess-hg-incompatible
-  $ setconfig experimental.allowfilepeer=True
-  > mkcommit()
+  $ mkcommit()
   > {
   >    echo $1 > $1
   >    hg add $1

@@ -1,6 +1,5 @@
 #modern-config-incompatible
 #inprocess-hg-incompatible
-  $ setconfig experimental.allowfilepeer=True
   $ setconfig devel.segmented-changelog-rev-compat=true
 
 #require jq no-eden

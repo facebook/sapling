@@ -3,7 +3,6 @@
 #require no-eden
 
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ setconfig experimental.allowfilepeer=True
   $ setconfig clone.use-rust=1
 
 #testcases rustcheckout pythoncheckout

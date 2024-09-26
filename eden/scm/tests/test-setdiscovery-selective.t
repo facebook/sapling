@@ -2,7 +2,6 @@
 #require no-eden
 
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ setconfig experimental.allowfilepeer=True
 
 Test discovery with modern setup: selectivepull, visibility.
 

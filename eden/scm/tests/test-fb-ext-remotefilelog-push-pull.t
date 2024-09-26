@@ -1,5 +1,4 @@
 #debugruntest-incompatible
-  $ setconfig experimental.allowfilepeer=True
 
   $ . "$TESTDIR/library.sh"
   $ setconfig devel.print-metrics=ssh

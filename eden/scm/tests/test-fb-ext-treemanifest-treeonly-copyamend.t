@@ -1,6 +1,5 @@
 #chg-compatible
 #debugruntest-incompatible
-  $ setconfig experimental.allowfilepeer=True
 
   $ configure mutation-norecord
   $ . "$TESTDIR/library.sh"

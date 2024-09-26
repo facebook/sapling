@@ -9,7 +9,6 @@
   $ eagerepo
   $ CACHEDIR=`pwd`/hgcache
 
-  $ setconfig experimental.allowfilepeer=True
   $ . "$TESTDIR/library.sh"
 
   $ hg init client1

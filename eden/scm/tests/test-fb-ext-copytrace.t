@@ -3,7 +3,6 @@
 
 #inprocess-hg-incompatible
   $ eagerepo
-  $ setconfig experimental.allowfilepeer=True
 
   $ configure mutation-norecord
   $ enable rebase shelve remotenames
