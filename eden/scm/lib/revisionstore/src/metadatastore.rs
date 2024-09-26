@@ -28,6 +28,7 @@ use crate::unionhistorystore::UnionHgIdHistoryStore;
 use crate::util::get_cache_path;
 use crate::util::get_indexedloghistorystore_path;
 use crate::util::get_local_path;
+use crate::HistoryStore;
 
 /// A `MetadataStore` aggregate all the local and remote stores and expose them as one. Both local and
 /// remote stores can be queried and accessed via the `HgIdHistoryStore` trait. The local store can also
@@ -82,24 +83,6 @@ impl MetadataStore {
     }
 }
 
-impl MetadataStore {
-    // Copy of self without local store (i.e. cache only).
-    pub fn with_shared_only(&self) -> Self {
-        let mut historystore: UnionHgIdHistoryStore<Arc<dyn HgIdHistoryStore>> =
-            UnionHgIdHistoryStore::new();
-        historystore.add(self.shared_mutablehistorystore.clone());
-        if let Some(remote) = &self.remote_store {
-            historystore.add(Arc::new(remote.clone()));
-        }
-        Self {
-            historystore,
-            shared_mutablehistorystore: self.shared_mutablehistorystore.clone(),
-            remote_store: self.remote_store.clone(),
-            local_mutablehistorystore: None,
-        }
-    }
-}
-
 impl HgIdHistoryStore for MetadataStore {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         self.historystore.get_node_info(key)
@@ -123,6 +106,23 @@ impl RemoteHistoryStore for MetadataStore {
             // There is no remote store, let's pretend everything is fine.
             Ok(())
         }
+    }
+}
+
+impl HistoryStore for MetadataStore {
+    fn with_shared_only(&self) -> Arc<dyn HistoryStore> {
+        let mut historystore: UnionHgIdHistoryStore<Arc<dyn HgIdHistoryStore>> =
+            UnionHgIdHistoryStore::new();
+        historystore.add(self.shared_mutablehistorystore.clone());
+        if let Some(remote) = &self.remote_store {
+            historystore.add(Arc::new(remote.clone()));
+        }
+        Arc::new(Self {
+            historystore,
+            shared_mutablehistorystore: self.shared_mutablehistorystore.clone(),
+            remote_store: self.remote_store.clone(),
+            local_mutablehistorystore: None,
+        })
     }
 }
 

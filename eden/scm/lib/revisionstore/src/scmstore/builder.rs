@@ -570,7 +570,7 @@ impl<'a> TreeStoreBuilder<'a> {
     pub fn build_historystore_local(&self) -> Result<Option<Arc<IndexedLogHgIdHistoryStore>>> {
         Ok(if let Some(local_path) = &self.local_path {
             Some(Arc::new(IndexedLogHgIdHistoryStore::new(
-                get_indexedloghistorystore_path(local_path)?,
+                get_indexedloghistorystore_path(local_path.join("manifests"))?,
                 self.config,
                 StoreType::Permanent,
             )?))
@@ -581,7 +581,7 @@ impl<'a> TreeStoreBuilder<'a> {
 
     #[context("failed to build shared history")]
     pub fn build_historystore_cache(&self) -> Result<Option<Arc<IndexedLogHgIdHistoryStore>>> {
-        let cache_path = match get_cache_path(self.config, &None::<&Path>)? {
+        let cache_path = match get_cache_path(self.config, &Some("manifests"))? {
             Some(p) => p,
             None => return Ok(None),
         };
@@ -642,17 +642,10 @@ impl<'a> TreeStoreBuilder<'a> {
         };
 
         tracing::trace!(target: "revisionstore::treestore", "processing historystore");
-        let (historystore_local, historystore_cache) = if self
-            .config
-            .get_or_default("scmstore", "handle-tree-parents")?
-        {
-            (
-                self.build_historystore_local()?,
-                self.build_historystore_cache()?,
-            )
-        } else {
-            (None, None)
-        };
+        let (historystore_local, historystore_cache) = (
+            self.build_historystore_local()?,
+            self.build_historystore_cache()?,
+        );
 
         let prefetch_tree_parents = self
             .config

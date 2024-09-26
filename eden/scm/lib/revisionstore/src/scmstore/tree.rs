@@ -41,6 +41,7 @@ use storemodel::TreeEntry;
 
 pub use self::metrics::TreeStoreMetrics;
 use crate::datastore::HgIdDataStore;
+use crate::historystore::HistoryStore;
 use crate::indexedlogdatastore::Entry;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
 use crate::indexedlogtreeauxstore::TreeAuxStore;
@@ -60,6 +61,7 @@ use crate::HgIdMutableHistoryStore;
 use crate::IndexedLogHgIdHistoryStore;
 use crate::LocalStore;
 use crate::Metadata;
+use crate::RemoteHistoryStore;
 use crate::SaplingRemoteApiTreeStore;
 use crate::StoreKey;
 use crate::StoreResult;
@@ -593,6 +595,24 @@ impl HgIdMutableHistoryStore for TreeStore {
     fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
         self.flush()?;
         Ok(None)
+    }
+}
+
+impl RemoteHistoryStore for TreeStore {
+    fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
+        self.fetch_batch(
+            keys.iter().filter_map(StoreKey::maybe_as_key).cloned(),
+            TreeAttributes::PARENTS,
+            FetchMode::AllowRemote,
+        )
+        .missing()?;
+        Ok(())
+    }
+}
+
+impl HistoryStore for TreeStore {
+    fn with_shared_only(&self) -> Arc<dyn HistoryStore> {
+        Arc::new(self.with_shared_only())
     }
 }
 

@@ -7,6 +7,7 @@
 
 use std::ops::Deref;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::Result;
 use edenapi_types::HistoryEntry;
@@ -36,6 +37,11 @@ pub trait HgIdMutableHistoryStore: HgIdHistoryStore + Send + Sync {
     fn add_entry(&self, entry: &HistoryEntry) -> Result<()> {
         self.add(&entry.key, &entry.nodeinfo)
     }
+}
+
+pub trait HistoryStore: RemoteHistoryStore + HgIdMutableHistoryStore {
+    /// Copy of self with local stores removed (i.e. cache only)..
+    fn with_shared_only(&self) -> Arc<dyn HistoryStore>;
 }
 
 /// The `RemoteHistoryStore` trait indicates that data can fetched over the network. Care must be

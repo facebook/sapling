@@ -588,13 +588,7 @@ class basetreemanifestlog:
         try:
             self.treescmstore = self._repo._rsrepo.treescmstore()
             self.datastore = self.treescmstore
-            self.historystore = revisionstore.metadatastore(
-                self._repo.svfs.base,
-                self.ui._rcfg,
-                remotestore,
-                None,
-                "manifests",
-            )
+            self.historystore = self.treescmstore.metadatastore()
         finally:
             os.umask(mask)
 

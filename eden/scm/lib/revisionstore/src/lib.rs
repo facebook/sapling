@@ -143,6 +143,7 @@ pub use crate::edenapi::SaplingRemoteApiRemoteStore;
 pub use crate::edenapi::SaplingRemoteApiTreeStore;
 pub use crate::historystore::HgIdHistoryStore;
 pub use crate::historystore::HgIdMutableHistoryStore;
+pub use crate::historystore::HistoryStore;
 pub use crate::historystore::RemoteHistoryStore;
 pub use crate::indexedlogauxstore::AuxStore;
 pub use crate::indexedlogdatastore::IndexedLogHgIdDataStore;

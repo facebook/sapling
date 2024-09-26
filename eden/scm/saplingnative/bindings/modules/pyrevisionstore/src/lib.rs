@@ -38,6 +38,7 @@ use revisionstore::HgIdHistoryStore;
 use revisionstore::HgIdMutableDeltaStore;
 use revisionstore::HgIdMutableHistoryStore;
 use revisionstore::HgIdRemoteStore;
+use revisionstore::HistoryStore;
 use revisionstore::IndexedLogHgIdDataStore;
 use revisionstore::IndexedLogHgIdDataStoreConfig;
 use revisionstore::IndexedLogHgIdHistoryStore;
@@ -636,7 +637,7 @@ impl ExtractInnerRef for edenapitreestore {
 }
 
 py_class!(class metadatastore |py| {
-    data store: Arc<MetadataStore>;
+    data store: Arc<dyn HistoryStore>;
 
     def __new__(_cls,
         path: Option<PyPathBuf>,
@@ -707,17 +708,9 @@ py_class!(class metadatastore |py| {
 
     def getsharedmutable(&self) -> PyResult<Self> {
         let store = self.store(py);
-        Self::create_instance(py, Arc::new(store.with_shared_only()))
+        Self::create_instance(py, store.with_shared_only())
     }
 });
-
-impl ExtractInnerRef for metadatastore {
-    type Inner = Arc<MetadataStore>;
-
-    fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
-        self.store(py)
-    }
-}
 
 py_class!(pub class filescmstore |py| {
     data store: Arc<FileStore>;
@@ -1033,7 +1026,12 @@ py_class!(pub class treescmstore |py| {
 
     def getsharedmutable(&self) -> PyResult<Self> {
         let store = self.store(py);
-        Self::create_instance(py, Arc::new(store.with_shared_only()), None)
+        Self::create_instance(py, Arc::new(TreeStore::with_shared_only(store)), None)
+    }
+
+    def metadatastore(&self) -> PyResult<metadatastore> {
+        let store = self.store(py);
+        metadatastore::create_instance(py, store.clone())
     }
 });
 
