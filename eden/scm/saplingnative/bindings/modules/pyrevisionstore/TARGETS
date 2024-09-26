@@ -23,7 +23,6 @@ rust_python_library(
         "fbsource//third-party/rust:anyhow",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/cpython-ext:cpython-ext",
-        "//eden/scm/lib/minibytes:minibytes",
         "//eden/scm/lib/revisionstore:revisionstore",
         "//eden/scm/lib/storemodel:storemodel",
         "//eden/scm/lib/types:types",

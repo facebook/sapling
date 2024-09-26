@@ -22,7 +22,6 @@ from . import eagerepo, error, git, mdiff, revlog, util
 from .node import bin
 from .pycompat import decodeutf8, encodeutf8
 
-
 _mdre: Pattern[bytes] = re.compile(b"\1\n")
 
 
@@ -162,10 +161,6 @@ class fileslog:
             self.filestore = git.openstore(repo)
         elif eagerepo.iseagerepo(repo) or repo.storage_format() == "revlog":
             self.filestore = repo._rsrepo.eagerstore()
-        elif util.istest():
-            self.filestore = bindings.revisionstore.pyfilescmstore(
-                lambda name, node: self.repo.file(name).read(node)
-            )
 
     def commitpending(self):
         """Used in alternative filelog implementations to commit pending

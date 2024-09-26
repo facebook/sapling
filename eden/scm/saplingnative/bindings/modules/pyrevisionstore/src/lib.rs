@@ -67,13 +67,11 @@ mod datastorepyext;
 mod historystorepyext;
 mod impl_into;
 mod pythondatastore;
-mod pythonfilescmstore;
 mod pythonutil;
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
 pub use crate::pythondatastore::PythonHgIdDataStore;
-use crate::pythonfilescmstore::PythonFileScmStore;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "revisionstore"].join(".");
@@ -85,7 +83,6 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<metadatastore>(py)?;
     m.add_class::<filescmstore>(py)?;
     m.add_class::<treescmstore>(py)?;
-    m.add_class::<pyfilescmstore>(py)?;
     m.add(
         py,
         "repair",
@@ -719,24 +716,6 @@ fn make_treescmstore<'a>(
     }
 
     Ok(Arc::new(treestore_builder.build()?))
-}
-
-py_class!(pub class pyfilescmstore |py| {
-    data inner: Arc<PythonFileScmStore>;
-
-    def __new__(_cls,
-        py_store: PyObject,
-    ) -> PyResult<pyfilescmstore> {
-        pyfilescmstore::create_instance(py, Arc::new(PythonFileScmStore::new(py_store)))
-    }
-});
-
-impl ExtractInnerRef for pyfilescmstore {
-    type Inner = Arc<PythonFileScmStore>;
-
-    fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
-        self.inner(py)
-    }
 }
 
 py_class!(pub class treescmstore |py| {

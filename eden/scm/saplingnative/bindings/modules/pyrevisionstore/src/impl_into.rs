@@ -26,7 +26,6 @@ use types::Key;
 use types::RepoPath;
 
 use crate::filescmstore;
-use crate::pyfilescmstore;
 use crate::treescmstore;
 use crate::PythonHgIdDataStore;
 
@@ -35,7 +34,6 @@ pub(crate) fn register(py: Python) {
     register_into(py, py_to_dyn_treestore);
 
     register_into(py, |py, f: filescmstore| f.to_read_file_contents(py));
-    register_into(py, |py, p: pyfilescmstore| p.to_read_file_contents(py));
 }
 
 impl filescmstore {
@@ -43,12 +41,6 @@ impl filescmstore {
         let store = self.extract_inner(py);
         let store = ArcFileStore(store);
         Arc::new(store)
-    }
-}
-
-impl pyfilescmstore {
-    fn to_read_file_contents(&self, py: Python) -> Arc<dyn FileStore> {
-        self.extract_inner(py)
     }
 }
 
