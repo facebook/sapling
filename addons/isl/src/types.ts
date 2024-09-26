@@ -719,6 +719,7 @@ export type LocalStorageName =
   | 'isl.expand-generated-files'
   | 'isl-color-theme'
   | 'isl.auto-resolve-before-continue'
+  | 'isl.warn-about-diagnostics'
   // These keys are prefixes, with further dynamic keys appended afterwards
   | 'isl.edited-commit-messages:';
 

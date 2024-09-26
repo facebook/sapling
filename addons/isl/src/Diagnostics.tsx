@@ -11,16 +11,23 @@ import type {Diagnostic} from './types';
 import {spacing} from '../../components/theme/tokens.stylex';
 import serverAPI from './ClientToServerAPI';
 import {Collapsable} from './Collapsable';
-import {t} from './i18n';
-import {readAtom} from './jotaiUtils';
+import {T, t} from './i18n';
+import {localStorageBackedAtom, readAtom} from './jotaiUtils';
 import foundPlatform from './platform';
 import {uncommittedChangesWithPreviews} from './previews';
 import {showModal} from './useModal';
 import * as stylex from '@stylexjs/stylex';
+import {Checkbox} from 'isl-components/Checkbox';
 import {Column, Row} from 'isl-components/Flex';
 import {Icon} from 'isl-components/Icon';
 import {Subtle} from 'isl-components/Subtle';
+import {useAtom} from 'jotai';
 import {basename} from 'shared/utils';
+
+export const shouldWarnAboutDiagnosticsAtom = localStorageBackedAtom<boolean>(
+  'isl.warn-about-diagnostics',
+  true,
+);
 
 const styles = stylex.create({
   diagnosticList: {
@@ -37,11 +44,17 @@ const styles = stylex.create({
     maxHeight: '80vh',
     overflowY: 'scroll',
   },
+  confirmCheckbox: {
+    paddingTop: spacing.double,
+  },
 });
 
 export async function confirmNoBlockingDiagnostics(
   selection: UseUncommittedSelection,
 ): Promise<boolean> {
+  if (!readAtom(shouldWarnAboutDiagnosticsAtom)) {
+    return true;
+  }
   if (foundPlatform.platformName === 'vscode') {
     const allFiles = readAtom(uncommittedChangesWithPreviews);
     const selectedFiles = selection.isEverythingSelected()
@@ -66,40 +79,43 @@ export async function confirmNoBlockingDiagnostics(
               replace: {$num: String(totalErrors)},
             }),
             message: (
-              <Column alignStart xstyle={styles.allDiagnostics}>
-                {[...result.diagnostics.entries()].map(([filepath, diagnostics]) => {
-                  return (
-                    <Column key={filepath} alignStart>
-                      <Collapsable
-                        startExpanded
-                        title={
-                          <Row>
-                            <span>{basename(filepath)}</span>
-                            <Subtle>{filepath}</Subtle>
-                          </Row>
-                        }>
-                        <Column alignStart xstyle={styles.diagnosticList}>
-                          {diagnostics.map(d => (
-                            <Row key={d.source} xstyle={styles.diagnosticRow}>
-                              {iconForDiagnostic(d)}
-                              <span>{d.message}</span>
-                              {d.source && (
-                                <Subtle {...stylex.props(styles.nowrap)}>
-                                  {d.source}
-                                  {d.code ? `(${d.code})` : null}
-                                </Subtle>
-                              )}{' '}
-                              <Subtle {...stylex.props(styles.nowrap)}>
-                                [Ln {d.range.startLine}, Col {d.range.startCol}]
-                              </Subtle>
+              <>
+                <Column alignStart xstyle={styles.allDiagnostics}>
+                  {[...result.diagnostics.entries()].map(([filepath, diagnostics]) => {
+                    return (
+                      <Column key={filepath} alignStart>
+                        <Collapsable
+                          startExpanded
+                          title={
+                            <Row>
+                              <span>{basename(filepath)}</span>
+                              <Subtle>{filepath}</Subtle>
                             </Row>
-                          ))}
-                        </Column>
-                      </Collapsable>
-                    </Column>
-                  );
-                })}
-              </Column>
+                          }>
+                          <Column alignStart xstyle={styles.diagnosticList}>
+                            {diagnostics.map(d => (
+                              <Row key={d.source} xstyle={styles.diagnosticRow}>
+                                {iconForDiagnostic(d)}
+                                <span>{d.message}</span>
+                                {d.source && (
+                                  <Subtle {...stylex.props(styles.nowrap)}>
+                                    {d.source}
+                                    {d.code ? `(${d.code})` : null}
+                                  </Subtle>
+                                )}{' '}
+                                <Subtle {...stylex.props(styles.nowrap)}>
+                                  [Ln {d.range.startLine}, Col {d.range.startCol}]
+                                </Subtle>
+                              </Row>
+                            ))}
+                          </Column>
+                        </Collapsable>
+                      </Column>
+                    );
+                  })}
+                </Column>
+                <DontShowDiagnosticsConfirmationCheckbox />
+              </>
             ),
             buttons,
           })) === buttons[1]
@@ -109,6 +125,19 @@ export async function confirmNoBlockingDiagnostics(
   }
   return true;
 }
+
+function DontShowDiagnosticsConfirmationCheckbox() {
+  const [shouldWarn, setShouldWarn] = useAtom(shouldWarnAboutDiagnosticsAtom);
+
+  return (
+    <Row xstyle={styles.confirmCheckbox}>
+      <Checkbox checked={!shouldWarn} onChange={checked => setShouldWarn(!checked)}>
+        <T>Don't ask again</T>
+      </Checkbox>
+    </Row>
+  );
+}
+
 function iconForDiagnostic(d: Diagnostic): React.ReactNode {
   switch (d.severity) {
     case 'error':
