@@ -43,9 +43,11 @@ export const FIELDS = {
   remoteBookmarks: `{remotenames % '{remotename}${ESCAPED_NULL_CHAR}'}`,
   parents: `{parents % "{node}${ESCAPED_NULL_CHAR}"}`,
   isDot: `{ifcontains(rev, revset('.'), '${WDIR_PARENT_MARKER}')}`,
-  filesAdded: '{file_adds|json}',
-  filesModified: '{file_mods|json}',
-  filesRemoved: '{file_dels|json}',
+  // Getting file statuses can be expensive. We don't really need files sample for public commits, so just skip those.
+  filesAdded: `{ifeq(phase, 'draft', file_adds|json, '[]')}`,
+  filesModified: `{ifeq(phase, 'draft', file_mods|json, '[]')}`,
+  filesRemoved: `{ifeq(phase, 'draft', file_dels|json, '[]')}`,
+  totalFileCount: '{files|count}', // We skip getting files for public commits, but we still want to know how many files there would be
   successorInfo: '{mutations % "{operation}:{successors % "{node}"},"}',
   closestPredecessors: '{predecessors % "{node},"}',
   // This would be more elegant as a new built-in template
@@ -108,7 +110,7 @@ export function parseCommitInfoOutput(
         remoteBookmarks: splitLine(lines[FIELD_INDEX.remoteBookmarks]),
         isDot: lines[FIELD_INDEX.isDot] === WDIR_PARENT_MARKER,
         filesSample: files.slice(0, MAX_FETCHED_FILES_PER_COMMIT),
-        totalFileCount: files.length,
+        totalFileCount: parseInt(lines[FIELD_INDEX.totalFileCount], 10),
         successorInfo: parseSuccessorData(lines[FIELD_INDEX.successorInfo]),
         closestPredecessors: splitLine(lines[FIELD_INDEX.closestPredecessors], ','),
         description: lines
