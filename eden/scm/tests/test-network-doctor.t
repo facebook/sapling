@@ -41,7 +41,7 @@ Set up fake cert paths so we don't hit "missing certs" error.
 
 
 Works for native rust commands as well.
-  $ hg clone mononoke://169.254.1.2/banana --config commands.force-rust=clone --config edenapi.url=https://test_fail/foo --config doctor.external-host-check-url=https://test_succeed
+  $ hg clone mononoke://169.254.1.2/banana --config commands.force-rust=clone --config edenapi.url=https://test_fail/foo --config doctor.external-host-check-url=https://test_succeed 2>&1 | sed '/Stack backtrace/q'
   Cloning banana into $TESTTMP/repo/banana
   abort: command failed due to network error
   
@@ -58,5 +58,4 @@ Works for native rust commands as well.
   Caused by:
       [6] Couldn't resolve host name (Could not resolve host: test_fail)
   
-  [255]
-
+  Stack backtrace:

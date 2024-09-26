@@ -132,6 +132,7 @@ def testsetup(t: TestTmp):
         "LANGUAGE": "en_US.UTF-8",
         "LC_ALL": "en_US.UTF-8",
         "LOCALIP": "127.0.0.1",
+        "RUST_BACKTRACE": "1",
         "SL_CONFIG_PATH": str(hgrcpath),
         # Normalize TERM to avoid control sequence variations.
         # We use a non-existent terminal to avoid any terminfo dependency.
@@ -176,6 +177,7 @@ def testsetup(t: TestTmp):
     run = None
     try:
         import bindings
+
         from sapling import util
 
         run = bindings.commands.run
@@ -237,6 +239,7 @@ def hg(stdin: BinaryIO, stdout: BinaryIO, stderr: BinaryIO, env: Env) -> int:
         return python(args, stdin, stdout, stderr, env)
 
     import bindings
+
     from sapling import encoding, extensions, pycompat, util
 
     # emulate ui.system via sheval

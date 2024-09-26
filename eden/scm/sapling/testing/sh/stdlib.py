@@ -489,6 +489,11 @@ def _sedscript(script: str, lines: List[str]) -> List[str]:
             for line in lines:
                 if not patre.match(line):
                     newlines.append(line)
+        elif rest == "q":
+            for line in lines:
+                newlines.append(line)
+                if patre.match(line):
+                    break
         else:
             raise NotImplementedError(f"sed {script=}")
         return newlines

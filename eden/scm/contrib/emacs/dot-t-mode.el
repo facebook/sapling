@@ -152,7 +152,7 @@ Add prefix arg to run with --fix.
     (when (file-remote-p file)
       (setq file (tramp-file-name-localname (tramp-dissect-file-name file))))
 
-    (if (save-excursion (goto-char (point-min)) (search-forward "#debugruntest-incompatible" nil t))
+    (if (save-excursion (goto-char (point-min)) (search-forward-regexp "#debugruntest-incompatible\\|#require fsmonitor" nil t))
         (let ((run-tests-py (concat (locate-dominating-file file "run-tests.py") "run-tests.py")))
           (setq args (list run-tests-py
                            "--noprogress"

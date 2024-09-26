@@ -452,7 +452,7 @@ impl FileSystem for WatchmanFileSystem {
                 // work, but that is probably still an unacceptable UX in general.
 
                 tracing::debug!(target: "watchman_info", watchmanfallback=1);
-                tracing::warn!(?err, "watchman error - falling back to slow crawl");
+                tracing::warn!(%err, "watchman error - falling back to slow crawl");
                 self.inner.pending_changes(
                     ctx,
                     matcher,

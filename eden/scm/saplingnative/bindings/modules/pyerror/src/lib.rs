@@ -159,9 +159,9 @@ fn register_error_handlers() {
         } else if e.is::<repo::errors::InvalidWorkingCopy>() {
             Some(PyErr::new::<WorkingCopyError, _>(py, format!("{:#}", e)))
         } else if e.is::<cpython_ext::Error>() {
-            Some(PyErr::new::<NonUTF8Path, _>(py, format!("{:?}", e)))
+            Some(PyErr::new::<NonUTF8Path, _>(py, format!("{}", e)))
         } else if e.is::<types::path::ParseError>() {
-            Some(PyErr::new::<InvalidRepoPath, _>(py, format!("{:?}", e)))
+            Some(PyErr::new::<InvalidRepoPath, _>(py, format!("{}", e)))
         } else if let Some(e) = e.downcast_ref::<edenapi::SaplingRemoteApiError>() {
             match e {
                 edenapi::SaplingRemoteApiError::Http(http_client::HttpClientError::Tls(
@@ -186,7 +186,7 @@ fn register_error_handlers() {
             specific_error_handler(py, &e.0)
                 .or_else(|| Some(PyErr::new::<HttpError, _>(py, e.0.to_string())))
         } else if e.is::<pathmatcher::Error>() {
-            Some(PyErr::new::<PathMatcherError, _>(py, format!("{:?}", e)))
+            Some(PyErr::new::<PathMatcherError, _>(py, format!("{}", e)))
         } else if let Some(e) = e.downcast_ref::<checkout::CheckoutConflictsError>() {
             Some(PyErr::new::<CheckoutConflictsError, _>(
                 py,
