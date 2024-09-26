@@ -63,7 +63,7 @@ impl std::fmt::Display for Abort {
 /// Print an error suitable for end-user consumption.
 ///
 /// This function adds `hg:` or `abort:` to error messages.
-pub fn print_error(err: &anyhow::Error, io: &crate::io::IO, _args: &[String]) {
+pub fn print_error(err: &anyhow::Error, io: &crate::io::IO, traceback: bool) {
     use cliparser::parser::ParseError;
     let cli_name = identity::cli_name();
     if err.downcast_ref::<configloader::Error>().is_some() {
@@ -93,7 +93,11 @@ pub fn print_error(err: &anyhow::Error, io: &crate::io::IO, _args: &[String]) {
         // Ideally we'd identify expected errors and unexpected errors and print the full {:?}
         // output for unexpected errors. Today we can't make that distinction though, so for now we
         // print it in the user-friendly way.
-        let _ = io.write_err(format!("abort: {:#}\n", err));
+        if traceback {
+            let _ = io.write_err(format!("abort: {:?}\n", err));
+        } else {
+            let _ = io.write_err(format!("abort: {:#}\n", err));
+        }
     }
 }
 
@@ -188,10 +192,10 @@ mod tests {
         let tin = Cursor::new(Vec::new());
         let tout = Cursor::new(Vec::new());
         let terr = Cursor::new(Vec::new());
-        let mut io = crate::io::IO::new(tin, tout, Some(terr));
+        let io = crate::io::IO::new(tin, tout, Some(terr));
 
         // Call print_error with error and in-memory IO stream
-        print_error(&error, &mut io, &[] as &[String]);
+        print_error(&error, &io, false);
 
         // Make sure error message is formatted correctly.
         io.with_error(|e| {

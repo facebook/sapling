@@ -175,7 +175,11 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
                 dispatch_command(io, dispatcher, cwd, Arc::downgrade(&in_scope), start_time)
             }
             Err(err) => {
-                errors::print_error(&err, io, &args[1..]);
+                errors::print_error(
+                    &err,
+                    io,
+                    global_opts.as_ref().map_or(true, |opts| opts.traceback),
+                );
                 255
             }
         }
@@ -296,7 +300,7 @@ fn dispatch_command(
                     already_ran_pre_hooks,
                 )
             } else {
-                errors::print_error(&err, io, &dispatcher.args()[1..]);
+                errors::print_error(&err, io, dispatcher.global_opts().traceback);
                 errors::upload_traceback(&err, start_time.epoch_ms());
                 255
             }
@@ -305,7 +309,7 @@ fn dispatch_command(
 
     if !fell_back {
         if let Err(err) = io.wait_pager().context("error flushing command output") {
-            errors::print_error(&err, io, &dispatcher.args()[1..]);
+            errors::print_error(&err, io, dispatcher.global_opts().traceback);
             return 255;
         }
     }
