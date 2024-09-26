@@ -791,10 +791,6 @@ function ActionsBar({
                   }
                 }
 
-                if (!(await confirmNoBlockingDiagnostics(selection))) {
-                  return;
-                }
-
                 return doAmendOrCommit();
               }}>
               {isCommitMode ? <T>Commit</T> : <T>Amend</T>}
