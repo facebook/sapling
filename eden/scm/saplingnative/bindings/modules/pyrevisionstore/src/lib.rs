@@ -41,7 +41,6 @@ use revisionstore::HgIdRemoteStore;
 use revisionstore::IndexedLogHgIdDataStore;
 use revisionstore::IndexedLogHgIdDataStoreConfig;
 use revisionstore::IndexedLogHgIdHistoryStore;
-use revisionstore::LegacyStore;
 use revisionstore::LocalStore;
 use revisionstore::Metadata;
 use revisionstore::MetadataStore;
@@ -81,7 +80,6 @@ type Result<T, E = Error> = std::result::Result<T, E>;
 
 pub use crate::pythondatastore::PythonHgIdDataStore;
 use crate::pythonfilescmstore::PythonFileScmStore;
-pub use crate::pythonutil::as_legacystore;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "revisionstore"].join(".");
@@ -1017,7 +1015,7 @@ py_class!(pub class treescmstore |py| {
 
     def getsharedmutable(&self) -> PyResult<mutabledeltastore> {
         let store = self.store(py);
-        mutabledeltastore::create_instance(py, store.get_shared_mutable())
+        mutabledeltastore::create_instance(py, Arc::new(store.with_shared_only()) as Arc<dyn HgIdMutableDeltaStore>)
     }
 });
 

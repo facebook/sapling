@@ -145,7 +145,6 @@ pub use crate::datastore::ContentMetadata;
 pub use crate::datastore::Delta;
 pub use crate::datastore::HgIdDataStore;
 pub use crate::datastore::HgIdMutableDeltaStore;
-pub use crate::datastore::LegacyStore;
 pub use crate::datastore::RemoteDataStore;
 pub use crate::datastore::StoreResult;
 pub use crate::edenapi::SaplingRemoteApiFileStore;

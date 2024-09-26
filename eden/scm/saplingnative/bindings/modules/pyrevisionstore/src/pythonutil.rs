@@ -5,12 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use std::sync::Arc;
-
 use cpython::exc;
 use cpython::FromPyObject;
 use cpython::PyBytes;
-use cpython::PyClone;
 use cpython::PyDict;
 use cpython::PyErr;
 use cpython::PyObject;
@@ -18,22 +15,16 @@ use cpython::PyResult;
 use cpython::PyTuple;
 use cpython::Python;
 use cpython::PythonObject;
-use cpython::PythonObjectWithCheckedDowncast;
 use cpython::ToPyObject;
-use cpython_ext::ExtractInner;
 use cpython_ext::PyPath;
 use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
 use revisionstore::datastore::Delta;
 use revisionstore::datastore::Metadata;
-use revisionstore::LegacyStore;
 use revisionstore::StoreKey;
 use types::Key;
 use types::Node;
 use types::RepoPathBuf;
-
-use crate::filescmstore;
-use crate::treescmstore;
 
 pub fn to_node(py: Python, node: &PyBytes) -> Node {
     let mut bytes: [u8; 20] = Default::default();
@@ -78,15 +69,6 @@ pub fn to_delta(
         },
         key,
     })
-}
-
-pub fn as_legacystore(py: Python, store: PyObject) -> PyResult<Arc<dyn LegacyStore>> {
-    Ok(filescmstore::downcast_from(py, store.clone_ref(py))
-        .map(|s| s.extract_inner(py) as Arc<dyn LegacyStore>)
-        .or_else(|_| {
-            treescmstore::downcast_from(py, store)
-                .map(|s| s.extract_inner(py) as Arc<dyn LegacyStore>)
-        })?)
 }
 
 pub fn from_base(py: Python, delta: &Delta) -> (PyPathBuf, PyBytes) {

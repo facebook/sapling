@@ -51,6 +51,7 @@ server, rather than relying on the server to perform this computation.
     [treemanifest]
     http = True
 """
+
 from __future__ import absolute_import
 
 import hashlib
@@ -59,6 +60,7 @@ import struct
 
 import bindings
 from bindings import manifest as rustmanifest, revisionstore
+
 from sapling import (
     bundle2,
     bundlerepo,
@@ -105,7 +107,6 @@ from ..remotefilelog.contentstore import unioncontentstore
 from ..remotefilelog.datapack import memdatapack
 from ..remotefilelog.historypack import memhistorypack
 from ..remotefilelog.metadatastore import unionmetadatastore
-
 
 try:
     from itertools import zip_longest

@@ -15,7 +15,6 @@ use cpython_ext::convert::register_into;
 use cpython_ext::ExtractInner;
 use revisionstore::trait_impls::ArcFileStore;
 use revisionstore::HgIdDataStore;
-use revisionstore::LegacyStore;
 use revisionstore::RemoteDataStore;
 use revisionstore::StoreKey;
 use revisionstore::StoreResult;
@@ -57,19 +56,15 @@ impl treescmstore {
     fn to_dyn_treestore(&self, py: Python) -> Arc<dyn TreeStore> {
         match &self.caching_store(py) {
             Some(caching_store) => caching_store.clone(),
-            None => {
-                let store = self.extract_inner(py) as Arc<dyn LegacyStore>;
-                Arc::new(ManifestStore::new(store))
-            }
+            None => self.store(py).clone(),
         }
     }
 }
 
 // Legacy support for store in Python.
-// XXX: Check if it's used and drop support for it.
+// Used at least by unioncontentstore.
 fn py_to_dyn_treestore(_py: Python, obj: PyObject) -> Arc<dyn TreeStore> {
-    let store = Arc::new(PythonHgIdDataStore::new(obj)) as Arc<dyn LegacyStore>;
-    Arc::new(ManifestStore::new(store))
+    Arc::new(ManifestStore::new(PythonHgIdDataStore::new(obj)))
 }
 
 struct ManifestStore<T> {

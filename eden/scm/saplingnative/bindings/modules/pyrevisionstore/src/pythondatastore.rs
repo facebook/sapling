@@ -5,9 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::path::PathBuf;
-use std::sync::Arc;
-
 use anyhow::Result;
 use cpython::exc;
 use cpython::FromPyObject;
@@ -22,16 +19,12 @@ use cpython::PythonObject;
 use cpython::PythonObjectWithTypeObject;
 use cpython_ext::PyErr;
 use cpython_ext::PyPathBuf;
-use revisionstore::Delta;
 use revisionstore::HgIdDataStore;
-use revisionstore::HgIdMutableDeltaStore;
-use revisionstore::LegacyStore;
 use revisionstore::LocalStore;
 use revisionstore::Metadata;
 use revisionstore::RemoteDataStore;
 use revisionstore::StoreKey;
 use revisionstore::StoreResult;
-use types::Key;
 
 use crate::pythonutil::from_key_to_tuple;
 use crate::pythonutil::from_tuple_to_key;
@@ -178,28 +171,5 @@ impl LocalStore for PythonHgIdDataStore {
             })
             .collect::<Result<Vec<StoreKey>>>()?;
         Ok(missing)
-    }
-}
-
-// Dummy implementation just to satisfy ManifestStore which consumes the sub-traits of LegacyStore
-// which PythonHgIdDataStore already implements. This is only required for tests.
-impl LegacyStore for PythonHgIdDataStore {
-    fn get_file_content(&self, _key: &Key) -> Result<Option<minibytes::Bytes>> {
-        unimplemented!("")
-    }
-
-    fn get_shared_mutable(&self) -> Arc<dyn HgIdMutableDeltaStore> {
-        unimplemented!("")
-    }
-}
-
-// Dummy implementation just to satisfy ManifestStore which consumes the sub-traits of LegacyStore
-// which PythonHgIdDataStore already implements. This is only required for tests.
-impl HgIdMutableDeltaStore for PythonHgIdDataStore {
-    fn add(&self, _delta: &Delta, _metadata: &Metadata) -> Result<()> {
-        unimplemented!()
-    }
-    fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
-        unimplemented!()
     }
 }

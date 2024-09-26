@@ -78,6 +78,7 @@ use minibytes::Bytes;
 use pyconfigloader::config;
 use pyrevisionstore::edenapifilestore;
 use pyrevisionstore::edenapitreestore;
+use pyrevisionstore::filescmstore;
 use revisionstore::SaplingRemoteApiFileStore;
 use revisionstore::SaplingRemoteApiTreeStore;
 use types::HgId;
@@ -372,7 +373,7 @@ py_class!(pub class client |py| {
     /// Upload file contents and hg filenodes
     def uploadfiles(
         &self,
-        store: PyObject,
+        store: filescmstore,
         keys: Vec<(
             PyPathBuf,     /* path */
             Serde<HgId>,   /* hgid */

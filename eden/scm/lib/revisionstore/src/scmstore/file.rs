@@ -58,7 +58,6 @@ use crate::ContentDataStore;
 use crate::ContentMetadata;
 use crate::Delta;
 use crate::ExtStoredPolicy;
-use crate::LegacyStore;
 use crate::LocalStore;
 use crate::Metadata;
 use crate::MultiplexDeltaStore;
@@ -494,35 +493,6 @@ impl FileStore {
     }
 }
 
-impl FileStore {
-    pub(crate) fn get_file_content_impl(
-        &self,
-        key: &Key,
-        fetch_mode: FetchMode,
-    ) -> Result<Option<Bytes>> {
-        self.metrics.write().api.hg_getfilecontent.call(0);
-        self.fetch(
-            std::iter::once(key.clone()),
-            FileAttributes::CONTENT,
-            fetch_mode,
-        )
-        .single()?
-        .map(|entry| entry.content.unwrap().file_content())
-        .transpose()
-    }
-}
-
-impl LegacyStore for FileStore {
-    /// For compatibility with ContentStore::get_shared_mutable
-    fn get_shared_mutable(&self) -> Arc<dyn HgIdMutableDeltaStore> {
-        Arc::new(self.with_shared_only())
-    }
-
-    fn get_file_content(&self, key: &Key) -> Result<Option<Bytes>> {
-        self.get_file_content_impl(key, FetchMode::AllowRemote)
-    }
-}
-
 impl HgIdDataStore for FileStore {
     // Fetch the raw content of a single TreeManifest blob
     fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
@@ -616,7 +586,7 @@ impl RemoteDataStore for FileStore {
         // TODO(meyer): Eliminate usage of legacy API, or at least minimize it (do we really need multiplex, etc)
         if let Some(ref lfs_remote) = self.lfs_remote {
             let mut multiplex = MultiplexDeltaStore::new();
-            multiplex.add_store(self.get_shared_mutable());
+            multiplex.add_store(self.with_shared_only());
             lfs_remote
                 .clone()
                 .datastore(Arc::new(multiplex))
