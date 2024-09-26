@@ -253,6 +253,7 @@ dott_test(
             "test-scs-land-service*.t",
         ],
     ),
+    enable_async_requests_worker = True,
     deps = [
         "//eden/mononoke:admin",
         "//eden/mononoke:backfill_mapping",
