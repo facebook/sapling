@@ -1,0 +1,78 @@
+[tool.ruff.lint.isort]
+combine-as-imports = true
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["B", "C", "E", "F", "W", "B9"] # "P",
+# Main Explanation Docs: https://github.com/grantmcconnaughey/Flake8Rules
+ignore = [
+  # Black conflicts and overlaps.
+  # Found in https://github.com/psf/black/issues/429
+  # "B950", # Line too long. (Use `arc lint`'s LINEWRAP instead)
+  "E111", # Indentation is not a multiple of four.
+  "E115", # Expected an indented block (comment).
+  "E117", # Over-indented.
+  # "E121", # Continuation line under-indented for hanging indent.
+  # "E122", # Continuation line missing indentation or outdented.
+  # "E123", # Closing bracket does not match indentation of opening bracket's line.
+  # "E124", # Closing bracket does not match visual indentation.
+  # "E125", # Continuation line with same indent as next logical line.
+  # "E126", # Continuation line over-indented for hanging indent.
+  # "E127", # Continuation line over-indented for visual indent.
+  # "E128", # Continuation line under-indented for visual indent.
+  # "E129", # Visually indented line with same indent as next logical line.
+  # "E131", # Continuation line unaligned for hanging indent.
+  "E201", # Whitespace after '('.
+  "E202", # Whitespace before ')'.
+  "E203", # Whitespace before ':'.
+  "E221", # Multiple spaces before operator.
+  "E222", # Multiple spaces after operator.
+  "E225", # Missing whitespace around operator.
+  "E226", # Missing whitespace around arithmetic operator.
+  "E227", # Missing whitespace around bitwise or shift operator.
+  "E231", # Missing whitespace after ',', ';', or ':'.
+  "E241", # Multiple spaces after ','.
+  "E251", # Unexpected spaces around keyword / parameter equals.
+  "E252", # Missing whitespace around parameter equals.
+  "E261", # At least two spaces before inline comment.
+  "E262", # Inline comment should start with '# '.
+  "E265", # Block comment should start with '# '.
+  "E271", # Multiple spaces after keyword.
+  "E272", # Multiple spaces before keyword.
+  "E301", # Expected 1 blank line, found 0.
+  "E302", # Expected 2 blank lines, found 0.
+  "E303", # Too many blank lines (3).
+  "E305", # Expected 2 blank lines after end of function or class.
+  "E306", # Expected 1 blank line before a nested definition.
+  "E501", # Line too long (82 > 79 characters).
+  "E502", # The backslash is redundant between brackets.
+  "E701", # Multiple statements on one line (colon).
+  "E702", # Multiple statements on one line (semicolon).
+  "E703", # Statement ends with a semicolon.
+  # "E704", # Multiple statements on one line (def).
+  "W291", # Trailing whitespace.
+  "W292", # No newline at end of file.
+  "W293", # Blank line contains whitespace.
+  "W391", # Blank line at end of file.
+  # "W504", # Line break occurred after a binary operator.
+
+  # Too opinionated.
+  "E265", # Block comment should start with '# '.
+  "E266", # Too many leading '#' for block comment.
+  "E402", # Module level import not at top of file. (Use cases like demandimport https://fburl.com/demandimport require statements before imports)
+  "E722", # Do not use bare except, specify exception instead. (Duplicate of B001)
+  # "P207", # (Duplicate of B003)
+  # "P208", # (Duplicate of C403)
+  # "W503", # Line break occurred before a binary operator.
+
+  # Bugbear has opinions: https://github.com/PyCQA/flake8-bugbear#opinionated-warnings
+  "B904", # "raise from" missing on except blocks
+  "B905", # zip() without strict=
+  # "B906", # visit_*() without calls to another visit function
+  # "B907", # replace f" '{x}' " with f" {x!r} "
+
+  # Conflicts with jaxtyping array sizes: https://docs.kidger.site/jaxtyping/faq/#flake8-or-ruff-are-throwing-an-error
+  "F722", # Syntax error in forward annotation. False warning when declaring array shape
+]
