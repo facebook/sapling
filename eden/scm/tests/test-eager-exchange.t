@@ -179,30 +179,24 @@ Clone (using edenapi clonedata, bypassing peer interface):
 
   $ cd $TESTTMP
   $ hg clone -U --shallow test:e1 --config remotefilelog.reponame=x cloned1
-  fetching lazy changelog
-  populating main commit graph
-  DEBUG eagerepo::api: clone_data
-  tip commit: 23d30dc6b70380b2d939023947578ae0e0198999
-  fetching selected remote bookmarks
+  Cloning x into $TESTTMP/cloned1
   DEBUG eagerepo::api: bookmarks master
+  DEBUG eagerepo::api: pull_lazy
 
 Clone:
 
   $ cd $TESTTMP
   $ hg clone -U --shallow test:e1 cloned
-  fetching lazy changelog
-  populating main commit graph
-  DEBUG eagerepo::api: clone_data
-  tip commit: 23d30dc6b70380b2d939023947578ae0e0198999
-  fetching selected remote bookmarks
+  Cloning e1 into $TESTTMP/cloned
   DEBUG eagerepo::api: bookmarks master
+  DEBUG eagerepo::api: pull_lazy
 
   $ cd cloned
 
 Commit hash and message are lazy
 
   $ LOG=dag::protocol=debug,eagerepo=debug hg log -T '{desc} {node}\n' -r 'all()'
-  DEBUG dag::protocol: resolve ids [1, 0] remotely
+  DEBUG dag::protocol: resolve ids [1] remotely
   DEBUG eagerepo::api: revlog_data 748104bd5058bf2c386d074d8dcf2704855380f6, 178c10ffbc2f92d5407c14478ae9d9dea81f232e, 23d30dc6b70380b2d939023947578ae0e0198999
   A 748104bd5058bf2c386d074d8dcf2704855380f6
   C 178c10ffbc2f92d5407c14478ae9d9dea81f232e

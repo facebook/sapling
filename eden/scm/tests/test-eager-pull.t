@@ -48,18 +48,9 @@ Clone:
 
   $ cd $TESTTMP
 #if pulllazy-python
-  $ hg clone test:e3 cloned
-  fetching lazy changelog
-  populating main commit graph
-  tip commit: 7b3a68e117f183a6da8e60779d8fbeeed22382bb
-  fetching selected remote bookmarks
-  updating to branch default
-  9 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg clone -q test:e3 cloned
 #else
-  $ hg clone test:e3 cloned
-  Cloning e3 into $TESTTMP/cloned
-  Checking out 'master'
-  9 files updated
+  $ hg clone -q test:e3 cloned
 #endif
   $ cd cloned
   $ hg log -Gr 'all()' -T '{desc} {remotenames}'

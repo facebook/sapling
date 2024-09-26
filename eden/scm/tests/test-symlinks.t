@@ -1,7 +1,5 @@
 #require symlink no-eden
 
-  $ eagerepo
-
 == tests added in 0.7 ==
 
   $ newclientrepo test-symlinks-0.7

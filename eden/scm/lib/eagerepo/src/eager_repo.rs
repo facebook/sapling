@@ -51,6 +51,7 @@ use storemodel::types::Parents;
 use storemodel::types::RepoPathBuf;
 use storemodel::FileAuxData;
 use storemodel::SerializationFormat;
+use tracing::instrument;
 use zstore::Id20;
 use zstore::Zstore;
 
@@ -332,9 +333,9 @@ impl EagerRepo {
     /// - `eager:dir_path`, `eager://dir_path`
     /// - `test:name`, `test://name`: same as `eager:$TESTTMP/name`
     /// - `/path/to/dir` where the path is a EagerRepo.
+    #[instrument(level = "trace", ret)]
     pub fn url_to_dir(url: &RepoUrl) -> Option<PathBuf> {
         if url.scheme() == "eager" {
-            tracing::trace!("url_to_dir {} => {}", url, url.path());
             return Some(url.path().to_string().into());
         }
 
@@ -343,7 +344,6 @@ impl EagerRepo {
             let path = path.trim_start_matches('/');
             if let Some(tmp) = testtmp() {
                 let path = tmp.join(path);
-                tracing::trace!("url_to_dir {} => {}", url, path.display());
                 return Some(path);
             }
         }
@@ -358,9 +358,12 @@ impl EagerRepo {
                     store_path.push(ident.dot_dir());
                     store_path.push("store");
                     if has_eagercompat_requirement(&store_path) {
-                        tracing::trace!("url_to_dir {} => {}", url, path.display());
                         return Some(path);
+                    } else {
+                        tracing::trace!("no eagercompat requirement for dummy URL");
                     }
+                } else {
+                    tracing::trace!("no identity for dummy URL");
                 }
             }
         }
@@ -368,8 +371,9 @@ impl EagerRepo {
         if url.scheme() == "file" {
             let path = PathBuf::from(url.path());
             if is_eager_repo(&path) {
-                tracing::trace!("url_to_dir {} => {}", url, path.display());
                 return Some(path.to_path_buf());
+            } else {
+                tracing::trace!("file URL isn't an eagerepo");
             }
         }
 

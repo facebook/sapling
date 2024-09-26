@@ -19,6 +19,7 @@ use percent_encoding::AsciiSet;
 use percent_encoding::NON_ALPHANUMERIC;
 use url::Url;
 
+#[derive(Debug)]
 pub struct RepoUrl {
     // What should be saved as paths.default.
     clean_input: String,

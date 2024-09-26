@@ -90,8 +90,8 @@ newserver() {
     mononoke
     MONONOKE_START_TIMEOUT=60 wait_for_mononoke "$TESTTMP/$reponame"
   elif [ -f "$TESTTMP/.eagerepo" ] ; then
-    # Do nothing, it will be setup at access time
-    true
+    hg init "$TESTTMP/$reponame" --config format.use-eager-repo=true
+    cd "$TESTTMP/$reponame"
   else
     mkdir "$TESTTMP/$reponame"
     cd "$TESTTMP/$reponame"

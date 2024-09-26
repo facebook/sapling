@@ -50,25 +50,10 @@ Attribution works
 
 Cloning adds --configfile values to .hg/hgrc
   $ cd ..
-  $ hg clone test:repo_server repo2 --configfile $TESTTMP/simple.rc --configfile $TESTTMP/other.rc
-  fetching lazy changelog
-  populating main commit graph
-  fetching selected remote bookmarks
-  updating to branch default
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg clone -q test:repo_server repo2 --configfile $TESTTMP/simple.rc --configfile $TESTTMP/other.rc
   $ dos2unix repo2/.hg/hgrc
-  # example repository config (see 'hg help config' for more info)
-  [paths]
-  default = test:repo_server
-  
-  # URL aliases to other repo sources
-  # (see 'hg help config.paths' for more info)
-  #
-  # my-fork = https://example.com/jdoe/example-repo
-  
-  [ui]
-  # name and email (local to this repository, optional), e.g.
-  # username = Jane Doe <jdoe@example.com>
-  
   %include $TESTTMP/simple.rc
   %include $TESTTMP/other.rc
+  
+  [paths]
+  default = test:repo_server

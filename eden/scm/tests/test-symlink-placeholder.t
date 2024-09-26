@@ -1,7 +1,4 @@
-
 #require symlink no-eden
-
-  $ eagerepo
 
   $ hg init unix-repo
   $ cd unix-repo

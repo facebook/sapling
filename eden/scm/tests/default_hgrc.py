@@ -144,6 +144,9 @@ ssh=python {testdir}/dummyssh
 
 [visibility]
 enabled=true
+
+[clone]
+use-rust=true
 """
 
     return content

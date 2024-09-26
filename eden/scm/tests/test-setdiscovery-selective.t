@@ -27,7 +27,8 @@ Push 2 branches to the server.
   $ hg push -r $C --to other --create -q
 
 Pull exchange should only consider 1 remote head (master, B, ignore C), but
-consider all visible local heads (X, Y):
+consider all visible local heads (X, Y).
+Lazy changelog also consizers Z - hence "local heads: 3" - see D36335928.
 
   $ cd $TESTTMP/client2
   $ drawdag << 'EOS'
@@ -39,14 +40,14 @@ consider all visible local heads (X, Y):
   $ hg hide $Z -q
 
   $ hg pull --debug 2>&1 | grep 'remote heads'
-  local heads: 2; remote heads: 1 (explicit: 1); initial common: 0
+  local heads: 3; remote heads: 1 (explicit: 1); initial common: 0
 
   $ hg log -G -r 'all()' -T '{desc} {remotenames}'
-  o  X
+  o  B remote/master
   │
   │ o  Y
   ├─╯
-  │ o  B remote/master
+  │ o  X
   ├─╯
   o  A
 
