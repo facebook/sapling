@@ -205,7 +205,12 @@ class eagerpeer(repository.peer):
         if node is not None:
             if self.known([node]) == [True]:
                 return node
-        # NOTE: Prefix match does not work yet.
+
+        prefix_resp = self.edenapi.hashlookup([key])
+        hgids = prefix_resp[0]["hgids"]
+        if len(hgids) == 1:
+            return hgids[0]
+
         # bookmark?
         m = self.listkeyspatterns("bookmarks", [key])
         node = m.get(key, None)
