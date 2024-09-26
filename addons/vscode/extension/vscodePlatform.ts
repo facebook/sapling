@@ -9,6 +9,8 @@ import type {ServerPlatform} from 'isl-server/src/serverPlatform';
 import type {RepositoryContext} from 'isl-server/src/serverTypes';
 import type {
   AbsolutePath,
+  Diagnostic,
+  DiagnosticSeverity,
   PlatformSpecificClientToServerMessages,
   RepoRelativePath,
   ServerToClientMessage,
@@ -71,6 +73,19 @@ export type VSCodeServerPlatform = ServerPlatform & {
   panelOrView: undefined | vscode.WebviewPanel | vscode.WebviewView;
 };
 
+function diagnosticSeverity(severity: vscode.DiagnosticSeverity): DiagnosticSeverity {
+  switch (severity) {
+    case vscode.DiagnosticSeverity.Error:
+      return 'error';
+    case vscode.DiagnosticSeverity.Warning:
+      return 'warning';
+    case vscode.DiagnosticSeverity.Information:
+      return 'info';
+    case vscode.DiagnosticSeverity.Hint:
+      return 'hint';
+  }
+}
+
 export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServerPlatform => ({
   platformName: 'vscode',
   sessionId: vscode.env.sessionId,
@@ -113,6 +128,38 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           if (this.panelOrView != null) {
             this.panelOrView.title = message.title;
           }
+          break;
+        }
+        case 'platform/checkForDiagnostics': {
+          const diagnosticMap = new Map<RepoRelativePath, Array<Diagnostic>>();
+          const repoRoot = repo?.info.repoRoot;
+          if (repoRoot) {
+            for (const path of message.paths) {
+              const uri = vscode.Uri.file(pathModule.join(repoRoot, path));
+              const diagnostics = vscode.languages.getDiagnostics(uri);
+              if (diagnostics.length > 0) {
+                diagnosticMap.set(
+                  path,
+                  diagnostics.map(diagnostic => ({
+                    message: diagnostic.message,
+                    range: {
+                      startLine: diagnostic.range.start.line,
+                      startCol: diagnostic.range.start.character,
+                      endLine: diagnostic.range.end.line,
+                      endCol: diagnostic.range.end.character,
+                    },
+                    severity: diagnosticSeverity(diagnostic.severity),
+                    source: diagnostic.source,
+                    code:
+                      typeof diagnostic.code === 'object'
+                        ? String(diagnostic.code.value)
+                        : String(diagnostic.code),
+                  })),
+                );
+              }
+            }
+          }
+          postMessage({type: 'platform/gotDiagnostics', diagnostics: diagnosticMap});
           break;
         }
         case 'platform/confirm': {

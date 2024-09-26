@@ -553,6 +553,18 @@ export type OperationProgressEvent = {type: 'operationProgress'} & OperationProg
 /** A line number starting from 1 */
 export type OneIndexedLineNumber = Exclude<number, 0>;
 
+export type DiagnosticSeverity = 'error' | 'warning' | 'info' | 'hint';
+
+export type Diagnostic = {
+  range: {startLine: number; startCol: number; endLine: number; endCol: number};
+  message: string;
+  severity: DiagnosticSeverity;
+  /** LSP providing this diagnostic, like "typescript" or "eslint" */
+  source?: string;
+  /** Code or name for this kind of diagnostic */
+  code?: string;
+};
+
 /* protocol */
 
 /**
@@ -581,6 +593,7 @@ export type PlatformSpecificClientToServerMessages =
       value: Json | undefined;
       scope: 'workspace' | 'global';
     }
+  | {type: 'platform/checkForDiagnostics'; paths: Array<RepoRelativePath>}
   | {type: 'platform/executeVSCodeCommand'; command: string; args: Array<Json>}
   | {type: 'platform/subscribeToVSCodeConfig'; config: string};
 
@@ -599,6 +612,10 @@ export type PlatformSpecificServerToClientMessages =
     }
   | {type: 'platform/unsavedFiles'; unsaved: Array<{path: RepoRelativePath; uri: string}>}
   | {type: 'platform/savedAllUnsavedFiles'; success: boolean}
+  | {
+      type: 'platform/gotDiagnostics';
+      diagnostics: Map<RepoRelativePath, Array<Diagnostic>>;
+    }
   | {
       type: 'platform/vscodeConfigChanged';
       config: string;
