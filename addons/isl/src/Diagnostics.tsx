@@ -33,12 +33,18 @@ const styles = stylex.create({
   diagnosticList: {
     paddingInline: spacing.double,
     paddingBlock: spacing.half,
+    gap: 0,
   },
   nowrap: {
     whiteSpace: 'nowrap',
   },
   diagnosticRow: {
     maxWidth: 'max(400px, 80vw)',
+    padding: spacing.half,
+    cursor: 'pointer',
+    ':hover': {
+      backgroundColor: 'var(--hover-darken)',
+    },
   },
   allDiagnostics: {
     maxHeight: '80vh',
@@ -94,7 +100,14 @@ export async function confirmNoBlockingDiagnostics(
                           }>
                           <Column alignStart xstyle={styles.diagnosticList}>
                             {diagnostics.map(d => (
-                              <Row key={d.source} xstyle={styles.diagnosticRow}>
+                              <Row
+                                role="button"
+                                tabIndex={0}
+                                key={d.source}
+                                xstyle={styles.diagnosticRow}
+                                onClick={() => {
+                                  foundPlatform.openFile(filepath, {line: d.range.startLine + 1});
+                                }}>
                                 {iconForDiagnostic(d)}
                                 <span>{d.message}</span>
                                 {d.source && (
