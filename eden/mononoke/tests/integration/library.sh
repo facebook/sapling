@@ -1718,15 +1718,23 @@ function start_and_wait_for_land_service {
   wait_for_land_service
 }
 
-function megarepo_async_worker {
+function _megarepo_async_worker_cmd {
   GLOG_minloglevel=5 "$ASYNC_REQUESTS_WORKER" "$@" \
     --log-level INFO \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --scuba-dataset "file://$TESTTMP/async-worker.json" \
     "${CACHE_ARGS[@]}" \
-    "${COMMON_ARGS[@]}" >> "$TESTTMP/megarepo_async_worker.out" 2>&1 &
+    "${COMMON_ARGS[@]}"
+}
+
+function megarepo_async_worker {
+  _megarepo_async_worker_cmd "$@" >> "$TESTTMP/megarepo_async_worker.out" 2>&1 &
   export MEGAREPO_ASYNC_WORKER_PID=$!
   echo "$MEGAREPO_ASYNC_WORKER_PID" >> "$DAEMON_PIDS"
+}
+
+function megarepo_async_worker_foreground {
+  _megarepo_async_worker_cmd "$@"
 }
 
 function scsc_as {

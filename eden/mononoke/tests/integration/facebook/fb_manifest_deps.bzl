@@ -91,6 +91,10 @@ DOTT_HG_CAS = {
     "//eden/scm:hgpython_cas": "BINARY_HGPYTHON",
 }
 
+DOTT_ASYNC_WORKER = {
+    "//eden/mononoke/async_requests:worker": "ASYNC_REQUESTS_WORKER",
+}
+
 DISABLE_ALL_NETWORK_ACCESS_DEPS = {
     # Stop network
     "//eden/mononoke/tests/integration/facebook:disable-all-network-access": "DISABLE_ALL_NETWORK_ACCESS",
@@ -164,8 +168,8 @@ def custom_manifest_rule(name, manifest_file, targets):
 
     return list(targets.values())
 
-def dott_test(name, dott_files, deps, use_mysql = False, disable_all_network_access_target = True, enable_sapling_cas = False):
-    _dott_test(name, dott_files, deps, use_mysql, False, enable_sapling_cas = enable_sapling_cas)
+def dott_test(name, dott_files, deps, use_mysql = False, disable_all_network_access_target = True, enable_sapling_cas = False, enable_async_requests_worker = False):
+    _dott_test(name, dott_files, deps, use_mysql, False, enable_sapling_cas = enable_sapling_cas, enable_async_requests_worker = enable_async_requests_worker)
 
     if use_mysql:
         # NOTE: We need network to talk to MySQL
@@ -173,9 +177,9 @@ def dott_test(name, dott_files, deps, use_mysql = False, disable_all_network_acc
 
     if disable_all_network_access_target:
         # there's not much sense in blocking network for OSS builds
-        _dott_test(name + "-disable-all-network-access", dott_files, deps, use_mysql, disable_all_network_access = True, rust_allow_oss_build = False, enable_sapling_cas = enable_sapling_cas)
+        _dott_test(name + "-disable-all-network-access", dott_files, deps, use_mysql, disable_all_network_access = True, rust_allow_oss_build = False, enable_sapling_cas = enable_sapling_cas, enable_async_requests_worker = enable_async_requests_worker)
 
-def _dott_test(name, dott_files, deps, use_mysql = False, disable_all_network_access = True, rust_allow_oss_build = None, enable_sapling_cas = False):
+def _dott_test(name, dott_files, deps, use_mysql = False, disable_all_network_access = True, rust_allow_oss_build = None, enable_sapling_cas = False, enable_async_requests_worker = False):
     manifest_target = name + "-manifest"
 
     noop_for_oss = rust_common.is_noop_in_oss_build(rust_allow_oss_build)
@@ -205,6 +209,10 @@ def _dott_test(name, dott_files, deps, use_mysql = False, disable_all_network_ac
         dott_deps = dott_deps | DOTT_HG
     else:
         dott_deps = dott_deps | DOTT_HG_CAS
+
+    if enable_async_requests_worker:
+        dott_deps = dott_deps | DOTT_ASYNC_WORKER
+
     for d in deps:
         # test runner takes sybolic names not targets, map from targets to the placeholder names
         if d in dott_deps:
