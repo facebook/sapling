@@ -129,6 +129,40 @@ macro_rules! bail_internal {
     };
 }
 
+impl From<AsyncRequestsError> for scs_thrift::AsyncRequestError {
+    fn from(e: AsyncRequestsError) -> Self {
+        match e {
+            AsyncRequestsError::RequestError(e) => {
+                Self::request_error(scs_thrift::RequestErrorStruct {
+                    kind: scs_thrift::RequestErrorKind::INVALID_REQUEST,
+                    reason: format!("{}", e),
+                    ..Default::default()
+                })
+            }
+            AsyncRequestsError::InternalError(error) => {
+                let reason = error.to_string();
+                let backtrace = match error.backtrace().status() {
+                    BacktraceStatus::Captured => Some(error.backtrace().to_string()),
+                    _ => None,
+                };
+                let mut source_chain = Vec::new();
+                let mut error: &dyn StdError = &error;
+                while let Some(source) = error.source() {
+                    source_chain.push(source.to_string());
+                    error = source;
+                }
+
+                Self::internal_error(scs_thrift::InternalErrorStruct {
+                    reason,
+                    backtrace,
+                    source_chain,
+                    ..Default::default()
+                })
+            }
+        }
+    }
+}
+
 impl From<AsyncRequestsError> for scs_thrift::MegarepoAsynchronousRequestError {
     fn from(e: AsyncRequestsError) -> Self {
         match e {

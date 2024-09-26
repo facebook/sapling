@@ -2347,6 +2347,11 @@ struct InternalErrorStruct {
   3: list<string> source_chain;
 }
 
+union AsyncRequestError {
+  1: RequestErrorStruct request_error;
+  2: InternalErrorStruct internal_error;
+}
+
 union MegarepoAsynchronousRequestError {
   1: RequestErrorStruct request_error;
   2: InternalErrorStruct internal_error;
