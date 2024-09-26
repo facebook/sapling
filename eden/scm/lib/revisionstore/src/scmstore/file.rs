@@ -60,7 +60,6 @@ use crate::Delta;
 use crate::ExtStoredPolicy;
 use crate::LocalStore;
 use crate::Metadata;
-use crate::MultiplexDeltaStore;
 use crate::SaplingRemoteApiFileStore;
 use crate::StoreKey;
 use crate::StoreResult;
@@ -583,13 +582,11 @@ impl RemoteDataStore for FileStore {
 
     fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         self.metrics.write().api.hg_upload.call(keys.len());
-        // TODO(meyer): Eliminate usage of legacy API, or at least minimize it (do we really need multiplex, etc)
+        // TODO(meyer): Eliminate usage of legacy API, or at least minimize it
         if let Some(ref lfs_remote) = self.lfs_remote {
-            let mut multiplex = MultiplexDeltaStore::new();
-            multiplex.add_store(self.with_shared_only());
             lfs_remote
                 .clone()
-                .datastore(Arc::new(multiplex))
+                .datastore(Arc::new(self.with_shared_only()))
                 .upload(keys)
         } else {
             Ok(keys.to_vec())

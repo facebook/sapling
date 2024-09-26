@@ -55,14 +55,6 @@
 //! Compose multiple stores into one and re-implement the main traits by
 //! iterating over these stores.
 //!
-//! ## `MultiplexDeltaStore`, `MultiplexHgIdHistoryStore`
-//!
-//! Similarly to the `UnionStore`, this allows composing stores together but
-//! for the purposes of duplicating all the writes to all the stores. Mainly
-//! used to send data to both a fast caching server (ex: Memcache), and to a
-//! shared store when receiving network data. It can also be used for data format
-//! migration
-//!
 //! ## `IndexedLogHgIdDataStore`, `IndexedLogHgIdHistoryStore`
 //!
 //! Basic `IndexedLog` backed stores. As opposed to the packfiles, these allow
@@ -130,7 +122,6 @@ pub mod indexedlogauxstore;
 pub mod indexedlogdatastore;
 pub mod indexedlogtreeauxstore;
 pub mod localstore;
-pub mod multiplexstore;
 pub mod scmstore;
 pub mod trait_impls;
 pub mod uniondatastore;
@@ -163,8 +154,6 @@ pub use crate::localstore::ExtStoredPolicy;
 pub use crate::localstore::LocalStore;
 pub use crate::metadatastore::MetadataStore;
 pub use crate::metadatastore::MetadataStoreBuilder;
-pub use crate::multiplexstore::MultiplexDeltaStore;
-pub use crate::multiplexstore::MultiplexHgIdHistoryStore;
 pub use crate::redacted::redact_if_needed;
 pub use crate::remotestore::HgIdRemoteStore;
 pub use crate::repair::repair;
