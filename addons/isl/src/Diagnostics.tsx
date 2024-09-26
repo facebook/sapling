@@ -11,6 +11,8 @@ import type {Diagnostic} from './types';
 import {spacing} from '../../components/theme/tokens.stylex';
 import serverAPI from './ClientToServerAPI';
 import {Collapsable} from './Collapsable';
+import {Internal} from './Internal';
+import {getFeatureFlag} from './featureFlags';
 import {T, t} from './i18n';
 import {localStorageBackedAtom, readAtom} from './jotaiUtils';
 import foundPlatform from './platform';
@@ -77,16 +79,28 @@ export async function confirmNoBlockingDiagnostics(
       type: 'platform/checkForDiagnostics',
       paths: selectedFiles.map(file => file.path),
     });
-    const result = await serverAPI.nextMessageMatching('platform/gotDiagnostics', () => true);
+    const [result, enabled] = await Promise.all([
+      serverAPI.nextMessageMatching('platform/gotDiagnostics', () => true),
+      getFeatureFlag(
+        Internal.featureFlags?.ShowPresubmitDiagnosticsWarning,
+        /* enable this feature in OSS */ true,
+      ),
+    ]);
     if (result.diagnostics.size > 0) {
       const allDiagnostics = [...result.diagnostics.values()];
       const totalErrors = allDiagnostics
         .map(value => value.filter(d => d.severity === 'error').length)
         .reduce((a, b) => a + b, 0);
 
+      // TODO: tracking here
+
+      if (!enabled) {
+        return true;
+      }
+
       if (totalErrors > 0) {
         const buttons = [{label: 'Cancel'}, {label: 'Continue', primary: true}] as const;
-        return (
+        const shouldContinue =
           (await showModal({
             type: 'confirm',
             title: t('$num code issues found in selected files', {
@@ -94,8 +108,9 @@ export async function confirmNoBlockingDiagnostics(
             }),
             message: <DiagnosticsList diagnostics={[...result.diagnostics.entries()]} />,
             buttons,
-          })) === buttons[1]
-        );
+          })) === buttons[1];
+
+        return shouldContinue;
       }
     }
   }
