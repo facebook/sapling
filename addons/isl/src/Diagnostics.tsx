@@ -126,9 +126,7 @@ export async function confirmNoBlockingDiagnostics(
         const shouldContinue =
           (await showModal({
             type: 'confirm',
-            title: t('$num code issues found in selected files', {
-              replace: {$num: String(totalErrors)},
-            }),
+            title: t('codeIssuesFound', {count: totalErrors}),
             message: <DiagnosticsList diagnostics={[...result.diagnostics.entries()]} />,
             buttons,
           })) === buttons[1];
