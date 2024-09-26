@@ -21,11 +21,17 @@ import {Checkbox} from 'isl-components/Checkbox';
 import {Column, Row} from 'isl-components/Flex';
 import {Icon} from 'isl-components/Icon';
 import {Subtle} from 'isl-components/Subtle';
+import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom} from 'jotai';
 import {basename} from 'shared/utils';
 
 export const shouldWarnAboutDiagnosticsAtom = localStorageBackedAtom<boolean>(
   'isl.warn-about-diagnostics',
+  true,
+);
+
+const hideNonBlockingDiagnosticsAtom = localStorageBackedAtom<boolean>(
+  'isl.hide-non-blocking-diagnostics',
   true,
 );
 
@@ -86,55 +92,7 @@ export async function confirmNoBlockingDiagnostics(
             title: t('$num code issues found in selected files', {
               replace: {$num: String(totalErrors)},
             }),
-            message: (
-              <>
-                <Column alignStart xstyle={styles.allDiagnostics}>
-                  {[...result.diagnostics.entries()].map(([filepath, diagnostics]) => {
-                    const sortedDiagnostics = [...diagnostics].sort((a, b) => {
-                      return severityComparator(a) - severityComparator(b);
-                    });
-                    return (
-                      <Column key={filepath} alignStart>
-                        <Collapsable
-                          startExpanded
-                          title={
-                            <Row>
-                              <span>{basename(filepath)}</span>
-                              <Subtle>{filepath}</Subtle>
-                            </Row>
-                          }>
-                          <Column alignStart xstyle={styles.diagnosticList}>
-                            {sortedDiagnostics.map(d => (
-                              <Row
-                                role="button"
-                                tabIndex={0}
-                                key={d.source}
-                                xstyle={styles.diagnosticRow}
-                                onClick={() => {
-                                  foundPlatform.openFile(filepath, {line: d.range.startLine + 1});
-                                }}>
-                                {iconForDiagnostic(d)}
-                                <span>{d.message}</span>
-                                {d.source && (
-                                  <Subtle {...stylex.props(styles.nowrap)}>
-                                    {d.source}
-                                    {d.code ? `(${d.code})` : null}
-                                  </Subtle>
-                                )}{' '}
-                                <Subtle {...stylex.props(styles.nowrap)}>
-                                  [Ln {d.range.startLine}, Col {d.range.startCol}]
-                                </Subtle>
-                              </Row>
-                            ))}
-                          </Column>
-                        </Collapsable>
-                      </Column>
-                    );
-                  })}
-                </Column>
-                <DontShowDiagnosticsConfirmationCheckbox />
-              </>
-            ),
+            message: <DiagnosticsList diagnostics={[...result.diagnostics.entries()]} />,
             buttons,
           })) === buttons[1]
         );
@@ -142,6 +100,74 @@ export async function confirmNoBlockingDiagnostics(
     }
   }
   return true;
+}
+
+function DiagnosticsList({diagnostics}: {diagnostics: Array<[string, Array<Diagnostic>]>}) {
+  const [hideNonBlocking, setHideNonBlocking] = useAtom(hideNonBlockingDiagnosticsAtom);
+  const [shouldWarn, setShouldWarn] = useAtom(shouldWarnAboutDiagnosticsAtom);
+  return (
+    <>
+      <Column alignStart xstyle={styles.allDiagnostics}>
+        {diagnostics.map(([filepath, diagnostics]) => {
+          const sortedDiagnostics = [...diagnostics]
+            .filter(d => (hideNonBlocking ? d.severity === 'error' : true))
+            .sort((a, b) => {
+              return severityComparator(a) - severityComparator(b);
+            });
+          return (
+            <Column key={filepath} alignStart>
+              <Collapsable
+                startExpanded
+                title={
+                  <Row>
+                    <span>{basename(filepath)}</span>
+                    <Subtle>{filepath}</Subtle>
+                  </Row>
+                }>
+                <Column alignStart xstyle={styles.diagnosticList}>
+                  {sortedDiagnostics.map(d => (
+                    <Row
+                      role="button"
+                      tabIndex={0}
+                      key={d.source}
+                      xstyle={styles.diagnosticRow}
+                      onClick={() => {
+                        foundPlatform.openFile(filepath, {line: d.range.startLine + 1});
+                      }}>
+                      {iconForDiagnostic(d)}
+                      <span>{d.message}</span>
+                      {d.source && (
+                        <Subtle {...stylex.props(styles.nowrap)}>
+                          {d.source}
+                          {d.code ? `(${d.code})` : null}
+                        </Subtle>
+                      )}{' '}
+                      <Subtle {...stylex.props(styles.nowrap)}>
+                        [Ln {d.range.startLine}, Col {d.range.startCol}]
+                      </Subtle>
+                    </Row>
+                  ))}
+                </Column>
+              </Collapsable>
+            </Column>
+          );
+        })}
+      </Column>
+      <Row xstyle={styles.confirmCheckbox}>
+        <Checkbox checked={!shouldWarn} onChange={checked => setShouldWarn(!checked)}>
+          <T>Don't ask again</T>
+        </Checkbox>
+        <Tooltip
+          title={t(
+            "Only 'error' severity issues will cause this dialog to appear, but less severe issues can still be shown here. This option hides these non-blocking issues.",
+          )}>
+          <Checkbox checked={hideNonBlocking} onChange={setHideNonBlocking}>
+            <T>Hide non-blocking issues</T>
+          </Checkbox>
+        </Tooltip>
+      </Row>
+    </>
+  );
 }
 
 function severityComparator(a: Diagnostic) {
@@ -155,18 +181,6 @@ function severityComparator(a: Diagnostic) {
     case 'hint':
       return 3;
   }
-}
-
-function DontShowDiagnosticsConfirmationCheckbox() {
-  const [shouldWarn, setShouldWarn] = useAtom(shouldWarnAboutDiagnosticsAtom);
-
-  return (
-    <Row xstyle={styles.confirmCheckbox}>
-      <Checkbox checked={!shouldWarn} onChange={checked => setShouldWarn(!checked)}>
-        <T>Don't ask again</T>
-      </Checkbox>
-    </Row>
-  );
 }
 
 function iconForDiagnostic(d: Diagnostic): React.ReactNode {

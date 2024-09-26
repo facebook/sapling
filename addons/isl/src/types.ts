@@ -720,6 +720,7 @@ export type LocalStorageName =
   | 'isl-color-theme'
   | 'isl.auto-resolve-before-continue'
   | 'isl.warn-about-diagnostics'
+  | 'isl.hide-non-blocking-diagnostics'
   // These keys are prefixes, with further dynamic keys appended afterwards
   | 'isl.edited-commit-messages:';
 
