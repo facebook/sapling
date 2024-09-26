@@ -357,7 +357,7 @@ impl EagerRepo {
                     let mut store_path = path.clone();
                     store_path.push(ident.dot_dir());
                     store_path.push("store");
-                    if has_eagercompat_requirement(&store_path) {
+                    if has_eagercompat_requirement(&store_path) || is_eager_repo(&path) {
                         return Some(path);
                     } else {
                         tracing::trace!("no eagercompat requirement for dummy URL");
@@ -373,7 +373,7 @@ impl EagerRepo {
             if is_eager_repo(&path) {
                 return Some(path.to_path_buf());
             } else {
-                tracing::trace!("file URL isn't an eagerepo");
+                tracing::trace!("file URL isn't an eagerepo (no eagerepo requirement)");
             }
         }
 
@@ -738,14 +738,9 @@ pub fn is_eager_repo(path: &Path) -> bool {
         let store_requirement_path = path.join(ident.dot_dir()).join("store").join("requires");
         if let Ok(s) = std::fs::read_to_string(store_requirement_path) {
             if s.lines().any(|s| s == "eagerepo") {
-                tracing::trace!("url_to_dir {} => {}", path.display(), path.display());
                 return true;
             }
         }
-        tracing::trace!(
-            "url_to_dir {}: missing 'eagerepo' requirement",
-            path.display()
-        );
     }
 
     false
