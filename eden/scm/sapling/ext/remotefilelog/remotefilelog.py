@@ -532,7 +532,7 @@ class remotefileslog(filelog.fileslog):
             self.metadatastore = revisionstore.metadatastore(
                 repo.svfs.base,
                 repo.ui._rcfg,
-                edenapi=edenapi.filestore() if edenapi else None,
+                edenapi.filestore() if edenapi else None,
             )
         finally:
             os.umask(mask)

@@ -20,12 +20,10 @@ use configmodel::Config;
 use cpython::*;
 use cpython_ext::ExtractInner;
 use cpython_ext::ExtractInnerRef;
-use cpython_ext::PyErr;
 use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
-use parking_lot::RwLock;
 use pyconfigloader::config;
 use pythonutil::to_node;
 use revisionstore::scmstore::FileAttributes;
@@ -37,7 +35,6 @@ use revisionstore::HgIdDataStore;
 use revisionstore::HgIdHistoryStore;
 use revisionstore::HgIdMutableDeltaStore;
 use revisionstore::HgIdMutableHistoryStore;
-use revisionstore::HgIdRemoteStore;
 use revisionstore::HistoryStore;
 use revisionstore::IndexedLogHgIdDataStore;
 use revisionstore::IndexedLogHgIdDataStoreConfig;
@@ -46,8 +43,6 @@ use revisionstore::LocalStore;
 use revisionstore::Metadata;
 use revisionstore::MetadataStore;
 use revisionstore::MetadataStoreBuilder;
-use revisionstore::RemoteDataStore;
-use revisionstore::RemoteHistoryStore;
 use revisionstore::SaplingRemoteApiFileStore;
 use revisionstore::SaplingRemoteApiTreeStore;
 use revisionstore::StoreKey;
@@ -65,7 +60,6 @@ use crate::historystorepyext::HgIdHistoryStorePyExt;
 use crate::historystorepyext::HgIdMutableHistoryStorePyExt;
 use crate::historystorepyext::IterableHgIdHistoryStorePyExt;
 use crate::historystorepyext::RemoteHistoryStorePyExt;
-use crate::pythonutil::from_key;
 use crate::pythonutil::from_key_to_tuple;
 use crate::pythonutil::from_tuple_to_key;
 
@@ -88,7 +82,6 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<indexedloghistorystore>(py)?;
     m.add_class::<mutabledeltastore>(py)?;
     m.add_class::<mutablehistorystore>(py)?;
-    m.add_class::<pyremotestore>(py)?;
     m.add_class::<metadatastore>(py)?;
     m.add_class::<filescmstore>(py)?;
     m.add_class::<treescmstore>(py)?;
@@ -420,176 +413,6 @@ impl HgIdMutableHistoryStore for mutablehistorystore {
     }
 }
 
-struct PyHgIdRemoteStoreInner {
-    py_store: PyObject,
-    datastore: Option<mutabledeltastore>,
-    historystore: Option<mutablehistorystore>,
-}
-
-pub struct PyHgIdRemoteStore {
-    inner: RwLock<PyHgIdRemoteStoreInner>,
-}
-
-impl PyHgIdRemoteStore {
-    fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-
-        let keys = keys
-            .iter()
-            .filter_map(|key| match key {
-                StoreKey::HgId(key) => Some(from_key(py, key)),
-                StoreKey::Content(_, _) => None,
-            })
-            .collect::<Vec<_>>();
-
-        if !keys.is_empty() {
-            let inner = self.inner.read();
-            inner
-                .py_store
-                .call_method(
-                    py,
-                    "prefetch",
-                    (
-                        inner.datastore.clone_ref(py),
-                        inner.historystore.clone_ref(py),
-                        keys,
-                    ),
-                    None,
-                )
-                .map_err(PyErr::from)?;
-        }
-        Ok(())
-    }
-}
-
-struct PyRemoteDataStore(Arc<PyHgIdRemoteStore>);
-struct PyRemoteHistoryStore(Arc<PyHgIdRemoteStore>);
-
-impl HgIdRemoteStore for PyHgIdRemoteStore {
-    fn datastore(
-        self: Arc<Self>,
-        store: Arc<dyn HgIdMutableDeltaStore>,
-    ) -> Arc<dyn RemoteDataStore> {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-
-        self.inner.write().datastore = Some(mutabledeltastore::create_instance(py, store).unwrap());
-
-        Arc::new(PyRemoteDataStore(self))
-    }
-
-    fn historystore(
-        self: Arc<Self>,
-        store: Arc<dyn HgIdMutableHistoryStore>,
-    ) -> Arc<dyn RemoteHistoryStore> {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-
-        self.inner.write().historystore =
-            Some(mutablehistorystore::create_instance(py, store).unwrap());
-
-        Arc::new(PyRemoteHistoryStore(self))
-    }
-}
-
-impl RemoteDataStore for PyRemoteDataStore {
-    fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        self.0.prefetch(keys)?;
-        self.get_missing(keys)
-    }
-
-    fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        Ok(keys.to_vec())
-    }
-}
-
-impl HgIdDataStore for PyRemoteDataStore {
-    fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
-        self.prefetch(&[key.clone()])?;
-        self.0.inner.read().datastore.as_ref().unwrap().get(key)
-    }
-
-    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
-        match self.prefetch(&[key.clone()]) {
-            Ok(_) => self
-                .0
-                .inner
-                .read()
-                .datastore
-                .as_ref()
-                .unwrap()
-                .get_meta(key),
-            Err(_) => Ok(StoreResult::NotFound(key)),
-        }
-    }
-
-    fn refresh(&self) -> Result<()> {
-        Ok(())
-    }
-}
-
-impl LocalStore for PyRemoteDataStore {
-    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        Ok(keys.to_vec())
-    }
-}
-
-impl RemoteHistoryStore for PyRemoteHistoryStore {
-    fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
-        self.0.prefetch(keys)
-    }
-}
-
-impl HgIdHistoryStore for PyRemoteHistoryStore {
-    fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
-        match self.prefetch(&[StoreKey::hgid(key.clone())]) {
-            Ok(()) => self
-                .0
-                .inner
-                .read()
-                .historystore
-                .as_ref()
-                .unwrap()
-                .get_node_info(key),
-            Err(_) => Ok(None),
-        }
-    }
-
-    fn refresh(&self) -> Result<()> {
-        Ok(())
-    }
-}
-
-impl LocalStore for PyRemoteHistoryStore {
-    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        self.0
-            .inner
-            .read()
-            .historystore
-            .as_ref()
-            .unwrap()
-            .get_missing(keys)
-    }
-}
-
-py_class!(pub class pyremotestore |py| {
-    data remote: Arc<PyHgIdRemoteStore>;
-
-    def __new__(_cls, py_store: PyObject) -> PyResult<pyremotestore> {
-        let store = Arc::new(PyHgIdRemoteStore { inner: RwLock::new(PyHgIdRemoteStoreInner { py_store, datastore: None, historystore: None }) });
-        pyremotestore::create_instance(py, store)
-    }
-});
-
-impl ExtractInnerRef for pyremotestore {
-    type Inner = Arc<PyHgIdRemoteStore>;
-
-    fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
-        self.remote(py)
-    }
-}
-
 // Python wrapper around an SaplingRemoteAPI-backed remote store for files.
 //
 // This type exists for the sole purpose of allowing an `SaplingRemoteApiFileStore`
@@ -642,8 +465,7 @@ py_class!(class metadatastore |py| {
     def __new__(_cls,
         path: Option<PyPathBuf>,
         config: config,
-        remote: Option<pyremotestore> = None,
-        edenapi: Option<edenapifilestore> = None,
+        edenapi: Option<edenapifilestore>,
         suffix: Option<String> = None
     ) -> PyResult<metadatastore> {
         let config = config.get_cfg(py);
@@ -652,8 +474,6 @@ py_class!(class metadatastore |py| {
 
         builder = if let Some(edenapi) = edenapi {
             builder.remotestore(edenapi.extract_inner(py))
-        } else if let Some(remote) = remote {
-            builder.remotestore(remote.extract_inner(py))
         } else {
             builder
         };

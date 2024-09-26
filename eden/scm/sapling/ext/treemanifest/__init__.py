@@ -583,7 +583,6 @@ class basetreemanifestlog:
 
     def makeruststore(self):
         assert not self._iseager
-        remotestore = revisionstore.pyremotestore(remotetreestore(self._repo))
         mask = os.umask(0o002)
         try:
             self.treescmstore = self._repo._rsrepo.treescmstore()
@@ -928,61 +927,6 @@ def _prefetchonlytrees(repo, opts):
     repo.prefetchtrees(mfnodes, basemfnodes=basemfnode)
 
 
-def _gettrees(
-    repo,
-    remote,
-    rootdir,
-    mfnodes,
-    basemfnodes,
-    directories,
-    start,
-    depth,
-    ondemandfetch=False,
-):
-    if "gettreepack" not in shallowutil.peercapabilities(remote):
-        raise error.Abort(_("missing gettreepack capability on remote"))
-    bundle = remote.gettreepack(rootdir, mfnodes, basemfnodes, directories, depth)
-
-    try:
-        op = bundle2.processbundle(repo, bundle, None)
-
-        receivednodes = op.records[RECEIVEDNODE_RECORD]
-        count = 0
-        missingnodes = set(mfnodes)
-
-        for reply in receivednodes:
-            # If we're doing on-demand tree fetching, this means that we are not
-            # trying to fetch complete trees. Consequently, the set of mfnodes
-            # passed in are not all different versions of the same root
-            # directory -- instead they correspond to individual subdirectories
-            # within a single tree, which we are explicitly not downloading in
-            # its entirety. This means we should not check the directory path
-            # when checking for missing nodes in the response.
-            if ondemandfetch:
-                missingnodes.difference_update(n for d, n in reply)
-            else:
-                missingnodes.difference_update(n for d, n in reply if d == rootdir)
-            count += len(reply)
-        perftrace.tracevalue("Fetched", count)
-        if op.repo.ui.configbool("remotefilelog", "debug"):
-            duration = util.timer() - start
-            op.repo.ui.warn(_("%s trees fetched over %0.2fs\n") % (count, duration))
-
-        if missingnodes:
-            raise shallowutil.MissingNodesError(
-                (("", n) for n in missingnodes),
-                "tree nodes missing from server response",
-            )
-    except bundle2.AbortFromPart as exc:
-        repo.ui.debug("remote: abort: %s\n" % exc)
-        # Give stderr some time to reach the client, so we can read it into the
-        # currently pushed ui buffer, instead of it randomly showing up in a
-        # future ui read.
-        raise shallowutil.MissingNodesError((("", n) for n in mfnodes), hint=exc.hint)
-    except error.BundleValueError as exc:
-        raise error.Abort(_("missing support for %s") % exc)
-
-
 def _registerbundle2parts():
     @bundle2.parthandler(TREEGROUP_PARTTYPE2, ("version", "cache", "category"))
     def treeparthandler2(op, part):
@@ -1124,16 +1068,6 @@ def createtreepackpart(repo, outgoing, partname, sendtrees=shallowbundle.AllTree
     part.addparam("category", PACK_CATEGORY)
 
     return part
-
-
-def getfallbackpath(repo):
-    if hasattr(repo, "fallbackpath"):
-        return repo.fallbackpath
-    else:
-        path = repo.ui.config("paths", "default")
-        if not path:
-            raise error.Abort("no remote server configured to fetch trees from")
-        return path
 
 
 def pull(orig, ui, repo, *pats, **opts):
@@ -1585,80 +1519,6 @@ def _generatepackstream(
                 yield chunk
 
     yield wirepack.closepart()
-
-
-class remotetreestore:
-    def __init__(self, repo):
-        self._repo = repo
-        self.ui = repo.ui
-
-    def _interactivedebug(self):
-        """Returns True if this is an interactive command running in debug mode."""
-        return self.ui.interactive() and self.ui.configbool("remotefilelog", "debug")
-
-    def prefetch(self, datastore, historystore, keys):
-        if usehttpfetching(self._repo):
-            # http fetching is handled inside the content store, so raise a
-            # KeyError here.
-            raise shallowutil.MissingNodesError(keys)
-        else:
-            if self._interactivedebug():
-                n = len(keys)
-                (firstpath, firstnode) = keys[0]
-                firstnode = hex(firstnode)
-                self.ui.write_err(
-                    _n(
-                        "fetching tree for ('%(path)s', %(node)s)\n",
-                        "fetching %(num)s trees\n",
-                        n,
-                    )
-                    % {"path": firstpath, "node": firstnode, "num": n}
-                )
-
-            return self._sshgetdesignatednodes(keys)
-
-    @perftrace.tracefunc("SSH On-Demand Fetch Trees")
-    def _sshgetdesignatednodes(self, keys):
-        """
-        Fetch the specified tree nodes over SSH.
-
-        This method requires the server to support the "designatednodes"
-        capability. This capability overloads the gettreepack wireprotocol
-        command to allow the client to specify an exact set of tree nodes
-        to fetch; the server will then provide only those nodes.
-
-        Returns False if the server does not support "designatednodes",
-        and True otherwise.
-        """
-        fallbackpath = getfallbackpath(self._repo)
-        with self._repo.connectionpool.get(fallbackpath) as conn:
-            if "designatednodes" not in conn.peer.capabilities():
-                raise error.ProgrammingError("designatednodes must be supported")
-
-            mfnodes = [node for path, node in keys]
-            directories = [path for path, node in keys]
-
-            if self.ui.configbool("remotefilelog", "debug") and len(keys) == 1:
-                name = keys[0][0]
-                node = keys[0][1]
-                msg = _("fetching tree %r %s") % (name, hex(node))
-                self.ui.warn(msg + "\n")
-
-            start = util.timer()
-            with self.ui.timesection("getdesignatednodes"):
-                _gettrees(
-                    self._repo,
-                    conn.peer,
-                    "",
-                    mfnodes,
-                    [],
-                    directories,
-                    start,
-                    depth=1,
-                    ondemandfetch=True,
-                )
-
-        return True
 
 
 def _debugcmdfindtreemanifest(orig, ctx):

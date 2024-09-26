@@ -22,7 +22,7 @@ impl StorageFormat {
         // The "revlog" format writes to EagerRepoStore.
         // The pure Rust logic does not understand revlog but fine with eagerepo.
         // Note: The Python logic might still want to use the non-eager storage
-        // like filescmstore/pyremotestore etc.
+        // like filescmstore etc.
         self == Self::Eagerepo || self == Self::Revlog
     }
 

@@ -27,7 +27,7 @@ pub(crate) fn init() {
             //
             // The pure Rust logic does not understand revlog but fine with eagerepo.
             // Note: The Python logic might still want to use the non-eager storage
-            // like filescmstore/pyremotestore etc.
+            // like filescmstore etc.
             let store_path = info.store_path();
             // The hgcommits/v1 path shares objects with commits.
             // Maybe it should be renamed to hg-objects.
