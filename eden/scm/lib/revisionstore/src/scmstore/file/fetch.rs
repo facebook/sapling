@@ -176,12 +176,7 @@ impl FetchState {
         Ok(LazyFile::IndexedLog(mmap_entry))
     }
 
-    pub(crate) fn fetch_indexedlog(
-        &mut self,
-        store: &IndexedLogHgIdDataStore,
-        lfs_store: Option<&LfsStore>,
-        loc: StoreLocation,
-    ) {
+    pub(crate) fn fetch_indexedlog(&mut self, store: &IndexedLogHgIdDataStore, loc: StoreLocation) {
         let pending = self.pending_nonlfs(FileAttributes::CONTENT);
         if pending.is_empty() {
             return;

@@ -41,7 +41,6 @@ use storemodel::TreeEntry;
 
 pub use self::metrics::TreeStoreMetrics;
 use crate::datastore::HgIdDataStore;
-use crate::datastore::RemoteDataStore;
 use crate::indexedlogdatastore::Entry;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
 use crate::indexedlogtreeauxstore::TreeAuxStore;
@@ -434,6 +433,18 @@ impl TreeStore {
             prefetch_tree_parents: false,
         }
     }
+
+    pub fn prefetch(&self, keys: Vec<Key>) -> Result<Vec<Key>> {
+        Ok(self
+            .fetch_batch(
+                keys.into_iter(),
+                TreeAttributes::CONTENT,
+                FetchMode::AllowRemote,
+            )
+            .missing()?
+            .into_iter()
+            .collect())
+    }
 }
 
 impl HgIdDataStore for TreeStore {
@@ -474,25 +485,6 @@ impl HgIdDataStore for TreeStore {
 
     fn refresh(&self) -> Result<()> {
         self.refresh()
-    }
-}
-
-impl RemoteDataStore for TreeStore {
-    fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        Ok(self
-            .fetch_batch(
-                keys.iter().cloned().filter_map(StoreKey::maybe_into_key),
-                TreeAttributes::CONTENT,
-                FetchMode::AllowRemote,
-            )
-            .missing()?
-            .into_iter()
-            .map(StoreKey::HgId)
-            .collect())
-    }
-
-    fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        Ok(keys.to_vec())
     }
 }
 

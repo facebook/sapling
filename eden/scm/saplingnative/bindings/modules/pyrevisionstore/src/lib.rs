@@ -60,7 +60,6 @@ use crate::datastorepyext::ContentDataStorePyExt;
 use crate::datastorepyext::HgIdDataStorePyExt;
 use crate::datastorepyext::HgIdMutableDeltaStorePyExt;
 use crate::datastorepyext::IterableHgIdDataStorePyExt;
-use crate::datastorepyext::RemoteDataStorePyExt;
 use crate::historystorepyext::HgIdHistoryStorePyExt;
 use crate::historystorepyext::HgIdMutableHistoryStorePyExt;
 use crate::historystorepyext::IterableHgIdHistoryStorePyExt;
@@ -1006,17 +1005,19 @@ py_class!(pub class treescmstore |py| {
         }
 
         let store = self.store(py);
-        store.prefetch_py(py, keys)
+
+        let keys = keys
+            .iter(py)
+            .map(|tuple| from_tuple_to_key(py, &tuple))
+            .collect::<PyResult<Vec<Key>>>()?;
+        py.allow_threads(|| TreeStore::prefetch(store, keys)).map_pyerr(py)?;
+
+        Ok(Python::None(py))
     }
 
     def markforrefresh(&self) -> PyResult<PyNone> {
         let store = self.store(py);
         HgIdDataStorePyExt::refresh_py(store, py)
-    }
-
-    def upload(&self, keys: PyList) -> PyResult<PyList> {
-        let store = self.store(py);
-        store.upload_py(py, keys)
     }
 
     def blob(&self, name: &PyPath, node: &PyBytes) -> PyResult<PyBytes> {

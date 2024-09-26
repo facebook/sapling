@@ -42,7 +42,6 @@ pub(crate) use self::types::LazyFile;
 pub use self::types::StoreFile;
 use crate::datastore::HgIdDataStore;
 use crate::datastore::HgIdMutableDeltaStore;
-use crate::datastore::RemoteDataStore;
 use crate::indexedlogauxstore::AuxStore;
 use crate::indexedlogdatastore::Entry;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
@@ -205,19 +204,11 @@ impl FileStore {
 
             if fetch_local {
                 if let Some(ref indexedlog_cache) = indexedlog_cache {
-                    state.fetch_indexedlog(
-                        indexedlog_cache,
-                        lfs_cache.as_ref().map(|v| v.as_ref()),
-                        StoreLocation::Cache,
-                    );
+                    state.fetch_indexedlog(indexedlog_cache, StoreLocation::Cache);
                 }
 
                 if let Some(ref indexedlog_local) = indexedlog_local {
-                    state.fetch_indexedlog(
-                        indexedlog_local,
-                        lfs_local.as_ref().map(|v| v.as_ref()),
-                        StoreLocation::Local,
-                    );
+                    state.fetch_indexedlog(indexedlog_local, StoreLocation::Local);
                 }
 
                 if let Some(ref lfs_cache) = lfs_cache {
@@ -567,26 +558,6 @@ impl FileStore {
         }
 
         Ok(missing)
-    }
-}
-
-impl RemoteDataStore for FileStore {
-    fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        let missing = self
-            .prefetch(
-                keys.iter()
-                    .cloned()
-                    .filter_map(|sk| sk.maybe_into_key())
-                    .collect(),
-            )?
-            .into_iter()
-            .map(StoreKey::HgId)
-            .collect();
-        Ok(missing)
-    }
-
-    fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        self.upload_lfs(keys)
     }
 }
 

@@ -27,7 +27,6 @@ use revisionstore::ContentDataStore;
 use revisionstore::ContentHash;
 use revisionstore::HgIdDataStore;
 use revisionstore::HgIdMutableDeltaStore;
-use revisionstore::RemoteDataStore;
 use revisionstore::StoreKey;
 use revisionstore::ToKeys;
 use types::Node;
@@ -71,11 +70,6 @@ pub trait HgIdMutableDeltaStorePyExt: HgIdDataStorePyExt {
         metadata: Option<PyDict>,
     ) -> PyResult<PyObject>;
     fn flush_py(&self, py: Python) -> PyResult<Option<Vec<PyPathBuf>>>;
-}
-
-pub trait RemoteDataStorePyExt: RemoteDataStore {
-    fn prefetch_py(&self, py: Python, keys: PyList) -> PyResult<PyObject>;
-    fn upload_py(&self, py: Python, keys: PyList) -> PyResult<PyList>;
 }
 
 impl<T: HgIdDataStore + ?Sized> HgIdDataStorePyExt for T {
@@ -301,39 +295,5 @@ impl<T: HgIdMutableDeltaStore + ?Sized> HgIdMutableDeltaStorePyExt for T {
             .transpose()
             .map_pyerr(py)?;
         Ok(opt)
-    }
-}
-
-impl<T: RemoteDataStore + ?Sized> RemoteDataStorePyExt for T {
-    fn prefetch_py(&self, py: Python, keys: PyList) -> PyResult<PyObject> {
-        let keys = keys
-            .iter(py)
-            .map(|tuple| Ok(StoreKey::from(from_tuple_to_key(py, &tuple)?)))
-            .collect::<PyResult<Vec<StoreKey>>>()?;
-        py.allow_threads(|| self.prefetch(&keys)).map_pyerr(py)?;
-        Ok(Python::None(py))
-    }
-
-    fn upload_py(&self, py: Python, keys: PyList) -> PyResult<PyList> {
-        let keys = keys
-            .iter(py)
-            .map(|tuple| Ok(StoreKey::from(from_tuple_to_key(py, &tuple)?)))
-            .collect::<PyResult<Vec<StoreKey>>>()?;
-        let not_uploaded = py.allow_threads(|| self.upload(&keys)).map_pyerr(py)?;
-
-        let results = PyList::new(py, &[]);
-        for key in not_uploaded {
-            match key {
-                StoreKey::HgId(key) => {
-                    let key_tuple = from_key_to_tuple(py, &key);
-                    results.append(py, key_tuple.into_object());
-                }
-                StoreKey::Content(_, _) => {
-                    return Err(format_err!("Unsupported key: {:?}", key)).map_pyerr(py);
-                }
-            }
-        }
-
-        Ok(results)
     }
 }
