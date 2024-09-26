@@ -7,7 +7,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
   $ setconfig ui.ignorerevnum=false
   $ setconfig push.edenapi=true
-  $ ENABLE_API_WRITES=1 BLOB_TYPE="blob_files" default_setup
+  $ BLOB_TYPE="blob_files" default_setup
   hg repo
   o  C [draft;rev=2;26805aba1e60]
   │

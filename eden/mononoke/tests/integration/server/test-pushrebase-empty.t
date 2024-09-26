@@ -7,7 +7,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
   $ setconfig push.edenapi=true
-  $ ENABLE_API_WRITES=1 BLOB_TYPE="blob_sqlite" default_setup
+  $ BLOB_TYPE="blob_sqlite" default_setup
   hg repo
   o  C [draft;rev=2;26805aba1e60]
   │

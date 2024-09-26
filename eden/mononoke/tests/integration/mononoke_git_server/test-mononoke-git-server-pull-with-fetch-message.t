@@ -12,8 +12,6 @@
   $ cat >> repos/repo/server.toml <<EOF
   > [git_configs]
   > fetch_message = "HELLO USER"
-  > [source_control_service]
-  > permit_writes = true
   > EOF
 
   $ merge_just_knobs <<EOF

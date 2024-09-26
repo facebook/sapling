@@ -9,7 +9,7 @@
 setup configuration
   $ export EMIT_OBSMARKERS=1
   $ setconfig push.edenapi=true
-  $ ENABLE_API_WRITES=1 setup_common_config
+  $ setup_common_config
   $ cd $TESTTMP
 
 setup common configuration

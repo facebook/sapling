@@ -9,10 +9,6 @@
   $ REPOTYPE="blob_files"
   $ ENABLED_DERIVED_DATA='["git_commits", "git_trees", "git_delta_manifests_v2", "unodes", "filenodes", "hgchangesets"]' setup_common_config $REPOTYPE
 Without that bit gitimport is unable to set bookmarks
-  $ cat >> repos/repo/server.toml <<EOF
-  > [source_control_service]
-  > permit_writes = true
-  > EOF
 
 Use common repo setup
   $ test_repos_for_git_lfs_import

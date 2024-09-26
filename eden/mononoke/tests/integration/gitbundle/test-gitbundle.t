@@ -9,10 +9,6 @@
   $ BUNDLE_OUTPUT="${TESTTMP}/repo.bundle"
   $ REPOTYPE="blob_files"
   $ setup_common_config $REPOTYPE
-  $ cat >> repos/repo/server.toml <<EOF
-  > [source_control_service]
-  > permit_writes = true
-  > EOF
 
 # Setup git repository
   $ mkdir -p "$GIT_REPO_ORIGIN"

@@ -6,7 +6,7 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ setconfig push.edenapi=true
-  $ ENABLE_API_WRITES=1 BLOB_TYPE="blob_files" default_setup --scuba-dataset "file://$TESTTMP/log.json"
+  $ BLOB_TYPE="blob_files" default_setup --scuba-dataset "file://$TESTTMP/log.json"
   hg repo
   o  C [draft;rev=2;26805aba1e60]
   │

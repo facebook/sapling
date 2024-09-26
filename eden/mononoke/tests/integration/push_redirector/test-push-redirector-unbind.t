@@ -8,7 +8,7 @@
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
 
   $ setconfig push.edenapi=true
-  $ ENABLE_API_WRITES=1 create_large_small_repo
+  $ create_large_small_repo
   Adding synced mapping entry
   $ setup_configerator_configs
   $ merge_just_knobs <<EOF

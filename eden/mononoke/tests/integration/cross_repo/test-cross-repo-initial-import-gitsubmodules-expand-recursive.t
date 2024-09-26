@@ -29,10 +29,10 @@
 
 
 Run the x-repo with submodules setup  
-  $ ENABLE_API_WRITES=1 REPOID="$REPO_C_ID" REPONAME="repo_c" \
+  $ REPOID="$REPO_C_ID" REPONAME="repo_c" \
   > COMMIT_IDENTITY_SCHEME=3  setup_common_config "$REPOTYPE"
 
-  $ ENABLE_API_WRITES=1 REPOID="$REPO_B_ID" REPONAME="repo_b" \
+  $ REPOID="$REPO_B_ID" REPONAME="repo_b" \
   > COMMIT_IDENTITY_SCHEME=3 setup_common_config "$REPOTYPE"
 
   $ run_common_xrepo_sync_with_gitsubmodules_setup

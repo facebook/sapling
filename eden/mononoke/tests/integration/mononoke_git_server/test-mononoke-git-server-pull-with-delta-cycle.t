@@ -10,10 +10,6 @@
   $ setup_common_config $REPOTYPE
   $ GIT_REPO_ORIGIN="${TESTTMP}/origin/repo-git"
   $ GIT_REPO="${TESTTMP}/repo-git"
-  $ cat >> repos/repo/server.toml <<EOF
-  > [source_control_service]
-  > permit_writes = true
-  > EOF
 
 # Setup git repository
   $ mkdir -p "$GIT_REPO_ORIGIN"

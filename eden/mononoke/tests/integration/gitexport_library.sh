@@ -11,7 +11,7 @@
 # Setup configuration
 REPOTYPE="blob_files"
 setup_common_config "$REPOTYPE"
-ENABLE_API_WRITES=1 REPOID=1 setup_mononoke_repo_config "temp_repo"
+REPOID=1 setup_mononoke_repo_config "temp_repo"
 
 HG_REPO="$TESTTMP/repo"
 SOURCE_REPO_LOG="$TESTTMP/source_repo_log"

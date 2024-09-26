@@ -10,7 +10,7 @@
   $ export COMMIT_SCRIBE_CATEGORY=public_commit
   $ export MONONOKE_TEST_SCRIBE_LOGGING_DIRECTORY=$TESTTMP/scribe_logs/
   $ setconfig push.edenapi=true
-  $ ENABLE_API_WRITES=1 setup_common_config
+  $ setup_common_config
   $ testtool_drawdag -R repo --derive-all --print-hg-hashes <<EOF
   > A-B-C
   > # bookmark: C main

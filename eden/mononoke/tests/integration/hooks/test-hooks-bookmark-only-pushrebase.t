@@ -8,7 +8,7 @@
 
 setup configuration
   $ setconfig push.edenapi=true
-  $ ENABLE_API_WRITES=1 setup_mononoke_config
+  $ setup_mononoke_config
   $ cd "$TESTTMP/mononoke-config"
   $ cat >> repos/repo/server.toml <<CONFIG
   > [[bookmarks]]

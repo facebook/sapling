@@ -9,7 +9,7 @@
 Setup
 
   $ setconfig push.edenapi=true
-  $ ENABLE_API_WRITES=1 setup_common_config "blob_files"
+  $ setup_common_config "blob_files"
   $ cat >> repos/repo/server.toml << EOF
   > [[bookmarks]]
   > regex=".*"

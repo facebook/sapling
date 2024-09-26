@@ -17,10 +17,6 @@
   > infinitepush=
   > commitcloud=
   > EOF
-  $ cat >> repos/repo/server.toml <<EOF
-  > [source_control_service]
-  > permit_writes = true
-  > EOF
 
 # Enable infinite push and commit cloud for the test
   $ cd $TESTTMP

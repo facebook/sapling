@@ -11,10 +11,6 @@
   $ GIT_REPO_ORIGIN="${TESTTMP}/origin/repo-git"
   $ GIT_REPO_SUBMODULE="${TESTTMP}/origin/repo-submodule-git"
   $ GIT_REPO="${TESTTMP}/repo-git"
-  $ cat >> repos/repo/server.toml <<EOF
-  > [source_control_service]
-  > permit_writes = true
-  > EOF
 # Setup git repository
   $ mkdir -p "$GIT_REPO_ORIGIN"
   $ cd "$GIT_REPO_ORIGIN"

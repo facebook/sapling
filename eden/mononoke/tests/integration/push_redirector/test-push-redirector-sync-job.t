@@ -9,7 +9,7 @@
   $ enable remotenames
 
   $ setconfig push.edenapi=true
-  $ ENABLE_API_WRITES=1 PUSHREBASE_REWRITE_DATES=1 create_large_small_repo
+  $ PUSHREBASE_REWRITE_DATES=1 create_large_small_repo
   Adding synced mapping entry
   $ setup_configerator_configs
   $ enable_pushredirect 1

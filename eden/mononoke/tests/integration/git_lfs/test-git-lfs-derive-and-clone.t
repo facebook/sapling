@@ -7,11 +7,6 @@
   $ . "${TEST_FIXTURES}/library.sh"
   $ REPOTYPE="blob_files"
   $ GIT_LFS_INTERPRET_POINTERS=1 ENABLED_DERIVED_DATA='["git_commits", "git_trees", "git_delta_manifests_v2", "unodes", "filenodes", "hgchangesets", "ccsm", "skeleton_manifests"]' setup_common_config $REPOTYPE
-  $ cat >> repos/repo/server.toml <<EOF
-  > [source_control_service]
-  > permit_writes = true
-  > permit_service_writes = true
-  > EOF
   $ testtool_drawdag -R repo << EOF
   > A-B-C
   > # bookmark: C heads/main

@@ -1326,12 +1326,12 @@ backup_source_repo_name="$BACKUP_FROM"
 CONFIG
 fi
 
-if [[ -n "${ENABLE_API_WRITES:-}" ]]; then
-  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
+cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [source_control_service]
-permit_writes = true
+permit_writes = ${SCS_PERMIT_WRITES:-true}
+permit_service_writes = ${SCS_PERMIT_SERVICE_WRITES:-true}
+permit_commits_without_parents = ${SCS_PERMIT_COMMITS_WITHOUT_PARENTS:-true}
 CONFIG
-fi
 
 if [[ -n "${SPARSE_PROFILES_LOCATION}" ]]; then
   cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG

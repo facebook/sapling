@@ -7,7 +7,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
   $ setconfig push.edenapi=true
-  $ ENABLE_API_WRITES=1 INFINITEPUSH_NAMESPACE_REGEX='^scratch/.+$' POPULATE_GIT_MAPPING=1 EMIT_OBSMARKERS=1 BLOB_TYPE="blob_files" default_setup
+  $ INFINITEPUSH_NAMESPACE_REGEX='^scratch/.+$' POPULATE_GIT_MAPPING=1 EMIT_OBSMARKERS=1 BLOB_TYPE="blob_files" default_setup
   hg repo
   o  C [draft;rev=2;26805aba1e60]
   │

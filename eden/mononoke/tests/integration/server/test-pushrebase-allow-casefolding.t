@@ -7,7 +7,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
   $ setconfig push.edenapi=true
-  $ ENABLE_API_WRITES=1 DISALLOW_NON_PUSHREBASE=1 ALLOW_CASEFOLDING=1 BLOB_TYPE="blob_files" default_setup
+  $ DISALLOW_NON_PUSHREBASE=1 ALLOW_CASEFOLDING=1 BLOB_TYPE="blob_files" default_setup
   hg repo
   o  C [draft;rev=2;26805aba1e60]
   │

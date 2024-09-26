@@ -11,7 +11,7 @@
 
 setup configuration
   $ setconfig push.edenapi=true
-  $ ENABLE_API_WRITES=1 INFINITEPUSH_NAMESPACE_REGEX='^scratch/.+$' setup_common_config
+  $ INFINITEPUSH_NAMESPACE_REGEX='^scratch/.+$' setup_common_config
   $ cd $TESTTMP
 
 setup repo

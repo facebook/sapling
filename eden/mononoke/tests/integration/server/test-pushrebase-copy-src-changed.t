@@ -8,7 +8,7 @@
 
 setup configuration
   $ setconfig push.edenapi=true
-  $ ENABLE_API_WRITES=1 setup_common_config "blob_files"
+  $ setup_common_config "blob_files"
   $ cd $TESTTMP
 
 setup common configuration

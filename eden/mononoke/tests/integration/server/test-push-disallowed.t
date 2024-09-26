@@ -9,7 +9,7 @@
 setup configuration
 
   $ setconfig push.edenapi=true
-  $ ENABLE_API_WRITES=1 DISALLOW_NON_PUSHREBASE=1 setup_common_config
+  $ DISALLOW_NON_PUSHREBASE=1 setup_common_config
 
   $ cd $TESTTMP
 

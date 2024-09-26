@@ -106,11 +106,11 @@ function run_common_xrepo_sync_with_gitsubmodules_setup {
   export XDG_CONFIG_HOME=$TESTTMP
   git config --global protocol.file.allow always
 
-  INFINITEPUSH_ALLOW_WRITES=true ENABLE_API_WRITES=1 REPOID="$LARGE_REPO_ID" \
+  INFINITEPUSH_ALLOW_WRITES=true REPOID="$LARGE_REPO_ID" \
     REPONAME="$LARGE_REPO_NAME" setup_common_config "$REPOTYPE"
   # Enable writes in small repo as well, so we can update bookmarks when running gitimport,
   # and set the default commit identity schema to git.
-  INFINITEPUSH_ALLOW_WRITES=true ENABLE_API_WRITES=1 REPOID="$SUBMODULE_REPO_ID" \
+  INFINITEPUSH_ALLOW_WRITES=true REPOID="$SUBMODULE_REPO_ID" \
     REPONAME="$SUBMODULE_REPO_NAME" COMMIT_IDENTITY_SCHEME=3 setup_common_config "$REPOTYPE"
 
   # Set the REPONAME environment variable to the large repo name, so that all

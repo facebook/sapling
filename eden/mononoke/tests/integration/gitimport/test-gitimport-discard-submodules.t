@@ -12,10 +12,6 @@
   $ GIT_REPO="${TESTTMP}/repo-git"
   $ HG_REPO="${TESTTMP}/repo"
   $ BUNDLE_PATH="${TESTTMP}/repo_bundle.bundle"
-  $ cat >> repos/repo/server.toml <<EOF
-  > [source_control_service]
-  > permit_writes = true
-  > EOF
 
 
 # Setup submodule git repository

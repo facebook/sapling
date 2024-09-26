@@ -21,10 +21,6 @@ function test_repos_for_lfs_with_upstream {
     REPOTYPE="blob_files"
     setup_common_config $REPOTYPE
     cat >> repos/repo/server.toml <<EOF
-    [source_control_service]
-    permit_writes = true
-    permit_service_writes = true
-    permit_commits_without_parents = true
     [source_control_service.service_write_restrictions.gitremoteimport]
     permitted_methods = ["create_bookmark", "move_bookmark", "create_changeset", "set_git_mapping_from_changeset", "git_import_operations"]
     permitted_path_prefixes = [""]
@@ -36,10 +32,6 @@ EOF
     # to other LFS server and the import will copy them to Mononoke.
     # (at Meta this simulates our legacy dewey-lfs setup)
     REPOID=2 REPONAME=legacy_lfs setup_common_config $REPOTYPE
-    cat >> repos/legacy_lfs/server.toml <<EOF
-    [source_control_service]
-    permit_writes = true
-EOF
 
     SCUBA_LEGACY_LFS="$TESTTMP/scuba_legacy_lfs_server.json"
     # start LFS server

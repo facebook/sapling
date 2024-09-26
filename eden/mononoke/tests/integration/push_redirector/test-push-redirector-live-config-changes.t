@@ -13,8 +13,8 @@
 setup configuration
   $ REPOTYPE="blob_files"
   $ setconfig push.edenapi=true
-  $ ENABLE_API_WRITES=1 REPOID=$LARGE_REPO_ID REPONAME=large-mon setup_common_config $REPOTYPE
-  $ ENABLE_API_WRITES=1 REPOID=$SMALL_REPO_ID REPONAME=small-mon-1 setup_common_config $REPOTYPE
+  $ REPOID=$LARGE_REPO_ID REPONAME=large-mon setup_common_config $REPOTYPE
+  $ REPOID=$SMALL_REPO_ID REPONAME=small-mon-1 setup_common_config $REPOTYPE
 
   $ cat >> "$TESTTMP/mononoke-config/common/commitsyncmap.toml" <<EOF
   > [megarepo_test]

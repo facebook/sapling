@@ -7,7 +7,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
   $ setconfig push.edenapi=true
-  $ ENABLE_API_WRITES=1 DISALLOW_NON_PUSHREBASE=1 EMIT_OBSMARKERS=1 setup_common_config "blob_files"
+  $ DISALLOW_NON_PUSHREBASE=1 EMIT_OBSMARKERS=1 setup_common_config "blob_files"
   $ cat >> repos/repo/server.toml << EOF
   > [[bookmarks]]
   > name="ancestor"

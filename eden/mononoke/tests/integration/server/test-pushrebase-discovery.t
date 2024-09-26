@@ -15,7 +15,7 @@ actual pushrebase.
 
 setup configuration
   $ setconfig push.edenapi=true
-  $ ENABLE_API_WRITES=1 INFINITEPUSH_ALLOW_WRITES=true setup_common_config
+  $ INFINITEPUSH_ALLOW_WRITES=true setup_common_config
   $ cd "$TESTTMP/mononoke-config"
 
   $ cat >> repos/repo/server.toml <<CONFIG

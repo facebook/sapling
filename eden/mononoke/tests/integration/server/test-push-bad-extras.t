@@ -8,7 +8,7 @@
 
 setup configuration
   $ setconfig push.edenapi=true
-  $ ENABLE_API_WRITES=1 setup_common_config
+  $ setup_common_config
 
   $ cd $TESTTMP
 
@@ -70,7 +70,7 @@ create new commit in repo2 and check that push fails
   $ killandwait $MONONOKE_PID
   $ cd "$TESTTMP"
   $ rm -rf "$TESTTMP/mononoke-config"
-  $ ENABLE_API_WRITES=1 ALLOW_CHANGE_XREPO_MAPPING_EXTRA=true setup_common_config
+  $ ALLOW_CHANGE_XREPO_MAPPING_EXTRA=true setup_common_config
   $ mononoke
   $ wait_for_mononoke
   $ cd "$TESTTMP/repo2"
