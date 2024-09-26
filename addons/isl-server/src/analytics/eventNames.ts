@@ -43,6 +43,8 @@ export type TrackEventName =
   | 'ClickSuggestedRebase'
   | 'ClickedConfigureExternalMergeTool'
   | 'DiscardOperation'
+  | 'DiagnosticsConfirmationOpportunity'
+  | 'DiagnosticsConfirmationAction'
   | 'EnterMergeConflicts'
   | 'ExitMergeConflicts'
   | 'FetchPendingSloc'

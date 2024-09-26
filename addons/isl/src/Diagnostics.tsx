@@ -12,6 +12,7 @@ import {spacing} from '../../components/theme/tokens.stylex';
 import serverAPI from './ClientToServerAPI';
 import {Collapsable} from './Collapsable';
 import {Internal} from './Internal';
+import {tracker} from './analytics';
 import {getFeatureFlag} from './featureFlags';
 import {T, t} from './i18n';
 import {localStorageBackedAtom, readAtom} from './jotaiUtils';
@@ -92,7 +93,17 @@ export async function confirmNoBlockingDiagnostics(
         .map(value => value.filter(d => d.severity === 'error').length)
         .reduce((a, b) => a + b, 0);
 
-      // TODO: tracking here
+      const allSources = [...new Set(allDiagnostics.flat().map(d => d.source))];
+      const totalDiagnostics = allDiagnostics.flat().length;
+
+      const childTracker = tracker.trackAsParent('DiagnosticsConfirmationOpportunity', {
+        extras: {
+          shown: enabled,
+          sources: allSources,
+          totalErrors,
+          totalDiagnostics,
+        },
+      });
 
       if (!enabled) {
         return true;
@@ -109,6 +120,12 @@ export async function confirmNoBlockingDiagnostics(
             message: <DiagnosticsList diagnostics={[...result.diagnostics.entries()]} />,
             buttons,
           })) === buttons[1];
+
+        childTracker.track('DiagnosticsConfirmationAction', {
+          extras: {
+            action: shouldContinue ? 'continue' : 'cancel',
+          },
+        });
 
         return shouldContinue;
       }
