@@ -735,10 +735,13 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
   }
   // Use collectAll() rather than collect() to wait for all of the unmounts
   // to complete, and only check for errors once everything has finished.
-  return folly::collectAll(futures).toUnsafeFuture().thenValue(
-      [takeoverPromise = std::move(takeoverPromise)](
-          std::vector<folly::Try<optional<TakeoverData::MountInfo>>>
-              results) mutable {
+  // We should not be using .via(&InlineExecutor::instance()) here, this is
+  // unsafe and deadlock prone. See eden/fs/docs/Futures.md for more details.
+  return folly::collectAll(futures)
+      .via(&folly::InlineExecutor::instance())
+      .thenValue([takeoverPromise = std::move(takeoverPromise)](
+                     std::vector<folly::Try<optional<TakeoverData::MountInfo>>>
+                         results) mutable {
         TakeoverData data;
         data.takeoverComplete = std::move(takeoverPromise);
         data.mountPoints.reserve(results.size());

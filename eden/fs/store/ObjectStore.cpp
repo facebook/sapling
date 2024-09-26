@@ -188,9 +188,11 @@ ImmediateFuture<ObjectStore::GetRootTreeResult> ObjectStore::getRootTree(
         self->stats_->increment(&ObjectStoreStats::getRootTreeFromBackingStore);
         if (self->shouldCacheOnDisk(
                 BackingStore::LocalStoreCachingPolicy::Anything)) {
-          // TODO: perhaps this callback should use toUnsafeFuture() to
-          // ensure the tree is cached whether or not the caller consumes
-          // the future. See comments on D39475223
+          // TODO: perhaps this callback should use
+          // via(&InlineExecutor::instance()) to ensure the tree is cached
+          // whether or not the caller consumes the future. See comments on
+          // D39475223. Also, before changing, see eden/fs/docs/Futures.md
+          // for more details on possible pitfalls of InlineExecutor.
           localStore->putTree(*result.tree);
         }
         return result;
@@ -297,9 +299,10 @@ folly::SemiFuture<BackingStore::GetTreeResult> ObjectStore::getTreeImpl(
             }
 
             return ImmediateFuture{self->backingStore_->getTree(id, context)}
-                // TODO: This is a good use for toUnsafeFuture to ensure the
-                // tree is cached even if the resulting future is never
-                // consumed.
+                // TODO: This is a good use for via(&InlineExecutor::instance())
+                // to ensure the tree is cached even if the resulting future is
+                // never consumed. Before changing, see eden/fs/docs/Futures.md
+                // for more details on possible pitfalls of InlineExecutor.
                 .thenValue([self, watch](BackingStore::GetTreeResult result) {
                   auto batch = self->localStore_->beginWrite();
                   if (self->shouldCacheOnDisk(
@@ -467,9 +470,10 @@ folly::SemiFuture<BackingStore::GetBlobResult> ObjectStore::getBlobImpl(
             // If we didn't find the blob in the LocalStore, then fetch it
             // from the BackingStore.
             return ImmediateFuture{self->backingStore_->getBlob(id, context)}
-                // TODO: This is a good use for toUnsafeFuture to ensure the
-                // blob is cached even if the resulting future is never
-                // consumed.
+                // TODO: This is a good use for via(&InlineExecutor::instance())
+                // to ensure the blob is cached even if the resulting future is
+                // never consumed. Before changing, see eden/fs/docs/Futures.md
+                // for more details on possible pitfalls of InlineExecutor.
                 .thenValue([self, id](BackingStore::GetBlobResult result) {
                   if (self->shouldCacheOnDisk(
                           BackingStore::LocalStoreCachingPolicy::Blobs)) {
