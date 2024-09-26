@@ -16,7 +16,6 @@ from sapling.i18n import _
 
 from . import constants, shallowutil, wirepack
 
-
 # Statistics for debugging
 fetchcost = 0
 fetches = 0

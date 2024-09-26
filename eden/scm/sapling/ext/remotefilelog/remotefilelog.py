@@ -11,6 +11,7 @@ import collections
 import os
 
 from bindings import revisionstore
+
 from sapling import ancestor, error, filelog, mdiff, pycompat, revlog, util
 from sapling.i18n import _
 from sapling.node import bin, hex, nullid
@@ -521,33 +522,17 @@ class remotefileslog(filelog.fileslog):
 
     def __init__(self, repo):
         super(remotefileslog, self).__init__(repo)
-        self._edenapistore = None
         self.makeruststore(repo)
 
-    def edenapistore(self, repo):
-        if self._edenapistore is None:
-            useedenapi = repo.ui.configbool("remotefilelog", "http")
-            if repo.ui.config("ui", "ssh") == "false":
-                # Cannot use ssh. Force EdenAPI.
-                useedenapi = True
-            if repo.nullableedenapi is not None and useedenapi:
-                self._edenapistore = repo.edenapi.filestore()
-
-        return self._edenapistore
-
     def makeruststore(self, repo):
-        remotestore = revisionstore.pyremotestore(fileserverclient.getpackclient(repo))
-
-        edenapistore = self.edenapistore(repo)
-
         mask = os.umask(0o002)
         try:
             self.filestore = repo._rsrepo.filescmstore()
+            edenapi = repo.nullableedenapi
             self.metadatastore = revisionstore.metadatastore(
                 repo.svfs.base,
                 repo.ui._rcfg,
-                remotestore,
-                edenapistore,
+                edenapi=edenapi.filestore() if edenapi else None,
             )
         finally:
             os.umask(mask)

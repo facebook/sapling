@@ -641,19 +641,20 @@ py_class!(class metadatastore |py| {
     def __new__(_cls,
         path: Option<PyPathBuf>,
         config: config,
-        remote: pyremotestore,
+        remote: Option<pyremotestore> = None,
         edenapi: Option<edenapifilestore> = None,
         suffix: Option<String> = None
     ) -> PyResult<metadatastore> {
-        let remotestore = remote.extract_inner(py);
         let config = config.get_cfg(py);
 
         let mut builder = MetadataStoreBuilder::new(&config);
 
         builder = if let Some(edenapi) = edenapi {
             builder.remotestore(edenapi.extract_inner(py))
+        } else if let Some(remote) = remote {
+            builder.remotestore(remote.extract_inner(py))
         } else {
-            builder.remotestore(remotestore)
+            builder
         };
 
         builder = if let Some(path) = path {
