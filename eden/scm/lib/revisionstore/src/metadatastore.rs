@@ -35,8 +35,8 @@ use crate::util::get_local_path;
 /// commit data.
 pub struct MetadataStore {
     historystore: UnionHgIdHistoryStore<Arc<dyn HgIdHistoryStore>>,
-    local_mutablehistorystore: Option<Arc<dyn HgIdMutableHistoryStore>>,
-    shared_mutablehistorystore: Arc<dyn HgIdMutableHistoryStore>,
+    local_mutablehistorystore: Option<Arc<IndexedLogHgIdHistoryStore>>,
+    shared_mutablehistorystore: Arc<IndexedLogHgIdHistoryStore>,
     remote_store: Option<Arc<dyn RemoteHistoryStore>>,
 }
 
@@ -83,8 +83,20 @@ impl MetadataStore {
 }
 
 impl MetadataStore {
-    pub fn get_shared_mutable(&self) -> Arc<dyn HgIdMutableHistoryStore> {
-        self.shared_mutablehistorystore.clone()
+    // Copy of self without local store (i.e. cache only).
+    pub fn with_shared_only(&self) -> Self {
+        let mut historystore: UnionHgIdHistoryStore<Arc<dyn HgIdHistoryStore>> =
+            UnionHgIdHistoryStore::new();
+        historystore.add(self.shared_mutablehistorystore.clone());
+        if let Some(remote) = &self.remote_store {
+            historystore.add(Arc::new(remote.clone()));
+        }
+        Self {
+            historystore,
+            shared_mutablehistorystore: self.shared_mutablehistorystore.clone(),
+            remote_store: self.remote_store.clone(),
+            local_mutablehistorystore: None,
+        }
     }
 }
 
@@ -217,22 +229,22 @@ impl<'a> MetadataStoreBuilder<'a> {
         //  - When pushing changes on a pushrebase server, the local linknode will become
         //    incorrect, future fetches will put that change in the shared cache where the linknode
         //    will be correct.
-        let primary: Option<Arc<dyn HgIdMutableHistoryStore>> = {
+        let primary: Option<Arc<IndexedLogHgIdHistoryStore>> = {
             // Put the indexedlog first, since recent data will have gone there.
             if let Some(shared_indexedloghistorystore) = shared_indexedloghistorystore.clone() {
                 historystore.add(shared_indexedloghistorystore);
             }
-            shared_indexedloghistorystore.map(|store| store as Arc<dyn HgIdMutableHistoryStore>)
+            shared_indexedloghistorystore
         };
 
-        let local_mutablehistorystore: Option<Arc<dyn HgIdMutableHistoryStore>> =
+        let local_mutablehistorystore: Option<Arc<IndexedLogHgIdHistoryStore>> =
             if let Some(local_path) = local_path.as_ref() {
                 let local_indexedloghistorystore = Arc::new(IndexedLogHgIdHistoryStore::new(
                     get_indexedloghistorystore_path(local_path)?,
                     &self.config,
                     StoreType::Permanent,
                 )?);
-                let primary: Arc<dyn HgIdMutableHistoryStore> = {
+                let primary: Arc<IndexedLogHgIdHistoryStore> = {
                     // Put the indexedlog first, since recent data will have gone there.
                     historystore.add(local_indexedloghistorystore.clone());
                     local_indexedloghistorystore
@@ -266,12 +278,10 @@ impl<'a> MetadataStoreBuilder<'a> {
                 None
             };
 
-        let shared_mutablehistorystore: Arc<dyn HgIdMutableHistoryStore> = primary;
-
         Ok(MetadataStore {
             historystore,
             local_mutablehistorystore,
-            shared_mutablehistorystore,
+            shared_mutablehistorystore: primary,
             remote_store,
         })
     }

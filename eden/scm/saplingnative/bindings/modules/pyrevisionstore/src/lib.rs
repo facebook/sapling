@@ -705,9 +705,9 @@ py_class!(class metadatastore |py| {
         store.refresh_py(py)
     }
 
-    def getsharedmutable(&self) -> PyResult<mutablehistorystore> {
+    def getsharedmutable(&self) -> PyResult<Self> {
         let store = self.store(py);
-        mutablehistorystore::create_instance(py, store.get_shared_mutable())
+        Self::create_instance(py, Arc::new(store.with_shared_only()))
     }
 });
 
@@ -1031,9 +1031,9 @@ py_class!(pub class treescmstore |py| {
         store.metadata_py(py, name, node)
     }
 
-    def getsharedmutable(&self) -> PyResult<mutabledeltastore> {
+    def getsharedmutable(&self) -> PyResult<Self> {
         let store = self.store(py);
-        mutabledeltastore::create_instance(py, Arc::new(store.with_shared_only()) as Arc<dyn HgIdMutableDeltaStore>)
+        Self::create_instance(py, Arc::new(store.with_shared_only()), None)
     }
 });
 
