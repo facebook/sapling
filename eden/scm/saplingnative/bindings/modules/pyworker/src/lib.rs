@@ -15,7 +15,6 @@ use std::sync::Arc;
 use std::thread;
 use std::thread::JoinHandle;
 
-use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Result;
@@ -29,13 +28,11 @@ use crossbeam::channel::bounded;
 use crossbeam::channel::Receiver;
 use crossbeam::channel::Sender;
 use pyrevisionstore::filescmstore;
-use revisionstore::datastore::RemoteDataStore;
-use revisionstore::localstore::LocalStore;
 use revisionstore::redact_if_needed;
-use revisionstore::HgIdDataStore;
-use revisionstore::LegacyStore;
-use revisionstore::StoreKey;
-use revisionstore::StoreResult;
+use revisionstore::scmstore::FileStore;
+use revisionstore::trait_impls::ArcFileStore;
+use storemodel::KeyStore;
+use types::fetch_mode::FetchMode;
 use types::HgId;
 use types::Key;
 use types::RepoPathBuf;
@@ -148,19 +145,7 @@ impl<Ret: Send + 'static, Work: Sync + Send + 'static> Worker<Ret, Work> {
 fn update(state: &WriterState, key: Key, flag: UpdateFlag) -> Result<usize> {
     let content = state
         .store
-        .get_file_content(&key)?
-        .ok_or_else(|| format_err!("Can't find key: {}", key))?;
-
-    let meta = match state.store.get_meta(StoreKey::hgid(key.clone()))? {
-        StoreResult::NotFound(key) => {
-            return Err(format_err!("Can't find metadata for key: {:?}", key));
-        }
-        StoreResult::Found(meta) => meta,
-    };
-
-    if meta.is_lfs() {
-        bail!("LFS pointers cannot be deserialized properly yet");
-    }
+        .get_content(&key.path, key.hgid, FetchMode::AllowRemote)?;
 
     let content = redact_if_needed(content);
 
@@ -175,20 +160,9 @@ fn threaded_writer(
 
     let mut written = 0;
     while let Ok(vec) = chan.recv() {
-        let store_keys: Vec<_> = vec.iter().map(|(k, _)| StoreKey::hgid(k.clone())).collect();
-        let missing = match state.store.get_missing(&store_keys) {
-            Ok(missing) => missing,
-            Err(e) => {
-                tracing::warn!("{:?}", e);
-                let failed_inputs: Vec<_> = vec.into_iter().map(|(k, f)| (k.path, f)).collect();
-                failures.extend_from_slice(&failed_inputs);
-                continue;
-            }
-        };
-        if !missing.is_empty() {
-            // Any errors will get reported below.
-            let _ = state.store.prefetch(&missing);
-        }
+        let keys: Vec<_> = vec.iter().map(|(k, _)| k.clone()).collect();
+        // Any errors will get reported below.
+        let _ = state.store.0.prefetch(keys);
 
         for (key, flag) in vec.into_iter() {
             let res = update(&state, key.clone(), flag)
@@ -209,15 +183,15 @@ fn threaded_writer(
 
 #[derive(Clone)]
 struct WriterState {
-    store: Arc<dyn LegacyStore>,
+    store: ArcFileStore,
     working_copy: VFS,
 }
 
 impl WriterState {
-    pub fn new(root: PathBuf, store: Arc<dyn LegacyStore>) -> Result<Self> {
+    pub fn new(root: PathBuf, store: Arc<FileStore>) -> Result<Self> {
         let working_copy = VFS::new(root)?;
         Ok(Self {
-            store,
+            store: ArcFileStore(store),
             working_copy,
         })
     }
@@ -226,11 +200,9 @@ impl WriterState {
 py_class!(class writerworker |py| {
     data inner: RefCell<Option<Worker<(usize, Vec<(RepoPathBuf, UpdateFlag)>), (Key, UpdateFlag)>>>;
 
-    def __new__(_cls, store: PyObject, root: &PyPath, numthreads: usize) -> PyResult<writerworker> {
-        let store = filescmstore::downcast_from(py, store).map(|s|  s.extract_inner(py) as Arc<dyn LegacyStore>)?;
-
+    def __new__(_cls, store: filescmstore, root: &PyPath, numthreads: usize) -> PyResult<writerworker> {
         let root = root.to_path_buf();
-        let writer_state = WriterState::new(root, store).map_pyerr(py)?;
+        let writer_state = WriterState::new(root, store.extract_inner(py)).map_pyerr(py)?;
 
         let inner = Worker::new(numthreads, writer_state, threaded_writer);
 

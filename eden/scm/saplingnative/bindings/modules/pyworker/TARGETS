@@ -36,6 +36,7 @@ rust_python_library(
         "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/cpython-ext:cpython-ext",
         "//eden/scm/lib/revisionstore:revisionstore",
+        "//eden/scm/lib/storemodel:storemodel",
         "//eden/scm/lib/types:types",
         "//eden/scm/lib/vfs:vfs",
         "//eden/scm/saplingnative/bindings/modules/pyrevisionstore:pyrevisionstore",
