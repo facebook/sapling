@@ -10,6 +10,7 @@
   $ echo path:included > sparse
   $ touch eden-sparse
   $ hg commit -Aqm a
+  $ hg book master
 
   $ cd
   $ hg clone -q --eden test:server client --config clone.eden-sparse-filter=eden-sparse

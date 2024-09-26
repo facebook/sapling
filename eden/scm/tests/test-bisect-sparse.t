@@ -62,11 +62,9 @@ test bisect-sparse
 
 verify bisect skips empty sparse commits (2,3)
 
-  $ hg up -r $A
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg up -qr $A
   $ hg bisect --good
-  $ hg up $J
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg up -q $J
 
   $ hg bisect --bad
   Skipping changeset 61165d92eeb6 as there are no changes inside

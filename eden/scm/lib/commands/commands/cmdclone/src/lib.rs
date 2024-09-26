@@ -69,7 +69,7 @@ define_flags! {
         stream: bool,
 
         /// "use remotefilelog (only turn it off in legacy tests) (ADVANCED)"
-        shallow: Option<bool>,
+        shallow: bool = true,
 
         /// "use git protocol (EXPERIMENTAL)"
         git: bool,
@@ -321,7 +321,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
     );
 
     abort_if!(
-        use_eden && ctx.opts.shallow == Some(false),
+        use_eden && !ctx.opts.shallow,
         "--shallow is required with --eden",
     );
 
@@ -536,13 +536,7 @@ fn clone_metadata(
     let eager_format: bool = config.get_or_default("format", "use-eager-repo")?;
     let remote_eager_path = EagerRepo::url_to_dir(&source);
 
-    let shallow = match ctx.opts.shallow {
-        Some(shallow) => shallow,
-        // Infer non-shallow for eager->eager clone.
-        None => !eager_format || remote_eager_path.is_none(),
-    };
-
-    if shallow {
+    if ctx.opts.shallow {
         config.set("format", "use-remotefilelog", Some("true"), &"clone".into());
     } else {
         if !eager_format {

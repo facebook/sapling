@@ -1,9 +1,6 @@
 
 #require no-eden
 
-#inprocess-hg-incompatible
-  $ eagerepo
-
   $ configure mutation-norecord
   $ enable rebase shelve remotenames
   $ setconfig copytrace.dagcopytrace=False
