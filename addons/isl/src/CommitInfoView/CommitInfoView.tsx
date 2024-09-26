@@ -910,7 +910,7 @@ function SubmitButton({
       return;
     }
 
-    if (!(await confirmNoBlockingDiagnostics(selection))) {
+    if (!(await confirmNoBlockingDiagnostics(selection, isCommitMode ? undefined : commit))) {
       return;
     }
 

@@ -6,7 +6,7 @@
  */
 
 import type {UseUncommittedSelection} from './partialSelection';
-import type {Diagnostic} from './types';
+import type {CommitInfo, Diagnostic} from './types';
 
 import {spacing} from '../../components/theme/tokens.stylex';
 import serverAPI from './ClientToServerAPI';
@@ -64,21 +64,33 @@ const styles = stylex.create({
   },
 });
 
+/**
+ * Check IDE diagnostics for files that will be commit/amended/submitted,
+ * to confirm if they intended the errors.
+ */
 export async function confirmNoBlockingDiagnostics(
+  /** Check diagnostics for these selected files. */
   selection: UseUncommittedSelection,
+  /** If provided, warn for changes to files in this commit. Used when checking diagnostics when amending a commit. */
+  commit?: CommitInfo,
 ): Promise<boolean> {
   if (!readAtom(shouldWarnAboutDiagnosticsAtom)) {
     return true;
   }
   if (foundPlatform.platformName === 'vscode') {
-    const allFiles = readAtom(uncommittedChangesWithPreviews);
-    const selectedFiles = selection.isEverythingSelected()
-      ? allFiles
-      : allFiles.filter(file => selection.isFullyOrPartiallySelected(file.path));
+    const allFiles = new Set<string>();
+    for (const file of readAtom(uncommittedChangesWithPreviews)) {
+      if (selection.isFullyOrPartiallySelected(file.path)) {
+        allFiles.add(file.path);
+      }
+    }
+    for (const file of commit?.filesSample ?? []) {
+      allFiles.add(file.path);
+    }
 
     serverAPI.postMessage({
       type: 'platform/checkForDiagnostics',
-      paths: selectedFiles.map(file => file.path),
+      paths: [...allFiles],
     });
     const [result, enabled] = await Promise.all([
       serverAPI.nextMessageMatching('platform/gotDiagnostics', () => true),
