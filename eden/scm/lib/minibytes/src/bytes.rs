@@ -150,23 +150,6 @@ where
         unsafe { std::slice::from_raw_parts(self.ptr, self.len) }
     }
 
-    /// Attempt to downcast to an exclusive mut reference.
-    ///
-    /// Returns None if the type mismatches, or the internal reference count is
-    /// not 0.
-    pub fn downcast_mut<A: Any>(&mut self) -> Option<&mut A> {
-        let arc_owner = match self.owner.as_mut() {
-            None => return None,
-            Some(owner) => owner,
-        };
-        let owner = match Arc::get_mut(arc_owner) {
-            None => return None,
-            Some(owner) => owner,
-        };
-        let any = owner.as_any_mut();
-        any.downcast_mut()
-    }
-
     /// Create a weak pointer. Returns `None` if backed by a static buffer.
     /// Note the weak pointer has the full range of the buffer.
     pub fn downgrade(&self) -> Option<Weak<dyn AbstractOwner<T>>> {
@@ -204,14 +187,29 @@ impl Bytes {
     /// Convert to `Vec<u8>`, in a zero-copy way if possible.
     pub fn into_vec(mut self) -> Vec<u8> {
         let len = self.len();
-        match self.downcast_mut::<Vec<u8>>() {
-            Some(ref mut owner) if owner.len() == len => {
-                let mut result: Vec<u8> = Vec::new();
-                std::mem::swap(&mut result, owner);
-                result
+
+        'zero_copy: {
+            let arc_owner = match self.owner.as_mut() {
+                None => break 'zero_copy,
+                Some(owner) => owner,
+            };
+            let owner = match Arc::get_mut(arc_owner) {
+                None => break 'zero_copy,
+                Some(owner) => owner,
+            };
+            let any = owner.as_any_mut();
+            let mut maybe_vec = any.downcast_mut::<Vec<u8>>();
+            match maybe_vec {
+                Some(ref mut owner) if owner.len() == len => {
+                    let mut result: Vec<u8> = Vec::new();
+                    std::mem::swap(&mut result, owner);
+                    return result;
+                }
+                _ => break 'zero_copy,
             }
-            Some(_) | None => self.as_slice().to_vec(),
         }
+
+        self.as_slice().to_vec()
     }
 }
 

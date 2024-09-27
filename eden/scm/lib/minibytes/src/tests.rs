@@ -69,17 +69,6 @@ fn test_text_slice_invalid() {
 }
 
 #[test]
-fn test_downcast_mut() {
-    let v = b"abcd".to_vec();
-    let mut b = Bytes::from(v);
-    assert!(b.downcast_mut::<Vec<u8>>().is_some());
-    assert!(b.downcast_mut::<String>().is_none());
-    let mut c = b.clone();
-    assert!(b.downcast_mut::<Vec<u8>>().is_none());
-    assert!(c.downcast_mut::<Vec<u8>>().is_none());
-}
-
-#[test]
 fn test_into_vec() {
     let v = b"abcd".to_vec();
     let ptr1 = &v[0] as *const u8;
