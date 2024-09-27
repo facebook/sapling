@@ -57,6 +57,7 @@ impl SourceControlServiceImpl {
                 }
                 Some(custom_acl) => {
                     command.arg("--hipster-group").arg(custom_acl.hipster_group);
+                    command.arg("--oncall").arg(repo.oncall_name);
                 }
             }
             let output = command
