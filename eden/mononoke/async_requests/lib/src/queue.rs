@@ -20,7 +20,6 @@ use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use memblob::Memblob;
-use mononoke_api::Mononoke;
 use mononoke_api::MononokeRepo;
 use mononoke_types::BlobstoreKey as BlobstoreKeyTrait;
 use mononoke_types::RepositoryId;
@@ -77,10 +76,9 @@ impl AsyncMethodRequestQueue {
         })
     }
 
-    pub async fn enqueue<P: ThriftParams, R: MononokeRepo>(
+    pub async fn enqueue<P: ThriftParams>(
         &self,
         ctx: &CoreContext,
-        _mononoke: &Mononoke<R>,
         repo_id: Option<&RepositoryId>,
         thrift_params: P,
     ) -> Result<<P::R as Request>::Token, Error> {
@@ -369,12 +367,10 @@ mod tests {
                 let ctx = CoreContext::test_mock(fb);
                 let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
                 let repo_id = repo.repo_identity().id();
-                let mononoke =
-                    Mononoke::new_test(vec![("test".to_string(), repo)]).await?;
 
                 // Enqueue a request
                 let params = $thrift_params;
-                let token = q.enqueue(&ctx, &mononoke, Some(&repo_id), params.clone()).await?;
+                let token = q.enqueue(&ctx, Some(&repo_id), params.clone()).await?;
 
                 // Verify that request metadata is in the db and has expected values
                 let row_id = token.to_db_id()?;

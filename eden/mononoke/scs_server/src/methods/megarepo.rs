@@ -347,12 +347,12 @@ async fn build_queue(
 async fn enqueue<P: ThriftParams, R: MononokeRepo>(
     ctx: &CoreContext,
     queue: &AsyncMethodRequestQueue,
-    mononoke: &Mononoke<R>,
+    _mononoke: &Mononoke<R>,
     repo_id: Option<&RepositoryId>,
     params: P,
 ) -> Result<<<P::R as Request>::Token as Token>::ThriftToken, errors::ServiceError> {
     queue
-        .enqueue(ctx, mononoke, repo_id, params)
+        .enqueue(ctx, repo_id, params)
         .await
         .map(|res| res.into_thrift())
         .map_err(|e| errors::internal_error(format!("Failed to enqueue the request: {}", e)).into())

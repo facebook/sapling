@@ -100,7 +100,6 @@ rust_binary(
         ":requests_table",
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/mononoke_macros:mononoke_macros",
-        "//eden/mononoke/repo_factory:test_repo_factory",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",

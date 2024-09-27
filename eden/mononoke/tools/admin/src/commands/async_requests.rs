@@ -59,12 +59,6 @@ pub enum AsyncRequestsSubcommand {
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let ctx = app.new_basic_context();
-    let mononoke = Arc::new(
-        app.open_managed_repo_arg::<Repo>(&args.repo)
-            .await
-            .context("Failed to initialize Mononoke API")?
-            .make_mononoke_api()?,
-    );
     let queues_client: AsyncRequestsQueue = AsyncRequestsQueue::new(ctx.fb, &app, None)
         .await
         .context("acquiring the async requests queue")?;
@@ -80,6 +74,12 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             list::list_requests(list_args, ctx, queues_client).await?
         }
         AsyncRequestsSubcommand::Show(show_args) => {
+            let mononoke = Arc::new(
+                app.open_managed_repo_arg::<Repo>(&args.repo)
+                    .await
+                    .context("Failed to initialize Mononoke API")?
+                    .make_mononoke_api()?,
+            );
             show::show_request(show_args, ctx, queues_client, mononoke).await?
         }
         AsyncRequestsSubcommand::Requeue(requeue_args) => {
@@ -90,7 +90,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         }
         AsyncRequestsSubcommand::Submit(abort_args) => {
             let repo = app.open_repo(&args.repo).await?;
-            submit::submit_request(abort_args, ctx, queues_client, mononoke, repo).await?
+            submit::submit_request(abort_args, ctx, queues_client, repo).await?
         }
     }
     Ok(())

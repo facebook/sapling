@@ -348,7 +348,6 @@ mod test {
 
     use anyhow::Error;
     use fbinit::FacebookInit;
-    use mononoke_api::Mononoke;
     use mononoke_api::Repo;
     use mononoke_macros::mononoke;
     use requests_table::RequestType;
@@ -360,8 +359,6 @@ mod test {
     async fn test_request_stream_simple(fb: FacebookInit) -> Result<(), Error> {
         let q = AsyncMethodRequestQueue::new_test_in_memory().unwrap();
         let ctx = CoreContext::test_mock(fb);
-        let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
-        let mononoke = Mononoke::new_test(vec![("test".to_string(), repo)]).await?;
 
         let params = thrift::MegarepoSyncChangesetParams {
             cs_id: vec![],
@@ -374,7 +371,7 @@ mod test {
             target_location: vec![],
             ..Default::default()
         };
-        q.enqueue(&ctx, &mononoke, None, params).await?;
+        q.enqueue(&ctx, None, params).await?;
 
         let will_exit = Arc::new(AtomicBool::new(false));
         let s = AsyncMethodRequestWorker::<Repo>::request_stream_inner(
@@ -402,8 +399,6 @@ mod test {
     async fn test_request_stream_clear_abandoned(fb: FacebookInit) -> Result<(), Error> {
         let q = AsyncMethodRequestQueue::new_test_in_memory().unwrap();
         let ctx = CoreContext::test_mock(fb);
-        let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
-        let mononoke = Mononoke::new_test(vec![("test".to_string(), repo)]).await?;
 
         let params = thrift::MegarepoSyncChangesetParams {
             cs_id: vec![],
@@ -416,7 +411,7 @@ mod test {
             target_location: vec![],
             ..Default::default()
         };
-        q.enqueue(&ctx, &mononoke, None, params).await?;
+        q.enqueue(&ctx, None, params).await?;
 
         // Grab it from the queue...
         let dequed = q.dequeue(&ctx, &ClaimedBy("name".to_string())).await?;
