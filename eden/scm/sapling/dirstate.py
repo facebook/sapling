@@ -198,10 +198,6 @@ class dirstate:
         self._map = self._mapcls(self._ui, self._opener, self._root)
         return self._map
 
-    @repocache("branch")
-    def _branch(self) -> str:
-        return self._opener.tryreadutf8("branch").strip() or "default"
-
     @property
     def _pl(self) -> "Tuple[bytes, bytes]":
         return self._map.parents()
@@ -353,9 +349,6 @@ class dirstate:
     def p2(self) -> bytes:
         return self._validate(self._pl[1])
 
-    def branch(self) -> str:
-        return encoding.tolocal(self._branch)
-
     def setparents(self, p1: bytes, p2: bytes = nullid) -> "Dict[str, str]":
         """Set dirstate parents to p1 and p2.
 
@@ -398,31 +391,13 @@ class dirstate:
                     self.add(f)
         return copies
 
-    def setbranch(self, branch: str) -> None:
-        assert isinstance(branch, str)
-        self._branch = encoding.fromlocal(branch)
-        f = self._opener("branch", "w", atomictemp=True, checkambig=True)
-        try:
-            f.write(encodeutf8(self._branch + "\n"))
-            f.close()
-
-            # make sure filecache has the correct stat info for _branch after
-            # replacing the underlying file
-            ce = self._filecache["_branch"]
-            if ce:
-                ce.refresh()
-        except:  # re-raises
-            # pyre-fixme[16]: `BinaryIO` has no attribute `discard`.
-            f.discard()
-            raise
-
     def invalidate(self) -> None:
         """Causes the next access to reread the dirstate.
 
         This is different from localrepo.invalidatedirstate() because it always
         rereads the dirstate. Use localrepo.invalidatedirstate() if you want to
         check whether the dirstate has changed before rereading it."""
-        for a in ("_map", "_branch", "_ignore"):
+        for a in ("_map", "_ignore"):
             if a in self.__dict__:
                 delattr(self, a)
         self._lastnormaltime = 0

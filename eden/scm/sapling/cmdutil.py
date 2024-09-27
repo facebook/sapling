@@ -1728,9 +1728,6 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
             if p2 != parents[1]:
                 repo.setparents(p1.node(), p2.node())
 
-            if opts.get("exact"):
-                repo.dirstate.setbranch(branch or "default")
-
             partial = opts.get("partial", False)
             files = set()
             try:

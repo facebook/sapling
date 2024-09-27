@@ -1381,7 +1381,7 @@ def branch(ui, repo, label=None, **opts):
         ui.deprecate("hg-branch", "branches are deprecated at Meta")
     hintutil.trigger("branch-command-deprecate")
     if not opts.get("clean") and not label:
-        ui.write("%s\n" % repo.dirstate.branch())
+        ui.write("default\n")
         return
 
     raise error.Abort(

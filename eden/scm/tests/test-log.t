@@ -1638,7 +1638,6 @@
   phase:       draft
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  extra:       branch=default
   $ hg log -r 'wdir()' -p --stat
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -1667,7 +1666,6 @@
   files:       d1/f1
   files+:      d1/f2
   files-:      .d6/f1
-  extra:       branch=default
   $ hg log -r 'wdir()' -p --stat --git
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -1731,7 +1729,7 @@
     "bookmarks": [],
     "parents": ["*"], (glob)
     "manifest": null,
-    "extra": {"branch": "default"},
+    "extra": {},
     "modified": ["d1/f1"],
     "added": ["d1/f2"],
     "removed": [".d6/f1"]

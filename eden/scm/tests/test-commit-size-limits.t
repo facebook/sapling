@@ -15,10 +15,10 @@ Test commit message limit
 
   $ echo data >> file
 
-Test extras limit (limit includes 13 bytes for "branch=default")
+Test extras limit
   $ hg commit -m "message" --extra "testextra=long value" \
-  >   --config commit.extras-size-limit=31
-  abort: commit extras total size (32) exceeds configured limit (31)
+  >   --config commit.extras-size-limit=18
+  abort: commit extras total size (19) exceeds configured limit (18)
   [255]
   $ hg commit -m "message" --extra "testextra=long value" \
-  >   --config commit.extras-size-limit=32
+  >   --config commit.extras-size-limit=19
