@@ -198,10 +198,11 @@ pub(crate) async fn megarepo_async_request_compute<R: MononokeRepo>(
                 .map_err(|e| e.into())
                 .into())
         }
-        async_requests_types_thrift::AsynchronousRequestParams::async_ping_params(_) => {
-            bail!(
-                "this type of request (AsynchronousRequestParams tag {}) not supported by this worker!", "ping".to_string(),
-            )
+        async_requests_types_thrift::AsynchronousRequestParams::async_ping_params(params) => {
+            Ok(Ok(thrift::AsyncPingResponse {
+                payload: params.payload,
+                ..Default::default()
+            }).into())
         }
         async_requests_types_thrift::AsynchronousRequestParams::UnknownField(union_tag) => {
              bail!(
