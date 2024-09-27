@@ -67,24 +67,6 @@ class branchcache(dict):
         except IndexError:
             return False
 
-    def _branchtip(self, heads):
-        """Return tuple with last open head in heads and false,
-        otherwise return last closed head and true."""
-        tip = heads[-1]
-        closed = True
-        for h in reversed(heads):
-            if h not in self._closednodes:
-                tip = h
-                closed = False
-                break
-        return tip, closed
-
-    def branchtip(self, branch):
-        """Return the tipmost open head on branch head, otherwise return the
-        tipmost closed head on branch.
-        Raise KeyError for unknown branch."""
-        return self._branchtip(self[branch])[0]
-
     def iteropen(self, nodes):
         return (n for n in nodes if n not in self._closednodes)
 
@@ -93,10 +75,6 @@ class branchcache(dict):
         if not closed:
             heads = list(self.iteropen(heads))
         return heads
-
-    def iterbranches(self):
-        for bn, heads in self.items():
-            yield (bn, heads) + self._branchtip(heads)
 
     def copy(self) -> "branchcache":
         """return an deep copy of the branchcache object"""
