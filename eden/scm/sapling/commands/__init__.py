@@ -3135,34 +3135,24 @@ def _rungrep(ui, cmd, files, match):
             _("show only heads which are descendants of STARTREV"),
             _("STARTREV"),
         ),
-        ("t", "topo", False, _("show topological heads only")),
+        ("t", "topo", False, _("show topological heads only (DEPRECATED)")),
         ("a", "active", False, _("show active branchheads only (DEPRECATED)")),
-        ("c", "closed", False, _("show normal and closed branch heads")),
+        ("c", "closed", False, _("show normal and closed branch heads (DEPRECATED)")),
     ]
     + templateopts,
     _("[OPTION]... [REV]..."),
     cmdtype=readonly,
 )
 def heads(ui, repo, *branchrevs, **opts):
-    """show branch heads
+    """show heads
 
-    With no arguments, show all open branch heads in the repository.
-    Branch heads are changesets that have no descendants on the
-    same branch. They are where development generally takes place and
-    are the usual targets for update and merge operations.
-
-    If one or more REVs are given, only open branch heads on the
-    branches associated with the specified changesets are shown. This
-    means that you can use :prog:`heads .` to see the heads on the
-    currently checked-out branch.
-
-    If -c/--closed is specified, also show branch heads marked closed.
+    With no arguments, show all heads in the repository. Heads are
+    changesets that have no descendants. They are where development
+    generally takes place and are the usual targets for update and
+    merge operations.
 
     If STARTREV is specified, only those heads that are descendants of
     STARTREV will be displayed.
-
-    If -t/--topo is specified, named branch mechanics will be ignored and only
-    topological heads (changesets with no children) will be shown.
 
     Returns 0 if matching heads are found, 1 if not.
     """
@@ -3176,30 +3166,7 @@ def heads(ui, repo, *branchrevs, **opts):
     if "rev" in opts:
         start = scmutil.revsingle(repo, opts["rev"], None).node()
 
-    if opts.get("topo"):
-        heads = [repo[h] for h in repo.heads(start)]
-    else:
-        heads = []
-        for branch in repo.branchmap():
-            heads += repo.branchheads(branch, start, opts.get("closed"))
-        heads = [repo[h] for h in heads]
-
-    if branchrevs:
-        branches = set(repo[br].branch() for br in branchrevs)
-        heads = [h for h in heads if h.branch() in branches]
-
-    if opts.get("active") and branchrevs:
-        dagheads = repo.heads(start)
-        heads = [h for h in heads if h.node() in dagheads]
-
-    if branchrevs:
-        haveheads = set(h.branch() for h in heads)
-        if branches - haveheads:
-            headless = ", ".join(b for b in branches - haveheads)
-            msg = _("no open branch heads found on branches %s") % headless
-            if opts.get("rev"):
-                msg += _(" (started at %s)") % opts["rev"]
-            ui.warn(msg, "\n")
+    heads = [repo[h] for h in repo.heads(start)]
 
     if not heads:
         return 1
