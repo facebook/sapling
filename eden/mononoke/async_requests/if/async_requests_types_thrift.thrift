@@ -20,12 +20,14 @@ typedef id.Id MegarepoAddBranchingTargetParamsId (rust.newtype)
 typedef id.Id MegarepoChangeTargetConfigParamsId (rust.newtype)
 typedef id.Id MegarepoRemergeSourceParamsId (rust.newtype)
 typedef id.Id MegarepoSyncChangesetParamsId (rust.newtype)
+typedef id.Id AsyncPingParamsId (rust.newtype)
 
 typedef id.Id MegarepoSyncChangesetResultId (rust.newtype)
 typedef id.Id MegarepoAddTargetResultId (rust.newtype)
 typedef id.Id MegarepoAddBranchingTargetResultId (rust.newtype)
 typedef id.Id MegarepoRemergeSourceResultId (rust.newtype)
 typedef id.Id MegarepoChangeTargetConfigResultId (rust.newtype)
+typedef id.Id AsyncPingResultId (rust.newtype)
 
 typedef id.Id AsynchronousRequestResultId (rust.newtype)
 union AsynchronousRequestResult {
@@ -34,6 +36,7 @@ union AsynchronousRequestResult {
   3: source_control.MegarepoRemergeSourceResult megarepo_remerge_source_result;
   4: source_control.MegarepoSyncChangesetResult megarepo_sync_changeset_result;
   5: source_control.MegarepoAddBranchingTargetResult megarepo_add_branching_target_result;
+  6: source_control.AsyncPingResult async_ping_result;
 }
 
 typedef id.Id AsynchronousRequestParamsId (rust.newtype)
@@ -43,4 +46,5 @@ union AsynchronousRequestParams {
   3: source_control.MegarepoRemergeSourceParams megarepo_remerge_source_params;
   4: source_control.MegarepoSyncChangesetParams megarepo_sync_changeset_params;
   5: source_control.MegarepoAddBranchingTargetParams megarepo_add_branching_target_params;
+  6: source_control.AsyncPingParams async_ping_params;
 }

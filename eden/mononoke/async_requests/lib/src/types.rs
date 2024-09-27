@@ -33,6 +33,11 @@ use mononoke_types::RepositoryId;
 pub use requests_table::RequestStatus;
 pub use requests_table::RequestType;
 pub use requests_table::RowId;
+pub use source_control::AsyncPingParams as ThriftAsyncPingParams;
+pub use source_control::AsyncPingPollResponse as ThriftAsyncPingPollResponse;
+pub use source_control::AsyncPingResponse as ThriftAsyncPingResponse;
+pub use source_control::AsyncPingResult as ThriftAsyncPingResult;
+pub use source_control::AsyncPingToken as ThriftAsyncPingToken;
 pub use source_control::MegarepoAddBranchingTargetParams as ThriftMegarepoAddBranchingTargetParams;
 pub use source_control::MegarepoAddBranchingTargetPollResponse as ThriftMegarepoAddBranchingTargetPollResponse;
 pub use source_control::MegarepoAddBranchingTargetResponse as ThriftMegarepoAddBranchingTargetResponse;
@@ -517,6 +522,28 @@ impl_async_svc_method_types! {
     }
 }
 
+// Params and result types for async_ping
+
+impl_async_svc_method_types! {
+    method_name => "async_ping",
+    request_struct => AsyncPing,
+
+    params_value_thrift_type => ThriftAsyncPingParams,
+    params_union_variant => async_ping_params,
+
+    result_value_thrift_type => ThriftAsyncPingResult,
+    result_union_variant => async_ping_result,
+
+    response_type => ThriftAsyncPingResponse,
+    poll_response_type => ThriftAsyncPingPollResponse,
+    token_type => AsyncPingToken,
+    token_thrift_type => ThriftAsyncPingToken,
+
+    fn target(&self: ThriftParams) -> String {
+        "".to_string()
+    }
+}
+
 impl_async_svc_stored_type! {
     handle_type => AsynchronousRequestParamsId,
     handle_thrift_type => ThriftAsynchronousRequestParamsId,
@@ -566,6 +593,7 @@ impl AsynchronousRequestParams {
             ThriftAsynchronousRequestParams::megarepo_sync_changeset_params(params) => {
                 Ok(params.target())
             }
+            ThriftAsynchronousRequestParams::async_ping_params(params) => Ok(params.target()),
             ThriftAsynchronousRequestParams::UnknownField(union_tag) => {
                 Err(AsyncRequestsError::internal(anyhow!(
                     "this type of request (AsynchronousRequestParams tag {}) not supported by this worker!",

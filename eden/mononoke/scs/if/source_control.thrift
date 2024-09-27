@@ -2301,6 +2301,29 @@ struct CloudWorkspaceSmartlogResponse {
   1: SmartlogData smartlog;
 }
 
+// Note that this method has no repo nor commit specifier–that is intentional, tests depend on that.
+struct AsyncPingParams {
+  /// The request payload, which will be echoed back into the response.
+  1: string payload;
+}
+
+struct AsyncPingToken {
+  1: i64 id;
+}
+
+struct AsyncPingResponse {
+  1: string payload;
+}
+
+union AsyncPingResult {
+  1: AsyncPingResponse success;
+  2: AsyncRequestError error;
+}
+
+struct AsyncPingPollResponse {
+  1: optional AsyncPingResult result;
+}
+
 /// Exceptions
 
 enum RequestErrorKind {
@@ -3098,6 +3121,22 @@ service SourceControlService extends fb303_core.BaseService {
   CloudWorkspaceSmartlogResponse cloud_workspace_smartlog(
     1: CloudWorkspaceSmartlogParams params,
   ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
+
+  /// Test support methods
+  /// ==================
+
+  AsyncPingToken async_ping(1: AsyncPingParams params) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
+
+  //// Poll the execution of async_ping request
+  AsyncPingPollResponse async_ping_poll(1: AsyncPingToken token) throws (
     1: RequestError request_error,
     2: InternalError internal_error,
     3: OverloadError overload_error,

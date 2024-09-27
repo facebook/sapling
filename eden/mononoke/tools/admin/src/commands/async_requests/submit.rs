@@ -12,6 +12,7 @@ use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+use async_requests::types::ThriftAsyncPingParams;
 use async_requests::types::ThriftMegarepoAddBranchingTargetParams;
 use async_requests::types::ThriftMegarepoAddTargetParams;
 use async_requests::types::ThriftMegarepoChangeTargetConfigParams;
@@ -115,6 +116,11 @@ pub async fn submit_request<R: MononokeRepo>(
                 params,
             )
             .await
+        }
+        "ping" => {
+            let params: ThriftAsyncPingParams =
+                serde_json::from_str(&params).context("parsing params")?;
+            enqueue::<ThriftAsyncPingParams, R>(&ctx, mononoke, queue, Some(&repo_id), params).await
         }
         _ => bail!("method {} not supported in submit", args.method),
     }?;

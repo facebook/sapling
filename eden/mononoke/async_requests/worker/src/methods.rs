@@ -198,6 +198,9 @@ pub(crate) async fn megarepo_async_request_compute<R: MononokeRepo>(
                 .map_err(|e| e.into())
                 .into()
         }
+        async_requests_types_thrift::AsynchronousRequestParams::async_ping_params(_) => {
+            todo!()
+        }
         async_requests_types_thrift::AsynchronousRequestParams::UnknownField(union_tag) => {
             Err::<thrift::MegarepoRemergeSourceResponse, _>(AsyncRequestsError::internal(anyhow!(
                 "this type of request (AsynchronousRequestParams tag {}) not supported by this worker!", union_tag
