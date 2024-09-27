@@ -24,6 +24,7 @@ from facebook.eden.ttypes import (
     EdenErrorType,
     FaultDefinition,
     MountState,
+    RemoveFaultArg,
     ResetParentCommitsParams,
     SyncBehavior,
     UnblockFaultArg,
@@ -33,6 +34,7 @@ from fb303_core.ttypes import fb303_status
 from thrift.Thrift import TException  # @manual=//thrift/lib/py:base
 
 from .lib import testcase
+from .lib.edenclient import EdenCommandError
 
 
 @testcase.eden_repo_test
@@ -241,6 +243,49 @@ class MountTest(testcase.EdenRepoTest):
             self.assertEqual(fb303_status.ALIVE, client.getDaemonInfo().status)
 
         self.assertEqual({self.mount: "RUNNING"}, self.eden.list_cmd_simple())
+
+    def test_remount_after_initialization_failure(self) -> None:
+        # Unmount and inject a fault that blocks subsequent mount attempts
+        self.eden.run_cmd("unmount", self.mount)
+        with self.eden.get_thrift_client_legacy() as client:
+            fault = FaultDefinition(
+                keyClass="failMountInitialization",
+                keyValueRegex=".*",
+                errorType="runtime_error",
+                errorMessage="PC LOAD LETTER",
+            )
+            client.injectFault(fault)
+
+        # Run the "eden mount" CLI command.
+        # This will fail because we injected an exception
+        with self.assertRaises(EdenCommandError):
+            self.eden.run_cmd("mount", self.mount)
+
+        # Remove the previously added fault
+        with self.eden.get_thrift_client_legacy() as client:
+            client.removeFault(
+                RemoveFaultArg(keyClass="failMountInitialization", keyValueRegex=".*")
+            )
+
+        # A subsequent attempt to remount should crash EdenFS (on NFS mounts)
+        self.eden.run_unchecked("mount", self.mount)
+
+        self.assertEqual(False if self.use_nfs() else True, self.eden.is_healthy())
+
+        if self.use_nfs():
+            # The subprocess library doesn't know that the daemon crashed, so
+            # we must first wait() on it so that we don't receive errors like:
+            # ResourceWarning: subprocess $PID is still running
+            if self.eden._process is not None:
+                self.eden._process.wait()
+
+            # Setting the process field to none is temporary, as this test will
+            # be fixed in the next diff. It's required because start() expects
+            # this field to be None.
+            self.eden._process = None
+
+            # The daemon must be restarted before the test finishes
+            self.eden.start()
 
     def _wait_for_mount_running(
         self, client: EdenClient, path: Optional[Path] = None

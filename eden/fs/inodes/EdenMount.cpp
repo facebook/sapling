@@ -2203,6 +2203,12 @@ folly::Future<folly::Unit> EdenMount::fsChannelMount(bool readOnly) {
                 // Channel is later moved. We must assign addr to a local var
                 // to avoid the possibility of a use-after-move bug.
                 auto addr = channel->getAddr();
+
+                // For testing purposes only: allow tests to force an exception
+                // that mimics privhelper mount failing
+                serverState_->getFaultInjector().check(
+                    "failMountInitialization", mountPath.view());
+
                 // TODO: teach privhelper or something to mount on Windows
                 return serverState_->getPrivHelper()
                     ->nfsMount(
@@ -2269,6 +2275,11 @@ folly::Future<folly::Unit> EdenMount::fsChannelMount(bool readOnly) {
               return makeFuture(folly::unit);
             });
 #else
+
+        // For testing purposes only: allow tests to force an exception
+        // that mimics privhelper mount failing
+        serverState_->getFaultInjector().check(
+            "failMountInitialization", mountPath.view());
         return serverState_->getPrivHelper()
             ->fuseMount(
                 mountPath.view(),
