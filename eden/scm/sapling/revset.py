@@ -1713,14 +1713,9 @@ def outgoing(repo, subset, x):
             hint=_("see '@prog@ help config.paths'"),
         )
     dest = path.pushloc or path.loc
-    branches = path.branch, []
-
-    revs, checkout = hg.addbranchrevs(repo, repo, branches, [])
-    if revs:
-        revs = [repo.lookup(rev) for rev in revs]
     other = hg.peer(repo, {}, dest)
     with repo.ui.configoverride({("ui", "quiet"): True}):
-        outgoing = discovery.findcommonoutgoing(repo, other, onlyheads=revs)
+        outgoing = discovery.findcommonoutgoing(repo, other)
     cl = repo.changelog
     o = {cl.rev(r) for r in outgoing.missing}
     return subset & o
@@ -1943,10 +1938,7 @@ def remote(repo, subset, x):
         # i18n: "remote" is a keyword
         dest = getstring(l[1], _("remote requires a repository path"))
     dest = repo.ui.expandpath(dest or "default")
-    dest, branches = hg.parseurl(dest)
-    revs, checkout = hg.addbranchrevs(repo, repo, branches, [])
-    if revs:
-        revs = [repo.lookup(rev) for rev in revs]
+    dest = hg.parseurl(dest)
     other = hg.peer(repo, {}, dest)
     n = other.lookup(q)
     if n in repo:

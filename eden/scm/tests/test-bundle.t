@@ -239,7 +239,7 @@ bundle single branch
   $ hg bundle bundle.hg test:branchy_server --debug --config progress.debug=true
   query 1; heads
   searching for changes
-  local heads: 2; remote heads: 1 (explicit: 0); initial common: 1
+  local heads: 1; remote heads: 1 (explicit: 0); initial common: 1
   sampling from both directions (1 of 1)
   sampling undecided commits (1 of 1)
   progress: searching: checking 1 commits, 0 left 2 queries

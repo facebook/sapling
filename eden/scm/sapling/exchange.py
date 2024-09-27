@@ -18,6 +18,7 @@ import hashlib
 from typing import List, Tuple
 
 import bindings
+
 from sapling import tracing
 
 from . import (
@@ -43,7 +44,6 @@ from . import (
 )
 from .i18n import _
 from .node import bin, hex, nullid
-
 
 urlerr = util.urlerr
 urlreq = util.urlreq

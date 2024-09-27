@@ -193,7 +193,7 @@ def _pull(orig, ui, repo, source: str = "default", **opts):
 
 def _dopull(orig, ui, repo, source: str = "default", **opts):
     # Copy paste from `pull` command
-    source, branches = hg.parseurl(ui.expandpath(source), opts.get("branch"))
+    source = hg.parseurl(ui.expandpath(source))
 
     scratchbookmarks = {}
     unfi = repo

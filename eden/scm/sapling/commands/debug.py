@@ -1284,14 +1284,14 @@ def debugdiffdirs(ui, repo, *pats, **opts) -> None:
 )
 def debugdiscovery(ui, repo, remoteurl: str = "default", **opts) -> None:
     """runs the changeset discovery protocol in isolation"""
-    remoteurl, branches = hg.parseurl(ui.expandpath(remoteurl))
+    remoteurl = hg.parseurl(ui.expandpath(remoteurl))
     remote = hg.peer(repo, opts, remoteurl)
     ui.status(_("comparing with %s\n") % util.hidepassword(remoteurl))
 
     # make sure tests are repeatable
     random.seed(12323)
 
-    def doit(pushedrevs, remoteheads, remote=remote):
+    def doit(pushedrevs, remote=remote):
         nodes = None
         if pushedrevs:
             revs = scmutil.revrange(repo, pushedrevs)
@@ -1308,9 +1308,8 @@ def debugdiscovery(ui, repo, remoteurl: str = "default", **opts) -> None:
         elif rheads <= common:
             ui.write(_x("remote is subset\n"))
 
-    remoterevs, _checkout = hg.addbranchrevs(repo, remote, branches, revs=None)
     localrevs = opts["rev"]
-    doit(localrevs, remoterevs)
+    doit(localrevs)
 
 
 @command(
@@ -3100,7 +3099,7 @@ def debugssl(ui, repo, source=None, **opts) -> None:
             )
         source = "default"
 
-    source, branches = hg.parseurl(ui.expandpath(source))
+    source = hg.parseurl(ui.expandpath(source))
     url = util.url(source)
     addr = None
 

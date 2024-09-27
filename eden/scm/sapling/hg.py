@@ -76,59 +76,17 @@ def _eager_or_local(path):
     return _local(path)
 
 
-def addbranchrevs(lrepo, other, branches, revs):
-    peer = other.peer()  # a courtesy to callers using a localrepo for other
-    hashbranch, branches = branches
-    if not hashbranch and not branches:
-        x = revs or None
-        if hasattr(revs, "first"):
-            y = revs.first()
-        elif revs:
-            y = revs[0]
-        else:
-            y = None
-        return x, y
-    if revs:
-        revs = list(revs)
-    else:
-        revs = []
+def parseurl(path):
+    """parse url#branch, returning url"""
 
-    if not peer.capable("branchmap"):
-        if branches:
-            raise error.Abort(_("remote branch lookup not supported"))
-        revs.append(hashbranch)
-        return revs, revs[0]
-    branchmap = peer.branchmap()
-
-    def primary(branch):
-        if branch == ".":
-            if not lrepo:
-                raise error.Abort(_("dirstate branch not accessible"))
-            branch = lrepo.dirstate.branch()
-        if branch in branchmap:
-            revs.extend(node.hex(r) for r in reversed(branchmap[branch]))
-            return True
-        else:
-            return False
-
-    for branch in branches:
-        if not primary(branch):
-            raise error.RepoLookupError(_("unknown branch '%s'") % branch)
-    if hashbranch:
-        if not primary(hashbranch):
-            revs.append(hashbranch)
-    return revs, revs[0]
-
-
-def parseurl(path, branches=None):
-    """parse url#branch, returning (url, (branch, branches))"""
+    # We no longer support hg branches, so just drop the branch
+    # fragment. The Rust clone supports fragments as bookmarks, so
+    # doesn't seem like we will need to bring fragment support back to
+    # Python.
 
     u = util.url(path)
-    branch = None
-    if u.fragment:
-        branch = u.fragment
-        u.fragment = None
-    return str(u), (branch, branches or [])
+    u.fragment = None
+    return str(u)
 
 
 schemes = {
@@ -266,13 +224,11 @@ def share(
 
     if isinstance(source, str):
         origsource = ui.expandpath(source)
-        source, branches = parseurl(origsource)
+        source = parseurl(origsource)
         srcrepo = repository(ui, source)
-        rev, checkout = addbranchrevs(srcrepo, srcrepo, branches, None)
     else:
         srcrepo = source.local()
         origsource = source = srcrepo.url()
-        checkout = None
 
     sharedpath = srcrepo.sharedpath  # if our source is already sharing
     requirements = srcrepo.requirements.copy()
@@ -313,7 +269,7 @@ def share(
     # Reload repo so Rust repo picks up paths.default.
     r = repository(ui, destwvfs.base)
 
-    _postshareupdate(r, update, checkout=checkout)
+    _postshareupdate(r, update)
     return r
 
 
@@ -557,14 +513,12 @@ def clone(
         # Construct the srcpeer after the destpeer, so we can use the destrepo.ui
         # configs.
         if isinstance(source, str):
-            source, mayberevs = parseurl(origsource)
-            if len(mayberevs) == 1:
-                rev = rev or mayberevs[0]
+            source = parseurl(origsource)
             srcpeer = peer(destrepo.ui if destrepo else ui, peeropts, source)
 
-        branch = (None, [])
-        # pyre-fixme[61]: `srcpeer` is undefined, or not always defined.
-        rev, checkout = addbranchrevs(srcpeer, srcpeer, branch, rev)
+        checkout = None
+        if rev:
+            checkout = rev[0]
 
         source = util.urllocalpath(source)
 

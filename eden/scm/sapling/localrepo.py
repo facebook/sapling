@@ -1311,7 +1311,7 @@ class localrepository:
         """Create a connection from the connection pool"""
         from . import hg  # avoid cycle
 
-        source, _branches = hg.parseurl(self.ui.expandpath(source))
+        source = hg.parseurl(self.ui.expandpath(source))
         return self.connectionpool.get(source, opts=opts)
 
     @repofilecache(localpaths=["shared"])

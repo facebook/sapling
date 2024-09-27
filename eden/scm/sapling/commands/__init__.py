@@ -75,7 +75,6 @@ from ..pycompat import isint, range
 from ..utils import subtreeutil
 from . import cmdtable
 
-
 with hgdemandimport.deactivated():
     # Importing these modules have side effect on the command table.
     from . import (  # noqa: F401
@@ -1490,9 +1489,8 @@ def bundle(ui, repo, fname, dest=None, **opts):
         outgoing = discovery.outgoing(repo, common, heads)
     else:
         dest = ui.expandpath(dest or "default-push", dest or "default")
-        dest, branches = hg.parseurl(dest)
+        dest = hg.parseurl(dest)
         other = hg.peer(repo, opts, dest)
-        revs, checkout = hg.addbranchrevs(repo, repo, branches, revs)
         heads = revs and list(map(repo.lookup, revs)) or revs
         outgoing = discovery.findcommonoutgoing(
             repo, other, onlyheads=heads, force=opts.get("force"), portable=True
@@ -3605,13 +3603,11 @@ def identify(
         hexfunc = short
     default = not (num or id or branch or bookmarks)
     output = []
-    revs = []
 
     if source:
-        source, branches = hg.parseurl(ui.expandpath(source))
+        source = hg.parseurl(ui.expandpath(source))
         peer = hg.peer(repo or ui, opts, source)  # only pass ui when no repo
         repo = peer.local()
-        revs, checkout = hg.addbranchrevs(repo, peer, branches, None)
 
     fm = ui.formatter("identify", opts)
     fm.startitem()
@@ -3619,8 +3615,6 @@ def identify(
     if not repo:
         if num or branch:
             raise error.Abort(_("can't query remote revision number or branch"))
-        if not rev and revs:
-            rev = revs[0]
         if not rev:
             rev = "tip"
 
@@ -4754,19 +4748,13 @@ def pull(ui, repo, source="default", **opts):
         if name.startswith("pull:"):
             hintutil.trigger(name)
 
-    source, branches = hg.parseurl(ui.expandpath(source))
+    source = hg.parseurl(ui.expandpath(source))
     ui.status_err(_("pulling from %s\n") % util.hidepassword(source))
 
     hasselectivepull = ui.configbool("remotenames", "selectivepull")
-    if (
-        hasselectivepull
-        and ui.configbool("commands", "new-pull")
-        and not branches[0]
-        and not branches[1]
-    ):
+    if hasselectivepull and ui.configbool("commands", "new-pull"):
         # Use the new repo.pull API.
         # - Does not support non-selectivepull.
-        # - Does not support named branches.
         modheads, checkout = _newpull(ui, repo, source, **opts)
     else:
         if git.isgitpeer(repo):
@@ -4786,8 +4774,10 @@ def pull(ui, repo, source="default", **opts):
             source, opts=opts
         ) as conn, repo.wlock(), repo.lock(), repo.transaction("pull"):
             other = conn.peer
-            revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get("rev"))
+            revs = opts.get("rev") or None
+            checkout = None
             if revs:
+                checkout = revs[0]
                 revs = autopull.rewritepullrevs(repo, revs)
 
             implicitbookmarks = set()
@@ -4877,13 +4867,11 @@ def pull(ui, repo, source="default", **opts):
     if checkout and checkout in repo:
         checkout = repo[checkout].node()
 
-        # order below depends on implementation of
-        # hg.addbranchrevs(). opts['bookmark'] is ignored,
-        # because 'checkout' is determined without it.
+        # opts['bookmark'] is ignored, because 'checkout' is determined without it.
         if opts.get("rev"):
             brev = opts["rev"][0]
         else:
-            brev = branches[0]
+            brev = None
     repo._subtoppath = source
     try:
         ret = postincoming(ui, repo, modheads, opts.get("update"), checkout, brev)
@@ -5044,9 +5032,8 @@ def push(ui, repo, dest=None, **opts):
             hint=_("see '@prog@ help config.paths'"),
         )
     dest = path.pushloc or path.loc
-    branches = (path.branch, [])
     ui.status_err(_("pushing to %s\n") % util.hidepassword(dest))
-    revs, checkout = hg.addbranchrevs(repo, repo, branches, opts.get("rev"))
+    revs = opts.get("rev") or None
     other = hg.peer(repo, opts, dest)
 
     if revs:
@@ -6105,60 +6092,50 @@ def summary(ui, repo, **opts):
             return
 
     def getincoming():
-        source, branches = hg.parseurl(ui.expandpath("default"))
-        sbranch = branches[0]
+        source = hg.parseurl(ui.expandpath("default"))
         try:
             other = hg.peer(repo, {}, source)
         except error.RepoError:
             if opts.get("remote"):
                 raise
-            return source, sbranch, None, None, None
-        revs, checkout = hg.addbranchrevs(repo, other, branches, None)
-        if revs:
-            revs = [other.lookup(rev) for rev in revs]
+            return source, None, None, None
         ui.debug("comparing with %s\n" % util.hidepassword(source))
         with repo.ui.configoverride({("ui", "quiet"): True}):
-            commoninc = discovery.findcommonincoming(repo, other, heads=revs)
-        return source, sbranch, other, commoninc, commoninc[1]
+            commoninc = discovery.findcommonincoming(repo, other)
+        return source, other, commoninc, commoninc[1]
 
     if needsincoming:
-        source, sbranch, sother, commoninc, incoming = getincoming()
+        source, sother, commoninc, incoming = getincoming()
     else:
-        source = sbranch = sother = commoninc = incoming = None
+        source = sother = commoninc = incoming = None
 
     def getoutgoing():
-        dest, branches = hg.parseurl(ui.expandpath("default-push", "default"))
-        dbranch = branches[0]
-        revs, checkout = hg.addbranchrevs(repo, repo, branches, None)
+        dest = hg.parseurl(ui.expandpath("default-push", "default"))
         if source != dest:
             try:
                 dother = hg.peer(repo, {}, dest)
             except error.RepoError:
                 if opts.get("remote"):
                     raise
-                return dest, dbranch, None, None
+                return dest, None, None
             ui.debug("comparing with %s\n" % util.hidepassword(dest))
         elif sother is None:
             # there is no explicit destination peer, but source one is invalid
-            return dest, dbranch, None, None
+            return dest, None, None
         else:
             dother = sother
-        if source != dest or (sbranch is not None and sbranch != dbranch):
+        if source != dest:
             common = None
         else:
             common = commoninc
-        if revs:
-            revs = [repo.lookup(rev) for rev in revs]
         with repo.ui.configoverride({("ui", "quiet"): True}):
-            outgoing = discovery.findcommonoutgoing(
-                repo, dother, onlyheads=revs, commoninc=common
-            )
-        return dest, dbranch, dother, outgoing
+            outgoing = discovery.findcommonoutgoing(repo, dother, commoninc=common)
+        return dest, dother, outgoing
 
     if needsoutgoing:
-        dest, dbranch, dother, outgoing = getoutgoing()
+        dest, dother, outgoing = getoutgoing()
     else:
-        dest = dbranch = dother = outgoing = None
+        dest = dother = outgoing = None
 
     if opts.get("remote"):
         t = []
@@ -6186,7 +6163,7 @@ def summary(ui, repo, **opts):
         ui,
         repo,
         opts,
-        ((source, sbranch, sother, commoninc), (dest, dbranch, dother, outgoing)),
+        ((source, None, sother, commoninc), (dest, None, dother, outgoing)),
     )
 
 
@@ -6396,7 +6373,6 @@ def update(
     inactive=None,
     **opts,
 ):
-
     ui.log("checkout_info", checkout_mode="python")
 
     def abort_on_unresolved_conflicts():
