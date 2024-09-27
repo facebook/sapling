@@ -176,7 +176,8 @@ def _moverelative(ui, repo, args, opts, reverse=False):
     if n <= 0:
         return
 
-    if reverse and n >= 1000:
+    prev_steps_threshold = ui.configint("experimental", "prev.steps-threshold", 1000)
+    if reverse and n >= prev_steps_threshold:
         hintutil.triggershow(ui, "prev-steps-threshold", n)
 
     if ui.configbool("amend", "alwaysnewest") and not ui.interactive():
