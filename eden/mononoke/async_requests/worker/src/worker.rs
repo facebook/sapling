@@ -264,23 +264,39 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
                     .log_with_msg("Request complete, saving result", None);
 
                 // Save the result.
-                let updated_res = queue.complete(&ctx, &req_id, result).await;
+                match result {
+                    Ok(result) => {
+                        let updated_res = queue.complete(&ctx, &req_id, result).await;
+                        let updated = match updated_res {
+                            Ok(updated) => {
+                                info!(ctx.logger(), "[{}] result saved", &req_id.0);
+                                ctx.scuba().clone().log_with_msg("Result saved", None);
+                                updated
+                            }
+                            Err(err) => {
+                                ctx.scuba().clone().log_with_msg(
+                                    "Failed to save result",
+                                    Some(format!("{:?}", err)),
+                                );
+                                return Err(err);
+                            }
+                        };
 
-                let updated = match updated_res {
-                    Ok(updated) => {
-                        info!(ctx.logger(), "[{}] result saved", &req_id.0);
-                        ctx.scuba().clone().log_with_msg("Result saved", None);
-                        updated
+                        Ok(updated)
                     }
                     Err(err) => {
+                        info!(
+                            ctx.logger(),
+                            "[{}] worker failed to process request, will retry: {:?}",
+                            &req_id.0,
+                            err
+                        );
                         ctx.scuba()
                             .clone()
-                            .log_with_msg("Failed to save result", Some(format!("{:?}", err)));
-                        return Err(err);
+                            .log_with_msg("Failed to process request", Some(format!("{:?}", err)));
+                        Ok(false)
                     }
-                };
-
-                Ok(updated)
+                }
             }
             Either::Right((res, _)) => {
                 // We haven't completed the request, and failed to update

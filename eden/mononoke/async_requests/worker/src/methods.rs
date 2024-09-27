@@ -14,11 +14,11 @@
 
 use std::collections::HashMap;
 
-use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::Result;
 use async_requests::types::AsynchronousRequestParams;
 use async_requests::types::AsynchronousRequestResult;
 use async_requests::types::IntoConfigFormat;
-use async_requests::AsyncRequestsError;
 use context::CoreContext;
 use megarepo_api::MegarepoApi;
 use megarepo_error::MegarepoError;
@@ -159,54 +159,54 @@ async fn megarepo_remerge_source<R: MononokeRepo>(
 }
 
 /// Given the request params dispatches the request to the right processing
-/// funtion and returns the computation result. This function doesn't return
-/// `Result` as both successfull computation and error are part of
-/// `AsynchronousRequestResult` structure.
+/// function and returns the computation result. Both successfull computation
+/// and error are part of the `AsynchronousRequestResult` structure. We only
+/// return `Err` for transient errors, to indicate we should retry.
 pub(crate) async fn megarepo_async_request_compute<R: MononokeRepo>(
     ctx: &CoreContext,
     megarepo_api: &MegarepoApi<R>,
     params: AsynchronousRequestParams,
-) -> AsynchronousRequestResult {
+) -> Result<AsynchronousRequestResult> {
     match params.into() {
         async_requests_types_thrift::AsynchronousRequestParams::megarepo_add_target_params(params) => {
-            megarepo_add_sync_target(ctx, megarepo_api, params)
+            Ok(megarepo_add_sync_target(ctx, megarepo_api, params)
                 .await
                 .map_err(|e| e.into())
-                .into()
+                .into())
         }
         async_requests_types_thrift::AsynchronousRequestParams::megarepo_add_branching_target_params(params) => {
-            megarepo_add_branching_sync_target(ctx, megarepo_api, params)
+            Ok(megarepo_add_branching_sync_target(ctx, megarepo_api, params)
                 .await
                 .map_err(|e| e.into())
-                .into()
+                .into())
         }
         async_requests_types_thrift::AsynchronousRequestParams::megarepo_change_target_params(params) => {
-            megarepo_change_target_config(ctx, megarepo_api, params)
+            Ok(megarepo_change_target_config(ctx, megarepo_api, params)
                 .await
                 .map_err(|e| e.into())
-                .into()
+                .into())
         }
         async_requests_types_thrift::AsynchronousRequestParams::megarepo_remerge_source_params(params) => {
-            megarepo_remerge_source(ctx, megarepo_api, params)
+            Ok(megarepo_remerge_source(ctx, megarepo_api, params)
                 .await
                 .map_err(|e| e.into())
-                .into()
+                .into())
         }
         async_requests_types_thrift::AsynchronousRequestParams::megarepo_sync_changeset_params(params) => {
-            megarepo_sync_changeset(ctx, megarepo_api, params)
+            Ok(megarepo_sync_changeset(ctx, megarepo_api, params)
                 .await
                 .map_err(|e| e.into())
-                .into()
+                .into())
         }
         async_requests_types_thrift::AsynchronousRequestParams::async_ping_params(_) => {
-            todo!()
+            bail!(
+                "this type of request (AsynchronousRequestParams tag {}) not supported by this worker!", "ping".to_string(),
+            )
         }
         async_requests_types_thrift::AsynchronousRequestParams::UnknownField(union_tag) => {
-            Err::<thrift::MegarepoRemergeSourceResponse, _>(AsyncRequestsError::internal(anyhow!(
+             bail!(
                 "this type of request (AsynchronousRequestParams tag {}) not supported by this worker!", union_tag
-            )))
-            .into()
-
+             )
         }
     }
 }
