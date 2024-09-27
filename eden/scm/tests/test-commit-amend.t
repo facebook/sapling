@@ -189,7 +189,6 @@ at first, test saving last-message.txt
   HG: Leave message empty to abort commit.
   HG: --
   HG: user: foo
-  HG: branch 'default'
   HG: added B
   HG: changed A
   transaction abort! (?)
@@ -215,7 +214,6 @@ then, test editing custom commit message
   HG: Leave message empty to abort commit.
   HG: --
   HG: user: foo
-  HG: branch 'default'
   HG: added B
   HG: changed A
 
@@ -230,7 +228,6 @@ Same, but with changes in working dir (different code path):
   HG: Leave message empty to abort commit.
   HG: --
   HG: user: foo
-  HG: branch 'default'
   HG: added B
   HG: changed A
 
@@ -531,7 +528,6 @@ Test that amend with --edit invokes editor forcibly
   HG: Leave message empty to abort commit.
   HG: --
   HG: user: test
-  HG: branch 'default'
   HG: bookmark 'A'
   HG: added A
 

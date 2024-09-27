@@ -75,7 +75,6 @@
   HG: Leave message empty to abort commit.
   HG: --
   HG: user: someone
-  HG: branch 'default'
   HG: changed a
   $ cat a
   line2
@@ -97,7 +96,6 @@
   HG: Leave message empty to abort commit.
   HG: --
   HG: user: test
-  HG: branch 'default'
   HG: changed a
   abort: empty commit message
   [255]

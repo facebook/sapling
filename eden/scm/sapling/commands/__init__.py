@@ -3692,7 +3692,7 @@ def identify(
                 output.append(bm)
         else:
             if branch:
-                output.append(ctx.branch())
+                output.append("default")
 
             if bookmarks:
                 output.extend(ctx.bookmarks())

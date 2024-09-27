@@ -10,6 +10,7 @@ import abc
 import collections
 
 import bindings
+
 from sapling import node as nodemod, pycompat
 from sapling.graphmod import CHANGESET, GRANDPARENT, PARENT
 from sapling.pycompat import ensurestr
@@ -82,9 +83,6 @@ class FakeCtx:
 
     def rev(self):
         return self._rev
-
-    def branch(self):
-        return "default"
 
     def bookmarks(self):
         return self._nodeinfo.bookmarks

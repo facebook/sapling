@@ -18,7 +18,6 @@ from . import error, node, parser, pycompat, util
 from .i18n import _
 from .pycompat import range
 
-
 elements = {
     # token-type: binding-strength, primary, prefix, infix, suffix
     "(": (21, None, ("group", 1, ")"), ("func", 1, ")"), None),
@@ -640,7 +639,7 @@ def formatspec(expr, *args):
     %r = revset expression, parenthesized
     %d = int(arg), no quoting
     %s = string(arg), escaped and single-quoted
-    %b = arg.branch(), escaped and single-quoted
+    %b = 'default'
     %n = hex(arg), single-quoted
     %% = a literal '%'
 
@@ -682,7 +681,7 @@ def formatspec(expr, *args):
         elif c == "n":
             return _quote(node.hex(arg))
         elif c == "b":
-            return _quote(arg.branch())
+            return _quote("default")
 
     def listexp(s, t):
         l = len(s)
@@ -699,7 +698,7 @@ def formatspec(expr, *args):
         elif t == "n":
             return "_hexlist('%s')" % "\0".join(node.hex(a) for a in s)
         elif t == "b":
-            return "_list('%s')" % "\0".join(a.branch() for a in s)
+            return "_list('%s')" % "\0".join("default" for a in s)
 
         m = l // 2
         return "(%s or %s)" % (listexp(s[:m], t), listexp(s[m:], t))

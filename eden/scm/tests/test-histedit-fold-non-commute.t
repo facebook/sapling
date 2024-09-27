@@ -117,7 +117,6 @@ fix up
   HG: Leave message empty to abort commit.
   HG: --
   HG: user: test
-  HG: branch 'default'
   HG: changed d
   HG: changed e
   merging e

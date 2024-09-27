@@ -134,7 +134,6 @@
   HG: Leave message empty to abort commit.
   HG: --
   HG: user: foo
-  HG: branch 'default'
   HG: added b
   HG: removed a
   $ hg export tip --git

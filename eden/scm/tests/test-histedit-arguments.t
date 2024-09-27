@@ -260,7 +260,6 @@ short hash. This tests issue3893.
   HG: Leave message empty to abort commit.
   HG: --
   HG: user: test
-  HG: branch 'default'
   HG: changed alpha
 
   $ hg goto -q 'desc(three)'

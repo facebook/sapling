@@ -215,7 +215,6 @@ check histedit_source
   HG: Leave message empty to abort commit.
   HG: --
   HG: user: test
-  HG: branch 'default'
   HG: added f
 
   $ hg status
@@ -307,7 +306,6 @@ check saving last-message.txt, at first
   HG: Leave message empty to abort commit.
   HG: --
   HG: user: test
-  HG: branch 'default'
   HG: added f
   ====
   note: commit message saved in .hg/last-message.txt
@@ -330,7 +328,6 @@ action)
   HG: Leave message empty to abort commit.
   HG: --
   HG: user: test
-  HG: branch 'default'
   HG: added f
   note: commit message saved in .hg/last-message.txt
   abort: pretxncommit.unexpectedabort hook exited with status 1

@@ -602,9 +602,6 @@ class changectx(basectx):
     def shortdescription(self):
         return self.description().splitlines()[0]
 
-    def branch(self):
-        return encoding.tolocal(self._changeset.extra.get("branch"))
-
     def closesbranch(self):
         return "close" in self._changeset.extra
 
@@ -870,9 +867,6 @@ class basefilectx:
 
     def description(self):
         return self._changectx.description()
-
-    def branch(self):
-        return self._changectx.branch()
 
     def extra(self):
         return self._changectx.extra()
@@ -1745,9 +1739,6 @@ class committablectx(basectx):
 
     def deleted(self):
         return self._status.deleted
-
-    def branch(self):
-        return encoding.tolocal(self._extra["branch"])
 
     def closesbranch(self):
         return "close" in self._extra
@@ -2940,7 +2931,6 @@ class memctx(committablectx):
         op,
         parents=None,
     ):
-
         extra = ctx.extra().copy()
         extra[op + "_source"] = ctx.hex()
         mutinfo = mutation.record(ctx.repo(), extra, [ctx.node()], op)
@@ -3397,7 +3387,6 @@ class metadataonlyctx(committablectx):
 
 
 class subtreecopyctx(committablectx):
-
     def __new__(cls, repo, to_mctx, *args, **kwargs):
         return super(subtreecopyctx, cls).__new__(cls, repo)
 

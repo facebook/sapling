@@ -47,5 +47,4 @@ Ensure it populates the message editor:
   HG: Leave message empty to abort commit.
   HG: --
   HG: user: test
-  HG: branch 'default'
   HG: changed afile

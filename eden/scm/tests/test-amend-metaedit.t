@@ -137,7 +137,6 @@ Test
   SL: Leave message empty to abort commit.
   SL: --
   SL: user: test
-  SL: branch 'default'
   SL: added E
   SL: added F
   2 changesets folded
@@ -167,7 +166,6 @@ no new commit is created here because the date is the same
   SL: Leave message empty to abort commit.
   SL: --
   SL: user: test
-  SL: branch 'default'
   SL: added E
   SL: added F
   nothing changed
@@ -482,7 +480,6 @@ Editing a single commit using `--batch` uses the single-commit template
   SL: Leave message empty to abort commit.
   SL: --
   SL: user: test
-  SL: branch 'default'
   SL: added A3
   nothing changed
   [1]

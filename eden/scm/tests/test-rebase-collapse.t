@@ -57,7 +57,6 @@ Rebasing B onto H and collapsing changesets:
   HG: Leave message empty to abort commit.
   HG: --
   HG: user: test
-  HG: branch 'default'
   HG: added B
   HG: added C
   HG: added D

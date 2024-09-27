@@ -191,7 +191,6 @@ check saving last-message.txt
   HG: Leave message empty to abort commit.
   HG: --
   HG: user: test
-  HG: branch 'default'
   HG: added c
   HG: added d
   HG: added f
@@ -385,7 +384,6 @@ dropped revision.
   HG: Leave message empty to abort commit.
   HG: --
   HG: user: test
-  HG: branch 'default'
   HG: changed file
   $ hg logt -G
   @  10c647b2cdd5 +4
@@ -540,7 +538,6 @@ Editor should have run only once
   HG: Leave message empty to abort commit.
   HG: --
   HG: user: test
-  HG: branch 'default'
   HG: added foo
   END
 

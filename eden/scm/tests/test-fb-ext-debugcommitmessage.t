@@ -28,7 +28,6 @@
   HG: Leave message empty to abort commit.
   HG: --
   HG: user: test
-  HG: branch 'default'
   HG: no files changed
   $ hg debugcommitmessage --config 'committemplate.changeset.commit.normal.normal=Test Specific Message\n'
   Test Specific Message
@@ -43,5 +42,4 @@
   HG: Leave message empty to abort commit.
   HG: --
   HG: user: test
-  HG: branch 'default'
   HG: no files changed

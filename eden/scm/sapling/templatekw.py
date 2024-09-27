@@ -363,7 +363,7 @@ def showbranch(**args):
     """String. The name of the branch on which the changeset was
     committed.
     """
-    return args[r"ctx"].branch()
+    return "default"
 
 
 @templatekeyword("branches")
@@ -372,10 +372,6 @@ def showbranches(**args) -> _hybrid:
     changeset was committed. Will be empty if the branch name was
     default. (DEPRECATED)
     """
-    args = args
-    branch = args["ctx"].branch()
-    if branch != "default":
-        return showlist("branch", [branch], args, plural="branches")
     return showlist("branch", [], args, plural="branches")
 
 

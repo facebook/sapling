@@ -161,7 +161,6 @@ Now we see the default commit message
   HG: Leave message empty to abort commit.
   HG: --
   HG: user: test
-  HG: branch 'default'
   HG: added bar
   changeset 9b702c98cd4b backs out changeset 4dc95485382f
 

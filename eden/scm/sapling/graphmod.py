@@ -27,7 +27,6 @@ from __future__ import absolute_import
 from . import dagop, smartset, util
 from .node import nullrev
 
-
 CHANGESET = "C"
 PARENT = "P"
 GRANDPARENT = "G"
@@ -114,91 +113,3 @@ def nodes(repo, nodes):
         ctx = repo[node]
         parents = set((PARENT, p.rev()) for p in ctx.parents() if p.node() in include)
         yield (ctx.rev(), CHANGESET, ctx, sorted(parents))
-
-
-def colored(dag, repo):
-    """annotates a DAG with colored edge information
-
-    For each DAG node this function emits tuples::
-
-      (id, type, data, (col, color), [(col, nextcol, color)])
-
-    with the following new elements:
-
-      - Tuple (col, color) with column and color index for the current node
-      - A list of tuples indicating the edges between the current node and its
-        parents.
-    """
-    seen = []
-    colors = {}
-    newcolor = 1
-    config = {}
-
-    for key, val in repo.ui.configitems("graph"):
-        if "." in key:
-            branch, setting = key.rsplit(".", 1)
-            # Validation
-            if setting == "width" and val.isdigit():
-                config.setdefault(branch, {})[setting] = int(val)
-            elif setting == "color" and val.isalnum():
-                config.setdefault(branch, {})[setting] = val
-
-    if config:
-        getconf = util.lrucachefunc(lambda rev: config.get(repo[rev].branch(), {}))
-    else:
-        getconf = lambda rev: {}
-
-    for cur, type, data, parents in dag:
-
-        # Compute seen and next
-        if cur not in seen:
-            seen.append(cur)  # new head
-            colors[cur] = newcolor
-            newcolor += 1
-
-        col = seen.index(cur)
-        color = colors.pop(cur)
-        next = seen[:]
-
-        # Add parents to next
-        addparents = [p for pt, p in parents if p not in next]
-        next[col : col + 1] = addparents
-
-        # Set colors for the parents
-        for i, p in enumerate(addparents):
-            if not i:
-                colors[p] = color
-            else:
-                colors[p] = newcolor
-                newcolor += 1
-
-        # Add edges to the graph
-        edges = []
-        for ecol, eid in enumerate(seen):
-            if eid in next:
-                bconf = getconf(eid)
-                edges.append(
-                    (
-                        ecol,
-                        next.index(eid),
-                        colors[eid],
-                        bconf.get("width", -1),
-                        bconf.get("color", ""),
-                    )
-                )
-            elif eid == cur:
-                for ptype, p in parents:
-                    bconf = getconf(p)
-                    edges.append(
-                        (
-                            ecol,
-                            next.index(p),
-                            color,
-                            bconf.get("width", -1),
-                            bconf.get("color", ""),
-                        )
-                    )
-
-        # Yield and move on
-        yield (cur, type, data, (col, color), edges)
-        seen = next

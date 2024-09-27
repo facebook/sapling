@@ -204,7 +204,6 @@ partial subdir commit test
   HG: Leave message empty to abort commit.
   HG: --
   HG: user: test
-  HG: branch 'default'
   HG: added foo/foo
 
 
@@ -272,7 +271,6 @@ dot and subdir commit test
   HG: Leave message empty to abort commit.
   HG: --
   HG: user: test
-  HG: branch 'default'
   HG: added foo/plain-file
 
 
@@ -373,7 +371,6 @@ test commit message content
   HG: Leave message empty to abort commit.
   HG: --
   HG: user: test
-  HG: branch 'default'
   HG: bookmark 'activebookmark'
   HG: added added
   HG: changed changed
@@ -410,7 +407,6 @@ test saving last-message.txt
   HG: Leave message empty to abort commit.
   HG: --
   HG: user: test
-  HG: branch 'default'
   HG: bookmark 'activebookmark'
   HG: added .hgsub
   HG: added added

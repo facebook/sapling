@@ -24,6 +24,7 @@ from typing import Dict, List, Optional, Set, Tuple
 
 import bindings
 from bindings import renderdag
+
 from sapling import tracing
 from sapling.ext.extlib.phabricator import PHABRICATOR_COMMIT_MESSAGE_TAGS
 
@@ -1166,7 +1167,6 @@ def makefileobj(
     modemap=None,
     pathname=None,
 ):
-
     writable = mode not in ("r", "rb")
 
     if isstdiofilename(pat):
@@ -2234,7 +2234,7 @@ class jsonchangeset(changeset_printer):
 
         self.ui.write(_x('\n  "rev": %s') % jrev)
         self.ui.write(_x(',\n  "node": %s') % jnode)
-        self.ui.write(_x(',\n  "branch": %s') % j(ctx.branch()))
+        self.ui.write(_x(',\n  "branch": %s') % j("default"))
         self.ui.write(_x(',\n  "phase": "%s"') % ctx.phasestr())
         self.ui.write(_x(',\n  "user": %s') % j(ctx.user()))
         date = ctx.date()
@@ -4404,8 +4404,6 @@ def buildcommittext(repo, ctx, summaryfooter=""):
     edittext.append(hgprefix(_("user: %s") % ctx.user()))
     if ctx.p2():
         edittext.append(hgprefix(_("branch merge")))
-    if ctx.branch():
-        edittext.append(hgprefix(_("branch '%s'") % ctx.branch()))
     if bookmarks.isactivewdirparent(repo):
         edittext.append(hgprefix(_("bookmark '%s'") % repo._activebookmark))
     edittext.extend([hgprefix(_("added %s") % f) for f in added])
@@ -4842,7 +4840,6 @@ def _performrevert(
         originalchunks = patch.parsepatch(diff)
 
         try:
-
             chunks, opts = recordfilter(repo.ui, originalchunks, operation=operation)
             if reversehunks:
                 chunks = patch.reversehunks(chunks)

@@ -201,7 +201,6 @@ the commit message, regardless of '--edit')
   HG: Leave message empty to abort commit.
   HG: --
   HG: user: test
-  HG: branch 'default'
   HG: changed a
   abort: empty commit message
   [255]

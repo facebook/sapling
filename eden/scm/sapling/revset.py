@@ -38,7 +38,6 @@ from . import (
 )
 from .i18n import _
 
-
 # helpers for processing parsed tree
 getsymbol = revsetlang.getsymbol
 getstring = revsetlang.getstring
@@ -1926,12 +1925,12 @@ def remote(repo, subset, x):
     # i18n: "remote" is a keyword
     l = getargs(x, 0, 2, _("remote takes zero, one, or two arguments"))
 
-    q = "."
+    # Legacy default of using the current branch (which is now only "default").
+    # Maybe we should use the current remote bookmark (if one is checked out)?
+    q = "default"
     if len(l) > 0:
         # i18n: "remote" is a keyword
         q = getstring(l[0], _("remote requires a string id"))
-    if q == ".":
-        q = repo["."].branch()
 
     dest = ""
     if len(l) > 1:
@@ -2066,7 +2065,7 @@ def matching(repo, subset, x):
     getfieldfuncs = []
     _funcs = {
         "user": lambda r: repo[r].user(),
-        "branch": lambda r: repo[r].branch(),
+        "branch": lambda r: "default",
         "date": lambda r: repo[r].date(),
         "description": lambda r: repo[r].description(),
         "files": lambda r: repo[r].files(),
@@ -2126,7 +2125,7 @@ def roots(repo, subset, x):
 
 _sortkeyfuncs = {
     "rev": lambda c: c.rev(),
-    "branch": lambda c: c.branch(),
+    "branch": lambda c: "default",
     "desc": lambda c: c.description(),
     "user": lambda c: c.user(),
     "author": lambda c: c.user(),
