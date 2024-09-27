@@ -1427,13 +1427,10 @@ def hasfile(repo, subset, x):
 
 @predicate("head()", safe=True)
 def head(repo, subset, x):
-    """Changeset is a named branch head."""
+    """Changeset is a head."""
     # i18n: "head" is a keyword
     getargs(x, 0, 0, _("head takes no arguments"))
-    hs = set()
-    cl = repo.changelog
-    for ls in pycompat.itervalues(repo.branchmap()):
-        hs.update(cl.rev(h) for h in ls)
+    hs = set(repo.headrevs())
     return subset & baseset(hs, repo=repo)
 
 
