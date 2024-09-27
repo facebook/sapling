@@ -21,7 +21,7 @@ Test namespace registration using registrar
   > EOF
 
   $ hg debugshell -c "ui.write('%s\n' % str(list(repo.names)))"
-  ['bookmarks', 'branches', 'c', 'remotebookmarks', 'a', 'hoistednames', 'titles', 'commitscheme']
+  ['bookmarks', 'c', 'remotebookmarks', 'a', 'hoistednames', 'titles', 'commitscheme']
 
   $ newext << EOF
   > from sapling import registrar, namespaces
@@ -34,7 +34,7 @@ Test namespace registration using registrar
   >     return namespaces.namespace()
   > EOF
   $ hg debugshell -c "ui.write('%s\n' % str(list(repo.names)))"
-  ['bookmarks', 'd', 'branches', 'c', 'remotebookmarks', 'a', 'hoistednames', 'titles', 'z', 'commitscheme']
+  ['bookmarks', 'd', 'c', 'remotebookmarks', 'a', 'hoistednames', 'titles', 'z', 'commitscheme']
 
 Test that not specifying the priority will result in failure to load the
 extension.

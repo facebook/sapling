@@ -3672,8 +3672,6 @@
   2
    bookmarks color=bookmark builtin=True
     bar,foo,text.{rev}
-   branches color=branch builtin=True
-    default
    remotebookmarks color=remotebookmark builtin=True
     
    hoistednames color=hoistedname builtin=True
@@ -3688,8 +3686,6 @@
   1
    bookmarks color=bookmark builtin=True
     baz
-   branches color=branch builtin=True
-    default
    remotebookmarks color=remotebookmark builtin=True
     
    hoistednames color=hoistedname builtin=True
@@ -3704,8 +3700,6 @@
   0
    bookmarks color=bookmark builtin=True
     
-   branches color=branch builtin=True
-    default
    remotebookmarks color=remotebookmark builtin=True
     
    hoistednames color=hoistedname builtin=True
@@ -3724,7 +3718,6 @@
 
   $ hg log -r2 -T '{namespaces % "{namespace}: {names}\n"}'
   bookmarks: bar foo text.{rev}
-  branches: default
   remotebookmarks: 
   hoistednames: 
   titles: 
@@ -3734,8 +3727,6 @@
    bar
    foo
    text.{rev}
-  branches:
-   default
   remotebookmarks:
   hoistednames:
   titles:

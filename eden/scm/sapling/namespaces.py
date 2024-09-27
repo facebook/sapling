@@ -49,21 +49,6 @@ def bookmarks(repo):
     )
 
 
-@builtinnamespace("branches", priority=30)
-def branches(repo):
-    bnames = lambda repo: repo.branchmap().keys()
-    bnamemap = lambda repo, name: tolist(repo.branchtip(name, True))
-    bnodemap = lambda repo, node: [repo[node].branch()]
-    return namespace(
-        templatename="branch",
-        logfmt=templatekw.getlogcolumns()["branch"],
-        listnames=bnames,
-        namemap=bnamemap,
-        nodemap=bnodemap,
-        builtin=True,
-    )
-
-
 @builtinnamespace("remotebookmarks", priority=55)
 def remotebookmarks(repo):
     namemap = lambda repo, name: repo._remotenames.mark2nodes().get(name, [])
@@ -242,9 +227,6 @@ class namespaces:
         if 'self.included' is 'False'.
         """
         for ns, v in self._names.items():
-            # Fast path: do not consider branches unless it's "default".
-            if ns == "branches" and name != "default":
-                continue
             if namespaces is not None:
                 if ns not in namespaces:
                     continue

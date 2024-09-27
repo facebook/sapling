@@ -118,8 +118,6 @@ def _ctxdesc(ctx) -> str:
     repo = ctx.repo()
     names = []
     for nsname, ns in repo.names.items():
-        if nsname == "branches":
-            continue
         names.extend(ns.names(repo, ctx.node()))
     if names:
         desc += " (%s)" % " ".join(names)

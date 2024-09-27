@@ -427,7 +427,9 @@ class changectx(basectx):
             if changeid == "null":
                 self._node = nullid
                 return
-            if changeid == "tip":
+
+            # Be backwards compatible for resolving the "default" branch.
+            if changeid == "tip" or changeid == "default":
                 self._node = repo.changelog.tip()
                 return
             try:

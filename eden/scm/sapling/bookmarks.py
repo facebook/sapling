@@ -1224,9 +1224,6 @@ class lazyremotenamedict(pycompat.Mapping):
                 % (potentialentry, hexnode, e),
                 hint=_("try '@prog@ doctor' to attempt to fix it"),
             )
-        # Skip closed branches
-        if nametype == "branches" and repo[binnode].closesbranch():
-            return None
         return [binnode]
 
     def __getitem__(self, key):

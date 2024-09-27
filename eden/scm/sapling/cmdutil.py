@@ -2102,10 +2102,6 @@ class changeset_printer:
             )
 
         for nsname, ns in self.repo.names.items():
-            # branches has special logic already handled above, so here we just
-            # skip it
-            if nsname == "branches":
-                continue
             # we will use the templatename as the color name since those two
             # should be the same
             for name in ns.names(self.repo, changenode):

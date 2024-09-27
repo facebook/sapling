@@ -1017,7 +1017,7 @@
      test * (glob)
   $ hg share -B obsrepo obsshare
   updating working directory
-  6 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  7 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd obsshare
 
   $ hg bookmarks

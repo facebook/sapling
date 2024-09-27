@@ -2306,7 +2306,7 @@ def debugnamecomplete(ui, repo, *args, **opts) -> None:
         # arc uses debugnamecomplete for doing some really wacky things, but
         # luckily it does so by setting HGPLAIN=1, hence the ui.plain()
         # check below
-        if name != "branches" and (ui.plain() or name != "remotebookmarks"):
+        if ui.plain() or name != "remotebookmarks":
             names.update(ns.listnames(repo))
 
     age = ui.configint("zsh", "completion-age")
