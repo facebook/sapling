@@ -489,7 +489,7 @@ impl Client {
         attributes: Option<TreeAttributes>,
     ) -> Result<Response<Result<TreeEntry, SaplingRemoteApiServerError>>, SaplingRemoteApiError>
     {
-        tracing::info!("Requesting fetching of {} tree(s)", keys.len());
+        tracing::info!("Fetching {} tree(s)", keys.len());
 
         if keys.is_empty() {
             return Ok(Response::empty());
@@ -539,10 +539,7 @@ impl Client {
         &self,
         reqs: Vec<FileSpec>,
     ) -> Result<Response<FileResponse>, SaplingRemoteApiError> {
-        tracing::info!(
-            "Requesting fetching of content and attributes for {} file(s)",
-            reqs.len()
-        );
+        tracing::info!("Fetching content and attributes for {} file(s)", reqs.len());
 
         if reqs.is_empty() {
             return Ok(Response::empty());
@@ -1310,11 +1307,6 @@ impl SaplingRemoteApi for Client {
         &self,
         reqs: Vec<FileSpec>,
     ) -> Result<Response<FileResponse>, SaplingRemoteApiError> {
-        tracing::info!(
-            "Requesting content and attributes for {} file(s)",
-            reqs.len()
-        );
-
         let prog = self.inner.file_progress.create_or_extend(reqs.len() as u64);
 
         RetryableFileAttrs::new(reqs)
@@ -1343,8 +1335,6 @@ impl SaplingRemoteApi for Client {
         attributes: Option<TreeAttributes>,
     ) -> Result<Response<Result<TreeEntry, SaplingRemoteApiServerError>>, SaplingRemoteApiError>
     {
-        tracing::info!("Requesting {} tree(s)", keys.len());
-
         let prog = self.inner.tree_progress.create_or_extend(keys.len() as u64);
 
         RetryableTrees::new(keys, attributes)
