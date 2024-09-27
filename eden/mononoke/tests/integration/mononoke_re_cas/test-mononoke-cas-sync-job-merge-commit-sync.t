@@ -23,8 +23,6 @@
   $ hg log -r "p1($F)" -T "{node}" | grep $D > /dev/null
   [1]
   $ hg log -r "p2($F)" -T "{node}" | grep $D > /dev/null
-  $ cat .hg/requires
-  $ cat .hg/store/requires
   $ hg push -r $B --to master -q --create
   $ hg push -r $D --allow-anon -q
   $ hg push -r $F --to master -q
