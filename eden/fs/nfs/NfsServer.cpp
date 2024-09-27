@@ -120,6 +120,10 @@ void NfsServer::unregisterMount(AbsolutePathPiece path) {
   mountd_.unregisterMount(path);
 }
 
+void NfsServer::tryUnregisterMount(AbsolutePathPiece path) {
+  mountd_.tryUnregisterMount(path);
+}
+
 folly::SemiFuture<folly::File> NfsServer::takeoverStop() {
   return mountd_.takeoverStop();
 }

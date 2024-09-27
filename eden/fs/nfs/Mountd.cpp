@@ -53,11 +53,17 @@ class MountdServerProcessor final : public RpcServerProcessor {
   exprt(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
 
   void registerMount(AbsolutePathPiece path, InodeNumber rootIno);
-  void unregisterMount(AbsolutePathPiece path);
+  void unregisterMount(AbsolutePathPiece path) {
+    unregisterMountImpl(path, /*enforceRemoval=*/true);
+  }
+  void tryUnregisterMount(AbsolutePathPiece path) {
+    unregisterMountImpl(path, /*enforceRemoval=*/false);
+  }
 
  private:
   folly::Synchronized<std::unordered_map<AbsolutePath, InodeNumber>>
       mountPoints_;
+  void unregisterMountImpl(AbsolutePathPiece path, bool enforceRemoval);
 };
 
 namespace {
@@ -210,10 +216,14 @@ void MountdServerProcessor::registerMount(
       << ") is already inserted into the mount map as " << iter->second;
 }
 
-void MountdServerProcessor::unregisterMount(AbsolutePathPiece path) {
+void MountdServerProcessor::unregisterMountImpl(
+    AbsolutePathPiece path,
+    bool enforceRemoval) {
   auto map = mountPoints_.wlock();
   auto numRemoved = map->erase(path.copy());
-  XCHECK_EQ(numRemoved, 1u);
+  if (enforceRemoval) {
+    XCHECK_EQ(numRemoved, 1u);
+  }
 }
 
 Mountd::Mountd(
@@ -257,6 +267,10 @@ void Mountd::registerMount(AbsolutePathPiece path, InodeNumber ino) {
 
 void Mountd::unregisterMount(AbsolutePathPiece path) {
   proc_->unregisterMount(path);
+}
+
+void Mountd::tryUnregisterMount(AbsolutePathPiece path) {
+  proc_->tryUnregisterMount(path);
 }
 
 folly::SocketAddress Mountd::getAddr() const {

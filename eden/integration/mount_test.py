@@ -267,25 +267,15 @@ class MountTest(testcase.EdenRepoTest):
                 RemoveFaultArg(keyClass="failMountInitialization", keyValueRegex=".*")
             )
 
-        # A subsequent attempt to remount should crash EdenFS (on NFS mounts)
-        self.eden.run_unchecked("mount", self.mount)
+        # A subsequent attempt to remount should not crash the Eden daemon
+        self.eden.run_cmd("mount", self.mount)
 
-        self.assertEqual(False if self.use_nfs() else True, self.eden.is_healthy())
-
-        if self.use_nfs():
-            # The subprocess library doesn't know that the daemon crashed, so
-            # we must first wait() on it so that we don't receive errors like:
-            # ResourceWarning: subprocess $PID is still running
-            if self.eden._process is not None:
-                self.eden._process.wait()
-
-            # Setting the process field to none is temporary, as this test will
-            # be fixed in the next diff. It's required because start() expects
-            # this field to be None.
-            self.eden._process = None
-
-            # The daemon must be restarted before the test finishes
-            self.eden.start()
+        # Eden should be running and the checkout should be mounted
+        self.assertEqual(True, self.eden.is_healthy())
+        self.assertEqual(
+            {self.mount: "RUNNING"},
+            self.eden.list_cmd_simple(),
+        )
 
     def _wait_for_mount_running(
         self, client: EdenClient, path: Optional[Path] = None

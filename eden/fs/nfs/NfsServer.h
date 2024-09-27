@@ -103,6 +103,15 @@ class NfsServer {
   void unregisterMount(AbsolutePathPiece path);
 
   /**
+   * Try to unregister the mount point matching the path.
+   *
+   * The nfs program will also be destroyed, and thus it is expected that
+   * EdenFS has unmounted this mount point before calling this function. Does
+   * not throw if the mount point is already unregistered.
+   */
+  void tryUnregisterMount(AbsolutePathPiece path);
+
+  /**
    * Return the EventBase that the various NFS programs are running on.
    */
   folly::EventBase* getEventBase() const {
