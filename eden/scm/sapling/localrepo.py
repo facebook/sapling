@@ -23,12 +23,12 @@ from functools import partial
 from typing import Optional, Set
 
 import bindings
+
 from sapling import tracing
 from sapling.ext.extlib.phabricator import diffprops
 
 from . import (
     bookmarks,
-    branchmap,
     bundle2,
     changegroup,
     changelog2,
@@ -76,7 +76,6 @@ from . import (
 from .i18n import _, _n
 from .node import bin, hex, nullhex, nullid
 from .pycompat import range
-
 
 release = lockmod.release
 urlerr = util.urlerr
@@ -1615,8 +1614,10 @@ class localrepository:
     def branchmap(self):
         """returns a dictionary {branch: [branchheads]} with branchheads
         ordered by increasing revision number"""
-        branchmap.updatecache(self)
-        return self._branchcaches[None]
+        branches = {}
+        if heads := list(self.changelog.dag.sort(self.heads()).reverse()):
+            branches["default"] = heads
+        return branches
 
     def lookup(self, key):
         return self[key].node()
@@ -3037,27 +3038,6 @@ class localrepository:
     def heads(self, start=None, includepublic=True, includedraft=True):
         headrevs = self.headrevs(start, includepublic, includedraft)
         return list(map(self.changelog.node, headrevs))
-
-    def branchheads(self, branch=None, start=None, closed=False):
-        """return a list of heads for the given branch
-
-        Heads are returned in topological order, from newest to oldest.
-        If branch is None, use the dirstate branch.
-        If start is not None, return only heads reachable from start.
-        If closed is True, return heads that are marked as closed as well.
-        """
-        if branch is None:
-            branch = self[None].branch()
-        branches = self.branchmap()
-        if branch not in branches:
-            return []
-        # the cache returns heads ordered lowest to highest
-        bheads = list(reversed(branches.branchheads(branch, closed=closed)))
-        if start is not None:
-            # filter out the heads that cannot be reached from startrev
-            fbheads = set(self.changelog.nodesbetween([start], bheads)[2])
-            bheads = [h for h in bheads if h in fbheads]
-        return bheads
 
     def branches(self, nodes):
         if not nodes:
