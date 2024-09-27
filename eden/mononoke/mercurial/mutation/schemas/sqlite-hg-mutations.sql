@@ -16,7 +16,6 @@ CREATE TABLE IF NOT EXISTS `hg_mutation_info` (
   `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
   `repo_id` INTEGER UNSIGNED NOT NULL,
   `successor` BINARY(20) NOT NULL,
-  `primordial` BINARY(20) NULL,
   `pred_count` INTEGER NOT NULL,
   `split_count` INTEGER NOT NULL,
   `op` VARCHAR(32) NOT NULL,
@@ -33,7 +32,6 @@ CREATE TABLE IF NOT EXISTS `hg_mutation_preds` (
   `successor` BINARY(20) NOT NULL,
   `seq` INTEGER NOT NULL,
   `predecessor` BINARY(20) NOT NULL,
-  `primordial` BINARY(20) NULL,
   UNIQUE (`repo_id`, `successor`, `seq`)
 );
 
