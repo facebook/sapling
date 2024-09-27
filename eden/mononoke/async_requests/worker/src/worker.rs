@@ -45,6 +45,7 @@ use mononoke_types::Timestamp;
 use slog::debug;
 use slog::error;
 use slog::info;
+use slog::warn;
 
 use crate::methods::megarepo_async_request_compute;
 
@@ -164,7 +165,15 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
                 if will_exit.load(Ordering::Relaxed) {
                     break 'outer;
                 }
-                if let Some((request_id, params)) = queue.dequeue(&ctx, &claimed_by).await? {
+                let res = queue.dequeue(&ctx, &claimed_by).await;
+                if res.is_err() {
+                    warn!(
+                        ctx.logger(),
+                        "error while dequeueing, skipping: {}", res.err().unwrap()
+                    );
+                    continue;
+                }
+                if let Some((request_id, params)) = res? {
                     yield (request_id, params);
                     yielded = true;
                 }
