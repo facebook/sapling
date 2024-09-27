@@ -558,6 +558,7 @@ class EdenInstance(AbstractEdenInstance):
                 ("mount_protocol", checkout_config.mount_protocol),
                 ("case_sensitive", checkout_config.case_sensitive),
                 ("backing_repo", str(checkout.get_backing_repo_path())),
+                ("home_dir", str(self.home_dir)),
             ]
         )
 

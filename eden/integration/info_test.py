@@ -45,6 +45,7 @@ class InfoTest(testcase.EdenRepoTest):
                 "mount_protocol": get_protocol(self.use_nfs()),
                 "backing_repo": backing_repo,
                 "checked_out_revision": self.repo.get_head_hash(),
+                "home_dir": str(self.eden.home_dir),
                 "working_copy_parent": self.repo.get_head_hash(),
                 "inode_catalog_type": self.inode_catalog_type,
             },
