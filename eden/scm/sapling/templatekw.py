@@ -616,8 +616,6 @@ def showgraphnode(repo, ctx, **args) -> str:
         return "@"
     elif ctx.invisible() or ctx.obsolete():
         return "x"
-    elif ctx.closesbranch():
-        return "_"
     else:
         return "o"
 

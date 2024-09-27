@@ -82,7 +82,6 @@ from .. import (
 from ..i18n import _, _n, _x
 from ..node import bin, hex, nullhex, nullid, nullrev, short
 from ..pycompat import decodeutf8, range
-
 from . import migratesymlinks
 from .cmdtable import command
 
@@ -2438,9 +2437,6 @@ def debugpreviewbindag(ui, repo, path):
         def obsolete(self):
             return False
 
-        def closesbranch(self):
-            return False
-
     opts = {"template": "{rev}", "graph": True}
     displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
     cmdutil.displaygraph(ui, repo, gendag(revs, parentrevs), displayer)
@@ -3668,7 +3664,6 @@ def debugruntest(ui, *paths, **opts) -> int:
     current configuration.
     """
     import textwrap
-
     from multiprocessing import util as mputil
     from unittest import SkipTest
 

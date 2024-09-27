@@ -919,10 +919,10 @@ def children(repo, subset, x):
 
 @predicate("closed()", safe=True, weight=10)
 def closed(repo, subset, x):
-    """Changeset is closed."""
+    """Deprecated. Changeset is closed."""
     # i18n: "closed" is a keyword
     getargs(x, 0, 0, _("closed takes no arguments"))
-    return subset.filter(lambda r: repo[r].closesbranch(), condrepr="<branch closed>")
+    return subset.filter(lambda r: False, condrepr="<branch closed>")
 
 
 @predicate("contains(pattern)", weight=100)

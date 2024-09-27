@@ -602,9 +602,6 @@ class changectx(basectx):
     def shortdescription(self):
         return self.description().splitlines()[0]
 
-    def closesbranch(self):
-        return "close" in self._changeset.extra
-
     def extra(self):
         """Return a dict of extra information."""
         return self._changeset.extra
@@ -1727,9 +1724,6 @@ class committablectx(basectx):
 
     def deleted(self):
         return self._status.deleted
-
-    def closesbranch(self):
-        return "close" in self._extra
 
     def extra(self):
         return self._extra

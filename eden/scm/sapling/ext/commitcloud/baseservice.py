@@ -63,9 +63,6 @@ class FakeCtx:
     def invisible(self):
         return False
 
-    def closesbranch(self):
-        return False
-
     def hex(self):
         return nodemod.hex(self._nodeinfo.node)
 
