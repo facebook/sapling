@@ -2212,7 +2212,7 @@ def _update(
                     _("merging with a working directory ancestor has no effect")
                 )
             elif pas == [p1] and not xdir:
-                if not mergeancestor and wc.branch() == p2.branch():
+                if not mergeancestor:
                     raise error.Abort(
                         _("nothing to merge"),
                         hint=_("use '@prog@ goto' or check '@prog@ heads'"),
@@ -2338,9 +2338,6 @@ def _update(
                 # doesn't exist for the dirstate right now.
                 if hasattr(repo, "_persistprofileconfigs"):
                     repo._persistprofileconfigs()
-
-                if not branchmerge:
-                    repo.dirstate.setbranch(p2.branch())
 
     if git.isgitformat(repo) and not wc.isinmemory():
         if branchmerge:

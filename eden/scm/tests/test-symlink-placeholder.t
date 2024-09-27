@@ -21,7 +21,7 @@ Simulate a checkout shared on NFS/Samba:
 Make a clone using placeholders:
 
   $ SL_DEBUG_DISABLE_SYMLINKS=1 hg clone . ../win-repo
-  updating to branch default
+  updating to tip
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ../win-repo
   $ cat b

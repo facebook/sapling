@@ -372,7 +372,7 @@ def getshelvename(repo, parent, opts):
             yield "%s-%02d" % (label, i)
 
     name = opts.get("name")
-    label = repo._activebookmark or parent.branch() or "default"
+    label = repo._activebookmark or "default"
     # slashes aren't allowed in filenames, therefore we rename it
     label = label.replace("/", "_")
     label = label.replace("\\", "_")
@@ -469,7 +469,6 @@ def _docreatecmd(ui, repo, pats, opts) -> Optional[int]:
     if len(parents) > 1:
         raise error.Abort(_("cannot shelve while merging"))
     parent = parents[0]
-    origbranch = wctx.branch()
 
     if parent.node() != nodemod.nullid:
         desc = "shelve changes to: %s" % parent.description().split("\n", 1)[0]
@@ -493,11 +492,6 @@ def _docreatecmd(ui, repo, pats, opts) -> Optional[int]:
             extra = {}
             if includeunknown:
                 _includeunknownfiles(repo, pats, opts, extra)
-
-            if _iswctxonnewbranch(repo) and not _isbareshelve(pats, opts):
-                # In non-bare shelve we don't store newly created branch
-                # at bundled commit
-                repo.dirstate.setbranch(repo["."].branch())
 
             commitfunc = getcommitfunc(extra, interactive, editor=True)
             if not interactive:
@@ -541,8 +535,6 @@ def _docreatecmd(ui, repo, pats, opts) -> Optional[int]:
         repo.setparents(parent.node())
         raise
     finally:
-        if origbranch != repo["."].branch() and not _isbareshelve(pats, opts):
-            repo.dirstate.setbranch(origbranch)
         if activebookmark:
             bookmarks.activate(repo, activebookmark)
 
@@ -556,10 +548,6 @@ def _isbareshelve(pats, opts) -> bool:
         and not opts.get("include", False)
         and not opts.get("exclude", False)
     )
-
-
-def _iswctxonnewbranch(repo):
-    return repo[None].branch() != repo["."].branch()
 
 
 def _listshelvefileinfos(repo, shelvedir):
@@ -750,12 +738,6 @@ def mergefiles(ui, repo, wctx, shelvectx) -> None:
         ui.popbuffer()
 
 
-def restorebranch(ui, repo, branchtorestore) -> None:
-    if branchtorestore and branchtorestore != repo.dirstate.branch():
-        repo.dirstate.setbranch(branchtorestore)
-        ui.status(_("marked working directory as branch %s\n") % branchtorestore)
-
-
 def unshelvecleanup(ui, repo, name, opts) -> None:
     """remove related files after an unshelve"""
     if not opts.get("keep"):
@@ -803,7 +785,6 @@ def unshelvecontinue(ui, repo, state, opts) -> None:
             state.nodestoremove.append(shelvectx.node())
 
         mergefiles(ui, repo, state.wctx, shelvectx)
-        restorebranch(ui, repo, state.branchtorestore)
 
         state.removenodes(ui, repo)
         _restoreactivebookmark(repo, state.activebookmark)
@@ -1116,8 +1097,6 @@ def _dounshelve(ui, repo, *shelved, **opts):
         repo, shelvectx = _unshelverestorecommit(ui, repo, basename)
         _checkunshelveuntrackedproblems(ui, repo, shelvectx)
         branchtorestore = ""
-        if shelvectx.branch() != shelvectx.p1().branch():
-            branchtorestore = shelvectx.branch()
 
         rebaseconfigoverrides = {
             ("ui", "forcemerge"): opts.get("tool", ""),
@@ -1138,7 +1117,6 @@ def _dounshelve(ui, repo, *shelved, **opts):
                 activebookmark,
             )
             mergefiles(ui, repo, pctx, shelvectx)
-            restorebranch(ui, repo, branchtorestore)
             _forgetunknownfiles(repo, shelvectx, addedbefore)
 
         _hideredundantnodes(repo, tr, pctx, shelvectx, tmpwctx)

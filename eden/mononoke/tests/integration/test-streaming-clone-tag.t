@@ -38,7 +38,7 @@ Clone - check that no bytes were transferred from streaming clone because no tag
   adding changesets
   adding manifests
   adding file changes
-  updating to branch default
+  updating to tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ diff repo-streamclone/.hg/store/00changelog.i repo/.hg/store/00changelog.i
@@ -56,5 +56,5 @@ Now clone with tag, make sure that streaming clone was used
   adding changesets
   adding manifests
   adding file changes
-  updating to branch default
+  updating to tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved

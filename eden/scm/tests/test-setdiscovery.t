@@ -441,7 +441,7 @@ The graph looks like:
   adding changesets
   adding manifests
   adding file changes
-  updating to branch default
+  updating to 1b227ad97c76068e2d1a4c750ab1be81e1bfd1d6
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg -R a debugdiscovery b --debug --verbose --config progress.debug=true

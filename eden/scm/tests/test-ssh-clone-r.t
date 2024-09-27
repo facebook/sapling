@@ -32,55 +32,55 @@ clone remote via stream
   adding changesets
   adding manifests
   adding file changes
-  updating to branch default
+  updating to bfaf4b5cbf0118bb4af9af4a814f69938aba779d
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   warning: verify does not actually check anything in this repo
   adding changesets
   adding manifests
   adding file changes
-  updating to branch default
+  updating to 21f32785131faada60c836287c02be2897cd236b
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   warning: verify does not actually check anything in this repo
   adding changesets
   adding manifests
   adding file changes
-  updating to branch default
+  updating to 4ce51a113780a3de8b48c9f6fe2cd277498316c8
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   warning: verify does not actually check anything in this repo
   adding changesets
   adding manifests
   adding file changes
-  updating to branch default
+  updating to 93ee6ab32777cd430e07da694794fb6a4f917712
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   warning: verify does not actually check anything in this repo
   adding changesets
   adding manifests
   adding file changes
-  updating to branch default
+  updating to c70afb1ee98533b7b5660ecff09b6b5f7f582089
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   warning: verify does not actually check anything in this repo
   adding changesets
   adding manifests
   adding file changes
-  updating to branch default
+  updating to f03ae5a9b9793707225f01c702f21f1fc4bd338f
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   warning: verify does not actually check anything in this repo
   adding changesets
   adding manifests
   adding file changes
-  updating to branch default
+  updating to 095cb14b1b4d2c1dd4adcd0a4850288728a62af0
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   warning: verify does not actually check anything in this repo
   adding changesets
   adding manifests
   adding file changes
-  updating to branch default
+  updating to faa2e4234c7af3618f18f052cdd849dd96cc0d01
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   warning: verify does not actually check anything in this repo
   adding changesets
   adding manifests
   adding file changes
-  updating to branch default
+  updating to 916f1afdef9056d85a9da7c863112473923434a1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   warning: verify does not actually check anything in this repo
   $ cd test-8

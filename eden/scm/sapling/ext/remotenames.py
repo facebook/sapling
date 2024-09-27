@@ -632,7 +632,6 @@ def expushdiscoverybookmarks(pushop):
                 if (
                     known
                     or ctx.obsolete()
-                    or ctx.closesbranch()
                     # if there is a topic, let's just skip it for now
                     or (ctx.mutable() and "topic" in ctx.extra())
                 ):

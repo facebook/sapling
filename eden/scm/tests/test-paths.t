@@ -5,7 +5,7 @@
 
   $ hg init a
   $ hg clone a b
-  updating to branch default
+  updating to tip
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd a
 

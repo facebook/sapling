@@ -26,7 +26,7 @@ Create first client
   0 files to transfer, 0 bytes of data
   transferred 0 bytes in * seconds (0 bytes/sec) (glob)
   no changes found
-  updating to branch default
+  updating to tip
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd shallow1
   $ enable infinitepush

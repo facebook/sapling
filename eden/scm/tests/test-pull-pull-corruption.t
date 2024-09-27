@@ -25,7 +25,7 @@ create one repo with a shorter history
   adding changesets
   adding manifests
   adding file changes
-  updating to branch default
+  updating to 495a0ec48aafa0ff0dc88b7342dac7597aa8214d
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd source2
   $ echo a >> foo

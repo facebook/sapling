@@ -3086,10 +3086,6 @@ Branch, inactive
     shows inactive branches by default, though they can be hidden with
     :prog:`branches --active`.
 
-    NOTE: this concept is deprecated because it is too implicit.
-    Branches should now be explicitly closed using :prog:`commit
-    --close-branch` when they are no longer needed.
-
 Branch tip
     See 'Tip, branch'.
 

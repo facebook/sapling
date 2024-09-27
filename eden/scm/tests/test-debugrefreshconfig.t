@@ -189,7 +189,7 @@ Clear the cached, non-repo dynamic config
   populating main commit graph
   fetching selected remote bookmarks
   Hook ran!
-  updating to branch default
+  updating to tip
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   Hook ran!
   $ cat client2/.hg/hgrc.dynamic

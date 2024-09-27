@@ -115,11 +115,11 @@ Test push hook locking
   adding foo
 
   $ hg clone 1 2
-  updating to branch default
+  updating to tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg clone 2 3
-  updating to branch default
+  updating to tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ cat <<EOF > $TESTTMP/debuglocks-pretxn-hook.sh

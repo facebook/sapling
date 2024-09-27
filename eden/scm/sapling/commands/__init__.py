@@ -782,8 +782,6 @@ def _dobackout(ui, repo, node=None, rev=None, **opts):
             raise error.Abort(_("cannot use --parent on non-merge changeset"))
         parent = p1
 
-    # the backout should appear on the same branch
-    branch = repo.dirstate.branch()
     rctx = scmutil.revsingle(repo, hex(parent))
     if not opts.get("merge") and op1 != node:
         dsguard = dirstateguard.dirstateguard(repo, "backout")
@@ -809,7 +807,6 @@ def _dobackout(ui, repo, node=None, rev=None, **opts):
             lockmod.release(dsguard)
     else:
         hg.clean(repo, node, show_stats=False)
-        repo.dirstate.setbranch(branch)
         cmdutil.revert(ui, repo, rctx, repo.dirstate.parents())
         # Ensure reverse-renames are preserved during the backout. In theory
         # cmdutil.revert() should handle this, but it's extremely complex, so
@@ -834,7 +831,7 @@ def _dobackout(ui, repo, node=None, rev=None, **opts):
     if not newnode:
         ui.status(_("nothing changed\n"))
         return 1
-    cmdutil.commitstatus(repo, newnode, branch)
+    cmdutil.commitstatus(repo, newnode)
 
     nice = short
     ui.status(
@@ -1733,8 +1730,6 @@ def _docommit(ui, repo, *pats, **opts):
 
     cmdutil.checkunfinished(repo, op="commit")
 
-    branch = repo[None].branch()
-
     extra = {}
     if opts.get("amend"):
         old = repo["."]
@@ -1795,7 +1790,7 @@ def _docommit(ui, repo, *pats, **opts):
                 ui.status(_("nothing changed\n"))
             return 1
 
-    cmdutil.commitstatus(repo, node, branch, opts=opts)
+    cmdutil.commitstatus(repo, node, opts=opts)
 
 
 @command(
@@ -3161,8 +3156,7 @@ def heads(ui, repo, *branchrevs, **opts):
     means that you can use :prog:`heads .` to see the heads on the
     currently checked-out branch.
 
-    If -c/--closed is specified, also show branch heads marked closed
-    (see :prog:`commit --close-branch`).
+    If -c/--closed is specified, also show branch heads marked closed.
 
     If STARTREV is specified, only those heads that are descendants of
     STARTREV will be displayed.
@@ -3701,7 +3695,7 @@ def identify(
             parents = ctx.parents()
 
             dirty = ""
-            if ctx.dirty(missing=True, merge=False, branch=False):
+            if ctx.dirty(missing=True, merge=False):
                 dirty = "+"
             fm.data(dirty=dirty)
 

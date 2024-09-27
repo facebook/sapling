@@ -20,7 +20,7 @@
   adding changesets
   adding manifests
   adding file changes
-  updating to branch default
+  updating to cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Verify pulling only some commits does not cause errors from the unpulled

@@ -1844,7 +1844,7 @@ class committablectx(basectx):
         # from immediately doing so for subsequent changing files
         self._repo.dirstate.write(self._repo.currenttransaction())
 
-    def dirty(self, missing=False, merge=True, branch=True):
+    def dirty(self, missing=False, merge=True):
         return False
 
     def loginfo(self):
@@ -1902,12 +1902,11 @@ class workingctx(committablectx):
         """get a file context from the working directory"""
         return workingfilectx(self._repo, path, workingctx=self, filelog=filelog)
 
-    def dirty(self, missing=False, merge=True, branch=True):
+    def dirty(self, missing=False, merge=True):
         "check whether a working directory is modified"
         # check current working dir
         return (
             (merge and self.p2())
-            or (branch and self.branch() != self.p1().branch())
             or self.modified()
             or self.added()
             or self.removed()
@@ -2560,7 +2559,6 @@ class overlayworkingctx(committablectx):
     def tomemctx(
         self,
         text,
-        branch=None,
         extra=None,
         date=None,
         parents=None,
@@ -2614,7 +2612,6 @@ class overlayworkingctx(committablectx):
             date=date,
             extra=extra,
             user=user,
-            branch=branch,
             editor=editor,
             loginfo=loginfo,
             mutinfo=mutinfo,
@@ -2902,7 +2899,6 @@ class memctx(committablectx):
         user=None,
         date=None,
         extra=None,
-        branch=None,
         editor=None,
         loginfo=None,
         mutinfo=None,
@@ -2918,8 +2914,6 @@ class memctx(committablectx):
             parents = [repo[nullid]]
         self._parents = parents
         self._filesset = set(files)
-        if branch is not None:
-            self._extra["branch"] = encoding.fromlocal(branch)
 
         if isinstance(filectxfn, patch.filestore):
             filectxfn = memfilefrompatch(filectxfn)

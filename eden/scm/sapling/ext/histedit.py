@@ -557,7 +557,6 @@ class histeditaction:
         with repo.wlock(), repo.lock(), repo.transaction("histedit"):
             hg.update(repo, self.state.parentctxnode, quietempty=True)
             stats = applychanges(repo.ui, repo, rulectx, {})
-            repo.dirstate.setbranch(rulectx.branch())
         if stats and stats[3] > 0:
             buf = repo.ui.popbuffer()
             repo.ui.write(*buf)

@@ -194,5 +194,5 @@ Do a streaming clone of the repo
   adding changesets
   adding manifests
   adding file changes
-  updating to branch default
+  updating to tip
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved

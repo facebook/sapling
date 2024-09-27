@@ -187,7 +187,7 @@ def wrapui(ui) -> None:
                     # just don't set the rev.
                     pass
                 if ui.configbool("blackbox", "dirty") and ctx.dirty(
-                    missing=True, merge=False, branch=False
+                    missing=True, merge=False
                 ):
                     changed = "+"
             if ui.configbool("blackbox", "logsource"):

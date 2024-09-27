@@ -1637,14 +1637,6 @@ class localrepository:
     def lookup(self, key):
         return self[key].node()
 
-    def lookupbranch(self, key, remote=None):
-        repo = remote or self
-        if key in repo.branchmap():
-            return key
-
-        repo = (remote and remote.local()) and remote or self
-        return repo[key].branch()
-
     def known(self, nodes):
         cl = self.changelog
         nm = cl.nodemap
@@ -2177,17 +2169,6 @@ class localrepository:
             dsguard.close()
 
             self.dirstate.restorebackup(None, "undo.dirstate")
-            try:
-                branch = self.localvfs.readutf8("undo.branch")
-                self.dirstate.setbranch(encoding.tolocal(branch))
-            except IOError:
-                ui.warn(
-                    _(
-                        "named branch could not be reset: "
-                        "current branch is still '%s'\n"
-                    )
-                    % self.dirstate.branch()
-                )
 
             parents = tuple([p.rev() for p in self[None].parents()])
             if len(parents) > 1:
@@ -2776,11 +2757,7 @@ class localrepository:
 
             # internal config: ui.allowemptycommit
             allowemptycommit = (
-                wctx.branch() != wctx.p1().branch()
-                or extra.get("close")
-                or merge
-                or cctx.files()
-                or self.ui.configbool("ui", "allowemptycommit")
+                merge or cctx.files() or self.ui.configbool("ui", "allowemptycommit")
             )
             if not allowemptycommit:
                 return None

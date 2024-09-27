@@ -1780,10 +1780,6 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                     for idfunc in extrapostimport:
                         extrapostimportmap[idfunc](repo[n])
         else:
-            if opts.get("exact"):
-                branch = branch or "default"
-            else:
-                branch = p1.branch()
             store = patch.filestore()
             try:
                 files = set()
@@ -1805,7 +1801,6 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                     filectxfn=store,
                     user=user,
                     date=date,
-                    branch=branch,
                     editor=editor,
                 )
                 n = memctx.commit()
@@ -1850,7 +1845,6 @@ def _exportsingle(
 
     node = scmutil.binnode(ctx)
     parents = [p.node() for p in ctx.parents() if p]
-    branch = ctx.branch()
     if switch_parent:
         parents.reverse()
 
@@ -1863,8 +1857,6 @@ def _exportsingle(
     writestr("# User %s\n" % ctx.user())
     writestr("# Date %d %d\n" % ctx.date())
     writestr("#      %s\n" % util.datestr(ctx.date()))
-    if branch and branch != "default":
-        writestr("# Branch %s\n" % branch)
     writestr("# Node ID %s\n" % hex(node))
     writestr("# Parent  %s\n" % hex(prev))
     if len(parents) > 1:
@@ -2108,13 +2100,6 @@ class changeset_printer:
                 columns["changeset"] % scmutil.formatchangeid(ctx),
                 label=_changesetlabels(ctx),
             )
-
-        # branches are shown first before any other names due to backwards
-        # compatibility
-        branch = ctx.branch()
-        # don't show the default branch name
-        if branch != "default":
-            self.ui.write(columns["branch"] % branch, label="log.branch")
 
         for nsname, ns in self.repo.names.items():
             # branches has special logic already handled above, so here we just
@@ -4437,16 +4422,10 @@ def buildcommittext(repo, ctx, summaryfooter=""):
     return "\n".join(edittext)
 
 
-def commitstatus(repo, node, branch, opts=None):
+def commitstatus(repo, node, opts=None):
     if opts is None:
         opts = {}
     ctx = repo[node]
-    parents = ctx.parents()
-
-    if not opts.get("close_branch"):
-        for r in parents:
-            if r.closesbranch() and r.branch() == branch:
-                repo.ui.status(_("reopening closed branch head %d\n") % r)
 
     if repo.ui.debugflag:
         repo.ui.write(_("committed %s\n") % (ctx.hex()))
@@ -4975,7 +4954,7 @@ def howtocontinue(repo):
     for f, msg in afterresolvedstates:
         if repo.localvfs.exists(f):
             return contmsg % msg, True
-    if repo[None].dirty(missing=True, merge=False, branch=False):
+    if repo[None].dirty(missing=True, merge=False):
         return contmsg % _("@prog@ commit"), False
     return None, None
 

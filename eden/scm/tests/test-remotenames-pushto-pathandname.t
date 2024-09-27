@@ -19,7 +19,7 @@ Init the original "remote" repo
 Clone original repo
 
   $ hg clone orig cloned
-  updating to branch default
+  updating to tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd cloned
   $ echo somethingelse > something

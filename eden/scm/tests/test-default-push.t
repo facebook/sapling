@@ -10,11 +10,11 @@
   adding a
 
   $ hg clone a c
-  updating to branch default
+  updating to tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg clone a b
-  updating to branch default
+  updating to tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ echo b >> b/a

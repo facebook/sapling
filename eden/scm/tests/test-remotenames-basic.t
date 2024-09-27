@@ -27,7 +27,7 @@ Continue testing
   $ mkcommit c
   $ cd ..
   $ hg clone alpha beta
-  updating to branch default
+  updating to tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd beta
   $ hg book babar
