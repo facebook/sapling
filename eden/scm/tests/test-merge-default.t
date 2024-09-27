@@ -1,7 +1,4 @@
-
 #require no-eden
-
-
 
   $ eagerepo
   $ setconfig devel.segmented-changelog-rev-compat=true
@@ -44,7 +41,7 @@ Should fail because > 2 heads:
 
   $ HGMERGE=internal:other; export HGMERGE
   $ hg merge
-  abort: branch 'default' has 3 heads - please merge with an explicit rev
+  abort: repo has 3 heads - please merge with an explicit rev
   (run 'hg heads .' to see heads)
   [255]
 

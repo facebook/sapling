@@ -60,18 +60,18 @@ msgdestmerge: Dict[
             _("run '@prog@ heads' to see all heads"),
         ),
     },
-    # branch have too many unbookmarked heads, no obvious destination
+    # repo has too many unbookmarked heads, no obvious destination
     "toomanyheads": {
         "merge": (
-            _("branch '%s' has %d heads - please merge with an explicit rev"),
+            _("repo has %d heads - please merge with an explicit rev"),
             _("run '@prog@ heads .' to see heads"),
         ),
         "rebase": (
-            _("branch '%s' has %d heads - please rebase to an explicit rev"),
+            _("repo has %d heads - please rebase to an explicit rev"),
             _("run '@prog@ heads .' to see heads"),
         ),
     },
-    # branch have no other unbookmarked heads
+    # repo has no other unbookmarked heads
     "bookmarkedheads": {
         "merge": (
             _("heads are bookmarked - please merge with an explicit rev"),
@@ -82,14 +82,14 @@ msgdestmerge: Dict[
             _("run '@prog@ heads' to see all heads"),
         ),
     },
-    # branch have just a single heads, but there is other branches
+    # repo has just a single head, but there is other branches
     "nootherbranchheads": {
         "merge": (
-            _("branch '%s' has one head - please merge with an explicit rev"),
+            _("repo has one head - please merge with an explicit rev"),
             _("run '@prog@ heads' to see all heads"),
         ),
         "rebase": (
-            _("branch '%s' has one head - please rebase to an explicit rev"),
+            _("repo has one head - please rebase to an explicit rev"),
             _("run '@prog@ heads' to see all heads"),
         ),
     },
@@ -118,13 +118,6 @@ msgdestmerge: Dict[
         "merge": (_("source set is empty"), None),
         "rebase": (_("source set is empty"), None),
     },
-    "multiplebranchessourceset": {
-        "merge": (_("source set is rooted in multiple branches"), None),
-        "rebase": (
-            _("rebaseset is rooted in multiple named branches"),
-            _("specify an explicit destination with --dest"),
-        ),
-    },
 }
 
 
@@ -148,32 +141,24 @@ def _destmergebook(repo, action: str = "merge", sourceset=None, destspace=None):
     return node
 
 
-def _destmergebranch(
+def _destmergeheads(
     repo,
     action: str = "merge",
     sourceset=None,
     onheadcheck: bool = True,
     destspace=None,
 ):
-    """find merge destination based on branch heads"""
+    """find merge destination based on repo heads"""
     node = None
 
     if sourceset is None:
         sourceset = [repo[repo.dirstate.p1()].rev()]
-        branch = repo.dirstate.branch()
     elif not sourceset:
         msg, hint = msgdestmerge["emptysourceset"][action]
         raise error.NoMergeDestAbort(msg, hint=hint)
-    else:
-        branch = None
-        for ctx in repo.set("roots(%ld::%ld)", sourceset, sourceset):
-            if branch is not None and ctx.branch() != branch:
-                msg, hint = msgdestmerge["multiplebranchessourceset"][action]
-                raise error.ManyMergeDestAbort(msg, hint=hint)
-            branch = ctx.branch()
 
-    bheads = repo.branchheads(branch)
-    onhead = repo.revs("%ld and %ln", sourceset, bheads)
+    bheads = repo.headrevs()
+    onhead = repo.revs("%ld and %ld", sourceset, bheads)
     if onheadcheck and not onhead:
         # Case A: working copy if not on a head. (merge only)
         #
@@ -184,7 +169,7 @@ def _destmergebranch(
             msg, hint = msgdestmerge["notatheads"][action]
         raise error.Abort(msg, hint=hint)
     # remove heads descendants of source from the set
-    bheads = list(repo.revs("%ln - (%ld::)", bheads, sourceset))
+    bheads = list(repo.revs("%ld - (%ld::)", bheads, sourceset))
     # filters out bookmarked heads
     nbhs = list(repo.revs("%ld - bookmark()", bheads))
 
@@ -200,7 +185,7 @@ def _destmergebranch(
         # ambiguous. We abort asking the user to pick as explicit destination
         # instead.
         msg, hint = msgdestmerge["toomanyheads"][action]
-        msg %= (branch, len(bheads) + 1)
+        msg %= len(bheads) + 1
         raise error.ManyMergeDestAbort(msg, hint=hint)
     elif not nbhs:
         # Case B: There is no other anonymous heads
@@ -211,7 +196,6 @@ def _destmergebranch(
             msg, hint = msgdestmerge["bookmarkedheads"][action]
         elif len(repo.heads()) > 1:
             msg, hint = msgdestmerge["nootherbranchheads"][action]
-            msg %= branch
         elif not onhead:
             # if 'onheadcheck == False' (rebase case),
             # this was not caught in Case A.
@@ -245,7 +229,7 @@ def destmerge(
             repo, action=action, sourceset=sourceset, destspace=destspace
         )
     else:
-        node = _destmergebranch(
+        node = _destmergeheads(
             repo,
             action=action,
             sourceset=sourceset,
