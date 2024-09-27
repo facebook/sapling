@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-from . import pycompat, rcutil, util
+from . import rcutil, util
 from .i18n import _
 
 
