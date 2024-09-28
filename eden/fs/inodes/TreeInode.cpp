@@ -4707,7 +4707,7 @@ void TreeInode::doPrefetch(
           load.finish();
         }
 
-        return collectAll(std::move(inodeFutures))
+        return collectAllSafe(std::move(inodeFutures))
             .thenTry([lease = std::move(lease)](auto&&) {
               XLOG(DBG4) << "finished prefetch for "
                          << lease.getTreeInode()->getLogPath();
