@@ -12,6 +12,8 @@ python_binary(
         "//eden/mononoke/scs/if:source_control-py3-clients",
         "//eden/mononoke/scs/if:source_control-py3-types",
         "//employee/if:thrift-py3-clients",
+        "//gatekeeper/py:client",
+        "//libfb/py:employee",
         "//libfb/py/asyncio:sandcastle",
         "//libfb/py/asyncio:thrift",
     ],
