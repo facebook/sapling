@@ -44,7 +44,7 @@ impl RetryLogic {
 pub async fn retry_always<V, Fut, Func, Error>(
     logger: &Logger,
     func: Func,
-    base_delay_ms: u64,
+    base_delay: Duration,
     retry_num: usize,
 ) -> Result<(V, RetryAttemptsCount), Error>
 where
@@ -57,7 +57,7 @@ where
         func,
         |_| true,
         RetryLogic::Exponential {
-            base: Duration::from_millis(base_delay_ms),
+            base: base_delay,
             factor: 2.0,
         },
         retry_num,

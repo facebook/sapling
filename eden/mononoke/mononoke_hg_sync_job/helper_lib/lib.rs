@@ -134,7 +134,7 @@ pub async fn lines_after(p: impl AsRef<Path>, num: usize) -> Result<Vec<String>,
 pub async fn wait_till_more_lines(
     p: impl AsRef<Path>,
     initial_num: usize,
-    timeout_millis: u64,
+    timeout_duration: Duration,
 ) -> Result<Vec<String>, Error> {
     let p = p.as_ref().to_path_buf();
 
@@ -151,7 +151,7 @@ pub async fn wait_till_more_lines(
         }
     };
 
-    match timeout(Duration::from_millis(timeout_millis), read).await {
+    match timeout(timeout_duration, read).await {
         Ok(Ok(lines)) => Ok(lines),
         Ok(Err(e)) => Err(e),
         Err(_) => Err(Error::msg("timed out waiting for new lines")),

@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::Error;
 use bookmarks::BookmarkKey;
@@ -52,7 +53,7 @@ use crate::Repo;
 
 pub struct BundlePreparer {
     repo: Repo,
-    base_retry_delay_ms: u64,
+    base_retry_delay: Duration,
     retry_num: usize,
     filenode_verifier: FilenodeVerifier,
     bookmark_regex_force_lfs: Option<Regex>,
@@ -62,7 +63,7 @@ pub struct BundlePreparer {
 impl BundlePreparer {
     pub async fn new_generate_bundles(
         repo: Repo,
-        base_retry_delay_ms: u64,
+        base_retry_delay: Duration,
         retry_num: usize,
         filenode_verifier: FilenodeVerifier,
         bookmark_regex_force_lfs: Option<Regex>,
@@ -70,7 +71,7 @@ impl BundlePreparer {
     ) -> Result<BundlePreparer, Error> {
         Ok(BundlePreparer {
             repo,
-            base_retry_delay_ms,
+            base_retry_delay,
             retry_num,
             filenode_verifier,
             bookmark_regex_force_lfs,
@@ -160,7 +161,7 @@ impl BundlePreparer {
     ) -> BoxFuture<'static, Result<CombinedBookmarkUpdateLogEntry, Error>> {
         cloned!(self.repo, self.push_vars, self.filenode_verifier);
 
-        let base_retry_delay_ms = self.base_retry_delay_ms;
+        let base_retry_delay = self.base_retry_delay;
         let retry_num = self.retry_num;
         async move {
             let entry_ids = batch
@@ -200,7 +201,7 @@ impl BundlePreparer {
                         )
                     }
                 },
-                base_retry_delay_ms,
+                base_retry_delay,
                 retry_num,
             )
             .map_ok(|(res, _)| res);

@@ -149,7 +149,7 @@ const HGSQL_GLOBALREVS_DB_ADDR: &str = "hgsql-globalrevs-db-addr";
 const DEFAULT_RETRY_NUM: usize = 1;
 const DEFAULT_BATCH_SIZE: usize = 10;
 const DEFAULT_CONFIGERATOR_BATCH_SIZE: usize = 5;
-const DEFAULT_SINGLE_BUNDLE_TIMEOUT_MS: u64 = 5 * 60 * 1000;
+const DEFAULT_SINGLE_BUNDLE_TIMEOUT: Duration = Duration::from_secs(5 * 60);
 
 #[derive(Copy, Clone)]
 struct QueueSize(usize);
@@ -501,7 +501,7 @@ impl RepoShardedProcessExecutor for HgSyncProcessExecutor {
             self.ctx.logger(),
             "Initiating hg sync command execution for repo {}", &self.repo_name,
         );
-        let base_retry_delay_ms = 1000;
+        let base_retry_delay = Duration::from_secs(1);
         retry_always(
             self.ctx.logger(),
             |attempt| async move {
@@ -530,7 +530,7 @@ impl RepoShardedProcessExecutor for HgSyncProcessExecutor {
                     anyhow::Ok(())
                 }
             },
-            base_retry_delay_ms,
+            base_retry_delay,
             DEFAULT_RETRY_NUM,
         )
         .await?;
@@ -793,7 +793,7 @@ async fn sync_single_combined_entry(
     ctx: &CoreContext,
     combined_entry: &CombinedBookmarkUpdateLogEntry,
     hg_repo: &HgRepo,
-    base_retry_delay_ms: u64,
+    base_retry_delay: Duration,
     retry_num: usize,
     globalrev_syncer: &GlobalrevSyncer,
 ) -> Result<RetryAttemptsCount, Error> {
@@ -807,7 +807,7 @@ async fn sync_single_combined_entry(
     let (_, attempts) = retry_always(
         ctx.logger(),
         |attempt| try_sync_single_combined_entry(ctx, attempt, combined_entry, hg_repo),
-        base_retry_delay_ms,
+        base_retry_delay,
         retry_num,
     )
     .watched(ctx.logger())
@@ -1108,7 +1108,8 @@ async fn run<'a>(
     let readonly_storage = matches.readonly_storage();
     let config_store = matches.config_store();
 
-    let base_retry_delay_ms = args::get_u64_opt(matches, "base-retry-delay-ms").unwrap_or(1000);
+    let base_retry_delay =
+        Duration::from_millis(args::get_u64_opt(matches, "base-retry-delay-ms").unwrap_or(1000));
     let retry_num = args::get_usize(matches, "retry-num", DEFAULT_RETRY_NUM);
 
     let bookmark_regex_force_lfs = matches
@@ -1198,7 +1199,7 @@ async fn run<'a>(
                 repo.clone(),
                 BundlePreparer::new_generate_bundles(
                     repo,
-                    base_retry_delay_ms,
+                    base_retry_delay,
                     retry_num,
                     filenode_verifier,
                     bookmark_regex_force_lfs,
@@ -1281,16 +1282,16 @@ async fn run<'a>(
         }
     };
 
-    let single_bundle_timeout_ms = args::get_u64(
+    let single_bundle_timeout = Duration::from_millis(args::get_u64(
         matches,
         "single-bundle-timeout-ms",
-        DEFAULT_SINGLE_BUNDLE_TIMEOUT_MS,
-    );
+        DEFAULT_SINGLE_BUNDLE_TIMEOUT.as_millis() as u64,
+    ));
     let verify_server_bookmark_on_failure = matches.is_present("verify-server-bookmark-on-failure");
     let hg_repo = hgrepo::HgRepo::new(
         hg_repo_path,
         batch_size,
-        single_bundle_timeout_ms,
+        single_bundle_timeout,
         verify_server_bookmark_on_failure,
     )?;
     let bookmarks =
@@ -1367,7 +1368,7 @@ async fn run<'a>(
                         ctx,
                         &combined_entry,
                         &hg_repo,
-                        base_retry_delay_ms,
+                        base_retry_delay,
                         retry_num,
                         &globalrev_syncer,
                     )
@@ -1550,7 +1551,7 @@ async fn run<'a>(
                         ctx,
                         &bundle,
                         hg_repo,
-                        base_retry_delay_ms,
+                        base_retry_delay,
                         retry_num,
                         globalrev_syncer,
                     )
@@ -1580,7 +1581,7 @@ async fn run<'a>(
                                 bail!("failed to update counter")
                             }
                         },
-                        base_retry_delay_ms,
+                        base_retry_delay,
                         retry_num,
                     )
                     .watched(ctx.logger())

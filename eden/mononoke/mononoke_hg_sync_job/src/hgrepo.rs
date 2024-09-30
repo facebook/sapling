@@ -46,7 +46,7 @@ use tokio::sync::Mutex;
 
 use crate::CommitsInBundle;
 
-const BOOKMARK_LOCATION_LOOKUP_TIMEOUT_MS: u64 = 10_000;
+const BOOKMARK_LOCATION_LOOKUP_TIMEOUT: Duration = Duration::from_secs(10);
 const LIST_SERVER_BOOKMARKS_EXTENSION: &str = include_str!("listserverbookmarks.py");
 const SEND_UNBUNDLE_REPLAY_EXTENSION: &str = include_str!("sendunbundlereplay.py");
 
@@ -218,7 +218,7 @@ struct HgPeer {
     reports_file: Arc<NamedTempFile>,
     bundle_applied: usize,
     max_bundles_allowed: usize,
-    baseline_bundle_timeout_ms: u64,
+    baseline_bundle_timeout: Duration,
     invalidated: bool,
     // The extension_file needs to be kept around while we have running instances of the process.
     #[allow(unused)]
@@ -229,7 +229,7 @@ impl HgPeer {
     pub fn new(
         repo_path: &str,
         max_bundles_allowed: usize,
-        baseline_bundle_timeout_ms: u64,
+        baseline_bundle_timeout: Duration,
     ) -> Result<Self> {
         let reports_file = NamedTempFile::new()?;
         let file_path = reports_file
@@ -263,7 +263,7 @@ impl HgPeer {
             reports_file: Arc::new(reports_file),
             bundle_applied: 0,
             max_bundles_allowed,
-            baseline_bundle_timeout_ms,
+            baseline_bundle_timeout,
             invalidated: false,
             extension_file: Arc::new(extension_file),
         })
@@ -350,7 +350,9 @@ impl HgPeer {
             log_path,
         );
         let path = self.reports_file.path().to_path_buf();
-        let bundle_timeout_ms = self.baseline_bundle_timeout_ms * 2_u64.pow(attempt as u32 - 1);
+        let bundle_timeout = Duration::from_millis(
+            self.baseline_bundle_timeout.as_millis() as u64 * 2_u64.pow(attempt as u32 - 1),
+        );
 
         let line_num_in_reports_file = lines_after(&path, 0).watched(logger).await?.len();
 
@@ -364,7 +366,7 @@ impl HgPeer {
             let report_lines = self
                 .process
                 .ensure_alive(
-                    wait_till_more_lines(path, line_num_in_reports_file, bundle_timeout_ms).boxed(),
+                    wait_till_more_lines(path, line_num_in_reports_file, bundle_timeout).boxed(),
                     // even if peer process has died, lets wait for additional grace
                     // period, and try to collect the report if any.
                     Some(Duration::from_secs(1)),
@@ -406,7 +408,7 @@ pub struct HgRepo {
     repo_path: Arc<String>,
     peer: Arc<Mutex<HgPeer>>,
     max_bundles_per_peer: usize,
-    baseline_bundle_timeout_ms: u64,
+    baseline_bundle_timeout: Duration,
     verify_server_bookmark_on_failure: bool,
 }
 
@@ -414,15 +416,15 @@ impl HgRepo {
     pub fn new(
         repo_path: String,
         max_bundles_per_peer: usize,
-        baseline_bundle_timeout_ms: u64,
+        baseline_bundle_timeout: Duration,
         verify_server_bookmark_on_failure: bool,
     ) -> Result<Self> {
-        let peer = HgPeer::new(&repo_path, max_bundles_per_peer, baseline_bundle_timeout_ms)?;
+        let peer = HgPeer::new(&repo_path, max_bundles_per_peer, baseline_bundle_timeout)?;
         Ok(Self {
             repo_path: Arc::new(repo_path),
             peer: peer.arc_mutexed(),
             max_bundles_per_peer,
-            baseline_bundle_timeout_ms,
+            baseline_bundle_timeout,
             verify_server_bookmark_on_failure,
         })
     }
@@ -494,7 +496,7 @@ impl HgRepo {
         let new_peer = HgPeer::new(
             &self.repo_path.clone(),
             self.max_bundles_per_peer,
-            self.baseline_bundle_timeout_ms,
+            self.baseline_bundle_timeout,
         )?;
         *peer = new_peer;
         Ok(debug!(logger, "done renewing hg peer"))
@@ -538,7 +540,7 @@ impl HgRepo {
         let exit_status = cmd
             .wait()
             .map_err(Error::from)
-            .timeout(Duration::from_millis(BOOKMARK_LOCATION_LOOKUP_TIMEOUT_MS))
+            .timeout(BOOKMARK_LOCATION_LOOKUP_TIMEOUT)
             .flatten_err()
             .await?;
 

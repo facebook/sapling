@@ -95,7 +95,7 @@ const SCUBA_TABLE: &str = "mononoke_cas_sync";
 const JOB_NAME: &str = "mononoke_cas_sync_job";
 
 const DEFAULT_EXECUTION_RETRY_NUM: usize = 1;
-const DEFAULT_RETRY_DELAY_MS: u64 = 1000;
+const DEFAULT_RETRY_DELAY: Duration = Duration::from_secs(1);
 const DEFAULT_BATCH_SIZE: u64 = 10;
 
 #[derive(Copy, Clone)]
@@ -296,8 +296,8 @@ impl MononokeCasSyncProcessExecutor {
             self.ctx.logger(),
             "Initiating mononoke RE CAS sync command execution for repo {}", &self.repo_name,
         );
-        let base_retry_delay_ms = args::get_u64_opt(self.matches.as_ref(), "base-retry-delay-ms")
-            .unwrap_or(DEFAULT_RETRY_DELAY_MS);
+        let base_retry_delay = args::get_u64_opt(self.matches.as_ref(), "base-retry-delay-ms")
+            .map_or(DEFAULT_RETRY_DELAY, Duration::from_millis);
         let retry_num = args::get_usize(
             self.matches.as_ref(),
             "retry-num",
@@ -341,7 +341,7 @@ impl MononokeCasSyncProcessExecutor {
                 }
                 anyhow::Ok(())
             },
-            base_retry_delay_ms,
+            base_retry_delay,
             retry_num,
         )
         .await?;

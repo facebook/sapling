@@ -6,6 +6,7 @@
  */
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -25,7 +26,7 @@ use sqlblob::Sqlblob;
 use crate::utils;
 use crate::MononokeSQLBlobGCArgs;
 
-const BASE_RETRY_DELAY_MS: u64 = 1000;
+const BASE_RETRY_DELAY: Duration = Duration::from_secs(1);
 const RETRIES: usize = 3;
 
 /// mark referenced blobs as not safe to delete
@@ -52,7 +53,7 @@ async fn handle_one_key(
     retry_always(
         &logger,
         |_| store.set_generation(&key, inline_small_values, mark_generation),
-        BASE_RETRY_DELAY_MS,
+        BASE_RETRY_DELAY,
         RETRIES,
     )
     .await
@@ -64,7 +65,7 @@ async fn handle_initial_generation(store: &Sqlblob, shard: usize, logger: &Logge
     retry_always(
         logger,
         |_| store.set_initial_generation(shard),
-        BASE_RETRY_DELAY_MS,
+        BASE_RETRY_DELAY,
         RETRIES,
     )
     .await

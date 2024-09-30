@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashMap;
+use std::time::Duration;
 use std::time::Instant;
 
 use anyhow::anyhow;
@@ -34,7 +35,7 @@ const BLOBSTORE_KEY: &str = "blobstore_key";
 const COMPRESSED_SIZE: &str = "compressed_size";
 const PACK_KEY: &str = "pack_key";
 const UNCOMPRESSED_SIZE: &str = "uncompressed_size";
-const BASE_RETRY_DELAY_MS: u64 = 2000;
+const BASE_RETRY_DELAY: Duration = Duration::from_secs(2);
 const RETRIES: usize = 10;
 
 // Tries to pack with the first blob from `blobs` as the dictionary for the other blobs
@@ -150,7 +151,7 @@ pub async fn repack_keys_with_retry<T: BlobstoreUnlinkOps>(
                 tuning_info_scuba,
             )
         },
-        BASE_RETRY_DELAY_MS,
+        BASE_RETRY_DELAY,
         RETRIES,
     )
     .await?;
