@@ -18,6 +18,7 @@ use async_trait::async_trait;
 use cache_warmup::cache_warmup;
 use cache_warmup::CacheWarmupKind;
 use clap::Parser;
+use clientinfo::ClientEntryPoint;
 use cloned::cloned;
 use cmdlib_logging::ScribeLoggingArgs;
 use environment::BookmarkCacheDerivedData;
@@ -235,6 +236,7 @@ impl RepoShardedProcessExecutor for MononokeServerProcessExecutor {
 fn main(fb: FacebookInit) -> Result<()> {
     let app = MononokeAppBuilder::new(fb)
         .with_default_scuba_dataset("mononoke_test_perf")
+        .with_entry_point(ClientEntryPoint::SaplingRemoteApi)
         .with_bookmarks_cache(BookmarkCacheOptions {
             cache_kind: BookmarkCacheKind::Local,
             derived_data: BookmarkCacheDerivedData::HgOnly,

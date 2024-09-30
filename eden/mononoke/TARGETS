@@ -29,6 +29,7 @@ rust_binary(
         "//eden/mononoke/mononoke_api:mononoke_api",
         "//eden/mononoke/server/repo_listener:repo_listener",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
+        "//eden/scm/lib/clientinfo:clientinfo",
     ] + ([] if rust_oss.is_oss_build() else [
         "//eden/mononoke/pushrebase:pushrebase_client",
     ])),

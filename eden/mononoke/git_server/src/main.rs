@@ -163,6 +163,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let app = MononokeAppBuilder::new(fb)
         .with_default_scuba_dataset("mononoke_git_server")
+        .with_entry_point(ClientEntryPoint::MononokeGitServer)
         .with_bookmarks_cache(BookmarkCacheOptions {
             cache_kind: BookmarkCacheKind::Local,
             derived_data: BookmarkCacheDerivedData::NoDerivation, // Derivation is already done at push time

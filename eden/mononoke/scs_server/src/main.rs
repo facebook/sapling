@@ -19,6 +19,7 @@ use async_trait::async_trait;
 use clap::Parser;
 use clap::ValueEnum;
 use client::AsyncRequestsQueue;
+use clientinfo::ClientEntryPoint;
 use cloned::cloned;
 use cmdlib_logging::ScribeLoggingArgs;
 use connection_security_checker::ConnectionSecurityChecker;
@@ -232,6 +233,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     panichandler::set_panichandler(Fate::Abort);
 
     let app = MononokeAppBuilder::new(fb)
+        .with_entry_point(ClientEntryPoint::ScsServer)
         .with_bookmarks_cache(BookmarkCacheOptions {
             cache_kind: BookmarkCacheKind::Local,
             derived_data: BookmarkCacheDerivedData::AllKinds,

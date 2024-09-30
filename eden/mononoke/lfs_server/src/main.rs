@@ -188,6 +188,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     };
 
     let app = MononokeAppBuilder::new(fb)
+        .with_entry_point(ClientEntryPoint::LfsServer)
         .with_app_extension(Fb303AppExtension {})
         .with_app_extension(RepoFilterAppExtension {})
         .with_cachelib_settings(cachelib_settings)
