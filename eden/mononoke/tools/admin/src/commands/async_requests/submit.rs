@@ -18,6 +18,7 @@ use async_requests::types::ThriftMegarepoChangeTargetConfigParams;
 use async_requests::types::ThriftMegarepoRemergeSourceParams;
 use async_requests::types::ThriftMegarepoSyncChangesetParams;
 use async_requests::types::ThriftParams;
+use async_requests::types::Token;
 use async_requests::AsyncMethodRequestQueue;
 use clap::Args;
 use client::AsyncRequestsQueue;
@@ -54,7 +55,7 @@ pub async fn submit_request(
     let repo_id = repo.repo_identity().id();
 
     let params = fs::read_to_string(args.params)?;
-    match args.method.as_str() {
+    let token = match args.method.as_str() {
         "megarepo_add_sync_target" => {
             let params: ThriftMegarepoAddTargetParams =
                 serde_json::from_str(&params).context("parsing params")?;
@@ -90,6 +91,8 @@ pub async fn submit_request(
         _ => bail!("method {} not supported in submit", args.method),
     }?;
 
+    println!("Submitted with token: {}", token);
+
     Ok(())
 }
 
@@ -98,10 +101,10 @@ async fn enqueue<P: ThriftParams>(
     queue: AsyncMethodRequestQueue,
     repo_id: Option<&RepositoryId>,
     params: P,
-) -> Result<()> {
-    let _token = queue
+) -> Result<u64> {
+    let token = queue
         .enqueue(ctx, repo_id, params)
         .await
         .context("updating the request")?;
-    Ok(())
+    Ok(token.id().0)
 }
