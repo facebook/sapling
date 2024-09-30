@@ -16,6 +16,7 @@ bonsai_git_mapping = { version = "0.1.0", path = "../../bonsai_git_mapping" }
 bonsai_tag_mapping = { version = "0.1.0", path = "../../bonsai_tag_mapping" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 bookmarks_movement = { version = "0.1.0", path = "../../bookmarks/bookmarks_movement" }
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 bulk_derivation = { version = "0.1.0", path = "../../derived_data/bulk_derivation" }
 bytes = { version = "1.6.0", features = ["serde"] }
 changesets_creation = { version = "0.1.0", path = "../../changesets/changesets_creation" }
@@ -45,6 +46,7 @@ rand = { version = "0.8", features = ["small_rng"] }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
+retry = { version = "0.1.0", path = "../../common/retry" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
 sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

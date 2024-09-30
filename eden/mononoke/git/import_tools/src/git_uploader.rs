@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::time::Duration;
+
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
@@ -14,6 +16,7 @@ use bonsai_git_mapping::BonsaiGitMappingEntry;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_git_mapping::BonsaisOrGitShas;
 use bonsai_tag_mapping::BonsaiTagMappingRef;
+use borrowed::borrowed;
 use bulk_derivation::BulkDerivation;
 use bytes::Bytes;
 use changesets_creation::save_changesets;
@@ -39,6 +42,8 @@ use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
+use retry::retry_always;
+use retry::RetryAttemptsCount;
 use slog::debug;
 use slog::info;
 use sorted_vector_map::SortedVectorMap;
@@ -51,6 +56,9 @@ use crate::TagMetadata;
 use crate::HGGIT_COMMIT_ID_EXTRA;
 use crate::HGGIT_MARKER_EXTRA;
 use crate::HGGIT_MARKER_VALUE;
+
+const BASE_RETRY_DELAY: Duration = Duration::from_secs(1);
+const RETRY_ATTEMPTS: usize = 4;
 
 #[derive(Clone, Copy, Debug)]
 pub enum ReuploadCommits {
@@ -369,26 +377,40 @@ pub async fn finalize_batch(
         .iter()
         .map(|(git_sha1, bcs)| BonsaiGitMappingEntry::new(*git_sha1, bcs.get_changeset_id()))
         .collect::<Vec<BonsaiGitMappingEntry>>();
-    let vbcs = changesets.into_iter().map(|(_, bcsid)| bcsid).collect();
+    let vbcs = changesets
+        .into_iter()
+        .map(|(_, bcsid)| bcsid)
+        .collect::<Vec<_>>();
     let ret = oid_to_bcsid
         .iter()
         .map(|entry| (entry.git_sha1, entry.bcs_id))
         .collect();
 
-    // We know that the commits are in order (this is guaranteed by the Walk), so we
-    // can insert them as-is, one by one, without extra dependency / ordering checks.
-    let (stats, ()) = save_changesets(ctx, repo, vbcs).try_timed().await?;
-    debug!(
-        ctx.logger(),
-        "save_changesets for {} commits in {:?}",
-        oid_to_bcsid.len(),
-        stats.completion_time
-    );
-
     if dry_run {
         // Short circuit the steps that write
         return Ok(ret);
     }
+
+    // We know that the commits are in order (this is guaranteed by the Walk), so we
+    // can insert them as-is, one by one, without extra dependency / ordering checks.
+    let ((stats, ()), RetryAttemptsCount(num_retries)) = retry_always(
+        ctx.logger(),
+        |_| {
+            cloned!(vbcs);
+            async move { save_changesets(ctx, repo, vbcs).try_timed().await }
+        },
+        BASE_RETRY_DELAY,
+        RETRY_ATTEMPTS,
+    )
+    .await?;
+
+    debug!(
+        ctx.logger(),
+        "save_changesets for {} commits in {:?} after {} retries",
+        oid_to_bcsid.len(),
+        stats.completion_time,
+        num_retries
+    );
 
     let csids = oid_to_bcsid
         .iter()
@@ -419,9 +441,16 @@ pub async fn finalize_batch(
     // it is safe to proceed from there.
     // We can't actually do it last as it must be done before deriving `GitDeltaManifest`
     // since that depends on git commits.
-    repo.bonsai_git_mapping()
-        .bulk_add(ctx, &oid_to_bcsid)
-        .await?;
+    retry_always(
+        ctx.logger(),
+        |_| {
+            borrowed!(oid_to_bcsid);
+            async move { repo.bonsai_git_mapping().bulk_add(ctx, oid_to_bcsid).await }
+        },
+        BASE_RETRY_DELAY,
+        RETRY_ATTEMPTS,
+    )
+    .await?;
     // derive git delta manifests: note: GitCommit don't need to be explicitly
     // derived as they were already imported
     let delta_manifests = backfill_derivation
