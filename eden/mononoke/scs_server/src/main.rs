@@ -67,6 +67,7 @@ use tracing_subscriber::filter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::Layer;
 
+mod async_requests;
 mod commit_id;
 mod errors;
 mod facebook;
