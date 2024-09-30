@@ -44,3 +44,14 @@ pub(crate) async fn enqueue<P: ThriftParams>(
         .map(|res| res.into_thrift())
         .map_err(|e| errors::internal_error(format!("Failed to enqueue the request: {}", e)).into())
 }
+
+pub(crate) async fn poll<T: Token>(
+    ctx: &CoreContext,
+    queue: &AsyncMethodRequestQueue,
+    token: T,
+) -> Result<<T::R as Request>::PollResponse, errors::ServiceError> {
+    Ok(queue
+        .poll(ctx, token)
+        .await
+        .map_err(errors::internal_error)?)
+}
