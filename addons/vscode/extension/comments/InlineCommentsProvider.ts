@@ -120,6 +120,8 @@ class InlineCommentsForRepo implements vscode.Disposable {
     if (numComments > 0) {
       this.provider.fetchComments?.(diffId).then(comments => {
         this.ctx.logger.info(`Updating ${comments.length} diff comments for diff ${diffId}`);
+
+        this.currentCommentsPerFile.clear();
         for (const comment of comments) {
           if (comment.filename) {
             const existing = this.currentCommentsPerFile.get(comment.filename) ?? [];
