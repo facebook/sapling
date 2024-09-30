@@ -18,7 +18,6 @@ use tokio::io::AsyncBufReadExt;
 use tokio::io::BufReader;
 use tokio_stream::wrappers::LinesStream;
 use tracing::error;
-//use async_runtime::{block_on_future as block_on, stream_to_iter as block_on_stream};
 use types::HgId;
 use types::Key;
 use types::RepoPathBuf;
