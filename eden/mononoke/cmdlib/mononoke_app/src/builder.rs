@@ -29,6 +29,7 @@ use clap::Args;
 use clap::Command;
 use clap::CommandFactory;
 use clap::FromArgMatches;
+use clientinfo::ClientEntryPoint;
 use cmdlib_caching::init_cachelib;
 use cmdlib_caching::CachelibArgs;
 use cmdlib_caching::CachelibSettings;
@@ -78,6 +79,7 @@ pub struct MononokeAppBuilder {
     default_scuba_dataset: Option<String>,
     defaults: HashMap<&'static str, String>,
     bookmark_cache_options: BookmarkCacheOptions,
+    client_entry_point_for_service: ClientEntryPoint,
 }
 
 #[derive(Args, Debug)]
@@ -139,6 +141,7 @@ impl MononokeAppBuilder {
             default_scuba_dataset: None,
             defaults: HashMap::new(),
             bookmark_cache_options: Default::default(),
+            client_entry_point_for_service: ClientEntryPoint::Unknown,
         }
     }
 
@@ -154,6 +157,13 @@ impl MononokeAppBuilder {
 
     pub fn with_bookmarks_cache(mut self, bookmark_cache_options: BookmarkCacheOptions) -> Self {
         self.bookmark_cache_options = bookmark_cache_options;
+        self
+    }
+
+    /// Method for setting the service level client entry point that is not specific to any
+    /// particular request
+    pub fn with_entry_point(mut self, entry_point: ClientEntryPoint) -> Self {
+        self.client_entry_point_for_service = entry_point;
         self
     }
 
