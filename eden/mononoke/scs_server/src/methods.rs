@@ -5,9 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use async_requests::types::AsyncPingToken;
 use context::CoreContext;
 use source_control as thrift;
 
+use crate::async_requests::enqueue;
+use crate::async_requests::get_queue;
+use crate::async_requests::poll;
 use crate::errors;
 use crate::source_control_impl::SourceControlServiceImpl;
 
@@ -39,5 +43,24 @@ impl SourceControlServiceImpl {
             })
             .collect();
         Ok(rsp)
+    }
+
+    pub(crate) async fn async_ping(
+        &self,
+        ctx: CoreContext,
+        params: thrift::AsyncPingParams,
+    ) -> Result<thrift::AsyncPingToken, errors::ServiceError> {
+        let queue = get_queue(&ctx, &self.async_requests_queue_client).await?;
+        enqueue::<thrift::AsyncPingParams>(&ctx, &queue, None, params).await
+    }
+
+    pub(crate) async fn async_ping_poll(
+        &self,
+        ctx: CoreContext,
+        token: thrift::AsyncPingToken,
+    ) -> Result<thrift::AsyncPingPollResponse, errors::ServiceError> {
+        let queue = get_queue(&ctx, &self.async_requests_queue_client).await?;
+        let token = AsyncPingToken(token);
+        poll::<AsyncPingToken>(&ctx, &queue, token).await
     }
 }

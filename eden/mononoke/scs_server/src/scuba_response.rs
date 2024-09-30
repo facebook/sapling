@@ -7,7 +7,8 @@
 
 use faster_hex::hex_string;
 use scuba_ext::MononokeScubaSampleBuilder;
-use source_control as thrift;
+use source_control::AsyncPingResult;
+use source_control::{self as thrift};
 
 use crate::commit_id::CommitIdExt;
 
@@ -258,3 +259,25 @@ impl AddScubaResponse for thrift::RepoStackGitBundleStoreResponse {
         scuba.add("response_bundle_handle", self.everstore_handle.as_ref());
     }
 }
+
+impl AddScubaResponse for thrift::AsyncPingToken {
+    fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("token", self.id);
+    }
+}
+
+impl AddScubaResponse for thrift::AsyncPingPollResponse {
+    fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        match &self.result {
+            None => {
+                scuba.add("poll_ready", false);
+            }
+            Some(resp) => {
+                scuba.add("poll_ready", true);
+                <AsyncPingResult as AddScubaResponse>::add_scuba_response(resp, scuba);
+            }
+        }
+    }
+}
+
+impl AddScubaResponse for thrift::AsyncPingResult {}

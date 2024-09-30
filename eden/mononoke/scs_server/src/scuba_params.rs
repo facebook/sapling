@@ -683,6 +683,18 @@ impl AddScubaParams for thrift::CloudWorkspaceSmartlogParams {
     }
 }
 
+impl AddScubaParams for thrift::AsyncPingParams {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("param_payload", self.payload.clone());
+    }
+}
+
+impl AddScubaParams for thrift::AsyncPingToken {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("param_token", self.id);
+    }
+}
+
 pub(crate) fn report_megarepo_target(
     target: &thrift::MegarepoTarget,
     scuba: &mut MononokeScubaSampleBuilder,
