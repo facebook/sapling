@@ -14,10 +14,10 @@ import type {Comparison} from 'shared/Comparison';
 import packageJson from '../package.json';
 import {executeVSCodeCommand} from './commands';
 import {getCLICommand, PERSISTED_STORAGE_KEY_PREFIX, shouldOpenBeside} from './config';
+import {getWebviewOptions, htmlForWebview} from './htmlForWebview';
 import {locale, t} from './i18n';
 import {onClientConnection} from 'isl-server/src';
 import {deserializeFromString, serializeToString} from 'isl/src/serialize';
-import crypto from 'node:crypto';
 import {ComparisonType, isComparison, labelForComparison} from 'shared/Comparison';
 import {nullthrows} from 'shared/utils';
 import * as vscode from 'vscode';
@@ -27,9 +27,6 @@ let hasOpenedISLWebviewBeforeState = false;
 
 const islViewType = 'sapling.isl';
 const comparisonViewType = 'sapling.comparison';
-
-const devPort = 3005;
-const devUri = `http://localhost:${devPort}`;
 
 function createOrFocusISLWebview(
   context: vscode.ExtensionContext,
@@ -52,7 +49,7 @@ function createOrFocusISLWebview(
       islViewType,
       t('isl.title'),
       viewColumn,
-      getWebviewOptions(context),
+      getWebviewOptions(context, 'dist/webview'),
     ),
     platform,
     {mode: 'isl'},
@@ -79,28 +76,13 @@ function createComparisonWebview(
       comparisonViewType,
       labelForComparison(comparison),
       column,
-      getWebviewOptions(context),
+      getWebviewOptions(context, 'dist/webview'),
     ),
     platform,
     {mode: 'comparison', comparison},
     logger,
   );
   return webview;
-}
-
-function getWebviewOptions(
-  context: vscode.ExtensionContext,
-): vscode.WebviewOptions & vscode.WebviewPanelOptions {
-  return {
-    enableScripts: true,
-    retainContextWhenHidden: true,
-    // Restrict the webview to only loading content from our extension's `webview` directory.
-    localResourceRoots: [
-      vscode.Uri.joinPath(context.extensionUri, 'dist/webview'),
-      vscode.Uri.parse(devUri),
-    ],
-    portMapping: [{webviewPort: devPort, extensionHostPort: devPort}],
-  };
 }
 
 function shouldUseWebviewView(): boolean {
@@ -244,7 +226,7 @@ function registerDeserializer(
         return Promise.resolve();
       }
       // Reset the webview options so we use latest uri for `localResourceRoots`.
-      webviewPanel.webview.options = getWebviewOptions(context);
+      webviewPanel.webview.options = getWebviewOptions(context, 'dist/webview');
       populateAndSetISLWebview(context, webviewPanel, platform, {mode: 'isl'}, logger);
       return Promise.resolve();
     },
@@ -264,7 +246,7 @@ class ISLWebviewViewProvider implements vscode.WebviewViewProvider {
   ) {}
 
   resolveWebviewView(webviewView: vscode.WebviewView): void | Thenable<void> {
-    webviewView.webview.options = getWebviewOptions(this.extensionContext);
+    webviewView.webview.options = getWebviewOptions(this.extensionContext, 'dist/webview');
     populateAndSetISLWebview(
       this.extensionContext,
       webviewView,
@@ -301,13 +283,22 @@ function populateAndSetISLWebview<W extends vscode.WebviewPanel | vscode.Webview
       'Sapling_favicon-light-green-transparent.svg',
     );
   }
-  panelOrView.webview.html = htmlForISLWebview(
+  panelOrView.webview.html = htmlForWebview({
     context,
-    panelOrView.webview,
-    isPanel(panelOrView) ? 'panel' : 'view',
-    mode,
-    logger,
-  );
+    extensionRelativeBase: 'dist/webview',
+    entryPointFile: 'webview.js',
+    cssEntryPointFile: 'res/webview.css',
+    devModeScripts: ['/webview/islWebviewPreload.ts', '/webview/islWebviewEntry.tsx'],
+    title: t('isl.title'),
+    rootClass: `webview-${isPanel(panelOrView) ? 'panel' : 'view'}`,
+    webview: panelOrView.webview,
+    extraStyles: '',
+    initialScript: `
+      window.saplingLanguage = "${locale /* important: locale has already been validated */}";
+      window.islAppMode = ${JSON.stringify(mode)};
+      ${getInitialStateJs(context, logger)}
+    `,
+  });
   const updatedPlatform = {...platform, panelOrView} as VSCodeServerPlatform as ServerPlatform;
 
   const disposeConnection = onClientConnection({
@@ -448,164 +439,4 @@ function getInitialStateJs(context: vscode.ExtensionContext, logger: Logger) {
     logger.info('Found INVALID initial persisted state for webview: ', parsed);
     return '';
   }
-}
-
-/**
- * Get any extra styles to inject into the webview.
- * Important: this is injected into the HTML directly, and should not
- * use any user-controlled data that could be used maliciously.
- */
-function getExtraStyles(): string {
-  const globalStyles = new Map();
-
-  const fontFeatureSettings = vscode.workspace
-    .getConfiguration('editor')
-    .get<string | boolean>('fontLigatures');
-  const validFontFeaturesRegex = /^[0-9a-zA-Z"',\-_ ]*$/;
-  if (fontFeatureSettings === true) {
-    // no need to specify specific additional settings
-  } else if (
-    !fontFeatureSettings ||
-    typeof fontFeatureSettings !== 'string' ||
-    !validFontFeaturesRegex.test(fontFeatureSettings)
-  ) {
-    globalStyles.set('font-variant-ligatures', 'none');
-  } else {
-    globalStyles.set('font-feature-settings', fontFeatureSettings);
-  }
-
-  const tabSizeSettings = vscode.workspace.getConfiguration('editor').get<number>('tabSize');
-  if (typeof tabSizeSettings === 'number') {
-    globalStyles.set('--tab-size', tabSizeSettings);
-  }
-
-  const globalStylesFlat = Array.from(globalStyles, ([k, v]) => `${k}: ${v};`);
-  return `
-  html {
-    ${globalStylesFlat.join('\n')};
-  }`;
-}
-
-/**
- * When built in dev mode using vite, files are not written to disk.
- * In order to get files to load, we need to set up the server path ourself.
- *
- * Note: no CSPs in dev mode. This should not be used in production!
- */
-function devModeHtmlForISLWebview(
-  kind: 'panel' | 'view',
-  context: vscode.ExtensionContext,
-  appMode: AppMode,
-  logger: Logger,
-) {
-  logger.info('using dev mode webview');
-  // make resource access use vite dev server, instead of `webview.asWebviewUri`
-  const baseUri = vscode.Uri.parse(devUri);
-
-  const extraRootClass = `webview-${kind}`;
-
-  return `<!DOCTYPE html>
-	<html lang="en">
-	<head>
-		<meta charset="UTF-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<base href="${baseUri}">
-
-    <!-- Hot reloading code from Vite. Normally, vite injects this into the HTML.
-    But since we have to load this statically, we insert it manually here.
-    See https://github.com/vitejs/vite/blob/734a9e3a4b9a0824a5ba4a5420f9e1176ce74093/docs/guide/backend-integration.md?plain=1#L50-L56 -->
-    <script type="module">
-      import RefreshRuntime from "/@react-refresh"
-      RefreshRuntime.injectIntoGlobalHook(window)
-      window.$RefreshReg$ = () => {}
-      window.$RefreshSig$ = () => (type) => type
-      window.__vite_plugin_react_preamble_installed__ = true
-    </script>
-    <script type="module" src="/@vite/client"></script>
-    <style>
-      ${getExtraStyles()}
-    </style>
-
-		<script>
-			window.saplingLanguage = "${locale /* important: locale has already been validated */}";
-      window.islAppMode = ${JSON.stringify(appMode)};
-      ${getInitialStateJs(context, logger)}
-		</script>
-    <script type="module" src="/webview/islWebviewPreload.ts"></script>
-    <script type="module" src="/webview/islWebviewEntry.tsx"></script>
-	</head>
-	<body>
-		<div id="root" class="${extraRootClass}">loading (dev mode)</div>
-	</body>
-	</html>`;
-}
-
-const IS_DEV_BUILD = process.env.NODE_ENV === 'development';
-function htmlForISLWebview(
-  context: vscode.ExtensionContext,
-  webview: vscode.Webview,
-  kind: 'panel' | 'view',
-  appMode: AppMode,
-  logger: Logger,
-) {
-  if (IS_DEV_BUILD) {
-    return devModeHtmlForISLWebview(kind, context, appMode, logger);
-  }
-
-  // Only allow accessing resources relative to webview dir,
-  // and make paths relative to here.
-  const baseUri = webview.asWebviewUri(
-    vscode.Uri.joinPath(context.extensionUri, 'dist', 'webview'),
-  );
-
-  const scriptUri = 'webview.js';
-
-  // Use a nonce to only allow specific scripts to be run
-  const nonce = getNonce();
-
-  const loadingText = t('isl.loading-text');
-  const titleText = t('isl.title');
-
-  const extraRootClass = `webview-${kind}`;
-
-  const CSP = [
-    `default-src ${webview.cspSource}`,
-    `style-src ${webview.cspSource} 'unsafe-inline'`,
-    // vscode-webview-ui needs to use style-src-elem without the nonce
-    `style-src-elem ${webview.cspSource} 'unsafe-inline'`,
-    `font-src ${webview.cspSource} data:`,
-    `img-src ${webview.cspSource} https: data:`,
-    `script-src ${webview.cspSource} 'nonce-${nonce}' 'wasm-unsafe-eval'`,
-    `script-src-elem ${webview.cspSource} 'nonce-${nonce}'`,
-    `worker-src ${webview.cspSource} 'nonce-${nonce}' blob:`,
-  ].join('; ');
-
-  return `<!DOCTYPE html>
-	<html lang="en">
-	<head>
-		<meta charset="UTF-8">
-		<meta http-equiv="Content-Security-Policy" content="${CSP}">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<base href="${baseUri}/">
-		<title>${titleText}</title>
-		<link href="res/webview.css" rel="stylesheet">
-		<link href="res/stylex.css" rel="stylesheet">
-    <style>
-      ${getExtraStyles()}
-    </style>
-		<script nonce="${nonce}">
-			window.saplingLanguage = "${locale /* important: locale has already been validated */}";
-      window.islAppMode = ${JSON.stringify(appMode)};
-      ${getInitialStateJs(context, logger)}
-		</script>
-		<script type="module" defer="defer" nonce="${nonce}" src="${scriptUri}"></script>
-	</head>
-	<body>
-		<div id="root" class="${extraRootClass}">${loadingText}</div>
-	</body>
-	</html>`;
-}
-
-function getNonce(): string {
-  return crypto.randomBytes(16).toString('base64');
 }
