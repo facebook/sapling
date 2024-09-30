@@ -2626,6 +2626,37 @@ void EdenServer::detectNfsCrawl() {
   }
 }
 
+void EdenServer::runEdenDoctor() {
+  // We are creating a new thread after a long time of inactivity and hence
+  // it makes sense to create a new thread pool executor for each run rather
+  // than reusing it. Explanation on why CPUThreadPoolExecutor-
+  // https://www.internalfb.com/intern/staticdocs/fbcref/guides/Executors/.
+  folly::CPUThreadPoolExecutor executor(1);
+  executor.add([] {
+    try {
+      XLOG(INFO, "Running periodic eden doctor dry-run.");
+      // Assuming, this will only be run from windows user's system,
+      // we are using the plain vanilla version of eden doctor dry run.
+      // This can be modified in the future to pass config-dir param.
+      auto proc = SpawnedProcess({"edenfsctl", "doctor", "--dry-run"});
+      XLOG(INFO, "Checking status for eden doctor dry-run.");
+      // Setting the timeout to terminate process to 2.5 minutes.
+      // P99.9 to run eden doctor dry-run is ~2 minutes.
+      // (https://fburl.com/scuba/edenfs_cli_usage/0ky3mf6q)
+      auto status = proc.waitOrTerminateOrKill(150s, 5s);
+      if (status.exitStatus() != 0) {
+        XLOG(
+            ERR,
+            "EdenFS doctor dry run failed or timed-out. Check edenfs doctor scuba logs for more info.");
+      }
+    } catch (const std::exception& e) {
+      XLOG(ERR)
+          << "Exception occurred while trying to run periodic doctor dry-run: "
+          << e.what();
+    }
+  });
+}
+
 void EdenServer::reloadConfig() {
   // Get the config, forcing a reload now.
   auto config = serverState_->getReloadableConfig()->getEdenConfig(

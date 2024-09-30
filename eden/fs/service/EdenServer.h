@@ -653,6 +653,9 @@ class EdenServer : private TakeoverHandler {
   // Detects when NFS backed repos are being crawled.
   void detectNfsCrawl();
 
+  // Run eden doctor to report issues.
+  void runEdenDoctor();
+
   // Cancel all subscribers on all mounts so that we can tear
   // down the thrift server without blocking
   void shutdownSubscribers();
@@ -855,5 +858,8 @@ class EdenServer : private TakeoverHandler {
   PeriodicFnTask<&EdenServer::detectNfsCrawl> detectNfsCrawlTask_{
       this,
       "detect_nfs_crawl"};
+  PeriodicFnTask<&EdenServer::runEdenDoctor> edenDoctorTask_{
+      this,
+      "run_eden_doctor"};
 };
 } // namespace facebook::eden
