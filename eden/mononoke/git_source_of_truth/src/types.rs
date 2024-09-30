@@ -21,7 +21,7 @@ use strum::EnumString;
 #[derive(Clone, Copy, Debug, Eq, PartialEq, mysql::OptTryFromRowField)]
 pub struct RowId(pub u64);
 
-#[derive(Clone, Debug, Eq, PartialEq, mysql::OptTryFromRowField)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash, mysql::OptTryFromRowField)]
 pub struct RepositoryName(pub String);
 
 #[derive(

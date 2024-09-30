@@ -51,6 +51,20 @@ mononoke_queries! {
          WHERE repo_id = {repo_id}"
     }
 
+    read GetByRepoName(repo_name: RepositoryName) -> (
+        RowId,
+        RepositoryId,
+        RepositoryName,
+        GitSourceOfTruth,
+    ) {
+        "SELECT id,
+            repo_id,
+            repo_name,
+            source_of_truth
+         FROM git_repositories_source_of_truth
+         WHERE repo_name = {repo_name}"
+    }
+
     read GetByGitSourceOfTruth(source_of_truth: GitSourceOfTruth) -> (
         RowId,
         RepositoryId,
@@ -149,6 +163,16 @@ impl GitSourceOfTruthConfig for SqlGitSourceOfTruthConfig {
         staleness: Staleness,
     ) -> Result<Option<GitSourceOfTruthConfigEntry>> {
         let rows = GetByRepoId::query(self.get_connection(staleness), &repo_id).await?;
+        Ok(rows.into_iter().next().map(row_to_entry))
+    }
+
+    async fn get_by_repo_name(
+        &self,
+        _ctx: &CoreContext,
+        repo_name: &RepositoryName,
+        staleness: Staleness,
+    ) -> Result<Option<GitSourceOfTruthConfigEntry>> {
+        let rows = GetByRepoName::query(self.get_connection(staleness), repo_name).await?;
         Ok(rows.into_iter().next().map(row_to_entry))
     }
 
@@ -255,6 +279,31 @@ mod test {
             .await?;
         let entry = push
             .get_by_repo_id(&ctx, repo_id, Staleness::MostRecent)
+            .await?;
+        assert!(entry.is_some());
+        let entry = entry.unwrap();
+        assert_eq!(entry.source_of_truth, GitSourceOfTruth::Mononoke);
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_get_by_repo_name(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let builder = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?;
+        let push = builder.build();
+
+        let repo_id = RepositoryId::new(1);
+        let repo_name = RepositoryName("test1".to_string());
+        let entry = push
+            .get_by_repo_name(&ctx, &repo_name, Staleness::MostRecent)
+            .await?;
+        assert!(entry.is_none());
+
+        push.set(&ctx, repo_id, repo_name.clone(), GitSourceOfTruth::Mononoke)
+            .await?;
+        let entry = push
+            .get_by_repo_name(&ctx, &repo_name, Staleness::MostRecent)
             .await?;
         assert!(entry.is_some());
         let entry = entry.unwrap();
