@@ -9,6 +9,8 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use cas_client::CasClient;
+use configmodel::convert::ByteCount;
+use configmodel::convert::FromConfigValue;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use re_client_lib::create_default_config;
@@ -25,6 +27,7 @@ pub struct ThinCasClient {
     uds_path: Option<String>,
     verbose: bool,
     log_dir: Option<String>,
+    fetch_limit: ByteCount,
 }
 
 pub fn init() {
@@ -66,6 +69,8 @@ impl ThinCasClient {
             }
         }
 
+        let default_fetch_limit = ByteCount::try_from_str("200MB")?;
+
         Ok(Self {
             client: Default::default(),
             connection_count: config.get_or("cas", "connection-count", || 1)?,
@@ -77,6 +82,8 @@ impl ThinCasClient {
                 ..Default::default()
             },
             log_dir,
+            fetch_limit: config
+                .get_or::<ByteCount>("cas", "max-batch-bytes", || default_fetch_limit)?,
         })
     }
 

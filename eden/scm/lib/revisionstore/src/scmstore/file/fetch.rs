@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::future;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -743,15 +744,14 @@ impl FetchState {
         let mut error = 0;
         let mut reqs = 0;
 
-        // TODO: configure
-        let max_batch_size = 1000;
+        let max_batch_size = 10000;
         let start_time = Instant::now();
 
         for chunk in digests.chunks(max_batch_size) {
             reqs += 1;
 
-            // TODO: should we fan out here into multiple requests?
-            match block_on(cas_client.fetch(chunk, CasDigestType::File)) {
+            block_on(async {
+                cas_client.fetch(chunk, CasDigestType::File).await.for_each(|results| match results {
                 Ok(results) => {
                     for (digest, data) in results {
                         let Some(key) = digest_to_key.remove(&digest) else {
@@ -783,14 +783,17 @@ impl FetchState {
                             }
                         }
                     }
+                    future::ready(())
                 }
                 Err(err) => {
                     tracing::error!(?err, "overall CAS error");
 
                     // Don't propagate CAS error - we want to fall back to SLAPI.
                     error += 1;
+                    future::ready(())
                 }
-            }
+            }).await;
+            })
         }
 
         span.record("hits", found);

@@ -9,6 +9,8 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use cas_client::CasClient;
+use configmodel::convert::ByteCount;
+use configmodel::convert::FromConfigValue;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use re_client_lib::create_default_config;
@@ -27,6 +29,7 @@ pub struct RichCasClient {
     verbose: bool,
     metadata: RemoteExecutionMetadata,
     use_casd_cache: bool,
+    fetch_limit: ByteCount,
 }
 
 pub fn init() {
@@ -55,6 +58,8 @@ impl RichCasClient {
 
         let use_casd_cache = config.get_or("cas", "use-shared-cache", || true)?;
 
+        let default_fetch_limit = ByteCount::try_from_str("200MB")?;
+
         Ok(Self {
             client: Default::default(),
             verbose: config.get_or_default("cas", "verbose")?,
@@ -63,6 +68,8 @@ impl RichCasClient {
                 ..Default::default()
             },
             use_casd_cache,
+            fetch_limit: config
+                .get_or::<ByteCount>("cas", "max-batch-bytes", || default_fetch_limit)?,
         })
     }
 

@@ -11,5 +11,6 @@ async-trait = "0.1.71"
 auto_impl = "1.1.0"
 configmodel = { version = "0.1.0", path = "../config/model" }
 factory = { version = "0.1.0", path = "../util/factory" }
+futures = { version = "0.3.30", features = ["async-await", "compat"] }
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 types = { version = "0.1.0", path = "../types" }

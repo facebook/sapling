@@ -10,6 +10,7 @@ async-runtime = { version = "0.1.0", path = "../../../async-runtime" }
 cas-client = { version = "0.1.0", path = "../../../cas-client" }
 clidispatch = { version = "0.1.0", path = "../../../clidispatch" }
 cmdutil = { version = "0.1.0", path = "../../cmdutil" }
+futures = { version = "0.3.30", features = ["async-await", "compat"] }
 manifest = { version = "0.1.0", path = "../../../manifest" }
 repo = { version = "0.1.0", path = "../../../repo" }
 types = { version = "0.1.0", path = "../../../types" }

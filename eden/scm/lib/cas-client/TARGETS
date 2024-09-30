@@ -10,6 +10,7 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:auto_impl",
+        "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/types:types",

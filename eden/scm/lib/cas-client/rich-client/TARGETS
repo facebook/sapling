@@ -7,6 +7,7 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     deps = [
         "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:tracing",
         "//common/rust/shed/fbinit:fbinit",
         "//eden/scm/lib/cas-client:cas-client",
