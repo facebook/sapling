@@ -85,7 +85,7 @@ export default defineConfig(({mode}) => ({
     outDir: 'dist/webview',
     manifest: true,
     rollupOptions: {
-      input: normalizeInputPath('webview.html'),
+      input: [normalizeInputPath('webview.html'), normalizeInputPath('inlineCommentWebview.html')],
       output: {
         // Don't use hashed names, so ISL webview panel can pre-define what filename to load
         entryFileNames: '[name].js',

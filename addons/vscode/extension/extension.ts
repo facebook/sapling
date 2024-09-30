@@ -59,7 +59,7 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(registerSaplingDiffContentProvider(ctx));
     context.subscriptions.push(new DeletedFileContentProvider());
     if (enabledSCMApiFeatures.has('comments')) {
-      context.subscriptions.push(new InlineCommentsProvider(reposList, ctx));
+      context.subscriptions.push(new InlineCommentsProvider(context, reposList, ctx));
     }
 
     context.subscriptions.push(...registerCommands(ctx));

@@ -10,12 +10,17 @@ import type {CodeReviewProvider, DiffSummaries} from 'isl-server/src/CodeReviewP
 import type {RepositoryContext} from 'isl-server/src/serverTypes';
 import type {CommitInfo, DiffComment} from 'isl/src/types';
 
+import {getWebviewOptions, htmlForWebview} from '../htmlForWebview';
 import * as vscode from 'vscode';
 
 export class InlineCommentsProvider implements vscode.Disposable {
   private disposables: Array<vscode.Disposable> = [];
   private repoDisposables: Array<vscode.Disposable> = [];
-  constructor(private reposList: VSCodeReposList, private ctx: RepositoryContext) {
+  constructor(
+    private extensionContext: vscode.ExtensionContext,
+    private reposList: VSCodeReposList,
+    private ctx: RepositoryContext,
+  ) {
     this.disposables.push(
       this.reposList.observeActiveRepos(repos => {
         for (const repo of repos) {
@@ -33,7 +38,9 @@ export class InlineCommentsProvider implements vscode.Disposable {
         return;
       }
 
-      this.repoDisposables.push(new InlineCommentsForRepo(repo, provider, this.ctx));
+      this.repoDisposables.push(
+        new InlineCommentsForRepo(this.extensionContext, repo, provider, this.ctx),
+      );
     }
   }
 
@@ -68,6 +75,7 @@ class InlineCommentsForRepo implements vscode.Disposable {
   private currentCommentsPerFile: Map<string, Array<DiffComment>> = new Map();
   private currentDecorations: Array<vscode.Disposable> = [];
   constructor(
+    private extensionContext: vscode.ExtensionContext,
     private repo: VSCodeRepo,
     private provider: CodeReviewProvider,
     private ctx: RepositoryContext,
@@ -166,7 +174,20 @@ class InlineCommentsForRepo implements vscode.Disposable {
         },
       );
 
-      inset.webview.html = `<html><body style="padding: 0;">${comment.html}</body></html>`;
+      inset.webview.options = getWebviewOptions(this.extensionContext, 'dist/webview');
+
+      inset.webview.html = htmlForWebview({
+        context: this.extensionContext,
+        devModeScripts: ['/extension/comments/webview/inlineCommentWebview.tsx'],
+        entryPointFile: 'inlineCommentWebview.js',
+        cssEntryPointFile: 'inlineCommentWebview.css',
+        extensionRelativeBase: 'dist/webview',
+        extraStyles: '',
+        initialScript: `console.log('hello from inline comments initial script');`,
+        rootClass: 'inline-comments',
+        title: 'Inline Comments',
+        webview: inset.webview,
+      });
       this.currentDecorations.push(inset);
 
       const decoration = vscode.window.createTextEditorDecorationType({
