@@ -26,6 +26,7 @@ use crate::PushAuthoredBy;
 pub struct BlockNewBookmarkCreationsByNameConfig {
     #[serde(with = "serde_regex")]
     blocked_bookmarks: Regex,
+    message: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -60,14 +61,21 @@ impl BookmarkHook for BlockNewBookmarkCreationsByNameHook {
         }
 
         if self.config.blocked_bookmarks.is_match(bookmark.as_str()) {
-            return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
-                "Bookmark creation is restricted in this repository.",
-                format!(
-                    "Creation of bookmark \"{}\" was blocked because it matched the '{}' regular expression",
-                    bookmark.as_str(),
-                    self.config.blocked_bookmarks.as_str(),
-                ),
-            )));
+            if let Some(message) = &self.config.message {
+                return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                    "Bookmark creation is restricted in this repository.",
+                    message.clone(),
+                )));
+            } else {
+                return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                    "Bookmark creation is restricted in this repository.",
+                    format!(
+                        "Creation of bookmark \"{}\" was blocked because it matched the '{}' regular expression",
+                        bookmark.as_str(),
+                        self.config.blocked_bookmarks.as_str(),
+                    ),
+                )));
+            }
         }
         Ok(HookExecution::Accepted)
     }
