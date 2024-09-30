@@ -6,6 +6,7 @@
  */
 
 import type {VSCodeRepo, VSCodeReposList} from '../VSCodeRepo';
+import type {ClientToServerMessage, ServerToClientMessage} from './types';
 import type {CodeReviewProvider, DiffSummaries} from 'isl-server/src/CodeReviewProvider';
 import type {RepositoryContext} from 'isl-server/src/serverTypes';
 import type {CommitInfo, DiffComment} from 'isl/src/types';
@@ -183,12 +184,21 @@ class InlineCommentsForRepo implements vscode.Disposable {
         cssEntryPointFile: 'inlineCommentWebview.css',
         extensionRelativeBase: 'dist/webview',
         extraStyles: '',
-        initialScript: `console.log('hello from inline comments initial script');`,
+        initialScript: `window.islCommentHtml = ${JSON.stringify(comment.html)};`,
         rootClass: 'inline-comments',
         title: 'Inline Comments',
         webview: inset.webview,
       });
       this.currentDecorations.push(inset);
+
+      inset.webview.onDidReceiveMessage((event: ClientToServerMessage) => {
+        if (event.type === 'squareIt') {
+          inset.webview.postMessage({
+            type: 'gotSquared',
+            result: event.value * event.value,
+          } as ServerToClientMessage);
+        }
+      });
 
       const decoration = vscode.window.createTextEditorDecorationType({
         overviewRulerLane: vscode.OverviewRulerLane.Left,
