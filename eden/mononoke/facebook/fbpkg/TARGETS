@@ -183,6 +183,19 @@ mononoke_fbpkg(
 )
 
 mononoke_fbpkg(
+    name = "mononoke.whatsapp_commit_tailer",
+    compress_type = None,
+    override_log_paths = [
+        "eden/mononoke/facebook/post_commit_tailer",
+        "eden/mononoke/facebook/whatsapp_commit_tailer",
+    ],
+    path_actions = {
+        "swift": "//scribeutil/swift:swift",
+        "whatsapp_commit_tailer.par": "//eden/mononoke/facebook/whatsapp_commit_tailer:whatsapp_commit_tailer",
+    },
+)
+
+mononoke_fbpkg(
     name = "mononoke.review-bookmarks",
     compress_type = None,
     override_log_paths = ["eden/mononoke/facebook/monitoring"],
