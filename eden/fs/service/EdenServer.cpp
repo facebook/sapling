@@ -838,6 +838,16 @@ void EdenServer::updatePeriodicTaskIntervals(const EdenConfig& config) {
   } else {
     detectNfsCrawlTask_.updateInterval(0s);
   }
+
+#ifdef _WIN32
+  // Using 1 minute as threshold for reporting slowness.
+  // P99 of `eden doctor --dry-run` run is ~25s.
+  // (https://fburl.com/scuba/edenfs_cli_usage/0ky3mf6q)
+  edenDoctorTask_.updateInterval(
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          config.edenDoctorInterval.getValue()),
+      60s);
+#endif
 }
 
 void EdenServer::scheduleCallbackOnMainEventBase(
