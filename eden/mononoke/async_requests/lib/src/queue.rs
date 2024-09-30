@@ -33,6 +33,8 @@ use requests_table::RequestType;
 pub use requests_table::RowId;
 use requests_table::SqlLongRunningRequestsQueue;
 use sql_construct::SqlConstruct;
+use stats::define_stats;
+use stats::prelude::TimeseriesStatic;
 
 use crate::error::AsyncRequestsError;
 use crate::types::AsynchronousRequestParams;
@@ -43,6 +45,24 @@ use crate::types::Token;
 
 const INITIAL_POLL_DELAY_MS: u64 = 1000;
 const MAX_POLL_DURATION: Duration = Duration::from_secs(60);
+
+define_stats! {
+    prefix = "async_requests.queue";
+    complete_called: timeseries("complete.called"; Count),
+    complete_error: timeseries("complete.error"; Count),
+    complete_success: timeseries("complete.success"; Count),
+    dequeue_called: timeseries("dequeue.called"; Count),
+    dequeue_error: timeseries("dequeue.error"; Count),
+    dequeue_success: timeseries("dequeue.success"; Count),
+    enqueue_called: timeseries("enqueue.called"; Count),
+    enqueue_error: timeseries("enqueue.error"; Count),
+    enqueue_success: timeseries("enqueue.success"; Count),
+    poll_called: timeseries("poll.called"; Count),
+    poll_error: timeseries("poll.error"; Count),
+    poll_empty: timeseries("poll.empty"; Count),
+    poll_success: timeseries("poll.success"; Count),
+    poll_timeout: timeseries("poll.timeout"; Count),
+}
 
 #[derive(Clone)]
 pub struct AsyncMethodRequestQueue {
@@ -82,8 +102,28 @@ impl AsyncMethodRequestQueue {
         repo_id: Option<&RepositoryId>,
         thrift_params: P,
     ) -> Result<<P::R as Request>::Token, Error> {
+        STATS::enqueue_called.add_value(1);
         let request_type = RequestType(P::R::NAME.to_owned());
-        let rust_params: AsynchronousRequestParams = thrift_params.into();
+        let rust_params = thrift_params.into();
+        self.enqueue_inner::<P>(ctx, repo_id, request_type, rust_params)
+            .await
+            .map(|token| {
+                STATS::enqueue_success.add_value(1);
+                token
+            })
+            .map_err(|err| {
+                STATS::enqueue_error.add_value(1);
+                err
+            })
+    }
+
+    async fn enqueue_inner<P: ThriftParams>(
+        &self,
+        ctx: &CoreContext,
+        repo_id: Option<&RepositoryId>,
+        request_type: RequestType,
+        rust_params: AsynchronousRequestParams,
+    ) -> Result<<P::R as Request>::Token, Error> {
         let params_object_id = rust_params.store(ctx, &self.blobstore).await?;
         let blobstore_key = BlobstoreKey(params_object_id.blobstore_key());
         let table_id = self
@@ -95,6 +135,24 @@ impl AsyncMethodRequestQueue {
     }
 
     pub async fn dequeue(
+        &self,
+        ctx: &CoreContext,
+        claimed_by: &ClaimedBy,
+    ) -> Result<Option<(RequestId, AsynchronousRequestParams)>, AsyncRequestsError> {
+        STATS::dequeue_called.add_value(1);
+        self.dequeue_inner(ctx, claimed_by)
+            .await
+            .map(|token| {
+                STATS::dequeue_success.add_value(1);
+                token
+            })
+            .map_err(|err| {
+                STATS::dequeue_error.add_value(1);
+                err
+            })
+    }
+
+    pub async fn dequeue_inner(
         &self,
         ctx: &CoreContext,
         claimed_by: &ClaimedBy,
@@ -120,6 +178,25 @@ impl AsyncMethodRequestQueue {
     }
 
     pub async fn complete(
+        &self,
+        ctx: &CoreContext,
+        req_id: &RequestId,
+        result: AsynchronousRequestResult,
+    ) -> Result<bool, AsyncRequestsError> {
+        STATS::complete_called.add_value(1);
+        self.complete_inner(ctx, req_id, result)
+            .await
+            .map(|token| {
+                STATS::complete_success.add_value(1);
+                token
+            })
+            .map_err(|err| {
+                STATS::complete_error.add_value(1);
+                err
+            })
+    }
+
+    pub async fn complete_inner(
         &self,
         ctx: &CoreContext,
         req_id: &RequestId,
@@ -161,6 +238,21 @@ impl AsyncMethodRequestQueue {
         ctx: &CoreContext,
         token: T,
     ) -> Result<<T::R as Request>::PollResponse, AsyncRequestsError> {
+        STATS::poll_called.add_value(1);
+        self.poll_inner(ctx, token)
+            .await
+            // we don't bump poll_success here, we do it in poll_inner
+            .map_err(|err| {
+                STATS::poll_error.add_value(1);
+                err
+            })
+    }
+
+    pub async fn poll_inner<T: Token>(
+        &self,
+        ctx: &CoreContext,
+        token: T,
+    ) -> Result<<T::R as Request>::PollResponse, AsyncRequestsError> {
         let mut backoff_ms = INITIAL_POLL_DELAY_MS;
         let before = Instant::now();
         let row_id = token.to_db_id()?;
@@ -174,12 +266,14 @@ impl AsyncMethodRequestQueue {
             match maybe_thrift_result {
                 Some(thrift_result) => {
                     // Nice, the result is ready!
+                    STATS::poll_success.add_value(1);
                     return Ok(<T::R as Request>::thrift_result_into_poll_response(
                         thrift_result,
                     ));
                 }
                 None if before.elapsed() + next_sleep > MAX_POLL_DURATION => {
                     // The result is not yet ready, but we're out of time
+                    STATS::poll_timeout.add_value(1);
                     return Ok(T::R::empty_poll_response());
                 }
                 None => {

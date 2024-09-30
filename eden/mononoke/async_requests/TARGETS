@@ -23,6 +23,7 @@ rust_library(
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
         ":requests_table",
+        "//common/rust/shed/stats:stats",
         "//eden/mononoke/async_requests/if:async_requests_types-thrift-rust",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/blobstore:memblob",
