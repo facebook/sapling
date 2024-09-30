@@ -216,15 +216,12 @@ impl FetchState {
         let mut error = 0;
         let mut reqs = 0;
 
-        let max_batch_size = 10000;
         let start_time = Instant::now();
 
-        for chunk in digests.chunks(max_batch_size) {
-            reqs += 1;
-
-            block_on(async {
-                cas_client.fetch(chunk, CasDigestType::Tree).await.for_each(|results| match results {
+        block_on(async {
+            cas_client.fetch(&digests, CasDigestType::Tree).await.for_each(|results| match results {
                 Ok(results) => {
+                    reqs += 1;
                     for (digest, data) in results {
                         let Some(key) = digest_to_key.remove(&digest) else {
                             tracing::error!("got CAS result for unrequested digest {:?}", digest);
@@ -281,12 +278,12 @@ impl FetchState {
                     tracing::error!(?err, "overall CAS error");
 
                     // Don't propagate CAS error - we want to fall back to SLAPI.
+                    reqs += 1;
                     error += 1;
                     future::ready(())
                 }
             }).await;
-            })
-        }
+        });
 
         span.record("hits", found);
         span.record("requests", reqs);
