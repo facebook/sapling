@@ -112,6 +112,7 @@ pub struct ClientRequestInfo {
 
 #[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Eq)]
 pub enum ClientEntryPoint {
+    Unknown,
     Sapling,
     EdenFs,
     Fbclone,
@@ -200,6 +201,7 @@ impl ClientRequestInfo {
 impl Display for ClientEntryPoint {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let out = match self {
+            ClientEntryPoint::Unknown => "unknown",
             ClientEntryPoint::Sapling => "sapling",
             ClientEntryPoint::EdenFs => "edenfs",
             ClientEntryPoint::Fbclone => "fbclone",
