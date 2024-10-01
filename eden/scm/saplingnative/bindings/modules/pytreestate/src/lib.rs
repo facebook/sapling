@@ -127,11 +127,11 @@ py_class!(pub class treestate |py| {
 
     def get(&self, path: &PyPath, default: Option<(u16, u32, i32, i32, Option<PyPathBuf>)>) -> PyResult<Option<(u16, u32, i32, i32, Option<PyPathBuf>)>> {
         let mut state = self.state(py).lock();
-        let path = path.as_utf8_bytes();
+        let path_bytes = path.as_utf8_bytes();
 
-        assert!(!path.ends_with(b"/"));
+        assert!(!path_bytes.ends_with(b"/"), "path should not end with '/': {}", path);
 
-        let file = convert_result(py, state.get(path))?;
+        let file = convert_result(py, state.get(path_bytes))?;
         Ok(file.map_or(default, |file|
                     Some((file.state.to_bits(),
                      file.mode,
