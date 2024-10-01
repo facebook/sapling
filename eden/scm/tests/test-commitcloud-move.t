@@ -1,10 +1,4 @@
-#modern-config-incompatible
-#inprocess-hg-incompatible
-
 #require no-eden
-
-
-  $ configure modern
 
   $ showgraph() {
   >    hg log -G -T "{desc}: {phase} {bookmarks} {remotenames}" -r "all()"
@@ -47,8 +41,7 @@ manually.
   $ clone server client1
   $ cd client1
   $ hg goto -q 'desc(Y)'
-  $ hg pull -B other
-  pulling from ssh://user@dummy/server
+  $ hg pull -qB other
   $ hg up -qC other
 
   $ drawdag <<EOS
@@ -826,8 +819,7 @@ Try to move the same stack twice
   ├─╯
   @  Z: public
 
-  $ hg pull -r 080f94b3ed7f
-  pulling from ssh://user@dummy/server
+  $ hg pull -qr 080f94b3ed7f
   $ showgraph
   o  G: draft
   │

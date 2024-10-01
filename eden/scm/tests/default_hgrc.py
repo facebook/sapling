@@ -60,7 +60,7 @@ httpcommitgraph2=true
 
 [hint]
 ack-match-full-traversal=True
-ack = smartlog-default-command
+ack = smartlog-default-command commitcloud-update-on-move
 
 [scmstore]
 contentstorefallback=False

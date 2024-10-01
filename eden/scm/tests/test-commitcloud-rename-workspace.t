@@ -1,10 +1,5 @@
-#modern-config-incompatible
-#inprocess-hg-incompatible
-
 #require no-eden
 
-
-  $ configure modern
   $ enable smartlog
   $ showgraph() {
   >    hg log -G -T "{desc}: {phase} {bookmarks} {remotenames}" -r "all()"
@@ -192,7 +187,7 @@ Back to client1
   commitcloud: this repository is now connected to the 'user/test/testhost' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/testhost'
   commitcloud: nothing to upload
-  pulling 67590a46a20b from ssh://user@dummy/server
+  pulling 67590a46a20b from test:server
   searching for changes
   commitcloud: commits synchronized
   finished in * (glob)
