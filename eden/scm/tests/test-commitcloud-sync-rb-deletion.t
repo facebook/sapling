@@ -1,12 +1,10 @@
-#modern-config-incompatible
-#inprocess-hg-incompatible
-
 #require no-eden
 
-
-  $ configure modern
   $ setconfig infinitepush.branchpattern=re:scratch/.+
-  $ setconfig checkout.use-rust=false
+
+Eagerepo server isn't compatible with infinitepush (but is compatible with
+scratch bookmark pushes over SLAPI).
+  $ disable infinitepush
 
   $ showgraph() {
   >    hg log -G -T "{desc}: {phase} {bookmarks} {remotenames}" -r "all()"
@@ -72,7 +70,7 @@
 Pull the other bookmark so we have a subscription.
   $ cd $TESTTMP/client1
   $ hg pull -B other
-  pulling from ssh://user@dummy/server
+  pulling from test:server
   searching for changes
   $ hg book --list-subs
      remote/master             9da34b1aa207
@@ -83,12 +81,9 @@ Push to a new public branch
   $ echo 3 > public3
   $ hg commit -Aqm public3
   $ hg push --to created --create
-  pushing rev ec1dff19c429 to destination ssh://user@dummy/server bookmark created
+  pushing rev ec1dff19c429 to destination test:server bookmark created
   searching for changes
   exporting bookmark created
-  remote: adding changesets
-  remote: adding manifests
-  remote: adding file changes
   $ hg book --list-subs
      remote/master             9da34b1aa207
      remote/other              4c8ee072cf16
@@ -106,7 +101,7 @@ BUG! public3 is draft and 'created' is not subscribed to
 
 Workaround this bug by pulling created
   $ hg pull -B created
-  pulling from ssh://user@dummy/server
+  pulling from test:server
   $ showgraph
   @  public3: public  remote/created
   │
@@ -121,10 +116,13 @@ Create a draft commit and push it to a scratch branch
   $ echo 1 > draft1
   $ hg commit -Aqm draft1
   $ hg push --to scratch/draft1 --create
-  pushing to ssh://user@dummy/server
-  searching for changes
-  remote: pushing 1 commit:
-  remote:     d860d2fc26c5  draft1
+  pushing rev d860d2fc26c5 to destination eager:$TESTTMP/server bookmark scratch/draft1
+  edenapi: queue 1 commit for upload
+  edenapi: queue 0 files for upload
+  edenapi: queue 1 tree for upload
+  edenapi: uploaded 1 tree
+  edenapi: uploaded 1 changeset
+  creating remote bookmark scratch/draft1
   $ hg cloud sync -q
   $ hg up 'desc(base)'
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
@@ -162,7 +160,7 @@ Create a draft commit and push it to a scratch branch
 
 Pull in this repo
   $ hg pull
-  pulling from ssh://user@dummy/server
+  pulling from test:server
   $ showgraph
   o  draft1: draft  remote/scratch/draft1
   │
@@ -244,7 +242,7 @@ Sync in the third repo again
 
 Bookmark "remote/scratch/draft1" shoudn't come back after a pull
   $ hg pull
-  pulling from ssh://user@dummy/server
+  pulling from test:server
   $ hg book --list-subs
      remote/master             9da34b1aa207
   $ showgraph

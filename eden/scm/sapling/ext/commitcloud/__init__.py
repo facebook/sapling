@@ -121,7 +121,6 @@ from . import (
     bookmarks,
     checkoutlocations,
     commands as cccommands,
-    dependencies,
     status,
     sync,
     util as ccutil,
@@ -159,7 +158,6 @@ configitem("infinitepush", "httpbookmarks", default=True)
 def extsetup(ui):
     background.extsetup(ui)
     bookmarks.extsetup(ui)
-    dependencies.extsetup(ui)
 
     localrepo.localrepository._wlockfreeprefix.add(backuplock.progressfilename)
     localrepo.localrepository._wlockfreeprefix.add(backupstate.BackupState.directory)

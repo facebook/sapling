@@ -30,7 +30,6 @@ from . import (
     background,
     backuplock,
     backupstate,
-    dependencies,
     error as ccerror,
     interactivehistory,
     megarepoimport,
@@ -44,7 +43,6 @@ from . import (
     util as ccutil,
     workspace,
 )
-
 
 cmdtable = {}
 command = registrar.command(cmdtable)
