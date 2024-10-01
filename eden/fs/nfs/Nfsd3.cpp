@@ -2216,8 +2216,10 @@ bool Nfsd3::takeoverStop() {
   // There are a couple of nuances in the following code:
   //
   // First, RpcServer::takeoverStop() must be called from the RpcServer's
-  // EventBase. runImmediatelyOrRunInEventBaseThreadAndWait makes sure we call
-  // server_->takeoverStop() from the RpcServer's EventBase.
+  // EventBase. This is currently handled by making sure that
+  // EdenServer::stopMountsForTakeover(), which calls this function,
+  // is ran using EdenServer::getMainEventBase(), which is the same EventBase as
+  // the RpcServer.
   //
   // Second, the SemiFuture returned from RpcServer::takeoverStop() may have
   // deferred callbacks attached to it which must be scheduled on an executor.
@@ -2228,24 +2230,36 @@ bool Nfsd3::takeoverStop() {
   // EventBase.
   //
   // This is a bit easier to picture if you unwrap the function into its
-  // underlying logic. Specifically,
+  // underlying logic. Specifically, the callstack of
+  // EdenServer::startTakeoverShutdown() eventually looks like:
   //
   // ```
-  // auto* evb = server_->getEventBase();
-  // evb->runImmediatelyOrRunInEventBaseThreadAndWait(
-  //    [&] { folly::futures::detachOn(evb, server_->takeoverStop()); });
+  //     .via(getMainEventBase())
+  //     ...
+  //     .thenTry([this](auto&&) {
+  //         ...
+  //         // the following line happens inside of stopMountsForTakeover() by
+  //         // calling fschannel->takeover() (aka this funcion!)
+  //         folly::futures::detachOn(
+  //             server_->getEventBase(),
+  //             server_->takeoverStop()
+  //         );
+  //     })
+  //     ...
   // ```
   //
-  // is equivalent to:
+  // which is equivalent to:
   //
   // ```
-  // auto* evb = server_->getEventBase();
-  // if (evb->isInEventBaseThread()) {
-  //   server_->takeoverStop().via(evb).detach();
-  // } else {
-  //   evb->runInEventBaseThreadAndWait(server_->takeoverStop().via(evb).detach());
-  // }
+  //     .via(getMainEventBase())
+  //     ...
+  //     .thenTry([this](auto&&) {
+  //         ...
+  //         server_->takeoverStop().via(server_->getEventBase()).detach();
+  //     })
+  //     ...
   // ```
+  //
   //
   // Overally, there is a strangeness to how this works. Nfsd3::takeoverStop is
   // a request to begin takeover. RpcServer::takeoverStop is an asynchronous
@@ -2253,9 +2267,8 @@ bool Nfsd3::takeoverStop() {
   // the floor here. Instead, the file descriptor is detached as returned as
   // part of the StopFuture returned by getStopFuture(). There may be an
   // opportunity to simplify this data flow.
-  auto* evb = server_->getEventBase();
-  evb->runImmediatelyOrRunInEventBaseThreadAndWait(
-      [&] { folly::futures::detachOn(evb, server_->takeoverStop()); });
+
+  folly::futures::detachOn(server_->getEventBase(), server_->takeoverStop());
   return true;
 }
 

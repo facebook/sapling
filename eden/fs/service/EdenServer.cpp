@@ -2305,7 +2305,7 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
   return serverState_->getFaultInjector()
       .checkAsync("takeover", "server_shutdown")
       .semi()
-      .via(serverState_->getThreadPool().get())
+      .via(getMainEventBase())
       .thenValue([this](auto&&) {
         // Compact storage for all key spaces in order to speed up the
         // takeover start of the new process. We could potentially test this
