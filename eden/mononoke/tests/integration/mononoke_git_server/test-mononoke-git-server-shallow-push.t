@@ -67,7 +67,5 @@
   $ git add .
   $ git commit -qam "Commit with newly added file"
   $ git_client push origin --all
-  error: RPC failed; HTTP 400 curl 22 The requested URL returned error: 400
-  fatal: the remote end hung up unexpectedly
-  Everything up-to-date
-  [1]
+  To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
+     18a6f40..3b8e8f3  R2 -> R2
