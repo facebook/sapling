@@ -7,6 +7,7 @@
 
 import type {UseUncommittedSelection} from './partialSelection';
 import type {CommitInfo, Diagnostic} from './types';
+import type {Tracker} from 'isl-server/src/analytics/tracker';
 
 import {spacing} from '../../components/theme/tokens.stylex';
 import serverAPI from './ClientToServerAPI';
@@ -147,7 +148,12 @@ export async function confirmNoBlockingDiagnostics(
           (await showModal({
             type: 'confirm',
             title: t('codeIssuesFound', {count: totalErrors}),
-            message: <DiagnosticsList diagnostics={[...result.diagnostics.entries()]} />,
+            message: (
+              <DiagnosticsList
+                diagnostics={[...result.diagnostics.entries()]}
+                tracker={childTracker}
+              />
+            ),
             buttons,
           })) === buttons[1];
 
@@ -164,7 +170,13 @@ export async function confirmNoBlockingDiagnostics(
   return true;
 }
 
-function DiagnosticsList({diagnostics}: {diagnostics: Array<[string, Array<Diagnostic>]>}) {
+function DiagnosticsList({
+  diagnostics,
+  tracker,
+}: {
+  diagnostics: Array<[string, Array<Diagnostic>]>;
+  tracker: Tracker<{parentId: string}>;
+}) {
   const [hideNonBlocking, setHideNonBlocking] = useAtom(hideNonBlockingDiagnosticsAtom);
   const [shouldWarn, setShouldWarn] = useAtom(shouldWarnAboutDiagnosticsAtom);
   return (
@@ -195,6 +207,9 @@ function DiagnosticsList({diagnostics}: {diagnostics: Array<[string, Array<Diagn
                       xstyle={styles.diagnosticRow}
                       onClick={() => {
                         foundPlatform.openFile(filepath, {line: d.range.startLine + 1});
+                        tracker.track('DiagnosticsConfirmationAction', {
+                          extras: {action: 'openFile'},
+                        });
                       }}>
                       {iconForDiagnostic(d)}
                       <span>{d.message}</span>
@@ -216,7 +231,14 @@ function DiagnosticsList({diagnostics}: {diagnostics: Array<[string, Array<Diagn
         })}
       </Column>
       <Row xstyle={styles.confirmCheckbox}>
-        <Checkbox checked={!shouldWarn} onChange={checked => setShouldWarn(!checked)}>
+        <Checkbox
+          checked={!shouldWarn}
+          onChange={checked => {
+            setShouldWarn(!checked);
+            if (checked) {
+              tracker.track('DiagnosticsConfirmationAction', {extras: {action: 'dontAskAgain'}});
+            }
+          }}>
           <T>Don't ask again</T>
         </Checkbox>
         <Tooltip
