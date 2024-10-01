@@ -323,6 +323,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--pad);
+  height: unset;
 }
 
 .commit-info-tokenized-field:not(:focus-within) .typeahead-suggestions {
