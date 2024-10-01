@@ -30,7 +30,6 @@ pub mod types;
 pub mod utils;
 
 const HEAD_REF: &str = "HEAD";
-const TAGS_PREFIX: &str = "tags/";
 const REF_PREFIX: &str = "refs/";
 const PACKFILE_SUFFIX: &str = ".pack";
 

@@ -21,7 +21,6 @@ use crate::types::RefsSource;
 use crate::types::RequestedRefs;
 use crate::Repo;
 use crate::REF_PREFIX;
-use crate::TAGS_PREFIX;
 
 /// Get the bookmarks (branches, tags) and their corresponding commits
 /// for the given repo based on the request parameters. If the request
@@ -79,7 +78,7 @@ pub(crate) async fn list_tags(
     repo: &impl Repo,
     refs_source: RefsSource,
 ) -> Result<Vec<(BookmarkKey, (ChangesetId, BookmarkKind))>> {
-    list_bookmarks(ctx, repo, refs_source, &BookmarkPrefix::new(TAGS_PREFIX)?).await
+    list_bookmarks(ctx, repo, refs_source, &BookmarkPrefix::empty()).await
 }
 
 /// Method for listing bookmarks for the current repo based on specified freshness
