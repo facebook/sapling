@@ -1,16 +1,8 @@
-#modern-config-incompatible
-#inprocess-hg-incompatible
-
 #require no-eden
 
-  $ configure modern
+  $ setconfig remotefilelog.cachelimit=50B remotefilelog.manifestlimit=50B
 
   $ newserver master
-  $ cat >> .hg/hgrc <<EOF
-  > [remotefilelog]
-  > cachelimit = 100B
-  > manifestlimit = 100B
-  > EOF
   $ hg debugdetectissues
   ran issue detector 'cachesizeexceedslimit', found 0 issues
   $ echo "a" > a ; hg add a ; hg commit -qAm a
@@ -20,12 +12,7 @@
   $ cd ..
   $ clone master shallow --config remotenames.selectivepull=false
   $ cd shallow
-  $ cat >> .hg/hgrc <<EOF
-  > [remotefilelog]
-  > cachelimit = 100B
-  > manifestlimit = 100B
-  > EOF
   $ hg debugdetectissues
   ran issue detector 'cachesizeexceedslimit', found 2 issues
-  'cache_size_exceeds_limit': 'cache size of * exceeds configured limit of 100. 0 files skipped.' (glob)
-  'manifest_size_exceeds_limit': 'manifest cache size of * exceeds configured limit of 100. 0 files skipped.' (glob)
+  'cache_size_exceeds_limit': 'cache size of * exceeds configured limit of 50. 0 files skipped.' (glob)
+  'manifest_size_exceeds_limit': 'manifest cache size of * exceeds configured limit of 50. 0 files skipped.' (glob)

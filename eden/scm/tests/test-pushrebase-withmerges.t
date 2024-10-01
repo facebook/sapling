@@ -1,8 +1,10 @@
-#modern-config-incompatible
-#inprocess-hg-incompatible
-
 #require no-eden
 
+Dummy SSH issues on Windows
+#inprocess-hg-incompatible
+
+Eagerepo doesn't support pushrebase yet.
+  $ rm $TESTTMP/.eagerepo
 
 Setup
 
@@ -99,14 +101,13 @@ Push in from the client.
   ├─╮
   │ o    merge alpha [public:a9138cc95bb3]
   │ ├─╮
-  o │ │  merge beta [public:f71e1c3a925c]
-  ├───╮
-  │ │ o  other [public:7fd651906bb3]
-  │ │ │
-  o │ │  beta [public:4f90fdc3a1aa]
-    │ │
-    o │  alpha [public:c85f9ce7b342]
-      │
-      o  base [public:d20a80d4def3]
-  
+  │ │ o  alpha [public:c85f9ce7b342]
+  │ │
+  o │  merge beta [public:f71e1c3a925c]
+  ├─╮
+  │ o  other [public:7fd651906bb3]
+  │ │
+  o │  beta [public:4f90fdc3a1aa]
+    │
+    o  base [public:d20a80d4def3]
   $ test -f other

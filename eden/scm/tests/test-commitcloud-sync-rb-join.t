@@ -1,10 +1,4 @@
-#modern-config-incompatible
-#inprocess-hg-incompatible
-
 #require no-eden
-
-
-  $ configure modern
 
   $ showgraph() {
   >    hg log -G -T "{desc}: {phase} {bookmarks} {remotenames}" -r "all()"

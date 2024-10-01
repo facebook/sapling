@@ -1,10 +1,4 @@
-#modern-config-incompatible
-#inprocess-hg-incompatible
-
 #require no-eden
-
-
-  $ configure modern
 
   $ newserver server
   $ cd $TESTTMP/server
