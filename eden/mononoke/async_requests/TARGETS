@@ -114,6 +114,7 @@ rust_binary(
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/hostname:hostname",
+        "//common/rust/shed/stats:stats",
         "//eden/mononoke/async_requests/if:async_requests_types-thrift-rust",
         "//eden/mononoke/cmdlib:cmdlib_logging",
         "//eden/mononoke/cmdlib:environment",

@@ -46,6 +46,8 @@ use slog::debug;
 use slog::error;
 use slog::info;
 use slog::warn;
+use stats::define_stats;
+use stats::prelude::TimeseriesStatic;
 
 use crate::methods::megarepo_async_request_compute;
 
@@ -54,6 +56,17 @@ const DEQUEUE_STREAM_SLEEP_TIME: u64 = 1000;
 // if it hasn't updated inprogress timestamp
 const ABANDONED_REQUEST_THRESHOLD_SECS: i64 = 5 * 60;
 const KEEP_ALIVE_INTERVAL: Duration = Duration::from_secs(10);
+
+define_stats! {
+    prefix = "async_requests.worker";
+    dequeue_called: timeseries("dequeue.called"; Count),
+    dequeue_error: timeseries("dequeue.error"; Count),
+    process_aborted: timeseries("process.aborted"; Count),
+    process_complete_failed: timeseries("process.complete.failed"; Count),
+    process_failed: timeseries("process.failed"; Count),
+    process_succeeded: timeseries("process.succeeded"; Count),
+    requested: timeseries("requested"; Count),
+}
 
 #[derive(Clone)]
 pub struct AsyncMethodRequestWorker<R> {
@@ -155,6 +168,8 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
     {
         try_stream! {
             'outer: loop {
+                STATS::dequeue_called.add_value(1);
+
                 let mut yielded = false;
                 Self::cleanup_abandoned_requests(
                     &ctx,
@@ -167,6 +182,7 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
                 }
                 let res = queue.dequeue(&ctx, &claimed_by).await;
                 if res.is_err() {
+                    STATS::dequeue_error.add_value(1);
                     warn!(
                         ctx.logger(),
                         "error while dequeueing, skipping: {}", res.err().unwrap()
@@ -238,6 +254,7 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
         let ctx = self.prepare_ctx(&ctx, &req_id, &target);
 
         // Do the actual work.
+        STATS::requested.add_value(1);
         let work_fut = megarepo_async_request_compute(&ctx, &self.megarepo, params);
 
         // Start the loop that would keep saying that request is still being
@@ -266,6 +283,7 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
                 // Save the result.
                 match result {
                     Ok(result) => {
+                        STATS::process_succeeded.add_value(1);
                         let updated_res = queue.complete(&ctx, &req_id, result).await;
                         let updated = match updated_res {
                             Ok(updated) => {
@@ -274,6 +292,7 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
                                 updated
                             }
                             Err(err) => {
+                                STATS::process_complete_failed.add_value(1);
                                 ctx.scuba().clone().log_with_msg(
                                     "Failed to save result",
                                     Some(format!("{:?}", err)),
@@ -285,6 +304,7 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
                         Ok(updated)
                     }
                     Err(err) => {
+                        STATS::process_failed.add_value(1);
                         info!(
                             ctx.logger(),
                             "[{}] worker failed to process request, will retry: {:?}",
@@ -303,6 +323,7 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
                 // inprogress timestamp. Most likely it means that other
                 // worker has completed it
 
+                STATS::process_aborted.add_value(1);
                 res.map_err(AsyncRequestsError::internal)?
                     .map_err(AsyncRequestsError::internal)?;
                 info!(
