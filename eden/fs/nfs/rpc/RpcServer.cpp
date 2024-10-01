@@ -84,6 +84,10 @@ void RpcConnectionHandler::readEOF() noexcept {
   // handler's state inline with this so that we could not have multiple
   // versions of shutdown running in parallel, but we can wait for all requests
   // to finish asynchronously from this call.
+  if (!sock_) {
+    XLOGF(ERR, "readEOF called after the socket was already closed");
+    return;
+  }
   folly::futures::detachOn(
       sock_->getEventBase(), resetReader(RpcStopReason::UNMOUNT));
 }
@@ -94,6 +98,10 @@ void RpcConnectionHandler::readErr(
   // Reading from the socket failed. There's nothing else to do, so
   // close the connection.  See the comment in readEOF() for more
   // context.
+  if (!sock_) {
+    XLOGF(ERR, "readErr called after the socket was already closed");
+    return;
+  }
   folly::futures::detachOn(
       sock_->getEventBase(), resetReader(RpcStopReason::ERROR));
 }
