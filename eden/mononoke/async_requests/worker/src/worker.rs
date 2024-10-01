@@ -47,7 +47,7 @@ use slog::error;
 use slog::info;
 use slog::warn;
 use stats::define_stats;
-use stats::prelude::TimeseriesStatic;
+use stats::prelude::*;
 
 use crate::methods::megarepo_async_request_compute;
 
@@ -56,6 +56,7 @@ const DEQUEUE_STREAM_SLEEP_TIME: u64 = 1000;
 // if it hasn't updated inprogress timestamp
 const ABANDONED_REQUEST_THRESHOLD_SECS: i64 = 5 * 60;
 const KEEP_ALIVE_INTERVAL: Duration = Duration::from_secs(10);
+const STATS_LOOP_INTERNAL: Duration = Duration::from_secs(5 * 60);
 
 define_stats! {
     prefix = "async_requests.worker";
@@ -66,6 +67,10 @@ define_stats! {
     process_failed: timeseries("process.failed"; Count),
     process_succeeded: timeseries("process.succeeded"; Count),
     requested: timeseries("requested"; Count),
+
+    stats_error: timeseries("stats.error"; Count),
+    queue_length_by_status: dynamic_singleton_counter("stats.queue.length.{}", (status: String)),
+    queue_age_by_status: dynamic_singleton_counter("stats.queue.age_s.{}", (status: String)),
 }
 
 #[derive(Clone)]
@@ -111,6 +116,13 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
     ) -> Result<(), AsyncRequestsError> {
         let queue = self.queues_client.async_method_request_queue(ctx).await?;
 
+        // Start the stats logger loop
+        let (stats, stats_abort_handle) = abortable({
+            cloned!(ctx, queue);
+            async move { Self::stats_loop(&ctx, &queue).await }
+        });
+        let _stats = tokio::spawn(stats);
+
         // Build stream that pools all the queues
         let request_stream = self.request_stream(ctx.clone(), queue, will_exit).boxed();
 
@@ -135,6 +147,9 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
                 Ok(())
             })
             .await?;
+
+        stats_abort_handle.abort();
+
         Ok(())
     }
 
@@ -384,6 +399,37 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
                 }
             }
             tokio::time::sleep(KEEP_ALIVE_INTERVAL).await;
+        }
+    }
+
+    async fn stats_loop(ctx: &CoreContext, queue: &AsyncMethodRequestQueue) {
+        loop {
+            let now = Timestamp::now();
+            let res = queue.get_queue_stats(ctx).await;
+            match res {
+                Ok(res) => {
+                    for (status, count) in res.queue_length_by_status.iter() {
+                        STATS::queue_length_by_status.set_value(
+                            ctx.fb,
+                            *count as i64,
+                            (status.to_string(),),
+                        );
+                    }
+                    for (status, ts) in res.queue_age_by_status.iter() {
+                        let diff = now.timestamp_seconds() - ts.timestamp_seconds();
+                        STATS::queue_age_by_status.set_value(ctx.fb, diff, (status.to_string(),));
+                    }
+                }
+                Err(err) => {
+                    STATS::stats_error.add_value(1);
+                    warn!(
+                        ctx.logger(),
+                        "error while getting queue stats, skipping: {}", err
+                    );
+                }
+            }
+
+            tokio::time::sleep(STATS_LOOP_INTERNAL).await;
         }
     }
 }

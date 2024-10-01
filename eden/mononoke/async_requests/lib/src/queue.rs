@@ -28,6 +28,7 @@ use requests_table::BlobstoreKey;
 pub use requests_table::ClaimedBy;
 use requests_table::LongRunningRequestEntry;
 use requests_table::LongRunningRequestsQueue;
+use requests_table::QueueStats;
 pub use requests_table::RequestId;
 use requests_table::RequestType;
 pub use requests_table::RowId;
@@ -413,6 +414,16 @@ impl AsyncMethodRequestQueue {
             // empty queue
             Ok(None)
         }
+    }
+
+    pub async fn get_queue_stats(
+        &self,
+        ctx: &CoreContext,
+    ) -> Result<QueueStats, AsyncRequestsError> {
+        self.table
+            .get_queue_stats(ctx, self.repos.as_deref())
+            .await
+            .map_err(AsyncRequestsError::internal)
     }
 }
 
