@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+
 use anyhow::Result;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
@@ -95,7 +97,7 @@ mysql_string_newtype!(BlobstoreKey);
 mysql_string_newtype!(RequestType);
 mysql_string_newtype!(ClaimedBy);
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, mysql::OptTryFromRowField)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, mysql::OptTryFromRowField)]
 pub enum RequestStatus {
     New,
     InProgress,
@@ -178,3 +180,8 @@ impl From<RequestStatus> for Value {
 ///       which request type you are talking about
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RequestId(pub RowId, pub RequestType);
+
+pub struct QueueStats {
+    pub queue_length_by_status: HashMap<RequestStatus, u64>,
+    pub queue_age_by_status: HashMap<RequestStatus, Timestamp>,
+}

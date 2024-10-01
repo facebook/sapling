@@ -10,6 +10,7 @@ use async_trait::async_trait;
 use context::CoreContext;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
+use types::QueueStats;
 
 mod store;
 mod types;
@@ -128,10 +129,18 @@ pub trait LongRunningRequestsQueue: Send + Sync {
         req_id: &RequestId,
     ) -> Result<Option<(bool, LongRunningRequestEntry)>>;
 
+    /// List all requests, optionally filtered by repo_id and/or date.
     async fn list_requests(
         &self,
         ctx: &CoreContext,
         repo_ids: Option<&[RepositoryId]>,
         last_update_newer_than: Option<&Timestamp>,
     ) -> Result<Vec<LongRunningRequestEntry>>;
+
+    /// Retrieve stats on the queue, optionally filtered by repo_id.
+    async fn get_queue_stats(
+        &self,
+        ctx: &CoreContext,
+        repo_ids: Option<&[RepositoryId]>,
+    ) -> Result<QueueStats>;
 }

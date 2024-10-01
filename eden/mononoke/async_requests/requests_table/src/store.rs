@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
@@ -12,11 +14,13 @@ use async_trait::async_trait;
 use context::CoreContext;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
+use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
 
+use crate::types::QueueStats;
 use crate::BlobstoreKey;
 use crate::ClaimedBy;
 use crate::LongRunningRequestEntry;
@@ -325,6 +329,38 @@ mononoke_queries! {
             inprogress_last_updated_at > {last_update_newer_than} OR
             (status = 'new' AND created_at > {last_update_newer_than})
         )"
+    }
+
+    read GetQueueLengthForRepos(>list repo_ids: RepositoryId) -> (
+        RequestStatus, u64
+    ) {
+        "SELECT status, count(*) FROM long_running_request_queue WHERE repo_id IN {repo_ids} GROUP BY status"
+    }
+
+    read GetQueueLengthForAllRepos() -> (
+        RequestStatus, u64
+    ) {
+        "SELECT status, count(*) FROM long_running_request_queue GROUP BY status"
+    }
+
+    read GetQueueAgeForRepos(>list repo_ids: RepositoryId) -> (
+        RequestStatus, u64, Option<u64>, Option<u64>
+    ) {
+        "SELECT status, min(created_at), min(inprogress_last_updated_at), min(ready_at)
+        FROM long_running_request_queue
+        WHERE repo_id IN {repo_ids} AND status != 'polled'
+        GROUP BY status
+        "
+    }
+
+    read GetQueueAgeForAllRepos() -> (
+        RequestStatus, u64, Option<u64>, Option<u64>
+    ) {
+        "SELECT status, min(created_at), min(inprogress_last_updated_at), min(ready_at)
+        FROM long_running_request_queue
+        WHERE status != 'polled'
+        GROUP BY status
+        "
     }
 }
 
@@ -653,6 +689,55 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
         .collect();
         Ok(entries)
     }
+
+    async fn get_queue_stats(
+        &self,
+        _ctx: &CoreContext,
+        repo_ids: Option<&[RepositoryId]>,
+    ) -> Result<QueueStats> {
+        Ok(QueueStats {
+            queue_length_by_status: get_queue_length(&self.connections.read_connection, repo_ids)
+                .await?,
+            queue_age_by_status: get_queue_age(&self.connections.read_connection, repo_ids).await?,
+        })
+    }
+}
+
+async fn get_queue_length(
+    conn: &Connection,
+    repo_ids: Option<&[RepositoryId]>,
+) -> Result<HashMap<RequestStatus, u64>> {
+    Ok(match repo_ids {
+        Some(repos) => GetQueueLengthForRepos::query(conn, repos).await,
+        None => GetQueueLengthForAllRepos::query(conn).await,
+    }
+    .context("fetching queue length stats")?
+    .into_iter()
+    .collect())
+}
+
+async fn get_queue_age(
+    conn: &Connection,
+    repo_ids: Option<&[RepositoryId]>,
+) -> Result<HashMap<RequestStatus, Timestamp>> {
+    Ok(match repo_ids {
+        Some(repos) => GetQueueAgeForRepos::query(conn, repos).await,
+        None => GetQueueAgeForAllRepos::query(conn).await,
+    }
+    .context("fetching queue age stats")?
+    .into_iter()
+    .map(
+        |(status, created_at, inprogress_last_updated_at, ready_at)| {
+            match &status {
+                RequestStatus::New => (status, created_at),
+                RequestStatus::InProgress => (status, inprogress_last_updated_at.unwrap_or(0)),
+                RequestStatus::Ready => (status, ready_at.unwrap_or(0)),
+                RequestStatus::Polled => (status, 0), // should not happen, but if it does we'll ignore
+            }
+        },
+    )
+    .map(|(status, timestamp)| (status, Timestamp::from_timestamp_nanos(timestamp as i64)))
+    .collect())
 }
 
 impl SqlConstruct for SqlLongRunningRequestsQueue {
@@ -933,6 +1018,64 @@ mod test {
         assert!(request.is_some());
         let request = request.unwrap();
         assert_eq!(request.status, RequestStatus::New);
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_get_stats(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let queue = SqlLongRunningRequestsQueue::with_sqlite_in_memory()?;
+        let repo_id = RepositoryId::new(0);
+        let now = Timestamp::now();
+        let _ = queue
+            .add_request(
+                &ctx,
+                &RequestType("type".to_string()),
+                Some(&repo_id),
+                &BlobstoreKey("key".to_string()),
+            )
+            .await?;
+
+        let stats = queue.get_queue_stats(&ctx, None).await?;
+        assert_eq!(stats.queue_length_by_status.len(), 1);
+        assert_eq!(
+            stats
+                .queue_length_by_status
+                .get(&RequestStatus::New)
+                .unwrap(),
+            &1
+        );
+        assert_eq!(stats.queue_age_by_status.len(), 1);
+        let age = stats.queue_age_by_status.get(&RequestStatus::New).unwrap();
+        println!("now {} age {}", now.since_seconds(), age.since_seconds());
+        assert!((age.since_seconds() - now.since_seconds()) < 1);
+
+        // This claims new request from queue and makes it inprogress
+        let now = Timestamp::now();
+        let req = queue
+            .claim_and_get_new_request(&ctx, &ClaimedBy("me".to_string()), None)
+            .await?;
+        assert!(req.is_some());
+
+        tokio::time::sleep(Duration::from_secs(3)).await;
+
+        let stats = queue.get_queue_stats(&ctx, None).await?;
+        assert_eq!(stats.queue_length_by_status.len(), 1);
+        assert_eq!(
+            stats
+                .queue_length_by_status
+                .get(&RequestStatus::InProgress)
+                .unwrap(),
+            &1
+        );
+        assert_eq!(stats.queue_age_by_status.len(), 1);
+        let age = stats
+            .queue_age_by_status
+            .get(&RequestStatus::InProgress)
+            .unwrap();
+        println!("now {} age {}", now.since_seconds(), age.since_seconds());
+        assert!((age.since_seconds() - now.since_seconds()) < 1);
 
         Ok(())
     }
