@@ -49,6 +49,10 @@ struct AsyncRequestsWorkerArgs {
     /// The number of requests / jobs to be processed concurrently
     #[clap(long, short = 'j', default_value = "1")]
     jobs: usize,
+    /// If true, the worker will process requests for any repo. If false (the default), it will only process requests
+    /// for some repos, inferred from the loaded config, possibly filtered.
+    #[clap(long)]
+    process_all_repos: bool,
 }
 
 #[fbinit::main]
@@ -94,10 +98,15 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     };
 
     let will_exit = Arc::new(AtomicBool::new(false));
+    let filter_repos = if args.process_all_repos {
+        None
+    } else {
+        Some(repos)
+    };
     let worker = runtime.block_on(worker::AsyncMethodRequestWorker::new(
         fb,
         &app,
-        Some(repos),
+        filter_repos,
         megarepo,
         name,
     ))?;
