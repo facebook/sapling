@@ -46,6 +46,11 @@ pub struct ManifoldArgs {
     /// operation.
     #[clap(long)]
     pub manifold_read_retries: Option<i16>,
+
+    /// The maximum number of automatic retries during write
+    /// operation.
+    #[clap(long)]
+    pub manifold_write_retries: Option<i16>,
 }
 
 impl From<ManifoldArgs> for ManifoldOptions {
@@ -56,6 +61,7 @@ impl From<ManifoldArgs> for ManifoldOptions {
             parallel_downloads: args.manifold_parallel_downloads,
             read_timeout_ms: args.manifold_read_timeout_ms,
             read_retries: args.manifold_read_retries,
+            write_retries: args.manifold_write_retries,
         }
     }
 }
