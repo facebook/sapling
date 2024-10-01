@@ -11,6 +11,5 @@ rust_library(
         "//common/rust/mysql:mysql_client",
         "//eden/mononoke/facebook/git_server/push_poller/lib/command:command",
         "//eden/mononoke/facebook/git_server/push_poller/lib/storage:storage",
-        "//eden/mononoke/mononoke_types:mononoke_types",
     ],
 )

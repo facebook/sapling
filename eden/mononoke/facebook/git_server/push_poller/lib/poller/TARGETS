@@ -14,7 +14,6 @@ rust_library(
         "//common/rust/logging:logging",
         "//common/rust/mysql:mysql_client",
         "//common/rust/scuba:scuba",
-        "//common/rust/shed/cached_config:cached_config",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/stats:stats",
         "//configerator/structs/fi/common:context-rust",
@@ -23,7 +22,6 @@ rust_library(
         "//eden/mononoke/facebook/git_server/push_poller/lib/repository:repository",
         "//eden/mononoke/facebook/git_server/push_poller/lib/storage:storage",
         "//eden/mononoke/git_source_of_truth:git_source_of_truth",
-        "//eden/mononoke/metaconfig:metaconfig_parser",
         "//eden/mononoke/server/context:context",
     ],
 )
