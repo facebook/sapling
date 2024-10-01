@@ -35,6 +35,7 @@ rust_binary(
         "//common/rust/thrift/srclient:srclient",
         "//eden/mononoke/cmdlib/config_args:config_args",
         "//eden/mononoke/cmdlib/mononoke_app/tls:tls",
+        "//eden/mononoke/common/retry:retry",
         "//eden/mononoke/git/facebook/scs_connection:scs_connection",
         "//eden/mononoke/git/import_tools:import_tools",
         "//eden/mononoke/metaconfig:metaconfig_types",
