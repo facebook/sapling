@@ -147,7 +147,18 @@ export async function confirmNoBlockingDiagnostics(
         const shouldContinue =
           (await showModal({
             type: 'confirm',
-            title: t('codeIssuesFound', {count: totalErrors}),
+            title: (
+              <Row>
+                <T count={totalErrors}>codeIssuesFound</T>
+                <Tooltip
+                  title={t(
+                    'Error-severity issues are typically land blocking and should be resolved before submitting for code review.\n\n' +
+                      'Errors shown here are best-effort and not necessarily comprehensive.',
+                  )}>
+                  <Icon icon="info" />
+                </Tooltip>
+              </Row>
+            ),
             message: (
               <DiagnosticsList
                 diagnostics={[...result.diagnostics.entries()]}
