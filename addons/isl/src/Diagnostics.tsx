@@ -64,6 +64,20 @@ const styles = stylex.create({
   },
 });
 
+/** Some error codes are not worth blocking on */
+const ignoreCodesBySource = Internal.ignoredDiagnosticCodes ?? new Map<string, Set<string>>();
+
+function isBlockingDiagnostic(d: Diagnostic): boolean {
+  if (d.severity !== 'error') {
+    return false;
+  }
+  if (d.source == null || d.code == null) {
+    return true;
+  }
+  const ignoreCodesForSource = ignoreCodesBySource.get(d.source);
+  return !ignoreCodesForSource || ignoreCodesForSource.has(d.code) === false;
+}
+
 /**
  * Check IDE diagnostics for files that will be commit/amended/submitted,
  * to confirm if they intended the errors.
@@ -101,17 +115,23 @@ export async function confirmNoBlockingDiagnostics(
     ]);
     if (result.diagnostics.size > 0) {
       const allDiagnostics = [...result.diagnostics.values()];
-      const totalErrors = allDiagnostics
-        .map(value => value.filter(d => d.severity === 'error').length)
-        .reduce((a, b) => a + b, 0);
+      const allBlockingErrors = allDiagnostics
+        .map(value => value.filter(isBlockingDiagnostic))
+        .flat();
+      const totalErrors = allBlockingErrors.length;
 
-      const allSources = [...new Set(allDiagnostics.flat().map(d => d.source))];
       const totalDiagnostics = allDiagnostics.flat().length;
+
+      const firstError = allBlockingErrors[0];
 
       const childTracker = tracker.trackAsParent('DiagnosticsConfirmationOpportunity', {
         extras: {
           shown: enabled,
-          sources: allSources,
+          errorCodes: [...new Set(allBlockingErrors.map(d => `${d.source}(${d.code})`))],
+          sampleMessage:
+            firstError != null
+              ? `${firstError.source}(${firstError.code}): ${firstError?.message.slice(0, 100)}`
+              : undefined,
           totalErrors,
           totalDiagnostics,
         },
@@ -152,7 +172,7 @@ function DiagnosticsList({diagnostics}: {diagnostics: Array<[string, Array<Diagn
       <Column alignStart xstyle={styles.allDiagnostics}>
         {diagnostics.map(([filepath, diagnostics]) => {
           const sortedDiagnostics = [...diagnostics]
-            .filter(d => (hideNonBlocking ? d.severity === 'error' : true))
+            .filter(d => (hideNonBlocking ? isBlockingDiagnostic(d) : true))
             .sort((a, b) => {
               return severityComparator(a) - severityComparator(b);
             });
