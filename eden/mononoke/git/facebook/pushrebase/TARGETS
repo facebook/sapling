@@ -12,8 +12,11 @@ rust_binary(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:clap",
         "fbsource//third-party/rust:tracing",
-        "//cli/rust/cli:cli",
+        "fbsource//third-party/rust:tracing-core",
+        "fbsource//third-party/rust:tracing-glog",
+        "fbsource//third-party/rust:tracing-subscriber",
         "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
     ],
 )
 
