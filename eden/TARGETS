@@ -53,6 +53,9 @@ fbpkg.builder(
         "etc/eden/config.d": "fs/facebook/packaging/config.d",
         "etc/eden/ignore": "fs/facebook/packaging/ignore",
 
+        # static file for DevFeature installation instructions
+        "install.toml": "facebook/dev_feature_install.toml",
+
         # these should be put under "/usr/local/libexec/eden/"
         "libexec/eden/eden-fb303-collector": fbpkg.copy("//eden/fs/facebook:eden-fb303-collector"),
         "libexec/eden/eden_fsck": fbpkg.copy("//eden/fs/inodes/fscatalog:eden_fsck"),
