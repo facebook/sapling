@@ -332,7 +332,7 @@ function RenderTooltipOnto({
   style.height =
     renderedDimensions.height > style.maxHeight
       ? '100%' // allow scrolling
-      : 'min-content';
+      : 'unset';
 
   // Use a portal so the tooltip element is rendered into the global list of tooltips,
   // rather than as a descendant of the tooltip creator.
