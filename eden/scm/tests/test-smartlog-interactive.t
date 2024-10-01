@@ -9,7 +9,7 @@
   > |
   > a
   > EOS
-  $ export HGRCPATH=fb=static
+  $ export HGRCPATH="$HGRCPATH;fb=static"
   $ cat > transcript <<EOF
   > j
   > j
@@ -18,38 +18,38 @@
 
   $ hg sl -i < transcript
   ===== Screen Refresh =====
-  o  f4016ed9f (Not backed up)  1970-01-01 00:00  test  d
+  o  f4016ed9f  Today at 00:00  test  d
   │  d
   │
-  │ o  a82ac2b38 (Not backed up)  1970-01-01 00:00  test  c
+  │ o  a82ac2b38  Today at 00:00  test  c
   ├─╯  c
   │
-  o  488e1b7e7 (Not backed up)  1970-01-01 00:00  test  b
+  o  488e1b7e7  Today at 00:00  test  b
   │  b
   │
-  o  b173517d0 (Not backed up)  1970-01-01 00:00  test  a
+  o  b173517d0  Today at 00:00  test  a
      a
   ===== Screen Refresh =====
-  o  f4016ed9f (Not backed up)  1970-01-01 00:00  test  d
+  o  f4016ed9f  Today at 00:00  test  d
   │  d
   │
-  │ o  a82ac2b38 (Not backed up)  1970-01-01 00:00  test  c
+  │ o  a82ac2b38  Today at 00:00  test  c
   ├─╯  c
   │
-  o  488e1b7e7 (Not backed up)  1970-01-01 00:00  test  b
+  o  488e1b7e7  Today at 00:00  test  b
   │  b
   │
-  o  b173517d0 (Not backed up)  1970-01-01 00:00  test  a
+  o  b173517d0  Today at 00:00  test  a
      a
   ===== Screen Refresh =====
-  o  f4016ed9f (Not backed up)  1970-01-01 00:00  test  d
+  o  f4016ed9f  Today at 00:00  test  d
   │  d
   │
-  │ o  a82ac2b38 (Not backed up)  1970-01-01 00:00  test  c
+  │ o  a82ac2b38  Today at 00:00  test  c
   ├─╯  c
   │
-  o  488e1b7e7 (Not backed up)  1970-01-01 00:00  test  b
+  o  488e1b7e7  Today at 00:00  test  b
   │  b
   │
-  o  b173517d0 (Not backed up)  1970-01-01 00:00  test  a
+  o  b173517d0  Today at 00:00  test  a
      a

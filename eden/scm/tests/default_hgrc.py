@@ -8,7 +8,6 @@ Default config file for testing
 """
 
 import os
-
 from typing import Optional
 
 
@@ -83,6 +82,9 @@ dagcopytrace=True
 [committemplate]
 commit-message-fields=Summary,"Test Plan",Reviewers,Subscribers,Tasks,Tags,"Differential Revision","Reviewed By"
 summary-field=Summary
+
+[templatealias]
+sl_hash_minlen=9
 """
     if use_watchman:
         content += """

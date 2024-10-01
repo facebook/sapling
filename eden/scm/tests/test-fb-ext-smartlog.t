@@ -1,7 +1,4 @@
-
 #require no-eden
-
-#inprocess-hg-incompatible
 
   $ enable smartlog
   $ readconfig <<EOF

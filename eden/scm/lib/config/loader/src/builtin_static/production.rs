@@ -244,7 +244,7 @@ interval=60
 # NOTE: There's a very specific spacing scheme at play:
 #   - One space between items within a section
 #   - Two spaces between sections
-sl_hash_minlen=9
+sl_hash_minlen=10
 sl_phase_label="{ifeq(phase, 'public', 'sl.public', 'sl.draft')}"
 sl_node="{label(sl_phase_label, shortest(node, sl_hash_minlen))}"
 sl_node_debug="{label(sl_phase_label, '{node}')}"
