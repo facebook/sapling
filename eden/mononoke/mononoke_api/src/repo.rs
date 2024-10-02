@@ -1166,8 +1166,12 @@ impl<R: MononokeRepo> RepoContext<R> {
         let maybe_warm_changeset =
             maybe_warm_cs_id.map(|cs_id| ChangesetContext::new(self.clone(), cs_id));
 
-        let (_id, maybe_fresh_cs_id, _reason, timestamp) = maybe_log_entry
-            .ok_or_else(|| anyhow!("Bookmark update log has no entries for queried bookmark!"))?;
+        let (maybe_fresh_cs_id, timestamp) = match maybe_log_entry {
+            Some((_id, maybe_fresh_cs_id, _reason, timestamp)) => (maybe_fresh_cs_id, timestamp),
+            None => {
+                return Ok(None);
+            }
+        };
 
         let fresh_cs_id = match maybe_fresh_cs_id {
             Some(cs_id) => cs_id,
