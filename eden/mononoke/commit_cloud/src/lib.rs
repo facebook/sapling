@@ -424,9 +424,9 @@ impl CommitCloud {
         {
             Err(e) => bail!(
                 "'share_workspace' failed: unable to create acl {} for workspace {}: {} ",
-                ctx.workspace,
                 acl_name,
-                e
+                ctx.workspace,
+                e.to_string()
             ),
             Ok(_) => Ok(WorkspaceSharingData {
                 acl_name: acl_name.clone(),
