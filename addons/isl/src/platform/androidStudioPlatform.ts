@@ -14,7 +14,7 @@ import {browserPlatformImpl} from './browerPlatformImpl';
 declare global {
   interface Window {
     __IdeBridge: {
-      openFileInAndroidStudio: (path: string) => void;
+      openFileInAndroidStudio: (path: string, line?: number, col?: number) => void;
       clipboardCopy?: (data: string) => void;
       getIDETheme(): ThemeColor;
     };
@@ -33,14 +33,12 @@ const androidStudioPlatform: Platform = {
     return Promise.resolve(ok);
   },
 
-  openFile: (_path: RepoRelativePath, _options: {line?: OneIndexedLineNumber}) => {
-    // TODO: support line numbers
-    window.__IdeBridge.openFileInAndroidStudio(_path);
+  openFile: (_path: RepoRelativePath, _options?: {line?: OneIndexedLineNumber}) => {
+    window.__IdeBridge.openFileInAndroidStudio(_path, _options?.line);
   },
-  openFiles: (paths: Array<RepoRelativePath>, _options: {line?: OneIndexedLineNumber}) => {
+  openFiles: (paths: Array<RepoRelativePath>, _options?: {line?: OneIndexedLineNumber}) => {
     for (const path of paths) {
-      // TODO: support line numbers
-      window.__IdeBridge.openFileInAndroidStudio(path);
+      window.__IdeBridge.openFileInAndroidStudio(path, _options?.line);
     }
   },
   canCustomizeFileOpener: false,
