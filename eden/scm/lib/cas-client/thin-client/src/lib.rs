@@ -98,6 +98,7 @@ impl ThinCasClient {
         re_config.features_config_path = "remote_execution/features/client_sapling".to_string();
         re_config.enable_ods_logging = false;
         re_config.enable_scuba_logging = false;
+        re_config.enable_cancellation = true;
 
         let mut builder = REClientBuilder::new(fbinit::expect_init()).with_config(re_config);
 
