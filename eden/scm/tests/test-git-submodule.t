@@ -1,6 +1,9 @@
 #require git no-windows no-eden
 #modern-config-incompatible
 
+Make sure things still work for submodules not properly namespaced (fixed in D63775983).
+#testcases normal submodule-namespace-bug
+
   $ . $TESTDIR/git.sh
   $ setconfig diff.git=true ui.allowemptycommit=true
   $ enable rebase
@@ -45,20 +48,39 @@ Prepare git repo with submodules
 Clone the git repo with submodules
 
   $ cd
+
+#if submodule-namespace-bug
+Reproduce the lack of submodule namespacing:
+
+  $ cat > namespace_bug.py <<EOF
+  > def badjoin(self, path, *paths):
+  >   return self.inner.join(path)
+  > from sapling import store
+  > store.metavfs.join = badjoin
+  > EOF
+
+  $ hg clone -q --git "$TESTTMP/parent-repo-git" parent-repo-hg --config extensions.namespacebug=namespace_bug.py
+#else
   $ hg clone --git "$TESTTMP/parent-repo-git" parent-repo-hg
   From $TESTTMP/parent-repo-git
    * [new ref]         * -> remote/main (glob)
   pulling submodule mod/1
   pulling submodule mod/2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+#endif
 
   $ cd parent-repo-hg
   $ echo mod/*/*
   mod/1/A mod/2/C
 
-FIXME: subdmodules not namespaced properly
+subdmodules are namespaced into separate directories
+#if submodule-namespace-bug
   $ ls .sl/store/gitmodules | wc -l
   0
+#else
+  $ ls .sl/store/gitmodules | wc -l
+  2
+#endif
 
 Checking out commits triggers submodule updates
 
@@ -74,7 +96,7 @@ Checking out commits triggers submodule updates
   mod/1/A mod/1/B mod/2/C mod/2/D
 
   $ LOG=ext::sigtrace=debug hg checkout main --config extensions.sigtrace= --config sigtrace.interval=60
-  DEBUG ext::sigtrace: starting sigtrace thread
+  DEBUG ext::sigtrace: starting sigtrace thread (?)
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo mod/*/*
   mod/1/A mod/2/C

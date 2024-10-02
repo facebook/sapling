@@ -366,7 +366,7 @@ class metavfs(util.proxy_wrapper, vfsmod.abstractvfs):
         return self.inner(path, mode, *args, **kw)
 
     def join(self, path: "Optional[str]", *insidef: str) -> str:
-        return self.inner.join(path)
+        return self.inner.join(path, *insidef)
 
 
 class readablestream:
