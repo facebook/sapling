@@ -22,6 +22,7 @@ use gotham::mime;
 use gotham::state::FromState;
 use gotham::state::State;
 use gotham_ext::error::HttpError;
+use gotham_ext::middleware::ScubaMiddlewareState;
 use gotham_ext::response::BytesBody;
 use gotham_ext::response::ResponseStream;
 use gotham_ext::response::ResponseTryStreamExt;
@@ -315,6 +316,9 @@ impl Iterator for FetchResponseHeaders {
 }
 
 pub async fn upload_pack(state: &mut State) -> Result<Response<Body>, HttpError> {
+    let repo_name = RepositoryParams::borrow_from(state).repo_name();
+    ScubaMiddlewareState::try_borrow_add(state, "repo", repo_name.as_str());
+    ScubaMiddlewareState::try_borrow_add(state, "method", "clone|pull");
     let body_bytes = get_body(state).await?;
     // We got a flush line packet to keep the connection alive. Just return Ok.
     if body_bytes == packetline::FLUSH_LINE {
@@ -322,7 +326,6 @@ pub async fn upload_pack(state: &mut State) -> Result<Response<Body>, HttpError>
     }
     let request_command =
         RequestCommand::parse_from_packetline(&body_bytes).map_err(HttpError::e400)?;
-    let repo_name = RepositoryParams::borrow_from(state).repo_name();
     let request_context = RepositoryRequestContext::instantiate(
         state,
         GitMethodInfo::from_command(&request_command.command, repo_name),
