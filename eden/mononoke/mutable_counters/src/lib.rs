@@ -129,7 +129,9 @@ impl MutableCounters for SqlMutableCounters {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsMaster);
         let conn = &self.connections.read_master_connection;
-        let counter = GetCounter::query(conn, &self.repo_id, &name).await?;
+        let counter =
+            GetCounter::maybe_traced_query(conn, ctx.client_request_info(), &self.repo_id, &name)
+                .await?;
         Ok(counter.first().map(|entry| entry.0))
     }
 
@@ -137,7 +139,9 @@ impl MutableCounters for SqlMutableCounters {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
         let conn = &self.connections.read_connection;
-        let counter = GetCounter::query(conn, &self.repo_id, &name).await?;
+        let counter =
+            GetCounter::maybe_traced_query(conn, ctx.client_request_info(), &self.repo_id, &name)
+                .await?;
         Ok(counter.first().map(|entry| entry.0))
     }
 
@@ -166,7 +170,9 @@ impl MutableCounters for SqlMutableCounters {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsMaster);
         let conn = &self.connections.read_master_connection;
-        let counters = GetCountersForRepo::query(conn, &self.repo_id).await?;
+        let counters =
+            GetCountersForRepo::maybe_traced_query(conn, ctx.client_request_info(), &self.repo_id)
+                .await?;
         Ok(counters.into_iter().collect())
     }
 }
@@ -183,8 +189,9 @@ impl SqlMutableCounters {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
         let (txn, result) = if let Some(prev_value) = prev_value {
-            SetCounterConditionally::query_with_transaction(
+            SetCounterConditionally::maybe_traced_query_with_transaction(
                 txn,
+                ctx.client_request_info(),
                 &repo_id,
                 &name,
                 &value,
@@ -192,7 +199,14 @@ impl SqlMutableCounters {
             )
             .await?
         } else {
-            SetCounter::query_with_transaction(txn, &repo_id, &name, &value).await?
+            SetCounter::maybe_traced_query_with_transaction(
+                txn,
+                ctx.client_request_info(),
+                &repo_id,
+                &name,
+                &value,
+            )
+            .await?
         };
 
         Ok(if result.affected_rows() >= 1 {
