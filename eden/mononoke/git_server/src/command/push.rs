@@ -184,4 +184,8 @@ impl<'a> PushArgs<'a> {
         push_args.pack_file = tokens.into_inner();
         Ok(push_args)
     }
+
+    pub fn is_shallow(&self) -> bool {
+        !self.shallow.is_empty()
+    }
 }

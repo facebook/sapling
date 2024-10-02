@@ -120,7 +120,13 @@ impl GitMethodInfo {
                 }
                 (method, variants)
             }
-            Command::Push(_) => (GitMethod::Push, vec![GitMethodVariant::Standard]),
+            Command::Push(ref push_args) => {
+                if push_args.is_shallow() {
+                    (GitMethod::Push, vec![GitMethodVariant::Shallow])
+                } else {
+                    (GitMethod::Push, vec![GitMethodVariant::Standard])
+                }
+            }
         };
         GitMethodInfo {
             method,
