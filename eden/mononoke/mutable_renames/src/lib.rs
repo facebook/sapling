@@ -207,7 +207,12 @@ impl MutableRenames {
             ));
         }
 
-        AddPaths::query(&self.store.write_connection, &rows[..]).await?;
+        AddPaths::maybe_traced_query(
+            &self.store.write_connection,
+            ctx.client_request_info(),
+            &rows[..],
+        )
+        .await?;
 
         // Now insert the renames
         ctx.perf_counters()
@@ -226,7 +231,12 @@ impl MutableRenames {
             ));
         }
 
-        AddRenames::query(&self.store.write_connection, &rows[..]).await?;
+        AddRenames::maybe_traced_query(
+            &self.store.write_connection,
+            ctx.client_request_info(),
+            &rows[..],
+        )
+        .await?;
 
         Ok(())
     }
@@ -239,8 +249,13 @@ impl MutableRenames {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
-        let rename_targets =
-            HasRenameCheck::query(&self.store.read_connection, &self.repo_id, &dst_cs_id).await?;
+        let rename_targets = HasRenameCheck::maybe_traced_query(
+            &self.store.read_connection,
+            ctx.client_request_info(),
+            &self.repo_id,
+            &dst_cs_id,
+        )
+        .await?;
 
         Ok(!rename_targets.is_empty())
     }
@@ -279,8 +294,9 @@ impl MutableRenames {
 
         let dst_path_bytes = path_bytes_from_mpath(&dst_path);
         let dst_path_hash = PathHashBytes::new(&dst_path_bytes);
-        let mut rows = GetRename::query(
+        let mut rows = GetRename::maybe_traced_query(
             &self.store.read_connection,
+            ctx.client_request_info(),
             &self.repo_id,
             &dst_cs_id,
             &dst_path_hash.0,
@@ -338,8 +354,13 @@ impl MutableRenames {
 
         let dst_path_bytes = path_bytes_from_mpath(&dst_path);
         let dst_path_hash = PathHashBytes::new(&dst_path_bytes);
-        let rows = FindRenames::query(&self.store.read_connection, &self.repo_id, &dst_path_hash.0)
-            .await?;
+        let rows = FindRenames::maybe_traced_query(
+            &self.store.read_connection,
+            ctx.client_request_info(),
+            &self.repo_id,
+            &dst_path_hash.0,
+        )
+        .await?;
         Ok(rows.into_iter().map(|r| r.0).collect())
     }
 

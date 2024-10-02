@@ -84,7 +84,7 @@ pub struct SqlMegarepoSyncConfig {
 impl MegarepoSyncConfig for SqlMegarepoSyncConfig {
     async fn add_repo_config(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         repo_id: &RepositoryId,
         bookmark: &BookmarkKey,
         version: &SyncConfigVersion,
@@ -93,8 +93,9 @@ impl MegarepoSyncConfig for SqlMegarepoSyncConfig {
         let contents =
             String::from_utf8(fbthrift::simplejson_protocol::serialize(&sources).to_vec())
                 .context("failed to serialize SyncTargetConfig")?;
-        let res = AddRepoConfig::query(
+        let res = AddRepoConfig::maybe_traced_query(
             &self.connections.write_connection,
+            ctx.client_request_info(),
             repo_id,
             bookmark.name(),
             version,
@@ -127,13 +128,14 @@ impl MegarepoSyncConfig for SqlMegarepoSyncConfig {
 
     async fn get_repo_config_by_version(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         repo_id: &RepositoryId,
         bookmark: &BookmarkKey,
         version: &SyncConfigVersion,
     ) -> Result<Option<MegarepoSyncConfigEntry>> {
-        let rows = GetRepoConfigByVersion::query(
+        let rows = GetRepoConfigByVersion::maybe_traced_query(
             &self.connections.read_connection,
+            ctx.client_request_info(),
             repo_id,
             bookmark.name(),
             version,
