@@ -100,6 +100,10 @@ struct ScscArgs {
 }
 
 async fn main_impl(fb: FacebookInit) -> anyhow::Result<()> {
+    if hostcaps::is_corp() {
+        //In Corp we should not be using strict mode of fbwhoami, which throws an error if the file is not present.
+        gflags::set_gflag_value(fb, "fbwhoami_strict", gflags::GflagValue::Bool(false))?
+    }
     let subcommands = commands::subcommands();
     assert!(!subcommands.is_empty());
     let app = ScscArgs::command()
