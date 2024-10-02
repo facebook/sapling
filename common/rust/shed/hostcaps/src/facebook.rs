@@ -1,8 +1,10 @@
 // (c) Meta Platforms, Inc. and affiliates. Confidential and proprietary.
 
+use derive_more::Display;
 use fbwhoami::FbWhoAmI;
 
 #[derive(PartialEq)]
+#[derive(Display)]
 #[repr(u8)]
 pub enum Env {
     Prod = 0,
