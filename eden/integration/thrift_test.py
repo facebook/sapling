@@ -10,36 +10,19 @@ import binascii
 import hashlib
 import os
 import re
-import socket
 import subprocess
-import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Pattern, Tuple, TypeVar, Union
+from typing import Dict, List, Optional, Pattern, TypeVar, Union
 
 from facebook.eden.eden_config.ttypes import ConfigReloadBehavior
 
 from facebook.eden.ttypes import (
     Blake3Result,
-    DirListAttributeDataOrError,
-    EdenError,
-    EdenErrorType,
-    FileAttributeData,
     FileAttributeDataOrError,
     FileAttributeDataOrErrorV2,
-    FileAttributeDataV2,
-    FileAttributes,
-    GetAttributesFromFilesParams,
-    GetAttributesFromFilesResult,
-    GetAttributesFromFilesResultV2,
     GetConfigParams,
-    ReaddirParams,
-    ReaddirResult,
     ScmFileStatus,
-    Sha1OrError,
     SHA1Result,
-    SizeOrError,
-    SourceControlType,
-    SourceControlTypeOrError,
     SyncBehavior,
     TimeSpec,
 )
@@ -53,13 +36,6 @@ EdenThriftResult = TypeVar(
     Union[FileAttributeDataOrError, FileAttributeDataOrErrorV2],
     SHA1Result,
     Blake3Result,
-)
-
-# Change this if more attributes are added
-ALL_ATTRIBUTES = (
-    FileAttributes.FILE_SIZE
-    | FileAttributes.SHA1_HASH
-    | FileAttributes.SOURCE_CONTROL_TYPE
 )
 
 
