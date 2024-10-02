@@ -45,6 +45,7 @@
 #include "eden/fs/journal/Journal.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
+#include "eden/fs/model/TreeMetadata.h"
 #include "eden/fs/model/git/GitIgnoreStack.h"
 #include "eden/fs/nfs/NfsDirList.h"
 #include "eden/fs/nfs/Nfsd3.h"
@@ -1219,6 +1220,46 @@ FileInodePtr TreeInode::createImpl(
 std::optional<ObjectId> TreeInode::getObjectId() const {
   auto state = contents_.rlock();
   return state->treeHash;
+}
+
+ImmediateFuture<std::optional<Hash32>> TreeInode::getDigestHash(
+    const ObjectFetchContextPtr& fetchContext) {
+  auto state = contents_.rlock();
+
+  if (!state->isMaterialized()) {
+    // If a tree is not materialized, it should have a hash value.
+    return getObjectStore()
+        .getTreeDigestHash(state->treeHash.value(), fetchContext)
+        .thenValue([](Hash32 hash) { return std::make_optional(hash); });
+  }
+  return ImmediateFuture<std::optional<Hash32>>{std::nullopt};
+}
+
+ImmediateFuture<std::optional<uint64_t>> TreeInode::getDigestSize(
+    const ObjectFetchContextPtr& fetchContext) {
+  auto state = contents_.rlock();
+
+  if (!state->isMaterialized()) {
+    // If a tree is not materialized, it should have a hash size.
+    return getObjectStore()
+        .getTreeDigestSize(state->treeHash.value(), fetchContext)
+        .thenValue([](uint64_t size) { return std::make_optional(size); });
+  }
+  return ImmediateFuture<std::optional<uint64_t>>{std::nullopt};
+}
+
+ImmediateFuture<std::optional<TreeMetadata>> TreeInode::getTreeMetadata(
+    const ObjectFetchContextPtr& fetchContext) {
+  auto state = contents_.rlock();
+
+  if (!state->isMaterialized()) {
+    // If a tree is not materialized, it should have metadata.
+    return getObjectStore()
+        .getTreeMetadata(state->treeHash.value(), fetchContext)
+        .thenValue(
+            [](TreeMetadata treeMeta) { return std::make_optional(treeMeta); });
+  }
+  return ImmediateFuture<std::optional<TreeMetadata>>{std::nullopt};
 }
 
 FileInodePtr TreeInode::symlink(
