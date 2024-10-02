@@ -66,6 +66,8 @@ impl ThinCasClient {
                         log_dir = Some(std::env::temp_dir().to_string_lossy().to_string());
                     }
                 }
+            } else {
+                log_dir = Some(std::env::temp_dir().to_string_lossy().to_string());
             }
         }
 
