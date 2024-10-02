@@ -409,6 +409,31 @@ ObjectStore::getTreeMetadataImpl(
       .semi();
 }
 
+ImmediateFuture<Hash32> ObjectStore::getTreeDigestHash(
+    const ObjectId& id,
+    const ObjectFetchContextPtr& context) const {
+  return getTreeMetadata(id, context)
+      .thenValue(
+          [id, context = context.copy(), self = shared_from_this()](
+              const TreeMetadata& metadata) -> ImmediateFuture<Hash32> {
+            if (metadata.digestHash) {
+              return *metadata.digestHash;
+            }
+
+            // should never happen but better than crashing
+            EDEN_BUG() << fmt::format(
+                "DigestHash hash is not defined for id={}", id);
+          });
+}
+
+ImmediateFuture<uint64_t> ObjectStore::getTreeDigestSize(
+    const ObjectId& id,
+    const ObjectFetchContextPtr& context) const {
+  return getTreeMetadata(id, context)
+      .thenValue(
+          [](const TreeMetadata& metadata) { return metadata.digestSize; });
+}
+
 ImmediateFuture<folly::Unit> ObjectStore::prefetchBlobs(
     ObjectIdRange ids,
     const ObjectFetchContextPtr& fetchContext) const {

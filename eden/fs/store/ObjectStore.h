@@ -190,6 +190,20 @@ class ObjectStore : public IObjectStore,
       const ObjectFetchContextPtr& context) const;
 
   /**
+   * Returns the DigestHash hash of the contents of the tree with the given ID.
+   */
+  ImmediateFuture<Hash32> getTreeDigestHash(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) const;
+
+  /**
+   * Returns the digest size of the tree with the given ID.
+   */
+  ImmediateFuture<uint64_t> getTreeDigestSize(
+      const ObjectId& id,
+      const ObjectFetchContextPtr& context) const;
+
+  /**
    * Prefetch all the blobs represented by the HashRange.
    *
    * The caller is responsible for making sure that the HashRange stays valid
