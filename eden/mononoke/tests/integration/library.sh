@@ -713,7 +713,8 @@ function set_bonsai_globalrev_mapping {
 }
 
 function set_mononoke_as_source_of_truth_for_git {
-  sqlite3 "$TESTTMP/monsql/sqlite_dbs" "REPLACE INTO git_repositories_source_of_truth (repo_id, repo_name, source_of_truth) VALUES (${REPO_ID:-0}, '${REPONAME}', 'mononoke')"
+  REPO_NAME_HEX=$(echo -n "${REPONAME}" | xxd -p)
+  sqlite3 "$TESTTMP/monsql/sqlite_dbs" "REPLACE INTO git_repositories_source_of_truth (repo_id, repo_name, source_of_truth) VALUES (${REPO_ID:-0}, X'${REPO_NAME_HEX}', 'mononoke')"
 }
 
 function setup_mononoke_config {
