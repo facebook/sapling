@@ -16,6 +16,7 @@
 #include "eden/fs/model/TreeMetadata.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/utils/EdenError.h"
 
 namespace facebook::eden {
 
@@ -107,6 +108,57 @@ ImmediateFuture<Hash32> VirtualInode::getBlake3(
         }
         // Revert to querying the objectStore for the file's medatadata
         return objectStore->getBlobBlake3(entry.getHash(), fetchContext);
+      });
+}
+
+ImmediateFuture<Hash32> VirtualInode::getDigestHash(
+    RelativePathPiece path,
+    const std::shared_ptr<ObjectStore>& objectStore,
+    const ObjectFetchContextPtr& fetchContext) const {
+  // Ensure this is a regular file or directory.
+  // We intentionally want to refuse to compute the digestHash of symlinks
+  switch (filteredEntryDtype(
+      getDtype(), objectStore->getWindowsSymlinksEnabled())) {
+    case dtype_t::Symlink:
+      return makeImmediateFuture<Hash32>(
+          PathError(EINVAL, path, "file is a symlink"));
+    case dtype_t::Dir:
+      break;
+    case dtype_t::Regular:
+      // The DigestHash of a file is the same as the Blake3 hash for that file
+      return getBlake3(path, objectStore, fetchContext);
+    default:
+      return makeImmediateFuture<Hash32>(
+          PathError(EINVAL, path, "variant is of unhandled type"));
+  }
+
+  // This is now guaranteed to be a dtype_t::Dir. This means there's no
+  // need to handle any file case
+
+  return match(
+      variant_,
+      [&](const InodePtr& inode) {
+        auto treeFut = inode.asTreePtr()->getDigestHash(fetchContext);
+        return std::move(treeFut).thenValue([path](std::optional<Hash32> hash) {
+          if (hash.has_value()) {
+            return ImmediateFuture<Hash32>{hash.value()};
+          } else {
+            return makeImmediateFuture<Hash32>(newEdenError(
+                EINVAL,
+                EdenErrorType::GENERIC_ERROR,
+                fmt::format("digest hash missing for tree: {}", path)));
+          }
+        });
+      },
+      [&](const UnmaterializedUnloadedBlobDirEntry& entry) {
+        return objectStore->getTreeDigestHash(
+            entry.getObjectId(), fetchContext);
+      },
+      [&](const TreePtr& tree) {
+        return objectStore->getTreeDigestHash(tree->getHash(), fetchContext);
+      },
+      [&](const TreeEntry& entry) {
+        return objectStore->getTreeDigestHash(entry.getHash(), fetchContext);
       });
 }
 

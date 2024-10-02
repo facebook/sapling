@@ -119,6 +119,11 @@ class VirtualInode {
       const std::shared_ptr<ObjectStore>& objectStore,
       const ObjectFetchContextPtr& fetchContext) const;
 
+  ImmediateFuture<Hash32> getDigestHash(
+      RelativePathPiece path,
+      const std::shared_ptr<ObjectStore>& objectStore,
+      const ObjectFetchContextPtr& fetchContext) const;
+
   /**
    * Get all the available attributes for a file entry in this tree. Available
    * attributes are currently:
