@@ -34,7 +34,7 @@ use crate::manager::derive::Rederivation;
 #[derive(Clone)]
 pub struct DerivationContext {
     pub(crate) bonsai_hg_mapping: Option<Arc<dyn BonsaiHgMapping>>,
-    bonsai_git_mapping: Option<Arc<dyn BonsaiGitMapping>>,
+    pub(crate) bonsai_git_mapping: Option<Arc<dyn BonsaiGitMapping>>,
     pub(crate) filenodes: Option<Arc<dyn Filenodes>>,
     config_name: String,
     config: DerivedDataTypesConfig,

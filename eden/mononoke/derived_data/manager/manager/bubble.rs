@@ -58,11 +58,11 @@ impl DerivedDataManager {
         );
         let wrapped_blobstore = bubble.wrap_repo_blobstore(self.inner.repo_blobstore.clone());
         let mut derivation_context = self.inner.derivation_context.clone();
+        derivation_context.bonsai_git_mapping = None;
         derivation_context.bonsai_hg_mapping = None;
         derivation_context.filenodes = None;
         derivation_context.blobstore = wrapped_blobstore.boxed();
 
-        // TODO (Pierre): Should we also clear bonsai_git_mapping? By symmetry, it appears so
         Self {
             inner: Arc::new(DerivedDataManagerInner {
                 secondary: Some(SecondaryManagerData {
