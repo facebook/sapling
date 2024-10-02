@@ -16,19 +16,19 @@
 namespace facebook::eden {
 
 /**
- * A small struct containing both the size (in bytes) and Blake3 hash of
+ * A small struct containing both the size (in bytes) and hash of
  * a Tree's RE CAS digest. Note: digest_size != stat(tree).st_size
  */
 class TreeMetadata {
  public:
-  TreeMetadata(Hash32 blake3, uint64_t digestSize)
-      : blake3(std::move(blake3)), digestSize(digestSize) {}
+  TreeMetadata(Hash32 digestHash, uint64_t digestSize)
+      : digestHash(std::move(digestHash)), digestSize(digestSize) {}
 
-  TreeMetadata(std::optional<Hash32> blake3, uint64_t digestSize)
-      : blake3(std::move(blake3)), digestSize(digestSize) {}
+  TreeMetadata(std::optional<Hash32> digestHash, uint64_t digestSize)
+      : digestHash(std::move(digestHash)), digestSize(digestSize) {}
 
   // TODO: make it non optional
-  std::optional<Hash32> blake3;
+  std::optional<Hash32> digestHash;
   uint64_t digestSize;
 };
 

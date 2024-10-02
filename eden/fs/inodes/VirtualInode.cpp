@@ -292,7 +292,7 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
                           digestHash](TreeMetadata treeMeta) mutable {
                 if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_HASH)) {
                   digestHash =
-                      std::optional<folly::Try<Hash32>>{treeMeta.blake3};
+                      std::optional<folly::Try<Hash32>>{treeMeta.digestHash};
                 }
                 if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_SIZE)) {
                   digestSize = std::optional<folly::Try<uint64_t>>{

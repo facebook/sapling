@@ -25,7 +25,7 @@ impl From<ScmStoreTreeAuxData> for TreeAuxData {
     fn from(v: ScmStoreTreeAuxData) -> Self {
         TreeAuxData {
             digest_size: v.augmented_manifest_size,
-            digest_blake3: v.augmented_manifest_id.into_byte_array(),
+            digest_hash: v.augmented_manifest_id.into_byte_array(),
         }
     }
 }
