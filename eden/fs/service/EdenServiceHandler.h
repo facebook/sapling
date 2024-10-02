@@ -155,6 +155,12 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::vector<std::string>> paths,
       std::unique_ptr<SyncBehavior> sync) override;
 
+  folly::SemiFuture<std::unique_ptr<std::vector<DigestHashResult>>>
+  semifuture_getDigestHash(
+      std::unique_ptr<std::string> mountPoint,
+      std::unique_ptr<std::vector<std::string>> paths,
+      std::unique_ptr<SyncBehavior> sync) override;
+
   void getCurrentJournalPosition(
       JournalPosition& out,
       std::unique_ptr<std::string> mountPoint) override;

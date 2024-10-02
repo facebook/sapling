@@ -1049,6 +1049,61 @@ EdenServiceHandler::semifuture_getBlake3(
       .semi();
 }
 
+folly::SemiFuture<std::unique_ptr<std::vector<DigestHashResult>>>
+EdenServiceHandler::semifuture_getDigestHash(
+    std::unique_ptr<std::string> mountPoint,
+    std::unique_ptr<std::vector<std::string>> paths,
+    std::unique_ptr<SyncBehavior> sync) {
+  TraceBlock block("getDigestHash");
+  auto helper = INSTRUMENT_THRIFT_CALL(
+      DBG3, *mountPoint, getSyncTimeout(*sync), toLogArg(*paths));
+  auto& fetchContext = helper->getFetchContext();
+  auto mountHandle = lookupMount(mountPoint);
+
+  auto notificationFuture =
+      waitForPendingWrites(mountHandle.getEdenMount(), *sync);
+  return wrapImmediateFuture(
+             std::move(helper),
+             std::move(notificationFuture)
+                 .thenValue(
+                     [mountHandle,
+                      paths = std::move(paths),
+                      fetchContext = fetchContext.copy()](auto&&) mutable {
+                       return applyToVirtualInode(
+                           mountHandle.getRootInode(),
+                           *paths,
+                           [mountHandle, fetchContext = fetchContext.copy()](
+                               const VirtualInode& inode, RelativePath path) {
+                             return inode
+                                 .getDigestHash(
+                                     path,
+                                     mountHandle.getObjectStorePtr(),
+                                     fetchContext)
+                                 .semi();
+                           },
+                           mountHandle.getObjectStorePtr(),
+                           fetchContext);
+                     })
+                 .ensure([mountHandle] {})
+                 .thenValue([](std::vector<folly::Try<Hash32>> results) {
+                   auto out = std::make_unique<std::vector<DigestHashResult>>();
+                   out->reserve(results.size());
+
+                   for (auto& result : results) {
+                     auto& digestHashResult = out->emplace_back();
+                     if (result.hasValue()) {
+                       digestHashResult.digestHash_ref() =
+                           thriftHash32(result.value());
+                     } else {
+                       digestHashResult.error_ref() =
+                           newEdenError(result.exception());
+                     }
+                   }
+                   return out;
+                 }))
+      .semi();
+}
+
 folly::SemiFuture<std::unique_ptr<std::vector<SHA1Result>>>
 EdenServiceHandler::semifuture_getSHA1(
     std::unique_ptr<string> mountPoint,

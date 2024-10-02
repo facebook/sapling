@@ -309,6 +309,12 @@ class HgRepository(repobase.Repository):
         hgrc.add_section("push")
         hgrc["push"]["edenapi"] = "true"
 
+        # Turn off commit cloud. Some tests require testing the behavior of
+        # local-only changes. Commit cloud makes it difficult to test that.
+        if not hgrc.has_section("extensions"):
+            hgrc.add_section("extensions")
+        hgrc["extensions"]["commitcloud"] = "!"
+
         self.write_hgrc(hgrc)
 
         storerequirespath = os.path.join(self.path, ".hg", "store", "requires")

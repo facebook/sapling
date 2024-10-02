@@ -18,6 +18,7 @@ from facebook.eden.eden_config.ttypes import ConfigReloadBehavior
 
 from facebook.eden.ttypes import (
     Blake3Result,
+    DigestHashResult,
     FileAttributeDataOrError,
     FileAttributeDataOrErrorV2,
     GetConfigParams,
@@ -36,17 +37,20 @@ EdenThriftResult = TypeVar(
     Union[FileAttributeDataOrError, FileAttributeDataOrErrorV2],
     SHA1Result,
     Blake3Result,
+    DigestHashResult,
 )
 
 
 @testcase.eden_repo_test
 class ThriftTest(testcase.EdenRepoTest):
-    # pyre-fixme[13]: Attribute `commit1` is never initialized.
-    commit1: str
-    # pyre-fixme[13]: Attribute `commit2` is never initialized.
-    commit2: str
-    # pyre-fixme[13]: Attribute `commit3` is never initialized.
-    commit3: str
+    # The following members are initilaized in populate_repo()
+    commit1: str = ""
+    commit2: str = ""
+    commit3: str = ""
+    local_commit: str = ""
+    expected_adir_digest_hash: bytes = b""
+    expected_hello_blake3: bytes = b""
+    expected_adir_file_blake3: bytes = b""
 
     def setup_eden_test(self) -> None:
         self.enable_windows_symlinks = True
@@ -99,6 +103,31 @@ class ThriftTest(testcase.EdenRepoTest):
         # revert the change made to bdir/file
         self.repo.write_file("bdir/file", "bar!\n")
         self.commit3 = self.repo.commit("Commit 3.")
+
+        # Eagerepo requires commits to be pushed to the server so that
+        # aux data can be derived for trees
+        if self.repo_type in ["hg", "filteredhg"]:
+            self.repo.push(rev=".", target="master", create=True)
+
+        # Commit changes, but don't push them to the server (simulates local-only trees)
+        self.repo.write_file("local_dir/file", "hola\n")
+        self.local_commit = self.repo.commit("Local Commit")
+
+        # There is no easy way to compute the dighest hash for a directory on the fly (in Python)
+        # Since these hashes/sizes should stay constant, we can just hardcode the expected result
+        #
+        # We define digest hashes as bytes since defining them as hex and then converting to bytes
+        # could lead to an integer overflow.
+        #
+        # Future computation of results:
+        #   digest_hash_res = results[0].get_digestHash()
+        #   digest_hash_bytes = "\\".join(list(map(hex, digest_hash_res)))
+        #   expected_digest_hash = "\\" + digest_hash_bytes.replace("0x", "x")
+        self.expected_adir_digest_hash = b"\x73\xf0\xc6\xe3\x6b\x3c\xb9\xfc\x64\xa8\xa3\x39\x24\x57\xd3\xc9\xd0\x2d\x11\xfd\x22\xe5\x36\x71\x94\x5d\x95\x3f\xfa\xc3\x8c\x92"
+
+        # For files, digest hashes are just the blake3 hash of the file contents
+        self.expected_hello_blake3: bytes = self.blake3_hash(b"hola\n")
+        self.expected_adir_file_blake3: bytes = self.blake3_hash(b"foo!\n")
 
     def get_loaded_inodes_count(self, path: str) -> int:
         with self.get_thrift_client_legacy() as client:
@@ -161,11 +190,8 @@ class ThriftTest(testcase.EdenRepoTest):
             )
 
     def test_get_blake3(self) -> None:
-        expected_blake3_for_hello = self.blake3_hash(b"hola\n")
-        result_for_hello = Blake3Result(expected_blake3_for_hello)
-
-        expected_blake3_for_adir_file = self.blake3_hash(b"foo!\n")
-        result_for_adir_file = Blake3Result(expected_blake3_for_adir_file)
+        result_for_hello = Blake3Result(self.expected_hello_blake3)
+        result_for_adir_file = Blake3Result(self.expected_adir_file_blake3)
 
         with self.get_thrift_client_legacy() as client:
             self.assertEqual(
@@ -175,6 +201,38 @@ class ThriftTest(testcase.EdenRepoTest):
                     [b"hello", b"adir/file"],
                     sync=SyncBehavior(),
                 ),
+            )
+
+    def test_get_digest_hash_for_file(self) -> None:
+        with self.get_thrift_client_legacy() as client:
+            results = client.getDigestHash(
+                self.mount_path_bytes, [b"hello", b"adir/file"], sync=SyncBehavior(60)
+            )
+
+        self.assertEqual(2, len(results))
+        self.assertEqual(
+            results,
+            [
+                DigestHashResult(self.expected_hello_blake3),
+                DigestHashResult(self.expected_adir_file_blake3),
+            ],
+        )
+
+    def test_get_digest_hash_for_directory(self) -> None:
+        with self.get_thrift_client_legacy() as client:
+            results = client.getDigestHash(
+                self.mount_path_bytes, [b"adir"], sync=SyncBehavior(60)
+            )
+
+        self.assertEqual(1, len(results))
+        if self.repo.get_type() in ["hg", "filteredhg"]:
+            self.assertEqual(
+                results, [DigestHashResult(self.expected_adir_digest_hash)]
+            )
+        else:
+            self.assert_digest_hash_error(
+                results[0],
+                "std::domain_error: getTreeMetadata is not implemented for GitBackingStores",
             )
 
     def test_get_sha1_throws_for_path_with_dot_components(self) -> None:
@@ -203,6 +261,19 @@ class ThriftTest(testcase.EdenRepoTest):
             ),
         )
 
+    def test_get_digest_hash_throws_for_path_with_dot_components(self) -> None:
+        with self.get_thrift_client_legacy() as client:
+            results = client.getDigestHash(
+                self.mount_path_bytes, [b"./hello"], sync=SyncBehavior()
+            )
+        self.assertEqual(1, len(results))
+        self.assert_digest_hash_error(
+            results[0],
+            re.compile(
+                r".*PathComponentValidationError.*: PathComponent must not be \."
+            ),
+        )
+
     def test_get_sha1_throws_for_empty_string(self) -> None:
         with self.get_thrift_client_legacy() as client:
             results = client.getSHA1(self.mount_path_bytes, [b""], sync=SyncBehavior())
@@ -216,6 +287,14 @@ class ThriftTest(testcase.EdenRepoTest):
             )
         self.assertEqual(1, len(results))
         self.assert_blake3_error(results[0], ": Is a directory")
+
+    def test_get_digest_hash_throws_for_empty_string(self) -> None:
+        with self.get_thrift_client_legacy() as client:
+            results = client.getDigestHash(
+                self.mount_path_bytes, [b""], sync=SyncBehavior()
+            )
+        self.assertEqual(1, len(results))
+        self.assert_digest_hash_error(results[0], "digest hash missing for tree: ")
 
     def test_get_sha1_throws_for_directory(self) -> None:
         with self.get_thrift_client_legacy() as client:
@@ -251,6 +330,16 @@ class ThriftTest(testcase.EdenRepoTest):
             results[0], "i_do_not_exist: No such file or directory"
         )
 
+    def test_get_digest_hash_throws_for_non_existent_file(self) -> None:
+        with self.get_thrift_client_legacy() as client:
+            results = client.getDigestHash(
+                self.mount_path_bytes, [b"i_do_not_exist"], sync=SyncBehavior()
+            )
+        self.assertEqual(1, len(results))
+        self.assert_digest_hash_error(
+            results[0], "i_do_not_exist: No such file or directory"
+        )
+
     def test_get_sha1_throws_for_symlink(self) -> None:
         """Fails because caller should resolve the symlink themselves."""
         with self.get_thrift_client_legacy() as client:
@@ -271,6 +360,59 @@ class ThriftTest(testcase.EdenRepoTest):
             results[0], "slink: file is a symlink: Invalid argument"
         )
 
+    def test_get_digest_hash_throws_for_materialized_directory(self) -> None:
+        # Materialize a file in a nested directory
+        self.mkdir("adir2")
+        # Resuse contents of "hello" file so we don't need to calculate another blake3
+        self.write_file("adir2/file", "hola\n")
+
+        with self.get_thrift_client_legacy() as client:
+            results = client.getDigestHash(
+                self.mount_path_bytes, [b"adir2", b"adir2/file"], sync=SyncBehavior()
+            )
+        self.assertEqual(2, len(results))
+        self.assert_digest_hash_error(
+            results[0],
+            "digest hash missing for tree: adir2",
+        )
+        self.assertEqual(
+            results[1],
+            DigestHashResult(self.expected_hello_blake3),
+        )
+
+    def test_get_digest_hash_throws_for_local_directory(self) -> None:
+        # By default, the checked out revision for eagerepos is the latest commit pushed to the
+        # server. There's no way to do source control operations in generic Eden tests, so we
+        # will clone a new repo w/ the specified local commit instead
+        new_clone = Path(self.make_temporary_directory())
+        self.eden.run_cmd(
+            "clone", "--rev", self.local_commit, self.repo.path, str(new_clone)
+        )
+
+        with self.get_thrift_client_legacy() as client:
+            results = client.getDigestHash(
+                bytes(new_clone),
+                [b"local_dir", b"local_dir/file"],
+                sync=SyncBehavior(),
+            )
+        print(results)
+        self.assertEqual(2, len(results))
+        if self.repo_type in ["hg", "filteredhg"]:
+            self.assert_digest_hash_error(
+                results[0],
+                re.compile(r".*domain_error.* aux data for .* not found"),
+            )
+        else:
+            self.assert_digest_hash_error(
+                results[0],
+                "std::domain_error: getTreeMetadata is not implemented for GitBackingStores",
+            )
+
+        self.assertEqual(
+            results[1],
+            DigestHashResult(self.expected_hello_blake3),
+        )
+
     def assert_eden_error(
         self, result: EdenThriftResult, error_message: Union[str, Pattern]
     ) -> None:
@@ -289,6 +431,17 @@ class ThriftTest(testcase.EdenRepoTest):
             SHA1Result.ERROR, sha1result.getType(), msg="SHA1Result must be an error"
         )
         self.assert_eden_error(sha1result, error_message)
+
+    def assert_digest_hash_error(
+        self, digest_hash_result: DigestHashResult, error_message: Union[str, Pattern]
+    ) -> None:
+        self.assertIsNotNone(digest_hash_result, msg="Must pass a DigestHashResult")
+        self.assertEqual(
+            DigestHashResult.ERROR,
+            digest_hash_result.getType(),
+            msg="DigestHashResult must be an error",
+        )
+        self.assert_eden_error(digest_hash_result, error_message)
 
     def assert_blake3_error(
         self, blake3_result: Blake3Result, error_message: Union[str, Pattern]

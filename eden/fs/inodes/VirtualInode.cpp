@@ -139,16 +139,17 @@ ImmediateFuture<Hash32> VirtualInode::getDigestHash(
       variant_,
       [&](const InodePtr& inode) {
         auto treeFut = inode.asTreePtr()->getDigestHash(fetchContext);
-        return std::move(treeFut).thenValue([path](std::optional<Hash32> hash) {
-          if (hash.has_value()) {
-            return ImmediateFuture<Hash32>{hash.value()};
-          } else {
-            return makeImmediateFuture<Hash32>(newEdenError(
-                EINVAL,
-                EdenErrorType::GENERIC_ERROR,
-                fmt::format("digest hash missing for tree: {}", path)));
-          }
-        });
+        return std::move(treeFut).thenValue(
+            [treePath = path.copy()](std::optional<Hash32> hash) {
+              if (hash.has_value()) {
+                return ImmediateFuture<Hash32>{hash.value()};
+              } else {
+                return makeImmediateFuture<Hash32>(newEdenError(
+                    EINVAL,
+                    EdenErrorType::GENERIC_ERROR,
+                    fmt::format("digest hash missing for tree: {}", treePath)));
+              }
+            });
       },
       [&](const UnmaterializedUnloadedBlobDirEntry& entry) {
         return objectStore->getTreeDigestHash(
