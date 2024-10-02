@@ -48,7 +48,7 @@ ServerState::ServerState(
     std::shared_ptr<Clock> clock,
     std::shared_ptr<ProcessInfoCache> processInfoCache,
     std::shared_ptr<StructuredLogger> structuredLogger,
-    std::shared_ptr<IHiveLogger> hiveLogger,
+    std::shared_ptr<IScribeLogger> scribeLogger,
     std::shared_ptr<ReloadableConfig> reloadableConfig,
     const EdenConfig& initialConfig,
     [[maybe_unused]] folly::EventBase* mainEventBase,
@@ -62,7 +62,7 @@ ServerState::ServerState(
       clock_{std::move(clock)},
       processInfoCache_{std::move(processInfoCache)},
       structuredLogger_{std::move(structuredLogger)},
-      hiveLogger_{std::move(hiveLogger)},
+      scribeLogger_{std::move(scribeLogger)},
       faultInjector_{std::make_unique<FaultInjector>(enableFaultDetection)},
       nfs_{
           initialConfig.enableNfsServer.getValue()
@@ -85,7 +85,7 @@ ServerState::ServerState(
       notifier_{std::move(notifier)},
       fsEventLogger_{
           initialConfig.requestSamplesPerMinute.getValue()
-              ? std::make_shared<FsEventLogger>(config_, hiveLogger_)
+              ? std::make_shared<FsEventLogger>(config_, scribeLogger_)
               : nullptr} {
   // It would be nice if we eventually built a more generic mechanism for
   // defining faults to be configured on start up.  (e.g., loading this from

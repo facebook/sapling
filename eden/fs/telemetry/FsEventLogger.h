@@ -29,7 +29,7 @@ enum class SamplingGroup : uint32_t {
 };
 
 class ReloadableConfig;
-class IHiveLogger;
+class IScribeLogger;
 
 class FsEventLogger {
  public:
@@ -41,12 +41,12 @@ class FsEventLogger {
 
   FsEventLogger(
       std::shared_ptr<ReloadableConfig> edenConfig,
-      std::shared_ptr<IHiveLogger> logger);
+      std::shared_ptr<IScribeLogger> logger);
   void log(Event event);
 
  private:
   std::shared_ptr<ReloadableConfig> edenConfig_;
-  std::shared_ptr<IHiveLogger> logger_;
+  std::shared_ptr<IScribeLogger> logger_;
 
   std::atomic<uint32_t> samplesCount_{0};
   std::atomic<std::chrono::steady_clock::time_point> counterStartTime_;

@@ -26,7 +26,7 @@ struct FileAccess {
 };
 
 /**
- * A filesystem event to be logged through HiveLogger.
+ * A filesystem event to be logged through ScribeLogger.
  * The caller is responsible for ensuring the lifetime of the underlying
  * string exceeds the lifetime of the event.
  */
@@ -36,14 +36,13 @@ struct FsEventSample {
   folly::StringPiece configList;
 };
 
-// TODO: Deprecate ScribeLogger and rename this class ScribeLogger.
-class IHiveLogger {
+class IScribeLogger {
  public:
-  IHiveLogger(
+  IScribeLogger(
       SessionInfo sessionInfo,
       std::shared_ptr<const EdenConfig> edenConfig)
       : sessionInfo_{std::move(sessionInfo)}, reloadableConfig_{edenConfig} {}
-  virtual ~IHiveLogger() = default;
+  virtual ~IScribeLogger() = default;
 
   virtual void log(std::string_view category, std::string&& message) = 0;
 
@@ -52,22 +51,22 @@ class IHiveLogger {
   virtual void logFsEventSample(FsEventSample event) = 0;
 
   /**
-   * This allows us to create objects derived from IHiveLogger with
-   * only a IHiveLogger pointer
+   * This allows us to create objects derived from IScribeLogger with
+   * only a IScribeLogger pointer
    */
-  virtual std::unique_ptr<IHiveLogger> create() = 0;
+  virtual std::unique_ptr<IScribeLogger> create() = 0;
 
  protected:
   SessionInfo sessionInfo_;
   ReloadableConfig reloadableConfig_;
 };
 
-class NullHiveLogger : public IHiveLogger {
+class NullScribeLogger : public IScribeLogger {
  public:
-  NullHiveLogger() : IHiveLogger{SessionInfo{}, {}} {}
+  NullScribeLogger() : IScribeLogger{SessionInfo{}, {}} {}
 
-  std::unique_ptr<IHiveLogger> create() override {
-    return std::make_unique<NullHiveLogger>();
+  std::unique_ptr<IScribeLogger> create() override {
+    return std::make_unique<NullScribeLogger>();
   }
 
   void log(std::string_view /*category*/, std::string&& /*message*/) override {}

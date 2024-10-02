@@ -19,7 +19,7 @@
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/notifications/CommandNotifier.h"
 #include "eden/fs/telemetry/EdenStats.h"
-#include "eden/fs/telemetry/IHiveLogger.h"
+#include "eden/fs/telemetry/IScribeLogger.h"
 #include "eden/fs/testharness/FakeClock.h"
 #include "eden/fs/testharness/FakePrivHelper.h"
 
@@ -39,7 +39,7 @@ std::shared_ptr<ServerState> createTestServerState() {
       std::make_shared<FakeClock>(),
       std::make_shared<ProcessInfoCache>(),
       std::make_shared<NullStructuredLogger>(),
-      std::make_shared<NullHiveLogger>(),
+      std::make_shared<NullScribeLogger>(),
       std::make_shared<ReloadableConfig>(edenConfig),
       *edenConfig,
       nullptr,

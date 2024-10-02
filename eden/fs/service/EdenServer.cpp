@@ -90,7 +90,7 @@
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/EdenStructuredLogger.h"
-#include "eden/fs/telemetry/IHiveLogger.h"
+#include "eden/fs/telemetry/IScribeLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/EdenError.h"
@@ -412,7 +412,7 @@ EdenServer::EdenServer(
     std::shared_ptr<const EdenConfig> edenConfig,
     ActivityRecorderFactory activityRecorderFactory,
     BackingStoreFactory* backingStoreFactory,
-    std::shared_ptr<IHiveLogger> hiveLogger,
+    std::shared_ptr<IScribeLogger> scribeLogger,
     std::shared_ptr<StartupStatusChannel> startupStatusChannel,
     std::string version)
     : originalCommandLine_{std::move(originalCommandLine)},
@@ -441,7 +441,7 @@ EdenServer::EdenServer(
           std::make_shared<UnixClock>(),
           std::make_shared<ProcessInfoCache>(),
           structuredLogger_,
-          std::move(hiveLogger),
+          std::move(scribeLogger),
           config_,
           *edenConfig,
           mainEventBase_,

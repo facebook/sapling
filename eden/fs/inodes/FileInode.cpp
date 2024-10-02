@@ -34,7 +34,7 @@
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/BlobAccess.h"
 #include "eden/fs/store/ObjectStore.h"
-#include "eden/fs/telemetry/IHiveLogger.h"
+#include "eden/fs/telemetry/IScribeLogger.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/FileHash.h"
 #include "eden/fs/utils/NotImplemented.h"
@@ -1503,7 +1503,7 @@ void FileInode::logAccess(const ObjectFetchContext& fetchContext) {
     fetchDetail.emplace(std::string{detail.value()});
   }
 
-  getMount()->getServerState()->getHiveLogger()->logFileAccess(FileAccess{
+  getMount()->getServerState()->getScribeLogger()->logFileAccess(FileAccess{
       ino,
       fetchContext.getCause(),
       std::move(fetchDetail),

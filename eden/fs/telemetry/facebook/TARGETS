@@ -3,9 +3,9 @@ load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 oncall("scm_client_infra")
 
 cpp_library(
-    name = "hive_logger",
-    srcs = ["HiveLogger.cpp"],
-    headers = ["HiveLogger.h"],
+    name = "scribe_logger",
+    srcs = ["ScribeLogger.cpp"],
+    headers = ["ScribeLogger.h"],
     compatible_with = [
         "ovr_config//os:linux",
         "ovr_config//os:macos",
@@ -20,7 +20,7 @@ cpp_library(
         "//folly/system:thread_name",
     ],
     exported_deps = [
-        "//eden/fs/telemetry:hive_logger",
+        "//eden/fs/telemetry:scribe_logger",
         "//folly/synchronization:lifo_sem",
         "//rfe/scubadata:scubadata",
         "//scribe/api/producer:local_producer",
@@ -80,7 +80,7 @@ cpp_library(
         "//common/base:build_info",
         "//common/network:hostname",
         "//common/network:util",
-        "//eden/fs/telemetry:hive_logger",
+        "//eden/fs/telemetry:scribe_logger",
         "//folly/logging:log_level",
         "//thrift/lib/cpp2/protocol:protocol",
     ],

@@ -546,7 +546,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
 #endif // _WIN32
 
   /**
-   * Log accesses via the ServerState's HiveLogger.
+   * Log accesses via the ServerState's ScribeLogger.
    */
   void logAccess(const ObjectFetchContext& fetchContext);
 

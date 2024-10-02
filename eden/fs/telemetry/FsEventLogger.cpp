@@ -13,7 +13,7 @@
 
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
-#include "eden/fs/telemetry/IHiveLogger.h"
+#include "eden/fs/telemetry/IScribeLogger.h"
 
 namespace facebook::eden {
 
@@ -47,7 +47,7 @@ std::string getConfigsString(std::shared_ptr<const EdenConfig> config) {
 
 FsEventLogger::FsEventLogger(
     std::shared_ptr<ReloadableConfig> edenConfig,
-    std::shared_ptr<IHiveLogger> logger)
+    std::shared_ptr<IScribeLogger> logger)
     : edenConfig_{std::move(edenConfig)},
       logger_{std::move(logger)},
       counterStartTime_{std::chrono::steady_clock::now()},
