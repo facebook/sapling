@@ -269,6 +269,34 @@ ImmediateFuture<BlobMetadata> VirtualInode::getBlobMetadata(
       });
 }
 
+ImmediateFuture<TreeMetadata> VirtualInode::getTreeMetadata(
+    RelativePathPiece path,
+    const std::shared_ptr<ObjectStore>& objectStore,
+    const ObjectFetchContextPtr& fetchContext) const {
+  return match(
+      variant_,
+      [&](const InodePtr& inode) {
+        return inode.asTreePtr()
+            ->getTreeMetadata(fetchContext)
+            .thenValue([path](std::optional<TreeMetadata> treeMeta) {
+              if (treeMeta.has_value()) {
+                return ImmediateFuture<TreeMetadata>(treeMeta.value());
+              } else {
+                return makeImmediateFuture<TreeMetadata>(newEdenError(
+                    EINVAL,
+                    EdenErrorType::GENERIC_ERROR,
+                    fmt::format("tree meta missing for tree: {}", path)));
+              }
+            });
+      },
+      [&](const TreePtr& tree) {
+        return objectStore->getTreeMetadata(tree->getHash(), fetchContext);
+      },
+      [&](auto& entry) {
+        return objectStore->getTreeMetadata(entry.getObjectId(), fetchContext);
+      });
+}
+
 ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
     EntryAttributeFlags requestedAttributes,
     RelativePathPiece path,

@@ -18,6 +18,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/model/TreeFwd.h"
+#include "eden/fs/model/TreeMetadataFwd.h"
 
 namespace facebook::eden {
 
@@ -195,6 +196,14 @@ class VirtualInode {
       const std::shared_ptr<ObjectStore>& objectStore,
       const ObjectFetchContextPtr& fetchContext,
       bool blake3Required = false) const;
+
+  /**
+   * Helper function for getChildrenAttributes
+   */
+  ImmediateFuture<TreeMetadata> getTreeMetadata(
+      RelativePathPiece path,
+      const std::shared_ptr<ObjectStore>& objectStore,
+      const ObjectFetchContextPtr& fetchContext) const;
 
   ImmediateFuture<EntryAttributes> getEntryAttributesForNonFile(
       EntryAttributeFlags requestedAttributes,
