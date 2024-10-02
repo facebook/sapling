@@ -33,6 +33,7 @@ use super::GitObjectStore;
 use crate::command::RefUpdate;
 use crate::model::RepositoryRequestContext;
 use crate::service::uploader::peel_tag_target;
+use crate::util::mononoke_source_of_truth;
 
 const HOOK_WIKI_LINK: &str = "https://fburl.com/wiki/mb4wtk1j";
 
@@ -120,6 +121,12 @@ pub async fn set_refs(
             }
         })
         .collect::<Vec<_>>();
+    // Do one final check of SoT to ensure that we don't update the bookmark if the repo is locked or sourced in Metagit
+    if !mononoke_source_of_truth(&ctx, repo.clone()).await? {
+        return Err(anyhow::anyhow!(
+            "Mononoke is not the source of truth for this repo"
+        ));
+    }
     // Flag for client side expectation of allow non fast forward updates. Git clients by default
     // prevent users from pushing non-ffwd updates. If the request reaches the server, then that
     // means the client has explicitly requested for a non-ffwd update and the final result will be
@@ -184,6 +191,12 @@ async fn set_ref_inner(
     )?;
     let bookmark_operation =
         BookmarkOperation::new(bookmark_key.clone(), old_changeset, new_changeset)?;
+    // Do one final check of SoT to ensure that we don't update the bookmark if the repo is locked or sourced in Metagit
+    if !mononoke_source_of_truth(&ctx, repo.clone()).await? {
+        return Err(anyhow::anyhow!(
+            "Mononoke is not the source of truth for this repo"
+        ));
+    }
     // Flag for client side expectation of allow non fast forward updates. Git clients by default
     // prevent users from pushing non-ffwd updates. If the request reaches the server, then that
     // means the client has explicitly requested for a non-ffwd update and the final result will be

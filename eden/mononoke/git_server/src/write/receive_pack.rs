@@ -10,14 +10,9 @@ use std::sync::Arc;
 use bonsai_git_mapping::BonsaiGitMappingArc;
 use bytes::Bytes;
 use cloned::cloned;
-use context::CoreContext;
 use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
-use git_source_of_truth::GitSourceOfTruth;
-use git_source_of_truth::GitSourceOfTruthConfigRef;
-use git_source_of_truth::RepositoryName;
-use git_source_of_truth::Staleness;
 use gotham::mime;
 use gotham::state::FromState;
 use gotham::state::State;
@@ -29,12 +24,10 @@ use hyper::Body;
 use hyper::Response;
 use import_tools::GitImportLfs;
 use metaconfig_types::RepoConfigRef;
-use mononoke_api::Repo;
 use packetline::encode::flush_to_write;
 use packetline::encode::write_text_packetline;
 use protocol::pack_processor::parse_pack;
 use repo_blobstore::RepoBlobstoreArc;
-use repo_identity::RepoIdentityRef;
 use slog::info;
 
 use crate::command::Command;
@@ -53,6 +46,7 @@ use crate::service::GitObjectStore;
 use crate::service::RefUpdateOperation;
 use crate::util::empty_body;
 use crate::util::get_body;
+use crate::util::mononoke_source_of_truth;
 
 const PACK_OK: &[u8] = b"unpack ok";
 const REF_OK: &str = "ok";
@@ -295,18 +289,6 @@ async fn atomic_refs_update(
                 .collect())
         }
     }
-}
-
-async fn mononoke_source_of_truth(ctx: &CoreContext, repo: Arc<Repo>) -> anyhow::Result<bool> {
-    let repo_name = RepositoryName(repo.repo_identity().name().to_string());
-    repo.git_source_of_truth_config()
-        .get_by_repo_name(ctx, &repo_name, Staleness::MostRecent)
-        .await
-        .map(|entry| {
-            entry.map_or(false, |entry| {
-                entry.source_of_truth == GitSourceOfTruth::Mononoke
-            })
-        })
 }
 
 async fn reject_push(
