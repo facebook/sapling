@@ -496,24 +496,24 @@ TEST(TreeInode, setattr) {
   somedir->setattr(emptyMetadata, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(somedir->getContents().rlock()->isMaterialized());
 
-  auto oldmetadata = somedir->getMetadata();
+  auto oldauxData = somedir->getMetadata();
   DesiredMetadata sameMetadata{
       std::nullopt,
-      oldmetadata.mode,
-      oldmetadata.uid,
-      oldmetadata.gid,
-      oldmetadata.timestamps.atime.toTimespec(),
-      oldmetadata.timestamps.mtime.toTimespec()};
+      oldauxData.mode,
+      oldauxData.uid,
+      oldauxData.gid,
+      oldauxData.timestamps.atime.toTimespec(),
+      oldauxData.timestamps.mtime.toTimespec()};
   somedir->setattr(sameMetadata, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(somedir->getContents().rlock()->isMaterialized());
 
   DesiredMetadata newMetadata{
       std::nullopt,
-      oldmetadata.mode,
-      oldmetadata.uid + 1,
-      oldmetadata.gid + 1,
-      oldmetadata.timestamps.atime.toTimespec(),
-      oldmetadata.timestamps.mtime.toTimespec()};
+      oldauxData.mode,
+      oldauxData.uid + 1,
+      oldauxData.gid + 1,
+      oldauxData.timestamps.atime.toTimespec(),
+      oldauxData.timestamps.mtime.toTimespec()};
   somedir->setattr(newMetadata, ObjectFetchContext::getNullContext());
   EXPECT_TRUE(somedir->getContents().rlock()->isMaterialized());
 }
@@ -708,7 +708,7 @@ TEST(TreeInode, getOrFindChildrenRemovedChild) {
   collectResults(mount, std::move(result));
 }
 
-TEST(TreeInode, if_readdir_prefetching_is_disabled_metadata_is_not_fetched) {
+TEST(TreeInode, if_readdir_prefetching_is_disabled_aux_data_is_not_fetched) {
   FakeTreeBuilder builder;
   builder.setFile("foo/bar.txt", "bar");
   builder.setFile("foo/baz.txt", "baz");
@@ -731,12 +731,12 @@ TEST(TreeInode, if_readdir_prefetching_is_disabled_metadata_is_not_fetched) {
 
   auto bar = mount.getFileInode("foo/bar.txt"_relpath);
   bar->stat(ObjectFetchContext::getNullContext()).get();
-  EXPECT_EQ(1, mount.getBackingStore()->getMetadataLookups().size());
+  EXPECT_EQ(1, mount.getBackingStore()->getAuxDataLookups().size());
 
   // Pump the prefetch operation here.
   mount.drainServerExecutor();
 
-  EXPECT_EQ(1, mount.getBackingStore()->getMetadataLookups().size());
+  EXPECT_EQ(1, mount.getBackingStore()->getAuxDataLookups().size());
 }
 
 TEST(TreeInode, readdir_does_not_prefetch) {
@@ -762,8 +762,8 @@ TEST(TreeInode, readdir_does_not_prefetch) {
 
   mount.drainServerExecutor();
 
-  auto metadata = mount.getBackingStore()->getMetadataLookups();
-  EXPECT_EQ(0, metadata.size());
+  auto auxData = mount.getBackingStore()->getAuxDataLookups();
+  EXPECT_EQ(0, auxData.size());
 }
 
 TEST(TreeInode, stat_on_child_does_not_prefetch_parent) {
@@ -784,10 +784,10 @@ TEST(TreeInode, stat_on_child_does_not_prefetch_parent) {
 
   auto executor = mount.getServerExecutor().get();
 
-  // Inject a fault in the getBlobMetadata method because we want to trigger the
-  // prefetch logic without actually fetching the metadata for `bar`.
+  // Inject a fault in the getBlobAuxData method because we want to trigger the
+  // prefetch logic without actually fetching the aux data for `bar`.
   mount.getServerState()->getFaultInjector().injectBlock(
-      "getBlobMetadata", ".*");
+      "getBlobAuxData", ".*");
 
   auto statFuture =
       bar->stat(ObjectFetchContext::getNullContext()).semi().via(executor);
@@ -796,12 +796,12 @@ TEST(TreeInode, stat_on_child_does_not_prefetch_parent) {
 
   EXPECT_FALSE(statFuture.isReady());
 
-  auto metadata = mount.getBackingStore()->getMetadataLookups();
-  EXPECT_EQ(1, metadata.size());
-  EXPECT_EQ(metadata.front().getBytes(), barObjectId.getBytes());
+  auto auxData = mount.getBackingStore()->getAuxDataLookups();
+  EXPECT_EQ(1, auxData.size());
+  EXPECT_EQ(auxData.front().getBytes(), barObjectId.getBytes());
 
   // Unblock stat
-  mount.getServerState()->getFaultInjector().unblock("getBlobMetadata", ".*");
+  mount.getServerState()->getFaultInjector().unblock("getBlobAuxData", ".*");
 
   auto waitedStatFuture = std::move(statFuture).waitVia(executor);
   EXPECT_TRUE(waitedStatFuture.isReady());
@@ -830,12 +830,12 @@ TEST(TreeInode, readdir_followed_by_stat_on_child_prefetches_parents_children) {
 
   auto bar = mount.getFileInode("foo/bar.txt"_relpath);
   bar->stat(ObjectFetchContext::getNullContext()).get();
-  EXPECT_EQ(1, mount.getBackingStore()->getMetadataLookups().size());
+  EXPECT_EQ(1, mount.getBackingStore()->getAuxDataLookups().size());
 
   // Pump the prefetch operation here.
   mount.drainServerExecutor();
 
-  EXPECT_EQ(2, mount.getBackingStore()->getMetadataLookups().size());
+  EXPECT_EQ(2, mount.getBackingStore()->getAuxDataLookups().size());
 }
 
 TEST(TreeInode, stat_on_directories_only_prefetches_subdirectories) {
@@ -857,28 +857,28 @@ TEST(TreeInode, stat_on_directories_only_prefetches_subdirectories) {
 
   // stat() a directory. This looks like a `find .` operation where the
   // traversal itself will lookup() any child directories, but will not stat()
-  // blobs. Therefore, it's best to only prefetch tree metadata.
+  // blobs. Therefore, it's best to only prefetch tree aux data.
   auto bar = mount.getTreeInode("foo/bar"_relpath);
   bar->stat(ObjectFetchContext::getNullContext()).get();
-  EXPECT_EQ(0, mount.getBackingStore()->getMetadataLookups().size());
+  EXPECT_EQ(0, mount.getBackingStore()->getAuxDataLookups().size());
 
   // Pump the prefetch operation here.
   mount.drainServerExecutor();
 
-  // Trees don't have blob metadata.
-  EXPECT_EQ(0, mount.getBackingStore()->getMetadataLookups().size());
+  // Trees don't have blob aux data.
+  EXPECT_EQ(0, mount.getBackingStore()->getAuxDataLookups().size());
 
   // Now stat() a file. We already prefetched directories, so if a file is
   // stat()'d, that's a clue that the rest of the files should be prefetched.
 
   auto baz = mount.getFileInode("foo/baz.txt"_relpath);
   baz->stat(ObjectFetchContext::getNullContext()).get();
-  EXPECT_EQ(1, mount.getBackingStore()->getMetadataLookups().size());
+  EXPECT_EQ(1, mount.getBackingStore()->getAuxDataLookups().size());
 
   // Pump the prefetch operation here.
   mount.drainServerExecutor();
 
-  EXPECT_EQ(2, mount.getBackingStore()->getMetadataLookups().size());
+  EXPECT_EQ(2, mount.getBackingStore()->getAuxDataLookups().size());
 }
 
 #endif // _WIN32

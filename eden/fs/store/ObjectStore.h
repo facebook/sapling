@@ -17,7 +17,7 @@
 
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/RefPtr.h"
-#include "eden/fs/model/BlobMetadata.h"
+#include "eden/fs/model/BlobAuxData.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/RootId.h"
 #include "eden/fs/model/TreeEntry.h"
@@ -179,13 +179,13 @@ class ObjectStore : public IObjectStore,
       const ObjectFetchContextPtr& context) const override;
 
   /**
-   * Get metadata about a tree.
+   * Get aux data about a tree.
    *
-   * This returns an ImmediateFuture object that will produce the TreeMetadata
+   * This returns an ImmediateFuture object that will produce the TreeAuxData
    * when it is ready.  It may result in a std::domain_error if the specified
    * tree does not exist, or possibly other exceptions on error.
    */
-  ImmediateFuture<TreeMetadata> getTreeMetadata(
+  ImmediateFuture<TreeAuxData> getTreeAuxData(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) const;
 
@@ -225,25 +225,25 @@ class ObjectStore : public IObjectStore,
       const ObjectFetchContextPtr& context) const override;
 
   /**
-   * Get metadata about a Blob.
+   * Get aux data about a Blob.
    *
-   * This returns an ImmediateFuture object that will produce the BlobMetadata
+   * This returns an ImmediateFuture object that will produce the BlobAuxData
    * when it is ready.  It may result in a std::domain_error if the specified
    * blob does not exist, or possibly other exceptions on error.
    */
-  ImmediateFuture<BlobMetadata> getBlobMetadata(
+  ImmediateFuture<BlobAuxData> getBlobAuxData(
       const ObjectId& id,
       const ObjectFetchContextPtr& context,
       bool blake3Needed = false) const;
 
   /**
-   * Get metadata about a Blob from EdenFS's in memory BlobMetadata cache.
+   * Get aux data about a Blob from EdenFS's in memory BlobAuxData cache.
    *
-   * This returns an ImmediateFuture object that will produce the BlobMetadata
+   * This returns an ImmediateFuture object that will produce the BlobAuxData
    * when it is ready.  It may result in a std::domain_error if the specified
    * blob does not exist, or possibly other exceptions on error.
    */
-  std::optional<BlobMetadata> getBlobMetadataFromInMemoryCache(
+  std::optional<BlobAuxData> getBlobAuxDataFromInMemoryCache(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) const;
 
@@ -338,8 +338,8 @@ class ObjectStore : public IObjectStore,
   FRIEND_TEST(ObjectStoreTest, caching_policies_no_caching);
   FRIEND_TEST(ObjectStoreTest, caching_policies_blob);
   FRIEND_TEST(ObjectStoreTest, caching_policies_trees);
-  FRIEND_TEST(ObjectStoreTest, caching_policies_blob_metadata);
-  FRIEND_TEST(ObjectStoreTest, caching_policies_trees_and_blob_metadata);
+  FRIEND_TEST(ObjectStoreTest, caching_policies_blob_aux_data);
+  FRIEND_TEST(ObjectStoreTest, caching_policies_trees_and_blob_aux_data);
   // Forbidden constructor. Use create().
   ObjectStore(
       std::shared_ptr<BackingStore> backingStore,
@@ -377,7 +377,7 @@ class ObjectStore : public IObjectStore,
       const ObjectFetchContextPtr& context,
       folly::stop_watch<std::chrono::milliseconds> watch) const;
 
-  folly::SemiFuture<BackingStore::GetTreeMetaResult> getTreeMetadataImpl(
+  folly::SemiFuture<BackingStore::GetTreeAuxResult> getTreeAuxDataImpl(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) const;
 
@@ -385,7 +385,7 @@ class ObjectStore : public IObjectStore,
       const ObjectId& id,
       const ObjectFetchContextPtr& context) const;
 
-  folly::SemiFuture<BackingStore::GetBlobMetaResult> getBlobMetadataImpl(
+  folly::SemiFuture<BackingStore::GetBlobAuxResult> getBlobAuxDataImpl(
       const ObjectId& id,
       const ObjectFetchContextPtr& context,
       folly::stop_watch<std::chrono::milliseconds> watch) const;
@@ -399,7 +399,7 @@ class ObjectStore : public IObjectStore,
    * During status and checkout, it's common to look up the SHA-1 for a given
    * blob ID. To avoid needing to hit RocksDB, keep a bounded in-memory cache of
    * the sizes and SHA-1s of blobs we've seen. Each node is somewhere around 50
-   * bytes (20+28 + LRU overhead) and we store metadataCacheSize entries (as
+   * bytes (20+28 + LRU overhead) and we store auxDataCacheSize entries (as
    * defined in EdenConfig.h), which EvictingCacheMap divides in two for some
    * reason. At the time of this comment, EvictingCacheMap does not store its
    * nodes densely, so there may also be some jemalloc tracking overhead and
@@ -409,8 +409,8 @@ class ObjectStore : public IObjectStore,
    * TODO: It never makes sense to rlock an LRU cache, since cache hits mutate
    * the data structure. Thus, should we use a more appropriate type of lock?
    */
-  mutable folly::Synchronized<folly::EvictingCacheMap<ObjectId, BlobMetadata>>
-      metadataCache_;
+  mutable folly::Synchronized<folly::EvictingCacheMap<ObjectId, BlobAuxData>>
+      auxDataCache_;
 
   /**
    * During glob, we need to read a lot of trees, but we avoid loading inodes,

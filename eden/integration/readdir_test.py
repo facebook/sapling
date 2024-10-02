@@ -238,7 +238,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             "filteredhg": DigestSizeOrError(adir_digest_size),
             "git": DigestSizeOrError(
                 error=EdenError(
-                    message="std::domain_error: getTreeMetadata is not implemented for GitBackingStores",
+                    message="std::domain_error: getTreeAuxData is not implemented for GitBackingStores",
                     errorType=EdenErrorType.GENERIC_ERROR,
                 )
             ),
@@ -249,7 +249,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             "filteredhg": DigestHashOrError(adir_blake3),
             "git": DigestHashOrError(
                 error=EdenError(
-                    message="std::domain_error: getTreeMetadata is not implemented for GitBackingStores",
+                    message="std::domain_error: getTreeAuxData is not implemented for GitBackingStores",
                     errorType=EdenErrorType.GENERIC_ERROR,
                 )
             ),
@@ -274,7 +274,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             "filteredhg": DigestSizeOrError(cdir_subdir_digest_size),
             "git": DigestSizeOrError(
                 error=EdenError(
-                    message="std::domain_error: getTreeMetadata is not implemented for GitBackingStores",
+                    message="std::domain_error: getTreeAuxData is not implemented for GitBackingStores",
                     errorType=EdenErrorType.GENERIC_ERROR,
                 )
             ),
@@ -285,7 +285,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             "filteredhg": DigestHashOrError(cdir_subdir_blake3),
             "git": DigestHashOrError(
                 error=EdenError(
-                    message="std::domain_error: getTreeMetadata is not implemented for GitBackingStores",
+                    message="std::domain_error: getTreeAuxData is not implemented for GitBackingStores",
                     errorType=EdenErrorType.GENERIC_ERROR,
                 )
             ),

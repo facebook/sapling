@@ -71,12 +71,12 @@ makeBlobImportRequestWithHash(ImportPriority priority, HgProxyHash proxyHash) {
 }
 
 std::pair<ObjectId, std::shared_ptr<SaplingImportRequest>>
-makeBlobMetaImportRequestWithHash(
+makeBlobAuxImportRequestWithHash(
     ImportPriority priority,
     HgProxyHash proxyHash) {
   auto hash = ObjectId{proxyHash.getValue()};
   auto requestContext = ObjectFetchContext::getNullContext();
-  auto request = SaplingImportRequest::makeBlobMetaImportRequest(
+  auto request = SaplingImportRequest::makeBlobAuxImportRequest(
       hash, std::move(proxyHash), requestContext);
   request->setPriority(priority);
   return std::make_pair(hash, request);
@@ -120,11 +120,11 @@ TEST_F(SaplingImportRequestQueueTest, sameObjectIdDifferentType) {
 
   auto [blobHash, blobRequest] = makeBlobImportRequestWithHash(
       ImportPriority(ImportPriority::Class::Normal, 1), proxyHash);
-  auto [blobMetaHash, blobMetaRequest] = makeBlobMetaImportRequestWithHash(
+  auto [blobAuxHash, blobAuxRequest] = makeBlobAuxImportRequestWithHash(
       ImportPriority(ImportPriority::Class::Normal, 1), proxyHash);
 
   queue.enqueueBlob(std::move(blobRequest));
-  queue.enqueueBlobMeta(std::move(blobMetaRequest));
+  queue.enqueueBlobAux(std::move(blobAuxRequest));
 
   auto request1 = queue.dequeue().at(0);
   EXPECT_NE(request1, nullptr);

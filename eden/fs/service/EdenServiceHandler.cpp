@@ -54,7 +54,7 @@
 #include "eden/fs/journal/Journal.h"
 #include "eden/fs/journal/JournalDelta.h"
 #include "eden/fs/model/Blob.h"
-#include "eden/fs/model/BlobMetadata.h"
+#include "eden/fs/model/BlobAuxData.h"
 #include "eden/fs/model/GlobEntry.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
@@ -1760,10 +1760,10 @@ void convertHgImportTraceEventToHgEvent(
     case HgImportTraceEvent::TREE:
       te.resourceType_ref() = HgResourceType::TREE;
       break;
-    case HgImportTraceEvent::BLOBMETA:
+    case HgImportTraceEvent::BLOB_AUX:
       te.resourceType_ref() = HgResourceType::BLOBMETA;
       break;
-    case HgImportTraceEvent::TREEMETA:
+    case HgImportTraceEvent::TREE_AUX:
       te.resourceType_ref() = HgResourceType::TREEMETA;
       break;
   }
@@ -2581,7 +2581,7 @@ getAllEntryAttributes(
     const EdenMount& edenMount,
     std::string path,
     const ObjectFetchContextPtr& fetchContext,
-    bool shouldFetchTreeMetadata) {
+    bool shouldFetchTreeAuxData) {
   auto virtualInode =
       edenMount.getVirtualInode(RelativePathPiece{path}, fetchContext);
   return std::move(virtualInode)
@@ -2589,7 +2589,7 @@ getAllEntryAttributes(
                   requestedAttributes,
                   objectStore = edenMount.getObjectStore(),
                   fetchContext = fetchContext.copy(),
-                  shouldFetchTreeMetadata](VirtualInode tree) mutable {
+                  shouldFetchTreeAuxData](VirtualInode tree) mutable {
         if (!tree.isDirectory()) {
           return ImmediateFuture<std::vector<
               std::pair<PathComponent, folly::Try<EntryAttributes>>>>(
@@ -2603,7 +2603,7 @@ getAllEntryAttributes(
             RelativePath{path},
             objectStore,
             fetchContext,
-            shouldFetchTreeMetadata);
+            shouldFetchTreeAuxData);
       });
 }
 
@@ -2751,9 +2751,9 @@ EdenServiceHandler::semifuture_readdir(std::unique_ptr<ReaddirParams> params) {
   auto& fetchContext = helper->getFetchContext();
   auto requestedAttributes =
       EntryAttributeFlags::raw(*params->requestedAttributes());
-  auto shouldFetchTreeMetadata = server_->getServerState()
-                                     ->getEdenConfig()
-                                     ->shouldFetchTreeMetadata.getValue();
+  auto shouldFetchTreeAuxData = server_->getServerState()
+                                    ->getEdenConfig()
+                                    ->shouldFetchTreeMetadata.getValue();
   return wrapImmediateFuture(
              std::move(helper),
              waitForPendingWrites(mountHandle.getEdenMount(), *params->sync())
@@ -2762,7 +2762,7 @@ EdenServiceHandler::semifuture_readdir(std::unique_ptr<ReaddirParams> params) {
                       requestedAttributes,
                       paths = std::move(paths),
                       fetchContext = fetchContext.copy(),
-                      shouldFetchTreeMetadata](auto&&) mutable
+                      shouldFetchTreeAuxData](auto&&) mutable
                      -> ImmediateFuture<
                          std::vector<DirListAttributeDataOrError>> {
                        std::vector<ImmediateFuture<DirListAttributeDataOrError>>
@@ -2775,7 +2775,7 @@ EdenServiceHandler::semifuture_readdir(std::unique_ptr<ReaddirParams> params) {
                                  mountHandle.getEdenMount(),
                                  std::move(path),
                                  fetchContext,
-                                 shouldFetchTreeMetadata)
+                                 shouldFetchTreeAuxData)
                                  .thenTry([requestedAttributes, mountHandle](
                                               folly::Try<std::vector<std::pair<
                                                   PathComponent,
@@ -2813,7 +2813,7 @@ EdenServiceHandler::getEntryAttributes(
     AttributesRequestScope reqScope,
     SyncBehavior sync,
     const ObjectFetchContextPtr& fetchContext,
-    bool shouldFetchTreeMetadata) {
+    bool shouldFetchTreeAuxData) {
   return waitForPendingWrites(edenMount, sync)
       .thenValue([this,
                   &edenMount,
@@ -2821,7 +2821,7 @@ EdenServiceHandler::getEntryAttributes(
                   fetchContext = fetchContext.copy(),
                   reqBitmask,
                   reqScope,
-                  shouldFetchTreeMetadata](auto&&) mutable {
+                  shouldFetchTreeAuxData](auto&&) mutable {
         vector<ImmediateFuture<EntryAttributes>> futures;
         for (const auto& path : paths) {
           futures.emplace_back(getEntryAttributesForPath(
@@ -2830,7 +2830,7 @@ EdenServiceHandler::getEntryAttributes(
               reqScope,
               path,
               fetchContext,
-              shouldFetchTreeMetadata));
+              shouldFetchTreeAuxData));
         }
 
         // Collect all futures into a single tuple
@@ -2860,7 +2860,7 @@ ImmediateFuture<EntryAttributes> EdenServiceHandler::getEntryAttributesForPath(
     AttributesRequestScope reqScope,
     std::string_view path,
     const ObjectFetchContextPtr& fetchContext,
-    bool shouldFetchTreeMetadata) {
+    bool shouldFetchTreeAuxData) {
   if (path.empty()) {
     return ImmediateFuture<EntryAttributes>(newEdenError(
         EINVAL,
@@ -2877,14 +2877,14 @@ ImmediateFuture<EntryAttributes> EdenServiceHandler::getEntryAttributesForPath(
                     reqScope,
                     relativePath = relativePath.copy(),
                     fetchContext = fetchContext.copy(),
-                    shouldFetchTreeMetadata](const VirtualInode& virtualInode) {
+                    shouldFetchTreeAuxData](const VirtualInode& virtualInode) {
           if (dtypeMatchesRequestScope(virtualInode, reqScope)) {
             return virtualInode.getEntryAttributes(
                 reqBitmask,
                 relativePath,
                 edenMount.getObjectStore(),
                 fetchContext,
-                shouldFetchTreeMetadata);
+                shouldFetchTreeAuxData);
           }
           return makeImmediateFuture<EntryAttributes>(PathError(
               reqScope == AttributesRequestScope::TREES ? ENOTDIR : EISDIR,
@@ -4305,18 +4305,18 @@ EdenServiceHandler::semifuture_debugGetBlobMetadata(
   std::vector<ImmediateFuture<BlobMetadataWithOrigin>> blobFutures;
 
   if (originFlags.contains(FROMWHERE_MEMORY_CACHE)) {
-    auto metadata = store->getBlobMetadataFromInMemoryCache(id, fetchContext);
+    auto auxData = store->getBlobAuxDataFromInMemoryCache(id, fetchContext);
     blobFutures.emplace_back(transformToBlobMetadataFromOrigin(
-        edenMount, id, metadata, DataFetchOrigin::MEMORY_CACHE));
+        edenMount, id, auxData, DataFetchOrigin::MEMORY_CACHE));
   }
   if (originFlags.contains(FROMWHERE_DISK_CACHE)) {
     auto localStore = server_->getLocalStore();
-    blobFutures.emplace_back(localStore->getBlobMetadata(id).thenTry(
-        [edenMount, id](auto&& metadata) {
+    blobFutures.emplace_back(
+        localStore->getBlobAuxData(id).thenTry([edenMount, id](auto&& auxData) {
           return transformToBlobMetadataFromOrigin(
               edenMount,
               id,
-              std::move(metadata.value()),
+              std::move(auxData.value()),
               DataFetchOrigin::DISK_CACHE);
         }));
   }
@@ -4330,13 +4330,13 @@ EdenServiceHandler::semifuture_debugGetBlobMetadata(
     std::shared_ptr<SaplingBackingStore> saplingBackingStore =
         castToSaplingBackingStore(backingStore, edenMount->getPath());
 
-    auto metadata =
-        saplingBackingStore->getLocalBlobMetadata(proxyHash).value_or(nullptr);
+    auto auxData =
+        saplingBackingStore->getLocalBlobAuxData(proxyHash).value_or(nullptr);
 
     blobFutures.emplace_back(transformToBlobMetadataFromOrigin(
         edenMount,
         id,
-        std::move(metadata),
+        std::move(auxData),
         DataFetchOrigin::LOCAL_BACKING_STORE));
   }
   if (originFlags.contains(FROMWHERE_REMOTE_BACKING_STORE)) {
@@ -4350,21 +4350,21 @@ EdenServiceHandler::semifuture_debugGetBlobMetadata(
         castToSaplingBackingStore(backingStore, edenMount->getPath());
 
     blobFutures.emplace_back(
-        ImmediateFuture{saplingBackingStore->getBlobMetadataEnqueue(
+        ImmediateFuture{saplingBackingStore->getBlobAuxDataEnqueue(
                             id, proxyHash, fetchContext)}
-            .thenValue([edenMount, id](BackingStore::GetBlobMetaResult result) {
+            .thenValue([edenMount, id](BackingStore::GetBlobAuxResult result) {
               return transformToBlobMetadataFromOrigin(
                   edenMount,
                   id,
-                  std::move(result.blobMeta),
+                  std::move(result.blobAux),
                   DataFetchOrigin::REMOTE_BACKING_STORE);
             }));
   }
   if (originFlags.contains(FROMWHERE_ANYWHERE)) {
-    blobFutures.emplace_back(store->getBlobMetadata(id, fetchContext)
-                                 .thenTry([edenMount, id](auto&& metadata) {
+    blobFutures.emplace_back(store->getBlobAuxData(id, fetchContext)
+                                 .thenTry([edenMount, id](auto&& auxData) {
                                    return transformToBlobMetadataFromOrigin(
-                                       std::move(metadata),
+                                       std::move(auxData),
                                        DataFetchOrigin::ANYWHERE);
                                  }));
   }

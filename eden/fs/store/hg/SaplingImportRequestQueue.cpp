@@ -32,15 +32,15 @@ ImmediateFuture<TreePtr> SaplingImportRequestQueue::enqueueTree(
   return enqueue<Tree, SaplingImportRequest::TreeImport>(std::move(request));
 }
 
-ImmediateFuture<BlobMetadataPtr> SaplingImportRequestQueue::enqueueBlobMeta(
+ImmediateFuture<BlobAuxDataPtr> SaplingImportRequestQueue::enqueueBlobAux(
     std::shared_ptr<SaplingImportRequest> request) {
-  return enqueue<BlobMetadata, SaplingImportRequest::BlobMetaImport>(
+  return enqueue<BlobAuxData, SaplingImportRequest::BlobAuxImport>(
       std::move(request));
 }
 
-ImmediateFuture<TreeMetadataPtr> SaplingImportRequestQueue::enqueueTreeMeta(
+ImmediateFuture<TreeAuxDataPtr> SaplingImportRequestQueue::enqueueTreeAux(
     std::shared_ptr<SaplingImportRequest> request) {
-  return enqueue<TreeMetadata, SaplingImportRequest::TreeMetaImport>(
+  return enqueue<TreeAuxData, SaplingImportRequest::TreeAuxImport>(
       std::move(request));
 }
 
@@ -104,15 +104,15 @@ SaplingImportRequestQueue::combineAndClearRequestQueues() {
   auto state = state_.lock();
   auto treeQSz = state->treeQueue.queue.size();
   auto blobQSz = state->blobQueue.queue.size();
-  auto blobMetaQSz = state->blobMetaQueue.queue.size();
-  auto treeMetaQSz = state->treeMetaQueue.queue.size();
+  auto blobAuxQSz = state->blobAuxQueue.queue.size();
+  auto treeAuxQSz = state->treeAuxQueue.queue.size();
   XLOGF(
       DBG5,
-      "combineAndClearRequestQueues: tree queue size = {}, blob queue size = {}, blob metadata queue size = {}, tree metadata queue size = {}",
+      "combineAndClearRequestQueues: tree queue size = {}, blob queue size = {}, blob aux data queue size = {}, tree aux data queue size = {}",
       treeQSz,
       blobQSz,
-      blobMetaQSz,
-      treeMetaQSz);
+      blobAuxQSz,
+      treeAuxQSz);
   auto res = std::move(state->treeQueue.queue);
   res.insert(
       res.end(),
@@ -120,17 +120,17 @@ SaplingImportRequestQueue::combineAndClearRequestQueues() {
       std::make_move_iterator(state->blobQueue.queue.end()));
   res.insert(
       res.end(),
-      std::make_move_iterator(state->blobMetaQueue.queue.begin()),
-      std::make_move_iterator(state->blobMetaQueue.queue.end()));
+      std::make_move_iterator(state->blobAuxQueue.queue.begin()),
+      std::make_move_iterator(state->blobAuxQueue.queue.end()));
   res.insert(
       res.end(),
-      std::make_move_iterator(state->treeMetaQueue.queue.begin()),
-      std::make_move_iterator(state->treeMetaQueue.queue.end()));
+      std::make_move_iterator(state->treeAuxQueue.queue.begin()),
+      std::make_move_iterator(state->treeAuxQueue.queue.end()));
   state->treeQueue.queue.clear();
   state->blobQueue.queue.clear();
-  state->blobMetaQueue.queue.clear();
-  state->treeMetaQueue.queue.clear();
-  XCHECK_EQ(res.size(), treeQSz + blobQSz + blobMetaQSz + treeMetaQSz);
+  state->blobAuxQueue.queue.clear();
+  state->treeAuxQueue.queue.clear();
+  XCHECK_EQ(res.size(), treeQSz + blobQSz + blobAuxQSz + treeAuxQSz);
   return res;
 }
 
@@ -144,8 +144,8 @@ SaplingImportRequestQueue::dequeue() {
     if (!state->running) {
       state->treeQueue.queue.clear();
       state->blobQueue.queue.clear();
-      state->blobMetaQueue.queue.clear();
-      state->treeMetaQueue.queue.clear();
+      state->blobAuxQueue.queue.clear();
+      state->treeAuxQueue.queue.clear();
       return std::vector<std::shared_ptr<SaplingImportRequest>>();
     }
 
@@ -161,19 +161,19 @@ SaplingImportRequestQueue::dequeue() {
       queue = &state->treeQueue.queue;
     }
 
-    if (!state->treeMetaQueue.queue.empty()) {
-      auto priority = state->treeMetaQueue.queue.front()->getPriority();
+    if (!state->treeAuxQueue.queue.empty()) {
+      auto priority = state->treeAuxQueue.queue.front()->getPriority();
       if (!queue || priority > highestPriority) {
-        queue = &state->treeMetaQueue.queue;
+        queue = &state->treeAuxQueue.queue;
         count = config_->getEdenConfig()->importBatchSizeTreeMeta.getValue();
         highestPriority = priority;
       }
     }
 
-    if (!state->blobMetaQueue.queue.empty()) {
-      auto priority = state->blobMetaQueue.queue.front()->getPriority();
+    if (!state->blobAuxQueue.queue.empty()) {
+      auto priority = state->blobAuxQueue.queue.front()->getPriority();
       if (!queue || priority > highestPriority) {
-        queue = &state->blobMetaQueue.queue;
+        queue = &state->blobAuxQueue.queue;
         count = config_->getEdenConfig()->importBatchSizeBlobMeta.getValue();
         highestPriority = priority;
       }

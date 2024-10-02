@@ -11,23 +11,23 @@
 
 #include <folly/Range.h>
 
-#include "eden/fs/model/BlobMetadata.h"
+#include "eden/fs/model/BlobAuxData.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/store/StoreResult.h"
 
 namespace facebook::eden {
 
-class SerializedBlobMetadata {
+class SerializedBlobAuxData {
  public:
-  explicit SerializedBlobMetadata(const BlobMetadata& metadata);
-  SerializedBlobMetadata(
+  explicit SerializedBlobAuxData(const BlobAuxData& auxData);
+  SerializedBlobAuxData(
       const Hash20& sha1,
       const std::optional<Hash32>& blake3,
       uint64_t blobSize);
   folly::ByteRange slice() const;
 
-  static BlobMetadataPtr parse(
+  static BlobAuxDataPtr parse(
       const ObjectId& blobID,
       const StoreResult& result);
 

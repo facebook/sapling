@@ -16,7 +16,6 @@
 
 #include "eden/common/utils/EnumValue.h"
 #include "eden/common/utils/PathFuncs.h"
-#include "eden/fs/model/BlobMetadata.h"
 
 namespace facebook::eden {
 

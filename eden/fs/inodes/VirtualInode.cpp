@@ -13,7 +13,7 @@
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Tree.h"
-#include "eden/fs/model/TreeMetadata.h"
+#include "eden/fs/model/TreeAuxData.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/EdenError.h"
@@ -250,7 +250,7 @@ ImmediateFuture<std::optional<TreeEntryType>> VirtualInode::getTreeEntryType(
       });
 }
 
-ImmediateFuture<BlobMetadata> VirtualInode::getBlobMetadata(
+ImmediateFuture<BlobAuxData> VirtualInode::getBlobAuxData(
     RelativePathPiece path,
     const std::shared_ptr<ObjectStore>& objectStore,
     const ObjectFetchContextPtr& fetchContext,
@@ -258,18 +258,18 @@ ImmediateFuture<BlobMetadata> VirtualInode::getBlobMetadata(
   return match(
       variant_,
       [&](const InodePtr& inode) {
-        return inode.asFilePtr()->getBlobMetadata(fetchContext, blake3Required);
+        return inode.asFilePtr()->getBlobAuxData(fetchContext, blake3Required);
       },
       [&](const TreePtr&) {
-        return makeImmediateFuture<BlobMetadata>(PathError(EISDIR, path));
+        return makeImmediateFuture<BlobAuxData>(PathError(EISDIR, path));
       },
       [&](auto& entry) {
-        return objectStore->getBlobMetadata(
+        return objectStore->getBlobAuxData(
             entry.getObjectId(), fetchContext, blake3Required);
       });
 }
 
-ImmediateFuture<TreeMetadata> VirtualInode::getTreeMetadata(
+ImmediateFuture<TreeAuxData> VirtualInode::getTreeAuxData(
     RelativePathPiece path,
     const std::shared_ptr<ObjectStore>& objectStore,
     const ObjectFetchContextPtr& fetchContext) const {
@@ -277,12 +277,12 @@ ImmediateFuture<TreeMetadata> VirtualInode::getTreeMetadata(
       variant_,
       [&](const InodePtr& inode) {
         return inode.asTreePtr()
-            ->getTreeMetadata(fetchContext)
-            .thenValue([path](std::optional<TreeMetadata> treeMeta) {
-              if (treeMeta.has_value()) {
-                return ImmediateFuture<TreeMetadata>(treeMeta.value());
+            ->getTreeAuxData(fetchContext)
+            .thenValue([path](std::optional<TreeAuxData> treeAux) {
+              if (treeAux.has_value()) {
+                return ImmediateFuture<TreeAuxData>(treeAux.value());
               } else {
-                return makeImmediateFuture<TreeMetadata>(newEdenError(
+                return makeImmediateFuture<TreeAuxData>(newEdenError(
                     EINVAL,
                     EdenErrorType::GENERIC_ERROR,
                     fmt::format("tree meta missing for tree: {}", path)));
@@ -290,10 +290,10 @@ ImmediateFuture<TreeMetadata> VirtualInode::getTreeMetadata(
             });
       },
       [&](const TreePtr& tree) {
-        return objectStore->getTreeMetadata(tree->getHash(), fetchContext);
+        return objectStore->getTreeAuxData(tree->getHash(), fetchContext);
       },
       [&](auto& entry) {
-        return objectStore->getTreeMetadata(entry.getObjectId(), fetchContext);
+        return objectStore->getTreeAuxData(entry.getObjectId(), fetchContext);
       });
 }
 
@@ -302,7 +302,7 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
     RelativePathPiece path,
     const std::shared_ptr<ObjectStore>& objectStore,
     const ObjectFetchContextPtr& fetchContext,
-    bool shouldFetchTreeMetadata,
+    bool shouldFetchTreeAuxData,
     std::optional<TreeEntryType> entryType,
     int errorCode,
     std::string additionalErrorContext) const {
@@ -354,15 +354,15 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
     }
   } else {
     // The entry is a tree, and therefore we can attempt to compute tree
-    // metadata for it. However, we can only compute the additional attributes
+    // aux data for it. However, we can only compute the additional attributes
     // of trees that have ObjectIds. In other words, the tree must be
     // unmaterialized.
-    if (shouldFetchTreeMetadata &&
+    if (shouldFetchTreeAuxData &&
         (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_HASH) ||
          requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_SIZE)) &&
         oid.has_value()) {
-      auto treeMetaFut =
-          objectStore->getTreeMetadata(oid.value(), fetchContext)
+      auto treeAuxFut =
+          objectStore->getTreeAuxData(oid.value(), fetchContext)
               .thenValue([requestedAttributes,
                           sha1,
                           type,
@@ -370,14 +370,14 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
                           blake3,
                           size,
                           digestSize,
-                          digestHash](TreeMetadata treeMeta) mutable {
+                          digestHash](TreeAuxData treeAux) mutable {
                 if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_HASH)) {
                   digestHash =
-                      std::optional<folly::Try<Hash32>>{treeMeta.digestHash};
+                      std::optional<folly::Try<Hash32>>{treeAux.digestHash};
                 }
                 if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_SIZE)) {
                   digestSize = std::optional<folly::Try<uint64_t>>{
-                      std::move(treeMeta.digestSize)};
+                      std::move(treeAux.digestSize)};
                 }
                 return EntryAttributes{
                     std::move(sha1),
@@ -388,7 +388,7 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
                     std::move(digestSize),
                     std::move(digestHash)};
               });
-      return std::move(treeMetaFut)
+      return std::move(treeAuxFut)
           .thenError([requestedAttributes,
                       treeSha1 = std::move(sha1),
                       treeType = std::move(type),
@@ -419,7 +419,7 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
                 std::move(treeDigestHash)};
           });
     }
-    // We return empty tree metadata attributes for materialized directories
+    // We return empty tree aux data attributes for materialized directories
   }
 
   return EntryAttributes{
@@ -437,7 +437,7 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
     RelativePathPiece path,
     const std::shared_ptr<ObjectStore>& objectStore,
     const ObjectFetchContextPtr& fetchContext,
-    bool shouldFetchTreeMetadata) const {
+    bool shouldFetchTreeAuxData) const {
   bool windowsSymlinksEnabled = objectStore->getWindowsSymlinksEnabled();
   // For non regular files we return errors for hashes and sizes.
   // We intentionally want to refuse to compute the SHA1 of symlinks.
@@ -451,7 +451,7 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
           path,
           objectStore,
           fetchContext,
-          shouldFetchTreeMetadata,
+          shouldFetchTreeAuxData,
           TreeEntryType::TREE,
           EISDIR,
           {});
@@ -461,7 +461,7 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
           path,
           objectStore,
           fetchContext,
-          shouldFetchTreeMetadata,
+          shouldFetchTreeAuxData,
           TreeEntryType::SYMLINK,
           EINVAL,
           "file is a symlink");
@@ -471,7 +471,7 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
           path,
           objectStore,
           fetchContext,
-          shouldFetchTreeMetadata,
+          shouldFetchTreeAuxData,
           std::nullopt,
           EINVAL,
           fmt::format(
@@ -488,14 +488,14 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
     entryTypeFuture =
         getTreeEntryType(path, fetchContext, windowsSymlinksEnabled);
   }
-  auto blobMetadataFuture = ImmediateFuture<BlobMetadata>{
+  auto blobAuxdataFuture = ImmediateFuture<BlobAuxData>{
       PathError{EINVAL, path, "neither sha1 nor size requested"}};
   // sha1, blake3 and size come together so, there isn't much point of splitting
   // them up
   if (requestedAttributes.containsAnyOf(
           ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 | ENTRY_ATTRIBUTE_BLAKE3 |
           ENTRY_ATTRIBUTE_DIGEST_SIZE | ENTRY_ATTRIBUTE_DIGEST_HASH)) {
-    blobMetadataFuture = getBlobMetadata(
+    blobAuxdataFuture = getBlobAuxData(
         path,
         objectStore,
         fetchContext,
@@ -508,31 +508,31 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
     objectId = getObjectId();
   }
 
-  return collectAll(std::move(entryTypeFuture), std::move(blobMetadataFuture))
+  return collectAll(std::move(entryTypeFuture), std::move(blobAuxdataFuture))
       .thenValue(
           [requestedAttributes,
            entryObjectId = std::move(objectId),
            filePath = RelativePath{path}](
               std::tuple<
                   folly::Try<std::optional<TreeEntryType>>,
-                  folly::Try<BlobMetadata>> rawAttributeData) mutable
+                  folly::Try<BlobAuxData>> rawAttributeData) mutable
           -> EntryAttributes {
-            auto& [entryType, blobMetadata] = rawAttributeData;
+            auto& [entryType, blobAuxdata] = rawAttributeData;
 
             std::optional<folly::Try<Hash20>> sha1;
             if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SHA1)) {
-              sha1 = blobMetadata.hasException()
-                  ? folly::Try<Hash20>(blobMetadata.exception())
-                  : folly::Try<Hash20>(blobMetadata.value().sha1);
+              sha1 = blobAuxdata.hasException()
+                  ? folly::Try<Hash20>(blobAuxdata.exception())
+                  : folly::Try<Hash20>(blobAuxdata.value().sha1);
             }
 
             std::optional<folly::Try<Hash32>> blake3;
             if (requestedAttributes.contains(ENTRY_ATTRIBUTE_BLAKE3)) {
-              if (blobMetadata.hasException()) {
-                blake3 = folly::Try<Hash32>(blobMetadata.exception());
+              if (blobAuxdata.hasException()) {
+                blake3 = folly::Try<Hash32>(blobAuxdata.exception());
               } else {
-                blake3 = blobMetadata.value().blake3
-                    ? folly::Try<Hash32>(blobMetadata.value().blake3.value())
+                blake3 = blobAuxdata.value().blake3
+                    ? folly::Try<Hash32>(blobAuxdata.value().blake3.value())
                     : folly::Try<Hash32>(
                           folly::make_exception_wrapper<std::runtime_error>(
                               "no blake3 available"));
@@ -541,9 +541,9 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
 
             std::optional<folly::Try<uint64_t>> size;
             if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SIZE)) {
-              size = blobMetadata.hasException()
-                  ? folly::Try<uint64_t>(blobMetadata.exception())
-                  : folly::Try<uint64_t>(blobMetadata.value().size);
+              size = blobAuxdata.hasException()
+                  ? folly::Try<uint64_t>(blobAuxdata.exception())
+                  : folly::Try<uint64_t>(blobAuxdata.value().size);
             }
 
             std::optional<folly::Try<std::optional<TreeEntryType>>> type;
@@ -560,18 +560,18 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
 
             std::optional<folly::Try<uint64_t>> digestSize;
             if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_SIZE)) {
-              digestSize = blobMetadata.hasException()
-                  ? folly::Try<uint64_t>(blobMetadata.exception())
-                  : folly::Try<uint64_t>(blobMetadata.value().size);
+              digestSize = blobAuxdata.hasException()
+                  ? folly::Try<uint64_t>(blobAuxdata.exception())
+                  : folly::Try<uint64_t>(blobAuxdata.value().size);
             }
 
             std::optional<folly::Try<Hash32>> digestHash;
             if (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_HASH)) {
-              if (blobMetadata.hasException()) {
-                digestHash = folly::Try<Hash32>(blobMetadata.exception());
+              if (blobAuxdata.hasException()) {
+                digestHash = folly::Try<Hash32>(blobAuxdata.exception());
               } else {
-                digestHash = blobMetadata.value().blake3
-                    ? folly::Try<Hash32>(blobMetadata.value().blake3.value())
+                digestHash = blobAuxdata.value().blake3
+                    ? folly::Try<Hash32>(blobAuxdata.value().blake3.value())
                     : folly::Try<Hash32>(
                           folly::make_exception_wrapper<std::runtime_error>(
                               "no blake3 available"));
@@ -652,8 +652,8 @@ ImmediateFuture<struct stat> VirtualInode::stat(
         } else {
           static_assert(always_false_v<T>, "non-exhaustive visitor!");
         }
-        return objectStore->getBlobMetadata(objectId, fetchContext)
-            .thenValue([mode, lastCheckoutTime](const BlobMetadata& metadata) {
+        return objectStore->getBlobAuxData(objectId, fetchContext)
+            .thenValue([mode, lastCheckoutTime](const BlobAuxData& auxData) {
               struct stat st = {};
               st.st_mode = static_cast<decltype(st.st_mode)>(mode);
               stMtime(st, lastCheckoutTime);
@@ -665,7 +665,7 @@ ImmediateFuture<struct stat> VirtualInode::stat(
                 stMtime(st, ts0);
               }
 #endif
-              st.st_size = static_cast<decltype(st.st_size)>(metadata.size);
+              st.st_size = static_cast<decltype(st.st_size)>(auxData.size);
               return st;
             });
       },
@@ -745,7 +745,7 @@ VirtualInode::getChildrenAttributes(
     RelativePath path,
     const std::shared_ptr<ObjectStore>& objectStore,
     const ObjectFetchContextPtr& fetchContext,
-    bool shouldFetchTreeMetadata) {
+    bool shouldFetchTreeAuxData) {
   auto children = this->getChildren(path.piece(), objectStore, fetchContext);
 
   if (children.hasException()) {
@@ -768,13 +768,13 @@ VirtualInode::getChildrenAttributes(
                         subPath = path + nameAndvirtualInode.first,
                         objectStore,
                         fetchContext = fetchContext.copy(),
-                        shouldFetchTreeMetadata](VirtualInode virtualInode) {
+                        shouldFetchTreeAuxData](VirtualInode virtualInode) {
               return virtualInode.getEntryAttributes(
                   requestedAttributes,
                   subPath,
                   objectStore,
                   fetchContext,
-                  shouldFetchTreeMetadata);
+                  shouldFetchTreeAuxData);
             }));
   }
   return collectAll(std::move(attributesFutures))

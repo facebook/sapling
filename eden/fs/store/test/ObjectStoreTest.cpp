@@ -145,9 +145,9 @@ TEST_F(ObjectStoreTest, caching_policies_anything) {
   EXPECT_TRUE(objectStore->shouldCacheOnDisk(
       BackingStore::LocalStoreCachingPolicy::Blobs));
   EXPECT_TRUE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::BlobMetadata));
+      BackingStore::LocalStoreCachingPolicy::BlobAuxData));
   EXPECT_TRUE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::TreesAndBlobMetadata));
+      BackingStore::LocalStoreCachingPolicy::TreesAndBlobAuxData));
   EXPECT_TRUE(objectStore->shouldCacheOnDisk(
       BackingStore::LocalStoreCachingPolicy::Anything));
   EXPECT_FALSE(objectStore->shouldCacheOnDisk(
@@ -162,9 +162,9 @@ TEST_F(ObjectStoreTest, caching_policies_no_caching) {
   EXPECT_FALSE(objectStore->shouldCacheOnDisk(
       BackingStore::LocalStoreCachingPolicy::Blobs));
   EXPECT_FALSE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::BlobMetadata));
+      BackingStore::LocalStoreCachingPolicy::BlobAuxData));
   EXPECT_FALSE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::TreesAndBlobMetadata));
+      BackingStore::LocalStoreCachingPolicy::TreesAndBlobAuxData));
   EXPECT_FALSE(objectStore->shouldCacheOnDisk(
       BackingStore::LocalStoreCachingPolicy::Anything));
   EXPECT_FALSE(objectStore->shouldCacheOnDisk(
@@ -178,9 +178,9 @@ TEST_F(ObjectStoreTest, caching_policies_blob) {
   EXPECT_TRUE(objectStore->shouldCacheOnDisk(
       BackingStore::LocalStoreCachingPolicy::Blobs));
   EXPECT_FALSE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::BlobMetadata));
+      BackingStore::LocalStoreCachingPolicy::BlobAuxData));
   EXPECT_FALSE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::TreesAndBlobMetadata));
+      BackingStore::LocalStoreCachingPolicy::TreesAndBlobAuxData));
   EXPECT_TRUE(objectStore->shouldCacheOnDisk(
       BackingStore::LocalStoreCachingPolicy::Anything));
   EXPECT_FALSE(objectStore->shouldCacheOnDisk(
@@ -195,43 +195,43 @@ TEST_F(ObjectStoreTest, caching_policies_trees) {
   EXPECT_FALSE(objectStore->shouldCacheOnDisk(
       BackingStore::LocalStoreCachingPolicy::Blobs));
   EXPECT_FALSE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::BlobMetadata));
+      BackingStore::LocalStoreCachingPolicy::BlobAuxData));
   EXPECT_TRUE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::TreesAndBlobMetadata));
-  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::Anything));
-  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::NoCaching));
-}
-
-TEST_F(ObjectStoreTest, caching_policies_blob_metadata) {
-  objectStore->setLocalStoreCachingPolicy(
-      BackingStore::LocalStoreCachingPolicy::BlobMetadata);
-  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::Trees));
-  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::Blobs));
-  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::BlobMetadata));
-  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::TreesAndBlobMetadata));
+      BackingStore::LocalStoreCachingPolicy::TreesAndBlobAuxData));
   EXPECT_TRUE(objectStore->shouldCacheOnDisk(
       BackingStore::LocalStoreCachingPolicy::Anything));
   EXPECT_FALSE(objectStore->shouldCacheOnDisk(
       BackingStore::LocalStoreCachingPolicy::NoCaching));
 }
 
-TEST_F(ObjectStoreTest, caching_policies_trees_and_blob_metadata) {
+TEST_F(ObjectStoreTest, caching_policies_blob_aux_data) {
   objectStore->setLocalStoreCachingPolicy(
-      BackingStore::LocalStoreCachingPolicy::TreesAndBlobMetadata);
+      BackingStore::LocalStoreCachingPolicy::BlobAuxData);
+  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
+      BackingStore::LocalStoreCachingPolicy::Trees));
+  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
+      BackingStore::LocalStoreCachingPolicy::Blobs));
+  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
+      BackingStore::LocalStoreCachingPolicy::BlobAuxData));
+  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
+      BackingStore::LocalStoreCachingPolicy::TreesAndBlobAuxData));
+  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
+      BackingStore::LocalStoreCachingPolicy::Anything));
+  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
+      BackingStore::LocalStoreCachingPolicy::NoCaching));
+}
+
+TEST_F(ObjectStoreTest, caching_policies_trees_and_blob_aux_data) {
+  objectStore->setLocalStoreCachingPolicy(
+      BackingStore::LocalStoreCachingPolicy::TreesAndBlobAuxData);
   EXPECT_TRUE(objectStore->shouldCacheOnDisk(
       BackingStore::LocalStoreCachingPolicy::Trees));
   EXPECT_FALSE(objectStore->shouldCacheOnDisk(
       BackingStore::LocalStoreCachingPolicy::Blobs));
   EXPECT_TRUE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::BlobMetadata));
+      BackingStore::LocalStoreCachingPolicy::BlobAuxData));
   EXPECT_TRUE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::TreesAndBlobMetadata));
+      BackingStore::LocalStoreCachingPolicy::TreesAndBlobAuxData));
   EXPECT_TRUE(objectStore->shouldCacheOnDisk(
       BackingStore::LocalStoreCachingPolicy::Anything));
   EXPECT_FALSE(objectStore->shouldCacheOnDisk(
@@ -284,7 +284,7 @@ TEST_F(ObjectStoreTest, getBlobSize_tracks_backing_store_read) {
   objectStore->getBlobSize(readyBlobId, context).get(0ms);
   ASSERT_EQ(1, loggingContext->requests.size());
   auto& request = loggingContext->requests[0];
-  EXPECT_EQ(ObjectFetchContext::BlobMetadata, request.type);
+  EXPECT_EQ(ObjectFetchContext::BlobAuxData, request.type);
   EXPECT_EQ(readyBlobId, request.hash);
   EXPECT_EQ(ObjectFetchContext::FromNetworkFetch, request.origin);
 }
@@ -294,7 +294,7 @@ TEST_F(ObjectStoreTest, getBlobSize_tracks_second_read_from_cache) {
   objectStore->getBlobSize(readyBlobId, context).get(0ms);
   ASSERT_EQ(2, loggingContext->requests.size());
   auto& request = loggingContext->requests[1];
-  EXPECT_EQ(ObjectFetchContext::BlobMetadata, request.type);
+  EXPECT_EQ(ObjectFetchContext::BlobAuxData, request.type);
   EXPECT_EQ(readyBlobId, request.hash);
   EXPECT_EQ(ObjectFetchContext::FromMemoryCache, request.origin);
 }
@@ -361,8 +361,8 @@ TEST_F(ObjectStoreTest, getBlobBlake3) {
 TEST_F(ObjectStoreTest, getBlobBlake3IsMissingInLocalStore) {
   auto data = "A"_sp;
   ObjectId id = putReadyBlob(data);
-  BlobMetadata blobMetadata(Hash20::sha1(data), std::nullopt, data.size());
-  localStore->putBlobMetadata(id, blobMetadata);
+  BlobAuxData blobAuxdata(Hash20::sha1(data), std::nullopt, data.size());
+  localStore->putBlobAuxData(id, blobAuxdata);
 
   const auto blake3Try =
       objectStoreWithBlake3Key->getBlobBlake3(id, context).getTry();

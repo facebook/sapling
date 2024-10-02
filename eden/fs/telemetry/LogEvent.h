@@ -143,10 +143,10 @@ struct FinishedCheckout {
   bool success = false;
   int64_t fetchedTrees = 0;
   int64_t fetchedBlobs = 0;
-  int64_t fetchedBlobsMetadata = 0;
+  int64_t fetchedBlobsAuxData = 0;
   int64_t accessedTrees = 0;
   int64_t accessedBlobs = 0;
-  int64_t accessedBlobsMetadata = 0;
+  int64_t accessedBlobsAuxData = 0;
   int64_t numConflicts = 0;
 
   void populate(DynamicEvent& event) const {
@@ -155,10 +155,10 @@ struct FinishedCheckout {
     event.addBool("success", success);
     event.addInt("fetched_trees", fetchedTrees);
     event.addInt("fetched_blobs", fetchedBlobs);
-    event.addInt("fetched_blobs_metadata", fetchedBlobsMetadata);
+    event.addInt("fetched_blobs_metadata", fetchedBlobsAuxData);
     event.addInt("accessed_trees", accessedTrees);
     event.addInt("accessed_blobs", accessedBlobs);
-    event.addInt("accessed_blobs_metadata", accessedBlobsMetadata);
+    event.addInt("accessed_blobs_metadata", accessedBlobsAuxData);
     event.addInt("num_conflicts", numConflicts);
   }
 };
@@ -394,8 +394,8 @@ struct FetchMiss {
   enum MissType : uint8_t {
     Tree = 0,
     Blob = 1,
-    BlobMetadata = 2,
-    TreeMetadata = 3
+    BlobAuxData = 2,
+    TreeAuxData = 3
   };
 
   std::string_view missTypeToString(MissType miss) const {
@@ -404,10 +404,10 @@ struct FetchMiss {
         return "Tree";
       case Blob:
         return "Blob";
-      case BlobMetadata:
-        return "BlobMetadata";
-      case TreeMetadata:
-        return "TreeMetadata";
+      case BlobAuxData:
+        return "BlobAuxData";
+      case TreeAuxData:
+        return "TreeAuxData";
       default:
         return "Unknown";
     }
@@ -426,9 +426,9 @@ struct FetchMiss {
       event.addString("miss_type", "tree");
     } else if (miss_type == Blob) {
       event.addString("miss_type", "blob");
-    } else if (miss_type == BlobMetadata) {
+    } else if (miss_type == BlobAuxData) {
       event.addString("miss_type", "blob_aux");
-    } else if (miss_type == TreeMetadata) {
+    } else if (miss_type == TreeAuxData) {
       event.addString("miss_type", "tree_aux");
     } else {
       throw std::range_error(

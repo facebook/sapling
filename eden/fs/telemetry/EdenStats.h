@@ -431,15 +431,15 @@ struct ObjectStoreStats : StatsGroup<ObjectStoreStats> {
   Duration getTreeMemoryDuration{"store.get_tree.memory_us"};
   Duration getTreeLocalstoreDuration{"store.get_tree.localstore_us"};
   Duration getTreeBackingstoreDuration{"store.get_tree.backingstore_us"};
-  Duration getTreeMetadata{"store.get_tree_metadata_us"};
+  Duration getTreeAuxData{"store.get_tree_metadata_us"};
   Duration getBlob{"store.get_blob_us"};
-  Duration getBlobMetadata{"store.get_blob_metadata_us"};
-  Duration getBlobMetadataMemoryDuration{"store.get_blob_metadata.memory_us"};
-  Duration getBlobMetadataLocalstoreDuration{
+  Duration getBlobAuxData{"store.get_blob_metadata_us"};
+  Duration getBlobAuxDataMemoryDuration{"store.get_blob_metadata.memory_us"};
+  Duration getBlobAuxDataLocalstoreDuration{
       "store.get_blob_metadata.localstore_us"};
-  Duration getBlobMetadataBackingstoreDuration{
+  Duration getBlobAuxDataBackingstoreDuration{
       "store.get_blob_metadata.backingstore_us"};
-  Duration getBlobMetadataFromBlobDuration{
+  Duration getBlobAuxDataFromBlobDuration{
       "store.get_blob_metadata.from_blob_us"};
   Duration getRootTree{"store.get_root_tree_us"};
 
@@ -453,37 +453,37 @@ struct ObjectStoreStats : StatsGroup<ObjectStoreStats> {
   Counter getTreeFromBackingStore{"object_store.get_tree.backing_store"};
   Counter getTreeFailed{"object_store.get_tree_failed"};
 
-  Counter getTreeMetadataFromMemory{"object_store.get_tree_metadata.memory"};
-  Counter getTreeMetadataFromBackingStore{
+  Counter getTreeAuxDataFromMemory{"object_store.get_tree_metadata.memory"};
+  Counter getTreeAuxDataFromBackingStore{
       "object_store.get_tree_metadata.backing_store"};
-  Counter getTreeMetadataFailed{"object_store.get_tree_metadata_failed"};
+  Counter getTreeAuxDataFailed{"object_store.get_tree_metadata_failed"};
 
   Counter getRootTreeFromBackingStore{
       "object_store.get_root_tree.backing_store"};
   Counter getRootTreeFailed{"object_store.get_root_tree_failed"};
 
-  Counter getBlobMetadataFromMemory{"object_store.get_blob_metadata.memory"};
-  Counter getBlobMetadataFromLocalStore{
+  Counter getBlobAuxDataFromMemory{"object_store.get_blob_metadata.memory"};
+  Counter getBlobAuxDataFromLocalStore{
       "object_store.get_blob_metadata.local_store"};
-  Counter getBlobMetadataFromBackingStore{
+  Counter getBlobAuxDataFromBackingStore{
       "object_store.get_blob_metadata.backing_store"};
-  Counter getBlobMetadataFromBlob{"object_store.get_blob_metadata.blob"};
-  Counter getBlobMetadataFailed{"object_store.get_blob_metadata_failed"};
+  Counter getBlobAuxDataFromBlob{"object_store.get_blob_metadata.blob"};
+  Counter getBlobAuxDataFailed{"object_store.get_blob_metadata_failed"};
 };
 
 struct LocalStoreStats : StatsGroup<LocalStoreStats> {
   Duration getTree{"local_store.get_tree_us"};
   Duration getBlob{"local_store.get_blob_us"};
-  Duration getBlobMetadata{"local_store.get_blob_metadata_us"};
+  Duration getBlobAuxData{"local_store.get_blob_metadata_us"};
   Counter getTreeSuccess{"local_store.get_tree_success"};
   Counter getBlobSuccess{"local_store.get_blob_success"};
-  Counter getBlobMetadataSuccess{"local_store.get_blob_metadata_success"};
+  Counter getBlobAuxDataSuccess{"local_store.get_blob_metadata_success"};
   Counter getTreeFailure{"local_store.get_tree_failure"};
   Counter getBlobFailure{"local_store.get_blob_failure"};
-  Counter getBlobMetadataFailure{"local_store.get_blob_metadata_failure"};
+  Counter getBlobAuxDataFailure{"local_store.get_blob_metadata_failure"};
   Counter getTreeError{"local_store.get_tree_error"};
   Counter getBlobError{"local_store.get_blob_error"};
-  Counter getBlobMetadataError{"local_store.get_blob_metadata_error"};
+  Counter getBlobAuxDataError{"local_store.get_blob_metadata_error"};
 };
 
 /**
@@ -504,12 +504,12 @@ struct SaplingBackingStoreStats : StatsGroup<SaplingBackingStoreStats> {
   Counter fetchTreeFailure{"store.sapling.fetch_tree_failure"};
   Counter fetchTreeRetrySuccess{"store.sapling.fetch_tree_retry_success"};
   Counter fetchTreeRetryFailure{"store.sapling.fetch_tree_retry_failure"};
-  Duration getTreeMetadata{"store.sapling.get_tree_metadata_us"};
-  Duration fetchTreeMetadata{"store.sapling.fetch_tree_metadata_us"};
-  Counter fetchTreeMetadataLocal{"store.sapling.fetch_tree_metadata_local"};
-  Counter fetchTreeMetadataRemote{"store.sapling.fetch_tree_metadata_remote"};
-  Counter fetchTreeMetadataSuccess{"store.sapling.fetch_tree_metadata_success"};
-  Counter fetchTreeMetadataFailure{"store.sapling.fetch_tree_metadata_failure"};
+  Duration getTreeAuxData{"store.sapling.get_tree_metadata_us"};
+  Duration fetchTreeAuxData{"store.sapling.fetch_tree_metadata_us"};
+  Counter fetchTreeAuxDataLocal{"store.sapling.fetch_tree_metadata_local"};
+  Counter fetchTreeAuxDataRemote{"store.sapling.fetch_tree_metadata_remote"};
+  Counter fetchTreeAuxDataSuccess{"store.sapling.fetch_tree_metadata_success"};
+  Counter fetchTreeAuxDataFailure{"store.sapling.fetch_tree_metadata_failure"};
   Counter getRootTreeLocal{"store.sapling.get_root_tree_local"};
   Counter getRootTreeRemote{"store.sapling.get_root_tree_remote"};
   Counter getRootTreeSuccess{"store.sapling.get_root_tree_success"};
@@ -543,12 +543,12 @@ struct SaplingBackingStoreStats : StatsGroup<SaplingBackingStoreStats> {
   Counter prefetchBlobFailure{"store.sapling.prefetch_blob_failure"};
   Counter prefetchBlobRetrySuccess{"store.sapling.prefetch_blob_retry_success"};
   Counter prefetchBlobRetryFailure{"store.sapling.prefetch_blob_retry_failure"};
-  Duration getBlobMetadata{"store.sapling.get_blob_metadata_us"};
-  Duration fetchBlobMetadata{"store.sapling.fetch_blob_metadata_us"};
-  Counter fetchBlobMetadataLocal{"store.sapling.fetch_blob_metadata_local"};
-  Counter fetchBlobMetadataRemote{"store.sapling.fetch_blob_metadata_remote"};
-  Counter fetchBlobMetadataSuccess{"store.sapling.fetch_blob_metadata_success"};
-  Counter fetchBlobMetadataFailure{"store.sapling.fetch_blob_metadata_failure"};
+  Duration getBlobAuxData{"store.sapling.get_blob_metadata_us"};
+  Duration fetchBlobAuxData{"store.sapling.fetch_blob_metadata_us"};
+  Counter fetchBlobAuxDataLocal{"store.sapling.fetch_blob_metadata_local"};
+  Counter fetchBlobAuxDataRemote{"store.sapling.fetch_blob_metadata_remote"};
+  Counter fetchBlobAuxDataSuccess{"store.sapling.fetch_blob_metadata_success"};
+  Counter fetchBlobAuxDataFailure{"store.sapling.fetch_blob_metadata_failure"};
   Counter fetchGlobFilesSuccess{"store.sapling.fetch_glob_files_success"};
   Counter fetchGlobFilesFailure{"store.sapling.fetch_glob_files_failure"};
   Duration fetchGlobFiles{"store.sapling.fetch_glob_files_us"};

@@ -74,41 +74,41 @@ TEST_P(LocalStoreTest, testReadAndWriteBlob) {
   EXPECT_EQ(contents, outBlob->getContents().clone()->to<std::string>());
 
   {
-    auto retrievedMetadata = store_->getBlobMetadata(hash).get(10s);
-    ASSERT_EQ(retrievedMetadata, nullptr);
+    auto retrievedAuxData = store_->getBlobAuxData(hash).get(10s);
+    ASSERT_EQ(retrievedAuxData, nullptr);
   }
 }
 
-TEST_P(LocalStoreTest, testReadAndWriteMetadata) {
+TEST_P(LocalStoreTest, testReadAndWriteAuxData) {
   ObjectId id = ObjectId::fromHex("3a8f8eb91101860fd8484154885838bf322964d0");
   auto sha1 = Hash20::sha1("foobar");
   size_t size = 6;
-  BlobMetadata metadata{sha1, std::nullopt, size};
-  store_->putBlobMetadata(id, metadata);
+  BlobAuxData auxData{sha1, std::nullopt, size};
+  store_->putBlobAuxData(id, auxData);
 
-  auto retrievedMetadata = store_->getBlobMetadata(id).get(10s);
-  ASSERT_NE(retrievedMetadata, nullptr);
+  auto retrievedAuxData = store_->getBlobAuxData(id).get(10s);
+  ASSERT_NE(retrievedAuxData, nullptr);
 
-  EXPECT_EQ(sha1, retrievedMetadata->sha1);
-  EXPECT_EQ(size, retrievedMetadata->size);
+  EXPECT_EQ(sha1, retrievedAuxData->sha1);
+  EXPECT_EQ(size, retrievedAuxData->size);
 }
 
-TEST_P(LocalStoreTest, testReadAndWriteMetadataWithBlake3) {
+TEST_P(LocalStoreTest, testReadAndWriteAuxDataWithBlake3) {
   ObjectId id = ObjectId::fromHex("3a8f8eb91101860fd8484154885838bf322964d0");
   std::string content(4 << 20, 'a');
   auto sha1 = Hash20::sha1(content);
   auto blake3 = Hash32::blake3(content);
   size_t size = content.size();
-  BlobMetadata metadata{sha1, blake3, size};
-  store_->putBlobMetadata(id, metadata);
+  BlobAuxData auxData{sha1, blake3, size};
+  store_->putBlobAuxData(id, auxData);
 
-  auto retrievedMetadata = store_->getBlobMetadata(id).get(10s);
-  ASSERT_NE(retrievedMetadata, nullptr);
+  auto retrievedAuxData = store_->getBlobAuxData(id).get(10s);
+  ASSERT_NE(retrievedAuxData, nullptr);
 
-  EXPECT_EQ(sha1, retrievedMetadata->sha1);
-  ASSERT_TRUE(retrievedMetadata->blake3.has_value());
-  EXPECT_EQ(blake3, *retrievedMetadata->blake3);
-  EXPECT_EQ(size, retrievedMetadata->size);
+  EXPECT_EQ(sha1, retrievedAuxData->sha1);
+  ASSERT_TRUE(retrievedAuxData->blake3.has_value());
+  EXPECT_EQ(blake3, *retrievedAuxData->blake3);
+  EXPECT_EQ(size, retrievedAuxData->size);
 }
 
 TEST_P(LocalStoreTest, testReadNonexistent) {
@@ -116,8 +116,8 @@ TEST_P(LocalStoreTest, testReadNonexistent) {
 
   ObjectId hash = ObjectId::fromHex("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
   EXPECT_EQ(store_->getBlob(hash).get(10s), nullptr);
-  auto retrievedMetadata = store_->getBlobMetadata(hash).get(10s);
-  EXPECT_EQ(retrievedMetadata, nullptr);
+  auto retrievedAuxData = store_->getBlobAuxData(hash).get(10s);
+  EXPECT_EQ(retrievedAuxData, nullptr);
 }
 
 TEST_P(LocalStoreTest, testReadsAndWriteTree) {

@@ -10,38 +10,37 @@
 #include "folly/Try.h"
 
 #include "eden/fs/inodes/EdenMount.h"
-#include "eden/fs/model/Blob.h"
-#include "eden/fs/model/BlobMetadata.h"
+#include "eden/fs/model/BlobAuxData.h"
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/service/ThriftUtil.h"
 
 namespace facebook::eden {
 namespace detail {
-folly::Try<BlobMetadata> transformToTryMetadata(
-    folly::Try<std::optional<BlobMetadata>> metadata,
+folly::Try<BlobAuxData> transformToTryAuxData(
+    folly::Try<std::optional<BlobAuxData>> auxData,
     std::shared_ptr<EdenMount> edenMount,
     ObjectId id) {
-  if (metadata.hasException()) {
-    return folly::Try<BlobMetadata>{std::move(metadata).exception()};
+  if (auxData.hasException()) {
+    return folly::Try<BlobAuxData>{std::move(auxData).exception()};
   }
-  return transformToTryMetadata(metadata.value(), std::move(edenMount), id);
+  return transformToTryAuxData(auxData.value(), std::move(edenMount), id);
 }
 } // namespace detail
 
 BlobMetadataWithOrigin transformToBlobMetadataFromOrigin(
-    folly::Try<BlobMetadata> metadata,
+    folly::Try<BlobAuxData> auxData,
     DataFetchOrigin origin) {
-  BlobMetadataOrError metadataOrError;
-  if (metadata.hasValue()) {
+  BlobMetadataOrError auxDataOrError;
+  if (auxData.hasValue()) {
     ScmBlobMetadata thriftMetadata;
-    thriftMetadata.size() = metadata.value().size;
-    thriftMetadata.contentsSha1() = thriftHash20(metadata.value().sha1);
-    metadataOrError.metadata_ref() = std::move(thriftMetadata);
+    thriftMetadata.size() = auxData.value().size;
+    thriftMetadata.contentsSha1() = thriftHash20(auxData.value().sha1);
+    auxDataOrError.metadata_ref() = std::move(thriftMetadata);
   } else {
-    metadataOrError.error_ref() = newEdenError(metadata.exception());
+    auxDataOrError.error_ref() = newEdenError(auxData.exception());
   }
   BlobMetadataWithOrigin result;
-  result.metadata() = std::move(metadataOrError);
+  result.metadata() = std::move(auxDataOrError);
   result.origin() = std::move(origin);
   return result;
 }

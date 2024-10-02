@@ -232,7 +232,7 @@ class ThriftTest(testcase.EdenRepoTest):
         else:
             self.assert_digest_hash_error(
                 results[0],
-                "std::domain_error: getTreeMetadata is not implemented for GitBackingStores",
+                "std::domain_error: getTreeAuxData is not implemented for GitBackingStores",
             )
 
     def test_get_sha1_throws_for_path_with_dot_components(self) -> None:
@@ -405,7 +405,7 @@ class ThriftTest(testcase.EdenRepoTest):
         else:
             self.assert_digest_hash_error(
                 results[0],
-                "std::domain_error: getTreeMetadata is not implemented for GitBackingStores",
+                "std::domain_error: getTreeAuxData is not implemented for GitBackingStores",
             )
 
         self.assertEqual(

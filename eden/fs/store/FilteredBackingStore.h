@@ -136,7 +136,7 @@ class FilteredBackingStore
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
 
-  folly::SemiFuture<GetTreeMetaResult> getTreeMetadata(
+  folly::SemiFuture<GetTreeAuxResult> getTreeAuxData(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
 
@@ -144,7 +144,7 @@ class FilteredBackingStore
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
 
-  folly::SemiFuture<GetBlobMetaResult> getBlobMetadata(
+  folly::SemiFuture<GetBlobAuxResult> getBlobAuxData(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
 

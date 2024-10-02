@@ -73,13 +73,13 @@ class GitBackingStore final : public BijectiveBackingStore {
   folly::SemiFuture<BackingStore::GetTreeResult> getTree(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
-  folly::SemiFuture<BackingStore::GetTreeMetaResult> getTreeMetadata(
+  folly::SemiFuture<BackingStore::GetTreeAuxResult> getTreeAuxData(
       const ObjectId& /*id*/,
       const ObjectFetchContextPtr& /*context*/) override;
   folly::SemiFuture<BackingStore::GetBlobResult> getBlob(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
-  folly::SemiFuture<BackingStore::GetBlobMetaResult> getBlobMetadata(
+  folly::SemiFuture<BackingStore::GetBlobAuxResult> getBlobAuxData(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
   ImmediateFuture<GetGlobFilesResult> getGlobFiles(
@@ -97,7 +97,7 @@ class GitBackingStore final : public BijectiveBackingStore {
   git_repository* repo_{nullptr};
 
   LocalStoreCachingPolicy localStoreCachingPolicy_ =
-      LocalStoreCachingPolicy::TreesAndBlobMetadata;
+      LocalStoreCachingPolicy::TreesAndBlobAuxData;
 };
 
 } // namespace facebook::eden

@@ -48,19 +48,19 @@ SaplingImportRequest::makeTreeImportRequest(
 }
 
 std::shared_ptr<SaplingImportRequest>
-SaplingImportRequest::makeBlobMetaImportRequest(
+SaplingImportRequest::makeBlobAuxImportRequest(
     const ObjectId& hash,
     const HgProxyHash& proxyHash,
     const ObjectFetchContextPtr& context) {
-  return makeRequest<BlobMetaImport>(context, hash, proxyHash);
+  return makeRequest<BlobAuxImport>(context, hash, proxyHash);
 }
 
 std::shared_ptr<SaplingImportRequest>
-SaplingImportRequest::makeTreeMetaImportRequest(
+SaplingImportRequest::makeTreeAuxImportRequest(
     const ObjectId& hash,
     const HgProxyHash& proxyHash,
     const ObjectFetchContextPtr& context) {
-  return makeRequest<TreeMetaImport>(context, hash, proxyHash);
+  return makeRequest<TreeAuxImport>(context, hash, proxyHash);
 }
 
 } // namespace facebook::eden

@@ -10,7 +10,7 @@
 #include <unordered_map>
 
 #include "eden/fs/model/Blob.h"
-#include "eden/fs/model/BlobMetadata.h"
+#include "eden/fs/model/BlobAuxData.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/RootId.h"
 #include "eden/fs/model/Tree.h"

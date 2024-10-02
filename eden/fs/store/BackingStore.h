@@ -14,12 +14,12 @@
 
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/PathFuncs.h"
+#include "eden/fs/model/BlobAuxDataFwd.h"
 #include "eden/fs/model/BlobFwd.h"
-#include "eden/fs/model/BlobMetadataFwd.h"
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/model/RootId.h"
+#include "eden/fs/model/TreeAuxDataFwd.h"
 #include "eden/fs/model/TreeFwd.h"
-#include "eden/fs/model/TreeMetadataFwd.h"
 #include "eden/fs/store/BackingStoreType.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
@@ -65,12 +65,12 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
     NoCaching = 0,
     Trees = 1 << 0,
     Blobs = 1 << 1,
-    BlobMetadata = 1 << 2,
-    // TODO(T192128228): Add caching policy for TreeMetadata
+    BlobAuxData = 1 << 2,
+    // TODO(T192128228): Add caching policy for TreeAuxData
     TreesAndBlobs = Trees | Blobs,
-    TreesAndBlobMetadata = Trees | BlobMetadata,
-    BlobsAndBlobMetadata = Blobs | BlobMetadata,
-    Anything = Trees | Blobs | BlobMetadata,
+    TreesAndBlobAuxData = Trees | BlobAuxData,
+    BlobsAndBlobAuxData = Blobs | BlobAuxData,
+    Anything = Trees | Blobs | BlobAuxData,
   };
 
   virtual LocalStoreCachingPolicy getLocalStoreCachingPolicy() const = 0;
@@ -106,14 +106,14 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
   };
 
   /**
-   * Return value of the getTreeMetadata method.
+   * Return value of the getTreeAuxData method.
    */
-  struct GetTreeMetaResult {
+  struct GetTreeAuxResult {
     /**
-     * The retrieved tree metadata.
+     * The retrieved tree aux data.
      */
-    TreeMetadataPtr treeMeta;
-    /** The fetch origin of the tree metadata. */
+    TreeAuxDataPtr treeAux;
+    /** The fetch origin of the tree aux data. */
     ObjectFetchContext::Origin origin;
   };
 
@@ -128,21 +128,21 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
   };
 
   /**
-   * Return value of the getBlobMetadata method.
+   * Return value of the getBlobAuxData method.
    */
-  struct GetBlobMetaResult {
+  struct GetBlobAuxResult {
     /**
-     * The retrieved blob metadata.
+     * The retrieved blob aux data.
      *
-     * If either BackingStore::LocalStoreCachingPolicy::BlobMetadata is not set
-     * or the blob metadata was not found in the LocalStore, setting this to a
-     * nullptr will make ObjectStore::getBlobMetadata fallback to fetching
+     * If either BackingStore::LocalStoreCachingPolicy::BlobAuxData is not set
+     * or the blob aux data was not found in the LocalStore, setting this to a
+     * nullptr will make ObjectStore::getBlobAuxData fallback to fetching
      * the blob, either from the LocalStore or from the BackingStore, to compute
-     * the blob metadata. It also may store the fetched blob and calculated blob
-     * metadata in the LocalStore, depending on the current caching policy.
+     * the blob aux data. It also may store the fetched blob and calculated blob
+     * aux data in the LocalStore, depending on the current caching policy.
      */
-    BlobMetadataPtr blobMeta;
-    /** The fetch origin of the blob metadata. */
+    BlobAuxDataPtr blobAux;
+    /** The fetch origin of the blob aux data. */
     ObjectFetchContext::Origin origin;
   };
 
@@ -251,11 +251,11 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
       const ObjectFetchContextPtr& context) = 0;
 
   /**
-   * Fetch the tree metadata from the backing store.
+   * Fetch the tree aux data from the backing store.
    *
-   * Return the tree metadata and where it was found.
+   * Return the tree aux data and where it was found.
    */
-  virtual folly::SemiFuture<GetTreeMetaResult> getTreeMetadata(
+  virtual folly::SemiFuture<GetTreeAuxResult> getTreeAuxData(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) = 0;
 
@@ -269,11 +269,11 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
       const ObjectFetchContextPtr& context) = 0;
 
   /**
-   * Fetch the blob metadata from the backing store.
+   * Fetch the blob aux data from the backing store.
    *
-   * Return the blob metadata and where it was found.
+   * Return the blob aux data and where it was found.
    */
-  virtual folly::SemiFuture<GetBlobMetaResult> getBlobMetadata(
+  virtual folly::SemiFuture<GetBlobAuxResult> getBlobAuxData(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) = 0;
 

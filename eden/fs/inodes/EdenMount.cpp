@@ -900,9 +900,9 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathsToObjectIds(
                          << " trees (" << fetchStats.tree.cacheHitRate
                          << "% chr), " << fetchStats.blob.accessCount
                          << " blobs (" << fetchStats.blob.cacheHitRate
-                         << "% chr), and "
-                         << fetchStats.blobMetadata.accessCount << " metadata ("
-                         << fetchStats.blobMetadata.cacheHitRate << "% chr).";
+                         << "% chr), and " << fetchStats.blobAuxData.accessCount
+                         << " metadata (" << fetchStats.blobAuxData.cacheHitRate
+                         << "% chr).";
 
               return std::move(resultAndTimes);
             });
@@ -1615,8 +1615,8 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
                    << fetchStats.tree.cacheHitRate << "% chr), "
                    << fetchStats.blob.accessCount << " blobs ("
                    << fetchStats.blob.cacheHitRate << "% chr), and "
-                   << fetchStats.blobMetadata.accessCount << " metadata ("
-                   << fetchStats.blobMetadata.cacheHitRate << "% chr).";
+                   << fetchStats.blobAuxData.accessCount << " metadata ("
+                   << fetchStats.blobAuxData.cacheHitRate << "% chr).";
 
         auto checkoutTimeInSeconds =
             std::chrono::duration<double>{stopWatch.elapsed()};
@@ -1626,10 +1626,10 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
         event.success = result.hasValue();
         event.fetchedTrees = fetchStats.tree.fetchCount;
         event.fetchedBlobs = fetchStats.blob.fetchCount;
-        event.fetchedBlobsMetadata = fetchStats.blobMetadata.fetchCount;
+        event.fetchedBlobsAuxData = fetchStats.blobAuxData.fetchCount;
         event.accessedTrees = fetchStats.tree.accessCount;
         event.accessedBlobs = fetchStats.blob.accessCount;
-        event.accessedBlobsMetadata = fetchStats.blobMetadata.accessCount;
+        event.accessedBlobsAuxData = fetchStats.blobAuxData.accessCount;
         if (result.hasValue()) {
           auto& conflicts = result.value().conflicts;
           event.numConflicts = conflicts.size();
@@ -1650,9 +1650,9 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
           }
         }
 
-        // Don't log metadata fetches, because our backends don't yet support
-        // fetching metadata directly. We expect tree fetches to eventually
-        // return metadata for their entries.
+        // Don't log aux data fetches, because our backends don't yet support
+        // fetching aux data directly. We expect tree fetches to eventually
+        // return aux data for their entries.
         this->serverState_->getStructuredLogger()->logEvent(event);
         return std::move(result);
       });

@@ -660,7 +660,7 @@ uint64_t RocksDbLocalStore::getApproximateSize(KeySpace keySpace) const {
   // We use this as a something that will hopefully roughly approximate the size
   // of the *.log files.  In practice this generally seems to be a fair amount
   // smaller than the on-disk *.log file size, except immediately after a
-  // compaction when there is still a couple MB of in-memory metadata despite
+  // compaction when there is still a couple MB of in-memory aux data despite
   // having no uncompacted on-disk data.
   uint64_t memtableSize;
   result = handles->db->GetIntProperty(

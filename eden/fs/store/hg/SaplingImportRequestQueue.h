@@ -48,7 +48,7 @@ class SaplingImportRequestQueue {
    *
    * Return a future that will complete when the aux data request completes.
    */
-  ImmediateFuture<BlobMetadataPtr> enqueueBlobMeta(
+  ImmediateFuture<BlobAuxDataPtr> enqueueBlobAux(
       std::shared_ptr<SaplingImportRequest> request);
 
   /**
@@ -56,7 +56,7 @@ class SaplingImportRequestQueue {
    *
    * Return a future that will complete when the aux data request completes.
    */
-  ImmediateFuture<TreeMetadataPtr> enqueueTreeMeta(
+  ImmediateFuture<TreeAuxDataPtr> enqueueTreeAux(
       std::shared_ptr<SaplingImportRequest> request);
 
   /**
@@ -121,8 +121,8 @@ class SaplingImportRequestQueue {
     bool running = true;
     ImportQueue treeQueue;
     ImportQueue blobQueue;
-    ImportQueue blobMetaQueue;
-    ImportQueue treeMetaQueue;
+    ImportQueue blobAuxQueue;
+    ImportQueue treeAuxQueue;
   };
 
   /**
@@ -163,18 +163,18 @@ void SaplingImportRequestQueue::markImportAsFinished(
   if constexpr (std::is_same_v<T, const Tree>) {
     auto* treeImport = import->getRequest<SaplingImportRequest::TreeImport>();
     promises = &treeImport->promises;
-  } else if constexpr (std::is_same_v<T, const TreeMetadata>) {
-    auto* treeMetaImport =
-        import->getRequest<SaplingImportRequest::TreeMetaImport>();
-    promises = &treeMetaImport->promises;
-  } else if constexpr (std::is_same_v<T, const BlobMetadata>) {
-    auto* blobMetaImport =
-        import->getRequest<SaplingImportRequest::BlobMetaImport>();
-    promises = &blobMetaImport->promises;
+  } else if constexpr (std::is_same_v<T, const TreeAuxData>) {
+    auto* treeAuxImport =
+        import->getRequest<SaplingImportRequest::TreeAuxImport>();
+    promises = &treeAuxImport->promises;
+  } else if constexpr (std::is_same_v<T, const BlobAuxData>) {
+    auto* blobAuxImport =
+        import->getRequest<SaplingImportRequest::BlobAuxImport>();
+    promises = &blobAuxImport->promises;
   } else {
     static_assert(
         std::is_same_v<T, const Blob>,
-        "markImportAsFinished can only be called with Tree, TreeMetadata, Blob or BlobMetadata types");
+        "markImportAsFinished can only be called with Tree, TreeAuxData, Blob or BlobAuxData types");
     auto* blobImport = import->getRequest<SaplingImportRequest::BlobImport>();
     promises = &blobImport->promises;
   }
@@ -202,14 +202,14 @@ SaplingImportRequestQueue::getImportQueue(folly::Synchronized<
                                           std::mutex>::LockedPtr& state) {
   if constexpr (std::is_same_v<T, const Tree>) {
     return &state->treeQueue;
-  } else if constexpr (std::is_same_v<T, const TreeMetadata>) {
-    return &state->treeMetaQueue;
-  } else if constexpr (std::is_same_v<T, const BlobMetadata>) {
-    return &state->blobMetaQueue;
+  } else if constexpr (std::is_same_v<T, const TreeAuxData>) {
+    return &state->treeAuxQueue;
+  } else if constexpr (std::is_same_v<T, const BlobAuxData>) {
+    return &state->blobAuxQueue;
   } else {
     static_assert(
         std::is_same_v<T, const Blob>,
-        "getImportQueue can only be called with Tree, TreeMetadata, Blob or BlobMetadata types");
+        "getImportQueue can only be called with Tree, TreeAuxData, Blob or BlobAuxData types");
     return &state->blobQueue;
   }
 }

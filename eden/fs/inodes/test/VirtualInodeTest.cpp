@@ -409,14 +409,14 @@ FakeTreeBuilder MakeTestTreeBuilder(TestFileDatabase& files) {
 
 enum VERIFY_FLAGS {
   VERIFY_SHA1 = 0x0001,
-  VERIFY_BLOB_METADATA = 0x0002,
+  VERIFY_BLOB_AUX_DATA = 0x0002,
   VERIFY_STAT = 0x0004,
 
   VERIFY_WITH_MODIFICATIONS = 0x0008,
 
   VERIFY_BLAKE3 = 0x0016,
 
-  VERIFY_DEFAULT = VERIFY_SHA1 | VERIFY_STAT | VERIFY_BLOB_METADATA |
+  VERIFY_DEFAULT = VERIFY_SHA1 | VERIFY_STAT | VERIFY_BLOB_AUX_DATA |
       VERIFY_WITH_MODIFICATIONS | VERIFY_BLAKE3,
   VERIFY_INITIAL = VERIFY_DEFAULT & ~VERIFY_WITH_MODIFICATIONS,
 };
@@ -549,9 +549,9 @@ void verifyTreeState(
             << "\"";
       }
 
-      if ((verify_flags & VERIFY_BLOB_METADATA) &&
+      if ((verify_flags & VERIFY_BLOB_AUX_DATA) &&
           virtualInode.getDtype() == dtype_t::Regular) {
-        auto metadataFut =
+        auto auxDataFut =
             virtualInode
                 .getEntryAttributes(
                     ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 |
@@ -560,25 +560,24 @@ void verifyTreeState(
                     expected.path,
                     mount.getEdenMount()->getObjectStore(),
                     ObjectFetchContext::getNullContext(),
-                    /*shouldFetchTreeMetadata=*/true)
+                    /*shouldFetchTreeAuxData=*/true)
                 .semi()
                 .via(mount.getServerExecutor().get());
         mount.drainServerExecutor();
-        auto metadata = std::move(metadataFut).get(0ms);
-        EXPECT_EQ(metadata.sha1.value().value(), expected.getSHA1()) << dbgMsg;
-        EXPECT_EQ(
-            metadata.blake3.value().value(), expected.getBlake3(blake3Key))
+        auto auxData = std::move(auxDataFut).get(0ms);
+        EXPECT_EQ(auxData.sha1.value().value(), expected.getSHA1()) << dbgMsg;
+        EXPECT_EQ(auxData.blake3.value().value(), expected.getBlake3(blake3Key))
             << dbgMsg;
         // The digest size and file size of regular files are the same.
-        EXPECT_EQ(metadata.size.value().value(), expected.getContents().size())
+        EXPECT_EQ(auxData.size.value().value(), expected.getContents().size())
             << dbgMsg;
         EXPECT_EQ(
-            metadata.digestSize.value().value(), expected.getContents().size())
+            auxData.digestSize.value().value(), expected.getContents().size())
             << dbgMsg;
-        EXPECT_EQ(metadata.type.value().value(), expected.getTreeEntryType())
+        EXPECT_EQ(auxData.type.value().value(), expected.getTreeEntryType())
             << dbgMsg;
         EXPECT_EQ(
-            metadata.digestSize.value().value(), expected.getContents().size())
+            auxData.digestSize.value().value(), expected.getContents().size())
             << dbgMsg;
       }
 
@@ -771,7 +770,7 @@ TEST(VirtualInodeTest, getChildrenAttributes) {
                               info->path,
                               mount.getEdenMount()->getObjectStore(),
                               ObjectFetchContext::getNullContext(),
-                              /*shouldFetchTreeMetadata=*/true)
+                              /*shouldFetchTreeAuxData=*/true)
                           .get();
 
         for (auto child : files.getChildren(RelativePathPiece{info->path})) {
@@ -787,7 +786,7 @@ TEST(VirtualInodeTest, getChildrenAttributes) {
                           child->path,
                           mount.getEdenMount()->getObjectStore(),
                           ObjectFetchContext::getNullContext(),
-                          /*shouldFetchTreeMetadata=*/true)
+                          /*shouldFetchTreeAuxData=*/true)
                       .getTry())));
         }
       }
@@ -833,52 +832,51 @@ TEST(VirtualInodeTest, fileOpsOnCorrectObjectsOnly) {
           << " on path " << info.getLogPath();
     }
 
-    auto metadataTry = virtualInode
-                           .getEntryAttributes(
-                               ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 |
-                                   ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE |
-                                   ENTRY_ATTRIBUTE_DIGEST_SIZE,
-                               info.path,
-                               mount.getEdenMount()->getObjectStore(),
-                               ObjectFetchContext::getNullContext(),
-                               /*shouldFetchTreeMetadata=*/true)
-                           .getTry();
+    auto auxDataTry = virtualInode
+                          .getEntryAttributes(
+                              ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SHA1 |
+                                  ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE |
+                                  ENTRY_ATTRIBUTE_DIGEST_SIZE,
+                              info.path,
+                              mount.getEdenMount()->getObjectStore(),
+                              ObjectFetchContext::getNullContext(),
+                              /*shouldFetchTreeAuxData=*/true)
+                          .getTry();
     if (info.isRegularFile()) {
-      EXPECT_EQ(true, metadataTry.hasValue())
+      EXPECT_EQ(true, auxDataTry.hasValue())
           << " on path " << info.getLogPath();
-      if (metadataTry.hasValue()) {
-        auto& metadata = metadataTry.value();
-        EXPECT_EQ(metadata.sha1.value().value(), info.getSHA1())
+      if (auxDataTry.hasValue()) {
+        auto& auxData = auxDataTry.value();
+        EXPECT_EQ(auxData.sha1.value().value(), info.getSHA1())
             << " on path " << info.getLogPath();
-        EXPECT_EQ(metadata.size.value().value(), info.getContents().size())
+        EXPECT_EQ(auxData.size.value().value(), info.getContents().size())
             << " on path " << info.getLogPath();
-        EXPECT_EQ(
-            metadata.digestSize.value().value(), info.getContents().size())
+        EXPECT_EQ(auxData.digestSize.value().value(), info.getContents().size())
             << " on path " << info.getLogPath();
-        EXPECT_EQ(metadata.type.value().value(), info.getTreeEntryType())
+        EXPECT_EQ(auxData.type.value().value(), info.getTreeEntryType())
             << " on path " << info.getLogPath();
       }
     } else {
-      EXPECT_EQ(true, metadataTry.hasValue())
+      EXPECT_EQ(true, auxDataTry.hasValue())
           << " on path " << info.getLogPath();
-      if (metadataTry.hasValue()) {
-        auto& metadata = metadataTry.value();
+      if (auxDataTry.hasValue()) {
+        auto& auxData = auxDataTry.value();
         // We can't calculate the sha1/file-size of directories
-        EXPECT_TRUE(metadata.sha1.value().hasException());
-        EXPECT_TRUE(metadata.size.value().hasException());
+        EXPECT_TRUE(auxData.sha1.value().hasException());
+        EXPECT_TRUE(auxData.size.value().hasException());
         if (info.isMaterialized()) {
           // We can't get the digest-size/blake3 of materialized directories
-          EXPECT_FALSE(metadata.digestSize.has_value());
+          EXPECT_FALSE(auxData.digestSize.has_value());
         } else {
           // We require a remote lookup to get the size/blake3 of directories
-          EXPECT_TRUE(metadata.digestSize.value().hasException());
+          EXPECT_TRUE(auxData.digestSize.value().hasException());
         }
-        EXPECT_EQ(metadata.type.value().value(), info.getTreeEntryType())
+        EXPECT_EQ(auxData.type.value().value(), info.getTreeEntryType())
             << " on path " << info.getLogPath();
       }
     }
 
-    metadataTry =
+    auxDataTry =
         virtualInode
             .getEntryAttributes(
                 ENTRY_ATTRIBUTE_SIZE | ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE |
@@ -886,39 +884,38 @@ TEST(VirtualInodeTest, fileOpsOnCorrectObjectsOnly) {
                 info.path,
                 mount.getEdenMount()->getObjectStore(),
                 ObjectFetchContext::getNullContext(),
-                /*shouldFetchTreeMetadata=*/true)
+                /*shouldFetchTreeAuxData=*/true)
             .getTry();
     if (info.isRegularFile()) {
-      EXPECT_EQ(true, metadataTry.hasValue())
+      EXPECT_EQ(true, auxDataTry.hasValue())
           << " on path " << info.getLogPath();
-      if (metadataTry.hasValue()) {
-        auto& metadata = metadataTry.value();
-        EXPECT_FALSE(metadata.sha1.has_value())
+      if (auxDataTry.hasValue()) {
+        auto& auxData = auxDataTry.value();
+        EXPECT_FALSE(auxData.sha1.has_value())
             << " on path " << info.getLogPath();
-        EXPECT_EQ(metadata.size.value().value(), info.getContents().size())
+        EXPECT_EQ(auxData.size.value().value(), info.getContents().size())
             << " on path " << info.getLogPath();
-        EXPECT_EQ(
-            metadata.digestSize.value().value(), info.getContents().size())
+        EXPECT_EQ(auxData.digestSize.value().value(), info.getContents().size())
             << " on path " << info.getLogPath();
-        EXPECT_EQ(metadata.type.value().value(), info.getTreeEntryType())
+        EXPECT_EQ(auxData.type.value().value(), info.getTreeEntryType())
             << " on path " << info.getLogPath();
       }
     } else {
-      EXPECT_EQ(true, metadataTry.hasValue())
+      EXPECT_EQ(true, auxDataTry.hasValue())
           << " on path " << info.getLogPath();
-      if (metadataTry.hasValue()) {
-        auto& metadata = metadataTry.value();
+      if (auxDataTry.hasValue()) {
+        auto& auxData = auxDataTry.value();
         // We can't calculate the sha1/file-size of directories
-        EXPECT_FALSE(metadata.sha1.has_value());
-        EXPECT_TRUE(metadata.size.value().hasException());
+        EXPECT_FALSE(auxData.sha1.has_value());
+        EXPECT_TRUE(auxData.size.value().hasException());
         if (info.isMaterialized()) {
           // We can't get the digest-size/blake3 of materialized directories
-          EXPECT_FALSE(metadata.digestSize.has_value());
+          EXPECT_FALSE(auxData.digestSize.has_value());
         } else {
           // We require a remote lookup to get the size/blake3 of directories
-          EXPECT_TRUE(metadata.digestSize.value().hasException());
+          EXPECT_TRUE(auxData.digestSize.value().hasException());
         }
-        EXPECT_EQ(metadata.type.value().value(), info.getTreeEntryType())
+        EXPECT_EQ(auxData.type.value().value(), info.getTreeEntryType())
             << " on path " << info.getLogPath();
       }
     }
@@ -955,7 +952,7 @@ TEST(VirtualInodeTest, getEntryAttributesAttributeError) {
       RelativePathPiece{"root_dirA"},
       mount.getEdenMount()->getObjectStore(),
       ObjectFetchContext::getNullContext(),
-      /*shouldFetchTreeMetadata=*/true);
+      /*shouldFetchTreeAuxData=*/true);
 
   builder.triggerError(
       "root_dirA/child1_fileA1", std::domain_error("fake error for testing"));

@@ -613,7 +613,7 @@ TEST_P(FsckTest, testTruncatedDirData) {
 
 TEST_P(FsckTest, testMissingDirData) {
   // This test doesn't work for SQLite or InMemory backed overlays because it
-  // directly manipluates the written overlay metadata data on disk to simulate
+  // directly manipluates the written overlay metadata on disk to simulate
   // file corruption, which is not applicable for sqlite backed overlays
   if (overlayType() == InodeCatalogType::Sqlite ||
       overlayType() == InodeCatalogType::InMemory) {

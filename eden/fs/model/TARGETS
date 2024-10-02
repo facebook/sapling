@@ -13,11 +13,11 @@ cpp_library(
     ],
     headers = [
         "Blob.h",
-        "BlobMetadata.h",
+        "BlobAuxData.h",
         "EntryAttributeFlags.h",
         "GlobEntry.h",
         "LocalFiles.h",
-        "TreeMetadata.h",
+        "TreeAuxData.h",
     ],
     deps = [
         "//eden/common/utils:enum",
@@ -61,9 +61,9 @@ cpp_library(
 cpp_library(
     name = "model-fwd",
     headers = [
+        "BlobAuxDataFwd.h",
         "BlobFwd.h",
-        "BlobMetadataFwd.h",
+        "TreeAuxDataFwd.h",
         "TreeFwd.h",
-        "TreeMetadataFwd.h",
     ],
 )

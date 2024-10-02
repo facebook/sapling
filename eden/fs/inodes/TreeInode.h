@@ -17,7 +17,7 @@
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/model/Tree.h"
-#include "eden/fs/model/TreeMetadataFwd.h"
+#include "eden/fs/model/TreeAuxDataFwd.h"
 
 namespace facebook::eden {
 
@@ -234,9 +234,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       const ObjectFetchContextPtr& fetchContext);
 
   /**
-   * Get the tree metadata for this inode.
+   * Get the tree aux data for this inode.
    */
-  ImmediateFuture<std::optional<TreeMetadata>> getTreeMetadata(
+  ImmediateFuture<std::optional<TreeAuxData>> getTreeAuxData(
       const ObjectFetchContextPtr& fetchContext);
 
   FileInodePtr symlink(
@@ -952,7 +952,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   };
 
   /**
-   * Only prefetch children metadata once.
+   * Only prefetch children aux data once.
    */
   std::atomic<PrefetchState> prefetchState_{NeverEnumerated};
 

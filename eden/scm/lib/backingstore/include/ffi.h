@@ -35,7 +35,7 @@ struct GetTreeBatchResolver {
 };
 
 /**
- * Resolver used in the processing of getTreeMetadataBatch requests.
+ * Resolver used in the processing of getTreeAuxDataBatch requests.
  */
 struct GetTreeAuxBatchResolver {
   explicit GetTreeAuxBatchResolver(
@@ -61,7 +61,7 @@ struct GetBlobBatchResolver {
 };
 
 /**
- * Resolver used in the processing of getBlobMetadataBatch requests.
+ * Resolver used in the processing of getBlobAuxDataBatch requests.
  */
 struct GetFileAuxBatchResolver {
   explicit GetFileAuxBatchResolver(

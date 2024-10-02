@@ -124,12 +124,11 @@ SemiFuture<BackingStore::GetTreeResult> FakeBackingStore::getTree(
       .semi();
 }
 
-SemiFuture<BackingStore::GetTreeMetaResult> FakeBackingStore::getTreeMetadata(
+SemiFuture<BackingStore::GetTreeAuxResult> FakeBackingStore::getTreeAuxData(
     const ObjectId& /*id*/,
     const ObjectFetchContextPtr& /*context*/) {
-  return folly::makeSemiFuture<BackingStore::GetTreeMetaResult>(
-      std::domain_error(
-          "GetTreeMetadata not implemented for FakeBackingStore"));
+  return folly::makeSemiFuture<BackingStore::GetTreeAuxResult>(
+      std::domain_error("GetTreeAuxData not implemented for FakeBackingStore"));
 }
 
 SemiFuture<BackingStore::GetBlobResult> FakeBackingStore::getBlob(
@@ -151,18 +150,18 @@ SemiFuture<BackingStore::GetBlobResult> FakeBackingStore::getBlob(
       .semi();
 }
 
-folly::SemiFuture<BackingStore::GetBlobMetaResult>
-FakeBackingStore::getBlobMetadata(
+folly::SemiFuture<BackingStore::GetBlobAuxResult>
+FakeBackingStore::getBlobAuxData(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
   {
     auto data = data_.wlock();
-    data->metadataLookups.push_back(id);
+    data->auxDataLookups.push_back(id);
   }
 
   auto fault = ImmediateFuture<folly::Unit>{std::in_place};
   if (serverState_) {
-    fault = serverState_->getFaultInjector().checkAsync("getBlobMetadata", id);
+    fault = serverState_->getFaultInjector().checkAsync("getBlobAuxData", id);
   }
 
   return std::move(fault)
@@ -170,8 +169,8 @@ FakeBackingStore::getBlobMetadata(
         return ImmediateFuture{getBlob(id, context)};
       })
       .thenValue([this](BackingStore::GetBlobResult result) {
-        return BackingStore::GetBlobMetaResult{
-            std::make_shared<BlobMetadataPtr::element_type>(
+        return BackingStore::GetBlobAuxResult{
+            std::make_shared<BlobAuxDataPtr::element_type>(
                 Hash20::sha1(result.blob->getContents()),
                 blake3Key_ ? Hash32::keyedBlake3(
                                  folly::ByteRange{folly::StringPiece{

@@ -108,28 +108,28 @@ void SaplingNativeBackingStore::getTreeBatch(
 }
 
 folly::Try<std::shared_ptr<TreeAuxData>>
-SaplingNativeBackingStore::getTreeMetadata(NodeId node, bool local) {
+SaplingNativeBackingStore::getTreeAuxData(NodeId node, bool local) {
   FetchMode fetch_mode = FetchMode::AllowRemote;
   if (local) {
     fetch_mode = FetchMode::LocalOnly;
   }
   XLOGF(
       DBG7,
-      "Importing tree metadata node={} from hgcache",
+      "Importing tree aux data node={} from hgcache",
       folly::hexlify(node));
   return folly::makeTryWith([&] {
-    auto metadata = sapling_backingstore_get_tree_aux(
+    auto auxData = sapling_backingstore_get_tree_aux(
         *store_.get(),
         rust::Slice<const uint8_t>{node.data(), node.size()},
         fetch_mode);
     XCHECK(
-        metadata.get(),
+        auxData.get(),
         "sapling_backingstore_get_tree_aux returned a nullptr, but did not throw an exception.");
-    return metadata;
+    return auxData;
   });
 }
 
-void SaplingNativeBackingStore::getTreeMetadataBatch(
+void SaplingNativeBackingStore::getTreeAuxDataBatch(
     SaplingRequestRange requests,
     sapling::FetchMode fetch_mode,
     folly::FunctionRef<void(size_t, folly::Try<std::shared_ptr<TreeAuxData>>)>
@@ -137,7 +137,7 @@ void SaplingNativeBackingStore::getTreeMetadataBatch(
   auto resolver = std::make_shared<GetTreeAuxBatchResolver>(std::move(resolve));
   auto count = requests.size();
 
-  XLOGF(DBG7, "Import tree metadatas with size: {}", count);
+  XLOGF(DBG7, "Import tree aux datas with size: {}", count);
 
   std::vector<Request> raw_requests;
   raw_requests.reserve(count);
@@ -205,28 +205,28 @@ void SaplingNativeBackingStore::getBlobBatch(
 }
 
 folly::Try<std::shared_ptr<FileAuxData>>
-SaplingNativeBackingStore::getBlobMetadata(NodeId node, bool local) {
+SaplingNativeBackingStore::getBlobAuxData(NodeId node, bool local) {
   FetchMode fetch_mode = FetchMode::AllowRemote;
   if (local) {
     fetch_mode = FetchMode::LocalOnly;
   }
   XLOGF(
       DBG7,
-      "Importing blob metadata node={} from hgcache",
+      "Importing blob aux data node={} from hgcache",
       folly::hexlify(node));
   return folly::makeTryWith([&] {
-    auto metadata = sapling_backingstore_get_file_aux(
+    auto auxData = sapling_backingstore_get_file_aux(
         *store_.get(),
         rust::Slice<const uint8_t>{node.data(), node.size()},
         fetch_mode);
     XCHECK(
-        metadata.get(),
+        auxData.get(),
         "sapling_backingstore_get_file_aux returned a nullptr, but did not throw an exception.");
-    return metadata;
+    return auxData;
   });
 }
 
-void SaplingNativeBackingStore::getBlobMetadataBatch(
+void SaplingNativeBackingStore::getBlobAuxDataBatch(
     SaplingRequestRange requests,
     sapling::FetchMode fetch_mode,
     folly::FunctionRef<void(size_t, folly::Try<std::shared_ptr<FileAuxData>>)>
@@ -234,7 +234,7 @@ void SaplingNativeBackingStore::getBlobMetadataBatch(
   auto resolver = std::make_shared<GetFileAuxBatchResolver>(std::move(resolve));
   auto count = requests.size();
 
-  XLOGF(DBG7, "Import blob metadatas with size: {}", count);
+  XLOGF(DBG7, "Import blob aux datas with size: {}", count);
 
   std::vector<Request> raw_requests;
   raw_requests.reserve(count);

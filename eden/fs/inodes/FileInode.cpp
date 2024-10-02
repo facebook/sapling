@@ -913,7 +913,7 @@ ImmediateFuture<Hash32> FileInode::getBlake3(
   XLOG(FATAL) << "FileInode in illegal state: " << state->tag;
 }
 
-ImmediateFuture<BlobMetadata> FileInode::getBlobMetadata(
+ImmediateFuture<BlobAuxData> FileInode::getBlobAuxData(
     const ObjectFetchContextPtr& fetchContext,
     bool blake3Required) {
   auto state = LockedState{this};
@@ -923,11 +923,11 @@ ImmediateFuture<BlobMetadata> FileInode::getBlobMetadata(
     case State::BLOB_NOT_LOADING:
     case State::BLOB_LOADING:
       // If a file is not materialized, it should have a hash value.
-      return getObjectStore().getBlobMetadata(
+      return getObjectStore().getBlobAuxData(
           state->nonMaterializedState.hash, fetchContext, blake3Required);
     case State::MATERIALIZED_IN_OVERLAY:
       return makeImmediateFutureWith([&] {
-        return BlobMetadata{
+        return BlobAuxData{
             state->materializedState.getSha1(*this),
             state->materializedState.getBlake3(
                 *this, getMount()->getEdenConfig()->blake3Key.getValue()),
@@ -1438,7 +1438,7 @@ void FileInode::materializeNow(
   // This function should only be called from the BLOB_NOT_LOADING state
   XDCHECK_EQ(state->tag, State::BLOB_NOT_LOADING);
 
-  // If the blob metadata is immediately available, use it to populate the SHA-1
+  // If the blob aux data is immediately available, use it to populate the SHA-1
   // value in the overlay for this file.
   // Since this uses state->nonMaterializedState.hash we perform this before
   // calling state.setMaterialized().

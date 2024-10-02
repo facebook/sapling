@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/store/SerializedBlobMetadata.h"
+#include "eden/fs/store/SerializedBlobAuxData.h"
 
 #include <optional>
 
@@ -16,23 +16,23 @@
 #include <cstddef>
 
 #include "eden/common/utils/Throw.h"
-#include "eden/fs/model/BlobMetadata.h"
+#include "eden/fs/model/BlobAuxData.h"
 #include "eden/fs/model/Hash.h"
 
 namespace facebook::eden {
 
-SerializedBlobMetadata::SerializedBlobMetadata(const BlobMetadata& metadata) {
-  serialize(metadata.sha1, metadata.blake3, metadata.size);
+SerializedBlobAuxData::SerializedBlobAuxData(const BlobAuxData& auxData) {
+  serialize(auxData.sha1, auxData.blake3, auxData.size);
 }
 
-SerializedBlobMetadata::SerializedBlobMetadata(
+SerializedBlobAuxData::SerializedBlobAuxData(
     const Hash20& sha1,
     const std::optional<Hash32>& blake3,
     uint64_t blobSize) {
   serialize(sha1, blake3, blobSize);
 }
 
-folly::ByteRange SerializedBlobMetadata::slice() const {
+folly::ByteRange SerializedBlobAuxData::slice() const {
   return folly::ByteRange{dataAndSize_.first.get(), dataAndSize_.second};
 }
 
@@ -54,12 +54,12 @@ write(const uint8_t* src, size_t len, uint8_t* dest, size_t& off) {
   off += len;
 }
 
-BlobMetadataPtr unsliceLegacy(folly::ByteRange bytes) {
+BlobAuxDataPtr unsliceLegacy(folly::ByteRange bytes) {
   uint64_t blobSizeBE;
   memcpy(&blobSizeBE, bytes.data(), sizeof(uint64_t));
   bytes.advance(sizeof(uint64_t));
   auto contentsHash = Hash20{bytes};
-  return std::make_shared<BlobMetadataPtr::element_type>(
+  return std::make_shared<BlobAuxDataPtr::element_type>(
       contentsHash, std::nullopt, folly::Endian::big(blobSizeBE));
 }
 
@@ -70,7 +70,7 @@ void readHash(
     Hash<SIZE>& hash) {
   if (bytes.size() < SIZE) {
     throwf<std::invalid_argument>(
-        "Blob metadata for {} had unexpected size {}. Could not deserialize the hash of size {}.",
+        "Blob auxData for {} had unexpected size {}. Could not deserialize the hash of size {}.",
         blobID,
         bytes.size(),
         SIZE);
@@ -85,7 +85,7 @@ std::pair<Hash20, std::optional<Hash32>>
 unsliceV1(const ObjectId& blobID, uint8_t usedHashes, folly::ByteRange& bytes) {
   if ((usedHashes & static_cast<uint8_t>(HashType::SHA1)) == 0) {
     throwf<std::invalid_argument>(
-        "Blob metadata for {} doesn't have SHA1 hash which is mandatory. Could not deserialize.",
+        "Blob auxData for {} doesn't have SHA1 hash which is mandatory. Could not deserialize.",
         blobID);
   }
 
@@ -101,12 +101,12 @@ unsliceV1(const ObjectId& blobID, uint8_t usedHashes, folly::ByteRange& bytes) {
   return {std::move(sha1), std::move(blake3)};
 }
 
-BlobMetadataPtr unslice(const ObjectId& blobID, folly::ByteRange bytes) {
+BlobAuxDataPtr unslice(const ObjectId& blobID, folly::ByteRange bytes) {
   // min required size is 3
   // version + size + used_hashes
   if (bytes.size() < 3 * sizeof(uint8_t)) {
     throwf<std::invalid_argument>(
-        "Blob metadata for {} had unexpected size {}. Could not deserialize.",
+        "Blob auxData for {} had unexpected size {}. Could not deserialize.",
         blobID,
         bytes.size());
   }
@@ -118,7 +118,7 @@ BlobMetadataPtr unslice(const ObjectId& blobID, folly::ByteRange bytes) {
 
   if (version > kCurrentVersion || version == 0) {
     throwf<std::invalid_argument>(
-        "Blob metadata for {} had unsupported version {}, expected version should be <= to {}. Could not deserialize.",
+        "Blob auxData for {} had unsupported version {}, expected version should be <= to {}. Could not deserialize.",
         blobID,
         version,
         kCurrentVersion);
@@ -149,7 +149,7 @@ BlobMetadataPtr unslice(const ObjectId& blobID, folly::ByteRange bytes) {
     case kCurrentVersion: {
       auto [sha1, maybeBlake3] =
           unsliceV1(blobID, usedHashesExpected.value(), bytes);
-      return std::make_shared<BlobMetadataPtr::element_type>(
+      return std::make_shared<BlobAuxDataPtr::element_type>(
           std::move(sha1), std::move(maybeBlake3), blobSize);
     }
     default:
@@ -163,7 +163,7 @@ BlobMetadataPtr unslice(const ObjectId& blobID, folly::ByteRange bytes) {
 }
 } // namespace
 
-BlobMetadataPtr SerializedBlobMetadata::parse(
+BlobAuxDataPtr SerializedBlobAuxData::parse(
     const ObjectId& blobID,
     const StoreResult& result) {
   auto bytes = result.bytes();
@@ -177,7 +177,7 @@ BlobMetadataPtr SerializedBlobMetadata::parse(
   return unslice(blobID, bytes);
 }
 
-void SerializedBlobMetadata::serialize(
+void SerializedBlobAuxData::serialize(
     const Hash20& sha1,
     const std::optional<Hash32>& blake3,
     uint64_t blobSize) {

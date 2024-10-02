@@ -177,8 +177,8 @@ class FakeBackingStore final : public BackingStore {
     return 0;
   }
 
-  std::vector<ObjectId> getMetadataLookups() const {
-    return data_.rlock()->metadataLookups;
+  std::vector<ObjectId> getAuxDataLookups() const {
+    return data_.rlock()->auxDataLookups;
   }
 
  private:
@@ -193,7 +193,7 @@ class FakeBackingStore final : public BackingStore {
 
     std::unordered_map<RootId, size_t> commitAccessCounts;
     std::unordered_map<ObjectId, size_t> accessCounts;
-    std::vector<ObjectId> metadataLookups;
+    std::vector<ObjectId> auxDataLookups;
   };
 
   static Tree::container buildTreeEntries(
@@ -221,13 +221,13 @@ class FakeBackingStore final : public BackingStore {
   folly::SemiFuture<GetTreeResult> getTree(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
-  folly::SemiFuture<GetTreeMetaResult> getTreeMetadata(
+  folly::SemiFuture<GetTreeAuxResult> getTreeAuxData(
       const ObjectId& /*id*/,
       const ObjectFetchContextPtr& /*context*/) override;
   folly::SemiFuture<GetBlobResult> getBlob(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
-  folly::SemiFuture<GetBlobMetaResult> getBlobMetadata(
+  folly::SemiFuture<GetBlobAuxResult> getBlobAuxData(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
   ImmediateFuture<GetGlobFilesResult> getGlobFiles(

@@ -11,7 +11,7 @@
 
 namespace facebook::eden {
 
-class TreeMetadata;
-using TreeMetadataPtr = std::shared_ptr<const TreeMetadata>;
+class TreeAuxData;
+using TreeAuxDataPtr = std::shared_ptr<const TreeAuxData>;
 
 } // namespace facebook::eden

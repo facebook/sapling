@@ -26,7 +26,7 @@ struct Unit;
 namespace facebook::eden {
 
 class Blob;
-class BlobMetadata;
+class BlobAuxData;
 class ObjectId;
 class Hash20;
 class ObjectFetchContext;

@@ -15,7 +15,7 @@
 #include "eden/common/utils/FileOffset.h"
 #include "eden/fs/inodes/CacheHint.h"
 #include "eden/fs/inodes/InodeBase.h"
-#include "eden/fs/model/BlobMetadata.h"
+#include "eden/fs/model/BlobAuxData.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/BlobCache.h"
 #include "eden/fs/store/IObjectStore.h"
@@ -229,7 +229,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
 
   ImmediateFuture<Hash32> getBlake3(const ObjectFetchContextPtr& fetchContext);
 
-  ImmediateFuture<BlobMetadata> getBlobMetadata(
+  ImmediateFuture<BlobAuxData> getBlobAuxData(
       const ObjectFetchContextPtr& fetchContext,
       bool blake3Required = false);
 

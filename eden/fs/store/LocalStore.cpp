@@ -20,7 +20,7 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/git/GitBlob.h"
 #include "eden/fs/model/git/GitTree.h"
-#include "eden/fs/store/SerializedBlobMetadata.h"
+#include "eden/fs/store/SerializedBlobAuxData.h"
 #include "eden/fs/store/StoreResult.h"
 #include "eden/fs/telemetry/EdenStats.h"
 
@@ -166,26 +166,26 @@ ImmediateFuture<BlobPtr> LocalStore::getBlob(const ObjectId& id) const {
           });
 }
 
-ImmediateFuture<BlobMetadataPtr> LocalStore::getBlobMetadata(
+ImmediateFuture<BlobAuxDataPtr> LocalStore::getBlobAuxData(
     const ObjectId& id) const {
-  DurationScope<EdenStats> stat{stats_, &LocalStoreStats::getBlobMetadata};
-  return getImmediateFuture(KeySpace::BlobMetaDataFamily, id)
+  DurationScope<EdenStats> stat{stats_, &LocalStoreStats::getBlobAuxData};
+  return getImmediateFuture(KeySpace::BlobAuxDataFamily, id)
       .thenValue(
           [id, stat = std::move(stat), stats = stats_.copy()](
-              StoreResult&& data) -> BlobMetadataPtr {
+              StoreResult&& data) -> BlobAuxDataPtr {
             if (data.isValid()) {
-              return parse<const BlobMetadata>(
+              return parse<const BlobAuxData>(
                   id,
-                  "BlobMetadata",
+                  "BlobAuxData",
                   stats,
-                  &LocalStoreStats::getBlobMetadataSuccess,
-                  &LocalStoreStats::getBlobMetadataError,
+                  &LocalStoreStats::getBlobAuxDataSuccess,
+                  &LocalStoreStats::getBlobAuxDataError,
                   [&id, &data]() {
-                    return SerializedBlobMetadata::parse(id, data);
+                    return SerializedBlobAuxData::parse(id, data);
                   });
             }
 
-            stats->increment(&LocalStoreStats::getBlobMetadataFailure);
+            stats->increment(&LocalStoreStats::getBlobAuxDataFailure);
             return nullptr;
           });
 }
@@ -223,22 +223,22 @@ void LocalStore::putBlob(const ObjectId& id, const Blob* blob) {
   batch->flush();
 }
 
-void LocalStore::putBlobMetadata(
+void LocalStore::putBlobAuxData(
     const ObjectId& id,
-    const BlobMetadata& metadata) {
+    const BlobAuxData& auxData) {
   auto hashBytes = id.getBytes();
-  SerializedBlobMetadata metadataBytes(metadata);
+  SerializedBlobAuxData auxDataBytes(auxData);
 
-  put(KeySpace::BlobMetaDataFamily, hashBytes, metadataBytes.slice());
+  put(KeySpace::BlobAuxDataFamily, hashBytes, auxDataBytes.slice());
 }
 
-void LocalStore::WriteBatch::putBlobMetadata(
+void LocalStore::WriteBatch::putBlobAuxData(
     const ObjectId& id,
-    const BlobMetadata& metadata) {
+    const BlobAuxData& auxData) {
   auto hashBytes = id.getBytes();
-  SerializedBlobMetadata metadataBytes(metadata);
+  SerializedBlobAuxData auxDataBytes(auxData);
 
-  put(KeySpace::BlobMetaDataFamily, hashBytes, metadataBytes.slice());
+  put(KeySpace::BlobAuxDataFamily, hashBytes, auxDataBytes.slice());
 }
 
 void LocalStore::put(

@@ -54,8 +54,8 @@ struct HgImportTraceEvent : TraceEventBase {
   enum ResourceType : uint8_t {
     BLOB,
     TREE,
-    BLOBMETA,
-    TREEMETA,
+    BLOB_AUX,
+    TREE_AUX,
   };
 
   static HgImportTraceEvent queue(
@@ -192,23 +192,23 @@ class SaplingBackingStore final : public BackingStore {
   enum SaplingImportObject {
     BLOB,
     TREE,
-    BLOBMETA,
-    TREEMETA,
+    BLOB_AUX,
+    TREE_AUX,
     BATCHED_BLOB,
     BATCHED_TREE,
-    BATCHED_BLOBMETA,
-    BATCHED_TREEMETA,
+    BATCHED_BLOB_AUX,
+    BATCHED_TREE_AUX,
     PREFETCH
   };
   constexpr static std::array<SaplingImportObject, 9> saplingImportObjects{
       SaplingImportObject::BLOB,
       SaplingImportObject::TREE,
-      SaplingImportObject::BLOBMETA,
-      SaplingImportObject::TREEMETA,
+      SaplingImportObject::BLOB_AUX,
+      SaplingImportObject::TREE_AUX,
       SaplingImportObject::BATCHED_BLOB,
       SaplingImportObject::BATCHED_TREE,
-      SaplingImportObject::BATCHED_BLOBMETA,
-      SaplingImportObject::BATCHED_TREEMETA,
+      SaplingImportObject::BATCHED_BLOB_AUX,
+      SaplingImportObject::BATCHED_TREE_AUX,
       SaplingImportObject::PREFETCH};
 
   static folly::StringPiece stringOfSaplingImportObject(
@@ -405,19 +405,19 @@ class SaplingBackingStore final : public BackingStore {
       const HgProxyHash& proxyHash,
       const ObjectFetchContextPtr& context);
 
-  folly::SemiFuture<GetTreeMetaResult> getTreeMetadata(
+  folly::SemiFuture<GetTreeAuxResult> getTreeAuxData(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
 
   /**
-   * Create a tree metadata fetch request and enqueue it to the
+   * Create a tree aux data fetch request and enqueue it to the
    * SaplingImportRequestQueue
    *
    * For latency sensitive context, the caller is responsible for checking if
-   * the tree metadata is present locally, as this function will always push
+   * the tree aux data is present locally, as this function will always push
    * the request at the end of the queue.
    */
-  ImmediateFuture<GetTreeMetaResult> getTreeMetadataEnqueue(
+  ImmediateFuture<GetTreeAuxResult> getTreeAuxDataEnqueue(
       const ObjectId& id,
       const HgProxyHash& proxyHash,
       const ObjectFetchContextPtr& context);
@@ -427,14 +427,14 @@ class SaplingBackingStore final : public BackingStore {
    *
    * This function returns when all the aux data have been fetched.
    */
-  void getTreeMetadataBatch(
+  void getTreeAuxDataBatch(
       const ImportRequestsList& requests,
       sapling::FetchMode fetch_mode);
 
   /**
-   * Reads tree metadata from hg cache.
+   * Reads tree aux data from hg cache.
    */
-  folly::Try<TreeMetadataPtr> getLocalTreeMetadata(const HgProxyHash& id);
+  folly::Try<TreeAuxDataPtr> getLocalTreeAuxData(const HgProxyHash& id);
 
   folly::SemiFuture<GetBlobResult> getBlob(
       const ObjectId& id,
@@ -495,19 +495,19 @@ class SaplingBackingStore final : public BackingStore {
     return getBlobFromBackingStore(hgInfo, sapling::FetchMode::RemoteOnly);
   }
 
-  folly::SemiFuture<GetBlobMetaResult> getBlobMetadata(
+  folly::SemiFuture<GetBlobAuxResult> getBlobAuxData(
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
 
   /**
-   * Create a blob metadata fetch request and enqueue it to the
+   * Create a blob aux data fetch request and enqueue it to the
    * SaplingImportRequestQueue
    *
    * For latency sensitive context, the caller is responsible for checking if
-   * the blob metadata is present locally, as this function will always push
+   * the blob aux data is present locally, as this function will always push
    * the request at the end of the queue.
    */
-  ImmediateFuture<GetBlobMetaResult> getBlobMetadataEnqueue(
+  ImmediateFuture<GetBlobAuxResult> getBlobAuxDataEnqueue(
       const ObjectId& id,
       const HgProxyHash& proxyHash,
       const ObjectFetchContextPtr& context);
@@ -517,14 +517,14 @@ class SaplingBackingStore final : public BackingStore {
    *
    * This function returns when all the aux data have been fetched.
    */
-  void getBlobMetadataBatch(
+  void getBlobAuxDataBatch(
       const ImportRequestsList& requests,
       sapling::FetchMode fetch_mode);
 
   /**
-   * Reads blob metadata from hg cache.
+   * Reads blob aux data from hg cache.
    */
-  folly::Try<BlobMetadataPtr> getLocalBlobMetadata(const HgProxyHash& id);
+  folly::Try<BlobAuxDataPtr> getLocalBlobAuxData(const HgProxyHash& id);
 
   FOLLY_NODISCARD virtual folly::SemiFuture<folly::Unit> prefetchBlobs(
       ObjectIdRange ids,
@@ -534,9 +534,9 @@ class SaplingBackingStore final : public BackingStore {
       std::vector<std::shared_ptr<SaplingImportRequest>>&& requests);
   void processTreeImportRequests(
       std::vector<std::shared_ptr<SaplingImportRequest>>&& requests);
-  void processBlobMetaImportRequests(
+  void processBlobAuxImportRequests(
       std::vector<std::shared_ptr<SaplingImportRequest>>&& requests);
-  void processTreeMetaImportRequests(
+  void processTreeAuxImportRequests(
       std::vector<std::shared_ptr<SaplingImportRequest>>&& requests);
 
   ImmediateFuture<GetGlobFilesResult> getGlobFiles(
@@ -668,20 +668,18 @@ class SaplingBackingStore final : public BackingStore {
   // Track metrics for queued imports
   mutable RequestMetricsScope::LockedRequestWatchList pendingImportBlobWatches_;
   mutable RequestMetricsScope::LockedRequestWatchList
-      pendingImportBlobMetaWatches_;
+      pendingImportBlobAuxWatches_;
   mutable RequestMetricsScope::LockedRequestWatchList pendingImportTreeWatches_;
   mutable RequestMetricsScope::LockedRequestWatchList
-      pendingImportTreeMetaWatches_;
+      pendingImportTreeAuxWatches_;
   mutable RequestMetricsScope::LockedRequestWatchList
       pendingImportPrefetchWatches_;
 
   // Track metrics for imports currently fetching data from hg
   mutable RequestMetricsScope::LockedRequestWatchList liveImportBlobWatches_;
   mutable RequestMetricsScope::LockedRequestWatchList liveImportTreeWatches_;
-  mutable RequestMetricsScope::LockedRequestWatchList
-      liveImportBlobMetaWatches_;
-  mutable RequestMetricsScope::LockedRequestWatchList
-      liveImportTreeMetaWatches_;
+  mutable RequestMetricsScope::LockedRequestWatchList liveImportBlobAuxWatches_;
+  mutable RequestMetricsScope::LockedRequestWatchList liveImportTreeAuxWatches_;
   mutable RequestMetricsScope::LockedRequestWatchList
       liveImportPrefetchWatches_;
 
@@ -689,9 +687,9 @@ class SaplingBackingStore final : public BackingStore {
   mutable RequestMetricsScope::LockedRequestWatchList liveBatchedBlobWatches_;
   mutable RequestMetricsScope::LockedRequestWatchList liveBatchedTreeWatches_;
   mutable RequestMetricsScope::LockedRequestWatchList
-      liveBatchedBlobMetaWatches_;
+      liveBatchedBlobAuxWatches_;
   mutable RequestMetricsScope::LockedRequestWatchList
-      liveBatchedTreeMetaWatches_;
+      liveBatchedTreeAuxWatches_;
 
   std::unique_ptr<SaplingBackingStoreOptions> runtimeOptions_;
 

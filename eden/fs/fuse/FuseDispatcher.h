@@ -377,7 +377,7 @@ class FuseDispatcher {
    * Ensure directory content changes are flushed to disk.
    *
    * If the datasync parameter is true, then only the directory contents should
-   * be flushed, not the metadata.
+   * be flushed, not the aux data.
    */
   FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit> fsyncdir(
       InodeNumber ino,

@@ -24,7 +24,7 @@ class Try;
 
 namespace facebook::eden {
 class Blob;
-class BlobMetadata;
+class BlobAuxData;
 
 struct DataFetchOriginFlags
     : OptionSet<DataFetchOriginFlags, std::underlying_type_t<DataFetchOrigin>> {
@@ -87,22 +87,22 @@ ScmTreeWithOrigin transformToTreeFromOrigin(
 
 namespace detail {
 /**
- * Our various methods to get blob metadata through out EdenFS
- * return different types. In fact, no blob metadata fetching method returns the
- * same type as another :( `transformToTryMetadata` converts some BlobMetadata
- * type into a Try<BlobMetadata>. this is an intermediary for converting the
- * data into our thrift type (BlobMetadataWithOrigin).
+ * Our various methods to get blob aux data through out EdenFS
+ * return different types. In fact, no blob aux data fetching method returns the
+ * same type as another :( `transformToTryAuxData` converts some BlobAuxData
+ * type into a Try<BlobAuxData>. this is an intermediary for converting the
+ * data into our thrift type (BlobAuxDataWithOrigin).
  */
 
 template <typename T>
-folly::Try<BlobMetadata> transformToTryMetadata(
-    T metadata,
+folly::Try<BlobAuxData> transformToTryAuxData(
+    T auxData,
     std::shared_ptr<EdenMount> edenMount,
     ObjectId id) {
-  if (metadata) {
-    return folly::Try<BlobMetadata>{std::move(*metadata)};
+  if (auxData) {
+    return folly::Try<BlobAuxData>{std::move(*auxData)};
   }
-  return folly::Try<BlobMetadata>{newEdenError(
+  return folly::Try<BlobAuxData>{newEdenError(
       ENOENT,
       EdenErrorType::POSIX_ERROR,
       "no blob found for id ",
@@ -110,7 +110,7 @@ folly::Try<BlobMetadata> transformToTryMetadata(
 }
 
 // [[maybe_unused]]: This specialization is used and nessecary, but clang's
-// maybe unused thing thinks that the templated transformToTryMetadata above
+// maybe unused thing thinks that the templated transformToTryAuxData above
 // will over shadow this specialization. So clang will think this is unused.
 // Apparently, clang does not bother trying to instantate a templated thing.
 // So its prone to false positive "unused" warnings with tempated stuff.
@@ -118,27 +118,27 @@ folly::Try<BlobMetadata> transformToTryMetadata(
 // https://stackoverflow.com/questions/66986718/c-clang-emit-warning-about-unused-template-variable)
 // Maybe concepts in C++20 will clear this up, but we aren't there yet.
 template <>
-[[maybe_unused]] folly::Try<BlobMetadata> transformToTryMetadata(
-    folly::Try<std::optional<BlobMetadata>> metadata,
+[[maybe_unused]] folly::Try<BlobAuxData> transformToTryAuxData(
+    folly::Try<std::optional<BlobAuxData>> auxData,
     std::shared_ptr<EdenMount> edenMount,
     ObjectId id);
 } // namespace detail
 
 /**
- * Transforms BlobMetadata in some format into a BlobMetadataWithOrigin.
+ * Transforms BlobAuxData in some format into a BlobMetadataWithOrigin.
  */
 template <typename T>
 BlobMetadataWithOrigin transformToBlobMetadataFromOrigin(
     std::shared_ptr<EdenMount> edenMount,
     ObjectId id,
-    T raw_metadata,
+    T raw_auxData,
     DataFetchOrigin origin) {
-  auto metadata =
-      detail::transformToTryMetadata(std::move(raw_metadata), edenMount, id);
-  return transformToBlobMetadataFromOrigin(std::move(metadata), origin);
+  auto auxData =
+      detail::transformToTryAuxData(std::move(raw_auxData), edenMount, id);
+  return transformToBlobMetadataFromOrigin(std::move(auxData), origin);
 }
 
 BlobMetadataWithOrigin transformToBlobMetadataFromOrigin(
-    folly::Try<BlobMetadata> metadata,
+    folly::Try<BlobAuxData> auxData,
     DataFetchOrigin origin);
 } // namespace facebook::eden

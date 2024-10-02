@@ -19,7 +19,7 @@
 #include "eden/fs/model/ObjectId.h"
 
 namespace facebook::eden {
-class BlobMetadata;
+class BlobAuxData;
 
 /**
  * Represents the allowed types of entries in version control trees.

@@ -11,7 +11,7 @@
 
 namespace facebook::eden {
 
-class BlobMetadata;
-using BlobMetadataPtr = std::shared_ptr<const BlobMetadata>;
+class BlobAuxData;
+using BlobAuxDataPtr = std::shared_ptr<const BlobAuxData>;
 
 } // namespace facebook::eden

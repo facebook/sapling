@@ -32,7 +32,7 @@ namespace facebook::eden {
 
 class Hash20;
 class Hash32;
-class BlobMetadata;
+class BlobAuxData;
 class EdenMount;
 class EdenServer;
 class TreeInode;

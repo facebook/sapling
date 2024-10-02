@@ -15,11 +15,11 @@
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/RefPtr.h"
+#include "eden/fs/model/BlobAuxDataFwd.h"
 #include "eden/fs/model/BlobFwd.h"
-#include "eden/fs/model/BlobMetadataFwd.h"
 #include "eden/fs/model/ObjectId.h"
+#include "eden/fs/model/TreeAuxDataFwd.h"
 #include "eden/fs/model/TreeFwd.h"
-#include "eden/fs/model/TreeMetadataFwd.h"
 #include "eden/fs/store/KeySpace.h"
 
 namespace facebook::eden {
@@ -150,7 +150,7 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
    * Returns std::nullopt if this key is not present in the store, or throws an
    * exception on error.
    */
-  ImmediateFuture<BlobMetadataPtr> getBlobMetadata(const ObjectId& id) const;
+  ImmediateFuture<BlobAuxDataPtr> getBlobAuxData(const ObjectId& id) const;
 
   /**
    * Test whether the key is stored.
@@ -169,9 +169,9 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
   void putBlob(const ObjectId& id, const Blob* blob);
 
   /**
-   * Store a blob metadata.
+   * Store a blob aux data.
    */
-  void putBlobMetadata(const ObjectId& id, const BlobMetadata& metadata);
+  void putBlobAuxData(const ObjectId& id, const BlobAuxData& auxData);
 
   /**
    * Put arbitrary data in the store.
@@ -208,9 +208,9 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
     void putBlob(const ObjectId& id, const Blob* blob);
 
     /**
-     * Store a blob metadata.
+     * Store a blob aux data.
      */
-    void putBlobMetadata(const ObjectId& id, const BlobMetadata& metadata);
+    void putBlobAuxData(const ObjectId& id, const BlobAuxData& auxData);
 
     /**
      * Put arbitrary data in the store.

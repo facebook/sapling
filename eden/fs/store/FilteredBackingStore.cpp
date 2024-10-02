@@ -320,8 +320,8 @@ FilteredBackingStore::getTreeEntryForObjectId(
       filteredId.object(), treeEntryType, context);
 }
 
-folly::SemiFuture<BackingStore::GetTreeMetaResult>
-FilteredBackingStore::getTreeMetadata(
+folly::SemiFuture<BackingStore::GetTreeAuxResult>
+FilteredBackingStore::getTreeAuxData(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
   // TODO(cuev): This is wrong. This is only correct for the case where the
@@ -329,7 +329,7 @@ FilteredBackingStore::getTreeMetadata(
   // what the optimal behavior of this function is (i.e. if it should respect
   // filters or not).
   auto filteredId = FilteredObjectId::fromObjectId(id);
-  return backingStore_->getTreeMetadata(filteredId.object(), context);
+  return backingStore_->getTreeAuxData(filteredId.object(), context);
 }
 
 folly::SemiFuture<BackingStore::GetTreeResult> FilteredBackingStore::getTree(
@@ -357,12 +357,12 @@ folly::SemiFuture<BackingStore::GetTreeResult> FilteredBackingStore::getTree(
       });
 }
 
-folly::SemiFuture<BackingStore::GetBlobMetaResult>
-FilteredBackingStore::getBlobMetadata(
+folly::SemiFuture<BackingStore::GetBlobAuxResult>
+FilteredBackingStore::getBlobAuxData(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) {
   auto filteredId = FilteredObjectId::fromObjectId(id);
-  return backingStore_->getBlobMetadata(filteredId.object(), context);
+  return backingStore_->getBlobAuxData(filteredId.object(), context);
 }
 
 folly::SemiFuture<BackingStore::GetBlobResult> FilteredBackingStore::getBlob(

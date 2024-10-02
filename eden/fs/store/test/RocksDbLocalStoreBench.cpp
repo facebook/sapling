@@ -11,14 +11,14 @@
 #include "eden/common/utils/benchharness/Bench.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
-#include "eden/fs/model/BlobMetadata.h"
+#include "eden/fs/model/BlobAuxData.h"
 #include "eden/fs/store/RocksDbLocalStore.h"
 #include "eden/fs/telemetry/EdenStats.h"
 
 namespace {
 using namespace facebook::eden;
 
-void getBlobMetadata(benchmark::State& st) {
+void getBlobAuxData(benchmark::State& st) {
   auto tempDir = makeTempDir();
   FaultInjector faultInjector{false};
   auto edenStats = makeRefPtr<EdenStats>();
@@ -42,14 +42,14 @@ void getBlobMetadata(benchmark::State& st) {
     ids.emplace_back(fmt::format("{:08x}", i));
   }
 
-  std::vector<BlobMetadata> metadata;
-  metadata.reserve(N);
+  std::vector<BlobAuxData> auxData;
+  auxData.reserve(N);
   for (size_t i = 0; i < N; ++i) {
-    metadata.push_back(BlobMetadata{Hash20{}, std::nullopt, i});
+    auxData.push_back(BlobAuxData{Hash20{}, std::nullopt, i});
   }
 
   for (size_t i = 0; i < N; ++i) {
-    store->putBlobMetadata(ids[i], metadata[i]);
+    store->putBlobAuxData(ids[i], auxData[i]);
   }
 
   // Reopen the database to exercise the read-from-disk path.
@@ -64,13 +64,13 @@ void getBlobMetadata(benchmark::State& st) {
 
   size_t i = 0;
   for (auto _ : st) {
-    benchmark::DoNotOptimize(store->getBlobMetadata(ids[i]).get());
+    benchmark::DoNotOptimize(store->getBlobAuxData(ids[i]).get());
     if (++i == N) {
       i = 0;
     }
   }
 }
-BENCHMARK(getBlobMetadata);
+BENCHMARK(getBlobAuxData);
 
 } // namespace
 

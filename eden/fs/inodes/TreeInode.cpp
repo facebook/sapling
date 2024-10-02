@@ -44,8 +44,8 @@
 #include "eden/fs/inodes/TreePrefetchLease.h"
 #include "eden/fs/journal/Journal.h"
 #include "eden/fs/model/Tree.h"
+#include "eden/fs/model/TreeAuxData.h"
 #include "eden/fs/model/TreeEntry.h"
-#include "eden/fs/model/TreeMetadata.h"
 #include "eden/fs/model/git/GitIgnoreStack.h"
 #include "eden/fs/nfs/NfsDirList.h"
 #include "eden/fs/nfs/Nfsd3.h"
@@ -1248,18 +1248,18 @@ ImmediateFuture<std::optional<uint64_t>> TreeInode::getDigestSize(
   return ImmediateFuture<std::optional<uint64_t>>{std::nullopt};
 }
 
-ImmediateFuture<std::optional<TreeMetadata>> TreeInode::getTreeMetadata(
+ImmediateFuture<std::optional<TreeAuxData>> TreeInode::getTreeAuxData(
     const ObjectFetchContextPtr& fetchContext) {
   auto state = contents_.rlock();
 
   if (!state->isMaterialized()) {
-    // If a tree is not materialized, it should have metadata.
+    // If a tree is not materialized, it should have aux data.
     return getObjectStore()
-        .getTreeMetadata(state->treeHash.value(), fetchContext)
+        .getTreeAuxData(state->treeHash.value(), fetchContext)
         .thenValue(
-            [](TreeMetadata treeMeta) { return std::make_optional(treeMeta); });
+            [](TreeAuxData treeAux) { return std::make_optional(treeAux); });
   }
-  return ImmediateFuture<std::optional<TreeMetadata>>{std::nullopt};
+  return ImmediateFuture<std::optional<TreeAuxData>>{std::nullopt};
 }
 
 FileInodePtr TreeInode::symlink(
@@ -2330,7 +2330,7 @@ bool TreeInode::readdirImpl(
   // It's very common for userspace to readdir() a directory to completion and
   // serially stat() every entry. Since stat() returns a file's size and a
   // directory's entry count in the st_nlink field, treat readdir() as a signal
-  // that we may want to prefetch metadata for all children.
+  // that we may want to prefetch aux data for all children.
 #ifndef _WIN32
   // TODO: enable readdir prefetching on Windows
   considerReaddirPrefetch(context);
@@ -4676,7 +4676,7 @@ void TreeInode::doPrefetch(
   // doPrefetch() is called by stat(), under the assumption that a readdir()
   // followed by stat() on a child will precede stat() calls on the remainder of
   // the children. For example, `ls -l` or `find -ls`. To optimize that common
-  // situation, load trees and blob metadata in parallel here.
+  // situation, load trees and blob aux data in parallel here.
 
   auto prefetchLease =
       getMount()->tryStartTreePrefetch(inodePtrFromThis(), context);

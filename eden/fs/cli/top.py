@@ -165,12 +165,12 @@ class RequestStage(Enum):
 class ImportObject(Enum):
     BLOB = "blob"
     TREE = "tree"
-    BLOBMETA = "blobmeta"
-    TREEMETA = "treemeta"
+    BLOB_AUX = "blob_aux"
+    TREE_AUX = "tree_aux"
     BATCHED_BLOB = "batched_blob"
     BATCHED_TREE = "batched_tree"
-    BATCHED_BLOBMETA = "batched_blobmeta"
-    BATCHED_TREEMETA = "batched_treemeta"
+    BATCHED_BLOB_AUX = "batched_blob_aux"
+    BATCHED_TREE_META = "batched_tree_aux"
     PREFETCH = "prefetch"
 
 

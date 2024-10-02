@@ -145,13 +145,13 @@ ImmediateFuture<BackingStore::GetRootTreeResult> GitBackingStore::getRootTree(
   return GetRootTreeResult{getTreeImpl(treeID), treeID};
 }
 
-folly::SemiFuture<BackingStore::GetTreeMetaResult>
-GitBackingStore::getTreeMetadata(
+folly::SemiFuture<BackingStore::GetTreeAuxResult>
+GitBackingStore::getTreeAuxData(
     const ObjectId& /*id*/,
     const ObjectFetchContextPtr& /*context*/) {
-  return folly::makeSemiFuture<BackingStore::GetTreeMetaResult>(
+  return folly::makeSemiFuture<BackingStore::GetTreeAuxResult>(
       std::domain_error(
-          "getTreeMetadata is not implemented for GitBackingStores"));
+          "getTreeAuxData is not implemented for GitBackingStores"));
 }
 
 SemiFuture<BackingStore::GetTreeResult> GitBackingStore::getTree(
@@ -257,11 +257,9 @@ BlobPtr GitBackingStore::getBlobImpl(const ObjectId& id) {
   return std::make_shared<BlobPtr::element_type>(std::move(buf));
 }
 
-folly::SemiFuture<BackingStore::GetBlobMetaResult>
-GitBackingStore::getBlobMetadata(
-    const ObjectId&,
-    const ObjectFetchContextPtr&) {
-  return BackingStore::GetBlobMetaResult{
+folly::SemiFuture<BackingStore::GetBlobAuxResult>
+GitBackingStore::getBlobAuxData(const ObjectId&, const ObjectFetchContextPtr&) {
+  return BackingStore::GetBlobAuxResult{
       nullptr, ObjectFetchContext::Origin::NotFetched};
 }
 

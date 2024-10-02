@@ -64,14 +64,14 @@ void BackingStoreLogger::logImport(
     case ObjectFetchContext::ObjectType::Blob:
       typeString = "Blob";
       break;
-    case ObjectFetchContext::ObjectType::BlobMetadata:
-      typeString = "Blob Metadata";
+    case ObjectFetchContext::ObjectType::BlobAuxData:
+      typeString = "Blob Aux Data";
       break;
     case ObjectFetchContext::ObjectType::Tree:
       typeString = "Tree";
       break;
-    case ObjectFetchContext::ObjectType::TreeMetadata:
-      typeString = "Tree Metadata";
+    case ObjectFetchContext::ObjectType::TreeAuxData:
+      typeString = "Tree Aux Data";
       break;
     case ObjectFetchContext::RootTree:
       typeString = "Root Tree";

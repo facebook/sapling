@@ -11,7 +11,7 @@
 #include <optional>
 
 #include "eden/fs/model/Hash.h"
-#include "eden/fs/model/TreeMetadataFwd.h"
+#include "eden/fs/model/TreeAuxDataFwd.h"
 
 namespace facebook::eden {
 
@@ -19,12 +19,12 @@ namespace facebook::eden {
  * A small struct containing both the size (in bytes) and hash of
  * a Tree's RE CAS digest. Note: digest_size != stat(tree).st_size
  */
-class TreeMetadata {
+class TreeAuxData {
  public:
-  TreeMetadata(Hash32 digestHash, uint64_t digestSize)
+  TreeAuxData(Hash32 digestHash, uint64_t digestSize)
       : digestHash(std::move(digestHash)), digestSize(digestSize) {}
 
-  TreeMetadata(std::optional<Hash32> digestHash, uint64_t digestSize)
+  TreeAuxData(std::optional<Hash32> digestHash, uint64_t digestSize)
       : digestHash(std::move(digestHash)), digestSize(digestSize) {}
 
   // TODO: make it non optional
