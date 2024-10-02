@@ -43,13 +43,6 @@ pub trait GitSourceOfTruthConfig: Send + Sync {
         source_of_truth: GitSourceOfTruth,
     ) -> Result<()>;
 
-    async fn get_by_repo_id(
-        &self,
-        ctx: &CoreContext,
-        repo_id: RepositoryId,
-        staleness: Staleness,
-    ) -> Result<Option<GitSourceOfTruthConfigEntry>>;
-
     async fn get_by_repo_name(
         &self,
         ctx: &CoreContext,
@@ -85,15 +78,6 @@ impl GitSourceOfTruthConfig for NoopGitSourceOfTruthConfig {
         Ok(())
     }
 
-    async fn get_by_repo_id(
-        &self,
-        _ctx: &CoreContext,
-        _repo_id: RepositoryId,
-        _staleness: Staleness,
-    ) -> Result<Option<GitSourceOfTruthConfigEntry>> {
-        Ok(None)
-    }
-
     async fn get_by_repo_name(
         &self,
         _ctx: &CoreContext,
@@ -124,15 +108,13 @@ impl GitSourceOfTruthConfig for NoopGitSourceOfTruthConfig {
 
 #[derive(Clone)]
 pub struct TestGitSourceOfTruthConfig {
-    repo_id_entries: Arc<Mutex<HashMap<RepositoryId, GitSourceOfTruthConfigEntry>>>,
-    repo_name_entries: Arc<Mutex<HashMap<RepositoryName, GitSourceOfTruthConfigEntry>>>,
+    entries: Arc<Mutex<HashMap<RepositoryName, GitSourceOfTruthConfigEntry>>>,
 }
 
 impl TestGitSourceOfTruthConfig {
     pub fn new() -> Self {
         Self {
-            repo_id_entries: Arc::new(Mutex::new(HashMap::new())),
-            repo_name_entries: Arc::new(Mutex::new(HashMap::new())),
+            entries: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 }
@@ -142,38 +124,20 @@ impl GitSourceOfTruthConfig for TestGitSourceOfTruthConfig {
     async fn set(
         &self,
         _ctx: &CoreContext,
-        repo_id: RepositoryId,
+        _repo_id: RepositoryId,
         repo_name: RepositoryName,
         source_of_truth: GitSourceOfTruth,
     ) -> Result<()> {
-        let entry = GitSourceOfTruthConfigEntry {
-            id: RowId(0),
-            repo_id,
-            repo_name: repo_name.clone(),
-            source_of_truth,
-        };
-
-        let mut repo_id_map = self.repo_id_entries.lock().expect("poisoned lock");
-        repo_id_map.insert(repo_id.to_owned(), entry.clone());
-
-        let mut repo_name_map = self.repo_name_entries.lock().expect("poisoned lock");
-        repo_name_map.insert(repo_name.to_owned(), entry);
-
+        let mut map = self.entries.lock().expect("poisoned lock");
+        map.insert(
+            repo_name.to_owned(),
+            GitSourceOfTruthConfigEntry {
+                id: RowId(0),
+                repo_name,
+                source_of_truth,
+            },
+        );
         Ok(())
-    }
-
-    async fn get_by_repo_id(
-        &self,
-        _ctx: &CoreContext,
-        repo_id: RepositoryId,
-        _staleness: Staleness,
-    ) -> Result<Option<GitSourceOfTruthConfigEntry>> {
-        Ok(self
-            .repo_id_entries
-            .lock()
-            .expect("poisoned lock")
-            .get(&repo_id)
-            .cloned())
     }
 
     async fn get_by_repo_name(
@@ -183,7 +147,7 @@ impl GitSourceOfTruthConfig for TestGitSourceOfTruthConfig {
         _staleness: Staleness,
     ) -> Result<Option<GitSourceOfTruthConfigEntry>> {
         Ok(self
-            .repo_name_entries
+            .entries
             .lock()
             .expect("poisoned lock")
             .get(repo_name)
@@ -195,7 +159,7 @@ impl GitSourceOfTruthConfig for TestGitSourceOfTruthConfig {
         _ctx: &CoreContext,
     ) -> Result<Vec<GitSourceOfTruthConfigEntry>> {
         Ok(self
-            .repo_id_entries
+            .entries
             .lock()
             .expect("poisoned lock")
             .values()
@@ -209,7 +173,7 @@ impl GitSourceOfTruthConfig for TestGitSourceOfTruthConfig {
         _ctx: &CoreContext,
     ) -> Result<Vec<GitSourceOfTruthConfigEntry>> {
         Ok(self
-            .repo_id_entries
+            .entries
             .lock()
             .expect("poisoned lock")
             .values()
@@ -220,7 +184,7 @@ impl GitSourceOfTruthConfig for TestGitSourceOfTruthConfig {
 
     async fn get_locked(&self, _ctx: &CoreContext) -> Result<Vec<GitSourceOfTruthConfigEntry>> {
         Ok(self
-            .repo_id_entries
+            .entries
             .lock()
             .expect("poisoned lock")
             .values()

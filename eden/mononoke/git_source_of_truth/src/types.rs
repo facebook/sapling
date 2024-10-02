@@ -8,7 +8,6 @@
 use std::str::FromStr;
 
 use anyhow::Result;
-use mononoke_types::RepositoryId;
 use sql::mysql;
 use sql::mysql_async::from_value_opt;
 use sql::mysql_async::prelude::ConvIr;
@@ -142,7 +141,6 @@ impl ConvIr<GitSourceOfTruth> for GitSourceOfTruth {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct GitSourceOfTruthConfigEntry {
     pub id: RowId,
-    pub repo_id: RepositoryId,
     pub repo_name: RepositoryName,
     pub source_of_truth: GitSourceOfTruth,
 }

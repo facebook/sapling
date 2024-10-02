@@ -25,40 +25,22 @@ use crate::Staleness;
 mononoke_queries! {
     read TestGet(id: RowId) -> (
         RowId,
-        RepositoryId,
         RepositoryName,
         GitSourceOfTruth,
     ) {
         "SELECT id,
-            repo_id,
             repo_name,
             source_of_truth
          FROM git_repositories_source_of_truth
          WHERE id = {id}"
     }
 
-    read GetByRepoId(repo_id: RepositoryId) -> (
-        RowId,
-        RepositoryId,
-        RepositoryName,
-        GitSourceOfTruth,
-    ) {
-        "SELECT id,
-            repo_id,
-            repo_name,
-            source_of_truth
-         FROM git_repositories_source_of_truth
-         WHERE repo_id = {repo_id}"
-    }
-
     read GetByRepoName(repo_name: RepositoryName) -> (
         RowId,
-        RepositoryId,
         RepositoryName,
         GitSourceOfTruth,
     ) {
         "SELECT id,
-            repo_id,
             repo_name,
             source_of_truth
          FROM git_repositories_source_of_truth
@@ -67,12 +49,10 @@ mononoke_queries! {
 
     read GetByGitSourceOfTruth(source_of_truth: GitSourceOfTruth) -> (
         RowId,
-        RepositoryId,
         RepositoryName,
         GitSourceOfTruth,
     ) {
         "SELECT id,
-            repo_id,
             repo_name,
             source_of_truth
          FROM git_repositories_source_of_truth
@@ -86,13 +66,10 @@ mononoke_queries! {
     }
 }
 
-fn row_to_entry(
-    row: (RowId, RepositoryId, RepositoryName, GitSourceOfTruth),
-) -> GitSourceOfTruthConfigEntry {
-    let (id, repo_id, repo_name, source_of_truth) = row;
+fn row_to_entry(row: (RowId, RepositoryName, GitSourceOfTruth)) -> GitSourceOfTruthConfigEntry {
+    let (id, repo_name, source_of_truth) = row;
     GitSourceOfTruthConfigEntry {
         id,
-        repo_id,
         repo_name,
         source_of_truth,
     }
@@ -154,16 +131,6 @@ impl GitSourceOfTruthConfig for SqlGitSourceOfTruthConfig {
         )
         .await?;
         Ok(())
-    }
-
-    async fn get_by_repo_id(
-        &self,
-        _ctx: &CoreContext,
-        repo_id: RepositoryId,
-        staleness: Staleness,
-    ) -> Result<Option<GitSourceOfTruthConfigEntry>> {
-        let rows = GetByRepoId::query(self.get_connection(staleness), &repo_id).await?;
-        Ok(rows.into_iter().next().map(row_to_entry))
     }
 
     async fn get_by_repo_name(
@@ -229,7 +196,7 @@ mod test {
         push.set(&ctx, repo_id, repo_name.clone(), GitSourceOfTruth::Mononoke)
             .await?;
         let entry = push
-            .get_by_repo_id(&ctx, repo_id, Staleness::MostRecent)
+            .get_by_repo_name(&ctx, &repo_name, Staleness::MostRecent)
             .await?;
         assert!(entry.is_some());
         let entry = entry.unwrap();
@@ -243,42 +210,17 @@ mod test {
         push.set(&ctx, repo_id, repo_name.clone(), GitSourceOfTruth::Metagit)
             .await?;
         let entry = push
-            .get_by_repo_id(&ctx, repo_id, Staleness::MostRecent)
+            .get_by_repo_name(&ctx, &repo_name, Staleness::MostRecent)
             .await?;
         assert!(entry.is_some());
         let entry = entry.unwrap();
         assert_eq!(entry.source_of_truth, GitSourceOfTruth::Metagit);
 
         // update it
-        push.set(&ctx, repo_id, repo_name, GitSourceOfTruth::Mononoke)
+        push.set(&ctx, repo_id, repo_name.clone(), GitSourceOfTruth::Mononoke)
             .await?;
         let entry = push
-            .get_by_repo_id(&ctx, repo_id, Staleness::MostRecent)
-            .await?;
-        assert!(entry.is_some());
-        let entry = entry.unwrap();
-        assert_eq!(entry.source_of_truth, GitSourceOfTruth::Mononoke);
-
-        Ok(())
-    }
-
-    #[mononoke::fbinit_test]
-    async fn test_get_by_repo_id(fb: FacebookInit) -> Result<()> {
-        let ctx = CoreContext::test_mock(fb);
-        let builder = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?;
-        let push = builder.build();
-
-        let repo_id = RepositoryId::new(1);
-        let repo_name = RepositoryName("test1".to_string());
-        let entry = push
-            .get_by_repo_id(&ctx, repo_id, Staleness::MostRecent)
-            .await?;
-        assert!(entry.is_none());
-
-        push.set(&ctx, repo_id, repo_name, GitSourceOfTruth::Mononoke)
-            .await?;
-        let entry = push
-            .get_by_repo_id(&ctx, repo_id, Staleness::MostRecent)
+            .get_by_repo_name(&ctx, &repo_name, Staleness::MostRecent)
             .await?;
         assert!(entry.is_some());
         let entry = entry.unwrap();
