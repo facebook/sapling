@@ -224,8 +224,9 @@ impl RepoEphemeralStoreInner {
             .write_connection
             .start_transaction()
             .await?;
-        let (txn, res) = CreateBubble::query_with_transaction(
+        let (txn, res) = CreateBubble::maybe_traced_query_with_transaction(
             txn,
+            ctx.client_request_info(),
             &Timestamp::from(created_at),
             &Timestamp::from(expires_at),
             &None,
@@ -243,9 +244,12 @@ impl RepoEphemeralStoreInner {
                         .iter()
                         .map(|label| (&bubble_id, label as &str))
                         .collect::<Vec<_>>();
-                    let (txn, _res) =
-                        AddBubbleLabels::query_with_transaction(txn, bubble_labels.as_slice())
-                            .await?;
+                    let (txn, _res) = AddBubbleLabels::maybe_traced_query_with_transaction(
+                        txn,
+                        ctx.client_request_info(),
+                        bubble_labels.as_slice(),
+                    )
+                    .await?;
                     txn.commit().await?;
                 } else {
                     txn.commit().await?;
@@ -282,8 +286,12 @@ impl RepoEphemeralStoreInner {
         // The bubble exists, add labels to it.
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
-        AddBubbleLabels::query(&self.connections.write_connection, bubble_labels.as_slice())
-            .await?;
+        AddBubbleLabels::maybe_traced_query(
+            &self.connections.write_connection,
+            ctx.client_request_info(),
+            bubble_labels.as_slice(),
+        )
+        .await?;
         Ok(())
     }
 
@@ -306,14 +314,19 @@ impl RepoEphemeralStoreInner {
             // labels associated with the bubble.
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlWrites);
-            DeleteBubbleLabelsById::query(&self.connections.write_connection, &bubble.bubble_id())
-                .await?;
+            DeleteBubbleLabelsById::maybe_traced_query(
+                &self.connections.write_connection,
+                ctx.client_request_info(),
+                &bubble.bubble_id(),
+            )
+            .await?;
         } else {
             // Specific labels were provided as input. Only remove those labels.
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlWrites);
-            DeleteBubbleLabels::query(
+            DeleteBubbleLabels::maybe_traced_query(
                 &self.connections.write_connection,
+                ctx.client_request_info(),
                 &bubble.bubble_id(),
                 labels.as_slice(),
             )
@@ -331,9 +344,13 @@ impl RepoEphemeralStoreInner {
     ) -> Result<Option<BubbleId>> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let rows =
-            SelectBubbleFromChangeset::query(&self.connections.read_connection, repo_id, cs_id)
-                .await?;
+        let rows = SelectBubbleFromChangeset::maybe_traced_query(
+            &self.connections.read_connection,
+            ctx.client_request_info(),
+            repo_id,
+            cs_id,
+        )
+        .await?;
         Ok(rows.into_iter().next().map(|b| b.0))
     }
 
@@ -345,8 +362,12 @@ impl RepoEphemeralStoreInner {
     ) -> Result<Vec<String>> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let rows =
-            SelectBubbleLabelsById::query(&self.connections.read_connection, bubble_id).await?;
+        let rows = SelectBubbleLabelsById::maybe_traced_query(
+            &self.connections.read_connection,
+            ctx.client_request_info(),
+            bubble_id,
+        )
+        .await?;
         Ok(rows.into_iter().map(|l| l.0).collect::<Vec<_>>())
     }
 
@@ -357,8 +378,12 @@ impl RepoEphemeralStoreInner {
     ) -> Result<Vec<ChangesetId>> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let rows =
-            SelectChangesetFromBubble::query(&self.connections.read_connection, bubble_id).await?;
+        let rows = SelectChangesetFromBubble::maybe_traced_query(
+            &self.connections.read_connection,
+            ctx.client_request_info(),
+            bubble_id,
+        )
+        .await?;
         Ok(rows.into_iter().map(|b| b.0).collect::<Vec<_>>())
     }
 
@@ -378,8 +403,9 @@ impl RepoEphemeralStoreInner {
             BubbleDeletionMode::MarkOnly => {
                 ctx.perf_counters()
                     .increment_counter(PerfCounterType::SqlWrites);
-                SelectBubblesWithExpiryAndStatus::query(
+                SelectBubblesWithExpiryAndStatus::maybe_traced_query(
                     &self.connections.write_connection,
+                    ctx.client_request_info(),
                     &Timestamp::from(expiry_cutoff - self.bubble_expiration_grace),
                     &max_bubbles,
                     &ExpiryStatus::Active,
@@ -391,8 +417,9 @@ impl RepoEphemeralStoreInner {
             _ => {
                 ctx.perf_counters()
                     .increment_counter(PerfCounterType::SqlWrites);
-                SelectBubblesWithExpiry::query(
+                SelectBubblesWithExpiry::maybe_traced_query(
                     &self.connections.write_connection,
+                    ctx.client_request_info(),
                     &Timestamp::from(expiry_cutoff - self.bubble_expiration_grace),
                     &max_bubbles,
                 )
@@ -423,8 +450,9 @@ impl RepoEphemeralStoreInner {
         // Step 1: Mark the bubble as expired in the backing SQL Store.
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
-        let res = UpdateExpired::query(
+        let res = UpdateExpired::maybe_traced_query(
             &self.connections.write_connection,
+            ctx.client_request_info(),
             &ExpiryStatus::Expired,
             &bubble_id,
         )
@@ -444,9 +472,12 @@ impl RepoEphemeralStoreInner {
         // the backing SQL store.
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
-        let res =
-            DeleteBubbleChangesetMapping::query(&self.connections.write_connection, &bubble_id)
-                .await?;
+        let res = DeleteBubbleChangesetMapping::maybe_traced_query(
+            &self.connections.write_connection,
+            ctx.client_request_info(),
+            &bubble_id,
+        )
+        .await?;
         if res.affected_rows() > 1 {
             return Err(EphemeralBlobstoreError::DeleteBubbleFailed(bubble_id).into());
         }
@@ -454,12 +485,22 @@ impl RepoEphemeralStoreInner {
         // manually deleting a bubble regardless of its expiry status.
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
-        DeleteExpiredBubbleLabels::query(&self.connections.write_connection, &bubble_id).await?;
+        DeleteExpiredBubbleLabels::maybe_traced_query(
+            &self.connections.write_connection,
+            ctx.client_request_info(),
+            &bubble_id,
+        )
+        .await?;
 
         // Step 4: Delete the bubble itself from the backing SQL store.
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
-        let res = DeleteBubble::query(&self.connections.write_connection, &bubble_id).await?;
+        let res = DeleteBubble::maybe_traced_query(
+            &self.connections.write_connection,
+            ctx.client_request_info(),
+            &bubble_id,
+        )
+        .await?;
         if res.affected_rows() > 1 {
             return Err(EphemeralBlobstoreError::DeleteBubbleFailed(bubble_id).into());
         }
@@ -474,9 +515,10 @@ impl RepoEphemeralStoreInner {
     ) -> Result<Bubble> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let mut bubble_rows = SelectBubbleById::query(
+        let mut bubble_rows = SelectBubbleById::maybe_traced_query(
             self.sql_config.as_ref(),
             &self.connections.read_connection,
+            ctx.client_request_info(),
             &bubble_id,
         )
         .await?;
@@ -487,9 +529,13 @@ impl RepoEphemeralStoreInner {
             async move {
                 ctx.perf_counters()
                     .increment_counter(PerfCounterType::SqlReadsReplica);
-                let label_rows = SelectBubbleLabelsById::query(&connection, &bubble_id)
-                    .await
-                    .map_err(|_| EphemeralBlobstoreError::FetchBubbleLabelsFailed(bubble_id))?;
+                let label_rows = SelectBubbleLabelsById::maybe_traced_query(
+                    &connection,
+                    ctx.client_request_info(),
+                    &bubble_id,
+                )
+                .await
+                .map_err(|_| EphemeralBlobstoreError::FetchBubbleLabelsFailed(bubble_id))?;
                 let labels = label_rows.into_iter().map(|l| l.0).collect::<Vec<_>>();
                 Ok(labels)
             }
@@ -501,9 +547,10 @@ impl RepoEphemeralStoreInner {
             // Let's retry on master just in case.
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsMaster);
-            bubble_rows = SelectBubbleById::query(
+            bubble_rows = SelectBubbleById::maybe_traced_query(
                 self.sql_config.as_ref(),
                 &self.connections.read_master_connection,
+                ctx.client_request_info(),
                 &bubble_id,
             )
             .await?;
@@ -513,9 +560,10 @@ impl RepoEphemeralStoreInner {
                 tokio::time::sleep(Duration::from_millis(500)).await;
                 ctx.perf_counters()
                     .increment_counter(PerfCounterType::SqlReadsMaster);
-                bubble_rows = SelectBubbleById::query(
+                bubble_rows = SelectBubbleById::maybe_traced_query(
                     self.sql_config.as_ref(),
                     &self.connections.read_master_connection,
+                    ctx.client_request_info(),
                     &bubble_id,
                 )
                 .await?;

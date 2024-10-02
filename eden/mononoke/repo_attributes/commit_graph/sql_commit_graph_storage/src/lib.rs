@@ -1314,7 +1314,12 @@ impl SqlCommitGraphStorage {
         read_from_master: bool,
     ) -> Result<Option<Range<u64>>> {
         let conn = self.read_conn(read_from_master);
-        let rows = SelectChangesetsIdsBounds::query(conn, &self.repo_id).await?;
+        let rows = SelectChangesetsIdsBounds::maybe_traced_query(
+            conn,
+            ctx.client_request_info(),
+            &self.repo_id,
+        )
+        .await?;
         Ok(rows.first().map(|(lo, hi)| *lo..*hi + 1))
     }
 
@@ -1330,8 +1335,9 @@ impl SqlCommitGraphStorage {
         read_from_master: bool,
     ) -> Result<Vec<(ChangesetId, u64)>> {
         let conn = self.read_conn(read_from_master);
-        SelectOldestChangesetsIdsInRange::query(
+        SelectOldestChangesetsIdsInRange::maybe_traced_query(
             conn,
+            ctx.client_request_info(),
             &self.repo_id,
             &range.start,
             &range.end,
@@ -1352,8 +1358,9 @@ impl SqlCommitGraphStorage {
         read_from_master: bool,
     ) -> Result<Vec<(ChangesetId, u64)>> {
         let conn = self.read_conn(read_from_master);
-        SelectNewestChangesetsIdsInRange::query(
+        SelectNewestChangesetsIdsInRange::maybe_traced_query(
             conn,
+            ctx.client_request_info(),
             &self.repo_id,
             &range.start,
             &range.end,
