@@ -16,6 +16,7 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use git_source_of_truth::GitSourceOfTruth;
 use git_source_of_truth::GitSourceOfTruthConfigRef;
+use git_source_of_truth::RepositoryName;
 use git_source_of_truth::Staleness;
 use gotham::mime;
 use gotham::state::FromState;
@@ -256,9 +257,9 @@ async fn atomic_refs_update(
 }
 
 async fn mononoke_source_of_truth(ctx: &CoreContext, repo: Arc<Repo>) -> anyhow::Result<bool> {
-    let repo_id = repo.repo_identity().id();
+    let repo_name = RepositoryName(repo.repo_identity().name().to_string());
     repo.git_source_of_truth_config()
-        .get_by_repo_id(ctx, repo_id, Staleness::MostRecent)
+        .get_by_repo_name(ctx, &repo_name, Staleness::MostRecent)
         .await
         .map(|entry| {
             entry.map_or(false, |entry| {
