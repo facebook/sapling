@@ -56,6 +56,10 @@ Clone the git repo with submodules
   $ echo mod/*/*
   mod/1/A mod/2/C
 
+FIXME: subdmodules not namespaced properly
+  $ ls .sl/store/gitmodules | wc -l
+  0
+
 Checking out commits triggers submodule updates
 
   $ hg checkout '.^' --config experimental.submodule-pull-quiet=False
