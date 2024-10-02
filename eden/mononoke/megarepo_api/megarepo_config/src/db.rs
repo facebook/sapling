@@ -34,8 +34,7 @@ pub trait MegarepoSyncConfig: Send + Sync {
     ) -> Result<RowId>;
 
     /// Get the full request object entry by id
-    /// Mainly intended to be used in tests.
-    #[allow(dead_code)]
+    #[cfg(test)]
     async fn test_get_repo_config_by_id(
         &self,
         ctx: &CoreContext,

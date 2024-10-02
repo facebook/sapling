@@ -114,6 +114,7 @@ impl MegarepoSyncConfig for SqlMegarepoSyncConfig {
         }
     }
 
+    #[cfg(test)]
     async fn test_get_repo_config_by_id(
         &self,
         _ctx: &CoreContext,
