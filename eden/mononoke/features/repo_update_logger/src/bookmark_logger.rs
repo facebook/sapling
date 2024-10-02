@@ -22,6 +22,7 @@ use futures::join;
 use git_ref_rust_logger::GitRefLogger;
 use git_source_of_truth::GitSourceOfTruth;
 use git_source_of_truth::GitSourceOfTruthConfigRef;
+use git_source_of_truth::RepositoryName;
 use git_source_of_truth::Staleness;
 use gix_hash::Kind;
 use gix_hash::ObjectId;
@@ -240,7 +241,11 @@ pub async fn log_bookmark_operation(
         let git_logger_future = async move {
             let mononoke_source_of_truth = repo
                 .git_source_of_truth_config()
-                .get_by_repo_id(ctx, repo.repo_identity().id(), Staleness::MaybeStale)
+                .get_by_repo_name(
+                    ctx,
+                    &RepositoryName(repo.repo_identity().name().to_string()),
+                    Staleness::MaybeStale,
+                )
                 .await
                 .map(|entry| {
                     entry.map_or(false, |entry| {
