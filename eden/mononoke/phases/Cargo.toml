@@ -19,7 +19,7 @@ async-trait = "0.1.71"
 context = { version = "0.1.0", path = "../server/context" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
-thiserror = "1.0.49"
+thiserror = "1.0.64"
 
 [dev-dependencies]
 bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }

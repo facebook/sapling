@@ -64,8 +64,8 @@ futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimen
 git_source_of_truth = { version = "0.1.0", path = "../../git_source_of_truth" }
 git_symbolic_refs = { version = "0.1.0", path = "../../git_symbolic_refs" }
 git_types = { version = "0.1.0", path = "../../git/git_types" }
-gix-hash = "0.14.2"
-gix-object = "0.44.0"
+gix-hash = { git = "https://github.com/pierrechevalier83/gitoxide", rev = "a080348c2fefb7a300ec80f4481617f870065589" }
+gix-object = { git = "https://github.com/pierrechevalier83/gitoxide", rev = "a080348c2fefb7a300ec80f4481617f870065589" }
 itertools = "0.11.0"
 manifest = { version = "0.1.0", path = "../../manifest" }
 megarepo_error = { version = "0.1.0", path = "../../megarepo_api/megarepo_error" }

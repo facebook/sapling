@@ -15,4 +15,4 @@ anyhow = "1.0.86"
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
-thiserror = "1.0.49"
+thiserror = "1.0.64"

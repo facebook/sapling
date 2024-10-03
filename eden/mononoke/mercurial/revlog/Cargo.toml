@@ -22,7 +22,7 @@ lz4-pyframe = { version = "0.1.0", path = "../../../scm/lib/lz4-pyframe" }
 memmap2 = "0.5.10"
 mercurial_types = { version = "0.1.0", path = "../types" }
 nom = { version = "3", features = ["verbose-errors"] }
-thiserror = "1.0.49"
+thiserror = "1.0.64"
 
 [dev-dependencies]
 assert_matches = "1.5"

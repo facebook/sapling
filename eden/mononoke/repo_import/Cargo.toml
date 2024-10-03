@@ -31,7 +31,7 @@ fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rus
 filenodes = { version = "0.1.0", path = "../filenodes" }
 filestore = { version = "0.1.0", path = "../filestore" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
-gix-hash = "0.14.2"
+gix-hash = { git = "https://github.com/pierrechevalier83/gitoxide", rev = "a080348c2fefb7a300ec80f4481617f870065589" }
 import_direct = { version = "0.1.0", path = "../git/import_direct" }
 import_tools = { version = "0.1.0", path = "../git/import_tools" }
 itertools = "0.11.0"

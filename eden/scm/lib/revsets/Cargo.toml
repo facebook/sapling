@@ -15,6 +15,6 @@ edenapi = { version = "0.1.0", path = "../edenapi" }
 hgplain = { version = "0.1.0", path = "../util/hgplain" }
 metalog = { version = "0.1.0", path = "../metalog" }
 refencode = { version = "0.1.0", path = "../refencode" }
-thiserror = "1.0.49"
+thiserror = "1.0.64"
 treestate = { version = "0.1.0", path = "../treestate" }
 types = { version = "0.1.0", path = "../types" }

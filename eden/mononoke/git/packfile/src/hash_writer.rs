@@ -9,7 +9,7 @@ use std::pin::Pin;
 use std::task::Context;
 use std::task::Poll;
 
-use gix_features::hash::Sha1;
+use gix_features::hash::Hasher;
 use pin_project::pin_project;
 use tokio::io::AsyncWrite;
 
@@ -24,14 +24,14 @@ where
     #[pin]
     pub inner: T,
     /// SHA1 hasher
-    pub hasher: Sha1,
+    pub hasher: Hasher,
 }
 
 impl<T: AsyncWrite> AsyncHashWriter<T> {
     pub fn new(inner: T) -> Self {
         Self {
             inner,
-            hasher: Sha1::default(),
+            hasher: Hasher::default(),
         }
     }
 }

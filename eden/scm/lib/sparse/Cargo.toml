@@ -13,7 +13,7 @@ once_cell = "1.12"
 pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 regex = "1.9.2"
 rewrite-macros = { version = "0.1.0", path = "../util/rewrite-macros" }
-thiserror = "1.0.49"
+thiserror = "1.0.64"
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 types = { version = "0.1.0", path = "../types" }
 

@@ -36,4 +36,4 @@ repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_deri
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 sha1 = "0.10.5"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-thiserror = "1.0.49"
+thiserror = "1.0.64"

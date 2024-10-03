@@ -21,7 +21,7 @@ context = { version = "0.1.0", path = "../../server/context" }
 ephemeral_blobstore = { version = "0.1.0", path = "../../blobstore/ephemeral_blobstore" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 git_source_of_truth = { version = "0.1.0", path = "../../git_source_of_truth" }
-gix-hash = "0.14.2"
+gix-hash = { git = "https://github.com/pierrechevalier83/gitoxide", rev = "a080348c2fefb7a300ec80f4481617f870065589" }
 hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 logger_ext = { version = "0.1.0", path = "../../common/logger_ext" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }

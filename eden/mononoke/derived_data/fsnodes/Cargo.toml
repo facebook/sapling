@@ -30,7 +30,7 @@ sha1 = "0.10.5"
 sha2 = "0.10.6"
 sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-thiserror = "1.0.49"
+thiserror = "1.0.64"
 
 [dev-dependencies]
 bonsai_git_mapping = { version = "0.1.0", path = "../../bonsai_git_mapping" }

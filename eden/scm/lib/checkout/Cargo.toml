@@ -29,7 +29,7 @@ spawn-ext = { version = "0.1.0", path = "../spawn-ext" }
 status = { version = "0.1.0", path = "../status" }
 storemodel = { version = "0.1.0", path = "../storemodel" }
 termlogger = { version = "0.1.0", path = "../io/term/logger" }
-thiserror = "1.0.49"
+thiserror = "1.0.64"
 toml = { version = "0.8.4", optional = true }
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 treestate = { version = "0.1.0", path = "../treestate" }

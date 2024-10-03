@@ -11,6 +11,6 @@ configmodel = { version = "0.1.0", path = "../config/model" }
 indexmap = { version = "2.2.6", features = ["arbitrary", "rayon", "serde"] }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
-thiserror = "1.0.49"
+thiserror = "1.0.64"
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 util = { version = "0.1.0", path = "../util" }

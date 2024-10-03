@@ -27,7 +27,7 @@ mononoke_types_serialization = { version = "0.1.0", path = "../../../mononoke_ty
 once_cell = "1.12"
 ref-cast = "1.0.18"
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
-thiserror = "1.0.49"
+thiserror = "1.0.64"
 
 [build-dependencies]
 thrift_compiler = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

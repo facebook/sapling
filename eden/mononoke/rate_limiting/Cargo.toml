@@ -17,7 +17,7 @@ rate_limiting_config = { version = "0.1.0", path = "../../../configerator/struct
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-thiserror = "1.0.49"
+thiserror = "1.0.64"
 
 [dev-dependencies]
 mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }

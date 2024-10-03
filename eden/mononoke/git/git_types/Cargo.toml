@@ -23,9 +23,9 @@ flate2 = { version = "1.0.33", features = ["rust_backend"], default-features = f
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 git_delta = { version = "0.1.0", path = "../../third_party/git_delta" }
 git_types_thrift = { version = "0.1.0", path = "if" }
-gix-actor = "0.32.0"
-gix-hash = "0.14.2"
-gix-object = "0.44.0"
+gix-actor = { git = "https://github.com/pierrechevalier83/gitoxide", rev = "a080348c2fefb7a300ec80f4481617f870065589" }
+gix-hash = { git = "https://github.com/pierrechevalier83/gitoxide", rev = "a080348c2fefb7a300ec80f4481617f870065589" }
+gix-object = { git = "https://github.com/pierrechevalier83/gitoxide", rev = "a080348c2fefb7a300ec80f4481617f870065589" }
 itertools = "0.11.0"
 lazy_static = "1.4"
 manifest = { version = "0.1.0", path = "../../manifest" }
@@ -37,7 +37,7 @@ packfile = { version = "0.1.0", path = "../packfile" }
 regex = "1.9.2"
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 sha1 = "0.10.5"
-thiserror = "1.0.49"
+thiserror = "1.0.64"
 tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]

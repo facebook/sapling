@@ -11,7 +11,7 @@ checkout = { version = "0.1.0", path = "../checkout" }
 configmodel = { version = "0.1.0", path = "../config/model" }
 context = { version = "0.1.0", path = "../context" }
 repo = { version = "0.1.0", path = "../repo" }
-thiserror = "1.0.49"
+thiserror = "1.0.64"
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 types = { version = "0.1.0", path = "../types" }
 util = { version = "0.1.0", path = "../util" }

@@ -5,10 +5,10 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
-  $ ENABLED_DERIVED_DATA='["unodes", "git_commits", "git_trees", "git_delta_manifests_v2"]' setup_common_config
+  $ ENABLED_DERIVED_DATA='["ccsm", "unodes", "git_commits", "git_trees", "git_delta_manifests_v2"]' setup_common_config
   $ GIT_REPO="${TESTTMP}/repo-git"
   $ REPOTYPE="blob_files"
-  $ ENABLED_DERIVED_DATA='["unodes", "git_commits", "git_trees", "git_delta_manifests_v2"]' setup_common_config $REPOTYPE
+  $ ENABLED_DERIVED_DATA='["ccsm", "unodes", "git_commits", "git_trees", "git_delta_manifests_v2"]' setup_common_config $REPOTYPE
 
 # Setup git repository
   $ mkdir -p "$GIT_REPO"
@@ -44,41 +44,36 @@
   
 # We will make an incorrect tag by stripping the timezone from the tagger, as was seen in prod during T199503972
 # First, show why the tag is invalid, and why git tries to prevent us from creating it
-  $ git cat-file -p 596f709c975acae56ccd9fd3e6714beeece4005f | head -c 111 | git mktag
-  error: tag input does not pass fsck: unterminatedHeader: unterminated header
+  $ git cat-file -p 596f709c975acae56ccd9fd3e6714beeece4005f | head -c 111 | { printf "%s\n" "$(cat)"; } | git mktag
+  error: tag input does not pass fsck: missingSpaceBeforeDate: invalid author/committer line - missing space before date
   fatal: tag on stdin did not pass our strict fsck check
   [128]
 # Nevermind: just need to ask nicely
-  $ git cat-file -p 596f709c975acae56ccd9fd3e6714beeece4005f | head -c 111 | git hash-object -w --stdin -t tag --literally
-  627a05f23e3182ada1071a3bfaa59dbb527ecba9
+  $ git cat-file -p 596f709c975acae56ccd9fd3e6714beeece4005f | head -c 111 | { printf "%s\n" "$(cat)"; } | git hash-object -w --stdin -t tag --literally
+  1b2df0f47c7d7360831f174fd9a6c31580ee9b53
 # Show our malformed tag for info
-  $ git cat-file -p 627a05f23e3182ada1071a3bfaa59dbb527ecba9
+  $ git cat-file -p 1b2df0f47c7d7360831f174fd9a6c31580ee9b53
   object 15cc4e9575665b507ee372f97b716ff552842136
   type commit
   tag correct_tag
-  tagger mononoke <mononoke@mononoke> (no-eol)
-  $ git cat-file -t 627a05f23e3182ada1071a3bfaa59dbb527ecba9
+  tagger mononoke <mononoke@mononoke>
+  $ git cat-file -t 1b2df0f47c7d7360831f174fd9a6c31580ee9b53
   tag
 # Make a ref that points to this incorrect tag
-  $ echo 627a05f23e3182ada1071a3bfaa59dbb527ecba9 > .git/refs/tags/incorrect_tag
+  $ echo 1b2df0f47c7d7360831f174fd9a6c31580ee9b53 > .git/refs/tags/incorrect_tag
 
 # Import it into Mononoke
   $ with_stripped_logs gitimport "$GIT_REPO" --generate-bookmarks full-repo
   using repo "repo" repoid RepositoryId(0)
   GitRepo:$TESTTMP/repo-git commit 1 of 1 - Oid:15cc4e95 => Bid:ce423062
-  Execution error: read_git_refs failed
-  
-  Caused by:
-      0: unable to read git object: 627a05f23e3182ada1071a3bfaa59dbb527ecba9 for ref: refs/tags/incorrect_tag
-      1: Failed to parse:
-         ```
-         object 15cc4e9575665b507ee372f97b716ff552842136
-         type commit
-         tag correct_tag
-         tagger mononoke <mononoke@mononoke>
-         ```
-         into object of kind Tag
-      2: object parsing failed
-  Error: Execution failed
+  Ref: "refs/heads/master": Some(ChangesetId(Blake2(ce423062b4eee7935dc1bf77937f8393e1aa97478077e1cce2745c8cf1b9e8c6)))
+  Ref: "refs/tags/correct_tag": Some(ChangesetId(Blake2(ce423062b4eee7935dc1bf77937f8393e1aa97478077e1cce2745c8cf1b9e8c6)))
+  Ref: "refs/tags/incorrect_tag": Some(ChangesetId(Blake2(ce423062b4eee7935dc1bf77937f8393e1aa97478077e1cce2745c8cf1b9e8c6)))
+  Initializing repo: repo
+  Initialized repo: repo
+  All repos initialized. It took: 0 seconds
+  Bookmark: "heads/master": ChangesetId(Blake2(ce423062b4eee7935dc1bf77937f8393e1aa97478077e1cce2745c8cf1b9e8c6)) (created)
+  Bookmark: "tags/correct_tag": ChangesetId(Blake2(ce423062b4eee7935dc1bf77937f8393e1aa97478077e1cce2745c8cf1b9e8c6)) (created)
+  Bookmark: "tags/incorrect_tag": ChangesetId(Blake2(ce423062b4eee7935dc1bf77937f8393e1aa97478077e1cce2745c8cf1b9e8c6)) (created)
 
 

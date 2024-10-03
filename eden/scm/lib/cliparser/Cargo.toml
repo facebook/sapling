@@ -12,7 +12,7 @@ cpython = { version = "0.7.2", features = ["python3-sys"], optional = true, defa
 indexmap = { version = "2.2.6", features = ["arbitrary", "rayon", "serde"] }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 shlex = "1.3"
-thiserror = "1.0.49"
+thiserror = "1.0.64"
 
 [features]
 default = []

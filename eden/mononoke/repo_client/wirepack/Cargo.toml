@@ -14,7 +14,7 @@ futures = { version = "0.3.30", features = ["async-await", "compat"] }
 mercurial_bundles = { version = "0.1.0", path = "../../mercurial/bundles" }
 mercurial_revlog = { version = "0.1.0", path = "../../mercurial/revlog" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
-thiserror = "1.0.49"
+thiserror = "1.0.64"
 
 [dev-dependencies]
 maplit = "1.0"

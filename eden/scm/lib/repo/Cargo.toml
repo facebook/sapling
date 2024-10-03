@@ -33,7 +33,7 @@ revisionstore = { version = "0.1.0", path = "../revisionstore" }
 revsets = { version = "0.1.0", path = "../revsets" }
 rewrite-macros = { version = "0.1.0", path = "../util/rewrite-macros" }
 storemodel = { version = "0.1.0", path = "../storemodel" }
-thiserror = "1.0.49"
+thiserror = "1.0.64"
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 treestate = { version = "0.1.0", path = "../treestate" }
 types = { version = "0.1.0", path = "../types" }

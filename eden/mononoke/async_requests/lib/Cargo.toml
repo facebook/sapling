@@ -26,7 +26,7 @@ requests_table = { version = "0.1.0", path = "../requests_table" }
 source_control = { version = "0.1.0", path = "../../scs/if" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-thiserror = "1.0.49"
+thiserror = "1.0.64"
 tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
