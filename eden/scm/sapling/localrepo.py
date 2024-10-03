@@ -1227,10 +1227,10 @@ class localrepository:
                     self.ui.status(
                         _("imported commit graph for %s (%s)\n")
                         % (
-                            _n("%s commit" % commits, "%s commits" % commits, commits),
+                            _n(f"{commits:,} commit", f"{commits:,} commits", commits),
                             _n(
-                                "%s segment" % segments,
-                                "%s segments" % segments,
+                                f"{segments:,} segment",
+                                f"{segments:,} segments",
                                 segments,
                             ),
                         )
