@@ -1326,10 +1326,21 @@ impl RepoFactory {
             })?;
             let zelos_client = self.zelos_client(zelos_config).await?;
 
+            let scuba_table = repo_config
+                .derived_data_config
+                .derivation_queue_scuba_table
+                .as_deref();
+            let scuba = match scuba_table {
+                Some(scuba_table) => MononokeScubaSampleBuilder::new(self.env.fb, scuba_table)
+                    .with_context(|| "Couldn't create derivation queue scuba sample builder")?,
+                None => MononokeScubaSampleBuilder::with_discard(),
+            };
+
             anyhow::Ok(Arc::new(
                 zelos_derivation_queues(
                     repo_identity.id(),
                     repo_identity.name().to_string(),
+                    scuba,
                     commit_graph.clone(),
                     bonsai_hg_mapping.clone(),
                     bonsai_git_mapping.clone(),
