@@ -7,8 +7,10 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     deps = [
         "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:tokio",
         "//common/rust/logging:logging",
         "//common/rust/mysql:mysql_client",
+        "//common/rust/shed/justknobs_stub:justknobs",
         "//eden/mononoke/facebook/git_server/push_poller/lib/command:command",
         "//eden/mononoke/facebook/git_server/push_poller/lib/storage:storage",
     ],

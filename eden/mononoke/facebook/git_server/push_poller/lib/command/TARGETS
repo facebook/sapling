@@ -9,6 +9,7 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:wait-timeout",
         "//common/rust/logging:logging",
     ],
 )
