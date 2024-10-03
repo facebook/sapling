@@ -12,6 +12,7 @@ load("@fbcode_macros//build_defs:native_rules.bzl", "buck_command_alias", "buck_
 load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
 load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
 load("@fbcode_macros//build_defs:rust_universal_binary.bzl", "rust_universal_binary")
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 
 oncall("sapling")
 
@@ -104,8 +105,8 @@ buck_filegroup(
 gen_hgpython(hg_target = "fbcode//eden/scm:hg")
 
 gen_hgpython(
-    hg_target = "fbcode//eden/scm:hg_cas",
-    suffix = "_cas",
+    hg_target = "fbcode//eden/scm:hg_test",
+    suffix = "_test",
 )
 
 export_file(
@@ -179,14 +180,20 @@ hg_binary(
         },
         "cargo_toml_dir": "exec/hgmain",
     },
+    extra_features = select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [] if rust_oss.is_oss_build() else ["cas"],
+    }),
+    named_deps = select({
+        "DEFAULT": {},
+        "ovr_config//os:linux": {} if rust_oss.is_oss_build() else {"thin_cas_client": "//eden/scm/lib/cas-client/thin-client:thin-cas-client"},
+    }),
 )
 
 hg_binary(
-    name = "hg_cas",
+    name = "hg_test",
     allow_oss_build = False,
     autocargo = {"ignore_rule": True},
-    extra_deps = ["//eden/scm/lib/cas-client/thin-client:thin-cas-client"],
-    extra_features = ["cas"],
 )
 
 # Try to override target depth so //eden/scm/tests:hg_run_tests and other

@@ -15,7 +15,6 @@ dott_test(
     dott_files = glob([
         "*.t",
     ]),
-    enable_sapling_cas = True,
     deps = [
         "//eden/mononoke:mononoke",
         "//eden/mononoke/lfs_server:lfs_server",
