@@ -38,6 +38,7 @@ import {repositoryCache} from './RepositoryCache';
 import {parseExecJson} from './utils';
 import {serializeToString, deserializeFromString} from 'isl/src/serialize';
 import {Readable} from 'node:stream';
+import path from 'path';
 import {revsetForComparison} from 'shared/Comparison';
 import {randomId, notEmpty, base64Decode} from 'shared/utils';
 
@@ -478,6 +479,8 @@ export default class ServerToClientAPI {
           numLines,
         } = data;
 
+        const absolutePath = path.join(repo.info.repoRoot, relativePath);
+
         // TODO: For context lines, before/after sides of the comparison
         // are identical... except for line numbers.
         // Typical comparisons with '.' would be much faster (nearly instant)
@@ -485,7 +488,7 @@ export default class ServerToClientAPI {
         // we just need the caller to ask with "after" line numbers instead of "before".
         // Note: we would still need to fall back to cat for comparisons that do not involve
         // the working copy.
-        const cat: Promise<string> = repo.cat(ctx, relativePath, revsetForComparison(comparison));
+        const cat: Promise<string> = repo.cat(ctx, absolutePath, revsetForComparison(comparison));
 
         cat
           .then(content =>
