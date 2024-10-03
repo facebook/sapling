@@ -80,6 +80,7 @@ def get_test_env_and_deps(suffix = ""):
         "EDENFSCTL_REAL_PATH": "//eden/fs/cli:edenfsctl",
         "EDENFSCTL_RUST_PATH": "//eden/fs/cli_rs/edenfsctl:edenfsctl",
         "EDENFS_FAKE_EDENFS": "//eden/integration/helpers:fake_edenfs",
+        "EDENFS_FSCK": "//eden/fs/inodes/fscatalog:eden_fsck",
         "EDENFS_SNAPSHOTS": "//eden/test-data:snapshots",
         "EDENFS_ZERO_BLOB": "//eden/integration/helpers:zero_blob",
         "HG_ETC_MERCURIAL": "//eden/scm:etc_mercurial",
