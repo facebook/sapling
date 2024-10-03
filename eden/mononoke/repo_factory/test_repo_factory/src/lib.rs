@@ -188,6 +188,7 @@ pub fn default_test_repo_config() -> RepoConfig {
                 "default".to_string() => derived_data_types_config.clone(),
                 "backfilling".to_string() => derived_data_types_config
             ],
+            derivation_queue_scuba_table: None,
         },
         infinitepush: InfinitepushParams {
             namespace: Some(InfinitepushNamespace::new(

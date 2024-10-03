@@ -556,6 +556,7 @@ impl Convert for RawDerivedDataConfig {
                 .into_iter()
                 .map(|(s, raw_config)| Ok((s, raw_config.convert()?)))
                 .collect::<Result<_, anyhow::Error>>()?,
+            derivation_queue_scuba_table: self.derivation_queue_scuba_table,
         })
     }
 }

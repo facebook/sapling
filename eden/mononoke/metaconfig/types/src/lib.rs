@@ -359,6 +359,9 @@ pub struct DerivedDataConfig {
 
     /// All available configs for derived data types
     pub available_configs: HashMap<String, DerivedDataTypesConfig>,
+
+    /// Name of scuba table to log all derivation queue operations
+    pub derivation_queue_scuba_table: Option<String>,
 }
 
 impl DerivedDataConfig {
