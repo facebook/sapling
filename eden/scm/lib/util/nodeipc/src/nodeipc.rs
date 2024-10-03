@@ -61,6 +61,7 @@ impl NodeIpc {
     /// are errors initializing internal states.
     pub fn from_env() -> Option<Self> {
         let fd_str = env::var_os("NODE_CHANNEL_FD")?;
+        let fd_str = fd_str.to_str()?;
 
         let serialization_mode = env::var_os("NODE_CHANNEL_SERIALIZATION_MODE");
         if let Some(mode) = serialization_mode.as_ref() {
@@ -70,8 +71,21 @@ impl NodeIpc {
             }
         }
 
-        let libc_fd: LibcFd = fd_str.to_str()?.parse().ok()?;
-        let ipc = Self::from_libc_fd(libc_fd).ok()?.with_libuv_compat();
+        let ipc = if let Some(handle_str) = fd_str.strip_prefix('H') {
+            // It's a (Windows) HANDLE, not a libc fd. This is used by a wrapper program that
+            // receives the node fd, and wants to pass it to the child. Passing a libc fd
+            // on Windows requires setting `STARTUPINFOA.lpReserved2`, publicly documented as
+            // "Reserved for use by the C Run-time; must be NULL.". So the wrapper program
+            // might want to translate the libc fd to handle and hit this code path.
+            let handle: usize = handle_str.parse().ok()?;
+            let handle: RawFileDescriptor = handle as _;
+            Self::from_raw_file_descriptor(handle)
+                .ok()?
+                .with_libuv_compat()
+        } else {
+            let libc_fd: LibcFd = fd_str.parse().ok()?;
+            Self::from_libc_fd(libc_fd).ok()?.with_libuv_compat()
+        };
 
         env::remove_var("NODE_CHANNEL_FD");
         if serialization_mode.is_some() {
