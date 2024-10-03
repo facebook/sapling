@@ -6,7 +6,7 @@ thrift_library(
     name = "xdb_gc_structs",
     languages = [
         "rust",
-        "py",
+        "py-deprecated",
     ],
     py_base_module = "configerator.mononoke",
     thrift_py_options = "json",
