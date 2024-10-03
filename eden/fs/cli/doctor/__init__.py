@@ -68,6 +68,14 @@ except ImportError:
 
 
 try:
+    from eden.fs.cli.facebook.hostcaps import is_asic
+except ImportError:
+
+    def is_asic() -> bool:
+        return False
+
+
+try:
     from .facebook.check_vscode_extensions import VSCodeExtensionsChecker
 except ImportError:
     from typing import Any
@@ -264,7 +272,7 @@ class EdenDoctorChecker:
     def run_edenfs_not_healthy_checks(self) -> None:
         configured_mounts = self.instance.get_mount_paths()
         if configured_mounts:
-            if not self.fast:
+            if not self.fast and not is_asic():
                 # Run network checks without a backing repo
                 try:
                     self.network_checker.check_network(
@@ -963,7 +971,7 @@ def check_mount(
         raise RuntimeError("Failed to detect nested checkout") from ex
 
     # Network issues could prevent a mount from starting
-    if not fast:
+    if not fast and not is_asic():
         try:
             backing_repo = checkout.get_backing_repo()
             run_repo_check = True
