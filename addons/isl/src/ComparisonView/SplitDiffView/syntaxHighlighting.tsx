@@ -13,7 +13,7 @@ import type {
 } from './syntaxHighlightingTypes';
 import type {ParsedDiff} from 'shared/patch/parse';
 
-import foundPlatform from '../../platform';
+import {isVscode} from '../../environment';
 import {themeState} from '../../theme';
 import {SynchronousWorker, WorkerApi} from './workerApi';
 import {useAtomValue} from 'jotai';
@@ -36,7 +36,7 @@ function getWorker(): Promise<WorkerApi<SyntaxWorkerRequest, SyntaxWorkerRespons
   }
   cachedWorkerPromise = (async () => {
     let worker: WorkerApi<SyntaxWorkerRequest, SyntaxWorkerResponse>;
-    if (foundPlatform.platformName === 'vscode') {
+    if (isVscode()) {
       if (process.env.NODE_ENV === 'development') {
         // NOTE: when using vscode in dev mode, because the web worker is not compiled to a single file,
         // the webview can't use it properly.
