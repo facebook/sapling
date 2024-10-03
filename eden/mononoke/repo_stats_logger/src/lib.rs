@@ -9,7 +9,6 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Error;
-use blobstore::Blobstore;
 use blobstore::Loadable;
 use bookmarks::ArcBookmarks;
 use bookmarks::BookmarkKey;
@@ -20,6 +19,7 @@ use futures::future::abortable;
 use futures::future::AbortHandle;
 use metaconfig_types::ArcRepoConfig;
 use mononoke_types::ChangesetId;
+use repo_blobstore::ArcRepoBlobstore;
 use repo_derived_data::ArcRepoDerivedData;
 use sharding_ext::encode_repo_name;
 use slog::warn;
@@ -47,7 +47,7 @@ impl RepoStatsLogger {
         repo_name: String,
         repo_config: ArcRepoConfig,
         bookmarks: ArcBookmarks,
-        repo_blobstore: Arc<dyn Blobstore>,
+        repo_blobstore: ArcRepoBlobstore,
         repo_derived_data: ArcRepoDerivedData,
     ) -> Result<Self, Error> {
         let ctx = CoreContext::new_for_bulk_processing(fb, logger.clone());
@@ -60,26 +60,19 @@ impl RepoStatsLogger {
                 let repo_key = encode_repo_name(&repo_name);
                 let bookmark_name =
                     get_repo_bookmark_name(repo_config.clone()).expect("invalid bookmark name");
-                let default_repo_objects_count =
-                    get_repo_default_objects_count(repo_config.clone());
 
                 match get_repo_objects_count(
                     &ctx,
+                    &repo_name,
+                    &repo_config,
                     &bookmark_name,
                     bookmarks.clone(),
                     repo_blobstore.clone(),
                     repo_derived_data.clone(),
-                    default_repo_objects_count,
                 )
                 .await
                 {
                     Ok(count) => {
-                        let over = justknobs::get_as::<i64>(
-                            "scm/mononoke:scs_override_repo_objects_count",
-                            Some(&repo_name),
-                        )
-                        .unwrap_or(0);
-                        let count = if over > 0 { over } else { count };
                         STATS::repo_objects_count.set_value(fb, count, (repo_key,));
                     }
                     Err(e) => {
@@ -125,29 +118,45 @@ fn get_repo_default_objects_count(repo_config: Arc<metaconfig_types::RepoConfig>
 
 async fn get_repo_objects_count(
     ctx: &CoreContext,
+    repo_name: &str,
+    repo_config: &ArcRepoConfig,
     bookmark_name: &BookmarkKey,
     bookmarks: ArcBookmarks,
-    repo_blobstore: Arc<dyn Blobstore>,
+    repo_blobstore: ArcRepoBlobstore,
     repo_derived_data: ArcRepoDerivedData,
-    default_repo_object_count: i64,
 ) -> Result<i64, Error> {
-    let maybe_bookmark = bookmarks.get(ctx.clone(), bookmark_name).await?;
-    if let Some(cs_id) = maybe_bookmark {
-        get_descendant_count(
-            ctx,
-            repo_blobstore.clone(),
-            repo_derived_data.clone(),
-            cs_id,
-        )
-        .await
-    } else {
-        Ok(default_repo_object_count)
+    let default_repo_objects_count = get_repo_default_objects_count(repo_config.clone());
+    let maybe_override = justknobs::get_as::<i64>(
+        "scm/mononoke:scs_override_repo_objects_count",
+        Some(repo_name),
+    )
+    .ok();
+
+    match maybe_override {
+        Some(over) => {
+            // whether the override comes from config or JK, we will skip any computation
+            Ok(over)
+        }
+        None => {
+            let maybe_bookmark = bookmarks.get(ctx.clone(), bookmark_name).await?;
+            if let Some(cs_id) = maybe_bookmark {
+                get_descendant_count(
+                    ctx,
+                    repo_blobstore.clone(),
+                    repo_derived_data.clone(),
+                    cs_id,
+                )
+                .await
+            } else {
+                Ok(default_repo_objects_count)
+            }
+        }
     }
 }
 
 async fn get_descendant_count(
     ctx: &CoreContext,
-    repo_blobstore: Arc<dyn Blobstore>,
+    repo_blobstore: ArcRepoBlobstore,
     repo_derived_data: ArcRepoDerivedData,
     cs_id: ChangesetId,
 ) -> Result<i64, Error> {
@@ -164,5 +173,153 @@ async fn get_descendant_count(
 impl Drop for RepoStatsLogger {
     fn drop(&mut self) {
         self.abort_handle.abort()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use bookmarks::Bookmarks;
+    use bookmarks::BookmarksArc;
+    use fbinit::FacebookInit;
+    use futures::future::FutureExt;
+    use justknobs::test_helpers::with_just_knobs;
+    use justknobs::test_helpers::with_just_knobs_async;
+    use justknobs::test_helpers::JustKnobsInMemory;
+    use justknobs::test_helpers::KnobVal;
+    use maplit::hashmap;
+    use metaconfig_types::RepoConfig;
+    use metaconfig_types::RepoConfigArc;
+    use mononoke_macros::mononoke;
+    use repo_blobstore::RepoBlobstore;
+    use repo_blobstore::RepoBlobstoreArc;
+    use repo_derived_data::RepoDerivedData;
+    use repo_derived_data::RepoDerivedDataArc;
+    use test_repo_factory::TestRepoFactory;
+
+    use super::*;
+
+    #[facet::container]
+    #[derive(Clone)]
+    struct Repo {
+        #[facet]
+        repo_config: RepoConfig,
+
+        #[facet]
+        bookmarks: dyn Bookmarks,
+
+        #[facet]
+        repo_blobstore: RepoBlobstore,
+
+        #[facet]
+        derived_data: RepoDerivedData,
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_get_repo_default_objects_count(fb: FacebookInit) -> Result<(), Error> {
+        let factory = TestRepoFactory::new(fb)?;
+        let repo: Repo = factory.build().await?;
+
+        let count = get_repo_default_objects_count(repo.repo_config_arc());
+        assert_eq!(count, 1000000);
+
+        // set a default via JK
+        let count = with_just_knobs(
+            JustKnobsInMemory::new(hashmap![
+                "scm/mononoke:scs_default_repo_objects_count".to_string() => KnobVal::Int(10),
+            ]),
+            || get_repo_default_objects_count(repo.repo_config_arc()),
+        );
+        assert_eq!(count, 10);
+
+        // set a default in the repo config
+        let repo_config = Arc::new(RepoConfig {
+            default_objects_count: Some(100),
+            ..Default::default()
+        });
+        let count = get_repo_default_objects_count(repo_config);
+        assert_eq!(count, 100);
+
+        // set a default in the repo config and in the JK
+        let repo_config = Arc::new(RepoConfig {
+            default_objects_count: Some(1000),
+            ..Default::default()
+        });
+        let count = with_just_knobs(
+            JustKnobsInMemory::new(hashmap![
+                "scm/mononoke:scs_default_repo_objects_count".to_string() => KnobVal::Int(2000),
+            ]),
+            || get_repo_default_objects_count(repo_config),
+        );
+        assert_eq!(count, 1000);
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_get_repo_objects_count(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let factory = TestRepoFactory::new(fb)?;
+        let repo: Repo = factory.build().await?;
+
+        let repo_config = repo.repo_config_arc();
+        let bookmarks = repo.bookmarks_arc();
+        let repo_blobstore = repo.repo_blobstore_arc();
+        let repo_derived_data = repo.repo_derived_data_arc();
+
+        let bookmark_key = BookmarkKey::new("master")?;
+        let get_count = get_repo_objects_count(
+            &ctx,
+            "repo",
+            &repo_config,
+            &bookmark_key,
+            bookmarks.clone(),
+            repo_blobstore.clone(),
+            repo_derived_data.clone(),
+        );
+
+        // plain defaults, including the default JK value of 1000000
+        let count = get_count.await?;
+        assert_eq!(count, 1000000);
+
+        // set a default via JK
+        let get_count = get_repo_objects_count(
+            &ctx,
+            "repo",
+            &repo_config,
+            &bookmark_key,
+            bookmarks.clone(),
+            repo_blobstore.clone(),
+            repo_derived_data.clone(),
+        );
+        let count = with_just_knobs_async(
+            JustKnobsInMemory::new(hashmap![
+                "scm/mononoke:scs_default_repo_objects_count".to_string() => KnobVal::Int(42)
+            ]),
+            get_count.boxed(),
+        )
+        .await?;
+        assert_eq!(count, 42);
+
+        // override via JK
+        let get_count = get_repo_objects_count(
+            &ctx,
+            "repo",
+            &repo_config,
+            &bookmark_key,
+            bookmarks.clone(),
+            repo_blobstore.clone(),
+            repo_derived_data.clone(),
+        );
+        let count = with_just_knobs_async(
+            JustKnobsInMemory::new(hashmap![
+                "scm/mononoke:scs_default_repo_objects_count".to_string() => KnobVal::Int(42),
+                "scm/mononoke:scs_override_repo_objects_count".to_string() => KnobVal::Int(15),
+            ]),
+            get_count.boxed(),
+        )
+        .await?;
+        assert_eq!(count, 15);
+
+        Ok(())
     }
 }
