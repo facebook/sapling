@@ -9,8 +9,13 @@ rust_library(
         "fbsource//third-party/rust:maplit",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
+        "//eden/mononoke/filestore:filestore",
         "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
+        "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/repo_factory:test_repo_factory",
+        "//eden/mononoke/tests/utils:tests_utils",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",

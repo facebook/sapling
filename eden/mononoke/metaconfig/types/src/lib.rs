@@ -261,6 +261,8 @@ pub struct RepoConfig {
     /// the actual value can be computed with TreeInfo or not (in fact, the computation is
     /// skipped entirely).
     pub override_objects_count: Option<i64>,
+    /// Sets a multiplier for the value for the objects count metric for this repo
+    pub objects_count_multiplier: Option<ObjectsCountMultiplier>,
     /// Map of XRepoSyncSourceConfig for the current repo keyed by the name of the target repo, e.g.
     /// XRepoSyncSourceConfig for the sync from whatsapp/server to fbsource will be stored as
     /// whatsapp_server_config.x_repo_sync_source_mapping["fbsource"] = config
@@ -1934,4 +1936,25 @@ pub struct CommitCloudConfig {
     pub mocked_employees: Vec<String>,
     /// Disables interngraph notification whenever a commit is synced to commit cloud
     pub disable_interngraph_notification: bool,
+}
+
+/// Configs the multiplier when computing the repo load from the objects count
+#[derive(Debug, Default, Clone, PartialEq)]
+pub struct ObjectsCountMultiplier(f32);
+
+impl Eq for ObjectsCountMultiplier {}
+
+impl ObjectsCountMultiplier {
+    /// Build a new ObjectsCountMultiplier wrapping a value
+    pub fn new(val: f32) -> Self {
+        ObjectsCountMultiplier(val)
+    }
+}
+
+impl Deref for ObjectsCountMultiplier {
+    type Target = f32;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
