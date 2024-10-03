@@ -30,6 +30,7 @@ class EdenConfig;
 class EdenStats;
 class FaultInjector;
 class FsEventLogger;
+class IFileAccessLogger;
 class IScribeLogger;
 class NfsServer;
 class Notifier;
@@ -64,6 +65,7 @@ class ServerState {
       std::shared_ptr<Clock> clock,
       std::shared_ptr<ProcessInfoCache> processInfoCache,
       std::shared_ptr<StructuredLogger> structuredLogger,
+      std::shared_ptr<IFileAccessLogger> fileAccessLogger,
       std::shared_ptr<IScribeLogger> scribeLogger,
       std::shared_ptr<ReloadableConfig> reloadableConfig,
       const EdenConfig& initialConfig,
@@ -180,6 +182,16 @@ class ServerState {
   }
 
   /**
+   * Returns a FileAccessLogger that can be used to send log events to external
+   * long term storage for offline consumption. Prefer this method if the
+   * caller needs to own a reference due to lifetime mismatch with the
+   * ServerState
+   */
+  const std::shared_ptr<IFileAccessLogger>& getFileAccessLogger() const {
+    return fileAccessLogger_;
+  }
+
+  /**
    * Returns a pointer to the FsEventLogger for logging FS event samples, if the
    * platform supports it. Otherwise, returns nullptr. The caller is responsible
    * for null checking.
@@ -206,6 +218,7 @@ class ServerState {
   std::shared_ptr<Clock> clock_;
   std::shared_ptr<ProcessInfoCache> processInfoCache_;
   std::shared_ptr<StructuredLogger> structuredLogger_;
+  std::shared_ptr<IFileAccessLogger> fileAccessLogger_;
   std::shared_ptr<IScribeLogger> scribeLogger_;
   std::unique_ptr<FaultInjector> const faultInjector_;
   std::shared_ptr<NfsServer> nfs_;

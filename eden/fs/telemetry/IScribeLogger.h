@@ -18,13 +18,6 @@ namespace facebook::eden {
 class EdenConfig;
 class EdenMount;
 
-struct FileAccess {
-  InodeNumber inodeNumber;
-  ObjectFetchContext::Cause cause;
-  std::optional<std::string> causeDetail;
-  std::weak_ptr<EdenMount> edenMount;
-};
-
 /**
  * A filesystem event to be logged through ScribeLogger.
  * The caller is responsible for ensuring the lifetime of the underlying
@@ -45,8 +38,6 @@ class IScribeLogger {
   virtual ~IScribeLogger() = default;
 
   virtual void log(std::string_view category, std::string&& message) = 0;
-
-  virtual void logFileAccess(FileAccess access) = 0;
 
   virtual void logFsEventSample(FsEventSample event) = 0;
 
@@ -70,8 +61,6 @@ class NullScribeLogger : public IScribeLogger {
   }
 
   void log(std::string_view /*category*/, std::string&& /*message*/) override {}
-
-  void logFileAccess(FileAccess /* access */) override {}
 
   void logFsEventSample(FsEventSample /* event */) override {}
 };
