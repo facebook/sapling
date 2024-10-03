@@ -5,8 +5,8 @@ oncall("source_control")
 thrift_library(
     name = "constants",
     languages = [
-        "py",
         "rust",
+        "py-deprecated",
     ],
     py_base_module = "configerator.mononoke",
     thrift_py_options = "json",
