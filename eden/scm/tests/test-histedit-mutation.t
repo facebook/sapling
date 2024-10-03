@@ -1,7 +1,6 @@
 
 #require no-eden
 
-#inprocess-hg-incompatible
 
   $ eagerepo
   $ configure mutation

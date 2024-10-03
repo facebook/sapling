@@ -2,7 +2,6 @@
 
 #require no-eden
 
-#inprocess-hg-incompatible
   $ configure mutation-norecord dummyssh
   $ enable amend crdump remotenames
   $ showgraph() {

@@ -1,5 +1,4 @@
 #modern-config-incompatible
-#inprocess-hg-incompatible
 
   $ configure dummyssh
 #require serve no-eden

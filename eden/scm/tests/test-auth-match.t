@@ -1,7 +1,6 @@
 
 #require no-eden
 
-#inprocess-hg-incompatible
 
   $ newclientrepo repo
   $ export EDENSCM_LOG=auth=debug

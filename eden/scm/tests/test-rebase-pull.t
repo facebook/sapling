@@ -3,7 +3,6 @@
 #require no-eden
 
 # coding=utf-8
-#inprocess-hg-incompatible
 
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # Copyright (c) Mercurial Contributors.

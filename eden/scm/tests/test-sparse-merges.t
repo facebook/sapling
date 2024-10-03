@@ -1,5 +1,4 @@
 #require no-windows no-eden
-#inprocess-hg-incompatible
 
   $ eagerepo
 

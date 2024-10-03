@@ -2,7 +2,6 @@
 
 #require no-eden
 
-#inprocess-hg-incompatible
   $ enable remotenames
   > mkcommit()
   > {
