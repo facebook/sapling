@@ -11,7 +11,7 @@ python_library(
     deps = [
         "fbsource//third-party/pypi/toml:toml",
         "//configerator/distribution/api/py:configerator_config",
-        "//configerator/structs/scm/mononoke/repos:repos-py",
+        "//configerator/structs/scm/mononoke/repos:repos-py-deprecated",
     ],
 )
 

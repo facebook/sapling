@@ -5,9 +5,9 @@ oncall("source_control")
 thrift_library(
     name = "repos",
     languages = [
-        "py",
         "python",
         "rust",
+        "py-deprecated",
     ],
     py3_namespace = "mononoke.repos",
     py_base_module = "configerator.mononoke",
@@ -26,8 +26,8 @@ thrift_library(
 thrift_library(
     name = "commitsync",
     languages = [
-        "py",
         "rust",
+        "py-deprecated",
     ],
     py_base_module = "configerator.mononoke",
     rust_autocargo = {"cargo_toml_dir": "commitsync"},
