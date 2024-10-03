@@ -286,7 +286,7 @@ export enum GeneratedMessageTrackEventName {
 /**
  * Manage tracking events and including a suggestion identifier according to the analytics funnel:
  *
- * (O) Opporunity - The dropdown has rendered and a suggestion has begun being rendered
+ * (O) Opportunity - The dropdown has rendered and a suggestion has begun being rendered
  * (S) Shown - A complete suggestion has been rendered
  * (A) Accepted - The suggestion was accepted
  * (R) Rejected - The suggestion was rejected, retried, or dismissed
