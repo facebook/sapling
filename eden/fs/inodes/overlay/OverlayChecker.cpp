@@ -747,12 +747,16 @@ OverlayChecker::OverlayChecker(
     InodeCatalog* inodeCatalog,
     FsFileContentStore* fcs,
     optional<InodeNumber> nextInodeNumber,
-    InodeCatalog::LookupCallback& lookupCallback)
+    InodeCatalog::LookupCallback& lookupCallback,
+    uint64_t numErrorDiscoveryThreads)
     : impl_{std::make_unique<Impl>(
           inodeCatalog,
           fcs,
           nextInodeNumber,
-          lookupCallback)} {}
+          lookupCallback)},
+      numErrorDiscoveryThreads_{numErrorDiscoveryThreads} {
+  XCHECK_GT(numErrorDiscoveryThreads_, 0u);
+}
 
 OverlayChecker::~OverlayChecker() = default;
 
@@ -966,7 +970,7 @@ std::unique_ptr<OverlayChecker::Error> make_error(Args&&... args) {
 void OverlayChecker::readInodes(const ProgressCallback& progressCallback) {
   using namespace folly::gen;
 
-  auto threads = 4;
+  auto threads = numErrorDiscoveryThreads_;
   uint32_t progress10pct = 0;
 
   folly::Synchronized<std::vector<std::unique_ptr<Error>>> errors;

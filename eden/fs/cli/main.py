@@ -1290,6 +1290,11 @@ class FsckCmd(Subcmd):
             nargs="*",
             help="The path to an EdenFS checkout to verify.",
         )
+        parser.add_argument(
+            "--num-error-discovery-threads",
+            default=4,
+            help="Specifies the number of threads that the OverlayChecker will use for error discovery",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         if sys.platform == "win32":
@@ -1334,7 +1339,12 @@ class FsckCmd(Subcmd):
         instance = get_eden_instance(args)
         return_codes: List[int] = []
         for checkout in instance.get_checkouts():
-            result = self.check_one(args, instance, checkout.path, checkout.state_dir)
+            result = self.check_one(
+                args,
+                instance,
+                checkout.path,
+                checkout.state_dir,
+            )
             return_codes.append(result)
 
         return return_codes
@@ -1348,12 +1358,15 @@ class FsckCmd(Subcmd):
     ) -> int:
         print(f"Checking {checkout_path}...")
         overlay_path = state_dir / "local"
+        num_threads = args.num_error_discovery_threads
+        instance.get_config_int("fsck.num-error-discovery-threads", num_threads)
         return subprocess.call(
             [
                 get_fsck_command(),
                 overlay_path,
                 f"--dry-run={'true' if args.check_only else 'false'}",
                 f"--force={'true' if args.force else 'false'}",
+                f"--num_error_discovery_threads={num_threads}",
             ]
         )
 

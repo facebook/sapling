@@ -28,6 +28,11 @@ DEFINE_bool(
     false,
     "Force fsck to scan for errors even on checkouts that appear to currently be mounted.  It will not attempt to fix any problems, but will only scan and report possible issues");
 
+DEFINE_int64(
+    num_error_discovery_threads,
+    4,
+    "Number of threads to use for discovering errors in the overlay");
+
 using namespace facebook::eden;
 
 int main(int argc, char** argv) {
@@ -67,7 +72,8 @@ int main(int argc, char** argv) {
       &fsInodeCatalog.value(),
       &fileContentStore.value(),
       nextInodeNumber,
-      lookup);
+      lookup,
+      FLAGS_num_error_discovery_threads);
   checker.scanForErrors();
   if (FLAGS_dry_run || FLAGS_force) {
     checker.logErrors();

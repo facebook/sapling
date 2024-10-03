@@ -89,6 +89,10 @@ class TestOverlay : public std::enable_shared_from_this<TestOverlay> {
 
   void recreateSqliteInodeCatalog();
 
+  std::shared_ptr<EdenConfig> getTestConfig() {
+    return testConfig_;
+  }
+
  private:
   folly::test::TemporaryDirectory tmpDir_;
   AbsolutePath tmpDirPath_;
@@ -96,6 +100,7 @@ class TestOverlay : public std::enable_shared_from_this<TestOverlay> {
   std::unique_ptr<InodeCatalog> inodeCatalog_;
   InodeCatalogType type_;
   uint64_t nextInodeNumber_{0};
+  std::shared_ptr<EdenConfig> testConfig_;
 };
 
 class TestFile {
@@ -210,7 +215,8 @@ TestOverlay::TestOverlay(InodeCatalogType type)
       // so make sure we put the overlay at least 1 directory deep inside our
       // temporary directory
       fcs_(tmpDirPath_ + "overlay"_pc),
-      type_(type) {
+      type_(type),
+      testConfig_{EdenConfig::createTestEdenConfig()} {
   if (type != InodeCatalogType::Legacy) {
     inodeCatalog_ = std::make_unique<SqliteInodeCatalog>(
         tmpDirPath_ + "overlay"_pc, std::make_shared<NullStructuredLogger>());
@@ -384,7 +390,12 @@ TEST_P(FsckTest, testNoErrors) {
     return makeImmediateFuture<InodeCatalog::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
   };
-  OverlayChecker checker(catalog, &fcs, nextInode, lookup);
+  OverlayChecker checker(
+      catalog,
+      &fcs,
+      nextInode,
+      lookup,
+      testOverlay->getTestConfig()->fsckNumErrorDiscoveryThreads.getValue());
   checker.scanForErrors();
   EXPECT_EQ(0, checker.getErrors().size());
   EXPECT_THAT(errorMessages(checker), UnorderedElementsAre());
@@ -428,7 +439,12 @@ TEST_P(FsckTest, testMissingNextInodeNumber) {
     return makeImmediateFuture<InodeCatalog::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
   };
-  OverlayChecker checker(catalog, &fcs, nextInode, lookup);
+  OverlayChecker checker(
+      catalog,
+      &fcs,
+      nextInode,
+      lookup,
+      testOverlay->getTestConfig()->fsckNumErrorDiscoveryThreads.getValue());
   checker.scanForErrors();
   // OverlayChecker should still report 0 errors in this case.
   // We don't report a missing next inode number as an error: if this is the
@@ -462,7 +478,12 @@ TEST_P(FsckTest, testBadNextInodeNumber) {
     return makeImmediateFuture<InodeCatalog::LookupCallbackValue>(
         std::runtime_error("no lookup callback"));
   };
-  OverlayChecker checker(catalog, &fcs, nextInode, lookup);
+  OverlayChecker checker(
+      catalog,
+      &fcs,
+      nextInode,
+      lookup,
+      testOverlay->getTestConfig()->fsckNumErrorDiscoveryThreads.getValue());
   checker.scanForErrors();
   EXPECT_THAT(
       errorMessages(checker),
@@ -487,7 +508,11 @@ TEST_P(FsckTest, testBadFileData) {
         std::runtime_error("no lookup callback"));
   };
   OverlayChecker checker(
-      testOverlay->inodeCatalog(), &testOverlay->fcs(), std::nullopt, lookup);
+      testOverlay->inodeCatalog(),
+      &testOverlay->fcs(),
+      std::nullopt,
+      lookup,
+      testOverlay->getTestConfig()->fsckNumErrorDiscoveryThreads.getValue());
   checker.scanForErrors();
   EXPECT_THAT(
       errorMessages(checker),
@@ -542,7 +567,11 @@ TEST_P(FsckTest, testTruncatedDirData) {
         std::runtime_error("no lookup callback"));
   };
   OverlayChecker checker(
-      testOverlay->inodeCatalog(), &testOverlay->fcs(), std::nullopt, lookup);
+      testOverlay->inodeCatalog(),
+      &testOverlay->fcs(),
+      std::nullopt,
+      lookup,
+      testOverlay->getTestConfig()->fsckNumErrorDiscoveryThreads.getValue());
   checker.scanForErrors();
   EXPECT_THAT(
       errorMessages(checker),
@@ -640,7 +669,11 @@ TEST_P(FsckTest, testMissingDirData) {
         std::runtime_error("no lookup callback"));
   };
   OverlayChecker checker(
-      testOverlay->inodeCatalog(), &testOverlay->fcs(), std::nullopt, lookup);
+      testOverlay->inodeCatalog(),
+      &testOverlay->fcs(),
+      std::nullopt,
+      lookup,
+      testOverlay->getTestConfig()->fsckNumErrorDiscoveryThreads.getValue());
   checker.scanForErrors();
   EXPECT_THAT(
       errorMessages(checker),
@@ -730,7 +763,11 @@ TEST_P(FsckTest, testHardLink) {
         std::runtime_error("no lookup callback"));
   };
   OverlayChecker checker(
-      testOverlay->inodeCatalog(), &testOverlay->fcs(), std::nullopt, lookup);
+      testOverlay->inodeCatalog(),
+      &testOverlay->fcs(),
+      std::nullopt,
+      lookup,
+      testOverlay->getTestConfig()->fsckNumErrorDiscoveryThreads.getValue());
   checker.scanForErrors();
   EXPECT_THAT(
       errorMessages(checker),

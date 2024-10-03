@@ -1467,8 +1467,8 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> multiThreadedFsck{"fsck:multi-threaded", true, this};
 
   /**
-   * The number of threads that the OverlayChecker will use to when
-   * performing error discovery.
+   * The number of threads that the OverlayChecker will use when performing
+   * error discovery.
    */
   ConfigSetting<uint64_t> fsckNumErrorDiscoveryThreads{
       "fsck:num-error-discovery-threads",

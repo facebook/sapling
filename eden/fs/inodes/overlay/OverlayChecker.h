@@ -66,7 +66,15 @@ class OverlayChecker {
       InodeCatalog* inodeCatalog,
       FsFileContentStore* fcs,
       std::optional<InodeNumber> nextInodeNumber,
-      InodeCatalog::LookupCallback& lookupCallback);
+      InodeCatalog::LookupCallback& lookupCallback,
+      std::shared_ptr<const EdenConfig> edenConfig);
+
+  OverlayChecker(
+      InodeCatalog* inodeCatalog,
+      FsFileContentStore* fcs,
+      std::optional<InodeNumber> nextInodeNumber,
+      InodeCatalog::LookupCallback& lookupCallback,
+      uint64_t numErrorDiscoveryThreads);
 
   ~OverlayChecker();
 
@@ -214,6 +222,9 @@ class OverlayChecker {
   std::unique_ptr<Impl> impl_;
   std::vector<std::unique_ptr<Error>> errors_;
   uint64_t maxInodeNumber_{kRootNodeId.get()};
+
+  // Number of threads used for loading inodes in the error discovery phase.
+  uint64_t numErrorDiscoveryThreads_;
 
   std::unordered_map<InodeNumber, PathInfo> pathCache_;
 };

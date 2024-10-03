@@ -369,7 +369,8 @@ void Overlay::initOverlay(
         inodeCatalog_.get(),
         static_cast<FsFileContentStore*>(fileContentStore_.get()),
         std::nullopt,
-        lookupCallback);
+        lookupCallback,
+        config->fsckNumErrorDiscoveryThreads.getValue());
     folly::stop_watch<> fsckRuntime;
     checker.scanForErrors(progressCallback);
     auto result = checker.repairErrors();
