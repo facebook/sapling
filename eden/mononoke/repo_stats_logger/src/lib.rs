@@ -106,14 +106,27 @@ fn get_repo_bookmark_name(
     BookmarkKey::new(bookmark_name)
 }
 
-fn get_repo_default_objects_count(repo_config: Arc<metaconfig_types::RepoConfig>) -> i64 {
-    let default_repo_object_count =
-        justknobs::get_as::<i64>("scm/mononoke:scs_default_repo_objects_count", None)
-            .unwrap_or(DEFAULT_REPO_OBJECTS_COUNT);
-    repo_config
+//
+// Returns the settings for repo objectos count computations.
+//
+fn get_repo_objects_count_settings(
+    repo_name: &str,
+    repo_config: Arc<metaconfig_types::RepoConfig>,
+) -> (i64, Option<i64>) {
+    let default_objects_count = repo_config
         .default_objects_count
         .clone()
-        .unwrap_or(default_repo_object_count)
+        .or_else(|| justknobs::get("scm/mononoke:scs_default_repo_objects_count", None).ok())
+        .unwrap_or(DEFAULT_REPO_OBJECTS_COUNT);
+
+    let maybe_override_objects_count = justknobs::get_as::<i64>(
+        "scm/mononoke:scs_override_repo_objects_count",
+        Some(repo_name),
+    )
+    .ok()
+    .or_else(|| repo_config.override_objects_count.clone());
+
+    (default_objects_count, maybe_override_objects_count)
 }
 
 async fn get_repo_objects_count(
@@ -125,14 +138,10 @@ async fn get_repo_objects_count(
     repo_blobstore: ArcRepoBlobstore,
     repo_derived_data: ArcRepoDerivedData,
 ) -> Result<i64, Error> {
-    let default_repo_objects_count = get_repo_default_objects_count(repo_config.clone());
-    let maybe_override = justknobs::get_as::<i64>(
-        "scm/mononoke:scs_override_repo_objects_count",
-        Some(repo_name),
-    )
-    .ok();
+    let (default_repo_objects_count, maybe_override_objects_count) =
+        get_repo_objects_count_settings(repo_name, repo_config.clone());
 
-    match maybe_override {
+    match maybe_override_objects_count {
         Some(over) => {
             // whether the override comes from config or JK, we will skip any computation
             Ok(over)
@@ -215,42 +224,52 @@ mod tests {
     }
 
     #[mononoke::fbinit_test]
-    async fn test_get_repo_default_objects_count(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_get_repo_objects_count_settings(fb: FacebookInit) -> Result<(), Error> {
         let factory = TestRepoFactory::new(fb)?;
         let repo: Repo = factory.build().await?;
 
-        let count = get_repo_default_objects_count(repo.repo_config_arc());
-        assert_eq!(count, 1000000);
+        let (default_objects_count, maybe_override_objects_count) =
+            get_repo_objects_count_settings("repo", repo.repo_config_arc());
+        assert_eq!(default_objects_count, 1000000);
+        assert!(maybe_override_objects_count.is_none());
 
-        // set a default via JK
-        let count = with_just_knobs(
+        // set via JK
+        let (default_objects_count, maybe_override_objects_count) = with_just_knobs(
             JustKnobsInMemory::new(hashmap![
                 "scm/mononoke:scs_default_repo_objects_count".to_string() => KnobVal::Int(10),
+                "scm/mononoke:scs_override_repo_objects_count".to_string() => KnobVal::Int(20),
             ]),
-            || get_repo_default_objects_count(repo.repo_config_arc()),
+            || get_repo_objects_count_settings("repo", repo.repo_config_arc()),
         );
-        assert_eq!(count, 10);
+        assert_eq!(default_objects_count, 10);
+        assert_eq!(maybe_override_objects_count.unwrap(), 20);
 
-        // set a default in the repo config
+        // set in the repo config
         let repo_config = Arc::new(RepoConfig {
             default_objects_count: Some(100),
+            override_objects_count: Some(200),
             ..Default::default()
         });
-        let count = get_repo_default_objects_count(repo_config);
-        assert_eq!(count, 100);
+        let (default_objects_count, maybe_override_objects_count) =
+            get_repo_objects_count_settings("repo", repo_config);
+        assert_eq!(default_objects_count, 100);
+        assert_eq!(maybe_override_objects_count.unwrap(), 200);
 
-        // set a default in the repo config and in the JK
+        // set in both the repo config and in the JK
         let repo_config = Arc::new(RepoConfig {
             default_objects_count: Some(1000),
+            override_objects_count: Some(4000),
             ..Default::default()
         });
-        let count = with_just_knobs(
+        let (default_objects_count, maybe_override_objects_count) = with_just_knobs(
             JustKnobsInMemory::new(hashmap![
                 "scm/mononoke:scs_default_repo_objects_count".to_string() => KnobVal::Int(2000),
+                "scm/mononoke:scs_override_repo_objects_count".to_string() => KnobVal::Int(3000),
             ]),
-            || get_repo_default_objects_count(repo_config),
+            || get_repo_objects_count_settings("repo", repo_config),
         );
-        assert_eq!(count, 1000);
+        assert_eq!(default_objects_count, 1000);
+        assert_eq!(maybe_override_objects_count.unwrap(), 3000);
 
         Ok(())
     }

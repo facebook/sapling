@@ -257,6 +257,10 @@ pub struct RepoConfig {
     pub bookmark_name_for_objects_count: Option<String>,
     /// Default value for the objects count metric if it cannot be determined via TreeInfo.
     pub default_objects_count: Option<i64>,
+    /// Overrides the value for the objects count metric for this repo, whether
+    /// the actual value can be computed with TreeInfo or not (in fact, the computation is
+    /// skipped entirely).
+    pub override_objects_count: Option<i64>,
     /// Map of XRepoSyncSourceConfig for the current repo keyed by the name of the target repo, e.g.
     /// XRepoSyncSourceConfig for the sync from whatsapp/server to fbsource will be stored as
     /// whatsapp_server_config.x_repo_sync_source_mapping["fbsource"] = config
