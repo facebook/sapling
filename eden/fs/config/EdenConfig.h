@@ -1003,6 +1003,15 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Minimum interval between NFS stats updates in seconds. NFS stat collection
+   * only happens on macOS. Change this to 0 to disable NFS stat collection.
+   */
+  ConfigSetting<std::chrono::nanoseconds> updateNFSStatsInterval{
+      "telemetry:update-nfs-stats-interval",
+      std::chrono::seconds{60},
+      this};
+
+  /**
    * Controls which configs we want to send with the request logging.
    * The elements are full config keys, e.g. "hg:import-batch-size".
    * Elements not valid or not present in the config map are silently ignored.

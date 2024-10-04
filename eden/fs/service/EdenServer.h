@@ -742,6 +742,10 @@ class EdenServer : private TakeoverHandler {
       {"Client Info.RPC Info.X Replies", "replies"},
       {"Client Info.RPC Info.TimedOut", "timed_out"},
       {"Client Info.RPC Info.Invalid", "invalid"}};
+  folly::Synchronized<std::chrono::steady_clock::time_point>
+      lastTimeUpdatedNfsStat_;
+  // Update NFS stats if needed. Return false if NFS stats are not available.
+  bool updateNFSStatsIfNeeded();
 #endif
 
   /**

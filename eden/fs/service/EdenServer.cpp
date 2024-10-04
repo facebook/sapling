@@ -536,40 +536,43 @@ EdenServer::EdenServer(
 
 #ifdef __APPLE__
   // On macOS, export the NFS clients/servers counters
-  auto result = collectNFSUtilStats();
-  if (result.hasValue()) {
-    nfsStatOutput_ = result.value();
-    for (const auto& nfsStatsCounter : kNfsStatsToEdenStatsMap_) {
-      auto counterName = mapCounterNameForNFSStat(nfsStatsCounter);
-      if (counterName.has_value()) {
-        counters->registerCallback(
-            counterName.value(), [this, nfsStatsCounter] {
-              auto result = this->getNFSStatCounterValue(nfsStatsCounter.first);
-              if (result.has_value()) {
-                return result.value();
-              } else {
-                return 0LL;
-              }
-            });
-      } else {
-        // This is not an error, just log it and continue.
-        // This only happen on registration time, not during runtime per
-        // counter. It notify us that we have a NFS counter in the map that
-        // is not reported by Apple.
-        XLOGF(
-            DBG6,
-            "macOS doesn't report any stat for: {}",
-            nfsStatsCounter.first);
+  if (config_->getEdenConfig()->updateNFSStatsInterval.getValue() > 0ms) {
+    auto result = collectNFSUtilStats();
+    if (result.hasValue()) {
+      for (const auto& nfsStatsCounter : kNfsStatsToEdenStatsMap_) {
+        auto counterName = mapCounterNameForNFSStat(nfsStatsCounter);
+        if (counterName.has_value()) {
+          counters->registerCallback(
+              counterName.value(), [this, nfsStatsCounter] {
+                auto result =
+                    this->getNFSStatCounterValue(nfsStatsCounter.first);
+                if (result.has_value()) {
+                  return result.value();
+                } else {
+                  return 0LL;
+                }
+              });
+        } else {
+          // This is not an error, just log it and continue.
+          // This only happen on registration time, not during runtime per
+          // counter. It notify us that we have a NFS counter in the map that
+          // is not reported by Apple.
+          XLOGF(
+              DFATAL,
+              "macOS doesn't report any stat for: {}",
+              nfsStatsCounter.first);
+        }
       }
+    } else {
+      auto error = result.exception();
+      // This is not a fatal error, just log it and continue.
+      // This only happen on registration time, not during runtime per
+      // counter.
+      XLOGF(
+          ERR,
+          "Failed to collect NFS clients/servers counters: {}",
+          error.what());
     }
-  } else {
-    auto error = result.exception();
-    // This is not a fatal error, just log it and continue.
-    // This only happen on registration time, not during runtime per counter.
-    XLOGF(
-        ERR,
-        "Failed to collect NFS clients/servers counters: {}",
-        error.what());
   }
 #endif
 }
@@ -615,6 +618,10 @@ std::optional<std::string> EdenServer::mapCounterNameForNFSStat(
 
 std::optional<long long> EdenServer::getNFSStatCounterValue(
     std::string nfsStatsCounterMacOSName) {
+  if (!this->updateNFSStatsIfNeeded()) {
+    // Unable to collect NFS stats
+    return std::nullopt;
+  }
   try {
     std::vector<std::string> tokens;
     folly::split('.', nfsStatsCounterMacOSName, tokens);
@@ -622,6 +629,22 @@ std::optional<long long> EdenServer::getNFSStatCounterValue(
   } catch (const std::exception&) {
     return std::nullopt;
   }
+}
+
+bool EdenServer::updateNFSStatsIfNeeded() {
+  auto now = std::chrono::steady_clock::now();
+  auto last = lastTimeUpdatedNfsStat_.wlock();
+  if (now >=
+      *last + config_->getEdenConfig()->updateNFSStatsInterval.getValue()) {
+    auto result = collectNFSUtilStats();
+    *last = std::chrono::steady_clock::now();
+    if (!result.hasValue()) {
+      // Unable to collect NFS stats
+      return false;
+    }
+    nfsStatOutput_ = result.value();
+  }
+  return true;
 }
 #endif
 
