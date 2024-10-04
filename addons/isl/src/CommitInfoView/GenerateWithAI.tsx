@@ -113,9 +113,9 @@ const cachedSuggestions = new Map<
 >();
 const ONE_HOUR = 60 * 60 * 1000;
 const MAX_SUGGESTION_CACHE_AGE = 24 * ONE_HOUR; // cache aggressively since we have an explicit button to invalidate
-const generatedCommitMessages = atomFamilyWeak((hashKey: string | undefined) =>
+const generatedCommitMessages = atomFamilyWeak((hashKey: string) =>
   atomLoadableWithRefresh((get): Promise<Result<string>> => {
-    if (hashKey == null || Internal.generateAICommitMessage == null) {
+    if (Internal.generateAICommitMessage == null) {
       return Promise.resolve({value: ''});
     }
 
