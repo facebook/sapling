@@ -25,7 +25,11 @@
 #include <folly/Exception.h>
 #include <folly/FileUtil.h>
 #include <folly/SocketAddress.h>
-#include <folly/String.h>
+
+#include <folly/json/json.h>
+#ifdef __APPLE__
+#include <folly/Subprocess.h> // @manual
+#endif
 #include <folly/chrono/Conv.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
 #include <folly/executors/thread_factory/NamedThreadFactory.h>
@@ -218,6 +222,9 @@ constexpr StringPiece kSlStorePrefix{"store.sapling"};
 #ifndef _WIN32
 constexpr StringPiece kFuseRequestPrefix{"fuse"};
 #endif
+#ifdef __APPLE__
+constexpr StringPiece kNFSStatPrefix{"nfs"};
+#endif
 constexpr StringPiece kStateConfig{"config.toml"};
 
 std::optional<std::string> getUnixDomainSocketPath(
@@ -225,6 +232,21 @@ std::optional<std::string> getUnixDomainSocketPath(
   return AF_UNIX == address.getFamily() ? std::make_optional(address.getPath())
                                         : std::nullopt;
 }
+
+#ifdef __APPLE__
+folly::Try<folly::dynamic> collectNFSUtilStats() {
+  try {
+    folly::Subprocess nfsStatProc(
+        "nfsstat -f JSON",
+        folly::Subprocess::Options().pipeStdout().pipeStderr());
+    std::string nfsStatOutputString = nfsStatProc.communicate().first;
+    nfsStatProc.wait();
+    return folly::Try<folly::dynamic>(folly::parseJson(nfsStatOutputString));
+  } catch (const std::exception& e) {
+    return folly::Try<folly::dynamic>(e);
+  }
+}
+#endif
 
 std::string getCounterNameForImportMetric(
     RequestMetricsScope::RequestStage stage,
@@ -511,6 +533,45 @@ EdenServer::EdenServer(
     }
     return (size_t)0;
   });
+
+#ifdef __APPLE__
+  // On macOS, export the NFS clients/servers counters
+  auto result = collectNFSUtilStats();
+  if (result.hasValue()) {
+    nfsStatOutput_ = result.value();
+    for (const auto& nfsStatsCounter : kNfsStatsToEdenStatsMap_) {
+      auto counterName = mapCounterNameForNFSStat(nfsStatsCounter);
+      if (counterName.has_value()) {
+        counters->registerCallback(
+            counterName.value(), [this, nfsStatsCounter] {
+              auto result = this->getNFSStatCounterValue(nfsStatsCounter.first);
+              if (result.has_value()) {
+                return result.value();
+              } else {
+                return 0LL;
+              }
+            });
+      } else {
+        // This is not an error, just log it and continue.
+        // This only happen on registration time, not during runtime per
+        // counter. It notify us that we have a NFS counter in the map that
+        // is not reported by Apple.
+        XLOGF(
+            DBG6,
+            "macOS doesn't report any stat for: {}",
+            nfsStatsCounter.first);
+      }
+    }
+  } else {
+    auto error = result.exception();
+    // This is not a fatal error, just log it and continue.
+    // This only happen on registration time, not during runtime per counter.
+    XLOGF(
+        ERR,
+        "Failed to collect NFS clients/servers counters: {}",
+        error.what());
+  }
+#endif
 }
 
 EdenServer::~EdenServer() {
@@ -529,7 +590,40 @@ EdenServer::~EdenServer() {
     }
   }
   counters->unregisterCallback(kFsChannelTaskCount);
+#ifdef __APPLE__
+  for (const auto& nfsStatsCounter : kNfsStatsToEdenStatsMap_) {
+    auto counterName = mapCounterNameForNFSStat(nfsStatsCounter);
+    if (counterName.has_value()) {
+      counters->unregisterCallback(counterName.value());
+    }
+  }
+#endif
 }
+
+#ifdef __APPLE__
+std::optional<std::string> EdenServer::mapCounterNameForNFSStat(
+    std::pair<std::string, std::string> nfsStatsCounter) {
+  auto result = this->getNFSStatCounterValue(nfsStatsCounter.first);
+  if (result.has_value()) {
+    return fmt::format(
+        kNFSStatPrefix.str() + ".{}",
+        nfsStatsCounter.second); // e.g. "nfs.requests"
+  } else {
+    return std::nullopt;
+  }
+}
+
+std::optional<long long> EdenServer::getNFSStatCounterValue(
+    std::string nfsStatsCounterMacOSName) {
+  try {
+    std::vector<std::string> tokens;
+    folly::split('.', nfsStatsCounterMacOSName, tokens);
+    return nfsStatOutput_[tokens[0]][tokens[1]][tokens[2]].asInt();
+  } catch (const std::exception&) {
+    return std::nullopt;
+  }
+}
+#endif
 
 namespace cursor_helper {
 

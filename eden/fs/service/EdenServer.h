@@ -723,6 +723,27 @@ class EdenServer : private TakeoverHandler {
   };
   folly::Synchronized<RunStateData> runningState_;
 
+#ifdef __APPLE__
+  folly::dynamic nfsStatOutput_;
+  std::optional<std::string> mapCounterNameForNFSStat(
+      std::pair<std::string, std::string> nfsStatsCounter);
+  std::optional<long long> getNFSStatCounterValue(
+      std::string nfsStatsCounterMacOSName);
+  /**
+   * `nfsstat` provides stats from NFS clients and servers on macOS devices used
+   * to populate ODS. The keys below are the concatenation of the sub-path names
+   * returned from `nfsstat`, the values are the names that we use for edenFS
+   * ODS. If the names change we can add/update the key to keep our edenFS ODS
+   * names consistent.
+   */
+  std::map<std::string, std::string> kNfsStatsToEdenStatsMap_{
+      {"Client Info.RPC Info.Requests", "requests"},
+      {"Client Info.RPC Info.Retries", "retries"},
+      {"Client Info.RPC Info.X Replies", "replies"},
+      {"Client Info.RPC Info.TimedOut", "timed_out"},
+      {"Client Info.RPC Info.Invalid", "invalid"}};
+#endif
+
   /**
    * The EventBase driving the main thread loop.
    *

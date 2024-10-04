@@ -318,6 +318,12 @@ cpp_library(
     ],
     os_deps = [
         (
+            "macos",
+            [
+                "//folly:subprocess",
+            ],
+        ),
+        (
             "windows",
             [
                 "//eden/fs/notifications:windows_notifier",
@@ -378,6 +384,7 @@ cpp_library(
         "//folly/executors:serial_executor",
         "//folly/futures:core",
         "//folly/io/async:async_signal_handler",
+        "//folly/json:dynamic",
         "//folly/logging:logging",
         "//folly/portability:gflags",
         "//folly/portability:sys_types",
