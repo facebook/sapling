@@ -247,6 +247,8 @@ impl TreeStore {
                 if let Some(tree_aux_store) = &tree_aux_store {
                     let mut wants_aux = TreeAttributes::AUX_DATA;
                     if cas_client.is_some() {
+                        // We need the tree aux data in order to fetch from CAS, so fetch
+                        // tree aux data for any key we want CONTENT for.
                         wants_aux |= TreeAttributes::CONTENT;
                     }
                     let pending: Vec<_> = state
