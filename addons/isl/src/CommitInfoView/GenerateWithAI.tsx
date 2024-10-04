@@ -289,11 +289,6 @@ enum InternalFieldName {
   TestPlan = 'Test Plan',
 }
 
-enum TrackerFieldName {
-  Summary = 'CommitMessage',
-  TestPlan = 'TestPlan',
-}
-
 export enum FunnelEvent {
   Opportunity = 'opportunity',
   Shown = 'shown',
@@ -370,11 +365,9 @@ class FunnelTracker {
 
     // log all events into the same event, which can be extracted for funnel analysis
     Internal?.trackerWithUserInfo?.track(
-      `GenerateAI${
-        fieldName === InternalFieldName.TestPlan
-          ? TrackerFieldName.TestPlan
-          : TrackerFieldName.Summary
-      }FunnelEvent`,
+      fieldName === InternalFieldName.TestPlan
+        ? 'GenerateAITestPlanFunnelEvent'
+        : 'GenerateAICommitMessageFunnelEvent',
       {
         extras: {
           eventName,
