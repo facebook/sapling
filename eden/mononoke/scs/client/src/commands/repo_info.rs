@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-//! Display information about a commit, directory, or file.
+//! Display information about a repository
 
 use std::io::Write;
 
@@ -22,7 +22,7 @@ use crate::render::Render;
 use crate::ScscApp;
 
 #[derive(clap::Parser)]
-/// Fetch info about a commit, directory, file or bookmark
+/// Fetch information about a repo
 pub(super) struct CommandArgs {
     #[clap(flatten)]
     repo_args: RepoArgs,
