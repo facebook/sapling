@@ -783,7 +783,7 @@ export type ClientToServerMessage =
   | {type: 'fetchFeatureFlag'; name: string}
   | {type: 'fetchInternalUserInfo'}
   | {
-      type: 'generateAICommitMessage';
+      type: 'generateSuggestionWithAI';
       id: string;
       comparison: Comparison;
       fieldName: string;

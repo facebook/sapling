@@ -891,7 +891,7 @@ export default class ServerToClientAPI {
         );
         break;
       }
-      case 'generateAICommitMessage': {
+      case 'generateSuggestionWithAI': {
         if (Internal.generateAICommitMessage == null) {
           break;
         }
