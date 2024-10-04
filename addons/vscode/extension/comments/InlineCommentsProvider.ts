@@ -13,6 +13,7 @@ import type {CommitInfo, DiffComment} from 'isl/src/types';
 
 import {getWebviewOptions, htmlForWebview} from '../htmlForWebview';
 import * as vscode from 'vscode';
+import {workspace} from 'vscode';
 
 export class InlineCommentsProvider implements vscode.Disposable {
   private disposables: Array<vscode.Disposable> = [];
@@ -22,6 +23,11 @@ export class InlineCommentsProvider implements vscode.Disposable {
     private reposList: VSCodeReposList,
     private ctx: RepositoryContext,
   ) {
+    const config = 'sapling.showDiffComments';
+    if (!workspace.getConfiguration().get<boolean>(config)) {
+      return;
+    }
+
     this.disposables.push(
       this.reposList.observeActiveRepos(repos => {
         for (const repo of repos) {

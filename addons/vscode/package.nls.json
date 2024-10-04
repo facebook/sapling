@@ -13,6 +13,7 @@
   "settings.isl.showInSidebar.description": "If true, Interactive Smartlog will appear in the sidebar as a view. If false, Interactive Smartlog will appear as a normal panel like an editor. Restart to take full effect.",
   "settings.commandPath.description": "Controls which executable to use for running Sapling commands. Default: use `sl` on your PATH. Restart required to take effect.",
   "settings.showInlineBlame.description": "Whether to show inline blame annotations next to your cursor when browsing files in Sapling repos.",
+  "settings.showDiffComments.description": "Whether to show Phabricator Diff comments and inline code suggestions.",
   "settings.markConflictingFilesResolvedOnSave.description": "Whether to mark files with merge conflicts as resolved after saving them with no remaining conflict markers.",
   "settings.comparisonPanelMode.description": "Whether comparisons should always appear in a separate panel or only when ISL is not active",
   "settings.comparisonPanelMode.enumDescriptions.auto": "Show comparisons inside the ISL window when ISL is active, and otherwise use a new panel",

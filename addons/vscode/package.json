@@ -48,6 +48,11 @@
           "description": "%settings.showInlineBlame.description%",
           "default": true
         },
+        "sapling.showDiffComments": {
+          "type": "boolean",
+          "description": "%settings.showDiffComments.description%",
+          "default": true
+        },
         "sapling.markConflictingFilesResolvedOnSave": {
           "type": "boolean",
           "description": "%settings.markConflictingFilesResolvedOnSave.description%",
