@@ -120,11 +120,15 @@ const cachedSuggestions = new Map<
 >();
 const ONE_HOUR = 60 * 60 * 1000;
 const MAX_SUGGESTION_CACHE_AGE = 24 * ONE_HOUR; // cache aggressively since we have an explicit button to invalidate
-const generatedCommitMessages = atomFamilyWeak((hashKey: string) =>
+const generatedSuggestions = atomFamilyWeak((fieldNameAndHashKey: string) =>
   atomLoadableWithRefresh((get): Promise<Result<string>> => {
     if (Internal.generateAICommitMessage == null) {
       return Promise.resolve({value: ''});
     }
+
+    const fieldNameAndHashKeyArray = fieldNameAndHashKey.split('+');
+
+    const hashKey = fieldNameAndHashKeyArray[1];
 
     const cached = cachedSuggestions.get(hashKey);
     if (cached && Date.now() - cached.lastFetch < MAX_SUGGESTION_CACHE_AGE) {
@@ -190,7 +194,7 @@ function GenerateAIModal({
   appendToTextArea: (toAdd: string) => unknown;
   fieldName: string;
 }) {
-  const [content, refetch] = useAtom(generatedCommitMessages(hashKey));
+  const [content, refetch] = useAtom(generatedSuggestions(`${fieldName}+${hashKey}`));
 
   const setHasAccepted = useSetAtom(hasAcceptedAIMessageSuggestion(hashKey));
 
