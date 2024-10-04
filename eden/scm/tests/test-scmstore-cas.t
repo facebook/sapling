@@ -1,6 +1,3 @@
-BUG: --config devel-print-metrics goes to real stderr
-#inprocess-hg-incompatible
-
   $ setconfig push.edenapi=true
   $ setconfig scmstore.fetch-from-cas=true scmstore.fetch-tree-aux-data=true scmstore.tree-metadata-mode=always
   $ setconfig scmstore.contentstorefallback=false

@@ -90,6 +90,9 @@ struct IOState {
     output: Box<dyn Write>,
     error: Option<Box<dyn Write>>,
     pager_progress: Option<Box<dyn Term + Send + Sync>>,
+    // (output, error) before pager was activated
+    // error is None if pager isn't handling the error stream
+    pre_pager_io: Option<(Box<dyn Write>, Option<Option<Box<dyn Write>>>)>,
 
     term: Option<Box<dyn Term + Send + Sync>>,
 
@@ -334,6 +337,7 @@ impl IO {
                 output: Box::new(output),
                 error: error.map(|e| Box::new(e) as Box<dyn Write>),
                 pager_progress: None,
+                pre_pager_io: None,
                 term: None,
                 progress_conflict_with_output,
                 output_on_new_line: true,
@@ -364,11 +368,14 @@ impl IO {
         let mut inner = self.inner.locked_with_blocked_interval();
         inner.flush()?;
 
-        // Drop the piped streams (to the pager).
-        // XXX: Stdio is hard-coded for wait_pager.
-        inner.input = Box::new(io::stdin());
-        inner.output = Box::new(io::stdout());
-        inner.error = Some(Box::new(io::stderr()));
+        // Restore pre-pager output/error streams.
+        if let Some((output, error)) = inner.pre_pager_io.take() {
+            inner.output = output;
+            if let Some(error) = error {
+                inner.error = error;
+            }
+        }
+
         inner.redirect_err_to_out = false;
         inner.pager_progress = None;
 
@@ -442,6 +449,7 @@ impl IO {
                 output: Box::new(io::stdout()),
                 error: Some(Box::new(io::stderr())),
                 pager_progress: None,
+                pre_pager_io: None,
                 term: None,
                 progress_conflict_with_output,
                 progress_has_content: false,
@@ -596,25 +604,28 @@ impl IO {
             Ok(child) => child,
         };
 
-        // pipe hg output to pager input
-        inner.output = {
-            let mut pipe =
-                WriterWithTty::new(Box::new(child.stdin.take().unwrap()), inner.output.is_tty());
-            pipe.pretend_stdout = inner.output.is_stdout();
-            Box::new(pipe)
-        };
+        let mut output_to_pager =
+            WriterWithTty::new(Box::new(child.stdin.take().unwrap()), inner.output.is_tty());
+        output_to_pager.pretend_stdout = inner.output.is_stdout();
+        let output_to_pager = Box::new(output_to_pager);
+
+        let pre_pager_output = std::mem::replace(&mut inner.output, output_to_pager);
 
         let err_is_tty = inner
             .error
             .as_ref()
             .map_or_else(|| inner.output.is_tty(), |e| e.is_tty());
 
+        let mut pre_pager_error = None;
+
         // handle pager.stderr
         let send_err_to_pager = err_is_tty && config.get_or_default("pager", "stderr").unwrap();
         if send_err_to_pager {
             inner.redirect_err_to_out = true;
-            inner.error = None;
+            pre_pager_error = Some(std::mem::take(&mut inner.error));
         }
+
+        inner.pre_pager_io = Some((pre_pager_output, pre_pager_error));
 
         inner.flush()?;
 
@@ -693,22 +704,27 @@ impl IO {
             .map_or_else(|| out_is_tty, |e| e.is_tty());
 
         inner.flush()?;
-        inner.output = {
-            let mut pipe = WriterWithTty::new(Box::new(out_write), out_is_tty);
-            pipe.pretend_stdout = out_is_stdout;
-            Box::new(pipe)
-        };
+
+        let mut output_to_pager = WriterWithTty::new(Box::new(out_write), out_is_tty);
+        output_to_pager.pretend_stdout = out_is_stdout;
+
+        let pre_pager_output = std::mem::replace(&mut inner.output, Box::new(output_to_pager));
+
         pager
             .add_stream(out_read, "")
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
 
+        let mut pre_pager_error = None;
+
         // Only use the pager for error stream if error stream is a tty.
         // This makes `hg 2>foo` works as expected.
         if err_is_tty {
-            inner.error = Some(Box::new(WriterWithTty::new(
-                Box::new(err_write),
-                err_is_tty,
-            )));
+            pre_pager_error = Some(std::mem::replace(
+                &mut inner.error,
+                Some(
+                    Box::new(WriterWithTty::new(Box::new(err_write), err_is_tty)) as Box<dyn Write>,
+                ),
+            ));
             let separate =
                 config.get_opt::<bool>("pager", "separate-stderr").ok() == Some(Some(true));
             inner.redirect_err_to_out = !separate;
@@ -718,6 +734,8 @@ impl IO {
                     .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
             }
         }
+
+        inner.pre_pager_io = Some((pre_pager_output, pre_pager_error));
 
         let mut pager_term = DumbTerm::new(DumbTty::new(Box::new(prg_write)))
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;

@@ -1,6 +1,4 @@
-#debugruntest-incompatible
-FIXME(debugruntest) - "devel.print-metrics" stderr not working
-#chg-compatible
+#require no-eden
 
   $ eagerepo
 
