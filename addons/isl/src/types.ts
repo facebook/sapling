@@ -785,8 +785,9 @@ export type ClientToServerMessage =
   | {
       type: 'generateAICommitMessage';
       id: string;
-      title: string;
       comparison: Comparison;
+      fieldName: string;
+      title: string;
     }
   | {type: 'gotUiState'; state: string}
   | CodeReviewProviderSpecificClientToServerMessages

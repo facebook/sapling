@@ -122,12 +122,13 @@ const ONE_HOUR = 60 * 60 * 1000;
 const MAX_SUGGESTION_CACHE_AGE = 24 * ONE_HOUR; // cache aggressively since we have an explicit button to invalidate
 const generatedSuggestions = atomFamilyWeak((fieldNameAndHashKey: string) =>
   atomLoadableWithRefresh((get): Promise<Result<string>> => {
-    if (Internal.generateAICommitMessage == null) {
+    if (Internal.generateSuggestionWithAI == null) {
       return Promise.resolve({value: ''});
     }
 
     const fieldNameAndHashKeyArray = fieldNameAndHashKey.split('+');
 
+    const fieldName = fieldNameAndHashKeyArray[0];
     const hashKey = fieldNameAndHashKeyArray[1];
 
     const cached = cachedSuggestions.get(hashKey);
@@ -162,8 +163,9 @@ const generatedSuggestions = atomFamilyWeak((fieldNameAndHashKey: string) =>
         const comparison: Comparison = hashKey.startsWith('commit/')
           ? {type: ComparisonType.UncommittedChanges}
           : {type: ComparisonType.Committed, hash: hashKey};
-        const response = await nullthrows(Internal.generateAICommitMessage)({
+        const response = await nullthrows(Internal.generateSuggestionWithAI)({
           comparison,
+          fieldName,
           title: latestWrittenTitle,
         });
 
