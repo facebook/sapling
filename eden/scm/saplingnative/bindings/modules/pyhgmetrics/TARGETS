@@ -22,6 +22,7 @@ rust_python_library(
     deps = [
         "//eden/scm/lib/cpython-ext:cpython-ext",
         "//eden/scm/lib/hg-metrics:hg-metrics",
+        "//eden/scm/lib/metrics:metrics",
         "//eden/scm/lib/sampling:sampling",
     ],
 )

@@ -21,6 +21,10 @@ pub fn summarize() -> HashMap<String, u64> {
     METRICS.summarize()
 }
 
+pub fn reset() {
+    METRICS.reset();
+}
+
 pub trait Key: Into<String> + Borrow<str> {}
 impl<T> Key for T where T: Into<String> + Borrow<str> {}
 
@@ -62,6 +66,10 @@ impl Metrics {
             .iter()
             .map(|(k, v)| (k.into(), v.load(Ordering::Acquire)))
             .collect()
+    }
+
+    fn reset(&self) {
+        self.counters.write().clear();
     }
 }
 

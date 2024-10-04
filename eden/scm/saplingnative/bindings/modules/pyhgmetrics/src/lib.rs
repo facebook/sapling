@@ -32,6 +32,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         "appendsamples",
         py_fn!(py, append_samples(data: String)),
     )?;
+    m.add(py, "reset", py_fn!(py, reset()))?;
 
     Ok(m)
 }
@@ -58,5 +59,11 @@ fn append_samples(py: Python, data: String) -> PyResult<PyNone> {
         file.write_all(data.as_bytes()).map_pyerr(py)?;
         file.write_all(b"\0").map_pyerr(py)?;
     }
+    Ok(PyNone)
+}
+
+fn reset(_py: Python) -> PyResult<PyNone> {
+    hg_metrics::reset();
+    metrics::Registry::global().reset();
     Ok(PyNone)
 }

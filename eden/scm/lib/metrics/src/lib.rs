@@ -114,6 +114,12 @@ impl Registry {
     pub fn counters(&self) -> HashMap<&'static str, &'static Counter> {
         self.counters.read().unwrap().clone()
     }
+
+    pub fn reset(&self) {
+        for counter in self.counters.read().unwrap().values() {
+            counter.inner().store(0, Ordering::Relaxed);
+        }
+    }
 }
 
 #[cfg(test)]

@@ -266,6 +266,7 @@ def hg(stdin: BinaryIO, stdout: BinaryIO, stderr: BinaryIO, env: Env) -> int:
             subprocess, "run", _patchedsubprun
         ):
             bindings.identity.resetdefault()
+            bindings.hgmetrics.reset()
 
             encoding.setfromenviron()
             pycompat.stdin = stdin
