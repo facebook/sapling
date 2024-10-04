@@ -49,7 +49,11 @@ export function GenerateAIButton({
 }) {
   const currentCommit = useAtomValue(commitInfoViewCurrentCommits)?.[0];
   const mode = useAtomValue(commitMode);
-  const featureEnabled = useFeatureFlagSync(Internal.featureFlags?.GeneratedAICommitMessages);
+  const featureEnabled = useFeatureFlagSync(
+    fieldName === InternalFieldName.TestPlan
+      ? Internal.featureFlags?.GeneratedAITestPlan
+      : Internal.featureFlags?.GeneratedAICommitMessages,
+  );
 
   const hashKey: HashKey | undefined =
     currentCommit == null
@@ -266,6 +270,11 @@ function GenerateAIModal({
       </div>
     </div>
   );
+}
+
+enum InternalFieldName {
+  Summary = 'Summary',
+  TestPlan = 'Test Plan',
 }
 
 export enum FunnelEvent {
