@@ -259,7 +259,7 @@ class UnixProcUtils(ProcUtils):
 
         # Note that the command may be just "edenfs" rather than a path, but it
         # works out fine either way.
-        return os.path.basename(comm) in ("edenfs", "fake_edenfs")
+        return "eden" in os.path.basename(comm)
 
     def _get_process_command(self, pid: int) -> Optional[str]:
         try:
