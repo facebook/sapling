@@ -28,7 +28,7 @@ use crate::context::DerivationContext;
 use crate::DerivedDataManager;
 use crate::Rederivation;
 use crate::SharedDerivationError;
-use crate::VisitedDerivableTypesMap;
+use crate::VisitedDerivableTypesMapStatic;
 
 /// Defines how derivation occurs.  Each derived data type must implement
 /// `BonsaiDerivable` to describe how to derive a new value from its inputs
@@ -210,13 +210,13 @@ pub trait DerivationDependencies {
     ) -> Result<()>;
     /// Derive all dependent data types for this batch of commits.
     /// The same pre-conditions apply as in derive.rs
-    async fn derive_heads<'a>(
+    async fn derive_heads(
         ddm: DerivedDataManager,
-        ctx: &'a CoreContext,
-        heads: &'a [ChangesetId],
+        ctx: CoreContext,
+        heads: Vec<ChangesetId>,
         override_batch_size: Option<u64>,
         rederivation: Option<Arc<dyn Rederivation>>,
-        _visited: VisitedDerivableTypesMap<'a, u64, SharedDerivationError>,
+        _visited: VisitedDerivableTypesMapStatic<u64, SharedDerivationError>,
     ) -> Result<(), SharedDerivationError>;
     /// Derive all predecessor data types for this batch of commits.
     /// The same pre-conditions apply as in derive.rs
@@ -242,13 +242,13 @@ impl DerivationDependencies for () {
     ) -> Result<()> {
         Ok(())
     }
-    async fn derive_heads<'a>(
+    async fn derive_heads(
         _ddm: DerivedDataManager,
-        _ctx: &'a CoreContext,
-        _heads: &'a [ChangesetId],
+        _ctx: CoreContext,
+        _heads: Vec<ChangesetId>,
         _override_batch_size: Option<u64>,
         _rederivation: Option<Arc<dyn Rederivation>>,
-        _visited: VisitedDerivableTypesMap<'a, u64, SharedDerivationError>,
+        _visited: VisitedDerivableTypesMapStatic<u64, SharedDerivationError>,
     ) -> Result<(), SharedDerivationError> {
         Ok(())
     }
@@ -290,18 +290,18 @@ where
             Rest::check_dependencies(ctx, derivation_ctx, csid, visited).await
         }
     }
-    async fn derive_heads<'a>(
+    async fn derive_heads(
         ddm: DerivedDataManager,
-        ctx: &'a CoreContext,
-        heads: &'a [ChangesetId],
+        ctx: CoreContext,
+        heads: Vec<ChangesetId>,
         override_batch_size: Option<u64>,
         rederivation: Option<Arc<dyn Rederivation>>,
-        visited: VisitedDerivableTypesMap<'a, u64, SharedDerivationError>,
+        visited: VisitedDerivableTypesMapStatic<u64, SharedDerivationError>,
     ) -> Result<(), SharedDerivationError> {
         let _res = try_join(
             ddm.clone().derive_heads_with_visited::<Derivable>(
-                ctx,
-                heads,
+                ctx.clone(),
+                heads.clone(),
                 override_batch_size,
                 rederivation.clone(),
                 visited.clone(),

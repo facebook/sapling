@@ -104,7 +104,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         if args.derive_all {
             derive_all(&ctx, &repo, &csids).await?;
         } else {
-            derive::<MappedHgChangesetId>(&ctx, &repo, &csids).await?;
+            derive::<MappedHgChangesetId>(&ctx, &repo, csids).await?;
         }
     }
 
@@ -136,12 +136,12 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
 async fn derive<D: BonsaiDerivable>(
     ctx: &CoreContext,
     repo: &Repo,
-    csids: &[ChangesetId],
+    csids: Vec<ChangesetId>,
 ) -> Result<()> {
     let mgr = repo.repo_derived_data().manager();
     let rederivation = None;
     let override_batch_size = None;
-    mgr.derive_heads::<D>(ctx, csids, override_batch_size, rederivation)
+    mgr.derive_heads::<D>(ctx.clone(), csids, override_batch_size, rederivation)
         .await
         .with_context(|| format!("Failed to derive {}", D::NAME))?;
     Ok(())
