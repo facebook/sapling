@@ -181,6 +181,9 @@ struct Repo {
 struct RepoInfo {
   1: string name;
   2: CommitIdentityScheme default_commit_identity_scheme;
+  /// Name of a large repo to which this repo is push redirected, i.e. when
+  /// the large repo is the source of truth.
+  3: optional string push_redirected_to;
 }
 
 struct CommitInfo {

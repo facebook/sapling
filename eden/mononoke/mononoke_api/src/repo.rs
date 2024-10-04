@@ -781,6 +781,13 @@ impl<R: MononokeRepo> RepoContext<R> {
             .map(AsRef::as_ref)
     }
 
+    pub fn push_redirector(&self) -> Option<&PushRedirector<R>> {
+        match &self.push_redirector {
+            Some(prd) => Some(prd.as_ref()),
+            None => None,
+        }
+    }
+
     /// The configuration for the referenced repository.
     pub fn config(&self) -> &RepoConfig {
         self.repo.repo_config()

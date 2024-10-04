@@ -50,6 +50,7 @@ use mononoke_types::DateTime as MononokeDateTime;
 use mononoke_types::NonRootMPath;
 use mononoke_types::ThriftConvert;
 use repo_authorization::AuthorizationContext;
+use repo_identity::RepoIdentityRef;
 use source_control as thrift;
 
 use crate::commit_id::map_commit_identities;
@@ -90,9 +91,14 @@ impl SourceControlServiceImpl {
             CommitIdentityScheme::UNKNOWN => thrift::CommitIdentityScheme::UNKNOWN,
         };
 
+        let push_redirected_to = repo
+            .push_redirector()
+            .map(|prd| prd.repo.repo_identity().name().to_string());
+
         Ok(thrift::RepoInfo {
             name: repo_name.to_string(),
             default_commit_identity_scheme,
+            push_redirected_to,
             ..Default::default()
         })
     }

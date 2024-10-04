@@ -37,6 +37,7 @@ pub(crate) struct RepoInfo {
     pub r#type: String, // For JSON output, always "repo".
     pub name: String,
     pub default_commit_identity_scheme: String,
+    pub push_redirected_to: Option<String>,
 }
 
 impl TryFrom<&thrift::RepoInfo> for RepoInfo {
@@ -47,6 +48,7 @@ impl TryFrom<&thrift::RepoInfo> for RepoInfo {
             r#type: "repo".to_string(),
             name: repo.name.clone(),
             default_commit_identity_scheme: repo.default_commit_identity_scheme.to_string(),
+            push_redirected_to: repo.push_redirected_to.clone().map(|s| s.to_string()),
         })
     }
 }
@@ -65,6 +67,9 @@ impl Render for RepoInfoOutput {
             "Default commit identity scheme: {}\n",
             self.repo.default_commit_identity_scheme
         )?;
+        if let Some(push_redirected_to) = &self.repo.push_redirected_to {
+            write!(w, "Source of truth: {}\n", push_redirected_to)?;
+        }
         Ok(())
     }
 
