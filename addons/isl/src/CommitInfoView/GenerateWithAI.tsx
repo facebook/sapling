@@ -65,7 +65,10 @@ export function GenerateAIButton({
   useThrottledEffect(
     () => {
       if (currentCommit != null && featureEnabled && hashKey != null) {
-        FunnelTracker.get(hashKey)?.track(GeneratedMessageTrackEventName.ButtonImpression);
+        FunnelTracker.get(hashKey)?.track(
+          GeneratedMessageTrackEventName.ButtonImpression,
+          fieldName,
+        );
       }
     },
     100,
@@ -78,9 +81,9 @@ export function GenerateAIButton({
       if (hasAcceptedState === true) {
         return;
       }
-      FunnelTracker.get(hashKey)?.track(GeneratedMessageTrackEventName.Dismiss);
+      FunnelTracker.get(hashKey)?.track(GeneratedMessageTrackEventName.Dismiss, fieldName);
     }
-  }, [hashKey]);
+  }, [hashKey, fieldName]);
 
   const fieldKey = convertFieldNameToKey(fieldName);
 
@@ -201,7 +204,10 @@ function GenerateAIModal({
 
   useThrottledEffect(
     () => {
-      FunnelTracker.get(hashKey)?.track(GeneratedMessageTrackEventName.SuggestionRequested);
+      FunnelTracker.get(hashKey)?.track(
+        GeneratedMessageTrackEventName.SuggestionRequested,
+        fieldName,
+      );
     },
     100,
     [suggestionId], // ensure we track again if the hash key hasn't changed but a new suggestionID was generated
@@ -210,7 +216,10 @@ function GenerateAIModal({
   useThrottledEffect(
     () => {
       if (content.state === 'hasData' && content.data.value != null) {
-        FunnelTracker.get(hashKey)?.track(GeneratedMessageTrackEventName.ResponseImpression);
+        FunnelTracker.get(hashKey)?.track(
+          GeneratedMessageTrackEventName.ResponseImpression,
+          fieldName,
+        );
       }
     },
     100,
@@ -243,7 +252,7 @@ function GenerateAIModal({
         <Button
           disabled={content.state === 'loading' || error != null}
           onClick={() => {
-            FunnelTracker.get(hashKey)?.track(GeneratedMessageTrackEventName.RetryClick);
+            FunnelTracker.get(hashKey)?.track(GeneratedMessageTrackEventName.RetryClick, fieldName);
             cachedSuggestions.delete(hashKey); // make sure we don't re-use cached value
             setHasAccepted(false);
             FunnelTracker.restartFunnel(hashKey);
@@ -260,7 +269,10 @@ function GenerateAIModal({
             if (value) {
               appendToTextArea(value);
             }
-            FunnelTracker.get(hashKey)?.track(GeneratedMessageTrackEventName.InsertClick);
+            FunnelTracker.get(hashKey)?.track(
+              GeneratedMessageTrackEventName.InsertClick,
+              fieldName,
+            );
             setHasAccepted(true);
             dismiss();
           }}>
@@ -275,6 +287,11 @@ function GenerateAIModal({
 enum InternalFieldName {
   Summary = 'Summary',
   TestPlan = 'Test Plan',
+}
+
+enum TrackerFieldName {
+  Summary = 'CommitMessage',
+  TestPlan = 'TestPlan',
 }
 
 export enum FunnelEvent {
@@ -342,7 +359,7 @@ class FunnelTracker {
   private alreadyTrackedFunnelEvents = new Set<FunnelEvent>();
   private suggestionId = randomId();
 
-  public track(eventName: GeneratedMessageTrackEventName) {
+  public track(eventName: GeneratedMessageTrackEventName, fieldName: string) {
     let funnelEventName: FunnelEvent | undefined = this.mapToFunnelEvent(eventName);
     if (funnelEventName != null && !this.alreadyTrackedFunnelEvents.has(funnelEventName)) {
       // prevent tracking this funnel event again for this suggestion ID
@@ -352,13 +369,20 @@ class FunnelTracker {
     }
 
     // log all events into the same event, which can be extracted for funnel analysis
-    Internal?.trackerWithUserInfo?.track('GenerateAICommitMessageFunnelEvent', {
-      extras: {
-        eventName,
-        suggestionIdentifier: this.suggestionId,
-        funnelEventName,
+    Internal?.trackerWithUserInfo?.track(
+      `GenerateAI${
+        fieldName === InternalFieldName.TestPlan
+          ? TrackerFieldName.TestPlan
+          : TrackerFieldName.Summary
+      }FunnelEvent`,
+      {
+        extras: {
+          eventName,
+          suggestionIdentifier: this.suggestionId,
+          funnelEventName,
+        },
       },
-    });
+    );
   }
 
   /** Convert from our internal names to the funnel event names */
