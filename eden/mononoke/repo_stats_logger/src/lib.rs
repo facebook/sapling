@@ -141,6 +141,8 @@ fn get_repo_objects_count_settings(
     )
     .ok()
     .or_else(|| repo_config.override_objects_count.clone());
+    // setting the override to 0 means no override
+    let maybe_override_objects_count = maybe_override_objects_count.filter(|x| *x > 0);
 
     let objects_count_multiplier = repo_config
         .objects_count_multiplier
@@ -297,6 +299,16 @@ mod tests {
         assert_eq!(default_objects_count, 10);
         assert_eq!(maybe_override_objects_count.unwrap(), 20);
         assert_eq!(objects_count_multiplier, 1.0);
+
+        // override JK set to 0 means no override
+        let (default_objects_count, maybe_override_objects_count, objects_count_multiplier) =
+            with_just_knobs(
+                JustKnobsInMemory::new(hashmap![
+                    "scm/mononoke:scs_override_repo_objects_count".to_string() => KnobVal::Int(0),
+                ]),
+                || get_repo_objects_count_settings("repo", repo.repo_config_arc()),
+            );
+        assert!(maybe_override_objects_count.is_none());
 
         // set in the repo config
         let repo_config = Arc::new(RepoConfig {
@@ -460,6 +472,25 @@ mod tests {
         )
         .await?;
         assert_eq!(count, 15);
+
+        // an override set to 0 should be ignored
+        let get_count = get_repo_objects_count(
+            &ctx,
+            "repo",
+            &repo_config,
+            &bookmark,
+            bookmarks.clone(),
+            repo_blobstore.clone(),
+            repo_derived_data.clone(),
+        );
+        let count = with_just_knobs_async(
+            JustKnobsInMemory::new(hashmap![
+                "scm/mononoke:scs_override_repo_objects_count".to_string() => KnobVal::Int(0),
+            ]),
+            get_count.boxed(),
+        )
+        .await?;
+        assert_eq!(count, 5);
 
         // set a multiplier
         let repo_config = Arc::new(RepoConfig {
