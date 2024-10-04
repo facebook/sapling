@@ -129,6 +129,7 @@ def is_github_enterprise_hostname(hostname: str) -> bool:
             ["gh", "auth", "status", "--hostname", hostname],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
+            env=dict(os.environ, TCELL_MINIMIZE="1"),
         )
     except Exception:
         # The user may not be authenticated or may not even have `gh` installed.

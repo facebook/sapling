@@ -54,6 +54,7 @@ async def _make_request(
     # explicitly disable ANSI colors in our piped output.
     env = os.environ.copy()
     env["CLICOLOR_FORCE"] = "0"
+    env["TCELL_MINIMIZE"] = "1"
     proc = await asyncio.create_subprocess_exec(
         *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=env
     )
