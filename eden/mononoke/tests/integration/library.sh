@@ -669,6 +669,7 @@ rust-checkout=false
 hg=ssh://user@dummy/{1}
 
 [cas]
+disable=false
 use-case=source-control-testing
 log-dir=$TESTTMP
 EOF

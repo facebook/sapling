@@ -85,6 +85,9 @@ summary-field=Summary
 
 [templatealias]
 sl_hash_minlen=9
+
+[cas]
+disable=true
 """
     if use_watchman:
         content += """
