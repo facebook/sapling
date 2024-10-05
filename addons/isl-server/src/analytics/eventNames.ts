@@ -60,6 +60,7 @@ export type TrackEventName =
   | 'AcceptSuggestedReviewer'
   | 'GenerateAICommitMessage'
   | 'GenerateAICommitMessageFunnelEvent'
+  | 'GenerateAITestPlan'
   | 'GenerateAITestPlanFunnelEvent'
   | 'GhStackSubmitOperation'
   | 'GotoOperation'

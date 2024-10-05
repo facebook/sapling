@@ -156,7 +156,7 @@ const generatedSuggestions = atomFamilyWeak((fieldNameAndHashKey: string) =>
     // Note: we don't use the FunnelTracker because this event is not needed for funnel analysis,
     // only for our own duration / error rate tracking.
     const resultPromise = tracker.operation(
-      'GenerateAICommitMessage',
+      fieldName === InternalFieldName.TestPlan ? 'GenerateAITestPlan' : 'GenerateAICommitMessage',
       'FetchError',
       {},
       async () => {
