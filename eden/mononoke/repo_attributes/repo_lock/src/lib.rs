@@ -28,6 +28,16 @@ pub enum RepoLockState {
     Unlocked,
 }
 
+impl RepoLockState {
+    /// Returns true if the repo is locked, false otherwise.
+    pub fn is_locked(&self) -> bool {
+        match self {
+            RepoLockState::Locked(_) => true,
+            RepoLockState::Unlocked => false,
+        }
+    }
+}
+
 #[facet::facet]
 #[async_trait]
 pub trait RepoLock: Send + Sync {

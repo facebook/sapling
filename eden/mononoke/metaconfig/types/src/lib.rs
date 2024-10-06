@@ -508,6 +508,16 @@ pub enum RepoReadOnly {
     ReadWrite,
 }
 
+impl RepoReadOnly {
+    /// Returns true if the repo is read-only
+    pub fn is_read_only(&self) -> bool {
+        match self {
+            RepoReadOnly::ReadOnly(_) => true,
+            RepoReadOnly::ReadWrite => false,
+        }
+    }
+}
+
 /// Configuration of warming up the Mononoke cache. This warmup happens on startup
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct CacheWarmupParams {
