@@ -35,9 +35,8 @@ Create commit via git, allowed branch name:
   $ cd client-repo3
 
   $ git commit -qm A --allow-empty
-FIXME: "foo" should be active in sl.
   $ sl bookmarks
-     foo                       04d80a1d9a8a
+   * foo                       04d80a1d9a8a
   $ git branch
   * foo
 
@@ -48,8 +47,7 @@ Create commit via sl, allowed branch name:
   $ cd client-repo3
 
   $ sl commit -qm A --config ui.allowemptycommit=true
-FIXME: "foo" should be active in sl.
   $ sl bookmarks
-     foo                       b2698e270d93
+   * foo                       b2698e270d93
   $ git branch
   * foo

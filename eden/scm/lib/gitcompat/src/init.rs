@@ -7,6 +7,7 @@
 
 use std::collections::BTreeMap;
 use std::env;
+use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 use std::path::MAIN_SEPARATOR_STR as SEP;
@@ -19,12 +20,16 @@ use identity::Identity;
 use tracing::debug;
 use types::HgId;
 
-use crate::rungit::GlobalGit;
+use crate::refs::ReferenceValue;
 use crate::utils::follow_dotgit_path;
+use crate::BareGit;
 
-/// Initialize Sapling's dotdir inside `.git/`. Write requirements. Update config files from
-/// translated Git config.
-/// Skip if the directory already exists, or if `ident` is not using `.git/sl` dot dir.
+/// Initialize and update Sapling's dotdir inside `.git/`.
+/// - Write requirements, on demand.
+/// - Update config files from translated Git config, on demand.
+/// - Update "bookmarks.current".
+///
+/// Skip if `ident` is not using `.git/sl` dot dir.
 ///
 /// `dot_dir` is expected to be something like `<prefix>/.git/sl`.
 pub fn maybe_init_inside_dotgit(root_path: &Path, ident: Identity) -> Result<()> {
@@ -61,12 +66,13 @@ pub fn maybe_init_inside_dotgit(root_path: &Path, ident: Identity) -> Result<()>
     let git_repo_mtime = git_repo_config_mtime(&dot_git_path);
     let git_user_mtime = git_user_config_mtime();
 
+    // NOTE: At this point no sapling config is loaded. For simplicity, this does not respect `ui.git`.
+    let git = BareGit::from_git_dir_and_config(dot_git_path, &BTreeMap::<String, String>::new());
+
     if git_repo_mtime != try_mtime(&repo_config_path)
         || git_user_mtime != try_mtime(&user_config_path)
     {
         debug!("translating git configs");
-        // NOTE: At this point no sapling config is loaded. For simplicity, this does not respect `ui.git`.
-        let git = GlobalGit::from_config(&BTreeMap::<String, String>::new());
         let (user_config, repo_config) = git.translate_git_config()?;
         fs::write(&user_config_path, user_config)?;
         fs::write(&repo_config_path, repo_config)?;
@@ -74,6 +80,26 @@ pub fn maybe_init_inside_dotgit(root_path: &Path, ident: Identity) -> Result<()>
         set_file_mtime(&repo_config_path, git_repo_mtime)?;
     } else {
         debug!("skipped translating git configs");
+    }
+
+    // Sync git "current branch" to "bookmarks.current".
+    let head_ref_value = git.lookup_reference("HEAD")?;
+    let current_bookmark = match &head_ref_value {
+        Some(ReferenceValue::Sym(name)) => name.strip_prefix("refs/heads/"),
+        _ => None,
+    };
+
+    // NOTE: This could be racy.
+    let current_bookmark_path = dot_dir.join("bookmarks.current");
+    if let Some(bookmark) = current_bookmark {
+        debug!(bookmark, "writing bookmarks.current");
+        fs::write(current_bookmark_path, bookmark.as_bytes())?;
+    } else {
+        debug!("removing bookmarks.current");
+        match fs::remove_file(current_bookmark_path) {
+            Err(e) if e.kind() != io::ErrorKind::NotFound => return Err(e.into()),
+            _ => {}
+        }
     }
 
     Ok(())
