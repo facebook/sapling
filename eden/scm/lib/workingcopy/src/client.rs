@@ -143,13 +143,18 @@ impl WorkingCopyClient for RepoGit {
         Ok(changes)
     }
 
-    fn set_parents(&self, p1: HgId, p2: Option<HgId>, p1_tree: HgId) -> Result<()> {
+    fn set_parents(&self, p1: HgId, p2: Option<HgId>, mut p1_tree: HgId) -> Result<()> {
         tracing::debug!(?p1, ?p2, ?p1_tree, "set_parents");
         // TODO: What to do with p2?
         if self.resolve_head()? != p1 {
             let p1_hex = p1.to_hex();
             self.call("update-ref", &["HEAD", &p1_hex])?;
             if !p1_tree.is_wdir() {
+                if p1_tree.is_null() {
+                    // Git's empty tree.
+                    // git hash-object -t tree /dev/null
+                    p1_tree = HgId::from_hex(b"4b825dc642cb6eb9a060e54bf8d69288fbee4904").unwrap();
+                }
                 let p1_tree_hex = p1_tree.to_hex();
                 self.call("read-tree", &["--no-recurse-submodules", &p1_tree_hex])?;
             }
