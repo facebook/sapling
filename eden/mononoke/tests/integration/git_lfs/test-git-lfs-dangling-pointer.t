@@ -37,7 +37,7 @@
   $ git add .gitattributes large_file
   $ git commit -aqm "new LFS change"
   $ quiet git_client push
-  Uploading LFS objects: 100% (1/1), 60 B | 0 B/s, done.
+  Uploading LFS objects: 100% (1/1), 60 B | 0 B/s, done. (?)
   error: RPC failed; HTTP 500 curl 22 The requested URL returned error: 500
   fatal: the remote end hung up unexpectedly
   Everything up-to-date

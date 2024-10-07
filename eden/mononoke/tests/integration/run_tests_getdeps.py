@@ -166,6 +166,8 @@ def get_test_groups():
             "cross_repo/test-cross-repo-initial-import-gitsubmodules-expand-recursive.t",
             # warning: some filter configuration was not removed (found filter.lfs.clean)
             "gitimport/test-gitimport-lfs-enabled-dangling-pointer.t",
+            # flaky internally and externally
+            "mononoke_re_cas/test-mononoke-cas-sync-job-merge-commit-sync.t",
             # intermittenly outputs: 0000000000000000000000000000000000000000 for
             # hg debugsh -c 'ui.write("%s\n" % s.node.hex(repo["."].filectx("was_a_lively_fellow").getnodeinfo()[2]))'
             "server/test-pushrebase.t",

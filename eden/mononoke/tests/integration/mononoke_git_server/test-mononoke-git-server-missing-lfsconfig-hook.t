@@ -47,7 +47,7 @@
   $ git add .gitattributes large_file
   $ git commit -aqm "new LFS change"
   $ quiet git_client push origin main
-  Uploading LFS objects: 100% (1/1), 60 B | 0 B/s, done.
+  Uploading LFS objects: 100% (1/1), 60 B | 0 B/s, done. (?)
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
    ! [remote rejected] main -> main (hooks failed:
     missing_lfsconfig for 1fc5ba8b03de67a5e0eeb7e61c0df0703e3715e8: You need to add a properly defined .lfsconfig at the root directory of the repository prior to pushing.
