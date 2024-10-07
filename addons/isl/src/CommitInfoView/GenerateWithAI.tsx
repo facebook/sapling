@@ -30,6 +30,7 @@ import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {useCallback} from 'react';
 import {ComparisonType} from 'shared/Comparison';
+import {InternalFieldName} from 'shared/constants';
 import {useThrottledEffect} from 'shared/hooks';
 import {randomId, nullthrows} from 'shared/utils';
 
@@ -288,11 +289,6 @@ function GenerateAIModal({
       </div>
     </div>
   );
-}
-
-enum InternalFieldName {
-  Summary = 'Summary',
-  TestPlan = 'Test Plan',
 }
 
 export enum FunnelEvent {

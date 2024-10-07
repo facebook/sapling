@@ -892,13 +892,14 @@ export default class ServerToClientAPI {
         break;
       }
       case 'generateSuggestionWithAI': {
-        if (Internal.generateAICommitMessage == null) {
+        if (Internal.generateSuggestionWithAI == null) {
           break;
         }
         repo.runDiff(ctx, data.comparison, /* context lines */ 4).then(diff => {
-          Internal.generateAICommitMessage?.(repo.initialConnectionContext, {
+          Internal.generateSuggestionWithAI?.(repo.initialConnectionContext, {
             title: data.title,
             context: diff,
+            fieldName: data.fieldName,
           })
             .catch((error: Error) => ({error}))
             .then((result: Result<string>) => {
