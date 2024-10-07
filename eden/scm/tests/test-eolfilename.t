@@ -37,27 +37,27 @@ Do error out if the naughty file is explicitly referenced:
   nothing changed
   [1]
   $ echo foo > "$A"
-  $ hg debugwalk
+  $ hg debugwalk 2>&1 | sort
   skipping invalid path 'he\rllo'
   skipping invalid path 'hell\no'
 
   $ echo bla > quickfox
-  $ hg add quickfox
+  $ hg add quickfox 2>&1  | sort
   skipping invalid path 'he\rllo'
   skipping invalid path 'hell\no'
-  $ hg ci -m 2
+  $ hg ci -m 2 2>&1 | sort
   skipping invalid path 'he\rllo'
   skipping invalid path 'hell\no'
   $ A=`printf 'quick\rfox'`
-  $ hg cp quickfox "$A"
+  $ (hg cp quickfox "$A" 2>&1; echo "[$?]" 1>&2) | sort
+  abort: '\n' and '\r' disallowed in filenames: 'quick\rfox'
   skipping invalid path 'he\rllo'
   skipping invalid path 'hell\no'
-  abort: '\n' and '\r' disallowed in filenames: 'quick\rfox'
   [255]
-  $ hg mv quickfox "$A"
+  $ (hg mv quickfox "$A" 2>&1; echo "[$?]" 1>&2) | sort
+  abort: '\n' and '\r' disallowed in filenames: 'quick\rfox'
   skipping invalid path 'he\rllo'
   skipping invalid path 'hell\no'
-  abort: '\n' and '\r' disallowed in filenames: 'quick\rfox'
   [255]
 
 https://bz.mercurial-scm.org/2036
@@ -78,10 +78,8 @@ test issue2039
   $ touch "$A"
   $ touch "$B"
 
-  $ hg status --color=always
-  skipping invalid filename: 'foo
-  bar.baz'
-  skipping invalid filename: 'foo
-  bar'
+  $ hg status --color=always 2>&1 | sed -e 's/foo\n/foo<NEWLINE>/'| sort
+  skipping invalid filename: 'foo<NEWLINE>bar'
+  skipping invalid filename: 'foo<NEWLINE>bar.baz'
 
   $ cd ..

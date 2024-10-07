@@ -136,7 +136,7 @@ Warn about python hooks since we can't fall back to Python:
   [255]
 #else
   $ hg debugtestcommand --echo running
-  * command not found (glob)
+  * not found (glob)
   abort: pre-debugtestcommand hook exited with status 127
   [255]
 #endif

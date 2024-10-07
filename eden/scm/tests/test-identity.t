@@ -97,7 +97,7 @@ Test we prefer ".sl" over ".hg"
 
 Can choose flavor of dot dir using REPO_IDENTITY override:
   $ SL_IDENTITY=sl SL_REPO_IDENTITY=hg hg version -q
-  Sapling 4.4.2_dev
+  Sapling 4.* (glob)
   $ SL_IDENTITY=sl SL_REPO_IDENTITY=hg newrepo
   $ ls .hg/requires
   .hg/requires

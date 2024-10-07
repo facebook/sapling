@@ -65,6 +65,9 @@ COMPILERFLAG_tmp_ =
 COMPILERFLAG_tmp_${COMPILER} ?= -c $(COMPILER)
 COMPILERFLAG=${COMPILERFLAG_tmp_${COMPILER}}
 
+MAKE_PID := $(shell echo $$PPID)
+JOBS := $(shell ps T | sed -n 's%.*$(MAKE_PID).*$(MAKE).* \(-j\|--jobs=\) *\([0-9][0-9]*\).*%\2%p')
+
 # Mac Big Sur doesn't find the standard library without this.
 export SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
 
@@ -172,17 +175,86 @@ install: build
 install-home: build
 	$(PYTHON) setup.py $(PURE) install --home="$(HOME)" --prefix="" --force
 
-install-getdeps: getdepsbuild
+install-getdeps:
 	PYTHON_SYS_EXECUTABLE=$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) \
 	    GETDEPS_BUILD=1 $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) \
-		setup.py $(PURE) install --root="$(DESTDIR)/" --prefix="$(PREFIX)" --install-lib="$(PREFIX)/bin" --force
+		setup.py $(PURE) install --skip-build --prefix="$(PREFIX)" --install-scripts="$(PREFIX)/bin"  --install-lib="$(PREFIX)/bin" --force && \
+		cd "$(PREFIX)/bin" && ln -f "$(SL_BIN_NAME)" "$(HG_BIN_NAME)"
+
+# Exclusions for OSS getdeps cli tests.  Newline separated
+# test-cats.t: internal crpyto token test
+# test-check-execute.t: fails on CI, passes locally on ubuntu-22.04
+# test-clone-per-repo-config.t: fails in oss, looks like depends on fb hgrc.dynamic
+# test-clone-resume.t: fails on CI, passes locally on ubuntu-22.04
+# test-commitcloud-sync.t: flaky Last Sync Version on line 812, flips beteen 17 and 16
+# test-config-precedence.t:  output mismatch: DEBUG configloader::hg: spawn ["false"] because * (glob)
+# test-dynamicconfig-unicode.t: output mismatch: cat: .hg/hgrc.dynamic: $ENOENT$
+# test-debugrefreshconfig.t: assumes an internal config location
+# test-fb-ext-fastlog.t: timesout, maybe due to internal endpoint assumptions
+# test-fb-ext-sampling.t: timeout
+# test-fb-ext-smartlog.t: output mismatch
+# test-help.t: help is different vs internal build
+# test-include-fail.t: fails on CI, passes locally on ubuntu-22.04
+# test-matcher-lots-of-globs.t: fails on CI, passes locally on ubuntu-22.04 (needs ~40GiB RAM)
+# test-network-doctor.t: times out
+# test-rust-checkout.t: fails on CI, passes locally on ubuntu-22.04
+# test-smartlog-interactive.t: smartlog format is different causing output mismatch
+# test-smartlog-interactive-highlighting.t: smartlog format is different causing output mismatch
+GETDEPS_TEST_EXCLUSION_LIST := test-cats.t \
+	test-check-execute.t \
+	test-clone-per-repo-config.t \
+	test-clone-resume.t \
+	test-commitcloud-sync.t \
+	test-config-precedence.t \
+	test-dynamicconfig-unicode.t \
+	test-debugrefreshconfig.t \
+	test-fb-ext-fastlog.t \
+	test-fb-ext-sampling.t \
+	test-fb-ext-smartlog.t \
+	test-help.t \
+	test-include-fail.t \
+	test-matcher-lots-of-globs.t \
+	test-network-doctor.t \
+	test-rust-checkout.t \
+	test-smartlog-interactive.t \
+	test-smartlog-interactive-highlighting.t
+	
+# convert to a sed expression
+GETDEPS_TEST_EXCLUSIONS := $(subst $() $(),|,$(GETDEPS_TEST_EXCLUSION_LIST))
 
 .PHONY: test-getdeps
 test-getdeps:
-	# Run indicative tests to check the binary is minimally good as will be used later in Mononoke getdeps tests
-	# Running all the tests requires a bit of filtering to run the good set (or deleting flaky ones)
-	cd tests && PYTHON_SYS_EXECUTABLE=$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) \
-	    $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) run-tests.py -j2 --getdeps-build --with-hg="$(PREFIX)/bin/$(HGNAME)" test-status.t test-commit.t
+    # Remove the .testfailed and .testerrored files so that after this next
+	# step they are written clean
+	rm -f ./tests/.test*
+	# ensure that fbpython is present, as some tests depend on it being on PATH
+	if ! which fbpython >/dev/null 2>&1; then \
+		FBPYTHON="$(GETDEPS_INSTALL_DIR)/sapling/bin/fbpython"; \
+		PYTHON_SYS_EXECUTABLE=$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)); \
+		printf "#!/bin/sh\nexec \"$$PYTHON_SYS_EXECUTABLE\" \"\$$@\"\n"  > $$FBPYTHON; \
+		chmod +x "$$FBPYTHON"; \
+	fi;
+	# Run tests and retry any failures
+	export GETDEPS_BUILD=1; \
+	export HGTEST_HG=$(GETDEPS_INSTALL_DIR)/sapling/bin/$(HG_BIN_NAME); \
+	cd tests && export PYTHON_SYS_EXECUTABLE=$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)); \
+	for try in $$(seq 0 $(GETDEPS_TEST_RETRY)); do \
+		RERUN_ARG=""; \
+		GETDEPS_TEST_FILTER=$(GETDEPS_TEST_FILTER); \
+		if [ $$try -gt 0 ]; then \
+			GETDEPS_TEST_FILTER=$$(cat .testfailed .testerrored | sort -u | grep -v '^$$'); \
+			if [ -z "$$GETDEPS_TEST_FILTER" ]; then "Echo no tests found for rerun on try $$try"; exit 2; fi; \
+			echo "Rerunning: $$GETDEPS_TEST_FILTER on try $$try" 1>&2; \
+			rm -f .testfailed .testerrored; \
+		elif [ -z "$$GETDEPS_TEST_FILTER" ]; then \
+		    GETDEPS_TEST_FILTER=$$(echo *.t | sed -Ee 's/($(GETDEPS_TEST_EXCLUSIONS))//g'); \
+		fi; \
+		$$PYTHON_SYS_EXECUTABLE run-tests.py -j $(JOBS) --getdeps-build --with-hg="$(PREFIX)/bin/$(HGNAME)" $$GETDEPS_TEST_FILTER; \
+		status=$$?; \
+		# stop if all good \
+		if [ $$status = 0 ]; then echo "passed on try $$try"; exit 0; fi; \
+	done; \
+	exit $$status
 
 check: tests
 
