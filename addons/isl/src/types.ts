@@ -98,6 +98,8 @@ export type DiffComment = {
   /** Suggestion for how to change the code, as a patch */
   suggestedChange?: ParsedDiff;
   replies: Array<DiffComment>;
+  /** If this comment has been resolved. true => "resolved", false => "unresolved", null => the comment is not resolvable, don't show any UI for it */
+  isResolved?: boolean;
 };
 
 /**
