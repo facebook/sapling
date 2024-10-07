@@ -650,32 +650,24 @@ impl SaplingRemoteApiHandler for GraphHandlerV2 {
             ))?
         }
 
-        if justknobs::eval(
-            "scm/mononoke:enable_streaming_commit_graph_edenapi_endpoint",
-            None,
-            None,
-        )
-        .unwrap_or_default()
-        {
-            // If all the requested heads are public, return stream.
-            if heads.len() < PHASES_CHECK_LIMIT && repo.is_all_public(&heads).await? {
-                let graph_stream = repo
-                    .get_graph_mapping_stream(common, heads)
-                    .await?
-                    .err_into::<Error>()
-                    .and_then(|(hgid, parents)| async move {
-                        Ok(CommitGraphEntry {
-                            hgid: HgId::from(hgid.into_nodehash()),
-                            parents: parents
-                                .into_iter()
-                                .map(|p_hgid| HgId::from(p_hgid.into_nodehash()))
-                                .collect(),
-                            is_draft: Some(false),
-                        })
+        // If all the requested heads are public, return stream.
+        if heads.len() < PHASES_CHECK_LIMIT && repo.is_all_public(&heads).await? {
+            let graph_stream = repo
+                .get_graph_mapping_stream(common, heads)
+                .await?
+                .err_into::<Error>()
+                .and_then(|(hgid, parents)| async move {
+                    Ok(CommitGraphEntry {
+                        hgid: HgId::from(hgid.into_nodehash()),
+                        parents: parents
+                            .into_iter()
+                            .map(|p_hgid| HgId::from(p_hgid.into_nodehash()))
+                            .collect(),
+                        is_draft: Some(false),
                     })
-                    .boxed();
-                return Ok(graph_stream);
-            }
+                })
+                .boxed();
+            return Ok(graph_stream);
         }
 
         let graph_entries = repo
