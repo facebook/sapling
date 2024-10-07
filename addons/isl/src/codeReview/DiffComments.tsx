@@ -14,7 +14,7 @@ import serverAPI from '../ClientToServerAPI';
 import {SplitDiffTable} from '../ComparisonView/SplitDiffView/SplitDiffHunk';
 import {Column, Row} from '../ComponentUtils';
 import {Link} from '../Link';
-import {t} from '../i18n';
+import {T, t} from '../i18n';
 import {atomFamilyWeak, atomLoadableWithRefresh} from '../jotaiUtils';
 import foundPlatform from '../platform';
 import {RelativeDate} from '../relativeDate';
@@ -87,7 +87,8 @@ const styles = stylex.create({
   byline: {
     display: 'flex',
     flexDirection: 'row',
-    gap: spacing.half,
+    gap: spacing.pad,
+    alignItems: 'center',
   },
   diffView: {
     marginBlock: spacing.pad,
@@ -121,6 +122,15 @@ function Comment({comment, isTopLevel}: {comment: DiffComment; isTopLevel?: bool
         <Subtle {...stylex.props(styles.byline)}>
           <RelativeDate date={comment.created} />
           <Reactions reactions={comment.reactions} />
+          {comment.isResolved === true ? (
+            <span>
+              <T>Resolved</T>
+            </span>
+          ) : comment.isResolved === false ? (
+            <span>
+              <T>Unresolved</T>
+            </span>
+          ) : null}
         </Subtle>
         {comment.replies.map((reply, i) => (
           <Comment key={i} comment={reply} />
