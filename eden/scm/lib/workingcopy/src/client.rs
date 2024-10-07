@@ -149,8 +149,10 @@ impl WorkingCopyClient for RepoGit {
         if self.resolve_head()? != p1 {
             let p1_hex = p1.to_hex();
             self.call("update-ref", &["HEAD", &p1_hex])?;
-            let p1_tree_hex = p1_tree.to_hex();
-            self.call("read-tree", &["--no-recurse-submodules", &p1_tree_hex])?;
+            if !p1_tree.is_wdir() {
+                let p1_tree_hex = p1_tree.to_hex();
+                self.call("read-tree", &["--no-recurse-submodules", &p1_tree_hex])?;
+            }
         }
         Ok(())
     }

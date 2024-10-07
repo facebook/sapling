@@ -169,11 +169,8 @@ impl FileSystem for DotGitFileSystem {
 
     fn set_parents(&self, p1: HgId, p2: Option<HgId>, p1_tree: Option<HgId>) -> Result<()> {
         tracing::debug!(p1=?p1, p2=?p2, p1_tree=?p1_tree, "set_parents (DotGitFileSystem)");
-        if self.git.resolve_head()? != p1 {
-            let p1_hex = p1.to_hex();
-            self.git.call("update-ref", &["HEAD", &p1_hex])?;
-            // TODO: What to do with p2?
-        }
+        self.git
+            .set_parents(p1, p2, p1_tree.unwrap_or(*HgId::wdir_id()))?;
         Ok(())
     }
 
