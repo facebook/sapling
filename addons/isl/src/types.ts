@@ -876,7 +876,7 @@ export type ServerToClientMessage =
   | {type: 'fetchedFeatureFlag'; name: string; passes: boolean}
   | {type: 'fetchedInternalUserInfo'; info: Serializable}
   | {
-      type: 'generatedAICommitMessage';
+      type: 'generatedSuggestionWithAI';
       message: Result<string>;
       id: string;
     }

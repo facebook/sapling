@@ -904,7 +904,7 @@ export default class ServerToClientAPI {
             .catch((error: Error) => ({error}))
             .then((result: Result<string>) => {
               this.postMessage({
-                type: 'generatedAICommitMessage',
+                type: 'generatedSuggestionWithAI',
                 message: result,
                 id: data.id,
               });
