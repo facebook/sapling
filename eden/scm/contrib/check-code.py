@@ -415,7 +415,7 @@ txtfilters = []
 
 txtpats = [
     [
-        ("\s$", "trailing whitespace"),
+        ("\\s$", "trailing whitespace"),
         (".. note::[ \n][^\n]", "add two newlines after note::"),
     ],
     [],

@@ -35,7 +35,7 @@ Clone a Sapling repo from a Git repo:
 Create a GPG key and configure signing.
 
   $ export HGUSER="Test User <testuser@example.com>"
-  $ gpg --batch --passphrase '' --quick-gen-key "$HGUSER" rsa2048 default 2> /dev/null
+  $ gpg --batch --passphrase '' --yes --quick-gen-key "$HGUSER" rsa2048 default 2>/dev/null
   $ KEYID=$(gpg --list-secret-keys --keyid-format LONG --no-auto-check-trustdb | grep -oP '^sec\s+ rsa2048/\K(\w+)')
   gpg: please do a --check-trustdb
   $ hg config --local gpg.key "$KEYID"

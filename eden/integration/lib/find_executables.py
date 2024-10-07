@@ -9,11 +9,12 @@ These utilities are only expected to work if `sys.argv[0]` is an executable
 being run in buck-out.
 """
 
-# pyre-strict
-
-import distutils.spawn
 import logging
 import os
+
+# pyre-strict
+
+import shutil
 import sys
 from pathlib import Path
 from typing import Any, Callable, Dict, Generic, List, Optional, Tuple, Type, TypeVar
@@ -192,9 +193,7 @@ class FindExeClass:
 
     @cached_property
     def GIT(self) -> str:
-        git = distutils.spawn.find_executable(
-            "git.real"
-        ) or distutils.spawn.find_executable("git")
+        git = shutil.which("git.real") or shutil.which("git")
         if git is None:
             raise Exception("unable to find git binary")
         return git
@@ -224,7 +223,7 @@ class FindExeClass:
         if hg_bin:
             return hg_bin
 
-        hg_real_bin = distutils.spawn.find_executable("hg")
+        hg_real_bin = shutil.which("hg")
         if hg_real_bin:
             return hg_real_bin
 
@@ -238,11 +237,11 @@ class FindExeClass:
         if hg_real_bin:
             return hg_real_bin
 
-        hg_real_bin = distutils.spawn.find_executable("hg.real")
+        hg_real_bin = shutil.which("hg.real")
         if hg_real_bin:
             return hg_real_bin
 
-        hg_real_bin = distutils.spawn.find_executable("hg")
+        hg_real_bin = shutil.which("hg")
         if hg_real_bin:
             return hg_real_bin
 
