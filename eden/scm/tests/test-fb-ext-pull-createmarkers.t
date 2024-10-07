@@ -2,6 +2,7 @@
 
 #require no-eden
 
+#inprocess-hg-incompatible
 
 Setup
 
@@ -64,7 +65,7 @@ The first client works on several diffs while the second client lands one of her
   o  "add secondcommit" default/master
   │
   o  "add initial"
-  
+
   $ hg push --to master
   pushing rev d5895ab36037 to destination ssh://user@dummy/server bookmark master
   searching for changes
@@ -96,7 +97,7 @@ the remote
   @  "add secondcommit"
   │
   o  "add initial"
-  
+
   $ hg pull
   pulling from ssh://user@dummy/server
   searching for changes
@@ -118,7 +119,7 @@ the remote
   @  "add secondcommit"
   │
   o  "add initial"
-  
+
 Rebasing a stack containing landed changesets should only rebase the non-landed
 changesets
 
