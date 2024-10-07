@@ -40,8 +40,6 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests fmt
     - name: Fetch googletest
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests googletest
-    - name: Fetch python-six
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests python-six
     - name: Fetch zstd
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests zstd
     - name: Fetch boost
@@ -112,8 +110,6 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --free-up-disk --no-tests fmt
     - name: Build googletest
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --free-up-disk --no-tests googletest
-    - name: Build python-six
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --free-up-disk --no-tests python-six
     - name: Build zstd
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --free-up-disk --no-tests zstd
     - name: Build boost
