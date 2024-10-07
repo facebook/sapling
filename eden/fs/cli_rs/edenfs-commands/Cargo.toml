@@ -24,7 +24,7 @@ hex = "0.4.3"
 hg_util = { package = "util", version = "0.1.0", path = "../../../scm/lib/util" }
 once_cell = "1.12"
 serde = { version = "1.0.185", features = ["derive", "rc"] }
-serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.125", features = ["float_roundtrip", "unbounded_depth"] }
 subprocess = "0.2.7"
 sysinfo = "0.30.11"
 tabular = "0.2.0"

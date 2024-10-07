@@ -9,4 +9,4 @@ edition = "2021"
 cpython = { version = "0.7.2", default-features = false }
 cpython_ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 nodeipc = { version = "0.1.0", path = "../../../../lib/util/nodeipc" }
-serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.125", features = ["float_roundtrip", "unbounded_depth"] }

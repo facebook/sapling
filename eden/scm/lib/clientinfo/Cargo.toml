@@ -11,5 +11,5 @@ hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 lazy_static = "1.4"
 rand = { version = "0.8", features = ["small_rng"] }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
-serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.125", features = ["float_roundtrip", "unbounded_depth"] }
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }

@@ -23,7 +23,7 @@ repourl = { version = "0.1.0", path = "../../../scm/lib/repo/url" }
 rusoto_core = "0.46.0"
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_ignored = "0.1.8"
-serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.125", features = ["float_roundtrip", "unbounded_depth"] }
 thiserror = "1.0.64"
 toml = "0.8.4"
 

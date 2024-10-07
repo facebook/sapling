@@ -12,7 +12,7 @@ lazy_static = "1.4"
 mincode = { version = "0.1.0", path = "../../../../lib/mincode" }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 python3-sys = "0.7.2"
-serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.125", features = ["float_roundtrip", "unbounded_depth"] }
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 tracing-collector = { version = "0.1.0", path = "../../../../lib/tracing-collector" }
 tracing-reload = { version = "0.1.0", path = "../../../../lib/tracing-reload" }

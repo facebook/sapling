@@ -9,5 +9,5 @@ edition = "2021"
 configmodel = { version = "0.1.0", path = "../config/model" }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
-serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.125", features = ["float_roundtrip", "unbounded_depth"] }
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }

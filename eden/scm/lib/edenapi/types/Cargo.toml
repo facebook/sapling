@@ -30,7 +30,7 @@ types = { version = "0.1.0", path = "../../types" }
 [dev-dependencies]
 insta_ext = { version = "0.1.0", path = "../../insta_ext" }
 quickcheck_macros = "1.0"
-serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.125", features = ["float_roundtrip", "unbounded_depth"] }
 
 [features]
 default = ["for-tests"]

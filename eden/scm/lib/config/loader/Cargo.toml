@@ -32,7 +32,7 @@ regex = { version = "1.9.2", optional = true }
 repo-minimal-info = { version = "0.1.0", path = "../../repo/repo-minimal-info" }
 repourl = { version = "0.1.0", path = "../../repo/url" }
 serde = { version = "1.0.185", features = ["derive", "rc"], optional = true }
-serde_json = { version = "1.0.100", features = ["float_roundtrip", "unbounded_depth"], optional = true }
+serde_json = { version = "1.0.125", features = ["float_roundtrip", "unbounded_depth"], optional = true }
 serde_urlencoded = { version = "0.7", optional = true }
 sha2 = { version = "0.10.6", optional = true }
 spawn-ext = { version = "0.1.0", path = "../../spawn-ext" }
