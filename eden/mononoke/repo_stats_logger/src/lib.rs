@@ -301,7 +301,7 @@ mod tests {
         assert_eq!(objects_count_multiplier, 1.0);
 
         // override JK set to 0 means no override
-        let (default_objects_count, maybe_override_objects_count, objects_count_multiplier) =
+        let (_default_objects_count, maybe_override_objects_count, _objects_count_multiplier) =
             with_just_knobs(
                 JustKnobsInMemory::new(hashmap![
                     "scm/mononoke:scs_override_repo_objects_count".to_string() => KnobVal::Int(0),
