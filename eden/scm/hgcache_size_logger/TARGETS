@@ -7,7 +7,6 @@ python_binary(
     srcs = [
         "hgcache_size_logger.py",
     ],
-    base_module = "eden.scm",
     main_function = "eden.scm.hgcache_size_logger.main",
     deps = [
         "//libfb/py:log",
