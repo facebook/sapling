@@ -32,14 +32,14 @@ export function CommitInfoTextArea({
   name,
   autoFocus,
   editedMessage,
-  setEditedCommitMessage,
+  setEditedField,
 }: {
   kind: 'title' | 'textarea' | 'field';
   fieldConfig: FieldConfig;
   name: string;
   autoFocus: boolean;
   editedMessage: string;
-  setEditedCommitMessage: (fieldValue: string) => unknown;
+  setEditedField: (fieldValue: string) => unknown;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
@@ -67,7 +67,7 @@ export function CommitInfoTextArea({
       process.env.NODE_ENV === 'test');
 
   const onInput = (event: {currentTarget: HTMLTextAreaElement}) => {
-    setEditedCommitMessage(event.currentTarget?.value);
+    setEditedField(event.currentTarget?.value);
   };
 
   const uploadFiles = useUploadFilesCallback(name, ref, onInput);

@@ -57,7 +57,7 @@ export function CommitInfoField({
               name={field.key}
               autoFocus={autofocus ?? false}
               editedMessage={editedFieldContent}
-              setEditedCommitMessage={setEditedField}
+              setEditedField={setEditedField}
             />
           </Section>
         ) : (
@@ -104,7 +104,7 @@ export function CommitInfoField({
               name={field.key}
               autoFocus={autofocus ?? false}
               editedMessage={editedFieldContent}
-              setEditedCommitMessage={setEditedField}
+              setEditedField={setEditedField}
             />
           )}
           {extra}
