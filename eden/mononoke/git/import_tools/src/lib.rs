@@ -473,7 +473,7 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
     let mut commits_with_file_changes = stream::iter(relevant_commits)
         .map(Ok)
         .map_ok(|oid| {
-            cloned!(ctx, reader, uploader, prefs.lfs, prefs.submodules);
+            cloned!(ctx, reader, uploader, prefs.lfs, prefs.submodules, prefs.stream_for_changed_trees);
             async move {
                 task::spawn({
                     async move {
@@ -489,8 +489,15 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
                         let oid = extracted_commit.metadata.oid;
                         // Before generating the corresponding changeset at Mononoke end, upload the raw git commit
                         // and the git tree pointed to by the git commit.
-                        extracted_commit
+                        let entries_stream = if !stream_for_changed_trees {
+                            stream::iter(extracted_commit
                             .changed_trees(&ctx, &reader)
+                            .try_collect::<Vec<_>>()
+                            .await?).map(Ok).boxed()
+                        } else {
+                            extracted_commit.changed_trees(&ctx, &reader).boxed()
+                        };
+                        entries_stream
                             .map_ok(|entry| {
                                 cloned!(oid, uploader, reader, ctx);
                                 async move {
