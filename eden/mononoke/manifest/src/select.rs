@@ -24,7 +24,7 @@ impl From<MPath> for PathOrPrefix {
 
 impl From<NonRootMPath> for PathOrPrefix {
     fn from(path: NonRootMPath) -> Self {
-        PathOrPrefix::Prefix(path.into())
+        PathOrPrefix::Path(path.into())
     }
 }
 
