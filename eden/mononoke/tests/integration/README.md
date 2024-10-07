@@ -84,10 +84,9 @@ If your test needs assets to work, then you'll need to:
 - In tests, your asset can be found at `${TEST_FIXTURES}/relative/path`, where
   `relative/path` is the path to your asset relative from
   `.../mononoke/tests/integration`.
-- Add your asset to the `test_fixtures` Buck rule in this directory's `TARGETS`
-  file. If you don't do this, then running tests using the runner directly will
-  work (read on to understand why), but it won't work when running through Buck
-  / TestPilot.
+- Add your asset to the `test_fixtures` Buck rule in the `mononoke/tests` directory's
+  `TARGETS` file. If you skip this step, you can still run tests directly using the runner
+  (read on for more details), but it will not work correctly when using Buck / TestPilot.
 
 
 ## Exposing a new binary
@@ -97,6 +96,13 @@ in the `facebook/` directory. The key is the buck target for the dependency and
 the value is an environment variable that will be set to the path to this
 binary when the tests execute (if you need to customize the environment
 variable a bit, you can do so in `facebook/generate_manifest.py`).
+
+## dott_test targets
+Tests are grouped into targets of `dott_test` type. Each `dott_test` target specifies:
+- The name of the target
+- `disable_all_network_access_target` which, if false, will not run the test a second time with a wrapper that blocks network access. Keep this enabled to the extent that it is possible, if you must disable it explaining the services it's connecting to.
+- A glob expression representing the test files included in the target.
+- A list of its dependencies
 
 # Running tests from OSS getdeps build
 
