@@ -30,8 +30,14 @@ jobs:
       run: sudo python3 build/fbcode_builder/getdeps.py --allow-system-packages install-system-deps --recursive sapling
     - name: Install packaging system deps
       run: sudo python3 build/fbcode_builder/getdeps.py --allow-system-packages install-system-deps --recursive patchelf
+    - name: Install locale-gen
+      run: sudo apt-get install locales
+    - name: Ensure en_US.UTF-8 locale present
+      run: sudo locale-gen en_US.UTF-8
     - name: Install Rust Stable
       uses: dtolnay/rust-toolchain@stable
+    - name: Fetch hexdump
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests hexdump
     - name: Fetch bz2
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests bz2
     - name: Fetch ninja
@@ -102,6 +108,8 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests fb303
     - name: Fetch rust-shed
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests rust-shed
+    - name: Build hexdump
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --free-up-disk --no-tests hexdump
     - name: Build bz2
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --free-up-disk --no-tests bz2
     - name: Build ninja
@@ -181,6 +189,7 @@ jobs:
         name: sapling
         path: _artifacts
     - name: Test sapling
-      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages test --src-dir=. sapling  --project-install-prefix sapling:/
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages test --num-jobs 16 --src-dir=. sapling  --project-install-prefix sapling:/
     - name: Show disk space at end
+      if: always()
       run: df -h
