@@ -23,7 +23,14 @@ thrift_library(
     py_base_module = "scm.service.thrift",
     rust_deps = [
         "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:faster-hex",
         "fbsource//third-party/rust:smallvec",
+    ],
+    rust_extra_srcs = [
+        "extra_thrift.rs",
+    ],
+    rust_include_srcs = [
+        "include_thrift.rs",
     ],
     thrift_cpp2_options = [
         "reflection",

@@ -10,8 +10,6 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use source_control::AsyncPingResult;
 use source_control::{self as thrift};
 
-use crate::commit_id::CommitIdExt;
-
 /// A trait for logging a thrift `Response` struct to scuba.
 pub(crate) trait AddScubaResponse: Send + Sync {
     fn add_scuba_response(&self, _scuba: &mut MononokeScubaSampleBuilder) {}

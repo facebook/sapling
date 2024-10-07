@@ -66,7 +66,6 @@ use srserver::RequestContext;
 use stats::prelude::*;
 use time_ext::DurationExt;
 
-use crate::commit_id::CommitIdExt;
 use crate::errors;
 use crate::errors::ServiceErrorResultExt;
 use crate::errors::Status;

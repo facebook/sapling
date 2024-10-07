@@ -9,7 +9,6 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
 use cloned::cloned;
-use faster_hex::hex_string;
 use futures_util::future;
 use futures_util::FutureExt;
 use mononoke_api::ChangesetContext;
@@ -208,7 +207,6 @@ pub(crate) async fn map_commit_identities(
 /// Trait to extend CommitId with useful functions.
 pub(crate) trait CommitIdExt {
     fn scheme(&self) -> thrift::CommitIdentityScheme;
-    fn to_string(&self) -> String;
 }
 
 impl CommitIdExt for thrift::CommitId {
@@ -222,25 +220,6 @@ impl CommitIdExt for thrift::CommitId {
             thrift::CommitId::globalrev(_) => thrift::CommitIdentityScheme::GLOBALREV,
             thrift::CommitId::svnrev(_) => thrift::CommitIdentityScheme::SVNREV,
             thrift::CommitId::UnknownField(t) => (*t).into(),
-        }
-    }
-
-    /// Convert a `thrift::CommitId` to a string for display. This would normally
-    /// be implemented as `Display for thrift::CommitId`, but it is defined in
-    /// the generated crate.
-    fn to_string(&self) -> String {
-        match self {
-            thrift::CommitId::bonsai(id) => hex_string(id),
-            thrift::CommitId::ephemeral_bonsai(ephemeral) => format!(
-                "{} (bubble {})",
-                hex_string(&ephemeral.bonsai_id),
-                ephemeral.bubble_id
-            ),
-            thrift::CommitId::hg(id) => hex_string(id),
-            thrift::CommitId::git(id) => hex_string(id),
-            thrift::CommitId::globalrev(rev) => rev.to_string(),
-            thrift::CommitId::svnrev(rev) => rev.to_string(),
-            thrift::CommitId::UnknownField(t) => format!("unknown id type ({})", t),
         }
     }
 }

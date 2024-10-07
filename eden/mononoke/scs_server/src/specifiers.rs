@@ -8,8 +8,6 @@
 use faster_hex::hex_string;
 use source_control as thrift;
 
-use crate::commit_id::CommitIdExt;
-
 pub(crate) trait SpecifierExt: Send + Sync {
     fn description(&self) -> String;
 

@@ -13,8 +13,6 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use scuba_ext::ScubaValue;
 use source_control as thrift;
 
-use crate::commit_id::CommitIdExt;
-
 /// To avoid logging very large numbers of commit ids to scuba, we limit
 /// requests that potentially involve unbounded numbers of commits to logging
 /// just the first few.
@@ -48,7 +46,7 @@ impl AddScubaParams for thrift::RepoCreateCommitParams {
             "param_parents",
             self.parents
                 .iter()
-                .map(CommitIdExt::to_string)
+                .map(ToString::to_string)
                 .collect::<ScubaValue>(),
         );
         if let Some(date) = self.info.date.as_ref() {
@@ -75,7 +73,7 @@ impl AddScubaParams for thrift::RepoCreateStackParams {
             "param_parents",
             self.parents
                 .iter()
-                .map(CommitIdExt::to_string)
+                .map(ToString::to_string)
                 .collect::<ScubaValue>(),
         );
         let deletes_count = self
@@ -207,7 +205,7 @@ impl AddScubaParams for thrift::RepoStackInfoParams {
             self.heads
                 .iter()
                 .take(COMMIT_LIMIT)
-                .map(CommitIdExt::to_string)
+                .map(ToString::to_string)
                 .collect::<ScubaValue>(),
         );
         scuba.add("param_commit_count", self.heads.len());
@@ -223,7 +221,7 @@ impl AddScubaParams for thrift::RepoPrepareCommitsParams {
             self.commits
                 .iter()
                 .take(COMMIT_LIMIT)
-                .map(CommitIdExt::to_string)
+                .map(ToString::to_string)
                 .collect::<ScubaValue>(),
         );
         scuba.add("param_commit_count", self.commits.len());

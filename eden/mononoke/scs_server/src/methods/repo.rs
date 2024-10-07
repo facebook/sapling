@@ -55,7 +55,6 @@ use source_control as thrift;
 
 use crate::commit_id::map_commit_identities;
 use crate::commit_id::map_commit_identity;
-use crate::commit_id::CommitIdExt;
 use crate::errors;
 use crate::errors::ServiceErrorResultExt;
 use crate::from_request::check_range_and_convert;
