@@ -543,7 +543,7 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
                                 }
                             })
                             .try_buffer_unordered(100)
-                            .try_collect()
+                            .try_collect::<()>()
                             .await?;
                         // Upload packfile base item for Git commit and the raw Git commit
                         let packfile_item_upload = async {

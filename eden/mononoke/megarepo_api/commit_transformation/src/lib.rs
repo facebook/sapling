@@ -829,7 +829,7 @@ pub async fn upload_commits<'a>(
             copy_file_contents(ctx, sm_repo.as_ref(), target_repo, content_ids, |_| {}).await
         })
         .buffer_unordered(10)
-        .try_collect()
+        .try_collect::<()>()
         .await?;
 
     // Then copy from source repo

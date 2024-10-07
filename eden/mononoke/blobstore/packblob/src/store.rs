@@ -226,7 +226,7 @@ impl<T: Blobstore + BlobstoreUnlinkOps> PackBlob<T> {
             let key = format!("{}{}{}", key_prefix, key, ENVELOPE_SUFFIX);
             links.push(self.inner.copy(ctx, &pack_key, key));
         }
-        links.try_collect().await?;
+        links.try_collect::<()>().await?;
 
         // remove the pack key, so that only the entries links are keeping it live
         self.inner.unlink(ctx, &pack_key).await?;

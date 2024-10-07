@@ -348,7 +348,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 // Repo cache warmup can be quite expensive, let's limit to 40
                 // at a time.
                 .buffer_unordered(40)
-                .try_collect()
+                .try_collect::<()>()
                 .await?;
             info!(&root_log, "Cache warmup completed");
             if let Some(mut executor) = args.sharded_executor_args.build_executor(

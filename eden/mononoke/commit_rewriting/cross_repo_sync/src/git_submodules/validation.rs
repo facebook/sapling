@@ -787,7 +787,7 @@ where
             }
         })
         .buffer_unordered(100)
-        .try_collect()
+        .try_collect::<()>()
         .await?;
 
     Ok(())
