@@ -64,24 +64,6 @@ export function keyForLineRange(param: {path: string; comparison: Comparison}): 
   return `${param.path}:${comparisonStringKey(param.comparison)}`;
 }
 
-/** Fetches context lines */
-export function useFetchLines(ctx: Context, numLines: number, start: number) {
-  const [fetchedLines, setFetchedLines] = useState<Result<Array<string>> | undefined>(undefined);
-
-  // Use-case controlled key that allows invalidating the fetched lines.
-  const invalidationKey = useAtomValue(ctx.comparisonInvalidatedAtom || atom(''));
-
-  const comparisonKey = comparisonStringKey(ctx.id.comparison);
-  useEffect(() => {
-    ctx.fetchAdditionalLines?.(ctx.id, start, numLines).then(result => {
-      setFetchedLines(result);
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invalidationKey, ctx.id.path, comparisonKey, numLines, start]);
-
-  return fetchedLines;
-}
-
 type ComparisonDisplayMode = 'unified' | 'split';
 const comparisonDisplayMode = localStorageBackedAtom<ComparisonDisplayMode | 'responsive'>(
   'isl.comparison-display-mode',
