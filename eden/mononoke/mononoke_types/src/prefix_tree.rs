@@ -36,6 +36,23 @@ fn common_prefix<'a>(a: &'a [u8], b: &'a [u8]) -> &'a [u8] {
 }
 
 impl<V> PrefixTree<V> {
+    /// Returns the value associated with the given key, if any.
+    pub fn get<K: AsRef<[u8]>>(&self, key: K) -> Option<&V> {
+        let mut node = self;
+        let mut key = key.as_ref();
+        loop {
+            key = key.strip_prefix(node.prefix.as_ref())?;
+
+            let (next_byte, rest) = match key.split_first() {
+                Some((next_byte, rest)) => (next_byte, rest),
+                None => return node.value.as_ref().map(|value| value.as_ref()),
+            };
+
+            node = node.edges.get(next_byte)?;
+            key = rest;
+        }
+    }
+
     pub fn is_empty(&self) -> bool {
         self.value.is_none() && self.edges.is_empty()
     }
@@ -203,6 +220,9 @@ mod test {
             vec![("abcde".to_string(), 1)]
         );
 
+        assert_eq!(prefix_tree.get("abcde"), Some(&1));
+        assert_eq!(prefix_tree.get("abc"), None);
+
         prefix_tree.insert("abcdf", 2);
         assert_eq!(
             prefix_tree.clone().into_vec(),
@@ -218,6 +238,10 @@ mod test {
                 ("bcdf".to_string(), 3),
             ]
         );
+
+        assert_eq!(prefix_tree.get(""), None);
+        assert_eq!(prefix_tree.get("bcdf"), Some(&3));
+        assert_eq!(prefix_tree.get("zzzz"), None);
 
         prefix_tree.insert("abcde", 4);
         assert_eq!(
@@ -251,6 +275,11 @@ mod test {
                 ("zzzz".to_string(), 10),
             ]
         );
+
+        assert_eq!(prefix_tree.get(""), Some(&5));
+        assert_eq!(prefix_tree.get("bcdf"), Some(&3));
+        assert_eq!(prefix_tree.get("zzzz"), Some(&10));
+        assert_eq!(prefix_tree.get("zzzx"), None);
 
         prefix_tree.insert("abc", 3);
         assert_eq!(
