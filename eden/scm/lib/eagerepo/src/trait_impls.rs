@@ -18,6 +18,7 @@ use storemodel::BoxIterator;
 use storemodel::FileStore;
 use storemodel::InsertOpts;
 use storemodel::KeyStore;
+use storemodel::Kind;
 use storemodel::SerializationFormat;
 use storemodel::TreeStore;
 use types::CasDigest;
@@ -37,7 +38,13 @@ impl KeyStore for EagerRepoStore {
         id: HgId,
     ) -> anyhow::Result<Option<minibytes::Bytes>> {
         match self.get_content(id)? {
-            Some(data) => Ok(Some(split_hg_file_metadata(&data).0)),
+            Some(data) => {
+                let data = match self.format {
+                    SerializationFormat::Hg => split_hg_file_metadata(&data).0,
+                    SerializationFormat::Git => data,
+                };
+                Ok(Some(data))
+            }
             None => Ok(None),
         }
     }
@@ -48,17 +55,34 @@ impl KeyStore for EagerRepoStore {
         _path: &RepoPath,
         data: &[u8],
     ) -> anyhow::Result<HgId> {
-        let mut sha1_data = Vec::with_capacity(data.len() + HgId::len() * 2);
-
-        // Calculate the "hg" text: sorted([p1, p2]) + data
-        opts.parents.sort_unstable();
-        let mut iter = opts.parents.iter().rev();
-        let p2 = iter.next().copied().unwrap_or_else(|| *HgId::null_id());
-        let p1 = iter.next().copied().unwrap_or_else(|| *HgId::null_id());
-        sha1_data.extend_from_slice(p1.as_ref());
-        sha1_data.extend_from_slice(p2.as_ref());
-        sha1_data.extend_from_slice(data);
-        drop(iter);
+        let mut sha1_data;
+        match self.format {
+            SerializationFormat::Hg => {
+                sha1_data = Vec::with_capacity(data.len() + HgId::len() * 2);
+                // Calculate the "hg" text: sorted([p1, p2]) + data
+                opts.parents.sort_unstable();
+                let mut iter = opts.parents.iter().rev();
+                let p2 = iter.next().copied().unwrap_or_else(|| *HgId::null_id());
+                let p1 = iter.next().copied().unwrap_or_else(|| *HgId::null_id());
+                sha1_data.extend_from_slice(p1.as_ref());
+                sha1_data.extend_from_slice(p2.as_ref());
+                sha1_data.extend_from_slice(data);
+                drop(iter);
+            }
+            SerializationFormat::Git => {
+                let size_str = data.len().to_string();
+                let type_str = match opts.kind {
+                    Kind::File => "blob",
+                    Kind::Tree => "tree",
+                };
+                sha1_data = Vec::with_capacity(data.len() + type_str.len() + size_str.len() + 2);
+                sha1_data.extend_from_slice(type_str.as_bytes());
+                sha1_data.push(b' ');
+                sha1_data.extend_from_slice(size_str.as_bytes());
+                sha1_data.push(0);
+                sha1_data.extend_from_slice(data);
+            }
+        };
 
         if let Some(id) = opts.forced_id {
             let id = *id;
@@ -83,7 +107,7 @@ impl KeyStore for EagerRepoStore {
     }
 
     fn format(&self) -> SerializationFormat {
-        SerializationFormat::Hg
+        self.format
     }
 
     fn maybe_as_any(&self) -> Option<&dyn std::any::Any> {
@@ -96,36 +120,47 @@ impl FileStore for EagerRepoStore {
         &self,
         keys: Vec<Key>,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Key)>>> {
-        let iter = keys.into_iter().filter_map(|k| {
-            let id = k.hgid;
-            match self.get_content(id) {
-                Err(e) => Some(Err(e.into())),
-                Ok(Some(data)) => match strip_hg_file_metadata(&data) {
-                    Err(e) => Some(Err(e)),
-                    Ok((_, Some(copy_from))) => Some(Ok((k, copy_from))),
-                    Ok((_, None)) => None,
-                },
-                Ok(None) => Some(Err(anyhow::format_err!("no such file: {:?}", &k))),
+        match self.format {
+            SerializationFormat::Hg => {
+                let iter = keys.into_iter().filter_map(|k| {
+                    let id = k.hgid;
+                    match self.get_content(id) {
+                        Err(e) => Some(Err(e.into())),
+                        Ok(Some(data)) => match strip_hg_file_metadata(&data) {
+                            Err(e) => Some(Err(e)),
+                            Ok((_, Some(copy_from))) => Some(Ok((k, copy_from))),
+                            Ok((_, None)) => None,
+                        },
+                        Ok(None) => Some(Err(anyhow::format_err!("no such file: {:?}", &k))),
+                    }
+                });
+                Ok(Box::new(iter))
             }
-        });
-        Ok(Box::new(iter))
+            SerializationFormat::Git => Ok(Box::new(std::iter::empty())),
+        }
     }
 
     fn get_hg_parents(&self, _path: &RepoPath, id: HgId) -> anyhow::Result<Vec<HgId>> {
-        let mut parents = Vec::new();
-        if let Some(blob) = self.get_sha1_blob(id)? {
-            for start in [HgId::len(), 0] {
-                let end = start + HgId::len();
-                if let Some(slice) = blob.get(start..end) {
-                    if let Ok(id) = HgId::from_slice(slice) {
-                        if !id.is_null() {
-                            parents.push(id);
+        match self.format {
+            SerializationFormat::Hg => {
+                let mut parents = Vec::new();
+                if let Some(blob) = self.get_sha1_blob(id)? {
+                    for start in [HgId::len(), 0] {
+                        let end = start + HgId::len();
+                        if let Some(slice) = blob.get(start..end) {
+                            if let Ok(id) = HgId::from_slice(slice) {
+                                if !id.is_null() {
+                                    parents.push(id);
+                                }
+                            }
                         }
                     }
                 }
+                Ok(parents)
             }
+            // For Git, just return a dummy empty "parents".
+            SerializationFormat::Git => Ok(Vec::new()),
         }
-        Ok(parents)
     }
 }
 
