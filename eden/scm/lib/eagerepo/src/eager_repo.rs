@@ -587,7 +587,10 @@ impl EagerRepo {
             .map(|v| Vertex::copy_from(v.as_ref()))
             .collect();
         let id: Id20 = {
-            let data = hg_sha1_text(&parents, raw_text);
+            let data = match self.format() {
+                SerializationFormat::Git => git_sha1_text(raw_text),
+                SerializationFormat::Hg => hg_sha1_text(&parents, raw_text),
+            };
             self.add_sha1_blob(&data)?
         };
         let vertex: Vertex = { Vertex::copy_from(id.as_ref()) };
@@ -599,7 +602,13 @@ impl EagerRepo {
         // the root tree without recursion. But that requires
         // new APIs to insert trees, and insert trees in a
         // certain order.
-        if let Some(hex_tree_id) = raw_text.get(0..Id20::hex_len()) {
+        let maybe_hex_tree_id = match self.format() {
+            SerializationFormat::Hg => raw_text.get(0..Id20::hex_len()),
+            SerializationFormat::Git => raw_text
+                .strip_prefix(b"tree ")
+                .and_then(|t| t.get(0..Id20::hex_len())),
+        };
+        if let Some(hex_tree_id) = maybe_hex_tree_id {
             if let Ok(tree_id) = Id20::from_hex(hex_tree_id) {
                 let mut missing = Vec::new();
                 let path = PathInfo::root();
@@ -803,6 +812,16 @@ fn hg_sha1_text(parents: &[Vertex], raw_text: &[u8]) -> Vec<u8> {
         result.extend_from_slice(p2.as_ref());
         result.extend_from_slice(p1.as_ref());
     }
+    result.extend_from_slice(raw_text);
+    result
+}
+
+fn git_sha1_text(raw_text: &[u8]) -> Vec<u8> {
+    let size_str = raw_text.len().to_string();
+    let mut result = Vec::with_capacity(raw_text.len() + size_str.len() + 8);
+    result.extend_from_slice(b"commit ");
+    result.extend_from_slice(size_str.as_bytes());
+    result.push(0);
     result.extend_from_slice(raw_text);
     result
 }
