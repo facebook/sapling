@@ -67,6 +67,7 @@ mod capabilities;
 mod commit;
 mod commit_cloud;
 mod files;
+mod git_objects;
 mod handler;
 mod history;
 mod land;
@@ -112,6 +113,7 @@ pub enum SaplingRemoteApiMethod {
     EphemeralPrepare,
     FetchSnapshot,
     Files2,
+    GitObjects,
     History,
     LandStack,
     Lookup,
@@ -154,6 +156,7 @@ impl fmt::Display for SaplingRemoteApiMethod {
             Self::EphemeralPrepare => "ephemeral_prepare",
             Self::FetchSnapshot => "fetch_snapshot",
             Self::Files2 => "files2",
+            Self::GitObjects => "git_objects",
             Self::History => "history",
             Self::LandStack => "land_stack",
             Self::Lookup => "lookup",
