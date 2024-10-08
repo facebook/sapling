@@ -80,6 +80,12 @@ impl<V> PrefixTree<V> {
         self.value.is_none() && self.edges.is_empty()
     }
 
+    pub fn clear(&mut self) {
+        self.prefix.clear();
+        self.value = None;
+        self.edges.clear();
+    }
+
     #[cfg(test)]
     pub fn into_vec(self) -> Vec<(String, V)> {
         self.into_iter()
@@ -392,7 +398,7 @@ mod test {
             ]
         );
 
-        let (root_value, children) = prefix_tree.expand();
+        let (root_value, children) = prefix_tree.clone().expand();
 
         assert_eq!(root_value, Some(5));
         assert_eq!(children.len(), 4);
@@ -423,6 +429,10 @@ mod test {
         assert_eq!(t_child.into_vec(), vec![("est".to_string(), 0)]);
 
         assert_eq!(z_child.into_vec(), vec![("zzz".to_string(), 10)]);
+
+        let mut prefix_tree = prefix_tree.clone();
+        prefix_tree.clear();
+        assert_eq!(prefix_tree.into_vec(), vec![]);
 
         Ok(())
     }
