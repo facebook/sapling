@@ -56,8 +56,10 @@ use crate::utils;
 
 /// Git commits with segments index.
 ///
-/// Use segmented changelog for the commit graph algorithms and IdMap.
-/// Use libgit2 for commit messages.
+/// Source of truth is `.git/`. This struct bi-directionally syncs
+/// the `.git/` commit graph with Sapling's own structures like
+/// segmented changelog and metalog. Commit messages are not double
+/// stored and will be read from `.git/` directly.
 ///
 /// ## Integration with metalog
 ///
