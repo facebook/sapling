@@ -14,6 +14,7 @@ use permission_checker::MononokeIdentitySetExt;
 use scuba_ext::MononokeScubaSampleBuilder;
 
 use crate::model::GitMethodInfo;
+use crate::model::PushValidationErrors;
 
 #[derive(Copy, Clone, Debug)]
 pub enum MononokeGitScubaKey {
@@ -23,6 +24,7 @@ pub enum MononokeGitScubaKey {
     User,
     Error,
     ErrorCount,
+    PushValidationErrors,
 }
 
 impl AsRef<str> for MononokeGitScubaKey {
@@ -34,6 +36,7 @@ impl AsRef<str> for MononokeGitScubaKey {
             Self::User => "user",
             Self::Error => "error",
             Self::ErrorCount => "error_count",
+            Self::PushValidationErrors => "push_validation_errors",
         }
     }
 }
@@ -48,6 +51,7 @@ impl From<MononokeGitScubaKey> for String {
 pub struct MononokeGitScubaHandler {
     request_context: Option<RequestContext>,
     method_info: Option<GitMethodInfo>,
+    push_validation_errors: Option<PushValidationErrors>,
     client_username: Option<String>,
 }
 
@@ -56,6 +60,7 @@ impl ScubaHandler for MononokeGitScubaHandler {
         Self {
             request_context: state.try_borrow::<RequestContext>().cloned(),
             method_info: state.try_borrow::<GitMethodInfo>().cloned(),
+            push_validation_errors: state.try_borrow::<PushValidationErrors>().cloned(),
             client_username: state
                 .try_borrow::<MetadataState>()
                 .and_then(|metadata_state| metadata_state.metadata().identities().username())
@@ -81,6 +86,13 @@ impl ScubaHandler for MononokeGitScubaHandler {
 
         if let Some(err) = info.first_error() {
             scuba.add(MononokeGitScubaKey::Error, format!("{:?}", err));
+        }
+
+        if let Some(push_validation_errors) = self.push_validation_errors {
+            scuba.add(
+                MononokeGitScubaKey::PushValidationErrors,
+                push_validation_errors.to_string(),
+            );
         }
 
         scuba.add(MononokeGitScubaKey::ErrorCount, info.error_count());

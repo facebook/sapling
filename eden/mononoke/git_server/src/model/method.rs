@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use std::fmt;
+use std::collections::HashMap;
+use std::fmt::Display;
+use std::fmt::{self};
 
 use gotham_derive::StateData;
 
@@ -133,5 +135,31 @@ impl GitMethodInfo {
             variants,
             repo,
         }
+    }
+}
+
+/// Struct representing the validation errors returned by Mononoke Git server when
+/// processing a push request
+#[derive(Clone, StateData, Default)]
+pub struct PushValidationErrors {
+    pub ref_with_errors: HashMap<String, String>,
+}
+
+impl PushValidationErrors {
+    pub fn add_error(&mut self, ref_name: String, error: String) {
+        self.ref_with_errors.insert(ref_name, error);
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.ref_with_errors.is_empty()
+    }
+}
+
+impl Display for PushValidationErrors {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (ref_name, error) in &self.ref_with_errors {
+            write!(f, "{} => {}\n", ref_name, error)?;
+        }
+        Ok(())
     }
 }

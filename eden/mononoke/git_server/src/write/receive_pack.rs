@@ -36,6 +36,7 @@ use crate::command::RefUpdate;
 use crate::command::RequestCommand;
 use crate::model::GitMethodInfo;
 use crate::model::GitServerContext;
+use crate::model::PushValidationErrors;
 use crate::model::RepositoryParams;
 use crate::model::RepositoryRequestContext;
 use crate::service::set_ref;
@@ -157,6 +158,7 @@ async fn push<'a>(
             request_context.ctx.logger(),
             "Updated refs for repo {}. Sending ref update status to the client", repo_name
         );
+        let mut validation_errors = PushValidationErrors::default();
         // For each ref, update the status as ok or ng based on the result of the bookmark set operation
         for (updated_ref, result) in updated_refs {
             match result {
@@ -168,6 +170,8 @@ async fn push<'a>(
                     .await?;
                 }
                 Err(e) => {
+                    validation_errors
+                        .add_error(updated_ref.ref_name.clone(), e.root_cause().to_string());
                     write_text_packetline(
                         format!("{} {} {}", REF_ERR, updated_ref.ref_name, e.root_cause())
                             .as_bytes(),
@@ -176,6 +180,9 @@ async fn push<'a>(
                     .await?;
                 }
             }
+        }
+        if !validation_errors.is_empty() {
+            state.put(validation_errors);
         }
         flush_to_write(&mut output).await?;
     }

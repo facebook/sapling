@@ -15,6 +15,7 @@ use gotham_derive::StateData;
 use gotham_derive::StaticResponseExtender;
 pub use method::GitMethod;
 pub use method::GitMethodInfo;
+pub use method::PushValidationErrors;
 pub use pushvars::Pushvars;
 use serde::Deserialize;
 
