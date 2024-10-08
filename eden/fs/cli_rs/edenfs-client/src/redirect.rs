@@ -1190,12 +1190,16 @@ pub fn get_configured_redirections(
     // User-specific things have the highest precedence
     if let Some(user_redirs) = &checkout.redirections {
         for (repo_path, redir_type) in user_redirs {
+            let target = checkout
+                .redirection_targets
+                .as_ref()
+                .and_then(|targets| targets.get(repo_path));
             redirs.insert(
                 repo_path.clone(),
                 Redirection {
                     repo_path: repo_path.clone(),
                     redir_type: *redir_type,
-                    target: None,
+                    target: target.cloned(),
                     source: USER_REDIRECTION_SOURCE.to_string(),
                     state: Some(RedirectionState::MatchesConfiguration),
                 },
@@ -1503,7 +1507,7 @@ pub async fn try_add_redirection(
             )
         })?;
 
-    let redir = Redirection {
+    let mut redir = Redirection {
         repo_path: resolved_repo_path.clone(),
         redir_type,
         target: None,
@@ -1565,6 +1569,11 @@ pub async fn try_add_redirection(
             checkout.path().display()
         )
     })?;
+
+    // If apply() was successful, we can expect that the `expand_target_abspath`
+    // was successfull and not handling the `Err` case.
+    // Setting target here to make it part of eden checkout config.
+    redir.target = redir.expand_target_abspath(checkout).ok().flatten();
 
     // We expressly allow replacing an existing configuration in order to
     // support a user with a local ad-hoc override for global- or profile-

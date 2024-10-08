@@ -314,10 +314,54 @@ pub struct CheckoutConfig {
     #[serde(deserialize_with = "deserialize_redirections")]
     redirections: BTreeMap<PathBuf, RedirectionType>,
 
+    #[serde(
+        rename = "redirection-targets",
+        deserialize_with = "deserialize_redirection_targets",
+        default = "default_redirection_targets"
+    )]
+    redirection_targets: BTreeMap<PathBuf, PathBuf>,
+
     profiles: Option<PrefetchProfiles>,
 
     #[serde(rename = "predictive-prefetch", default)]
     predictive_prefetch: Option<PredictivePrefetch>,
+}
+
+// Initialize it to empty map to ensure backward compatibility
+fn default_redirection_targets() -> BTreeMap<PathBuf, PathBuf> {
+    BTreeMap::new()
+}
+
+fn deserialize_redirection_targets<'de, D>(
+    deserializer: D,
+) -> Result<BTreeMap<PathBuf, PathBuf>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let unvalidated_map: BTreeMap<String, Value> = BTreeMap::deserialize(deserializer)?;
+    let mut map = BTreeMap::new();
+    for (key, value) in unvalidated_map {
+        if let Some(s) = value.as_str() {
+            map.insert(
+                PathBuf::from(
+                    // Convert path separator to backslash on Windows
+                    if cfg!(windows) {
+                        key.replace("/", "\\")
+                    } else {
+                        key
+                    },
+                ),
+                PathBuf::from_str(s).map_err(serde::de::Error::custom)?,
+            );
+        } else {
+            return Err(serde::de::Error::custom(format!(
+                "Unsupported redirection target {}. Must be string.",
+                value
+            )));
+        }
+    }
+
+    Ok(map)
 }
 
 impl CheckoutConfig {
@@ -386,10 +430,15 @@ impl CheckoutConfig {
         redirs: &BTreeMap<PathBuf, Redirection>,
     ) -> Result<()> {
         self.redirections.clear();
+        self.redirection_targets.clear();
         for (_, redir) in redirs.iter() {
             if redir.source != REPO_SOURCE {
                 self.redirections
                     .insert(redir.repo_path(), redir.redir_type);
+                self.redirection_targets.insert(
+                    redir.repo_path(),
+                    redir.target.clone().unwrap_or_else(|| PathBuf::from("")),
+                );
             }
         }
         self.save_config(config_dir.into())?;
@@ -571,6 +620,8 @@ pub struct EdenFsCheckout {
     backing_repo: Option<PathBuf>,
     #[serde(skip)]
     pub(crate) redirections: Option<BTreeMap<PathBuf, RedirectionType>>,
+    #[serde(skip)]
+    pub(crate) redirection_targets: Option<BTreeMap<PathBuf, PathBuf>>,
 }
 
 impl EdenFsCheckout {
@@ -726,6 +777,7 @@ impl EdenFsCheckout {
                 None => None,
             },
             redirections: None,
+            redirection_targets: None,
         })
     }
 
@@ -737,6 +789,7 @@ impl EdenFsCheckout {
             configured: true,
             backing_repo: Some(config.repository.path.clone()),
             redirections: Some(config.redirections),
+            redirection_targets: Some(config.redirection_targets),
         }
     }
 
