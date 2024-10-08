@@ -6,14 +6,14 @@
  */
 
 use mononoke_types::path::MPath;
+use mononoke_types::prefix_tree::PrefixTree;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
-use mononoke_types::TrieMap;
 
 #[derive(Clone, Debug)]
 pub struct PathTree<V> {
     pub value: V,
-    pub subentries: TrieMap<Self>,
+    pub subentries: PrefixTree<Self>,
 }
 
 impl<V> PathTree<V> {

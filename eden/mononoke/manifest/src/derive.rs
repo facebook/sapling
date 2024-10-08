@@ -27,9 +27,9 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use itertools::Either;
 use mononoke_types::path::MPath;
+use mononoke_types::prefix_tree::PrefixTree;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
-use mononoke_types::TrieMap;
 use smallvec::smallvec;
 use smallvec::SmallVec;
 
@@ -588,7 +588,7 @@ where
 struct MergeSubentriesNode<'a, Leaf, TrieMapType> {
     path: &'a MPath,
     prefix: SmallVec<[u8; 24]>,
-    changes: TrieMap<PathTree<Option<Change<Leaf>>>>,
+    changes: PrefixTree<PathTree<Option<Change<Leaf>>>>,
     parents: Vec<TrieMapType>,
 }
 
@@ -601,7 +601,7 @@ async fn merge_subentries<TreeId, Leaf, LeafChange, TrieMapType, Store>(
     ctx: &CoreContext,
     store: &Store,
     path: &MPath,
-    changes: TrieMap<PathTree<Option<Change<LeafChange>>>>,
+    changes: PrefixTree<PathTree<Option<Change<LeafChange>>>>,
     parents: Vec<TrieMapType>,
 ) -> Result<MergeSubentriesResult<TreeId, Leaf, LeafChange, TrieMapType>>
 where
