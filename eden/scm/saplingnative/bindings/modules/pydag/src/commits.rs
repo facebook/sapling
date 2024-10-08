@@ -10,9 +10,9 @@ use std::sync::Arc;
 use ::commits::DagCommits;
 use ::commits::GraphNode;
 use ::commits::HgCommit;
-use ::commits::HgCommits;
 use ::commits::HybridCommits;
-use ::commits::MemHgCommits;
+use ::commits::MemCommits;
+use ::commits::OnDiskCommits;
 use ::commits::RevlogCommits;
 use anyhow::format_err;
 use async_runtime::try_block_unless_interrupted as block_on;
@@ -294,7 +294,7 @@ py_class!(pub class commits |py| {
     /// Construct `commits` from a segmented changelog + hgcommits directory.
     @staticmethod
     def opensegments(segmentsdir: &PyPath, commitsdir: &PyPath) -> PyResult<Self> {
-        let inner = HgCommits::new(segmentsdir.as_path(), commitsdir.as_path()).map_pyerr(py)?;
+        let inner = OnDiskCommits::new(segmentsdir.as_path(), commitsdir.as_path()).map_pyerr(py)?;
         Self::from_commits(py, inner)
     }
 
@@ -305,7 +305,7 @@ py_class!(pub class commits |py| {
     @staticmethod
     def migraterevlogtosegments(revlogdir: &PyPath, segmentsdir: &PyPath, commitsdir: &PyPath, master: Names) -> PyResult<PyNone> {
         let revlog = RevlogCommits::new(revlogdir.as_path()).map_pyerr(py)?;
-        let mut segments = HgCommits::new(segmentsdir.as_path(), commitsdir.as_path()).map_pyerr(py)?;
+        let mut segments = OnDiskCommits::new(segmentsdir.as_path(), commitsdir.as_path()).map_pyerr(py)?;
         py.allow_threads(|| block_on(segments.import_dag(revlog, master.0))).map_pyerr(py)?;
         Ok(PyNone)
     }
@@ -343,7 +343,7 @@ py_class!(pub class commits |py| {
     /// `flush` does nothing for this type of object.
     @staticmethod
     def openmemory() -> PyResult<Self> {
-        let inner = MemHgCommits::new().map_pyerr(py)?;
+        let inner = MemCommits::new().map_pyerr(py)?;
         Self::from_commits(py, inner)
     }
 });

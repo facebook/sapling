@@ -42,15 +42,15 @@ use crate::Result;
 use crate::StreamCommitText;
 use crate::StripCommits;
 
-/// Commits using the HG SHA1 hash function. Stored on disk.
-pub struct HgCommits {
+/// Commits stored on disk, identified by SHA1.
+pub struct OnDiskCommits {
     commits: Arc<RwLock<Zstore>>,
     pub(crate) commits_path: PathBuf,
     pub(crate) dag: Dag,
     pub(crate) dag_path: PathBuf,
 }
 
-impl HgCommits {
+impl OnDiskCommits {
     pub fn new(dag_path: &Path, commits_path: &Path) -> Result<Self> {
         let result = Self {
             dag: Dag::open(dag_path)?,
@@ -74,7 +74,7 @@ impl HgCommits {
 }
 
 #[async_trait::async_trait]
-impl AppendCommits for HgCommits {
+impl AppendCommits for OnDiskCommits {
     async fn add_commits(&mut self, commits: &[HgCommit]) -> Result<()> {
         fn null_id() -> Vertex {
             Vertex::copy_from(Id20::null_id().as_ref())
@@ -152,7 +152,7 @@ impl AppendCommits for HgCommits {
 }
 
 #[async_trait::async_trait]
-impl ReadCommitText for HgCommits {
+impl ReadCommitText for OnDiskCommits {
     async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
         let store = self.commits.read();
         get_commit_raw_text(&store, vertex)
@@ -186,7 +186,7 @@ fn get_commit_raw_text(store: &Zstore, vertex: &Vertex) -> Result<Option<Bytes>>
     }
 }
 
-impl StreamCommitText for HgCommits {
+impl StreamCommitText for OnDiskCommits {
     fn stream_commit_raw_text(
         &self,
         stream: BoxStream<'static, anyhow::Result<Vertex>>,
@@ -211,15 +211,15 @@ impl StreamCommitText for HgCommits {
 }
 
 #[async_trait::async_trait]
-impl StripCommits for HgCommits {
+impl StripCommits for OnDiskCommits {
     async fn strip_commits(&mut self, set: Set) -> Result<()> {
         self.dag.strip(&set).await.map_err(Into::into)
     }
 }
 
-delegate!(CheckIntegrity | IdConvert | IdMapSnapshot | PrefixLookup | DagAlgorithm, HgCommits => self.dag);
+delegate!(CheckIntegrity | IdConvert | IdMapSnapshot | PrefixLookup | DagAlgorithm, OnDiskCommits => self.dag);
 
-impl DescribeBackend for HgCommits {
+impl DescribeBackend for OnDiskCommits {
     fn algorithm_backend(&self) -> &'static str {
         "segments"
     }

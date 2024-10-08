@@ -17,8 +17,8 @@ use fs_err as fs;
 use storemodel::StoreInfo;
 
 use crate::DoubleWriteCommits;
-use crate::HgCommits;
 use crate::HybridCommits;
+use crate::OnDiskCommits;
 use crate::RevlogCommits;
 
 macro_rules! concat_os_path {
@@ -131,7 +131,7 @@ fn get_path_from_file(store_path: &Path, target_file: &str) -> Result<PathBuf, s
 }
 
 fn open_segments(store_path: &Path) -> anyhow::Result<Box<dyn DagCommits + Send + 'static>> {
-    let commits = HgCommits::new(
+    let commits = OnDiskCommits::new(
         &calculate_segments_path(store_path),
         &store_path.join(HG_COMMITS_PATH),
     )?;

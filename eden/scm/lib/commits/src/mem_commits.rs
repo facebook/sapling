@@ -33,12 +33,12 @@ use crate::StreamCommitText;
 use crate::StripCommits;
 
 /// HG commits in memory.
-pub struct MemHgCommits {
+pub struct MemCommits {
     commits: HashMap<Vertex, Bytes>,
     dag: MemDag,
 }
 
-impl MemHgCommits {
+impl MemCommits {
     pub fn new() -> Result<Self> {
         let result = Self {
             dag: MemDag::new(),
@@ -49,7 +49,7 @@ impl MemHgCommits {
 }
 
 #[async_trait::async_trait]
-impl AppendCommits for MemHgCommits {
+impl AppendCommits for MemCommits {
     async fn add_commits(&mut self, commits: &[HgCommit]) -> Result<()> {
         // Write commit data to zstore.
         for commit in commits {
@@ -109,7 +109,7 @@ impl AppendCommits for MemHgCommits {
 }
 
 #[async_trait::async_trait]
-impl ReadCommitText for MemHgCommits {
+impl ReadCommitText for MemCommits {
     async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
         Ok(self.commits.get(vertex).cloned())
     }
@@ -133,7 +133,7 @@ impl ReadCommitText for ArcHashMapVertexBytes {
     }
 }
 
-impl StreamCommitText for MemHgCommits {
+impl StreamCommitText for MemCommits {
     fn stream_commit_raw_text(
         &self,
         stream: BoxStream<'static, anyhow::Result<Vertex>>,
@@ -154,15 +154,15 @@ impl StreamCommitText for MemHgCommits {
 }
 
 #[async_trait::async_trait]
-impl StripCommits for MemHgCommits {
+impl StripCommits for MemCommits {
     async fn strip_commits(&mut self, set: Set) -> Result<()> {
         self.dag.strip(&set).await.map_err(Into::into)
     }
 }
 
-delegate!(CheckIntegrity | IdConvert | IdMapSnapshot | PrefixLookup | DagAlgorithm, MemHgCommits => self.dag);
+delegate!(CheckIntegrity | IdConvert | IdMapSnapshot | PrefixLookup | DagAlgorithm, MemCommits => self.dag);
 
-impl DescribeBackend for MemHgCommits {
+impl DescribeBackend for MemCommits {
     fn algorithm_backend(&self) -> &'static str {
         "segments"
     }

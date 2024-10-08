@@ -22,9 +22,9 @@ pub use commits_trait::StripCommits;
 mod doublewrite;
 pub(crate) mod errors;
 mod factory_impls;
-mod hgsha1commits;
 mod hybrid;
-mod memhgcommits;
+mod mem_commits;
+mod on_disk_commits;
 mod revlog;
 mod strip;
 pub mod trait_impls;
@@ -32,14 +32,14 @@ mod utils;
 
 pub use anyhow::Result;
 pub use doublewrite::DoubleWriteCommits;
-pub use hgsha1commits::HgCommits;
 pub use hybrid::HybridCommits;
-pub use memhgcommits::MemHgCommits;
+pub use mem_commits::MemCommits;
+pub use on_disk_commits::OnDiskCommits;
 pub use revlog::RevlogCommits;
 
-impl DagCommits for HgCommits {}
+impl DagCommits for OnDiskCommits {}
 impl DagCommits for HybridCommits {}
-impl DagCommits for MemHgCommits {}
+impl DagCommits for MemCommits {}
 impl DagCommits for RevlogCommits {}
 impl DagCommits for DoubleWriteCommits {}
 

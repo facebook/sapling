@@ -42,7 +42,7 @@ use zstore::Zstore;
 use crate::AppendCommits;
 use crate::DescribeBackend;
 use crate::HgCommit;
-use crate::HgCommits;
+use crate::OnDiskCommits;
 use crate::ParentlessHgCommit;
 use crate::ReadCommitText;
 use crate::Result;
@@ -58,7 +58,7 @@ use crate::StripCommits;
 /// Use edenapi to resolve public commit messages and hashes.
 pub struct HybridCommits {
     revlog: Option<RevlogCommits>,
-    commits: HgCommits,
+    commits: OnDiskCommits,
     client: Arc<dyn SaplingRemoteApi>,
     lazy_hash_desc: String,
 }
@@ -209,7 +209,7 @@ impl HybridCommits {
         commits_path: &Path,
         client: Arc<dyn SaplingRemoteApi>,
     ) -> Result<Self> {
-        let commits = HgCommits::new(dag_path, commits_path)?;
+        let commits = OnDiskCommits::new(dag_path, commits_path)?;
         let revlog = match revlog_dir {
             Some(revlog_dir) => Some(RevlogCommits::new(revlog_dir)?),
             None => None,

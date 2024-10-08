@@ -18,7 +18,7 @@ use minibytes::Bytes;
 use crate::AppendCommits;
 use crate::DescribeBackend;
 use crate::HgCommit;
-use crate::HgCommits;
+use crate::OnDiskCommits;
 use crate::ParentlessHgCommit;
 use crate::ReadCommitText;
 use crate::Result;
@@ -32,12 +32,12 @@ use crate::StripCommits;
 /// Use revlog for fallback commit messages. Double writes to revlog.
 pub struct DoubleWriteCommits {
     revlog: RevlogCommits,
-    commits: HgCommits,
+    commits: OnDiskCommits,
 }
 
 impl DoubleWriteCommits {
     pub fn new(revlog_dir: &Path, dag_path: &Path, commits_path: &Path) -> Result<Self> {
-        let commits = HgCommits::new(dag_path, commits_path)?;
+        let commits = OnDiskCommits::new(dag_path, commits_path)?;
         let revlog = RevlogCommits::new(revlog_dir)?;
         Ok(Self { revlog, commits })
     }
