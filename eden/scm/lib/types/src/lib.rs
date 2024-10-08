@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![allow(unexpected_cfgs)]
+
 //! Common types used by sibling crates
 
 pub mod augmented_tree;

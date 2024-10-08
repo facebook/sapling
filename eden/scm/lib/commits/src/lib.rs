@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![allow(unexpected_cfgs)]
+
 //! # commits
 //!
 //! Commits stored in HG format and backed by efficient `dag` structures.

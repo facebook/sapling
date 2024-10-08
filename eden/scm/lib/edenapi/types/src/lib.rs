@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![allow(unexpected_cfgs)]
+
 //! Types shared between the SaplingRemoteAPI client and server.
 //!
 //! This crate exists primarily to provide a lightweight place to

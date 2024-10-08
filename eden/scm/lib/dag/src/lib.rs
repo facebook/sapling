@@ -7,6 +7,7 @@
 
 #![allow(dead_code)]
 #![allow(clippy::iter_nth_zero, for_loops_over_fallibles)]
+#![allow(unexpected_cfgs)]
 
 //! # dag
 //!
