@@ -79,7 +79,7 @@ export const SplitDiffTable = React.memo(
                 afterLineStart={1}
               />,
             );
-          } else if (ctx.supportsExpandingContext) {
+          } else if (ctx.fetchAdditionalLines != null) {
             const numLines = Math.max(hunk.oldStart, hunk.newStart) - 1;
             rows.push(
               <HunkSeparator key={key} numLines={numLines} onExpand={() => onExpand(key)} t={t} />,
@@ -109,7 +109,7 @@ export const SplitDiffTable = React.memo(
                 afterLineStart={hunk.newStart + hunk.newLines}
               />,
             );
-          } else if (ctx.supportsExpandingContext) {
+          } else if (ctx.fetchAdditionalLines != null) {
             const numLines = isLast ? null : nextHunk.oldStart - hunk.oldLines - hunk.oldStart;
             rows.push(
               <HunkSeparator key={key} numLines={numLines} onExpand={() => onExpand(key)} t={t} />,

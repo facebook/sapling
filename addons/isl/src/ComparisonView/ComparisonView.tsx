@@ -83,18 +83,9 @@ export function useFetchLines(ctx: Context, numLines: number, start: number) {
 
   const comparisonKey = comparisonStringKey(ctx.id.comparison);
   useEffect(() => {
-    serverAPI.postMessage({
-      type: 'requestComparisonContextLines',
-      numLines,
-      start,
-      id: ctx.id,
+    ctx.fetchAdditionalLines?.(ctx.id, start, numLines).then(result => {
+      setFetchedLines(result);
     });
-
-    serverAPI
-      .nextMessageMatching('comparisonContextLines', msg => msg.path === ctx.id.path)
-      .then(result => {
-        setFetchedLines(result.lines);
-      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dotCommit?.hash, ctx.id.path, comparisonKey, numLines, start]);
 
@@ -455,9 +446,24 @@ function ComparisonViewFile({
     openFileToLine: comparisonIsAgainstHead(comparison)
       ? (line: number) => platform.openFile(path, {line})
       : undefined,
+
+    async fetchAdditionalLines(id, start, numLines) {
+      serverAPI.postMessage({
+        type: 'requestComparisonContextLines',
+        numLines,
+        start,
+        id,
+      });
+
+      const result = await serverAPI.nextMessageMatching(
+        'comparisonContextLines',
+        msg => msg.path === id.path,
+      );
+
+      return result.lines;
+    },
     collapsed,
     setCollapsed,
-    supportsExpandingContext: true,
     display: displayMode,
   };
   return (
