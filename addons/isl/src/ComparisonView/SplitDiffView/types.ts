@@ -6,6 +6,7 @@
  */
 
 import type {Result} from '../../types';
+import type {Atom} from 'jotai';
 import type {Comparison} from 'shared/Comparison';
 
 type ContextId = {path: string; comparison: Comparison};
@@ -25,6 +26,8 @@ export type Context = {
     start: OneIndexedLineNumber,
     numLines: number,
   ): Promise<Result<Array<string>>>;
+  /** A string value used as an effect dependency. If this value changes, the comparison will be considered invalidated and must be refreshed. */
+  comparisonInvalidatedAtom?: Atom<string | undefined>;
   /**
    * Whether to render as a side-by-side diff view, or a unified view where deleted and added lines are interleaved.
    * TODO: make this controllable / configurable / responsive based on screen width
