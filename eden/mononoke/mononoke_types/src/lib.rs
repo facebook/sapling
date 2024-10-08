@@ -29,6 +29,7 @@ pub mod generation;
 pub mod globalrev;
 pub mod hash;
 pub mod path;
+pub mod prefix_tree;
 pub mod rawbundle2;
 pub mod redaction_key_list;
 pub mod repo;
