@@ -36,7 +36,7 @@ mononoke_queries! {
     // it could be modified by another transaction fail the transaction in such cases
     write InsertVersion(reponame: String, workspace: String, version: u64, timestamp: i64, now: i64) {
         none,
-        mysql("INSERT INTO versions (`reponame`, `workspace`, `version`, `timestamp`) VALUES ({reponame}, {workspace}, {version}, COALESCE({timestamp},{now})) \
+        mysql("INSERT INTO versions (`reponame`, `workspace`, `version`, `timestamp`) VALUES ({reponame}, {workspace}, {version}, COALESCE(FROM_UNIXTIME({timestamp}),FROM_UNIXTIME({now}))) \
         ON DUPLICATE KEY UPDATE timestamp = current_timestamp, version = \
           IF(version + 1 = VALUES(version), \
             VALUES(version), \
