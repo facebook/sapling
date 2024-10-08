@@ -22,6 +22,7 @@ use edenapi_types::HgId;
 use pyconfigloader::config;
 use pydag::dagalgo::dagalgo as PyDag;
 use pyedenapi::PyClient;
+use storemodel::SerializationFormat;
 
 mod impl_into;
 
@@ -130,9 +131,9 @@ py_class!(pub class EagerRepoStore |py| {
 
     /// Construct `EagerRepoStore` from a directory.
     @staticmethod
-    def open(dir: &PyPath) -> PyResult<Self> {
+    def open(dir: &PyPath, format: Serde<SerializationFormat> = Serde(SerializationFormat::Hg)) -> PyResult<Self> {
         let path = dir.as_path().to_path_buf();
-        let inner = RustEagerRepoStore::open(&path).map_pyerr(py)?;
+        let inner = RustEagerRepoStore::open(&path, format.0).map_pyerr(py)?;
         Self::create_instance(py, inner)
     }
 

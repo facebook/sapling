@@ -100,30 +100,33 @@ pub struct EagerRepo {
 /// File, tree, commit contents.
 ///
 /// SHA1 is verifiable. For HG this means `sorted([p1, p2])` and filelog rename
-/// metadata is included in values.
+/// metadata is included in values. For Git this means `type size` is part of
+/// the prefix of the stored blobs.
 ///
 /// This is meant to be mainly a content store. We currently "abuse" it to
-/// answer filelog history. The filelog (filenode) and linknodes are
-/// considered tech-debt and we hope to replace them with fastlog APIs which
-/// serve sub-graph with `(commit, path)` as graph nodes.
+/// answer filelog history when ght HG format is used. The filelog (filenode)
+/// and linknodes are considered tech-debt and we hope to replace them with
+/// fastlog APIs which serve sub-graph with `(commit, path)` as graph nodes.
 ///
-/// We don't use `(p1, p2)` for commit parents because it loses the parent
-/// order. The DAG storage is used to answer commit parents instead.
+/// Unlike file history, we don't use `(p1, p2)` for commit parents because it
+/// loses the parent order, which is important for commits. The callsite should
+/// use a dedicated DAG implementation to answer commit parents questions.
 ///
-/// Currently backed by [`zstore::Zstore`]. For simplicity, we don't use the
-/// zstore delta-compress features, and don't store different types separately.
+/// Currently backed by [`zstore::Zstore`], a pure content key-value store.
 #[derive(Clone)]
 pub struct EagerRepoStore {
     pub(crate) inner: Arc<RwLock<Zstore>>,
+    pub(crate) format: SerializationFormat,
 }
 
 impl EagerRepoStore {
     /// Open an [`EagerRepoStore`] at the given directory.
     /// Create an empty store on demand.
-    pub fn open(dir: &Path) -> Result<Self> {
+    pub fn open(dir: &Path, format: SerializationFormat) -> Result<Self> {
         let inner = Zstore::open(dir)?;
         Ok(Self {
             inner: Arc::new(RwLock::new(inner)),
+            format,
         })
     }
 
@@ -136,6 +139,7 @@ impl EagerRepoStore {
 
     /// Insert SHA1 blob to zstore.
     /// In hg's case, the `data` is `min(p1, p2) + max(p1, p2) + text`.
+    /// In git's case, the `data` should include the type and size header.
     pub fn add_sha1_blob(&self, data: &[u8], bases: &[Id20]) -> Result<Id20> {
         let mut inner = self.inner.write();
         Ok(inner.insert(data, bases)?)
@@ -149,7 +153,7 @@ impl EagerRepoStore {
         Ok(())
     }
 
-    /// Read SHA1 blob from zstore.
+    /// Read SHA1 blob from zstore, including the prefixes.
     pub fn get_sha1_blob(&self, id: Id20) -> Result<Option<Bytes>> {
         let inner = self.inner.read();
         Ok(inner.get(id)?)
@@ -157,15 +161,31 @@ impl EagerRepoStore {
 
     /// Read the blob with its p1, p2 prefix removed.
     pub fn get_content(&self, id: Id20) -> Result<Option<Bytes>> {
-        // Prefix in bytes of the hg SHA1s in the eagerepo data.
-        const HG_SHA1_PREFIX: usize = Id20::len() * 2;
         // Special null case.
         if id.is_null() {
             return Ok(Some(Bytes::default()));
         }
         match self.get_sha1_blob(id)? {
             None => Ok(None),
-            Some(data) => Ok(Some(data.slice(HG_SHA1_PREFIX..))),
+            Some(data) => {
+                match self.format {
+                    SerializationFormat::Hg => {
+                        // Strip prefix in Hg: Skip first 40 bytes.
+                        const HG_SHA1_PREFIX: usize = Id20::len() * 2;
+                        Ok(Some(data.slice(HG_SHA1_PREFIX..)))
+                    }
+                    SerializationFormat::Git => {
+                        // Strip prefix in Git: Skip bytes ending at the first NUL.
+                        let index = data
+                            .as_ref()
+                            .iter()
+                            .position(|&b| b == 0)
+                            .map(|v| v + 1)
+                            .unwrap_or_default();
+                        Ok(Some(data.slice(index..)))
+                    }
+                }
+            }
         }
     }
 
@@ -234,7 +254,7 @@ impl EagerRepoStore {
         };
         // Check subfiles or subtrees.
         if matches!(flag, Flag::Directory) {
-            let entry = TreeEntry(content, SerializationFormat::Hg);
+            let entry = TreeEntry(content, self.format);
             for element in entry.elements() {
                 let element = element?;
                 let name = element.component.into_string();
@@ -288,12 +308,17 @@ impl PathInfo {
 impl EagerRepo {
     /// Open an [`EagerRepo`] at the given directory. Create an empty repo on demand.
     pub fn open(dir: &Path) -> Result<Self> {
+        // Auto-detect Git format from path. "*-git" or "*.git" use the Git format.
+        let format = match dir.file_name().and_then(|s| s.to_str()) {
+            Some(s) if s.ends_with(".git") || s.ends_with("-git") => SerializationFormat::Git,
+            _ => SerializationFormat::Hg,
+        };
         let ident = identity::sniff_dir(dir)?.unwrap_or_else(identity::default);
         // Attempt to match directory layout of a real client repo.
         let hg_dir = dir.join(ident.dot_dir());
         let store_dir = hg_dir.join("store");
         let dag = Dag::open(store_dir.join("segments").join("v1"))?;
-        let store = EagerRepoStore::open(&store_dir.join("hgcommits").join("v1"))?;
+        let store = EagerRepoStore::open(&store_dir.join("hgcommits").join("v1"), format)?;
         let metalog = MetaLog::open(store_dir.join("metalog"), None)?;
         let mut_store = MutationStore::open(store_dir.join("mutation"))?;
 
@@ -314,16 +339,17 @@ impl EagerRepo {
 
         // Write "requires" files.
         write_requires(&hg_dir, &["store", "treestate", "windowssymlinks"])?;
-        write_requires(
-            &store_dir,
-            &[
-                "narrowheads",
-                "visibleheads",
-                "segmentedchangelog",
-                "eagerepo",
-                "invalidatelinkrev",
-            ],
-        )?;
+        let mut store_requires = vec![
+            "narrowheads",
+            "visibleheads",
+            "segmentedchangelog",
+            "eagerepo",
+            "invalidatelinkrev",
+        ];
+        if matches!(format, SerializationFormat::Git) {
+            store_requires.push("git");
+        }
+        write_requires(&store_dir, &store_requires)?;
         Ok(repo)
     }
 
