@@ -53,6 +53,29 @@ impl<V> PrefixTree<V> {
         }
     }
 
+    /// Expands the prefix tree into a tuple of the root value and a list of
+    /// (byte, child) pairs corresponding to the children prefix trees starting
+    /// with each byte.
+    pub fn expand(self) -> (Option<V>, Vec<(u8, Self)>) {
+        match self.prefix.split_first() {
+            Some((first_byte, rest)) => (
+                None,
+                vec![(
+                    *first_byte,
+                    Self {
+                        prefix: rest.to_smallvec(),
+                        value: self.value,
+                        edges: self.edges,
+                    },
+                )],
+            ),
+            None => (
+                self.value.map(|value| *value),
+                self.edges.into_iter().collect(),
+            ),
+        }
+    }
+
     pub fn is_empty(&self) -> bool {
         self.value.is_none() && self.edges.is_empty()
     }
@@ -204,6 +227,7 @@ impl<V> Iterator for PrefixTreeIntoIter<V> {
 #[cfg(test)]
 mod test {
     use anyhow::Result;
+    use itertools::Itertools;
     use mononoke_macros::mononoke;
     use quickcheck::quickcheck;
 
@@ -367,6 +391,38 @@ mod test {
                 ("zzzz".to_string(), 10),
             ]
         );
+
+        let (root_value, children) = prefix_tree.expand();
+
+        assert_eq!(root_value, Some(5));
+        assert_eq!(children.len(), 4);
+        assert_eq!(children[0].0, b'a');
+        assert_eq!(children[1].0, b'b');
+        assert_eq!(children[2].0, b't');
+        assert_eq!(children[3].0, b'z');
+
+        let (a_child, b_child, t_child, z_child) = children
+            .into_iter()
+            .map(|(_byte, child)| child)
+            .collect_tuple()
+            .unwrap();
+
+        assert_eq!(
+            a_child.into_vec(),
+            vec![
+                ("bbbbbb".to_string(), 2),
+                ("bc".to_string(), 3),
+                ("bcde".to_string(), 4),
+                ("bcdf".to_string(), 2),
+                ("c".to_string(), 60),
+            ]
+        );
+
+        assert_eq!(b_child.into_vec(), vec![("cdf".to_string(), 3)]);
+
+        assert_eq!(t_child.into_vec(), vec![("est".to_string(), 0)]);
+
+        assert_eq!(z_child.into_vec(), vec![("zzz".to_string(), 10)]);
 
         Ok(())
     }
