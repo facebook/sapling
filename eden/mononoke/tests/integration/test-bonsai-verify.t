@@ -18,29 +18,18 @@ setup common configuration
 
 
 setup repo
+  $ testtool_drawdag -R repo << EOF
+  > A
+  > # modify: A a "a"
+  > # author_date: A "1970-01-01T01:00:00+00:00"
+  > # author: A test
+  > EOF
+  A=546ab8adb92af7ef882231ea89d5f3d6d1d0345f761aa7b3a25ff08f25aa0e85
 
-  $ hginit_treemanifest repo
+  $ HG_ID=$(mononoke_newadmin convert --repo-name repo  --derive --from bonsai --to hg $A)
 
-  $ cd repo
-
-  $ touch a
-  $ hg add a
-  $ hg ci -ma
-  $ hg log
-  commit:      3903775176ed
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     a
-   (re)
-  $ hg log -r. -T '{node}\n'
-  3903775176ed42b1458a6281db4a0ccf4d9f287a
-
-blobimport
-
-  $ cd ..
-  $ blobimport repo/.hg repo
 
 smoke test to ensure bonsai_verify works
 
-  $ bonsai_verify round-trip 3903775176ed42b1458a6281db4a0ccf4d9f287a 2>&1 | grep valid
+  $ bonsai_verify round-trip $HG_ID 2>&1 | grep valid
   * 100.00% valid, summary: , total: 1, valid: 1, errors: 0, ignored: 0 (glob)
