@@ -457,6 +457,10 @@ impl EagerRepo {
             .add_arbitrary_blob(digest_id(digest), &pointer.serialize())
     }
 
+    pub(crate) fn format(&self) -> SerializationFormat {
+        self.store.format
+    }
+
     /// Extract parents out of a SHA1 manifest blob, returns the remaining data.
     fn extract_parents_from_tree_data(data: Bytes) -> Result<(Parents, Bytes)> {
         let p2 = HgId::from_slice(&data[..HG_LEN]).map_err(anyhow::Error::from)?;
@@ -474,6 +478,11 @@ impl EagerRepo {
 
     /// Calculate augmented trees recursively
     pub fn derive_augmented_tree_recursively(&self, id: Id20) -> Result<Option<Bytes>> {
+        if !matches!(self.format(), SerializationFormat::Hg) {
+            return Err(crate::Error::Other(anyhow!(
+                "Augmented tree is only supported for Hg format"
+            )));
+        }
         match self.store.get_augmented_blob(id)? {
             Some(t) => Ok(Some(t)),
             None => {
