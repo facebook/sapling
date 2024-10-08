@@ -51,12 +51,11 @@ use mononoke_types::NonRootMPath;
 use mononoke_types::ThriftConvert;
 use repo_authorization::AuthorizationContext;
 use repo_identity::RepoIdentityRef;
+use scs_errors::ServiceErrorResultExt;
 use source_control as thrift;
 
 use crate::commit_id::map_commit_identities;
 use crate::commit_id::map_commit_identity;
-use crate::errors;
-use crate::errors::ServiceErrorResultExt;
 use crate::from_request::check_range_and_convert;
 use crate::from_request::convert_pushvars;
 use crate::from_request::FromRequest;
@@ -74,7 +73,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         repo: thrift::RepoSpecifier,
         _params: thrift::RepoInfoParams,
-    ) -> Result<thrift::RepoInfo, errors::ServiceError> {
+    ) -> Result<thrift::RepoInfo, scs_errors::ServiceError> {
         let authz = AuthorizationContext::new_bypass_access_control();
         let repo = self
             .repo_impl(ctx, &repo, authz, |_| async { Ok(None) })
@@ -111,7 +110,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         repo: thrift::RepoSpecifier,
         params: thrift::RepoResolveBookmarkParams,
-    ) -> Result<thrift::RepoResolveBookmarkResponse, errors::ServiceError> {
+    ) -> Result<thrift::RepoResolveBookmarkResponse, scs_errors::ServiceError> {
         let repo = self.repo(ctx, &repo).await?;
         match repo
             .resolve_bookmark(
@@ -145,7 +144,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         repo: thrift::RepoSpecifier,
         params: thrift::RepoResolveCommitPrefixParams,
-    ) -> Result<thrift::RepoResolveCommitPrefixResponse, errors::ServiceError> {
+    ) -> Result<thrift::RepoResolveCommitPrefixResponse, scs_errors::ServiceError> {
         use ChangesetSpecifierPrefixResolution::*;
         type Response = thrift::RepoResolveCommitPrefixResponse;
         type ResponseType = thrift::RepoResolveCommitPrefixResponseType;
@@ -189,7 +188,7 @@ impl SourceControlServiceImpl {
                 })
             }
             Single(cs_id) => match &repo.changeset(cs_id).await? {
-                None => Err(errors::internal_error(
+                None => Err(scs_errors::internal_error(
                     "unexpected failure to resolve an existing commit",
                 )
                 .into()),
@@ -219,7 +218,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         repo: thrift::RepoSpecifier,
         params: thrift::RepoBookmarkInfoParams,
-    ) -> Result<thrift::RepoBookmarkInfoResponse, errors::ServiceError> {
+    ) -> Result<thrift::RepoBookmarkInfoResponse, scs_errors::ServiceError> {
         let repo = self.repo(ctx, &repo).await?;
         let info = repo.bookmark_info(params.bookmark_name).await?;
         Ok(thrift::RepoBookmarkInfoResponse {
@@ -237,7 +236,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         repo: thrift::RepoSpecifier,
         params: thrift::RepoListBookmarksParams,
-    ) -> Result<thrift::RepoListBookmarksResponse, errors::ServiceError> {
+    ) -> Result<thrift::RepoListBookmarksResponse, scs_errors::ServiceError> {
         let limit = match check_range_and_convert(
             "limit",
             params.limit,
@@ -287,7 +286,7 @@ impl SourceControlServiceImpl {
     async fn convert_create_commit_parents(
         repo: &RepoContext<Repo>,
         parents: &[thrift::CommitId],
-    ) -> Result<Vec<ChangesetId>, errors::ServiceError> {
+    ) -> Result<Vec<ChangesetId>, scs_errors::ServiceError> {
         let parents: Vec<_> = parents
             .iter()
             .map(|parent| async move {
@@ -296,15 +295,15 @@ impl SourceControlServiceImpl {
                 let changeset = repo
                     .changeset(changeset_specifier)
                     .await?
-                    .ok_or_else(|| errors::commit_not_found(parent.to_string()))?;
-                Ok::<_, errors::ServiceError>(changeset.id())
+                    .ok_or_else(|| scs_errors::commit_not_found(parent.to_string()))?;
+                Ok::<_, scs_errors::ServiceError>(changeset.id())
             })
             .collect::<FuturesOrdered<_>>()
             .try_collect()
             .await?;
 
         if parents.is_empty() && !repo.allow_no_parent_writes() {
-            return Err(errors::invalid_request(
+            return Err(scs_errors::invalid_request(
                 "this repo does not permit commits without a parent",
             )
             .into());
@@ -316,14 +315,14 @@ impl SourceControlServiceImpl {
     async fn convert_create_commit_file_content(
         repo: &RepoContext<Repo>,
         content: thrift::RepoCreateCommitParamsFileContent,
-    ) -> Result<CreateChangeFileContents, errors::ServiceError> {
+    ) -> Result<CreateChangeFileContents, scs_errors::ServiceError> {
         let contents = match content {
             thrift::RepoCreateCommitParamsFileContent::id(id) => {
                 let file_id = FileId::from_request(&id)?;
                 let file = repo
                     .file(file_id)
                     .await?
-                    .ok_or_else(|| errors::file_not_found(file_id.to_string()))?;
+                    .ok_or_else(|| scs_errors::file_not_found(file_id.to_string()))?;
                 CreateChangeFileContents::Existing {
                     file_id: file.id().await?,
                     maybe_size: None,
@@ -334,7 +333,7 @@ impl SourceControlServiceImpl {
                 let file = repo
                     .file_by_content_sha1(sha)
                     .await?
-                    .ok_or_else(|| errors::file_not_found(sha.to_string()))?;
+                    .ok_or_else(|| scs_errors::file_not_found(sha.to_string()))?;
                 CreateChangeFileContents::Existing {
                     file_id: file.id().await?,
                     maybe_size: None,
@@ -345,7 +344,7 @@ impl SourceControlServiceImpl {
                 let file = repo
                     .file_by_content_sha256(sha)
                     .await?
-                    .ok_or_else(|| errors::file_not_found(sha.to_string()))?;
+                    .ok_or_else(|| scs_errors::file_not_found(sha.to_string()))?;
                 CreateChangeFileContents::Existing {
                     file_id: file.id().await?,
                     maybe_size: None,
@@ -356,7 +355,7 @@ impl SourceControlServiceImpl {
                 let file = repo
                     .file_by_content_gitsha1(sha)
                     .await?
-                    .ok_or_else(|| errors::file_not_found(sha.to_string()))?;
+                    .ok_or_else(|| scs_errors::file_not_found(sha.to_string()))?;
                 CreateChangeFileContents::Existing {
                     file_id: file.id().await?,
                     maybe_size: None,
@@ -368,7 +367,7 @@ impl SourceControlServiceImpl {
                 }
             }
             thrift::RepoCreateCommitParamsFileContent::UnknownField(t) => {
-                return Err(errors::invalid_request(format!(
+                return Err(scs_errors::invalid_request(format!(
                     "file content type not supported: {}",
                     t
                 ))
@@ -381,7 +380,7 @@ impl SourceControlServiceImpl {
     async fn convert_create_commit_change(
         repo: &RepoContext<Repo>,
         change: thrift::RepoCreateCommitParamsChange,
-    ) -> Result<CreateChange, errors::ServiceError> {
+    ) -> Result<CreateChange, scs_errors::ServiceError> {
         let change = match change {
             thrift::RepoCreateCommitParamsChange::changed(c) => {
                 let file_type = FileType::from_request(&c.r#type)?;
@@ -411,7 +410,7 @@ impl SourceControlServiceImpl {
                             ),
                         },
                         thrift::RepoCreateCommitParamsGitLfs::UnknownField(t) => {
-                            return Err(errors::invalid_request(format!(
+                            return Err(scs_errors::invalid_request(format!(
                                 "git lfs variant not supported: {}",
                                 t
                             ))
@@ -437,7 +436,7 @@ impl SourceControlServiceImpl {
             }
             thrift::RepoCreateCommitParamsChange::deleted(_d) => CreateChange::Deletion,
             thrift::RepoCreateCommitParamsChange::UnknownField(t) => {
-                return Err(errors::invalid_request(format!(
+                return Err(scs_errors::invalid_request(format!(
                     "file change type not supported: {}",
                     t
                 ))
@@ -450,15 +449,15 @@ impl SourceControlServiceImpl {
     async fn convert_create_commit_changes(
         repo: &RepoContext<Repo>,
         changes: BTreeMap<String, thrift::RepoCreateCommitParamsChange>,
-    ) -> Result<BTreeMap<MPath, CreateChange>, errors::ServiceError> {
+    ) -> Result<BTreeMap<MPath, CreateChange>, scs_errors::ServiceError> {
         let changes = changes
             .into_iter()
             .map(|(path, change)| async move {
                 let path = MPath::try_from(&path).map_err(|e| {
-                    errors::invalid_request(format!("invalid path '{}': {}", path, e))
+                    scs_errors::invalid_request(format!("invalid path '{}': {}", path, e))
                 })?;
                 let change = Self::convert_create_commit_change(repo, change).await?;
-                Ok::<_, errors::ServiceError>((path, change))
+                Ok::<_, scs_errors::ServiceError>((path, change))
             })
             .collect::<FuturesOrdered<_>>()
             .try_collect()
@@ -473,7 +472,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         repo: thrift::RepoSpecifier,
         params: thrift::RepoCreateCommitParams,
-    ) -> Result<thrift::RepoCreateCommitResponse, errors::ServiceError> {
+    ) -> Result<thrift::RepoCreateCommitResponse, scs_errors::ServiceError> {
         let repo = self
             .repo_for_service(ctx, &repo, params.service_identity.clone())
             .await?;
@@ -511,7 +510,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         repo: thrift::RepoSpecifier,
         params: thrift::RepoCreateStackParams,
-    ) -> Result<thrift::RepoCreateStackResponse, errors::ServiceError> {
+    ) -> Result<thrift::RepoCreateStackResponse, scs_errors::ServiceError> {
         let batch_size = params.commits.len() as u64;
         let repo = self
             .repo_for_service(ctx.clone(), &repo, params.service_identity.clone())
@@ -592,7 +591,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         repo: thrift::RepoSpecifier,
         params: thrift::RepoStackInfoParams,
-    ) -> Result<thrift::RepoStackInfoResponse, errors::ServiceError> {
+    ) -> Result<thrift::RepoStackInfoResponse, scs_errors::ServiceError> {
         let repo = self.repo(ctx, &repo).await?;
 
         // Check the limit
@@ -648,7 +647,7 @@ impl SourceControlServiceImpl {
         )?;
 
         if draft_commits.len() <= params.heads.len() && !leftover_heads.is_empty() {
-            Err(errors::limit_too_low(limit))?;
+            Err(scs_errors::limit_too_low(limit))?;
         }
 
         // generate response
@@ -684,9 +683,10 @@ impl SourceControlServiceImpl {
                     ..Default::default()
                 })
             }
-            _ => Err(
-                errors::internal_error("unexpected failure to resolve an existing commit").into(),
-            ),
+            _ => Err(scs_errors::internal_error(
+                "unexpected failure to resolve an existing commit",
+            )
+            .into()),
         }
     }
 
@@ -695,7 +695,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         repo: thrift::RepoSpecifier,
         params: thrift::RepoCreateBookmarkParams,
-    ) -> Result<thrift::RepoCreateBookmarkResponse, errors::ServiceError> {
+    ) -> Result<thrift::RepoCreateBookmarkResponse, scs_errors::ServiceError> {
         let repo = self
             .repo_for_service(ctx, &repo, params.service_identity)
             .await?;
@@ -703,7 +703,7 @@ impl SourceControlServiceImpl {
         let changeset = repo
             .changeset(ChangesetSpecifier::from_request(target)?)
             .await?
-            .ok_or_else(|| errors::commit_not_found(target.to_string()))?;
+            .ok_or_else(|| scs_errors::commit_not_found(target.to_string()))?;
         let pushvars = convert_pushvars(params.pushvars);
 
         repo.create_bookmark(
@@ -722,7 +722,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         repo: thrift::RepoSpecifier,
         params: thrift::RepoMoveBookmarkParams,
-    ) -> Result<thrift::RepoMoveBookmarkResponse, errors::ServiceError> {
+    ) -> Result<thrift::RepoMoveBookmarkResponse, scs_errors::ServiceError> {
         let repo = self
             .repo_for_service(ctx, &repo, params.service_identity)
             .await?;
@@ -730,13 +730,13 @@ impl SourceControlServiceImpl {
         let changeset = repo
             .changeset(ChangesetSpecifier::from_request(target)?)
             .await?
-            .ok_or_else(|| errors::commit_not_found(target.to_string()))?;
+            .ok_or_else(|| scs_errors::commit_not_found(target.to_string()))?;
         let old_changeset_id = match &params.old_target {
             Some(old_target) => Some(
                 repo.changeset(ChangesetSpecifier::from_request(old_target)?)
                     .await
                     .context("failed to resolve old target")?
-                    .ok_or_else(|| errors::commit_not_found(old_target.to_string()))?
+                    .ok_or_else(|| scs_errors::commit_not_found(old_target.to_string()))?
                     .id(),
             ),
             None => None,
@@ -761,7 +761,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         repo: thrift::RepoSpecifier,
         params: thrift::RepoDeleteBookmarkParams,
-    ) -> Result<thrift::RepoDeleteBookmarkResponse, errors::ServiceError> {
+    ) -> Result<thrift::RepoDeleteBookmarkResponse, scs_errors::ServiceError> {
         let repo = self
             .repo_for_service(ctx, &repo, params.service_identity)
             .await?;
@@ -769,7 +769,7 @@ impl SourceControlServiceImpl {
             Some(old_target) => Some(
                 repo.changeset(ChangesetSpecifier::from_request(old_target)?)
                     .await?
-                    .ok_or_else(|| errors::commit_not_found(old_target.to_string()))?
+                    .ok_or_else(|| scs_errors::commit_not_found(old_target.to_string()))?
                     .id(),
             ),
             None => None,
@@ -805,7 +805,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         repo: thrift::RepoSpecifier,
         params: thrift::RepoPrepareCommitsParams,
-    ) -> Result<thrift::RepoPrepareCommitsResponse, errors::ServiceError> {
+    ) -> Result<thrift::RepoPrepareCommitsResponse, scs_errors::ServiceError> {
         let repo = self.repo(ctx.clone(), &repo).await?;
         // Convert thrift commit ids to bonsai changeset ids
         let changesets = try_join_all(
@@ -821,7 +821,7 @@ impl SourceControlServiceImpl {
         let csids = std::iter::zip(params.commits, changesets)
             .map(|(commit, cs)| {
                 cs.map(|cs| cs.id())
-                    .ok_or_else(|| errors::commit_not_found(commit.to_string()))
+                    .ok_or_else(|| scs_errors::commit_not_found(commit.to_string()))
             })
             .collect::<Result<Vec<_>, _>>()?;
         let derived_data_type = DerivableType::from_request(&params.derived_data_type)?;
@@ -840,7 +840,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         repo: thrift::RepoSpecifier,
         params: thrift::RepoUploadFileContentParams,
-    ) -> Result<thrift::RepoUploadFileContentResponse, errors::ServiceError> {
+    ) -> Result<thrift::RepoUploadFileContentResponse, scs_errors::ServiceError> {
         let repo = self
             .repo_for_service(ctx, &repo, params.service_identity)
             .await?;
@@ -858,7 +858,7 @@ impl SourceControlServiceImpl {
             store_request.sha256 = Some(Sha256::from_request(expected_content_sha256)?);
         }
         if params.expected_content_seeded_blake3.is_some() {
-            return Err(errors::invalid_request(
+            return Err(scs_errors::invalid_request(
                 "Seeded blake3 not yet implemented for file upload",
             )
             .into());
@@ -881,7 +881,7 @@ impl SourceControlServiceImpl {
         &self,
         ctx: CoreContext,
         params: thrift::RepoUpdateSubmoduleExpansionParams,
-    ) -> Result<thrift::RepoUpdateSubmoduleExpansionResponse, errors::ServiceError> {
+    ) -> Result<thrift::RepoUpdateSubmoduleExpansionResponse, scs_errors::ServiceError> {
         let large_repo_ctx = self.repo(ctx.clone(), &params.large_repo).await?;
 
         let base_cs_specifier = ChangesetSpecifier::from_request(&params.base_commit_id)?;
@@ -933,7 +933,7 @@ impl SourceControlServiceImpl {
                 SubmoduleExpansionUpdate::UpdateCommit(git_commit_id_bytes)
             }
             Some(_) => {
-                return Err(errors::invalid_request(anyhow!(
+                return Err(scs_errors::invalid_request(anyhow!(
                     "New submodule commit is not a valid git commit hash"
                 ))
                 .into());
@@ -961,7 +961,7 @@ impl SourceControlServiceImpl {
                         .hg_id()
                         .await?
                         .ok_or_else(|| {
-                            errors::internal_error(format!(
+                            scs_errors::internal_error(format!(
                                 "No hg mapping found for changeset {}",
                                 cs_ctx.id()
                             ))
@@ -974,7 +974,7 @@ impl SourceControlServiceImpl {
                         .git_sha1()
                         .await?
                         .ok_or_else(|| {
-                            errors::internal_error(format!(
+                            scs_errors::internal_error(format!(
                                 "No git mapping found for changeset {}",
                                 cs_ctx.id()
                             ))
@@ -983,7 +983,7 @@ impl SourceControlServiceImpl {
                         .to_vec(),
                 ),
                 _ => {
-                    return Err(errors::invalid_request(format!(
+                    return Err(scs_errors::invalid_request(format!(
                         "{scheme} scheme is not supported"
                     ))
                     .into());

@@ -55,6 +55,8 @@ use permission_checker::MononokeIdentity;
 use permission_checker::MononokeIdentitySet;
 use repo_authorization::AuthorizationContext;
 use scribe_ext::Scribe;
+use scs_errors::ServiceErrorResultExt;
+use scs_errors::Status;
 use scuba_ext::MononokeScubaSampleBuilder;
 use scuba_ext::ScubaValue;
 use slog::debug;
@@ -66,9 +68,6 @@ use srserver::RequestContext;
 use stats::prelude::*;
 use time_ext::DurationExt;
 
-use crate::errors;
-use crate::errors::ServiceErrorResultExt;
-use crate::errors::Status;
 use crate::from_request::FromRequest;
 use crate::scuba_params::AddScubaParams;
 use crate::scuba_response::AddScubaResponse;
@@ -166,7 +165,7 @@ impl SourceControlServiceImpl {
         req_ctxt: &RequestContext,
         specifier: Option<&dyn SpecifierExt>,
         params: &dyn AddScubaParams,
-    ) -> Result<CoreContext, errors::ServiceError> {
+    ) -> Result<CoreContext, scs_errors::ServiceError> {
         let session = self.create_session(req_ctxt).await?;
         let identities = session.metadata().identities();
         let mut scuba = self.create_scuba(name, req_ctxt, specifier, params, identities)?;
@@ -187,7 +186,7 @@ impl SourceControlServiceImpl {
         specifier: Option<&dyn SpecifierExt>,
         params: &dyn AddScubaParams,
         identities: &MononokeIdentitySet,
-    ) -> Result<MononokeScubaSampleBuilder, errors::ServiceError> {
+    ) -> Result<MononokeScubaSampleBuilder, scs_errors::ServiceError> {
         let mut scuba = self.scuba_builder.clone().with_seq("seq");
         scuba.add("type", "thrift");
         scuba.add("method", name);
@@ -227,7 +226,9 @@ impl SourceControlServiceImpl {
             "proxy_client_id",
         ];
         for &header in CLIENT_HEADERS.iter() {
-            let value = req_ctxt.header(header).map_err(errors::internal_error)?;
+            let value = req_ctxt
+                .header(header)
+                .map_err(scs_errors::internal_error)?;
             if let Some(value) = value {
                 scuba.add(header, value);
             }
@@ -247,12 +248,12 @@ impl SourceControlServiceImpl {
     async fn create_metadata(
         &self,
         req_ctxt: &RequestContext,
-    ) -> Result<Metadata, errors::ServiceError> {
-        let header = |h: &str| req_ctxt.header(h).map_err(errors::invalid_request);
+    ) -> Result<Metadata, scs_errors::ServiceError> {
+        let header = |h: &str| req_ctxt.header(h).map_err(scs_errors::invalid_request);
 
         let tls_identities: MononokeIdentitySet = req_ctxt
             .identities()
-            .map_err(errors::internal_error)?
+            .map_err(scs_errors::internal_error)?
             .entries()
             .into_iter()
             .map(MononokeIdentity::from_identity_ref)
@@ -264,7 +265,7 @@ impl SourceControlServiceImpl {
                 &self.identity,
                 &[EnvironmentType::PROD, EnvironmentType::CORP],
             )
-            .map_err(errors::internal_error)?
+            .map_err(scs_errors::internal_error)?
             .entries()
             .into_iter()
             .map(MononokeIdentity::from_identity_ref)
@@ -272,7 +273,7 @@ impl SourceControlServiceImpl {
 
         let client_info: Option<ClientInfo> = req_ctxt
             .header(CLIENT_INFO_HEADER)
-            .map_err(errors::invalid_request)?
+            .map_err(scs_errors::invalid_request)?
             .as_ref()
             .and_then(|ci| serde_json::from_str(ci).ok());
 
@@ -289,16 +290,16 @@ impl SourceControlServiceImpl {
             ) {
                 let mut header_identities: MononokeIdentitySet =
                     serde_json::from_str(forwarded_identities.as_str())
-                        .map_err(errors::invalid_request)?;
+                        .map_err(scs_errors::invalid_request)?;
                 let client_ip = Some(
                     forwarded_ip
                         .parse::<IpAddr>()
-                        .map_err(errors::invalid_request)?,
+                        .map_err(scs_errors::invalid_request)?,
                 );
                 let client_port = Some(
                     forwarded_port
                         .parse::<u16>()
-                        .map_err(errors::invalid_request)?,
+                        .map_err(scs_errors::invalid_request)?,
                 );
                 let client_debug = header(FORWARDED_CLIENT_DEBUG_HEADER)?.is_some();
 
@@ -308,7 +309,7 @@ impl SourceControlServiceImpl {
                     header_identities,
                     client_debug,
                     metadata::security::is_client_untrusted(|h| req_ctxt.header(h))
-                        .map_err(errors::invalid_request)?,
+                        .map_err(scs_errors::invalid_request)?,
                     client_ip,
                     client_port,
                 )
@@ -332,13 +333,17 @@ impl SourceControlServiceImpl {
             tls_identities.union(&cats_identities).cloned().collect(),
             false,
             metadata::security::is_client_untrusted(|h| req_ctxt.header(h))
-                .map_err(errors::invalid_request)?,
+                .map_err(scs_errors::invalid_request)?,
             Some(
                 req_ctxt
                     .get_peer_ip_address()
-                    .map_err(errors::internal_error)?,
+                    .map_err(scs_errors::internal_error)?,
             ),
-            Some(req_ctxt.get_peer_port().map_err(errors::internal_error)?),
+            Some(
+                req_ctxt
+                    .get_peer_port()
+                    .map_err(scs_errors::internal_error)?,
+            ),
         )
         .await;
 
@@ -352,7 +357,7 @@ impl SourceControlServiceImpl {
     async fn create_session(
         &self,
         req_ctxt: &RequestContext,
-    ) -> Result<SessionContainer, errors::ServiceError> {
+    ) -> Result<SessionContainer, scs_errors::ServiceError> {
         let metadata = self.create_metadata(req_ctxt).await?;
         let session = SessionContainer::builder(self.fb)
             .metadata(Arc::new(metadata))
@@ -369,7 +374,7 @@ impl SourceControlServiceImpl {
         &self,
         ctx: CoreContext,
         repo: &thrift::RepoSpecifier,
-    ) -> Result<RepoContext<Repo>, errors::ServiceError> {
+    ) -> Result<RepoContext<Repo>, scs_errors::ServiceError> {
         let authz = AuthorizationContext::new(&ctx);
         self.repo_impl(ctx, repo, authz, |_| async { Ok(None) })
             .await
@@ -382,7 +387,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         repo: &thrift::RepoSpecifier,
         service_name: Option<String>,
-    ) -> Result<RepoContext<Repo>, errors::ServiceError> {
+    ) -> Result<RepoContext<Repo>, scs_errors::ServiceError> {
         let authz = match service_name {
             Some(service_name) => AuthorizationContext::new_for_service_writes(service_name),
             None => AuthorizationContext::new(&ctx),
@@ -397,7 +402,7 @@ impl SourceControlServiceImpl {
         repo: &thrift::RepoSpecifier,
         authz: AuthorizationContext,
         bubble_fetcher: F,
-    ) -> Result<RepoContext<Repo>, errors::ServiceError>
+    ) -> Result<RepoContext<Repo>, scs_errors::ServiceError>
     where
         F: FnOnce(RepoEphemeralStore) -> R,
         R: Future<Output = anyhow::Result<Option<BubbleId>>>,
@@ -406,7 +411,7 @@ impl SourceControlServiceImpl {
             .mononoke
             .repo(ctx, &repo.name)
             .await?
-            .ok_or_else(|| errors::repo_not_found(repo.description()))?
+            .ok_or_else(|| scs_errors::repo_not_found(repo.description()))?
             .with_bubble(bubble_fetcher)
             .await?
             .with_authorization_context(authz)
@@ -429,7 +434,7 @@ impl SourceControlServiceImpl {
         &self,
         ctx: CoreContext,
         commit: &thrift::CommitSpecifier,
-    ) -> Result<(RepoContext<Repo>, ChangesetContext<Repo>), errors::ServiceError> {
+    ) -> Result<(RepoContext<Repo>, ChangesetContext<Repo>), scs_errors::ServiceError> {
         let changeset_specifier = ChangesetSpecifier::from_request(&commit.id)?;
         let authz = AuthorizationContext::new(&ctx);
         let bubble_fetcher =
@@ -440,7 +445,7 @@ impl SourceControlServiceImpl {
         let changeset = repo
             .changeset(changeset_specifier)
             .await?
-            .ok_or_else(|| errors::commit_not_found(commit.description()))?;
+            .ok_or_else(|| scs_errors::commit_not_found(commit.description()))?;
         Ok((repo, changeset))
     }
 
@@ -457,14 +462,14 @@ impl SourceControlServiceImpl {
             ChangesetContext<Repo>,
             ChangesetContext<Repo>,
         ),
-        errors::ServiceError,
+        scs_errors::ServiceError,
     > {
         let changeset_specifier =
             ChangesetSpecifier::from_request(&commit.id).context("invalid target commit id")?;
         let other_changeset_specifier = ChangesetSpecifier::from_request(other_commit)
             .context("invalid or missing other commit id")?;
         if other_changeset_specifier.in_bubble() {
-            Err(errors::invalid_request(format!(
+            Err(scs_errors::invalid_request(format!(
                 "Can't compare against a snapshot: {}",
                 other_changeset_specifier
             )))?
@@ -477,20 +482,20 @@ impl SourceControlServiceImpl {
             .await?;
         let (changeset, other_changeset) = try_join!(
             async {
-                Ok::<_, errors::ServiceError>(
+                Ok::<_, scs_errors::ServiceError>(
                     repo.changeset(changeset_specifier)
                         .await
                         .context("failed to resolve target commit")?
-                        .ok_or_else(|| errors::commit_not_found(commit.description()))?,
+                        .ok_or_else(|| scs_errors::commit_not_found(commit.description()))?,
                 )
             },
             async {
-                Ok::<_, errors::ServiceError>(
+                Ok::<_, scs_errors::ServiceError>(
                     repo.changeset(other_changeset_specifier)
                         .await
                         .context("failed to resolve other commit")?
                         .ok_or_else(|| {
-                            errors::commit_not_found(format!(
+                            scs_errors::commit_not_found(format!(
                                 "repo={} commit={}",
                                 commit.repo.name,
                                 other_commit.to_string()
@@ -507,13 +512,17 @@ impl SourceControlServiceImpl {
         &self,
         repo: &RepoContext<Repo>,
         id: &thrift::CommitId,
-    ) -> Result<ChangesetId, errors::ServiceError> {
+    ) -> Result<ChangesetId, scs_errors::ServiceError> {
         let changeset_specifier = ChangesetSpecifier::from_request(id)?;
         Ok(repo
             .resolve_specifier(changeset_specifier)
             .await?
             .ok_or_else(|| {
-                errors::commit_not_found(format!("repo={} commit={}", repo.name(), id.to_string()))
+                scs_errors::commit_not_found(format!(
+                    "repo={} commit={}",
+                    repo.name(),
+                    id.to_string()
+                ))
             })?)
     }
 
@@ -525,7 +534,7 @@ impl SourceControlServiceImpl {
         &self,
         ctx: CoreContext,
         tree: &thrift::TreeSpecifier,
-    ) -> Result<(RepoContext<Repo>, Option<TreeContext<Repo>>), errors::ServiceError> {
+    ) -> Result<(RepoContext<Repo>, Option<TreeContext<Repo>>), scs_errors::ServiceError> {
         let (repo, tree) = match tree {
             thrift::TreeSpecifier::by_commit_path(commit_path) => {
                 let (repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
@@ -538,11 +547,11 @@ impl SourceControlServiceImpl {
                 let tree = repo
                     .tree(tree_id)
                     .await?
-                    .ok_or_else(|| errors::tree_not_found(tree.description()))?;
+                    .ok_or_else(|| scs_errors::tree_not_found(tree.description()))?;
                 (repo, Some(tree))
             }
             thrift::TreeSpecifier::UnknownField(id) => {
-                return Err(errors::invalid_request(format!(
+                return Err(scs_errors::invalid_request(format!(
                     "tree specifier type not supported: {}",
                     id
                 ))
@@ -560,7 +569,7 @@ impl SourceControlServiceImpl {
         &self,
         ctx: CoreContext,
         file: &thrift::FileSpecifier,
-    ) -> Result<(RepoContext<Repo>, Option<FileContext<Repo>>), errors::ServiceError> {
+    ) -> Result<(RepoContext<Repo>, Option<FileContext<Repo>>), scs_errors::ServiceError> {
         let (repo, file) = match file {
             thrift::FileSpecifier::by_commit_path(commit_path) => {
                 let (repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
@@ -573,7 +582,7 @@ impl SourceControlServiceImpl {
                 let file = repo
                     .file(file_id)
                     .await?
-                    .ok_or_else(|| errors::file_not_found(file.description()))?;
+                    .ok_or_else(|| scs_errors::file_not_found(file.description()))?;
                 (repo, Some(file))
             }
             thrift::FileSpecifier::by_sha1_content_hash(hash) => {
@@ -582,7 +591,7 @@ impl SourceControlServiceImpl {
                 let file = repo
                     .file_by_content_sha1(file_sha1)
                     .await?
-                    .ok_or_else(|| errors::file_not_found(file.description()))?;
+                    .ok_or_else(|| scs_errors::file_not_found(file.description()))?;
                 (repo, Some(file))
             }
             thrift::FileSpecifier::by_sha256_content_hash(hash) => {
@@ -591,11 +600,11 @@ impl SourceControlServiceImpl {
                 let file = repo
                     .file_by_content_sha256(file_sha256)
                     .await?
-                    .ok_or_else(|| errors::file_not_found(file.description()))?;
+                    .ok_or_else(|| scs_errors::file_not_found(file.description()))?;
                 (repo, Some(file))
             }
             thrift::FileSpecifier::UnknownField(id) => {
-                return Err(errors::invalid_request(format!(
+                return Err(scs_errors::invalid_request(format!(
                     "file specifier type not supported: {}",
                     id
                 ))
@@ -644,7 +653,7 @@ fn log_result<T: AddScubaResponse>(
     ctx: CoreContext,
     method: &str,
     stats: &FutureStats,
-    result: &Result<T, impl errors::LoggableError>,
+    result: &Result<T, impl scs_errors::LoggableError>,
     start_mem_stats: Option<&MemoryStats>,
 ) {
     let mut scuba = ctx.scuba().clone();
@@ -721,7 +730,7 @@ fn check_memory_usage(
     ctx: &CoreContext,
     method: &str,
     start_mem_stats: Option<&MemoryStats>,
-) -> Result<(), errors::ServiceError> {
+) -> Result<(), scs_errors::ServiceError> {
     let stats = match start_mem_stats {
         Some(start_mem_stats) => Cow::Borrowed(start_mem_stats),
         None => match memory::get_stats() {
@@ -759,7 +768,7 @@ fn check_memory_usage(
                 stats.rss_free_bytes,
             );
 
-            return Err(errors::overloaded(format!(
+            return Err(scs_errors::overloaded(format!(
                 "Not enough memory free ({} < {})",
                 stats.rss_free_bytes, rss_min_free_bytes
             ))
@@ -774,7 +783,7 @@ fn check_memory_usage(
                 stats.rss_free_pct,
             );
 
-            return Err(errors::overloaded(format!(
+            return Err(scs_errors::overloaded(format!(
                 "Not enough memory free ({:.0}% < {}%)",
                 stats.rss_free_pct, rss_min_free_pct
             ))
@@ -843,7 +852,7 @@ macro_rules! impl_thrift_methods {
                         let group = factory_group.clone();
                         let queue: usize =
                             justknobs::get_as::<u64>("scm/mononoke:scs_factory_queue_for_method", Some(stringify!($method_name))).unwrap_or(0) as usize;
-                        group.execute(queue, handler, None).await.map_err(|e| errors::internal_error(e.to_string()))?
+                        group.execute(queue, handler, None).await.map_err(|e| scs_errors::internal_error(e.to_string()))?
                     } else {
                         let res: Result<$ok_type, $err_type> = handler.await;
                         res

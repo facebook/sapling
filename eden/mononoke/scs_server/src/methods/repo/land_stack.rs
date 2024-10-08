@@ -15,27 +15,26 @@ use mononoke_api::ChangesetSpecifier;
 use mononoke_api::MononokeError;
 use pushrebase::PushrebaseConflict;
 use repo_identity::RepoIdentityRef;
+use scs_errors::LoggableError;
+use scs_errors::ServiceErrorResultExt;
+use scs_errors::Status;
 use service::RepoLandStackExn;
 use source_control as thrift;
 use source_control_services::errors::source_control_service as service;
 
-use crate::errors;
-use crate::errors::LoggableError;
-use crate::errors::ServiceErrorResultExt;
-use crate::errors::Status;
 use crate::from_request::convert_pushvars;
 use crate::from_request::FromRequest;
 use crate::into_response::AsyncIntoResponseWith;
 use crate::source_control_impl::SourceControlServiceImpl;
 
 pub(crate) enum LandStackError {
-    Service(errors::ServiceError),
+    Service(scs_errors::ServiceError),
     PushrebaseConflicts(Vec<PushrebaseConflict>),
     HookRejections(Vec<HookRejection>),
 }
 
-impl From<errors::ServiceError> for LandStackError {
-    fn from(e: errors::ServiceError) -> Self {
+impl From<scs_errors::ServiceError> for LandStackError {
+    fn from(e: scs_errors::ServiceError) -> Self {
         Self::Service(e)
     }
 }
@@ -52,7 +51,7 @@ impl From<MononokeError> for LandStackError {
 
 impl From<anyhow::Error> for LandStackError {
     fn from(e: anyhow::Error) -> Self {
-        Self::Service(errors::internal_error(e).into())
+        Self::Service(scs_errors::internal_error(e).into())
     }
 }
 
@@ -149,12 +148,12 @@ impl SourceControlServiceImpl {
             .changeset(ChangesetSpecifier::from_request(head)?)
             .await
             .context("failed to resolve head commit")?
-            .ok_or_else(|| errors::commit_not_found(head.to_string()))?;
+            .ok_or_else(|| scs_errors::commit_not_found(head.to_string()))?;
         let base = repo
             .changeset(ChangesetSpecifier::from_request(base)?)
             .await
             .context("failed to resolve base commit")?
-            .ok_or_else(|| errors::commit_not_found(base.to_string()))?;
+            .ok_or_else(|| scs_errors::commit_not_found(base.to_string()))?;
         let pushvars = convert_pushvars(params.pushvars);
         let bookmark_restrictions =
             BookmarkKindRestrictions::from_request(&params.bookmark_restrictions)?;

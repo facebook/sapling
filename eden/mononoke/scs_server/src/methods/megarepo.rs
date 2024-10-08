@@ -32,7 +32,6 @@ use source_control as thrift;
 use crate::async_requests::enqueue;
 use crate::async_requests::get_queue;
 use crate::async_requests::poll;
-use crate::errors;
 use crate::from_request::FromRequest;
 use crate::source_control_impl::SourceControlServiceImpl;
 
@@ -40,7 +39,7 @@ impl SourceControlServiceImpl {
     fn verify_repos_by_config(
         &self,
         config: &SyncTargetConfig,
-    ) -> Result<(), errors::ServiceError> {
+    ) -> Result<(), scs_errors::ServiceError> {
         let known_repo_ids: HashSet<RepositoryId> =
             self.mononoke.known_repo_ids().into_iter().collect();
 
@@ -53,10 +52,9 @@ impl SourceControlServiceImpl {
 
         for repo_id_in_cfg in repo_ids_in_cfg {
             if !known_repo_ids.contains(&RepositoryId::new(repo_id_in_cfg as i32)) {
-                return Err(errors::ServiceError::from(errors::repo_not_found(format!(
-                    "{}",
-                    repo_id_in_cfg
-                ))));
+                return Err(scs_errors::ServiceError::from(scs_errors::repo_not_found(
+                    format!("{}", repo_id_in_cfg),
+                )));
             }
         }
 
@@ -67,13 +65,15 @@ impl SourceControlServiceImpl {
         &self,
         ctx: &CoreContext,
         target_repo_id: RepositoryId,
-    ) -> Result<(), errors::ServiceError> {
+    ) -> Result<(), scs_errors::ServiceError> {
         let target_repo = self
             .mononoke
             .repo_by_id(ctx.clone(), target_repo_id)
             .await
-            .map_err(errors::invalid_request)?
-            .ok_or_else(|| errors::invalid_request(anyhow!("repo not found {}", target_repo_id)))?
+            .map_err(scs_errors::invalid_request)?
+            .ok_or_else(|| {
+                scs_errors::invalid_request(anyhow!("repo not found {}", target_repo_id))
+            })?
             .build()
             .await?;
         // Check that source control service writes are enabled
@@ -91,7 +91,7 @@ impl SourceControlServiceImpl {
         &self,
         ctx: CoreContext,
         params: thrift::MegarepoAddConfigParams,
-    ) -> Result<thrift::MegarepoAddConfigResponse, errors::ServiceError> {
+    ) -> Result<thrift::MegarepoAddConfigResponse, scs_errors::ServiceError> {
         let target = params
             .new_config
             .target
@@ -146,7 +146,7 @@ impl SourceControlServiceImpl {
         }
 
         if let Some(err) = latest_error {
-            return Err(errors::internal_error(format!(
+            return Err(scs_errors::internal_error(format!(
                 "Failed to read just written config version {}, error: {:?}",
                 new_config.version, err
             ))
@@ -162,14 +162,14 @@ impl SourceControlServiceImpl {
         &self,
         ctx: CoreContext,
         params: thrift::MegarepoReadConfigParams,
-    ) -> Result<thrift::MegarepoReadConfigResponse, errors::ServiceError> {
+    ) -> Result<thrift::MegarepoReadConfigResponse, scs_errors::ServiceError> {
         let target = params.target.clone().into_config_format(&self.mononoke)?;
         let repo = self
             .megarepo_api
             .target_repo(&ctx, &target)
             .await
             .map_err(|err| {
-                errors::invalid_request(anyhow!(
+                scs_errors::invalid_request(anyhow!(
                     "can't open target repo {}: {}",
                     target.repo_id,
                     err
@@ -178,7 +178,7 @@ impl SourceControlServiceImpl {
         let changeset = repo
             .changeset(ChangesetSpecifier::from_request(&params.commit)?)
             .await?
-            .ok_or_else(|| errors::invalid_request(anyhow!("commit not found")))?;
+            .ok_or_else(|| scs_errors::invalid_request(anyhow!("commit not found")))?;
         let (_commit_remapping_state, target_config) = self
             .megarepo_api
             .get_target_sync_config(&ctx, &target, &changeset.id())
@@ -194,7 +194,7 @@ impl SourceControlServiceImpl {
         &self,
         ctx: CoreContext,
         params: thrift::MegarepoAddTargetParams,
-    ) -> Result<thrift::MegarepoAddTargetToken, errors::ServiceError> {
+    ) -> Result<thrift::MegarepoAddTargetToken, scs_errors::ServiceError> {
         let queue = get_queue(&ctx, &self.async_requests_queue_client).await?;
         let target_repo_id =
             get_repo_id_from_target(&params.config_with_new_target.target, &self.mononoke)?;
@@ -213,7 +213,7 @@ impl SourceControlServiceImpl {
         &self,
         ctx: CoreContext,
         token: thrift::MegarepoAddTargetToken,
-    ) -> Result<thrift::MegarepoAddTargetPollResponse, errors::ServiceError> {
+    ) -> Result<thrift::MegarepoAddTargetPollResponse, scs_errors::ServiceError> {
         let queue = get_queue(&ctx, &self.async_requests_queue_client).await?;
         let token = MegarepoAddTargetToken(token);
         poll::<MegarepoAddTargetToken>(&ctx, &queue, token).await
@@ -223,7 +223,7 @@ impl SourceControlServiceImpl {
         &self,
         ctx: CoreContext,
         params: thrift::MegarepoAddBranchingTargetParams,
-    ) -> Result<thrift::MegarepoAddBranchingTargetToken, errors::ServiceError> {
+    ) -> Result<thrift::MegarepoAddBranchingTargetToken, scs_errors::ServiceError> {
         let queue = get_queue(&ctx, &self.async_requests_queue_client).await?;
         let target_repo_id = get_repo_id_from_target(&params.target, &self.mononoke)?;
         self.check_write_allowed(&ctx, target_repo_id).await?;
@@ -241,7 +241,7 @@ impl SourceControlServiceImpl {
         &self,
         ctx: CoreContext,
         token: thrift::MegarepoAddBranchingTargetToken,
-    ) -> Result<thrift::MegarepoAddBranchingTargetPollResponse, errors::ServiceError> {
+    ) -> Result<thrift::MegarepoAddBranchingTargetPollResponse, scs_errors::ServiceError> {
         let queue = get_queue(&ctx, &self.async_requests_queue_client).await?;
         let token = MegarepoAddBranchingTargetToken(token);
         poll::<MegarepoAddBranchingTargetToken>(&ctx, &queue, token).await
@@ -251,7 +251,7 @@ impl SourceControlServiceImpl {
         &self,
         ctx: CoreContext,
         params: thrift::MegarepoChangeTargetConfigParams,
-    ) -> Result<thrift::MegarepoChangeConfigToken, errors::ServiceError> {
+    ) -> Result<thrift::MegarepoChangeConfigToken, scs_errors::ServiceError> {
         let queue = get_queue(&ctx, &self.async_requests_queue_client).await?;
         let target_repo_id = get_repo_id_from_target(&params.target, &self.mononoke)?;
         self.check_write_allowed(&ctx, target_repo_id).await?;
@@ -269,7 +269,7 @@ impl SourceControlServiceImpl {
         &self,
         ctx: CoreContext,
         token: thrift::MegarepoChangeConfigToken,
-    ) -> Result<thrift::MegarepoChangeTargetConfigPollResponse, errors::ServiceError> {
+    ) -> Result<thrift::MegarepoChangeTargetConfigPollResponse, scs_errors::ServiceError> {
         let queue = get_queue(&ctx, &self.async_requests_queue_client).await?;
         let token = MegarepoChangeTargetConfigToken(token);
         poll::<MegarepoChangeTargetConfigToken>(&ctx, &queue, token).await
@@ -279,7 +279,7 @@ impl SourceControlServiceImpl {
         &self,
         ctx: CoreContext,
         params: thrift::MegarepoSyncChangesetParams,
-    ) -> Result<thrift::MegarepoSyncChangesetToken, errors::ServiceError> {
+    ) -> Result<thrift::MegarepoSyncChangesetToken, scs_errors::ServiceError> {
         let queue = get_queue(&ctx, &self.async_requests_queue_client).await?;
         let target_repo_id = get_repo_id_from_target(&params.target, &self.mononoke)?;
         self.check_write_allowed(&ctx, target_repo_id).await?;
@@ -292,7 +292,7 @@ impl SourceControlServiceImpl {
         &self,
         ctx: CoreContext,
         token: thrift::MegarepoSyncChangesetToken,
-    ) -> Result<thrift::MegarepoSyncChangesetPollResponse, errors::ServiceError> {
+    ) -> Result<thrift::MegarepoSyncChangesetPollResponse, scs_errors::ServiceError> {
         let queue = get_queue(&ctx, &self.async_requests_queue_client).await?;
         let token = MegarepoSyncChangesetToken(token);
         poll::<MegarepoSyncChangesetToken>(&ctx, &queue, token).await
@@ -302,7 +302,7 @@ impl SourceControlServiceImpl {
         &self,
         ctx: CoreContext,
         params: thrift::MegarepoRemergeSourceParams,
-    ) -> Result<thrift::MegarepoRemergeSourceToken, errors::ServiceError> {
+    ) -> Result<thrift::MegarepoRemergeSourceToken, scs_errors::ServiceError> {
         let queue = get_queue(&ctx, &self.async_requests_queue_client).await?;
         let target_repo_id = get_repo_id_from_target(&params.target, &self.mononoke)?;
         self.check_write_allowed(&ctx, target_repo_id).await?;
@@ -315,7 +315,7 @@ impl SourceControlServiceImpl {
         &self,
         ctx: CoreContext,
         token: thrift::MegarepoRemergeSourceToken,
-    ) -> Result<thrift::MegarepoRemergeSourcePollResponse, errors::ServiceError> {
+    ) -> Result<thrift::MegarepoRemergeSourcePollResponse, scs_errors::ServiceError> {
         let queue = get_queue(&ctx, &self.async_requests_queue_client).await?;
         let token = MegarepoRemergeSourceToken(token);
         poll::<MegarepoRemergeSourceToken>(&ctx, &queue, token).await
@@ -326,20 +326,20 @@ impl SourceControlServiceImpl {
 fn get_repo_id_from_target<R: MononokeRepo>(
     target: &thrift::MegarepoTarget,
     mononoke: &Mononoke<R>,
-) -> Result<RepositoryId, errors::ServiceError> {
+) -> Result<RepositoryId, scs_errors::ServiceError> {
     match (&target.repo, target.repo_id) {
         (Some(repo), _) => {
             let repo = mononoke
                 .repo_id_from_name(repo.name.clone())
                 .ok_or_else(|| {
-                    errors::invalid_request(format!("Invalid repo_name {}", repo.name))
+                    scs_errors::invalid_request(format!("Invalid repo_name {}", repo.name))
                 })?;
             Ok(RepositoryId::new(repo.id()))
         }
         (_, Some(repo_id)) => Ok(RepositoryId::new(
-            repo_id.try_into().map_err(errors::invalid_request)?,
+            repo_id.try_into().map_err(scs_errors::invalid_request)?,
         )),
-        (None, None) => Err(errors::invalid_request(
+        (None, None) => Err(scs_errors::invalid_request(
             "both repo_id and repo_name are None!",
         ))?,
     }

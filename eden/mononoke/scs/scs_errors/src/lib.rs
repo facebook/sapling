@@ -17,7 +17,7 @@ use source_control as thrift;
 use source_control_services::errors::source_control_service as service;
 
 #[derive(Debug)]
-pub(crate) enum ServiceError {
+pub enum ServiceError {
     Request(thrift::RequestError),
     Internal(thrift::InternalError),
     Overload(thrift::OverloadError),
@@ -42,14 +42,14 @@ impl From<thrift::OverloadError> for ServiceError {
 }
 
 #[derive(Clone, Copy)]
-pub(crate) enum Status {
+pub enum Status {
     RequestError,
     InternalError,
     OverloadError,
 }
 
 /// Error can be logged to SCS scuba table
-pub(crate) trait LoggableError {
+pub trait LoggableError {
     fn status_and_description(&self) -> (Status, String);
 }
 
@@ -99,7 +99,7 @@ impl ServiceError {
     }
 }
 
-pub(crate) trait ServiceErrorResultExt<T> {
+pub trait ServiceErrorResultExt<T> {
     fn context(self, context: &str) -> Result<T, ServiceError>;
     fn with_context(self, context_fn: impl FnOnce() -> String) -> Result<T, ServiceError>;
 }
@@ -348,7 +348,7 @@ impl_into_thrift_error!(service::CloudWorkspaceSmartlogExn);
 impl_into_thrift_error!(service::AsyncPingExn);
 impl_into_thrift_error!(service::AsyncPingPollExn);
 
-pub(crate) fn invalid_request(reason: impl ToString) -> thrift::RequestError {
+pub fn invalid_request(reason: impl ToString) -> thrift::RequestError {
     thrift::RequestError {
         kind: thrift::RequestErrorKind::INVALID_REQUEST,
         reason: reason.to_string(),
@@ -356,7 +356,7 @@ pub(crate) fn invalid_request(reason: impl ToString) -> thrift::RequestError {
     }
 }
 
-pub(crate) fn internal_error(error: impl ToString) -> thrift::InternalError {
+pub fn internal_error(error: impl ToString) -> thrift::InternalError {
     thrift::InternalError {
         reason: error.to_string(),
         backtrace: None,
@@ -365,7 +365,7 @@ pub(crate) fn internal_error(error: impl ToString) -> thrift::InternalError {
     }
 }
 
-pub(crate) fn repo_not_found(repo: String) -> thrift::RequestError {
+pub fn repo_not_found(repo: String) -> thrift::RequestError {
     thrift::RequestError {
         kind: thrift::RequestErrorKind::REPO_NOT_FOUND,
         reason: format!("repo not found ({})", repo),
@@ -373,7 +373,7 @@ pub(crate) fn repo_not_found(repo: String) -> thrift::RequestError {
     }
 }
 
-pub(crate) fn commit_not_found(commit: String) -> thrift::RequestError {
+pub fn commit_not_found(commit: String) -> thrift::RequestError {
     thrift::RequestError {
         kind: thrift::RequestErrorKind::COMMIT_NOT_FOUND,
         reason: format!("commit not found ({})", commit),
@@ -381,7 +381,7 @@ pub(crate) fn commit_not_found(commit: String) -> thrift::RequestError {
     }
 }
 
-pub(crate) fn file_not_found(file: String) -> thrift::RequestError {
+pub fn file_not_found(file: String) -> thrift::RequestError {
     thrift::RequestError {
         kind: thrift::RequestErrorKind::FILE_NOT_FOUND,
         reason: format!("file not found ({})", file),
@@ -389,7 +389,7 @@ pub(crate) fn file_not_found(file: String) -> thrift::RequestError {
     }
 }
 
-pub(crate) fn tree_not_found(tree: String) -> thrift::RequestError {
+pub fn tree_not_found(tree: String) -> thrift::RequestError {
     thrift::RequestError {
         kind: thrift::RequestErrorKind::TREE_NOT_FOUND,
         reason: format!("tree not found ({})", tree),
@@ -397,7 +397,7 @@ pub(crate) fn tree_not_found(tree: String) -> thrift::RequestError {
     }
 }
 
-pub(crate) fn limit_too_low(limit: usize) -> thrift::RequestError {
+pub fn limit_too_low(limit: usize) -> thrift::RequestError {
     thrift::RequestError {
         kind: thrift::RequestErrorKind::INVALID_REQUEST,
         reason: format!(
@@ -408,7 +408,7 @@ pub(crate) fn limit_too_low(limit: usize) -> thrift::RequestError {
     }
 }
 
-pub(crate) fn diff_input_too_big(total_size: u64) -> thrift::RequestError {
+pub fn diff_input_too_big(total_size: u64) -> thrift::RequestError {
     thrift::RequestError {
         kind: thrift::RequestErrorKind::INVALID_REQUEST_INPUT_TOO_BIG,
         reason: format!(
@@ -420,7 +420,7 @@ pub(crate) fn diff_input_too_big(total_size: u64) -> thrift::RequestError {
     }
 }
 
-pub(crate) fn diff_input_too_many_paths(path_count: usize) -> thrift::RequestError {
+pub fn diff_input_too_many_paths(path_count: usize) -> thrift::RequestError {
     thrift::RequestError {
         kind: thrift::RequestErrorKind::INVALID_REQUEST_TOO_MANY_PATHS,
         reason: format!(
@@ -432,7 +432,7 @@ pub(crate) fn diff_input_too_many_paths(path_count: usize) -> thrift::RequestErr
     }
 }
 
-pub(crate) fn not_available(reason: String) -> thrift::RequestError {
+pub fn not_available(reason: String) -> thrift::RequestError {
     thrift::RequestError {
         kind: thrift::RequestErrorKind::NOT_AVAILABLE,
         reason,
@@ -441,7 +441,7 @@ pub(crate) fn not_available(reason: String) -> thrift::RequestError {
 }
 
 #[allow(unused)]
-pub(crate) fn not_implemented(reason: String) -> thrift::RequestError {
+pub fn not_implemented(reason: String) -> thrift::RequestError {
     thrift::RequestError {
         kind: thrift::RequestErrorKind::NOT_IMPLEMENTED,
         reason,
@@ -449,7 +449,7 @@ pub(crate) fn not_implemented(reason: String) -> thrift::RequestError {
     }
 }
 
-pub(crate) fn overloaded(reason: String) -> thrift::OverloadError {
+pub fn overloaded(reason: String) -> thrift::OverloadError {
     thrift::OverloadError {
         reason,
         ..Default::default()

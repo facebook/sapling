@@ -43,12 +43,11 @@ use mononoke_api::UnifiedDiffMode;
 use mononoke_api::XRepoLookupExactBehaviour;
 use mononoke_api::XRepoLookupSyncBehaviour;
 use mononoke_types::path::MPath;
+use scs_errors::ServiceErrorResultExt;
 use source_control as thrift;
 
 use crate::commit_id::map_commit_identities;
 use crate::commit_id::map_commit_identity;
-use crate::errors;
-use crate::errors::ServiceErrorResultExt;
 use crate::from_request::check_range_and_convert;
 use crate::from_request::validate_timestamp;
 use crate::from_request::FromRequest;
@@ -68,7 +67,7 @@ enum CommitComparePath {
 
 impl CommitComparePath {
     /// The main path that this comparison applies to.
-    fn path(&self) -> Result<&str, errors::ServiceError> {
+    fn path(&self) -> Result<&str, scs_errors::ServiceError> {
         // Use the base path where available.  If it is not available, then
         // this is a deletion and the other path should be used.
         match self {
@@ -78,7 +77,7 @@ impl CommitComparePath {
                 .or(file.other_file.as_ref())
                 .map(|file| file.path.as_str())
                 .ok_or_else(|| {
-                    errors::internal_error("programming error, file entry has no file").into()
+                    scs_errors::internal_error("programming error, file entry has no file").into()
                 }),
 
             CommitComparePath::Tree(tree) => tree
@@ -87,14 +86,14 @@ impl CommitComparePath {
                 .or(tree.other_tree.as_ref())
                 .map(|tree| tree.path.as_str())
                 .ok_or_else(|| {
-                    errors::internal_error("programming error, tree entry has no tree").into()
+                    scs_errors::internal_error("programming error, tree entry has no tree").into()
                 }),
         }
     }
 
     async fn from_path_diff(
         path_diff: ChangesetPathDiffContext<Repo>,
-    ) -> Result<Self, errors::ServiceError> {
+    ) -> Result<Self, scs_errors::ServiceError> {
         if path_diff.path().is_file().await? {
             let (base_file, other_file) = try_join!(
                 path_diff.base().into_response(),
@@ -125,7 +124,7 @@ impl CommitComparePath {
 async fn add_mutable_renames(
     base_changeset: &mut ChangesetContext<Repo>,
     params: &thrift::CommitCompareParams,
-) -> Result<(), errors::ServiceError> {
+) -> Result<(), scs_errors::ServiceError> {
     if params.follow_mutable_file_history.unwrap_or(false) {
         if let Some(paths) = &params.paths {
             let paths: Vec<_> = paths
@@ -155,13 +154,13 @@ impl CommitFileDiffsItem {
         }
     }
 
-    async fn total_size(&self) -> Result<u64, errors::ServiceError> {
+    async fn total_size(&self) -> Result<u64, scs_errors::ServiceError> {
         if self.placeholder {
             Ok(0)
         } else {
             async fn file_size(
                 path: Option<&ChangesetPathContentContext<Repo>>,
-            ) -> Result<u64, errors::ServiceError> {
+            ) -> Result<u64, scs_errors::ServiceError> {
                 if let Some(path) = path {
                     if let Some(file) = path.file().await? {
                         return Ok(file.metadata().await?.total_size);
@@ -181,20 +180,22 @@ impl CommitFileDiffsItem {
         &self,
         format: thrift::DiffFormat,
         context_lines: usize,
-    ) -> Result<CommitFileDiffsResponseElement, errors::ServiceError> {
+    ) -> Result<CommitFileDiffsResponseElement, scs_errors::ServiceError> {
         match format {
             thrift::DiffFormat::RAW_DIFF => self.raw_diff(context_lines).await,
             thrift::DiffFormat::METADATA_DIFF => self.metadata_diff().await,
-            unknown => {
-                Err(errors::invalid_request(format!("invalid diff format: {:?}", unknown)).into())
-            }
+            unknown => Err(scs_errors::invalid_request(format!(
+                "invalid diff format: {:?}",
+                unknown
+            ))
+            .into()),
         }
     }
 
     async fn raw_diff(
         &self,
         context_lines: usize,
-    ) -> Result<CommitFileDiffsResponseElement, errors::ServiceError> {
+    ) -> Result<CommitFileDiffsResponseElement, scs_errors::ServiceError> {
         let mode = if self.placeholder {
             UnifiedDiffMode::OmitContent
         } else {
@@ -207,7 +208,9 @@ impl CommitFileDiffsItem {
         Ok(CommitFileDiffsResponseElement::RawDiff { diff })
     }
 
-    async fn metadata_diff(&self) -> Result<CommitFileDiffsResponseElement, errors::ServiceError> {
+    async fn metadata_diff(
+        &self,
+    ) -> Result<CommitFileDiffsResponseElement, scs_errors::ServiceError> {
         let metadata_diff = self.path_diff_context.metadata_diff().await?;
         Ok(CommitFileDiffsResponseElement::MetadataDiff { metadata_diff })
     }
@@ -257,7 +260,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         commit: thrift::CommitSpecifier,
         params: thrift::CommitCommonBaseWithParams,
-    ) -> Result<thrift::CommitLookupResponse, errors::ServiceError> {
+    ) -> Result<thrift::CommitLookupResponse, scs_errors::ServiceError> {
         let (_repo, changeset, other_changeset) = self
             .repo_changeset_pair(ctx, &commit, &params.other_commit_id)
             .await?;
@@ -279,7 +282,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         commit: thrift::CommitSpecifier,
         params: thrift::CommitLookupParams,
-    ) -> Result<thrift::CommitLookupResponse, errors::ServiceError> {
+    ) -> Result<thrift::CommitLookupResponse, scs_errors::ServiceError> {
         let repo = self.repo(ctx, &commit.repo).await?;
         match repo
             .changeset(ChangesetSpecifier::from_request(&commit.id)?)
@@ -307,10 +310,10 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         commit: thrift::CommitSpecifier,
         params: thrift::CommitFileDiffsParams,
-    ) -> Result<thrift::CommitFileDiffsResponse, errors::ServiceError> {
+    ) -> Result<thrift::CommitFileDiffsResponse, scs_errors::ServiceError> {
         // Check the path count limit
         if params.paths.len() as i64 > thrift::consts::COMMIT_FILE_DIFFS_PATH_COUNT_LIMIT {
-            Err(errors::diff_input_too_many_paths(params.paths.len()))?;
+            Err(scs_errors::diff_input_too_many_paths(params.paths.len()))?;
         }
 
         // Resolve the CommitSpecfier into ChangesetContext
@@ -366,7 +369,7 @@ impl SourceControlServiceImpl {
                     path_pair.generate_placeholder_diff.unwrap_or(false),
                 ))
             })
-            .collect::<Result<Vec<_>, errors::ServiceError>>()?;
+            .collect::<Result<Vec<_>, scs_errors::ServiceError>>()?;
 
         let (base_commit_contexts, other_commit_contexts) = try_join!(
             async {
@@ -402,7 +405,7 @@ impl SourceControlServiceImpl {
                 let base_path = match base_path {
                     Some(base_path) => {
                         Some(base_commit_contexts.get(&base_path).ok_or_else(|| {
-                            errors::invalid_request(format!(
+                            scs_errors::invalid_request(format!(
                                 "{} not found in {:?}",
                                 base_path, commit
                             ))
@@ -415,7 +418,7 @@ impl SourceControlServiceImpl {
                     Some(other_path) => match &other_commit_contexts {
                         Some(other_commit_contexts) => {
                             Some(other_commit_contexts.get(&other_path).ok_or_else(|| {
-                                errors::invalid_request(format!(
+                                scs_errors::invalid_request(format!(
                                     "{} not found in {:?}",
                                     other_path, other_commit
                                 ))
@@ -436,7 +439,7 @@ impl SourceControlServiceImpl {
                     placeholder,
                 })
             })
-            .collect::<Result<Vec<_>, errors::ServiceError>>()?;
+            .collect::<Result<Vec<_>, scs_errors::ServiceError>>()?;
 
         // Check the total file size limit
         let total_input_size = stream::iter(items.iter())
@@ -450,7 +453,7 @@ impl SourceControlServiceImpl {
             .await?;
 
         if total_input_size > thrift::consts::COMMIT_FILE_DIFFS_SIZE_LIMIT as u64 {
-            Err(errors::diff_input_too_big(total_input_size))?;
+            Err(scs_errors::diff_input_too_big(total_input_size))?;
         }
 
         let context = check_range_and_convert("context", params.context, 0..)?;
@@ -464,7 +467,7 @@ impl SourceControlServiceImpl {
         let path_diffs = stream::iter(items)
             .map(|item| async move {
                 let element = item.response_element(params.format, context).await?;
-                Ok::<_, errors::ServiceError>((item, element))
+                Ok::<_, scs_errors::ServiceError>((item, element))
             })
             .boxed() // Prevents compiler error
             .buffered(20)
@@ -496,7 +499,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         commit: thrift::CommitSpecifier,
         params: thrift::CommitInfoParams,
-    ) -> Result<thrift::CommitInfo, errors::ServiceError> {
+    ) -> Result<thrift::CommitInfo, scs_errors::ServiceError> {
         let (_repo, changeset) = self.repo_changeset(ctx, &commit).await?;
         changeset.into_response_with(&params.identity_schemes).await
     }
@@ -507,7 +510,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         commit: thrift::CommitSpecifier,
         _params: thrift::CommitGenerationParams,
-    ) -> Result<i64, errors::ServiceError> {
+    ) -> Result<i64, scs_errors::ServiceError> {
         let (_repo, changeset) = self.repo_changeset(ctx, &commit).await?;
         Ok(changeset.generation().await?.value() as i64)
     }
@@ -518,7 +521,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         commit: thrift::CommitSpecifier,
         params: thrift::CommitIsAncestorOfParams,
-    ) -> Result<bool, errors::ServiceError> {
+    ) -> Result<bool, scs_errors::ServiceError> {
         let (_repo, changeset, other_changeset) = self
             .repo_changeset_pair(ctx, &commit, &params.descendant_commit_id)
             .await?;
@@ -537,7 +540,7 @@ impl SourceControlServiceImpl {
         repo: &RepoContext<Repo>,
         base_changeset: &mut ChangesetContext<Repo>,
         params: &thrift::CommitCompareParams,
-    ) -> Result<Option<ChangesetContext<Repo>>, errors::ServiceError> {
+    ) -> Result<Option<ChangesetContext<Repo>>, scs_errors::ServiceError> {
         let commit_parents = base_changeset.parents().await?;
         let mut other_changeset_id = commit_parents.first().copied();
 
@@ -547,7 +550,7 @@ impl SourceControlServiceImpl {
             // If there are multiple choices to make, then bail - the user needs to be
             // clear to avoid the ambiguity
             if mutable_parents.len() > 1 {
-                return Err(errors::invalid_request(
+                return Err(scs_errors::invalid_request(
                     "multiple different mutable parents in supplied paths",
                 )
                 .into());
@@ -563,7 +566,7 @@ impl SourceControlServiceImpl {
                 let other_changeset = repo
                     .changeset(ChangesetSpecifier::Bonsai(other_changeset_id))
                     .await?
-                    .ok_or_else(|| errors::internal_error("other changeset is missing"))?;
+                    .ok_or_else(|| scs_errors::internal_error("other changeset is missing"))?;
                 Ok(Some(other_changeset))
             }
         }
@@ -575,7 +578,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         commit: thrift::CommitSpecifier,
         params: thrift::CommitCompareParams,
-    ) -> Result<thrift::CommitCompareResponse, errors::ServiceError> {
+    ) -> Result<thrift::CommitCompareResponse, scs_errors::ServiceError> {
         let (base_changeset, other_changeset) = match &params.other_commit_id {
             Some(id) => {
                 let (_repo, mut base_changeset, other_changeset) =
@@ -675,7 +678,7 @@ impl SourceControlServiceImpl {
                     .after_path
                     .map(|after| {
                         MPath::try_from(&after).map_err(|e| {
-                            errors::invalid_request(format!(
+                            scs_errors::invalid_request(format!(
                                 "invalid continuation path '{}': {}",
                                 after, e
                             ))
@@ -745,7 +748,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         commit: thrift::CommitSpecifier,
         params: thrift::CommitFindFilesParams,
-    ) -> Result<thrift::CommitFindFilesResponse, errors::ServiceError> {
+    ) -> Result<thrift::CommitFindFilesResponse, scs_errors::ServiceError> {
         let (_repo, changeset) = self.repo_changeset(ctx.clone(), &commit).await?;
         let limit: usize = check_range_and_convert(
             "limit",
@@ -758,7 +761,10 @@ impl SourceControlServiceImpl {
                     .into_iter()
                     .map(|prefix| {
                         MPath::try_from(&prefix).map_err(|e| {
-                            errors::invalid_request(format!("invalid prefix '{}': {}", prefix, e))
+                            scs_errors::invalid_request(format!(
+                                "invalid prefix '{}': {}",
+                                prefix, e
+                            ))
                         })
                     })
                     .collect::<Result<Vec<_>, _>>()?,
@@ -768,7 +774,10 @@ impl SourceControlServiceImpl {
         let ordering = match &params.after {
             Some(after) => {
                 let after = Some(MPath::try_from(after).map_err(|e| {
-                    errors::invalid_request(format!("invalid continuation path '{}': {}", after, e))
+                    scs_errors::invalid_request(format!(
+                        "invalid continuation path '{}': {}",
+                        after, e
+                    ))
                 })?);
                 ChangesetFileOrdering::Ordered { after }
             }
@@ -800,12 +809,12 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         commit: thrift::CommitSpecifier,
         params: thrift::CommitHistoryParams,
-    ) -> Result<thrift::CommitHistoryResponse, errors::ServiceError> {
+    ) -> Result<thrift::CommitHistoryResponse, scs_errors::ServiceError> {
         let (repo, changeset) = self.repo_changeset(ctx, &commit).await?;
         let (descendants_of, exclude_changeset_and_ancestors) = try_join!(
             async {
                 if let Some(descendants_of) = &params.descendants_of {
-                    Ok::<_, errors::ServiceError>(Some(
+                    Ok::<_, scs_errors::ServiceError>(Some(
                         self.changeset_id(&repo, descendants_of).await?,
                     ))
                 } else {
@@ -816,7 +825,7 @@ impl SourceControlServiceImpl {
                 if let Some(exclude_changeset_and_ancestors) =
                     &params.exclude_changeset_and_ancestors
                 {
-                    Ok::<_, errors::ServiceError>(Some(
+                    Ok::<_, scs_errors::ServiceError>(Some(
                         self.changeset_id(&repo, exclude_changeset_and_ancestors)
                             .await?,
                     ))
@@ -836,7 +845,7 @@ impl SourceControlServiceImpl {
 
         if let (Some(ats), Some(bts)) = (after_timestamp, before_timestamp) {
             if bts < ats {
-                return Err(errors::invalid_request(format!(
+                return Err(scs_errors::invalid_request(format!(
                     "after_timestamp ({}) cannot be greater than before_timestamp ({})",
                     ats, bts,
                 ))
@@ -845,7 +854,7 @@ impl SourceControlServiceImpl {
         }
 
         if skip > 0 && (after_timestamp.is_some() || before_timestamp.is_some()) {
-            return Err(errors::invalid_request(
+            return Err(scs_errors::invalid_request(
                 "Time filters cannot be applied if skip is not 0".to_string(),
             )
             .into());
@@ -880,12 +889,12 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         commit: thrift::CommitSpecifier,
         params: thrift::CommitLinearHistoryParams,
-    ) -> Result<thrift::CommitLinearHistoryResponse, errors::ServiceError> {
+    ) -> Result<thrift::CommitLinearHistoryResponse, scs_errors::ServiceError> {
         let (repo, changeset) = self.repo_changeset(ctx, &commit).await?;
         let (descendants_of, exclude_changeset_and_ancestors) = try_join!(
             async {
                 if let Some(descendants_of) = &params.descendants_of {
-                    Ok::<_, errors::ServiceError>(Some(
+                    Ok::<_, scs_errors::ServiceError>(Some(
                         self.changeset_id(&repo, descendants_of).await?,
                     ))
                 } else {
@@ -896,7 +905,7 @@ impl SourceControlServiceImpl {
                 if let Some(exclude_changeset_and_ancestors) =
                     &params.exclude_changeset_and_ancestors
                 {
-                    Ok::<_, errors::ServiceError>(Some(
+                    Ok::<_, scs_errors::ServiceError>(Some(
                         self.changeset_id(&repo, exclude_changeset_and_ancestors)
                             .await?,
                     ))
@@ -939,7 +948,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         commit: thrift::CommitSpecifier,
         params: thrift::CommitListDescendantBookmarksParams,
-    ) -> Result<thrift::CommitListDescendantBookmarksResponse, errors::ServiceError> {
+    ) -> Result<thrift::CommitListDescendantBookmarksResponse, scs_errors::ServiceError> {
         let limit = match check_range_and_convert(
             "limit",
             params.limit,
@@ -1025,7 +1034,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         commit: thrift::CommitSpecifier,
         params: thrift::CommitRunHooksParams,
-    ) -> Result<thrift::CommitRunHooksResponse, errors::ServiceError> {
+    ) -> Result<thrift::CommitRunHooksResponse, scs_errors::ServiceError> {
         let (_repo, changeset) = self.repo_changeset(ctx, &commit).await?;
         let pushvars: Option<HashMap<String, Bytes>> = params
             .pushvars
@@ -1081,7 +1090,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         commit: thrift::CommitSpecifier,
         params: thrift::CommitLookupXRepoParams,
-    ) -> Result<thrift::CommitLookupResponse, errors::ServiceError> {
+    ) -> Result<thrift::CommitLookupResponse, scs_errors::ServiceError> {
         let repo = self.repo(ctx.clone(), &commit.repo).await?;
         let other_repo = self.repo(ctx, &params.other_repo).await?;
         let candidate_selection_hint = match params.candidate_selection_hint {

@@ -26,7 +26,6 @@ use source_control as thrift;
 
 use crate::commit_id::map_commit_identities;
 use crate::commit_id::map_commit_identity;
-use crate::errors;
 use crate::from_request::check_range_and_convert;
 use crate::from_request::validate_timestamp;
 use crate::history::collect_history;
@@ -42,7 +41,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         commit_path: thrift::CommitPathSpecifier,
         _params: thrift::CommitPathExistsParams,
-    ) -> Result<thrift::CommitPathExistsResponse, errors::ServiceError> {
+    ) -> Result<thrift::CommitPathExistsResponse, scs_errors::ServiceError> {
         let (_repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
         let path = changeset.path(&commit_path.path).await?;
         Ok(thrift::CommitPathExistsResponse {
@@ -59,7 +58,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         commit_path: thrift::CommitPathSpecifier,
         _params: thrift::CommitPathInfoParams,
-    ) -> Result<thrift::CommitPathInfoResponse, errors::ServiceError> {
+    ) -> Result<thrift::CommitPathInfoResponse, scs_errors::ServiceError> {
         let (_repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
         let path = changeset.path_with_content(&commit_path.path).await?;
         let response = match path.entry().await? {
@@ -114,7 +113,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         commit: thrift::CommitSpecifier,
         params: thrift::CommitMultiplePathInfoParams,
-    ) -> Result<thrift::CommitMultiplePathInfoResponse, errors::ServiceError> {
+    ) -> Result<thrift::CommitMultiplePathInfoResponse, scs_errors::ServiceError> {
         let (_repo, changeset) = self.repo_changeset(ctx, &commit).await?;
         let mut paths = vec![];
         for path in params.paths {
@@ -138,7 +137,7 @@ impl SourceControlServiceImpl {
                             info: None,
                             ..Default::default()
                         };
-                        Result::<_, errors::ServiceError>::Ok((context_path, not_present_elem))
+                        Result::<_, scs_errors::ServiceError>::Ok((context_path, not_present_elem))
                     }
                     PathEntry::Tree(tree) => {
                         let summary = tree.summary().await?;
@@ -150,7 +149,7 @@ impl SourceControlServiceImpl {
                             )),
                             ..Default::default()
                         };
-                        Result::<_, errors::ServiceError>::Ok((context_path, tree_elem))
+                        Result::<_, scs_errors::ServiceError>::Ok((context_path, tree_elem))
                     }
                     PathEntry::File(file, file_type) => {
                         let metadata = file.metadata().await?;
@@ -160,11 +159,11 @@ impl SourceControlServiceImpl {
                             info: Some(thrift::EntryInfo::file(metadata.into_response())),
                             ..Default::default()
                         };
-                        Result::<_, errors::ServiceError>::Ok((context_path, file_elem))
+                        Result::<_, scs_errors::ServiceError>::Ok((context_path, file_elem))
                     }
                 }
             })
-            .map_err(errors::ServiceError::from)
+            .map_err(scs_errors::ServiceError::from)
             .try_buffer_unordered(100)
             .try_collect::<BTreeMap<_, _>>()
             .await?;
@@ -180,13 +179,13 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         commit_path: thrift::CommitPathSpecifier,
         params: thrift::CommitPathBlameParams,
-    ) -> Result<thrift::CommitPathBlameResponse, errors::ServiceError> {
+    ) -> Result<thrift::CommitPathBlameResponse, scs_errors::ServiceError> {
         match params.format {
             thrift::BlameFormat::COMPACT => {
                 self.commit_path_blame_compact(ctx, commit_path, params)
                     .await
             }
-            other_format => Err(errors::invalid_request(format!(
+            other_format => Err(scs_errors::invalid_request(format!(
                 "unsupported blame format {}",
                 other_format
             ))
@@ -199,7 +198,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         commit_path: thrift::CommitPathSpecifier,
         params: thrift::CommitPathBlameParams,
-    ) -> Result<thrift::CommitPathBlameResponse, errors::ServiceError> {
+    ) -> Result<thrift::CommitPathBlameResponse, scs_errors::ServiceError> {
         let (repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
         borrowed!(repo);
         let path = changeset.path_with_history(&commit_path.path).await?;
@@ -300,7 +299,7 @@ impl SourceControlServiceImpl {
             let mut parent_commit_ids = Vec::with_capacity(indexed_csids.len());
             for csid in indexed_csids {
                 let parents = changeset_parents.get(&csid).ok_or_else(|| {
-                    errors::internal_error(format!("missing parents for {}", csid))
+                    scs_errors::internal_error(format!("missing parents for {}", csid))
                 })?;
                 let mut changeset_parent_commit_ids = Vec::with_capacity(parents.len());
                 for parent in parents {
@@ -308,7 +307,7 @@ impl SourceControlServiceImpl {
                         parent_commit_ids_map
                             .get(parent)
                             .ok_or_else(|| {
-                                errors::internal_error(format!(
+                                scs_errors::internal_error(format!(
                                     "missing parent commit ids for {}",
                                     parent
                                 ))
@@ -334,14 +333,14 @@ impl SourceControlServiceImpl {
                     commit_id_indexes
                         .get(blame_line.changeset_id)
                         .ok_or_else(|| {
-                            errors::commit_not_found(format!(
+                            scs_errors::commit_not_found(format!(
                                 "failed to resolve commit: {}",
                                 blame_line.changeset_id
                             ))
                         })?;
                 let (author, date, message, title) =
                     info.get(blame_line.changeset_id).ok_or_else(|| {
-                        errors::commit_not_found(format!(
+                        scs_errors::commit_not_found(format!(
                             "failed to resolve commit: {}",
                             blame_line.changeset_id
                         ))
@@ -433,13 +432,13 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         commit_path: thrift::CommitPathSpecifier,
         params: thrift::CommitPathHistoryParams,
-    ) -> Result<thrift::CommitPathHistoryResponse, errors::ServiceError> {
+    ) -> Result<thrift::CommitPathHistoryResponse, scs_errors::ServiceError> {
         let (repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
         let path = changeset.path_with_history(&commit_path.path).await?;
         let (descendants_of, exclude_changeset_and_ancestors) = try_join!(
             async {
                 if let Some(descendants_of) = &params.descendants_of {
-                    Ok::<_, errors::ServiceError>(Some(
+                    Ok::<_, scs_errors::ServiceError>(Some(
                         self.changeset_id(&repo, descendants_of).await?,
                     ))
                 } else {
@@ -450,7 +449,7 @@ impl SourceControlServiceImpl {
                 if let Some(exclude_changeset_and_ancestors) =
                     &params.exclude_changeset_and_ancestors
                 {
-                    Ok::<_, errors::ServiceError>(Some(
+                    Ok::<_, scs_errors::ServiceError>(Some(
                         self.changeset_id(&repo, exclude_changeset_and_ancestors)
                             .await?,
                     ))
@@ -470,7 +469,7 @@ impl SourceControlServiceImpl {
 
         if let (Some(ats), Some(bts)) = (after_timestamp, before_timestamp) {
             if bts < ats {
-                return Err(errors::invalid_request(format!(
+                return Err(scs_errors::invalid_request(format!(
                     "after_timestamp ({}) cannot be greater than before_timestamp ({})",
                     ats, bts,
                 ))
@@ -479,7 +478,7 @@ impl SourceControlServiceImpl {
         }
 
         if skip > 0 && (after_timestamp.is_some() || before_timestamp.is_some()) {
-            return Err(errors::invalid_request(
+            return Err(scs_errors::invalid_request(
                 "Time filters cannot be applied if skip is not 0".to_string(),
             )
             .into());
@@ -516,7 +515,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         commit_path: thrift::CommitPathSpecifier,
         params: thrift::CommitPathLastChangedParams,
-    ) -> Result<thrift::CommitPathLastChangedResponse, errors::ServiceError> {
+    ) -> Result<thrift::CommitPathLastChangedResponse, scs_errors::ServiceError> {
         let (_repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
         let path = changeset.path_with_history(&commit_path.path).await?;
         match path.last_modified().await? {
@@ -558,7 +557,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         commit: thrift::CommitSpecifier,
         params: thrift::CommitMultiplePathLastChangedParams,
-    ) -> Result<thrift::CommitMultiplePathLastChangedResponse, errors::ServiceError> {
+    ) -> Result<thrift::CommitMultiplePathLastChangedResponse, scs_errors::ServiceError> {
         let (repo, changeset) = self.repo_changeset(ctx, &commit).await?;
         let mut paths = HashSet::with_capacity(params.paths.len());
         for path in params.paths {
@@ -574,9 +573,9 @@ impl SourceControlServiceImpl {
             .map_ok(|context| async move {
                 let context_path = context.path().clone();
                 let last_modified = context.last_modified().await?;
-                Ok::<_, errors::ServiceError>((context_path, last_modified))
+                Ok::<_, scs_errors::ServiceError>((context_path, last_modified))
             })
-            .map_err(errors::ServiceError::from)
+            .map_err(scs_errors::ServiceError::from)
             .try_buffer_unordered(100)
             .try_filter_map(|(path, maybe_last_changed)| async move {
                 Ok(maybe_last_changed.map(move |last_changed| (path, last_changed.id())))
@@ -592,9 +591,9 @@ impl SourceControlServiceImpl {
             .map_ok(|context| async move {
                 let context_path = context.path().clone();
                 let last_deleted = context.last_deleted().await?;
-                Ok::<_, errors::ServiceError>((context_path, last_deleted))
+                Ok::<_, scs_errors::ServiceError>((context_path, last_deleted))
             })
-            .map_err(errors::ServiceError::from)
+            .map_err(scs_errors::ServiceError::from)
             .try_buffer_unordered(100)
             .try_filter_map(|(path, maybe_last_changed)| async move {
                 Ok(maybe_last_changed.map(move |last_changed| (path, last_changed.id())))

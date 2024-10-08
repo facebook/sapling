@@ -13,7 +13,6 @@ use mononoke_api::sparse_profile::ProfileSizeChange;
 use mononoke_api::sparse_profile::SparseProfileMonitoring;
 use source_control as thrift;
 
-use crate::errors;
 use crate::source_control_impl::SourceControlServiceImpl;
 
 impl SourceControlServiceImpl {
@@ -22,7 +21,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         commit: thrift::CommitSpecifier,
         params: thrift::CommitSparseProfileSizeParams,
-    ) -> Result<thrift::CommitSparseProfileSizeResponse, errors::ServiceError> {
+    ) -> Result<thrift::CommitSparseProfileSizeResponse, scs_errors::ServiceError> {
         let (repo, changeset) = self.repo_changeset(ctx.clone(), &commit).await?;
         let profiles = convert_profiles_params(params.profiles).await?;
         let monitor = SparseProfileMonitoring::new(
@@ -59,7 +58,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         commit: thrift::CommitSpecifier,
         params: thrift::CommitSparseProfileDeltaParams,
-    ) -> Result<thrift::CommitSparseProfileDeltaResponse, errors::ServiceError> {
+    ) -> Result<thrift::CommitSparseProfileDeltaResponse, scs_errors::ServiceError> {
         let (repo, changeset, other) = self
             .repo_changeset_pair(ctx.clone(), &commit, &params.other_id)
             .await?;
@@ -97,12 +96,12 @@ impl SourceControlServiceImpl {
 
 async fn convert_profiles_params(
     params_profiles: thrift::SparseProfiles,
-) -> Result<MonitoringProfiles, errors::ServiceError> {
+) -> Result<MonitoringProfiles, scs_errors::ServiceError> {
     match params_profiles {
         thrift::SparseProfiles::all_profiles(_) => Ok(MonitoringProfiles::All),
         thrift::SparseProfiles::profiles(profiles) => Ok(MonitoringProfiles::Exact { profiles }),
-        thrift::SparseProfiles::UnknownField(_) => Err(errors::ServiceError::Request(
-            errors::not_available("Not implemented".to_string()),
+        thrift::SparseProfiles::UnknownField(_) => Err(scs_errors::ServiceError::Request(
+            scs_errors::not_available("Not implemented".to_string()),
         )),
     }
 }

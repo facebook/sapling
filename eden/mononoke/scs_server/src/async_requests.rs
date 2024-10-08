@@ -15,21 +15,21 @@ use client::AsyncRequestsQueue;
 use context::CoreContext;
 use mononoke_api::RepositoryId;
 
-use crate::errors;
-
 pub(crate) async fn get_queue(
     ctx: &CoreContext,
     async_requests_queue_client: &Option<Arc<AsyncRequestsQueue>>,
-) -> Result<AsyncMethodRequestQueue, errors::ServiceError> {
+) -> Result<AsyncMethodRequestQueue, scs_errors::ServiceError> {
     match async_requests_queue_client {
         Some(queue_client) => Ok(queue_client.async_method_request_queue(ctx).await?),
         None => Err(async_requests_disabled()),
     }
 }
 
-fn async_requests_disabled() -> errors::ServiceError {
-    errors::internal_error("Method is not supported when async requests are disabled".to_string())
-        .into()
+fn async_requests_disabled() -> scs_errors::ServiceError {
+    scs_errors::internal_error(
+        "Method is not supported when async requests are disabled".to_string(),
+    )
+    .into()
 }
 
 pub(crate) async fn enqueue<P: ThriftParams>(
@@ -37,21 +37,23 @@ pub(crate) async fn enqueue<P: ThriftParams>(
     queue: &AsyncMethodRequestQueue,
     repo_id: Option<&RepositoryId>,
     params: P,
-) -> Result<<<P::R as Request>::Token as Token>::ThriftToken, errors::ServiceError> {
+) -> Result<<<P::R as Request>::Token as Token>::ThriftToken, scs_errors::ServiceError> {
     queue
         .enqueue(ctx, repo_id, params)
         .await
         .map(|res| res.into_thrift())
-        .map_err(|e| errors::internal_error(format!("Failed to enqueue the request: {}", e)).into())
+        .map_err(|e| {
+            scs_errors::internal_error(format!("Failed to enqueue the request: {}", e)).into()
+        })
 }
 
 pub(crate) async fn poll<T: Token>(
     ctx: &CoreContext,
     queue: &AsyncMethodRequestQueue,
     token: T,
-) -> Result<<T::R as Request>::PollResponse, errors::ServiceError> {
+) -> Result<<T::R as Request>::PollResponse, scs_errors::ServiceError> {
     Ok(queue
         .poll(ctx, token)
         .await
-        .map_err(errors::internal_error)?)
+        .map_err(scs_errors::internal_error)?)
 }

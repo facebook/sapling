@@ -13,9 +13,9 @@ use commit_cloud_types::WorkspaceData;
 use commit_cloud_types::WorkspaceRemoteBookmark as CCWorkspaceRemoteBookmark;
 use context::CoreContext;
 use mononoke_api_hg::RepoContextHgExt;
+use scs_errors::invalid_request;
+use scs_errors::ServiceError;
 
-use crate::errors::invalid_request;
-use crate::errors::ServiceError;
 use crate::into_response::IntoResponse;
 use crate::methods::thrift;
 use crate::source_control_impl::SourceControlServiceImpl;

@@ -8,7 +8,6 @@
 use context::CoreContext;
 use source_control as thrift;
 
-use crate::errors;
 use crate::from_request::check_range_and_convert;
 use crate::into_response::IntoResponse;
 use crate::source_control_impl::SourceControlServiceImpl;
@@ -20,7 +19,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         tree: thrift::TreeSpecifier,
         _params: thrift::TreeExistsParams,
-    ) -> Result<bool, errors::ServiceError> {
+    ) -> Result<bool, scs_errors::ServiceError> {
         let (_repo, tree) = self.repo_tree(ctx, &tree).await?;
         Ok(tree.is_some())
     }
@@ -31,7 +30,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         tree: thrift::TreeSpecifier,
         params: thrift::TreeListParams,
-    ) -> Result<thrift::TreeListResponse, errors::ServiceError> {
+    ) -> Result<thrift::TreeListResponse, scs_errors::ServiceError> {
         let (_repo, tree) = self.repo_tree(ctx, &tree).await?;
         let offset: usize = check_range_and_convert("offset", params.offset, 0..)?;
         let limit: usize = check_range_and_convert(

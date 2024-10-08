@@ -8,10 +8,9 @@
 use context::CoreContext;
 use mononoke_api::headerless_unified_diff;
 use mononoke_api::FileId;
+use scs_errors::ServiceErrorResultExt;
 use source_control as thrift;
 
-use crate::errors;
-use crate::errors::ServiceErrorResultExt;
 use crate::from_request::check_range_and_convert;
 use crate::from_request::FromRequest;
 use crate::into_response::IntoResponse;
@@ -25,7 +24,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         file: thrift::FileSpecifier,
         _params: thrift::FileExistsParams,
-    ) -> Result<bool, errors::ServiceError> {
+    ) -> Result<bool, scs_errors::ServiceError> {
         let (_repo, file) = self.repo_file(ctx, &file).await?;
         Ok(file.is_some())
     }
@@ -36,10 +35,10 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         file: thrift::FileSpecifier,
         _params: thrift::FileInfoParams,
-    ) -> Result<thrift::FileInfo, errors::ServiceError> {
+    ) -> Result<thrift::FileInfo, scs_errors::ServiceError> {
         match self.repo_file(ctx, &file).await? {
             (_repo, Some(file)) => Ok(file.metadata().await?.into_response()),
-            (_repo, None) => Err(errors::file_not_found(file.description()).into()),
+            (_repo, None) => Err(scs_errors::file_not_found(file.description()).into()),
         }
     }
 
@@ -49,7 +48,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         file: thrift::FileSpecifier,
         params: thrift::FileContentChunkParams,
-    ) -> Result<thrift::FileChunk, errors::ServiceError> {
+    ) -> Result<thrift::FileChunk, scs_errors::ServiceError> {
         let offset: u64 = check_range_and_convert("offset", params.offset, 0..)?;
         let size: u64 = check_range_and_convert(
             "size",
@@ -67,7 +66,7 @@ impl SourceControlServiceImpl {
                     ..Default::default()
                 })
             }
-            (_repo, None) => Err(errors::file_not_found(file.description()).into()),
+            (_repo, None) => Err(scs_errors::file_not_found(file.description()).into()),
         }
     }
 
@@ -77,19 +76,19 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         file: thrift::FileSpecifier,
         params: thrift::FileDiffParams,
-    ) -> Result<thrift::FileDiffResponse, errors::ServiceError> {
+    ) -> Result<thrift::FileDiffResponse, scs_errors::ServiceError> {
         let context_lines = params.context as usize;
 
         let (repo, base_file) = self.repo_file(ctx, &file).await?;
         let base_file = base_file
-            .ok_or_else(|| errors::file_not_found(file.description()))
+            .ok_or_else(|| scs_errors::file_not_found(file.description()))
             .context("failed to resolve target file")?;
 
         let other_file_id = FileId::from_request(&params.other_file_id)?;
         let other_file = repo
             .file(other_file_id)
             .await?
-            .ok_or_else(|| errors::file_not_found(other_file_id.to_string()))
+            .ok_or_else(|| scs_errors::file_not_found(other_file_id.to_string()))
             .context("failed to resolve other file")?;
 
         let diff = headerless_unified_diff(&other_file, &base_file, context_lines)

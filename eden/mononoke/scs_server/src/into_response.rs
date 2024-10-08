@@ -40,7 +40,6 @@ use source_control as thrift;
 
 use crate::commit_id::map_commit_identities;
 use crate::commit_id::map_commit_identity;
-use crate::errors;
 
 /// Convert an item into a thrift type suitable for inclusion in a thrift
 /// response.
@@ -52,7 +51,7 @@ pub(crate) trait IntoResponse<T> {
 /// in a thrift response.
 #[async_trait]
 pub(crate) trait AsyncIntoResponse<T> {
-    async fn into_response(self) -> Result<T, errors::ServiceError>;
+    async fn into_response(self) -> Result<T, scs_errors::ServiceError>;
 }
 
 /// Asynchronously convert an item into a thrift type suitable for inclusion
@@ -66,12 +65,12 @@ pub(crate) trait AsyncIntoResponseWith<T> {
     async fn into_response_with(
         self,
         additional: &Self::Additional,
-    ) -> Result<T, errors::ServiceError>;
+    ) -> Result<T, scs_errors::ServiceError>;
 }
 
 #[async_trait]
 impl<T, A: AsyncIntoResponse<T> + Send> AsyncIntoResponse<Option<T>> for Option<A> {
-    async fn into_response(self) -> Result<Option<T>, errors::ServiceError> {
+    async fn into_response(self) -> Result<Option<T>, scs_errors::ServiceError> {
         match self {
             Some(value) => Ok(Some(value.into_response().await?)),
             None => Ok(None),
@@ -299,22 +298,22 @@ impl IntoResponse<thrift::WorkspaceInfo> for WorkspaceData {
 
 #[async_trait]
 impl AsyncIntoResponse<thrift::FilePathInfo> for &ChangesetPathContentContext<Repo> {
-    async fn into_response(self) -> Result<thrift::FilePathInfo, errors::ServiceError> {
+    async fn into_response(self) -> Result<thrift::FilePathInfo, scs_errors::ServiceError> {
         let (meta, type_) = try_join!(
             async {
-                Ok::<_, errors::ServiceError>(
+                Ok::<_, scs_errors::ServiceError>(
                     self.file()
                         .await?
-                        .ok_or_else(|| errors::internal_error("programming error: not a file"))?
+                        .ok_or_else(|| scs_errors::internal_error("programming error: not a file"))?
                         .metadata()
                         .await?,
                 )
             },
             async {
-                Ok::<_, errors::ServiceError>(
-                    self.file_type()
-                        .await?
-                        .ok_or_else(|| errors::internal_error("programming error: not a file"))?,
+                Ok::<_, scs_errors::ServiceError>(
+                    self.file_type().await?.ok_or_else(|| {
+                        scs_errors::internal_error("programming error: not a file")
+                    })?,
                 )
             },
         )?;
@@ -329,11 +328,11 @@ impl AsyncIntoResponse<thrift::FilePathInfo> for &ChangesetPathContentContext<Re
 
 #[async_trait]
 impl AsyncIntoResponse<thrift::TreePathInfo> for &ChangesetPathContentContext<Repo> {
-    async fn into_response(self) -> Result<thrift::TreePathInfo, errors::ServiceError> {
+    async fn into_response(self) -> Result<thrift::TreePathInfo, scs_errors::ServiceError> {
         let tree = self
             .tree()
             .await?
-            .ok_or_else(|| errors::internal_error("programming error: not a tree"))?;
+            .ok_or_else(|| scs_errors::internal_error("programming error: not a tree"))?;
 
         let summary = (tree.id().clone(), tree.summary().await?);
         Ok(thrift::TreePathInfo {
@@ -353,7 +352,7 @@ impl AsyncIntoResponseWith<thrift::CommitInfo> for ChangesetContext<Repo> {
     async fn into_response_with(
         self,
         identity_schemes: &BTreeSet<thrift::CommitIdentityScheme>,
-    ) -> Result<thrift::CommitInfo, errors::ServiceError> {
+    ) -> Result<thrift::CommitInfo, scs_errors::ServiceError> {
         async fn map_parent_identities(
             changeset: &ChangesetContext<Repo>,
             identity_schemes: &BTreeSet<thrift::CommitIdentityScheme>,
@@ -433,8 +432,10 @@ impl AsyncIntoResponseWith<Vec<BTreeMap<thrift::CommitIdentityScheme, thrift::Co
     async fn into_response_with(
         self,
         identity_schemes: &BTreeSet<thrift::CommitIdentityScheme>,
-    ) -> Result<Vec<BTreeMap<thrift::CommitIdentityScheme, thrift::CommitId>>, errors::ServiceError>
-    {
+    ) -> Result<
+        Vec<BTreeMap<thrift::CommitIdentityScheme, thrift::CommitId>>,
+        scs_errors::ServiceError,
+    > {
         let res = try_join_all({
             let changesets_grouped_by_repo = self
                 .into_iter()
@@ -451,7 +452,7 @@ impl AsyncIntoResponseWith<Vec<BTreeMap<thrift::CommitIdentityScheme, thrift::Co
                         .iter()
                         .map(move |id| {
                             id_map.get(id).cloned().ok_or_else(|| {
-                                errors::internal_error(
+                                scs_errors::internal_error(
                                     "programming error, id is missing from the map",
                                 )
                                 .into()
@@ -459,7 +460,7 @@ impl AsyncIntoResponseWith<Vec<BTreeMap<thrift::CommitIdentityScheme, thrift::Co
                         })
                         .collect::<Result<
                             Vec<BTreeMap<thrift::CommitIdentityScheme, thrift::CommitId>>,
-                            errors::ServiceError,
+                            scs_errors::ServiceError,
                         >>()
                 })
         })
@@ -471,9 +472,9 @@ impl AsyncIntoResponseWith<Vec<BTreeMap<thrift::CommitIdentityScheme, thrift::Co
     }
 }
 
-fn to_i64(val: usize) -> Result<i64, errors::ServiceError> {
+fn to_i64(val: usize) -> Result<i64, scs_errors::ServiceError> {
     val.try_into()
-        .map_err(|_| errors::internal_error("usize too big for i64").into())
+        .map_err(|_| scs_errors::internal_error("usize too big for i64").into())
 }
 
 #[async_trait]
@@ -490,7 +491,7 @@ impl AsyncIntoResponseWith<thrift::PushrebaseOutcome> for PushrebaseOutcome {
     async fn into_response_with(
         self,
         additional: &Self::Additional,
-    ) -> Result<thrift::PushrebaseOutcome, errors::ServiceError> {
+    ) -> Result<thrift::PushrebaseOutcome, scs_errors::ServiceError> {
         let (repo, identity_schemes, old_identity_schemes) = additional;
         let mut new_ids = HashSet::new();
         let mut old_ids = HashSet::new();
@@ -560,7 +561,7 @@ impl AsyncIntoResponseWith<thrift::BookmarkInfo> for BookmarkInfo<Repo> {
     async fn into_response_with(
         self,
         identity_schemes: &BTreeSet<thrift::CommitIdentityScheme>,
-    ) -> Result<thrift::BookmarkInfo, errors::ServiceError> {
+    ) -> Result<thrift::BookmarkInfo, scs_errors::ServiceError> {
         let (warm_ids, fresh_ids) = try_join!(
             map_commit_identity(&self.warm_changeset, identity_schemes),
             map_commit_identity(&self.fresh_changeset, identity_schemes),

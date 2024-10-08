@@ -20,7 +20,6 @@ use pushrebase_mutation_mapping::PushrebaseMutationMappingRef;
 use source_control as thrift;
 use synced_commit_mapping::SyncedCommitSourceRepo;
 
-use crate::errors;
 use crate::source_control_impl::SourceControlServiceImpl;
 
 #[derive(Debug, Clone)]
@@ -80,18 +79,21 @@ impl RepoChangesetsPushrebaseHistory {
         }
     }
 
-    async fn repo(&self, repo_name: &String) -> Result<RepoContext<Repo>, errors::ServiceError> {
+    async fn repo(
+        &self,
+        repo_name: &String,
+    ) -> Result<RepoContext<Repo>, scs_errors::ServiceError> {
         let repo = self
             .mononoke
             .repo(self.ctx.clone(), repo_name)
             .await?
-            .ok_or_else(|| errors::repo_not_found(repo_name.clone()))?
+            .ok_or_else(|| scs_errors::repo_not_found(repo_name.clone()))?
             .build()
             .await?;
         Ok(repo)
     }
 
-    async fn ensure_head_is_public(&self) -> Result<(), errors::ServiceError> {
+    async fn ensure_head_is_public(&self) -> Result<(), scs_errors::ServiceError> {
         let RepoChangeset(repo_name, bcs_id) = &self.head;
         let repo = self.repo(repo_name).await?;
         let is_public = repo
@@ -99,10 +101,10 @@ impl RepoChangesetsPushrebaseHistory {
             .phases()
             .get_public(&self.ctx, vec![*bcs_id], true /* ephemeral_derive */)
             .await
-            .map_err(errors::internal_error)?
+            .map_err(scs_errors::internal_error)?
             .contains(bcs_id);
         if !is_public {
-            return Err(errors::invalid_request(format!(
+            return Err(scs_errors::invalid_request(format!(
                 "changeset {} is not public, and only public commits could be pushrebased",
                 bcs_id,
             ))
@@ -111,7 +113,7 @@ impl RepoChangesetsPushrebaseHistory {
         Ok(())
     }
 
-    async fn try_traverse_pushrebase(&mut self) -> Result<bool, errors::ServiceError> {
+    async fn try_traverse_pushrebase(&mut self) -> Result<bool, scs_errors::ServiceError> {
         let RepoChangeset(repo_name, bcs_id) = self.last();
         let repo = self.repo(&repo_name).await?;
         let bcs_ids = repo
@@ -119,7 +121,7 @@ impl RepoChangesetsPushrebaseHistory {
             .pushrebase_mutation_mapping()
             .get_prepushrebase_ids(&self.ctx, bcs_id)
             .await
-            .map_err(errors::internal_error)?;
+            .map_err(scs_errors::internal_error)?;
         let mut iter = bcs_ids.iter();
         match (iter.next(), iter.next()) {
             (None, _) => Ok(false),
@@ -135,7 +137,7 @@ impl RepoChangesetsPushrebaseHistory {
                     Ok(true)
                 }
             }
-            (Some(_), Some(_)) => Err(errors::internal_error(format!(
+            (Some(_), Some(_)) => Err(scs_errors::internal_error(format!(
                 "pushrebase mapping is ambiguous in repo {} for {}: {:?} (expected only one)",
                 repo_name, bcs_id, bcs_ids,
             ))
@@ -146,7 +148,7 @@ impl RepoChangesetsPushrebaseHistory {
     async fn try_traverse_commit_sync(
         &mut self,
         changeset: Option<RepoChangeset>,
-    ) -> Result<bool, errors::ServiceError> {
+    ) -> Result<bool, scs_errors::ServiceError> {
         let RepoChangeset(repo_name, bcs_id) = match changeset {
             Some(changeset) => changeset,
             None => self.last(),
@@ -157,7 +159,7 @@ impl RepoChangesetsPushrebaseHistory {
         let maybe_common_commit_sync_config = repo
             .live_commit_sync_config()
             .get_common_config_if_exists(repo.repoid())
-            .map_err(errors::internal_error)?;
+            .map_err(scs_errors::internal_error)?;
 
         if let Some(config) = maybe_common_commit_sync_config {
             self.try_traverse_commit_sync_inner(repo, bcs_id, config)
@@ -174,7 +176,7 @@ impl RepoChangesetsPushrebaseHistory {
         repo: RepoContext<Repo>,
         bcs_id: ChangesetId,
         config: CommonCommitSyncConfig,
-    ) -> Result<bool, errors::ServiceError> {
+    ) -> Result<bool, scs_errors::ServiceError> {
         let mut synced_changesets = vec![];
         let (target_repo_ids, expected_sync_origin) = if config.large_repo_id == repo.repoid() {
             (
@@ -190,7 +192,7 @@ impl RepoChangesetsPushrebaseHistory {
                 .synced_commit_mapping()
                 .get_maybe_stale(&self.ctx, repo.repoid(), bcs_id, target_repo_id)
                 .await
-                .map_err(errors::internal_error)?;
+                .map_err(scs_errors::internal_error)?;
             if let Some(target_repo_name) = self.mononoke.repo_name_from_id(target_repo_id) {
                 synced_changesets.extend(entries.into_iter().filter_map(|entry| {
                     let traverse = match entry.maybe_source_repo {
@@ -218,7 +220,7 @@ impl RepoChangesetsPushrebaseHistory {
                 self.changesets.push(rc.clone());
                 Ok(true)
             }
-            (Some(_), Some(_)) => Err(errors::internal_error(format!(
+            (Some(_), Some(_)) => Err(scs_errors::internal_error(format!(
                 "commit sync mapping is ambiguous in repo {} for {}: {:?} (expected only one)",
                 repo.name(),
                 bcs_id,
@@ -249,7 +251,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         commit: thrift::CommitSpecifier,
         _params: thrift::CommitLookupPushrebaseHistoryParams,
-    ) -> Result<thrift::CommitLookupPushrebaseHistoryResponse, errors::ServiceError> {
+    ) -> Result<thrift::CommitLookupPushrebaseHistoryResponse, scs_errors::ServiceError> {
         let (repo, changeset) = self.repo_changeset(ctx.clone(), &commit).await?;
         let mut history = RepoChangesetsPushrebaseHistory::new(
             ctx,

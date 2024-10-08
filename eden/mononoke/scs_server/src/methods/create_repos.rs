@@ -16,7 +16,6 @@ use mononoke_api::MononokeError;
 use repo_authorization::AuthorizationContext;
 use source_control as thrift;
 
-use crate::errors;
 use crate::source_control_impl::SourceControlServiceImpl;
 
 impl SourceControlServiceImpl {
@@ -24,7 +23,7 @@ impl SourceControlServiceImpl {
         &self,
         ctx: CoreContext,
         params: thrift::CreateReposParams,
-    ) -> Result<thrift::CreateReposToken, errors::ServiceError> {
+    ) -> Result<thrift::CreateReposToken, scs_errors::ServiceError> {
         let authz = AuthorizationContext::new(&ctx);
         try_join_all(params.repos.iter().map(|repo| {
             authz.require_repo_create(&ctx, &repo.repo_name, self.acl_provider.as_ref())
@@ -65,7 +64,7 @@ impl SourceControlServiceImpl {
                 .map_err(Into::<Error>::into)
                 .map_err(Into::<MononokeError>::into)?;
             if !output.status.success() {
-                Err(errors::internal_error(format!(
+                Err(scs_errors::internal_error(format!(
                     "Failed to create repo: {}, stderr: {}, stdout: {}",
                     &repo.repo_name,
                     String::from_utf8_lossy(&output.stderr),
@@ -83,7 +82,7 @@ impl SourceControlServiceImpl {
         &self,
         _ctx: CoreContext,
         _token: thrift::CreateReposToken,
-    ) -> Result<thrift::CreateReposPollResponse, errors::ServiceError> {
+    ) -> Result<thrift::CreateReposPollResponse, scs_errors::ServiceError> {
         Ok(thrift::CreateReposPollResponse {
             result: Some(Default::default()),
             ..Default::default()

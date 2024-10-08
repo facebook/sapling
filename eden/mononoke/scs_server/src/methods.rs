@@ -12,7 +12,6 @@ use source_control as thrift;
 use crate::async_requests::enqueue;
 use crate::async_requests::get_queue;
 use crate::async_requests::poll;
-use crate::errors;
 use crate::source_control_impl::SourceControlServiceImpl;
 
 pub(crate) mod cloud;
@@ -32,7 +31,7 @@ impl SourceControlServiceImpl {
         &self,
         _ctx: CoreContext,
         _params: thrift::ListReposParams,
-    ) -> Result<Vec<thrift::Repo>, errors::ServiceError> {
+    ) -> Result<Vec<thrift::Repo>, scs_errors::ServiceError> {
         let mut repo_names: Vec<_> = self.mononoke.repo_names_in_tier.clone();
         repo_names.sort();
         let rsp = repo_names
@@ -49,7 +48,7 @@ impl SourceControlServiceImpl {
         &self,
         ctx: CoreContext,
         params: thrift::AsyncPingParams,
-    ) -> Result<thrift::AsyncPingToken, errors::ServiceError> {
+    ) -> Result<thrift::AsyncPingToken, scs_errors::ServiceError> {
         let queue = get_queue(&ctx, &self.async_requests_queue_client).await?;
         enqueue::<thrift::AsyncPingParams>(&ctx, &queue, None, params).await
     }
@@ -58,7 +57,7 @@ impl SourceControlServiceImpl {
         &self,
         ctx: CoreContext,
         token: thrift::AsyncPingToken,
-    ) -> Result<thrift::AsyncPingPollResponse, errors::ServiceError> {
+    ) -> Result<thrift::AsyncPingPollResponse, scs_errors::ServiceError> {
         let queue = get_queue(&ctx, &self.async_requests_queue_client).await?;
         let token = AsyncPingToken(token);
         poll::<AsyncPingToken>(&ctx, &queue, token).await

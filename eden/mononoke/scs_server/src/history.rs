@@ -17,7 +17,6 @@ use mononoke_api::MononokeError;
 use mononoke_api::Repo;
 use source_control as thrift;
 
-use crate::errors;
 use crate::into_response::AsyncIntoResponseWith;
 
 pub(crate) async fn collect_history(
@@ -28,9 +27,9 @@ pub(crate) async fn collect_history(
     after_timestamp: Option<i64>,
     format: thrift::HistoryFormat,
     identity_schemes: &BTreeSet<thrift::CommitIdentityScheme>,
-) -> Result<thrift::History, errors::ServiceError> {
+) -> Result<thrift::History, scs_errors::ServiceError> {
     let history_stream = history_stream
-        .map_err(errors::ServiceError::from)
+        .map_err(scs_errors::ServiceError::from)
         .skip(skip);
 
     let history = if before_timestamp.is_some() || after_timestamp.is_some() {
@@ -58,7 +57,7 @@ pub(crate) async fn collect_history(
             // better to try doing it in parallel
             .buffered(100)
             .try_filter_map(|maybe_changeset| async move {
-                Ok::<_, errors::ServiceError>(maybe_changeset)
+                Ok::<_, scs_errors::ServiceError>(maybe_changeset)
             })
             .take(limit)
             .left_stream()
@@ -94,7 +93,7 @@ pub(crate) async fn collect_history(
                                 .into_response_with(&identity_schemes)
                                 .await?
                                 .into_iter()
-                                .map(Ok::<_, errors::ServiceError>)
+                                .map(Ok::<_, scs_errors::ServiceError>)
                                 .collect::<Vec<_>>(),
                         ))
                     }
@@ -104,7 +103,7 @@ pub(crate) async fn collect_history(
                 .await?;
             Ok(thrift::History::commit_ids(commit_ids))
         }
-        other_format => Err(errors::invalid_request(format!(
+        other_format => Err(scs_errors::invalid_request(format!(
             "unsupported history format {}",
             other_format
         ))

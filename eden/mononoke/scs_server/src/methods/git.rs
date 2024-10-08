@@ -21,12 +21,11 @@ use mononoke_api::errors::MononokeError;
 use mononoke_api::ChangesetId;
 use mononoke_types::bonsai_changeset::BonsaiAnnotatedTag;
 use mononoke_types::bonsai_changeset::BonsaiAnnotatedTagTarget;
+use scs_errors::internal_error;
+use scs_errors::invalid_request;
+use scs_errors::ServiceErrorResultExt;
 use source_control as thrift;
 
-use crate::errors::internal_error;
-use crate::errors::invalid_request;
-use crate::errors::ServiceErrorResultExt;
-use crate::errors::{self};
 use crate::source_control_impl::SourceControlServiceImpl;
 
 const EVERSTORE_CONTEXT: &str = "mononoke/scs";
@@ -39,7 +38,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         repo: thrift::RepoSpecifier,
         params: thrift::RepoUploadNonBlobGitObjectParams,
-    ) -> Result<thrift::RepoUploadNonBlobGitObjectResponse, errors::ServiceError> {
+    ) -> Result<thrift::RepoUploadNonBlobGitObjectResponse, scs_errors::ServiceError> {
         let repo_ctx = self
             .repo_for_service(ctx, &repo, params.service_identity.clone())
             .await
@@ -69,7 +68,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         repo: thrift::RepoSpecifier,
         params: thrift::CreateGitTreeParams,
-    ) -> Result<thrift::CreateGitTreeResponse, errors::ServiceError> {
+    ) -> Result<thrift::CreateGitTreeResponse, scs_errors::ServiceError> {
         let repo_ctx = self
             .repo_for_service(ctx, &repo, params.service_identity.clone())
             .await
@@ -97,7 +96,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         repo: thrift::RepoSpecifier,
         params: thrift::CreateGitTagParams,
-    ) -> Result<thrift::CreateGitTagResponse, errors::ServiceError> {
+    ) -> Result<thrift::CreateGitTagResponse, scs_errors::ServiceError> {
         let repo_ctx = self
             .repo_for_service(ctx, &repo, params.service_identity.clone())
             .await
@@ -172,7 +171,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         repo: thrift::RepoSpecifier,
         params: thrift::RepoStackGitBundleStoreParams,
-    ) -> Result<thrift::RepoStackGitBundleStoreResponse, errors::ServiceError> {
+    ) -> Result<thrift::RepoStackGitBundleStoreResponse, scs_errors::ServiceError> {
         let repo_ctx = self
             .repo_for_service(ctx, &repo, params.service_identity.clone())
             .await
@@ -254,7 +253,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         repo: thrift::RepoSpecifier,
         params: thrift::RepoUploadPackfileBaseItemParams,
-    ) -> Result<thrift::RepoUploadPackfileBaseItemResponse, errors::ServiceError> {
+    ) -> Result<thrift::RepoUploadPackfileBaseItemResponse, scs_errors::ServiceError> {
         let repo_ctx = self
             .repo_for_service(ctx, &repo, params.service_identity.clone())
             .await
