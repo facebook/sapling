@@ -49,6 +49,7 @@ static CUSTOM_BUILD_FUNCS: Lazy<
 pub struct Builder<'a> {
     config: &'a dyn configmodel::Config,
     repo_name: Option<String>,
+    server_url: Option<Url>,
 }
 
 impl<'a> Builder<'a> {
@@ -57,6 +58,7 @@ impl<'a> Builder<'a> {
         let builder = Self {
             config,
             repo_name: None,
+            server_url: None,
         };
         Ok(builder)
     }
@@ -64,6 +66,12 @@ impl<'a> Builder<'a> {
     /// Configure repo name for client. This is only used by the Http Client.
     pub fn repo_name(mut self, repo_name: Option<impl ToString>) -> Self {
         self.repo_name = repo_name.map(|s| s.to_string());
+        self
+    }
+
+    /// Configure server URL for client. This is only used by the Http Client.
+    pub fn server_url(mut self, url: Option<Url>) -> Self {
+        self.server_url = url;
         self
     }
 
@@ -78,8 +86,11 @@ impl<'a> Builder<'a> {
                 }
             }
         }
-
-        let mut builder = HttpClientBuilder::from_config(self.config)?;
+        let mut builder = if let Some(server_url) = self.server_url {
+            HttpClientBuilder::from_config_with_url(self.config, server_url)?
+        } else {
+            HttpClientBuilder::from_config(self.config)?
+        };
 
         if let Some(repo_name) = &self.repo_name {
             builder = builder.repo_name(repo_name);
@@ -144,8 +155,10 @@ impl HttpClientBuilder {
         self.try_into().map(Client::with_config)
     }
 
-    /// Populate a `HttpClientBuilder` from a Mercurial configuration.
-    pub fn from_config(config: &dyn configmodel::Config) -> Result<Self, SaplingRemoteApiError> {
+    pub fn from_config_with_url(
+        config: &dyn configmodel::Config,
+        server_url: Url,
+    ) -> Result<Self, SaplingRemoteApiError> {
         // XXX: Ideally, the repo name would be a required field, obtained from a `Repo` object from
         // the `clidispatch` crate. Unforunately, not all callsites presently have access to a
         // populated `Repo` object, and it isn't trivial to just initialize one (requires a path to
@@ -156,10 +169,6 @@ impl HttpClientBuilder {
         if repo_name.as_deref() == Some("") {
             repo_name = None;
         }
-
-        let server_url = get_required_config::<String>(config, "edenapi", "url")?
-            .parse::<Url>()
-            .map_err(|e| ConfigError::Invalid("edenapi.url".into(), e.into()))?;
 
         let mut headers = get_config::<String>(config, "edenapi", "headers")?
             .map(parse_headers)
@@ -260,6 +269,14 @@ impl HttpClientBuilder {
 
         tracing::debug!(?builder);
         Ok(builder)
+    }
+
+    /// Populate a `HttpClientBuilder` from a Mercurial configuration.
+    pub fn from_config(config: &dyn configmodel::Config) -> Result<Self, SaplingRemoteApiError> {
+        let server_url = get_required_config::<String>(config, "edenapi", "url")?
+            .parse::<Url>()
+            .map_err(|e| ConfigError::Invalid("edenapi.url".into(), e.into()))?;
+        Self::from_config_with_url(config, server_url)
     }
 
     /// Set the repo name.

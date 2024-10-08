@@ -299,11 +299,22 @@ impl Repo {
 
     /// Private API used by `optional_eden_api` that bypasses checks about whether
     /// SaplingRemoteAPI should be used or not.
-    fn force_construct_eden_api(&self) -> Result<Arc<dyn SaplingRemoteApi>, SaplingRemoteApiError> {
+    fn force_construct_eden_api(
+        &self,
+        maybe_repo_url: Option<RepoUrl>,
+    ) -> Result<Arc<dyn SaplingRemoteApi>, SaplingRemoteApiError> {
         let eden_api = self.eden_api.get_or_try_init(
             || -> Result<Arc<dyn SaplingRemoteApi>, SaplingRemoteApiError> {
                 tracing::trace!(target: "repo::eden_api", "creating edenapi");
-                let eden_api = Builder::from_config(&self.config)?.build()?;
+                let mut builder = Builder::from_config(&self.config)?;
+                if let Some(path) = maybe_repo_url {
+                    if path.is_sapling_git() {
+                        if let Ok(url) = path.into_https_url() {
+                            builder = builder.server_url(Some(url));
+                        }
+                    }
+                }
+                let eden_api = builder.build()?;
                 tracing::info!(url=eden_api.url(), path=?self.path, "SaplingRemoteApi built");
                 Ok(eden_api)
             },
@@ -341,7 +352,7 @@ impl Repo {
                 // EagerRepo URLs (test:, eager: file path, dummyssh).
                 if EagerRepo::url_to_dir(&path).is_some() {
                     tracing::trace!(target: "repo::eden_api", "using EagerRepo at {}", &path);
-                    return Ok(Some(self.force_construct_eden_api()?));
+                    return Ok(Some(self.force_construct_eden_api(Some(path))?));
                 }
                 // Legacy tests are incompatible with SaplingRemoteAPI.
                 // They use None or file or ssh scheme with dummyssh.
@@ -370,9 +381,9 @@ impl Repo {
                 }
 
                 tracing::trace!(target: "repo::eden_api", "proceeding with path {}, reponame {:?}", path, self.config.get("remotefilelog", "reponame"));
+                Ok(Some(self.force_construct_eden_api(Some(path))?))
             }
         }
-        Ok(Some(self.force_construct_eden_api()?))
     }
 
     pub fn cas_client(&self) -> Result<Option<Arc<dyn CasClient>>> {

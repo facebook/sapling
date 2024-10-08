@@ -130,6 +130,25 @@ impl RepoUrl {
     pub fn resolved_str(&self) -> &str {
         self.url.as_str()
     }
+
+    /// Whether the repo is a Sapling Git repo hosted in Mononoke.
+    pub fn is_sapling_git(&self) -> bool {
+        self.scheme() == "mononoke" && self.path().starts_with("slapigit/")
+    }
+
+    /// Convert the Repo URL into an HTTPs URL for Mononoke repos.
+    pub fn into_https_url(self) -> Result<Url> {
+        match self.scheme() {
+            "mononoke" => {
+                let mut url = self.url.clone();
+                url.set_scheme("https")
+                    .map_err(|_| anyhow::anyhow!("Error setting scheme for URL"))?;
+                Ok(url)
+            }
+            "https" => Ok(self.url),
+            _ => Err(anyhow::anyhow!("Repo URL is not a Mononoke or HTTPS URL")),
+        }
+    }
 }
 
 fn looks_like_windows_path(s: &str) -> bool {
@@ -164,7 +183,6 @@ fn resolve_custom_scheme(config: &dyn Config, url: String) -> String {
     if let Some((scheme, rest)) = url.split_once(':') {
         if let Some(tmpl) = config.get_nonempty("schemes", scheme) {
             let rest = rest.trim_start_matches('/');
-
             return if tmpl.contains("{1}") {
                 tmpl.replace("{1}", rest)
             } else {
