@@ -23,7 +23,6 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
 use fixtures::TestRepoFixture;
-use futures::stream;
 use futures::TryStreamExt;
 use itertools::Itertools;
 use manifest::ManifestOps;
@@ -107,8 +106,8 @@ async fn test_for_fixture<F: TestRepoFixture + Send>(fb: FacebookInit) -> Result
         other => anyhow::bail!("Unexpected number of commits: {:?}", other),
     };
     let visited = &RwLock::new(HashSet::new());
-    stream::iter(all_commits.into_iter().map(anyhow::Ok))
-        .try_for_each_concurrent(None, |cs_id| async move {
+    repo.commit_graph()
+        .process_topologically(ctx, all_commits, |cs_id| async move {
             let bssm_v3_dir_id = derived_data
                 .derive::<RootBssmV3DirectoryId>(ctx, cs_id)
                 .await?;
