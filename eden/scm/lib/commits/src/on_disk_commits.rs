@@ -53,13 +53,13 @@ pub struct OnDiskCommits {
 }
 
 impl OnDiskCommits {
-    pub fn new(dag_path: &Path, commits_path: &Path) -> Result<Self> {
+    pub fn new(dag_path: &Path, commits_path: &Path, format: SerializationFormat) -> Result<Self> {
         let result = Self {
             dag: Dag::open(dag_path)?,
             dag_path: dag_path.to_path_buf(),
             commits: Arc::new(RwLock::new(Zstore::open(commits_path)?)),
             commits_path: commits_path.to_path_buf(),
-            format: SerializationFormat::Hg,
+            format,
         };
         Ok(result)
     }

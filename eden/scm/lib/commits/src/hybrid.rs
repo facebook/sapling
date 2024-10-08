@@ -33,6 +33,7 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use minibytes::Bytes;
 use parking_lot::RwLock;
+use storemodel::SerializationFormat;
 use streams::HybridResolver;
 use streams::HybridStream;
 use tracing::instrument;
@@ -208,10 +209,11 @@ impl HybridCommits {
         dag_path: &Path,
         commits_path: &Path,
         client: Arc<dyn SaplingRemoteApi>,
+        format: SerializationFormat,
     ) -> Result<Self> {
-        let commits = OnDiskCommits::new(dag_path, commits_path)?;
+        let commits = OnDiskCommits::new(dag_path, commits_path, format)?;
         let revlog = match revlog_dir {
-            Some(revlog_dir) => Some(RevlogCommits::new(revlog_dir)?),
+            Some(revlog_dir) => Some(RevlogCommits::new(revlog_dir, format)?),
             None => None,
         };
         Ok(Self {

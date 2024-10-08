@@ -14,6 +14,7 @@ use dag::Set;
 use dag::Vertex;
 use futures::stream::BoxStream;
 use minibytes::Bytes;
+use storemodel::SerializationFormat;
 
 use crate::AppendCommits;
 use crate::DescribeBackend;
@@ -36,9 +37,14 @@ pub struct DoubleWriteCommits {
 }
 
 impl DoubleWriteCommits {
-    pub fn new(revlog_dir: &Path, dag_path: &Path, commits_path: &Path) -> Result<Self> {
-        let commits = OnDiskCommits::new(dag_path, commits_path)?;
-        let revlog = RevlogCommits::new(revlog_dir)?;
+    pub fn new(
+        revlog_dir: &Path,
+        dag_path: &Path,
+        commits_path: &Path,
+        format: SerializationFormat,
+    ) -> Result<Self> {
+        let commits = OnDiskCommits::new(dag_path, commits_path, format)?;
+        let revlog = RevlogCommits::new(revlog_dir, format)?;
         Ok(Self { revlog, commits })
     }
 }

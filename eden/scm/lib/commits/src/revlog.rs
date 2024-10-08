@@ -12,6 +12,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use anyhow::ensure;
 use dag::delegate;
 use dag::errors::programming;
 use dag::errors::NotFoundError;
@@ -24,6 +25,7 @@ use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use minibytes::Bytes;
 use revlogindex::RevlogIndex;
+use storemodel::SerializationFormat;
 use zstore::Id20;
 
 use crate::strip;
@@ -54,7 +56,11 @@ pub(crate) fn get_hard_coded_commit_text(vertex: &Vertex) -> Option<Bytes> {
 }
 
 impl RevlogCommits {
-    pub fn new(dir: &Path) -> Result<Self> {
+    pub fn new(dir: &Path, format: SerializationFormat) -> Result<Self> {
+        ensure!(
+            matches!(format, SerializationFormat::Hg),
+            "RevlogCommits does not support Git format"
+        );
         let index_path = dir.join("00changelog.i");
         let nodemap_path = dir.join("00changelog.nodemap");
         let revlog = RevlogIndex::new(&index_path, &nodemap_path)?;
@@ -197,11 +203,11 @@ impl StripCommits for RevlogCommits {
         let old_dir = &self.dir;
         let new_dir = old_dir.join("strip");
         let _ = fs::create_dir(&new_dir);
-        let mut new = Self::new(&new_dir)?;
+        let mut new = Self::new(&new_dir, SerializationFormat::Hg)?;
         strip::migrate_commits(self, &mut new, set).await?;
         drop(new);
         strip::racy_unsafe_move_files(&new_dir, old_dir)?;
-        *self = Self::new(old_dir)?;
+        *self = Self::new(old_dir, SerializationFormat::Hg)?;
         Ok(())
     }
 }

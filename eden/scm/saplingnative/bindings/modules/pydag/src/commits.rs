@@ -39,6 +39,7 @@ use parking_lot::RwLock;
 use pyedenapi::PyClient;
 use pymetalog::metalog as PyMetaLog;
 use storemodel::ReadRootTreeIds;
+use storemodel::SerializationFormat;
 
 use crate::dagalgo::dagalgo;
 use crate::idmap;
@@ -286,15 +287,15 @@ py_class!(pub class commits |py| {
 
     /// Construct `commits` from a revlog (`00changelog.i` and `00changelog.d`).
     @staticmethod
-    def openrevlog(dir: &PyPath) -> PyResult<Self> {
-        let inner = RevlogCommits::new(dir.as_path()).map_pyerr(py)?;
+    def openrevlog(dir: &PyPath, format: Serde<SerializationFormat> = Serde(SerializationFormat::Hg)) -> PyResult<Self> {
+        let inner = RevlogCommits::new(dir.as_path(), format.0).map_pyerr(py)?;
         Self::from_commits(py, inner)
     }
 
     /// Construct `commits` from a segmented changelog + hgcommits directory.
     @staticmethod
-    def opensegments(segmentsdir: &PyPath, commitsdir: &PyPath) -> PyResult<Self> {
-        let inner = OnDiskCommits::new(segmentsdir.as_path(), commitsdir.as_path()).map_pyerr(py)?;
+    def opensegments(segmentsdir: &PyPath, commitsdir: &PyPath, format: Serde<SerializationFormat> = Serde(SerializationFormat::Hg)) -> PyResult<Self> {
+        let inner = OnDiskCommits::new(segmentsdir.as_path(), commitsdir.as_path(), format.0).map_pyerr(py)?;
         Self::from_commits(py, inner)
     }
 
@@ -303,9 +304,9 @@ py_class!(pub class commits |py| {
     /// This does not migrate commit texts and therefore only useful for
     /// doublewrite backend.
     @staticmethod
-    def migraterevlogtosegments(revlogdir: &PyPath, segmentsdir: &PyPath, commitsdir: &PyPath, master: Names) -> PyResult<PyNone> {
-        let revlog = RevlogCommits::new(revlogdir.as_path()).map_pyerr(py)?;
-        let mut segments = OnDiskCommits::new(segmentsdir.as_path(), commitsdir.as_path()).map_pyerr(py)?;
+    def migraterevlogtosegments(revlogdir: &PyPath, segmentsdir: &PyPath, commitsdir: &PyPath, master: Names, format: Serde<SerializationFormat> = Serde(SerializationFormat::Hg)) -> PyResult<PyNone> {
+        let revlog = RevlogCommits::new(revlogdir.as_path(), format.0).map_pyerr(py)?;
+        let mut segments = OnDiskCommits::new(segmentsdir.as_path(), commitsdir.as_path(), format.0).map_pyerr(py)?;
         py.allow_threads(|| block_on(segments.import_dag(revlog, master.0))).map_pyerr(py)?;
         Ok(PyNone)
     }
@@ -322,7 +323,8 @@ py_class!(pub class commits |py| {
     @staticmethod
     def openhybrid(
         revlogdir: Option<&PyPath>, segmentsdir: &PyPath, commitsdir: &PyPath, edenapi: PyClient,
-        lazyhash: bool = false, lazyhashdir: Option<&PyPath> = None
+        lazyhash: bool = false, lazyhashdir: Option<&PyPath> = None,
+        format: Serde<SerializationFormat> = Serde(SerializationFormat::Hg)
     ) -> PyResult<Self> {
         let client = edenapi.extract_inner(py);
         let mut inner = HybridCommits::new(
@@ -330,6 +332,7 @@ py_class!(pub class commits |py| {
             segmentsdir.as_path(),
             commitsdir.as_path(),
             client,
+            format.0,
         ).map_pyerr(py)?;
         if let Some(dir) = lazyhashdir {
             inner.enable_lazy_commit_hashes_from_local_segments( dir.as_path()).map_pyerr(py)?;

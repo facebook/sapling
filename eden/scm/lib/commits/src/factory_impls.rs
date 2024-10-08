@@ -14,6 +14,7 @@ use std::sync::Arc;
 use commits_trait::DagCommits;
 use edenapi::SaplingRemoteApi;
 use fs_err as fs;
+use storemodel::SerializationFormat;
 use storemodel::StoreInfo;
 
 use crate::DoubleWriteCommits;
@@ -41,6 +42,7 @@ const HYBRID_REQUIREMENT: &str = "hybridchangelog";
 const LAZY_TEXT_REQUIREMENT: &str = "lazytextchangelog";
 const LAZY_STORE_REQUIREMENT: &str = "lazychangelog";
 const SEGMENTS_REQUIREMENT: &str = "segmentedchangelog";
+const GIT_FORMAT_REQUIREMENT: &str = "git";
 
 pub(crate) fn setup_commits_constructor() {
     factory::register_constructor("20-hgcommits", maybe_construct_commits);
@@ -58,17 +60,33 @@ fn get_required_edenapi(info: &dyn StoreInfo) -> anyhow::Result<Arc<dyn SaplingR
 fn maybe_construct_commits(
     info: &dyn StoreInfo,
 ) -> anyhow::Result<Option<Box<dyn DagCommits + Send + 'static>>> {
+    let format = match info.has_requirement(GIT_FORMAT_REQUIREMENT) {
+        true => SerializationFormat::Git,
+        false => SerializationFormat::Hg,
+    };
     if info.has_requirement(LAZY_STORE_REQUIREMENT) {
         let eden_api = get_required_edenapi(info)?;
         tracing::info!(target: "changelog_info", changelog_backend="lazy");
-        Ok(Some(open_hybrid(info.store_path(), eden_api, true, false)?))
+        Ok(Some(open_hybrid(
+            info.store_path(),
+            eden_api,
+            true,
+            false,
+            format,
+        )?))
     } else if info.has_requirement(DOUBLE_WRITE_REQUIREMENT) {
         tracing::info!(target: "changelog_info", changelog_backend="doublewrite");
-        Ok(Some(open_double(info.store_path())?))
+        Ok(Some(open_double(info.store_path(), format)?))
     } else if info.has_requirement(HYBRID_REQUIREMENT) {
         let eden_api = get_required_edenapi(info)?;
         tracing::info!(target: "changelog_info", changelog_backend="hybrid");
-        Ok(Some(open_hybrid(info.store_path(), eden_api, false, true)?))
+        Ok(Some(open_hybrid(
+            info.store_path(),
+            eden_api,
+            false,
+            true,
+            format,
+        )?))
     } else if info.has_requirement(LAZY_TEXT_REQUIREMENT) {
         let eden_api = get_required_edenapi(info)?;
         tracing::info!(target: "changelog_info", changelog_backend="lazytext");
@@ -77,23 +95,31 @@ fn maybe_construct_commits(
             eden_api,
             false,
             false,
+            format,
         )?))
     } else if info.has_requirement(SEGMENTS_REQUIREMENT) {
         tracing::info!(target: "changelog_info", changelog_backend="segments");
-        Ok(Some(open_segments(info.store_path())?))
+        Ok(Some(open_segments(info.store_path(), format)?))
     } else {
         tracing::info!(target: "changelog_info", changelog_backend="rustrevlog");
-        Ok(Some(Box::new(RevlogCommits::new(info.store_path())?)))
+        Ok(Some(Box::new(RevlogCommits::new(
+            info.store_path(),
+            format,
+        )?)))
     }
 }
 
-fn open_double(store_path: &Path) -> anyhow::Result<Box<dyn DagCommits + Send + 'static>> {
+fn open_double(
+    store_path: &Path,
+    format: SerializationFormat,
+) -> anyhow::Result<Box<dyn DagCommits + Send + 'static>> {
     let segments_path = calculate_segments_path(store_path);
     let hg_commits_path = store_path.join(HG_COMMITS_PATH);
     let double_commits = DoubleWriteCommits::new(
         store_path,
         segments_path.as_path(),
         hg_commits_path.as_path(),
+        format,
     )?;
     Ok(Box::new(double_commits))
 }
@@ -103,6 +129,7 @@ fn open_hybrid(
     eden_api: Arc<dyn SaplingRemoteApi>,
     lazy_hash: bool,
     use_revlog: bool,
+    format: SerializationFormat,
 ) -> anyhow::Result<Box<dyn DagCommits + Send + 'static>> {
     let segments_path = calculate_segments_path(store_path);
     let hg_commits_path = store_path.join(HG_COMMITS_PATH);
@@ -112,6 +139,7 @@ fn open_hybrid(
         segments_path.as_path(),
         hg_commits_path.as_path(),
         eden_api,
+        format,
     )?;
     if let Ok(lazy_path) = lazy_hash_path {
         hybrid_commits.enable_lazy_commit_hashes_from_local_segments(lazy_path.as_path())?;
@@ -130,10 +158,14 @@ fn get_path_from_file(store_path: &Path, target_file: &str) -> Result<PathBuf, s
     fs::read_to_string(path_file).map(PathBuf::from)
 }
 
-fn open_segments(store_path: &Path) -> anyhow::Result<Box<dyn DagCommits + Send + 'static>> {
+fn open_segments(
+    store_path: &Path,
+    format: SerializationFormat,
+) -> anyhow::Result<Box<dyn DagCommits + Send + 'static>> {
     let commits = OnDiskCommits::new(
         &calculate_segments_path(store_path),
         &store_path.join(HG_COMMITS_PATH),
+        format,
     )?;
     Ok(Box::new(commits))
 }
