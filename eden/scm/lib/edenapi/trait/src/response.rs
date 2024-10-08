@@ -41,7 +41,7 @@ pub struct Response<T> {
     /// may be arbitrarily interleaved.
     pub entries: Entries<T>,
 
-    /// A `Future` that returns the aggregated transfer stastics for the
+    /// A `Future` that returns the aggregated transfer statistics for
     /// all of the HTTP requests involved in the fetching operation. Will
     /// only resolve once all of the requests have completed.
     pub stats: StatsFuture,
