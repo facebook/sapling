@@ -6,7 +6,6 @@
  */
 
 use std::io;
-use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -27,6 +26,7 @@ use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use minibytes::Bytes;
 use parking_lot::RwLock;
+use storemodel::SerializationFormat;
 use types::HgId;
 use zstore::Id20;
 use zstore::Zstore;
@@ -48,6 +48,8 @@ pub struct OnDiskCommits {
     pub(crate) commits_path: PathBuf,
     pub(crate) dag: Dag,
     pub(crate) dag_path: PathBuf,
+    /// Whether to use Git's SHA1 or Hg's SHA1 format.
+    pub(crate) format: SerializationFormat,
 }
 
 impl OnDiskCommits {
@@ -57,6 +59,7 @@ impl OnDiskCommits {
             dag_path: dag_path.to_path_buf(),
             commits: Arc::new(RwLock::new(Zstore::open(commits_path)?)),
             commits_path: commits_path.to_path_buf(),
+            format: SerializationFormat::Hg,
         };
         Ok(result)
     }
@@ -76,31 +79,16 @@ impl OnDiskCommits {
 #[async_trait::async_trait]
 impl AppendCommits for OnDiskCommits {
     async fn add_commits(&mut self, commits: &[HgCommit]) -> Result<()> {
-        fn null_id() -> Vertex {
-            Vertex::copy_from(Id20::null_id().as_ref())
-        }
-
-        // The SHA1 of hg commit includes sorted(p1, p2) as header.
-        fn text_with_header(raw_text: &[u8], parents: &[Vertex]) -> Result<Vec<u8>> {
-            let mut result = Vec::with_capacity(raw_text.len() + Id20::len() * 2);
-            let (p1, p2) = (
-                parents.first().cloned().unwrap_or_else(null_id),
-                parents.get(1).cloned().unwrap_or_else(null_id),
-            );
-            if p1 < p2 {
-                result.write_all(p1.as_ref())?;
-                result.write_all(p2.as_ref())?;
-            } else {
-                result.write_all(p2.as_ref())?;
-                result.write_all(p1.as_ref())?;
-            }
-            result.write_all(raw_text)?;
-            Ok(result)
-        }
+        // Construct the SHA1 raw text.
+        // The SHA1 of the returned value should match the commit hash.
+        let get_sha1_raw_text = match self.format {
+            SerializationFormat::Git => git_sha1_raw_text,
+            SerializationFormat::Hg => hg_sha1_raw_text,
+        };
 
         // Write commit data to zstore.
         for commit in commits {
-            let text = text_with_header(&commit.raw_text, &commit.parents)?;
+            let text = get_sha1_raw_text(&commit.raw_text, &commit.parents);
             let vertex = Vertex::copy_from(self.commits.write().insert(&text, &[])?.as_ref());
             if vertex != commit.vertex {
                 return Err(crate::errors::hash_mismatch(&vertex, &commit.vertex));
@@ -149,6 +137,39 @@ impl AppendCommits for OnDiskCommits {
         tracing::trace!(null_rev=?null_rev, wdir_rev=?wdir_rev, dag_version=?self.dag.dag_version(), "updated virtual revs");
         Ok(())
     }
+}
+
+fn null_id() -> Vertex {
+    Vertex::copy_from(Id20::null_id().as_ref())
+}
+
+fn hg_sha1_raw_text(raw_text: &[u8], parents: &[Vertex]) -> Vec<u8> {
+    // The SHA1 of a hg commit includes the "sorted(p1, p2)" header.
+    let mut result = Vec::with_capacity(raw_text.len() + Id20::len() * 2);
+    let (p1, p2) = (
+        parents.first().cloned().unwrap_or_else(null_id),
+        parents.get(1).cloned().unwrap_or_else(null_id),
+    );
+    if p1 < p2 {
+        result.extend_from_slice(p1.as_ref());
+        result.extend_from_slice(p2.as_ref());
+    } else {
+        result.extend_from_slice(p2.as_ref());
+        result.extend_from_slice(p1.as_ref());
+    }
+    result.extend_from_slice(raw_text);
+    result
+}
+
+fn git_sha1_raw_text(raw_text: &[u8], _parents: &[Vertex]) -> Vec<u8> {
+    // The SHA1 of a git commit includes "commit <size>" header.
+    let mut result = Vec::with_capacity(raw_text.len() + 15);
+    result.extend_from_slice(b"commit ");
+    let size_str = raw_text.len().to_string();
+    result.extend_from_slice(size_str.as_bytes());
+    result.push(0);
+    result.extend_from_slice(raw_text);
+    result
 }
 
 #[async_trait::async_trait]
