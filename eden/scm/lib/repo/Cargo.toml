@@ -41,6 +41,7 @@ util = { version = "0.1.0", path = "../util" }
 workingcopy = { version = "0.1.0", path = "../workingcopy", optional = true }
 
 [dev-dependencies]
+rand_chacha = "0.3"
 tempfile = "3.8"
 
 [features]

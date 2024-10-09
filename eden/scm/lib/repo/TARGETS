@@ -35,6 +35,7 @@ rust_library(
         "wdir",
     ],
     test_deps = [
+        "fbsource//third-party/rust:rand_chacha",
         "fbsource//third-party/rust:tempfile",
     ],
     deps = [

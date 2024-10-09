@@ -127,6 +127,13 @@ impl CachingTreeStore {
 
         (keys, found)
     }
+
+    /// Insert a (key, value) pair into the cache.
+    /// Note: this does not insert the value into the underlying store
+    fn cache_with_key(&self, key: HgId, data: Bytes) -> Result<()> {
+        self.cache.lock().insert(key, data.clone());
+        Ok(())
+    }
 }
 
 // Our caching is not aux aware, so just proxy all the higher level tree methods directly
@@ -267,6 +274,8 @@ impl<'a> Iterator for CachingIter<'a> {
 #[cfg(test)]
 mod test {
     use manifest_tree::testutil::TestStore;
+    use rand_chacha::rand_core::SeedableRng;
+    use rand_chacha::ChaChaRng;
     use types::RepoPathBuf;
 
     use super::*;
@@ -285,6 +294,8 @@ mod test {
 
         let dir1_id = caching_store.insert_data(Default::default(), &dir1_path, b"dir1")?;
         let dir2_id = caching_store.insert_data(Default::default(), &dir2_path, b"dir2")?;
+        let mut rng = ChaChaRng::from_seed([0u8; 32]);
+        let dir3_id = HgId::random(&mut rng);
 
         assert_eq!(inner_store.key_fetch_count(), 0);
 
@@ -329,6 +340,15 @@ mod test {
         caching_store.prefetch(vec![key1.clone(), key2.clone()])?;
 
         assert_eq!(inner_store.key_fetch_count(), 2);
+
+        // Ensure only the cache is modified; not the underlying store
+        let insert_count = inner_store.insert_count();
+        caching_store.cache_with_key(dir3_id.clone(), b"dir3".as_ref().into())?;
+        assert_eq!(insert_count, inner_store.insert_count());
+        let cached_value = caching_store
+            .cached_single(&dir3_id)
+            .expect("value to be cached");
+        assert_eq!(cached_value, b"dir3");
 
         Ok(())
     }
