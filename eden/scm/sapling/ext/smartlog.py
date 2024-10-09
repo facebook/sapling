@@ -90,7 +90,6 @@ def shelveenabled(repo, ctx, **args):
 
 
 def getdag(ui, repo, revs, masterstring, template):
-
     knownrevs = set(revs)
     gpcache = {}
     results = []
@@ -183,10 +182,18 @@ def getdag(ui, repo, revs, masterstring, template):
     return results, reserved
 
 
-def _reposnames(ui):
+def _reposnames(repo):
+    ui = repo.ui
+
     # '' is local repo. This also defines an order precedence for master.
     repos = ui.configlist("smartlog", "repos", ["", "remote/", "default/"])
-    names = ui.configlist("smartlog", "names", ["@", "master", "stable"])
+
+    if ui.configbool("experimental", "smartlog-use-sp-bm", True):
+        main = bookmarks.mainbookmark(repo)
+    else:
+        main = "master"
+
+    names = ui.configlist("smartlog", "names", ["@", main, "stable"])
 
     for repo in repos:
         for name in names:
@@ -347,7 +354,7 @@ def interestingheads(repo, subset, x):
     # add 'interesting' remote bookmarks as well
     if hasattr(repo, "names") and "remotebookmarks" in repo.names:
         ns = repo.names["remotebookmarks"]
-        for name in _reposnames(repo.ui):
+        for name in _reposnames(repo):
             nodes = ns.namemap(repo, name)
             if nodes:
                 heads.add(rev(nodes[0]))
@@ -363,7 +370,7 @@ def interestingmaster(repo, subset, x):
     if hasattr(repo, "names") and "remotebookmarks" in repo.names:
         names.update(set(repo.names["remotebookmarks"].listnames(repo)))
 
-    for name in _reposnames(repo.ui):
+    for name in _reposnames(repo):
         if name in names:
             revs = repo.revs("%s", name)
             break

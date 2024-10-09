@@ -10,6 +10,6 @@
   $ hg push -q --to apple --create
   $ hg pull -qB apple
 
-FIXME: not showing selectivepulldefault by default??
+We show selectivepulldefault by default:
   $ hg log -r 'interestingmaster()' -T '{remotebookmarks}\n'
-  remote/apple
+  remote/banana
