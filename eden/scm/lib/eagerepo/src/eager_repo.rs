@@ -30,6 +30,7 @@ use hgstore::split_hg_file_metadata;
 use manifest_tree::FileType;
 use manifest_tree::Flag;
 use manifest_tree::TreeEntry;
+use manifest_tree::TreeManifest;
 use metalog::CommitOptions;
 use metalog::MetaLog;
 use minibytes::Bytes;
@@ -50,6 +51,7 @@ use storemodel::types::HgId;
 use storemodel::types::Parents;
 use storemodel::types::RepoPathBuf;
 use storemodel::FileAuxData;
+use storemodel::ReadRootTreeIds;
 use storemodel::SerializationFormat;
 use tracing::instrument;
 use zstore::Id20;
@@ -688,6 +690,16 @@ impl EagerRepo {
             .concat();
         self.metalog.write().set("bookmarks", text.as_bytes())?;
         Ok(())
+    }
+
+    /// Get the tree manifest of a commit.
+    pub async fn commit_to_manifest(&self, commit_id: HgId) -> Result<TreeManifest> {
+        let commit_to_root_tree = self.store.read_root_tree_ids(vec![commit_id]).await?;
+        if commit_to_root_tree.is_empty() {
+            return Err(anyhow!("commit {} cannot be found", commit_id.to_hex()).into());
+        }
+        let (_, tree_id) = commit_to_root_tree[0];
+        Ok(TreeManifest::durable(Arc::new(self.store.clone()), tree_id))
     }
 
     /// Obtain a reference to the commit graph.
