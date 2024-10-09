@@ -19,6 +19,7 @@ use storemodel::FileStore;
 use storemodel::InsertOpts;
 use storemodel::KeyStore;
 use storemodel::Kind;
+use storemodel::ReadRootTreeIds;
 use storemodel::SerializationFormat;
 use storemodel::TreeStore;
 use types::CasDigest;
@@ -165,6 +166,21 @@ impl FileStore for EagerRepoStore {
 }
 
 impl TreeStore for EagerRepoStore {}
+
+#[async_trait::async_trait]
+impl ReadRootTreeIds for EagerRepoStore {
+    async fn read_root_tree_ids(&self, commits: Vec<HgId>) -> anyhow::Result<Vec<(HgId, HgId)>> {
+        let mut res = Vec::new();
+        for commit in &commits {
+            let content = self.get_content(*commit)?;
+            if let Some(data) = content {
+                let tree_id = HgId::from_hex(&data[0..HgId::hex_len()])?;
+                res.push((commit.clone(), tree_id));
+            }
+        }
+        Ok(res)
+    }
+}
 
 #[async_trait::async_trait]
 impl CasClient for EagerRepoStore {
