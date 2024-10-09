@@ -435,7 +435,7 @@ function NopOperationButtons() {
   const runOperation = useRunOperation();
   return (
     <>
-      {[2, 5, 10].map(durationSeconds => (
+      {[2, 5, 20].map(durationSeconds => (
         <Button
           key={durationSeconds}
           onClick={() => runOperation(new NopOperation(durationSeconds))}>

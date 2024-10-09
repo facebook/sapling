@@ -55,6 +55,8 @@ export class OperationQueue {
       const deferred = defer<'ran' | 'skipped'>();
       this.deferredOperations.set(operation.id, deferred);
       onProgress({id: operation.id, kind: 'queue', queue: this.queuedOperations.map(o => o.id)});
+
+      logger.log('queued operation:', operation.args.join(' '));
       return deferred.promise;
     }
     this.runningOperation = operation;
@@ -101,10 +103,14 @@ export class OperationQueue {
       logger.log('error running operation: ', operation.args[0], errString);
       onProgress({id: operation.id, kind: 'error', error: errString});
 
-      // clear queue to run when we hit an error,
-      // which also requires resolving all their promises
-      for (const queued of this.queuedOperations) {
-        this.resolveDeferredPromise(queued.id, 'skipped');
+      if (this.queuedOperations.length > 0) {
+        logger.log('the above error removed queued operations:');
+        // clear queue to run when we hit an error,
+        // which also requires resolving all their promises
+        for (const queued of this.queuedOperations) {
+          logger.log(' >  ', queued.args.join(' ')); // print out commands that are skipped, in case it's useful to debug or recover data
+          this.resolveDeferredPromise(queued.id, 'skipped');
+        }
       }
       this.queuedOperations = [];
     } finally {
