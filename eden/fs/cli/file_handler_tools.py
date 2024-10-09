@@ -284,7 +284,7 @@ if sys.platform == "win32":
             except subprocess.CalledProcessError as e:
                 # Note that if adb-server is not running the error code will still be 0 (and a message written to console),
                 # but just in case there's any other cases, log error codes.
-                print(f"adb returned {e.errorcode} when trying to stop adb server.")
+                print(f"adb returned {e.returncode} when trying to stop adb server.")
 
         def stop_buck2(self) -> None:
             """buck2 server seems to like cwd'ing into places and staying there.
@@ -304,4 +304,6 @@ if sys.platform == "win32":
             except subprocess.CalledProcessError as e:
                 # Note that if buck2 server is not running the error code will still be 0 (and a message written to console),
                 # but just in case there's any other cases, log error codes.
-                print(f"buck2 returned {e.errorcode} when trying to stop buckd server.")
+                print(
+                    f"buck2 returned {e.returncode} when trying to stop buckd server."
+                )
