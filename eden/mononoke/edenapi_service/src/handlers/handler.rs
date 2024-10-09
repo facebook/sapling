@@ -15,6 +15,7 @@ use gotham::extractor::QueryStringExtractor;
 use gotham_derive::StateData;
 use gotham_derive::StaticResponseExtender;
 use gotham_ext::error::HttpError;
+use gotham_ext::handler::SlapiCommitIdentityScheme;
 use gotham_ext::middleware::request_context::RequestContext;
 use hyper::body::Body;
 use mononoke_api::MononokeError;
@@ -80,6 +81,7 @@ pub struct SaplingRemoteApiContext<P, Q, R: Send + Sync + 'static> {
     repo: HgRepoContext<R>,
     path: P,
     query: Q,
+    slapi_flavour: SlapiCommitIdentityScheme,
 }
 
 impl<P, Q, R: Send + Sync + 'static> SaplingRemoteApiContext<P, Q, R> {
@@ -89,6 +91,7 @@ impl<P, Q, R: Send + Sync + 'static> SaplingRemoteApiContext<P, Q, R> {
         repo: HgRepoContext<R>,
         path: P,
         query: Q,
+        slapi_flavour: SlapiCommitIdentityScheme,
     ) -> Self {
         Self {
             rctx,
@@ -96,6 +99,7 @@ impl<P, Q, R: Send + Sync + 'static> SaplingRemoteApiContext<P, Q, R> {
             repo,
             path,
             query,
+            slapi_flavour,
         }
     }
     pub fn repo(&self) -> HgRepoContext<R>
@@ -103,6 +107,11 @@ impl<P, Q, R: Send + Sync + 'static> SaplingRemoteApiContext<P, Q, R> {
         R: Clone,
     {
         self.repo.clone()
+    }
+
+    #[allow(unused)]
+    pub fn slapi_flavour(&self) -> SlapiCommitIdentityScheme {
+        self.slapi_flavour
     }
 
     #[allow(unused)]
@@ -139,6 +148,9 @@ pub trait SaplingRemoteApiHandler: 'static {
     /// DON'T include the /:repo prefix.
     /// Example: "/ephemeral/prepare"
     const ENDPOINT: &'static str;
+
+    const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] =
+        &[SlapiCommitIdentityScheme::Hg];
 
     fn sampling_rate(_request: &Self::Request) -> NonZeroU64 {
         nonzero!(1u64)

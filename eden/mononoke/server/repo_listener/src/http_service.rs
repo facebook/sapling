@@ -25,6 +25,7 @@ use clientinfo::ClientInfo;
 use clientinfo::CLIENT_INFO_HEADER;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
+use gotham_ext::handler::SlapiCommitIdentityScheme;
 use gotham_ext::middleware::metadata::ingress_request_identities_from_headers;
 use gotham_ext::socket_data::TlsSocketData;
 use http::HeaderMap;
@@ -197,19 +198,34 @@ where
             return self.handle_control_request(req.method, path).await;
         }
 
-        let edenapi_path_and_query = req
+        if let Some((flavour, path_and_query)) = req
             .uri
             .path_and_query()
             .as_ref()
-            .and_then(|pq| pq.as_str().strip_prefix("/edenapi"));
-
-        if let Some(edenapi_path_and_query) = edenapi_path_and_query {
-            let pq = http::uri::PathAndQuery::from_str(edenapi_path_and_query)
+            .and_then(|pq| pq.as_str().strip_prefix("/"))
+            .and_then(|pq| pq.split_once('/'))
+        {
+            let pq = http::uri::PathAndQuery::from_str(&format!("/{}", path_and_query))
                 .context("Error translating SaplingRemoteAPI request path")
                 .map_err(HttpError::internal)?;
-            return self.handle_eden_api_request(req, pq, body).await;
+            match flavour {
+                "edenapi" | "slapi" => {
+                    return self
+                        .handle_eden_api_request(req, pq, body, SlapiCommitIdentityScheme::Hg)
+                        .await;
+                }
+                "slapigit" => {
+                    return self
+                        .handle_eden_api_request(req, pq, body, SlapiCommitIdentityScheme::Git)
+                        .await;
+                }
+                _ => {
+                    return Err(HttpError::BadRequest(anyhow!(
+                        "Unknown SaplingRemoteAPI flavour"
+                    )));
+                }
+            }
         }
-
         Err(HttpError::NotFound)
     }
 
@@ -355,6 +371,7 @@ where
         mut req: http::request::Parts,
         pq: http::uri::PathAndQuery,
         body: Body,
+        flavour: SlapiCommitIdentityScheme,
     ) -> Result<Response<Body>, HttpError> {
         let mut uri_parts = req.uri.into_parts();
 
@@ -380,7 +397,7 @@ where
             .acceptor()
             .edenapi
             .clone()
-            .into_service(self.conn.pending.addr, Some(tls_socket_data))
+            .into_service_with_state(self.conn.pending.addr, Some(tls_socket_data), flavour)
             .call_gotham(req)
             .await;
 

@@ -10,6 +10,7 @@ use std::pin::Pin;
 use std::time::Duration;
 use std::time::Instant;
 
+use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use edenapi_types::ToWire;
@@ -33,6 +34,8 @@ use gotham::state::State;
 use gotham_derive::StateData;
 use gotham_ext::content_encoding::ContentEncoding;
 use gotham_ext::error::ErrorFormatter;
+use gotham_ext::error::HttpError;
+use gotham_ext::handler::SlapiCommitIdentityScheme;
 use gotham_ext::middleware::load::RequestLoad;
 use gotham_ext::middleware::request_context::RequestContext;
 use gotham_ext::middleware::scuba::HttpScubaKey;
@@ -231,24 +234,45 @@ impl ErrorFormatter for JsonErrorFomatter {
 /// fn wrapped(mut state: State) -> Pin<Box<HandlerFuture>>
 /// ```
 macro_rules! define_handler {
-    ($name:ident, $func:path) => {
+    ($name:ident, $func:path, [$($flavour:ident),*]) => {
         fn $name(mut state: State) -> Pin<Box<HandlerFuture>> {
             async move {
-                let (future_stats, res) = $func(&mut state).timed().await;
-                ScubaMiddlewareState::try_set_future_stats(&mut state, &future_stats);
+                let slapi_flavour = SlapiCommitIdentityScheme::borrow_from(&state).clone();
+                let supported_flavours = [$(SlapiCommitIdentityScheme::$flavour),*];
+                let res = if !supported_flavours
+                    .iter()
+                    .any(|x| *x == slapi_flavour)
+                {
+                    Err(HttpError::e400(anyhow!(
+                        "Unsupported SaplingRemoteApi flavour"
+                    )))
+                } else {
+                    let (future_stats, res) = $func(&mut state).timed().await;
+                    ScubaMiddlewareState::try_set_future_stats(&mut state, &future_stats);
+                    res
+                };
                 build_response(res, state, &JsonErrorFomatter)
+
             }
             .boxed()
         }
     };
 }
 
-define_handler!(capabilities_handler, capabilities::capabilities_handler);
-define_handler!(commit_hash_to_location_handler, commit::hash_to_location);
-define_handler!(commit_revlog_data_handler, commit::revlog_data);
-define_handler!(repos_handler, repos::repos);
-define_handler!(trees_handler, trees::trees);
-define_handler!(upload_file_handler, files::upload_file);
+define_handler!(
+    capabilities_handler,
+    capabilities::capabilities_handler,
+    [Hg]
+);
+define_handler!(
+    commit_hash_to_location_handler,
+    commit::hash_to_location,
+    [Hg]
+);
+define_handler!(commit_revlog_data_handler, commit::revlog_data, [Hg]);
+define_handler!(repos_handler, repos::repos, [Hg]);
+define_handler!(trees_handler, trees::trees, [Hg]);
+define_handler!(upload_file_handler, files::upload_file, [Hg]);
 
 static HIGH_LOAD_SIGNAL: &str = "I_AM_OVERLOADED";
 static ALIVE: &str = "I_AM_ALIVE";
@@ -291,6 +315,15 @@ where
         let query = Handler::QueryStringExtractor::take_from(&mut state);
         let content_encoding = ContentEncoding::from_state(&state);
 
+        let slapi_flavour = SlapiCommitIdentityScheme::borrow_from(&state).clone();
+        if !Handler::SUPPORTED_FLAVOURS
+            .iter()
+            .any(|x| *x == slapi_flavour)
+        {
+            return Err(gotham_ext::error::HttpError::e400(anyhow!(
+                "Unsupported SaplingRemoteApi flavour"
+            )));
+        }
         state.put(HandlerInfo::new(path.repo(), Handler::API_METHOD));
 
         let rctx = RequestContext::borrow_from(&state).clone();
@@ -308,7 +341,7 @@ where
             rd.add_request(&request);
         }
 
-        let ectx = SaplingRemoteApiContext::new(rctx, sctx, repo, path, query);
+        let ectx = SaplingRemoteApiContext::new(rctx, sctx, repo, path, query, slapi_flavour);
 
         match Handler::handler(ectx, request).await {
             Ok(responses) => Ok(encode_response_stream(

@@ -24,7 +24,11 @@ use tokio::net::TcpListener;
 use tokio_openssl::SslStream;
 
 use crate::handler::MononokeHttpHandler;
+use crate::handler::MononokeHttpHandlerAsService;
 use crate::socket_data::TlsSocketData;
+
+#[derive(gotham_derive::StateData, Clone)]
+struct Empty {}
 
 pub async fn https<H>(
     logger: Logger,
@@ -66,7 +70,7 @@ where
             )
             .await;
 
-            let service = handler
+            let service: MononokeHttpHandlerAsService<_, Empty> = handler
                 .clone()
                 .into_service(peer_addr, Some(tls_socket_data));
 
@@ -103,7 +107,8 @@ where
         cloned!(logger, handler);
 
         let task = async move {
-            let service = handler.clone().into_service(peer_addr, None);
+            let service: MononokeHttpHandlerAsService<_, Empty> =
+                handler.clone().into_service(peer_addr, None);
 
             let socket = QuietShutdownStream::new(socket);
 
