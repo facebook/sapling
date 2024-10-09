@@ -61,6 +61,7 @@ pub struct TestStore {
     pub prefetched: Mutex<Vec<Vec<Key>>>,
     format: SerializationFormat,
     key_fetch_count: AtomicU64,
+    insert_count: AtomicU64,
 }
 
 impl TestStore {
@@ -80,6 +81,10 @@ impl TestStore {
 
     pub fn key_fetch_count(&self) -> u64 {
         self.key_fetch_count.load(Ordering::Relaxed)
+    }
+
+    pub fn insert_count(&self) -> u64 {
+        self.insert_count.load(Ordering::Relaxed)
     }
 }
 
@@ -102,6 +107,7 @@ impl KeyStore for TestStore {
     }
 
     fn insert_data(&self, opts: InsertOpts, path: &RepoPath, data: &[u8]) -> anyhow::Result<HgId> {
+        self.insert_count.fetch_add(1, Ordering::Relaxed);
         let mut underlying = self.entries.write();
         let hgid = match opts.forced_id {
             Some(id) => *id,
