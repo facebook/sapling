@@ -110,8 +110,8 @@ dott_test(
     name = "check-git-wc",
     dott_files = ["test-check-git-wc.t"],
     deps = [
-        "//eden/mononoke:blobimport",
         "//eden/mononoke:check_git_wc",
+        "//eden/mononoke/tools/testtool:testtool",
     ],
 )
 
