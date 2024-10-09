@@ -20,7 +20,7 @@ pub(super) async fn list_public(
     repo: &Repo,
     _args: ListPublicArgs,
 ) -> Result<()> {
-    let cs_ids = repo.phases().list_all_public(&ctx).await?;
+    let cs_ids = repo.phases().list_all_public(ctx).await?;
     for cs_id in cs_ids {
         println!("{}", cs_id);
     }
