@@ -428,6 +428,7 @@ describe('operations', () => {
       await clickGoto('b');
 
       expect(screen.queryByTestId('queued-commands')).toBeInTheDocument();
+      expect(screen.queryByText('Next to run')).toBeInTheDocument();
       act(() => {
         // original goto fails
         simulateMessageFromServer({
@@ -438,7 +439,8 @@ describe('operations', () => {
           timestamp: 1234,
         });
       });
-      expect(screen.queryByTestId('queued-commands')).not.toBeInTheDocument();
+      expect(screen.getByTestId('cancelled-queued-commands')).toBeInTheDocument();
+      expect(screen.queryByText('Next to run')).not.toBeInTheDocument();
     });
 
     it('force clears optimistic state after fetching after an operation has finished', async () => {

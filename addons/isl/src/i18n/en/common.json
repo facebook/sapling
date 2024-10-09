@@ -16,6 +16,8 @@
   "unsavedFileCount_other": "$count unsaved files",
   "confirmUnsavedFileCount_one": "You have 1 unsaved file",
   "confirmUnsavedFileCount_other": "You have $count unsaved files",
+  "queuedOperationsWereCancelled_one": "1 queued operation was cancelled",
+  "queuedOperationsWereCancelled_other": "$count queued operations were cancelled",
   "doYouWantToSaveThem_one": "Do you want to save before continuing?",
   "doYouWantToSaveThem_other": "Do you want to save them before continuing?",
   "commitsBeingBackedUp_one": "1 commit being backed up...",
