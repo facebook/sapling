@@ -269,6 +269,14 @@ registerDisposable(
   import.meta.hot,
 );
 
+/** If an operation in the queue fails, it will remove all further queued operations.
+ * On such an error, we move the remaining operations into this separate state to be shown in the UI as a warning.
+ * This lets you see and understand what actions you took that were "reverted", so you might recreate those steps. */
+export const queuedOperationsErrorAtom = atomResetOnCwdChange<
+  | {error: Error; operationThatErrored: Operation | undefined; operations: Array<Operation>}
+  | undefined
+>(undefined);
+
 export const inlineProgressByHash = atomFamilyWeak((hash: Hash) =>
   atom(get => {
     const info = get(operationList);
@@ -349,28 +357,53 @@ registerDisposable(
             .map(opId => operationsById.get(opId))
             .filter((op): op is Operation => op != null);
         });
+        // On spawn, we can clear the queued commands error. The error would have already been shown and then further acted on.
+        // This wouldn't happen automatically, so we consider this an explicit user acknowledgement.
+        // This also means this error state and the queuedOperations state should be mutually exclusive.
+        writeAtom(queuedOperationsErrorAtom, undefined);
         break;
-      case 'error':
-        writeAtom(queuedOperations, () => []); // empty queue when a command hits an error
+      case 'error': {
+        saveQueuedOperationsOnError(progress.id, new Error(progress.error));
+
+        writeAtom(queuedOperations, []); // empty queue when a command hits an error
         break;
-      case 'exit':
-        writeAtom(queuedOperations, current => {
-          setTimeout(() => {
-            // we don't need to care about this operation anymore after this tick,
-            // once all other callsites processing 'operationProgress' messages have run.
-            operationsById.delete(progress.id);
-          });
-          if (progress.exitCode != null && progress.exitCode !== 0) {
-            // if any process in the queue exits with an error, the entire queue is cleared.
-            return [];
-          }
-          return current;
+      }
+      case 'exit': {
+        setTimeout(() => {
+          // we don't need to care about this operation anymore after this tick,
+          // once all other callsites processing 'operationProgress' messages have run.
+          operationsById.delete(progress.id);
         });
+        if (progress.exitCode != null && progress.exitCode !== 0) {
+          saveQueuedOperationsOnError(progress.id, new Error('command exited with non-zero code'));
+
+          // if any process in the queue exits with an error, the entire queue is cleared.
+          writeAtom(queuedOperations, []);
+        }
         break;
+      }
     }
   }),
   import.meta.hot,
 );
+
+function saveQueuedOperationsOnError(operationIdThatErrored: string, error: Error) {
+  const queued = readAtom(queuedOperations);
+  // This may be called twice for the same operation (error, then also exit).
+  // Don't clear the error state if it's for the same operation, even if the queue is now empty.
+  if (readAtom(queuedOperationsErrorAtom)?.operationThatErrored?.id !== operationIdThatErrored) {
+    writeAtom(
+      queuedOperationsErrorAtom,
+      queued.length === 0
+        ? undefined // invariant: queuedOperationsError.operations should never be [], rather the whole thing is undefined
+        : {
+            operationThatErrored: operationsById.get(operationIdThatErrored),
+            error,
+            operations: readAtom(queuedOperations),
+          },
+    );
+  }
+}
 
 export function getLastestOperationInfo(operation: Operation): OperationInfo | undefined {
   const list = readAtom(operationList);
@@ -398,9 +431,8 @@ function runOperationImpl(operation: Operation): Promise<undefined | Error> {
   const ongoing = readAtom(operationList);
 
   if (ongoing?.currentOperation != null && ongoing.currentOperation.exitCode == null) {
-    const queue = readAtom(queuedOperations);
     // Add to the queue optimistically. The server will tell us the real state of the queue when it gets our run request.
-    writeAtom(queuedOperations, [...(queue || []), operation]);
+    writeAtom(queuedOperations, prev => [...(prev || []), operation]);
   } else {
     // start a new operation. We need to manage the previous operations
     writeAtom(operationList, list => startNewOperation(operation, list));
