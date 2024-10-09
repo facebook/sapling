@@ -122,8 +122,8 @@ dott_test(
     ]),
     deps = [
         "//eden/mononoke:admin",
-        "//eden/mononoke:blobimport",
         "//eden/mononoke:mononoke",
+        "//eden/mononoke/tools/testtool:testtool",
     ],
 )
 

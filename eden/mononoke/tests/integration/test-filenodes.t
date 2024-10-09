@@ -6,59 +6,24 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
 
-setup configuration
-  $ setup_common_config "blob_files"
+Setup repo and config
   $ cd $TESTTMP
+  $ default_setup_drawdag
+  A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
+  B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
+  C=e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
 
-setup common configuration
-  $ cat >> $HGRCPATH <<EOF
-  > [ui]
-  > ssh="$DUMMYSSH"
-  > [extensions]
-  > amend=
-  > EOF
 
 Setup helpers
   $ log() {
   >   hg log -G -T "{desc} [{phase};rev={rev};{node|short}] {remotenames}" "$@"
   > }
 
-setup repo
-  $ hginit_treemanifest repo
-  $ cd repo
-  $ hg debugdrawdag <<EOF
-  > C
-  > |
-  > B
-  > |
-  > A
-  > EOF
-
-create master bookmark
-
-  $ hg bookmark master_bookmark -r tip
-
-blobimport them into Mononoke storage and start Mononoke
-  $ cd ..
-  $ blobimport repo/.hg repo
-
-start mononoke
-  $ mononoke
-  $ wait_for_mononoke $TESTTMP/repo
-
-Clone the repo
-  $ hg clone -q mono:repo repo2 --noupdate
-  $ cd repo2
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > pushrebase =
-  > EOF
-
 Pushrebase commit 1
   $ hg up -q "min(all())"
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
   $ hg push -r . --to master_bookmark
-  pushing rev a0c9c5791058 to destination mono:repo bookmark master_bookmark
+  pushing rev 26f143b427a3 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests

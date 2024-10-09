@@ -2224,6 +2224,30 @@ pushrebase =
 EOF
 }
 
+function default_setup_drawdag() {
+  setup_common_config "blob_files"
+
+  testtool_drawdag -R repo <<EOF
+C
+|
+B
+|
+A
+# bookmark: C "${MASTER_BOOKMARK:-master_bookmark}"
+EOF
+
+  start_and_wait_for_mononoke_server
+  hg clone -q "mono:repo" "$REPONAME" --noupdate
+  cd $REPONAME || exit 1
+  cat >> .hg/hgrc <<EOF
+[ui]
+ssh ="$DUMMYSSH"
+[extensions]
+amend =
+pushrebase =
+EOF
+}
+
 function gitexport() {
   log="$TESTTMP/gitexport.out"
 
