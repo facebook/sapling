@@ -30,6 +30,7 @@ from enum import IntEnum
 from typing import Any, Dict, List, Tuple, Union
 
 import bindings
+
 from sapling import tracing
 
 from . import (
@@ -52,7 +53,6 @@ from . import (
 from .i18n import _
 from .node import hex
 from .pycompat import decodeutf8, encodeutf8
-
 
 urlreq = util.urlreq
 
@@ -848,30 +848,7 @@ class ui:
         wasformatted = self.formatted
         wasterminaloutput = self.terminaloutput()
 
-        if self.configbool("experimental", "rust-custom-pager", True):
-            self._runrustpager(pagercmd)
-            return
-
-        if pagercmd == "internal:streampager":
-            self._runinternalstreampager()
-        elif self._runpager(pagercmd, pagerenv):
-            self.pageractive = True
-            # Preserve the formatted-ness of the UI. This is important
-            # because we mess with stdout, which might confuse
-            # auto-detection of things being formatted.
-            self.setconfig("ui", "formatted", wasformatted, "pager")
-            util.clearcachedproperty(self, "formatted")
-            self.setconfig("ui", "interactive", False, "pager")
-            self._terminaloutput = wasterminaloutput
-
-            # If pager encoding is set, update the output encoding
-            if pagerencoding:
-                encoding.outputencoding = pagerencoding
-        else:
-            # If the pager can't be spawned in dispatch when --pager=on is
-            # given, don't try again when the command runs, to avoid a duplicate
-            # warning about a missing pager command.
-            self.disablepager()
+        self._runrustpager(pagercmd)
 
     def _runrustpager(self, pagercmd):
         """Delegate both streampager and custom pagers to rust"""
@@ -892,105 +869,6 @@ class ui:
             encoding.outputencoding = origencoding
 
         self.pageractive = True
-        return True
-
-    def _runinternalstreampager(self):
-        """Start the builtin streampager"""
-        origencoding = encoding.outputencoding
-        self.flush()
-
-        # This will start the pager using the system terminal immediately.
-        util.get_main_io().start_pager(self._rcfg)
-
-        # The Rust pager wants utf-8 unconditionally.
-        encoding.outputencoding = "utf-8"
-
-        @self.atexit
-        def waitpager():
-            util.get_main_io().wait_pager()
-            encoding.outputencoding = origencoding
-
-        self.pageractive = True
-
-    def _runpager(self, command, env=None):
-        """Actually start the pager and set up file descriptors.
-
-        This is separate in part so that extensions (like chg) can
-        override how a pager is invoked.
-        """
-
-        if command == "cat":
-            # Save ourselves some work.
-            return False
-        # If the command doesn't contain any of these characters, we
-        # assume it's a binary and exec it directly. This means for
-        # simple pager command configurations, we can degrade
-        # gracefully and tell the user about their broken pager.
-        shell = any(c in command for c in "|&;<>()$`\\\"' \t\n*?[#~=%")
-
-        if pycompat.iswindows and not shell:
-            # Window's built-in `more` cannot be invoked with shell=False, but
-            # its `more.com` can.  Hide this implementation detail from the
-            # user so we can also get sane bad PAGER behavior.  MSYS has
-            # `more.exe`, so do a cmd.exe style resolution of the executable to
-            # determine which one to use.
-            fullcmd = util.findexe(command)
-            if not fullcmd:
-                self.warn(_("missing pager command '%s', skipping pager\n") % command)
-                return False
-
-            command = fullcmd
-
-        try:
-            with self.timeblockedsection("pager"):
-                util.get_main_io().disable_progress()
-                pager = subprocess.Popen(
-                    command,
-                    shell=shell,
-                    bufsize=-1,
-                    close_fds=util.closefds,
-                    stdin=subprocess.PIPE,
-                    stdout=util.stdout,
-                    stderr=util.stderr,
-                    env=util.shellenviron(env),
-                )
-        except OSError as e:
-            if e.errno == errno.ENOENT and not shell:
-                self.warn(_("missing pager command '%s', skipping pager\n") % command)
-                return False
-            raise
-
-        # back up original file descriptors
-        stdoutfd = os.dup(util.stdout.fileno())
-        stderrfd = os.dup(util.stderr.fileno())
-
-        os.dup2(pager.stdin.fileno(), util.stdout.fileno())
-        if self._isatty(util.stderr) and self.configbool("pager", "stderr"):
-            os.dup2(pager.stdin.fileno(), util.stderr.fileno())
-
-        if os.name == "nt":
-            # Note:
-            # - `terminate_pid_tree_on_exit` is only available on Windows.
-            # - Cannot use atexit or ctrlc handler, since TerminateProcess does
-            #   not give them a chance to run.
-            # - Need process tree killing. The "pager" process might be
-            #   "cmd.exe". "less.exe" is a child. Killing "cmd.exe" does
-            #   not affect "less.exe".
-            # - Important when running with commandserver, where Ctrl+C does
-            #   not affect the server-spawned "less.exe" directly.
-            bindings.process.terminate_pid_tree_on_exit(pager.pid)
-
-        @self.atexit
-        def killpager():
-            if hasattr(signal, "SIGINT"):
-                util.signal(signal.SIGINT, signal.SIG_IGN)
-            # restore original fds, closing pager.stdin copies in the process
-            os.dup2(stdoutfd, util.stdout.fileno())
-            os.dup2(stderrfd, util.stderr.fileno())
-            pager.stdin.close()
-            with self.timeblockedsection("pager"):  # not yet using Rust pager
-                pager.wait()
-
         return True
 
     @property
@@ -1534,7 +1412,6 @@ class ui:
         elif pycompat.sysplatform == "win32":
             defaulteditor = "notepad.exe"
         else:
-
             defaulteditor = "vi"
         return (
             encoding.environ.get("HGEDITOR")
