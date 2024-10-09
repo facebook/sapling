@@ -132,7 +132,7 @@ const generatedSuggestions = atomFamilyWeak((fieldNameAndHashKey: string) =>
     const fieldName = fieldNameAndHashKeyArray[0];
     const hashKey = fieldNameAndHashKeyArray[1];
 
-    const cached = cachedSuggestions.get(hashKey);
+    const cached = cachedSuggestions.get(fieldNameAndHashKey);
     if (cached && Date.now() - cached.lastFetch < MAX_SUGGESTION_CACHE_AGE) {
       return cached.messagePromise;
     }
@@ -174,7 +174,7 @@ const generatedSuggestions = atomFamilyWeak((fieldNameAndHashKey: string) =>
       },
     );
 
-    cachedSuggestions.set(hashKey, {
+    cachedSuggestions.set(fieldNameAndHashKey, {
       lastFetch: Date.now(),
       messagePromise: resultPromise,
     });
@@ -197,7 +197,9 @@ function GenerateAIModal({
   appendToTextArea: (toAdd: string) => unknown;
   fieldName: string;
 }) {
-  const [content, refetch] = useAtom(generatedSuggestions(`${fieldName}+${hashKey}`));
+  const fieldNameAndHashKey = `${fieldName}+${hashKey}`;
+
+  const [content, refetch] = useAtom(generatedSuggestions(fieldNameAndHashKey));
 
   const setHasAccepted = useSetAtom(hasAcceptedAIMessageSuggestion(hashKey));
 
@@ -260,7 +262,7 @@ function GenerateAIModal({
           disabled={content.state === 'loading' || error != null}
           onClick={() => {
             FunnelTracker.get(hashKey)?.track(GeneratedMessageTrackEventName.RetryClick, fieldName);
-            cachedSuggestions.delete(hashKey); // make sure we don't re-use cached value
+            cachedSuggestions.delete(fieldNameAndHashKey); // make sure we don't re-use cached value
             setHasAccepted(false);
             FunnelTracker.restartFunnel(hashKey);
             refetch();
