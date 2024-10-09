@@ -102,7 +102,7 @@ const queueErrorCollapsedAtom = atom(true);
 export function CommandHistoryAndProgress() {
   const list = useAtomValue(operationList);
   const queued = useAtomValue(queuedOperations);
-  const [queuedError] = useAtom(queuedOperationsErrorAtom);
+  const [queuedError, setQueuedError] = useAtom(queuedOperationsErrorAtom);
   const abortRunningOperation = useAbortRunningOperation();
 
   const [collapsed, setCollapsed] = useAtom(nextToRunCollapsedAtom);
@@ -195,6 +195,15 @@ export function CommandHistoryAndProgress() {
                     <Icon icon="warning" color="yellow" />
                     <T count={queuedError.operations.length}>queuedOperationsWereCancelled</T>
                   </Banner>
+                  <Tooltip title={t('Dismiss')}>
+                    <Button
+                      icon
+                      onClick={() => {
+                        setQueuedError(undefined);
+                      }}>
+                      <Icon icon="x" />
+                    </Button>
+                  </Tooltip>
                 </Row>
               </Tooltip>
               {errorCollapsed ? null : (
