@@ -10,6 +10,7 @@ import type {ValidatedRepoInfo} from './types';
 import type {ReactNode} from 'react';
 
 import {Delayed} from './Delayed';
+import {LogRenderExposures} from './analytics/LogRenderExposures';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {T, t} from './i18n';
 import {
@@ -180,36 +181,38 @@ export function CommandHistoryAndProgress() {
       {queuedError != null || queued.length > 0 ? (
         <div className="queued-operations-container" data-testid="queued-commands">
           {queuedError != null && (
-            <Column alignStart data-testid="cancelled-queued-commands">
-              <Tooltip
-                title={t(
-                  'When an operation process fails or is aborted, any operations queued after that are cancelled, as they may depend on the previous operation succeeding.',
-                )}>
-                <Row
-                  style={{cursor: 'pointer'}}
-                  onClick={() => {
-                    setErrorCollapsed(!errorCollapsed);
-                  }}>
-                  <Icon icon={errorCollapsed ? 'chevron-right' : 'chevron-down'} />
-                  <Banner kind={BannerKind.warning}>
-                    <Icon icon="warning" color="yellow" />
-                    <T count={queuedError.operations.length}>queuedOperationsWereCancelled</T>
-                  </Banner>
-                  <Tooltip title={t('Dismiss')}>
-                    <Button
-                      icon
-                      onClick={() => {
-                        setQueuedError(undefined);
-                      }}>
-                      <Icon icon="x" />
-                    </Button>
-                  </Tooltip>
-                </Row>
-              </Tooltip>
-              {errorCollapsed ? null : (
-                <TruncatedOperationList operations={queuedError.operations} info={info} />
-              )}
-            </Column>
+            <LogRenderExposures eventName="QueueCancelledWarningShown">
+              <Column alignStart data-testid="cancelled-queued-commands">
+                <Tooltip
+                  title={t(
+                    'When an operation process fails or is aborted, any operations queued after that are cancelled, as they may depend on the previous operation succeeding.',
+                  )}>
+                  <Row
+                    style={{cursor: 'pointer'}}
+                    onClick={() => {
+                      setErrorCollapsed(!errorCollapsed);
+                    }}>
+                    <Icon icon={errorCollapsed ? 'chevron-right' : 'chevron-down'} />
+                    <Banner kind={BannerKind.warning}>
+                      <Icon icon="warning" color="yellow" />
+                      <T count={queuedError.operations.length}>queuedOperationsWereCancelled</T>
+                    </Banner>
+                    <Tooltip title={t('Dismiss')}>
+                      <Button
+                        icon
+                        onClick={() => {
+                          setQueuedError(undefined);
+                        }}>
+                        <Icon icon="x" />
+                      </Button>
+                    </Tooltip>
+                  </Row>
+                </Tooltip>
+                {errorCollapsed ? null : (
+                  <TruncatedOperationList operations={queuedError.operations} info={info} />
+                )}
+              </Column>
+            </LogRenderExposures>
           )}
           {queued.length > 0 ? (
             <>

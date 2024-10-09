@@ -140,6 +140,7 @@ export type TrackEventName =
   | 'OptInToNewISLAgain'
   | 'OpenAllFiles'
   | 'QueueOperation'
+  | 'QueueCancelledWarningShown'
   | 'QueryGraphQL'
   | 'UploadImage'
   | 'RunVSCodeCommand'
