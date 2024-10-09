@@ -55,6 +55,8 @@ use edenapi::types::HgMutationEntryContent;
 use edenapi::types::HistoryEntry;
 use edenapi::types::IndexableId;
 use edenapi::types::Key;
+use edenapi::types::LandStackData;
+use edenapi::types::LandStackResponse;
 use edenapi::types::LookupResponse;
 use edenapi::types::LookupResult;
 use edenapi::types::NodeInfo;
@@ -1180,6 +1182,25 @@ impl SaplingRemoteApi for EagerRepo {
             }
         }
         Ok(convert_to_response(res))
+    }
+
+    async fn land_stack(
+        &self,
+        bookmark: String,
+        head: HgId,
+        base: HgId,
+        pushvars: HashMap<String, String>,
+    ) -> Result<LandStackResponse, SaplingRemoteApiError> {
+        // dummy implementation
+        let _ = (bookmark, head, base, pushvars);
+        let new_head = head;
+        let mut old_to_new_hgids = HashMap::new();
+        old_to_new_hgids.insert(head, new_head);
+        let data = LandStackData {
+            new_head,
+            old_to_new_hgids,
+        };
+        Ok(LandStackResponse { data: Ok(data) })
     }
 }
 
