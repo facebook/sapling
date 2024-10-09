@@ -183,7 +183,7 @@ template <>
 struct formatter<facebook::eden::ImportPriority> : formatter<std::string> {
   template <typename Context>
   auto format(facebook::eden::ImportPriority priority, Context& ctx) const {
-    return format_to(
+    return fmt::format_to(
         ctx.out(),
         "({}, {:+d})",
         priority.className(),
