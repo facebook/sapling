@@ -110,10 +110,11 @@ impl<R: Repo> PushRedirectorArgs<R> {
     }
 
     /// Create `PushRedirector` for a given source repo
-    pub fn into_push_redirector(
+    pub fn into_push_redirector<'a>(
         self,
-        ctx: &CoreContext,
+        ctx: &'a CoreContext,
         live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+        submodule_deps: SubmoduleDeps<R>,
     ) -> Result<PushRedirector<R>, Error> {
         // TODO: This function needs to be extended
         //       and query configerator for the fresh
@@ -127,10 +128,6 @@ impl<R: Repo> PushRedirectorArgs<R> {
 
         let small_repo = (*source_repo).clone();
         let large_repo = (*target_repo).clone();
-
-        // Push redirector uses large repo as source, so there are no submodule
-        // deps to load.
-        let submodule_deps = SubmoduleDeps::NotNeeded;
 
         let syncers = create_commit_syncers(
             ctx,
