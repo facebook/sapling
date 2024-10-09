@@ -74,7 +74,7 @@ pub async fn data_to_write(data: &[u8], out: &mut (impl AsyncWrite + Unpin)) -> 
 
 /// Write a `text` message to `out`, which is assured to end in a newline.
 pub async fn text_to_write(text: &[u8], out: &mut (impl AsyncWrite + Unpin)) -> io::Result<usize> {
-    prefixed_and_suffixed_data_to_write(&[], text, &[b'\n'], out).await
+    prefixed_and_suffixed_data_to_write(&[], text, b"\n", out).await
 }
 
 /// Write text byte level data to `out` in packetline format

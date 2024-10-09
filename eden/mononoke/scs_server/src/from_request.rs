@@ -138,7 +138,7 @@ impl FromRequest<thrift::CommitId> for ChangesetSpecifier {
                     scs_errors::invalid_request(format!(
                         "invalid commit id (scheme={} {}): {}",
                         commit.scheme(),
-                        commit.to_string(),
+                        commit,
                         e
                     ))
                 })?;
@@ -149,7 +149,7 @@ impl FromRequest<thrift::CommitId> for ChangesetSpecifier {
                     scs_errors::invalid_request(format!(
                         "invalid commit id (scheme={} {}): {}",
                         commit.scheme(),
-                        commit.to_string(),
+                        commit,
                         e
                     ))
                 })?;
@@ -166,7 +166,7 @@ impl FromRequest<thrift::CommitId> for ChangesetSpecifier {
                     scs_errors::invalid_request(format!(
                         "invalid commit id (scheme={} {}): {}",
                         commit.scheme(),
-                        commit.to_string(),
+                        commit,
                         e
                     ))
                 })?;
@@ -183,7 +183,7 @@ impl FromRequest<thrift::CommitId> for ChangesetSpecifier {
                     scs_errors::invalid_request(format!(
                         "invalid commit id (scheme={} {}): {}",
                         commit.scheme(),
-                        commit.to_string(),
+                        commit,
                         e
                     ))
                 })?;

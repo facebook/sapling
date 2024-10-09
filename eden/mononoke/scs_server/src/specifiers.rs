@@ -36,7 +36,7 @@ impl SpecifierExt for thrift::RepoSpecifier {
 
 impl SpecifierExt for thrift::CommitSpecifier {
     fn description(&self) -> String {
-        format!("repo={} commit={}", self.repo.name, self.id.to_string())
+        format!("repo={} commit={}", self.repo.name, self.id)
     }
 
     fn scuba_reponame(&self) -> Option<String> {
@@ -52,9 +52,7 @@ impl SpecifierExt for thrift::CommitPathSpecifier {
     fn description(&self) -> String {
         format!(
             "repo={} commit={} path={}",
-            self.commit.repo.name,
-            self.commit.id.to_string(),
-            self.path
+            self.commit.repo.name, self.commit.id, self.path
         )
     }
 

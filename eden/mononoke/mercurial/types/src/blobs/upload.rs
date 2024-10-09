@@ -264,11 +264,7 @@ impl UploadHgFileContents {
                 let f = File::new(raw_content, p1, p2);
                 let metadata = f.metadata();
 
-                let copy_from = match f.copied_from() {
-                    Ok(copy_from) => copy_from,
-                    // XXX error out if copy-from information couldn't be read?
-                    Err(_err) => None,
-                };
+                let copy_from = f.copied_from().unwrap_or_default();
                 // Upload the contents separately (they'll be used for bonsai changesets as well).
                 let file_bytes = f.file_contents();
 

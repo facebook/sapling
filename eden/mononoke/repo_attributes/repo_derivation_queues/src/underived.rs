@@ -198,9 +198,8 @@ pub async fn build_underived_batched_graph<'a>(
                             }
                         }
                     };
-                    cur_item = maybe_inserted.map(|item| {
+                    cur_item = maybe_inserted.inspect(|item| {
                         upstream_dep = item.id().clone();
-                        item
                     });
                 }
 

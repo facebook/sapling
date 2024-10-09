@@ -108,13 +108,11 @@ impl AsyncMethodRequestQueue {
         let rust_params = thrift_params.into();
         self.enqueue_inner::<P>(ctx, repo_id, request_type, rust_params)
             .await
-            .map(|token| {
+            .inspect(|_token| {
                 STATS::enqueue_success.add_value(1);
-                token
             })
-            .map_err(|err| {
+            .inspect_err(|_err| {
                 STATS::enqueue_error.add_value(1);
-                err
             })
     }
 
@@ -143,13 +141,11 @@ impl AsyncMethodRequestQueue {
         STATS::dequeue_called.add_value(1);
         self.dequeue_inner(ctx, claimed_by)
             .await
-            .map(|token| {
+            .inspect(|_token| {
                 STATS::dequeue_success.add_value(1);
-                token
             })
-            .map_err(|err| {
+            .inspect_err(|_err| {
                 STATS::dequeue_error.add_value(1);
-                err
             })
     }
 
@@ -187,13 +183,11 @@ impl AsyncMethodRequestQueue {
         STATS::complete_called.add_value(1);
         self.complete_inner(ctx, req_id, result)
             .await
-            .map(|token| {
+            .inspect(|_token| {
                 STATS::complete_success.add_value(1);
-                token
             })
-            .map_err(|err| {
+            .inspect_err(|_err| {
                 STATS::complete_error.add_value(1);
-                err
             })
     }
 
@@ -243,9 +237,8 @@ impl AsyncMethodRequestQueue {
         self.poll_inner(ctx, token)
             .await
             // we don't bump poll_success here, we do it in poll_inner
-            .map_err(|err| {
+            .inspect_err(|_err| {
                 STATS::poll_error.add_value(1);
-                err
             })
     }
 

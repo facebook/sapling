@@ -59,9 +59,8 @@ async fn query_queue_size(
     bookmark_update_log
         .count_further_bookmark_log_entries(ctx.clone(), current_id, None)
         .await
-        .map(|queue_size| {
+        .inspect(|&queue_size| {
             debug!(ctx.logger(), "queue size query returned: {}", queue_size);
-            queue_size
         })
 }
 

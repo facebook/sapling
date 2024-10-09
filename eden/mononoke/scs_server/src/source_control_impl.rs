@@ -497,8 +497,7 @@ impl SourceControlServiceImpl {
                         .ok_or_else(|| {
                             scs_errors::commit_not_found(format!(
                                 "repo={} commit={}",
-                                commit.repo.name,
-                                other_commit.to_string()
+                                commit.repo.name, other_commit
                             ))
                         })?,
                 )
@@ -518,11 +517,7 @@ impl SourceControlServiceImpl {
             .resolve_specifier(changeset_specifier)
             .await?
             .ok_or_else(|| {
-                scs_errors::commit_not_found(format!(
-                    "repo={} commit={}",
-                    repo.name(),
-                    id.to_string()
-                ))
+                scs_errors::commit_not_found(format!("repo={} commit={}", repo.name(), id))
             })?)
     }
 

@@ -133,11 +133,11 @@ impl File {
 
         // Yay, Mercurial has yet another ad-hoc encoding. This one is kv pairs separated by \n,
         // with ": " separating the key and value
-        Self::parse_to_hash_map(meta, &[b':', b' '])
+        Self::parse_to_hash_map(meta, b": ")
     }
 
     pub fn parse_content_to_lfs_hash_map(content: &[u8]) -> HashMap<&[u8], &[u8]> {
-        Self::parse_to_hash_map(content, &[b' '])
+        Self::parse_to_hash_map(content, b" ")
     }
 
     pub fn copied_from(&self) -> Result<Option<(NonRootMPath, HgFileNodeId)>> {

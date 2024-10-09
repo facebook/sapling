@@ -61,7 +61,6 @@ use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::RepoProvider;
-use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::Target;
 use dag_types::Location;
 use derived_data_manager::BonsaiDerivable;

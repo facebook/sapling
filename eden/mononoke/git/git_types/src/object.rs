@@ -43,7 +43,7 @@ impl ObjectKind {
             .expect("Object size must fit in a u64");
 
         let mut sha1 = Sha1::new();
-        sha1.update(&format!("{} {}", self.as_str(), size));
+        sha1.update(format!("{} {}", self.as_str(), size));
         sha1.update([0]);
         sha1.update(<[u8] as AsRef<[u8]>>::as_ref(object_buff));
 
