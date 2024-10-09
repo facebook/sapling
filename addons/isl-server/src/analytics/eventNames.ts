@@ -141,6 +141,7 @@ export type TrackEventName =
   | 'OpenAllFiles'
   | 'QueueOperation'
   | 'QueueCancelledWarningShown'
+  | 'RecoverCommitMessageFromOperationError'
   | 'QueryGraphQL'
   | 'UploadImage'
   | 'RunVSCodeCommand'

@@ -6,7 +6,7 @@
  */
 
 import App from '../../App';
-import {CommitInfoTestUtils} from '../../testQueries';
+import {CommitInfoTestUtils, CommitTreeListTestUtils} from '../../testQueries';
 import {
   resetTestMessages,
   expectMessageSentToServer,
@@ -25,6 +25,18 @@ describe('AmendMessageOperation', () => {
     resetTestMessages();
     render(<App />);
     act(() => {
+      simulateMessageFromServer({
+        type: 'repoInfo',
+        info: {
+          type: 'success',
+          command: 'sl',
+          repoRoot: '/path/to/testrepo',
+          dotdir: '/path/to/testrepo/.sl',
+          codeReviewSystem: {type: 'unknown'},
+          pullRequestDomain: undefined,
+          preferredSubmitCommand: undefined,
+        },
+      });
       expectMessageSentToServer({
         type: 'subscribe',
         kind: 'smartlogCommits',
@@ -39,16 +51,17 @@ describe('AmendMessageOperation', () => {
       });
       simulateCommits({
         value: [
-          COMMIT('1', 'Commit 1', '0', {phase: 'public'}),
-          COMMIT('a', 'Commit A', '1'),
-          COMMIT('b', 'Commit B', 'a', {isDot: true}),
+          COMMIT('111111111111', 'Commit 1', '0', {phase: 'public'}),
+          COMMIT('aaaaaaaaaaaa', 'Commit A', '1'),
+          COMMIT('bbbbbbbbbbbb', 'Commit B', 'a', {isDot: true}),
+          COMMIT('cccccccccccc', 'Commit C', 'b'),
         ],
       });
     });
   });
 
   it('on error, restores edited commit message to try again', () => {
-    act(() => CommitInfoTestUtils.clickToSelectCommit('a'));
+    act(() => CommitInfoTestUtils.clickToSelectCommit('aaaaaaaaaaaa'));
     act(() => openCommitInfoSidebar());
     act(() => {
       CommitInfoTestUtils.clickToEditTitle();
@@ -68,7 +81,7 @@ describe('AmendMessageOperation', () => {
 
     CommitInfoTestUtils.expectIsNOTEditingTitle();
 
-    act(() => CommitInfoTestUtils.clickToSelectCommit('b'));
+    act(() => CommitInfoTestUtils.clickToSelectCommit('bbbbbbbbbbbb'));
     expect(CommitInfoTestUtils.withinCommitInfo().getByText('You are here')).toBeInTheDocument();
 
     act(() => {
@@ -88,6 +101,88 @@ describe('AmendMessageOperation', () => {
       CommitInfoTestUtils.expectIsEditingTitle();
       const title = CommitInfoTestUtils.getTitleEditor();
       expect(title).toHaveValue('My Commit');
+      CommitInfoTestUtils.expectIsEditingDescription();
+      const desc = CommitInfoTestUtils.getDescriptionEditor();
+      expect(desc).toHaveValue('My description');
+    });
+  });
+
+  it('if a previous command errors and metaedit is queued, the message is recovered', async () => {
+    // run a goto
+    jest.spyOn(utils, 'randomId').mockImplementationOnce(() => '3333');
+    await CommitTreeListTestUtils.clickGoto('cccccccccccc');
+    expectMessageSentToServer({
+      type: 'runOperation',
+      operation: expect.objectContaining({
+        args: expect.arrayContaining(['goto']),
+      }),
+    });
+
+    act(() => {
+      simulateMessageFromServer({
+        type: 'operationProgress',
+        kind: 'spawn',
+        id: '3333',
+        queue: [],
+      });
+    });
+
+    // then queue a metaedit
+    act(() => CommitInfoTestUtils.clickToSelectCommit('aaaaaaaaaaaa'));
+    act(() => openCommitInfoSidebar());
+    act(() => {
+      CommitInfoTestUtils.clickToEditTitle();
+      CommitInfoTestUtils.clickToEditDescription();
+    });
+    act(() => {
+      const title = CommitInfoTestUtils.getTitleEditor();
+      userEvent.type(title, 'My Commit');
+      const desc = CommitInfoTestUtils.getDescriptionEditor();
+      userEvent.type(desc, 'My description');
+    });
+
+    jest.spyOn(utils, 'randomId').mockImplementationOnce(() => '4444');
+    act(() => {
+      CommitInfoTestUtils.clickAmendMessageButton();
+    });
+    await waitFor(() => {
+      expectMessageSentToServer({
+        type: 'runOperation',
+        operation: expect.objectContaining({
+          args: expect.arrayContaining(['metaedit']),
+        }),
+      });
+    });
+
+    act(() => {
+      simulateMessageFromServer({
+        type: 'operationProgress',
+        kind: 'queue',
+        id: '4444',
+        queue: ['4444'],
+      });
+    });
+
+    CommitInfoTestUtils.expectIsNOTEditingTitle();
+
+    act(() => CommitInfoTestUtils.clickToSelectCommit('bbbbbbbbbbbb'));
+
+    // the goto fails
+    act(() => {
+      simulateMessageFromServer({
+        type: 'operationProgress',
+        kind: 'exit',
+        exitCode: 1,
+        id: '3333',
+        timestamp: 0,
+      });
+    });
+
+    // we recover the message
+    await waitFor(() => {
+      CommitInfoTestUtils.expectIsEditingTitle();
+      const title = CommitInfoTestUtils.getTitleEditor();
+      expect(title).toHaveValue('Commit AMy Commit');
       CommitInfoTestUtils.expectIsEditingDescription();
       const desc = CommitInfoTestUtils.getDescriptionEditor();
       expect(desc).toHaveValue('My description');
