@@ -1385,18 +1385,21 @@ impl RepoFactory {
         &self,
         synced_commit_mapping: &ArcSyncedCommitMapping,
         push_redirection_config: &ArcPushRedirectionConfig,
+        repo_identity: &ArcRepoIdentity,
     ) -> Result<ArcRepoCrossRepo> {
         let sync_lease = create_commit_syncer_lease(self.env.fb, self.env.caching)?;
         let live_commit_sync_config = Arc::new(CfgrLiveCommitSyncConfig::new(
             &self.env.config_store,
             push_redirection_config.clone(),
         )?);
-
-        Ok(Arc::new(RepoCrossRepo::new(
+        let repo_xrepo = RepoCrossRepo::new(
             synced_commit_mapping.clone(),
             live_commit_sync_config,
             sync_lease,
-        )))
+            repo_identity.id(),
+        )
+        .await?;
+        Ok(Arc::new(repo_xrepo))
     }
 
     pub async fn mutable_counters(

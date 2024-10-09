@@ -6,9 +6,11 @@ rust_library(
     name = "repo_cross_repo",
     srcs = glob(["src/**/*.rs"]),
     deps = [
+        "fbsource//third-party/rust:anyhow",
         "//common/rust/shed/facet:facet",
         "//eden/mononoke/blobstore:cacheblob",
         "//eden/mononoke/commit_rewriting/live_commit_sync_config:live_commit_sync_config",
         "//eden/mononoke/commit_rewriting/synced_commit_mapping:synced_commit_mapping",
+        "//eden/mononoke/mononoke_types:mononoke_types",
     ],
 )

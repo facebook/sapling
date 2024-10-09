@@ -40,6 +40,8 @@ Run the x-repo with submodules setup
   $ set_git_submodules_action_in_config_version "$LATEST_CONFIG_VERSION_NAME" "$SUBMODULE_REPO_ID" 3 # 3=expand
   $ set_git_submodule_dependencies_in_config_version "$LATEST_CONFIG_VERSION_NAME" \
   > "$SUBMODULE_REPO_ID" "{\"git-repo-b\": $REPO_B_ID, \"git-repo-b/git-repo-c\": $REPO_C_ID, \"repo_c\": $REPO_C_ID}"
+  $ killandwait $MONONOKE_PID
+  $ start_and_wait_for_mononoke_server
 
 -- Setup git repos A, B and C
   $ setup_git_repos_a_b_c
