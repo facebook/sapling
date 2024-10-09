@@ -154,10 +154,10 @@ dott_test(
             "test-cache-warmup-microwave.t",
         ],
     deps = [
-        "//eden/mononoke:blobimport",
         "//eden/mononoke:mononoke",
         "//eden/mononoke/microwave:builder",
         "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/testtool:testtool",
     ],
 )
 

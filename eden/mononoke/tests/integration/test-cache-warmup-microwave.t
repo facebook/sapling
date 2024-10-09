@@ -10,7 +10,10 @@ Setup repository
 
   $ export CACHE_WARMUP_BOOKMARK="master_bookmark"
   $ export CACHE_WARMUP_MICROWAVE=1
-  $ BLOB_TYPE="blob_files" quiet default_setup
+  $ default_setup_drawdag
+  A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
+  B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
+  C=e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
 
 Check that Mononoke booted despite the lack of microwave snapshot
 
