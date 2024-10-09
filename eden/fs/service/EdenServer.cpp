@@ -609,7 +609,7 @@ std::optional<std::string> EdenServer::mapCounterNameForNFSStat(
   auto result = this->getNFSStatCounterValue(nfsStatsCounter.first);
   if (result.has_value()) {
     return fmt::format(
-        kNFSStatPrefix.str() + ".{}",
+        fmt::runtime(kNFSStatPrefix.str() + ".{}"),
         nfsStatsCounter.second); // e.g. "nfs.requests"
   } else {
     return std::nullopt;
