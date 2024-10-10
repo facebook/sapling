@@ -51,7 +51,7 @@ function readFilesLookingForGeneratedTag(
       let chunk;
       try {
         const f = await fs.open(pathMod.join(cwd, path));
-        chunk = await f.read({length: 512});
+        chunk = await f.read({length: 1024});
         f.close();
       } catch (e) {
         // e.g. missing files considered Manual. This can happen when queries files in non-head commits.
