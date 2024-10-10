@@ -223,6 +223,8 @@ pub(crate) mod ffi {
             commit_id: &[u8],
             suffixes: Vec<String>,
         ) -> Result<SharedPtr<GlobFilesResponse>>;
+
+        pub fn sapling_using_dogfooding_host(store: &BackingStore) -> Result<bool>;
     }
 }
 
@@ -389,6 +391,10 @@ pub fn sapling_backingstore_get_file_aux_batch(
         };
         unsafe { ffi::sapling_backingstore_get_file_aux_batch_handler(resolver, idx, error, aux) };
     });
+}
+
+pub fn sapling_using_dogfooding_host(store: &BackingStore) -> Result<bool> {
+    store.using_dogfooding_host()
 }
 
 pub fn sapling_backingstore_flush(store: &BackingStore) {

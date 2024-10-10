@@ -249,6 +249,10 @@ impl BackingStore {
             .batch_with_callback(keys, fetch_mode, resolve)
     }
 
+    pub fn using_dogfooding_host(&self) -> Result<bool> {
+        Ok(false)
+    }
+
     /// Forces backing store to rescan pack files or local indexes
     #[instrument(level = "trace", skip(self))]
     pub fn refresh(&self) {
