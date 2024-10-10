@@ -110,8 +110,9 @@ pub struct ClientRequestInfo {
     pub correlator: String,
 }
 
-#[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Eq)]
+#[derive(Clone, Default, Copy, Deserialize, Serialize, Debug, PartialEq, Eq)]
 pub enum ClientEntryPoint {
+    #[default]
     Unknown,
     Sapling,
     EdenFs,

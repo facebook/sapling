@@ -88,6 +88,7 @@ rust_library(
         "//eden/mononoke/observability:observability",
         "//eden/mononoke/permission_checker:permission_checker",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph_types:commit_graph_types",
+        "//eden/scm/lib/clientinfo:clientinfo",
     ],
 )
 

@@ -141,7 +141,7 @@ impl MononokeAppBuilder {
             default_scuba_dataset: None,
             defaults: HashMap::new(),
             bookmark_cache_options: Default::default(),
-            client_entry_point_for_service: ClientEntryPoint::Unknown,
+            client_entry_point_for_service: Default::default(),
         }
     }
 
@@ -398,6 +398,7 @@ impl MononokeAppBuilder {
             bookmark_cache_options: self.bookmark_cache_options.clone(),
             filter_repos: None,
             commit_graph_options,
+            client_entry_point_for_service: self.client_entry_point_for_service,
         })
     }
 }

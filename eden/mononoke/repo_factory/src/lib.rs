@@ -67,6 +67,8 @@ use cacheblob::LeaseOps;
 use cacheblob::MemcacheOps;
 use caching_commit_graph_storage::CachingCommitGraphStorage;
 use caching_ext::CacheHandlerFactory;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use commit_cloud::sql::builder::SqlCommitCloudBuilder;
 use commit_cloud::ArcCommitCloud;
 use commit_cloud::CommitCloud;
@@ -645,6 +647,14 @@ impl RepoFactory {
     }
 
     fn ctx(&self, repo_identity: Option<&ArcRepoIdentity>) -> CoreContext {
+        self.ctx_with_client_entry_point(repo_identity, None)
+    }
+
+    fn ctx_with_client_entry_point(
+        &self,
+        repo_identity: Option<&ArcRepoIdentity>,
+        client_entry_point: Option<ClientEntryPoint>,
+    ) -> CoreContext {
         let logger = repo_identity.map_or_else(
             || self.env.logger.new(o!()),
             |id| {
@@ -652,7 +662,14 @@ impl RepoFactory {
                 self.env.logger.new(o!("repo" => repo_name))
             },
         );
-        let session = SessionContainer::new_with_defaults(self.env.fb);
+        let session = if let Some(client_entry_point) = client_entry_point {
+            SessionContainer::new_with_client_info(
+                self.env.fb,
+                ClientInfo::default_with_entry_point(client_entry_point),
+            )
+        } else {
+            SessionContainer::new_with_defaults(self.env.fb)
+        };
         session.new_context(logger, self.env.scuba_sample_builder.clone())
     }
 
@@ -1572,7 +1589,10 @@ impl RepoFactory {
                 let scuba_sample_builder =
                     self.env.warm_bookmarks_cache_scuba_sample_builder.clone();
                 let ctx = self
-                    .ctx(Some(repo_identity))
+                    .ctx_with_client_entry_point(
+                        Some(repo_identity),
+                        Some(self.env.client_entry_point_for_service),
+                    )
                     .with_mutated_scuba(|_| scuba_sample_builder);
 
                 let mut wbc_builder = WarmBookmarksCacheBuilder::new(

@@ -8,6 +8,7 @@
 use std::sync::Arc;
 
 use async_limiter::AsyncLimiter;
+use clientinfo::ClientInfo;
 use fbinit::FacebookInit;
 use metadata::Metadata;
 use permission_checker::MononokeIdentitySetExt;
@@ -68,6 +69,12 @@ impl SessionContainer {
 
     pub fn new_with_defaults(fb: FacebookInit) -> Self {
         Self::builder(fb).build()
+    }
+
+    pub fn new_with_client_info(fb: FacebookInit, client_info: ClientInfo) -> Self {
+        let mut metadata = Metadata::default();
+        metadata.add_client_info(client_info);
+        Self::builder(fb).metadata(Arc::new(metadata)).build()
     }
 
     pub fn new_context(&self, logger: Logger, scuba: MononokeScubaSampleBuilder) -> CoreContext {

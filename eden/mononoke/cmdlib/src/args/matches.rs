@@ -236,6 +236,7 @@ impl<'a> MononokeMatches<'a> {
                     remote_derivation_options,
                     disabled_hooks: HashMap::new(),
                     bookmark_cache_options: Default::default(),
+                    client_entry_point_for_service: Default::default(),
                     filter_repos: None,
                     commit_graph_options,
                 }),
