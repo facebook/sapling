@@ -87,8 +87,10 @@ export type DiffCommentReaction = {
 
 export type DiffComment = {
   author: string;
+  authorName?: string;
   authorAvatarUri?: string;
   html: string;
+  content?: string;
   created: Date;
   /** If it's an inline comment, this is the file path with the comment */
   filename?: string;
@@ -97,6 +99,7 @@ export type DiffComment = {
   reactions: Array<DiffCommentReaction>;
   /** Suggestion for how to change the code, as a patch */
   suggestedChange?: ParsedDiff;
+  codePatchSuggestedChange?: ParsedDiff;
   replies: Array<DiffComment>;
   /** If this comment has been resolved. true => "resolved", false => "unresolved", null => the comment is not resolvable, don't show any UI for it */
   isResolved?: boolean;

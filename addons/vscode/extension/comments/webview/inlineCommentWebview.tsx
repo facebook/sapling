@@ -5,18 +5,24 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ClientToServerMessage, ServerToClientMessage} from '../types';
+import 'isl/src/ComparisonView/SplitDiffView/SplitDiffHunk.css';
 
+import type {ServerToClientMessage} from '../types';
+import type {DiffComment} from 'isl/src/types';
+
+import InlineCommentComparisonView from './InlineCommentComparisonView';
 import * as stylex from '@stylexjs/stylex';
-import {Button} from 'isl-components/Button';
 import {Row} from 'isl-components/Flex';
 import {ThemedComponentsRoot} from 'isl-components/ThemedComponentsRoot';
 import vscodeApi from 'isl/src/vscodeSingleton';
-import React, {useEffect} from 'react';
+import React, {useEffect, useState} from 'react';
 import ReactDOM from 'react-dom/client';
+import {ComparisonType} from 'shared/Comparison';
 
 import 'isl-components/theme/themeDarkVariables.css';
 import 'isl-components/theme/themeLightVariables.css';
+import 'isl-components/theme/themeDark.css';
+import 'isl-components/theme/themeLight.css';
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(<App />);
 
@@ -34,46 +40,52 @@ declare global {
 }
 
 function App() {
-  return (
-    <React.StrictMode>
-      <ThemedComponentsRoot theme={'light'}>
-        <Row xstyle={style.alignTop}>
-          <Counter />
-          <DangerousHTML html={window.islCommentHtml} />
-        </Row>
-      </ThemedComponentsRoot>
-    </React.StrictMode>
-  );
-}
+  const [comment, setComment] = useState<{diffComment: DiffComment; hash: string}>();
 
-function DangerousHTML({html}: {html: string}) {
-  return <span dangerouslySetInnerHTML={{__html: html}} />;
-}
-
-function Counter() {
-  const [count, setCount] = React.useState(2);
   useEffect(() => {
     window.addEventListener('message', event => {
       const message = event.data as ServerToClientMessage;
       switch (message.type) {
-        case 'gotSquared':
-          setCount(message.result);
+        case 'fetchedDiffComment':
+          setComment({
+            hash: message.hash,
+            diffComment: message.comment,
+          });
           break;
       }
     });
   }, []);
 
+  useEffect(() => {
+    vscodeApi?.postMessage({type: 'fetchDiffComment'});
+  }, []);
+
+  const diffComment = comment?.diffComment;
+  const path = diffComment?.filename ?? '';
+  const codeSuggestion = diffComment?.suggestedChange ?? null;
+
   return (
-    <>
-      Count: {count}
-      <Button
-        xstyle={style.smallBtn}
-        icon
-        onClick={() => {
-          vscodeApi?.postMessage({type: 'squareIt', value: count} as ClientToServerMessage);
-        }}>
-        Square It
-      </Button>
-    </>
+    <React.StrictMode>
+      <ThemedComponentsRoot theme={'dark'}>
+        <Row xstyle={style.alignTop}>
+          {path && codeSuggestion && (
+            <InlineCommentComparisonView
+              path={path}
+              suggestion={codeSuggestion}
+              ctx={{
+                collapsed: false,
+                id: {
+                  comparison: {type: ComparisonType.HeadChanges},
+                  path,
+                },
+                setCollapsed: () => null,
+                supportsExpandingContext: false,
+                display: 'unified',
+              }}
+            />
+          )}
+        </Row>
+      </ThemedComponentsRoot>
+    </React.StrictMode>
   );
 }

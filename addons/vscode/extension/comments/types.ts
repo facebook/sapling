@@ -5,12 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-export type ClientToServerMessage = {
-  type: 'squareIt';
-  value: number;
-};
+import type {DiffComment} from 'isl/src/types';
 
-export type ServerToClientMessage = {
-  type: 'gotSquared';
-  result: number;
-};
+export type ClientToServerMessage = {type: 'squareIt'; value: number} | {type: 'fetchDiffComment'};
+
+export type ServerToClientMessage =
+  | {type: 'gotSquared'; result: number}
+  | {type: 'fetchedDiffComment'; hash: string; comment: DiffComment};

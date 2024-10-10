@@ -148,6 +148,7 @@ class InlineCommentsForRepo implements vscode.Disposable {
     this.currentDecorations.forEach(d => d.dispose());
     this.currentDecorations = [];
   }
+
   private updateActiveFileDecorations() {
     this.disposeActiveFileDecorations();
     const editor = vscode.window.activeTextEditor;
@@ -173,11 +174,14 @@ class InlineCommentsForRepo implements vscode.Disposable {
       }
       const range = new vscode.Range(comment.line, 0, comment.line, 0);
 
-      const HEIGHT_IN_LINES = 1;
+      const HEIGHT_IN_LINES = comment.suggestedChange?.hunks.reduce(
+        (count, hunk) => count + hunk.lines.length,
+        0,
+      );
       const inset = vscode.window.createWebviewTextEditorInset(
         editor,
-        range.start.line - 1,
-        HEIGHT_IN_LINES,
+        range.start.line - 2 >= 0 ? range.start.line - 2 : 0,
+        HEIGHT_IN_LINES ?? 0,
         {
           enableScripts: true,
         },
@@ -200,11 +204,15 @@ class InlineCommentsForRepo implements vscode.Disposable {
       this.currentDecorations.push(inset);
 
       inset.webview.onDidReceiveMessage((event: ClientToServerMessage) => {
-        if (event.type === 'squareIt') {
-          inset.webview.postMessage({
-            type: 'gotSquared',
-            result: event.value * event.value,
-          } as ServerToClientMessage);
+        switch (event.type) {
+          case 'fetchDiffComment': {
+            inset.webview.postMessage({
+              type: 'fetchedDiffComment',
+              hash: this.repo.repo.getHeadCommit()?.hash,
+              comment,
+            } as ServerToClientMessage);
+            break;
+          }
         }
       });
 
