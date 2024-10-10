@@ -24,6 +24,10 @@ use dag::Dag;
 use dag::Group;
 use dag::Vertex;
 use dag::VertexListWithOptions;
+use format_util::git_sha1_deserialize;
+use format_util::git_sha1_serialize;
+use format_util::hg_sha1_deserialize;
+use format_util::hg_sha1_serialize;
 use format_util::split_hg_file_metadata;
 use futures::lock::Mutex;
 use futures::lock::MutexGuard;
@@ -41,6 +45,7 @@ use parking_lot::RwLock;
 use repourl::RepoUrl;
 use sha1::Digest;
 use sha1::Sha1;
+use storemodel::types::hgid::NULL_ID;
 use storemodel::types::AugmentedDirectoryNode;
 use storemodel::types::AugmentedFileNode;
 use storemodel::types::AugmentedTree;
@@ -170,23 +175,11 @@ impl EagerRepoStore {
         match self.get_sha1_blob(id)? {
             None => Ok(None),
             Some(data) => {
-                match self.format {
-                    SerializationFormat::Hg => {
-                        // Strip prefix in Hg: Skip first 40 bytes.
-                        const HG_SHA1_PREFIX: usize = Id20::len() * 2;
-                        Ok(Some(data.slice(HG_SHA1_PREFIX..)))
-                    }
-                    SerializationFormat::Git => {
-                        // Strip prefix in Git: Skip bytes ending at the first NUL.
-                        let index = data
-                            .as_ref()
-                            .iter()
-                            .position(|&b| b == 0)
-                            .map(|v| v + 1)
-                            .unwrap_or_default();
-                        Ok(Some(data.slice(index..)))
-                    }
-                }
+                let content = match self.format {
+                    SerializationFormat::Hg => hg_sha1_deserialize(&*data)?.0,
+                    SerializationFormat::Git => git_sha1_deserialize(&*data)?.0,
+                };
+                Ok(Some(data.slice_to_bytes(content)))
             }
         }
     }
@@ -584,18 +577,23 @@ impl EagerRepo {
 
     /// Insert a commit. Return the commit hash.
     pub async fn add_commit(&self, parents: &[Id20], raw_text: &[u8]) -> Result<Id20> {
+        let id: Id20 = {
+            let data = match self.format() {
+                SerializationFormat::Git => git_sha1_serialize(raw_text, "commit"),
+                SerializationFormat::Hg => {
+                    let p1 = parents.first().cloned();
+                    let p2 = parents.get(1).cloned();
+                    hg_sha1_serialize(raw_text, &p1.unwrap_or(NULL_ID), &p2.unwrap_or(NULL_ID))
+                }
+            };
+            self.add_sha1_blob(&data)?
+        };
+
+        let vertex: Vertex = { Vertex::copy_from(id.as_ref()) };
         let parents: Vec<Vertex> = parents
             .iter()
             .map(|v| Vertex::copy_from(v.as_ref()))
             .collect();
-        let id: Id20 = {
-            let data = match self.format() {
-                SerializationFormat::Git => git_sha1_text(raw_text),
-                SerializationFormat::Hg => hg_sha1_text(&parents, raw_text),
-            };
-            self.add_sha1_blob(&data)?
-        };
-        let vertex: Vertex = { Vertex::copy_from(id.as_ref()) };
 
         // Check paths referred by the commit are present.
         //
@@ -807,37 +805,6 @@ fn has_eagercompat_requirement(store_path: &Path) -> bool {
         .is_ok_and(|r| r.split('\n').any(|r| r == "eagercompat"))
 }
 
-/// Convert parents and raw_text to HG SHA1 text format.
-fn hg_sha1_text(parents: &[Vertex], raw_text: &[u8]) -> Vec<u8> {
-    fn null_id() -> Vertex {
-        Vertex::copy_from(Id20::null_id().as_ref())
-    }
-    let mut result = Vec::with_capacity(raw_text.len() + Id20::len() * 2);
-    let (p1, p2) = (
-        parents.first().cloned().unwrap_or_else(null_id),
-        parents.get(1).cloned().unwrap_or_else(null_id),
-    );
-    if p1 < p2 {
-        result.extend_from_slice(p1.as_ref());
-        result.extend_from_slice(p2.as_ref());
-    } else {
-        result.extend_from_slice(p2.as_ref());
-        result.extend_from_slice(p1.as_ref());
-    }
-    result.extend_from_slice(raw_text);
-    result
-}
-
-fn git_sha1_text(raw_text: &[u8]) -> Vec<u8> {
-    let size_str = raw_text.len().to_string();
-    let mut result = Vec::with_capacity(raw_text.len() + size_str.len() + 8);
-    result.extend_from_slice(b"commit ");
-    result.extend_from_slice(size_str.as_bytes());
-    result.push(0);
-    result.extend_from_slice(raw_text);
-    result
-}
-
 /// Write "requires" in the given directory, if it does not exist already.
 /// If "requires" exists and does not match the given content, raise an error.
 fn write_requires(dir: &Path, requires: &[&'static str]) -> Result<()> {
@@ -1021,7 +988,11 @@ mod tests {
         )
         .to_bytes();
         let subtree_id = repo
-            .add_sha1_blob(&hg_sha1_text(&[], &subtree_content))
+            .add_sha1_blob(&hg_sha1_serialize(
+                &subtree_content,
+                Id20::null_id(),
+                Id20::null_id(),
+            ))
             .unwrap();
         let root_tree_content = TreeEntry::from_elements(
             vec![
@@ -1032,7 +1003,11 @@ mod tests {
         )
         .to_bytes();
         let root_tree_id = repo
-            .add_sha1_blob(&hg_sha1_text(&[], &root_tree_content))
+            .add_sha1_blob(&hg_sha1_serialize(
+                &root_tree_content,
+                Id20::null_id(),
+                Id20::null_id(),
+            ))
             .unwrap();
         let err = repo
             .add_commit(&[], root_tree_id.to_hex().as_bytes())
