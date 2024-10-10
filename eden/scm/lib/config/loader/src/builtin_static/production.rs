@@ -602,13 +602,8 @@ master-fastpath=True
 httpcommitlookup=True
 
 [scmstore]
-backingstore=True
-contentstorefallback=False
 lfsptrwrites=True
 auxindexedlog=True
-
-[nativecheckout]
-usescmstore=True
 
 [pager]
 pager=internal:streampager

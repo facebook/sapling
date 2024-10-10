@@ -1,6 +1,5 @@
   $ setconfig push.edenapi=true
   $ setconfig scmstore.fetch-from-cas=true scmstore.fetch-tree-aux-data=true scmstore.tree-metadata-mode=always
-  $ setconfig scmstore.contentstorefallback=false
 
 First sanity check eagerepo works as CAS store
   $ newclientrepo client1 test:server

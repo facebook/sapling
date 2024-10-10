@@ -59,9 +59,6 @@ record=False
 ack-match-full-traversal=True
 ack = smartlog-default-command commitcloud-update-on-move
 
-[scmstore]
-contentstorefallback=False
-
 [experimental]
 use-rust-changelog=True
 windows-symlinks=True
