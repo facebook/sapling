@@ -18,7 +18,8 @@ use futures::StreamExt;
 use git_types::fetch_git_object_bytes;
 use git_types::GitIdentifier;
 use git_types::HeaderState;
-use gotham_ext::handler::SlapiFlavour;
+// TODO(lmvasquezg): implement SlapiFlavour
+// use gotham_ext::handler::SlapiFlavour;
 use mononoke_api::MononokeRepo;
 use mononoke_api::Repo;
 use mononoke_api_hg::HgRepoContext;
@@ -40,7 +41,7 @@ impl SaplingRemoteApiHandler for GitObjectsHandler {
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::GitObjects;
     const ENDPOINT: &'static str = "/git_objects";
-    const SUPPORTED_FLAVOURS: &'static [SlapiFlavour] = &[SlapiFlavour::GIT];
+    // const SUPPORTED_FLAVOURS: &'static [SlapiFlavour] = &[SlapiFlavour::GIT];
 
     async fn handler(
         ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
