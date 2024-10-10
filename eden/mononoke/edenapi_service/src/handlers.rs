@@ -492,6 +492,7 @@ pub fn build_router<R: Send + Sync + Clone + 'static>(ctx: ServerContext<R>) -> 
         Handlers::setup::<files::DownloadFileHandler>(route);
         Handlers::setup::<files::Files2Handler>(route);
         Handlers::setup::<files::UploadHgFilenodesHandler>(route);
+        Handlers::setup::<git_objects::GitObjectsHandler>(route);
         Handlers::setup::<history::HistoryHandler>(route);
         Handlers::setup::<land::LandStackHandler>(route);
         Handlers::setup::<lookup::LookupHandler>(route);

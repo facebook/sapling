@@ -44,6 +44,7 @@ rust_library(
         "//eden/mononoke/commit_cloud/types:commit_cloud_types",
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/filestore:filestore",
+        "//eden/mononoke/git/git_types:git_types",
         "//eden/mononoke/gotham_ext:gotham_ext",
         "//eden/mononoke/hooks:hooks",
         "//eden/mononoke/manifest:manifest",
