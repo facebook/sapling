@@ -239,7 +239,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         .with_entry_point(ClientEntryPoint::SaplingRemoteApi)
         .with_bookmarks_cache(BookmarkCacheOptions {
             cache_kind: BookmarkCacheKind::Local,
-            derived_data: BookmarkCacheDerivedData::HgOnly,
+            derived_data: BookmarkCacheDerivedData::HgAndGit,
         })
         .with_app_extension(WarmBookmarksCacheExtension {})
         .with_app_extension(McrouterAppExtension {})
