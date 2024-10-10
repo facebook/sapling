@@ -37,16 +37,17 @@ cpp_library(
 )
 
 cpp_library(
-    name = "file_access_logger",
+    name = "file_access_structured_logger",
+    srcs = [
+        "FileAccessStructuredLogger.cpp",
+    ],
     headers = [
-        "IFileAccessLogger.h",
+        "FileAccessStructuredLogger.h",
     ],
     exported_deps = [
+        ":structured_logger",
         "//eden/common/telemetry:log_info",
-        "//eden/common/utils:path",
-        "//eden/fs/config:config",
-        "//eden/fs/inodes:inode_number",
-        "//eden/fs/store:context",
+        "//eden/common/telemetry:scribe_logger",
     ],
 )
 

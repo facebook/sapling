@@ -44,7 +44,6 @@
 #include "eden/fs/store/FilteredBackingStore.h"
 #include "eden/fs/store/filter/HgSparseFilter.h"
 #include "eden/fs/store/hg/SaplingBackingStore.h"
-#include "eden/fs/telemetry/IFileAccessLogger.h"
 #include "eden/fs/telemetry/IScribeLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/utils/WinStackTrace.h"
@@ -228,12 +227,6 @@ ActivityRecorderFactory DefaultEdenMain::getActivityRecorderFactory() {
   };
 }
 
-std::shared_ptr<IFileAccessLogger> DefaultEdenMain::getFileAccessLogger(
-    SessionInfo /*sessionInfo*/,
-    std::shared_ptr<EdenConfig> /*edenConfig*/) {
-  return std::make_shared<NullFileAccessLogger>();
-}
-
 std::shared_ptr<IScribeLogger> DefaultEdenMain::getScribeLogger(
     SessionInfo /*sessionInfo*/,
     std::shared_ptr<EdenConfig> /*edenConfig*/) {
@@ -368,7 +361,6 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
     auto sessionInfo = makeSessionInfo(
         identity, main.getLocalHostname(), main.getEdenfsVersion());
 
-    auto fileAccessLogger = main.getFileAccessLogger(sessionInfo, edenConfig);
     auto scribeLogger = main.getScribeLogger(sessionInfo, edenConfig);
 
     server.emplace(
@@ -380,7 +372,6 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
         std::move(edenConfig),
         main.getActivityRecorderFactory(),
         main.getBackingStoreFactory(),
-        std::move(fileAccessLogger),
         std::move(scribeLogger),
         std::move(startupStatusChannel),
         main.getEdenfsVersion());

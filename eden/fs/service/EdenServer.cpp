@@ -65,6 +65,7 @@
 #include "eden/fs/config/MountProtocol.h"
 #include "eden/fs/config/TomlConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/inodes/FileAccessLogger.h"
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/ServerState.h"
@@ -94,7 +95,6 @@
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/EdenStructuredLogger.h"
-#include "eden/fs/telemetry/IFileAccessLogger.h"
 #include "eden/fs/telemetry/IScribeLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/utils/Clock.h"
@@ -435,7 +435,6 @@ EdenServer::EdenServer(
     std::shared_ptr<const EdenConfig> edenConfig,
     ActivityRecorderFactory activityRecorderFactory,
     BackingStoreFactory* backingStoreFactory,
-    std::shared_ptr<IFileAccessLogger> fileAccessLogger,
     std::shared_ptr<IScribeLogger> scribeLogger,
     std::shared_ptr<StartupStatusChannel> startupStatusChannel,
     std::string version)
@@ -454,18 +453,18 @@ EdenServer::EdenServer(
           makeDefaultStructuredLogger<EdenStructuredLogger, EdenStatsPtr>(
               edenConfig->scribeLogger.getValue(),
               edenConfig->scribeCategory.getValue(),
-              std::move(sessionInfo),
+              sessionInfo,
               edenStats.copy())},
       serverState_{make_shared<ServerState>(
           std::move(userInfo),
           std::move(edenStats),
+          std::move(sessionInfo),
           std::move(privHelper),
           std::make_shared<EdenCPUThreadPool>(),
           makeFsChannelThreads(edenConfig),
           std::make_shared<UnixClock>(),
           std::make_shared<ProcessInfoCache>(),
           structuredLogger_,
-          std::move(fileAccessLogger),
           std::move(scribeLogger),
           config_,
           *edenConfig,

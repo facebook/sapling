@@ -25,6 +25,11 @@ struct EdenFSEvent : public TypedEvent {
   virtual const char* getType() const override = 0;
 };
 
+struct EdenFSFileAccessEvent : public TypelessEvent {
+  // Keep populate() pure virtual to force subclasses to implement it
+  virtual void populate(DynamicEvent&) const override = 0;
+};
+
 struct Fsck : public EdenFSEvent {
   double duration = 0.0;
   bool success = false;
@@ -712,6 +717,34 @@ struct EMenuActionEvent : public EdenFSEvent {
 
   const char* getType() const override {
     return "e_menu_action_events";
+  }
+};
+
+struct FileAccessEvent : public EdenFSFileAccessEvent {
+  std::string repo;
+  std::string directory;
+  std::string filename;
+  std::string source;
+  std::string source_detail;
+
+  FileAccessEvent(
+      std::string repo,
+      std::string directory,
+      std::string filename,
+      std::string source,
+      std::string source_detail)
+      : repo(std::move(repo)),
+        directory(std::move(directory)),
+        filename(std::move(filename)),
+        source(std::move(source)),
+        source_detail(std::move(source_detail)) {}
+
+  void populate(DynamicEvent& event) const override {
+    event.addString("repo", repo);
+    event.addString("directory", directory);
+    event.addString("filename", filename);
+    event.addString("source", source);
+    event.addString("source_detail", source_detail);
   }
 };
 

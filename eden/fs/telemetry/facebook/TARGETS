@@ -30,33 +30,6 @@ cpp_library(
 )
 
 cpp_library(
-    name = "file_access_logger",
-    srcs = ["FileAccessLogger.cpp"],
-    headers = ["FileAccessLogger.h"],
-    compatible_with = [
-        "ovr_config//os:linux",
-        "ovr_config//os:macos",
-    ],
-    deps = [
-        "//eden/fs/config:config",
-        "//eden/fs/inodes:inodes",
-        "//eden/fs/store:store",
-        "//folly:random",
-        "//folly/logging:logging",
-        "//folly/system:thread_name",
-    ],
-    exported_deps = [
-        "//eden/fs/telemetry:file_access_logger",
-        "//folly/synchronization:lifo_sem",
-        "//rfe/scubadata:scubadata",
-        "//scribe/api/producer:local_producer",
-    ],
-    external_deps = [
-        "re2",
-    ],
-)
-
-cpp_library(
     name = "activity_recorder",
     srcs = ["ActivityRecorder.cpp"],
     headers = ["ActivityRecorder.h"],

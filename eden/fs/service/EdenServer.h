@@ -65,7 +65,6 @@ class EdenConfig;
 class EdenMount;
 class EdenServiceHandler;
 class SaplingBackingStore;
-class IFileAccessLogger;
 class IScribeLogger;
 class Journal;
 class LocalStore;
@@ -154,7 +153,6 @@ class EdenServer : private TakeoverHandler {
       std::shared_ptr<const EdenConfig> edenConfig,
       ActivityRecorderFactory activityRecorderFactory,
       BackingStoreFactory* backingStoreFactory,
-      std::shared_ptr<IFileAccessLogger> fileAccessLogger,
       std::shared_ptr<IScribeLogger> scribeLogger,
       std::shared_ptr<StartupStatusChannel> startupStatusChannel,
       std::string version = std::string{});
