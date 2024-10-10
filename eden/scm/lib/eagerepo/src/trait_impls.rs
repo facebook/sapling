@@ -8,6 +8,8 @@
 //! Implement traits from other crates.
 
 use cas_client::CasClient;
+use format_util::git_sha1_serialize;
+use format_util::hg_sha1_serialize;
 use format_util::split_hg_file_metadata;
 use format_util::strip_hg_file_metadata;
 use futures::stream;
@@ -50,38 +52,20 @@ impl KeyStore for EagerRepoStore {
         }
     }
 
-    fn insert_data(
-        &self,
-        mut opts: InsertOpts,
-        _path: &RepoPath,
-        data: &[u8],
-    ) -> anyhow::Result<HgId> {
-        let mut sha1_data;
-        match self.format {
+    fn insert_data(&self, opts: InsertOpts, _path: &RepoPath, data: &[u8]) -> anyhow::Result<HgId> {
+        let sha1_data = match self.format {
             SerializationFormat::Hg => {
-                sha1_data = Vec::with_capacity(data.len() + HgId::len() * 2);
-                // Calculate the "hg" text: sorted([p1, p2]) + data
-                opts.parents.sort_unstable();
-                let mut iter = opts.parents.iter().rev();
-                let p2 = iter.next().copied().unwrap_or_else(|| *HgId::null_id());
+                let mut iter = opts.parents.iter();
                 let p1 = iter.next().copied().unwrap_or_else(|| *HgId::null_id());
-                sha1_data.extend_from_slice(p1.as_ref());
-                sha1_data.extend_from_slice(p2.as_ref());
-                sha1_data.extend_from_slice(data);
-                drop(iter);
+                let p2 = iter.next().copied().unwrap_or_else(|| *HgId::null_id());
+                hg_sha1_serialize(data, &p1, &p2)
             }
             SerializationFormat::Git => {
-                let size_str = data.len().to_string();
                 let type_str = match opts.kind {
                     Kind::File => "blob",
                     Kind::Tree => "tree",
                 };
-                sha1_data = Vec::with_capacity(data.len() + type_str.len() + size_str.len() + 2);
-                sha1_data.extend_from_slice(type_str.as_bytes());
-                sha1_data.push(b' ');
-                sha1_data.extend_from_slice(size_str.as_bytes());
-                sha1_data.push(0);
-                sha1_data.extend_from_slice(data);
+                git_sha1_serialize(data, type_str)
             }
         };
 
