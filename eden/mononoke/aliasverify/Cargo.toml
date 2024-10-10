@@ -16,7 +16,7 @@ anyhow = "1.0.86"
 async-trait = "0.1.71"
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bytes = { version = "1.6.0", features = ["serde"] }
-clap = { version = "4.5.11", features = ["derive", "env", "string", "unicode", "wrap_help"] }
+clap = { version = "4.5.20", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 context = { version = "0.1.0", path = "../server/context" }
 executor_lib = { version = "0.1.0", path = "../cmdlib/sharding" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

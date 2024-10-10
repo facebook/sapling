@@ -34,7 +34,7 @@ changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info"
 changesets_creation = { version = "0.1.0", path = "../../changesets/changesets_creation" }
 changesets_uploader = { version = "0.1.0", path = "../../cas_client/changesets_uploader" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
-clap = { version = "4.5.11", features = ["derive", "env", "string", "unicode", "wrap_help"] }
+clap = { version = "4.5.20", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 client = { version = "0.1.0", path = "../../async_requests/client" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib_cross_repo = { version = "0.1.0", path = "../../cmdlib/cross_repo" }

@@ -12,7 +12,7 @@ abomonation = { version = "0.7", features = ["smallvec"] }
 abomonation_derive = "0.5"
 anyhow = "1.0.86"
 async-trait = "0.1.71"
-clap = { version = "4.5.11", features = ["derive", "env", "string", "unicode", "wrap_help"] }
+clap = { version = "4.5.20", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 commit_graph_thrift = { version = "0.1.0", path = "if" }
 context = { version = "0.1.0", path = "../../../server/context" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
