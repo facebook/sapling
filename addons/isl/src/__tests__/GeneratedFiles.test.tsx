@@ -236,7 +236,7 @@ describe('Generated Files', () => {
             COMMIT('a', 'Commit A', '1', {
               isDot: true,
               totalFileCount: 3,
-              filesSample: Object.keys(files).map(file => ({path: file, status: 'M'})),
+              filePathsSample: Object.keys(files),
             }),
           ],
         });

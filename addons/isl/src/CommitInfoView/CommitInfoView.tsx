@@ -441,7 +441,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
  * Some files are generated -> "Open non-generated files" button
  */
 function OpenAllFilesButton({commit}: {commit: CommitInfo}) {
-  const paths = useMemo(() => commit.filesSample.map(file => file.path), [commit]);
+  const paths = useMemo(() => commit.filePathsSample, [commit]);
   const statuses = useGeneratedFileStatuses(paths);
   const allAreGenerated = paths.every(file => statuses[file] === GeneratedStatus.Generated);
   const someAreGenerated = paths.some(file => statuses[file] === GeneratedStatus.Generated);
@@ -457,16 +457,13 @@ function OpenAllFilesButton({commit}: {commit: CommitInfo}) {
         icon
         onClick={() => {
           tracker.track('OpenAllFiles');
-          const statuses = getCachedGeneratedFileStatuses(
-            commit.filesSample.map(file => file.path),
-          );
+          const statuses = getCachedGeneratedFileStatuses(commit.filePathsSample);
           const toOpen = allAreGenerated
-            ? commit.filesSample
-            : commit.filesSample.filter(
-                file =>
-                  statuses[file.path] == null || statuses[file.path] !== GeneratedStatus.Generated,
+            ? commit.filePathsSample
+            : commit.filePathsSample.filter(
+                file => statuses[file] == null || statuses[file] !== GeneratedStatus.Generated,
               );
-          platform.openFiles(toOpen.map(file => file.path));
+          platform.openFiles(toOpen);
         }}>
         <Icon icon="go-to-file" slot="start" />
         {someAreGenerated && !allAreGenerated ? (

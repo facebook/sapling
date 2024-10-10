@@ -28,7 +28,7 @@ export interface Platform {
   platformName: PlatformName;
   confirm(message: string, details?: string): Promise<boolean>;
   openFile(path: RepoRelativePath, options?: {line?: OneIndexedLineNumber}): void;
-  openFiles(paths: Array<RepoRelativePath>, options?: {line?: OneIndexedLineNumber}): void;
+  openFiles(paths: ReadonlyArray<RepoRelativePath>, options?: {line?: OneIndexedLineNumber}): void;
   canCustomizeFileOpener: boolean;
   openContainingFolder?(path: RepoRelativePath): void;
   openDiff?(path: RepoRelativePath, comparison: Comparison): void;

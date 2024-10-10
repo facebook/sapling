@@ -52,14 +52,14 @@ export function useGeneratedFileStatus(path: RepoRelativePath): GeneratedStatus 
   return found;
 }
 
-export function getGeneratedFilesFrom(paths: Array<RepoRelativePath>) {
+export function getGeneratedFilesFrom(paths: ReadonlyArray<RepoRelativePath>) {
   return Object.fromEntries(
     paths.map(path => [path, genereatedFileCache.get(path) ?? GeneratedStatus.Manual]),
   );
 }
 
 export function useGeneratedFileStatuses(
-  paths: Array<RepoRelativePath>,
+  paths: ReadonlyArray<RepoRelativePath>,
 ): Record<RepoRelativePath, GeneratedStatus> {
   const generation = useAtomValue(generatedFileGeneration); // update if we get new statuses
 
@@ -72,7 +72,7 @@ export function useGeneratedFileStatuses(
 }
 
 export function getCachedGeneratedFileStatuses(
-  paths: Array<RepoRelativePath>,
+  paths: ReadonlyArray<RepoRelativePath>,
 ): Record<RepoRelativePath, GeneratedStatus | undefined> {
   return Object.fromEntries(paths.map(path => [path, genereatedFileCache.get(path)]));
 }
@@ -82,7 +82,7 @@ export function getCachedGeneratedFileStatuses(
  * should be checked on the server.
  * No-op if all files already in the cache.
  */
-export function fetchMissingGeneratedFileStatuses(files: Array<RepoRelativePath>) {
+export function fetchMissingGeneratedFileStatuses(files: ReadonlyArray<RepoRelativePath>) {
   const notCached = files.filter(
     file => genereatedFileCache.get(file) == null && !currentlyFetching.has(file),
   );

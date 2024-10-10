@@ -586,7 +586,7 @@ export type PlatformSpecificClientToServerMessages =
   | {type: 'platform/openFile'; path: RepoRelativePath; options?: {line?: OneIndexedLineNumber}}
   | {
       type: 'platform/openFiles';
-      paths: Array<RepoRelativePath>;
+      paths: ReadonlyArray<RepoRelativePath>;
       options?: {line?: OneIndexedLineNumber};
     }
   | {type: 'platform/openContainingFolder'; path: RepoRelativePath}

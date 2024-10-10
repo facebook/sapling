@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {CommitInfo, SlocInfo} from '../types';
+import type {CommitInfo, RepoRelativePath, SlocInfo} from '../types';
 import type {Atom, Getter} from 'jotai';
 import type {Loadable} from 'jotai/vanilla/utils/loadable';
 
@@ -23,7 +23,7 @@ import {atom, useAtomValue} from 'jotai';
 import {loadable} from 'jotai/utils';
 import {useRef} from 'react';
 
-const getGeneratedFiles = (files: string[]): string[] => {
+const getGeneratedFiles = (files: ReadonlyArray<RepoRelativePath>): Array<RepoRelativePath> => {
   const generatedStatuses = getGeneratedFilesFrom(files);
 
   return files.reduce<string[]>((filtered, path) => {
@@ -37,7 +37,7 @@ const getGeneratedFiles = (files: string[]): string[] => {
   }, []);
 };
 
-const filterGeneratedFiles = (files: string[]): string[] => {
+const filterGeneratedFiles = (files: ReadonlyArray<RepoRelativePath>): Array<RepoRelativePath> => {
   const generatedStatuses = getGeneratedFilesFrom(files);
 
   return files.filter(
@@ -47,10 +47,12 @@ const filterGeneratedFiles = (files: string[]): string[] => {
 
 async function fetchSignificantLinesOfCode(
   commit: Readonly<CommitInfo>,
-  additionalFilesToExclude: Readonly<string[]> = [],
-  getExcludedFiles: (files: string[]) => string[] = getGeneratedFiles,
+  additionalFilesToExclude: ReadonlyArray<RepoRelativePath> = [],
+  getExcludedFiles: (
+    files: ReadonlyArray<RepoRelativePath>,
+  ) => Array<RepoRelativePath> = getGeneratedFiles,
 ): Promise<SlocInfo> {
-  const filesToQueryGeneratedStatus = commit.filesSample.map(f => f.path);
+  const filesToQueryGeneratedStatus = commit.filePathsSample;
   const excludedFiles = getExcludedFiles(filesToQueryGeneratedStatus);
 
   serverAPI.postMessage({

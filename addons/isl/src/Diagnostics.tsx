@@ -99,8 +99,8 @@ export async function confirmNoBlockingDiagnostics(
         allFiles.add(file.path);
       }
     }
-    for (const file of commit?.filesSample ?? []) {
-      allFiles.add(file.path);
+    for (const filePath of commit?.filePathsSample ?? []) {
+      allFiles.add(filePath);
     }
 
     serverAPI.postMessage({
