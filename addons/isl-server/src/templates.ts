@@ -80,26 +80,12 @@ export function parseCommitInfoOutput(
       if (lines.length < Object.keys(FIELDS).length) {
         continue;
       }
-      const filesWithStatuses: Array<ChangedFile> = [
-        ...(JSON.parse(lines[FIELD_INDEX.filesModified]) as Array<string>).map(path => ({
-          path,
-          status: 'M' as const,
-        })),
-        ...(JSON.parse(lines[FIELD_INDEX.filesAdded]) as Array<string>).map(path => ({
-          path,
-          status: 'A' as const,
-        })),
-        ...(JSON.parse(lines[FIELD_INDEX.filesRemoved]) as Array<string>).map(path => ({
-          path,
-          status: 'R' as const,
-        })),
-      ];
       const files = lines[FIELD_INDEX.files].split(NULL_CHAR).filter(e => e.length > 0);
 
       // Find if the commit is entirely within the cwd and therefore mroe relevant to the user.
       // Note: this must be done on the server using the full list of files, not just the sample that the client gets.
       // TODO: should we cache this by commit hash to avoid iterating all files on the same commits every time?
-      const maxCommonPathPrefix = findMaxCommonPathPrefix(filesWithStatuses);
+      const maxCommonPathPrefix = findMaxCommonPathPrefix(files);
 
       commitInfos.push({
         hash: lines[FIELD_INDEX.hash],
@@ -139,22 +125,22 @@ export function parseCommitInfoOutput(
  * See {@link CommitInfo}.maxCommonPathPrefix
  * TODO: This could be cached by commit hash
  */
-export function findMaxCommonPathPrefix(files: Array<ChangedFile>): RepoRelativePath {
+export function findMaxCommonPathPrefix(filePaths: Array<RepoRelativePath>): RepoRelativePath {
   let max: null | Array<string> = null;
   let maxLength = 0;
 
   // Path module separator should match what `sl` gives us
   const sep = path.sep;
 
-  for (const file of files) {
+  for (const path of filePaths) {
     if (max == null) {
-      max = file.path.split(sep);
+      max = path.split(sep);
       max.pop(); // ignore file part, only care about directory
       maxLength = max.reduce((acc, part) => acc + part.length + 1, 0); // +1 for slash
       continue;
     }
     // small optimization: we only need to look as long as the max so far, max common path will always be shorter
-    const parts = file.path.slice(0, maxLength).split(sep);
+    const parts = path.slice(0, maxLength).split(sep);
     for (const [i, part] of parts.entries()) {
       if (part !== max[i]) {
         max = max.slice(0, i);

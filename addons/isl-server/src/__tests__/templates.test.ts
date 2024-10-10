@@ -162,44 +162,32 @@ ${COMMIT_END_MARK}
 });
 
 describe('max common path prefix', () => {
-  const FILE = (path: string): ChangedFile => ({
-    path,
-    status: 'M',
-  });
   it('extracts common prefix', () => {
-    expect(findMaxCommonPathPrefix([FILE('a/b/c'), FILE('a/b/d'), FILE('a/b/d/e')])).toEqual(
-      'a/b/',
-    );
+    expect(findMaxCommonPathPrefix(['a/b/c', 'a/b/d', 'a/b/d/e'])).toEqual('a/b/');
     expect(
-      findMaxCommonPathPrefix([
-        FILE('a/b/c1'),
-        FILE('a/b/c2'),
-        FILE('a/b/d/e/f'),
-        FILE('a/b/d/e/f/g/h/i'),
-        FILE('a/b/q'),
-      ]),
+      findMaxCommonPathPrefix(['a/b/c1', 'a/b/c2', 'a/b/d/e/f', 'a/b/d/e/f/g/h/i', 'a/b/q']),
     ).toEqual('a/b/');
     expect(
       findMaxCommonPathPrefix([
-        FILE('addons/isl/src/file.ts'),
-        FILE('addons/isl/README.md'),
-        FILE('addons/isl/src/another.ts'),
+        'addons/isl/src/file.ts',
+        'addons/isl/README.md',
+        'addons/isl/src/another.ts',
       ]),
     ).toEqual('addons/isl/');
   });
   it('handles root as common', () => {
-    expect(findMaxCommonPathPrefix([FILE('a/b/c'), FILE('d/e/f')])).toEqual('');
-    expect(findMaxCommonPathPrefix([FILE('www/README'), FILE('fbcode/foo')])).toEqual('');
-    expect(findMaxCommonPathPrefix([FILE('subdir/some/file'), FILE('toplevel')])).toEqual('');
+    expect(findMaxCommonPathPrefix(['a/b/c', 'd/e/f'])).toEqual('');
+    expect(findMaxCommonPathPrefix(['www/README', 'fbcode/foo'])).toEqual('');
+    expect(findMaxCommonPathPrefix(['subdir/some/file', 'toplevel'])).toEqual('');
   });
   it('acts on full dir names', () => {
-    expect(findMaxCommonPathPrefix([FILE('a/foo1/a'), FILE('a/foo2/b'), FILE('a/foo3/c')])).toEqual(
+    expect(findMaxCommonPathPrefix(['a/foo1/a', 'a/foo2/b', 'a/foo3/c'])).toEqual(
       'a/', // not a/foo
     );
-    expect(findMaxCommonPathPrefix([FILE('foo/bananaspoon'), FILE('foo/banana')])).toEqual(
+    expect(findMaxCommonPathPrefix(['foo/bananaspoon', 'foo/banana'])).toEqual(
       'foo/', // not foo/banana
     );
-    expect(findMaxCommonPathPrefix([FILE('foo/banana'), FILE('foo/bananaspoon')])).toEqual(
+    expect(findMaxCommonPathPrefix(['foo/banana', 'foo/bananaspoon'])).toEqual(
       'foo/', // not foo/banana
     );
   });
@@ -215,9 +203,9 @@ describe('max common path prefix', () => {
     it('handles windows paths', () => {
       expect(
         findMaxCommonPathPrefix([
-          FILE('addons\\isl\\src\\file.ts'),
-          FILE('addons\\isl\\README.md'),
-          FILE('addons\\isl\\src\\another.ts'),
+          'addons\\isl\\src\\file.ts',
+          'addons\\isl\\README.md',
+          'addons\\isl\\src\\another.ts',
         ]),
       ).toEqual('addons\\isl\\');
     });
