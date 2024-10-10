@@ -111,7 +111,6 @@ export function parseCommitInfoOutput(
         bookmarks: splitLine(lines[FIELD_INDEX.bookmarks]),
         remoteBookmarks: splitLine(lines[FIELD_INDEX.remoteBookmarks]),
         isDot: lines[FIELD_INDEX.isDot] === WDIR_PARENT_MARKER,
-        filesSample: filesWithStatuses.slice(0, MAX_FETCHED_FILES_PER_COMMIT),
         filePathsSample: files.slice(0, MAX_FETCHED_FILES_PER_COMMIT),
         totalFileCount: parseInt(lines[FIELD_INDEX.totalFileCount], 10),
         successorInfo: parseSuccessorData(lines[FIELD_INDEX.successorInfo]),

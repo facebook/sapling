@@ -53,7 +53,7 @@ draft
 ["sapling/addons/isl/README.md"]
 []
 []
-sapling/addons/isl/README.md
+sapling/addons/isl/README.md\x00sapling/addons/isl/package.json
 1
 
 9637166dabea9ac50ccb93902f3f41df4d8a15c4,
@@ -72,12 +72,6 @@ Commit B
         date: new Date('2024-04-24T21:16:24.000Z'),
         description: 'Summary:\nthis is my summary',
         diffId: '1',
-        filesSample: [
-          {
-            path: 'sapling/addons/isl/README.md',
-            status: 'M',
-          },
-        ],
         filePathsSample: ['sapling/addons/isl/README.md'],
         hash: '77fdcef8759fb65da46a7a6431310829f12cef5b',
         isDot: false,
@@ -98,13 +92,7 @@ Commit B
         date: new Date('2024-04-24T19:19:08.000Z'),
         description: '',
         diffId: undefined,
-        filesSample: [
-          {
-            path: 'sapling/addons/isl/README.md',
-            status: 'A',
-          },
-        ],
-        filePathsSample: ['sapling/addons/isl/README.md'],
+        filePathsSample: ['sapling/addons/isl/README.md', 'sapling/addons/isl/package.json'],
         hash: 'e4594714fb9b3410a0ef4affc955f9d76d61c8a7',
         isDot: false,
         isFollower: false,
@@ -156,12 +144,6 @@ ${COMMIT_END_MARK}
         date: new Date('2024-04-24T21:16:24.000Z'),
         description: '',
         diffId: '1',
-        filesSample: [
-          {
-            path: 'sapling/addons/isl/README.md',
-            status: 'M',
-          },
-        ],
         filePathsSample: ['sapling/addons/isl/README.md'],
         hash: '77fdcef8759fb65da46a7a6431310829f12cef5b',
         isDot: false,

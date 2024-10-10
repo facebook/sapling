@@ -56,7 +56,6 @@ const CommitInfoExtRecord = Record<CommitInfoExtProps>({
   successorInfo: undefined,
   closestPredecessors: undefined,
   optimisticRevset: undefined,
-  filesSample: [],
   filePathsSample: [],
   totalFileCount: 0,
   diffId: undefined,
@@ -154,10 +153,6 @@ export class DagCommitInfo extends SelfUpdate<CommitInfoExtRecord> {
 
   get optimisticRevset(): string | undefined {
     return this.inner.optimisticRevset;
-  }
-
-  get filesSample(): ReadonlyArray<ChangedFile> {
-    return this.inner.filesSample;
   }
 
   get filePathsSample(): ReadonlyArray<RepoRelativePath> {

@@ -113,9 +113,9 @@ describe('UncommitOperation', () => {
       simulateCommits({
         value: [
           COMMIT('1', 'Commit 1', '0', {phase: 'public'}),
-          COMMIT('a', 'Commit A', '1', {filesSample: [FILE1]}),
-          COMMIT('b', 'Commit B', 'a', {isDot: true, filesSample: [FILE1, FILE2]}),
-          COMMIT('c', 'Commit C', 'b', {filesSample: [FILE1, FILE2, FILE3]}),
+          COMMIT('a', 'Commit A', '1', {filePathsSample: [FILEPATH1]}),
+          COMMIT('b', 'Commit B', 'a', {isDot: true, filePathsSample: [FILEPATH1, FILEPATH2]}),
+          COMMIT('c', 'Commit C', 'b', {filePathsSample: [FILEPATH1, FILEPATH2, FILEPATH3]}),
         ],
       });
     });

@@ -19,7 +19,6 @@ export const YOU_ARE_HERE_VIRTUAL_COMMIT: DagCommitInfo = DagCommitInfo.fromComm
   remoteBookmarks: [],
   author: '',
   description: t('You are here'),
-  filesSample: [],
   filePathsSample: [],
   totalFileCount: 0,
   isYouAreHere: true,
