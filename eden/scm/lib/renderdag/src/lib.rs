@@ -10,6 +10,7 @@ mod ascii_large;
 mod box_drawing;
 mod column;
 mod output;
+mod pad;
 #[allow(clippy::module_inception)]
 mod render;
 
