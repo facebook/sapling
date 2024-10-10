@@ -7,8 +7,8 @@
 
 //! Utilities interacting with store serialization formats (git or hg).
 
-mod filestore_util;
+mod hg_filelog;
 
-pub use filestore_util::parse_copy_from_hg_file_metadata;
-pub use filestore_util::split_hg_file_metadata;
-pub use filestore_util::strip_hg_file_metadata;
+pub use hg_filelog::parse_copy_from_hg_file_metadata;
+pub use hg_filelog::split_hg_file_metadata;
+pub use hg_filelog::strip_hg_file_metadata;
