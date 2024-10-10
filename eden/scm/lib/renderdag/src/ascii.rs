@@ -7,8 +7,6 @@
 
 use std::marker::PhantomData;
 
-use itertools::Itertools;
-
 use super::output::OutputRendererOptions;
 use super::render::Ancestor;
 use super::render::GraphRow;
@@ -104,11 +102,16 @@ where
             let any_horizontal = link_row
                 .iter()
                 .any(|cur| cur.intersects(LinkLine::HORIZONTAL));
-            for (cur, next) in link_row
+            let mut iter = link_row
                 .iter()
-                .chain(Some(LinkLine::empty()).iter())
-                .tuple_windows()
-            {
+                .copied()
+                .chain(std::iter::once(LinkLine::empty()))
+                .peekable();
+            while let Some(cur) = iter.next() {
+                let next = match iter.peek() {
+                    Some(&v) => v,
+                    None => break,
+                };
                 // Draw the parent/ancestor line.
                 if cur.intersects(LinkLine::HORIZONTAL) {
                     if cur.intersects(LinkLine::CHILD | LinkLine::ANY_FORK_OR_MERGE) {

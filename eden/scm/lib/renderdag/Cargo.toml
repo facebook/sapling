@@ -8,7 +8,6 @@ license = "MIT"
 
 [dependencies]
 bitflags = { version = "2.6", features = ["serde"] }
-itertools = "0.11.0"
 serde = { version = "1.0.185", features = ["derive", "rc"], optional = true }
 
 [dev-dependencies]

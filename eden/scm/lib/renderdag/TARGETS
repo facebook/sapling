@@ -35,6 +35,5 @@ rust_library(
     ],
     deps = [
         "fbsource//third-party/rust:bitflags",
-        "fbsource//third-party/rust:itertools",
     ],
 )
