@@ -101,6 +101,4 @@
   $ git commit -qam "Just a regular commit"
   $ git_client push origin HEAD:refs/heads/regular_branch
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-   ! [remote rejected] HEAD -> regular_branch (Bookmark heads/regular_branch does not exist)
-  error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
-  [1]
+   * [new branch]      HEAD -> regular_branch

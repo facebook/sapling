@@ -38,7 +38,7 @@ impl ChangesetHook for MissingLFSConfigHook {
     async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
         &'this self,
         ctx: &'ctx CoreContext,
-        bookmark: &BookmarkKey,
+        _bookmark: &BookmarkKey,
         changeset: &'cs BonsaiChangeset,
         content_manager: &'fetcher dyn HookStateProvider,
         _cross_repo_push_source: CrossRepoPushSource,
@@ -47,7 +47,11 @@ impl ChangesetHook for MissingLFSConfigHook {
         let lfsconfig_path: NonRootMPath = MPathElement::new_from_slice(b".lfsconfig")?.into();
 
         let lfsconfig_file: HashMap<NonRootMPath, PathContent> = content_manager
-            .find_content(ctx, bookmark.clone(), vec![lfsconfig_path.clone()])
+            .find_content_by_changeset_id(
+                ctx,
+                changeset.get_changeset_id(),
+                vec![lfsconfig_path.clone()],
+            )
             .await?;
 
         if !lfsconfig_file.is_empty() {
