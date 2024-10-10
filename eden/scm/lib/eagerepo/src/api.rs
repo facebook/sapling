@@ -80,6 +80,8 @@ use edenapi::ResponseMeta;
 use edenapi::SaplingRemoteApi;
 use edenapi::SaplingRemoteApiError;
 use edenapi_trait as edenapi;
+use format_util::git_sha1_deserialize;
+use format_util::hg_sha1_deserialize;
 use futures::stream::BoxStream;
 use futures::stream::TryStreamExt;
 use futures::StreamExt;
@@ -138,14 +140,14 @@ impl SaplingRemoteApi for EagerRepo {
         for key in keys {
             let id = key.hgid;
             let data = self.get_sha1_blob_for_api(id, "files")?;
-            let (p1, p2) = extract_p1_p2(&data);
-            let parents = Parents::new(p1, p2);
+
+            let (parents, body) = sha1_blob_to_parents_body(&data, self.format())?;
+
             let entry = FileEntry {
                 key: key.clone(),
                 parents,
-                // PERF: to_vec().into() converts minibytes::Bytes to bytes::Bytes.
                 content: Some(FileContent {
-                    hg_file_blob: extract_body(&data).to_vec().into(),
+                    hg_file_blob: body,
                     metadata: Default::default(),
                 }),
                 aux_data: None,
@@ -176,8 +178,8 @@ impl SaplingRemoteApi for EagerRepo {
             let key = spec.key;
             let id = key.hgid;
             let data = self.get_sha1_blob_for_api(id, "files_attrs")?;
-            let (p1, p2) = extract_p1_p2(&data);
-            let parents = Parents::new(p1, p2);
+
+            let (parents, body) = sha1_blob_to_parents_body(&data, self.format())?;
 
             let mut entry = FileEntry {
                 key: key.clone(),
@@ -186,16 +188,14 @@ impl SaplingRemoteApi for EagerRepo {
                 aux_data: None,
             };
 
-            // PERF: to_vec().into() converts minibytes::Bytes to bytes::Bytes.
-            let file_body = extract_body(&data).to_vec();
-
             if spec.attrs.aux_data {
-                entry.aux_data = Some(FileAuxData::from_content(&file_body));
+                // NOTE: "body" includes the hg filelog header. Is it right?
+                entry.aux_data = Some(FileAuxData::from_content(&body));
             }
 
             if spec.attrs.content {
                 entry.content = Some(FileContent {
-                    hg_file_blob: file_body.into(),
+                    hg_file_blob: body,
                     metadata: Default::default(),
                 });
             }
@@ -229,9 +229,11 @@ impl SaplingRemoteApi for EagerRepo {
                 continue;
             };
 
+            let (parents, body) = sha1_blob_to_parents_body(&data, self.format())?;
+
             // NOTE: Order of p1, p2 are not preserved, unlike revlog hg.
             // It should be okay correctness-wise.
-            let (p1, p2) = extract_p1_p2(&data);
+            let (p1, p2) = parents.into_nodes();
             let mut key1 = Key {
                 path: key.path.clone(),
                 hgid: p1,
@@ -240,7 +242,7 @@ impl SaplingRemoteApi for EagerRepo {
                 path: key.path.clone(),
                 hgid: p2,
             };
-            if let Some(renamed_from) = extract_rename(&extract_body(&data)) {
+            if let Some(renamed_from) = extract_rename(&body) {
                 if p1.is_null() {
                     key1 = renamed_from;
                 } else {
@@ -826,10 +828,11 @@ impl SaplingRemoteApi for EagerRepo {
                 data.file_content_upload_token.data.id,
                 "upload_filesnodes_batch",
             )?;
-            let content = self.get_sha1_blob_for_api(content_sha1, "upload_filenodes_batch")?;
+            // NOTE: "raw_text" is pure content without hg/git SHA1 frames!
+            let raw_text = self.get_sha1_blob_for_api(content_sha1, "upload_filenodes_batch")?;
 
             let mut content_with_parents =
-                Vec::<u8>::with_capacity(content.len() + 40 + 4 + data.metadata.len());
+                Vec::<u8>::with_capacity(raw_text.len() + 40 + 4 + data.metadata.len());
             let (mut p1, mut p2) = data.parents.into_nodes();
             if p2 < p1 {
                 std::mem::swap(&mut p1, &mut p2);
@@ -838,12 +841,12 @@ impl SaplingRemoteApi for EagerRepo {
             content_with_parents.extend_from_slice(p2.as_ref());
 
             // see sapling.filelog.filelog.add
-            if content.starts_with(b"\x01\n") || !data.metadata.is_empty() {
+            if raw_text.starts_with(b"\x01\n") || !data.metadata.is_empty() {
                 content_with_parents.extend_from_slice(b"\x01\n");
                 content_with_parents.extend(data.metadata);
                 content_with_parents.extend_from_slice(b"\x01\n");
             }
-            content_with_parents.extend_from_slice(content.as_ref());
+            content_with_parents.extend_from_slice(raw_text.as_ref());
 
             self.add_sha1_blob_for_api(
                 data.node_id,
@@ -1206,6 +1209,23 @@ impl SaplingRemoteApi for EagerRepo {
         };
         Ok(LandStackResponse { data: Ok(data) })
     }
+}
+
+fn sha1_blob_to_parents_body(
+    data: &Bytes,
+    format: SerializationFormat,
+) -> anyhow::Result<(Parents, Bytes)> {
+    let (parents, body) = match format {
+        SerializationFormat::Hg => {
+            let (body, p2, p1) = hg_sha1_deserialize(data)?;
+            (Parents::new(p1, p2), data.slice_to_bytes(body))
+        }
+        SerializationFormat::Git => {
+            let body = git_sha1_deserialize(data)?.0;
+            (Parents::default(), data.slice_to_bytes(body))
+        }
+    };
+    Ok((parents, body))
 }
 
 fn edenapi_mutation_to_local(m: HgMutationEntryContent) -> MutationEntry {
