@@ -141,9 +141,7 @@
 # Trying to delete a branch with allow-branch-deletion should succeed 
   $ git_client -c http.extraHeader="x-git-allow-branch-deletion: 1" push origin --delete branch_for_delete_ffonly
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-   ! [remote rejected] branch_for_delete_ffonly (invalid request: Deletion of 'heads/branch_for_delete_ffonly' is prohibited)
-  error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
-  [1]
+   - [deleted]         branch_for_delete_ffonly
 
 # Trying to delete a tag with no pushvar should fail
   $ git_client push origin --delete tag_to_delete_ffonly
@@ -160,9 +158,7 @@
 # Trying to delete a tag with allow-tag-deletion should succeed
   $ git_client -c http.extraHeader="x-git-allow-tag-deletion: 1" push origin --delete tag_to_delete_ffonly
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-   ! [remote rejected] tag_to_delete_ffonly (invalid request: Deletion of 'tags/tag_to_delete_ffonly' is prohibited)
-  error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
-  [1]
+   - [deleted]         tag_to_delete_ffonly
 
 # Push all the changes made so far
   $ git_client push origin master branch_ffonly non_ffwd_branch --force &> output
@@ -191,6 +187,4 @@
   676bc3cdd4bcc0b238223b6ca444c7ac50b59174 refs/remotes/origin/non_ffwd_branch
   7b248e999d14fbc53386479609031c21649c6598 refs/remotes/origin/bypass_branch_ffonly
   8963e1f55d1346a07c3aec8c8fc72bf87d0452b1 refs/tags/first_tag
-  8f99a49657d7430c4943afce0a9331a59a0d6648 refs/tags/tag_to_delete_ffonly
-  c47cf83db7aff6eb843f31a57d59f19670b69ed5 refs/remotes/origin/branch_for_delete_ffonly
   eb95862bb5d5c295844706cbb0d0e56fee405f5c refs/remotes/origin/branch_ffonly

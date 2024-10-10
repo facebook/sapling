@@ -72,6 +72,8 @@ pub use crate::update::BookmarkUpdateTargets;
 pub use crate::update::UpdateBookmarkOp;
 
 const ALLOW_NON_FFWD_PUSHVAR: &str = "x-git-allow-non-ffwd-push";
+const ALLOW_BRANCH_DELETION: &str = "x-git-allow-branch-deletion";
+const ALLOW_TAG_DELETION: &str = "x-git-allow-tag-deletion";
 
 /// Trait alias for bookmarks movement repositories.
 ///

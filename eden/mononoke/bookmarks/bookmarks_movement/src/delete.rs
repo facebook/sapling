@@ -27,7 +27,9 @@ use crate::BookmarkInfoData;
 use crate::BookmarkInfoTransaction;
 use crate::BookmarkMovementError;
 use crate::Repo;
+use crate::ALLOW_BRANCH_DELETION;
 use crate::ALLOW_NON_FFWD_PUSHVAR;
+use crate::ALLOW_TAG_DELETION;
 
 #[must_use = "DeleteBookmarkOp must be run to have an effect"]
 pub struct DeleteBookmarkOp<'op> {
@@ -109,6 +111,8 @@ impl<'op> DeleteBookmarkOp<'op> {
             .is_fast_forward_only(&self.bookmark);
         let bypass = self.pushvars.map_or(false, |pushvar| {
             pushvar.contains_key(ALLOW_NON_FFWD_PUSHVAR)
+                || self.bookmark.is_tag() && pushvar.contains_key(ALLOW_TAG_DELETION)
+                || !self.bookmark.is_tag() && pushvar.contains_key(ALLOW_BRANCH_DELETION)
         });
         if fast_forward_only && !bypass {
             // Cannot delete fast-forward-only bookmarks.
