@@ -1,7 +1,7 @@
 load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
 load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
 
-oncall("mononoke")
+oncall("scm_server_infra")
 
 python_library(
     name = "post_commit_tailer",

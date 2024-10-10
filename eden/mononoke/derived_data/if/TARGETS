@@ -1,7 +1,7 @@
 load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
 load("//common/automock:automock.bzl", "thrift_plugin_automock")
 
-oncall("mononoke")
+oncall("scm_server_infra")
 
 thrift_library(
     name = "derived_data_type_if",

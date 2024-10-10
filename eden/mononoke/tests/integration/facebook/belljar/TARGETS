@@ -2,7 +2,7 @@ load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
 load("@fbsource//tools/build_defs:scrut_test.bzl", "scrut_test")
 load("//belljar/buck:defs.bzl", "belljar_scrut_test")
 
-oncall("mononoke")
+oncall("scm_server_infra")
 
 python_library(
     name = "scsc_allowlist",

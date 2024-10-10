@@ -1,6 +1,6 @@
 load("//windtunnel/cogwheel:defs.bzl", "cogwheel_test", "create_cogwheel_config")
 
-oncall("mononoke")
+oncall("scm_server_infra")
 
 cogwheel_test(
     name = "cogwheel_edenapi_replay_test",

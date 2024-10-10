@@ -1,7 +1,7 @@
 load("@fbcode_macros//build_defs:native_rules.bzl", "buck_filegroup", "buck_genrule", "buck_sh_test")
 load("//eden/mononoke/facebook/mononoke-bootstrap:lib.bzl", "binaries_cmd", "env_for_binaries")
 
-oncall("mononoke")
+oncall("scm_server_infra")
 
 buck_sh_test(
     name = "check",

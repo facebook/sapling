@@ -2,7 +2,7 @@ load("//eden/mononoke/facebook/fbpkg:lib.bzl", "mononoke_fbpkg")
 load("//tupperware/cm/antlir2/bzl:buck2_container.bzl", "tw")
 load("//tupperware/config/common:tw.mixin.zkdaemon.bzl", zkdaemon_mixin = "mixin")
 
-oncall("mononoke")
+oncall("scm_server_infra")
 
 mononoke_fbpkg(
     name = "mononoke.server",

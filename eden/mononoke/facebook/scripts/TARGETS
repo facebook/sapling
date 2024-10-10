@@ -2,7 +2,7 @@ load("@fbcode_macros//build_defs:custom_unittest.bzl", "custom_unittest")
 load("@fbcode_macros//build_defs:native_rules.bzl", "buck_filegroup")
 load("//fbpkg:fbpkg.bzl", "fbpkg")
 
-oncall("mononoke")
+oncall("scm_server_infra")
 
 buck_filegroup(
     name = "scripts",

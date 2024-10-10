@@ -1,6 +1,6 @@
 load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
 
-oncall("mononoke")
+oncall("scm_server_infra")
 
 rust_library(
     name = "observability",

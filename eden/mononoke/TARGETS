@@ -2,7 +2,7 @@ load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
 load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 load("//eden/mononoke/facebook:lib.bzl", "tokio_dependency_test")
 
-oncall("mononoke")
+oncall("scm_server_infra")
 
 rust_binary(
     name = "mononoke",

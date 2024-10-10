@@ -2,7 +2,7 @@ load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
 load("@fbcode_macros//build_defs:rust_unittest.bzl", "rust_unittest")
 load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 
-oncall("mononoke")
+oncall("scm_server_infra")
 
 rust_library(
     name = "blobstore_factory",

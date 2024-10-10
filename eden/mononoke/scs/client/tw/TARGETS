@@ -1,6 +1,6 @@
 load("//fbpkg:fbpkg.bzl", "fbpkg")
 
-oncall("mononoke")
+oncall("scm_server_infra")
 
 fbpkg.builder(
     name = "scm.scsc",

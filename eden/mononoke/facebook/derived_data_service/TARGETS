@@ -4,7 +4,7 @@ load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
 load("//fbpkg:fbpkg.bzl", "fbpkg")
 load("//tupperware/cm/antlir2/bzl:buck2_container.bzl", "tw")
 
-oncall("mononoke")
+oncall("scm_server_infra")
 
 rust_binary(
     name = "derived_data_service",

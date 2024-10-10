@@ -1,6 +1,6 @@
 load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
 
-oncall("mononoke")
+oncall("scm_server_infra")
 
 thrift_library(
     name = "filenodes-if",

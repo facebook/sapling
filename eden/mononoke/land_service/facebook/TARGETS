@@ -1,7 +1,7 @@
 load("//fbpkg:fbpkg.bzl", "fbpkg")
 load("//tupperware/cm/antlir2/bzl:buck2_container.bzl", "tw")
 
-oncall("mononoke")
+oncall("scm_server_infra")
 
 tw.container(
     name = "tw.mononoke.land_service",

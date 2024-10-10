@@ -1,6 +1,6 @@
 load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
 
-oncall("mononoke")
+oncall("scm_server_infra")
 
 rust_binary(
     name = "myadmin_example",

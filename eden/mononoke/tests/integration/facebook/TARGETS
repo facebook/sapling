@@ -6,7 +6,7 @@ load(
     "dott_test",
 )
 
-oncall("mononoke")
+oncall("scm_server_infra")
 
 python_library(
     name = "lib_buck",

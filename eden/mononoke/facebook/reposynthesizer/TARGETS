@@ -1,6 +1,6 @@
 load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
 
-oncall("mononoke")
+oncall("scm_server_infra")
 
 python_binary(
     name = "reposynthesizer",
