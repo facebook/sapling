@@ -55,9 +55,6 @@ cachepath=$TESTTMP/default-hgcache
 [mutation]
 record=False
 
-[pull]
-httpcommitgraph2=true
-
 [hint]
 ack-match-full-traversal=True
 ack = smartlog-default-command commitcloud-update-on-move

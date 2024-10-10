@@ -324,7 +324,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         Ok(Serde(responses))
     }
 
-    fn commit_graph2_py(
+    fn commit_graph_py(
         &self,
         py: Python,
         heads: Vec<HgId>,

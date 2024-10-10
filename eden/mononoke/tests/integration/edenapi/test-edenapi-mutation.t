@@ -8,7 +8,7 @@
   $ configure modern
   $ setconfig ui.ignorerevnum=false
 
-  $ setconfig pull.httpcommitgraph2=true pull.use-commit-graph=true clone.use-rust=true clone.use-commit-graph=true
+  $ setconfig pull.use-commit-graph=true clone.use-rust=true clone.use-commit-graph=true
 
 Set up local hgrc and Mononoke config, with commit cloud, http pull and upload.
   $ export READ_ONLY_REPO=1
@@ -92,7 +92,7 @@ Test mutations on client 1
   $ hg debugapi -e commitmutations -i '["929f2b9071cf032d9422b3cce9773cbe1c574822"]'
   []
 Test phases from commitgraph
-  $ hg debugapi -e commitgraph2 -i '["f643b098cd183f085ba3e6107b6867ca472e87d1", "929f2b9071cf032d9422b3cce9773cbe1c574822"]' -i '[]' --sort
+  $ hg debugapi -e commitgraph -i '["f643b098cd183f085ba3e6107b6867ca472e87d1", "929f2b9071cf032d9422b3cce9773cbe1c574822"]' -i '[]' --sort
   [{"hgid": bin("8b2dca0c8a726d66bf26d47835a356cc4286facd"),
     "parents": [],
     "is_draft": False},

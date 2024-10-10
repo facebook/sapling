@@ -6,6 +6,7 @@
 from typing import Optional
 
 import bindings
+
 from sapling import tracing
 
 from . import error, peer, repository, util
@@ -84,11 +85,11 @@ class eagerpeer(repository.peer):
 
     # "Pull" without using getbundle.
 
-    def commitgraph2(self, heads, common):
+    def commitgraph(self, heads, common):
         """heads: [node], common: [node]
         Returns a list of [(node, parents)], parents is a list of node.
         """
-        items = self.edenapi.commitgraph2(heads, common)
+        items = self.edenapi.commitgraph(heads, common)
         shouldtrace = tracing.isenabled(tracing.LEVEL_TRACE)
         for item in items:
             node = item["hgid"]
@@ -137,7 +138,6 @@ class eagerpeer(repository.peer):
             "known",
             "branchmap",
             "addblobs",
-            "commitgraph2",
             "clonedata",
         }
 

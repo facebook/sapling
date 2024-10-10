@@ -61,7 +61,7 @@ Start up SaplingRemoteAPI server.
   $ setup_mononoke_config
   $ start_and_wait_for_mononoke_server
 Check response.
-  $ hg debugapi mono:repo -e commitgraph2 -i "['$H']" -i "['$B','$C']" --sort
+  $ hg debugapi mono:repo -e commitgraph -i "['$H']" -i "['$B','$C']" --sort
   [{"hgid": bin("49cb92066bfd0763fff729c354345650b7428554"),
     "parents": [bin("112478962961147124edd43549aedd1a335e44bf")],
     "is_draft": False},

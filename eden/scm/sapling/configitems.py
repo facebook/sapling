@@ -279,7 +279,9 @@ coreconfigitem("experimental", "uncommitondirtywdir", default=True)
 coreconfigitem("extensions", ".*", default=None, generic=True)
 coreconfigitem("format", "aggressivemergedeltas", default=False)
 coreconfigitem(
-    "format", "cgdeltabase", default="default"  # changegroup.CFG_CGDELTA_DEFAULT
+    "format",
+    "cgdeltabase",
+    default="default",  # changegroup.CFG_CGDELTA_DEFAULT
 )
 coreconfigitem("format", "chunkcachesize", default=None)
 coreconfigitem("format", "dirstate", default=2)
@@ -400,7 +402,6 @@ coreconfigitem(
 )
 coreconfigitem("pull", "httpbookmarks", default=True)
 coreconfigitem("pull", "httphashprefix", default=False)
-coreconfigitem("pull", "httpcommitgraph2", default=False)
 coreconfigitem("pull", "httpmutation", default=True)
 coreconfigitem("pull", "master-fastpath", default=True)
 coreconfigitem("exchange", "httpcommitlookup", default=True)

@@ -304,11 +304,11 @@ py_class!(pub class client |py| {
         self.inner(py).as_ref().commit_known_py(py, hgids.0)
     }
 
-    /// commitgraph2(heads: [bytes], common: [bytes]) -> [{'hgid': bytes, 'parents': [bytes], 'is_draft': Option[bool]}]
-    def commitgraph2(&self, heads: Serde<Vec<HgId>>, common: Serde<Vec<HgId>>)
+    /// commitgraph(heads: [bytes], common: [bytes]) -> [{'hgid': bytes, 'parents': [bytes], 'is_draft': Option[bool]}]
+    def commitgraph(&self, heads: Serde<Vec<HgId>>, common: Serde<Vec<HgId>>)
         -> PyResult<Serde<Vec<CommitGraphEntry>>>
     {
-        self.inner(py).as_ref().commit_graph2_py(py, heads.0, common.0)
+        self.inner(py).as_ref().commit_graph_py(py, heads.0, common.0)
     }
 
     /// commitgraphsegments(heads: [bytes], common: [bytes]) -> [{'head': bytes, 'base': bytes, 'parents': [bytes]}]
