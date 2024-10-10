@@ -92,3 +92,15 @@
   Uploading LFS objects: 100% (1/1), 68 B | 0 B/s, done.
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
      02afe80..72162d7  main -> main
+
+# Add a regular commit to the repo but through a new branch
+  $ git checkout -b regular_branch
+  Switched to a new branch 'regular_branch'
+  $ echo "Just a regular file" > file.txt
+  $ git add .
+  $ git commit -qam "Just a regular commit"
+  $ git_client push origin HEAD:refs/heads/regular_branch
+  To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
+   ! [remote rejected] HEAD -> regular_branch (Bookmark heads/regular_branch does not exist)
+  error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
+  [1]
