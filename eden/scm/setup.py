@@ -26,6 +26,7 @@ import contextlib
 import errno
 import glob
 import hashlib
+import logging
 import re
 import shutil
 import socket
@@ -34,8 +35,11 @@ import struct
 import subprocess
 import tempfile
 import time
+from sysconfig import get_platform
 
 from contrib.pick_python import load_build_env
+
+from setuptools import Command, setup
 
 
 ossbuild = bool(os.environ.get("SAPLING_OSS_BUILD"))
@@ -77,22 +81,22 @@ def filter(f, it):
     return list(__builtins__.filter(f, it))
 
 
-ispypy = "PyPy" in sys.version
+log = logging.getLogger()
 
-
-import distutils
-from distutils import file_util, log
+from distutils import file_util
 from distutils.ccompiler import new_compiler
+
+# uses the setuptools vendored distutils
 from distutils.command.build import build
+from distutils.command.build_clib import build_clib
 from distutils.command.build_scripts import build_scripts
 from distutils.command.install import install
 from distutils.command.install_lib import install_lib
 from distutils.command.install_scripts import install_scripts
-from distutils.core import Command, setup
-from distutils.dir_util import copy_tree
-from distutils.spawn import find_executable, spawn
-from distutils.sysconfig import get_config_var
-from distutils.version import StrictVersion
+
+from distutils.dep_util import newer_group
+from distutils.errors import DistutilsSetupError
+from distutils.spawn import spawn
 
 from distutils_rust import BuildRustExt, InstallRustExt, RustBinary
 
@@ -178,7 +182,7 @@ def tryunlink(path):
 
 def copy_to(source, target):
     if os.path.isdir(source):
-        copy_tree(source, target)
+        shutil.copytree(source, target)
     else:
         ensureexists(os.path.dirname(target))
         shutil.copy2(source, target)
@@ -543,7 +547,7 @@ class hgbuildmo(build):
     description = "build translations (.mo files)"
 
     def run(self):
-        if not find_executable("msgfmt"):
+        if not shutil.which("msgfmt"):
             self.warn(
                 "could not find msgfmt executable, no translations " "will be built"
             )
@@ -932,7 +936,7 @@ def distutils_dir_name(dname):
         f = "{dirname}.{platform}-{version}"
     return f.format(
         dirname=dname,
-        platform=distutils.util.get_platform(),
+        platform=get_platform(),
         version=("%s.%s" % sys.version_info[:2]),
     )
 
@@ -1100,6 +1104,8 @@ def ordinarypath(p):
 if sys.platform == "darwin" and os.path.exists("/usr/bin/xcodebuild"):
     xcode_version = runcmd(["/usr/bin/xcodebuild", "-version"], {})[1].splitlines()
     if xcode_version:
+        from distutils.version import StrictVersion
+
         xcode_version = xcode_version[0]
         xcode_version = xcode_version.decode("utf-8")
         xcode4 = xcode_version.startswith("Xcode") and StrictVersion(
@@ -1125,14 +1131,11 @@ if sys.platform == "darwin" and os.path.exists("/usr/bin/xcodebuild"):
     # http://bugs.python.org/issue21244. We also need to patch this here
     # so Mercurial can continue to compile in the meantime.
     if xcode51:
+        from distutils.sysconfig import get_config_var
+
         cflags = get_config_var("CFLAGS")
         if cflags and re.search(r"-mno-fused-madd\b", cflags) is not None:
             os.environ["CFLAGS"] = os.environ.get("CFLAGS", "") + " -Qunused-arguments"
-
-
-import distutils.command.build_clib
-from distutils.dep_util import newer_group
-from distutils.errors import DistutilsSetupError
 
 
 def build_libraries(self, libraries):
@@ -1180,7 +1183,7 @@ def build_libraries(self, libraries):
         )
 
 
-distutils.command.build_clib.build_clib.build_libraries = build_libraries
+build_clib.build_libraries = build_libraries
 
 hgmainfeatures = (
     " ".join(

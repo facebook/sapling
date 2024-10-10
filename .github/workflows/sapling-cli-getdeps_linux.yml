@@ -70,6 +70,8 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests snappy
     - name: Fetch zlib
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests zlib
+    - name: Fetch python-setuptools
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests python-setuptools
     - name: Fetch openssl
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests openssl
     - name: Fetch liboqs
@@ -142,6 +144,8 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --free-up-disk --no-tests snappy
     - name: Build zlib
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --free-up-disk --no-tests zlib
+    - name: Build python-setuptools
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --free-up-disk --no-tests python-setuptools
     - name: Build openssl
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --free-up-disk --no-tests openssl
     - name: Build liboqs

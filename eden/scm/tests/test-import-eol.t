@@ -2,7 +2,7 @@
 #debugruntest-incompatible
 
 
-  $ cat > makepatch.py <<EOF
+  $ cat > makepatch.py <<'EOF'
   > f = open('eol.diff', 'wb')
   > w = f.write
   > _ = w(b'test message\n')
@@ -17,9 +17,9 @@
   > _ = w(b' \n')
   > _ = w(b' d\n')
   > _ = w(b'-e\n')
-  > _ = w(b'\ No newline at end of file\n')
+  > _ = w(b' No newline at end of file\n')
   > _ = w(b'+z\r\n')
-  > _ = w(b'\ No newline at end of file\r\n')
+  > _ = w(b' No newline at end of file\r\n')
   > EOF
 
   $ configure modern

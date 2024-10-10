@@ -21,6 +21,10 @@ import glob
 import os
 import re
 import sys
+
+import setuptools  # noqa # usort:skip imported to get setuptools version of distutils
+
+# after setuptools so that python 3.12 can find it
 from distutils.version import LooseVersion
 
 

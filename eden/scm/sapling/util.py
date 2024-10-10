@@ -2254,9 +2254,10 @@ def makedate(timestamp=None):
     if timestamp < 0:
         hint = _("check your clock")
         raise Abort(_("negative timestamp: %d") % timestamp, hint=hint)
-    delta = datetime.datetime.utcfromtimestamp(
-        timestamp
-    ) - datetime.datetime.fromtimestamp(timestamp)
+    as_utc = datetime.datetime.fromtimestamp(timestamp, datetime.timezone.utc)
+    converted = as_utc.astimezone()
+    forced = as_utc.replace(tzinfo=converted.tzinfo)
+    delta = forced - converted
     tz = delta.days * 86400 + delta.seconds
     return timestamp, tz
 
