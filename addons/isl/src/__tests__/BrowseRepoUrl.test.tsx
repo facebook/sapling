@@ -160,7 +160,7 @@ describe('Browse repo url', () => {
             COMMIT('a', 'My Commit', '1', {
               isDot: true,
               totalFileCount: 1,
-              filesSample: [{path: 'file2.txt', status: 'M'}],
+              filePathsSample: ['file2.txt'],
             }),
           ],
         });

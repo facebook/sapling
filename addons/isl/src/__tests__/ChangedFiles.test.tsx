@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {UncommittedChanges} from '../types';
+import type {ChangedFileType, RepoRelativePath, UncommittedChanges} from '../types';
 
 import App from '../App';
 import {defaultChangedFilesDisplayType} from '../ChangedFileDisplayTypePicker';
@@ -243,16 +243,21 @@ describe('Changed Files', () => {
   });
 
   describe('truncated list of changed files', () => {
-    function makeFiles(n: number): UncommittedChanges {
-      return new Array(n)
-        .fill(null)
-        .map((_, i) => ({path: `file${leftPad(i, 3, '0')}.txt`, status: 'M'}));
+    function makeFiles(n: number): Array<RepoRelativePath> {
+      return new Array(n).fill(null).map((_, i) => `file${leftPad(i, 3, '0')}.txt`);
+    }
+
+    function withStatus(
+      changes: Array<RepoRelativePath>,
+      status: ChangedFileType,
+    ): UncommittedChanges {
+      return changes.map(path => ({path, status}));
     }
 
     it('only first 500 files are shown', () => {
       act(() => {
         simulateUncommittedChangedFiles({
-          value: makeFiles(510),
+          value: withStatus(makeFiles(510), 'M'),
         });
       });
       const files = screen.getAllByText(/file\d+\.txt/);
@@ -262,7 +267,7 @@ describe('Changed Files', () => {
     it('banner is shown if some files are hidden', () => {
       act(() => {
         simulateUncommittedChangedFiles({
-          value: makeFiles(700),
+          value: withStatus(makeFiles(700), 'M'),
         });
       });
       expect(screen.getByText('Showing first 500 files out of 700 total')).toBeInTheDocument();
@@ -271,7 +276,7 @@ describe('Changed Files', () => {
     it('if more than 500 files are provided, there are page navigation buttons', () => {
       act(() => {
         simulateUncommittedChangedFiles({
-          value: makeFiles(510),
+          value: withStatus(makeFiles(510), 'M'),
         });
       });
       expect(screen.getByTestId('changed-files-next-page')).toBeInTheDocument();
@@ -283,7 +288,7 @@ describe('Changed Files', () => {
     it('can click buttons to navigate pages', () => {
       act(() => {
         simulateUncommittedChangedFiles({
-          value: makeFiles(1010),
+          value: withStatus(makeFiles(1010), 'M'),
         });
       });
       fireEvent.click(screen.getByTestId('changed-files-next-page'));
@@ -309,7 +314,7 @@ describe('Changed Files', () => {
             COMMIT('1', 'some public base', '0', {phase: 'public'}),
             COMMIT('a', 'Commit', '1', {
               isDot: true,
-              filesSample: makeFiles(500),
+              filePathsSample: makeFiles(500),
               totalFileCount: 1010,
             }),
           ],
@@ -339,7 +344,7 @@ describe('Changed Files', () => {
     it('if the number of files changes, restrict the page number to fit', () => {
       act(() => {
         simulateUncommittedChangedFiles({
-          value: makeFiles(2020),
+          value: withStatus(makeFiles(2020), 'M'),
         });
       });
       fireEvent.click(screen.getByTestId('changed-files-next-page'));
@@ -351,7 +356,7 @@ describe('Changed Files', () => {
       // now some file changes are removed (e.g. discarded)
       act(() => {
         simulateUncommittedChangedFiles({
-          value: makeFiles(700),
+          value: withStatus(makeFiles(700), 'M'),
         });
       });
 

@@ -35,11 +35,11 @@ describe('RevertOperation', () => {
       simulateCommits({
         value: [
           COMMIT('c', 'Commit C', 'b', {
-            filesSample: [{path: 'file.txt', status: 'M'}],
+            filePathsSample: ['file.txt'],
             isDot: true,
           }),
-          COMMIT('b', 'Commit B', 'a', {filesSample: [{path: 'file.txt', status: 'M'}]}),
-          COMMIT('a', 'Commit A', '1', {filesSample: [{path: 'file.txt', status: 'M'}]}),
+          COMMIT('b', 'Commit B', 'a', {filePathsSample: ['file.txt']}),
+          COMMIT('a', 'Commit A', '1', {filePathsSample: ['file.txt']}),
           COMMIT('1', 'Commit 1', '0', {phase: 'public'}),
         ],
       });

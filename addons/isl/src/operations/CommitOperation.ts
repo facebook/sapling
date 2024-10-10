@@ -135,6 +135,7 @@ export class CommitOperation extends Operation {
       optimisticRevset,
       phase: 'draft',
       filesSample: this.optimisticChangedFiles,
+      filePathsSample: this.optimisticChangedFiles.map(f => f.path),
       totalFileCount: this.optimisticChangedFiles.length,
       date: now,
     });

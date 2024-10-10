@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Hash, Result, CommitInfo, FilesSample} from './types';
+import type {Hash, Result, CommitInfo, FilesSample, ChangedFile} from './types';
 
 import serverAPI from './ClientToServerAPI';
 import {ChangedFiles} from './UncommittedChanges';
@@ -17,30 +17,38 @@ import {LRU} from 'shared/LRU';
 const commitFilesCache = new LRU<Hash, Promise<Result<FilesSample>>>(10);
 
 /**
- * The basic CommitInfo we fetch in bulk only contains the first 25 files.
- * But we want to be able to scroll through pages of files.
+ * The basic CommitInfo we fetch in bulk only contains the first 25 files,
+ * and is missing file statuses.
+ * But we want to be able to scroll through pages of files,
+ * and also see their statuses (added, removed, etc).
  * So fetch all files for the currently selected commit,
  * to augment the subset we already have.
  */
 export function ChangedFilesWithFetching({commit}: {commit: CommitInfo}) {
   const [fetchedAllFiles, setFetchedAllFiles] = useState<FilesSample | undefined>(undefined);
 
-  const hasAllFilesAlready = commit.filesSample.length === commit.totalFileCount;
   useEffect(() => {
     setFetchedAllFiles(undefined);
-    if (hasAllFilesAlready) {
-      return;
-    }
     getChangedFilesForHash(commit.hash).then(result => {
       if (result.value != null) {
         setFetchedAllFiles(result.value);
       }
     });
-  }, [commit.hash, hasAllFilesAlready]);
+  }, [commit.hash]);
 
   return (
     <ChangedFiles
-      filesSubset={fetchedAllFiles?.filesSample ?? commit.filesSample}
+      filesSubset={
+        fetchedAllFiles?.filesSample ??
+        commit.filePathsSample.map(
+          (filePath): ChangedFile => ({
+            path: filePath,
+            // default to 'modified' as a best guess.
+            // TODO: should this be a special loading status that shows a spinner?
+            status: 'M' as const,
+          }),
+        )
+      }
       totalFiles={fetchedAllFiles?.totalFileCount ?? commit.totalFileCount}
       comparison={
         commit.isDot

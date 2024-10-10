@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ChangedFile} from '../types';
+import type {ChangedFile, ChangedFileType, RepoRelativePath} from '../types';
 
 import App from '../App';
 import {ignoreRTL, CommitInfoTestUtils} from '../testQueries';
@@ -21,10 +21,11 @@ import {
 import {leftPad} from '../utils';
 import {fireEvent, render, screen, waitFor, act} from '@testing-library/react';
 
-function makeFiles(n: number): Array<ChangedFile> {
-  return new Array(n)
-    .fill(null)
-    .map((_, i) => ({path: `file${leftPad(i, 3, '0')}.txt`, status: 'M'} as ChangedFile));
+function makeFiles(n: number): Array<RepoRelativePath> {
+  return new Array(n).fill(null).map((_, i) => `file${leftPad(i, 3, '0')}.txt`);
+}
+function withStatus(files: Array<RepoRelativePath>, status: ChangedFileType): Array<ChangedFile> {
+  return files.map(path => ({path, status}));
 }
 
 describe('ChangedFilesWithFetching', () => {
@@ -43,18 +44,15 @@ describe('ChangedFilesWithFetching', () => {
           COMMIT('1', 'some public base', '0', {phase: 'public', isDot: true}),
           COMMIT('a', 'My Commit', '1', {
             totalFileCount: 2,
-            filesSample: [
-              {path: 'file1.js', status: 'M'},
-              {path: 'file2.js', status: 'M'},
-            ],
+            filePathsSample: ['file1.js', 'file2.js'],
           }),
           COMMIT('b', 'Another Commit', 'a', {
             totalFileCount: 700,
-            filesSample: makeFiles(500),
+            filePathsSample: makeFiles(500),
           }),
           COMMIT('c', 'Another Commit 2', 'a', {
             totalFileCount: 700,
-            filesSample: makeFiles(500),
+            filePathsSample: makeFiles(500),
           }),
         ],
       });
@@ -81,7 +79,7 @@ describe('ChangedFilesWithFetching', () => {
       simulateMessageFromServer({
         type: 'fetchedCommitChangedFiles',
         hash: 'b',
-        result: {value: {filesSample: makeFiles(510), totalFileCount: 510}},
+        result: {value: {filesSample: withStatus(makeFiles(510), 'M'), totalFileCount: 510}},
       });
     });
 
