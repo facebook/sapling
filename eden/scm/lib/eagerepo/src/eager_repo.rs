@@ -458,14 +458,16 @@ impl EagerRepo {
     }
 
     /// Extract parents out of a SHA1 manifest blob, returns the remaining data.
-    fn extract_parents_from_tree_data(data: Bytes) -> Result<(Parents, Bytes)> {
+    /// The callsite needs to ensure the store format is hg.
+    fn extract_parents_from_tree_data_hg(data: Bytes) -> Result<(Parents, Bytes)> {
         let p2 = HgId::from_slice(&data[..HG_LEN]).map_err(anyhow::Error::from)?;
         let p1 = HgId::from_slice(&data[HG_LEN..HG_PARENTS_LEN]).map_err(anyhow::Error::from)?;
         Ok((Parents::new(p1, p2), data.slice(HG_PARENTS_LEN..)))
     }
 
     /// Parse a file blob into raw data and copy_from metadata.
-    fn parse_file_blob(data: Bytes) -> (Bytes, Bytes) {
+    /// The callsite needs to ensure the store format is hg.
+    fn parse_file_blob_hg(data: Bytes) -> (Bytes, Bytes) {
         // drop the p1/p2 info
         let data = data.slice(HG_PARENTS_LEN..);
         let (raw_data, copy_from) = format_util::split_hg_file_metadata(&data);
@@ -488,7 +490,7 @@ impl EagerRepo {
                     return Ok(None);
                 }
                 let sapling_manifest = sapling_manifest.unwrap();
-                let (parents, data) = Self::extract_parents_from_tree_data(sapling_manifest)?;
+                let (parents, data) = Self::extract_parents_from_tree_data_hg(sapling_manifest)?;
                 let tree_entry = manifest_tree::TreeEntry(data, SerializationFormat::Hg);
                 let mut entries: Vec<(RepoPathBuf, AugmentedTreeEntry)> = Vec::new();
                 for child in tree_entry.elements() {
@@ -515,7 +517,7 @@ impl EagerRepo {
                             if bytes.is_none() {
                                 return Ok(None); // Can't calculate because file is missing.
                             }
-                            let (raw_data, copy_from) = Self::parse_file_blob(bytes.unwrap());
+                            let (raw_data, copy_from) = Self::parse_file_blob_hg(bytes.unwrap());
                             let aux_data = FileAuxData::from_content(&raw_data);
 
                             // Store a mapping from CasDigest to hg id so we can query augmented data by CasDigest.
