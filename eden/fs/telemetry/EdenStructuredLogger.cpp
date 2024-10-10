@@ -14,7 +14,8 @@ EdenStructuredLogger::EdenStructuredLogger(
     SessionInfo sessionInfo)
     : ScubaStructuredLogger{std::move(scribeLogger), std::move(sessionInfo)} {}
 
-DynamicEvent EdenStructuredLogger::populateDefaultFields(const char* type) {
+DynamicEvent EdenStructuredLogger::populateDefaultFields(
+    std::optional<const char*> type) {
   DynamicEvent event = StructuredLogger::populateDefaultFields(type);
   if (sessionInfo_.ciInstanceId.has_value()) {
     event.addInt("sandcastle_instance_id", *sessionInfo_.ciInstanceId);

@@ -21,7 +21,8 @@ class EdenStructuredLogger : public ScubaStructuredLogger {
   virtual ~EdenStructuredLogger() override = default;
 
  protected:
-  virtual DynamicEvent populateDefaultFields(const char* type) override;
+  virtual DynamicEvent populateDefaultFields(
+      std::optional<const char*> type) override;
 };
 
 } // namespace facebook::eden
