@@ -20,6 +20,7 @@ export const YOU_ARE_HERE_VIRTUAL_COMMIT: DagCommitInfo = DagCommitInfo.fromComm
   author: '',
   description: t('You are here'),
   filesSample: [],
+  filePathsSample: [],
   totalFileCount: 0,
   isYouAreHere: true,
 });

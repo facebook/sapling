@@ -47,6 +47,7 @@ export const FIELDS = {
   filesAdded: `{ifeq(phase, 'draft', file_adds|json, '[]')}`,
   filesModified: `{ifeq(phase, 'draft', file_mods|json, '[]')}`,
   filesRemoved: `{ifeq(phase, 'draft', file_dels|json, '[]')}`,
+  files: `{ifeq(phase, 'draft', join(files,'${ESCAPED_NULL_CHAR}'), '')}`,
   totalFileCount: '{files|count}', // We skip getting files for public commits, but we still want to know how many files there would be
   successorInfo: '{mutations % "{operation}:{successors % "{node}"},"}',
   closestPredecessors: '{predecessors % "{node},"}',
@@ -79,7 +80,7 @@ export function parseCommitInfoOutput(
       if (lines.length < Object.keys(FIELDS).length) {
         continue;
       }
-      const files: Array<ChangedFile> = [
+      const filesWithStatuses: Array<ChangedFile> = [
         ...(JSON.parse(lines[FIELD_INDEX.filesModified]) as Array<string>).map(path => ({
           path,
           status: 'M' as const,
@@ -93,11 +94,12 @@ export function parseCommitInfoOutput(
           status: 'R' as const,
         })),
       ];
+      const files = lines[FIELD_INDEX.files].split(NULL_CHAR).filter(e => e.length > 0);
 
       // Find if the commit is entirely within the cwd and therefore mroe relevant to the user.
       // Note: this must be done on the server using the full list of files, not just the sample that the client gets.
       // TODO: should we cache this by commit hash to avoid iterating all files on the same commits every time?
-      const maxCommonPathPrefix = findMaxCommonPathPrefix(files);
+      const maxCommonPathPrefix = findMaxCommonPathPrefix(filesWithStatuses);
 
       commitInfos.push({
         hash: lines[FIELD_INDEX.hash],
@@ -109,7 +111,8 @@ export function parseCommitInfoOutput(
         bookmarks: splitLine(lines[FIELD_INDEX.bookmarks]),
         remoteBookmarks: splitLine(lines[FIELD_INDEX.remoteBookmarks]),
         isDot: lines[FIELD_INDEX.isDot] === WDIR_PARENT_MARKER,
-        filesSample: files.slice(0, MAX_FETCHED_FILES_PER_COMMIT),
+        filesSample: filesWithStatuses.slice(0, MAX_FETCHED_FILES_PER_COMMIT),
+        filePathsSample: files.slice(0, MAX_FETCHED_FILES_PER_COMMIT),
         totalFileCount: parseInt(lines[FIELD_INDEX.totalFileCount], 10),
         successorInfo: parseSuccessorData(lines[FIELD_INDEX.successorInfo]),
         closestPredecessors: splitLine(lines[FIELD_INDEX.closestPredecessors], ','),

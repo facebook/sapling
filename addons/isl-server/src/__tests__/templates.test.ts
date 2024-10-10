@@ -29,6 +29,7 @@ draft
 []
 ["sapling/addons/isl/README.md"]
 []
+sapling/addons/isl/README.md
 1
 
 
@@ -52,6 +53,7 @@ draft
 ["sapling/addons/isl/README.md"]
 []
 []
+sapling/addons/isl/README.md
 1
 
 9637166dabea9ac50ccb93902f3f41df4d8a15c4,
@@ -76,6 +78,7 @@ Commit B
             status: 'M',
           },
         ],
+        filePathsSample: ['sapling/addons/isl/README.md'],
         hash: '77fdcef8759fb65da46a7a6431310829f12cef5b',
         isDot: false,
         isFollower: false,
@@ -101,6 +104,7 @@ Commit B
             status: 'A',
           },
         ],
+        filePathsSample: ['sapling/addons/isl/README.md'],
         hash: 'e4594714fb9b3410a0ef4affc955f9d76d61c8a7',
         isDot: false,
         isFollower: false,
@@ -133,6 +137,7 @@ draft
 []
 ["sapling/addons/isl/README.md"]
 []
+sapling/addons/isl/README.md
 1
 
 
@@ -157,6 +162,7 @@ ${COMMIT_END_MARK}
             status: 'M',
           },
         ],
+        filePathsSample: ['sapling/addons/isl/README.md'],
         hash: '77fdcef8759fb65da46a7a6431310829f12cef5b',
         isDot: false,
         isFollower: false,

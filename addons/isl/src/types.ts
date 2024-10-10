@@ -287,8 +287,14 @@ export type CommitInfo = {
    * This is only valid after the operation which creates this commit has completed.
    */
   optimisticRevset?: Revset;
-  /** only a subset of the total files for this commit */
+  /** only a subset of the total files for this commit
+   * @deprecated use {@link filePathsSample} instead
+   */
   filesSample: ReadonlyArray<ChangedFile>;
+  /** only a subset of the total changed file paths for this commit.
+   * File statuses must be fetched separately for performance.
+   */
+  filePathsSample: ReadonlyArray<RepoRelativePath>;
   totalFileCount: number;
   /** @see {@link DiffId} */
   diffId?: DiffId;
