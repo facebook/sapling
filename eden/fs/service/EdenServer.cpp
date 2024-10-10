@@ -1873,29 +1873,25 @@ ImmediateFuture<std::shared_ptr<EdenMount>> EdenServer::mount(
               }
             })
             .thenTry([this, mountStopWatch, doTakeover, edenMount](auto&& t) {
-              FinishedMount event;
-              event.repo_type = edenMount->getCheckoutConfig()->getRepoType();
-              event.backing_store_type = toBackingStoreString(
-                  edenMount->getCheckoutConfig()->getRepoBackingStoreType());
-              event.repo_source =
-                  basename(edenMount->getCheckoutConfig()->getRepoSource());
               auto* fsChannel = edenMount->getFsChannel();
-              event.fs_channel_type =
-                  fsChannel ? fsChannel->getName() : "unknown";
-              event.is_takeover = doTakeover;
-              event.duration =
-                  std::chrono::duration<double>{mountStopWatch.elapsed()}
-                      .count();
-              event.success = !t.hasException();
-              event.clean = edenMount->getOverlay()->hadCleanStartup();
-
               auto inodeCatalogType =
                   edenMount->getCheckoutConfig()->getInodeCatalogType();
-              if (inodeCatalogType.has_value()) {
-                event.inode_catalog_type =
-                    static_cast<int64_t>(inodeCatalogType.value());
-              }
-              serverState_->getStructuredLogger()->logEvent(event);
+              serverState_->getStructuredLogger()->logEvent(FinishedMount{
+                  std::string{
+                      toBackingStoreString(edenMount->getCheckoutConfig()
+                                               ->getRepoBackingStoreType())},
+                  edenMount->getCheckoutConfig()->getRepoType(),
+                  std::string{basename(
+                      edenMount->getCheckoutConfig()->getRepoSource())},
+                  fsChannel ? fsChannel->getName() : "unknown",
+                  doTakeover,
+                  std::chrono::duration<double>{mountStopWatch.elapsed()}
+                      .count(),
+                  !t.hasException(),
+                  edenMount->getOverlay()->hadCleanStartup(),
+                  inodeCatalogType.has_value()
+                      ? static_cast<int64_t>(inodeCatalogType.value())
+                      : 0});
               return makeFuture(std::move(t));
             });
       });

@@ -67,6 +67,7 @@ cpp_unittest(
     ],
     supports_static_listing = False,
     deps = [
+        "//eden/common/telemetry:log_info",
         "//eden/common/telemetry:scribe_logger",
         "//eden/fs/telemetry:structured_logger",
         "//folly/json:dynamic",

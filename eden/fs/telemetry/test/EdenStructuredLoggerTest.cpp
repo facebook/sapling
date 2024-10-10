@@ -11,6 +11,7 @@
 #include <folly/portability/GMock.h>
 #include <folly/portability/GTest.h>
 
+#include "eden/common/telemetry/LogEvent.h"
 #include "eden/common/telemetry/ScribeLogger.h"
 
 using namespace facebook::eden;
@@ -26,15 +27,20 @@ struct TestScribeLogger : public ScribeLogger {
   }
 };
 
-struct TestLogEvent {
-  static constexpr const char* type = "test_event";
-
+struct TestLogEvent : public TestEvent {
   std::string str;
   int number = 0;
 
-  void populate(DynamicEvent& event) const {
+  TestLogEvent(std::string str, int number)
+      : str(std::move(str)), number(number) {}
+
+  void populate(DynamicEvent& event) const override {
     event.addString("str", str);
     event.addInt("number", number);
+  }
+
+  char const* getType() const override {
+    return "test_event";
   }
 };
 
