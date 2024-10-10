@@ -24,6 +24,7 @@ use dag::Dag;
 use dag::Group;
 use dag::Vertex;
 use dag::VertexListWithOptions;
+use format_util::commit_text_to_root_tree_id;
 use format_util::git_sha1_deserialize;
 use format_util::git_sha1_serialize;
 use format_util::hg_sha1_deserialize;
@@ -602,26 +603,18 @@ impl EagerRepo {
         // the root tree without recursion. But that requires
         // new APIs to insert trees, and insert trees in a
         // certain order.
-        let maybe_hex_tree_id = match self.format() {
-            SerializationFormat::Hg => raw_text.get(0..Id20::hex_len()),
-            SerializationFormat::Git => raw_text
-                .strip_prefix(b"tree ")
-                .and_then(|t| t.get(0..Id20::hex_len())),
-        };
-        if let Some(hex_tree_id) = maybe_hex_tree_id {
-            if let Ok(tree_id) = Id20::from_hex(hex_tree_id) {
-                let mut missing = Vec::new();
-                let path = PathInfo::root();
-                self.store
-                    .find_missing_references(tree_id, Flag::Directory, path, &mut missing)?;
-                if !missing.is_empty() {
-                    let paths = missing.into_iter().map(|p| p.to_string()).collect();
-                    return Err(crate::Error::CommitMissingPaths(
-                        vertex,
-                        Vertex::copy_from(tree_id.as_ref()),
-                        paths,
-                    ));
-                }
+        if let Ok(tree_id) = commit_text_to_root_tree_id(raw_text, self.format()) {
+            let mut missing = Vec::new();
+            let path = PathInfo::root();
+            self.store
+                .find_missing_references(tree_id, Flag::Directory, path, &mut missing)?;
+            if !missing.is_empty() {
+                let paths = missing.into_iter().map(|p| p.to_string()).collect();
+                return Err(crate::Error::CommitMissingPaths(
+                    vertex,
+                    Vertex::copy_from(tree_id.as_ref()),
+                    paths,
+                ));
             }
         }
 
