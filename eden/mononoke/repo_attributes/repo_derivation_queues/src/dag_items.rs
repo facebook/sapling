@@ -126,19 +126,7 @@ impl DagItemInfo {
     }
 
     pub fn deserialize(data: &[u8]) -> Result<Self> {
-        if data.len() == 32 {
-            // Old format: data is just the head changset id.
-            let head_cs_id = ChangesetId::from_bytes(data)?;
-            Ok(Self {
-                head_cs_id,
-                enqueue_timestamp: None,
-                client_info: None,
-                bubble_id: None,
-            })
-        } else {
-            // New format: deserialize thrift.
-            Self::from_thrift(compact_protocol::deserialize(data)?)
-        }
+        Self::from_thrift(compact_protocol::deserialize(data)?)
     }
 }
 
