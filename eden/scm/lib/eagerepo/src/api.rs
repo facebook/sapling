@@ -310,20 +310,18 @@ impl SaplingRemoteApi for EagerRepo {
             }
         } else {
             for key in keys {
-                let data = self.get_sha1_blob_for_api(key.hgid, "trees")?;
+                let sha1_blob = self.get_sha1_blob_for_api(key.hgid, "trees")?;
+                let (parents, body) = sha1_blob_to_parents_body(&sha1_blob, self.format())?;
                 let mut entry = TreeEntry {
                     key: key.clone(),
                     ..Default::default()
                 };
 
                 if attributes.manifest_blob {
-                    // PERF: to_vec().into() converts minibytes::Bytes to bytes::Bytes.
-                    entry.data = Some(extract_body(&data).to_vec().into());
+                    entry.data = Some(body.clone());
                 }
 
                 if attributes.parents {
-                    let (p1, p2) = extract_p1_p2(&data);
-                    let parents = Parents::new(p1, p2);
                     entry.parents = Some(parents);
                 }
 
@@ -331,8 +329,7 @@ impl SaplingRemoteApi for EagerRepo {
                     let mut children: Vec<Result<TreeChildEntry, SaplingRemoteApiServerError>> =
                         Vec::new();
 
-                    let tree_entry =
-                        manifest_tree::TreeEntry(extract_body(&data), SerializationFormat::Hg);
+                    let tree_entry = manifest_tree::TreeEntry(body, self.format());
                     for child in tree_entry.elements() {
                         let child = match child {
                             Ok(child) => child,
@@ -347,11 +344,16 @@ impl SaplingRemoteApi for EagerRepo {
 
                         match child.flag {
                             Flag::File(_) => {
-                                let file_with_parents =
+                                let file_sha1_blob =
                                     self.get_sha1_blob_for_api(child.hgid, "trees (aux)")?;
-                                let file_body_without_parents = extract_body(&file_with_parents);
+                                let (_file_parents, file_body) =
+                                    sha1_blob_to_parents_body(&file_sha1_blob, self.format())?;
+
                                 let (file_body, _copy_from) =
-                                    format_util::split_hg_file_metadata(&file_body_without_parents);
+                                    file_body_to_file_content_and_copy_from(
+                                        &file_body,
+                                        self.format(),
+                                    );
 
                                 let aux_data = FileAuxData::from_content(&file_body);
                                 children.push(Ok(TreeChildEntry::File(TreeChildFileEntry {
@@ -1228,6 +1230,16 @@ fn sha1_blob_to_parents_body(
     Ok((parents, body))
 }
 
+fn file_body_to_file_content_and_copy_from(
+    body: &Bytes,
+    format: SerializationFormat,
+) -> (Bytes, Bytes) {
+    match format {
+        SerializationFormat::Hg => format_util::split_hg_file_metadata(body),
+        SerializationFormat::Git => (body.clone(), Bytes::new()),
+    }
+}
+
 fn edenapi_mutation_to_local(m: HgMutationEntryContent) -> MutationEntry {
     MutationEntry {
         succ: m.successor,
@@ -1492,16 +1504,6 @@ fn default_response_meta() -> ResponseMeta {
         server: Some("EagerRepo".to_string()),
         ..Default::default()
     }
-}
-
-fn extract_body(data_with_p1p2_prefix: &minibytes::Bytes) -> minibytes::Bytes {
-    data_with_p1p2_prefix.slice(HgId::len() * 2..)
-}
-
-fn extract_p1_p2(data: &[u8]) -> (HgId, HgId) {
-    let p2 = HgId::from_slice(&data[..HgId::len()]).unwrap();
-    let p1 = HgId::from_slice(&data[HgId::len()..(HgId::len() * 2)]).unwrap();
-    (p1, p2)
 }
 
 /// Extract rename metadata from filelog header (if rename exists).
