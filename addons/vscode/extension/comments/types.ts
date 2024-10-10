@@ -7,8 +7,12 @@
 
 import type {DiffComment} from 'isl/src/types';
 
-export type ClientToServerMessage = {type: 'squareIt'; value: number} | {type: 'fetchDiffComment'};
+export type ClientToServerMessage =
+  | {type: 'setInsetHeight'; height: number}
+  | {type: 'fetchDiffComment'};
 
-export type ServerToClientMessage =
-  | {type: 'gotSquared'; result: number}
-  | {type: 'fetchedDiffComment'; hash: string; comment: DiffComment};
+export type ServerToClientMessage = {
+  type: 'fetchedDiffComment';
+  hash: string;
+  comment: DiffComment;
+};

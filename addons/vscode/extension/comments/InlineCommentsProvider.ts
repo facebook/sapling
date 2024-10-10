@@ -12,6 +12,8 @@ import type {RepositoryContext} from 'isl-server/src/serverTypes';
 import type {CommitInfo, DiffComment} from 'isl/src/types';
 
 import {getWebviewOptions, htmlForWebview} from '../htmlForWebview';
+import computeLineHeight from './computeLineHeight';
+import {isMac} from 'isl-components/OperatingSystem';
 import * as vscode from 'vscode';
 import {workspace} from 'vscode';
 
@@ -60,7 +62,7 @@ declare module 'vscode' {
   export interface WebviewEditorInset {
     readonly editor: TextEditor;
     readonly line: number;
-    readonly height: number;
+    height: number;
     readonly webview: Webview;
     readonly onDidDispose: Event<void>;
     dispose(): void;
@@ -106,7 +108,7 @@ class InlineCommentsForRepo implements vscode.Disposable {
     );
 
     this.disposables.push(
-      vscode.window.onDidChangeActiveTextEditor(() => {
+      vscode.window.onDidChangeActiveTextEditor(editor => {
         this.updateActiveFileDecorations();
       }),
     );
@@ -174,14 +176,15 @@ class InlineCommentsForRepo implements vscode.Disposable {
       }
       const range = new vscode.Range(comment.line, 0, comment.line, 0);
 
-      const HEIGHT_IN_LINES = comment.suggestedChange?.hunks.reduce(
-        (count, hunk) => count + hunk.lines.length,
-        0,
-      );
+      // TODO: figure out how to use navigator.userAgent to find out window or mac
+      // for some reason components/OperatingSystem.ts doesn't work
+      const initialEditorLineHeight = computeLineHeight(true);
+      const heightInLines =
+        comment.suggestedChange?.hunks.reduce((count, hunk) => count + hunk.lines.length, 0) ?? 0;
       const inset = vscode.window.createWebviewTextEditorInset(
         editor,
         range.start.line - 2 >= 0 ? range.start.line - 2 : 0,
-        HEIGHT_IN_LINES ?? 0,
+        heightInLines,
         {
           enableScripts: true,
         },
@@ -196,7 +199,10 @@ class InlineCommentsForRepo implements vscode.Disposable {
         cssEntryPointFile: 'inlineCommentWebview.css',
         extensionRelativeBase: 'dist/webview',
         extraStyles: '',
-        initialScript: `window.islCommentHtml = ${JSON.stringify(comment.html)};`,
+        initialScript: `
+          window.islCommentHtml = ${JSON.stringify(comment.html)};
+          window.initialEditorLineHeight = ${initialEditorLineHeight};
+        `,
         rootClass: 'inline-comments',
         title: 'Inline Comments',
         webview: inset.webview,
@@ -205,6 +211,12 @@ class InlineCommentsForRepo implements vscode.Disposable {
 
       inset.webview.onDidReceiveMessage((event: ClientToServerMessage) => {
         switch (event.type) {
+          case 'setInsetHeight': {
+            if (event.height && event.height >= 0) {
+              inset.height = event.height;
+            }
+            break;
+          }
           case 'fetchDiffComment': {
             inset.webview.postMessage({
               type: 'fetchedDiffComment',
