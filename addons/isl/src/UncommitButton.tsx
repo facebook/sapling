@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {getChangedFilesForHash} from './ChangedFilesWithFetching';
 import {codeReviewProvider, diffSummary} from './codeReview/CodeReviewInfo';
 import {t, T} from './i18n';
 import {UncommitOperation} from './operations/Uncommit';
@@ -49,20 +50,30 @@ export function UncommitButton() {
       <Button
         onClick={async e => {
           e.stopPropagation();
-          const confirmed = await foundPlatform.confirm(
-            t('Are you sure you want to Uncommit?'),
-            hasChildren
-              ? t(
-                  'Uncommitting will not hide the original commit because it has children, but will move to the parent commit and keep its changes as uncommitted changes.',
-                )
-              : t(
-                  'Uncommitting will hide this commit, but keep its changes as uncommitted changes, as if you never ran commit.',
-                ),
-          );
+          const [confirmed, changedFilesResult] = await Promise.all([
+            foundPlatform.confirm(
+              t('Are you sure you want to Uncommit?'),
+              hasChildren
+                ? t(
+                    'Uncommitting will not hide the original commit because it has children, but will move to the parent commit and keep its changes as uncommitted changes.',
+                  )
+                : t(
+                    'Uncommitting will hide this commit, but keep its changes as uncommitted changes, as if you never ran commit.',
+                  ),
+            ),
+            getChangedFilesForHash(headCommit.hash),
+          ]);
           if (!confirmed) {
             return;
           }
-          runOperation(new UncommitOperation(headCommit));
+          const changedFiles =
+            changedFilesResult.value?.filesSample ??
+            headCommit.filePathsSample.map(path => ({
+              path,
+              // In the event of a failure, just guess at it being Modified. This is just for the UI preview.
+              status: 'M',
+            }));
+          runOperation(new UncommitOperation(headCommit, changedFiles));
         }}
         icon
         data-testid="uncommit-button">

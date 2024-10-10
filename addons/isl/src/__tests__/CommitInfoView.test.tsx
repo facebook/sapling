@@ -255,8 +255,7 @@ describe('CommitInfoView', () => {
         expect(amendButton?.disabled).toBe(true);
       });
 
-      // TODO
-      it.skip('shows optimistic uncommitted changes', async () => {
+      it('shows optimistic uncommitted changes', async () => {
         act(() => {
           simulateUncommittedChangedFiles({
             value: [],
@@ -268,6 +267,18 @@ describe('CommitInfoView', () => {
         jest.spyOn(platform, 'confirm').mockImplementation(() => Promise.resolve(true));
         act(() => {
           fireEvent.click(screen.getByText('Uncommit'));
+        });
+        act(() => {
+          simulateMessageFromServer({
+            type: 'fetchedCommitChangedFiles',
+            hash: 'b',
+            result: {
+              value: {
+                totalFileCount: 3,
+                filesSample: [{path: 'src/cb.js', status: 'M'}],
+              },
+            },
+          });
         });
 
         await waitFor(() => {

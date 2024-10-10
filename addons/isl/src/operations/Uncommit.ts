@@ -10,15 +10,16 @@ import type {
   Dag,
   UncommittedChangesPreviewContext,
 } from '../previews';
-import type {CommitInfo, UncommittedChanges} from '../types';
+import type {ChangedFile, CommitInfo, UncommittedChanges} from '../types';
 
 import {Operation} from './Operation';
 
 export class UncommitOperation extends Operation {
   /**
-   * @param originalDotCommit the current dot commit, needed to track when optimistic state is resolved and get the list of files that will be uncommitted
+   * @param originalDotCommit the current dot commit, needed to track when optimistic state is resolved
+   * @param changedFiles the files that are in the commit to be uncommitted. Must be fetched before running, as the CommitInfo object itself does not have file statuses.
    */
-  constructor(private originalDotCommit: CommitInfo) {
+  constructor(private originalDotCommit: CommitInfo, private changedFiles: Array<ChangedFile>) {
     super('UncommitOperation');
   }
 
@@ -60,10 +61,9 @@ export class UncommitOperation extends Operation {
   makeOptimisticUncommittedChangesApplier?(
     context: UncommittedChangesPreviewContext,
   ): ApplyUncommittedChangesPreviewsFuncType | undefined {
-    const uncommittedChangesAfterUncommit = this.originalDotCommit.filesSample;
     const preexistingChanges = new Set(context.uncommittedChanges.map(change => change.path));
 
-    if (uncommittedChangesAfterUncommit.every(file => preexistingChanges.has(file.path))) {
+    if (this.changedFiles.every(file => preexistingChanges.has(file.path))) {
       // once every file to uncommit appears in the output, the uncommit has reflected in the latest fetch.
       // TODO: we'll eventually limit how many uncommitted changes we pull in. When this happens, it's
       // possible the list of files won't include any of the changes being uncommitted (though this would be rare).
@@ -75,9 +75,7 @@ export class UncommitOperation extends Operation {
       // You could have uncommitted changes before uncommitting, so we need to include
       // files from the commit AND the existing uncommitted changes.
       // But it's also possible to have changed a file changed by the commit, so we need to de-dupe.
-      const newChanges = uncommittedChangesAfterUncommit.filter(
-        file => !preexistingChanges.has(file.path),
-      );
+      const newChanges = this.changedFiles.filter(file => !preexistingChanges.has(file.path));
       return [...changes, ...newChanges];
     };
     return func;
