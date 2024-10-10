@@ -22,7 +22,9 @@ use dag::Group;
 use dag::Set;
 use dag::Vertex;
 use dag::VertexListWithOptions;
+use format_util::git_sha1_deserialize;
 use format_util::git_sha1_serialize;
+use format_util::hg_sha1_deserialize;
 use format_util::hg_sha1_serialize;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
@@ -161,22 +163,22 @@ fn git_sha1_raw_text(raw_text: &[u8], _parents: &[Vertex]) -> Result<Vec<u8>> {
 impl ReadCommitText for OnDiskCommits {
     async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
         let store = self.commits.read();
-        get_commit_raw_text(&store, vertex)
+        get_commit_raw_text(&store, vertex, self.format)
     }
 
     fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
-        ArcRwLockZstore(self.commits.clone()).to_dyn_read_commit_text()
+        ArcRwLockZstore(self.commits.clone(), self.format).to_dyn_read_commit_text()
     }
 }
 
 #[derive(Clone)]
-struct ArcRwLockZstore(Arc<RwLock<Zstore>>);
+struct ArcRwLockZstore(Arc<RwLock<Zstore>>, SerializationFormat);
 
 #[async_trait::async_trait]
 impl ReadCommitText for ArcRwLockZstore {
     async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
         let store = self.0.read();
-        get_commit_raw_text(&store, vertex)
+        get_commit_raw_text(&store, vertex, self.1)
     }
 
     fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
@@ -184,10 +186,20 @@ impl ReadCommitText for ArcRwLockZstore {
     }
 }
 
-fn get_commit_raw_text(store: &Zstore, vertex: &Vertex) -> Result<Option<Bytes>> {
+fn get_commit_raw_text(
+    store: &Zstore,
+    vertex: &Vertex,
+    format: SerializationFormat,
+) -> Result<Option<Bytes>> {
     let id = Id20::from_slice(vertex.as_ref())?;
     match store.get(id)? {
-        Some(bytes) => Ok(Some(bytes.slice(Id20::len() * 2..))),
+        Some(bytes) => {
+            let raw_text = match format {
+                SerializationFormat::Hg => hg_sha1_deserialize(bytes.as_ref())?.0,
+                SerializationFormat::Git => git_sha1_deserialize(bytes.as_ref())?.0,
+            };
+            Ok(Some(bytes.slice_to_bytes(raw_text)))
+        }
         None => Ok(crate::revlog::get_hard_coded_commit_text(vertex)),
     }
 }
