@@ -8,11 +8,11 @@
 //! Implement traits from other crates.
 
 use cas_client::CasClient;
+use format_util::split_hg_file_metadata;
+use format_util::strip_hg_file_metadata;
 use futures::stream;
 use futures::stream::BoxStream;
 use futures::StreamExt;
-use hgstore::split_hg_file_metadata;
-use hgstore::strip_hg_file_metadata;
 use storemodel::types;
 use storemodel::BoxIterator;
 use storemodel::FileStore;

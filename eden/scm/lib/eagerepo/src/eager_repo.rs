@@ -24,9 +24,9 @@ use dag::Dag;
 use dag::Group;
 use dag::Vertex;
 use dag::VertexListWithOptions;
+use format_util::split_hg_file_metadata;
 use futures::lock::Mutex;
 use futures::lock::MutexGuard;
-use hgstore::split_hg_file_metadata;
 use manifest_tree::FileType;
 use manifest_tree::Flag;
 use manifest_tree::TreeEntry;
@@ -474,7 +474,7 @@ impl EagerRepo {
     fn parse_file_blob(data: Bytes) -> (Bytes, Bytes) {
         // drop the p1/p2 info
         let data = data.slice(HG_PARENTS_LEN..);
-        let (raw_data, copy_from) = hgstore::split_hg_file_metadata(&data);
+        let (raw_data, copy_from) = format_util::split_hg_file_metadata(&data);
         (raw_data, copy_from)
     }
 

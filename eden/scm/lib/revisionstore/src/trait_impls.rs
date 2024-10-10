@@ -12,7 +12,7 @@ use std::sync::Arc;
 use anyhow::format_err;
 use anyhow::Result;
 use edenapi_types::FileAuxData;
-use hgstore::strip_hg_file_metadata;
+use format_util::strip_hg_file_metadata;
 use minibytes::Bytes;
 use storemodel::BoxIterator;
 use types::fetch_mode::FetchMode;

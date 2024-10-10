@@ -9,7 +9,7 @@ use std::ops::BitOr;
 
 use anyhow::anyhow;
 use anyhow::Result;
-use hgstore::parse_copy_from_hg_file_metadata;
+use format_util::parse_copy_from_hg_file_metadata;
 use minibytes::Bytes;
 use types::Key;
 

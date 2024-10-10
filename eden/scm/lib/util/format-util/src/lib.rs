@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-//! Utilities interacting with hg store.
+//! Utilities interacting with store serialization formats (git or hg).
 
 mod filestore_util;
 

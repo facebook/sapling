@@ -9,7 +9,7 @@ use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
 use edenapi_types::FileEntry;
-use hgstore::strip_hg_file_metadata;
+use format_util::strip_hg_file_metadata;
 use minibytes::Bytes;
 use types::HgId;
 use types::Key;

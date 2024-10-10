@@ -293,7 +293,7 @@ impl IndexedLogHgIdDataStore {
             // It seems this is not actually used in modern setup.
             return Ok(None);
         }
-        let data = hgstore::strip_hg_file_metadata(&entry.calculate_content()?)?.0;
+        let data = format_util::strip_hg_file_metadata(&entry.calculate_content()?)?.0;
         Ok(Some(data))
     }
 
