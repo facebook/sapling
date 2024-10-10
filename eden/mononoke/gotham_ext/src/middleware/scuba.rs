@@ -37,6 +37,8 @@ use crate::response::HeadersMeta;
 use crate::state_ext::StateExt;
 
 const X_FB_PRODUCT_LOG_HEADER: &str = "x-fb-product-log";
+const X_FB_GIT_WRAPPER: &str = "x-fb-git-wrapper";
+const X_FB_NETWORK_TYPE: &str = "x-fb-validated-x2pauth-advice-subject-network-type";
 
 /// Common HTTP-related Scuba columns that the middlware will set automatically.
 /// Applications using the middleware are encouraged to follow a similar pattern
@@ -87,6 +89,10 @@ pub enum HttpScubaKey {
     ConfigStoreLastUpdatedAt,
     /// Request correlator ID that is recognized and standardized across all traffic infra for E2E tracebility.
     XFBProductLog,
+    /// Indicates whether the client was using the Meta's git wrapper or not.
+    XFBGitWrapper,
+    /// Which kind of network type user came from. E.g. corp or vpnless.
+    XFBNetworkType,
 }
 
 impl AsRef<str> for HttpScubaKey {
@@ -116,6 +122,8 @@ impl AsRef<str> for HttpScubaKey {
             ConfigStoreVersion => "config_store_version",
             ConfigStoreLastUpdatedAt => "config_store_last_updated_at",
             XFBProductLog => "x_fb_product_log",
+            XFBGitWrapper => "git_wrapper",
+            XFBNetworkType => "fb_network_type",
         }
     }
 }
@@ -242,6 +250,21 @@ fn populate_scuba(scuba: &mut MononokeScubaSampleBuilder, state: &mut State) {
             headers,
             HttpScubaKey::XFBProductLog,
             X_FB_PRODUCT_LOG_HEADER,
+            |header| header.to_string(),
+        );
+
+        add_header(
+            scuba,
+            headers,
+            HttpScubaKey::XFBGitWrapper,
+            X_FB_GIT_WRAPPER,
+            |header| header.to_string(),
+        );
+        add_header(
+            scuba,
+            headers,
+            HttpScubaKey::XFBNetworkType,
+            X_FB_NETWORK_TYPE,
             |header| header.to_string(),
         );
     }
