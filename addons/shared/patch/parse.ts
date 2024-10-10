@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {diffBlocks} from '../diff';
+
 export type Hunk = {
   oldStart: number;
   oldLines: number;
@@ -263,4 +265,45 @@ export function parsePatch(patch: string): ParsedDiff[] {
   }
 
   return list;
+}
+
+export function parseParsedDiff(
+  oldCodeLines: string[],
+  newCodeLines: string[],
+  lineNumber: number,
+  oldFileName?: string,
+  newFileName?: string,
+): ParsedDiff {
+  const hunks: Hunk[] = [];
+  const blocks = diffBlocks(oldCodeLines, newCodeLines);
+
+  blocks.forEach(block => {
+    if (block[0] === '=') {
+      return;
+    }
+
+    const oldRange = [block[1][0], block[1][1]];
+    const newRange = [block[1][2], block[1][3]];
+
+    const oldLines = oldCodeLines.slice(oldRange[0], oldRange[1]).map(codeStr => '-' + codeStr);
+    const newLines = newCodeLines.slice(newRange[0], newRange[1]).map(codeStr => '+' + codeStr);
+    const delimiters = new Array(oldLines.length + newLines.length).fill('\n');
+
+    const hunk: Hunk = {
+      oldStart: lineNumber + oldRange[0],
+      oldLines: oldLines.length ?? 0,
+      newStart: lineNumber + newRange[0],
+      newLines: newLines.length ?? 0,
+      lines: oldLines.concat(newLines),
+      linedelimiters: delimiters,
+    };
+
+    hunks.push(hunk);
+  });
+
+  return {
+    oldFileName,
+    newFileName,
+    hunks,
+  } as ParsedDiff;
 }

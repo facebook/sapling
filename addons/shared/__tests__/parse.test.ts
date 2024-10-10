@@ -5,7 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {parsePatch} from '../patch/parse';
+import {splitLines} from '../diff';
+import {parseParsedDiff, parsePatch} from '../patch/parse';
 
 describe('patch/parse', () => {
   it('should parse basic modified patch', () => {
@@ -254,5 +255,50 @@ old mode XXX
 new mode 100755
 `;
     expect(() => parsePatch(patch)).toThrow("invalid format 'old mode XXX'");
+  });
+});
+
+describe('createParsedDiffWithLines', () => {
+  it('return no hunks for empty lines', () => {
+    expect(parseParsedDiff([], [], 1)).toMatchObject({hunks: []});
+  });
+
+  it('returns no hunks when comparing same lines', () => {
+    const lines = splitLines('a\nb\nc\nd\ne\n');
+    expect(parseParsedDiff(lines, lines, 1)).toMatchObject({hunks: []});
+  });
+
+  it('return all "-" for old code and "=" for new code for totally different contents', () => {
+    const aLines = splitLines('x\ny\n');
+    const bLines = splitLines('a\nb\nc\n');
+    expect(parseParsedDiff(aLines, bLines, 1)).toMatchObject({
+      hunks: [
+        {
+          oldStart: 1,
+          oldLines: 2,
+          newStart: 1,
+          newLines: 3,
+          lines: ['-x\n', '-y\n', '+a\n', '+b\n', '+c\n'],
+          linedelimiters: ['\n', '\n', '\n', '\n', '\n'],
+        },
+      ],
+    });
+  });
+
+  it('reutrn for when a line was changed in the middle', () => {
+    const aLines = splitLines('a\nb\nc\nd\ne\n');
+    const bLines = splitLines('a\nb\nc\nd1\nd2\ne\n');
+    expect(parseParsedDiff(aLines, bLines, 1)).toMatchObject({
+      hunks: [
+        {
+          oldStart: 4,
+          oldLines: 1,
+          newStart: 4,
+          newLines: 2,
+          lines: ['-d\n', '+d1\n', '+d2\n'],
+          linedelimiters: ['\n', '\n', '\n'],
+        },
+      ],
+    });
   });
 });
