@@ -10,7 +10,7 @@ pub use self::ffi::create_metadata;
 #[cxx::bridge]
 mod ffi {
     unsafe extern "C++" {
-        include!("eden/mononoke/scs_server/metadata.h");
+        include!("eden/mononoke/scs/scs_server/metadata.h");
 
         #[namespace = "facebook::rust::srserver"]
         type RustThriftMetadata = srserver::RustThriftMetadata;

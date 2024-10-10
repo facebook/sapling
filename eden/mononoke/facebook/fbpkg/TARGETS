@@ -19,7 +19,7 @@ mononoke_fbpkg(
         "oncalls": "fbcode//oncall/py:oncalls",
         "scmadmin": "fbcode//scm/scmadmin:client",
         # actual scs server binary
-        "scs_server": "fbcode//eden/mononoke/scs_server:scs_server",
+        "scs_server": "fbcode//eden/mononoke/scs/scs_server:scs_server",
     },
 )
 

@@ -38,7 +38,7 @@ MONONOKE_TARGETS_TO_ENV = {
     "//eden/mononoke/mononoke_hg_sync_job:mononoke_hg_sync_job": "MONONOKE_HG_SYNC",
     "//eden/mononoke/repo_import:repo_import": "MONONOKE_REPO_IMPORT",
     "//eden/mononoke/scs/client:scsc": "SCS_CLIENT",
-    "//eden/mononoke/scs_server:scs_server": "SCS_SERVER",
+    "//eden/mononoke/scs/scs_server:scs_server": "SCS_SERVER",
     "//eden/mononoke/streaming_clone:new_streaming_clone": "MONONOKE_STREAMING_CLONE",
     "//eden/mononoke/tools/admin:newadmin": "MONONOKE_NEWADMIN",
     "//eden/mononoke/tools/example:example": "MONONOKE_EXAMPLE",
