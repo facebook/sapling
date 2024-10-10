@@ -103,7 +103,7 @@ const suggestedReviewersForCommit = atomFamilyWeak((hashOrHead: string | 'head' 
           const uncommittedChanges = get(uncommittedChangesWithPreviews);
           context.paths.push(...uncommittedChanges.slice(0, 10).map(change => change.path));
         }
-        context.paths.push(...(commit?.filesSample.slice(0, 10).map(change => change.path) ?? []));
+        context.paths.push(...(commit?.filePathsSample.slice(0, 10) ?? []));
       }
 
       return tracker.operation('GetSuggestedReviewers', 'FetchError', undefined, async () => {

@@ -147,7 +147,7 @@ const generatedSuggestions = atomFamilyWeak((fieldNameAndHashKey: string) =>
         const uncommittedChanges = get(uncommittedChangesWithPreviews);
         fileChanges.push(...uncommittedChanges.slice(0, 10).map(change => change.path));
       }
-      fileChanges.push(...(commit?.filesSample.slice(0, 10).map(change => change.path) ?? []));
+      fileChanges.push(...(commit?.filePathsSample.slice(0, 10) ?? []));
     }
 
     const hashOrHead = hashKey.startsWith('commit/') ? 'head' : hashKey;
