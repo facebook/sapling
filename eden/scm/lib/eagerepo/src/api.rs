@@ -390,8 +390,14 @@ impl SaplingRemoteApi for EagerRepo {
             let data = self.get_sha1_blob_for_api(id, "commit_revlog_data")?;
             let data = CommitRevlogData {
                 hgid: id,
-                // PERF: to_vec().into() converts minibytes::Bytes to bytes::Bytes.
-                revlog_data: data.to_vec().into(),
+                revlog_data: match self.format() {
+                    SerializationFormat::Hg => data,
+                    SerializationFormat::Git => {
+                        // For Git, just return the commit data without hesders.
+                        let git_commit_data = git_sha1_deserialize(&data)?.0;
+                        data.slice_to_bytes(git_commit_data)
+                    }
+                },
             };
             values.push(Ok(data));
         }
