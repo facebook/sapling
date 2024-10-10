@@ -22,6 +22,8 @@ use dag::Group;
 use dag::Set;
 use dag::Vertex;
 use dag::VertexListWithOptions;
+use format_util::git_sha1_serialize;
+use format_util::hg_sha1_serialize;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use minibytes::Bytes;
@@ -88,7 +90,7 @@ impl AppendCommits for OnDiskCommits {
 
         // Write commit data to zstore.
         for commit in commits {
-            let text = get_sha1_raw_text(&commit.raw_text, &commit.parents);
+            let text = get_sha1_raw_text(&commit.raw_text, &commit.parents)?;
             let vertex = Vertex::copy_from(self.commits.write().insert(&text, &[])?.as_ref());
             if vertex != commit.vertex {
                 return Err(crate::errors::hash_mismatch(&vertex, &commit.vertex));
@@ -139,37 +141,20 @@ impl AppendCommits for OnDiskCommits {
     }
 }
 
-fn null_id() -> Vertex {
-    Vertex::copy_from(Id20::null_id().as_ref())
+fn hg_sha1_raw_text(raw_text: &[u8], parents: &[Vertex]) -> Result<Vec<u8>> {
+    let p1 = match parents.first() {
+        Some(v) => Id20::from_slice(v.as_ref())?,
+        None => *Id20::null_id(),
+    };
+    let p2 = match parents.get(1) {
+        Some(v) => Id20::from_slice(v.as_ref())?,
+        None => *Id20::null_id(),
+    };
+    Ok(hg_sha1_serialize(raw_text, &p1, &p2))
 }
 
-fn hg_sha1_raw_text(raw_text: &[u8], parents: &[Vertex]) -> Vec<u8> {
-    // The SHA1 of a hg commit includes the "sorted(p1, p2)" header.
-    let mut result = Vec::with_capacity(raw_text.len() + Id20::len() * 2);
-    let (p1, p2) = (
-        parents.first().cloned().unwrap_or_else(null_id),
-        parents.get(1).cloned().unwrap_or_else(null_id),
-    );
-    if p1 < p2 {
-        result.extend_from_slice(p1.as_ref());
-        result.extend_from_slice(p2.as_ref());
-    } else {
-        result.extend_from_slice(p2.as_ref());
-        result.extend_from_slice(p1.as_ref());
-    }
-    result.extend_from_slice(raw_text);
-    result
-}
-
-fn git_sha1_raw_text(raw_text: &[u8], _parents: &[Vertex]) -> Vec<u8> {
-    // The SHA1 of a git commit includes "commit <size>" header.
-    let mut result = Vec::with_capacity(raw_text.len() + 15);
-    result.extend_from_slice(b"commit ");
-    let size_str = raw_text.len().to_string();
-    result.extend_from_slice(size_str.as_bytes());
-    result.push(0);
-    result.extend_from_slice(raw_text);
-    result
+fn git_sha1_raw_text(raw_text: &[u8], _parents: &[Vertex]) -> Result<Vec<u8>> {
+    Ok(git_sha1_serialize(raw_text, "commit"))
 }
 
 #[async_trait::async_trait]
