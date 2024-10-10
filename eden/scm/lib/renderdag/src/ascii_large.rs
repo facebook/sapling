@@ -7,8 +7,6 @@
 
 use std::marker::PhantomData;
 
-use itertools::Itertools;
-
 use super::output::OutputRendererOptions;
 use super::render::Ancestor;
 use super::render::GraphRow;
@@ -16,6 +14,7 @@ use super::render::LinkLine;
 use super::render::NodeLine;
 use super::render::PadLine;
 use super::render::Renderer;
+use crate::pad::pad_lines;
 
 pub struct AsciiLargeRenderer<N, R>
 where
@@ -70,10 +69,7 @@ where
     ) -> String {
         let line = self.inner.next_row(node, parents, glyph, message);
         let mut out = String::new();
-        let mut message_lines = line
-            .message
-            .lines()
-            .pad_using(self.options.min_row_height, |_| "");
+        let mut message_lines = pad_lines(line.message.lines(), self.options.min_row_height);
         let mut need_extra_pad_line = false;
 
         // Render the previous extra pad line
