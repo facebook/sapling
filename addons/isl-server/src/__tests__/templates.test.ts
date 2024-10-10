@@ -5,8 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ChangedFile} from 'isl/src/types';
-
 import {COMMIT_END_MARK, findMaxCommonPathPrefix, parseCommitInfoOutput} from '../templates';
 import path from 'path';
 import {mockLogger} from 'shared/testUtils';
@@ -26,9 +24,6 @@ draft
 
 3f41d88ab69446763404eccd0f3e579352ba2753\x00
 
-[]
-["sapling/addons/isl/README.md"]
-[]
 sapling/addons/isl/README.md
 1
 
@@ -50,9 +45,6 @@ draft
 
 2934650733c9181bdf64b7d00f5e0c7ca93d7ed7\x00
 
-["sapling/addons/isl/README.md"]
-[]
-[]
 sapling/addons/isl/README.md\x00sapling/addons/isl/package.json
 1
 
@@ -122,9 +114,6 @@ draft
 
 3f41d88ab69446763404eccd0f3e579352ba2753\x00
 
-[]
-["sapling/addons/isl/README.md"]
-[]
 sapling/addons/isl/README.md
 1
 

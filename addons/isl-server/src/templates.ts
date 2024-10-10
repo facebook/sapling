@@ -43,10 +43,8 @@ export const FIELDS = {
   remoteBookmarks: `{remotenames % '{remotename}${ESCAPED_NULL_CHAR}'}`,
   parents: `{parents % "{node}${ESCAPED_NULL_CHAR}"}`,
   isDot: `{ifcontains(rev, revset('.'), '${WDIR_PARENT_MARKER}')}`,
-  // Getting file statuses can be expensive. We don't really need files sample for public commits, so just skip those.
-  filesAdded: `{ifeq(phase, 'draft', file_adds|json, '[]')}`,
-  filesModified: `{ifeq(phase, 'draft', file_mods|json, '[]')}`,
-  filesRemoved: `{ifeq(phase, 'draft', file_dels|json, '[]')}`,
+  // We don't need files for public commits, and public commits are sometimes gigantic codemods without you realizing.
+  // No need to fetch if not draft.
   files: `{ifeq(phase, 'draft', join(files,'${ESCAPED_NULL_CHAR}'), '')}`,
   totalFileCount: '{files|count}', // We skip getting files for public commits, but we still want to know how many files there would be
   successorInfo: '{mutations % "{operation}:{successors % "{node}"},"}',
