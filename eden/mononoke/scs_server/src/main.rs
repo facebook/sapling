@@ -44,6 +44,7 @@ use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_app::MononokeReposManager;
 use panichandler::Fate;
+use scs_methods::source_control_impl::SourceControlServiceImpl;
 use sharding_ext::RepoShard;
 use slog::info;
 use slog::Logger;
@@ -67,19 +68,9 @@ use tracing_subscriber::filter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::Layer;
 
-mod async_requests;
-mod commit_id;
 mod facebook;
-mod from_request;
-mod history;
-mod into_response;
 mod metadata;
-mod methods;
 mod monitoring;
-mod scuba_params;
-mod scuba_response;
-mod source_control_impl;
-mod specifiers;
 
 const SERVICE_NAME: &str = "mononoke_scs_server";
 const SM_CLEANUP_TIMEOUT_SECS: u64 = 60;
@@ -291,7 +282,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         } else {
             None
         };
-        runtime.block_on(source_control_impl::SourceControlServiceImpl::new(
+        runtime.block_on(SourceControlServiceImpl::new(
             fb,
             &app,
             mononoke.clone(),
@@ -437,7 +428,7 @@ fn setup_thrift_server(
     fb: FacebookInit,
     args: &ScsServerArgs,
     will_exit: &Arc<AtomicBool>,
-    source_control_server: source_control_impl::SourceControlServiceImpl,
+    source_control_server: SourceControlServiceImpl,
     exec: impl 'static + Clone + ThriftExecutor + ThriftStreamExecutor,
 ) -> anyhow::Result<ThriftServer> {
     let fb303_base = {

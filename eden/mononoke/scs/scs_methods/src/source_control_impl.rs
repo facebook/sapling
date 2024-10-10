@@ -102,7 +102,7 @@ define_stats! {
 }
 
 #[derive(Clone)]
-pub(crate) struct SourceControlServiceImpl {
+pub struct SourceControlServiceImpl {
     pub(crate) fb: FacebookInit,
     pub(crate) mononoke: Arc<Mononoke<Repo>>,
     pub(crate) megarepo_api: Arc<MegarepoApi<Repo>>,
@@ -117,7 +117,7 @@ pub(crate) struct SourceControlServiceImpl {
     pub(crate) acl_provider: Arc<dyn AclProvider>,
 }
 
-pub(crate) struct SourceControlServiceThriftImpl(Arc<SourceControlServiceImpl>);
+pub struct SourceControlServiceThriftImpl(Arc<SourceControlServiceImpl>);
 
 impl SourceControlServiceImpl {
     pub async fn new(
@@ -155,7 +155,7 @@ impl SourceControlServiceImpl {
         })
     }
 
-    pub(crate) fn thrift_server(&self) -> SourceControlServiceThriftImpl {
+    pub fn thrift_server(&self) -> SourceControlServiceThriftImpl {
         SourceControlServiceThriftImpl(Arc::new(self.clone()))
     }
 
