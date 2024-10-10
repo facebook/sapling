@@ -119,12 +119,16 @@ impl SaplingRemoteApi for EagerRepo {
     }
 
     async fn capabilities(&self) -> Result<Vec<String>, SaplingRemoteApiError> {
-        Ok(vec![
+        let mut caps = vec![
             "segmented-changelog".to_string(),
             "commit-graph-segments".to_string(),
             // Inform client that we only support sha1 content addressing.
             "sha1-only".to_string(),
-        ])
+        ];
+        if matches!(self.format(), SerializationFormat::Git) {
+            caps.push("git-format".to_string());
+        }
+        Ok(caps)
     }
 
     async fn files(&self, keys: Vec<Key>) -> edenapi::Result<Response<FileResponse>> {
