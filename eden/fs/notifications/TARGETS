@@ -27,6 +27,9 @@ buck_genrule(
     compatible_with = [
         "ovr_config//os:windows",
     ],
+    exec_compatible_with = [
+        "ovr_config//os:windows",
+    ],
 )
 
 cpp_library(
