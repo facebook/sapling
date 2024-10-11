@@ -642,6 +642,13 @@ impl EagerRepo {
         Ok(())
     }
 
+    /// Get the commit id of a bookmark.
+    pub fn get_bookmark(&self, name: &str) -> Result<Option<Id20>> {
+        let bookmarks = self.get_bookmarks_map()?;
+        let id = bookmarks.get(name).cloned();
+        Ok(id)
+    }
+
     /// Get bookmarks.
     pub fn get_bookmarks_map(&self) -> Result<BTreeMap<String, Id20>> {
         // Attempt to match the format used by a real client repo.
