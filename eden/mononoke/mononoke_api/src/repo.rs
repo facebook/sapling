@@ -78,6 +78,7 @@ use filestore::FetchKey;
 use filestore::FilestoreConfig;
 use filestore::FilestoreConfigRef;
 pub use filestore::StoreRequest;
+use futures::future;
 use futures::stream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
@@ -1673,6 +1674,42 @@ impl<R: MononokeRepo> RepoContext<R> {
         Ok(ancestors)
     }
 
+    // TODO(mbthomas): get_git_from_bonsai -> derive_git_changeset
+    pub async fn get_git_from_bonsai(&self, cs_id: ChangesetId) -> Result<GitSha1, MononokeError> {
+        Ok(derive_git_changeset(self.ctx(), self.repo().repo_derived_data(), cs_id).await?)
+    }
+
+    /// This provides the same functionality as
+    /// `mononoke_api::RepoContext::location_to_changeset_id`. It just wraps the request and
+    /// response using Git specific types.
+    pub async fn location_to_git_changeset_id(
+        &self,
+        location: Location<GitSha1>,
+        count: u64,
+    ) -> Result<Vec<GitSha1>, MononokeError> {
+        let cs_location = location
+            .and_then_descendant(|descendant| async move {
+                self.repo()
+                    .bonsai_git_mapping()
+                    .get_bonsai_from_git_sha1(self.ctx(), descendant)
+                    .await?
+                    .ok_or_else(|| {
+                        MononokeError::InvalidRequest(format!(
+                            "git changeset {} not found",
+                            descendant
+                        ))
+                    })
+            })
+            .await?;
+        let result_csids = self.location_to_changeset_id(cs_location, count).await?;
+        let git_id_futures = result_csids.iter().map(|result_csid| {
+            derive_git_changeset(self.ctx(), self.repo().repo_derived_data(), *result_csid)
+        });
+        future::try_join_all(git_id_futures)
+            .await
+            .map_err(MononokeError::from)
+    }
+
     /// A Segmented Changelog client needs to know how to translate between a commit hash,
     /// for example one that is provided by the user, and the information that it has locally,
     /// the shape of the graph, i.e. a location in the graph.
@@ -1755,6 +1792,18 @@ impl<R: MononokeRepo> Eq for RepoContext<R> {}
 impl<R: MononokeRepo> Hash for RepoContext<R> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.repoid().hash(state);
+    }
+}
+
+// TODO(mbthomas): This is temporary to allow us to derive git changesets
+pub async fn derive_git_changeset(
+    ctx: &CoreContext,
+    derived_data: &RepoDerivedData,
+    cs_id: ChangesetId,
+) -> Result<GitSha1, Error> {
+    match derived_data.derive::<MappedGitCommitId>(ctx, cs_id).await {
+        Ok(id) => Ok(*id.oid()),
+        Err(err) => Err(err.into()),
     }
 }
 

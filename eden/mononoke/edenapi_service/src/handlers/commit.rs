@@ -15,6 +15,7 @@ use anyhow::Error;
 use async_stream::try_stream;
 use async_trait::async_trait;
 use blobstore::Loadable;
+use dag_types::Location;
 use edenapi_types::wire::WireCommitHashToLocationRequestBatch;
 use edenapi_types::AlterSnapshotRequest;
 use edenapi_types::AlterSnapshotResponse;
@@ -75,6 +76,7 @@ use mononoke_api::XRepoLookupExactBehaviour;
 use mononoke_api::XRepoLookupSyncBehaviour;
 use mononoke_api_hg::HgRepoContext;
 use mononoke_types::hash::GitSha1;
+use mononoke_types::sha1_hash::Sha1;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
@@ -127,13 +129,37 @@ pub struct LocationToHashHandler;
 
 async fn translate_location<R: MononokeRepo>(
     hg_repo_ctx: HgRepoContext<R>,
+    slapi_flavour: SlapiCommitIdentityScheme,
     request: CommitLocationToHashRequest,
 ) -> Result<CommitLocationToHashResponse, Error> {
+    // TODO(mbthomas): refactor HgId to Id20 (and related)
     let location = request.location.map_descendant(|x| x.into());
-    let ancestors: Vec<HgChangesetId> = hg_repo_ctx
-        .location_to_hg_changeset_id(location, request.count)
-        .await
-        .context(ErrorKind::CommitLocationToHashRequestFailed)?;
+    let ancestors: Vec<HgChangesetId> = match slapi_flavour {
+        SlapiCommitIdentityScheme::Hg => hg_repo_ctx
+            .location_to_hg_changeset_id(location, request.count)
+            .await
+            .context(ErrorKind::CommitLocationToHashRequestFailed)?,
+        SlapiCommitIdentityScheme::Git => {
+            let repo_ctx = hg_repo_ctx.repo_ctx();
+            // TODO(mbthomas): This is a working around HgId/HgChangesetId not being "generic".
+            // This should be cleaned up when we have a generic Id20 type
+            repo_ctx
+                .location_to_git_changeset_id(
+                    Location::new(
+                        GitSha1::from(location.descendant.into_nodehash().sha1().into_byte_array()),
+                        location.distance,
+                    ),
+                    request.count,
+                )
+                .await
+                .context(ErrorKind::CommitLocationToHashRequestFailed)?
+                .into_iter()
+                .map(|id| {
+                    HgChangesetId::new(HgNodeHash::new(Sha1::from_byte_array(id.into_inner())))
+                })
+                .collect()
+        }
+    };
     let hgids = ancestors.into_iter().map(|x| x.into()).collect();
     let answer = CommitLocationToHashResponse {
         location: request.location,
@@ -161,10 +187,11 @@ impl SaplingRemoteApiHandler for LocationToHashHandler {
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
+        let slapi_flavour = ectx.slapi_flavour();
         let hgid_list = request
             .requests
             .into_iter()
-            .map(move |location| translate_location(repo.clone(), location));
+            .map(move |location| translate_location(repo.clone(), slapi_flavour, location));
         let response = stream::iter(hgid_list).buffer_unordered(MAX_CONCURRENT_FETCHES_PER_REQUEST);
         Ok(response.boxed())
     }

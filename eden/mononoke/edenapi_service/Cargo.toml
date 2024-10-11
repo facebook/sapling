@@ -20,6 +20,7 @@ clientinfo = { version = "0.1.0", path = "../../scm/lib/clientinfo" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 commit_cloud_types = { version = "0.1.0", path = "../commit_cloud/types" }
 context = { version = "0.1.0", path = "../server/context" }
+dag-types = { version = "0.1.0", path = "../../scm/lib/dag/dag-types" }
 edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
 ephemeral_blobstore = { version = "0.1.0", path = "../blobstore/ephemeral_blobstore" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
