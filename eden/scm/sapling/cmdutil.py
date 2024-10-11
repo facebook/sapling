@@ -66,6 +66,7 @@ from . import (
 from .i18n import _, _x
 from .node import hex, nullid, nullrev, short
 from .pycompat import ensureunicode, range
+from .utils import subtreeutil
 
 if typing.TYPE_CHECKING:
     from .ui import ui
@@ -5008,8 +5009,8 @@ def registerdiffgrafts(from_paths, to_paths, *ctxs):
     if not ctxs:
         return error.ProgrammingError("registerdiffgrafts() requires ctxs")
 
-    scmutil.validate_path_size(from_paths, to_paths)
-    scmutil.validate_path_overlap(to_paths)
+    subtreeutil.validate_path_size(from_paths, to_paths)
+    subtreeutil.validate_path_overlap(to_paths)
 
     for ctx in ctxs:
         manifest = ctx.manifest()

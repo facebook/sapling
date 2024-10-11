@@ -5,7 +5,8 @@
 
 import json
 
-from .. import error, node
+from .. import error, node, util
+from ..i18n import _
 
 # todo: remove the 'test_' prefix when this feature is stable
 SUBTREE_BRANCH_KEY = "test_subtree_copy"
@@ -66,3 +67,32 @@ def _get_subtree_metadata(repo, node, key):
         return json.loads(val_str)
     except json.JSONDecodeError:
         raise error.Abort(f"invalid {key} metadata: {val_str}")
+
+
+def validate_path_exist(ui, ctx, paths, abort_on_missing=False):
+    """Validate that the given path exists in the given context."""
+    for p in paths:
+        if not (p in ctx or ctx.hasdir(p)):
+            msg = _("path '%s' does not exist in commit %s") % (p, ctx)
+            if abort_on_missing:
+                raise error.Abort(msg)
+            else:
+                ui.status(msg + "\n")
+
+
+def validate_path_size(from_paths, to_paths, abort_on_empty=False):
+    if len(from_paths) != len(to_paths):
+        raise error.Abort(_("must provide same number of --from-path and --to-path"))
+
+    if abort_on_empty and not from_paths:
+        raise error.Abort(_("must provide --from-path and --to-path"))
+
+
+def validate_path_overlap(to_paths):
+    # Disallow overlapping --to-path to keep things simple.
+    to_dirs = util.dirs(to_paths)
+    seen = set()
+    for p in to_paths:
+        if p in to_dirs or p in seen:
+            raise error.Abort(_("overlapping --to-path entries"))
+        seen.add(p)
