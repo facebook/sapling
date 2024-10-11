@@ -7,17 +7,10 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
   $ setconfig push.edenapi=true
-  $ BLOB_TYPE="blob_sqlite" default_setup
-  hg repo
-  o  C [draft;rev=2;26805aba1e60]
-  │
-  o  B [draft;rev=1;112478962961]
-  │
-  o  A [draft;rev=0;426bada5c675]
-  $
-  blobimporting
-  starting Mononoke
-  cloning repo in hg client 'repo2'
+  $ BLOB_TYPE="blob_sqlite" default_setup_drawdag
+  A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
+  B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
+  C=e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
 
 Push single empty commit
   $ hg up -q "min(all())"
@@ -25,7 +18,7 @@ Push single empty commit
   $ hg revert -r .^ 1
   $ hg commit --amend
   $ hg show
-  commit:      4d5799789652
+  commit:      6be0d6e308ce
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   description:
@@ -33,15 +26,18 @@ Push single empty commit
   
   
   
+
+
+
   $ hg push -r . --to master_bookmark
-  pushing rev 4d5799789652 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  pushing rev 6be0d6e308ce to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 0 files for upload
   edenapi: queue 0 trees for upload
   edenapi: uploaded 1 changeset
-  pushrebasing stack (426bada5c675, 4d5799789652] (1 commit) to remote bookmark master_bookmark
+  pushrebasing stack (20ca2a4749a4, 6be0d6e308ce] (1 commit) to remote bookmark master_bookmark
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updated remote bookmark master_bookmark to 13b7fc3111fb
+  updated remote bookmark master_bookmark to 8523ebae9c7b
 
 Push empty and non-empty commit in a stack
   $ hg up -q "min(all())"
@@ -50,16 +46,16 @@ Push empty and non-empty commit in a stack
   $ hg revert -r .^ 2
   $ hg commit --amend
   $ hg push -r . --to master_bookmark
-  pushing rev 22c3c2036561 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  pushing rev e7ecf1de70fd to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 2 commits for upload
   edenapi: queue 1 file for upload
   edenapi: uploaded 1 file
   edenapi: queue 1 tree for upload
   edenapi: uploaded 1 tree
   edenapi: uploaded 2 changesets
-  pushrebasing stack (426bada5c675, 22c3c2036561] (2 commits) to remote bookmark master_bookmark
+  pushrebasing stack (20ca2a4749a4, e7ecf1de70fd] (2 commits) to remote bookmark master_bookmark
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updated remote bookmark master_bookmark to e16fec5713c0
+  updated remote bookmark master_bookmark to 2f4070d136e3
 
 Push stack of empty commits
   $ hg up -q tip
@@ -70,11 +66,11 @@ Push stack of empty commits
   $ hg revert -r .^ 111
   $ hg commit --amend
   $ hg push -r . --to master_bookmark
-  pushing rev aeb4783bffb3 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  pushing rev bec6b3705d41 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 2 commits for upload
   edenapi: queue 0 files for upload
   edenapi: queue 0 trees for upload
   edenapi: uploaded 2 changesets
-  pushrebasing stack (e16fec5713c0, aeb4783bffb3] (2 commits) to remote bookmark master_bookmark
+  pushrebasing stack (2f4070d136e3, bec6b3705d41] (2 commits) to remote bookmark master_bookmark
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updated remote bookmark master_bookmark to aeb4783bffb3
+  updated remote bookmark master_bookmark to bec6b3705d41

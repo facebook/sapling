@@ -8,42 +8,35 @@
   $ . "${TEST_FIXTURES}/library.sh"
   $ setconfig ui.ignorerevnum=false
   $ setconfig push.edenapi=true
-  $ BLOB_TYPE="blob_files" default_setup --scuba-dataset "file://$TESTTMP/log.json"
-  hg repo
-  o  C [draft;rev=2;26805aba1e60]
-  │
-  o  B [draft;rev=1;112478962961]
-  │
-  o  A [draft;rev=0;426bada5c675]
-  $
-  blobimporting
-  starting Mononoke
-  cloning repo in hg client 'repo2'
+  $ BLOB_TYPE="blob_files" default_setup_drawdag --scuba-dataset "file://$TESTTMP/log.json"
+  A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
+  B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
+  C=e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
 
 
 Pushrebase commit 1
   $ hg up -q "min(all())"
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
   $ hg push -r . --to master_bookmark
-  pushing rev a0c9c5791058 to destination https://localhost:*/edenapi/ bookmark master_bookmark (glob)
+  pushing rev 26f143b427a3 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload
   edenapi: uploaded 1 file
   edenapi: queue 1 tree for upload
   edenapi: uploaded 1 tree
   edenapi: uploaded 1 changeset
-  pushrebasing stack (426bada5c675, a0c9c5791058] (1 commit) to remote bookmark master_bookmark
+  pushrebasing stack (20ca2a4749a4, 26f143b427a3] (1 commit) to remote bookmark master_bookmark
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updated remote bookmark master_bookmark to c2e526aacb51
+  updated remote bookmark master_bookmark to c39a1f67cdbc
 
   $ log -r "all()"
-  @  1 [public;rev=4;c2e526aacb51] default/master_bookmark
+  @  1 [public;rev=4;c39a1f67cdbc] default/master_bookmark
   │
-  o  C [public;rev=2;26805aba1e60]
+  o  C [public;rev=2;d3b399ca8757]
   │
-  o  B [public;rev=1;112478962961]
+  o  B [public;rev=1;80521a640a0c]
   │
-  o  A [public;rev=0;426bada5c675]
+  o  A [public;rev=0;20ca2a4749a4]
   $
 
 Pushrebased commit 1 over commits B and C (thus the distance should be 2).
@@ -68,22 +61,22 @@ Check that the filenode for 1 does not point to the draft commit in a new clone
   $ hg up master_bookmark
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg debugsh -c 'ui.write("%s\n" % s.node.hex(repo["."].filectx("1").getnodeinfo()[2]))'
-  c2e526aacb5100b7c1ddb9b711d2e012e6c69cda
-  $ cd ../repo2
+  c39a1f67cdbc38a5701bef538d354d47b7c9f2cb
+  $ cd ../repo
 
 Push rebase fails with conflict in the bottom of the stack
   $ hg up -q "min(all())"
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
   $ echo 2 > 2 && hg add 2 && hg ci -m 2
   $ hg push -r . --to master_bookmark
-  pushing rev 0c67ec8c24b9 to destination https://localhost:*/edenapi/ bookmark master_bookmark (glob)
+  pushing rev 8b01ec816b8a to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload
   edenapi: uploaded 1 file
   edenapi: queue 1 tree for upload
   edenapi: uploaded 1 tree
   edenapi: uploaded 1 changeset
-  pushrebasing stack (426bada5c675, 0c67ec8c24b9] (2 commits) to remote bookmark master_bookmark
+  pushrebasing stack (20ca2a4749a4, 8b01ec816b8a] (2 commits) to remote bookmark master_bookmark
   abort: Server error: Conflicts while pushrebasing: [PushrebaseConflict { left: NonRootMPath("1"), right: NonRootMPath("1") }]
   [255]
   $ hg hide -r ".^ + ." -q
@@ -94,13 +87,13 @@ Push rebase fails with conflict in the top of the stack
   $ echo 2 > 2 && hg add 2 && hg ci -m 2
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
   $ hg push -r . --to master_bookmark
-  pushing rev 8d2ff619947e to destination https://localhost:*/edenapi/ bookmark master_bookmark (glob)
+  pushing rev be73549636d1 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 2 commits for upload
   edenapi: queue 0 files for upload
   edenapi: queue 2 trees for upload
   edenapi: uploaded 2 trees
   edenapi: uploaded 2 changesets
-  pushrebasing stack (426bada5c675, 8d2ff619947e] (2 commits) to remote bookmark master_bookmark
+  pushrebasing stack (20ca2a4749a4, be73549636d1] (2 commits) to remote bookmark master_bookmark
   abort: Server error: Conflicts while pushrebasing: [PushrebaseConflict { left: NonRootMPath("1"), right: NonRootMPath("1") }]
   [255]
   $ hg hide -r ".^ + ." -q
@@ -111,29 +104,29 @@ Push stack
   $ echo 3 > 3 && hg add 3 && hg ci -m 3
   $ echo 4 > 4 && hg add 4 && hg ci -m 4
   $ hg push -r . --to master_bookmark
-  pushing rev 7a68f123d810 to destination https://localhost:*/edenapi/ bookmark master_bookmark (glob)
+  pushing rev 1096b7ced56c to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 2 commits for upload
   edenapi: queue 2 files for upload
   edenapi: uploaded 2 files
   edenapi: queue 2 trees for upload
   edenapi: uploaded 2 trees
   edenapi: uploaded 2 changesets
-  pushrebasing stack (426bada5c675, 7a68f123d810] (2 commits) to remote bookmark master_bookmark
+  pushrebasing stack (20ca2a4749a4, 1096b7ced56c] (2 commits) to remote bookmark master_bookmark
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updated remote bookmark master_bookmark to 4f5a4463b24b
+  updated remote bookmark master_bookmark to 6c33ca0cbd4d
   $ hg up -q master_bookmark
   $ log -r "all()"
-  @  4 [public;rev=11;4f5a4463b24b] default/master_bookmark
+  @  4 [public;rev=11;6c33ca0cbd4d] default/master_bookmark
   │
-  o  3 [public;rev=10;7796136324ad]
+  o  3 [public;rev=10;663c2d9c201e]
   │
-  o  1 [public;rev=4;c2e526aacb51]
+  o  1 [public;rev=4;c39a1f67cdbc]
   │
-  o  C [public;rev=2;26805aba1e60]
+  o  C [public;rev=2;d3b399ca8757]
   │
-  o  B [public;rev=1;112478962961]
+  o  B [public;rev=1;80521a640a0c]
   │
-  o  A [public;rev=0;426bada5c675]
+  o  A [public;rev=0;20ca2a4749a4]
   $
 
 Pushrebased commits {3, 4} over commits {B, C, 1} (thus the distance should be 3).
@@ -146,30 +139,30 @@ Push fast-forward
   $ OLD_HASH="$(hg whereami)"
   $ echo 5 > 5 && hg add 5 && hg ci -m 5
   $ hg push -r . --to master_bookmark
-  pushing rev 59e5396444cf to destination https://localhost:*/edenapi/ bookmark master_bookmark (glob)
+  pushing rev b9f277aaa224 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload
   edenapi: uploaded 1 file
   edenapi: queue 1 tree for upload
   edenapi: uploaded 1 tree
   edenapi: uploaded 1 changeset
-  pushrebasing stack (4f5a4463b24b, 59e5396444cf] (1 commit) to remote bookmark master_bookmark
+  pushrebasing stack (6c33ca0cbd4d, b9f277aaa224] (1 commit) to remote bookmark master_bookmark
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updated remote bookmark master_bookmark to 59e5396444cf
+  updated remote bookmark master_bookmark to b9f277aaa224
   $ log -r "all()"
-  @  5 [public;rev=12;59e5396444cf] default/master_bookmark
+  @  5 [public;rev=12;b9f277aaa224] default/master_bookmark
   │
-  o  4 [public;rev=11;4f5a4463b24b]
+  o  4 [public;rev=11;6c33ca0cbd4d]
   │
-  o  3 [public;rev=10;7796136324ad]
+  o  3 [public;rev=10;663c2d9c201e]
   │
-  o  1 [public;rev=4;c2e526aacb51]
+  o  1 [public;rev=4;c39a1f67cdbc]
   │
-  o  C [public;rev=2;26805aba1e60]
+  o  C [public;rev=2;d3b399ca8757]
   │
-  o  B [public;rev=1;112478962961]
+  o  B [public;rev=1;80521a640a0c]
   │
-  o  A [public;rev=0;426bada5c675]
+  o  A [public;rev=0;20ca2a4749a4]
   $
   $ jq < "$TESTTMP/log.json" '.int.pushrebase_distance | numbers' | tail -n 1
   0
@@ -178,10 +171,10 @@ Push fast-forward
 Push with no new commits
   $ wait_for_bookmark_move_away_edenapi repo master_bookmark "$OLD_HASH"
   $ hg push -r . --to master_bookmark
-  pushing rev 59e5396444cf to destination https://localhost:*/edenapi/ bookmark master_bookmark (glob)
-  moving remote bookmark master_bookmark from 59e5396444cf to 59e5396444cf
+  pushing rev b9f277aaa224 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  moving remote bookmark master_bookmark from b9f277aaa224 to b9f277aaa224
   $ log -r "."
-  @  5 [public;rev=12;59e5396444cf] default/master_bookmark
+  @  5 [public;rev=12;b9f277aaa224] default/master_bookmark
   │
   ~
 
@@ -192,30 +185,30 @@ Push a merge commit with both parents not ancestors of destination bookmark
   $ echo 7 > 7 && hg add 7 && hg ci -m 7
   $ hg merge -q -r 13 && hg ci -m "merge 6 and 7"
   $ log -r "all()"
-  @    merge 6 and 7 [draft;rev=15;fad460d85200]
+  @    merge 6 and 7 [draft;rev=15;3216c28e1752]
   ├─╮
-  │ o  7 [draft;rev=14;299aa3fbbd3f]
+  │ o  7 [draft;rev=14;963a2e3bcf35]
   │ │
-  o │  6 [draft;rev=13;55337b4265b3]
+  o │  6 [draft;rev=13;22cfc5c8c7f6]
   ├─╯
-  │ o  5 [public;rev=12;59e5396444cf] default/master_bookmark
+  │ o  5 [public;rev=12;b9f277aaa224] default/master_bookmark
   │ │
-  │ o  4 [public;rev=11;4f5a4463b24b]
+  │ o  4 [public;rev=11;6c33ca0cbd4d]
   │ │
-  │ o  3 [public;rev=10;7796136324ad]
+  │ o  3 [public;rev=10;663c2d9c201e]
   │ │
-  │ o  1 [public;rev=4;c2e526aacb51]
+  │ o  1 [public;rev=4;c39a1f67cdbc]
   │ │
-  │ o  C [public;rev=2;26805aba1e60]
+  │ o  C [public;rev=2;d3b399ca8757]
   ├─╯
-  o  B [public;rev=1;112478962961]
+  o  B [public;rev=1;80521a640a0c]
   │
-  o  A [public;rev=0;426bada5c675]
+  o  A [public;rev=0;20ca2a4749a4]
   $
 
   $ hg push -r . --to master_bookmark
   fallback reason: merge commit is not supported by EdenApi push yet
-  pushing rev fad460d85200 to destination mono:repo bookmark master_bookmark
+  pushing rev 3216c28e1752 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -223,25 +216,25 @@ Push a merge commit with both parents not ancestors of destination bookmark
   updating bookmark master_bookmark
   $ hg up master_bookmark -q && hg hide -r "13+14+15" -q
   $ log -r "all()"
-  @    merge 6 and 7 [public;rev=18;4a0002072071] default/master_bookmark
+  * (glob)
   ├─╮
   * (glob)
   │ │
-  * (glob)
+  o │  6 [public;rev=16;18e02fd69ab4]
   ├─╯
-  o  5 [public;rev=12;59e5396444cf]
+  o  5 [public;rev=12;b9f277aaa224]
   │
-  o  4 [public;rev=11;4f5a4463b24b]
+  o  4 [public;rev=11;6c33ca0cbd4d]
   │
-  o  3 [public;rev=10;7796136324ad]
+  o  3 [public;rev=10;663c2d9c201e]
   │
-  o  1 [public;rev=4;c2e526aacb51]
+  o  1 [public;rev=4;c39a1f67cdbc]
   │
-  o  C [public;rev=2;26805aba1e60]
+  o  C [public;rev=2;d3b399ca8757]
   │
-  o  B [public;rev=1;112478962961]
+  o  B [public;rev=1;80521a640a0c]
   │
-  o  A [public;rev=0;426bada5c675]
+  o  A [public;rev=0;20ca2a4749a4]
   $
   $ jq < "$TESTTMP/log.json" '.int.pushrebase_distance | numbers' | tail -n 1
   5
@@ -262,20 +255,20 @@ Push-rebase of a commit with p2 being the ancestor of the destination bookmark
   $ hg up .^^ && echo 12 > 12 && hg add 12 && hg ci -m 12
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg log -r master_bookmark -T '{node}\n'
-  589551466f2555a4d90ca544b23273a2eed21f9d
+  45d2d9680dec59f71e8cbfd4b5c0fa9ec4c1215c
 
   $ hg merge -qr 21 && hg ci -qm "merge 10 and 12"
   $ hg phase -r $(hg log -r . -T "{p1node}")
-  cd5aac4439e50d4329539ac117bfb3e35d7fb74b: draft
+  67c6d19149569d9a7ff24f480a1e0391038108de: draft
   $ hg phase -r $(hg log -r . -T "{p2node}")
-  c573a92e1179f7367f4e4a51689d097bb84842ab: public
+  715b5a51388191187b4157554963250980b7ce45: public
   $ hg log -r master_bookmark -T '{node}\n'
-  589551466f2555a4d90ca544b23273a2eed21f9d
+  45d2d9680dec59f71e8cbfd4b5c0fa9ec4c1215c
 
 - Actually test the push
   $ hg push -r . --to master_bookmark
   fallback reason: merge commit is not supported by EdenApi push yet
-  pushing rev e3db177db1d1 to destination mono:repo bookmark master_bookmark
+  pushing rev f1e6d3dc240b to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -283,52 +276,52 @@ Push-rebase of a commit with p2 being the ancestor of the destination bookmark
   updating bookmark master_bookmark
   $ hg hide -r . -q && hg up master_bookmark -q
   $ hg log -r master_bookmark -T '{node}\n'
-  eb388b759fde98ed5b1e05fd2da5309f3762c2fd
+  1065de83df59887b118346ca57704ee2326b4cb9
 Test creating a bookmark on a public commit
   $ hg push --rev 25 --to master_bookmark_2 --create
-  pushing rev eb388b759fde to destination https://localhost:*/edenapi/ bookmark master_bookmark_2 (glob)
+  pushing rev 1065de83df59 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark_2
   creating remote bookmark master_bookmark_2
   $ log -r "20::"
-  @    merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark default/master_bookmark_2
+  @    merge 10 and 12 [public;rev=25;1065de83df59] default/master_bookmark default/master_bookmark_2
   ├─╮
-  │ o  12 [public;rev=23;cd5aac4439e5]
+  │ o  12 [public;rev=23;67c6d1914956]
   │ │
-  o │  11 [public;rev=22;589551466f25]
+  o │  11 [public;rev=22;45d2d9680dec]
   │ │
-  o │  10 [public;rev=21;c573a92e1179]
+  o │  10 [public;rev=21;715b5a513881]
   ├─╯
-  o  9 [public;rev=20;2f7cc50dc4e5]
+  o  9 [public;rev=20;99a124548fb0]
   │
   ~
 
 Test a non-forward push
   $ hg up 22 -q
   $ log -r "20::"
-  o    merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark default/master_bookmark_2
+  o    merge 10 and 12 [public;rev=25;1065de83df59] default/master_bookmark default/master_bookmark_2
   ├─╮
-  │ o  12 [public;rev=23;cd5aac4439e5]
+  │ o  12 [public;rev=23;67c6d1914956]
   │ │
-  @ │  11 [public;rev=22;589551466f25]
+  @ │  11 [public;rev=22;45d2d9680dec]
   │ │
-  o │  10 [public;rev=21;c573a92e1179]
+  o │  10 [public;rev=21;715b5a513881]
   ├─╯
-  o  9 [public;rev=20;2f7cc50dc4e5]
+  o  9 [public;rev=20;99a124548fb0]
   │
   ~
   $ hg push --force -r . --to master_bookmark_2 --non-forward-move --pushvar NON_FAST_FORWARD=true
-  pushing rev 589551466f25 to destination https://localhost:*/edenapi/ bookmark master_bookmark_2 (glob)
-  moving remote bookmark master_bookmark_2 from eb388b759fde to 589551466f25
+  pushing rev 45d2d9680dec to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark_2
+  moving remote bookmark master_bookmark_2 from 1065de83df59 to 45d2d9680dec
   $ wait_for_bookmark_move_edenapi repo master_bookmark_2 "$(hg log -T"{node}" -r 22)"
   $ log -r "20::"
-  o    merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark
+  o    merge 10 and 12 [public;rev=25;1065de83df59] default/master_bookmark
   ├─╮
-  │ o  12 [public;rev=23;cd5aac4439e5]
+  │ o  12 [public;rev=23;67c6d1914956]
   │ │
-  @ │  11 [public;rev=22;589551466f25] default/master_bookmark_2
+  @ │  11 [public;rev=22;45d2d9680dec] default/master_bookmark_2
   │ │
-  o │  10 [public;rev=21;c573a92e1179]
+  o │  10 [public;rev=21;715b5a513881]
   ├─╯
-  o  9 [public;rev=20;2f7cc50dc4e5]
+  o  9 [public;rev=20;99a124548fb0]
   │
   ~
 
@@ -336,22 +329,22 @@ Test deleting a bookmark
   $ hg push --delete master_bookmark_2
   deleting remote bookmark master_bookmark_2
   $ log -r "20::"
-  o    merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark
+  o    merge 10 and 12 [public;rev=25;1065de83df59] default/master_bookmark
   ├─╮
-  │ o  12 [public;rev=23;cd5aac4439e5]
+  │ o  12 [public;rev=23;67c6d1914956]
   │ │
-  @ │  11 [public;rev=22;589551466f25]
+  @ │  11 [public;rev=22;45d2d9680dec]
   │ │
-  o │  10 [public;rev=21;c573a92e1179]
+  o │  10 [public;rev=21;715b5a513881]
   ├─╯
-  o  9 [public;rev=20;2f7cc50dc4e5]
+  o  9 [public;rev=20;99a124548fb0]
   │
   ~
 
 Test creating a bookmark and new head
   $ echo draft > draft && hg add draft && hg ci -m draft
   $ hg push -r . --to newbook --create
-  pushing rev 7a037594e202 to destination https://localhost:*/edenapi/ bookmark newbook (glob)
+  pushing rev db727ac656f2 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark newbook
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload
   edenapi: uploaded 1 file
@@ -364,44 +357,44 @@ Test non-fast-forward force pushrebase
   $ hg up -qr 20
   $ echo Aeneas > was_a_lively_fellow && hg ci -qAm 26
   $ log -r "20::"
-  @  26 [draft;rev=27;4899f9112d9b]
+  @  26 [draft;rev=27;10b6d4d89240]
   │
-  │ o  draft [public;rev=26;7a037594e202] default/newbook
+  │ o  draft [public;rev=26;db727ac656f2] default/newbook
   │ │
-  │ │ o  merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark
+  │ │ o  merge 10 and 12 [public;rev=25;1065de83df59] default/master_bookmark
   │ ╭─┤
-  │ │ o  12 [public;rev=23;cd5aac4439e5]
+  │ │ o  12 [public;rev=23;67c6d1914956]
   ├───╯
-  │ o  11 [public;rev=22;589551466f25]
+  │ o  11 [public;rev=22;45d2d9680dec]
   │ │
-  │ o  10 [public;rev=21;c573a92e1179]
+  │ o  10 [public;rev=21;715b5a513881]
   ├─╯
-  o  9 [public;rev=20;2f7cc50dc4e5]
+  o  9 [public;rev=20;99a124548fb0]
   │
   ~
 -- we don't need to pass --pushvar NON_FAST_FORWARD if we're doing a force pushrebase
   $ hg push -r . -f --to newbook
-  pushing rev 4899f9112d9b to destination https://localhost:*/edenapi/ bookmark newbook (glob)
+  pushing rev 10b6d4d89240 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark newbook
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload
   edenapi: uploaded 1 file
   edenapi: queue 1 tree for upload
   edenapi: uploaded 1 tree
   edenapi: uploaded 1 changeset
-  moving remote bookmark newbook from 7a037594e202 to 4899f9112d9b
+  moving remote bookmark newbook from db727ac656f2 to 10b6d4d89240
 -- "20 draft newbook" gets moved to 26 and 20 gets hidden.
   $ log -r "20::"
-  @  26 [public;rev=27;4899f9112d9b] default/newbook
+  @  26 [public;rev=27;10b6d4d89240] default/newbook
   │
-  │ o    merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark
+  │ o    merge 10 and 12 [public;rev=25;1065de83df59] default/master_bookmark
   │ ├─╮
-  │ │ o  12 [public;rev=23;cd5aac4439e5]
+  │ │ o  12 [public;rev=23;67c6d1914956]
   ├───╯
-  │ o  11 [public;rev=22;589551466f25]
+  │ o  11 [public;rev=22;45d2d9680dec]
   │ │
-  │ o  10 [public;rev=21;c573a92e1179]
+  │ o  10 [public;rev=21;715b5a513881]
   ├─╯
-  o  9 [public;rev=20;2f7cc50dc4e5]
+  o  9 [public;rev=20;99a124548fb0]
   │
   ~
 
@@ -416,8 +409,8 @@ Test non-fast-forward force pushrebase
   $ hg up newbook
   7 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg debugsh -c 'ui.write("%s\n" % s.node.hex(repo["."].filectx("was_a_lively_fellow").getnodeinfo()[2]))'
-  4899f9112d9b79c3ecbc343169db37fbe1efdd20
-  $ cd ../repo2
+  10b6d4d892408c3005dcd233c3a8cc470246aba5
+  $ cd ../repo
 
 Check that a force pushrebase with mutation markers.
   $ echo SPARTACUS > sum_ego && hg ci -qAm 27
@@ -435,7 +428,7 @@ Check that a force pushrebase with mutation markers.
   [255]
 
 Check that we can replace a file with a directory
-  $ cd "$TESTTMP/repo2"
+  $ cd ../$REPONAME
   $ hg up default/newbook -q
   $ hg rm A -q
   $ mkdir A
@@ -443,20 +436,20 @@ Check that we can replace a file with a directory
   $ hg add A/hello -q
   $ hg ci -qm "replace a file with a dir"
   $ hg push --to newbook
-  pushing rev 4e5fec14573f to destination https://localhost:*/edenapi/ bookmark newbook (glob)
+  pushing rev 8294354c0a10 to destination https://localhost:*/edenapi/ bookmark newbook (glob)
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload
   edenapi: uploaded 1 file
   edenapi: queue 2 trees for upload
   edenapi: uploaded 2 trees
   edenapi: uploaded 1 changeset
-  pushrebasing stack (4899f9112d9b, 4e5fec14573f] (1 commit) to remote bookmark newbook
+  pushrebasing stack (10b6d4d89240, 8294354c0a10] (1 commit) to remote bookmark newbook
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updated remote bookmark newbook to 4e5fec14573f
+  updated remote bookmark newbook to 8294354c0a10
 
   $ ls A
   hello
   $ log -r "30"
-  @  replace a file with a dir [public;rev=30;4e5fec14573f] default/newbook
+  @  replace a file with a dir [public;rev=30;8294354c0a10] default/newbook
   │
   ~

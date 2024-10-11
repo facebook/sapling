@@ -7,17 +7,10 @@
   $ . "${TEST_FIXTURES}/library.sh"
   $ setconfig ui.ignorerevnum=false
   $ setconfig push.edenapi=true
-  $ BLOB_TYPE="blob_files" default_setup
-  hg repo
-  o  C [draft;rev=2;26805aba1e60]
-  │
-  o  B [draft;rev=1;112478962961]
-  │
-  o  A [draft;rev=0;426bada5c675]
-  $
-  blobimporting
-  starting Mononoke
-  cloning repo in hg client 'repo2'
+  $ BLOB_TYPE="blob_files" default_setup_drawdag
+  A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
+  B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
+  C=e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
 
 
 Try to push merge commit
@@ -27,17 +20,17 @@ Try to push merge commit
   $ echo 2 > 2 && hg add 2 && hg ci -m 2
   $ hg merge -q -r 3 && hg ci -m "merge 1 and 2"
   $ log -r ":"
-  @    merge 1 and 2 [draft;rev=5;3e1c4ca1f9be]
+  @    merge 1 and 2 [draft;rev=5;540b69c58d33]
   ├─╮
-  │ o  2 [draft;rev=4;c9b2673d3218]
+  │ o  2 [draft;rev=4;d9fe1d08ff73]
   │ │
-  o │  1 [draft;rev=3;a0c9c5791058]
+  o │  1 [draft;rev=3;26f143b427a3]
   ├─╯
-  │ o  C [public;rev=2;26805aba1e60] default/master_bookmark
+  │ o  C [public;rev=2;d3b399ca8757] default/master_bookmark
   │ │
-  │ o  B [public;rev=1;112478962961]
+  │ o  B [public;rev=1;80521a640a0c]
   ├─╯
-  o  A [public;rev=0;426bada5c675]
+  o  A [public;rev=0;20ca2a4749a4]
   $
 
   $ hg push -r . --to master_bookmark -q
@@ -49,7 +42,7 @@ Now try to push over a merge commit
   $ hg ci -m 'pushrebase over merge'
   $ hg push -r . --to master_bookmark -q
   $ hg log -r master_bookmark
-  commit:      c8a34708eb3a
+  commit:      a652c7e3bce5
   bookmark:    default/master_bookmark
   hoistedname: master_bookmark
   user:        test

@@ -10,17 +10,10 @@ setup configuration
   $ export PUSHREBASE_REWRITE_DATES=1
 
   $ setconfig push.edenapi=true
-  $ BLOB_TYPE="blob_files" default_setup
-  hg repo
-  o  C [draft;rev=2;26805aba1e60]
-  │
-  o  B [draft;rev=1;112478962961]
-  │
-  o  A [draft;rev=0;426bada5c675]
-  $
-  blobimporting
-  starting Mononoke
-  cloning repo in hg client 'repo2'
+  $ BLOB_TYPE="blob_files" default_setup_drawdag
+  A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
+  B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
+  C=e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
 
 Push a directory
   $ hg up -q "min(all())"
