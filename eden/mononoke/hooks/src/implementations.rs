@@ -87,7 +87,9 @@ pub async fn make_changeset_hook(
     }
 
     Ok(match params.implementation.as_str() {
-        "always_fail_changeset" => Some(b(always_fail_changeset::AlwaysFailChangeset::new())),
+        "always_fail_changeset" => Some(b(always_fail_changeset::AlwaysFailChangeset::new(
+            &params.config,
+        )?)),
         "block_merge_commits" => Some(b(block_merge_commits::BlockMergeCommitsHook::new(
             &params.config,
         )?)),

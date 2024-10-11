@@ -6,10 +6,13 @@
  */
 
 use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
 use bookmarks::BookmarkKey;
 use context::CoreContext;
+use metaconfig_types::HookConfig;
 use mononoke_types::BonsaiChangeset;
+use serde::Deserialize;
 
 use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
@@ -18,12 +21,25 @@ use crate::HookRejectionInfo;
 use crate::HookStateProvider;
 use crate::PushAuthoredBy;
 
+#[derive(Debug, Deserialize, Clone, Default)]
+pub struct AlwaysFailChangesetConfig {
+    /// Optional message to display when the hook fails.
+    message: Option<String>,
+}
+
 #[derive(Clone, Debug)]
-pub struct AlwaysFailChangeset;
+pub struct AlwaysFailChangeset {
+    config: AlwaysFailChangesetConfig,
+}
 
 impl AlwaysFailChangeset {
-    pub fn new() -> Self {
-        Self
+    pub fn new(config: &HookConfig) -> Result<Self> {
+        let config = config.parse_options().unwrap_or_default();
+        Ok(Self::with_config(config))
+    }
+
+    pub fn with_config(config: AlwaysFailChangesetConfig) -> Self {
+        Self { config }
     }
 }
 
@@ -38,8 +54,14 @@ impl ChangesetHook for AlwaysFailChangeset {
         _cross_repo_push_source: CrossRepoPushSource,
         _push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error> {
-        Ok(HookExecution::Rejected(HookRejectionInfo::new(
-            "This hook always fails",
+        let msg = self
+            .config
+            .message
+            .clone()
+            .unwrap_or("This hook always fails".to_string());
+        Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+            "Always fail hook",
+            msg,
         )))
     }
 }
