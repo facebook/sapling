@@ -13,6 +13,7 @@ python_unittest(
     },
     deps = [
         "//artillery/artillery2/python/api:artillery2_api",
+        "//eden/fs/cli:hostname",
         "//eden/fs/cli/facebook:hostcaps",
         "//eden/fs/cli/facebook:trace",
         "//eden/fs/service:thrift-py",
