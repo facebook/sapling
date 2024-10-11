@@ -35,7 +35,7 @@ test subtree merge from copy source -> copy dest
   > |
   > A   # A/foo/x = aaa\n
   >     # drawdag.defaultfiles=false
-  > EOS 
+  > EOS
   $ hg go -q $B
   $ hg subtree copy --from-path foo --to-path foo2
   copying foo to foo2
@@ -62,7 +62,7 @@ test subtree merge from copy dest -> copy source
   > |
   > A   # A/foo/x = aaa\n
   >     # drawdag.defaultfiles=false
-  > EOS 
+  > EOS
   $ hg go -q $B
   $ hg subtree copy --from-path foo --to-path foo2
   copying foo to foo2
@@ -90,7 +90,7 @@ test multiple subtree merge from source -> dest
   > |
   > A   # A/foo/x = aaa\n
   >     # drawdag.defaultfiles=false
-  > EOS 
+  > EOS
   $ hg go -q $B
   $ hg subtree copy --from-path foo --to-path foo2
   copying foo to foo2
@@ -123,7 +123,7 @@ test multiple subtree merge from dest -> source
   > |
   > A   # A/foo/x = aaa\n
   >     # drawdag.defaultfiles=false
-  > EOS 
+  > EOS
   $ hg go -q $B
   $ hg subtree copy --from-path foo --to-path foo2
   copying foo to foo2
@@ -155,7 +155,7 @@ test multiple subtree merge from source -> dest, then dest -> source
   > |
   > A   # A/foo/x = aaa\n
   >     # drawdag.defaultfiles=false
-  > EOS 
+  > EOS
   $ hg go -q $B
   $ hg subtree copy --from-path foo --to-path foo2
   copying foo to foo2
@@ -188,7 +188,7 @@ test multiple subtree merge from dest -> source, then source -> dest
   > |
   > A   # A/foo/x = aaa\n
   >     # drawdag.defaultfiles=false
-  > EOS 
+  > EOS
   $ hg go -q $B
   $ hg subtree copy --from-path foo --to-path foo2
   copying foo to foo2
