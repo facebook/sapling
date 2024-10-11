@@ -145,6 +145,7 @@ def subtree_merge(ui, repo, **opts):
         repo, ctx, to_paths[0], from_ctx, from_paths[0]
     )
     merge_base_ctx = repo[merge_base_commit]
+    ui.status("merge base: %s\n" % merge_base_ctx)
     cmdutil.registerdiffgrafts(from_paths, to_paths, ctx, from_ctx, merge_base_ctx)
 
     labels = ["working copy", "merge rev"]
