@@ -115,6 +115,22 @@ function run_common_xrepo_sync_with_gitsubmodules_setup {
   INFINITEPUSH_ALLOW_WRITES=true REPOID="$SUBMODULE_REPO_ID" \
     REPONAME="$SUBMODULE_REPO_NAME" COMMIT_IDENTITY_SCHEME=3 setup_common_config "$REPOTYPE"
 
+  # Save a copy of the config before the deny_files hook, so we can disable it later
+  cp "$TESTTMP/mononoke-config/repos/$LARGE_REPO_NAME/server.toml" "$TESTTMP/old_large_repo_config.toml"
+  # Disable pushes to small repo's directory in large repo
+  cat >> "$TESTTMP/mononoke-config/repos/$LARGE_REPO_NAME/server.toml" << CONFIG
+[[bookmarks]]
+name="$MASTER_BOOKMARK_NAME"
+[[bookmarks.hooks]]
+hook_name="deny_files"
+[[hooks]]
+name="deny_files"
+[hooks.config_string_lists]
+  native_push_only_deny_patterns = [
+    "^$SMALL_REPO_DIR/",
+  ]
+CONFIG
+
   # Set the REPONAME environment variable to the large repo name, so that all
   # sapling commands run with the large repo by default.
   # The small repos don't support sapling, because hg types are not derived in

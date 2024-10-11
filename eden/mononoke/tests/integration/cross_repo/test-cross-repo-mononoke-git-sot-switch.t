@@ -15,6 +15,8 @@
   $ export SUBMODULE_REPO_ID=11
   $ export SUBMODULE_REPO_GIT="$TESTTMP/small_repo_git"
   $ export MASTER_BOOKMARK_NAME="master"
+  $ export SMALL_REPO_DIR="smallrepofolder1"
+  $ export MONONOKE_GIT_SERVICE_START_TIMEOUT=120
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
@@ -31,7 +33,6 @@ Run the x-repo with submodules setup
   $ set_git_submodule_dependencies_in_config_version "$LATEST_CONFIG_VERSION_NAME" \
   > "$SUBMODULE_REPO_ID" "{\"git-repo-b\": $REPO_B_ID, \"git-repo-b/git-repo-c\": $REPO_C_ID, \"repo_c\": $REPO_C_ID}"
 
-
 # Setup git repos A, B and C
   $ setup_git_repos_a_b_c &> $TESTTMP/git_repos_setup.out
 
@@ -44,8 +45,29 @@ Run the x-repo with submodules setup
 # Set up live forward sync
   $ with_stripped_logs mononoke_x_repo_sync_forever "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID"
 
+# Pushing to small repo directory fails while SoT is in git repo, because of the
+# deny_files hook
+  $ cd $TESTTMP/$LARGE_REPO_NAME
+  $ mkcommit "$SMALL_REPO_DIR/foo"
+  $ hg push --to $MASTER_BOOKMARK_NAME
+  pushing rev cd2f3d7d0e02 to destination mono:large_repo bookmark master
+  searching for changes
+  remote: Command failed
+  remote:   Error:
+  remote:     hooks failed:
+  remote:     deny_files for cd2f3d7d0e02310aee6e7fbfb92d6f127ceef539: Denied filename 'smallrepofolder1/foo' matched name pattern '^smallrepofolder1/'. Rename or remove this file and try again.
+  remote: 
+  remote:   Root cause:
+  remote:     hooks failed:
+  remote:     deny_files for cd2f3d7d0e02310aee6e7fbfb92d6f127ceef539: Denied filename 'smallrepofolder1/foo' matched name pattern '^smallrepofolder1/'. Rename or remove this file and try again.
+  remote: 
+  remote:   Debug context:
+  remote:     "hooks failed:\ndeny_files for cd2f3d7d0e02310aee6e7fbfb92d6f127ceef539: Denied filename 'smallrepofolder1/foo' matched name pattern '^smallrepofolder1/'. Rename or remove this file and try again."
+  abort: unexpected EOL, expected netstring digit
+  [255]
+
 # Start up the Mononoke Git Service
-  $ MONONOKE_GIT_SERVICE_START_TIMEOUT=120 mononoke_git_service
+  $ mononoke_git_service
 
 
 # Clone the small repo from mononoke
@@ -90,12 +112,11 @@ Run the x-repo with submodules setup
   $ sl_log -r "sort(all(), desc)" -l 3
   @  bee3089ac10c Small repo commit after git clone
   │
+  │ o  cd2f3d7d0e02 smallrepofolder1/foo
+  ├─╯
   o  e2b260a2b04f Added git repo C as submodule directly in A
   │
-  o    c0240984981f [MEGAREPO GRADUAL MERGE] gradual merge (7)
-  ├─╮
-  │ │
-  ~ ~
+  ~
   $ switch_source_of_truth_to_large_repo $SUBMODULE_REPO_ID $LARGE_REPO_ID
   
   

@@ -403,6 +403,8 @@ function switch_source_of_truth_to_large_repo {
   local small_repo=$1
   local large_repo=$2
 
+  orig_pwd=$(pwd)
+
   # Kill forward syncer job
   killandwait "$XREPOSYNC_PID"
 
@@ -421,6 +423,7 @@ function switch_source_of_truth_to_large_repo {
   print_section "Delete forward syncer counter and set backsyncer counter"
   sqlite3 "$TESTTMP/monsql/sqlite_dbs" \
     "DELETE FROM mutable_counters WHERE name = 'xreposync_from_$SUBMODULE_REPO_ID'";
+
   sqlite3 "$TESTTMP/monsql/sqlite_dbs" \
     "INSERT INTO mutable_counters (repo_id, name, value) \
     VALUES ($small_repo, 'backsync_from_$LARGE_REPO_ID', $LARGE_REPO_BOOKMARK_UPDATE_LOG_ID)";
@@ -428,4 +431,24 @@ function switch_source_of_truth_to_large_repo {
   BACKSYNC_COUNTER=$(sqlite3 "$TESTTMP/monsql/sqlite_dbs" \
     "SELECT value FROM mutable_counters WHERE name = 'backsync_from_$LARGE_REPO_ID';")
   echo "BACKSYNC_COUNTER: $BACKSYNC_COUNTER"
+
+  # Disable the deny_files hook in small repo
+  rm "$TESTTMP/mononoke-config/repos/$LARGE_REPO_NAME/server.toml"
+  mv "$TESTTMP/old_large_repo_config.toml" "$TESTTMP/mononoke-config/repos/$LARGE_REPO_NAME/server.toml"
+
+  # Restart Mononoke and Mononoke Git service to pick up the config change
+  killandwait "$MONONOKE_PID"
+  start_and_wait_for_mononoke_server
+
+  killandwait "$MONONOKE_GIT_SERVICE_PID"
+
+  mononoke_git_service
+
+  # Update the remote url on the small repo clone if the directory exists
+  if [ -d "$SUBMODULE_REPO_GIT" ]; then
+    cd "$SUBMODULE_REPO_GIT" || exit
+    git remote set-url origin "$MONONOKE_GIT_SERVICE_BASE_URL/$SUBMODULE_REPO_NAME.git"
+  fi
+
+  cd "$orig_pwd" || exit
 }
