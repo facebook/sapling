@@ -11,17 +11,10 @@
   $ GIT_REPO="${TESTTMP}/repo-git"
   $ GIT_SUBMODULE_REPO="${TESTTMP}/repo-submodule"
   $ HG_REPO="${TESTTMP}/repo"
-  $ BLOB_TYPE="blob_files" default_setup
-  hg repo
-  o  C [draft;rev=2;26805aba1e60]
-  │
-  o  B [draft;rev=1;112478962961]
-  │
-  o  A [draft;rev=0;426bada5c675]
-  $
-  blobimporting
-  starting Mononoke
-  cloning repo in hg client 'repo2'
+  $ BLOB_TYPE="blob_files" default_setup_drawdag
+  A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
+  B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
+  C=e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
   $ SKIP_CROSS_REPO_CONFIG=1 setup_configerator_configs
   $ enable_pushredirect 0
 # Setup git repository to be used as submodule
@@ -55,6 +48,8 @@
   Date:   Sat Jan 1 00:00:00 2000 +0000
   
       Add foo
+
+
 
 
 # Setup git repository
@@ -93,6 +88,10 @@
   Date:   Sat Jan 1 00:00:00 2000 +0000
   
       Add file1 and file2
+
+
+
+
   $ GIT_MASTER_HASH=$(git log -n 1 --pretty=format:"%H" master)
 
 
@@ -153,31 +152,31 @@
   Finished moving the bookmark
   Merging the imported commits into given bookmark, master_bookmark
   Done checking path conflicts
-  Creating a merge bonsai changeset with parents: c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd, a1740c3d4a0f8e012b12c0c93f5a69cc902fe7398d8f334ef202f33c32fc247c
-  Created merge bonsai: f9b7b059f605feab3a96d8bfbcc2c9a43428496ed4ea1fb5625ea6cb41092dc2 and changeset: BonsaiChangeset { inner: BonsaiChangesetMut { parents: [ChangesetId(Blake2(c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd)), ChangesetId(Blake2(a1740c3d4a0f8e012b12c0c93f5a69cc902fe7398d8f334ef202f33c32fc247c))], author: "user", author_date: DateTime(2005-04-02T21:37:00+01:00), committer: Some("user"), committer_date: Some(DateTime(2005-04-02T21:37:00+01:00)), message: "merging", hg_extra: {}, git_extra_headers: None, file_changes: {}, is_snapshot: false, git_tree_hash: None, git_annotated_tag: None }, id: ChangesetId(Blake2(f9b7b059f605feab3a96d8bfbcc2c9a43428496ed4ea1fb5625ea6cb41092dc2)) }
+  Creating a merge bonsai changeset with parents: e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2, a1740c3d4a0f8e012b12c0c93f5a69cc902fe7398d8f334ef202f33c32fc247c
+  Created merge bonsai: 97a4e6df4c15db82ee1b428058a27b9fc274cb689f6eda481fdde33feff263bd and changeset: BonsaiChangeset { inner: BonsaiChangesetMut { parents: [ChangesetId(Blake2(e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2)), ChangesetId(Blake2(a1740c3d4a0f8e012b12c0c93f5a69cc902fe7398d8f334ef202f33c32fc247c))], author: "user", author_date: DateTime(2005-04-02T21:37:00+01:00), committer: Some("user"), committer_date: Some(DateTime(2005-04-02T21:37:00+01:00)), message: "merging", hg_extra: {}, git_extra_headers: None, file_changes: {}, is_snapshot: false, git_tree_hash: None, git_annotated_tag: None }, id: ChangesetId(Blake2(97a4e6df4c15db82ee1b428058a27b9fc274cb689f6eda481fdde33feff263bd)) }
   Finished merging
   Running pushrebase
-  Finished pushrebasing to f9b7b059f605feab3a96d8bfbcc2c9a43428496ed4ea1fb5625ea6cb41092dc2
-  Set bookmark BookmarkKey { name: BookmarkName { bookmark: "repo_import_new_repo" }, category: Branch } to the merge commit: ChangesetId(Blake2(f9b7b059f605feab3a96d8bfbcc2c9a43428496ed4ea1fb5625ea6cb41092dc2))
+  Finished pushrebasing to 97a4e6df4c15db82ee1b428058a27b9fc274cb689f6eda481fdde33feff263bd
+  Set bookmark BookmarkKey { name: BookmarkName { bookmark: "repo_import_new_repo" }, category: Branch } to the merge commit: ChangesetId(Blake2(97a4e6df4c15db82ee1b428058a27b9fc274cb689f6eda481fdde33feff263bd))
 
 # Check if we derived all the types for imported commits. Checking last one after bookmark move, before setting it to the merge commit.
-  $ MERGE_PARENT_GIT="f9b7b059f605feab3a96d8bfbcc2c9a43428496ed4ea1fb5625ea6cb41092dc2"
+  $ MERGE_PARENT_GIT="97a4e6df4c15db82ee1b428058a27b9fc274cb689f6eda481fdde33feff263bd"
   $ mononoke_newadmin derived-data -R repo exists -T changeset_info  -i $MERGE_PARENT_GIT
-  Not Derived: f9b7b059f605feab3a96d8bfbcc2c9a43428496ed4ea1fb5625ea6cb41092dc2
+  Not Derived: 97a4e6df4c15db82ee1b428058a27b9fc274cb689f6eda481fdde33feff263bd
   $ mononoke_newadmin derived-data -R repo exists -T blame  -i $MERGE_PARENT_GIT
-  Not Derived: f9b7b059f605feab3a96d8bfbcc2c9a43428496ed4ea1fb5625ea6cb41092dc2
+  Not Derived: 97a4e6df4c15db82ee1b428058a27b9fc274cb689f6eda481fdde33feff263bd
   $ mononoke_newadmin derived-data -R repo exists -T deleted_manifest  -i $MERGE_PARENT_GIT
-  Not Derived: f9b7b059f605feab3a96d8bfbcc2c9a43428496ed4ea1fb5625ea6cb41092dc2
+  Not Derived: 97a4e6df4c15db82ee1b428058a27b9fc274cb689f6eda481fdde33feff263bd
   $ mononoke_newadmin derived-data -R repo exists -T fastlog  -i $MERGE_PARENT_GIT
-  Not Derived: f9b7b059f605feab3a96d8bfbcc2c9a43428496ed4ea1fb5625ea6cb41092dc2
+  Not Derived: 97a4e6df4c15db82ee1b428058a27b9fc274cb689f6eda481fdde33feff263bd
   $ mononoke_newadmin derived-data -R repo exists -T filenodes  -i $MERGE_PARENT_GIT
-  Not Derived: f9b7b059f605feab3a96d8bfbcc2c9a43428496ed4ea1fb5625ea6cb41092dc2
+  Not Derived: 97a4e6df4c15db82ee1b428058a27b9fc274cb689f6eda481fdde33feff263bd
   $ mononoke_newadmin derived-data -R repo exists -T fsnodes  -i $MERGE_PARENT_GIT
-  Not Derived: f9b7b059f605feab3a96d8bfbcc2c9a43428496ed4ea1fb5625ea6cb41092dc2
+  Not Derived: 97a4e6df4c15db82ee1b428058a27b9fc274cb689f6eda481fdde33feff263bd
   $ mononoke_newadmin derived-data -R repo exists -T hgchangesets  -i $MERGE_PARENT_GIT
-  Derived: f9b7b059f605feab3a96d8bfbcc2c9a43428496ed4ea1fb5625ea6cb41092dc2
+  Derived: 97a4e6df4c15db82ee1b428058a27b9fc274cb689f6eda481fdde33feff263bd
   $ mononoke_newadmin derived-data -R repo exists -T unodes  -i $MERGE_PARENT_GIT
-  Not Derived: f9b7b059f605feab3a96d8bfbcc2c9a43428496ed4ea1fb5625ea6cb41092dc2
+  Not Derived: 97a4e6df4c15db82ee1b428058a27b9fc274cb689f6eda481fdde33feff263bd
 
 # Start Mononoke
   $ start_and_wait_for_mononoke_server
@@ -232,7 +231,7 @@
   6 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg whereami
-  abb3e8e8e71f1aa9ba229c72b7ee12a9825143e2
+  db39bf064f102b6fdfa0f641cb08860a450f16af
   $ tree
   .
   |-- A
@@ -249,39 +248,39 @@
 
 Normal log works
   $ log -r "ancestors(master_bookmark)"
-  @    merging [public;rev=5;abb3e8e8e71f] default/master_bookmark default/repo_import_new_repo
+  @    merging [public;rev=5;db39bf064f10] default/master_bookmark default/repo_import_new_repo
   ├─╮
   │ o  Added git submodule [public;rev=4;d5bd7c7af4df]
   │ │
   │ o  Add file1 and file2 [public;rev=3;4ad443ff73f0]
   │
-  o  C [public;rev=2;26805aba1e60]
+  o  C [public;rev=2;d3b399ca8757]
   │
-  o  B [public;rev=1;112478962961]
+  o  B [public;rev=1;80521a640a0c]
   │
-  o  A [public;rev=0;426bada5c675]
+  o  A [public;rev=0;20ca2a4749a4]
   $
 
 But using --stat crashes
   $ hg log -r "ancestors(master_bookmark)" --stat
-  commit:      426bada5c675
-  user:        test
+  commit:      20ca2a4749a4
+  user:        author
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     A
   
    A |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
-  commit:      112478962961
-  user:        test
+  commit:      80521a640a0c
+  user:        author
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     B
   
    B |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
-  commit:      26805aba1e60
-  user:        test
+  commit:      d3b399ca8757
+  user:        author
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     C
   
@@ -305,7 +304,7 @@ But using --stat crashes
    new_dir/new_repo/.gitmodules |  3 +++
    1 files changed, 3 insertions(+), 0 deletions(-)
   
-  commit:      abb3e8e8e71f
+  commit:      db39bf064f10
   bookmark:    default/master_bookmark
   bookmark:    default/repo_import_new_repo
   hoistedname: master_bookmark
@@ -319,6 +318,18 @@ But using --stat crashes
    new_dir/new_repo/file2_repo/file2 |  1 +
    3 files changed, 5 insertions(+), 0 deletions(-)
   
+
+
+
+
+
+
+
+
+
+
+
+
 
   $ hg show 4ad443ff73f01bf1762918fa2be9c21cbdf038ea
   commit:      4ad443ff73f0
@@ -340,6 +351,7 @@ But using --stat crashes
   @@ -0,0 +1,1 @@
   +this is file2
   
+
   $ ls
   A
   B
