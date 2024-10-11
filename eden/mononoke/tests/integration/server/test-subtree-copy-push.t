@@ -6,6 +6,7 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ setconfig push.edenapi=true
+  $ setconfig subtree.copy-reuse-tree=true
   $ BLOB_TYPE="blob_files" default_setup --scuba-dataset "file://$TESTTMP/log.json"
   hg repo
   o  C [draft;rev=2;26805aba1e60]

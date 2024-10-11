@@ -3,9 +3,20 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+import os
 from collections import defaultdict
 
-from .. import cmdutil, context, error, hg, merge as mergemod, node, scmutil
+from .. import (
+    cmdutil,
+    context,
+    error,
+    hg,
+    match as matchmod,
+    merge as mergemod,
+    node,
+    pathutil,
+    scmutil,
+)
 from ..cmdutil import (
     commitopts,
     commitopts2,
@@ -231,6 +242,13 @@ def _docopy(ui, repo, *args, **opts):
     scmutil.validate_path_exist(ui, from_ctx, from_paths, abort_on_missing=True)
     scmutil.validate_path_overlap(to_paths)
 
+    if ui.configbool("subtree", "copy-reuse-tree"):
+        _do_cheap_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts)
+    else:
+        _do_normal_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts)
+
+
+def _do_cheap_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
     user = opts.get("user")
     date = opts.get("date")
     text = opts.get("message")
@@ -259,6 +277,63 @@ def _docopy(ui, repo, *args, **opts):
 
     newid = repo.commitctx(newctx)
     hg.update(repo, newid)
+
+
+def _do_normal_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
+    def walk_path(walkctx, path):
+        m = matchmod.match(repo.root, "", [f"path:{path}"])
+        return list(walkctx.walk(m))
+
+    ui = repo.ui
+    auditor = pathutil.pathauditor(repo.root)
+
+    for to_path in to_paths:
+        auditor(to_path)
+        if repo.wvfs.lexists(to_path):
+            # todo: hint=_("use --force to overwrite"),
+            raise error.Abort(
+                _("cannot copy to an existing path: %s") % to_path,
+            )
+
+    new_files = []
+    for from_path, to_path in zip(from_paths, to_paths):
+        for src in walk_path(from_ctx, from_path):
+            tail = src[len(from_path) :]
+            dest = to_path + tail
+            os_abs_dest = repo.wjoin(dest)
+            os_abs_dest_dir = os.path.dirname(os_abs_dest)
+            if not os.path.isdir(os_abs_dest_dir):
+                os.makedirs(os_abs_dest_dir)
+
+            new_files.append(dest)
+            # todo: handle symlink
+            fctx = from_ctx[src]
+            with open(os_abs_dest, "wb") as f:
+                f.write(fctx.data())
+
+    wctx = repo[None]
+    wctx.add(new_files)
+
+    extra = {}
+    extra.update(gen_branch_info(from_ctx.hex(), from_paths, to_paths))
+
+    summaryfooter = _gen_prepopulated_commit_msg(from_ctx, from_paths, to_paths)
+    editform = cmdutil.mergeeditform(repo[None], "subtree.copy")
+    editor = cmdutil.getcommiteditor(
+        editform=editform, summaryfooter=summaryfooter, **opts
+    )
+
+    def commitfunc(ui, repo, message, match, opts):
+        return repo.commit(
+            message,
+            opts.get("user"),
+            opts.get("date"),
+            match,
+            editor=editor,
+            extra=extra,
+        )
+
+    cmdutil.commit(ui, repo, commitfunc, [], opts)
 
 
 def _gen_prepopulated_commit_msg(from_commit, from_paths, to_paths):

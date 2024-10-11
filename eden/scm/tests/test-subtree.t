@@ -1,4 +1,5 @@
   $ setconfig diff.git=True
+  $ setconfig subtree.copy-reuse-tree=False
 
 setup backing repo
 
@@ -31,15 +32,14 @@ test subtree copy paths validation
 
 test subtree copy
   $ hg subtree cp -r $A --from-path foo --to-path bar -m "subtree copy foo -> bar"
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G -T '{node|short} {desc|firstline}\n'
-  @  ecc461c7d308 subtree copy foo -> bar
+  @  d7a063467d35 subtree copy foo -> bar
   │
   o  b9450a0e6ae4 B
   │
   o  d908813f0f7c A
   $ hg show --git
-  commit:      ecc461c7d308
+  commit:      d7a063467d35
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/x
@@ -89,7 +89,6 @@ test subtree graft
   > EOS
   $ hg go $C -q
   $ hg subtree copy -r $B --from-path foo --to-path bar -m 'subtree copy foo -> bar'
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg subtree graft -r $C
   abort: must provide --from-path and --to-path
@@ -103,10 +102,11 @@ test subtree graft
 
   $ hg subtree graft -r $C --from-path foo --to-path bar
   grafting 78072751cf70 "C"
+  merging bar/x and foo/x to bar/x
   $ hg log -G -T '{node|short} {desc|firstline}\n'
-  @  8b7f0cb610d9 Graft "C"
+  @  1780ced9fdfa Graft "C"
   │
-  o  c8ddf4d613b1 subtree copy foo -> bar
+  o  00aa28df6e77 subtree copy foo -> bar
   │
   o  78072751cf70 C
   │
@@ -114,7 +114,7 @@ test subtree graft
   │
   o  2f10237b4399 A
   $ hg show
-  commit:      8b7f0cb610d9
+  commit:      1780ced9fdfa
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/x
@@ -146,12 +146,12 @@ test 'subtree graft -m'
   > EOS
   $ hg go $C -q
   $ hg subtree copy -r $B --from-path foo --to-path bar -m 'subtree copy foo -> bar'
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg subtree graft -r $C --from-path foo --to-path bar -m "new C"
   grafting 78072751cf70 "C"
+  merging bar/x and foo/x to bar/x
   $ hg show
-  commit:      faa9028b5ad6
+  commit:      33c4fb2a5d1e
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/x
@@ -185,9 +185,9 @@ test subtree merge
   > EOS
   $ hg go $D -q
   $ hg subtree copy -r $B --from-path foo --to-path bar -m 'subtree copy foo -> bar'
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg subtree merge -r $D --from-path foo --to-path bar
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  merging bar/x and foo/x to bar/x
+  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
   $ hg st
   M bar/x
@@ -205,7 +205,7 @@ test subtree merge
   $ hg dbsh -c 'print(repo["."].extra())'
   {'branch': 'default', 'test_subtree_merge': '{"v":1,"merges":[{"from_commit":"907442010f516d83aea80b4382964be22a34214f","from_path":"foo","to_path":"bar"}]}'}
   $ hg show
-  commit:      d4af047a2267
+  commit:      456910364677
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/x
@@ -227,13 +227,17 @@ test subtree merge
   +4
 should have one parent
   $ hg log -r . -T '{parents}'
-  573882c72521  (no-eol)
-tofix: show logs of 'bar' directory
+  c6a9af23c94b  (no-eol)
   $ hg log bar
-  commit:      d4af047a2267
+  commit:      456910364677
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     subtree merge foo to bar
+  
+  commit:      c6a9af23c94b
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     subtree copy foo -> bar
 
 test subtree merge with normal copy
   $ newclientrepo
