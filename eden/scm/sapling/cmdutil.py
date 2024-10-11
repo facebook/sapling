@@ -1916,10 +1916,7 @@ def export(
     dest = "<unnamed>"
     if fp:
         dest = getattr(fp, "name", dest)
-
-        def write(s, **kw):
-            fp.write(s)
-
+        write = lambda s, **kw: fp.write(s)
     elif not fntemplate:
         write = repo.ui.writebytes
         writestr = repo.ui.write
@@ -1942,9 +1939,7 @@ def export(
                 modemap=filemode,
             )
             dest = getattr(fo, "name", "<unnamed>")
-
-            def write(s, **kw):
-                fo.write(s)
+            write = lambda s, **kw: fo.write(s)
 
         if not dest.startswith("<"):
             repo.ui.note("%s\n" % dest)
@@ -3313,8 +3308,6 @@ def getloglinerangerevs(repo, userrevs, opts):
                 linerange
             )
 
-    filematcher = None
-    hunksfilter = None
     if opts.get("patch") or opts.get("stat"):
 
         def nofilterhunksfn(fctx, hunks):
@@ -3343,6 +3336,10 @@ def getloglinerangerevs(repo, userrevs, opts):
         def filematcher(rev):
             files = list(linerangesbyrev.get(rev, []))
             return scmutil.matchfiles(repo, files)
+
+    else:
+        filematcher = None
+        hunksfilter = None
 
     revs = sorted(linerangesbyrev, reverse=True)
 
