@@ -34,6 +34,7 @@ use gotham::state::State;
 use gotham_derive::StateData;
 use gotham_derive::StaticResponseExtender;
 use gotham_ext::error::HttpError;
+use gotham_ext::handler::SlapiCommitIdentityScheme;
 use gotham_ext::middleware::request_context::RequestContext;
 use gotham_ext::middleware::scuba::ScubaMiddlewareState;
 use gotham_ext::response::TryIntoResponse;
@@ -63,6 +64,7 @@ use super::SaplingRemoteApiHandler;
 use super::SaplingRemoteApiMethod;
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
+use crate::handlers::git_objects::fetch_git_object;
 use crate::middleware::request_dumper::RequestDumper;
 use crate::utils::custom_cbor_stream;
 use crate::utils::get_repo;
@@ -90,7 +92,7 @@ pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
 
     let rctx = RequestContext::borrow_from(state).clone();
     let sctx = ServerContext::borrow_from(state);
-
+    let slapi_flavour = SlapiCommitIdentityScheme::borrow_from(state).clone();
     let repo: HgRepoContext<Repo> =
         get_repo(sctx, &rctx, &params.repo, Metric::TotalManifests).await?;
     let request = parse_wire_request::<WireTreeRequest>(state).await?;
@@ -101,7 +103,7 @@ pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
     ScubaMiddlewareState::try_set_sampling_rate(state, nonzero_ext::nonzero!(256_u64));
 
     Ok(custom_cbor_stream(
-        super::monitor_request(state, fetch_all_trees(repo, request)),
+        super::monitor_request(state, fetch_all_trees(repo, request, slapi_flavour)),
         |tree_entry| tree_entry.as_ref().err(),
     ))
 }
@@ -110,12 +112,17 @@ pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
 fn fetch_all_trees<R: MononokeRepo>(
     repo: HgRepoContext<R>,
     request: TreeRequest,
+    flavour: SlapiCommitIdentityScheme,
 ) -> impl Stream<Item = Result<TreeEntry, SaplingRemoteApiServerError>> {
     let ctx = repo.ctx().clone();
 
-    let fetches = request.keys.into_iter().map(move |key| {
-        fetch_tree(repo.clone(), key.clone(), request.attributes)
+    let fetches = request.keys.into_iter().map(move |key| match flavour {
+        SlapiCommitIdentityScheme::Git => fetch_git_object_as_tree(key.clone(), repo.clone())
             .map(|r| r.map_err(|e| SaplingRemoteApiServerError::with_key(key, e)))
+            .left_future(),
+        SlapiCommitIdentityScheme::Hg => fetch_tree(repo.clone(), key.clone(), request.attributes)
+            .map(|r| r.map_err(|e| SaplingRemoteApiServerError::with_key(key, e)))
+            .right_future(),
     });
 
     stream::iter(fetches)
@@ -123,6 +130,23 @@ fn fetch_all_trees<R: MononokeRepo>(
         .inspect_ok(move |_| {
             ctx.session().bump_load(Metric::TotalManifests, 1.0);
         })
+}
+
+// Sapling wants to use trees the same way for Hg and Git, so shaping somehow
+// the git object to fit within the defiend TreeEntry structure.
+async fn fetch_git_object_as_tree<R: MononokeRepo>(
+    key: Key,
+    repo: HgRepoContext<R>,
+) -> Result<TreeEntry, Error> {
+    let git_object = fetch_git_object(key.hgid, &repo).await;
+
+    Ok(TreeEntry {
+        key: key.clone(),
+        data: git_object.ok().map(|o| o.bytes.into()),
+        parents: None,
+        children: None,
+        tree_aux_data: None,
+    })
 }
 
 /// Fetch requested tree for a single key.

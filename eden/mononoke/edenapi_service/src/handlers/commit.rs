@@ -52,6 +52,7 @@ use edenapi_types::UploadTokensResponse;
 use ephemeral_blobstore::BubbleId;
 use futures::stream;
 use futures::try_join;
+use futures::FutureExt;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
@@ -60,6 +61,7 @@ use gotham::state::State;
 use gotham_derive::StateData;
 use gotham_derive::StaticResponseExtender;
 use gotham_ext::error::HttpError;
+use gotham_ext::handler::SlapiCommitIdentityScheme;
 use gotham_ext::middleware::request_context::RequestContext;
 use gotham_ext::middleware::scuba::ScubaMiddlewareState;
 use gotham_ext::response::TryIntoResponse;
@@ -88,6 +90,7 @@ use super::SaplingRemoteApiHandler;
 use super::SaplingRemoteApiMethod;
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
+use crate::handlers::git_objects::fetch_git_object;
 use crate::middleware::request_dumper::RequestDumper;
 use crate::utils::cbor_stream_filtered_errors;
 use crate::utils::custom_cbor_stream;
@@ -244,6 +247,7 @@ pub async fn revlog_data(state: &mut State) -> Result<impl TryIntoResponse, Http
 
     let sctx = ServerContext::borrow_from(state);
     let rctx = RequestContext::borrow_from(state).clone();
+    let slapi_flavour = SlapiCommitIdentityScheme::borrow_from(state).clone();
 
     let hg_repo_ctx: HgRepoContext<Repo> = get_repo(sctx, &rctx, &params.repo, None).await?;
 
@@ -251,7 +255,14 @@ pub async fn revlog_data(state: &mut State) -> Result<impl TryIntoResponse, Http
     let revlog_commits = request
         .hgids
         .into_iter()
-        .map(move |hg_id| commit_revlog_data(hg_repo_ctx.clone(), hg_id));
+        .map(move |hg_id| match slapi_flavour {
+            SlapiCommitIdentityScheme::Git => {
+                fetch_git_object_as_revlog_data(hg_id, hg_repo_ctx.clone()).left_future()
+            }
+            SlapiCommitIdentityScheme::Hg => {
+                commit_revlog_data(hg_repo_ctx.clone(), hg_id).right_future()
+            }
+        });
     let response =
         stream::iter(revlog_commits).buffer_unordered(MAX_CONCURRENT_FETCHES_PER_REQUEST);
     Ok(cbor_stream_filtered_errors(super::monitor_request(
@@ -270,6 +281,20 @@ async fn commit_revlog_data<R: MononokeRepo>(
         .ok_or(ErrorKind::HgIdNotFound(hg_id))?;
     let answer = CommitRevlogData::new(hg_id, bytes.into());
     Ok(answer)
+}
+
+// Sapling wants to use revlog_data the same way for Hg and Git, so shaping somehow
+// the git object to fit within the defined CommitRevlogData
+async fn fetch_git_object_as_revlog_data<R: MononokeRepo>(
+    id: HgId,
+    repo: HgRepoContext<R>,
+) -> Result<CommitRevlogData, Error> {
+    Ok(CommitRevlogData {
+        hgid: id,
+        revlog_data: fetch_git_object(id, &repo)
+            .await
+            .map(|bytes| bytes.bytes.into())?,
+    })
 }
 
 pub struct HashLookupHandler;

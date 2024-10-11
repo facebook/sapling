@@ -33,6 +33,7 @@ use edenapi_types::UploadTokenMetadata;
 use edenapi_types::UploadTokensResponse;
 use ephemeral_blobstore::BubbleId;
 use futures::stream;
+use futures::FutureExt;
 use futures::Stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
@@ -41,6 +42,7 @@ use gotham::state::State;
 use gotham_derive::StateData;
 use gotham_derive::StaticResponseExtender;
 use gotham_ext::error::HttpError;
+use gotham_ext::handler::SlapiCommitIdentityScheme;
 use gotham_ext::middleware::request_context::RequestContext;
 use gotham_ext::response::TryIntoResponse;
 use hyper::Body;
@@ -52,8 +54,10 @@ use mononoke_api_hg::HgDataContext;
 use mononoke_api_hg::HgDataId;
 use mononoke_api_hg::HgRepoContext;
 use rate_limiting::Metric;
+use revisionstore_types::Metadata;
 use serde::Deserialize;
-use types::Key;
+use types::key::Key;
+use types::parents::Parents;
 
 use super::handler::SaplingRemoteApiContext;
 use super::HandlerInfo;
@@ -62,6 +66,7 @@ use super::SaplingRemoteApiHandler;
 use super::SaplingRemoteApiMethod;
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
+use crate::handlers::git_objects::fetch_git_object;
 use crate::utils::cbor_stream_filtered_errors;
 use crate::utils::get_repo;
 
@@ -117,7 +122,15 @@ impl SaplingRemoteApiHandler for Files2Handler {
                     ctx.perf_counters()
                         .increment_counter(PerfCounterType::EdenapiFilesAuxData);
                 }
-                fetch_file_response(repo.clone(), key, attrs)
+
+                match ectx.slapi_flavour() {
+                    SlapiCommitIdentityScheme::Hg => {
+                        fetch_file_response(repo.clone(), key, attrs).left_future()
+                    }
+                    SlapiCommitIdentityScheme::Git => {
+                        fetch_git_object_as_file(key, repo.clone()).right_future()
+                    }
+                }
             }
         });
 
@@ -203,6 +216,32 @@ async fn fetch_file<R: MononokeRepo>(
     }
 
     Ok(file)
+}
+
+// Sapling wants to use files the same way for Hg and Git, so shaping somehow
+// the git object to fit within the defined FileResponse
+async fn fetch_git_object_as_file<R: MononokeRepo>(
+    key: Key,
+    repo: HgRepoContext<R>,
+) -> Result<FileResponse, Error> {
+    let result = fetch_git_object(key.hgid, &repo)
+        .await
+        .map(|bytes| FileEntry {
+            key: key.clone(),
+            parents: Parents::None,
+            aux_data: None,
+            content: Some(FileContent {
+                hg_file_blob: bytes.bytes.into(),
+                metadata: Metadata {
+                    size: None,
+                    flags: None,
+                },
+            }),
+        });
+    Ok(FileResponse {
+        key,
+        result: result.map_err(|e| ServerError::generic(format!("{}", e))),
+    })
 }
 
 /// Generate an upload token for alredy uploaded content

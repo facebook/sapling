@@ -62,7 +62,7 @@ impl SaplingRemoteApiHandler for GitObjectsHandler {
     }
 }
 
-async fn fetch_git_object<R: MononokeRepo>(
+pub(crate) async fn fetch_git_object<R: MononokeRepo>(
     oid: Id20,
     repo: &HgRepoContext<R>,
 ) -> Result<GitObjectBytes, Error> {
