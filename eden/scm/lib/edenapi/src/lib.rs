@@ -24,6 +24,7 @@ pub use crate::api::SaplingRemoteApi;
 pub use crate::builder::Builder;
 pub use crate::builder::HttpClientBuilder;
 pub use crate::client::Client;
+pub use crate::client::RECENT_DOGFOODING_REQUESTS;
 pub use crate::errors::ConfigError;
 pub use crate::errors::SaplingRemoteApiError;
 pub use crate::response::BlockingResponse;

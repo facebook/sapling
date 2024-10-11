@@ -11,6 +11,8 @@ use std::fmt::Debug;
 use std::fs::create_dir_all;
 use std::future::ready;
 use std::num::NonZeroU64;
+use std::sync::atomic::AtomicI64;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -120,6 +122,7 @@ use metrics::Counter;
 use metrics::EntranceGuard;
 use minibytes::Bytes as RawBytes;
 use minibytes::Bytes;
+use once_cell::sync::Lazy;
 use parking_lot::Once;
 use progress_model::AggregatingProgressBar;
 use progress_model::ProgressBar;
@@ -151,6 +154,9 @@ const MAX_ERROR_MSG_LEN: usize = 500;
 
 static REQUESTS_INFLIGHT: Counter = Counter::new_counter("edenapi.req_inflight");
 static FILES_ATTRS_INFLIGHT: Counter = Counter::new_counter("edenapi.files_attrs_inflight");
+
+pub static RECENT_DOGFOODING_REQUESTS: Lazy<ExpiringBool> =
+    Lazy::new(|| ExpiringBool::new(Duration::from_secs(5)));
 
 mod paths {
     pub const ALTER_SNAPSHOT: &str = "snapshot/alter";
@@ -205,6 +211,38 @@ pub struct ClientInner {
     client: HttpClient,
     tree_progress: Arc<AggregatingProgressBar>,
     file_progress: Arc<AggregatingProgressBar>,
+}
+
+pub struct ExpiringBool {
+    inner: AtomicI64,
+    origin: std::time::Instant,
+    timeout: Duration,
+}
+
+impl ExpiringBool {
+    fn new(timeout: Duration) -> Self {
+        Self {
+            inner: AtomicI64::new(-1),
+            origin: std::time::Instant::now(),
+            timeout,
+        }
+    }
+
+    fn set(&self) {
+        let t = std::time::Instant::now().duration_since(self.origin);
+        self.inner.store(t.as_secs() as i64, Ordering::Relaxed);
+    }
+
+    pub fn get(&self) -> bool {
+        let val = self.inner.load(Ordering::Relaxed);
+        if val >= 0 {
+            let val = Duration::from_secs(val as u64);
+            let now = self.origin.elapsed();
+            (now - val) <= self.timeout
+        } else {
+            false
+        }
+    }
 }
 
 static LOG_SERVER_INFO_ONCE: Once = Once::new();
@@ -339,13 +377,17 @@ impl Client {
                 let res = raise_for_status(fut.await?).await?;
                 tracing::debug!("{:?}", ResponseMeta::from(&res));
 
+                let res_meta = ResponseMeta::from(&res);
+                let is_dogfooding = res_meta.tw_task_handle.map_or(false, |handle| { handle.contains("dogfooding") });
+                if is_dogfooding {
+                    RECENT_DOGFOODING_REQUESTS.set();
+                }
+
                 LOG_SERVER_INFO_ONCE.call_once(|| {
-                    let res_meta = ResponseMeta::from(&res);
-                    tracing::debug!(target: "mononoke_info", mononoke_host=res_meta.mononoke_host.unwrap_or_default());
+                    tracing::info!(target: "mononoke_info", mononoke_host=res_meta.mononoke_host.unwrap_or_default(), dogfooding=is_dogfooding);
                 });
 
                 Ok::<_, SaplingRemoteApiError>(res.into_body().cbor::<T>().err_into())
-
             })
             .try_flatten()
             .boxed()
@@ -2055,6 +2097,9 @@ async fn with_retry<'t, T>(
 
 #[cfg(test)]
 mod tests {
+    use std::thread;
+    use std::time::Duration;
+
     use anyhow::Result;
 
     use crate::builder::HttpClientBuilder;
@@ -2104,5 +2149,15 @@ mod tests {
         assert_eq!(&url, &expected);
 
         Ok(())
+    }
+
+    #[test]
+    fn test_expiring_bool() {
+        let expiring = crate::client::ExpiringBool::new(Duration::from_secs(1));
+        assert!(!expiring.get());
+        expiring.set();
+        assert!(expiring.get());
+        thread::sleep(Duration::from_secs(1));
+        assert!(!expiring.get());
     }
 }
