@@ -88,7 +88,7 @@ def validate_path_size(from_paths, to_paths, abort_on_empty=False):
         raise error.Abort(_("must provide --from-path and --to-path"))
 
 
-def validate_path_overlap(to_paths):
+def validate_path_overlap(from_paths, to_paths):
     # Disallow overlapping --to-path to keep things simple.
     to_dirs = util.dirs(to_paths)
     seen = set()
@@ -96,3 +96,11 @@ def validate_path_overlap(to_paths):
         if p in to_dirs or p in seen:
             raise error.Abort(_("overlapping --to-path entries"))
         seen.add(p)
+
+    from_dirs = util.dirs(from_paths)
+    for from_path, to_path in zip(from_paths, to_paths):
+        if from_path in to_dirs or to_path in from_dirs:
+            raise error.Abort(
+                _("overlapping --from-path '%s' and --to-path '%s'")
+                % (from_path, to_path)
+            )

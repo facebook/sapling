@@ -246,7 +246,7 @@ def _docopy(ui, repo, *args, **opts):
     to_paths = scmutil.rootrelpaths(from_ctx, opts.get("to_path"))
     subtreeutil.validate_path_size(from_paths, to_paths, abort_on_empty=True)
     subtreeutil.validate_path_exist(ui, from_ctx, from_paths, abort_on_missing=True)
-    subtreeutil.validate_path_overlap(to_paths)
+    subtreeutil.validate_path_overlap(from_paths, to_paths)
 
     if ui.configbool("subtree", "copy-reuse-tree"):
         _do_cheap_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts)

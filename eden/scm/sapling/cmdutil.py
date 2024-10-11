@@ -5007,7 +5007,7 @@ def registerdiffgrafts(from_paths, to_paths, *ctxs):
         return error.ProgrammingError("registerdiffgrafts() requires ctxs")
 
     subtreeutil.validate_path_size(from_paths, to_paths)
-    subtreeutil.validate_path_overlap(to_paths)
+    subtreeutil.validate_path_overlap(from_paths, to_paths)
 
     for ctx in ctxs:
         manifest = ctx.manifest()
