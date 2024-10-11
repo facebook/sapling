@@ -33,7 +33,6 @@ from . import (
     revsetlang,
     similar,
     smartset,
-    url,
     util,
     vfs,
     visibility,
