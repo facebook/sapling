@@ -336,10 +336,12 @@ def _do_normal_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
                     os.makedirs(os_abs_dest_dir)
 
                 new_files.append(dest)
-                # todo: handle symlink
                 fctx = from_ctx[src]
-                with open(os_abs_dest, "wb") as f:
-                    f.write(fctx.data())
+                if fctx.islink():
+                    os.symlink(fctx.data(), os_abs_dest)
+                else:
+                    with open(os_abs_dest, "wb") as f:
+                        f.write(fctx.data())
 
     wctx = repo[None]
     wctx.add(new_files)

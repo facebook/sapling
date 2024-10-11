@@ -97,6 +97,21 @@ abort when the working copy is dirty
   abort: uncommitted changes
   [255]
 
+test subtree copy with symlinks
+  $ newclientrepo
+  $ mkdir foo
+  $ echo "aaa" > foo/a
+  $ ln -s a foo/b
+  $ hg ci -Aqm 'first'
+  $ echo "bbb" > foo/a
+  $ hg ci -m 'second'
+  $ hg subtree cp -r "desc(first)" --from-path foo --to-path foo2
+  copying foo to foo2
+  $ readlink foo2/b
+  a
+  $ cat foo2/b
+  aaa
+
 test subtree graft
   $ newclientrepo
   $ drawdag <<'EOS'
