@@ -21,6 +21,7 @@ use edenapi_types::SetBookmarkRequest;
 use edenapi_types::SetBookmarkResponse;
 use futures::stream;
 use futures::StreamExt;
+use gotham_ext::handler::SlapiCommitIdentityScheme;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mononoke_api::MononokeRepo;
@@ -47,16 +48,21 @@ impl SaplingRemoteApiHandler for BookmarksHandler {
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::Bookmarks;
     const ENDPOINT: &'static str = "/bookmarks";
+    const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[
+        SlapiCommitIdentityScheme::Hg,
+        SlapiCommitIdentityScheme::Git,
+    ];
 
     async fn handler(
         ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
+        let slapi_flavour = ectx.slapi_flavour().clone();
         let repo = ectx.repo();
         let fetches = request
             .bookmarks
             .into_iter()
-            .map(move |bookmark| fetch_bookmark(repo.clone(), bookmark));
+            .map(move |bookmark| fetch_bookmark(repo.clone(), bookmark, slapi_flavour));
 
         Ok(stream::iter(fetches)
             .buffer_unordered(MAX_CONCURRENT_FETCHES_PER_REQUEST)
@@ -68,12 +74,22 @@ impl SaplingRemoteApiHandler for BookmarksHandler {
 async fn fetch_bookmark<R: MononokeRepo>(
     repo: HgRepoContext<R>,
     bookmark: String,
+    flavour: SlapiCommitIdentityScheme,
 ) -> Result<BookmarkEntry, Error> {
-    let hgid = repo
-        .resolve_bookmark(bookmark.clone(), Freshness::MaybeStale)
-        .await
-        .map_err(|_| ErrorKind::BookmarkResolutionFailed(bookmark.clone()))?
-        .map(|id| HgId::from(id.into_nodehash()));
+    let hgid = match flavour {
+        SlapiCommitIdentityScheme::Git => repo
+            .resolve_bookmark_git(bookmark.clone(), Freshness::MaybeStale)
+            .await
+            .map_err(|_| ErrorKind::BookmarkResolutionFailed(bookmark.clone()))?
+            .map(|id| HgId::from_slice(id.as_ref()))
+            .transpose()?,
+        SlapiCommitIdentityScheme::Hg => repo
+            .resolve_bookmark(bookmark.clone(), Freshness::MaybeStale)
+            .await
+            .map_err(|_| ErrorKind::BookmarkResolutionFailed(bookmark.clone()))?
+            .map(|id| HgId::from(id.into_nodehash())),
+    };
+
     Ok(BookmarkEntry { bookmark, hgid })
 }
 

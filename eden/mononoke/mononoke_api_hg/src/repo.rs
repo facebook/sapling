@@ -58,6 +58,7 @@ use metaconfig_types::RepoConfig;
 use mononoke_api::errors::MononokeError;
 use mononoke_api::repo::RepoContext;
 use mononoke_api::MononokeRepo;
+use mononoke_types::hash::GitSha1;
 use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
@@ -655,6 +656,22 @@ impl<R: MononokeRepo> HgRepoContext<R> {
             .await?
         {
             Some(c) => c.hg_id().await,
+            None => Ok(None),
+        }
+    }
+
+    /// resolve a bookmark name to an Hg Changeset
+    pub async fn resolve_bookmark_git(
+        &self,
+        bookmark: impl AsRef<str>,
+        freshness: Freshness,
+    ) -> Result<Option<GitSha1>, MononokeError> {
+        match self
+            .repo_ctx
+            .resolve_bookmark(&BookmarkKey::new(bookmark)?, freshness)
+            .await?
+        {
+            Some(c) => c.git_sha1().await,
             None => Ok(None),
         }
     }

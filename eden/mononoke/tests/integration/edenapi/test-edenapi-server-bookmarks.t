@@ -47,3 +47,9 @@ Check response.
   {"beta": "112478962961147124edd43549aedd1a335e44bf",
    "alpha": "426bada5c67598ca65036d57d9e4b64b0c1ce7a0",
    "unknown": None}
+
+Check response for slapigit.
+  $ hg --config edenapi.url=https://localhost:$MONONOKE_SOCKET/slapigit/ debugapi -e bookmarks -i '["alpha", "beta", "unknown"]'
+  {"beta": "6cfc1c8c1f96fda3264583d15e8ef8b2a3436dca",
+   "alpha": "396d8029b77033c770d483ba57559d5161397819",
+   "unknown": None}
