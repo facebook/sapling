@@ -1,18 +1,12 @@
-#modern-config-incompatible
 #require no-eden
 #inprocess-hg-incompatible
 
-  $ setconfig devel.segmented-changelog-rev-compat=true
-  $ configure mutation dummyssh
+  $ configure mutation
   $ setconfig push.edenapi=true
 
 Set up server repository
 
   $ newserver server
-  $ cat >> .hg/hgrc << EOF
-  > [extensions]
-  > pushrebase=
-  > EOF
   $ echo foo > a
   $ echo foo > b
   $ hg commit -Am 'initial'
@@ -21,14 +15,9 @@ Set up server repository
   $ hg book master
   $ cd ..
 
-Set up client repository
+Test fast forward push
 
-  $ hg clone --config 'extensions.remotenames=' ssh://user@dummy/server client -q
-
-Test that pushing to a remotename preserves commit hash if no rebase happens
-
-  $ cd client
-  $ setconfig extensions.remotenames= extensions.pushrebase=
+  $ newclientrepo client test:server
   $ hg up -q master
   $ echo x >> a && hg commit -qm 'add a'
   $ hg commit --amend -qm 'changed message'
@@ -38,7 +27,7 @@ Test that pushing to a remotename preserves commit hash if no rebase happens
 tofix: push should create a new node after pushrebase
   $ hg show
   commit:      ea98a8f95390
-  bookmark:    default/master
+  bookmark:    remote/master
   hoistedname: master
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -54,15 +43,11 @@ tofix: push should create a new node after pushrebase
    foo
   +x
   $ hg log -G -r 'all()' -T '{node|short} {desc} {remotebookmarks} {bookmarks}'
-  @  ea98a8f95390 changed message default/master
+  @  ea98a8f95390 changed message remote/master
   │
   o  2bb9d20e471c initial
 
 tofix: the master bookmark should point to the latest commit
-  $ cd ..
-  $ hg clone --config 'extensions.remotenames=' ssh://user@dummy/server client1 -q
-  $ cd client1
+  $ newclientrepo client2 test:server
   $ hg log -G -r 'all()' -T '{node|short} {desc} {remotebookmarks} {bookmarks}'
-  @  ea98a8f95390 changed message
-  │
-  o  2bb9d20e471c initial default/master
+  @  2bb9d20e471c initial remote/master
