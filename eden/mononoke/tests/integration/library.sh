@@ -2246,7 +2246,7 @@ EOF
 }
 
 function default_setup_drawdag() {
-  setup_common_config "blob_files"
+  setup_common_config "$BLOB_TYPE"
 
   testtool_drawdag -R repo <<EOF
 C
@@ -2257,7 +2257,7 @@ A
 # bookmark: C "${MASTER_BOOKMARK:-master_bookmark}"
 EOF
 
-  start_and_wait_for_mononoke_server
+  start_and_wait_for_mononoke_server "$@"
   hg clone -q "mono:repo" "$REPONAME" --noupdate
   cd $REPONAME || exit 1
   cat >> .hg/hgrc <<EOF
