@@ -77,7 +77,8 @@ subtree_subcmd = subtree.subcommand(
 )
 def subtree_copy(ui, repo, *args, **opts):
     """create a directory or file branching"""
-    copy(ui, repo, *args, **opts)
+    with repo.wlock(), repo.lock():
+        return _docopy(ui, repo, *args, **opts)
 
 
 @subtree_subcmd(
@@ -230,11 +231,6 @@ def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path):
 
     # should never reach here
     raise error.Abort("cannot find a merge base")
-
-
-def copy(ui, repo, *args, **opts):
-    with repo.wlock(), repo.lock():
-        return _docopy(ui, repo, *args, **opts)
 
 
 def _docopy(ui, repo, *args, **opts):
