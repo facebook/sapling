@@ -61,6 +61,25 @@ test subtree copy
   {'branch': 'default', 'test_subtree_copy': '{"v":1,"branches":[{"from_path":"foo","to_path":"bar","from_commit":"d908813f0f7c9078810e26aad1e37bdb32013d4b"}]}'}
 
 
+abort when subtree copy too many files
+
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B   # B/foo/x = bbb\n
+  > |
+  > A   # A/foo/x = aaa\n
+  >     # A/foo/y = yyy\n
+  >     # drawdag.defaultfiles=false
+  > EOS  
+  $ hg subtree cp -r $A --from-path foo --to-path bar --config subtree.copy-max-file-count=1
+  abort: subtree copy includes too many files
+  [255]
+  $ hg subtree cp -r $A --from-path foo --to-path bar --config subtree.copy-max-file-count=1 --config ui.supportcontact="Sapling Team"
+  abort: subtree copy includes too many files
+  (contact Sapling Team for help)
+  [255]
+
+
 abort when the working copy is dirty
 
   $ newclientrepo

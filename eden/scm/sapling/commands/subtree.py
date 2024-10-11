@@ -30,6 +30,9 @@ from ..utils.subtreeutil import gen_branch_info, get_branch_info, get_merge_info
 from .cmdtable import command
 
 
+MAX_SUBTREE_COPY_FILE_COUNT = 10_000
+
+
 @command(
     "subtree",
     [],
@@ -299,9 +302,17 @@ def _do_normal_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
             )
 
     path_to_fileids = {}
+    limit = ui.configint("subtree", "copy-max-file-count", MAX_SUBTREE_COPY_FILE_COUNT)
+    file_count = 0
     for path in from_paths:
         matcher = matchmod.match(repo.root, "", [f"path:{path}"])
-        path_to_fileids[path] = scmutil.walkfiles(repo, from_ctx, matcher)
+        fileids = scmutil.walkfiles(repo, from_ctx, matcher)
+        file_count += len(fileids)
+        if file_count > limit:
+            support = ui.config("ui", "supportcontact")
+            hint = _("contact %s for help") % support if support else ""
+            raise error.Abort(_("subtree copy includes too many files"), hint=hint)
+        path_to_fileids[path] = fileids
 
     new_files = []
     for from_path, to_path in zip(from_paths, to_paths):
