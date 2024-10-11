@@ -6,9 +6,10 @@
 # shallowrepo.py - shallow repository that uses remote filelogs
 from __future__ import absolute_import
 
-from sapling import match, progress, util
+from sapling import progress, util
 from sapling.i18n import _
-from sapling.node import hex, nullid
+from sapling.node import nullid
+from sapling.scmutil import walkfiles
 
 from . import fileserverclient, remotefilectx, remotefilelog
 
@@ -122,32 +123,19 @@ def wraprepo(repo) -> None:
             else:
                 files = []
 
-            basemf = self[base or nullid].manifest()
             with progress.bar(self.ui, _("prefetching"), total=len(revs)) as prog:
                 for rev in sorted(revs):
                     ctx = self[rev]
                     if matcher is None:
                         matcher = self.maybesparsematch(rev)
 
-                    mfctx = ctx.manifestctx()
-                    mf = mfctx.read()
-
                     with progress.spinner(self.ui, _("computing files")):
-                        if base is None and hasattr(mf, "walkfiles"):
-                            # If there is no base, skip diff and use more efficient walk.
-                            walked = mf.walkfiles(matcher)
-                            if type(files) is set:
-                                files.update(walked)
-                            elif type(files) is list:
-                                # we know len(revs) == 1, so avoid copy and assign
-                                files = walked
-                        else:
-                            for path, (new, _old) in mf.diff(basemf, matcher).items():
-                                if new[0]:
-                                    if type(files) is set:
-                                        files.add((path, new[0]))
-                                    elif type(files) is list:
-                                        files.append((path, new[0]))
+                        walked = walkfiles(repo, ctx, matcher, base)
+                        if type(files) is set:
+                            files.update(walked)
+                        elif type(files) is list:
+                            # we know len(revs) == 1, so avoid copy and assign
+                            files = walked
 
                     prog.value += 1
 

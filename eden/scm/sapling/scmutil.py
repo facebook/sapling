@@ -1596,3 +1596,14 @@ def validate_path_overlap(to_paths):
         if p in to_dirs or p in seen:
             raise error.Abort(_("overlapping --to-path entries"))
         seen.add(p)
+
+
+def walkfiles(repo, walkctx, matcher, base=None):
+    """Return a list (path, filenode) pairs that match the matcher in the given context."""
+    mf = walkctx.manifest()
+    if base is None and hasattr(mf, "walkfiles"):
+        # If there is no base, skip diff and use more efficient walk.
+        return mf.walkfiles(matcher)
+    else:
+        basemf = repo[base or nullid].manifest()
+        return [(p, n[0]) for p, (n, _o) in mf.diff(basemf, matcher).items() if n[0]]
