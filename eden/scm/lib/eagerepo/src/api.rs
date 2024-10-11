@@ -1201,16 +1201,58 @@ impl SaplingRemoteApi for EagerRepo {
         base: HgId,
         pushvars: HashMap<String, String>,
     ) -> Result<LandStackResponse, SaplingRemoteApiError> {
-        // dummy implementation
-        let _ = (bookmark, head, base, pushvars);
-        let new_head = head;
-        let mut old_to_new_hgids = HashMap::new();
-        old_to_new_hgids.insert(head, new_head);
-        let data = LandStackData {
-            new_head,
-            old_to_new_hgids,
+        let _ = pushvars;
+        let latest_bookmark_id = match self.get_bookmark(&bookmark) {
+            Ok(Some(id)) => id,
+            _ => {
+                return Err(SaplingRemoteApiError::HttpError {
+                    status: StatusCode::NOT_FOUND,
+                    message: format!("bookmark {} was not found", bookmark),
+                    headers: Default::default(),
+                    url: self.url("land_stack"),
+                });
+            }
         };
-        Ok(LandStackResponse { data: Ok(data) })
+
+        let roots = vec![base];
+        let heads = vec![head];
+
+        let source_commits = self
+            .dag()
+            .await
+            .only(to_set(&heads), to_set(&roots))
+            .await
+            .map_err(map_dag_err)?;
+        let commits_stream = source_commits.iter_rev().await.map_err(map_dag_err)?;
+        let commits_stream: BoxStream<edenapi::Result<HgId>> = commits_stream
+            .then(|v| async move {
+                let v = v?;
+                let hgid = HgId::from_slice(v.as_ref()).unwrap();
+                Ok(hgid)
+            })
+            .map_err(map_dag_err)
+            .boxed();
+        let commits: Vec<HgId> = commits_stream.try_collect().await?;
+
+        if latest_bookmark_id == base {
+            // no changes on server side, just move the bookmark
+            EagerRepo::set_bookmark(self, &bookmark, Some(head)).unwrap();
+            let mut old_to_new_hgids = HashMap::new();
+            for commit in commits {
+                old_to_new_hgids.insert(
+                    HgId::from_slice(commit.as_ref()).unwrap(),
+                    HgId::from_slice(commit.as_ref()).unwrap(),
+                );
+            }
+            let data = LandStackData {
+                new_head: head,
+                old_to_new_hgids,
+            };
+            self.flush_for_api("land_stack").await?;
+            return Ok(LandStackResponse { data: Ok(data) });
+        } else {
+            panic!("not implemented");
+        }
     }
 }
 

@@ -47,7 +47,9 @@ tofix: push should create a new node after pushrebase
   │
   o  2bb9d20e471c initial
 
-tofix: the master bookmark should point to the latest commit
+the master bookmark should point to the latest commit
   $ newclientrepo client2 test:server
   $ hg log -G -r 'all()' -T '{node|short} {desc} {remotebookmarks} {bookmarks}'
-  @  2bb9d20e471c initial remote/master
+  @  ea98a8f95390 changed message remote/master
+  │
+  o  2bb9d20e471c initial
