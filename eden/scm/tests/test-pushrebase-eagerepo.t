@@ -1,12 +1,25 @@
 #require no-eden
-#inprocess-hg-incompatible
 
   $ configure mutation
+
+#testcases slapi wireproto
+
+#if wireproto
+  $ setconfig push.edenapi=false
+#else
   $ setconfig push.edenapi=true
+#endif
 
 Set up server repository
 
+#if wireproto
+  $ rm $TESTTMP/.eagerepo
+#endif
   $ newserver server
+  $ cat >> .hg/hgrc << EOF
+  > [extensions]
+  > pushrebase=
+  > EOF
   $ echo foo > a
   $ echo foo > b
   $ hg commit -Am 'initial'
@@ -24,7 +37,6 @@ Test fast forward push
   $ hg log -r . -T '{node}\n'
   ea98a8f9539083f60b81315106c94227e8814d17
   $ hg push --to master -q
-tofix: push should create a new node after pushrebase
   $ hg show
   commit:      ea98a8f95390
   bookmark:    remote/master
