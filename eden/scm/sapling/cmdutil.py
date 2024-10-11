@@ -3685,7 +3685,7 @@ def eden_files(ui, ctx, m, fm, fmt):
     return ret
 
 
-def remove(ui, repo, m, prefix, mark, force, warnings=None):
+def remove(ui, repo, m, mark, force, warnings=None):
     ret = 0
     clean = force or not mark
     s = repo.status(match=m, clean=clean)

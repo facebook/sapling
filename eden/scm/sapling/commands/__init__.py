@@ -5234,7 +5234,7 @@ def remove(ui, repo, *pats, **opts):
         raise error.Abort(_("no files specified"))
 
     m = scmutil.match(repo[None], pats, opts)
-    return cmdutil.remove(ui, repo, m, "", mark, force)
+    return cmdutil.remove(ui, repo, m, mark, force)
 
 
 @command(
