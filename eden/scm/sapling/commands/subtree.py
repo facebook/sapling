@@ -141,12 +141,11 @@ def subtree_merge(ui, repo, **opts):
     subtreeutil.validate_path_exist(ui, from_ctx, from_paths, abort_on_missing=True)
     subtreeutil.validate_path_exist(ui, ctx, to_paths, abort_on_missing=True)
 
-    merge_base_commit = _subtree_merge_base(
+    merge_base_ctx = _subtree_merge_base(
         repo, ctx, to_paths[0], from_ctx, from_paths[0]
     )
-    merge_base_ctx = repo[merge_base_commit]
     ui.status("merge base: %s\n" % merge_base_ctx)
-    cmdutil.registerdiffgrafts(from_paths, to_paths, ctx, from_ctx, merge_base_ctx)
+    cmdutil.registerdiffgrafts(from_paths, to_paths, ctx, from_ctx)
 
     labels = ["working copy", "merge rev"]
     stats = mergemod.merge(
@@ -181,7 +180,21 @@ def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path):
     1. try to find the last subtree merge point
     2. try to find the original subtree copy info
     3. otherwise, fallback to the parent commit of the creation commit
+
+    The return value is the context of merge base commit with registered
+    path mapping.
     """
+
+    def registerdiffgrafts(merge_base_ctx, heads_index):
+        # if the head index is 0, then it points to to_paths, which means
+        # the merge direction matches the original copy direction, otherwise
+        # it is a reverse merge
+        if heads_index == 0:
+            cmdutil.registerdiffgrafts([from_path], [to_path], merge_base_ctx)
+        else:
+            cmdutil.registerdiffgrafts([to_path], [from_path], merge_base_ctx)
+        return merge_base_ctx
+
     dag = repo.changelog.dag
     isancestor = dag.isancestor
     to_hist = repo.pathhistory([to_path], dag.ancestors([to_ctx.node()]))
@@ -209,7 +222,8 @@ def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path):
         if merge_info := get_merge_info(repo, heads[i]):
             for merge in merge_info["merges"]:
                 if merge["to_path"] == paths[i] and merge["from_path"] == paths[1 - i]:
-                    return merge["from_commit"]
+                    merge_base_ctx = repo[merge["from_commit"]]
+                    return registerdiffgrafts(merge_base_ctx, i)
 
         # check branch info
         if branch_info := get_branch_info(repo, heads[i]):
@@ -218,17 +232,19 @@ def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path):
                     branch["to_path"] == paths[i]
                     and branch["from_path"] == paths[1 - i]
                 ):
-                    return branch["from_commit"]
+                    merge_base_ctx = repo[branch["from_commit"]]
+                    return registerdiffgrafts(merge_base_ctx, i)
 
         try:
             # add next node to the list
             heads[i] = next(iters[i])
         except StopIteration:
-            # no branch info, use the first parent
             try:
-                return dag.parentnames(heads[i])[0]
+                # no branch info, use the first parent
+                p1 = dag.parentnames(heads[i])[0]
+                return registerdiffgrafts(repo[p1], i)
             except IndexError:
-                return node.nullid
+                return repo[node.nullid]
 
     # should never reach here
     raise error.Abort("cannot find a merge base")
