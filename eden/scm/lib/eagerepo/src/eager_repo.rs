@@ -632,7 +632,7 @@ impl EagerRepo {
     }
 
     /// Update or remove a single bookmark.
-    pub fn set_bookmark(&mut self, name: &str, id: Option<Id20>) -> Result<()> {
+    pub fn set_bookmark(&self, name: &str, id: Option<Id20>) -> Result<()> {
         let mut bookmarks = self.get_bookmarks_map()?;
         match id {
             None => bookmarks.remove(name),
@@ -905,7 +905,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let dir = dir.path();
 
-        let mut repo = EagerRepo::open(dir).unwrap();
+        let repo = EagerRepo::open(dir).unwrap();
         let commit1 = repo.add_commit(&[], b"A").await.unwrap();
         let commit2 = repo.add_commit(&[], b"B").await.unwrap();
         repo.set_bookmark("c1", Some(commit1)).unwrap();
@@ -913,7 +913,7 @@ mod tests {
         repo.set_bookmark("main", Some(commit2)).unwrap();
         repo.flush().await.unwrap();
 
-        let mut repo = EagerRepo::open(dir).unwrap();
+        let repo = EagerRepo::open(dir).unwrap();
         assert_eq!(
             format!("{:#?}", repo.get_bookmarks_map().unwrap()),
             r#"{
@@ -1026,7 +1026,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let dir = dir.path();
 
-        let mut repo = EagerRepo::open(dir).unwrap();
+        let repo = EagerRepo::open(dir).unwrap();
         let missing_id = missing_id();
 
         let err = repo.set_bookmark("a", Some(missing_id)).unwrap_err();
