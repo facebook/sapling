@@ -11,8 +11,7 @@
 
 Setup repo, and create test repo
 
-  $ BLOB_TYPE="blob_files" EMIT_OBSMARKERS=1 quiet default_setup
-
+  $ BLOB_TYPE="blob_files" EMIT_OBSMARKERS=1 quiet default_setup_drawdag
   $ mkdir sparse
   $ cat > sparse/profile <<EOF
   > path:sparse/
