@@ -196,6 +196,11 @@ def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path):
         return merge_base_ctx
 
     dag = repo.changelog.dag
+    if from_path == to_path:
+        nodes = [from_ctx.node(), to_ctx.node()]
+        gca = dag.gcaone(nodes)
+        return registerdiffgrafts(repo[gca], 0)
+
     isancestor = dag.isancestor
     to_hist = repo.pathhistory([to_path], dag.ancestors([to_ctx.node()]))
     from_hist = repo.pathhistory([from_path], dag.ancestors([from_ctx.node()]))

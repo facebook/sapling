@@ -219,3 +219,60 @@ to fix: show a better message when there is no changes for subtree merge
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
   $ hg st
+
+test subtree merge from the same directory from a different branch
+
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  >   D  # D/foo/y = 111\n
+  >   |
+  > B C  # B/foo/x = 1a\n2\n3\n
+  > |/   # C/foo/x = 1\n2\n3a\n
+  > A    # A/foo/x = 1\n2\n3\n
+  > EOS
+  $ hg go -q $B
+  $ hg log -G -T '{node|short} {desc}'
+  o  8c8c93854742 D
+  │
+  o  b1b40873e5ea C
+  │
+  │ @  c4fbbcdf676b B
+  ├─╯
+  o  b4cb27eee4e2 A
+  $ hg subtree merge -r $C --from-path foo --to-path foo
+  merge base: b4cb27eee4e2
+  merging foo/x
+  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (subtree merge, don't forget to commit)
+  $ hg diff
+  diff --git a/foo/x b/foo/x
+  --- a/foo/x
+  +++ b/foo/x
+  @@ -1,3 +1,3 @@
+   1a
+   2
+  -3
+  +3a
+  $ hg ci -m "merge from foo to foo"
+
+  $ hg go -q $A
+  $ hg subtree merge -r $D --from-path foo --to-path foo
+  merge base: b4cb27eee4e2
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (subtree merge, don't forget to commit)
+  $ hg diff
+  diff --git a/foo/x b/foo/x
+  --- a/foo/x
+  +++ b/foo/x
+  @@ -1,3 +1,3 @@
+   1
+   2
+  -3
+  +3a
+  diff --git a/foo/y b/foo/y
+  new file mode 100644
+  --- /dev/null
+  +++ b/foo/y
+  @@ -0,0 +1,1 @@
+  +111
+  $ hg ci -m "merge foo from a descendant"
