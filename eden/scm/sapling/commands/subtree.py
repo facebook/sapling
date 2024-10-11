@@ -67,6 +67,7 @@ subtree_subcmd = subtree.subcommand(
             _("the commit to copy from"),
             _("REV"),
         ),
+        ("f", "force", None, _("forcibly copy over an existing file")),
     ]
     + subtree_path_opts
     + commitopts
@@ -291,15 +292,20 @@ def _do_normal_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
                 fileservice.prefetch(fileids, fetchhistory=False)
 
     ui = repo.ui
+    force = opts.get("force")
     auditor = pathutil.pathauditor(repo.root)
 
     for to_path in to_paths:
         auditor(to_path)
         if repo.wvfs.lexists(to_path):
-            # todo: hint=_("use --force to overwrite"),
-            raise error.Abort(
-                _("cannot copy to an existing path: %s") % to_path,
-            )
+            if not force:
+                raise error.Abort(
+                    _("cannot copy to an existing path: %s") % to_path,
+                    hint=_("use --force to overwrite (recursively remove %s)")
+                    % to_path,
+                )
+            matcher = matchmod.match(repo.root, "", [f"path:{to_path}"])
+            cmdutil.remove(ui, repo, matcher, mark=False, force=True)
 
     path_to_fileids = {}
     limit = ui.configint("subtree", "copy-max-file-count", MAX_SUBTREE_COPY_FILE_COUNT)

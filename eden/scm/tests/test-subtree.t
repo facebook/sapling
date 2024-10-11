@@ -112,6 +112,27 @@ test subtree copy with symlinks
   $ cat foo2/b
   aaa
 
+test subtree copy to tracked directory
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > C   # B/bar/x = ccc\n
+  > |
+  > B   # B/foo/x = bbb\n
+  > |
+  > A   # A/foo/x = aaa\n
+  >     # drawdag.defaultfiles=false
+  > EOS  
+  $ hg go $C -q
+  $ hg subtree cp -r $A --from-path foo --to-path bar
+  abort: cannot copy to an existing path: bar
+  (use --force to overwrite (recursively remove bar))
+  [255]
+  $ hg subtree cp -r $A --from-path foo --to-path bar --force
+  removing bar/x
+  copying foo to bar
+  $ cat bar/x
+  aaa
+
 test subtree graft
   $ newclientrepo
   $ drawdag <<'EOS'
