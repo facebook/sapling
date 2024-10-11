@@ -320,19 +320,26 @@ def _do_normal_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
         fileids = path_to_fileids[from_path]
         prefetch(repo, from_path, fileids)
 
-        for src, _node in fileids:
-            tail = src[len(from_path) :]
-            dest = to_path + tail
-            os_abs_dest = repo.wjoin(dest)
-            os_abs_dest_dir = os.path.dirname(os_abs_dest)
-            if not os.path.isdir(os_abs_dest_dir):
-                os.makedirs(os_abs_dest_dir)
+        with progress.bar(
+            repo.ui,
+            _("subtree copy from %s to %s") % (from_path, to_path),
+            _("files"),
+            len(fileids),
+        ) as p:
+            for src, _node in fileids:
+                p.value += 1
+                tail = src[len(from_path) :]
+                dest = to_path + tail
+                os_abs_dest = repo.wjoin(dest)
+                os_abs_dest_dir = os.path.dirname(os_abs_dest)
+                if not os.path.isdir(os_abs_dest_dir):
+                    os.makedirs(os_abs_dest_dir)
 
-            new_files.append(dest)
-            # todo: handle symlink
-            fctx = from_ctx[src]
-            with open(os_abs_dest, "wb") as f:
-                f.write(fctx.data())
+                new_files.append(dest)
+                # todo: handle symlink
+                fctx = from_ctx[src]
+                with open(os_abs_dest, "wb") as f:
+                    f.write(fctx.data())
 
     wctx = repo[None]
     wctx.add(new_files)
