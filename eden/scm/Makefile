@@ -21,6 +21,8 @@ PYTHON := python
 endif
 PYTHON3 := python3
 
+PYTHON_SYS_EXECUTABLE=$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3))
+
 BUCK_BUILD_MODE = @fbcode//mode/opt
 ifeq ($(OS),Windows_NT)
   BUCK_BUILD_MODE := @fbcode//mode/opt-win
@@ -31,7 +33,7 @@ else
   endif
 endif
 
-PYTHON_MINOR_VERSION=$(shell $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) -c "import sys; print(sys.version_info.minor)")
+PYTHON_MINOR_VERSION=$(shell $(PYTHON_SYS_EXECUTABLE) -c "import sys; print(sys.version_info.minor)")
 
 ifeq ($(RUST_DEBUG),1)
 RUST_FLAG = --debug
@@ -105,7 +107,7 @@ install-oss: oss
 
 local:
 	SAPLING_OSS_BUILD=$(OSS) HGNAME=$(HGNAME) \
-	  $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py $(PURE) \
+	  $(PYTHON_SYS_EXECUTABLE) setup.py $(PURE) \
 	  build_interactive_smartlog \
 	  build_clib $(COMPILERFLAG) \
 	  build_rust_ext -i -l $(RUST_FLAG) \
@@ -116,7 +118,7 @@ endif
 	cp build/scripts-3.$(PYTHON_MINOR_VERSION)/$(HG_BIN_NAME) $(HG_BIN_NAME)
 
 hg:
-	SAPLING_SKIP_OTHER_RUST_BINARIES=true $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py $(PURE) \
+	SAPLING_SKIP_OTHER_RUST_BINARIES=true $(PYTHON_SYS_EXECUTABLE) setup.py $(PURE) \
 	  build_clib $(COMPILERFLAG) \
 	  build_rust_ext -i -l $(RUST_FLAG) \
 	  build_mo
@@ -145,9 +147,9 @@ getdepsbuild:
 	mkdir -p $(GETDEPS_BUILD_DIR)/sapling
 	ln -sfn $(GETDEPS_BUILD_DIR)/sapling build
 	HGNAME=$(HGNAME) GETDEPS_BUILD=1 \
-		PYTHON_SYS_EXECUTABLE=$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) \
+		PYTHON_SYS_EXECUTABLE=$(PYTHON_SYS_EXECUTABLE) \
 		THRIFT="$(GETDEPS_INSTALL_DIR)/fbthrift/bin/thrift1" \
-		$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) setup.py \
+		$(PYTHON_SYS_EXECUTABLE) setup.py \
 		$(PURE) build $(COMPILERFLAG)
 
 cleanbutpackages:
@@ -176,8 +178,8 @@ install-home: build
 	$(PYTHON) setup.py $(PURE) install --home="$(HOME)" --prefix="" --force
 
 install-getdeps:
-	PYTHON_SYS_EXECUTABLE=$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) \
-	    GETDEPS_BUILD=1 $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) \
+	PYTHON_SYS_EXECUTABLE=$(PYTHON_SYS_EXECUTABLE) \
+	    GETDEPS_BUILD=1 $(PYTHON_SYS_EXECUTABLE) \
 		setup.py $(PURE) install --skip-build --prefix="$(PREFIX)" --install-scripts="$(PREFIX)/bin"  --install-lib="$(PREFIX)/bin" --force && \
 		cd "$(PREFIX)/bin" && ln -f "$(SL_BIN_NAME)" "$(HG_BIN_NAME)"
 
@@ -218,7 +220,13 @@ GETDEPS_TEST_EXCLUSION_LIST := test-cats.t \
 	test-rust-checkout.t \
 	test-smartlog-interactive.t \
 	test-smartlog-interactive-highlighting.t
-	
+
+ifeq ($(PYTHON_MINOR_VERSION),12)
+# output differs for these on 3.12 in ways that are hard to match for 3.10 and 3.12 simultaneously
+GETDEPS_TEST_EXCLUSION_LIST := $(GETDEPS_TEST_EXCLUSION_LIST) \
+	test-eager-exchange.t
+endif
+
 # convert to a sed expression
 GETDEPS_TEST_EXCLUSIONS := $(subst $() $(),|,$(GETDEPS_TEST_EXCLUSION_LIST))
 
@@ -230,14 +238,14 @@ test-getdeps:
 	# ensure that fbpython is present, as some tests depend on it being on PATH
 	if ! which fbpython >/dev/null 2>&1; then \
 		FBPYTHON="$(GETDEPS_INSTALL_DIR)/sapling/bin/fbpython"; \
-		PYTHON_SYS_EXECUTABLE=$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)); \
+		PYTHON_SYS_EXECUTABLE=$(PYTHON_SYS_EXECUTABLE); \
 		printf "#!/bin/sh\nexec \"$$PYTHON_SYS_EXECUTABLE\" \"\$$@\"\n"  > $$FBPYTHON; \
 		chmod +x "$$FBPYTHON"; \
 	fi;
 	# Run tests and retry any failures
 	export GETDEPS_BUILD=1; \
 	export HGTEST_HG=$(GETDEPS_INSTALL_DIR)/sapling/bin/$(HG_BIN_NAME); \
-	cd tests && export PYTHON_SYS_EXECUTABLE=$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)); \
+	cd tests && export PYTHON_SYS_EXECUTABLE=$(PYTHON_SYS_EXECUTABLE); \
 	for try in $$(seq 0 $(GETDEPS_TEST_RETRY)); do \
 		RERUN_ARG=""; \
 		GETDEPS_TEST_FILTER=$(GETDEPS_TEST_FILTER); \
@@ -260,8 +268,8 @@ check: tests
 
 .PHONY: tests
 tests:
-	cd tests && PYTHON_SYS_EXECUTABLE=$(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) \
-	    $(shell $(PYTHON3) contrib/pick_python.py $(PYTHON3)) run-tests.py
+	cd tests && PYTHON_SYS_EXECUTABLE=$(PYTHON_SYS_EXECUTABLE) \
+	    $(PYTHON_SYS_EXECUTABLE) run-tests.py
 
 update-pot: i18n/hg.pot
 

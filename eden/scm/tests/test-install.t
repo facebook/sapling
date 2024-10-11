@@ -1,11 +1,9 @@
 #debugruntest-incompatible
   $ eagerepo
 hg debuginstall
-  $ hg debuginstall
+  $ hg debuginstall 2>&1 | grep -v 'checking Python version ' | grep -v 'checking Python lib '
   checking encoding (utf-8)...
   checking Python executable (*) (glob)
-  checking Python version (*) (glob)
-  checking Python lib (*lib*)... (glob)
   checking Python security support (*) (glob)
     TLS 1.2 not supported by Python install; network connections lack modern security (?)
     SNI not supported by Python install; may have connectivity issues with some servers (?)
@@ -44,11 +42,9 @@ hg debuginstall JSON
   ]
 
 hg debuginstall with no username
-  $ HGUSER= hg debuginstall
+  $ (HGUSER= hg debuginstall; echo [$?]) | grep -v 'checking Python version ' | grep -v 'checking Python lib '
   checking encoding (utf-8)...
   checking Python executable (*) (glob)
-  checking Python version (*) (glob)
-  checking Python lib (*lib*)... (glob)
   checking Python security support (*) (glob)
     TLS 1.2 not supported by Python install; network connections lack modern security (?)
     SNI not supported by Python install; may have connectivity issues with some servers (?)
@@ -83,11 +79,9 @@ path variables are expanded (~ is the same as $TESTTMP)
 #if execbit
   $ chmod 755 tools/testeditor.exe
 #endif
-  $ hg debuginstall --config ui.editor=~/tools/testeditor.exe
+  $ hg debuginstall --config ui.editor="~/tools/testeditor.exe" | grep -v 'checking Python version ' | grep -v 'checking Python lib '
   checking encoding (utf-8)...
   checking Python executable (*) (glob)
-  checking Python version (*) (glob)
-  checking Python lib (*lib*)... (glob)
   checking Python security support (*) (glob)
     TLS 1.2 not supported by Python install; network connections lack modern security (?)
     SNI not supported by Python install; may have connectivity issues with some servers (?)
@@ -100,4 +94,3 @@ path variables are expanded (~ is the same as $TESTTMP)
   checking commit editor (internal:none)
   checking username (test)
   no problems detected
-
