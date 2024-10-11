@@ -426,15 +426,10 @@ impl SaplingRemoteApi for EagerRepo {
 
         debug!("pull_lazy");
         self.refresh_for_api();
-        let common = to_vec_vertex(&common);
-        let missing = to_vec_vertex(&missing);
         let set = self
             .dag()
             .await
-            .only(
-                Set::from_static_names(missing),
-                Set::from_static_names(common),
-            )
+            .only(to_set(&missing), to_set(&common))
             .await
             .map_err(map_dag_err)?;
         let clone_data = self
@@ -562,8 +557,8 @@ impl SaplingRemoteApi for EagerRepo {
             debug_hgid_list(&common),
         );
         self.refresh_for_api();
-        let heads = Set::from_static_names(heads.iter().map(|v| Vertex::copy_from(v.as_ref())));
-        let common = Set::from_static_names(common.iter().map(|v| Vertex::copy_from(v.as_ref())));
+        let heads = to_set(&heads);
+        let common = to_set(&common);
         let graph = self
             .dag()
             .await
@@ -608,8 +603,8 @@ impl SaplingRemoteApi for EagerRepo {
             debug_hgid_list(&common),
         );
         self.refresh_for_api();
-        let heads = Set::from_static_names(heads.iter().map(|v| Vertex::copy_from(v.as_ref())));
-        let common = Set::from_static_names(common.iter().map(|v| Vertex::copy_from(v.as_ref())));
+        let heads = to_set(&heads);
+        let common = to_set(&common);
         let graph = self
             .dag()
             .await
@@ -1558,6 +1553,11 @@ fn check_convert_to_hgid<'a>(vertexes: impl Iterator<Item = &'a Vertex>) -> eden
 
 fn to_vec_vertex(ids: &[HgId]) -> Vec<Vertex> {
     ids.iter().map(|i| Vertex::copy_from(i.as_ref())).collect()
+}
+
+fn to_set(ids: &[HgId]) -> Set {
+    let vertexes = to_vec_vertex(ids);
+    Set::from_static_names(vertexes)
 }
 
 fn convert_clone_data(clone_data: dag::CloneData<Vertex>) -> edenapi::Result<dag::CloneData<HgId>> {
