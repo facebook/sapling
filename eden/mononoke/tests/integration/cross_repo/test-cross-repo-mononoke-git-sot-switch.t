@@ -120,24 +120,19 @@ Run the x-repo with submodules setup
   $ switch_source_of_truth_to_large_repo $SUBMODULE_REPO_ID $LARGE_REPO_ID
   
   
-  NOTE: Enable push redirection for small repo
-  
-  
   NOTE: Get current large repo bookmark update log id to set the backsyncer counter
   LARGE_REPO_BOOKMARK_UPDATE_LOG_ID: 11
   
   
-  NOTE: Delete forward syncer counter and set backsyncer counter
+  NOTE: Set backsyncer counter
   BACKSYNC_COUNTER: 11
+  
+  
+  NOTE: Enable push redirection for small repo
 
   $ PREV_BOOK_VALUE=$(get_bookmark_value_bonsai "$SUBMODULE_REPO_NAME" "heads/master")
   $ echo "$PREV_BOOK_VALUE"
   8f67a0aced3d7aafbba86c1b1510fb7aa2bba7fde303fa27da272543c2341fd1
-
-# Start backsyncer in the background
-  $ REPOIDSMALL=$SUBMODULE_REPO_ID REPOIDLARGE=$LARGE_REPO_ID \
-  > with_stripped_logs backsync_large_to_small_forever
-
 
 # Make changes to small repo from the large repo  
   $ echo "change" > smallrepofolder1/from_large_repo

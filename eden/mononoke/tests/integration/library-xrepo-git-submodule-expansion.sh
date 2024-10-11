@@ -405,25 +405,14 @@ function switch_source_of_truth_to_large_repo {
 
   orig_pwd=$(pwd)
 
-  # Kill forward syncer job
-  killandwait "$XREPOSYNC_PID"
-
-  # Enable pushredirection for small repo, i.e. switch the source of truth to large repo
-  print_section "Enable push redirection for small repo"
-  enable_pushredirect "$small_repo" false true
-
+  # Set the backsyncer mutable counter
   print_section "Get current large repo bookmark update log id to set the backsyncer counter"
   LARGE_REPO_BOOKMARK_UPDATE_LOG_ID=$(mononoke_newadmin bookmarks \
     --repo-id "$large_repo" log "$MASTER_BOOKMARK_NAME" -S bonsai,hg -l1 \
     | cut -d " " -f1)
 
   echo "LARGE_REPO_BOOKMARK_UPDATE_LOG_ID: $LARGE_REPO_BOOKMARK_UPDATE_LOG_ID"
-
-  # Delete the forward syncer counter
-  print_section "Delete forward syncer counter and set backsyncer counter"
-  sqlite3 "$TESTTMP/monsql/sqlite_dbs" \
-    "DELETE FROM mutable_counters WHERE name = 'xreposync_from_$SUBMODULE_REPO_ID'";
-
+  print_section "Set backsyncer counter"
   sqlite3 "$TESTTMP/monsql/sqlite_dbs" \
     "INSERT INTO mutable_counters (repo_id, name, value) \
     VALUES ($small_repo, 'backsync_from_$LARGE_REPO_ID', $LARGE_REPO_BOOKMARK_UPDATE_LOG_ID)";
@@ -431,6 +420,15 @@ function switch_source_of_truth_to_large_repo {
   BACKSYNC_COUNTER=$(sqlite3 "$TESTTMP/monsql/sqlite_dbs" \
     "SELECT value FROM mutable_counters WHERE name = 'backsync_from_$LARGE_REPO_ID';")
   echo "BACKSYNC_COUNTER: $BACKSYNC_COUNTER"
+
+
+  # Start backsyncer in the background
+  REPOIDSMALL=$SUBMODULE_REPO_ID REPOIDLARGE=$LARGE_REPO_ID \
+    with_stripped_logs backsync_large_to_small_forever
+
+  # Enable pushredirection for small repo, i.e. switch the source of truth to large repo
+  print_section "Enable push redirection for small repo"
+  enable_pushredirect "$small_repo" false true
 
   # Disable the deny_files hook in small repo
   rm "$TESTTMP/mononoke-config/repos/$LARGE_REPO_NAME/server.toml"
