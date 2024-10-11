@@ -32,6 +32,7 @@ test subtree copy paths validation
 
 test subtree copy
   $ hg subtree cp -r $A --from-path foo --to-path bar -m "subtree copy foo -> bar"
+  copying foo to bar
   $ hg log -G -T '{node|short} {desc|firstline}\n'
   @  d7a063467d35 subtree copy foo -> bar
   │
@@ -89,6 +90,7 @@ test subtree graft
   > EOS
   $ hg go $C -q
   $ hg subtree copy -r $B --from-path foo --to-path bar -m 'subtree copy foo -> bar'
+  copying foo to bar
 
   $ hg subtree graft -r $C
   abort: must provide --from-path and --to-path
@@ -146,6 +148,7 @@ test 'subtree graft -m'
   > EOS
   $ hg go $C -q
   $ hg subtree copy -r $B --from-path foo --to-path bar -m 'subtree copy foo -> bar'
+  copying foo to bar
 
   $ hg subtree graft -r $C --from-path foo --to-path bar -m "new C"
   grafting 78072751cf70 "C"
@@ -185,6 +188,7 @@ test subtree merge
   > EOS
   $ hg go $D -q
   $ hg subtree copy -r $B --from-path foo --to-path bar -m 'subtree copy foo -> bar'
+  copying foo to bar
   $ hg subtree merge -r $D --from-path foo --to-path bar
   merging bar/x and foo/x to bar/x
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved

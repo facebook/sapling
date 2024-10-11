@@ -15,6 +15,7 @@ from .. import (
     merge as mergemod,
     node,
     pathutil,
+    progress,
     scmutil,
 )
 from ..cmdutil import (
@@ -280,9 +281,11 @@ def _do_cheap_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
 
 
 def _do_normal_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
-    def walk_path(walkctx, path):
-        m = matchmod.match(repo.root, "", [f"path:{path}"])
-        return list(walkctx.walk(m))
+    def prefetch(repo, path, fileids):
+        # fileservice is defined in shallowrepo.py
+        if fileservice := getattr(repo, "fileservice", None):
+            with progress.spinner(repo.ui, _("prefetching files in %s") % path):
+                fileservice.prefetch(fileids, fetchhistory=False)
 
     ui = repo.ui
     auditor = pathutil.pathauditor(repo.root)
@@ -295,9 +298,18 @@ def _do_normal_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
                 _("cannot copy to an existing path: %s") % to_path,
             )
 
+    path_to_fileids = {}
+    for path in from_paths:
+        matcher = matchmod.match(repo.root, "", [f"path:{path}"])
+        path_to_fileids[path] = scmutil.walkfiles(repo, from_ctx, matcher)
+
     new_files = []
     for from_path, to_path in zip(from_paths, to_paths):
-        for src in walk_path(from_ctx, from_path):
+        ui.status(_("copying %s to %s\n") % (from_path, to_path))
+        fileids = path_to_fileids[from_path]
+        prefetch(repo, from_path, fileids)
+
+        for src, _node in fileids:
             tail = src[len(from_path) :]
             dest = to_path + tail
             os_abs_dest = repo.wjoin(dest)
