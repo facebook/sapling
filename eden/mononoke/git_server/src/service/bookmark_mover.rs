@@ -257,7 +257,10 @@ async fn update_error(mappings_store: &GitMappingsStore, err: MononokeError) -> 
         MononokeError::NonFastForwardMove { bookmark, from, to } => {
             let from = git_sha_str(mappings_store, &from).await;
             let to = git_sha_str(mappings_store, &to).await;
-            anyhow::anyhow!("Non fast-forward bookmark move of '{bookmark}' from {from} to {to}")
+            anyhow::anyhow!(
+                "Non fast-forward bookmark move of '{bookmark}' from {from} to {to}\
+            \n\nFor more information about hooks and bypassing, refer {HOOK_WIKI_LINK}"
+            )
         }
         MononokeError::HookFailure(hook_rejections) => {
             let mut hook_msgs = vec![];

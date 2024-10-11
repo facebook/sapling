@@ -96,14 +96,19 @@
 
 # Push all the changes made so far ATOMICALLY. Only non_ffwd_branch should have failed, but since we use atomic mode
 # all the ref updates should fail
-  $ git_client push origin master branch_ffonly non_ffwd_branch --force --atomic &> output
-  [1]
-  $ cat output | sort
-   ! [remote rejected] branch_ffonly -> branch_ffonly (Atomic bookmark update failed with error: Non fast-forward bookmark move of 'heads/branch_ffonly' from * to *) (glob)
-   ! [remote rejected] master -> master (Atomic bookmark update failed with error: Non fast-forward bookmark move of 'heads/branch_ffonly' from * to *) (glob)
-   ! [remote rejected] non_ffwd_branch -> non_ffwd_branch (Atomic bookmark update failed with error: Non fast-forward bookmark move of 'heads/branch_ffonly' from * to *) (glob)
+  $ git_client push origin master branch_ffonly non_ffwd_branch --force --atomic
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
+   ! [remote rejected] branch_ffonly -> branch_ffonly (Atomic bookmark update failed with error: Non fast-forward bookmark move of 'heads/branch_ffonly' from eb95862bb5d5c295844706cbb0d0e56fee405f5c to 3ea0687e31d7b65429c774526728dba90cbaabc0
+  
+  For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
+   ! [remote rejected] master -> master (Atomic bookmark update failed with error: Non fast-forward bookmark move of 'heads/branch_ffonly' from eb95862bb5d5c295844706cbb0d0e56fee405f5c to 3ea0687e31d7b65429c774526728dba90cbaabc0
+  
+  For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
+   ! [remote rejected] non_ffwd_branch -> non_ffwd_branch (Atomic bookmark update failed with error: Non fast-forward bookmark move of 'heads/branch_ffonly' from eb95862bb5d5c295844706cbb0d0e56fee405f5c to 3ea0687e31d7b65429c774526728dba90cbaabc0
+  
+  For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
   error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
+  [1]
 
 # Just push the master branch which should succeed
   $ git_client push origin master --atomic
