@@ -136,6 +136,9 @@ def subtree_merge(ui, repo, **opts):
 
     if len(from_paths) != 1 or len(to_paths) != 1:
         raise error.Abort(_("must provide exactly one --from-path and --to-path"))
+    subtreeutil.validate_path_overlap(from_paths, to_paths)
+    subtreeutil.validate_path_exist(ui, from_ctx, from_paths, abort_on_missing=True)
+    subtreeutil.validate_path_exist(ui, ctx, to_paths, abort_on_missing=True)
 
     merge_base_commit = _subtree_merge_base(
         repo, ctx, to_paths[0], from_ctx, from_paths[0]
