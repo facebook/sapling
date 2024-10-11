@@ -72,6 +72,7 @@ use mononoke_api::CreateInfo;
 use mononoke_api::MononokeError;
 use mononoke_api::MononokeRepo;
 use mononoke_api::Repo;
+use mononoke_api::RepoContext;
 use mononoke_api::XRepoLookupExactBehaviour;
 use mononoke_api::XRepoLookupSyncBehaviour;
 use mononoke_api_hg::HgRepoContext;
@@ -198,13 +199,13 @@ impl SaplingRemoteApiHandler for LocationToHashHandler {
 }
 
 pub async fn hash_to_location(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
-    async fn hash_to_location_chunk<R: MononokeRepo>(
+    async fn hg_hash_to_location_chunk<R: MononokeRepo>(
         hg_repo_ctx: HgRepoContext<R>,
         master_heads: Vec<HgChangesetId>,
         hg_cs_ids: Vec<HgChangesetId>,
     ) -> impl Stream<Item = CommitHashToLocationResponse> {
         let hgcsid_to_location = hg_repo_ctx
-            .many_changeset_ids_to_locations(master_heads, hg_cs_ids.clone())
+            .many_hg_changeset_ids_to_locations(master_heads, hg_cs_ids.clone())
             .await;
         let responses = hg_cs_ids.into_iter().map(move |hgcsid| {
             let result = match hgcsid_to_location.as_ref() {
@@ -217,6 +218,31 @@ pub async fn hash_to_location(state: &mut State) -> Result<impl TryIntoResponse,
             };
             CommitHashToLocationResponse {
                 hgid: hgcsid.into(),
+                result,
+            }
+        });
+        stream::iter(responses)
+    }
+
+    async fn git_hash_to_location_chunk<R: MononokeRepo>(
+        repo_ctx: RepoContext<R>,
+        master_heads: Vec<GitSha1>,
+        git_commit_ids: Vec<GitSha1>,
+    ) -> impl Stream<Item = CommitHashToLocationResponse> {
+        let git_commit_id_to_location = repo_ctx
+            .many_git_commit_ids_to_locations(master_heads, git_commit_ids.clone())
+            .await;
+        let responses = git_commit_ids.into_iter().map(move |git_commit_id| {
+            let result = match git_commit_id_to_location.as_ref() {
+                Ok(hsh) => match hsh.get(&git_commit_id) {
+                    Some(Ok(l)) => Ok(Some(l.map_descendant(|x| HgId::from(x.into_inner())))),
+                    Some(Err(e)) => Err(e.into()),
+                    None => Ok(None),
+                },
+                Err(e) => Err(e.into()),
+            };
+            CommitHashToLocationResponse {
+                hgid: HgId::from(git_commit_id.into_inner()),
                 result,
             }
         });
@@ -248,16 +274,43 @@ pub async fn hash_to_location(state: &mut State) -> Result<impl TryIntoResponse,
         .into_iter()
         .map(|x| x.into())
         .collect::<Vec<_>>();
-
-    let response = stream::iter(batch.hgids)
-        .chunks(HASH_TO_LOCATION_BATCH_SIZE)
-        .map(|chunk| chunk.into_iter().map(|x| x.into()).collect::<Vec<_>>())
-        .map({
-            let ctx = hg_repo_ctx.clone();
-            move |chunk| hash_to_location_chunk(ctx.clone(), master_heads.clone(), chunk)
-        })
-        .buffer_unordered(3)
-        .flatten();
+    let response = match SlapiCommitIdentityScheme::try_take_from(state) {
+        Some(SlapiCommitIdentityScheme::Hg) | None => stream::iter(batch.hgids)
+            .chunks(HASH_TO_LOCATION_BATCH_SIZE)
+            .map(|chunk| chunk.into_iter().map(|x| x.into()).collect::<Vec<_>>())
+            .map({
+                let ctx = hg_repo_ctx.clone();
+                move |chunk| hg_hash_to_location_chunk(ctx.clone(), master_heads.clone(), chunk)
+            })
+            .buffer_unordered(3)
+            .flatten()
+            .left_stream(),
+        Some(SlapiCommitIdentityScheme::Git) => {
+            // TODO(mbthomas): This is a working around HgId/HgChangesetId not being "generic".
+            // This should be cleaned up when we have a generic Id20 type
+            stream::iter(batch.hgids)
+                .chunks(HASH_TO_LOCATION_BATCH_SIZE)
+                .map(|chunk| {
+                    chunk
+                        .into_iter()
+                        .map(|x| GitSha1::from(x.into_byte_array()))
+                        .collect::<Vec<_>>()
+                })
+                .map({
+                    let ctx = hg_repo_ctx.repo_ctx().clone();
+                    let master_heads = master_heads
+                        .into_iter()
+                        .map(|x| GitSha1::from(x.into_nodehash().sha1().into_byte_array()))
+                        .collect::<Vec<_>>();
+                    move |chunk| {
+                        git_hash_to_location_chunk(ctx.clone(), master_heads.clone(), chunk)
+                    }
+                })
+                .buffer_unordered(3)
+                .flatten()
+                .right_stream()
+        }
+    };
     let cbor_response = custom_cbor_stream(super::monitor_request(state, response), |t| {
         t.result.as_ref().err()
     });

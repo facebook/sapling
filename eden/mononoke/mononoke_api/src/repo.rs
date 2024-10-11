@@ -22,6 +22,7 @@ use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_git_mapping::BonsaiGitMappingRef;
+use bonsai_git_mapping::BonsaisOrGitShas;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
 use bonsai_hg_mapping::BonsaiHgMapping;
@@ -85,6 +86,7 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::try_join;
 use futures::Future;
+use futures::TryFutureExt;
 use git_source_of_truth::GitSourceOfTruthConfig;
 use git_symbolic_refs::GitSymbolicRefs;
 use git_types::MappedGitCommitId;
@@ -1738,6 +1740,90 @@ impl<R: MononokeRepo> RepoContext<R> {
             .map_err(MononokeError::from)
     }
 
+    /// This provides the same functionality as
+    /// `mononoke_api::RepoContext::many_changeset_ids_to_locations`. It just translates to
+    /// and from Git types.
+    pub async fn many_git_commit_ids_to_locations(
+        &self,
+        git_master_heads: Vec<GitSha1>,
+        git_ids: Vec<GitSha1>,
+    ) -> Result<HashMap<GitSha1, Result<Location<GitSha1>, MononokeError>>, MononokeError> {
+        let all_git_ids: Vec<_> = git_ids
+            .iter()
+            .cloned()
+            .chain(git_master_heads.clone().into_iter())
+            .collect();
+        let git_to_bonsai: HashMap<GitSha1, ChangesetId> =
+            get_git_bonsai_mapping(self.ctx().clone(), self, all_git_ids)
+                .await?
+                .into_iter()
+                .collect();
+        let master_heads = git_master_heads
+            .iter()
+            .map(|master_id| {
+                git_to_bonsai.get(master_id).cloned().ok_or_else(|| {
+                    MononokeError::InvalidRequest(format!(
+                        "failed to find bonsai equivalent for client head {}",
+                        master_id
+                    ))
+                })
+            })
+            .collect::<Result<Vec<_>, MononokeError>>()?;
+
+        // We should treat git_ids as being absolutely any hash. It is perfectly valid for the
+        // server to have not encountered the hash that it was given to convert. Filter out the
+        // hashes that we could not convert to bonsai.
+        let cs_ids = git_ids
+            .iter()
+            .filter_map(|hg_id| git_to_bonsai.get(hg_id).cloned())
+            .collect::<Vec<ChangesetId>>();
+
+        let cs_to_blocations = self
+            .many_changeset_ids_to_locations(master_heads, cs_ids)
+            .await?;
+
+        let bonsai_to_git: HashMap<ChangesetId, GitSha1> = get_git_bonsai_mapping(
+            self.ctx().clone(),
+            self,
+            cs_to_blocations
+                .iter()
+                .filter_map(|(_, result)| match result {
+                    Ok(l) => Some(l.descendant),
+                    _ => None,
+                })
+                .collect::<Vec<_>>(),
+        )
+        .await?
+        .into_iter()
+        .map(|(git_id, cs_id)| (cs_id, git_id))
+        .collect();
+        let response = git_ids
+            .into_iter()
+            .filter_map(|git_id| git_to_bonsai.get(&git_id).map(|cs_id| (git_id, cs_id)))
+            .filter_map(|(git_id, cs_id)| {
+                cs_to_blocations
+                    .get(cs_id)
+                    .map(|cs_result| (git_id, cs_result.clone()))
+            })
+            .map(|(git_id, cs_result)| {
+                let cs_result = match cs_result {
+                    Ok(cs_location) => cs_location.try_map_descendant(|descendant| {
+                        bonsai_to_git.get(&descendant).cloned().ok_or_else(|| {
+                            MononokeError::InvalidRequest(format!(
+                                "failed to find git equivalent for bonsai {}",
+                                descendant
+                            ))
+                        })
+                    }),
+                    Err(e) => Err(e),
+                };
+                (git_id, cs_result)
+            })
+            .collect::<HashMap<GitSha1, Result<Location<GitSha1>, MononokeError>>>();
+
+        Ok(response)
+    }
+
     pub async fn derive_bulk(
         &self,
         ctx: &CoreContext,
@@ -1804,6 +1890,83 @@ pub async fn derive_git_changeset(
     match derived_data.derive::<MappedGitCommitId>(ctx, cs_id).await {
         Ok(id) => Ok(*id.oid()),
         Err(err) => Err(err.into()),
+    }
+}
+
+// TODO(mbthomas): This is temporary to allow us to derive git changesets
+// Returns only the mapping for valid changesets that are known to the server.
+// For Bonsai -> Git conversion, missing Git changesets will be derived (so all Bonsais will be
+// in the output).
+// For Git -> Bonsai conversion, missing Bonsais will not be returned, since they cannot be
+// derived from Git Changesets.
+async fn get_git_bonsai_mapping<'a, R>(
+    ctx: CoreContext,
+    repo_ctx: &RepoContext<R>,
+    bonsai_or_git_shas: impl Into<BonsaisOrGitShas> + 'a + Send,
+) -> Result<Vec<(GitSha1, ChangesetId)>, Error>
+where
+    //R: CommitGraphRef + RepoDerivedDataRef + BonsaiHgMappingRef,
+    R: MononokeRepo,
+{
+    // STATS::get_git_bonsai_mapping.add_value(1);
+
+    let bonsai_or_git_shas = bonsai_or_git_shas.into();
+    let git_bonsai_list = repo_ctx
+        .repo()
+        .bonsai_git_mapping()
+        .get(&ctx, bonsai_or_git_shas.clone())
+        .await?
+        .into_iter()
+        .map(|entry| (entry.git_sha1, entry.bcs_id))
+        .collect::<Vec<_>>();
+
+    use BonsaisOrGitShas::*;
+    match bonsai_or_git_shas {
+        Bonsai(bonsais) => {
+            // If a bonsai commit doesn't exist in the bonsai_git_mapping,
+            // that might mean two things: 1) Bonsai commit just doesn't exist
+            // 2) Bonsai commit exists but git changesets weren't generated for it
+            // Normally the callers of get_git_bonsai_mapping would expect that git
+            // changesets will be lazily generated, so the
+            // code below explicitly checks if a commit exists and if yes then
+            // generates git changeset for it.
+            let mapping: HashMap<_, _> = git_bonsai_list
+                .iter()
+                .map(|(git_id, bcs_id)| (bcs_id, git_id))
+                .collect();
+
+            let mut notfound = vec![];
+            for b in bonsais {
+                if !mapping.contains_key(&b) {
+                    notfound.push(b);
+                }
+            }
+
+            let existing: HashSet<_> = repo_ctx
+                .commit_graph()
+                .known_changesets(&ctx, notfound.clone())
+                .await?
+                .into_iter()
+                .collect();
+
+            let mut newmapping: Vec<_> = stream::iter(
+                notfound
+                    .into_iter()
+                    .filter(|csid| existing.contains(csid))
+                    .map(Ok),
+            )
+            .map_ok(|csid| {
+                derive_git_changeset(&ctx, repo_ctx.repo().repo_derived_data(), csid)
+                    .map_ok(move |gitsha1| (gitsha1, csid))
+            })
+            .try_buffer_unordered(100)
+            .try_collect()
+            .await?;
+
+            newmapping.extend(git_bonsai_list);
+            Ok(newmapping)
+        }
+        GitSha1(_) => Ok(git_bonsai_list),
     }
 }
 

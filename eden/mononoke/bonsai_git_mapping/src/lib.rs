@@ -40,6 +40,7 @@ impl BonsaiGitMappingEntry {
     }
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum BonsaisOrGitShas {
     Bonsai(Vec<ChangesetId>),
     GitSha1(Vec<GitSha1>),
