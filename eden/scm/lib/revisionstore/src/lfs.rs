@@ -831,7 +831,6 @@ pub(crate) fn lfs_from_hg_file_blob(
     hgid: HgId,
     raw_content: &Bytes,
 ) -> Result<(LfsPointersEntry, Bytes)> {
-    // TODO(cuev): support Git serialization format in LfsStore
     let (data, copy_from) = strip_file_metadata(raw_content, SerializationFormat::Hg)?;
     let pointer = LfsPointersEntry::from_file_content(hgid, &data, copy_from)?;
     Ok((pointer, data))
@@ -2470,7 +2469,6 @@ mod tests {
             };
 
             let with_metadata = rebuild_metadata(data.clone(), &pointer);
-            // TODO(cuev): support Git serialization format in LfsStore
             let (without, copy) = strip_file_metadata(&with_metadata, SerializationFormat::Hg)?;
 
             Ok(data == without && copy == copy_from)

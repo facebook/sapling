@@ -175,6 +175,7 @@ impl FileStore {
         let lfs_remote = self.lfs_remote.clone();
         let metrics = self.metrics.clone();
         let activity_logger = self.activity_logger.clone();
+        let format = self.format;
 
         let fetch_local = fetch_mode.contains(FetchMode::LOCAL);
         let fetch_remote = fetch_mode.contains(FetchMode::REMOTE);
@@ -216,10 +217,18 @@ impl FileStore {
                 }
 
                 if let Some(ref lfs_cache) = lfs_cache {
+                    assert!(
+                        format == SerializationFormat::Hg,
+                        "LFS cannot be used with non-Hg serialization format"
+                    );
                     state.fetch_lfs(lfs_cache, StoreLocation::Cache);
                 }
 
                 if let Some(ref lfs_local) = lfs_local {
+                    assert!(
+                        format == SerializationFormat::Hg,
+                        "LFS cannot be used with non-Hg serialization format"
+                    );
                     state.fetch_lfs(lfs_local, StoreLocation::Local);
                 }
             }
@@ -239,6 +248,10 @@ impl FileStore {
                 }
 
                 if let Some(ref lfs_remote) = lfs_remote {
+                    assert!(
+                        format == SerializationFormat::Hg,
+                        "LFS cannot be used with non-Hg serialization format"
+                    );
                     state.fetch_lfs_remote(
                         &lfs_remote.remote,
                         lfs_local.clone(),
@@ -289,6 +302,10 @@ impl FileStore {
                 "writing LFS pointers directly is not allowed outside of tests"
             );
         }
+        ensure!(
+            self.format == SerializationFormat::Hg,
+            "LFS cannot be used with non-Hg serialization format"
+        );
         let lfs_local = self.lfs_local.as_ref().ok_or_else(|| {
             anyhow!("trying to write LFS pointer but no local LfsStore is available")
         })?;
@@ -301,6 +318,10 @@ impl FileStore {
         let lfs_local = self.lfs_local.as_ref().ok_or_else(|| {
             anyhow!("trying to write LFS file but no local LfsStore is available")
         })?;
+        ensure!(
+            self.format == SerializationFormat::Hg,
+            "LFS cannot be used with non-Hg serialization format"
+        );
         let (lfs_pointer, lfs_blob) = lfs_from_hg_file_blob(key.hgid, &bytes)?;
         let sha256 = lfs_pointer.sha256();
 
