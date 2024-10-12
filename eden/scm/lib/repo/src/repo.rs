@@ -46,6 +46,7 @@ use revsets::errors::RevsetLookupError;
 use revsets::utils as revset_utils;
 use rewrite_macros::cached_field;
 use storemodel::FileStore;
+use storemodel::SerializationFormat;
 use storemodel::StoreInfo;
 use storemodel::StoreOutput;
 use storemodel::TreeStore;
@@ -475,6 +476,14 @@ impl Repo {
             file_builder = file_builder.cas_client(cas_client.clone());
         } else {
             tracing::trace!(target: "repo::file_store", "no cas client");
+        }
+
+        // Note: This currently does nothing, since the "git" repo requirement makes
+        // try_construct_file_tree_store return a GitStore. Therefore we never hit this code path.
+        let info: &dyn StoreInfo = self;
+        if info.has_requirement("git") {
+            tracing::trace!(target: "repo::file_store", "enabling git serialization");
+            file_builder = file_builder.format(SerializationFormat::Git);
         }
 
         tracing::trace!(target: "repo::file_store", "building file store");

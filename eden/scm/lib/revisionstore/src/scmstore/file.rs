@@ -30,6 +30,7 @@ use parking_lot::Mutex;
 use parking_lot::RwLock;
 use progress_model::AggregatingProgressBar;
 use rand::Rng;
+use storemodel::SerializationFormat;
 use tracing::debug;
 
 pub(crate) use self::fetch::FetchState;
@@ -106,6 +107,9 @@ pub struct FileStore {
 
     // Don't flush on drop when we're using FileStore in a "disposable" context, like backingstore
     pub flush_on_drop: bool,
+
+    // The serialization format that the store should use
+    pub(crate) format: SerializationFormat,
 }
 
 impl Drop for FileStore {
@@ -426,6 +430,7 @@ impl FileStore {
 
             lfs_progress: AggregatingProgressBar::new("fetching", "LFS"),
             flush_on_drop: true,
+            format: SerializationFormat::Hg,
         }
     }
 
@@ -474,6 +479,7 @@ impl FileStore {
 
             // Conservatively flushing on drop here, didn't see perf problems and might be needed by Python
             flush_on_drop: true,
+            format: self.format,
         }
     }
 

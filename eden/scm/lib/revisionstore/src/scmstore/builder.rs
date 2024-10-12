@@ -20,6 +20,7 @@ use fn_error_context::context;
 use hgtime::HgTime;
 use parking_lot::Mutex;
 use progress_model::AggregatingProgressBar;
+use storemodel::SerializationFormat;
 
 use crate::indexedlogauxstore::AuxStore;
 use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
@@ -58,6 +59,7 @@ pub struct FileStoreBuilder<'a> {
 
     edenapi: Option<Arc<SaplingRemoteApiFileStore>>,
     cas_client: Option<Arc<dyn CasClient>>,
+    format: Option<SerializationFormat>,
 }
 
 impl<'a> FileStoreBuilder<'a> {
@@ -73,6 +75,7 @@ impl<'a> FileStoreBuilder<'a> {
             lfs_cache: None,
             edenapi: None,
             cas_client: None,
+            format: None,
         }
     }
 
@@ -118,6 +121,11 @@ impl<'a> FileStoreBuilder<'a> {
 
     pub fn lfs_local(mut self, lfs_local: Arc<LfsStore>) -> Self {
         self.lfs_local = Some(lfs_local);
+        self
+    }
+
+    pub fn format(mut self, format: SerializationFormat) -> Self {
+        self.format = Some(format);
         self
     }
 
@@ -366,6 +374,8 @@ impl<'a> FileStoreBuilder<'a> {
             None
         };
 
+        let format: SerializationFormat = self.format.unwrap_or(SerializationFormat::Hg);
+
         tracing::trace!(target: "revisionstore::filestore", "constructing FileStore");
         Ok(FileStore {
             lfs_threshold_bytes,
@@ -393,6 +403,7 @@ impl<'a> FileStoreBuilder<'a> {
 
             lfs_progress: AggregatingProgressBar::new("fetching", "LFS"),
             flush_on_drop: true,
+            format,
         })
     }
 }
