@@ -74,9 +74,7 @@ impl LazyFile {
             IndexedLog(ref mut entry, format) => strip_file_metadata(&entry.content()?, *format)?.0,
             Lfs(ref blob, _) => blob.clone(),
             // TODO(meyer): Convert SaplingRemoteApi to use minibytes
-            SaplingRemoteApi(ref entry, format) => {
-                strip_file_metadata(&entry.data()?.into(), *format)?.0
-            }
+            SaplingRemoteApi(ref entry, format) => strip_file_metadata(&entry.data()?, *format)?.0,
             Cas(data) => data.clone(),
         })
     }
@@ -87,9 +85,7 @@ impl LazyFile {
         Ok(match self {
             IndexedLog(ref mut entry, format) => strip_file_metadata(&entry.content()?, *format)?,
             Lfs(ref blob, ref ptr) => (blob.clone(), ptr.copy_from().clone()),
-            SaplingRemoteApi(ref entry, format) => {
-                strip_file_metadata(&entry.data()?.into(), *format)?
-            }
+            SaplingRemoteApi(ref entry, format) => strip_file_metadata(&entry.data()?, *format)?,
             Cas(_) => bail!("CAS data has no copy info"),
         })
     }
@@ -100,7 +96,7 @@ impl LazyFile {
         Ok(match self {
             IndexedLog(ref entry, _) => entry.content()?,
             Lfs(ref blob, ref ptr) => rebuild_metadata(blob.clone(), ptr),
-            SaplingRemoteApi(ref entry, _) => entry.data()?.into(),
+            SaplingRemoteApi(ref entry, _) => entry.data()?,
             Cas(_) => bail!("CAS data has no copy info"),
         })
     }
@@ -126,11 +122,9 @@ impl LazyFile {
         use LazyFile::*;
         Ok(match self {
             IndexedLog(ref entry, _) => Some(entry.clone().with_key(key)),
-            SaplingRemoteApi(ref entry, _) => Some(Entry::new(
-                key,
-                entry.data()?.into(),
-                entry.metadata()?.clone(),
-            )),
+            SaplingRemoteApi(ref entry, _) => {
+                Some(Entry::new(key, entry.data()?, entry.metadata()?.clone()))
+            }
             // LFS Files should be written to LfsCache instead
             Lfs(_, _) => None,
             Cas(_) => None,
