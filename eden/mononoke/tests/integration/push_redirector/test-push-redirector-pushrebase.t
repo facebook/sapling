@@ -4,6 +4,7 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
+FIXME! - sorry, this test is broken due to migration D63999703
   $ export COMMIT_SCRIBE_CATEGORY=mononoke_commits
   $ export BOOKMARK_SCRIBE_CATEGORY=mononoke_bookmark
   $ export MONONOKE_TEST_SCRIBE_LOGGING_DIRECTORY=$TESTTMP/scribe_logs/

@@ -4,6 +4,8 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
+FIXME! - sorry, this test is broken due to migration D63999703
+
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
   $ export COMMIT_SCRIBE_CATEGORY=mononoke_commits
   $ export BOOKMARK_SCRIBE_CATEGORY=mononoke_bookmark

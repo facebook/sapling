@@ -4,6 +4,8 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
+FIXME! - sorry, this test is broken due to migration D63999703
+
 This is a fork of test-cross-repo-commit-sync-live.t that brings the via-extra mode
 to be fully able to deal with mapping changes regardless of sync direction. I will
 replace that file once fully fixed.
