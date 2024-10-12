@@ -214,6 +214,7 @@ mod tests {
 
     use edenapi_types::Sha1;
     use maplit::hashmap;
+    use storemodel::SerializationFormat;
     use tempfile::TempDir;
     use types::fetch_mode::FetchMode;
     use types::testutil::*;
@@ -257,6 +258,7 @@ mod tests {
             &tmp,
             &config,
             StoreType::Rotated,
+            SerializationFormat::Hg,
         )?);
         store.indexedlog_cache = Some(cache.clone());
         store.edenapi = Some(remote_files);
@@ -303,6 +305,7 @@ mod tests {
             &tmp,
             &config,
             StoreType::Rotated,
+            SerializationFormat::Hg,
         )?);
         store.indexedlog_cache = Some(cache.clone());
         store.edenapi = Some(remote_files);
@@ -349,6 +352,7 @@ mod tests {
             &tmp,
             &config,
             StoreType::Rotated,
+            SerializationFormat::Hg,
         )?);
         store.indexedlog_cache = Some(cache.clone());
         store.edenapi = Some(remote_trees);
@@ -398,6 +402,7 @@ mod tests {
             &tmp,
             &config,
             StoreType::Rotated,
+            SerializationFormat::Hg,
         )?);
         store.indexedlog_cache = Some(cache.clone());
         store.edenapi = Some(remote_trees);
@@ -478,6 +483,7 @@ mod tests {
             &tmp,
             &config,
             StoreType::Rotated,
+            SerializationFormat::Hg,
         )?);
         store.indexedlog_cache = Some(cache.clone());
 

@@ -48,6 +48,7 @@ use revisionstore::SaplingRemoteApiTreeStore;
 use revisionstore::StoreKey;
 use revisionstore::StoreResult;
 use revisionstore::StoreType;
+use storemodel::SerializationFormat;
 use types::fetch_mode::FetchMode;
 use types::Key;
 use types::NodeInfo;
@@ -142,6 +143,8 @@ py_class!(class indexedlogdatastore |py| {
                 path.as_path(),
                 &config,
                 StoreType::Permanent,
+                // TODO: allow specifying Git format
+                SerializationFormat::Hg,
             ).map_pyerr(py)?),
         )
     }
@@ -224,6 +227,8 @@ fn make_mutabledeltastore(
         indexedlogpath.as_path(),
         &config,
         StoreType::Permanent,
+        // TODO: allow specifying Git format
+        SerializationFormat::Hg,
     )?))
 }
 

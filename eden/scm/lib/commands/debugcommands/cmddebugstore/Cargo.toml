@@ -11,4 +11,5 @@ cmdutil = { version = "0.1.0", path = "../../cmdutil" }
 configloader = { version = "0.1.0", path = "../../../config/loader" }
 repo = { version = "0.1.0", path = "../../../repo" }
 revisionstore = { version = "0.1.0", path = "../../../revisionstore" }
+storemodel = { version = "0.1.0", path = "../../../storemodel" }
 types = { version = "0.1.0", path = "../../../types" }

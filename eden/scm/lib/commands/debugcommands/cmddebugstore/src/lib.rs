@@ -20,6 +20,7 @@ use revisionstore::StoreKey;
 use revisionstore::StoreResult;
 use revisionstore::StoreType;
 use revisionstore::UnionHgIdDataStore;
+use storemodel::SerializationFormat;
 use types::HgId;
 use types::Key;
 use types::RepoPathBuf;
@@ -60,6 +61,8 @@ pub fn run(ctx: ReqCtx<DebugstoreOpts>, repo: &Repo) -> Result<u8> {
             datastore_path,
             &indexedlog_config,
             StoreType::Permanent,
+            // Consider allowing Git format for debug commands
+            SerializationFormat::Hg,
         )
         .unwrap(),
     );

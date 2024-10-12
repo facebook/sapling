@@ -2115,6 +2115,7 @@ mod tests {
     use std::str::FromStr;
 
     use quickcheck::quickcheck;
+    use storemodel::SerializationFormat;
     use tempfile::TempDir;
     use types::testutil::*;
 
@@ -2518,6 +2519,7 @@ mod tests {
             &dir,
             &indexedlog_config,
             StoreType::Rotated,
+            SerializationFormat::Hg,
         )?);
 
         let multiplexer = LfsMultiplexer::new(lfs, indexedlog.clone(), 10);
@@ -2556,6 +2558,7 @@ mod tests {
             &dir,
             &indexedlog_config,
             StoreType::Rotated,
+            SerializationFormat::Hg,
         )?);
 
         let multiplexer = LfsMultiplexer::new(lfs, indexedlog.clone(), 4);
@@ -2594,6 +2597,7 @@ mod tests {
             &dir,
             &indexedlog_config,
             StoreType::Rotated,
+            SerializationFormat::Hg,
         )?);
 
         let multiplexer = LfsMultiplexer::new(lfs, indexedlog.clone(), 4);
@@ -2672,6 +2676,7 @@ mod tests {
             &dir,
             &indexedlog_config,
             StoreType::Rotated,
+            SerializationFormat::Hg,
         )?);
 
         let multiplexer = LfsMultiplexer::new(lfs, indexedlog.clone(), 4);
@@ -2753,6 +2758,7 @@ mod tests {
             &dir,
             &indexedlog_config,
             StoreType::Rotated,
+            SerializationFormat::Hg,
         )?);
 
         let blob = Bytes::from(&b"\x01\nTHIS IS A BLOB WITH A HEADER"[..]);

@@ -242,6 +242,7 @@ mod tests {
     use edenapi_types::Sha1;
     use edenapi_types::Sha256;
     use fs_err::remove_file;
+    use storemodel::SerializationFormat;
     use tempfile::TempDir;
     use types::fetch_mode::FetchMode;
     use types::testutil::*;
@@ -403,6 +404,7 @@ mod tests {
             &tmp,
             &config,
             StoreType::Rotated,
+            SerializationFormat::Hg,
         )?);
 
         content.add(&d, &meta).unwrap();

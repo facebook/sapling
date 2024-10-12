@@ -25,6 +25,7 @@ use lz4_pyframe::compress;
 use lz4_pyframe::decompress;
 use minibytes::Bytes;
 use once_cell::sync::OnceCell;
+use storemodel::SerializationFormat;
 use tracing::warn;
 use types::hgid::ReadHgIdExt;
 use types::HgId;
@@ -54,6 +55,7 @@ pub struct IndexedLogHgIdDataStoreConfig {
 pub struct IndexedLogHgIdDataStore {
     store: Store,
     missing: MissingInjection,
+    format: SerializationFormat,
 }
 
 #[derive(Clone, Debug)]
@@ -80,8 +82,8 @@ impl Entry {
     pub fn new(key: Key, content: Bytes, metadata: Metadata) -> Self {
         Entry {
             key,
-            content: OnceCell::with_value(content),
             metadata,
+            content: OnceCell::with_value(content),
             compressed_content: None,
         }
     }
@@ -122,9 +124,9 @@ impl Entry {
 
         Ok(Entry {
             key,
+            metadata,
             content: OnceCell::new(),
             compressed_content: Some(bytes),
-            metadata,
         })
     }
 
@@ -193,8 +195,8 @@ impl Entry {
     pub(crate) fn with_key(self, key: Key) -> Self {
         Entry {
             key,
-            content: self.content,
             metadata: self.metadata,
+            content: self.content,
             compressed_content: self.compressed_content,
         }
     }
@@ -207,6 +209,7 @@ impl IndexedLogHgIdDataStore {
         path: impl AsRef<Path>,
         log_config: &IndexedLogHgIdDataStoreConfig,
         store_type: StoreType,
+        format: SerializationFormat,
     ) -> Result<Self> {
         let open_options = IndexedLogHgIdDataStore::open_options(config, log_config);
 
@@ -218,6 +221,7 @@ impl IndexedLogHgIdDataStore {
         Ok(IndexedLogHgIdDataStore {
             store: log,
             missing: MissingInjection::new_from_env("MISSING_FILES"),
+            format,
         })
     }
 
@@ -293,8 +297,15 @@ impl IndexedLogHgIdDataStore {
             // It seems this is not actually used in modern setup.
             return Ok(None);
         }
-        let data = format_util::strip_hg_file_metadata(&entry.calculate_content()?)?.0;
-        Ok(Some(data))
+
+        // Git objects will never have copy info stored inside them
+        if self.format == SerializationFormat::Git {
+            Ok(Some(entry.calculate_content()?))
+        } else {
+            Ok(Some(
+                format_util::strip_hg_file_metadata(&entry.calculate_content()?)?.0,
+            ))
+        }
     }
 
     /// Write an entry to the IndexedLog
@@ -447,6 +458,7 @@ mod tests {
             &tempdir,
             &config,
             StoreType::Rotated,
+            SerializationFormat::Hg,
         )
         .unwrap();
         log.flush().unwrap();
@@ -465,6 +477,7 @@ mod tests {
             &tempdir,
             &config,
             StoreType::Rotated,
+            SerializationFormat::Hg,
         )
         .unwrap();
 
@@ -492,6 +505,7 @@ mod tests {
             &tempdir,
             &config,
             StoreType::Rotated,
+            SerializationFormat::Hg,
         )
         .unwrap();
 
@@ -515,6 +529,7 @@ mod tests {
             &tempdir,
             &config,
             StoreType::Rotated,
+            SerializationFormat::Hg,
         )
         .unwrap();
         let read_data = log.get(StoreKey::hgid(delta.key)).unwrap();
@@ -534,6 +549,7 @@ mod tests {
             &tempdir,
             &config,
             StoreType::Rotated,
+            SerializationFormat::Hg,
         )
         .unwrap();
 
@@ -554,6 +570,7 @@ mod tests {
             &tempdir,
             &config,
             StoreType::Rotated,
+            SerializationFormat::Hg,
         )?;
 
         let delta = Delta {
@@ -580,6 +597,7 @@ mod tests {
             &tempdir,
             &config,
             StoreType::Rotated,
+            SerializationFormat::Hg,
         )?;
 
         let k = key("a", "2");
@@ -608,6 +626,7 @@ mod tests {
             &tempdir,
             &config,
             StoreType::Rotated,
+            SerializationFormat::Hg,
         )?;
 
         let k = key("a", "2");
@@ -638,6 +657,7 @@ mod tests {
             &tempdir,
             &config,
             StoreType::Rotated,
+            SerializationFormat::Hg,
         )?;
         let k = key("a", "3");
         let delta = Delta {
@@ -667,6 +687,7 @@ mod tests {
             &tempdir,
             &config,
             StoreType::Rotated,
+            SerializationFormat::Hg,
         )?;
 
         let delta = Delta {
@@ -710,6 +731,7 @@ mod tests {
             &tmp,
             &config,
             StoreType::Rotated,
+            SerializationFormat::Hg,
         )?);
 
         local.add(&d, &meta).unwrap();
@@ -751,6 +773,7 @@ mod tests {
             &tmp,
             &config,
             StoreType::Rotated,
+            SerializationFormat::Hg,
         )?);
 
         // Set up local-only FileStore
@@ -787,6 +810,7 @@ mod tests {
             &tempdir,
             &config,
             StoreType::Rotated,
+            SerializationFormat::Hg,
         )?;
 
         let lfs_key = key("a", "1");
@@ -828,6 +852,81 @@ mod tests {
         );
 
         assert!(missing.contains_key(&lfs_key));
+        Ok(())
+    }
+
+    #[test]
+    fn test_git_serialization_format() -> Result<()> {
+        let tempdir = TempDir::new().unwrap();
+        let config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
+        let log = IndexedLogHgIdDataStore::new(
+            &BTreeMap::<&str, &str>::new(),
+            &tempdir,
+            &config,
+            StoreType::Rotated,
+            SerializationFormat::Git,
+        )
+        .unwrap();
+
+        // We construct a blob that looks like it could be a blob with hg copy info in it
+        let data = Bytes::from(&b"\x01\n\x01\nthis is a blob"[..]);
+        let delta = Delta {
+            data: data.clone(),
+            base: None,
+            key: key("a", "1"),
+        };
+        let metadata = Default::default();
+
+        assert!(log.add(&delta, &metadata).is_ok());
+        log.flush().unwrap();
+
+        let config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+        };
+
+        // Using Git Serialization format, we should parse the blob as is (despite it looking like
+        // it has copy info in it)
+        let git_log = IndexedLogHgIdDataStore::new(
+            &BTreeMap::<&str, &str>::new(),
+            &tempdir,
+            &config,
+            StoreType::Rotated,
+            SerializationFormat::Git,
+        )
+        .unwrap();
+        let search_result = git_log.get(StoreKey::hgid(delta.key.clone())).unwrap();
+        let blob = git_log
+            .get_local_content_direct(&key("a", "1").hgid)?
+            .unwrap();
+
+        // Both the search result and blob still contain the "copy data"
+        assert_eq!(search_result, StoreResult::Found(data.to_vec()));
+        assert_eq!(blob, data.to_vec());
+
+        // Using Hg serialization format, get_local_content_direct will ignore the copy data
+        let hg_log = IndexedLogHgIdDataStore::new(
+            &BTreeMap::<&str, &str>::new(),
+            &tempdir,
+            &config,
+            StoreType::Rotated,
+            SerializationFormat::Hg,
+        )
+        .unwrap();
+        let search_result = hg_log.get(StoreKey::hgid(delta.key)).unwrap();
+
+        // The search result returns the raw entry, not the stripped content.
+        assert_eq!(search_result, StoreResult::Found(data.to_vec()));
+        // The actual blob has the copy data stripped
+        let hg_blob = hg_log
+            .get_local_content_direct(&key("a", "1").hgid)?
+            .unwrap();
+        assert_eq!(hg_blob, Bytes::from(&b"this is a blob"[..]));
         Ok(())
     }
 }
