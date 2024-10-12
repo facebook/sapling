@@ -326,7 +326,7 @@ impl From<TreeEntry> for Entry {
         Entry::new(
             v.key().clone(),
             // TODO(meyer): Why does this infallible conversion exist? Push the failure to consumer of TryFrom, at worst
-            v.data_unchecked().unwrap().into(),
+            v.data_unchecked().unwrap(),
             Metadata::default(),
         )
     }
@@ -339,8 +339,7 @@ impl From<FileEntry> for Entry {
             v.content()
                 .expect("missing content")
                 .data_unchecked()
-                .clone()
-                .into(),
+                .clone(),
             v.metadata().expect("missing content").clone(),
         )
     }
