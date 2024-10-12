@@ -224,7 +224,7 @@ pub(crate) mod ffi {
             suffixes: Vec<String>,
         ) -> Result<SharedPtr<GlobFilesResponse>>;
 
-        pub fn sapling_using_dogfooding_host(store: &BackingStore) -> Result<bool>;
+        pub fn sapling_dogfooding_host(store: &BackingStore) -> Result<bool>;
     }
 }
 
@@ -393,8 +393,8 @@ pub fn sapling_backingstore_get_file_aux_batch(
     });
 }
 
-pub fn sapling_using_dogfooding_host(store: &BackingStore) -> Result<bool> {
-    store.using_dogfooding_host()
+pub fn sapling_dogfooding_host(store: &BackingStore) -> Result<bool> {
+    store.dogfooding_host()
 }
 
 pub fn sapling_backingstore_flush(store: &BackingStore) {

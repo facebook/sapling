@@ -652,7 +652,8 @@ folly::SemiFuture<BlobPtr> SaplingBackingStore::retryGetBlob(
                 store_.getRepoName(),
                 FetchMiss::Blob,
                 blob.exception().what().toStdString(),
-                true});
+                true, // isRetry
+                store_.dogfoodingHost()});
           }
           switch (fetch_type) {
             case SaplingImportRequest::FetchType::Prefetch:
@@ -1208,7 +1209,8 @@ void SaplingBackingStore::getTreeAuxDataBatch(
                 store_.getRepoName(),
                 FetchMiss::TreeAuxData,
                 auxTry.exception().what().toStdString(),
-                false});
+                false, // isRetry
+                store_.dogfoodingHost()});
           }
 
           return;
@@ -1274,7 +1276,8 @@ void SaplingBackingStore::getBlobAuxDataBatch(
                 store_.getRepoName(),
                 FetchMiss::BlobAuxData,
                 auxTry.exception().what().toStdString(),
-                false});
+                false, // isRetry
+                store_.dogfoodingHost()});
           }
 
           return;
@@ -2201,7 +2204,8 @@ folly::Future<TreePtr> SaplingBackingStore::retryGetTreeImpl(
                 store_.getRepoName(),
                 FetchMiss::Tree,
                 tree.exception().what().toStdString(),
-                true});
+                true, // isRetry
+                store_.dogfoodingHost()});
           }
 
           switch (type) {

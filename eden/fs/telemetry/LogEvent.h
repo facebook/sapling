@@ -648,16 +648,19 @@ struct FetchMiss : public EdenFSEvent {
   MissType miss_type;
   std::string reason;
   bool retry;
+  bool dogfooding_host;
 
   FetchMiss(
       std::string_view repo_source,
       MissType miss_type,
       std::string reason,
-      bool retry)
+      bool retry,
+      bool dogfooding_host)
       : repo_source(repo_source),
         miss_type(miss_type),
         reason(std::move(reason)),
-        retry(retry) {}
+        retry(retry),
+        dogfooding_host(dogfooding_host) {}
 
   void populate(DynamicEvent& event) const override {
     event.addString("repo_source", std::string(repo_source));
@@ -675,6 +678,7 @@ struct FetchMiss : public EdenFSEvent {
     }
     event.addString("reason", reason);
     event.addBool("retry", retry);
+    event.addBool("dogfooding_host", dogfooding_host);
   }
 
   const char* getType() const override {

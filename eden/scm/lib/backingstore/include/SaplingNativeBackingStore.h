@@ -72,6 +72,8 @@ class SaplingNativeBackingStore {
     return repoName_;
   }
 
+  bool dogfoodingHost() const;
+
   std::optional<ManifestId> getManifestNode(NodeId node);
 
   folly::Try<std::shared_ptr<Tree>> getTree(

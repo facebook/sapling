@@ -252,6 +252,10 @@ void SaplingNativeBackingStore::getBlobAuxDataBatch(
       std::move(resolver));
 }
 
+bool SaplingNativeBackingStore::dogfoodingHost() const {
+  return sapling_dogfooding_host(*store_.get());
+}
+
 folly::Try<std::shared_ptr<GlobFilesResponse>>
 SaplingNativeBackingStore::getGlobFiles(
     // Human Readable 40b commit id

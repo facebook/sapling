@@ -250,7 +250,7 @@ impl BackingStore {
             .batch_with_callback(keys, fetch_mode, resolve)
     }
 
-    pub fn using_dogfooding_host(&self) -> Result<bool> {
+    pub fn dogfooding_host(&self) -> Result<bool> {
         Ok(RECENT_DOGFOODING_REQUESTS.get())
     }
 
