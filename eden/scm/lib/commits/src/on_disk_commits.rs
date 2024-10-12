@@ -78,6 +78,10 @@ impl OnDiskCommits {
     pub(crate) fn commit_data_store(&self) -> Arc<RwLock<Zstore>> {
         self.commits.clone()
     }
+
+    pub(crate) fn format(&self) -> SerializationFormat {
+        self.format
+    }
 }
 
 #[async_trait::async_trait]
@@ -85,7 +89,7 @@ impl AppendCommits for OnDiskCommits {
     async fn add_commits(&mut self, commits: &[HgCommit]) -> Result<()> {
         // Construct the SHA1 raw text.
         // The SHA1 of the returned value should match the commit hash.
-        let get_sha1_raw_text = match self.format {
+        let get_sha1_raw_text = match self.format() {
             SerializationFormat::Git => git_sha1_raw_text,
             SerializationFormat::Hg => hg_sha1_raw_text,
         };
@@ -163,11 +167,11 @@ fn git_sha1_raw_text(raw_text: &[u8], _parents: &[Vertex]) -> Result<Vec<u8>> {
 impl ReadCommitText for OnDiskCommits {
     async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
         let store = self.commits.read();
-        get_commit_raw_text(&store, vertex, self.format)
+        get_commit_raw_text(&store, vertex, self.format())
     }
 
     fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
-        ArcRwLockZstore(self.commits.clone(), self.format).to_dyn_read_commit_text()
+        ArcRwLockZstore(self.commits.clone(), self.format()).to_dyn_read_commit_text()
     }
 }
 

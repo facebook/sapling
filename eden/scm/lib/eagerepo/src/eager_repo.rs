@@ -167,6 +167,10 @@ impl EagerRepoStore {
         Ok(inner.get(id)?)
     }
 
+    pub(crate) fn format(&self) -> SerializationFormat {
+        self.format
+    }
+
     /// Read the blob with its p1, p2 prefix removed.
     pub fn get_content(&self, id: Id20) -> Result<Option<Bytes>> {
         // Special null case.
@@ -176,7 +180,7 @@ impl EagerRepoStore {
         match self.get_sha1_blob(id)? {
             None => Ok(None),
             Some(data) => {
-                let content = match self.format {
+                let content = match self.format() {
                     SerializationFormat::Hg => hg_sha1_deserialize(&*data)?.0,
                     SerializationFormat::Git => git_sha1_deserialize(&*data)?.0,
                 };
@@ -250,7 +254,7 @@ impl EagerRepoStore {
         };
         // Check subfiles or subtrees.
         if matches!(flag, Flag::Directory) {
-            let entry = TreeEntry(content, self.format);
+            let entry = TreeEntry(content, self.format());
             for element in entry.elements() {
                 let element = element?;
                 let name = element.component.into_string();
@@ -454,7 +458,7 @@ impl EagerRepo {
     }
 
     pub(crate) fn format(&self) -> SerializationFormat {
-        self.store.format
+        self.store.format()
     }
 
     /// Extract parents out of a SHA1 manifest blob, returns the remaining data.

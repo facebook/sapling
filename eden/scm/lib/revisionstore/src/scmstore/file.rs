@@ -109,7 +109,7 @@ pub struct FileStore {
     pub flush_on_drop: bool,
 
     // The serialization format that the store should use
-    pub(crate) format: SerializationFormat,
+    pub format: SerializationFormat,
 }
 
 impl Drop for FileStore {
@@ -175,7 +175,7 @@ impl FileStore {
         let lfs_remote = self.lfs_remote.clone();
         let metrics = self.metrics.clone();
         let activity_logger = self.activity_logger.clone();
-        let format = self.format;
+        let format = self.format();
 
         let fetch_local = fetch_mode.contains(FetchMode::LOCAL);
         let fetch_remote = fetch_mode.contains(FetchMode::REMOTE);
@@ -303,7 +303,7 @@ impl FileStore {
             );
         }
         ensure!(
-            self.format == SerializationFormat::Hg,
+            self.format() == SerializationFormat::Hg,
             "LFS cannot be used with non-Hg serialization format"
         );
         let lfs_local = self.lfs_local.as_ref().ok_or_else(|| {
@@ -319,7 +319,7 @@ impl FileStore {
             anyhow!("trying to write LFS file but no local LfsStore is available")
         })?;
         ensure!(
-            self.format == SerializationFormat::Hg,
+            self.format() == SerializationFormat::Hg,
             "LFS cannot be used with non-Hg serialization format"
         );
         let (lfs_pointer, lfs_blob) = lfs_from_hg_file_blob(key.hgid, &bytes)?;
@@ -500,7 +500,7 @@ impl FileStore {
 
             // Conservatively flushing on drop here, didn't see perf problems and might be needed by Python
             flush_on_drop: true,
-            format: self.format,
+            format: self.format(),
         }
     }
 
@@ -512,6 +512,10 @@ impl FileStore {
         } else {
             Ok(keys.to_vec())
         }
+    }
+
+    pub fn format(&self) -> SerializationFormat {
+        self.format
     }
 }
 

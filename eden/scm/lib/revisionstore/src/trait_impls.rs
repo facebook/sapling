@@ -135,6 +135,11 @@ impl storemodel::KeyStore for ArcFileStore {
     fn statistics(&self) -> Vec<(String, usize)> {
         FileStore::metrics(&self.0)
     }
+
+    /// Decides whether the store uses git or hg format.
+    fn format(&self) -> SerializationFormat {
+        self.0.format
+    }
 }
 
 impl storemodel::FileStore for ArcFileStore {

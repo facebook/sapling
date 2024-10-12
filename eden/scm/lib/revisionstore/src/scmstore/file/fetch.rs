@@ -105,7 +105,7 @@ impl FetchState {
             compute_aux_data: file_store.compute_aux_data,
             lfs_progress: file_store.lfs_progress.clone(),
             lfs_enabled,
-            format: file_store.format,
+            format: file_store.format(),
             fetch_mode,
         }
     }
@@ -120,6 +120,10 @@ impl FetchState {
 
     pub(crate) fn metrics(&self) -> &FileStoreFetchMetrics {
         &self.metrics
+    }
+
+    pub(crate) fn format(&self) -> SerializationFormat {
+        self.format
     }
 
     /// Returns all incomplete requested Keys for which we haven't discovered an LFS pointer, and for which additional attributes may be gathered by querying a store which provides the specified attributes.
@@ -210,6 +214,7 @@ impl FetchState {
         let mut error: Option<String> = None;
 
         self.metrics.indexedlog.store(loc).fetch(pending.len());
+        let format = self.format();
 
         self.common
             .iter_pending(FileAttributes::CONTENT, self.compute_aux_data, |key| {
@@ -236,7 +241,7 @@ impl FetchState {
                         if entry.metadata().is_lfs() && self.lfs_enabled {
                             return None;
                         } else {
-                            return Some(LazyFile::IndexedLog(entry, self.format).into());
+                            return Some(LazyFile::IndexedLog(entry, format).into());
                         }
                     }
                     Ok(None) => {
@@ -558,7 +563,7 @@ impl FetchState {
             }
         };
 
-        let format = self.format;
+        let format = self.format();
         let entries = response
             .entries
             .map(move |res_entry| {

@@ -55,7 +55,7 @@ pub struct IndexedLogHgIdDataStoreConfig {
 pub struct IndexedLogHgIdDataStore {
     store: Store,
     missing: MissingInjection,
-    pub format: SerializationFormat,
+    format: SerializationFormat,
 }
 
 #[derive(Clone, Debug)]
@@ -300,7 +300,7 @@ impl IndexedLogHgIdDataStore {
 
         // Git objects will never have copy info stored inside them
         Ok(Some(
-            format_util::strip_file_metadata(&entry.calculate_content()?, self.format)?.0,
+            format_util::strip_file_metadata(&entry.calculate_content()?, self.format())?.0,
         ))
     }
 
@@ -313,6 +313,10 @@ impl IndexedLogHgIdDataStore {
     pub fn flush_log(&self) -> Result<()> {
         self.store.write().flush()?;
         Ok(())
+    }
+
+    pub(crate) fn format(&self) -> SerializationFormat {
+        self.format
     }
 }
 
