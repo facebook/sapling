@@ -434,6 +434,35 @@ function switch_source_of_truth_to_large_repo {
   rm "$TESTTMP/mononoke-config/repos/$LARGE_REPO_NAME/server.toml"
   mv "$TESTTMP/old_large_repo_config.toml" "$TESTTMP/mononoke-config/repos/$LARGE_REPO_NAME/server.toml"
 
+  if [[ -z "$SCS_PORT" ]]; then
+    start_and_wait_for_scs_server
+  fi
+
+  # Enable commit hook that ensures all commits are backsyncable (i.e. doesn't
+  # break submodule expansions)
+  cat >> "$TESTTMP/mononoke-config/repos/$LARGE_REPO_NAME/server.toml" << CONFIG
+[[bookmarks]]
+regex=".*"
+[[bookmarks.hooks]]
+hook_name="check_commit_is_backsyncable"
+[[hooks]]
+name="check_commit_is_backsyncable"
+config_json='''{
+  "sync_dir_to_repo_map": {"$SMALL_REPO_DIR": "$SUBMODULE_REPO_NAME"},
+  "target_scs": {
+    "HostPort": {
+      "host": "localhost",
+      "port": $SCS_PORT,
+      "cert_paths": {
+        "cert_path": "$TEST_CERTDIR/${OVERRIDE_CLIENT_CERT:-client0}.crt",
+        "key_path": "$TEST_CERTDIR/${OVERRIDE_CLIENT_CERT:-client0}.key",
+        "ca_path": "$TEST_CERTDIR/root-ca.crt"
+      }
+    }
+  }
+}'''
+CONFIG
+
   # Restart Mononoke and Mononoke Git service to pick up the config change
   killandwait "$MONONOKE_PID"
   start_and_wait_for_mononoke_server
