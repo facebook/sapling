@@ -71,6 +71,7 @@ Now we do have aux data locally:
                       b"\x01\x00\x00\x00\x10A",
                   ),
               },
+              Hg,
           ),
       ),
       aux_data: Some(
@@ -109,6 +110,7 @@ Make sure we don't have aux data yet:
                       b"\x01\x00\x00\x00\x10B",
                   ),
               },
+              Hg,
           ),
       ),
       aux_data: None,

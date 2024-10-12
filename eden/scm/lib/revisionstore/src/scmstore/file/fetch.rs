@@ -26,6 +26,7 @@ use futures::StreamExt;
 use futures::TryFutureExt;
 use minibytes::Bytes;
 use progress_model::AggregatingProgressBar;
+use storemodel::SerializationFormat;
 use tracing::debug;
 use tracing::field;
 use types::errors::NetworkError;
@@ -81,6 +82,8 @@ pub struct FetchState {
     lfs_enabled: bool,
 
     fetch_mode: FetchMode,
+
+    format: SerializationFormat,
 }
 
 impl FetchState {
@@ -102,6 +105,7 @@ impl FetchState {
             compute_aux_data: file_store.compute_aux_data,
             lfs_progress: file_store.lfs_progress.clone(),
             lfs_enabled,
+            format: file_store.format,
             fetch_mode,
         }
     }
@@ -164,6 +168,7 @@ impl FetchState {
         key: Key,
         file: LazyFile,
         indexedlog_cache: &IndexedLogHgIdDataStore,
+        format: SerializationFormat,
     ) -> Result<LazyFile> {
         let cache_entry = file.indexedlog_cache_entry(key.clone())?.ok_or_else(|| {
             anyhow!(
@@ -174,7 +179,7 @@ impl FetchState {
         let mmap_entry = indexedlog_cache
             .get_entry(key)?
             .ok_or_else(|| anyhow!("failed to read entry back from indexedlog after writing"))?;
-        Ok(LazyFile::IndexedLog(mmap_entry))
+        Ok(LazyFile::IndexedLog(mmap_entry, format))
     }
 
     pub(crate) fn fetch_indexedlog(&mut self, store: &IndexedLogHgIdDataStore, loc: StoreLocation) {
@@ -231,7 +236,7 @@ impl FetchState {
                         if entry.metadata().is_lfs() && self.lfs_enabled {
                             return None;
                         } else {
-                            return Some(LazyFile::IndexedLog(entry).into());
+                            return Some(LazyFile::IndexedLog(entry, self.format).into());
                         }
                     }
                     Ok(None) => {
@@ -460,6 +465,7 @@ impl FetchState {
         indexedlog_cache: Option<Arc<IndexedLogHgIdDataStore>>,
         lfs_cache: Option<Arc<LfsStore>>,
         aux_cache: Option<Arc<AuxStore>>,
+        format: SerializationFormat,
     ) -> Result<(StoreFile, Option<LfsPointersEntry>)> {
         let entry = entry.result?;
 
@@ -485,11 +491,12 @@ impl FetchState {
             } else if let Some(indexedlog_cache) = indexedlog_cache.as_ref() {
                 file.content = Some(Self::evict_to_cache(
                     key,
-                    LazyFile::SaplingRemoteApi(entry),
+                    LazyFile::SaplingRemoteApi(entry, format),
                     indexedlog_cache,
+                    format,
                 )?);
             } else {
-                file.content = Some(LazyFile::SaplingRemoteApi(entry));
+                file.content = Some(LazyFile::SaplingRemoteApi(entry, format));
             }
         }
 
@@ -551,6 +558,7 @@ impl FetchState {
             }
         };
 
+        let format = self.format;
         let entries = response
             .entries
             .map(move |res_entry| {
@@ -561,7 +569,13 @@ impl FetchState {
                     res_entry.map(move |entry| {
                         (
                             entry.key.clone(),
-                            Self::found_edenapi(entry, indexedlog_cache, lfs_cache, aux_cache),
+                            Self::found_edenapi(
+                                entry,
+                                indexedlog_cache,
+                                lfs_cache,
+                                aux_cache,
+                                format,
+                            ),
                         )
                     })
                 })

@@ -55,7 +55,7 @@ pub struct IndexedLogHgIdDataStoreConfig {
 pub struct IndexedLogHgIdDataStore {
     store: Store,
     missing: MissingInjection,
-    format: SerializationFormat,
+    pub format: SerializationFormat,
 }
 
 #[derive(Clone, Debug)]
