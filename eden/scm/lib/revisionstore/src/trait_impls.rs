@@ -12,9 +12,11 @@ use std::sync::Arc;
 use anyhow::format_err;
 use anyhow::Result;
 use edenapi_types::FileAuxData;
-use format_util::strip_hg_file_metadata;
+use format_util::strip_file_metadata;
 use minibytes::Bytes;
 use storemodel::BoxIterator;
+use storemodel::KeyStore;
+use storemodel::SerializationFormat;
 use types::fetch_mode::FetchMode;
 use types::HgId;
 use types::Key;
@@ -54,7 +56,7 @@ where
             match store_result {
                 Err(err) => Err(err),
                 Ok(StoreResult::Found(data)) => {
-                    strip_hg_file_metadata(&data.into()).map(|(d, _)| (key, d))
+                    strip_file_metadata(&data.into(), self.format()).map(|(d, _)| (key, d))
                 }
                 Ok(StoreResult::NotFound(k)) => Err(format_err!("{:?} not found in store", k)),
             }
@@ -84,7 +86,8 @@ where
                 let store_result = store.get(StoreKey::HgId(key.clone()))?;
                 match store_result {
                     StoreResult::Found(data) => {
-                        let (_data, maybe_copy_from) = strip_hg_file_metadata(&data.into())?;
+                        let (_data, maybe_copy_from) =
+                            strip_file_metadata(&data.into(), self.format())?;
                         Ok(maybe_copy_from.map(|copy_from| (key, copy_from)))
                     }
                     StoreResult::NotFound(k) => Err(format_err!("{:?} not found in store", k)),

@@ -13,6 +13,7 @@ use std::str::FromStr;
 use anyhow::bail;
 use anyhow::Result;
 use minibytes::Bytes;
+use storemodel::SerializationFormat;
 use types::HgId;
 use types::Key;
 use types::RepoPath;
@@ -27,9 +28,19 @@ use types::RepoPath;
 ///   blob
 ///
 /// If the blob starts with \1\n too, it's escaped by adding \1\n\1\n at the beginning.
-pub fn strip_hg_file_metadata(data: &Bytes) -> Result<(Bytes, Option<Key>)> {
-    let (blob, copy_from) = split_hg_file_metadata(data);
-    Ok((blob, parse_copy_from_hg_file_metadata(copy_from.as_ref())?))
+///
+/// Git objects do not include this extra information, so this method no-ops for those objects.
+pub fn strip_file_metadata(
+    data: &Bytes,
+    format: SerializationFormat,
+) -> Result<(Bytes, Option<Key>)> {
+    match format {
+        SerializationFormat::Hg => {
+            let (blob, copy_from) = split_hg_file_metadata(data);
+            Ok((blob, parse_copy_from_hg_file_metadata(copy_from.as_ref())?))
+        }
+        SerializationFormat::Git => Ok((data.clone(), None)),
+    }
 }
 
 pub fn parse_copy_from_hg_file_metadata(data: &[u8]) -> Result<Option<Key>> {
@@ -93,9 +104,16 @@ mod tests {
             )
             .as_bytes(),
         );
-        let (split_data, path) = strip_hg_file_metadata(&data)?;
-        assert_eq!(split_data, Bytes::from(&b"this is a blob"[..]));
+
+        // Hg format should strip the copy data from the blob
+        let (hg_split_data, path) = strip_file_metadata(&data, SerializationFormat::Hg)?;
+        assert_eq!(hg_split_data, Bytes::from(&b"this is a blob"[..]));
         assert_eq!(path, Some(key.clone()));
+
+        // Git format should no-op; copy metadata isn't interpreted for git objects
+        let (git_split_data, path) = strip_file_metadata(&data, SerializationFormat::Git)?;
+        assert_eq!(git_split_data, data);
+        assert_eq!(path, None);
 
         let (blob, copy_from) = split_hg_file_metadata(&data);
         assert_eq!(blob, Bytes::from(&b"this is a blob"[..]));
@@ -107,18 +125,28 @@ mod tests {
         );
 
         let data = Bytes::from(&b"\x01\n\x01\nthis is a blob"[..]);
-        let (split_data, path) = strip_hg_file_metadata(&data)?;
-        assert_eq!(split_data, Bytes::from(&b"this is a blob"[..]));
+        let (hg_split_data, path) = strip_file_metadata(&data, SerializationFormat::Hg)?;
+        assert_eq!(hg_split_data, Bytes::from(&b"this is a blob"[..]));
+        assert_eq!(path, None);
+
+        // Same as above, Git format should no-op
+        let data = Bytes::from(&b"\x01\n\x01\nthis is a blob"[..]);
+        let (git_split_data, path) = strip_file_metadata(&data, SerializationFormat::Git)?;
+        assert_eq!(git_split_data, data);
         assert_eq!(path, None);
 
         let (blob, copy_from) = split_hg_file_metadata(&data);
         assert_eq!(blob, Bytes::from(&b"this is a blob"[..]));
         assert_eq!(copy_from, &b"\x01\n\x01\n"[..]);
 
+        // Git and hg behave the same in this case
         let data = Bytes::from(&b"\x01\nthis is a blob"[..]);
-        let (split_data, path) = strip_hg_file_metadata(&data)?;
-        assert_eq!(split_data, data);
-        assert_eq!(path, None);
+        let (hg_split_data, hg_path) = strip_file_metadata(&data, SerializationFormat::Hg)?;
+        let (git_split_data, git_path) = strip_file_metadata(&data, SerializationFormat::Git)?;
+        assert_eq!(hg_split_data, data);
+        assert_eq!(git_split_data, hg_split_data);
+        assert_eq!(hg_path, None);
+        assert_eq!(git_path, hg_path);
 
         let (blob, copy_from) = split_hg_file_metadata(&data);
         assert_eq!(blob, data);

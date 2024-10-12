@@ -9,8 +9,9 @@ use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
 use edenapi_types::FileEntry;
-use format_util::strip_hg_file_metadata;
+use format_util::strip_file_metadata;
 use minibytes::Bytes;
+use storemodel::SerializationFormat;
 use types::HgId;
 use types::Key;
 
@@ -70,10 +71,16 @@ impl LazyFile {
     pub(crate) fn file_content(&mut self) -> Result<Bytes> {
         use LazyFile::*;
         Ok(match self {
-            IndexedLog(ref mut entry) => strip_hg_file_metadata(&entry.content()?)?.0,
+            IndexedLog(ref mut entry) => {
+                // TODO(cuev): Add SerializationFormat to LazyFile variants
+                strip_file_metadata(&entry.content()?, SerializationFormat::Hg)?.0
+            }
             Lfs(ref blob, _) => blob.clone(),
             // TODO(meyer): Convert SaplingRemoteApi to use minibytes
-            SaplingRemoteApi(ref entry) => strip_hg_file_metadata(&entry.data()?.into())?.0,
+            SaplingRemoteApi(ref entry) => {
+                // TODO(cuev): Add SerializationFormat to LazyFile variants
+                strip_file_metadata(&entry.data()?.into(), SerializationFormat::Hg)?.0
+            }
             Cas(data) => data.clone(),
         })
     }
@@ -82,9 +89,15 @@ impl LazyFile {
     pub(crate) fn file_content_with_copy_info(&mut self) -> Result<(Bytes, Option<Key>)> {
         use LazyFile::*;
         Ok(match self {
-            IndexedLog(ref mut entry) => strip_hg_file_metadata(&entry.content()?)?,
+            IndexedLog(ref mut entry) => {
+                // TODO(cuev): Add SerializationFormat to LazyFile variants
+                strip_file_metadata(&entry.content()?, SerializationFormat::Hg)?
+            }
             Lfs(ref blob, ref ptr) => (blob.clone(), ptr.copy_from().clone()),
-            SaplingRemoteApi(ref entry) => strip_hg_file_metadata(&entry.data()?.into())?,
+            SaplingRemoteApi(ref entry) => {
+                // TODO(cuev): Add SerializationFormat to LazyFile variants
+                strip_file_metadata(&entry.data()?.into(), SerializationFormat::Hg)?
+            }
             Cas(_) => bail!("CAS data has no copy info"),
         })
     }

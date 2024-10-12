@@ -160,6 +160,7 @@ pub trait KeyStore: Send + Sync {
 
     /// Decides whether the store uses git or hg format.
     fn format(&self) -> SerializationFormat {
+        // TODO(cuev): Allow Git serialization format
         SerializationFormat::Hg
     }
 

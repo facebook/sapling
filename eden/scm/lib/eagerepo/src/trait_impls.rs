@@ -11,7 +11,7 @@ use cas_client::CasClient;
 use format_util::git_sha1_serialize;
 use format_util::hg_sha1_serialize;
 use format_util::split_hg_file_metadata;
-use format_util::strip_hg_file_metadata;
+use format_util::strip_file_metadata;
 use futures::stream;
 use futures::stream::BoxStream;
 use futures::StreamExt;
@@ -111,7 +111,7 @@ impl FileStore for EagerRepoStore {
                     let id = k.hgid;
                     match self.get_content(id) {
                         Err(e) => Some(Err(e.into())),
-                        Ok(Some(data)) => match strip_hg_file_metadata(&data) {
+                        Ok(Some(data)) => match strip_file_metadata(&data, self.format) {
                             Err(e) => Some(Err(e)),
                             Ok((_, Some(copy_from))) => Some(Ok((k, copy_from))),
                             Ok((_, None)) => None,

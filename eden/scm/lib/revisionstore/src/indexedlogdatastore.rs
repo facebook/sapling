@@ -299,13 +299,9 @@ impl IndexedLogHgIdDataStore {
         }
 
         // Git objects will never have copy info stored inside them
-        if self.format == SerializationFormat::Git {
-            Ok(Some(entry.calculate_content()?))
-        } else {
-            Ok(Some(
-                format_util::strip_hg_file_metadata(&entry.calculate_content()?)?.0,
-            ))
-        }
+        Ok(Some(
+            format_util::strip_file_metadata(&entry.calculate_content()?, self.format)?.0,
+        ))
     }
 
     /// Write an entry to the IndexedLog
