@@ -39,11 +39,14 @@ Setup repositories
   > [extensions]
   > amend=
   > pushrebase=
-  > remotenames=
   > EOF
 
   $ function createfile { mkdir -p "$(dirname  $1)" && echo "$1" > "$1" && hg add -q "$1"; }
   $ function createfile_with_content { mkdir -p "$(dirname  $1)" && echo "$2" > "$1" && hg add -q "$1"; }
+
+  $ cd $TESTTMP
+FIXME: enable selective pull
+  $ setconfig remotenames.selectivepull=false
 
 -- init hg fbsource server repo
   $ cd $TESTTMP

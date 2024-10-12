@@ -126,6 +126,8 @@ setup configerator configs
   > }
   > EOF
 
+  $ setconfig remotenames.selectivepulldefault=master_bookmark,bookprefix1/master_bookmark_non_fast_forward,bookprefix1/master_bookmark_2
+
 Verification function
   $ function verify_wc() {
   >   local large_repo_commit
@@ -258,7 +260,7 @@ Non-shared bookmark should work
   $ cd "$TESTTMP/large-hg-client"
   $ hg pull -q
   $ log -r bookprefix1/master_bookmark_non_fast_forward
-  o  non-forward move [public;rev=5;6b6a308437bb] default/bookprefix1/master_bookmark_non_fast_forward
+  o  non-forward move [public;rev=281474976710656;6b6a308437bb] default/bookprefix1/master_bookmark_non_fast_forward
   │
   ~
 

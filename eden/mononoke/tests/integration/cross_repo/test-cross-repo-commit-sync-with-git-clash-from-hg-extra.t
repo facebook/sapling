@@ -10,7 +10,7 @@
   $ export SUBMODULE_REPO_NAME="small_repo"
   $ export SUBMODULE_REPO_ID=11
   $ export COMMIT_DATE="1985-09-04T00:00:00.00Z"
-  $ export MASTER_BOOKMARK_NAME="master"
+  $ export MASTER_BOOKMARK_NAME="master_bookmark"
 
 -- Use large repo as the default repo
   $ export REPONAME="$LARGE_REPO_NAME"
@@ -19,7 +19,6 @@
   > [extensions]
   > rebase=
   > pushrebase=
-  > remotenames=
   > EOF
 
 
@@ -37,7 +36,7 @@ Setup configuration
   $ testtool_drawdag -R "$LARGE_REPO_NAME" --no-default-files <<EOF
   > A
   > # modify: A "large_repo_root.txt" "file in large repo root"
-  > # bookmark: A master
+  > # bookmark: A master_bookmark
   > EOF
   A=3f09a27a52abfe9117e13ec42027d0220ed88ce2b8ad976cf49e5b6d28fc2baa
 
@@ -50,7 +49,7 @@ Create small repo commits
   > # modify: B "bar/c.txt" "random change"
   > # modify: B "foo/d" "another random change"
   > # copy: C "foo/b.txt" "copying file from bar into foo" B "bar/b.txt"
-  > # bookmark: C master
+  > # bookmark: C master_bookmark
   > EOF
   A=7e97054c51a17ea2c03cd5184826b6a7556d141d57c5a1641bbd62c0854d1a36
   B=2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3
@@ -104,7 +103,7 @@ Create small repo commits
 
 -- Prepare large repo
   $ cd "$TESTTMP/$LARGE_REPO_NAME"
-  $ hg pull -q && hg co -q master
+  $ hg pull -q && hg co -q master_bookmark
   $ enable commitcloud infinitepush # to push commits to server
 
 -- Create a large repo commit
@@ -121,7 +120,7 @@ Create small repo commits
   $ echo "change file" > large_repo_file.txt
   $ hg commit -Aq -m "change large repo file AGAIN" 
   $ REBASE_TARGET=$(hg whereami)
-  $ hg push -q --to master
+  $ hg push -q --to master_bookmark
 
   $ hg co -q $ORIGINAL_HG_COMMIT
 

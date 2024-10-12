@@ -46,7 +46,6 @@ Create new commits
   sending clienttelemetry command
   pushing rev 48d4d2fa17e5 to destination mono:repo bookmark master_bookmark
   query 1; heads
-  sending batch command
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 1
   1 total queries in 0.0000s
@@ -67,9 +66,9 @@ Create new commits
   bundle2-input-part: "reply:pushkey" (params: 2 mandatory) supported
   bundle2-input-bundle: 1 parts total
   updating bookmark master_bookmark
-  preparing listkeys for "bookmarks"
-  sending listkeys command
-  received listkey for "bookmarks": 57 bytes
+  preparing listkeys for "bookmarks" with pattern "['master_bookmark']"
+  sending listkeyspatterns command
+  received listkey for "bookmarks": 56 bytes
 
 Clone the repository, and pull
 

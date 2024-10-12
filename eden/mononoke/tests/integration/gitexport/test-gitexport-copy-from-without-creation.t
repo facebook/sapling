@@ -19,7 +19,7 @@ Setup configuration
   > # modify: A "bar/b.txt" "creating bar directory"
   > # modify: B "bar/c.txt" "irrelevant change"
   > # copy: C "foo/b.txt" "copying file from bar into foo" B "bar/b.txt"
-  > # bookmark: C master
+  > # bookmark: C master_bookmark
   > EOF
   A=7e97054c51a17ea2c03cd5184826b6a7556d141d57c5a1641bbd62c0854d1a36
   B=00b258af738c278985fa2f7b224bb2054527eaaedfcc49d5e5cb0af35080d2f3
@@ -29,7 +29,7 @@ Setup configuration
   $ start_and_wait_for_mononoke_server
   $ hg clone -q mono:repo repo
   $ cd repo
-  $ hg -q co master
+  $ hg -q co master_bookmark
 
 
 # -------------------- Use the gitexport tool --------------------

@@ -22,6 +22,8 @@ setup common configuration for these tests
   > infinitepush=
   > commitcloud=
   > EOF
+FIXME: enable selective pull
+  $ setconfig remotenames.selectivepull=false
 
 setup repo
 

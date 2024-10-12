@@ -11,12 +11,14 @@ setup configuration
   $ cd "$TESTTMP/mononoke-config"
   $ cat >> repos/repo/server.toml <<CONFIG
   > [[bookmarks]]
-  > name="main"
+  > name="master_bookmark"
   > CONFIG
 
   $ register_hook_limit_filesize_global_limit 10 'bypass_pushvar="ALLOW_LARGE_FILES=true"'
 
   $ setup_common_hg_configs
+FIXME: enable selective pull
+  $ setconfig remotenames.selectivepull=false
   $ cd $TESTTMP
 
   $ configure dummyssh
@@ -29,7 +31,7 @@ setup repo
   > A X
   > EOF
 
-  $ hg bookmark main -r $A
+  $ hg bookmark master_bookmark -r $A
   $ hg bookmark alternate -r $X
 
 blobimport
@@ -57,15 +59,15 @@ make more commits
 
 fast-forward the bookmark
   $ hg up -q $B
-  $ hg push -r . --to main
-  pushing rev 112478962961 to destination mono:repo bookmark main
+  $ hg push -r . --to master_bookmark
+  pushing rev 112478962961 to destination mono:repo bookmark master_bookmark
   searching for changes
-  updating bookmark main
+  updating bookmark master_bookmark
 
 fast-forward the bookmark over a commit that fails the hook
   $ hg up -q $D
-  $ hg push -r . --to main
-  pushing rev 7ff4b7c298ec to destination mono:repo bookmark main
+  $ hg push -r . --to master_bookmark
+  pushing rev 7ff4b7c298ec to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -82,27 +84,27 @@ fast-forward the bookmark over a commit that fails the hook
   [255]
 
 bypass the hook, the push will now work
-  $ hg push -r . --to main --pushvar ALLOW_LARGE_FILES=true
-  pushing rev 7ff4b7c298ec to destination mono:repo bookmark main
+  $ hg push -r . --to master_bookmark --pushvar ALLOW_LARGE_FILES=true
+  pushing rev 7ff4b7c298ec to destination mono:repo bookmark master_bookmark
   searching for changes
-  updating bookmark main
+  updating bookmark master_bookmark
 
 attempt a non-fast-forward move, it should fail
   $ hg up -q $F
-  $ hg push -r . --to main --non-forward-move
-  pushing rev af09fbbc2f05 to destination mono:repo bookmark main
+  $ hg push -r . --to master_bookmark --non-forward-move
+  pushing rev af09fbbc2f05 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     While doing a push
   remote: 
   remote:   Root cause:
-  remote:     Non fast-forward bookmark move of 'main' from cbe5624248da659ef8f938baaf65796e68252a0a735e885a814b94f38b901d5b to 2b7843b3fb41a99743420b26286cc5e7bc94ebf7576eaf1bbceb70cd36ffe8b0
+  remote:     Non fast-forward bookmark move of 'master_bookmark' from cbe5624248da659ef8f938baaf65796e68252a0a735e885a814b94f38b901d5b to 2b7843b3fb41a99743420b26286cc5e7bc94ebf7576eaf1bbceb70cd36ffe8b0
   remote: 
   remote:   Caused by:
   remote:     Failed to fast-forward bookmark (set pushvar NON_FAST_FORWARD=true for a non-fast-forward move)
   remote:   Caused by:
-  remote:     Non fast-forward bookmark move of 'main' from cbe5624248da659ef8f938baaf65796e68252a0a735e885a814b94f38b901d5b to 2b7843b3fb41a99743420b26286cc5e7bc94ebf7576eaf1bbceb70cd36ffe8b0
+  remote:     Non fast-forward bookmark move of 'master_bookmark' from cbe5624248da659ef8f938baaf65796e68252a0a735e885a814b94f38b901d5b to 2b7843b3fb41a99743420b26286cc5e7bc94ebf7576eaf1bbceb70cd36ffe8b0
   remote: 
   remote:   Debug context:
   remote:     Error {
@@ -112,7 +114,7 @@ attempt a non-fast-forward move, it should fail
   remote:             source: NonFastForwardMove {
   remote:                 bookmark: BookmarkKey {
   remote:                     name: BookmarkName {
-  remote:                         bookmark: "main",
+  remote:                         bookmark: "master_bookmark",
   remote:                     },
   remote:                     category: Branch,
   remote:                 },
@@ -129,8 +131,8 @@ attempt a non-fast-forward move, it should fail
   [255]
 
 allow the non-forward move
-  $ hg push -r . --to main --non-forward-move --pushvar NON_FAST_FORWARD=true
-  pushing rev af09fbbc2f05 to destination mono:repo bookmark main
+  $ hg push -r . --to master_bookmark --non-forward-move --pushvar NON_FAST_FORWARD=true
+  pushing rev af09fbbc2f05 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -147,16 +149,16 @@ allow the non-forward move
   [255]
 
 bypass the hook too, and it should work
-  $ hg push -r . --to main --non-forward-move --pushvar NON_FAST_FORWARD=true --pushvar ALLOW_LARGE_FILES=true
-  pushing rev af09fbbc2f05 to destination mono:repo bookmark main
+  $ hg push -r . --to master_bookmark --non-forward-move --pushvar NON_FAST_FORWARD=true --pushvar ALLOW_LARGE_FILES=true
+  pushing rev af09fbbc2f05 to destination mono:repo bookmark master_bookmark
   searching for changes
-  updating bookmark main
+  updating bookmark master_bookmark
 
 attempt a move to a completely unrelated commit (no common ancestor), with an ancestor that
 fails the hook
   $ hg up -q $Z
-  $ hg push -r . --to main --non-forward-move --pushvar NON_FAST_FORWARD=true
-  pushing rev e3295448b1ef to destination mono:repo bookmark main
+  $ hg push -r . --to master_bookmark --non-forward-move --pushvar NON_FAST_FORWARD=true
+  pushing rev e3295448b1ef to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -173,7 +175,7 @@ fails the hook
   [255]
 
 bypass the hook, and it should work
-  $ hg push -r . --to main --non-forward-move --pushvar NON_FAST_FORWARD=true --pushvar ALLOW_LARGE_FILES=true
-  pushing rev e3295448b1ef to destination mono:repo bookmark main
+  $ hg push -r . --to master_bookmark --non-forward-move --pushvar NON_FAST_FORWARD=true --pushvar ALLOW_LARGE_FILES=true
+  pushing rev e3295448b1ef to destination mono:repo bookmark master_bookmark
   searching for changes
-  updating bookmark main
+  updating bookmark master_bookmark

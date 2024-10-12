@@ -16,7 +16,7 @@
   $ echo "this is file1" > file1
   $ git add file1
   $ git commit -am "Add file1"
-  [master (root-commit) 8ce3eae] Add file1
+  [master_bookmark (root-commit) 8ce3eae] Add file1
    1 file changed, 1 insertion(+)
    create mode 100644 file1
   $ git log
@@ -60,26 +60,27 @@
   Hg: Sha1(8ce3eae44760b500bf3f2c3922a95dcd3c908e9e): HgManifestId(HgNodeHash(Sha1(009adbc8d457927d2e1883c08b0692bc45089839)))
   Hg: Sha1(69a265312a2c29cdf5667ff401d895a66e6ac02a): HgManifestId(HgNodeHash(Sha1(009adbc8d457927d2e1883c08b0692bc45089839)))
   Ref: "refs/heads/another_committer": Some(ChangesetId(Blake2(1213979c6023f23e70dbe8845d773078ac1e0506bc2ab98382a329da0cb379a7)))
-  Ref: "refs/heads/master": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
+  Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
 
-# Set master (gitimport does not do this yet)
+# Set master_bookmark (gitimport does not do this yet)
   $ mononoke_newadmin bookmarks -R repo set another_committer 1213979c6023f23e70dbe8845d773078ac1e0506bc2ab98382a329da0cb379a7
   Creating publishing bookmark another_committer at 1213979c6023f23e70dbe8845d773078ac1e0506bc2ab98382a329da0cb379a7
-  $ mononoke_newadmin bookmarks -R repo set master 032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044
-  Creating publishing bookmark master at 032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044
+  $ mononoke_newadmin bookmarks -R repo set master_bookmark 032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044
+  Creating publishing bookmark master_bookmark at 032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044
 
 # Start Mononoke
   $ start_and_wait_for_mononoke_server
 # Clone the repository
   $ cd "$TESTTMP"
+  $ setconfig remotenames.selectivepulldefault=master_bookmark,another_committer
   $ hg clone -q mono:repo "$HG_REPO"
   $ cd "$HG_REPO"
   $ cat "file1"
   this is file1
-  $ hg log -r master
+  $ hg log -r master_bookmark
   commit:      b48ed4600785
-  bookmark:    default/master
-  hoistedname: master
+  bookmark:    default/master_bookmark
+  hoistedname: master_bookmark
   user:        mononoke <mononoke@mononoke>
   date:        Sat Jan 01 00:00:00 2000 +0000
   summary:     Add file1
@@ -87,7 +88,7 @@
 
 
 # No committer extra here, because committer is the same as author
-  $ hg log -r master -T '{extras}'
+  $ hg log -r master_bookmark -T '{extras}'
   branch=defaultconvert_revision=8ce3eae44760b500bf3f2c3922a95dcd3c908e9ehg-git-rename-source=git (no-eol)
   $ hg log -r another_committer -T '{extras}'
   branch=defaultcommitter=second_committer <second_committer@fb.com> 1000000000 0convert_revision=69a265312a2c29cdf5667ff401d895a66e6ac02ahg-git-rename-source=git (no-eol)

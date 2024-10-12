@@ -18,6 +18,8 @@
   > )
 
 
+FIXME: enable selective pull
+  $ setconfig remotenames.selectivepull=false
 
 
   $ hg up -q tip

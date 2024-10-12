@@ -19,6 +19,8 @@
   Starting Mononoke server
   $ init_local_large_small_clones
 
+  $ setconfig remotenames.selectivepulldefault=master_bookmark,master_bookmark_2,bookprefix/master_bookmark_2
+
 Normal pushrebase with one commit
   $ cd "$TESTTMP/small-hg-client"
   $ hg up -q master_bookmark

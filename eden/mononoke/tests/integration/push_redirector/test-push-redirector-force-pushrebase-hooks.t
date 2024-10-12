@@ -39,6 +39,8 @@
   Starting Mononoke server
   $ init_local_large_small_clones
 
+  $ setconfig remotenames.selectivepulldefault=master_bookmark,bookprefix/test_bookmark,test_bookmark
+
 We can't force pushrebase to a shared bookmark, so create a test bookmark that only belongs
 to the small repo
   $ cd "$TESTTMP/small-hg-client"

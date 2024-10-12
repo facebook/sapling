@@ -7,6 +7,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
   $ REPOTYPE="blob_files"
   $ setup_common_config $REPOTYPE
+  $ setconfig remotenames.selectivepulldefault=master_bookmark,head_bookmark,small_repo_head_bookmark,pre_merge_head_bookmark
 
   $ cd "$TESTTMP"  
   $ hginit_treemanifest repo
@@ -129,9 +130,6 @@ blobimport
   $ hg pull
   pulling from mono:repo
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
   $ hg up head_bookmark
   6 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ ls

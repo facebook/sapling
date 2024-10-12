@@ -100,9 +100,6 @@ Pull the amended stack to the other repo
   $ hg pull -r a24671c3bce2
   pulling from mono:repo
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
   $ tglogp
   o  a24671c3bce2 draft 'B1'
   │
@@ -138,9 +135,6 @@ Pull the amended stack to the other repo.
   $ hg pull -r 647398
   pulling from mono:repo
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
   $ tglogm
   o  6473983c899c 'B1'
   │
@@ -187,9 +181,6 @@ Pull the modified stack to the other repo.
   $ hg pull -r 853e5ba9bd35
   pulling from mono:repo
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
   $ tglogm
   o  853e5ba9bd35 'B1'
   │

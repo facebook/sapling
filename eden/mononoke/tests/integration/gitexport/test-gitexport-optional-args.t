@@ -35,7 +35,7 @@ Set some env vars that will be used frequently
   > # author_date: B "2016-01-01T02:00:00+00:00"
   > # author_date: C "2016-01-01T03:00:00+00:00"
   > # author_date: D "2016-01-01T04:00:00+00:00"
-  > # bookmark: D master
+  > # bookmark: D master_bookmark
   > EOF
   A=69f4d052996dc4a3fba7ab86939f567ad5a9be2a551198d0dc2f8b6f2145e511
   B=b777f68868ccf129c78904ffa0ffc20b4819023710e451a771543a2ff561a119
@@ -46,7 +46,7 @@ Set some env vars that will be used frequently
   $ start_and_wait_for_mononoke_server
   $ hg clone -q mono:repo repo
   $ cd repo
-  $ hg -q co master
+  $ hg -q co master_bookmark
   $ B_AUTHOR_TS=1451613600
 
 
@@ -81,7 +81,7 @@ Specify a bookmark
 
 Specify a changeset id
 # This run can't use the `test_gitexport` abbreviation because it uses the `-i`
-# flag and it conflicts with the default `-B "master"` arg used in the abbreviation.
+# flag and it conflicts with the default `-B "master_bookmark"` arg used in the abbreviation.
   $ gitexport -R "repo" --scuba-dataset="$SCUBA_LOGS_FILE" -o "$GIT_BUNDLE_OUTPUT" --log-level ERROR -p $EXPORT_DIR -i "$C"
   $ git clone $GIT_BUNDLE_OUTPUT $GIT_REPO
   Cloning into '$TESTTMP/git_repo'...
@@ -138,7 +138,7 @@ Test oldest commit timestamp arg
 
 Test both latest changeset and commit timestamp arg
 # This run can't use the `test_gitexport` abbreviation because it uses the `-i`
-# flag and it conflicts with the default `-B "master"` arg used in the abbreviation.
+# flag and it conflicts with the default `-B "master_bookmark"` arg used in the abbreviation.
   $ gitexport --log-level ERROR -R "repo" -p $EXPORT_DIR -i "$C" --oldest-commit-ts $B_AUTHOR_TS -o "$GIT_BUNDLE_OUTPUT"
   $ git clone $GIT_BUNDLE_OUTPUT $GIT_REPO
   Cloning into '$TESTTMP/git_repo'...

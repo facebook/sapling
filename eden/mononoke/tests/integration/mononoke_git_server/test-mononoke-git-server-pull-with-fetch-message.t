@@ -79,8 +79,8 @@
   $ git_client pull
   remote: HELLO USER
   From https://localhost:$LOCAL_PORT/repos/git/ro/repo
-     db39b4c..356883f  master     -> origin/master
-   * [new tag]         last_tag   -> last_tag
+     db39b4c..356883f  master_bookmark -> origin/master_bookmark
+   * [new tag]         last_tag        -> last_tag
   Updating db39b4c..356883f
   Fast-forward
    fileC | 1 +

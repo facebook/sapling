@@ -636,6 +636,10 @@ remotenames=
 smartlog=
 clienttelemetry=
 
+[remotenames]
+selectivepull=True
+selectivepulldefault=master_bookmark
+
 [remotefilelog]
 cachepath=$TESTTMP/cachepath
 shallowtrees=True
@@ -1135,7 +1139,7 @@ CONFIG
 
   cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
 [mononoke_cas_sync_config]
-main_bookmark_to_sync="master"
+main_bookmark_to_sync="master_bookmark"
 sync_all_bookmarks=true
 CONFIG
 
@@ -2269,6 +2273,32 @@ pushrebase =
 EOF
 }
 
+function default_setup_drawdag_no_selective_pull() {
+  setup_common_config "blob_files"
+  setconfig remotenames.selectivepull=false
+
+  testtool_drawdag -R repo <<EOF
+C
+|
+B
+|
+A
+# bookmark: C "${MASTER_BOOKMARK:-master_bookmark}"
+EOF
+
+  start_and_wait_for_mononoke_server
+  hg clone -q "mono:repo" "$REPONAME" --noupdate
+  cd $REPONAME || exit 1
+  cat >> .hg/hgrc <<EOF
+[ui]
+ssh ="$DUMMYSSH"
+[extensions]
+amend =
+pushrebase =
+EOF
+}
+
+
 function gitexport() {
   log="$TESTTMP/gitexport.out"
 
@@ -2322,7 +2352,7 @@ function git() {
   GIT_AUTHOR_DATE="${GIT_AUTHOR_DATE:-$date}" \
   GIT_AUTHOR_NAME="$name" \
   GIT_AUTHOR_EMAIL="$email" \
-  command git -c init.defaultBranch=master -c protocol.file.allow=always "$@"
+  command git -c init.defaultBranch=master_bookmark -c protocol.file.allow=always "$@"
 }
 
 function git_set_only_author() {
@@ -2333,7 +2363,7 @@ function git_set_only_author() {
   GIT_AUTHOR_DATE="$date" \
   GIT_AUTHOR_NAME="$name" \
   GIT_AUTHOR_EMAIL="$email" \
-  command git -c init.defaultBranch=master -c protocol.file.allow=always "$@"
+  command git -c init.defaultBranch=master_bookmark -c protocol.file.allow=always "$@"
 }
 
 function summarize_scuba_json() {

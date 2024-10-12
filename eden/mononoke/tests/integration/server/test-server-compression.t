@@ -37,6 +37,7 @@ start mononoke
 clone and checkout the repository with compression enabled
   $ hg clone -U --debug mono:repo --config mononokepeer.compression=true 2>&1 | grep zstd
   zstd compression on the wire is enabled
+  zstd compression on the wire is enabled
   $ cd repo
   $ hg checkout master_bookmark --config mononokepeer.compression=true
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

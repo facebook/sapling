@@ -28,7 +28,7 @@
   $ cd ..
   $ git add file1 file2_repo/file2
   $ git commit -am "Add file1 and file2"
-  [master (root-commit) ce435b0] Add file1 and file2
+  [master_bookmark (root-commit) ce435b0] Add file1 and file2
    2 files changed, 2 insertions(+)
    create mode 100644 file1
    create mode 100644 file2_repo/file2
@@ -36,7 +36,7 @@
   $ echo "this is file3" > file3_repo/file3
   $ git add file3_repo/file3
   $ git commit -am "Add file3"
-  [master 2c01e4a] Add file3
+  [master_bookmark 2c01e4a] Add file3
    1 file changed, 1 insertion(+)
    create mode 100644 file3_repo/file3
   $ git checkout -b other_branch
@@ -46,9 +46,9 @@
   * 6783feb (HEAD -> other_branch) commit 2
   * 13aef6e commit 1
   * 38f71f7 commit 0
-  * 2c01e4a (master) Add file3
+  * 2c01e4a (master_bookmark) Add file3
   * ce435b0 Add file1 and file2
-  $ GIT_MASTER_HASH=$(git log -n 1 --pretty=format:"%H" master)
+  $ GIT_MASTER_HASH=$(git log -n 1 --pretty=format:"%H" master_bookmark)
 
 # Import the repo
   $ cd "$TESTTMP"

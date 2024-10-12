@@ -22,16 +22,16 @@
   > EOS
 
   $ hg goto A -q
-  $ hg push -r . --to master -q --create
+  $ hg push -r . --to master_bookmark -q --create
 
   $ hg goto B -q
-  $ hg push -r . --to master -q
+  $ hg push -r . --to master_bookmark -q
 
   $ hg goto C -q
-  $ hg push -r . --to master -q
+  $ hg push -r . --to master_bookmark -q
 
   $ hg goto D -q
-  $ hg push -r . --to master -q
+  $ hg push -r . --to master_bookmark -q
 
 Check that new entry was added to the sync database. 4 pushes
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) from bookmarks_update_log";

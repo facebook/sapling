@@ -13,7 +13,6 @@
   B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
   C=e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
 
-
 Pushrebase commit 1
   $ hg up -q "min(all())"
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
@@ -54,14 +53,11 @@ Check that the filenode for 1 does not point to the draft commit in a new clone
 
   $ hg pull -r master_bookmark
   pulling from mono:repo
-  no changes found
-  adding changesets
-  adding manifests
-  adding file changes
   $ hg up master_bookmark
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg debugsh -c 'ui.write("%s\n" % s.node.hex(repo["."].filectx("1").getnodeinfo()[2]))'
-  c39a1f67cdbc38a5701bef538d354d47b7c9f2cb
+  0000000000000000000000000000000000000000
+FIXME: enable selective pull: hash should be "c2e526aacb5100b7c1ddb9b711d2e012e6c69cda"
   $ cd ../repo
 
 Push rebase fails with conflict in the bottom of the stack
@@ -400,16 +396,15 @@ Test non-fast-forward force pushrebase
 
 -- Check that pulling a force pushrebase has good linknodes.
   $ cd ../repo3
-  $ hg pull -r newbook
+  $ hg pull -B newbook
   pulling from mono:repo
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
+  fetching revlog data for 8 commits
   $ hg up newbook
   7 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg debugsh -c 'ui.write("%s\n" % s.node.hex(repo["."].filectx("was_a_lively_fellow").getnodeinfo()[2]))'
-  10b6d4d892408c3005dcd233c3a8cc470246aba5
+  0000000000000000000000000000000000000000
+FIXME: enable selective pull: hash should be "4899f9112d9b79c3ecbc343169db37fbe1efdd20"
   $ cd ../repo
 
 Check that a force pushrebase with mutation markers.

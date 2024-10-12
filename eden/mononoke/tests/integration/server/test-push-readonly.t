@@ -69,7 +69,6 @@ create new commit in repo2 and check that push to a bookmark fails
   sending clienttelemetry command
   pushing rev bb0985934a0f to destination mono:repo bookmark master_bookmark
   query 1; heads
-  sending heads command
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 1
   1 total queries in 0.0000s
@@ -124,9 +123,8 @@ Check that a push which doesn't move a bookmark is allowed
   sending hello command
   sending clienttelemetry command
   query 1; heads
-  sending heads command
   searching for changes
-  local heads: 2; remote heads: 1 (explicit: 0); initial common: 1
+  local heads: 1; remote heads: 1 (explicit: 0); initial common: 1
   all local heads known remotely
   checking for updated bookmarks
   preparing listkeys for "bookmarks"
@@ -134,7 +132,7 @@ Check that a push which doesn't move a bookmark is allowed
   received listkey for "bookmarks": 57 bytes
   sending known command
   no changes found
-  preparing listkeys for "bookmarks" with pattern "['master']"
+  preparing listkeys for "bookmarks" with pattern "['master_bookmark']"
   sending listkeyspatterns command
-  received listkey for "bookmarks": 0 bytes
+  received listkey for "bookmarks": 56 bytes
   [1]

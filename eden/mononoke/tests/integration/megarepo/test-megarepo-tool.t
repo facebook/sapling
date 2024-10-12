@@ -110,7 +110,7 @@ move things in ovrsource in a stack
   * created 7 commits, with the last commit * (glob)
 
 merge things in both repos
-  $ megarepo_tool merge fbsource_move ovrsource_move user "megarepo merge" --mark-public --commit-date-rfc3339 "$COMMIT_DATE" --bookmark master
+  $ megarepo_tool merge fbsource_move ovrsource_move user "megarepo merge" --mark-public --commit-date-rfc3339 "$COMMIT_DATE" --bookmark master_bookmark
   * using repo "repo" repoid RepositoryId(0) (glob)
   * changeset resolved as: * (glob)
   * changeset resolved as: * (glob)
@@ -119,8 +119,8 @@ merge things in both repos
   * Done checking path conflicts (glob)
   * Creating a merge bonsai changeset with parents: * (glob)
   * Marked as public * (glob)
-  * Setting bookmark * "master" * to point to * (glob)
-  * Setting bookmark * "master" * finished (glob)
+  * Setting bookmark * "master_bookmark" * to point to * (glob)
+  * Setting bookmark * "master_bookmark" * finished (glob)
   * Generating an HG equivalent of * (glob)
   * Hg equivalent of *: HgChangesetId(HgNodeHash(Sha1(*))) (glob)
 
@@ -128,7 +128,7 @@ start mononoke server
   $ start_and_wait_for_mononoke_server
 pull the result
   $ cd $TESTTMP/repo-pull
-  $ hg -q pull && hg -q up master
+  $ hg -q pull && hg -q up master_bookmark
   $ ls -1
   arvr
   arvr-legacy
@@ -160,7 +160,7 @@ pull the result
 
 test pre-merge deletes functionality
   $ cd "$TESTTMP"
-  $ megarepo_tool pre-merge-delete master author "merge preparation" --even-chunk-size 4 --commit-date-rfc3339 "$COMMIT_DATE" 2>/dev/null
+  $ megarepo_tool pre-merge-delete master_bookmark author "merge preparation" --even-chunk-size 4 --commit-date-rfc3339 "$COMMIT_DATE" 2>/dev/null
   32d2e80ff176b65df5cdeadec6dc52fdf8b66264965b001b91fab99dfb7aad75
   8807f350542a43aa815abc0c250c4a79ba35fd5bb68594e3ce6555e6630d81c2
   090a140adb3da3f4a629014cd9625055d8bd992a967ad7fc7e4e4d74892c4b71

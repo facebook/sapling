@@ -9,7 +9,7 @@
   $ INFINITEPUSH_ALLOW_WRITES=true setup_common_config
   $ testtool_drawdag -R repo << EOF
   > A-B-C
-  > # bookmark: C master
+  > # bookmark: C master_bookmark
   > EOF
   A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
   B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
@@ -47,8 +47,8 @@ Can still push to commit cloud
   edenapi: uploaded 1 changeset
 
 Cannot push to the server
-  $ hg push --to master
-  pushing rev 9c00c53d25b3 to destination mono:repo bookmark master
+  $ hg push --to master_bookmark
+  pushing rev 9c00c53d25b3 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -69,13 +69,13 @@ Unlock the repo
   repo unlocked
 
 Now we can push
-  $ hg push --to master
-  pushing rev 9c00c53d25b3 to destination mono:repo bookmark master
+  $ hg push --to master_bookmark
+  pushing rev 9c00c53d25b3 to destination mono:repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  updating bookmark master
+  updating bookmark master_bookmark
 
   $ hg pull -q
   $ tglogp

@@ -13,7 +13,7 @@ setup configuration
   $ cd "$TESTTMP/mononoke-config"
   $ cat >> repos/repo/server.toml <<CONFIG
   > [[bookmarks]]
-  > name="main"
+  > name="master_bookmark"
   > CONFIG
 
   $ register_hook_limit_filesize_global_limit 10 'bypass_pushvar="ALLOW_LARGE_FILES=true"'
@@ -27,6 +27,10 @@ setup configuration
   > EOF
 
   $ setup_common_hg_configs
+
+FIXME: enable selective pull
+  $ setconfig remotenames.selectivepull=false
+
   $ cd $TESTTMP
 
   $ configure dummyssh
@@ -39,7 +43,7 @@ setup repo
   > A X
   > EOF
 
-  $ hg bookmark main -r $A
+  $ hg bookmark master_bookmark -r $A
   $ hg bookmark alternate -r $X
 
 blobimport
@@ -51,7 +55,7 @@ start mononoke
 clone
   $ hg clone -q mono:repo repo2 --noupdate
   $ cd repo2
-  $ enable pushrebase remotenames
+  $ enable pushrebase
 
 make more commits
   $ drawdag <<EOF
@@ -67,73 +71,73 @@ make more commits
 
 fast-forward the bookmark
   $ hg up -q $B
-  $ hg push -r . --to main --force
-  pushing rev 112478962961 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
+  $ hg push -r . --to master_bookmark --force
+  pushing rev 112478962961 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload
   edenapi: uploaded 1 file
   edenapi: queue 1 tree for upload
   edenapi: uploaded 1 tree
   edenapi: uploaded 1 changeset
-  moving remote bookmark main from * to 112478962961 (glob)
+  moving remote bookmark master_bookmark from * to 112478962961 (glob)
 
 fast-forward the bookmark over a commit that fails the hook
   $ hg up -q $D
-  $ hg push -r . --to main --force
-  pushing rev 7ff4b7c298ec to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
+  $ hg push -r . --to master_bookmark --force
+  pushing rev 7ff4b7c298ec to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 2 commits for upload
   edenapi: queue 3 files for upload
   edenapi: uploaded 3 files
   edenapi: queue 2 trees for upload
   edenapi: uploaded 2 trees
   edenapi: uploaded 2 changesets
-  moving remote bookmark main from * to 7ff4b7c298ec (glob)
+  moving remote bookmark master_bookmark from * to 7ff4b7c298ec (glob)
   abort: server error: hooks failed:
     limit_filesize for 365e543af2aaf5cca34cf47377a8aee88b5597d45160996bf6434703fca8f8ff: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   [255]
 
 bypass the hook, the push will now work
-  $ hg push -r . --to main --force --pushvar ALLOW_LARGE_FILES=true
-  pushing rev 7ff4b7c298ec to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
-  moving remote bookmark main from * to 7ff4b7c298ec (glob)
+  $ hg push -r . --to master_bookmark --force --pushvar ALLOW_LARGE_FILES=true
+  pushing rev 7ff4b7c298ec to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  moving remote bookmark master_bookmark from * to 7ff4b7c298ec (glob)
 
 attempt a non-fast-forward push over a commit that fails the hook
   $ hg up -q $F
-  $ hg push -r . --to main --force
-  pushing rev af09fbbc2f05 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
+  $ hg push -r . --to master_bookmark --force
+  pushing rev af09fbbc2f05 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 2 commits for upload
   edenapi: queue 2 files for upload
   edenapi: uploaded 2 files
   edenapi: queue 2 trees for upload
   edenapi: uploaded 2 trees
   edenapi: uploaded 2 changesets
-  moving remote bookmark main from * to af09fbbc2f05 (glob)
+  moving remote bookmark master_bookmark from * to af09fbbc2f05 (glob)
   abort: server error: hooks failed:
     limit_filesize for 9c3ef8778600f6cd1c20c8a098bbb93a4d1b30fee00ff001e37ffff1908c920d: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   [255]
 
 bypass the hook, and it should work
-  $ hg push -r . --to main --pushvar ALLOW_LARGE_FILES=true --force
-  pushing rev af09fbbc2f05 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
-  moving remote bookmark main from * to af09fbbc2f05 (glob)
+  $ hg push -r . --to master_bookmark --pushvar ALLOW_LARGE_FILES=true --force
+  pushing rev af09fbbc2f05 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  moving remote bookmark master_bookmark from * to af09fbbc2f05 (glob)
 
 attempt a move to a completely unrelated commit (no common ancestor), with an ancestor that
 fails the hook
   $ hg up -q $Z
-  $ hg push -r . --to main --force
-  pushing rev e3295448b1ef to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
+  $ hg push -r . --to master_bookmark --force
+  pushing rev e3295448b1ef to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 2 commits for upload
   edenapi: queue 2 files for upload
   edenapi: uploaded 2 files
   edenapi: queue 2 trees for upload
   edenapi: uploaded 2 trees
   edenapi: uploaded 2 changesets
-  moving remote bookmark main from * to e3295448b1ef (glob)
+  moving remote bookmark master_bookmark from * to e3295448b1ef (glob)
   abort: server error: hooks failed:
     limit_filesize for e9bcd19d2580895e76b4e228c3df2ae8d3f2863894ba4d2e9dea3004bdd5abb8: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   [255]
 
 bypass the hook, and it should work
-  $ hg push -r . --to main --force --pushvar ALLOW_LARGE_FILES=true
-  pushing rev e3295448b1ef to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
-  moving remote bookmark main from * to e3295448b1ef (glob)
+  $ hg push -r . --to master_bookmark --force --pushvar ALLOW_LARGE_FILES=true
+  pushing rev e3295448b1ef to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  moving remote bookmark master_bookmark from * to e3295448b1ef (glob)

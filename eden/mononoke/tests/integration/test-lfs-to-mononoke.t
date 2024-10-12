@@ -144,12 +144,6 @@ Create a new client repository, using getpack (with its own cachepath)
 
   $ hg pull -v
   pulling from mono:repo
-  searching for changes
-  all local heads known remotely
-  no changes found
-  adding changesets
-  adding manifests
-  adding file changes
  
   $ hg update -r master_bookmark -v
   resolving manifests

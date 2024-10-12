@@ -24,7 +24,7 @@
   $ echo "foo" > foo
   $ git add foo
   $ git commit -am "Add foo"
-  [master (root-commit) 1c7ecd4] Add foo
+  [master_bookmark (root-commit) 1c7ecd4] Add foo
    1 file changed, 1 insertion(+)
    create mode 100644 foo
   $ mkdir bar
@@ -33,7 +33,7 @@
   $ cd ..
   $ git add bar/qux
   $ git commit -am "Add bar/qux"
-  [master 22b063b] Add bar/qux
+  [master_bookmark 22b063b] Add bar/qux
    1 file changed, 1 insertion(+)
    create mode 100644 bar/qux
   $ git log
@@ -63,7 +63,7 @@
   $ cd ..
   $ git add file1 file2_repo/file2
   $ git commit -am "Add file1 and file2"
-  [master (root-commit) ce435b0] Add file1 and file2
+  [master_bookmark (root-commit) ce435b0] Add file1 and file2
    2 files changed, 2 insertions(+)
    create mode 100644 file1
    create mode 100644 file2_repo/file2
@@ -72,7 +72,7 @@
   done.
   $ git add .
   $ git commit -am "Added git submodule"
-  [master 67328fd] Added git submodule
+  [master_bookmark 67328fd] Added git submodule
    2 files changed, 4 insertions(+)
    create mode 100644 .gitmodules
    create mode 160000 repo-submodule
@@ -92,7 +92,7 @@
 
 
 
-  $ GIT_MASTER_HASH=$(git log -n 1 --pretty=format:"%H" master)
+  $ GIT_MASTER_HASH=$(git log -n 1 --pretty=format:"%H" master_bookmark)
 
 
 # Run setup checker
@@ -222,11 +222,6 @@
   $ cd repo1
   $ hg pull
   pulling from mono:repo
-  searching for changes
-  no changes found
-  adding changesets
-  adding manifests
-  adding file changes
   $ hg up master_bookmark
   6 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -248,7 +243,7 @@
 
 Normal log works
   $ log -r "ancestors(master_bookmark)"
-  @    merging [public;rev=5;db39bf064f10] default/master_bookmark default/repo_import_new_repo
+  @    merging [public;rev=5;db39bf064f10] default/master_bookmark
   ├─╮
   │ o  Added git submodule [public;rev=4;d5bd7c7af4df]
   │ │
@@ -306,9 +301,7 @@ But using --stat crashes
   
   commit:      db39bf064f10
   bookmark:    default/master_bookmark
-  bookmark:    default/repo_import_new_repo
   hoistedname: master_bookmark
-  hoistedname: repo_import_new_repo
   user:        user
   date:        Sat Apr 02 21:37:00 2005 +0100
   summary:     merging

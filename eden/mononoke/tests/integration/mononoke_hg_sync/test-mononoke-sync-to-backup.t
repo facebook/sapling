@@ -10,6 +10,8 @@ setup configuration
 
   $ REPOID=0 REPONAME=orig setup_common_config blob_files
   $ REPOID=1 REPONAME=backup setup_common_config blob_files
+FIXME: enable selective pull
+  $ setconfig remotenames.selectivepull=false
   $ export BACKUP_REPO_ID=1
   $ cd $TESTTMP
 

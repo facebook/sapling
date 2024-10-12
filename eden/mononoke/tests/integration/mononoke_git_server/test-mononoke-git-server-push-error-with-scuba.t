@@ -37,8 +37,8 @@
   $ echo "fwd file3" > fwdfile3
   $ git add fwdfile3
   $ git commit -qam "Add fwdfile3"
-  $ git checkout master
-  Switched to branch 'master'
+  $ git checkout master_bookmark
+  Switched to branch 'master_bookmark'
   $ cd "$TESTTMP"
   $ git clone --mirror "$GIT_REPO_ORIGIN" repo-git
   Cloning into bare repository 'repo-git'...
@@ -59,10 +59,10 @@
   $ cd repo
 
 
-# Add some new commits to the master branch
+# Add some new commits to the master_bookmark branch
   $ echo "Just another file" > another_file
   $ git add .
-  $ git commit -qam "Another commit on master"
+  $ git commit -qam "Another commit on master_bookmark"
 # Try to do a non-ffwd push on branch_ffonly which should fail
   $ git checkout branch_ffonly
   Switched to a new branch 'branch_ffonly'
@@ -71,9 +71,9 @@
   HEAD is now at 3ea0687 Add fwdfile1
 
 # Push all the changes made so far
-  $ git_client push origin master branch_ffonly --force
+  $ git_client push origin master_bookmark branch_ffonly --force
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-     e8615d6..4981a25  master -> master
+     e8615d6..60fb9c7  master_bookmark -> master_bookmark
    ! [remote rejected] branch_ffonly -> branch_ffonly (Non fast-forward bookmark move of 'heads/branch_ffonly' from eb95862bb5d5c295844706cbb0d0e56fee405f5c to 3ea0687e31d7b65429c774526728dba90cbaabc0)
   error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
   [1]

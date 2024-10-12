@@ -42,12 +42,12 @@
   GitRepo:*repo-git commit 2 of 2 - Oid:* => Bid:* (glob)
   Hg: Sha1(*): HgManifestId(HgNodeHash(Sha1(*))) (glob)
   Hg: Sha1(*): HgManifestId(HgNodeHash(Sha1(*))) (glob)
-  Ref: "refs/heads/master": Some(ChangesetId(Blake2(*))) (glob)
+  Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(*))) (glob)
   Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(*))) (glob)
   Initializing repo: repo
   Initialized repo: repo
   All repos initialized. It took: * seconds (glob)
-  Bookmark: "heads/master": ChangesetId(Blake2(*)) (created) (glob)
+  Bookmark: "heads/master_bookmark": ChangesetId(Blake2(*)) (created) (glob)
   Bookmark: "tags/empty_tag": ChangesetId(Blake2(*)) (created) (glob)
 
 # Regenerate the Git repo out of the Mononoke repo
@@ -68,13 +68,13 @@
 # Get the repository log and verify if its the same as earlier
   $ git log --pretty=format:"%h %an %s %D" > $TESTTMP/new_repo_log
   $ diff -w $TESTTMP/new_repo_log $TESTTMP/repo_log
-  > d46416c mononoke यह एक और परीक्षा है HEAD -> master, tag: empty_tag
+  > d46416c mononoke यह एक और परीक्षा है HEAD -> master_bookmark, tag: empty_tag
   $TESTTMP.sh: line *: d46416c: command not found (glob)
   [127]
 
 # Print out the log to ensure the commit messages have carried over without data loss
   $ git log --pretty=format:"%h %an %s %D"
-  d46416c mononoke यह एक और परीक्षा है HEAD -> master, tag: empty_tag
+  d46416c mononoke यह एक और परीक्षा है HEAD -> master_bookmark, tag: empty_tag
   65d5239 mononoke मैं परीक्षण कर रहा हूँ  (no-eol)
 
 # Dump all the known Git objects into a file

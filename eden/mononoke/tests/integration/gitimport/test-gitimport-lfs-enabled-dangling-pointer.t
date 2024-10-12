@@ -23,7 +23,7 @@ Use common repo setup
   > EOF
   $ git add large_file_dangling_pointer
   $ git commit -aqm "add dangling pointer"
-  $ quiet git push -q origin main
+  $ quiet git push -q origin master_bookmark
   Uploading LFS objects:   0% (0/1), 0 B | 0 B/s, done. (?)
 
 But it's available on the separate lfs server
@@ -41,7 +41,7 @@ Git Import will skip dangling pointer
   Uploading LFS large_file_dangling_pointer sha256:baaaaaad size:1234
   Uploading LFS large_file_non_canonical_pointer sha256:6c54a4de size:20
 We store full file contents for non-LFS file
-  $ mononoke_newadmin fetch -R repo -B heads/main --path small_file
+  $ mononoke_newadmin fetch -R repo -B heads/master_bookmark --path small_file
   File-Type: regular
   Size: 8
   Content-Id: 5db7cda483f4d35a023d447b8210bd317497193813e9b7ac57268f525277b509
@@ -52,7 +52,7 @@ We store full file contents for non-LFS file
   sml fle
   
 We store just LFS pointer for LFS file
-  $ mononoke_newadmin fetch -R repo -B heads/main --path large_file
+  $ mononoke_newadmin fetch -R repo -B heads/master_bookmark --path large_file
   File-Type: regular
   Size: 20
   Content-Id: 48ef00ac63821b09154b55f1b380d253f936afb076a873e1bcc1d137c8b5bab2
@@ -62,7 +62,7 @@ We store just LFS pointer for LFS file
   
   laaaaaaaaaarge file
   
-  $ mononoke_newadmin fetch -R repo -B heads/main --path large_file_non_canonical_pointer
+  $ mononoke_newadmin fetch -R repo -B heads/master_bookmark --path large_file_non_canonical_pointer
   File-Type: regular
   Size: 20
   Content-Id: 48ef00ac63821b09154b55f1b380d253f936afb076a873e1bcc1d137c8b5bab2
@@ -111,7 +111,7 @@ Show that we still have all the original git objects
   size 20
 
 Inspect bonsai change
-  $ mononoke_newadmin fetch -R repo -B heads/main
+  $ mononoke_newadmin fetch -R repo -B heads/master_bookmark
   BonsaiChangesetId: 9fdf792450a6f263f7a3417827e261709fcc14a521e24fb60dde0346300eda2a
   Author: mononoke <mononoke@mononoke>
   Message: add dangling pointer

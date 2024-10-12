@@ -73,7 +73,7 @@ function test_repos_for_git_lfs_import {
     export GIT_REPO_CLIENT
     GIT_REPO_SERVER="${TESTTMP}/repo-git-server"
     GIT_REPO_CLIENT="${TESTTMP}/repo-git-client"
-    git init -q "$GIT_REPO_SERVER" -b main --bare
+    git init -q "$GIT_REPO_SERVER" -b master_bookmark --bare
     quiet git clone -q "$GIT_REPO_SERVER" "$GIT_REPO_CLIENT"
     cd "$GIT_REPO_CLIENT"|| return 1
     echo "sml fle" > small_file
@@ -99,7 +99,7 @@ EOF
 
     # swap that pointer for contents
     quiet git lfs checkout
-    quiet git push -q origin main || return 1
+    quiet git push -q origin master_bookmark || return 1
     export GIT_REPO_HEAD
     GIT_REPO_HEAD="$(git rev-parse HEAD)"
 

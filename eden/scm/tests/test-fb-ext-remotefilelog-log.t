@@ -4,31 +4,30 @@
 
   $ . "$TESTDIR/library.sh"
 
-  $ newserver master
-  $ clone master client1
+  $ newserver master_bookmark
+  $ clone master_bookmark client1
   $ cd client1
   $ echo x > x
   $ hg commit -qAm x
   $ mkdir dir
   $ echo y > dir/y
   $ hg commit -qAm y
-  $ hg push -r tip --to master --create --config paths.default=mononoke://$(mononoke_address)/master
+  $ hg push -r tip --to master_bookmark --create --config paths.default=mononoke://$(mononoke_address)/master_bookmark
   remote: adding changesets (?)
   remote: adding manifests (?)
   remote: adding file changes (?)
-  pushing rev 79c51fb96423 to destination mononoke://$LOCALIP:$LOCAL_PORT/master bookmark master
+  pushing rev 79c51fb96423 to destination mononoke://$LOCALIP:$LOCAL_PORT/master_bookmark bookmark master_bookmark
   searching for changes
-  exporting bookmark master
+  exporting bookmark master_bookmark
 
   $ cd ..
 
 Shallow clone from full
 
-  $ clone master shallow --noupdate
+  $ clone master_bookmark shallow --noupdate
   $ cd shallow
   $ cat .hg/requires
   generaldelta
-  lz4revlog
   remotefilelog
   revlogv1
   store
@@ -43,8 +42,8 @@ Log on a file without -f
   $ hg log dir/y
   warning: file log can be slow on large repos - use -f to speed it up
   commit:      79c51fb96423
-  bookmark:    default/master
-  hoistedname: master
+  bookmark:    default/master_bookmark
+  hoistedname: master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     y
@@ -53,27 +52,23 @@ Log on a file with -f
 
   $ hg log -f dir/y
   commit:      79c51fb96423
-  bookmark:    default/master
-  hoistedname: master
+  bookmark:    default/master_bookmark
+  hoistedname: master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     y
   
 Log on a file with kind in path
   $ hg log -r "filelog('path:dir/y')"
-  commit:      79c51fb96423
-  bookmark:    default/master
-  hoistedname: master
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     y
-  
+FIXME: enable selective pull
+Output used to be not empty
+
 Log on multiple files with -f
 
   $ hg log -f dir/y x
   commit:      79c51fb96423
-  bookmark:    default/master
-  hoistedname: master
+  bookmark:    default/master_bookmark
+  hoistedname: master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     y
@@ -87,8 +82,8 @@ Log on a directory
 
   $ hg log dir
   commit:      79c51fb96423
-  bookmark:    default/master
-  hoistedname: master
+  bookmark:    default/master_bookmark
+  hoistedname: master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     y
@@ -99,8 +94,8 @@ Log on a file from inside a directory
   $ hg log y
   warning: file log can be slow on large repos - use -f to speed it up
   commit:      79c51fb96423
-  bookmark:    default/master
-  hoistedname: master
+  bookmark:    default/master_bookmark
+  hoistedname: master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     y

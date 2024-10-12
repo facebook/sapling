@@ -29,8 +29,8 @@ Create commit in detached state so its not tracked by any branch
   $ git commit -qam "Add file3"
 Create a tag which becomes the only pointer to this commit
   $ git tag -a -m "tag in detached state" detached_tag
-Go back to the master branch
-  $ git checkout master -q
+Go back to the master_bookmark branch
+  $ git checkout master_bookmark -q
 
 # Capture all the known Git objects from the repo
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/object_list

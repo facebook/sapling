@@ -9,7 +9,7 @@
 Set up local hgrc and Mononoke config.
   $ setup_common_config
   $ setup_configerator_configs
-  $ enable remotenames
+  $ setconfig remotenames.selectivepulldefault=master_bookmark,to_delete,create_bookmark
   $ cd $TESTTMP
 
 Initialize test repo.
@@ -59,6 +59,7 @@ Test move bookmark
   {"data": {"Ok": None}}
 
 Inspect results
+  $ wait_for_bookmark_move_away_edenapi repo master_bookmark $(hg whereami)
   $ hg pull -q
   $ hg log -G -T '{node} {desc} {remotenames}\n' -r "all()"
   o  9bc730a19041f9ec7cb33c626e811aa233efb18c E default/master_bookmark default/to_delete

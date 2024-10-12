@@ -11,6 +11,7 @@ Setup repositories
   $ FBS_REPOID=0
 
   $ NO_BOOKMARKS_CACHE=1 REPOID=$FBS_REPOID REPONAME=repo setup_common_config $REPOTYPE
+  $ setconfig remotenames.selectivepulldefault=master_bookmark,correct_history_branch
   $ setup_commitsyncmap
   $ setup_configerator_configs
 
@@ -36,7 +37,7 @@ Setup repositories
   $ createfile file_with_incorrect_history2
   $ hg -q ci -m "commit commit 3 [incorrect history]"
 
-  $ hg book -i -r . master
+  $ hg book -i -r . master_bookmark
 
   $ hg update -q null
 
@@ -72,17 +73,18 @@ Start mononoke server
   > file_with_incorrect_history2
   > EOF
   $ COMMIT_DATE="1985-09-04T00:00:00.00Z"
-  $ REPOID=$FBS_REPOID megarepo_tool history-fixup-deletes author "history fixup" master correct_history_branch --paths-file paths_to_fixup --even-chunk-size 3 --commit-date-rfc3339 "$COMMIT_DATE" 2> /dev/null
+  $ REPOID=$FBS_REPOID megarepo_tool history-fixup-deletes author "history fixup" master_bookmark correct_history_branch --paths-file paths_to_fixup --even-chunk-size 3 --commit-date-rfc3339 "$COMMIT_DATE" 2> /dev/null
   cee330c0c3ab8ee70923d9b750e8fb56579e3be4db9fb41a54b63578c975bc8a
   f72c4b95a6f2e49b28c830406a0921e00621615b174cefee9f9e31c57346ac5a
   4b4ada0c9b89b1d4679e18ddf2100d725d48721571363bbf527e78ab6dbf161d
 
-  $ REPOID=$FBS_REPOID  megarepo_tool merge cee330c0c3ab8ee70923d9b750e8fb56579e3be4db9fb41a54b63578c975bc8a f72c4b95a6f2e49b28c830406a0921e00621615b174cefee9f9e31c57346ac5a author "history fixup"  --mark-public --commit-date-rfc3339 "$COMMIT_DATE" --bookmark master 2> /dev/null
+  $ REPOID=$FBS_REPOID  megarepo_tool merge cee330c0c3ab8ee70923d9b750e8fb56579e3be4db9fb41a54b63578c975bc8a f72c4b95a6f2e49b28c830406a0921e00621615b174cefee9f9e31c57346ac5a author "history fixup"  --mark-public --commit-date-rfc3339 "$COMMIT_DATE" --bookmark master_bookmark 2> /dev/null
 
   $ cd "$TESTTMP"/fbs-hg-cnt
+  $ wait_for_bookmark_move_away_edenapi repo master_bookmark $(hg whereami)
   $ hg pull -q
 
-  $ hg update -q master
+  $ hg update -q master_bookmark
 
   $ ls *
   file_with_incorrect_history2
@@ -100,7 +102,7 @@ Start mononoke server
   835251f7cda8fd1adddf414ce67d58090897e93a master commit 1
 
   $ hg log -G -T "{desc} [{phase};{node|short}] {remotenames}" -r 'sort(::.,topo)' | sed '$d'
-  @    history fixup [public;dcacf3dd28f1] default/master
+  @    history fixup [public;dcacf3dd28f1] default/master_bookmark
   ├─╮
   │ o  [MEGAREPO DELETE] history fixup (0) [public;94932f105be0]
   │ │

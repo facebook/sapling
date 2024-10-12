@@ -60,7 +60,7 @@
   $ git commit -q -m "Added helper methods for testing"
   $ git tag -a -m "Tag for commit for latest version of tag branch" tag_version
 
-  $ git checkout -q master
+  $ git checkout -q master_bookmark
   $ git merge -q dev_branch test_branch
 
   $ cd "$TESTTMP"
@@ -81,7 +81,7 @@
   using repo "repo" repoid RepositoryId(0)
   GitRepo:$TESTTMP/repo-git commit 7 of 7 - Oid:e460783b => Bid:73a90516
   Ref: "refs/heads/dev_branch": Some(ChangesetId(Blake2(a2cfb9ade953e1c8f39e4f6d6eca07eb7bf628f25862e13a0c62c6620944e8fd)))
-  Ref: "refs/heads/master": Some(ChangesetId(Blake2(*))) (glob)
+  Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(*))) (glob)
   Ref: "refs/heads/test_branch": Some(ChangesetId(Blake2(73a90516c7d6cc1076e5ef7f51cf7f614a217922d90b45a5e72f196f894c32f8)))
   Ref: "refs/tags/dev_version": Some(ChangesetId(Blake2(*))) (glob)
   Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(*))) (glob)
@@ -92,7 +92,7 @@
   Initialized repo: repo
   All repos initialized. It took: * seconds (glob)
   Bookmark: "heads/dev_branch": ChangesetId(Blake2(*)) (created) (glob)
-  Bookmark: "heads/master": ChangesetId(Blake2(*)) (created) (glob)
+  Bookmark: "heads/master_bookmark": ChangesetId(Blake2(*)) (created) (glob)
   Bookmark: "heads/test_branch": ChangesetId(Blake2(*)) (created) (glob)
   Bookmark: "tags/dev_version": ChangesetId(Blake2(*)) (created) (glob)
   Bookmark: "tags/first_tag": ChangesetId(Blake2(*)) (created) (glob)

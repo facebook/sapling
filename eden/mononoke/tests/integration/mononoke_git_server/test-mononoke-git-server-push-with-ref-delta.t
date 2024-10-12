@@ -52,4 +52,4 @@
 # Push all the changes made so far
   $ git_client push origin --all --follow-tags
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-     611de34..3b75f0b  master -> master
+     611de34..3b75f0b  master_bookmark -> master_bookmark

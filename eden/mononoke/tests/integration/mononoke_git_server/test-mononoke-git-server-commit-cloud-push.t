@@ -68,7 +68,7 @@
 # This push works
   $ git_client push origin --all
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-     e8615d6..8ff9b0a  master -> master
+     e8615d6..8ff9b0a  master_bookmark -> master_bookmark
 
   $ git checkout -b commitcloud/upload
   Switched to a new branch 'commitcloud/upload'

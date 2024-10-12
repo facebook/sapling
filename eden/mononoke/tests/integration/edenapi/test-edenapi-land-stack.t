@@ -8,6 +8,8 @@
 
 Set up local hgrc and Mononoke config.
   $ setup_common_config
+FIXME: enable selective pull  
+  $ setconfig remotenames.selectivepull=false
   $ setup_configerator_configs
   $ cd $TESTTMP
 

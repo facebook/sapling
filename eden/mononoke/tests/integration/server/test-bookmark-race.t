@@ -13,6 +13,8 @@ for more.
 setup configuration
 
   $ setup_common_config
+FIXME: enable selective pull
+  $ setconfig remotenames.selectivepull=false
 
   $ cd $TESTTMP
 

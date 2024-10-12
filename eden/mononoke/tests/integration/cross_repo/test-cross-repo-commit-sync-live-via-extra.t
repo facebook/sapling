@@ -96,10 +96,6 @@ After the change
   $ cd "$TESTTMP/small-hg-client"
   $ hg pull -r $X
   pulling from mono:small-mon
-  no changes found
-  adding changesets
-  adding manifests
-  adding file changes
   $ hg up -q $X
   $ log -r .^::.
   @  before config change [public;rev=2;bc6a206054d0] default/master_bookmark

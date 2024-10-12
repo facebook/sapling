@@ -20,6 +20,9 @@
   Starting Mononoke server
   $ init_local_large_small_clones
 
+FIXME: enable selective pull
+  $ setconfig remotenames.selectivepull=false
+
 -- Empty commit sync
   $ cd "$TESTTMP"/large-hg-client
   $ quiet hg up master_bookmark

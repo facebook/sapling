@@ -13,7 +13,9 @@ Disable boookmarks cache because we manually modify bookmarks table
 
 setup common configuration for these tests
 
-  $ enable amend infinitepush infinitepushbackup remotenames commitcloud
+  $ enable amend infinitepush infinitepushbackup commitcloud
+FIXME: enable selective pull
+  $ setconfig remotenames.selectivepull=false
 
 setup repo
 

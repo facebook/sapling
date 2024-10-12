@@ -9,15 +9,15 @@
   $ GIT_LFS_INTERPRET_POINTERS=1 ENABLED_DERIVED_DATA='["git_commits", "git_trees", "git_delta_manifests_v2", "unodes", "filenodes", "hgchangesets", "ccsm", "skeleton_manifests"]' setup_common_config $REPOTYPE
   $ testtool_drawdag -R repo << EOF
   > A-B-C
-  > # bookmark: C heads/main
+  > # bookmark: C heads/master_bookmark
   > # modify: C large_file regular lfs "contents of LFS file"
   > EOF
   A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
   B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
   C=198d25da38c153f3feecddeee7e49fe3fa16d7e0085ea919c183372bf42a66d4
   $ mononoke_newadmin derived-data -R repo derive -T git_trees -T git_commits -T git_delta_manifests_v2 -T unodes --all-bookmarks
-  $ mononoke_newadmin git-symref -R repo create --symref-name HEAD --ref-name main --ref-type branch
-  Symbolic ref HEAD pointing to branch main has been added
+  $ mononoke_newadmin git-symref -R repo create --symref-name HEAD --ref-name master_bookmark --ref-type branch
+  Symbolic ref HEAD pointing to branch master_bookmark has been added
 
 # Start up the LFS server
   $ LFS_LOG="${TESTTMP}/lfs.log"
@@ -65,7 +65,7 @@ $ cd "$TESTTMP"
   contents of LFS file (no-eol)
 
 Inspect bonsai for LFS flag
-  $ mononoke_newadmin fetch -R repo -B heads/main
+  $ mononoke_newadmin fetch -R repo -B heads/master_bookmark
   BonsaiChangesetId: 198d25da38c153f3feecddeee7e49fe3fa16d7e0085ea919c183372bf42a66d4
   Author: author
   Message: C
@@ -79,7 +79,7 @@ Push a change to LFS file
   $ echo contents of LFS file with some extra > large_file
   $ git commit -aqm "new LFS change"
   $ quiet git_client push
-  $ mononoke_newadmin fetch -R repo -B heads/main
+  $ mononoke_newadmin fetch -R repo -B heads/master_bookmark
   BonsaiChangesetId: bc0b66e9dda60bc3c73dc3b56f7a0b65e4eb830e76af6ab595bd5c3759e8983b
   Author: mononoke <mononoke@mononoke>
   Message: new LFS change

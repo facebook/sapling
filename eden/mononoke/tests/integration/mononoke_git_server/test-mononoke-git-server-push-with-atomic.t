@@ -46,8 +46,8 @@
   $ echo "nonfwd file2" > nonfwdfile2
   $ git add nonfwdfile2
   $ git commit -qam "Add nonfwdfile2"
-  $ git checkout master
-  Switched to branch 'master'
+  $ git checkout master_bookmark
+  Switched to branch 'master_bookmark'
 
   $ cd "$TESTTMP"
   $ git clone --mirror "$GIT_REPO_ORIGIN" repo-git
@@ -71,15 +71,15 @@
   $ git show-ref | sort
   33f84db74b1f57fe45ae0fc29edc65ae984b979d refs/remotes/origin/non_ffwd_branch
   8963e1f55d1346a07c3aec8c8fc72bf87d0452b1 refs/tags/first_tag
-  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/heads/master
+  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/heads/master_bookmark
   e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/remotes/origin/HEAD
-  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/remotes/origin/master
+  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/remotes/origin/master_bookmark
   eb95862bb5d5c295844706cbb0d0e56fee405f5c refs/remotes/origin/branch_ffonly
 
-# Add some new commits to the master branch
+# Add some new commits to the master_bookmark branch
   $ echo "Just another file" > another_file
   $ git add .
-  $ git commit -qam "Another commit on master"
+  $ git commit -qam "Another commit on master_bookmark"
 # Try to do a non-ffwd push on branch_ffonly which should fail
   $ git checkout branch_ffonly
   Switched to a new branch 'branch_ffonly'
@@ -96,12 +96,12 @@
 
 # Push all the changes made so far ATOMICALLY. Only non_ffwd_branch should have failed, but since we use atomic mode
 # all the ref updates should fail
-  $ git_client push origin master branch_ffonly non_ffwd_branch --force --atomic
+  $ git_client push origin master_bookmark branch_ffonly non_ffwd_branch --force --atomic
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
    ! [remote rejected] branch_ffonly -> branch_ffonly (Atomic bookmark update failed with error: Non fast-forward bookmark move of 'heads/branch_ffonly' from eb95862bb5d5c295844706cbb0d0e56fee405f5c to 3ea0687e31d7b65429c774526728dba90cbaabc0
   
   For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
-   ! [remote rejected] master -> master (Atomic bookmark update failed with error: Non fast-forward bookmark move of 'heads/branch_ffonly' from eb95862bb5d5c295844706cbb0d0e56fee405f5c to 3ea0687e31d7b65429c774526728dba90cbaabc0
+   ! [remote rejected] master_bookmark -> master_bookmark (Atomic bookmark update failed with error: Non fast-forward bookmark move of 'heads/branch_ffonly' from eb95862bb5d5c295844706cbb0d0e56fee405f5c to 3ea0687e31d7b65429c774526728dba90cbaabc0
   
   For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
    ! [remote rejected] non_ffwd_branch -> non_ffwd_branch (Atomic bookmark update failed with error: Non fast-forward bookmark move of 'heads/branch_ffonly' from eb95862bb5d5c295844706cbb0d0e56fee405f5c to 3ea0687e31d7b65429c774526728dba90cbaabc0
@@ -110,10 +110,10 @@
   error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
   [1]
 
-# Just push the master branch which should succeed
-  $ git_client push origin master --atomic
+# Just push the master_bookmark branch which should succeed
+  $ git_client push origin master_bookmark --atomic
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-     e8615d6..4981a25  master -> master
+     e8615d6..60fb9c7  master_bookmark -> master_bookmark
 
 # Wait for the warm bookmark cache to catch up with the latest changes
   $ wait_for_git_bookmark_move HEAD $master_commit
@@ -124,11 +124,11 @@
   Cloning into 'new_repo'...
   $ cd new_repo
 
-# List all the known refs. Ensure that only master reflect a change
+# List all the known refs. Ensure that only master_bookmark reflect a change
   $ git show-ref | sort
   33f84db74b1f57fe45ae0fc29edc65ae984b979d refs/remotes/origin/non_ffwd_branch
-  4981a25180e49be096fce2ac3e68e455fc158449 refs/heads/master
-  4981a25180e49be096fce2ac3e68e455fc158449 refs/remotes/origin/HEAD
-  4981a25180e49be096fce2ac3e68e455fc158449 refs/remotes/origin/master
+  60fb9c7880e62a34d49662147f9af7ad50de3e99 refs/heads/master_bookmark
+  60fb9c7880e62a34d49662147f9af7ad50de3e99 refs/remotes/origin/HEAD
+  60fb9c7880e62a34d49662147f9af7ad50de3e99 refs/remotes/origin/master_bookmark
   8963e1f55d1346a07c3aec8c8fc72bf87d0452b1 refs/tags/first_tag
   eb95862bb5d5c295844706cbb0d0e56fee405f5c refs/remotes/origin/branch_ffonly

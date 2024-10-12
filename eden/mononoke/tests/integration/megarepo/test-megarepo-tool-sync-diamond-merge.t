@@ -21,6 +21,7 @@ setup configuration
   $ REPOID=2 REPONAME=another setup_common_config $REPOTYPE
   $ setup_commitsyncmap
   $ setup_configerator_configs
+  $ setconfig remotenames.selectivepulldefault=master_bookmark,with_merge_master,with_merge_pre_big_merge,merge_with_preserved,another_master
 
   $ cd "$TESTTMP"
   $ hginit_treemanifest with_merge

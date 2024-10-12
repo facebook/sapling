@@ -20,7 +20,7 @@
   $ echo "this is file2" > dir/file2
   $ git add dir/file2
   $ git commit -am "Add files"
-  [master (root-commit) c141531] Add files
+  [master_bookmark (root-commit) c141531] Add files
    2 files changed, 2 insertions(+)
    create mode 100644 dir/file2
    create mode 100644 file1
@@ -48,7 +48,7 @@
   > EOF
   $ git add lfs-file
   $ git commit -am "LFS pointer"
-  [master 71ba3fb] LFS pointer
+  [master_bookmark 71ba3fb] LFS pointer
    1 file changed, 3 insertions(+)
    create mode 100644 lfs-file
 

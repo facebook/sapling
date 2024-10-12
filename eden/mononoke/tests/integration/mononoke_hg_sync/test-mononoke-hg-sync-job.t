@@ -10,6 +10,8 @@
 setup configuration
 
   $ setup_common_config blob_files
+FIXME: enable selective pull
+  $ setconfig remotenames.selectivepull=false
   $ cd $TESTTMP
 
 setup repo

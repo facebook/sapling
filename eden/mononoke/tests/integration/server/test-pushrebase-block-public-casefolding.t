@@ -12,10 +12,10 @@ setup configuration
   $ cd "$TESTTMP/mononoke-config"
   $ cat >> repos/repo/server.toml <<CONFIG
   > [[bookmarks]]
-  > name="main"
+  > name="master_bookmark"
   > [[bookmarks]]
   > regex=".*"
-  > hooks_skip_ancestors_of=["main"]
+  > hooks_skip_ancestors_of=["master_bookmark"]
   > CONFIG
 
   $ merge_just_knobs <<EOF
@@ -27,6 +27,8 @@ setup configuration
   > EOF
 
   $ setup_common_hg_configs
+FIXME: enable selective pull
+  $ setconfig remotenames.selectivepull=false
   $ cd $TESTTMP
 
   $ configure dummyssh
@@ -41,7 +43,7 @@ setup repo
   > A    # A/somefile = somefile
   > EOF
 
-  $ hg bookmark main -r $B
+  $ hg bookmark master_bookmark -r $B
   $ hg bookmark other -r $C
 
 blobimport
@@ -56,22 +58,22 @@ clone
   $ enable pushrebase remotenames infinitepush commitcloud
   $ setconfig infinitepush.server=false infinitepush.branchpattern='re:scratch/.+'
 
-attempt to push a case conflict onto main
-  $ hg up -q main
+attempt to push a case conflict onto master_bookmark
+  $ hg up -q master_bookmark
   $ echo caseconflict > caseconflict.txt
   $ echo caseconflict > CaseConflict.txt
   $ hg add caseconflict.txt CaseConflict.txt
   warning: possible case-folding collision for caseconflict.txt
   $ hg commit -qm conflict1
-  $ hg push -r . --to main
-  pushing rev ddbe318d5aca to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
+  $ hg push -r . --to master_bookmark
+  pushing rev ddbe318d5aca to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 2 files for upload
   edenapi: uploaded 2 files
   edenapi: queue 1 tree for upload
   edenapi: uploaded 1 tree
   edenapi: uploaded 1 changeset
-  pushrebasing stack (8c2a70bb0c78, ddbe318d5aca] (1 commit) to remote bookmark main
+  pushrebasing stack (8c2a70bb0c78, ddbe318d5aca] (1 commit) to remote bookmark master_bookmark
   abort: Server error: invalid request: Case conflict found in faaf8134514581fac83a1feaf35cee8ece18561a89bcac7e2be927395465938a: CaseConflict.txt conflicts with caseconflict.txt
   [255]
 
@@ -83,31 +85,31 @@ it's ok to push it on to a scratch bookmark, though
 if we stack a commit that fixes the case conflict, we still can't land the stack
   $ hg rm caseconflict.txt
   $ hg commit -qm "fix conflict"
-  $ hg push -r . --to main
-  pushing rev cbb97717004c to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
+  $ hg push -r . --to master_bookmark
+  pushing rev cbb97717004c to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 0 files for upload
   edenapi: queue 1 tree for upload
   edenapi: uploaded 1 tree
   edenapi: uploaded 1 changeset
-  pushrebasing stack (8c2a70bb0c78, cbb97717004c] (2 commits) to remote bookmark main
+  pushrebasing stack (8c2a70bb0c78, cbb97717004c] (2 commits) to remote bookmark master_bookmark
   abort: Server error: invalid request: Case conflict found in faaf8134514581fac83a1feaf35cee8ece18561a89bcac7e2be927395465938a: CaseConflict.txt conflicts with caseconflict.txt
   [255]
 
-attempt to push a commit that introduces a case conflict onto main
-  $ hg up -q main
+attempt to push a commit that introduces a case conflict onto master_bookmark
+  $ hg up -q master_bookmark
   $ echo caseconflict > SomeFile
   $ hg add SomeFile
   warning: possible case-folding collision for SomeFile
   $ hg commit -qm conflict2
-  $ hg push -r . --to main
-  pushing rev 99950f688a32 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
+  $ hg push -r . --to master_bookmark
+  pushing rev 99950f688a32 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 0 files for upload
   edenapi: queue 1 tree for upload
   edenapi: uploaded 1 tree
   edenapi: uploaded 1 changeset
-  pushrebasing stack (8c2a70bb0c78, 99950f688a32] (1 commit) to remote bookmark main
+  pushrebasing stack (8c2a70bb0c78, 99950f688a32] (1 commit) to remote bookmark master_bookmark
   abort: Server error: invalid request: Case conflict found in 273fd0b40d61b2582af82625cbd3d60f2c35f4e5ec819191f4f3a7adbc21dec2: SomeFile conflicts with somefile
   [255]
 
@@ -117,9 +119,9 @@ again, it's ok to push this to a scratch branch
   searching for changes
 
 we can move the bookmark to a commit with a pre-existing case conflict via bookmark-only pushrebase
-  $ hg push -r other --to main --pushvar NON_FAST_FORWARD=true
-  pushing rev 2b2f2fedc926 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark main
-  moving remote bookmark main from 8c2a70bb0c78 to 2b2f2fedc926
+  $ hg push -r other --to master_bookmark --pushvar NON_FAST_FORWARD=true
+  pushing rev 2b2f2fedc926 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  moving remote bookmark master_bookmark from 8c2a70bb0c78 to 2b2f2fedc926
 
 we can't land to the other if we introduce a new case conflict
   $ hg up -q other

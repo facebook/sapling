@@ -14,7 +14,7 @@
 
   $ cat >> repos/repo/server.toml <<EOF
   > [[bookmarks]]
-  > name="heads/master"
+  > name="heads/master_bookmark"
   > [[bookmarks.hooks]]
   > hook_name="limit_submodule_edits"
   > [[hooks]]
@@ -76,7 +76,7 @@
 # but stores all the git and bonsai objects in the server
   $ git_client push origin --all
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-   ! [remote rejected] master -> master (hooks failed:
+   ! [remote rejected] master_bookmark -> master_bookmark (hooks failed:
     limit_submodule_edits for *: Commit creates or edits a submodule at path submodule_path. If you did mean to do this, add "@update-submodule: submodule_path" to your commit message (glob)
   
   For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
@@ -85,14 +85,14 @@
 
 # Change the commit message and try to push with the marker containing a wrong path.
   $ git commit --amend -m "@update-submodule: wrong_path"
-  [master *] @update-submodule: wrong_path (glob)
+  [master_bookmark *] @update-submodule: wrong_path (glob)
    Date: Sat Jan 1 00:00:00 2000 +0000
    2 files changed, 4 insertions(+)
    create mode 100644 .gitmodules
    create mode 160000 submodule_path
   $ git_client push origin --all
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-   ! [remote rejected] master -> master (hooks failed:
+   ! [remote rejected] master_bookmark -> master_bookmark (hooks failed:
     limit_submodule_edits for *: Commit creates or edits a submodule at path submodule_path. The content of the "@update-submodule" marker, do not match the path of the submodule: "wrong_path" != "submodule_path" (glob)
   
   For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
@@ -101,11 +101,11 @@
 
 # Change the commit message and try to push with the marker containing the path.
   $ git commit --amend -m "@update-submodule: submodule_path rest of the commit message"
-  [master *] @update-submodule: submodule_path rest of the commit message (glob)
+  [master_bookmark *] @update-submodule: submodule_path rest of the commit message (glob)
    Date: Sat Jan 1 00:00:00 2000 +0000
    2 files changed, 4 insertions(+)
    create mode 100644 .gitmodules
    create mode 160000 submodule_path
   $ git_client push origin --all
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-     *..*  master -> master (glob)
+     *..*  master_bookmark -> master_bookmark (glob)

@@ -67,6 +67,7 @@ mononoke now
   $ hg push -r . --to tag/newtag --create
   pushing rev cd415129827a to destination mono:repo bookmark tag/newtag
   searching for changes
+  no changes found
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
@@ -86,6 +87,7 @@ First check that push fail for this bookmark as well
   $ hg push -r . --to another_bookmark --create
   pushing rev cd415129827a to destination mono:repo bookmark another_bookmark
   searching for changes
+  no changes found
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
@@ -102,6 +104,7 @@ First check that push fail for this bookmark as well
   $ hg push -r . --to another_bookmark --create --pushvar ALLOW_LARGE_FILES=true
   pushing rev cd415129827a to destination mono:repo bookmark another_bookmark
   searching for changes
+  no changes found
   exporting bookmark another_bookmark
 
 Try the push tag/newtag again. Since this commit is public it should succeed

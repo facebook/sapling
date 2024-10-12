@@ -29,7 +29,7 @@ Set some env vars that will be used frequently
   > # modify: C "$OLD_FOO" "first foo"
   > # copy: D "$NEW_FOO" "first foo" C "$OLD_FOO"
   > # delete: D "$OLD_FOO"
-  > # bookmark: D master
+  > # bookmark: D master_bookmark
   > EOF
   A=4611de5cc4c4aebb12fe004b72e4bfb4fe3f6f92ecf4e7e13101aa21ee63f376
   B=4aefc65541bed48aa05912520e72886dc187846900552521fd609684b13bac29
@@ -39,7 +39,7 @@ Set some env vars that will be used frequently
   $ start_and_wait_for_mononoke_server
   $ hg clone -q mono:repo repo
   $ cd repo
-  $ hg -q co master
+  $ hg -q co master_bookmark
 
 # -------------------- Use the gitexport tool --------------------
 

@@ -18,7 +18,7 @@
   $ echo "this is file1" > file1
   $ git add file1
   $ git commit -am "Add file1"
-  [master (root-commit) 8ce3eae] Add file1
+  [master_bookmark (root-commit) 8ce3eae] Add file1
    1 file changed, 1 insertion(+)
    create mode 100644 file1
   $ git tag -a -m"new tag" first_tag
@@ -26,7 +26,7 @@
   $ echo "fn main() -> Result<()>" > src/lib.rs
   $ git add .
   $ git commit -m "Added rust library"
-  [master a612a21] Added rust library
+  [master_bookmark a612a21] Added rust library
    1 file changed, 1 insertion(+)
    create mode 100644 src/lib.rs
   $ git tag -a -m "tag for first release" release_v1.0
@@ -35,18 +35,18 @@
   $ echo "mod test.rs" > src/mod.rs
   $ git add .
   $ git commit -m "Added rust tests"
-  [master ca4b2b2] Added rust tests
+  [master_bookmark ca4b2b2] Added rust tests
    2 files changed, 2 insertions(+)
    create mode 100644 src/mod.rs
    create mode 100644 src/test/test.rs
   $ echo "This is new rust library. Use it on your own risk" > README.md
   $ git add .
   $ git commit -m "Added README.md"
-  [master 7cb1854] Added README.md
+  [master_bookmark 7cb1854] Added README.md
    1 file changed, 1 insertion(+)
    create mode 100644 README.md
   $ git log --pretty=format:"%h %an %s %D"
-  7cb1854 mononoke Added README.md HEAD -> master
+  7cb1854 mononoke Added README.md HEAD -> master_bookmark
   ca4b2b2 mononoke Added rust tests 
   a612a21 mononoke Added rust library tag: release_v1.0
   8ce3eae mononoke Add file1 tag: first_tag (no-eol)
@@ -93,7 +93,7 @@
   $ cd git_client_repo
 # Get the repository log and verify if its the same as earlier
   $ git log --pretty=format:"%h %an %s %D"
-  7cb1854 mononoke Added README.md HEAD -> master
+  7cb1854 mononoke Added README.md HEAD -> master_bookmark
   ca4b2b2 mononoke Added rust tests 
   a612a21 mononoke Added rust library tag: release_v1.0
   8ce3eae mononoke Add file1 tag: first_tag (no-eol)

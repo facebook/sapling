@@ -10,6 +10,7 @@ setup configuration
 
   $ REPOTYPE="blob_files"
   $ setup_common_config $REPOTYPE
+  $ setconfig remotenames.selectivepulldefault=master_bookmark,head_bookmark
 
   $ cd $TESTTMP
 
@@ -123,9 +124,6 @@ setup hg server repo
   $ hg pull
   pulling from mono:repo
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
   $ hg log -G -T '{node|short} {desc|firstline}\n'
   o    * [MEGAREPO GRADUAL MERGE] gradual merge (2) (glob)
   ├─╮

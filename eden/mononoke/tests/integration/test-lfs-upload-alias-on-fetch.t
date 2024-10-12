@@ -96,11 +96,6 @@
 
   $ hg pull
   pulling from mono:repo
-  searching for changes
-  no changes found
-  adding changesets
-  adding manifests
-  adding file changes
 
   $ ls $TESTTMP/blobstore/blobs | grep "alias.content" | wc -l
   0

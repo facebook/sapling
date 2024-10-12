@@ -15,11 +15,11 @@
   $ mkdir -p "$GIT_REPO_ORIGIN"
   $ cd "$GIT_REPO_ORIGIN"
   $ git init -q
-# Add a base commit on master
+# Add a base commit on master_bookmark
   $ echo "this is origin" > origin
   $ git add origin
   $ git commit -qam "Add origin"
-# Create branch R1 from master and add three commits on it
+# Create branch R1 from master_bookmark and add three commits on it
   $ git checkout -qb R1
   $ echo "this is file1" > file1
   $ git add file1
@@ -30,8 +30,8 @@
   $ echo "this is file1.2" > file1
   $ git add file1
   $ git commit -qam "Modified file1.1 -> file1.2 in branch R1"
-# Create branch R2 from master and add two commits on it
-  $ git checkout -qb R2 master
+# Create branch R2 from master_bookmark and add two commits on it
+  $ git checkout -qb R2 master_bookmark
   $ echo "this is file1.2" > file1
   $ git add file1
   $ git commit -qam "Add file1.2 in branch R2"

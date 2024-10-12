@@ -40,17 +40,6 @@ set up the local repo
   $ cd local
   $ hg pull
   pulling from mono:repo
-  connected to * (glob)
-  searching for changes
-  no changes found
-  adding changesets
-  adding manifests
-  adding file changes
   $ hg pull -q
   $ hg pull --config clienttelemetry.announceremotehostname=False
   pulling from mono:repo
-  searching for changes
-  no changes found
-  adding changesets
-  adding manifests
-  adding file changes

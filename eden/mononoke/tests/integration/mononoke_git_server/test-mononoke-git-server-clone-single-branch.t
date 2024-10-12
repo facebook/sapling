@@ -30,8 +30,8 @@ Create commit in detached state so its not tracked by any branch
 Create a tag which becomes the only pointer to this commit
   $ git tag -a -m "tag in detached state" detached_tag
   $ git branch detached_branch
-Go back to the master branch
-  $ git checkout master -q
+Go back to the master_bookmark branch
+  $ git checkout master_bookmark -q
 
 # Capture all the known Git objects from the repo
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/object_list
@@ -43,13 +43,13 @@ Go back to the master branch
 # Start up the Mononoke Git Service
   $ mononoke_git_service
 # Clone the Git repo from Mononoke
-  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git --single-branch -b master
+  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git --single-branch -b master_bookmark
   Cloning into 'repo'...
   $ cd $REPONAME
 # Verify that we indeed did not fetch the tag
   $ git show-ref | grep detached_tag
   [1]
-# Verify that we only get the objects associated with the master branch without including any extra objects
+# Verify that we only get the objects associated with the master_bookmark branch without including any extra objects
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list
   $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list | sed 's/>//g'
   0a1,2

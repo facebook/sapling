@@ -77,14 +77,14 @@
   Hg: Sha1(*): HgManifestId(HgNodeHash(Sha1(*))) (glob)
   Hg: Sha1(*): HgManifestId(HgNodeHash(Sha1(*))) (glob)
   Hg: Sha1(*): HgManifestId(HgNodeHash(Sha1(*))) (glob)
-  Ref: "refs/heads/master": Some(ChangesetId(Blake2(*))) (glob)
+  Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(*))) (glob)
   Ref: "refs/tags/changed_tag": Some(ChangesetId(Blake2(*))) (glob)
   Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(*))) (glob)
   Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(*))) (glob)
   Initializing repo: repo
   Initialized repo: repo
   All repos initialized. It took: * seconds (glob)
-  Bookmark: "heads/master": ChangesetId(Blake2(*)) (created) (glob)
+  Bookmark: "heads/master_bookmark": ChangesetId(Blake2(*)) (created) (glob)
   Bookmark: "tags/changed_tag": ChangesetId(Blake2(*)) (created) (glob)
   Bookmark: "tags/empty_tag": ChangesetId(Blake2(*)) (created) (glob)
   Bookmark: "tags/first_tag": ChangesetId(Blake2(*)) (created) (glob)

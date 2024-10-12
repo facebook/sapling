@@ -25,16 +25,16 @@
   > EOS
 
   $ hg goto A -q
-  $ hg push -r . --to master -q --create
+  $ hg push -r . --to master_bookmark -q --create
 
   $ hg goto B -q
-  $ hg push -r . --to master -q
+  $ hg push -r . --to master_bookmark -q
 
   $ hg goto C -q
-  $ hg push -r . --to master -q
+  $ hg push -r . --to master_bookmark -q
 
   $ hg goto D -q
-  $ hg push -r . --to master -q
+  $ hg push -r . --to master_bookmark -q
 
   $ hg goto F -q
   $ hg push -r . --to other_bookmark -q --create
@@ -43,7 +43,7 @@ Check that new entry was added to the sync database. 4 pushes
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) from bookmarks_update_log";
   5
 
-Sync all bookmarks moves and test the "stats" output. This should be stable due to the use of "random", that's why we never expect already present blobs, and uploaded sum should be the same for all runs. Upload should include both bookmarks master and other.
+Sync all bookmarks moves and test the "stats" output. This should be stable due to the use of "random", that's why we never expect already present blobs, and uploaded sum should be the same for all runs. Upload should include both bookmarks master_bookmark and other.
   $ with_stripped_logs mononoke_cas_sync repo 0
   Initiating mononoke RE CAS sync command execution for repo repo, repo: repo
   using repo "repo" repoid RepositoryId(0), repo: repo
@@ -60,7 +60,7 @@ Validate that all the blobs are now present in CAS for the commit D
   Upload completed. Upload stats: uploaded digests: 0, already present digests: 5, uploaded bytes: 0 B, the largest uploaded blob: 0 B
 
 Validate that all the blobs are now present in CAS for the commit D (by bookmark name)
-  $ with_stripped_logs mononoke_newadmin cas-store --repo-name repo upload --full -B master
+  $ with_stripped_logs mononoke_newadmin cas-store --repo-name repo upload --full -B master_bookmark
   Upload completed. Upload stats: uploaded digests: 0, already present digests: 5, uploaded bytes: 0 B, the largest uploaded blob: 0 B
 
 Validate that all the blobs are now present in CAS for the middle commit B

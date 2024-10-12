@@ -18,7 +18,7 @@
   $ echo "this is file1" > file1
   $ git add file1
   $ git commit -am "Add file1"
-  [master (root-commit) 8ce3eae] Add file1
+  [master_bookmark (root-commit) 8ce3eae] Add file1
    1 file changed, 1 insertion(+)
    create mode 100644 file1
   $ mkdir dir
@@ -44,9 +44,9 @@
   $ ls $TESTTMP/blobstore/blobs | grep "git_object" | grep "69d481cfc9a21ef59b516c3de04cd742d059d345"
   blob-repo0000.git_object.69d481cfc9a21ef59b516c3de04cd742d059d345
 
-# Set master (gitimport does not do this yet)
-  $ mononoke_newadmin bookmarks -R repo set master 996a9fdfbf6ef7fe0e61e6f5da99f2189896379558cc24e9501b06b45350d489
-  Creating publishing bookmark master at 996a9fdfbf6ef7fe0e61e6f5da99f2189896379558cc24e9501b06b45350d489
+# Set master_bookmark (gitimport does not do this yet)
+  $ mononoke_newadmin bookmarks -R repo set master_bookmark 996a9fdfbf6ef7fe0e61e6f5da99f2189896379558cc24e9501b06b45350d489
+  Creating publishing bookmark master_bookmark at 996a9fdfbf6ef7fe0e61e6f5da99f2189896379558cc24e9501b06b45350d489
 
 # Start Mononoke
   $ start_and_wait_for_mononoke_server
@@ -54,7 +54,7 @@
   $ cd "$TESTTMP"
   $ hg clone -q mono:repo "$HG_REPO"
   $ cd "$HG_REPO"
-  $ hg up -q master
+  $ hg up -q master_bookmark
   $ cat file1
   this is file1
   $ cat dir/file2

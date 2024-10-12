@@ -21,7 +21,7 @@
 
 [megarepo_test]
 large_repo_id = 0
-common_pushrebase_bookmarks = ["main_bookmark"]
+common_pushrebase_bookmarks = ["master_bookmark"]
 version_name = "COMPLEX_1"
 
     [[megarepo_test.small_repos]]

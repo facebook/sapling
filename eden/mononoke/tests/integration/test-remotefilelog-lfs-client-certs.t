@@ -23,7 +23,7 @@ Create a repo
   $ yes 2>/dev/null | head -c 100 > large
   $ hg add large
   $ hg ci -ma
-  $ hg push -q --to master --create
+  $ hg push -q --to master_bookmark --create
   $ cd "$TESTTMP"
 
 Clone the repo. Enable LFS. Take a different cache path to make sure we have to go to the server.
@@ -35,13 +35,13 @@ Clone the repo. Enable LFS. Take a different cache path to make sure we have to 
 
 Initially, unconfigure client certs. This will fail, because certs are required.
 
-  $ hg up master -q --config auth.mononoke.schemes=doesntmatch 2>&1 | grep -i 'certificate' -m 1
+  $ hg up master_bookmark -q --config auth.mononoke.schemes=doesntmatch 2>&1 | grep -i 'certificate' -m 1
   tls error: [60] SSL peer certificate or SSH remote key was not OK (SSL certificate problem: self?signed certificate in certificate chain)! (glob)
   $ ! test -f large
 
 Now, with certs. This will work.
 
-  $ hg up master -q
+  $ hg up master_bookmark -q
   $ test -f large
 
 Finally, check what identities the client presented.

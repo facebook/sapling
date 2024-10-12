@@ -54,4 +54,4 @@
   $ git commit -qam "Modified fileA.12"
   $ git_client push origin --all
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-     5b3b465..f3b108f  master -> master
+     5b3b465..f3b108f  master_bookmark -> master_bookmark

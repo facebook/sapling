@@ -46,8 +46,6 @@ to pull these pushed commits
   $ cd repo2
   $ hg pull ssh://user@dummy/repo
   pulling from ssh://user@dummy/repo
-  searching for changes
-  no changes found
 
 start mononoke
 

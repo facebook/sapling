@@ -49,7 +49,7 @@ function default_initial_import_config {
         "versions": [
           {
             "large_repo_id": $LARGE_REPO_ID,
-            "common_pushrebase_bookmarks": ["master"],
+            "common_pushrebase_bookmarks": ["master_bookmark"],
             "small_repos": [
               $SMALL_REPO_CFG
             ],
@@ -57,12 +57,12 @@ function default_initial_import_config {
           }
         ],
         "common": {
-          "common_pushrebase_bookmarks": ["master"],
+          "common_pushrebase_bookmarks": ["master_bookmark"],
           "large_repo_id": $LARGE_REPO_ID,
           "small_repos": {
             "$SUBMODULE_REPO_ID": {
               "bookmark_prefix": "$repo_folder/",
-              "common_pushrebase_bookmarks_map": { "master": "heads/master" }
+              "common_pushrebase_bookmarks_map": { "master_bookmark": "heads/master_bookmark" }
             }
           }
         }
@@ -145,7 +145,7 @@ CONFIG
   testtool_drawdag -R "$LARGE_REPO_NAME" --no-default-files <<EOF
 L_A
 # modify: L_A "file_in_large_repo.txt" "first file"
-# bookmark: L_A master
+# bookmark: L_A master_bookmark
 EOF
 
   # Setting up mutable counter for live forward sync

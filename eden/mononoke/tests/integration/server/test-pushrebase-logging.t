@@ -6,11 +6,14 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
 
-  $ enable pushrebase remotenames
+  $ enable pushrebase
   $ export COMMIT_SCRIBE_CATEGORY=public_commit
   $ export MONONOKE_TEST_SCRIBE_LOGGING_DIRECTORY=$TESTTMP/scribe_logs/
   $ setconfig push.edenapi=true
   $ setup_common_config
+FIXME: enable selective pull
+  $ setconfig remotenames.selectivepull=false
+
   $ testtool_drawdag -R repo --derive-all --print-hg-hashes <<EOF
   > A-B-C
   > # bookmark: C main

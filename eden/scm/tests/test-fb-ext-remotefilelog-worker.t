@@ -4,9 +4,9 @@
 
   $ . "$TESTDIR/library.sh"
 
-  $ newserver master
+  $ newserver master_bookmark
 
-  $ clone master client
+  $ clone master_bookmark client
   $ cd client
   $ mkdir dir
   $ echo x > dir/x
@@ -17,16 +17,16 @@
   $ hg rm dir/x
   $ hg rm dir/ydir/y
   $ hg commit -qAm rm
-  $ hg push -q -r tip --to master --create
+  $ hg push -q -r tip --to master_bookmark --create
   $ cd ..
 
 Shallow clone
 
-  $ clone master shallow --noupdate
+  $ clone master_bookmark shallow --noupdate
   $ cd shallow
   $ setconfig extensions.amend= rebase.experimental.inmemory=True
 
-  $ hg up master
+  $ hg up master_bookmark
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg up .~1
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -40,7 +40,7 @@ Shallow clone
 
   $ findfilessorted dir
   dir/x
-  $ hg up master
+  $ hg up master_bookmark
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ test -f dir
   [1]

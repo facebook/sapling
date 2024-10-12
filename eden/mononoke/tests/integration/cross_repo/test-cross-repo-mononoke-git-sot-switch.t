@@ -14,7 +14,7 @@
   $ export SUBMODULE_REPO_NAME="small_repo"
   $ export SUBMODULE_REPO_ID=11
   $ export SUBMODULE_REPO_GIT="$TESTTMP/small_repo_git"
-  $ export MASTER_BOOKMARK_NAME="master"
+  $ export MASTER_BOOKMARK_NAME="master_bookmark"
   $ export SMALL_REPO_DIR="smallrepofolder1"
   $ export MONONOKE_GIT_SERVICE_START_TIMEOUT=120
 
@@ -45,12 +45,13 @@ Run the x-repo with submodules setup
 # Set up live forward sync
   $ with_stripped_logs mononoke_x_repo_sync_forever "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID"
 
+  $ enable pushrebase
 # Pushing to small repo directory fails while SoT is in git repo, because of the
 # deny_files hook
   $ cd $TESTTMP/$LARGE_REPO_NAME
   $ mkcommit "$SMALL_REPO_DIR/foo"
   $ hg push --to $MASTER_BOOKMARK_NAME
-  pushing rev cd2f3d7d0e02 to destination mono:large_repo bookmark master
+  pushing rev cd2f3d7d0e02 to destination mono:large_repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
@@ -88,7 +89,7 @@ Run the x-repo with submodules setup
   $ git_client push origin --all --follow-tags
   error: unable to parse remote unpack status: Push rejected: Mononoke is not the source of truth for repo small_repo
   To https://localhost:$LOCAL_PORT/repos/git/ro/small_repo.git
-   ! [remote rejected] master -> master (Push rejected: Mononoke is not the source of truth for repo small_repo)
+   ! [remote rejected] master_bookmark -> master_bookmark (Push rejected: Mononoke is not the source of truth for repo small_repo)
   error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/small_repo.git'
   [1]
 
@@ -100,12 +101,13 @@ Run the x-repo with submodules setup
 # Now push succeeds
   $ git_client push origin --all --follow-tags
   To https://localhost:$LOCAL_PORT/repos/git/ro/small_repo.git
-     3a41dad..c88eb10  master -> master
+     3a41dad..c88eb10  master_bookmark -> master_bookmark
 
   $ with_stripped_logs wait_for_xrepo_sync 2
 
   $ export REPONAME=$LARGE_REPO_NAME
   $ cd $TESTTMP/$LARGE_REPO_NAME || exit
+  $ wait_for_bookmark_move_away_edenapi large_repo master_bookmark $(hg whereami)
   $ hg pull -q
   $ hg checkout $MASTER_BOOKMARK_NAME -q
 
@@ -130,7 +132,7 @@ Run the x-repo with submodules setup
   
   NOTE: Enable push redirection for small repo
 
-  $ PREV_BOOK_VALUE=$(get_bookmark_value_bonsai "$SUBMODULE_REPO_NAME" "heads/master")
+  $ PREV_BOOK_VALUE=$(get_bookmark_value_bonsai "$SUBMODULE_REPO_NAME" "heads/master_bookmark")
   $ echo "$PREV_BOOK_VALUE"
   8f67a0aced3d7aafbba86c1b1510fb7aa2bba7fde303fa27da272543c2341fd1
 
@@ -146,7 +148,7 @@ Run the x-repo with submodules setup
 
 
 # Push to large repo, which should be backsynced to small repo
-  $ hg push -q --to master
+  $ hg push -q --to master_bookmark
 
 
   $ mononoke_newadmin fetch -R $LARGE_REPO_NAME -B $MASTER_BOOKMARK_NAME
@@ -157,9 +159,9 @@ Run the x-repo with submodules setup
   	 ADDED/MODIFIED: large_repo_file.txt 7e0269c3137ea814b84ca0f2d4896f0cbc5e6216362803d4df88cf3f80536f0c
   
 
-  $ ATTEMPTS=20 wait_for_bookmark_move_away_bonsai "$SUBMODULE_REPO_NAME" "heads/master" "$PREV_BOOK_VALUE"
+  $ ATTEMPTS=20 wait_for_bookmark_move_away_bonsai "$SUBMODULE_REPO_NAME" "heads/master_bookmark" "$PREV_BOOK_VALUE"
 
-  $ mononoke_newadmin fetch -R $SUBMODULE_REPO_NAME -B heads/master
+  $ mononoke_newadmin fetch -R $SUBMODULE_REPO_NAME -B heads/master_bookmark
   BonsaiChangesetId: 13715279cffa4966ef3572ed60d1779e42a103911c360618611a36b1c08ecd2e
   Author: test
   Message: Change submodule repo from large repo
@@ -191,6 +193,6 @@ Run the x-repo with submodules setup
   $ git commit -q -am "Git commit that should be pushredirected" 
   $ git_client push origin --all --follow-tags
   To https://localhost:$LOCAL_PORT/repos/git/ro/small_repo.git
-   ! [remote rejected] master -> master (invalid request: Bookmark transaction failed)
+   ! [remote rejected] master_bookmark -> master_bookmark (invalid request: Bookmark transaction failed)
   error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/small_repo.git'
   [1]

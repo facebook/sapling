@@ -8,6 +8,8 @@
 
 setup configuration
   $ setup_common_config
+FIXME: enable selective pull
+  $ setconfig remotenames.selectivepull=false
   $ REPOID=1 REPONAME=disabled_repo ENABLED=false setup_mononoke_config
   $ cd $TESTTMP
 

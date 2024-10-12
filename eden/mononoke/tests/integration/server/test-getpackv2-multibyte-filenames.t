@@ -10,7 +10,7 @@
   $ HG_REPO="${TESTTMP}/repo"
   $ DIR='dir-multibyte-€'
   $ NAME='file-multibyte-€'
-  $ BOOKMARK='book'
+  $ BOOKMARK='master_bookmark'
 
   $ ENABLED_DERIVED_DATA='["git_trees", "filenodes", "hgchangesets"]' setup_common_config
 
@@ -35,7 +35,7 @@
 # Set test bookmark
 
   $ mononoke_newadmin bookmarks -R repo set "$BOOKMARK" 0b82d99309fc23ae5ae39c8eb93aaee9178a746f6cd882afddc183e0d3217195
-  Creating publishing bookmark book at 0b82d99309fc23ae5ae39c8eb93aaee9178a746f6cd882afddc183e0d3217195
+  Creating publishing bookmark master_bookmark at 0b82d99309fc23ae5ae39c8eb93aaee9178a746f6cd882afddc183e0d3217195
 
 # Start Mononoke
 

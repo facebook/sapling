@@ -51,7 +51,6 @@ verify content
   $ cd client
   $ echo 'remotefilelog' >> .hg/requires
   $ hg pull --config ui.disable-stream-clone=true -q
-  warning: stream clone is disabled
   $ hg up c201a1696ba0db28be95eedf0949329fa8c44478 -q
   $ cat a
   $ cat b

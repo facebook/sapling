@@ -27,8 +27,8 @@
   $ echo "file to be deleted" > deleted_file
   $ git add .
   $ git commit -qam "Deleted file commit"
-  $ git checkout master
-  Switched to branch 'master'
+  $ git checkout master_bookmark
+  Switched to branch 'master_bookmark'
   $ echo "this is file2" > file2
   $ git add .
   $ git commit -qam "Add file2"
@@ -74,7 +74,7 @@
 # Push all the changes made so far
   $ git_client push origin --all --follow-tags
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-     e8615d6..84bcc24  master -> master
+     e8615d6..84bcc24  master_bookmark -> master_bookmark
    * [new branch]      new_branch -> new_branch
   $ git_client push origin --delete branch_to_be_deleted
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
@@ -103,14 +103,14 @@
   }
   {
     "repo_name": "repo",
-    "bookmark_name": "heads/master",
+    "bookmark_name": "heads/master_bookmark",
     "old_bookmark_value": null,
     "new_bookmark_value": "da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c",
     "operation": "create"
   }
   {
     "repo_name": "repo",
-    "bookmark_name": "heads/master",
+    "bookmark_name": "heads/master_bookmark",
     "old_bookmark_value": "da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c",
     "new_bookmark_value": "a2b9a16e20a9a328b497a5ba9d6a20285688795410225b98f34bfbacd73370b8",
     "operation": "update"
@@ -145,7 +145,7 @@
   }
   {
     "repo_name": "repo.git",
-    "bookmark_name": "refs/heads/master",
+    "bookmark_name": "refs/heads/master_bookmark",
     "old_bookmark_value": "e8615d6f149b876be0a2f30a1c5bf0c42bf8e136",
     "new_bookmark_value": "84bcc2429ed75bca1a1c8c98fc49f283b69e333a",
     "operation": null

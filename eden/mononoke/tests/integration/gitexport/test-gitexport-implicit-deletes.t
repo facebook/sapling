@@ -30,7 +30,7 @@ Setup configuration
   > # modify: A "bar/h/i" "i"
   > # modify: B "foo" "SECRET FILE"
   > # modify: C "bar" "SECRET FILE"
-  > # bookmark: C master
+  > # bookmark: C master_bookmark
   > EOF
   A=85dfabda124636200fe6499b65123179020d32c0ab50818b72a8097dcf9b1880
   B=a0cf4ce8cd4495b5733f844cc384dbcce4c305eb597a73f38d239cad78c29883
@@ -39,7 +39,7 @@ Setup configuration
   $ start_and_wait_for_mononoke_server
   $ hg clone -q mono:repo repo
   $ cd repo
-  $ hg -q co master
+  $ hg -q co master_bookmark
 
 
 # -------------------- Use the gitexport tool --------------------

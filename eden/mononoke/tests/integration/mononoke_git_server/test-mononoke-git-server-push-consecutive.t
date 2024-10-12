@@ -62,16 +62,16 @@
   $ echo "file 6" > file_6
   $ git add .
   $ git commit -qam "Commit 6"
-# Incrementally publish master changes through multiple pushes
-  $ git branch -f pusher_branch master~6
+# Incrementally publish master_bookmark changes through multiple pushes
+  $ git branch -f pusher_branch master_bookmark~6
   $ git_client push -f origin pusher_branch
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
    * [new branch]      pusher_branch -> pusher_branch
-  $ git branch -f pusher_branch master~3
+  $ git branch -f pusher_branch master_bookmark~3
   $ git_client push -f origin pusher_branch
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
      e8615d6..70faae0  pusher_branch -> pusher_branch
-  $ git branch -f pusher_branch master
+  $ git branch -f pusher_branch master_bookmark
   $ git_client push -f origin pusher_branch
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
      70faae0..5d04bf5  pusher_branch -> pusher_branch
@@ -91,7 +91,7 @@
   $ git show-ref | sort
   5d04bf5a8538644ca808a1436dc00c435f75a65a refs/remotes/origin/pusher_branch
   8963e1f55d1346a07c3aec8c8fc72bf87d0452b1 refs/tags/first_tag
-  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/heads/master
+  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/heads/master_bookmark
   e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/remotes/origin/HEAD
-  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/remotes/origin/master
+  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/remotes/origin/master_bookmark
   fb02ed046a1e75fe2abb8763f7c715496ae36353 refs/tags/empty_tag

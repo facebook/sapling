@@ -34,8 +34,8 @@
   $ git add .
   $ git commit -qam "Commit with another newly added file"
   $ current_another_branch=$(git rev-parse HEAD)
-  $ git checkout master
-  Switched to branch 'master'
+  $ git checkout master_bookmark
+  Switched to branch 'master_bookmark'
 
   $ cd "$TESTTMP"
   $ git clone --mirror "$GIT_REPO_ORIGIN" repo-git
@@ -60,9 +60,9 @@
   65383a43aea4926032857fa6b08e45736b98ef61 refs/remotes/origin/another_branch
   8963e1f55d1346a07c3aec8c8fc72bf87d0452b1 refs/tags/first_tag
   b714f035ffaef456213df2667c59fd48911854a8 refs/remotes/origin/new_branch
-  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/heads/master
+  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/heads/master_bookmark
   e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/remotes/origin/HEAD
-  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/remotes/origin/master
+  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/remotes/origin/master_bookmark
 
 # Delete some branches and push to remote
   $ git_client push origin --delete new_branch another_branch
@@ -82,6 +82,6 @@
 # List all the known refs. Ensure that the deleted branches do not show up anymore
   $ git show-ref | sort
   8963e1f55d1346a07c3aec8c8fc72bf87d0452b1 refs/tags/first_tag
-  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/heads/master
+  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/heads/master_bookmark
   e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/remotes/origin/HEAD
-  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/remotes/origin/master
+  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/remotes/origin/master_bookmark

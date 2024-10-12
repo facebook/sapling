@@ -111,6 +111,3 @@ Commit should have been accepted
   $ hg pull -r 47da8b81097c5534f3eb7947a8764dd323cffe3d
   pulling from mono:repo
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes

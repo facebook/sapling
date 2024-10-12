@@ -58,7 +58,7 @@
 # Push all the changes made so far
   $ git_client push origin --all --follow-tags
   To https://*/repos/git/ro/repo.git (glob)
-     e8615d6..e8b927e  master -> master
+     e8615d6..e8b927e  master_bookmark -> master_bookmark
    * [new branch]      new_branch -> new_branch
    * [new tag]         past_tag -> past_tag
    * [new tag]         push_tag -> push_tag
@@ -95,8 +95,8 @@
   8963e1f55d1346a07c3aec8c8fc72bf87d0452b1 refs/tags/first_tag
   9183b513199288101e5aafb7f5f90b64092093de refs/tags/past_tag
   ad1d25082e63405c284b9dc2d4b63fd2c39bcc7e refs/remotes/origin/new_branch
-  e8b927ed84aa5ab33aeada81770a2aaa94f111be refs/heads/master
+  e8b927ed84aa5ab33aeada81770a2aaa94f111be refs/heads/master_bookmark
   e8b927ed84aa5ab33aeada81770a2aaa94f111be refs/remotes/origin/HEAD
-  e8b927ed84aa5ab33aeada81770a2aaa94f111be refs/remotes/origin/master
+  e8b927ed84aa5ab33aeada81770a2aaa94f111be refs/remotes/origin/master_bookmark
   ec8f5a7483999d8d78203a64786f3734d7737ee7 refs/tags/push_tag
   fb02ed046a1e75fe2abb8763f7c715496ae36353 refs/tags/empty_tag

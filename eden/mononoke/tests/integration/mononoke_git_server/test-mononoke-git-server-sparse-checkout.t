@@ -63,7 +63,7 @@
   $ cd $GIT_REPO
 # Inform git that we are interested only in the top level directory and files. This will download objects ondemand from server
   $ git sparse-checkout init --cone
-  $ git checkout -q master
+  $ git checkout -q master_bookmark
 # Get the count of files which are materialized on disk as part of this checkout
   $ find . -path "./.git" -prune -o -type f | wc -l
   4
@@ -79,7 +79,7 @@
   $ cd $REPONAME
 # Inform git that we are interested only in the top level directory and files. This will download objects ondemand from server
   $ git sparse-checkout init --cone
-  $ git_client checkout -q master
+  $ git_client checkout -q master_bookmark
 # Get the count of files which are materialized on disk as part of this checkout
   $ find . -path "./.git" -prune -o -type f | wc -l
   4

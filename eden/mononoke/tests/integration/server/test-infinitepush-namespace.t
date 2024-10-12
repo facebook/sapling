@@ -138,6 +138,7 @@ Valid push, with pushrebase disabled
   $ hg push -r . --to "plain/123" --create
   pushing rev 47da8b81097c to destination mono:repo bookmark plain/123
   searching for changes
+  no changes found
   exporting bookmark plain/123
 
 Valid push, with pushrebase enabled
@@ -224,14 +225,10 @@ Check everything is as expected
   $ cd repo-pull
   $ hg pull
   pulling from mono:repo
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
   $ hg bookmarks --remote
-     default/master_bookmark   3903775176ed
-     default/plain/123         47da8b81097c
-     default/plain/456         47da8b81097c
+     default/master_bookmark           3903775176ed42b1458a6281db4a0ccf4d9f287a
+     default/plain/123                 47da8b81097c5534f3eb7947a8764dd323cffe3d
+     default/plain/456                 47da8b81097c5534f3eb7947a8764dd323cffe3d
   $ hg bookmarks --list-remote "*"
      infinitepush1/123         47da8b81097c5534f3eb7947a8764dd323cffe3d
      infinitepush1/456         47da8b81097c5534f3eb7947a8764dd323cffe3d

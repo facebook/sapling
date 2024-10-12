@@ -108,7 +108,6 @@ Sync from the second client - the commits should appear
   commitcloud: nothing to upload
   pulling 44641a2b1a42 from mono:repo
   searching for changes
-  fetching revlog data for 3 commits
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -147,7 +146,6 @@ On the first client, make a bookmark, then sync - the bookmark and the new commi
   commitcloud: nothing to upload
   pulling 58508421158d from mono:repo
   searching for changes
-  fetching revlog data for 3 commits
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -191,7 +189,6 @@ On the second client sync it
   commitcloud: nothing to upload
   pulling 8e3f03f8d9db from mono:repo
   searching for changes
-  fetching revlog data for 6 commits
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: current revision 58508421158d has been moved remotely to 8e3f03f8d9db
@@ -292,7 +289,6 @@ Commit still becomes available in the other repo
   commitcloud: nothing to upload
   pulling 88d416aed919 ec61bf312a03 from mono:repo
   searching for changes
-  fetching revlog data for 4 commits
   commitcloud: commits synchronized
   finished in * (glob)
 

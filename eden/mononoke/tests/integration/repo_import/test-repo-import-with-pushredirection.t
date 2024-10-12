@@ -65,7 +65,7 @@ Before the change
   $ cd ..
   $ git add file1 file2_repo/file2
   $ git commit -am "Add file1 and file2"
-  [master (root-commit) ce435b0] Add file1 and file2
+  [master_bookmark (root-commit) ce435b0] Add file1 and file2
    2 files changed, 2 insertions(+)
    create mode 100644 file1
    create mode 100644 file2_repo/file2
@@ -73,7 +73,7 @@ Before the change
   $ echo "this is file3" > file3_repo/file3
   $ git add file3_repo/file3
   $ git commit -am "Add file3"
-  [master 2c01e4a] Add file3
+  [master_bookmark 2c01e4a] Add file3
    1 file changed, 1 insertion(+)
    create mode 100644 file3_repo/file3
 
@@ -91,7 +91,7 @@ Before the change
   > --disable-phabricator-check \
   > --disable-hg-sync-check \
   > --dest-bookmark new_bookmark \
-  > --git-merge-rev-id master \
+  > --git-merge-rev-id master_bookmark \
   > --commit-author user \
   > --commit-message "merging" \
   > --recovery-file-path "$GIT_REPO/recovery_file.json" &> /dev/null
@@ -102,9 +102,11 @@ Before the change
   $ hg pull
   pulling from mono:large-mon
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
+  fetching revlog data for 1 commits
+  $ hg pull -B bookprefix/new_bookmark
+  pulling from mono:large-mon
+  searching for changes
+  fetching revlog data for 4 commits
   $ hg up bookprefix/new_bookmark
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

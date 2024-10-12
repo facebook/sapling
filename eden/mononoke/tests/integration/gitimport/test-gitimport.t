@@ -32,7 +32,7 @@
   $ cd repo-git
   $ git fetch "$GIT_REPO_ORIGIN" +refs/*:refs/* --prune -u
   From $TESTTMP/origin/repo-git
-   - [deleted]         (none)     -> origin/master
+   - [deleted]         (none)     -> origin/master_bookmark
      (refs/remotes/origin/HEAD has become dangling)
   $ git branch "a_ref_prefixed_by_remotes_origin"
   $ git update-ref refs/remotes/origin/a_ref_prefixed_by_remotes_origin a_ref_prefixed_by_remotes_origin
@@ -47,7 +47,7 @@
   using repo "repo" repoid RepositoryId(0)
   GitRepo:$TESTTMP/repo-git commit 1 of 1 - Oid:8ce3eae4 => Bid:032cd4dc
   Hg: Sha1(8ce3eae44760b500bf3f2c3922a95dcd3c908e9e): HgManifestId(HgNodeHash(Sha1(009adbc8d457927d2e1883c08b0692bc45089839)))
-  Ref: "refs/heads/master": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
+  Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
   Ref: "refs/remotes/origin/a_ref_prefixed_by_remotes_origin": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
   Ref: "refs/tags/changing_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
   Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
@@ -97,7 +97,7 @@
 
 # Validate if we imported the HEAD symref
   $ mononoke_newadmin git-symref -R repo get --symref-name HEAD
-  The symbolic ref HEAD points to branch master
+  The symbolic ref HEAD points to branch master_bookmark
 
 # Cross reference with the blobs present in the git store
   $ cd "$GIT_REPO"
@@ -117,7 +117,7 @@
   using repo "repo" repoid RepositoryId(0)
   GitRepo:$TESTTMP/repo-git 1 of 2 commit(s) already exist
   GitRepo:$TESTTMP/repo-git commit 2 of 2 - Oid:e8615d6f => Bid:da93dc81
-  Ref: "refs/heads/master": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))
+  Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))
   Ref: "refs/remotes/origin/a_ref_prefixed_by_remotes_origin": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
   Ref: "refs/tags/changing_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
   Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
@@ -150,7 +150,7 @@
   GitRepo:$TESTTMP/repo-git 2 of 2 commit(s) already exist
   Hg: Sha1(*): HgManifestId(HgNodeHash(Sha1(*))) (glob)
   Hg: Sha1(*): HgManifestId(HgNodeHash(Sha1(*))) (glob)
-  Ref: "refs/heads/master": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))
+  Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))
   Ref: "refs/remotes/origin/a_ref_prefixed_by_remotes_origin": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
   Ref: "refs/tags/changing_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
   Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
@@ -166,7 +166,7 @@
   $ with_stripped_logs gitimport "$GIT_REPO" --generate-bookmarks full-repo
   using repo "repo" repoid RepositoryId(0)
   GitRepo:$TESTTMP/repo-git 2 of 2 commit(s) already exist
-  Ref: "refs/heads/master": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))
+  Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))
   Ref: "refs/remotes/origin/a_ref_prefixed_by_remotes_origin": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
   Ref: "refs/tags/changing_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
   Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))
@@ -176,7 +176,7 @@
   Initializing repo: repo
   Initialized repo: repo
   All repos initialized. It took: * seconds (glob)
-  Bookmark: "heads/master": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (created)
+  Bookmark: "heads/master_bookmark": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (created)
   Bookmark: "remotes/origin/a_ref_prefixed_by_remotes_origin": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (created)
   Bookmark: "tags/changing_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (created)
   Bookmark: "tags/empty_tag": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (created)
@@ -260,7 +260,7 @@
   $ with_stripped_logs gitimport "$GIT_REPO" --generate-bookmarks full-repo
   using repo "repo" repoid RepositoryId(0)
   GitRepo:$TESTTMP/repo-git 2 of 2 commit(s) already exist
-  Ref: "refs/heads/master": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))
+  Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))
   Ref: "refs/remotes/origin/a_ref_prefixed_by_remotes_origin": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
   Ref: "refs/tags/changing_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
   Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))
@@ -270,7 +270,7 @@
   Initializing repo: repo
   Initialized repo: repo
   All repos initialized. It took: 0 seconds
-  Bookmark: "heads/master": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (already up-to-date)
+  Bookmark: "heads/master_bookmark": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (already up-to-date)
   Bookmark: "remotes/origin/a_ref_prefixed_by_remotes_origin": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (already up-to-date)
   Bookmark: "tags/changing_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (already up-to-date)
   Bookmark: "tags/empty_tag": ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)) (already up-to-date)
@@ -289,6 +289,7 @@
   $ start_and_wait_for_mononoke_server
 # Clone the repository
   $ cd "$TESTTMP"
+  $ setconfig remotenames.selectivepulldefault=master_bookmark,heads/master_bookmark
   $ hg clone -q mono:repo "$HG_REPO"
   $ cd "$HG_REPO"
   $ cat "file1"
@@ -297,7 +298,7 @@
   this is file2
 
 # Check that we can see the git hash from extras
-  $ hg log --config extensions.gitrevset= --template 'hg={node}: git={gitnode}\nextras=(\n{extras % "  {extra}\n"})\n' -r heads/master
+  $ hg log --config extensions.gitrevset= --template 'hg={node}: git={gitnode}\nextras=(\n{extras % "  {extra}\n"})\n' -r heads/master_bookmark
   hg=e7f52161c6127445391295b677f87aded035450a: git=e8615d6f149b876be0a2f30a1c5bf0c42bf8e136
   extras=(
     branch=default
@@ -306,12 +307,11 @@
   )
 
 # Checks all the bookmarks were created
-  $ hg bookmarks --all
-  no bookmarks set
-     default/heads/master      e7f52161c612
-     default/remotes/origin/a_ref_prefixed_by_remotes_origin b48ed4600785
-     default/tags/changing_tag b48ed4600785
-     default/tags/empty_tag    e7f52161c612
-     default/tags/first_tag    b48ed4600785
-     default/tags/recursive_tag b48ed4600785
-     default/tags/simple_tag   e7f52161c612
+  $ hg bookmarks --all --remote
+     default/heads/master_bookmark     e7f52161c6127445391295b677f87aded035450a
+     default/remotes/origin/a_ref_prefixed_by_remotes_origin b48ed460078564067eabec6c4a50909d000d7e22
+     default/tags/changing_tag         b48ed460078564067eabec6c4a50909d000d7e22
+     default/tags/empty_tag            e7f52161c6127445391295b677f87aded035450a
+     default/tags/first_tag            b48ed460078564067eabec6c4a50909d000d7e22
+     default/tags/recursive_tag        b48ed460078564067eabec6c4a50909d000d7e22
+     default/tags/simple_tag           e7f52161c6127445391295b677f87aded035450a

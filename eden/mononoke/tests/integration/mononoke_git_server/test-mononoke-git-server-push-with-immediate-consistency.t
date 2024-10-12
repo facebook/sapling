@@ -39,8 +39,8 @@
   $ echo "yet another newly added file" > yet_another_new_file
   $ git add .
   $ git commit -qam "Commit with yet another newly added file"
-  $ git checkout master
-  Switched to branch 'master'
+  $ git checkout master_bookmark
+  Switched to branch 'master_bookmark'
 
   $ cd "$TESTTMP"
   $ git clone --mirror "$GIT_REPO_ORIGIN" repo-git
@@ -76,14 +76,14 @@
 # List all the known refs. Ensure that the deleted branches do not show up anymore
   $ git show-ref | sort
   8963e1f55d1346a07c3aec8c8fc72bf87d0452b1 refs/tags/first_tag
-  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/heads/master
+  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/heads/master_bookmark
   e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/remotes/origin/HEAD
-  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/remotes/origin/master
+  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/remotes/origin/master_bookmark
   fc3048042ba6628ce96a6a6ce7d1839327ec4563 refs/remotes/origin/yet_another_branch
 
 # Create new branch in the repo
   $ cd "$TESTTMP"/repo
-  $ git checkout -b brand_new_branch master
+  $ git checkout -b brand_new_branch master_bookmark
   Switched to a new branch 'brand_new_branch'
   $ echo "File on brand new branch" > brand_new_branch_file.txt
   $ git add .
@@ -103,19 +103,19 @@
   $ git show-ref | sort
   55e2d4267a1afd04875670380119e989c8e0bf97 refs/remotes/origin/brand_new_branch
   8963e1f55d1346a07c3aec8c8fc72bf87d0452b1 refs/tags/first_tag
-  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/heads/master
+  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/heads/master_bookmark
   e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/remotes/origin/HEAD
-  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/remotes/origin/master
+  e8615d6f149b876be0a2f30a1c5bf0c42bf8e136 refs/remotes/origin/master_bookmark
   fc3048042ba6628ce96a6a6ce7d1839327ec4563 refs/remotes/origin/yet_another_branch
 
 # Modify existing branches in the repo
   $ cd "$TESTTMP"/repo
-  $ git checkout master
-  Switched to branch 'master'
-  Your branch is up to date with 'origin/master'.
-  $ echo "Moving master file" > file1
+  $ git checkout master_bookmark
+  Switched to branch 'master_bookmark'
+  Your branch is up to date with 'origin/master_bookmark'.
+  $ echo "Moving master_bookmark file" > file1
   $ git add .
-  $ git commit -qam "Moving master branch"
+  $ git commit -qam "Moving master_bookmark branch"
   $ git checkout yet_another_branch
   Switched to a new branch 'yet_another_branch'
   ?ranch 'yet_another_branch' set up to track *yet_another_branch*. (glob)
@@ -124,7 +124,7 @@
   $ git commit -qam "Moving yet another branch"
   $ git_client -c http.extraHeader="x-git-read-after-write-consistency: 1" push origin --all
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-     e8615d6..bbc5b18  master -> master
+     e8615d6..9e88337  master_bookmark -> master_bookmark
      fc30480..afa25c0  yet_another_branch -> yet_another_branch
 
 # Without waiting for the WBC, clone the repo and check its state
@@ -138,7 +138,7 @@
   $ git show-ref | sort
   55e2d4267a1afd04875670380119e989c8e0bf97 refs/remotes/origin/brand_new_branch
   8963e1f55d1346a07c3aec8c8fc72bf87d0452b1 refs/tags/first_tag
+  9e88337cd2c0238af3322f7c3135d084e840165d refs/heads/master_bookmark
+  9e88337cd2c0238af3322f7c3135d084e840165d refs/remotes/origin/HEAD
+  9e88337cd2c0238af3322f7c3135d084e840165d refs/remotes/origin/master_bookmark
   afa25c08df81858debe9dcede1bc5de3f2512a08 refs/remotes/origin/yet_another_branch
-  bbc5b18b3fdb6465d94ad062818434a1aa9b1bbb refs/heads/master
-  bbc5b18b3fdb6465d94ad062818434a1aa9b1bbb refs/remotes/origin/HEAD
-  bbc5b18b3fdb6465d94ad062818434a1aa9b1bbb refs/remotes/origin/master

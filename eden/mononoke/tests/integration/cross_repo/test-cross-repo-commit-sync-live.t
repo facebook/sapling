@@ -18,6 +18,9 @@
   Starting Mononoke server
   $ init_local_large_small_clones
 
+FIXME: enable selective pull
+  $ setconfig remotenames.selectivepull=false
+
 -- Start up the sync job in the background
   $ mononoke_x_repo_sync_forever $REPOIDSMALL $REPOIDLARGE
 

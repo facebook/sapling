@@ -60,10 +60,14 @@ pull them
   0cd96de13884b090099512d4794ae87ad067ea8e
   $ hg pull
   pulling from mono:repo
+  failed to get fast pull data (server responded 404 Not Found for https://localhost:$LOCAL_PORT/edenapi/repo/pull_lazy: . Headers: {
+      "x-request-id": "*", (glob)
+      "x-load": "1",
+      "server": "edenapi_server",
+      "x-mononoke-host": "*", (glob)
+      "date": "*", (glob)
+  }), using fallback path
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
   $ hg log -T '{node}\n'
   4b747ca852a40a105b9bb71cd4d07248ea80f704
   0cd96de13884b090099512d4794ae87ad067ea8e
@@ -87,10 +91,14 @@ pull them
   0cd96de13884b090099512d4794ae87ad067ea8e
   $ hg pull
   pulling from mono:repo
+  failed to get fast pull data (server responded 404 Not Found for https://localhost:$LOCAL_PORT/edenapi/repo/pull_lazy: . Headers: {
+      "x-request-id": "*", (glob)
+      "x-load": "1",
+      "server": "edenapi_server",
+      "x-mononoke-host": "*", (glob)
+      "date": "*", (glob)
+  }), using fallback path
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
   $ hg log -T '{node}\n'
   8b374fd7e2ef1cc418b9c68f484ebd2cb6c6c6a1
   4b747ca852a40a105b9bb71cd4d07248ea80f704

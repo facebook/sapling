@@ -66,13 +66,13 @@
   $ with_stripped_logs gitimport "$GIT_REPO" --generate-bookmarks full-repo
   using repo "repo" repoid RepositoryId(0)
   GitRepo:$TESTTMP/repo-git commit 1 of 1 - Oid:15cc4e95 => Bid:ce423062
-  Ref: "refs/heads/master": Some(ChangesetId(Blake2(ce423062b4eee7935dc1bf77937f8393e1aa97478077e1cce2745c8cf1b9e8c6)))
+  Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(ce423062b4eee7935dc1bf77937f8393e1aa97478077e1cce2745c8cf1b9e8c6)))
   Ref: "refs/tags/correct_tag": Some(ChangesetId(Blake2(ce423062b4eee7935dc1bf77937f8393e1aa97478077e1cce2745c8cf1b9e8c6)))
   Ref: "refs/tags/incorrect_tag": Some(ChangesetId(Blake2(ce423062b4eee7935dc1bf77937f8393e1aa97478077e1cce2745c8cf1b9e8c6)))
   Initializing repo: repo
   Initialized repo: repo
   All repos initialized. It took: 0 seconds
-  Bookmark: "heads/master": ChangesetId(Blake2(ce423062b4eee7935dc1bf77937f8393e1aa97478077e1cce2745c8cf1b9e8c6)) (created)
+  Bookmark: "heads/master_bookmark": ChangesetId(Blake2(ce423062b4eee7935dc1bf77937f8393e1aa97478077e1cce2745c8cf1b9e8c6)) (created)
   Bookmark: "tags/correct_tag": ChangesetId(Blake2(ce423062b4eee7935dc1bf77937f8393e1aa97478077e1cce2745c8cf1b9e8c6)) (created)
   Bookmark: "tags/incorrect_tag": ChangesetId(Blake2(ce423062b4eee7935dc1bf77937f8393e1aa97478077e1cce2745c8cf1b9e8c6)) (created)
 

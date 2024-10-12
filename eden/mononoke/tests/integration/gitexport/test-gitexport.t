@@ -50,7 +50,7 @@ Set some env vars that will be used frequently
   > # message: J "Delete internal and exported files"
   > # modify: K "root_file.txt" "Root file"
   > # message: K "Add file to repo root"
-  > # bookmark: K master
+  > # bookmark: K master_bookmark
   > EOF
   A=2b45b0cac2615a6b5f1808161f96eb56376f313b45744ce83fd60931dee1e02b
   B=db859048f5ffc6d47dddd3bbe01e223654e9992537421e4ba13b87a7e0dbcc3c
@@ -67,7 +67,7 @@ Set some env vars that will be used frequently
   $ start_and_wait_for_mononoke_server
   $ hg clone -q mono:repo repo
   $ cd repo
-  $ hg -q co master
+  $ hg -q co master_bookmark
 
 # -------------------- Use the gitexport tool --------------------
 

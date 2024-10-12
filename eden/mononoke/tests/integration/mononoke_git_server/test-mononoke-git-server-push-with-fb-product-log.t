@@ -43,15 +43,15 @@
   Cloning into 'repo'...
   $ cd repo
 
-# Add some new commits to the master branch
+# Add some new commits to the master_bookmark branch
   $ echo "Just another file" > another_file
   $ git add .
-  $ git commit -qam "Another commit on master"
+  $ git commit -qam "Another commit on master_bookmark"
 
 # Push all the changes made so far
-  $ git_client push origin master
+  $ git_client push origin master_bookmark
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-     e8615d6..4981a25  master -> master
+     e8615d6..60fb9c7  master_bookmark -> master_bookmark
 
 # Wait for the warm bookmark cache to catch up with the latest changes
   $ wait_for_git_bookmark_move HEAD $master_commit

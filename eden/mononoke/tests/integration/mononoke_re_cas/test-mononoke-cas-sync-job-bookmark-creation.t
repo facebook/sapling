@@ -23,7 +23,7 @@
   > EOS
 
   $ hg goto D -q
-  $ hg push -r . --to master -q --create
+  $ hg push -r . --to master_bookmark -q --create
 
 
 Validate that blobs and trees were uploaded for _all_ 4 commits (this should include 4 files and 4 trees)

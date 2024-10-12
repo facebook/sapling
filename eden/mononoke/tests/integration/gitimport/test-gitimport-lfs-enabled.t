@@ -22,7 +22,7 @@ Git Import
   Uploading LFS large_file sha256:6c54a4de size:20
   Uploading LFS large_file_non_canonical_pointer sha256:6c54a4de size:20
 We store full file contents for non-LFS file
-  $ mononoke_newadmin fetch -R repo -B heads/main --path small_file
+  $ mononoke_newadmin fetch -R repo -B heads/master_bookmark --path small_file
   File-Type: regular
   Size: 8
   Content-Id: 5db7cda483f4d35a023d447b8210bd317497193813e9b7ac57268f525277b509
@@ -33,7 +33,7 @@ We store full file contents for non-LFS file
   sml fle
   
 We store just LFS pointer for LFS file
-  $ mononoke_newadmin fetch -R repo -B heads/main --path large_file
+  $ mononoke_newadmin fetch -R repo -B heads/master_bookmark --path large_file
   File-Type: regular
   Size: 20
   Content-Id: 48ef00ac63821b09154b55f1b380d253f936afb076a873e1bcc1d137c8b5bab2
@@ -43,7 +43,7 @@ We store just LFS pointer for LFS file
   
   laaaaaaaaaarge file
   
-  $ mononoke_newadmin fetch -R repo -B heads/main --path large_file_non_canonical_pointer
+  $ mononoke_newadmin fetch -R repo -B heads/master_bookmark --path large_file_non_canonical_pointer
   File-Type: regular
   Size: 20
   Content-Id: 48ef00ac63821b09154b55f1b380d253f936afb076a873e1bcc1d137c8b5bab2
@@ -91,7 +91,7 @@ Show that we still have all the original git objects
   size 20
 
 Inspect bonsai change
-  $ mononoke_newadmin fetch -R repo -B heads/main
+  $ mononoke_newadmin fetch -R repo -B heads/master_bookmark
   BonsaiChangesetId: 84fd51b5fa2a956b4c6135697f3e626655fbf2eb7c8478e4f3d5159b153effef
   Author: mononoke <mononoke@mononoke>
   Message: add large file non canonical pointer

@@ -40,7 +40,7 @@ Setup configuration
   > --disable-phabricator-check \
   > --disable-hg-sync-check \
   > --dest-bookmark master_bookmark \
-  > --git-merge-rev-id master \
+  > --git-merge-rev-id master_bookmark \
   > --commit-author user \
   > --commit-message "merging" \
   > --commit-date-rfc3339 "1970-01-01T00:00:00Z" \
@@ -80,7 +80,7 @@ Setup configuration
   > --disable-phabricator-check \
   > --disable-hg-sync-check \
   > --dest-bookmark master_bookmark \
-  > --git-merge-rev-id master \
+  > --git-merge-rev-id master_bookmark \
   > --commit-author user \
   > --commit-message "merging2" \
   > --commit-date-rfc3339 "1970-01-01T00:00:00Z" \

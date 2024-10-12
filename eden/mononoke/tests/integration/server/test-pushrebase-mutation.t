@@ -20,7 +20,7 @@ setup common configuration
   $ cd repo
   $ echo base > base
   $ hg commit -Aqm base
-  $ hg bookmark master -r tip
+  $ hg bookmark master_bookmark -r tip
 
 blobimport
   $ cd $TESTTMP
@@ -31,7 +31,7 @@ start mononoke
 clone the repo
   $ hg clone -q mono:repo client --noupdate
   $ cd client
-  $ enable pushrebase remotenames
+  $ enable pushrebase
 
 create a commit with mutation extras
   $ hg up -q "min(all())"
@@ -41,17 +41,17 @@ create a commit with mutation extras
    *  6ad95cdc8ab9aab92b341e8a7b90296d04885b30 amend by test at 1970-01-01T00:00:00 from:
       f0161ad23099c690115006c21e96f780f5d740b6
   
-pushrebase it directly onto master - it will be rewritten without the mutation extras
-  $ hg push -r . --to master --config push.skip-cleanup-commits=true
-  pushing rev 6ad95cdc8ab9 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master
+pushrebase it directly onto master_bookmark - it will be rewritten without the mutation extras
+  $ hg push -r . --to master_bookmark --config push.skip-cleanup-commits=true
+  pushing rev 6ad95cdc8ab9 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload
   edenapi: uploaded 1 file
   edenapi: queue 1 tree for upload
   edenapi: uploaded 1 tree
   edenapi: uploaded 1 changeset
-  pushrebasing stack (d20a80d4def3, 6ad95cdc8ab9] (1 commit) to remote bookmark master
-  updated remote bookmark master to a05b3505b7d1
+  pushrebasing stack (d20a80d4def3, 6ad95cdc8ab9] (1 commit) to remote bookmark master_bookmark
+  updated remote bookmark master_bookmark to a05b3505b7d1
 
   $ tglog
   o  a05b3505b7d1 '1a'
@@ -60,7 +60,7 @@ pushrebase it directly onto master - it will be rewritten without the mutation e
   ├─╯
   o  d20a80d4def3 'base'
   
-  $ hg debugmutation -r master
+  $ hg debugmutation -r master_bookmark
    *  a05b3505b7d1aac5fd90b09a5f014822647ec205
   
 create another commit on the base commit with mutation extras
@@ -72,17 +72,17 @@ create another commit on the base commit with mutation extras
    *  fd935a5d42c4be474397d87ab7810b0b006722af amend by test at 1970-01-01T00:00:00 from:
       1b9fe529321657f93e84f23afaf9c855b9af34ff
   
-pushrebase it onto master - it will be rebased and rewritten without the mutation extras
-  $ hg push -r . --to master --config push.skip-cleanup-commits=true
-  pushing rev fd935a5d42c4 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master
+pushrebase it onto master_bookmark - it will be rebased and rewritten without the mutation extras
+  $ hg push -r . --to master_bookmark --config push.skip-cleanup-commits=true
+  pushing rev fd935a5d42c4 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload
   edenapi: uploaded 1 file
   edenapi: queue 1 tree for upload
   edenapi: uploaded 1 tree
   edenapi: uploaded 1 changeset
-  pushrebasing stack (d20a80d4def3, fd935a5d42c4] (1 commit) to remote bookmark master
-  updated remote bookmark master to 7042a534cddc
+  pushrebasing stack (d20a80d4def3, fd935a5d42c4] (1 commit) to remote bookmark master_bookmark
+  updated remote bookmark master_bookmark to 7042a534cddc
 
   $ tglog
   o  7042a534cddc '2a'
@@ -95,6 +95,6 @@ pushrebase it onto master - it will be rebased and rewritten without the mutatio
   ├─╯
   o  d20a80d4def3 'base'
   
-  $ hg debugmutation -r master
+  $ hg debugmutation -r master_bookmark
    *  7042a534cddcd761aeea38446ce39590634568e8
   

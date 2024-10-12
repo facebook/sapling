@@ -21,6 +21,7 @@
 
 -- setup hg client repos
   $ cd "$TESTTMP"
+  $ setconfig remotenames.selectivepulldefault=master_bookmark,somebook,fbsource/somebook
   $ hg clone -q mono:fbs-mon fbs-hg-cnt --noupdate
   $ hg clone -q mono:ovr-mon ovr-hg-cnt --noupdate
   $ hg clone -q mono:meg-mon meg-hg-cnt --noupdate

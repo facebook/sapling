@@ -28,7 +28,7 @@ Push commit, check a globalrev was assigned
   branch=default
   global_rev=1000147970
   $ hg bookmarks --remote
-     default/master_bookmark   2fa5be0dd895
+     default/master_bookmark           2fa5be0dd895db0f33eaad12bc9fb3e17c169012
 
 Push another commit, check that the globalrev is incrementing
   $ touch file2
@@ -38,20 +38,20 @@ Push another commit, check that the globalrev is incrementing
   branch=default
   global_rev=1000147971
   $ hg bookmarks --remote
-     default/master_bookmark   7a3a1e2e51f5
+     default/master_bookmark           7a3a1e2e51f575e8390b4e0867ac8584dba59df8
 
 
 Check that we create a new bookmark that is a descendant of the globalrev bookmark
   $ hg push -q -r '.^' --to other_bookmark --create
   $ hg bookmarks --remote
-     default/master_bookmark   7a3a1e2e51f5
-     default/other_bookmark    2fa5be0dd895
+     default/master_bookmark           7a3a1e2e51f575e8390b4e0867ac8584dba59df8
+     default/other_bookmark            2fa5be0dd895db0f33eaad12bc9fb3e17c169012
 
 Check that we update bookmark to a descendant of the globalrev bookmark
   $ hg push -q -r . --to other_bookmark --force
   $ hg bookmarks --remote
-     default/master_bookmark   7a3a1e2e51f5
-     default/other_bookmark    7a3a1e2e51f5
+     default/master_bookmark           7a3a1e2e51f575e8390b4e0867ac8584dba59df8
+     default/other_bookmark            7a3a1e2e51f575e8390b4e0867ac8584dba59df8
 
 Check that we cannot pushrebase on that bookmark
   $ touch file3

@@ -54,9 +54,9 @@
   $ git tag -a push_tag $(git hash-object new_file) -m "Tag for push" 
 
 # Push all the changes made so far
-  $ git_client push origin master push_tag new_branch
+  $ git_client push origin master_bookmark push_tag new_branch
   To https://*/repos/git/ro/repo.git (glob)
-     e8615d6..e8b927e  master -> master
+     e8615d6..e8b927e  master_bookmark -> master_bookmark
    ! [remote rejected] push_tag -> push_tag (*** Refs pointing to tree or blobs is not allowed)
    ! [remote rejected] new_branch -> new_branch (*** Refs pointing to tree or blobs is not allowed)
   error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'

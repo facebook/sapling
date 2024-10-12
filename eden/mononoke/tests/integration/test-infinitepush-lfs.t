@@ -62,7 +62,6 @@ Do infinitepush (aka commit cloud) push
   sending hello command
   sending clienttelemetry command
   query 1; heads
-  sending batch command
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 1
   1 total queries in 0.0000s
@@ -81,15 +80,13 @@ Do infinitepush (aka commit cloud) push
   bundle2-input-bundle: 1 params no-transaction
   bundle2-input-part: "reply:changegroup" (params: 2 mandatory) supported
   bundle2-input-bundle: 0 parts total
-  preparing listkeys for "bookmarks"
-  sending listkeys command
-  received listkey for "bookmarks": 57 bytes
+  preparing listkeys for "bookmarks" with pattern "['master_bookmark']"
+  sending listkeyspatterns command
+  received listkey for "bookmarks": 56 bytes
 
 Try to pull it
   $ cd "${TESTTMP}/repo-pull"
   $ hg pull -r 68394cf51f7e96952fe832a3c05d17a9b49e8b4b
   pulling from mono:repo
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
+  fetching revlog data for 1 commits

@@ -13,6 +13,9 @@ Setup repository
   $ export REPO_CLIENT_USE_WARM_BOOKMARKS_CACHE="true"
   $ BLOB_TYPE="blob_files" quiet default_setup_pre_blobimport
 
+FIXME: enable selective pull
+  $ setconfig remotenames.selectivepull=false
+
   $ blobimport repo/.hg repo
   $ mononoke --scuba-dataset "file://$SCUBA_LOGGING_PATH"
   $ wait_for_mononoke "$TESTTMP/repo"

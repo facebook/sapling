@@ -75,11 +75,6 @@ Check LFS is not in backup
   $ REPONAME=backup
   $ hg pull
   pulling from mono:backup
-  searching for changes
-  no changes found
-  adding changesets
-  adding manifests
-  adding file changes
   $ hg up master_bookmark
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ [ -f lfs-largefile ]; echo "$?"
@@ -95,9 +90,7 @@ Check LFS is in backup
   $ hg pull
   pulling from mono:backup
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
+  fetching revlog data for 1 commits
   $ hg up master_bookmark
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ [ -f lfs-largefile ]; echo "$?"
