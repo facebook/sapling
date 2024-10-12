@@ -470,6 +470,10 @@ void SaplingBackingStore::processBlobImportRequests(
                 stats_.copy());
             break;
         }
+        if (store_.dogfoodingHost()) {
+          stats_->increment(
+              &SaplingBackingStoreStats::fetchBlobSuccessDogfooding);
+        }
       } else {
         retryRequest.emplace_back(std::move(request));
       }
@@ -517,6 +521,10 @@ void SaplingBackingStore::processBlobImportRequests(
             stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccess);
             break;
         }
+        if (store_.dogfoodingHost()) {
+          stats_->increment(
+              &SaplingBackingStoreStats::fetchBlobSuccessDogfooding);
+        }
         continue;
       }
 
@@ -527,6 +535,10 @@ void SaplingBackingStore::processBlobImportRequests(
         case SaplingImportRequest::FetchType::Fetch:
           stats_->increment(&SaplingBackingStoreStats::fetchBlobFailure);
           break;
+      }
+      if (store_.dogfoodingHost()) {
+        stats_->increment(
+            &SaplingBackingStoreStats::fetchBlobFailureDogfooding);
       }
       // The blobs were either not found locally, or, when EdenAPI is enabled,
       // not found on the server. Let's retry to import the blob
@@ -623,6 +635,10 @@ folly::SemiFuture<BlobPtr> SaplingBackingStore::retryGetBlob(
                   &SaplingBackingStoreStats::fetchBlobRetrySuccess);
               break;
           }
+          if (store_.dogfoodingHost()) {
+            stats_->increment(
+                &SaplingBackingStoreStats::fetchBlobRetrySuccessDogfooding);
+          }
           switch (fetch_mode) {
             case sapling::FetchMode::LocalOnly:
               context->setFetchedSource(
@@ -664,6 +680,10 @@ folly::SemiFuture<BlobPtr> SaplingBackingStore::retryGetBlob(
               stats_->increment(
                   &SaplingBackingStoreStats::fetchBlobRetryFailure);
               break;
+          }
+          if (store_.dogfoodingHost()) {
+            stats_->increment(
+                &SaplingBackingStoreStats::fetchBlobRetryFailureDogfooding);
           }
           auto ew = folly::exception_wrapper{blob.exception()};
           result = folly::makeFuture<BlobPtr>(std::move(ew));
@@ -776,6 +796,10 @@ void SaplingBackingStore::processTreeImportRequests(
         stats_->addDuration(
             &SaplingBackingStoreStats::fetchTree, watch.elapsed());
         stats_->increment(&SaplingBackingStoreStats::fetchTreeSuccess);
+        if (store_.dogfoodingHost()) {
+          stats_->increment(
+              &SaplingBackingStoreStats::fetchTreeSuccessDogfooding);
+        }
       } else {
         retryRequest.emplace_back(std::move(request));
       }
@@ -803,12 +827,20 @@ void SaplingBackingStore::processTreeImportRequests(
         stats_->addDuration(
             &SaplingBackingStoreStats::fetchTree, watch.elapsed());
         stats_->increment(&SaplingBackingStoreStats::fetchTreeSuccess);
+        if (store_.dogfoodingHost()) {
+          stats_->increment(
+              &SaplingBackingStoreStats::fetchTreeSuccessDogfooding);
+        }
         continue;
       }
 
       // The trees were either not found locally, or, when EdenAPI is enabled,
       // not found on the server. Let's retry to import the trees
       stats_->increment(&SaplingBackingStoreStats::fetchTreeFailure);
+      if (store_.dogfoodingHost()) {
+        stats_->increment(
+            &SaplingBackingStoreStats::fetchTreeFailureDogfooding);
+      }
       auto* treeImport =
           request->getRequest<SaplingImportRequest::TreeImport>();
       auto treeSemiFuture =
@@ -1547,6 +1579,9 @@ folly::SemiFuture<BackingStore::GetTreeResult> SaplingBackingStore::getTree(
         proxyHash.path(),
         proxyHash.revHash().toString());
     stats_->increment(&SaplingBackingStoreStats::fetchTreeSuccess);
+    if (store_.dogfoodingHost()) {
+      stats_->increment(&SaplingBackingStoreStats::fetchTreeSuccessDogfooding);
+    }
     stats_->increment(&SaplingBackingStoreStats::fetchTreeLocal);
     return folly::makeSemiFuture(GetTreeResult{
         std::move(tree), ObjectFetchContext::Origin::FromDiskCache});
@@ -1675,6 +1710,9 @@ folly::SemiFuture<BackingStore::GetBlobResult> SaplingBackingStore::getBlob(
   auto blob = getBlobLocal(proxyHash);
   if (blob.hasValue()) {
     stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccess);
+    if (store_.dogfoodingHost()) {
+      stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccessDogfooding);
+    }
     stats_->increment(&SaplingBackingStoreStats::fetchBlobLocal);
     return folly::makeSemiFuture(GetBlobResult{
         std::move(blob.value()), ObjectFetchContext::Origin::FromDiskCache});
@@ -1992,6 +2030,9 @@ folly::Future<TreePtr> SaplingBackingStore::importTreeManifestImpl(
       case ObjectFetchContext::kObjectTypeEnumMax:
         break;
     }
+    if (store_.dogfoodingHost()) {
+      stats_->increment(&SaplingBackingStoreStats::fetchTreeSuccessDogfooding);
+    }
     return folly::makeFuture(std::move(tree.value()));
   }
   // retry once if the initial fetch failed
@@ -2014,6 +2055,9 @@ folly::Future<TreePtr> SaplingBackingStore::importTreeManifestImpl(
     case ObjectFetchContext::PrefetchBlob:
     case ObjectFetchContext::kObjectTypeEnumMax:
       break;
+  }
+  if (store_.dogfoodingHost()) {
+    stats_->increment(&SaplingBackingStoreStats::fetchTreeFailureDogfooding);
   }
   return retryGetTree(manifestNode, objectId, path, context.copy(), type);
 }
@@ -2196,6 +2240,10 @@ folly::Future<TreePtr> SaplingBackingStore::retryGetTreeImpl(
             case ObjectFetchContext::kObjectTypeEnumMax:
               break;
           }
+          if (store_.dogfoodingHost()) {
+            stats_->increment(
+                &SaplingBackingStoreStats::fetchTreeRetrySuccessDogfooding);
+          }
           result = tree.value();
         } else {
           // Record miss and return error
@@ -2228,6 +2276,10 @@ folly::Future<TreePtr> SaplingBackingStore::retryGetTreeImpl(
             case ObjectFetchContext::PrefetchBlob:
             case ObjectFetchContext::kObjectTypeEnumMax:
               break;
+          }
+          if (store_.dogfoodingHost()) {
+            stats_->increment(
+                &SaplingBackingStoreStats::fetchTreeRetryFailureDogfooding);
           }
           auto ew = folly::exception_wrapper{tree.exception()};
           result = folly::makeFuture<TreePtr>(std::move(ew));
