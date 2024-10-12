@@ -483,7 +483,7 @@ def xmlescape(text):
         .replace('"', "&quot;")
         .replace("'", "&#39;")
     )  # &apos; invalid in HTML
-    return re.sub("[\x00-\x08\x0B\x0C\x0E-\x1F]", " ", text)
+    return re.sub("[\x00-\x08\x0b\x0c\x0e-\x1f]", " ", text)
 
 
 def loadfilter(ui, extname, registrarobj):

@@ -46,7 +46,6 @@ def _findupdatetarget(repo, nodes):
 
 def strip(ui, repo, revs, update=True, backup=True, force=None, bookmarks=None):
     with repo.wlock(), repo.lock():
-
         if update:
             checklocalchanges(repo, force=force)
             urev = _findupdatetarget(repo, revs)

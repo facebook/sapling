@@ -5,7 +5,6 @@
 
 """Revlog compatibility backed by modern storage backend."""
 
-
 import hashlib
 import pickle
 

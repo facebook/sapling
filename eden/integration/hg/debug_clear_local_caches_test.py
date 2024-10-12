@@ -71,7 +71,6 @@ class DebugClearLocalCachesTest(EdenHgTestCase):
         with open(os.path.join(self.mount, "hello")) as c2_hello_file, open(
             os.path.join(self.mount, "subdir", "file2")
         ) as c2_file2_file:
-
             self.eden.run_cmd("debug", "clear_local_caches")
             self.eden.graceful_restart()
             self.eden.run_cmd("debug", "flush_cache", "hello", cwd=self.mount)

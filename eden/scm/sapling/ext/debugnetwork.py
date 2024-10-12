@@ -38,7 +38,9 @@ def httpstatussuccess(s):
     return s >= 200 and s < 300
 
 
-def checkdnsresolution(ui, url) -> Optional[
+def checkdnsresolution(
+    ui, url
+) -> Optional[
     List[
         Tuple[
             socket.AddressFamily,

@@ -79,7 +79,7 @@ def write(
         hashing_write(b"\x02")
         _write_path(hashing_write, dest)
         _write_path(hashing_write, source)
-    hashing_write(b"\xFF")
+    hashing_write(b"\xff")
 
     # Write the checksum, so we use file.write() instead of hashing_write().
     file.write(sha.digest())

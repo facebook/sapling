@@ -148,7 +148,6 @@ class RustBinary:
 
 
 class BuildRustExt(Command):
-
     description = "build Rust extensions (compile/link to build directory)"
 
     user_options = [

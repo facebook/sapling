@@ -37,6 +37,7 @@ Configs:
     ``pushrebase.commitdatesfile`` is a file with map {commit hash -> timestamp}
     in a json format.
 """
+
 from __future__ import absolute_import
 
 import errno

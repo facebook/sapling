@@ -4,7 +4,7 @@
 # GNU General Public License version 2.
 
 # Infinite push
-""" store draft commits in the cloud
+"""store draft commits in the cloud
 
 Configs::
 
@@ -194,7 +194,6 @@ def pushbackupbundle(ui, repo, other, outgoing, bookmarks):
 
 
 def pushbackupbundlewithdiscovery(ui, repo, other, heads, bookmarks):
-
     if heads:
         outgoing = discovery.findcommonoutgoing(repo, other, onlyheads=heads)
     else:

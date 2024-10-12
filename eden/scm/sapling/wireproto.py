@@ -347,10 +347,13 @@ class wirepeer(repository.legacypeer):
         self.ui.debug(
             'preparing listkeys for "%s" with pattern "%s"\n' % (namespace, patterns)
         )
-        yield {
-            "namespace": encoding.fromlocal(namespace),
-            "patterns": encodelist([pycompat.encodeutf8(p) for p in patterns]),
-        }, f
+        yield (
+            {
+                "namespace": encoding.fromlocal(namespace),
+                "patterns": encodelist([pycompat.encodeutf8(p) for p in patterns]),
+            },
+            f,
+        )
         d = f.value
         self.ui.debug('received listkey for "%s": %i bytes\n' % (namespace, len(d)))
         yield pushkeymod.decodekeys(d)
@@ -361,12 +364,15 @@ class wirepeer(repository.legacypeer):
             yield False, None
         f = future()
         self.ui.debug('preparing pushkey for "%s:%s"\n' % (namespace, key))
-        yield {
-            "namespace": encoding.fromlocal(namespace),
-            "key": encoding.fromlocal(key),
-            "old": encoding.fromlocal(old),
-            "new": encoding.fromlocal(new),
-        }, f
+        yield (
+            {
+                "namespace": encoding.fromlocal(namespace),
+                "key": encoding.fromlocal(key),
+                "old": encoding.fromlocal(old),
+                "new": encoding.fromlocal(new),
+            },
+            f,
+        )
         d = decodeutf8(f.value)
         d, output = d.split("\n", 1)
         try:
@@ -1164,7 +1170,6 @@ def pushkey(repo, proto, namespace, key, old, new):
         new = encoding.tolocal(new)  # normal path
 
     if hasattr(proto, "restore"):
-
         proto.redirect()
 
         try:

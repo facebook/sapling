@@ -205,9 +205,7 @@ def backgroundbackup(repo, reason=None):
         background_cmd[1:]
     ).avoidinherithandles().newsession().stdin(Stdio.null()).stdout(out).stderr(
         out
-    ).env(
-        "EDENSCM_LOG", "clienttelemetry=info"
-    ).spawn()
+    ).env("EDENSCM_LOG", "clienttelemetry=info").spawn()
 
 
 class WrongPermissionsException(Exception):

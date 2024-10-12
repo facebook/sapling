@@ -46,7 +46,9 @@ def _localrepoinit(
                 kwargs[targetname] = value
 
     self.ui.log(
-        "logginghelper", "", **kwargs  # ui.log requires a format string as args[0].
+        "logginghelper",
+        "",
+        **kwargs,  # ui.log requires a format string as args[0].
     )
 
 

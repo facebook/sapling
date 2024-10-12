@@ -25,7 +25,6 @@ def check_recent_writes(
     instance: EdenInstance,
     debug: bool,
 ) -> None:
-
     # setting true will output a top ten list of largest write operations.
     verboseOutput = debug
 
@@ -76,7 +75,6 @@ def check_recent_writes(
 
 
 def should_we_report_error(results: Dict[str, int], minWriteThreshold: int) -> bool:
-
     total = 0
     for val in results:
         total += results[val]
@@ -87,7 +85,6 @@ def should_we_report_error(results: Dict[str, int], minWriteThreshold: int) -> b
 def format_output_message_verbose(
     result: Dict[str, int], maxNumberDisplayed: int, minWriteThreshold: int
 ) -> str:
-
     message = "\nCount List:"
 
     warnlist = []
@@ -124,7 +121,6 @@ def format_output_message_verbose(
 
 
 def format_output_message(result: Dict[str, int], minWriteThreshold: int) -> str:
-
     totalCounts = 0
     for val in result:
         totalCounts += result[val]

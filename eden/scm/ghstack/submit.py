@@ -137,7 +137,6 @@ def main(
     github_url: str,
     remote_name: str,
 ) -> List[Optional[DiffMeta]]:
-
     repo = ghstack.github_utils.get_github_repo_info(
         github=github,
         sh=sh,
@@ -496,9 +495,7 @@ If you think this is in error, run:
 
 to disassociate the commit with the pull request, and then try again.
 (This will create a new pull request!)
-""".format(
-                        commit.oid
-                    )
+""".format(commit.oid)
                 )
         username = m.group(1)
         gh_number = GhNumber(m.group(2))
@@ -816,7 +813,6 @@ Since we cannot proceed, ghstack will abort now.
         non_orig_commit_msg = strip_mentions(RE_STACK.sub("", elab_commit.body))
 
         if orig_base_hash == self.base_commit:
-
             new_base = self.base_commit
             base_args = ()
 

@@ -79,7 +79,7 @@ class DebugBlobHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
         )
         print(response)
         # this should not error
-        response.blobs[0].blob.get_error(),
+        (response.blobs[0].blob.get_error(),)
 
     def assert_blob_available(
         self,
@@ -213,7 +213,7 @@ class DebugBlobMetadataHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
         )
         print(response)
         # this should not error
-        response.metadatas[0].metadata.get_error(),
+        (response.metadatas[0].metadata.get_error(),)
 
     def assert_metadata_available(
         self,

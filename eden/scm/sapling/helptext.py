@@ -3424,9 +3424,7 @@ Working directory parent
 """
 
 
-globals()[
-    "merge-tools"
-] = r"""To merge files @Product@ uses merge tools.
+globals()["merge-tools"] = r"""To merge files @Product@ uses merge tools.
 
 A merge tool combines two different versions of a file into a merged
 file. Merge tools are given the two files and the greatest common

@@ -29,7 +29,7 @@ def pack_dirstate(
     now: int,
 ) -> bytes: ...
 def nonnormalotherparententries(
-    dmap: Dict[str, dirstatetuple]
+    dmap: Dict[str, dirstatetuple],
 ) -> Tuple[Set[str], Set[str]]: ...
 
 class lazymanifest:

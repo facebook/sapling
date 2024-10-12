@@ -347,8 +347,9 @@ bbb
         )
         m_lines, conflictscount = render_minimized(m3, b"OTHER", b"THIS")
         self.assertEqual(
-            b"<<<<<<< OTHER\r\nc\r\n=======\r\nb\r\n"
-            b">>>>>>> THIS\r\n".splitlines(True),
+            b"<<<<<<< OTHER\r\nc\r\n=======\r\nb\r\n" b">>>>>>> THIS\r\n".splitlines(
+                True
+            ),
             m_lines,
         )
         self.assertEqual(conflictscount, 1)

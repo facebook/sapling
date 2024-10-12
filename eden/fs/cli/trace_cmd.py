@@ -58,29 +58,29 @@ Events are encoded using the following emojis:
 Event Type:
 \u2193 START
 \u2714 FINISH
-\u26A0 FAILURE
+\u26a0 FAILURE
 
 Resource Type:
-\U0001F4C4 Blob (file content)
-\U0001F332 Tree (directory content)
-\U0001F5C2\U00000020 Blob Aux Data (sha1, size, blake3)
-\U000100B7 Tree Aux Data (digest size, digest hash)
+\U0001f4c4 Blob (file content)
+\U0001f332 Tree (directory content)
+\U0001f5c2\U00000020 Blob Aux Data (sha1, size, blake3)
+\U000100b7 Tree Aux Data (digest size, digest hash)
 
 Import Priority (--verbose):
-\U0001F535 LOW
-\U0001F7E1 NORMAL
-\U0001F534 HIGH
+\U0001f535 LOW
+\U0001f7e1 NORMAL
+\U0001f534 HIGH
 
 Import Cause (--verbose):
 \u2753 UNKNOWN
-\U0001F4C1 FS
-\U0001F4E0 THRIFT
-\U0001F4C5 PREFETCH
+\U0001f4c1 FS
+\U0001f4e0 THRIFT
+\U0001f4c5 PREFETCH
 
 Fetched Source in Sapling (--verbose):
-\U0001F4BB LOCAL
-\U0001F310 REMOTE
-\U0001F937 UNKNOWN
+\U0001f4bb LOCAL
+\U0001f310 REMOTE
+\U0001f937 UNKNOWN
 \U00000020\U00000020 not available yet
 
 """
@@ -185,11 +185,11 @@ Events for this command are encoded using the following emojis/letters:
 Event Progress:
 \u2193 START
 \u2714 FINISH
-\u26A0 FAILURE
+\u26a0 FAILURE
 
 Resource Type:
-\U0001F4C4 BLOB/FILE
-\U0001F332 TREE/DIRECTORY
+\U0001f4c4 BLOB/FILE
+\U0001f332 TREE/DIRECTORY
 
 Event Type
 L LOAD

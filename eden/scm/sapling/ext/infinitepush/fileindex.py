@@ -4,10 +4,10 @@
 # GNU General Public License version 2.
 
 """
-    [infinitepush]
-    # Server-side option. Used only if indextype=disk.
-    # Filesystem path to the index store
-    indexpath = PATH
+[infinitepush]
+# Server-side option. Used only if indextype=disk.
+# Filesystem path to the index store
+indexpath = PATH
 """
 
 import os
@@ -143,8 +143,9 @@ class fileindex:
                 bookmark = posixpath.join(dirpath, book)[prefixlen:]
                 if not matcher(bookmark):
                     continue
-                yield bookmark, pycompat.decodeutf8(
-                    self._read(os.path.join(dirpath, book))
+                yield (
+                    bookmark,
+                    pycompat.decodeutf8(self._read(os.path.join(dirpath, book))),
                 )
 
     def _write(self, path, value):

@@ -89,7 +89,6 @@ try:
         stop_internal_processes,
     )
 except ImportError:
-
     migration_restart_help = "This migrates ALL your mounts to a new mount protocol."
 
     # pyre-fixme[2]: Parameter must be annotated.
@@ -234,7 +233,6 @@ class InfoCmd(Subcmd):
 
 @subcmd("du", "Show disk space usage for a checkout")
 class DiskUsageCmd(Subcmd):
-
     # pyre-fixme[4]: Attribute must be annotated.
     isatty = sys.stdout and sys.stdout.isatty()
     # Escape sequence to move the cursor left to the start of the line
@@ -539,7 +537,6 @@ space by running:
         lfs_repos: Set[Path],
         backed_working_copy_repos: Set[Path],
     ) -> None:
-
         self.usage_for_dir(backing_repo, "backing")
 
         hg_dir = backing_repo / hg_util.sniff_dot_dir(backing_repo)
@@ -619,7 +616,6 @@ Legacy bind mount dirs listed above are unused and can be removed!
     def usage_for_mount(
         self, mount: str, args: argparse.Namespace, clean: bool, deep_clean: bool
     ) -> None:
-
         instance, checkout, _rel_path = require_checkout(args, mount)
 
         client_dir = checkout.state_dir

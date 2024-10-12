@@ -6,6 +6,7 @@
 """
 mark commits as "Landed" on pull
 """
+
 import typing as t
 from collections import defaultdict
 

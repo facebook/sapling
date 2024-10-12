@@ -452,7 +452,6 @@ if pycompat.iswindows:
     from ctypes.wintypes import DWORD, HANDLE
 
     def openfilewin(path):
-
         createfile = ctypes.windll.kernel32.CreateFileW
 
         cpath = ctypes.create_unicode_buffer(path)

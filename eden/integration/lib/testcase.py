@@ -681,7 +681,7 @@ def _replicate_test(
 
 
 def test_replicator(
-    replicate: Callable[..., Iterable[Tuple[str, Type[unittest.TestCase]]]]
+    replicate: Callable[..., Iterable[Tuple[str, Type[unittest.TestCase]]]],
 ) -> Callable[..., Any]:
     """
     A helper function for implementing decorators that replicate TestCase

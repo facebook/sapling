@@ -353,7 +353,7 @@ def slidegoal():
         r"Improve $ O(changelog) $ set operations.",
         itemlist(tt("a + b"), tt("a - b"), tt(r"a \& b")),
     )
-    yield r"\footnotetext[2]{Number of commits in the repo}",
+    yield (r"\footnotetext[2]{Number of commits in the repo}",)
 
 
 def slidenongoal():
@@ -524,10 +524,13 @@ def slidespans():
         ],
         widths=(0.35, 0.63),
     )
-    yield r"\footnotetext[2]{%s can be lazy\footnotemark[3] to avoid %s and %s lookups.}" % (
-        tt("::10"),
-        tt("1:2"),
-        tt("3:4"),
+    yield (
+        r"\footnotetext[2]{%s can be lazy\footnotemark[3] to avoid %s and %s lookups.}"
+        % (
+            tt("::10"),
+            tt("1:2"),
+            tt("3:4"),
+        )
     )
     yield r"\footnotetext[3]{Laziness has a cost. Non-lazy version has $ O(\log changelog) $-ish overhead.}"
 
@@ -599,7 +602,7 @@ def slidenumberassign3():
 
 
 def slidenumberassignalgo():
-    yield r"To assign a number for %s, check its parents." % tt("x"),
+    yield (r"To assign a number for %s, check its parents." % tt("x"),)
     yield itemlist(
         r"If all parents have numbers, assign the next available number to %s."
         % tt("x"),
@@ -626,7 +629,7 @@ def sliderealworldrepos():
         ["hg", "42k", 4654, 297, 17, 0],
     ]
     yield box(table(rows))
-    yield r"\footnotetext[2]{Segment Size = 16. Last segment per level is removed.}",
+    yield (r"\footnotetext[2]{Segment Size = 16. Last segment per level is removed.}",)
 
 
 def slidestorage():

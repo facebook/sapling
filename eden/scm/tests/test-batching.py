@@ -36,7 +36,6 @@ class localthing(thing):
 
 # usage of "thing" interface
 def use(it):
-
     # Direct call to base method shared between client and server.
     print(it.hello())
 

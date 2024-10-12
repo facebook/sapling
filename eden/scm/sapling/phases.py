@@ -5,7 +5,7 @@
 
 # Copyright Olivia Mackall <olivia@selenic.com> and others
 
-""" Mercurial phases support code
+"""Mercurial phases support code
 
     ---
 
@@ -495,7 +495,6 @@ class phasecache:
             self._retractboundary(repo, tr, targetphase, nodes)
             and phasetracking is not None
         ):
-
             # find the affected revisions
             new = self.phaseroots[targetphase]
             old = oldroots[targetphase]
@@ -524,7 +523,6 @@ class phasecache:
         finalroots = oldroots = set(currentroots)
         newroots = [n for n in nodes if self.phase(repo, repo[n].rev()) < targetphase]
         if newroots:
-
             if nullid in newroots:
                 raise error.Abort(_("cannot change null revision phase"))
             currentroots = currentroots.copy()

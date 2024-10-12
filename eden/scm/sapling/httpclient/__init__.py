@@ -41,6 +41,7 @@ httplib, but has several additional features:
   * notices when the server responds early to a request
   * implements ssl inline instead of in a different class
 """
+
 from __future__ import absolute_import
 
 # Many functions in this file have too many arguments.

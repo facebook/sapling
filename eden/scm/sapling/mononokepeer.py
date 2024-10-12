@@ -64,7 +64,6 @@ class mononokepipe:
     """Wraps a pipe that count the number of bytes read/written to it"""
 
     def __init__(self, ui, pipe, decompress=False):
-
         self._sendbuf = b""
         self._readbuf = b""
         self._readoffset = 0

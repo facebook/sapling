@@ -2,6 +2,7 @@
 """
 Tests the behavior of filelog w.r.t. data starting with '\1\n'
 """
+
 from __future__ import absolute_import, print_function
 
 from sapling import hg, ui as uimod

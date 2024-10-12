@@ -44,6 +44,7 @@ template.
     # globalrev. This configuration is only effective on the clients.
     scmquerylookup = False
 """
+
 from __future__ import absolute_import
 
 import re

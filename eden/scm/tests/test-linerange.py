@@ -19,9 +19,7 @@ text1 = b"""
            09 at OLD
            10 at OLD
            11 at OLD
-"""[
-    1:
-]  # strip initial LF
+"""[1:]  # strip initial LF
 
 text2 = b"""
 00 at NEW
@@ -36,9 +34,7 @@ text2 = b"""
 09 at NEW
 10 at NEW
 11 at NEW
-"""[
-    1:
-]  # strip initial LF
+"""[1:]  # strip initial LF
 
 
 def filteredblocks(blocks, rangeb):

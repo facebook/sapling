@@ -3,8 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-"""templates to use when the GitHub extension is enabled
-"""
+"""templates to use when the GitHub extension is enabled"""
 
 from typing import Optional
 

@@ -150,7 +150,6 @@ class FailsToOpenLocalStoreTestWithMounts(EdenHgTestCase):
         repo.write_file("afile", "blah")
 
     def test_start_eden_with_local_store_that_fails_to_open(self) -> None:
-
         self.eden.shutdown()
 
         self.eden.start(

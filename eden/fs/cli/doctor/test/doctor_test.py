@@ -2458,9 +2458,7 @@ Your local commits will be unaffected, but reclones will lose uncommitted work o
 However, the local changes are manually recoverable before the reclone.
 If you have local changes you would like to save before reclone, see {recovery_link}, or reachout to the EdenFS team.
 To reclone the corrupted repo, run: `fbclone \$REPO --reclone --eden`
-((.|\n)*)""".format(
-                path=clean_path, recovery_link=get_local_commit_recovery_link()
-            ),
+((.|\n)*)""".format(path=clean_path, recovery_link=get_local_commit_recovery_link()),
         )
 
     @patch("eden.fs.cli.doctor.test.lib.fake_eden_instance.FakeEdenInstance.mount")
@@ -2497,9 +2495,7 @@ To recover, you will need to remove and reclone the repo.
 Your local commits will be unaffected, but reclones will lose uncommitted work or shelves.
 However, the local changes are manually recoverable before the reclone.
 To remove the corrupted repo, run: `eden rm {path}`
-((.|\n)*)""".format(
-                path=clean_path
-            ),
+((.|\n)*)""".format(path=clean_path),
         )
 
     @patch("eden.fs.cli.doctor.test.lib.fake_eden_instance.FakeEdenInstance.mount")

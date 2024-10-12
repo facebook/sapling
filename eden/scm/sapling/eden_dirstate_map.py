@@ -4,6 +4,7 @@
 # GNU General Public License version 2.
 
 """Eden implementation for the dirstatemap class."""
+
 import stat
 from typing import BinaryIO, Dict
 

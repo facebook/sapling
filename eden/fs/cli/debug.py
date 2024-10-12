@@ -77,7 +77,6 @@ from thrift.util import Serializer
 try:
     from tqdm import tqdm
 except ModuleNotFoundError:
-
     # pyre-fixme[3]: Return type must be annotated.
     # pyre-fixme[2]: Parameter must be annotated.
     def tqmd(x):
@@ -127,7 +126,6 @@ class BooleanOptionalAction(argparse.Action):
         # pyre-fixme[2]: Parameter must be annotated.
         metavar=None,
     ):
-
         _option_strings = []
         for option_string in option_strings:
             _option_strings.append(option_string)
@@ -336,7 +334,6 @@ class ProcessFetchCmd(Subcmd):
 
         eden = cmd_util.get_eden_instance(args)
         with eden.get_thrift_client_legacy() as client:
-
             # Get the data in the past 16 seconds. All data is collected only within
             # this period except that fetchCountsByPid is from the beginning of start
             counts = client.getAccessCounts(16)

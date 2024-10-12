@@ -67,7 +67,6 @@ class status(tuple):
         clean,
         invalid_path=None,
     ):
-
         for files in (modified, added, removed, deleted, unknown, ignored, clean):
             assert all(isinstance(f, str) for f in files)
 

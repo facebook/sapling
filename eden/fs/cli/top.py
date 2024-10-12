@@ -560,12 +560,12 @@ class Top:
                     if longest_outstanding_request == STATS_NOT_AVAILABLE
                     else (longest_outstanding_request / 1000000)
                 )  # s
-                import_stats[import_stage][import_type][
-                    RequestMetric.COUNT
-                ] = number_requests
-                import_stats[import_stage][import_type][
-                    RequestMetric.MAX_DURATION
-                ] = longest_outstanding_request
+                import_stats[import_stage][import_type][RequestMetric.COUNT] = (
+                    number_requests
+                )
+                import_stats[import_stage][import_type][RequestMetric.MAX_DURATION] = (
+                    longest_outstanding_request
+                )
         return import_stats
 
     # pyre-fixme[3]: Return type must be annotated.
@@ -604,9 +604,9 @@ class Top:
                 else:
                     raise Exception(f"Aggregation not implemented for: {metric.value}")
 
-        fuse_requests_stats[RequestStage.PENDING][
-            RequestMetric.MAX_DURATION
-        ] = STATS_NOT_IMPLEMENTED
+        fuse_requests_stats[RequestStage.PENDING][RequestMetric.MAX_DURATION] = (
+            STATS_NOT_IMPLEMENTED
+        )
         return fuse_requests_stats
 
     # fuse summary counters have the form:
@@ -824,7 +824,6 @@ class Top:
 
     # pyre-fixme[2]: Parameter must be annotated.
     def render_row(self, window: Window, row: Row, style) -> None:
-
         row_data = zip(row, COLUMN_ALIGNMENT, COLUMN_SPACING)
         for i, (raw_text, align, space) in enumerate(row_data):
             remaining_space = window.get_remaining_columns()

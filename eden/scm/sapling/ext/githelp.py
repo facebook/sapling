@@ -14,6 +14,7 @@ The translation is best effort, and if an unknown command or parameter
 combination is detected, it simply returns an error.
 
 """
+
 import re
 
 from bindings import cliparser, identity

@@ -97,7 +97,6 @@ def setup(
     file_level: int = logging.DEBUG,
     sapling_cli: str = _sapling_cli,
 ) -> None:
-
     global _sapling_cli
     _sapling_cli = sapling_cli
 

@@ -2125,9 +2125,10 @@ def iterhunks(fp):
             if gitpatches is None:
                 # scan whole input for git metadata
                 gitpatches = scangitpatch(lr, x)
-                yield "git", [
-                    g.copy() for g in gitpatches if g.op in ("COPY", "RENAME")
-                ]
+                yield (
+                    "git",
+                    [g.copy() for g in gitpatches if g.op in ("COPY", "RENAME")],
+                )
                 gitpatches.reverse()
             afile = "a/" + pycompat.decodeutf8(m.group(1))
             bfile = "b/" + pycompat.decodeutf8(m.group(2))

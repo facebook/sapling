@@ -35,7 +35,6 @@ Config::
     sockettimeout = 60
 """
 
-
 from __future__ import absolute_import
 
 import hashlib
@@ -1040,7 +1039,6 @@ def wraprepo(repo) -> None:
                     # only let one process update the repo at a time.
                     limiter = self.synclimiter()
                     if not limiter:
-
                         # It's important that we load bookmarks before the
                         # changelog. This way we know that the bookmarks point to
                         # valid nodes. Otherwise, the bookmarks might change between
@@ -2367,7 +2365,6 @@ def _discoverrevisions(repo, startrev):
 def sqlrefill(ui, startrev: int, **opts) -> None:
     """Inserts the given revs into the database"""
     if not opts.get("i_know_what_i_am_doing"):
-
         raise util.Abort(
             "You must pass --i-know-what-i-am-doing to run this "
             "command. If you have multiple servers using the database, you "

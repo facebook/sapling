@@ -527,7 +527,8 @@ class vfs(abstractvfs):
             fp = checkambigatclosing(fp)
 
         if backgroundclose and isinstance(
-            threading.current_thread(), threading._MainThread  # pyre-fixme
+            threading.current_thread(),
+            threading._MainThread,  # pyre-fixme
         ):
             if not self._backgroundfilecloser:
                 raise error.Abort(

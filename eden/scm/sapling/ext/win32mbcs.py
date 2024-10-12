@@ -49,6 +49,7 @@ You can specify the encoding by config option::
 
 It is useful for the users who want to commit with UTF-8 log message.
 """
+
 from __future__ import absolute_import
 
 import os

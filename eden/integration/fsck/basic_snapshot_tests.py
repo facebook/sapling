@@ -67,7 +67,6 @@ class MissingMaterializedInode(FsckError):
 
 
 class InvalidMaterializedInode(FsckError):
-
     regex = r"error: error reading data for inode [0-9]+"
 
     def __init__(
@@ -106,7 +105,6 @@ class InvalidMaterializedInode(FsckError):
 
 
 class OrphanFile(FsckError):
-
     regex = r"error: found orphan file inode [0-9]+"
 
     def __init__(
@@ -137,7 +135,6 @@ class OrphanFile(FsckError):
 
 
 class OrphanDir(FsckError):
-
     regex = r"error: found orphan directory inode [0-9]+"
 
     def __init__(
@@ -169,7 +166,6 @@ class OrphanDir(FsckError):
 
 
 class MissingNextInodeNumber(FsckError):
-
     regex = r"Overlay was shut down uncleanly"
 
     def __init__(self) -> None:
@@ -191,7 +187,6 @@ class MissingNextInodeNumber(FsckError):
 
 
 class BadNextInodeNumber(FsckError):
-
     regex = r"error: bad stored next inode number: read [0-9]+ but should be at least [0-9]+"
 
     def __init__(
@@ -231,7 +226,6 @@ class BadNextInodeNumber(FsckError):
 
 
 class CorruptNextInodeNumber(FsckError):
-
     regex = r"Failed to read entire inode number\. Only read [0-9]+ bytes\. Full overlay scan required\."
 
     def __init__(self) -> None:
@@ -253,7 +247,6 @@ class CorruptNextInodeNumber(FsckError):
 
 
 def createFsckError(line: str) -> Optional[FsckError]:
-
     if MissingMaterializedInode.is_instance(line):
         return MissingMaterializedInode.create(line)
 
@@ -347,7 +340,6 @@ class SnapshotTestBase(
     def _check_expected_errors(
         self, actual_errors: List[FsckError], expected_errors: List[FsckError]
     ) -> None:
-
         actual_errors_str = sorted([str(x) for x in actual_errors])
         expected_errors_str = sorted([str(x) for x in expected_errors])
 

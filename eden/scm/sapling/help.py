@@ -662,7 +662,6 @@ class _helpdispatch:
         ]
 
         for desc, commands in helphomecommands:
-
             sectionrst = []
             for command in commands:
                 if cmdrst := self._helpcmditem(command):

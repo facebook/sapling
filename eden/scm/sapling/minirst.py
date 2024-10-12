@@ -536,7 +536,7 @@ def formatoption(block, width):
     colwidth = encoding.colwidth(block["optstr"])
     usablewidth = width - 1
     hanging = block["optstrwidth"]
-    initindent = "%s%s  " % (block["optstr"], " " * ((hanging - colwidth)))
+    initindent = "%s%s  " % (block["optstr"], " " * (hanging - colwidth))
     hangindent = " " * (encoding.colwidth(initindent) + 1)
     return " %s\n" % (
         util.wrap(desc, usablewidth, initindent=initindent, hangindent=hangindent)

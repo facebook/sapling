@@ -579,7 +579,6 @@ def _query_phabricator(repo, diffids, diff_status_list):
         return
 
     try:
-
         return client.getnodes(repo, diffids, diff_status_list)
 
     except Exception as ex:

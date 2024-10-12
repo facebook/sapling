@@ -5,10 +5,11 @@
 
 """upload useful diagnostics and give instructions for asking for help
 
-    [rage]
-    # Name of the rpm binary
-    rpmbin = rpm
+[rage]
+# Name of the rpm binary
+rpmbin = rpm
 """
+
 import ctypes
 import glob
 import json

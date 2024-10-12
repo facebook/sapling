@@ -29,6 +29,7 @@ location. For example::
 Note only '{1}' is supported. There is no '{2}', '{0}' or other template
 functions.
 """
+
 from __future__ import absolute_import
 
 import os

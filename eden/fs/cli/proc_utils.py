@@ -344,7 +344,6 @@ class MacProcUtils(UnixProcUtils):
         pid_to_eden_dir = self.get_eden_dir_mapping(pids)
 
         for uid, pid, cmdline in zip(uids, pids, cmds):
-
             if pid in pid_to_eden_dir:
                 eden_dir = pid_to_eden_dir[pid]
                 holding_lock = True

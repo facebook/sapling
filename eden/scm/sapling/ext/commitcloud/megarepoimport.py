@@ -64,7 +64,6 @@ def validateimportparams(ui, repo, opts):
 def fetchworkspaces(
     ui, repo, sourceworkspace, destinationworkspace, sourcerepo, destinationrepo, serv
 ):
-
     # Validate source workspace
     srcinfo = serv.getworkspace(sourcerepo, sourceworkspace)
     if not srcinfo:
@@ -91,7 +90,6 @@ def translateandpull(
     full,
     cloudrefs,
 ):
-
     # Get the list of heads to pull
     headdates = cloudrefs.headdates
     headstranslatequeue = []
@@ -134,7 +132,6 @@ def translateandpull(
 
 
 def dedupechanges(ui, heads, newheads, bookmarks, newbookmarks):
-
     uniquenewheads = [head.hex() for head in newheads if head.hex() not in heads]
 
     uniquenewbookmarks = {}
@@ -161,7 +158,6 @@ def dedupechanges(ui, heads, newheads, bookmarks, newbookmarks):
 # E.g If you're importing repo1 workspace into repo2 workspace you need to run the import command in repo2, otherwise it'll fail
 # Warning: This does not support translating diffs or bookmarks
 def batchtranslate(repo, commits, srcrepo, dstrepo):
-
     # Translation service not available
     if not repo.nullableedenapi:
         raise error.Abort(
@@ -194,7 +190,6 @@ def batchtranslate(repo, commits, srcrepo, dstrepo):
     for batch in batches:
         translatequeue = []
         for commit in batch:
-
             # Get xnode value
             xnode = None
             if len(commit) == 40:

@@ -77,7 +77,6 @@ def uncommit(ui, repo, *pats, **opts) -> Optional[int]:
     """
 
     with repo.wlock(), repo.lock():
-
         if not pats and not repo.ui.configbool("experimental", "uncommitondirtywdir"):
             cmdutil.bailifchanged(repo)
         old = repo["."]

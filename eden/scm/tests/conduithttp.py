@@ -90,7 +90,6 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         self.wfile.write(pycompat.encodeutf8(json.dumps(response)))
 
     def do_POST(self):
-
         content_len = int(self.headers.get("content-length", 0))
         data = self.rfile.read(content_len)
         params = urlparse.parse_qs(data)

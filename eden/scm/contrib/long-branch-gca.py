@@ -12,6 +12,7 @@ Note: This script only works with Mercurial (not Sapling). If you work
 at Meta you'll need to the `HG` environment variable to an executable
 that runs the external Mercurial.
 """
+
 import hashlib
 import os
 import struct

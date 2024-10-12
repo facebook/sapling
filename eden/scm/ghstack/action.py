@@ -9,7 +9,6 @@ def main(
     github: ghstack.github.GitHubEndpoint,
     close: bool = False,
 ) -> None:
-
     params = ghstack.github_utils.parse_pull_request(pull_request)
     pr_result = github.graphql_sync(
         """

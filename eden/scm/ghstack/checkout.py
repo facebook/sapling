@@ -13,7 +13,6 @@ def main(
     sh: ghstack.shell.Shell,
     remote_name: str,
 ) -> None:
-
     params = ghstack.github_utils.parse_pull_request(pull_request)
     pr_result = github.graphql_sync(
         """
@@ -26,7 +25,7 @@ def main(
             }
         }
     """,
-        **params
+        **params,
     )
     repository = pr_result["data"]["repository"]
     head_ref = repository["pullRequest"]["headRefName"]

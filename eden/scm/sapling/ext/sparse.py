@@ -1741,7 +1741,9 @@ def _discover(ui, repo, rev: Optional[str] = None):
             (
                 PROFILE_ACTIVE
                 if p in active
-                else PROFILE_INCLUDED if p in included else PROFILE_INACTIVE
+                else PROFILE_INCLUDED
+                if p in included
+                else PROFILE_INACTIVE
             ),
             md,
         )

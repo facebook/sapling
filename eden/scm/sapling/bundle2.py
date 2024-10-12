@@ -1268,7 +1268,6 @@ class interrupthandler(unpackermixin):
         return None
 
     def __call__(self):
-
         self.ui.debug(
             "bundle2-input-stream-interrupt:" " opening out of band context\n"
         )

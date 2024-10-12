@@ -538,7 +538,6 @@ def _callcatch(ui, req, func):
     try:
         return scmutil.callcatch(ui, req, func)
     except error.AmbiguousCommand as inst:
-
         ui.warn(_("@prog@: command '%s' is ambiguous:\n") % inst.args[0])
 
         for match in inst.args[1]:
@@ -735,7 +734,6 @@ def runcommand(
     namesforhooks,
     skipprehooks,
 ):
-
     fullargs = _joinfullargs(fullargs)
 
     for name in namesforhooks:

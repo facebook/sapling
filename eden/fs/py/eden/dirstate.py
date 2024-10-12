@@ -83,7 +83,7 @@ def write(
         hashing_write(b"\x02")
         _write_path(hashing_write, dest)
         _write_path(hashing_write, source)
-    hashing_write(b"\xFF")
+    hashing_write(b"\xff")
 
     # Write the checksum, so we use file.write() instead of hashing_write().
     file.write(sha.digest())
@@ -158,7 +158,7 @@ def read(
             dest = _read_path(hashing_read, filename)
             source = _read_path(hashing_read, filename)
             copymap[dest] = source
-        elif header == b"\xFF":
+        elif header == b"\xff":
             # Reading the checksum, so we use fp.read() instead of
             # hashing_read().
             binary_checksum = fp.read(32)
@@ -187,8 +187,9 @@ def read(
                 )
         else:
             raise DirstateParseException(
-                "Unexpected header byte "
-                "when reading {:s}: 0x{:x}.".format(filename, header)
+                "Unexpected header byte " "when reading {:s}: 0x{:x}.".format(
+                    filename, header
+                )
                 + " Ignoring remaining dirstate data.\n"
             )
 

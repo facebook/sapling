@@ -15,6 +15,7 @@ Check and fix the following things:
 - Cargo.toml
     - Change version = "*" to actual version (requires Cargo.lock)
 """
+
 from __future__ import absolute_import
 
 import glob

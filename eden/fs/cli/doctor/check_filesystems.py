@@ -808,7 +808,6 @@ def check_loaded_content(
     checkout: EdenCheckout,
     query_prjfs_file: Callable[[Path], PRJ_FILE_STATE],
 ) -> None:
-
     with instance.get_thrift_client_legacy() as client:
         try:
             loaded = client.debugInodeStatus(

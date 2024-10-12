@@ -6,9 +6,9 @@
 # clienttelemetry: provide information about the client in server telemetry
 """provide information about the client in server telemetry
 
-  [clienttelemetry]
-  # whether or not to announce the remote hostname when connecting
-  announceremotehostname = False
+[clienttelemetry]
+# whether or not to announce the remote hostname when connecting
+announceremotehostname = False
 """
 
 from __future__ import absolute_import

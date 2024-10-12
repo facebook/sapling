@@ -3,8 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-"""make calls to GitHub's GraphQL API
-"""
+"""make calls to GitHub's GraphQL API"""
 
 import asyncio
 from typing import Dict, Iterable, List, Optional, Union

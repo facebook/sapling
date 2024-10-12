@@ -1879,9 +1879,7 @@ class localrepository:
                 # "lazychangelog" assumes commits in the master group are lazy
                 # and resolvable by the server, which is no longer true if we
                 # force local "hg commit" commits in the master group.
-                assert (
-                    util.istest()
-                ), "devel.segmented-changelog-rev-compat should not be used outside tests"
+                assert util.istest(), "devel.segmented-changelog-rev-compat should not be used outside tests"
                 cl.inner.flush(list(cl.dag.dirty().iterrev()))
                 return
 

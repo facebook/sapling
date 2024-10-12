@@ -36,6 +36,7 @@
 This module is package-private. It is not expected that these will
 have any clients outside of httpplus.
 """
+
 from __future__ import absolute_import
 
 import logging
@@ -175,9 +176,7 @@ class AbstractSimpleReader(AbstractReader):
             assert not self._finished, (
                 "tried to add data (%r) to a closed reader!" % data
             )
-        logger.debug(
-            "%s read an additional %d data", self.name, len(data)
-        )  # pylint: disable=E1101
+        logger.debug("%s read an additional %d data", self.name, len(data))  # pylint: disable=E1101
         self._addchunk(data)
 
 

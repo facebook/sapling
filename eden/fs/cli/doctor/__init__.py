@@ -611,7 +611,6 @@ class EdenDoctor(EdenDoctorChecker):
 
 
 class EdenfsNotHealthy(FixableProblem):
-
     def __init__(
         self,
         instance: EdenInstance,

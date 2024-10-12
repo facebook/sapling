@@ -29,7 +29,6 @@ def get_status(log_dir: str) -> str:
 
 
 def main(latest: bool = False) -> None:
-
     log_base = ghstack.logs.base_dir()
     logs = os.listdir(log_base)
     logs.sort(reverse=True)

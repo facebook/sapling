@@ -3,8 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-"""utilities for interacting with GitHub (EXPERIMENTAL)
-"""
+"""utilities for interacting with GitHub (EXPERIMENTAL)"""
 
 import asyncio
 from typing import Optional

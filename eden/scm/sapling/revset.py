@@ -2079,8 +2079,7 @@ def matching(repo, subset, x):
         if getfield is None:
             raise error.ParseError(
                 # i18n: "matching" is a keyword
-                _("unexpected field name passed to matching: %s")
-                % info
+                _("unexpected field name passed to matching: %s") % info
             )
         getfieldfuncs.append(getfield)
     # convert the getfield array of functions into a "getinfo" function

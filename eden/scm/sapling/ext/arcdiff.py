@@ -88,7 +88,7 @@ def _diff2o(ui, repo, rev1, rev2, *pats, **opts) -> None:
     files1, filepatches1, node1 = changediff(rev1node)
     files2, filepatches2, node2 = changediff(rev2node)
 
-    ui.write(_("Phabricator rev: %s\n") % hex(node1)),
+    (ui.write(_("Phabricator rev: %s\n") % hex(node1)),)
     ui.write(_("Local rev: %s (%s)\n") % (hex(node2), rev2))
 
     # For files have changed, produce a diff of the diffs first using a normal

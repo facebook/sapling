@@ -38,6 +38,7 @@ Syntax rules:
 
 The main function in this module is transform().
 """
+
 from __future__ import annotations
 
 import textwrap

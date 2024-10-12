@@ -85,7 +85,6 @@ def isgitpeer(repo):
 
 
 def createrepo(ui, url, destpath, submodule=None):
-
     repo_config = ""
     if url:
         repo_config += "\n[paths]\ndefault = %s\n" % url

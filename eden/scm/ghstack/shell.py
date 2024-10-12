@@ -110,7 +110,7 @@ class Shell:
         input: Optional[str] = None,
         stdin: _HANDLE = None,
         stdout: _HANDLE = subprocess.PIPE,
-        exitcode: bool = False
+        exitcode: bool = False,
     ) -> _SHELL_RET:
         """
         Run a command specified by args, and return string representing

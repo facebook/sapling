@@ -208,7 +208,7 @@ def insert_latency_record(
 
     def with_microsecond_units(i: int) -> str:
         if i:
-            return str(i) + " \u03BCs"  # mu for micro
+            return str(i) + " \u03bcs"  # mu for micro
         else:
             return str(i) + "   "
 

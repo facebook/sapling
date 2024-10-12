@@ -618,7 +618,6 @@ def print_system_mount_table(out: IO[bytes]) -> None:
 
 
 def print_disk_space_usage(out: IO[bytes]) -> None:
-
     section_title("Disk space usage:", out)
     cmds = [["eden", "du", "--fast"]]
     if sys.platform == "darwin":
@@ -898,7 +897,6 @@ def print_sample_trace(pid: int, sink: IO[bytes]) -> None:
 
 
 def print_third_party_vscode_extensions(instance: EdenInstance, out: IO[bytes]) -> None:
-
     problematic_extensions = (
         VSCodeExtensionsChecker().find_problematic_vscode_extensions(instance)
     )

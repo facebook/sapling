@@ -284,7 +284,6 @@ class TakeoverTest(TakeoverTestBase):
         with open(os.path.join(self.mount, "tree", "hello")) as c2_hello_file, open(
             os.path.join(self.mount, "src", "main.c")
         ) as c2_mainc_file:
-
             self.eden.graceful_restart()
             self.eden.run_cmd(
                 "debug", "flush_cache", os.path.join("tree", "hello"), cwd=self.mount

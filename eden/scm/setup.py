@@ -539,7 +539,6 @@ class hgbuild(build):
 
 
 class hgbuildmo(build):
-
     description = "build translations (.mo files)"
 
     def run(self):
@@ -747,7 +746,6 @@ class BuildInteractiveSmartLog(build):
 
 
 class hginstall(install):
-
     user_options = install.user_options + [
         ("old-and-unmanageable", None, "noop, present for eggless setuptools compat"),
         (
@@ -1101,11 +1099,14 @@ def build_libraries(self, libraries):
     for lib_name, build_info in libraries:
         sources = build_info.get("sources")
         if sources is None or not isinstance(sources, (list, tuple)):
-            raise DistutilsSetupError(
-                "in 'libraries' option (library '%s'), "
-                + "'sources' must be present and must be "
-                + "a list of source filenames"
-            ) % lib_name
+            raise (
+                DistutilsSetupError(
+                    "in 'libraries' option (library '%s'), "
+                    + "'sources' must be present and must be "
+                    + "a list of source filenames"
+                )
+                % lib_name
+            )
         sources = list(sources)
 
         lib_path = self.compiler.library_filename(lib_name, output_dir=self.build_clib)

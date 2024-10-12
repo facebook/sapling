@@ -62,7 +62,6 @@ class StaleInodeTestHgNFS(EdenHgTestCase):
             fd.write(b"hola\n")
 
         with open(bonjour, "r") as fd:
-
             os.remove(bonjour)
 
             # this should not error or crash, eden does not remove the inode after
@@ -73,13 +72,11 @@ class StaleInodeTestHgNFS(EdenHgTestCase):
     # unlinked after all file handles referencing them are gone, and then
     # after the next checkout they will be unloaded.
     def test_remove_file_update(self) -> None:
-
         nihao = os.path.join(self.mount, "nihao")
         with open(nihao, "wb") as fd:
             fd.write(b"hey\n")
 
         with open(nihao, "r") as fd:
-
             os.remove(nihao)
 
             self.repo.update(self.commit0, clean=True)

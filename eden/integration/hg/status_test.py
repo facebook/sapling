@@ -123,7 +123,6 @@ class StatusTest(EdenHgTestCase):
         enable_status_cache = self.enable_status_cache
 
         with self.get_thrift_client_legacy() as client:
-
             # Test with a clean status.
             expected_status = ScmStatus(entries={}, errors={})
             self.thoroughly_get_scm_status(
@@ -666,9 +665,7 @@ class StatusTest(EdenHgTestCase):
                 )
                 thread_expect_two_entries.start()
 
-                assert (
-                    thread_expect_one_entry.is_alive()
-                ), f"the first thread should be blocked. dumping exceptions: {exceptions}"
+                assert thread_expect_one_entry.is_alive(), f"the first thread should be blocked. dumping exceptions: {exceptions}"
             finally:
                 client.unblockFault(
                     UnblockFaultArg(

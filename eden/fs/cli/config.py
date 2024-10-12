@@ -1340,9 +1340,9 @@ class EdenCheckout:
         }
 
         if checkout_config.predictive_prefetch_num_dirs:
-            config_data["predictive-prefetch"][
-                "predictive-prefetch-num-dirs"
-            ] = checkout_config.predictive_prefetch_num_dirs
+            config_data["predictive-prefetch"]["predictive-prefetch-num-dirs"] = (
+                checkout_config.predictive_prefetch_num_dirs
+            )
 
         util.write_file_atomically(
             self._config_path(), toml.dumps(config_data).encode()

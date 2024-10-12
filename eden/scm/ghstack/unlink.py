@@ -159,9 +159,7 @@ Diffs successfully unlinked!
 To undo this operation, run:
 
     git reset --soft {}
-""".format(
-                s.commit_id
-            )
+""".format(s.commit_id)
         )
 
     return head

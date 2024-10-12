@@ -21,6 +21,7 @@ You can have more than one shelved change outstanding at a time; each
 shelved change has a distinct name. For details, see the help for "hg
 shelve".
 """
+
 from __future__ import absolute_import
 
 import collections
@@ -481,7 +482,6 @@ def _docreatecmd(ui, repo, pats, opts) -> Optional[int]:
     activebookmark = None
     try:
         with repo.lock(), repo.transaction("commit", report=None):
-
             interactive = opts.get("interactive", False)
             includeunknown = opts.get("unknown", False) and not opts.get(
                 "addremove", False

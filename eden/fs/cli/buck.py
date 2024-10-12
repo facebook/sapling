@@ -58,7 +58,6 @@ def is_buckd_running_for_repo(path: str) -> bool:
 def run_buck_command(
     buck_command: List[str], path: str
 ) -> "subprocess.CompletedProcess[bytes]":
-
     env = get_env_with_buck_version(path)
     try:
         return subprocess.run(

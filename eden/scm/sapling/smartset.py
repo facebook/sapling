@@ -574,7 +574,7 @@ class nameset(abstractsmartset):
         datarepr=None,
         istopo=False,
         preserve_order=None,
-        repo=None
+        repo=None,
     ):
         """Initialize nameset (Rust ``dag::Set`` wrapper) for Python smartset.
 
