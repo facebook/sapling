@@ -65,3 +65,12 @@ the master bookmark should point to the latest commit
   @  ea98a8f95390 changed message remote/master
   │
   o  2bb9d20e471c initial
+
+test pushrebase conflicts
+  $ hg go -q 2bb9d20e471c --debug -v
+  $ echo y >> a && hg commit -qm "update a"
+#if slapi
+  $ hg push --to master -q
+  abort: Server error: Conflicts while pushrebasing: [(RepoPathBuf("a"), RepoPathBuf("a"))]
+  [255]
+#endif

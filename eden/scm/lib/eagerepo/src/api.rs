@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::io::Write;
@@ -63,6 +64,7 @@ use edenapi::types::NodeInfo;
 use edenapi::types::Parents;
 use edenapi::types::RepoPathBuf;
 use edenapi::types::SaplingRemoteApiServerError;
+use edenapi::types::ServerError;
 use edenapi::types::SetBookmarkResponse;
 use edenapi::types::SuffixQueryResponse;
 use edenapi::types::TreeAttributes;
@@ -87,10 +89,13 @@ use futures::stream::TryStreamExt;
 use futures::StreamExt;
 use http::StatusCode;
 use http::Version;
+use manifest::Manifest;
 use manifest_tree::Flag;
+use manifest_tree::TreeManifest;
 use minibytes::Bytes;
 use mutationstore::MutationEntry;
 use nonblocking::non_blocking_result;
+use pathmatcher::AlwaysMatcher;
 use repourl::RepoUrl;
 use storemodel::types::AugmentedTreeWithDigest;
 use storemodel::SerializationFormat;
@@ -1251,7 +1256,69 @@ impl SaplingRemoteApi for EagerRepo {
             self.flush_for_api("land_stack").await?;
             return Ok(LandStackResponse { data: Ok(data) });
         } else {
+            let head_manifest = self.commit_to_manifest(head).await.map_err(map_crate_err)?;
+            let base_manifest = self.commit_to_manifest(base).await.map_err(map_crate_err)?;
+            let bookmark_manifest = self
+                .commit_to_manifest(latest_bookmark_id)
+                .await
+                .map_err(map_crate_err)?;
+
+            let conflicts =
+                pushrebase_conflicts(&base_manifest, &bookmark_manifest, &head_manifest)?;
+            if !conflicts.is_empty() {
+                let e =
+                    ServerError::generic(format!("Conflicts while pushrebasing: {:?}", conflicts));
+
+                return Ok(LandStackResponse { data: Err(e) });
+            }
+
             panic!("not implemented");
+        }
+
+        /// `left` and `right` are considerered to be conflit free, if none of the element
+        /// from `left` is prefix of element from `right`, and vice versa.
+        fn pushrebase_conflicts(
+            mbase: &TreeManifest,
+            mleft: &TreeManifest,
+            mright: &TreeManifest,
+        ) -> anyhow::Result<Vec<(RepoPathBuf, RepoPathBuf)>> {
+            let matcher = AlwaysMatcher::new();
+            let mut left = mbase
+                .diff(mleft, &matcher)?
+                .map(|e| e.map(|e| e.path))
+                .collect::<anyhow::Result<Vec<_>>>()?;
+            left.sort_unstable();
+            let mut left_iter = left.into_iter();
+
+            let mut right = mbase
+                .diff(mright, &matcher)?
+                .map(|e| e.map(|e| e.path))
+                .collect::<anyhow::Result<Vec<_>>>()?;
+            right.sort_unstable();
+            let mut right_iter = right.into_iter();
+
+            let mut conflicts = Vec::new();
+            let mut state = (left_iter.next(), right_iter.next());
+            loop {
+                state = match state {
+                    (Some(l), Some(r)) => match l.cmp(&r) {
+                        Ordering::Equal => {
+                            conflicts.push((l.clone(), r.clone()));
+                            (left_iter.next(), right_iter.next())
+                        }
+                        // todo: handle repo path prefix
+                        Ordering::Less => {
+                            panic!("not implemented");
+                        }
+                        Ordering::Greater => {
+                            panic!("not implemented");
+                        }
+                    },
+                    _ => break,
+                }
+            }
+
+            Ok(conflicts)
         }
     }
 }

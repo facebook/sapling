@@ -18,12 +18,14 @@ format-util = { version = "0.1.0", path = "../util/format-util" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 http = "0.2"
 identity = { version = "0.1.0", path = "../identity" }
+manifest = { version = "0.1.0", path = "../manifest" }
 manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 metalog = { version = "0.1.0", path = "../metalog" }
 minibytes = { version = "0.1.0", path = "../minibytes" }
 mutationstore = { version = "0.1.0", path = "../mutationstore" }
 nonblocking = { version = "0.1.0", path = "../nonblocking" }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
+pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 repourl = { version = "0.1.0", path = "../repo/url" }
 sha1 = "0.10.5"
 storemodel = { version = "0.1.0", path = "../storemodel" }
