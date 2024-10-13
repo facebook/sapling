@@ -4,8 +4,6 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
-FIXME! - sorry, this test is broken due to migration D63999703
-
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
   $ export COMMIT_SCRIBE_CATEGORY=mononoke_commits
   $ export BOOKMARK_SCRIBE_CATEGORY=mononoke_bookmark
@@ -49,11 +47,11 @@ Backsync to a small repo
   $ backsync_large_to_small 2>&1 | grep "syncing bookmark"
   * syncing bookmark master_bookmark to * (glob)
   * syncing bookmark master_bookmark to * (glob)
-  $ flush_mononoke_bookmarks
 
 Pull from a small repo. Check that both merges are synced
 although the second one became non-merge commit
   $ cd "$TESTTMP/small-hg-client"
+  $ wait_for_bookmark_move_away_edenapi "$SMALL_REPO_NAME" master_bookmark "$(hg whereami)"
   $ hg pull -q
   $ log -r :
   o  merge commit no new files [public;rev=4;534a740cd266] default/master_bookmark
