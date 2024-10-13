@@ -26,8 +26,8 @@ cpp_library(
         ":startup_status_subscriber",
         "//eden/common/telemetry:log_info",
         "//eden/common/telemetry:structured_logger",
+        "//eden/common/utils:bug",
         "//eden/common/utils:user_info",
-        "//eden/common/utils:utils",
         "//eden/fs:config",
         "//eden/fs/config:config",
         "//eden/fs/inodes:inodes",
@@ -330,6 +330,7 @@ cpp_library(
         "//common/fb303/cpp:thread_pool_executor_counters",  # @manual
         "//eden/common/telemetry:log_info",
         "//eden/common/telemetry:structured_logger_factory",
+        "//eden/common/utils:bug",
         "//eden/common/utils:enum",
         "//eden/common/utils:fault_injector",
         "//eden/common/utils:file_utils",

@@ -7,9 +7,9 @@ cpp_unittest(
     srcs = glob(["*Test.cpp"]),
     supports_static_listing = False,
     deps = [
+        "//eden/common/utils:bug",
         "//eden/common/utils:file_utils",
         "//eden/common/utils:path",
-        "//eden/common/utils:utils",
         "//eden/fs/config:config",
         "//eden/fs/model/git:gitignore",
         "//folly:file",

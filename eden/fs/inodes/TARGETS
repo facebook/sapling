@@ -46,9 +46,9 @@ cpp_library(
     headers = ["InodeCatalog.h"],
     exported_deps = [
         ":inode_number",
+        "//eden/common/utils:bug",
         "//eden/common/utils:immediate_future",
         "//eden/common/utils:path",
-        "//eden/common/utils:utils",
         "//eden/fs/inodes/overlay:overlay_checker_util",
         "//eden/fs/inodes/overlay:serialization-cpp2-types",
         "//eden/fs/model:model",
@@ -205,6 +205,7 @@ cpp_library(
         ":inode_number",
         "//eden/common/telemetry:structured_logger",
         "//eden/common/telemetry:telemetry",
+        "//eden/common/utils:bug",
         "//eden/common/utils:case_sensitivity",
         "//eden/common/utils:file_utils",
         "//eden/common/utils:immediate_future",

@@ -219,7 +219,7 @@ cpp_unittest(
     srcs = ["InodeMapTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "//eden/common/utils:utils",
+        "//eden/common/utils:bug",
         "//eden/fs/inodes:inodes",
         "//eden/fs/store:context",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
@@ -379,7 +379,7 @@ cpp_unittest(
     srcs = ["RenameTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "//eden/common/utils:utils",
+        "//eden/common/utils:bug",
         "//eden/fs/inodes:inodes",
         "//eden/fs/store:context",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
@@ -396,7 +396,7 @@ cpp_unittest(
     srcs = ["SymlinkTest.cpp"],
     supports_static_listing = False,
     deps = [
-        "//eden/common/utils:utils",
+        "//eden/common/utils:bug",
         "//eden/fs/inodes:inodes",
         "//eden/fs/store:context",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",

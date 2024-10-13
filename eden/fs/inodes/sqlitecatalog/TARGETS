@@ -35,6 +35,7 @@ cpp_library(
         "WindowsFsck.h",
     ],
     deps = [
+        "//eden/common/utils:bug",
         "//eden/common/utils:case_sensitivity",
         "//eden/common/utils:file_utils",
         "//eden/common/utils:utils",

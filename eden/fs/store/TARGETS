@@ -43,6 +43,7 @@ cpp_library(
     headers = ROCKSDB_HEADERS,
     deps = [
         "//eden/common/telemetry:structured_logger",
+        "//eden/common/utils:bug",
         "//eden/common/utils:fault_injector",
         "//eden/common/utils:throw",
         "//eden/fs/config:config",
@@ -182,6 +183,7 @@ cpp_library(
     ),
     deps = [
         "//eden/common/telemetry:structured_logger",
+        "//eden/common/utils:bug",
         "//eden/common/utils:process_info_cache",
         "//eden/common/utils:throw",
         "//eden/fs/model/git:git",

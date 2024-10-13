@@ -9,6 +9,7 @@ cpp_library(
     deps = [
         "fbsource//third-party/fmt:fmt",
         "//eden/common/telemetry:structured_logger",
+        "//eden/common/utils:bug",
         "//eden/common/utils:synchronized",
         "//eden/common/utils:system_error",
         "//eden/fs/notifications:notifier",

@@ -12,6 +12,7 @@ cpp_library(
     exported_deps = [
         ":hg_proxy_hash",
         "//eden/common/telemetry:telemetry",
+        "//eden/common/utils:bug",
         "//eden/common/utils:utils",
         "//eden/fs/model:model",
         "//eden/fs/model:model-fwd",
@@ -47,6 +48,7 @@ cpp_library(
         ":sapling_import_request",
         "//common/fb303/cpp:thread_pool_executor_counters",  # @manual
         "//eden/common/telemetry:structured_logger",
+        "//eden/common/utils:bug",
         "//eden/common/utils:enum",
         "//eden/common/utils:fault_injector",
         "//eden/common/utils:path",
@@ -101,8 +103,8 @@ cpp_library(
     headers = ["HgProxyHash.h"],
     deps = [
         "fbsource//third-party/fmt:fmt",
+        "//eden/common/utils:bug",
         "//eden/common/utils:throw",
-        "//eden/common/utils:utils",
         "//eden/fs/telemetry:stats",
         "//folly/logging:logging",
     ],
