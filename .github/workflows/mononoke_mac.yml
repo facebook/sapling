@@ -24,6 +24,8 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages install-system-deps --recursive mononoke
     - name: Install Rust Stable
       uses: dtolnay/rust-toolchain@stable
+    - name: Fetch xxhash
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests xxhash
     - name: Fetch openssl
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests openssl
     - name: Fetch ninja
@@ -82,6 +84,8 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests fb303
     - name: Fetch rust-shed
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests rust-shed
+    - name: Build xxhash
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --free-up-disk --no-tests xxhash
     - name: Build openssl
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --free-up-disk --no-tests openssl
     - name: Build ninja
@@ -151,4 +155,5 @@ jobs:
     - name: Test mononoke
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages test --src-dir=. mononoke  --project-install-prefix mononoke:/usr/local
     - name: Show disk space at end
+      if: always()
       run: df -h

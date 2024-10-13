@@ -38,6 +38,8 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
     - name: Fetch hexdump
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests hexdump
+    - name: Fetch xxhash
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests xxhash
     - name: Fetch bz2
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests bz2
     - name: Fetch ninja
@@ -112,6 +114,8 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests rust-shed
     - name: Build hexdump
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --free-up-disk --no-tests hexdump
+    - name: Build xxhash
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --free-up-disk --no-tests xxhash
     - name: Build bz2
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --free-up-disk --no-tests bz2
     - name: Build ninja
