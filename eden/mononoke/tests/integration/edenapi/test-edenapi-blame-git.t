@@ -33,13 +33,12 @@
 
 # Test with slapigit with git sha1 input
   $ hg --config remotefilelog.reponame=repo --config edenapi.url=https://localhost:$MONONOKE_SOCKET/slapigit/ debugapi -e blame -i "[{'path': 'A', 'node': 'ca5c1860d51d7cfbc1102f5d6aa1cfe6e44aeeff'}]"
-  abort: server responded 400 Bad Request for https://localhost:$LOCAL_PORT/slapigit/repo/blame: {"message":"Unsupported SaplingRemoteApi flavour",* (glob)
-      "x-request-id": * (glob)
-      "content-type": "application/json",
-      "x-load": "1",
-      "server": "edenapi_server",
-      "x-mononoke-host": * (glob)
-      "date": * (glob)
-      "content-length": "74",
-  }
-  [255]
+  [{"data": {"Ok": {"paths": ["A"],
+                    "commits": [bin("ca5c1860d51d7cfbc1102f5d6aa1cfe6e44aeeff")],
+                    "line_ranges": [{"line_count": 1,
+                                     "path_index": 0,
+                                     "line_offset": 0,
+                                     "commit_index": 0,
+                                     "origin_line_offset": 0}]}},
+    "file": {"node": bin("ca5c1860d51d7cfbc1102f5d6aa1cfe6e44aeeff"),
+             "path": "A"}}]
