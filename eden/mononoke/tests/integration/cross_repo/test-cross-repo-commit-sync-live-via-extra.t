@@ -57,6 +57,7 @@ Before the change
 
 -- check the same commit in the large repo
   $ cd "$TESTTMP/large-hg-client"
+  $ wait_for_bookmark_move_away_edenapi "$LARGE_REPO_NAME" master_bookmark "$(hg whereami)"
   $ hg pull -q
   $ hg up -q master_bookmark
   $ log -r master_bookmark
@@ -80,9 +81,9 @@ Make a config change
   > --via-extra \
   > --date 2002-10-02T21:38:00-05:00 \
   > --version-name new_version
-  $ flush_mononoke_bookmarks
 Find the hash of mapping change commit in the large repo
   $ cd "$TESTTMP/large-hg-client"
+  $ wait_for_bookmark_move_away_edenapi "$LARGE_REPO_NAME" master_bookmark "$(hg whereami)"
   $ hg pull -q
   $ hg up -q master_bookmark
 
@@ -121,22 +122,20 @@ After the change
   │
   ~
 
+-- trigger xrepo sync and show that can sync commit over the config change
+  $ with_stripped_logs wait_for_xrepo_sync 3
+
 -- push to a large repo
   $ cd "$TESTTMP/large-hg-client"
+  $ wait_for_bookmark_move_away_edenapi "$LARGE_REPO_NAME" master_bookmark "$(hg whereami)"
   $ hg pull -q
   $ hg up -q master_bookmark
   $ echo a > after_change
   $ hg ci -Aqm "after config change from large"
   $ hg push -r . --to master_bookmark -q
 
--- trigger xrepo sync and show that can sync commit over the config change
-  $ with_stripped_logs wait_for_xrepo_sync 3
 Rest of this test won't pass as we failed the previous command so is commented out.
-  $ flush_mononoke_bookmarks
 -- check the same commit in the large repo
-  $ cd "$TESTTMP/large-hg-client"
-  $ hg pull -q
-  $ hg up -q master_bookmark
   $ log -r "master_bookmark^::master_bookmark"
   @  after config change from large [public;rev=?;ad029e9c7735] default/master_bookmark (glob)
   │
