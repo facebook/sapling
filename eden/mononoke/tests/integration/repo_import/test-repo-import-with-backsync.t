@@ -4,8 +4,6 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
-FIXME! - sorry, this test is broken due to migration D63999703
-
   $ . "${TEST_FIXTURES}/library.sh"
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
 
@@ -52,6 +50,7 @@ Setup configuration
 
 -- Checking imported files
   $ cd "$TESTTMP/large-hg-client"
+  $ wait_for_bookmark_move_away_edenapi "$LARGE_REPO_NAME" master_bookmark "$(hg whereami)"
   $ hg pull -q
   $ hg up -q master_bookmark
 
