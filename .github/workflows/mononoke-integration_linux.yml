@@ -52,6 +52,10 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests fmt
     - name: Fetch googletest
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests googletest
+    - name: Fetch xxhash
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests xxhash
+    - name: Fetch python-setuptools
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests python-setuptools
     - name: Fetch autoconf
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests autoconf
     - name: Fetch automake
@@ -136,6 +140,10 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests fmt
     - name: Build googletest
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests googletest
+    - name: Build xxhash
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests xxhash
+    - name: Build python-setuptools
+      run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests python-setuptools
     - name: Build autoconf
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --no-tests autoconf
     - name: Build automake
