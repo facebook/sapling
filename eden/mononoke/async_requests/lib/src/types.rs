@@ -627,7 +627,9 @@ impl AsynchronousRequestParams {
                 Ok(params.target())
             }
             ThriftAsynchronousRequestParams::async_ping_params(params) => Ok(params.target()),
-            ThriftAsynchronousRequestParams::commit_sparse_profile_size_params(_params) => todo!(),
+            ThriftAsynchronousRequestParams::commit_sparse_profile_size_params(params) => {
+                Ok(params.target())
+            }
             ThriftAsynchronousRequestParams::UnknownField(union_tag) => {
                 Err(AsyncRequestsError::internal(anyhow!(
                     "this type of request (AsynchronousRequestParams tag {}) not supported by this worker!",

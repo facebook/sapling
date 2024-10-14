@@ -12,6 +12,7 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use async_requests::types::ThriftAsyncPingParams;
+use async_requests::types::ThriftCommitSparseProfileSizeParamsV2;
 use async_requests::types::ThriftMegarepoAddBranchingTargetParams;
 use async_requests::types::ThriftMegarepoAddTargetParams;
 use async_requests::types::ThriftMegarepoChangeTargetConfigParams;
@@ -87,6 +88,12 @@ pub async fn submit_request(
             let params: ThriftAsyncPingParams =
                 serde_json::from_str(&params).context("parsing params")?;
             enqueue::<ThriftAsyncPingParams>(&ctx, queue, Some(&repo_id), params).await
+        }
+        "commit_sparse_profile_size" => {
+            let params: ThriftCommitSparseProfileSizeParamsV2 =
+                serde_json::from_str(&params).context("parsing params")?;
+            enqueue::<ThriftCommitSparseProfileSizeParamsV2>(&ctx, queue, Some(&repo_id), params)
+                .await
         }
         _ => bail!("method {} not supported in submit", args.method),
     }?;
