@@ -2649,3 +2649,22 @@ EOF
 function async_requests_clear_queue() {
   sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'delete from long_running_request_queue;'
 }
+
+# Wait for bookmark to move to a commit with a certain title
+function wait_for_bookmark_move_to_commit {
+  local commit_title=$1
+  local repo=$2
+  local bookmark=${3-master_bookmark}
+
+
+
+  local attempts=150
+  for _ in $(seq 1 $attempts); do
+    mononoke_newadmin fetch -R "$repo" -B "$bookmark" | rg -q "$commit_title" && return
+    sleep 0.1
+  done
+
+  echo "bookmark didn't move to commit $commit_title" >&2
+  exit 1
+
+}
