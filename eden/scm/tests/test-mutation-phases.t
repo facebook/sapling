@@ -5,7 +5,6 @@
   $ eagerepo
   $ enable amend
   $ setconfig experimental.evolution=obsolete
-  $ setconfig experimental.narrow-heads=false
   $ setconfig visibility.enabled=true
   $ setconfig mutation.record=true mutation.enabled=true
 
