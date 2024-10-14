@@ -38,6 +38,12 @@ pub use source_control::AsyncPingPollResponse as ThriftAsyncPingPollResponse;
 pub use source_control::AsyncPingResponse as ThriftAsyncPingResponse;
 pub use source_control::AsyncPingResult as ThriftAsyncPingResult;
 pub use source_control::AsyncPingToken as ThriftAsyncPingToken;
+pub use source_control::CommitSparseProfileSizeParamsV2 as ThriftCommitSparseProfileSizeParamsV2;
+pub use source_control::CommitSparseProfileSizePollResponse as ThriftCommitSparseProfileSizePollResponse;
+pub use source_control::CommitSparseProfileSizeResponse as ThriftCommitSparseProfileSizeResponse;
+pub use source_control::CommitSparseProfileSizeResult as ThriftCommitSparseProfileSizeResult;
+pub use source_control::CommitSparseProfileSizeToken as ThriftCommitSparseProfileSizeToken;
+pub use source_control::CommitSpecifier as ThriftCommitSpecifier;
 pub use source_control::MegarepoAddBranchingTargetParams as ThriftMegarepoAddBranchingTargetParams;
 pub use source_control::MegarepoAddBranchingTargetPollResponse as ThriftMegarepoAddBranchingTargetPollResponse;
 pub use source_control::MegarepoAddBranchingTargetResponse as ThriftMegarepoAddBranchingTargetResponse;
@@ -66,6 +72,7 @@ pub use source_control::MegarepoSyncChangesetToken as ThriftMegarepoSyncChangese
 pub use source_control::MegarepoSyncTargetConfig as ThriftMegarepoSyncTargetConfig;
 pub use source_control::MegarepoTarget as ThriftMegarepoTarget;
 pub use source_control::RepoSpecifier as ThriftRepoSpecifier;
+pub use source_control::SparseProfiles as ThriftSparseProfiles;
 
 use crate::error::AsyncRequestsError;
 
@@ -544,6 +551,32 @@ impl_async_svc_method_types! {
     }
 }
 
+// Params and result types for commit_sparse_profile_size_async
+
+impl_async_svc_method_types! {
+    method_name => "commit_sparse_profile_size_async",
+    request_struct => CommitSparseProfileSize,
+
+    params_value_thrift_type => ThriftCommitSparseProfileSizeParamsV2,
+    params_union_variant => commit_sparse_profile_size_params,
+
+    result_value_thrift_type => ThriftCommitSparseProfileSizeResult,
+    result_union_variant => commit_sparse_profile_size_result,
+
+    response_type => ThriftCommitSparseProfileSizeResponse,
+    poll_response_type => ThriftCommitSparseProfileSizePollResponse,
+    token_type => CommitSparseProfileSizeToken,
+    token_thrift_type => ThriftCommitSparseProfileSizeToken,
+
+    fn target(&self: ThriftParams) -> String {
+        format!(
+            "repo: {}, id: {}",
+            self.commit.repo,
+            self.commit.id
+        )
+    }
+}
+
 impl_async_svc_stored_type! {
     handle_type => AsynchronousRequestParamsId,
     handle_thrift_type => ThriftAsynchronousRequestParamsId,
@@ -594,6 +627,7 @@ impl AsynchronousRequestParams {
                 Ok(params.target())
             }
             ThriftAsynchronousRequestParams::async_ping_params(params) => Ok(params.target()),
+            ThriftAsynchronousRequestParams::commit_sparse_profile_size_params(_params) => todo!(),
             ThriftAsynchronousRequestParams::UnknownField(union_tag) => {
                 Err(AsyncRequestsError::internal(anyhow!(
                     "this type of request (AsynchronousRequestParams tag {}) not supported by this worker!",

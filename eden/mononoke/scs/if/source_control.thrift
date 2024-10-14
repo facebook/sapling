@@ -1490,6 +1490,19 @@ struct CommitSparseProfileSizeParams {
   1: SparseProfiles profiles;
 }
 
+struct CommitSparseProfileSizeToken {
+  /// A target this token relates to
+  1: SparseProfiles target;
+  /// An actual token payload
+  2: i64 id;
+}
+
+struct CommitSparseProfileSizeParamsV2 {
+  1: CommitSpecifier commit;
+  /// list of sparse profiles for which calculate total size
+  2: SparseProfiles profiles;
+}
+
 struct TreeExistsParams {}
 
 struct TreeListParams {
@@ -2075,6 +2088,15 @@ struct CommitSparseProfileDeltaResponse {
 
 struct CommitSparseProfileSizeResponse {
   1: SparseProfileSizes profiles_size;
+}
+
+union CommitSparseProfileSizeResult {
+  1: CommitSparseProfileSizeResponse success;
+  2: AsyncRequestError error;
+}
+
+struct CommitSparseProfileSizePollResponse {
+  1: optional CommitSparseProfileSizeResult result;
 }
 
 struct TreeListResponse {
@@ -2825,6 +2847,24 @@ service SourceControlService extends fb303_core.BaseService {
   CommitSparseProfileSizeResponse commit_sparse_profile_size(
     1: CommitSpecifier commit,
     2: CommitSparseProfileSizeParams params,
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
+
+  /// Calculate the total size of each sparse profiles
+  CommitSparseProfileSizeToken commit_sparse_profile_size_async(
+    1: CommitSparseProfileSizeParamsV2 params,
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
+
+  /// Calculate the total size of each sparse profiles
+  CommitSparseProfileSizePollResponse commit_sparse_profile_size_poll(
+    1: CommitSparseProfileSizeToken token,
   ) throws (
     1: RequestError request_error,
     2: InternalError internal_error,

@@ -204,6 +204,7 @@ pub(crate) async fn megarepo_async_request_compute<R: MononokeRepo>(
                 ..Default::default()
             }).into())
         }
+        async_requests_types_thrift::AsynchronousRequestParams::commit_sparse_profile_size_params(_params) => todo!(),
         async_requests_types_thrift::AsynchronousRequestParams::UnknownField(union_tag) => {
              bail!(
                 "this type of request (AsynchronousRequestParams tag {}) not supported by this worker!", union_tag
