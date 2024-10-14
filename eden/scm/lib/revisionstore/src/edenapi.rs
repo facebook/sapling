@@ -149,7 +149,9 @@ impl SaplingRemoteApiTreeStore {
         BlockingResponse<Result<TreeEntry, SaplingRemoteApiServerError>>,
         SaplingRemoteApiError,
     > {
-        BlockingResponse::from_async(self.client.trees(keys, attributes))
+        async_runtime::block_in_place(|| {
+            BlockingResponse::from_async(self.client.trees(keys, attributes))
+        })
     }
 }
 
