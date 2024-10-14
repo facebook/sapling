@@ -62,6 +62,7 @@ ack = smartlog-default-command commitcloud-update-on-move
 [experimental]
 use-rust-changelog=True
 windows-symlinks=True
+narrow-heads=true
 
 [tweakdefaults]
 graftkeepdate=True
@@ -113,7 +114,6 @@ remotebookmarkssync=True
 [experimental]
 changegroup3=True
 evolution=obsolete
-narrow-heads=true
 
 [extensions]
 amend=
