@@ -803,42 +803,68 @@ impl SaplingRemoteApiHandler for GraphSegmentsHandler {
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CommitGraphSegments;
     const ENDPOINT: &'static str = "/commit/graph_segments";
+    const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[
+        SlapiCommitIdentityScheme::Hg,
+        SlapiCommitIdentityScheme::Git,
+    ];
 
     async fn handler(
         ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
+        let slapi_flavour = ectx.slapi_flavour();
         let repo = ectx.repo();
-        let heads: Vec<_> = request
-            .heads
-            .into_iter()
-            .map(|hg_id| HgChangesetId::new(HgNodeHash::from(hg_id)))
-            .collect();
-        let common: Vec<_> = request
-            .common
-            .into_iter()
-            .map(|hg_id| HgChangesetId::new(HgNodeHash::from(hg_id)))
-            .collect();
 
         Ok(try_stream! {
-            let graph_segments = repo.repo_ctx().graph_segments_hg(common, heads).await?;
+            let graph_segments = match slapi_flavour {
+                SlapiCommitIdentityScheme::Hg => {
+                    let heads: Vec<_> = request
+                        .heads
+                        .into_iter()
+                        .map(|hg_id| HgChangesetId::new(HgNodeHash::from(hg_id)))
+                        .collect();
+                    let common: Vec<_> = request
+                        .common
+                        .into_iter()
+                        .map(|hg_id| HgChangesetId::new(HgNodeHash::from(hg_id)))
+                        .collect();
+                    repo.repo_ctx()
+                        .graph_segments_hg(common, heads)
+                        .await?
+                        .map_ok(|segment| segment.map_ids(|id| HgId::from(id.into_nodehash())))
+                        .left_stream()
+                }
+                SlapiCommitIdentityScheme::Git => {
+                    let heads: Vec<_> = request
+                        .heads
+                        .into_iter()
+                        .map(|id| GitSha1::from(id.into_byte_array()))
+                        .collect();
+                    let common: Vec<_> = request
+                        .common
+                        .into_iter()
+                        .map(|id| GitSha1::from(id.into_byte_array()))
+                        .collect();
+                    repo.repo_ctx()
+                        .graph_segments_git(common, heads)
+                        .await?
+                        .map_ok(|segment| segment.map_ids(|id| HgId::from(id.into_inner())))
+                        .right_stream()
+                }
+            };
 
             for await segment in graph_segments {
                 let segment = segment?;
                 yield CommitGraphSegmentsEntry {
-                    head: HgId::from(segment.head.into_nodehash()),
-                    base: HgId::from(segment.base.into_nodehash()),
+                    head: segment.head,
+                    base: segment.base,
                     length: segment.length,
                     parents: segment
                         .parents
                         .into_iter()
                         .map(|parent| CommitGraphSegmentParent {
-                            hgid: HgId::from(parent.id.into_nodehash()),
-                            location: parent.location.map(|location| {
-                                location.map_descendant(|descendant| {
-                                    HgId::from(descendant.into_nodehash())
-                                })
-                            }),
+                            hgid: parent.id,
+                            location: parent.location,
                         })
                         .collect(),
                 }

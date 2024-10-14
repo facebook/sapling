@@ -33,9 +33,35 @@ pub struct ChangesetSegment<Id> {
     pub parents: Vec<ChangesetSegmentParent<Id>>,
 }
 
+impl<Id> ChangesetSegment<Id> {
+    pub fn map_ids<NewId>(self, map_id: impl Fn(Id) -> NewId + Clone) -> ChangesetSegment<NewId> {
+        ChangesetSegment {
+            head: map_id(self.head),
+            base: map_id(self.base),
+            length: self.length,
+            parents: self
+                .parents
+                .into_iter()
+                .map(|parent| parent.map_ids(map_id.clone()))
+                .collect(),
+        }
+    }
+}
+
 pub struct ChangesetSegmentParent<Id> {
     pub id: Id,
     pub location: Option<Location<Id>>,
+}
+
+impl<Id> ChangesetSegmentParent<Id> {
+    pub fn map_ids<NewId>(self, map_id: impl Fn(Id) -> NewId) -> ChangesetSegmentParent<NewId> {
+        ChangesetSegmentParent {
+            id: map_id(self.id),
+            location: self
+                .location
+                .map(|location| location.map_descendant(map_id)),
+        }
+    }
 }
 
 impl<R: MononokeRepo> RepoContext<R> {
