@@ -74,7 +74,9 @@
   $ git_client push origin master_bookmark branch_ffonly --force
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
      e8615d6..60fb9c7  master_bookmark -> master_bookmark
-   ! [remote rejected] branch_ffonly -> branch_ffonly (Non fast-forward bookmark move of 'heads/branch_ffonly' from eb95862bb5d5c295844706cbb0d0e56fee405f5c to 3ea0687e31d7b65429c774526728dba90cbaabc0)
+   ! [remote rejected] branch_ffonly -> branch_ffonly (Non fast-forward bookmark move of 'heads/branch_ffonly' from eb95862bb5d5c295844706cbb0d0e56fee405f5c to 3ea0687e31d7b65429c774526728dba90cbaabc0
+  
+  For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
   error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
   [1]
 
@@ -83,4 +85,4 @@
 
 # Verify the push validation errors got recorded in scuba
   $ jq -S .normal "$SCUBA" | grep validation
-    "push_validation_errors": "refs/heads/branch_ffonly => Non fast-forward bookmark move of 'heads/branch_ffonly' from eb95862bb5d5c295844706cbb0d0e56fee405f5c to 3ea0687e31d7b65429c774526728dba90cbaabc0\n",
+    "push_validation_errors": "refs/heads/branch_ffonly => Non fast-forward bookmark move of 'heads/branch_ffonly' from eb95862bb5d5c295844706cbb0d0e56fee405f5c to 3ea0687e31d7b65429c774526728dba90cbaabc0\n\nFor more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j\n",
