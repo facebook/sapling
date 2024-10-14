@@ -441,6 +441,18 @@ pub trait TreeStore: KeyStore {
             Some(Ok((_k, aux))) => Ok(aux),
         }
     }
+
+    /// Similar to `KeyStore::insert_data` with `opts.kind` set to `Kind::Tree`.
+    fn insert_tree(
+        &self,
+        mut opts: InsertOpts,
+        path: &RepoPath,
+        items: Vec<(PathComponentBuf, Id20, TreeItemFlag)>,
+    ) -> anyhow::Result<Id20> {
+        opts.kind = Kind::Tree;
+        let data = basic_serialize_tree(items, self.format())?;
+        KeyStore::insert_data(self, opts, path, &data)
+    }
 }
 
 /// Decides the serialization format. This exists so different parts of the code
