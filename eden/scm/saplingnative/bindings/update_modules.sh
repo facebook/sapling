@@ -4,5 +4,5 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# use 'python3.8 -m pip install cogapp' to install cog
-python3.8 -m cogapp -r TARGETS src/modules.rs
+# use 'python3 pip.pyz install --user cogapp' to install cog
+${PYTHON:-python3} -m cogapp -r TARGETS src/modules.rs
