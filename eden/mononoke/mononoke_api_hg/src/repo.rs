@@ -83,18 +83,6 @@ pub struct HgRepoContext<R> {
     repo_ctx: RepoContext<R>,
 }
 
-pub struct HgChangesetSegment {
-    pub head: HgChangesetId,
-    pub base: HgChangesetId,
-    pub length: u64,
-    pub parents: Vec<HgChangesetSegmentParent>,
-}
-
-pub struct HgChangesetSegmentParent {
-    pub hgid: HgChangesetId,
-    pub location: Option<Location<HgChangesetId>>,
-}
-
 impl<R: MononokeRepo> HgRepoContext<R> {
     pub(crate) fn new(repo_ctx: RepoContext<R>) -> Self {
         Self { repo_ctx }
@@ -718,85 +706,6 @@ impl<R: MononokeRepo> HgRepoContext<R> {
             )
             .await?;
         Ok(len == public_phases.len())
-    }
-
-    pub async fn graph_segments(
-        &self,
-        common: Vec<HgChangesetId>,
-        heads: Vec<HgChangesetId>,
-    ) -> Result<impl Stream<Item = Result<HgChangesetSegment, MononokeError>> + '_, MononokeError>
-    {
-        let bonsai_common = self.convert_changeset_ids(common).await?;
-        let bonsai_heads = self.convert_changeset_ids(heads).await?;
-
-        let segments = self
-            .repo_ctx()
-            .repo()
-            .commit_graph()
-            .ancestors_difference_segments(self.ctx(), bonsai_heads, bonsai_common)
-            .await?;
-
-        Ok(stream::iter(segments.into_iter())
-            .chunks(25)
-            .map(move |segments| async move {
-                let mut ids = HashSet::with_capacity(segments.len() * 4);
-                for segment in segments.iter() {
-                    ids.insert(segment.head);
-                    ids.insert(segment.base);
-                    for parent in segment.parents.iter() {
-                        ids.insert(parent.cs_id);
-                        if let Some(location) = &parent.location {
-                            ids.insert(location.head);
-                        }
-                    }
-                }
-                let mapping: HashMap<ChangesetId, HgChangesetId> = self
-                    .repo()
-                    .get_hg_bonsai_mapping(self.ctx().clone(), ids.into_iter().collect::<Vec<_>>())
-                    .await
-                    .context("error fetching hg bonsai mapping")?
-                    .into_iter()
-                    .map(|(hgid, csid)| (csid, hgid))
-                    .collect();
-                let map_id = move |name, csid| {
-                    mapping
-                        .get(&csid)
-                        .ok_or_else(|| {
-                            MononokeError::InvalidRequest(format!(
-                                "failed to find hg equivalent for {} {}",
-                                name, csid,
-                            ))
-                        })
-                        .copied()
-                };
-                anyhow::Ok(stream::iter(segments.into_iter().map(move |segment| {
-                    Ok(HgChangesetSegment {
-                        head: map_id("segment head", segment.head)?,
-                        base: map_id("segment base", segment.base)?,
-                        length: segment.length,
-                        parents: segment
-                            .parents
-                            .into_iter()
-                            .map(|parent| {
-                                Ok(HgChangesetSegmentParent {
-                                    hgid: map_id("segment parent", parent.cs_id)?,
-                                    location: parent
-                                        .location
-                                        .map(|location| {
-                                            anyhow::Ok(Location::new(
-                                                map_id("location head", location.head)?,
-                                                location.distance,
-                                            ))
-                                        })
-                                        .transpose()?,
-                                })
-                            })
-                            .collect::<Result<_, MononokeError>>()?,
-                    })
-                })))
-            })
-            .buffered(25)
-            .try_flatten())
     }
 
     /// Return a mapping of commits to their parents that are in the segment of

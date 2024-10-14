@@ -821,7 +821,7 @@ impl SaplingRemoteApiHandler for GraphSegmentsHandler {
             .collect();
 
         Ok(try_stream! {
-            let graph_segments = repo.graph_segments(common, heads).await?;
+            let graph_segments = repo.repo_ctx().graph_segments_hg(common, heads).await?;
 
             for await segment in graph_segments {
                 let segment = segment?;
@@ -833,7 +833,7 @@ impl SaplingRemoteApiHandler for GraphSegmentsHandler {
                         .parents
                         .into_iter()
                         .map(|parent| CommitGraphSegmentParent {
-                            hgid: HgId::from(parent.hgid.into_nodehash()),
+                            hgid: HgId::from(parent.id.into_nodehash()),
                             location: parent.location.map(|location| {
                                 location.map_descendant(|descendant| {
                                     HgId::from(descendant.into_nodehash())
