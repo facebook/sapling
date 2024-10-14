@@ -260,6 +260,17 @@ pub trait FileStore: KeyStore + 'static {
         Ok(())
     }
 
+    /// Similar to `KeyStore::insert_data` with `opts.kind` set to `Kind::File`.
+    fn insert_file(
+        &self,
+        mut opts: InsertOpts,
+        path: &RepoPath,
+        data: &[u8],
+    ) -> anyhow::Result<HgId> {
+        opts.kind = Kind::File;
+        KeyStore::insert_data(self, opts, path, data)
+    }
+
     fn as_key_store(&self) -> &dyn KeyStore
     where
         Self: Sized,
