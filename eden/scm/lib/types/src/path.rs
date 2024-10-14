@@ -73,7 +73,19 @@ pub struct RepoPath(str);
 
 /// An owned version of a `PathComponent`. Not intended for mutation. RepoPathBuf is probably
 /// more appropriate for mutation.
-#[derive(Clone, Debug, Default, Ord, PartialOrd, Eq, PartialEq, Hash)]
+#[derive(
+    Serialize,
+    Deserialize,
+    Clone,
+    Debug,
+    Default,
+    Ord,
+    PartialOrd,
+    Eq,
+    PartialEq,
+    Hash
+)]
+#[serde(transparent)]
 pub struct PathComponentBuf(String);
 
 /// A `RepoPath` is a series of `PathComponent`s joined together by a separator (`/`).
