@@ -139,6 +139,8 @@ impl AddScubaResponse for thrift::CommitSparseProfileSizeToken {
     }
 }
 
+impl AddScubaResponse for thrift::CommitSparseProfileSizePollResponse {}
+
 impl AddScubaResponse for thrift::FileChunk {}
 
 impl AddScubaResponse for thrift::FileInfo {}

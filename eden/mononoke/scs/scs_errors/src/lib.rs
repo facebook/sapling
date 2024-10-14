@@ -327,6 +327,7 @@ impl_into_thrift_error!(service::CommitMultiplePathLastChangedExn);
 impl_into_thrift_error!(service::CommitSparseProfileDeltaExn);
 impl_into_thrift_error!(service::CommitSparseProfileSizeExn);
 impl_into_thrift_error!(service::CommitSparseProfileSizeAsyncExn);
+impl_into_thrift_error!(service::CommitSparseProfileSizePollExn);
 impl_into_thrift_error!(service::TreeExistsExn);
 impl_into_thrift_error!(service::TreeListExn);
 impl_into_thrift_error!(service::FileExistsExn);

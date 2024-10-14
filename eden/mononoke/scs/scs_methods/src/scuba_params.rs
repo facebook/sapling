@@ -508,6 +508,12 @@ impl AddScubaParams for thrift::CommitSparseProfileSizeParamsV2 {
     }
 }
 
+impl AddScubaParams for thrift::CommitSparseProfileSizeToken {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("param_token", self.id);
+    }
+}
+
 impl AddScubaParams for thrift::FileContentChunkParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_offset", self.offset);

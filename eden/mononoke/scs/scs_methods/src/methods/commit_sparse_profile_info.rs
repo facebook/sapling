@@ -6,6 +6,7 @@
  */
 
 use anyhow::Result;
+use async_requests::types::CommitSparseProfileSizeToken;
 use context::CoreContext;
 use mononoke_api::sparse_profile::get_profile_delta_size;
 use mononoke_api::sparse_profile::MonitoringProfiles;
@@ -18,6 +19,7 @@ use source_control as thrift;
 
 use crate::async_requests::enqueue;
 use crate::async_requests::get_queue;
+use crate::async_requests::poll;
 use crate::source_control_impl::SourceControlServiceImpl;
 
 impl SourceControlServiceImpl {
@@ -85,6 +87,16 @@ impl SourceControlServiceImpl {
             params,
         )
         .await
+    }
+
+    pub(crate) async fn commit_sparse_profile_size_poll(
+        &self,
+        ctx: CoreContext,
+        token: thrift::CommitSparseProfileSizeToken,
+    ) -> Result<thrift::CommitSparseProfileSizePollResponse, scs_errors::ServiceError> {
+        let queue = get_queue(&ctx, &self.async_requests_queue_client).await?;
+        let token = CommitSparseProfileSizeToken(token);
+        poll::<CommitSparseProfileSizeToken>(&ctx, &queue, token).await
     }
 }
 

@@ -88,7 +88,9 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
             let res = conn.commit_sparse_profile_size_poll(&token).await?;
             match res.result {
                 Some(result) => match result {
-                    thrift::CommitSparseProfileSizeResult::success(_success) => todo!(),
+                    thrift::CommitSparseProfileSizeResult::success(success) => {
+                        break success;
+                    }
                     thrift::CommitSparseProfileSizeResult::error(error) => {
                         return Err(anyhow::anyhow!("request failed with error: {:?}", error));
                     }
@@ -97,7 +99,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                     }
                 },
                 None => {
-                    println!("sparse profile size is not ready yet");
+                    println!("sparse profile size is not ready yet, waiting some more...");
                 }
             }
         }
