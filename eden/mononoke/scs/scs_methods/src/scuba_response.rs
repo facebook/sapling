@@ -133,6 +133,12 @@ impl AddScubaResponse for thrift::CommitSparseProfileDeltaResponse {}
 
 impl AddScubaResponse for thrift::CommitSparseProfileSizeResponse {}
 
+impl AddScubaResponse for thrift::CommitSparseProfileSizeToken {
+    fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("response_token", self.id);
+    }
+}
+
 impl AddScubaResponse for thrift::FileChunk {}
 
 impl AddScubaResponse for thrift::FileInfo {}

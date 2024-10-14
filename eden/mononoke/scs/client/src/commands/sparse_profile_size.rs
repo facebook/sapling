@@ -7,6 +7,7 @@
 
 use std::io::Write;
 
+use anyhow::bail;
 use anyhow::Result;
 use scs_client_raw::thrift;
 use serde::Serialize;
@@ -29,6 +30,9 @@ pub(super) struct CommandArgs {
 
     #[clap(flatten)]
     sparse_profiles_args: SparseProfilesArgs,
+
+    #[clap(long = "async")]
+    asynchronous: bool,
 }
 
 #[derive(Serialize)]
@@ -72,12 +76,38 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         ..Default::default()
     };
 
-    let params = thrift::CommitSparseProfileSizeParams {
-        profiles,
-        ..Default::default()
-    };
+    let response = if args.asynchronous {
+        let params = thrift::CommitSparseProfileSizeParamsV2 {
+            commit: commit.clone(),
+            profiles,
+            ..Default::default()
+        };
+        let token = conn.commit_sparse_profile_size_async(&params).await?;
 
-    let response = conn.commit_sparse_profile_size(&commit, &params).await?;
+        loop {
+            let res = conn.commit_sparse_profile_size_poll(&token).await?;
+            match res.result {
+                Some(result) => match result {
+                    thrift::CommitSparseProfileSizeResult::success(_success) => todo!(),
+                    thrift::CommitSparseProfileSizeResult::error(error) => {
+                        return Err(anyhow::anyhow!("request failed with error: {:?}", error));
+                    }
+                    thrift::CommitSparseProfileSizeResult::UnknownField(_) => {
+                        bail!("unknown result type");
+                    }
+                },
+                None => {
+                    println!("sparse profile size is not ready yet");
+                }
+            }
+        }
+    } else {
+        let params = thrift::CommitSparseProfileSizeParams {
+            profiles,
+            ..Default::default()
+        };
+        conn.commit_sparse_profile_size(&commit, &params).await?
+    };
 
     let output = SparseProfileSizeOutput {
         profiles_size: response.profiles_size,

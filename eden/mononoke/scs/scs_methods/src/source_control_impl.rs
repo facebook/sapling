@@ -1007,6 +1007,10 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::CommitSparseProfileSizeParams,
         ) -> Result<thrift::CommitSparseProfileSizeResponse, service::CommitSparseProfileSizeExn>;
 
+        async fn commit_sparse_profile_size_async(
+            params: thrift::CommitSparseProfileSizeParamsV2,
+        ) -> Result<thrift::CommitSparseProfileSizeToken, service::CommitSparseProfileSizeAsyncExn>;
+
         async fn tree_list(
             tree: thrift::TreeSpecifier,
             params: thrift::TreeListParams,

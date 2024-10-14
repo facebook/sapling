@@ -13,6 +13,8 @@ use mononoke_api::sparse_profile::ProfileSizeChange;
 use mononoke_api::sparse_profile::SparseProfileMonitoring;
 use source_control as thrift;
 
+use crate::async_requests::enqueue;
+use crate::async_requests::get_queue;
 use crate::source_control_impl::SourceControlServiceImpl;
 
 impl SourceControlServiceImpl {
@@ -91,6 +93,22 @@ impl SourceControlServiceImpl {
             }),
             ..Default::default()
         })
+    }
+
+    pub(crate) async fn commit_sparse_profile_size_async(
+        &self,
+        ctx: CoreContext,
+        params: thrift::CommitSparseProfileSizeParamsV2,
+    ) -> Result<thrift::CommitSparseProfileSizeToken, scs_errors::ServiceError> {
+        let (repo, _changeset) = self.repo_changeset(ctx.clone(), &params.commit).await?;
+        let queue = get_queue(&ctx, &self.async_requests_queue_client).await?;
+        enqueue::<thrift::CommitSparseProfileSizeParamsV2>(
+            &ctx,
+            &queue,
+            Some(&repo.repoid()),
+            params,
+        )
+        .await
     }
 }
 
