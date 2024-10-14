@@ -11,6 +11,9 @@ use mononoke_api::sparse_profile::get_profile_delta_size;
 use mononoke_api::sparse_profile::MonitoringProfiles;
 use mononoke_api::sparse_profile::ProfileSizeChange;
 use mononoke_api::sparse_profile::SparseProfileMonitoring;
+use mononoke_api::ChangesetContext;
+use mononoke_api::Repo;
+use mononoke_api::RepoContext;
 use source_control as thrift;
 
 use crate::async_requests::enqueue;
@@ -25,34 +28,7 @@ impl SourceControlServiceImpl {
         params: thrift::CommitSparseProfileSizeParams,
     ) -> Result<thrift::CommitSparseProfileSizeResponse, scs_errors::ServiceError> {
         let (repo, changeset) = self.repo_changeset(ctx.clone(), &commit).await?;
-        let profiles = convert_profiles_params(params.profiles).await?;
-        let monitor = SparseProfileMonitoring::new(
-            repo.name(),
-            repo.sparse_profiles(),
-            repo.config().sparse_profiles_config.clone(),
-            profiles,
-        )?;
-        let profiles = monitor.get_monitoring_profiles(&changeset).await?;
-        let sizes_hashmap = monitor.get_profile_size(&ctx, &changeset, profiles).await?;
-        let sizes = sizes_hashmap
-            .into_iter()
-            .map(|(source, size)| {
-                (
-                    source,
-                    thrift::SparseProfileSize {
-                        size: size as i64,
-                        ..Default::default()
-                    },
-                )
-            })
-            .collect();
-        Ok(thrift::CommitSparseProfileSizeResponse {
-            profiles_size: thrift::SparseProfileSizes {
-                sizes,
-                ..Default::default()
-            },
-            ..Default::default()
-        })
+        commit_sparse_profile_size_impl(ctx, repo, changeset, params.profiles).await
     }
 
     pub(crate) async fn commit_sparse_profile_delta(
@@ -110,6 +86,42 @@ impl SourceControlServiceImpl {
         )
         .await
     }
+}
+
+pub(crate) async fn commit_sparse_profile_size_impl(
+    ctx: CoreContext,
+    repo: RepoContext<Repo>,
+    changeset: ChangesetContext<Repo>,
+    profiles: thrift::SparseProfiles,
+) -> Result<thrift::CommitSparseProfileSizeResponse, scs_errors::ServiceError> {
+    let profiles = convert_profiles_params(profiles).await?;
+    let monitor = SparseProfileMonitoring::new(
+        repo.name(),
+        repo.sparse_profiles(),
+        repo.config().sparse_profiles_config.clone(),
+        profiles,
+    )?;
+    let profiles = monitor.get_monitoring_profiles(&changeset).await?;
+    let sizes_hashmap = monitor.get_profile_size(&ctx, &changeset, profiles).await?;
+    let sizes = sizes_hashmap
+        .into_iter()
+        .map(|(source, size)| {
+            (
+                source,
+                thrift::SparseProfileSize {
+                    size: size as i64,
+                    ..Default::default()
+                },
+            )
+        })
+        .collect();
+    Ok(thrift::CommitSparseProfileSizeResponse {
+        profiles_size: thrift::SparseProfileSizes {
+            sizes,
+            ..Default::default()
+        },
+        ..Default::default()
+    })
 }
 
 async fn convert_profiles_params(
