@@ -84,7 +84,7 @@ DOTT_DEPS = {
 }
 
 DOTT_ASYNC_WORKER = {
-    "//eden/mononoke/async_requests:worker": "ASYNC_REQUESTS_WORKER",
+    "//eden/mononoke/async_requests/worker:worker": "ASYNC_REQUESTS_WORKER",
 }
 
 DISABLE_ALL_NETWORK_ACCESS_DEPS = {

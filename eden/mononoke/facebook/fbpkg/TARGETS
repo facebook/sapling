@@ -65,7 +65,7 @@ mononoke_fbpkg(
 mononoke_fbpkg(
     name = "mononoke.megarepo_async_requests_worker",
     path_actions = {
-        "async_requests_worker": "//eden/mononoke/async_requests:worker",
+        "async_requests_worker": "//eden/mononoke/async_requests/worker:worker",
     },
 )
 

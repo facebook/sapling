@@ -1,0 +1,39 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+
+oncall("scm_server_infra")
+
+rust_binary(
+    name = "worker",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/main.rs",
+    test_deps = [
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/async_requests:requests_table",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-stream",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/cloned:cloned",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/hostname:hostname",
+        "//common/rust/shed/stats:stats",
+        "//eden/mononoke/async_requests:async_requests",
+        "//eden/mononoke/async_requests:client",
+        "//eden/mononoke/async_requests/if:async_requests_types-thrift-rust",
+        "//eden/mononoke/cmdlib:cmdlib_logging",
+        "//eden/mononoke/cmdlib:environment",
+        "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
+        "//eden/mononoke/megarepo_api:megarepo_api",
+        "//eden/mononoke/megarepo_api:megarepo_error",
+        "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/mononoke_api:mononoke_api",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/scs/if:source_control-rust",
+        "//eden/mononoke/server/context:context",
+    ],
+)
