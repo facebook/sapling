@@ -33,7 +33,7 @@ fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbth
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 gix-date = { git = "https://github.com/pierrechevalier83/gitoxide", rev = "a080348c2fefb7a300ec80f4481617f870065589" }
 gix-hash = { git = "https://github.com/pierrechevalier83/gitoxide", rev = "a080348c2fefb7a300ec80f4481617f870065589" }
-itertools = "0.11.0"
+itertools = "0.12.1"
 lazy_static = "1.4"
 lfs_protocol = { version = "0.1.0", path = "../lfs_protocol" }
 maplit = "1.0"

@@ -29,7 +29,7 @@ fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rus
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_watchdog = { version = "0.1.0", path = "../common/futures_watchdog" }
-itertools = "0.11.0"
+itertools = "0.12.1"
 mercurial_derivation = { version = "0.1.0", path = "../derived_data/mercurial_derivation" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
