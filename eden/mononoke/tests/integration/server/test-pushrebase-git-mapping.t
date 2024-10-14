@@ -7,7 +7,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
   $ setconfig push.edenapi=true
-  $ DISALLOW_NON_PUSHREBASE=1 POPULATE_GIT_MAPPING=1 EMIT_OBSMARKERS=1 BLOB_TYPE="blob_files" NON_GIT_TYPES=1 default_setup
+  $ DISALLOW_NON_PUSHREBASE=1 POPULATE_GIT_MAPPING=1 EMIT_OBSMARKERS=1 BLOB_TYPE="blob_files" default_setup
   hg repo
   o  C [draft;rev=2;26805aba1e60]
   │

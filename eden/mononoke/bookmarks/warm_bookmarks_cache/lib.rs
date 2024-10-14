@@ -165,15 +165,6 @@ impl WarmBookmarksCacheBuilder {
         Ok(())
     }
 
-    pub fn add_hg_and_git_warmers(
-        &mut self,
-        repo_derived_data: &ArcRepoDerivedData,
-        phases: &ArcPhases,
-    ) -> Result<(), Error> {
-        self.add_hg_warmers(repo_derived_data, phases)?;
-        self.add_git_warmers(repo_derived_data, phases)
-    }
-
     pub fn add_hg_warmers(
         &mut self,
         repo_derived_data: &ArcRepoDerivedData,
