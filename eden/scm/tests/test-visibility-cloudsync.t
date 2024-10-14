@@ -9,7 +9,6 @@
   $ setconfig commitcloud.hostname=testhost
   $ setconfig visibility.enabled=true
   $ setconfig experimental.evolution=obsolete
-  $ setconfig experimental.narrow-heads=true
   $ setconfig mutation.record=true mutation.enabled=true mutation.user=test
   $ setconfig remotefilelog.reponame=server
   $ setconfig hint.ack='*'

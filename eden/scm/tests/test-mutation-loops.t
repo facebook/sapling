@@ -4,7 +4,6 @@
   $ eagerepo
   $ enable amend rebase remotenames
   $ setconfig experimental.evolution=obsolete
-  $ setconfig experimental.narrow-heads=true
   $ setconfig visibility.enabled=true
   $ setconfig mutation.record=true mutation.enabled=true
 
@@ -24,7 +23,7 @@
       d3c8fd338cf40a496d981b2ada8df4108f575897 amend by test at 1970-01-01T00:00:00 from:
       932f02c9fad3fa46e55b62560c88eb67528b02f0 amend by test at 1970-01-01T00:00:00 from:
       e6c779c67aa947c951f334f4f312bd2b21d27e55
-  
+
 
 Loops are not normally possible, but they can sneak in through backfilling complex
 obsmarker graphs.  Create a fake one to check behaviour.
@@ -42,7 +41,7 @@ obsmarker graphs.  Create a fake one to check behaviour.
   │ x  e6c779c67aa9 'commit1'  (Rewritten using loop into 932f02c9fad3)
   ├─╯
   o  d20a80d4def3 'base'
-  
+
 
   $ hg unhide e6c779c67aa9
 
@@ -66,7 +65,7 @@ continuously cycles round the commit2 to commit4 loop.
   │ x  e6c779c67aa9 'commit1'  (Rewritten using rewrite into 21c93100b04c)
   ├─╯
   o  d20a80d4def3 'base'
-  
+
 Similarly, check that predecessorsset is also safe.
 
   $ hg debugsh -c "ui.write(str([s.node.hex(n) for n in s.mutation.predecessorsset(repo, s.node.bin(\"21c93100b04c543843a7dab4fa0d5bada061b7a0\"))]) + '\n')"
