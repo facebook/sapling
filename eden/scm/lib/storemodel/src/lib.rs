@@ -40,6 +40,7 @@ pub use types;
 use types::fetch_mode::FetchMode;
 pub use types::tree::TreeItemFlag;
 use types::HgId;
+use types::Id20;
 use types::Key;
 use types::PathComponent;
 use types::PathComponentBuf;
@@ -559,6 +560,10 @@ impl<T: FileStore + TreeStore> StoreOutput for Arc<T> {
 pub type StaticSerializedTreeParseFunc =
     fn(Bytes, SerializationFormat) -> anyhow::Result<Box<dyn TreeEntry>>;
 
+#[doc(hidden)]
+pub type StaticSerializeTreeFunc =
+    fn(Vec<(PathComponentBuf, Id20, TreeItemFlag)>, SerializationFormat) -> anyhow::Result<Bytes>;
+
 /// Parse a serialized git or hg tree into `TreeEntry`.
 /// This is basic parsing that does not provide `FileAuxData`.
 /// The actual implementation is elsewhere to avoid cyclic dependencies.
@@ -571,4 +576,16 @@ pub fn basic_parse_tree(
     let parse = TREE_PARSER
         .get_or_try_init(|| factory::call_constructor::<(), StaticSerializedTreeParseFunc>(&()))?;
     parse(data, format)
+}
+
+/// Serialize tree items to bytes.
+pub fn basic_serialize_tree(
+    items: Vec<(PathComponentBuf, Id20, TreeItemFlag)>,
+    format: SerializationFormat,
+) -> anyhow::Result<Bytes> {
+    // Only call `call_constructor` once to avoid overhead in `factory`.
+    static TREE_SERIALIZER: OnceCell<StaticSerializeTreeFunc> = OnceCell::new();
+    let serialize = TREE_SERIALIZER
+        .get_or_try_init(|| factory::call_constructor::<(), StaticSerializeTreeFunc>(&()))?;
+    serialize(items, format)
 }

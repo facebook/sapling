@@ -915,6 +915,7 @@ pub fn prefetch(
 
 pub fn init() {
     crate::factory_impls::setup_basic_tree_parser_constructor();
+    crate::factory_impls::setup_basic_tree_serializer_constructor();
 }
 
 #[cfg(test)]
