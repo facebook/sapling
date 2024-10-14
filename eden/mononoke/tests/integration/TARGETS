@@ -64,8 +64,8 @@ dott_test(
     dott_files = ["test-alias-verify.t"],
     deps = [
         "//eden/mononoke:aliasverify",
-        "//eden/mononoke:blobimport",
         "//eden/mononoke:mononoke",
+        "//eden/mononoke/tools/testtool:testtool",
     ],
 )
 
