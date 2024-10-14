@@ -5,8 +5,23 @@
  * GNU General Public License version 2.
  */
 
+use serde::Deserialize;
+use serde::Serialize;
+
 /// Used to signal the type of element in a directory: file or directory.
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(
+    Serialize,
+    Deserialize,
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd
+)]
+#[serde(rename_all = "snake_case")]
 pub enum TreeItemFlag {
     File(FileType),
     Directory,
@@ -15,7 +30,19 @@ pub enum TreeItemFlag {
 /// The types of files (leaf nodes in a tree).
 ///
 /// The type needs to round-trip tree serialization.
-#[derive(Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
+#[derive(
+    Serialize,
+    Deserialize,
+    Clone,
+    Copy,
+    Debug,
+    Ord,
+    PartialOrd,
+    Eq,
+    PartialEq,
+    Hash
+)]
+#[serde(rename_all = "snake_case")]
 #[derive(Default)]
 pub enum FileType {
     /// Regular files.
