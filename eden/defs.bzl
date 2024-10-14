@@ -53,6 +53,7 @@ def get_test_env_and_deps(suffix = ""):
         env_to_target.update({
             "EDENFS_DROP_PRIVS": "//eden/fs/privhelper/test:drop_privs",
             "EDENFS_FSATTR_BIN": "//eden/integration/helpers:fsattr",
+            "EDENFS_FSCK": "//eden/fs/inodes/fscatalog:eden_fsck",
             "EDENFS_TAKEOVER_TOOL": "//eden/integration/helpers:takeover_tool",
             "EDEN_HG_BINARY": "//scm/telemetry/hg:hg",
             "HG_REAL_BIN": "//eden/scm:hg_universal_binary",
@@ -69,6 +70,7 @@ def get_test_env_and_deps(suffix = ""):
         env_to_target.update({
             "EDENFS_DROP_PRIVS": "//eden/fs/privhelper/test:drop_privs",
             "EDENFS_FSATTR_BIN": "//eden/integration/helpers:fsattr",
+            "EDENFS_FSCK": "//eden/fs/inodes/fscatalog:eden_fsck",
             "EDENFS_TAKEOVER_TOOL": "//eden/integration/helpers:takeover_tool",
             "EDEN_HG_BINARY": "//scm/telemetry/hg:hg",
             "HG_REAL_BIN": "//eden/scm:hg",
@@ -80,7 +82,6 @@ def get_test_env_and_deps(suffix = ""):
         "EDENFSCTL_REAL_PATH": "//eden/fs/cli:edenfsctl",
         "EDENFSCTL_RUST_PATH": "//eden/fs/cli_rs/edenfsctl:edenfsctl",
         "EDENFS_FAKE_EDENFS": "//eden/integration/helpers:fake_edenfs",
-        "EDENFS_FSCK": "//eden/fs/inodes/fscatalog:eden_fsck",
         "EDENFS_SNAPSHOTS": "//eden/test-data:snapshots",
         "EDENFS_ZERO_BLOB": "//eden/integration/helpers:zero_blob",
         "HG_ETC_MERCURIAL": "//eden/scm:etc_mercurial",
