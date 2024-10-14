@@ -36,6 +36,7 @@ use minibytes::Bytes;
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 use storemodel::BoxIterator;
+use storemodel::KeyStore;
 use storemodel::SerializationFormat;
 use storemodel::TreeEntry;
 
@@ -118,6 +119,8 @@ pub struct TreeStore {
     pub fetch_tree_aux_data: bool,
 
     pub(crate) metrics: Arc<RwLock<TreeStoreMetrics>>,
+
+    pub format: SerializationFormat,
 }
 
 impl Drop for TreeStore {
@@ -370,6 +373,7 @@ impl TreeStore {
             fetch_tree_aux_data: false,
             metrics: Default::default(),
             prefetch_tree_parents: false,
+            format: SerializationFormat::Hg,
         }
     }
 
@@ -435,6 +439,7 @@ impl TreeStore {
             fetch_tree_aux_data: false,
             metrics: self.metrics.clone(),
             prefetch_tree_parents: false,
+            format: self.format(),
         }
     }
 
@@ -707,6 +712,10 @@ impl storemodel::KeyStore for TreeStore {
 
     fn refresh(&self) -> Result<()> {
         TreeStore::refresh(self)
+    }
+
+    fn format(&self) -> SerializationFormat {
+        self.format
     }
 }
 

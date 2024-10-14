@@ -546,6 +546,14 @@ impl Repo {
             tracing::trace!(target: "repo::tree_store", "no filestore for aux fetching");
         }
 
+        // Note: This currently does nothing, since the "git" repo requirement makes
+        // try_construct_file_tree_store return a GitStore. Therefore we never hit this code path.
+        let info: &dyn StoreInfo = self;
+        if info.has_requirement("git") {
+            tracing::trace!(target: "repo::tree_store", "enabling git serialization");
+            tree_builder = tree_builder.format(SerializationFormat::Git);
+        }
+
         let ts = Arc::new(tree_builder.build()?);
         let _ = self.tree_scm_store.set(ts.clone());
         let _ = self.tree_store.set(ts.clone());

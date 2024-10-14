@@ -278,7 +278,7 @@ impl<'a> FileStoreBuilder<'a> {
 
         let edenapi_retries = self.get_edenapi_retries();
 
-        let format: SerializationFormat = self.format.unwrap_or(SerializationFormat::Hg);
+        let format: SerializationFormat = self.get_format();
 
         tracing::trace!(target: "revisionstore::filestore", "processing local");
         let indexedlog_local = if let Some(indexedlog_local) = self.indexedlog_local.take() {
@@ -426,6 +426,7 @@ pub struct TreeStoreBuilder<'a> {
     tree_aux_store: Option<Arc<TreeAuxStore>>,
     filestore: Option<Arc<FileStore>>,
     cas_client: Option<Arc<dyn CasClient>>,
+    format: Option<SerializationFormat>,
 }
 
 impl<'a> TreeStoreBuilder<'a> {
@@ -441,6 +442,7 @@ impl<'a> TreeStoreBuilder<'a> {
             tree_aux_store: None,
             filestore: None,
             cas_client: None,
+            format: None,
         }
     }
 
@@ -494,6 +496,11 @@ impl<'a> TreeStoreBuilder<'a> {
         self
     }
 
+    pub fn format(mut self, format: SerializationFormat) -> Self {
+        self.format = Some(format);
+        self
+    }
+
     #[context("failed to determine whether to use edenapi")]
     fn use_edenapi(&self) -> Result<bool> {
         Ok(if let Some(use_edenapi) = self.override_edenapi {
@@ -510,9 +517,8 @@ impl<'a> TreeStoreBuilder<'a> {
         Ok(SaplingRemoteApiTreeStore::new(client))
     }
 
-    // TODO(cuev): Allow TreeStore builder to specify the serialization format
     fn get_format(&self) -> SerializationFormat {
-        SerializationFormat::Hg
+        self.format.unwrap_or(SerializationFormat::Hg)
     }
 
     #[context("failed to build local indexedlog")]
@@ -626,6 +632,8 @@ impl<'a> TreeStoreBuilder<'a> {
             check_cache_buster(&self.config, &cache_path);
         }
 
+        let format = self.get_format();
+
         tracing::trace!(target: "revisionstore::treestore", "processing local");
         let indexedlog_local = if let Some(indexedlog_local) = self.indexedlog_local.take() {
             Some(indexedlog_local)
@@ -728,6 +736,7 @@ impl<'a> TreeStoreBuilder<'a> {
             fetch_tree_aux_data,
             flush_on_drop: true,
             metrics: Default::default(),
+            format,
         })
     }
 }
