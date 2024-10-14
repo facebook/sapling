@@ -35,6 +35,7 @@ const RelativePathPiece kCheckoutConfig{"config.toml"};
 
 // Keys for the TOML config file.
 constexpr folly::StringPiece kRepoSection{"repository"};
+constexpr folly::StringPiece kRedirectionTargetsSection{"redirection-targets"};
 constexpr folly::StringPiece kRepoSourceKey{"path"};
 constexpr folly::StringPiece kRepoTypeKey{"type"};
 constexpr folly::StringPiece kRepoCaseSensitiveKey{"case-sensitive"};
@@ -347,6 +348,15 @@ std::unique_ptr<CheckoutConfig> CheckoutConfig::loadFromClientDirectory(
   auto repository = configRoot->get_table(kRepoSection.str());
   config->repoType_ = *repository->get_as<std::string>(kRepoTypeKey.str());
   config->repoSource_ = *repository->get_as<std::string>(kRepoSourceKey.str());
+
+  // Load redirection targets
+  auto redirectionTargetsTable =
+      configRoot->get_table(kRedirectionTargetsSection.str());
+  if (redirectionTargetsTable) {
+    for (const auto& [path, target] : *redirectionTargetsTable) {
+      config->redirection_targets_[path] = target->as<std::string>()->get();
+    }
+  }
 
   FieldConverter<MountProtocol> mountProtocolConverter;
   MountProtocol mountProtocol = kMountProtocolDefault;
