@@ -13,18 +13,35 @@
 //! handling, enqueuing and polling should be done by the callers.
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
+use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Result;
 use async_requests::types::AsynchronousRequestParams;
 use async_requests::types::AsynchronousRequestResult;
 use async_requests::types::IntoConfigFormat;
 use context::CoreContext;
+use ephemeral_blobstore::BubbleId;
+use ephemeral_blobstore::RepoEphemeralStore;
+use futures::future::BoxFuture;
+use futures::Future;
+use futures::FutureExt;
 use megarepo_api::MegarepoApi;
 use megarepo_error::MegarepoError;
+use mononoke_api::ChangesetContext;
+use mononoke_api::ChangesetSpecifier;
+use mononoke_api::Mononoke;
 use mononoke_api::MononokeRepo;
+use mononoke_api::Repo;
+use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
+use repo_authorization::AuthorizationContext;
+use scs_methods::commit_sparse_profile_info::commit_sparse_profile_size_impl;
+use scs_methods::from_request::FromRequest;
+use scs_methods::specifiers::SpecifierExt;
 use source_control as thrift;
+use source_control::CommitSpecifier;
 
 async fn megarepo_sync_changeset<R: MononokeRepo>(
     ctx: &CoreContext,
@@ -164,6 +181,7 @@ async fn megarepo_remerge_source<R: MononokeRepo>(
 /// return `Err` for transient errors, to indicate we should retry.
 pub(crate) async fn megarepo_async_request_compute<R: MononokeRepo>(
     ctx: &CoreContext,
+    mononoke: Arc<Mononoke<Repo>>,
     megarepo_api: &MegarepoApi<R>,
     params: AsynchronousRequestParams,
 ) -> Result<AsynchronousRequestResult> {
@@ -204,11 +222,65 @@ pub(crate) async fn megarepo_async_request_compute<R: MononokeRepo>(
                 ..Default::default()
             }).into())
         }
-        async_requests_types_thrift::AsynchronousRequestParams::commit_sparse_profile_size_params(_params) => todo!(),
+        async_requests_types_thrift::AsynchronousRequestParams::commit_sparse_profile_size_params(params) => {
+            let (repo, changeset ) = get_repo_and_changeset(ctx, mononoke, &params.commit).await
+                .map_err(|e| anyhow!("error finding changeset: {:?}", e))?;
+
+            Ok(commit_sparse_profile_size_impl(ctx, repo, changeset, params.profiles)
+                .await
+                .map_err(|e| todo!() /* AsyncRequestsError::InternalError(anyhow!(e.into())) */ )
+                .into())
+        }
         async_requests_types_thrift::AsynchronousRequestParams::UnknownField(union_tag) => {
              bail!(
                 "this type of request (AsynchronousRequestParams tag {}) not supported by this worker!", union_tag
              )
         }
     }
+}
+
+async fn get_repo_and_changeset(
+    ctx: &CoreContext,
+    mononoke: Arc<Mononoke<Repo>>,
+    commit: &CommitSpecifier,
+) -> Result<(RepoContext<Repo>, ChangesetContext<Repo>), scs_errors::ServiceError> {
+    let changeset_specifier = ChangesetSpecifier::from_request(&commit.id)?;
+    let bubble_fetcher = bubble_fetcher_for_changeset(ctx.clone(), changeset_specifier.clone());
+    let repo = repo_impl(ctx.clone(), mononoke, &commit.repo, bubble_fetcher).await?;
+
+    let changeset = repo
+        .changeset(changeset_specifier)
+        .await?
+        .ok_or_else(|| scs_errors::commit_not_found(commit.description()))?;
+
+    Ok((repo, changeset))
+}
+
+fn bubble_fetcher_for_changeset(
+    ctx: CoreContext,
+    specifier: ChangesetSpecifier,
+) -> impl FnOnce(RepoEphemeralStore) -> BoxFuture<'static, anyhow::Result<Option<BubbleId>>> {
+    move |ephemeral| async move { specifier.bubble_id(&ctx, ephemeral).await }.boxed()
+}
+
+async fn repo_impl<F, R>(
+    ctx: CoreContext,
+    mononoke: Arc<Mononoke<Repo>>,
+    repo: &thrift::RepoSpecifier,
+    bubble_fetcher: F,
+) -> Result<RepoContext<Repo>, scs_errors::ServiceError>
+where
+    F: FnOnce(RepoEphemeralStore) -> R,
+    R: Future<Output = anyhow::Result<Option<BubbleId>>>,
+{
+    let repo = mononoke
+        .repo(ctx, &repo.name)
+        .await?
+        .ok_or_else(|| scs_errors::repo_not_found(repo.description()))?
+        .with_bubble(bubble_fetcher)
+        .await?
+        .with_authorization_context(AuthorizationContext::new_bypass_access_control())
+        .build()
+        .await?;
+    Ok(repo)
 }

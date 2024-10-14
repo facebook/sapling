@@ -38,7 +38,9 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::Stream;
 use megarepo_api::MegarepoApi;
+use mononoke_api::Mononoke;
 use mononoke_api::MononokeRepo;
+use mononoke_api::Repo;
 use mononoke_api::RepositoryId;
 use mononoke_app::MononokeApp;
 use mononoke_types::Timestamp;
@@ -75,6 +77,7 @@ define_stats! {
 
 #[derive(Clone)]
 pub struct AsyncMethodRequestWorker<R> {
+    mononoke: Arc<Mononoke<Repo>>,
     megarepo: Arc<MegarepoApi<R>>,
     name: String,
     queues_client: AsyncRequestsQueue,
@@ -89,6 +92,7 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
         fb: FacebookInit,
         app: &MononokeApp,
         repos: Option<Vec<RepositoryId>>,
+        mononoke: Arc<Mononoke<Repo>>,
         megarepo: Arc<MegarepoApi<R>>,
         name: String,
     ) -> Result<Self, Error> {
@@ -96,6 +100,7 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
             .await
             .context("acquiring the async requests queue")?;
         Ok(Self {
+            mononoke,
             megarepo,
             name,
             queues_client,
@@ -270,7 +275,7 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
 
         // Do the actual work.
         STATS::requested.add_value(1);
-        let work_fut = megarepo_async_request_compute(&ctx, &self.megarepo, params);
+        let work_fut = megarepo_async_request_compute(&ctx, self.mononoke, &self.megarepo, params);
 
         // Start the loop that would keep saying that request is still being
         // processed

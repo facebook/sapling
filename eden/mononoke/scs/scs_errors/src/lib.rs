@@ -187,6 +187,16 @@ impl From<AsyncRequestsError> for ServiceError {
     }
 }
 
+impl From<ServiceError> for AsyncRequestsError {
+    fn from(e: ServiceError) -> Self {
+        match e {
+            ServiceError::Request(e) => Self::request(e),
+            ServiceError::Internal(e) => Self::internal(e),
+            ServiceError::Overload(e) => Self::internal(e),
+        }
+    }
+}
+
 impl From<MononokeError> for ServiceError {
     fn from(e: MononokeError) -> Self {
         match e {

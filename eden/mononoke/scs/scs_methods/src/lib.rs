@@ -7,11 +7,13 @@
 
 mod async_requests;
 mod commit_id;
-mod from_request;
+pub mod from_request;
 mod history;
 mod into_response;
 mod methods;
 mod scuba_params;
 mod scuba_response;
 pub mod source_control_impl;
-mod specifiers;
+pub mod specifiers;
+
+pub use methods::commit_sparse_profile_info;

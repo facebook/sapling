@@ -48,7 +48,7 @@ use source_control as thrift;
 use crate::commit_id::CommitIdExt;
 
 /// Convert an item from a thrift request to the internal type.
-pub(crate) trait FromRequest<T: ?Sized> {
+pub trait FromRequest<T: ?Sized> {
     fn from_request(t: &T) -> Result<Self, thrift::RequestError>
     where
         Self: Sized;

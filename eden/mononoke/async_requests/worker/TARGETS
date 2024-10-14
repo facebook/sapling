@@ -25,6 +25,7 @@ rust_binary(
         "//eden/mononoke/async_requests:async_requests",
         "//eden/mononoke/async_requests:client",
         "//eden/mononoke/async_requests/if:async_requests_types-thrift-rust",
+        "//eden/mononoke/blobstore:ephemeral_blobstore",
         "//eden/mononoke/cmdlib:cmdlib_logging",
         "//eden/mononoke/cmdlib:environment",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
@@ -33,7 +34,10 @@ rust_binary(
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_api:mononoke_api",
         "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/repo_authorization:repo_authorization",
         "//eden/mononoke/scs/if:source_control-rust",
+        "//eden/mononoke/scs/scs_errors:scs_errors",
+        "//eden/mononoke/scs/scs_methods:scs_methods",
         "//eden/mononoke/server/context:context",
     ],
 )

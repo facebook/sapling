@@ -28,7 +28,7 @@ impl SourceControlServiceImpl {
         params: thrift::CommitSparseProfileSizeParams,
     ) -> Result<thrift::CommitSparseProfileSizeResponse, scs_errors::ServiceError> {
         let (repo, changeset) = self.repo_changeset(ctx.clone(), &commit).await?;
-        commit_sparse_profile_size_impl(ctx, repo, changeset, params.profiles).await
+        commit_sparse_profile_size_impl(&ctx, repo, changeset, params.profiles).await
     }
 
     pub(crate) async fn commit_sparse_profile_delta(
@@ -88,8 +88,8 @@ impl SourceControlServiceImpl {
     }
 }
 
-pub(crate) async fn commit_sparse_profile_size_impl(
-    ctx: CoreContext,
+pub async fn commit_sparse_profile_size_impl(
+    ctx: &CoreContext,
     repo: RepoContext<Repo>,
     changeset: ChangesetContext<Repo>,
     profiles: thrift::SparseProfiles,
@@ -102,7 +102,7 @@ pub(crate) async fn commit_sparse_profile_size_impl(
         profiles,
     )?;
     let profiles = monitor.get_monitoring_profiles(&changeset).await?;
-    let sizes_hashmap = monitor.get_profile_size(&ctx, &changeset, profiles).await?;
+    let sizes_hashmap = monitor.get_profile_size(ctx, &changeset, profiles).await?;
     let sizes = sizes_hashmap
         .into_iter()
         .map(|(source, size)| {

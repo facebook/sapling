@@ -107,6 +107,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         fb,
         &app,
         filter_repos,
+        mononoke,
         megarepo,
         name,
     ))?;

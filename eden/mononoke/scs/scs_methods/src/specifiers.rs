@@ -8,7 +8,7 @@
 use faster_hex::hex_string;
 use source_control as thrift;
 
-pub(crate) trait SpecifierExt: Send + Sync {
+pub trait SpecifierExt: Send + Sync {
     fn description(&self) -> String;
 
     fn scuba_reponame(&self) -> Option<String> {
