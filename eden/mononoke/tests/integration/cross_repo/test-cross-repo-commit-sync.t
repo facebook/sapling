@@ -4,8 +4,6 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
-FIXME! - sorry, this test is broken due to migration D63999703
-
   $ . "${TEST_FIXTURES}/library.sh"
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
   $ setconfig ui.ignorerevnum=false
@@ -110,11 +108,9 @@ FIXME! - sorry, this test is broken due to migration D63999703
   $ hg push -r . --to master_bookmark -q
   $ mononoke_x_repo_sync 1 0  --pushrebase-rewrite-dates tail --catch-up-once |& grep processing
   * processing log entry * (glob)
-  $ flush_mononoke_bookmarks
-
-  $ flush_mononoke_bookmarks
 
   $ cd "$TESTTMP/meg-hg-cnt"
+  $ wait_for_bookmark_move_away_edenapi meg-mon master_bookmark "$(hg whereami)"
   $ hg pull -q
   $ hg up master_bookmark -q
   $ hg log -r ':' -T '{remotenames} {node} {date|shortdate} {desc}\n' | sort
