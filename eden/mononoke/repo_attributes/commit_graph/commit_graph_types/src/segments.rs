@@ -11,6 +11,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt::Display;
 
+use either::Either;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 use serde::Deserialize;
@@ -43,6 +44,17 @@ pub struct ChangesetSegmentParent {
 pub struct ChangesetSegmentLocation {
     pub head: ChangesetId,
     pub distance: u64,
+}
+
+impl ChangesetSegment {
+    pub fn ids(&self) -> impl Iterator<Item = ChangesetId> + '_ {
+        [self.head, self.base]
+            .into_iter()
+            .chain(self.parents.iter().flat_map(|p| match p.location {
+                Some(loc) => Either::Left([p.cs_id, loc.head].into_iter()),
+                None => Either::Right([p.cs_id].into_iter()),
+            }))
+    }
 }
 
 impl Display for ChangesetSegment {

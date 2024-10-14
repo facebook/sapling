@@ -5,7 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+
 use ::sql::Transaction;
+use anyhow::ensure;
 use anyhow::Result;
 use ascii::AsciiStr;
 use async_trait::async_trait;
@@ -203,6 +207,89 @@ pub trait BonsaiGitMapping: Send + Sync {
         high: GitSha1,
         limit: usize,
     ) -> Result<Vec<GitSha1>>;
+
+    /// Convert a set of git commit ids to bonsai changesets.  If a changeset doesn't exist, it is omitted from the result.
+    async fn convert_available_git_to_bonsai(
+        &self,
+        ctx: &CoreContext,
+        git_sha1s: Vec<GitSha1>,
+    ) -> Result<Vec<ChangesetId>> {
+        let mapping = self.get(ctx, git_sha1s.into()).await?;
+        Ok(mapping.into_iter().map(|entry| entry.bcs_id).collect())
+    }
+
+    /// Convert a set of git commit ids to bonsai changesets.  If a changeset doesn't exist, this is an error.
+    async fn convert_all_git_to_bonsai(
+        &self,
+        ctx: &CoreContext,
+        git_sha1s: Vec<GitSha1>,
+    ) -> Result<Vec<ChangesetId>> {
+        let mapping = self.get(ctx, git_sha1s.clone().into()).await?;
+        if mapping.len() != git_sha1s.len() {
+            let mut result = Vec::with_capacity(mapping.len());
+            let mut missing = git_sha1s.into_iter().collect::<HashSet<_>>();
+            for entry in mapping {
+                missing.remove(&entry.git_sha1);
+                result.push(entry.bcs_id);
+            }
+            ensure!(
+                missing.is_empty(),
+                "Missing bonsai mapping for git commits: {:?}",
+                missing,
+            );
+            Ok(result)
+        } else {
+            Ok(mapping.into_iter().map(|entry| entry.bcs_id).collect())
+        }
+    }
+
+    /// Convert a set of bonsai changeset ids to git commits.  If a changeset doesn't exist, it is omitted from the result.
+    async fn convert_available_bonsai_to_git(
+        &self,
+        ctx: &CoreContext,
+        bcs_ids: Vec<ChangesetId>,
+    ) -> Result<Vec<GitSha1>> {
+        let mapping = self.get(ctx, bcs_ids.into()).await?;
+        Ok(mapping.into_iter().map(|entry| entry.git_sha1).collect())
+    }
+
+    /// Convert a set of bonsai changeset ids to git commits.  If a changeset doesn't exist, this is an error.
+    async fn convert_all_bonsai_to_hg(
+        &self,
+        ctx: &CoreContext,
+        bcs_ids: Vec<ChangesetId>,
+    ) -> Result<Vec<GitSha1>> {
+        let mapping = self.get(ctx, bcs_ids.clone().into()).await?;
+        if mapping.len() != bcs_ids.len() {
+            let mut result = Vec::with_capacity(mapping.len());
+            let mut missing = bcs_ids.into_iter().collect::<HashSet<_>>();
+            for entry in mapping {
+                missing.remove(&entry.bcs_id);
+                result.push(entry.git_sha1);
+            }
+            ensure!(
+                missing.is_empty(),
+                "Missing git mapping for bonsai changesets: {:?}",
+                missing,
+            );
+            Ok(result)
+        } else {
+            Ok(mapping.into_iter().map(|entry| entry.git_sha1).collect())
+        }
+    }
+
+    /// Get a hashmap that maps from given bonsai changesets to their hg equivalent.
+    async fn get_bonsai_to_git_map(
+        &self,
+        ctx: &CoreContext,
+        bcs_ids: Vec<ChangesetId>,
+    ) -> Result<HashMap<ChangesetId, GitSha1>> {
+        let mapping = self.get(ctx, bcs_ids.into()).await?;
+        Ok(mapping
+            .into_iter()
+            .map(|entry| (entry.bcs_id, entry.git_sha1))
+            .collect())
+    }
 }
 
 pub const HGGIT_SOURCE_EXTRA: &str = "hg-git-rename-source";

@@ -5,8 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
+use anyhow::ensure;
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -154,6 +157,89 @@ pub trait BonsaiHgMapping: Send + Sync {
         high: HgChangesetId,
         limit: usize,
     ) -> Result<Vec<HgChangesetId>, Error>;
+
+    /// Convert a set of hg changeset ids to bonsai changesets.  If a changeset doesn't exist, it is omitted from the result.
+    async fn convert_available_hg_to_bonsai(
+        &self,
+        ctx: &CoreContext,
+        hg_cs_ids: Vec<HgChangesetId>,
+    ) -> Result<Vec<ChangesetId>, Error> {
+        let mapping = self.get(ctx, hg_cs_ids.into()).await?;
+        Ok(mapping.into_iter().map(|entry| entry.bcs_id).collect())
+    }
+
+    /// Convert a set of hg changeset ids to bonsai changesets.  If a changeset doesn't exist, this is an error.
+    async fn convert_all_hg_to_bonsai(
+        &self,
+        ctx: &CoreContext,
+        hg_cs_ids: Vec<HgChangesetId>,
+    ) -> Result<Vec<ChangesetId>, Error> {
+        let mapping = self.get(ctx, hg_cs_ids.clone().into()).await?;
+        if mapping.len() != hg_cs_ids.len() {
+            let mut result = Vec::with_capacity(mapping.len());
+            let mut missing = hg_cs_ids.into_iter().collect::<HashSet<_>>();
+            for entry in mapping {
+                missing.remove(&entry.hg_cs_id);
+                result.push(entry.bcs_id);
+            }
+            ensure!(
+                missing.is_empty(),
+                "Missing bonsai mapping for hg changesets: {:?}",
+                missing,
+            );
+            Ok(result)
+        } else {
+            Ok(mapping.into_iter().map(|entry| entry.bcs_id).collect())
+        }
+    }
+
+    /// Convert a set of bonsai changeset ids to hg changesets.  If a changeset doesn't exist, it is omitted from the result.
+    async fn convert_available_bonsai_to_hg(
+        &self,
+        ctx: &CoreContext,
+        bcs_ids: Vec<ChangesetId>,
+    ) -> Result<Vec<HgChangesetId>, Error> {
+        let mapping = self.get(ctx, bcs_ids.into()).await?;
+        Ok(mapping.into_iter().map(|entry| entry.hg_cs_id).collect())
+    }
+
+    /// Convert a set of bonsai changeset ids to hg changesets.  If a changeset doesn't exist, this is an error.
+    async fn convert_all_bonsai_to_hg(
+        &self,
+        ctx: &CoreContext,
+        bcs_ids: Vec<ChangesetId>,
+    ) -> Result<Vec<HgChangesetId>, Error> {
+        let mapping = self.get(ctx, bcs_ids.clone().into()).await?;
+        if mapping.len() != bcs_ids.len() {
+            let mut result = Vec::with_capacity(mapping.len());
+            let mut missing = bcs_ids.into_iter().collect::<HashSet<_>>();
+            for entry in mapping {
+                missing.remove(&entry.bcs_id);
+                result.push(entry.hg_cs_id);
+            }
+            ensure!(
+                missing.is_empty(),
+                "Missing hg mapping for bonsai changesets: {:?}",
+                missing,
+            );
+            Ok(result)
+        } else {
+            Ok(mapping.into_iter().map(|entry| entry.hg_cs_id).collect())
+        }
+    }
+
+    /// Get a hashmap that maps from given bonsai changesets to their hg equivalent.
+    async fn get_bonsai_to_hg_map(
+        &self,
+        ctx: &CoreContext,
+        bcs_ids: Vec<ChangesetId>,
+    ) -> Result<HashMap<ChangesetId, HgChangesetId>, Error> {
+        let mapping = self.get(ctx, bcs_ids.into()).await?;
+        Ok(mapping
+            .into_iter()
+            .map(|entry| (entry.bcs_id, entry.hg_cs_id))
+            .collect())
+    }
 }
 
 #[derive(Clone)]

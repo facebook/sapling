@@ -15,6 +15,7 @@ async-trait = "0.1.71"
 clap = { version = "4.5.20", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 commit_graph_thrift = { version = "0.1.0", path = "if" }
 context = { version = "0.1.0", path = "../../../server/context" }
+either = "1.5"
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 maplit = "1.0"
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }

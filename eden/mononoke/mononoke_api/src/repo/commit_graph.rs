@@ -8,11 +8,12 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-use anyhow::Context;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
+use commit_graph::ChangesetSegment as CommitGraphSegment;
 use commit_graph::CommitGraphRef;
 use dag_types::Location;
+use futures::future;
 use futures::stream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
@@ -38,6 +39,49 @@ pub struct ChangesetSegmentParent<Id> {
 }
 
 impl<R: MononokeRepo> RepoContext<R> {
+    fn make_graph_segments_stream<Id: Copy + 'static>(
+        &self,
+        segments: Vec<CommitGraphSegment>,
+        mapping: HashMap<ChangesetId, Id>,
+    ) -> impl Stream<Item = Result<ChangesetSegment<Id>, MononokeError>> + '_ {
+        let map_id = move |name, csid| {
+            mapping
+                .get(&csid)
+                .ok_or_else(|| {
+                    MononokeError::InvalidRequest(format!(
+                        "failed to find mapped commit for {} {}",
+                        name, csid,
+                    ))
+                })
+                .copied()
+        };
+        stream::iter(segments.into_iter().map(move |segment| {
+            Ok(ChangesetSegment {
+                head: map_id("segment head", segment.head)?,
+                base: map_id("segment base", segment.base)?,
+                length: segment.length,
+                parents: segment
+                    .parents
+                    .into_iter()
+                    .map(|parent| {
+                        Ok(ChangesetSegmentParent {
+                            id: map_id("segment parent", parent.cs_id)?,
+                            location: parent
+                                .location
+                                .map(|location| {
+                                    anyhow::Ok(Location::new(
+                                        map_id("location head", location.head)?,
+                                        location.distance,
+                                    ))
+                                })
+                                .transpose()?,
+                        })
+                    })
+                    .collect::<Result<_, MononokeError>>()?,
+            })
+        }))
+    }
+
     /// Get a stream of the linear segments of the commit graph between the common and heads as HgChangesetIds.
     pub async fn graph_segments_hg(
         &self,
@@ -47,22 +91,15 @@ impl<R: MononokeRepo> RepoContext<R> {
         impl Stream<Item = Result<ChangesetSegment<HgChangesetId>, MononokeError>> + '_,
         MononokeError,
     > {
-        let bonsai_common = self
-            .repo()
-            .bonsai_hg_mapping()
-            .get(self.ctx(), common.into())
-            .await?
-            .into_iter()
-            .map(|e| e.bcs_id)
-            .collect();
-        let bonsai_heads = self
-            .repo()
-            .bonsai_hg_mapping()
-            .get(self.ctx(), heads.into())
-            .await?
-            .into_iter()
-            .map(|e| e.bcs_id)
-            .collect();
+        let (bonsai_common, bonsai_heads) = future::try_join(
+            self.repo()
+                .bonsai_hg_mapping()
+                .convert_all_hg_to_bonsai(self.ctx(), common),
+            self.repo()
+                .bonsai_hg_mapping()
+                .convert_all_hg_to_bonsai(self.ctx(), heads),
+        )
+        .await?;
 
         let segments = self
             .repo()
@@ -75,60 +112,14 @@ impl<R: MononokeRepo> RepoContext<R> {
             .map(move |segments| async move {
                 let mut ids = HashSet::with_capacity(segments.len() * 4);
                 for segment in segments.iter() {
-                    ids.insert(segment.head);
-                    ids.insert(segment.base);
-                    for parent in segment.parents.iter() {
-                        ids.insert(parent.cs_id);
-                        if let Some(location) = &parent.location {
-                            ids.insert(location.head);
-                        }
-                    }
+                    ids.extend(segment.ids())
                 }
-                let mapping: HashMap<ChangesetId, HgChangesetId> = self
+                let mapping = self
                     .repo()
                     .bonsai_hg_mapping()
-                    .get(self.ctx(), ids.into_iter().collect::<Vec<_>>().into())
-                    .await
-                    .context("error fetching bonsai-hg mapping")?
-                    .into_iter()
-                    .map(|e| (e.bcs_id, e.hg_cs_id))
-                    .collect();
-                let map_id = move |name, csid| {
-                    mapping
-                        .get(&csid)
-                        .ok_or_else(|| {
-                            MononokeError::InvalidRequest(format!(
-                                "failed to find hg equivalent for {} {}",
-                                name, csid,
-                            ))
-                        })
-                        .copied()
-                };
-                anyhow::Ok(stream::iter(segments.into_iter().map(move |segment| {
-                    Ok(ChangesetSegment {
-                        head: map_id("segment head", segment.head)?,
-                        base: map_id("segment base", segment.base)?,
-                        length: segment.length,
-                        parents: segment
-                            .parents
-                            .into_iter()
-                            .map(|parent| {
-                                Ok(ChangesetSegmentParent {
-                                    id: map_id("segment parent", parent.cs_id)?,
-                                    location: parent
-                                        .location
-                                        .map(|location| {
-                                            anyhow::Ok(Location::new(
-                                                map_id("location head", location.head)?,
-                                                location.distance,
-                                            ))
-                                        })
-                                        .transpose()?,
-                                })
-                            })
-                            .collect::<Result<_, MononokeError>>()?,
-                    })
-                })))
+                    .get_bonsai_to_hg_map(self.ctx(), ids.into_iter().collect::<Vec<_>>())
+                    .await?;
+                anyhow::Ok(self.make_graph_segments_stream(segments, mapping))
             })
             .buffered(25)
             .try_flatten())
@@ -143,22 +134,15 @@ impl<R: MononokeRepo> RepoContext<R> {
         impl Stream<Item = Result<ChangesetSegment<GitSha1>, MononokeError>> + '_,
         MononokeError,
     > {
-        let bonsai_common = self
-            .repo()
-            .bonsai_git_mapping()
-            .get(self.ctx(), common.into())
-            .await?
-            .into_iter()
-            .map(|e| e.bcs_id)
-            .collect();
-        let bonsai_heads = self
-            .repo()
-            .bonsai_git_mapping()
-            .get(self.ctx(), heads.into())
-            .await?
-            .into_iter()
-            .map(|e| e.bcs_id)
-            .collect();
+        let (bonsai_common, bonsai_heads) = future::try_join(
+            self.repo()
+                .bonsai_git_mapping()
+                .convert_all_git_to_bonsai(self.ctx(), common),
+            self.repo()
+                .bonsai_git_mapping()
+                .convert_all_git_to_bonsai(self.ctx(), heads),
+        )
+        .await?;
 
         let segments = self
             .repo()
@@ -171,60 +155,14 @@ impl<R: MononokeRepo> RepoContext<R> {
             .map(move |segments| async move {
                 let mut ids = HashSet::with_capacity(segments.len() * 4);
                 for segment in segments.iter() {
-                    ids.insert(segment.head);
-                    ids.insert(segment.base);
-                    for parent in segment.parents.iter() {
-                        ids.insert(parent.cs_id);
-                        if let Some(location) = &parent.location {
-                            ids.insert(location.head);
-                        }
-                    }
+                    ids.extend(segment.ids());
                 }
                 let mapping: HashMap<ChangesetId, GitSha1> = self
                     .repo()
                     .bonsai_git_mapping()
-                    .get(self.ctx(), ids.into_iter().collect::<Vec<_>>().into())
-                    .await
-                    .context("error fetching bonsai-git mapping")?
-                    .into_iter()
-                    .map(|e| (e.bcs_id, e.git_sha1))
-                    .collect();
-                let map_id = move |name, csid| {
-                    mapping
-                        .get(&csid)
-                        .ok_or_else(|| {
-                            MononokeError::InvalidRequest(format!(
-                                "failed to find git equivalent for {} {}",
-                                name, csid,
-                            ))
-                        })
-                        .copied()
-                };
-                anyhow::Ok(stream::iter(segments.into_iter().map(move |segment| {
-                    Ok(ChangesetSegment {
-                        head: map_id("segment head", segment.head)?,
-                        base: map_id("segment base", segment.base)?,
-                        length: segment.length,
-                        parents: segment
-                            .parents
-                            .into_iter()
-                            .map(|parent| {
-                                Ok(ChangesetSegmentParent {
-                                    id: map_id("segment parent", parent.cs_id)?,
-                                    location: parent
-                                        .location
-                                        .map(|location| {
-                                            anyhow::Ok(Location::new(
-                                                map_id("location head", location.head)?,
-                                                location.distance,
-                                            ))
-                                        })
-                                        .transpose()?,
-                                })
-                            })
-                            .collect::<Result<_, MononokeError>>()?,
-                    })
-                })))
+                    .get_bonsai_to_git_map(self.ctx(), ids.into_iter().collect::<Vec<_>>())
+                    .await?;
+                anyhow::Ok(self.make_graph_segments_stream(segments, mapping))
             })
             .buffered(25)
             .try_flatten())
