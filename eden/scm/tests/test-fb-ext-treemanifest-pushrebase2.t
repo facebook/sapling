@@ -4,6 +4,8 @@
   $ setconfig devel.segmented-changelog-rev-compat=true
 Push merge commits from a treeonly shallow repo to a hybrid treemanifest server
 
+  $ setconfig remotenames.selectivepull=true
+
   $ setconfig remotefilelog.reponame=x remotefilelog.cachepath=$TESTTMP/cache
   $ setconfig format.aggressivemergedeltas=True
   $ configure dummyssh
@@ -56,12 +58,9 @@ Push a commit that client1 doesnt have
   $ echo remotefilelog >> .hg/requires
   $ enable pushrebase remotenames
   $ setconfig paths.default=ssh://user@dummy/server
-  $ hg pull
+  $ hg pull -B foo
   pulling from ssh://user@dummy/server
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
+  fetching revlog data for 5 commits
   $ hg up -q tip
 - Add a bunch of files, to force it to choose to make a delta
   $ echo >> file1

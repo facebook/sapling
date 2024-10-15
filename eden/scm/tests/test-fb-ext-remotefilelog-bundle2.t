@@ -3,6 +3,8 @@
 
   $ . "$TESTDIR/library.sh"
 
+  $ setconfig remotenames.selectivepull=true
+
   $ hginit master
   $ grep generaldelta master/.hg/requires
   generaldelta
@@ -18,6 +20,7 @@ preferuncompressed = False so that we can make both generaldelta and non-general
   > EOF
   $ echo x > x
   $ hg commit -qAm x
+  $ hg book master
 
   $ cd ..
 
@@ -35,14 +38,7 @@ preferuncompressed = False so that we can make both generaldelta and non-general
 
 pull from generaldelta to generaldelta
   $ cd ../shallow-generaldelta
-  $ hg pull -u -d tip
-  pulling from ssh://user@dummy/master
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg pull -q -u -d master
 push from generaldelta to generaldelta
   $ echo b > b
   $ hg commit -qAm b
@@ -54,14 +50,7 @@ push from generaldelta to generaldelta
   remote: adding file changes
 pull from generaldelta to non-generaldelta
   $ cd ../shallow-plain
-  $ hg pull -u -d tip
-  pulling from ssh://user@dummy/master
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg pull -q -u -d master
 push from non-generaldelta to generaldelta
   $ echo c > c
   $ hg commit -qAm c

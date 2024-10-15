@@ -4,6 +4,8 @@
 
   $ . "$TESTDIR/library.sh"
 
+  $ setconfig remotenames.selectivepull=true
+
   $ enable lfs pushrebase
   $ hginit master
 
@@ -16,15 +18,12 @@
   $ cd ..
 
   $ hgcloneshallow ssh://user@dummy/master shallow
-  streaming all changes
-  0 files to transfer, 0 bytes of data
-  transferred 0 bytes in 0.0 seconds (0 bytes/sec)
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  updating to tip
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
+  fetching lazy changelog
+  populating main commit graph
+  tip commit: 17c1120490576a2c8322e09881534341089e946d
+  fetching selected remote bookmarks
+  updating to tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ cd shallow

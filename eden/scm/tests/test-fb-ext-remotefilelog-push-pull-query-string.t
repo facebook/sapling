@@ -3,6 +3,8 @@
 
   $ . "$TESTDIR/library.sh"
 
+  $ setconfig remotenames.selectivepull=true
+
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > remotenames=
@@ -62,8 +64,6 @@ as well
   
   $ hg pull
   pulling from ssh://user@dummy/repo?read
-  searching for changes
-  no changes found
   $ hg log -r .
   commit:      421535db10b6
   bookmark:    remote/master

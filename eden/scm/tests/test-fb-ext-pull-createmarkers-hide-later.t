@@ -96,13 +96,7 @@ Strip the commits we just landed.
 Here pull should now detect commits 2 and 3 as landed, but it won't be able to
 hide them since there is a non-hidden successor.
 
-  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg pull
-  pulling from ssh://user@dummy/server
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  marked 2 commits as landed
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg pull -q
   $ hg log -G -T '"{desc}" {remotebookmarks}' -r 'all()'
   o  "add d
   │
@@ -158,11 +152,7 @@ Here pull should now detect commit 4 has been landed.  It should hide this
 commit, and should also hide 3 and 2, which were previously landed, but up
 until now had non-hidden successors.
 
-  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg pull
-  pulling from ssh://user@dummy/server
-  searching for changes
-  no changes found
-  marked 1 commit as landed
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg pull -q
   $ hg log -G -T '"{desc}" {remotebookmarks}' -r 'all()'
   o  "add d
   │

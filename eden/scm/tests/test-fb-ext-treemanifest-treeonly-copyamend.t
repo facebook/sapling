@@ -4,6 +4,8 @@
   $ configure mutation-norecord
   $ . "$TESTDIR/library.sh"
 
+  $ setconfig remotenames.selectivepull=true
+
 Setup the server
 
   $ newserver master
@@ -28,55 +30,56 @@ time.
   >   echo $i >> a/b/c/d/e/f/g/h/i/otherfile$i
   >   hg commit -qAm "commit $i"
   > done
+  $ hg book master
 
   $ hg log -G -r 'all()' -T '{desc}'
-  @  commit 12
-  │
-  │ o  commit 12 branch
-  ├─╯
-  o  commit 11
-  │
-  │ o  commit 11 branch
-  ├─╯
-  o  commit 10
-  │
-  │ o  commit 10 branch
-  ├─╯
-  o  commit 9
-  │
-  │ o  commit 9 branch
-  ├─╯
-  o  commit 8
-  │
-  │ o  commit 8 branch
-  ├─╯
-  o  commit 7
-  │
-  │ o  commit 7 branch
-  ├─╯
-  o  commit 6
-  │
-  │ o  commit 6 branch
-  ├─╯
-  o  commit 5
-  │
-  │ o  commit 5 branch
-  ├─╯
-  o  commit 4
-  │
-  │ o  commit 4 branch
-  ├─╯
-  o  commit 3
-  │
-  │ o  commit 3 branch
-  ├─╯
-  o  commit 2
+  o  commit 1 branch
   │
   │ o  commit 2 branch
-  ├─╯
-  o  commit 1
-  │
-  │ o  commit 1 branch
+  │ │
+  │ │ o  commit 3 branch
+  │ │ │
+  │ │ │ o  commit 4 branch
+  │ │ │ │
+  │ │ │ │ o  commit 5 branch
+  │ │ │ │ │
+  │ │ │ │ │ o  commit 6 branch
+  │ │ │ │ │ │
+  │ │ │ │ │ │ o  commit 7 branch
+  │ │ │ │ │ │ │
+  │ │ │ │ │ │ │ o  commit 8 branch
+  │ │ │ │ │ │ │ │
+  │ │ │ │ │ │ │ │ o  commit 9 branch
+  │ │ │ │ │ │ │ │ │
+  │ │ │ │ │ │ │ │ │ o  commit 10 branch
+  │ │ │ │ │ │ │ │ │ │
+  │ │ │ │ │ │ │ │ │ │ o  commit 11 branch
+  │ │ │ │ │ │ │ │ │ │ │
+  │ │ │ │ │ │ │ │ │ │ │ o  commit 12 branch
+  │ │ │ │ │ │ │ │ │ │ │ │
+  │ │ │ │ │ │ │ │ │ │ │ │ @  commit 12
+  │ │ │ │ │ │ │ │ │ │ │ ├─╯
+  │ │ │ │ │ │ │ │ │ │ │ o  commit 11
+  │ │ │ │ │ │ │ │ │ │ ├─╯
+  │ │ │ │ │ │ │ │ │ │ o  commit 10
+  │ │ │ │ │ │ │ │ │ ├─╯
+  │ │ │ │ │ │ │ │ │ o  commit 9
+  │ │ │ │ │ │ │ │ ├─╯
+  │ │ │ │ │ │ │ │ o  commit 8
+  │ │ │ │ │ │ │ ├─╯
+  │ │ │ │ │ │ │ o  commit 7
+  │ │ │ │ │ │ ├─╯
+  │ │ │ │ │ │ o  commit 6
+  │ │ │ │ │ ├─╯
+  │ │ │ │ │ o  commit 5
+  │ │ │ │ ├─╯
+  │ │ │ │ o  commit 4
+  │ │ │ ├─╯
+  │ │ │ o  commit 3
+  │ │ ├─╯
+  │ │ o  commit 2
+  │ ├─╯
+  │ o  commit 1
   ├─╯
   o  base
   

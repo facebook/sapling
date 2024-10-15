@@ -3,6 +3,8 @@
 
   $ . "$TESTDIR/library.sh"
 
+  $ setconfig remotenames.selectivepull=true
+
   $ newserver master
   $ echo x > x
   $ echo z > z
@@ -10,7 +12,7 @@
   $ echo x2 > x
   $ echo z2 > z
   $ hg commit -qAm x2
-  $ hg bookmark foo
+  $ hg bookmark master
 
   $ cd ..
 
@@ -44,12 +46,9 @@
   $ clearcache
   $ hg pull
   pulling from ssh://user@dummy/master
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  prefetching file contents
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
+  imported commit graph for 1 commit (1 segment)
+  prefetching file contents
 
 # Dont consider filtered files when doing copy tracing
 
@@ -65,16 +64,18 @@
   $ touch a
   $ hg ci -Aqm a
   $ hg push -q -f --allow-anon
+  $ hg whereami
+  a96546d1acd84e2abf205545385ed16a0b4c3337
 
 ## Pull the unrelated commit and rebase onto it - verify unrelated file was not
 pulled
 
   $ cd ../shallow
   $ hg up -q 'desc(x2)'
-  $ hg pull -q
+  $ hg pull -q -r a96546d1acd
   $ hg sparse -I z
   $ clearcache
   $ hg prefetch -r '. + .^' -I x -I z
   4 files fetched over 1 fetches - (4 misses, 0.00% hit ratio) over * (glob) (?)
   $ hg rebase -d 'desc(a)' --keep
-  rebasing 876b1317060d "x2" (remote/foo foo)
+  rebasing 876b1317060d "x2" (remote/master master)

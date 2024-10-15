@@ -377,7 +377,12 @@ impl EagerRepo {
             }
         }
 
-        if let Some(path) = url.resolved_str().strip_prefix("ssh://user@dummy/") {
+        if let Some(mut path) = url.resolved_str().strip_prefix("ssh://user@dummy/") {
+            // Strip off any query params.
+            if let Some(query_start) = path.find('?') {
+                path = &path[..query_start];
+            }
+
             // Allow instantiating EagerRepo for dummyssh servers. This is so we can get a
             // working SaplingRemoteApi for server repos in legacy tests.
             if let Some(tmp) = testtmp() {
