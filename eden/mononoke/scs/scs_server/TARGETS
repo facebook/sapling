@@ -29,7 +29,7 @@ rust_binary(
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/panichandler:panichandler",
         "//common/rust/srserver:srserver",
-        "//eden/mononoke/async_requests:client",
+        "//eden/mononoke/async_requests:async_requests_client",
         "//eden/mononoke/cmdlib:cmdlib_logging",
         "//eden/mononoke/cmdlib:environment",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",

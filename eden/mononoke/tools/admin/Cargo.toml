@@ -11,6 +11,7 @@ license = "GPLv2+"
 anyhow = "1.0.86"
 async-stream = "0.3"
 async_requests = { version = "0.1.0", path = "../../async_requests/lib" }
+async_requests_client = { version = "0.1.0", path = "../../async_requests/async_requests_client" }
 backsyncer = { version = "0.1.0", path = "../../commit_rewriting/backsyncer" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
@@ -35,7 +36,6 @@ changesets_creation = { version = "0.1.0", path = "../../changesets/changesets_c
 changesets_uploader = { version = "0.1.0", path = "../../cas_client/changesets_uploader" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 clap = { version = "4.5.20", features = ["derive", "env", "string", "unicode", "wrap_help"] }
-client = { version = "0.1.0", path = "../../async_requests/client" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib_cross_repo = { version = "0.1.0", path = "../../cmdlib/cross_repo" }
 cmdlib_displaying = { version = "0.1.0", path = "../../cmdlib/displaying" }

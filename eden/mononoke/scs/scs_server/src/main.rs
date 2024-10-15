@@ -15,10 +15,10 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Error;
+use async_requests_client::AsyncRequestsQueue;
 use async_trait::async_trait;
 use clap::Parser;
 use clap::ValueEnum;
-use client::AsyncRequestsQueue;
 use clientinfo::ClientEntryPoint;
 use cloned::cloned;
 use cmdlib_logging::ScribeLoggingArgs;

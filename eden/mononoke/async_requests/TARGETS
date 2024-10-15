@@ -39,9 +39,9 @@ rust_library(
 )
 
 rust_library(
-    name = "client",
-    srcs = glob(["client/src/**/*.rs"]),
-    autocargo = {"cargo_toml_dir": "client"},
+    name = "async_requests_client",
+    srcs = glob(["async_requests_client/src/**/*.rs"]),
+    autocargo = {"cargo_toml_dir": "async_requests_client"},
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:slog",

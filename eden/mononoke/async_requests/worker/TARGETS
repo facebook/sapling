@@ -24,7 +24,7 @@ rust_binary(
         "//common/rust/shed/hostname:hostname",
         "//common/rust/shed/stats:stats",
         "//eden/mononoke/async_requests:async_requests",
-        "//eden/mononoke/async_requests:client",
+        "//eden/mononoke/async_requests:async_requests_client",
         "//eden/mononoke/async_requests/if:async_requests_types-thrift-rust",
         "//eden/mononoke/blobstore:ephemeral_blobstore",
         "//eden/mononoke/cmdlib:cmdlib_logging",

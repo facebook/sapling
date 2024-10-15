@@ -11,7 +11,7 @@ use async_requests::types::Request;
 use async_requests::types::ThriftParams;
 use async_requests::types::Token;
 use async_requests::AsyncMethodRequestQueue;
-use client::AsyncRequestsQueue;
+use async_requests_client::AsyncRequestsQueue;
 use context::CoreContext;
 use mononoke_api::RepositoryId;
 

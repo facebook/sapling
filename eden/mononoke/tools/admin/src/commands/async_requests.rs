@@ -15,9 +15,9 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
+use async_requests_client::AsyncRequestsQueue;
 use clap::Parser;
 use clap::Subcommand;
-use client::AsyncRequestsQueue;
 use context::SessionContainer;
 use mononoke_api::Repo;
 use mononoke_app::args::RepoArgs;

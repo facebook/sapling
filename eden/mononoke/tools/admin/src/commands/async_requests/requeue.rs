@@ -10,8 +10,8 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use async_requests::types::RowId;
+use async_requests_client::AsyncRequestsQueue;
 use clap::Args;
-use client::AsyncRequestsQueue;
 use context::CoreContext;
 use mononoke_api::MononokeRepo;
 

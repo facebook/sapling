@@ -12,7 +12,7 @@ use std::num::NonZeroU64;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use client::AsyncRequestsQueue;
+use async_requests_client::AsyncRequestsQueue;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use clientinfo::CLIENT_INFO_HEADER;
