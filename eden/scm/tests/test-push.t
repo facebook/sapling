@@ -21,7 +21,7 @@ Testing of the '--rev' flag
   $ for i in 0 1 2 3 4 5 6 7 8; do
   >    echo
   >    hg init test-revflag-"$i"
-  >    hg -R test-revflag push -r "$i" test-revflag-"$i"
+  >    hg -R test-revflag push -r "$i" test-revflag-"$i" --allow-anon
   >    hg -R test-revflag-"$i" verify
   > done
   
@@ -128,12 +128,12 @@ Test push hook locking
   > EOF
   $ echo '[hooks]' >> 2/.hg/hgrc
   $ echo "pretxnchangegroup.a = sh $TESTTMP/debuglocks-pretxn-hook.sh" >> 2/.hg/hgrc
-  $ echo 'changegroup.push = hg push -qf ../1' >> 2/.hg/hgrc
+  $ echo 'changegroup.push = hg push -qf --allow-anon ../1' >> 2/.hg/hgrc
 
   $ echo bar >> 3/foo
   $ hg --cwd 3 ci -m bar
 
-  $ hg --cwd 3 push ../2
+  $ hg --cwd 3 push --allow-anon ../2
   pushing to ../2
   searching for changes
   adding changesets
@@ -147,7 +147,7 @@ Test push hook locking
 
   $ hg --cwd 1 debugstrip tip -q
   $ hg --cwd 2 debugstrip tip -q
-  $ hg --cwd 3 push ../2 # bundle2+
+  $ hg --cwd 3 push --allow-anon ../2 # bundle2+
   pushing to ../2
   searching for changes
   adding changesets
@@ -164,13 +164,13 @@ Test bare push with multiple race checking options
 
   $ hg init test-bare-push-no-concurrency
   $ hg init test-bare-push-unrelated-concurrency
-  $ hg -R test-revflag push -r 'desc(0.0)' test-bare-push-no-concurrency --config server.concurrent-push-mode=strict
+  $ hg -R test-revflag push -r 'desc(0.0)' test-bare-push-no-concurrency --config server.concurrent-push-mode=strict --allow-anon
   pushing to test-bare-push-no-concurrency
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  $ hg -R test-revflag push -r 'desc(0.0)' test-bare-push-unrelated-concurrency --config server.concurrent-push-mode=check-related
+  $ hg -R test-revflag push -r 'desc(0.0)' test-bare-push-unrelated-concurrency --config server.concurrent-push-mode=check-related --allow-anon
   pushing to test-bare-push-unrelated-concurrency
   searching for changes
   adding changesets

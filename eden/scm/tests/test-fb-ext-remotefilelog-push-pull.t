@@ -107,7 +107,7 @@ the server supports our custom getfiles method.
   $ cd shallow
   $ echo a > a
   $ hg commit -qAm a
-  $ hg push ssh://user@dummy/$TESTTMP/shallow2
+  $ hg push ssh://user@dummy/$TESTTMP/shallow2 --allow-anon
   pushing to ssh://user@dummy/$TESTTMP/shallow2
   searching for changes
   remote: adding changesets
@@ -127,7 +127,7 @@ the server supports our custom getfiles method.
 # push from shallow to full
 
   $ cd shallow
-  $ hg push
+  $ hg push --allow-anon
   pushing to ssh://user@dummy/master
   searching for changes
   remote: adding changesets

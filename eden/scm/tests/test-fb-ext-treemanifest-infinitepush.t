@@ -82,8 +82,7 @@ Pull a non-tree scratch branch into a normal client
   adding file changes
   $ hg log -r tip -vp
   commit:      ebde88dba372
-  bookmark:    default/scratch/nontree
-  hoistedname: scratch/nontree
+  bookmark:    remote/scratch/nontree
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/car
@@ -97,7 +96,6 @@ Pull a non-tree scratch branch into a normal client
   @@ -1,1 +1,2 @@
    
   +
-  
 Pull a treeonly scratch branch into a normal client
   $ hg pull -r scratch/foo
   pulling from ssh://user@dummy/master
@@ -147,8 +145,7 @@ Pull a treeonly scratch branch into a treeonly client (non-rebundling)
   adding file changes
   $ hg log -G
   o  commit:      5a7a7de8a420
-  │  bookmark:    default/scratch/foo
-  │  hoistedname: scratch/foo
+  │  bookmark:    remote/scratch/foo
   │  user:        test
   │  date:        Thu Jan 01 00:00:00 1970 +0000
   │  summary:     edit subdir/a
@@ -159,12 +156,10 @@ Pull a treeonly scratch branch into a treeonly client (non-rebundling)
   │  summary:     add subdir/a
   │
   @  commit:      085784c01c08
-     bookmark:    default/master
-     hoistedname: master
+     bookmark:    remote/master
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     add x
-  
   $ hg cat -r tip subdir/a
   my change
   my other change

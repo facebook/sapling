@@ -172,7 +172,7 @@ move master bookmarks
    2 files changed, 2 insertions(+), 1 deletions(-)
   
   commit:      0e7ec5675652
-  bookmark:    default/master_bookmark
+  bookmark:    remote/master_bookmark
   hoistedname: master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -228,7 +228,7 @@ Now pull what was just pushed
   $ cd ../repo3
   $ hg log -r "reverse(all())" --stat
   commit:      0e7ec5675652
-  bookmark:    default/master_bookmark
+  bookmark:    remote/master_bookmark
   hoistedname: master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

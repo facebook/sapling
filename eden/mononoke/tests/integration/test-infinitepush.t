@@ -261,8 +261,8 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   o  3903775176ed public 'a'
   
   $ hg book --remote
-     default/master_bookmark   3903775176ed
-     default/scratch/123       007299f6399f
+     remote/master_bookmark   3903775176ed
+     remote/scratch/123       007299f6399f
 
 Pushbackup also works
   $ cd ../repo-push
@@ -636,8 +636,8 @@ More sophisticated test for phases
 
   $ hg pull -r 5e59ac0f4dd0 -r bf677f20a49d -r 7d67c7248d48 -r b9f080ea9500 -q
 
-  $ tglogpnr -r "::b9f080ea9500 - ::default/master_bookmark"
-  o  b9f080ea9500 public 'zzzzz'  default/release 4
+  $ tglogpnr -r "::b9f080ea9500 - ::remote/master_bookmark"
+  o  b9f080ea9500 public 'zzzzz'  remote/release 4
   │
   o  6e068f112af8 public 'yyyyy'
   │
@@ -646,33 +646,33 @@ More sophisticated test for phases
   o  8be205326fcf public 'wwwww'
   │
   ~
-  $ tglogpnr -r "::7d67c7248d48 - ::default/master_bookmark"
+  $ tglogpnr -r "::7d67c7248d48 - ::remote/master_bookmark"
   o  7d67c7248d48 draft 'zzzz'
   │
-  o  859e9fdde968 public 'yyyy'  default/release 3
+  o  859e9fdde968 public 'yyyy'  remote/release 3
   │
   o  abe01677f4a6 public 'xxxx'
   │
   o  4710fc0238de public 'wwww'
   │
   ~
-  $ tglogpnr -r "::bf677f20a49d - ::default/master_bookmark"
+  $ tglogpnr -r "::bf677f20a49d - ::remote/master_bookmark"
   o  bf677f20a49d draft 'zzz'
   │
   o  43db2471732d draft 'yyy'
   │
-  o  f743965444d9 public 'xxx'  default/release 2
+  o  f743965444d9 public 'xxx'  remote/release 2
   │
   o  83da839eb4d2 public 'www'
   │
   ~
-  $ tglogpnr -r "::5e59ac0f4dd0 - ::default/master_bookmark"
+  $ tglogpnr -r "::5e59ac0f4dd0 - ::remote/master_bookmark"
   o  5e59ac0f4dd0 draft 'zz'
   │
   o  1a4fd3035391 draft 'yy'
   │
   o  c2234433b092 draft 'xx'
   │
-  o  2ba1f5f6cccd public 'ww'  default/release 1
+  o  2ba1f5f6cccd public 'ww'  remote/release 1
   │
   ~

@@ -54,7 +54,7 @@ although the second one became non-merge commit
   $ wait_for_bookmark_move_away_edenapi "$SMALL_REPO_NAME" master_bookmark "$(hg whereami)"
   $ hg pull -q
   $ log -r :
-  o  merge commit no new files [public;rev=4;534a740cd266] default/master_bookmark
+  o  merge commit no new files [public;rev=4;534a740cd266] remote/master_bookmark
   │
   o    merge commit from large repo [public;rev=3;246c2e616e99]
   ├─╮
@@ -67,7 +67,7 @@ although the second one became non-merge commit
   $ hg up -q master_bookmark
   $ hg show master_bookmark
   commit:      534a740cd266
-  bookmark:    default/master_bookmark
+  bookmark:    remote/master_bookmark
   hoistedname: master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

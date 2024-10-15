@@ -44,7 +44,7 @@ Setup server with a few commits and one remote bookmark.
   $ cd ..
 
 Create new client
-  $ hg clone ssh://user@dummy/repo --config extensions.remotenames= client -q
+  $ hg clone ssh://user@dummy/repo client -q
   $ cd client
 
 Create scratch commit and back it up.
@@ -84,8 +84,8 @@ Pull to get remote names
   searching for changes
   no changes found
   $ hg book --remote
-     default/master            05fb75d88dcd
-     default/remotebook        b75a450e74d5
+     remote/master             05fb75d88dcd
+     remote/remotebook         b75a450e74d5
 
 Strip public commits from the repo (still needed?)
   $ hg debugstrip -q -r 'desc(second):'
@@ -106,8 +106,8 @@ Download scratch commit. It also downloads a few public commits
   o  first
   
   $ hg book --remote
-     default/master            05fb75d88dcd
-     default/remotebook        b75a450e74d5
+     remote/master             05fb75d88dcd
+     remote/remotebook         b75a450e74d5
 
 Run cloud backup and make sure only scratch commits are backed up.
   $ hg cloud backup

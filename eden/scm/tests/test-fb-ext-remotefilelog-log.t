@@ -42,7 +42,7 @@ Log on a file without -f
   $ hg log dir/y
   warning: file log can be slow on large repos - use -f to speed it up
   commit:      79c51fb96423
-  bookmark:    default/master_bookmark
+  bookmark:    remote/master_bookmark
   hoistedname: master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -52,7 +52,7 @@ Log on a file with -f
 
   $ hg log -f dir/y
   commit:      79c51fb96423
-  bookmark:    default/master_bookmark
+  bookmark:    remote/master_bookmark
   hoistedname: master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -67,7 +67,7 @@ Log on multiple files with -f
 
   $ hg log -f dir/y x
   commit:      79c51fb96423
-  bookmark:    default/master_bookmark
+  bookmark:    remote/master_bookmark
   hoistedname: master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -82,7 +82,7 @@ Log on a directory
 
   $ hg log dir
   commit:      79c51fb96423
-  bookmark:    default/master_bookmark
+  bookmark:    remote/master_bookmark
   hoistedname: master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -94,7 +94,7 @@ Log on a file from inside a directory
   $ hg log y
   warning: file log can be slow on large repos - use -f to speed it up
   commit:      79c51fb96423
-  bookmark:    default/master_bookmark
+  bookmark:    remote/master_bookmark
   hoistedname: master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

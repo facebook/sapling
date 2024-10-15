@@ -125,8 +125,8 @@
    b0474d400edddcabef0a27ead293a6b99ae59490 1970-01-01 ovrsource commit 2
    b06de5da9e40e0da6eda1f7b5c891711106d707b 1970-01-01 fbsource commit 3
    e0cb430152c2dcc47b93a516344e3814ece60d4b 1970-01-01 fbsource commit 10
-  default/fbsource/somebook d692e38644b938ccccc4192bd2f507955f3888c5 1970-01-01 non-master commit
-  default/master_bookmark * 20*-*-* fbsource commit resume (glob)
+  remote/fbsource/somebook d692e38644b938ccccc4192bd2f507955f3888c5 1970-01-01 non-master commit
+  remote/master_bookmark * 20*-*-* fbsource commit resume (glob)
   $ export FORGOTTEN_PARENT=$(hg log -T "{node}" -r b0474d400edddcabef0a27ead293a6b99ae59490^)
 
 -- Validate the synced entries

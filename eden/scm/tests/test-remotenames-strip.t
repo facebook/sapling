@@ -25,12 +25,12 @@
   $ hg book foo
   $ hg log -T '{desc} ({bookmarks}) ({remotebookmarks})\n'
   bb (foo) ()
-  aa () (default/master public/a6e72781733c178cd290a07022bb6c8460749e7b)
+  aa () (public/a6e72781733c178cd290a07022bb6c8460749e7b remote/master)
   a () ()
   $ hg debugstrip -qB foo
   bookmark 'foo' deleted
   $ hg log -T '{desc} ({bookmarks}) ({remotebookmarks})\n'
-  aa () (default/master public/a6e72781733c178cd290a07022bb6c8460749e7b)
+  aa () (public/a6e72781733c178cd290a07022bb6c8460749e7b remote/master)
   a () ()
 
 # Test that hg debugstrip -B deletes bookmark even if there is a remote bookmark,
@@ -45,10 +45,10 @@
   $ hg push -q --to master --create
   $ hg book foo
   $ hg log -T '{desc} ({bookmarks}) ({remotebookmarks})\n'
-  a (foo) (default/master public/770eb8fce608e2c55f853a8a5ea328b659d70616)
+  a (foo) (public/770eb8fce608e2c55f853a8a5ea328b659d70616 remote/master)
   $ hg debugstrip -qB foo
   bookmark 'foo' deleted
   abort: empty revision set
   [255]
   $ hg log -T '{desc} ({bookmarks}) ({remotebookmarks})\n'
-  a () (default/master public/770eb8fce608e2c55f853a8a5ea328b659d70616)
+  a () (public/770eb8fce608e2c55f853a8a5ea328b659d70616 remote/master)

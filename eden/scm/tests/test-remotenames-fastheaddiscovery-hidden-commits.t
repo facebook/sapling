@@ -2,7 +2,6 @@
 
 #require no-eden
 
-
   $ enable remotenames
   $ enable amend
 
@@ -42,7 +41,7 @@ Load the commit in repo3, hide it, check that we can still pull.
   commitB
   $ hg hide -q -r tip
 
-  $ hg goto -q default/book
+  $ hg goto -q remote/book
   $ hg log -r tip -T '{desc}\n'
   commitB
 

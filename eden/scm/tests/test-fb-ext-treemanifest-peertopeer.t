@@ -72,7 +72,7 @@ Pushing p2p with sendtrees=True puts the received packs in the local pack store
   > EOF
 
 # Push and expect downloads of both public trees (in arbitrary order)
-  $ hg push -q ssh://user@dummy/client2
+  $ hg push -q ssh://user@dummy/client2 --allow-anon
   remote: 1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
   $ hg log

@@ -2,8 +2,6 @@
 #debugruntest-incompatible
 
   $ eagerepo
-  $ setconfig remotenames.rename.default=
-
 
   $ mkcommit()
   > {
@@ -27,7 +25,7 @@ Test hg pull --rebase degrades gracefully if rebase extension is not loaded
   $ newclientrepo localrepo test:remoterepo bookmarkonremote
 
 Make sure to enable tracking
-  $ hg book bmtrackingremote --track default/bookmarkonremote
+  $ hg book bmtrackingremote --track remote/bookmarkonremote
   $ hg pull --rebase > /dev/null
   abort: missing rebase destination - supply --dest / -d
   [255]
@@ -55,7 +53,7 @@ Create local changes and checkout tracking bookmark
   $ printdag
   @  localcommit | bmtrackingremote |
   │
-  o  root |  | default/bookmarkonremote
+  o  root |  | remote/bookmarkonremote
   
 Pull remote changes and rebase local changes with tracked bookmark onto them
   $ hg pull -q --rebase -r $untrackedremotecommit
@@ -64,7 +62,7 @@ Pull remote changes and rebase local changes with tracked bookmark onto them
   │
   │ o  untrackedremotecommit |  |
   │ │
-  o │  trackedremotecommit |  | default/bookmarkonremote
+  o │  trackedremotecommit |  | remote/bookmarkonremote
   ├─╯
   o  root |  |
   
@@ -91,7 +89,7 @@ Tests 'hg pull --rebase' defaults to original (rebase->pullrebase) behaviour whe
   │
   o  untrackedremotecommit |  |
   │
-  │ o  trackedremotecommit |  | default/bookmarkonremote
+  │ o  trackedremotecommit |  | remote/bookmarkonremote
   ├─╯
   o  root |  |
   
@@ -102,7 +100,7 @@ Tests the behavior of a pull followed by a pull --rebase
   $ hg add foo -q
   $ hg commit -m foo -q
   $ cd ../localrepo
-  $ hg book -t default/bookmarkonremote tracking
+  $ hg book -t remote/bookmarkonremote tracking
   $ hg pull
   pulling from test:remoterepo
   searching for changes
@@ -133,10 +131,10 @@ Tests that there are no race condition between pulling changesets and remote boo
   $ cd ../localrepo
   $ hg up tracking -q
   $ hg log -l 1 --template="{desc} {remotenames}\n"
-  foo default/bookmarkonremote
+  foo remote/bookmarkonremote
   $ hg -q pull
   $ hg log -l 1 --template="{desc} {remotenames}\n"
-  between_pull default/bookmarkonremote
+  between_pull remote/bookmarkonremote
 
 Test pull with --rebase and --tool
   $ cd ../remoterepo
@@ -145,7 +143,7 @@ Test pull with --rebase and --tool
   $ hg add editedbyboth
   $ mkcommit remotecommit
   $ cd ../localrepo
-  $ hg book -t default/bookmarkonremote -r default/bookmarkonremote tracking2
+  $ hg book -t remote/bookmarkonremote -r remote/bookmarkonremote tracking2
   $ hg goto tracking2 -q
   $ echo localchanges > editedbyboth
   $ hg add editedbyboth
@@ -153,7 +151,7 @@ Test pull with --rebase and --tool
   $ printdag
   @  somelocalchanges | tracking2 |
   │
-  o  between_pull |  | default/bookmarkonremote
+  o  between_pull |  | remote/bookmarkonremote
   │
   o  foo |  |
   │
@@ -173,7 +171,7 @@ Test pull with --rebase and --tool
   $ printdag
   @  somelocalchanges | tracking2 |
   │
-  o  remotecommit |  | default/bookmarkonremote
+  o  remotecommit |  | remote/bookmarkonremote
   │
   o  between_pull |  |
   │

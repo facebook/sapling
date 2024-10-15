@@ -290,6 +290,7 @@ Test extension help:
        rebase        command to move sets of revisions to a different ancestor
        remotefilelog
                      minimize and speed up large repositories
+       remotenames   mercurial extension for improving client/server workflows
        sampling      (no help text available)
        schemes       extend schemes with shortcuts to repository swarms
        treemanifest
@@ -346,7 +347,6 @@ Test extension help:
        pushrebase    rebases commits during push
        rage          upload useful diagnostics and give instructions for asking
                      for help
-       remotenames   mercurial extension for improving client/server workflows
        reset         reset the active bookmark and working copy to a desired
                      revision
        share         share a common history between several working directories

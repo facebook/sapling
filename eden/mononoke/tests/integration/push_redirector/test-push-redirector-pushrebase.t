@@ -41,20 +41,20 @@ Normal pushrebase with one commit
   "b83fcdec86997308b73b957a3037979c1d1d670929d02b663a183789dfd5a3fa"
 -- newcommit was correctly pushed to master_bookmark
   $ log -r master_bookmark
-  @  newcommit [public;rev=2;ce81c7d38286] default/master_bookmark
+  @  newcommit [public;rev=2;ce81c7d38286] remote/master_bookmark
   │
   ~
 
 -- newcommit is also present in the large repo (after a pull)
   $ cd "$TESTTMP"/large-hg-client
   $ log -r master_bookmark
-  @  first post-move commit [public;rev=2;bfcfb674663c] default/master_bookmark
+  @  first post-move commit [public;rev=2;bfcfb674663c] remote/master_bookmark
   │
   ~
   $ wait_for_bookmark_move_away_edenapi "$LARGE_REPO_NAME" master_bookmark "$(hg whereami)"
   $ hg pull -q
   $ log -r master_bookmark
-  o  newcommit [public;rev=3;819e91b238b7] default/master_bookmark
+  o  newcommit [public;rev=3;819e91b238b7] remote/master_bookmark
   │
   ~
 - compare the working copies
@@ -66,8 +66,8 @@ Bookmark-only pushrebase (Create a new bookmark, do not push commits)
   creating remote bookmark master_bookmark_2
   $ hg book --all
   no bookmarks set
-     default/master_bookmark   ce81c7d38286
-     default/master_bookmark_2 11f848659bfc
+     remote/master_bookmark    ce81c7d38286
+     remote/master_bookmark_2  11f848659bfc
 
 Noop bookmark-only pushrebase
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) from bookmarks_update_log";
@@ -76,8 +76,8 @@ Noop bookmark-only pushrebase
   moving remote bookmark master_bookmark_2 from 11f848659bfc to 11f848659bfc
   $ hg book --all
   no bookmarks set
-     default/master_bookmark   ce81c7d38286
-     default/master_bookmark_2 11f848659bfc
+     remote/master_bookmark    ce81c7d38286
+     remote/master_bookmark_2  11f848659bfc
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) from bookmarks_update_log";
   6
 
@@ -87,8 +87,8 @@ Noop bookmark-only pushrebase
   $ hg pull -q
   $ hg book --all
   no bookmarks set
-     default/bookprefix/master_bookmark_2 bfcfb674663c
-     default/master_bookmark   819e91b238b7
+     remote/bookprefix/master_bookmark_2 bfcfb674663c
+     remote/master_bookmark    819e91b238b7
 - compare the working copies
   $ verify_wc $(hg log -r bookprefix/master_bookmark_2 -T '{node}')
 
@@ -98,13 +98,13 @@ Delete a bookmark
   deleting remote bookmark master_bookmark_2
   $ hg book --all
   no bookmarks set
-     default/master_bookmark   ce81c7d38286
+     remote/master_bookmark    ce81c7d38286
   $ cd "$TESTTMP/large-hg-client"
   $ wait_for_bookmark_move_away_edenapi "$LARGE_REPO_NAME" master_bookmark "$(hg whereami)"
   $ hg pull -q
   $ hg book --all
   no bookmarks set
-     default/master_bookmark   819e91b238b7
+     remote/master_bookmark    819e91b238b7
 
 Normal pushrebase with many commits
   $ cd "$TESTTMP/small-hg-client"
@@ -126,7 +126,7 @@ Normal pushrebase with many commits
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updated remote bookmark master_bookmark to beb30dc3a35c
   $ log -r master_bookmark
-  @  The staunchest tramp to ply his trade [public;rev=6;beb30dc3a35c] default/master_bookmark
+  @  The staunchest tramp to ply his trade [public;rev=6;beb30dc3a35c] remote/master_bookmark
   │
   ~
 -- this should also be present in a large repo, once we pull:
@@ -134,7 +134,7 @@ Normal pushrebase with many commits
   $ wait_for_bookmark_move_away_edenapi "$LARGE_REPO_NAME" master_bookmark "$(hg whereami)"
   $ hg pull -q
   $ log -r master_bookmark
-  o  The staunchest tramp to ply his trade [public;rev=7;34c34be6efde] default/master_bookmark
+  o  The staunchest tramp to ply his trade [public;rev=7;34c34be6efde] remote/master_bookmark
   │
   ~
   $ verify_wc $(hg log -r master_bookmark -T '{node}')
@@ -149,14 +149,14 @@ Pushrebase, which copies and removes files
   $ hg push --to master_bookmark 2>&1 | grep 'updated remote bookmark'
   updated remote bookmark master_bookmark to b888ee4f19b5
   $ log -r master_bookmark
-  @  Moves, renames and copies [public;rev=7;b888ee4f19b5] default/master_bookmark
+  @  Moves, renames and copies [public;rev=7;b888ee4f19b5] remote/master_bookmark
   │
   ~
 -- this should also be present in a large repo, once we pull:
   $ cd "$TESTTMP/large-hg-client"
   $ hg pull -q
   $ log -r master_bookmark
-  o  Moves, renames and copies [public;rev=8;b4e3e504160c] default/master_bookmark
+  o  Moves, renames and copies [public;rev=8;b4e3e504160c] remote/master_bookmark
   │
   ~
   $ verify_wc $(hg log -r master_bookmark -T '{node}')
@@ -170,7 +170,7 @@ Pushrebase, which replaces a directory with a file
   $ hg push --to master_bookmark 2>&1 | grep 'updated remote bookmark'
   updated remote bookmark master_bookmark to e72ee383159a
   $ log -r master_bookmark
-  @  Replace a directory with a file [public;rev=8;e72ee383159a] default/master_bookmark
+  @  Replace a directory with a file [public;rev=8;e72ee383159a] remote/master_bookmark
   │
   ~
 -- this should also be present in a large repo, once we pull
@@ -178,7 +178,7 @@ Pushrebase, which replaces a directory with a file
   $ wait_for_bookmark_move_away_edenapi "$LARGE_REPO_NAME" master_bookmark "$(hg whereami)"
   $ hg pull -q
   $ log -r master_bookmark
-  o  Replace a directory with a file [public;rev=9;6ac00e7afd93] default/master_bookmark
+  o  Replace a directory with a file [public;rev=9;6ac00e7afd93] remote/master_bookmark
   │
   ~
   $ verify_wc $(hg log -r master_bookmark -T '{node}')
@@ -190,7 +190,7 @@ Normal pushrebase to a prefixed bookmark
   $ createfile epicfail && hg ci -qm "The epicness of this fail is great"
   $ hg push --to master_bookmark_2 --create -q
   $ log -r master_bookmark_2
-  @  The epicness of this fail is great [public;rev=9;8d22dc8b8a89] default/master_bookmark_2
+  @  The epicness of this fail is great [public;rev=9;8d22dc8b8a89] remote/master_bookmark_2
   │
   ~
 -- this should also be present in a large repo, once we pull
@@ -198,7 +198,7 @@ Normal pushrebase to a prefixed bookmark
   $ wait_for_bookmark_move_away_edenapi "$LARGE_REPO_NAME" master_bookmark "$(hg whereami)"
   $ hg pull -q
   $ log -r bookprefix/master_bookmark_2
-  o  The epicness of this fail is great [public;rev=10;030470259cb4] default/bookprefix/master_bookmark_2
+  o  The epicness of this fail is great [public;rev=10;030470259cb4] remote/bookprefix/master_bookmark_2
   │
   ~
   $ verify_wc $(hg log -r bookprefix/master_bookmark_2 -T '{node}')
@@ -209,7 +209,7 @@ Normal pushrebase to a prefixed bookmark
   $ hg push --to master_bookmark_2 2>&1 | grep 'updated remote bookmark'
   updated remote bookmark master_bookmark_2 to bd5577e4b538
   $ log -r master_bookmark_2
-  @  The epicness of this fail is greater [public;rev=10;bd5577e4b538] default/master_bookmark_2
+  @  The epicness of this fail is greater [public;rev=10;bd5577e4b538] remote/master_bookmark_2
   │
   ~
 -- this should also be present in a large repo, once we pull
@@ -217,7 +217,7 @@ Normal pushrebase to a prefixed bookmark
   $ wait_for_bookmark_move_away_edenapi "$LARGE_REPO_NAME" master_bookmark "$(hg whereami)"
   $ hg pull -q
   $ log -r bookprefix/master_bookmark_2
-  o  The epicness of this fail is greater [public;rev=11;ccbb367ae93a] default/bookprefix/master_bookmark_2
+  o  The epicness of this fail is greater [public;rev=11;ccbb367ae93a] remote/bookprefix/master_bookmark_2
   │
   ~
   $ verify_wc $(hg log -r bookprefix/master_bookmark_2 -T '{node}')
@@ -286,7 +286,7 @@ Pushrebase, which replaces a file with a directory
   $ hg push --to master_bookmark 2>&1 | grep 'updated remote bookmark'
   updated remote bookmark master_bookmark to 4d2fda63b03e
   $ log -r master_bookmark
-  @  Replace a file with a directory [public;rev=14;4d2fda63b03e] default/master_bookmark
+  @  Replace a file with a directory [public;rev=14;4d2fda63b03e] remote/master_bookmark
   │
   ~
 -- this should also be present in a large repo, once we pull
@@ -297,7 +297,7 @@ Pushrebase, which replaces a file with a directory
   $ ls smallrepofolder/subdir
   greatfile
   $ log -r master_bookmark
-  @  Replace a file with a directory [public;rev=15;81b97bd0337e] default/master_bookmark
+  @  Replace a file with a directory [public;rev=15;81b97bd0337e] remote/master_bookmark
   │
   ~
   $ verify_wc $(hg log -r master_bookmark -T '{node}')

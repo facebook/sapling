@@ -45,7 +45,7 @@ Create a repo with several bookmarks
 Move only rebased bookmarks
 
   $ cd ..
-  $ hg clone -q a a1
+  $ cp -r a a1
 
   $ cd a1
   $ hg up -q Z
@@ -83,7 +83,7 @@ Test deleting divergent bookmarks from dest (issue3685)
 Do not try to keep active but deleted divergent bookmark
 
   $ cd ..
-  $ hg clone -q a a4
+  $ cp -r a a4
 
   $ cd a4
   $ hg up -q 'desc(C)'
@@ -101,7 +101,7 @@ Do not try to keep active but deleted divergent bookmark
 Keep bookmarks to the correct rebased changeset
 
   $ cd ..
-  $ hg clone -q a a2
+  $ cp -r a a2
 
   $ cd a2
   $ hg up -q Z
@@ -123,7 +123,7 @@ Keep bookmarks to the correct rebased changeset
 Keep active bookmark on the correct changeset
 
   $ cd ..
-  $ hg clone -q a a3
+  $ cp -r a a3
 
   $ cd a3
   $ hg up -q X

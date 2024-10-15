@@ -79,7 +79,7 @@
   this is file1
   $ hg log -r master_bookmark
   commit:      b48ed4600785
-  bookmark:    default/master_bookmark
+  bookmark:    remote/master_bookmark
   hoistedname: master_bookmark
   user:        mononoke <mononoke@mononoke>
   date:        Sat Jan 01 00:00:00 2000 +0000

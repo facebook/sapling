@@ -61,7 +61,7 @@ Try to push merge commit
   │ │
   o │  1 [draft;rev=3;a0c9c5791058]
   ├─╯
-  │ o  C [public;rev=2;26805aba1e60] default/master_bookmark
+  │ o  C [public;rev=2;26805aba1e60] remote/master_bookmark
   │ │
   │ o  B [public;rev=1;112478962961]
   ├─╯

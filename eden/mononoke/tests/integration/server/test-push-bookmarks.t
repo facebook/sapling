@@ -54,8 +54,8 @@ Pull the bookmark
 
   $ hg pull -q
   $ hg book --remote
-     default/master_bookmark           0e7ec5675652a04069cbf976a42e45b740f3243c
-     default/withbook                  11f53bbd855ac06521a8895bd57e6ce5f46a9980
+     remote/master_bookmark           0e7ec5675652a04069cbf976a42e45b740f3243c
+     remote/withbook                  11f53bbd855ac06521a8895bd57e6ce5f46a9980
 
 Update the bookmark
   $ cd ../repo-push
@@ -68,8 +68,8 @@ Update the bookmark
   $ cd ../repo-pull
   $ hg pull -q
   $ hg book --remote
-     default/master_bookmark           0e7ec5675652a04069cbf976a42e45b740f3243c
-     default/withbook                  66b9c137712a551f5404e8840d5cdbc8227b8fd8
+     remote/master_bookmark           0e7ec5675652a04069cbf976a42e45b740f3243c
+     remote/withbook                  66b9c137712a551f5404e8840d5cdbc8227b8fd8
 
 Try non fastforward moves (backwards and across branches)
   $ cd ../repo-push
@@ -165,8 +165,8 @@ Try non fastforward moves (backwards and across branches)
   $ cd ../repo-pull
   $ hg pull -q
   $ hg book --remote
-     default/master_bookmark           a075b5221b925b04d4251d67730fc28b3c14a687
-     default/withbook                  0e7ec5675652a04069cbf976a42e45b740f3243c
+     remote/master_bookmark           a075b5221b925b04d4251d67730fc28b3c14a687
+     remote/withbook                  0e7ec5675652a04069cbf976a42e45b740f3243c
 
 Try non fastfoward moves on regex bookmark
   $ hg push -r a075b5221b92 --to ffonly_bookmark --create -q
@@ -256,5 +256,5 @@ Delete the bookmark
   $ cd ../repo-pull
   $ hg pull -q
   $ hg book --remote
-     default/ffonly_bookmark           a075b5221b925b04d4251d67730fc28b3c14a687
-     default/master_bookmark           a075b5221b925b04d4251d67730fc28b3c14a687
+     remote/ffonly_bookmark           a075b5221b925b04d4251d67730fc28b3c14a687
+     remote/master_bookmark           a075b5221b925b04d4251d67730fc28b3c14a687

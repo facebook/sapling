@@ -243,7 +243,7 @@
 
 Normal log works
   $ log -r "ancestors(master_bookmark)"
-  @    merging [public;rev=5;db39bf064f10] default/master_bookmark
+  @    merging [public;rev=5;db39bf064f10] remote/master_bookmark
   ├─╮
   │ o  Added git submodule [public;rev=4;d5bd7c7af4df]
   │ │
@@ -300,7 +300,7 @@ But using --stat crashes
    1 files changed, 3 insertions(+), 0 deletions(-)
   
   commit:      db39bf064f10
-  bookmark:    default/master_bookmark
+  bookmark:    remote/master_bookmark
   hoistedname: master_bookmark
   user:        user
   date:        Sat Apr 02 21:37:00 2005 +0100

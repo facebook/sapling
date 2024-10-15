@@ -6,7 +6,6 @@
 Set up extension and repos
 
   $ eagerepo
-  $ setconfig remotenames.rename.default=
   $ setconfig phases.publish=false
   $ hg init repo1
 
@@ -71,23 +70,23 @@ Test push tracking
   $ newclientrepo repo2 test:repo1 a b
   $ setconfig 'remotenames.selectivepulldefault=a b'
   $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
-  @  b  default/b
+  @  b  remote/b
   │
-  o  a2  default/a
+  o  a2  remote/a
   │
   o  a1
   
 
-  $ hg boo c -t default/b
+  $ hg boo c -t remote/b
   $ echo c > c
   $ hg add c
   $ hg commit -m c
   $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
   @  c c
   │
-  o  b  default/b
+  o  b  remote/b
   │
-  o  a2  default/a
+  o  a2  remote/a
   │
   o  a1
   
@@ -96,11 +95,11 @@ Test push tracking
   searching for changes
   updating bookmark b
   $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
-  @  c c default/b
+  @  c c remote/b
   │
   o  b
   │
-  o  a2  default/a
+  o  a2  remote/a
   │
   o  a1
   

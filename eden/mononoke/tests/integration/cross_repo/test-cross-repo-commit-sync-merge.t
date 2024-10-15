@@ -100,7 +100,7 @@ check that the changes are synced
   A .fbsource-rest/arvr/tomerge
   $ hg log -G
   o    commit:      9c3b218de12e
-  ├─╮  bookmark:    default/master_bookmark
+  ├─╮  bookmark:    remote/master_bookmark
   │ │  hoistedname: master_bookmark
   │ │  user:        test
   │ │  date:        Thu Jan 01 00:00:00 1970 +0000

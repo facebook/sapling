@@ -104,7 +104,7 @@ not move a bookmark
   $ hg push -r . --to master_bookmark --pushvar BYPASS_REVIEW=true -q --config push.skip-cleanup-commits=true
   $ hg up -q master_bookmark
   $ log
-  @  to push [public;rev=5;a6205c464622] default/master_bookmark
+  @  to push [public;rev=5;a6205c464622] remote/master_bookmark
   │
   o  to push2 [public;rev=4;854b7c3bdd1f]
   │
@@ -135,7 +135,7 @@ Now let's push commit cloud commit. Again, it should do pushrebase
   $ hg push -r . --to master_bookmark --pushvar BYPASS_REVIEW=true -q --config push.skip-cleanup-commits=true
   $ hg up -q master_bookmark
   $ log
-  @  commitcloud [public;rev=8;3308f3bd8048] default/master_bookmark
+  @  commitcloud [public;rev=8;3308f3bd8048] remote/master_bookmark
   │
   o  to push3 [public;rev=7;c3f020572849]
   │

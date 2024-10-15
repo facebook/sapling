@@ -5,7 +5,6 @@ Set up extension and repos
 
   $ eagerepo
   $ setconfig phases.publish=false
-  $ setconfig remotenames.rename.default=
 For convenience. The test was written without selectivepull and uses the "@" bookmark.
   $ setconfig remotenames.selectivepulldefault=master,@
 
@@ -117,7 +116,7 @@ Test that --non-forward-move allows moving bookmark around arbitrarily
   $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
   @  c headc
   │
-  │ o  b headb default/@
+  │ o  b headb remote/@
   ├─╯
   o  a
   
@@ -176,11 +175,11 @@ Test that rebasing and pushing works as expected
   $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
   o  c headc
   │
-  │ o  b  default/@
+  │ o  b  remote/@
   ├─╯
   @  a
   
-  $ hg --config extensions.rebase= rebase -d default/@ -s headc 2>&1 | grep -v "^warning:" | grep -v incomplete
+  $ hg --config extensions.rebase= rebase -d remote/@ -s headc 2>&1 | grep -v "^warning:" | grep -v incomplete
   rebasing cc61aa6be3dc "c" (headc)
   merging a
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -194,7 +193,7 @@ Test that rebasing and pushing works as expected
   $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
   o  c headc
   │
-  o  b  default/@
+  o  b  remote/@
   │
   @  a
   
@@ -206,7 +205,7 @@ Test that rebasing and pushing works as expected
   searching for changes
   updating bookmark @
   $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
-  @  c headc default/@
+  @  c headc remote/@
   │
   o  b
   │

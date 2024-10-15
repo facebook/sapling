@@ -31,7 +31,7 @@ Before the change
   $ hg ci -Aqm "before config change"
   $ hg push -r . --to master_bookmark -q
   $ log
-  @  before config change [public;rev=2;bc6a206054d0] default/master_bookmark
+  @  before config change [public;rev=2;bc6a206054d0] remote/master_bookmark
   │
   o  first post-move commit [public;rev=1;11f848659bfc]
   │
@@ -48,7 +48,7 @@ Before the change
   $ hg pull -q
   $ hg up -q master_bookmark
   $ log -r master_bookmark
-  @  before config change [public;rev=3;c76f6510b5c1] default/master_bookmark
+  @  before config change [public;rev=3;c76f6510b5c1] remote/master_bookmark
   │
   ~
   $ hg log -r master_bookmark -T "{files % '{file}\n'}"
@@ -95,7 +95,7 @@ After the change
     }
   } (no-eol)
   $ log -r master_bookmark^::master_bookmark
-  @  after config change [public;rev=4;*] default/master_bookmark (glob)
+  @  after config change [public;rev=4;*] remote/master_bookmark (glob)
   │
   o  Changing synced mapping version to new_version for large-mon->small-mon sync [public;rev=3;*] (glob)
   │
@@ -111,7 +111,7 @@ After the change
   $ hg pull -q
   $ hg up -q master_bookmark
   $ log -r "master_bookmark^::master_bookmark"
-  @  after config change [public;rev=6;*] default/master_bookmark (glob)
+  @  after config change [public;rev=6;*] remote/master_bookmark (glob)
   │
   o  Changing synced mapping version to new_version for large-mon->small-mon sync [public;rev=5;*] (glob)
   │

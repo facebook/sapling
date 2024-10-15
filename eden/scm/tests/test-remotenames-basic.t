@@ -241,9 +241,9 @@ Test custom paths dont override default
   adding manifests
   adding file changes
   $ hg book --remote
-     default/bar               4538525df7e2
-     default/baz               4538525df7e2
-     default/foo               4538525df7e2
+     remote/bar                4538525df7e2
+     remote/baz                4538525df7e2
+     remote/foo                4538525df7e2
 
 
 Test json formatted bookmarks with tracking data

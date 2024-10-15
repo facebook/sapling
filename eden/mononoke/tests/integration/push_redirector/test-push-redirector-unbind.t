@@ -31,19 +31,19 @@
   updated remote bookmark master_bookmark to ce81c7d38286
 -- newcommit was correctly pushed to master_bookmark
   $ log -r master_bookmark
-  @  newcommit [public;rev=2;ce81c7d38286] default/master_bookmark
+  @  newcommit [public;rev=2;ce81c7d38286] remote/master_bookmark
   │
   ~
 
 -- newcommit is also present in the large repo (after a pull)
   $ cd "$TESTTMP"/large-hg-client
   $ log -r master_bookmark
-  @  first post-move commit [public;rev=2;bfcfb674663c] default/master_bookmark
+  @  first post-move commit [public;rev=2;bfcfb674663c] remote/master_bookmark
   │
   ~
   $ hg pull -q
   $ log -r master_bookmark
-  o  newcommit [public;rev=3;819e91b238b7] default/master_bookmark
+  o  newcommit [public;rev=3;819e91b238b7] remote/master_bookmark
   │
   ~
 
@@ -63,7 +63,7 @@
   $ cd "$TESTTMP"/large-hg-client
   $ hg pull -q &> /dev/null
   $ log -r master_bookmark
-  o  newcommit [public;rev=3;819e91b238b7] default/master_bookmark
+  o  newcommit [public;rev=3;819e91b238b7] remote/master_bookmark
   │
   ~
   $ hg st --change master_bookmark
@@ -77,7 +77,7 @@
   $ hg push -r . --to master_bookmark 2>&1 | grep 'updated remote bookmark'
   updated remote bookmark master_bookmark to c4fabb2e572b
   $ log -r master_bookmark
-  @  large repo unbound commit [public;rev=4;c4fabb2e572b] default/master_bookmark
+  @  large repo unbound commit [public;rev=4;c4fabb2e572b] remote/master_bookmark
   │
   ~
 
@@ -140,7 +140,7 @@
   $ hg push -r . --to master_bookmark -q
   $ hg log -r master_bookmark
   commit:      ad40a9a26fbd
-  bookmark:    default/master_bookmark
+  bookmark:    remote/master_bookmark
   hoistedname: master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -150,7 +150,7 @@
   $ hg pull -q
   $ hg log -r master_bookmark
   commit:      57b52edb15eb
-  bookmark:    default/master_bookmark
+  bookmark:    remote/master_bookmark
   hoistedname: master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -182,7 +182,7 @@
   updated remote bookmark master_bookmark to 9f6b8b8acc0b
   $ hg log -r master_bookmark
   commit:      9f6b8b8acc0b
-  bookmark:    default/master_bookmark
+  bookmark:    remote/master_bookmark
   hoistedname: master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

@@ -54,7 +54,7 @@
   remote:     0b41a6a811a2  x3
   $ hg log -r .
   commit:      0b41a6a811a2
-  bookmark:    default/master
+  bookmark:    remote/master
   hoistedname: master
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -75,7 +75,7 @@
   default-push = ssh://user@dummy/repo?write
   $ hg log -r .
   commit:      a89d614e2364
-  bookmark:    default/master
+  bookmark:    remote/master
   hoistedname: master
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

@@ -43,7 +43,7 @@ Create a merge commit that merges executable file in
   $ cd ../client
   $ hg up -q tip
   $ log -r .
-  @  initial [public:2bb9d20e471c] default/master
+  @  initial [public:2bb9d20e471c] remote/master
   
   $ hg up -q null
   $ echo ex > ex

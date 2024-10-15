@@ -395,7 +395,7 @@ Check that can delete a file, which we cannot add
   updating bookmark master_bookmark
 
 - now delete it without a bypass
-  $ hg up -q default/master_bookmark
+  $ hg up -q remote/master_bookmark
   $ hg rm OWNERS
   $ hg ci -qm "delete owners"
   $ hg push -r . --to master_bookmark 2>&1 | grep updating
@@ -433,7 +433,7 @@ Deleting from experimental directories should still be allowed
   updating bookmark master_bookmark
 
 - now delete it without a bypass
-  $ hg up -q default/master_bookmark
+  $ hg up -q remote/master_bookmark
   $ hg rm fbcode/experimental/this_is_a_test/file
   $ hg ci -qm "delete this_is_a_test"
   $ hg push -r . --to master_bookmark

@@ -308,10 +308,10 @@
 
 # Checks all the bookmarks were created
   $ hg bookmarks --all --remote
-     default/heads/master_bookmark     e7f52161c6127445391295b677f87aded035450a
-     default/remotes/origin/a_ref_prefixed_by_remotes_origin b48ed460078564067eabec6c4a50909d000d7e22
-     default/tags/changing_tag         b48ed460078564067eabec6c4a50909d000d7e22
-     default/tags/empty_tag            e7f52161c6127445391295b677f87aded035450a
-     default/tags/first_tag            b48ed460078564067eabec6c4a50909d000d7e22
-     default/tags/recursive_tag        b48ed460078564067eabec6c4a50909d000d7e22
-     default/tags/simple_tag           e7f52161c6127445391295b677f87aded035450a
+     remote/heads/master_bookmark     e7f52161c6127445391295b677f87aded035450a
+     remote/remotes/origin/a_ref_prefixed_by_remotes_origin b48ed460078564067eabec6c4a50909d000d7e22
+     remote/tags/changing_tag         b48ed460078564067eabec6c4a50909d000d7e22
+     remote/tags/empty_tag            e7f52161c6127445391295b677f87aded035450a
+     remote/tags/first_tag            b48ed460078564067eabec6c4a50909d000d7e22
+     remote/tags/recursive_tag        b48ed460078564067eabec6c4a50909d000d7e22
+     remote/tags/simple_tag           e7f52161c6127445391295b677f87aded035450a

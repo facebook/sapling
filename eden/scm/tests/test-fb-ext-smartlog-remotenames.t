@@ -69,7 +69,7 @@
   @  x1 mybook
   $ cat >> $HGRCPATH << 'EOF'
   > [smartlog]
-  > repos=default/
+  > repos=remote/
   > names=project/bookmark
   > EOF
   $ hg smartlog -T '{desc} {bookmarks} {remotebookmarks}'

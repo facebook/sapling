@@ -46,7 +46,7 @@ pull from generaldelta to generaldelta
 push from generaldelta to generaldelta
   $ echo b > b
   $ hg commit -qAm b
-  $ hg push
+  $ hg push --allow-anon
   pushing to ssh://user@dummy/master
   searching for changes
   remote: adding changesets
@@ -65,7 +65,7 @@ pull from generaldelta to non-generaldelta
 push from non-generaldelta to generaldelta
   $ echo c > c
   $ hg commit -qAm c
-  $ hg push
+  $ hg push --allow-anon
   pushing to ssh://user@dummy/master
   searching for changes
   remote: adding changesets

@@ -38,7 +38,6 @@ from .i18n import _
 from .node import hex, nullrev
 from .pycompat import decodeutf8, encodeutf8, range
 
-
 CFG_CGDELTA_ALWAYS_NULL = "always-null"
 CFG_CGDELTA_NO_EXTERNAL = "no-external"
 CFG_CGDELTA_DEFAULT = "default"

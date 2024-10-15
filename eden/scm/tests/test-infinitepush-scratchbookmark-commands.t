@@ -97,8 +97,8 @@ Check that the bookmarks show as expected on the client.
   $ cd ../client
   $ hg log -r "all()" -T '{node|short} "{desc}" {remotebookmarks}\n'
   74903ee2450a "public commit" 
-  72feb0cc373f "another public commit" default/scratch/public
-  68d8ff913700 "draft commit" default/scratch/draft
+  72feb0cc373f "another public commit" remote/scratch/public
+  68d8ff913700 "draft commit" remote/scratch/draft
 
   $ hg pull -B scratch/anotherpublic
   pulling from ssh://user@dummy/server
@@ -106,8 +106,8 @@ Check that the bookmarks show as expected on the client.
 
   $ hg log -r "all()" -T '{node|short} "{desc}" {remotebookmarks}\n'
   74903ee2450a "public commit" 
-  72feb0cc373f "another public commit" default/scratch/anotherpublic default/scratch/public
-  68d8ff913700 "draft commit" default/scratch/draft
+  72feb0cc373f "another public commit" remote/scratch/anotherpublic remote/scratch/public
+  68d8ff913700 "draft commit" remote/scratch/draft
 
 
 Make another scratch bookmark on a draft commit on the server.
@@ -130,8 +130,8 @@ Check that the draft scratch bookmark shows up on the client as expected.
 
   $ hg log -r "all()" -T '{node|short} "{desc}" {remotebookmarks}\n'
   74903ee2450a "public commit" 
-  72feb0cc373f "another public commit" default/scratch/anotherpublic default/scratch/public
-  68d8ff913700 "draft commit" default/scratch/anotherdraft default/scratch/draft
+  72feb0cc373f "another public commit" remote/scratch/anotherpublic remote/scratch/public
+  68d8ff913700 "draft commit" remote/scratch/anotherdraft remote/scratch/draft
 
 
 Test the attempting to create a scratch bookmark on a non existing commit fails.
@@ -189,9 +189,9 @@ Check that the bookmarks show as expected on the client.
   no changes found
 
   $ hg log -r "all()" -T '{node|short} "{desc}" {remotebookmarks}\n'
-  74903ee2450a "public commit" default/scratch/public
-  72feb0cc373f "another public commit" default/scratch/anotherpublic
-  68d8ff913700 "draft commit" default/scratch/anotherdraft default/scratch/draft
+  74903ee2450a "public commit" remote/scratch/public
+  72feb0cc373f "another public commit" remote/scratch/anotherpublic
+  68d8ff913700 "draft commit" remote/scratch/anotherdraft remote/scratch/draft
 
 
 Push another draft commit to a scratch bookmark.
@@ -202,10 +202,10 @@ Push another draft commit to a scratch bookmark.
   $ hg push -q --to "scratch/draft" -r "."
 
   $ hg log -r "all()" -T '{node|short} "{desc}" {remotebookmarks}\n'
-  74903ee2450a "public commit" default/scratch/public
-  72feb0cc373f "another public commit" default/scratch/anotherpublic
-  68d8ff913700 "draft commit" default/scratch/anotherdraft
-  6051090c9df8 "another draft commit" default/scratch/draft
+  74903ee2450a "public commit" remote/scratch/public
+  72feb0cc373f "another public commit" remote/scratch/anotherpublic
+  68d8ff913700 "draft commit" remote/scratch/anotherdraft
+  6051090c9df8 "another draft commit" remote/scratch/draft
 
 
 Swap the draft scratch bookmarks.
@@ -235,7 +235,7 @@ Check that the bookmarks show as expected on the client.
   adding file changes
 
   $ hg log -r "all()" -T '{node|short} "{desc}" {remotebookmarks}\n'
-  74903ee2450a "public commit" default/scratch/public
-  72feb0cc373f "another public commit" default/scratch/anotherpublic
-  68d8ff913700 "draft commit" default/scratch/draft
-  6051090c9df8 "another draft commit" default/scratch/anotherdraft
+  74903ee2450a "public commit" remote/scratch/public
+  72feb0cc373f "another public commit" remote/scratch/anotherpublic
+  68d8ff913700 "draft commit" remote/scratch/draft
+  6051090c9df8 "another draft commit" remote/scratch/anotherdraft

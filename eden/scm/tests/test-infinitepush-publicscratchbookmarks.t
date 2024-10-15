@@ -6,7 +6,7 @@
 
   $ configure dummyssh
   $ enable infinitepush remotenames
-  $ setconfig remotenames.hoist=default 'remotenames.autopullhoistpattern=re:.*'
+  $ setconfig remotenames.hoist=default remotenames.rename.default= 'remotenames.autopullhoistpattern=re:.*'
   $ setconfig infinitepush.branchpattern="re:scratch/.+"
   $ setconfig remotefilelog.http=false pull.httpbookmarks=false
   $ newrepo server

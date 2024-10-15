@@ -175,7 +175,8 @@ Repo ua has both heads:
 
   $ hg -R ua heads
   commit:      4f44d5743f52
-  bookmark:    stable
+  bookmark:    remote/stable
+  hoistedname: stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
@@ -184,7 +185,6 @@ Repo ua has both heads:
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     hacked default
-  
 
 Same revision checked out in repo a and ua:
 
@@ -210,7 +210,8 @@ Repo ua has both heads:
 
   $ hg -R ua heads
   commit:      4f44d5743f52
-  bookmark:    stable
+  bookmark:    remote/stable
+  hoistedname: stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
@@ -219,7 +220,6 @@ Repo ua has both heads:
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     hacked default
-  
 
 Same revision checked out in repo a and ua:
 
@@ -241,7 +241,8 @@ Repo ua has both heads:
 
   $ hg -R ua heads
   commit:      4f44d5743f52
-  bookmark:    stable
+  bookmark:    remote/stable
+  hoistedname: stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
@@ -250,17 +251,16 @@ Repo ua has both heads:
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     hacked default
-  
 
 Branch 'stable' is checked out:
 
   $ hg -R ua parents
   commit:      4f44d5743f52
-  bookmark:    stable
+  bookmark:    remote/stable
+  hoistedname: stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
-  
 
   $ rm -r ua
 
@@ -275,7 +275,8 @@ Repo ua has both heads:
 
   $ hg -R ua heads
   commit:      4f44d5743f52
-  bookmark:    stable
+  bookmark:    remote/stable
+  hoistedname: stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
@@ -284,7 +285,6 @@ Repo ua has both heads:
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     hacked default
-  
 
   $ rm -r ua
 
@@ -299,7 +299,6 @@ Repo ua has branch 'stable' and 'default' (was changed in fd511e9eeea6):
 
   $ hg -R ua heads
   commit:      4f44d5743f52
-  bookmark:    stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
@@ -308,7 +307,6 @@ Repo ua has branch 'stable' and 'default' (was changed in fd511e9eeea6):
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     hacked default
-  
 
 Same revision checked out in repo a and ua:
 
@@ -333,11 +331,11 @@ Repo ua has branch 'stable' and 'default' (was changed in fd511e9eeea6):
 
   $ hg -R ua heads
   commit:      4f44d5743f52
-  bookmark:    stable
+  bookmark:    remote/stable
+  hoistedname: stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
-  
 
 Same revision checked out in repo a and ua:
 
@@ -362,21 +360,21 @@ Repo ua has branch 'stable' and 'default' (was changed in fd511e9eeea6):
 
   $ hg -R ua heads
   commit:      4f44d5743f52
-  bookmark:    stable
+  bookmark:    remote/stable
+  hoistedname: stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
-  
 
 Branch 'stable' is checked out:
 
   $ hg -R ua parents
   commit:      4f44d5743f52
-  bookmark:    stable
+  bookmark:    remote/stable
+  hoistedname: stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
-  
 
   $ rm -r ua
 
@@ -615,7 +613,6 @@ Warning not printed if working directory isn't empty
   $ cd fsmonitor-update
   $ hg up acb14030fe0a
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  (leaving bookmark @)
   $ hg up cf0fe1914066
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

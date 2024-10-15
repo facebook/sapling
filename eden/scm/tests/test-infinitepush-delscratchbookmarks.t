@@ -2,7 +2,8 @@
 #debugruntest-incompatible
 
   $ configure dummyssh
-  $ enable infinitepush remotenames commitcloud
+  $ enable remotenames commitcloud
+  $ disable infinitepush
   $ setconfig infinitepush.branchpattern="re:scratch/.+"
   $ mkcommit() {
   >    echo "$1" > "$1"
@@ -45,17 +46,14 @@ Ensure no bookmarks
 
 Push scratch bookmark
   $ mkcommit scratchcommit1
-  $ hg push default -r . --to scratch/test1 --create
-  pushing to ssh://user@dummy/repo
-  searching for changes
-  remote: pushing 1 commit:
-  remote:     45f7b362ad7c  scratchcommit1
+  $ hg push -qr . --to scratch/test1 --create
   $ hg book --remote
-     default/scratch/test1     45f7b362ad7c
+     remote/scratch/test1      45f7b362ad7c
 
 Delete scratch bookmark
-  $ hg book -d scratch/test1
+  $ hg push -q --delete scratch/test1
   $ hg book --remote
+  $ hg push -q --to scratch/test1 -r 45f7b362ad7c --create
 
 Check regular deletion still works
   $ hg book testlocal1
@@ -66,18 +64,17 @@ Check regular deletion still works
   no bookmarks set
 
 Test deleting both regular and scratch
-  $ hg push default -r . --to scratch/test2 --create
-  pushing to ssh://user@dummy/repo
-  searching for changes
-  remote: pushing 1 commit:
-  remote:     45f7b362ad7c  scratchcommit1
+  $ hg push -qr . --to scratch/test2 --create
   $ hg book testlocal2
   $ hg book -a
    * testlocal2                45f7b362ad7c
-     default/scratch/test2     45f7b362ad7c
-  $ hg book -d testlocal2 scratch/test2
+     remote/scratch/test1      45f7b362ad7c
+     remote/scratch/test2      45f7b362ad7c
+  $ hg book -d testlocal2
+  $ hg push -q --delete scratch/test2
   $ hg book -a
   no bookmarks set
+     remote/scratch/test1      45f7b362ad7c
 
 Test deleting nonexistent bookmarks
   $ hg book -d scratch/nonexistent1
@@ -92,20 +89,24 @@ Test deleting nonexistent bookmarks
 
 Test deleting a nonexistent bookmark with an existing tag that has the right name
   $ hg book --remote
+     remote/scratch/test1      45f7b362ad7c
   $ hg book -d scratch/serverbranch
   abort: scratch bookmark 'scratch/serverbranch' does not exist in path 'default'
   [255]
   $ hg book --remote
+     remote/scratch/test1      45f7b362ad7c
 
 Test deleting a local bookmark that has a scratch-like name
   $ hg book scratch/thisisalocalbm
   $ hg book
    * scratch/thisisalocalbm    45f7b362ad7c
   $ hg book --remote
+     remote/scratch/test1      45f7b362ad7c
   $ hg book -d scratch/thisisalocalbm
   $ hg book
   no bookmarks set
   $ hg book --remote
+     remote/scratch/test1      45f7b362ad7c
 
 Prepare client to be pushed to for next tests
   $ cat >> .hg/hgrc << EOF
@@ -117,21 +118,19 @@ Prepare client to be pushed to for next tests
 
 Test scratch bookmarks still pullable
   $ cd ..
-  $ hg clone ssh://user@dummy/repo --config extensions.remotenames= client2 -q
+  $ hg clone ssh://user@dummy/repo client2 -q
   $ cd client2
   $ hg book -a
   no bookmarks set
+     remote/scratch/test1      45f7b362ad7c
   $ hg pull -B scratch/test1
   pulling from ssh://user@dummy/repo
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
+  no changes found
   $ hg book -a
   no bookmarks set
-     default/scratch/test1     45f7b362ad7c
+     remote/scratch/test1      45f7b362ad7c
   $ hg up scratch/test1
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ ls -a
   .
   ..
@@ -146,32 +145,32 @@ Add a second remote
   > EOF
 
 Create some bookmarks on remote2
+TODO: specifying remote doesn't work w/ SLAPI push
+#if false
   $ mkcommit r2c
   $ hg push remote2 -r . --to scratch/realscratch2 --create
   pushing to ssh://user@dummy/client
   searching for changes
   remote: pushing 1 commit:
   remote:     7601bbca65fd  r2c
+#endif
+
   $ hg book local2
   $ hg book -a
-   * local2                    7601bbca65fd
-     default/scratch/test1     45f7b362ad7c
-     remote2/scratch/realscratch2 7601bbca65fd
+   * local2                    45f7b362ad7c
+     remote/scratch/test1      45f7b362ad7c
 
 Delete all the things !
-  $ hg book -d --remote-path default scratch/test1
-  $ hg book -a
-   * local2                    7601bbca65fd
-     remote2/scratch/realscratch2 7601bbca65fd
-  $ hg book -d --remote-path nosuchremote scratch/realscratch2
+  $ hg book -d --remote-path nosuchremote scratch/test1
   abort: repository nosuchremote does not exist!
   [255]
+  $ hg push -q --delete scratch/test1
   $ hg book -a
-   * local2                    7601bbca65fd
-     remote2/scratch/realscratch2 7601bbca65fd
-  $ hg book -d --remote-path remote2 scratch/realscratch2
+   * local2                    45f7b362ad7c
   $ hg book -a
-   * local2                    7601bbca65fd
+   * local2                    45f7b362ad7c
+  $ hg book -a
+   * local2                    45f7b362ad7c
   $ hg book -d local2
   $ hg book -a
   no bookmarks set

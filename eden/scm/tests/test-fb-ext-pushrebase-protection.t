@@ -24,14 +24,14 @@ Setup pushrebase required repo
 
 Non-pushrebase pushes should be rejected
 
-  $ hg push
+  $ hg push --allow-anon
   pushing to $TESTTMP/server (glob)
   searching for changes
   error: prechangegroup.blocknonpushrebase hook failed: this repository requires that you enable the pushrebase extension and push using 'hg push --to'
   abort: this repository requires that you enable the pushrebase extension and push using 'hg push --to'
   [255]
 
-  $ hg push -f
+  $ hg push -f --allow-anon
   pushing to $TESTTMP/server (glob)
   searching for changes
   error: prechangegroup.blocknonpushrebase hook failed: this repository requires that you enable the pushrebase extension and push using 'hg push --to'
@@ -47,8 +47,8 @@ Non-pushrebase pushes should be rejected
 
 Pushrebase pushes should be allowed
 
-  $ hg push --config "extensions.pushrebase=" --to master -B master
-  pushing to $TESTTMP/server (glob)
+  $ hg push --config "extensions.pushrebase=" --to master --create
+  pushing rev 1846eede8b68 to destination $TESTTMP/server bookmark master
   searching for changes
   pushing 1 changeset:
       1846eede8b68  b

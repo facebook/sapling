@@ -39,19 +39,19 @@ blocked by deny_files
   updated remote bookmark master_bookmark to ce81c7d38286
 -- newcommit was correctly pushed to master_bookmark
   $ log -r master_bookmark
-  @  newcommit [public;rev=2;ce81c7d38286] default/master_bookmark
+  @  newcommit [public;rev=2;ce81c7d38286] remote/master_bookmark
   │
   ~
 
 -- newcommit is also present in the large repo (after a pull)
   $ cd "$TESTTMP"/large-hg-client
   $ log -r master_bookmark
-  @  first post-move commit [public;rev=2;bfcfb674663c] default/master_bookmark
+  @  first post-move commit [public;rev=2;bfcfb674663c] remote/master_bookmark
   │
   ~
   $ hg pull -q
   $ log -r master_bookmark
-  o  newcommit [public;rev=3;819e91b238b7] default/master_bookmark
+  o  newcommit [public;rev=3;819e91b238b7] remote/master_bookmark
   │
   ~
 - compare the working copies

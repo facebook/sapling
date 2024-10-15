@@ -141,7 +141,7 @@ blobimport
   unchanged_files
   $ hg log -G
   @  commit:      * (glob)
-  │  bookmark:    default/head_bookmark
+  │  bookmark:    remote/head_bookmark
   │  hoistedname: head_bookmark
   │  user:        user
   │  date:        * (glob)
@@ -153,7 +153,7 @@ blobimport
   │  summary:     [MEGAREPO CATCHUP DELETE] deletion commit (0)
   │
   │ o  commit:      f910c17f2a72
-  │ │  bookmark:    default/small_repo_head_bookmark
+  │ │  bookmark:    remote/small_repo_head_bookmark
   │ │  hoistedname: small_repo_head_bookmark
   │ │  user:        test
   │ │  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -180,7 +180,7 @@ blobimport
   │    summary:     small repo first commit
   │
   o  commit:      * (glob)
-  │  bookmark:    default/pre_merge_head_bookmark
+  │  bookmark:    remote/pre_merge_head_bookmark
   │  hoistedname: pre_merge_head_bookmark
   │  user:        test
   │  date:        Thu Jan 01 00:00:00 1970 +0000

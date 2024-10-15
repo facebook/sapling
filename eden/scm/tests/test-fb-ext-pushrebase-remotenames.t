@@ -51,7 +51,7 @@ Test that pushing to a remotename preserves commit hash if no rebase happens
   $ hg log -r . -T '{node}\n'
   a59527fd0ae5acd6fe09597193f5eb3e01113f22
   $ hg log -G -r 'all()' -T '{desc} {remotebookmarks} {bookmarks}'
-  @  changed message default/master
+  @  changed message remote/master
   │
   o  initial
   
@@ -74,7 +74,7 @@ Test that pushing to a remotename gets rebased
   $ hg log -G -T '"{desc}" {remotebookmarks}'
   @  "client's commit"
   │
-  o  "initial" default/master
+  o  "initial" remote/master
   
 
  (disable remotenames.racy-pull-on-push so we can check pushrebase's fallback behavior on updating remotenames)
@@ -88,11 +88,11 @@ Test that pushing to a remotename gets rebased
   remote: pushing 1 changeset:
   remote:     5c3cfb78df2f  client's commit
   remote: 2 new changesets from the server will be downloaded
-  moving remote bookmark 'default/master' to 98d6f1036c3b
+  moving remote bookmark 'remote/master' to 98d6f1036c3b
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg log -G -T '"{desc}" {remotebookmarks}'
-  @  "client's commit" default/master
+  @  "client's commit" remote/master
   │
   o  "master's commit"
   │
@@ -132,7 +132,7 @@ Test pushing a new bookmark
   o  "initial"
   
   $ hg log -R client -G -r 'all()' -T '{desc} {remotebookmarks}'
-  @  client's commit default/master default/newbook
+  @  client's commit remote/master remote/newbook
   │
   o  master's commit
   │
@@ -153,7 +153,7 @@ Test doing a non-fastforward bookmark move
   o  "initial"
   
   $ hg log -R client -G -r 'all()' -T '{desc} {remotebookmarks} {bookmarks}'
-  @  client's commit default/master default/newbook
+  @  client's commit remote/master remote/newbook
   │
   o  master's commit
   │
@@ -226,7 +226,7 @@ Test a push that comes with out-of-date bookmark discovery
   o  "aa"
   
   $ hg -R client log -G -T '"{desc}" {bookmarks} {remotenames}'
-  @  "cc"  default/bm
+  @  "cc"  remote/bm
   │
   o  "bb"
   │
@@ -297,7 +297,7 @@ Test force pushes
   remote: 1 new changeset from the server will be downloaded
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G -r 'all()' -T '{desc} {remotebookmarks} {bookmarks}'
-  @  b default/master
+  @  b remote/master
   │
   o  a
   
@@ -310,7 +310,7 @@ Test force pushes
   $ hg log -G -T '{desc} {remotebookmarks}'
   o  aa
   │
-  │ @  b default/master
+  │ @  b remote/master
   ├─╯
   o  a
   

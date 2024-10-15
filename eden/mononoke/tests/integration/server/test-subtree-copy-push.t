@@ -41,7 +41,7 @@ subtree copy and push
   $ hg log -G -T '{node|short} {desc|firstline} {remotebookmarks}\n'
   @  0eb66b793a2b Subtree copy from 8174a01c532cd975ecb875fb1556590dd776b29e
   │
-  o  64a6d9b95dad update foo/file2 default/master_bookmark
+  o  64a6d9b95dad update foo/file2 remote/master_bookmark
   │
   o  8174a01c532c foo/file1 -> foo/file2
   │

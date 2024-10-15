@@ -60,7 +60,7 @@ Set up a client repository, and work on 3 diffs
   o  "add b
   │
   │  Differential Revision: https://phabricator.fb.com/D123"
-  o  "add secondcommit" default/master
+  o  "add secondcommit" remote/master
   │
   o  "add initial"
   
@@ -116,7 +116,7 @@ hide them since there is a non-hidden successor.
   │ o  "add c
   │ │
   │ │  Differential Revision: https://phabricator.fb.com/D124
-  │ │  Reviewed By: someone" default/master
+  │ │  Reviewed By: someone" remote/master
   │ o  "add b
   ├─╯
   │    Differential Revision: https://phabricator.fb.com/D123
@@ -167,7 +167,7 @@ until now had non-hidden successors.
   o  "add d
   │
   │  Differential Revision: https://phabricator.fb.com/D131
-  │  Reviewed By: someone" default/master
+  │  Reviewed By: someone" remote/master
   @  "add c
   │
   │  Differential Revision: https://phabricator.fb.com/D124

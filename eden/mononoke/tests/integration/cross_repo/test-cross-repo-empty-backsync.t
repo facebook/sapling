@@ -33,7 +33,7 @@
   $ wait_for_bookmark_move_away_edenapi small-mon master_bookmark $(hg whereami)
   $ quiet hg pull
   $ log -r master_bookmark
-  o  Empty1 [public;rev=2;bcf0910445fc] default/master_bookmark
+  o  Empty1 [public;rev=2;bcf0910445fc] remote/master_bookmark
   │
   ~
 
@@ -62,7 +62,7 @@
   $ wait_for_bookmark_move_away_edenapi small-mon master_bookmark $(hg whereami)
   $ quiet hg pull
   $ log -r master_bookmark^::master_bookmark
-  o  non-empty after empty2 [public;rev=3;*] default/master_bookmark (glob)
+  o  non-empty after empty2 [public;rev=3;*] remote/master_bookmark (glob)
   │
   o  Empty1 [public;rev=2;*] (glob)
   │
@@ -79,7 +79,7 @@ nothingness. (But it succeeds in the end.)
   │
   ~
   $
-  o  non-empty after empty2 [public;rev=3;919e7f2c67b8] default/master_bookmark
+  o  non-empty after empty2 [public;rev=3;919e7f2c67b8] remote/master_bookmark
   │
   ~
 Non-empty commit can go in via pushrebase
@@ -91,7 +91,7 @@ Non-empty commit can go in via pushrebase
 XXX (not sure why we don't end up on master just after push)
   $ quiet hg up master_bookmark
   $ log -r master_bookmark^::master_bookmark
-  @  Non-empty-4 [public;rev=6;*] default/master_bookmark (glob)
+  @  Non-empty-4 [public;rev=6;*] remote/master_bookmark (glob)
   │
   o  non-empty after empty2 [public;rev=3;*] (glob)
   │
@@ -102,7 +102,7 @@ The large repo accepted all those pushes
   $ wait_for_bookmark_move_away_edenapi large-mon master_bookmark $(hg whereami)
   $ hg pull -q
   $ log -r master_bookmark^::master_bookmark
-  o  Non-empty-4 [public;rev=7;*] default/master_bookmark (glob)
+  o  Non-empty-4 [public;rev=7;*] remote/master_bookmark (glob)
   │
   o  Empty3 [public;rev=6;*] (glob)
   │
@@ -128,7 +128,7 @@ This time pushing empty commit shouldn't fail as there is no pushredirection.
   $ wait_for_bookmark_move_away_edenapi large-mon master_bookmark $(hg whereami)
   $ quiet hg pull
   $ log -r master_bookmark^::master_bookmark
-  o  Empty5 [public;rev=8;*] default/master_bookmark (glob)
+  o  Empty5 [public;rev=8;*] remote/master_bookmark (glob)
   │
   o  Non-empty-4 [public;rev=7;*] (glob)
   │

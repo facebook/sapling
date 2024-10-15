@@ -190,7 +190,7 @@
   6 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ log -r "ancestors(master_bookmark)"
-  @    merging [public;rev=5;71432df6ffa8] default/master_bookmark
+  @    merging [public;rev=5;71432df6ffa8] remote/master_bookmark
   ├─╮
   │ o  Add file3 [public;rev=4;fe8342d2de1a]
   │ │

@@ -37,6 +37,9 @@ Clone with background file closing enabled
   remote: * (glob)
   remote: capabilities: * (glob)
   remote: 1
+  preparing listkeys for "bookmarks"
+  sending listkeys command
+  received listkey for "bookmarks": 0 bytes
   streaming all changes
   sending stream_out_option command
   * (glob)
@@ -52,7 +55,11 @@ Clone with background file closing enabled
   bundle2-input-part: "b2x:treegroup2" (params: 3 mandatory) supported
   bundle2-input-part: total payload size 46374
   bundle2-input-bundle: 2 parts total
-  checking for updated bookmarks
+  remotenames: skipped syncing local bookmarks
+  preparing listkeys for "bookmarks"
+  sending listkeys command
+  received listkey for "bookmarks": 0 bytes
+  remotenames: removing cloned bookmarks
 
 Stream clone while repo is changing:
 

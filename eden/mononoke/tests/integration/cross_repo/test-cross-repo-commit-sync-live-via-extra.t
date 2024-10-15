@@ -44,7 +44,7 @@ Before the change
   $ hg ci -Aqm "before config change"
   $ hg push -r . --to master_bookmark -q
   $ log
-  @  before config change [public;rev=2;bc6a206054d0] default/master_bookmark
+  @  before config change [public;rev=2;bc6a206054d0] remote/master_bookmark
   │
   o  first post-move commit [public;rev=1;11f848659bfc]
   │
@@ -61,7 +61,7 @@ Before the change
   $ hg pull -q
   $ hg up -q master_bookmark
   $ log -r master_bookmark
-  @  before config change [public;rev=3;c76f6510b5c1] default/master_bookmark
+  @  before config change [public;rev=3;c76f6510b5c1] remote/master_bookmark
   │
   ~
   $ hg log -r master_bookmark -T "{files % '{file}\n'}"
@@ -98,7 +98,7 @@ After the change
   pulling from mono:small-mon
   $ hg up -q $X
   $ log -r .^::.
-  @  before config change [public;rev=2;bc6a206054d0] default/master_bookmark
+  @  before config change [public;rev=2;bc6a206054d0] remote/master_bookmark
   │
   o  first post-move commit [public;rev=1;11f848659bfc]
   │
@@ -113,7 +113,7 @@ After the change
   $ hg ci -Aqm "after config change from small"
   $ hg push -r . --to master_bookmark -q
   $ log -r master_bookmark^::master_bookmark
-  @  after config change from small [public;rev=3;6bfa38885cea] default/master_bookmark
+  @  after config change from small [public;rev=3;6bfa38885cea] remote/master_bookmark
   │
   o  before config change [public;rev=2;bc6a206054d0] (glob)
   │
@@ -134,7 +134,7 @@ After the change
 Rest of this test won't pass as we failed the previous command so is commented out.
 -- check the same commit in the large repo
   $ log -r "master_bookmark^::master_bookmark"
-  @  after config change from large [public;rev=?;ad029e9c7735] default/master_bookmark (glob)
+  @  after config change from large [public;rev=?;ad029e9c7735] remote/master_bookmark (glob)
   │
   o  after config change from small [public;rev=?;9a1a082f2f8e] (glob)
   │

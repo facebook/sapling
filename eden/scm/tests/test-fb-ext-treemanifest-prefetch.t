@@ -110,7 +110,7 @@ Test auto prefetch during normal access
   $ hg log -r tip --stat --pager=off
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
   commit:      311cac64787d
-  bookmark:    default/master
+  bookmark:    remote/master
   hoistedname: master
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

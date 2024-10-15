@@ -83,6 +83,14 @@ sl_hash_minlen=9
 
 [cas]
 disable=true
+
+[remotenames]
+rename.default=remote
+hoist=remote
+selectivepulldefault=master
+
+[extensions]
+remotenames=
 """
     if use_watchman:
         content += """
@@ -119,7 +127,6 @@ evolution=obsolete
 amend=
 commitcloud=
 infinitepush=
-remotenames=
 
 [mutation]
 enabled=true
@@ -130,10 +137,7 @@ date=0 0
 http=True
 
 [remotenames]
-rename.default=remote
-hoist=remote
 selectivepull=True
-selectivepulldefault=master
 
 [treemanifest]
 http=True

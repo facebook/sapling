@@ -31,18 +31,18 @@
 -- newcommit was correctly pushed to master_bookmark (we need to update, as it's a new commit with date rewriting)
   $ hg up -q master_bookmark
   $ log -r master_bookmark
-  @  newcommit [public;rev=3;*] default/master_bookmark (glob)
+  @  newcommit [public;rev=3;*] remote/master_bookmark (glob)
   │
   ~
 -- newcommit is also present in the large repo (after a pull)
   $ cd "$TESTTMP"/large-hg-client
   $ log -r master_bookmark
-  @  first post-move commit [public;rev=2;*] default/master_bookmark (glob)
+  @  first post-move commit [public;rev=2;*] remote/master_bookmark (glob)
   │
   ~
   $ hg pull -q
   $ log -r master_bookmark
-  o  newcommit [public;rev=3;*] default/master_bookmark (glob)
+  o  newcommit [public;rev=3;*] remote/master_bookmark (glob)
   │
   ~
   $ verify_wc $(hg log -r master_bookmark -T '{node}')

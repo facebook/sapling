@@ -101,7 +101,7 @@ Push of a merge with a copy
   $ hg push -r . --to master_bookmark -q
   $ hg log -r tip
   commit:      bc6bfc6ac632
-  bookmark:    default/master_bookmark
+  bookmark:    remote/master_bookmark
   hoistedname: master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

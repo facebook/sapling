@@ -226,9 +226,9 @@ Check everything is as expected
   $ hg pull
   pulling from mono:repo
   $ hg bookmarks --remote
-     default/master_bookmark           3903775176ed42b1458a6281db4a0ccf4d9f287a
-     default/plain/123                 47da8b81097c5534f3eb7947a8764dd323cffe3d
-     default/plain/456                 47da8b81097c5534f3eb7947a8764dd323cffe3d
+     remote/master_bookmark           3903775176ed42b1458a6281db4a0ccf4d9f287a
+     remote/plain/123                 47da8b81097c5534f3eb7947a8764dd323cffe3d
+     remote/plain/456                 47da8b81097c5534f3eb7947a8764dd323cffe3d
   $ hg bookmarks --list-remote "*"
      infinitepush1/123         47da8b81097c5534f3eb7947a8764dd323cffe3d
      infinitepush1/456         47da8b81097c5534f3eb7947a8764dd323cffe3d

@@ -35,7 +35,7 @@ Before config change
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi small-mon master_bookmark)
   $ hg push -r . --to master_bookmark -q
   $ log -r master_bookmark
-  o  before config change [public;rev=4;*] default/master_bookmark (glob)
+  o  before config change [public;rev=4;*] remote/master_bookmark (glob)
   │
   ~
 
@@ -47,7 +47,7 @@ Before config change
   $ hg pull -q
   $ hg up -q master_bookmark
   $ log -r master_bookmark
-  @  before config change [public;rev=2;*] default/master_bookmark (glob)
+  @  before config change [public;rev=2;*] remote/master_bookmark (glob)
   │
   ~
   $ hg log -r master_bookmark -T "{files % '{file}\n'}"
@@ -86,7 +86,7 @@ Config change
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi small-mon master_bookmark)
   $ hg push -r . --to master_bookmark -q
   $ log -r master_bookmark
-  o  after config change [public;rev=*;*] default/master_bookmark (glob)
+  o  after config change [public;rev=*;*] remote/master_bookmark (glob)
   │
   ~
 
@@ -98,7 +98,7 @@ Config change
   $ hg pull -q
   $ hg up -q master_bookmark
   $ log -r master_bookmark
-  @  after config change [public;rev=*;*] default/master_bookmark (glob)
+  @  after config change [public;rev=*;*] remote/master_bookmark (glob)
   │
   ~
   $ hg log -r master_bookmark -T "{files % '{file}\n'}"

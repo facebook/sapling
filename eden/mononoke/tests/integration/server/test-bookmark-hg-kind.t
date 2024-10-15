@@ -73,12 +73,12 @@ create new bookmarks, then update their properties
   │
   o  907767d421e4 draft 'add b'
   │
-  o  ac82d8b1f7c4 public 'add a'  default/master_bookmark
+  o  ac82d8b1f7c4 public 'add a'  remote/master_bookmark
   
 test publishing
   $ cd "$TESTTMP/repo-pull"
   $ tglogpnr
-  o  ac82d8b1f7c4 public 'add a'  default/master_bookmark
+  o  ac82d8b1f7c4 public 'add a'  remote/master_bookmark
   
   $ hg pull
   pulling from mono:repo
@@ -93,7 +93,7 @@ test publishing
   │
   o  907767d421e4 draft 'add b'
   │
-  o  ac82d8b1f7c4 public 'add a'  default/master_bookmark
+  o  ac82d8b1f7c4 public 'add a'  remote/master_bookmark
   
   $ hg bookmarks
   no bookmarks set

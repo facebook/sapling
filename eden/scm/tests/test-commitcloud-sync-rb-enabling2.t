@@ -67,7 +67,7 @@ Make changes in client2 and sync the changes to cloud.
   > EOS
   $ hg cloud sync -q
 
-Sync back to client1. This does not cause lagged default/master.
+Sync back to client1. This does not cause lagged remote/master.
 
   $ cd $TESTTMP/client1
   $ hg cloud sync -q

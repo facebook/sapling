@@ -75,7 +75,7 @@ push some draft commits
   │
   o  48337b947baa draft 'draft1'
   │
-  o  f2f073d106b0 public 'public1'  default/master_bookmark
+  o  f2f073d106b0 public 'public1'  remote/master_bookmark
   │
   o  df4f53cec30a public 'base'
   
@@ -98,7 +98,7 @@ pull these draft commits
   │
   o  48337b947baa draft 'draft1'
   │
-  o  f2f073d106b0 public 'public1'  default/master_bookmark
+  o  f2f073d106b0 public 'public1'  remote/master_bookmark
   │
   o  df4f53cec30a public 'base'
   
@@ -142,13 +142,13 @@ add some draft commits to the branch
   │
   o  0bf099b792a8 draft 'branch2'
   │
-  o  eaf82af99127 public 'branch1'  default/branch_bookmark
+  o  eaf82af99127 public 'branch1'  remote/branch_bookmark
   │
   │ o  09b17e5ff090 draft 'draft3'
   │ │
   │ o  fc8f2fba9ac9 draft 'draft2'
   │ │
-  │ o  48337b947baa public 'draft1'  default/master_bookmark
+  │ o  48337b947baa public 'draft1'  remote/master_bookmark
   │ │
   │ o  f2f073d106b0 public 'public1'
   ├─╯
@@ -168,13 +168,13 @@ the server will have returned phaseheads information that makes 'draft1' and
   │
   o  0bf099b792a8 draft 'branch2'
   │
-  o  eaf82af99127 public 'branch1'  default/branch_bookmark
+  o  eaf82af99127 public 'branch1'  remote/branch_bookmark
   │
   │ o  09b17e5ff090 draft 'draft3'
   │ │
   │ o  fc8f2fba9ac9 draft 'draft2'
   │ │
-  │ o  48337b947baa public 'draft1'  default/master_bookmark
+  │ o  48337b947baa public 'draft1'  remote/master_bookmark
   │ │
   │ o  f2f073d106b0 public 'public1'
   ├─╯

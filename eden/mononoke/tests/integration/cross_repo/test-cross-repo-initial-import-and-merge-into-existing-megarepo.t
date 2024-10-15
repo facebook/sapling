@@ -81,7 +81,7 @@ Before config change
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK)
   $ hg push -r . --to $MASTER_BOOKMARK -q
   $ log_globalrev -r $MASTER_BOOKMARK
-  o  before merge [public;globalrev=1000157971;a94d137602c0] default/master_bookmark
+  o  before merge [public;globalrev=1000157971;a94d137602c0] remote/master_bookmark
   │
   ~
 
@@ -93,7 +93,7 @@ Before config change
   $ hg pull -q
   $ hg up -q $MASTER_BOOKMARK
   $ log_globalrev -r $MASTER_BOOKMARK
-  @  before merge [public;globalrev=1000157971;61807722d4ec] default/master_bookmark
+  @  before merge [public;globalrev=1000157971;61807722d4ec] remote/master_bookmark
   │
   ~
   $ hg log -r $MASTER_BOOKMARK -T "{files % '{file}\n'}"
@@ -155,7 +155,7 @@ Before config change
   $ hg -q pull
   $ hg up -q $MASTER_BOOKMARK
   $ log_globalrev -r $MASTER_BOOKMARK
-  @    [MEGAREPO GRADUAL MERGE] gradual merge (0) [public;globalrev=1000157972;9af7a2bbf0f5] default/master_bookmark
+  @    [MEGAREPO GRADUAL MERGE] gradual merge (0) [public;globalrev=1000157972;9af7a2bbf0f5] remote/master_bookmark
   ├─╮
   │ │
   ~ ~
@@ -167,7 +167,7 @@ Before config change
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK)
   $ hg push -r . --to $MASTER_BOOKMARK -q
   $ log_globalrev -r $MASTER_BOOKMARK
-  o  after merge [public;globalrev=1000157973;1220098b4cde] default/master_bookmark
+  o  after merge [public;globalrev=1000157973;1220098b4cde] remote/master_bookmark
   │
   ~
 -- wait a second to give backsyncer some time to catch up
@@ -178,7 +178,7 @@ Before config change
   $ hg pull -q
   $ hg up -q $MASTER_BOOKMARK
   $ log_globalrev -r $MASTER_BOOKMARK^::$MASTER_BOOKMARK
-  @  after merge [public;globalrev=1000157973;3381b75593e5] default/master_bookmark
+  @  after merge [public;globalrev=1000157973;3381b75593e5] remote/master_bookmark
   │
   o  [MEGAREPO GRADUAL MERGE] gradual merge (0) [public;globalrev=1000157972;9351f7816915]
   │
@@ -188,7 +188,7 @@ Before config change
   $ hg ci -Aqm "after merge from small"
   $ hg push -r . --to $MASTER_BOOKMARK -q
   $ log_globalrev -r $MASTER_BOOKMARK^::$MASTER_BOOKMARK
-  o  after merge from small [public;globalrev=1000157974;c17052372d27] default/master_bookmark
+  o  after merge from small [public;globalrev=1000157974;c17052372d27] remote/master_bookmark
   │
   o  after merge [public;globalrev=1000157973;3381b75593e5]
   │
@@ -196,7 +196,7 @@ Before config change
   $ cd "$TESTTMP/large-hg-client"
   $ hg pull -q
   $ log_globalrev -r $MASTER_BOOKMARK^::$MASTER_BOOKMARK
-  o  after merge from small [public;globalrev=1000157974;4d44ba9e1ca3] default/master_bookmark
+  o  after merge from small [public;globalrev=1000157974;4d44ba9e1ca3] remote/master_bookmark
   │
   o  after merge [public;globalrev=1000157973;1220098b4cde]
   │
@@ -232,7 +232,7 @@ Before config change
   $ hg update $MASTER_BOOKMARK
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ log_globalrev -r .^::.
-  @  ID [public;globalrev=1000157975;8d707fde6f5e] default/master_bookmark
+  @  ID [public;globalrev=1000157975;8d707fde6f5e] remote/master_bookmark
   │
   o  after merge from small [public;globalrev=1000157974;c17052372d27]
   │
@@ -243,7 +243,7 @@ Before config change
   $ hg push -r . --to $MASTER_BOOKMARK -q
 
   $ log_globalrev -r $MASTER_BOOKMARK^::$MASTER_BOOKMARK
-  o  after mapping change from small [public;globalrev=1000157976;ecca553b5690] default/master_bookmark
+  o  after mapping change from small [public;globalrev=1000157976;ecca553b5690] remote/master_bookmark
   │
   o  ID [public;globalrev=1000157975;8d707fde6f5e]
   │
@@ -252,7 +252,7 @@ Before config change
   $ cd "$TESTTMP/large-hg-client"
   $ hg pull -q
   $ log_globalrev -r $MASTER_BOOKMARK^::$MASTER_BOOKMARK
-  o  after mapping change from small [public;globalrev=1000157976;54bd67a132c8] default/master_bookmark
+  o  after mapping change from small [public;globalrev=1000157976;54bd67a132c8] remote/master_bookmark
   │
   o  ID [public;globalrev=1000157975;4f56877f458b]
   │
@@ -281,7 +281,7 @@ Before config change
 
   $ hg pull -q
   $ log_globalrev -r $MASTER_BOOKMARK^^^::$MASTER_BOOKMARK
-  o  IG [public;globalrev=1000157979;0d969c3e772c] default/master_bookmark
+  o  IG [public;globalrev=1000157979;0d969c3e772c] remote/master_bookmark
   │
   o  IF [public;globalrev=1000157978;a3fc14316d38]
   │
@@ -344,7 +344,7 @@ Before config change
   $ hg -q pull
   $ hg up -q $MASTER_BOOKMARK
   $ log_globalrev -r $MASTER_BOOKMARK
-  @    [MEGAREPO GRADUAL MERGE] another merge (0) [public;globalrev=1000157980;c58d6329efff] default/master_bookmark
+  @    [MEGAREPO GRADUAL MERGE] another merge (0) [public;globalrev=1000157980;c58d6329efff] remote/master_bookmark
   ├─╮
   │ │
   ~ ~
@@ -472,7 +472,7 @@ so they'll be dumped to files to keep this (already long) integration test short
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK)
   $ hg push -r . --to $MASTER_BOOKMARK -q
   $ log_globalrev -r $MASTER_BOOKMARK -l 10
-  @  after merging submodule expansion [public;globalrev=;ffe35354096c] default/master_bookmark
+  @  after merging submodule expansion [public;globalrev=;ffe35354096c] remote/master_bookmark
   │
   ~
 
@@ -484,7 +484,7 @@ so they'll be dumped to files to keep this (already long) integration test short
   $ cd "$TESTTMP/small-hg-client"
   $ hg pull -q
   $ log_globalrev -l 10
-  o  after merging submodule expansion [public;globalrev=;5bc83a834e83] default/master_bookmark
+  o  after merging submodule expansion [public;globalrev=;5bc83a834e83] remote/master_bookmark
   │
   o  Added git repo C as submodule directly in A [public;globalrev=1000157988;69712c3f21b2]
   │
@@ -520,7 +520,7 @@ so they'll be dumped to files to keep this (already long) integration test short
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK)
   $ hg push -r . --to $MASTER_BOOKMARK -q
   $ log_globalrev -r $MASTER_BOOKMARK -l 30
-  o  after live sync and changes to submodule repo [public;globalrev=1000157989;cf2c14f12677] default/master_bookmark
+  o  after live sync and changes to submodule repo [public;globalrev=1000157989;cf2c14f12677] remote/master_bookmark
   │
   ~
 -- wait a second to give backsyncer some time to catch up

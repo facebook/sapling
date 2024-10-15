@@ -55,7 +55,7 @@ Push commits that will be obsoleted
   │
   o  1 [draft;rev=3;a0c9c5791058]
   │
-  │ o  C [public;rev=2;26805aba1e60] default/master_bookmark
+  │ o  C [public;rev=2;26805aba1e60] remote/master_bookmark
   │ │
   │ o  B [public;rev=1;112478962961]
   ├─╯
@@ -73,7 +73,7 @@ Push commits that will be obsoleted
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updated remote bookmark master_bookmark to dc31470c8386
   $ log -r "all()"
-  @  2 [public;rev=6;dc31470c8386] default/master_bookmark
+  @  2 [public;rev=6;dc31470c8386] remote/master_bookmark
   │
   o  1 [public;rev=5;c2e526aacb51]
   │
@@ -90,7 +90,7 @@ Push commits that will not be obsoleted
   $ log -r "all()"
   @  3 [draft;rev=7;6398085ceb9d]
   │
-  o  2 [public;rev=6;dc31470c8386] default/master_bookmark
+  o  2 [public;rev=6;dc31470c8386] remote/master_bookmark
   │
   o  1 [public;rev=5;c2e526aacb51]
   │
@@ -112,7 +112,7 @@ Push commits that will not be obsoleted
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updated remote bookmark master_bookmark to 6398085ceb9d
   $ log -r "all()"
-  @  3 [public;rev=7;6398085ceb9d] default/master_bookmark
+  @  3 [public;rev=7;6398085ceb9d] remote/master_bookmark
   │
   o  2 [public;rev=6;dc31470c8386]
   │

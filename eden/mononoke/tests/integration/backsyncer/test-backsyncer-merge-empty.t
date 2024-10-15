@@ -78,7 +78,7 @@ although the second one became non-merge commit
   $ cd "$TESTTMP/small-hg-client"
   $ hg pull -q
   $ log -r :
-  o  merge commit in large repo #2 - should be non-merge in small repo [public;rev=5;5be69a1c5de7] default/master_bookmark
+  o  merge commit in large repo #2 - should be non-merge in small repo [public;rev=5;5be69a1c5de7] remote/master_bookmark
   │
   o    merge commit in large repo #1 [public;rev=4;8e94c6a96669]
   ├─╮

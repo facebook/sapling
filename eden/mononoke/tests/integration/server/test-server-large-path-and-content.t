@@ -33,7 +33,7 @@ clone the repo and check that mercurial can access the file
   $ cd repo
   $ hg log
   commit:      41c590dc2a01
-  bookmark:    default/master_bookmark
+  bookmark:    remote/master_bookmark
   hoistedname: master_bookmark
   user:        author
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -59,7 +59,7 @@ push another long path with a large file
   summary:     long2
   
   commit:      41c590dc2a01
-  bookmark:    default/master_bookmark
+  bookmark:    remote/master_bookmark
   hoistedname: master_bookmark
   user:        author
   date:        Thu Jan 01 00:00:00 1970 +0000

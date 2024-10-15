@@ -62,7 +62,7 @@ The first client works on several diffs while the second client lands one of her
   o  "add c
   │
   │  Differential Revision: https://phabricator.fb.com/D123"
-  o  "add secondcommit" default/master
+  o  "add secondcommit" remote/master
   │
   o  "add initial"
 
@@ -107,7 +107,7 @@ the remote
   $ hg log -G -T '"{desc}" {remotebookmarks}'
   o  "add e
   │
-  │  Differential Revision: https://phabricator.fb.com/D131" default/master
+  │  Differential Revision: https://phabricator.fb.com/D131" remote/master
   o  "add d
   │
   │  Differential Revision: https://phabricator.intern.facebook.com/D124"
@@ -126,10 +126,10 @@ changesets
   $ hg up --hidden d5895ab3603770985bf7ab04bf25c0da2d7e08ab # --hidden because directaccess works only with hashes
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ mkcommit k 202
-  $ hg rebase -d default/master
+  $ hg rebase -d remote/master
   note: not rebasing 1a07332e9fa1 "add c", already in destination as d446b1b2be43 "add c"
   note: not rebasing ee96b78ae17d "add d", already in destination as 1f539cc6f364 "add d"
-  note: not rebasing d5895ab36037 "add e", already in destination as 461a5b25b3dc "add e" (default/master master)
+  note: not rebasing d5895ab36037 "add e", already in destination as 461a5b25b3dc "add e" (remote/master master)
   rebasing 7dcd118e395a "add k"
 
   $ echo more >> k

@@ -26,7 +26,7 @@ Try to push merge commit
   │ │
   o │  1 [draft;rev=3;26f143b427a3]
   ├─╯
-  │ o  C [public;rev=2;d3b399ca8757] default/master_bookmark
+  │ o  C [public;rev=2;d3b399ca8757] remote/master_bookmark
   │ │
   │ o  B [public;rev=1;80521a640a0c]
   ├─╯
@@ -43,7 +43,7 @@ Now try to push over a merge commit
   $ hg push -r . --to master_bookmark -q
   $ hg log -r master_bookmark
   commit:      a652c7e3bce5
-  bookmark:    default/master_bookmark
+  bookmark:    remote/master_bookmark
   hoistedname: master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

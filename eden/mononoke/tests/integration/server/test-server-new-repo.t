@@ -35,5 +35,5 @@ Push with bookmark
   searching for changes
   exporting bookmark withbook
   $ hg book --remote
-     default/master                    0e7ec5675652a04069cbf976a42e45b740f3243c
-     default/withbook                  11f53bbd855ac06521a8895bd57e6ce5f46a9980
+     remote/master                    0e7ec5675652a04069cbf976a42e45b740f3243c
+     remote/withbook                  11f53bbd855ac06521a8895bd57e6ce5f46a9980

@@ -217,19 +217,19 @@ Normal pushrebase with one commit
   updated remote bookmark master_bookmark to 6989db12d1e5
 -- newcommit was correctly pushed to master_bookmark
   $ log -r master_bookmark
-  @  newcommit [public;rev=2;6989db12d1e5] default/master_bookmark
+  @  newcommit [public;rev=2;6989db12d1e5] remote/master_bookmark
   │
   ~
 
 -- newcommit is also present in the large repo (after a pull)
   $ cd "$TESTTMP"/large-hg-client
   $ log -r master_bookmark
-  o  first post-move commit [public;rev=3;bca7e9574548] default/master_bookmark
+  o  first post-move commit [public;rev=3;bca7e9574548] remote/master_bookmark
   │
   ~
   $ hg pull -q
   $ log -r master_bookmark
-  o  newcommit [public;rev=4;7c9a729ceb57] default/master_bookmark
+  o  newcommit [public;rev=4;7c9a729ceb57] remote/master_bookmark
   │
   ~
 - compare the working copies
@@ -260,7 +260,7 @@ Non-shared bookmark should work
   $ cd "$TESTTMP/large-hg-client"
   $ hg pull -q
   $ log -r bookprefix1/master_bookmark_non_fast_forward
-  o  non-forward move [public;rev=281474976710656;6b6a308437bb] default/bookprefix1/master_bookmark_non_fast_forward
+  o  non-forward move [public;rev=281474976710656;6b6a308437bb] remote/bookprefix1/master_bookmark_non_fast_forward
   │
   ~
 
@@ -270,17 +270,17 @@ Bookmark-only pushrebase (Create a new bookmark, do not push commits)
   creating remote bookmark master_bookmark_2
   $ hg book --all
   no bookmarks set
-     default/master_bookmark   6989db12d1e5
-     default/master_bookmark_2 680aaf36d7a2
-     default/master_bookmark_non_fast_forward 161addaa86c7
+     remote/master_bookmark    6989db12d1e5
+     remote/master_bookmark_2  680aaf36d7a2
+     remote/master_bookmark_non_fast_forward 161addaa86c7
 -- this is not a `common_pushrebase_bookmark`, so should be prefixed
   $ cd "$TESTTMP/large-hg-client"
   $ hg pull -q
   $ hg book --all
   no bookmarks set
-     default/bookprefix1/master_bookmark_2 bca7e9574548
-     default/bookprefix1/master_bookmark_non_fast_forward 6b6a308437bb
-     default/master_bookmark   bf8e8d65212d
+     remote/bookprefix1/master_bookmark_2 bca7e9574548
+     remote/bookprefix1/master_bookmark_non_fast_forward 6b6a308437bb
+     remote/master_bookmark    bf8e8d65212d
 - compare the working copies
   $ verify_wc $(hg log -r bookprefix1/master_bookmark_2 -T '{node}')
 
@@ -290,11 +290,11 @@ Delete a bookmark
   deleting remote bookmark master_bookmark_2
   $ hg book --all
   no bookmarks set
-     default/master_bookmark   6989db12d1e5
-     default/master_bookmark_non_fast_forward 161addaa86c7
+     remote/master_bookmark    6989db12d1e5
+     remote/master_bookmark_non_fast_forward 161addaa86c7
   $ cd "$TESTTMP/large-hg-client"
   $ hg pull -q
   $ hg book --all
   no bookmarks set
-     default/bookprefix1/master_bookmark_non_fast_forward 6b6a308437bb
-     default/master_bookmark   bf8e8d65212d
+     remote/bookprefix1/master_bookmark_non_fast_forward 6b6a308437bb
+     remote/master_bookmark    bf8e8d65212d

@@ -31,7 +31,7 @@ Push should provide a hint when both 'default' and 'default-push' not set:
 
 Push should push to 'default' when 'default-push' not set:
 
-  $ hg --cwd b push
+  $ hg --cwd b push --allow-anon
   pushing to $TESTTMP/a
   searching for changes
   adding changesets
@@ -42,7 +42,7 @@ Push should push to 'default-push' when set:
 
   $ echo '[paths]' >> b/.hg/hgrc
   $ echo 'default-push = ../c' >> b/.hg/hgrc
-  $ hg --cwd b push
+  $ hg --cwd b push --allow-anon
   pushing to $TESTTMP/c
   searching for changes
   adding changesets
@@ -65,7 +65,7 @@ Push should push to 'default-push' when 'default' is not set
 
   $ touch foo
   $ hg -q commit -A -m 'add foo'
-  $ hg --config paths.default-push=../a push
+  $ hg --config paths.default-push=../a push --allow-anon
   pushing to $TESTTMP/a
   searching for changes
   adding changesets
@@ -99,7 +99,7 @@ Windows needs a leading slash to make a URL that passes all of the checks
 
   $ touch pushurl
   $ hg -q commit -A -m 'add pushurl'
-  $ hg push
+  $ hg push --allow-anon
   pushing to file:/*/$TESTTMP/pushurlsource/../pushurldest (glob)
   searching for changes
   adding changesets
@@ -117,14 +117,14 @@ Windows needs a leading slash to make a URL that passes all of the checks
   $ hg -q up -r cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
   $ echo head2 > foo
   $ hg -q commit -A -m head2
-  $ hg push -f
+  $ hg push -f --allow-anon
   pushing to file:/*/$TESTTMP/pushurlsource/../pushurldest (glob)
   searching for changes
   adding changesets
   adding manifests
   adding file changes
 
-  $ hg --config 'paths.default:pushrev=draft()' push -f
+  $ hg --config 'paths.default:pushrev=draft()' push -f --allow-anon
   pushing to file:/*/$TESTTMP/pushurlsource/../pushurldest (glob)
   searching for changes
   adding changesets
