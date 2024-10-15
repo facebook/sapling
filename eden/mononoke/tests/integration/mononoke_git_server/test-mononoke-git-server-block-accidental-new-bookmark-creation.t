@@ -112,12 +112,7 @@
   
   $ git_client push origin brand_new_branch2
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-   ! [remote rejected] brand_new_branch2 -> brand_new_branch2 (hooks failed:
-    block_accidental_new_bookmark_creation for 8c3df9fb1ac00e7b3f93ca1d4e6557cb34e54da9: Add "@new-branch: brand_new_branch2" to the commit message to be able to create this branch.
-  
-  For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
-  error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
-  [1]
+   * [new branch]      brand_new_branch2 -> brand_new_branch2
   $ quiet git checkout HEAD^
 
 # now test the bypass based on bookmark matching a regex

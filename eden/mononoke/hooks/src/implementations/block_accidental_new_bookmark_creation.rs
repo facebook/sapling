@@ -71,7 +71,7 @@ impl BlockAccidentalNewBookmarkCreationHook {
         }) = config.allow_creations_with_marker
         {
             let marker_extraction_regex = Regex::new(&format!(
-                r"^{}:\s*(?<{}>.+?)(\s|$|\n)",
+                r"(?m)^{}:\s*(?<{}>.+?)(\s|$|\n)",
                 &marker, &NAMED_CAPTURE_NAME
             ))?;
             Some(CreationAllowedWithMarkerOptions {
