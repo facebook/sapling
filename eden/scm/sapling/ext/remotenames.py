@@ -1396,18 +1396,12 @@ def activepath(ui, remote):
     return ui.paths.getname(rpath) or ""
 
 
-# memoization
-_renames = None
-
-
 def _getrenames(ui):
-    global _renames
-    if _renames is None:
-        _renames = {}
-        for k, v in ui.configitems("remotenames"):
-            if k.startswith("rename."):
-                _renames[k[7:]] = v
-    return _renames
+    renames = {}
+    for k, v in ui.configitems("remotenames"):
+        if k.startswith("rename."):
+            renames[k[7:]] = v
+    return renames
 
 
 def shareawarecachevfs(repo):
