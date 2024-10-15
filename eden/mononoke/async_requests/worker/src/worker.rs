@@ -40,6 +40,7 @@ use futures::pin_mut;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::Stream;
+use hostname::get_hostname;
 use megarepo_api::MegarepoApi;
 use mononoke_api::Mononoke;
 use mononoke_api::MononokeRepo;
@@ -102,11 +103,25 @@ impl AsyncMethodRequestWorker {
         repos: Option<Vec<RepositoryId>>,
         mononoke: Arc<Mononoke<Repo>>,
         megarepo: Arc<MegarepoApi<Repo>>,
-        name: String,
         will_exit: Arc<AtomicBool>,
         limit: Option<usize>,
         concurrency_limit: usize,
     ) -> Result<Self, Error> {
+        let name = {
+            let tw_job_cluster = std::env::var("TW_JOB_CLUSTER");
+            let tw_job_name = std::env::var("TW_JOB_NAME");
+            let tw_task_id = std::env::var("TW_TASK_ID");
+            match (tw_job_cluster, tw_job_name, tw_task_id) {
+                (Ok(tw_job_cluster), Ok(tw_job_name), Ok(tw_task_id)) => {
+                    format!("{}/{}/{}", tw_job_cluster, tw_job_name, tw_task_id)
+                }
+                _ => format!(
+                    "megarepo_async_requests_worker/{}",
+                    get_hostname().unwrap_or_else(|_| "unknown_hostname".to_string())
+                ),
+            }
+        };
+
         let queues_client = AsyncRequestsQueue::new(fb, app, repos)
             .await
             .context("acquiring the async requests queue")?;

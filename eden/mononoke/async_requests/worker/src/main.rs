@@ -14,7 +14,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
-use anyhow::Error;
+use anyhow::Result;
 use clap::Parser;
 use cmdlib_logging::ScribeLoggingArgs;
 use context::SessionContainer;
@@ -23,7 +23,6 @@ use environment::BookmarkCacheKind;
 use environment::BookmarkCacheOptions;
 use executor_lib::RepoShardedProcessExecutor;
 use fbinit::FacebookInit;
-use hostname::get_hostname;
 use megarepo_api::MegarepoApi;
 use metaconfig_types::ShardedService;
 use mononoke_api::Repo;
@@ -35,7 +34,7 @@ use mononoke_app::fb303::AliveService;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeAppBuilder;
 
-const SERVICE_NAME: &str = "megarepo_async_requests_worker";
+const SERVICE_NAME: &str = "async_requests_worker";
 
 /// Processes the megarepo async requests
 #[derive(Parser)]
@@ -57,7 +56,7 @@ struct AsyncRequestsWorkerArgs {
 }
 
 #[fbinit::main]
-fn main(fb: FacebookInit) -> Result<(), Error> {
+fn main(fb: FacebookInit) -> Result<()> {
     let app = MononokeAppBuilder::new(fb)
         .with_bookmarks_cache(BookmarkCacheOptions {
             cache_kind: BookmarkCacheKind::Local,
@@ -68,13 +67,15 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .with_app_extension(Fb303AppExtension {})
         .with_app_extension(RepoFilterAppExtension {})
         .build::<AsyncRequestsWorkerArgs>()?;
+
     let args: AsyncRequestsWorkerArgs = app.args()?;
     let request_limit = args.request_limit;
     let jobs_limit = args.jobs;
-    let (env, logger, runtime) = (app.environment(), app.logger(), app.runtime());
 
+    let env = app.environment();
+    let runtime = app.runtime().clone();
     let session = SessionContainer::new_with_defaults(env.fb);
-    let ctx = session.new_context(logger.clone(), env.scuba_sample_builder.clone());
+    let ctx = session.new_context(app.logger().clone(), env.scuba_sample_builder.clone());
 
     let mononoke = Arc::new(
         runtime
@@ -84,20 +85,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let repos = mononoke.known_repo_ids();
     let megarepo = Arc::new(MegarepoApi::new(&app, mononoke.clone())?);
 
-    let tw_job_cluster = std::env::var("TW_JOB_CLUSTER");
-    let tw_job_name = std::env::var("TW_JOB_NAME");
-    let tw_task_id = std::env::var("TW_TASK_ID");
-
-    let name = match (tw_job_cluster, tw_job_name, tw_task_id) {
-        (Ok(tw_job_cluster), Ok(tw_job_name), Ok(tw_task_id)) => {
-            format!("{}/{}/{}", tw_job_cluster, tw_job_name, tw_task_id)
-        }
-        _ => format!(
-            "megarepo_async_requests_worker/{}",
-            get_hostname().unwrap_or_else(|_| "unknown_hostname".to_string())
-        ),
-    };
-
     let will_exit = Arc::new(AtomicBool::new(false));
     let filter_repos = if args.process_all_repos {
         None
@@ -105,13 +92,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         Some(repos)
     };
     let worker = runtime.block_on(worker::AsyncMethodRequestWorker::new(
-        fb,
+        app.fb,
         &app,
         Arc::new(ctx),
         filter_repos,
         mononoke,
         megarepo,
-        name,
         will_exit.clone(),
         request_limit,
         jobs_limit,
