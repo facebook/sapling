@@ -34,13 +34,13 @@ test subtree copy
   $ hg subtree cp -r $A --from-path foo --to-path bar -m "subtree copy foo -> bar"
   copying foo to bar
   $ hg log -G -T '{node|short} {desc|firstline}\n'
-  @  d7a063467d35 subtree copy foo -> bar
+  @  a6c15b42e6a2 subtree copy foo -> bar
   │
   o  b9450a0e6ae4 B
   │
   o  d908813f0f7c A
   $ hg show --git
-  commit:      d7a063467d35
+  commit:      a6c15b42e6a2
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/x
@@ -58,7 +58,7 @@ test subtree copy
   @@ -0,0 +1,1 @@
   +aaa
   $ hg dbsh -c 'print(repo["."].extra())'
-  {'branch': 'default', 'test_subtree_copy': '{"v":1,"branches":[{"from_path":"foo","to_path":"bar","from_commit":"d908813f0f7c9078810e26aad1e37bdb32013d4b"}]}'}
+  {'branch': 'default', 'test_subtree_copy': '{"branches":[{"from_commit":"d908813f0f7c9078810e26aad1e37bdb32013d4b","from_path":"foo","to_path":"bar"}],"v":1}'}
 
 
 abort when subtree copy too many files
@@ -161,9 +161,9 @@ test subtree graft
   grafting 78072751cf70 "C"
   merging bar/x and foo/x to bar/x
   $ hg log -G -T '{node|short} {desc|firstline}\n'
-  @  1780ced9fdfa Graft "C"
+  @  94b9958c85ae Graft "C"
   │
-  o  00aa28df6e77 subtree copy foo -> bar
+  o  d52331776b7e subtree copy foo -> bar
   │
   o  78072751cf70 C
   │
@@ -171,7 +171,7 @@ test subtree graft
   │
   o  2f10237b4399 A
   $ hg show
-  commit:      1780ced9fdfa
+  commit:      94b9958c85ae
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/x
@@ -209,7 +209,7 @@ test 'subtree graft -m'
   grafting 78072751cf70 "C"
   merging bar/x and foo/x to bar/x
   $ hg show
-  commit:      33c4fb2a5d1e
+  commit:      785d864769d0
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/x
@@ -263,9 +263,9 @@ test subtree merge
   +4
   $ hg ci -m 'subtree merge foo to bar'
   $ hg dbsh -c 'print(repo["."].extra())'
-  {'branch': 'default', 'test_subtree_merge': '{"v":1,"merges":[{"from_commit":"907442010f516d83aea80b4382964be22a34214f","from_path":"foo","to_path":"bar"}]}'}
+  {'branch': 'default', 'test_subtree_merge': '{"merges":[{"from_commit":"907442010f516d83aea80b4382964be22a34214f","from_path":"foo","to_path":"bar"}],"v":1}'}
   $ hg show
-  commit:      456910364677
+  commit:      944563f24b78
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/x
@@ -287,14 +287,14 @@ test subtree merge
   +4
 should have one parent
   $ hg log -r . -T '{parents}'
-  c6a9af23c94b  (no-eol)
+  4658f38ab377  (no-eol)
   $ hg log bar
-  commit:      456910364677
+  commit:      944563f24b78
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     subtree merge foo to bar
   
-  commit:      c6a9af23c94b
+  commit:      4658f38ab377
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     subtree copy foo -> bar

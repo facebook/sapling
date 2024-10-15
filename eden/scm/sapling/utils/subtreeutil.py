@@ -4,6 +4,7 @@
 # GNU General Public License version 2.
 
 import json
+from operator import itemgetter
 
 from .. import error, node, util
 from ..i18n import _
@@ -21,25 +22,30 @@ SUBTREE_OPERATION_KEYS = [
 
 
 def gen_branch_info(from_commit, from_paths, to_paths):
+    # sort by to_path
+    path_mapping = sorted(zip(from_paths, to_paths), key=itemgetter(1))
     value = {
         "v": 1,
         "branches": [
             {
+                "from_commit": from_commit,
                 "from_path": from_path,
                 "to_path": to_path,
-                "from_commit": from_commit,
             }
-            for from_path, to_path in zip(from_paths, to_paths)
+            for from_path, to_path in path_mapping
         ],
     }
     # compact JSON representation
-    str_val = json.dumps(value, separators=(",", ":"))
+    str_val = json.dumps(value, separators=(",", ":"), sort_keys=True)
     return {SUBTREE_BRANCH_KEY: str_val}
 
 
 def gen_merge_info(subtree_merges):
     if not subtree_merges:
         return {}
+
+    # sort by to_path
+    subtree_merges = sorted(subtree_merges, key=itemgetter(2))
     value = {
         "v": 1,
         "merges": [
@@ -52,7 +58,7 @@ def gen_merge_info(subtree_merges):
         ],
     }
     # compact JSON representation
-    str_val = json.dumps(value, separators=(",", ":"))
+    str_val = json.dumps(value, separators=(",", ":"), sort_keys=True)
     return {SUBTREE_MERGE_KEY: str_val}
 
 

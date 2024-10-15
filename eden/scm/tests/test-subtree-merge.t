@@ -16,10 +16,10 @@ test subtree merge path validation
   $ hg subtree cp -r $A --from-path foo --to-path bar -m "subtree copy foo -> bar"
   copying foo to bar
   $ hg subtree merge --from-path foo --to-path not-exists
-  abort: path 'not-exists' does not exist in commit d7a063467d35
+  abort: path 'not-exists' does not exist in commit a6c15b42e6a2
   [255]
   $ hg subtree merge --from-path not-exists --to-path bar
-  abort: path 'not-exists' does not exist in commit d7a063467d35
+  abort: path 'not-exists' does not exist in commit a6c15b42e6a2
   [255]
   $ hg subtree merge --from-path foo/bar --to-path foo
   abort: overlapping --from-path 'foo/bar' and --to-path 'foo'
@@ -103,7 +103,7 @@ test multiple subtree merge from source -> dest
   $ hg ci -m "merge foo to foo2"
   $ echo "source2" >> foo/x && hg ci -m "update foo again"
   $ hg subtree merge --from-path foo --to-path foo2
-  merge base: eb690cf75b85
+  merge base: 3a47f1b511d0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
   $ hg diff
@@ -136,7 +136,7 @@ test multiple subtree merge from dest -> source
   $ hg ci -m "merge foo2 to foo"
   $ echo "dest2" >> foo2/y && hg ci -m "update foo2 again"
   $ hg subtree merge --from-path foo2 --to-path foo
-  merge base: eb690cf75b85
+  merge base: 3a47f1b511d0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
   $ hg diff
@@ -168,7 +168,7 @@ test multiple subtree merge from source -> dest, then dest -> source
   $ hg ci -m "merge foo to foo2"
   $ echo "dest2" >> foo2/y && hg ci -m "update foo2 again"
   $ hg subtree merge --from-path foo2 --to-path foo
-  merge base: eb690cf75b85
+  merge base: 3a47f1b511d0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
   $ hg diff
@@ -201,7 +201,7 @@ test multiple subtree merge from dest -> source, then source -> dest
   $ hg ci -m "merge foo2 to foo"
   $ echo "source2" >> foo/x && hg ci -m "update foo again"
   $ hg subtree merge --from-path foo --to-path foo2
-  merge base: eb690cf75b85
+  merge base: 3a47f1b511d0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
   $ hg diff
@@ -215,7 +215,7 @@ test multiple subtree merge from dest -> source, then source -> dest
   $ hg ci -m "merge foo to foo2"
 to fix: show a better message when there is no changes for subtree merge
   $ hg subtree merge --from-path foo --to-path foo2
-  merge base: 06961b266f86
+  merge base: 10b55f445a8e
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
   $ hg st
