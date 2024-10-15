@@ -56,6 +56,7 @@ use stats::define_stats;
 use stats::prelude::*;
 
 use crate::methods::megarepo_async_request_compute;
+use crate::AsyncRequestsWorkerArgs;
 
 const DEQUEUE_STREAM_SLEEP_TIME: u64 = 1000;
 // Number of seconds after which inprogress request is considered abandoned
@@ -99,13 +100,12 @@ impl AsyncMethodRequestWorker {
     pub(crate) async fn new(
         fb: FacebookInit,
         app: &MononokeApp,
+        args: Arc<AsyncRequestsWorkerArgs>,
         ctx: Arc<CoreContext>,
         repos: Option<Vec<RepositoryId>>,
         mononoke: Arc<Mononoke<Repo>>,
         megarepo: Arc<MegarepoApi<Repo>>,
         will_exit: Arc<AtomicBool>,
-        limit: Option<usize>,
-        concurrency_limit: usize,
     ) -> Result<Self, Error> {
         let name = {
             let tw_job_cluster = std::env::var("TW_JOB_CLUSTER");
@@ -132,8 +132,8 @@ impl AsyncMethodRequestWorker {
             name,
             queues_client,
             will_exit,
-            limit,
-            concurrency_limit,
+            limit: args.request_limit,
+            concurrency_limit: args.jobs,
         })
     }
 }

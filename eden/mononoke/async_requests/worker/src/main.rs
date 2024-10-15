@@ -68,9 +68,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         .with_app_extension(RepoFilterAppExtension {})
         .build::<AsyncRequestsWorkerArgs>()?;
 
-    let args: AsyncRequestsWorkerArgs = app.args()?;
-    let request_limit = args.request_limit;
-    let jobs_limit = args.jobs;
+    let args: Arc<AsyncRequestsWorkerArgs> = Arc::new(app.args()?);
 
     let env = app.environment();
     let runtime = app.runtime().clone();
@@ -94,13 +92,12 @@ fn main(fb: FacebookInit) -> Result<()> {
     let worker = runtime.block_on(worker::AsyncMethodRequestWorker::new(
         app.fb,
         &app,
+        args.clone(),
         Arc::new(ctx),
         filter_repos,
         mononoke,
         megarepo,
         will_exit.clone(),
-        request_limit,
-        jobs_limit,
     ))?;
 
     app.start_monitoring(SERVICE_NAME, AliveService)?;
