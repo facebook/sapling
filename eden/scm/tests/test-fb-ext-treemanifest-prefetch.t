@@ -107,6 +107,7 @@ Test auto prefetch during normal access
   $ hg log -r tip --stat --pager=off
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
   commit:      311cac64787d
+  bookmark:    public/0bcf7fbaf4e603953fe5af7ffc26b3568512046c
   bookmark:    remote/master
   hoistedname: master
   user:        test
@@ -115,7 +116,6 @@ Test auto prefetch during normal access
   
    dir/x |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
-  
 TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 Test that auto prefetch scans up the changelog for base trees
   $ rm -rf $CACHEDIR/master

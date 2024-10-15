@@ -76,7 +76,7 @@ Tests 'hg pull --rebase' defaults to original (rebase->pullrebase) behaviour whe
   │
   │ @  localcommit | bmnottracking |
   ├─╯
-  o  root |  |
+  o  root |  | remote/bookmarkonremote
   
   $ hg pull --rebase -d .
   pulling from test:remoterepo

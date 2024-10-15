@@ -14,11 +14,12 @@
 from __future__ import absolute_import
 
 import hashlib
+from collections import defaultdict
 from typing import List, Optional
 
-from . import bundle2, changegroup, discovery, error, scmutil, util
+from . import bookmarks, bundle2, changegroup, discovery, error, scmutil, util
 from .i18n import _
-from .node import hex, short
+from .node import bin, hex, short
 from .pycompat import encodeutf8, range
 
 
@@ -121,6 +122,16 @@ def stripgeneric(repo, nodelist, backup: bool = True, topic: str = "backup") -> 
         with repo.transaction("strip"):
             allnodes = list(repo.nodes("%ln::", nodelist))
             scmutil.cleanupnodes(repo, allnodes, "strip")
+
+            # Dumb hack to roll remotenames backwards (helps compat with remotenames ext).
+            # Things don't work when you have a remote bookmark pointing to a commit not
+            # in the local commit graph, so walk p1 until we find non-stripped commit.
+            remotenames = defaultdict(dict)
+            for hexbm, typ, remote, name in bookmarks.readremotenames(repo):
+                while bin(hexbm) in allnodes:
+                    hexbm = repo[hexbm].p1().hex()
+                remotenames[remote][name] = hexbm
+            bookmarks.saveremotenames(repo, remotenames)
 
         # Strip changelog (unsafe for readers).
         # Handled by the Rust layer. Independent from revlog.

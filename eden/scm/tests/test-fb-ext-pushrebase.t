@@ -10,6 +10,8 @@ TODO: configure mutation
 Setup
 
   $ setconfig ui.username="nobody <no.reply@fb.com>"
+  $ setconfig remotenames.selectivepull=true
+  $ setconfig remotenames.selectivepulldefault=main
 
   $ commit() {
   >   hg commit -d "0 0" -A -m "$@"
@@ -84,13 +86,11 @@ Stack of non-conflicting commits should be accepted
   remote: 1
   pushing rev 0e3997dc0733 to destination ssh://user@dummy/server bookmark main
   query 1; heads
-  sending batch command
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 0
   sampling from both directions (1 of 1)
   sampling undecided commits (1 of 1)
   query 2; still undecided: 1, sample size is: 1
-  sending known command
   2 total queries in *s (glob)
   preparing listkeys for "bookmarks" with pattern "['main']"
   sending listkeyspatterns command
@@ -105,8 +105,8 @@ Stack of non-conflicting commits should be accepted
   adding manifests
   adding file changes
   updating bookmark main
-  preparing listkeys for "bookmarks"
-  sending listkeys command
+  preparing listkeys for "bookmarks" with pattern "['main']"
+  sending listkeyspatterns command
   received listkey for "bookmarks": 45 bytes
   remote: pushing 2 changesets:
   remote:     46a2df24e272  b => xxx
@@ -158,7 +158,7 @@ Check that we did not generate any check:heads parts
   │
   o  b => xxx [draft:46a2df24e272]
   │
-  o  initial [draft:2bb9d20e471c]
+  o  initial [public:2bb9d20e471c]
   
 
 Push using changegroup2
@@ -190,8 +190,6 @@ Push using changegroup2
   $ hg debugstrip 46a2df24e27273bb06dbf28b085fcc2e911bf986
   $ hg pull
   pulling from ssh://user@dummy/server
-  searching for changes
-  no changes found
   $ hg goto default
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -418,7 +416,7 @@ Pushing a merge should rebase only the latest side of the merge
   $ hg debugstrip -r add5ec74853d -q
   $ cd ../client
   $ hg debugstrip -r add5ec74853d -q
-  $ hg book -d master
+  $ hg book -d master --traceback
   $ hg -R ../server book -d master
 
 With evolution enabled, should set obsolescence markers
@@ -470,8 +468,6 @@ With evolution enabled, should set obsolescence markers
 
   $ hg pull
   pulling from ssh://user@dummy/server
-  searching for changes
-  no changes found
   $ hg up d53a62ed14be
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ log
@@ -572,7 +568,7 @@ Test that hooks are fired with the correct variables
   $ touch file && hg ci -Aqm initial
   pretxnclose hook: HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/hookserver HG_PENDING_METALOG={"$TESTTMP/hookserver/.hg/store/metalog": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"} HG_PHASES_MOVED=1 HG_SHAREDPENDING=$TESTTMP/hookserver HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
   txnclose hook: HG_HOOKNAME=txnclose HG_HOOKTYPE=txnclose HG_PHASES_MOVED=1 HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
-  $ hg bookmark master
+  $ hg bookmark main
   pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/hookserver HG_SHAREDPENDING=$TESTTMP/hookserver HG_TXNID=TXN:$ID$ HG_TXNNAME=bookmark
   txnclose hook: HG_BOOKMARK_MOVED=1 HG_HOOKNAME=txnclose HG_HOOKTYPE=txnclose HG_TXNID=TXN:* HG_TXNNAME=bookmark (glob)
   $ cd ../
@@ -583,22 +579,22 @@ Test that hooks are fired with the correct variables
   > [extensions]
   > pushrebase=
   > EOF
-  $ hg goto master
+  $ hg goto main
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo >> file && hg ci -Aqm first
   $ echo >> file && hg ci -Aqm second
   $ echo >> file && hg ci -Aqm last
-  $ hg push --to master
-  pushing rev a5e72ac0df88 to destination ssh://user@dummy/hookserver bookmark master
+  $ hg push --to main
+  pushing rev a5e72ac0df88 to destination ssh://user@dummy/hookserver bookmark main
   searching for changes
-  updating bookmark master
+  updating bookmark main
   remote: pushing 3 changesets:
   remote:     4fcee35c508c  first
   remote:     11be4ca7f3f4  second
   remote:     a5e72ac0df88  last
   remote: prechangegroup hook: HG_BUNDLE2=1 HG_HOOKNAME=prechangegroup HG_HOOKTYPE=prechangegroup HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_URL=* (glob)
   remote: pretxnchangegroup hook: HG_BUNDLE2=1 HG_HOOKNAME=pretxnchangegroup HG_HOOKTYPE=pretxnchangegroup HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_NODE_LAST=a5e72ac0df8881afef34132987e8ae78d2e6cb13 HG_PENDING=$TESTTMP/hookserver HG_PENDING_METALOG={"$TESTTMP/hookserver/.hg/store/metalog": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"} HG_SHAREDPENDING=$TESTTMP/hookserver HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_URL=* (glob)
-  remote: prepushkey hook: HG_BUNDLE2=1 HG_HOOKNAME=prepushkey HG_HOOKTYPE=prepushkey HG_KEY=master HG_NAMESPACE=bookmarks HG_NEW=a5e72ac0df8881afef34132987e8ae78d2e6cb13 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_OLD=e95be919ac60f0c114075e32a0a4301afabadb60 HG_PENDING=$TESTTMP/hookserver HG_PENDING_METALOG={"$TESTTMP/hookserver/.hg/store/metalog": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"} HG_PHASES_MOVED=1 HG_SHAREDPENDING=$TESTTMP/hookserver HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_URL=* (glob)
+  remote: prepushkey hook: HG_BUNDLE2=1 HG_HOOKNAME=prepushkey HG_HOOKTYPE=prepushkey HG_KEY=main HG_NAMESPACE=bookmarks HG_NEW=a5e72ac0df8881afef34132987e8ae78d2e6cb13 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_OLD=e95be919ac60f0c114075e32a0a4301afabadb60 HG_PENDING=$TESTTMP/hookserver HG_PENDING_METALOG={"$TESTTMP/hookserver/.hg/store/metalog": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"} HG_PHASES_MOVED=1 HG_SHAREDPENDING=$TESTTMP/hookserver HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_URL=* (glob)
   remote: pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PENDING=$TESTTMP/hookserver HG_PENDING_METALOG={"$TESTTMP/hookserver/.hg/store/metalog": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"} HG_PHASES_MOVED=1 HG_SHAREDPENDING=$TESTTMP/hookserver HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_TXNNAME=serve HG_URL=* (glob)
   remote: txnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_HOOKNAME=txnclose HG_HOOKTYPE=txnclose HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PHASES_MOVED=1 HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_TXNNAME=serve HG_URL=* (glob)
   remote: changegroup hook: HG_BUNDLE2=1 HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_NODE_LAST=a5e72ac0df8881afef34132987e8ae78d2e6cb13 HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_URL=* (glob)
@@ -616,7 +612,7 @@ Test that failing prechangegroup hooks block the push
   > pushrebase=
   > EOF
   $ touch file && hg ci -Aqm initial
-  $ hg bookmark master
+  $ hg bookmark main
   $ cd ../
 
   $ hg clone -q ssh://user@dummy/hookserver2 hookclient2
@@ -625,13 +621,13 @@ Test that failing prechangegroup hooks block the push
   > [extensions]
   > pushrebase=
   > EOF
-  $ hg goto master
+  $ hg goto main
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo >> file && hg ci -Aqm first
   $ echo >> file && hg ci -Aqm second
   $ echo >> file && hg ci -Aqm last
-  $ hg push --to master
-  pushing rev a5e72ac0df88 to destination ssh://user@dummy/hookserver2 bookmark master
+  $ hg push --to main
+  pushing rev a5e72ac0df88 to destination ssh://user@dummy/hookserver2 bookmark main
   searching for changes
   remote: prechangegroup hook exited with status 1
   remote: pushing 3 changesets:
@@ -654,14 +650,14 @@ Test date rewriting
   > EOF
   $ touch a && hg commit -Aqm a
   $ touch b && hg commit -Aqm b
-  $ hg book master
+  $ hg book main
   $ cd ..
 
   $ hg clone ssh://user@dummy/rewritedate rewritedateclient
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
+  fetching lazy changelog
+  populating main commit graph
+  tip commit: 0e067c57feba1a5694ca4844f05588bb1bf82342
+  fetching selected remote bookmarks
   updating to tip
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd rewritedateclient
@@ -685,41 +681,41 @@ Test date rewriting
   > [extensions]
   > daterewrite=$TESTTMP/daterewrite.py
   > EOF
-  $ hg push --to master
-  pushing rev d5e255ef74f8 to destination ssh://user@dummy/rewritedate bookmark master
+  $ hg push --to main
+  pushing rev d5e255ef74f8 to destination ssh://user@dummy/rewritedate bookmark main
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  updating bookmark master
+  updating bookmark main
   remote: pushing 1 changeset:
   remote:     d5e255ef74f8  c
   remote: 1 new changeset from the server will be downloaded
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg log -G -T '{desc} {date|isodate}'
-  @  c 2001-09-09 01:46 +0000
+  $ hg log -G -T '{node|short} {desc} {date|isodate}'
+  @  14b4f5db4d72 c 2001-09-09 01:46 +0000
   │
-  o  b 1970-01-01 00:00 +0000
+  o  0e067c57feba b 1970-01-01 00:00 +0000
   │
-  o  a 1970-01-01 00:00 +0000
+  o  3903775176ed a 1970-01-01 00:00 +0000
   
 Test date rewriting with a merge commit
 
   $ hg up -q 'desc(a)'
   $ echo x >> x
   $ hg commit -qAm x
-  $ hg up -q 'max(desc(c))'
+  $ hg up -q 'public() & desc(c)'
   $ echo y >> y
   $ hg commit -qAm y
   $ hg merge -q 'desc(x)'
   $ hg commit -qm merge
-  $ hg push --to master
-  pushing rev 4514adb1f536 to destination ssh://user@dummy/rewritedate bookmark master
+  $ hg push --to main
+  pushing rev 4514adb1f536 to destination ssh://user@dummy/rewritedate bookmark main
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  updating bookmark master
+  updating bookmark main
   remote: pushing 3 changesets:
   remote:     a5f9a9a43049  x
   remote:     c1392466a61e  y
@@ -729,7 +725,7 @@ Test date rewriting with a merge commit
 
   $ cd ..
 
-Test pushrebase on merge commit where master is on the p2 side
+Test pushrebase on merge commit where main is on the p2 side
 
   $ newserver p2mergeserver
   $ cat >> .hg/hgrc <<EOF
@@ -737,7 +733,7 @@ Test pushrebase on merge commit where master is on the p2 side
   > pushrebase=
   > EOF
   $ echo a >> a && hg commit -Aqm 'add a'
-  $ hg bookmark master
+  $ hg bookmark main
 
   $ cd ..
   $ hg clone -q ssh://user@dummy/p2mergeserver p2mergeclient
@@ -752,13 +748,13 @@ Test pushrebase on merge commit where master is on the p2 side
   $ echo c >> c && hg commit -Aqm 'add c'
   $ hg merge -q cde40f86152f76163041ff50d68d2e8fddc1b46b
   $ hg commit -m 'merge b and c'
-  $ hg push --to master
-  pushing rev 4ae459502279 to destination ssh://user@dummy/p2mergeserver bookmark master
+  $ hg push --to main
+  pushing rev 4ae459502279 to destination ssh://user@dummy/p2mergeserver bookmark main
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  updating bookmark master
+  updating bookmark main
   remote: pushing 3 changesets:
   remote:     cde40f86152f  add b
   remote:     6c337f0241b3  add c
@@ -789,15 +785,15 @@ Test force pushes
   > [extensions]
   > pushrebase=
   > EOF
-  $ hg bookmark master
+  $ hg bookmark main
   $ echo a > a && hg commit -Aqm a
   $ cd ..
 
   $ hg clone ssh://user@dummy/forcepushserver forcepushclient
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
+  fetching lazy changelog
+  populating main commit graph
+  tip commit: cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
+  fetching selected remote bookmarks
   updating to tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd forcepushserver
@@ -811,23 +807,17 @@ Test force pushes
   $ hg up 'desc(a)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo b >> a && hg commit -Aqm b
-  $ hg push -f --to master
-  pushing rev 1846eede8b68 to destination ssh://user@dummy/forcepushserver bookmark master
+  $ hg push -f --to main
+  pushing rev 1846eede8b68 to destination ssh://user@dummy/forcepushserver bookmark main
   searching for changes
-  updating bookmark master
+  updating bookmark main
   remote: pushing 1 changeset:
   remote:     1846eede8b68  b
   $ hg pull
   pulling from ssh://user@dummy/forcepushserver
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
   $ hg log -G -T '{desc} {bookmarks}'
-  o  aa
+  @  b
   │
-  │ @  b
-  ├─╯
   o  a
   
 Make sure that no hg-bundle-* files left
@@ -883,11 +873,11 @@ phase is updated correctly with the marker information.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg up tip -q
   $ log --hidden
-  @  a2 [public:722505d780e3] BOOK
+  x  a2 [draft:045279cde9f0]
   │
-  o  b [public:d2ae7f538514]
-  │
-  │ x  a2 [draft:045279cde9f0]
+  │ @  a2 [public:722505d780e3] BOOK
+  │ │
+  │ o  b [public:d2ae7f538514]
   ├─╯
   o  a [public:cb9a9f314b8b]
   
