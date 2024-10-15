@@ -41,10 +41,8 @@ use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncers;
-use cross_repo_sync::find_bookmark_diff;
-use cross_repo_sync::update_large_repo_bookmarks;
+use cross_repo_sync::verify_bookmarks;
 use cross_repo_sync::verify_working_copy;
-use cross_repo_sync::BookmarkDiff;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
@@ -53,6 +51,7 @@ use cross_repo_sync::Small;
 use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::Syncers;
 use cross_repo_sync::UpdateLargeRepoBookmarksMode;
+use cross_repo_sync::VerifyBookmarksRunMode;
 use cross_repo_sync::CHANGE_XREPO_MAPPING_EXTRA;
 use fbinit::FacebookInit;
 use filenodes::Filenodes;
@@ -94,7 +93,6 @@ use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
 use slog::info;
-use slog::warn;
 use slog::Logger;
 use sorted_vector_map::sorted_vector_map;
 use sql_query_config::SqlQueryConfig;
@@ -197,15 +195,6 @@ pub struct Repo {
     sql_query_config: SqlQueryConfig,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-enum VerifyRunMode {
-    JustVerify,
-    UpdateLargeRepoBookmarks {
-        limit: Option<usize>,
-        mode: UpdateLargeRepoBookmarksMode,
-    },
-}
-
 pub async fn subcommand_crossrepo<'a>(
     fb: FacebookInit,
     logger: Logger,
@@ -271,7 +260,7 @@ pub async fn subcommand_crossrepo<'a>(
                 get_source_target_repos_and_mapping::<Repo>(fb, logger, matches).await?;
 
             let mode = if sub_sub_m.is_present(UPDATE_LARGE_REPO_BOOKMARKS) {
-                VerifyRunMode::UpdateLargeRepoBookmarks {
+                VerifyBookmarksRunMode::UpdateLargeRepoBookmarks {
                     mode: if sub_sub_m.is_present(NO_BOOKMARK_UPDATES) {
                         UpdateLargeRepoBookmarksMode::DryRun
                     } else {
@@ -284,20 +273,22 @@ pub async fn subcommand_crossrepo<'a>(
                         .map_err(anyhow::Error::msg)?,
                 }
             } else {
-                VerifyRunMode::JustVerify
+                VerifyBookmarksRunMode::JustVerify
             };
 
             let live_commit_sync_config =
                 get_live_commit_sync_config(&ctx, fb, matches, source_repo.repo_identity().id())
                     .await?;
-            subcommand_verify_bookmarks(
-                ctx,
+            let syncers = get_syncers(
+                &ctx,
                 source_repo,
                 target_repo,
-                mode,
                 Arc::new(live_commit_sync_config),
             )
-            .await
+            .await?;
+            verify_bookmarks(&ctx, syncers, mode)
+                .await
+                .map_err(|e| e.into())
         }
         (SUBCOMMAND_CONFIG, Some(sub_sub_m)) => {
             let config_store = matches.config_store();
@@ -1126,83 +1117,6 @@ async fn subcommand_map(
     }
 
     Ok(())
-}
-
-async fn subcommand_verify_bookmarks(
-    ctx: CoreContext,
-    source_repo: Repo,
-    target_repo: Repo,
-    run_mode: VerifyRunMode,
-    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
-) -> Result<(), SubcommandError> {
-    let syncers = get_syncers(
-        &ctx,
-        source_repo.clone(),
-        target_repo.clone(),
-        live_commit_sync_config,
-    )
-    .await?;
-
-    let diff = find_bookmark_diff(ctx.clone(), &syncers.large_to_small).await?;
-
-    if diff.is_empty() {
-        info!(ctx.logger(), "all is well!");
-        return Ok(());
-    }
-
-    match run_mode {
-        VerifyRunMode::UpdateLargeRepoBookmarks { mode, limit } => {
-            update_large_repo_bookmarks(&ctx, &diff, &syncers, mode, limit).await?;
-            Ok(())
-        }
-        VerifyRunMode::JustVerify => {
-            for d in &diff {
-                use BookmarkDiff::*;
-                match d {
-                    InconsistentValue {
-                        target_bookmark,
-                        target_cs_id,
-                        source_cs_id,
-                    } => {
-                        warn!(
-                            ctx.logger(),
-                            "inconsistent value of {}: '{}' has {}, but '{}' bookmark points to {:?}",
-                            target_bookmark,
-                            target_repo.repo_identity().name(),
-                            target_cs_id,
-                            source_repo.repo_identity().name(),
-                            source_cs_id,
-                        );
-                    }
-                    MissingInTarget {
-                        target_bookmark,
-                        source_cs_id,
-                    } => {
-                        warn!(
-                            ctx.logger(),
-                            "'{}' doesn't have bookmark {} but '{}' has it and it points to {}",
-                            target_repo.repo_identity().name(),
-                            target_bookmark,
-                            source_repo.repo_identity().name(),
-                            source_cs_id,
-                        );
-                    }
-                    NoSyncOutcome { target_bookmark } => {
-                        warn!(
-                            ctx.logger(),
-                            "'{}' has a bookmark {} but it points to a commit that has no \
-                            equivalent in '{}'. If it's a shared bookmark (e.g. master) \
-                            that might mean that it points to a commit from another repository",
-                            target_repo.repo_identity().name(),
-                            target_bookmark,
-                            source_repo.repo_identity().name(),
-                        );
-                    }
-                }
-            }
-            Err(format_err!("found {} inconsistencies", diff.len()).into())
-        }
-    }
 }
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {

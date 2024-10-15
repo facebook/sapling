@@ -1421,6 +1421,93 @@ async fn rename_and_remap_bookmarks<R: Repo>(
     Ok((remapped_bookmarks, no_sync_outcome))
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum VerifyBookmarksRunMode {
+    JustVerify,
+    UpdateLargeRepoBookmarks {
+        limit: Option<usize>,
+        mode: UpdateLargeRepoBookmarksMode,
+    },
+}
+
+pub async fn verify_bookmarks<R: Repo>(
+    ctx: &CoreContext,
+    syncers: Syncers<R>,
+    run_mode: VerifyBookmarksRunMode,
+) -> Result<(), Error> {
+    let diff = find_bookmark_diff(ctx.clone(), &syncers.large_to_small).await?;
+
+    let source_repo_name = syncers
+        .large_to_small
+        .get_source_repo()
+        .repo_identity()
+        .name();
+    let target_repo_name = syncers
+        .large_to_small
+        .get_target_repo()
+        .repo_identity()
+        .name();
+
+    if diff.is_empty() {
+        info!(ctx.logger(), "all is well!");
+        return Ok(());
+    }
+
+    match run_mode {
+        VerifyBookmarksRunMode::UpdateLargeRepoBookmarks { mode, limit } => {
+            update_large_repo_bookmarks(ctx, &diff, &syncers, mode, limit).await?;
+            Ok(())
+        }
+        VerifyBookmarksRunMode::JustVerify => {
+            for d in &diff {
+                use BookmarkDiff::*;
+                match d {
+                    InconsistentValue {
+                        target_bookmark,
+                        target_cs_id,
+                        source_cs_id,
+                    } => {
+                        warn!(
+                            ctx.logger(),
+                            "inconsistent value of {}: '{}' has {}, but '{}' bookmark points to {:?}",
+                            target_bookmark,
+                            target_repo_name,
+                            target_cs_id,
+                            source_repo_name,
+                            source_cs_id,
+                        );
+                    }
+                    MissingInTarget {
+                        target_bookmark,
+                        source_cs_id,
+                    } => {
+                        warn!(
+                            ctx.logger(),
+                            "'{}' doesn't have bookmark {} but '{}' has it and it points to {}",
+                            target_repo_name,
+                            target_bookmark,
+                            source_repo_name,
+                            source_cs_id,
+                        );
+                    }
+                    NoSyncOutcome { target_bookmark } => {
+                        warn!(
+                            ctx.logger(),
+                            "'{}' has a bookmark {} but it points to a commit that has no \
+                            equivalent in '{}'. If it's a shared bookmark (e.g. master) \
+                            that might mean that it points to a commit from another repository",
+                            target_repo_name,
+                            target_bookmark,
+                            source_repo_name,
+                        );
+                    }
+                }
+            }
+            Err(format_err!("found {} inconsistencies", diff.len()))
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum UpdateLargeRepoBookmarksMode {
     Real,
