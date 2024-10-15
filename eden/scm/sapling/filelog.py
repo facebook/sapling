@@ -171,3 +171,7 @@ class fileslog:
     def abortpending(self):
         """Used in alternative filelog implementations to throw out pending
         additions."""
+
+    def abstracted_file_store(self):
+        """get the abstracted storemodel::FileStore"""
+        return bindings.storemodel.FileStore.from_store(self.filestore)
