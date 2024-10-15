@@ -236,11 +236,13 @@ std::optional<std::string> getUnixDomainSocketPath(
 #ifdef __APPLE__
 folly::Try<folly::dynamic> collectNFSUtilStats() {
   try {
-    folly::Subprocess nfsStatProc(
-        "nfsstat -f JSON",
-        folly::Subprocess::Options().pipeStdout().pipeStderr());
+    SpawnedProcess::Options opts;
+    opts.pipeStdout();
+    opts.pipeStderr();
+    auto nfsStatProc =
+        SpawnedProcess({"nfsstat", "-f", "JSON"}, std::move(opts));
     std::string nfsStatOutputString = nfsStatProc.communicate().first;
-    nfsStatProc.wait();
+    nfsStatProc.waitTimeout(1s);
     return folly::Try<folly::dynamic>(folly::parseJson(nfsStatOutputString));
   } catch (const std::exception& e) {
     return folly::Try<folly::dynamic>(e);

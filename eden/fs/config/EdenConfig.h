@@ -1017,7 +1017,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<std::chrono::nanoseconds> updateNFSStatsInterval{
       "telemetry:update-nfs-stats-interval",
-      std::chrono::seconds{60},
+      std::chrono::seconds{0},
       this};
 
   /**
