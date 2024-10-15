@@ -309,11 +309,14 @@ impl EagerRepo {
     /// Open an [`EagerRepo`] at the given directory. Create an empty repo on demand.
     pub fn open(dir: &Path) -> Result<Self> {
         // Auto-detect Git format from path. "*-git" or "*.git" use the Git format.
+        // Resolve to full path since "." might be a "-git" path.
+        let dir = std::fs::canonicalize(dir).unwrap_or_else(|_| dir.to_path_buf());
         let format = match dir.file_name().and_then(|s| s.to_str()) {
             Some(s) if s.ends_with(".git") || s.ends_with("-git") => SerializationFormat::Git,
             _ => SerializationFormat::Hg,
         };
-        let ident = identity::sniff_dir(dir)?.unwrap_or_else(identity::default);
+        tracing::trace!(?dir, ?format, "EagerRepo::open");
+        let ident = identity::sniff_dir(&dir)?.unwrap_or_else(identity::default);
         // Attempt to match directory layout of a real client repo.
         let hg_dir = dir.join(ident.dot_dir());
         let store_dir = hg_dir.join("store");
