@@ -2653,7 +2653,12 @@ class localrepository:
         fnode = git.submodule_node_from_fctx(fctx)
         if fnode is not None:
             return fnode
-        return self.fileslog.filestore.writeobj("blob", fctx.data())
+        store = self.fileslog.abstracted_file_store()
+        opts = {}
+        data = fctx.data()
+        path = ""  # git does not need a path
+        fnode = store.insert_file(opts, path, data)
+        return fnode
 
     def checkcommitpatterns(self, wctx, match, status, fail):
         """check for commit arguments that aren't committable"""
