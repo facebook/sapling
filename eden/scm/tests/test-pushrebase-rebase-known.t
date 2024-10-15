@@ -2,9 +2,9 @@
 
 #require no-eden
 
+  $ setconfig remotenames.selectivepull=true
 
 Pushrebase still needs filepeer.
-
 
   $ configure modern
   $ enable pushrebase

@@ -1,25 +1,16 @@
-#modern-config-incompatible
-
 #require no-eden
 
-#inprocess-hg-incompatible
-
-  $ enable amend remotenames
-
-Setup common infinitepush
   $ . "$TESTDIR/library.sh"
-  $ . "$TESTDIR/infinitepush/library.sh"
-  $ setupcommon
+
+  $ setconfig push.edenapi=true
 
 Setup lfs
   $ setconfig remotefilelog.lfs=true
-  $ setconfig experimental.changegroup3=true
   $ setconfig lfs.threshold=10B lfs.url="file:$TESTTMP/dummy-remote/"
 
 Setup server repo
   $ hg init repo
   $ cd repo
-  $ setupserver
   $ echo 1 > 1
   $ hg add 1
   $ hg ci -m initial
@@ -32,21 +23,18 @@ Setup client
   $ echo aaaaaaaaaaa > largefile
   $ hg ci -Aqm commit
 
-  $ hg push -r . --to lfscommit --create
-  pushing rev 0da81a72db1a to destination ssh://user@dummy/repo bookmark lfscommit
-  searching for changes
-  exporting bookmark lfscommit
-  remote: adding changesets
-  remote: adding manifests
-  remote: adding file changes
+  $ hg push -q -r . --to lfscommit --create
 
   $ cd ..
 
 Setup another client
   $ hg clone ssh://user@dummy/repo client2 -q
   $ cd client2
+  $ hg pull -B lfscommit
+  pulling from ssh://user@dummy/repo
+  searching for changes
   $ hg goto remote/lfscommit
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Make pushbackup that contains bundle with 2 heads
   $ cd ../client
@@ -72,6 +60,3 @@ Pull just one head to trigger rebundle
   $ hg pull -r c800524c1b7637c6f3f997d1459237d01fe1ea10
   pulling from ssh://user@dummy/repo
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes

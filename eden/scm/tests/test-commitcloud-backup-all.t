@@ -2,6 +2,7 @@
 
 #require no-eden
 
+  $ setconfig remotenames.selectivepull=true
 
   $ enable amend
 
@@ -18,6 +19,7 @@
 
   $ touch base
   $ hg commit -Aqm base
+  $ hg book master
   $ cd ..
 
   $ hgcloneshallow ssh://user@dummy/server shallow -q

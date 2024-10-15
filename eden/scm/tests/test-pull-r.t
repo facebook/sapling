@@ -2,6 +2,8 @@
 
 #require no-eden
 
+  $ setconfig remotenames.selectivepull=true
+
   $ setconfig devel.segmented-changelog-rev-compat=true
 
   $ configure dummyssh
@@ -42,10 +44,10 @@ don't show "(+1 heads)" message when pulling closed head
   $ echo hello >> foo
   $ hg ci -mx1
   $ hg ci -mx2 --config ui.allowemptycommit=1
+  $ hg book master
   $ cd ../repo3
   $ hg heads -q --closed
   effea6de0384
-  ed1b79f46b9a
   $ hg pull
   pulling from $TESTTMP/repo2
   searching for changes
@@ -55,7 +57,6 @@ don't show "(+1 heads)" message when pulling closed head
   $ hg heads -q --closed
   1a1aa123db21
   effea6de0384
-  ed1b79f46b9a
 
   $ cd ..
 

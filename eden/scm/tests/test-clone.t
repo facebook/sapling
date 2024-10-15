@@ -4,6 +4,7 @@
 
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig clone.use-rust=1
+  $ setconfig remotenames.selectivepull=true
 
 #testcases rustcheckout pythoncheckout
 
@@ -174,17 +175,10 @@ Testing clone -u:
 Repo ua has both heads:
 
   $ hg -R ua heads
-  commit:      4f44d5743f52
-  bookmark:    remote/stable
-  hoistedname: stable
+  commit:      7bc8ee83a26f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     another change for branch stable
-  
-  commit:      3aa88e8a4d5f
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     hacked default
+  summary:     starting branch stable
 
 Same revision checked out in repo a and ua:
 
@@ -209,17 +203,10 @@ Testing clone --pull -u:
 Repo ua has both heads:
 
   $ hg -R ua heads
-  commit:      4f44d5743f52
-  bookmark:    remote/stable
-  hoistedname: stable
+  commit:      7bc8ee83a26f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     another change for branch stable
-  
-  commit:      3aa88e8a4d5f
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     hacked default
+  summary:     starting branch stable
 
 Same revision checked out in repo a and ua:
 
@@ -241,23 +228,14 @@ Repo ua has both heads:
 
   $ hg -R ua heads
   commit:      4f44d5743f52
-  bookmark:    remote/stable
-  hoistedname: stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
-  
-  commit:      3aa88e8a4d5f
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     hacked default
 
 Branch 'stable' is checked out:
 
   $ hg -R ua parents
   commit:      4f44d5743f52
-  bookmark:    remote/stable
-  hoistedname: stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
@@ -275,16 +253,9 @@ Repo ua has both heads:
 
   $ hg -R ua heads
   commit:      4f44d5743f52
-  bookmark:    remote/stable
-  hoistedname: stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
-  
-  commit:      3aa88e8a4d5f
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     hacked default
 
   $ rm -r ua
 
@@ -298,15 +269,10 @@ Testing #<bookmark> (no longer works):
 Repo ua has branch 'stable' and 'default' (was changed in fd511e9eeea6):
 
   $ hg -R ua heads
-  commit:      4f44d5743f52
+  commit:      7bc8ee83a26f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     another change for branch stable
-  
-  commit:      3aa88e8a4d5f
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     hacked default
+  summary:     starting branch stable
 
 Same revision checked out in repo a and ua:
 
@@ -330,12 +296,10 @@ Testing -u -r <branch>:
 Repo ua has branch 'stable' and 'default' (was changed in fd511e9eeea6):
 
   $ hg -R ua heads
-  commit:      4f44d5743f52
-  bookmark:    remote/stable
-  hoistedname: stable
+  commit:      7bc8ee83a26f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     another change for branch stable
+  summary:     starting branch stable
 
 Same revision checked out in repo a and ua:
 
@@ -360,8 +324,6 @@ Repo ua has branch 'stable' and 'default' (was changed in fd511e9eeea6):
 
   $ hg -R ua heads
   commit:      4f44d5743f52
-  bookmark:    remote/stable
-  hoistedname: stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable
@@ -370,8 +332,6 @@ Branch 'stable' is checked out:
 
   $ hg -R ua parents
   commit:      4f44d5743f52
-  bookmark:    remote/stable
-  hoistedname: stable
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     another change for branch stable

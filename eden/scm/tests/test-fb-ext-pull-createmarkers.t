@@ -4,6 +4,8 @@
 
 #inprocess-hg-incompatible
 
+  $ setconfig remotenames.selectivepull=true
+
 Setup
 
   $ configure mutation-norecord dummyssh
@@ -98,12 +100,7 @@ the remote
   │
   o  "add initial"
 
-  $ hg pull
-  pulling from ssh://user@dummy/server
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
+  $ hg pull -q
   $ hg log -G -T '"{desc}" {remotebookmarks}'
   o  "add e
   │
@@ -139,12 +136,7 @@ changesets
   $ cd ../server
   $ mkcommit k 202
   $ cd ../client
-  $ hg pull
-  pulling from ssh://user@dummy/server
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
+  $ hg pull -q
 
 (Note: pullcreatemarkers created two markers, however only one of them was
 counted in the message as the first commit had previously been obsoleted

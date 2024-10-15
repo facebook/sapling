@@ -4,6 +4,8 @@
 
 #inprocess-hg-incompatible
 
+  $ setconfig remotenames.selectivepull=true
+
 Remotenames extension has a shortcut that makes heads discovery work faster.
 Unfortunately that may result in sending public commits to the server. This
 test covers the issue.
@@ -81,11 +83,9 @@ Create second client
 Pull to get remote names
   $ hg pull
   pulling from ssh://user@dummy/repo
-  searching for changes
-  no changes found
   $ hg book --remote
-     remote/master             05fb75d88dcd
-     remote/remotebook         b75a450e74d5
+     remote/master                    05fb75d88dcd1fd5bb73daffe4142774c5aa5547
+     remote/remotebook                b75a450e74d5a7708da8c3144fbeb4ac88694044
 
 Strip public commits from the repo (still needed?)
   $ hg debugstrip -q -r 'desc(second):'
@@ -106,8 +106,8 @@ Download scratch commit. It also downloads a few public commits
   o  first
   
   $ hg book --remote
-     remote/master             05fb75d88dcd
-     remote/remotebook         b75a450e74d5
+     remote/master                    05fb75d88dcd1fd5bb73daffe4142774c5aa5547
+     remote/remotebook                b75a450e74d5a7708da8c3144fbeb4ac88694044
 
 Run cloud backup and make sure only scratch commits are backed up.
   $ hg cloud backup
