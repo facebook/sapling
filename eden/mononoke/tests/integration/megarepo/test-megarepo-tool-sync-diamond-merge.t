@@ -208,7 +208,7 @@ Now sync with the tool
   * 1 new commits are going to be merged in (glob)
   * syncing commit from new branch 0feeed653ec98bb533a2ad7fc8940ce07c4105326f07b20fcc68ebac0607abf2 (glob)
   * uploading merge commit 39f339283c1910b404b40271e69e72e9de2a962e903ce9d4fe9f4488f5896242 (glob)
-  * It is recommended to run 'mononoke_admin crossrepo verify-wc' for 39f339283c1910b404b40271e69e72e9de2a962e903ce9d4fe9f4488f5896242! (glob)
+  * It is recommended to run 'mononoke_newadmin cross-repo verify-working-copy' for 39f339283c1910b404b40271e69e72e9de2a962e903ce9d4fe9f4488f5896242! (glob)
 -- a mapping should've been created for the synced merge commit
   $ mononoke_newadmin cross-repo --source-repo-id 0 --target-repo-id 1 map -B master_bookmark |& grep -v "using repo"
   RewrittenAs([(ChangesetId(Blake2(46c0f70c6300f4168cb70321839ac0079c74b6d3295adb81eeb1932be4f80e9d)), CommitSyncConfigVersion("TEST_VERSION_NAME"))])
@@ -298,7 +298,7 @@ Merge with preserved ancestors
   * syncing commit from new branch d27a299389c7bedbe3e4dc01b7d4e7ac2162d935401c5d8462b7e1663dfee0e4 (glob)
   * syncing commit from new branch 89c0603366c60ae4bf8d8dca6da7581c741b7e89a6fcc3f49a44fdd248de3b1d (glob)
   * uploading merge commit 0958bd58a03b8c799664bc0767b095a97003ee41eaa7814343ad9dcc6f90bc16 (glob)
-  * It is recommended to run 'mononoke_admin crossrepo verify-wc' for 0958bd58a03b8c799664bc0767b095a97003ee41eaa7814343ad9dcc6f90bc16! (glob)
+  * It is recommended to run 'mononoke_newadmin cross-repo verify-working-copy' for 0958bd58a03b8c799664bc0767b095a97003ee41eaa7814343ad9dcc6f90bc16! (glob)
 
 -- check that p2 was synced as preserved (note identical hashes)
   $ mononoke_newadmin cross-repo --source-repo-id 1 --target-repo-id 0 map -i $(hg log -r pre_merge_p2 -T "{node}" --cwd "$TESTTMP/with_merge_hg")

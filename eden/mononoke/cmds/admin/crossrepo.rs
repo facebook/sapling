@@ -35,14 +35,11 @@ use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use cmdlib::args;
 use cmdlib::args::MononokeMatches;
-use cmdlib::helpers;
-use cmdlib_x_repo::create_commit_syncers_from_matches;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncers;
 use cross_repo_sync::verify_bookmarks;
-use cross_repo_sync::verify_working_copy;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::Large;
@@ -106,9 +103,7 @@ const ONCALL_ARG: &str = "oncall";
 const DUMP_MAPPING_LARGE_REPO_PATH_ARG: &str = "dump-mapping-large-repo-path";
 const PREPARE_ROLLOUT_SUBCOMMAND: &str = "prepare-rollout";
 const PUSHREDIRECTION_SUBCOMMAND: &str = "pushredirection";
-const VERIFY_WC_SUBCOMMAND: &str = "verify-wc";
 const VERIFY_BOOKMARKS_SUBCOMMAND: &str = "verify-bookmarks";
-const LARGE_REPO_HASH_ARG: &str = "large-repo-hash";
 const UPDATE_LARGE_REPO_BOOKMARKS: &str = "update-large-repo-bookmarks";
 const LIMIT_ARG: &str = "limit";
 const NO_BOOKMARK_UPDATES: &str = "no-bookmark-updates";
@@ -197,35 +192,6 @@ pub async fn subcommand_crossrepo<'a>(
         ClientInfo::default_with_entry_point(ClientEntryPoint::MononokeAdmin),
     );
     match sub_m.subcommand() {
-        (VERIFY_WC_SUBCOMMAND, Some(sub_sub_m)) => {
-            let source_repo_id =
-                args::not_shardmanager_compatible::get_source_repo_id(config_store, matches)?;
-            let target_repo_id =
-                args::not_shardmanager_compatible::get_target_repo_id(config_store, matches)?;
-            let syncers = create_commit_syncers_from_matches::<Repo>(
-                &ctx,
-                matches,
-                Some((source_repo_id, target_repo_id)),
-            )
-            .await?;
-
-            let commit_syncer = syncers.large_to_small;
-
-            let large_hash = {
-                let large_hash = sub_sub_m.value_of(LARGE_REPO_HASH_ARG).unwrap().to_owned();
-                let large_repo = commit_syncer.get_large_repo();
-                helpers::csid_resolve(&ctx, large_repo, large_hash).await?
-            };
-
-            verify_working_copy(
-                &ctx,
-                &commit_syncer,
-                large_hash,
-                commit_syncer.live_commit_sync_config.clone(),
-            )
-            .await
-            .map_err(|e| e.into())
-        }
         (VERIFY_BOOKMARKS_SUBCOMMAND, Some(sub_sub_m)) => {
             let (source_repo, target_repo, _mapping) =
                 get_source_target_repos_and_mapping::<Repo>(fb, logger, matches).await?;
@@ -886,14 +852,6 @@ async fn subcommand_by_version<'a, L: LiveCommitSyncConfig>(
 }
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
-    let verify_wc_subcommand = SubCommand::with_name(VERIFY_WC_SUBCOMMAND)
-        .about("verify working copy")
-        .arg(
-            Arg::with_name(LARGE_REPO_HASH_ARG)
-                .required(true)
-                .help("bonsai changeset hash from large repo to verify"),
-        );
-
     let verify_bookmarks_subcommand = SubCommand::with_name(VERIFY_BOOKMARKS_SUBCOMMAND).about(
         "verify that bookmarks are the same in small and large repo (subject to bookmark renames)",
     ).arg(
@@ -1010,7 +968,6 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
         .subcommand(change_mapping_version);
 
     SubCommand::with_name(CROSSREPO)
-        .subcommand(verify_wc_subcommand)
         .subcommand(verify_bookmarks_subcommand)
         .subcommand(commit_sync_config_subcommand)
         .subcommand(pushredirection_subcommand)

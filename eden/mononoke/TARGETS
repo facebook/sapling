@@ -212,7 +212,6 @@ rust_binary(
         "//eden/mononoke/bookmarks:bookmarks_movement",
         "//eden/mononoke/changesets/changesets_creation:changesets_creation",
         "//eden/mononoke/cmdlib:cmdlib",
-        "//eden/mononoke/cmdlib:cmdlib_x_repo",
         "//eden/mononoke/commit_rewriting/backsyncer:backsyncer",
         "//eden/mononoke/commit_rewriting/cross_repo_sync:cross_repo_sync",
         "//eden/mononoke/commit_rewriting/live_commit_sync_config:live_commit_sync_config",
