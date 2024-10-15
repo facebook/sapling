@@ -1531,7 +1531,7 @@ pub async fn update_large_repo_bookmarks<R: Repo>(
 
     let bookmark_renamer = syncers.small_to_large.get_bookmark_renamer().await?;
 
-    let diff: Box<dyn Iterator<Item = &BookmarkDiff>> = match limit {
+    let diff: Box<dyn Iterator<Item = &BookmarkDiff> + Send> = match limit {
         Some(limit) => {
             warn!(
                 ctx.logger(),

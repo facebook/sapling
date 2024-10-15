@@ -152,8 +152,6 @@ Query synced commit mapping, check that automatically inserted mappings have ver
 
 fbsource should be fully in sync
   $ crossrepo_verify_bookmarks 0 1
-  * using repo "meg-mon" repoid RepositoryId(0) (glob)
-  * using repo "fbs-mon" repoid RepositoryId(1) (glob)
   * all is well! (glob)
 
 ovrsource has two problems
@@ -203,8 +201,6 @@ and tried again
 
 now the verfication shouldn't return that error
   $ crossrepo_verify_bookmarks 0 2
-  * using repo "meg-mon" repoid RepositoryId(0) (glob)
-  * using repo "ovr-mon" repoid RepositoryId(2) (glob)
   * 'ovr-mon' has a bookmark master_bookmark but it points to a commit that has no equivalent in 'meg-mon'. If it's a shared bookmark (e.g. master) that might mean that it points to a commit from another repository (glob)
   * found 1 inconsistencies (glob)
   [1]

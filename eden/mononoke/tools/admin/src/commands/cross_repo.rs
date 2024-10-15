@@ -34,11 +34,13 @@ use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 use sql_query_config::SqlQueryConfig;
+use verify_bookmarks::VerifyBookmarksArgs;
 use verify_working_copy::VerifyWorkingCopyArgs;
 
 mod insert;
 mod map;
 mod pushredirection;
+mod verify_bookmarks;
 mod verify_working_copy;
 
 /// Query and manage cross repo syncs
@@ -60,6 +62,7 @@ pub enum CrossRepoSubcommand {
     Map(MapArgs),
     Pushredirection(PushredirectionArgs),
     VerifyWorkingCopy(VerifyWorkingCopyArgs),
+    VerifyBookmarks(VerifyBookmarksArgs),
 }
 
 #[facet::container]
@@ -145,6 +148,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         CrossRepoSubcommand::VerifyWorkingCopy(args) => {
             verify_working_copy::verify_working_copy(&ctx, &app, source_repo, target_repo, args)
                 .await
+        }
+        CrossRepoSubcommand::VerifyBookmarks(args) => {
+            verify_bookmarks::verify_bookmarks(&ctx, &app, source_repo, target_repo, args).await
         }
     }
 }

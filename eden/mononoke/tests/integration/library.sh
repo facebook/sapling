@@ -2143,7 +2143,7 @@ function crossrepo_verify_bookmarks() {
   shift
   large_repo_id="$1"
   shift
-  mononoke_admin_source_target "$small_repo_id" "$large_repo_id" crossrepo verify-bookmarks "$@"
+  mononoke_newadmin cross-repo --source-repo-id "$small_repo_id" --target-repo-id "$large_repo_id" verify-bookmarks "$@"
 }
 
 function read_blobstore_wal_queue_size() {
