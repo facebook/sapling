@@ -65,18 +65,40 @@ const styles = stylex.create({
   },
 });
 
-/** Some error codes are not worth blocking on */
-const ignoreCodesBySource = Internal.ignoredDiagnosticCodes ?? new Map<string, Set<string>>();
+/** Many diagnostics are low-quality and don't reflect what would appear on CI.
+ * Start with an allowlist while we validate which signals are worthwhile. */
+const allowlistedCodesBySource = Internal.allowlistedDiagnosticCodes ?? undefined;
 
 function isBlockingDiagnostic(d: Diagnostic): boolean {
-  if (d.severity !== 'error') {
-    return false;
-  }
   if (d.source == null || d.code == null) {
     return true;
   }
-  const ignoreCodesForSource = ignoreCodesBySource.get(d.source);
-  return !ignoreCodesForSource || ignoreCodesForSource.has(d.code) === false;
+  if (allowlistedCodesBySource == null) {
+    // In OSS, let's assume all errors are blocking.
+    return true;
+  }
+  if (d.severity !== 'error' && d.severity !== 'warning') {
+    return false;
+  }
+  if (allowlistedCodesBySource == null) {
+    return true;
+  }
+  const relevantAllowlist = allowlistedCodesBySource.get(d.severity)?.get(d.source);
+  return (
+    relevantAllowlist != null &&
+    (relevantAllowlist.has(d.code) === true || relevantAllowlist.has('*') === true)
+  );
+}
+
+function isErrorDiagnosticToLog(d: Diagnostic): boolean {
+  return d.severity === 'error';
+}
+
+/** Render diagnostic to a string, in the format `Source(Code): Snippet of error message` */
+function previewDiagnostic(diagnostic: Diagnostic | undefined) {
+  return diagnostic != null
+    ? `${diagnostic.source}(${diagnostic.code}): ${diagnostic?.message.slice(0, 100)}`
+    : undefined;
 }
 
 /**
@@ -121,18 +143,24 @@ export async function confirmNoBlockingDiagnostics(
         .flat();
       const totalErrors = allBlockingErrors.length;
 
+      // It's useful to track even the diagnostics that are filtered out, to refine the allowlist in the future
+      const unfilteredErrors = allDiagnostics
+        .map(value => value.filter(isErrorDiagnosticToLog))
+        .flat();
+
       const totalDiagnostics = allDiagnostics.flat().length;
 
       const firstError = allBlockingErrors[0];
+      const firstUnfilteredError = unfilteredErrors[0];
 
       const childTracker = tracker.trackAsParent('DiagnosticsConfirmationOpportunity', {
         extras: {
           shown: enabled,
-          errorCodes: [...new Set(allBlockingErrors.map(d => `${d.source}(${d.code})`))],
-          sampleMessage:
-            firstError != null
-              ? `${firstError.source}(${firstError.code}): ${firstError?.message.slice(0, 100)}`
-              : undefined,
+          unfilteredErrorCodes: [...new Set(unfilteredErrors.map(d => `${d.source}(${d.code})`))],
+          filteredErrorCodes: [...new Set(allBlockingErrors.map(d => `${d.source}(${d.code})`))],
+          sampleMessage: previewDiagnostic(firstError),
+          unfilteredSampleMessage: previewDiagnostic(firstUnfilteredError),
+          totalUnfilteredErrors: unfilteredErrors.length,
           totalErrors,
           totalDiagnostics,
         },
@@ -194,11 +222,15 @@ function DiagnosticsList({
     <>
       <Column alignStart xstyle={styles.allDiagnostics}>
         {diagnostics.map(([filepath, diagnostics]) => {
-          const sortedDiagnostics = [...diagnostics]
-            .filter(d => (hideNonBlocking ? isBlockingDiagnostic(d) : true))
-            .sort((a, b) => {
-              return severityComparator(a) - severityComparator(b);
-            });
+          const sortedDiagnostics = [...diagnostics].filter(d =>
+            hideNonBlocking ? isBlockingDiagnostic(d) : true,
+          );
+          sortedDiagnostics.sort((a, b) => {
+            return severityComparator(a) - severityComparator(b);
+          });
+          if (sortedDiagnostics.length === 0) {
+            return null;
+          }
           return (
             <Column key={filepath} alignStart>
               <Collapsable
@@ -210,11 +242,11 @@ function DiagnosticsList({
                   </Row>
                 }>
                 <Column alignStart xstyle={styles.diagnosticList}>
-                  {sortedDiagnostics.map(d => (
+                  {sortedDiagnostics.map((d, i) => (
                     <Row
                       role="button"
                       tabIndex={0}
-                      key={d.source}
+                      key={i}
                       xstyle={styles.diagnosticRow}
                       onClick={() => {
                         foundPlatform.openFile(filepath, {line: d.range.startLine + 1});
@@ -254,7 +286,7 @@ function DiagnosticsList({
         </Checkbox>
         <Tooltip
           title={t(
-            "Only 'error' severity issues will cause this dialog to appear, but less severe issues can still be shown here. This option hides these non-blocking issues.",
+            "Only 'error' severity issues known to cause problems will cause this dialog to appear, but less severe issues can still be shown here. This option hides these non-blocking issues.",
           )}>
           <Checkbox checked={hideNonBlocking} onChange={setHideNonBlocking}>
             <T>Hide non-blocking issues</T>
