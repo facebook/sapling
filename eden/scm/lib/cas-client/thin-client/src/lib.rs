@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use cas_client::CasClient;
+use cas_client::CasFetchedStats;
 use configmodel::convert::ByteCount;
 use configmodel::convert::FromConfigValue;
 use configmodel::Config;

@@ -14,6 +14,7 @@ pub use tracing;
 pub use types::Blake3;
 pub use types::CasDigest;
 pub use types::CasDigestType;
+pub use types::CasFetchedStats;
 
 #[macro_export]
 macro_rules! re_client {
@@ -26,6 +27,7 @@ macro_rules! re_client {
         use re_client_lib::TCode;
         use re_client_lib::TDigest;
         use re_client_lib::THashAlgo;
+        use re_client_lib::TStorageBackendType;
 
         impl $struct {
             fn client(&self) -> Result<&REClient> {
@@ -55,7 +57,7 @@ macro_rules! re_client {
                 &'a self,
                 digests: &'a [$crate::CasDigest],
                 log_name: $crate::CasDigestType,
-            ) -> BoxStream<'a, $crate::Result<Vec<($crate::CasDigest, Result<Option<Vec<u8>>>)>>>
+            ) -> BoxStream<'a, $crate::Result<(CasFetchedStats, Vec<($crate::CasDigest, Result<Option<Vec<u8>>>)>)>>
             {
                 stream::iter(split_up_to_max_bytes(digests, self.fetch_limit.value()))
                     .then(move |digests| async move {
@@ -67,10 +69,24 @@ macro_rules! re_client {
                             ..Default::default()
                         };
 
-                        self.client()?
+                        let response = self.client()?
                             .download(self.metadata.clone(), request)
-                            .await?
-                            .inlined_blobs
+                            .await?;
+
+                        let download_stats_map = response.storage_stats.per_backend_stats;
+
+                        let mut stats = CasFetchedStats::default();
+                        for (backend, dstats) in download_stats_map {
+                            match backend {
+                                TStorageBackendType::ZDB => stats.total_bytes_zdb += dstats.bytes as u64,
+                                TStorageBackendType::ZGATEWAY => stats.total_bytes_zgw += dstats.bytes as u64,
+                                TStorageBackendType::MANIFOLD => stats.total_bytes_manifold += dstats.bytes as u64,
+                                TStorageBackendType::HEDWIG => stats.total_bytes_hedwig += dstats.bytes as u64,
+                                _ => {}
+                            }
+                        }
+
+                        let data = response.inlined_blobs
                             .unwrap_or_default()
                             .into_iter()
                             .map(|blob| {
@@ -89,7 +105,9 @@ macro_rules! re_client {
                                     )),
                                 }
                             })
-                            .collect::<$crate::Result<Vec<_>>>()
+                            .collect::<$crate::Result<Vec<_>>>()?;
+
+                        Ok((stats, data))
                     })
                     .boxed()
             }

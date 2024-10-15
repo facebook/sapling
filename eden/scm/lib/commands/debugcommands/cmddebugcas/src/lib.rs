@@ -12,7 +12,6 @@ use clidispatch::abort;
 use clidispatch::ReqCtx;
 use cmdutil::define_flags;
 use cmdutil::Result;
-use futures::StreamExt;
 use futures::TryStreamExt;
 use manifest::FileMetadata;
 use manifest::FsNodeMetadata;
@@ -71,6 +70,7 @@ pub fn run(ctx: ReqCtx<DebugCasOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u
                             CasDigestType::Tree,
                         )
                         .await
+                        .map_ok(|(_, data)| data)
                         .try_collect::<Vec<_>>()
                         .await
                 })?;
@@ -103,6 +103,7 @@ pub fn run(ctx: ReqCtx<DebugCasOpts>, repo: &Repo, wc: &WorkingCopy) -> Result<u
                             CasDigestType::File,
                         )
                         .await
+                        .map_ok(|(_, data)| data)
                         .try_collect::<Vec<_>>()
                         .await
                 })?;

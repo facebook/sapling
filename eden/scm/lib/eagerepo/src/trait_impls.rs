@@ -8,6 +8,7 @@
 //! Implement traits from other crates.
 
 use cas_client::CasClient;
+use cas_client::CasFetchedStats;
 use format_util::git_sha1_serialize;
 use format_util::hg_sha1_serialize;
 use format_util::split_hg_file_metadata;
@@ -172,11 +173,17 @@ impl CasClient for EagerRepoStore {
         &'a self,
         digests: &'a [CasDigest],
         log_name: CasDigestType,
-    ) -> BoxStream<'a, anyhow::Result<Vec<(CasDigest, anyhow::Result<Option<Vec<u8>>>)>>> {
+    ) -> BoxStream<
+        'a,
+        anyhow::Result<(
+            CasFetchedStats,
+            Vec<(CasDigest, anyhow::Result<Option<Vec<u8>>>)>,
+        )>,
+    > {
         stream::once(async move {
             tracing::debug!(target: "cas", "EagerRepoStore fetching {} {}(s)", digests.len(), log_name);
 
-            Ok(digests
+            Ok((CasFetchedStats::default(), digests
                 .iter()
                 .map(|digest| {
                     (
@@ -186,7 +193,7 @@ impl CasClient for EagerRepoStore {
                             .map(|data| data.map(|data| data.into_vec())),
                     )
                 })
-                .collect())
+                .collect()))
         }).boxed()
     }
 }

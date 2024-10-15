@@ -13,6 +13,7 @@ use parking_lot::RwLock;
 use stats::prelude::*;
 
 use crate::scmstore::metrics::namespaced;
+use crate::scmstore::metrics::CasBackendMetrics;
 use crate::scmstore::metrics::FetchMetrics;
 use crate::scmstore::metrics::LocalAndCacheFetchMetrics;
 
@@ -22,6 +23,7 @@ pub struct TreeStoreFetchMetrics {
     pub(crate) aux: LocalAndCacheFetchMetrics,
     pub(crate) edenapi: FetchMetrics,
     pub(crate) cas: FetchMetrics,
+    pub(crate) cas_backend: CasBackendMetrics,
 }
 
 impl AddAssign for TreeStoreFetchMetrics {
@@ -30,6 +32,7 @@ impl AddAssign for TreeStoreFetchMetrics {
         self.aux += rhs.aux;
         self.edenapi += rhs.edenapi;
         self.cas += rhs.cas;
+        self.cas_backend += rhs.cas_backend;
     }
 }
 
@@ -39,6 +42,7 @@ impl TreeStoreFetchMetrics {
             .chain(namespaced("aux", self.aux.metrics()))
             .chain(namespaced("edenapi", self.edenapi.metrics()))
             .chain(namespaced("cas", self.cas.metrics()))
+            .chain(namespaced("cas", self.cas_backend.metrics()))
     }
 
     /// Update ODS stats.

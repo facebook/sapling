@@ -221,3 +221,52 @@ impl ApiMetrics {
         .filter(|&(_, v)| v != 0)
     }
 }
+
+#[derive(Clone, Debug, Default)]
+pub struct CasBackendMetrics {
+    /// Total number of bytes fetched from the CAS ZippyDb backend
+    zdb_bytes: u64,
+
+    /// Total number of bytes fetched from the CAS ZGW backend
+    zgw_bytes: u64,
+
+    /// Total number of bytes fetched from the CAS Manifold backend
+    manifold_bytes: u64,
+
+    /// Total number of bytes fetched from the CAS Hedwig backend
+    hedwig_bytes: u64,
+}
+
+impl CasBackendMetrics {
+    pub(crate) fn zdb_bytes(&mut self, bytes: u64) {
+        self.zdb_bytes += bytes;
+    }
+    pub(crate) fn zgw_bytes(&mut self, bytes: u64) {
+        self.zgw_bytes += bytes;
+    }
+    pub(crate) fn manifold_bytes(&mut self, bytes: u64) {
+        self.manifold_bytes += bytes;
+    }
+    pub(crate) fn hedwig_bytes(&mut self, bytes: u64) {
+        self.hedwig_bytes += bytes;
+    }
+    pub(crate) fn metrics(&self) -> impl Iterator<Item = (&'static str, usize)> {
+        [
+            ("zdb.bytes", self.zdb_bytes as usize),
+            ("zgw.bytes", self.zgw_bytes as usize),
+            ("manifold.bytes", self.manifold_bytes as usize),
+            ("hedwig.bytes", self.hedwig_bytes as usize),
+        ]
+        .into_iter()
+        .filter(|&(_, v)| v != 0)
+    }
+}
+
+impl AddAssign for CasBackendMetrics {
+    fn add_assign(&mut self, rhs: Self) {
+        self.zdb_bytes += rhs.zdb_bytes;
+        self.zgw_bytes += rhs.zgw_bytes;
+        self.manifold_bytes += rhs.manifold_bytes;
+        self.hedwig_bytes += rhs.hedwig_bytes;
+    }
+}

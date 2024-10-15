@@ -21,6 +21,7 @@ use types::AugmentedTree;
 use types::AugmentedTreeWithDigest;
 use types::CasDigest;
 use types::CasDigestType;
+use types::CasFetchedStats;
 use types::Key;
 use types::NodeInfo;
 
@@ -217,11 +218,13 @@ impl FetchState {
         let mut reqs = 0;
 
         let start_time = Instant::now();
+        let mut total_stats = CasFetchedStats::default();
 
         block_on(async {
             cas_client.fetch(&digests, CasDigestType::Tree).await.for_each(|results| match results {
-                Ok(results) => {
+                Ok((stats, results)) => {
                     reqs += 1;
+                    total_stats.add(&stats);
                     for (digest, data) in results {
                         let Some(key) = digest_to_key.remove(&digest) else {
                             tracing::error!("got CAS result for unrequested digest {:?}", digest);
@@ -293,6 +296,18 @@ impl FetchState {
         self.metrics.cas.fetch(digests.len());
         self.metrics.cas.err(error);
         self.metrics.cas.hit(found);
+        self.metrics
+            .cas_backend
+            .zdb_bytes(total_stats.total_bytes_zdb);
+        self.metrics
+            .cas_backend
+            .zgw_bytes(total_stats.total_bytes_zgw);
+        self.metrics
+            .cas_backend
+            .manifold_bytes(total_stats.total_bytes_manifold);
+        self.metrics
+            .cas_backend
+            .hedwig_bytes(total_stats.total_bytes_hedwig);
     }
 }
 

@@ -11,6 +11,7 @@ use configmodel::Config;
 use futures::stream::BoxStream;
 pub use types::CasDigest;
 pub use types::CasDigestType;
+pub use types::CasFetchedStats;
 
 pub fn new(config: Arc<dyn Config>) -> anyhow::Result<Option<Arc<dyn CasClient>>> {
     match factory::call_constructor::<_, Arc<dyn CasClient>>(&config as &dyn Config) {
@@ -38,5 +39,11 @@ pub trait CasClient: Sync + Send {
         &'a self,
         digests: &'a [CasDigest],
         log_name: CasDigestType,
-    ) -> BoxStream<'a, anyhow::Result<Vec<(CasDigest, anyhow::Result<Option<Vec<u8>>>)>>>;
+    ) -> BoxStream<
+        'a,
+        anyhow::Result<(
+            CasFetchedStats,
+            Vec<(CasDigest, anyhow::Result<Option<Vec<u8>>>)>,
+        )>,
+    >;
 }

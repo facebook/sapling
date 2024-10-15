@@ -32,3 +32,20 @@ impl fmt::Display for CasDigestType {
         }
     }
 }
+
+#[derive(Default, Debug)]
+pub struct CasFetchedStats {
+    pub total_bytes_zdb: u64,
+    pub total_bytes_zgw: u64,
+    pub total_bytes_manifold: u64,
+    pub total_bytes_hedwig: u64,
+}
+
+impl CasFetchedStats {
+    pub fn add(&mut self, other: &CasFetchedStats) {
+        self.total_bytes_zdb += other.total_bytes_zdb;
+        self.total_bytes_zgw += other.total_bytes_zgw;
+        self.total_bytes_manifold += other.total_bytes_manifold;
+        self.total_bytes_hedwig += other.total_bytes_hedwig;
+    }
+}
