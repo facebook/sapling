@@ -2,6 +2,7 @@
 
 #require no-eden
 
+  $ setconfig remotenames.selectivepull=true
 
   $ . "$TESTDIR/library.sh"
 
@@ -19,6 +20,7 @@
   $ hg commit -qAm z
   $ echo a > a
   $ hg commit -qAm a
+  $ hg book master
 
   $ cd ..
 

@@ -2,6 +2,9 @@
 
 #require no-eden
 
+  $ setconfig remotenames.selectivepull=true
+  $ setconfig remotenames.selectivepulldefault=master,releasebranch
+
   $ configure mutation-norecord dummyssh
   $ enable amend crdump remotenames
   $ showgraph() {
@@ -104,7 +107,7 @@ Test obsolete markers
 
 Add a master bookmark and verify it becomes the remote branch
 - The [1] exit code is because no commits are pushed
-  $ hg push -q -r releasebranch --to master --create
+  $ hg push -q -r remote/releasebranch --to master --create
 
 Test basic dump of two commits
 

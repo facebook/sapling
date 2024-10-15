@@ -3,6 +3,7 @@
 #require no-eden
 
 #inprocess-hg-incompatible
+  $ setconfig remotenames.selectivepull=true
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ configure mutation-norecord
 

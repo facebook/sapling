@@ -2,7 +2,7 @@
 
 #require no-eden
 
-
+  $ setconfig remotenames.selectivepull=true
 
   $ CACHEDIR=`pwd`/hgcache
 
@@ -85,10 +85,7 @@ Test prefetching when a draft commit is marked public
   o  public 287ee6e53d4fbc5fab2157eb0383fdff1c3277c8
   
 - Add remotenames for the remote heads
-  $ hg pull --config extensions.remotenames=
-  pulling from ssh://user@dummy/master
-  searching for changes
-  no changes found
+  $ hg pull -q
 
 - Attempt to download the latest server commit. Verify there's no error about a
 - missing manifest from the server.
@@ -139,8 +136,6 @@ Test auto prefetch during pull
   $ rm -rf $CACHEDIR/master
   $ hg pull --config treemanifest.pullprefetchcount=10 --traceback
   pulling from ssh://user@dummy/master
-  searching for changes
-  no changes found
   prefetching trees for 3 commits
 TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 
@@ -150,8 +145,6 @@ TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and ad
   $ rm -rf $CACHEDIR/master
   $ hg pull --config treemanifest.pullprefetchcount=1 --traceback
   pulling from ssh://user@dummy/master
-  searching for changes
-  no changes found
   prefetching tree for 311cac64787d
 TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 
@@ -161,8 +154,6 @@ TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and ad
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
   $ hg pull --config treemanifest.pullprefetchcount=1 --traceback
   pulling from ssh://user@dummy/master
-  searching for changes
-  no changes found
   prefetching tree for 311cac64787d
 TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 
@@ -177,10 +168,7 @@ Test prefetching certain revs during pull
   $ rm -rf $CACHEDIR/master
   $ hg pull --config treemanifest.pullprefetchrevs='tip~2'
   pulling from ssh://user@dummy/master
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
+  imported commit graph for 2 commits (1 segment)
   prefetching tree for 311cac64787d
 TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 
@@ -188,8 +176,6 @@ TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and ad
 - downloaded already. Note that subdir/z was not downloaded this time.
   $ hg pull --config treemanifest.pullprefetchrevs='tip'
   pulling from ssh://user@dummy/master
-  searching for changes
-  no changes found
   prefetching tree for 47bb1c5075af
 TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 

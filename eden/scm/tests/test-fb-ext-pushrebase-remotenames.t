@@ -3,6 +3,8 @@
 #require no-eden
 
 #inprocess-hg-incompatible
+  $ setconfig remotenames.selectivepull=true
+
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ configure mutation dummyssh
 
@@ -69,6 +71,7 @@ Test that pushing to a remotename gets rebased
   > pushrebase=
   > [remotenames]
   > allownonfastforward=True
+  > selectivepulldefault=master,newbook,bm
   > EOF
   $ echo x >> b && hg commit -m "client's commit"
   $ hg log -G -T '"{desc}" {remotebookmarks}'
@@ -301,17 +304,10 @@ Test force pushes
   │
   o  a
   
-  $ hg pull
-  pulling from * (glob)
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
+  $ hg pull -q
   $ hg log -G -T '{desc} {remotebookmarks}'
-  o  aa
+  @  b remote/master
   │
-  │ @  b remote/master
-  ├─╯
   o  a
   
   $ cd ..

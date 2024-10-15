@@ -2,7 +2,7 @@
 
 #require no-eden
 
-
+  $ setconfig remotenames.selectivepull=true
 
   $ . "$TESTDIR/library.sh"
 
@@ -21,6 +21,7 @@ Set up the server
 
   $ echo 1 > x
   $ hg commit -Aqm x1
+  $ hg book master
 
 Create client
   $ cd ..

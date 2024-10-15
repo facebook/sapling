@@ -4,6 +4,8 @@
 
 #chg-compatible
 
+  $ setconfig remotenames.selectivepull=true
+
   $ . "$TESTDIR/library.sh"
 
 Set up an extension to make sure remotefilelog clientsetup() runs
@@ -29,6 +31,7 @@ Set up the master repository to pull from.
   > EOF
   $ echo x > x
   $ hg commit -qAm x
+  $ hg book master
 
   $ cd ..
 
@@ -52,16 +55,12 @@ is not shallow.)
 
   $ echo y > y
   $ hg commit -qAm y
+  $ hg book -r . master
 
   $ cd ../child
-  $ hg pull --config extensions.setuprfl=$TESTTMP/setupremotefilelog.py
-  pulling from ssh://user@dummy/master
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
+  $ hg pull -q --config extensions.setuprfl=$TESTTMP/setupremotefilelog.py
 
-  $ hg up tip
+  $ hg up master
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ cat y

@@ -1,7 +1,8 @@
 #modern-config-incompatible
-#modern-config-incompatible
 
 #require no-eden
+
+  $ setconfig remotenames.selectivepull=true
 
   $ configure modern
   $ enable smartlog

@@ -2,6 +2,8 @@
 
 #require no-eden
 
+  $ setconfig remotenames.selectivepull=true
+
   $ configure modern
 
   $ newserver master

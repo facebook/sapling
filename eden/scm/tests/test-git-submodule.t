@@ -4,6 +4,8 @@
 Make sure things still work for submodules not properly namespaced (fixed in D63775983).
 #testcases normal submodule-namespace-bug
 
+  $ setconfig remotenames.selectivepull=true
+
   $ . $TESTDIR/git.sh
   $ setconfig diff.git=true ui.allowemptycommit=true
   $ enable rebase
@@ -17,15 +19,15 @@ Prepare smaller submodules
   > |
   > A
   > EOS
-  $ hg bookmark --cwd sub1 -r $B main 
+  $ hg bookmark --cwd sub1 -r $B main
 
   $ hg init --git sub2
   $ drawdag --cwd sub2 << 'EOS'
-  > D 
+  > D
   > |
-  > C 
+  > C
   > EOS
-  $ hg bookmark --cwd sub2 -r $D main 
+  $ hg bookmark --cwd sub2 -r $D main
 
 Prepare git repo with submodules
 (commit hashes are unstable because '.gitmodules' contains TESTTMP paths)

@@ -2,6 +2,7 @@
 
 #require no-eden
 
+  $ setconfig remotenames.selectivepull=true
 
   $ configure dummyssh
   $ enable amend directaccess commitcloud infinitepush rebase remotenames undo
@@ -76,7 +77,6 @@ Create another client and use it to modify the commits and create some new ones.
   commitcloud: nothing to upload
   pulling 6ba5de8abe43 c70a9bd6bfd1 from ssh://user@dummy/server
   searching for changes
-  fetching revlog data for 4 commits
   commitcloud: commits synchronized
   finished in * sec (glob)
   $ tglogm
@@ -157,7 +157,6 @@ Now cloud sync.  The sets of commits should be merged.
   edenapi: uploaded 2 changesets
   pulling d8fc5ae9b7ef dd114d9b2f9e from ssh://user@dummy/server
   searching for changes
-  fetching revlog data for 2 commits
   commitcloud: commits synchronized
   finished in * sec (glob)
   $ tglogm
@@ -184,7 +183,6 @@ Cloud sync back to the other client, it should get the same smartlog (apart from
   commitcloud: nothing to upload
   pulling ba83c5428cb2 6caded0e9807 from ssh://user@dummy/server
   searching for changes
-  fetching revlog data for 2 commits
   commitcloud: commits synchronized
   finished in * sec (glob)
   $ tglogm
