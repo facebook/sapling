@@ -127,6 +127,7 @@ impl PushRedirectionConfig for SqlPushRedirectionConfig {
     ) -> Result<Option<PushRedirectionConfigEntry>> {
         let rows = Get::maybe_traced_query(
             self.sql_query_config.as_ref(),
+            None,
             &self.connections.read_connection,
             ctx.client_request_info(),
             &repo_id,

@@ -228,6 +228,7 @@ macro_rules! mononoke_queries {
                 #[allow(dead_code)]
                 pub async fn query(
                     config: &SqlQueryConfig,
+                    cache_ttl: Option<std::time::Duration>,
                     connection: &Connection,
                     $( $pname: & $ptype, )*
                     $( $lname: & [ $ltype ], )*
@@ -244,7 +245,7 @@ macro_rules! mononoke_queries {
                     stringify!($mysql_q).hash(&mut hasher);
                     stringify!($sqlite_q).hash(&mut hasher);
                     let key = hasher.finish_ext();
-                    let data = CacheData {key, config: config.caching.as_ref()};
+                    let data = CacheData {key, config: config.caching.as_ref(), cache_ttl };
 
 
                     Ok(query_with_retry(
@@ -256,6 +257,7 @@ macro_rules! mononoke_queries {
                 #[allow(dead_code)]
                 pub async fn traced_query(
                     config: &SqlQueryConfig,
+                    cache_ttl: Option<std::time::Duration>,
                     connection: &Connection,
                     cri: &ClientRequestInfo,
                     $( $pname: & $ptype, )*
@@ -273,7 +275,7 @@ macro_rules! mononoke_queries {
                     stringify!($mysql_q).hash(&mut hasher);
                     stringify!($sqlite_q).hash(&mut hasher);
                     let key = hasher.finish_ext();
-                    let data = CacheData {key, config: config.caching.as_ref()};
+                    let data = CacheData {key, config: config.caching.as_ref(), cache_ttl };
 
 
                     let cri = serde_json::to_string(cri)?;
@@ -291,14 +293,15 @@ macro_rules! mononoke_queries {
                 #[allow(dead_code)]
                 pub async fn maybe_traced_query(
                     config: &SqlQueryConfig,
+                    cache_ttl: Option<std::time::Duration>,
                     connection: &Connection,
                     cri: Option<&ClientRequestInfo>,
                     $( $pname: & $ptype, )*
                     $( $lname: & [ $ltype ], )*
                 ) -> Result<Vec<($( $rtype, )*)>> {
                     match cri {
-                        Some(cri) => traced_query(config, connection, &cri, $( $pname, )* $( $lname, )*).await,
-                        None => query(config, connection, $( $pname, )* $( $lname, )*).await
+                        Some(cri) => traced_query(config, cache_ttl, connection, &cri, $( $pname, )* $( $lname, )*).await,
+                        None => query(config, cache_ttl, connection, $( $pname, )* $( $lname, )*).await
                     }
                 }
             }
@@ -572,6 +575,7 @@ type Key = u128;
 pub struct CacheData<'a> {
     pub key: Key,
     pub config: Option<&'a CachingConfig>,
+    pub cache_ttl: Option<Duration>,
 }
 
 struct QueryCacheStore<'a, F, T> {
@@ -580,6 +584,7 @@ struct QueryCacheStore<'a, F, T> {
     cachelib: CachelibHandler<CachedQueryResult<Vec<T>>>,
     memcache: MemcacheHandler,
     fetcher: F,
+    cache_ttl: Option<Duration>,
 }
 
 impl<F, T> EntityStore<CachedQueryResult<Vec<T>>> for QueryCacheStore<'_, F, T> {
@@ -599,7 +604,7 @@ impl<F, T> EntityStore<CachedQueryResult<Vec<T>>> for QueryCacheStore<'_, F, T> 
         if v.0.is_empty() {
             CacheDisposition::Ignore
         } else {
-            CacheDisposition::Cache(CacheTtl::NoTtl)
+            CacheDisposition::Cache(self.cache_ttl.map_or(CacheTtl::NoTtl, CacheTtl::Ttl))
         }
     }
 
@@ -698,6 +703,7 @@ where
             memcache: config.cache_handler_factory.memcache(),
             cache_config: config,
             fetcher: fetch,
+            cache_ttl: cache_data.cache_ttl,
         };
         Ok(get_or_fill(&store, hashset! {key})
             .await?
@@ -749,21 +755,22 @@ mod tests {
         let cri = ClientRequestInfo::new(ClientEntryPoint::Sapling);
         TestQuery::query(connection, todo!(), todo!()).await?;
         TestQuery::query_with_transaction(todo!(), todo!(), todo!()).await?;
-        TestQuery2::query(config, connection).await?;
+        TestQuery2::query(config, None, connection).await?;
+        TestQuery2::query(config, Some(std::time::Duration::from_secs(60)), connection).await?;
         TestQuery2::query_with_transaction(todo!()).await?;
         TestQuery3::query(connection, &[(&12,)]).await?;
         TestQuery3::query_with_transaction(todo!(), &[(&12,)]).await?;
         TestQuery4::query(connection, &"hello").await?;
         TestQuery::traced_query(connection, &cri, todo!(), todo!()).await?;
-        TestQuery2::traced_query(config, connection, &cri).await?;
+        TestQuery2::traced_query(config, None, connection, &cri).await?;
         TestQuery3::traced_query(connection, &cri, &[(&12,)]).await?;
         TestQuery4::traced_query(connection, &cri, &"hello").await?;
         TestQuery::maybe_traced_query(connection, Some(&cri), todo!(), todo!()).await?;
-        TestQuery2::maybe_traced_query(config, connection, Some(&cri)).await?;
+        TestQuery2::maybe_traced_query(config, None, connection, Some(&cri)).await?;
         TestQuery3::maybe_traced_query(connection, Some(&cri), &[(&12,)]).await?;
         TestQuery4::maybe_traced_query(connection, Some(&cri), &"hello").await?;
         TestQuery::maybe_traced_query(connection, None, todo!(), todo!()).await?;
-        TestQuery2::maybe_traced_query(config, connection, None).await?;
+        TestQuery2::maybe_traced_query(config, None, connection, None).await?;
         TestQuery3::maybe_traced_query(connection, None, &[(&12,)]).await?;
         TestQuery4::maybe_traced_query(connection, None, &"hello").await?;
         Ok(())

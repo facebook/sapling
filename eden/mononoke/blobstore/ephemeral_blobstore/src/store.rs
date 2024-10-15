@@ -517,6 +517,7 @@ impl RepoEphemeralStoreInner {
             .increment_counter(PerfCounterType::SqlReadsReplica);
         let mut bubble_rows = SelectBubbleById::maybe_traced_query(
             self.sql_config.as_ref(),
+            None,
             &self.connections.read_connection,
             ctx.client_request_info(),
             &bubble_id,
@@ -549,6 +550,7 @@ impl RepoEphemeralStoreInner {
                 .increment_counter(PerfCounterType::SqlReadsMaster);
             bubble_rows = SelectBubbleById::maybe_traced_query(
                 self.sql_config.as_ref(),
+                None,
                 &self.connections.read_master_connection,
                 ctx.client_request_info(),
                 &bubble_id,
@@ -562,6 +564,7 @@ impl RepoEphemeralStoreInner {
                     .increment_counter(PerfCounterType::SqlReadsMaster);
                 bubble_rows = SelectBubbleById::maybe_traced_query(
                     self.sql_config.as_ref(),
+                    None,
                     &self.connections.read_master_connection,
                     ctx.client_request_info(),
                     &bubble_id,
