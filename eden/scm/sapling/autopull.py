@@ -14,7 +14,6 @@ from . import bookmarks, error, pycompat, registrar, util
 from .i18n import _
 from .node import hex
 
-
 _commithashre = re.compile(r"\A[0-9a-f]{6,40}\Z")
 _table = {}  # {name: (repo, name) -> Optional[pullattempt]}
 

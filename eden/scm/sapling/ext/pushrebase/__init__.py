@@ -88,7 +88,6 @@ from ..remotefilelog import (
 from . import common, stackpush
 from .errors import ConflictsError, StackPushUnsupportedError
 
-
 testedwith = "ships-with-fb-ext"
 
 cmdtable = {}

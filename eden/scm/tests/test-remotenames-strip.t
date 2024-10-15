@@ -7,6 +7,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+  $ setconfig remotenames.selectivepull=true
+
   $ enable remotenames
 
 # Test that hg debugstrip -B stops at remotenames

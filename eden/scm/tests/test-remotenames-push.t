@@ -10,6 +10,9 @@
   >    hg ci -m "add $1"
   > }
 
+  $ setconfig remotenames.selectivepull=true
+  $ setconfig remotenames.selectivepulldefault=rbook
+
 Set up extension and repos to clone over wire protocol
 
   $ configure dummyssh
@@ -18,10 +21,7 @@ Set up extension and repos to clone over wire protocol
   $ setconfig phases.publish=false
 
   $ hg init repo1
-  $ hg clone  ssh://user@dummy/repo1 repo2
-  no changes found
-  updating to tip
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg clone -q ssh://user@dummy/repo1 repo2
   $ cd repo2
 
 Test that anonymous heads are disallowed by default
@@ -105,7 +105,7 @@ remote or local repo
   exporting bookmark foo
   [1]
   $ hg log -G -T '{node|short} {bookmarks} {remotebookmarks}\n'
-  @  2d95304fed5d foo remote/foo
+  @  2d95304fed5d foo
   │
   o  1846eede8b68
   │
@@ -116,7 +116,8 @@ remote or local repo
   @  1846eede8b68
   │
   o  cb9a9f314b8b
-  
+
+  $ hg pull -q
   $ hg push
   pushing to ssh://user@dummy/repo1
   searching for changes
@@ -179,6 +180,4 @@ Expect update for the bookmark after the push.
   $ hg book --all
   no bookmarks set
      remote/rbook              7c3bad9141dc
-  $ hg goto rbook
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

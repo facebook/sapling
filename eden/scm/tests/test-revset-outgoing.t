@@ -2,7 +2,6 @@
 
 #require no-eden
 
-
   $ readconfig <<EOF
   > [alias]
   > tlog = log --template "{node|short}: '{desc}'\n"

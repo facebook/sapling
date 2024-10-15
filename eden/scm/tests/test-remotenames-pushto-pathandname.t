@@ -2,6 +2,7 @@
 
 #require no-eden
 
+  $ setconfig remotenames.selectivepull=true
 
   $ enable remotenames
   $ setconfig remotenames.rename.default=remote remotenames.disallowedto="^remote/"

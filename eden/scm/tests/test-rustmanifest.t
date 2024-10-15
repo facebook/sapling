@@ -11,6 +11,8 @@
 # This test was written when we migrated from using C++ Manifests to Rust
 # Manifests and wanted to verify the values of the hashes.
 
+  $ setconfig remotenames.selectivepull=true
+
   >>> import os, shlex, pprint
   >>> def listcommitandmanifesthashes(rev):
   ...     # returns dictionary from descrition to commit node and manifest node
@@ -182,8 +184,10 @@
   > |/
   > G   # G/y/d=g
   > |
-  > desc(E)
+  > min(desc(E)) # there's an obsolete, newer "E"
   > EOS
+
+
   $ hg push --to=master -r $J
   pushing rev * to destination ssh://user@dummy/serverpushrebasemerge bookmark master (glob)
   searching for changes
