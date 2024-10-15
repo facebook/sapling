@@ -14,6 +14,7 @@ rust_binary(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-stream",
+        "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:clap",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:slog",
@@ -29,6 +30,7 @@ rust_binary(
         "//eden/mononoke/cmdlib:cmdlib_logging",
         "//eden/mononoke/cmdlib:environment",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
+        "//eden/mononoke/cmdlib/sharding:executor_lib",
         "//eden/mononoke/megarepo_api:megarepo_api",
         "//eden/mononoke/megarepo_api:megarepo_error",
         "//eden/mononoke/metaconfig:metaconfig_types",

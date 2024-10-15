@@ -21,6 +21,7 @@ use context::SessionContainer;
 use environment::BookmarkCacheDerivedData;
 use environment::BookmarkCacheKind;
 use environment::BookmarkCacheOptions;
+use executor_lib::RepoShardedProcessExecutor;
 use fbinit::FacebookInit;
 use hostname::get_hostname;
 use megarepo_api::MegarepoApi;
@@ -106,23 +107,20 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let worker = runtime.block_on(worker::AsyncMethodRequestWorker::new(
         fb,
         &app,
+        Arc::new(ctx),
         filter_repos,
         mononoke,
         megarepo,
         name,
+        will_exit.clone(),
+        request_limit,
+        jobs_limit,
     ))?;
 
     app.start_monitoring(SERVICE_NAME, AliveService)?;
     app.start_stats_aggregation()?;
 
-    let run_worker = {
-        let will_exit = will_exit.clone();
-        move |_app| async move {
-            Ok(worker
-                .run(&ctx, will_exit, request_limit, jobs_limit)
-                .await?)
-        }
-    };
+    let run_worker = { move |_app| async move { worker.execute().await } };
 
     app.run_until_terminated(
         run_worker,

@@ -20,15 +20,18 @@ use std::time::Duration;
 
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::Result;
 use async_requests::types::AsynchronousRequestParams;
 use async_requests::AsyncMethodRequestQueue;
 use async_requests::AsyncRequestsError;
 use async_requests::ClaimedBy;
 use async_requests::RequestId;
 use async_stream::try_stream;
+use async_trait::async_trait;
 use client::AsyncRequestsQueue;
 use cloned::cloned;
 use context::CoreContext;
+use executor_lib::RepoShardedProcessExecutor;
 use fbinit::FacebookInit;
 use futures::future::abortable;
 use futures::future::select;
@@ -76,81 +79,99 @@ define_stats! {
 }
 
 #[derive(Clone)]
-pub struct AsyncMethodRequestWorker<R> {
+pub struct AsyncMethodRequestWorker {
+    ctx: Arc<CoreContext>,
     mononoke: Arc<Mononoke<Repo>>,
-    megarepo: Arc<MegarepoApi<R>>,
+    megarepo: Arc<MegarepoApi<Repo>>,
     name: String,
     queues_client: AsyncRequestsQueue,
+    will_exit: Arc<AtomicBool>,
+    limit: Option<usize>,
+    concurrency_limit: usize,
 }
 
-impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
+impl AsyncMethodRequestWorker {
     /// Creates a new tailer instance that's going to use provided megarepo API
     /// The name argument should uniquely identify tailer instance and will be put
     /// in the queue table so it's possible to find out which instance is working on
     /// a given task (for debugging purposes).
-    pub async fn new(
+    pub(crate) async fn new(
         fb: FacebookInit,
         app: &MononokeApp,
+        ctx: Arc<CoreContext>,
         repos: Option<Vec<RepositoryId>>,
         mononoke: Arc<Mononoke<Repo>>,
-        megarepo: Arc<MegarepoApi<R>>,
+        megarepo: Arc<MegarepoApi<Repo>>,
         name: String,
+        will_exit: Arc<AtomicBool>,
+        limit: Option<usize>,
+        concurrency_limit: usize,
     ) -> Result<Self, Error> {
         let queues_client = AsyncRequestsQueue::new(fb, app, repos)
             .await
             .context("acquiring the async requests queue")?;
         Ok(Self {
+            ctx,
             mononoke,
             megarepo,
             name,
             queues_client,
+            will_exit,
+            limit,
+            concurrency_limit,
         })
     }
+}
 
+#[async_trait]
+impl RepoShardedProcessExecutor for AsyncMethodRequestWorker {
     /// Start async request worker.
     /// If limit is set the worker will process a preset number of requests and
     /// return. If the limit is None the worker will be running continuously. The
     /// will_exit atomic bool is a flag to prevent the worker from grabbing new
     /// items from the queue and gracefully terminate.
-    pub async fn run(
-        &self,
-        ctx: &CoreContext,
-        will_exit: Arc<AtomicBool>,
-        limit: Option<usize>,
-        concurrency_limit: usize,
-    ) -> Result<(), AsyncRequestsError> {
-        let queue = self.queues_client.async_method_request_queue(ctx).await?;
+    async fn execute(&self) -> Result<()> {
+        let queue = self
+            .queues_client
+            .async_method_request_queue(&self.ctx)
+            .await?;
 
         // Start the stats logger loop
         let (stats, stats_abort_handle) = abortable({
-            cloned!(ctx, queue);
+            cloned!(self.ctx, queue);
             async move { Self::stats_loop(&ctx, &queue).await }
         });
         let _stats = tokio::spawn(stats);
 
         // Build stream that pools all the queues
-        let request_stream = self.request_stream(ctx.clone(), queue, will_exit).boxed();
+        let request_stream = self
+            .request_stream(&self.ctx, queue, self.will_exit.clone())
+            .boxed();
 
-        let request_stream = if let Some(limit) = limit {
+        let request_stream = if let Some(limit) = self.limit {
             request_stream.take(limit).left_stream()
         } else {
             request_stream.right_stream()
         };
 
         info!(
-            ctx.logger(),
+            self.ctx.logger(),
             "Worker initialization complete, starting request processing loop.",
         );
 
         request_stream
-            .try_for_each_concurrent(Some(concurrency_limit), |(req_id, params)| async move {
-                let worker = self.clone();
-                let ctx = ctx.clone();
-                let _updated = tokio::spawn(worker.compute_and_mark_completed(ctx, req_id, params))
-                    .await
-                    .map_err(AsyncRequestsError::internal)??;
-                Ok(())
-            })
+            .try_for_each_concurrent(
+                Some(self.concurrency_limit),
+                |(req_id, params)| async move {
+                    let worker = self.clone();
+                    let ctx = CoreContext::clone(&self.ctx);
+                    let _updated =
+                        tokio::spawn(worker.compute_and_mark_completed(ctx, req_id, params))
+                            .await
+                            .map_err(AsyncRequestsError::internal)??;
+                    Ok(())
+                },
+            )
             .await?;
 
         stats_abort_handle.abort();
@@ -158,9 +179,17 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
         Ok(())
     }
 
+    async fn stop(&self) -> Result<()> {
+        info!(self.ctx.logger(), "Worker stopping");
+
+        Ok(())
+    }
+}
+
+impl AsyncMethodRequestWorker {
     pub fn request_stream(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         queue: AsyncMethodRequestQueue,
         will_exit: Arc<AtomicBool>,
     ) -> impl Stream<Item = Result<(RequestId, AsynchronousRequestParams), AsyncRequestsError>>
@@ -168,7 +197,7 @@ impl<R: MononokeRepo> AsyncMethodRequestWorker<R> {
         let claimed_by = ClaimedBy(self.name.clone());
         let sleep_time = Duration::from_millis(DEQUEUE_STREAM_SLEEP_TIME);
         Self::request_stream_inner(
-            ctx,
+            ctx.clone(),
             claimed_by,
             queue,
             will_exit,
@@ -445,7 +474,6 @@ mod test {
 
     use anyhow::Error;
     use fbinit::FacebookInit;
-    use mononoke_api::Repo;
     use mononoke_macros::mononoke;
     use requests_table::RequestType;
     use source_control as thrift;
@@ -471,8 +499,8 @@ mod test {
         q.enqueue(&ctx, None, params).await?;
 
         let will_exit = Arc::new(AtomicBool::new(false));
-        let s = AsyncMethodRequestWorker::<Repo>::request_stream_inner(
-            ctx,
+        let s = AsyncMethodRequestWorker::request_stream_inner(
+            ctx.clone(),
             ClaimedBy("name".to_string()),
             q,
             will_exit.clone(),
@@ -516,7 +544,7 @@ mod test {
 
         // ... and check that the queue is empty now...
         let will_exit = Arc::new(AtomicBool::new(false));
-        let s = AsyncMethodRequestWorker::<Repo>::request_stream_inner(
+        let s = AsyncMethodRequestWorker::request_stream_inner(
             ctx.clone(),
             ClaimedBy("name".to_string()),
             q.clone(),
@@ -534,8 +562,8 @@ mod test {
         // ... now make it "abandoned", and make sure we reclaim it
         tokio::time::sleep(Duration::from_secs(1)).await;
         let will_exit = Arc::new(AtomicBool::new(false));
-        let s = AsyncMethodRequestWorker::<Repo>::request_stream_inner(
-            ctx,
+        let s = AsyncMethodRequestWorker::request_stream_inner(
+            ctx.clone(),
             ClaimedBy("name".to_string()),
             q,
             will_exit.clone(),

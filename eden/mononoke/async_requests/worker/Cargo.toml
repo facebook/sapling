@@ -10,6 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.86"
 async-stream = "0.3"
+async-trait = "0.1.71"
 async_requests = { version = "0.1.0", path = "../lib" }
 async_requests_types_thrift = { version = "0.1.0", path = "../if" }
 clap = { version = "4.5.20", features = ["derive", "env", "string", "unicode", "wrap_help"] }
@@ -19,6 +20,7 @@ cmdlib_logging = { version = "0.1.0", path = "../../cmdlib/log" }
 context = { version = "0.1.0", path = "../../server/context" }
 environment = { version = "0.1.0", path = "../../cmdlib/environment" }
 ephemeral_blobstore = { version = "0.1.0", path = "../../blobstore/ephemeral_blobstore" }
+executor_lib = { version = "0.1.0", path = "../../cmdlib/sharding" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
