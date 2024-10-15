@@ -1,7 +1,4 @@
-#modern-config-incompatible
-
 #require no-eden
-
 
   $ hg init a
   $ hg clone a b

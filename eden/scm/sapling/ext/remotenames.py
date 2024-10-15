@@ -63,7 +63,6 @@ from sapling.ext.commitcloud import util as ccutil
 from sapling.i18n import _
 from sapling.node import bin, hex, short
 
-
 cmdtable = {}
 command = registrar.command(cmdtable)
 
@@ -412,8 +411,8 @@ def expaths(orig, ui, repo, *args, **opts):
     This is very hacky and only exists as an experimentation.
 
     """
-    delete = opts.get("delete")
-    add = opts.get("add")
+    delete = opts.pop("delete", None)
+    add = opts.pop("add", None)
     configrepofile = repo.localvfs.join(ui.identity.configrepofile())
     if delete:
         rcutil.editconfig(ui, configrepofile, "paths", delete, None)
@@ -436,7 +435,7 @@ def expaths(orig, ui, repo, *args, **opts):
         rcutil.editconfig(ui, configrepofile, "paths", add, path)
         return
 
-    return orig(ui, repo, *args)
+    return orig(ui, repo, *args, **opts)
 
 
 def exnowarnheads(orig, pushop):
