@@ -39,15 +39,12 @@ use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncers;
-use cross_repo_sync::verify_bookmarks;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::Large;
 use cross_repo_sync::Small;
 use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::Syncers;
-use cross_repo_sync::UpdateLargeRepoBookmarksMode;
-use cross_repo_sync::VerifyBookmarksRunMode;
 use cross_repo_sync::CHANGE_XREPO_MAPPING_EXTRA;
 use fbinit::FacebookInit;
 use filenodes::Filenodes;
@@ -103,10 +100,6 @@ const ONCALL_ARG: &str = "oncall";
 const DUMP_MAPPING_LARGE_REPO_PATH_ARG: &str = "dump-mapping-large-repo-path";
 const PREPARE_ROLLOUT_SUBCOMMAND: &str = "prepare-rollout";
 const PUSHREDIRECTION_SUBCOMMAND: &str = "pushredirection";
-const VERIFY_BOOKMARKS_SUBCOMMAND: &str = "verify-bookmarks";
-const UPDATE_LARGE_REPO_BOOKMARKS: &str = "update-large-repo-bookmarks";
-const LIMIT_ARG: &str = "limit";
-const NO_BOOKMARK_UPDATES: &str = "no-bookmark-updates";
 const LARGE_REPO_BOOKMARK_ARG: &str = "large-repo-bookmark";
 const CHANGE_MAPPING_VERSION_SUBCOMMAND: &str = "change-mapping-version";
 const VIA_EXTRAS_ARG: &str = "via-extra";
@@ -192,41 +185,6 @@ pub async fn subcommand_crossrepo<'a>(
         ClientInfo::default_with_entry_point(ClientEntryPoint::MononokeAdmin),
     );
     match sub_m.subcommand() {
-        (VERIFY_BOOKMARKS_SUBCOMMAND, Some(sub_sub_m)) => {
-            let (source_repo, target_repo, _mapping) =
-                get_source_target_repos_and_mapping::<Repo>(fb, logger, matches).await?;
-
-            let mode = if sub_sub_m.is_present(UPDATE_LARGE_REPO_BOOKMARKS) {
-                VerifyBookmarksRunMode::UpdateLargeRepoBookmarks {
-                    mode: if sub_sub_m.is_present(NO_BOOKMARK_UPDATES) {
-                        UpdateLargeRepoBookmarksMode::DryRun
-                    } else {
-                        UpdateLargeRepoBookmarksMode::Real
-                    },
-                    limit: sub_sub_m
-                        .value_of(LIMIT_ARG)
-                        .map(str::parse::<usize>)
-                        .transpose()
-                        .map_err(anyhow::Error::msg)?,
-                }
-            } else {
-                VerifyBookmarksRunMode::JustVerify
-            };
-
-            let live_commit_sync_config =
-                get_live_commit_sync_config(&ctx, fb, matches, source_repo.repo_identity().id())
-                    .await?;
-            let syncers = get_syncers(
-                &ctx,
-                source_repo,
-                target_repo,
-                Arc::new(live_commit_sync_config),
-            )
-            .await?;
-            verify_bookmarks(&ctx, syncers, mode)
-                .await
-                .map_err(|e| e.into())
-        }
         (SUBCOMMAND_CONFIG, Some(sub_sub_m)) => {
             let config_store = matches.config_store();
             let repo_id = args::not_shardmanager_compatible::get_repo_id(config_store, matches)?;
@@ -852,30 +810,6 @@ async fn subcommand_by_version<'a, L: LiveCommitSyncConfig>(
 }
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
-    let verify_bookmarks_subcommand = SubCommand::with_name(VERIFY_BOOKMARKS_SUBCOMMAND).about(
-        "verify that bookmarks are the same in small and large repo (subject to bookmark renames)",
-    ).arg(
-        Arg::with_name(UPDATE_LARGE_REPO_BOOKMARKS)
-            .long(UPDATE_LARGE_REPO_BOOKMARKS)
-            .required(false)
-            .takes_value(false)
-            .help("update any inconsistencies between bookmarks (except for the common bookmarks between large and small repo e.g. 'master')"),
-    ).arg(
-        Arg::with_name(LIMIT_ARG)
-            .long(LIMIT_ARG)
-            .required(false)
-            .requires(UPDATE_LARGE_REPO_BOOKMARKS)
-            .takes_value(true)
-            .help("update up to N bookmarks in large repo. Default value is unlimited"),
-    ).arg(
-        Arg::with_name(NO_BOOKMARK_UPDATES)
-            .long(NO_BOOKMARK_UPDATES)
-            .required(false)
-            .requires(UPDATE_LARGE_REPO_BOOKMARKS)
-            .takes_value(false)
-            .help("don't do actual bookmark updates, only print what would be done (deriving data is real!)"),
-    );
-
     let commit_sync_config_subcommand = {
         let by_version_subcommand = SubCommand::with_name(SUBCOMMAND_BY_VERSION)
             .about("print info about a particular version of CommitSyncConfig")
@@ -968,7 +902,6 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
         .subcommand(change_mapping_version);
 
     SubCommand::with_name(CROSSREPO)
-        .subcommand(verify_bookmarks_subcommand)
         .subcommand(commit_sync_config_subcommand)
         .subcommand(pushredirection_subcommand)
 }
