@@ -73,6 +73,8 @@ pub use types::SubmoduleDeps;
 pub use types::Target;
 pub use validation::find_bookmark_diff;
 pub use validation::report_different;
+pub use validation::update_large_repo_bookmarks;
 pub use validation::verify_working_copy;
 pub use validation::verify_working_copy_with_version;
 pub use validation::BookmarkDiff;
+pub use validation::UpdateLargeRepoBookmarksMode;

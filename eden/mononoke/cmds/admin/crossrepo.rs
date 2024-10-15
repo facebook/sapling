@@ -10,7 +10,6 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::format_err;
-use anyhow::Context;
 use anyhow::Error;
 use backsyncer::format_counter as format_backsyncer_counter;
 use blobstore::Loadable;
@@ -26,7 +25,6 @@ use bookmarks::BookmarkUpdateReason;
 use bookmarks::Bookmarks;
 use bookmarks::BookmarksRef;
 use bookmarks::Freshness;
-use bulk_derivation::BulkDerivation;
 use cached_config::ConfigStore;
 use changesets_creation::save_changesets;
 use clap_old::App;
@@ -44,16 +42,17 @@ use commit_graph::CommitGraphWriter;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncers;
 use cross_repo_sync::find_bookmark_diff;
+use cross_repo_sync::update_large_repo_bookmarks;
 use cross_repo_sync::verify_working_copy;
 use cross_repo_sync::BookmarkDiff;
 use cross_repo_sync::CommitSyncContext;
 use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::Large;
-use cross_repo_sync::PluralCommitSyncOutcome;
 use cross_repo_sync::Small;
 use cross_repo_sync::SubmoduleDeps;
 use cross_repo_sync::Syncers;
+use cross_repo_sync::UpdateLargeRepoBookmarksMode;
 use cross_repo_sync::CHANGE_XREPO_MAPPING_EXTRA;
 use fbinit::FacebookInit;
 use filenodes::Filenodes;
@@ -70,7 +69,6 @@ use maplit::hashmap;
 use maplit::hashset;
 use metaconfig_types::CommitSyncConfig;
 use metaconfig_types::CommitSyncConfigVersion;
-use metaconfig_types::CommonCommitSyncConfig;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
 use metaconfig_types::RepoConfig;
 use mononoke_types::BonsaiChangesetMut;
@@ -93,7 +91,6 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_bookmark_attrs::RepoBookmarkAttrs;
 use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::RepoDerivedData;
-use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
 use slog::info;
@@ -198,12 +195,6 @@ pub struct Repo {
 
     #[facet]
     sql_query_config: SqlQueryConfig,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-enum UpdateLargeRepoBookmarksMode {
-    Real,
-    DryRun,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -1144,8 +1135,6 @@ async fn subcommand_verify_bookmarks(
     run_mode: VerifyRunMode,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<(), SubcommandError> {
-    let common_config =
-        live_commit_sync_config.get_common_config(target_repo.repo_identity().id())?;
     let syncers = get_syncers(
         &ctx,
         source_repo.clone(),
@@ -1163,8 +1152,7 @@ async fn subcommand_verify_bookmarks(
 
     match run_mode {
         VerifyRunMode::UpdateLargeRepoBookmarks { mode, limit } => {
-            update_large_repo_bookmarks(ctx.clone(), &diff, &syncers, &common_config, mode, limit)
-                .await?;
+            update_large_repo_bookmarks(&ctx, &diff, &syncers, mode, limit).await?;
             Ok(())
         }
         VerifyRunMode::JustVerify => {
@@ -1215,144 +1203,6 @@ async fn subcommand_verify_bookmarks(
             Err(format_err!("found {} inconsistencies", diff.len()).into())
         }
     }
-}
-
-async fn update_large_repo_bookmarks(
-    ctx: CoreContext,
-    diff: &[BookmarkDiff],
-    syncers: &Syncers<Repo>,
-    common_commit_sync_config: &CommonCommitSyncConfig,
-    update_mode: UpdateLargeRepoBookmarksMode,
-    limit: Option<usize>,
-) -> Result<(), Error> {
-    let large_repo = syncers.small_to_large.get_large_repo();
-    let mut book_txn = large_repo.bookmarks().create_transaction(ctx.clone());
-
-    let bookmark_renamer = syncers.small_to_large.get_bookmark_renamer().await?;
-
-    let diff: Box<dyn Iterator<Item = &BookmarkDiff>> = match limit {
-        Some(limit) => {
-            warn!(
-                ctx.logger(),
-                "found {} inconsistencies, will update at most {} of them...",
-                diff.len(),
-                limit
-            );
-            Box::new(diff.iter().take(limit))
-        }
-        None => {
-            warn!(
-                ctx.logger(),
-                "found {} inconsistencies, trying to update them...",
-                diff.len()
-            );
-            Box::new(diff.iter())
-        }
-    };
-    for d in diff {
-        if common_commit_sync_config
-            .common_pushrebase_bookmarks
-            .contains(d.target_bookmark())
-        {
-            info!(
-                ctx.logger(),
-                "skipping {} because it's a common bookmark",
-                d.target_bookmark()
-            );
-            continue;
-        }
-
-        use BookmarkDiff::*;
-        match d {
-            InconsistentValue {
-                target_bookmark,
-                target_cs_id,
-                ..
-            } => {
-                let outcomes = syncers
-                    .small_to_large
-                    .get_plural_commit_sync_outcome(&ctx, *target_cs_id)
-                    .await?
-                    .with_context(|| {
-                        format!("Missing outcome for {} from small repo", target_cs_id)
-                    })?;
-
-                use PluralCommitSyncOutcome::*;
-                let new_value = match outcomes {
-                    NotSyncCandidate(..) => {
-                        warn!(
-                            ctx.logger(),
-                            "{} from small repo doesn't remap to large repo", target_cs_id,
-                        );
-                        None
-                    }
-                    EquivalentWorkingCopyAncestor(large_cs_id, _) => Some(large_cs_id),
-                    RewrittenAs(rewritten_commits) if rewritten_commits.len() == 1 => {
-                        Some(rewritten_commits.into_iter().next().unwrap().0)
-                    }
-                    RewrittenAs(rewritten_commits) => {
-                        return Err(format_err!(
-                            "multiple remappings of {} in {}: {:?}",
-                            *target_cs_id,
-                            large_repo.repo_identity().name(),
-                            rewritten_commits,
-                        ));
-                    }
-                };
-
-                if let Some(large_cs_id) = new_value {
-                    let derived_data_types = large_repo
-                        .repo_derived_data()
-                        .active_config()
-                        .types
-                        .iter()
-                        .copied()
-                        .collect::<Vec<_>>();
-                    large_repo
-                        .repo_derived_data()
-                        .manager()
-                        .derive_bulk(&ctx, &[large_cs_id], None, &derived_data_types, None)
-                        .await?;
-                    let reason = BookmarkUpdateReason::XRepoSync;
-                    let large_bookmark = bookmark_renamer(target_bookmark).ok_or_else(|| {
-                        format_err!("small bookmark {} remaps to nothing", target_bookmark)
-                    })?;
-
-                    info!(ctx.logger(), "setting {} {}", large_bookmark, large_cs_id);
-                    if update_mode == UpdateLargeRepoBookmarksMode::Real {
-                        book_txn.force_set(&large_bookmark, large_cs_id, reason)?;
-                    }
-                }
-            }
-            MissingInTarget {
-                target_bookmark, ..
-            } => {
-                warn!(
-                    ctx.logger(),
-                    "large repo bookmark (renames to {}) not found in small repo", target_bookmark,
-                );
-                let large_bookmark = bookmark_renamer(target_bookmark).ok_or_else(|| {
-                    format_err!("small bookmark {} remaps to nothing", target_bookmark)
-                })?;
-                let reason = BookmarkUpdateReason::XRepoSync;
-                info!(ctx.logger(), "deleting {}", large_bookmark);
-                if update_mode == UpdateLargeRepoBookmarksMode::Real {
-                    book_txn.force_delete(&large_bookmark, reason)?;
-                }
-            }
-            NoSyncOutcome { target_bookmark } => {
-                warn!(
-                    ctx.logger(),
-                    "Not updating {} because it points to a commit that has no \
-                     equivalent in source repo.",
-                    target_bookmark,
-                );
-            }
-        }
-    }
-
-    book_txn.commit().await?;
-    Ok(())
 }
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
@@ -1643,238 +1493,4 @@ async fn get_live_commit_sync_config<'a>(
         .await?;
     let push_redirection_config = builder.build(Arc::new(SqlQueryConfig { caching: None }));
     CfgrLiveCommitSyncConfig::new(config_store, Arc::new(push_redirection_config))
-}
-
-#[cfg(test)]
-mod test {
-    use std::collections::HashMap;
-    use std::collections::HashSet;
-    use std::sync::Arc;
-
-    use ascii::AsciiString;
-    use bookmarks::BookmarkKey;
-    use commit_graph::CommitGraphRef;
-    use cross_repo_sync::find_bookmark_diff;
-    use fixtures::set_bookmark;
-    use fixtures::Linear;
-    use fixtures::TestRepoFixture;
-    use live_commit_sync_config::TestLiveCommitSyncConfig;
-    use maplit::hashmap;
-    use maplit::hashset;
-    use metaconfig_types::CommitSyncConfig;
-    use metaconfig_types::CommitSyncConfigVersion;
-    use metaconfig_types::CommonCommitSyncConfig;
-    use metaconfig_types::SmallRepoCommitSyncConfig;
-    use metaconfig_types::SmallRepoPermanentConfig;
-    use mononoke_macros::mononoke;
-    use mononoke_types::RepositoryId;
-    use rendezvous::RendezVousOptions;
-    use sql_construct::SqlConstruct;
-    use synced_commit_mapping::SqlSyncedCommitMappingBuilder;
-    use synced_commit_mapping::SyncedCommitMappingEntry;
-    use synced_commit_mapping::SyncedCommitSourceRepo;
-    use test_repo_factory::TestRepoFactory;
-
-    use super::*;
-
-    #[mononoke::fbinit_test]
-    async fn test_bookmark_diff(fb: FacebookInit) -> Result<(), Error> {
-        let ctx = CoreContext::test_mock(fb);
-        let syncers = init_syncers(fb).await?;
-
-        let small_repo = syncers.small_to_large.get_small_repo();
-        let large_repo = syncers.small_to_large.get_large_repo();
-
-        let master = BookmarkKey::new("master")?;
-        let maybe_master_val = small_repo.bookmarks().get(ctx.clone(), &master).await?;
-        let master_val = maybe_master_val.ok_or_else(|| Error::msg("master not found"))?;
-
-        // Everything is identical - no diff at all
-        {
-            let diff = find_bookmark_diff(ctx.clone(), &syncers.large_to_small).await?;
-
-            assert!(diff.is_empty());
-        }
-
-        // Move bookmark to another changeset
-        let another_hash = "607314ef579bd2407752361ba1b0c1729d08b281";
-        set_bookmark(fb, &small_repo, another_hash, master.clone()).await;
-        let another_bcs_id =
-            helpers::csid_resolve(&ctx, small_repo, another_hash.to_string()).await?;
-
-        let actual_diff = find_bookmark_diff(ctx.clone(), &syncers.large_to_small).await?;
-
-        let mut expected_diff = hashset! {
-            BookmarkDiff::InconsistentValue {
-                target_bookmark: master.clone(),
-                target_cs_id: another_bcs_id,
-                source_cs_id: Some(master_val),
-            }
-        };
-        assert!(!actual_diff.is_empty());
-        assert_eq!(
-            actual_diff.into_iter().collect::<HashSet<_>>(),
-            expected_diff,
-        );
-
-        // Create another bookmark
-        let another_book = BookmarkKey::new("newbook")?;
-        set_bookmark(fb, &small_repo, another_hash, another_book.clone()).await;
-
-        let actual_diff = find_bookmark_diff(ctx.clone(), &syncers.large_to_small).await?;
-
-        expected_diff.insert(BookmarkDiff::InconsistentValue {
-            target_bookmark: another_book,
-            target_cs_id: another_bcs_id,
-            source_cs_id: None,
-        });
-        assert_eq!(
-            actual_diff.clone().into_iter().collect::<HashSet<_>>(),
-            expected_diff
-        );
-
-        // Update the bookmarks
-        {
-            let mut common_config = CommonCommitSyncConfig {
-                common_pushrebase_bookmarks: vec![master.clone()],
-                small_repos: hashmap! {
-                    small_repo.repo_identity().id() => SmallRepoPermanentConfig {
-                        bookmark_prefix: Default::default(),
-                        common_pushrebase_bookmarks_map: Default::default(),
-                    },
-                },
-                large_repo_id: large_repo.repo_identity().id(),
-            };
-
-            update_large_repo_bookmarks(
-                ctx.clone(),
-                &actual_diff,
-                &syncers,
-                &common_config,
-                UpdateLargeRepoBookmarksMode::Real,
-                None,
-            )
-            .await?;
-
-            let actual_diff = find_bookmark_diff(ctx.clone(), &syncers.large_to_small).await?;
-
-            // Master bookmark hasn't been updated because it's a common pushrebase bookmark
-            let expected_diff = hashset! {
-                BookmarkDiff::InconsistentValue {
-                    target_bookmark: master.clone(),
-                    target_cs_id: another_bcs_id,
-                    source_cs_id: Some(master_val),
-                }
-            };
-            assert_eq!(
-                actual_diff.clone().into_iter().collect::<HashSet<_>>(),
-                expected_diff,
-            );
-
-            // Now remove master bookmark from common_pushrebase_bookmarks and update large repo
-            // bookmarks again
-            common_config.common_pushrebase_bookmarks = vec![];
-
-            update_large_repo_bookmarks(
-                ctx.clone(),
-                &actual_diff,
-                &syncers,
-                &common_config,
-                UpdateLargeRepoBookmarksMode::Real,
-                None,
-            )
-            .await?;
-            let actual_diff = find_bookmark_diff(ctx.clone(), &syncers.large_to_small).await?;
-            assert!(actual_diff.is_empty());
-        }
-        Ok(())
-    }
-
-    async fn init_syncers(fb: FacebookInit) -> Result<Syncers<Repo>, Error> {
-        let ctx = CoreContext::test_mock(fb);
-
-        let mut factory = TestRepoFactory::new(fb)?;
-
-        let (lv_cfg, lv_cfg_src) = TestLiveCommitSyncConfig::new_with_source();
-        let live_commit_sync_config = Arc::new(lv_cfg);
-
-        let mapping =
-            SqlSyncedCommitMappingBuilder::from_sql_connections(factory.metadata_db().clone())
-                .build(RendezVousOptions::for_test());
-
-        let small_repo: Repo = factory
-            .with_live_commit_sync_config(live_commit_sync_config.clone())
-            .with_id(RepositoryId::new(0))
-            .build()
-            .await?;
-        Linear::init_repo(fb, &small_repo).await?;
-        let large_repo: Repo = factory
-            .with_live_commit_sync_config(live_commit_sync_config.clone())
-            .with_id(RepositoryId::new(1))
-            .build()
-            .await?;
-        Linear::init_repo(fb, &large_repo).await?;
-
-        let master = BookmarkKey::new("master")?;
-        let maybe_master_val = small_repo.bookmarks().get(ctx.clone(), &master).await?;
-
-        let master_val = maybe_master_val.ok_or_else(|| Error::msg("master not found"))?;
-        let changesets = small_repo
-            .commit_graph()
-            .ancestors_difference(&ctx, vec![master_val], vec![])
-            .await?;
-
-        let current_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
-
-        for cs_id in changesets {
-            mapping
-                .add(
-                    &ctx,
-                    SyncedCommitMappingEntry {
-                        large_repo_id: large_repo.repo_identity().id(),
-                        small_repo_id: small_repo.repo_identity().id(),
-                        small_bcs_id: cs_id,
-                        large_bcs_id: cs_id,
-                        version_name: Some(current_version.clone()),
-                        source_repo: Some(SyncedCommitSourceRepo::Large),
-                    },
-                )
-                .await?;
-        }
-
-        let common_config = CommonCommitSyncConfig {
-            common_pushrebase_bookmarks: vec![BookmarkKey::new("master")?],
-            small_repos: hashmap! {
-                small_repo.repo_identity().id() => SmallRepoPermanentConfig {
-                    bookmark_prefix: AsciiString::new(),
-                    common_pushrebase_bookmarks_map: Default::default(),
-                }
-            },
-            large_repo_id: large_repo.repo_identity().id(),
-        };
-
-        let current_version_config = CommitSyncConfig {
-            large_repo_id: large_repo.repo_identity().id(),
-            common_pushrebase_bookmarks: vec![BookmarkKey::new("master")?],
-            small_repos: hashmap! {
-                small_repo.repo_identity().id() => SmallRepoCommitSyncConfig {
-                    default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
-                    map: hashmap! { },
-                    submodule_config: Default::default(),
-                },
-            },
-            version_name: current_version.clone(),
-        };
-
-        lv_cfg_src.add_common_config(common_config);
-        lv_cfg_src.add_config(current_version_config);
-
-        create_commit_syncers(
-            &ctx,
-            small_repo,
-            large_repo,
-            SubmoduleDeps::ForSync(HashMap::new()),
-            live_commit_sync_config,
-        )
-    }
 }

@@ -372,6 +372,10 @@ impl TestLiveCommitSyncConfigSource {
             .push(config);
     }
 
+    pub fn replace_common_configs(&self, configs: Vec<CommonCommitSyncConfig>) {
+        *self.0.common_configs.lock().expect("poisoned lock") = configs;
+    }
+
     async fn push_redirector_enabled_for_draft(
         &self,
         _ctx: &CoreContext,
@@ -470,7 +474,7 @@ impl TestLiveCommitSyncConfigSource {
 /// should be used.
 #[derive(Clone)]
 pub struct TestLiveCommitSyncConfig {
-    source: TestLiveCommitSyncConfigSource,
+    pub source: TestLiveCommitSyncConfigSource,
 }
 
 impl TestLiveCommitSyncConfig {
