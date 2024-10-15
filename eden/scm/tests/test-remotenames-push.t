@@ -14,6 +14,7 @@ Set up extension and repos to clone over wire protocol
 
   $ configure dummyssh
   $ enable remotenames
+  $ setconfig remotenames.hoist=remote remotenames.rename.default=remote
   $ setconfig phases.publish=false
 
   $ hg init repo1
@@ -104,12 +105,11 @@ remote or local repo
   exporting bookmark foo
   [1]
   $ hg log -G -T '{node|short} {bookmarks} {remotebookmarks}\n'
-  @  2d95304fed5d foo default/foo
+  @  2d95304fed5d foo remote/foo
   │
   o  1846eede8b68
   │
   o  cb9a9f314b8b
-  
   $ hg boo -d foo
   $ hg debugstrip . -q
   $ hg log -G -T '{node|short} {bookmarks} {remotebookmarks}\n'
@@ -149,7 +149,7 @@ Set up client repo
   $ cd rnclient
   $ hg book --all
   no bookmarks set
-     default/rbook             1f0dee641bb7
+     remote/rbook              1f0dee641bb7
   $ cd ..
 
 Advance a server bookmark to an unknown commit and create a new server bookmark
@@ -170,7 +170,7 @@ Expect update for the bookmark after the push.
   $ cd rnclient
   $ hg book --all
   no bookmarks set
-     default/rbook             1f0dee641bb7
+     remote/rbook              1f0dee641bb7
   $ hg push
   pushing to $TESTTMP/repo2/rnserver
   searching for changes
@@ -178,7 +178,7 @@ Expect update for the bookmark after the push.
   [1]
   $ hg book --all
   no bookmarks set
-     default/rbook             7c3bad9141dc
+     remote/rbook              7c3bad9141dc
   $ hg goto rbook
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

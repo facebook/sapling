@@ -235,7 +235,7 @@ def pullremotenames(repo, remote, bookmarks):
         saveremotenames(repo, {path: bookmarks})
 
         # repo.ui.paths.get(path) might be empty during clone.
-        if repo.ui.paths.get(path):
+        if repo.ui.paths.getpath(path):
             # Collect selected bookmarks that point to unknown commits. This
             # indicates a race condition.
             selected = set(selectivepullbookmarknames(repo, path))
