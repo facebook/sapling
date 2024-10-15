@@ -16,7 +16,7 @@ Setup configuration
 
 Before the change
 -- push to a small repo
-  $ quiet mononoke_admin_source_target $REPOIDLARGE $REPOIDSMALL crossrepo \
+  $ quiet mononoke_newadmin cross-repo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL \
   > pushredirection prepare-rollout
 
   $ enable_pushredirect 1
@@ -46,7 +46,7 @@ Before the change
   > --author author \
   > --large-repo-bookmark master_bookmark \
   > --version-name new_version &> /dev/null
-  $ mononoke_admin_source_target $REPOIDLARGE $REPOIDSMALL crossrepo \
+  $ mononoke_newadmin cross-repo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL \
   > pushredirection prepare-rollout &> /dev/null
 
   $ enable_pushredirect 1 false true

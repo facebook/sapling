@@ -13,7 +13,6 @@ path = "../cmds/admin/main.rs"
 
 [dependencies]
 anyhow = "1.0.86"
-backsyncer = { version = "0.1.0", path = "../commit_rewriting/backsyncer" }
 blame = { version = "0.1.0", path = "../derived_data/blame" }
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
