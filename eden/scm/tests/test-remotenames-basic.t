@@ -2,6 +2,8 @@
 
 #require no-eden
 
+  $ setconfig remotenames.selectivepull=true
+
   $ enable remotenames
   > mkcommit()
   > {
@@ -17,6 +19,7 @@ Test that remotenames works on a repo without any names file
   $ cd alpha
   $ mkcommit a
   $ mkcommit b
+  $ hg book master
   $ hg log -r 'upstream()'
   $ hg log -r . -T '{remotenames} {remotebookmarks}\n'
    
@@ -35,24 +38,16 @@ Continue testing
 
   $ hg init gamma
   $ cd gamma
+  $ echo remotefilelog >> .hg/requires
   $ cat > .hg/hgrc <<EOF
   > [paths]
   > default = ../alpha
   > alpha = ../alpha
   > beta = ../beta
+  > [remotenames]
+  > selectivepulldefault=babar
   > EOF
-  $ hg pull
-  pulling from $TESTTMP/alpha
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  $ hg pull beta
-  pulling from $TESTTMP/beta
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
+  $ hg pull -q beta
   $ hg co -C default
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ mkcommit e
@@ -100,7 +95,7 @@ make sure we can list remote bookmarks with --all
    }
   ]
   $ hg bookmarks --remote
-     beta/babar                47d2a3944de8
+     remote/master                    4538525df7e2b9f09423636c61ef63a4cb872a2d
 
 Verify missing node doesnt break remotenames
 
@@ -108,16 +103,8 @@ Verify missing node doesnt break remotenames
   > ml["remotenames"] = ml["remotenames"] + b"18f8e0f8ba54270bf158734c781327581cf43634 bookmarks beta/foo\n"
   > ml.commit("add unknown ref to remotenames")
   > EOS
-  $ hg book --remote --config remotenames.resolvenodes=False
-     beta/babar                47d2a3944de8
-
-But does break if the missing node is considered essential:
-
-  $ hg book --remote --config remotenames.selectivepulldefault=foo
-     beta/babar                47d2a3944de8
-  abort: remotename entry beta/foo (18f8e0f8ba54270bf158734c781327581cf43634) cannot be found: 00changelog.i@18f8e0f8ba54: no node!
-  (try 'hg doctor' to attempt to fix it)
-  [255]
+  $ hg book --remote
+     remote/master                    4538525df7e2b9f09423636c61ef63a4cb872a2d
 
 make sure bogus revisions in .hg/store/remotenames do not break hg
   $ echo deadbeefdeadbeefdeadbeefdeadbeefdeadbeef default/default >> \
@@ -234,16 +221,12 @@ Test custom paths dont override default
   $ cd path_overrides
   $ hg path -a default ../alpha
   $ hg path -a custom ../alpha
-  $ hg pull
-  pulling from $TESTTMP/alpha
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
+  $ hg pull -q
   $ hg book --remote
-     remote/bar                4538525df7e2
-     remote/baz                4538525df7e2
-     remote/foo                4538525df7e2
+     remote/bar                       4538525df7e2b9f09423636c61ef63a4cb872a2d
+     remote/baz                       4538525df7e2b9f09423636c61ef63a4cb872a2d
+     remote/foo                       4538525df7e2b9f09423636c61ef63a4cb872a2d
+     remote/master                    4538525df7e2b9f09423636c61ef63a4cb872a2d
 
 
 Test json formatted bookmarks with tracking data
