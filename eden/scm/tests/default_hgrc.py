@@ -87,8 +87,6 @@ disable=true
 [remotenames]
 rename.default=remote
 hoist=remote
-selectivepulldefault=master
-selectivepull=true
 """
     if use_watchman:
         content += """

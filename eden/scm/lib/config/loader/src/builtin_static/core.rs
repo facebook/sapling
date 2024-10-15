@@ -73,6 +73,7 @@ enable-merge-tool-script=true
 
 [remotenames]
 autocleanupthreshold=50
+selectivepull=true
 selectivepulldefault=master
 selectivepulldiscovery=true
 autopullhoistpattern=

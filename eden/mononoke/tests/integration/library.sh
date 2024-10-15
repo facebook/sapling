@@ -636,7 +636,6 @@ smartlog=
 clienttelemetry=
 
 [remotenames]
-selectivepull=True
 selectivepulldefault=master_bookmark
 
 [remotefilelog]

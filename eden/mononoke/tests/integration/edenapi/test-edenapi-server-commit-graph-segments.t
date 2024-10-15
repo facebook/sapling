@@ -8,7 +8,6 @@
 
   $ setup_common_config
   $ configure modern
-  $ setconfig remotenames.selectivepull=True remotenames.selectivepulldefault=master_bookmark
   $ setconfig devel.segmented-changelog-rev-compat=False
 
   $ testtool_drawdag -R repo --derive-all --print-hg-hashes <<'EOF'
