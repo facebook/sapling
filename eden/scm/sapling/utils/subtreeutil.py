@@ -12,6 +12,13 @@ from ..i18n import _
 SUBTREE_BRANCH_KEY = "test_subtree_copy"
 SUBTREE_MERGE_KEY = "test_subtree_merge"
 
+# keys that are used for subtree operations, this list should
+# include the keys for both O(n) copy and O(1) copy
+SUBTREE_OPERATION_KEYS = [
+    SUBTREE_BRANCH_KEY,
+    SUBTREE_MERGE_KEY,
+]
+
 
 def gen_branch_info(from_commit, from_paths, to_paths):
     value = {
@@ -47,6 +54,11 @@ def gen_merge_info(subtree_merges):
     # compact JSON representation
     str_val = json.dumps(value, separators=(",", ":"))
     return {SUBTREE_MERGE_KEY: str_val}
+
+
+def get_subtree_metadata(extra):
+    """Get the subtree metadata from commit's extra."""
+    return {k: v for k, v in extra.items() if k in SUBTREE_OPERATION_KEYS}
 
 
 def get_branch_info(repo, node):
