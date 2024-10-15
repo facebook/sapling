@@ -5,23 +5,41 @@
  * GNU General Public License version 2.
  */
 
+use std::io;
+
 use anyhow::ensure;
 use anyhow::Result;
 use types::Id20;
 
+use crate::ByteCount;
+
 /// Wrap `raw_text` in Hg SHA1 format so the returned bytes have the SHA1 that
 /// matches the Hg object identity.
 pub fn hg_sha1_serialize(raw_text: &[u8], p1: &Id20, p2: &Id20) -> Vec<u8> {
-    let mut result = Vec::with_capacity(raw_text.len() + Id20::len() * 2);
-    if p1 < p2 {
-        result.extend_from_slice(p1.as_ref());
-        result.extend_from_slice(p2.as_ref());
-    } else {
-        result.extend_from_slice(p2.as_ref());
-        result.extend_from_slice(p1.as_ref());
-    }
-    result.extend_from_slice(raw_text);
+    let mut byte_count = ByteCount::default();
+    hg_sha1_serialize_write(raw_text, p1, p2, &mut byte_count).unwrap();
+    let mut result = Vec::with_capacity(byte_count.into());
+    hg_sha1_serialize_write(raw_text, p1, p2, &mut result).unwrap();
     result
+}
+
+/// A more general purposed `hg_sha1_serialize` to avoid copies.
+/// The `write` function can write directly to a file, or update a SHA1 digest.
+pub fn hg_sha1_serialize_write(
+    raw_text: &[u8],
+    p1: &Id20,
+    p2: &Id20,
+    out: &mut dyn io::Write,
+) -> Result<()> {
+    if p1 < p2 {
+        out.write_all(p1.as_ref())?;
+        out.write_all(p2.as_ref())?;
+    } else {
+        out.write_all(p2.as_ref())?;
+        out.write_all(p1.as_ref())?;
+    }
+    out.write_all(raw_text)?;
+    Ok(())
 }
 
 /// The reverse of `hg_sha1_serialize`.

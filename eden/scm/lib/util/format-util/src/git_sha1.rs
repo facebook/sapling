@@ -5,23 +5,40 @@
  * GNU General Public License version 2.
  */
 
+use std::io;
+
 use anyhow::ensure;
 use anyhow::Context as _;
 use anyhow::Result;
+
+use crate::ByteCount;
 
 /// Wrap `raw_text` in Git SHA1 format so the returned bytes have the SHA1 that
 /// matches the Git object identity.
 ///
 /// kind is "commit", "tree", or "blob".
 pub fn git_sha1_serialize(raw_text: &[u8], kind: &str) -> Vec<u8> {
-    let size_str = raw_text.len().to_string();
-    let mut result = Vec::with_capacity(kind.len() + raw_text.len() + size_str.len() + 2);
-    result.extend_from_slice(kind.as_bytes());
-    result.push(b' ');
-    result.extend_from_slice(size_str.as_bytes());
-    result.push(0);
-    result.extend_from_slice(raw_text);
+    let mut byte_count = ByteCount::default();
+    git_sha1_serialize_write(raw_text, kind, &mut byte_count).unwrap();
+    let mut result = Vec::with_capacity(byte_count.into());
+    git_sha1_serialize_write(raw_text, kind, &mut result).unwrap();
     result
+}
+
+/// A more general purposed `git_sha1_serialize` to avoid copies.
+/// The `write` function can write directly to a file, or update a SHA1 digest.
+pub fn git_sha1_serialize_write(
+    raw_text: &[u8],
+    kind: &str,
+    out: &mut dyn io::Write,
+) -> Result<()> {
+    let size = raw_text.len();
+    out.write_all(kind.as_bytes())?;
+    out.write_all(b" ")?;
+    write!(out, "{}", size)?;
+    out.write_all(b"\0")?;
+    out.write_all(raw_text)?;
+    Ok(())
 }
 
 /// The reverse of `git_sha1_serialize`.
