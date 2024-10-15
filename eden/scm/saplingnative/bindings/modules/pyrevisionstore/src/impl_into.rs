@@ -34,13 +34,26 @@ pub(crate) fn register(py: Python) {
     register_into(py, py_to_dyn_treestore);
 
     register_into(py, |py, f: filescmstore| f.to_read_file_contents(py));
+    register_into(py, |py, f: filescmstore| f.to_dyn_key_store(py));
+    register_into(py, |py, f: filescmstore| f.to_dyn_file_store(py));
 }
 
 impl filescmstore {
-    fn to_read_file_contents(&self, py: Python) -> Arc<dyn FileStore> {
+    fn to_arc_store(&self, py: Python) -> Arc<ArcFileStore> {
         let store = self.extract_inner(py);
-        let store = ArcFileStore(store);
-        Arc::new(store)
+        Arc::new(ArcFileStore(store))
+    }
+
+    fn to_read_file_contents(&self, py: Python) -> Arc<dyn FileStore> {
+        self.to_arc_store(py)
+    }
+
+    fn to_dyn_key_store(&self, py: Python) -> Arc<dyn KeyStore> {
+        self.to_arc_store(py)
+    }
+
+    fn to_dyn_file_store(&self, py: Python) -> Arc<dyn FileStore> {
+        self.to_arc_store(py)
     }
 }
 
