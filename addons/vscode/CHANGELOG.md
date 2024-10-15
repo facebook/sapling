@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.60
+
+### Oct 14 2024
+
+- Optimized how files in commits are fetched, reducing timeouts and improving startup time. Complex commit history fetch times are reduced by 90% or more.
+- Improved generated file detection in some cases by looking further in the file contents.
+- Warn when queued commands are cancelled due to a failure of a running command, and show which commands exactly were cancelled.
+- Recover commit messages from cancelled queued commands, and put them back as unsaved edits so they can be retried.
+- Fix some UI elements missing a background
+
 ## 0.1.59
 
 ### Sep 26 2024
