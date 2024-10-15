@@ -53,13 +53,11 @@ use filestore::FilestoreConfigRef;
 use futures::stream;
 use futures::try_join;
 use futures::TryFutureExt;
-use itertools::Itertools;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use maplit::btreemap;
 use maplit::hashmap;
 use maplit::hashset;
-use metaconfig_types::CommitSyncConfig;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
 use metaconfig_types::RepoConfig;
@@ -104,11 +102,7 @@ const LARGE_REPO_BOOKMARK_ARG: &str = "large-repo-bookmark";
 const CHANGE_MAPPING_VERSION_SUBCOMMAND: &str = "change-mapping-version";
 const VIA_EXTRAS_ARG: &str = "via-extra";
 
-const SUBCOMMAND_CONFIG: &str = "config";
-const SUBCOMMAND_BY_VERSION: &str = "by-version";
-const SUBCOMMAND_LIST: &str = "list";
 const ARG_VERSION_NAME: &str = "version-name";
-const ARG_WITH_CONTENTS: &str = "with-contents";
 
 #[facet::container]
 #[derive(Clone)]
@@ -185,13 +179,6 @@ pub async fn subcommand_crossrepo<'a>(
         ClientInfo::default_with_entry_point(ClientEntryPoint::MononokeAdmin),
     );
     match sub_m.subcommand() {
-        (SUBCOMMAND_CONFIG, Some(sub_sub_m)) => {
-            let config_store = matches.config_store();
-            let repo_id = args::not_shardmanager_compatible::get_repo_id(config_store, matches)?;
-            let live_commit_sync_config =
-                get_live_commit_sync_config(&ctx, fb, matches, repo_id).await?;
-            run_config_sub_subcommand(matches, sub_sub_m, repo_id, live_commit_sync_config).await
-        }
         (PUSHREDIRECTION_SUBCOMMAND, Some(sub_sub_m)) => {
             let source_repo_id =
                 args::not_shardmanager_compatible::get_source_repo_id(config_store, matches)?;
@@ -206,29 +193,6 @@ pub async fn subcommand_crossrepo<'a>(
                 live_commit_sync_config,
             )
             .await
-        }
-        _ => Err(SubcommandError::InvalidArgs),
-    }
-}
-
-async fn run_config_sub_subcommand<'a>(
-    _matches: &'a MononokeMatches<'_>,
-    config_subcommand_matches: &'a ArgMatches<'a>,
-    repo_id: RepositoryId,
-    live_commit_sync_config: CfgrLiveCommitSyncConfig,
-) -> Result<(), SubcommandError> {
-    match config_subcommand_matches.subcommand() {
-        (SUBCOMMAND_BY_VERSION, Some(sub_m)) => {
-            let version_name: String = sub_m.value_of(ARG_VERSION_NAME).unwrap().to_string();
-            subcommand_by_version(repo_id, live_commit_sync_config, version_name)
-                .await
-                .map_err(|e| e.into())
-        }
-        (SUBCOMMAND_LIST, Some(sub_m)) => {
-            let with_contents = sub_m.is_present(ARG_WITH_CONTENTS);
-            subcommand_list(repo_id, live_commit_sync_config, with_contents)
-                .await
-                .map_err(|e| e.into())
         }
         _ => Err(SubcommandError::InvalidArgs),
     }
@@ -748,94 +712,7 @@ async fn move_bookmark(
     }
 }
 
-fn print_commit_sync_config(csc: CommitSyncConfig, line_prefix: &str) {
-    println!("{}large repo: {}", line_prefix, csc.large_repo_id);
-    println!(
-        "{}common pushrebase bookmarks: {:?}",
-        line_prefix, csc.common_pushrebase_bookmarks
-    );
-    println!("{}version name: {}", line_prefix, csc.version_name);
-    for (small_repo_id, small_repo_config) in csc
-        .small_repos
-        .into_iter()
-        .sorted_by_key(|(small_repo_id, _)| *small_repo_id)
-    {
-        println!("{}  small repo: {}", line_prefix, small_repo_id);
-        println!(
-            "{}  default action: {:?}",
-            line_prefix, small_repo_config.default_action
-        );
-        println!("{}  prefix map:", line_prefix);
-        for (from, to) in small_repo_config
-            .map
-            .into_iter()
-            .sorted_by_key(|(from, _)| from.clone())
-        {
-            println!("{}    {}->{}", line_prefix, from, to);
-        }
-    }
-}
-
-async fn subcommand_list<'a, L: LiveCommitSyncConfig>(
-    repo_id: RepositoryId,
-    live_commit_sync_config: L,
-    with_contents: bool,
-) -> Result<(), Error> {
-    let all = live_commit_sync_config
-        .get_all_commit_sync_config_versions(repo_id)
-        .await?;
-    for (version_name, csc) in all.into_iter().sorted_by_key(|(vn, _)| vn.clone()) {
-        if with_contents {
-            println!("{}:", version_name);
-            print_commit_sync_config(csc, "  ");
-            println!("\n");
-        } else {
-            println!("{}", version_name);
-        }
-    }
-
-    Ok(())
-}
-
-async fn subcommand_by_version<'a, L: LiveCommitSyncConfig>(
-    repo_id: RepositoryId,
-    live_commit_sync_config: L,
-    version_name: String,
-) -> Result<(), Error> {
-    let csc = live_commit_sync_config
-        .get_commit_sync_config_by_version(repo_id, &CommitSyncConfigVersion(version_name))
-        .await?;
-    print_commit_sync_config(csc, "");
-    Ok(())
-}
-
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
-    let commit_sync_config_subcommand = {
-        let by_version_subcommand = SubCommand::with_name(SUBCOMMAND_BY_VERSION)
-            .about("print info about a particular version of CommitSyncConfig")
-            .arg(
-                Arg::with_name(ARG_VERSION_NAME)
-                    .required(true)
-                    .takes_value(true)
-                    .help("commit sync config version name to query"),
-            );
-
-        let list_subcommand = SubCommand::with_name(SUBCOMMAND_LIST)
-            .about("list all available CommitSyncConfig versions for repo")
-            .arg(
-                Arg::with_name(ARG_WITH_CONTENTS)
-                    .long(ARG_WITH_CONTENTS)
-                    .required(false)
-                    .takes_value(false)
-                    .help("Do not just print version names, also include config bodies"),
-            );
-
-        SubCommand::with_name(SUBCOMMAND_CONFIG)
-            .about("query available CommitSyncConfig versions for repo")
-            .subcommand(list_subcommand)
-            .subcommand(by_version_subcommand)
-    };
-
     let prepare_rollout_subcommand = SubCommand::with_name(PREPARE_ROLLOUT_SUBCOMMAND)
         .about("command to prepare rollout of pushredirection");
 
@@ -901,9 +778,7 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
         .subcommand(prepare_rollout_subcommand)
         .subcommand(change_mapping_version);
 
-    SubCommand::with_name(CROSSREPO)
-        .subcommand(commit_sync_config_subcommand)
-        .subcommand(pushredirection_subcommand)
+    SubCommand::with_name(CROSSREPO).subcommand(pushredirection_subcommand)
 }
 
 async fn get_syncers<'a>(
