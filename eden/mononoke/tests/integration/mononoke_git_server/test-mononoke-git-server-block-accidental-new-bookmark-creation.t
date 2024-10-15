@@ -95,6 +95,31 @@
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
    * [new branch]      brand_new_branch -> brand_new_branch
 
+# put @new-branch marker in the middle of the message
+  $ git checkout -b brand_new_branch2
+  Switched to a new branch 'brand_new_branch2'
+  $ echo append >> new_file
+  $ git commit -a --amend -m "$(echo -e "better change\n\nSummary:\n@new-branch: brand_new_branch2\nand rest of the message here")"
+  [brand_new_branch2 8c3df9f] better change
+   Date: Sat Jan 1 00:00:00 2000 +0000
+   1 file changed, 2 insertions(+)
+  $ git show -s --format=%B HEAD
+  better change
+  
+  Summary:
+  @new-branch: brand_new_branch2
+  and rest of the message here
+  
+  $ git_client push origin brand_new_branch2
+  To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
+   ! [remote rejected] brand_new_branch2 -> brand_new_branch2 (hooks failed:
+    block_accidental_new_bookmark_creation for 8c3df9fb1ac00e7b3f93ca1d4e6557cb34e54da9: Add "@new-branch: brand_new_branch2" to the commit message to be able to create this branch.
+  
+  For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
+  error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
+  [1]
+  $ quiet git checkout HEAD^
+
 # now test the bypass based on bookmark matching a regex
   $ git checkout -b prefix_should_land_as_is
   Switched to a new branch 'prefix_should_land_as_is'
@@ -114,7 +139,7 @@
   $ git_client push origin different_new_branch
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
    ! [remote rejected] different_new_branch -> different_new_branch (hooks failed:
-    block_accidental_new_bookmark_creation for 611f756928216528dc12ba5c69fc0ca50ba5e7ef: Add "@new-branch: different_new_branch" to the commit message to be able to create this branch.
+    block_accidental_new_bookmark_creation for 0c4bc7c3ca9c49c81125af10c4ea876929b40e1a: Add "@new-branch: different_new_branch" to the commit message to be able to create this branch.
   
   For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
   error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
