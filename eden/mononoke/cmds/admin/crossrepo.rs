@@ -44,7 +44,6 @@ use cross_repo_sync::create_commit_syncers;
 use cross_repo_sync::verify_bookmarks;
 use cross_repo_sync::verify_working_copy;
 use cross_repo_sync::CommitSyncContext;
-use cross_repo_sync::CommitSyncRepos;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::Large;
 use cross_repo_sync::Small;
@@ -108,12 +107,10 @@ const AUTHOR_ARG: &str = "author";
 const DATE_ARG: &str = "date";
 const ONCALL_ARG: &str = "oncall";
 const DUMP_MAPPING_LARGE_REPO_PATH_ARG: &str = "dump-mapping-large-repo-path";
-const MAP_SUBCOMMAND: &str = "map";
 const PREPARE_ROLLOUT_SUBCOMMAND: &str = "prepare-rollout";
 const PUSHREDIRECTION_SUBCOMMAND: &str = "pushredirection";
 const VERIFY_WC_SUBCOMMAND: &str = "verify-wc";
 const VERIFY_BOOKMARKS_SUBCOMMAND: &str = "verify-bookmarks";
-const HASH_ARG: &str = "HASH";
 const LARGE_REPO_HASH_ARG: &str = "large-repo-hash";
 const UPDATE_LARGE_REPO_BOOKMARKS: &str = "update-large-repo-bookmarks";
 const LIMIT_ARG: &str = "limit";
@@ -209,23 +206,6 @@ pub async fn subcommand_crossrepo<'a>(
         ClientInfo::default_with_entry_point(ClientEntryPoint::MononokeAdmin),
     );
     match sub_m.subcommand() {
-        (MAP_SUBCOMMAND, Some(sub_sub_m)) => {
-            let (source_repo, target_repo, _mapping) =
-                get_source_target_repos_and_mapping::<Repo>(fb, logger, matches).await?;
-
-            let submodule_deps = SubmoduleDeps::NotNeeded;
-
-            let live_commit_sync_config =
-                get_live_commit_sync_config(&ctx, fb, matches, source_repo.repo_identity().id())
-                    .await?;
-            let commit_sync_repos = CommitSyncRepos::new(source_repo, target_repo, submodule_deps)?;
-            let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
-                Arc::new(live_commit_sync_config);
-
-            let commit_syncer = CommitSyncer::new(&ctx, commit_sync_repos, live_commit_sync_config);
-            let hash = sub_sub_m.value_of(HASH_ARG).unwrap().to_owned();
-            subcommand_map(ctx, commit_syncer, hash).await
-        }
         (VERIFY_WC_SUBCOMMAND, Some(sub_sub_m)) => {
             let source_repo_id =
                 args::not_shardmanager_compatible::get_source_repo_id(config_store, matches)?;
@@ -1096,38 +1076,7 @@ async fn subcommand_by_version<'a, L: LiveCommitSyncConfig>(
     Ok(())
 }
 
-async fn subcommand_map(
-    ctx: CoreContext,
-    commit_syncer: CommitSyncer<Repo>,
-    hash: String,
-) -> Result<(), SubcommandError> {
-    let source_repo = commit_syncer.get_source_repo();
-    let source_cs_id = helpers::csid_resolve(&ctx, source_repo, &hash).await?;
-
-    let plural_commit_sync_outcome = commit_syncer
-        .get_plural_commit_sync_outcome(&ctx, source_cs_id)
-        .await?;
-    match plural_commit_sync_outcome {
-        Some(plural_commit_sync_outcome) => {
-            println!("{:?}", plural_commit_sync_outcome);
-        }
-        None => {
-            println!("{} is not remapped", hash);
-        }
-    }
-
-    Ok(())
-}
-
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
-    let map_subcommand = SubCommand::with_name(MAP_SUBCOMMAND)
-        .about("Check cross-repo commit mapping")
-        .arg(
-            Arg::with_name(HASH_ARG)
-                .required(true)
-                .help("bonsai changeset hash to map"),
-        );
-
     let verify_wc_subcommand = SubCommand::with_name(VERIFY_WC_SUBCOMMAND)
         .about("verify working copy")
         .arg(
@@ -1323,7 +1272,6 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
         .subcommand(not_sync_candidate_subcommand);
 
     SubCommand::with_name(CROSSREPO)
-        .subcommand(map_subcommand)
         .subcommand(verify_wc_subcommand)
         .subcommand(verify_bookmarks_subcommand)
         .subcommand(commit_sync_config_subcommand)

@@ -661,8 +661,8 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   >   local hg_hash=$1; shift;
   >   
   >   printf "Check mapping in database with Mononoke admin\n"
-  >   with_stripped_logs mononoke_admin_source_target $LARGE_REPO_ID $SUBMODULE_REPO_ID \
-  >     crossrepo map $hg_hash | rg -v "using repo"
+  >   with_stripped_logs mononoke_newadmin \
+  >     cross-repo --source-repo-id $LARGE_REPO_ID --target-repo-id $SUBMODULE_REPO_ID map -i $hg_hash | rg -v "using repo"
   >   
   >   printf "\n\nCall hg committranslateids\n" 
   >   
@@ -678,7 +678,6 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 -- Commit: Change directly in A
   $ check_mapping_and_run_xrepo_lookup_large_to_small ada44b220ff885a5757bf80bee03e64f0b0e063d
   Check mapping in database with Mononoke admin
-  changeset resolved as: ChangesetId(Blake2(b382cdfd9ad4ee0cc977e2263ff392900cd41b1141ddf046cf93d5ef1136f0e7))
   RewrittenAs([(ChangesetId(Blake2(4aee0499ea629ebcd9d0e4be89267d7a4eab5e72f988c20a392d59081db0c32a)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
   
   
@@ -689,7 +688,6 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 -- Commit: Update submodule B in repo A
   $ check_mapping_and_run_xrepo_lookup_large_to_small d3dae76d4349c88c24d60fe533bd9fbd02ddd5ae
   Check mapping in database with Mononoke admin
-  changeset resolved as: ChangesetId(Blake2(0617acae68a70aff4e62d0afc707785bd7b0318f912d9a83c35f99d6e0c79158))
   RewrittenAs([(ChangesetId(Blake2(b86f7426fc1fe95e22b6bef591e7ba9c8385b86f7b85abd3a377f941d39522af)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
   
   
@@ -701,7 +699,6 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
 -- Commit: Add regular_dir/aardvar
   $ check_mapping_and_run_xrepo_lookup_large_to_small e2c69ce8cc11691984e50e6023f4bbf4271aa4c3
   Check mapping in database with Mononoke admin
-  changeset resolved as: ChangesetId(Blake2(b43576e9e9685513cf91adbe5fb817cbe2837ba9a4dca12a4c64a6aebfe09780))
   RewrittenAs([(ChangesetId(Blake2(856b09638e2550d912282c5a9e8bd47fdf1a899545f9f4a05430a8dc7be1f768)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
   
   

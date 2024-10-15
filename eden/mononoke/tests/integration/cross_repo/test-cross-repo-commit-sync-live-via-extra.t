@@ -90,10 +90,7 @@ Find the hash of mapping change commit in the large repo
 After the change
 -- an empty, mapping changing commit from large repo shouldn't be backsynced when forward sync is on
   $ X=$(x_repo_lookup large-mon small-mon "$(hg whereami)")
-  $ with_stripped_logs mononoke_admin_source_target 0 1 crossrepo map $(hg whereami)
-  using repo "large-mon" repoid RepositoryId(0)
-  using repo "small-mon" repoid RepositoryId(1)
-  changeset resolved as: ChangesetId(Blake2(a45c6ed3a8522811955be9b4eb0b80f29d2229eeeb43f7f017b2411c0feab955))
+  $ with_stripped_logs mononoke_newadmin cross-repo --source-repo-id 0 --target-repo-id 1 map -i $(hg whereami)
   EquivalentWorkingCopyAncestor(ChangesetId(Blake2(cdd50b2d186ce87fe6d2428b01caf9994a98ac51e65f7d6bb43c6a0f6e8d7a56)), CommitSyncConfigVersion("new_version"))
 
   $ cd "$TESTTMP/small-hg-client"
@@ -161,8 +158,5 @@ Rest of this test won't pass as we failed the previous command so is commented o
   smallrepofolder_after/foo
 
 -- Show the actual mapping version used for rewriting of small repo change
-  $ with_stripped_logs mononoke_admin_source_target 0 1 crossrepo map $(hg log -T "{node}" -r .^)
-  using repo "large-mon" repoid RepositoryId(0)
-  using repo "small-mon" repoid RepositoryId(1)
-  changeset resolved as: ChangesetId(Blake2(*)) (glob)
+  $ with_stripped_logs mononoke_newadmin cross-repo --source-repo-id 0 --target-repo-id 1 map -i $(hg log -T "{node}" -r .^)
   RewrittenAs([(ChangesetId(Blake2(e7a0827177ac9caf3578f2c5e4307f3d11a8954ccaa576c3813f166d174f4e64)), CommitSyncConfigVersion("new_version"))])

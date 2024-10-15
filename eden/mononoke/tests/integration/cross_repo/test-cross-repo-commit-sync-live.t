@@ -145,8 +145,5 @@ After the change
   smallrepofolder_after/mapping.json
 
 -- Show the actual mapping version used for the operation
-  $ with_stripped_logs mononoke_admin_source_target 0 1 crossrepo map $(hg whereami)
-  using repo "large-mon" repoid RepositoryId(0)
-  using repo "small-mon" repoid RepositoryId(1)
-  changeset resolved as: ChangesetId(Blake2(*)) (glob)
+  $ with_stripped_logs mononoke_newadmin cross-repo --source-repo-id 0 --target-repo-id 1 map -i $(hg whereami)
   RewrittenAs([(ChangesetId(Blake2(*)), CommitSyncConfigVersion("new_version"))]) (glob)

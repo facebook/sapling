@@ -177,7 +177,7 @@ function clone_and_log_large_repo {
 
   printf "\n\nRunning mononoke_admin to verify mapping\n\n"
   for LARGE_BCS_ID in "${LARGE_BCS_IDS[@]}"; do
-    quiet_grep RewrittenAs -- with_stripped_logs mononoke_admin_source_target "$LARGE_REPO_ID" "$SUBMODULE_REPO_ID" crossrepo map "$LARGE_BCS_ID"
+    quiet_grep RewrittenAs -- with_stripped_logs mononoke_newadmin cross-repo --source-repo-id "$LARGE_REPO_ID" --target-repo-id "$SUBMODULE_REPO_ID" map -i "$LARGE_BCS_ID"
   done
 
   printf "\nDeriving all the enabled derived data types\n"

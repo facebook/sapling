@@ -210,8 +210,7 @@ Now sync with the tool
   * uploading merge commit 39f339283c1910b404b40271e69e72e9de2a962e903ce9d4fe9f4488f5896242 (glob)
   * It is recommended to run 'mononoke_admin crossrepo verify-wc' for 39f339283c1910b404b40271e69e72e9de2a962e903ce9d4fe9f4488f5896242! (glob)
 -- a mapping should've been created for the synced merge commit
-  $ mononoke_admin_source_target 0 1 crossrepo map master_bookmark |& grep -v "using repo"
-  * changeset resolved as: ChangesetId(Blake2(39f339283c1910b404b40271e69e72e9de2a962e903ce9d4fe9f4488f5896242)) (glob)
+  $ mononoke_newadmin cross-repo --source-repo-id 0 --target-repo-id 1 map -B master_bookmark |& grep -v "using repo"
   RewrittenAs([(ChangesetId(Blake2(46c0f70c6300f4168cb70321839ac0079c74b6d3295adb81eeb1932be4f80e9d)), CommitSyncConfigVersion("TEST_VERSION_NAME"))])
   $ flush_mononoke_bookmarks
 
@@ -245,10 +244,7 @@ Merge with preserved ancestors
   $ cd "$TESTTMP"/with_merge_hg
 
 -- check the mapping for p2's parent
-  $ mononoke_admin_source_target 1 0 crossrepo map $(hg log -T "{node}" -r with_merge_pre_big_merge)
-  * using repo "with_merge" repoid RepositoryId(1) (glob)
-  * using repo "meg" repoid RepositoryId(0) (glob)
-  * changeset resolved as: ChangesetId(Blake2(d27a299389c7bedbe3e4dc01b7d4e7ac2162d935401c5d8462b7e1663dfee0e4)) (glob)
+  $ mononoke_newadmin cross-repo --source-repo-id 1 --target-repo-id 0 map -i $(hg log -T "{node}" -r with_merge_pre_big_merge)
   RewrittenAs([(ChangesetId(Blake2(d27a299389c7bedbe3e4dc01b7d4e7ac2162d935401c5d8462b7e1663dfee0e4)), CommitSyncConfigVersion("TEST_VERSION_NAME"))])
 
 -- create a p2, based on a pre-merge commit
@@ -288,10 +284,7 @@ Merge with preserved ancestors
   * changeset 87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d synced as 321d5cb2cf4c5e1bf7cb2e809b3aaf181a0907aa63bc69ee3575a7e6313b92e7 in * (glob)
   * successful sync (glob)
   * X Repo Sync execution finished from small repo with_merge to large repo meg (glob)
-  $ mononoke_admin_source_target 1 0 crossrepo map 87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d
-  * using repo "with_merge" repoid RepositoryId(1) (glob)
-  * using repo "meg" repoid RepositoryId(0) (glob)
-  * changeset resolved as: ChangesetId(Blake2(87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d)) (glob)
+  $ mononoke_newadmin cross-repo --source-repo-id 1 --target-repo-id 0 map -i 87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d
   RewrittenAs([(ChangesetId(Blake2(321d5cb2cf4c5e1bf7cb2e809b3aaf181a0907aa63bc69ee3575a7e6313b92e7)), CommitSyncConfigVersion("TEST_VERSION_NAME"))])
 
 -- sync the merge
@@ -308,17 +301,11 @@ Merge with preserved ancestors
   * It is recommended to run 'mononoke_admin crossrepo verify-wc' for 0958bd58a03b8c799664bc0767b095a97003ee41eaa7814343ad9dcc6f90bc16! (glob)
 
 -- check that p2 was synced as preserved (note identical hashes)
-  $ mononoke_admin_source_target 1 0 crossrepo map $(hg log -r pre_merge_p2 -T "{node}" --cwd "$TESTTMP/with_merge_hg")
-  * using repo "with_merge" repoid RepositoryId(1) (glob)
-  * using repo "meg" repoid RepositoryId(0) (glob)
-  * changeset resolved as: ChangesetId(Blake2(89c0603366c60ae4bf8d8dca6da7581c741b7e89a6fcc3f49a44fdd248de3b1d)) (glob)
+  $ mononoke_newadmin cross-repo --source-repo-id 1 --target-repo-id 0 map -i $(hg log -r pre_merge_p2 -T "{node}" --cwd "$TESTTMP/with_merge_hg")
   RewrittenAs([(ChangesetId(Blake2(89c0603366c60ae4bf8d8dca6da7581c741b7e89a6fcc3f49a44fdd248de3b1d)), CommitSyncConfigVersion("TEST_VERSION_NAME"))])
 
 -- check that merge was synced
-  $ mononoke_admin_source_target 1 0 crossrepo map with_merge_master
-  * using repo "with_merge" repoid RepositoryId(1) (glob)
-  * using repo "meg" repoid RepositoryId(0) (glob)
-  * changeset resolved as: ChangesetId(Blake2(3f71f093fcfbebcc47c981c847cd80c7d0bf063c5022aba53fab95244e4c4f1c)) (glob)
+  $ mononoke_newadmin cross-repo --source-repo-id 1 --target-repo-id 0 map -B with_merge_master
   RewrittenAs([(ChangesetId(Blake2(0958bd58a03b8c799664bc0767b095a97003ee41eaa7814343ad9dcc6f90bc16)), CommitSyncConfigVersion("TEST_VERSION_NAME"))])
 
 --verify the working copy
