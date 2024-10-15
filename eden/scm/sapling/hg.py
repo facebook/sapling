@@ -600,6 +600,7 @@ def clone(
                 if (
                     getattr(destrepo, "nullableedenapi", None)
                     and ui.configbool("remotenames", "selectivepull")
+                    and not stream
                     and destrepo.name
                     and (
                         (

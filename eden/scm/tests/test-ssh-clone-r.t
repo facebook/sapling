@@ -3,6 +3,7 @@
 #require no-eden
 
 #inprocess-hg-incompatible
+  $ setconfig remotenames.selectivepull=true
   $ setconfig devel.segmented-changelog-rev-compat=true
 
   $ configure dummyssh
@@ -86,10 +87,6 @@ clone remote via stream
   $ cd test-8
   $ hg pull ../test-7
   pulling from ../test-7
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
   $ hg verify
   warning: verify does not actually check anything in this repo
   $ cd ..
@@ -97,33 +94,21 @@ clone remote via stream
   $ hg pull -r 4 ssh://user@dummy/remote
   pulling from ssh://user@dummy/remote
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
+  fetching revlog data for 1 commits
   $ hg verify
   warning: verify does not actually check anything in this repo
   $ hg pull ssh://user@dummy/remote
   pulling from ssh://user@dummy/remote
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
   $ cd ..
   $ cd test-2
   $ hg pull -r 5 ssh://user@dummy/remote
   pulling from ssh://user@dummy/remote
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
+  fetching revlog data for 2 commits
   $ hg verify
   warning: verify does not actually check anything in this repo
   $ hg pull ssh://user@dummy/remote
   pulling from ssh://user@dummy/remote
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
   $ hg verify
   warning: verify does not actually check anything in this repo
 
