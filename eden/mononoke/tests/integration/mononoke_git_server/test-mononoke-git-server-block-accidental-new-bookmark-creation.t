@@ -108,16 +108,13 @@
 # now test that a new branch pointing at an existing commit should also fail
   $ git switch -c different_new_branch
   Switched to a new branch 'different_new_branch'
-  $ echo a_file > a_file
+  $ echo a_file >> a_file
   $ git add .
   $ git commit -qam "new commit"
-  On branch different_new_branch
-  nothing to commit, working tree clean
-  [1]
   $ git_client push origin different_new_branch
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
    ! [remote rejected] different_new_branch -> different_new_branch (hooks failed:
-    block_accidental_new_bookmark_creation for 4fe07c27b4b62e3d5168b4f7fd5863265af9d25e: Add "@new-branch: different_new_branch" to the commit message to be able to create this branch.
+    block_accidental_new_bookmark_creation for 611f756928216528dc12ba5c69fc0ca50ba5e7ef: Add "@new-branch: different_new_branch" to the commit message to be able to create this branch.
   
   For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
   error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
