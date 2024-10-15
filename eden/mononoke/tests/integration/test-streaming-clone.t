@@ -86,7 +86,6 @@ Push a few new commits and update streaming clone
   $ cd "$TESTTMP"
   $ hg clone -q mono:repo repo-push --noupdate
   $ cd repo-push
-  $ enableextension remotenames
   $ hg up tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 1 > 1

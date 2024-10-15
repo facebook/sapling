@@ -9,7 +9,7 @@ Eagerepo doesn't support pushrebase yet.
 Setup
 
   $ configure mutation-norecord dummyssh
-  $ enable remotenames pushrebase
+  $ enable pushrebase
   $ setconfig ui.username="nobody <no.reply@fb.com>"
 
   $ commit() {

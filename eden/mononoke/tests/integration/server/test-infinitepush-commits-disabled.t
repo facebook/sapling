@@ -12,7 +12,7 @@ setup configuration
 
 setup common configuration for these tests
 
-  $ enable amend infinitepush commitcloud remotenames
+  $ enable amend infinitepush commitcloud
 
 setup repo
 
@@ -43,8 +43,6 @@ start mononoke
 Do infinitepush (aka commit cloud) push
   $ cd repo-push
   $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > remotenames=
   > [infinitepush]
   > server=False
   > branchpattern=re:scratch/.+
@@ -93,8 +91,6 @@ Bookmark push should have been ignored
 Commit should have been rejected
   $ cd ../repo-pull
   $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > remotenames=
   > [infinitepush]
   > server=False
   > branchpattern=re:scratch/.+

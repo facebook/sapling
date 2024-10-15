@@ -55,7 +55,7 @@ Remove the phase information. See D58415927 for an explanation as to why that is
 clone
   $ hg clone -q mono:repo repo2 --noupdate
   $ cd repo2
-  $ enable pushrebase remotenames
+  $ enable pushrebase
 
 fast-forward the bookmark
   $ hg up -q $B

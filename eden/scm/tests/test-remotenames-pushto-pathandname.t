@@ -3,7 +3,6 @@
 #require no-eden
 
 
-  $ enable remotenames
   $ setconfig remotenames.rename.default=remote remotenames.disallowedto="^remote/"
 
 Init the original "remote" repo

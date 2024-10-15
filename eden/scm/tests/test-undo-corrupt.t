@@ -2,7 +2,7 @@
 #debugruntest-incompatible
 
   $ configure modern
-  $ enable undo remotenames
+  $ enable undo
   $ setconfig hint.ack-hint-ack=1
 
   $ newrepo

@@ -5,7 +5,7 @@
   $ eagerepo
 Test migration between narrow-heads and non-narrow-heads
 
-  $ enable remotenames amend
+  $ enable amend
   $ setconfig experimental.narrow-heads=true visibility.enabled=true mutation.record=true mutation.enabled=true experimental.evolution= remotenames.rename.default=remote
 
   $ newrepo

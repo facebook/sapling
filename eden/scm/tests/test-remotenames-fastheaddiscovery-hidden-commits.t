@@ -3,7 +3,6 @@
 #require no-eden
 
 
-  $ enable remotenames
   $ enable amend
 
 Set up repositories

@@ -8,10 +8,6 @@
 
   $ eagerepo
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ cat >> $HGRCPATH << 'EOF'
-  > [extensions]
-  > remotenames=
-  > EOF
 
 # Setup repo
 

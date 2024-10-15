@@ -12,7 +12,6 @@ Test indexedlogdatapack
   $ setconfig remotefilelog.server=true remotefilelog.serverexpiration=-1
 
   $ cd $TESTTMP
-  $ enable remotenames
   $ setconfig remotefilelog.debug=false remotefilelog.fetchpacks=true
   $ setconfig diff.git=true mutation.record=true mutation.enabled=true visibility.enabled=1
 

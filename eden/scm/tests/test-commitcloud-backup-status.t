@@ -7,7 +7,6 @@
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
   $ setupcommon
-  $ enable remotenames
 
   $ hgfakedate() {
   >   fakedate="$1"

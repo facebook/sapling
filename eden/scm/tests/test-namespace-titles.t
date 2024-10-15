@@ -6,8 +6,6 @@
   > remotenames.hoist=remote \
   > remotenames.rename.default=remote
 
-  $ enable remotenames
-
 Prepare a repo
 
   $ newrepo

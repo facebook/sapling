@@ -7,7 +7,7 @@
 Do some initial setup
   $ CACHEDIR="$TESTTMP/hgcache"
   $ configure dummyssh
-  $ enable pushrebase remotenames
+  $ enable pushrebase
   $ setconfig remotefilelog.reponame=testrepo remotefilelog.cachepath="$CACHEDIR"
   $ setconfig treemanifest.sendtrees=true
   $ setconfig ui.username="nobody <no.reply@fb.com>"

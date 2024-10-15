@@ -632,7 +632,6 @@ segmented-changelog-rev-compat=True
 
 [extensions]
 commitextras=
-remotenames=
 smartlog=
 clienttelemetry=
 

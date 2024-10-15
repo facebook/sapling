@@ -10,7 +10,7 @@
 Common configuration for both the server and client.
 
 
-  $ enable infinitepush remotenames
+  $ enable infinitepush
   $ setconfig infinitepush.branchpattern="re:scratch/.+"
 
 

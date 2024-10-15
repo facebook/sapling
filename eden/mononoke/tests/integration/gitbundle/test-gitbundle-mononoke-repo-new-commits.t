@@ -20,7 +20,7 @@
 
 # Enable infinite push and commit cloud for the test
   $ cd $TESTTMP
-  $ enable amend infinitepush commitcloud remotenames
+  $ enable amend infinitepush commitcloud
 
 # Setup git repository
   $ mkdir -p "$GIT_REPO_ORIGIN"

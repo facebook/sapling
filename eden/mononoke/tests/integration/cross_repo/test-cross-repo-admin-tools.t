@@ -10,7 +10,6 @@
   > [extensions]
   > rebase=
   > pushrebase=
-  > remotenames=
   > EOF
 
 setup configuration

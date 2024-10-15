@@ -3,7 +3,7 @@
 
 
   $ eagerepo
-  $ enable crdump remotenames
+  $ enable crdump
 
   $ showgraph() {
   >    hg log -G -T "{desc}: {phase} {bookmarks} {remotenames}" -r "all()"

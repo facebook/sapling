@@ -30,4 +30,4 @@
 
 # Same test but with remotenames enabled
 
-  $ hg bookmark b2 -r da7a5140a611 -q --config 'extensions.remotenames='
+  $ hg bookmark b2 -r da7a5140a611 -q

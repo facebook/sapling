@@ -5,7 +5,7 @@
 #inprocess-hg-incompatible
 
 
-  $ enable amend commitcloud infinitepush rebase remotenames fbcodereview
+  $ enable amend commitcloud infinitepush rebase fbcodereview
   $ configure dummyssh
   $ setconfig commitcloud.hostname=testhost
   $ setconfig remotefilelog.reponame=server

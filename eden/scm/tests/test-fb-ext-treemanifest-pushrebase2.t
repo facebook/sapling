@@ -13,7 +13,7 @@ Push merge commits from a treeonly shallow repo to a hybrid treemanifest server
 
   $ newrepo client
   $ echo remotefilelog >> .hg/requires
-  $ enable pushrebase remotenames
+  $ enable pushrebase
   $ setconfig paths.default=ssh://user@dummy/server
   $ drawdag <<'EOS'
   > D
@@ -54,7 +54,7 @@ Push a commit that client1 doesnt have
   $ cd ..
   $ newrepo client2
   $ echo remotefilelog >> .hg/requires
-  $ enable pushrebase remotenames
+  $ enable pushrebase
   $ setconfig paths.default=ssh://user@dummy/server
   $ hg pull -B foo
   pulling from ssh://user@dummy/server

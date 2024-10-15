@@ -53,8 +53,6 @@ start mononoke
 push some draft commits
   $ cd repo-push
   $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > remotenames=
   > [infinitepush]
   > server=False
   > branchpattern=re:scratch/.+
@@ -83,8 +81,6 @@ push some draft commits
 pull these draft commits
   $ cd "$TESTTMP/repo-pull"
   $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > remotenames=
   > [infinitepush]
   > server=False
   > branchpattern=re:scratch/.+

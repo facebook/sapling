@@ -2,7 +2,7 @@
 #require no-eden
 
   $ configure mutation-norecord
-  $ enable rebase shelve remotenames
+  $ enable rebase shelve
   $ setconfig copytrace.dagcopytrace=False
 
   $ initclient() {

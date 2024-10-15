@@ -6,7 +6,7 @@
 
   $ eagerepo
   $ configure mutation-norecord dummyssh
-  $ enable rebase amend remotenames
+  $ enable rebase amend
   $ setconfig 'hint.ack=amend-restack'
   $ readconfig <<EOF
   > [ui]

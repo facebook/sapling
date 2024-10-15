@@ -2,7 +2,7 @@
 #require no-eden
 
 
-  $ enable amend rebase remotenames
+  $ enable amend rebase
   $ setconfig experimental.evolution=obsolete
   $ setconfig visibility.enabled=true
   $ setconfig mutation.record=true mutation.enabled=true

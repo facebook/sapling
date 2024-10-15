@@ -7,7 +7,6 @@
 
   $ . "$TESTDIR/library.sh"
 
-  $ enable remotenames
   $ hginit master
   $ cd master
   $ cat >> .hg/hgrc <<EOF
@@ -89,7 +88,7 @@ Test prefetching when a draft commit is marked public
 - Attempt to download the latest server commit. Verify there's no error about a
 - missing manifest from the server.
   $ clearcache
-  $ hg status --change 'desc("modify x")' --config extensions.remotenames=
+  $ hg status --change 'desc("modify x")'
   M dir/x
   $ hg debugstrip -r 'desc("add foo")'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved

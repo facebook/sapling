@@ -89,9 +89,6 @@ rename.default=remote
 hoist=remote
 selectivepulldefault=master
 selectivepull=true
-
-[extensions]
-remotenames=
 """
     if use_watchman:
         content += """

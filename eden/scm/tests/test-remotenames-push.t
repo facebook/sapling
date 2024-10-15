@@ -15,8 +15,6 @@
 Set up extension and repos to clone over wire protocol
 
   $ configure dummyssh
-  $ enable remotenames
-  $ setconfig remotenames.hoist=remote remotenames.rename.default=remote
   $ setconfig phases.publish=false
 
   $ hg init repo1

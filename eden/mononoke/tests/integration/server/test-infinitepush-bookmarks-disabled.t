@@ -47,8 +47,6 @@ start mononoke
 Do infinitepush (aka commit cloud) push
   $ cd repo-push
   $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > remotenames=
   > [infinitepush]
   > server=False
   > branchpattern=re:scratch/.+
@@ -102,8 +100,6 @@ Bookmark push should have been ignored
 Commit should have been accepted
   $ cd ../repo-pull
   $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > remotenames=
   > [infinitepush]
   > server=False
   > branchpattern=re:scratch/.+

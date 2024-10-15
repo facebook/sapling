@@ -1,6 +1,6 @@
 #require no-eden
 
-  $ enable amend commitcloud infinitepush remotenames
+  $ enable amend commitcloud infinitepush
   $ configure dummyssh
   $ setconfig commitcloud.hostname=testhost
   $ setconfig remotefilelog.reponame=server

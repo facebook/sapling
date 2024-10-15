@@ -5,7 +5,6 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
-  $ enable remotenames
 
   $ export LOG=revisionstore::scmstore::tree=info
 

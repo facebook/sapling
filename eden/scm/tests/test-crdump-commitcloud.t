@@ -7,7 +7,7 @@
   $ . "$TESTDIR/infinitepush/library.sh"
   $ setupcommon
 
-  $ enable crdump remotenames
+  $ enable crdump
   $ setconfig crdump.commitcloud=true
 
 Setup server

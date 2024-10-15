@@ -2,7 +2,7 @@
 #require no-eden
 
 
-  $ enable schemes remotenames
+  $ enable schemes
   $ configure modern
 
   $ cat >> "$HGRCPATH" << EOF

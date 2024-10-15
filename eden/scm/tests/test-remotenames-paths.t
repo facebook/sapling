@@ -3,7 +3,6 @@
 
 
   $ eagerepo
-  $ enable remotenames
 
 Init a repo
 

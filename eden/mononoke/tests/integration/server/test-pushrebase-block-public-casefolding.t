@@ -54,7 +54,7 @@ start mononoke
 clone
   $ hg clone -q mono:repo repo2 --noupdate
   $ cd repo2
-  $ enable pushrebase remotenames infinitepush commitcloud
+  $ enable pushrebase infinitepush commitcloud
   $ setconfig infinitepush.server=false infinitepush.branchpattern='re:scratch/.+'
 
 attempt to push a case conflict onto master_bookmark

@@ -3,7 +3,7 @@
   $ setconfig devel.collapse-traceback=true
 
   $ configure dummyssh mutation-norecord
-  $ enable amend directaccess commitcloud infinitepush rebase remotenames share smartlog
+  $ enable amend directaccess commitcloud infinitepush rebase share smartlog
 
   $ setconfig infinitepush.branchpattern="re:scratch/.*"
   $ setconfig commitcloud.hostname=testhost

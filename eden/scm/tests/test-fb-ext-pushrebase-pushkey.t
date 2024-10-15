@@ -4,7 +4,7 @@
 Setup
 
   $ configure dummyssh
-  $ enable pushrebase remotenames
+  $ enable pushrebase
 
   $ cat >> "$TESTTMP/commit.sh" << EOF
   > #!/bin/bash

@@ -12,7 +12,6 @@ setup configuration
   $ REPOID=1 REPONAME=disabled_repo ENABLED=false setup_mononoke_config
   $ cd $TESTTMP
 
-  $ configure selectivepull
   $ setconfig remotenames.selectivepulldefault=master_bookmark,master_bookmark2
   $ setconfig experimental.new-clone-path=true
 

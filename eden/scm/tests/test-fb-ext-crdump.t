@@ -5,7 +5,7 @@
   $ setconfig remotenames.selectivepulldefault=master,releasebranch
 
   $ configure mutation-norecord dummyssh
-  $ enable amend crdump remotenames
+  $ enable amend crdump
   $ showgraph() {
   >   hg log --graph --hidden -T "{desc|firstline}" | sed \$d
   > }

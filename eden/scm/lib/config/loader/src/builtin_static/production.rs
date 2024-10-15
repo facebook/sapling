@@ -155,7 +155,6 @@ pushrebase=!
 rage=!
 rebase=
 remotefilelog=
-remotenames=
 shelve=
 smartlog=
 sparse=

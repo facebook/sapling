@@ -12,7 +12,6 @@ Set up the server
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase=
-  > remotenames=
   > [remotefilelog]
   > server=true
   > shallowtrees=true
@@ -31,7 +30,6 @@ Create client
   > [extensions]
   > amend=
   > pushrebase=
-  > remotenames=
   > EOF
 
 Create a commit, and then amend the message twice.  All three should share a manifest.

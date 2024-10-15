@@ -1,7 +1,7 @@
 #require no-eden
 
 
-  $ enable commitcloud remotenames
+  $ enable commitcloud
   $ disable infinitepush
   $ setconfig remotenames.autopullhoistpattern='re:.*'
   $ setconfig infinitepush.branchpattern="re:scratch/.+"

@@ -4,7 +4,7 @@
 
   $ eagerepo
   $ configure mutation
-  $ enable undo remotenames
+  $ enable undo
   $ setconfig extensions.extralog="$TESTDIR/extralog.py"
   $ setconfig ui.interactive=true
 

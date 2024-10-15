@@ -5,7 +5,6 @@
 
 TODO: configure mutation
   $ configure dummyssh
-  $ enable remotenames
 
 Setup
 

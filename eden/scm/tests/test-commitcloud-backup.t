@@ -11,7 +11,6 @@
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
   $ setupcommon
-  $ enable remotenames
 
 Setup server
   $ newserver repo

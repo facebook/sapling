@@ -288,7 +288,6 @@ reponame is set from paths.default
   > %unset reponame
   > EOF
   $ newrepo reponame-path-default-test
-  $ enable remotenames
   $ hg paths --add default test:repo-myrepo1
   $ hg config remotefilelog.reponame
   repo-myrepo1

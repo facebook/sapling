@@ -8,7 +8,6 @@
 Setup
 
   $ configure dummyssh
-  $ enable remotenames
   $ setconfig ui.username="nobody <no.reply@fb.com>"
 
   $ log() {
@@ -31,7 +30,6 @@ Clone client repository
   $ hg clone ssh://user@dummy/server client -q
   $ cd client
   $ setconfig extensions.pushrebase=
-  $ setconfig extensions.remotenames=
 
 Add new commit
   $ cd ../server

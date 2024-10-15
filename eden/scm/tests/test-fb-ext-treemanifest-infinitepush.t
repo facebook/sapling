@@ -8,7 +8,7 @@
 
   $ setupcommon
 
-  $ enable remotenames commitcloud
+  $ enable commitcloud
   $ disable infinitepush
   $ hginit master
   $ cd master

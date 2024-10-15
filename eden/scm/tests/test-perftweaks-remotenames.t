@@ -6,7 +6,7 @@
 
 
   $ configure dummyssh
-  $ enable remotenames rebase
+  $ enable rebase
 
   $ hg init master
   $ cd master

@@ -17,7 +17,6 @@ new-pull=true
 commitcloud=!
 github=
 infinitepush=!
-remotenames=
 treemanifest=
 
 [commitcloud]

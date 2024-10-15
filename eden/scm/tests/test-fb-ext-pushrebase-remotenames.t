@@ -13,7 +13,6 @@ Set up server repository
   $ cat >> .hg/hgrc << EOF
   > [extensions]
   > pushrebase=
-  > remotenames = !
   > EOF
   $ echo foo > a
   $ echo foo > b
@@ -25,14 +24,14 @@ Set up server repository
 
 Set up client repository
 
-  $ hg clone --config 'extensions.remotenames=' ssh://user@dummy/server client -q
+  $ hg clone ssh://user@dummy/server client -q
   $ cp -R server server1
-  $ hg clone --config 'extensions.remotenames=' ssh://user@dummy/server1 client1 -q
+  $ hg clone ssh://user@dummy/server1 client1 -q
 
 Test that pushing to a remotename preserves commit hash if no rebase happens
 
   $ cd client1
-  $ setconfig extensions.remotenames= extensions.pushrebase=
+  $ setconfig extensions.pushrebase=
   $ hg up -q master
   $ echo x >> a && hg commit -qm 'add a'
   $ hg commit --amend -qm 'changed message'
@@ -66,7 +65,6 @@ Test that pushing to a remotename gets rebased
   $ cd ../client
   $ cat >> .hg/hgrc << EOF
   > [extensions]
-  > remotenames =
   > pushrebase=
   > [remotenames]
   > allownonfastforward=True
@@ -266,13 +264,12 @@ Test force pushes
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase=
-  > remotenames = !
   > EOF
   $ echo a > a && hg commit -Aqm a
   $ hg book master
   $ cd ..
 
-  $ hg clone -q --config 'extensions.remotenames=' ssh://user@dummy/forcepushserver forcepushclient
+  $ hg clone -q ssh://user@dummy/forcepushserver forcepushclient
   $ cd forcepushserver
   $ echo a >> a && hg commit -Aqm aa
 
@@ -280,7 +277,6 @@ Test force pushes
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase=
-  > remotenames =
   > [remotenames]
   > allownonfastforward=True
   > EOF
@@ -316,17 +312,15 @@ Test 'hg push' with a tracking bookmark
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase=
-  > remotenames = !
   > EOF
   $ echo a > a && hg commit -Aqm a
   $ hg book master
   $ cd ..
-  $ hg clone --config 'extensions.remotenames=' -q ssh://user@dummy/trackingserver trackingclient
+  $ hg clone -q ssh://user@dummy/trackingserver trackingclient
   $ cd trackingclient
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase=
-  > remotenames =
   > [remotenames]
   > allownonfastforward=True
   > EOF
@@ -357,19 +351,14 @@ Test 'hg push' with a tracking bookmark
 
 Test push --to to a repo without pushrebase on (i.e. the default remotenames behavior)
   $ newserver oldserver
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > remotenames =
-  > EOF
   $ echo a > a && hg commit -Aqm a
   $ hg book serverfeature
   $ cd ..
-  $ hg clone --config 'extensions.remotenames=' -q ssh://user@dummy/oldserver newclient
+  $ hg clone -q ssh://user@dummy/oldserver newclient
   $ cd newclient
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase=
-  > remotenames =
   > EOF
   $ hg book clientfeature -t default/serverfeature
   $ echo b > b && hg commit -Aqm b
@@ -398,7 +387,6 @@ that requires pushrebase.
   $ newserver pushrebaseserver
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > remotenames =
   > pushrebase=
   > [pushrebase]
   > blocknonpushrebase = True
@@ -406,12 +394,11 @@ that requires pushrebase.
   $ echo a > a && hg commit -Aqm a
   $ hg book serverfeature
   $ cd ..
-  $ hg clone --config 'extensions.remotenames=' -q ssh://user@dummy/pushrebaseserver remotenamesonlyclient
+  $ hg clone -q ssh://user@dummy/pushrebaseserver remotenamesonlyclient
   $ cd remotenamesonlyclient
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase=!
-  > remotenames =
   > EOF
   $ hg book clientfeature -t default/serverfeature
   $ echo b > b && hg commit -Aqm b

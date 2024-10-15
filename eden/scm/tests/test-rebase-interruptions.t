@@ -5,7 +5,7 @@
 #chg-compatible
 
 
-  $ enable rebase remotenames
+  $ enable rebase
 
   $ hg init a
   $ cd a

@@ -40,7 +40,6 @@ start mononoke
   $ start_and_wait_for_mononoke_server
 Push with bookmark
   $ cd repo-push
-  $ enableextension remotenames
   $ echo withbook > withbook && hg addremove && hg ci -m withbook
   adding withbook
   $ hg push --to withbook --create
@@ -50,7 +49,6 @@ Push with bookmark
 
 Pull the bookmark
   $ cd ../repo-pull
-  $ enableextension remotenames
 
   $ hg pull -q
   $ hg book --remote

@@ -25,7 +25,6 @@
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ cd shallow
-  $ enable remotenames
   $ setconfig treemanifest.sendtrees=True
   $ echo >> dir/x
   $ hg commit -m "Modify dir/x"

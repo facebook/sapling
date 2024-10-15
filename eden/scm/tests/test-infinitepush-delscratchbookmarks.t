@@ -2,7 +2,7 @@
 #debugruntest-incompatible
 
   $ configure dummyssh
-  $ enable remotenames commitcloud
+  $ enable commitcloud
   $ disable infinitepush
   $ setconfig infinitepush.branchpattern="re:scratch/.+"
   $ mkcommit() {
@@ -37,7 +37,7 @@ Create second server repo
   $ cd ..
 
 Clone server
-  $ hg clone ssh://user@dummy/repo --config extensions.remotenames= client -q
+  $ hg clone ssh://user@dummy/repo client -q
   $ cd client
 
 Ensure no bookmarks

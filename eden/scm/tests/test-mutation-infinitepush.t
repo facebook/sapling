@@ -1,7 +1,7 @@
 #chg-compatible
 #require bash no-eden
 
-  $ enable amend rebase histedit fbhistedit remotenames
+  $ enable amend rebase histedit fbhistedit
   $ setconfig experimental.evolution=obsolete
   $ setconfig visibility.enabled=true
   $ setconfig mutation.record=true mutation.enabled=true

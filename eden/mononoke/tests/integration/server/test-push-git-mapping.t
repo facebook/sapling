@@ -16,7 +16,6 @@
   $ hg up -q master_bookmark
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > remotenames=
   > commitcloud=
   > [infinitepush]
   > server=False

@@ -9,7 +9,7 @@
 # Using modern setup
 
   $ eagerepo
-  $ enable remotenames amend rebase
+  $ enable amend rebase
   $ setconfig visibility.enabled=true mutation.record=true mutation.enabled=true experimental.evolution= remotenames.rename.default=remote
 
 # Test restack behavior with old stacks.

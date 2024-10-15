@@ -5,7 +5,6 @@
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
   $ setconfig extensions.commitcloud=
-  $ enable remotenames
 
   $ mkcommit() {
   >   echo "$1" > "$1"

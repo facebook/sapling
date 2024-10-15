@@ -75,7 +75,7 @@ newclientrepo() {
 newremoterepo() {
   newrepo "$@"
   echo remotefilelog >> .hg/requires
-  enable pushrebase remotenames
+  enable pushrebase
   if [ -n "$USE_MONONOKE" ] ; then
     setconfig paths.default=mononoke://$(mononoke_address)/server
   else
@@ -98,7 +98,6 @@ newserver() {
     hg --config experimental.narrow-heads=false \
       --config visibility.enabled=false \
       init
-    enable remotenames
     setconfig \
        remotefilelog.reponame="$reponame" remotefilelog.server=True \
        infinitepush.server=yes infinitepush.reponame="$reponame" \
@@ -122,15 +121,11 @@ clone() {
   fi
 
   hg clone -q --shallow "$serverurl" "$clientname" "$@" \
-    --config "extensions.remotenames=" \
     --config "remotefilelog.reponame=$servername" \
     --config "ui.ssh=$(dummysshcmd)" \
     --config "ui.remotecmd=$remotecmd"
 
   cat >> $clientname/.hg/hgrc <<EOF
-[extensions]
-remotenames=
-
 [phases]
 publish=False
 
@@ -198,16 +193,12 @@ configure() {
         configure noevolution mutation-norecord
         setconfig experimental.narrow-heads=true
         ;;
-      selectivepull)
-        enable remotenames
-        setconfig remotenames.selectivepulldefault=master
-        ;;
       modern)
         enable amend
         setconfig remotenames.rename.default=remote
         setconfig remotenames.hoist=remote
         setconfig experimental.changegroup3=True
-        configure dummyssh commitcloud narrowheads selectivepull
+        configure dummyssh commitcloud narrowheads
         ;;
       modernclient)
         touch $TESTTMP/.eagerepo
@@ -270,7 +261,7 @@ setglobalconfig() {
 
 # Set config items that enable modern features.
 setmodernconfig() {
-  enable remotenames amend
+  enable amend
   setconfig experimental.narrow-heads=true visibility.enabled=true mutation.record=true mutation.enabled=true experimental.evolution=obsolete remotenames.rename.default=remote
 }
 

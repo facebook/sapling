@@ -22,7 +22,6 @@ import sys
 from . import cmdutil, configitems, error, pycompat, util
 from .i18n import _, gettext
 
-
 _preimported = {}
 _extensions = {}
 _disabledextensions = {}
@@ -112,6 +111,7 @@ DEFAULT_EXTENSIONS = {
 
 # Similar to DEFAULT_EXTENSIONS. But cannot be disabled.
 ALWAYS_ON_EXTENSIONS = {
+    "remotenames",
     "treemanifest",
 }
 

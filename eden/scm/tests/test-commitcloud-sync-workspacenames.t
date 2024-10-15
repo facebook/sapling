@@ -8,7 +8,7 @@
 
   $ eagerepo
   $ configure dummyssh
-  $ enable amend commitcloud infinitepush rebase remotenames share
+  $ enable amend commitcloud infinitepush rebase share
 
   $ cat >> $HGRCPATH << 'EOF'
   > [infinitepush]

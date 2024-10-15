@@ -32,7 +32,6 @@ Setup common client configuration for these tests
   > amend=
   > infinitepush=
   > commitcloud=
-  > remotenames=
   > [infinitepush]
   > server=False
   > EOF

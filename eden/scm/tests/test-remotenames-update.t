@@ -6,8 +6,6 @@
   $ setconfig devel.segmented-changelog-rev-compat=true
 Set up repo
 
-  $ enable remotenames
-
   $ hg init repo
   $ cd repo
   $ echo 'foo'> a.txt

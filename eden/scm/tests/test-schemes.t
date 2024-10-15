@@ -5,7 +5,7 @@
 #inprocess-hg-incompatible
 
 
-  $ enable infinitepush remotenames
+  $ enable infinitepush
   $ . "$TESTDIR/library.sh"
 
   $ mkcommit() {

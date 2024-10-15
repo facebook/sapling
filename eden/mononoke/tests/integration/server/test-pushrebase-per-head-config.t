@@ -32,7 +32,6 @@ Setup
   > [extensions]
   > amend=
   > pushrebase =
-  > remotenames=
   > EOF
 
 Prepare the server-side repo

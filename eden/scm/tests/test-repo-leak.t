@@ -139,7 +139,6 @@ Somehow problematic: With many extensions
   > rage=
   > rebase =
   > rebase=
-  > remotenames=
   > reset=
   > sampling=
   > shelve=

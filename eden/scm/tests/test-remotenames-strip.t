@@ -8,8 +8,6 @@
 # GNU General Public License version 2.
 
 
-  $ enable remotenames
-
 # Test that hg debugstrip -B stops at remotenames
 
   $ hg init server

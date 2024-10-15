@@ -3,8 +3,7 @@
 #require no-eden
 
 
-  $ enable remotenames
-  > mkcommit()
+  $ mkcommit()
   > {
   >    echo $1 > $1
   >    hg add $1

@@ -15,7 +15,6 @@ setup common configuration for these tests
   > [extensions]
   > infinitepush=
   > commitcloud=
-  > remotenames=
   > [infinitepush]
   > server=False
   > branchpattern=re:(infinitepush1|bad)/.+

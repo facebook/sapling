@@ -8,7 +8,6 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > pushrebase=
-  > remotenames=
   > [treemanifest]
   > sendtrees=True
   > EOF

@@ -11,7 +11,6 @@ test covers the issue.
 
   $ . $TESTDIR/library.sh
   $ . $TESTDIR/infinitepush/library.sh
-  $ enable remotenames
 
   $ setupcommon
 
@@ -75,9 +74,8 @@ Create scratch commit and back it up.
   $ cd ..
 
 Create second client
-  $ hg clone ssh://user@dummy/repo --config extensions.remotenames= client2 -q
+  $ hg clone ssh://user@dummy/repo client2 -q
   $ cd client2
-  $ enable remotenames
 
 Pull to get remote names
   $ hg pull

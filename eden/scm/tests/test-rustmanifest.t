@@ -24,7 +24,7 @@
   $ . "$TESTDIR/library.sh"
 
   $ configure dummyssh
-  $ enable remotenames pushrebase
+  $ enable pushrebase
 
 # Check manifest behavior with empty commit
 

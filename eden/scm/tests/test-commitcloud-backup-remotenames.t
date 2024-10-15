@@ -17,7 +17,7 @@ Create client
 
 Backup with remotenames enabled. Make sure that it works fine with anon heads
   $ mkcommit remotenamespush
-  $ hg --config extensions.remotenames= cloud backup
+  $ hg cloud backup
   commitcloud: head 'f4ca5164f72e' hasn't been uploaded yet
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload

@@ -42,7 +42,6 @@ start mononoke
 clone
   $ hg clone -q mono:repo repo2 --noupdate
   $ cd repo2
-  $ enable remotenames
 
 make more commits
   $ drawdag <<EOF

@@ -10,7 +10,6 @@
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]
   > reset=
-  > remotenames=
   > EOF
 
   $ newclientrepo repo

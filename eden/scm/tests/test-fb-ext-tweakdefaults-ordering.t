@@ -16,7 +16,6 @@
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]
   > rebase=
-  > remotenames=
   > tweakdefaults=
   > EOF
 

@@ -11,7 +11,7 @@ setup configuration
   $ cd $TESTTMP
 
 setup common configuration for these tests
-  $ enable amend infinitepush commitcloud remotenames
+  $ enable amend infinitepush commitcloud
   $ setconfig ui.ssh="\"$DUMMYSSH\""
   $ setconfig mutation.date="0 0" mutation.enabled=true mutation.record=true visibility.enabled=true
   $ setconfig experimental.evolution=obsolete
@@ -43,11 +43,9 @@ start mononoke
 
   $ start_and_wait_for_mononoke_server
   $ cd $TESTTMP/repo-push
-  $ enable remotenames
   $ setconfig infinitepush.server=false infinitepush.branchpattern="re:scratch/.+"
 
   $ cd $TESTTMP/repo-pull
-  $ enable remotenames
   $ setconfig infinitepush.server=false infinitepush.branchpattern="re:scratch/.+"
 
 Do initial infinitepush of a small stack

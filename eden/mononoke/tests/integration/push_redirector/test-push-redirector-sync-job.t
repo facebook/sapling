@@ -6,8 +6,6 @@
 
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
 
-  $ enable remotenames
-
   $ setconfig push.edenapi=true
   $ PUSHREBASE_REWRITE_DATES=1 create_large_small_repo
   Adding synced mapping entry

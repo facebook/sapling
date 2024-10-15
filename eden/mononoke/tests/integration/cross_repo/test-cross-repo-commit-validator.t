@@ -21,7 +21,6 @@ Disable bookmarks cache because bookmarks are modified by two separate processes
   > [extensions]
   > amend=
   > pushrebase=
-  > remotenames=
   > EOF
 
   $ setup_commitsyncmap

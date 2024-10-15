@@ -10,7 +10,7 @@
   $ setconfig "visibility.enabled=true" "metalog.track-config=0"
 
   $ newrepo
-  $ enable remotenames amend
+  $ enable amend
 
   $ hg debugdrawdag << 'EOS'
   > C

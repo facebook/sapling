@@ -11,7 +11,6 @@
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]
   > smartlog=
-  > remotenames=
   > [commitcloud]
   > enablestatus=false
   > EOF

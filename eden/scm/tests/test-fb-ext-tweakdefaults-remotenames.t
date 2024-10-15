@@ -7,7 +7,7 @@
   $ configure mutation-norecord modernclient
 
 Set up
-  $ enable rebase remotenames tweakdefaults
+  $ enable rebase tweakdefaults
 
   $ newclientrepo repo
   $ echo a > a

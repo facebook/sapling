@@ -701,7 +701,6 @@ ssh="$DUMMYSSH"
 [extensions]
 amend=
 pushrebase=
-remotenames=
 EOF
 
   setup_commitsyncmap

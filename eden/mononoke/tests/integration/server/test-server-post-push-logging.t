@@ -179,7 +179,6 @@ Use infinitepush push
   > [extensions]
   > commitcloud=
   > infinitepush=
-  > remotenames=
   > [infinitepush]
   > server=False
   > branchpattern=re:^scratch/.+$
