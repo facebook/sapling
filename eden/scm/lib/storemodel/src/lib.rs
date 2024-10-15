@@ -507,10 +507,12 @@ pub struct InsertOpts {
     /// Parent hashes.
     /// For Hg it's required and affects SHA1.
     /// For Git it's a hint about the delta bases.
+    #[serde(default)]
     pub parents: Vec<HgId>,
 
     /// Whether this is a file or a tree.
     /// For Hg it's ignored. For Git it affects SHA1.
+    #[serde(default)]
     pub kind: Kind,
 
     /// Forced SHA1 to use. Mainly for testing purpose.
