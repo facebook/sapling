@@ -95,9 +95,6 @@ use slog::info;
 use slog::Logger;
 use sorted_vector_map::sorted_vector_map;
 use sql_query_config::SqlQueryConfig;
-use synced_commit_mapping::EquivalentWorkingCopyEntry;
-use synced_commit_mapping::SyncedCommitMapping;
-use synced_commit_mapping::SyncedCommitMappingEntry;
 
 use crate::common::get_source_target_repos_and_mapping;
 use crate::error::SubcommandError;
@@ -117,12 +114,6 @@ const LIMIT_ARG: &str = "limit";
 const NO_BOOKMARK_UPDATES: &str = "no-bookmark-updates";
 const LARGE_REPO_BOOKMARK_ARG: &str = "large-repo-bookmark";
 const CHANGE_MAPPING_VERSION_SUBCOMMAND: &str = "change-mapping-version";
-const INSERT_SUBCOMMAND: &str = "insert";
-const REWRITTEN_SUBCOMMAND: &str = "rewritten";
-const EQUIVALENT_WORKING_COPY_SUBCOMMAND: &str = "equivalent-working-copy";
-const NOT_SYNC_CANDIDATE_SUBCOMMAND: &str = "not-sync-candidate";
-const SOURCE_HASH_ARG: &str = "source-hash";
-const TARGET_HASH_ARG: &str = "target-hash";
 const VIA_EXTRAS_ARG: &str = "via-extra";
 
 const SUBCOMMAND_CONFIG: &str = "config";
@@ -291,13 +282,6 @@ pub async fn subcommand_crossrepo<'a>(
                 live_commit_sync_config,
             )
             .await
-        }
-        (INSERT_SUBCOMMAND, Some(sub_sub_m)) => {
-            let source_repo_id =
-                args::not_shardmanager_compatible::get_source_repo_id(config_store, matches)?;
-            let live_commit_sync_config =
-                get_live_commit_sync_config(&ctx, fb, matches, source_repo_id).await?;
-            run_insert_subcommand(ctx, matches, sub_sub_m, live_commit_sync_config).await
         }
         _ => Err(SubcommandError::InvalidArgs),
     }
@@ -615,181 +599,6 @@ async fn change_mapping_via_extras<'a>(
     println!("{}", pushrebase_res.head);
 
     Ok(())
-}
-
-async fn run_insert_subcommand<'a>(
-    ctx: CoreContext,
-    matches: &'a MononokeMatches<'_>,
-    insert_subcommand_matches: &'a ArgMatches<'a>,
-    live_commit_sync_config: CfgrLiveCommitSyncConfig,
-) -> Result<(), SubcommandError> {
-    let (source_repo, target_repo, mapping) =
-        get_source_target_repos_and_mapping::<Repo>(ctx.fb, ctx.logger().clone(), matches).await?;
-
-    let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> = Arc::new(live_commit_sync_config);
-    let commit_syncer = get_large_to_small_commit_syncer(
-        &ctx,
-        source_repo.clone(),
-        target_repo.clone(),
-        live_commit_sync_config.clone(),
-    )
-    .await?;
-
-    match insert_subcommand_matches.subcommand() {
-        (REWRITTEN_SUBCOMMAND, Some(sub_m)) => {
-            let (source_cs_id, target_cs_id, mapping_version) =
-                get_source_target_cs_ids_and_version(&ctx, sub_m, &commit_syncer).await?;
-            let small_repo_id = commit_syncer.get_small_repo().repo_identity().id();
-            let large_repo_id = commit_syncer.get_large_repo().repo_identity().id();
-
-            let mapping_entry = if small_repo_id == source_repo.repo_identity().id() {
-                SyncedCommitMappingEntry {
-                    large_repo_id,
-                    small_repo_id,
-                    small_bcs_id: source_cs_id,
-                    large_bcs_id: target_cs_id,
-                    version_name: Some(mapping_version),
-                    source_repo: Some(commit_syncer.get_source_repo_type()),
-                }
-            } else {
-                SyncedCommitMappingEntry {
-                    large_repo_id,
-                    small_repo_id,
-                    small_bcs_id: target_cs_id,
-                    large_bcs_id: source_cs_id,
-                    version_name: Some(mapping_version),
-                    source_repo: Some(commit_syncer.get_source_repo_type()),
-                }
-            };
-
-            let res = mapping.add(&ctx, mapping_entry).await?;
-            if res {
-                info!(
-                    ctx.logger(),
-                    "successfully inserted rewritten mapping entry"
-                );
-                Ok(())
-            } else {
-                Err(anyhow!("failed to insert entry").into())
-            }
-        }
-        (EQUIVALENT_WORKING_COPY_SUBCOMMAND, Some(sub_m)) => {
-            let (source_cs_id, target_cs_id, mapping_version) =
-                get_source_target_cs_ids_and_version(&ctx, sub_m, &commit_syncer).await?;
-            let small_repo_id = commit_syncer.get_small_repo().repo_identity().id();
-            let large_repo_id = commit_syncer.get_large_repo().repo_identity().id();
-
-            let mapping_entry = if small_repo_id == source_repo.repo_identity().id() {
-                EquivalentWorkingCopyEntry {
-                    large_repo_id,
-                    small_repo_id,
-                    small_bcs_id: Some(source_cs_id),
-                    large_bcs_id: target_cs_id,
-                    version_name: Some(mapping_version),
-                }
-            } else {
-                EquivalentWorkingCopyEntry {
-                    large_repo_id,
-                    small_repo_id,
-                    small_bcs_id: Some(target_cs_id),
-                    large_bcs_id: source_cs_id,
-                    version_name: Some(mapping_version),
-                }
-            };
-
-            let res = mapping
-                .insert_equivalent_working_copy(&ctx, mapping_entry)
-                .await?;
-            if res {
-                info!(
-                    ctx.logger(),
-                    "successfully inserted equivalent working copy"
-                );
-                Ok(())
-            } else {
-                Err(anyhow!("failed to insert entry").into())
-            }
-        }
-        (NOT_SYNC_CANDIDATE_SUBCOMMAND, Some(sub_m)) => {
-            let large_repo = commit_syncer.get_large_repo();
-            let large_repo_hash = sub_m
-                .value_of(LARGE_REPO_HASH_ARG)
-                .ok_or_else(|| anyhow!("{} is not specified", LARGE_REPO_HASH_ARG))?;
-            let large_repo_cs_id = helpers::csid_resolve(&ctx, large_repo, large_repo_hash).await?;
-
-            let small_repo_id = commit_syncer.get_small_repo().repo_identity().id();
-            let large_repo_id = commit_syncer.get_large_repo().repo_identity().id();
-
-            let maybe_mapping_version = sub_m.value_of(ARG_VERSION_NAME);
-            let maybe_mapping_version = match maybe_mapping_version {
-                Some(mapping_version) => {
-                    let mapping_version = CommitSyncConfigVersion(mapping_version.to_string());
-                    if !commit_syncer.version_exists(&mapping_version).await? {
-                        return Err(
-                            format_err!("{} version does not exist", mapping_version).into()
-                        );
-                    }
-                    Some(mapping_version)
-                }
-                None => None,
-            };
-
-            let mapping_entry = EquivalentWorkingCopyEntry {
-                large_repo_id,
-                small_repo_id,
-                small_bcs_id: None,
-                large_bcs_id: large_repo_cs_id,
-                version_name: maybe_mapping_version,
-            };
-
-            let res = mapping
-                .insert_equivalent_working_copy(&ctx, mapping_entry)
-                .await?;
-            if res {
-                info!(
-                    ctx.logger(),
-                    "successfully inserted not sync candidate entry"
-                );
-                Ok(())
-            } else {
-                Err(anyhow!("failed to insert entry").into())
-            }
-        }
-        _ => Err(SubcommandError::InvalidArgs),
-    }
-}
-
-async fn get_source_target_cs_ids_and_version(
-    ctx: &CoreContext,
-    sub_m: &ArgMatches<'_>,
-    commit_syncer: &CommitSyncer<Repo>,
-) -> Result<(ChangesetId, ChangesetId, CommitSyncConfigVersion), Error> {
-    async fn fetch_cs_id(
-        ctx: &CoreContext,
-        sub_m: &ArgMatches<'_>,
-        repo: &Repo,
-        arg: &str,
-    ) -> Result<ChangesetId, Error> {
-        let hash = sub_m
-            .value_of(arg)
-            .ok_or_else(|| anyhow!("{} is not specified", arg))?;
-        helpers::csid_resolve(ctx, repo, hash).await
-    }
-
-    let source_cs_id = fetch_cs_id(ctx, sub_m, commit_syncer.get_source_repo(), SOURCE_HASH_ARG);
-    let target_cs_id = fetch_cs_id(ctx, sub_m, commit_syncer.get_target_repo(), TARGET_HASH_ARG);
-
-    let (source_cs_id, target_cs_id) = try_join!(source_cs_id, target_cs_id)?;
-    let mapping_version = sub_m
-        .value_of(ARG_VERSION_NAME)
-        .ok_or_else(|| format_err!("{} is not specified", ARG_VERSION_NAME))?;
-
-    let mapping_version = CommitSyncConfigVersion(mapping_version.to_string());
-    if !commit_syncer.version_exists(&mapping_version).await? {
-        return Err(format_err!("{} version does not exist", mapping_version));
-    }
-
-    Ok((source_cs_id, target_cs_id, mapping_version))
 }
 
 struct MappingCommitOptions {
@@ -1200,83 +1009,11 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
         .subcommand(prepare_rollout_subcommand)
         .subcommand(change_mapping_version);
 
-    let rewritten_subcommand = SubCommand::with_name(REWRITTEN_SUBCOMMAND)
-        .about("mark a pair of commits as rewritten")
-        .arg(
-            Arg::with_name(SOURCE_HASH_ARG)
-                .long(SOURCE_HASH_ARG)
-                .required(true)
-                .takes_value(true)
-                .help("hash in the source repo"),
-        )
-        .arg(
-            Arg::with_name(TARGET_HASH_ARG)
-                .long(TARGET_HASH_ARG)
-                .required(true)
-                .takes_value(true)
-                .help("hash in the target repo"),
-        )
-        .arg(
-            Arg::with_name(ARG_VERSION_NAME)
-                .long(ARG_VERSION_NAME)
-                .required(true)
-                .takes_value(true)
-                .help("mapping version to write to db"),
-        );
-
-    let equivalent_wc_subcommand = SubCommand::with_name(EQUIVALENT_WORKING_COPY_SUBCOMMAND)
-        .about("mark a pair of commits as having an equivalent working copy")
-        .arg(
-            Arg::with_name(SOURCE_HASH_ARG)
-                .long(SOURCE_HASH_ARG)
-                .required(true)
-                .takes_value(true)
-                .help("hash in the source repo"),
-        )
-        .arg(
-            Arg::with_name(TARGET_HASH_ARG)
-                .long(TARGET_HASH_ARG)
-                .required(true)
-                .takes_value(true)
-                .help("hash in the target repo"),
-        )
-        .arg(
-            Arg::with_name(ARG_VERSION_NAME)
-                .long(ARG_VERSION_NAME)
-                .required(true)
-                .takes_value(true)
-                .help("mapping version to write to db"),
-        );
-
-    let not_sync_candidate_subcommand = SubCommand::with_name(NOT_SYNC_CANDIDATE_SUBCOMMAND)
-        .about("mark a source commit as not having a synced commit in the target repo")
-        .arg(
-            Arg::with_name(LARGE_REPO_HASH_ARG)
-                .long(LARGE_REPO_HASH_ARG)
-                .required(true)
-                .takes_value(true)
-                .help("hash in the source repo"),
-        )
-        .arg(
-            Arg::with_name(ARG_VERSION_NAME)
-                .long(ARG_VERSION_NAME)
-                .required(false)
-                .takes_value(true)
-                .help("optional mapping version to write to db"),
-        );
-
-    let insert_subcommand = SubCommand::with_name(INSERT_SUBCOMMAND)
-        .about("helper commands to insert mappings directly into db")
-        .subcommand(equivalent_wc_subcommand)
-        .subcommand(rewritten_subcommand)
-        .subcommand(not_sync_candidate_subcommand);
-
     SubCommand::with_name(CROSSREPO)
         .subcommand(verify_wc_subcommand)
         .subcommand(verify_bookmarks_subcommand)
         .subcommand(commit_sync_config_subcommand)
         .subcommand(pushredirection_subcommand)
-        .subcommand(insert_subcommand)
 }
 
 async fn get_syncers<'a>(

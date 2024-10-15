@@ -120,8 +120,8 @@
 -- Step 5. mark commits that fix working copy as rewritten
   $ megarepo_tool_multirepo --source-repo-id 1 --target-repo-id 0 check-push-redirection-prereqs "$SMALL_REBINDING" "$LARGE_REBINDING" test_version 2>&1 | grep 'all is well!'
   * all is well! (glob)
-  $ mononoke_admin_source_target 0 1 crossrepo insert rewritten \
-  > --source-hash "$LARGE_REBINDING" --target-hash "$SMALL_REBINDING" --version-name test_version 2>&1 | grep 'successfully inserted'
+  $ mononoke_newadmin cross-repo --source-repo-id 0 --target-repo-id 1 insert rewritten \
+  > --source-commit-id "$LARGE_REBINDING" --target-commit-id "$SMALL_REBINDING" --version-name test_version 2>&1 | grep 'successfully inserted'
   * successfully inserted rewritten mapping entry (glob)
 
 -- Step 6. Rebind repositories and wait until it propagates
