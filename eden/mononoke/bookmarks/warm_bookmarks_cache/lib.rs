@@ -555,7 +555,7 @@ async fn init_bookmarks(
         .buffered(100)
         .try_filter_map(|element| async move {
             let (remaining, entry) = element;
-            if remaining % 100 == 0 {
+            if remaining % 1000 == 0 {
                 info!(ctx.logger(), "{} bookmarks left to warm up", remaining);
             }
             Result::<_, Error>::Ok(entry)
