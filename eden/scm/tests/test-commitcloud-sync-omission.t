@@ -1,6 +1,7 @@
 #modern-config-incompatible
 #inprocess-hg-incompatible
   $ setconfig devel.segmented-changelog-rev-compat=true
+  $ setconfig remotenames.selectivepull=true
 
 #require jq no-eden
   $ configure mutation-norecord dummyssh
@@ -157,10 +158,8 @@ Connect to commit cloud
     d16408588b2d from Sun Feb 04 12:00:00 1990 +0000
   pulling d133b886da68 from ssh://user@dummy/server
   searching for changes
-  fetching revlog data for 2 commits
   pulling 7f958333fe84 from ssh://user@dummy/server
   searching for changes
-  fetching revlog data for 2 commits
   1f9ebd6d1390 not found, omitting oldbook bookmark
   df4f53cec30a is older than 14 days, omitting mytag bookmark
   commitcloud: commits synchronized
@@ -202,7 +201,6 @@ Sync these commits to the first client - it has everything
   commitcloud: nothing to upload
   pulling ff52de2f760c from ssh://user@dummy/server
   searching for changes
-  fetching revlog data for 1 commits
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglogp
@@ -295,7 +293,6 @@ Second client syncs that in, but still leaves the old commits missing
     d16408588b2d from Sun Feb 04 12:00:00 1990 +0000
   pulling 46f8775ee5d4 from ssh://user@dummy/server
   searching for changes
-  fetching revlog data for 1 commits
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglogp
@@ -366,7 +363,6 @@ Second client syncs the old stack in, and now has the bookmark
   commitcloud: nothing to upload
   pulling 2b8dce7bd745 from ssh://user@dummy/server
   searching for changes
-  fetching revlog data for 3 commits
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglogp
@@ -417,13 +413,10 @@ Connect to commit cloud
     d133b886da68 from Fri Feb 09 12:00:00 1990 +0000
   pulling ff52de2f760c from ssh://user@dummy/server
   searching for changes
-  fetching revlog data for 1 commits
   pulling 46f8775ee5d4 from ssh://user@dummy/server
   searching for changes
-  fetching revlog data for 3 commits
   pulling 2b8dce7bd745 from ssh://user@dummy/server
   searching for changes
-  fetching revlog data for 3 commits
   1c1b7955142c not found, omitting midbook bookmark
   df4f53cec30a is older than 14 days, omitting mytag bookmark
   commitcloud: commits synchronized
@@ -547,7 +540,6 @@ A full sync pulls the old commits in
   commitcloud: nothing to upload
   pulling d133b886da68 from ssh://user@dummy/server
   searching for changes
-  fetching revlog data for 2 commits
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -627,7 +619,6 @@ Pull in some of the commits by setting max age manually
     d133b886da68 from Fri Feb 09 12:00:00 1990 +0000
   pulling 2b8dce7bd745 from ssh://user@dummy/server
   searching for changes
-  fetching revlog data for 3 commits
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglogp
@@ -757,12 +748,7 @@ Make a new public commit
 
 Pull this into client1
   $ cd ../client1
-  $ hg pull
-  pulling from ssh://user@dummy/server
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
+  $ hg pull -q
 
 Move midbook to the public commit.
   $ hg book -fr 'desc(public1)' midbook
@@ -784,13 +770,13 @@ Sync in client 2.  It doesn't have the new destination of midbook, so should omi
   $ cd ../client1
   $ hg cloud sync -q
   $ tglogp
-  o  f770b7f72fa5 public 'public1' midbook
+  @  0fe175b134e8 draft 'oldstack-mar4 amended'
   │
-  │ @  0fe175b134e8 draft 'oldstack-mar4 amended'
-  │ │
-  │ o  d16408588b2d draft 'oldstack-feb4'
-  │ │
-  │ o  1f9ebd6d1390 draft 'oldstack-feb1'
+  o  d16408588b2d draft 'oldstack-feb4'
+  │
+  o  1f9ebd6d1390 draft 'oldstack-feb1'
+  │
+  │ o  f770b7f72fa5 public 'public1' midbook
   ├─╯
   o  df4f53cec30a public 'base' mytag
 Sync in client 4.  Some of the omitted heads in this client have been removed
@@ -802,7 +788,6 @@ from the cloud workspace, but the sync should still work.
   commitcloud: nothing to upload
   pulling 0fe175b134e8 from ssh://user@dummy/server
   searching for changes
-  fetching revlog data for 1 commits
   f770b7f72fa5 not found, omitting midbook bookmark
   commitcloud: commits synchronized
   finished in 0.00 sec

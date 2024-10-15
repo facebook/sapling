@@ -4,6 +4,8 @@
 
 #inprocess-hg-incompatible
 
+  $ setconfig remotenames.selectivepull=true
+
   $ enable amend commitcloud infinitepush rebase remotenames fbcodereview
   $ configure dummyssh
   $ setconfig commitcloud.hostname=testhost
@@ -53,7 +55,6 @@ Client 1
   commitcloud: nothing to upload
   pulling 00422fad0026 from ssh://user@dummy/server
   searching for changes
-  fetching revlog data for 1 commits
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglogp
@@ -109,22 +110,18 @@ Fake land the commit
   $ cd client1
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg pull
   pulling from ssh://user@dummy/server
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
+  imported commit graph for 3 commits (1 segment)
   marked 1 commit as landed
   $ tglogp
-  o  67d363c9001e public 'public-commit-2'
-  │
-  o  441f69264760 public 'landed-commit
-  │  Differential Revision: https://phabricator.fb.com/D1234'
-  o  031d760782fb public 'public-commit-1'
-  │
-  │ x  00422fad0026 draft 'draft-commit
-  ├─╯  Differential Revision: https://phabricator.fb.com/D1234' foo
+  x  00422fad0026 draft 'draft-commit
+  │  Differential Revision: https://phabricator.fb.com/D1234' foo
+  │ o  67d363c9001e public 'public-commit-2'
+  │ │
+  │ o  441f69264760 public 'landed-commit
+  │ │  Differential Revision: https://phabricator.fb.com/D1234'
+  │ o  031d760782fb public 'public-commit-1'
+  ├─╯
   @  df4f53cec30a public 'base'
-  
   $ hg cloud sync -q
   $ cd ../client2
   $ hg cloud sync -q
@@ -172,12 +169,7 @@ Sync in client2.   This will omit the bookmark because we don't have the landed 
   
 Pull so that we have the public commit and sync again.
 
-  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg pull
-  pulling from ssh://user@dummy/server
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg pull -q
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: nothing to upload

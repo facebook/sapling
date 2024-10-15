@@ -4,6 +4,7 @@
 
 #chg-compatible
   $ setconfig devel.segmented-changelog-rev-compat=true
+  $ setconfig remotenames.selectivepull=true
 
 ==================================
 Basic testing for the push command
@@ -92,10 +93,6 @@ Testing of the '--rev' flag
 
   $ hg pull ../test-revflag-7
   pulling from ../test-revflag-7
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
 
   $ hg verify
   warning: verify does not actually check anything in this repo

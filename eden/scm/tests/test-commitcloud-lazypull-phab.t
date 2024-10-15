@@ -2,6 +2,7 @@
 
 #require no-eden
 
+  $ setconfig remotenames.selectivepull=true
 
   $ configure dummyssh mutation-norecord
   $ enable amend arcdiff commitcloud infinitepush rebase remotenames share
@@ -144,7 +145,6 @@ Test for `hg diff --since-last-submit`
   commitcloud: nothing to upload
   pulling 1166f984c176 from ssh://user@dummy/server
   searching for changes
-  fetching revlog data for 1 commits
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -177,7 +177,6 @@ Test for `hg diff --since-last-submit`
   commitcloud: nothing to upload
   pulling 1166f984c176 from ssh://user@dummy/server
   searching for changes
-  fetching revlog data for 1 commits
   commitcloud: commits synchronized
   finished in * (glob)
 

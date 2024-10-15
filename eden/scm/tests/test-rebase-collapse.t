@@ -2,6 +2,7 @@
 
 #require no-eden
 
+  $ setconfig remotenames.selectivepull=true
 
   $ configure mutation
   $ enable rebase strip
@@ -33,8 +34,9 @@ Create repo a:
 Rebasing B onto H and collapsing changesets:
 
 
-  $ hg clone -q -u $D a a1
+  $ cp -r a a1
   $ cd a1
+  $ hg go -q $D
 
   $ cat > $TESTTMP/editor.sh <<EOF
   > echo "==== before editing"
@@ -92,8 +94,9 @@ Rebasing B onto H and collapsing changesets:
 
 Rebasing E onto H:
 
-  $ hg clone -q -u $H a a2
+  $ cp -r a a2
   $ cd a2
+  $ hg go -q $H
 
   $ hg rebase --source $E --collapse --dest $H
   rebasing 7fb047a69f22 "E"
@@ -125,8 +128,9 @@ Rebasing E onto H:
 
 Rebasing G onto H with custom message:
 
-  $ hg clone -q -u $H a a3
+  $ cp -r a a3
   $ cd a3
+  $ hg go -q $H
 
   $ hg rebase --base 6 -m 'custom message' -d .
   abort: message can only be specified with collapse
@@ -189,8 +193,9 @@ Create repo b:
 
 Rebase and collapse - more than one external (fail):
 
-  $ hg clone -q -u $H b b1
+  $ cp -r b b1
   $ cd b1
+  $ hg go -q $H
 
   $ hg rebase -s $C --dest $H --collapse
   abort: unable to collapse on top of 575c4b5ec114, there is more than one external parent: 112478962961, 11abe3fb10b8
@@ -252,8 +257,9 @@ Create repo c:
 
 Rebase and collapse - E onto I:
 
-  $ hg clone -q -u $I c c1
+  $ cp -r c c1
   $ cd c1
+  $ hg go -q $I
 
   $ hg rebase -s $E --dest $I --collapse # root (E) is not a merge
   rebasing 49cb92066bfd "E"
@@ -310,8 +316,9 @@ Create repo d:
 
 Rebase and collapse - B onto F:
 
-  $ hg clone -q -u $F d d1
+  $ cp -r d d1
   $ cd d1
+  $ hg go -q $F
 
   $ hg rebase -s $B --collapse --dest $F
   rebasing 112478962961 "B"

@@ -1297,10 +1297,11 @@ class localrepository:
                 remotename = bookmarks.remotenameforurl(
                     self.ui, remote.url()
                 )  # ex. 'default' or 'remote'
-                # saveremotenames will invalidate self.heads by bumping
-                # _remotenames.changecount, and invalidate phase sets
-                # like `public()` by calling invalidatevolatilesets.
+                # `remotename` can be None when source is a filesystem path
                 if remotename is not None:
+                    # saveremotenames will invalidate self.heads by bumping
+                    # _remotenames.changecount, and invalidate phase sets
+                    # like `public()` by calling invalidatevolatilesets.
                     bookmarks.saveremotenames(
                         self, {remotename: remotenamechanges}, override=False
                     )

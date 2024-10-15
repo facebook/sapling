@@ -2,6 +2,7 @@
 
 #require no-eden
 
+  $ setconfig remotenames.selectivepull=true
 
   $ configure dummyssh mutation-norecord
   $ enable amend commitcloud infinitepush rebase remotenames share
@@ -93,7 +94,6 @@ Sync from the second client and `hg unamend` there
   commitcloud: nothing to upload
   pulling b68dd726c6c6 from ssh://user@dummy/server
   searching for changes
-  fetching revlog data for 1 commits
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -171,7 +171,6 @@ Now cloud sync in the other client.  The cycle means we can't reliably pick a de
   commitcloud: nothing to upload
   pulling cb45bbd0ae75 74b668b6b779 from ssh://user@dummy/server
   searching for changes
-  fetching revlog data for 2 commits
   commitcloud: commits synchronized
   finished in * sec (glob)
   commitcloud: current revision 1cf4a5a0e8fc has been moved remotely to 74b668b6b779

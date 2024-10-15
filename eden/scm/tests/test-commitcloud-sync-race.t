@@ -5,6 +5,8 @@
 
 #inprocess-hg-incompatible
 
+  $ setconfig remotenames.selectivepull=true
+
   $ cat >>$TESTTMP/ccdelay.py <<EOF
   > 
   > import os
@@ -131,7 +133,6 @@ Let the background sync we started earlier continue, and start a concurrent clou
   visibility: read 1 heads: 1292cc1f1c17
   pulling 79089e97b9e7 from ssh://user@dummy/server
   searching for changes
-  fetching revlog data for 1 commits
   visibility: removed 0 heads []; added 1 heads [79089e97b9e7]
   visibility: removed 0 heads []; added 1 heads [79089e97b9e7] (?)
   commitcloud_sync: synced to workspace user/test/default version 2: 1 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks (0 omitted)

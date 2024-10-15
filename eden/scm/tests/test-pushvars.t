@@ -10,6 +10,8 @@
 
 # Setup
 
+  $ setconfig remotenames.selectivepull=true
+
   $ cat > $TESTTMP/pretxnchangegroup.sh << 'EOF'
   > env | egrep "^HG_USERVAR_(DEBUG|BYPASS_REVIEW)" | sort
   > exit 0

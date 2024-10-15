@@ -4,30 +4,21 @@
 
 #chg-compatible
 
+  $ setconfig remotenames.selectivepull=true
+
   $ enable rebase remotenames
 
   $ hg init a
   $ cd a
-
-  $ echo A > A
-  $ hg ci -Am A
-  adding A
-
-  $ echo B > B
-  $ hg ci -Am B
-  adding B
-
-  $ echo C >> A
-  $ hg ci -m C
-
-  $ hg up -q -C 'desc(A)'
-
-  $ echo D >> A
-  $ hg ci -m D
-
-  $ echo E > E
-  $ hg ci -Am E
-  adding E
+  $ drawdag <<EOS
+  > C    # C/A = A\nC\n
+  > | E  # E/E = E\n
+  > B |  # B/B = B\n
+  > | D  # D/A = A\nD\n
+  > |/
+  > A    # A/A = A\n
+  > # drawdag.defaultfiles=false
+  > EOS
 
   $ cd ..
 
@@ -43,23 +34,24 @@ Changes during an interruption - continue:
 
   $ hg clone -q a a1
   $ cd a1
+  $ hg pull -q -r $C -r $E
+  $ hg go -q $E
 
   $ tglog
-  @  ae36e8e3dfd7 'E'
+  @  a0c831b27e4d 'E'
   │
-  o  46b37eabc604 'D'
-  │
-  │ o  965c486023db 'C'
+  │ o  9adab7336c0e 'C'
+  │ │
+  o │  1204d6864fcb 'D'
   │ │
   │ o  27547f69f254 'B'
   ├─╯
   o  4a2df7238c3b 'A'
-  
 Rebasing B onto E:
 
   $ hg rebase -s 'desc(B)' -d 'desc(E)'
   rebasing 27547f69f254 "B"
-  rebasing 965c486023db "C"
+  rebasing 9adab7336c0e "C"
   merging A
   warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -78,25 +70,24 @@ Force a commit on C during the interruption:
   $ restore_rebasestate
 
   $ tglogp
-  @  deb5d2f93d8b draft 'Extra'
+  @  a1192b4e4efb draft 'Extra'
   │
-  │ o  45396c49d53b draft 'B'
+  │ o  8e6c056dc407 draft 'B'
   │ │
-  │ o  ae36e8e3dfd7 draft 'E'
+  │ o  a0c831b27e4d draft 'E'
   │ │
-  │ o  46b37eabc604 draft 'D'
+  o │  9adab7336c0e draft 'C'
   │ │
-  o │  965c486023db draft 'C'
+  │ o  1204d6864fcb draft 'D'
   │ │
   x │  27547f69f254 draft 'B'
   ├─╯
   o  4a2df7238c3b draft 'A'
-  
 Resume the rebasing:
 
   $ hg rebase --continue
-  already rebased 27547f69f254 "B" as 45396c49d53b
-  rebasing 965c486023db "C"
+  already rebased 27547f69f254 "B" as 8e6c056dc407
+  rebasing 9adab7336c0e "C"
   merging A
   warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -111,26 +102,25 @@ Solve the conflict and go on:
   continue: hg rebase --continue
 
   $ hg rebase --continue
-  already rebased 27547f69f254 "B" as 45396c49d53b
-  rebasing 965c486023db "C"
+  already rebased 27547f69f254 "B" as 8e6c056dc407
+  rebasing 9adab7336c0e "C"
 
   $ tglogp
-  o  d2d25e26288e draft 'C'
+  o  bc920f6d31a8 draft 'C'
   │
-  │ o  deb5d2f93d8b draft 'Extra'
+  │ o  a1192b4e4efb draft 'Extra'
   │ │
-  o │  45396c49d53b draft 'B'
+  o │  8e6c056dc407 draft 'B'
   │ │
-  @ │  ae36e8e3dfd7 draft 'E'
+  @ │  a0c831b27e4d draft 'E'
   │ │
-  o │  46b37eabc604 draft 'D'
+  │ x  9adab7336c0e draft 'C'
   │ │
-  │ x  965c486023db draft 'C'
+  o │  1204d6864fcb draft 'D'
   │ │
   │ x  27547f69f254 draft 'B'
   ├─╯
   o  4a2df7238c3b draft 'A'
-  
   $ cd ..
 
 
@@ -138,23 +128,24 @@ Changes during an interruption - abort:
 
   $ hg clone -q a a2
   $ cd a2
+  $ hg pull -q -r $C -r $E
+  $ hg go -q $E
 
   $ tglog
-  @  ae36e8e3dfd7 'E'
+  @  a0c831b27e4d 'E'
   │
-  o  46b37eabc604 'D'
-  │
-  │ o  965c486023db 'C'
+  │ o  9adab7336c0e 'C'
+  │ │
+  o │  1204d6864fcb 'D'
   │ │
   │ o  27547f69f254 'B'
   ├─╯
   o  4a2df7238c3b 'A'
-  
 Rebasing B onto E:
 
   $ hg rebase -s 'desc(B)' -d 'desc(E)'
   rebasing 27547f69f254 "B"
-  rebasing 965c486023db "C"
+  rebasing 9adab7336c0e "C"
   merging A
   warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -173,20 +164,19 @@ Force a commit on B' during the interruption:
   $ restore_rebasestate
 
   $ tglog
-  @  402ee3642b59 'Extra'
+  @  c2ca60255d82 'Extra'
   │
-  o  45396c49d53b 'B'
+  o  8e6c056dc407 'B'
   │
-  o  ae36e8e3dfd7 'E'
+  o  a0c831b27e4d 'E'
   │
-  o  46b37eabc604 'D'
-  │
-  │ o  965c486023db 'C'
+  │ o  9adab7336c0e 'C'
+  │ │
+  o │  1204d6864fcb 'D'
   │ │
   │ x  27547f69f254 'B'
   ├─╯
   o  4a2df7238c3b 'A'
-  
 Abort the rebasing:
 
   $ hg rebase --abort
@@ -194,43 +184,43 @@ Abort the rebasing:
   rebase aborted
 
   $ tglog
-  @  402ee3642b59 'Extra'
+  @  c2ca60255d82 'Extra'
   │
-  o  45396c49d53b 'B'
+  o  8e6c056dc407 'B'
   │
-  o  ae36e8e3dfd7 'E'
+  o  a0c831b27e4d 'E'
   │
-  o  46b37eabc604 'D'
-  │
-  │ o  965c486023db 'C'
+  │ o  9adab7336c0e 'C'
+  │ │
+  o │  1204d6864fcb 'D'
   │ │
   │ x  27547f69f254 'B'
   ├─╯
   o  4a2df7238c3b 'A'
-  
   $ cd ..
 
 Changes during an interruption - abort (again):
 
   $ hg clone -q a a3
   $ cd a3
+  $ hg pull -q -r $C -r $E
+  $ hg go -q $E
 
   $ tglogp
-  @  ae36e8e3dfd7 draft 'E'
+  @  a0c831b27e4d draft 'E'
   │
-  o  46b37eabc604 draft 'D'
-  │
-  │ o  965c486023db draft 'C'
+  │ o  9adab7336c0e draft 'C'
+  │ │
+  o │  1204d6864fcb draft 'D'
   │ │
   │ o  27547f69f254 draft 'B'
   ├─╯
   o  4a2df7238c3b draft 'A'
-  
 Rebasing B onto E:
 
   $ hg rebase -s 'desc(B)' -d 'desc(E)'
   rebasing 27547f69f254 "B"
-  rebasing 965c486023db "C"
+  rebasing 9adab7336c0e "C"
   merging A
   warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -244,41 +234,39 @@ Change phase on B and B'
   $ hg debugmakepublic 'desc(B)'
 
   $ tglogp
-  @  45396c49d53b public 'B'
+  @  8e6c056dc407 public 'B'
   │
-  o  ae36e8e3dfd7 public 'E'
+  o  a0c831b27e4d public 'E'
   │
-  o  46b37eabc604 public 'D'
-  │
-  │ o  965c486023db draft 'C'
+  │ o  9adab7336c0e draft 'C'
+  │ │
+  o │  1204d6864fcb public 'D'
   │ │
   │ o  27547f69f254 public 'B'
   ├─╯
   o  4a2df7238c3b public 'A'
-  
 Abort the rebasing:
 
   $ hg rebase --abort
-  warning: can't clean up public changesets 45396c49d53b
+  warning: can't clean up public changesets 8e6c056dc407
   rebase aborted
 
   $ tglogp
-  @  45396c49d53b public 'B'
+  @  8e6c056dc407 public 'B'
   │
-  o  ae36e8e3dfd7 public 'E'
+  o  a0c831b27e4d public 'E'
   │
-  o  46b37eabc604 public 'D'
-  │
-  │ o  965c486023db draft 'C'
+  │ o  9adab7336c0e draft 'C'
+  │ │
+  o │  1204d6864fcb public 'D'
   │ │
   │ o  27547f69f254 public 'B'
   ├─╯
   o  4a2df7238c3b public 'A'
-  
 Test rebase interrupted by hooks
 
   $ hg up 'desc(C)'
-  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ echo F > F
   $ hg add F
   $ hg ci -m F
@@ -290,46 +278,44 @@ Test rebase interrupted by hooks
   $ cp -R a3 hook-precommit
   $ cd hook-precommit
   $ hg rebase --source 'desc(C)' --dest 'max(desc(B))' --tool internal:other --config 'hooks.precommit=hg status | grep "M A"'
-  rebasing 965c486023db "C"
+  rebasing 9adab7336c0e "C"
   M A
-  rebasing a0b2430ebfb8 "F"
+  rebasing 096735ac862c "F"
   abort: precommit hook exited with status 1
   [255]
   $ tglogp
-  @  401ccec5e39f draft 'C'
+  @  0004de432eb5 draft 'C'
   │
-  │ @  a0b2430ebfb8 draft 'F'
+  │ @  096735ac862c draft 'F'
   │ │
-  o │  45396c49d53b public 'B'
+  o │  8e6c056dc407 public 'B'
   │ │
-  o │  ae36e8e3dfd7 public 'E'
+  o │  a0c831b27e4d public 'E'
   │ │
-  o │  46b37eabc604 public 'D'
+  │ x  9adab7336c0e draft 'C'
   │ │
-  │ x  965c486023db draft 'C'
+  o │  1204d6864fcb public 'D'
   │ │
   │ o  27547f69f254 public 'B'
   ├─╯
   o  4a2df7238c3b public 'A'
-  
   $ hg rebase --continue
-  already rebased 965c486023db "C" as 401ccec5e39f
-  rebasing a0b2430ebfb8 "F"
+  already rebased 9adab7336c0e "C" as 0004de432eb5
+  rebasing 096735ac862c "F"
   $ tglogp
-  @  6e92a149ac6b draft 'F'
+  @  6c021db6ecaa draft 'F'
   │
-  o  401ccec5e39f draft 'C'
+  o  0004de432eb5 draft 'C'
   │
-  o  45396c49d53b public 'B'
+  o  8e6c056dc407 public 'B'
   │
-  o  ae36e8e3dfd7 public 'E'
+  o  a0c831b27e4d public 'E'
   │
-  o  46b37eabc604 public 'D'
+  o  1204d6864fcb public 'D'
   │
   │ o  27547f69f254 public 'B'
   ├─╯
   o  4a2df7238c3b public 'A'
-  
   $ cd ..
 
 Make sure merge state is cleaned up after a no-op rebase merge (issue5494)

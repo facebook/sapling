@@ -1,6 +1,8 @@
 #modern-config-incompatible
 #inprocess-hg-incompatible
 
+  $ setconfig remotenames.selectivepull=true
+
   $ configure dummyssh
 #require serve no-eden
 
@@ -11,23 +13,19 @@
   $ hg addremove
   adding foo
   $ hg commit -m 1
+  $ hg book master
 
   $ hg verify
   warning: verify does not actually check anything in this repo
 
   $ cd ..
 
-  $ hg clone --pull ssh://user@dummy/test copy
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  updating to tip
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg clone -q --pull ssh://user@dummy/test copy
 
   $ cd copy
   $ hg verify
-  warning: verify does not actually check anything in this repo
+  commit graph passed quick local checks
+  (pass --dag to perform slow checks with server)
 
   $ hg co tip
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -39,8 +37,6 @@
 
   $ hg pull
   pulling from ssh://user@dummy/test (glob)
-  searching for changes
-  no changes found
 
 Test pull of non-existing 20 character revision specification, making sure plain ascii identifiers
 not are encoded like a node:
@@ -61,7 +57,6 @@ Issue622: hg init && hg pull -u URL doesn't checkout default branch
   $ cd empty
   $ hg pull -u ../test -d tip
   pulling from ../test
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
