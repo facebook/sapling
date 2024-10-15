@@ -125,9 +125,16 @@ impl PushRedirectionConfig for SqlPushRedirectionConfig {
         ctx: &CoreContext,
         repo_id: RepositoryId,
     ) -> Result<Option<PushRedirectionConfigEntry>> {
+        let ttl =
+            justknobs::get_as::<u64>("scm/mononoke:pushredirection_config_cache_ttl_secs", None)?;
+
         let rows = Get::maybe_traced_query(
             self.sql_query_config.as_ref(),
-            None,
+            if ttl == 0 {
+                None
+            } else {
+                Some(std::time::Duration::from_secs(ttl))
+            },
             &self.connections.read_connection,
             ctx.client_request_info(),
             &repo_id,
