@@ -9,9 +9,11 @@ use std::io;
 
 use anyhow::ensure;
 use anyhow::Result;
+use types::HgId;
 use types::Id20;
 
 use crate::ByteCount;
+use crate::Sha1Write;
 
 /// Wrap `raw_text` in Hg SHA1 format so the returned bytes have the SHA1 that
 /// matches the Hg object identity.
@@ -21,6 +23,13 @@ pub fn hg_sha1_serialize(raw_text: &[u8], p1: &Id20, p2: &Id20) -> Vec<u8> {
     let mut result = Vec::with_capacity(byte_count.into());
     hg_sha1_serialize_write(raw_text, p1, p2, &mut result).unwrap();
     result
+}
+
+/// Calculate the SHA1 digest.
+pub fn hg_sha1_digest(raw_text: &[u8], p1: &Id20, p2: &Id20) -> HgId {
+    let mut hasher = Sha1Write::default();
+    hg_sha1_serialize_write(raw_text, p1, p2, &mut hasher).unwrap();
+    hasher.into()
 }
 
 /// A more general purposed `hg_sha1_serialize` to avoid copies.

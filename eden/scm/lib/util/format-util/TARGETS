@@ -8,6 +8,7 @@ rust_library(
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:sha1",
         "//eden/scm/lib/minibytes:minibytes",
         "//eden/scm/lib/storemodel:storemodel",
         "//eden/scm/lib/types:types",

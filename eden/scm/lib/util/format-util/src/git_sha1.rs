@@ -10,8 +10,10 @@ use std::io;
 use anyhow::ensure;
 use anyhow::Context as _;
 use anyhow::Result;
+use types::Id20;
 
 use crate::ByteCount;
+use crate::Sha1Write;
 
 /// Wrap `raw_text` in Git SHA1 format so the returned bytes have the SHA1 that
 /// matches the Git object identity.
@@ -23,6 +25,13 @@ pub fn git_sha1_serialize(raw_text: &[u8], kind: &str) -> Vec<u8> {
     let mut result = Vec::with_capacity(byte_count.into());
     git_sha1_serialize_write(raw_text, kind, &mut result).unwrap();
     result
+}
+
+/// Calculate the SHA1 digest.
+pub fn git_sha1_digest(raw_text: &[u8], kind: &str) -> Id20 {
+    let mut hasher = Sha1Write::default();
+    git_sha1_serialize_write(raw_text, kind, &mut hasher).unwrap();
+    hasher.into()
 }
 
 /// A more general purposed `git_sha1_serialize` to avoid copies.
