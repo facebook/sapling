@@ -30,6 +30,7 @@ import typing
 
 from sapling import (
     bookmarks,
+    cmdutil,
     commands,
     discovery,
     encoding,
@@ -710,6 +711,8 @@ def expullcmd(orig, ui, repo, source="default", **opts):
 
     if not opts.get("rebase"):
         return orig(ui, repo, source, **opts)
+
+    cmdutil.checkunfinished(repo)
 
     try:
         rebasemodule = extensions.find("rebase")

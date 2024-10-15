@@ -10,6 +10,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+  $ enable remotenames
+
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]
@@ -85,7 +87,7 @@
 # Abort pull early if working dir is not clean:
 
   $ echo L1-mod > L1
-  $ hg pull --rebase -d tip
+  $ hg pull -q --rebase -d tip
   abort: uncommitted changes
   [255]
   $ hg goto --clean --quiet .
@@ -121,7 +123,7 @@
   $ hg merge 2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
-  $ hg pull --rebase -d tip
+  $ hg pull -q --rebase -d tip
   abort: outstanding uncommitted merge
   [255]
   $ hg goto --clean --quiet .
@@ -144,12 +146,6 @@
   @  77ae9631bcca 'R1' norebase
   │
   ~
-
-# pull --rebase --update should ignore --update:
-
-  $ hg pull --rebase --update
-  abort: missing rebase destination - supply --dest / -d
-  [255]
 
 # pull --rebase doesn't update if nothing has been pulled:
 
