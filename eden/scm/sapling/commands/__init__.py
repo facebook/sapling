@@ -4919,6 +4919,7 @@ def _newpull(ui, repo, source, **opts):
         bookmarknames=bmarks,
         headnames=revs,
         quiet=False,
+        force=opts.get("force"),
     )
     newlen = len(repo)
 

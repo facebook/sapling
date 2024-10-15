@@ -1,32 +1,25 @@
-#modern-config-incompatible
-
 #require no-eden
 
 #inprocess-hg-incompatible
 
+  $ setconfig remotenames.selectivepull=true
+
 Issue586: removing remote files after merge appears to corrupt the
 dirstate
 
-  $ hg init a
-  $ cd a
+  $ newserver a
   $ echo a > a
   $ hg ci -Ama
   adding a
+  $ hg book master
 
-  $ hg init ../b
-  $ cd ../b
+  $ cd
+  $ hg clone -qU test:a b
+  $ cd b
   $ echo b > b
   $ hg ci -Amb
   adding b
 
-  $ hg pull -f ../a
-  pulling from ../a
-  searching for changes
-  warning: repository is unrelated
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
   $ hg merge
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -46,17 +39,20 @@ create test repos
   $ touch repoa/a
   $ hg -R repoa ci -Am adda
   adding a
+  $ hg -R repoa whereami
+  7132ab4568acf5245eda3a818f5e927761e093bd
 
   $ hg init repob
   $ touch repob/b
   $ hg -R repob ci -Am addb
   adding b
+  $ hg -R repob whereami
+  5ddceb3496526eca9300ea4b56d384785a1e31ba
 
   $ hg init repoc
   $ cd repoc
-  $ hg pull ../repoa
-  pulling from ../repoa
-  requesting all changes
+  $ hg pull -fr 7132ab456 ssh://user@dummy/repoa
+  pulling from ssh://user@dummy/repoa
   adding changesets
   adding manifests
   adding file changes
@@ -65,11 +61,10 @@ create test repos
   $ mkdir tst
   $ hg mv * tst
   $ hg ci -m "import a in tst"
-  $ hg pull -f ../repob
+  $ hg pull -fr 5ddceb349 ../repob
   pulling from ../repob
   searching for changes
   warning: repository is unrelated
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes

@@ -1032,6 +1032,7 @@ class localrepository:
         quiet=True,
         visible=True,
         remotebookmarks=None,
+        force=False,
     ):
         """Pull specified revisions and remote bookmarks.
 
@@ -1042,8 +1043,10 @@ class localrepository:
           new nodes of those remote bookmarks from server, we just use the value
           from this map.
 
-        visible=False can disable updating visible heads. This means the pulled
+        - visible=False can disable updating visible heads. This means the pulled
         commit hashes will not be visible, although bookmarks are still updated.
+
+        - force=true allows pulling unrelated heads (i.e. empty common)
 
         If a remote bookmark no longer exists on the server-side, it will be
         removed.
@@ -1281,7 +1284,13 @@ class localrepository:
                 }
                 opargs = {"extras": extras, "newpull": True}
                 pullheads = sorted(pullheads)
-                exchange.pull(self, remote, pullheads, opargs=opargs)
+                exchange.pull(
+                    self,
+                    remote,
+                    pullheads,
+                    force=force,
+                    opargs=opargs,
+                )
 
             # Update remotenames.
             if remotenamechanges:
