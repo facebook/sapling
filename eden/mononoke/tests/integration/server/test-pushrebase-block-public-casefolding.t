@@ -27,8 +27,7 @@ setup configuration
   > EOF
 
   $ setup_common_hg_configs
-FIXME: enable selective pull
-  $ setconfig remotenames.selectivepull=false
+  $ setconfig remotenames.selectivepulldefault=master_bookmark,other
   $ cd $TESTTMP
 
   $ configure dummyssh

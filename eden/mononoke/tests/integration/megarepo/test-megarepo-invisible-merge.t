@@ -45,8 +45,6 @@ Setup repositories
   $ function createfile_with_content { mkdir -p "$(dirname  $1)" && echo "$2" > "$1" && hg add -q "$1"; }
 
   $ cd $TESTTMP
-FIXME: enable selective pull
-  $ setconfig remotenames.selectivepull=false
 
 -- init hg fbsource server repo
   $ cd $TESTTMP
@@ -197,12 +195,12 @@ Add a new config version to "all" configs, this new version has fbsource as larg
 Prepare for the invisible merge
 1. Create an independent ovrsource DAG in fbsource
   $ cd "$TESTTMP/ovr-hg-cnt"
-# edenapi uses repo name from paths.default - wrong! disable for now.
   $ hg push -q \
+  >     --config experimental.narrow-heads=true \
+  >     --config pull.httpbookmarks=false \
   >     --config extensions.pushrebase=! \
   >     --to ovrsource/pre_move_master \
   >     --create --force -r . \
-  >     --config edenapi.url= \
   >     mono:fbs-mon
   warning: repository is unrelated
 1.5. Mark independent ovrsource DAG in fbsource as preserved
@@ -215,7 +213,7 @@ Prepare for the invisible merge
 
 2. Move files on top of the intermediate DAG
   $ cd "$TESTTMP/fbs-hg-cnt"
-  $ hg pull -q
+  $ hg pull -q -B ovrsource/pre_move_master
   $ hg up -q ovrsource/pre_move_master
   $ mkdir arvr-legacy .ovrsource-rest
   $ hg mv fbcode .ovrsource-rest/

@@ -123,6 +123,7 @@ dott_test(
     deps = [
         "//eden/mononoke:admin",
         "//eden/mononoke:mononoke",
+        "//eden/mononoke/tools/admin:newadmin",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )

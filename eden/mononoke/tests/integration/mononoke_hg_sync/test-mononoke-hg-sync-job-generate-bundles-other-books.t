@@ -9,8 +9,7 @@
 setup configuration
 
   $ setup_common_config blob_files
-FIXME: enable selective pull
-  $ setconfig remotenames.selectivepull=false
+  $ setconfig remotenames.selectivepulldefault=master_bookmark,newbook
   $ cd $TESTTMP
 
 setup repo

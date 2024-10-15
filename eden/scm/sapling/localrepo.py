@@ -1291,9 +1291,10 @@ class localrepository:
                 # saveremotenames will invalidate self.heads by bumping
                 # _remotenames.changecount, and invalidate phase sets
                 # like `public()` by calling invalidatevolatilesets.
-                bookmarks.saveremotenames(
-                    self, {remotename: remotenamechanges}, override=False
-                )
+                if remotename is not None:
+                    bookmarks.saveremotenames(
+                        self, {remotename: remotenamechanges}, override=False
+                    )
 
             # Update visibleheads:
             if visible and heads:

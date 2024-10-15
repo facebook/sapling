@@ -22,8 +22,8 @@ setup common configuration for these tests
   > infinitepush=
   > commitcloud=
   > EOF
-FIXME: enable selective pull
-  $ setconfig remotenames.selectivepull=false
+  $ setconfig pull.use-commit-graph=true
+  $ setconfig remotenames.selectivepulldefault=master_bookmark,branch_bookmark
 
 setup repo
 
@@ -92,9 +92,6 @@ pull these draft commits
   $ hg pull -r fc8f2fba9ac9
   pulling from mono:repo
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
 
   $ graphlog
   o  fc8f2fba9ac9 draft 'draft2'
@@ -111,6 +108,7 @@ land the first draft commit
   $ hg push -r 48337b947baa --to master_bookmark
   pushing rev 48337b947baa to destination mono:repo bookmark master_bookmark
   searching for changes
+  no changes found
   updating bookmark master_bookmark
 
 put a new draft commit on top
@@ -162,26 +160,23 @@ pull all of these commits
   $ hg pull -r 09b17e5ff090 -r 3e86159717e8
   pulling from mono:repo
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
 
 the server will have returned phaseheads information that makes 'draft1' and
 'branch1' public, and everything else draft
   $ graphlog
-  o  09b17e5ff090 draft 'draft3'
+  o  3e86159717e8 draft 'branch3'
   │
-  │ o  3e86159717e8 draft 'branch3'
+  o  0bf099b792a8 draft 'branch2'
+  │
+  o  eaf82af99127 public 'branch1'  default/branch_bookmark
+  │
+  │ o  09b17e5ff090 draft 'draft3'
   │ │
-  │ o  0bf099b792a8 draft 'branch2'
+  │ o  fc8f2fba9ac9 draft 'draft2'
   │ │
-  │ o  eaf82af99127 public 'branch1'  default/branch_bookmark
+  │ o  48337b947baa public 'draft1'  default/master_bookmark
   │ │
-  o │  fc8f2fba9ac9 draft 'draft2'
-  │ │
-  o │  48337b947baa public 'draft1'  default/master_bookmark
-  │ │
-  o │  f2f073d106b0 public 'public1'
+  │ o  f2f073d106b0 public 'public1'
   ├─╯
   o  df4f53cec30a public 'base'
   

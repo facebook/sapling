@@ -9,8 +9,6 @@
 setup configuration
 
   $ setup_common_config
-FIXME: enable selective pull
-  $ setconfig remotenames.selectivepull=false
 
   $ cd $TESTTMP
 
@@ -46,8 +44,6 @@ to pull these pushed commits
   $ cd repo2
   $ hg pull ssh://user@dummy/repo
   pulling from ssh://user@dummy/repo
-  searching for changes
-  no changes found
 
 start mononoke
 
@@ -113,12 +109,21 @@ move master bookmarks
   $ hg bookmark -f master_bookmark -r 'tip'
 
   $ hg log -r "reverse(all())" --stat
+  commit:      f40c09205504
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     c
+   (re)
+   b_dir/b |  2 +-
+   c_dir/c |  1 +
+   2 files changed, 2 insertions(+), 1 deletions(-)
+  
   commit:      634de738bb0f
   bookmark:    master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     g
-   (re)
+  
    a           |  1 -
    a_dir/a     |  1 +
    b_dir/a_bis |  1 +
@@ -157,15 +162,6 @@ move master bookmarks
    d_dir/d |  1 +
    2 files changed, 2 insertions(+), 1 deletions(-)
   
-  commit:      f40c09205504
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     c
-  
-   b_dir/b |  2 +-
-   c_dir/c |  1 +
-   2 files changed, 2 insertions(+), 1 deletions(-)
-  
   commit:      bb0985934a0f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -194,13 +190,11 @@ push to Mononoke
   sending hello command
   sending clienttelemetry command
   query 1; heads
-  sending batch command
   searching for changes
   local heads: 2; remote heads: 1 (explicit: 0); initial common: 1
   sampling from both directions (2 of 2)
   sampling undecided commits (4 of 4)
   query 2; still undecided: 4, sample size is: 4
-  sending known command
   2 total queries in 0.0000s
   checking for updated bookmarks
   preparing listkeys for "bookmarks"
@@ -209,11 +203,11 @@ push to Mononoke
   6 changesets found
   list of changesets:
   bb0985934a0f8a493887892173b68940ceb40b4f
-  f40c09205504d8410f8c8679bf7a85fef25f9337
   fbd6b221382efa5d5bc53130cdaccf06e04c97d3
   30da5bf63484d2d6572edafb3ea211c17cd8c005
   8315ea53ef41d34f56232c88669cc80225b6e66d
   634de738bb0ff135e32d48567718fb9d7dedf575
+  f40c09205504d8410f8c8679bf7a85fef25f9337
   sending unbundle command
   bundle2-output-bundle: "HG20", 4 parts total
   bundle2-output-part: "replycaps" * bytes payload (glob)
@@ -225,9 +219,9 @@ push to Mononoke
   bundle2-input-part: "reply:pushkey" (params: 2 mandatory) supported
   bundle2-input-bundle: 1 parts total
   updating bookmark master_bookmark
-  preparing listkeys for "bookmarks"
-  sending listkeys command
-  received listkey for "bookmarks": 57 bytes
+  preparing listkeys for "bookmarks" with pattern "['master_bookmark']"
+  sending listkeyspatterns command
+  received listkey for "bookmarks": 56 bytes
 
 Now pull what was just pushed
 

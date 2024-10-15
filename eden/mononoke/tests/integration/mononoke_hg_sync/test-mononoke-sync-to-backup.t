@@ -10,8 +10,6 @@ setup configuration
 
   $ REPOID=0 REPONAME=orig setup_common_config blob_files
   $ REPOID=1 REPONAME=backup setup_common_config blob_files
-FIXME: enable selective pull
-  $ setconfig remotenames.selectivepull=false
   $ export BACKUP_REPO_ID=1
   $ cd $TESTTMP
 
@@ -121,14 +119,11 @@ Do a manual move
   $ mononoke_backup_sync backup sync-loop 2 --bookmark-move-any-direction 2>&1 | grep 'successful sync'
   * successful sync of entries [8]* (glob)
 
+  $ wait_for_bookmark_move_edenapi backup master_bookmark "$TIP_PARENT"
+
   $ cd "$TESTTMP/backup"
   $ REPONAME=backup
-  $ hg pull
-  pulling from mono:backup
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
+  $ hg pull -q
   $ hg log -r master_bookmark -T '{node}\n'
   f5fb745185a2d197d092e7dfffe147f36de1af76
   $ echo "$TIP_PARENT"
@@ -143,14 +138,11 @@ Move forward to a commit that's already present in the destination
   * 1 of 1 commits already in the darkstorm backup repo, not including them in the bundle, repo: orig (glob)
   * successful sync of entries [9], repo: orig (glob)
 
+  $ wait_for_bookmark_move_edenapi backup master_bookmark "$TIP"
+
   $ cd "$TESTTMP/backup"
   $ REPONAME=backup
-  $ hg pull
-  pulling from mono:backup
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
+  $ hg pull -q
   $ hg log -r master_bookmark -T '{node}\n'
   bcf523b814e2cbae2d4d2d5b1cbbe3e391f4b4d8
   $ echo "$TIP"

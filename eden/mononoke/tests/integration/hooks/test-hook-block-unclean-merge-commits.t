@@ -14,10 +14,7 @@
   > CONF
   > )
 
-
-FIXME: enable selective pull
-  $ setconfig remotenames.selectivepull=false
-
+  $ setconfig remotenames.selectivepulldefault=master_bookmark,feature_bookmark,new_bookmark_not_in_regex,feature_bookmark2
 
   $ hg up -q tip
   $ echo file1 > file1 && hg -q addremove && hg commit -m "file1"

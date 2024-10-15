@@ -17,8 +17,7 @@ setup configuration
   $ register_hook_limit_filesize_global_limit 10 'bypass_pushvar="ALLOW_LARGE_FILES=true"'
 
   $ setup_common_hg_configs
-FIXME: enable selective pull
-  $ setconfig remotenames.selectivepull=false
+  $ setconfig remotenames.selectivepulldefault=master_bookmark,alternate
   $ cd $TESTTMP
 
   $ configure dummyssh
@@ -59,10 +58,7 @@ make more commits
 
 fast-forward the bookmark
   $ hg up -q $B
-  $ hg push -r . --to master_bookmark
-  pushing rev 112478962961 to destination mono:repo bookmark master_bookmark
-  searching for changes
-  updating bookmark master_bookmark
+  $ hg push -q -r . --to master_bookmark
 
 fast-forward the bookmark over a commit that fails the hook
   $ hg up -q $D
@@ -84,10 +80,7 @@ fast-forward the bookmark over a commit that fails the hook
   [255]
 
 bypass the hook, the push will now work
-  $ hg push -r . --to master_bookmark --pushvar ALLOW_LARGE_FILES=true
-  pushing rev 7ff4b7c298ec to destination mono:repo bookmark master_bookmark
-  searching for changes
-  updating bookmark master_bookmark
+  $ hg push -q -r . --to master_bookmark --pushvar ALLOW_LARGE_FILES=true
 
 attempt a non-fast-forward move, it should fail
   $ hg up -q $F
@@ -134,6 +127,7 @@ allow the non-forward move
   $ hg push -r . --to master_bookmark --non-forward-move --pushvar NON_FAST_FORWARD=true
   pushing rev af09fbbc2f05 to destination mono:repo bookmark master_bookmark
   searching for changes
+  no changes found (?)
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
@@ -149,10 +143,7 @@ allow the non-forward move
   [255]
 
 bypass the hook too, and it should work
-  $ hg push -r . --to master_bookmark --non-forward-move --pushvar NON_FAST_FORWARD=true --pushvar ALLOW_LARGE_FILES=true
-  pushing rev af09fbbc2f05 to destination mono:repo bookmark master_bookmark
-  searching for changes
-  updating bookmark master_bookmark
+  $ hg push -q -r . --to master_bookmark --non-forward-move --pushvar NON_FAST_FORWARD=true --pushvar ALLOW_LARGE_FILES=true
 
 attempt a move to a completely unrelated commit (no common ancestor), with an ancestor that
 fails the hook
@@ -160,6 +151,7 @@ fails the hook
   $ hg push -r . --to master_bookmark --non-forward-move --pushvar NON_FAST_FORWARD=true
   pushing rev e3295448b1ef to destination mono:repo bookmark master_bookmark
   searching for changes
+  no changes found (?)
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
@@ -175,7 +167,4 @@ fails the hook
   [255]
 
 bypass the hook, and it should work
-  $ hg push -r . --to master_bookmark --non-forward-move --pushvar NON_FAST_FORWARD=true --pushvar ALLOW_LARGE_FILES=true
-  pushing rev e3295448b1ef to destination mono:repo bookmark master_bookmark
-  searching for changes
-  updating bookmark master_bookmark
+  $ hg push -q -r . --to master_bookmark --non-forward-move --pushvar NON_FAST_FORWARD=true --pushvar ALLOW_LARGE_FILES=true

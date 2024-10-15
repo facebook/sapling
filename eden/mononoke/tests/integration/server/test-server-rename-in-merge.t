@@ -9,8 +9,7 @@
 
 setup configuration
   $ setup_common_config
-FIXME: enable selective pull
-  $ setconfig remotenames.selectivepull=false
+  $ setconfig pull.use-commit-graph=true
   $ cd $TESTTMP
 
 setup common configuration
@@ -61,9 +60,6 @@ start mononoke
   $ hg pull
   pulling from mono:repo
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
   $ hg up 2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg st --change . -C

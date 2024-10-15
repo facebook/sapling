@@ -20,8 +20,7 @@ setup configuration
   $ register_hook_limit_filesize_global_limit 10 'bypass_pushvar="ALLOW_LARGE_FILES=true"'
 
   $ setup_common_hg_configs
-FIXME: enable selective pull
-  $ setconfig remotenames.selectivepull=false
+  $ setconfig remotenames.selectivepulldefault=master_bookmark,x
   $ cd $TESTTMP
 
   $ configure dummyssh

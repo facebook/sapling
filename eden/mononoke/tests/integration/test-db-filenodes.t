@@ -6,13 +6,11 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
 
-FIXME: enable selective pull
-  $ BLOB_TYPE="blob_files" default_setup_drawdag_no_selective_pull
+  $ BLOB_TYPE="blob_files" default_setup_drawdag
   A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
   B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
   C=e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
 
-Check that filenodes exist after blobimport
   $ mononoke_admin filenodes validate master_bookmark &> /dev/null
 
 Pushrebase commit 1

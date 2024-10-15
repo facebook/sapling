@@ -27,6 +27,7 @@ Pushrebase commit 1
   pushrebasing stack (20ca2a4749a4, 26f143b427a3] (1 commit) to remote bookmark master_bookmark
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updated remote bookmark master_bookmark to c39a1f67cdbc
+  $ mononoke_newadmin derived-data -R repo derive -T filenodes --all-bookmarks
 
   $ log -r "all()"
   @  1 [public;rev=4;c39a1f67cdbc] default/master_bookmark
@@ -56,8 +57,7 @@ Check that the filenode for 1 does not point to the draft commit in a new clone
   $ hg up master_bookmark
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg debugsh -c 'ui.write("%s\n" % s.node.hex(repo["."].filectx("1").getnodeinfo()[2]))'
-  0000000000000000000000000000000000000000
-FIXME: enable selective pull: hash should be "c2e526aacb5100b7c1ddb9b711d2e012e6c69cda"
+  c39a1f67cdbc38a5701bef538d354d47b7c9f2cb
   $ cd ../repo
 
 Push rebase fails with conflict in the bottom of the stack
@@ -378,6 +378,7 @@ Test non-fast-forward force pushrebase
   edenapi: uploaded 1 tree
   edenapi: uploaded 1 changeset
   moving remote bookmark newbook from db727ac656f2 to 10b6d4d89240
+  $ mononoke_newadmin derived-data -R repo derive -T filenodes --all-bookmarks
 -- "20 draft newbook" gets moved to 26 and 20 gets hidden.
   $ log -r "20::"
   @  26 [public;rev=27;10b6d4d89240] default/newbook
@@ -403,8 +404,7 @@ Test non-fast-forward force pushrebase
   $ hg up newbook
   7 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg debugsh -c 'ui.write("%s\n" % s.node.hex(repo["."].filectx("was_a_lively_fellow").getnodeinfo()[2]))'
-  0000000000000000000000000000000000000000
-FIXME: enable selective pull: hash should be "4899f9112d9b79c3ecbc343169db37fbe1efdd20"
+  10b6d4d892408c3005dcd233c3a8cc470246aba5
   $ cd ../repo
 
 Check that a force pushrebase with mutation markers.
