@@ -2535,7 +2535,7 @@ function derived_data_service() {
   THRIFT_TLS_SRV_KEY="$TEST_CERTDIR/localhost.key" \
   THRIFT_TLS_CL_CA_PATH="$TEST_CERTDIR/root-ca.crt" \
   THRIFT_TLS_TICKETS="$TEST_CERTDIR/server.pem.seeds" \
-  GLOG_minloglevel=1 "$DERIVED_DATA_SERVICE" "$@" \
+  GLOG_minloglevel=5 "$DERIVED_DATA_SERVICE" "$@" \
     -p 0 \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
     --bound-address-file "$DDS_SERVER_ADDR_FILE" \
