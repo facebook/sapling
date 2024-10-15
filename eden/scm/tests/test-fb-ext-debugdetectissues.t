@@ -10,7 +10,7 @@
   $ hg debugdetectissues
   ran issue detector 'cachesizeexceedslimit', found 0 issues
   $ cd ..
-  $ clone master shallow --config remotenames.selectivepull=false
+  $ clone master shallow
   $ cd shallow
   $ hg debugdetectissues
   ran issue detector 'cachesizeexceedslimit', found 2 issues

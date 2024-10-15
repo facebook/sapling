@@ -1,7 +1,4 @@
-#modern-config-incompatible
-
 #require no-eden
-
 
   $ newserver server
   $ newremoterepo

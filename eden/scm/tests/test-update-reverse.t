@@ -2,6 +2,7 @@
 
 #require no-eden
 
+  $ setconfig remotenames.selectivepull=true
   $ setconfig experimental.nativecheckout=true
   $ newserver server
 

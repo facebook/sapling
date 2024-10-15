@@ -2,14 +2,15 @@
 
 #require no-eden
 
-
+  $ setconfig remotenames.selectivepull=true
 
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
 
   $ setupcommon
 
-  $ enable remotenames
+  $ enable remotenames commitcloud
+  $ disable infinitepush
   $ hginit master
   $ cd master
   $ setupserver
@@ -39,12 +40,7 @@ Push a non-tree scratch branch from one client
   $ hg commit -qAm 'add bar/car'
   $ echo >> bar/car
   $ hg commit -qm 'edit bar/car'
-  $ hg push --to scratch/nontree --create
-  pushing to ssh://user@dummy/master
-  searching for changes
-  remote: pushing 2 commits:
-  remote:     3ef288300b64  add bar/car
-  remote:     ebde88dba372  edit bar/car
+  $ hg push -q --to scratch/nontree --create
   $ clearcache
   $ cd ..
 
@@ -62,12 +58,7 @@ Push a tree-only scratch branch from another client
   $ hg commit -qAm 'add subdir/a'
   $ echo "my other change" >> subdir/a
   $ hg commit -qAm 'edit subdir/a'
-  $ hg push --to scratch/foo --create
-  pushing to ssh://user@dummy/master
-  searching for changes
-  remote: pushing 2 commits:
-  remote:     02c12aef64ff  add subdir/a
-  remote:     5a7a7de8a420  edit subdir/a
+  $ hg push -q --to scratch/foo --create
   $ cd ..
 
 Pull a non-tree scratch branch into a normal client
@@ -77,12 +68,8 @@ Pull a non-tree scratch branch into a normal client
   $ hg pull -r scratch/nontree
   pulling from ssh://user@dummy/master
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
   $ hg log -r tip -vp
   commit:      ebde88dba372
-  bookmark:    remote/scratch/nontree
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/car
@@ -100,9 +87,6 @@ Pull a treeonly scratch branch into a normal client
   $ hg pull -r scratch/foo
   pulling from ssh://user@dummy/master
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
 - Verify no new manifest revlog entry was written
 - ...but we can still read the manifest
   $ hg log -r 02c12aef64ff --stat -T '{node}\n'
@@ -122,9 +106,6 @@ Pull just part of a treeonly scratch branch (this causes rebundling on the serve
   $ hg pull -r 02c12aef64ff
   pulling from ssh://user@dummy/master
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
   $ hg log -r 02c12aef64ff  --stat
   commit:      02c12aef64ff
   user:        test
@@ -140,12 +121,8 @@ Pull a treeonly scratch branch into a treeonly client (non-rebundling)
   $ hg pull -r scratch/foo
   pulling from ssh://user@dummy/master
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
   $ hg log -G
   o  commit:      5a7a7de8a420
-  │  bookmark:    remote/scratch/foo
   │  user:        test
   │  date:        Thu Jan 01 00:00:00 1970 +0000
   │  summary:     edit subdir/a
@@ -169,9 +146,6 @@ Pull just part of a normal scratch branch (this causes rebundling on the server)
   $ hg pull -r 3ef288300b64
   pulling from ssh://user@dummy/master
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
   $ hg log -r 3ef288300b64 --stat
   commit:      3ef288300b64
   user:        test
@@ -185,9 +159,6 @@ Pull a normal scratch branch into a treeonly client
   $ hg pull -r scratch/nontree
   pulling from ssh://user@dummy/master
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
   $ hg log -r 3ef288300b64 -T ' ' --stat
     bar/car |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
@@ -208,8 +179,7 @@ trees
   $ hg cloud backup
   commitcloud: head '7e75be1136c3' hasn't been uploaded yet
   edenapi: queue 1 commit for upload
-  edenapi: queue 1 file for upload
-  edenapi: uploaded 1 file
+  edenapi: queue 0 files for upload
   edenapi: queue 1 tree for upload
   edenapi: uploaded 1 tree
   edenapi: uploaded 1 changeset
@@ -217,13 +187,12 @@ trees
 
 Verify its not on the server
   $ cd master
-  $ hg log -G
-  @  commit:      085784c01c08
-     bookmark:    master
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     add x
-  
+  $ hg log -r 7e75be1136c3
+  commit:      7e75be1136c3
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add foo
+
 Test delivering public and draft commits to the client. Verify we don't deliver
 treemanifest data for the public commits.
   $ cd ../client1
@@ -245,12 +214,6 @@ treemanifest data for the public commits.
 # Pull one infinitepush commit and one normal commit
   $ hg pull -r 02c12aef64ffa8bfc
   pulling from ssh://user@dummy/master
-  adding changesets
-  adding manifests
-  adding file changes
-  adding changesets
-  adding manifests
-  adding file changes
 
   $ hg log -G -T '{node|short} {phase} {desc}'
   o  02c12aef64ff draft add subdir/a
@@ -281,11 +244,10 @@ treemanifest data for the public commits.
   (branch merge, don't forget to commit)
   $ hg commit -qm "merge"
   $ hg cloud backup
-  commitcloud: head '02c12aef64ff' hasn't been uploaded yet
   commitcloud: head '8b1db7b72253' hasn't been uploaded yet
-  edenapi: queue 3 commits for upload
-  edenapi: queue 2 files for upload
-  edenapi: uploaded 2 files
-  edenapi: queue 4 trees for upload
-  edenapi: uploaded 4 trees
-  edenapi: uploaded 3 changesets
+  edenapi: queue 2 commits for upload
+  edenapi: queue 1 file for upload
+  edenapi: uploaded 1 file
+  edenapi: queue 2 trees for upload
+  edenapi: uploaded 2 trees
+  edenapi: uploaded 2 changesets

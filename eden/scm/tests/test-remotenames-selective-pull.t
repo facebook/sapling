@@ -182,24 +182,6 @@ Check that `--remote` shows real remote bookmarks from default remote
      secondremote/master                    0238718db2b174d2622ae9c4c75d61745eb12b25
      secondremote/thirdbook                 1449e7934ec1c4d0c2eefb1194c1cb70e78ba232
 
-when selectivepull is disabled
-
-  $ hg book --remote --config remotenames.selectivepull=false
-     default/master            0238718db2b1
-     default/thirdbook         1449e7934ec1
-
-  $ hg book --remote --config remotenames.selectivepull=false -Tjson
-  [
-   {
-    "node": "0238718db2b174d2622ae9c4c75d61745eb12b25",
-    "remotebookmark": "default/master"
-   },
-   {
-    "node": "1449e7934ec1c4d0c2eefb1194c1cb70e78ba232",
-    "remotebookmark": "default/thirdbook"
-   }
-  ]
-
   $ setglobalconfig remotenames.selectivepulldefault=master
 
 Clone remote repo with the selectivepull enabled

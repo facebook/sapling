@@ -2,7 +2,7 @@
 
 #require no-eden
 
-#inprocess-hg-incompatible
+  $ setconfig remotenames.selectivepull=true
 
 Stabilize test
 
@@ -17,7 +17,9 @@ Function to test discovery between two repos in both directions, using both the 
   >     cd foo
   >     hg debugbuilddag "$3"
   >     hg clone . a $1 --quiet
+  >     hg -R a pull -q $1
   >     hg clone . b $2 --quiet
+  >     hg -R b pull -q $2
   >     echo
   >     echo "% -- a -> b set"
   >     hg -R a debugdiscovery b --verbose --debug --config progress.debug=true
@@ -45,6 +47,7 @@ Small superset:
   % -- a -> b set
   comparing with b
   query 1; heads
+  listing keys for "bookmarks"
   searching for changes
   local heads: 2; remote heads: 3 (explicit: 0); initial common: 1
   all local heads known remotely
@@ -54,6 +57,7 @@ Small superset:
   % -- a -> b set (tip only)
   comparing with b
   query 1; heads
+  listing keys for "bookmarks"
   searching for changes
   local heads: 1; remote heads: 3 (explicit: 0); initial common: 1
   all local heads known remotely
@@ -62,6 +66,7 @@ Small superset:
   % -- b -> a set
   comparing with a
   query 1; heads
+  listing keys for "bookmarks"
   searching for changes
   local heads: 3; remote heads: 2 (explicit: 0); initial common: 2
   sampling from both directions (4 of 4)
@@ -76,6 +81,7 @@ Small superset:
   % -- b -> a set (tip only)
   comparing with a
   query 1; heads
+  listing keys for "bookmarks"
   searching for changes
   local heads: 1; remote heads: 2 (explicit: 0); initial common: 2
   sampling from both directions (2 of 2)
@@ -97,6 +103,7 @@ Many new:
   % -- a -> b set
   comparing with b
   query 1; heads
+  listing keys for "bookmarks"
   searching for changes
   local heads: 2; remote heads: 1 (explicit: 0); initial common: 0
   sampling from both directions (2 of 2)
@@ -110,6 +117,7 @@ Many new:
   % -- a -> b set (tip only)
   comparing with b
   query 1; heads
+  listing keys for "bookmarks"
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 0
   sampling undecided commits (31 of 31)
@@ -122,6 +130,7 @@ Many new:
   % -- b -> a set
   comparing with a
   query 1; heads
+  listing keys for "bookmarks"
   searching for changes
   local heads: 1; remote heads: 2 (explicit: 0); initial common: 1
   sampling from both directions (2 of 2)
@@ -135,6 +144,7 @@ Many new:
   % -- b -> a set (tip only)
   comparing with a
   query 1; heads
+  listing keys for "bookmarks"
   searching for changes
   local heads: 1; remote heads: 2 (explicit: 0); initial common: 1
   sampling from both directions (2 of 2)
@@ -154,6 +164,7 @@ Both sides many new with stub:
   % -- a -> b set
   comparing with b
   query 1; heads
+  listing keys for "bookmarks"
   searching for changes
   local heads: 2; remote heads: 1 (explicit: 0); initial common: 0
   sampling from both directions (2 of 2)
@@ -167,6 +178,7 @@ Both sides many new with stub:
   % -- a -> b set (tip only)
   comparing with b
   query 1; heads
+  listing keys for "bookmarks"
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 0
   sampling undecided commits (31 of 31)
@@ -179,6 +191,7 @@ Both sides many new with stub:
   % -- b -> a set
   comparing with a
   query 1; heads
+  listing keys for "bookmarks"
   searching for changes
   local heads: 1; remote heads: 2 (explicit: 0); initial common: 1
   sampling from both directions (2 of 2)
@@ -192,6 +205,7 @@ Both sides many new with stub:
   % -- b -> a set (tip only)
   comparing with a
   query 1; heads
+  listing keys for "bookmarks"
   searching for changes
   local heads: 1; remote heads: 2 (explicit: 0); initial common: 1
   sampling from both directions (2 of 2)
@@ -212,6 +226,7 @@ Both many new:
   % -- a -> b set
   comparing with b
   query 1; heads
+  listing keys for "bookmarks"
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 0
   sampling undecided commits (31 of 31)
@@ -224,6 +239,7 @@ Both many new:
   % -- a -> b set (tip only)
   comparing with b
   query 1; heads
+  listing keys for "bookmarks"
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 0
   sampling undecided commits (31 of 31)
@@ -236,6 +252,7 @@ Both many new:
   % -- b -> a set
   comparing with a
   query 1; heads
+  listing keys for "bookmarks"
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 0
   sampling undecided commits (31 of 31)
@@ -248,6 +265,7 @@ Both many new:
   % -- b -> a set (tip only)
   comparing with a
   query 1; heads
+  listing keys for "bookmarks"
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 0
   sampling undecided commits (31 of 31)
@@ -267,6 +285,7 @@ Both many new skewed:
   % -- a -> b set
   comparing with b
   query 1; heads
+  listing keys for "bookmarks"
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 0
   sampling undecided commits (51 of 51)
@@ -279,6 +298,7 @@ Both many new skewed:
   % -- a -> b set (tip only)
   comparing with b
   query 1; heads
+  listing keys for "bookmarks"
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 0
   sampling undecided commits (51 of 51)
@@ -291,6 +311,7 @@ Both many new skewed:
   % -- b -> a set
   comparing with a
   query 1; heads
+  listing keys for "bookmarks"
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 0
   sampling undecided commits (31 of 31)
@@ -303,6 +324,7 @@ Both many new skewed:
   % -- b -> a set (tip only)
   comparing with a
   query 1; heads
+  listing keys for "bookmarks"
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 0
   sampling undecided commits (31 of 31)
@@ -322,6 +344,7 @@ Both many new on top of long history:
   % -- a -> b set
   comparing with b
   query 1; heads
+  listing keys for "bookmarks"
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 0
   sampling undecided commits (200 of 1049)
@@ -338,6 +361,7 @@ Both many new on top of long history:
   % -- a -> b set (tip only)
   comparing with b
   query 1; heads
+  listing keys for "bookmarks"
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 0
   sampling undecided commits (200 of 1049)
@@ -354,6 +378,7 @@ Both many new on top of long history:
   % -- b -> a set
   comparing with a
   query 1; heads
+  listing keys for "bookmarks"
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 0
   sampling undecided commits (200 of 1029)
@@ -370,6 +395,7 @@ Both many new on top of long history:
   % -- b -> a set (tip only)
   comparing with a
   query 1; heads
+  listing keys for "bookmarks"
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 0
   sampling undecided commits (200 of 1029)
@@ -382,110 +408,6 @@ Both many new on top of long history:
   progress: searching (end)
   3 total queries in *.????s (glob)
   common heads: 7ead0cba2838
-
-
-One with >200 heads, which used to use up all of the sample:
-
-  $ hg init manyheads
-  $ cd manyheads
-  $ echo "+300:r" >dagdesc
-  $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
-  $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
-  $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
-  $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
-  $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
-  $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
-  $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
-  $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
-  $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
-  $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
-  $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
-  $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
-  $ echo "*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3 *r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3*r+3" >>dagdesc # 20 heads
-  $ echo "*r+3" >>dagdesc # one more head
-  $ hg debugbuilddag <dagdesc
-  reading DAG from stdin
-
-  $ hg heads -t --template . | wc -c
-  \s*261 (re)
-
-The graph looks like:
-
->  b a  (b is tip)
->  | |
->  b a
->  | |
->  b a
->  | |
->  b a
->  |/
->  :   (many other a-a-a-a branches)
->  | a
->  | |
->  | a
->  | |
->  | a
->  | |
->  | a
->  |/
->  |
->  default  (is also 'ancestor(head())')
->  |
->  default
->  |
->  :  (many other default commits)
-
-  $ hg clone . a -q
-  $ hg -R a up -q 'ancestor(head())'
-  $ hg clone -r tip . b
-  adding changesets
-  adding manifests
-  adding file changes
-  updating to 1b227ad97c76068e2d1a4c750ab1be81e1bfd1d6
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-
-  $ hg -R a debugdiscovery b --debug --verbose --config progress.debug=true
-  comparing with b
-  query 1; heads
-  searching for changes
-  local heads: 261; remote heads: 1 (explicit: 0); initial common: 1
-  sampling from both directions (200 of 520)
-  progress: searching: checking 200 commits, 741 left 2 queries
-  query 2; still undecided: 941, sample size is: 200
-  sampling from both directions (200 of 260)
-  progress: searching: checking 200 commits, 237 left 3 queries
-  query 3; still undecided: 437, sample size is: 200
-  sampling from both directions (68 of 68)
-  sampling undecided commits (93 of 93)
-  progress: searching: checking 93 commits, 0 left 4 queries
-  query 4; still undecided: 93, sample size is: 93
-  progress: searching (end)
-  4 total queries in 0.0000s
-  common heads: 1b227ad97c76
-  remote is subset
-  $ hg -R a debugdiscovery b --debug --verbose --config progress.debug=true --rev tip
-  comparing with b
-  query 1; heads
-  searching for changes
-  local heads: 1; remote heads: 1 (explicit: 0); initial common: 1
-  all local heads known remotely
-  common heads: 1b227ad97c76
-  remote is subset
-
-Test actual protocol when pulling one new head in addition to common heads
-
-  $ hg clone -U b c
-  $ hg -R c id -ir tip
-  1b227ad97c76
-  $ hg -R c up -qr default
-  $ touch c/f
-  $ hg -R c ci -Aqm "extra head"
-  $ hg -R c id -i
-  d2eb68bd34e5
-
-  $ cd b
-  $ configure dummyssh
-  $ cd ../..
 
 
 Issue 4438 - test coverage for 3ef893520a85 issues.

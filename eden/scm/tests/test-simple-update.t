@@ -1,8 +1,4 @@
-#modern-config-incompatible
-
 #require no-eden
-
-#inprocess-hg-incompatible
 
   $ hg init test
   $ cd test
@@ -22,10 +18,12 @@
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo bar>>foo
   $ hg commit -m "2"
+  $ hg whereami
+  30aff43faee11c21aa9036768ad78cc32a171e06
 
   $ cd ../test
 
-  $ hg pull ../branch
+  $ hg pull ../branch -r 30aff43faee11c21aa9036768ad78cc32a171e06
   pulling from ../branch
   searching for changes
   adding changesets
