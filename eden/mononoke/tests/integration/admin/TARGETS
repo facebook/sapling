@@ -12,7 +12,6 @@ dott_test(
     ]),
     deps = [
         "//eden/mononoke:admin",
-        "//eden/mononoke:blobimport",
         "//eden/mononoke:blobstore_healer",
         "//eden/mononoke:mononoke",
         "//eden/mononoke/git/gitimport:gitimport",

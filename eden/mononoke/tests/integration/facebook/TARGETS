@@ -305,7 +305,6 @@ dott_test(
     deps = [
         "//eden/mononoke:admin",
         "//eden/mononoke:backfill_mapping",
-        "//eden/mononoke:blobimport",
         "//eden/mononoke:mononoke",
         "//eden/mononoke/commit_rewriting/backsyncer:backsyncer_cmd",
         "//eden/mononoke/land_service/facebook/server:land_service",
@@ -337,7 +336,6 @@ dott_test(
     ]),
     deps = [
         "//eden/mononoke:admin",
-        "//eden/mononoke:blobimport",
         "//eden/mononoke:bonsai_verify",
         "//eden/mononoke:mononoke",
         "//eden/mononoke/commit_rewriting/megarepo:megarepotool",
