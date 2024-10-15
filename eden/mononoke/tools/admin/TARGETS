@@ -130,6 +130,7 @@ rust_binary(
         "//thrift/lib/rust:fbthrift",
     ] + ([] if rust_oss.is_oss_build() else [
         "fbsource//third-party/rust:serde",
+        "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/mysql:mysql_client",
         "//eden/mononoke/blobstore:blobstore_factory",
         "//eden/mononoke/blobstore:fileblob",
