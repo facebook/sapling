@@ -36,6 +36,7 @@ use minibytes::Bytes;
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 use storemodel::BoxIterator;
+use storemodel::InsertOpts;
 use storemodel::KeyStore;
 use storemodel::SerializationFormat;
 use storemodel::TreeEntry;
@@ -53,6 +54,7 @@ use crate::scmstore::metrics::StoreLocation;
 use crate::scmstore::tree::types::LazyTree;
 use crate::scmstore::tree::types::StoreTree;
 use crate::scmstore::tree::types::TreeAttributes;
+use crate::trait_impls::sha1_digest;
 use crate::ContentDataStore;
 use crate::ContentMetadata;
 use crate::Delta;
@@ -716,6 +718,20 @@ impl storemodel::KeyStore for TreeStore {
 
     fn format(&self) -> SerializationFormat {
         self.format
+    }
+
+    fn flush(&self) -> anyhow::Result<()> {
+        TreeStore::flush(self)
+    }
+
+    fn insert_data(&self, opts: InsertOpts, path: &RepoPath, data: &[u8]) -> anyhow::Result<HgId> {
+        let id = sha1_digest(&opts, data, self.format());
+
+        // PERF: Ideally there is no need to clone path or data.
+        let key = Key::new(path.to_owned(), id);
+        let data = Bytes::copy_from_slice(data);
+        self.write_batch(std::iter::once((key, data, Default::default())))?;
+        Ok(id)
     }
 }
 
