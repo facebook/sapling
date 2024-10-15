@@ -12,13 +12,19 @@ use std::sync::Arc;
 use anyhow::format_err;
 use anyhow::Result;
 use edenapi_types::FileAuxData;
+use format_util::git_sha1_digest;
+use format_util::hg_sha1_digest;
 use format_util::strip_file_metadata;
 use minibytes::Bytes;
 use storemodel::BoxIterator;
+use storemodel::InsertOpts;
 use storemodel::KeyStore;
+use storemodel::Kind;
 use storemodel::SerializationFormat;
 use types::fetch_mode::FetchMode;
+use types::hgid::NULL_ID;
 use types::HgId;
+use types::Id20;
 use types::Key;
 use types::RepoPath;
 
@@ -140,6 +146,15 @@ impl storemodel::KeyStore for ArcFileStore {
     fn format(&self) -> SerializationFormat {
         self.0.format
     }
+
+    fn insert_data(&self, opts: InsertOpts, path: &RepoPath, data: &[u8]) -> anyhow::Result<HgId> {
+        let id = sha1_digest(&opts, data, self.format());
+        let key = Key::new(path.to_owned(), id);
+        // PERF: Ideally, there is no need to copy `data`.
+        let data = Bytes::copy_from_slice(data);
+        self.0.write_nonlfs(key, data, Default::default())?;
+        Ok(id)
+    }
 }
 
 impl storemodel::FileStore for ArcFileStore {
@@ -196,3 +211,20 @@ impl storemodel::FileStore for ArcFileStore {
 }
 
 const PREFETCH_CHUNK_SIZE: usize = 1000;
+
+pub(crate) fn sha1_digest(opts: &InsertOpts, data: &[u8], format: SerializationFormat) -> Id20 {
+    match format {
+        SerializationFormat::Hg => {
+            let p1 = opts.parents.first().copied().unwrap_or(NULL_ID);
+            let p2 = opts.parents.get(1).copied().unwrap_or(NULL_ID);
+            hg_sha1_digest(data, &p1, &p2)
+        }
+        SerializationFormat::Git => {
+            let kind = match opts.kind {
+                Kind::File => "blob",
+                Kind::Tree => "tree",
+            };
+            git_sha1_digest(data, kind)
+        }
+    }
+}

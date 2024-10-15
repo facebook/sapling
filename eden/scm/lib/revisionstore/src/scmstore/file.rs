@@ -331,7 +331,7 @@ impl FileStore {
         Ok(())
     }
 
-    fn write_nonlfs(&self, key: Key, bytes: Bytes, meta: Metadata) -> Result<()> {
+    pub(crate) fn write_nonlfs(&self, key: Key, bytes: Bytes, meta: Metadata) -> Result<()> {
         let indexedlog_local = self.indexedlog_local.as_ref().ok_or_else(|| {
             anyhow!("trying to write non-LFS file but no local non-LFS IndexedLog is available")
         })?;
