@@ -3,8 +3,6 @@
 
   $ . "$TESTDIR/library.sh"
 
-  $ setconfig remotenames.selectivepull=true
-
   $ newserver master
   $ echo x > x
   $ echo z > z

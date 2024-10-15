@@ -2,7 +2,6 @@
 
 #require no-eden
 
-  $ setconfig remotenames.selectivepull=true
 
 Push treeonly commits from a treeonly shallow repo to a treeonly server
 

@@ -200,7 +200,6 @@ configure() {
         ;;
       selectivepull)
         enable remotenames
-        setconfig remotenames.selectivepull=True
         setconfig remotenames.selectivepulldefault=master
         ;;
       modern)

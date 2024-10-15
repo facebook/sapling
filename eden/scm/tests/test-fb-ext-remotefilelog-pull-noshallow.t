@@ -4,7 +4,6 @@
 
 #chg-compatible
 
-  $ setconfig remotenames.selectivepull=true
 
   $ . "$TESTDIR/library.sh"
 

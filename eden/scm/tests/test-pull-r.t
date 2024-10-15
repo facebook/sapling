@@ -2,7 +2,6 @@
 
 #require no-eden
 
-  $ setconfig remotenames.selectivepull=true
 
   $ setconfig devel.segmented-changelog-rev-compat=true
 

@@ -4,8 +4,6 @@
   $ setconfig devel.segmented-changelog-rev-compat=true
 Push merge commits from a treeonly shallow repo to a hybrid treemanifest server
 
-  $ setconfig remotenames.selectivepull=true
-
   $ setconfig remotefilelog.reponame=x remotefilelog.cachepath=$TESTTMP/cache
   $ setconfig format.aggressivemergedeltas=True
   $ configure dummyssh

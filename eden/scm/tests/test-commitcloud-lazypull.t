@@ -2,7 +2,6 @@
 
 #require no-eden
 
-  $ setconfig remotenames.selectivepull=true
 
   $ configure dummyssh mutation-norecord
   $ enable amend commitcloud infinitepush rebase remotenames share

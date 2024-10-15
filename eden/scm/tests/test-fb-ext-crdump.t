@@ -2,7 +2,6 @@
 
 #require no-eden
 
-  $ setconfig remotenames.selectivepull=true
   $ setconfig remotenames.selectivepulldefault=master,releasebranch
 
   $ configure mutation-norecord dummyssh

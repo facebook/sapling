@@ -4,7 +4,6 @@
 
 #inprocess-hg-incompatible
 
-  $ setconfig remotenames.selectivepull=true
 
   $ enable infinitepush remotenames
   $ . "$TESTDIR/library.sh"

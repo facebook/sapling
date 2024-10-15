@@ -3,7 +3,6 @@
 #require execbit no-eden
   $ setconfig experimental.nativecheckout=true
   $ setconfig commands.update.check=none
-  $ setconfig remotenames.selectivepull=true
 
   $ newserver server
 

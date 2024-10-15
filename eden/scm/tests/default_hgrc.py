@@ -88,6 +88,7 @@ disable=true
 rename.default=remote
 hoist=remote
 selectivepulldefault=master
+selectivepull=true
 
 [extensions]
 remotenames=
@@ -135,9 +136,6 @@ date=0 0
 
 [remotefilelog]
 http=True
-
-[remotenames]
-selectivepull=True
 
 [treemanifest]
 http=True

@@ -5,7 +5,6 @@
 
 #inprocess-hg-incompatible
 
-  $ setconfig remotenames.selectivepull=true
 
   $ cat >>$TESTTMP/ccdelay.py <<EOF
   > 

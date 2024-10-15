@@ -10,7 +10,6 @@ TODO: configure mutation
 Setup
 
   $ setconfig ui.username="nobody <no.reply@fb.com>"
-  $ setconfig remotenames.selectivepull=true
   $ setconfig remotenames.selectivepulldefault=main
 
   $ commit() {

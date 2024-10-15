@@ -2,7 +2,6 @@
 
 #require no-eden
 
-  $ setconfig remotenames.selectivepull=true
 
   $ enable amend commitcloud infinitepush remotenames
   $ configure dummyssh
@@ -54,7 +53,6 @@ Setup remote repo
 
 Setup first client repo and subscribe to the bookmarks "stable" and "warm".
   $ cd ..
-  $ setconfig remotenames.selectivepull=True
   $ setconfig remotenames.selectivepulldefault=master
   $ setconfig commitcloud.remotebookmarkssync=True
 

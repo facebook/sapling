@@ -4,7 +4,6 @@
 
 #inprocess-hg-incompatible
 
-  $ setconfig remotenames.selectivepull=true
 
   $ enable amend commitcloud infinitepush rebase remotenames fbcodereview
   $ configure dummyssh

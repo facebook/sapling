@@ -1,6 +1,5 @@
 #require no-eden
 
-  $ setconfig remotenames.selectivepull=true
 
   $ hg init a
   $ hg clone a b

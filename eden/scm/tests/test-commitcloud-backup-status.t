@@ -2,7 +2,6 @@
 
 #require symlink no-eden
 
-  $ setconfig remotenames.selectivepull=true
 
   $ enable amend smartlog
   $ . "$TESTDIR/library.sh"

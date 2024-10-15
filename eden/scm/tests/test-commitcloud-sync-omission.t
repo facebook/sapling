@@ -1,7 +1,6 @@
 #modern-config-incompatible
 #inprocess-hg-incompatible
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ setconfig remotenames.selectivepull=true
 
 #require jq no-eden
   $ configure mutation-norecord dummyssh

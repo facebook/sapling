@@ -10,7 +10,6 @@
   >    hg ci -m "add $1"
   > }
 
-  $ setconfig remotenames.selectivepull=true
   $ setconfig remotenames.selectivepulldefault=rbook
 
 Set up extension and repos to clone over wire protocol

@@ -2,7 +2,6 @@
 
 #require no-fsmonitor no-eden
 
-  $ setconfig remotenames.selectivepull=true
 
   $ disable copytrace
   $ hg debugextensions --excludedefault

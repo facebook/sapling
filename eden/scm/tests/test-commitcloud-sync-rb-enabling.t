@@ -23,7 +23,6 @@ Set remotebookmarkssync True initially for the first repo and False for the seco
   $ cd $TESTTMP
   $ clone server client1
   $ cd client1
-  $ setconfig remotenames.selectivepull=True
   $ setconfig remotenames.selectivepulldefault=master,base
   $ setconfig commitcloud.remotebookmarkssync=True
   $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP
@@ -33,7 +32,6 @@ Set remotebookmarkssync True initially for the first repo and False for the seco
   $ cd $TESTTMP
   $ clone server client2
   $ cd client2
-  $ setconfig remotenames.selectivepull=True
   $ setconfig remotenames.selectivepulldefault=master,base
   $ setconfig commitcloud.remotebookmarkssync=False
   $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP

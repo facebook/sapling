@@ -4,7 +4,6 @@
 
 #inprocess-hg-incompatible
 
-  $ setconfig remotenames.selectivepull=true
 
   $ hg init a
   $ cd a

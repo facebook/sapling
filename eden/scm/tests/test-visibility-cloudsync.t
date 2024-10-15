@@ -2,7 +2,6 @@
 
 #require no-eden
 
-  $ setconfig remotenames.selectivepull=true
 
   $ configure dummyssh
   $ enable amend directaccess commitcloud infinitepush rebase remotenames undo

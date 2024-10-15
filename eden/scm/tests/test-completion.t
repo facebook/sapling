@@ -3,7 +3,6 @@
 
 #require no-fsmonitor no-eden
 
-  $ setconfig remotenames.selectivepull=true
 
 Show all commands except debug commands
   $ hg debugcomplete | grep 'commit|diff|status|debugapi'

@@ -2,8 +2,6 @@
 
 #inprocess-hg-incompatible
 
-  $ setconfig remotenames.selectivepull=true
-
 Issue586: removing remote files after merge appears to corrupt the
 dirstate
 

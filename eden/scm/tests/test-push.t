@@ -4,7 +4,6 @@
 
 #chg-compatible
   $ setconfig devel.segmented-changelog-rev-compat=true
-  $ setconfig remotenames.selectivepull=true
 
 ==================================
 Basic testing for the push command

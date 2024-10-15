@@ -4,8 +4,6 @@
   $ configure mutation-norecord
   $ . "$TESTDIR/library.sh"
 
-  $ setconfig remotenames.selectivepull=true
-
 Setup the server
 
   $ newserver master

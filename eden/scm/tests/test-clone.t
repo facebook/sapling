@@ -4,7 +4,6 @@
 
   $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig clone.use-rust=1
-  $ setconfig remotenames.selectivepull=true
 
 #testcases rustcheckout pythoncheckout
 

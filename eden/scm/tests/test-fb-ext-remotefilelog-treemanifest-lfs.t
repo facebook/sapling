@@ -4,8 +4,6 @@
 
   $ . "$TESTDIR/library.sh"
 
-  $ setconfig remotenames.selectivepull=true
-
   $ enable lfs pushrebase
   $ hginit master
 

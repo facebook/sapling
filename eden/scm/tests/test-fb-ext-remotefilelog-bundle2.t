@@ -3,8 +3,6 @@
 
   $ . "$TESTDIR/library.sh"
 
-  $ setconfig remotenames.selectivepull=true
-
   $ hginit master
   $ grep generaldelta master/.hg/requires
   generaldelta

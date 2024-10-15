@@ -11,7 +11,6 @@
 # This test was written when we migrated from using C++ Manifests to Rust
 # Manifests and wanted to verify the values of the hashes.
 
-  $ setconfig remotenames.selectivepull=true
 
   >>> import os, shlex, pprint
   >>> def listcommitandmanifesthashes(rev):

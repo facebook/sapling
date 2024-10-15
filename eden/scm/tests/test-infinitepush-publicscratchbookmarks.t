@@ -1,6 +1,5 @@
 #require no-eden
 
-  $ setconfig remotenames.selectivepull=true
 
   $ enable commitcloud remotenames
   $ disable infinitepush

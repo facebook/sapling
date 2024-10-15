@@ -3,13 +3,6 @@
 
   $ . "$TESTDIR/library.sh"
 
-  $ setconfig remotenames.selectivepull=true
-
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > remotenames=
-  > EOF
-
   $ hg init repo
   $ cd repo
   $ cat >> .hg/hgrc <<EOF

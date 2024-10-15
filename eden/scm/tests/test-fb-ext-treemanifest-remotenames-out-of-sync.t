@@ -3,12 +3,9 @@
 
   $ . "$TESTDIR/library.sh"
 
-  $ setconfig remotenames.selectivepull=true
-
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > pushrebase=
-  > remotenames=
   > EOF
 
 # Setup repo

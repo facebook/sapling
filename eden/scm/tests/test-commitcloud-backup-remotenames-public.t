@@ -4,7 +4,6 @@
 
 #inprocess-hg-incompatible
 
-  $ setconfig remotenames.selectivepull=true
 
 Remotenames extension has a shortcut that makes heads discovery work faster.
 Unfortunately that may result in sending public commits to the server. This

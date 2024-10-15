@@ -1,7 +1,6 @@
 #modern-config-incompatible
 #inprocess-hg-incompatible
 
-  $ setconfig remotenames.selectivepull=true
 
   $ configure dummyssh
 #require serve no-eden

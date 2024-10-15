@@ -5,7 +5,6 @@
 
 #inprocess-hg-incompatible
 
-  $ setconfig remotenames.selectivepull=true
 
   $ configure dummyssh
 Common configuration for both the server and client.

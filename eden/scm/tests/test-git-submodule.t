@@ -4,7 +4,6 @@
 Make sure things still work for submodules not properly namespaced (fixed in D63775983).
 #testcases normal submodule-namespace-bug
 
-  $ setconfig remotenames.selectivepull=true
 
   $ . $TESTDIR/git.sh
   $ setconfig diff.git=true ui.allowemptycommit=true

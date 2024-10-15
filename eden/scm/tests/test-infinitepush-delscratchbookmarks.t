@@ -21,6 +21,7 @@ Create server repo
   > indextype=disk
   > storetype=disk
   > EOF
+  $ hg book master
   $ cd ..
 
 Create second server repo
@@ -41,6 +42,7 @@ Clone server
 
 Ensure no bookmarks
   $ hg book --remote
+     remote/master                    ac312cb08db5366e622a01fd001e583917eb9f1c
   $ hg book
   no bookmarks set
 
@@ -48,11 +50,13 @@ Push scratch bookmark
   $ mkcommit scratchcommit1
   $ hg push -qr . --to scratch/test1 --create
   $ hg book --remote
-     remote/scratch/test1      45f7b362ad7c
+     remote/master                    ac312cb08db5366e622a01fd001e583917eb9f1c
+     remote/scratch/test1             45f7b362ad7cbaee8758e111c407f615dcd82f00
 
 Delete scratch bookmark
   $ hg push -q --delete scratch/test1
   $ hg book --remote
+     remote/master                    ac312cb08db5366e622a01fd001e583917eb9f1c
   $ hg push -q --to scratch/test1 -r 45f7b362ad7c --create
 
 Check regular deletion still works
@@ -68,12 +72,14 @@ Test deleting both regular and scratch
   $ hg book testlocal2
   $ hg book -a
    * testlocal2                45f7b362ad7c
+     remote/master             ac312cb08db5
      remote/scratch/test1      45f7b362ad7c
      remote/scratch/test2      45f7b362ad7c
   $ hg book -d testlocal2
   $ hg push -q --delete scratch/test2
   $ hg book -a
   no bookmarks set
+     remote/master             ac312cb08db5
      remote/scratch/test1      45f7b362ad7c
 
 Test deleting nonexistent bookmarks
@@ -89,24 +95,28 @@ Test deleting nonexistent bookmarks
 
 Test deleting a nonexistent bookmark with an existing tag that has the right name
   $ hg book --remote
-     remote/scratch/test1      45f7b362ad7c
+     remote/master                    ac312cb08db5366e622a01fd001e583917eb9f1c
+     remote/scratch/test1             45f7b362ad7cbaee8758e111c407f615dcd82f00
   $ hg book -d scratch/serverbranch
   abort: scratch bookmark 'scratch/serverbranch' does not exist in path 'default'
   [255]
   $ hg book --remote
-     remote/scratch/test1      45f7b362ad7c
+     remote/master                    ac312cb08db5366e622a01fd001e583917eb9f1c
+     remote/scratch/test1             45f7b362ad7cbaee8758e111c407f615dcd82f00
 
 Test deleting a local bookmark that has a scratch-like name
   $ hg book scratch/thisisalocalbm
   $ hg book
    * scratch/thisisalocalbm    45f7b362ad7c
   $ hg book --remote
-     remote/scratch/test1      45f7b362ad7c
+     remote/master                    ac312cb08db5366e622a01fd001e583917eb9f1c
+     remote/scratch/test1             45f7b362ad7cbaee8758e111c407f615dcd82f00
   $ hg book -d scratch/thisisalocalbm
   $ hg book
   no bookmarks set
   $ hg book --remote
-     remote/scratch/test1      45f7b362ad7c
+     remote/master                    ac312cb08db5366e622a01fd001e583917eb9f1c
+     remote/scratch/test1             45f7b362ad7cbaee8758e111c407f615dcd82f00
 
 Prepare client to be pushed to for next tests
   $ cat >> .hg/hgrc << EOF
@@ -122,15 +132,16 @@ Test scratch bookmarks still pullable
   $ cd client2
   $ hg book -a
   no bookmarks set
-     remote/scratch/test1      45f7b362ad7c
+     remote/master             ac312cb08db5
   $ hg pull -B scratch/test1
   pulling from ssh://user@dummy/repo
-  no changes found
+  searching for changes
   $ hg book -a
   no bookmarks set
+     remote/master             ac312cb08db5
      remote/scratch/test1      45f7b362ad7c
   $ hg up scratch/test1
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ ls -a
   .
   ..
@@ -158,6 +169,7 @@ TODO: specifying remote doesn't work w/ SLAPI push
   $ hg book local2
   $ hg book -a
    * local2                    45f7b362ad7c
+     remote/master             ac312cb08db5
      remote/scratch/test1      45f7b362ad7c
 
 Delete all the things !
@@ -167,11 +179,15 @@ Delete all the things !
   $ hg push -q --delete scratch/test1
   $ hg book -a
    * local2                    45f7b362ad7c
+     remote/master             ac312cb08db5
   $ hg book -a
    * local2                    45f7b362ad7c
+     remote/master             ac312cb08db5
   $ hg book -a
    * local2                    45f7b362ad7c
+     remote/master             ac312cb08db5
   $ hg book -d local2
   $ hg book -a
   no bookmarks set
+     remote/master             ac312cb08db5
 
