@@ -228,7 +228,7 @@ pub(crate) async fn megarepo_async_request_compute<R: MononokeRepo>(
 
             Ok(commit_sparse_profile_size_impl(ctx, repo, changeset, params.profiles)
                 .await
-                .map_err(|e| todo!() /* AsyncRequestsError::InternalError(anyhow!(e.into())) */ )
+                .map_err(|_e| todo!() /* AsyncRequestsError::InternalError(anyhow!(e.into())) */ )
                 .into())
         }
         async_requests_types_thrift::AsynchronousRequestParams::UnknownField(union_tag) => {
