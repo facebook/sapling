@@ -18,6 +18,7 @@ import SaplingFileDecorationProvider from './SaplingFileDecorationProvider';
 import {executeVSCodeCommand} from './commands';
 import {getCLICommand} from './config';
 import {t} from './i18n';
+import {existsSync} from 'fs';
 import {Repository} from 'isl-server/src/Repository';
 import {repositoryCache} from 'isl-server/src/RepositoryCache';
 import {ResolveOperation, ResolveTool} from 'isl/src/operations/ResolveOperation';
@@ -110,6 +111,16 @@ export class VSCodeReposList {
     for (const value of this.vscodeRepos.values()) {
       if (path.startsWith(value.rootPath)) {
         return value;
+      }
+    }
+    return undefined;
+  }
+
+  public repoForRelativePath(relativePath: string): VSCodeRepo | undefined {
+    for (const repo of this.vscodeRepos.values()) {
+      const fullPath = path.join(repo.rootPath, relativePath);
+      if (existsSync(fullPath)) {
+        return repo;
       }
     }
     return undefined;

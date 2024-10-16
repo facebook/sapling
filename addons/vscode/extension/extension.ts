@@ -63,6 +63,12 @@ export async function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(...registerCommands(ctx));
 
+    if (Internal.SaplingISLUriHandler != null) {
+      context.subscriptions.push(
+        vscode.window.registerUriHandler(new Internal.SaplingISLUriHandler(reposList, ctx)),
+      );
+    }
+
     Internal?.registerInternalBugLogsProvider != null &&
       context.subscriptions.push(Internal.registerInternalBugLogsProvider(logger));
 
