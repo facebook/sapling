@@ -1217,27 +1217,7 @@ CONFIG
 }
 
 function write_infinitepush_config {
-  local reponame="$1"
-  local reponame_urlencoded
-  reponame_urlencoded=$(urlencode encode "$reponame")
-
-  cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
-[infinitepush]
-CONFIG
-
-  if [[ -n "${INFINITEPUSH_ALLOW_WRITES:-}" ]] || \
-     [[ -n "${INFINITEPUSH_NAMESPACE_REGEX:-}" ]];
-  then
-    namespace=""
-    if [[ -n "${INFINITEPUSH_NAMESPACE_REGEX:-}" ]]; then
-      namespace="namespace_pattern=\"$INFINITEPUSH_NAMESPACE_REGEX\""
-    fi
-
-    cat >> "repos/$reponame_urlencoded/server.toml" <<CONFIG
-allow_writes = ${INFINITEPUSH_ALLOW_WRITES:-true}
-${namespace}
-CONFIG
-  fi
+  python_fn write_infinitepush_config "$@"
 }
 
 function register_hook {
