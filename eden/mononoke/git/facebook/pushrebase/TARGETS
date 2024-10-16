@@ -11,6 +11,7 @@ rust_binary(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:tracing-core",
         "fbsource//third-party/rust:tracing-glog",
