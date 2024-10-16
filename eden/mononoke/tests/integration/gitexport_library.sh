@@ -10,6 +10,7 @@
 
 # Setup configuration
 REPOTYPE="blob_files"
+export REPOTYPE
 setup_common_config "$REPOTYPE"
 REPOID=1 setup_mononoke_repo_config "temp_repo"
 

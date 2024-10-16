@@ -8,8 +8,8 @@
 
 setup configuration
 
-  $ FILESTORE=1
-  $ FILESTORE_CHUNK_SIZE=10
+  $ export FILESTORE=1
+  $ export FILESTORE_CHUNK_SIZE=10
   $ REPOID=0 REPONAME=orig setup_common_config blob_files
   $ REPOID=1 REPONAME=backup setup_common_config blob_files
   $ REPOID_SRC=0

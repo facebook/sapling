@@ -4,8 +4,8 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
-  $ FILESTORE=1
-  $ FILESTORE_CHUNK_SIZE=10
+  $ export FILESTORE=1
+  $ export FILESTORE_CHUNK_SIZE=10
   $ . "${TEST_FIXTURES}/library.sh"
   $ ENABLED_DERIVED_DATA='["git_trees", "filenodes", "hgchangesets"]' setup_common_config
   $ GIT_REPO="${TESTTMP}/repo-git"

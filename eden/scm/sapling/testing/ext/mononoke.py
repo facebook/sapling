@@ -296,29 +296,6 @@ git_delta_manifest_v2_config.max_inlined_delta_size = 20
 git_delta_manifest_v2_config.delta_chunk_size = 1000
 """
         )
-    elif env.getenv("NON_GIT_TYPES"):
-        append_config(
-            f"""
-[derived_data_config.available_configs.default]
-types=[
-  "blame",
-  "changeset_info",
-  "deleted_manifest",
-  "fastlog",
-  "filenodes",
-  "fsnodes",
-  "unodes",
-  "hgchangesets",
-  "hg_augmented_manifests",
-  "skeleton_manifests",
-  "skeleton_manifests_v2",
-  "bssm_v3",
-  "ccsm",
-  "test_manifests",
-  "test_sharded_manifests"
-]
-"""
-        )
     else:
         append_config(
             """
