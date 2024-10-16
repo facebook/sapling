@@ -726,20 +726,7 @@ CONFIG
 }
 
 function setup_acls() {
-  if [[ ! -f "$ACL_FILE" ]]; then
-    cat > "$ACL_FILE" <<ACLS
-{
-  "repos": {
-    "default": {
-      "actions": {
-        "read": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA"],
-        "write": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA"]
-      }
-    }
-  }
-}
-ACLS
-  fi
+  python_fn setup_acls "$@"
 }
 
 function db_config() {

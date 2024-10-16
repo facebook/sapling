@@ -3,6 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+import json
 import os
 from typing import BinaryIO, List, Union
 from urllib.parse import quote, unquote
@@ -19,6 +20,7 @@ def testsetup(t: TestTmp):
 
 
 def setupfuncs(t: TestTmp):
+    t.command(setup_acls)
     t.command(setup_mononoke_repo_config)
     t.command(write_infinitepush_config)
     t.command(urlencode)
@@ -27,6 +29,34 @@ def setupfuncs(t: TestTmp):
     t.command(db_config)
     t.command(blobstore_db_config)
     t.command(setup_environment_variables)
+
+
+def setup_acls(stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
+    acl_file = env.getenv("ACL_FILE")
+    if not acl_file:
+        stderr.write(b"Error: ACL_FILE environment variable is not set\n")
+        return 1
+
+    # Check if the ACL file already exists
+    if not fs.exists(acl_file):
+        client0_id_type = env.getenv("CLIENT0_ID_TYPE")
+        client0_id_data = env.getenv("CLIENT0_ID_DATA")
+
+        # Create the ACL file with the necessary permissions
+        acl_content = {
+            "repos": {
+                "default": {
+                    "actions": {
+                        "read": [f"{client0_id_type}:{client0_id_data}"],
+                        "write": [f"{client0_id_type}:{client0_id_data}"],
+                    }
+                }
+            }
+        }
+        with fs.open(acl_file, "w") as f:
+            f.write(json.dumps(acl_content).encode())
+
+    return 0
 
 
 def setup_mononoke_repo_config(
