@@ -17,13 +17,13 @@ use async_requests::types::IntoConfigFormat;
 use async_requests::types::RowId;
 use async_requests::types::ThriftAsynchronousRequestParams;
 use async_requests::types::ThriftAsynchronousRequestResult;
-use async_requests::types::ThriftMegarepoSyncChangesetResult;
 use async_requests_client::AsyncRequestsQueue;
 use clap::Args;
 use context::CoreContext;
 use mononoke_api::Mononoke;
 use mononoke_api::MononokeRepo;
 use mononoke_types::ChangesetId;
+use source_control as thrift;
 
 #[derive(Args)]
 /// Subcommand responsible for showing the request
@@ -100,7 +100,7 @@ impl std::fmt::Debug for ResultsWrapper {
         match &self.0 {
             Some(res) => match res.thrift() {
                 ThriftAsynchronousRequestResult::megarepo_sync_changeset_result(
-                    ThriftMegarepoSyncChangesetResult::success(result),
+                    thrift::MegarepoSyncChangesetResult::success(result),
                 ) => f
                     .debug_struct("MegarepoSyncChangesetResponse")
                     .field("cs_id", &ChangesetId::from_bytes(&result.cs_id))

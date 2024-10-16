@@ -33,46 +33,7 @@ use mononoke_types::RepositoryId;
 pub use requests_table::RequestStatus;
 pub use requests_table::RequestType;
 pub use requests_table::RowId;
-pub use source_control::AsyncPingParams as ThriftAsyncPingParams;
-pub use source_control::AsyncPingPollResponse as ThriftAsyncPingPollResponse;
-pub use source_control::AsyncPingResponse as ThriftAsyncPingResponse;
-pub use source_control::AsyncPingResult as ThriftAsyncPingResult;
-pub use source_control::AsyncPingToken as ThriftAsyncPingToken;
-pub use source_control::CommitSparseProfileSizeParamsV2 as ThriftCommitSparseProfileSizeParamsV2;
-pub use source_control::CommitSparseProfileSizePollResponse as ThriftCommitSparseProfileSizePollResponse;
-pub use source_control::CommitSparseProfileSizeResponse as ThriftCommitSparseProfileSizeResponse;
-pub use source_control::CommitSparseProfileSizeResult as ThriftCommitSparseProfileSizeResult;
-pub use source_control::CommitSparseProfileSizeToken as ThriftCommitSparseProfileSizeToken;
-pub use source_control::CommitSpecifier as ThriftCommitSpecifier;
-pub use source_control::MegarepoAddBranchingTargetParams as ThriftMegarepoAddBranchingTargetParams;
-pub use source_control::MegarepoAddBranchingTargetPollResponse as ThriftMegarepoAddBranchingTargetPollResponse;
-pub use source_control::MegarepoAddBranchingTargetResponse as ThriftMegarepoAddBranchingTargetResponse;
-pub use source_control::MegarepoAddBranchingTargetResult as ThriftMegarepoAddBranchingTargetResult;
-pub use source_control::MegarepoAddBranchingTargetToken as ThriftMegarepoAddBranchingTargetToken;
-pub use source_control::MegarepoAddTargetParams as ThriftMegarepoAddTargetParams;
-pub use source_control::MegarepoAddTargetPollResponse as ThriftMegarepoAddTargetPollResponse;
-pub use source_control::MegarepoAddTargetResponse as ThriftMegarepoAddTargetResponse;
-pub use source_control::MegarepoAddTargetResult as ThriftMegarepoAddTargetResult;
-pub use source_control::MegarepoAddTargetToken as ThriftMegarepoAddTargetToken;
-pub use source_control::MegarepoChangeConfigToken as ThriftMegarepoChangeConfigToken;
-pub use source_control::MegarepoChangeTargetConfigParams as ThriftMegarepoChangeTargetConfigParams;
-pub use source_control::MegarepoChangeTargetConfigPollResponse as ThriftMegarepoChangeTargetConfigPollResponse;
-pub use source_control::MegarepoChangeTargetConfigResponse as ThriftMegarepoChangeTargetConfigResponse;
-pub use source_control::MegarepoChangeTargetConfigResult as ThriftMegarepoChangeTargetConfigResult;
-pub use source_control::MegarepoRemergeSourceParams as ThriftMegarepoRemergeSourceParams;
-pub use source_control::MegarepoRemergeSourcePollResponse as ThriftMegarepoRemergeSourcePollResponse;
-pub use source_control::MegarepoRemergeSourceResponse as ThriftMegarepoRemergeSourceResponse;
-pub use source_control::MegarepoRemergeSourceResult as ThriftMegarepoRemergeSourceResult;
-pub use source_control::MegarepoRemergeSourceToken as ThriftMegarepoRemergeSourceToken;
-pub use source_control::MegarepoSyncChangesetParams as ThriftMegarepoSyncChangesetParams;
-pub use source_control::MegarepoSyncChangesetPollResponse as ThriftMegarepoSyncChangesetPollResponse;
-pub use source_control::MegarepoSyncChangesetResponse as ThriftMegarepoSyncChangesetResponse;
-pub use source_control::MegarepoSyncChangesetResult as ThriftMegarepoSyncChangesetResult;
-pub use source_control::MegarepoSyncChangesetToken as ThriftMegarepoSyncChangesetToken;
-pub use source_control::MegarepoSyncTargetConfig as ThriftMegarepoSyncTargetConfig;
-pub use source_control::MegarepoTarget as ThriftMegarepoTarget;
-pub use source_control::RepoSpecifier as ThriftRepoSpecifier;
-pub use source_control::SparseProfiles as ThriftSparseProfiles;
+pub use source_control as thrift;
 
 use crate::error::AsyncRequestsError;
 
@@ -292,7 +253,7 @@ macro_rules! impl_async_svc_method_types {
         fn target(&$self_ident: ident: ThriftParams) -> String $target_in_params: tt
 
     } => {
-        impl ThriftParams for $params_value_thrift_type {
+        impl ThriftParams for thrift::$params_value_thrift_type {
             type R = $request_struct;
 
             fn target(&$self_ident) -> String {
@@ -301,17 +262,17 @@ macro_rules! impl_async_svc_method_types {
         }
 
         #[derive(Clone, Debug)]
-        pub struct $token_type(pub $token_thrift_type);
+        pub struct $token_type(pub thrift::$token_thrift_type);
 
         impl Token for $token_type {
-            type ThriftToken = $token_thrift_type;
+            type ThriftToken = thrift::$token_thrift_type;
             type R = $request_struct;
 
             fn from_db_id(id: RowId) -> Result<Self, AsyncRequestsError> {
                 // Thrift token is a string alias
                 // but's guard ourselves here against
                 // it changing unexpectedly.
-                let thrift_token = $token_thrift_type {
+                let thrift_token = thrift::$token_thrift_type {
                     id: id.0 as i64,
                     ..Default::default()
                 };
@@ -329,45 +290,45 @@ macro_rules! impl_async_svc_method_types {
                 RowId(self.0.id as u64)
             }
 
-            fn into_thrift(self) -> $token_thrift_type {
+            fn into_thrift(self) -> thrift::$token_thrift_type {
                 self.0
             }
         }
 
-        impl From<Result<$response_type, AsyncRequestsError>> for AsynchronousRequestResult {
-            fn from(r: Result<$response_type, AsyncRequestsError>) -> AsynchronousRequestResult {
+        impl From<Result<thrift::$response_type, AsyncRequestsError>> for AsynchronousRequestResult {
+            fn from(r: Result<thrift::$response_type, AsyncRequestsError>) -> AsynchronousRequestResult {
                 let thrift = match r {
-                    Ok(payload) => ThriftAsynchronousRequestResult::$result_union_variant($result_value_thrift_type::success(payload)),
-                    Err(e) => ThriftAsynchronousRequestResult::$result_union_variant($result_value_thrift_type::error(e.into()))
+                    Ok(payload) => ThriftAsynchronousRequestResult::$result_union_variant(thrift::$result_value_thrift_type::success(payload)),
+                    Err(e) => ThriftAsynchronousRequestResult::$result_union_variant(thrift::$result_value_thrift_type::error(e.into()))
                 };
 
                 AsynchronousRequestResult::from_thrift(thrift)
             }
         }
 
-        impl From<$result_value_thrift_type> for AsynchronousRequestResult {
-            fn from(r: $result_value_thrift_type) -> AsynchronousRequestResult {
+        impl From<thrift::$result_value_thrift_type> for AsynchronousRequestResult {
+            fn from(r: thrift::$result_value_thrift_type) -> AsynchronousRequestResult {
                 let thrift = ThriftAsynchronousRequestResult::$result_union_variant(r);
                 AsynchronousRequestResult::from_thrift(thrift)
             }
         }
 
-        impl From<$params_value_thrift_type> for AsynchronousRequestParams{
-            fn from(params: $params_value_thrift_type) -> AsynchronousRequestParams {
+        impl From<thrift::$params_value_thrift_type> for AsynchronousRequestParams{
+            fn from(params: thrift::$params_value_thrift_type) -> AsynchronousRequestParams {
                 AsynchronousRequestParams::from_thrift(
                     ThriftAsynchronousRequestParams::$params_union_variant(params)
                 )
             }
         }
 
-        impl ThriftResult for $result_value_thrift_type {
+        impl ThriftResult for thrift::$result_value_thrift_type {
             type R = $request_struct;
         }
 
-        impl TryFrom<AsynchronousRequestResult> for $result_value_thrift_type {
+        impl TryFrom<AsynchronousRequestResult> for thrift::$result_value_thrift_type {
             type Error = AsyncRequestsError;
 
-            fn try_from(r: AsynchronousRequestResult) -> Result<$result_value_thrift_type, Self::Error> {
+            fn try_from(r: AsynchronousRequestResult) -> Result<thrift::$result_value_thrift_type, Self::Error> {
                 match r.thrift {
                     ThriftAsynchronousRequestResult::$result_union_variant(payload) => Ok(payload),
                     ThriftAsynchronousRequestResult::UnknownField(x) => {
@@ -375,7 +336,7 @@ macro_rules! impl_async_svc_method_types {
                         Err(AsyncRequestsError::internal(
                             anyhow!(
                                 "failed to parse {} thrift. UnknownField: {}",
-                                stringify!($result_value_thrift_type),
+                                stringify!(thrift::$result_value_thrift_type),
                                 x,
                             )
                         ))
@@ -384,7 +345,7 @@ macro_rules! impl_async_svc_method_types {
                         Err(AsyncRequestsError::internal(
                             anyhow!(
                                 "failed to parse {} thrift. The result union contains the wrong result variant: {:?}",
-                                stringify!($result_value_thrift_type),
+                                stringify!(thrift::$result_value_thrift_type),
                                 x,
                             )
                         ))
@@ -399,20 +360,20 @@ macro_rules! impl_async_svc_method_types {
             const NAME: &'static str = $method_name;
 
             type Token = $token_type;
-            type ThriftParams = $params_value_thrift_type;
-            type ThriftResult = $result_value_thrift_type;
-            type ThriftResponse = $response_type;
+            type ThriftParams = thrift::$params_value_thrift_type;
+            type ThriftResult = thrift::$result_value_thrift_type;
+            type ThriftResponse = thrift::$response_type;
 
-            type PollResponse = $poll_response_type;
+            type PollResponse = thrift::$poll_response_type;
 
             fn thrift_result_into_poll_response(
                 thrift_result: Self::ThriftResult,
             ) -> Self::PollResponse {
-                $poll_response_type { result: Some(thrift_result), ..Default::default() }
+                thrift::$poll_response_type { result: Some(thrift_result), ..Default::default() }
             }
 
             fn empty_poll_response() -> Self::PollResponse {
-                $poll_response_type { result: None, ..Default::default() }
+                thrift::$poll_response_type { result: None, ..Default::default() }
             }
         }
 
@@ -425,16 +386,16 @@ impl_async_svc_method_types! {
     method_name => "megarepo_add_sync_target",
     request_struct => MegarepoAddSyncTarget,
 
-    params_value_thrift_type => ThriftMegarepoAddTargetParams,
+    params_value_thrift_type => MegarepoAddTargetParams,
     params_union_variant => megarepo_add_target_params,
 
-    result_value_thrift_type => ThriftMegarepoAddTargetResult,
+    result_value_thrift_type => MegarepoAddTargetResult,
     result_union_variant => megarepo_add_target_result,
 
-    response_type => ThriftMegarepoAddTargetResponse,
-    poll_response_type => ThriftMegarepoAddTargetPollResponse,
+    response_type => MegarepoAddTargetResponse,
+    poll_response_type => MegarepoAddTargetPollResponse,
     token_type => MegarepoAddTargetToken,
-    token_thrift_type => ThriftMegarepoAddTargetToken,
+    token_thrift_type => MegarepoAddTargetToken,
 
     fn target(&self: ThriftParams) -> String {
         render_target(&self.config_with_new_target.target)
@@ -447,16 +408,16 @@ impl_async_svc_method_types! {
     method_name => "megarepo_add_branching_sync_target",
     request_struct => MegarepoAddBranchingSyncTarget,
 
-    params_value_thrift_type => ThriftMegarepoAddBranchingTargetParams,
+    params_value_thrift_type => MegarepoAddBranchingTargetParams,
     params_union_variant => megarepo_add_branching_target_params,
 
-    result_value_thrift_type => ThriftMegarepoAddBranchingTargetResult,
+    result_value_thrift_type => MegarepoAddBranchingTargetResult,
     result_union_variant => megarepo_add_branching_target_result,
 
-    response_type => ThriftMegarepoAddBranchingTargetResponse,
-    poll_response_type => ThriftMegarepoAddBranchingTargetPollResponse,
+    response_type => MegarepoAddBranchingTargetResponse,
+    poll_response_type => MegarepoAddBranchingTargetPollResponse,
     token_type => MegarepoAddBranchingTargetToken,
-    token_thrift_type => ThriftMegarepoAddBranchingTargetToken,
+    token_thrift_type => MegarepoAddBranchingTargetToken,
 
     fn target(&self: ThriftParams) -> String {
         render_target(&self.target)
@@ -469,16 +430,16 @@ impl_async_svc_method_types! {
     method_name => "megarepo_change_target_config",
     request_struct => MegarepoChangeTargetConfig,
 
-    params_value_thrift_type => ThriftMegarepoChangeTargetConfigParams,
+    params_value_thrift_type => MegarepoChangeTargetConfigParams,
     params_union_variant => megarepo_change_target_params,
 
-    result_value_thrift_type => ThriftMegarepoChangeTargetConfigResult,
+    result_value_thrift_type => MegarepoChangeTargetConfigResult,
     result_union_variant => megarepo_change_target_result,
 
-    response_type => ThriftMegarepoChangeTargetConfigResponse,
-    poll_response_type => ThriftMegarepoChangeTargetConfigPollResponse,
+    response_type => MegarepoChangeTargetConfigResponse,
+    poll_response_type => MegarepoChangeTargetConfigPollResponse,
     token_type => MegarepoChangeTargetConfigToken,
-    token_thrift_type => ThriftMegarepoChangeConfigToken,
+    token_thrift_type => MegarepoChangeConfigToken,
 
     fn target(&self: ThriftParams) -> String {
         render_target(&self.target)
@@ -491,16 +452,16 @@ impl_async_svc_method_types! {
     method_name => "megarepo_sync_changeset",
     request_struct => MegarepoSyncChangeset,
 
-    params_value_thrift_type => ThriftMegarepoSyncChangesetParams,
+    params_value_thrift_type => MegarepoSyncChangesetParams,
     params_union_variant => megarepo_sync_changeset_params,
 
-    result_value_thrift_type => ThriftMegarepoSyncChangesetResult,
+    result_value_thrift_type => MegarepoSyncChangesetResult,
     result_union_variant => megarepo_sync_changeset_result,
 
-    response_type => ThriftMegarepoSyncChangesetResponse,
-    poll_response_type => ThriftMegarepoSyncChangesetPollResponse,
+    response_type => MegarepoSyncChangesetResponse,
+    poll_response_type => MegarepoSyncChangesetPollResponse,
     token_type => MegarepoSyncChangesetToken,
-    token_thrift_type => ThriftMegarepoSyncChangesetToken,
+    token_thrift_type => MegarepoSyncChangesetToken,
 
     fn target(&self: ThriftParams) -> String {
         render_target(&self.target)
@@ -513,16 +474,16 @@ impl_async_svc_method_types! {
     method_name => "megarepo_remerge_source",
     request_struct => MegarepoRemergeSource,
 
-    params_value_thrift_type => ThriftMegarepoRemergeSourceParams,
+    params_value_thrift_type => MegarepoRemergeSourceParams,
     params_union_variant => megarepo_remerge_source_params,
 
-    result_value_thrift_type => ThriftMegarepoRemergeSourceResult,
+    result_value_thrift_type => MegarepoRemergeSourceResult,
     result_union_variant => megarepo_remerge_source_result,
 
-    response_type => ThriftMegarepoRemergeSourceResponse,
-    poll_response_type => ThriftMegarepoRemergeSourcePollResponse,
+    response_type => MegarepoRemergeSourceResponse,
+    poll_response_type => MegarepoRemergeSourcePollResponse,
     token_type => MegarepoRemergeSourceToken,
-    token_thrift_type => ThriftMegarepoRemergeSourceToken,
+    token_thrift_type => MegarepoRemergeSourceToken,
 
     fn target(&self: ThriftParams) -> String {
         render_target(&self.target)
@@ -535,16 +496,16 @@ impl_async_svc_method_types! {
     method_name => "async_ping",
     request_struct => AsyncPing,
 
-    params_value_thrift_type => ThriftAsyncPingParams,
+    params_value_thrift_type => AsyncPingParams,
     params_union_variant => async_ping_params,
 
-    result_value_thrift_type => ThriftAsyncPingResult,
+    result_value_thrift_type => AsyncPingResult,
     result_union_variant => async_ping_result,
 
-    response_type => ThriftAsyncPingResponse,
-    poll_response_type => ThriftAsyncPingPollResponse,
+    response_type => AsyncPingResponse,
+    poll_response_type => AsyncPingPollResponse,
     token_type => AsyncPingToken,
-    token_thrift_type => ThriftAsyncPingToken,
+    token_thrift_type => AsyncPingToken,
 
     fn target(&self: ThriftParams) -> String {
         "".to_string()
@@ -557,16 +518,16 @@ impl_async_svc_method_types! {
     method_name => "commit_sparse_profile_size_async",
     request_struct => CommitSparseProfileSize,
 
-    params_value_thrift_type => ThriftCommitSparseProfileSizeParamsV2,
+    params_value_thrift_type => CommitSparseProfileSizeParamsV2,
     params_union_variant => commit_sparse_profile_size_params,
 
-    result_value_thrift_type => ThriftCommitSparseProfileSizeResult,
+    result_value_thrift_type => CommitSparseProfileSizeResult,
     result_union_variant => commit_sparse_profile_size_result,
 
-    response_type => ThriftCommitSparseProfileSizeResponse,
-    poll_response_type => ThriftCommitSparseProfileSizePollResponse,
+    response_type => CommitSparseProfileSizeResponse,
+    poll_response_type => CommitSparseProfileSizePollResponse,
     token_type => CommitSparseProfileSizeToken,
-    token_thrift_type => ThriftCommitSparseProfileSizeToken,
+    token_thrift_type => CommitSparseProfileSizeToken,
 
     fn target(&self: ThriftParams) -> String {
         format!(
@@ -593,7 +554,7 @@ impl_async_svc_stored_type! {
     context_type => AsynchronousRequestResultIdContext,
 }
 
-fn render_target(target: &ThriftMegarepoTarget) -> String {
+fn render_target(target: &thrift::MegarepoTarget) -> String {
     format!(
         "{}: {}, bookmark: {}",
         target
@@ -645,7 +606,7 @@ pub trait IntoConfigFormat<T, R> {
     fn into_config_format(self, mononoke: &Mononoke<R>) -> Result<T, AsyncRequestsError>;
 }
 
-impl<R: MononokeRepo> IntoConfigFormat<Target, R> for ThriftMegarepoTarget {
+impl<R: MononokeRepo> IntoConfigFormat<Target, R> for thrift::MegarepoTarget {
     fn into_config_format(self, mononoke: &Mononoke<R>) -> Result<Target, AsyncRequestsError> {
         let repo_id = match (self.repo, self.repo_id) {
             (Some(repo), _) => mononoke
@@ -663,7 +624,7 @@ impl<R: MononokeRepo> IntoConfigFormat<Target, R> for ThriftMegarepoTarget {
     }
 }
 
-impl<R: MononokeRepo> IntoConfigFormat<SyncTargetConfig, R> for ThriftMegarepoSyncTargetConfig {
+impl<R: MononokeRepo> IntoConfigFormat<SyncTargetConfig, R> for thrift::MegarepoSyncTargetConfig {
     fn into_config_format(
         self,
         mononoke: &Mononoke<R>,
@@ -682,18 +643,18 @@ pub trait IntoApiFormat<T, R> {
 }
 
 #[async_trait]
-impl<R: MononokeRepo> IntoApiFormat<ThriftMegarepoTarget, R> for Target {
+impl<R: MononokeRepo> IntoApiFormat<thrift::MegarepoTarget, R> for Target {
     fn into_api_format(
         self,
         mononoke: &Mononoke<R>,
-    ) -> Result<ThriftMegarepoTarget, AsyncRequestsError> {
+    ) -> Result<thrift::MegarepoTarget, AsyncRequestsError> {
         let repo = mononoke
             .repo_name_from_id(RepositoryId::new(self.repo_id as i32))
-            .map(|name| ThriftRepoSpecifier {
+            .map(|name| thrift::RepoSpecifier {
                 name,
                 ..Default::default()
             });
-        Ok(ThriftMegarepoTarget {
+        Ok(thrift::MegarepoTarget {
             repo_id: Some(self.repo_id),
             bookmark: self.bookmark,
             repo,
@@ -703,12 +664,12 @@ impl<R: MononokeRepo> IntoApiFormat<ThriftMegarepoTarget, R> for Target {
 }
 
 #[async_trait]
-impl<R: MononokeRepo> IntoApiFormat<ThriftMegarepoSyncTargetConfig, R> for SyncTargetConfig {
+impl<R: MononokeRepo> IntoApiFormat<thrift::MegarepoSyncTargetConfig, R> for SyncTargetConfig {
     fn into_api_format(
         self,
         mononoke: &Mononoke<R>,
-    ) -> Result<ThriftMegarepoSyncTargetConfig, AsyncRequestsError> {
-        Ok(ThriftMegarepoSyncTargetConfig {
+    ) -> Result<thrift::MegarepoSyncTargetConfig, AsyncRequestsError> {
+        Ok(thrift::MegarepoSyncTargetConfig {
             target: self.target.into_api_format(mononoke)?,
             sources: self.sources,
             version: self.version,

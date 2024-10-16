@@ -17,11 +17,7 @@ use clap::Args;
 use context::CoreContext;
 use megarepo_error::MegarepoError;
 use mononoke_api::MononokeRepo;
-use source_control::MegarepoAddBranchingTargetResult;
-use source_control::MegarepoAddTargetResult;
-use source_control::MegarepoChangeTargetConfigResult;
-use source_control::MegarepoRemergeSourceResult;
-use source_control::MegarepoSyncChangesetResult;
+use source_control as thrift;
 
 #[derive(Args)]
 /// Changes the request status to ready and put error as result.
@@ -53,19 +49,19 @@ pub async fn abort_request(
             let err = MegarepoError::InternalError(anyhow!("aborted from CLI!").into());
             let result: AsynchronousRequestResult = match params.thrift() {
                 ThriftAsynchronousRequestParams::megarepo_sync_changeset_params(_) => {
-                    MegarepoSyncChangesetResult::error(err.into()).into()
+                    thrift::MegarepoSyncChangesetResult::error(err.into()).into()
                 }
                 ThriftAsynchronousRequestParams::megarepo_add_target_params(_) => {
-                    MegarepoAddTargetResult::error(err.into()).into()
+                    thrift::MegarepoAddTargetResult::error(err.into()).into()
                 }
                 ThriftAsynchronousRequestParams::megarepo_change_target_params(_) => {
-                    MegarepoChangeTargetConfigResult::error(err.into()).into()
+                    thrift::MegarepoChangeTargetConfigResult::error(err.into()).into()
                 }
                 ThriftAsynchronousRequestParams::megarepo_remerge_source_params(_) => {
-                    MegarepoRemergeSourceResult::error(err.into()).into()
+                    thrift::MegarepoRemergeSourceResult::error(err.into()).into()
                 }
                 ThriftAsynchronousRequestParams::megarepo_add_branching_target_params(_) => {
-                    MegarepoAddBranchingTargetResult::error(err.into()).into()
+                    thrift::MegarepoAddBranchingTargetResult::error(err.into()).into()
                 }
                 _ => return Err(anyhow!("unknown request type!")),
             };
