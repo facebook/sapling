@@ -745,14 +745,7 @@ function db_config() {
 }
 
 function ephemeral_db_config() {
-  local blobstorename="$1"
-  if [[ -n "$DB_SHARD_NAME" ]]; then
-    echo "[$blobstorename.metadata.remote]"
-    echo "db_address = \"$DB_SHARD_NAME\""
-  else
-    echo "[$blobstorename.metadata.local]"
-    echo "local_db_path = \"$TESTTMP/monsql\""
-  fi
+  python_fn ephemeral_db_config "$@"
 }
 
 function blobstore_db_config() {
