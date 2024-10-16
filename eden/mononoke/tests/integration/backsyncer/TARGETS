@@ -9,7 +9,6 @@ dott_test(
     name = "backsyncer",
     dott_files = glob(["*.t"]),
     deps = [
-        "//eden/mononoke:admin",
         "//eden/mononoke:blobimport",
         "//eden/mononoke:mononoke",
         "//eden/mononoke/commit_rewriting/backsyncer:backsyncer_cmd",

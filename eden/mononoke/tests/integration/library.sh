@@ -375,14 +375,6 @@ function mononoke_hg_sync_loop_regenerate {
     ssh://user@dummy/"$repo" sync-loop --start-id "$start_id" "$@"
 }
 
-function mononoke_admin {
-  GLOG_minloglevel=5 "$MONONOKE_ADMIN" \
-    "${CACHE_ARGS[@]}" \
-    "${COMMON_ARGS[@]}" \
-    --repo-id $REPOID \
-    --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
-}
-
 function mononoke_newadmin {
   GLOG_minloglevel=5 "$MONONOKE_NEWADMIN" \
     "${CACHE_ARGS[@]}" \
@@ -416,19 +408,6 @@ function repo_metadata_logger {
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --scuba-dataset "file://$TESTTMP/metadata_logger_scuba_logs" \
-    --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
-}
-
-function mononoke_admin_source_target {
-  local source_repo_id=$1
-  shift
-  local target_repo_id=$1
-  shift
-  GLOG_minloglevel=5 "$MONONOKE_ADMIN" \
-    "${CACHE_ARGS[@]}" \
-    "${COMMON_ARGS[@]}" \
-    --source-repo-id "$source_repo_id" \
-    --target-repo-id "$target_repo_id" \
     --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
 }
 

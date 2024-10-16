@@ -12,7 +12,6 @@ MONONOKE_BINS = {
     "DERIVED_DATA_WORKER": "derivation_worker",
     "LFS_SERVER": "lfs_server",
     "MEGAREPO_TOOL": "megarepotool",
-    "MONONOKE_ADMIN": "admin",
     "MONONOKE_ALIAS_VERIFY": "aliasverify",
     "MONONOKE_BACKFILL_MAPPING": "backfill_mapping",
     "MONONOKE_BENCHMARK_FILESTORE": "benchmark_filestore",

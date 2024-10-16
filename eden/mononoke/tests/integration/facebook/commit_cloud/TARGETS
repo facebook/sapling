@@ -13,7 +13,6 @@ dott_test(
             "*.t",
         ]),
     deps = [
-        "//eden/mononoke:admin",
         "//eden/mononoke:blobimport",
         "//eden/mononoke:mononoke",
         "//eden/mononoke/tools/admin:newadmin",

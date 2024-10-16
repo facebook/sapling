@@ -388,7 +388,7 @@ Run the x-repo with submodules setup
   
   
   
-  Running mononoke_admin to verify mapping
+  Running mononoke_newadmin to verify mapping
   
   RewrittenAs([(ChangesetId(Blake2(eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
   

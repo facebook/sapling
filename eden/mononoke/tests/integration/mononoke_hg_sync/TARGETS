@@ -12,7 +12,6 @@ dott_test(
         "*.t",
     ]),
     deps = [
-        "//eden/mononoke:admin",
         "//eden/mononoke:blobimport",
         "//eden/mononoke:bonsai_verify",
         "//eden/mononoke:mononoke",

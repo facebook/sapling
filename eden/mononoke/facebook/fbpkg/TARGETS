@@ -27,7 +27,6 @@ mononoke_fbpkg(
     name = "mononoke.admin",
     compress_type = None,
     path_actions = {
-        "admin": "//eden/mononoke:admin",
         "newadmin": "//eden/mononoke/tools/admin:newadmin",
     },
 )

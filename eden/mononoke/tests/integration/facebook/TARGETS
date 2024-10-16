@@ -111,7 +111,6 @@ dott_test(
             "test-gitbundle*.t",
         ]),
     deps = [
-        "//eden/mononoke:admin",
         "//eden/mononoke:mononoke",
         "//eden/mononoke/git/facebook/git_move_bookmark:git_move_bookmark",
         "//eden/mononoke/git/facebook/remote_gitimport:remote_gitimport",
@@ -198,7 +197,6 @@ dott_test(
         "test-cat-auth.t",
     ],
     deps = [
-        "//eden/mononoke:admin",
         "//eden/mononoke:blobimport",
         "//eden/mononoke:mononoke",
         "//eden/mononoke/tools/testtool:testtool",
@@ -224,7 +222,6 @@ dott_test(
         "test-server-mononokepeer-proxy.t",
     ],
     deps = [
-        "//eden/mononoke:admin",
         "//eden/mononoke:blobimport",
         "//eden/mononoke:mononoke",
         "//eden/mononoke/tools/testtool:testtool",
@@ -255,7 +252,6 @@ dott_test(
     ),
     enable_async_requests_worker = True,
     deps = [
-        "//eden/mononoke:admin",
         "//eden/mononoke:backfill_mapping",
         "//eden/mononoke:blobimport",
         "//eden/mononoke:mononoke",
@@ -287,7 +283,6 @@ dott_test(
     disable_all_network_access_target = False,
     dott_files = glob(["test-scs-land-service*.t"]),
     deps = [
-        "//eden/mononoke:admin",
         "//eden/mononoke:mononoke",
         "//eden/mononoke/commit_rewriting/backsyncer:backsyncer_cmd",
         "//eden/mononoke/land_service/facebook/server:land_service",
@@ -303,7 +298,6 @@ dott_test(
     disable_all_network_access_target = False,
     dott_files = glob(["test-land-service*.t"]),
     deps = [
-        "//eden/mononoke:admin",
         "//eden/mononoke:backfill_mapping",
         "//eden/mononoke:mononoke",
         "//eden/mononoke/commit_rewriting/backsyncer:backsyncer_cmd",
@@ -319,7 +313,6 @@ dott_test(
     disable_all_network_access_target = False,
     dott_files = glob(["test-snapshot*.t"]),
     deps = [
-        "//eden/mononoke:admin",
         "//eden/mononoke:blobimport",
         "//eden/mononoke:mononoke",
         "//eden/mononoke/scs/client:scsc",
@@ -335,7 +328,6 @@ dott_test(
         "test-mononoke-slow-bookmark-mover*.t",
     ]),
     deps = [
-        "//eden/mononoke:admin",
         "//eden/mononoke:bonsai_verify",
         "//eden/mononoke:mononoke",
         "//eden/mononoke/commit_rewriting/megarepo:megarepotool",
@@ -369,7 +361,6 @@ dott_test(
         "test-cross-repo-and-scs-*.t",
     ]),
     deps = [
-        "//eden/mononoke:admin",
         "//eden/mononoke:blobimport",
         "//eden/mononoke:mononoke",
         "//eden/mononoke/commit_rewriting/backsyncer:backsyncer_cmd",
@@ -390,7 +381,6 @@ dott_test(
     name = "newadmin",
     dott_files = glob(["test-newadmin-*.t"]),
     deps = [
-        "//eden/mononoke:admin",
         "//eden/mononoke:mononoke",
         "//eden/mononoke/tools/admin:newadmin",
         "//eden/mononoke/tools/facebook/backfill_bonsai_blob_mapping:backfill_bonsai_blob_mapping",

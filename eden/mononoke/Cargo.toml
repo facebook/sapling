@@ -122,7 +122,6 @@ riscv = { git = "https://github.com/rust-embedded/riscv.git", rev = "28e9b02d458
 members = [
   ".",
   "acl_regions",
-  "admin",
   "aliasverify",
   "async_requests/async_requests_client",
   "async_requests/if",

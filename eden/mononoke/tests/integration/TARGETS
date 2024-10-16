@@ -118,11 +118,10 @@ dott_test(
 
 dott_test(
     name = "filenodes",
-    dott_files = ["test-db-filenodes.t"] + glob([
+    dott_files = glob([
         "test-filenodes*.t",
     ]),
     deps = [
-        "//eden/mononoke:admin",
         "//eden/mononoke:mononoke",
         "//eden/mononoke/tools/admin:newadmin",
         "//eden/mononoke/tools/testtool:testtool",
@@ -187,7 +186,6 @@ dott_test(
     name = "redaction",
     dott_files = glob(["test-redaction*.t"]),
     deps = [
-        "//eden/mononoke:admin",
         "//eden/mononoke:blobimport",
         "//eden/mononoke:mononoke",
         "//eden/mononoke/tools/admin:newadmin",
@@ -198,7 +196,6 @@ dott_test(
     name = "restore-keys",
     dott_files = glob(["test-restore-keys*.t"]),
     deps = [
-        "//eden/mononoke:admin",
         "//eden/mononoke:blobimport",
         "//eden/mononoke/cmds/copy_blobstore_keys:copy_blobstore_keys",
         "//eden/mononoke/walker:walker",

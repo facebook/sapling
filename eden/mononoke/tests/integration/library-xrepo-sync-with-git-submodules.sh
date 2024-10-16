@@ -175,7 +175,7 @@ function clone_and_log_large_repo {
 
   sl_log --stat -r "sort(all(), desc)"
 
-  printf "\n\nRunning mononoke_admin to verify mapping\n\n"
+  printf "\n\nRunning mononoke_newadmin to verify mapping\n\n"
   for LARGE_BCS_ID in "${LARGE_BCS_IDS[@]}"; do
     quiet_grep RewrittenAs -- with_stripped_logs mononoke_newadmin cross-repo --source-repo-id "$LARGE_REPO_ID" --target-repo-id "$SUBMODULE_REPO_ID" map -i "$LARGE_BCS_ID"
   done

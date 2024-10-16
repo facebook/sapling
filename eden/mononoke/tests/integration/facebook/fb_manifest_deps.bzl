@@ -48,7 +48,6 @@ MONONOKE_TARGETS_TO_ENV = {
     "//eden/mononoke/tools/import:import": "MONONOKE_IMPORT",
     "//eden/mononoke/tools/testtool:testtool": "MONONOKE_TESTTOOL",
     "//eden/mononoke/walker:walker": "MONONOKE_WALKER",
-    "//eden/mononoke:admin": "MONONOKE_ADMIN",
     "//eden/mononoke:aliasverify": "MONONOKE_ALIAS_VERIFY",
     "//eden/mononoke:backfill_mapping": "MONONOKE_BACKFILL_MAPPING",
     "//eden/mononoke:blobimport": "MONONOKE_BLOBIMPORT",

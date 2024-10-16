@@ -12,8 +12,6 @@ dott_test(
         "*.t",
     ]),
     deps = [
-        # TODO(T175880214): remove dependency to admin
-        "//eden/mononoke:admin",
         "//eden/mononoke:blobimport",
         "//eden/mononoke:mononoke",
         "//eden/mononoke/git/gitimport:gitimport",
