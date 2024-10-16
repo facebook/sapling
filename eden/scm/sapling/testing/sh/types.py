@@ -116,13 +116,13 @@ class Env:
     # background jobs
     jobs: List[Tuple[threading.Thread, BufIO]] = field(default_factory=list)
 
-    def getenv(self, name: str) -> str:
+    def getenv(self, name: str, alt: str = "") -> str:
         if name == "PWD":
             return self.fs.cwd()
         value = self.envvars.get(name)
         if value is None and self.parent is not None:
             value = self.parent.getenv(name)
-        return value or ""
+        return value or alt
 
     def setenv(self, name: str, value: str, scope: Optional[Scope] = None):
         assert isinstance(value, str), f"setenv {name}={repr(value)} is not a str"

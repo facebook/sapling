@@ -324,8 +324,8 @@ class TestTmp:
         if out:
             return out
 
-    def getenv(self, name: str) -> str:
-        return self.shenv.getenv(name)
+    def getenv(self, name: str, alt: str = "") -> str:
+        return self.shenv.getenv(name, alt)
 
     def setenv(self, name: str, value, export: bool = True):
         self.shenv.setenv(name, str(value), Scope.SHELL)
