@@ -17,6 +17,7 @@ buck_filegroup(
         "commitsync/current.toml",
         "commitsync/flipped_config.json",
         "commitsync/flipped_config.toml",
+        "dbrtest_runner.py",
         "fixtures/repo_with_newline_author_commit.tar.xz",
         "gitexport_library.sh",
         "library.sh",

@@ -6,6 +6,16 @@
 
 # Library routines and initial setup for Mononoke-related tests.
 
+# This runs the Python version of functions on debugruntest. It's also
+# capable of importing the env vars that would be modified if the function
+# was written in Bash.
+function python_fn() {
+  echo -n "" > "$TESTTMP/.dbrtest_envs"
+  CHGDISABLE=1 hg debugpython "$TEST_FIXTURES/dbrtest_runner.py" "$@"
+  # shellcheck disable=SC1091
+  . "$TESTTMP/.dbrtest_envs"
+}
+
 if [ -n "$FB_TEST_FIXTURES" ] && [ -f "$FB_TEST_FIXTURES/fb_library.sh" ]; then
   # shellcheck source=fbcode/eden/mononoke/tests/integration/facebook/fb_library.sh
   . "$FB_TEST_FIXTURES/fb_library.sh"
