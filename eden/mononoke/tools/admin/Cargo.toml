@@ -13,6 +13,8 @@ async-stream = "0.3"
 async_requests = { version = "0.1.0", path = "../../async_requests/lib" }
 async_requests_client = { version = "0.1.0", path = "../../async_requests/async_requests_client" }
 backsyncer = { version = "0.1.0", path = "../../commit_rewriting/backsyncer" }
+blame = { version = "0.1.0", path = "../../derived_data/blame" }
+blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
 bonsai_blob_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_blob_mapping" }

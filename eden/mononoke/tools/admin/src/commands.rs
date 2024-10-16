@@ -26,6 +26,7 @@
 
 mononoke_app::subcommands! {
     mod async_requests;
+    mod blame;
     mod blobstore;
     mod blobstore_bulk_unlink;
     mod blobstore_unlink;
