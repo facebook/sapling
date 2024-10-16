@@ -24,7 +24,7 @@ fi
 python_fn setup_environment_variables
 
 function urlencode {
-  "$URLENCODE" "$@"
+  python_fn urlencode "$@"
 }
 
 function get_configerator_relative_path {
