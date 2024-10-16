@@ -148,7 +148,6 @@ Add more commits to small repo
   X Repo Sync execution finished from small repo small_repo to large repo large_repo
 
   $ clone_and_log_large_repo "ccfdf094e4710a77de7b36c4324fa7ee64dafba4067726e383db62273553466b"
-  abort: destination 'large_repo' is not empty
   o  71fdac6141e7 D
   │   smallrepofolder1/bar/c.txt |  2 +-
   │   1 files changed, 1 insertions(+), 1 deletions(-)

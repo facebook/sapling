@@ -162,9 +162,9 @@ function sl_log() {
 function clone_and_log_large_repo {
   LARGE_BCS_IDS=( "$@" )
   cd "$TESTTMP" || exit
-  hg clone -q mono:$LARGE_REPO_NAME "$LARGE_REPO_NAME"
-  cd "$LARGE_REPO_NAME" || exit
+  clone_large_repo
 
+  cd "$LARGE_REPO_NAME" || exit
 
   for LARGE_BCS_ID in "${LARGE_BCS_IDS[@]}"; do
     LARGE_CS_ID=$(mononoke_newadmin convert --from bonsai --to hg -R "$LARGE_REPO_NAME" "$LARGE_BCS_ID" --derive)
@@ -185,4 +185,15 @@ function clone_and_log_large_repo {
     quiet mononoke_newadmin derived-data -R "$LARGE_REPO_NAME" derive --all-types \
       -i "$LARGE_BCS_ID" 2>&1| rg "Error" || true # filter to keep only Error line if there is an error
   done
+}
+
+# Clone the large repo if it hasn't been cloned yet
+function clone_large_repo {
+  orig_pwd=$(pwd)
+  cd "$TESTTMP" || exit
+  if [ ! -d "$LARGE_REPO_NAME" ]; then
+    hg clone -q "mono:$LARGE_REPO_NAME" "$LARGE_REPO_NAME"
+  fi
+
+  cd "$orig_pwd" || exit
 }
