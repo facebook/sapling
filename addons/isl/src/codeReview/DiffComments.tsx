@@ -19,12 +19,13 @@ import {atomFamilyWeak, atomLoadableWithRefresh} from '../jotaiUtils';
 import foundPlatform from '../platform';
 import {RelativeDate} from '../relativeDate';
 import {layout} from '../stylexUtils';
+import {themeState} from '../theme';
 import * as stylex from '@stylexjs/stylex';
 import {ErrorNotice} from 'isl-components/ErrorNotice';
 import {Icon} from 'isl-components/Icon';
 import {Subtle} from 'isl-components/Subtle';
 import {Tooltip} from 'isl-components/Tooltip';
-import {useAtom} from 'jotai';
+import {useAtom, useAtomValue} from 'jotai';
 import {useEffect} from 'react';
 import {ComparisonType} from 'shared/Comparison';
 import {group} from 'shared/utils';
@@ -140,6 +141,8 @@ function Comment({comment, isTopLevel}: {comment: DiffComment; isTopLevel?: bool
   );
 }
 
+const useThemeHook = () => useAtomValue(themeState);
+
 function InlineDiff({patch}: {patch: ParsedDiff}) {
   const path = patch.newFileName ?? '';
   return (
@@ -156,6 +159,7 @@ function InlineDiff({patch}: {patch: ParsedDiff}) {
             },
             setCollapsed: () => null,
             display: 'unified',
+            useThemeHook,
           }}
         />
       </div>

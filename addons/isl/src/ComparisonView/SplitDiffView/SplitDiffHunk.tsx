@@ -50,7 +50,7 @@ export const SplitDiffTable = React.memo(
       [expandedSeparators, setExpandedSeparators],
     );
 
-    const tokenization = useTokenizedHunks(patch.newFileName ?? '', patch.hunks);
+    const tokenization = useTokenizedHunks(patch.newFileName ?? '', patch.hunks, ctx.useThemeHook);
 
     const {className: tableSelectionClassName, ...tableSelectionProps} = useTableColumnSelection();
 
@@ -513,7 +513,7 @@ function ExpandingSeparator({
 }): React.ReactElement {
   const result = useFetchLines(ctx, numLines, start);
 
-  const tokenization = useTokenizedContents(path, result?.value);
+  const tokenization = useTokenizedContents(path, result?.value, ctx.useThemeHook);
   if (result == null) {
     return (
       <SeparatorRow>

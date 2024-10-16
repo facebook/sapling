@@ -26,6 +26,7 @@ import {useGeneratedFileStatuses} from '../../GeneratedFile';
 import {tracker} from '../../analytics';
 import {t, T} from '../../i18n';
 import {readAtom} from '../../jotaiUtils';
+import {themeState} from '../../theme';
 import {GeneratedStatus} from '../../types';
 import {isAbsent} from '../commitStackState';
 import {computeLinesForFileStackEditor} from './FileStackEditorLines';
@@ -793,6 +794,8 @@ type SplitFileProps = {
   path: string;
 };
 
+const useThemeHook = () => useAtomValue(themeState);
+
 export function SplitFile(props: SplitFileProps) {
   const mainContentRef = useRef<HTMLTableElement | null>(null);
   const [expandedLines, setExpandedLines] = useState<ImSet<LineIdx>>(ImSet);
@@ -838,7 +841,13 @@ export function SplitFile(props: SplitFileProps) {
   const aLines = useMemo(() => splitLines(aText), [aText]);
   const abBlocks = diffBlocks(aLines, bLines);
 
-  const highlights = useTokenizedContentsOnceVisible(props.path, aLines, bLines, mainContentRef);
+  const highlights = useTokenizedContentsOnceVisible(
+    props.path,
+    aLines,
+    bLines,
+    mainContentRef,
+    useThemeHook,
+  );
   const hasCopyFrom = copyFromText != null;
 
   const {leftGutter, leftButtons, mainContent, rightGutter, rightButtons, lineKind} =

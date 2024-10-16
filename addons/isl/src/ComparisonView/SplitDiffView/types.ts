@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ThemeColor} from '../../theme';
 import type {Result} from '../../types';
 import type {Atom} from 'jotai';
 import type {Comparison} from 'shared/Comparison';
@@ -28,6 +29,8 @@ export type Context = {
   ): Promise<Result<Array<string>>>;
   /** A string value used as an effect dependency. If this value changes, the comparison will be considered invalidated and must be refreshed. */
   comparisonInvalidatedAtom?: Atom<string | undefined>;
+  /** A React hook that returns the current theme color. This is a hook so it can trigger rerenders, but can use atom values. */
+  useThemeHook: () => ThemeColor;
   /**
    * Whether to render as a side-by-side diff view, or a unified view where deleted and added lines are interleaved.
    * TODO: make this controllable / configurable / responsive based on screen width

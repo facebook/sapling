@@ -17,6 +17,7 @@ import {T, t} from '../i18n';
 import {atomFamilyWeak, atomLoadableWithRefresh, localStorageBackedAtom} from '../jotaiUtils';
 import platform from '../platform';
 import {latestHeadCommit} from '../serverAPIState';
+import {themeState} from '../theme';
 import {GeneratedStatus} from '../types';
 import {SplitDiffView} from './SplitDiffView';
 import {currentComparisonMode} from './atoms';
@@ -446,6 +447,7 @@ function ComparisonViewFile({
     // Note: we use latestHeadCommit WITHOUT previews, so we don't accidentally cache the file content
     // AGAIN on the same data while waiting for some new operation to finish.
     comparisonInvalidatedAtom: atom(get => get(latestHeadCommit)?.hash),
+    useThemeHook: () => useAtomValue(themeState),
     collapsed,
     setCollapsed,
     display: displayMode,
