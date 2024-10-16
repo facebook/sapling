@@ -16,13 +16,11 @@ use cmdlib::args::MononokeClapApp;
 use fbinit::FacebookInit;
 use slog::error;
 
-use crate::crossrepo::subcommand_crossrepo;
 use crate::error::SubcommandError;
 use crate::filenodes::subcommand_filenodes;
 use crate::hg_changeset::subcommand_hg_changeset;
 
 mod common;
-mod crossrepo;
 mod error;
 mod filenodes;
 mod hg_changeset;
@@ -40,7 +38,6 @@ fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .about("Poke at mononoke internals for debugging and investigating data structures.")
         .subcommand(hg_changeset::build_subcommand())
         .subcommand(filenodes::build_subcommand())
-        .subcommand(crossrepo::build_subcommand())
         .subcommand(subcommand_blame::build_subcommand())
         .subcommand(subcommand_deleted_manifest::build_subcommand())
         .subcommand(rsync::build_subcommand())
@@ -64,9 +61,6 @@ fn main(fb: FacebookInit) -> ExitCode {
             }
             (filenodes::FILENODES, Some(sub_m)) => {
                 subcommand_filenodes(fb, logger, &matches, sub_m).await
-            }
-            (crossrepo::CROSSREPO, Some(sub_m)) => {
-                subcommand_crossrepo(fb, logger, &matches, sub_m).await
             }
             (subcommand_blame::BLAME, Some(sub_m)) => {
                 subcommand_blame::subcommand_blame(fb, logger, &matches, sub_m).await
