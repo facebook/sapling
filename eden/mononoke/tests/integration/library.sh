@@ -21,88 +21,15 @@ if [ -n "$FB_TEST_FIXTURES" ] && [ -f "$FB_TEST_FIXTURES/fb_library.sh" ]; then
   . "$FB_TEST_FIXTURES/fb_library.sh"
 fi
 
-PROXY_ID_TYPE="${FB_PROXY_ID_TYPE:-X509_SUBJECT_NAME}"
-PROXY_ID_DATA="${FB_PROXY_ID_DATA:-CN=proxy,O=Mononoke,C=US,ST=CA}"
-CLIENT0_ID_TYPE="${FB_CLIENT0_ID_TYPE:-X509_SUBJECT_NAME}"
-CLIENT0_ID_DATA="${FB_CLIENT0_ID_DATA:-CN=client0,O=Mononoke,C=US,ST=CA}"
-# shellcheck disable=SC2034
-CLIENT1_ID_TYPE="${FB_CLIENT1_ID_TYPE:-X509_SUBJECT_NAME}"
-# shellcheck disable=SC2034
-CLIENT1_ID_DATA="${FB_CLIENT1_ID_DATA:-CN=client1,O=Mononoke,C=US,ST=CA}"
-# shellcheck disable=SC2034
-CLIENT2_ID_TYPE="${FB_CLIENT2_ID_TYPE:-X509_SUBJECT_NAME}"
-# shellcheck disable=SC2034
-CLIENT2_ID_DATA="${FB_CLIENT2_ID_DATA:-CN=client2,O=Mononoke,C=US,ST=CA}"
-# shellcheck disable=SC2034
-JSON_CLIENT_ID="${FB_JSON_CLIENT_ID:-[\"X509_SUBJECT_NAME:CN=client0,O=Mononoke,C=US,ST=CA\"]}"
-
-SCRIBE_LOGS_DIR="$TESTTMP/scribe_logs"
-
-if [[ -n "$DB_SHARD_NAME" ]]; then
-  MONONOKE_DEFAULT_START_TIMEOUT=600
-  MONONOKE_LFS_DEFAULT_START_TIMEOUT=60
-  MONONOKE_GIT_SERVICE_DEFAULT_START_TIMEOUT=60
-  MONONOKE_SCS_DEFAULT_START_TIMEOUT=300
-  MONONOKE_LAND_SERVICE_DEFAULT_START_TIMEOUT=120
-else
-  MONONOKE_DEFAULT_START_TIMEOUT=60
-  MONONOKE_LFS_DEFAULT_START_TIMEOUT=60
-  MONONOKE_GIT_SERVICE_DEFAULT_START_TIMEOUT=60
-  # First scsc call takes a while as scs server is doing derivation
-  MONONOKE_SCS_DEFAULT_START_TIMEOUT=300
-  MONONOKE_LAND_SERVICE_DEFAULT_START_TIMEOUT=120
-  MONONOKE_DDS_DEFAULT_START_TIMEOUT=120
-fi
-VI_SERVICE_DEFAULT_START_TIMEOUT=60
+python_fn setup_environment_variables
 
 function urlencode {
   "$URLENCODE" "$@"
 }
 
-REPOID=0
-REPONAME=${REPONAME:-repo}
-
-# Where we write host:port information after servers bind to :0
-MONONOKE_SERVER_ADDR_FILE="$TESTTMP/mononoke_server_addr.txt"
-DDS_SERVER_ADDR_FILE="$TESTTMP/dds_server_addr.txt"
-
-export LOCAL_CONFIGERATOR_PATH="$TESTTMP/configerator"
-mkdir -p "${LOCAL_CONFIGERATOR_PATH}"
-
-export ACL_FILE="$TESTTMP/acls.json"
-
-export MONONOKE_JUST_KNOBS_OVERRIDES_PATH="${LOCAL_CONFIGERATOR_PATH}/just_knobs.json"
-cp "${JUST_KNOBS_DEFAULTS}/just_knobs_defaults/just_knobs.json" "$MONONOKE_JUST_KNOBS_OVERRIDES_PATH"
-
 function get_configerator_relative_path {
   realpath --relative-to "${LOCAL_CONFIGERATOR_PATH}" "$1"
 }
-
-if [[ -n "$ENABLE_LOCAL_CACHE" ]]; then
-  CACHE_ARGS=(
-    --cache-mode=local-only
-    --cache-size-gb=1
-    --cachelib-disable-cacheadmin
-  )
-else
-  CACHE_ARGS=( --cache-mode=disabled )
-fi
-
-COMMON_ARGS=(
-  --mysql-master-only
-  --just-knobs-config-path "$(get_configerator_relative_path "${MONONOKE_JUST_KNOBS_OVERRIDES_PATH}")"
-  --local-configerator-path "${LOCAL_CONFIGERATOR_PATH}"
-  --log-exclude-tag "futures_watchdog"
-  --with-test-megarepo-configs-client=true
-  --acl-file "${ACL_FILE}"
-)
-
-export TEST_CERTDIR
-TEST_CERTDIR="${HGTEST_CERTDIR:-"$TEST_CERTS"}"
-if [[ -z "$TEST_CERTDIR" ]]; then
-  echo "TEST_CERTDIR is not set" 1>&2
-  exit 1
-fi
 
 case "$(uname -s)" in
   # Workarounds for running tests on MacOS
