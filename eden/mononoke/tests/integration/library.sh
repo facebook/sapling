@@ -766,13 +766,7 @@ function ephemeral_db_config() {
 }
 
 function blobstore_db_config() {
-  if [[ -n "$DB_SHARD_NAME" ]]; then
-    echo "queue_db = { unsharded = { db_address = \"$DB_SHARD_NAME\" } }"
-  else
-    local blobstore_db_path="$TESTTMP/blobstore_sync_queue"
-    mkdir -p "$blobstore_db_path"
-    echo "queue_db = { local = { local_db_path = \"$blobstore_db_path\" } }"
-  fi
+  python_fn blobstore_db_config
 }
 
 function setup_mononoke_storage_config {
