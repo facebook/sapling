@@ -446,7 +446,9 @@ function ComparisonViewFile({
     // also changing the head commit's hash.
     // Note: we use latestHeadCommit WITHOUT previews, so we don't accidentally cache the file content
     // AGAIN on the same data while waiting for some new operation to finish.
-    comparisonInvalidatedAtom: atom(get => get(latestHeadCommit)?.hash),
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useComparisonInvalidationKeyHook: () =>
+      useAtomValue(atom(get => get(latestHeadCommit)?.hash)) ?? '',
     useThemeHook: () => useAtomValue(themeState),
     collapsed,
     setCollapsed,

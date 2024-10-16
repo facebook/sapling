@@ -18,7 +18,6 @@ import {useTokenizedContents, useTokenizedHunks} from './syntaxHighlighting';
 import {diffChars} from 'diff';
 import {ErrorNotice} from 'isl-components/ErrorNotice';
 import {Icon} from 'isl-components/Icon';
-import {atom, useAtomValue} from 'jotai';
 import React, {useCallback, useEffect, useState} from 'react';
 import {comparisonStringKey} from 'shared/Comparison';
 import organizeLinesIntoGroups from 'shared/SplitDiffView/organizeLinesIntoGroups';
@@ -565,7 +564,7 @@ function useFetchLines(ctx: Context, numLines: number, start: number) {
   const [fetchedLines, setFetchedLines] = useState<Result<Array<string>> | undefined>(undefined);
 
   // Use-case controlled key that allows invalidating the fetched lines.
-  const invalidationKey = useAtomValue(ctx.comparisonInvalidatedAtom || atom(''));
+  const invalidationKey = ctx.useComparisonInvalidationKeyHook?.();
 
   const comparisonKey = comparisonStringKey(ctx.id.comparison);
   useEffect(() => {
