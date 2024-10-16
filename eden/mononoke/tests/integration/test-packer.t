@@ -4,14 +4,14 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
-  $ CACHEDIR=$PWD/cachepath
+  $ export CACHEDIR=$PWD/cachepath
   $ . "${TEST_FIXTURES}/library.sh"
 
 # setup config repo
 
-  $ REPOTYPE="blob_files"
-  $ MULTIPLEXED=1
-  $ PACK_BLOB=1
+  $ export REPOTYPE="blob_files"
+  $ export MULTIPLEXED=1
+  $ export PACK_BLOB=1
   $ setup_common_config $REPOTYPE
   $ cd $TESTTMP
 

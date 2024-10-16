@@ -753,74 +753,7 @@ function blobstore_db_config() {
 }
 
 function setup_mononoke_storage_config {
-  local underlyingstorage="$1"
-  local blobstorename="$2"
-  local blobstorepath="$TESTTMP/$blobstorename"
-  local bubble_deletion_mode=0 # Bubble deletion is disabled by default
-  if [[ -n ${BUBBLE_DELETION_MODE:-} ]]; then
-    bubble_deletion_mode=${BUBBLE_DELETION_MODE}
-  fi
-  local bubble_lifespan_secs=1000
-  if [[ -n ${BUBBLE_LIFESPAN_SECS:-} ]]; then
-    bubble_lifespan_secs=${BUBBLE_LIFESPAN_SECS}
-  fi
-  local bubble_expiration_secs=1000
-  if [[ -n ${BUBBLE_EXPIRATION_SECS:-} ]]; then
-    bubble_expiration_secs=${BUBBLE_EXPIRATION_SECS}
-  fi
-
-  if [[ -n "${MULTIPLEXED:-}" ]]; then
-    local quorum
-    local btype
-    local scuba
-    quorum="write_quorum"
-    btype="multiplexed_wal"
-    scuba="multiplex_scuba_table = \"file://$TESTTMP/blobstore_trace_scuba.json\""
-    cat >> common/storage.toml <<CONFIG
-$(db_config "$blobstorename")
-
-[$blobstorename.blobstore.${btype}]
-multiplex_id = 1
-$(blobstore_db_config)
-${quorum} = ${MULTIPLEXED}
-${scuba}
-components = [
-CONFIG
-
-    local i
-    for ((i=0; i<=MULTIPLEXED; i++)); do
-      mkdir -p "$blobstorepath/$i/blobs"
-      if [[ -n "${PACK_BLOB:-}" && $i -le "$PACK_BLOB" ]]; then
-        echo "  { blobstore_id = $i, blobstore = { pack = { blobstore = { $underlyingstorage = { path = \"$blobstorepath/$i\" } } } } }," >> common/storage.toml
-      else
-        echo "  { blobstore_id = $i, blobstore = { $underlyingstorage = { path = \"$blobstorepath/$i\" } } }," >> common/storage.toml
-      fi
-    done
-    echo ']' >> common/storage.toml
-  else
-    mkdir -p "$blobstorepath/blobs"
-    # Using FileBlob instead of SqlBlob as the backing blobstore for ephemeral
-    # store since SqlBlob current doesn't support enumeration.
-    cat >> common/storage.toml <<CONFIG
-$(db_config "$blobstorename")
-
-[$blobstorename.ephemeral_blobstore]
-initial_bubble_lifespan_secs = $bubble_lifespan_secs
-bubble_expiration_grace_secs = $bubble_expiration_secs
-bubble_deletion_mode = $bubble_deletion_mode
-blobstore = { blob_files = { path = "$blobstorepath" } }
-
-$(ephemeral_db_config "$blobstorename.ephemeral_blobstore")
-
-
-[$blobstorename.blobstore]
-CONFIG
-    if [[ -n "${PACK_BLOB:-}" ]]; then
-      echo "  pack = { blobstore = { $underlyingstorage = { path = \"$blobstorepath\" } } }" >> common/storage.toml
-    else
-      echo "  $underlyingstorage = { path = \"$blobstorepath\" }" >> common/storage.toml
-    fi
-  fi
+  python_fn setup_mononoke_storage_config "$@"
 }
 
 function setup_commitsyncmap {
