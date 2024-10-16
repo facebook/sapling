@@ -450,6 +450,7 @@ function ComparisonViewFile({
     useComparisonInvalidationKeyHook: () =>
       useAtomValue(atom(get => get(latestHeadCommit)?.hash)) ?? '',
     useThemeHook: () => useAtomValue(themeState),
+    t,
     collapsed,
     setCollapsed,
     display: displayMode,

@@ -11,7 +11,6 @@ import type {Context, OneIndexedLineNumber} from './types';
 import type {ReactNode} from 'react';
 import type {Hunk, ParsedDiff} from 'shared/patch/parse';
 
-import {T, t} from '../../i18n';
 import SplitDiffRow, {BlankLineNumber} from './SplitDiffRow';
 import {useTableColumnSelection} from './copyFromSelectedColumn';
 import {useTokenizedContents, useTokenizedHunks} from './syntaxHighlighting';
@@ -49,6 +48,7 @@ export const SplitDiffTable = React.memo(
       [expandedSeparators, setExpandedSeparators],
     );
 
+    const t = ctx.t ?? (s => s);
     const tokenization = useTokenizedHunks(patch.newFileName ?? '', patch.hunks, ctx.useThemeHook);
 
     const {className: tableSelectionClassName, ...tableSelectionProps} = useTableColumnSelection();
@@ -511,6 +511,7 @@ function ExpandingSeparator({
   afterLineStart: number;
 }): React.ReactElement {
   const result = useFetchLines(ctx, numLines, start);
+  const t = ctx.t ?? (s => s);
 
   const tokenization = useTokenizedContents(path, result?.value, ctx.useThemeHook);
   if (result == null) {
@@ -527,7 +528,7 @@ function ExpandingSeparator({
     return (
       <SeparatorRow>
         <div className="split-diff-view-error-row">
-          <ErrorNotice error={result.error} title={<T>Unable to fetch additional lines</T>} />
+          <ErrorNotice error={result.error} title={t('Unable to fetch additional lines')} />
         </div>
       </SeparatorRow>
     );
