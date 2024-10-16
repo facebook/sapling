@@ -52,7 +52,7 @@
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/object_list
 
 # Import it into Mononoke
-  $ quiet gitimport "$GIT_REPO_ORIGIN" --derive-hg --generate-bookmarks full-repo
+  $ quiet gitimport "$GIT_REPO_ORIGIN" --allow-non-standard-file-mode --derive-hg --generate-bookmarks full-repo
 
 # Start up the Mononoke Git Service
   $ mononoke_git_service

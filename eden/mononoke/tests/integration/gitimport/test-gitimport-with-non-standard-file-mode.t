@@ -54,17 +54,9 @@
 # Import it into Mononoke
   $ with_stripped_logs gitimport "$GIT_REPO_ORIGIN" --derive-hg --generate-bookmarks full-repo
   using repo "repo" repoid RepositoryId(0)
-  GitRepo:$TESTTMP/origin/repo-git commit 4 of 4 - Oid:6887491e => Bid:788ba976
-  Hg: Sha1(*): HgManifestId(HgNodeHash(Sha1(*))) (glob)
-  Hg: Sha1(*): HgManifestId(HgNodeHash(Sha1(*))) (glob)
-  Hg: Sha1(*): HgManifestId(HgNodeHash(Sha1(*))) (glob)
-  Hg: Sha1(*): HgManifestId(HgNodeHash(Sha1(*))) (glob)
-  Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(*))) (glob)
-  Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(*))) (glob)
-  Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(*))) (glob)
-  Initializing repo: repo
-  Initialized repo: repo
-  All repos initialized. It took: 0 seconds
-  Bookmark: "heads/master_bookmark": ChangesetId(Blake2(*)) (created) (glob)
-  Bookmark: "tags/empty_tag": ChangesetId(Blake2(*)) (created) (glob)
-  Bookmark: "tags/first_tag": ChangesetId(Blake2(*)) (created) (glob)
+  Execution error: gitimport failed
+  
+  Caused by:
+      0: find_file_changes
+      1: Encountered non-standard file mode 0o100744 for file file2 with Object ID f138820097c8ef62a012205db0b1701df516f6d5
+  Error: Execution failed

@@ -49,6 +49,10 @@ impl GitObjectStore {
 
 #[async_trait]
 impl GitReader for GitObjectStore {
+    fn allow_non_standard_file_mode(&self) -> bool {
+        false // We never want to allow users to push non-standard file modes to Mononoke Git server
+    }
+
     async fn get_object(&self, oid: &gix_hash::oid) -> Result<ObjectContent> {
         if let Some(content) = self.object_map.get(oid).cloned() {
             Ok(content)

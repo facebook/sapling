@@ -54,8 +54,10 @@ pub async fn missing_for_commit(
     hg_repo: &impl BonsaiGitMappingRef,
     git_command_path: &Path,
     repo_path: &Path,
+    allow_non_standard_file_mode: bool,
 ) -> Result<GitimportTarget, Error> {
-    let reader = GitRepoReader::new(git_command_path, repo_path).await?;
+    let reader =
+        GitRepoReader::new(git_command_path, repo_path, allow_non_standard_file_mode).await?;
     let ta = Instant::now();
 
     // Starting from the specified commit. We need to get the boundaries of what already is imported into Mononoke.

@@ -117,6 +117,13 @@ impl<const SUBMODULES: bool, Store: Send + Sync> Manifest<Store> for GitManifest
     }
 }
 
+fn non_standard_mode(mode: tree::EntryMode) -> bool {
+    match mode.0 {
+        0o040000u16 | 0o100644 | 0o100755 | 0o120000 | 0o160000 => false,
+        _ => true,
+    }
+}
+
 async fn load_git_tree<const SUBMODULES: bool, Reader: GitReader>(
     oid: &gix_hash::oid,
     reader: &Reader,
@@ -132,11 +139,18 @@ async fn load_git_tree<const SUBMODULES: bool, Reader: GitReader>(
                  filename,
                  oid,
              }| {
-                let name = match MPathElement::new(filename.into()) {
+                let name = match MPathElement::new(filename.clone().into()) {
                     Ok(name) => name,
                     Err(e) => return Some(Err(e)),
                 };
-
+                if non_standard_mode(mode) && !reader.allow_non_standard_file_mode() {
+                    return Some(Err(anyhow::anyhow!(
+                        "Encountered non-standard file mode {:#o} for file {} with Object ID {}",
+                        mode.0,
+                        filename,
+                        oid.to_hex()
+                    )));
+                }
                 let r = match mode.into() {
                     tree::EntryKind::Blob => {
                         Some((name, Entry::Leaf((FileType::Regular, GitLeaf(oid)))))
@@ -197,6 +211,8 @@ pub struct GitimportPreferences {
     pub concurrency: usize,
     /// Whether submodules should be imported instead of dropped.
     pub submodules: bool,
+    /// Whether we should allow non-standard file mode.
+    pub allow_non_standard_file_mode: bool,
     /// Flag for controlling whether we should stream changed trees per commit. In case of deep-nested
     /// trees, gitimport can hang without making progress. Disable this flag to avoid that issue.
     pub stream_for_changed_trees: bool,
@@ -216,6 +232,7 @@ impl Default for GitimportPreferences {
             git_command_path: PathBuf::from("/usr/bin/git.real"),
             backfill_derivation: BackfillDerivation::No,
             stream_for_changed_trees: true,
+            allow_non_standard_file_mode: false,
         }
     }
 }

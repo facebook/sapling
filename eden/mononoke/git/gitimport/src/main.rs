@@ -162,6 +162,9 @@ struct GitimportArgs {
     /// Only use if you are sure that's what you want.
     #[clap(long)]
     discard_submodules: bool,
+    /// Allow non standard file mode (i.e. not 100744, 100655, etc.)
+    #[clap(long)]
+    allow_non_standard_file_mode: bool,
     /// Don't backfill derived data during this import.
     /// This is dangerous if used in conjunction with generate_bookmarks as public
     /// commits which are not derived may create high load for the derived data service
@@ -297,6 +300,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let mut prefs = GitimportPreferences {
         concurrency: args.concurrency,
         submodules: !args.discard_submodules,
+        allow_non_standard_file_mode: args.allow_non_standard_file_mode,
         backfill_derivation,
         lfs,
         ..Default::default()
@@ -320,8 +324,15 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         }
         GitimportSubcommand::MissingForCommit { git_commit } => {
             let commit = git_commit.parse()?;
-            import_direct::missing_for_commit(commit, &ctx, &repo, &prefs.git_command_path, path)
-                .await?
+            import_direct::missing_for_commit(
+                commit,
+                &ctx,
+                &repo,
+                &prefs.git_command_path,
+                path,
+                prefs.allow_non_standard_file_mode,
+            )
+            .await?
         }
         GitimportSubcommand::ImportTreeAsSingleBonsaiChangeset { git_commit } => {
             let commit = git_commit.parse()?;
@@ -407,7 +418,14 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 .into_iter()
                 .map(|entry| (entry.tag_name, entry.tag_hash))
                 .collect::<HashMap<_, _>>();
-            let reader = Arc::new(GitRepoReader::new(&prefs.git_command_path, path).await?);
+            let reader = Arc::new(
+                GitRepoReader::new(
+                    &prefs.git_command_path,
+                    path,
+                    prefs.allow_non_standard_file_mode,
+                )
+                .await?,
+            );
             for (maybe_tag_id, name, changeset) in
                 mapping
                     .iter()

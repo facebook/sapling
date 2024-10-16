@@ -298,9 +298,13 @@ pub async fn gitimport<Uploader: GitUploader>(
 ) -> Result<LinkedHashMap<ObjectId, ChangesetId>> {
     let repo_name = repo_name(prefs, path);
     let reader = Arc::new(
-        GitRepoReader::new(&prefs.git_command_path, path)
-            .await
-            .context("GitRepoReader::new")?,
+        GitRepoReader::new(
+            &prefs.git_command_path,
+            path,
+            prefs.allow_non_standard_file_mode,
+        )
+        .await
+        .context("GitRepoReader::new")?,
     );
     let acc = GitimportAccumulator::from_roots(target.get_roots().clone());
     let all_commits = target
@@ -689,7 +693,12 @@ pub async fn read_git_refs(
     path: &Path,
     prefs: &GitimportPreferences,
 ) -> Result<BTreeMap<GitRef, ObjectId>> {
-    let reader = GitRepoReader::new(&prefs.git_command_path, path).await?;
+    let reader = GitRepoReader::new(
+        &prefs.git_command_path,
+        path,
+        prefs.allow_non_standard_file_mode,
+    )
+    .await?;
 
     let mut command = Command::new(&prefs.git_command_path)
         .current_dir(path)
@@ -754,7 +763,14 @@ pub async fn import_tree_as_single_bonsai_changeset<Uploader: GitUploader>(
     prefs: &GitimportPreferences,
 ) -> Result<ChangesetId> {
     let acc = GitimportAccumulator::from_roots(HashMap::new());
-    let reader = Arc::new(GitRepoReader::new(&prefs.git_command_path, path).await?);
+    let reader = Arc::new(
+        GitRepoReader::new(
+            &prefs.git_command_path,
+            path,
+            prefs.allow_non_standard_file_mode,
+        )
+        .await?,
+    );
 
     let sha1 = oid_to_sha1(&git_cs_id)?;
 

@@ -41,6 +41,8 @@ type ObjectSender = oneshot::Sender<Result<ObjectContent>>;
 #[async_trait]
 #[auto_impl(&, Arc, Box)]
 pub trait GitReader: Clone + Send + Sync + 'static {
+    fn allow_non_standard_file_mode(&self) -> bool;
+
     async fn get_object(&self, oid: &gix_hash::oid) -> Result<ObjectContent>;
 
     async fn read_tag(&self, oid: &gix_hash::oid) -> Result<Tag> {
@@ -105,12 +107,17 @@ pub trait GitReader: Clone + Send + Sync + 'static {
 pub struct GitRepoReader {
     send_request: mpsc::Sender<ObjectId>,
     outstanding_requests: Arc<Mutex<HashMap<ObjectId, Vec<ObjectSender>>>>,
+    allow_non_standard_file_mode: bool,
 }
 
 impl GitRepoReader {
     /// Create a new repo reader for the repo at `repo_path`, using `git_command_path`
     /// as `git`
-    pub async fn new(git_command_path: &Path, repo_path: &Path) -> Result<Self> {
+    pub async fn new(
+        git_command_path: &Path,
+        repo_path: &Path,
+        allow_non_standard_file_mode: bool,
+    ) -> Result<Self> {
         let mut batch_cat_file = Command::new(git_command_path)
             .current_dir(repo_path)
             .env_clear()
@@ -170,6 +177,7 @@ impl GitRepoReader {
         Ok(Self {
             send_request,
             outstanding_requests,
+            allow_non_standard_file_mode,
         })
     }
 
@@ -200,6 +208,10 @@ impl GitRepoReader {
 
 #[async_trait]
 impl GitReader for GitRepoReader {
+    fn allow_non_standard_file_mode(&self) -> bool {
+        self.allow_non_standard_file_mode
+    }
+
     async fn get_object(&self, oid: &gix_hash::oid) -> Result<ObjectContent> {
         self.get_object(oid).await
     }
