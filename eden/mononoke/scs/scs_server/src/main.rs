@@ -15,7 +15,6 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Error;
-use async_requests_client::AsyncRequestsQueue;
 use async_trait::async_trait;
 use clap::Parser;
 use clap::ValueEnum;
@@ -261,7 +260,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let async_requests_queue_client = if args.disable_async_requests {
         None
     } else {
-        let queue_client = runtime.block_on(AsyncRequestsQueue::new(fb, &app, None))?;
+        let queue_client = runtime.block_on(async_requests_client::build(fb, &app, None))?;
         Some(Arc::new(queue_client))
     };
 

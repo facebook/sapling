@@ -26,7 +26,6 @@ use async_requests::AsyncMethodRequestQueue;
 use async_requests::AsyncRequestsError;
 use async_requests::ClaimedBy;
 use async_requests::RequestId;
-use async_requests_client::AsyncRequestsQueue;
 use async_stream::try_stream;
 use async_trait::async_trait;
 use cloned::cloned;
@@ -86,7 +85,7 @@ pub struct AsyncMethodRequestWorker {
     mononoke: Arc<Mononoke<Repo>>,
     megarepo: Arc<MegarepoApi<Repo>>,
     name: String,
-    queues_client: AsyncRequestsQueue,
+    queue: AsyncMethodRequestQueue,
     will_exit: Arc<AtomicBool>,
     limit: Option<usize>,
     concurrency_limit: usize,
@@ -122,7 +121,7 @@ impl AsyncMethodRequestWorker {
             }
         };
 
-        let queues_client = AsyncRequestsQueue::new(fb, app, repos)
+        let queue = async_requests_client::build(fb, app, repos)
             .await
             .context("acquiring the async requests queue")?;
         Ok(Self {
@@ -130,7 +129,7 @@ impl AsyncMethodRequestWorker {
             mononoke,
             megarepo,
             name,
-            queues_client,
+            queue,
             will_exit,
             limit: args.request_limit,
             concurrency_limit: args.jobs,
@@ -146,21 +145,16 @@ impl RepoShardedProcessExecutor for AsyncMethodRequestWorker {
     /// will_exit atomic bool is a flag to prevent the worker from grabbing new
     /// items from the queue and gracefully terminate.
     async fn execute(&self) -> Result<()> {
-        let queue = self
-            .queues_client
-            .async_method_request_queue(&self.ctx)
-            .await?;
-
         // Start the stats logger loop
         let (stats, stats_abort_handle) = abortable({
-            cloned!(self.ctx, queue);
+            cloned!(self.ctx, self.queue);
             async move { Self::stats_loop(&ctx, &queue).await }
         });
         let _stats = tokio::spawn(stats);
 
         // Build stream that pools all the queues
         let request_stream = self
-            .request_stream(&self.ctx, queue, self.will_exit.clone())
+            .request_stream(&self.ctx, self.queue.clone(), self.will_exit.clone())
             .boxed();
 
         let request_stream = if let Some(limit) = self.limit {
@@ -313,8 +307,6 @@ impl AsyncMethodRequestWorker {
         params: AsynchronousRequestParams,
     ) -> Result<bool, AsyncRequestsError> {
         let target = params.target()?;
-        let queue = self.queues_client.async_method_request_queue(&ctx).await?;
-
         let ctx = self.prepare_ctx(&ctx, &req_id, &target);
 
         // Do the actual work.
@@ -324,7 +316,7 @@ impl AsyncMethodRequestWorker {
         // Start the loop that would keep saying that request is still being
         // processed
         let (keep_alive, keep_alive_abort_handle) = abortable({
-            cloned!(ctx, req_id, queue);
+            cloned!(ctx, req_id, self.queue);
             async move { Self::keep_alive_loop(&ctx, &req_id, &queue).await }
         });
 
@@ -348,7 +340,7 @@ impl AsyncMethodRequestWorker {
                 match result {
                     Ok(result) => {
                         STATS::process_succeeded.add_value(1);
-                        let updated_res = queue.complete(&ctx, &req_id, result).await;
+                        let updated_res = self.queue.complete(&ctx, &req_id, result).await;
                         let updated = match updated_res {
                             Ok(updated) => {
                                 info!(ctx.logger(), "[{}] result saved", &req_id.0);

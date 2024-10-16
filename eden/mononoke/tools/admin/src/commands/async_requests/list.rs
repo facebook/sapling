@@ -9,7 +9,7 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use async_requests::types::ThriftAsynchronousRequestParams;
-use async_requests_client::AsyncRequestsQueue;
+use async_requests::AsyncMethodRequestQueue;
 use clap::Args;
 use context::CoreContext;
 use mononoke_api::MononokeRepo;
@@ -33,13 +33,8 @@ pub struct AsyncRequestsListArgs {
 pub async fn list_requests(
     args: AsyncRequestsListArgs,
     ctx: CoreContext,
-    queues_client: AsyncRequestsQueue,
+    queue: AsyncMethodRequestQueue,
 ) -> Result<(), Error> {
-    let queue = queues_client
-        .async_method_request_queue(&ctx)
-        .await
-        .context("obtaining async queue")?;
-
     let lookback = args.lookback;
     let mut table = Table::new();
     table.set_titles(row![

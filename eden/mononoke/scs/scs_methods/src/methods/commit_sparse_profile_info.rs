@@ -18,7 +18,6 @@ use mononoke_api::RepoContext;
 use source_control as thrift;
 
 use crate::async_requests::enqueue;
-use crate::async_requests::get_queue;
 use crate::async_requests::poll;
 use crate::source_control_impl::SourceControlServiceImpl;
 
@@ -79,10 +78,9 @@ impl SourceControlServiceImpl {
         params: thrift::CommitSparseProfileSizeParamsV2,
     ) -> Result<thrift::CommitSparseProfileSizeToken, scs_errors::ServiceError> {
         let (repo, _changeset) = self.repo_changeset(ctx.clone(), &params.commit).await?;
-        let queue = get_queue(&ctx, &self.async_requests_queue_client).await?;
         enqueue::<thrift::CommitSparseProfileSizeParamsV2>(
             &ctx,
-            &queue,
+            &self.async_requests_queue,
             Some(&repo.repoid()),
             params,
         )
@@ -94,9 +92,8 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         token: thrift::CommitSparseProfileSizeToken,
     ) -> Result<thrift::CommitSparseProfileSizePollResponse, scs_errors::ServiceError> {
-        let queue = get_queue(&ctx, &self.async_requests_queue_client).await?;
         let token = CommitSparseProfileSizeToken(token);
-        poll::<CommitSparseProfileSizeToken>(&ctx, &queue, token).await
+        poll::<CommitSparseProfileSizeToken>(&ctx, &self.async_requests_queue, token).await
     }
 }
 

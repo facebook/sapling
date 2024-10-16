@@ -30,7 +30,6 @@ use slog::warn;
 use source_control as thrift;
 
 use crate::async_requests::enqueue;
-use crate::async_requests::get_queue;
 use crate::async_requests::poll;
 use crate::from_request::FromRequest;
 use crate::source_control_impl::SourceControlServiceImpl;
@@ -195,7 +194,6 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         params: thrift::MegarepoAddTargetParams,
     ) -> Result<thrift::MegarepoAddTargetToken, scs_errors::ServiceError> {
-        let queue = get_queue(&ctx, &self.async_requests_queue_client).await?;
         let target_repo_id =
             get_repo_id_from_target(&params.config_with_new_target.target, &self.mononoke)?;
         self.check_write_allowed(&ctx, target_repo_id).await?;
@@ -205,8 +203,13 @@ impl SourceControlServiceImpl {
             .into_config_format(&self.mononoke)?;
         self.verify_repos_by_config(&config_with_new_target)?;
 
-        enqueue::<thrift::MegarepoAddTargetParams>(&ctx, &queue, Some(&target_repo_id), params)
-            .await
+        enqueue::<thrift::MegarepoAddTargetParams>(
+            &ctx,
+            &self.async_requests_queue,
+            Some(&target_repo_id),
+            params,
+        )
+        .await
     }
 
     pub(crate) async fn megarepo_add_sync_target_poll(
@@ -214,9 +217,8 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         token: thrift::MegarepoAddTargetToken,
     ) -> Result<thrift::MegarepoAddTargetPollResponse, scs_errors::ServiceError> {
-        let queue = get_queue(&ctx, &self.async_requests_queue_client).await?;
         let token = MegarepoAddTargetToken(token);
-        poll::<MegarepoAddTargetToken>(&ctx, &queue, token).await
+        poll::<MegarepoAddTargetToken>(&ctx, &self.async_requests_queue, token).await
     }
 
     pub(crate) async fn megarepo_add_branching_sync_target(
@@ -224,13 +226,12 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         params: thrift::MegarepoAddBranchingTargetParams,
     ) -> Result<thrift::MegarepoAddBranchingTargetToken, scs_errors::ServiceError> {
-        let queue = get_queue(&ctx, &self.async_requests_queue_client).await?;
         let target_repo_id = get_repo_id_from_target(&params.target, &self.mononoke)?;
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
         enqueue::<thrift::MegarepoAddBranchingTargetParams>(
             &ctx,
-            &queue,
+            &self.async_requests_queue,
             Some(&target_repo_id),
             params,
         )
@@ -242,9 +243,8 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         token: thrift::MegarepoAddBranchingTargetToken,
     ) -> Result<thrift::MegarepoAddBranchingTargetPollResponse, scs_errors::ServiceError> {
-        let queue = get_queue(&ctx, &self.async_requests_queue_client).await?;
         let token = MegarepoAddBranchingTargetToken(token);
-        poll::<MegarepoAddBranchingTargetToken>(&ctx, &queue, token).await
+        poll::<MegarepoAddBranchingTargetToken>(&ctx, &self.async_requests_queue, token).await
     }
 
     pub(crate) async fn megarepo_change_target_config(
@@ -252,13 +252,12 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         params: thrift::MegarepoChangeTargetConfigParams,
     ) -> Result<thrift::MegarepoChangeConfigToken, scs_errors::ServiceError> {
-        let queue = get_queue(&ctx, &self.async_requests_queue_client).await?;
         let target_repo_id = get_repo_id_from_target(&params.target, &self.mononoke)?;
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
         enqueue::<thrift::MegarepoChangeTargetConfigParams>(
             &ctx,
-            &queue,
+            &self.async_requests_queue,
             Some(&target_repo_id),
             params,
         )
@@ -270,9 +269,8 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         token: thrift::MegarepoChangeConfigToken,
     ) -> Result<thrift::MegarepoChangeTargetConfigPollResponse, scs_errors::ServiceError> {
-        let queue = get_queue(&ctx, &self.async_requests_queue_client).await?;
         let token = MegarepoChangeTargetConfigToken(token);
-        poll::<MegarepoChangeTargetConfigToken>(&ctx, &queue, token).await
+        poll::<MegarepoChangeTargetConfigToken>(&ctx, &self.async_requests_queue, token).await
     }
 
     pub(crate) async fn megarepo_sync_changeset(
@@ -280,12 +278,16 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         params: thrift::MegarepoSyncChangesetParams,
     ) -> Result<thrift::MegarepoSyncChangesetToken, scs_errors::ServiceError> {
-        let queue = get_queue(&ctx, &self.async_requests_queue_client).await?;
         let target_repo_id = get_repo_id_from_target(&params.target, &self.mononoke)?;
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
-        enqueue::<thrift::MegarepoSyncChangesetParams>(&ctx, &queue, Some(&target_repo_id), params)
-            .await
+        enqueue::<thrift::MegarepoSyncChangesetParams>(
+            &ctx,
+            &self.async_requests_queue,
+            Some(&target_repo_id),
+            params,
+        )
+        .await
     }
 
     pub(crate) async fn megarepo_sync_changeset_poll(
@@ -293,9 +295,8 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         token: thrift::MegarepoSyncChangesetToken,
     ) -> Result<thrift::MegarepoSyncChangesetPollResponse, scs_errors::ServiceError> {
-        let queue = get_queue(&ctx, &self.async_requests_queue_client).await?;
         let token = MegarepoSyncChangesetToken(token);
-        poll::<MegarepoSyncChangesetToken>(&ctx, &queue, token).await
+        poll::<MegarepoSyncChangesetToken>(&ctx, &self.async_requests_queue, token).await
     }
 
     pub(crate) async fn megarepo_remerge_source(
@@ -303,12 +304,16 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         params: thrift::MegarepoRemergeSourceParams,
     ) -> Result<thrift::MegarepoRemergeSourceToken, scs_errors::ServiceError> {
-        let queue = get_queue(&ctx, &self.async_requests_queue_client).await?;
         let target_repo_id = get_repo_id_from_target(&params.target, &self.mononoke)?;
         self.check_write_allowed(&ctx, target_repo_id).await?;
 
-        enqueue::<thrift::MegarepoRemergeSourceParams>(&ctx, &queue, Some(&target_repo_id), params)
-            .await
+        enqueue::<thrift::MegarepoRemergeSourceParams>(
+            &ctx,
+            &self.async_requests_queue,
+            Some(&target_repo_id),
+            params,
+        )
+        .await
     }
 
     pub(crate) async fn megarepo_remerge_source_poll(
@@ -316,9 +321,8 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         token: thrift::MegarepoRemergeSourceToken,
     ) -> Result<thrift::MegarepoRemergeSourcePollResponse, scs_errors::ServiceError> {
-        let queue = get_queue(&ctx, &self.async_requests_queue_client).await?;
         let token = MegarepoRemergeSourceToken(token);
-        poll::<MegarepoRemergeSourceToken>(&ctx, &queue, token).await
+        poll::<MegarepoRemergeSourceToken>(&ctx, &self.async_requests_queue, token).await
     }
 }
 

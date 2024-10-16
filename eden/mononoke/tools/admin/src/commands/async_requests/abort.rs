@@ -12,7 +12,7 @@ use anyhow::Result;
 use async_requests::types::AsynchronousRequestResult;
 use async_requests::types::RowId;
 use async_requests::types::ThriftAsynchronousRequestParams;
-use async_requests_client::AsyncRequestsQueue;
+use async_requests::AsyncMethodRequestQueue;
 use clap::Args;
 use context::CoreContext;
 use megarepo_error::MegarepoError;
@@ -31,13 +31,8 @@ pub struct AsyncRequestsAbortArgs {
 pub async fn abort_request(
     args: AsyncRequestsAbortArgs,
     ctx: CoreContext,
-    queues_client: AsyncRequestsQueue,
+    queue: AsyncMethodRequestQueue,
 ) -> Result<(), Error> {
-    let queue = queues_client
-        .async_method_request_queue(&ctx)
-        .await
-        .context("obtaining async queue")?;
-
     let row_id = args.request_id;
 
     if let Some((request_id, _entry, params, maybe_result)) = queue

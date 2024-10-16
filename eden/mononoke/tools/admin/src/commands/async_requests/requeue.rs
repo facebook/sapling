@@ -10,7 +10,7 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use async_requests::types::RowId;
-use async_requests_client::AsyncRequestsQueue;
+use async_requests::AsyncMethodRequestQueue;
 use clap::Args;
 use context::CoreContext;
 use mononoke_api::MononokeRepo;
@@ -27,13 +27,8 @@ pub struct AsyncRequestsRequeueArgs {
 pub async fn requeue_request(
     args: AsyncRequestsRequeueArgs,
     ctx: CoreContext,
-    queues_client: AsyncRequestsQueue,
+    queue: AsyncMethodRequestQueue,
 ) -> Result<(), Error> {
-    let queue = queues_client
-        .async_method_request_queue(&ctx)
-        .await
-        .context("obtaining async queue")?;
-
     let row_id = args.request_id;
 
     if let Some((request_id, _entry, _params, _maybe_result)) = queue

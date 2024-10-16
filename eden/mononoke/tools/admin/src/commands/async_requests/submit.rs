@@ -14,7 +14,6 @@ use anyhow::Result;
 use async_requests::types::ThriftParams;
 use async_requests::types::Token;
 use async_requests::AsyncMethodRequestQueue;
-use async_requests_client::AsyncRequestsQueue;
 use clap::Args;
 use context::CoreContext;
 use mononoke_api::MononokeRepo;
@@ -39,14 +38,9 @@ pub struct AsyncRequestsSubmitArgs {
 pub async fn submit_request(
     args: AsyncRequestsSubmitArgs,
     ctx: CoreContext,
-    queues_client: AsyncRequestsQueue,
+    queue: AsyncMethodRequestQueue,
     repo: Repo,
 ) -> Result<(), Error> {
-    let queue = queues_client
-        .async_method_request_queue(&ctx)
-        .await
-        .context("obtaining all async queues")?;
-
     let repo_id = repo.repo_identity().id();
 
     let params = fs::read_to_string(args.params)?;

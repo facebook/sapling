@@ -17,7 +17,7 @@ use async_requests::types::IntoConfigFormat;
 use async_requests::types::RowId;
 use async_requests::types::ThriftAsynchronousRequestParams;
 use async_requests::types::ThriftAsynchronousRequestResult;
-use async_requests_client::AsyncRequestsQueue;
+use async_requests::AsyncMethodRequestQueue;
 use clap::Args;
 use context::CoreContext;
 use mononoke_api::Mononoke;
@@ -116,14 +116,9 @@ impl std::fmt::Debug for ResultsWrapper {
 pub async fn show_request<R: MononokeRepo>(
     args: AsyncRequestsShowArgs,
     ctx: CoreContext,
-    queues_client: AsyncRequestsQueue,
+    queue: AsyncMethodRequestQueue,
     mononoke: Arc<Mononoke<R>>,
 ) -> Result<(), Error> {
-    let queue = queues_client
-        .async_method_request_queue(&ctx)
-        .await
-        .context("obtaining async queue")?;
-
     let row_id = args.request_id;
 
     if let Some((_request_id, entry, params, maybe_result)) = queue

@@ -15,7 +15,6 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
-use async_requests_client::AsyncRequestsQueue;
 use clap::Parser;
 use clap::Subcommand;
 use context::SessionContainer;
@@ -59,7 +58,7 @@ pub enum AsyncRequestsSubcommand {
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let ctx = app.new_basic_context();
-    let queues_client: AsyncRequestsQueue = AsyncRequestsQueue::new(ctx.fb, &app, None)
+    let queue = async_requests_client::build(ctx.fb, &app, None)
         .await
         .context("acquiring the async requests queue")?;
 
@@ -71,7 +70,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
 
     match args.subcommand {
         AsyncRequestsSubcommand::List(list_args) => {
-            list::list_requests(list_args, ctx, queues_client).await?
+            list::list_requests(list_args, ctx, queue).await?
         }
         AsyncRequestsSubcommand::Show(show_args) => {
             let mononoke = Arc::new(
@@ -80,17 +79,17 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
                     .context("Failed to initialize Mononoke API")?
                     .make_mononoke_api()?,
             );
-            show::show_request(show_args, ctx, queues_client, mononoke).await?
+            show::show_request(show_args, ctx, queue, mononoke).await?
         }
         AsyncRequestsSubcommand::Requeue(requeue_args) => {
-            requeue::requeue_request(requeue_args, ctx, queues_client).await?
+            requeue::requeue_request(requeue_args, ctx, queue).await?
         }
         AsyncRequestsSubcommand::Abort(abort_args) => {
-            abort::abort_request(abort_args, ctx, queues_client).await?
+            abort::abort_request(abort_args, ctx, queue).await?
         }
         AsyncRequestsSubcommand::Submit(abort_args) => {
             let repo = app.open_repo(&args.repo).await?;
-            submit::submit_request(abort_args, ctx, queues_client, repo).await?
+            submit::submit_request(abort_args, ctx, queue, repo).await?
         }
     }
     Ok(())

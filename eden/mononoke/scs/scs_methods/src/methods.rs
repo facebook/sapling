@@ -10,7 +10,6 @@ use context::CoreContext;
 use source_control as thrift;
 
 use crate::async_requests::enqueue;
-use crate::async_requests::get_queue;
 use crate::async_requests::poll;
 use crate::source_control_impl::SourceControlServiceImpl;
 
@@ -49,8 +48,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         params: thrift::AsyncPingParams,
     ) -> Result<thrift::AsyncPingToken, scs_errors::ServiceError> {
-        let queue = get_queue(&ctx, &self.async_requests_queue_client).await?;
-        enqueue::<thrift::AsyncPingParams>(&ctx, &queue, None, params).await
+        enqueue::<thrift::AsyncPingParams>(&ctx, &self.async_requests_queue, None, params).await
     }
 
     pub(crate) async fn async_ping_poll(
@@ -58,8 +56,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         token: thrift::AsyncPingToken,
     ) -> Result<thrift::AsyncPingPollResponse, scs_errors::ServiceError> {
-        let queue = get_queue(&ctx, &self.async_requests_queue_client).await?;
         let token = AsyncPingToken(token);
-        poll::<AsyncPingToken>(&ctx, &queue, token).await
+        poll::<AsyncPingToken>(&ctx, &self.async_requests_queue, token).await
     }
 }

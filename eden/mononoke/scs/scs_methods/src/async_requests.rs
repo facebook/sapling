@@ -11,19 +11,8 @@ use async_requests::types::Request;
 use async_requests::types::ThriftParams;
 use async_requests::types::Token;
 use async_requests::AsyncMethodRequestQueue;
-use async_requests_client::AsyncRequestsQueue;
 use context::CoreContext;
 use mononoke_api::RepositoryId;
-
-pub(crate) async fn get_queue(
-    ctx: &CoreContext,
-    async_requests_queue_client: &Option<Arc<AsyncRequestsQueue>>,
-) -> Result<AsyncMethodRequestQueue, scs_errors::ServiceError> {
-    match async_requests_queue_client {
-        Some(queue_client) => Ok(queue_client.async_method_request_queue(ctx).await?),
-        None => Err(async_requests_disabled()),
-    }
-}
 
 fn async_requests_disabled() -> scs_errors::ServiceError {
     scs_errors::internal_error(
@@ -34,26 +23,32 @@ fn async_requests_disabled() -> scs_errors::ServiceError {
 
 pub(crate) async fn enqueue<P: ThriftParams>(
     ctx: &CoreContext,
-    queue: &AsyncMethodRequestQueue,
+    queue: &Option<Arc<AsyncMethodRequestQueue>>,
     repo_id: Option<&RepositoryId>,
     params: P,
 ) -> Result<<<P::R as Request>::Token as Token>::ThriftToken, scs_errors::ServiceError> {
-    queue
-        .enqueue(ctx, repo_id, params)
-        .await
-        .map(|res| res.into_thrift())
-        .map_err(|e| {
-            scs_errors::internal_error(format!("Failed to enqueue the request: {}", e)).into()
-        })
+    match queue {
+        Some(queue) => queue
+            .enqueue(ctx, repo_id, params)
+            .await
+            .map(|res| res.into_thrift())
+            .map_err(|e| {
+                scs_errors::internal_error(format!("Failed to enqueue the request: {}", e)).into()
+            }),
+        None => Err(async_requests_disabled()),
+    }
 }
 
 pub(crate) async fn poll<T: Token>(
     ctx: &CoreContext,
-    queue: &AsyncMethodRequestQueue,
+    queue: &Option<Arc<AsyncMethodRequestQueue>>,
     token: T,
 ) -> Result<<T::R as Request>::PollResponse, scs_errors::ServiceError> {
-    Ok(queue
-        .poll(ctx, token)
-        .await
-        .map_err(scs_errors::internal_error)?)
+    match queue {
+        Some(queue) => Ok(queue
+            .poll(ctx, token)
+            .await
+            .map_err(scs_errors::internal_error)?),
+        None => Err(async_requests_disabled()),
+    }
 }

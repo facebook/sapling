@@ -12,7 +12,7 @@ use std::num::NonZeroU64;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use async_requests_client::AsyncRequestsQueue;
+use async_requests::AsyncMethodRequestQueue;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use clientinfo::CLIENT_INFO_HEADER;
@@ -112,7 +112,7 @@ pub struct SourceControlServiceImpl {
     pub(crate) scribe: Scribe,
     pub(crate) configs: Arc<MononokeConfigs>,
     pub(crate) factory_group: Option<Arc<FactoryGroup<2>>>,
-    pub(crate) async_requests_queue_client: Option<Arc<AsyncRequestsQueue>>,
+    pub(crate) async_requests_queue: Option<Arc<AsyncMethodRequestQueue>>,
     identity_proxy_checker: Arc<ConnectionSecurityChecker>,
     pub(crate) acl_provider: Arc<dyn AclProvider>,
 }
@@ -132,7 +132,7 @@ impl SourceControlServiceImpl {
         configs: Arc<MononokeConfigs>,
         common_config: &CommonConfig,
         factory_group: Option<Arc<FactoryGroup<2>>>,
-        async_requests_queue_client: Option<Arc<AsyncRequestsQueue>>,
+        async_requests_queue: Option<Arc<AsyncMethodRequestQueue>>,
     ) -> Result<Self, anyhow::Error> {
         scuba_builder.add_common_server_data();
 
@@ -150,7 +150,7 @@ impl SourceControlServiceImpl {
             configs,
             identity_proxy_checker: Arc::new(identity_proxy_checker),
             factory_group,
-            async_requests_queue_client,
+            async_requests_queue,
             acl_provider: app.environment().acl_provider.clone(),
         })
     }

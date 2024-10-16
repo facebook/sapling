@@ -55,7 +55,6 @@ rust_library(
         "//eden/mononoke/common/sql_construct:sql_construct",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_api:mononoke_api",
-        "//eden/mononoke/server/context:context",
     ],
 )
 
