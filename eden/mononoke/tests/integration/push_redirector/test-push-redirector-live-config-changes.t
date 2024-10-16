@@ -197,7 +197,7 @@ Live change of the config, without Mononoke restart
   * all is well! (glob)
   $ quiet_grep "all is well" -- megarepo_tool_multirepo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL1 check-push-redirection-prereqs master_bookmark master_bookmark TEST_VERSION_NAME_LIVE_V2
   * all is well! (glob)
-  $ mononoke_admin_source_target $REPOIDLARGE $REPOIDSMALL1 crossrepo pushredirection change-mapping-version \
+  $ mononoke_newadmin cross-repo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL1 pushredirection change-mapping-version \
   > --author author \
   > --large-repo-bookmark master_bookmark \
   > --version-name TEST_VERSION_NAME_LIVE_V2 \

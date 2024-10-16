@@ -62,14 +62,14 @@ Before the change
 Make a config change
   $ update_commit_sync_map_first_option
 -- try to create mapping commit with incorrect file - this should fail
-  $ mononoke_admin_source_target $REPOIDLARGE $REPOIDSMALL crossrepo pushredirection change-mapping-version \
+  $ mononoke_newadmin cross-repo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL pushredirection change-mapping-version \
   > --author author \
   > --large-repo-bookmark master_bookmark \
   > --version-name new_version \
   > --dump-mapping-large-repo-path mapping.json 2>&1 | grep 'cannot dump'
   * cannot dump mapping to a file because path doesn't rewrite to a small repo (glob)
 -- now fix the filename - it should succeed
-  $ mononoke_admin_source_target $REPOIDLARGE $REPOIDSMALL crossrepo pushredirection change-mapping-version \
+  $ mononoke_newadmin cross-repo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL pushredirection change-mapping-version \
   > --author author \
   > --large-repo-bookmark master_bookmark \
   > --version-name new_version \
