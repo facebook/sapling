@@ -5,12 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ThemeColor} from '../../theme';
 import type {
   SyntaxWorkerRequest,
   SyntaxWorkerResponse,
   TokenizedDiffHunks,
   TokenizedHunk,
+  ThemeColor,
 } from './syntaxHighlightingTypes';
 import type {ParsedDiff} from 'shared/patch/parse';
 

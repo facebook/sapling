@@ -5,9 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ThemeColor} from '../../theme';
 import type {ParsedDiff} from 'shared/patch/parse';
 import type {HighlightedToken} from 'shared/textmate-lib/tokenize';
+
+export type ThemeColor = 'light' | 'dark';
 
 export type TokenizedHunk = Array<Array<HighlightedToken>>;
 export type TokenizedDiffHunk = [before: TokenizedHunk, after: TokenizedHunk];
