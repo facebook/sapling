@@ -70,7 +70,7 @@ wireproto_handler = { version = "0.1.0", path = "../../wireproto_handler" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-itertools = "0.12.1"
+itertools = "0.13.0"
 mercurial_types-mocks = { version = "0.1.0", path = "../../mercurial/types/mocks" }
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 quickcheck_async = "0.1.1"

@@ -26,7 +26,7 @@ git_types_thrift = { version = "0.1.0", path = "if" }
 gix-actor = { git = "https://github.com/pierrechevalier83/gitoxide", rev = "a080348c2fefb7a300ec80f4481617f870065589" }
 gix-hash = { git = "https://github.com/pierrechevalier83/gitoxide", rev = "a080348c2fefb7a300ec80f4481617f870065589" }
 gix-object = { git = "https://github.com/pierrechevalier83/gitoxide", rev = "a080348c2fefb7a300ec80f4481617f870065589" }
-itertools = "0.12.1"
+itertools = "0.13.0"
 lazy_static = "1.4"
 manifest = { version = "0.1.0", path = "../../manifest" }
 megarepo_error = { version = "0.1.0", path = "../../megarepo_api/megarepo_error" }

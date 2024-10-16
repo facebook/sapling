@@ -18,7 +18,7 @@ cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 context = { version = "0.1.0", path = "../server/context" }
 either = "1.5"
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
-itertools = "0.12.1"
+itertools = "0.13.0"
 maplit = "1.0"
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 nonzero_ext = "0.2"

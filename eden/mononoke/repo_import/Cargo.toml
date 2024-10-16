@@ -34,7 +34,7 @@ futures = { version = "0.3.30", features = ["async-await", "compat"] }
 gix-hash = { git = "https://github.com/pierrechevalier83/gitoxide", rev = "a080348c2fefb7a300ec80f4481617f870065589" }
 import_direct = { version = "0.1.0", path = "../git/import_direct" }
 import_tools = { version = "0.1.0", path = "../git/import_tools" }
-itertools = "0.12.1"
+itertools = "0.13.0"
 live_commit_sync_config = { version = "0.1.0", path = "../commit_rewriting/live_commit_sync_config" }
 manifest = { version = "0.1.0", path = "../manifest" }
 maplit = "1.0"

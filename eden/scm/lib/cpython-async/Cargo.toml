@@ -11,7 +11,7 @@ async-runtime = { version = "0.1.0", path = "../async-runtime" }
 cpython = { version = "0.7.2", features = ["python3-sys"], default-features = false }
 cpython_ext = { version = "0.1.0", path = "../cpython-ext" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
-itertools = "0.12.1"
+itertools = "0.13.0"
 
 [dev-dependencies]
 tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }

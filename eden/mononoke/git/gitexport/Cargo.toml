@@ -38,7 +38,7 @@ futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimen
 git_symbolic_refs = { version = "0.1.0", path = "../../git_symbolic_refs" }
 git_types = { version = "0.1.0", path = "../git_types" }
 indicatif = { version = "0.17.6", features = ["futures", "improved_unicode", "rayon", "tokio"] }
-itertools = "0.12.1"
+itertools = "0.13.0"
 maplit = "1.0"
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
