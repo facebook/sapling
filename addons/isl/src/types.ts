@@ -200,6 +200,7 @@ export type CodeReviewSystem =
   | {
       type: 'phabricator';
       repo: string;
+      callsign?: string;
     }
   | {
       type: 'none';

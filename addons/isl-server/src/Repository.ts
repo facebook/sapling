@@ -476,6 +476,7 @@ export class Repository {
         'paths.default',
         'github.pull_request_domain',
         'github.preferred_submit_command',
+        'phrevset.callsign',
       ]),
     ]);
     const pathsDefault = configs.get('paths.default') ?? '';
@@ -507,7 +508,7 @@ export class Repository {
     if (Internal.isMononokePath?.(pathsDefault)) {
       // TODO: where should we be getting this from? arcconfig instead? do we need this?
       const repo = pathsDefault.slice(pathsDefault.lastIndexOf('/') + 1);
-      codeReviewSystem = {type: 'phabricator', repo};
+      codeReviewSystem = {type: 'phabricator', repo, callsign: configs.get('phrevset.callsign')};
     } else if (pathsDefault === '') {
       codeReviewSystem = {type: 'none'};
     } else {
