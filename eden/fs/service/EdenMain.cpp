@@ -150,8 +150,7 @@ void EdenMain::registerStandardBackingStores() {
     const auto repoPath = realpath(params.name);
     auto reloadableConfig = params.serverState->getReloadableConfig();
 
-    auto runtimeOptions = std::make_unique<SaplingBackingStoreOptions>(
-        /*ignoreFilteredPathsConfig=*/false);
+    auto runtimeOptions = std::make_unique<SaplingBackingStoreOptions>();
     return createSaplingBackingStore(
         params, repoPath, reloadableConfig, std::move(runtimeOptions));
   });
@@ -163,8 +162,7 @@ void EdenMain::registerStandardBackingStores() {
         auto reloadableConfig = params.serverState->getReloadableConfig();
         auto hgSparseFilter = std::make_unique<HgSparseFilter>(repoPath);
 
-        auto options = std::make_unique<SaplingBackingStoreOptions>(
-            /*ignoreFilteredPathsConfig=*/true);
+        auto options = std::make_unique<SaplingBackingStoreOptions>();
         auto saplingBackingStore = createSaplingBackingStore(
             params, repoPath, reloadableConfig, std::move(options));
         return std::make_shared<FilteredBackingStore>(

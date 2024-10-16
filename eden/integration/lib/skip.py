@@ -474,9 +474,6 @@ FILTEREDFS_TEST_DISABLED = {
         "test_list_no_legacy_bind_mounts",
         "test_disallow_bind_mount_outside_repo",
     ],
-    # These tests don't make sense to run on FilteredFS since the legacy
-    # filtering method doesn't work on FilteredFS.
-    "hg.legacy_filter_test.FilterTestTreeOnly": ["test_read_dir"],
 }
 for (testModule, disabled) in FILTEREDFS_TEST_DISABLED.items():
     # We should add skips for all combinations of FilteredHg mixins.

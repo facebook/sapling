@@ -875,20 +875,6 @@ class EdenConfig : private ConfigSettingManager {
       "hg:cache-blobs-in-localstore",
       false,
       this};
-  /**
-   * List of paths to filter out when importing Mercurial trees.
-   *
-   * This config must be set prior to cloning as no cache flushing is performed
-   * when setting this config and thus setting this after a mount has been
-   * created will lead to undefined behavior.
-   *
-   * DO NOT USE UNLESS YOU HAVE THE OK FROM THE EDENFS TEAM.
-   */
-  ConfigSetting<std::shared_ptr<std::unordered_set<RelativePath>>>
-      hgFilteredPaths{
-          "hg:filtered-paths",
-          std::make_shared<std::unordered_set<RelativePath>>(),
-          this};
 
   /**
    * Should we use the cached `sl status` results or not

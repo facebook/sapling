@@ -115,8 +115,8 @@ sapling::SaplingNativeBackingStoreOptions computeTestSaplingOptions() {
 
 std::unique_ptr<SaplingBackingStoreOptions> computeRuntimeOptions(
     std::unique_ptr<SaplingBackingStoreOptions> options) {
-  options->ignoreFilteredPathsConfig =
-      options->ignoreFilteredPathsConfig.value_or(false);
+  // No options are currently set. See D64436672 for an example on how to add
+  // this back if the mechanism is needed in the future.
   return options;
 }
 
@@ -171,33 +171,18 @@ Tree::value_type fromRawTreeEntry(
   return {std::move(name), std::move(treeEntry)};
 }
 
-bool doFilteredPathsApply(
-    bool ignoreFilteredPathsConfig,
-    const std::unordered_set<RelativePath>& filteredPaths,
-    const RelativePath& path) {
-  return ignoreFilteredPathsConfig || filteredPaths.empty() ||
-      filteredPaths.count(path) == 0;
-}
-
 TreePtr fromRawTree(
     const sapling::Tree* tree,
     const ObjectId& edenTreeId,
     RelativePathPiece path,
-    HgObjectIdFormat hgObjectIdFormat,
-    const std::unordered_set<RelativePath>& filteredPaths,
-    bool ignoreFilteredPathsConfig) {
+    HgObjectIdFormat hgObjectIdFormat) {
   Tree::container entries{kPathMapDefaultCaseSensitive};
 
   entries.reserve(tree->entries.size());
   for (uintptr_t i = 0; i < tree->entries.size(); i++) {
     try {
       auto entry = fromRawTreeEntry(tree->entries[i], path, hgObjectIdFormat);
-      // TODO(xavierd): In the case where this checks becomes too hot, we may
-      // need to change to a Trie like datastructure for fast filtering.
-      if (doFilteredPathsApply(
-              ignoreFilteredPathsConfig, filteredPaths, path + entry.first)) {
-        entries.emplace(entry.first, std::move(entry.second));
-      }
+      entries.emplace(entry.first, std::move(entry.second));
     } catch (const PathComponentContainsDirectorySeparator& ex) {
       XLOGF(WARN, "Ignoring directory entry: {}", ex.what());
     }
@@ -882,8 +867,6 @@ void SaplingBackingStore::getTreeBatch(
   auto importRequestsMap = std::move(preparedRequests.first);
   auto requests = std::move(preparedRequests.second);
   auto hgObjectIdFormat = config_->getEdenConfig()->hgObjectIdFormat.getValue();
-  const auto filteredPaths =
-      config_->getEdenConfig()->hgFilteredPaths.getValue();
 
   faultInjector_.check("SaplingBackingStore::getTreeBatch", "");
   store_.getTreeBatch(
@@ -891,8 +874,7 @@ void SaplingBackingStore::getTreeBatch(
       fetch_mode,
       // getTreeBatch is blocking, hence we can take these by
       // reference.
-      [&, filteredPaths = filteredPaths](
-          size_t index,
+      [&](size_t index,
           folly::Try<std::shared_ptr<sapling::Tree>> content) mutable {
         if (content.hasException()) {
           XLOGF(
@@ -927,9 +909,7 @@ void SaplingBackingStore::getTreeBatch(
                     content.value().get(),
                     treeRequest->hash,
                     treeRequest->proxyHash.path(),
-                    hgObjectIdFormat,
-                    *filteredPaths,
-                    runtimeOptions_->ignoreConfigFilter())};
+                    hgObjectIdFormat)};
               });
         }
 
@@ -1647,15 +1627,8 @@ TreePtr SaplingBackingStore::getTreeLocal(
   if (tree.hasValue()) {
     auto hgObjectIdFormat =
         config_->getEdenConfig()->hgObjectIdFormat.getValue();
-    const auto filteredPaths =
-        config_->getEdenConfig()->hgFilteredPaths.getValue();
     return fromRawTree(
-        tree.value().get(),
-        edenTreeId,
-        proxyHash.path(),
-        hgObjectIdFormat,
-        *filteredPaths,
-        runtimeOptions_->ignoreConfigFilter());
+        tree.value().get(), edenTreeId, proxyHash.path(), hgObjectIdFormat);
   }
 
   return nullptr;
@@ -1675,15 +1648,8 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeRemote(
   if (tree.hasValue()) {
     auto hgObjectIdFormat =
         config_->getEdenConfig()->hgObjectIdFormat.getValue();
-    const auto filteredPaths =
-        config_->getEdenConfig()->hgFilteredPaths.getValue();
     return GetTreeResult{fromRawTree(
-        tree.value().get(),
-        edenTreeId,
-        path,
-        std::move(hgObjectIdFormat),
-        std::move(*filteredPaths),
-        runtimeOptions_->ignoreConfigFilter())};
+        tree.value().get(), edenTreeId, path, std::move(hgObjectIdFormat))};
   } else {
     return GetTreeResult{tree.exception()};
   }
@@ -2155,8 +2121,6 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeFromBackingStore(
   if (tree.hasValue()) {
     auto hgObjectIdFormat =
         config_->getEdenConfig()->hgObjectIdFormat.getValue();
-    const auto filteredPaths =
-        config_->getEdenConfig()->hgFilteredPaths.getValue();
     switch (fetch_mode) {
       case sapling::FetchMode::LocalOnly:
         context->setFetchedSource(
@@ -2173,12 +2137,7 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeFromBackingStore(
         break;
     }
     return GetTreeResult{fromRawTree(
-        tree.value().get(),
-        edenTreeId,
-        path,
-        std::move(hgObjectIdFormat),
-        std::move(*filteredPaths),
-        runtimeOptions_->ignoreConfigFilter())};
+        tree.value().get(), edenTreeId, path, std::move(hgObjectIdFormat))};
   } else {
     return GetTreeResult{tree.exception()};
   }

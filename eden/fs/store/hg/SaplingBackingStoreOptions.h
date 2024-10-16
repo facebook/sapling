@@ -7,21 +7,13 @@
 
 #pragma once
 
-#include <optional>
-
 namespace facebook::eden {
 
 class SaplingBackingStoreOptions {
+  // All runtime options have been removed, but it's worth keeping this around
+  // for easy extensibility in the future
  public:
-  /* implicit */ SaplingBackingStoreOptions(
-      std::optional<bool> ignoreFilteredPathsConfig)
-      : ignoreFilteredPathsConfig{ignoreFilteredPathsConfig} {}
-
-  bool ignoreConfigFilter() {
-    return ignoreFilteredPathsConfig.value_or(false);
-  }
-
-  std::optional<bool> ignoreFilteredPathsConfig;
+  /* implicit */ SaplingBackingStoreOptions() {}
 };
 
 } // namespace facebook::eden

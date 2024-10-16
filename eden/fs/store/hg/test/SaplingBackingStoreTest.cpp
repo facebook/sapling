@@ -84,8 +84,7 @@ struct SaplingBackingStoreNoFaultInjectorTest : SaplingBackingStoreTestBase {
           localStore,
           stats.copy(),
           edenConfig,
-          std::make_unique<SaplingBackingStoreOptions>(
-              /*ignoreFilteredPathsConfig=*/false),
+          std::make_unique<SaplingBackingStoreOptions>(),
           std::make_shared<NullStructuredLogger>(),
           std::make_unique<BackingStoreLogger>(),
           &faultInjector);
@@ -102,8 +101,7 @@ struct SaplingBackingStoreWithFaultInjectorTest : SaplingBackingStoreTestBase {
           localStore,
           stats.copy(),
           edenConfig,
-          std::make_unique<SaplingBackingStoreOptions>(
-              /*ignoreFilteredPathsConfig=*/false),
+          std::make_unique<SaplingBackingStoreOptions>(),
           std::make_shared<NullStructuredLogger>(),
           std::make_unique<BackingStoreLogger>(),
           &faultInjector);
@@ -121,8 +119,7 @@ struct SaplingBackingStoreWithFaultInjectorIgnoreConfigTest
           localStore,
           stats.copy(),
           edenConfig,
-          std::make_unique<SaplingBackingStoreOptions>(
-              /*ignoreFilteredPathsConfig=*/true),
+          std::make_unique<SaplingBackingStoreOptions>(),
           std::make_shared<NullStructuredLogger>(),
           std::make_unique<BackingStoreLogger>(),
           &faultInjector);

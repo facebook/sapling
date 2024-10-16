@@ -140,8 +140,7 @@ struct SaplingFilteredBackingStoreTest : TestRepo, ::testing::Test {
   FaultInjector faultInjector{/*enabled=*/false};
 
   std::unique_ptr<SaplingBackingStoreOptions> runtimeOptions =
-      std::make_unique<SaplingBackingStoreOptions>(
-          /*ignoreFilteredPathsConfig=*/false);
+      std::make_unique<SaplingBackingStoreOptions>();
 
   std::shared_ptr<SaplingBackingStore> wrappedStore_{
       std::make_shared<SaplingBackingStore>(
