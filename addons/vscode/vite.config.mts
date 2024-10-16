@@ -8,11 +8,29 @@
 import type {Plugin} from 'vite';
 
 import react from '@vitejs/plugin-react';
-import fs from 'node:fs';
+import fs, {existsSync} from 'node:fs';
 import path from 'node:path';
 import {defineConfig} from 'vite';
 import styleX from 'vite-plugin-stylex';
 import viteTsconfigPaths from 'vite-tsconfig-paths';
+
+// Normalize `c:\foo\index.html` to `c:/foo/index.html`.
+// This affects Rollup's `facadeModuleId` (which expects the `c:/foo/bar` format),
+// and is important for Vite to replace the script tags in HTML files.
+// See https://github.com/vitejs/vite/blob/7440191715b07a50992fcf8c90d07600dffc375e/packages/vite/src/node/plugins/html.ts#L804
+// Without this, building on Windows might produce HTML entry points with
+// missing `<script>` tags, resulting in a blank page.
+function normalizeInputPath(inputPath: string) {
+  return process.platform === 'win32' ? path.resolve(inputPath).replace(/\\/g, '/') : inputPath;
+}
+
+const isInternal = existsSync(path.resolve(__dirname, 'facebook/README.facebook.md'));
+
+const input = [normalizeInputPath('webview.html')];
+if (isInternal) {
+  // Currently, the inline comment webview is not used in OSS
+  normalizeInputPath('inlineCommentWebview.html');
+}
 
 // vite-plugin-stylex doesn't support renaming the output CSS file, so we have to do that ourselves.
 function moveStylexFilenamePlugin(): Plugin {
@@ -41,16 +59,6 @@ function moveStylexFilenamePlugin(): Plugin {
       }
     },
   };
-}
-
-// Normalize `c:\foo\index.html` to `c:/foo/index.html`.
-// This affects Rollup's `facadeModuleId` (which expects the `c:/foo/bar` format),
-// and is important for Vite to replace the script tags in HTML files.
-// See https://github.com/vitejs/vite/blob/7440191715b07a50992fcf8c90d07600dffc375e/packages/vite/src/node/plugins/html.ts#L804
-// Without this, building on Windows might produce HTML entry points with
-// missing `<script>` tags, resulting in a blank page.
-function normalizeInputPath(inputPath: string) {
-  return process.platform === 'win32' ? path.resolve(inputPath).replace(/\\/g, '/') : inputPath;
 }
 
 export default defineConfig(({mode}) => ({
@@ -85,7 +93,7 @@ export default defineConfig(({mode}) => ({
     outDir: 'dist/webview',
     manifest: true,
     rollupOptions: {
-      input: [normalizeInputPath('webview.html'), normalizeInputPath('inlineCommentWebview.html')],
+      input,
       output: {
         // Don't use hashed names, so ISL webview panel can pre-define what filename to load
         entryFileNames: '[name].js',
