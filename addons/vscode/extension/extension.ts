@@ -57,17 +57,20 @@ export async function activate(context: vscode.ExtensionContext) {
     }
     context.subscriptions.push(registerSaplingDiffContentProvider(ctx));
     context.subscriptions.push(new DeletedFileContentProvider());
+    let inlineCommentsProvider;
     if (enabledSCMApiFeatures.has('comments') && Internal.inlineCommentsProvider) {
-      context.subscriptions.push(Internal.inlineCommentsProvider(context, reposList, ctx));
+      inlineCommentsProvider = Internal.inlineCommentsProvider(context, reposList, ctx);
+      context.subscriptions.push(inlineCommentsProvider);
+    }
+    if (Internal.SaplingISLUriHandler != null) {
+      context.subscriptions.push(
+        vscode.window.registerUriHandler(
+          new Internal.SaplingISLUriHandler(reposList, ctx, inlineCommentsProvider),
+        ),
+      );
     }
 
     context.subscriptions.push(...registerCommands(ctx));
-
-    if (Internal.SaplingISLUriHandler != null) {
-      context.subscriptions.push(
-        vscode.window.registerUriHandler(new Internal.SaplingISLUriHandler(reposList, ctx)),
-      );
-    }
 
     Internal?.registerInternalBugLogsProvider != null &&
       context.subscriptions.push(Internal.registerInternalBugLogsProvider(logger));
