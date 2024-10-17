@@ -262,33 +262,6 @@ rust_binary(
 )
 
 rust_binary(
-    name = "streaming_clone_warmup",
-    srcs = glob(["cmds/streaming_clone_warmup/**/*.rs"]),
-    named_deps = {
-        "clap-old": "fbsource//third-party/rust:clap-2",
-    },
-    test_deps = [],
-    deps = [
-        "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:futures",
-        "fbsource//third-party/rust:slog",
-        "fbsource//third-party/rust:tokio",
-        "//common/rust/shed/cached_config:cached_config",
-        "//common/rust/shed/fbinit:fbinit",
-        "//eden/mononoke/blobrepo:repo_blobstore",
-        "//eden/mononoke/blobstore:blobstore_factory",
-        "//eden/mononoke/blobstore:cacheblob",
-        "//eden/mononoke/cmdlib:cmdlib",
-        "//eden/mononoke/common/rust/sql_ext:sql_ext",
-        "//eden/mononoke/common/scuba_ext:scuba_ext",
-        "//eden/mononoke/common/sql_construct:sql_construct",
-        "//eden/mononoke/metaconfig:metaconfig_types",
-        "//eden/mononoke/repo_client:streaming_clone",
-        "//eden/mononoke/server/context:context",
-    ],
-)
-
-rust_binary(
     name = "sqlblob_gc",
     srcs = glob(["cmds/sqlblob_gc/**/*.rs"]),
     test_deps = [],

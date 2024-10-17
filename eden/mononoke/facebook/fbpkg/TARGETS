@@ -117,13 +117,6 @@ mononoke_fbpkg(
 )
 
 mononoke_fbpkg(
-    name = "mononoke.streaming_clone_warmup",
-    path_actions = {
-        "streaming_clone_warmup": "//eden/mononoke:streaming_clone_warmup",
-    },
-)
-
-mononoke_fbpkg(
     name = "mononoke.walker",
     path_actions = {
         "walker": "//eden/mononoke/walker:walker",
