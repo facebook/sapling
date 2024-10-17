@@ -835,6 +835,18 @@ impl FetchState {
         self.metrics
             .cas_backend
             .hedwig_bytes(total_stats.total_bytes_hedwig);
+        self.metrics
+            .cas_backend
+            .zdb_queries(total_stats.queries_zdb);
+        self.metrics
+            .cas_backend
+            .zgw_queries(total_stats.queries_zgw);
+        self.metrics
+            .cas_backend
+            .manifold_queries(total_stats.queries_manifold);
+        self.metrics
+            .cas_backend
+            .hedwig_queries(total_stats.queries_hedwig);
     }
 
     pub(crate) fn fetch_lfs_remote(

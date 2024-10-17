@@ -78,10 +78,10 @@ macro_rules! re_client {
                         let mut stats = CasFetchedStats::default();
                         for (backend, dstats) in download_stats_map {
                             match backend {
-                                TStorageBackendType::ZDB => stats.total_bytes_zdb += dstats.bytes as u64,
-                                TStorageBackendType::ZGATEWAY => stats.total_bytes_zgw += dstats.bytes as u64,
-                                TStorageBackendType::MANIFOLD => stats.total_bytes_manifold += dstats.bytes as u64,
-                                TStorageBackendType::HEDWIG => stats.total_bytes_hedwig += dstats.bytes as u64,
+                                TStorageBackendType::ZDB => {stats.total_bytes_zdb += dstats.bytes as u64; stats.queries_zdb += dstats.queries_count as u64}
+                                TStorageBackendType::ZGATEWAY => {stats.total_bytes_zgw += dstats.bytes as u64; stats.queries_zgw += dstats.queries_count as u64}
+                                TStorageBackendType::MANIFOLD => {stats.total_bytes_manifold += dstats.bytes as u64; stats.queries_manifold += dstats.queries_count as u64}
+                                TStorageBackendType::HEDWIG => {stats.total_bytes_hedwig += dstats.bytes as u64; stats.queries_hedwig += dstats.queries_count as u64 }
                                 _ => {}
                             }
                         }

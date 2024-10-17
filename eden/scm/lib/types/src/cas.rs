@@ -39,6 +39,10 @@ pub struct CasFetchedStats {
     pub total_bytes_zgw: u64,
     pub total_bytes_manifold: u64,
     pub total_bytes_hedwig: u64,
+    pub queries_zdb: u64,
+    pub queries_zgw: u64,
+    pub queries_manifold: u64,
+    pub queries_hedwig: u64,
 }
 
 impl CasFetchedStats {
@@ -47,5 +51,9 @@ impl CasFetchedStats {
         self.total_bytes_zgw += other.total_bytes_zgw;
         self.total_bytes_manifold += other.total_bytes_manifold;
         self.total_bytes_hedwig += other.total_bytes_hedwig;
+        self.queries_zdb += other.queries_zdb;
+        self.queries_zgw += other.queries_zgw;
+        self.queries_manifold += other.queries_manifold;
+        self.queries_hedwig += other.queries_hedwig;
     }
 }

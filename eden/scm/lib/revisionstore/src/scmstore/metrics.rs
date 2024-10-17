@@ -227,28 +227,52 @@ pub struct CasBackendMetrics {
     /// Total number of bytes fetched from the CAS ZippyDb backend
     zdb_bytes: u64,
 
+    /// Total number of queries to the CAS ZippyDb backend
+    zdb_queries: u64,
+
     /// Total number of bytes fetched from the CAS ZGW backend
     zgw_bytes: u64,
+
+    /// Total number of queries to the CAS ZGW backend
+    zgw_queries: u64,
 
     /// Total number of bytes fetched from the CAS Manifold backend
     manifold_bytes: u64,
 
+    /// Total number of queries to the CAS Manifold backend
+    manifold_queries: u64,
+
     /// Total number of bytes fetched from the CAS Hedwig backend
     hedwig_bytes: u64,
+
+    /// Total number of queries to the CAS Hedwig backend
+    hedwig_queries: u64,
 }
 
 impl CasBackendMetrics {
     pub(crate) fn zdb_bytes(&mut self, bytes: u64) {
         self.zdb_bytes += bytes;
     }
+    pub(crate) fn zdb_queries(&mut self, queries: u64) {
+        self.zdb_queries += queries;
+    }
     pub(crate) fn zgw_bytes(&mut self, bytes: u64) {
         self.zgw_bytes += bytes;
+    }
+    pub(crate) fn zgw_queries(&mut self, queries: u64) {
+        self.zgw_queries += queries;
     }
     pub(crate) fn manifold_bytes(&mut self, bytes: u64) {
         self.manifold_bytes += bytes;
     }
+    pub(crate) fn manifold_queries(&mut self, queries: u64) {
+        self.manifold_queries += queries;
+    }
     pub(crate) fn hedwig_bytes(&mut self, bytes: u64) {
         self.hedwig_bytes += bytes;
+    }
+    pub(crate) fn hedwig_queries(&mut self, queries: u64) {
+        self.hedwig_queries += queries;
     }
     pub(crate) fn metrics(&self) -> impl Iterator<Item = (&'static str, usize)> {
         [
@@ -256,6 +280,10 @@ impl CasBackendMetrics {
             ("zgw.bytes", self.zgw_bytes as usize),
             ("manifold.bytes", self.manifold_bytes as usize),
             ("hedwig.bytes", self.hedwig_bytes as usize),
+            ("zdb.queries", self.zdb_queries as usize),
+            ("zgw.queries", self.zgw_queries as usize),
+            ("manifold.queries", self.manifold_queries as usize),
+            ("hedwig.queries", self.hedwig_queries as usize),
         ]
         .into_iter()
         .filter(|&(_, v)| v != 0)
@@ -268,5 +296,9 @@ impl AddAssign for CasBackendMetrics {
         self.zgw_bytes += rhs.zgw_bytes;
         self.manifold_bytes += rhs.manifold_bytes;
         self.hedwig_bytes += rhs.hedwig_bytes;
+        self.zdb_queries += rhs.zdb_queries;
+        self.zgw_queries += rhs.zgw_queries;
+        self.manifold_queries += rhs.manifold_queries;
+        self.hedwig_queries += rhs.hedwig_queries;
     }
 }
