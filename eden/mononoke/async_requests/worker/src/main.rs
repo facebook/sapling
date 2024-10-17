@@ -89,12 +89,11 @@ fn main(fb: FacebookInit) -> Result<()> {
     } else {
         Some(repos)
     };
+    let queue = Arc::new(runtime.block_on(async_requests_client::build(fb, &app, filter_repos))?);
     let worker = runtime.block_on(worker::AsyncMethodRequestWorker::new(
-        app.fb,
-        &app,
         args.clone(),
         Arc::new(ctx),
-        filter_repos,
+        queue,
         mononoke,
         megarepo,
         will_exit.clone(),

@@ -18,7 +18,6 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use async_requests::types::AsynchronousRequestParams;
@@ -31,7 +30,6 @@ use async_trait::async_trait;
 use cloned::cloned;
 use context::CoreContext;
 use executor_lib::RepoShardedProcessExecutor;
-use fbinit::FacebookInit;
 use futures::future::abortable;
 use futures::future::select;
 use futures::future::Either;
@@ -44,8 +42,6 @@ use megarepo_api::MegarepoApi;
 use mononoke_api::Mononoke;
 use mononoke_api::MononokeRepo;
 use mononoke_api::Repo;
-use mononoke_api::RepositoryId;
-use mononoke_app::MononokeApp;
 use mononoke_types::Timestamp;
 use slog::debug;
 use slog::error;
@@ -85,23 +81,17 @@ pub struct AsyncMethodRequestWorker {
     mononoke: Arc<Mononoke<Repo>>,
     megarepo: Arc<MegarepoApi<Repo>>,
     name: String,
-    queue: AsyncMethodRequestQueue,
+    queue: Arc<AsyncMethodRequestQueue>,
     will_exit: Arc<AtomicBool>,
     limit: Option<usize>,
     concurrency_limit: usize,
 }
 
 impl AsyncMethodRequestWorker {
-    /// Creates a new tailer instance that's going to use provided megarepo API
-    /// The name argument should uniquely identify tailer instance and will be put
-    /// in the queue table so it's possible to find out which instance is working on
-    /// a given task (for debugging purposes).
     pub(crate) async fn new(
-        fb: FacebookInit,
-        app: &MononokeApp,
         args: Arc<AsyncRequestsWorkerArgs>,
         ctx: Arc<CoreContext>,
-        repos: Option<Vec<RepositoryId>>,
+        queue: Arc<AsyncMethodRequestQueue>,
         mononoke: Arc<Mononoke<Repo>>,
         megarepo: Arc<MegarepoApi<Repo>>,
         will_exit: Arc<AtomicBool>,
@@ -121,9 +111,6 @@ impl AsyncMethodRequestWorker {
             }
         };
 
-        let queue = async_requests_client::build(fb, app, repos)
-            .await
-            .context("acquiring the async requests queue")?;
         Ok(Self {
             ctx,
             mononoke,
@@ -199,7 +186,7 @@ impl AsyncMethodRequestWorker {
     pub fn request_stream(
         &self,
         ctx: &CoreContext,
-        queue: AsyncMethodRequestQueue,
+        queue: Arc<AsyncMethodRequestQueue>,
         will_exit: Arc<AtomicBool>,
     ) -> impl Stream<Item = Result<(RequestId, AsynchronousRequestParams), AsyncRequestsError>>
     {
@@ -218,7 +205,7 @@ impl AsyncMethodRequestWorker {
     fn request_stream_inner(
         ctx: CoreContext,
         claimed_by: ClaimedBy,
-        queue: AsyncMethodRequestQueue,
+        queue: Arc<AsyncMethodRequestQueue>,
         will_exit: Arc<AtomicBool>,
         sleep_time: Duration,
         abandoned_threshold_secs: i64,
@@ -489,7 +476,7 @@ mod test {
 
     #[mononoke::fbinit_test]
     async fn test_request_stream_simple(fb: FacebookInit) -> Result<(), Error> {
-        let q = AsyncMethodRequestQueue::new_test_in_memory().unwrap();
+        let q = Arc::new(AsyncMethodRequestQueue::new_test_in_memory().unwrap());
         let ctx = CoreContext::test_mock(fb);
 
         let params = thrift::MegarepoSyncChangesetParams {
@@ -529,7 +516,7 @@ mod test {
 
     #[mononoke::fbinit_test]
     async fn test_request_stream_clear_abandoned(fb: FacebookInit) -> Result<(), Error> {
-        let q = AsyncMethodRequestQueue::new_test_in_memory().unwrap();
+        let q = Arc::new(AsyncMethodRequestQueue::new_test_in_memory().unwrap());
         let ctx = CoreContext::test_mock(fb);
 
         let params = thrift::MegarepoSyncChangesetParams {

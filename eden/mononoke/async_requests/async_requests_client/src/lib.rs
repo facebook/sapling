@@ -40,7 +40,7 @@ pub async fn build(
     ))
 }
 
-async fn open_sql_connection(
+pub async fn open_sql_connection(
     fb: FacebookInit,
     app: &MononokeApp,
 ) -> Result<SqlLongRunningRequestsQueue, Error> {
@@ -61,7 +61,10 @@ async fn open_sql_connection(
     }
 }
 
-async fn open_blobstore(fb: FacebookInit, app: &MononokeApp) -> Result<Arc<dyn Blobstore>, Error> {
+pub async fn open_blobstore(
+    fb: FacebookInit,
+    app: &MononokeApp,
+) -> Result<Arc<dyn Blobstore>, Error> {
     let config = app.repo_configs().common.async_requests_config.clone();
     if let Some(config) = config.blobstore {
         let options = app.blobstore_options();
