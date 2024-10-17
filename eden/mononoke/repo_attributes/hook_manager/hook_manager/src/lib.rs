@@ -25,15 +25,20 @@ use anyhow::Result;
 use async_trait::async_trait;
 use bookmarks_types::BookmarkKey;
 use context::CoreContext;
+use futures::FutureExt;
 use futures::TryFutureExt;
+use futures_stats::FutureStats;
+use futures_stats::TimedFutureExt;
 use mononoke_types::BasicFileChange;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
+use scuba_ext::MononokeScubaSampleBuilder;
 
 pub use crate::errors::HookManagerError;
 pub use crate::errors::HookStateProviderError;
 pub use crate::manager::HookManager;
+use crate::manager::HooksOutcome;
 pub use crate::provider::memory::InMemoryHookStateProvider;
 pub use crate::provider::text_only::TextOnlyHookStateProvider;
 pub use crate::provider::FileChangeType;
@@ -75,6 +80,52 @@ pub enum CrossRepoPushSource {
     PushRedirected,
 }
 
+fn log_execution_stats(
+    mut scuba: MononokeScubaSampleBuilder,
+    stats: FutureStats,
+    result: &mut Result<HookOutcome>,
+    log_only: bool,
+) {
+    let mut errorcode = 0;
+    let mut failed_hooks = 0;
+    let mut stderr = None;
+
+    match result.as_mut() {
+        Ok(outcome) => match outcome.get_execution() {
+            HookExecution::Accepted => {
+                // Nothing to do
+            }
+            HookExecution::Rejected(info) if log_only => {
+                scuba.add("log_only_rejection", info.long_description.clone());
+                // Convert to accepted as we are only logging.
+                outcome.set_execution(HookExecution::Accepted);
+            }
+            HookExecution::Rejected(info) => {
+                failed_hooks = 1;
+                errorcode = 1;
+                stderr = Some(info.long_description.clone());
+            }
+        },
+        Err(e) => {
+            errorcode = 1;
+            stderr = Some(format!("{:?}", e));
+            scuba.add("internal_failure", true);
+        }
+    };
+
+    if let Some(stderr) = stderr {
+        scuba.add("stderr", stderr);
+    }
+
+    let elapsed = stats.completion_time.as_millis() as i64;
+    scuba
+        .add("elapsed", elapsed)
+        .add("total_time", elapsed)
+        .add("errorcode", errorcode)
+        .add("failed_hooks", failed_hooks)
+        .log();
+}
+
 /// Trait to be implemented by bookmarks hooks.
 ///
 /// Changeset hooks run once per bookmark movement, and primarily concern themselves
@@ -100,26 +151,32 @@ pub trait BookmarkHook: Send + Sync {
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
         hook_name: &str,
+        scuba: MononokeScubaSampleBuilder,
+        log_only: bool,
     ) -> Result<HookOutcome, Error> {
-        self.run(
-            ctx,
-            bookmark,
-            to,
-            content_provider,
-            cross_repo_push_source,
-            push_authored_by,
-        )
-        .map_ok(|exec| {
-            HookOutcome::BookmarkHook(
-                BookmarkHookExecutionId {
-                    cs_id: to.get_changeset_id(),
-                    bookmark_name: bookmark.to_string(),
-                    hook_name: hook_name.to_string(),
-                },
-                exec,
+        let (stats, mut result) = self
+            .run(
+                ctx,
+                bookmark,
+                to,
+                content_provider,
+                cross_repo_push_source,
+                push_authored_by,
             )
-        })
-        .await
+            .map_ok(|exec| {
+                HookOutcome::BookmarkHook(
+                    BookmarkHookExecutionId {
+                        cs_id: to.get_changeset_id(),
+                        bookmark_name: bookmark.to_string(),
+                        hook_name: hook_name.to_string(),
+                    },
+                    exec,
+                )
+            })
+            .timed()
+            .await;
+        log_execution_stats(scuba, stats, &mut result, log_only);
+        result.map_err(|e| e.context(format!("while executing hook {}", hook_name)))
     }
 }
 
@@ -148,25 +205,64 @@ pub trait ChangesetHook: Send + Sync {
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
         hook_name: &str,
+        scuba: MononokeScubaSampleBuilder,
+        log_only: bool,
     ) -> Result<HookOutcome, Error> {
-        self.run(
-            ctx,
-            bookmark,
-            changeset,
-            content_provider,
-            cross_repo_push_source,
-            push_authored_by,
-        )
-        .map_ok(|exec| {
-            HookOutcome::ChangesetHook(
-                ChangesetHookExecutionId {
-                    cs_id: changeset.get_changeset_id(),
-                    hook_name: hook_name.to_string(),
-                },
-                exec,
+        let (stats, mut result) = self
+            .run(
+                ctx,
+                bookmark,
+                changeset,
+                content_provider,
+                cross_repo_push_source,
+                push_authored_by,
             )
-        })
-        .await
+            .map_ok(|exec| {
+                HookOutcome::ChangesetHook(
+                    ChangesetHookExecutionId {
+                        cs_id: changeset.get_changeset_id(),
+                        hook_name: hook_name.to_string(),
+                    },
+                    exec,
+                )
+            })
+            .timed()
+            .await;
+        log_execution_stats(scuba, stats, &mut result, log_only);
+        result.map_err(|e| e.context(format!("while executing hook {}", hook_name)))
+    }
+
+    fn run_hook_on_many_changesets<'this: 'cs, 'ctx: 'this, 'cs, 'provider: 'cs>(
+        &'this self,
+        ctx: &'ctx CoreContext,
+        bookmark: &'cs BookmarkKey,
+        changesets: Vec<&'cs BonsaiChangeset>,
+        content_provider: &'provider dyn HookStateProvider,
+        cross_repo_push_source: CrossRepoPushSource,
+        push_authored_by: PushAuthoredBy,
+        hook_name: &'cs str,
+        scuba: MononokeScubaSampleBuilder,
+        log_only: bool,
+    ) -> HooksOutcome<'cs> {
+        HooksOutcome::Individual(
+            changesets
+                .into_iter()
+                .map(|cs| {
+                    self.run_hook(
+                        ctx,
+                        bookmark,
+                        cs,
+                        content_provider,
+                        cross_repo_push_source,
+                        push_authored_by,
+                        hook_name,
+                        scuba.clone(),
+                        log_only,
+                    )
+                    .boxed()
+                })
+                .collect(),
+        )
     }
 }
 
@@ -196,26 +292,32 @@ pub trait FileHook: Send + Sync {
         push_authored_by: PushAuthoredBy,
         cs_id: ChangesetId,
         hook_name: &str,
+        scuba: MononokeScubaSampleBuilder,
+        log_only: bool,
     ) -> Result<HookOutcome, Error> {
-        self.run(
-            ctx,
-            content_provider,
-            change,
-            path,
-            cross_repo_push_source,
-            push_authored_by,
-        )
-        .map_ok(|exec| {
-            HookOutcome::FileHook(
-                FileHookExecutionId {
-                    cs_id,
-                    path: path.clone(),
-                    hook_name: hook_name.to_string(),
-                },
-                exec,
+        let (stats, mut result) = self
+            .run(
+                ctx,
+                content_provider,
+                change,
+                path,
+                cross_repo_push_source,
+                push_authored_by,
             )
-        })
-        .await
+            .map_ok(|exec| {
+                HookOutcome::FileHook(
+                    FileHookExecutionId {
+                        cs_id,
+                        path: path.clone(),
+                        hook_name: hook_name.to_string(),
+                    },
+                    exec,
+                )
+            })
+            .timed()
+            .await;
+        log_execution_stats(scuba, stats, &mut result, log_only);
+        result.map_err(|e| e.context(format!("while executing hook {}", hook_name)))
     }
 }
 

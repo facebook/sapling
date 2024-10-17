@@ -23,8 +23,6 @@ use futures::stream::TryStreamExt;
 use futures::try_join;
 use futures::Future;
 use futures::FutureExt;
-use futures_stats::FutureStats;
-use futures_stats::TimedFutureExt;
 use metaconfig_types::BookmarkOrRegex;
 use metaconfig_types::HookBypass;
 use metaconfig_types::HookConfig;
@@ -48,7 +46,6 @@ use crate::BookmarkHook;
 use crate::ChangesetHook;
 use crate::CrossRepoPushSource;
 use crate::FileHook;
-use crate::HookExecution;
 use crate::HookOutcome;
 use crate::PushAuthoredBy;
 
@@ -467,12 +464,8 @@ fn get_bypassed_by_commit_msg_reason(bypass: Option<&HookBypass>, cs_msg: &str) 
     None
 }
 
-enum HooksOutcome<'a> {
+pub enum HooksOutcome<'a> {
     Individual(Vec<BoxFuture<'a, Result<HookOutcome, Error>>>),
-    // TODO (pierrec), propagate the code downstream and use
-    // this for verify integrity.
-    // This is very temporary, just so I can split my commits up for ease of code review.
-    #[allow(dead_code)]
     Batched(Vec<BoxFuture<'a, Result<HookOutcome, Error>>>),
 }
 
@@ -497,7 +490,7 @@ enum Hook {
     File(Box<dyn FileHook>, HookConfig),
 }
 
-enum HookInstance<'a> {
+pub(crate) enum HookInstance<'a> {
     Bookmark(&'a dyn BookmarkHook),
     Changeset(&'a dyn ChangesetHook),
     File(
@@ -508,7 +501,40 @@ enum HookInstance<'a> {
 }
 
 impl<'a> HookInstance<'a> {
-    async fn run_hook(
+    fn run_changeset_hook_on_many_changesets(
+        self,
+        ctx: &'a CoreContext,
+        bookmark: &'a BookmarkKey,
+        content_provider: &'a dyn HookStateProvider,
+        hook_name: &'a str,
+        scuba: MononokeScubaSampleBuilder,
+        changesets: Vec<&'a BonsaiChangeset>,
+        cross_repo_push_source: CrossRepoPushSource,
+        push_authored_by: PushAuthoredBy,
+        log_only: bool,
+    ) -> HooksOutcome<'a> {
+        match self {
+            Self::Bookmark(..) | Self::File(..) => {
+                // For bookmarks, we don't need batching as we run one per hook per push
+                // For files, the instance is specific to a changeset, so batching on changesets
+                // doesn't make much sense
+                // This should never be called
+                HooksOutcome::Individual(Vec::new())
+            }
+            Self::Changeset(hook) => hook.run_hook_on_many_changesets(
+                ctx,
+                bookmark,
+                changesets,
+                content_provider,
+                cross_repo_push_source,
+                push_authored_by,
+                hook_name,
+                scuba,
+                log_only,
+            ),
+        }
+    }
+    pub(crate) async fn run_hook(
         self,
         ctx: &CoreContext,
         bookmark: &BookmarkKey,
@@ -521,7 +547,7 @@ impl<'a> HookInstance<'a> {
         log_only: bool,
     ) -> Result<HookOutcome, Error> {
         let cs_id = cs.get_changeset_id();
-        let (stats, mut result) = match self {
+        match self {
             Self::Bookmark(hook) => hook.run_hook(
                 ctx,
                 bookmark,
@@ -530,6 +556,8 @@ impl<'a> HookInstance<'a> {
                 cross_repo_push_source,
                 push_authored_by,
                 hook_name,
+                scuba,
+                log_only,
             ),
             Self::Changeset(hook) => hook.run_hook(
                 ctx,
@@ -539,6 +567,8 @@ impl<'a> HookInstance<'a> {
                 cross_repo_push_source,
                 push_authored_by,
                 hook_name,
+                scuba,
+                log_only,
             ),
             Self::File(hook, path, change) => hook.run_hook(
                 ctx,
@@ -549,59 +579,11 @@ impl<'a> HookInstance<'a> {
                 push_authored_by,
                 cs_id,
                 hook_name,
+                scuba,
+                log_only,
             ),
         }
-        .timed()
-        .await;
-
-        Self::log_execution_stats(scuba, stats, &mut result, log_only);
-
-        result.map_err(|e| e.context(format!("while executing hook {}", hook_name)))
-    }
-    fn log_execution_stats(
-        mut scuba: MononokeScubaSampleBuilder,
-        stats: FutureStats,
-        result: &mut Result<HookOutcome>,
-        log_only: bool,
-    ) {
-        let mut errorcode = 0;
-        let mut failed_hooks = 0;
-        let mut stderr = None;
-
-        match result.as_mut() {
-            Ok(outcome) => match outcome.get_execution() {
-                HookExecution::Accepted => {
-                    // Nothing to do
-                }
-                HookExecution::Rejected(info) if log_only => {
-                    scuba.add("log_only_rejection", info.long_description.clone());
-                    // Convert to accepted as we are only logging.
-                    outcome.set_execution(HookExecution::Accepted);
-                }
-                HookExecution::Rejected(info) => {
-                    failed_hooks = 1;
-                    errorcode = 1;
-                    stderr = Some(info.long_description.clone());
-                }
-            },
-            Err(e) => {
-                errorcode = 1;
-                stderr = Some(format!("{:?}", e));
-                scuba.add("internal_failure", true);
-            }
-        };
-
-        if let Some(stderr) = stderr {
-            scuba.add("stderr", stderr);
-        }
-
-        let elapsed = stats.completion_time.as_millis() as i64;
-        scuba
-            .add("elapsed", elapsed)
-            .add("total_time", elapsed)
-            .add("errorcode", errorcode)
-            .add("failed_hooks", failed_hooks)
-            .log();
+        .await
     }
 }
 
@@ -672,31 +654,23 @@ impl Hook {
         log_only: bool,
     ) -> HooksOutcome<'cs> {
         match self {
-            Self::Changeset(hook, _) => HooksOutcome::Individual(
-                changesets
-                    .iter()
-                    .map(|cs| {
-                        HookInstance::Changeset(&**hook)
-                            .run_hook(
-                                ctx,
-                                bookmark,
-                                content_provider,
-                                hook_name,
-                                scuba.clone(),
-                                cs,
-                                cross_repo_push_source,
-                                push_authored_by,
-                                log_only,
-                            )
-                            .boxed()
-                    })
-                    .collect(),
-            ),
+            Self::Changeset(hook, _) => HookInstance::Changeset(&**hook)
+                .run_changeset_hook_on_many_changesets(
+                    ctx,
+                    bookmark,
+                    content_provider,
+                    hook_name,
+                    scuba,
+                    changesets,
+                    cross_repo_push_source,
+                    push_authored_by,
+                    log_only,
+                ),
             Self::File(hook, _) => HooksOutcome::Individual(
                 changesets
                     .iter()
                     .flat_map(|cs| {
-                        cloned!(scuba);
+                        cloned!(mut scuba);
                         cs.simplified_file_changes()
                             .map(move |(path, change)| {
                                 HookInstance::File(&**hook, path, change)
