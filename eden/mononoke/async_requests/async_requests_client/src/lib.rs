@@ -19,7 +19,7 @@ use mononoke_api::MononokeRepo;
 use mononoke_api::RepositoryId;
 use mononoke_app::MononokeApp;
 use requests_table::SqlLongRunningRequestsQueue;
-use slog::info;
+use slog::debug;
 use sql_construct::SqlConstructFromDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 
@@ -46,7 +46,7 @@ pub async fn open_sql_connection(
 ) -> Result<SqlLongRunningRequestsQueue, Error> {
     let config = app.repo_configs().common.async_requests_config.clone();
     if let Some(config) = config.db_config {
-        info!(
+        debug!(
             app.logger(),
             "Initializing async_requests with an explicit config"
         );
