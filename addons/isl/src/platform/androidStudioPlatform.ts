@@ -9,7 +9,7 @@ import type {Platform} from '../platform';
 import type {ThemeColor} from '../theme';
 import type {OneIndexedLineNumber, RepoRelativePath} from '../types';
 
-import {browserPlatformImpl} from './browerPlatformImpl';
+import {makeBrowserLikePlatformImpl} from './browerPlatformImpl';
 
 declare global {
   interface Window {
@@ -25,7 +25,7 @@ declare global {
 // since it will end up getting duplicated when bundling.
 
 const androidStudioPlatform: Platform = {
-  platformName: 'androidStudio',
+  ...makeBrowserLikePlatformImpl('androidStudio'),
 
   confirm: (message: string, details?: string) => {
     // TODO: Android Studio-style confirm modal
@@ -52,11 +52,6 @@ const androidStudioPlatform: Platform = {
     window.__IdeBridge.clipboardCopy?.(text);
   },
 
-  getPersistedState: browserPlatformImpl.getPersistedState,
-  setPersistedState: browserPlatformImpl.setPersistedState,
-  clearPersistedState: browserPlatformImpl.clearPersistedState,
-  getAllPersistedState: browserPlatformImpl.getAllPersistedState,
-
   theme: {
     getTheme(): ThemeColor {
       return 'dark'; // default to dark, IDE will adjust the theme if necessary
@@ -75,7 +70,6 @@ const androidStudioPlatform: Platform = {
       };
     },
   },
-  messageBus: browserPlatformImpl.messageBus,
 };
 
 window.islPlatform = androidStudioPlatform;

@@ -14,7 +14,7 @@ import type {Json} from 'shared/typeUtils';
 
 import {Internal} from './Internal';
 import {vscodeApi} from './vscodeApi';
-import {browserPlatformImpl} from 'isl/src/platform/browerPlatformImpl';
+import {browserClipboardCopy} from 'isl/src/platform/browerPlatformImpl';
 import {registerCleanup} from 'isl/src/utils';
 import {lazy} from 'react';
 
@@ -91,7 +91,7 @@ export const vscodeWebviewPlatform: Platform = {
     return true;
   },
 
-  clipboardCopy: browserPlatformImpl.clipboardCopy,
+  clipboardCopy: browserClipboardCopy,
 
   getPersistedState<T extends Json>(key: string): T | null {
     return persistedState[key] as T;

@@ -7,15 +7,13 @@
 
 import type {Platform} from '../platform';
 
-import {browserPlatformImpl} from './browerPlatformImpl';
+import {makeBrowserLikePlatformImpl} from './browerPlatformImpl';
 
 // important: this file should not try to import other code from 'isl',
 // since it will end up getting duplicated when bundling.
 
 const chromelikeAppPlatform: Platform = {
-  ...browserPlatformImpl,
-
-  platformName: 'chromelike_app',
+  ...makeBrowserLikePlatformImpl('chromelike_app'),
 };
 
 window.islPlatform = chromelikeAppPlatform;

@@ -7,7 +7,7 @@
 
 import type {Platform} from '../platform';
 
-import {browserPlatformImpl} from './browerPlatformImpl';
+import {makeBrowserLikePlatformImpl} from './browerPlatformImpl';
 
 // important: this file should not try to import other code from 'isl',
 // since it will end up getting duplicated when bundling.
@@ -20,9 +20,9 @@ import {browserPlatformImpl} from './browerPlatformImpl';
  * which are not implemented in the webview itself.
  */
 export const webviewPlatform: Platform = {
-  ...browserPlatformImpl, // just act like the browser platform by default, since the app use case is similar
+  // just act like the browser platform by default, since the app use case is similar
+  ...makeBrowserLikePlatformImpl('webview'),
 
-  platformName: 'webview',
   openExternalLink(url: string) {
     invoke({cmd: 'openExternal', url});
   },
