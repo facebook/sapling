@@ -1716,6 +1716,14 @@ Any uncommitted changes and shelves in this checkout will be lost forever."""
         exit_code = 0
         for mount, remove_type in mounts:
             print(f"Removing {mount}...")
+            # Removing reidrection targets from checkout config to allow deletion of redirected paths
+            instance, checkout, _rel_path = require_checkout(args, mount)
+            config = checkout.get_config()
+            config._replace(
+                redirection_targets={},
+            )
+            checkout.save_config(config)
+
             if remove_type == RemoveType.ACTIVE_MOUNT:
                 try:
                     # We don't bother complaining about removing redirections on Windows

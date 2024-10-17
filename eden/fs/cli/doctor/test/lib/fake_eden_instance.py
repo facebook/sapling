@@ -138,6 +138,7 @@ class FakeEdenInstance(AbstractEdenInstance):
             require_utf8_path=True,
             default_revision=snapshot,
             redirections={},
+            redirection_targets={},
             active_prefetch_profiles=[],
             predictive_prefetch_profiles_active=False,
             predictive_prefetch_num_dirs=0,

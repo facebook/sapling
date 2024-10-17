@@ -191,6 +191,8 @@ class CheckoutConfig(typing.NamedTuple):
     - redirections: dict where keys are relative pathnames in the EdenFS mount
       and the values are RedirectionType enum values that describe the type of
       the redirection.
+    - redirection_targets: dict where keys are relative pathnames in the EdenFS mount
+      and the values are target path for corresponding symlink.
     """
 
     backing_repo: Path
@@ -201,6 +203,7 @@ class CheckoutConfig(typing.NamedTuple):
     require_utf8_path: bool
     default_revision: str
     redirections: Dict[str, "RedirectionType"]
+    redirection_targets: Dict[str, str]
     active_prefetch_profiles: List[str]
     predictive_prefetch_profiles_active: bool
     predictive_prefetch_num_dirs: int
@@ -1530,6 +1533,7 @@ class EdenCheckout:
             require_utf8_path=require_utf8_path,
             mount_protocol=mount_protocol,
             redirections=redirections,
+            redirection_targets={},  # There is no need to read redirection targets in Python CLI for now.
             default_revision=(
                 repository.get("default-revision") or DEFAULT_REVISION[scm_type]
             ),
@@ -2140,6 +2144,7 @@ def create_checkout_config(
         require_utf8_path=True,
         default_revision=DEFAULT_REVISION[repo.type],
         redirections={},
+        redirection_targets={},
         active_prefetch_profiles=[],
         predictive_prefetch_profiles_active=False,
         predictive_prefetch_num_dirs=0,
