@@ -358,6 +358,17 @@ impl HookManager {
             })
             .partition::<Vec<_>, _>(HooksOutcome::is_batched);
 
+        let individual_concurrency = justknobs::get_as::<usize>(
+            "scm/mononoke:bookmark_movement_changeset_hooks_individual_concurency",
+            Some(&self.repo_name),
+        )
+        .unwrap_or(100);
+        let batched_concurrency = justknobs::get_as::<usize>(
+            "scm/mononoke:bookmark_movement_changeset_hooks_batched_concurency",
+            Some(&self.repo_name),
+        )
+        .unwrap_or(10);
+
         // Avoid mixing fast and slow futures by joining two streams:
         // * One that runs fast futures that operate on a single changeset or file.
         //   Such futures should be lightweight enough that we can run 100 of them concurrently
@@ -366,12 +377,12 @@ impl HookManager {
         let individual_fut =
             futures::stream::iter(individual.into_iter().flat_map(HooksOutcome::into_inner))
                 .boxed()
-                .buffer_unordered(100)
+                .buffer_unordered(individual_concurrency)
                 .try_collect::<Vec<_>>();
         let batched_fut =
             futures::stream::iter(batched.into_iter().flat_map(HooksOutcome::into_inner))
                 .boxed()
-                .buffer_unordered(10)
+                .buffer_unordered(batched_concurrency)
                 .try_collect::<Vec<_>>();
 
         let (individual_res, batched_res) = futures::try_join!(individual_fut, batched_fut)?;
