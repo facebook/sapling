@@ -86,6 +86,7 @@ export type DiffCommentReaction = {
 };
 
 export type DiffComment = {
+  id: string;
   author: string;
   authorName?: string;
   authorAvatarUri?: string;
