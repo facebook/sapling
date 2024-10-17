@@ -6,7 +6,7 @@
  */
 
 import App from '../App';
-import foundPlatform from '../platform';
+import platform from '../platform';
 import {CommitInfoTestUtils} from '../testQueries';
 import {
   expectMessageSentToServer,
@@ -204,7 +204,7 @@ describe('FillCommitMessage', () => {
     expect(getDescriptionEditor()).toHaveValue('');
 
     const confirmSpy = jest
-      .spyOn(foundPlatform, 'confirm')
+      .spyOn(platform, 'confirm')
       .mockImplementation(() => Promise.resolve(true));
 
     fireEvent.click(screen.getByTestId('fill-commit-message-more-options'));

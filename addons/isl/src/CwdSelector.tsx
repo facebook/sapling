@@ -14,7 +14,7 @@ import {useCommandEvent} from './ISLShortcuts';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {T, t} from './i18n';
 import {writeAtom} from './jotaiUtils';
-import foundPlatform from './platform';
+import platform from './platform';
 import {serverCwd} from './repositoryData';
 import {repositoryInfo} from './serverAPIState';
 import {registerCleanup, registerDisposable} from './utils';
@@ -140,7 +140,7 @@ function CwdDetails({dismiss}: {dismiss: () => unknown}) {
   const repoRoot = info?.type === 'success' ? info.repoRoot : null;
   const provider = useAtomValue(codeReviewProvider);
   const cwd = useAtomValue(serverCwd);
-  const AddMoreCwdsHint = foundPlatform.AddMoreCwdsHint;
+  const AddMoreCwdsHint = platform.AddMoreCwdsHint;
   return (
     <DropdownFields title={<T>Repository info</T>} icon="folder" data-testid="cwd-details-dropdown">
       <CwdSelections dismiss={dismiss} divider />

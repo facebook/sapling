@@ -9,7 +9,7 @@ import App from '../App';
 import {genereatedFileCache} from '../GeneratedFile';
 import {__TEST__} from '../UncommittedChanges';
 import {readAtom, writeAtom} from '../jotaiUtils';
-import foundPlatform from '../platform';
+import platform from '../platform';
 import {ignoreRTL} from '../testQueries';
 import {
   expectMessageSentToServer,
@@ -256,7 +256,7 @@ describe('Generated Files', () => {
     }
 
     it('No generated files, opens all files', async () => {
-      const openSpy = jest.spyOn(foundPlatform, 'openFiles').mockImplementation(() => {});
+      const openSpy = jest.spyOn(platform, 'openFiles').mockImplementation(() => {});
       await simulateCommitWithFiles({
         'file_partial.txt': GeneratedStatus.PartiallyGenerated,
         'file_manual.txt': GeneratedStatus.Manual,
@@ -268,7 +268,7 @@ describe('Generated Files', () => {
     });
 
     it('Some generated files, opens all non-generated files', async () => {
-      const openSpy = jest.spyOn(foundPlatform, 'openFiles').mockImplementation(() => {});
+      const openSpy = jest.spyOn(platform, 'openFiles').mockImplementation(() => {});
       await simulateCommitWithFiles({
         'file_gen.txt': GeneratedStatus.Generated,
         'file_partial.txt': GeneratedStatus.PartiallyGenerated,
@@ -281,7 +281,7 @@ describe('Generated Files', () => {
     });
 
     it('All generated files, opens all files', async () => {
-      const openSpy = jest.spyOn(foundPlatform, 'openFiles').mockImplementation(() => {});
+      const openSpy = jest.spyOn(platform, 'openFiles').mockImplementation(() => {});
       await simulateCommitWithFiles({
         'file_gen1.txt': GeneratedStatus.Generated,
         'file_gen2.txt': GeneratedStatus.Generated,

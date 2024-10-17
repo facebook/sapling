@@ -16,7 +16,7 @@ import {Column, Row} from '../ComponentUtils';
 import {Link} from '../Link';
 import {T, t} from '../i18n';
 import {atomFamilyWeak, atomLoadableWithRefresh} from '../jotaiUtils';
-import foundPlatform from '../platform';
+import platform from '../platform';
 import {RelativeDate} from '../relativeDate';
 import {layout} from '../stylexUtils';
 import {themeState} from '../theme';
@@ -109,7 +109,7 @@ function Comment({comment, isTopLevel}: {comment: DiffComment; isTopLevel?: bool
             <Link
               xstyle={styles.inlineCommentFilename}
               onClick={() =>
-                comment.filename && foundPlatform.openFile(comment.filename, {line: comment.line})
+                comment.filename && platform.openFile(comment.filename, {line: comment.line})
               }>
               {comment.filename}
               {comment.line == null ? '' : ':' + comment.line}

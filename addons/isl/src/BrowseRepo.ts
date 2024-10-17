@@ -10,7 +10,7 @@ import type {Comparison} from 'shared/Comparison';
 
 import serverAPI from './ClientToServerAPI';
 import {configBackedAtom} from './jotaiUtils';
-import foundPlatform from './platform';
+import platform from './platform';
 import {copyAndShowToast, showToast} from './toast';
 import {revsetForComparison} from 'shared/Comparison';
 
@@ -32,7 +32,7 @@ export async function openBrowseUrlForHash(hash: Hash) {
   } else if (url.value == null) {
     return;
   }
-  foundPlatform.openExternalLink(url.value);
+  platform.openExternalLink(url.value);
 }
 
 export async function copyUrlForFile(path: RepoRelativePath, comparison: Comparison) {

@@ -21,7 +21,7 @@ import {BulkRebaseOperation} from './operations/BulkRebaseOperation';
 import {HideOperation} from './operations/HideOperation';
 import {RebaseOperation} from './operations/RebaseOperation';
 import {operationBeingPreviewed, useRunOperation} from './operationsState';
-import foundPlatform from './platform';
+import platform from './platform';
 import {dagWithPreviews} from './previews';
 import {latestDag} from './serverAPIState';
 import {latestSuccessorUnlessExplicitlyObsolete} from './successionUtils';
@@ -369,7 +369,7 @@ export function useShortcutToRebaseSelected(): void {
       );
     } else {
       if (
-        await foundPlatform.confirm(
+        await platform.confirm(
           t('Are you sure you want to rebase $count commits?', {count: selectedRevsets.length}),
         )
       ) {

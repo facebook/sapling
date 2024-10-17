@@ -104,7 +104,7 @@ declare global {
 // before the main ISL script loads.
 
 /** The ISL client Platform. This may be BrowserPlatform, VSCodeWebviewPlatform, or another platforms, determined at runtime.  */
-const foundPlatform = window.islPlatform ?? browserPlatform;
-window.islPlatform = foundPlatform;
+const platform = window.islPlatform ?? browserPlatform;
+window.islPlatform = platform;
 
-export default foundPlatform;
+export default platform;

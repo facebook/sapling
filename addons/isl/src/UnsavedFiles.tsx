@@ -13,7 +13,7 @@ import {Column, Row} from './ComponentUtils';
 import {availableCwds} from './CwdSelector';
 import {T, t} from './i18n';
 import {readAtom, writeAtom} from './jotaiUtils';
-import foundPlatform from './platform';
+import platform from './platform';
 import {showModal} from './useModal';
 import {registerCleanup, registerDisposable} from './utils';
 import {Button} from 'isl-components/Button';
@@ -54,7 +54,7 @@ export function UnsavedFilesCount() {
     const options: Array<ContextMenuItem> = disambiguated.map((name, i) => ({
       label: t('Open $name', {replace: {$name: name}}),
       onClick: () => {
-        foundPlatform.openFile(fullPaths[i]);
+        platform.openFile(fullPaths[i]);
       },
     }));
     options.push({type: 'divider'});

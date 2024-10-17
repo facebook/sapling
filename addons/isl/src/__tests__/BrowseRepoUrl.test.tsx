@@ -6,7 +6,7 @@
  */
 
 import App from '../App';
-import foundPlatform from '../platform';
+import platform from '../platform';
 import {ignoreRTL} from '../testQueries';
 import {
   closeCommitInfoSidebar,
@@ -71,7 +71,7 @@ describe('Browse repo url', () => {
     setCodeBrowserConfig('https://www.example.com/repo/browse/%s');
     clickBrowseRepo();
 
-    const openLinkSpy = jest.spyOn(foundPlatform, 'openExternalLink').mockImplementation(() => {});
+    const openLinkSpy = jest.spyOn(platform, 'openExternalLink').mockImplementation(() => {});
     expectMessageSentToServer({
       type: 'getRepoUrlAtHash',
       revset: '1',
@@ -93,7 +93,7 @@ describe('Browse repo url', () => {
     setCodeBrowserConfig('https://www.example.com/repo/browse/%s');
     clickBrowseRepo();
 
-    const openLinkSpy = jest.spyOn(foundPlatform, 'openExternalLink').mockImplementation(() => {});
+    const openLinkSpy = jest.spyOn(platform, 'openExternalLink').mockImplementation(() => {});
     expectMessageSentToServer({
       type: 'getRepoUrlAtHash',
       revset: '1',
@@ -137,7 +137,7 @@ describe('Browse repo url', () => {
       });
 
       await waitFor(() => {
-        const copySpy = jest.spyOn(foundPlatform, 'clipboardCopy').mockImplementation(() => {});
+        const copySpy = jest.spyOn(platform, 'clipboardCopy').mockImplementation(() => {});
         expect(copySpy).toHaveBeenCalledWith(
           'https://www.example.com/repo/browse/a/file1.txt',
           undefined,

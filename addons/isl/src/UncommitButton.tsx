@@ -10,7 +10,7 @@ import {codeReviewProvider, diffSummary} from './codeReview/CodeReviewInfo';
 import {t, T} from './i18n';
 import {UncommitOperation} from './operations/Uncommit';
 import {useRunOperation} from './operationsState';
-import foundPlatform from './platform';
+import platform from './platform';
 import {dagWithPreviews} from './previews';
 import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
@@ -51,7 +51,7 @@ export function UncommitButton() {
         onClick={async e => {
           e.stopPropagation();
           const [confirmed, changedFilesResult] = await Promise.all([
-            foundPlatform.confirm(
+            platform.confirm(
               t('Are you sure you want to Uncommit?'),
               hasChildren
                 ? t(

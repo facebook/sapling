@@ -6,7 +6,7 @@
  */
 
 import App from '../App';
-import foundPlatform from '../platform';
+import platform from '../platform';
 import {
   TEST_COMMIT_HISTORY,
   expectMessageSentToServer,
@@ -32,7 +32,7 @@ describe('toasts', () => {
   });
 
   it('shows toast when copying commit hash', () => {
-    const copySpy = jest.spyOn(foundPlatform, 'clipboardCopy').mockImplementation(() => {});
+    const copySpy = jest.spyOn(platform, 'clipboardCopy').mockImplementation(() => {});
     fireEvent.contextMenu(screen.getByTestId('commit-e'));
     fireEvent.click(screen.getByText('Copy Commit Hash "e"'));
     expect(screen.getByText('Copied e')).toBeInTheDocument();

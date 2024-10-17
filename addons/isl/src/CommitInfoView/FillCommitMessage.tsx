@@ -15,7 +15,7 @@ import {Internal} from '../Internal';
 import {tracker} from '../analytics';
 import {T, t} from '../i18n';
 import {readAtom, writeAtom} from '../jotaiUtils';
-import foundPlatform from '../platform';
+import platform from '../platform';
 import {dagWithPreviews} from '../previews';
 import {layout} from '../stylexUtils';
 import {useModal} from '../useModal';
@@ -107,7 +107,7 @@ export function FillCommitMessage({commit, mode}: {commit: CommitInfo; mode: Com
     {
       label: t('Clear commit message'),
       onClick: async () => {
-        const confirmed = await foundPlatform.confirm(
+        const confirmed = await platform.confirm(
           t('Are you sure you want to clear the currently edited commit message?'),
         );
         if (confirmed) {

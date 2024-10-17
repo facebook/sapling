@@ -17,7 +17,7 @@ import {tracker} from './analytics';
 import {getFeatureFlag} from './featureFlags';
 import {T, t} from './i18n';
 import {localStorageBackedAtom, readAtom} from './jotaiUtils';
-import foundPlatform from './platform';
+import platform from './platform';
 import {uncommittedChangesWithPreviews} from './previews';
 import {showModal} from './useModal';
 import * as stylex from '@stylexjs/stylex';
@@ -114,7 +114,7 @@ export async function confirmNoBlockingDiagnostics(
   if (!readAtom(shouldWarnAboutDiagnosticsAtom)) {
     return true;
   }
-  if (foundPlatform.platformName === 'vscode') {
+  if (platform.platformName === 'vscode') {
     const allFiles = new Set<string>();
     for (const file of readAtom(uncommittedChangesWithPreviews)) {
       if (selection.isFullyOrPartiallySelected(file.path)) {
@@ -249,7 +249,7 @@ function DiagnosticsList({
                       key={i}
                       xstyle={styles.diagnosticRow}
                       onClick={() => {
-                        foundPlatform.openFile(filepath, {line: d.range.startLine + 1});
+                        platform.openFile(filepath, {line: d.range.startLine + 1});
                         tracker.track('DiagnosticsConfirmationAction', {
                           extras: {action: 'openFile'},
                         });

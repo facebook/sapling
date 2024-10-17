@@ -8,7 +8,7 @@
 import type {Comparison} from 'shared/Comparison';
 
 import {writeAtom} from '../jotaiUtils';
-import foundPlatform from '../platform';
+import platform from '../platform';
 import {atom} from 'jotai';
 import {ComparisonType} from 'shared/Comparison';
 
@@ -27,7 +27,7 @@ export const currentComparisonMode = atom<ComparisonMode>(
 
 /** Open Comparison View for a given comparison type */
 export async function showComparison(comparison: Comparison) {
-  if (await foundPlatform.openDedicatedComparison?.(comparison)) {
+  if (await platform.openDedicatedComparison?.(comparison)) {
     return;
   }
   writeAtom(currentComparisonMode, {comparison, visible: true});
