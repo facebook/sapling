@@ -14,6 +14,7 @@ use cpython_ext::ResultPyErrExt;
 use storemodel::Bytes;
 use storemodel::FileStore as NativeFileStore;
 use storemodel::InsertOpts;
+use storemodel::Kind;
 use storemodel::SerializationFormat;
 use storemodel::TreeItemFlag;
 use storemodel::TreeStore as NativeTreeStore;
@@ -77,6 +78,23 @@ py_class!(pub class TreeStore |py| {
         let inner = self.inner(py);
         let path = RepoPath::from_str(path).map_pyerr(py)?;
         let id = py.allow_threads(|| inner.insert_tree(opts.0, path, items.0)).map_pyerr(py)?;
+        Ok(Serde(id))
+    }
+
+    /// insert_data(opts, path, data: bytes) -> node
+    /// opts: {parents: List[node], hg_flags: int}
+    ///
+    /// The callsite takes care of serialization.
+    /// `data` does not include Git or Hg SHA1 headers.
+    ///
+    /// Check `storemodel::KeyStore` for details.
+    def insert_data(&self, opts: Serde<InsertOpts>, path: &str, data: PyBytes) -> PyResult<Serde<Id20>> {
+        let mut opts = opts.0;
+        opts.kind = Kind::Tree;
+        let path = RepoPath::from_str(path).map_pyerr(py)?;
+        let data = data.data(py);
+        let inner = self.inner(py);
+        let id = py.allow_threads(|| inner.insert_data(opts, path, data)).map_pyerr(py)?;
         Ok(Serde(id))
     }
 
