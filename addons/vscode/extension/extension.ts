@@ -10,7 +10,6 @@ import type {Logger} from 'isl-server/src/logger';
 import type {ServerPlatform} from 'isl-server/src/serverPlatform';
 import type {RepositoryContext} from 'isl-server/src/serverTypes';
 
-import packageJson from '../package.json';
 import {DeletedFileContentProvider} from './DeletedFileContentProvider';
 import {registerSaplingDiffContentProvider} from './DiffContentProvider';
 import {Internal} from './Internal';
@@ -20,6 +19,7 @@ import {registerCommands} from './commands';
 import {getCLICommand} from './config';
 import {ensureTranslationsLoaded} from './i18n';
 import {registerISLCommands} from './islWebviewPanel';
+import {extensionVersion} from './utils';
 import {getVSCodePlatform} from './vscodePlatform';
 import {makeServerSideTracker} from 'isl-server/src/analytics/serverSideTracker';
 import * as util from 'node:util';
@@ -32,7 +32,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const extensionTracker = makeServerSideTracker(
     logger,
     platform as ServerPlatform,
-    packageJson.version,
+    extensionVersion,
   );
   try {
     const ctx: RepositoryContext = {

@@ -11,11 +11,11 @@ import type {ServerPlatform} from 'isl-server/src/serverPlatform';
 import type {AppMode, ClientToServerMessage, ServerToClientMessage} from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
 
-import packageJson from '../package.json';
 import {executeVSCodeCommand} from './commands';
 import {getCLICommand, PERSISTED_STORAGE_KEY_PREFIX, shouldOpenBeside} from './config';
 import {getWebviewOptions, htmlForWebview} from './htmlForWebview';
 import {locale, t} from './i18n';
+import {extensionVersion} from './utils';
 import {onClientConnection} from 'isl-server/src';
 import {deserializeFromString, serializeToString} from 'isl/src/serialize';
 import {ComparisonType, isComparison, labelForComparison} from 'shared/Comparison';
@@ -316,7 +316,7 @@ function populateAndSetISLWebview<W extends vscode.WebviewPanel | vscode.Webview
     appMode: mode,
     logger,
     command: getCLICommand(),
-    version: packageJson.version,
+    version: extensionVersion,
   });
 
   panelOrView.onDidDispose(() => {
