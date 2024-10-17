@@ -401,11 +401,9 @@ def wraprepo(repo):
 
 def setuptreestores(repo, mfl):
     if git.isgitstore(repo):
-        mfl._isgit = True
         mfl._iseager = False
         mfl.datastore = git.openstore(repo)
     elif eagerepo.iseagerepo(repo) or repo.storage_format() == "revlog":
-        mfl._isgit = False
         mfl._iseager = True
         store = repo.fileslog.filestore
         mfl.datastore = EagerDataStore(store)
@@ -416,7 +414,6 @@ def setuptreestores(repo, mfl):
                 "incompatible eagerrepo store: %r (expect EagerRepoStore)" % store
             )
     else:
-        mfl._isgit = False
         mfl._iseager = False
         mfl.makeruststore()
 
@@ -426,7 +423,6 @@ class basetreemanifestlog:
         self.recentlinknode = None
         cachesize = 4
         self._treemanifestcache = util.lrucachedict(cachesize)
-        self._isgit = False
         # store object used to construct storemodel.TreeStore
         self._raw_store = None
 
@@ -435,6 +431,14 @@ class basetreemanifestlog:
         return bindings.storemodel.TreeStore.from_store(
             self._raw_store or self.datastore
         )
+
+    @util.propertycache
+    def _isgit(self):
+        """Whether the Git serialization format is used.
+        Note: This does not mean a libgit2 or ".git" store. Other stores like
+        the EagerRepoStore, or the revisionstore can also speak the Git format.
+        """
+        return self.abstract_store().format() == "git"
 
     def add(
         self,
