@@ -863,7 +863,7 @@ impl TailingWalkVisitor for WalkState {
                 .deferred_bcs
                 .iter()
                 .flat_map(|e| e.value().clone())
-                .group_by(|e| e.label)
+                .chunk_by(|e| e.label)
                 .into_iter()
                 .map(|(key, group)| (key, group.count()))
                 .collect();

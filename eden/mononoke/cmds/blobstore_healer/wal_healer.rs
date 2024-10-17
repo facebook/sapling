@@ -187,7 +187,7 @@ impl WalHealer {
         let healing_futures: Vec<(_, u64)> = queue_entries
             .into_iter()
             .sorted_by_key(|entry| entry.blobstore_key.clone())
-            .group_by(|entry| entry.blobstore_key.clone())
+            .chunk_by(|entry| entry.blobstore_key.clone())
             .into_iter()
             .map(|(key, entries)| {
                 let entries: Vec<_> = entries.into_iter().collect();

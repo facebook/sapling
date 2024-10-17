@@ -503,7 +503,7 @@ async fn process_deletion_nodes(
     deleted_to_last_mapping.sort_by_key(|(deleted_linknode, _)| *deleted_linknode);
     deleted_to_last_mapping
         .into_iter()
-        .group_by(|(deleted_linknode, _)| **deleted_linknode)
+        .chunk_by(|(deleted_linknode, _)| **deleted_linknode)
         .into_iter()
         .for_each(|(deleted_linknode, grouped_last)| {
             history_graph.insert(
@@ -789,7 +789,7 @@ async fn augment_history_graph_insertions_with_mutable_ancestry(
     graph_insertions.sort_unstable_by_key(|((_, path), _)| path.clone());
     let graph_insertions_by_path = graph_insertions
         .into_iter()
-        .group_by(|((_, path), _)| path.clone());
+        .chunk_by(|((_, path), _)| path.clone());
     let graph_insertions_by_path = graph_insertions_by_path
         .into_iter()
         .map(|(k, v)| (k, v.collect::<Vec<_>>()))

@@ -218,7 +218,7 @@ impl ValidatingVisitor {
             ),
             checks_by_node_type: include_checks
                 .into_iter()
-                .group_by(|c| c.node_type())
+                .chunk_by(|c| c.node_type())
                 .into_iter()
                 .map(|(key, group)| (key, HashSet::from_iter(group)))
                 .collect(),

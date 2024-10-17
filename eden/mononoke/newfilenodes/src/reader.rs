@@ -615,7 +615,7 @@ async fn select_paths<I: Iterator<Item = PathHashBytes>>(
     recorder: &PerfCounterRecorder<'_>,
 ) -> Result<HashMap<PathHashBytes, PathBytes>, ErrorKind> {
     let futs = iter
-        .group_by(|path_hash| connections.shard_id(path_hash))
+        .chunk_by(|path_hash| connections.shard_id(path_hash))
         .into_iter()
         .map(|(shard_id, group)| {
             let group = group.collect::<Vec<_>>();
