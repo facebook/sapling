@@ -32,15 +32,6 @@ export function arraysEqual<T>(a: Array<T>, b: Array<T>): boolean {
 
 export type NonNullReactElement = React.ReactElement | React.ReactFragment;
 
-/**
- * name of the isl platform being used,
- * for example 'browser' or 'vscode'.
- * Note: This is exposed outisde of isl/platform.ts to prevent import cycles.
- */
-export function islPlatformName(): string {
-  return window.islPlatform?.platformName ?? 'browser';
-}
-
 export function getWindowWidthInPixels(): number {
   if (isTest) {
     return 1000;
