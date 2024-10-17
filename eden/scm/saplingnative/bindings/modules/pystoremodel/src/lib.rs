@@ -68,7 +68,8 @@ py_class!(pub class FileStore |py| {
 py_class!(pub class TreeStore |py| {
     data inner: Arc<dyn NativeTreeStore>;
 
-    /// insert_file(opts, path: str, data: bytes) -> node
+    /// insert_tree(opts, path: str, items: [(name, node, flag)]) -> node
+    /// flag: 'directory' | {'file': 'regular' | 'executable' | 'symlink' | 'git_submodule'})
     /// opts: {parents: List[node], hg_flags: int}
     ///
     /// Check `storemodel::TreeStore` for details.
