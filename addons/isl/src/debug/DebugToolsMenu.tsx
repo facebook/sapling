@@ -13,7 +13,6 @@ import {colors} from '../../../components/theme/tokens.stylex';
 import serverApi, {debugLogMessageTraffic} from '../ClientToServerAPI';
 import {Column, Row} from '../ComponentUtils';
 import {DropdownField, DropdownFields} from '../DropdownFields';
-import messageBus from '../MessageBus';
 import {enableReactTools, enableReduxTools} from '../atoms/debugToolAtoms';
 import {holdingCtrlAtom} from '../atoms/keyboardAtoms';
 import {DagCommitInfo} from '../dag/dagCommitInfo';
@@ -409,7 +408,7 @@ const forceDisconnectDuration = atom<number>(3000);
 
 function ForceDisconnectButton() {
   const [duration, setDuration] = useAtom(forceDisconnectDuration);
-  const forceDisconnect = messageBus.forceDisconnect?.bind(messageBus);
+  const forceDisconnect = platform.messageBus.forceDisconnect?.bind(platform.messageBus);
   if (forceDisconnect == null) {
     return null;
   }

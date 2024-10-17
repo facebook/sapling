@@ -18,8 +18,13 @@ jest.mock('./logger');
 // jest doesn't have the stylex compilation step, let's just mock it
 jest.mock('@stylexjs/stylex');
 
-// Mock MessageBus before other logic which might have effects on it.
-jest.mock('./MessageBus');
+// Mock MessageBus via LocalWebSocketEventBus before other logic which might have effects on it.
+jest.mock('./LocalWebSocketEventBus', () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/consistent-type-imports
+  const TestMessageBus = (require('./TestingMessageBus') as typeof import('./TestingMessageBus'))
+    .TestingEventBus;
+  return {LocalWebSocketEventBus: TestMessageBus};
+});
 
 import {configure} from '@testing-library/react';
 

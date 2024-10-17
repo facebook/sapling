@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {MessageBus} from './MessageBus';
 import type {ThemeColor} from './theme';
 import type {
   Disposable,
@@ -83,6 +84,8 @@ export interface Platform {
     onDidChangeTheme(callback: (theme: ThemeColor) => unknown): Disposable;
     resetCSS?: string;
   };
+
+  messageBus: MessageBus;
 }
 
 declare global {

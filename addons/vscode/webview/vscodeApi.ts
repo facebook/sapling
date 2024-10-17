@@ -10,8 +10,8 @@ export type VSCodeAPI = {
   postMessage(message: any): void;
 };
 
-const vscode: VSCodeAPI | null =
-  // @ts-expect-error acquireVsCodeApi extern not guaranteed to be defined
-  typeof acquireVsCodeApi !== 'undefined' ? acquireVsCodeApi() : null;
+declare global {
+  function acquireVsCodeApi(): VSCodeAPI;
+}
 
-export default vscode;
+export const vscodeApi = acquireVsCodeApi();

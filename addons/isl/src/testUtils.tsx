@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {TestingEventBus} from './__mocks__/MessageBus';
+import type {TestingEventBus} from './TestingMessageBus';
 import type {
   ClientToServerMessage,
   CommitInfo,
@@ -17,13 +17,13 @@ import type {
 } from './types';
 import type {Writable} from 'shared/typeUtils';
 
-import messageBus from './MessageBus';
+import platform from './platform';
 import {deserializeFromString, serializeToString} from './serialize';
 import {mostRecentSubscriptionIds} from './serverAPIState';
 import {screen, act, within, waitFor} from '@testing-library/react';
 import {nextTick} from 'shared/testUtils';
 
-const testMessageBus = messageBus as TestingEventBus;
+const testMessageBus = platform.messageBus as TestingEventBus;
 
 export function simulateMessageFromServer(message: ServerToClientMessage): void {
   testMessageBus.simulateMessage(serializeToString(message));

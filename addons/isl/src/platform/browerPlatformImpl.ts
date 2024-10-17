@@ -8,6 +8,8 @@
 import type {RepoRelativePath, OneIndexedLineNumber} from '../types';
 import type {Json} from 'shared/typeUtils';
 
+import {LocalWebSocketEventBus} from '../LocalWebSocketEventBus';
+
 // important: this file should not try to import other code from 'isl',
 // since it will end up getting duplicated when bundling.
 
@@ -90,4 +92,14 @@ export const browserPlatformImpl = {
       return undefined;
     }
   },
+
+  messageBus: new LocalWebSocketEventBus(
+    process.env.NODE_ENV === 'development'
+      ? // in dev mode, Vite hosts our files for hot-reloading.
+        // This means we can't host the ws server on the same port as the page.
+        'localhost:3001'
+      : // in production, we serve both the static files and ws from the same port
+        location.host,
+    WebSocket,
+  ),
 };

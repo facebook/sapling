@@ -20,11 +20,11 @@ import type {
 
 import {hiddenRemoteBookmarksAtom} from './BookmarksData';
 import serverAPI from './ClientToServerAPI';
-import messageBus from './MessageBus';
 import {latestSuccessorsMapAtom, successionTracker} from './SuccessionTracker';
 import {Dag, DagCommitInfo} from './dag/dag';
 import {readInterestingAtoms, serializeAtomsState} from './debug/getInterestingAtoms';
 import {atomFamilyWeak, configBackedAtom, readAtom, writeAtom} from './jotaiUtils';
+import platform from './platform';
 import {atomResetOnCwdChange, repositoryData} from './repositoryData';
 import {registerCleanup, registerDisposable} from './utils';
 import {DEFAULT_DAYS_OF_COMMITS_TO_LOAD} from 'isl-server/src/constants';
@@ -90,7 +90,7 @@ registerCleanup(
 export const reconnectingStatus = atom<MessageBusStatus>({type: 'initializing'});
 registerDisposable(
   reconnectingStatus,
-  messageBus.onChangeStatus(status => {
+  platform.messageBus.onChangeStatus(status => {
     writeAtom(reconnectingStatus, status);
   }),
   import.meta.hot,

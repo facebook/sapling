@@ -5,9 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {MessageBus} from './MessageBus';
 import type {ServerToClientMessage, ClientToServerMessage, Disposable} from './types';
 
-import messageBus from './MessageBus';
+import platform from './platform';
 import {deserializeFromString, serializeToString} from './serialize';
 import {defer} from 'shared/utils';
 
@@ -32,11 +33,13 @@ export interface ClientToServerAPI {
  * Use to send and listen for well-typed events with the server
  */
 class ClientToServerAPIImpl implements ClientToServerAPI {
+  constructor(private messageBus: MessageBus) {}
+
   private listenersByType = new Map<
     string,
     Set<(message: IncomingMessage) => void | Promise<void>>
   >();
-  private incomingListener = messageBus.onMessage(event => {
+  private incomingListener = this.messageBus.onMessage(event => {
     const data = deserializeFromString(event.data as string) as IncomingMessage;
     if (debugLogMessageTraffic.shoudlLog) {
       // eslint-disable-next-line no-console
@@ -174,7 +177,7 @@ class ClientToServerAPIImpl implements ClientToServerAPI {
   }
 
   postMessage(message: ClientToServerMessage) {
-    messageBus.postMessage(serializeToString(message));
+    this.messageBus.postMessage(serializeToString(message));
     if (debugLogMessageTraffic.shoudlLog) {
       // eslint-disable-next-line no-console
       console.log('%c Outgoing ⮕ ', 'color:white;background-color:royalblue', message);
@@ -187,7 +190,7 @@ class ClientToServerAPIImpl implements ClientToServerAPI {
   onConnectOrReconnect(callback: () => (() => unknown) | unknown): () => void {
     let reconnecting = true;
     let disposeCallback: (() => unknown) | unknown = undefined;
-    const disposable = messageBus.onChangeStatus(newStatus => {
+    const disposable = this.messageBus.onChangeStatus(newStatus => {
       if (newStatus.type === 'reconnecting') {
         reconnecting = true;
       } else if (newStatus.type === 'open') {
@@ -229,7 +232,7 @@ class ClientToServerAPIImpl implements ClientToServerAPI {
   }
 }
 
-const clientToServerAPI = new ClientToServerAPIImpl();
+const clientToServerAPI = new ClientToServerAPIImpl(platform.messageBus);
 
 declare global {
   interface Window {

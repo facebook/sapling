@@ -31,8 +31,6 @@ import {nullthrows} from 'shared/utils';
 
 afterEach(cleanup);
 
-jest.mock('../platform');
-
 const UNCOMMITTED_CHANGES_DIFF = `\
 diff --git deletedFile.txt deletedFile.txt
 deleted file mode 100644
@@ -88,6 +86,12 @@ diff --git someFile.js someFile.js
    console.log(variable_in_content_line);
  }
 `;
+
+Object.defineProperty(navigator, 'clipboard', {
+  value: {
+    writeText: jest.fn(() => Promise.resolve()),
+  },
+});
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
@@ -377,15 +381,15 @@ describe('ComparisonView', () => {
     act(() => {
       fireEvent.click(inComparisonView().getByText('foo.go'));
     });
-    expect(platform.clipboardCopy).toHaveBeenCalledTimes(1);
-    expect(platform.clipboardCopy).toHaveBeenCalledWith('foo.go');
+    expect(navigator.clipboard.writeText).toHaveBeenCalledTimes(1);
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('foo.go');
 
     // Click on the "some/" of "some/path/foo.go".
     act(() => {
       fireEvent.click(inComparisonView().getByText('some/'));
     });
-    expect(platform.clipboardCopy).toHaveBeenCalledTimes(2);
-    expect(platform.clipboardCopy).toHaveBeenLastCalledWith('some/path/foo.go');
+    expect(navigator.clipboard.writeText).toHaveBeenCalledTimes(2);
+    expect(navigator.clipboard.writeText).toHaveBeenLastCalledWith('some/path/foo.go');
     unmountNow();
   });
 

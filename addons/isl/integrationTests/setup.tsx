@@ -14,7 +14,7 @@ import type {RepositoryContext} from 'isl-server/src/serverTypes';
 import type {TypedEventEmitter} from 'shared/TypedEventEmitter';
 
 import {onClientConnection} from '../../isl-server/src/index';
-import mockedClientMessagebus from '../src/MessageBus';
+import platform from '../src/platform';
 import {fireEvent, render, screen} from '@testing-library/react';
 import {makeServerSideTracker} from 'isl-server/src/analytics/serverSideTracker';
 import {runCommand} from 'isl-server/src/commands';
@@ -32,7 +32,7 @@ const mockTracker = makeServerSideTracker(
 );
 
 // fake client message bus that connects to server in the same process
-jest.mock('../src/MessageBus', () => {
+jest.mock('../src/LocalWebSocketEventBus', () => {
   const {TypedEventEmitter} =
     // this mock implementation is hoisted above all other imports, so we can't use imports "normally"
     // eslint-disable-next-line @typescript-eslint/no-var-requires,@typescript-eslint/consistent-type-imports
@@ -85,7 +85,7 @@ jest.mock('../src/MessageBus', () => {
     };
   }
 
-  return new IntegrationTestMessageBus();
+  return {LocalWebSocketEventBus: IntegrationTestMessageBus};
 });
 
 type MockedClientMessageBus = {
@@ -214,7 +214,7 @@ commit(date='now')
     serverToClient,
     clientToServer,
     dispose: disposeClientConnection,
-  } = mockedClientMessagebus as unknown as MockedClientMessageBus;
+  } = platform.messageBus as unknown as MockedClientMessageBus;
 
   const serverLogger = wrapLogger(console, '[server]');
 

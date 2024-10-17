@@ -9,9 +9,13 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-this-alias */
 
+import type {LocalWebSocketEventBus as LocalWebSocketEventBusType} from '../LocalWebSocketEventBus';
 import type {Writable} from 'shared/typeUtils';
 
-import {LocalWebSocketEventBus} from '../LocalWebSocketEventBus';
+const LocalWebSocketEventBus =
+  // eslint-disable-next-line @typescript-eslint/consistent-type-imports
+  (jest.requireActual('../LocalWebSocketEventBus') as typeof import('../LocalWebSocketEventBus'))
+    .LocalWebSocketEventBus;
 
 jest.mock('../urlParams', () => ({
   initialParams: new Map([['token', '1234']]),
@@ -67,7 +71,7 @@ const MockWebSocket = MockWebSocketImpl as unknown as typeof WebSocket;
 
 const DEFAULT_HOST = 'localhost:8080';
 
-function createMessageBus(): LocalWebSocketEventBus {
+function createMessageBus(): LocalWebSocketEventBusType {
   return new LocalWebSocketEventBus(DEFAULT_HOST, MockWebSocket);
 }
 

@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {MessageBus, MessageBusStatus} from '../MessageBus';
-import type {Disposable} from '../types';
+import type {MessageBus, MessageBusStatus} from './MessageBus';
+import type {Disposable} from './types';
 
 /** This fake implementation of MessageBus expects you to manually simulate messages from the server */
 export class TestingEventBus implements MessageBus {
@@ -53,6 +53,3 @@ export class TestingEventBus implements MessageBus {
     }
   }
 }
-
-const messageBus = new TestingEventBus();
-export default messageBus;

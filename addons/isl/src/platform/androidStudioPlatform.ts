@@ -75,6 +75,7 @@ const androidStudioPlatform: Platform = {
       };
     },
   },
+  messageBus: browserPlatformImpl.messageBus,
 };
 
 window.islPlatform = androidStudioPlatform;
