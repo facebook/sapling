@@ -410,6 +410,7 @@ def setuptreestores(repo, mfl):
         store = repo.fileslog.filestore
         mfl.datastore = EagerDataStore(store)
         mfl.historystore = mfl.datastore.historystore
+        mfl._raw_store = store
         if not isinstance(store, bindings.eagerepo.EagerRepoStore):
             raise error.ProgrammingError(
                 "incompatible eagerrepo store: %r (expect EagerRepoStore)" % store
@@ -426,6 +427,14 @@ class basetreemanifestlog:
         cachesize = 4
         self._treemanifestcache = util.lrucachedict(cachesize)
         self._isgit = False
+        # store object used to construct storemodel.TreeStore
+        self._raw_store = None
+
+    def abstract_store(self):
+        """returns storemodel.TreeStore backed by Rust trait object"""
+        return bindings.storemodel.TreeStore.from_store(
+            self._raw_store or self.datastore
+        )
 
     def add(
         self,
