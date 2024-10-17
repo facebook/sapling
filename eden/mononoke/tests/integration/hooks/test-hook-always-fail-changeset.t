@@ -55,15 +55,13 @@ Matches regex - should NOT pass
   remote:   Error:
   remote:     hooks failed:
   remote:     always_fail_changeset for *: This hook always fails (glob)
-  remote:     always_fail_changeset for *: This hook always fails (glob)
   remote: 
   remote:   Root cause:
   remote:     hooks failed:
   remote:     always_fail_changeset for *: This hook always fails (glob)
-  remote:     always_fail_changeset for *: This hook always fails (glob)
   remote: 
   remote:   Debug context:
-  remote:     "hooks failed:\nalways_fail_changeset for *: This hook always fails\nalways_fail_changeset for *: This hook always fails" (glob)
+  remote:     "hooks failed:\nalways_fail_changeset for *: This hook always fails" (glob)
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -81,6 +79,7 @@ Matches regex - should NOT pass
   $ hg push -r . --to master --create
   pushing rev cddcb6a5bb53 to destination mono:repo bookmark master
   searching for changes
+  no changes found
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
