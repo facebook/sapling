@@ -1,5 +1,8 @@
 #require no-eden
 
+Some Windows dummy ssh issue
+#inprocess-hg-incompatible
+
   $ . "$TESTDIR/library.sh"
 
   $ setconfig push.edenapi=true
