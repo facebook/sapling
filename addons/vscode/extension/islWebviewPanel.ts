@@ -288,7 +288,7 @@ function populateAndSetISLWebview<W extends vscode.WebviewPanel | vscode.Webview
     extensionRelativeBase: 'dist/webview',
     entryPointFile: 'webview.js',
     cssEntryPointFile: 'res/webview.css',
-    devModeScripts: ['/webview/islWebviewPreload.ts', '/webview/islWebviewEntry.tsx'],
+    devModeScripts: ['/webview/islWebviewEntry.tsx'],
     title: t('isl.title'),
     rootClass: `webview-${isPanel(panelOrView) ? 'panel' : 'view'}`,
     webview: panelOrView.webview,

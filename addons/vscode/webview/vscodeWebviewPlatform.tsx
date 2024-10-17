@@ -49,7 +49,7 @@ class VSCodeMessageBus {
 
 const persistedState: Record<string, Json> = window.islInitialPersistedState ?? {};
 
-export const vscodeWebviewPlatform: Platform = {
+const vscodeWebviewPlatform: Platform = {
   platformName: 'vscode',
   confirm: (message: string, details?: string | undefined) => {
     window.clientToServerAPI?.postMessage({type: 'platform/confirm', message, details});
@@ -217,3 +217,7 @@ declare global {
 if (import.meta.hot) {
   import.meta.hot?.invalidate();
 }
+
+window.islPlatform = vscodeWebviewPlatform;
+
+export default vscodeWebviewPlatform;

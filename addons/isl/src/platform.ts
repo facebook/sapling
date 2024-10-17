@@ -96,8 +96,14 @@ declare global {
   }
 }
 
-// Non-browser platforms are defined by setting window.islPlatform
+// [!] NOTE: On some platforms (vscode), this file is replaced at bundle time with a platform-specific implementation
+// of the Platform interface.
+// This file should have no other side effects than exporting the platform.
+
+// However, non-vscode but non-browser platforms are defined by setting window.islPlatform
 // before the main ISL script loads.
+
+/** The ISL client Platform. This may be BrowserPlatform, VSCodeWebviewPlatform, or another platforms, determined at runtime.  */
 const foundPlatform = window.islPlatform ?? browserPlatform;
 window.islPlatform = foundPlatform;
 

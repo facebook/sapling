@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Plugin} from 'vite';
+import type {Plugin, PluginOption} from 'vite';
 
 import react from '@vitejs/plugin-react';
 import fs, {existsSync} from 'node:fs';
@@ -61,9 +61,50 @@ function moveStylexFilenamePlugin(): Plugin {
   };
 }
 
+const replaceFiles = (
+  replacements?: Array<{
+    file: string;
+    replacement: string;
+  }>,
+): PluginOption => {
+  const projectRoot = process.cwd();
+  replacements = replacements?.map(x => ({
+    file: path.join(projectRoot, x.file),
+    replacement: path.join(projectRoot, x.replacement),
+  }));
+
+  return {
+    name: 'vite-plugin-replace-files',
+    enforce: 'pre',
+    async resolveId(source: string, importer: string | undefined, options: any) {
+      const resolvedFile = await this.resolve(source, importer, {
+        ...options,
+        ...{skipSelf: true},
+      });
+
+      const foundReplacementFile = replacements?.find(
+        replacement => replacement.file == resolvedFile?.id,
+      );
+
+      if (foundReplacementFile) {
+        return {
+          id: foundReplacementFile.replacement,
+        };
+      }
+      return null;
+    },
+  };
+};
+
 export default defineConfig(({mode}) => ({
   base: '',
   plugins: [
+    replaceFiles([
+      {
+        file: '../isl/src/platform.ts',
+        replacement: './webview/vscodeWebviewPlatform.tsx',
+      },
+    ]),
     react({
       babel: {
         plugins: [
