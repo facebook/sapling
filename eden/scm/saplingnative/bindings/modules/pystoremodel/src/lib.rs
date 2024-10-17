@@ -11,6 +11,7 @@ use cpython::*;
 use cpython_ext::convert::ImplInto;
 use cpython_ext::convert::Serde;
 use cpython_ext::ResultPyErrExt;
+use storemodel::Bytes;
 use storemodel::FileStore as NativeFileStore;
 use storemodel::InsertOpts;
 use storemodel::SerializationFormat;
@@ -26,6 +27,12 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let m = PyModule::new(py, &name)?;
     m.add_class::<FileStore>(py)?;
     m.add_class::<TreeStore>(py)?;
+    m.add(
+        py,
+        "deserialize_tree",
+        py_fn!(py, deserialize_tree(data: Serde<Bytes>, format: Serde<SerializationFormat>)),
+    )?;
+    m.add( py, "serialize_tree", py_fn!(py, serialize_tree(items: Serde<Vec<(PathComponentBuf, Id20, TreeItemFlag)>>, format: Serde<SerializationFormat>)))?;
 
     Ok(m)
 }
@@ -89,3 +96,23 @@ py_class!(pub class TreeStore |py| {
         Self::create_instance(py, inner)
     }
 });
+
+fn deserialize_tree(
+    py: Python,
+    data: Serde<Bytes>,
+    format: Serde<SerializationFormat>,
+) -> PyResult<Serde<Vec<(PathComponentBuf, Id20, TreeItemFlag)>>> {
+    let tree_entry = storemodel::basic_parse_tree(data.0, format.0).map_pyerr(py)?;
+    let iter = tree_entry.iter().map_pyerr(py)?;
+    let result = iter.collect::<Result<Vec<_>, _>>().map_pyerr(py)?;
+    Ok(Serde(result))
+}
+
+fn serialize_tree(
+    py: Python,
+    items: Serde<Vec<(PathComponentBuf, Id20, TreeItemFlag)>>,
+    format: Serde<SerializationFormat>,
+) -> PyResult<Serde<Bytes>> {
+    let bytes = storemodel::basic_serialize_tree(items.0, format.0).map_pyerr(py)?;
+    Ok(Serde(bytes))
+}
