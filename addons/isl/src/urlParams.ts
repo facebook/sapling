@@ -11,6 +11,12 @@ import {logger} from './logger';
 
 const INITIAL_PARAMS_LOCAL_STORAGE_KEY = 'ISLInitialParams';
 
+declare global {
+  interface Window {
+    relativeDateNowOverride?: number;
+  }
+}
+
 /**
  * Extract parameters from URL, then remove from URL to be cleaner (and hide sensitive tokens)
  */
@@ -48,5 +54,16 @@ export function computeInitialParams(isBrowserPlatform: boolean): Map<InitialPar
       logger.log('Failed to load initial params from local storage', error);
     }
   }
+
+  // relative date's "now" override is stored separate in window for easier access
+  const nowOverride = initialParams?.get('now');
+  if (nowOverride) {
+    try {
+      window.relativeDateNowOverride = parseInt(nowOverride);
+    } catch (error) {
+      logger.error('relative date "now" override in the wrong format', error);
+    }
+  }
+
   return initialParams ?? new Map();
 }

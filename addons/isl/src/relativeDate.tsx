@@ -6,7 +6,6 @@
  */
 
 import {getCurrentLanguage, useCurrentLang} from './i18n';
-import platform from './platform';
 
 /**
  * Originally adapted from https://github.com/azer/relative-date.
@@ -186,8 +185,11 @@ export function RelativeDate({
   return <>{relativeDate(date, {reference, useShortVariant, useNumbersOnly, useRelativeForm})}</>;
 }
 
-/** Get "now" for relativeDate use-case. Can be overriden by "?now=unixtime". */
+/** Get "now" for relativeDate use-case. Can be overriden by "?now=unixtime" in ISL browser environments. */
 function now(): number {
-  const forceNowStr = platform.initialUrlParams?.get('now');
-  return forceNowStr == null ? Date.now() : parseInt(forceNowStr);
+  const forceNowStr =
+    typeof window === 'undefined'
+      ? undefined
+      : (window as {relativeDateNowOverride?: number}).relativeDateNowOverride;
+  return forceNowStr == null ? Date.now() : forceNowStr;
 }
