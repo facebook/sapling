@@ -3326,6 +3326,12 @@ def debugwireargs(ui, repopath, *vals, **opts) -> None:
         ("p", "print", False, _("print name to hash mapping of created nodes")),
         ("b", "bookmarks", True, _("create bookmarks")),
         ("f", "files", True, _("create files")),
+        (
+            "",
+            "parent-order",
+            "",
+            _("parent order, one of: hash, name, hash-reverse, name-reverse"),
+        ),
         ("", "write-env", "", _("write NAME=HEX per line to a given file (ADVANCED)")),
     ],
 )

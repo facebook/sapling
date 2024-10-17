@@ -436,6 +436,25 @@ def drawdag(repo, text: str, **opts) -> None:
         return _drawdagintransaction(repo, text, tr, **opts)
 
 
+def _sort_parents(pctxs, order: str):
+    """sort praents by order:
+    - hash, hash-reverse: commit hash
+    - name, name-reverse: commit name (message)
+    """
+    reverse = False
+    if order.endswith("-reverse"):
+        reverse = True
+        order = order[: -len("-reverse")]
+    if order == "name":
+        key = lambda c: c.description()
+    elif order == "hash":
+        key = lambda c: c.node()
+    else:
+        raise error.Abort(_("unknown order: %s") % order)
+    pctxs.sort(key=key, reverse=reverse)
+    return pctxs
+
+
 def _drawdagintransaction(repo, text: str, tr, **opts) -> None:
     text, script = _split_script(text)
 
@@ -459,6 +478,13 @@ def _drawdagintransaction(repo, text: str, tr, **opts) -> None:
     datere = re.compile(r"^(\w+) has date\s*[= ]([0-9 ]+)$", re.M)
     for name, date in datere.findall(commenttext):
         dates[name] = date
+
+    # parse parent order "sort parents of X by Y"
+    default_parent_order = opts.get("parent_order") or "hash"
+    parent_order = collections.defaultdict(lambda: default_parent_order)
+    parent_order_re = re.compile(r"^sort parents of\s+(\w+)\s+by\s+([a-z-]+)$", re.M)
+    for name, order in parent_order_re.findall(commenttext):
+        parent_order[name] = order
 
     # do not create default files? (ex. commit A has file "A")
     defaultfiles = (
@@ -580,7 +606,8 @@ def _drawdagintransaction(repo, text: str, tr, **opts) -> None:
         if name in committed:
             continue
         pctxs = [repo[committed[n]] for n in parents]
-        pctxs.sort(key=lambda c: c.node())
+        order = parent_order[name]
+        pctxs = _sort_parents(pctxs, order)
 
         if script:
             ctx = output.get_commit_ctx(name, repo, pctxs)

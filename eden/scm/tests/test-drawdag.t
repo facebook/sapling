@@ -534,3 +534,34 @@ Can combine comment files with commit():
   +++ b/python
   @@ -0,0 +1,1 @@
   +bar
+
+Specify parent order:
+  $ newrepo
+  $ drawdag --parent-order=name << 'EOS'
+  > C   F
+  > |\  |\
+  > A B E D
+  > EOS
+  $ hg log -r "p1(merge())" -T '{desc}\n'
+  A
+  D
+
+  $ newrepo
+  $ drawdag --parent-order=name-reverse << 'EOS'
+  > C   F
+  > |\  |\
+  > A B E D
+  > EOS
+  $ hg log -r "p1(merge())" -T '{desc}\n'
+  B
+  E
+
+  $ newrepo
+  $ drawdag << 'EOS'
+  > C   F     # sort parents of C by name
+  > |\  |\    # sort parents of F by name-reverse
+  > A B E D
+  > EOS
+  $ hg log -r "p1(merge())" -T '{desc}\n'
+  A
+  E
