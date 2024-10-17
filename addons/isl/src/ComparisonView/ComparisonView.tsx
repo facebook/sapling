@@ -29,7 +29,7 @@ import {Icon} from 'isl-components/Icon';
 import {RadioGroup} from 'isl-components/Radio';
 import {Subtle} from 'isl-components/Subtle';
 import {Tooltip} from 'isl-components/Tooltip';
-import {atom, useAtom, useAtomValue, useSetAtom} from 'jotai';
+import {useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {useEffect, useMemo, useState} from 'react';
 import {
   comparisonIsAgainstHead,
@@ -447,8 +447,7 @@ function ComparisonViewFile({
     // Note: we use latestHeadCommit WITHOUT previews, so we don't accidentally cache the file content
     // AGAIN on the same data while waiting for some new operation to finish.
     // eslint-disable-next-line react-hooks/rules-of-hooks
-    useComparisonInvalidationKeyHook: () =>
-      useAtomValue(atom(get => get(latestHeadCommit)?.hash)) ?? '',
+    useComparisonInvalidationKeyHook: () => useAtomValue(latestHeadCommit)?.hash ?? '',
     useThemeHook: () => useAtomValue(themeState),
     t,
     collapsed,

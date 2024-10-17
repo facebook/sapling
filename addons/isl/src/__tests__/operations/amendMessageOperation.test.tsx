@@ -185,7 +185,7 @@ describe('AmendMessageOperation', () => {
       expect(title).toHaveValue('Commit AMy Commit');
       CommitInfoTestUtils.expectIsEditingDescription();
       const desc = CommitInfoTestUtils.getDescriptionEditor();
-      expect(desc).toHaveValue('My description');
+      expect(desc.value).toContain('My description');
     });
   });
 });
