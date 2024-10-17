@@ -23,6 +23,7 @@ export default function openFile(
   filePath: string,
   line?: number,
   preview?: boolean,
+  onOpened?: (editor: vscode.TextEditor) => void,
 ) {
   if (repo == null) {
     return;
@@ -50,6 +51,7 @@ export default function openFile(
             vscode.TextEditorRevealType.InCenterIfOutsideViewport,
           ); // scroll to line
         }
+        onOpened?.(editor);
       },
       err => {
         vscode.window.showErrorMessage(err.message ?? String(err));
