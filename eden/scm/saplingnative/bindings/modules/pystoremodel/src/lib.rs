@@ -13,6 +13,7 @@ use cpython_ext::convert::Serde;
 use cpython_ext::ResultPyErrExt;
 use storemodel::FileStore as NativeFileStore;
 use storemodel::InsertOpts;
+use storemodel::SerializationFormat;
 use storemodel::TreeItemFlag;
 use storemodel::TreeStore as NativeTreeStore;
 use types::Id20;
@@ -75,6 +76,11 @@ py_class!(pub class TreeStore |py| {
         let inner = self.inner(py);
         py.allow_threads(|| inner.flush()).map_pyerr(py)?;
         Ok(PyNone)
+    }
+
+    def format(&self) -> PyResult<Serde<SerializationFormat>> {
+        let inner = self.inner(py);
+        Ok(Serde(inner.format()))
     }
 
     @staticmethod
