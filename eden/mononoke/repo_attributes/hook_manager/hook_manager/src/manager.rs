@@ -16,6 +16,7 @@ use bytes::Bytes;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::stream::futures_unordered::FuturesUnordered;
+use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::try_join;
 use futures::Future;
@@ -312,7 +313,7 @@ impl HookManager {
 
         let hooks = self.hooks_for_bookmark(bookmark);
 
-        let futs = FuturesUnordered::new();
+        let mut futs = Vec::new();
 
         let mut scuba = self.scuba.clone();
         let username = ctx.metadata().unix_name();
@@ -342,7 +343,7 @@ impl HookManager {
                 continue;
             }
 
-            for future in hook.get_futures_for_changeset_or_file_hooks(
+            let futures = hook.get_futures_for_changeset_or_file_hooks(
                 ctx,
                 bookmark,
                 &*self.content_provider,
@@ -352,11 +353,13 @@ impl HookManager {
                 cross_repo_push_source,
                 push_authored_by,
                 hook.get_config().log_only,
-            ) {
-                futs.push(future);
-            }
+            );
+            futs.extend(futures);
         }
-        futs.try_collect().await
+        futures::stream::iter(futs)
+            .buffer_unordered(100)
+            .try_collect()
+            .await
     }
 }
 
@@ -536,7 +539,7 @@ impl Hook {
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
         log_only: bool,
-    ) -> impl Iterator<Item = impl Future<Output = Result<HookOutcome, Error>> + 'cs> + 'cs {
+    ) -> Vec<impl Future<Output = Result<HookOutcome, Error>> + 'cs> {
         let mut futures = Vec::new();
 
         match self {
@@ -555,7 +558,7 @@ impl Hook {
                 /* Not a bookmark hook */
                 {}
         };
-        futures.into_iter()
+        futures
     }
 
     pub fn get_futures_for_changeset_or_file_hooks<'a: 'cs, 'cs>(
@@ -569,7 +572,7 @@ impl Hook {
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
         log_only: bool,
-    ) -> impl Iterator<Item = impl Future<Output = Result<HookOutcome, Error>> + 'cs> + 'cs {
+    ) -> Vec<impl Future<Output = Result<HookOutcome, Error>> + 'cs> {
         let mut futures = Vec::new();
 
         match self {
@@ -603,7 +606,7 @@ impl Hook {
                 /* Not a changeset or file hook */
                 {}
         };
-        futures.into_iter()
+        futures
     }
 }
 
