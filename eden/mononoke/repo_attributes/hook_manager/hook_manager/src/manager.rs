@@ -21,6 +21,7 @@ use futures::try_join;
 use futures::Future;
 use futures::TryFutureExt;
 use futures_stats::TimedFutureExt;
+use itertools::Itertools;
 use metaconfig_types::BookmarkOrRegex;
 use metaconfig_types::HookBypass;
 use metaconfig_types::HookConfig;
@@ -304,7 +305,7 @@ impl HookManager {
     pub async fn run_changesets_hooks_for_bookmark(
         &self,
         ctx: &CoreContext,
-        changesets: impl Clone + itertools::Itertools<Item = &BonsaiChangeset>,
+        changesets: &[BonsaiChangeset],
         bookmark: &BookmarkKey,
         maybe_pushvars: Option<&HashMap<String, Bytes>>,
         cross_repo_push_source: CrossRepoPushSource,
@@ -324,7 +325,7 @@ impl HookManager {
             scuba.add("user", user);
         }
 
-        for (cs, hook_name) in changesets.cartesian_product(hooks) {
+        for (cs, hook_name) in changesets.iter().cartesian_product(hooks) {
             let hook = self
                 .hooks
                 .get(hook_name)

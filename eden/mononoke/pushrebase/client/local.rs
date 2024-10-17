@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashMap;
-use std::collections::HashSet;
 
 use bookmarks::BookmarkKey;
 use bookmarks_movement::BookmarkKindRestrictions;
@@ -35,7 +34,7 @@ impl<'a, R: Repo> PushrebaseClient for LocalPushrebaseClient<'a, R> {
     async fn pushrebase(
         &self,
         bookmark: &BookmarkKey,
-        changesets: HashSet<BonsaiChangeset>,
+        changesets: &[BonsaiChangeset],
         pushvars: Option<&HashMap<String, Bytes>>,
         cross_repo_push_source: CrossRepoPushSource,
         bookmark_restrictions: BookmarkKindRestrictions,

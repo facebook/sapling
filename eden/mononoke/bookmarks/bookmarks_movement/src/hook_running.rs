@@ -55,11 +55,9 @@ pub async fn is_admin_bypass(
     Ok(true)
 }
 
-fn take_n_changeset_ids<'a>(
-    changesets: impl Iterator<Item = &'a BonsaiChangeset> + Clone,
-    n: usize,
-) -> Vec<String> {
+fn take_n_changeset_ids(changesets: &[BonsaiChangeset], n: usize) -> Vec<String> {
     changesets
+        .iter()
         .map(|cs| cs.get_changeset_id().to_string())
         .take(n)
         .collect()
@@ -148,7 +146,7 @@ pub async fn run_changeset_hooks(
     ctx: &CoreContext,
     hook_manager: &HookManager,
     bookmark: &BookmarkKey,
-    changesets: impl Iterator<Item = &BonsaiChangeset> + Clone,
+    changesets: &[BonsaiChangeset],
     pushvars: Option<&HashMap<String, Bytes>>,
     cross_repo_push_source: CrossRepoPushSource,
     push_authored_by: PushAuthoredBy,

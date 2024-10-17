@@ -373,7 +373,7 @@ async fn run_changeset_hooks_with_mgr(
     let res = hook_manager
         .run_changesets_hooks_for_bookmark(
             &ctx,
-            vec![changeset].iter(),
+            &[changeset],
             &BookmarkKey::new(bookmark_name).unwrap(),
             None,
             CrossRepoPushSource::NativeToThisRepo,

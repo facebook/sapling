@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashMap;
-use std::collections::HashSet;
 
 use bookmarks::BookmarkKey;
 use bookmarks_movement::BookmarkKindRestrictions;
@@ -31,7 +30,7 @@ use crate::PushrebaseClient;
 pub async fn normal_pushrebase<'a>(
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
-    changesets: HashSet<BonsaiChangeset>,
+    changesets: &[BonsaiChangeset],
     bookmark: &'a BookmarkKey,
     maybe_pushvars: Option<&'a HashMap<String, Bytes>>,
     hook_manager: &'a HookManager,
@@ -54,7 +53,7 @@ pub async fn normal_pushrebase<'a>(
             let result = client
                 .pushrebase(
                     bookmark,
-                    changesets.clone(),
+                    changesets,
                     maybe_pushvars,
                     cross_repo_push_source,
                     bookmark_restrictions,

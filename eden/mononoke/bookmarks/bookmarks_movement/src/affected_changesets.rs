@@ -81,10 +81,10 @@ impl AffectedChangesets {
         }
     }
 
-    pub(crate) fn with_source_changesets(source_changesets: HashSet<BonsaiChangeset>) -> Self {
+    pub(crate) fn with_source_changesets(source_changesets: &[BonsaiChangeset]) -> Self {
         Self {
             new_changesets: HashMap::new(),
-            source_changesets,
+            source_changesets: source_changesets.iter().cloned().collect(),
             already_checked_changesets: HashSet::new(),
             should_bypass_checks_on_additional_changesets: false,
         }
@@ -552,7 +552,7 @@ impl AffectedChangesets {
                 ctx,
                 hook_manager,
                 bookmark,
-                loaded_changesets.iter(),
+                loaded_changesets,
                 pushvars,
                 cross_repo_push_source,
                 push_authored_by,

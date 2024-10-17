@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashMap;
-use std::collections::HashSet;
 
 use blobstore::Loadable;
 use bookmarks::BookmarkKey;
@@ -137,7 +136,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         // commit and descendants of the base commit.
         let ctx = self.ctx();
         let blobstore = self.repo().repo_blobstore();
-        let changesets: HashSet<_> = self
+        let changesets: Vec<_> = self
             .repo()
             .commit_graph()
             .range_stream(ctx, base, head)
@@ -162,7 +161,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                 ctx,
                 self.hook_manager().as_ref(),
                 &bookmark,
-                changesets.iter(),
+                &changesets,
                 pushvars,
                 CrossRepoPushSource::NativeToThisRepo,
                 push_authored_by,
@@ -177,7 +176,7 @@ impl<R: MononokeRepo> RepoContext<R> {
             let outcome = normal_pushrebase(
                 self.ctx(),
                 &redirector.repo,
-                small_to_large.into_values().collect(),
+                &small_to_large.into_values().collect::<Vec<_>>(),
                 &large_bookmark,
                 pushvars,
                 redirector.repo.hook_manager(),
@@ -196,7 +195,7 @@ impl<R: MononokeRepo> RepoContext<R> {
             normal_pushrebase(
                 self.ctx(),
                 self.repo(),
-                changesets,
+                &changesets,
                 &bookmark,
                 pushvars,
                 self.hook_manager().as_ref(),

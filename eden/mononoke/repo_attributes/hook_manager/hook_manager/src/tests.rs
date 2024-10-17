@@ -469,7 +469,7 @@ async fn run_changeset_hooks(
     let res = hook_manager
         .run_changesets_hooks_for_bookmark(
             &ctx,
-            vec![changeset].iter(),
+            &[changeset],
             &BookmarkKey::new(bookmark_name).unwrap(),
             None,
             CrossRepoPushSource::NativeToThisRepo,
@@ -500,7 +500,7 @@ async fn run_file_hooks(
     let res = hook_manager
         .run_changesets_hooks_for_bookmark(
             &ctx,
-            vec![cs].iter(),
+            &[cs],
             &BookmarkKey::new(bookmark_name).unwrap(),
             None,
             CrossRepoPushSource::NativeToThisRepo,

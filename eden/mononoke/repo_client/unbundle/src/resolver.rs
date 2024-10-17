@@ -85,7 +85,7 @@ mod UNBUNDLE_STATS {
 }
 
 pub type Changesets = Vec<(HgChangesetId, RevlogChangeset)>;
-pub type UploadedBonsais = HashSet<BonsaiChangeset>;
+pub type UploadedBonsais = Vec<BonsaiChangeset>;
 pub type UploadedHgChangesetIds = HashSet<HgChangesetId>;
 
 // This is to match the core hg behavior from https://fburl.com/jf3iyl7y
@@ -1276,7 +1276,7 @@ impl<'r, R: Repo> Bundle2Resolver<'r, R> {
             bonsais.reserve(uploaded.len());
             hg_cs_ids.reserve(uploaded.len());
             for (bcs, hg_cs_id) in uploaded {
-                bonsais.insert(bcs);
+                bonsais.push(bcs);
                 hg_cs_ids.insert(hg_cs_id);
             }
         }

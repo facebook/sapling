@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashMap;
-use std::collections::HashSet;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -288,7 +287,7 @@ async fn run_pushrebase(
             let outcome = normal_pushrebase(
                 ctx,
                 repo,
-                uploaded_bonsais,
+                &uploaded_bonsais,
                 &onto_bookmark,
                 maybe_pushvars.as_ref(),
                 hook_manager,
@@ -337,7 +336,7 @@ async fn run_pushrebase(
                 ctx,
                 repo,
                 hook_manager,
-                uploaded_bonsais,
+                &uploaded_bonsais,
                 &plain_push,
                 maybe_pushvars.as_ref(),
                 hook_rejection_remapper.as_ref(),
@@ -444,7 +443,7 @@ async fn force_pushrebase(
     ctx: &CoreContext,
     repo: &impl Repo,
     hook_manager: &HookManager,
-    uploaded_bonsais: HashSet<BonsaiChangeset>,
+    uploaded_bonsais: &[BonsaiChangeset],
     bookmark_push: &PlainBookmarkPush<ChangesetId>,
     maybe_pushvars: Option<&HashMap<String, Bytes>>,
     hook_rejection_remapper: &dyn HookRejectionRemapper,
@@ -457,7 +456,7 @@ async fn force_pushrebase(
     let mut new_changesets = HashMap::new();
     for bcs in uploaded_bonsais {
         let cs_id = bcs.get_changeset_id();
-        new_changesets.insert(cs_id, bcs);
+        new_changesets.insert(cs_id, bcs.clone());
     }
 
     plain_push_bookmark(

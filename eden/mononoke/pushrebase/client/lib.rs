@@ -11,7 +11,6 @@ mod hybrid;
 mod local;
 
 use std::collections::HashMap;
-use std::collections::HashSet;
 
 use bookmarks_movement::BookmarkKindRestrictions;
 use bookmarks_movement::BookmarkMovementError;
@@ -36,7 +35,7 @@ pub trait PushrebaseClient: Sync + Send {
         &self,
         bookmark: &BookmarkKey,
         // Must be a stack
-        changesets: HashSet<BonsaiChangeset>,
+        changesets: &[BonsaiChangeset],
         pushvars: Option<&HashMap<String, Bytes>>,
         cross_repo_push_source: CrossRepoPushSource,
         bookmark_restrictions: BookmarkKindRestrictions,

@@ -99,7 +99,7 @@ async fn run_pushrebase_hooks(
         ctx,
         hook_manager,
         action.bookmark_spec.get_bookmark_name(),
-        action.uploaded_bonsais.iter(),
+        &action.uploaded_bonsais.to_vec(),
         action.maybe_pushvars.as_ref(),
         cross_repo_push_source,
         PushAuthoredBy::User,

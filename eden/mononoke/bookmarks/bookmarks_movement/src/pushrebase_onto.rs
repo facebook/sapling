@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashMap;
-use std::collections::HashSet;
 
 use anyhow::anyhow;
 use bookmarks::BookmarkUpdateReason;
@@ -49,7 +48,7 @@ pub struct PushrebaseOntoBookmarkOp<'op> {
 impl<'op> PushrebaseOntoBookmarkOp<'op> {
     pub fn new(
         bookmark: &'op BookmarkKey,
-        changesets: HashSet<BonsaiChangeset>,
+        changesets: &[BonsaiChangeset],
     ) -> PushrebaseOntoBookmarkOp<'op> {
         PushrebaseOntoBookmarkOp {
             bookmark,

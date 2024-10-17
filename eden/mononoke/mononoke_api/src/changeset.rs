@@ -1377,7 +1377,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
             .hook_manager()
             .run_changesets_hooks_for_bookmark(
                 self.ctx(),
-                vec![self.bonsai_changeset().await?].iter(),
+                &[self.bonsai_changeset().await?],
                 &BookmarkKey::new(bookmark.as_ref())?,
                 pushvars,
                 CrossRepoPushSource::NativeToThisRepo,
