@@ -25,6 +25,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use bookmarks_types::BookmarkKey;
 use context::CoreContext;
+use futures::TryFutureExt;
 use mononoke_types::BasicFileChange;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
@@ -89,6 +90,37 @@ pub trait BookmarkHook: Send + Sync {
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error>;
+
+    async fn run_hook<'this: 'cs, 'ctx: 'this, 'cs, 'provider: 'cs>(
+        &'this self,
+        ctx: &'ctx CoreContext,
+        bookmark: &BookmarkKey,
+        to: &'cs BonsaiChangeset,
+        content_provider: &'provider dyn HookStateProvider,
+        cross_repo_push_source: CrossRepoPushSource,
+        push_authored_by: PushAuthoredBy,
+        hook_name: &str,
+    ) -> Result<HookOutcome, Error> {
+        self.run(
+            ctx,
+            bookmark,
+            to,
+            content_provider,
+            cross_repo_push_source,
+            push_authored_by,
+        )
+        .map_ok(|exec| {
+            HookOutcome::BookmarkHook(
+                BookmarkHookExecutionId {
+                    cs_id: to.get_changeset_id(),
+                    bookmark_name: bookmark.to_string(),
+                    hook_name: hook_name.to_string(),
+                },
+                exec,
+            )
+        })
+        .await
+    }
 }
 
 /// Trait to be implemented by changeset hooks.
@@ -106,6 +138,36 @@ pub trait ChangesetHook: Send + Sync {
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error>;
+
+    async fn run_hook<'this: 'cs, 'ctx: 'this, 'cs, 'provider: 'cs>(
+        &'this self,
+        ctx: &'ctx CoreContext,
+        bookmark: &BookmarkKey,
+        changeset: &'cs BonsaiChangeset,
+        content_provider: &'provider dyn HookStateProvider,
+        cross_repo_push_source: CrossRepoPushSource,
+        push_authored_by: PushAuthoredBy,
+        hook_name: &str,
+    ) -> Result<HookOutcome, Error> {
+        self.run(
+            ctx,
+            bookmark,
+            changeset,
+            content_provider,
+            cross_repo_push_source,
+            push_authored_by,
+        )
+        .map_ok(|exec| {
+            HookOutcome::ChangesetHook(
+                ChangesetHookExecutionId {
+                    cs_id: changeset.get_changeset_id(),
+                    hook_name: hook_name.to_string(),
+                },
+                exec,
+            )
+        })
+        .await
+    }
 }
 
 /// Trait to be implemented by file hooks.
@@ -123,6 +185,38 @@ pub trait FileHook: Send + Sync {
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
     ) -> Result<HookExecution, Error>;
+
+    async fn run_hook<'this: 'change, 'ctx: 'this, 'change, 'provider: 'change, 'path: 'change>(
+        &'this self,
+        ctx: &'ctx CoreContext,
+        content_provider: &'provider dyn HookStateProvider,
+        change: Option<&'change BasicFileChange>,
+        path: &'path NonRootMPath,
+        cross_repo_push_source: CrossRepoPushSource,
+        push_authored_by: PushAuthoredBy,
+        cs_id: ChangesetId,
+        hook_name: &str,
+    ) -> Result<HookOutcome, Error> {
+        self.run(
+            ctx,
+            content_provider,
+            change,
+            path,
+            cross_repo_push_source,
+            push_authored_by,
+        )
+        .map_ok(|exec| {
+            HookOutcome::FileHook(
+                FileHookExecutionId {
+                    cs_id,
+                    path: path.clone(),
+                    hook_name: hook_name.to_string(),
+                },
+                exec,
+            )
+        })
+        .await
+    }
 }
 
 /// Outcome of running a hook.
