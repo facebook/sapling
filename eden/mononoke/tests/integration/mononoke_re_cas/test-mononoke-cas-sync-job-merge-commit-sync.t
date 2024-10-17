@@ -12,7 +12,7 @@
   $ start_and_wait_for_mononoke_server
   $ hg clone -q mono:repo repo
   $ cd repo
-  $ drawdag << 'EOF'
+  $ drawdag --parent-order=name << 'EOF'
   > F        # F/quux = random:30
   > |\       # D/qux  = random:30
   > B D      # C/baz  = random:30
