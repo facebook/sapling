@@ -29,8 +29,10 @@ const isInternal = existsSync(path.resolve(__dirname, 'facebook/README.facebook.
 const input = [normalizeInputPath('webview.html')];
 if (isInternal) {
   // Currently, the inline comment webview is not used in OSS
-  normalizeInputPath('inlineCommentWebview.html');
+  input.push(normalizeInputPath('inlineCommentWebview.html'));
 }
+
+console.log(isInternal ? 'Building internal version' : 'Building OSS version');
 
 // vite-plugin-stylex doesn't support renaming the output CSS file, so we have to do that ourselves.
 function moveStylexFilenamePlugin(): Plugin {
