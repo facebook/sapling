@@ -86,6 +86,8 @@ export interface Platform {
   };
 
   messageBus: MessageBus;
+  /** In browser-like platforms, some ISL parameters are passed via URL query params */
+  initialUrlParams?: Map<InitialParamKeys, string>;
 }
 
 declare global {

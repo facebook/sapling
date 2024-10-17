@@ -17,10 +17,6 @@ const LocalWebSocketEventBus =
   (jest.requireActual('../LocalWebSocketEventBus') as typeof import('../LocalWebSocketEventBus'))
     .LocalWebSocketEventBus;
 
-jest.mock('../urlParams', () => ({
-  initialParams: new Map([['token', '1234']]),
-}));
-
 let globalMockWs: MockWebSocketImpl;
 class MockWebSocketImpl extends EventTarget implements WebSocket {
   constructor(public url: string, _protocols?: string | string[] | undefined) {
@@ -72,7 +68,7 @@ const MockWebSocket = MockWebSocketImpl as unknown as typeof WebSocket;
 const DEFAULT_HOST = 'localhost:8080';
 
 function createMessageBus(): LocalWebSocketEventBusType {
-  return new LocalWebSocketEventBus(DEFAULT_HOST, MockWebSocket);
+  return new LocalWebSocketEventBus(DEFAULT_HOST, MockWebSocket, {token: '1234'});
 }
 
 describe('LocalWebsocketEventBus', () => {

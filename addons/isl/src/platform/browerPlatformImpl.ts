@@ -9,9 +9,13 @@ import type {RepoRelativePath, OneIndexedLineNumber} from '../types';
 import type {Json} from 'shared/typeUtils';
 
 import {LocalWebSocketEventBus} from '../LocalWebSocketEventBus';
+import {computeInitialParams} from '../urlParams';
 
 // important: this file should not try to import other code from 'isl',
 // since it will end up getting duplicated when bundling.
+
+// TODO: make browserPlatformImpl a function, and take platform name as an argument to pass here for AndroidStudio.
+const initialUrlParams = computeInitialParams(true);
 
 export const browserPlatformImpl = {
   confirm: (message: string, details?: string) => {
@@ -101,5 +105,12 @@ export const browserPlatformImpl = {
       : // in production, we serve both the static files and ws from the same port
         location.host,
     WebSocket,
+    {
+      cwd: initialUrlParams.get('cwd'),
+      sessionId: initialUrlParams.get('sessionId'),
+      token: initialUrlParams.get('token'),
+    },
   ),
+
+  initialUrlParams,
 };

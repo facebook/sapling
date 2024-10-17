@@ -8,7 +8,7 @@
 import type {CommitInfo, RepoInfo, RepoRelativePath} from './types';
 
 import {atomResetOnDepChange, localStorageBackedAtom} from './jotaiUtils';
-import {initialParams} from './urlParams';
+import platform from './platform';
 import {atom, useAtomValue} from 'jotai';
 
 export const repositoryData = atom<{info?: RepoInfo; cwd?: string}>({});
@@ -19,7 +19,7 @@ export const serverCwd = atom<string>(get => {
   if (data.info?.type === 'cwdNotARepository') {
     return data.info.cwd;
   }
-  return data?.cwd ?? initialParams.get('cwd') ?? '';
+  return data?.cwd ?? platform.initialUrlParams?.get('cwd') ?? '';
 });
 
 const repoRoot = atom(get => {

@@ -8,14 +8,13 @@
 import type {InitialParamKeys} from './platform';
 
 import {logger} from './logger';
-import {islPlatformName} from './utils';
 
 const INITIAL_PARAMS_LOCAL_STORAGE_KEY = 'ISLInitialParams';
 
 /**
  * Extract parameters from URL, then remove from URL to be cleaner (and hide sensitive tokens)
  */
-function computeInitialParams(): Map<InitialParamKeys, string> {
+export function computeInitialParams(isBrowserPlatform: boolean): Map<InitialParamKeys, string> {
   let initialParams: Map<InitialParamKeys, string> | undefined;
   if (typeof window === 'undefined') {
     return new Map();
@@ -23,7 +22,7 @@ function computeInitialParams(): Map<InitialParamKeys, string> {
   if (window.location.search) {
     initialParams = new Map([...new URLSearchParams(window.location.search).entries()]);
     logger.log('Loaded initial params from URL: ', initialParams);
-    if (islPlatformName() === 'browser') {
+    if (isBrowserPlatform) {
       // Save params to local storage so reloading the page keeps the same URL parameters
       // Note: this assumes if search parameters are provided, ALL relevant search parameters are provided at the same time.
       // This way initial parameters stored in local storage is always consistent.
@@ -51,5 +50,3 @@ function computeInitialParams(): Map<InitialParamKeys, string> {
   }
   return initialParams ?? new Map();
 }
-
-export const initialParams = computeInitialParams();

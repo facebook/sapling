@@ -8,7 +8,6 @@
 import type {Disposable, MessageBusStatus} from './types';
 
 import {logger} from './logger';
-import {initialParams} from './urlParams';
 import {CLOSED_AND_SHOULD_NOT_RECONNECT_CODE} from 'isl-server/src/constants';
 
 export class LocalWebSocketEventBus {
@@ -37,7 +36,11 @@ export class LocalWebSocketEventBus {
    * @param host to use when creating the Web Socket to talk to the server. Should
    * include the hostname and optionally, a port, e.g., "localhost:3001" or "example.com".
    */
-  constructor(private host: string, private WebSocketType: typeof WebSocket) {
+  constructor(
+    private host: string,
+    private WebSocketType: typeof WebSocket,
+    private params: {token?: string; cwd?: string; sessionId?: string},
+  ) {
     // startConnection already assigns to websocket, but we do it here so typescript knows websocket is always defined
     this.websocket = this.startConnection();
   }
@@ -56,16 +59,16 @@ export class LocalWebSocketEventBus {
     }
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = new URL(`${wsProtocol}//${this.host}/ws`);
-    const token = initialParams.get('token');
+    const token = this.params.token;
     if (token) {
       wsUrl.searchParams.append('token', token);
     }
-    const cwdParam = initialParams.get('cwd');
+    const cwdParam = this.params.cwd;
     if (cwdParam) {
       const cwd = decodeURIComponent(cwdParam);
       wsUrl.searchParams.append('cwd', cwd);
     }
-    const sessionIdParam = initialParams.get('sessionId');
+    const sessionIdParam = this.params.sessionId;
     if (sessionIdParam) {
       const sessionId = decodeURIComponent(sessionIdParam);
       wsUrl.searchParams.append('sessionId', sessionId);

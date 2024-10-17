@@ -6,7 +6,7 @@
  */
 
 import {getCurrentLanguage, useCurrentLang} from './i18n';
-import {initialParams} from './urlParams';
+import platform from './platform';
 
 /**
  * Originally adapted from https://github.com/azer/relative-date.
@@ -188,6 +188,6 @@ export function RelativeDate({
 
 /** Get "now" for relativeDate use-case. Can be overriden by "?now=unixtime". */
 function now(): number {
-  const forceNowStr = initialParams.get('now');
+  const forceNowStr = platform.initialUrlParams?.get('now');
   return forceNowStr == null ? Date.now() : parseInt(forceNowStr);
 }
