@@ -10,6 +10,7 @@
 /* eslint-disable @typescript-eslint/no-this-alias */
 
 import type {LocalWebSocketEventBus as LocalWebSocketEventBusType} from '../LocalWebSocketEventBus';
+import type {PlatformName} from '../types';
 import type {Writable} from 'shared/typeUtils';
 
 const LocalWebSocketEventBus =
@@ -68,7 +69,10 @@ const MockWebSocket = MockWebSocketImpl as unknown as typeof WebSocket;
 const DEFAULT_HOST = 'localhost:8080';
 
 function createMessageBus(): LocalWebSocketEventBusType {
-  return new LocalWebSocketEventBus(DEFAULT_HOST, MockWebSocket, {token: '1234'});
+  return new LocalWebSocketEventBus(DEFAULT_HOST, MockWebSocket, {
+    token: '1234',
+    platformName: 'test' as string as PlatformName,
+  });
 }
 
 describe('LocalWebsocketEventBus', () => {
@@ -266,7 +270,7 @@ describe('LocalWebsocketEventBus', () => {
 
   it('includes token from initialState', () => {
     createMessageBus();
-    expect(globalMockWs.url).toEqual(`ws://${DEFAULT_HOST}/ws?token=1234`);
+    expect(globalMockWs.url).toEqual(`ws://${DEFAULT_HOST}/ws?token=1234&platform=test`);
   });
 
   describe('reconnect timing', () => {

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Disposable, MessageBusStatus} from './types';
+import type {Disposable, MessageBusStatus, PlatformName} from './types';
 
 import {logger} from './logger';
 import {CLOSED_AND_SHOULD_NOT_RECONNECT_CODE} from 'isl-server/src/constants';
@@ -39,7 +39,7 @@ export class LocalWebSocketEventBus {
   constructor(
     private host: string,
     private WebSocketType: typeof WebSocket,
-    private params: {token?: string; cwd?: string; sessionId?: string},
+    private params: {token?: string; cwd?: string; sessionId?: string; platformName: PlatformName},
   ) {
     // startConnection already assigns to websocket, but we do it here so typescript knows websocket is always defined
     this.websocket = this.startConnection();
@@ -73,7 +73,7 @@ export class LocalWebSocketEventBus {
       const sessionId = decodeURIComponent(sessionIdParam);
       wsUrl.searchParams.append('sessionId', sessionId);
     }
-    const platformName = window.islPlatform?.platformName;
+    const platformName = this.params.platformName;
     if (platformName) {
       wsUrl.searchParams.append('platform', platformName);
     }

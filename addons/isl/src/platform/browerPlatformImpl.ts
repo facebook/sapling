@@ -112,6 +112,7 @@ export const makeBrowserLikePlatformImpl = (platformName: PlatformName): Platfor
         cwd: initialUrlParams.get('cwd'),
         sessionId: initialUrlParams.get('sessionId'),
         token: initialUrlParams.get('token'),
+        platformName,
       },
     ),
 
