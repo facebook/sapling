@@ -2759,13 +2759,32 @@ void EdenServer::runEdenDoctor() {
   // than reusing it. Explanation on why CPUThreadPoolExecutor-
   // https://www.internalfb.com/intern/staticdocs/fbcref/guides/Executors/.
   folly::CPUThreadPoolExecutor executor(1);
-  executor.add([] {
+  auto systemConfigDir = config_->getEdenConfig()->getSystemConfigDir();
+  auto edenDir = getEdenDir();
+  executor.add([systemConfigDir, edenDir] {
     try {
       XLOG(INFO, "Running periodic eden doctor dry-run.");
+      // Not passing Options field cause "0x57" error. ref: D59783277
+      SpawnedProcess::Options opts;
+#ifdef _WIN32
+      opts.creationFlags(CREATE_NO_WINDOW);
+      opts.nullStderr();
+      opts.nullStdin();
+      opts.nullStdout();
+#endif // _WIN32
       // Assuming, this will only be run from windows user's system,
       // we are using the plain vanilla version of eden doctor dry run.
       // This can be modified in the future to pass config-dir param.
-      auto proc = SpawnedProcess({"edenfsctl", "doctor", "--dry-run"});
+      auto proc = SpawnedProcess(
+          {"c:\\tools\\eden\\bin\\edenfsctl.exe",
+           "--etc-eden-dir",
+           systemConfigDir.c_str(),
+           "--config-dir",
+           edenDir.asString(),
+           "doctor",
+           "--dry-run",
+           "--fast"},
+          std::move(opts));
       XLOG(INFO, "Checking status for eden doctor dry-run.");
       // Setting the timeout to terminate process to 2.5 minutes.
       // P99.9 to run eden doctor dry-run is ~2 minutes.
