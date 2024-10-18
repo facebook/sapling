@@ -27,6 +27,7 @@ fn main() {
         .clients_crate("source_control__clients")
         .options("deprecated_default_enum_min_i32,serde")
         .include_srcs(["include_thrift.rs"])
+        .extra_srcs(["extra_thrift.rs"])
         .run(["source_control.thrift"])
         .expect("Failed while running thrift compilation");
 }

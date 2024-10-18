@@ -33,6 +33,8 @@ mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 repo_authorization = { version = "0.1.0", path = "../../repo_authorization" }
 requests_table = { version = "0.1.0", path = "../requests_table" }
+scs_errors = { version = "0.1.0", path = "../../scs/scs_errors" }
+scs_methods = { version = "0.1.0", path = "../../scs/scs_methods" }
 sharding_ext = { version = "0.1.0", path = "../../cmdlib/sharding_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 source_control = { version = "0.1.0", path = "../../scs/if" }

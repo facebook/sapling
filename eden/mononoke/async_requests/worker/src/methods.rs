@@ -37,11 +37,22 @@ use mononoke_api::Repo;
 use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
 use repo_authorization::AuthorizationContext;
+#[cfg(fbcode_build)]
 use scs_methods::commit_sparse_profile_info::commit_sparse_profile_size_impl;
 use scs_methods::from_request::FromRequest;
 use scs_methods::specifiers::SpecifierExt;
 use source_control as thrift;
 use source_control::CommitSpecifier;
+
+#[cfg(not(fbcode_build))]
+pub async fn commit_sparse_profile_size_impl(
+    ctx: &CoreContext,
+    repo: RepoContext<Repo>,
+    changeset: ChangesetContext<Repo>,
+    profiles: thrift::SparseProfiles,
+) -> Result<thrift::CommitSparseProfileSizeResponse, scs_errors::ServiceError> {
+    todo!()
+}
 
 async fn megarepo_sync_changeset<R: MononokeRepo>(
     ctx: &CoreContext,

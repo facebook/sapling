@@ -10,10 +10,16 @@ mod commit_id;
 pub mod from_request;
 mod history;
 mod into_response;
-mod methods;
-mod scuba_params;
-mod scuba_response;
-pub mod source_control_impl;
 pub mod specifiers;
 
+#[cfg(fbcode_build)]
+mod methods;
+#[cfg(fbcode_build)]
+mod scuba_params;
+#[cfg(fbcode_build)]
+mod scuba_response;
+#[cfg(fbcode_build)]
+pub mod source_control_impl;
+
+#[cfg(fbcode_build)]
 pub use methods::commit_sparse_profile_info;

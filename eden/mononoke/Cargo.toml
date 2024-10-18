@@ -454,6 +454,8 @@ members = [
   "scs/if/clients",
   "scs/if/mocks",
   "scs/if/services",
+  "scs/scs_errors",
+  "scs/scs_methods",
   "server",
   "server/context",
   "server/metadata",
