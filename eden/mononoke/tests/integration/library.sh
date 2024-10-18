@@ -433,6 +433,7 @@ function wait_for_json_record_count {
 }
 
 function wait_for_server {
+  # TODO: Delete the shell version of this function once we can totally replace it with the Python version
   local service_description port_env_var log_file timeout_secs bound_addr_file
   service_description="$1"; shift
   port_env_var="$1"; shift

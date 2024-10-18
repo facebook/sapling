@@ -6,10 +6,12 @@
 import json
 import os
 import subprocess
+import time
 from typing import BinaryIO, List, Union
 from urllib.parse import quote, unquote
 
 from ..sh.bufio import BufIO
+from ..sh.interp import interpcode
 from ..sh.types import Env, ShellFS
 from ..t.runtime import TestTmp
 
@@ -22,6 +24,7 @@ def testsetup(t: TestTmp):
 
 
 def setupfuncs(t: TestTmp):
+    t.command(wait_for_server)
     t.command(mononoke_health)
     t.command(mononoke_address)
     t.command(mononoke_host)
@@ -40,6 +43,56 @@ def setupfuncs(t: TestTmp):
     t.command(db_config)
     t.command(blobstore_db_config)
     t.command(setup_environment_variables)
+
+
+def wait_for_server(args: List[str], stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
+    if len(args) < 5:
+        stderr.write(b"Error: Not enough arguments provided to wait_for_server\n")
+        return 1
+
+    service_description = args[0]
+    port_env_var = args[1]
+    log_file = args[2]
+    timeout_secs = int(args[3])
+    bound_addr_file = args[4]
+    health_check_command = " ".join(args[5:])
+
+    start_time = time.time()
+    found_port = None
+
+    while (time.time() - start_time) < timeout_secs:
+        if not found_port and fs.exists(bound_addr_file):
+            with fs.open(bound_addr_file, "r") as f:
+                content = f.read().decode()
+                found_port = content.split(":")[-1].strip()
+                env.setenv(port_env_var, found_port)
+
+        if found_port:
+            # Execute the health check command
+            result = interpcode(health_check_command, env).exitcode
+            if result == 0:
+                return 0
+
+        time.sleep(1)
+
+    elapsed_time = int(time.time() - start_time)
+    stderr.write(
+        f"{service_description} did not start in {timeout_secs} seconds, took {elapsed_time}\n".encode()
+    )
+    if found_port:
+        stderr.write(
+            f"Running check: {' '.join(health_check_command)} >/dev/null\n".encode()
+        )
+        result = interpcode(health_check_command, env).exitcode
+        stderr.write(f"exited with {result}\n".encode())
+    else:
+        stderr.write(f"Port was never written to {bound_addr_file}\n".encode())
+
+    stderr.write(b"\nLog of {service_description}:\n")
+    with fs.open(log_file, "r") as f:
+        stderr.write(f.read())
+
+    return 1
 
 
 def mononoke_health(stderr: BinaryIO, env: Env) -> Union[str, int]:
