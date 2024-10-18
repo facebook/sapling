@@ -21,6 +21,7 @@ def testsetup(t: TestTmp):
 
 
 def setupfuncs(t: TestTmp):
+    t.command(setup_configerator_configs)
     t.command(setup_common_hg_configs)
     t.command(setup_mononoke_config)
     t.command(setup_acls)
@@ -32,6 +33,121 @@ def setupfuncs(t: TestTmp):
     t.command(db_config)
     t.command(blobstore_db_config)
     t.command(setup_environment_variables)
+
+
+def setup_configerator_configs(fs: ShellFS, env: Env) -> int:
+    local_configerator_path = env.getenv("LOCAL_CONFIGERATOR_PATH")
+    test_fixtures = env.getenv("TEST_FIXTURES")
+    skip_cross_repo_config = env.getenv("SKIP_CROSS_REPO_CONFIG")
+
+    # Setup Rate Limit Config
+    rate_limit_conf = f"{local_configerator_path}/scm/mononoke/ratelimiting"
+    env.setenv("RATE_LIMIT_CONF", rate_limit_conf)
+    fs.mkdir(rate_limit_conf)
+    if not fs.exists(f"{rate_limit_conf}/ratelimits"):
+        with fs.open(f"{rate_limit_conf}/ratelimits", "w") as f:
+            f.write(
+                b"""
+{
+  "rate_limits": [],
+  "load_shed_limits": [],
+  "datacenter_prefix_capacity": {},
+  "commits_per_author": {
+    "status": 0,
+    "limit": 300,
+    "window": 1800
+  },
+  "total_file_changes": {
+    "status": 0,
+    "limit": 80000,
+    "window": 5
+  }
+}
+"""
+            )
+
+    # Setup Commit Sync Config
+    commit_sync_conf = f"{local_configerator_path}/scm/mononoke/repos/commitsyncmaps"
+    env.setenv("COMMIT_SYNC_CONF", commit_sync_conf)
+    fs.mkdir(commit_sync_conf)
+    if skip_cross_repo_config:
+        with fs.open(f"{commit_sync_conf}/all", "w") as f:
+            f.write(b"{}")
+        with fs.open(f"{commit_sync_conf}/current", "w") as f:
+            f.write(b"{}")
+    else:
+        if not fs.exists(f"{commit_sync_conf}/all"):
+            fs.cp(f"{test_fixtures}/commitsync/all.json", f"{commit_sync_conf}/all")
+        if not fs.exists(f"{commit_sync_conf}/current"):
+            fs.cp(
+                f"{test_fixtures}/commitsync/current.json",
+                f"{commit_sync_conf}/current",
+            )
+
+    # Setup XDB GC Config
+    xdb_gc_conf = f"{local_configerator_path}/scm/mononoke/xdb_gc"
+    env.setenv("XDB_GC_CONF", xdb_gc_conf)
+    fs.mkdir(xdb_gc_conf)
+    if not fs.exists(f"{xdb_gc_conf}/default"):
+        with fs.open(f"{xdb_gc_conf}/default", "w") as f:
+            f.write(
+                b"""
+{
+  "put_generation": 2,
+  "mark_generation": 1,
+  "delete_generation": 0
+}
+"""
+            )
+
+    # Setup Observability Config
+    observability_conf = f"{local_configerator_path}/scm/mononoke/observability"
+    env.setenv("OBSERVABILITY_CONF", observability_conf)
+    fs.mkdir(observability_conf)
+    if not fs.exists(f"{observability_conf}/observability_config"):
+        with fs.open(f"{observability_conf}/observability_config", "w") as f:
+            f.write(
+                b"""
+{
+  "slog_config": {
+    "level": 4
+  },
+  "scuba_config": {
+    "level": 1,
+    "verbose_sessions": [],
+    "verbose_unixnames": [],
+    "verbose_source_hostnames": []
+  }
+}
+"""
+            )
+
+    # Setup Redaction Config
+    redaction_conf = f"{local_configerator_path}/scm/mononoke/redaction"
+    env.setenv("REDACTION_CONF", redaction_conf)
+    fs.mkdir(redaction_conf)
+    if not fs.exists(f"{redaction_conf}/redaction_sets"):
+        with fs.open(f"{redaction_conf}/redaction_sets", "w") as f:
+            f.write(
+                b"""
+{
+  "all_redactions": []
+}
+"""
+            )
+
+    # Setup Replication Lag Config
+    replication_lag_conf = (
+        f"{local_configerator_path}/scm/mononoke/mysql/replication_lag/config"
+    )
+    env.setenv("REPLICATION_LAG_CONF", replication_lag_conf)
+    fs.mkdir(replication_lag_conf)
+    for conf in ["healer", "derived_data_backfiller", "derived_data_tailer"]:
+        if not fs.exists(f"{replication_lag_conf}/{conf}"):
+            with fs.open(f"{replication_lag_conf}/{conf}", "w") as f:
+                f.write(b"{}")
+
+    return 0
 
 
 def setup_common_hg_configs(
