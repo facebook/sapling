@@ -89,6 +89,7 @@ use futures::stream::TryStreamExt;
 use futures::StreamExt;
 use http::StatusCode;
 use http::Version;
+use manifest::DiffType;
 use manifest::Manifest;
 use manifest_tree::Flag;
 use manifest_tree::TreeManifest;
@@ -98,6 +99,9 @@ use nonblocking::non_blocking_result;
 use pathmatcher::AlwaysMatcher;
 use repourl::RepoUrl;
 use storemodel::types::AugmentedTreeWithDigest;
+use storemodel::InsertOpts;
+use storemodel::KeyStore;
+use storemodel::Kind;
 use storemodel::SerializationFormat;
 use tracing::debug;
 use tracing::error;
@@ -1273,6 +1277,83 @@ impl SaplingRemoteApi for EagerRepo {
             }
 
             panic!("not implemented");
+        }
+
+        #[allow(dead_code)]
+        async fn pushrebase_one(
+            repo: &EagerRepo,
+            base_commit: HgId,
+            source_commit: HgId,
+            dest_commit: HgId,
+        ) -> anyhow::Result<HgId> {
+            let base_manifest = repo.commit_to_manifest(base_commit).await?;
+            let source_manifest = repo.commit_to_manifest(source_commit).await?;
+            let dest_manifest = repo.commit_to_manifest(dest_commit).await?;
+
+            let mut new_manifest = dest_manifest.clone();
+            let matcher = AlwaysMatcher::new();
+            // generate new manifest
+            for e in base_manifest.diff(&source_manifest, &matcher)? {
+                let e = e?;
+                match e.diff_type {
+                    DiffType::LeftOnly(_) => {
+                        new_manifest.remove(&e.path)?;
+                    }
+                    DiffType::Changed(_, right) => {
+                        new_manifest.insert(e.path, right)?;
+                    }
+                    DiffType::RightOnly(right) => {
+                        new_manifest.insert(e.path.clone(), right)?;
+                    }
+                }
+            }
+
+            let new_tree_id = match repo.store.format {
+                SerializationFormat::Hg => {
+                    let new_parents = vec![&dest_manifest];
+                    let mut manifest_id: Option<HgId> = None;
+                    for (path, hgid, raw, p1, p2) in new_manifest.finalize(new_parents)? {
+                        let insert_opts = InsertOpts {
+                            parents: vec![p1, p2],
+                            kind: Kind::Tree,
+                            ..Default::default()
+                        };
+                        repo.store.insert_data(insert_opts, &path, &raw)?;
+                        if path.is_empty() {
+                            manifest_id = Some(hgid);
+                        }
+                    }
+                    match manifest_id {
+                        Some(manifest_id) => manifest_id,
+                        None => {
+                            return Err(anyhow!(
+                                "empty commit is not supported: {}",
+                                source_commit.to_hex()
+                            ));
+                        }
+                    }
+                }
+                SerializationFormat::Git => new_manifest.flush()?,
+            };
+
+            // generate new commit
+            let old_raw_text = match repo.store.get_content(source_commit)? {
+                None => {
+                    return Err(anyhow!(
+                        "commit content cannot be found: {}",
+                        source_commit.to_hex()
+                    ));
+                }
+                Some(raw_text) => raw_text,
+            };
+            let mut new_raw_text: Vec<u8> = Vec::new();
+            writeln!(new_raw_text, "{}", new_tree_id)?;
+            new_raw_text.extend_from_slice(&old_raw_text[HgId::hex_len()..]);
+
+            let commit_parents = vec![dest_commit];
+            let new_commit = repo.add_commit(&commit_parents, &new_raw_text).await?;
+
+            Ok(new_commit)
         }
 
         /// `left` and `right` are considerered to be conflit free, if none of the element
