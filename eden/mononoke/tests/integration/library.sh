@@ -544,9 +544,9 @@ function setup_common_hg_configs {
 }
 
 function setup_common_config {
-    setup_mononoke_config "$@"
-    setup_common_hg_configs
-    setup_configerator_configs
+    python_fn setup_common_config "$@"
+    # TODO: get rid of the cd once python_fn can properly switch cd
+    cd "$TESTTMP/mononoke-config" || exit 1
 }
 
 function get_bonsai_svnrev_mapping {

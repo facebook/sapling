@@ -21,6 +21,7 @@ def testsetup(t: TestTmp):
 
 
 def setupfuncs(t: TestTmp):
+    t.command(setup_common_config)
     t.command(setup_configerator_configs)
     t.command(setup_common_hg_configs)
     t.command(setup_mononoke_config)
@@ -33,6 +34,16 @@ def setupfuncs(t: TestTmp):
     t.command(db_config)
     t.command(blobstore_db_config)
     t.command(setup_environment_variables)
+
+
+def setup_common_config(
+    args: List[str], stderr: BinaryIO, fs: ShellFS, env: Env
+) -> int:
+    if (rv := setup_mononoke_config(args, stderr, fs, env)) != 0:
+        return rv
+    if (rv := setup_common_hg_configs(fs, env)) != 0:
+        return rv
+    return setup_configerator_configs(fs, env)
 
 
 def setup_configerator_configs(fs: ShellFS, env: Env) -> int:
