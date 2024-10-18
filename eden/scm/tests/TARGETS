@@ -231,6 +231,52 @@ python_unittest(
     deps = ["//libfb/py:parutil"],
 )
 
+MEW_ENV = dict(EW_ENV)
+
+MEW_ENV["USE_MONONOKE"] = "1"
+
+MEW_ENV["HGTEST_MONONOKE_SERVER"] = "$(location //eden/mononoke:mononoke)"
+
+MEW_ENV["HGTEST_GET_FREE_SOCKET"] = "$(location //eden/mononoke/tests/integration:get_free_socket)"
+
+MEW_ENV["HGTEST_CERTDIR"] = "$(location //eden/mononoke/tests/integration/certs/facebook:test_certs)"
+
+MEW_ENV.pop("HGTEST_EXCLUDED")
+
+MEW_ENV.pop("HGTEST_BLOCKLIST")
+
+MEW_ENV["HGTEST_INCLUDED"] = "test_(e2e_clone)_t"
+
+MEW_ENV["TEST_FIXTURES"] = "$(location //eden/mononoke/tests/integration:test_fixtures)"
+
+MEW_ENV["JUST_KNOBS_DEFAULTS"] = "$(location //eden/mononoke/mononoke_macros:just_knobs_defaults)"
+
+MEW_ENV["FB_TEST_FIXTURES"] = "$(location //eden/mononoke/tests/integration/facebook:facebook_test_fixtures)"
+
+python_unittest(
+    name = "trinity_tests",
+    srcs = SRCS,
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    env = MEW_ENV,
+    resources = {
+        "//eden/mononoke/tests/integration/certs/facebook:test_certs": "certs",
+        "//eden/mononoke/tests/integration:get_free_socket": "get_free_socket.par",
+        "//eden/mononoke:mononoke": "mononoke",
+        "//eden/scm/tests:dummyssh3": "dummyssh3.par",
+        "//eden/scm:hg_test": "hg.sh",
+        "//eden/scm:hgpython_test": "hgpython.sh",
+        "//watchman:watchman": "watchman",
+    },
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"] + [
+        "//eden/mononoke/tests/integration/certs/facebook:test_certs",
+        "//eden/mononoke/tests/integration:test_fixtures",
+    ],
+    deps = ["//libfb/py:parutil"],
+)
+
 buck_filegroup(
     name = "test_runner",
     srcs = [
