@@ -146,7 +146,14 @@ enable-eden-menu = "false"
 """
                         )
 
-                self.eden.start()
+                if not "USE_MONONOKE" in os.environ:
+                    # As mentioned above, not starting EdenFS is far from ideal,
+                    # but Mononoke tests (ab)use env vars, and in particular
+                    # rewrites HGRCPATH constantly. It puts the config for
+                    # edenapi there, so we cannot really start EdenFS until
+                    # that setting there is set. For Mononoke tests, EdenFS
+                    # will be started there.
+                    self.eden.start()
                 self.generate_eden_cli_wrapper(orig_test_dir)
             except Exception as e:
                 ex = e
@@ -162,6 +169,9 @@ enable-eden-menu = "false"
         # annoying to escape, so let's get rid of them
         env.pop("HGTEST_EXCLUDED", None)
         env.pop("HGTEST_INCLUDED", None)
+        # See comment about Monooke above for these two env vars below
+        env.pop("HGRCPATH", None)
+        env.pop("SL_CONFIG_PATH", None)
         # .t tests set the value for $HOME to $TESTTMP, and we don't want to
         # force every EdenFS command to have the current value of $HOME at this
         # point (which will likely be different to $TESTTMP). The $HOME in the

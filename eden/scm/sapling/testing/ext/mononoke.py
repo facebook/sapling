@@ -24,6 +24,10 @@ def testsetup(t: TestTmp):
     setupfuncs(t)
     setupmatching(t)
     t.sheval("setup_environment_variables")
+    if t.getenv("HGTEST_USE_EDEN") == "1":
+        # See comment in tests/eden.py for why we do this
+        interpcode("eden start", t.shenv)
+        time.sleep(3)
 
 
 def setupmatching(t: TestTmp):
