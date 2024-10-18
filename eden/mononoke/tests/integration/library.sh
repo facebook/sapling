@@ -12,8 +12,10 @@
 function python_fn() {
   echo -n "" > "$TESTTMP/.dbrtest_envs"
   CHGDISABLE=1 hg debugpython "$TEST_FIXTURES/dbrtest_runner.py" "$@"
+  local rv=$?
   # shellcheck disable=SC1091
   . "$TESTTMP/.dbrtest_envs"
+  return $rv
 }
 
 if [ -n "$FB_TEST_FIXTURES" ] && [ -f "$FB_TEST_FIXTURES/fb_library.sh" ]; then
@@ -117,9 +119,7 @@ function random_int() {
 }
 
 function sslcurlas {
-  local name="$1"
-  shift
-  curl --noproxy localhost -H 'x-client-info: {"request_info": {"entry_point": "CurlTest", "correlator": "test"}}' --cert "$TEST_CERTDIR/$name.crt" --cacert "$TEST_CERTDIR/root-ca.crt" --key "$TEST_CERTDIR/$name.key" "$@"
+  python_fn sslcurlas "$@"
 }
 
 function sslcurl {

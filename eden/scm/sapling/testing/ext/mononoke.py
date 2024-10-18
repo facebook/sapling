@@ -5,6 +5,7 @@
 
 import json
 import os
+import subprocess
 from typing import BinaryIO, List, Union
 from urllib.parse import quote, unquote
 
@@ -21,6 +22,7 @@ def testsetup(t: TestTmp):
 
 
 def setupfuncs(t: TestTmp):
+    t.command(sslcurlas)
     t.command(setup_common_config)
     t.command(setup_configerator_configs)
     t.command(setup_common_hg_configs)
@@ -34,6 +36,45 @@ def setupfuncs(t: TestTmp):
     t.command(db_config)
     t.command(blobstore_db_config)
     t.command(setup_environment_variables)
+
+
+def sslcurlas(args: List[str], stderr: BinaryIO, env: Env) -> Union[str, int]:
+    name = args[0]
+    test_certdir = env.getenv("TEST_CERTDIR")
+    if not test_certdir:
+        stderr.write(b"Error: TEST_CERTDIR environment variable is not set\n")
+        return 1
+
+    cert_path = f"{test_certdir}/{name}.crt"
+    key_path = f"{test_certdir}/{name}.key"
+    cacert_path = f"{test_certdir}/root-ca.crt"
+    headers = 'x-client-info: {"request_info": {"entry_point": "CurlTest", "correlator": "test"}}'
+
+    # TODO: Ideally we shouldn't specify the full path here, but in some cases
+    # $PATH might be already lost, so just using "curl" doesn't cut it.
+    curl_command = [
+        "/usr/bin/curl",
+        "--noproxy",
+        "localhost",
+        "-s",
+        "-H",
+        headers,
+        "--cert",
+        cert_path,
+        "--cacert",
+        cacert_path,
+        "--key",
+        key_path,
+    ] + [*args[1:]]
+
+    result = subprocess.run(curl_command, capture_output=True)
+
+    stderr.write(result.stderr)
+
+    if result.returncode != 0:
+        return result.returncode
+
+    return result.stdout.decode()
 
 
 def setup_common_config(
