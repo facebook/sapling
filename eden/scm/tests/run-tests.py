@@ -2325,6 +2325,8 @@ class DebugRunTestTest(Test):
             "-o",
             self.errpath,
         ]
+        if env.get("USE_MONONOKE"):
+            cmdargs += ["--ext", "sapling.testing.ext.mononoke"]
         vlog("# Running", shlex.join(cmdargs))
         exitcode, out = self._runcommand(cmdargs, env)
 

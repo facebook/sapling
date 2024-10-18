@@ -8,7 +8,7 @@
 
 _repocount=0
 
-if [ -n "$USE_MONONOKE" ] ; then
+if [ -n "$USE_MONONOKE" ] && [ -z "$DEBUGRUNTEST_ENABLED" ] ; then
   . "$TESTDIR/../../mononoke/tests/integration/library.sh"
 fi
 

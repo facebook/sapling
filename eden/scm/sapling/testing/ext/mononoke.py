@@ -20,6 +20,7 @@ from .hg import hg as hgcmd
 
 
 def testsetup(t: TestTmp):
+    pipedown_envvars(t)
     setupfuncs(t)
     setupmatching(t)
     t.sheval("setup_environment_variables")
@@ -51,6 +52,25 @@ def setupmatching(t: TestTmp):
             r"\1localhost:$LOCAL_PORT",
         ),
     ]
+
+
+def pipedown_envvars(t: TestTmp):
+    # These env vars are set up at the TARGET level, and need to be piped down
+    # to be used later on various places in Mononoke .t tests
+    monoenvs = [
+        "USE_MONONOKE",
+        "FB_TEST_FIXTURES",
+        "TEST_FIXTURES",
+        "JUST_KNOBS_DEFAULTS",
+        "HGTEST_CERTDIR",
+        "MONONOKE_SERVER",
+        "GET_FREE_SOCKET",
+        "URLENCODE",
+        "HGTEST_DUMMYSSH",
+    ]
+    for m in monoenvs:
+        if em := os.environ.get(m):
+            t.setenv(m, em)
 
 
 def setupfuncs(t: TestTmp):
