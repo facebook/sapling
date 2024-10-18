@@ -49,7 +49,7 @@ esac
 function killandwait {
   # sends KILL to the given process and waits for it so that nothing is printed
   # to the terminal on MacOS
-  { kill -9 "$1" && wait "$1"; } > /dev/null 2>&1
+  { kill -9 "$1" && tail --pid="$1" -f /dev/null; } > /dev/null 2>&1
   # We don't care for wait exit code
   true
 }
@@ -125,43 +125,7 @@ function curltest {
 }
 
 function mononoke {
-  if [[ ! -d "$SCRIBE_LOGS_DIR" ]]; then
-    mkdir "$SCRIBE_LOGS_DIR"
-  fi
-
-  setup_configerator_configs
-
-  local BIND_ADDR
-  if [[ $LOCALIP == *":"* ]]; then
-    # ipv6, surround in brackets
-    BIND_ADDR="[$LOCALIP]:0"
-  else
-    BIND_ADDR="$LOCALIP:0"
-  fi
-
-  # Stop any confusion from previous runs
-  rm -f "$MONONOKE_SERVER_ADDR_FILE"
-
-  # Ignore specific Python warnings to make tests predictable.
-  PYTHONWARNINGS="ignore:::requests,ignore::SyntaxWarning" \
-  GLOG_minloglevel=5 \
-    "$MONONOKE_SERVER" "$@" \
-    --scribe-logging-directory "$TESTTMP/scribe_logs" \
-    --tls-ca "$TEST_CERTDIR/root-ca.crt" \
-    --tls-private-key "$TEST_CERTDIR/localhost.key" \
-    --tls-certificate "$TEST_CERTDIR/localhost.crt" \
-    --tls-ticket-seeds "$TEST_CERTDIR/server.pem.seeds" \
-    --land-service-client-cert="$TEST_CERTDIR/proxy.crt" \
-    --land-service-client-private-key="$TEST_CERTDIR/proxy.key" \
-    --debug \
-    --listening-host-port "$BIND_ADDR" \
-    --bound-address-file "$MONONOKE_SERVER_ADDR_FILE" \
-    --mononoke-config-path "$TESTTMP/mononoke-config" \
-    --no-default-scuba-dataset \
-    "${CACHE_ARGS[@]}" \
-    "${COMMON_ARGS[@]}" >> "$TESTTMP/mononoke.out" 2>&1 &
-  export MONONOKE_PID=$!
-  echo "$MONONOKE_PID" >> "$DAEMON_PIDS"
+  python_fn mononoke "$@"
 }
 
 function mononoke_hg_sync {

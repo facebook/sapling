@@ -24,6 +24,7 @@ def testsetup(t: TestTmp):
 
 
 def setupfuncs(t: TestTmp):
+    t.command(mononoke)
     t.command(wait_for_mononoke)
     t.command(wait_for_server)
     t.command(mononoke_health)
@@ -44,6 +45,84 @@ def setupfuncs(t: TestTmp):
     t.command(db_config)
     t.command(blobstore_db_config)
     t.command(setup_environment_variables)
+
+
+def mononoke(args: List[str], stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
+    scribe_logs_dir = env.getenv("SCRIBE_LOGS_DIR")
+    if not fs.exists(scribe_logs_dir):
+        fs.mkdir(scribe_logs_dir)
+
+    setup_configerator_configs(fs, env)
+
+    localip = env.getenv("LOCALIP")
+    if ":" in localip:
+        # IPv6, surround in brackets
+        bind_addr = f"[{localip}]:0"
+    else:
+        bind_addr = f"{localip}:0"
+
+    # Stop any confusion from previous runs
+    mononoke_server_addr_file = env.getenv("MONONOKE_SERVER_ADDR_FILE")
+    fs.rm(mononoke_server_addr_file)
+
+    # Set environment variables
+    env.setenv("PYTHONWARNINGS", "ignore:::requests,ignore::SyntaxWarning")
+    env.setenv("GLOG_minloglevel", "5")
+
+    # Prepare command and arguments
+    mononoke_server = env.getenv("MONONOKE_SERVER")
+    test_tmp = env.getenv("TESTTMP")
+    test_certdir = env.getenv("TEST_CERTDIR")
+    cache_args = env.getenv("CACHE_ARGS_U", "").split(" ")
+    common_args = env.getenv("COMMON_ARGS_U", "").split(" ")
+    mononoke_command = [
+        mononoke_server,
+        *args,
+        "--scribe-logging-directory",
+        f"{test_tmp}/scribe_logs",
+        "--tls-ca",
+        f"{test_certdir}/root-ca.crt",
+        "--tls-private-key",
+        f"{test_certdir}/localhost.key",
+        "--tls-certificate",
+        f"{test_certdir}/localhost.crt",
+        "--tls-ticket-seeds",
+        f"{test_certdir}/server.pem.seeds",
+        "--land-service-client-cert",
+        f"{test_certdir}/proxy.crt",
+        "--land-service-client-private-key",
+        f"{test_certdir}/proxy.key",
+        "--debug",
+        "--listening-host-port",
+        bind_addr,
+        "--bound-address-file",
+        mononoke_server_addr_file,
+        "--mononoke-config-path",
+        f"{test_tmp}/mononoke-config",
+        "--no-default-scuba-dataset",
+        *cache_args,
+        *common_args,
+    ]
+
+    # Execute the command in the background
+    with open(f"{test_tmp}/mononoke.out", "w") as outfile:
+        try:
+            mononoke_pid = subprocess.Popen(
+                mononoke_command,
+                stdout=outfile,
+                stderr=outfile,
+                env=env.getexportedenv(),
+            )
+        except:
+            stderr.write(
+                f"Error when running mononoke with command {mononoke_command} and stdout file {test_tmp}/mononoke.out\n".encode()
+            )
+    env.setenv("MONONOKE_PID", str(mononoke_pid.pid))
+    daemon_pids = env.getenv("DAEMON_PIDS")
+    with fs.open(daemon_pids, "a") as f:
+        f.write(f"{mononoke_pid}\n".encode())
+
+    return 0
 
 
 def wait_for_mononoke(args: List[str], stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
@@ -1186,7 +1265,9 @@ def setup_environment_variables(stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
         ]
     else:
         cache_args = ["--cache-mode=disabled"]
-    env.setenv("CACHE_ARGS", "(" + " ".join(cache_args) + ")")
+    all_args = " ".join(cache_args)
+    env.setenv("CACHE_ARGS_U", all_args)
+    env.setenv("CACHE_ARGS", "(" + all_args + ")")
 
     # Common arguments
     common_args = [
@@ -1201,6 +1282,8 @@ def setup_environment_variables(stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
         "--acl-file",
         acl_file,
     ]
+    all_args = " ".join(common_args)
+    env.setenv("COMMON_ARGS_U", all_args)
     env.setenv("COMMON_ARGS", "(" + " ".join(common_args) + ")")
 
     # Set up certificate directory
