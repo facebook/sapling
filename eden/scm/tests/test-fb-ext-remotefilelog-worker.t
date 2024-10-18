@@ -1,6 +1,5 @@
 #chg-compatible
 #require mononoke
-#debugruntest-incompatible
 
   $ . "$TESTDIR/library.sh"
 

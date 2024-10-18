@@ -1,6 +1,6 @@
-#chg-compatible
+#inprocess-hg-incompatible
 #require mononoke
-#debugruntest-incompatible
+#modern-config-incompatible
 
   $ . "$TESTDIR/library.sh"
 

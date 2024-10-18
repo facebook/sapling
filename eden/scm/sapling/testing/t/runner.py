@@ -391,6 +391,7 @@ def _run_once(testcase=None):
     t = TestTmp(tmpprefix={repr(path.name)}, testcase=testcase)
     t.setenv("TESTFILE", TESTFILE)
     t.setenv("TESTDIR", TESTDIR)
+    t.setenv("DEBUGRUNTEST_ENABLED", "1")
     t.setenv("RUNTESTDIR", TESTDIR)  # compatibility: path of run-tests.py
 
     for exe in {sorted(exeneeded)}:
