@@ -64,12 +64,7 @@ export ZELOS_PORT
 CAS_SERVER_SOCKET=$(get_free_socket)
 
 function mononoke_host {
-  if [[ $LOCALIP == *":"* ]]; then
-    # ipv6, surround in brackets
-    echo -n "[$LOCALIP]"
-  else
-    echo -n "$LOCALIP"
-  fi
+  python_fn mononoke_host "$@"
 }
 
 function mononoke_address {

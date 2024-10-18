@@ -22,6 +22,7 @@ def testsetup(t: TestTmp):
 
 
 def setupfuncs(t: TestTmp):
+    t.command(mononoke_host)
     t.command(sslcurl)
     t.command(sslcurlas)
     t.command(setup_common_config)
@@ -37,6 +38,14 @@ def setupfuncs(t: TestTmp):
     t.command(db_config)
     t.command(blobstore_db_config)
     t.command(setup_environment_variables)
+
+
+def mononoke_host(env: Env) -> str:
+    localip = env.getenv("LOCALIP")
+    if ":" in localip:
+        return f"[{localip}]"
+    else:
+        return f"{localip}"
 
 
 def sslcurl(args: List[str], stderr: BinaryIO, env: Env) -> Union[str, int]:
