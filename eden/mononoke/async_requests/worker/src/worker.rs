@@ -340,7 +340,7 @@ impl AsyncMethodRequestWorker {
                                     "Failed to save result",
                                     Some(format!("{:?}", err)),
                                 );
-                                return Err(err);
+                                return Err(err.into());
                             }
                         };
 
