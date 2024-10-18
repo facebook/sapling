@@ -540,67 +540,7 @@ function wait_for_mononoke_cache_warmup {
 }
 
 function setup_common_hg_configs {
-  cat >> "$HGRCPATH" <<EOF
-[ui]
-ssh="$DUMMYSSH"
-
-[devel]
-segmented-changelog-rev-compat=True
-
-[extensions]
-commitextras=
-smartlog=
-clienttelemetry=
-
-[remotenames]
-selectivepulldefault=master_bookmark
-
-[remotefilelog]
-cachepath=$TESTTMP/cachepath
-shallowtrees=True
-
-[hint]
-ack=*
-
-[experimental]
-changegroup3=True
-
-[mutation]
-record=False
-
-[web]
-cacerts=$TEST_CERTDIR/root-ca.crt
-
-[auth]
-mononoke.prefix=*
-mononoke.schemes=https mononoke
-mononoke.cert=$TEST_CERTDIR/${OVERRIDE_CLIENT_CERT:-client0}.crt
-mononoke.key=$TEST_CERTDIR/${OVERRIDE_CLIENT_CERT:-client0}.key
-mononoke.cn=localhost
-
-[checkout]
-use-rust=false
-
-[workingcopy]
-rust-checkout=false
-
-[schemes]
-hg=ssh://user@dummy/{1}
-
-[cas]
-disable=false
-use-case=source-control-testing
-log-dir=$TESTTMP
-EOF
-
-  # Only set the dummy ssh "mono" scheme the first time. If we are called again after
-  # Mononoke starts, we don't want to override the scheme.
-  if ! hg config schemes.mono > /dev/null; then
-    cat >> "$HGRCPATH" <<EOF
-[schemes]
-mono=ssh://user@dummy/{1}
-EOF
-  fi
+  python_fn setup_common_hg_configs "$@"
 }
 
 function setup_common_config {

@@ -8,10 +8,11 @@ import os
 from typing import BinaryIO, List, Union
 from urllib.parse import quote, unquote
 
-from ..sh.interp import interpcode
-
+from ..sh.bufio import BufIO
 from ..sh.types import Env, ShellFS
 from ..t.runtime import TestTmp
+
+from .hg import hg as hgcmd
 
 
 def testsetup(t: TestTmp):
@@ -20,6 +21,7 @@ def testsetup(t: TestTmp):
 
 
 def setupfuncs(t: TestTmp):
+    t.command(setup_common_hg_configs)
     t.command(setup_mononoke_config)
     t.command(setup_acls)
     t.command(setup_mononoke_repo_config)
@@ -30,6 +32,92 @@ def setupfuncs(t: TestTmp):
     t.command(db_config)
     t.command(blobstore_db_config)
     t.command(setup_environment_variables)
+
+
+def setup_common_hg_configs(
+    fs: ShellFS,
+    env: Env,
+) -> int:
+    hg_rc_path = env.getenv("HGRCPATH")
+    test_tmp = env.getenv("TESTTMP")
+    test_certdir = env.getenv("TEST_CERTDIR")
+    override_client_cert = env.getenv("OVERRIDE_CLIENT_CERT", "client0")
+
+    config_content = f"""
+[ui]
+ssh="{env.getenv('DUMMYSSH')}"
+
+[devel]
+segmented-changelog-rev-compat=True
+
+[extensions]
+commitextras=
+remotenames=
+smartlog=
+clienttelemetry=
+
+[remotefilelog]
+cachepath={test_tmp}/cachepath
+shallowtrees=True
+
+[remotenames]
+selectivepulldefault=master_bookmark
+
+[hint]
+ack=*
+
+[experimental]
+changegroup3=True
+
+[mutation]
+record=False
+
+[web]
+cacerts={test_certdir}/root-ca.crt
+
+[auth]
+mononoke.prefix=*
+mononoke.schemes=https mononoke
+mononoke.cert={test_certdir}/{override_client_cert}.crt
+mononoke.key={test_certdir}/{override_client_cert}.key
+mononoke.cn=localhost
+
+[schemes]
+hg=ssh://user@dummy/{{1}}
+
+[cas]
+disable=false
+use-case=source-control-testing
+log-dir={test_tmp}
+"""
+
+    if not env.getenv("DEBUGRUNTEST_ENABLED"):
+        config_content += f"""
+[remotenames]
+selectivepull=True
+
+[checkout]
+use-rust=false
+
+[workingcopy]
+rust-checkout=false
+"""
+
+    with fs.open(hg_rc_path, "a") as f:
+        f.write(config_content.encode())
+
+    # Check if the 'mono' scheme is already set
+    env.args = ["hg", "config", "schemes.mono"]
+    if hgcmd(BufIO.devnull(), BufIO.devnull(), BufIO.devnull(), env) != 0:
+        with fs.open(hg_rc_path, "a") as f:
+            f.write(
+                b"""
+[schemes]
+mono=ssh://user@dummy/{1}
+"""
+            )
+
+    return 0
 
 
 def setup_mononoke_config(
