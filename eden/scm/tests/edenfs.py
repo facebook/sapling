@@ -5,6 +5,28 @@
 
 # pyre-strict
 
+# This file would be much better as a debugruntest extension, but there are a
+# few things preventing that:
+# 1. EdenFS setup env var setup is complex and difficult to keep in sync. This
+#    approach instead opts for using the exact env vars that were passed down
+#    to the test and then filters the ones that might be altered on the fly
+#    by tests.
+# 2. Running sl clone with EdenFS depends on having `edenfsctl` as an env var
+# 3. Cross-OS shenanigans related to TMPDIR, which is used extensively on debugruntest
+# 4. Starting EdenFS has a few caveats:
+#    a. The logic for waiting for EdenFS to start only fully exists in
+#       eden.integration.lib.edenclient. In theory this could be replaced with
+#       `eden status --wait`, but at least at the time this was originally written
+#       that never really worked.
+#    b. Adding a regular sleep after starting EdenFS is a bad idea. This makes
+#       testing slower, and we don't want slowness preventing us from enabling
+#       EdenFS on more .t tests.
+#    c. EdenFS has to be started before the entire test can be run so that we
+#       can have useful logs when there is an error. This is mostly a choice
+#       rather than a real requirement, however.
+# 5. It's better to make sure EdenFS is completely terminated once a test
+#    finishes. Not killing EdenFS can lead to mount shenanigans in some OSes
+
 import os
 import sys
 from contextlib import contextmanager
