@@ -227,31 +227,14 @@ macro_rules! impl_async_svc_stored_type {
     }
 }
 
-/// A macro to call impl_async_svc_stored_type for params/result
-/// types, as well as define a bunch of relationships between
-/// these types, and their Request-related frients.
-/// An underlying idea is to define as much behavior and relationships
-/// as possible in the type system, so that we
-/// (a) minimize a chance of using incorrent pair of types somewhere
-/// (b) can write generic enqueing/polling functions
-macro_rules! impl_async_svc_method_types {
+/// Implement the Params type for an async method, and any conversions.
+macro_rules! impl_async_svc_method_types_params {
     {
-        method_name => $method_name: expr,
         request_struct => $request_struct: ident,
-
         params_value_thrift_type => $params_value_thrift_type: ident,
         params_union_variant => $params_union_variant: ident,
 
-        result_value_thrift_type => $result_value_thrift_type: ident,
-        result_union_variant => $result_union_variant: ident,
-
-        response_type => $response_type: ident,
-        poll_response_type => $poll_response_type: ident,
-        token_type => $token_type: ident,
-        token_thrift_type => $token_thrift_type: ident,
-
         fn target(&$self_ident: ident: ThriftParams) -> String $target_in_params: tt
-
     } => {
         impl ThriftParams for thrift::$params_value_thrift_type {
             type R = $request_struct;
@@ -261,6 +244,23 @@ macro_rules! impl_async_svc_method_types {
             }
         }
 
+        impl From<thrift::$params_value_thrift_type> for AsynchronousRequestParams{
+            fn from(params: thrift::$params_value_thrift_type) -> AsynchronousRequestParams {
+                AsynchronousRequestParams::from_thrift(
+                    ThriftAsynchronousRequestParams::$params_union_variant(params)
+                )
+            }
+        }
+    }
+}
+
+/// Implement the Token type for an async method, and any conversions.
+macro_rules! impl_async_svc_method_types_token {
+    {
+        request_struct => $request_struct: ident,
+        token_type => $token_type: ident,
+        token_thrift_type => $token_thrift_type: ident,
+    } => {
         #[derive(Clone, Debug)]
         pub struct $token_type(pub thrift::$token_thrift_type);
 
@@ -294,16 +294,18 @@ macro_rules! impl_async_svc_method_types {
                 self.0
             }
         }
+    }
+}
 
-        impl From<Result<thrift::$response_type, AsyncRequestsError>> for AsynchronousRequestResult {
-            fn from(r: Result<thrift::$response_type, AsyncRequestsError>) -> AsynchronousRequestResult {
-                let thrift = match r {
-                    Ok(payload) => ThriftAsynchronousRequestResult::$result_union_variant(thrift::$result_value_thrift_type::success(payload)),
-                    Err(e) => ThriftAsynchronousRequestResult::$result_union_variant(thrift::$result_value_thrift_type::error(e.into()))
-                };
-
-                AsynchronousRequestResult::from_thrift(thrift)
-            }
+/// Implement the Result type for an async method, and any conversions.
+macro_rules! impl_async_svc_method_types_result {
+    {
+        request_struct => $request_struct: ident,
+        result_value_thrift_type => $result_value_thrift_type: ident,
+        result_union_variant => $result_union_variant: ident,
+    } => {
+        impl ThriftResult for thrift::$result_value_thrift_type {
+            type R = $request_struct;
         }
 
         impl From<thrift::$result_value_thrift_type> for AsynchronousRequestResult {
@@ -311,18 +313,6 @@ macro_rules! impl_async_svc_method_types {
                 let thrift = ThriftAsynchronousRequestResult::$result_union_variant(r);
                 AsynchronousRequestResult::from_thrift(thrift)
             }
-        }
-
-        impl From<thrift::$params_value_thrift_type> for AsynchronousRequestParams{
-            fn from(params: thrift::$params_value_thrift_type) -> AsynchronousRequestParams {
-                AsynchronousRequestParams::from_thrift(
-                    ThriftAsynchronousRequestParams::$params_union_variant(params)
-                )
-            }
-        }
-
-        impl ThriftResult for thrift::$result_value_thrift_type {
-            type R = $request_struct;
         }
 
         impl TryFrom<AsynchronousRequestResult> for thrift::$result_value_thrift_type {
@@ -353,6 +343,173 @@ macro_rules! impl_async_svc_method_types {
                 }
             }
         }
+    }
+}
+
+/// A macro to call impl_async_svc_stored_type for params/result
+/// types, as well as define a bunch of relationships between
+/// these types, and their Request-related frients.
+/// An underlying idea is to define as much behavior and relationships
+/// as possible in the type system, so that we
+/// (a) minimize a chance of using incorrent pair of types somewhere
+/// (b) can write generic enqueing/polling functions
+///
+/// The arguments are as follows:
+/// * method_name:              the Thrift method name
+/// * request_struct:           the name of an internal struct to represent the request (declared by the macro)
+/// * params_value_thrift_type: the Thrift structs that contains all the params
+/// * params_union_variant:     the name of a variant of the AsynchronousRequestParams union, maatching the Thrift params struct
+/// * response_type:            the name of the Thrift struct that holds the response to the method
+/// * result_union_variant:     the name of a variant of the AsynchronousRequestResult union, matching the Thrift response struct
+/// * poll_response_type:       the Thrift struct returned by the poll method associated with this method
+/// * token_type:               the name of an internal struct to represent the token (declared by the macro)
+/// * token_thrift_type:        the Thrift struct holding the token returned by the method and accepted by the poll method
+macro_rules! impl_async_svc_method_types {
+    {
+        method_name => $method_name: expr,
+        request_struct => $request_struct: ident,
+
+        params_value_thrift_type => $params_value_thrift_type: ident,
+        params_union_variant => $params_union_variant: ident,
+
+        response_type => $response_type: ident,
+        result_union_variant => $result_union_variant: ident,
+
+        poll_response_type => $poll_response_type: ident,
+        token_type => $token_type: ident,
+        token_thrift_type => $token_thrift_type: ident,
+
+        fn target(&$self_ident: ident: ThriftParams) -> String $target_in_params: tt
+
+    } => {
+        impl_async_svc_method_types_params!(
+            request_struct => $request_struct,
+            params_value_thrift_type => $params_value_thrift_type,
+            params_union_variant => $params_union_variant,
+
+            fn target(&$self_ident: ThriftParams) -> String {
+                $target_in_params
+            }
+        );
+        impl_async_svc_method_types_token!(
+            request_struct => $request_struct,
+            token_type => $token_type,
+            token_thrift_type => $token_thrift_type,
+        );
+
+        impl_async_svc_method_types_result!(
+            request_struct => $request_struct,
+            result_value_thrift_type => $response_type,
+            result_union_variant => $result_union_variant,
+        );
+
+        pub struct $request_struct;
+
+        impl Request for $request_struct {
+            const NAME: &'static str = $method_name;
+
+            type Token = $token_type;
+            type ThriftParams = thrift::$params_value_thrift_type;
+            type ThriftResult = thrift::$response_type;
+            type ThriftResponse = thrift::$response_type;
+            type PollResponse = thrift::$poll_response_type;
+
+            fn thrift_result_into_poll_response(
+                thrift_result: Self::ThriftResult,
+            ) -> Self::PollResponse {
+                thrift::$poll_response_type::response(thrift_result)
+            }
+
+            fn empty_poll_response() -> Self::PollResponse {
+                thrift::$poll_response_type::poll_pending ( thrift::PollPending{..Default::default() } )
+            }
+        }
+
+        impl From<Result<thrift::$response_type, AsyncRequestsError>> for AsynchronousRequestResult {
+            fn from(r: Result<thrift::$response_type, AsyncRequestsError>) -> AsynchronousRequestResult {
+                let thrift = match r {
+                    Ok(payload) => ThriftAsynchronousRequestResult::$result_union_variant(payload),
+                    Err(e) => {
+                        ThriftAsynchronousRequestResult::error(e.into())
+                    }
+                };
+
+                AsynchronousRequestResult::from_thrift(thrift)
+            }
+        }
+
+        impl TryFrom<AsynchronousRequestResult> for thrift::$poll_response_type {
+            type Error = AsyncRequestsError;
+
+            fn try_from(r: AsynchronousRequestResult) -> Result<thrift::$poll_response_type, Self::Error> {
+                match r.thrift {
+                    ThriftAsynchronousRequestResult::$result_union_variant(payload) => {
+                        Ok(thrift::$poll_response_type::response(payload))
+                    }
+                    ThriftAsynchronousRequestResult::UnknownField(x) => {
+                        // TODO: maybe use structured error?
+                        Err(AsyncRequestsError::internal(
+                            anyhow!(
+                                "failed to parse {} thrift. UnknownField: {}",
+                                stringify!(thrift::$response_type),
+                                x,
+                            )
+                        ))
+                    }
+                    x => {
+                        Err(AsyncRequestsError::internal(
+                            anyhow!(
+                                "failed to parse {} thrift. The result union contains the wrong result variant: {:?}",
+                                stringify!(thrift::$response_type),
+                                x,
+                            )
+                        ))
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Legacy version of impl_async_svc_method_types_legacy to maintain backward compatibility.
+macro_rules! impl_async_svc_method_types_legacy {
+    {
+        method_name => $method_name: expr,
+        request_struct => $request_struct: ident,
+
+        params_value_thrift_type => $params_value_thrift_type: ident,
+        params_union_variant => $params_union_variant: ident,
+
+        result_value_thrift_type => $result_value_thrift_type: ident,
+        result_union_variant => $result_union_variant: ident,
+
+        response_type => $response_type: ident,
+        poll_response_type => $poll_response_type: ident,
+        token_type => $token_type: ident,
+        token_thrift_type => $token_thrift_type: ident,
+
+        fn target(&$self_ident: ident: ThriftParams) -> String $target_in_params: tt
+
+    } => {
+        impl_async_svc_method_types_params!(
+            request_struct => $request_struct,
+            params_value_thrift_type => $params_value_thrift_type,
+            params_union_variant => $params_union_variant,
+
+            fn target(&$self_ident: ThriftParams) -> String {
+                $target_in_params
+            }
+        );
+        impl_async_svc_method_types_token!(
+            request_struct => $request_struct,
+            token_type => $token_type,
+            token_thrift_type => $token_thrift_type,
+        );
+        impl_async_svc_method_types_result!(
+            request_struct => $request_struct,
+            result_value_thrift_type => $result_value_thrift_type,
+            result_union_variant => $result_union_variant,
+        );
 
         pub struct $request_struct;
 
@@ -363,7 +520,6 @@ macro_rules! impl_async_svc_method_types {
             type ThriftParams = thrift::$params_value_thrift_type;
             type ThriftResult = thrift::$result_value_thrift_type;
             type ThriftResponse = thrift::$response_type;
-
             type PollResponse = thrift::$poll_response_type;
 
             fn thrift_result_into_poll_response(
@@ -377,12 +533,22 @@ macro_rules! impl_async_svc_method_types {
             }
         }
 
+        impl From<Result<thrift::$response_type, AsyncRequestsError>> for AsynchronousRequestResult {
+            fn from(r: Result<thrift::$response_type, AsyncRequestsError>) -> AsynchronousRequestResult {
+                let thrift = match r {
+                    Ok(payload) => ThriftAsynchronousRequestResult::$result_union_variant(thrift::$result_value_thrift_type::success(payload)),
+                    Err(e) => ThriftAsynchronousRequestResult::$result_union_variant(thrift::$result_value_thrift_type::error(e.into()))
+                };
+
+                AsynchronousRequestResult::from_thrift(thrift)
+            }
+        }
     }
 }
 
 // Params and result types for megarepo_add_sync_target
 
-impl_async_svc_method_types! {
+impl_async_svc_method_types_legacy! {
     method_name => "megarepo_add_sync_target",
     request_struct => MegarepoAddSyncTarget,
 
@@ -404,7 +570,7 @@ impl_async_svc_method_types! {
 
 // Params and result types for megarepo_add_branching_sync_target
 
-impl_async_svc_method_types! {
+impl_async_svc_method_types_legacy! {
     method_name => "megarepo_add_branching_sync_target",
     request_struct => MegarepoAddBranchingSyncTarget,
 
@@ -426,7 +592,7 @@ impl_async_svc_method_types! {
 
 // Params and result types for megarepo_change_target_config
 
-impl_async_svc_method_types! {
+impl_async_svc_method_types_legacy! {
     method_name => "megarepo_change_target_config",
     request_struct => MegarepoChangeTargetConfig,
 
@@ -448,7 +614,7 @@ impl_async_svc_method_types! {
 
 // Params and result types for megarepo_sync_changeset
 
-impl_async_svc_method_types! {
+impl_async_svc_method_types_legacy! {
     method_name => "megarepo_sync_changeset",
     request_struct => MegarepoSyncChangeset,
 
@@ -470,7 +636,7 @@ impl_async_svc_method_types! {
 
 // Params and result types for megarepo_remerge_source
 
-impl_async_svc_method_types! {
+impl_async_svc_method_types_legacy! {
     method_name => "megarepo_remerge_source",
     request_struct => MegarepoRemergeSource,
 
@@ -492,7 +658,7 @@ impl_async_svc_method_types! {
 
 // Params and result types for async_ping
 
-impl_async_svc_method_types! {
+impl_async_svc_method_types_legacy! {
     method_name => "async_ping",
     request_struct => AsyncPing,
 
@@ -521,10 +687,9 @@ impl_async_svc_method_types! {
     params_value_thrift_type => CommitSparseProfileSizeParamsV2,
     params_union_variant => commit_sparse_profile_size_params,
 
-    result_value_thrift_type => CommitSparseProfileSizeResult,
+    response_type => CommitSparseProfileSizeResponse,
     result_union_variant => commit_sparse_profile_size_result,
 
-    response_type => CommitSparseProfileSizeResponse,
     poll_response_type => CommitSparseProfileSizePollResponse,
     token_type => CommitSparseProfileSizeToken,
     token_thrift_type => CommitSparseProfileSizeToken,

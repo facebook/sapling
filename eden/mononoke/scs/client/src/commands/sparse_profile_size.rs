@@ -7,10 +7,10 @@
 
 use std::io::Write;
 
-use anyhow::bail;
 use anyhow::Result;
 use scs_client_raw::thrift;
 use serde::Serialize;
+use source_control_clients::errors::CommitSparseProfileSizePollError;
 
 use crate::args::commit_id::resolve_commit_id;
 use crate::args::commit_id::CommitIdArgs;
@@ -85,22 +85,28 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         let token = conn.commit_sparse_profile_size_async(&params).await?;
 
         loop {
-            let res = conn.commit_sparse_profile_size_poll(&token).await?;
-            match res.result {
-                Some(result) => match result {
-                    thrift::CommitSparseProfileSizeResult::success(success) => {
+            let res = conn.commit_sparse_profile_size_poll(&token).await;
+            match res {
+                Ok(res) => match res {
+                    source_control::CommitSparseProfileSizePollResponse::response(success) => {
                         break success;
                     }
-                    thrift::CommitSparseProfileSizeResult::error(error) => {
-                        return Err(anyhow::anyhow!("request failed with error: {:?}", error));
+                    source_control::CommitSparseProfileSizePollResponse::poll_pending(_) => {
+                        println!("sparse profile size is not ready yet, waiting some more...");
                     }
-                    thrift::CommitSparseProfileSizeResult::UnknownField(_) => {
-                        bail!("unknown result type");
+                    source_control::CommitSparseProfileSizePollResponse::UnknownField(t) => {
+                        return Err(anyhow::anyhow!(
+                            "request failed with unknown result: {:?}",
+                            t
+                        ));
                     }
                 },
-                None => {
-                    println!("sparse profile size is not ready yet, waiting some more...");
-                }
+                Err(e) => match e {
+                    CommitSparseProfileSizePollError::poll_error(_) => {
+                        // retry
+                    }
+                    _ => return Err(anyhow::anyhow!("request failed with error: {:?}", e)),
+                },
             }
         }
     } else {

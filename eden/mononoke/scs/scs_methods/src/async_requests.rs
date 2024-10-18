@@ -48,7 +48,7 @@ pub(crate) async fn poll<T: Token>(
         Some(queue) => Ok(queue
             .poll(ctx, token)
             .await
-            .map_err(scs_errors::internal_error)?),
+            .map_err(scs_errors::poll_error)?),
         None => Err(async_requests_disabled()),
     }
 }

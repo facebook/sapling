@@ -666,6 +666,7 @@ fn log_result<T: AddScubaResponse>(
                 Status::RequestError => ("REQUEST_ERROR", Some(desc), 1, 0, 0),
                 Status::InternalError => ("INTERNAL_ERROR", Some(desc), 0, 1, 0),
                 Status::OverloadError => ("OVERLOAD_ERROR", Some(desc), 0, 0, 1),
+                Status::PollError => ("POLL_ERROR", Some(desc), 0, 1, 0),
             }
         }
     };

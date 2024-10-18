@@ -50,6 +50,7 @@ rust_binary(
         "//eden/mononoke/cmdlib/base_app:base_app",
         "//eden/mononoke/common/bounded_traversal:bounded_traversal",
         "//eden/mononoke/scs/if:source_control-rust",
+        "//eden/mononoke/scs/if:source_control-rust-clients",
         "//eden/mononoke/scs/raw_client_lib:scs_client_raw",
     ],
 )

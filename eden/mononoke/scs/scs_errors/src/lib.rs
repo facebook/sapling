@@ -21,6 +21,7 @@ pub enum ServiceError {
     Request(thrift::RequestError),
     Internal(thrift::InternalError),
     Overload(thrift::OverloadError),
+    Poll(thrift::PollError),
 }
 
 impl From<thrift::RequestError> for ServiceError {
@@ -41,11 +42,18 @@ impl From<thrift::OverloadError> for ServiceError {
     }
 }
 
+impl From<thrift::PollError> for ServiceError {
+    fn from(e: thrift::PollError) -> Self {
+        Self::Poll(e)
+    }
+}
+
 #[derive(Clone, Copy)]
 pub enum Status {
     RequestError,
     InternalError,
     OverloadError,
+    PollError,
 }
 
 /// Error can be logged to SCS scuba table
@@ -59,6 +67,7 @@ impl LoggableError for ServiceError {
             Self::Request(err) => (Status::RequestError, format!("{:?}", err)),
             Self::Internal(err) => (Status::InternalError, format!("{:?}", err)),
             Self::Overload(err) => (Status::OverloadError, format!("{:?}", err)),
+            Self::Poll(err) => (Status::PollError, format!("{:?}", err)),
         }
     }
 }
@@ -91,6 +100,13 @@ impl ServiceError {
             Self::Overload(thrift::OverloadError { reason, .. }) => {
                 let reason = format!("{}: {}", context, reason);
                 Self::Overload(thrift::OverloadError {
+                    reason,
+                    ..Default::default()
+                })
+            }
+            Self::Poll(thrift::PollError { reason, .. }) => {
+                let reason = format!("{}: {}", context, reason);
+                Self::Poll(thrift::PollError {
                     reason,
                     ..Default::default()
                 })
@@ -193,6 +209,7 @@ impl From<ServiceError> for AsyncRequestsError {
             ServiceError::Request(e) => Self::request(e),
             ServiceError::Internal(e) => Self::internal(e),
             ServiceError::Overload(e) => Self::internal(e),
+            ServiceError::Poll(e) => Self::internal(e), // FIXME
         }
     }
 }
@@ -282,6 +299,7 @@ macro_rules! impl_into_thrift_error {
                     ServiceError::Request(e) => e.into(),
                     ServiceError::Internal(e) => e.into(),
                     ServiceError::Overload(e) => e.into(),
+                    ServiceError::Poll(_) => todo!(),
                 }
             }
         }
@@ -464,6 +482,13 @@ pub fn not_implemented(reason: String) -> thrift::RequestError {
 pub fn overloaded(reason: String) -> thrift::OverloadError {
     thrift::OverloadError {
         reason,
+        ..Default::default()
+    }
+}
+
+pub fn poll_error(error: impl ToString) -> thrift::PollError {
+    thrift::PollError {
+        reason: error.to_string(),
         ..Default::default()
     }
 }

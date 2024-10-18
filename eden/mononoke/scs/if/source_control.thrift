@@ -2095,8 +2095,11 @@ union CommitSparseProfileSizeResult {
   2: AsyncRequestError error;
 }
 
-struct CommitSparseProfileSizePollResponse {
-  1: optional CommitSparseProfileSizeResult result;
+struct PollPending {}
+
+union CommitSparseProfileSizePollResponse {
+  1: PollPending poll_pending;
+  2: CommitSparseProfileSizeResponse response;
 }
 
 struct TreeListResponse {
@@ -2380,6 +2383,11 @@ transient server exception InternalError {
 }
 
 transient server exception OverloadError {
+  @thrift.ExceptionMessage
+  1: string reason;
+}
+
+transient server exception PollError {
   @thrift.ExceptionMessage
   1: string reason;
 }
@@ -2869,6 +2877,7 @@ service SourceControlService extends fb303_core.BaseService {
     1: RequestError request_error,
     2: InternalError internal_error,
     3: OverloadError overload_error,
+    4: PollError poll_error,
   );
 
   /// Tree Methods
