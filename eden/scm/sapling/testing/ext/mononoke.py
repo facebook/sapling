@@ -22,6 +22,7 @@ def testsetup(t: TestTmp):
 
 
 def setupfuncs(t: TestTmp):
+    t.command(sslcurl)
     t.command(sslcurlas)
     t.command(setup_common_config)
     t.command(setup_configerator_configs)
@@ -36,6 +37,10 @@ def setupfuncs(t: TestTmp):
     t.command(db_config)
     t.command(blobstore_db_config)
     t.command(setup_environment_variables)
+
+
+def sslcurl(args: List[str], stderr: BinaryIO, env: Env) -> Union[str, int]:
+    return sslcurlas(["proxy"] + [*args], stderr, env)
 
 
 def sslcurlas(args: List[str], stderr: BinaryIO, env: Env) -> Union[str, int]:

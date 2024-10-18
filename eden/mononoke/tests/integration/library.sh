@@ -123,7 +123,7 @@ function sslcurlas {
 }
 
 function sslcurl {
-  sslcurlas proxy "$@"
+  python_fn sslcurl "$@"
 }
 
 function sslcurl_noclientinfo_test {
