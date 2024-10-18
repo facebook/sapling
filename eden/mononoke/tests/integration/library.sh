@@ -68,12 +68,7 @@ function mononoke_host {
 }
 
 function mononoke_address {
-  if [[ $LOCALIP == *":"* ]]; then
-    # ipv6, surround in brackets
-    echo -n "[$LOCALIP]:$MONONOKE_SOCKET"
-  else
-    echo -n "$LOCALIP:$MONONOKE_SOCKET"
-  fi
+  python_fn mononoke_address "$@"
 }
 
 function cas_server_address {
