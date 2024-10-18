@@ -1,5 +1,4 @@
-#ifndef SANE_CTYPE_H
-#define SANE_CTYPE_H
+#pragma once
 
 /* Sane ctype - no locale, and works with signed chars */
 #undef isascii
@@ -62,5 +61,3 @@ static inline int sane_iscase(int x, int is_lower)
 	else
 		return (x & 0x20) == 0;
 }
-
-#endif

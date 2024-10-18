@@ -1,5 +1,4 @@
-#ifndef GIT_COMPAT_UTIL_H
-#define GIT_COMPAT_UTIL_H
+#pragma once
 
 #if __STDC_VERSION__ - 0 < 199901L
 /*
@@ -1557,5 +1556,3 @@ static inline void *container_of_or_null_offset(void *ptr, size_t offset)
 #define OFFSETOF_VAR(ptr, member) \
 	((uintptr_t)&(ptr)->member - (uintptr_t)(ptr))
 #endif /* !__GNUC__ */
-
-#endif
