@@ -2,6 +2,10 @@
 
   $ configure mutation
 
+  $ function log() {
+  >   hg log -G -r 'all()' -T '{node|short} {desc} {remotebookmarks} {bookmarks}'
+  > }
+
 #testcases slapi wireproto
 
 #if wireproto
@@ -54,20 +58,20 @@ Test fast forward push
   @@ -1,1 +1,2 @@
    foo
   +x
-  $ hg log -G -r 'all()' -T '{node|short} {desc} {remotebookmarks} {bookmarks}'
+  $ log
   @  ea98a8f95390 changed message remote/master
   │
   o  2bb9d20e471c initial
 
 the master bookmark should point to the latest commit
   $ newclientrepo client2 test:server
-  $ hg log -G -r 'all()' -T '{node|short} {desc} {remotebookmarks} {bookmarks}'
+  $ log
   @  ea98a8f95390 changed message remote/master
   │
   o  2bb9d20e471c initial
 
 test pushrebase conflicts
-  $ hg go -q 2bb9d20e471c --debug -v
+  $ hg go -q 2bb9d20e471c
   $ echo y >> a && hg commit -qm "update a"
 #if slapi
   $ hg push --to master -q
