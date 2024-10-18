@@ -3180,18 +3180,16 @@ def debugsuccessorssets(ui, repo, *revs, **opts) -> None:
     """
     # passed to successorssets caching computation from one call to another
     cache = {}
-    ctx2str = str
-    node2str = short
     if mutation.enabled(repo):
         successorssets = mutation.successorssets
     else:
         successorssets = []
     if ui.debug():
-
-        def ctx2str(ctx):
-            return ctx.hex()
-
+        ctx2str = lambda ctx: ctx.hex()
         node2str = hex
+    else:
+        ctx2str = str
+        node2str = short
     for rev in scmutil.revrange(repo, revs):
         ctx = repo[rev]
         ui.write("%s\n" % ctx2str(ctx))
