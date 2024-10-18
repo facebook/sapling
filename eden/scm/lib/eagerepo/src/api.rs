@@ -1299,6 +1299,7 @@ impl SaplingRemoteApi for EagerRepo {
 
             let mut conflicts = Vec::new();
             let mut state = (left_iter.next(), right_iter.next());
+            let is_case_sensitive = true;
             loop {
                 state = match state {
                     (Some(l), Some(r)) => match l.cmp(&r) {
@@ -1306,12 +1307,17 @@ impl SaplingRemoteApi for EagerRepo {
                             conflicts.push((l.clone(), r.clone()));
                             (left_iter.next(), right_iter.next())
                         }
-                        // todo: handle repo path prefix
                         Ordering::Less => {
-                            panic!("not implemented");
+                            if r.starts_with(&l, is_case_sensitive) {
+                                conflicts.push((l.clone(), r.clone()));
+                            }
+                            (left_iter.next(), Some(r))
                         }
                         Ordering::Greater => {
-                            panic!("not implemented");
+                            if l.starts_with(&r, is_case_sensitive) {
+                                conflicts.push((l.clone(), r.clone()));
+                            }
+                            (Some(l), right_iter.next())
                         }
                     },
                     _ => break,
