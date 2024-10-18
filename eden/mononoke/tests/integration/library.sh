@@ -470,7 +470,7 @@ function wait_for_server {
 }
 
 function mononoke_health {
-  sslcurl -q "https://localhost:$MONONOKE_SOCKET/health_check"
+  python_fn mononoke_health "$@"
 }
 
 # Wait until a Mononoke server is available for this repo.

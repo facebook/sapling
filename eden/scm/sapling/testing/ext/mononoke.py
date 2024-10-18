@@ -22,6 +22,7 @@ def testsetup(t: TestTmp):
 
 
 def setupfuncs(t: TestTmp):
+    t.command(mononoke_health)
     t.command(mononoke_address)
     t.command(mononoke_host)
     t.command(sslcurl)
@@ -39,6 +40,16 @@ def setupfuncs(t: TestTmp):
     t.command(db_config)
     t.command(blobstore_db_config)
     t.command(setup_environment_variables)
+
+
+def mononoke_health(stderr: BinaryIO, env: Env) -> Union[str, int]:
+    mononoke_socket = env.getenv("MONONOKE_SOCKET")
+    if not mononoke_socket:
+        stderr.write(b"Error: MONONOKE_SOCKET environment variable is not set\n")
+        return 1
+
+    url = f"https://localhost:{mononoke_socket}/health_check"
+    return sslcurl(["-q", url], stderr, env)
 
 
 def mononoke_address(env: Env) -> str:
