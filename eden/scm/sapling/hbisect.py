@@ -15,7 +15,6 @@
 
 from __future__ import absolute_import
 
-import collections
 from typing import Optional, Sized, Tuple, TYPE_CHECKING
 
 import bindings

@@ -19,9 +19,7 @@ import getpass
 import inspect
 import os
 import re
-import signal
 import socket
-import subprocess
 import sys
 import tempfile
 import time

@@ -21,7 +21,6 @@ import selectors
 import signal
 import socket
 import struct
-import sys
 import traceback
 from typing import Any, BinaryIO, List, Tuple
 

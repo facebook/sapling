@@ -60,7 +60,6 @@ from sapling import (
     extensions,
     hintutil,
     lock as lockmod,
-    mutation,
     patch,
     phases,
     registrar,

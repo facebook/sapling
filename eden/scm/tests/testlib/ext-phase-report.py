@@ -2,8 +2,6 @@
 
 from __future__ import absolute_import
 
-from sapling import pycompat
-
 
 def reposetup(ui, repo):
     def reportphasemove(tr):

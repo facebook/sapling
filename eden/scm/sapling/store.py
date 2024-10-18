@@ -20,7 +20,6 @@ import bindings
 parsers = bindings.cext.parsers
 
 from . import error, pycompat, util, vfs as vfsmod
-from .i18n import _
 from .pycompat import decodeutf8, encodeutf8, inttobyte, range
 
 

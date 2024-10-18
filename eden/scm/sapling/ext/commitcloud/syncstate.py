@@ -5,11 +5,9 @@
 
 from __future__ import absolute_import
 
-import hashlib
 import json
 import time
 
-from sapling.i18n import _
 from sapling.pycompat import encodeutf8, ensurestr
 
 from . import error as ccerror

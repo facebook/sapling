@@ -80,7 +80,7 @@ from .. import (
     visibility,
 )
 from ..i18n import _, _n, _x
-from ..node import bin, hex, nullhex, nullid, nullrev, short
+from ..node import bin, hex, nullid, nullrev, short
 from ..pycompat import decodeutf8, range
 from . import migratesymlinks
 from .cmdtable import command

@@ -12,7 +12,7 @@
 
 from __future__ import absolute_import
 
-from typing import Dict, Optional, Sized, Tuple, Union
+from typing import Dict, Optional, Sized, Union
 
 from . import (
     encoding,

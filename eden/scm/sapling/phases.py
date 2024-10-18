@@ -111,7 +111,6 @@ import errno
 import struct
 from typing import Dict
 
-import bindings
 from sapling.util import sortdict
 
 from . import error, perftrace, pycompat, smartset, txnutil, util, visibility

@@ -24,7 +24,7 @@ from sapling import (
     util,
     visibility,
 )
-from sapling.i18n import _, _n
+from sapling.i18n import _
 
 from . import (
     background,

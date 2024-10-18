@@ -45,7 +45,6 @@ from sapling import (
     progress,
     pycompat,
     registrar,
-    revset,
     revsetlang,
     scmutil,
     simplemerge,

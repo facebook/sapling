@@ -14,7 +14,7 @@ from __future__ import absolute_import
 
 import os
 import weakref
-from typing import Dict, NamedTuple, Tuple
+from typing import Dict
 
 from bindings import journal as rsjournal
 

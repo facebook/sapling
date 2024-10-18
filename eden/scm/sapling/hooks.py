@@ -8,7 +8,6 @@
 import bindings
 
 from . import util
-from .i18n import _
 
 
 def backgroundfsync(ui, repo, hooktype, **kwargs) -> None:

@@ -11,7 +11,6 @@
 - source tinit.sh
 """
 
-import io
 import os
 import subprocess
 import sys

@@ -10,8 +10,6 @@ This overrides the dirstate to check with the eden daemon for modifications,
 instead of doing a normal scan of the filesystem.
 """
 
-import bindings
-
 from . import util
 
 from .node import nullid

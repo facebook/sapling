@@ -14,7 +14,6 @@ import unittest
 
 import silenttestrunner
 from bindings import treestate
-from sapling import pycompat
 
 
 testtmp = os.getenv("TESTTMP") or tempfile.mkdtemp("test-treestate")

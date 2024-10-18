@@ -31,8 +31,6 @@ def backtrace_all(ui, pid: int):
     import os
     import tempfile
 
-    import bindings
-
     python_source = inspect.getsource(sys.modules["sapling.dbgutil"])
 
     with tempfile.TemporaryDirectory(prefix="saplinglldb") as dir:

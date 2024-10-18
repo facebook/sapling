@@ -15,8 +15,6 @@ import subprocess
 import sys
 import unittest
 
-import libfb.py.parutil as parutil
-
 
 hgpath = os.environ.get("HGTEST_HG")
 pythonbinpath = os.environ.get("HGTEST_PYTHON", "python3")

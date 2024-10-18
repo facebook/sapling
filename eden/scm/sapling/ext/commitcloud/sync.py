@@ -22,7 +22,6 @@ from sapling import (
     node as nodemod,
     perftrace,
     progress,
-    pycompat,
     util,
     visibility,
 )

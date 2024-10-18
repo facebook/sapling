@@ -26,7 +26,6 @@ import bindings
 from bindings import renderdag
 
 from sapling import tracing
-from sapling.ext.extlib.phabricator import PHABRICATOR_COMMIT_MESSAGE_TAGS
 
 from . import (
     bookmarks,

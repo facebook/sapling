@@ -4,7 +4,6 @@
 # GNU General Public License version 2.
 
 import fnmatch
-import io
 import os
 from typing import BinaryIO, List
 

@@ -6,7 +6,6 @@
 import struct
 
 from sapling import extensions, json, node as nodemod, pycompat
-from sapling.i18n import _
 
 
 def remotebookmarksenabled(ui):

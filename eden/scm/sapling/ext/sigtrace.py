@@ -27,7 +27,7 @@ import sys
 import threading
 import time
 
-from sapling import pycompat, registrar, tracing, util
+from sapling import registrar, tracing, util
 
 
 pathformat = "/tmp/trace-%(pid)s-%(time)s.log"

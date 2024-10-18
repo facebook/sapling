@@ -17,7 +17,6 @@ import errno
 import getopt
 import os
 import pdb
-import re
 import signal
 import sys
 import time

@@ -5,7 +5,7 @@
 
 from __future__ import absolute_import
 
-from sapling import commands, encoding, error, extensions, hg, pycompat, util
+from sapling import commands, encoding, error, extensions, hg, util
 from sapling.i18n import _
 from sapling.util import sortdict
 

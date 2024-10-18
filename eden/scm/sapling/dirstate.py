@@ -28,7 +28,6 @@ from typing import (
     List,
     Optional,
     Sequence,
-    Set,
     Tuple,
 )
 
@@ -57,7 +56,6 @@ from . import (
 )
 from .i18n import _
 from .node import hex, nullid
-from .pycompat import encodeutf8
 
 # pyre-fixme[5]: Global expression must be annotated.
 parsers = bindings.cext.parsers

@@ -7,7 +7,7 @@
 from __future__ import absolute_import
 
 import bindings
-from sapling import context, dirstate, extensions, pycompat, registrar, treestate, util
+from sapling import context, dirstate, extensions, registrar, treestate, util
 
 parsers = bindings.cext.parsers
 

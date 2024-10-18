@@ -18,7 +18,6 @@ from typing import List, Optional
 from bindings import pathmatcher
 
 from . import error, identity, util
-from .i18n import _
 
 
 allpatternkinds = (

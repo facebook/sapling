@@ -1773,7 +1773,7 @@ class PythonTest(Test):
         debugargs = ""
         if self._options.debug:
             try:
-                import ipdb
+                pass
             except ImportError:
                 print(
                     "WARNING: ipdb is not available, not running %s under debug mode"

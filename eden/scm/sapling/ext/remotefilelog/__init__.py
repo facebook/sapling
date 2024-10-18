@@ -103,7 +103,6 @@ from sapling import (
     cmdutil,
     commands,
     context,
-    copies,
     error,
     exchange,
     extensions,
@@ -112,7 +111,6 @@ from sapling import (
     match,
     merge,
     patch,
-    pycompat,
     registrar,
     repair,
     revset,
@@ -125,7 +123,6 @@ from sapling import (
 from sapling.commands import debug as hgdebugcommands
 from sapling.extensions import wrapfunction
 from sapling.i18n import _
-from sapling.node import hex
 from sapling.pycompat import isint, sysplatform
 
 from . import (

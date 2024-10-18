@@ -59,7 +59,7 @@ import os
 import struct
 
 import bindings
-from bindings import manifest as rustmanifest, revisionstore
+from bindings import manifest as rustmanifest
 
 from sapling import (
     bundle2,
@@ -91,7 +91,7 @@ from sapling import (
     wireproto,
 )
 from sapling.commands import debug as debugcommands
-from sapling.i18n import _, _n
+from sapling.i18n import _
 from sapling.node import bin, hex, nullid, short
 from sapling.pycompat import range
 

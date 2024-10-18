@@ -25,7 +25,6 @@ from sapling import (
     mutation,
     node as nodemod,
     phases,
-    pycompat,
     util,
     wireproto,
 )

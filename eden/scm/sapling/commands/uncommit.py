@@ -37,7 +37,7 @@ from .. import (
     util,
 )
 from ..i18n import _
-from ..node import hex, nullid
+from ..node import nullid
 from .cmdtable import command
 
 
