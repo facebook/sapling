@@ -100,9 +100,6 @@ python_unittest(
     runtime_deps = [
         "//eden/mononoke/tests/integration/certs/facebook:test_certs",
     ],
-    deps = [
-        "//libfb/py:parutil",
-    ],
 )
 
 W_ENV = dict(ENV)
@@ -124,9 +121,6 @@ python_unittest(
         "//watchman:watchman": "watchman",
     },
     supports_static_listing = False,
-    deps = [
-        "//libfb/py:parutil",
-    ],
 )
 
 artifacts = get_integration_test_env_and_deps()
@@ -150,9 +144,6 @@ python_unittest(
     },
     supports_static_listing = False,
     runtime_deps = artifacts["deps"],
-    deps = [
-        "//libfb/py:parutil",
-    ],
 )
 
 # Order is important, we want HGTEST_RUN_TESTS_PY from the Eden env var dict
@@ -174,9 +165,6 @@ python_unittest(
     },
     supports_static_listing = False,
     runtime_deps = artifacts["deps"],
-    deps = [
-        "//libfb/py:parutil",
-    ],
 )
 
 buck_command_alias(
@@ -228,7 +216,6 @@ python_unittest(
         "//eden/mononoke/tests/integration/certs/facebook:test_certs",
         "//eden/mononoke/tests/integration:test_fixtures",
     ],
-    deps = ["//libfb/py:parutil"],
 )
 
 MEW_ENV = dict(EW_ENV)
