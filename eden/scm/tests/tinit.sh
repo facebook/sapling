@@ -49,9 +49,20 @@ newclientrepo() {
     reponame=repo$_repocount
   fi
   if [ -z "$server" ]; then
+    if [ -n "$USE_MONONOKE" ] ; then
+      servername="${reponame}"
+      newserver "${servername}"
+      server="mononoke://$(mononoke_address)/${servername}"
+    else
       server="test:${reponame}_server"
+    fi
   fi
-  hg clone --config "clone.use-rust=True" --config "remotefilelog.reponame=$reponame" --shallow -q "$server" "$TESTTMP/$reponame"
+  if [ -z "$USE_MONONOKE" ] ; then
+    remflog="--config remotefilelog.reponame=${reponame}"
+  else
+    remflog=""
+  fi
+  hg clone --config "clone.use-rust=True" $remflog --shallow -q "$server" "$TESTTMP/$reponame"
 
   local drawdaginput=""
   while IFS= read line
@@ -89,6 +100,8 @@ newserver() {
     REPONAME=$reponame setup_common_config
     mononoke
     MONONOKE_START_TIMEOUT=60 wait_for_mononoke "$TESTTMP/$reponame"
+    REPOID=${REPOID:-0}
+    export REPOID=$((REPOID+1))
   elif [ -f "$TESTTMP/.eagerepo" ] ; then
     hg init "$TESTTMP/$reponame" --config format.use-eager-repo=true
     cd "$TESTTMP/$reponame"
