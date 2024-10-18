@@ -20,6 +20,7 @@ def testsetup(t: TestTmp):
 
 
 def setupfuncs(t: TestTmp):
+    t.command(setup_mononoke_config)
     t.command(setup_acls)
     t.command(setup_mononoke_repo_config)
     t.command(write_infinitepush_config)
@@ -29,6 +30,81 @@ def setupfuncs(t: TestTmp):
     t.command(db_config)
     t.command(blobstore_db_config)
     t.command(setup_environment_variables)
+
+
+def setup_mononoke_config(
+    args: List[str],
+    stderr: BinaryIO,
+    fs: ShellFS,
+    env: Env,
+) -> int:
+    fs.chdir(env.getenv("TESTTMP"))
+
+    fs.mkdir("mononoke-config")
+    repotype = "blob_sqlite"
+    if len(args) > 0:
+        repotype = args.pop(0)
+    env.setenv("REPOTYPE", repotype)
+
+    blobstorename = "blobstore"
+    if len(args) > 0:
+        blobstorename = args.pop(0)
+
+    fs.chdir("mononoke-config")
+    fs.mkdir("common")
+    with fs.open("common/common.toml", "w") as f:
+        f.write(b"")
+    with fs.open("common/commitsyncmap.toml", "w") as f:
+        f.write(b"")
+
+    scuba_censored_logging_path = env.getenv("SCUBA_CENSORED_LOGGING_PATH")
+    if scuba_censored_logging_path:
+        with fs.open("common/common.toml", "w") as f:
+            f.write(
+                f'scuba_local_path_censored="{scuba_censored_logging_path}"\n'.encode()
+            )
+
+    if not env.getenv("DISABLE_HTTP_CONTROL_API"):
+        with fs.open("common/common.toml", "a") as f:
+            f.write(b"enable_http_control_api=true\n")
+
+    with fs.open("common/common.toml", "a") as f:
+        f.write(
+            f"""
+[async_requests_config]
+db_config = {{ local = {{ local_db_path="{env.getenv("TESTTMP")}/monsql" }} }}
+blobstore_config = {{ blob_files = {{ path = "{env.getenv("TESTTMP")}/async_requests.blobstore" }} }}
+
+[internal_identity]
+identity_type = "SERVICE_IDENTITY"
+identity_data = "proxy"
+
+[redaction_config]
+blobstore = "{blobstorename}"
+darkstorm_blobstore = "{blobstorename}"
+redaction_sets_location = "scm/mononoke/redaction/redaction_sets"
+
+[[trusted_parties_allowlist]]
+identity_type = "{env.getenv("PROXY_ID_TYPE")}"
+identity_data = "{env.getenv("PROXY_ID_DATA")}"
+""".encode()
+        )
+
+    additional_mononoke_common_config = env.getenv("ADDITIONAL_MONONOKE_COMMON_CONFIG")
+    if additional_mononoke_common_config:
+        with fs.open("common/common.toml", "a") as f:
+            f.write(f"{additional_mononoke_common_config}\n".encode())
+
+    with fs.open("common/storage.toml", "w") as f:
+        f.write(b"# Start new config\n")
+
+    setup_mononoke_storage_config([repotype, blobstorename], stderr, fs, env)
+    setup_mononoke_repo_config(
+        [env.getenv("REPONAME", ""), blobstorename], stderr, fs, env
+    )
+    setup_acls(stderr, fs, env)
+
+    return 0
 
 
 def setup_acls(stderr: BinaryIO, fs: ShellFS, env: Env) -> int:

@@ -638,70 +638,8 @@ function set_mononoke_as_source_of_truth_for_git {
 }
 
 function setup_mononoke_config {
-  cd "$TESTTMP" || exit
-
-  mkdir -p mononoke-config
-  REPOTYPE="blob_sqlite"
-  if [[ $# -gt 0 ]]; then
-    REPOTYPE="$1"
-    shift
-  fi
-  export REPOTYPE
-  local blobstorename=blobstore
-  if [[ $# -gt 0 ]]; then
-    blobstorename="$1"
-    shift
-  fi
-
-  cd mononoke-config || exit 1
-  mkdir -p common
-  touch common/common.toml
-  touch common/commitsyncmap.toml
-
-  # We have some tests that call this twice...
-  truncate -s 0 common/common.toml
-
-  if [[ -n "$SCUBA_CENSORED_LOGGING_PATH" ]]; then
-  cat > common/common.toml <<CONFIG
-scuba_local_path_censored="$SCUBA_CENSORED_LOGGING_PATH"
-CONFIG
-  fi
-
-  if [[ -z "$DISABLE_HTTP_CONTROL_API" ]]; then
-  cat >> common/common.toml <<CONFIG
-enable_http_control_api=true
-CONFIG
-  fi
-
-  cat >> common/common.toml <<CONFIG
-[async_requests_config]
-db_config = { local = { local_db_path="$TESTTMP/monsql" } }
-blobstore_config = { blob_files = { path = "$TESTTMP/async_requests.blobstore" } }
-
-[internal_identity]
-identity_type = "SERVICE_IDENTITY"
-identity_data = "proxy"
-
-[redaction_config]
-blobstore = "$blobstorename"
-darkstorm_blobstore = "$blobstorename"
-redaction_sets_location = "scm/mononoke/redaction/redaction_sets"
-
-[[trusted_parties_allowlist]]
-identity_type = "$PROXY_ID_TYPE"
-identity_data = "$PROXY_ID_DATA"
-CONFIG
-
-  cat >> common/common.toml <<CONFIG
-${ADDITIONAL_MONONOKE_COMMON_CONFIG}
-CONFIG
-
-  echo "# Start new config" > common/storage.toml
-  setup_mononoke_storage_config "$REPOTYPE" "$blobstorename"
-
-  setup_mononoke_repo_config "$REPONAME" "$blobstorename"
-
-  setup_acls
+  python_fn setup_mononoke_config "$@"
+  cd "$TESTTMP/mononoke-config" || exit 1
 }
 
 function setup_acls() {

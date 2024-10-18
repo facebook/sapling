@@ -7,7 +7,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ ADDITIONAL_MONONOKE_COMMON_CONFIG=$(cat <<EOF
+  $ export ADDITIONAL_MONONOKE_COMMON_CONFIG=$(cat <<EOF
   > [[global_allowlist]]
   > identity_type = "$CLIENT2_ID_TYPE"
   > identity_data = "$CLIENT2_ID_DATA"
