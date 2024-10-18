@@ -5,6 +5,7 @@
 
 import json
 import os
+import re
 import subprocess
 import time
 from typing import BinaryIO, List, Union
@@ -20,7 +21,36 @@ from .hg import hg as hgcmd
 
 def testsetup(t: TestTmp):
     setupfuncs(t)
+    setupmatching(t)
     t.sheval("setup_environment_variables")
+
+
+def setupmatching(t: TestTmp):
+    localip = t.getenv("LOCALIP", "127.0.0.1")
+    t.substitutions += [
+        # [ipv6]:port
+        (
+            r"([^0-9:])\[%s\]:[0-9]+" % re.escape(localip),
+            r"\1$LOCALIP:$LOCAL_PORT",
+        ),
+        # [ipv6]
+        (
+            r"([^0-9:])\[%s\]" % re.escape(localip),
+            r"\1$LOCALIP",
+        ),
+        # ipv4:port
+        (
+            r"([^0-9])%s:[0-9]+" % re.escape(localip),
+            r"\1$LOCALIP:$LOCAL_PORT",
+        ),
+        # [ipv4]
+        (r"([^0-9])%s" % re.escape(localip), r"\1$LOCALIP"),
+        # localhost:port
+        (
+            r"([^0-9])localhost:[0-9]+",
+            r"\1localhost:$LOCAL_PORT",
+        ),
+    ]
 
 
 def setupfuncs(t: TestTmp):
