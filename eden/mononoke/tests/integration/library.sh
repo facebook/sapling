@@ -476,20 +476,7 @@ function mononoke_health {
 
 # Wait until a Mononoke server is available for this repo.
 function wait_for_mononoke {
-  export MONONOKE_SOCKET
-  wait_for_server "Mononoke" MONONOKE_SOCKET "$TESTTMP/mononoke.out" \
-    "${MONONOKE_START_TIMEOUT:-"$MONONOKE_DEFAULT_START_TIMEOUT"}" "$MONONOKE_SERVER_ADDR_FILE" \
-    mononoke_health
-
-  # Now that we have started, write out a Sapling "mono" scheme that references our current IP/port,
-  # and configure the SLAPI URL.
-  cat >> "$HGRCPATH" <<EOF
-[schemes]
-mono=mononoke://$(mononoke_address)/{1}
-
-[edenapi]
-url=https://localhost:$MONONOKE_SOCKET/edenapi/
-EOF
+  python_fn wait_for_mononoke "$@"
 }
 
 function flush_mononoke_bookmarks {

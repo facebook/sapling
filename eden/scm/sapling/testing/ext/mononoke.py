@@ -24,6 +24,7 @@ def testsetup(t: TestTmp):
 
 
 def setupfuncs(t: TestTmp):
+    t.command(wait_for_mononoke)
     t.command(wait_for_server)
     t.command(mononoke_health)
     t.command(mononoke_address)
@@ -43,6 +44,50 @@ def setupfuncs(t: TestTmp):
     t.command(db_config)
     t.command(blobstore_db_config)
     t.command(setup_environment_variables)
+
+
+def wait_for_mononoke(args: List[str], stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
+    test_tmp = env.getenv("TESTTMP")
+    mononoke_server_addr_file = env.getenv("MONONOKE_SERVER_ADDR_FILE")
+    mononoke_default_start_timeout = env.getenv("MONONOKE_DEFAULT_START_TIMEOUT")
+    mononoke_start_timeout = env.getenv(
+        "MONONOKE_START_TIMEOUT", mononoke_default_start_timeout
+    )
+    if not env.getenv("MONONOKE_SOCKET"):
+        env.setenv("MONONOKE_SOCKET", "")
+
+    # Wait for the Mononoke server to be ready
+    rv = wait_for_server(
+        [
+            "Mononoke",
+            "MONONOKE_SOCKET",
+            f"{test_tmp}/mononoke.out",
+            mononoke_start_timeout,
+            mononoke_server_addr_file,
+            "mononoke_health",
+        ],
+        stderr,
+        fs,
+        env,
+    )
+    if rv != 0:
+        return rv
+
+    # Retrieve the Mononoke address
+    mononoke_address_v = mononoke_address(env)
+    mononoke_socket = env.getenv("MONONOKE_SOCKET")
+    # Update the HGRCPATH configuration
+    hg_rc_path = env.getenv("HGRCPATH")
+    with fs.open(hg_rc_path, "a") as f:
+        f.write(
+            f"""
+[schemes]
+mono=mononoke://{mononoke_address_v}/{{1}}
+[edenapi]
+url=https://localhost:{mononoke_socket}/edenapi/
+""".encode()
+        )
+    return 0
 
 
 def wait_for_server(args: List[str], stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
