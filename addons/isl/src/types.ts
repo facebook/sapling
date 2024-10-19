@@ -85,6 +85,14 @@ export type DiffCommentReaction = {
     | 'THUMBS_UP';
 };
 
+export enum SuggestedChangeStatus {
+  Accepted = 'ACCEPTED',
+  Active = 'ACTIVE',
+  ClosedDeprecated = 'CLOSED_DEPRECATED',
+  Draft = 'DRAFT',
+  Rejected = 'REJECTED',
+}
+
 export type DiffComment = {
   id?: string;
   author: string;
@@ -99,7 +107,11 @@ export type DiffComment = {
   line?: number;
   reactions: Array<DiffCommentReaction>;
   /** Suggestion for how to change the code, as a patch */
-  suggestedChange?: ParsedDiff;
+  suggestedChange?: {
+    id?: string;
+    status?: SuggestedChangeStatus;
+    patch?: ParsedDiff;
+  };
   codePatchSuggestedChange?: ParsedDiff;
   replies: Array<DiffComment>;
   /** If this comment has been resolved. true => "resolved", false => "unresolved", null => the comment is not resolvable, don't show any UI for it */

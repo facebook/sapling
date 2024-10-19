@@ -118,7 +118,9 @@ function Comment({comment, isTopLevel}: {comment: DiffComment; isTopLevel?: bool
           <div {...stylex.props(styles.commentContent)}>
             <div className="rendered-markup" dangerouslySetInnerHTML={{__html: comment.html}} />
           </div>
-          {comment.suggestedChange != null && <InlineDiff patch={comment.suggestedChange} />}
+          {comment.suggestedChange != null && comment.suggestedChange.patch != null && (
+            <InlineDiff patch={comment.suggestedChange.patch} />
+          )}
         </div>
         <Subtle {...stylex.props(styles.byline)}>
           <RelativeDate date={comment.created} />
