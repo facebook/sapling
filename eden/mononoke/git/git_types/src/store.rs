@@ -8,6 +8,7 @@
 use std::io::Write;
 use std::sync::Arc;
 
+use anyhow::Result;
 use blobstore::impl_loadable_storable;
 use blobstore::Blobstore;
 use bytes::Bytes;
@@ -47,7 +48,7 @@ pub async fn upload_non_blob_git_object<B>(
     blobstore: &B,
     git_hash: &gix_hash::oid,
     raw_content: Vec<u8>,
-) -> anyhow::Result<(), GitError>
+) -> Result<(), GitError>
 where
     B: Blobstore + Clone,
 {
@@ -91,7 +92,7 @@ pub async fn fetch_non_blob_git_object_bytes<B>(
     ctx: &CoreContext,
     blobstore: &B,
     git_hash: &gix_hash::oid,
-) -> anyhow::Result<Bytes, GitError>
+) -> Result<Bytes, GitError>
 where
     B: Blobstore,
 {
@@ -110,7 +111,7 @@ pub async fn fetch_non_blob_git_object<B>(
     ctx: &CoreContext,
     blobstore: &B,
     git_hash: &gix_hash::oid,
-) -> anyhow::Result<gix_object::Object, GitError>
+) -> Result<gix_object::Object, GitError>
 where
     B: Blobstore,
 {
@@ -169,7 +170,7 @@ async fn maybe_fetch_blob_bytes(
     blobstore: Arc<dyn Blobstore>,
     sha: &GitSha1,
     header_state: HeaderState,
-) -> anyhow::Result<Option<Bytes>> {
+) -> Result<Option<Bytes>> {
     let fetch_key = sha.clone().into();
     let output = fetch_with_size(blobstore, ctx, &fetch_key)
         .await
@@ -202,7 +203,7 @@ pub async fn fetch_git_object_bytes(
     blobstore: Arc<dyn Blobstore>,
     identifier: &GitIdentifier,
     header_state: HeaderState,
-) -> anyhow::Result<Bytes> {
+) -> Result<Bytes> {
     let sha = identifier.basic_sha();
     if identifier.blob_identifier() {
         if let Some(blob_bytes) =
@@ -227,7 +228,7 @@ pub async fn fetch_git_object(
     ctx: &CoreContext,
     blobstore: Arc<dyn Blobstore>,
     identifier: &GitIdentifier,
-) -> anyhow::Result<gix_object::Object> {
+) -> Result<gix_object::Object> {
     let raw_bytes =
         fetch_git_object_bytes(ctx, blobstore, identifier, HeaderState::Included).await?;
     let object = gix_object::ObjectRef::from_loose(raw_bytes.as_ref()).map_err(|e| {
@@ -246,7 +247,7 @@ pub async fn upload_packfile_base_item<B>(
     blobstore: &B,
     git_hash: &gix_hash::oid,
     raw_content: Vec<u8>,
-) -> anyhow::Result<GitPackfileBaseItem, GitError>
+) -> Result<GitPackfileBaseItem, GitError>
 where
     B: Blobstore + Clone,
 {
@@ -285,7 +286,7 @@ pub async fn fetch_packfile_base_item_if_exists<B>(
     ctx: &CoreContext,
     blobstore: &B,
     git_hash: &gix_hash::oid,
-) -> anyhow::Result<Option<GitPackfileBaseItem>, GitError>
+) -> Result<Option<GitPackfileBaseItem>, GitError>
 where
     B: Blobstore + Clone,
 {
@@ -309,7 +310,7 @@ pub async fn fetch_packfile_base_item<B>(
     ctx: &CoreContext,
     blobstore: &B,
     git_hash: &gix_hash::oid,
-) -> anyhow::Result<GitPackfileBaseItem, GitError>
+) -> Result<GitPackfileBaseItem, GitError>
 where
     B: Blobstore + Clone,
 {
