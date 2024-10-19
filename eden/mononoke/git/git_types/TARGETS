@@ -46,6 +46,7 @@ rust_library(
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
         "//common/rust/shed/cloned:cloned",
+        "//common/rust/shed/sorted_vector_map:sorted_vector_map",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/bonsai_git_mapping:bonsai_git_mapping",
         "//eden/mononoke/derived_data:derived_data_manager",

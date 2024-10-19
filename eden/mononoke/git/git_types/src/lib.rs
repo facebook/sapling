@@ -25,6 +25,7 @@ pub mod git_lfs;
 mod manifest;
 mod object;
 mod store;
+mod tree;
 
 pub use delta_manifest_v2::ObjectKind as DeltaObjectKind;
 pub use object::ObjectContent;
