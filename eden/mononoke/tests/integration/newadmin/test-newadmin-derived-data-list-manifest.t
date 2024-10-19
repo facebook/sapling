@@ -97,7 +97,20 @@ Note that `b/` appears because the directory was fully deleted.
   b/	0646f87ccb30da2fdfdc22c453d9bdb5a75e25d3104a8a1b25cc48037fd21cf6	linknode=3371afd62725ca00669b19e45fed925030a601c26c409742583da2cf3c5e6eae
   b/hoo.txt	c14cdb955b6ec1ce0f3b76e80d9aaca4e86766e08025e5b286dfeadc150d9b20	linknode=3371afd62725ca00669b19e45fed925030a601c26c409742583da2cf3c5e6eae
 
+#  $ mononoke_newadmin derived-data -R repo derive -B "main" -T git_commits
+
+  $ with_stripped_logs mononoke_newadmin derived-data -R repo list-manifest -B "main" -t git-trees --derive --recursive | sort
+  A	8c7e5a667f1b771847fe88c01c3de34413a1b220	mode=100644
+  B	7371f47a6f8bd23a8fa1a8b2a9479cdd76380e54	mode=100644
+  C	96d80cd6c4e7158dbebd0849f4fb7ce513e5828c	mode=100644
+  a/b/bar.txt	b31036e311273a931b70aeb7f79d4f30a22d1194	mode=100644
+  a/b/c/foo.txt	aa16822950ad21d28d240f73b69085ec2aaedb64	mode=100644
+  a/b/c/hoo.txt	60f4e4ce701de2916bf7d19765260b21e70e49a1	mode=100644
+  a/foo.txt	a4307d05df50a4b31e6b6b9da8c5921ffafbae96	mode=100644
+  script	0231def3d8f55958dddba757de918ca5eae0df4c	mode=120000
+  script.sh	30d74d258442c7c65512eafab474568dd706c430	mode=100755
+
 Validate all these manifests are equivalent
-  $ with_stripped_logs mononoke_newadmin derived-data -R repo verify-manifests -i "$A" -T fsnodes -T hgchangesets -T unodes -T skeleton_manifests
-  $ with_stripped_logs mononoke_newadmin derived-data -R repo verify-manifests -i "$B" -T fsnodes -T hgchangesets -T unodes -T skeleton_manifests
-  $ with_stripped_logs mononoke_newadmin derived-data -R repo verify-manifests -i "$C" -T fsnodes -T hgchangesets -T unodes -T skeleton_manifests
+  $ with_stripped_logs mononoke_newadmin derived-data -R repo verify-manifests -i "$A" -T fsnodes -T hgchangesets -T unodes -T skeleton_manifests -T git_commits
+  $ with_stripped_logs mononoke_newadmin derived-data -R repo verify-manifests -i "$B" -T fsnodes -T hgchangesets -T unodes -T skeleton_manifests -T git_commits
+  $ with_stripped_logs mononoke_newadmin derived-data -R repo verify-manifests -i "$C" -T fsnodes -T hgchangesets -T unodes -T skeleton_manifests -T git_commits

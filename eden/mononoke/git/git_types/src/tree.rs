@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::bail;
 use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::Blobstore;
@@ -19,6 +20,7 @@ use gix_object::tree;
 use gix_object::Tree;
 use manifest::Entry;
 use manifest::Manifest;
+use mononoke_types::FileType;
 use mononoke_types::MPathElement;
 use mononoke_types::SortedVectorTrieMap;
 use sorted_vector_map::SortedVectorMap;
@@ -32,6 +34,22 @@ pub struct GitTreeId(pub ObjectId);
 /// A leaf within a git tree.  This is the object id of the leaf and its mode as stored in the parent tree object.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct GitLeaf(pub ObjectId, pub tree::EntryMode);
+
+impl GitLeaf {
+    pub fn oid(&self) -> ObjectId {
+        self.0
+    }
+
+    pub fn file_type(&self) -> Result<FileType> {
+        match self.1.into() {
+            tree::EntryKind::Tree => bail!("Invalid leaf entry kind: {} is a tree", self.0),
+            tree::EntryKind::Blob => Ok(FileType::Regular),
+            tree::EntryKind::BlobExecutable => Ok(FileType::Executable),
+            tree::EntryKind::Link => Ok(FileType::Symlink),
+            tree::EntryKind::Commit => Ok(FileType::GitSubmodule),
+        }
+    }
+}
 
 /// A loaded Git tree object, suitable for use with Mononoke's manifest types.
 pub struct GitTree {

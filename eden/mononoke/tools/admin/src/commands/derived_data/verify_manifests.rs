@@ -12,6 +12,7 @@ use std::fmt;
 use anyhow::anyhow;
 use anyhow::Result;
 use blobstore::Loadable;
+use bytes::Bytes;
 use clap::builder::PossibleValuesParser;
 use clap::Args;
 use context::CoreContext;
@@ -20,12 +21,16 @@ use fsnodes::RootFsnodeId;
 use futures::future::try_join_all;
 use futures::future::FutureExt;
 use futures::TryStreamExt;
+use git_types::GitTreeId;
+use git_types::MappedGitCommitId;
 use manifest::ManifestOps;
 use mercurial_derivation::DeriveHgChangeset;
 use mercurial_derivation::MappedHgChangesetId;
 use mononoke_app::args::ChangesetArgs;
+use mononoke_types::hash::GitSha1;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
+use mononoke_types::FileContents;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
@@ -41,6 +46,7 @@ const MANIFEST_DERIVED_DATA_TYPES: &[&str] = &[
     MappedHgChangesetId::NAME,
     RootUnodeManifestId::NAME,
     RootSkeletonManifestId::NAME,
+    MappedGitCommitId::NAME,
 ];
 
 #[derive(Args)]
@@ -111,6 +117,7 @@ enum ManifestType {
     Hg,
     Unodes,
     Skeleton,
+    Git,
 }
 
 #[derive(Clone, Hash, Eq, PartialEq)]
@@ -119,6 +126,7 @@ enum ManifestData {
     Hg(FileType, ContentId),
     Unodes(FileType, ContentId),
     Skeleton,
+    Git(FileType, ContentId),
 }
 
 impl fmt::Display for ManifestType {
@@ -130,6 +138,7 @@ impl fmt::Display for ManifestType {
             Hg => write!(f, "Hg"),
             Unodes => write!(f, "Unodes"),
             Skeleton => write!(f, "Skeleton"),
+            Git => write!(f, "Git"),
         }
     }
 }
@@ -143,6 +152,7 @@ impl ManifestData {
             Hg(..) => ManifestType::Hg,
             Unodes(..) => ManifestType::Unodes,
             Skeleton => ManifestType::Skeleton,
+            Git(..) => ManifestType::Git,
         }
     }
 
@@ -150,7 +160,7 @@ impl ManifestData {
         use ManifestData::*;
 
         match self {
-            Fsnodes(ty, id) | Hg(ty, id) | Unodes(ty, id) => Some((*ty, *id)),
+            Fsnodes(ty, id) | Hg(ty, id) | Unodes(ty, id) | Git(ty, id) => Some((*ty, *id)),
             Skeleton => None,
         }
     }
@@ -160,7 +170,7 @@ impl fmt::Display for ManifestData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use ManifestData::*;
         match &self {
-            Fsnodes(ty, id) | Hg(ty, id) | Unodes(ty, id) => {
+            Fsnodes(ty, id) | Hg(ty, id) | Unodes(ty, id) | Git(ty, id) => {
                 write!(f, "{}: {}, {}", self.manifest_type(), ty, id)
             }
             Skeleton => write!(f, "{}: present", self.manifest_type()),
@@ -279,6 +289,43 @@ async fn list_unodes(
     Ok((ManifestType::Unodes, map))
 }
 
+async fn list_git_tree(
+    ctx: &CoreContext,
+    repo: &Repo,
+    cs_id: ChangesetId,
+    fetch_derived: bool,
+) -> Result<(ManifestType, HashMap<NonRootMPath, ManifestData>)> {
+    let git_commit = derive_or_fetch::<MappedGitCommitId>(ctx, repo, cs_id, fetch_derived)
+        .await?
+        .fetch_commit(ctx, repo.repo_blobstore())
+        .await?;
+    let root_git_tree_id = GitTreeId(git_commit.tree);
+
+    let map: HashMap<_, _> = root_git_tree_id
+        .list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
+        .map_ok(|(path, git_leaf)| async move {
+            let oid = git_leaf.oid();
+            let file_type = git_leaf.file_type()?;
+            let content_id = if file_type == FileType::GitSubmodule {
+                let oid_bytes = Bytes::copy_from_slice(oid.as_bytes());
+                FileContents::content_id_for_bytes(&oid_bytes)
+            } else {
+                let fetch_key = GitSha1::from_object_id(&oid)?.into();
+                let metadata = filestore::get_metadata(repo.repo_blobstore(), ctx, &fetch_key)
+                    .await?
+                    .ok_or_else(|| anyhow!("No metadata for {}", oid))?;
+                metadata.content_id
+            };
+            let val = ManifestData::Git(file_type, content_id);
+            Ok((path, val))
+        })
+        .try_buffer_unordered(100)
+        .try_collect()
+        .await?;
+    trace!(ctx.logger(), "Loaded git trees for {} paths", map.len());
+    Ok((ManifestType::Git, map))
+}
+
 pub(super) async fn verify_manifests(
     ctx: &CoreContext,
     repo: &Repo,
@@ -301,6 +348,9 @@ pub(super) async fn verify_manifests(
         } else if ty == RootSkeletonManifestId::NAME {
             manifests.insert(ManifestType::Skeleton);
             futs.push(list_skeleton_manifest(ctx, repo, cs_id, fetch_derived).boxed());
+        } else if ty == MappedGitCommitId::NAME {
+            manifests.insert(ManifestType::Git);
+            futs.push(list_git_tree(ctx, repo, cs_id, fetch_derived).boxed());
         } else {
             return Err(anyhow!("unknown derived data manifest type"));
         }

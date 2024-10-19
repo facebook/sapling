@@ -5,9 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::anyhow;
 use anyhow::Error;
+use anyhow::Result;
+use blobstore::Blobstore;
+use context::CoreContext;
 use mononoke_types::hash::GitSha1;
 
+use crate::fetch_non_blob_git_object;
 use crate::thrift;
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
@@ -20,6 +25,18 @@ impl MappedGitCommitId {
 
     pub fn oid(&self) -> &GitSha1 {
         &self.0
+    }
+
+    pub async fn fetch_commit(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &impl Blobstore,
+    ) -> Result<gix_object::Commit> {
+        let git_hash = self.oid().to_object_id()?;
+        let git_object = fetch_non_blob_git_object(ctx, blobstore, &git_hash).await?;
+        git_object
+            .try_into_commit()
+            .map_err(|_| anyhow!("Not a commit: {}", git_hash))
     }
 }
 

@@ -21,6 +21,9 @@ use fsnodes::RootFsnodeId;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use git_types::GitLeaf;
+use git_types::GitTreeId;
+use git_types::MappedGitCommitId;
 use manifest::Entry;
 use manifest::Manifest;
 use manifest::ManifestOps;
@@ -62,6 +65,7 @@ enum ListManifestType {
     DeletedManifests,
     HgManifests,
     HgAugmentedManifests,
+    GitTrees,
 }
 
 #[derive(Args)]
@@ -190,6 +194,15 @@ impl Listable for Entry<HgManifestId, (FileType, HgFileNodeId)> {
         match self {
             Entry::Tree(tree) => tree.to_string(),
             Entry::Leaf((file_type, filenode)) => format!("{}\ttype={}", filenode, file_type,),
+        }
+    }
+}
+
+impl Listable for Entry<GitTreeId, GitLeaf> {
+    fn list_item(self) -> String {
+        match self {
+            Entry::Tree(GitTreeId(oid)) => oid.to_string(),
+            Entry::Leaf(GitLeaf(oid, mode)) => format!("{}\tmode={:06o}", oid, mode.0),
         }
     }
 }
@@ -409,6 +422,15 @@ pub(super) async fn list_manifest(
                 fetch_or_derive_root::<RootDeletedManifestV2Id>(ctx, repo, cs_id, args.derive)
                     .await?;
             list_deleted(ctx, repo, root_id, path, args.directory, args.recursive).await?
+        }
+        ListManifestType::GitTrees => {
+            let git_commit =
+                fetch_or_derive_root::<MappedGitCommitId>(ctx, repo, cs_id, args.derive)
+                    .await?
+                    .fetch_commit(ctx, repo.repo_blobstore())
+                    .await?;
+            let root_id = GitTreeId(git_commit.tree);
+            list(ctx, repo, root_id, path, args.directory, args.recursive).await?
         }
     };
 

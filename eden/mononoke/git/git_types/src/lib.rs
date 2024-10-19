@@ -57,3 +57,5 @@ pub use crate::store::upload_non_blob_git_object;
 pub use crate::store::upload_packfile_base_item;
 pub use crate::store::GitIdentifier;
 pub use crate::store::HeaderState;
+pub use crate::tree::GitLeaf;
+pub use crate::tree::GitTreeId;
