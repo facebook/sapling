@@ -13,17 +13,19 @@ setup configuration
   > A-B-C
   > # modify: A "a/foo.txt" "a_foo"
   > # modify: A "a/bar.txt" "a_bar"
+  > # modify: A "script.sh" exec "test"
   > # modify: B "a/b/bar.txt" "b_bar"
   > # modify: B "b/hoo.txt" "b_hoo"
   > # delete: B "a/bar.txt"
+  > # modify: B "script" link "script.sh"
   > # modify: C "a/b/c/foo.txt" "c_foo"
   > # modify: C "a/b/c/hoo.txt" "c_hoo"
   > # delete: C "b/hoo.txt"
   > # bookmark: C main
   > EOF
-  A=ee3f74b0fc3e4862c21cb6dc6ac90901072e48d6c863bd4413c0ca660a16e1d9
-  B=b65c0e6f73c666e4f7b9b4bdddfcb72f2c8beef5968bbfc13ed1b231536f8e11
-  C=0b95b6947772ea75083a16af5c9cdc2c3f76b23c26c834f0bdfe227819319a2b
+  A=734dc23869fbed1c81d6561a16f0e896aa73bf037e688562c6bad691368db9fa
+  B=581ea2acc78e89f96ece88fc87956018ffd01941d62119e055bbc9348d98caad
+  C=3371afd62725ca00669b19e45fed925030a601c26c409742583da2cf3c5e6eae
 
 derived-data list-manifest:
 
@@ -37,6 +39,8 @@ Skeleton manifest of B's root directory
   B	exists
   a/	02d87d7d93a5072f4fe981d3801b13d6ca4157ad1387ffbeb20363463b19ff9a
   b/	8cd7d51ac1beaec4c16067a6f91ad5140754e3c07013ae939db474ae947afb6b
+  script	exists
+  script.sh	exists
 Skeleton manifest of B's a directory (recursive)
   $ with_stripped_logs mononoke_newadmin derived-data -R repo list-manifest -p "a" -i "$B" -t skeleton-manifests --recursive | sort
   a/b/bar.txt	exists
@@ -50,6 +54,8 @@ Skeleton manifest of main's root directory (recursive)
   a/b/c/foo.txt	exists
   a/b/c/hoo.txt	exists
   a/foo.txt	exists
+  script	exists
+  script.sh	exists
 
 Fsnodes of main's a directory
   $ with_stripped_logs mononoke_newadmin derived-data -R repo list-manifest -p "a" -B main -t fsnodes --derive | sort
@@ -62,30 +68,34 @@ Fsnodes from B's root path (recursive)
   a/b/bar.txt	638aceddb6283739ca98ac2cb18bf6d8d5358439ea187fd4ab0257d24d6d6e47	type=regular	size=5
   a/foo.txt	67f9f510b6a13f94986928ba0f270ec005b194edd77b22a13dec797471a4fe85	type=regular	size=5
   b/hoo.txt	88c50336ada15d8abe61f2adce8af17b63eb74985d50eec76d4d0248f33bb4a9	type=regular	size=5
+  script	f3fffae72590e3c9b4bd8801665ac3c9e16f35c63ba77c4642a54e1c0ad1d3f8	type=symlink	size=9
+  script.sh	7944a589808e894931ed482c1cb0543524483a49aaf9568e60959a34fe9700d9	type=executable	size=4
 
 Unodes of main's a directory
   $ with_stripped_logs mononoke_newadmin derived-data -R repo list-manifest -p "a" -B main -t unodes --derive
-  a/b/	48caf3edd514179ebde2bec7cc44bbc1e925b633a232eb9672fce099ca09054b
-  a/foo.txt	5b5ddd33b0347715e192bfc25bc172ed8c5800d87ba3d3238ef88dee25d28dc6
+  a/b/	102bf16d65a69acdfc009c57dcb04a5320793d4127f3380a563f4321dec5e188
+  a/foo.txt	6ff43b2e8ed1fe11cb9d4960b3b98b2b6b74f8d33b07212b21e703a26bff7bab
 
 Unodes of B's root (recursive)
   $ with_stripped_logs mononoke_newadmin derived-data -R repo list-manifest -i "$B" -t unodes --recursive | sort
-  A	5da8409b6ec0f3759444f93c2c5194f5c94c02037095ca16b5f3e0f70152c613
-  B	eb68a776a3017fcc811f6f23a8724a771db09de2f35fda2db314b580d41fb7ae
-  a/b/bar.txt	4e8fbca02d5fa0d2a9abb7f075d8b5c4ad22e54e49dd6e18e00590032b1d3064
-  a/foo.txt	5b5ddd33b0347715e192bfc25bc172ed8c5800d87ba3d3238ef88dee25d28dc6
-  b/hoo.txt	54942dc4ea2bd38839a40566d01e06d56e479adaeba9b3c64b94e55ae6911936
+  A	cd771475fbda7931a732013c817545b570f2fda7aedd5ee15677168c54e713b6
+  B	670de42024de2d059cc795e4af983511e283f7a20edac3f2c07954dde321133c
+  a/b/bar.txt	d865bc1be52ba5b788200e52fc52e091cee771ada2db4b8dd2e5360e181775df
+  a/foo.txt	6ff43b2e8ed1fe11cb9d4960b3b98b2b6b74f8d33b07212b21e703a26bff7bab
+  b/hoo.txt	1ce5ae2c91abb6b29783861478a5bc65df2e6220f9c292e4fe4bcec94fddfa06
+  script	6b4739b1309ad708365d3115916f0979f36dae4a852dd8263c554a177e5dbcd9
+  script.sh	8bdc9692cef408f0067f89ae55b0f3dab8e74ce8f63e34137ea5ef944e309dfe
 
 Deleted manifests of B's a directory
   $ with_stripped_logs mononoke_newadmin derived-data -R repo list-manifest -p "a" -i "$B" -t deleted-manifests --derive | sort
-  a/bar.txt	fa523e73a133223c61a827b226f8e339e136957ff48d7614d55dd0e18a42c19d	linknode=b65c0e6f73c666e4f7b9b4bdddfcb72f2c8beef5968bbfc13ed1b231536f8e11
+  a/bar.txt	2d424b26533fbe5aafdfb7a7f9834282630b465b2b1b56194c9e0689df8ec2f2	linknode=581ea2acc78e89f96ece88fc87956018ffd01941d62119e055bbc9348d98caad
 
 Deleted manifests of main from root (recursive)
 Note that `b/` appears because the directory was fully deleted.
   $ with_stripped_logs mononoke_newadmin derived-data -R repo list-manifest -B "main" -t deleted-manifests --derive --recursive | sort
-  a/bar.txt	fa523e73a133223c61a827b226f8e339e136957ff48d7614d55dd0e18a42c19d	linknode=b65c0e6f73c666e4f7b9b4bdddfcb72f2c8beef5968bbfc13ed1b231536f8e11
-  b/	c9e91618b8e2c37c1ead087030945e4feaa7adabe24b93aa7e41ed1de9ce6b88	linknode=0b95b6947772ea75083a16af5c9cdc2c3f76b23c26c834f0bdfe227819319a2b
-  b/hoo.txt	f67b8e1fe09de8ccc5697cbe4290bac4af2a889b03fb1d04a145c3c032bd865b	linknode=0b95b6947772ea75083a16af5c9cdc2c3f76b23c26c834f0bdfe227819319a2b
+  a/bar.txt	2d424b26533fbe5aafdfb7a7f9834282630b465b2b1b56194c9e0689df8ec2f2	linknode=581ea2acc78e89f96ece88fc87956018ffd01941d62119e055bbc9348d98caad
+  b/	0646f87ccb30da2fdfdc22c453d9bdb5a75e25d3104a8a1b25cc48037fd21cf6	linknode=3371afd62725ca00669b19e45fed925030a601c26c409742583da2cf3c5e6eae
+  b/hoo.txt	c14cdb955b6ec1ce0f3b76e80d9aaca4e86766e08025e5b286dfeadc150d9b20	linknode=3371afd62725ca00669b19e45fed925030a601c26c409742583da2cf3c5e6eae
 
 Validate all these manifests are equivalent
   $ with_stripped_logs mononoke_newadmin derived-data -R repo verify-manifests -i "$A" -T fsnodes -T hgchangesets -T unodes -T skeleton_manifests
