@@ -17,6 +17,7 @@ use filestore::fetch_with_size;
 use filestore::hash_bytes;
 use filestore::Sha1IncrementalHasher;
 use futures::TryStreamExt;
+use gix_hash::ObjectId;
 use gix_object::WriteTo;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::RichGitSha1;
@@ -117,7 +118,7 @@ where
 {
     // In git, empty tree is a special object: it's present in every git repo and not persisted in
     // the storage.
-    if git_hash == gix_hash::ObjectId::empty_tree(gix_hash::Kind::Sha1) {
+    if git_hash == ObjectId::empty_tree(gix_hash::Kind::Sha1) {
         return Ok(gix_object::Object::Tree(gix_object::Tree::empty()));
     }
     let raw_bytes = fetch_non_blob_git_object_bytes(ctx, blobstore, git_hash).await?;
@@ -161,6 +162,13 @@ impl GitIdentifier {
         match self {
             GitIdentifier::Rich(rich_sha) => rich_sha.is_blob(),
             GitIdentifier::Basic(_) => true, // May or may not be a blob, we can't know
+        }
+    }
+
+    pub fn to_object_id(&self) -> Result<ObjectId> {
+        match self {
+            GitIdentifier::Rich(rich_sha) => Ok(rich_sha.to_object_id()?),
+            GitIdentifier::Basic(basic_sha) => Ok(basic_sha.to_object_id()?),
         }
     }
 }
@@ -330,7 +338,6 @@ mod test {
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
     use fixtures::TestRepoFixture;
-    use gix_hash::ObjectId;
     use gix_object::Object;
     use gix_object::Tag;
     use mononoke_macros::mononoke;

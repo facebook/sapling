@@ -51,10 +51,7 @@ pub(crate) enum ObjectIdentifierType {
 impl ObjectIdentifierType {
     pub(crate) fn to_object_id(&self) -> Result<ObjectId> {
         match self {
-            Self::AllObjects(ident) => match ident {
-                GitIdentifier::Basic(sha) => sha.to_object_id(),
-                GitIdentifier::Rich(rich_sha) => rich_sha.to_object_id(),
-            },
+            Self::AllObjects(ident) => ident.to_object_id(),
             Self::NonBlobObjects(oid) => Ok(*oid),
         }
     }
