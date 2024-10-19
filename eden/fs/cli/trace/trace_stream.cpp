@@ -273,8 +273,9 @@ void print_hg_event(
 
   std::string processInfo;
   if (auto requestInfo = evt.requestInfo()) {
-    auto* pid = requestInfo.value().get_pid();
-    auto* processName = requestInfo.value().get_processName();
+    auto* pid = apache::thrift::get_pointer(requestInfo.value().pid());
+    auto* processName =
+        apache::thrift::get_pointer(requestInfo.value().processName());
     if (pid && processName) {
       processInfo = fmt::format("{}({})", *pid, processName->c_str());
     } else if (pid) {

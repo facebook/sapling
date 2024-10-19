@@ -2194,7 +2194,7 @@ EdenServiceHandler::streamSelectedChangesSince(
       DBG3,
       &ThriftStats::streamSelectedChangesSince,
       *params->changesParams_ref()->mountPoint_ref());
-  auto mountHandle = lookupMount(params->changesParams()->get_mountPoint());
+  auto mountHandle = lookupMount(params->changesParams()->mountPoint().value());
   const auto& fromPosition = *params->changesParams()->fromPosition_ref();
   auto& fetchContext = helper->getFetchContext();
 
@@ -2242,7 +2242,7 @@ EdenServiceHandler::streamSelectedChangesSince(
   auto caseSensitivity =
       mountHandle.getEdenMount().getCheckoutConfig()->getCaseSensitive();
   auto filter =
-      std::make_unique<GlobFilter>(params->get_globs(), caseSensitivity);
+      std::make_unique<GlobFilter>(params->globs().value(), caseSensitivity);
 
   sumUncommitedChanges(
       *summed, *sharedPublisherLock, std::reference_wrapper(*filter));
