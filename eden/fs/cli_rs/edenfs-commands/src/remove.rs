@@ -17,8 +17,6 @@ use clap::Parser;
 use dialoguer::Confirm;
 use tracing::debug;
 use tracing::error;
-use tracing::info;
-use tracing::trace;
 
 use crate::ExitCode;
 use crate::Subcommand;
@@ -82,12 +80,28 @@ impl SanityCheck {
 #[derive(Debug)]
 struct Determination {}
 impl Determination {
+    fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
+        let path = context.canonical_path.as_path();
+
+        if path.is_file() {
+            debug!("path {} determined to be a regular file", path.display());
+            return Ok(Some(State::RegFile(RegFile {})));
+        }
+
+        error!("Determination State for directory is not implemented!");
+        Err(anyhow!("Rust remove(Determination) is not implemented!"))
+    }
+}
+
+#[derive(Debug)]
+struct RegFile {}
+impl RegFile {
     fn next(&self, _context: &mut RemoveContext) -> Result<Option<State>> {
         if Confirm::new()
-            .with_prompt("Determination State is not implemented yet... proceed?")
+            .with_prompt("RegFile State is not implemented yet... proceed?")
             .interact()?
         {
-            return Err(anyhow!("Rust remove(Determination) is not implemented!"));
+            return Err(anyhow!("Rust remove(RegFile) is not implemented!"));
         }
         Ok(None)
     }
@@ -104,7 +118,7 @@ enum State {
     // ActiveEdenMount,
     // InactiveEdenMount,
     // CleanUp,
-    // RegFile,
+    RegFile(RegFile),
     // Unknown,
 }
 
@@ -117,6 +131,7 @@ impl State {
         match self {
             State::SanityCheck(_) => "SanityCheck",
             State::Determination(_) => "Determination",
+            State::RegFile(_) => "RegFile",
         }
     }
 
@@ -130,6 +145,7 @@ impl State {
         match self {
             State::SanityCheck(inner) => inner.next(context),
             State::Determination(inner) => inner.next(context),
+            State::RegFile(inner) => inner.next(context),
         }
     }
 }
@@ -162,6 +178,8 @@ impl Subcommand for RemoveCmd {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+
     use anyhow::Context;
     use tempfile::tempdir;
     use tempfile::TempDir;
@@ -217,5 +235,37 @@ mod tests {
                 .to_string()
                 .contains(PATH_NOT_FOUND_ERROR_MSG)
         );
+    }
+
+    #[test]
+    fn test_determine_regular_file() {
+        let temp_dir = prepare_directory();
+        let file_path_buf = temp_dir.path().join("temporary-file.txt");
+        fs::write(file_path_buf.as_path(), "anything").unwrap_or_else(|err| {
+            panic!(
+                "cannot write to a file at {}: {}",
+                file_path_buf.display(),
+                err
+            )
+        });
+
+        // When context includes a path to a regular file
+        let mut file_context = RemoveContext::new(file_path_buf.display().to_string());
+        let mut state = State::start().run(&mut file_context).unwrap().unwrap();
+        assert!(
+            matches!(state, State::Determination(_)),
+            "Expected Determination state"
+        );
+        state = state.run(&mut file_context).unwrap().unwrap();
+        assert!(matches!(state, State::RegFile(_)), "Expected RegFile state");
+
+        // When context includes a path to a directory
+        let mut dir_context = RemoveContext::new(temp_dir.path().to_str().unwrap().to_string());
+        state = State::start().run(&mut dir_context).unwrap().unwrap();
+        assert!(
+            matches!(state, State::Determination(_)),
+            "Expected Determination state"
+        );
+        assert!(state.run(&mut dir_context).is_err());
     }
 }
