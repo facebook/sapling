@@ -15,6 +15,10 @@ use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
 use dialoguer::Confirm;
+use tracing::debug;
+use tracing::error;
+use tracing::info;
+use tracing::trace;
 
 use crate::ExitCode;
 use crate::Subcommand;
@@ -85,7 +89,6 @@ impl Determination {
         {
             return Err(anyhow!("Rust remove(Determination) is not implemented!"));
         }
-        // TODO: this is an example of indicating a terminal state
         Ok(None)
     }
 }
@@ -110,12 +113,20 @@ impl State {
         State::SanityCheck(SanityCheck {})
     }
 
+    fn name(&self) -> &'static str {
+        match self {
+            State::SanityCheck(_) => "SanityCheck",
+            State::Determination(_) => "Determination",
+        }
+    }
+
     /// Runs the actions defined for this state
     /// There are three cases for the return value:
     /// 1. Ok(Some(State)) - we succeed in moving to the next state
     /// 2. Ok(None) - we are in a terminal state and the removal is successful
     /// 3. Err - the removal failed
     fn run(&self, context: &mut RemoveContext) -> Result<Option<State>> {
+        debug!("State {} running...", self.name());
         match self {
             State::SanityCheck(inner) => inner.next(context),
             State::Determination(inner) => inner.next(context),
@@ -170,7 +181,7 @@ mod tests {
         let temp_dir = tempdir().context("couldn't create temp dir").unwrap();
         let path = temp_dir.path().join("test").join("nested").join("inner");
         let prefix = path.parent().unwrap();
-        println!("creating dirs: {}", prefix.to_str().unwrap());
+        println!("creating dirs: {:?}", prefix.to_str().unwrap());
         std::fs::create_dir_all(prefix).unwrap();
         temp_dir
     }
