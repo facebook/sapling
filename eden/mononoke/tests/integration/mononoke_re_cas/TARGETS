@@ -1,3 +1,4 @@
+load("@fbcode//target_determinator/macros:ci_hint.bzl", "ci_hint")
 load(
     "//eden/mononoke/tests/integration/facebook:fb_manifest_deps.bzl",
     "dott_test",
@@ -20,4 +21,14 @@ dott_test(
         "//eden/mononoke/tools/admin:newadmin",
         "//eden/mononoke/tools/testtool:testtool",
     ],
+)
+
+# This adds some artificial direct dependecies to CI graph to make it look like deps are closer
+ci_hint(
+    ci_deps = [
+        "fbcode//remote_execution/client_lib/wrappers/rust:re_client_lib",
+        "fbcode//remote_execution/client_lib/wrappers/rust:external_re_client_lib",
+    ],
+    reason = "Those tests should be triggered on RE diffs despite the longer CI distance",
+    target = "mononoke_re_cas",
 )

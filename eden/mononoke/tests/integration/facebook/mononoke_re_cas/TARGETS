@@ -9,12 +9,16 @@ oncall("scm_server_infra")
 # Test suit for testing of Mononoke CAS Sync and also
 # for testing Sapling/Cas integration when a repo is synced
 
+# TODO(liubovd): fix flaky LFS test
 dott_test(
     name = "mononoke_re_cas",
     disable_all_network_access_target = False,
-    dott_files = glob([
-        "*.t",
-    ]),
+    dott_files = glob(
+        [
+            "*.t",
+        ],
+        exclude = ["test-sapling-cas-lfs-goto.t"],
+    ),
     deps = [
         "//eden/mononoke:mononoke",
         "//eden/mononoke/lfs_server:lfs_server",
@@ -24,8 +28,13 @@ dott_test(
     ],
 )
 
+# This adds some artificial direct dependecies to CI graph to make it look like deps are closer
 ci_hint(
+    ci_deps = [
+        "fbcode//remote_execution/client_lib/wrappers/rust:re_client_lib",
+        "fbcode//remote_execution/client_lib/wrappers/rust:external_re_client_lib",
+    ],
     ci_srcs = ["fbcode/eden/scm/**"],
-    reason = "Those tests should be triggered on hg diffs despite the longer CI distance",
+    reason = "Those tests should be triggered on sapling and RE diffs despite the longer CI distance",
     target = "mononoke_re_cas",
 )
