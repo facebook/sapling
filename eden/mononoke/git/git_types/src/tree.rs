@@ -18,18 +18,29 @@ use futures::StreamExt;
 use gix_hash::ObjectId;
 use gix_object::tree;
 use gix_object::Tree;
+use gix_object::WriteTo;
 use manifest::Entry;
 use manifest::Manifest;
+use mononoke_types::hash::GitSha1;
 use mononoke_types::FileType;
 use mononoke_types::MPathElement;
 use mononoke_types::SortedVectorTrieMap;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::fetch_non_blob_git_object;
+use crate::GitIdentifier;
 
 /// An id of a Git tree object.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct GitTreeId(pub ObjectId);
+
+impl GitTreeId {
+    pub(crate) async fn size(&self, ctx: &CoreContext, blobstore: &impl Blobstore) -> Result<u64> {
+        Ok(fetch_non_blob_git_object(ctx, blobstore, &self.0)
+            .await?
+            .size())
+    }
+}
 
 /// A leaf within a git tree.  This is the object id of the leaf and its mode as stored in the parent tree object.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
@@ -47,6 +58,49 @@ impl GitLeaf {
             tree::EntryKind::BlobExecutable => Ok(FileType::Executable),
             tree::EntryKind::Link => Ok(FileType::Symlink),
             tree::EntryKind::Commit => Ok(FileType::GitSubmodule),
+        }
+    }
+
+    pub fn is_submodule(&self) -> bool {
+        tree::EntryKind::from(self.1) == tree::EntryKind::Commit
+    }
+
+    pub(crate) async fn size(&self, ctx: &CoreContext, blobstore: &impl Blobstore) -> Result<u64> {
+        let key = GitSha1::from_object_id(&self.0)?.into();
+        let metadata = filestore::get_metadata(blobstore, ctx, &key)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("No metadata for {}", self.0))?;
+        Ok(metadata.total_size)
+    }
+}
+
+pub trait GitEntry {
+    fn oid(&self) -> ObjectId;
+    fn identifier(&self) -> Result<GitIdentifier>;
+    fn is_submodule(&self) -> bool;
+}
+
+impl GitEntry for Entry<GitTreeId, GitLeaf> {
+    fn oid(&self) -> ObjectId {
+        match self {
+            Entry::Tree(tree_id) => tree_id.0,
+            Entry::Leaf(leaf) => leaf.0,
+        }
+    }
+
+    fn identifier(&self) -> Result<GitIdentifier> {
+        match self {
+            Entry::Tree(tree_id) => {
+                Ok(GitIdentifier::NonBlob(GitSha1::from_object_id(&tree_id.0)?))
+            }
+            Entry::Leaf(leaf) => Ok(GitIdentifier::Basic(GitSha1::from_object_id(&leaf.0)?)),
+        }
+    }
+
+    fn is_submodule(&self) -> bool {
+        match self {
+            Entry::Tree(_) => false,
+            Entry::Leaf(leaf) => leaf.is_submodule(),
         }
     }
 }

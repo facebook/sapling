@@ -28,6 +28,7 @@ use futures::TryStreamExt;
 use gix_hash::oid;
 use gix_hash::ObjectId;
 use gix_object::Kind;
+use manifest::Entry;
 use mononoke_types::hash::Blake2;
 use mononoke_types::hash::BLAKE2_HASH_LENGTH_BYTES;
 use mononoke_types::impl_typed_hash;
@@ -42,6 +43,8 @@ use mononoke_types::MononokeId;
 use mononoke_types::ThriftConvert;
 
 use crate::thrift;
+use crate::GitLeaf;
+use crate::GitTreeId;
 use crate::TreeMember;
 
 /// A manifest that contains an entry for each Git object that was added or modified as part of
@@ -161,6 +164,29 @@ impl GDMV2ObjectEntry {
             crate::ObjectKind::Blob => crate::DeltaObjectKind::Blob,
             crate::ObjectKind::Tree => crate::DeltaObjectKind::Tree,
             kind => anyhow::bail!("Unexpected object kind {:?} for DeltaObjectEntry", kind),
+        };
+
+        Ok(GDMV2ObjectEntry {
+            oid,
+            size,
+            kind,
+            inlined_bytes,
+        })
+    }
+
+    pub async fn from_tree_entry(
+        ctx: &CoreContext,
+        blobstore: &impl Blobstore,
+        entry: &Entry<GitTreeId, GitLeaf>,
+        inlined_bytes: Option<Bytes>,
+    ) -> Result<Self> {
+        let (oid, size, kind) = match entry {
+            Entry::Leaf(leaf) => (
+                leaf.oid(),
+                leaf.size(ctx, blobstore).await?,
+                ObjectKind::Blob,
+            ),
+            Entry::Tree(tree) => (tree.0, tree.size(ctx, blobstore).await?, ObjectKind::Tree),
         };
 
         Ok(GDMV2ObjectEntry {

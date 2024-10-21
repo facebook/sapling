@@ -34,6 +34,7 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use itertools::Itertools;
 use manifest::Diff;
+use manifest::Entry;
 use manifest::ManifestOps;
 use metaconfig_types::GitDeltaManifestV2Config;
 use mononoke_types::path::MPath;
@@ -51,11 +52,11 @@ use crate::delta_manifest_v2::GDMV2ObjectEntry;
 use crate::delta_manifest_v2::GitDeltaManifestV2;
 use crate::delta_manifest_v2::GitDeltaManifestV2Id;
 use crate::store::fetch_git_object_bytes;
-use crate::store::GitIdentifier;
 use crate::store::HeaderState;
+use crate::tree::GitEntry;
+use crate::GitLeaf;
+use crate::GitTreeId;
 use crate::MappedGitCommitId;
-use crate::TreeHandle;
-use crate::TreeMember;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub struct RootGitDeltaManifestV2Id(GitDeltaManifestV2Id);
@@ -104,14 +105,19 @@ async fn derive_single(
         .ok_or_else(|| anyhow!("Can't derive GitDeltaManifestV2 without its config"))?;
     let cs_id = bonsai.get_changeset_id();
 
+    let fetch_tree = |bcs_id| async move {
+        let git_commit = derivation_ctx
+            .fetch_dependency::<MappedGitCommitId>(ctx, bcs_id)
+            .await?
+            .fetch_commit(ctx, blobstore)
+            .await?;
+        anyhow::Ok(GitTreeId(git_commit.tree))
+    };
+
     let (current_tree, parent_trees) = try_join!(
-        derivation_ctx.fetch_dependency::<TreeHandle>(ctx, cs_id),
+        fetch_tree(cs_id),
         stream::iter(bonsai.parents())
-            .map(|parent| async move {
-                derivation_ctx
-                    .fetch_dependency::<TreeHandle>(ctx, parent)
-                    .await
-            })
+            .map(fetch_tree)
             .buffered(10)
             .try_collect::<Vec<_>>()
     )?;
@@ -131,22 +137,23 @@ async fn derive_single(
 async fn gdm_v2_entries_root(
     ctx: &CoreContext,
     blobstore: &Arc<dyn Blobstore>,
-    current_tree: TreeHandle,
+    current_tree: GitTreeId,
 ) -> Result<Vec<(MPath, GDMV2Entry)>> {
     // For root commits we store an entry for each object in the tree with
     // no deltas.
     current_tree
         .list_all_entries(ctx.clone(), blobstore.clone())
         .map_ok(|(path, entry)| async move {
-            let member = TreeMember::from(entry);
             // If the entry corresponds to a submodule (and shows up as a commit), then we ignore it
-            if member.filemode() == crate::mode::GIT_FILEMODE_COMMIT {
+            if entry.is_submodule() {
                 return Ok(None);
             }
+            let full_object =
+                GDMV2ObjectEntry::from_tree_entry(ctx, blobstore, &entry, None).await?;
             Ok(Some((
                 path,
                 GDMV2Entry {
-                    full_object: GDMV2ObjectEntry::from_tree_member(&member, None)?,
+                    full_object,
                     deltas: vec![],
                 },
             )))
@@ -161,8 +168,8 @@ async fn gdm_v2_entries_non_root(
     ctx: &CoreContext,
     blobstore: &Arc<dyn Blobstore>,
     config: &GitDeltaManifestV2Config,
-    current_tree: TreeHandle,
-    parent_trees: Vec<TreeHandle>,
+    current_tree: GitTreeId,
+    parent_trees: Vec<GitTreeId>,
 ) -> Result<Vec<(MPath, GDMV2Entry)>> {
     let parent_count = parent_trees.len();
     let diffs = group_diffs_by_path(ctx, blobstore, current_tree, parent_trees).await?;
@@ -175,18 +182,18 @@ async fn gdm_v2_entries_non_root(
                 return Ok(None);
             }
 
-            let new_member = match diffs.first() {
-                Some((_, new_member)) => new_member.clone(),
+            let new_entry = match diffs.first() {
+                Some((_, new_entry)) => new_entry.clone(),
                 None => bail!("Expected at least one diff entry for every grouped path (while deriving GitDeltaManifestV2)")
             };
 
-            // If the entry corresponds to a submodule (and shows up as a commit), then we ignore it
-            if new_member.filemode() == crate::mode::GIT_FILEMODE_COMMIT {
+            // If the entry corresponds to a submodule, then we ignore it
+            if new_entry.is_submodule() {
                 return Ok(None);
             }
 
             let deltas = stream::iter(diffs)
-                .map(|(old_member, new_member)| create_delta_entry(ctx, blobstore, config, path.clone(), old_member, new_member))
+                .map(|(old_entry, new_entry)| create_delta_entry(ctx, blobstore, config, path.clone(), old_entry, new_entry))
                 .buffered(10)
                 .try_filter_map(futures::future::ok)
                 .try_collect::<Vec<_>>()
@@ -198,7 +205,7 @@ async fn gdm_v2_entries_non_root(
                 let new_object_bytes = fetch_git_object_bytes(
                     ctx,
                     blobstore.clone(),
-                    &GitIdentifier::Rich(*new_member.oid()),
+                    &new_entry.identifier()?,
                     HeaderState::Included,
                 ).await?;
 
@@ -212,8 +219,9 @@ async fn gdm_v2_entries_non_root(
                 None
             };
 
+            let full_object = GDMV2ObjectEntry::from_tree_entry(ctx, blobstore, &new_entry, inlined_bytes).await?;
             Ok(Some((path, GDMV2Entry {
-                full_object: GDMV2ObjectEntry::from_tree_member(&new_member, inlined_bytes)?,
+                full_object,
                 deltas,
             })))
         })
@@ -228,9 +236,9 @@ async fn gdm_v2_entries_non_root(
 async fn group_diffs_by_path(
     ctx: &CoreContext,
     blobstore: &Arc<dyn Blobstore>,
-    current_tree: TreeHandle,
-    parent_trees: Vec<TreeHandle>,
-) -> Result<HashMap<MPath, Vec<(Option<TreeMember>, TreeMember)>>> {
+    current_tree: GitTreeId,
+    parent_trees: Vec<GitTreeId>,
+) -> Result<HashMap<MPath, Vec<(Option<Entry<GitTreeId, GitLeaf>>, Entry<GitTreeId, GitLeaf>)>>> {
     Ok(stream::iter(parent_trees)
         .map(|parent_tree| async move {
             parent_tree
@@ -238,18 +246,13 @@ async fn group_diffs_by_path(
                 .try_filter_map(|diff| async move {
                     match diff {
                         Diff::Changed(path, old_entry, new_entry) => {
-                            let old_member = TreeMember::from(old_entry);
-                            let new_member = TreeMember::from(new_entry);
-
-                            if old_member.oid() == new_member.oid() {
+                            if old_entry.oid() == new_entry.oid() {
                                 Ok(None)
                             } else {
-                                Ok(Some((path, (Some(old_member), new_member))))
+                                Ok(Some((path, (Some(old_entry), new_entry))))
                             }
                         }
-                        Diff::Added(path, new_entry) => {
-                            Ok(Some((path, (None, TreeMember::from(new_entry)))))
-                        }
+                        Diff::Added(path, new_entry) => Ok(Some((path, (None, new_entry)))),
                         _ => Ok(None),
                     }
                 })
@@ -269,25 +272,24 @@ async fn create_delta_entry(
     blobstore: &Arc<dyn Blobstore>,
     config: &GitDeltaManifestV2Config,
     path: MPath,
-    old_member: Option<TreeMember>,
-    new_member: TreeMember,
+    old_entry: Option<Entry<GitTreeId, GitLeaf>>,
+    new_entry: Entry<GitTreeId, GitLeaf>,
 ) -> Result<Option<GDMV2DeltaEntry>> {
-    let old_member = match old_member {
-        Some(member) => {
+    let old_entry = match old_entry {
+        Some(entry) => {
             // If the entry corresponds to a submodule (and shows up as a commit), then we ignore it
-            if member.filemode() == crate::mode::GIT_FILEMODE_COMMIT {
+            if entry.is_submodule() {
                 return Ok(None);
-            } else {
-                member
             }
+            entry
         }
         None => {
             return Ok(None);
         }
     };
 
-    let old_git_ident = GitIdentifier::Rich(*old_member.oid());
-    let new_git_ident = GitIdentifier::Rich(*new_member.oid());
+    let old_git_ident = old_entry.identifier()?;
+    let new_git_ident = new_entry.identifier()?;
 
     let (old_object, new_object) = try_join!(
         fetch_git_object_bytes(
@@ -312,8 +314,10 @@ async fn create_delta_entry(
         return Ok(None);
     };
 
+    let base_object = GDMV2ObjectEntry::from_tree_entry(ctx, blobstore, &old_entry, None).await?;
+
     Ok(Some(GDMV2DeltaEntry {
-        base_object: GDMV2ObjectEntry::from_tree_member(&old_member, None)?,
+        base_object,
         base_object_path: path,
         instructions: GDMV2Instructions::from_raw_delta(
             ctx,
@@ -357,7 +361,7 @@ async fn compute_raw_delta(old_object: Bytes, new_object: Bytes) -> Result<Optio
 impl BonsaiDerivable for RootGitDeltaManifestV2Id {
     const VARIANT: DerivableType = DerivableType::GitDeltaManifestsV2;
 
-    type Dependencies = dependencies![TreeHandle, MappedGitCommitId];
+    type Dependencies = dependencies![MappedGitCommitId];
     type PredecessorDependencies = dependencies![];
 
     async fn derive_single(

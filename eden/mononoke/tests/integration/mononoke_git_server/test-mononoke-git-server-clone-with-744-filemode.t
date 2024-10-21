@@ -59,9 +59,6 @@
 # Clone the Git repo from Mononoke
   $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
   Cloning into 'repo'...
-  fatal: did not receive expected object a6232473c2c1a1b2b1130a41121b6b32e5592c00
-  fatal: fetch-pack: invalid index-pack output
-  [128]
-# Verify that we get the same Git repo back that we started with
-#   $ cd $REPONAME
-#   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list
+Verify that we get the same Git repo back that we started with
+  $ cd $REPONAME
+  $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list

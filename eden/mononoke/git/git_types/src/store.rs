@@ -148,6 +148,7 @@ pub enum HeaderState {
 pub enum GitIdentifier {
     Rich(RichGitSha1),
     Basic(GitSha1),
+    NonBlob(GitSha1),
 }
 
 impl GitIdentifier {
@@ -155,6 +156,7 @@ impl GitIdentifier {
         match self {
             GitIdentifier::Rich(rich_sha) => rich_sha.sha1(),
             GitIdentifier::Basic(basic_sha) => basic_sha.clone(),
+            GitIdentifier::NonBlob(basic_sha) => basic_sha.clone(),
         }
     }
 
@@ -162,6 +164,7 @@ impl GitIdentifier {
         match self {
             GitIdentifier::Rich(rich_sha) => rich_sha.is_blob(),
             GitIdentifier::Basic(_) => true, // May or may not be a blob, we can't know
+            GitIdentifier::NonBlob(_) => false, // Known to be not a blob
         }
     }
 
@@ -169,6 +172,7 @@ impl GitIdentifier {
         match self {
             GitIdentifier::Rich(rich_sha) => Ok(rich_sha.to_object_id()?),
             GitIdentifier::Basic(basic_sha) => Ok(basic_sha.to_object_id()?),
+            GitIdentifier::NonBlob(basic_sha) => Ok(basic_sha.to_object_id()?),
         }
     }
 }
