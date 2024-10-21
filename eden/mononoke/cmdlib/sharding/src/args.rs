@@ -29,6 +29,12 @@ pub struct ShardedExecutorArgs {
 }
 
 impl ShardedExecutorArgs {
+    pub fn is_sharded(self) -> bool {
+        self.sharded_service_name
+            .zip(self.sharded_scope_name)
+            .is_some()
+    }
+
     pub fn build_executor(
         self,
         fb: FacebookInit,

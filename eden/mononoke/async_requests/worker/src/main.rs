@@ -162,8 +162,14 @@ fn main(fb: FacebookInit) -> Result<()> {
     let session = SessionContainer::new_with_defaults(env.fb);
     let ctx = Arc::new(session.new_context(app.logger().clone(), env.scuba_sample_builder.clone()));
 
-    let service_name = Some(ShardedService::AsyncRequestsWorker);
-    let repos_mgr = Arc::new(runtime.block_on(app.open_managed_repos(service_name))?);
+    let sharded_args = args.sharded_executor_args.clone();
+    let repos_mgr = if sharded_args.is_sharded() {
+        let service_name = Some(ShardedService::AsyncRequestsWorker);
+        runtime.block_on(app.open_managed_repos(service_name))
+    } else {
+        runtime.block_on(app.open_managed_repos(None))
+    }?;
+    let repos_mgr = Arc::new(repos_mgr);
     let mononoke = Arc::new(repos_mgr.make_mononoke_api()?);
     let megarepo = Arc::new(MegarepoApi::new(&app, mononoke.clone())?);
 
@@ -226,10 +232,14 @@ fn main(fb: FacebookInit) -> Result<()> {
             let queue = Arc::new(AsyncMethodRequestQueue::new(
                 sql_connection.clone(),
                 blobstore.clone(),
-                Some(repos),
+                Some(repos.clone()),
             ));
 
-            info!(logger, "Starting unsharded executor for all repos");
+            info!(
+                logger,
+                "Starting unsharded executor for repos {:?}",
+                repos.clone()
+            );
             runtime.block_on(worker::AsyncMethodRequestWorker::new(
                 args.clone(),
                 ctx.clone(),
