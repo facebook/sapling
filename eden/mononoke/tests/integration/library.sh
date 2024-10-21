@@ -662,6 +662,12 @@ function scs {
     mkdir "$SCRIBE_LOGS_DIR"
   fi
 
+  # Disable bookmark cache unless test opts in with ENABLE_BOOKMARK_CACHE=1.
+  local BOOKMARK_CACHE_FLAG
+  if [ -z "$ENABLE_BOOKMARK_CACHE" ]; then
+    BOOKMARK_CACHE_FLAG="--disable-bookmark-cache-warming"
+  fi
+
   rm -f "$TESTTMP/scs_server_addr.txt"
   GLOG_minloglevel=5 \
     THRIFT_TLS_SRV_CERT="$TEST_CERTDIR/localhost.crt" \
@@ -677,6 +683,7 @@ function scs {
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --bound-address-file "$TESTTMP/scs_server_addr.txt" \
     --scribe-logging-directory "$TESTTMP/scribe_logs" \
+    $BOOKMARK_CACHE_FLAG \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" >> "$TESTTMP/scs_server.out" 2>&1 &
   export SCS_SERVER_PID=$!

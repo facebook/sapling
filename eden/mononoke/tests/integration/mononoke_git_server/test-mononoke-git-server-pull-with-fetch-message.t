@@ -72,8 +72,6 @@
 
 # Pull the Git repo from Mononoke
   $ cd $REPONAME
-# Wait for the warm bookmark cache to catch up with the latest changes
-  $ wait_for_git_bookmark_move HEAD $current_head
 
 # Pulling from git server returns the extra message  
   $ git_client pull

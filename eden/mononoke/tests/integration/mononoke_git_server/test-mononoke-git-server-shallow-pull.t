@@ -103,8 +103,6 @@
 
 # Pull the latest changes from Mononoke and verify we get the same end state
   $ cd $GIT_REPO
-# Wait for the warm bookmark cache to catch up with the latest changes
-  $ wait_for_git_bookmark_move HEAD $prev_head
   $ quiet git_client pull --depth=2
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | grep commit | sort
   18a6f40de35ce474e240faa7298ae2b5979751c8 commit 

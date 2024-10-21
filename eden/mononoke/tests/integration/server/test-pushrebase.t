@@ -165,7 +165,6 @@ Push fast-forward
 
 
 Push with no new commits
-  $ wait_for_bookmark_move_away_edenapi repo master_bookmark "$OLD_HASH"
   $ hg push -r . --to master_bookmark
   pushing rev b9f277aaa224 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   moving remote bookmark master_bookmark from b9f277aaa224 to b9f277aaa224
@@ -307,7 +306,6 @@ Test a non-forward push
   $ hg push --force -r . --to master_bookmark_2 --non-forward-move --pushvar NON_FAST_FORWARD=true
   pushing rev 45d2d9680dec to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark_2
   moving remote bookmark master_bookmark_2 from 1065de83df59 to 45d2d9680dec
-  $ wait_for_bookmark_move_edenapi repo master_bookmark_2 "$(hg log -T"{node}" -r 22)"
   $ log -r "20::"
   o    merge 10 and 12 [public;rev=25;1065de83df59] remote/master_bookmark
   ├─╮

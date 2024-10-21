@@ -68,7 +68,6 @@
   > # exists: L_C $LARGE_MASTER_BONSAI
   > EOF
   $ set_bonsai_globalrev_mapping "$LARGE_REPO_ID" "$L_D" 1000157970
-  $ wait_for_bookmark_move_away_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK "$PREV_BOOK_VALUE"
 
 Before config change
 -- push to a large repo
@@ -84,9 +83,6 @@ Before config change
   o  before merge [public;globalrev=1000157971;a94d137602c0] remote/master_bookmark
   │
   ~
-
--- wait a second to give backsyncer some time to catch up
-  $ wait_for_bookmark_move_away_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK  "$PREV_BOOK_VALUE"
 
 -- check the same commit in the small repo
   $ cd "$TESTTMP/small-hg-client"
@@ -147,9 +143,6 @@ Before config change
   > --commit-date-rfc3339 "$COMMIT_DATE"
   merging 1 commits
 
--- wait a second to give backsyncer some time to catch up
-  $ wait_for_bookmark_move_away_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK  "$PREV_BOOK_VALUE"
-
 -- check that merge has made into large repo
   $ cd "$TESTTMP"/large-hg-client
   $ hg -q pull
@@ -170,8 +163,6 @@ Before config change
   o  after merge [public;globalrev=1000157973;1220098b4cde] remote/master_bookmark
   │
   ~
--- wait a second to give backsyncer some time to catch up
-  $ wait_for_bookmark_move_away_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK  "$PREV_BOOK_VALUE"
 
 -- check the same commit in the small repo
   $ cd "$TESTTMP/small-hg-client"
@@ -225,7 +216,6 @@ Before config change
   changeset a14dee507f7605083e9a99901971ac7c5558d8b28d7d01090bd2cff2432fa707 synced as 402c52f0f2156a83bf5354aae35c3cae55e92b23da3ed61bc10ee7960e172c8e in *ms (glob)
   successful sync
   X Repo Sync execution finished from small repo imported_repo to large repo large-mon
-  $ wait_for_bookmark_move_away_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK  "$PREV_BOOK_VALUE"
 
   $ cd "$TESTTMP/small-hg-client"
   $ hg pull -q
@@ -277,7 +267,6 @@ Before config change
   $ quiet mononoke_newadmin mutable-counters --repo-id $LARGE_REPO_ID set xreposync_from_$IMPORTED_REPO_ID 2
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi $LARGE_REPO_NAME $MASTER_BOOKMARK)
   $ quiet mononoke_x_repo_sync "$IMPORTED_REPO_ID"  "$LARGE_REPO_ID" tail --bookmark-regex "heads/$MASTER_BOOKMARK" --catch-up-once
-  $ wait_for_bookmark_move_away_edenapi $LARGE_REPO_NAME $MASTER_BOOKMARK  "$PREV_BOOK_VALUE"
 
   $ hg pull -q
   $ log_globalrev -r $MASTER_BOOKMARK^^^::$MASTER_BOOKMARK
@@ -336,9 +325,6 @@ Before config change
   > --commit-date-rfc3339 "$COMMIT_DATE"
   merging 1 commits
 
--- wait a second to give backsyncer some time to catch up
-  $ wait_for_bookmark_move_away_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK  "$PREV_BOOK_VALUE"
-
 -- check that merge has made into large repo
   $ cd "$TESTTMP"/large-hg-client
   $ hg -q pull
@@ -371,7 +357,6 @@ Before config change
   changeset 1d0bbdb162c2887a5b93893d7a48fd852a304ab58be2245899bb795e80aa10e9 synced as 76b08a5702ff09571621ca88b107d886963d2c8265f508edc6e4d8f95777fd3e in *ms (glob)
   successful sync
   X Repo Sync execution finished from small repo another_repo to large repo large-mon
-  $ wait_for_bookmark_move_away_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK  "$PREV_BOOK_VALUE"
 
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi "$IMPORTED_REPO_NAME" heads/$MASTER_BOOKMARK)
   $ testtool_drawdag  --print-hg-hashes -R "$IMPORTED_REPO_NAME" <<EOF
@@ -382,7 +367,6 @@ Before config change
   IG=8ab5c12e737d5da736082a535ed0fc66b234e957
   IH=390213545a07b8f0b3452f97e862443d56b58375
   II=6738aefcbd6e1d868fa73a489b55aab543fd0c53
-  $ wait_for_bookmark_move_away_edenapi "$IMPORTED_REPO_NAME" heads/$MASTER_BOOKMARK  "$PREV_BOOK_VALUE"
   $ quiet with_stripped_logs mononoke_x_repo_sync "$IMPORTED_REPO_ID"  "$LARGE_REPO_ID" tail --bookmark-regex "heads/$MASTER_BOOKMARK" --catch-up-once
 
   $ FINAL_BOOK_VALUE=$(x_repo_lookup $IMPORTED_REPO_NAME $LARGE_REPO_NAME $II)
@@ -477,9 +461,6 @@ so they'll be dumped to files to keep this (already long) integration test short
   ~
 
 
--- wait a second to give backsyncer some time to catch up
-  $ wait_for_bookmark_move_away_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK  "$PREV_BOOK_VALUE"
-
 -- Check if changes were backsynced properly
   $ cd "$TESTTMP/small-hg-client"
   $ hg pull -q
@@ -523,9 +504,6 @@ so they'll be dumped to files to keep this (already long) integration test short
   o  after live sync and changes to submodule repo [public;globalrev=1000157989;cf2c14f12677] remote/master_bookmark
   │
   ~
--- wait a second to give backsyncer some time to catch up
-  $ wait_for_bookmark_move_away_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK  "$PREV_BOOK_VALUE"
-
 
 
 -- Check if changes were backsynced properly to small repo

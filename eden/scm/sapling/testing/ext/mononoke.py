@@ -15,7 +15,6 @@ from ..sh.bufio import BufIO
 from ..sh.interp import interpcode
 from ..sh.types import Env, ShellFS
 from ..t.runtime import TestTmp
-
 from .hg import hg as hgcmd
 
 
@@ -157,6 +156,9 @@ def mononoke(args: List[str], stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
         *cache_args,
         *common_args,
     ]
+
+    if not env.getenv("ENABLE_BOOKMARK_CACHE"):
+        mononoke_command.append("--disable-bookmark-cache-warming")
 
     # Execute the command in the background
     with open(f"{test_tmp}/mononoke.out", "w") as outfile:

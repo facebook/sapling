@@ -119,8 +119,6 @@ Do a manual move
   $ mononoke_backup_sync backup sync-loop 2 --bookmark-move-any-direction 2>&1 | grep 'successful sync'
   * successful sync of entries [8]* (glob)
 
-  $ wait_for_bookmark_move_edenapi backup master_bookmark "$TIP_PARENT"
-
   $ cd "$TESTTMP/backup"
   $ REPONAME=backup
   $ hg pull -q
@@ -137,8 +135,6 @@ Move forward to a commit that's already present in the destination
   $ mononoke_backup_sync backup sync-loop 2 --bookmark-move-any-direction 2>&1 | grep -e 'successful sync' -e 'already in the darkstorm backup repo'
   * 1 of 1 commits already in the darkstorm backup repo, not including them in the bundle, repo: orig (glob)
   * successful sync of entries [9], repo: orig (glob)
-
-  $ wait_for_bookmark_move_edenapi backup master_bookmark "$TIP"
 
   $ cd "$TESTTMP/backup"
   $ REPONAME=backup

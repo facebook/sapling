@@ -57,7 +57,6 @@ Before the change
 
 -- check the same commit in the large repo
   $ cd "$TESTTMP/large-hg-client"
-  $ wait_for_bookmark_move_away_edenapi "$LARGE_REPO_NAME" master_bookmark "$(hg whereami)"
   $ hg pull -q
   $ hg up -q master_bookmark
   $ log -r master_bookmark
@@ -83,7 +82,6 @@ Make a config change
   > --version-name new_version
 Find the hash of mapping change commit in the large repo
   $ cd "$TESTTMP/large-hg-client"
-  $ wait_for_bookmark_move_away_edenapi "$LARGE_REPO_NAME" master_bookmark "$(hg whereami)"
   $ hg pull -q
   $ hg up -q master_bookmark
 
@@ -124,7 +122,6 @@ After the change
 
 -- push to a large repo
   $ cd "$TESTTMP/large-hg-client"
-  $ wait_for_bookmark_move_away_edenapi "$LARGE_REPO_NAME" master_bookmark "$(hg whereami)"
   $ hg pull -q
   $ hg up -q master_bookmark
   $ echo a > after_change

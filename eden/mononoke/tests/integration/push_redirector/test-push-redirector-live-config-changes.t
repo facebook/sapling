@@ -251,7 +251,6 @@ Again, normal pushrebase with one commit
 
 -- in the large repo, new commit touched an after_change path
   $ cd "$TESTTMP"/large-hg-client
-  $ wait_for_bookmark_move_away_edenapi large-mon master_bookmark $(hg whereami)
   $ hg pull -q
   $ hg log -T "{files % '{file}\n'}" -r master_bookmark
   specialsmallrepofolder_after_change/f

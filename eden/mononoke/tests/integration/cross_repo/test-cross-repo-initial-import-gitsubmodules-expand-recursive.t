@@ -21,6 +21,7 @@
   $ export LARGE_REPO_ID=10
   $ export SUBMODULE_REPO_NAME="small_repo"
   $ export SUBMODULE_REPO_ID=11
+  $ export ENABLE_BOOKMARK_CACHE=1
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"

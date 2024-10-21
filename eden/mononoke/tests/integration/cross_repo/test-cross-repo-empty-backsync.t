@@ -30,7 +30,6 @@
   * syncing bookmark master_bookmark to * (glob)
 
   $ cd "$TESTTMP/small-hg-client"
-  $ wait_for_bookmark_move_away_edenapi small-mon master_bookmark $(hg whereami)
   $ quiet hg pull
   $ log -r master_bookmark
   o  Empty1 [public;rev=2;bcf0910445fc] remote/master_bookmark
@@ -59,7 +58,6 @@
   $ flush_mononoke_bookmarks
 
   $ cd "$TESTTMP/small-hg-client"
-  $ wait_for_bookmark_move_away_edenapi small-mon master_bookmark $(hg whereami)
   $ quiet hg pull
   $ log -r master_bookmark^::master_bookmark
   o  non-empty after empty2 [public;rev=3;*] remote/master_bookmark (glob)
@@ -99,7 +97,6 @@ XXX (not sure why we don't end up on master just after push)
 
 The large repo accepted all those pushes
   $ cd "$TESTTMP"/large-hg-client
-  $ wait_for_bookmark_move_away_edenapi large-mon master_bookmark $(hg whereami)
   $ hg pull -q
   $ log -r master_bookmark^::master_bookmark
   o  Non-empty-4 [public;rev=7;*] remote/master_bookmark (glob)
@@ -125,7 +122,6 @@ This time pushing empty commit shouldn't fail as there is no pushredirection.
   * processing log entry #5 (glob)
 
   $ cd "$TESTTMP"/large-hg-client
-  $ wait_for_bookmark_move_away_edenapi large-mon master_bookmark $(hg whereami)
   $ quiet hg pull
   $ log -r master_bookmark^::master_bookmark
   o  Empty5 [public;rev=8;*] remote/master_bookmark (glob)

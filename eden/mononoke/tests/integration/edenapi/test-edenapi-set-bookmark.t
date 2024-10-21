@@ -59,7 +59,6 @@ Test move bookmark
   {"data": {"Ok": None}}
 
 Inspect results
-  $ wait_for_bookmark_move_away_edenapi repo master_bookmark $(hg whereami)
   $ hg pull -q
   $ hg log -G -T '{node} {desc} {remotenames}\n' -r "all()"
   o  9bc730a19041f9ec7cb33c626e811aa233efb18c E remote/master_bookmark remote/to_delete

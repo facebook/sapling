@@ -7,6 +7,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
   $ setup_common_config
   $ export CAS_STORE_PATH="$TESTTMP"
+  $ export ENABLE_BOOKMARK_CACHE=1
   $ setconfig drawdag.defaultfiles=false
 
   $ start_and_wait_for_mononoke_server

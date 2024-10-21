@@ -69,7 +69,6 @@ Test land stack
                                         bin("f585351a92f85104bff7c284233c338b10eb1df7"): bin("c5ef64ddf563718659b4c9777f0110de43055135")}}}}
 
 Inspect results
-  $ wait_for_bookmark_move_away_edenapi repo master_bookmark $(hg whereami)
   $ hg pull -q
   $ hg log -G -T '{node} {desc} {remotenames}\n' -r "sort(all(),topo)"
   o  cee85bb77dff9258b0b36fbe83501f3fd953fc4d E remote/master_bookmark

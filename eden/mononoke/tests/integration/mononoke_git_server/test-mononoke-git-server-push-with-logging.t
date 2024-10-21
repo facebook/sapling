@@ -80,9 +80,6 @@
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
    - [deleted]         branch_to_be_deleted
 
-# Wait for WBC to catch up with the changes
-  $ wait_for_git_bookmark_delete refs/heads/branch_to_be_deleted
-
 # Validate if the bookmark moves got logged by Mononoke Bookmark logger and GitRefs logger. Mononoke Bookmark logger doesn't
 # use refs/ as prefix and stores unspecified commits as null. GitRefs logger uses refs/ prefix, stores unspecified commits
 # as git null hash and appends .git suffix to repo name

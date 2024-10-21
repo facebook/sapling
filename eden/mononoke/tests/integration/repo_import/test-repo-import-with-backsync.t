@@ -50,7 +50,6 @@ Setup configuration
 
 -- Checking imported files
   $ cd "$TESTTMP/large-hg-client"
-  $ wait_for_bookmark_move_away_edenapi "$LARGE_REPO_NAME" master_bookmark "$(hg whereami)"
   $ hg pull -q
   $ hg up -q master_bookmark
 

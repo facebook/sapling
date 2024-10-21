@@ -44,7 +44,6 @@ Before the change
 
 -- check the same commit in the large repo
   $ cd "$TESTTMP/large-hg-client"
-  $ wait_for_bookmark_move_away_edenapi large-mon master_bookmark $(hg whereami)
   $ hg pull -q
   $ hg up -q master_bookmark
   $ log -r master_bookmark
@@ -79,7 +78,6 @@ Make a config change
 After the change
 -- push to a small repo
   $ cd "$TESTTMP/small-hg-client"
-  $ wait_for_bookmark_move_away_edenapi small-mon master_bookmark $(hg whereami)
   $ hg pull -q
   $ hg up -q master_bookmark
   $ echo a > boo
@@ -107,7 +105,6 @@ After the change
 
 -- check the same commit in the large repo
   $ cd "$TESTTMP/large-hg-client"
-  $ wait_for_bookmark_move_away_edenapi large-mon master_bookmark $(hg whereami)
   $ hg pull -q
   $ hg up -q master_bookmark
   $ log -r "master_bookmark^::master_bookmark"

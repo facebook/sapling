@@ -14,9 +14,9 @@ Setup repositories
   $ FBS_REPOID=1
   $ OVR_REPOID=2
 
-  $ NO_BOOKMARKS_CACHE=1 REPOID=$MEG_REPOID REPONAME=meg-mon setup_common_config $REPOTYPE
-  $ NO_BOOKMARKS_CACHE=1 REPOID=$FBS_REPOID REPONAME=fbs-mon setup_common_config $REPOTYPE
-  $ NO_BOOKMARKS_CACHE=1 REPOID=$OVR_REPOID REPONAME=ovr-mon setup_common_config $REPOTYPE
+  $ REPOID=$MEG_REPOID REPONAME=meg-mon setup_common_config $REPOTYPE
+  $ REPOID=$FBS_REPOID REPONAME=fbs-mon setup_common_config $REPOTYPE
+  $ REPOID=$OVR_REPOID REPONAME=ovr-mon setup_common_config $REPOTYPE
 
   $ setup_commitsyncmap
   $ setup_configerator_configs

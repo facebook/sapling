@@ -110,7 +110,6 @@
   * processing log entry * (glob)
 
   $ cd "$TESTTMP/meg-hg-cnt"
-  $ wait_for_bookmark_move_away_edenapi meg-mon master_bookmark "$(hg whereami)"
   $ hg pull -q
   $ hg up master_bookmark -q
   $ hg log -r ':' -T '{remotenames} {node} {date|shortdate} {desc}\n' | sort

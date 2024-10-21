@@ -6,6 +6,8 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
 
+  $ export ENABLE_BOOKMARK_CACHE=1
+
 define an extension that reveals when Mercurial is fixing up linkrevs
 
   $ cat > $TESTTMP/loglinkrevfixup.py <<EOF

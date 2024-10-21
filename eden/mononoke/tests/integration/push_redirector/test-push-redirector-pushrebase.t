@@ -51,7 +51,6 @@ Normal pushrebase with one commit
   @  first post-move commit [public;rev=2;bfcfb674663c] remote/master_bookmark
   │
   ~
-  $ wait_for_bookmark_move_away_edenapi "$LARGE_REPO_NAME" master_bookmark "$(hg whereami)"
   $ hg pull -q
   $ log -r master_bookmark
   o  newcommit [public;rev=3;819e91b238b7] remote/master_bookmark
@@ -83,7 +82,6 @@ Noop bookmark-only pushrebase
 
 -- this is not a `common_pushrebase_bookmark`, so should be prefixed
   $ cd "$TESTTMP/large-hg-client"
-  $ wait_for_bookmark_move_away_edenapi "$LARGE_REPO_NAME" master_bookmark "$(hg whereami)"
   $ hg pull -q
   $ hg book --all
   no bookmarks set
@@ -100,7 +98,6 @@ Delete a bookmark
   no bookmarks set
      remote/master_bookmark    ce81c7d38286
   $ cd "$TESTTMP/large-hg-client"
-  $ wait_for_bookmark_move_away_edenapi "$LARGE_REPO_NAME" master_bookmark "$(hg whereami)"
   $ hg pull -q
   $ hg book --all
   no bookmarks set
@@ -131,7 +128,6 @@ Normal pushrebase with many commits
   ~
 -- this should also be present in a large repo, once we pull:
   $ cd "$TESTTMP/large-hg-client"
-  $ wait_for_bookmark_move_away_edenapi "$LARGE_REPO_NAME" master_bookmark "$(hg whereami)"
   $ hg pull -q
   $ log -r master_bookmark
   o  The staunchest tramp to ply his trade [public;rev=7;34c34be6efde] remote/master_bookmark
@@ -175,7 +171,6 @@ Pushrebase, which replaces a directory with a file
   ~
 -- this should also be present in a large repo, once we pull
   $ cd "$TESTTMP/large-hg-client"
-  $ wait_for_bookmark_move_away_edenapi "$LARGE_REPO_NAME" master_bookmark "$(hg whereami)"
   $ hg pull -q
   $ log -r master_bookmark
   o  Replace a directory with a file [public;rev=9;6ac00e7afd93] remote/master_bookmark
@@ -195,7 +190,6 @@ Normal pushrebase to a prefixed bookmark
   ~
 -- this should also be present in a large repo, once we pull
   $ cd "$TESTTMP/large-hg-client"
-  $ wait_for_bookmark_move_away_edenapi "$LARGE_REPO_NAME" master_bookmark "$(hg whereami)"
   $ hg pull -q
   $ log -r bookprefix/master_bookmark_2
   o  The epicness of this fail is great [public;rev=10;030470259cb4] remote/bookprefix/master_bookmark_2
@@ -214,7 +208,6 @@ Normal pushrebase to a prefixed bookmark
   ~
 -- this should also be present in a large repo, once we pull
   $ cd "$TESTTMP/large-hg-client"
-  $ wait_for_bookmark_move_away_edenapi "$LARGE_REPO_NAME" master_bookmark "$(hg whereami)"
   $ hg pull -q
   $ log -r bookprefix/master_bookmark_2
   o  The epicness of this fail is greater [public;rev=11;ccbb367ae93a] remote/bookprefix/master_bookmark_2
@@ -232,7 +225,6 @@ Pushrebase with a rename between a shifted and a non-shifted behavior
   updated remote bookmark master_bookmark to 6e3fc27a15b1
 -- let's sync it, make sure everything is fine
   $ cd "$TESTTMP/large-hg-client"
-  $ wait_for_bookmark_move_away_edenapi "$LARGE_REPO_NAME" master_bookmark "$(hg whereami)"
   $ hg pull -q
   $ hg up -q master_bookmark
   $ ls non_path_shifting
@@ -248,7 +240,6 @@ Pushrebase with a rename between a shifted and a non-shifted behavior
   updated remote bookmark master_bookmark to 4273bf9c3d03
 -- let's also sync it to the large repo
   $ cd "$TESTTMP/large-hg-client"
-  $ wait_for_bookmark_move_away_edenapi "$LARGE_REPO_NAME" master_bookmark "$(hg whereami)"
   $ hg pull -q
   $ hg up -q master_bookmark
   $ ls non_path_shifting/filetomove
@@ -267,7 +258,6 @@ Pushrebase with a rename between a shifted and a non-shifted behavior
   updated remote bookmark master_bookmark to eb96c35ce02c
 -- let's also sync it to the large repo
   $ cd "$TESTTMP/large-hg-client"
-  $ wait_for_bookmark_move_away_edenapi "$LARGE_REPO_NAME" master_bookmark "$(hg whereami)"
   $ hg pull -q
   $ hg up -q master_bookmark
   $ ls non_path_shifting
@@ -291,7 +281,6 @@ Pushrebase, which replaces a file with a directory
   ~
 -- this should also be present in a large repo, once we pull
   $ cd "$TESTTMP/large-hg-client"
-  $ wait_for_bookmark_move_away_edenapi "$LARGE_REPO_NAME" master_bookmark "$(hg whereami)"
   $ hg pull -q
   $ hg up -q master_bookmark
   $ ls smallrepofolder/subdir

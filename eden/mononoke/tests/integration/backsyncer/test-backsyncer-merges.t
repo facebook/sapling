@@ -51,7 +51,6 @@ Backsync to a small repo
 Pull from a small repo. Check that both merges are synced
 although the second one became non-merge commit
   $ cd "$TESTTMP/small-hg-client"
-  $ wait_for_bookmark_move_away_edenapi "$SMALL_REPO_NAME" master_bookmark "$(hg whereami)"
   $ hg pull -q
   $ log -r :
   o  merge commit no new files [public;rev=4;534a740cd266] remote/master_bookmark

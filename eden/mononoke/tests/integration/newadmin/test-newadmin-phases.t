@@ -11,6 +11,8 @@ Setup a Mononoke repo.
   $ setup_common_config blob_files
   $ cd "$TESTTMP"
 
+  $ export ENABLE_BOOKMARK_CACHE=1
+
 Start Mononoke & LFS.
 
   $ start_and_wait_for_mononoke_server

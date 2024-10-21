@@ -80,9 +80,6 @@
   error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
   [1]
 
-# Wait for the warm bookmark cache to catch up with the latest changes
-  $ wait_for_git_bookmark_move HEAD $master_commit
-
 # Verify the push validation errors got recorded in scuba
   $ jq -S .normal "$SCUBA" | grep validation
     "push_validation_errors": "refs/heads/branch_ffonly => Non fast-forward bookmark move of 'heads/branch_ffonly' from eb95862bb5d5c295844706cbb0d0e56fee405f5c to 3ea0687e31d7b65429c774526728dba90cbaabc0\n\nFor more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j\n",

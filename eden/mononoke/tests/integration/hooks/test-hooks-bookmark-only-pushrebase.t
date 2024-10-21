@@ -64,7 +64,6 @@ fast-forward the bookmark
   pushrebasing stack (426bada5c675, 112478962961] (1 commit) to remote bookmark master_bookmark
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updated remote bookmark master_bookmark to 112478962961
-  $ wait_for_bookmark_move_away_edenapi repo master_bookmark "$A"
 
 fast-forward the bookmark over a commit that fails the hook
   $ hg up -q $D
@@ -81,7 +80,6 @@ bypass the hook, the push will now work
   pushrebasing stack (112478962961, dc9cf68aa67d] (2 commits) to remote bookmark master_bookmark
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updated remote bookmark master_bookmark to dc9cf68aa67d
-  $ wait_for_bookmark_move_away_edenapi repo master_bookmark "$B"
 
 attempt a non-fast-forward move, it should fail
   $ hg up -q $F
@@ -105,7 +103,6 @@ bypass the hook too, and it should work
   pushrebasing stack (112478962961, 24b5f35a12db] (2 commits) to remote bookmark master_bookmark
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updated remote bookmark master_bookmark to 3960ade32ad0
-  $ wait_for_bookmark_move_away_edenapi repo master_bookmark "$D"
 
 Noop bookmark-only push doesn't need to bypass hooks to go through.
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) from bookmarks_update_log";

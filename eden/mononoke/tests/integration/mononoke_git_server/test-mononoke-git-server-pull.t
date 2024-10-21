@@ -69,8 +69,6 @@
 
 # Pull the Git repo from Mononoke
   $ cd $REPONAME
-# Wait for the warm bookmark cache to catch up with the latest changes
-  $ wait_for_git_bookmark_move HEAD $current_head
   $ quiet git_client pull
 # Verify that we get the same Git repo back that we started with
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list

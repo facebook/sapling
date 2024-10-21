@@ -25,14 +25,12 @@ Push commit
   $ touch file1
   $ hg ci -Aqm commit1 --extra hg-git-rename-source=git --extra convert_revision=1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a
   $ hg push -q -r . --to master_bookmark
-  $ wait_for_bookmark_move_away_edenapi repo master_bookmark "$C"
   $ D="$(hg whereami)"
 
 Push another commit
   $ touch file2
   $ hg ci -Aqm commit2 --extra hg-git-rename-source=git --extra convert_revision=2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b
   $ hg push -q -r . --to master_bookmark
-  $ wait_for_bookmark_move_away_edenapi repo master_bookmark "$D"
 
 Push another commit that conflicts
   $ touch file3

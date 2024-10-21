@@ -8,7 +8,6 @@
   $ export BOOKMARK_SCRIBE_CATEGORY=mononoke_bookmark
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
 
-
 We use multiplex blobstore here as this one provides logging that we test later.
   $ export MULTIPLEXED=1
 
