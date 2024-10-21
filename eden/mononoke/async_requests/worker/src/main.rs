@@ -219,6 +219,21 @@ fn main(fb: FacebookInit) -> Result<()> {
             }
         });
 
+        if args.process_global_queue {
+            info!(logger, "Starting executor for global queue");
+            run_worker_queue(
+                &runtime,
+                ctx.clone(),
+                args.clone(),
+                mononoke.clone(),
+                megarepo.clone(),
+                sql_connection.clone(),
+                blobstore.clone(),
+                None,
+                will_exit.clone(),
+            )?;
+        }
+
         app.wait_until_terminated(
             move || will_exit.store(true, Ordering::Relaxed),
             args.shutdown_timeout_args.shutdown_grace_period,
@@ -231,7 +246,11 @@ fn main(fb: FacebookInit) -> Result<()> {
         let logger = logger.clone();
 
         // all enabled repos
-        info!(logger, "Starting unsharded executor for global queue");
+        info!(
+            logger,
+            "Starting unsharded executor for repos {:?}",
+            repos.clone()
+        );
         run_worker_queue(
             &runtime,
             ctx.clone(),
