@@ -116,8 +116,8 @@ pub struct Element {
 impl Entry {
     /// Returns an iterator over the elements that the current `Entry` contains. This is the
     /// primary method of inspection for an `Entry`.
-    pub fn elements<'a>(&'a self) -> Elements<'a> {
-        Elements::from_byte_slice(&self.0, self.1)
+    pub fn elements(&self) -> Elements {
+        Elements::from_bytes(self.0.clone(), self.1)
     }
 
     /// The primary builder of an Entry, from a list of `Element`.
@@ -171,45 +171,45 @@ impl AsRef<[u8]> for Entry {
     }
 }
 
-pub struct Elements<'a> {
-    byte_slice: &'a [u8],
+pub struct Elements {
+    bytes: Bytes,
     position: usize,
     format: SerializationFormat,
 }
 
-impl<'a> Elements<'a> {
+impl Elements {
     /// Constructs `Elements` from raw byte slice.
-    pub(crate) fn from_byte_slice(byte_slice: &'a [u8], format: SerializationFormat) -> Self {
+    pub(crate) fn from_bytes(bytes: minibytes::Bytes, format: SerializationFormat) -> Self {
         Elements {
-            byte_slice,
+            bytes,
             position: 0,
             format,
         }
     }
 
     fn next_hg(&mut self) -> Option<Result<Element>> {
-        if self.position >= self.byte_slice.len() {
+        if self.position >= self.bytes.len() {
             return None;
         }
-        let end = match self.byte_slice[self.position..]
+        let end = match self.bytes[self.position..]
             .iter()
             .position(|&byte| byte == b'\n')
         {
             None => {
                 return Some(Err(format_err!(
                     "failed to deserialize tree manifest entry, missing line feed\n{:?}",
-                    String::from_utf8_lossy(self.byte_slice)
+                    String::from_utf8_lossy(&self.bytes[..])
                 )));
             }
             Some(delta) => self.position + delta,
         };
-        let result = Element::from_byte_slice_hg(&self.byte_slice[self.position..end]);
+        let result = Element::from_byte_slice_hg(&self.bytes[self.position..end]);
         self.position = end + 1;
         Some(result)
     }
 
     fn next_git(&mut self) -> Option<Result<Element>> {
-        let slice = match self.byte_slice.get(self.position..) {
+        let slice = match self.bytes.get(self.position..) {
             None => return None,
             Some(s) if s.is_empty() => return None,
             Some(s) => s,
@@ -258,7 +258,7 @@ impl<'a> Elements<'a> {
 
     fn lookup_hg(&self, name: &PathComponent) -> Result<Option<(HgId, Flag)>> {
         // NAME '\0' HEX_SHA1 MODE '\n'
-        let mut slice: &[u8] = self.byte_slice;
+        let mut slice: &[u8] = self.bytes.as_ref();
         let name = {
             let name = name.as_byte_slice();
             let mut buf = Vec::with_capacity(name.len() + 1);
@@ -296,7 +296,7 @@ impl<'a> Elements<'a> {
     }
 
     fn lookup_git(&self, name: &PathComponent) -> Result<Option<(HgId, Flag)>> {
-        let mut slice: &[u8] = self.byte_slice;
+        let mut slice: &[u8] = self.bytes.as_ref();
         let name: &[u8] = name.as_byte_slice();
         while !slice.is_empty() {
             let (mode_len, name_len) = match find_git_entry_positions(slice) {
@@ -342,7 +342,7 @@ impl<'a> Elements<'a> {
     }
 }
 
-impl<'a> Iterator for Elements<'a> {
+impl Iterator for Elements {
     type Item = Result<Element>;
 
     fn next(&mut self) -> Option<Self::Item> {
