@@ -10,15 +10,18 @@ use std::sync::Arc;
 use cpython::*;
 use cpython_ext::convert::ImplInto;
 use cpython_ext::convert::Serde;
+use cpython_ext::PyIter;
 use cpython_ext::ResultPyErrExt;
 use storemodel::Bytes;
 use storemodel::FileStore as NativeFileStore;
 use storemodel::InsertOpts;
 use storemodel::Kind;
 use storemodel::SerializationFormat;
+use storemodel::TreeEntry as NativeTreeEntry;
 use storemodel::TreeItemFlag;
 use storemodel::TreeStore as NativeTreeStore;
 use types::Id20;
+use types::PathComponent;
 use types::PathComponentBuf;
 use types::RepoPath;
 
@@ -27,6 +30,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 
     let m = PyModule::new(py, &name)?;
     m.add_class::<FileStore>(py)?;
+    m.add_class::<TreeEntry>(py)?;
     m.add_class::<TreeStore>(py)?;
     m.add(
         py,
@@ -63,6 +67,25 @@ py_class!(pub class FileStore |py| {
     def from_store(store: ImplInto<Arc<dyn NativeFileStore>>) -> PyResult<Self> {
         let inner = store.into();
         Self::create_instance(py, inner)
+    }
+});
+
+py_class!(pub class TreeEntry |py| {
+    data inner: Box<dyn NativeTreeEntry>;
+
+    def __iter__(&self) -> PyResult<PyIter> {
+        let inner = self.inner(py);
+        let iter = inner.iter().map_pyerr(py)?;
+        let iter = PyIter::new(py, iter)?;
+        Ok(iter)
+    }
+
+    /// lookup(name) -> (node, flag) | None
+    def lookup(&self, name: &str) -> PyResult<Serde<Option<(Id20, TreeItemFlag)>>> {
+        let inner = self.inner(py);
+        let name = PathComponent::from_str(name).map_pyerr(py)?;
+        let result = inner.lookup(name).map_pyerr(py)?;
+        Ok(Serde(result))
     }
 });
 
