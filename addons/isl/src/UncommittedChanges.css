@@ -16,6 +16,9 @@
 
 .uncommitted-changes {
   padding: var(--halfpad) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--halfpad);
 }
 .conflicts-header {
   display: flex;
@@ -78,7 +81,7 @@
   gap: var(--halfpad);
   margin-right: var(--halfpad);
   transition: color 0.1s;
-  line-height: 30px;
+  line-height: 25px;
   /* when files are expanded with chunk selection, use position sticky to keep showing path at the top */
   position: sticky;
   top: 0;
@@ -232,7 +235,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--halfpad);
-  margin: var(--halfpad) 0;
 }
 
 .changed-file-list .button-row,
@@ -241,6 +243,10 @@
   flex-wrap: wrap;
   gap: var(--halfpad) var(--pad);
   align-items: center;
+}
+
+.changed-file-list .button-row {
+  padding-bottom: var(--halfpad);
 }
 
 .quick-commit-inputs input[type='text'] {
