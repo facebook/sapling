@@ -32,9 +32,20 @@ py_class!(pub class PyIter |py| {
 
 impl PyIter {
     /// Wraps a Rust iterator so it works as a Python iterator.
-    pub fn new<T: Serialize>(
+    /// The value produced by `iter` will be serialized to PyObject using serde.
+    pub fn new<T: Serialize + 'static>(
+        py: Python,
+        iter: impl Iterator<Item = Result<T>> + Send + 'static,
+    ) -> PyResult<Self> {
+        Self::new_custom(py, iter, |py, v| to_object(py, &v))
+    }
+
+    /// Wraps a Rust iterator so it works as a Python iterator.
+    /// The `convert_fn` is used to convert a Rust item to a Python object.
+    pub fn new_custom<T: 'static>(
         py: Python,
         mut iter: impl Iterator<Item = Result<T>> + Send + 'static,
+        convert_fn: for<'a> fn(Python<'a>, T) -> PyResult<PyObject>,
     ) -> PyResult<Self> {
         let mut end = false;
         let next_func = move |py: Python| -> PyResult<Option<PyObject>> {
@@ -47,10 +58,9 @@ impl PyIter {
                     end = true;
                     Ok(None)
                 }
-                Some(v) => Ok(Some(to_object(py, &v)?)),
+                Some(v) => Ok(Some(convert_fn(py, v)?)),
             }
         };
-
         Self::create_instance(py, RefCell::new(Box::new(next_func)))
     }
 }
@@ -66,28 +76,34 @@ mod tests {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
-        let iter = vec![5, 10, 15]
-            .into_iter()
-            .map(|v| Ok::<_, anyhow::Error>(v));
-        let py_iter = PyIter::new(py, iter).unwrap();
+        let list = vec![5, 10, 15];
+        let iter1 = list.clone().into_iter().map(|v| Ok::<_, anyhow::Error>(v));
+        let py_iter1 = PyIter::new(py, iter1).unwrap();
 
-        let item1 = py_iter.__next__(py).unwrap();
-        let item2 = py_iter.__next__(py).unwrap();
-        let item3 = py_iter.__next__(py).unwrap();
-        let item4 = py_iter.__next__(py).unwrap();
-        let item5 = py_iter.__next__(py).unwrap();
+        struct S(usize);
+        let iter2 = list.into_iter().map(|v| Ok::<_, anyhow::Error>(S(v)));
+        let py_iter2 =
+            PyIter::new_custom(py, iter2, |py, v| Ok(v.0.to_py_object(py).into_object())).unwrap();
 
-        let to_str = |v: Option<PyObject>| -> String {
-            match v {
-                None => "None".to_owned(),
-                Some(v) => v.str(py).unwrap().to_string_lossy(py).into_owned(),
-            }
-        };
+        for py_iter in [py_iter1, py_iter2] {
+            let item1 = py_iter.__next__(py).unwrap();
+            let item2 = py_iter.__next__(py).unwrap();
+            let item3 = py_iter.__next__(py).unwrap();
+            let item4 = py_iter.__next__(py).unwrap();
+            let item5 = py_iter.__next__(py).unwrap();
 
-        assert_eq!(to_str(item1), "5");
-        assert_eq!(to_str(item2), "10");
-        assert_eq!(to_str(item3), "15");
-        assert_eq!(to_str(item4), "None");
-        assert_eq!(to_str(item5), "None");
+            let to_str = |v: Option<PyObject>| -> String {
+                match v {
+                    None => "None".to_owned(),
+                    Some(v) => v.str(py).unwrap().to_string_lossy(py).into_owned(),
+                }
+            };
+
+            assert_eq!(to_str(item1), "5");
+            assert_eq!(to_str(item2), "10");
+            assert_eq!(to_str(item3), "15");
+            assert_eq!(to_str(item4), "None");
+            assert_eq!(to_str(item5), "None");
+        }
     }
 }
