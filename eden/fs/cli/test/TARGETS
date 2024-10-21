@@ -20,7 +20,7 @@ python_unittest(
         "//eden/fs/cli:telemetry",
         "//eden/fs/cli/doctor/test/lib:lib",
         "//eden/fs/cli/test/lib:lib",
-        "//eden/fs/service:thrift-py",
+        "//eden/fs/service:thrift-py-deprecated",
         "//eden/test_support:py",
     ],
 )

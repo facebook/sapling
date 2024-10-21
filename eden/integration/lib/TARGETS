@@ -21,7 +21,7 @@ python_library(
         "//eden/fs/cli:proc_utils",
         "//eden/fs/py/eden:config",
         "//eden/fs/py/eden/thrift:legacy",
-        "//eden/fs/service:thrift-py",
+        "//eden/fs/service:thrift-py-deprecated",
         "//eden/integration/facebook/lib:lib",
         "//eden/test_support:py",
     ],

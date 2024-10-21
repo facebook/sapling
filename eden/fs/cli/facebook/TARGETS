@@ -22,7 +22,7 @@ python_library(
     deps = [
         "//artillery/artillery2/python/api:artillery2_api",
         "//eden/fs/cli:lib",
-        "//eden/fs/service:thrift-py",
+        "//eden/fs/service:thrift-py-deprecated",
     ],
 )
 

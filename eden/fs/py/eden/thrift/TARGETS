@@ -13,7 +13,7 @@ python_library(
         ),
     ],
     deps = [
-        "//eden/fs/service:thrift-py",
+        "//eden/fs/service:thrift-py-deprecated",
         "//thrift/lib/py:base",
         "//thrift/lib/py:server_base",
     ],

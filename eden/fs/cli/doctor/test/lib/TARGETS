@@ -10,7 +10,7 @@ python_library(
         "//eden/fs/cli:version",
         "//eden/fs/cli/test/lib:lib",
         "//eden/fs/py/eden:dirstate",
-        "//eden/fs/service:thrift-py",
+        "//eden/fs/service:thrift-py-deprecated",
         "//eden/test_support:py",
         "//fb303/thrift:fb303_core-py",
     ],

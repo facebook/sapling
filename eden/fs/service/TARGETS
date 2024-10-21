@@ -453,10 +453,10 @@ thrift_library(
     name = "thrift",
     languages = [
         "cpp2",
-        "py",
         "py3",
         "python",
         "rust",
+        "py-deprecated",
     ],
     py_base_module = "facebook",
     rust_deps = [
