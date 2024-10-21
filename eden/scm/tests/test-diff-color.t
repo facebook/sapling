@@ -282,7 +282,7 @@ test trailing spaces color diff
   > this is the first line
   > this is the second line 
   > EOF
-tofix: the second line should end with diff.trailingwhitespace
+the second line should end with diff.trailingwhitespace
   $ hg diff --config experimental.worddiff=True --color=debug
   [diff.diffline|diff --git a/file1 b/file1]
   [diff.file_a|--- a/file1]
@@ -290,4 +290,4 @@ tofix: the second line should end with diff.trailingwhitespace
   [diff.hunk|@@ -1,2 +1,2 @@]
    this is the first line
   [diff.deleted|-][diff.deleted.unchanged|this is the second line]
-  [diff.inserted|+][diff.inserted.unchanged|this is the second line][diff.inserted.changed| ]
+  [diff.inserted|+][diff.inserted.unchanged|this is the second line][diff.trailingwhitespace| ]

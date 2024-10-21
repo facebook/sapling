@@ -2888,16 +2888,19 @@ def diffsinglehunkinline(hunklines):
         (b"+", "diff.inserted", btokens),
     ]:
         isprevnewline = True
-        for changed, token in tokens:
+        length = len(tokens)
+        for i, (changed, token) in enumerate(tokens):
             if isprevnewline:
                 yield (prefix, label)
                 isprevnewline = False
             # special handling line end
+            isnextnewline = i + 1 < length and tokens[i + 1][1] == b"\n"
             isendofline = token.endswith(b"\n")
-            if isendofline:
-                chomp = token[:-1]  # chomp
+            if isendofline or isnextnewline:
+                chomp = token[:-1] if isendofline else token  # chomp
                 token = chomp.rstrip()  # detect spaces at the end
                 endspaces = chomp[len(token) :]
+
             # scan tabs
             for maybetab in tabsplitter.findall(token):
                 if b"\t" == maybetab[0:1]:
@@ -2908,11 +2911,13 @@ def diffsinglehunkinline(hunklines):
                     else:
                         currentlabel = label + ".unchanged"
                 yield (maybetab, currentlabel)
-            if isendofline:
+
+            if isendofline or isnextnewline:
                 if endspaces:
                     yield (endspaces, "diff.trailingwhitespace")
-                yield (b"\n", "")
-                isprevnewline = True
+                if isendofline:
+                    yield (b"\n", "")
+                    isprevnewline = True
 
 
 def difflabel(func, *args, **kw):
