@@ -670,7 +670,6 @@ export const allConfigNames = [
   // these config names are for compatibility.
   'isl.submitAsDraft',
   'isl.changedFilesDisplayType',
-  'isl.hasShownGettingStarted',
   // sapling config prefers foo-bar naming.
   'isl.pull-button-choice',
   'isl.show-stack-submit-confirmation',
@@ -701,7 +700,6 @@ export type ConfigName = (typeof allConfigNames)[number];
 export const settableConfigNames = [
   'isl.submitAsDraft',
   'isl.changedFilesDisplayType',
-  'isl.hasShownGettingStarted',
   'isl.pull-button-choice',
   'isl.show-stack-submit-confirmation',
   'isl.show-diff-number',

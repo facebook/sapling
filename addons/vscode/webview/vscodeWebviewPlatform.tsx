@@ -140,7 +140,6 @@ const vscodeWebviewPlatform: Platform = {
   },
 
   AdditionalDebugContent: Internal.AdditionalDebugContent,
-  GettingStartedContent: Internal.GettingStartedContent,
   AddMoreCwdsHint,
   Settings: VSCodeSettings,
 

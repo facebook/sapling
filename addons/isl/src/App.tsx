@@ -22,7 +22,6 @@ import {TopLevelAlerts} from './TopLevelAlert';
 import {TopLevelErrors} from './TopLevelErrors';
 import {tracker} from './analytics';
 import {islDrawerState} from './drawerState';
-import {GettingStartedModal} from './gettingStarted/GettingStartedModal';
 import {t, T} from './i18n';
 import platform from './platform';
 import {useMainContentWidth} from './responsive';
@@ -53,7 +52,6 @@ export default function App() {
       {mode.mode === 'isl' ? (
         <>
           <NullStateOrDrawers />
-          <GettingStartedModal />
           <ComparisonViewModal />
         </>
       ) : (
