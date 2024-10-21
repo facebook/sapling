@@ -1475,7 +1475,11 @@ SaplingBackingStore::getTreeAuxDataEnqueue(
     const HgProxyHash& proxyHash,
     const ObjectFetchContextPtr& context) {
   auto getTreeAuxFuture = makeImmediateFutureWith([&] {
-    XLOGF(DBG4, "making tree meta import request for {}", proxyHash.path(), id);
+    XLOGF(
+        DBG4,
+        "making tree aux data import request for {}",
+        proxyHash.path(),
+        id);
     auto requestContext = context.copy();
     auto request = SaplingImportRequest::makeTreeAuxImportRequest(
         id, proxyHash, requestContext);

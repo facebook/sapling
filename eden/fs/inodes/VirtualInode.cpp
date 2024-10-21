@@ -285,7 +285,7 @@ ImmediateFuture<TreeAuxData> VirtualInode::getTreeAuxData(
                 return makeImmediateFuture<TreeAuxData>(newEdenError(
                     EINVAL,
                     EdenErrorType::GENERIC_ERROR,
-                    fmt::format("tree meta missing for tree: {}", path)));
+                    fmt::format("tree aux data missing for tree: {}", path)));
               }
             });
       },

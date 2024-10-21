@@ -831,7 +831,7 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Controls the max number of blob metadata import requests we batch in
+   * Controls the max number of blob aux data import requests we batch in
    * SaplingBackingStore
    */
   ConfigSetting<uint32_t> importBatchSizeBlobMeta{
@@ -840,7 +840,7 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Controls the max number of tree metadata import requests we batch in
+   * Controls the max number of tree aux data import requests we batch in
    * SaplingBackingStore
    */
   ConfigSetting<uint32_t> importBatchSizeTreeMeta{
