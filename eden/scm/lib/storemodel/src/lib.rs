@@ -47,7 +47,7 @@ use types::PathComponentBuf;
 use types::RepoPath;
 
 /// Boxed dynamic iterator. Similar to `BoxStream`.
-pub type BoxIterator<'a, T> = Box<dyn Iterator<Item = T> + Send + 'a>;
+pub type BoxIterator<T> = Box<dyn Iterator<Item = T> + Send + 'static>;
 
 /// A store where content is indexed by "(path, hash)", aka "Key".
 pub trait KeyStore: Send + Sync {
@@ -65,9 +65,10 @@ pub trait KeyStore: Send + Sync {
         keys: Vec<Key>,
         _fetch_mode: FetchMode,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Bytes)>>> {
+        let store = self.clone_key_store();
         let iter = keys
             .into_iter()
-            .map(|k| match self.get_local_content(&k.path, k.hgid) {
+            .map(move |k| match store.get_local_content(&k.path, k.hgid) {
                 Err(e) => Err(e),
                 Ok(None) => Err(anyhow::format_err!(
                     "{}@{}: not found locally",
@@ -373,9 +374,10 @@ pub trait TreeStore: KeyStore {
         keys: Vec<Key>,
         _fetch_mode: FetchMode,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Box<dyn TreeEntry>)>>> {
+        let store = self.clone_tree_store();
         let iter = keys
             .into_iter()
-            .map(|k| match self.get_local_tree(&k.path, k.hgid) {
+            .map(move |k| match store.get_local_tree(&k.path, k.hgid) {
                 Err(e) => Err(e),
                 Ok(None) => Err(anyhow::format_err!(
                     "{}@{}: not found locally",
@@ -397,17 +399,19 @@ pub trait TreeStore: KeyStore {
         keys: Vec<Key>,
         _fetch_mode: FetchMode,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, TreeAuxData)>>> {
-        let iter = keys
-            .into_iter()
-            .map(|k| match self.get_local_tree_aux_data(&k.path, k.hgid) {
-                Err(e) => Err(e),
-                Ok(None) => Err(anyhow::format_err!(
-                    "{}@{}: not found locally",
-                    k.path,
-                    k.hgid
-                )),
-                Ok(Some(data)) => Ok((k, data)),
-            });
+        let store = self.clone_tree_store();
+        let iter =
+            keys.into_iter().map(
+                move |k| match store.get_local_tree_aux_data(&k.path, k.hgid) {
+                    Err(e) => Err(e),
+                    Ok(None) => Err(anyhow::format_err!(
+                        "{}@{}: not found locally",
+                        k.path,
+                        k.hgid
+                    )),
+                    Ok(Some(data)) => Ok((k, data)),
+                },
+            );
         Ok(Box::new(iter))
     }
 

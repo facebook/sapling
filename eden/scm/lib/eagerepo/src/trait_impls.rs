@@ -112,11 +112,12 @@ impl FileStore for EagerRepoStore {
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Key)>>> {
         match self.format {
             SerializationFormat::Hg => {
-                let iter = keys.into_iter().filter_map(|k| {
+                let store = self.clone();
+                let iter = keys.into_iter().filter_map(move |k| {
                     let id = k.hgid;
-                    match self.get_content(id) {
+                    match store.get_content(id) {
                         Err(e) => Some(Err(e.into())),
-                        Ok(Some(data)) => match strip_file_metadata(&data, self.format) {
+                        Ok(Some(data)) => match strip_file_metadata(&data, store.format) {
                             Err(e) => Some(Err(e)),
                             Ok((_, Some(copy_from))) => Some(Ok((k, copy_from))),
                             Ok((_, None)) => None,

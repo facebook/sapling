@@ -53,8 +53,9 @@ impl KeyStore for GitStore {
         if fetch_mode.contains(FetchMode::IGNORE_RESULT) {
             return Ok(Box::new(std::iter::empty()));
         }
+        let store = self.clone();
         let iter = keys.into_iter().map(move |k| {
-            let data = self.read_obj(k.hgid, git2::ObjectType::Any, FetchMode::AllowRemote)?;
+            let data = store.read_obj(k.hgid, git2::ObjectType::Any, FetchMode::AllowRemote)?;
             Ok((k, data.into()))
         });
         Ok(Box::new(iter))

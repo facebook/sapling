@@ -199,9 +199,10 @@ impl FileStore for CopyTraceTestCase {
         &self,
         keys: Vec<Key>,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Key)>>> {
+        let store = self.clone();
         let iter = keys
             .into_iter()
-            .filter_map(|k| self.inner.copies.get(&k).cloned().map(|v| Ok((k, v))));
+            .filter_map(move |k| store.inner.copies.get(&k).cloned().map(|v| Ok((k, v))));
         Ok(Box::new(iter))
     }
 

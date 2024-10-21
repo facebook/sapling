@@ -50,6 +50,7 @@ where
         _fetch_mode: FetchMode,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Bytes)>>> {
         let store = Arc::clone(&self.0);
+        let format = self.format();
         for chunk in keys.chunks(PREFETCH_CHUNK_SIZE) {
             let store_keys = chunk
                 .iter()
@@ -62,7 +63,7 @@ where
             match store_result {
                 Err(err) => Err(err),
                 Ok(StoreResult::Found(data)) => {
-                    strip_file_metadata(&data.into(), self.format()).map(|(d, _)| (key, d))
+                    strip_file_metadata(&data.into(), format).map(|(d, _)| (key, d))
                 }
                 Ok(StoreResult::NotFound(k)) => Err(format_err!("{:?} not found in store", k)),
             }
@@ -84,6 +85,7 @@ where
         keys: Vec<Key>,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Key)>>> {
         let store = Arc::clone(&self.0);
+        let format = self.format();
         for chunk in keys.chunks(PREFETCH_CHUNK_SIZE) {
             let store_keys = chunk
                 .iter()
@@ -96,8 +98,7 @@ where
                 let store_result = store.get(StoreKey::HgId(key.clone()))?;
                 match store_result {
                     StoreResult::Found(data) => {
-                        let (_data, maybe_copy_from) =
-                            strip_file_metadata(&data.into(), self.format())?;
+                        let (_data, maybe_copy_from) = strip_file_metadata(&data.into(), format)?;
                         Ok(maybe_copy_from.map(|copy_from| (key, copy_from)))
                     }
                     StoreResult::NotFound(k) => Err(format_err!("{:?} not found in store", k)),

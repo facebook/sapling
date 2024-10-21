@@ -16,9 +16,10 @@ impl TreeEntry for crate::store::Entry {
     fn iter(
         &self,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(PathComponentBuf, HgId, TreeItemFlag)>>> {
-        let elements = self.elements();
+        let entry = self.clone();
+        let elements = entry.elements();
         let iter = elements
-            .map(|fallible_element| fallible_element.map(|e| (e.component, e.hgid, e.flag)));
+            .map(move |fallible_element| fallible_element.map(|e| (e.component, e.hgid, e.flag)));
         Ok(Box::new(iter))
     }
 

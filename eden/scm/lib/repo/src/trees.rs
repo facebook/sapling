@@ -259,12 +259,12 @@ impl KeyStore for CachingTreeStore {
 }
 
 // An Iterator that lazily populates tree cache during iteration.
-struct CachingIter<'a> {
-    iter: BoxIterator<'a, Result<(Key, Bytes)>>,
+struct CachingIter {
+    iter: BoxIterator<Result<(Key, Bytes)>>,
     cache: Arc<Mutex<LruCache<HgId, Bytes>>>,
 }
 
-impl<'a> Iterator for CachingIter<'a> {
+impl Iterator for CachingIter {
     type Item = Result<(Key, Bytes)>;
 
     fn next(&mut self) -> Option<Self::Item> {

@@ -768,13 +768,13 @@ impl TreeEntry for ScmStoreTreeEntry {
     }
 
     fn file_aux_iter(&self) -> anyhow::Result<BoxIterator<anyhow::Result<(HgId, FileAuxData)>>> {
-        let maybe_iter = (|| -> Option<BoxIterator<anyhow::Result<(HgId, FileAuxData)>>> {
+        let maybe_iter = (move || -> Option<BoxIterator<anyhow::Result<(HgId, FileAuxData)>>> {
             let entry = match &self.tree {
-                LazyTree::SaplingRemoteApi(entry) => entry,
+                LazyTree::SaplingRemoteApi(entry) => entry.clone(),
                 _ => return None,
             };
-            let children = entry.children.as_ref()?;
-            let iter = children.iter().filter_map(|child| {
+            let children = entry.children?;
+            let iter = children.into_iter().filter_map(move |child| {
                 let child = child.as_ref().ok()?;
                 let file_entry = match child {
                     TreeChildEntry::File(v) => v,
@@ -795,12 +795,12 @@ impl TreeEntry for ScmStoreTreeEntry {
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(HgId, TreeAuxData)>>> {
         let maybe_iter = (|| -> Option<BoxIterator<anyhow::Result<(HgId, TreeAuxData)>>> {
             let entry = match &self.tree {
-                LazyTree::SaplingRemoteApi(entry) => entry,
+                LazyTree::SaplingRemoteApi(entry) => entry.clone(),
                 // TODO: We should also support fetching tree metadata from local cache
                 _ => return None,
             };
-            let children = entry.children.as_ref()?;
-            let iter = children.iter().filter_map(|child| {
+            let children = entry.children?;
+            let iter = children.into_iter().filter_map(|child| {
                 let child = child.as_ref().ok()?;
                 let directory_entry = match child {
                     TreeChildEntry::Directory(v) => v,
