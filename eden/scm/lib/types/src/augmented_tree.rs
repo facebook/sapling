@@ -24,7 +24,7 @@ use crate::CasDigest;
 use crate::FileType;
 use crate::HgId;
 use crate::Id20;
-use crate::RepoPathBuf;
+use crate::PathComponentBuf;
 use crate::Sha1;
 
 // Bring back the pre 0.20 bevahiour and allow either padded or un-padded base64 strings at decode time.
@@ -65,7 +65,7 @@ pub struct AugmentedTree {
     pub computed_hg_node_id: Option<HgId>,
     pub p1: Option<HgId>,
     pub p2: Option<HgId>,
-    pub entries: Vec<(RepoPathBuf, AugmentedTreeEntry)>,
+    pub entries: Vec<(PathComponentBuf, AugmentedTreeEntry)>,
 }
 
 impl AugmentedTree {
@@ -287,7 +287,6 @@ impl AugmentedTree {
                         .ok_or(anyhow!("augmented tree: invalid format of a child entry"))?;
 
                     let mut id = id.to_string();
-                    let path = RepoPathBuf::from_utf8(path.into())?;
                     let flag = id.pop().ok_or(anyhow!(
                         "augmented tree: missing flag part in a child entry"
                     ))?;
@@ -332,7 +331,7 @@ impl AugmentedTree {
                             };
 
                             Ok((
-                                path,
+                                path.to_string().try_into()?,
                                 AugmentedTreeEntry::FileNode(AugmentedFileNode {
                                     file_type: FileType::Regular,
                                     filenode: hgid,
@@ -344,7 +343,7 @@ impl AugmentedTree {
                             ))
                         }
                         't' => Ok((
-                            path,
+                            path.to_string().try_into()?,
                             AugmentedTreeEntry::DirectoryNode(AugmentedDirectoryNode {
                                 treenode: hgid,
                                 augmented_manifest_id: blake3,
@@ -354,7 +353,7 @@ impl AugmentedTree {
                         _ => Err(anyhow!("augmented tree: invalid flag in a child entry")),
                     }
                 })
-                .collect::<anyhow::Result<Vec<(RepoPathBuf, AugmentedTreeEntry)>, Error>>()?,
+                .collect::<anyhow::Result<Vec<(PathComponentBuf, AugmentedTreeEntry)>, Error>>()?,
         })
     }
 
@@ -529,7 +528,10 @@ mod tests {
         let first_child = augmented_tree_entry.entries.first().unwrap();
         assert_eq!(
             first_child.0,
-            RepoPathBuf::from_utf8(r"AssetWithZoneReclassifications.php".into()).unwrap()
+            "AssetWithZoneReclassifications.php"
+                .to_string()
+                .try_into()
+                .unwrap()
         );
         assert_matches!(first_child.1, AugmentedTreeEntry::FileNode(_));
         assert_matches!(

@@ -173,6 +173,10 @@ pub enum TreeChildEntry {
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct TreeChildFileEntry {
+    // TODO: Child entries should almost certainly not use Keys, as the path field in a Key is
+    // supposed to represent a repo relative path. The path field in this case is being used to
+    // represent a PathComponent, so it's very misleading. The fix is risky due to changing EdenAPI
+    // serialization, so I'm punting on the fix for now.
     pub key: Key,
     pub file_metadata: Option<FileMetadata>,
 }
@@ -180,6 +184,7 @@ pub struct TreeChildFileEntry {
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct TreeChildDirectoryEntry {
+    // See above comment warning about using a RepoPathBuf to represent a PathComponent.
     pub key: Key,
     pub tree_aux_data: Option<TreeAuxData>,
 }
@@ -224,7 +229,7 @@ impl TryFrom<AugmentedTree> for TreeEntry {
                     AugmentedTreeEntry::FileNode(file) => Ok(TreeChildEntry::new_file_entry(
                         Key {
                             hgid: file.filenode,
-                            path,
+                            path: path.into(),
                         },
                         FileAuxData {
                             blake3: Blake3::from_another(file.content_blake3),
@@ -241,7 +246,7 @@ impl TryFrom<AugmentedTree> for TreeEntry {
                         Ok(TreeChildEntry::new_directory_entry(
                             Key {
                                 hgid: tree.treenode,
-                                path,
+                                path: path.into(),
                             },
                             DirectoryMetadata {
                                 augmented_manifest_id: Blake3::from_another(

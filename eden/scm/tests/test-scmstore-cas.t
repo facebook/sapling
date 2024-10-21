@@ -26,7 +26,7 @@ Can also fetch tree data.
       p2: None,
       entries: [
           (
-              RepoPathBuf(
+              PathComponentBuf(
                   "A",
               ),
               FileNode(
@@ -41,7 +41,7 @@ Can also fetch tree data.
               ),
           ),
           (
-              RepoPathBuf(
+              PathComponentBuf(
                   "dir",
               ),
               DirectoryNode(
@@ -112,7 +112,7 @@ Then fetch "dir" from CAS:
                           p2: None,
                           entries: [
                               (
-                                  RepoPathBuf(
+                                  PathComponentBuf(
                                       "file",
                                   ),
                                   FileNode(
