@@ -148,6 +148,65 @@ static PyObject* open_directory_handle(PyObject* self, PyObject* args) {
   return reinterpret_cast<PyObject*>(result.release());
 }
 
+static PyObject* open_file_handle(PyObject* self, PyObject* args) {
+  PyObject* path;
+  char openFlag;
+  DWORD dwDesiredAccess;
+  DWORD dwShareMode;
+
+  if (!PyArg_ParseTuple(
+          args, "Uci:open_file_handle", &path, &openFlag, &dwShareMode)) {
+    return nullptr;
+  }
+
+  // Pass nullptr to size parameter so that we intentionally fail on strings
+  // containing null characters.
+  auto pathWstr = PyMemPtr<wchar_t>(PyUnicode_AsWideCharString(path, nullptr));
+  if (pathWstr.get() == nullptr) {
+    return nullptr;
+  }
+
+  // Due to python using 0x80000000 as a 64b signed int, we need to use
+  // indirection
+  if (openFlag == 'r') {
+    dwDesiredAccess = GENERIC_READ;
+  } else if (openFlag == 'w') {
+    dwDesiredAccess = GENERIC_WRITE;
+  } else if (openFlag == '+') {
+    dwDesiredAccess = GENERIC_READ | GENERIC_WRITE;
+  } else {
+    return nullptr;
+  }
+
+  auto result = PyRef<HandleObject>(PyObject_New(HandleObject, &HandleType));
+  // https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew
+  result->h = CreateFileW(
+      pathWstr.get(),
+      dwDesiredAccess,
+      dwShareMode,
+      /*lpSecurityAttributes=*/nullptr,
+      OPEN_EXISTING,
+      FILE_FLAG_BACKUP_SEMANTICS,
+      /*hTemplateFile=*/nullptr);
+
+  if (result->h == INVALID_HANDLE_VALUE) {
+    const char* error = "Unknown";
+    FormatMessage(
+        FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER |
+            FORMAT_MESSAGE_IGNORE_INSERTS,
+        nullptr,
+        GetLastError(),
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        reinterpret_cast<LPSTR>(&error),
+        0,
+        nullptr);
+    PyErr_Format(PyExc_RuntimeError, "Error from CreateFileW: %s", error);
+    return nullptr;
+  }
+
+  return reinterpret_cast<PyObject*>(result.release());
+}
+
 static PyObject* query_directory_file_ex(PyObject* self, PyObject* args) {
   PyObject* handle;
   Py_ssize_t bufferSize;
@@ -261,6 +320,10 @@ static PyMethodDef methods[] = {
      open_directory_handle,
      METH_VARARGS,
      "Opens a Handle to a named directory\n"},
+    {"open_file_handle",
+     open_file_handle,
+     METH_VARARGS,
+     "Opens a Handle to a named file\n"},
     {"query_directory_file_ex",
      query_directory_file_ex,
      METH_VARARGS,
