@@ -11,9 +11,11 @@ use std::io::BufReader;
 use std::io::BufWriter;
 use std::io::Read;
 use std::io::Write;
+use std::ops::Deref;
 use std::path::Path;
 use std::process::Output;
 use std::process::Stdio;
+use std::sync::Arc;
 
 use anyhow::Result;
 use configmodel::Config;
@@ -26,7 +28,10 @@ use types::errors::NetworkError;
 use types::fetch_mode::FetchMode;
 use types::HgId;
 
-pub struct GitStore {
+#[derive(Clone)]
+pub struct GitStore(Arc<GitStoreInner>);
+
+pub struct GitStoreInner {
     odb: git2::Odb<'static>,
 
     git: BareGit,
@@ -44,6 +49,14 @@ pub struct GitStore {
 }
 
 trait Opaque {}
+
+impl Deref for GitStore {
+    type Target = GitStoreInner;
+
+    fn deref(&self) -> &Self::Target {
+        &*self.0
+    }
+}
 
 impl GitStore {
     /// `open` a Git bare repo at `git_dir`. Gain access to its odb (object database).
@@ -92,13 +105,14 @@ impl GitStore {
             fetch_filter = &fetch_filter,
             "GitStore::open"
         );
-        let store = GitStore {
+        let inner = GitStoreInner {
             odb,
             git,
             fetch_url,
             fetch_filter,
             opaque_repo,
         };
+        let store = GitStore(Arc::new(inner));
         Ok(store)
     }
 
