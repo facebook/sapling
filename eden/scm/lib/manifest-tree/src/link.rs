@@ -302,7 +302,7 @@ impl DirLink {
 
         for (name, link) in self.links(store)? {
             let mut path = self.path.clone();
-            path.push(name.as_ref());
+            path.push(name.as_path_component());
             match link.as_ref() {
                 Leaf(_) => files.push(link.to_file(path).expect("leaf node must be a valid file")),
                 Ephemeral(_) | Durable(_) => dirs.push(

@@ -7,7 +7,6 @@
 
 #![allow(non_camel_case_types)]
 
-use std::path::PathBuf;
 use std::sync::Arc;
 
 use configmodel::Config;

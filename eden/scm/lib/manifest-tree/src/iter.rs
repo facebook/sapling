@@ -136,7 +136,7 @@ impl BfsWorker {
 
                 for (component, link) in children.iter() {
                     let mut child_path = path.clone();
-                    child_path.push(component.as_ref());
+                    child_path.push(component.as_path_component());
                     match link.matches(&self.matcher, &child_path) {
                         Ok(true) => {
                             to_send.push((child_path, link.thread_copy()));

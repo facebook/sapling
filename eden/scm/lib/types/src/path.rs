@@ -541,6 +541,15 @@ impl TryFrom<String> for RepoPathBuf {
     }
 }
 
+/// Note: this is an anti-pattern and should generally not be used. However, some legacy code is
+/// difficult to change and requires converting between the two types. This convenience method
+/// allows the conversion to be done infalliably and with zero allocation.
+impl From<PathComponentBuf> for RepoPathBuf {
+    fn from(p: PathComponentBuf) -> RepoPathBuf {
+        RepoPathBuf(p.into_string())
+    }
+}
+
 impl TryFrom<PathBuf> for RepoPathBuf {
     type Error = ParseError;
 
@@ -584,6 +593,14 @@ impl PathComponentBuf {
     fn from_string_unchecked(s: String) -> Self {
         PathComponentBuf(s)
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
 }
 
 impl Deref for PathComponentBuf {
@@ -599,6 +616,18 @@ impl AsRef<PathComponent> for PathComponentBuf {
     }
 }
 
+impl AsRef<str> for PathComponentBuf {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl AsRef<[u8]> for PathComponentBuf {
+    fn as_ref(&self) -> &[u8] {
+        self.as_byte_slice()
+    }
+}
+
 impl Borrow<PathComponent> for PathComponentBuf {
     fn borrow(&self) -> &PathComponent {
         self
@@ -608,6 +637,22 @@ impl Borrow<PathComponent> for PathComponentBuf {
 impl fmt::Display for PathComponentBuf {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         fmt::Display::fmt(&*self.0, formatter)
+    }
+}
+
+impl<'a> TryFrom<&'a str> for &'a PathComponent {
+    type Error = ParseError;
+
+    fn try_from(s: &'a str) -> Result<Self, Self::Error> {
+        PathComponent::from_str(s)
+    }
+}
+
+impl TryFrom<String> for PathComponentBuf {
+    type Error = ParseError;
+
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        PathComponentBuf::from_string(s)
     }
 }
 
@@ -667,6 +712,12 @@ impl AsRef<RepoPath> for PathComponent {
 impl AsRef<[u8]> for PathComponent {
     fn as_ref(&self) -> &[u8] {
         self.as_byte_slice()
+    }
+}
+
+impl AsRef<str> for PathComponent {
+    fn as_ref(&self) -> &str {
+        &self.0
     }
 }
 
@@ -945,7 +996,7 @@ impl quickcheck::Arbitrary for RepoPathBuf {
         let size = usize::arbitrary(g) % 8;
         let mut path_buf = RepoPathBuf::new();
         for _ in 0..size {
-            path_buf.push(PathComponentBuf::arbitrary(g).as_ref());
+            path_buf.push(PathComponentBuf::arbitrary(g).as_path_component());
         }
         path_buf
     }
@@ -1145,10 +1196,10 @@ mod tests {
     #[test]
     fn test_component_conversions() {
         let componentbuf = PathComponentBuf::from_string(String::from("componentbuf")).unwrap();
-        assert_eq!(componentbuf.as_ref().to_owned(), componentbuf);
+        assert_eq!(componentbuf.as_path_component().to_owned(), componentbuf);
 
         let component = PathComponent::from_str("component").unwrap();
-        assert_eq!(component.to_owned().as_ref(), component);
+        assert_eq!(component.to_owned().as_path_component(), component);
     }
 
     #[test]

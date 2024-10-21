@@ -95,7 +95,7 @@ pub fn generate_repo_paths(count: usize, qc_gen: &mut Gen) -> Vec<RepoPathBuf> {
                 if component_hash.contains(&component) {
                     continue;
                 }
-                self.current_path.push(component.as_ref());
+                self.current_path.push(component.as_path_component());
                 component_hash.insert(component);
                 self.current_component_length += 1;
 

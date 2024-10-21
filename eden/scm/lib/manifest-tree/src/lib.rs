@@ -860,7 +860,7 @@ pub fn compat_subtree_diff(
                         continue;
                     }
                     others.dedup();
-                    self.path.push(element.component.as_ref());
+                    self.path.push(element.component.as_path_component());
                     self.depth_remaining -= 1;
                     self.work(element.hgid, others)?;
                     self.depth_remaining += 1;

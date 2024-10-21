@@ -445,7 +445,7 @@ fn diff_links(
 
     let path = || -> RepoPathBuf {
         let mut p = parent_path.to_owned();
-        p.push(name.as_ref());
+        p.push(name.as_path_component());
         p
     };
 
