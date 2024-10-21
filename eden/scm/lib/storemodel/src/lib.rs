@@ -458,6 +458,11 @@ pub trait TreeStore: KeyStore {
         let data = basic_serialize_tree(items, self.format())?;
         KeyStore::insert_data(self, opts, path, &data)
     }
+
+    /// Obtains a snapshot of the store state.
+    /// Usually it is just `Arc::clone` under the hood.
+    /// Used to relax lifetime requirements for various `BoxIterator` outputs.
+    fn clone_tree_store(&self) -> Box<dyn TreeStore>;
 }
 
 /// Decides the serialization format. This exists so different parts of the code

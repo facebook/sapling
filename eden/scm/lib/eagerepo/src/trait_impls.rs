@@ -154,7 +154,11 @@ impl FileStore for EagerRepoStore {
     }
 }
 
-impl TreeStore for EagerRepoStore {}
+impl TreeStore for EagerRepoStore {
+    fn clone_tree_store(&self) -> Box<dyn TreeStore> {
+        Box::new(self.clone())
+    }
+}
 
 #[async_trait::async_trait]
 impl ReadRootTreeIds for EagerRepoStore {

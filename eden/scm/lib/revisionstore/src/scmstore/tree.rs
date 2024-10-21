@@ -874,4 +874,8 @@ impl storemodel::TreeStore for TreeStore {
             });
         Ok(Box::new(iter))
     }
+
+    fn clone_tree_store(&self) -> Box<dyn storemodel::TreeStore> {
+        Box::new(self.clone())
+    }
 }

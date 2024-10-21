@@ -283,7 +283,11 @@ impl KeyStore for TestHistory {
     }
 }
 
-impl TreeStore for TestHistory {}
+impl TreeStore for TestHistory {
+    fn clone_tree_store(&self) -> Box<dyn TreeStore> {
+        Box::new(self.clone())
+    }
+}
 
 #[async_trait]
 impl ReadRootTreeIds for TestHistory {

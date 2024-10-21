@@ -144,4 +144,8 @@ impl KeyStore for TestStore {
     }
 }
 
-impl TreeStore for TestStore {}
+impl TreeStore for TestStore {
+    fn clone_tree_store(&self) -> Box<dyn TreeStore> {
+        Box::new(self.clone())
+    }
+}

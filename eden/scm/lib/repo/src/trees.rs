@@ -175,6 +175,10 @@ impl TreeStore for CachingTreeStore {
     ) -> Result<TreeAuxData> {
         self.store.get_tree_aux_data(path, id, fetch_mode)
     }
+
+    fn clone_tree_store(&self) -> Box<dyn TreeStore> {
+        Box::new(self.clone())
+    }
 }
 
 impl KeyStore for CachingTreeStore {

@@ -118,4 +118,8 @@ impl KeyStore for ManifestStore {
     }
 }
 
-impl TreeStore for ManifestStore {}
+impl TreeStore for ManifestStore {
+    fn clone_tree_store(&self) -> Box<dyn TreeStore> {
+        Box::new(self.clone())
+    }
+}
