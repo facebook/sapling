@@ -208,6 +208,34 @@ py_class!(pub class TreeEntry |py| {
 py_class!(pub class TreeStore |py| {
     data inner: Arc<dyn NativeTreeStore>;
 
+    /// get_local_tree(path, node) -> TreeEntry
+    def get_local_tree(&self, path: &str, id: Serde<Id20>) -> PyResult<Option<TreeEntry>> {
+        let inner = self.inner(py);
+        let path = RepoPath::from_str(path).map_pyerr(py)?;
+        match py.allow_threads(|| inner.get_local_tree(path, id.0)).map_pyerr(py)? {
+            Some(entry) => Ok(Some(TreeEntry::create_instance(py, entry)?)),
+            None => Ok(None),
+        }
+    }
+
+    /// get_remote_tree_iter(keys) -> Iterator[Tuple[Key, TreeEntry]]
+    def get_remote_tree_iter(&self, keys: Serde<Vec<Key>>) -> PyResult<PyIter> {
+        let inner = self.inner(py);
+        let iter = inner.get_remote_tree_iter(keys.0).map_pyerr(py)?;
+        PyIter::new_custom(py, iter, |py, (key, entry)| {
+            Ok((Serde(key), TreeEntry::create_instance(py, entry)?).to_py_object(py).into_object())
+        })
+    }
+
+    /// get_tree_iter(keys, fetch_mode) -> Iterator[Tuple[Key, TreeEntry]]
+    def get_tree_iter(&self, keys: Serde<Vec<Key>>, fetch_mode: Serde<FetchMode> = Serde(FetchMode::AllowRemote)) -> PyResult<PyIter> {
+        let inner = self.inner(py);
+        let iter = inner.get_tree_iter(keys.0, fetch_mode.0).map_pyerr(py)?;
+        PyIter::new_custom(py, iter, |py, (key, entry)| {
+            Ok((Serde(key), TreeEntry::create_instance(py, entry)?).to_py_object(py).into_object())
+        })
+    }
+
     /// insert_tree(opts, path: str, items: [(name, node, flag)]) -> node
     /// flag: 'directory' | {'file': 'regular' | 'executable' | 'symlink' | 'git_submodule'})
     /// opts: {parents: List[node], hg_flags: int}
