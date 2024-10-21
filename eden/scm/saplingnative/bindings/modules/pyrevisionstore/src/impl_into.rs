@@ -72,6 +72,7 @@ fn py_to_dyn_treestore(_py: Python, obj: PyObject) -> Arc<dyn TreeStore> {
     Arc::new(ManifestStore::new(PythonHgIdDataStore::new(obj)))
 }
 
+#[derive(Clone)]
 struct ManifestStore {
     underlying: PythonHgIdDataStore,
 }

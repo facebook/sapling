@@ -11,6 +11,7 @@ use cpython::FromPyObject;
 use cpython::NoArgs;
 use cpython::ObjectProtocol;
 use cpython::PyBytes;
+use cpython::PyClone;
 use cpython::PyDict;
 use cpython::PyList;
 use cpython::PyObject;
@@ -37,6 +38,16 @@ pub struct PythonHgIdDataStore {
 impl PythonHgIdDataStore {
     pub fn new(py_store: PyObject) -> Self {
         PythonHgIdDataStore { py_store }
+    }
+}
+
+impl Clone for PythonHgIdDataStore {
+    fn clone(&self) -> Self {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        Self {
+            py_store: self.py_store.clone_ref(py),
+        }
     }
 }
 
