@@ -20,6 +20,7 @@ use async_requests::AsyncMethodRequestQueue;
 use async_requests_client::open_blobstore;
 use async_requests_client::open_sql_connection;
 use async_trait::async_trait;
+use blobstore::Blobstore;
 use clap::Parser;
 use cloned::cloned;
 use cmdlib_logging::ScribeLoggingArgs;
@@ -36,6 +37,7 @@ use megarepo_api::MegarepoApi;
 use metaconfig_types::ShardedService;
 use mononoke_api::Mononoke;
 use mononoke_api::Repo;
+use mononoke_api::RepositoryId;
 use mononoke_app::args::HooksAppExtension;
 use mononoke_app::args::RepoFilterAppExtension;
 use mononoke_app::args::ShutdownTimeoutArgs;
@@ -44,6 +46,7 @@ use mononoke_app::fb303::AliveService;
 use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_app::MononokeReposManager;
+use requests_table::LongRunningRequestsQueue;
 use requests_table::SqlLongRunningRequestsQueue;
 use sharding_ext::RepoShard;
 use slog::info;
@@ -228,49 +231,33 @@ fn main(fb: FacebookInit) -> Result<()> {
         let logger = logger.clone();
 
         // all enabled repos
-        let executor = {
-            let queue = Arc::new(AsyncMethodRequestQueue::new(
-                sql_connection.clone(),
-                blobstore.clone(),
-                Some(repos.clone()),
-            ));
-
-            info!(
-                logger,
-                "Starting unsharded executor for repos {:?}",
-                repos.clone()
-            );
-            runtime.block_on(worker::AsyncMethodRequestWorker::new(
-                args.clone(),
-                ctx.clone(),
-                queue.clone(),
-                mononoke.clone(),
-                megarepo.clone(),
-                will_exit.clone(),
-            ))?
-        };
-        runtime.spawn(async move { executor.execute().await });
+        info!(logger, "Starting unsharded executor for global queue");
+        run_worker_queue(
+            &runtime,
+            ctx.clone(),
+            args.clone(),
+            mononoke.clone(),
+            megarepo.clone(),
+            sql_connection.clone(),
+            blobstore.clone(),
+            Some(repos.clone()),
+            will_exit.clone(),
+        )?;
 
         // global queue
         if args.process_global_queue {
-            let executor = {
-                let queue = Arc::new(AsyncMethodRequestQueue::new(
-                    sql_connection,
-                    blobstore,
-                    None,
-                ));
-
-                info!(logger, "Starting unsharded executor for global queue");
-                runtime.block_on(worker::AsyncMethodRequestWorker::new(
-                    args.clone(),
-                    ctx.clone(),
-                    queue.clone(),
-                    mononoke.clone(),
-                    megarepo.clone(),
-                    will_exit.clone(),
-                ))?
-            };
-            runtime.spawn(async move { executor.execute().await });
+            info!(logger, "Starting unsharded executor for global queue");
+            run_worker_queue(
+                &runtime,
+                ctx.clone(),
+                args.clone(),
+                mononoke.clone(),
+                megarepo.clone(),
+                sql_connection.clone(),
+                blobstore.clone(),
+                None,
+                will_exit.clone(),
+            )?;
         }
 
         app.wait_until_terminated(
@@ -283,5 +270,36 @@ fn main(fb: FacebookInit) -> Result<()> {
         )?;
     }
 
+    Ok(())
+}
+
+fn run_worker_queue(
+    runtime: &tokio::runtime::Handle,
+    ctx: Arc<CoreContext>,
+    args: Arc<AsyncRequestsWorkerArgs>,
+    mononoke: Arc<Mononoke<Repo>>,
+    megarepo: Arc<MegarepoApi<Repo>>,
+    sql_connection: Arc<dyn LongRunningRequestsQueue>,
+    blobstore: Arc<dyn Blobstore>,
+    repos: Option<Vec<RepositoryId>>,
+    will_exit: Arc<AtomicBool>,
+) -> Result<()> {
+    let executor = {
+        let queue = Arc::new(AsyncMethodRequestQueue::new(
+            sql_connection,
+            blobstore,
+            repos,
+        ));
+
+        runtime.block_on(worker::AsyncMethodRequestWorker::new(
+            args.clone(),
+            ctx.clone(),
+            queue.clone(),
+            mononoke.clone(),
+            megarepo.clone(),
+            will_exit.clone(),
+        ))?
+    };
+    runtime.spawn(async move { executor.execute().await });
     Ok(())
 }
