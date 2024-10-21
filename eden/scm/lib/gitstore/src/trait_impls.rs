@@ -98,7 +98,11 @@ impl KeyStore for GitStore {
 }
 
 #[async_trait]
-impl FileStore for GitStore {}
+impl FileStore for GitStore {
+    fn clone_file_store(&self) -> Box<dyn FileStore> {
+        Box::new(self.clone())
+    }
+}
 
 impl TreeStore for GitStore {
     fn clone_tree_store(&self) -> Box<dyn TreeStore> {

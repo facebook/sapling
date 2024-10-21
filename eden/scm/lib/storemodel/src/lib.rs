@@ -283,6 +283,11 @@ pub trait FileStore: KeyStore + 'static {
     {
         self
     }
+
+    /// Obtains a snapshot of the store state.
+    /// Usually it is just `Arc::clone` under the hood.
+    /// Used to relax lifetime requirements for various `BoxIterator` outputs.
+    fn clone_file_store(&self) -> Box<dyn FileStore>;
 }
 
 #[async_trait]

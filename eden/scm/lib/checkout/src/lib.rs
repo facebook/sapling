@@ -2012,7 +2012,11 @@ mod test {
     }
 
     #[async_trait::async_trait]
-    impl FileStore for DummyFileContentStore {}
+    impl FileStore for DummyFileContentStore {
+        fn clone_file_store(&self) -> Box<dyn FileStore> {
+            Box::new(Self)
+        }
+    }
 
     fn hgid_file(hgid: &HgId) -> Vec<u8> {
         hgid.to_string().into_bytes()

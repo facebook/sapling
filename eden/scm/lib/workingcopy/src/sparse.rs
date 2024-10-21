@@ -544,5 +544,9 @@ inc
     }
 
     #[async_trait::async_trait]
-    impl FileStore for StubCommit {}
+    impl FileStore for StubCommit {
+        fn clone_file_store(&self) -> Box<dyn FileStore> {
+            Box::new(self.clone())
+        }
+    }
 }

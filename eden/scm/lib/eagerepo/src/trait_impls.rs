@@ -152,6 +152,10 @@ impl FileStore for EagerRepoStore {
             SerializationFormat::Git => Ok(Vec::new()),
         }
     }
+
+    fn clone_file_store(&self) -> Box<dyn FileStore> {
+        Box::new(self.clone())
+    }
 }
 
 impl TreeStore for EagerRepoStore {

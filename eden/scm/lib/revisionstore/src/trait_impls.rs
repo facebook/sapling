@@ -107,6 +107,10 @@ where
         });
         Ok(Box::new(iter))
     }
+
+    fn clone_file_store(&self) -> Box<dyn storemodel::FileStore> {
+        Box::new(Self(self.0.clone()))
+    }
 }
 
 impl storemodel::KeyStore for ArcFileStore {
@@ -215,6 +219,10 @@ impl storemodel::FileStore for ArcFileStore {
                 Ok((key, aux))
             });
         Ok(Box::new(iter))
+    }
+
+    fn clone_file_store(&self) -> Box<dyn storemodel::FileStore> {
+        Box::new(self.clone())
     }
 }
 

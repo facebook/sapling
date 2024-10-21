@@ -204,6 +204,10 @@ impl FileStore for CopyTraceTestCase {
             .filter_map(|k| self.inner.copies.get(&k).cloned().map(|v| Ok((k, v))));
         Ok(Box::new(iter))
     }
+
+    fn clone_file_store(&self) -> Box<dyn FileStore> {
+        Box::new(self.clone())
+    }
 }
 
 impl Change {
