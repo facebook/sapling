@@ -25,6 +25,9 @@ py_class!(pub class PyIter |py| {
         (func)(py)
     }
 
+    def __iter__(&self) -> PyResult<PyIter> {
+        Ok(self.clone_ref(py))
+    }
 });
 
 impl PyIter {
