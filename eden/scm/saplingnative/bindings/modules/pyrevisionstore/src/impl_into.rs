@@ -112,6 +112,10 @@ impl KeyStore for ManifestStore {
             .collect::<Vec<_>>();
         self.underlying.prefetch(&keys).map(|_| ())
     }
+
+    fn clone_key_store(&self) -> Box<dyn KeyStore> {
+        Box::new(self.clone())
+    }
 }
 
 impl TreeStore for ManifestStore {}

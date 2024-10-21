@@ -175,6 +175,11 @@ pub trait KeyStore: Send + Sync {
     fn maybe_as_any(&self) -> Option<&dyn Any> {
         None
     }
+
+    /// Obtains a snapshot of the store state.
+    /// Usually it is just `Arc::clone` under the hood.
+    /// Used to relax lifetime requirements for various `BoxIterator` outputs.
+    fn clone_key_store(&self) -> Box<dyn KeyStore>;
 }
 
 /// A store for files.

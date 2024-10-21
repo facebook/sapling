@@ -138,6 +138,10 @@ impl KeyStore for TestStore {
     fn format(&self) -> SerializationFormat {
         self.inner.read().format
     }
+
+    fn clone_key_store(&self) -> Box<dyn KeyStore> {
+        Box::new(self.clone())
+    }
 }
 
 impl TreeStore for TestStore {}

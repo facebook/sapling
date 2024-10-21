@@ -537,6 +537,10 @@ inc
                 _ => Ok(None),
             }
         }
+
+        fn clone_key_store(&self) -> Box<dyn KeyStore> {
+            Box::new(self.clone())
+        }
     }
 
     #[async_trait::async_trait]

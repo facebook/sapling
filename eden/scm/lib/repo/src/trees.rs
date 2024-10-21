@@ -83,6 +83,7 @@ static CACHE_HITS: Counter = Counter::new_counter("treeresolver.cache.hits");
 static CACHE_REQS: Counter = Counter::new_counter("treeresolver.cache.reqs");
 
 // TreeStore wrapper which caches trees in an LRU cache.
+#[derive(Clone)]
 pub(crate) struct CachingTreeStore {
     store: Arc<dyn TreeStore>,
     cache: Arc<Mutex<LruCache<HgId, Bytes>>>,
@@ -246,6 +247,10 @@ impl KeyStore for CachingTreeStore {
 
     fn statistics(&self) -> Vec<(String, usize)> {
         self.store.statistics()
+    }
+
+    fn clone_key_store(&self) -> Box<dyn KeyStore> {
+        Box::new(self.clone())
     }
 }
 

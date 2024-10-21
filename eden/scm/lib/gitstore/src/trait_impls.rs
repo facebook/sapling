@@ -91,6 +91,10 @@ impl KeyStore for GitStore {
         // We don't hold state in memory, so no need to refresh.
         Ok(())
     }
+
+    fn clone_key_store(&self) -> Box<dyn KeyStore> {
+        Box::new(self.clone())
+    }
 }
 
 #[async_trait]

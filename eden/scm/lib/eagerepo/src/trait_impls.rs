@@ -99,6 +99,10 @@ impl KeyStore for EagerRepoStore {
     fn maybe_as_any(&self) -> Option<&dyn std::any::Any> {
         Some(self)
     }
+
+    fn clone_key_store(&self) -> Box<dyn KeyStore> {
+        Box::new(self.clone())
+    }
 }
 
 impl FileStore for EagerRepoStore {

@@ -733,6 +733,10 @@ impl storemodel::KeyStore for TreeStore {
         self.write_batch(std::iter::once((key, data, Default::default())))?;
         Ok(id)
     }
+
+    fn clone_key_store(&self) -> Box<dyn KeyStore> {
+        Box::new(self.clone())
+    }
 }
 
 /// Extends a basic `TreeEntry` with aux data.

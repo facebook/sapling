@@ -69,6 +69,10 @@ where
         });
         Ok(Box::new(iter))
     }
+
+    fn clone_key_store(&self) -> Box<dyn KeyStore> {
+        Box::new(Self(self.0.clone()))
+    }
 }
 
 impl<T> storemodel::FileStore for ArcRemoteDataStore<T>
@@ -154,6 +158,10 @@ impl storemodel::KeyStore for ArcFileStore {
         let data = Bytes::copy_from_slice(data);
         self.0.write_nonlfs(key, data, Default::default())?;
         Ok(id)
+    }
+
+    fn clone_key_store(&self) -> Box<dyn KeyStore> {
+        Box::new(self.clone())
     }
 }
 

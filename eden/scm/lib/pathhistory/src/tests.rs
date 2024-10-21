@@ -277,6 +277,10 @@ impl KeyStore for TestHistory {
     fn format(&self) -> SerializationFormat {
         SerializationFormat::Git
     }
+
+    fn clone_key_store(&self) -> Box<dyn KeyStore> {
+        Box::new(self.clone())
+    }
 }
 
 impl TreeStore for TestHistory {}

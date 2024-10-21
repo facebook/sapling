@@ -187,7 +187,11 @@ impl ReadRootTreeIds for CopyTraceTestCase {
 }
 
 #[async_trait]
-impl KeyStore for CopyTraceTestCase {}
+impl KeyStore for CopyTraceTestCase {
+    fn clone_key_store(&self) -> Box<dyn KeyStore> {
+        Box::new(self.clone())
+    }
+}
 
 #[async_trait]
 impl FileStore for CopyTraceTestCase {

@@ -2005,6 +2005,10 @@ mod test {
         fn get_local_content(&self, _path: &RepoPath, hgid: HgId) -> anyhow::Result<Option<Bytes>> {
             Ok(Some(hgid_file(&hgid).into()))
         }
+
+        fn clone_key_store(&self) -> Box<dyn KeyStore> {
+            Box::new(Self)
+        }
     }
 
     #[async_trait::async_trait]
