@@ -176,7 +176,7 @@ async fn set_ref_inner(
     // Check if push redirector is enabled, if it is then reject the push
     if push_redirector_enabled(&ctx, repo.clone()).await? {
         return Err(anyhow::anyhow!(
-            "Pushes to repo {} are disallowed because its source of truth has been migrated",
+            "Pushes to repo {0} are disallowed because its source of truth has been moved. Use `git pushrebase` or make changes directly in the repo where the source of truth was moved.",
             repo.repo_identity().name()
         ));
     }
