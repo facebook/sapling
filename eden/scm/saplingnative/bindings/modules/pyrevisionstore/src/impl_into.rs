@@ -72,17 +72,17 @@ fn py_to_dyn_treestore(_py: Python, obj: PyObject) -> Arc<dyn TreeStore> {
     Arc::new(ManifestStore::new(PythonHgIdDataStore::new(obj)))
 }
 
-struct ManifestStore<T> {
-    underlying: T,
+struct ManifestStore {
+    underlying: PythonHgIdDataStore,
 }
 
-impl<T> ManifestStore<T> {
-    pub fn new(underlying: T) -> Self {
+impl ManifestStore {
+    pub fn new(underlying: PythonHgIdDataStore) -> Self {
         ManifestStore { underlying }
     }
 }
 
-impl<T: HgIdDataStore + RemoteDataStore> KeyStore for ManifestStore<T> {
+impl KeyStore for ManifestStore {
     fn get_local_content(
         &self,
         path: &RepoPath,
@@ -113,4 +113,4 @@ impl<T: HgIdDataStore + RemoteDataStore> KeyStore for ManifestStore<T> {
     }
 }
 
-impl<T: HgIdDataStore + RemoteDataStore> TreeStore for ManifestStore<T> {}
+impl TreeStore for ManifestStore {}
