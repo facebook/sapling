@@ -244,6 +244,19 @@ impl FetchErrors {
         self.fetch_errors.entry(key).or_insert(err);
     }
 
+    pub(crate) fn multiple_keyed_error(
+        &mut self,
+        keys: Vec<Key>,
+        msg: &'static str,
+        source_err: Error,
+    ) {
+        for key in keys {
+            self.fetch_errors
+                .entry(key)
+                .or_insert(anyhow!("{msg}: {source_err}"));
+        }
+    }
+
     pub(crate) fn other_error(&mut self, err: Error) {
         self.other_errors.push(err);
     }
