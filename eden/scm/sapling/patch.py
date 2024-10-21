@@ -2887,11 +2887,11 @@ def diffsinglehunkinline(hunklines):
         (b"-", "diff.deleted", atokens),
         (b"+", "diff.inserted", btokens),
     ]:
-        nextisnewline = True
+        isprevnewline = True
         for changed, token in tokens:
-            if nextisnewline:
+            if isprevnewline:
                 yield (prefix, label)
-                nextisnewline = False
+                isprevnewline = False
             # special handling line end
             isendofline = token.endswith(b"\n")
             if isendofline:
@@ -2912,7 +2912,7 @@ def diffsinglehunkinline(hunklines):
                 if endspaces:
                     yield (endspaces, "diff.trailingwhitespace")
                 yield (b"\n", "")
-                nextisnewline = True
+                isprevnewline = True
 
 
 def difflabel(func, *args, **kw):
