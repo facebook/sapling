@@ -30,6 +30,7 @@ pub struct RichCasClient {
     metadata: RemoteExecutionMetadata,
     use_casd_cache: bool,
     fetch_limit: ByteCount,
+    fetch_concurrency: usize,
 }
 
 pub fn init() {
@@ -70,6 +71,7 @@ impl RichCasClient {
             use_casd_cache,
             fetch_limit: config
                 .get_or::<ByteCount>("cas", "max-batch-bytes", || default_fetch_limit)?,
+            fetch_concurrency: config.get_or("cas", "fetch-concurrency", || 4)?,
         })
     }
 

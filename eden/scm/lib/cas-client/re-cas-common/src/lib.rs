@@ -75,7 +75,7 @@ macro_rules! re_client {
             ) -> BoxStream<'a, $crate::Result<($crate::CasFetchedStats, Vec<($crate::CasDigest, Result<Option<Vec<u8>>>)>)>>
             {
                 stream::iter(split_up_to_max_bytes(digests, self.fetch_limit.value()))
-                    .then(move |digests| async move {
+                    .map(move |digests| async move {
                         $crate::tracing::debug!(target: "cas", concat!(stringify!($struct), " fetching {} {}(s)"), digests.len(), log_name);
 
                         let request = DownloadRequest {
@@ -113,6 +113,7 @@ macro_rules! re_client {
 
                         Ok((stats, data))
                     })
+                    .buffer_unordered(self.fetch_concurrency)
                     .boxed()
             }
         }
