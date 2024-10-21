@@ -130,6 +130,12 @@ py_class!(pub class FileStore |py| {
         Ok(PyNone)
     }
 
+    def as_key_store(&self) -> PyResult<KeyStore> {
+        let inner = self.inner(py);
+        let store = inner.clone_key_store();
+        KeyStore::create_instance(py, store.into())
+    }
+
     @staticmethod
     def from_store(store: ImplInto<Arc<dyn NativeFileStore>>) -> PyResult<Self> {
         let inner = store.into();
@@ -197,6 +203,12 @@ py_class!(pub class TreeStore |py| {
     def format(&self) -> PyResult<Serde<SerializationFormat>> {
         let inner = self.inner(py);
         Ok(Serde(inner.format()))
+    }
+
+    def as_key_store(&self) -> PyResult<KeyStore> {
+        let inner = self.inner(py);
+        let store = inner.clone_key_store();
+        KeyStore::create_instance(py, store.into())
     }
 
     @staticmethod
