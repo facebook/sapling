@@ -91,7 +91,7 @@ mononoke_queries! {
         WHERE id = {id} AND request_type = {request_type}"
     }
 
-    read GetOneNewRequestForAnyRepo() -> (
+    read GetOneNewRequestForGlobalQueue() -> (
         RowId,
         RequestType,
         Option<RepositoryId>,
@@ -118,7 +118,7 @@ mononoke_queries! {
             status,
             claimed_by
         FROM long_running_request_queue
-        WHERE status = 'new'
+        WHERE status = 'new' AND repo_id IS NULL
         ORDER BY created_at ASC
         LIMIT 1
         "
@@ -464,7 +464,7 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
             let connection = &self.connections.read_master_connection; // reaching DB master improves our chances.
             let rows = match supported_repos {
                 Some(repos) => GetOneNewRequestForRepos::query(connection, repos).await,
-                None => GetOneNewRequestForAnyRepo::query(connection).await,
+                None => GetOneNewRequestForGlobalQueue::query(connection).await,
             }
             .context("claiming new request")?;
             let mut entry = match rows.into_iter().next() {
@@ -763,14 +763,14 @@ mod test {
     use super::*;
 
     #[mononoke::fbinit_test]
-    async fn test_claim_and_get_new_request(fb: FacebookInit) -> Result<()> {
+    async fn test_claim_and_get_new_request_for_global_queue(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let queue = SqlLongRunningRequestsQueue::with_sqlite_in_memory()?;
         let id = queue
             .add_request(
                 &ctx,
                 &RequestType("type".to_string()),
-                Some(&RepositoryId::new(0)),
+                None,
                 &BlobstoreKey("key".to_string()),
             )
             .await?;
@@ -809,6 +809,14 @@ mod test {
         assert!(request.is_some());
         let request = request.unwrap();
         assert!(request.inprogress_last_updated_at.is_none());
+
+        // passing None does *not* match any repo id; it only matches global queue
+        let result = queue
+            .claim_and_get_new_request(&ctx, &ClaimedBy("me".to_string()), None)
+            .await;
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert!(result.is_none());
 
         // different repo id
         let result = queue

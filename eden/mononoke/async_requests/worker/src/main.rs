@@ -68,10 +68,9 @@ struct AsyncRequestsWorkerArgs {
     /// The number of requests / jobs to be processed concurrently
     #[clap(long, short = 'j', default_value = "1")]
     jobs: usize,
-    /// If true, the worker will process requests for any repo. If false (the default), it will only process requests
-    /// for some repos, inferred from the loaded config, possibly filtered.
+    /// If true, the worker will process requests for the global queue.
     #[clap(long)]
-    process_all_repos: bool,
+    process_global_queue: bool,
 }
 
 pub struct WorkerProcess {
@@ -221,25 +220,50 @@ fn main(fb: FacebookInit) -> Result<()> {
         )?;
     } else {
         let logger = logger.clone();
-        let queue = Arc::new(AsyncMethodRequestQueue::new(
-            sql_connection,
-            blobstore,
-            None,
-        ));
 
-        info!(logger, "Starting unsharded executor for all repos");
-        let executor = runtime.block_on(worker::AsyncMethodRequestWorker::new(
-            args.clone(),
-            ctx.clone(),
-            queue.clone(),
-            mononoke.clone(),
-            megarepo.clone(),
-            will_exit.clone(),
-        ))?;
-        let run_worker = { move |_app| async move { executor.execute().await } };
+        // all enabled repos
+        let executor = {
+            let queue = Arc::new(AsyncMethodRequestQueue::new(
+                sql_connection.clone(),
+                blobstore.clone(),
+                Some(repos),
+            ));
 
-        app.run_until_terminated(
-            run_worker,
+            info!(logger, "Starting unsharded executor for all repos");
+            runtime.block_on(worker::AsyncMethodRequestWorker::new(
+                args.clone(),
+                ctx.clone(),
+                queue.clone(),
+                mononoke.clone(),
+                megarepo.clone(),
+                will_exit.clone(),
+            ))?
+        };
+        runtime.spawn(async move { executor.execute().await });
+
+        // global queue
+        if args.process_global_queue {
+            let executor = {
+                let queue = Arc::new(AsyncMethodRequestQueue::new(
+                    sql_connection,
+                    blobstore,
+                    None,
+                ));
+
+                info!(logger, "Starting unsharded executor for global queue");
+                runtime.block_on(worker::AsyncMethodRequestWorker::new(
+                    args.clone(),
+                    ctx.clone(),
+                    queue.clone(),
+                    mononoke.clone(),
+                    megarepo.clone(),
+                    will_exit.clone(),
+                ))?
+            };
+            runtime.spawn(async move { executor.execute().await });
+        }
+
+        app.wait_until_terminated(
             move || will_exit.store(true, Ordering::Relaxed),
             args.shutdown_timeout_args.shutdown_grace_period,
             async {
