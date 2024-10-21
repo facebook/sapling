@@ -191,7 +191,7 @@ python_library(
         ":version",
         "//eden/fs/cli/facebook:hostcaps",
         "//eden/fs/cli/facebook:rage",
-        "//eden/fs/inodes/overlay:serialization-py",
+        "//eden/fs/inodes/overlay:serialization-py-deprecated",
         "//eden/fs/py/eden:dirstate",
         "//eden/fs/py/eden/thrift:legacy",
         "//eden/fs/service:thrift-py",

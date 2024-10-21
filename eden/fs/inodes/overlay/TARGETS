@@ -7,8 +7,8 @@ thrift_library(
     name = "serialization",
     languages = [
         "cpp2",
-        "py",
         "rust",
+        "py-deprecated",
     ],
     py_base_module = "facebook.eden",
     thrift_srcs = {
