@@ -112,6 +112,49 @@ py_class!(pub class KeyStore |py| {
 py_class!(pub class FileStore |py| {
     data inner: Arc<dyn NativeFileStore>;
 
+    /// get_rename_iter(keys) -> Iteratable[Tuple[Key, Key]]
+    def get_rename_iter(&self, keys: Serde<Vec<Key>>) -> PyResult<PyIter> {
+        let inner = self.inner(py);
+        let iter = inner.get_rename_iter(keys.0).map_pyerr(py)?;
+        let iter = PyIter::new(py, iter)?;
+        Ok(iter)
+    }
+
+    /// get_hg_parents(path, node) -> List[node]
+    /// This is only used by legacy Hg logic and is incompatible with Git.
+    def get_hg_parents(&self, path: &str, id: Serde<Id20>) -> PyResult<Serde<Vec<Id20>>> {
+        let inner = self.inner(py);
+        let path = RepoPath::from_str(path).map_pyerr(py)?;
+        let result = py.allow_threads(|| inner.get_hg_parents(path, id.0)).map_pyerr(py)?;
+        Ok(Serde(result))
+    }
+
+    /// get_hg_raw_content(path, node) -> bytes
+    /// This is only used by legacy Hg logic and is incompatible with Git.
+    def get_hg_raw_content(&self, path: &str, id: Serde<Id20>) -> PyResult<Serde<Bytes>> {
+        let inner = self.inner(py);
+        let path = RepoPath::from_str(path).map_pyerr(py)?;
+        let result = py.allow_threads(|| inner.get_hg_raw_content(path, id.0)).map_pyerr(py)?;
+        Ok(Serde(result))
+    }
+
+    /// get_hg_flags(path, node) -> int
+    /// This is only used by legacy Hg logic and is incompatible with Git.
+    def get_hg_flags(&self, path: &str, id: Serde<Id20>) -> PyResult<u32> {
+        let inner = self.inner(py);
+        let path = RepoPath::from_str(path).map_pyerr(py)?;
+        let result = py.allow_threads(|| inner.get_hg_flags(path, id.0)).map_pyerr(py)?;
+        Ok(result)
+    }
+
+    /// Upload LFS files specified by the keys.
+    /// This is called before push.
+    def upload_lfs(&self, keys: Serde<Vec<Key>>) -> PyResult<PyNone> {
+        let inner = self.inner(py);
+        py.allow_threads(|| inner.upload_lfs(keys.0)).map_pyerr(py)?;
+        Ok(PyNone)
+    }
+
     /// insert_file(opts, path: str, data: bytes) -> node
     /// opts: {parents: List[node], hg_flags: int}
     ///
