@@ -6,7 +6,7 @@ thrift_library(
     name = "eden_logview",
     languages = [
         "cpp2",
-        "py",
+        "py-deprecated",
     ],
     py_base_module = "eden",
     thrift_cpp2_options = "json",
