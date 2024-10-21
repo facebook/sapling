@@ -16,8 +16,9 @@ import tempfile
 import textwrap
 import unittest
 from dataclasses import dataclass
+from itertools import chain
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable, Iterable, Optional, Union
 
 from .. import sh
 from ..sh.bufio import BufIO
@@ -244,7 +245,7 @@ class TestTmp:
         self,
         updateglobalstate: bool = True,
         tmpprefix: str = "",
-        testcase: Optional[str] = None,
+        testcase: Union[Iterable[Union[str, None, bool]], str, None, bool] = None,
     ):
         """create a TestTmp environment (tmpdir, and a shinterp Env)
         Intended to be used in 'with' context.
@@ -257,7 +258,8 @@ class TestTmp:
         self._fallbackmatch = None
         self._setup(tmpprefix)
         self._lastout = ""
-        self._testcase = testcase
+        # feature names that can be tested by `hasfeature` for this single test case
+        self._testcase_names = list(_expand_testcase_names(testcase))
 
     def atexit(self, func):
         # register a function to be called during tearing down
@@ -401,12 +403,12 @@ class TestTmp:
                 os.chdir(str(self.path))
             shext.updateosenv(self.shenv.getexportedenv())
 
-        if self._testcase is not None:
-            if self._testcase in hghave.checks:
+        for name in self._testcase_names:
+            if name in hghave.checks:
                 raise RuntimeError(
-                    f"test case {self._testcase} conflicts with an existing feature"
+                    f"test case {name} conflicts with an existing feature"
                 )
-            hghave.checks[self._testcase] = (True, f"test case {self._testcase}")
+            hghave.checks[name] = (True, f"test case {name}")
 
         return self
 
@@ -421,8 +423,8 @@ class TestTmp:
                 os.chdir(self._origcwd)
             shext.updateosenv(self._origenv)
 
-        if self._testcase is not None:
-            del hghave.checks[self._testcase]
+        for name in self._testcase_names:
+            del hghave.checks[name]
 
         self._teardown()
 
@@ -574,3 +576,27 @@ class TestTmp:
             else:
                 out = re.sub(frompat, topat, out)
         return out
+
+
+def _expand_testcase_names(
+    value: Union[Iterable[str], str, bool, None],
+) -> Iterable[str]:
+    """Flatten and filter out None test case names.
+
+    >>> list(_expand_testcase_names(None))
+    []
+    >>> list(_expand_testcase_names('a'))
+    ['a']
+    >>> list(_expand_testcase_names(('a', None, False, 'b')))
+    ['a', 'b']
+    >>> list(_expand_testcase_names(('a', ('b', 'c'))))
+    ['a', 'b', 'c']
+    """
+    if value is False or value is None:
+        return
+    elif isinstance(value, str):
+        yield value
+    elif value is True:
+        raise RuntimeError("_expand_testcase_names: invalid value: True")
+    else:
+        yield from chain(*map(_expand_testcase_names, value))
