@@ -1333,7 +1333,7 @@ but the version of EdenFS that is currently running is:
     {running_version}
 """
 
-        remediation_string = """Consider running `edenfsctl restart --graceful` to migrate to the newer version,
+        remediation_string = f"""Consider running `edenfsctl restart{' --graceful' if sys.platform != 'win32' else ''}` to migrate to the newer version,
 which may have important bug fixes or performance improvements.
 """
         super().__init__(
