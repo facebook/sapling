@@ -15,12 +15,15 @@ use cpython_ext::ResultPyErrExt;
 use storemodel::Bytes;
 use storemodel::FileStore as NativeFileStore;
 use storemodel::InsertOpts;
+use storemodel::KeyStore as NativeKeyStore;
 use storemodel::Kind;
 use storemodel::SerializationFormat;
 use storemodel::TreeEntry as NativeTreeEntry;
 use storemodel::TreeItemFlag;
 use storemodel::TreeStore as NativeTreeStore;
+use types::fetch_mode::FetchMode;
 use types::Id20;
+use types::Key;
 use types::PathComponent;
 use types::PathComponentBuf;
 use types::RepoPath;
@@ -30,6 +33,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 
     let m = PyModule::new(py, &name)?;
     m.add_class::<FileStore>(py)?;
+    m.add_class::<KeyStore>(py)?;
     m.add_class::<TreeEntry>(py)?;
     m.add_class::<TreeStore>(py)?;
     m.add(
@@ -41,6 +45,69 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 
     Ok(m)
 }
+
+py_class!(pub class KeyStore |py| {
+    data inner: Arc<dyn NativeKeyStore>;
+
+    /// get_content_iter(keys, fetch_mode = (AllowRemote)) -> Iterator[Tuple[Key, bytes]]
+    def get_content_iter(&self, keys: Serde<Vec<Key>>, fetch_mode: Serde<FetchMode> = Serde(FetchMode::AllowRemote)) -> PyResult<PyIter> {
+        let inner = self.inner(py);
+        let iter = inner.get_content_iter(keys.0, fetch_mode.0).map_pyerr(py)?;
+        let iter = PyIter::new(py, iter)?;
+        Ok(iter)
+    }
+
+    /// get_local_content(path, node) -> None | bytes
+    def get_local_content(&self, path: &str, id: Serde<Id20>) -> PyResult<Serde<Option<Bytes>>> {
+        let inner = self.inner(py);
+        let path = RepoPath::from_str(path).map_pyerr(py)?;
+        let result = py.allow_threads(|| inner.get_local_content(path, id.0)).map_pyerr(py)?;
+        Ok(Serde(result))
+    }
+
+    /// get_content(path, node, fetch_mode = (AllowRemote)) -> None | bytes
+    def get_content(&self, path: &str, id: Serde<Id20>, fetch_mode: Serde<FetchMode> = Serde(FetchMode::AllowRemote)) -> PyResult<Serde<Bytes>> {
+        let inner = self.inner(py);
+        let path = RepoPath::from_str(path).map_pyerr(py)?;
+        let result = py.allow_threads(|| inner.get_content(path, id.0, fetch_mode.0)).map_pyerr(py)?;
+        Ok(Serde(result))
+    }
+
+    /// prefetch(keys)
+    def prefetch(&self, keys: Serde<Vec<Key>>) -> PyResult<PyNone> {
+        let inner = self.inner(py);
+        py.allow_threads(|| inner.prefetch(keys.0)).map_pyerr(py)?;
+        Ok(PyNone)
+    }
+
+    def flush(&self) -> PyResult<PyNone> {
+        let inner = self.inner(py);
+        py.allow_threads(|| inner.flush()).map_pyerr(py)?;
+        Ok(PyNone)
+    }
+
+    def refresh(&self) -> PyResult<PyNone> {
+        let inner = self.inner(py);
+        py.allow_threads(|| inner.refresh()).map_pyerr(py)?;
+        Ok(PyNone)
+    }
+
+    def format(&self) -> PyResult<Serde<SerializationFormat>> {
+        let inner = self.inner(py);
+        Ok(Serde(inner.format()))
+    }
+
+    def statistics(&self) -> PyResult<Vec<(String, usize)>> {
+        let inner = self.inner(py);
+        Ok(inner.statistics())
+    }
+
+    @staticmethod
+    def from_store(store: ImplInto<Arc<dyn NativeKeyStore>>) -> PyResult<Self> {
+        let inner = store.into();
+        Self::create_instance(py, inner)
+    }
+});
 
 py_class!(pub class FileStore |py| {
     data inner: Arc<dyn NativeFileStore>;
