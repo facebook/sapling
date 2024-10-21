@@ -213,6 +213,20 @@ python_unittest(
 )
 
 python_unittest(
+    name = "lock",
+    srcs = ["lock_test.py"],
+    compatible_with = [
+        "ovr_config//os:windows",
+    ],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
     name = "long_path_test",
     srcs = ["long_path_test.py"],
     env = artifacts["env"],
