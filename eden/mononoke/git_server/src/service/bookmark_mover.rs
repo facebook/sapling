@@ -21,12 +21,14 @@ use import_tools::bookmark::BookmarkOperationErrorReporting;
 use import_tools::git_reader::GitReader;
 use import_tools::set_bookmark;
 use import_tools::BookmarkOperation;
+use mononoke_api::repo::push_redirector_enabled;
 use mononoke_api::repo::RepoContextBuilder;
 use mononoke_api::BookmarkKey;
 use mononoke_api::MononokeError;
 use mononoke_types::ChangesetId;
 use protocol::bookmarks_provider::wait_for_bookmark_move;
 use repo_authorization::AuthorizationContext;
+use repo_identity::RepoIdentityRef;
 
 use super::GitMappingsStore;
 use super::GitObjectStore;
@@ -36,6 +38,7 @@ use crate::service::uploader::peel_tag_target;
 use crate::util::mononoke_source_of_truth;
 
 const HOOK_WIKI_LINK: &str = "https://fburl.com/wiki/mb4wtk1j";
+const COMMIT_CLOUD_REF: &str = "refs/commitcloud/upload";
 
 /// Struct representing a ref update (create, move, delete) operation
 pub struct RefUpdateOperation {
@@ -164,6 +167,19 @@ async fn set_ref_inner(
         request_context.repo.clone(),
         request_context.mononoke_repos.clone(),
     );
+    // Check if the push is to a commit cloud ref, if yes then reject it with proper message
+    if ref_update_op.ref_update.ref_name == COMMIT_CLOUD_REF {
+        return Err(anyhow::anyhow!(
+            "Commit-cloud upload succeeded. Your commit is now backed up in Mononoke"
+        ));
+    }
+    // Check if push redirector is enabled, if it is then reject the push
+    if push_redirector_enabled(&ctx, repo.clone()).await? {
+        return Err(anyhow::anyhow!(
+            "Pushes to repo {} are disallowed because its source of truth has been migrated",
+            repo.repo_identity().name()
+        ));
+    }
     // Create the repo context which is the pre-requisite for moving bookmarks
     let repo_context = RepoContextBuilder::new(ctx.clone(), repo.clone(), repos)
         .await

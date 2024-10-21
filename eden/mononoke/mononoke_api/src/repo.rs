@@ -327,6 +327,16 @@ pub struct RepoContextBuilder<R> {
     repos: Arc<MononokeRepos<R>>,
 }
 
+pub async fn push_redirector_enabled<R: MononokeRepo>(
+    ctx: &CoreContext,
+    repo: Arc<R>,
+) -> Result<bool> {
+    let live_commit_sync_config = repo.repo_cross_repo().live_commit_sync_config();
+    live_commit_sync_config
+        .push_redirector_enabled_for_public(ctx, repo.repo_identity().id())
+        .await
+}
+
 async fn maybe_push_redirector<'a, R: MononokeRepo>(
     ctx: &'a CoreContext,
     repo: &'a Arc<R>,
