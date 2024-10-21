@@ -6,7 +6,7 @@
   >   hg log -G -r 'all()' -T '{node|short} {desc} {remotebookmarks} {bookmarks}'
   > }
 
-#testcases slapi wireproto
+#testcases slapi 
 
 #if wireproto
   $ setconfig push.edenapi=false
@@ -78,3 +78,26 @@ test pushrebase conflicts
   abort: Server error: Conflicts while pushrebasing: [(RepoPathBuf("a"), RepoPathBuf("a"))]
   [255]
 #endif
+
+Test pushrebase a diff stack
+  $ newclientrepo client3 test:server
+  $ hg go -q 2bb9d20e471c
+  $ echo 1 >> c && hg ci -qAm "add c"
+  $ echo 2 >> c && hg ci -qm "update c"
+  $ log
+  @  adb87132efa9 update c
+  │
+  o  f46b94d12452 add c
+  │
+  │ o  ea98a8f95390 changed message remote/master
+  ├─╯
+  o  2bb9d20e471c initial
+  $ hg push --to master -q
+  $ log
+  @  0359afffc631 update c remote/master
+  │
+  o  bc98034e098e add c
+  │
+  o  ea98a8f95390 changed message
+  │
+  o  2bb9d20e471c initial

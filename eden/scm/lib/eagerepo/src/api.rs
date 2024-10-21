@@ -1276,10 +1276,27 @@ impl SaplingRemoteApi for EagerRepo {
                 return Ok(LandStackResponse { data: Err(e) });
             }
 
-            panic!("not implemented");
+            let mut old_to_new_hgids = HashMap::new();
+            let mut base_commit = base;
+            let mut dest_commit = latest_bookmark_id;
+            for commit in commits {
+                let new_commit = pushrebase_one(self, base_commit, commit, dest_commit).await?;
+                old_to_new_hgids.insert(commit, new_commit);
+
+                base_commit = commit;
+                dest_commit = new_commit;
+            }
+
+            let new_head = old_to_new_hgids[&head];
+            EagerRepo::set_bookmark(self, &bookmark, Some(new_head)).map_err(map_crate_err)?;
+            let data = LandStackData {
+                new_head,
+                old_to_new_hgids,
+            };
+            self.flush_for_api("land_stack").await?;
+            return Ok(LandStackResponse { data: Ok(data) });
         }
 
-        #[allow(dead_code)]
         async fn pushrebase_one(
             repo: &EagerRepo,
             base_commit: HgId,
@@ -1292,6 +1309,7 @@ impl SaplingRemoteApi for EagerRepo {
 
             let mut new_manifest = dest_manifest.clone();
             let matcher = AlwaysMatcher::new();
+
             // generate new manifest
             for e in base_manifest.diff(&source_manifest, &matcher)? {
                 let e = e?;
