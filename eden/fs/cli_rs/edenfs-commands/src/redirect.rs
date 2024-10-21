@@ -312,6 +312,22 @@ impl RedirectCmd {
         // provide a way to remove bogus redirection paths.  After we've deployed
         // the improved `add` validation for a while, we can use it here also.
         if let Some(redir) = redirs.get(repo_path) {
+            let mut checkout_config = CheckoutConfig::parse_config(config_dir.clone())
+                .with_context(|| {
+                    format!(
+                        "Failed to parse checkout config using config dir {}",
+                        &config_dir.display()
+                    )
+                })?;
+            // Remove the redirection target from the config so that proj-fs pre-delete notification does not block deletion on symlink
+            checkout_config
+                .remove_redirection_target(&config_dir, repo_path)
+                .with_context(|| {
+                    format!(
+                        "Failed to remove redirection target for {} from config",
+                        repo_path.display()
+                    )
+                })?;
             redir
                 .remove_existing(&checkout, false, force, "del")
                 .await
@@ -322,13 +338,6 @@ impl RedirectCmd {
                     )
                 })?;
             redirs.remove(repo_path);
-            let mut checkout_config = CheckoutConfig::parse_config(config_dir.clone())
-                .with_context(|| {
-                    format!(
-                        "Failed to parse checkout config using config dir {}",
-                        &config_dir.display()
-                    )
-                })?;
             checkout_config
                 .update_redirections(&config_dir, &redirs)
                 .with_context(|| {
