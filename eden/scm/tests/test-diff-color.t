@@ -265,3 +265,29 @@ word diff is disabled if HGPLAIN=1
   @@ -1,1 +1,1 @@
   -blah \xe3\x82\xa2 blah (esc)
   +blah \xe3\x82\xa4 blah (esc)
+
+
+test trailing spaces color diff
+
+  $ newclientrepo
+
+  $ cat > file1 << EOF
+  > this is the first line
+  > this is the second line
+  > EOF
+  $ hg add file1
+  $ hg ci -m 'commit'
+
+  $ cat > file1 << EOF
+  > this is the first line
+  > this is the second line 
+  > EOF
+tofix: the second line should end with diff.trailingwhitespace
+  $ hg diff --config experimental.worddiff=True --color=debug
+  [diff.diffline|diff --git a/file1 b/file1]
+  [diff.file_a|--- a/file1]
+  [diff.file_b|+++ b/file1]
+  [diff.hunk|@@ -1,2 +1,2 @@]
+   this is the first line
+  [diff.deleted|-][diff.deleted.unchanged|this is the second line]
+  [diff.inserted|+][diff.inserted.unchanged|this is the second line][diff.inserted.changed| ]
