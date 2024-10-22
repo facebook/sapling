@@ -42,26 +42,33 @@ pub fn init() {
         }
 
         tracing::debug!(target: "cas", "creating rich client");
-        RichCasClient::from_config(config).map(|c| Some(Arc::new(c) as Arc<dyn CasClient>))
+        RichCasClient::from_config(config).map(|c| c.map(|c| Arc::new(c) as Arc<dyn CasClient>))
     }
     factory::register_constructor("rich-client", construct);
 }
 
 impl RichCasClient {
-    pub fn from_config(config: &dyn Config) -> Result<Self> {
+    pub fn from_config(config: &dyn Config) -> Result<Option<Self>> {
         let use_case: String = match config.get("cas", "use-case") {
             Some(use_case) => use_case.to_string(),
-            None => format!(
-                "source-control-{}",
-                config.must_get::<String>("remotefilelog", "reponame")?
-            ),
+            None => {
+                let repo_name =
+                    match config.get_nonempty_opt::<String>("remotefilelog", "reponame")? {
+                        Some(repo_name) => repo_name,
+                        None => {
+                            tracing::info!(target: "cas", "no use case or repo name configured");
+                            return Ok(None);
+                        }
+                    };
+                format!("source-control-{repo_name}")
+            }
         };
 
         let use_casd_cache = config.get_or("cas", "use-shared-cache", || true)?;
 
         let default_fetch_limit = ByteCount::try_from_str("200MB")?;
 
-        Ok(Self {
+        Ok(Some(Self {
             client: Default::default(),
             verbose: config.get_or_default("cas", "verbose")?,
             metadata: RemoteExecutionMetadata {
@@ -72,7 +79,7 @@ impl RichCasClient {
             fetch_limit: config
                 .get_or::<ByteCount>("cas", "max-batch-bytes", || default_fetch_limit)?,
             fetch_concurrency: config.get_or("cas", "fetch-concurrency", || 4)?,
-        })
+        }))
     }
 
     fn build(&self) -> Result<REClient> {
