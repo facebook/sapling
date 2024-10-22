@@ -4130,7 +4130,22 @@ def add_summary_footer(
     i am a summary footer
     <BLANKLINE>
     Test Plan: I am a test plan
+
+    >>> print(add_summary_footer(
+    ...   ui,
+    ...   "this is a title\\n\\nTest Plan: I am a test plan",
+    ...   "i am a summary footer"
+    ... ))
+    this is a title
+    <BLANKLINE>
+    i am a summary footer
+    <BLANKLINE>
+    Test Plan: I am a test plan
     """
+
+    def get_lines(field_content_list):
+        return [line for (_field, content) in field_content_list for line in content]
+
     if not summary_footer:
         return commit_msg
 
@@ -4147,6 +4162,12 @@ def add_summary_footer(
         if field == summary_field:
             summary_index, summary_content = i, content
             break
+        elif field is not None:
+            summary_index = i - 1
+            if summary_index >= 0:
+                summary_content = field_content_list[summary_index][1]
+            else:
+                summary_content = [""]
 
     if summary_content[-1]:
         summary_content.append("")
@@ -4154,9 +4175,12 @@ def add_summary_footer(
     if summary_index < len(field_content_list) - 1:
         summary_content.append("")
 
-    return "\n".join(
-        line for (_field, content) in field_content_list for line in content
+    new_lines = (
+        get_lines(field_content_list[:summary_index])
+        + summary_content
+        + get_lines(field_content_list[summary_index + 1 :])
     )
+    return "\n".join(new_lines)
 
 
 def extract_summary(ui, message: str) -> str:
@@ -4192,6 +4216,12 @@ def extract_summary(ui, message: str) -> str:
     this is a title
     <BLANKLINE>
     Summary: I am a summary
+
+    >>> print(extract_summary(
+    ...   ui,
+    ...   "this is a title\\n\\nTest Plan: I am a test plan",
+    ... ))
+    this is a title
     """
     commit_fields = set(ui.configlist("committemplate", "commit-message-fields"))
     summary_field = ui.config("committemplate", "summary-field")
@@ -4200,8 +4230,11 @@ def extract_summary(ui, message: str) -> str:
 
     new_lines = []
     for field, content in field_content_list:
-        new_lines.extend(content)
-        if field == summary_field:
+        if field is None:
+            new_lines.extend(content)
+        else:
+            if field == summary_field:
+                new_lines.extend(content)
             break
     while new_lines and not new_lines[-1]:
         new_lines.pop()
