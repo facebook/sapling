@@ -10,5 +10,10 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.86"
 clap = { version = "4.5.20", features = ["derive", "env", "string", "unicode", "wrap_help"] }
+executor_lib = { version = "0.1.0", path = "../cmdlib/sharding" }
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }
+mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
+slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }

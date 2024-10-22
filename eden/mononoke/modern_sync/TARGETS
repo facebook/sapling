@@ -10,7 +10,12 @@ rust_binary(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:slog",
+        "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
+        "//eden/mononoke/cmdlib/sharding:executor_lib",
+        "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/mutable_counters:mutable_counters",
     ],
 )
