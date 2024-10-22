@@ -6,7 +6,7 @@
  */
 
 //! edenfsctl remove
-
+use std::fmt;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -122,17 +122,23 @@ enum State {
     // Unknown,
 }
 
+impl fmt::Display for State {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                State::SanityCheck(_) => "SanityCheck",
+                State::Determination(_) => "Determination",
+                State::RegFile(_) => "RegFile",
+            }
+        )
+    }
+}
+
 impl State {
     fn start() -> State {
         State::SanityCheck(SanityCheck {})
-    }
-
-    fn name(&self) -> &'static str {
-        match self {
-            State::SanityCheck(_) => "SanityCheck",
-            State::Determination(_) => "Determination",
-            State::RegFile(_) => "RegFile",
-        }
     }
 
     /// Runs the actions defined for this state
@@ -141,7 +147,7 @@ impl State {
     /// 2. Ok(None) - we are in a terminal state and the removal is successful
     /// 3. Err - the removal failed
     fn run(&self, context: &mut RemoveContext) -> Result<Option<State>> {
-        debug!("State {} running...", self.name());
+        debug!("State {} running...", self);
         match self {
             State::SanityCheck(inner) => inner.next(context),
             State::Determination(inner) => inner.next(context),
