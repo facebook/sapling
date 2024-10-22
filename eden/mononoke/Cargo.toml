@@ -375,6 +375,7 @@ members = [
   "microwave/if/clients",
   "microwave/if/mocks",
   "microwave/if/services",
+  "modern_sync",
   "mononoke_api",
   "mononoke_api_hg",
   "mononoke_cas_sync_job",

@@ -317,6 +317,8 @@ pub enum ShardedService {
     MononokeGitServer,
     /// Repo Metadata Logger,
     RepoMetadataLogger,
+    /// Modern Sync Job
+    ModernSync,
 }
 
 /// Indicates types of commit hashes used in a repo context.
