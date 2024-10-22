@@ -400,11 +400,11 @@ async fn create_hg_changeset_part(
             let revlogcs = RevlogChangeset::new_from_parts(
                 cs.parents(),
                 cs.manifestid(),
-                cs.user().into(),
+                Bytes::copy_from_slice(cs.user()),
                 cs.time().clone(),
                 cs.extra().clone(),
                 cs.files().into(),
-                cs.message().into(),
+                Bytes::copy_from_slice(cs.message()),
             );
 
             let mut v = Vec::new();

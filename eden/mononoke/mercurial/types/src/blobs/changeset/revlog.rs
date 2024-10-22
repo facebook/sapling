@@ -39,18 +39,18 @@ pub struct RevlogChangeset {
     pub p1: Option<HgNodeHash>,
     pub p2: Option<HgNodeHash>,
     pub manifestid: HgManifestId,
-    pub user: Vec<u8>,
+    pub user: Bytes,
     pub time: DateTime,
     pub extra: Extra,
     pub files: Vec<NonRootMPath>,
-    pub message: Vec<u8>,
+    pub message: Bytes,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
-pub struct Extra(pub(super) BTreeMap<Vec<u8>, Vec<u8>>);
+pub struct Extra(pub(super) BTreeMap<Bytes, Bytes>);
 
-impl AsRef<BTreeMap<Vec<u8>, Vec<u8>>> for Extra {
-    fn as_ref(&self) -> &BTreeMap<Vec<u8>, Vec<u8>> {
+impl AsRef<BTreeMap<Bytes, Bytes>> for Extra {
+    fn as_ref(&self) -> &BTreeMap<Bytes, Bytes> {
         &self.0
     }
 }
@@ -82,11 +82,12 @@ pub(super) fn escape<'a, S: IntoIterator<Item = &'a u8>>(s: S) -> Vec<u8> {
     ret
 }
 
-pub(super) fn unescape<'a, S: IntoIterator<Item = &'a u8>>(s: S) -> Vec<u8> {
-    let mut ret = Vec::new();
+pub(super) fn unescape<S: AsRef<[u8]>>(s: S) -> Bytes {
+    let s = s.as_ref();
+    let mut ret = Vec::with_capacity(s.len());
     let mut quote = false;
 
-    for c in s.into_iter() {
+    for c in s.iter() {
         match *c {
             b'0' if quote => {
                 quote = false;
@@ -120,11 +121,11 @@ pub(super) fn unescape<'a, S: IntoIterator<Item = &'a u8>>(s: S) -> Vec<u8> {
         }
     }
 
-    ret
+    ret.into()
 }
 
 impl Extra {
-    pub fn new(extra: BTreeMap<Vec<u8>, Vec<u8>>) -> Self {
+    pub fn new(extra: BTreeMap<Bytes, Bytes>) -> Self {
         Extra(extra)
     }
 
@@ -184,11 +185,11 @@ impl RevlogChangeset {
         // XXX replace parents with p1 and p2
         parents: HgParents,
         manifestid: HgManifestId,
-        user: Vec<u8>,
+        user: Bytes,
         time: DateTime,
-        extra: BTreeMap<Vec<u8>, Vec<u8>>,
+        extra: BTreeMap<Bytes, Bytes>,
         files: Vec<NonRootMPath>,
-        message: Vec<u8>,
+        message: Bytes,
     ) -> Self {
         let (p1, p2) = parents.get_nodes();
         Self {
@@ -261,11 +262,11 @@ impl RevlogChangeset {
             p1: None,
             p2: None,
             manifestid: HgManifestId::new(NULL_HASH),
-            user: Vec::new(),
+            user: Bytes::new(),
             time: DateTime::from_timestamp(0, 0).expect("this is a valid DateTime"),
             extra: Extra(BTreeMap::new()),
             files: Vec::new(),
-            message: Vec::new(),
+            message: Bytes::new(),
         }
     }
 
@@ -297,11 +298,11 @@ impl RevlogChangeset {
             p1,
             p2,
             manifestid: HgManifestId::new(NULL_HASH),
-            user: Vec::new(),
+            user: Bytes::new(),
             time: DateTime::from_timestamp(0, 0).expect("this is a valid DateTime"),
             extra: Extra(BTreeMap::new()),
             files: Vec::new(),
-            message: Vec::new(),
+            message: Bytes::new(),
         };
 
         {
@@ -311,8 +312,8 @@ impl RevlogChangeset {
             let nodehash = parseline(&mut lines, |l| HgNodeHash::from_str(str::from_utf8(l)?))
                 .context("can't get hash")?;
             ret.manifestid = HgManifestId::new(nodehash);
-            ret.user =
-                parseline(&mut lines, |u| Ok::<_, Error>(u.to_vec())).context("can't get user")?;
+            ret.user = parseline(&mut lines, |u| Ok::<_, Error>(Bytes::copy_from_slice(u)))
+                .context("can't get user")?;
             let (time, extra) =
                 parseline(&mut lines, parsetimeextra).context("can't get time/extra")?;
 
@@ -342,7 +343,7 @@ impl RevlogChangeset {
             }
 
             ret.files = files;
-            ret.message = message.join(&b'\n');
+            ret.message = message.join(&b'\n').into();
         }
 
         Ok(ret)
@@ -382,7 +383,7 @@ impl RevlogChangeset {
         &self.user
     }
 
-    pub fn extra(&self) -> &BTreeMap<Vec<u8>, Vec<u8>> {
+    pub fn extra(&self) -> &BTreeMap<Bytes, Bytes> {
         &self.extra.0
     }
 

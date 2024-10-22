@@ -68,7 +68,7 @@ pub fn to_revlog_changeset(cs: HgChangesetContent) -> Result<RevlogChangeset> {
         extra: Extra::new(
             cs.extras
                 .into_iter()
-                .map(|extra| (extra.key, extra.value))
+                .map(|extra| (extra.key.into(), extra.value.into()))
                 .collect::<BTreeMap<_, _>>(),
         ),
         files: cs
@@ -80,9 +80,9 @@ pub fn to_revlog_changeset(cs: HgChangesetContent) -> Result<RevlogChangeset> {
                     .context(ErrorKind::UnexpectedEmptyPath)
             })
             .collect::<Result<_, _>>()?,
-        message: cs.message,
+        message: cs.message.into(),
         time: DateTime::from_timestamp(cs.time, cs.tz)?,
-        user: cs.user,
+        user: cs.user.into(),
     })
 }
 

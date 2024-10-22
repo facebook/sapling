@@ -61,7 +61,7 @@ pub async fn create_bonsai_changeset_object(
             // Extra keys must be valid UTF-8.   Mercurial supports arbitrary
             // bytes, but that is not supported in Mononoke.  Extra values can
             // be arbitrary bytes.
-            let key = String::from_utf8(key.clone())?;
+            let key = String::from_utf8(key.to_vec())?;
             Ok((key, value.clone()))
         })
         .collect::<Result<SortedVectorMap<_, _>, Error>>()?;
@@ -75,7 +75,7 @@ pub async fn create_bonsai_changeset_object(
         author,
         author_date: *cs.time(),
         message,
-        hg_extra: extra,
+        hg_extra: extra.into_iter().map(|(k, v)| (k, v.into())).collect(),
         file_changes,
         ..Default::default()
     }

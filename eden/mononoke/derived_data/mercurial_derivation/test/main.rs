@@ -1625,10 +1625,9 @@ mod octopus_merges {
             )
         );
 
-        let step_parents_key: Vec<u8> = "stepparents".into();
         let step_parents = hg_cs
             .extra()
-            .get(&step_parents_key)
+            .get(b"stepparents".as_slice())
             .ok_or_else(|| Error::msg("stepparents are missing"))?;
 
         assert_eq!(

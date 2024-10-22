@@ -32,12 +32,13 @@ use crate::HgNodeHash;
 use crate::HgParents;
 use crate::NonRootMPath;
 
-const STEP_PARENTS_METADATA_KEY: &str = "stepparents";
+const STEP_PARENTS_METADATA_KEY: &[u8] = b"stepparents";
+const COMMITTER_METADATA_KEY: &[u8] = b"committer";
 
 pub struct ChangesetMetadata {
     pub user: String,
     pub time: DateTime,
-    pub extra: BTreeMap<Vec<u8>, Vec<u8>>,
+    pub extra: BTreeMap<Bytes, Bytes>,
     pub message: String,
 }
 
@@ -56,7 +57,8 @@ impl ChangesetMetadata {
             return;
         }
 
-        self.extra.insert(STEP_PARENTS_METADATA_KEY.into(), meta);
+        self.extra
+            .insert(STEP_PARENTS_METADATA_KEY.into(), meta.into());
     }
 
     pub fn record_committer(
@@ -64,8 +66,7 @@ impl ChangesetMetadata {
         committer: &str,
         committer_time: &DateTime,
     ) -> Result<(), Error> {
-        let committer_key = "committer".as_bytes();
-        if self.extra.contains_key(committer_key) {
+        if self.extra.contains_key(COMMITTER_METADATA_KEY) {
             bail!("commiter extra is already set, can't insert another one!");
         }
 
@@ -78,7 +79,7 @@ impl ChangesetMetadata {
         );
 
         self.extra
-            .insert(committer_key.to_vec(), value.as_bytes().to_vec());
+            .insert(COMMITTER_METADATA_KEY.into(), value.into());
 
         Ok(())
     }
@@ -89,11 +90,11 @@ pub struct HgChangesetContent {
     p1: Option<HgNodeHash>,
     p2: Option<HgNodeHash>,
     manifestid: HgManifestId,
-    user: Vec<u8>,
+    user: Bytes,
     time: DateTime,
     extra: Extra,
     files: Vec<NonRootMPath>,
-    message: Vec<u8>,
+    message: Bytes,
 }
 
 impl HgChangesetContent {
@@ -109,11 +110,11 @@ impl HgChangesetContent {
             p1,
             p2,
             manifestid,
-            user: cs_metadata.user.into_bytes(),
+            user: cs_metadata.user.into(),
             time: cs_metadata.time,
             extra: Extra::new(cs_metadata.extra),
             files,
-            message: cs_metadata.message.into_bytes(),
+            message: cs_metadata.message.into(),
         }
     }
 
@@ -254,7 +255,7 @@ impl HgBlobChangeset {
         &self.content.user
     }
 
-    pub fn extra(&self) -> &BTreeMap<Vec<u8>, Vec<u8>> {
+    pub fn extra(&self) -> &BTreeMap<Bytes, Bytes> {
         self.content.extra.as_ref()
     }
 
@@ -278,7 +279,7 @@ impl HgBlobChangeset {
     pub fn step_parents(&self) -> Result<Vec<HgNodeHash>> {
         let mut ret = vec![];
 
-        if let Some(step_parents) = self.extra().get(STEP_PARENTS_METADATA_KEY.as_bytes()) {
+        if let Some(step_parents) = self.extra().get(STEP_PARENTS_METADATA_KEY) {
             let step_parents = std::str::from_utf8(step_parents)?;
             for csid in step_parents.split(',') {
                 let csid = csid.parse()?;

@@ -141,7 +141,11 @@ fn extras_roundtrip_prop(kv: BTreeMap<Vec<u8>, Vec<u8>>) -> TestResult {
         return TestResult::discard();
     }
 
-    let extra = Extra(kv);
+    let extra = Extra(
+        kv.into_iter()
+            .map(|(k, v)| (Bytes::from(k), Bytes::from(v)))
+            .collect(),
+    );
     let mut enc = Vec::new();
     let () = serialize_extras(&extra, &mut enc).expect("enc failed");
     let new = Extra::from_slice(Some(&enc)).expect("parse failed");

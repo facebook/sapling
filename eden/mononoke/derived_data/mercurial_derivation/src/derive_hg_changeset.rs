@@ -17,6 +17,7 @@ use blobrepo_common::changed_files::compute_changed_files;
 use blobstore::Blobstore;
 use blobstore::Loadable;
 use borrowed::borrowed;
+use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use futures::future;
@@ -461,7 +462,12 @@ async fn generate_hg_changeset(
         time: *bcs.author_date(),
         extra: bcs
             .hg_extra()
-            .map(|(k, v)| (k.as_bytes().to_vec(), v.to_vec()))
+            .map(|(k, v)| {
+                (
+                    Bytes::copy_from_slice(k.as_bytes()),
+                    Bytes::copy_from_slice(v),
+                )
+            })
             .collect(),
         message: bcs.message().to_string(),
     };
