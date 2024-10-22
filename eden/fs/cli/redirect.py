@@ -565,7 +565,7 @@ class Redirection:
                 print(
                     f"Redirection path found to be a file (full path `{self.expand_repo_path(checkout)}`). Either-"
                     "\n - Try again after reviewing and manually deleting the file, or "
-                    "\n - Run `redirect fixup --force` to attempt inline deletion of the file if it is not in use by another process.",
+                    "\n - Run `eden redirect fixup --force` to attempt inline deletion of the file if it is not in use by another process.",
                 )
         return disposition
 
