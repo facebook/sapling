@@ -27,7 +27,7 @@ use crate::Metadata;
 
 /// A minimal tree enum that simply wraps the possible underlying tree types,
 /// with no processing.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) enum LazyTree {
     /// An entry from a local IndexedLog. The contained Key's path might not match the requested Key's path.
     IndexedLog(Entry),

@@ -180,7 +180,7 @@ impl FetchState {
         );
         let _enter = span.enter();
 
-        let mut digest_to_key: HashMap<CasDigest, Key> = self
+        let digest_with_keys: Vec<(CasDigest, Key)> = self
             .common
             .pending(TreeAttributes::CONTENT | TreeAttributes::PARENTS, false)
             .filter_map(|(key, store_tree)| {
@@ -205,13 +205,20 @@ impl FetchState {
             })
             .collect();
 
+        // Include the duplicates in the count.
+        span.record("keys", digest_with_keys.len());
+
+        let mut digest_to_key: HashMap<CasDigest, Vec<Key>> = HashMap::default();
+
+        for (digest, key) in digest_with_keys {
+            digest_to_key.entry(digest).or_default().push(key);
+        }
+
         if digest_to_key.is_empty() {
             return;
         }
 
         let digests: Vec<CasDigest> = digest_to_key.keys().cloned().collect();
-
-        span.record("keys", digests.len());
 
         let mut found = 0;
         let mut error = 0;
@@ -226,26 +233,26 @@ impl FetchState {
                     reqs += 1;
                     total_stats.add(&stats);
                     for (digest, data) in results {
-                        let Some(key) = digest_to_key.remove(&digest) else {
+                        let Some(mut keys) = digest_to_key.remove(&digest) else {
                             tracing::error!("got CAS result for unrequested digest {:?}", digest);
                             continue;
                         };
 
                         match data {
                             Err(err) => {
-                                tracing::error!(?err, ?key, ?digest, "CAS fetch error");
-                                tracing::error!(target: "cas", ?err, ?key, ?digest, "tree fetch error");
-                                error += 1;
-                                self.errors.keyed_error(key, err);
+                                tracing::error!(?err, ?keys, ?digest, "CAS fetch error");
+                                tracing::error!(target: "cas", ?err, ?keys, ?digest, "tree fetch error");
+                                error += keys.len();
+                                self.errors.multiple_keyed_error(keys, "CAS fetch error", err);
                             }
                             Ok(None) => {
-                                tracing::trace!(target: "cas", ?key, ?digest, "tree not in cas");
+                                tracing::trace!(target: "cas", ?keys, ?digest, "tree not in cas");
                                 // miss
                             }
                             Ok(Some(data)) => match AugmentedTree::try_deserialize(&*data) {
                                 Ok(tree) => {
-                                    found += 1;
-                                    tracing::trace!(target: "cas", ?key, ?digest, "tree found in cas");
+                                    found += keys.len();
+                                    tracing::trace!(target: "cas", ?keys, ?digest, "tree found in cas");
 
                                     let lazy_tree = LazyTree::Cas(AugmentedTreeWithDigest {
                                         augmented_manifest_id: digest.hash,
@@ -256,21 +263,35 @@ impl FetchState {
                                     if let Err(err) =
                                         cache_child_aux_data(&lazy_tree, aux_cache, tree_aux_store)
                                     {
-                                        self.errors.keyed_error(key, err);
+                                        self.errors.multiple_keyed_error(keys, "cache child aux data failed", err);
                                     } else {
-                                        self.common.found(
-                                            key,
-                                            StoreTree {
-                                                content: Some(lazy_tree),
-                                                parents: None,
-                                                aux_data: None,
-                                            },
-                                        );
+                                        if !keys.is_empty() {
+                                            let last = keys.pop().unwrap();
+                                            for key in keys {
+                                                self.common.found(
+                                                    key,
+                                                    StoreTree {
+                                                        content: Some(lazy_tree.clone()),
+                                                        parents: None,
+                                                        aux_data: None,
+                                                    },
+                                                );
+                                            }
+                                            // no clones needed
+                                            self.common.found(
+                                                last,
+                                                StoreTree {
+                                                    content: Some(lazy_tree),
+                                                    parents: None,
+                                                    aux_data: None,
+                                                },
+                                            );
+                                        }
                                     }
                                 }
                                 Err(err) => {
-                                    error += 1;
-                                    self.errors.keyed_error(key, err);
+                                    error += keys.len();
+                                    self.errors.multiple_keyed_error(keys, "CAS tree deserialization failed", err);
                                 }
                             },
                         }
