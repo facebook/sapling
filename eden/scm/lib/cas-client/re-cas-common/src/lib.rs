@@ -15,6 +15,7 @@ pub use types::Blake3;
 pub use types::CasDigest;
 pub use types::CasDigestType;
 pub use types::CasFetchedStats;
+pub use types::CasPrefetchOutcome;
 
 #[macro_export]
 macro_rules! re_client {
@@ -24,6 +25,7 @@ macro_rules! re_client {
         use futures::StreamExt;
         use re_cas_common::split_up_to_max_bytes;
         use re_client_lib::DownloadRequest;
+        use re_client_lib::DownloadDigestsIntoCacheRequest;
         use re_client_lib::TCode;
         use re_client_lib::TDigest;
         use re_client_lib::THashAlgo;
@@ -116,7 +118,68 @@ macro_rules! re_client {
                     .buffer_unordered(self.fetch_concurrency)
                     .boxed()
             }
+
+        /// Prefetch digests into the cache. Returns missing digests.
+        async fn prefetch<'a>(
+            &'a self,
+            digests: &'a [$crate::CasDigest],
+            log_name: $crate::CasDigestType,
+        ) -> BoxStream<'a, $crate::Result<($crate::CasFetchedStats, Vec<$crate::CasDigest>)>>
+        {
+            stream::iter(split_up_to_max_bytes(digests, self.fetch_limit.value()))
+                .map(move |digests| async move {
+                    $crate::tracing::debug!(target: "cas", concat!(stringify!($struct), " prefetching {} {}(s)"), digests.len(), log_name);
+
+                    let request = DownloadDigestsIntoCacheRequest {
+                        digests: digests.iter().map(to_re_digest).collect(),
+                        throw_on_error: false,
+                        ..Default::default()
+                    };
+
+                    let response = self.client()?
+                        .download_digests_into_cache(self.metadata.clone(), request)
+                        .await?;
+
+                    let stats = parse_stats(response.storage_stats.per_backend_stats.into_iter());
+
+                    let response = response.digests_with_status
+                        .into_iter()
+                        .map(|blob| {
+                            let digest = from_re_digest(&blob.digest)?;
+                            match blob.status.code {
+                                TCode::OK => Ok($crate::CasPrefetchOutcome::Prefetched(digest)),
+                                TCode::NOT_FOUND => {
+                                    $crate::tracing::warn!(target: "cas", "digest not found and can not be prefetched: {:?}", digest);
+                                    Ok($crate::CasPrefetchOutcome::Missing(digest))
+                                },
+                                _ => Err($crate::anyhow!(
+                                        "bad status (code={}, message={}, group={})",
+                                        blob.status.code,
+                                        blob.status.message,
+                                        blob.status.group
+                                    )),
+                            }
+                        })
+                        .filter_map(|outcome| {
+                            match outcome {
+                                Err(e) => {
+                                    Some(Err(e))
+                                },
+                                Ok($crate::CasPrefetchOutcome::Prefetched(digest)) => {
+                                    None
+                                },
+                                Ok($crate::CasPrefetchOutcome::Missing(digest)) => {
+                                    Some(Ok(digest))
+                                }
+                            }
+                        }).collect::<Result<Vec<_>>>()?;
+
+                    Ok((stats, response))
+                })
+                .buffer_unordered(self.fetch_concurrency)
+                .boxed()
         }
+    }
     };
 }
 

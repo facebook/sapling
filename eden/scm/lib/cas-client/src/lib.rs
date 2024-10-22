@@ -46,4 +46,11 @@ pub trait CasClient: Sync + Send {
             Vec<(CasDigest, anyhow::Result<Option<Vec<u8>>>)>,
         )>,
     >;
+
+    /// Prefetch blobs into the CAS cache
+    async fn prefetch<'a>(
+        &'a self,
+        digests: &'a [CasDigest],
+        log_name: CasDigestType,
+    ) -> BoxStream<'a, anyhow::Result<(CasFetchedStats, Vec<CasDigest>)>>;
 }

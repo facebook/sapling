@@ -57,3 +57,9 @@ impl CasFetchedStats {
         self.queries_hedwig += other.queries_hedwig;
     }
 }
+
+#[derive(Debug, Clone, Copy)]
+pub enum CasPrefetchOutcome {
+    Prefetched(CasDigest),
+    Missing(CasDigest),
+}
