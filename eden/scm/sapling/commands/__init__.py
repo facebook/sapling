@@ -2695,7 +2695,7 @@ def _dograft(ui, repo, *revs, **opts):
 
         # commit
         editor = cmdutil.getcommiteditor(editform="graft", **opts)
-        message = _makegraftmessage(repo, ctx, opts)
+        message, _is_from_user = _makegraftmessage(repo, ctx, opts)
         node = repo.commit(
             text=message, user=user, date=date, extra=extra, editor=editor
         )
@@ -2714,9 +2714,9 @@ def _dograft(ui, repo, *revs, **opts):
 
 def _makegraftmessage(repo, ctx, opts):
     if logmessage := cmdutil.logmessage(repo, opts):
-        description, is_from_ctx = logmessage, False
+        description, is_from_user = logmessage, True
     else:
-        description, is_from_ctx = ctx.description(), True
+        description, is_from_user = ctx.description(), False
 
     message = []
     if opts.get("from_path"):
@@ -2726,9 +2726,8 @@ def _makegraftmessage(repo, ctx, opts):
             for f, t in zip(opts.get("from_path"), opts.get("to_path")):
                 message.append("- Grafted path %s to %s" % (f, t))
 
-            # only update the title if it is from original change context,
-            # we don't update the user provided title
-            if is_from_ctx:
+            # don't update the user provided title
+            if not is_from_user:
                 try:
                     title, rest = description.split("\n", 1)
                     description = f'Graft "{title}"\n{rest}'
@@ -2738,7 +2737,7 @@ def _makegraftmessage(repo, ctx, opts):
         if opts.get("log"):
             message.append("(grafted from %s)" % ctx.hex())
     message = "\n".join(message)
-    return cmdutil.add_summary_footer(ctx.repo().ui, description, message)
+    return cmdutil.add_summary_footer(ctx.repo().ui, description, message), is_from_user
 
 
 @command(
