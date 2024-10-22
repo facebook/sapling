@@ -93,6 +93,16 @@ export enum SuggestedChangeStatus {
   Rejected = 'REJECTED',
 }
 
+export type SuggestedChange = {
+  id?: string;
+  status?: SuggestedChangeStatus;
+  patch?: ParsedDiff;
+  oldContent?: string;
+  newContent?: string;
+  oldLength?: number;
+  newLength?: number;
+};
+
 export type DiffComment = {
   id?: string;
   author: string;
@@ -107,11 +117,7 @@ export type DiffComment = {
   line?: number;
   reactions: Array<DiffCommentReaction>;
   /** Suggestion for how to change the code, as a patch */
-  suggestedChange?: {
-    id?: string;
-    status?: SuggestedChangeStatus;
-    patch?: ParsedDiff;
-  };
+  suggestedChange?: SuggestedChange;
   codePatchSuggestedChange?: ParsedDiff;
   replies: Array<DiffComment>;
   /** If this comment has been resolved. true => "resolved", false => "unresolved", null => the comment is not resolvable, don't show any UI for it */
