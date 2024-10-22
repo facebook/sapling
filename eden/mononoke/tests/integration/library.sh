@@ -837,6 +837,8 @@ function wait_for_git_bookmark_move() {
   local bookmark_name="$1"
   local last_bookmark_target="$2"
   local attempt=1
+  local max_attempts=${MAX_ATTEMPTS-30}
+  local sleep_time=${SLEEP_TIME-2}
   last_status_regex="$last_bookmark_target\s+$bookmark_name"
   last_status="$last_bookmark_target$bookmark_name"
   while [[ "$(git_client ls-remote --quiet | grep -E "$last_status_regex" | tr -d '[:space:]')" == "$last_status" ]]
@@ -847,7 +849,7 @@ function wait_for_git_bookmark_move() {
         echo "bookmark move of $bookmark away from $last_bookmark_target has not happened"
         return 1
     fi
-    sleep 2
+    sleep $sleep_time
   done
 }
 

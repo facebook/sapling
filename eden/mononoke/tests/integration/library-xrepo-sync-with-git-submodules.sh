@@ -107,6 +107,7 @@ function run_common_xrepo_sync_with_gitsubmodules_setup {
   # Avoid local clone error "fatal: transport 'file' not allowed" in new Git versions (see CVE-2022-39253).
   export XDG_CONFIG_HOME=$TESTTMP
   git config --global protocol.file.allow always
+  git config --global advice.skippedCherryPicks false
 
   INFINITEPUSH_ALLOW_WRITES=true REPOID="$LARGE_REPO_ID" \
     REPONAME="$LARGE_REPO_NAME" setup_common_config "$REPOTYPE"
