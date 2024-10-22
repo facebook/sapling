@@ -147,6 +147,7 @@ pub enum ClientEntryPoint {
     BookmarkService,
     BookmarkServiceClientCli,
     MononokeGitServer,
+    ModernSync,
 }
 
 impl ClientRequestInfo {
@@ -227,6 +228,7 @@ impl Display for ClientEntryPoint {
             ClientEntryPoint::SaplingRemoteApiReplay => "eden_api_replay",
             ClientEntryPoint::MononokeHgSync => "hg_sync",
             ClientEntryPoint::MononokeCasSync => "mononoke_re_cas_sync",
+            ClientEntryPoint::ModernSync => "modern_sync",
             ClientEntryPoint::CurlTest => "curl_test",
             ClientEntryPoint::MirrorHgCommits => "mirror_hg_commits",
             ClientEntryPoint::StreamingClone => "streaming_clone",
@@ -268,6 +270,7 @@ impl TryFrom<&str> for ClientEntryPoint {
             "eden_api_replay" => Ok(ClientEntryPoint::SaplingRemoteApiReplay),
             "hg_sync" => Ok(ClientEntryPoint::MononokeHgSync),
             "mononoke_re_cas_sync" => Ok(ClientEntryPoint::MononokeCasSync),
+            "modern_sync" => Ok(ClientEntryPoint::ModernSync),
             "curl_test" => Ok(ClientEntryPoint::CurlTest),
             "mirror_hg_commits" => Ok(ClientEntryPoint::MirrorHgCommits),
             "streaming_clone" => Ok(ClientEntryPoint::StreamingClone),
