@@ -65,7 +65,7 @@ fbpkg.builder(
         "libexec/eden/edenfs": fbpkg.copy("//eden/fs/service:edenfs"),
         "libexec/eden/edenfs_config_manager": fbpkg.copy("//eden/fs/config/facebook:edenfs_config_manager"),
         "libexec/eden/edenfs_monitor": fbpkg.copy("//eden/fs/monitor:edenfs_monitor"),
-        "libexec/eden/edenfs_privhelper": fbpkg.copy("//eden/fs/service:edenfs_privhelper"),
+        "libexec/eden/edenfs_privhelper": fbpkg.copy("//eden/fs/service:edenfs_privhelper_with_setuid_root"),
         "libexec/eden/edenfs_restarter": fbpkg.copy("//eden/fs/facebook:edenfs_restarter"),
 
         # static file for eden-locale

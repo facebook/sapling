@@ -2,6 +2,7 @@ load("@fbcode//eden:defs.bzl", "get_oss_suffix", "make_rule_compatible_with")
 load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 load("@fbcode_macros//build_defs:java_binary.bzl", "java_binary")
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_genrule")
 load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
 load("@fbsource//tools/build_defs:audit_dependencies_test.bzl", "audit_dependencies_test")
 
@@ -139,6 +140,16 @@ cpp_binary(
         "//folly/logging:init",
         "//folly/logging:logging",
     ],
+)
+
+buck_genrule(
+    name = "edenfs_privhelper_with_setuid_root",
+    srcs = [":edenfs_privhelper"],
+    out = "edenfs_privhelper_with_setuid_root",
+    bash = """
+        cp $SRCS $OUT &&
+        chmod 04755 $OUT
+    """,
 )
 
 # The privhelper is installed setuid root. Since it is a privileged
