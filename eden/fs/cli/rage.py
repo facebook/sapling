@@ -32,7 +32,7 @@ from . import (
     util as util_mod,
     version as version_mod,
 )
-from .config import EdenInstance
+from .config import CheckoutPathProblemType, detect_checkout_path_problem, EdenInstance
 
 try:
     from .facebook.rage import (
@@ -279,6 +279,10 @@ def print_diagnostic_info(
     }
 
     for checkout_path in mountpoint_paths:
+        try:
+            nested_checkout, __ = detect_checkout_path_problem(checkout_path, instance)
+        except Exception:
+            nested_checkout = None
         out.write(b"\nMount point info for path %s:\n" % checkout_path.encode())
         checkout_data = instance.get_checkout_info(checkout_path)
         mount_data = mounts_data.get(checkout_path, {})
@@ -286,6 +290,10 @@ def print_diagnostic_info(
         if "data_dir" in mount_data:
             mount_data.pop("data_dir")
 
+        if nested_checkout == CheckoutPathProblemType.NESTED_CHECKOUT:
+            mount_data["nested_checkout"] = True
+        else:
+            mount_data["nested_checkout"] = False
         checkout_data.update(mount_data)
         for k, v in checkout_data.items():
             out.write("{:>20} : {}\n".format(k, v).encode())
