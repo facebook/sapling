@@ -212,7 +212,10 @@ def testsetup(t):
             indent: int,
             filename: str,
         ):
-            metalog = _get_record_metalog(filename, self._testcase, create=True)
+            testcase = None
+            if self._testcase_names:
+                testcase = "-".join(sorted(self._testcase_names))
+            metalog = _get_record_metalog(filename, testcase, create=True)
             shenv = self.shenv
             root = str(self.path)
             save_state(
@@ -220,8 +223,8 @@ def testsetup(t):
             )
             metalog["TESTTMP"] = root.encode()
             testname = os.path.basename(filename)
-            if self._testcase is not None:
-                testname += f":{self._testcase}"
+            if testcase is not None:
+                testname += f":{testcase}"
             metalog.commit(f"After {src}\nTest {testname}\nLine {srcloc}")
 
             return super().post_checkoutput(
