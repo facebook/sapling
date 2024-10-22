@@ -283,7 +283,7 @@ def _do_cheap_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
     extra = {}
     extra.update(gen_branch_info(from_ctx.hex(), from_paths, to_paths))
 
-    summaryfooter = _gen_prepopulated_commit_msg(from_ctx, from_paths, to_paths)
+    summaryfooter = _gen_copy_commit_msg(from_ctx, from_paths, to_paths)
     editform = cmdutil.mergeeditform(repo[None], "subtree.copy")
     editor = cmdutil.getcommiteditor(
         editform=editform, summaryfooter=summaryfooter, **opts
@@ -377,7 +377,7 @@ def _do_normal_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
     extra = {}
     extra.update(gen_branch_info(from_ctx.hex(), from_paths, to_paths))
 
-    summaryfooter = _gen_prepopulated_commit_msg(from_ctx, from_paths, to_paths)
+    summaryfooter = _gen_copy_commit_msg(from_ctx, from_paths, to_paths)
     editform = cmdutil.mergeeditform(repo[None], "subtree.copy")
     editor = cmdutil.getcommiteditor(
         editform=editform, summaryfooter=summaryfooter, **opts
@@ -396,7 +396,7 @@ def _do_normal_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
     cmdutil.commit(ui, repo, commitfunc, [], opts)
 
 
-def _gen_prepopulated_commit_msg(from_commit, from_paths, to_paths):
+def _gen_copy_commit_msg(from_commit, from_paths, to_paths):
     full_commit_hash = from_commit.hex()
     msgs = [f"Subtree copy from {full_commit_hash}"]
     for from_path, to_path in zip(from_paths, to_paths):
