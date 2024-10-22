@@ -85,22 +85,21 @@ export type DiffCommentReaction = {
     | 'THUMBS_UP';
 };
 
-export enum SuggestedChangeStatus {
+export enum CodePatchSuggestionStatus {
   Accepted = 'ACCEPTED',
-  Active = 'ACTIVE',
-  ClosedDeprecated = 'CLOSED_DEPRECATED',
-  Draft = 'DRAFT',
-  Rejected = 'REJECTED',
+  Declined = 'DECLINED',
+  Unset = 'UNSET',
 }
 
 export type SuggestedChange = {
   id?: string;
-  status?: SuggestedChangeStatus;
+  status?: CodePatchSuggestionStatus;
   patch?: ParsedDiff;
+  oldPath?: string;
+  currentPath?: string;
   oldContent?: string;
   newContent?: string;
-  oldLength?: number;
-  newLength?: number;
+  oldLineNumber?: number;
 };
 
 export type DiffComment = {
