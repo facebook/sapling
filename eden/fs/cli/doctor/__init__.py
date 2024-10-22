@@ -1255,8 +1255,7 @@ Failed to remount this mount with error:
 
 class StaleWorkingDirectory(Problem):
     def __init__(self, msg: str) -> None:
-        remediation = f"""\
-Run "cd / && cd -" to update your shell's working directory."""
+        remediation = 'Run "cd / && cd -" to update your shell\'s working directory.'
         super().__init__(msg, remediation)
 
 
@@ -1318,7 +1317,7 @@ This version is known to have issue:
     {reasons_string}
 """
 
-        remediation_string = 'Run `edenfsctl restart{"" if sys.platform == "win32" else " --graceful"}` to migrate to the newer version to avoid these issues.'
+        remediation_string = f'Run `edenfsctl restart{"" if sys.platform == "win32" else " --graceful"}` to migrate to the newer version to avoid these issues.'
         super().__init__(
             dedent(help_string), remediation_string, severity=ProblemSeverity.ADVICE
         )
