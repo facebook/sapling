@@ -481,6 +481,11 @@ class InodeBase {
    */
   void notifyParentOfStat(bool isFile, const ObjectFetchContext& context);
 
+  /**
+   * Log accesses via the ServerState's FileAccessLogger.
+   */
+  void logAccess(const ObjectFetchContext& fetchContext);
+
  private:
 #ifndef _WIN32
   // The caller (which is always InodeBaseMetadata) must be holding the

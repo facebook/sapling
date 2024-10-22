@@ -545,11 +545,6 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   AbsolutePath getMaterializedFilePath();
 #endif // _WIN32
 
-  /**
-   * Log accesses via the ServerState's FileAccessLogger.
-   */
-  void logAccess(const ObjectFetchContext& fetchContext);
-
   folly::Synchronized<State> state_;
 
   // So it can call inodePtrFromThis() for better error messages.

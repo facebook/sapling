@@ -11,9 +11,11 @@
 #include <folly/logging/xlog.h>
 
 #include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/inodes/FileAccessLogger.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/ParentInodeInfo.h"
+#include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/journal/Journal.h"
 #include "eden/fs/utils/Clock.h"
@@ -398,6 +400,35 @@ void InodeBase::notifyParentOfStat(
   if (auto parent = location_.rlock()->parent) {
     parent->childWasStat(isFile, context);
   }
+}
+
+void InodeBase::logAccess(const ObjectFetchContext& fetchContext) {
+  auto ino = getNodeId();
+
+  // Don't log root inode access
+  if (ino == kRootNodeId) {
+    return;
+  }
+
+  // Don't log file accesses that originate from a prefetch. In practice, this
+  // case should not be hit, but since we have the data for free here let's
+  // safeguard against it anyway
+  if (fetchContext.getCause() == ObjectFetchContext::Cause::Prefetch) {
+    return;
+  }
+
+  std::optional<std::string> fetchDetail;
+
+  const auto& detail = fetchContext.getCauseDetail();
+  if (detail.has_value()) {
+    fetchDetail.emplace(std::string{detail.value()});
+  }
+
+  getMount()->getServerState()->getFileAccessLogger()->logFileAccess(FileAccess{
+      ino,
+      fetchContext.getCause(),
+      std::move(fetchDetail),
+      getMount()->getWeakMount()});
 }
 
 } // namespace facebook::eden
