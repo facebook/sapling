@@ -23,9 +23,12 @@ macro_rules! re_client {
         use futures::stream;
         use futures::stream::BoxStream;
         use futures::StreamExt;
+        use futures::TryStreamExt;
         use re_cas_common::split_up_to_max_bytes;
         use re_client_lib::DownloadRequest;
         use re_client_lib::DownloadDigestsIntoCacheRequest;
+        use re_client_lib::DownloadStreamRequest;
+        use re_client_lib::REClientError;
         use re_client_lib::TCode;
         use re_client_lib::TDigest;
         use re_client_lib::THashAlgo;
@@ -78,6 +81,42 @@ macro_rules! re_client {
             {
                 stream::iter(split_up_to_max_bytes(digests, self.fetch_limit.value()))
                     .map(move |digests| async move {
+
+                        if self.use_streaming_dowloads && digests.len() == 1 && digests.first().unwrap().size >= self.fetch_limit.value() {
+                            // Single large file, fetch it via the streaming API to avoid memory issues on CAS side.
+                            let digest = digests.first().unwrap();
+                            $crate::tracing::debug!(target: "cas", concat!(stringify!($struct), " streaming {} {}(s)"), digests.len(), log_name);
+                            let request =  DownloadStreamRequest {
+                                digest: to_re_digest(digest),
+                                ..Default::default()
+                            };
+
+                            // Unfortunately, the streaming API does not return the storage stats, so it won't be added to the stats.
+                            let stats = $crate::CasFetchedStats::default();
+
+                            let response = self.client()?
+                                .download_stream(self.metadata.clone(), request)
+                                .await;
+
+                            if let Err(ref err) = response {
+                                if let Some(inner) = err.downcast_ref::<REClientError>() {
+                                    if inner.code == TCode::NOT_FOUND {
+                                        return Ok((stats, vec![(digest.to_owned(), Ok(None))]));
+                                    }
+                                }
+                            }
+
+                            let mut bytes: Vec<u8> = Vec::with_capacity(digest.size as usize);
+                            let mut response_stream = response?;
+                            while let Some(chunk) = response_stream.next().await {
+                                bytes.extend(chunk?.data);
+                            }
+
+                            return Ok((stats, vec![(digest.to_owned(), Ok(Some(bytes)))]));
+                        }
+
+                        // Fetch digests via the regular API (download inlined digests).
+
                         $crate::tracing::debug!(target: "cas", concat!(stringify!($struct), " fetching {} {}(s)"), digests.len(), log_name);
 
                         let request = DownloadRequest {

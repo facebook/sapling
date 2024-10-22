@@ -29,6 +29,7 @@ pub struct ThinCasClient {
     log_dir: Option<String>,
     fetch_limit: ByteCount,
     fetch_concurrency: usize,
+    use_streaming_dowloads: bool,
 }
 
 pub fn init() {
@@ -95,6 +96,7 @@ impl ThinCasClient {
             fetch_limit: config
                 .get_or::<ByteCount>("cas", "max-batch-bytes", || default_fetch_limit)?,
             fetch_concurrency: config.get_or("cas", "fetch-concurrency", || 4)?,
+            use_streaming_dowloads: config.get_or("cas", "use-streaming-downloads", || true)?,
         }))
     }
 
