@@ -468,6 +468,7 @@ mod test {
 
     use anyhow::Error;
     use fbinit::FacebookInit;
+    use mononoke_api::RepositoryId;
     use mononoke_macros::mononoke;
     use requests_table::RequestType;
     use source_control as thrift;
@@ -476,21 +477,22 @@ mod test {
 
     #[mononoke::fbinit_test]
     async fn test_request_stream_simple(fb: FacebookInit) -> Result<(), Error> {
-        let q = Arc::new(AsyncMethodRequestQueue::new_test_in_memory().unwrap());
+        let repo_id = RepositoryId::new(0);
+        let q = Arc::new(AsyncMethodRequestQueue::new_test_in_memory(Some(vec![repo_id])).unwrap());
         let ctx = CoreContext::test_mock(fb);
 
         let params = thrift::MegarepoSyncChangesetParams {
             cs_id: vec![],
             source_name: "name".to_string(),
             target: thrift::MegarepoTarget {
-                repo_id: Some(0),
+                repo_id: Some(repo_id.id() as i64),
                 bookmark: "book".to_string(),
                 ..Default::default()
             },
             target_location: vec![],
             ..Default::default()
         };
-        q.enqueue(&ctx, None, params).await?;
+        q.enqueue(&ctx, Some(&repo_id), params).await?;
 
         let will_exit = Arc::new(AtomicBool::new(false));
         let s = AsyncMethodRequestWorker::request_stream_inner(
@@ -516,21 +518,22 @@ mod test {
 
     #[mononoke::fbinit_test]
     async fn test_request_stream_clear_abandoned(fb: FacebookInit) -> Result<(), Error> {
-        let q = Arc::new(AsyncMethodRequestQueue::new_test_in_memory().unwrap());
+        let repo_id = RepositoryId::new(0);
+        let q = Arc::new(AsyncMethodRequestQueue::new_test_in_memory(Some(vec![repo_id])).unwrap());
         let ctx = CoreContext::test_mock(fb);
 
         let params = thrift::MegarepoSyncChangesetParams {
             cs_id: vec![],
             source_name: "name".to_string(),
             target: thrift::MegarepoTarget {
-                repo_id: Some(0),
+                repo_id: Some(repo_id.id() as i64),
                 bookmark: "book".to_string(),
                 ..Default::default()
             },
             target_location: vec![],
             ..Default::default()
         };
-        q.enqueue(&ctx, None, params).await?;
+        q.enqueue(&ctx, Some(&repo_id), params).await?;
 
         // Grab it from the queue...
         let dequed = q.dequeue(&ctx, &ClaimedBy("name".to_string())).await?;

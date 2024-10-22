@@ -84,7 +84,7 @@ impl AsyncMethodRequestQueue {
         }
     }
 
-    pub fn new_test_in_memory() -> Result<Self, Error> {
+    pub fn new_test_in_memory(repos: Option<Vec<RepositoryId>>) -> Result<Self, Error> {
         let blobstore: Arc<dyn Blobstore> = Arc::new(Memblob::new(PutBehaviour::IfAbsent));
         let table: Arc<dyn LongRunningRequestsQueue> =
             Arc::new(SqlLongRunningRequestsQueue::with_sqlite_in_memory()?);
@@ -92,7 +92,7 @@ impl AsyncMethodRequestQueue {
         Ok(Self {
             blobstore,
             table,
-            repos: None,
+            repos,
         })
     }
 
@@ -448,10 +448,11 @@ mod tests {
         } => {
             #[mononoke::fbinit_test]
             async fn $fn_name(fb: FacebookInit) -> Result<(), Error> {
-                let q = AsyncMethodRequestQueue::new_test_in_memory().unwrap();
+                println!("Running {}", stringify!($fn_name));
                 let ctx = CoreContext::test_mock(fb);
                 let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
                 let repo_id = repo.repo_identity().id();
+                let q = AsyncMethodRequestQueue::new_test_in_memory(Some(vec![repo_id])).unwrap();
 
                 // Enqueue a request
                 let params = $thrift_params;
@@ -482,7 +483,16 @@ mod tests {
 
                 // Simulate the tailer and grab the element from the queue, this should return the params
                 // back and flip its state back to "in_progress"
-                let (req_id, params_from_store) = q.dequeue(&ctx, &ClaimedBy("tests".to_string())).await?.unwrap();
+                let res = q.dequeue(&ctx, &ClaimedBy("tests".to_string())).await;
+                let res = match res {
+                    Ok(res) => res,
+                    Err(err) => panic!("Unexpected error: {:?}", err),
+                };
+                let res = match res {
+                    Some(res) => res,
+                    None => panic!("Unexpected None"),
+                };
+                let (req_id, params_from_store) = res;
 
                 // Verify that request params from blobstore match what we put there
                 assert_eq!(params_from_store, params.into());
