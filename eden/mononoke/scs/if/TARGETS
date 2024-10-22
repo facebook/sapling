@@ -11,10 +11,10 @@ thrift_library(
     languages = [
         "hs2",
         "rust",
-        "py",
         "py3",
         "cpp2",
         "java-swift",
+        "py-deprecated",
     ],
     plugins = [
         thrift_plugin_automock,
