@@ -510,6 +510,11 @@ class RefName:
                 name = name[len("tags/") :]
             else:
                 components += ["remotes", self.remote]
+        elif self.name.startswith("refs/"):
+            # This allows pushing to arbitrary git server-side refs which is useful with
+            # some servers like Gerrit which uses refs/for/master for sending changes for
+            # code review or mononoke's refs/commitcloud/upload.
+            return self.name
         elif all(
             not self.name.startswith(p)
             for p in ("visibleheads/", "remotetags/", "tags/")
