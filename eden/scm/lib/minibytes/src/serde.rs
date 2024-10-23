@@ -15,6 +15,7 @@ use serde::Serialize;
 use serde::Serializer;
 
 use crate::Bytes;
+use crate::Text;
 
 impl Serialize for Bytes {
     #[inline]
@@ -23,7 +24,14 @@ impl Serialize for Bytes {
     }
 }
 
+impl Serialize for Text {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self)
+    }
+}
+
 struct BytesVisitor;
+struct TextVisitor;
 
 thread_local! {
     static DESERIALIZE_HINT: RefCell<Option<Bytes>> = const { RefCell::new(None) };
@@ -85,6 +93,36 @@ impl<'de> Deserialize<'de> for Bytes {
     }
 }
 
+impl<'de> de::Visitor<'de> for TextVisitor {
+    type Value = Text;
+
+    fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str("str")
+    }
+
+    fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
+        let text = DESERIALIZE_HINT.with_borrow(|parent_buffer| match parent_buffer {
+            Some(buf) => {
+                let buf = buf.slice_to_bytes(v.as_bytes());
+                // safety: `v: &str` proves `v` and therefore `buf` valid utf-8.
+                unsafe { Text::from_utf8_unchecked(buf) }
+            }
+            None => Text::copy_from_slice(v),
+        });
+        Ok(text)
+    }
+
+    fn visit_string<E: de::Error>(self, v: String) -> Result<Self::Value, E> {
+        Ok(Text::from(v))
+    }
+}
+
+impl<'de> Deserialize<'de> for Text {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        deserializer.deserialize_string(TextVisitor)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -93,6 +131,7 @@ mod tests {
     struct S {
         a: Bytes,
         b: Bytes,
+        c: Text,
     }
 
     #[test]
@@ -100,6 +139,7 @@ mod tests {
         let s1 = S {
             a: Bytes::copy_from_slice(b"aaaa"),
             b: Bytes::from_static(b"bbbb"),
+            c: Text::from_static("ccc"),
         };
         let serialized = Bytes::from(serde_cbor::to_vec(&s1).unwrap());
 
@@ -107,10 +147,12 @@ mod tests {
         let s2: S = serde_cbor::from_slice(&serialized).unwrap();
         assert!(serialized.range_of_slice(s2.a.as_ref()).is_none());
         assert!(serialized.range_of_slice(s2.b.as_ref()).is_none());
+        assert!(serialized.range_of_slice(s2.c.as_bytes()).is_none());
 
         // Deserialize with hint - can be zero copy.
         let s3: S = serialized.as_deserialize_hint(|| serde_cbor::from_slice(&serialized).unwrap());
         assert!(serialized.range_of_slice(s3.a.as_ref()).is_some());
         assert!(serialized.range_of_slice(s3.b.as_ref()).is_some());
+        assert!(serialized.range_of_slice(s3.c.as_bytes()).is_some());
     }
 }
