@@ -881,13 +881,17 @@ fn load_dynamic(
 
     // Check version
     let content = read_to_string(&dynamic_path).ok();
-    let version = content.as_ref().and_then(|c| {
-        let mut lines = c.split('\n');
-        match lines.next() {
-            Some(line) if line.starts_with("# version=") => Some(&line[10..]),
-            Some(_) | None => None,
+    let mut headers = HashMap::new();
+    for line in content.as_deref().unwrap_or_default().lines() {
+        if let Some(kv) = line.strip_prefix("# ") {
+            if let Some((k, v)) = kv.split_once('=') {
+                headers.insert(k, v);
+            }
+        } else {
+            break;
         }
-    });
+    }
+    let version = headers.get("version").copied();
 
     let this_version = ::version::VERSION;
 
