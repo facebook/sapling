@@ -5,6 +5,7 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
+  $ export ENABLE_BOOKMARK_CACHE=1
   $ REPOTYPE="blob_files"
   $ export ONLY_FAST_FORWARD_BOOKMARK_REGEX=".*ffonly"
   $ setup_common_config $REPOTYPE
@@ -79,6 +80,9 @@
   For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
   error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
   [1]
+
+# Wait for the warm bookmark cache to catch up with the latest changes
+  $ wait_for_git_bookmark_move HEAD $master_commit
 
 # Verify the push validation errors got recorded in scuba
   $ jq -S .normal "$SCUBA" | grep validation

@@ -5,6 +5,7 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
+  $ export ENABLE_BOOKMARK_CACHE=1
   $ REPOTYPE="blob_files"
   $ setup_common_config $REPOTYPE
   $ GIT_REPO_ORIGIN="${TESTTMP}/origin/repo-git"
@@ -69,6 +70,8 @@
 
 # Pull the Git repo from Mononoke
   $ cd $REPONAME
+# Wait for the warm bookmark cache to catch up with the latest changes
+  $ wait_for_git_bookmark_move HEAD $current_head
 # Wait for the warm bookmark cache to catch up with the latest changes
   $ wait_for_git_bookmark_move HEAD $current_head
   $ quiet git_client pull

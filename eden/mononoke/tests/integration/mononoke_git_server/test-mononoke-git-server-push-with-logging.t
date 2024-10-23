@@ -8,6 +8,7 @@
   $ export BOOKMARK_SCRIBE_CATEGORY=mononoke_bookmark
   $ export MONONOKE_TEST_SCRIBE_LOGGING_DIRECTORY=$TESTTMP/scribe_logs/
   $ . "${TEST_FIXTURES}/library.sh"
+  $ export ENABLE_BOOKMARK_CACHE=1
   $ REPOTYPE="blob_files"
   $ setup_common_config $REPOTYPE
   $ GIT_REPO_ORIGIN="${TESTTMP}/origin/repo-git"
@@ -79,6 +80,9 @@
   $ git_client push origin --delete branch_to_be_deleted
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
    - [deleted]         branch_to_be_deleted
+
+# Wait for WBC to catch up with the changes
+  $ wait_for_git_bookmark_delete refs/heads/branch_to_be_deleted
 
 # Validate if the bookmark moves got logged by Mononoke Bookmark logger and GitRefs logger. Mononoke Bookmark logger doesn't
 # use refs/ as prefix and stores unspecified commits as null. GitRefs logger uses refs/ prefix, stores unspecified commits

@@ -5,6 +5,7 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
+  $ export ENABLE_BOOKMARK_CACHE=1
   $ REPOTYPE="blob_files"
   $ setup_common_config $REPOTYPE
   $ GIT_REPO_ORIGIN="${TESTTMP}/origin/repo-git"
@@ -103,6 +104,8 @@
 
 # Pull the latest changes from Mononoke and verify we get the same end state
   $ cd $GIT_REPO
+# Wait for the warm bookmark cache to catch up with the latest changes
+  $ wait_for_git_bookmark_move HEAD $prev_head
   $ quiet git_client pull --depth=2
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | grep commit | sort
   18a6f40de35ce474e240faa7298ae2b5979751c8 commit 
