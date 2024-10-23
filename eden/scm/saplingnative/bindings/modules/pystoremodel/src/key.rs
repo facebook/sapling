@@ -7,6 +7,7 @@
 
 use serde::Deserialize;
 use serde::Serialize;
+use storemodel::BoxIterator;
 use types::Id20;
 use types::Key;
 use types::RepoPathBuf;
@@ -35,5 +36,43 @@ pub(crate) trait IntoKeys {
 impl IntoKeys for Vec<CompactKey> {
     fn into_keys(self) -> Vec<Key> {
         self.into_iter().map(|k| k.into_key()).collect()
+    }
+}
+
+// Work around Rust's orphan rule
+pub(crate) trait IntoCompactKey {
+    type Output;
+    fn into_compact_key(self) -> Self::Output;
+}
+
+impl IntoCompactKey for Key {
+    type Output = CompactKey;
+
+    fn into_compact_key(self) -> Self::Output {
+        CompactKey::from_key(self)
+    }
+}
+
+impl<K: IntoCompactKey, T> IntoCompactKey for (K, T) {
+    type Output = (K::Output, T);
+
+    fn into_compact_key(self) -> Self::Output {
+        (self.0.into_compact_key(), self.1)
+    }
+}
+
+impl<T: IntoCompactKey, E> IntoCompactKey for Result<T, E> {
+    type Output = Result<T::Output, E>;
+
+    fn into_compact_key(self) -> Self::Output {
+        self.map(IntoCompactKey::into_compact_key)
+    }
+}
+
+impl<T: IntoCompactKey> IntoCompactKey for BoxIterator<T> {
+    type Output = std::iter::Map<BoxIterator<T>, fn(T) -> T::Output>;
+
+    fn into_compact_key(self) -> Self::Output {
+        self.into_iter().map(IntoCompactKey::into_compact_key)
     }
 }

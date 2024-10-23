@@ -28,6 +28,7 @@ use types::PathComponentBuf;
 use types::RepoPath;
 mod key;
 use key::CompactKey;
+use key::IntoCompactKey as _;
 use key::IntoKeys as _;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -55,6 +56,7 @@ py_class!(pub class KeyStore |py| {
     def get_content_iter(&self, keys: Serde<Vec<CompactKey>>, fetch_mode: Serde<FetchMode> = Serde(FetchMode::AllowRemote)) -> PyResult<PyIter> {
         let inner = self.inner(py);
         let iter = inner.get_content_iter(keys.0.into_keys(), fetch_mode.0).map_pyerr(py)?;
+        let iter = iter.into_compact_key();
         let iter = PyIter::new(py, iter)?;
         Ok(iter)
     }
@@ -118,6 +120,7 @@ py_class!(pub class FileStore |py| {
     def get_rename_iter(&self, keys: Serde<Vec<CompactKey>>) -> PyResult<PyIter> {
         let inner = self.inner(py);
         let iter = inner.get_rename_iter(keys.0.into_keys()).map_pyerr(py)?;
+        let iter = iter.map(|v| v.map(|(k1, k2)| (CompactKey::from_key(k1), CompactKey::from_key(k2))));
         let iter = PyIter::new(py, iter)?;
         Ok(iter)
     }
@@ -225,7 +228,7 @@ py_class!(pub class TreeStore |py| {
         let inner = self.inner(py);
         let iter = inner.get_remote_tree_iter(keys.0.into_keys()).map_pyerr(py)?;
         PyIter::new_custom(py, iter, |py, (key, entry)| {
-            Ok((Serde(key), TreeEntry::create_instance(py, entry)?).to_py_object(py).into_object())
+            Ok((Serde(key.into_compact_key()), TreeEntry::create_instance(py, entry)?).to_py_object(py).into_object())
         })
     }
 
@@ -234,7 +237,7 @@ py_class!(pub class TreeStore |py| {
         let inner = self.inner(py);
         let iter = inner.get_tree_iter(keys.0.into_keys(), fetch_mode.0).map_pyerr(py)?;
         PyIter::new_custom(py, iter, |py, (key, entry)| {
-            Ok((Serde(key), TreeEntry::create_instance(py, entry)?).to_py_object(py).into_object())
+            Ok((Serde(key.into_compact_key()), TreeEntry::create_instance(py, entry)?).to_py_object(py).into_object())
         })
     }
 
