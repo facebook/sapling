@@ -89,7 +89,7 @@ impl<'de> de::Visitor<'de> for BytesVisitor {
 
 impl<'de> Deserialize<'de> for Bytes {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        deserializer.deserialize_bytes(BytesVisitor)
+        deserializer.deserialize_byte_buf(BytesVisitor)
     }
 }
 
