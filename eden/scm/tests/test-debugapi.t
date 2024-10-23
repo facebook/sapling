@@ -138,7 +138,7 @@ Test APIs:
                                                     "content_sha1": bin("6dcd4ce23d88e2ee9568ba546c007c63d9131c1b"),
                                                     "content_blake3": bin("5ad3ba58a716e5fc04296ac9af7a1420f726b401fdf16d270beb5b6b30bc0cda"),
                                                     "content_sha256": bin("0000000000000000000000000000000000000000000000000000000000000000"),
-                                                    "file_header_metadata": None}}}}],
+                                                    "file_header_metadata": b""}}}}],
     "tree_aux_data": None}]
 
 Works outside repo

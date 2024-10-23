@@ -79,7 +79,9 @@ Now we do have aux data locally:
               total_size: 1,
               sha1: Sha1("6dcd4ce23d88e2ee9568ba546c007c63d9131c1b"),
               blake3: Blake3("5ad3ba58a716e5fc04296ac9af7a1420f726b401fdf16d270beb5b6b30bc0cda"),
-              file_header_metadata: None,
+              file_header_metadata: Some(
+                  b"",
+              ),
           },
       ),
   }

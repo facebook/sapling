@@ -198,8 +198,13 @@ impl SaplingRemoteApi for EagerRepo {
             };
 
             if spec.attrs.aux_data {
-                // NOTE: "body" includes the hg filelog header. Is it right?
-                entry.aux_data = Some(FileAuxData::from_content(&body));
+                let (pure_content, copy_from) =
+                    file_body_to_file_content_and_copy_from(&body, self.format());
+
+                let mut aux_data = FileAuxData::from_content(&pure_content);
+                aux_data.file_header_metadata = Some(copy_from);
+
+                entry.aux_data = Some(aux_data);
             }
 
             if spec.attrs.content {
@@ -358,13 +363,15 @@ impl SaplingRemoteApi for EagerRepo {
                                 let (_file_parents, file_body) =
                                     sha1_blob_to_parents_body(&file_sha1_blob, self.format())?;
 
-                                let (file_body, _copy_from) =
+                                let (file_body, copy_from) =
                                     file_body_to_file_content_and_copy_from(
                                         &file_body,
                                         self.format(),
                                     );
 
-                                let aux_data = FileAuxData::from_content(&file_body);
+                                let mut aux_data = FileAuxData::from_content(&file_body);
+                                aux_data.file_header_metadata = Some(copy_from);
+
                                 children.push(Ok(TreeChildEntry::File(TreeChildFileEntry {
                                     key: Key::new(
                                         RepoPathBuf::from_string(child.component.to_string())
