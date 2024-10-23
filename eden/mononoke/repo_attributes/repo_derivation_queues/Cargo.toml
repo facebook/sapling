@@ -23,6 +23,7 @@ ephemeral_blobstore = { version = "0.1.0", path = "../../blobstore/ephemeral_blo
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
+justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }

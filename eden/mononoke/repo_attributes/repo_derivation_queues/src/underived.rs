@@ -31,8 +31,6 @@ use crate::DerivationQueue;
 use crate::EnqueueResponse;
 use crate::InternalError;
 
-const MAX_FAILED_ATTEMPTS: u64 = 3;
-
 // Generation number starts with 1, so we need to account for it by offsetting
 // We also need to multiply index additionally by (batch size)
 // to get the generation number of root for each bat
@@ -124,13 +122,16 @@ pub async fn build_underived_batched_graph<'a>(
                     deps.collect(),
                     ctx.metadata().client_info(),
                 )?;
+
+                let max_failed_attemps = justknobs::get_as::<u64>("scm/mononoke:build_underived_batched_graph_max_failed_attempts", None)?;
+
                 let mut cur_item = Some(item.clone());
                 // Upstream batch will depend on this cs
                 let mut upstream_dep = item.id().clone();
                 let mut failed_attempt = 0;
                 let mut err_msg = None;
                 while let Some(item) = cur_item {
-                    if failed_attempt >= MAX_FAILED_ATTEMPTS {
+                    if failed_attempt >= max_failed_attemps {
                         return Err(anyhow!(
                             "Couldn't enqueue item {:?} into zeus after {} attempts. Last err: {:?}",
                             item,
