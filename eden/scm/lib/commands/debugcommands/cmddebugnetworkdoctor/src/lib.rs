@@ -9,9 +9,10 @@ use std::io::Write;
 
 use clidispatch::ReqCtx;
 use cmdutil::NoOpts;
+use cmdutil::Repo;
 use cmdutil::Result;
 
-pub fn run(ctx: ReqCtx<NoOpts>) -> Result<u8> {
+pub fn run(ctx: ReqCtx<NoOpts>, _repo: Option<&Repo>) -> Result<u8> {
     let config = ctx.config();
     let mut stdout = ctx.io().output();
     match network_doctor::Doctor::new().diagnose(config) {
