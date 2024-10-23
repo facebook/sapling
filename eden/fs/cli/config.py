@@ -414,8 +414,10 @@ class EdenInstance(AbstractEdenInstance):
             return telemetry.NullTelemetryLogger()
 
         try:
+            # pyre-fixme [21]: Undefined import Could not find a module corresponding to import
             from eden.fs.cli.facebook import scuba_telemetry  # @manual
 
+            # pyre-fixme [16]: Undefined attribute
             return scuba_telemetry.ScubaTelemetryLogger()
         except (ImportError, NotImplementedError):
             pass
