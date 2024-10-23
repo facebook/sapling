@@ -42,7 +42,7 @@ python_library(
         "//eden/fs/cli/facebook:telemetry",
         "//eden/mononoke/scs/if:source_control-py3-clients",
         "//eden/mononoke/scs/if:source_control-py3-types",
-        "//servicerouter/client/py3:_init",
+        "//servicerouter/client/py3:base",
         "//servicerouter/client/py3:get_client",
     ],
 )
