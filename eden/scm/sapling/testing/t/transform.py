@@ -43,7 +43,9 @@ from __future__ import annotations
 
 import textwrap
 from dataclasses import dataclass
-from typing import Callable, List, Optional, Tuple
+
+from itertools import product
+from typing import Callable, List, Optional, Tuple, Union
 
 
 def transform(
@@ -410,7 +412,7 @@ def rewriteblocks(
                 appendline(f'raise __import__("unittest").SkipTest({repr(msg)})\n')
         elif info.line.startswith("#testcases "):
             assert registertestcase is not None
-            newcases = info.line.split()[1:]
+            newcases = parse_testcases(info.line)
             for testcase in newcases:
                 registertestcase(testcase)
             testcases.extend(newcases)
@@ -470,3 +472,37 @@ def rewriteblocks(
         i = nexti
 
     return "".join(newlines)
+
+
+def parse_testcases(testcases: str) -> List[Union[str, Tuple[str]]]:
+    r"""Helper function to parse "#testcases " directive.
+
+    Support of the previous syntax where a list of simple test cases are provided:
+
+        >>> parse_testcases("#testcases CASE1 CASE2")
+        ['CASE1', 'CASE2']
+
+    Support of parsing the string as Python code when seeing "(":
+
+        >>> parse_testcases("#testcases('FEATURE_1', 'FEATURE_2')")
+        ['FEATURE_1', 'FEATURE_2']
+
+    With Python code, we can combine different cases to get a mixed testcase consisting of
+    independent features:
+
+        >>> parse_testcases("#testcases(*product(['FEATURE_1', None], ['FEATURE_2', None]))")
+        [('FEATURE_1', 'FEATURE_2'), ('FEATURE_1', None), (None, 'FEATURE_2'), (None, None)]
+
+    """
+    prefix = "#testcases "
+
+    if testcases.startswith(prefix):
+        return testcases[len(prefix) :].split()
+
+    # treat it as a python expression to evaluate
+    # ignore the leading "#"
+    python_str = testcases[1:]
+
+    res = eval(python_str, {"product": product, "testcases": lambda *args: args})
+
+    return list(res)
