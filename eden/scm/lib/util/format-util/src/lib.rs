@@ -8,6 +8,7 @@
 //! Utilities interacting with store serialization formats (git or hg).
 
 use anyhow::Result;
+use minibytes::Text;
 use types::Id20;
 
 mod byte_count;
@@ -16,6 +17,7 @@ mod git_commit;
 mod git_commit_fields;
 mod git_sha1;
 mod hg_commit;
+mod hg_commit_fields;
 mod hg_filelog;
 mod hg_sha1;
 mod sha1_digest;
@@ -30,6 +32,8 @@ pub use git_sha1::git_sha1_digest;
 pub use git_sha1::git_sha1_serialize;
 pub use git_sha1::git_sha1_serialize_write;
 pub use hg_commit::hg_commit_text_to_root_tree_id;
+pub use hg_commit_fields::HgCommitFields;
+pub use hg_commit_fields::HgCommitLazyFields;
 pub use hg_filelog::parse_copy_from_hg_file_metadata;
 pub use hg_filelog::split_hg_file_metadata;
 pub use hg_filelog::strip_file_metadata;
@@ -44,5 +48,12 @@ pub fn commit_text_to_root_tree_id(text: &[u8], format: SerializationFormat) -> 
     match format {
         SerializationFormat::Hg => hg_commit_text_to_root_tree_id(text),
         SerializationFormat::Git => git_commit_text_to_root_tree_id(text),
+    }
+}
+
+pub fn commit_text_to_fields(text: Text, format: SerializationFormat) -> Box<dyn CommitFields> {
+    match format {
+        SerializationFormat::Hg => Box::new(HgCommitLazyFields::new(text)),
+        SerializationFormat::Git => Box::new(GitCommitLazyFields::new(text)),
     }
 }
