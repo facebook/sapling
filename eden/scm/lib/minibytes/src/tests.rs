@@ -118,3 +118,18 @@ fn test_downgrade_upgrade() {
     let b3 = Bytes::upgrade(&b1);
     assert!(b3.is_none());
 }
+
+#[test]
+fn test_bytes_to_text() {
+    let b1 = Bytes::from_static("abcd 文字".as_bytes());
+    let t1 = Text::from_utf8_lossy(b1.clone());
+    // zero-copy, b1 and t1 share the same buffer.
+    assert_eq!(t1.as_ptr(), b1.as_ptr());
+    assert_eq!(t1.as_bytes(), b1.as_bytes());
+
+    let b2 = Bytes::from_static(b"\xff\xfe");
+    let t2 = Text::from_utf8_lossy(b2.clone());
+    // invalid utf-8, cannot zero-copy
+    assert_ne!(t2.as_ptr(), b2.as_ptr());
+    assert_ne!(t2.as_bytes(), b2.as_bytes());
+}
