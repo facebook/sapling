@@ -290,13 +290,15 @@ impl AugmentedTree {
                 .map(|line| {
                     let line = line?;
                     let line = line.trim();
-                    let mut parts = line.split(' ');
-                    let idpath = parts.next().ok_or(anyhow!(
-                        "augmented tree: missing path/id part in a child entry"
-                    ))?;
-                    let (path, id) = idpath
+
+                    let (path, rest) = line
                         .split_once('\0')
                         .ok_or(anyhow!("augmented tree: invalid format of a child entry"))?;
+
+                    let mut parts = rest.split(' ');
+                    let id = parts.next().ok_or(anyhow!(
+                        "augmented tree: missing id part in a child entry"
+                    ))?;
 
                     let mut id = id.to_string();
                     let flag = id.pop().ok_or(anyhow!(
@@ -811,6 +813,45 @@ mod tests {
                     })
                 ),
             ],
+        );
+
+        let mut buf: Vec<u8> = Vec::new();
+        augmented_tree
+            .try_serialize(&mut buf)
+            .expect("writing failed");
+
+        assert_eq!(&buf, serialized_manifest.as_bytes());
+    }
+
+    #[test]
+    fn test_filename_with_space() {
+        let serialized_manifest = concat!(
+            "v1 1111111111111111111111111111111111111111 - 2222222222222222222222222222222222222222 3333333333333333333333333333333333333333\n",
+            "hi there\x004444444444444444444444444444444444444444r 4444444444444444444444444444444444444444444444444444444444444444 10 4444444444444444444444444444444444444444 -\n",
+        );
+
+        // Parse initial augmented tree entry.
+        let augmented_tree =
+            AugmentedTree::try_deserialize(serialized_manifest.as_bytes()).expect("parsing failed");
+
+        assert_eq!(
+            augmented_tree.entries,
+            vec![(
+                "hi there".to_string().try_into().unwrap(),
+                AugmentedTreeEntry::FileNode(AugmentedFileNode {
+                    file_type: FileType::Regular,
+                    filenode: HgId::from_hex(b"4444444444444444444444444444444444444444")
+                        .expect("bad hgid"),
+                    content_blake3: Blake3::from_hex(
+                        b"4444444444444444444444444444444444444444444444444444444444444444"
+                    )
+                    .expect("bad blake3"),
+                    content_sha1: Sha1::from_hex(b"4444444444444444444444444444444444444444")
+                        .expect("bad id20"),
+                    total_size: 10,
+                    file_header_metadata: None,
+                })
+            ),],
         );
 
         let mut buf: Vec<u8> = Vec::new();
