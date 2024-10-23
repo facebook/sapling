@@ -401,20 +401,22 @@ def wraprepo(repo):
 
 def setuptreestores(repo, mfl):
     if git.isgitstore(repo):
-        mfl._iseager = False
+        mfl._use_abstraction = True
         mfl.datastore = git.openstore(repo)
     elif eagerepo.iseagerepo(repo) or repo.storage_format() == "revlog":
-        mfl._iseager = True
+        mfl._use_abstraction = True
         store = repo.fileslog.filestore
+        mfl._raw_store = store
         mfl.datastore = EagerDataStore(store)
         mfl.historystore = mfl.datastore.historystore
-        mfl._raw_store = store
         if not isinstance(store, bindings.eagerepo.EagerRepoStore):
             raise error.ProgrammingError(
                 "incompatible eagerrepo store: %r (expect EagerRepoStore)" % store
             )
     else:
-        mfl._iseager = False
+        # "historystore" related logic does not yet have confident
+        # abstraction-friendly alternative yet.
+        mfl._use_abstraction = False
         mfl.makeruststore()
 
 
@@ -425,6 +427,8 @@ class basetreemanifestlog:
         self._treemanifestcache = util.lrucachedict(cachesize)
         # store object used to construct storemodel.TreeStore
         self._raw_store = None
+        # whether to use the "storemodel" abstraction for write paths
+        self._use_abstraction = False
 
     def abstract_store(self):
         """returns storemodel.TreeStore backed by Rust trait object"""
@@ -494,14 +498,12 @@ class basetreemanifestlog:
     ):
         newtreeiter = _finalize(self, newtree, p1node, p2node)
 
-        if self._iseager:
-            # eagerepo does not have history pack but requires p1node and
-            # p2node to be part of the sha1 blob.
-            store = self.datastore
+        if self._use_abstraction:
+            store = self.abstract_store()
             rootnode = None
             for nname, nnode, ntext, _np1text, np1, np2 in newtreeiter:
-                rawtext = revlog.textwithheader(ntext, np1, np2)
-                node = store.add_sha1_blob(rawtext)
+                # ntext is the raw text of either git or hg format
+                node = store.insert_data({"parents": (np1, np2)}, nname, ntext)
                 assert node == nnode, f"{node} == {nnode}"
                 if rootnode is None and nname == "":
                     rootnode = node
@@ -521,10 +523,8 @@ class basetreemanifestlog:
 
     def commitsharedpacks(self):
         """Persist the dirty trees written to the shared packs."""
-        if self._isgit:
-            return
-        if self._iseager:
-            self.datastore.flush()
+        if self._use_abstraction:
+            self.abstract_store().flush()
             return
 
         self.datastore.markforrefresh()
@@ -555,7 +555,7 @@ class basetreemanifestlog:
         # git store does not have the Python `.get(path, node)` method.
         # it can only be accessed via the Rust treemanifest.
         # eager store does not require remote lookup.
-        if node == nullid or self._isgit or self._iseager:
+        if node == nullid or self._use_abstraction:
             return treemanifestctx(self, dir, node)
         if node in self._treemanifestcache:
             m = self._treemanifestcache[node]
@@ -595,7 +595,7 @@ class basetreemanifestlog:
         return None
 
     def makeruststore(self):
-        assert not self._iseager
+        assert not self._use_abstraction
         mask = os.umask(0o002)
         try:
             self.treescmstore = self._repo._rsrepo.treescmstore()
