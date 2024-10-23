@@ -242,7 +242,20 @@ impl<R: MononokeRepo> MegarepoApi<R> {
             .repo_by_id(ctx.clone(), repo_id)
             .await
             .map_err(MegarepoError::internal)?
-            .ok_or_else(|| MegarepoError::request(anyhow!("repo not found {}", repo_id)))?
+            .ok_or_else(|| {
+                if repo_id.id() != 0 // special case for some tests
+                    && justknobs::eval(
+                        "scm/mononoke:megarepo_panic_on_repo_not_found_error",
+                        None,
+                        Some(&repo_id.to_string()),
+                    )
+                    .unwrap_or(false)
+                {
+                    panic!("repo not found {}", repo_id)
+                } else {
+                    MegarepoError::request(anyhow!("repo not found {}", repo_id))
+                }
+            })?
             .with_authorization_context(AuthorizationContext::new_bypass_access_control())
             .build()
             .await?;
