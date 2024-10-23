@@ -6,6 +6,8 @@
 MAKE_PID := $(shell echo $$PPID)
 JOBS := $(shell ps T | sed -n 's%.*$(MAKE_PID).*$(MAKE).* \(-j\|--jobs=\) *\([0-9][0-9]*\).*%\2%p')
 
+PYTHON_SYS_EXECUTABLE=$(shell python3 ../../../scm/contrib/pick_python.py python3)
+
 help:
 	@echo 'This Makefile is supposed to be used by'
 	@echo 'fbcode_builder/getdeps.py script, DO NOT use it directly.'
@@ -17,7 +19,8 @@ all: help
 build-getdeps:
 	mkdir -p $(GETDEPS_BUILD_DIR)/mononoke_integration
 	# In this step just generate the manifest.json file
-	./run_tests_getdeps.py getdeps --jobs $(JOBS) $(GETDEPS_INSTALL_DIR) --generate_manifest
+	PYTHON_SYS_EXECUTABLE=$(PYTHON_SYS_EXECUTABLE) \
+	$(PYTHON_SYS_EXECUTABLE) ./run_tests_getdeps.py getdeps --jobs $(JOBS) $(GETDEPS_INSTALL_DIR) --generate_manifest
 
 install-getdeps:
 	mkdir -p $(GETDEPS_INSTALL_DIR)/mononoke_integration
@@ -44,7 +47,8 @@ test-getdeps:
 	  for try in $$(seq 0 $(GETDEPS_TEST_RETRY)); do \
 	    RERUN_ARG=""; \
 	    if [ $$try -gt 0 ]; then RERUN_ARG="--rerun-failed"; fi; \
-	    ./run_tests_getdeps.py getdeps --jobs $(JOBS) $(GETDEPS_INSTALL_DIR) $(GETDEPS_TEST_FILTER) $$RERUN_ARG; \
+	    	PYTHON_SYS_EXECUTABLE=$(PYTHON_SYS_EXECUTABLE) \
+			$(PYTHON_SYS_EXECUTABLE) ./run_tests_getdeps.py getdeps --jobs $(JOBS) $(GETDEPS_INSTALL_DIR) $(GETDEPS_TEST_FILTER) $$RERUN_ARG; \
 		status=$$?; \
 		# stop if all good \
 		if [ $$status = 0 ]; then echo "passed on try $$try"; exit 0; fi; \

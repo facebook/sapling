@@ -45,9 +45,9 @@ Simple usage
   $ mononoke_newadmin derived-data -R repo count-underived -T unodes -i aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
   aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675: 0
 Multiple changesets
-  $ mononoke_newadmin derived-data -R repo count-underived -T unodes -i aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675 -i 5a25c0a76794bbcc5180da0949a652750101597f0fbade488e611d5c0917e7be
-  aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675: 0
+  $ mononoke_newadmin derived-data -R repo count-underived -T unodes -i aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675 -i 5a25c0a76794bbcc5180da0949a652750101597f0fbade488e611d5c0917e7be | sort
   5a25c0a76794bbcc5180da0949a652750101597f0fbade488e611d5c0917e7be: 1
+  aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675: 0
 Bookmark
   $ mononoke_newadmin derived-data -R repo count-underived -T unodes -B main
   e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2: 0
