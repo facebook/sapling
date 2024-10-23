@@ -16,6 +16,7 @@ use once_cell::sync::OnceCell;
 use storemodel::SerializationFormat;
 use types::Id20;
 
+use crate::normalize_email_user;
 pub use crate::CommitFields;
 
 /// Holds the Git commit text. Fields can be lazily fields.
@@ -198,10 +199,10 @@ fn parse_name_date(line: Text) -> Result<(Text, Date)> {
 }
 
 fn write_name_date(prefix: &str, name: &str, date: Date, out: &mut String) -> Result<()> {
-    ensure!(!name.is_empty(), "{} cannot be empty", prefix);
+    let name = normalize_email_user(name, SerializationFormat::Git)?;
     out.push_str(prefix);
     out.push(' ');
-    out.push_str(name);
+    out.push_str(&name);
     out.push(' ');
     write!(out, "{}", date.0)?;
     out.push(' ');

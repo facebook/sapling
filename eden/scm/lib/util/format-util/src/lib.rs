@@ -21,6 +21,7 @@ mod hg_commit_fields;
 mod hg_filelog;
 mod hg_sha1;
 mod sha1_digest;
+mod utils;
 
 pub(crate) use byte_count::ByteCount;
 pub use commit_fields::CommitFields;
@@ -43,6 +44,7 @@ pub use hg_sha1::hg_sha1_serialize;
 pub use hg_sha1::hg_sha1_serialize_write;
 pub(crate) use sha1_digest::Sha1Write;
 use storemodel::SerializationFormat;
+pub(crate) use utils::normalize_email_user;
 
 pub fn commit_text_to_root_tree_id(text: &[u8], format: SerializationFormat) -> Result<Id20> {
     match format {

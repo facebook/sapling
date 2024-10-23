@@ -17,6 +17,7 @@ use once_cell::sync::OnceCell;
 use storemodel::SerializationFormat;
 use types::Id20;
 
+use crate::normalize_email_user;
 pub use crate::CommitFields;
 
 /// Holds the Hg commit text. Fields can be lazily parsed.
@@ -102,7 +103,7 @@ impl HgCommitFields {
     /// Serialize fields to "text".
     pub fn to_text(&self) -> Result<String> {
         ensure!(!self.message.is_empty(), "message cannot be empty");
-        ensure!(!self.author.is_empty(), "author cannot be empty");
+        let author = normalize_email_user(&self.author, SerializationFormat::Hg)?;
 
         let len = Id20::hex_len()
             + self.author.len()
@@ -121,7 +122,7 @@ impl HgCommitFields {
         result.push('\n');
 
         // author
-        result.push_str(&self.author);
+        result.push_str(&author);
         result.push('\n');
 
         // date, extra
