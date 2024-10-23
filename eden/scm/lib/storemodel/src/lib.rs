@@ -20,6 +20,7 @@
 //! Traits can be combined later. For example, reading file content, metadata,
 //! and history should probably be 3 different traits.
 
+use std::any::type_name;
 use std::any::Any;
 use std::path::Path;
 use std::sync::Arc;
@@ -145,13 +146,13 @@ pub trait KeyStore: Send + Sync {
         _path: &RepoPath,
         _data: &[u8],
     ) -> anyhow::Result<HgId> {
-        anyhow::bail!("store is read-only")
+        anyhow::bail!("store {} is read-only", type_name::<Self>())
     }
 
     /// Write pending changes to disk.
     /// For some implementations, this also includes `refresh()`.
     fn flush(&self) -> anyhow::Result<()> {
-        anyhow::bail!("store is read-only")
+        anyhow::bail!("store {} is read-only", type_name::<Self>())
     }
 
     /// Refresh the store so it might pick up new contents written by other processes.
