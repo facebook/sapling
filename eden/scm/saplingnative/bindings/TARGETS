@@ -52,6 +52,7 @@ rust_python_library(
         "//eden/scm/saplingnative/bindings/modules/pyerror:pyerror",
         "//eden/scm/saplingnative/bindings/modules/pyexchange:pyexchange",
         "//eden/scm/saplingnative/bindings/modules/pyfail:pyfail",
+        "//eden/scm/saplingnative/bindings/modules/pyformatutil:pyformatutil",
         "//eden/scm/saplingnative/bindings/modules/pyfs:pyfs",
         "//eden/scm/saplingnative/bindings/modules/pygitcompat:pygitcompat",
         "//eden/scm/saplingnative/bindings/modules/pygitstore:pygitstore",

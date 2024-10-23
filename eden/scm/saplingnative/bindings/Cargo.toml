@@ -33,6 +33,7 @@ pyedenapi = { version = "0.1.0", path = "modules/pyedenapi" }
 pyerror = { version = "0.1.0", path = "modules/pyerror" }
 pyexchange = { version = "0.1.0", path = "modules/pyexchange" }
 pyfail = { version = "0.1.0", path = "modules/pyfail" }
+pyformatutil = { version = "0.1.0", path = "modules/pyformatutil" }
 pyfs = { version = "0.1.0", path = "modules/pyfs" }
 pygitcompat = { version = "0.1.0", path = "modules/pygitcompat" }
 pygitstore = { version = "0.1.0", path = "modules/pygitstore" }
