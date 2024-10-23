@@ -629,7 +629,14 @@ class treeonlymanifestlog(basetreemanifestlog):
 def _buildtree(manifestlog, node=None):
     # this code seems to belong in manifestlog but I have no idea how
     # manifestlog objects work
+    # XXX: This breaks abstraction. But we want the "native" store, instead of a
+    # Python object (EagerDataStore) so store APIs like "format()" etc work
+    # well. Alternatively, we need to define "def format()" to pass the
+    # "format()" as-is across languages. Once we kill historystore then we might
+    # remove the EagerDataStore Python wrapper.
     store = manifestlog.datastore
+    if isinstance(store, EagerDataStore):
+        store = store._store
     initfn = rustmanifest.treemanifest
     if node is not None and node != nullid:
         return initfn(store, node)
