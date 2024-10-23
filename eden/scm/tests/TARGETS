@@ -261,7 +261,6 @@ python_unittest(
         "//eden/mononoke/tests/integration/certs/facebook:test_certs",
         "//eden/mononoke/tests/integration:test_fixtures",
     ],
-    deps = ["//libfb/py:parutil"],
 )
 
 buck_filegroup(
