@@ -15,8 +15,6 @@ use manifest::testutil::*;
 use manifest::Manifest;
 use minibytes::Bytes;
 use parking_lot::RwLock;
-use sha1::Digest;
-use sha1::Sha1;
 use storemodel::InsertOpts;
 use storemodel::KeyStore;
 use storemodel::SerializationFormat;
@@ -93,10 +91,7 @@ impl TestStore {
 }
 
 fn compute_sha1(content: &[u8]) -> HgId {
-    let mut hasher = Sha1::new();
-    hasher.update(content);
-    let buf: [u8; HgId::len()] = hasher.finalize().into();
-    (&buf).into()
+    format_util::hg_sha1_digest(content, HgId::null_id(), HgId::null_id())
 }
 
 impl KeyStore for TestStore {

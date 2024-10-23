@@ -1509,8 +1509,8 @@ mod tests {
             output,
             "Root (Ephemeral)\n\
              | a1 (Ephemeral)\n\
-             | | b1 (Durable, 4f75b40350c5a77ea27d3287b371016e2d940bab)\n\
-             | | | c1 (Durable, 4495bc0cc4093ed880fe1eb1489635f3cddcf04d)\n\
+             | | b1 (Durable, d6a71387fe6f91389e9f1b253b5d89d73e2c0741)\n\
+             | | | c1 (Durable, 73480e69d7ce9b9b3e8a3a02c4d0190f1f460306)\n\
              | | | | d1 (File, 0000000000000000000000000000000000000010, Regular)\n\
              | | b2 (File, 0000000000000000000000000000000000000020, Regular)\n\
              | a2 (Ephemeral)\n\
