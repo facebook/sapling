@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
 use std::fmt::Write as _;
 
 use anyhow::bail;
@@ -36,6 +37,10 @@ pub struct GitCommitFields {
     committer: Text,
     committer_date: Date,
     message: Text,
+    // e.g. "gpgsig", "gpgsig-sha256", "mergetag".
+    // See https://git-scm.com/docs/signature-format
+    #[serde(default)]
+    extras: BTreeMap<Text, Text>,
 }
 
 type Date = (u64, i32);
@@ -46,12 +51,31 @@ impl GitCommitFields {
         // {parents}
         // author {author_name} <{author_email}> {author_date_seconds} {author_date_timezone}
         // committer {committer_name} <{committer_email}> {committer_date_seconds} {committer_date_timezone}
+        // {gpgsig ...
+        //  ...
+        //  ...}
         //
         // {commit message}
         let mut result = Self::default();
         let mut last_pos = 0;
+        let mut current_extra: Option<(Text, String)> = None;
         for pos in memchr::memchr_iter(b'\n', text.as_bytes()) {
             let line = &text[last_pos..pos];
+            if let Some((name, mut value)) = current_extra {
+                if let Some(cont) = line.strip_prefix(' ') {
+                    // line is part of a multi-line extra.
+                    value.push('\n');
+                    value.push_str(cont);
+                    current_extra = Some((name, value));
+                    last_pos = pos + 1;
+                    continue;
+                } else {
+                    // line does not belong to this extra.
+                    result.extras.insert(name.clone(), value.into());
+                    current_extra = None;
+                }
+            }
+
             if let Some(hex) = line.strip_prefix("tree ") {
                 result.tree = Id20::from_hex(hex.as_bytes())?;
             } else if let Some(hex) = line.strip_prefix("parent ") {
@@ -61,10 +85,19 @@ impl GitCommitFields {
             } else if let Some(line) = line.strip_prefix("committer ") {
                 (result.committer, result.committer_date) =
                     parse_name_date(text.slice_to_bytes(line))?;
-            } else {
+            } else if let (Some((name, value)), None) = (line.split_once(' '), &current_extra) {
+                current_extra = Some((text.slice_to_bytes(name), value.to_string()));
+            } else if line.is_empty() {
                 // Treat the rest as "message".
                 result.message = text.slice(pos + 1..);
+                // "message" is the last part.
                 break;
+            } else {
+                ensure!(
+                    !result.committer.is_empty(),
+                    "bogus line in git commit: {}",
+                    line
+                );
             }
             last_pos = pos + 1;
         }
@@ -102,6 +135,11 @@ impl GitCommitFields {
             self.committer_date,
             &mut result,
         )?;
+
+        // extra (e.g. gpgsig)
+        for (name, value) in &self.extras {
+            write_extra(name, value, &mut result)?;
+        }
 
         // message
         result.push('\n');
@@ -158,6 +196,15 @@ impl CommitFields for GitCommitLazyFields {
         Ok(Some(self.fields()?.committer_date))
     }
 
+    fn extras(&self) -> Result<Option<&BTreeMap<Text, Text>>> {
+        let extras = &self.fields()?.extras;
+        if extras.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(extras))
+        }
+    }
+
     fn parents(&self) -> Result<Option<&[Id20]>> {
         Ok(Some(&self.fields()?.parents))
     }
@@ -197,6 +244,25 @@ fn parse_name_date(line: Text) -> Result<(Text, Date)> {
         line.slice_to_bytes(name_str)
     };
     Ok((name, (date_seconds, tz_seconds)))
+}
+
+fn write_extra(name: &str, value: &str, out: &mut String) -> Result<()> {
+    if name == "committer" || name == "committer_date" || name == "branch" {
+        // "committer" was written before; "branch" is useless - just skip it.
+        return Ok(());
+    }
+    let bad_extra_names = ["author", "parent", "tree"];
+    ensure!(
+        !name.contains("\n") && !name.contains(" ") && bad_extra_names.iter().all(|&n| n != name),
+        "invalid extra name"
+    );
+    out.push_str(name);
+    for line in value.trim_end_matches('\n').split('\n') {
+        out.push(' ');
+        out.push_str(line);
+        out.push('\n');
+    }
+    Ok(())
 }
 
 fn write_name_date(prefix: &str, name: &str, date: Date, out: &mut String) -> Result<()> {
@@ -265,6 +331,40 @@ Signed-off-by: Alice <a@example.com>
         assert_eq!(
             fields.root_tree().unwrap().to_hex(),
             "98edb6a9c7a48cae7a1ed9a39600952547daaebb"
+        );
+        assert_eq!(format!("{:?}", fields.extras().unwrap()), "None");
+
+        let text2 = fields.fields().unwrap().to_text().unwrap();
+        assert_eq!(text2, text);
+    }
+
+    #[test]
+    fn test_parse_git_commit_with_gpgsig() {
+        let text = r#"tree 98edb6a9c7a48cae7a1ed9a39600952547daaebb
+author Alice <a@example.com> 1714300000 -0001
+committer Bob <b@example.com> 1714400000 +0000
+data1 foo
+ bar
+data2 foo bar
+gpgsig -- BEGIN --
+ 
+ signature foo bar
+ 
+ -- END --
+
+This is the commit message.
+"#;
+        let fields = GitCommitLazyFields::new(text.into());
+        assert_eq!(fields.author_date().unwrap(), (1714300000, 60));
+        assert_eq!(fields.committer_date().unwrap().unwrap(), (1714400000, 0));
+
+        assert_eq!(
+            format!("{:?}", fields.extras().unwrap().unwrap()),
+            r#"{"data1": "foo\nbar", "data2": "foo bar", "gpgsig": "-- BEGIN --\n\nsignature foo bar\n\n-- END --"}"#
+        );
+        assert_eq!(
+            fields.description().unwrap(),
+            "This is the commit message.\n"
         );
 
         let text2 = fields.fields().unwrap().to_text().unwrap();

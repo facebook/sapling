@@ -48,8 +48,7 @@ pub trait CommitFields: Send + 'static {
         Ok(None)
     }
 
-    /// Only provided by hg format. Parsed extras.
-    /// Returns `None` if not tracked in the commit text (i.e. git format).
+    /// Returns `None` if the commit does not have extras.
     fn extras(&self) -> Result<Option<&BTreeMap<Text, Text>>> {
         Ok(None)
     }
