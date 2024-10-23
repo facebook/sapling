@@ -278,9 +278,21 @@ impl Doctor {
 
     pub fn diagnose(&self, config: &dyn Config) -> Result<(), Diagnosis> {
         let res = || -> Result<(), Diagnosis> {
-            self.check_server_connectivity(config)?;
-            self.check_http_connectivity(config)?;
-            Ok(())
+            let host_error = self.check_server_connectivity(config);
+
+            let http_error = self.check_http_connectivity(config);
+            if matches!(
+                http_error,
+                Err(Diagnosis::HttpProblem(
+                    HttpError::UnexpectedResponse(_)
+                        | HttpError::MissingCerts(_)
+                        | HttpError::InvalidCert(_, _)
+                ))
+            ) {
+                return http_error;
+            }
+
+            host_error.and(http_error)
         }();
 
         let short_res = match &res {
