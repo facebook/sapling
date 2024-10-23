@@ -106,6 +106,11 @@ py_class!(pub class KeyStore |py| {
         Ok(inner.statistics())
     }
 
+    def type_name(&self) -> PyResult<String> {
+        let inner = self.inner(py);
+        Ok(inner.type_name().into_owned())
+    }
+
     @staticmethod
     def from_store(store: ImplInto<Arc<dyn NativeKeyStore>>) -> PyResult<Self> {
         let inner = store.into();
@@ -182,6 +187,11 @@ py_class!(pub class FileStore |py| {
         let inner = self.inner(py);
         let store = inner.clone_key_store();
         KeyStore::create_instance(py, store.into())
+    }
+
+    def type_name(&self) -> PyResult<String> {
+        let inner = self.inner(py);
+        Ok(inner.type_name().into_owned())
     }
 
     @staticmethod
@@ -285,6 +295,11 @@ py_class!(pub class TreeStore |py| {
         let inner = self.inner(py);
         let store = inner.clone_key_store();
         KeyStore::create_instance(py, store.into())
+    }
+
+    def type_name(&self) -> PyResult<String> {
+        let inner = self.inner(py);
+        Ok(inner.type_name().into_owned())
     }
 
     @staticmethod
