@@ -129,10 +129,14 @@ impl SaplingRemoteApiError {
         use SaplingRemoteApiError::*;
 
         match self {
-            Http(_) | HttpError { .. } | ServerError(_) | NoResponse | Other(_) => true,
+            Http(_)
+            | HttpError { .. }
+            | ServerError(_)
+            | NoResponse
+            | ParseResponse(_)
+            | Other(_) => true,
 
             RequestSerializationFailed(_)
-            | ParseResponse(_)
             | BadConfig(_)
             | InvalidUrl(_)
             | WireToApiConversionFailed(_)
