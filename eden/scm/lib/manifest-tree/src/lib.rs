@@ -22,6 +22,7 @@ use std::sync::Arc;
 
 use anyhow::bail;
 use anyhow::Result;
+use format_util::hg_sha1_digest;
 use iter::bfs_iter;
 use manifest::DiffEntry;
 use manifest::DirDiffEntry;
@@ -35,8 +36,6 @@ pub use manifest::Manifest;
 use minibytes::Bytes;
 use once_cell::sync::OnceCell;
 use pathmatcher::Matcher;
-use sha1::Digest;
-use sha1::Sha1;
 pub use store::Flag;
 use storemodel::SerializationFormat;
 use thiserror::Error;
@@ -420,23 +419,11 @@ impl TreeManifest {
         &mut self,
         parent_trees: Vec<&TreeManifest>,
     ) -> Result<impl Iterator<Item = (RepoPathBuf, HgId, Bytes, HgId, HgId)>> {
-        fn compute_hgid<C: AsRef<[u8]>>(parent_tree_nodes: &[HgId], content: C) -> HgId {
-            let mut hasher = Sha1::new();
+        fn compute_hgid(parent_tree_nodes: &[HgId], content: &[u8]) -> HgId {
             debug_assert!(parent_tree_nodes.len() <= 2);
             let p1 = parent_tree_nodes.first().unwrap_or(HgId::null_id());
             let p2 = parent_tree_nodes.get(1).unwrap_or(HgId::null_id());
-            // Even if parents are sorted two hashes go into hash computation but surprise
-            // the NULL_ID is not a special case in this case and gets sorted.
-            if p1 < p2 {
-                hasher.update(p1.as_ref());
-                hasher.update(p2.as_ref());
-            } else {
-                hasher.update(p2.as_ref());
-                hasher.update(p1.as_ref());
-            }
-            hasher.update(content.as_ref());
-            let buf: [u8; HgId::len()] = hasher.finalize().into();
-            (&buf).into()
+            hg_sha1_digest(content, p1, p2)
         }
         struct Executor<'a> {
             store: &'a InnerStore,
@@ -549,7 +536,7 @@ impl TreeManifest {
                     entry.add_element_hg(element);
                 }
                 let entry = entry.freeze();
-                let hgid = compute_hgid(&parent_tree_nodes, &entry);
+                let hgid = compute_hgid(&parent_tree_nodes, entry.as_ref());
 
                 let cell = OnceCell::new();
                 // TODO: remove clone

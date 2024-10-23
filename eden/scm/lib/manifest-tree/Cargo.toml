@@ -15,6 +15,7 @@ required-features = ["for-tests"]
 anyhow = "1.0.86"
 crossbeam = "0.8"
 factory = { version = "0.1.0", path = "../util/factory" }
+format-util = { version = "0.1.0", path = "../util/format-util" }
 manifest = { version = "0.1.0", path = "../manifest" }
 minibytes = { version = "0.1.0", path = "../minibytes" }
 once_cell = "1.12"
