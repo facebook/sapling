@@ -250,6 +250,20 @@ impl RedirectCmd {
             })?,
         };
         let checkout = find_checkout(instance, &mount)?;
+        let client_name = instance.client_name(&mount)?;
+        let config_dir = instance.config_directory(&client_name);
+        let mut checkout_config =
+            CheckoutConfig::parse_config(config_dir.clone()).with_context(|| {
+                format!(
+                    "Failed to parse checkout config using config dir {}",
+                    &config_dir.display()
+                )
+            })?;
+        // Remove the redirection targets from the config so that proj-fs pre-delete notification does not block deletion on symlink
+        // This will be re-created when mounting the checkout again.
+        checkout_config
+            .remove_redirection_targets(&config_dir)
+            .with_context(|| "Failed to remove redirection targets from config")?;
         let redirs = get_effective_redirections(&checkout).with_context(|| {
             anyhow!(
                 "Could not get effective redirections for checkout {}",

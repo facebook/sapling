@@ -451,6 +451,12 @@ impl CheckoutConfig {
         Ok(())
     }
 
+    pub fn remove_redirection_targets(&mut self, config_dir: &Path) -> Result<()> {
+        self.redirection_targets.clear();
+        self.save_config(config_dir.into())?;
+        Ok(())
+    }
+
     /// Store information about the mount in the config.toml file.
     pub fn save_config(&mut self, state_dir: PathBuf) -> Result<()> {
         let toml_out = &toml::to_string(&self).with_context(|| {
