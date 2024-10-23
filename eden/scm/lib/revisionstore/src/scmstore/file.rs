@@ -146,6 +146,11 @@ impl FileStore {
         attrs: FileAttributes,
         fetch_mode: FetchMode,
     ) -> FetchResults<StoreFile> {
+        let mut keys = keys.into_iter().peekable();
+        if keys.peek().is_none() {
+            return FetchResults::new(Box::new(std::iter::empty()));
+        }
+
         let (found_tx, found_rx) = unbounded();
         let mut state = FetchState::new(
             keys,

@@ -43,11 +43,11 @@ Prefetch (and also check we get counters):
   scmstore.tree.fetch.edenapi.time: * (glob) (?)
   scmstore.tree.fetch.indexedlog.cache.keys: 1
   scmstore.tree.fetch.indexedlog.cache.misses: 1
-  scmstore.tree.fetch.indexedlog.cache.requests: 3
+  scmstore.tree.fetch.indexedlog.cache.requests: 1
   scmstore.tree.fetch.indexedlog.cache.time: * (glob) (?)
   scmstore.tree.fetch.indexedlog.local.keys: 1
   scmstore.tree.fetch.indexedlog.local.misses: 1
-  scmstore.tree.fetch.indexedlog.local.requests: 3
+  scmstore.tree.fetch.indexedlog.local.requests: 1
   scmstore.tree.fetch.indexedlog.local.time: * (glob) (?)
 
 Now we do have aux data locally:

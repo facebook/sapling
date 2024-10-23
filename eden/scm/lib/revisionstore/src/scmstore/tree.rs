@@ -140,6 +140,11 @@ impl TreeStore {
         attrs: TreeAttributes,
         fetch_mode: FetchMode,
     ) -> FetchResults<StoreTree> {
+        let mut reqs = reqs.peekable();
+        if reqs.peek().is_none() {
+            return FetchResults::new(Box::new(std::iter::empty()));
+        }
+
         let (found_tx, found_rx) = unbounded();
         let found_tx2 = found_tx.clone();
         let mut state = FetchState::new(reqs, attrs, found_tx, fetch_mode);
