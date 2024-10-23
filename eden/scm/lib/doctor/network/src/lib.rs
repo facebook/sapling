@@ -51,8 +51,8 @@ pub enum Diagnosis {
     BadConfig(String),
     #[error("no internet connectivity: {0}")]
     NoInternet(HostError),
-    #[error("no corp connectivity: {0}")]
-    NoCorp(HostError),
+    #[error("no server connectivity: {0}")]
+    NoServer(HostError),
     #[error("x2pagentd problem: {0}")]
     AuthProxyProblem(HttpError),
     #[error("http connection problem: {0}")]
@@ -92,8 +92,8 @@ impl fmt::Debug for HttpResponse {
 impl Diagnosis {
     pub fn treatment(&self, config: &dyn Config) -> String {
         match self {
-            Self::NoCorp(_) => {
-                "Please check your VPN connection (internet okay, but can't reach corp)."
+            Self::NoServer(_) => {
+                "Please check your VPN or proxy (internet okay, but can't reach server)."
                     .to_string()
             }
             Self::NoInternet(_) => {
@@ -116,7 +116,7 @@ impl Diagnosis {
         match self {
             Diagnosis::BadConfig(_) => "bad_config".to_string(),
             Diagnosis::NoInternet(_) => "no_internet".to_string(),
-            Diagnosis::NoCorp(_) => "no_corp".to_string(),
+            Diagnosis::NoServer(_) => "no_corp".to_string(),
             Diagnosis::AuthProxyProblem(err) => format!("auth_proxy_problem({})", err.short_name()),
             Diagnosis::HttpProblem(err) => format!("http_problem({})", err.short_name()),
         }
@@ -278,7 +278,7 @@ impl Doctor {
 
     pub fn diagnose(&self, config: &dyn Config) -> Result<(), Diagnosis> {
         let res = || -> Result<(), Diagnosis> {
-            self.check_corp_connectivity(config)?;
+            self.check_server_connectivity(config)?;
             self.check_http_connectivity(config)?;
             Ok(())
         }();
@@ -292,16 +292,16 @@ impl Doctor {
         res
     }
 
-    fn check_corp_connectivity(&self, config: &dyn Config) -> Result<(), Diagnosis> {
+    fn check_server_connectivity(&self, config: &dyn Config) -> Result<(), Diagnosis> {
         let repo_url = config_url(config, "edenapi", "url", None)?;
 
-        // First check for corp connectivity.
-        let corp_err = match self.check_host_tcp(&repo_url) {
+        // First check for server connectivity.
+        let server_err = match self.check_host_tcp(&repo_url) {
             Ok(()) => return Ok(()),
             Err(err) => err,
         };
 
-        // If we don't have corp connectivity, see if we have internet connectivity.
+        // If we don't have server connectivity, see if we have internet connectivity.
         let external_url = config_url(
             config,
             "doctor",
@@ -310,7 +310,7 @@ impl Doctor {
         )?;
 
         match self.check_host_tcp(&external_url) {
-            Ok(()) => Err(Diagnosis::NoCorp(corp_err)),
+            Ok(()) => Err(Diagnosis::NoServer(server_err)),
             Err(err) => Err(Diagnosis::NoInternet(err)),
         }
     }
@@ -524,10 +524,10 @@ mod tests {
     }
 
     #[test]
-    fn test_check_corp_connectivity() {
+    fn test_check_server_connectivity() {
         let non_working_url = "https://169.254.0.1:1234";
 
-        // Both corp and external fail.
+        // Both server and external fail.
         {
             let mut cfg = BTreeMap::new();
             cfg.insert("edenapi.url", non_working_url);
@@ -537,7 +537,7 @@ mod tests {
             doc.tcp_connect_timeout = Duration::from_millis(1);
 
             assert!(matches!(
-                doc.check_corp_connectivity(&cfg),
+                doc.check_server_connectivity(&cfg),
                 Err(Diagnosis::NoInternet(_))
             ));
         }
@@ -554,19 +554,19 @@ mod tests {
 
             let doc = Doctor::new();
             assert!(matches!(
-                doc.check_corp_connectivity(&cfg),
-                Err(Diagnosis::NoCorp(_))
+                doc.check_server_connectivity(&cfg),
+                Err(Diagnosis::NoServer(_))
             ));
         }
 
-        // Corp works.
+        // Server works.
         {
             let mut cfg: BTreeMap<&str, &str> = BTreeMap::new();
             cfg.insert("edenapi.url", &working_url);
             cfg.insert("doctor.external-host-check-url", &working_url);
 
             let doc = Doctor::new();
-            assert!(matches!(doc.check_corp_connectivity(&cfg), Ok(())));
+            assert!(matches!(doc.check_server_connectivity(&cfg), Ok(())));
         }
     }
 

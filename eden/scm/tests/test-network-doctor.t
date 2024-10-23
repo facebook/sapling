@@ -15,7 +15,7 @@ Set up fake cert paths so we don't hit "missing certs" error.
   pulling from mononoke://169.254.1.2/foo
   abort: command failed due to network error (see * for details) (glob)
   
-  Please check your VPN connection (internet okay, but can't reach corp).
+  Please check your VPN or proxy (internet okay, but can't reach server).
   [1]
 
 
@@ -23,8 +23,8 @@ Set up fake cert paths so we don't hit "missing certs" error.
   pulling from mononoke://169.254.1.2/foo
   abort: command failed due to network error (see * for details) (glob)
   
-  Please check your VPN connection (internet okay, but can't reach corp).
-    no corp connectivity: TCP error: test
+  Please check your VPN or proxy (internet okay, but can't reach server).
+    no server connectivity: TCP error: test
   [1]
 
 
@@ -32,8 +32,8 @@ Set up fake cert paths so we don't hit "missing certs" error.
   pulling from mononoke://169.254.1.2/foo
   abort: command failed due to network error (see * for details) (glob)
   
-  Please check your VPN connection (internet okay, but can't reach corp).
-    no corp connectivity: TCP error: test
+  Please check your VPN or proxy (internet okay, but can't reach server).
+    no server connectivity: TCP error: test
   
   Original error:
   [6] Couldn't resolve host name (Could not resolve host: test_fail)
@@ -45,11 +45,11 @@ Works for native rust commands as well.
   Cloning banana into $TESTTMP/repo/banana
   abort: command failed due to network error
   
-  Please check your VPN connection (internet okay, but can't reach corp).
+  Please check your VPN or proxy (internet okay, but can't reach server).
   
   Details:
   
-  NoCorp(TCP(Custom { kind: Other, error: "test" }))
+  NoServer(TCP(Custom { kind: Other, error: "test" }))
   
   Original error:
   
