@@ -1,6 +1,6 @@
 #require no-eden
 
-  $ setconfig scmstore.fetch-from-cas=true scmstore.fetch-tree-aux-data=true scmstore.tree-metadata-mode=always
+  $ setconfig scmstore.fetch-from-cas=true scmstore.fetch-tree-aux-data=true
 
   $ enable rebase
 
@@ -13,6 +13,7 @@
 
   $ newclientrepo client test:server
   $ hg go -q $B
-FIXME: should be able to fetch hg content (with header)
-  $ hg dbsh -c "repo['$B']['renamed'].data()" 2>&1 | grep UncategorizedNativeError
-  error.UncategorizedNativeError: CAS data has no copy info
+  $ hg dbsh -c "print(repo['$B']['renamed'].data())"
+  b'foo\n'
+  $ hg dbsh -c "r = repo['$B']['renamed'].renamed(); print((r[0], hex(r[1])))"
+  ('foo', '2ed2a3912a0b24502043eae84ee4b279c18b90dd')

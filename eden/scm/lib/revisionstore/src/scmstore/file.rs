@@ -566,7 +566,7 @@ impl HgIdDataStore for FileStore {
                 )
                 .single()?
             {
-                Some(entry) => StoreResult::Found(entry.content.unwrap().hg_content()?.into_vec()),
+                Some(entry) => StoreResult::Found(entry.hg_content()?.into_vec()),
                 None => StoreResult::NotFound(key),
             },
         )

@@ -31,7 +31,7 @@ pub(crate) struct CommonFetchState<T: StoreValue> {
     pub mode: FetchMode,
 }
 
-impl<T: StoreValue> CommonFetchState<T> {
+impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
     pub(crate) fn new(
         keys: impl IntoIterator<Item = Key>,
         attrs: T::Attrs,

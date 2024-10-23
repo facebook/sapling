@@ -8,6 +8,7 @@
 use std::ops::BitOr;
 
 use anyhow::anyhow;
+use anyhow::bail;
 use anyhow::Result;
 use format_util::parse_copy_from_hg_file_metadata;
 use minibytes::Bytes;
@@ -32,29 +33,28 @@ impl StoreValue for StoreFile {
     fn attrs(&self) -> FileAttributes {
         FileAttributes {
             pure_content: self.content.is_some(),
-            content_header: self
-                .content
-                .as_ref()
-                // All content sources have hg file header except CAS.
-                .is_some_and(|f| !matches!(f, LazyFile::Cas(_)))
-                // File header can also come from AUX data.
-                || self
-                    .aux_data
-                    .as_ref()
-                    .is_some_and(|aux| aux.file_header_metadata.is_some()),
+            content_header: self.content_contains_hg_header() || self.aux_data_contains_hg_header(),
             aux_data: self.aux_data.is_some(),
         }
     }
 
     /// Return a StoreFile with only the specified subset of attributes
     fn mask(self, attrs: FileAttributes) -> Self {
+        // hg content header can come from either content or aux data. Be sure not to mask
+        // off the content header if it was requested.
+        let content_has_header = self.content_contains_hg_header();
+        let aux_has_header = self.aux_data_contains_hg_header();
         StoreFile {
-            content: if attrs.pure_content || attrs.content_header {
+            content: if attrs.pure_content || (attrs.content_header && content_has_header) {
                 self.content
             } else {
                 None
             },
-            aux_data: if attrs.aux_data { self.aux_data } else { None },
+            aux_data: if attrs.aux_data || (attrs.content_header && aux_has_header) {
+                self.aux_data
+            } else {
+                None
+            },
         }
     }
 }
@@ -76,11 +76,36 @@ impl StoreFile {
         Ok(())
     }
 
+    // Pure file content without hg copy info.
     pub fn file_content(&mut self) -> Result<Bytes> {
         self.content
             .as_mut()
             .ok_or_else(|| anyhow!("no content available"))?
             .file_content()
+    }
+
+    // File content including hg copy info header.
+    pub fn hg_content(&self) -> Result<Bytes> {
+        if let Some(LazyFile::Cas(ref pure_content)) = self.content {
+            if let Some(FileAuxData {
+                file_header_metadata: Some(ref header),
+                ..
+            }) = self.aux_data
+            {
+                if header.is_empty() {
+                    Ok(pure_content.clone())
+                } else {
+                    Ok([header.as_ref(), pure_content.as_ref()].concat().into())
+                }
+            } else {
+                bail!("CAS file content with no hg content header in aux data");
+            }
+        } else {
+            self.content
+                .as_ref()
+                .ok_or_else(|| anyhow!("no content available"))?
+                .hg_content()
+        }
     }
 
     pub fn file_content_with_copy_info(&mut self) -> Result<(Bytes, Option<Key>)> {
@@ -103,6 +128,22 @@ impl StoreFile {
         } else {
             content.file_content_with_copy_info()
         }
+    }
+
+    fn content_contains_hg_header(&self) -> bool {
+        self.content
+            .as_ref()
+            .is_some_and(|f| !matches!(f, LazyFile::Cas(_)))
+    }
+
+    fn aux_data_contains_hg_header(&self) -> bool {
+        matches!(
+            self.aux_data.as_ref(),
+            Some(FileAuxData {
+                file_header_metadata: Some(_),
+                ..
+            })
+        )
     }
 }
 
