@@ -102,8 +102,6 @@ impl InnerStore {
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Entry(pub minibytes::Bytes, pub SerializationFormat);
 
-pub struct EntryMut(Vec<u8>, SerializationFormat);
-
 /// The `Element` is a parsed element of a directory. Directory elements are either files either
 /// direcotries. The type of element is signaled by `Flag`.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -144,24 +142,6 @@ impl Entry {
     // used in tests, finalize and subtree_diff
     pub fn to_bytes(self) -> Bytes {
         self.0
-    }
-}
-
-impl EntryMut {
-    /// Constructs an empty `Entry`. It is not valid to save an empty `Entry`.
-    pub fn new(format: SerializationFormat) -> Self {
-        EntryMut(Vec::new(), format)
-    }
-
-    /// Adds an element to the list of elements represented by this `Entry`.
-    /// It is expected that elements are added sorted by paths.
-    pub fn add_element_hg(&mut self, element: Element) {
-        self.0.extend(element.to_byte_vec_hg());
-        self.0.extend(b"\n");
-    }
-
-    pub fn freeze(self) -> Entry {
-        Entry(self.0.into(), self.1)
     }
 }
 

@@ -22,6 +22,7 @@ use std::sync::Arc;
 
 use anyhow::bail;
 use anyhow::Result;
+use format_util::git_sha1_digest;
 use format_util::hg_sha1_digest;
 use iter::bfs_iter;
 use manifest::DiffEntry;
@@ -419,11 +420,20 @@ impl TreeManifest {
         &mut self,
         parent_trees: Vec<&TreeManifest>,
     ) -> Result<impl Iterator<Item = (RepoPathBuf, HgId, Bytes, HgId, HgId)>> {
-        fn compute_hgid(parent_tree_nodes: &[HgId], content: &[u8]) -> HgId {
-            debug_assert!(parent_tree_nodes.len() <= 2);
-            let p1 = parent_tree_nodes.first().unwrap_or(HgId::null_id());
-            let p2 = parent_tree_nodes.get(1).unwrap_or(HgId::null_id());
-            hg_sha1_digest(content, p1, p2)
+        fn compute_hgid(
+            parent_tree_nodes: &[HgId],
+            content: &[u8],
+            format: SerializationFormat,
+        ) -> HgId {
+            match format {
+                SerializationFormat::Hg => {
+                    debug_assert!(parent_tree_nodes.len() <= 2);
+                    let p1 = parent_tree_nodes.first().unwrap_or(HgId::null_id());
+                    let p2 = parent_tree_nodes.get(1).unwrap_or(HgId::null_id());
+                    hg_sha1_digest(content, p1, p2)
+                }
+                SerializationFormat::Git => git_sha1_digest(content, "tree"),
+            }
         }
         struct Executor<'a> {
             store: &'a InnerStore,
@@ -524,19 +534,18 @@ impl TreeManifest {
                 // a list of entries to insert in the local store. For those cases we don't
                 // need to convert to Ephemeral instead only verify the hash.
                 let links = link.mut_ephemeral_links(self.store, &self.path)?;
-                // finalize() is only used for hg format.
-                let format = SerializationFormat::Hg;
-                let mut entry = store::EntryMut::new(format);
+                let format = self.store.format();
+                let mut elements = Vec::with_capacity(links.len());
                 for (component, link) in links.iter_mut() {
                     self.path.push(component.as_path_component());
                     let child_parents = self.parent_trees_for_subdirectory(&active_parents)?;
                     let (hgid, flag) = self.work(link, child_parents)?;
                     self.path.pop();
                     let element = store::Element::new(component.clone(), hgid, flag);
-                    entry.add_element_hg(element);
+                    elements.push(element);
                 }
-                let entry = entry.freeze();
-                let hgid = compute_hgid(&parent_tree_nodes, entry.as_ref());
+                let entry = store::Entry::from_elements(elements, format);
+                let hgid = compute_hgid(&parent_tree_nodes, entry.as_ref(), format);
 
                 let cell = OnceCell::new();
                 // TODO: remove clone
