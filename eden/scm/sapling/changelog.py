@@ -16,6 +16,8 @@ import subprocess
 import textwrap
 from typing import Dict, List, Optional, Tuple, Union
 
+import bindings
+
 from . import encoding, error, gituser, revlog, util
 from .i18n import _
 from .node import bbin, hex, nullid
@@ -237,28 +239,6 @@ def hgcommittext(manifest, files, desc, user, date, extra):
     return text
 
 
-def gitdatestr(dateobj: Union[str, Tuple[int, int]]) -> str:
-    """convert dateobj to git date str used in commits
-
-    >>> util.parsedate('2000-01-01T00:00:00 +0700')
-    (946659600, -25200)
-    >>> gitdatestr('2000-01-01T00:00:00 +0700')
-    '946659600 +0700'
-    >>> gitdatestr('2000-01-01T00:00:00 +0000')
-    '946684800 +0000'
-    """
-    utc, offset = util.parsedate(dateobj)
-    if offset > 0:
-        offsetsign = "-"
-    else:
-        offsetsign = "+"
-        offset = -offset
-    offset = offset // 60
-    offsethour = offset // 60
-    offsetminute = offset % 60
-    return "%d %s%02d%02d" % (utc, offsetsign, offsethour, offsetminute)
-
-
 def gitcommittext(
     tree: bytes,
     parents: List[bytes],
@@ -349,15 +329,22 @@ def gitcommittext(
     if date != authordate and date != committerdate:
         authordate = date
 
-    parent_entries = "".join(f"parent {hex(p)}\n" for p in parents)
-    pre_sig_text = f"""\
-tree {hex(tree)}
-{parent_entries}author {gituser.normalize(user)} {gitdatestr(authordate)}
-committer {gituser.normalize(committer)} {gitdatestr(committerdate)}"""
+    normalized_desc = f"{stripdesc(desc)}\n"
 
-    normalized_desc = stripdesc(desc)
-    text = pre_sig_text + f"\n\n{normalized_desc}\n"
-    text = encodeutf8(text, errors="surrogateescape")
+    # see Rust format-util GitCommitFields for available fields
+    fields = {
+        "tree": tree,
+        "parents": parents,
+        "author": gituser.normalize(user),
+        "date": util.parsedate(authordate),
+        "committer": gituser.normalize(committer),
+        "committer_date": util.parsedate(committerdate),
+        "message": normalized_desc,
+        "extras": extra or {},
+    }
+    to_text = bindings.formatutil.git_commit_fields_to_text
+    text = to_text(fields).encode()
+
     if not gpgkeyid:
         return text
 
@@ -388,83 +375,7 @@ committer {gituser.normalize(committer)} {gitdatestr(committerdate)}"""
             % (gpgkeyid, indented_stderr)
         )
 
-    return _signedgitcommittext(sig_bytes, pre_sig_text, normalized_desc, gpgkeyid)
-
-
-def _signedgitcommittext(
-    sig_bytes: bytes, pre_sig_text: str, normalized_desc: str, gpgkeyid: str
-) -> bytes:
-    r"""produces a signed commit from the intermediate values produced by gitcommittext()
-
-    >>> sig_bytes = (
-    ...     b"-----BEGIN PGP SIGNATURE-----\r\n" +
-    ...     b"\r\n" +
-    ...     b"iQEzBAABCAAdFiEEurYkrcQEDEhXMjb8tXeqdrrlBbEFAmOPpRIACgkQtXeqdrrl\r\n" +
-    ...     b"BbE8hAf/eybgd1jrovZhs8X/SU2UO4rQnekz5D1BpAVjKUIDTfvuVg7sczTyuXvE\r\n" +
-    ...     b"pkuhkeZd2Is0HvSzWa9dD88VECrwQfHjOFe2Ffb7QdVN4811pZ4+lcGcWKKVG9Oq\r\n" +
-    ...     b"uAtXJgXpBf58Vp9x7wgnbqPFlSUTk5vlbZ2TQNyJbT3/YNLiqTECD0MYeLmAlbiI\r\n" +
-    ...     b"tU4hdb6T57ztxy6DL5nk/mfrcO+k4Up+flpGVjm9juWY3jGgszClCLJW0vUH4ToI\r\n" +
-    ...     b"1Cb8ew5c7b0f4oYl9AQgySTN1slO64beedMpakS79Mcv5WFwen0vPBQilX7hEYVC\r\n" +
-    ...     b"DQnndXm8zU6/MhpVjfoLHd9Tzr0YYQ==\r\n" +
-    ...     b"=Equk\r\n" +
-    ...     b"-----END PGP SIGNATURE-----\r\n"
-    ... )
-    >>> pre_sig_text = (
-    ...     'tree deadbeef\n' +
-    ...     'parent deadc0de\n' +
-    ...     'parent baadf00d\n' +
-    ...     'author Alyssa P. Hacker <alyssa@example.com> 946659600 +0700\n' +
-    ...     'committer Alyssa P. Hacker <alyssa@example.com> 946659600 +0700'
-    ... )
-    >>> desc = " HI! \n   another line with leading spaces\n\nsecond line\n\n\n"
-    >>> normalized_desc = stripdesc(desc)
-    >>> gpgkeyid = "B577AA76BAE505B1"
-    >>> signedcommit = _signedgitcommittext(sig_bytes, pre_sig_text, normalized_desc, gpgkeyid)
-    >>> signedcommit == (
-    ...     b'tree deadbeef\n' +
-    ...     b'parent deadc0de\n' +
-    ...     b'parent baadf00d\n' +
-    ...     b'author Alyssa P. Hacker <alyssa@example.com> 946659600 +0700\n' +
-    ...     b'committer Alyssa P. Hacker <alyssa@example.com> 946659600 +0700\n' +
-    ...     b'gpgsig -----BEGIN PGP SIGNATURE-----\n' +
-    ...     b' \n' +
-    ...     b' iQEzBAABCAAdFiEEurYkrcQEDEhXMjb8tXeqdrrlBbEFAmOPpRIACgkQtXeqdrrl\n' +
-    ...     b' BbE8hAf/eybgd1jrovZhs8X/SU2UO4rQnekz5D1BpAVjKUIDTfvuVg7sczTyuXvE\n' +
-    ...     b' pkuhkeZd2Is0HvSzWa9dD88VECrwQfHjOFe2Ffb7QdVN4811pZ4+lcGcWKKVG9Oq\n' +
-    ...     b' uAtXJgXpBf58Vp9x7wgnbqPFlSUTk5vlbZ2TQNyJbT3/YNLiqTECD0MYeLmAlbiI\n' +
-    ...     b' tU4hdb6T57ztxy6DL5nk/mfrcO+k4Up+flpGVjm9juWY3jGgszClCLJW0vUH4ToI\n' +
-    ...     b' 1Cb8ew5c7b0f4oYl9AQgySTN1slO64beedMpakS79Mcv5WFwen0vPBQilX7hEYVC\n' +
-    ...     b' DQnndXm8zU6/MhpVjfoLHd9Tzr0YYQ==\n' +
-    ...     b' =Equk\n' +
-    ...     b' -----END PGP SIGNATURE-----\n'
-    ...     b'\n' +
-    ...     b' HI!\n' +
-    ...     b'   another line with leading spaces\n' +
-    ...     b'\n' +
-    ...     b'second line\n'
-    ... )
-    True
-    """
-    sig = sig_bytes.decode("ascii")
-    if not sig.endswith("\n"):
-        raise error.Abort(
-            _("expected signature to end with a newline but was %s") % sig_bytes
-        )
-
-    # Remove any carriage returns in case `gpg` was used on Windows:
-    # https://github.com/git/git/blob/2e71cbbddd64695d43383c25c7a054ac4ff86882/gpg-interface.c#L985
-    sig = sig.replace("\r\n", "\n")
-
-    # The signature returned by `gpg` contains '\n\n' after '-----BEGIN PGP SIGNATURE-----',
-    # which is a problem because '\n\n' is used to delimit the start of the commit message
-    # in a Git commit object. As a workaround, Git inserts a space after every '\n'
-    # (except the last one) as shown here:
-    # https://github.com/git/git/blob/2e71cbbddd64695d43383c25c7a054ac4ff86882/commit.c#L1059-L1072
-    sig = sig[:-1].replace("\n", "\n ") + "\n"
-
-    signed_text = f"""\
-{pre_sig_text}
-gpgsig {sig}
-{normalized_desc}
-"""
-    return encodeutf8(signed_text, errors="surrogateescape")
+    gpgsig = sig_bytes.replace(b"\r", b"").decode()
+    fields["extras"]["gpgsig"] = gpgsig
+    text = to_text(fields).encode()
+    return text
