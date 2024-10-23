@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt::Write as _;
+
 use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Context as _;
@@ -64,6 +66,46 @@ impl GitCommitFields {
             }
             last_pos = pos + 1;
         }
+        Ok(result)
+    }
+
+    /// Serialize fields to "text".
+    pub fn to_text(&self) -> Result<String> {
+        ensure!(!self.message.is_empty(), "message cannot be empty");
+
+        let len = (1 + self.parents.len()) * (8 + Id20::hex_len())
+            + self.author.len()
+            + self.committer.len()
+            + self.message.len()
+            + 64;
+        let mut result = String::with_capacity(len);
+
+        // tree
+        result.push_str("tree ");
+        result.push_str(&self.tree.to_hex());
+        result.push('\n');
+
+        // parents
+        for p in &self.parents {
+            result.push_str("parent ");
+            result.push_str(&p.to_hex());
+            result.push('\n');
+        }
+
+        // author, committer
+        write_name_date("author", &self.author, self.date, &mut result)?;
+        write_name_date(
+            "committer",
+            &self.committer,
+            self.committer_date,
+            &mut result,
+        )?;
+
+        // message
+        result.push('\n');
+        result.push_str(self.message.trim_matches('\n'));
+        result.push('\n');
+
         Ok(result)
     }
 }
@@ -155,6 +197,29 @@ fn parse_name_date(line: Text) -> Result<(Text, Date)> {
     Ok((name, (date_seconds, tz_seconds)))
 }
 
+fn write_name_date(prefix: &str, name: &str, date: Date, out: &mut String) -> Result<()> {
+    ensure!(!name.is_empty(), "{} cannot be empty", prefix);
+    out.push_str(prefix);
+    out.push(' ');
+    out.push_str(name);
+    out.push(' ');
+    write!(out, "{}", date.0)?;
+    out.push(' ');
+    write_git_tz(date.1, out)?;
+    out.push('\n');
+    Ok(())
+}
+
+fn write_git_tz(tz_seconds: i32, out: &mut String) -> Result<()> {
+    let sign = if tz_seconds <= 0 { '+' } else { '-' };
+    out.push(sign);
+    let hh = tz_seconds.abs() / 3600;
+    write!(out, "{:02}", hh)?;
+    let mm = (tz_seconds.abs() % 3600) / 60;
+    write!(out, "{:02}", mm)?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -199,5 +264,8 @@ Signed-off-by: Alice <a@example.com>
             fields.root_tree().unwrap().to_hex(),
             "98edb6a9c7a48cae7a1ed9a39600952547daaebb"
         );
+
+        let text2 = fields.fields().unwrap().to_text().unwrap();
+        assert_eq!(text2, text);
     }
 }
