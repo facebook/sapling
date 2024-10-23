@@ -49,7 +49,7 @@ python_library(
         "//configerator/structs/qe2/service:qe2_servicev2-py3-clients",
         "//configerator/structs/qe2/service:qe2_servicev2-py3-types",
         "//ondemand:paths",
-        "//servicerouter/client/py3:_init",
+        "//servicerouter/client/py3:base",
         "//servicerouter/client/py3:get_client",
     ],
 )
