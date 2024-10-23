@@ -20,6 +20,8 @@ use std::time::SystemTime;
 use clientinfo::CLIENT_INFO_HEADER;
 use curl::easy::HttpVersion;
 use curl::easy::List;
+use curl_sys::CURLoption;
+use curl_sys::CURLOPTTYPE_LONG;
 use http::header;
 use lru_cache::LruCache;
 use maplit::hashmap;
@@ -751,18 +753,28 @@ impl Request {
             None => {}
         }
 
-        #[cfg(windows)]
+        // Added in curl 7.54.0, but not exposed by curl_sys for some reason.
+        const CURLOPT_SUPPRESS_CONNECT_HEADERS: CURLoption = CURLOPTTYPE_LONG + 265;
+
         unsafe {
-            // Call directly since curl crate doesn't expose CURLSSLOPT_NATIVE_CA option.
-            let rc = curl_sys::curl_easy_setopt(
-                easy.raw(),
-                curl_sys::CURLOPT_SSL_OPTIONS,
-                // Windows enables ssl revocation checking by default, which doesn't work inside the
-                // datacenter.
-                curl_sys::CURLSSLOPT_NO_REVOKE |
-                // When using openssl, this imports CAs from Windows cert store.
-                curl_sys::CURLSSLOPT_NATIVE_CA,
-            );
+            // Tell curl to suppress CONNECT response from proxy. The proxy response is
+            // difficult to handle correctly since you receive two sets of status
+            // codes/headers, have have to "know" it is coming. See
+            // https://curl.se/libcurl/c/CURLOPT_SUPPRESS_CONNECT_HEADERS.html.
+            let mut rc = curl_sys::curl_easy_setopt(easy.raw(), CURLOPT_SUPPRESS_CONNECT_HEADERS);
+
+            if rc == curl_sys::CURLE_OK && cfg!(windows) {
+                rc = curl_sys::curl_easy_setopt(
+                    easy.raw(),
+                    curl_sys::CURLOPT_SSL_OPTIONS,
+                    // Windows enables ssl revocation checking by default, which doesn't work inside the
+                    // datacenter.
+                    curl_sys::CURLSSLOPT_NO_REVOKE |
+                    // When using openssl, this imports CAs from Windows cert store.
+                    curl_sys::CURLSSLOPT_NATIVE_CA,
+                );
+            }
+
             if rc == curl_sys::CURLE_OK {
                 Ok(())
             } else {
