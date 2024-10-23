@@ -135,6 +135,10 @@ class PrjfsDispatcherImpl : public PrjfsDispatcher {
       std::vector<RelativePath> pathParts,
       const size_t solvedLen,
       const size_t remainingRecursionDepth);
+
+  int handleRedirectedPathPreDeletion(
+      AbsolutePathPiece symlinkPath,
+      std::string targetPath);
 };
 
 } // namespace facebook::eden

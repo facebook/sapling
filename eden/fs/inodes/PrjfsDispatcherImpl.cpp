@@ -6,8 +6,8 @@
  */
 
 #ifdef _WIN32
-
 #include "eden/fs/inodes/PrjfsDispatcherImpl.h"
+#include <filesystem>
 
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
@@ -1345,6 +1345,28 @@ ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::preDirDelete(
     return makeImmediateFuture<folly::Unit>(
         std::system_error(EPERM, std::generic_category()));
   }
+
+  auto redirection_targets =
+      mount_->getCheckoutConfig()->getLatestRedirectionTargets();
+  if (redirection_targets->find(path.asString()) !=
+      redirection_targets->end()) {
+    auto full_path = mount_->getPath() + path;
+    // If it is a symlink then clear its content, else if directory/file then
+    // let post delete notification handle it.
+    if (std::filesystem::is_symlink(full_path.c_str())) {
+      XLOG(INFO)
+          << "Redirected path '" << full_path.asString()
+          << "' is directed to be deleted. Not actually deleting the directory, instead deleting its content.";
+      handleRedirectedPathPreDeletion(
+          full_path, redirection_targets->at(path.asString()));
+
+      // Returning error will error out delete operation leading to not
+      // executing actual delete operation and will not trigger post delete
+      // notification.
+      return makeImmediateFuture<folly::Unit>(
+          std::system_error(EPERM, std::generic_category()));
+    }
+  }
   return folly::unit;
 }
 
@@ -1361,6 +1383,47 @@ ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::matchEdenViewOfFileToFS(
     const ObjectFetchContextPtr& context) {
   return fileNotification(
       *mount_, std::move(path), context, /*dfatal_error=*/false);
+}
+
+/**
+ * This function is called when a redirected path is being deleted. Instead of
+ * deleting the path, it will delete the content of symlink's target.
+ */
+int PrjfsDispatcherImpl::handleRedirectedPathPreDeletion(
+    AbsolutePathPiece symlinkPath,
+    std::string targetPath) {
+  auto symlinkTarget = std::filesystem::read_symlink(symlinkPath.asString());
+  if (symlinkTarget != targetPath) {
+    XLOG(ERR) << "Symlink target '" << symlinkTarget
+              << "' is not same as config target '" << targetPath
+              << "'. Overriding with the config target.";
+    // Remove the symlink and create a new symlink to the config target.
+    try {
+      std::filesystem::remove(symlinkPath.asString());
+      XLOG(DBG2) << "Symlink deletion successful.";
+    } catch (const std::filesystem::filesystem_error& e) {
+      XLOG(INFO) << "Error deleting symlink: " << e.what();
+      return 1;
+    }
+  }
+
+  if (std::filesystem::exists(targetPath.c_str())) {
+    XLOG(INFO) << "Symlink target '" << targetPath.c_str()
+               << "' already exists. Trying to delete its content.";
+    try {
+      std::filesystem::remove_all(targetPath.c_str());
+      std::filesystem::create_directory(targetPath.c_str());
+      XLOG(DBG2) << "Symlink target contents deleted successfully.";
+    } catch (const std::filesystem::filesystem_error& e) {
+      XLOG(INFO) << "Error deleting symlink target contents: " << e.what();
+      return 1;
+    }
+  } else {
+    // Create a symlink to the config target.
+    std::filesystem::create_symlink(targetPath.c_str(), symlinkPath.asString());
+  }
+
+  return 0;
 }
 
 ImmediateFuture<folly::Unit>
