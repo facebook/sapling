@@ -93,6 +93,7 @@ export enum CodePatchSuggestionStatus {
 
 export type SuggestedChange = {
   id?: string;
+  codePatchSuggestionID?: string;
   status?: CodePatchSuggestionStatus;
   patch?: ParsedDiff;
   oldPath?: string;
