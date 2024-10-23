@@ -197,7 +197,9 @@ impl FileStore {
             );
             let _enter = span.enter();
 
-            if fetch_local || (fetch_remote && cas_client.is_some()) {
+            let fetch_from_cas = fetch_remote && cas_client.is_some();
+
+            if fetch_local || fetch_from_cas {
                 if let Some(ref aux_cache) = aux_cache {
                     state.fetch_aux_indexedlog(
                         aux_cache,
@@ -207,7 +209,38 @@ impl FileStore {
                 }
             }
 
-            if fetch_local {
+            if fetch_from_cas {
+                // When fetching from CAS, first fetch from local repo to avoid network
+                // request for data that is only available locally (e.g. localy
+                // committed).
+                if fetch_local {
+                    if let Some(ref indexedlog_local) = indexedlog_local {
+                        state.fetch_indexedlog(indexedlog_local, StoreLocation::Local);
+                    }
+
+                    if let Some(ref lfs_local) = lfs_local {
+                        state.fetch_lfs(lfs_local, StoreLocation::Local);
+                    }
+                }
+
+                // Then fetch from CAS since we essentially always expect a hit.
+                if let (Some(cas_client), true) = (&cas_client, fetch_remote) {
+                    state.fetch_cas(cas_client);
+                }
+
+                // Finally fetch from local cache (shouldn't normally get here).
+                if fetch_local {
+                    if let Some(ref indexedlog_cache) = indexedlog_cache {
+                        state.fetch_indexedlog(indexedlog_cache, StoreLocation::Cache);
+                    }
+
+                    if let Some(ref lfs_cache) = lfs_cache {
+                        state.fetch_lfs(lfs_cache, StoreLocation::Cache);
+                    }
+                }
+            } else if fetch_local {
+                // If not using CAS, fetch from cache first then local (hit rate in cache
+                // is typically much higher).
                 if let Some(ref indexedlog_cache) = indexedlog_cache {
                     state.fetch_indexedlog(indexedlog_cache, StoreLocation::Cache);
                 }
@@ -234,10 +267,6 @@ impl FileStore {
             }
 
             if fetch_remote {
-                if let Some(cas_client) = &cas_client {
-                    state.fetch_cas(cas_client);
-                }
-
                 if let Some(ref edenapi) = edenapi {
                     state.fetch_edenapi(
                         edenapi,

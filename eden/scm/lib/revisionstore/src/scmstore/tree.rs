@@ -182,73 +182,9 @@ impl TreeStore {
         let store_metrics = self.metrics.clone();
 
         let process_func = move || -> Result<()> {
-            if fetch_local {
-                for (log, location) in [
-                    (&indexedlog_cache, StoreLocation::Cache),
-                    (&indexedlog_local, StoreLocation::Local),
-                ] {
-                    if let Some(log) = log {
-                        let start_time = Instant::now();
+            let fetch_cas = fetch_remote && cas_client.is_some();
 
-                        let pending: Vec<_> = state
-                            .common
-                            .pending(TreeAttributes::CONTENT, false)
-                            .map(|(key, _attrs)| key.clone())
-                            .collect();
-
-                        let store_metrics = state.metrics.indexedlog.store(location);
-                        let fetch_count = pending.len();
-
-                        store_metrics.fetch(fetch_count);
-
-                        let mut found_count: usize = 0;
-                        for key in pending.into_iter() {
-                            if let Some(entry) = log.get_entry(key)? {
-                                tracing::trace!("{:?} found in {:?}", entry.key(), location);
-                                state
-                                    .common
-                                    .found(entry.key().clone(), LazyTree::IndexedLog(entry).into());
-                                found_count += 1;
-                            }
-                        }
-
-                        store_metrics.hit(found_count);
-                        store_metrics.miss(fetch_count - found_count);
-                        let _ = store_metrics.time_from_duration(start_time.elapsed());
-                    }
-                }
-
-                for (name, log) in [
-                    ("cache", &historystore_cache),
-                    ("local", &historystore_local),
-                ] {
-                    if let Some(log) = log {
-                        let pending: Vec<_> = state
-                            .common
-                            .pending(TreeAttributes::PARENTS, false)
-                            .map(|(key, _attrs)| key.clone())
-                            .collect();
-                        for key in pending.into_iter() {
-                            if let Some(entry) = log.get_node_info(&key)? {
-                                tracing::trace!("{:?} found parents in {name}", key);
-                                state.common.found(
-                                    key,
-                                    StoreTree {
-                                        content: None,
-                                        parents: Some(Parents::new(
-                                            entry.parents[0].hgid,
-                                            entry.parents[1].hgid,
-                                        )),
-                                        aux_data: None,
-                                    },
-                                );
-                            }
-                        }
-                    }
-                }
-            }
-
-            if fetch_local || (fetch_remote && cas_client.is_some()) {
+            if fetch_local || fetch_cas {
                 if let Some(tree_aux_store) = &tree_aux_store {
                     let mut wants_aux = TreeAttributes::AUX_DATA;
                     if cas_client.is_some() {
@@ -280,11 +216,99 @@ impl TreeStore {
                 }
             }
 
-            if fetch_remote {
+            let process_local = |state: &mut FetchState,
+                                 log: &Option<Arc<IndexedLogHgIdDataStore>>,
+                                 location|
+             -> Result<()> {
+                if let Some(log) = log {
+                    let start_time = Instant::now();
+
+                    let pending: Vec<_> = state
+                        .common
+                        .pending(TreeAttributes::CONTENT, false)
+                        .map(|(key, _attrs)| key.clone())
+                        .collect();
+
+                    let store_metrics = state.metrics.indexedlog.store(location);
+                    let fetch_count = pending.len();
+
+                    store_metrics.fetch(fetch_count);
+
+                    let mut found_count: usize = 0;
+                    for key in pending.into_iter() {
+                        if let Some(entry) = log.get_entry(key)? {
+                            tracing::trace!("{:?} found in {:?}", entry.key(), location);
+                            state
+                                .common
+                                .found(entry.key().clone(), LazyTree::IndexedLog(entry).into());
+                            found_count += 1;
+                        }
+                    }
+
+                    store_metrics.hit(found_count);
+                    store_metrics.miss(fetch_count - found_count);
+                    let _ = store_metrics.time_from_duration(start_time.elapsed());
+                }
+
+                Ok(())
+            };
+
+            if fetch_cas {
+                // When fetching from CAS, first fetch from local repo to avoid network
+                // request for data that is only available locally (e.g. localy
+                // committed).
+                if fetch_local {
+                    process_local(&mut state, &indexedlog_local, StoreLocation::Local)?;
+                }
+
+                // Then fetch from CAS since we essentially always expect a hit.
                 if let Some(cas_client) = &cas_client {
                     state.fetch_cas(cas_client, aux_cache.as_deref(), tree_aux_store.as_deref());
                 }
 
+                // Finally fetch from local cache (shouldn't normally get here).
+                if fetch_local {
+                    process_local(&mut state, &indexedlog_cache, StoreLocation::Cache)?;
+                }
+            } else if fetch_local {
+                // If not using CAS, fetch from cache first then local (hit rate in cache
+                // is typically much higher).
+                process_local(&mut state, &indexedlog_cache, StoreLocation::Cache)?;
+                process_local(&mut state, &indexedlog_local, StoreLocation::Local)?;
+            }
+
+            if fetch_local {
+                for (name, log) in [
+                    ("cache", &historystore_cache),
+                    ("local", &historystore_local),
+                ] {
+                    if let Some(log) = log {
+                        let pending: Vec<_> = state
+                            .common
+                            .pending(TreeAttributes::PARENTS, false)
+                            .map(|(key, _attrs)| key.clone())
+                            .collect();
+                        for key in pending.into_iter() {
+                            if let Some(entry) = log.get_node_info(&key)? {
+                                tracing::trace!("{:?} found parents in {name}", key);
+                                state.common.found(
+                                    key,
+                                    StoreTree {
+                                        content: None,
+                                        parents: Some(Parents::new(
+                                            entry.parents[0].hgid,
+                                            entry.parents[1].hgid,
+                                        )),
+                                        aux_data: None,
+                                    },
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+
+            if fetch_remote {
                 if let Some(edenapi) = &edenapi {
                     let attributes = edenapi_types::TreeAttributes {
                         manifest_blob: true,
