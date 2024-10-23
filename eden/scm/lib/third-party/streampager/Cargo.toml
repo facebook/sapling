@@ -13,7 +13,7 @@ categories = ["command-line-utilities", "text-processing"]
 [dependencies]
 bit-set = "0.5"
 dirs = "2.0"
-enum_dispatch = "0.3.5"
+enum_dispatch = "0.3.13"
 indexmap = { version = "2.2.6", features = ["arbitrary", "rayon", "serde"] }
 lazy_static = "1.4"
 lru = "0.12.3"
