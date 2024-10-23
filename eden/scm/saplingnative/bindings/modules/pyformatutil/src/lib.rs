@@ -12,6 +12,8 @@ use cpython_ext::convert::Serde;
 use cpython_ext::ResultPyErrExt;
 use format_util::commit_text_to_fields;
 use format_util::CommitFields as NativeCommitFields;
+use format_util::GitCommitFields;
+use format_util::HgCommitFields;
 use minibytes::Text;
 use storemodel::SerializationFormat;
 use types::Id20;
@@ -19,6 +21,16 @@ use types::Id20;
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "formatutil"].join(".");
     let m = PyModule::new(py, &name)?;
+    m.add(
+        py,
+        "hg_commit_fields_to_text",
+        py_fn!(py, hg_commit_fields_to_text(fields: Serde<HgCommitFields>)),
+    )?;
+    m.add(
+        py,
+        "git_commit_fields_to_text",
+        py_fn!(py, git_commit_fields_to_text(fields: Serde<GitCommitFields>)),
+    )?;
     m.add_class::<CommitFields>(py)?;
     Ok(m)
 }
@@ -111,3 +123,11 @@ py_class!(pub class CommitFields |py| {
         Self::create_instance(py, inner)
     }
 });
+
+fn hg_commit_fields_to_text(py: Python, fields: Serde<HgCommitFields>) -> PyResult<String> {
+    fields.0.to_text().map_pyerr(py)
+}
+
+fn git_commit_fields_to_text(py: Python, fields: Serde<GitCommitFields>) -> PyResult<String> {
+    fields.0.to_text().map_pyerr(py)
+}
