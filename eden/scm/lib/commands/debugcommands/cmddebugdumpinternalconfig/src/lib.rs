@@ -63,6 +63,9 @@ pub fn run(ctx: ReqCtx<DebugDumpConfigOpts>) -> Result<u8> {
             username,
             config.get_opt("auth_proxy", "unix_socket_path")?,
             true,
+            config
+                .get("experimental", "dynamic-config-domain-override")
+                .and_then(|d| configloader::fb::Domain::from_str(d.as_ref())),
         )?;
 
         if ctx.opts.args.is_empty() {

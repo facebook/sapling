@@ -20,4 +20,5 @@ pub(crate) mod thrift_types;
 
 mod mode;
 
+pub use internalconfig::Domain;
 pub use mode::FbConfigMode;

@@ -55,6 +55,9 @@ pub fn run(ctx: ReqCtx<DebugDynamicConfigOpts>, repo: Option<&Repo>) -> Result<u
             // We are explicitly requesting a config refresh - do not allow using baked in
             // remote config snapshot in case remote fetch fails.
             false,
+            config
+                .get("experimental", "dynamic-config-domain-override")
+                .and_then(|d| configloader::fb::Domain::from_str(d.as_ref())),
         )?;
     }
     #[cfg(not(feature = "fb"))]
