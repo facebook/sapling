@@ -7,7 +7,9 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.86"
+memchr = "2.5.0"
 minibytes = { version = "0.1.0", path = "../../minibytes" }
+once_cell = "1.12"
 sha1 = "0.10.5"
 storemodel = { version = "0.1.0", path = "../../storemodel" }
 types = { version = "0.1.0", path = "../../types" }
