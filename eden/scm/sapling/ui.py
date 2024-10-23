@@ -409,6 +409,11 @@ class ui:
         ... except Exception as e: print(e)
         foo.invalid is not a valid womble ('somevalue')
         """
+        if convert == bool:
+            self.develwarn(
+                "ui.configwith(bool, ...) is wrong - use ui.configbool(...) instead"
+            )
+
         return self._uiconfig.configwith(convert, section, name, default, desc)
 
     def configint(self, section, name, default=_unset):

@@ -239,14 +239,14 @@ class mononokepeer(stdiopeer.stdiopeer):
         self._host = maybestripsquarebrackets(u.host)
         self._port = u.port or 443
         self._path = u.path
-        self._compression = ui.configwith(bool, "mononokepeer", "compression")
+        self._compression = ui.configbool("mononokepeer", "compression")
         self._sockettimeout = ui.configwith(float, "mononokepeer", "sockettimeout")
         self._unix_socket_proxy = ui.config("auth_proxy", "unix_socket_path")
         self._auth_proxy_http = ui.config("auth_proxy", "http_proxy")
         self._fwdproxy_host = ui.config("http_proxy", "host")
         self._fwdproxy_port = ui.configint("http_proxy", "port")
         self._confheaders = ui.config("http", "extra_headers_json")
-        self._verbose = ui.configwith(bool, "http", "verbose")
+        self._verbose = ui.configbool("http", "verbose")
         try:
             self._cats = cats.getcats(ui._uiconfig._rcfg, "cats", raise_if_missing=True)
         except Exception as e:
