@@ -18,6 +18,7 @@ use async_runtime::block_unless_interrupted as block_on;
 use clidispatch::abort;
 use clidispatch::abort_if;
 use clidispatch::errors;
+use clidispatch::errors::triage_error;
 use clidispatch::fallback;
 use clidispatch::ReqCtx;
 use clidispatch::TermLogger;
@@ -579,60 +580,73 @@ fn clone_metadata(
         &PinnedConfig::from_cli_opts(&ctx.global_opts().config, &[]),
     )?;
 
-    let edenapi = repo.eden_api()?;
+    let res = (|| {
+        let edenapi = repo.eden_api()?;
 
-    let capabilities: Vec<String> =
-        block_on(edenapi.capabilities())?.map_err(|e| e.tag_network())?;
+        let capabilities: Vec<String> =
+            block_on(edenapi.capabilities())?.map_err(|e| e.tag_network())?;
 
-    let segmented_changelog = capabilities
-        .iter()
-        .any(|cap| cap == SEGMENTED_CHANGELOG_CAPABILITY);
-    let commit_graph_segments = capabilities
-        .iter()
-        .any(|cap| cap == COMMIT_GRAPH_SEGMENTS_CAPABILITY)
-        && repo
-            .config()
-            .get_or_default::<bool>("clone", "use-commit-graph")?;
+        let segmented_changelog = capabilities
+            .iter()
+            .any(|cap| cap == SEGMENTED_CHANGELOG_CAPABILITY);
+        let commit_graph_segments = capabilities
+            .iter()
+            .any(|cap| cap == COMMIT_GRAPH_SEGMENTS_CAPABILITY)
+            && repo
+                .config()
+                .get_or_default::<bool>("clone", "use-commit-graph")?;
 
-    let mut repo_needs_reload = false;
+        let mut repo_needs_reload = false;
 
-    if segmented_changelog || commit_graph_segments {
-        repo.add_store_requirement("lazychangelog")?;
+        if segmented_changelog || commit_graph_segments {
+            repo.add_store_requirement("lazychangelog")?;
 
-        let bookmark_names: Vec<String> = get_selective_bookmarks(&repo)?;
-        let metalog = repo.metalog()?;
-        let commits = repo.dag_commits()?;
-        tracing::trace!("fetching lazy commit data and bookmarks");
-        let bookmark_ids = exchange::clone(
-            repo.config(),
-            edenapi,
-            &mut metalog.write(),
-            &mut commits.write(),
-            bookmark_names,
-        )?;
-        logger.verbose(|| format!("Pulled bookmarks {:?}", bookmark_ids));
+            let bookmark_names: Vec<String> = get_selective_bookmarks(&repo)?;
+            let metalog = repo.metalog()?;
+            let commits = repo.dag_commits()?;
+            tracing::trace!("fetching lazy commit data and bookmarks");
+            let bookmark_ids = exchange::clone(
+                repo.config(),
+                edenapi,
+                &mut metalog.write(),
+                &mut commits.write(),
+                bookmark_names,
+            )?;
+            logger.verbose(|| format!("Pulled bookmarks {:?}", bookmark_ids));
 
-        if repo
-            .config()
-            .get_or_default("devel", "segmented-changelog-rev-compat")?
-        {
-            // "lazytext" (vs "lazy") is required for rev compat mode, so let's
-            // migrate automatically. This migration only works for tests.
-            migrate_to_lazytext(ctx, repo.config(), repo.path())?;
+            if repo
+                .config()
+                .get_or_default("devel", "segmented-changelog-rev-compat")?
+            {
+                // "lazytext" (vs "lazy") is required for rev compat mode, so let's
+                // migrate automatically. This migration only works for tests.
+                migrate_to_lazytext(ctx, repo.config(), repo.path())?;
+                repo_needs_reload = true;
+            }
+        } else {
+            revlog_clone(repo.config(), logger, ctx, destination)?;
+            // reload the repo to pick up any changes written out by the revlog clone
+            // such as metalog remotenames writes
             repo_needs_reload = true;
         }
-    } else {
-        revlog_clone(repo.config(), logger, ctx, destination)?;
-        // reload the repo to pick up any changes written out by the revlog clone
-        // such as metalog remotenames writes
-        repo_needs_reload = true;
-    }
 
-    if repo_needs_reload {
-        repo = Repo::load(
-            destination,
-            &PinnedConfig::from_cli_opts(&ctx.global_opts().config, &ctx.global_opts().configfile),
-        )?;
+        if repo_needs_reload {
+            repo = Repo::load(
+                destination,
+                &PinnedConfig::from_cli_opts(
+                    &ctx.global_opts().config,
+                    &ctx.global_opts().configfile,
+                ),
+            )?;
+        }
+
+        Ok(())
+    })();
+
+    if let Err(err) = res {
+        // Triage error using the new repo's config. This runs the network doctor against the
+        // host we actually attempted cloning against.
+        return Err(triage_error(repo.config(), err, Some("clone")));
     }
 
     ::fail::fail_point!("run::clone", |_| {
