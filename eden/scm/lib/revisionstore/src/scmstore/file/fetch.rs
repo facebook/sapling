@@ -826,6 +826,7 @@ impl FetchState {
                 }
                 Err(err) => {
                     tracing::error!(?err, "overall CAS error");
+                    tracing::error!(target: "cas", ?err, "CAS error fetching files");
 
                     // Don't propagate CAS error - we want to fall back to SLAPI.
                     reqs += 1;
