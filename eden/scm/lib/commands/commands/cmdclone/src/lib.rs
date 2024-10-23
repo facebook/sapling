@@ -89,6 +89,9 @@ define_flags! {
         /// location of the backing repo to be used or created (EXPERIMENTAL)
         eden_backing_repo: String,
 
+        /// configure repo to run against AWS (EXPERIMENTAL)
+        aws: bool,
+
         #[arg]
         source: String,
 
@@ -531,6 +534,10 @@ fn clone_metadata(
                 repo_config_file_content.push_str(&format!("\n[{section}]\n{name} = {value}\n"));
             }
         }
+    }
+
+    if ctx.opts.aws {
+        repo_config_file_content.push_str("\n[experimental]\ndynamic-config-domain-override=aws\n");
     }
 
     let eager_format: bool = config.get_or_default("format", "use-eager-repo")?;
