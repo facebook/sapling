@@ -23,10 +23,12 @@ use storemodel::TreeItemFlag;
 use storemodel::TreeStore as NativeTreeStore;
 use types::fetch_mode::FetchMode;
 use types::Id20;
-use types::Key;
 use types::PathComponent;
 use types::PathComponentBuf;
 use types::RepoPath;
+mod key;
+use key::CompactKey;
+use key::IntoKeys as _;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "storemodel"].join(".");
@@ -50,9 +52,9 @@ py_class!(pub class KeyStore |py| {
     data inner: Arc<dyn NativeKeyStore>;
 
     /// get_content_iter(keys, fetch_mode = (AllowRemote)) -> Iterator[Tuple[Key, bytes]]
-    def get_content_iter(&self, keys: Serde<Vec<Key>>, fetch_mode: Serde<FetchMode> = Serde(FetchMode::AllowRemote)) -> PyResult<PyIter> {
+    def get_content_iter(&self, keys: Serde<Vec<CompactKey>>, fetch_mode: Serde<FetchMode> = Serde(FetchMode::AllowRemote)) -> PyResult<PyIter> {
         let inner = self.inner(py);
-        let iter = inner.get_content_iter(keys.0, fetch_mode.0).map_pyerr(py)?;
+        let iter = inner.get_content_iter(keys.0.into_keys(), fetch_mode.0).map_pyerr(py)?;
         let iter = PyIter::new(py, iter)?;
         Ok(iter)
     }
@@ -74,9 +76,9 @@ py_class!(pub class KeyStore |py| {
     }
 
     /// prefetch(keys)
-    def prefetch(&self, keys: Serde<Vec<Key>>) -> PyResult<PyNone> {
+    def prefetch(&self, keys: Serde<Vec<CompactKey>>) -> PyResult<PyNone> {
         let inner = self.inner(py);
-        py.allow_threads(|| inner.prefetch(keys.0)).map_pyerr(py)?;
+        py.allow_threads(|| inner.prefetch(keys.0.into_keys())).map_pyerr(py)?;
         Ok(PyNone)
     }
 
@@ -113,9 +115,9 @@ py_class!(pub class FileStore |py| {
     data inner: Arc<dyn NativeFileStore>;
 
     /// get_rename_iter(keys) -> Iteratable[Tuple[Key, Key]]
-    def get_rename_iter(&self, keys: Serde<Vec<Key>>) -> PyResult<PyIter> {
+    def get_rename_iter(&self, keys: Serde<Vec<CompactKey>>) -> PyResult<PyIter> {
         let inner = self.inner(py);
-        let iter = inner.get_rename_iter(keys.0).map_pyerr(py)?;
+        let iter = inner.get_rename_iter(keys.0.into_keys()).map_pyerr(py)?;
         let iter = PyIter::new(py, iter)?;
         Ok(iter)
     }
@@ -149,9 +151,9 @@ py_class!(pub class FileStore |py| {
 
     /// Upload LFS files specified by the keys.
     /// This is called before push.
-    def upload_lfs(&self, keys: Serde<Vec<Key>>) -> PyResult<PyNone> {
+    def upload_lfs(&self, keys: Serde<Vec<CompactKey>>) -> PyResult<PyNone> {
         let inner = self.inner(py);
-        py.allow_threads(|| inner.upload_lfs(keys.0)).map_pyerr(py)?;
+        py.allow_threads(|| inner.upload_lfs(keys.0.into_keys())).map_pyerr(py)?;
         Ok(PyNone)
     }
 
@@ -219,18 +221,18 @@ py_class!(pub class TreeStore |py| {
     }
 
     /// get_remote_tree_iter(keys) -> Iterator[Tuple[Key, TreeEntry]]
-    def get_remote_tree_iter(&self, keys: Serde<Vec<Key>>) -> PyResult<PyIter> {
+    def get_remote_tree_iter(&self, keys: Serde<Vec<CompactKey>>) -> PyResult<PyIter> {
         let inner = self.inner(py);
-        let iter = inner.get_remote_tree_iter(keys.0).map_pyerr(py)?;
+        let iter = inner.get_remote_tree_iter(keys.0.into_keys()).map_pyerr(py)?;
         PyIter::new_custom(py, iter, |py, (key, entry)| {
             Ok((Serde(key), TreeEntry::create_instance(py, entry)?).to_py_object(py).into_object())
         })
     }
 
     /// get_tree_iter(keys, fetch_mode) -> Iterator[Tuple[Key, TreeEntry]]
-    def get_tree_iter(&self, keys: Serde<Vec<Key>>, fetch_mode: Serde<FetchMode> = Serde(FetchMode::AllowRemote)) -> PyResult<PyIter> {
+    def get_tree_iter(&self, keys: Serde<Vec<CompactKey>>, fetch_mode: Serde<FetchMode> = Serde(FetchMode::AllowRemote)) -> PyResult<PyIter> {
         let inner = self.inner(py);
-        let iter = inner.get_tree_iter(keys.0, fetch_mode.0).map_pyerr(py)?;
+        let iter = inner.get_tree_iter(keys.0.into_keys(), fetch_mode.0).map_pyerr(py)?;
         PyIter::new_custom(py, iter, |py, (key, entry)| {
             Ok((Serde(key), TreeEntry::create_instance(py, entry)?).to_py_object(py).into_object())
         })

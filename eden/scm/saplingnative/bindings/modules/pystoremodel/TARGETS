@@ -20,6 +20,7 @@ rust_python_library(
     },
     crate_root = "src/lib.rs",
     deps = [
+        "fbsource//third-party/rust:serde",
         "//eden/scm/lib/cpython-ext:cpython-ext",
         "//eden/scm/lib/storemodel:storemodel",
         "//eden/scm/lib/types:types",
