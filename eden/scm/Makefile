@@ -68,7 +68,7 @@ COMPILERFLAG_tmp_${COMPILER} ?= -c $(COMPILER)
 COMPILERFLAG=${COMPILERFLAG_tmp_${COMPILER}}
 
 MAKE_PID := $(shell echo $$PPID)
-JOBS := $(shell ps T | sed -n 's%.*$(MAKE_PID).*$(MAKE).* \(-j\|--jobs=\) *\([0-9][0-9]*\).*%\2%p')
+JOBS := $(shell ps T | sed -n -Ee 's%.*$(MAKE_PID).*$(MAKE).* (-j|--jobs=) *([0-9][0-9]*).*%\2%p')
 
 # Mac Big Sur doesn't find the standard library without this.
 export SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
@@ -184,37 +184,47 @@ install-getdeps:
 		cd "$(PREFIX)/bin" && ln -f "$(SL_BIN_NAME)" "$(HG_BIN_NAME)"
 
 # Exclusions for OSS getdeps cli tests.  Newline separated
+# test-casecollision.t: flaky on github CI, intermittent FATAL: exception not rethrown
 # test-cats.t: internal crpyto token test
 # test-check-execute.t: fails on CI, passes locally on ubuntu-22.04
 # test-clone-per-repo-config.t: fails in oss, looks like depends on fb hgrc.dynamic
 # test-clone-resume.t: fails on CI, passes locally on ubuntu-22.04
 # test-commitcloud-sync.t: flaky Last Sync Version on line 812, flips beteen 17 and 16
 # test-config-precedence.t:  output mismatch: DEBUG configloader::hg: spawn ["false"] because * (glob)
+# test-copytrace-heuristics.t:  flaky on github CI, intermittent core dump
 # test-dynamicconfig-unicode.t: output mismatch: cat: .hg/hgrc.dynamic: $ENOENT$
 # test-debugrefreshconfig.t: assumes an internal config location
+# test-fb-ext-copytrace-amend.t: flaky on github CI, intermittent core dump
 # test-fb-ext-fastlog.t: timesout, maybe due to internal endpoint assumptions
 # test-fb-ext-sampling.t: timeout
 # test-fb-ext-smartlog.t: output mismatch
 # test-help.t: help is different vs internal build
+# test-histedit-fold.t: flaky on github CI, intermittent core dump
 # test-include-fail.t: fails on CI, passes locally on ubuntu-22.04
+# test-issue586.t: flaky on github CI, intermittent FATAL: exception not rethrown
 # test-matcher-lots-of-globs.t: fails on CI, passes locally on ubuntu-22.04 (needs ~40GiB RAM)
 # test-network-doctor.t: times out
 # test-rust-checkout.t: fails on CI, passes locally on ubuntu-22.04
 # test-smartlog-interactive.t: smartlog format is different causing output mismatch
 # test-smartlog-interactive-highlighting.t: smartlog format is different causing output mismatch
-GETDEPS_TEST_EXCLUSION_LIST := test-cats.t \
+GETDEPS_TEST_EXCLUSION_LIST := test-casecollision.t \
+	test-cats.t \
 	test-check-execute.t \
 	test-clone-per-repo-config.t \
 	test-clone-resume.t \
 	test-commitcloud-sync.t \
 	test-config-precedence.t \
+	test-copytrace-heuristics.t \
 	test-dynamicconfig-unicode.t \
 	test-debugrefreshconfig.t \
+	test-fb-ext-copytrace-amend.t \
 	test-fb-ext-fastlog.t \
 	test-fb-ext-sampling.t \
 	test-fb-ext-smartlog.t \
 	test-help.t \
+	test-histedit-fold.t \
 	test-include-fail.t \
+	test-issue586.t \
 	test-matcher-lots-of-globs.t \
 	test-network-doctor.t \
 	test-rust-checkout.t \
@@ -259,7 +269,6 @@ test-getdeps:
 		fi; \
 		$$PYTHON_SYS_EXECUTABLE run-tests.py -j $(JOBS) --getdeps-build --with-hg="$(PREFIX)/bin/$(HGNAME)" $$GETDEPS_TEST_FILTER; \
 		status=$$?; \
-		# stop if all good \
 		if [ $$status = 0 ]; then echo "passed on try $$try"; exit 0; fi; \
 	done; \
 	exit $$status
