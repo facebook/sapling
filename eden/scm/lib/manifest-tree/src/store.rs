@@ -6,6 +6,7 @@
  */
 
 use std::cmp::Ordering;
+use std::ops::Deref;
 use std::sync::Arc;
 
 use anyhow::format_err;
@@ -74,6 +75,14 @@ impl InnerStore {
             }
         )
         .in_scope(|| self.tree_store.prefetch(keys))
+    }
+}
+
+impl Deref for InnerStore {
+    type Target = dyn TreeStore;
+
+    fn deref(&self) -> &Self::Target {
+        self.tree_store.as_ref()
     }
 }
 

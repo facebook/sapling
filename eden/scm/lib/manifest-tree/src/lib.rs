@@ -267,12 +267,6 @@ impl Manifest for TreeManifest {
             cursor: &'c mut Link,
             format: SerializationFormat,
         ) -> Result<(HgId, store::Flag)> {
-            #[cfg(not(test))]
-            assert_eq!(
-                format,
-                SerializationFormat::Git,
-                "flush() cannot be used with hg store, use finalize() instead"
-            );
             loop {
                 let new_cursor = match cursor.as_mut_ref()? {
                     Leaf(file_metadata) => {
@@ -310,6 +304,13 @@ impl Manifest for TreeManifest {
         }
         let mut path = RepoPathBuf::new();
         let format = self.store.format();
+        #[cfg(not(test))]
+        assert_eq!(
+            format,
+            SerializationFormat::Git,
+            "flush() cannot be used with hg store, use finalize() instead (store: {})",
+            self.store.type_name(),
+        );
         let (hgid, _) = do_flush(&self.store, &mut path, &mut self.root, format)?;
         Ok(hgid)
     }
