@@ -170,7 +170,7 @@ pub async fn build_underived_batched_graph<'a>(
                                     maybe_dedup
                                 }
                             }
-                            Err(InternalError::Other(e)) => {
+                            Err(e) => {
                                 let is_derived =
                                     ddm.is_derived(ctx, item.head_cs_id(), None, derived_data_type).await?;
                                 if is_derived {
@@ -182,20 +182,13 @@ pub async fn build_underived_batched_graph<'a>(
                                         Some(EnqueueResponse::new(Box::new(future::ok(true))));
                                     None
                                 } else {
+                                    // return same item for enqueue and incremente failures count
                                     failed_attempt += 1;
                                     let err_msg_str = format!("Failed to enqueue into DAG: {}", e);
                                     error!(ctx.logger(), "{}", err_msg_str);
                                     err_msg = Some(err_msg_str);
                                     Some(item)
                                 }
-                            }
-                            // return same item for enqueue and incremente failures count
-                            Err(e) => {
-                                failed_attempt += 1;
-                                let err_msg_str = format!("Failed to enqueue into DAG: {}", e);
-                                error!(ctx.logger(), "{}", err_msg_str);
-                                err_msg = Some(err_msg_str);
-                                Some(item)
                             }
                         }
                     };
