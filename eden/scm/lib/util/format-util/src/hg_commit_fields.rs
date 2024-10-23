@@ -6,8 +6,10 @@
  */
 
 use std::collections::BTreeMap;
+use std::fmt::Write as _;
 
 use anyhow::bail;
+use anyhow::ensure;
 use anyhow::Context as _;
 use anyhow::Result;
 use minibytes::Text;
@@ -93,6 +95,56 @@ impl HgCommitFields {
             }
             last_pos = pos + 1;
         }
+
+        Ok(result)
+    }
+
+    /// Serialize fields to "text".
+    pub fn to_text(&self) -> Result<String> {
+        ensure!(!self.message.is_empty(), "message cannot be empty");
+        ensure!(!self.author.is_empty(), "author cannot be empty");
+
+        let len = Id20::hex_len()
+            + self.author.len()
+            + self
+                .extras
+                .iter()
+                .map(|(k, v)| k.len() + v.len() + 2usize)
+                .sum::<usize>()
+            + self.files.iter().map(|p| p.len() + 1).sum::<usize>()
+            + self.message.len()
+            + 32;
+        let mut result = String::with_capacity(len);
+
+        // tree
+        result.push_str(&self.tree.to_hex());
+        result.push('\n');
+
+        // author
+        result.push_str(&self.author);
+        result.push('\n');
+
+        // date, extra
+        write!(&mut result, "{}", self.date.0)?;
+        result.push(' ');
+        write!(&mut result, "{}", self.date.1)?;
+        for (i, (k, v)) in self.extras.iter().enumerate() {
+            result.push(if i == 0 { ' ' } else { '\0' });
+            result.push_str(&extra_escape(k.clone()));
+            result.push(':');
+            result.push_str(&extra_escape(v.clone()));
+        }
+        result.push('\n');
+
+        // files
+        for path in &self.files {
+            result.push_str(path);
+            result.push('\n');
+        }
+        result.push('\n');
+
+        // message
+        result.push_str(self.message.trim_matches('\n'));
 
         Ok(result)
     }
@@ -281,6 +333,9 @@ mod tests {
             fields.root_tree().unwrap().to_hex(),
             "98edb6a9c7a48cae7a1ed9a39600952547daaebb"
         );
+
+        let text2 = fields.fields().unwrap().to_text().unwrap();
+        assert_eq!(text2, text);
     }
 
     #[test]
@@ -309,5 +364,8 @@ mod tests {
             fields.root_tree().unwrap().to_hex(),
             "98edb6a9c7a48cae7a1ed9a39600952547daaebb"
         );
+
+        let text2 = fields.fields().unwrap().to_text().unwrap();
+        assert_eq!(text2, text);
     }
 }
