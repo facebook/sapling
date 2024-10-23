@@ -8,6 +8,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:nix",
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:wait-timeout",
         "//common/rust/logging:logging",
