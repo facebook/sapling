@@ -149,11 +149,11 @@ class CheckoutConfig {
   }
 
   /**
-   * Get a mapping of redirected relative paths to their symlink targets.
+   * Gets a mapping of redirected relative paths to their symlink targets by
+   * directly reading the config file.
    */
-  const std::map<std::string, std::string>& getRedirectionTargets() const {
-    return redirection_targets_;
-  }
+  std::unique_ptr<std::unordered_map<std::string, std::string>>
+  getLatestRedirectionTargets() const;
 
   /** Path to the file where the current commit ID is stored */
   AbsolutePath getSnapshotPath() const;
@@ -218,7 +218,6 @@ class CheckoutConfig {
   const AbsolutePath mountPath_;
   std::string repoType_;
   std::string repoSource_;
-  std::map<std::string, std::string> redirection_targets_;
   MountProtocol mountProtocol_{kMountProtocolDefault};
   std::optional<InodeCatalogType> inodeCatalogType_;
   CaseSensitivity caseSensitive_{kPathMapDefaultCaseSensitive};

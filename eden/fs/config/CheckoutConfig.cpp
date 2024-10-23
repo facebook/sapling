@@ -326,6 +326,25 @@ const AbsolutePath& CheckoutConfig::getClientDirectory() const {
   return clientDirectory_;
 }
 
+std::unique_ptr<std::unordered_map<std::string, std::string>>
+CheckoutConfig::getLatestRedirectionTargets() const {
+  // Extract repository name from the client config file
+  auto configPath = clientDirectory_ + kCheckoutConfig;
+  auto configRoot = cpptoml::parse_file(configPath.c_str());
+  auto redirection_targets =
+      std::make_unique<std::unordered_map<std::string, std::string>>();
+  // Load redirection targets
+  auto redirectionTargetsTable =
+      configRoot->get_table(kRedirectionTargetsSection.str());
+  if (redirectionTargetsTable) {
+    for (const auto& [path, target] : *redirectionTargetsTable) {
+      redirection_targets->emplace(path, target->as<std::string>()->get());
+    }
+  }
+
+  return redirection_targets;
+}
+
 AbsolutePath CheckoutConfig::getSnapshotPath() const {
   return clientDirectory_ + kSnapshotFile;
 }
@@ -348,15 +367,6 @@ std::unique_ptr<CheckoutConfig> CheckoutConfig::loadFromClientDirectory(
   auto repository = configRoot->get_table(kRepoSection.str());
   config->repoType_ = *repository->get_as<std::string>(kRepoTypeKey.str());
   config->repoSource_ = *repository->get_as<std::string>(kRepoSourceKey.str());
-
-  // Load redirection targets
-  auto redirectionTargetsTable =
-      configRoot->get_table(kRedirectionTargetsSection.str());
-  if (redirectionTargetsTable) {
-    for (const auto& [path, target] : *redirectionTargetsTable) {
-      config->redirection_targets_[path] = target->as<std::string>()->get();
-    }
-  }
 
   FieldConverter<MountProtocol> mountProtocolConverter;
   MountProtocol mountProtocol = kMountProtocolDefault;
