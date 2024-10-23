@@ -42,11 +42,10 @@ from typing import Optional
 
 from bindings import cats, clientinfo, zstd
 
-from . import error, httpconnection, progress, sslutil, stdiopeer, util
+from . import error, httpconnection, progress, sslutil, stdiopeer, url, util
 from .i18n import _
 from .pycompat import decodeutf8, encodeutf8, iswindows
 from .thirdparty.pysocks import socks
-
 
 # Netencoding special characters
 NETSTRING_SEPARATOR = b":"
@@ -243,10 +242,11 @@ class mononokepeer(stdiopeer.stdiopeer):
         self._sockettimeout = ui.configwith(float, "mononokepeer", "sockettimeout")
         self._unix_socket_proxy = ui.config("auth_proxy", "unix_socket_path")
         self._auth_proxy_http = ui.config("auth_proxy", "http_proxy")
-        self._fwdproxy_host = ui.config("http_proxy", "host")
-        self._fwdproxy_port = ui.configint("http_proxy", "port")
         self._confheaders = ui.config("http", "extra_headers_json")
         self._verbose = ui.configbool("http", "verbose")
+
+        self._proxyhandler = url.proxyhandler(ui)
+
         try:
             self._cats = cats.getcats(ui._uiconfig._rcfg, "cats", raise_if_missing=True)
         except Exception as e:
@@ -320,10 +320,11 @@ class mononokepeer(stdiopeer.stdiopeer):
                         self._sockettimeout,
                     )
                     return
-                elif self._fwdproxy_host:
-                    socks.set_default_proxy(
-                        socks.HTTP, self._fwdproxy_host, self._fwdproxy_port
-                    )
+                elif proxyurl := self._proxyhandler.proxy_url(self._host):
+                    proxy_port = proxyurl.port
+                    if proxy_port:
+                        proxy_port = int(proxy_port)
+                    socks.set_default_proxy(socks.HTTP, proxyurl.host, proxy_port)
                     socket.socket = socks.socksocket
                     self.sock = socket.socket(socket.AF_INET6)
                     self.sock.settimeout(self._sockettimeout)
