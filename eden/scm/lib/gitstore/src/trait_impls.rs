@@ -93,6 +93,11 @@ impl KeyStore for GitStore {
         Ok(())
     }
 
+    fn flush(&self) -> anyhow::Result<()> {
+        // We don't hold pending state in memory, so no need to flush.
+        Ok(())
+    }
+
     fn clone_key_store(&self) -> Box<dyn KeyStore> {
         Box::new(self.clone())
     }
