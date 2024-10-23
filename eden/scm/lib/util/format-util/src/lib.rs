@@ -11,6 +11,7 @@ use anyhow::Result;
 use types::Id20;
 
 mod byte_count;
+mod commit_fields;
 mod git_commit;
 mod git_sha1;
 mod hg_commit;
@@ -19,6 +20,7 @@ mod hg_sha1;
 mod sha1_digest;
 
 pub(crate) use byte_count::ByteCount;
+pub use commit_fields::CommitFields;
 pub use git_commit::git_commit_text_to_root_tree_id;
 pub use git_sha1::git_sha1_deserialize;
 pub use git_sha1::git_sha1_digest;
