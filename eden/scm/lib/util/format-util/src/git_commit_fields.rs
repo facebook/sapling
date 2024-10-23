@@ -13,6 +13,7 @@ use anyhow::Context as _;
 use anyhow::Result;
 use minibytes::Text;
 use once_cell::sync::OnceCell;
+use serde::Deserialize;
 use storemodel::SerializationFormat;
 use types::Id20;
 
@@ -26,7 +27,7 @@ pub struct GitCommitLazyFields {
 }
 
 /// Fields of a git commit. Enough information to serialize to text.
-#[derive(Default)]
+#[derive(Default, Deserialize)]
 pub struct GitCommitFields {
     tree: Id20,
     parents: Vec<Id20>,

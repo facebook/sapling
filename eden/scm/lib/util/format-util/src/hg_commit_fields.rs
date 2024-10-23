@@ -14,6 +14,7 @@ use anyhow::Context as _;
 use anyhow::Result;
 use minibytes::Text;
 use once_cell::sync::OnceCell;
+use serde::Deserialize;
 use storemodel::SerializationFormat;
 use types::Id20;
 
@@ -27,7 +28,7 @@ pub struct HgCommitLazyFields {
 }
 
 /// Fields of a hg commit. Enough information to serialize to text.
-#[derive(Default)]
+#[derive(Default, Deserialize)]
 pub struct HgCommitFields {
     tree: Id20,
     author: Text,
