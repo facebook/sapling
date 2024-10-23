@@ -277,52 +277,48 @@ def gitcommittext(
     Note that while Git supports multiple signature formats (openpgp, x509, ssh),
     Sapling only supports openpgp today.
 
-    >>> import binascii
-    >>> tree = binascii.unhexlify('deadbeef')
+    >>> tree = b'0' * 20
     >>> desc = " HI! \n   another line with leading spaces\n\nsecond line\n\n\n"
     >>> user = "Alyssa P. Hacker <alyssa@example.com>"
     >>> date = "2000-01-01T00:00:00 +0700"
-    >>> no_parents = gitcommittext(tree, [], desc, user, date, None)
-    >>> no_parents == (
-    ...     b'tree deadbeef\n' +
-    ...     b'author Alyssa P. Hacker <alyssa@example.com> 946659600 +0700\n' +
-    ...     b'committer Alyssa P. Hacker <alyssa@example.com> 946659600 +0700\n' +
-    ...     b'\n' +
-    ...     b' HI!\n' +
-    ...     b'   another line with leading spaces\n' +
-    ...     b'\n' +
-    ...     b'second line\n'
-    ... )
-    True
-    >>> p1 = binascii.unhexlify('deadc0de')
-    >>> one_parent = gitcommittext(tree, [p1], desc, user, date, None)
-    >>> one_parent == (
-    ...     b'tree deadbeef\n' +
-    ...     b'parent deadc0de\n' +
-    ...     b'author Alyssa P. Hacker <alyssa@example.com> 946659600 +0700\n' +
-    ...     b'committer Alyssa P. Hacker <alyssa@example.com> 946659600 +0700\n' +
-    ...     b'\n' +
-    ...     b' HI!\n' +
-    ...     b'   another line with leading spaces\n' +
-    ...     b'\n' +
-    ...     b'second line\n'
-    ... )
-    True
-    >>> p2 = binascii.unhexlify('baadf00d')
-    >>> two_parents = gitcommittext(tree, [p1, p2], desc, user, date, None)
-    >>> two_parents == (
-    ...     b'tree deadbeef\n' +
-    ...     b'parent deadc0de\n' +
-    ...     b'parent baadf00d\n' +
-    ...     b'author Alyssa P. Hacker <alyssa@example.com> 946659600 +0700\n' +
-    ...     b'committer Alyssa P. Hacker <alyssa@example.com> 946659600 +0700\n' +
-    ...     b'\n' +
-    ...     b' HI!\n' +
-    ...     b'   another line with leading spaces\n' +
-    ...     b'\n' +
-    ...     b'second line\n'
-    ... )
-    True
+    >>> print(gitcommittext(tree, [], desc, user, date, None).decode())
+    tree 3030303030303030303030303030303030303030
+    author Alyssa P. Hacker <alyssa@example.com> 946659600 +0700
+    committer Alyssa P. Hacker <alyssa@example.com> 946659600 +0700
+    <BLANKLINE>
+     HI!
+       another line with leading spaces
+    <BLANKLINE>
+    second line
+    <BLANKLINE>
+
+    >>> p1 = b'2' * 20
+    >>> print(gitcommittext(tree, [p1], desc, user, date, None).decode())
+    tree 3030303030303030303030303030303030303030
+    parent 3232323232323232323232323232323232323232
+    author Alyssa P. Hacker <alyssa@example.com> 946659600 +0700
+    committer Alyssa P. Hacker <alyssa@example.com> 946659600 +0700
+    <BLANKLINE>
+     HI!
+       another line with leading spaces
+    <BLANKLINE>
+    second line
+    <BLANKLINE>
+
+    >>> p2 = b'1' * 20
+    >>> print(gitcommittext(tree, [p1, p2], desc, user, date, None).decode())
+    tree 3030303030303030303030303030303030303030
+    parent 3232323232323232323232323232323232323232
+    parent 3131313131313131313131313131313131313131
+    author Alyssa P. Hacker <alyssa@example.com> 946659600 +0700
+    committer Alyssa P. Hacker <alyssa@example.com> 946659600 +0700
+    <BLANKLINE>
+     HI!
+       another line with leading spaces
+    <BLANKLINE>
+    second line
+    <BLANKLINE>
+
     """
     # Example:
     # tree 97e8739f1945a4ba78c9bc1c670718c5dc5c08eb
