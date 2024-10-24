@@ -30,6 +30,7 @@ pub struct HgCommitLazyFields {
 
 /// Fields of a hg commit. Enough information to serialize to text.
 #[derive(Default, Deserialize)]
+#[cfg_attr(test, derive(Clone))]
 pub struct HgCommitFields {
     tree: Id20,
     author: Text,
@@ -230,10 +231,11 @@ fn parse_date<'a>(date_str: &'a str) -> Result<(Date, Option<&'a str>)> {
     Ok(((date_seconds, tz_seconds), parts.next()))
 }
 
-#[allow(dead_code)]
 fn extra_escape(s: Text) -> Text {
-    if s.contains('\\') {
-        let mut result = String::new();
+    let special_chars = "\0\n\r\\";
+    let need_escape_count = s.chars().filter(|&c| special_chars.contains(c)).count();
+    if need_escape_count > 0 {
+        let mut result = String::with_capacity(s.len() + need_escape_count);
         for ch in s.chars() {
             match ch {
                 '\0' => result.push_str("\\0"),
@@ -376,5 +378,30 @@ mod tests {
 
         let text2 = fields.fields().unwrap().to_text().unwrap();
         assert_eq!(text2, text);
+    }
+
+    #[test]
+    fn test_uncommon_fields() {
+        // Use uncommon characters in fields, to test escaping, etc.
+        let fields1 = HgCommitFields {
+            author: "a\\b".into(),
+            files: vec!["f/g h".into()],
+            extras: BTreeMap::from_iter([("e1".into(), "foo\0\n".into())]),
+            message: "  okay\n  some\0\\thing".into(),
+            ..Default::default()
+        };
+
+        // should round-trip
+        let text1 = fields1.to_text().unwrap();
+        let fields2 = HgCommitFields::from_text(&text1.into()).unwrap();
+        assert_eq!(&fields1.extras, &fields2.extras);
+        assert_eq!(&fields1.message, &fields2.message);
+
+        // should reject bad author name
+        let bad_fields = HgCommitFields {
+            author: "a\0b".into(),
+            ..fields1.clone()
+        };
+        assert!(bad_fields.to_text().is_err());
     }
 }
