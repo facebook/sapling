@@ -10,7 +10,8 @@ eden/fs/config/eden_config.thrift thrift->config_thrift //eden/fs/config:config_
 eden/fs/service/eden.thrift thrift //eden/fs/service:thrift-rust
 eden/fs/service/streamingeden.thrift crate //eden/fs/service:thrift-streaming-rust
 fb303/thrift/fb303_core.thrift thrift->fb303_core //fb303/thrift:fb303_core-rust
-thrift/annotation/scope.thrift thrift->thrift->scope //thrift/annotation:scope-rust
+thrift/annotation/cpp.thrift thrift->cpp //thrift/annotation:cpp-rust
+thrift/annotation/scope.thrift thrift->cpp->scope //thrift/annotation:scope-rust
 thrift/annotation/thrift.thrift thrift->thrift //thrift/annotation:thrift-rust
 ";
 #[rustfmt::skip]

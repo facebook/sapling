@@ -480,6 +480,7 @@ thrift_library(
     deps = [
         "//eden/fs/config:config_thrift",
         "//fb303/thrift:fb303_core",
+        "//thrift/annotation:cpp",
         "//thrift/annotation:thrift",
     ],
 )
