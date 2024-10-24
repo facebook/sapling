@@ -22,19 +22,21 @@ infinitepush =
 amend =
 EOF
 
-    hginit_treemanifest repo
-    cd repo
-    mkcommit "base_commit"
-
-    cd "$TESTTMP"
-    for clone in "$@"; do
-        hg clone -q mono:repo "$clone"
-    done
-    blobimport repo/.hg repo
-
+    testtool_drawdag -R repo --print-hg-hashes << EOF
+A
+EOF
     # start mononoke
     mononoke
     wait_for_mononoke
+
+
+    for clone in "$@"; do
+        hg clone -q mono:repo "$clone"
+        cd "$clone"
+        hg checkout $A -q
+        cd ..
+    done
+
 }
 
 function empty_snapshot_repo_setup {

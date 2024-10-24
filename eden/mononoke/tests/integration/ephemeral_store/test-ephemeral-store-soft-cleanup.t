@@ -10,22 +10,23 @@
 setup configuration
 # Need short-term expiring bubbles with mark-and-delete deletion mode
   $ BUBBLE_DELETION_MODE=1 BUBBLE_EXPIRATION_SECS=0 BUBBLE_LIFESPAN_SECS=10 base_snapshot_repo_setup client1
+  A=20ca2a4749a439b459125ef0f6a4f26e88ee7538
   $ cd client1
   $ mkdir test_tmp
   $ cd test_tmp
   $ echo "a file content" > a
   $ hg snapshot create
-  snapshot: Snapshot created with id 39c49a9ad363e4a2f0c314093683a84a85bfaa7b4da83046e58ccb4fbeb2f6c5
+  snapshot: Snapshot created with id 60ba9e25af931d7b1669e121cb4f42ad0eeca14462e8e8126140ca63a25bee8e
   $ echo "b file content" > b
   $ hg add b
   $ hg snapshot create
-  snapshot: Snapshot created with id a70032dd92c595f7c63727c331bff544b49b93655f5df698c756de0ca6e707be
+  snapshot: Snapshot created with id 41b1e99e2b81202d04b4817e3fa7ebdb936184626f74af23b865a80fa71b5561
   $ echo "c file content" > c
   $ hg snapshot create
-  snapshot: Snapshot created with id 29bc19b1061371d50be8982b75d12495f5c9f7dc26c1cbf6edccf225e0af6712
+  snapshot: Snapshot created with id 2a2db020a9a64a3541d655f0b8a14c4df3f26ce584d5e1945da2b5ef4aefe43c
   $ echo "d file content" > d
   $ hg snapshot create
-  snapshot: Snapshot created with id 736be07322596e3ff8cb7f237de157689bbac49b05d59115386d80925dd08b4b
+  snapshot: Snapshot created with id 0458064f09cc3f249dcdef56198bd70181ceae750a7512b842af8411dbcdb97d
 # Ensure bubbles are expired before moving forward
   $ sleep 10
 
@@ -51,7 +52,7 @@ Cleanup expired bubbles in dry-run mode with non-zero as the limit
 
 Before doing actual clean-up, verify that the blob indeed exists
   $ cd ../../
-  $ [ -f "blobstore/blobs/blob-eph1.repo0000.changeset.blake2.39c49a9ad363e4a2f0c314093683a84a85bfaa7b4da83046e58ccb4fbeb2f6c5" ] && echo "Blob still present"
+  $ [ -f "blobstore/blobs/blob-eph1.repo0000.changeset.blake2.60ba9e25af931d7b1669e121cb4f42ad0eeca14462e8e8126140ca63a25bee8e" ] && echo "Blob still present"
   Blob still present
 
 Cleanup expired bubbles with no cut-off
@@ -65,5 +66,5 @@ Cleanup expired bubbles with no cut-off
 # Since deletion_mode=MARK_ONLY, the blob keys within the bubbles
 # should NOT be deleted
 Verify the blob keys are NOT actually deleted (using a key from Bubble 1).
-  $ [ -f "blobstore/blobs/blob-eph1.repo0000.changeset.blake2.39c49a9ad363e4a2f0c314093683a84a85bfaa7b4da83046e58ccb4fbeb2f6c5" ] && echo "Blob still present"
+  $ [ -f "blobstore/blobs/blob-eph1.repo0000.changeset.blake2.60ba9e25af931d7b1669e121cb4f42ad0eeca14462e8e8126140ca63a25bee8e" ] && echo "Blob still present"
   Blob still present

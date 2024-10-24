@@ -313,7 +313,6 @@ dott_test(
     disable_all_network_access_target = False,
     dott_files = glob(["test-snapshot*.t"]),
     deps = [
-        "//eden/mononoke:blobimport",
         "//eden/mononoke:mononoke",
         "//eden/mononoke/scs/client:scsc",
         "//eden/mononoke/scs/scs_server:scs_server",
