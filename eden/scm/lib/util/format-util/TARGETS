@@ -12,6 +12,7 @@ rust_library(
         "fbsource//third-party/rust:once_cell",
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:sha1",
+        "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/minibytes:minibytes",
         "//eden/scm/lib/storemodel:storemodel",
         "//eden/scm/lib/types:types",

@@ -265,15 +265,38 @@ fn write_message(message: &str, out: &mut String) -> Result<()> {
     Ok(())
 }
 
+// redundant with actual fields: author*, committer*
+// not interesting for git: *source, mut*, branch
+const SORTED_IGNORED_EXTRA_NAMES: &[&str] = &[
+    "amend_source",
+    "author",
+    "author_date",
+    "branch",
+    "committer",
+    "committer_date",
+    "histedit_source",
+    "intermediate-source",
+    "mutdate",
+    "mutop",
+    "mutpred",
+    "mutsplit",
+    "mutuser",
+    "rebase_source",
+    "source",
+    "transplant_source",
+];
+
 fn write_extra(name: &str, value: &str, out: &mut String) -> Result<()> {
-    if name == "committer" || name == "committer_date" || name == "branch" {
-        // "committer" was written before; "branch" is useless - just skip it.
+    if SORTED_IGNORED_EXTRA_NAMES.binary_search(&name).is_ok() {
+        tracing::trace!(name, value, "ignored commit extra field");
         return Ok(());
     }
-    let bad_extra_names = ["author", "parent", "tree"];
+
+    let bad_extra_names = ["parent", "tree"];
     ensure!(
         !name.contains("\n") && !name.contains(" ") && bad_extra_names.iter().all(|&n| n != name),
-        "invalid extra name"
+        "invalid extra: {:?}",
+        name
     );
     out.push_str(name);
     let empty = write_multi_line(value, " ", out)?;
@@ -423,5 +446,12 @@ m
         assert!(fields.fields().unwrap().tree.is_null());
         // Test root_tree() after "fields" being calculated.
         assert!(fields.root_tree().unwrap().is_null());
+    }
+
+    #[test]
+    fn test_sorted_ignored_extras_are_actually_sorted() {
+        let mut v = SORTED_IGNORED_EXTRA_NAMES.to_vec();
+        v.sort_unstable();
+        assert_eq!(v, SORTED_IGNORED_EXTRA_NAMES);
     }
 }
