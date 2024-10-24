@@ -264,11 +264,9 @@ fn write_extra(name: &str, value: &str, out: &mut String) -> Result<()> {
         "invalid extra name"
     );
     out.push_str(name);
-    for line in value.trim_end_matches('\n').split('\n') {
-        out.push(' ');
-        out.push_str(line);
-        out.push('\n');
-    }
+    let empty = write_multi_line(value, " ", out)?;
+    ensure!(!empty, "empty commit extra: {}", name);
+    out.push('\n');
     Ok(())
 }
 
