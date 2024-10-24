@@ -699,7 +699,7 @@ def print_eden_doctor(processor: str, out: IO[bytes], dry_run: bool) -> None:
     cmd = ["edenfsctl", "doctor"]
     try:
         paste_output(
-            lambda sink: run_cmd(cmd, sink, out, 20),
+            lambda sink: run_cmd(cmd, sink, out, 120),
             processor,
             out,
             dry_run,
