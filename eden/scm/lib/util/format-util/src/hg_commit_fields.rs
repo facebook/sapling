@@ -9,7 +9,6 @@ use std::collections::BTreeMap;
 use std::fmt::Write as _;
 
 use anyhow::bail;
-use anyhow::ensure;
 use anyhow::Context as _;
 use anyhow::Result;
 use minibytes::Text;
@@ -289,8 +288,8 @@ fn extra_unescape(s: Text) -> Text {
 fn write_message(message: &str, out: &mut String) -> Result<()> {
     // Empty line indicates the start of commit message.
     out.push('\n');
-    let empty = write_multi_line(message, "", out)?;
-    ensure!(!empty, "commit message cannot be empty");
+    // For hg, empty commit message is allowed.
+    let _empty = write_multi_line(message, "", out)?;
     Ok(())
 }
 
