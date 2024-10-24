@@ -32,6 +32,7 @@ class SetAttrTest(testcase.EdenRepoTest):
 
         self.assertEqual(new_st.st_mtime, st.st_mtime)
         self.assertEqual(new_st.st_atime, st.st_atime)
+        # pyre-fixme[16]: `stat_result` has no attribute `st_ctime`.
         self.assertGreaterEqual(new_st.st_ctime, st.st_ctime)
         self.assertEqual(new_st.st_mode, st.st_mode | stat.S_IROTH)
 
@@ -142,6 +143,7 @@ class SetAttrTest(testcase.EdenRepoTest):
         new_st = os.lstat(filename)
         self.assertEqual(new_st.st_size, 0)
         self.assertGreaterEqual(new_st.st_atime, st.st_atime)
+        # pyre-fixme[16]: `stat_result` has no attribute `st_ctime`.
         self.assertGreaterEqual(new_st.st_ctime, st.st_ctime)
         self.assertGreaterEqual(new_st.st_mtime, st.st_mtime)
 
@@ -205,6 +207,7 @@ class SetAttrTest(testcase.EdenRepoTest):
         new_st = os.lstat(dirname)
 
         self.assertEqual(new_st.st_atime, st.st_atime)
+        # pyre-fixme[16]: `stat_result` has no attribute `st_ctime`.
         self.assertGreaterEqual(new_st.st_ctime, st.st_ctime)
         self.assertGreaterEqual(new_st.st_mtime, st.st_mtime)
 
@@ -218,6 +221,7 @@ class SetAttrTest(testcase.EdenRepoTest):
         new_st = os.lstat(dirname)
 
         self.assertEqual(new_st.st_atime, st.st_atime)
+        # pyre-fixme[16]: `stat_result` has no attribute `st_ctime`.
         self.assertGreaterEqual(new_st.st_ctime, st.st_ctime)
         self.assertGreaterEqual(new_st.st_mtime, st.st_mtime)
 
@@ -231,6 +235,7 @@ class SetAttrTest(testcase.EdenRepoTest):
         new_st = os.lstat(dirname)
 
         self.assertEqual(new_st.st_mtime, st.st_mtime)
+        # pyre-fixme[16]: `stat_result` has no attribute `st_ctime`.
         self.assertEqual(new_st.st_ctime, st.st_ctime)
         self.assertEqual(new_st.st_mtime, st.st_mtime)
 
@@ -246,6 +251,7 @@ class SetAttrTest(testcase.EdenRepoTest):
 
         self.assertEqual(new_st.st_mtime, st.st_mtime)
         self.assertEqual(new_st.st_atime, st.st_atime)
+        # pyre-fixme[16]: `stat_result` has no attribute `st_ctime`.
         self.assertGreaterEqual(new_st.st_ctime, st.st_ctime)
 
     # Read call on a file in Edenfs should modify the atime of the file.
@@ -257,6 +263,7 @@ class SetAttrTest(testcase.EdenRepoTest):
             new_st = os.lstat(filename)
             self.assertEqual(new_st.st_mtime, st.st_mtime)
             self.assertEqual(new_st.st_atime, st.st_atime)
+            # pyre-fixme[16]: `stat_result` has no attribute `st_ctime`.
             self.assertEqual(new_st.st_ctime, st.st_ctime)
             f.read()
             f.close()

@@ -146,4 +146,5 @@ class InvalidateTest(testcase.EdenRepoTest):
         st_after = os.stat(self.get_path("a/1"))
 
         self.assertEqual(st_before.st_mtime, st_after.st_mtime)
+        # pyre-fixme[16]: `stat_result` has no attribute `st_ctime`.
         self.assertEqual(st_before.st_ctime, st_after.st_ctime)

@@ -85,6 +85,7 @@ class PersistenceTest(testcase.EdenRepoTest):
                 f"mtime must line up for path {path}",
             )
             self.assertEqual(
+                # pyre-fixme[16]: `stat_result` has no attribute `st_ctime`.
                 old_stat.st_ctime,
                 new_stat.st_ctime,
                 f"ctime must line up for path {path}",

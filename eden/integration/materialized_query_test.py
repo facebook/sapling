@@ -214,6 +214,7 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
                     )
                 if not stat.S_ISDIR(st.st_mode):
                     self.assertNotEqual(0, st.st_mtime)
+                    # pyre-fixme[16]: `stat_result` has no attribute `st_ctime`.
                     self.assertNotEqual(0, st.st_ctime)
                     self.assertNotEqual(0, st.st_atime)
             except OSError as e:
