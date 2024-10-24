@@ -14,11 +14,11 @@ from __future__ import absolute_import
 
 import subprocess
 import textwrap
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional
 
 import bindings
 
-from . import encoding, error, gituser, revlog, util
+from . import encoding, error, revlog, util
 from .i18n import _
 from .node import bbin, hex, nullid
 from .pycompat import decodeutf8, encodeutf8, iteritems
@@ -309,13 +309,6 @@ def gitcommittext(
     # Updating submodules
     committer = (extra.get("committer") if extra else None) or user
 
-    # Bail out early with concise error if usernames are not valid.
-    try:
-        gituser.parse_username(committer)
-        gituser.parse_username(user)
-    except ValueError as ex:
-        raise error.Abort(ex)
-
     get_date = lambda name: util.parsedate((extra.get(name) if extra else None) or date)
 
     authordate = get_date("author_date")
@@ -333,9 +326,9 @@ def gitcommittext(
     fields = {
         "tree": tree,
         "parents": parents,
-        "author": gituser.normalize(user),
+        "author": user,
         "date": util.parsedate(authordate),
-        "committer": gituser.normalize(committer),
+        "committer": committer,
         "committer_date": util.parsedate(committerdate),
         "message": desc,
         "extras": extra or {},
