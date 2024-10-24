@@ -799,11 +799,11 @@ def checkpathconflicts(repo, wctx, mctx, actions):
         # Track the names of all deleted files.
         if m == ACTION_REMOVE:
             deletedfiles.add(f)
-        if m == ACTION_MERGE:
+        elif m == ACTION_MERGE:
             f1, f2, fa, move, anc = args
             if move:
                 deletedfiles.add(f1)
-        if m == ACTION_DIR_RENAME_MOVE_LOCAL:
+        elif m == ACTION_DIR_RENAME_MOVE_LOCAL:
             f2, flags = args
             deletedfiles.add(f2)
 
