@@ -345,8 +345,8 @@ py_class!(pub class commits |py| {
     /// Construct a private, empty `commits` object backed by the memory.
     /// `flush` does nothing for this type of object.
     @staticmethod
-    def openmemory() -> PyResult<Self> {
-        let inner = MemCommits::new().map_pyerr(py)?;
+    def openmemory(format: Serde<SerializationFormat> = Serde(SerializationFormat::Hg)) -> PyResult<Self> {
+        let inner = MemCommits::new(format.0).map_pyerr(py)?;
         Self::from_commits(py, inner)
     }
 });

@@ -21,6 +21,7 @@ use dag::Vertex;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use minibytes::Bytes;
+use storemodel::SerializationFormat;
 
 use crate::AppendCommits;
 use crate::DescribeBackend;
@@ -36,13 +37,15 @@ use crate::StripCommits;
 pub struct MemCommits {
     commits: HashMap<Vertex, Bytes>,
     dag: MemDag,
+    format: SerializationFormat,
 }
 
 impl MemCommits {
-    pub fn new() -> Result<Self> {
+    pub fn new(format: SerializationFormat) -> Result<Self> {
         let result = Self {
             dag: MemDag::new(),
             commits: HashMap::new(),
+            format,
         };
         Ok(result)
     }
@@ -115,12 +118,19 @@ impl ReadCommitText for MemCommits {
     }
 
     fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
-        Arc::new(ArcHashMapVertexBytes(Arc::new(self.commits.clone())))
+        Arc::new(ArcHashMapVertexBytes(
+            Arc::new(self.commits.clone()),
+            self.format,
+        ))
+    }
+
+    fn format(&self) -> SerializationFormat {
+        self.format
     }
 }
 
 #[derive(Clone)]
-struct ArcHashMapVertexBytes(Arc<HashMap<Vertex, Bytes>>);
+struct ArcHashMapVertexBytes(Arc<HashMap<Vertex, Bytes>>, SerializationFormat);
 
 #[async_trait::async_trait]
 impl ReadCommitText for ArcHashMapVertexBytes {
@@ -130,6 +140,10 @@ impl ReadCommitText for ArcHashMapVertexBytes {
 
     fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
         Arc::new(self.clone())
+    }
+
+    fn format(&self) -> SerializationFormat {
+        self.1
     }
 }
 

@@ -174,6 +174,10 @@ impl ReadCommitText for OnDiskCommits {
     fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
         ArcRwLockZstore(self.commits.clone(), self.format()).to_dyn_read_commit_text()
     }
+
+    fn format(&self) -> SerializationFormat {
+        self.format
+    }
 }
 
 #[derive(Clone)]
@@ -188,6 +192,10 @@ impl ReadCommitText for ArcRwLockZstore {
 
     fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
         Arc::new(self.clone())
+    }
+
+    fn format(&self) -> SerializationFormat {
+        self.1
     }
 }
 

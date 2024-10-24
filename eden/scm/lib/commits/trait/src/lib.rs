@@ -38,6 +38,7 @@ use minibytes::Bytes;
 use serde::Deserialize;
 use serde::Serialize;
 use storemodel::ReadRootTreeIds;
+use storemodel::SerializationFormat;
 
 #[async_trait::async_trait]
 pub trait ReadCommitText: Sync {
@@ -68,6 +69,8 @@ pub trait ReadCommitText: Sync {
         let reader = trait_impls::ArcReadCommitText(reader);
         Arc::new(reader)
     }
+
+    fn format(&self) -> SerializationFormat;
 }
 
 pub trait StreamCommitText {

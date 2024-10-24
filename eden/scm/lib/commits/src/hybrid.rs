@@ -269,6 +269,7 @@ impl HybridCommits {
         HybridCommitTextReader {
             zstore: self.commits.commit_data_store(),
             client: self.client.clone(),
+            format: self.commits.format(),
         }
     }
 }
@@ -371,6 +372,7 @@ impl AppendCommits for HybridCommits {
 struct HybridCommitTextReader {
     zstore: Arc<RwLock<Zstore>>,
     client: Arc<dyn SaplingRemoteApi>,
+    format: SerializationFormat,
 }
 
 #[async_trait::async_trait]
@@ -383,6 +385,10 @@ impl ReadCommitText for HybridCommits {
 
     fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
         Arc::new(self.to_hybrid_commit_text())
+    }
+
+    fn format(&self) -> SerializationFormat {
+        self.commits.format()
     }
 }
 
@@ -398,6 +404,10 @@ impl ReadCommitText for HybridCommitTextReader {
 
     fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
         Arc::new(self.clone())
+    }
+
+    fn format(&self) -> SerializationFormat {
+        self.format
     }
 }
 

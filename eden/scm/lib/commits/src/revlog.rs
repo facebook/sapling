@@ -43,6 +43,7 @@ use crate::StripCommits;
 pub struct RevlogCommits {
     revlog: RevlogIndex,
     pub(crate) dir: PathBuf,
+    format: SerializationFormat,
 }
 
 /// Hardcoded commit hashes defied by hg.
@@ -67,6 +68,7 @@ impl RevlogCommits {
         Ok(Self {
             revlog,
             dir: dir.to_path_buf(),
+            format,
         })
     }
 }
@@ -169,6 +171,10 @@ impl ReadCommitText for RevlogCommits {
 
     fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
         Arc::new(self.clone())
+    }
+
+    fn format(&self) -> SerializationFormat {
+        self.format
     }
 }
 

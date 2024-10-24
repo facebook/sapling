@@ -48,6 +48,7 @@ use minibytes::Bytes;
 use parking_lot::Mutex;
 use paste::paste;
 use storemodel::ReadRootTreeIds;
+use storemodel::SerializationFormat;
 use types::HgId;
 
 use crate::ref_filter::GitRefFilter;
@@ -632,6 +633,10 @@ impl ReadCommitText for GitSegmentedCommits {
         // the hg text. Bypass that overhead.
         Arc::new(Wrapper(self.git_repo.clone()))
     }
+
+    fn format(&self) -> SerializationFormat {
+        SerializationFormat::Git
+    }
 }
 
 #[derive(Clone)]
@@ -646,6 +651,10 @@ impl ReadCommitText for ArcMutexGitRepo {
 
     fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
         Arc::new(self.clone())
+    }
+
+    fn format(&self) -> SerializationFormat {
+        SerializationFormat::Git
     }
 }
 
