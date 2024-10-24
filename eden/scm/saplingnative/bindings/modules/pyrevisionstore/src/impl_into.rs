@@ -21,6 +21,7 @@ use revisionstore::StoreResult;
 use storemodel::minibytes::Bytes;
 use storemodel::FileStore;
 use storemodel::KeyStore;
+use storemodel::SerializationFormat;
 use storemodel::TreeStore;
 use types::Key;
 use types::RepoPath;
@@ -115,6 +116,10 @@ impl KeyStore for ManifestStore {
 
     fn clone_key_store(&self) -> Box<dyn KeyStore> {
         Box::new(self.clone())
+    }
+
+    fn format(&self) -> SerializationFormat {
+        self.underlying.format()
     }
 }
 

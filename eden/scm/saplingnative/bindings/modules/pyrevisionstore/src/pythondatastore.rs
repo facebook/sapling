@@ -26,6 +26,7 @@ use revisionstore::Metadata;
 use revisionstore::RemoteDataStore;
 use revisionstore::StoreKey;
 use revisionstore::StoreResult;
+use storemodel::SerializationFormat;
 
 use crate::pythonutil::from_key_to_tuple;
 use crate::pythonutil::from_tuple_to_key;
@@ -182,5 +183,33 @@ impl LocalStore for PythonHgIdDataStore {
             })
             .collect::<Result<Vec<StoreKey>>>()?;
         Ok(missing)
+    }
+}
+
+impl PythonHgIdDataStore {
+    fn python_type_name(&self, py: Python) -> String {
+        self.py_store.get_type(py).name(py).into_owned()
+    }
+
+    pub(crate) fn format(&self) -> SerializationFormat {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        'attempt: {
+            let format = match self.py_store.call_method(py, "format", NoArgs, None) {
+                Err(_) => break 'attempt,
+                Ok(v) => v,
+            };
+            match cpython_ext::de::from_object(py, format) {
+                Err(_) => break 'attempt,
+                Ok(v) => return v,
+            }
+        }
+        let fallback = SerializationFormat::Hg;
+        tracing::trace!(
+            "PythonHgIdDataStore {} does not report valid format. Use fallback format {:?}.",
+            self.python_type_name(py),
+            fallback,
+        );
+        fallback
     }
 }

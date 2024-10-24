@@ -13,4 +13,5 @@ cpython_ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 pyconfigloader = { version = "0.1.0", path = "../pyconfigloader" }
 revisionstore = { version = "0.1.0", path = "../../../../lib/revisionstore" }
 storemodel = { version = "0.1.0", path = "../../../../lib/storemodel" }
+tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 types = { version = "0.1.0", path = "../../../../lib/types" }
