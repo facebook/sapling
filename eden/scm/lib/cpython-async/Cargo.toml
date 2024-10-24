@@ -14,4 +14,4 @@ futures = { version = "0.3.30", features = ["async-await", "compat"] }
 itertools = "0.13.0"
 
 [dev-dependencies]
-tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }

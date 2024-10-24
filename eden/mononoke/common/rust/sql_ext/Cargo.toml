@@ -37,7 +37,7 @@ sql_common = { version = "0.1.0", git = "https://github.com/facebookexperimental
 sql_query_config = { version = "0.1.0", path = "../../../repo_attributes/sql_query_config" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 time_measuring = { version = "0.1.0", path = "../../time_measuring" }
-tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
 twox-hash = "1.6.1"
 vec1 = { version = "1", features = ["serde"] }
 

@@ -24,7 +24,7 @@ multiplexedblob = { version = "0.1.0", path = "../multiplexedblob" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 thiserror = "1.0.64"
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
 blobstore_test_utils = { version = "0.1.0", path = "../test_utils" }

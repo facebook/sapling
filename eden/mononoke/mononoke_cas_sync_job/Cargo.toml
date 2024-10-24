@@ -43,5 +43,5 @@ scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 sharding_ext = { version = "0.1.0", path = "../cmdlib/sharding_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 thiserror = "1.0.64"
-tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
 zk_leader_election = { version = "0.1.0", path = "../cmdlib/zk_leader_election" }

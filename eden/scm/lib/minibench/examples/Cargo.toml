@@ -13,4 +13,4 @@ path = "fs_read.rs"
 crossbeam = "0.8"
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 minibench = { version = "0.1.0", path = ".." }
-tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }

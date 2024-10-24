@@ -41,4 +41,4 @@ maplit = "1.0"
 mononoke_macros = { version = "0.1.0", path = "../../../mononoke_macros" }
 mononoke_types-mocks = { version = "0.1.0", path = "../../../mononoke_types/mocks" }
 sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }

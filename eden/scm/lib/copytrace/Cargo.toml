@@ -27,5 +27,5 @@ xdiff = { version = "0.1.0", path = "../xdiff" }
 
 [dev-dependencies]
 manifest-tree = { version = "0.1.0", path = "../manifest-tree", features = ["for-tests"] }
-tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
 tracing-test = "0.2.3"

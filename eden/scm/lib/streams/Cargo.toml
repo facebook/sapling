@@ -12,4 +12,4 @@ pin-project = "0.4.30"
 
 [dev-dependencies]
 anyhow = "1.0.86"
-tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }

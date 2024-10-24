@@ -30,7 +30,7 @@ sysinfo = "0.30.11"
 thrift-types = { version = "0.1.0", path = "../../../scm/lib/thrift-types" }
 thrift_streaming = { version = "0.1.0", path = "../../service/thrift_streaming" }
 thrift_streaming_clients = { version = "0.1.0", path = "../../service/thrift_streaming/clients" }
-tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
 tokio-uds-compat = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 toml = "0.8.4"
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }

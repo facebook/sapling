@@ -15,7 +15,7 @@ path = "test/packetline_test.rs"
 faster-hex = "0.6.1"
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 thiserror = "1.0.64"
-tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
 anyhow = "1.0.86"

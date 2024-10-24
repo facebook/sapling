@@ -32,5 +32,5 @@ skeleton_manifest = { version = "0.1.0", path = "../skeleton_manifest" }
 skeleton_manifest_v2 = { version = "0.1.0", path = "../skeleton_manifest_v2" }
 test_manifest = { version = "0.1.0", path = "../test_manifest" }
 test_sharded_manifest = { version = "0.1.0", path = "../test_sharded_manifest" }
-tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
 unodes = { version = "0.1.0", path = "../unodes" }

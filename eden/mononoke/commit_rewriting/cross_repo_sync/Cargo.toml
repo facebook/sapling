@@ -76,7 +76,7 @@ static_assertions = "1.1.0"
 synced_commit_mapping = { version = "0.1.0", path = "../synced_commit_mapping" }
 synced_commit_mapping_pushrebase_hook = { version = "0.1.0", path = "../synced_commit_mapping/pushrebase_hook" }
 thiserror = "1.0.64"
-tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
 
 [dev-dependencies]

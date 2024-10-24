@@ -32,7 +32,7 @@ quickcheck = "1.0"
 revisionstore_types = { version = "0.1.0", path = "../../../scm/lib/revisionstore/types" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 thiserror = "1.0.64"
-tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
 tokio-util = { version = "0.7.10", features = ["full"] }
 types = { version = "0.1.0", path = "../../../scm/lib/types" }
 vlqencoding = { version = "0.1.0", path = "../../../scm/lib/vlqencoding" }

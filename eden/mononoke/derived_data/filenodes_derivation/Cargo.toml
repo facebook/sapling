@@ -40,4 +40,4 @@ repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }
-tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }

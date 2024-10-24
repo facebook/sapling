@@ -13,7 +13,7 @@ anyhow = "1.0.86"
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 governor = "0.3.2"
 thiserror = "1.0.64"
-tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
 nonzero_ext = "0.2"

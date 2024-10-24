@@ -13,4 +13,4 @@ pin-project = "0.4.30"
 
 [dev-dependencies]
 bytes = { version = "1.6.0", features = ["serde"] }
-tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }

@@ -14,7 +14,7 @@ identity = { version = "0.1.0", path = "../identity" }
 minibytes = { version = "0.1.0", path = "../minibytes" }
 once_cell = "1.12"
 thiserror = "1.0.64"
-tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 types = { version = "0.1.0", path = "../types" }
 util = { version = "0.1.0", path = "../util" }

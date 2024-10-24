@@ -75,7 +75,7 @@ serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_derive = "1.0.185"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sqlblob = { version = "0.1.0", path = "blobstore/sqlblob" }
-tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
 toml = "0.8.4"
 
 [dev-dependencies]

@@ -12,4 +12,4 @@ anyhow = "1.0.86"
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 libc = "0.2.139"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }

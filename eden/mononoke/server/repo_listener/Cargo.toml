@@ -62,7 +62,7 @@ sshrelay = { version = "0.1.0", path = "../../sshrelay" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "1.0.64"
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-tokio = { version = "1.37.0", features = ["full", "test-util", "tracing"] }
+tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
 tokio-openssl = "0.6"
 tokio-util = { version = "0.7.10", features = ["full"] }
 wireproto_handler = { version = "0.1.0", path = "../../wireproto_handler" }
