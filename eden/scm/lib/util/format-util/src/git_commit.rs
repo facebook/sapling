@@ -7,6 +7,8 @@
 
 use anyhow::Context as _;
 use anyhow::Result;
+use types::hgid::GIT_EMPTY_TREE_ID;
+use types::hgid::NULL_ID;
 use types::Id20;
 
 pub fn git_commit_text_to_root_tree_id(text: &[u8]) -> Result<Id20> {
@@ -14,5 +16,10 @@ pub fn git_commit_text_to_root_tree_id(text: &[u8]) -> Result<Id20> {
         .strip_prefix(b"tree ")
         .and_then(|t| t.get(0..Id20::hex_len()))
         .context("invalid git commit")?;
-    Ok(Id20::from_hex(hex)?)
+    let id = Id20::from_hex(hex)?;
+    Ok(normalize_git_tree_id(id))
+}
+
+pub(crate) fn normalize_git_tree_id(id: Id20) -> Id20 {
+    if id == GIT_EMPTY_TREE_ID { NULL_ID } else { id }
 }

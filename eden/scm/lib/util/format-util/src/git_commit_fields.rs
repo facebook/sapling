@@ -19,6 +19,7 @@ use storemodel::SerializationFormat;
 use types::hgid::GIT_EMPTY_TREE_ID;
 use types::Id20;
 
+use crate::git_commit::normalize_git_tree_id;
 use crate::normalize_email_user;
 use crate::utils::write_multi_line;
 pub use crate::CommitFields;
@@ -79,7 +80,7 @@ impl GitCommitFields {
             }
 
             if let Some(hex) = line.strip_prefix("tree ") {
-                result.tree = Id20::from_hex(hex.as_bytes())?;
+                result.tree = normalize_git_tree_id(Id20::from_hex(hex.as_bytes())?);
             } else if let Some(hex) = line.strip_prefix("parent ") {
                 result.parents.push(Id20::from_hex(hex.as_bytes())?);
             } else if let Some(line) = line.strip_prefix("author ") {
@@ -180,7 +181,9 @@ impl CommitFields for GitCommitLazyFields {
         // Extract tree without parsing all fields.
         if let Some(rest) = self.text.strip_prefix("tree ") {
             if let Some(hex) = rest.get(..Id20::hex_len()) {
-                return Ok(Id20::from_hex(hex.as_bytes())?);
+                let id = Id20::from_hex(hex.as_bytes())?;
+                let id = normalize_git_tree_id(id);
+                return Ok(id);
             }
         }
         bail!("invalid git commit format: {}", &self.text);
@@ -305,6 +308,7 @@ fn write_git_tz(tz_seconds: i32, out: &mut String) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::git_commit_text_to_root_tree_id;
 
     #[test]
     fn test_parse_git_commit_basic() {
@@ -406,5 +410,18 @@ committer c <> 0 +0000
 m
 "#
         );
+
+        assert!(
+            git_commit_text_to_root_tree_id(text.as_bytes())
+                .unwrap()
+                .is_null()
+        );
+
+        let fields = GitCommitLazyFields::new(text.into());
+        assert!(fields.root_tree().unwrap().is_null());
+        // The field does not have `pub` but is implicitly accessiable via serde.
+        assert!(fields.fields().unwrap().tree.is_null());
+        // Test root_tree() after "fields" being calculated.
+        assert!(fields.root_tree().unwrap().is_null());
     }
 }
