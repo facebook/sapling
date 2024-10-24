@@ -98,7 +98,17 @@ else()
   endif()
 endif()
 
-set(CMAKE_CXX_STANDARD 17)
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 17)
+  set(CMAKE_CXX_STANDARD_REQUIRED ON)
+  message(STATUS "setting C++ standard to C++${CMAKE_CXX_STANDARD}")
+endif()
+
+# Explicitly enable coroutine support, since GCC does not enable it
+# by default when targeting C++17.
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fcoroutines>)
+endif()
 
 # Configuration options
 set(ENABLE_EDENSCM AUTO CACHE STRING "Enable support for Eden SCM repositories")
