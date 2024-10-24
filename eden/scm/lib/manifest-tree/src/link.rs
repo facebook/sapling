@@ -214,8 +214,12 @@ impl DurableEntry {
             for element_result in entry.elements() {
                 let element = element_result.with_context(|| {
                     format!(
-                        "failed to deserialize manifest entry {:?} for ({}, {})",
-                        entry, path, self.hgid
+                        "failed to deserialize manifest entry {:?} for ({}, {}) (store: {:?}, format: {:?})",
+                        entry,
+                        path,
+                        self.hgid,
+                        store.type_name(),
+                        store.format(),
                     )
                 })?;
                 let link = match element.flag {
