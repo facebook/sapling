@@ -12,6 +12,7 @@ use anyhow::bail;
 use anyhow::Result;
 use gitcompat::rungit::RepoGit;
 use gitcompat::GitCmd;
+use types::hgid::GIT_EMPTY_TREE_ID;
 use types::workingcopy_client::CheckoutConflict;
 use types::workingcopy_client::CheckoutMode;
 use types::workingcopy_client::FileStatus;
@@ -151,9 +152,7 @@ impl WorkingCopyClient for RepoGit {
             self.call("update-ref", &["HEAD", &p1_hex])?;
             if !p1_tree.is_wdir() {
                 if p1_tree.is_null() {
-                    // Git's empty tree.
-                    // git hash-object -t tree /dev/null
-                    p1_tree = HgId::from_hex(b"4b825dc642cb6eb9a060e54bf8d69288fbee4904").unwrap();
+                    p1_tree = GIT_EMPTY_TREE_ID;
                 }
                 let p1_tree_hex = p1_tree.to_hex();
                 self.call("read-tree", &["--no-recurse-submodules", &p1_tree_hex])?;

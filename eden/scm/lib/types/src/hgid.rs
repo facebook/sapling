@@ -69,6 +69,12 @@ impl HashTypeInfo for HgIdTypeInfo {
 /// (For example, a commit will have a nullid p2, if it has no second parent).
 pub const NULL_ID: HgId = HgId::from_byte_array([0; HgId::len()]);
 
+/// Git's empty tree. `git hash-object -t tree /dev/null`
+pub const GIT_EMPTY_TREE_ID: HgId = HgId::from_byte_array([
+    0x4b, 0x82, 0x5d, 0xc6, 0x42, 0xcb, 0x6e, 0xb9, 0xa0, 0x60, 0xe5, 0x4b, 0xf8, 0xd6, 0x92, 0x88,
+    0xfb, 0xee, 0x49, 0x04,
+]);
+
 /// The hard-coded 'working copy parent' Mercurial id.
 pub const WDIR_ID: HgId = HgId::from_byte_array([0xff; HgId::len()]);
 
