@@ -58,6 +58,7 @@ pub struct OnDiskCommits {
 
 impl OnDiskCommits {
     pub fn new(dag_path: &Path, commits_path: &Path, format: SerializationFormat) -> Result<Self> {
+        tracing::trace!(target: "commits::format", ?format);
         let result = Self {
             dag: Dag::open(dag_path)?,
             dag_path: dag_path.to_path_buf(),
