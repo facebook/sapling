@@ -222,8 +222,12 @@ impl HgPython {
                         Err(_) => 255,
                     }
                 } else {
-                    let message =
-                        format_py_error(py, &err).unwrap_or("unknown python exception".to_string());
+                    let message = format_py_error(py, &err).unwrap_or_else(|err| {
+                        format!(
+                            "unknown python exception {:?} {:?}",
+                            &err.ptype, &err.pvalue
+                        )
+                    });
                     let _ = io.write_err(message);
                     1
                 }

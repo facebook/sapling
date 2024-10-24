@@ -89,7 +89,7 @@
   $ git add another_large_file
   $ git commit -aqm "new commit with another large file"
   $ git_client push origin master_bookmark
-  Uploading LFS objects: 100% (1/1), 68 B | 0 B/s, done.
+  Uploading LFS objects: 100% (1/1), 68 B | 0 B/s, done. (?)
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
      02afe80..72162d7  master_bookmark -> master_bookmark
 

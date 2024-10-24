@@ -132,6 +132,8 @@ def prepare_manifest_deps(install_dir, mononoke_repo_root):
         + open(manifest_deps_path, "r").read()
     )
 
+    py3exe = os.environ.get("PYTHON_SYS_EXECUTABLE", "python3")
+
     MANIFEST_DEPS = {}
     for k, v in OSS_DEPS.items():  # noqa: F821
         if v.startswith("//"):
@@ -140,6 +142,8 @@ def prepare_manifest_deps(install_dir, mononoke_repo_root):
             installdep = join(install_dir, v[1:])
             print(f"Adding install dependency {installdep}")
             MANIFEST_DEPS[k] = installdep
+        elif k == "BINARY_HGPYTHON":
+            MANIFEST_DEPS[k] = py3exe
         else:
             MANIFEST_DEPS[k] = v
     for k, v in MONONOKE_BINS.items():  # noqa: F821
@@ -164,21 +168,35 @@ def get_test_groups():
         TestGroup.FLAKY: {
             # abort: server responded 500 Internal Server Error for https://localhost:$LOCAL_PORT/edenapi/large_repo/commit/translate_id: {"message":"internal error: Validation of submodule expansion failed:
             "cross_repo/test-cross-repo-initial-import-gitsubmodules-expand-recursive.t",
+            # intermittent hg cli core dumps
+            "edenapi/test-edenapi-server-files.t",
             # warning: some filter configuration was not removed (found filter.lfs.clean)
             "gitimport/test-gitimport-lfs-enabled-dangling-pointer.t",
+            # intermittent hg cli core dumps
+            "megarepo/test-megarepo-catchup.t",
             # flaky internally and externally
             "mononoke_re_cas/test-mononoke-cas-sync-job-merge-commit-sync.t",
             # intermittenly outputs: 0000000000000000000000000000000000000000 for
             # hg debugsh -c 'ui.write("%s\n" % s.node.hex(repo["."].filectx("was_a_lively_fellow").getnodeinfo()[2]))'
             "server/test-pushrebase.t",
+            # intermittent hg cli core dumps
+            "test-packer-tuning-debug-info.t",
         },
         TestGroup.BROKEN: {
             # no live config reload in OSS
             "cross_repo/test-cross-repo-commit-sync-live-via-extra.t",
-            # missing b0bf2974fb9bfd512e54939869465847f49f9131 Change submodule repo from large repo
-            "cross_repo/test-cross-repo-mononoke-git-sot-switch.t",
+            # output differs in what looks like harmless way
+            "cross_repo/test-cross-repo-initial-import-and-merge-into-existing-megarepo.t",
             # mononoke_hg_sync_loop fails with exit status 1, differs on: -  * successful sync of entries [6]* (glob)
             "mononoke_hg_sync/test-mononoke-hg-sync-job.t",
+            # Differs on diff -w
+            "mononoke_git_server/test-mononoke-git-server-filemode-delta-cycle.t",
+            # Differs on git_client pull output
+            "mononoke_git_server/test-mononoke-git-server-pull-with-fetch-message.t",
+            # Differs on diff at end
+            "mononoke_git_server/test-mononoke-git-server-pull-with-tag.t",
+            # Differs on jq count output
+            "mononoke_git_server/test-mononoke-git-server-push-with-fb-product-log.t",
             # differs on: warning: remote HEAD refers to nonexistent ref, unable to checkout
             "mononoke_git_server/test-mononoke-git-server-clone-with-invalid-head.t",
             # tags are missing in OSS run: - tags/first_tag|032CD4DCE0406F1C1DD1362B6C3C9F9BDFA82F2FC5615E237A890BE4FE08B044
@@ -187,6 +205,8 @@ def get_test_groups():
             "mononoke_re_cas/test-mononoke-cas-sync-job-random.t",
             # missing indexedloghistorystore in cachepath on OSS
             "test-gettreepack.t",
+            # output differs
+            "test-infinitepush.t",
         },
     }
 
@@ -251,33 +271,6 @@ def get_tests_to_run(tests, groups_to_run, rerun_failed, test_flag_root):
     return tests_to_run
 
 
-def get_pythonpath(getdeps_install_dir):
-    paths = [join(getdeps_install_dir, "sapling/lib/python3/site-packages")]
-
-    _, installed, _ = next(os.walk(getdeps_install_dir))
-
-    packages = ["click"]
-
-    for package in packages:
-        candidates = [i for i in installed if i.startswith(f"python-{package}-")]
-        if len(candidates) == 0:
-            raise Exception(
-                f"Failed to find 'python-{package}' in installed directory,"
-                " did you run getdeps?"
-            )
-        if len(candidates) > 1:
-            raise Exception(
-                f"Found more than one 'python-{package}' package in installed"
-                "directory, try cleaning the install dir and rerunning getdeps"
-            )
-        paths.append(
-            join(getdeps_install_dir, candidates[0], f"lib/fb-py-libs/python-{package}")
-        )
-
-    pythonpath = os.environ.get("PYTHONPATH")
-    return ":".join(paths) + (":{}".format(pythonpath) if pythonpath else "")
-
-
 def run_tests(args, manifest_json_dir):
     manifest_json_path = join(manifest_json_dir, "manifest.json")
     with open(manifest_json_path) as json_file:
@@ -290,7 +283,6 @@ def run_tests(args, manifest_json_dir):
 
     env = dict(os.environ.items())
     env["NO_LOCAL_PATHS"] = "1"
-    env["PYTHONPATH"] = get_pythonpath(args.getdeps_install_dir)
 
     if args.dry_run:
         print("\n".join(tests_to_run))
