@@ -9,7 +9,7 @@ edition = "2021"
 anyhow = "1.0.86"
 base64 = "0.21"
 bitflags = { version = "2.6", features = ["serde"] }
-blake3 = { version = "=1.5.0", features = ["traits-preview"] }
+blake3 = { version = "=1.5.0", features = ["rayon", "traits-preview"] }
 byteorder = "1.3"
 lazy_static = { version = "1.4", optional = true }
 minibytes = { version = "0.1.0", path = "../minibytes" }
