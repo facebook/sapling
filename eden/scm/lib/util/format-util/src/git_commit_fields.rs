@@ -16,6 +16,7 @@ use minibytes::Text;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use storemodel::SerializationFormat;
+use types::hgid::GIT_EMPTY_TREE_ID;
 use types::Id20;
 
 use crate::normalize_email_user;
@@ -116,11 +117,19 @@ impl GitCommitFields {
 
         // tree
         result.push_str("tree ");
-        result.push_str(&self.tree.to_hex());
+        let tree = if self.tree.is_null() {
+            GIT_EMPTY_TREE_ID
+        } else {
+            self.tree
+        };
+        result.push_str(&tree.to_hex());
         result.push('\n');
 
         // parents
         for p in &self.parents {
+            if p.is_null() {
+                continue;
+            }
             result.push_str("parent ");
             result.push_str(&p.to_hex());
             result.push('\n');
@@ -374,5 +383,28 @@ This is the commit message.
 
         let text2 = fields.fields().unwrap().to_text().unwrap();
         assert_eq!(text2, text);
+    }
+
+    #[test]
+    fn test_null_tree_parents() {
+        // The hg "null" tree is translated to Git's hardcoded empty tree automatically.
+        let fields = GitCommitFields {
+            author: "a".into(),
+            committer: "c".into(),
+            parents: vec![*Id20::null_id()],
+            message: "m".into(),
+            ..GitCommitFields::default()
+        };
+        let text = fields.to_text().unwrap();
+        assert!(!text.contains(&Id20::null_id().to_hex()));
+        assert_eq!(
+            text,
+            r#"tree 4b825dc642cb6eb9a060e54bf8d69288fbee4904
+author a <> 0 +0000
+committer c <> 0 +0000
+
+m
+"#
+        );
     }
 }

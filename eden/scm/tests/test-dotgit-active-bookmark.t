@@ -48,6 +48,7 @@ Create commit via sl, allowed branch name:
 
   $ sl commit -qm A --config ui.allowemptycommit=true
   $ sl bookmarks
-   * foo                       b2698e270d93
+   * foo                       48914b4aa685
   $ git branch
   * foo
+  $ git checkout HEAD
