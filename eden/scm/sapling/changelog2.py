@@ -61,6 +61,7 @@ class changelog:
         self._use_rust_hg_unparse = uiconfig.configbool(
             "experimental", "use-rust-hg-unparse", True
         )
+        self._changelogrevision_ctor = changelogrevision
 
     @util.propertycache
     def _visibleheads(self):
@@ -315,12 +316,12 @@ class changelog:
         ``changelogrevision`` instead, as it is faster for partial object
         access.
         """
-        c = changelogrevision(self.revision(node))
+        c = self._changelogrevision_ctor(self.revision(node))
         return (c.manifest, c.user, c.date, c.files, c.description, c.extra)
 
     def changelogrevision(self, nodeorrev):
         """Obtain a ``changelogrevision`` for a node or revision."""
-        return changelogrevision(self.revision(nodeorrev))
+        return self._changelogrevision_ctor(self.revision(nodeorrev))
 
     def readfiles(self, node):
         """
@@ -329,7 +330,7 @@ class changelog:
         # For performance we skip verifying the commit hash, which can trigger
         # remote lookups of the parent hashes. A real-world example is:
         # log -r " reverse(master~1000::master) & not(file(r're:.*'))"
-        c = changelogrevision(self.revision(node, verify=False))
+        c = self._changelogrevision_ctor(self.revision(node, verify=False))
         return c.files
 
     def add(
@@ -390,7 +391,9 @@ class changelog:
             basetext = textmap.get(deltabase) or self.revision(deltabase)
             rawtext = bytes(mdiff.patch(basetext, delta))
             if b"stepparents:" in rawtext:
-                parents += parse_stepparents(changelogrevision(rawtext).extra)
+                parents += parse_stepparents(
+                    self._changelogrevision_ctor(rawtext).extra
+                )
             textmap[node] = rawtext
             commits.append((node, parents, rawtext))
             # Attempt to make memory usage bound for large pulls.
