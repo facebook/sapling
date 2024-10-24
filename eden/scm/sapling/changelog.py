@@ -203,7 +203,7 @@ class changelogrevision:
         return encoding.tolocalstr(self._text[self._offsets[3] + 2 :])
 
 
-def hgcommittext(manifest, files, desc, user, date, extra):
+def hgcommittext(manifest, files, desc, user, date, extra, use_rust=True):
     """Generate the 'text' of a commit"""
     # Convert to UTF-8 encoded bytestrings as the very first
     # thing: calling any method on a localstr object will turn it
@@ -222,20 +222,35 @@ def hgcommittext(manifest, files, desc, user, date, extra):
     desc = stripdesc(desc)
 
     if date:
-        parseddate = "%d %d" % util.parsedate(date)
+        timestamp, tz = util.parsedate(date)
     else:
-        parseddate = "%d %d" % util.makedate()
+        timestamp, tz = util.makedate()
+
     if extra:
         branch = extra.get("branch")
         if branch in ("default", ""):
             del extra["branch"]
         elif branch in (".", "null", "tip"):
             raise error.RevlogError(_("the name '%s' is reserved") % branch)
-    if extra:
-        extra = encodeextra(extra)
-        parseddate = "%s %s" % (parseddate, extra)
-    l = [hex(manifest), user, parseddate] + sorted(files) + ["", desc]
-    text = encodeutf8("\n".join(l), errors="surrogateescape")
+
+    if use_rust:
+        # see Rust format-util HgCommitFields for available fields
+        fields = {
+            "tree": manifest,
+            "author": user,
+            "date": (int(timestamp), tz),
+            "extras": extra,
+            "files": sorted(files),
+            "message": desc,
+        }
+        text = bindings.formatutil.hg_commit_fields_to_text(fields).encode()
+    else:
+        parseddate = "%d %d" % (timestamp, tz)
+        if extra:
+            extra = encodeextra(extra)
+            parseddate = "%s %s" % (parseddate, extra)
+        l = [hex(manifest), user, parseddate] + sorted(files) + ["", desc]
+        text = encodeutf8("\n".join(l), errors="surrogateescape")
     return text
 
 

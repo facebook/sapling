@@ -57,6 +57,10 @@ class changelog:
         # Number of commit texts to buffer. Useful for bounding memory usage.
         self._groupbuffersize = uiconfig.configint("pull", "buffer-commit-count")
         self._reporef = weakref.ref(repo)
+        # Rollout control
+        self._use_rust_hg_unparse = uiconfig.configbool(
+            "experimental", "use-rust-hg-unparse", True
+        )
 
     @util.propertycache
     def _visibleheads(self):
@@ -349,7 +353,15 @@ class changelog:
             )
             node = git.hashobj(b"commit", text)
         else:
-            text = hgcommittext(manifest, files, desc, user, date, extra)
+            text = hgcommittext(
+                manifest,
+                files,
+                desc,
+                user,
+                date,
+                extra,
+                use_rust=self._use_rust_hg_unparse,
+            )
             node = revlog.hash(text, p1, p2)
 
         # Avoid updating "tip" if node is known locally.
