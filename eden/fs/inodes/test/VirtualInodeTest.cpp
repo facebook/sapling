@@ -559,8 +559,7 @@ void verifyTreeState(
                         ENTRY_ATTRIBUTE_BLAKE3 | ENTRY_ATTRIBUTE_DIGEST_SIZE,
                     expected.path,
                     mount.getEdenMount()->getObjectStore(),
-                    ObjectFetchContext::getNullContext(),
-                    /*shouldFetchTreeAuxData=*/true)
+                    ObjectFetchContext::getNullContext())
                 .semi()
                 .via(mount.getServerExecutor().get());
         mount.drainServerExecutor();
@@ -769,8 +768,7 @@ TEST(VirtualInodeTest, getChildrenAttributes) {
                               attribute_request,
                               info->path,
                               mount.getEdenMount()->getObjectStore(),
-                              ObjectFetchContext::getNullContext(),
-                              /*shouldFetchTreeAuxData=*/true)
+                              ObjectFetchContext::getNullContext())
                           .get();
 
         for (auto child : files.getChildren(RelativePathPiece{info->path})) {
@@ -785,8 +783,7 @@ TEST(VirtualInodeTest, getChildrenAttributes) {
                           attribute_request,
                           child->path,
                           mount.getEdenMount()->getObjectStore(),
-                          ObjectFetchContext::getNullContext(),
-                          /*shouldFetchTreeAuxData=*/true)
+                          ObjectFetchContext::getNullContext())
                       .getTry())));
         }
       }
@@ -839,8 +836,7 @@ TEST(VirtualInodeTest, fileOpsOnCorrectObjectsOnly) {
                                   ENTRY_ATTRIBUTE_DIGEST_SIZE,
                               info.path,
                               mount.getEdenMount()->getObjectStore(),
-                              ObjectFetchContext::getNullContext(),
-                              /*shouldFetchTreeAuxData=*/true)
+                              ObjectFetchContext::getNullContext())
                           .getTry();
     if (info.isRegularFile()) {
       EXPECT_EQ(true, auxDataTry.hasValue())
@@ -883,8 +879,7 @@ TEST(VirtualInodeTest, fileOpsOnCorrectObjectsOnly) {
                     ENTRY_ATTRIBUTE_DIGEST_SIZE,
                 info.path,
                 mount.getEdenMount()->getObjectStore(),
-                ObjectFetchContext::getNullContext(),
-                /*shouldFetchTreeAuxData=*/true)
+                ObjectFetchContext::getNullContext())
             .getTry();
     if (info.isRegularFile()) {
       EXPECT_EQ(true, auxDataTry.hasValue())
@@ -951,8 +946,7 @@ TEST(VirtualInodeTest, getEntryAttributesAttributeError) {
           ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE | ENTRY_ATTRIBUTE_DIGEST_SIZE,
       RelativePathPiece{"root_dirA"},
       mount.getEdenMount()->getObjectStore(),
-      ObjectFetchContext::getNullContext(),
-      /*shouldFetchTreeAuxData=*/true);
+      ObjectFetchContext::getNullContext());
 
   builder.triggerError(
       "root_dirA/child1_fileA1", std::domain_error("fake error for testing"));

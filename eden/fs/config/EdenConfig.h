@@ -320,11 +320,6 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
-  ConfigSetting<bool> shouldFetchTreeMetadata{
-      "thrift:request-tree-metadata",
-      false,
-      this};
-
   /**
    * How often to collect Thrift server metrics. The default value mirrors the
    * value from facebook::fb303::TServerCounters::kDefaultSampleRate

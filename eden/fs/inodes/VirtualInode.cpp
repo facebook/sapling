@@ -302,7 +302,6 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
     RelativePathPiece path,
     const std::shared_ptr<ObjectStore>& objectStore,
     const ObjectFetchContextPtr& fetchContext,
-    bool shouldFetchTreeAuxData,
     std::optional<TreeEntryType> entryType,
     int errorCode,
     std::string additionalErrorContext) const {
@@ -357,8 +356,7 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributesForNonFile(
     // aux data for it. However, we can only compute the additional attributes
     // of trees that have ObjectIds. In other words, the tree must be
     // unmaterialized.
-    if (shouldFetchTreeAuxData &&
-        (requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_HASH) ||
+    if ((requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_HASH) ||
          requestedAttributes.contains(ENTRY_ATTRIBUTE_DIGEST_SIZE)) &&
         oid.has_value()) {
       auto treeAuxFut =
@@ -436,8 +434,7 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
     EntryAttributeFlags requestedAttributes,
     RelativePathPiece path,
     const std::shared_ptr<ObjectStore>& objectStore,
-    const ObjectFetchContextPtr& fetchContext,
-    bool shouldFetchTreeAuxData) const {
+    const ObjectFetchContextPtr& fetchContext) const {
   bool windowsSymlinksEnabled = objectStore->getWindowsSymlinksEnabled();
   // For non regular files we return errors for hashes and sizes.
   // We intentionally want to refuse to compute the SHA1 of symlinks.
@@ -451,7 +448,6 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
           path,
           objectStore,
           fetchContext,
-          shouldFetchTreeAuxData,
           TreeEntryType::TREE,
           EISDIR,
           {});
@@ -461,7 +457,6 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
           path,
           objectStore,
           fetchContext,
-          shouldFetchTreeAuxData,
           TreeEntryType::SYMLINK,
           EINVAL,
           "file is a symlink");
@@ -471,7 +466,6 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
           path,
           objectStore,
           fetchContext,
-          shouldFetchTreeAuxData,
           std::nullopt,
           EINVAL,
           fmt::format(
@@ -744,8 +738,7 @@ VirtualInode::getChildrenAttributes(
     EntryAttributeFlags requestedAttributes,
     RelativePath path,
     const std::shared_ptr<ObjectStore>& objectStore,
-    const ObjectFetchContextPtr& fetchContext,
-    bool shouldFetchTreeAuxData) {
+    const ObjectFetchContextPtr& fetchContext) {
   auto children = this->getChildren(path.piece(), objectStore, fetchContext);
 
   if (children.hasException()) {
@@ -767,14 +760,10 @@ VirtualInode::getChildrenAttributes(
             .thenValue([requestedAttributes,
                         subPath = path + nameAndvirtualInode.first,
                         objectStore,
-                        fetchContext = fetchContext.copy(),
-                        shouldFetchTreeAuxData](VirtualInode virtualInode) {
+                        fetchContext =
+                            fetchContext.copy()](VirtualInode virtualInode) {
               return virtualInode.getEntryAttributes(
-                  requestedAttributes,
-                  subPath,
-                  objectStore,
-                  fetchContext,
-                  shouldFetchTreeAuxData);
+                  requestedAttributes, subPath, objectStore, fetchContext);
             }));
   }
   return collectAll(std::move(attributesFutures))

@@ -2580,16 +2580,15 @@ getAllEntryAttributes(
     EntryAttributeFlags requestedAttributes,
     const EdenMount& edenMount,
     std::string path,
-    const ObjectFetchContextPtr& fetchContext,
-    bool shouldFetchTreeAuxData) {
+    const ObjectFetchContextPtr& fetchContext) {
   auto virtualInode =
       edenMount.getVirtualInode(RelativePathPiece{path}, fetchContext);
   return std::move(virtualInode)
       .thenValue([path = std::move(path),
                   requestedAttributes,
                   objectStore = edenMount.getObjectStore(),
-                  fetchContext = fetchContext.copy(),
-                  shouldFetchTreeAuxData](VirtualInode tree) mutable {
+                  fetchContext =
+                      fetchContext.copy()](VirtualInode tree) mutable {
         if (!tree.isDirectory()) {
           return ImmediateFuture<std::vector<
               std::pair<PathComponent, folly::Try<EntryAttributes>>>>(
@@ -2599,11 +2598,7 @@ getAllEntryAttributes(
                   fmt::format("{}: path must be a directory", path)));
         }
         return tree.getChildrenAttributes(
-            requestedAttributes,
-            RelativePath{path},
-            objectStore,
-            fetchContext,
-            shouldFetchTreeAuxData);
+            requestedAttributes, RelativePath{path}, objectStore, fetchContext);
       });
 }
 
@@ -2751,9 +2746,7 @@ EdenServiceHandler::semifuture_readdir(std::unique_ptr<ReaddirParams> params) {
   auto& fetchContext = helper->getFetchContext();
   auto requestedAttributes =
       EntryAttributeFlags::raw(*params->requestedAttributes());
-  auto shouldFetchTreeAuxData = server_->getServerState()
-                                    ->getEdenConfig()
-                                    ->shouldFetchTreeMetadata.getValue();
+
   return wrapImmediateFuture(
              std::move(helper),
              waitForPendingWrites(mountHandle.getEdenMount(), *params->sync())
@@ -2761,8 +2754,7 @@ EdenServiceHandler::semifuture_readdir(std::unique_ptr<ReaddirParams> params) {
                      [mountHandle,
                       requestedAttributes,
                       paths = std::move(paths),
-                      fetchContext = fetchContext.copy(),
-                      shouldFetchTreeAuxData](auto&&) mutable
+                      fetchContext = fetchContext.copy()](auto&&) mutable
                      -> ImmediateFuture<
                          std::vector<DirListAttributeDataOrError>> {
                        std::vector<ImmediateFuture<DirListAttributeDataOrError>>
@@ -2774,8 +2766,7 @@ EdenServiceHandler::semifuture_readdir(std::unique_ptr<ReaddirParams> params) {
                                  requestedAttributes,
                                  mountHandle.getEdenMount(),
                                  std::move(path),
-                                 fetchContext,
-                                 shouldFetchTreeAuxData)
+                                 fetchContext)
                                  .thenTry([requestedAttributes, mountHandle](
                                               folly::Try<std::vector<std::pair<
                                                   PathComponent,
@@ -2812,25 +2803,18 @@ EdenServiceHandler::getEntryAttributes(
     EntryAttributeFlags reqBitmask,
     AttributesRequestScope reqScope,
     SyncBehavior sync,
-    const ObjectFetchContextPtr& fetchContext,
-    bool shouldFetchTreeAuxData) {
+    const ObjectFetchContextPtr& fetchContext) {
   return waitForPendingWrites(edenMount, sync)
       .thenValue([this,
                   &edenMount,
                   &paths,
                   fetchContext = fetchContext.copy(),
                   reqBitmask,
-                  reqScope,
-                  shouldFetchTreeAuxData](auto&&) mutable {
+                  reqScope](auto&&) mutable {
         vector<ImmediateFuture<EntryAttributes>> futures;
         for (const auto& path : paths) {
           futures.emplace_back(getEntryAttributesForPath(
-              edenMount,
-              reqBitmask,
-              reqScope,
-              path,
-              fetchContext,
-              shouldFetchTreeAuxData));
+              edenMount, reqBitmask, reqScope, path, fetchContext));
         }
 
         // Collect all futures into a single tuple
@@ -2859,8 +2843,7 @@ ImmediateFuture<EntryAttributes> EdenServiceHandler::getEntryAttributesForPath(
     EntryAttributeFlags reqBitmask,
     AttributesRequestScope reqScope,
     std::string_view path,
-    const ObjectFetchContextPtr& fetchContext,
-    bool shouldFetchTreeAuxData) {
+    const ObjectFetchContextPtr& fetchContext) {
   if (path.empty()) {
     return ImmediateFuture<EntryAttributes>(newEdenError(
         EINVAL,
@@ -2876,15 +2859,14 @@ ImmediateFuture<EntryAttributes> EdenServiceHandler::getEntryAttributesForPath(
                     reqBitmask,
                     reqScope,
                     relativePath = relativePath.copy(),
-                    fetchContext = fetchContext.copy(),
-                    shouldFetchTreeAuxData](const VirtualInode& virtualInode) {
+                    fetchContext =
+                        fetchContext.copy()](const VirtualInode& virtualInode) {
           if (dtypeMatchesRequestScope(virtualInode, reqScope)) {
             return virtualInode.getEntryAttributes(
                 reqBitmask,
                 relativePath,
                 edenMount.getObjectStore(),
-                fetchContext,
-                shouldFetchTreeAuxData);
+                fetchContext);
           }
           return makeImmediateFuture<EntryAttributes>(PathError(
               reqScope == AttributesRequestScope::TREES ? ENOTDIR : EISDIR,
@@ -2935,8 +2917,7 @@ EdenServiceHandler::semifuture_getAttributesFromFiles(
       kAllEntryAttributes,
       AttributesRequestScope::FILES,
       *params->sync(),
-      fetchContext,
-      config->shouldFetchTreeMetadata.getValue());
+      fetchContext);
 
   return wrapImmediateFuture(
              std::move(helper),
@@ -3043,8 +3024,7 @@ EdenServiceHandler::semifuture_getAttributesFromFilesV2(
       reqBitmask,
       reqScope,
       *params->sync(),
-      fetchContext,
-      config->shouldFetchTreeMetadata.getValue());
+      fetchContext);
 
   return wrapImmediateFuture(
              std::move(helper),

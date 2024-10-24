@@ -472,15 +472,13 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       EntryAttributeFlags reqBitmask,
       AttributesRequestScope reqScope,
       SyncBehavior sync,
-      const ObjectFetchContextPtr& fetchContext,
-      bool getEntryAttributesForPath);
+      const ObjectFetchContextPtr& fetchContext);
   ImmediateFuture<EntryAttributes> getEntryAttributesForPath(
       const EdenMount& edenMount,
       EntryAttributeFlags reqBitmask,
       AttributesRequestScope reqScope,
       std::string_view path,
-      const ObjectFetchContextPtr& fetchContext,
-      bool getEntryAttributesForPath);
+      const ObjectFetchContextPtr& fetchContext);
 
   folly::Synchronized<std::unordered_map<uint64_t, ThriftRequestTraceEvent>>
       outstandingThriftRequests_;

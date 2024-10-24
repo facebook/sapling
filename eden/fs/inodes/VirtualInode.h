@@ -139,8 +139,7 @@ class VirtualInode {
       EntryAttributeFlags requestedAttributes,
       RelativePathPiece path,
       const std::shared_ptr<ObjectStore>& objectStore,
-      const ObjectFetchContextPtr& fetchContext,
-      bool shouldFetchTreeAuxData) const;
+      const ObjectFetchContextPtr& fetchContext) const;
 
   /**
    * Emulate stat in a way that works for source control.
@@ -184,8 +183,7 @@ class VirtualInode {
       EntryAttributeFlags requestedAttributes,
       RelativePath path,
       const std::shared_ptr<ObjectStore>& objectStore,
-      const ObjectFetchContextPtr& fetchContext,
-      bool shouldFetchTreeAuxData);
+      const ObjectFetchContextPtr& fetchContext);
 
  private:
   /**
@@ -210,7 +208,6 @@ class VirtualInode {
       RelativePathPiece path,
       const std::shared_ptr<ObjectStore>& objectStore,
       const ObjectFetchContextPtr& fetchContext,
-      bool shouldFetchTreeAuxData,
       std::optional<TreeEntryType> entryType,
       int errorCode,
       std::string additionalErrorContext = {}) const;
