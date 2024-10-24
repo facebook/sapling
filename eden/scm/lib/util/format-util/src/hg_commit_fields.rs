@@ -190,7 +190,13 @@ impl CommitFields for HgCommitLazyFields {
     }
 
     fn author_date(&self) -> Result<HgTime> {
-        Ok(self.fields()?.date)
+        let fields = self.fields()?;
+        let date = if let Some(date_str) = fields.extras.get("author_date") {
+            parse_date(date_str.as_ref())?.0
+        } else {
+            fields.date
+        };
+        Ok(date)
     }
 
     fn committer_date(&self) -> Result<Option<HgTime>> {
