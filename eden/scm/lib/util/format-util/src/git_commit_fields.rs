@@ -19,6 +19,7 @@ use storemodel::SerializationFormat;
 use types::Id20;
 
 use crate::normalize_email_user;
+use crate::utils::write_multi_line;
 pub use crate::CommitFields;
 
 /// Holds the Git commit text. Fields can be lazily fields.
@@ -106,8 +107,6 @@ impl GitCommitFields {
 
     /// Serialize fields to "text".
     pub fn to_text(&self) -> Result<String> {
-        ensure!(!self.message.is_empty(), "message cannot be empty");
-
         let len = (1 + self.parents.len()) * (8 + Id20::hex_len())
             + self.author.len()
             + self.committer.len()
@@ -141,10 +140,8 @@ impl GitCommitFields {
             write_extra(name, value, &mut result)?;
         }
 
-        // message
-        result.push('\n');
-        result.push_str(self.message.trim_matches('\n'));
-        result.push('\n');
+        // message, trim empty lines, trailing spaces, and keep '\n' at the end
+        write_message(&self.message, &mut result)?;
 
         Ok(result)
     }
@@ -244,6 +241,16 @@ fn parse_name_date(line: Text) -> Result<(Text, Date)> {
         line.slice_to_bytes(name_str)
     };
     Ok((name, (date_seconds, tz_seconds)))
+}
+
+fn write_message(message: &str, out: &mut String) -> Result<()> {
+    // Empty line indicates the start of commit message.
+    out.push('\n');
+    let empty = write_multi_line(message, "", out)?;
+    ensure!(!empty, "commit message cannot be empty");
+    // Keep one new line at the end.
+    out.push('\n');
+    Ok(())
 }
 
 fn write_extra(name: &str, value: &str, out: &mut String) -> Result<()> {

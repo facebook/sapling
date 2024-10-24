@@ -70,6 +70,31 @@ pub(crate) fn normalize_email_user(name: &str, format: SerializationFormat) -> R
     Ok(normalized_name)
 }
 
+/// Write multi-line `message` to `out`. Each line is prefixed by `line_prefix`.
+/// `message` is normalized (trimed trailing spaces, and leading,
+/// trailing empty lines, `\r\n` becomes `\n`).
+///
+/// The last `\n` is not written. The callsite can choose to write it or not.
+/// Typically, hg commit message does not end with `\n` but git does.
+///
+/// Returns `empty`, `true` if nothing was written.
+pub(crate) fn write_multi_line(message: &str, line_prefix: &str, out: &mut String) -> Result<bool> {
+    // Trim empty lines.
+    let message = message.trim_matches(['\r', '\n']);
+    // Trim trailing spaces per line.
+    let mut empty = true;
+    for line in message.lines() {
+        if !empty {
+            out.push('\n');
+        }
+        out.push_str(line_prefix);
+        let line = line.trim_end_matches(' ');
+        out.push_str(line);
+        empty = false;
+    }
+    Ok(empty)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

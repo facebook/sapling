@@ -329,8 +329,6 @@ def gitcommittext(
     if date != authordate and date != committerdate:
         authordate = date
 
-    normalized_desc = f"{stripdesc(desc)}\n"
-
     # see Rust format-util GitCommitFields for available fields
     fields = {
         "tree": tree,
@@ -339,7 +337,7 @@ def gitcommittext(
         "date": util.parsedate(authordate),
         "committer": gituser.normalize(committer),
         "committer_date": util.parsedate(committerdate),
-        "message": normalized_desc,
+        "message": desc,
         "extras": extra or {},
     }
     to_text = bindings.formatutil.git_commit_fields_to_text
