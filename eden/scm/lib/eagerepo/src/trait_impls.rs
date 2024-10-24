@@ -9,6 +9,7 @@
 
 use cas_client::CasClient;
 use cas_client::CasFetchedStats;
+use format_util::commit_text_to_root_tree_id;
 use format_util::git_sha1_serialize;
 use format_util::hg_sha1_serialize;
 use format_util::split_hg_file_metadata;
@@ -169,10 +170,11 @@ impl TreeStore for EagerRepoStore {
 impl ReadRootTreeIds for EagerRepoStore {
     async fn read_root_tree_ids(&self, commits: Vec<HgId>) -> anyhow::Result<Vec<(HgId, HgId)>> {
         let mut res = Vec::new();
+        let format = self.format();
         for commit in &commits {
             let content = self.get_content(*commit)?;
             if let Some(data) = content {
-                let tree_id = HgId::from_hex(&data[0..HgId::hex_len()])?;
+                let tree_id = commit_text_to_root_tree_id(&data, format)?;
                 res.push((commit.clone(), tree_id));
             }
         }
