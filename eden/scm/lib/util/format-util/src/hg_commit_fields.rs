@@ -17,6 +17,7 @@ use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use storemodel::SerializationFormat;
 use types::Id20;
+use types::RepoPath;
 
 use crate::normalize_email_user;
 use crate::utils::write_multi_line;
@@ -141,6 +142,7 @@ impl HgCommitFields {
 
         // files
         for path in &self.files {
+            let _ = RepoPath::from_str(path)?;
             result.push_str(path);
             result.push('\n');
         }
@@ -400,6 +402,13 @@ mod tests {
         // should reject bad author name
         let bad_fields = HgCommitFields {
             author: "a\0b".into(),
+            ..fields1.clone()
+        };
+        assert!(bad_fields.to_text().is_err());
+
+        // should reject bad file names
+        let bad_fields = HgCommitFields {
+            files: vec!["a\n".into()],
             ..fields1.clone()
         };
         assert!(bad_fields.to_text().is_err());
