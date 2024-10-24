@@ -118,7 +118,7 @@ export type DiffComment = {
   reactions: Array<DiffCommentReaction>;
   /** Suggestion for how to change the code, as a patch */
   suggestedChange?: SuggestedChange;
-  codePatchSuggestedChange?: ParsedDiff;
+  codePatchSuggestedChange?: SuggestedChange;
   replies: Array<DiffComment>;
   /** If this comment has been resolved. true => "resolved", false => "unresolved", null => the comment is not resolvable, don't show any UI for it */
   isResolved?: boolean;
