@@ -115,8 +115,8 @@ pub async fn build_underived_batched_graph<'a>(
                 let item = DerivationDagItem::new(
                     repo_id,
                     config_name.to_string(),
-                    derived_data_type.clone(),
-                    root_cs_id.clone(),
+                    derived_data_type,
+                    root_cs_id,
                     head_cs_id,
                     bubble_id,
                     deps.collect(),
@@ -125,9 +125,9 @@ pub async fn build_underived_batched_graph<'a>(
 
                 let max_failed_attemps = justknobs::get_as::<u64>("scm/mononoke:build_underived_batched_graph_max_failed_attempts", None)?;
 
-                let mut cur_item = Some(item.clone());
                 // Upstream batch will depend on this cs
                 let mut upstream_dep = item.id().clone();
+                let mut cur_item = Some(item);
                 let mut failed_attempt = 0;
                 let mut err_msg = None;
                 while let Some(item) = cur_item {
@@ -171,23 +171,47 @@ pub async fn build_underived_batched_graph<'a>(
                                 }
                             }
                             Err(e) => {
-                                let is_derived =
-                                    ddm.is_derived(ctx, item.head_cs_id(), None, derived_data_type).await?;
-                                if is_derived {
-                                    let err_msg_str = format!("Failed to enqueue with error: {}, but the data was derived", e);
-                                    debug!(ctx.logger(), "{}", err_msg_str);
-                                    err_msg = Some(err_msg_str);
-                                    // derived, update ready watch and return no dependency
-                                    *watch.lock() =
-                                        Some(EnqueueResponse::new(Box::new(future::ok(true))));
-                                    None
-                                } else {
-                                    // return same item for enqueue and incremente failures count
-                                    failed_attempt += 1;
-                                    let err_msg_str = format!("Failed to enqueue into DAG: {}", e);
-                                    error!(ctx.logger(), "{}", err_msg_str);
-                                    err_msg = Some(err_msg_str);
-                                    Some(item)
+                                let derived_ancestors = commit_graph.ancestors_frontier_with(ctx, vec![item.head_cs_id()], |cs_id| async move {
+                                    Ok(ddm.is_derived(ctx, cs_id, None, derived_data_type).await?)
+                                }).await?;
+
+                                let mut underived_batch = commit_graph.ancestors_difference(ctx, vec![item.head_cs_id()], derived_ancestors).await?;
+                                match underived_batch.pop() {
+                                    // All changesets in the batch were derived
+                                    None => {
+                                        let err_msg_str = format!("Failed to enqueue with error: {}, but the data was derived", e);
+                                        debug!(ctx.logger(), "{}", err_msg_str);
+                                        err_msg = Some(err_msg_str);
+                                        // derived, update ready watch and return no dependency
+                                        *watch.lock() =
+                                            Some(EnqueueResponse::new(Box::new(future::ok(true))));
+                                        None
+                                    }
+                                    // None of the changesets in the batch were derived, but enqueuing failed
+                                    Some(root_cs_id) if root_cs_id == item.root_cs_id() => {
+                                        // return same item for enqueue and increment failures count
+                                        failed_attempt += 1;
+                                        let err_msg_str = format!("Failed to enqueue into DAG: {}", e);
+                                        error!(ctx.logger(), "{}", err_msg_str);
+                                        err_msg = Some(err_msg_str);
+                                        Some(item)
+                                    }
+                                    // Some of the changesets in the batch were derived
+                                    Some(root_cs_id) => {
+                                        // Create a new item with only the underived changesets
+                                        Some(
+                                            DerivationDagItem::new(
+                                                item.repo_id(),
+                                                item.config_name().to_string(),
+                                                item.derived_data_type(),
+                                                root_cs_id,
+                                                item.head_cs_id(),
+                                                item.bubble_id(),
+                                                vec![],
+                                                item.client_info(),
+                                            )?
+                                        )
+                                    }
                                 }
                             }
                         }
