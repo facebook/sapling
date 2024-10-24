@@ -11,6 +11,7 @@
 //!
 //! Commits stored in HG format and backed by efficient `dag` structures.
 
+pub use commits_trait::trait_impls;
 pub use commits_trait::AppendCommits;
 pub use commits_trait::DagCommits;
 pub use commits_trait::DescribeBackend;
@@ -29,7 +30,6 @@ mod mem_commits;
 mod on_disk_commits;
 mod revlog;
 mod strip;
-pub mod trait_impls;
 mod utils;
 
 pub use anyhow::Result;

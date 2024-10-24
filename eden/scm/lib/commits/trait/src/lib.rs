@@ -219,6 +219,6 @@ pub struct ParentlessHgCommit {
     pub raw_text: Bytes,
 }
 
-mod trait_impls;
+pub mod trait_impls;
 
 pub use anyhow::Result;
