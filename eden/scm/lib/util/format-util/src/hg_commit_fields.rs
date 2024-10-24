@@ -19,6 +19,7 @@ use storemodel::SerializationFormat;
 use types::Id20;
 
 use crate::normalize_email_user;
+use crate::utils::write_multi_line;
 pub use crate::CommitFields;
 
 /// Holds the Hg commit text. Fields can be lazily parsed.
@@ -103,7 +104,6 @@ impl HgCommitFields {
 
     /// Serialize fields to "text".
     pub fn to_text(&self) -> Result<String> {
-        ensure!(!self.message.is_empty(), "message cannot be empty");
         let author = normalize_email_user(&self.author, SerializationFormat::Hg)?;
 
         let len = Id20::hex_len()
@@ -143,10 +143,9 @@ impl HgCommitFields {
             result.push_str(path);
             result.push('\n');
         }
-        result.push('\n');
 
         // message
-        result.push_str(self.message.trim_matches('\n'));
+        write_message(&self.message, &mut result)?;
 
         Ok(result)
     }
@@ -276,6 +275,14 @@ fn extra_unescape(s: Text) -> Text {
     } else {
         s
     }
+}
+
+fn write_message(message: &str, out: &mut String) -> Result<()> {
+    // Empty line indicates the start of commit message.
+    out.push('\n');
+    let empty = write_multi_line(message, "", out)?;
+    ensure!(!empty, "commit message cannot be empty");
+    Ok(())
 }
 
 #[cfg(test)]
