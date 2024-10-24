@@ -1392,6 +1392,11 @@ class EagerDataStore:
         # need the historystore to provide p1, p2 information
         self.historystore = EagerHistoryStore(store)
 
+    def format(self):
+        format = bindings.storemodel.TreeStore.from_store(self._store).format()
+        self.format = lambda: format
+        return format
+
     def get(self, dir, node):
         rawtext = self._store.get_content(node)
         if rawtext is None:
