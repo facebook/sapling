@@ -5,9 +5,22 @@ oncall("sapling")
 rust_library(
     name = "hgtime",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "features": {
+                "default": ["serde"],
+                "serde": ["dep:serde"],
+            },
+        },
+    },
     crate_root = "src/lib.rs",
+    features = ["serde"],
+    test_deps = [
+        "fbsource//third-party/rust:serde_cbor",
+    ],
     deps = [
         "fbsource//third-party/rust:chrono",
         "fbsource//third-party/rust:humantime",
+        "fbsource//third-party/rust:serde",
     ],
 )

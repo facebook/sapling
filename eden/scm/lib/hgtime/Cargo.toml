@@ -8,3 +8,11 @@ edition = "2021"
 [dependencies]
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 humantime = "2.1"
+serde = { version = "1.0.185", features = ["derive", "rc"], optional = true }
+
+[dev-dependencies]
+serde_cbor = "0.11"
+
+[features]
+default = ["serde"]
+serde = ["dep:serde"]

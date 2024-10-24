@@ -21,6 +21,9 @@ use chrono::prelude::*;
 use chrono::Duration;
 use chrono::LocalResult;
 
+#[cfg(feature = "serde")]
+mod serde_impl;
+
 /// A simple time structure that matches hg's time representation.
 ///
 /// Internally it's unixtime (in GMT), and offset (GMT -1 = +3600).
