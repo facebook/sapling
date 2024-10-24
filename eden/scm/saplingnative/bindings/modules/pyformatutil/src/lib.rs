@@ -14,6 +14,7 @@ use format_util::commit_text_to_fields;
 use format_util::CommitFields as NativeCommitFields;
 use format_util::GitCommitFields;
 use format_util::HgCommitFields;
+use format_util::HgTime;
 use minibytes::Text;
 use storemodel::SerializationFormat;
 use types::Id20;
@@ -60,18 +61,18 @@ py_class!(pub class CommitFields |py| {
 
     /// Author (creation) date.
     /// (UTC seconds since UNIX epoch, timezone offset in seconds)
-    def author_date(&self) -> PyResult<(u64, i32)> {
+    def author_date(&self) -> PyResult<Serde<HgTime>> {
         let inner = self.inner(py);
-        inner.author_date().map_pyerr(py)
+        inner.author_date().map_pyerr(py).map(Serde)
     }
 
     /// Committer (modified) date.
     /// Returns `None` if committer is not explicitly tracked
     /// (i.e. hg format without committer_date extra).
     /// (UTC seconds since UNIX epoch, timezone offset in seconds)
-    def committer_date(&self) -> PyResult<Option<(u64, i32)>> {
+    def committer_date(&self) -> PyResult<Serde<Option<HgTime>>> {
         let inner = self.inner(py);
-        inner.committer_date().map_pyerr(py)
+        inner.committer_date().map_pyerr(py).map(Serde)
     }
 
     /// Parent information. Order-preserved.

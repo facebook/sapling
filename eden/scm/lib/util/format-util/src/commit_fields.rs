@@ -12,6 +12,8 @@ use minibytes::Text;
 use storemodel::SerializationFormat;
 use types::Id20;
 
+use crate::HgTime;
+
 /// Extract commit fields from commit raw text.
 /// Note: "parents" only exists in the Git commit raw text.
 pub trait CommitFields: Send + 'static {
@@ -28,13 +30,13 @@ pub trait CommitFields: Send + 'static {
 
     /// Author (creation) date.
     /// (UTC seconds since UNIX epoch, timezone offset in seconds)
-    fn author_date(&self) -> Result<(u64, i32)>;
+    fn author_date(&self) -> Result<HgTime>;
 
     /// Committer (modified) date.
     /// Returns `None` if committer is not explicitly tracked
     /// (i.e. hg format without committer_date extra).
     /// (UTC seconds since UNIX epoch, timezone offset in seconds)
-    fn committer_date(&self) -> Result<Option<(u64, i32)>>;
+    fn committer_date(&self) -> Result<Option<HgTime>>;
 
     /// Parent information. Order-preserved.
     /// Returns `None` if not tracked in the commit text (i.e. hg format).

@@ -42,6 +42,7 @@ pub use hg_sha1::hg_sha1_deserialize;
 pub use hg_sha1::hg_sha1_digest;
 pub use hg_sha1::hg_sha1_serialize;
 pub use hg_sha1::hg_sha1_serialize_write;
+pub use hgtime::HgTime;
 pub(crate) use sha1_digest::Sha1Write;
 use storemodel::SerializationFormat;
 pub(crate) use utils::normalize_email_user;

@@ -22,6 +22,7 @@ use types::RepoPath;
 use crate::normalize_email_user;
 use crate::utils::write_multi_line;
 pub use crate::CommitFields;
+use crate::HgTime;
 
 /// Holds the Hg commit text. Fields can be lazily parsed.
 pub struct HgCommitLazyFields {
@@ -35,13 +36,11 @@ pub struct HgCommitLazyFields {
 pub struct HgCommitFields {
     tree: Id20,
     author: Text,
-    date: Date,
+    date: HgTime,
     extras: BTreeMap<Text, Text>,
     files: Vec<Text>,
     message: Text,
 }
-
-type Date = (u64, i32);
 
 impl HgCommitFields {
     fn from_text(text: &Text) -> Result<Self> {
@@ -129,9 +128,9 @@ impl HgCommitFields {
         result.push('\n');
 
         // date, extra
-        write!(&mut result, "{}", self.date.0)?;
+        write!(&mut result, "{}", self.date.unixtime)?;
         result.push(' ');
-        write!(&mut result, "{}", self.date.1)?;
+        write!(&mut result, "{}", self.date.offset)?;
         for (i, (k, v)) in self.extras.iter().enumerate() {
             result.push(if i == 0 { ' ' } else { '\0' });
             result.push_str(&extra_escape(k.clone()));
@@ -190,11 +189,11 @@ impl CommitFields for HgCommitLazyFields {
         Ok(self.fields()?.extras.get("committer").map(AsRef::as_ref))
     }
 
-    fn author_date(&self) -> Result<(u64, i32)> {
+    fn author_date(&self) -> Result<HgTime> {
         Ok(self.fields()?.date)
     }
 
-    fn committer_date(&self) -> Result<Option<(u64, i32)>> {
+    fn committer_date(&self) -> Result<Option<HgTime>> {
         if let Some(date_str) = self.fields()?.extras.get("committer_date") {
             let date = parse_date(date_str.as_ref())?.0;
             Ok(Some(date))
@@ -226,11 +225,11 @@ impl CommitFields for HgCommitLazyFields {
 
 /// Returns the `Time` and the rest of `date_str`.
 /// date_str is "timestamp tz" used in hg commits
-fn parse_date<'a>(date_str: &'a str) -> Result<(Date, Option<&'a str>)> {
+fn parse_date<'a>(date_str: &'a str) -> Result<(HgTime, Option<&'a str>)> {
     let mut parts = date_str.splitn(3, ' ');
-    let date_seconds: u64 = parts.next().context("missing time")?.parse()?;
-    let tz_seconds: i32 = parts.next().context("missing tz")?.parse()?;
-    Ok(((date_seconds, tz_seconds), parts.next()))
+    let unixtime: i64 = parts.next().context("missing time")?.parse()?;
+    let offset: i32 = parts.next().context("missing tz")?.parse()?;
+    Ok((HgTime { unixtime, offset }, parts.next()))
 }
 
 fn extra_escape(s: Text) -> Text {
@@ -292,6 +291,7 @@ fn write_message(message: &str, out: &mut String) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::utils::tests::ToTuple;
 
     #[test]
     fn test_extra_escape() {
@@ -324,9 +324,12 @@ mod tests {
             fields.committer_name().unwrap().unwrap(),
             "Bob \\ 2 <b@example.com>"
         );
-        assert_eq!(fields.author_date().unwrap(), (1714100000, 25200));
         assert_eq!(
-            fields.committer_date().unwrap().unwrap(),
+            fields.author_date().unwrap().to_tuple(),
+            (1714100000, 25200)
+        );
+        assert_eq!(
+            fields.committer_date().unwrap().unwrap().to_tuple(),
             (1714200000, -28800)
         );
         assert_eq!(
@@ -367,7 +370,10 @@ mod tests {
         );
         assert_eq!(fields.author_name().unwrap(), "Alice 1 <a@example.com>");
         assert_eq!(fields.committer_name().unwrap(), None);
-        assert_eq!(fields.author_date().unwrap(), (1714100000, 25200));
+        assert_eq!(
+            fields.author_date().unwrap().to_tuple(),
+            (1714100000, 25200)
+        );
         assert_eq!(fields.committer_date().unwrap(), None);
         assert_eq!(format!("{:?}", fields.extras().unwrap().unwrap()), "{}");
         assert_eq!(format!("{:?}", fields.files().unwrap().unwrap()), "[]");

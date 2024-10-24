@@ -22,7 +22,8 @@ use types::Id20;
 use crate::git_commit::normalize_git_tree_id;
 use crate::normalize_email_user;
 use crate::utils::write_multi_line;
-pub use crate::CommitFields;
+use crate::CommitFields;
+use crate::HgTime;
 
 /// Holds the Git commit text. Fields can be lazily fields.
 pub struct GitCommitLazyFields {
@@ -36,17 +37,15 @@ pub struct GitCommitFields {
     tree: Id20,
     parents: Vec<Id20>,
     author: Text,
-    date: Date,
+    date: HgTime,
     committer: Text,
-    committer_date: Date,
+    committer_date: HgTime,
     message: Text,
     // e.g. "gpgsig", "gpgsig-sha256", "mergetag".
     // See https://git-scm.com/docs/signature-format
     #[serde(default)]
     extras: BTreeMap<Text, Text>,
 }
-
-type Date = (u64, i32);
 
 impl GitCommitFields {
     fn from_text(text: &Text) -> Result<Self> {
@@ -197,11 +196,11 @@ impl CommitFields for GitCommitLazyFields {
         Ok(Some(self.fields()?.committer.as_ref()))
     }
 
-    fn author_date(&self) -> Result<(u64, i32)> {
+    fn author_date(&self) -> Result<HgTime> {
         Ok(self.fields()?.date)
     }
 
-    fn committer_date(&self) -> Result<Option<(u64, i32)>> {
+    fn committer_date(&self) -> Result<Option<HgTime>> {
         Ok(Some(self.fields()?.committer_date))
     }
 
@@ -231,10 +230,10 @@ impl CommitFields for GitCommitLazyFields {
     }
 }
 
-fn parse_name_date(line: Text) -> Result<(Text, Date)> {
+fn parse_name_date(line: Text) -> Result<(Text, HgTime)> {
     // {name} <{email}> {date_seconds} {date_timezone}
     let mut parts = line.rsplitn(3, ' ');
-    let tz_seconds = {
+    let offset = {
         // +HHMM or -HHMM
         let tz_str = parts.next().context("missing timezone")?;
         ensure!(tz_str.len() == 5, "invalid git timezone: {}", tz_str);
@@ -244,15 +243,15 @@ fn parse_name_date(line: Text) -> Result<(Text, Date)> {
         let minutes = tz_str[3..5].parse::<i32>()?;
         (hours * 3600 + minutes * 60) * sign
     };
-    let date_seconds = {
+    let unixtime = {
         let date_str = parts.next().context("missing date")?;
-        date_str.parse::<u64>()?
+        date_str.parse::<i64>()?
     };
     let name = {
         let name_str = parts.next().context("missing name")?;
         line.slice_to_bytes(name_str)
     };
-    Ok((name, (date_seconds, tz_seconds)))
+    Ok((name, HgTime { unixtime, offset }))
 }
 
 fn write_message(message: &str, out: &mut String) -> Result<()> {
@@ -305,15 +304,15 @@ fn write_extra(name: &str, value: &str, out: &mut String) -> Result<()> {
     Ok(())
 }
 
-fn write_name_date(prefix: &str, name: &str, date: Date, out: &mut String) -> Result<()> {
+fn write_name_date(prefix: &str, name: &str, date: HgTime, out: &mut String) -> Result<()> {
     let name = normalize_email_user(name, SerializationFormat::Git)?;
     out.push_str(prefix);
     out.push(' ');
     out.push_str(&name);
     out.push(' ');
-    write!(out, "{}", date.0)?;
+    write!(out, "{}", date.unixtime)?;
     out.push(' ');
-    write_git_tz(date.1, out)?;
+    write_git_tz(date.offset, out)?;
     out.push('\n');
     Ok(())
 }
@@ -332,6 +331,7 @@ fn write_git_tz(tz_seconds: i32, out: &mut String) -> Result<()> {
 mod tests {
     use super::*;
     use crate::git_commit_text_to_root_tree_id;
+    use crate::utils::tests::ToTuple;
 
     #[test]
     fn test_parse_git_commit_basic() {
@@ -355,9 +355,12 @@ Signed-off-by: Alice <a@example.com>
             fields.committer_name().unwrap().unwrap(),
             "Bob 2 <b@example.com>"
         );
-        assert_eq!(fields.author_date().unwrap(), (1714100000, 25200));
         assert_eq!(
-            fields.committer_date().unwrap().unwrap(),
+            fields.author_date().unwrap().to_tuple(),
+            (1714100000, 25200)
+        );
+        assert_eq!(
+            fields.committer_date().unwrap().unwrap().to_tuple(),
             (1714200000, -28800)
         );
         assert_eq!(
@@ -396,8 +399,11 @@ gpgsig -- BEGIN --
 This is the commit message.
 "#;
         let fields = GitCommitLazyFields::new(text.into());
-        assert_eq!(fields.author_date().unwrap(), (1714300000, 60));
-        assert_eq!(fields.committer_date().unwrap().unwrap(), (1714400000, 0));
+        assert_eq!(fields.author_date().unwrap().to_tuple(), (1714300000, 60));
+        assert_eq!(
+            fields.committer_date().unwrap().unwrap().to_tuple(),
+            (1714400000, 0)
+        );
 
         assert_eq!(
             format!("{:?}", fields.extras().unwrap().unwrap()),

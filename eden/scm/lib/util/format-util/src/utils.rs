@@ -96,7 +96,9 @@ pub(crate) fn write_multi_line(message: &str, line_prefix: &str, out: &mut Strin
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
+    use hgtime::HgTime;
+
     use super::*;
 
     #[test]
@@ -156,5 +158,15 @@ mod tests {
         assert_eq!(t("a <a>>"), "Err(invalid name (mismatched brackets))");
         assert_eq!(t("a a>"), "Err(invalid name (mismatched brackets))");
         assert_eq!(t("a <a>a"), "Err(invalid name (content after email))");
+    }
+
+    pub(crate) trait ToTuple {
+        fn to_tuple(self) -> (i64, i32);
+    }
+
+    impl ToTuple for HgTime {
+        fn to_tuple(self) -> (i64, i32) {
+            (self.unixtime, self.offset)
+        }
     }
 }
