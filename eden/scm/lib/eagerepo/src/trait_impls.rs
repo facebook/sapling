@@ -213,11 +213,15 @@ impl CasClient for EagerRepoStore {
     }
 
     /// Prefetch blobs into the CAS cache
+    /// Returns a stream of (stats, digests_prefetched, digests_not_found) tuples
     async fn prefetch<'a>(
         &'a self,
         digests: &'a [CasDigest],
         log_name: CasDigestType,
-    ) -> BoxStream<'a, anyhow::Result<(CasFetchedStats, Vec<CasDigest>)>> {
-        stream::once(async move { Ok((CasFetchedStats::default(), vec![])) }).boxed()
+    ) -> BoxStream<'a, anyhow::Result<(CasFetchedStats, Vec<CasDigest>, Vec<CasDigest>)>> {
+        stream::once(async move {
+            tracing::debug!(target: "cas", "EagerRepoStore prefetching {} {}(s)", digests.len(), log_name);
+            Ok((CasFetchedStats::default(), digests.to_owned(), vec![]))
+        }).boxed()
     }
 }

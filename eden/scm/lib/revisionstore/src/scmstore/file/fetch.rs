@@ -774,67 +774,108 @@ impl FetchState {
         let start_time = Instant::now();
         let mut total_stats = CasFetchedStats::default();
 
-        block_on(async {
-            cas_client.fetch(&digests, CasDigestType::File).await.for_each(|results| match results {
-                Ok((stats, results)) => {
-                    reqs += 1;
-                    total_stats.add(&stats);
-                    for (digest, data) in results {
-                        let Some(mut keys) = digest_to_key.remove(&digest) else {
-                            tracing::error!("got CAS result for unrequested digest {:?}", digest);
-                            continue;
-                        };
-
-                        match data {
-                            Err(err) => {
-                                tracing::error!(?err, ?keys, ?digest, "CAS fetch error");
-                                tracing::error!(target: "cas", ?err, ?keys, ?digest, "file(s) fetch error");
-                                error += keys.len();
-                                self.errors.multiple_keyed_error(keys, "CAS fetch error", err);
+        if self.fetch_mode.ignore_result() {
+            // Prefetching files, so we don't need the data, just to ensure digests are in the CAS local Cache.
+            block_on(async {
+                cas_client.prefetch(&digests, CasDigestType::File).await.for_each(|results| match results {
+                    Ok((stats, digests_prefetched, digests_not_found)) => {
+                        reqs += 1;
+                        total_stats.add(&stats);
+                        if !digests_not_found.is_empty() {
+                            tracing::trace!(target: "cas", "{} digests are missing in CAS", digests_not_found.len());
+                        }
+                        for digest in digests_prefetched {
+                            let Some(keys) = digest_to_key.remove(&digest) else {
+                                tracing::error!("got CAS result for unrequested digest {:?}", digest);
+                                continue;
+                            };
+                            found += keys.len();
+                            tracing::trace!(target: "cas", ?keys, ?digest, "file(s) prefetched in cas");
+                            for key in keys {
+                                self.found_attributes(
+                                    key,
+                                    StoreFile {
+                                        content: Some(LazyFile::Cas(Vec::new().into())),
+                                        aux_data: None,
+                                    },
+                                );
                             }
-                            Ok(None) => {
-                                tracing::trace!(target: "cas", ?keys, ?digest, "file(s) not in cas");
-                                // miss
-                            }
-                            Ok(Some(data)) => {
-                                found += keys.len();
-                                tracing::trace!(target: "cas", ?keys, ?digest, "file(s) found in cas");
-                                if !keys.is_empty() {
-                                    let last = keys.pop().unwrap();
-                                    for key in keys {
+                        }
+                        future::ready(())
+                    }
+                    Err(err) => {
+                        tracing::error!(?err, "overall CAS error");
+                        tracing::error!(target: "cas", ?err, "CAS error prefetching files");
+                        // Don't propagate CAS error - we want to fall back to SLAPI.
+                        reqs += 1;
+                        error += 1;
+                        future::ready(())
+                    }
+                }).await;
+            });
+        } else {
+            // Fetching files, we need the data.
+            block_on(async {
+                cas_client.fetch(&digests, CasDigestType::File).await.for_each(|results| match results {
+                    Ok((stats, results)) => {
+                        reqs += 1;
+                        total_stats.add(&stats);
+                        for (digest, data) in results {
+                            let Some(mut keys) = digest_to_key.remove(&digest) else {
+                                tracing::error!("got CAS result for unrequested digest {:?}", digest);
+                                continue;
+                            };
+                            match data {
+                                Err(err) => {
+                                    tracing::error!(?err, ?keys, ?digest, "CAS fetch error");
+                                    tracing::error!(target: "cas", ?err, ?keys, ?digest, "file(s) fetch error");
+                                    error += keys.len();
+                                    self.errors.multiple_keyed_error(keys, "CAS fetch error", err);
+                                }
+                                Ok(None) => {
+                                    tracing::trace!(target: "cas", ?keys, ?digest, "file(s) not in cas");
+                                    // miss
+                                }
+                                Ok(Some(data)) => {
+                                    found += keys.len();
+                                    tracing::trace!(target: "cas", ?keys, ?digest, "file(s) found in cas");
+                                    if !keys.is_empty() {
+                                        let last = keys.pop().unwrap();
+                                        for key in keys {
+                                            self.found_attributes(
+                                                key,
+                                                StoreFile {
+                                                    content: Some(LazyFile::Cas(data.clone().into())),
+                                                    aux_data: None,
+                                                },
+                                            );
+                                        }
+                                        // zero copy here
                                         self.found_attributes(
-                                            key,
+                                            last,
                                             StoreFile {
-                                                content: Some(LazyFile::Cas(data.clone().into())),
+                                                content: Some(LazyFile::Cas(data.into())),
                                                 aux_data: None,
                                             },
                                         );
                                     }
-                                    // zero copy here
-                                    self.found_attributes(
-                                        last,
-                                        StoreFile {
-                                            content: Some(LazyFile::Cas(data.into())),
-                                            aux_data: None,
-                                        },
-                                    );
                                 }
                             }
                         }
+                        future::ready(())
                     }
-                    future::ready(())
-                }
-                Err(err) => {
-                    tracing::error!(?err, "overall CAS error");
-                    tracing::error!(target: "cas", ?err, "CAS error fetching files");
+                    Err(err) => {
+                        tracing::error!(?err, "overall CAS error");
+                        tracing::error!(target: "cas", ?err, "CAS error fetching files");
 
-                    // Don't propagate CAS error - we want to fall back to SLAPI.
-                    reqs += 1;
-                    error += 1;
-                    future::ready(())
-                }
-            }).await;
-        });
+                        // Don't propagate CAS error - we want to fall back to SLAPI.
+                        reqs += 1;
+                        error += 1;
+                        future::ready(())
+                    }
+                }).await;
+            });
+        }
 
         span.record("hits", found);
         span.record("requests", reqs);

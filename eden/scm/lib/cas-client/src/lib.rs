@@ -48,9 +48,10 @@ pub trait CasClient: Sync + Send {
     >;
 
     /// Prefetch blobs into the CAS cache
+    /// Returns a stream of (stats, digests_prefetched, digests_not_found) tuples.
     async fn prefetch<'a>(
         &'a self,
         digests: &'a [CasDigest],
         log_name: CasDigestType,
-    ) -> BoxStream<'a, anyhow::Result<(CasFetchedStats, Vec<CasDigest>)>>;
+    ) -> BoxStream<'a, anyhow::Result<(CasFetchedStats, Vec<CasDigest>, Vec<CasDigest>)>>;
 }

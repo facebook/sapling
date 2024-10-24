@@ -9,6 +9,7 @@ edition = "2021"
 anyhow = "1.0.86"
 async-trait = "0.1.71"
 cas-client = { version = "0.1.0", path = ".." }
+itertools = "0.13.0"
 once_cell = "1.12"
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 types = { version = "0.1.0", path = "../../types" }

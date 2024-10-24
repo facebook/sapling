@@ -9,6 +9,8 @@ pub use anyhow::anyhow;
 pub use anyhow::Result;
 pub use async_trait::async_trait;
 pub use cas_client::CasClient;
+pub use itertools::Either;
+pub use itertools::Itertools;
 pub use once_cell::sync::OnceCell;
 pub use tracing;
 pub use types::Blake3;
@@ -25,6 +27,7 @@ macro_rules! re_client {
         use futures::StreamExt;
         use futures::TryStreamExt;
         use re_cas_common::split_up_to_max_bytes;
+        use re_cas_common::Itertools;
         use re_client_lib::DownloadRequest;
         use re_client_lib::DownloadDigestsIntoCacheRequest;
         use re_client_lib::DownloadStreamRequest;
@@ -158,12 +161,13 @@ macro_rules! re_client {
                     .boxed()
             }
 
-        /// Prefetch digests into the cache. Returns missing digests.
+        /// Prefetch digests into the cache.
+        /// Returns a stream of (stats, digests_prefetched, digests_not_found) tuples.
         async fn prefetch<'a>(
             &'a self,
             digests: &'a [$crate::CasDigest],
             log_name: $crate::CasDigestType,
-        ) -> BoxStream<'a, $crate::Result<($crate::CasFetchedStats, Vec<$crate::CasDigest>)>>
+        ) -> BoxStream<'a, $crate::Result<($crate::CasFetchedStats, Vec<$crate::CasDigest>, Vec<$crate::CasDigest>)>>
         {
             stream::iter(split_up_to_max_bytes(digests, self.fetch_limit.value()))
                 .map(move |digests| async move {
@@ -177,11 +181,24 @@ macro_rules! re_client {
 
                     let response = self.client()?
                         .download_digests_into_cache(self.metadata.clone(), request)
-                        .await?;
+                        .await;
+
+                    // Unfortunately, the download_digests_into_cache fails entirely with NOT_FOUND if a digest is not found.
+                    // For now, let's report that everything is missing instead of failing the entire prefetch.
+                    // The issue should be fixed on RE side, so that they can provide correct per digest statuses.
+                    if let Err(ref err) = response {
+                        if let Some(inner) = err.downcast_ref::<REClientError>() {
+                            if inner.code == TCode::NOT_FOUND {
+                                return Ok(($crate::CasFetchedStats::default(), Vec::new(), digests.to_vec()));
+                            }
+                        }
+                    }
+
+                    let response = response?;
 
                     let stats = parse_stats(response.storage_stats.per_backend_stats.into_iter());
 
-                    let response = response.digests_with_status
+                    let (digests_prefetched, digests_not_found) = response.digests_with_status
                         .into_iter()
                         .map(|blob| {
                             let digest = from_re_digest(&blob.digest)?;
@@ -199,21 +216,14 @@ macro_rules! re_client {
                                     )),
                             }
                         })
-                        .filter_map(|outcome| {
-                            match outcome {
-                                Err(e) => {
-                                    Some(Err(e))
-                                },
-                                Ok($crate::CasPrefetchOutcome::Prefetched(digest)) => {
-                                    None
-                                },
-                                Ok($crate::CasPrefetchOutcome::Missing(digest)) => {
-                                    Some(Ok(digest))
-                                }
-                            }
-                        }).collect::<Result<Vec<_>>>()?;
+                        .collect::<Result<Vec<_>>>()?
+                        .into_iter()
+                        .partition_map(|outcome| match outcome {
+                            $crate::CasPrefetchOutcome::Prefetched(digest) => $crate::Either::Left(digest),
+                            $crate::CasPrefetchOutcome::Missing(digest) => $crate::Either::Right(digest),
+                        });
 
-                    Ok((stats, response))
+                    Ok((stats, digests_prefetched, digests_not_found))
                 })
                 .buffer_unordered(self.fetch_concurrency)
                 .boxed()
