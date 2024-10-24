@@ -9,6 +9,7 @@ edition = "2021"
 anyhow = "1.0.86"
 async-trait = "0.1.71"
 dag = { version = "0.1.0", path = "../../dag" }
+format-util = { version = "0.1.0", path = "../../util/format-util" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 metalog = { version = "0.1.0", path = "../../metalog" }
 minibytes = { version = "0.1.0", path = "../../minibytes" }

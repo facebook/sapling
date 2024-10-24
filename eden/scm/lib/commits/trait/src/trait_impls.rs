@@ -9,9 +9,9 @@
 
 use std::sync::Arc;
 
-use anyhow::bail;
 use async_trait::async_trait;
 use dag::Vertex;
+use format_util::commit_text_to_root_tree_id;
 use storemodel::ReadRootTreeIds;
 use types::HgId;
 
@@ -23,6 +23,7 @@ pub struct ArcReadCommitText(pub Arc<dyn ReadCommitText + Send + Sync>);
 #[async_trait]
 impl ReadRootTreeIds for ArcReadCommitText {
     async fn read_root_tree_ids(&self, commits: Vec<HgId>) -> anyhow::Result<Vec<(HgId, HgId)>> {
+        let format = self.0.format();
         let vertexes: Vec<Vertex> = commits
             .iter()
             .map(|c| Vertex::copy_from(c.as_ref()))
@@ -35,19 +36,9 @@ impl ReadRootTreeIds for ArcReadCommitText {
                 if c == *HgId::null_id() {
                     Ok((c, *HgId::null_id()))
                 } else {
-                    Ok((c, extract_tree_root_id_from_raw_hg_text(t.as_ref())?))
+                    Ok((c, commit_text_to_root_tree_id(t.as_ref(), format)?))
                 }
             })
             .collect::<anyhow::Result<Vec<_>>>()
     }
-}
-
-fn extract_tree_root_id_from_raw_hg_text(text: &[u8]) -> anyhow::Result<HgId> {
-    // The first 40-bytes are hex tree id.
-    let hex_tree_id = match text.get(0..HgId::hex_len()) {
-        Some(id) => id,
-        None => bail!("incomplete hg commit text"),
-    };
-    let id = HgId::from_hex(hex_tree_id)?;
-    Ok(id)
 }
