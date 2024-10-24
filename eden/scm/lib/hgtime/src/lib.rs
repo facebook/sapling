@@ -27,7 +27,7 @@ mod serde_impl;
 /// A simple time structure that matches hg's time representation.
 ///
 /// Internally it's unixtime (in GMT), and offset (GMT -1 = +3600).
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct HgTime {
     pub unixtime: i64,
     pub offset: i32,
