@@ -833,10 +833,9 @@ Test email metadata
   > +a
   > EOF
   applying patch from stdin
-Python 3 email parser is slightly different - it inserts a space in "user".
   $ hg --encoding utf-8 log -r .
   commit:      * (glob)
-  user:        Rapha\xc3\xabl Hertzog  <hertzog@debian.org> (esc)
+  user:        Raphaël Hertzog <hertzog@debian.org>
   date:        * (glob)
   summary:     \xc5\xa7\xe2\x82\xac\xc3\x9f\xe1\xb9\xaa (esc)
   
