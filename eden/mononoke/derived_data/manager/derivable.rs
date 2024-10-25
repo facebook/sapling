@@ -206,7 +206,6 @@ pub trait DerivationDependencies {
         ctx: &CoreContext,
         derivation: &DerivationContext,
         csid: ChangesetId,
-        visited: &mut HashSet<TypeId>,
     ) -> Result<()>;
     /// Derive all dependent data types for this batch of commits.
     /// The same pre-conditions apply as in derive.rs
@@ -238,7 +237,6 @@ impl DerivationDependencies for () {
         _ctx: &CoreContext,
         _derivation: &DerivationContext,
         _csid: ChangesetId,
-        _visited: &mut HashSet<TypeId>,
     ) -> Result<()> {
         Ok(())
     }
@@ -276,19 +274,13 @@ where
         ctx: &CoreContext,
         derivation_ctx: &DerivationContext,
         csid: ChangesetId,
-        visited: &mut HashSet<TypeId>,
     ) -> Result<()> {
-        let type_id = TypeId::of::<Derivable>();
-        if visited.insert(type_id) {
-            try_join(
-                derivation_ctx.fetch_dependency::<Derivable>(ctx, csid),
-                Rest::check_dependencies(ctx, derivation_ctx, csid, visited),
-            )
-            .await?;
-            Ok(())
-        } else {
-            Rest::check_dependencies(ctx, derivation_ctx, csid, visited).await
-        }
+        try_join(
+            derivation_ctx.fetch_dependency::<Derivable>(ctx, csid),
+            Rest::check_dependencies(ctx, derivation_ctx, csid),
+        )
+        .await?;
+        Ok(())
     }
     async fn derive_heads(
         ddm: DerivedDataManager,

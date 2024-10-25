@@ -398,13 +398,9 @@ impl DerivedDataManager {
 
         derived_data_scuba.log_derivation_start(&ctx);
 
-        let predecessor_checks = Derivable::PredecessorDependencies::check_dependencies(
-            &ctx,
-            &derivation_ctx,
-            csid,
-            &mut HashSet::new(),
-        )
-        .await;
+        let predecessor_checks =
+            Derivable::PredecessorDependencies::check_dependencies(&ctx, &derivation_ctx, csid)
+                .await;
         // If predecessor derived data types are not derived yet, let's derive them
         if let Err(e) = predecessor_checks {
             Derivable::PredecessorDependencies::derive_predecessors(
@@ -774,13 +770,7 @@ impl DerivedDataManager {
         // Let's check if that's the case
         stream::iter(heads)
             .map(|csid| async move {
-                Derivable::Dependencies::check_dependencies(
-                    ctx,
-                    derivation_ctx_ref,
-                    csid,
-                    &mut HashSet::new(),
-                )
-                .await
+                Derivable::Dependencies::check_dependencies(ctx, derivation_ctx_ref, csid).await
             })
             .buffered(100)
             .try_for_each(|_| async { Ok(()) })
