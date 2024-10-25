@@ -17,11 +17,12 @@ def get(ui, repo=None):
     if servicetype == "local":
         return localservice.LocalService(ui)
     elif servicetype == "remote":
-        ui.warn(
-            "You are using the legacy commit cloud service. This service will be deprecated by the end of H2 2024.\n\
-             Switch to the modern service by adding: `[commitcloud] servicetype = edenapi` to your ~/.hgrc \n",
-            component="commitcloud",
-        )
+        emergencybypass = ui.config("commitcloud", "allow_legacy_service")
+        if emergencybypass != "true":
+            raise error.Abort(
+                "You're trying to reach the old commit cloud service. Switch to the modern service by adding: `[commitcloud] servicetype = edenapi` to your `~/.hgrc`. Refer to S462529 for help/updates.  \n",
+                component="commitcloud",
+            )
         return httpsservice.HttpsCommitCloudService(ui)
     elif servicetype == "saplingremoteapi" or servicetype == "edenapi":
         fallbackcfg = ui.config("commitcloud", "fallback")
