@@ -176,12 +176,6 @@ fn main(fb: FacebookInit) -> Result<()> {
     let mononoke = Arc::new(repos_mgr.make_mononoke_api()?);
     let megarepo = Arc::new(MegarepoApi::new(&app, mononoke.clone())?);
 
-    // Sanity check to avoid a weird nonsensical state. This triggered S460221, so let's be paranoid.
-    let repos = mononoke.known_repo_ids();
-    if repos.is_empty() {
-        panic!("There are no repos configured for this service, cannot continue");
-    }
-
     let sql_connection = Arc::new(runtime.block_on(open_sql_connection(fb, &app))?);
     let blobstore = runtime.block_on(open_blobstore(fb, &app))?;
     let will_exit = Arc::new(AtomicBool::new(false));
@@ -244,6 +238,12 @@ fn main(fb: FacebookInit) -> Result<()> {
         )?;
     } else {
         let logger = logger.clone();
+
+        // Sanity check to avoid a weird nonsensical state. This triggered S460221, so let's be paranoid.
+        let repos = mononoke.known_repo_ids();
+        if repos.is_empty() {
+            panic!("There are no repos configured for this service, cannot continue");
+        }
 
         // all enabled repos
         info!(
