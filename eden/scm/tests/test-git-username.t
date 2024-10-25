@@ -2,6 +2,7 @@
 
 Test that we validate certain username errors.
 
+  $ export RUST_BACKTRACE=0
   $ configure modern
   $ . $TESTDIR/git.sh
 
@@ -11,5 +12,5 @@ Test that we validate certain username errors.
 
   $ touch foo
   $ sl commit -Aqm foo
-  abort: invalid '<' or '>' in Git username: `Oopsie Daisy <oopsie@example`
+  abort: invalid name (mismatched brackets): "Oopsie Daisy <oopsie@example"
   [255]
