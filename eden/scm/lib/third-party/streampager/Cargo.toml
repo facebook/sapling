@@ -28,5 +28,5 @@ termwiz = { version = "0.22", features = ["widgets"] }
 thiserror = "1.0.64"
 toml = "0.8.4"
 unicode-segmentation = "1.6.0"
-unicode-width = "0.1"
+unicode-width = "=0.1.12"
 vec_map = "0.8"

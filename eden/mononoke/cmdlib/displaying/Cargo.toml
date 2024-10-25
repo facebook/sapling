@@ -18,4 +18,4 @@ mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 unicode-truncate = "0.2"
-unicode-width = "0.1"
+unicode-width = "=0.1.12"
