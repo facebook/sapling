@@ -15,6 +15,7 @@ use minibytes::Text;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use storemodel::SerializationFormat;
+use types::hgid::NULL_ID;
 use types::Id20;
 use types::RepoPath;
 
@@ -188,6 +189,9 @@ impl HgCommitLazyFields {
 
 impl CommitFields for HgCommitLazyFields {
     fn root_tree(&self) -> Result<Id20> {
+        if self.text.is_empty() {
+            return Ok(NULL_ID);
+        }
         if let Some(fields) = self.fields.get() {
             return Ok(fields.tree);
         }
@@ -486,5 +490,13 @@ mod tests {
 
         // Committer info is absent
         assert_eq!(t(&[]), "None None");
+    }
+
+    #[test]
+    fn test_empty_text() {
+        let lazy_fields = HgCommitLazyFields::new(Default::default());
+        assert!(lazy_fields.root_tree().unwrap().is_null());
+        assert!(lazy_fields.fields().unwrap().tree.is_null());
+        assert!(lazy_fields.root_tree().unwrap().is_null());
     }
 }

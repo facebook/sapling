@@ -17,6 +17,7 @@ use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use storemodel::SerializationFormat;
 use types::hgid::GIT_EMPTY_TREE_ID;
+use types::hgid::NULL_ID;
 use types::Id20;
 
 use crate::git_commit::normalize_git_tree_id;
@@ -58,7 +59,10 @@ impl GitCommitFields {
         //  ...}
         //
         // {commit message}
-        let mut result = Self::default();
+        let mut result = Self {
+            tree: GIT_EMPTY_TREE_ID,
+            ..Self::default()
+        };
         let mut last_pos = 0;
         let mut current_extra: Option<(Text, String)> = None;
         for pos in memchr::memchr_iter(b'\n', text.as_bytes()) {
@@ -174,8 +178,11 @@ impl GitCommitLazyFields {
 
 impl CommitFields for GitCommitLazyFields {
     fn root_tree(&self) -> Result<Id20> {
+        if self.text.is_empty() {
+            return Ok(NULL_ID);
+        }
         if let Some(fields) = self.fields.get() {
-            return Ok(fields.tree);
+            return Ok(normalize_git_tree_id(fields.tree));
         }
         // Extract tree without parsing all fields.
         if let Some(rest) = self.text.strip_prefix("tree ") {
@@ -459,5 +466,13 @@ m
         let mut v = SORTED_IGNORED_EXTRA_NAMES.to_vec();
         v.sort_unstable();
         assert_eq!(v, SORTED_IGNORED_EXTRA_NAMES);
+    }
+
+    #[test]
+    fn test_empty_text() {
+        let lazy_fields = GitCommitLazyFields::new(Default::default());
+        assert!(lazy_fields.root_tree().unwrap().is_null());
+        assert!(normalize_git_tree_id(lazy_fields.fields().unwrap().tree).is_null());
+        assert!(lazy_fields.root_tree().unwrap().is_null());
     }
 }
