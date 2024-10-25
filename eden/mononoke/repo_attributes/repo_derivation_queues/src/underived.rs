@@ -171,11 +171,24 @@ pub async fn build_underived_batched_graph<'a>(
                                 }
                             }
                             Err(e) => {
-                                let derived_ancestors = commit_graph.ancestors_frontier_with(ctx, vec![item.head_cs_id()], |cs_id| async move {
-                                    Ok(ddm.is_derived(ctx, cs_id, None, derived_data_type).await?)
-                                }).await?;
+                                let root_generation = commit_graph.changeset_generation(ctx, item.root_cs_id()).await?;
+                                // Find the highest derived changeset in the batch or the parents of the batch
+                                // if none of the changesets are derived.
+                                let derived_ancestors_or_parents = commit_graph.ancestors_frontier_with(ctx, vec![item.head_cs_id()],
+                                    |cs_id| {
+                                        cloned!(commit_graph);
+                                        async move {
+                                            if commit_graph.changeset_generation(ctx, cs_id).await? < root_generation {
+                                                Ok(true)
+                                            } else {
+                                                Ok(ddm.is_derived(ctx, cs_id, None, derived_data_type).await?)
+                                            }
+                                        }
+                                    }
+                                )
+                                .await?;
 
-                                let mut underived_batch = commit_graph.ancestors_difference(ctx, vec![item.head_cs_id()], derived_ancestors).await?;
+                                let mut underived_batch = commit_graph.ancestors_difference(ctx, vec![item.head_cs_id()], derived_ancestors_or_parents).await?;
                                 match underived_batch.pop() {
                                     // All changesets in the batch were derived
                                     None => {
