@@ -12,15 +12,10 @@ import unittest
 import warnings
 from pathlib import Path
 from typing import cast, Optional, Union
+from unittest import IsolatedAsyncioTestCase
 
 from . import environment_variable as env_module
 from .temporary_directory import TempFileManager
-
-
-try:
-    from unittest import IsolatedAsyncioTestCase
-except ImportError:
-    from .async_case_backport import IsolatedAsyncioTestCase
 
 
 @contextlib.contextmanager
