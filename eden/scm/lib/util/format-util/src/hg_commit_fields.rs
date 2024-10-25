@@ -231,8 +231,8 @@ impl CommitFields for HgCommitLazyFields {
         Ok(Some(&self.fields()?.files))
     }
 
-    fn extras(&self) -> Result<Option<&BTreeMap<Text, Text>>> {
-        Ok(Some(&self.fields()?.extras))
+    fn extras(&self) -> Result<&BTreeMap<Text, Text>> {
+        Ok(&self.fields()?.extras)
     }
 
     fn description(&self) -> Result<&str> {
@@ -358,7 +358,7 @@ mod tests {
             (1714200000, -28800)
         );
         assert_eq!(
-            format!("{:?}", fields.extras().unwrap().unwrap()),
+            format!("{:?}", fields.extras().unwrap()),
             "{\"committer\": \"Bob \\\\ 2 <b@example.com>\", \"committer_date\": \"1714200000 -28800\"}"
         );
         assert_eq!(
@@ -400,7 +400,7 @@ mod tests {
             (1714100000, 25200)
         );
         assert_eq!(fields.committer_date().unwrap(), None);
-        assert_eq!(format!("{:?}", fields.extras().unwrap().unwrap()), "{}");
+        assert_eq!(format!("{:?}", fields.extras().unwrap()), "{}");
         assert_eq!(format!("{:?}", fields.files().unwrap().unwrap()), "[]");
         assert_eq!(fields.description().unwrap(), "This is the commit message.");
         assert_eq!(fields.raw_text(), text.as_bytes());

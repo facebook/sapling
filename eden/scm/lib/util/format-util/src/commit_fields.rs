@@ -50,9 +50,10 @@ pub trait CommitFields: Send + 'static {
         Ok(None)
     }
 
-    /// Returns `None` if the commit does not have extras.
-    fn extras(&self) -> Result<Option<&BTreeMap<Text, Text>>> {
-        Ok(None)
+    /// Extra metadata for this commit.
+    fn extras(&self) -> Result<&BTreeMap<Text, Text>> {
+        static EMPTY_TREE: BTreeMap<Text, Text> = BTreeMap::new();
+        Ok(&EMPTY_TREE)
     }
 
     /// Commit message encoded in UTF-8.

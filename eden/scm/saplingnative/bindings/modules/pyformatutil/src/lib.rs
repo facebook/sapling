@@ -91,12 +91,10 @@ py_class!(pub class CommitFields |py| {
         Ok(files.map(|v| Serde(v.to_vec())))
     }
 
-    /// Only provided by hg format. Parsed extras.
-    /// Returns `None` if not tracked in the commit text (i.e. git format).
-    def extras(&self) -> PyResult<Option<Serde<BTreeMap<Text, Text>>>> {
+    /// extras() -> Dict[str, str]
+    def extras(&self) -> PyResult<Serde<BTreeMap<Text, Text>>> {
         let inner = self.inner(py);
-        let extras = inner.extras().map_pyerr(py)?;
-        Ok(extras.map(|v| Serde(v.clone())))
+        inner.extras().map_pyerr(py).map(|v| Serde(v.clone()))
     }
 
     /// Commit message encoded in UTF-8.

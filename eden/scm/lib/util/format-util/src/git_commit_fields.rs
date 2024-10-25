@@ -211,13 +211,9 @@ impl CommitFields for GitCommitLazyFields {
         Ok(Some(self.fields()?.committer_date))
     }
 
-    fn extras(&self) -> Result<Option<&BTreeMap<Text, Text>>> {
+    fn extras(&self) -> Result<&BTreeMap<Text, Text>> {
         let extras = &self.fields()?.extras;
-        if extras.is_empty() {
-            Ok(None)
-        } else {
-            Ok(Some(extras))
-        }
+        Ok(extras)
     }
 
     fn parents(&self) -> Result<Option<&[Id20]>> {
@@ -383,7 +379,7 @@ Signed-off-by: Alice <a@example.com>
             fields.root_tree().unwrap().to_hex(),
             "98edb6a9c7a48cae7a1ed9a39600952547daaebb"
         );
-        assert_eq!(format!("{:?}", fields.extras().unwrap()), "None");
+        assert_eq!(format!("{:?}", fields.extras().unwrap()), "{}");
 
         let text2 = fields.fields().unwrap().to_text().unwrap();
         assert_eq!(text2, text);
@@ -413,7 +409,7 @@ This is the commit message.
         );
 
         assert_eq!(
-            format!("{:?}", fields.extras().unwrap().unwrap()),
+            format!("{:?}", fields.extras().unwrap()),
             r#"{"data1": "foo\nbar", "data2": "foo bar", "gpgsig": "-- BEGIN --\n\nsignature foo bar\n\n-- END --"}"#
         );
         assert_eq!(
