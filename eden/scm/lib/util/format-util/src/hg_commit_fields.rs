@@ -150,6 +150,24 @@ impl HgCommitFields {
 
         Ok(result)
     }
+
+    fn committer_and_date(&self) -> Option<(&str, &str)> {
+        let committer = self.extras.get("committer")?;
+        let committer_date = self.extras.get("committer_date");
+        match committer_date {
+            Some(committer_date) => {
+                // Two fields. "foo bar", "100000 0".
+                Some((committer.trim(), committer_date.trim()))
+            }
+            None => {
+                // One field. "foo bar 100000 0". Split from the right side.
+                let mut parts = committer.rsplitn(3, ' ');
+                let committer_name = parts.nth(2)?;
+                let rest = &committer[committer_name.len()..];
+                Some((committer_name.trim(), rest.trim()))
+            }
+        }
+    }
 }
 
 impl HgCommitLazyFields {
@@ -185,7 +203,7 @@ impl CommitFields for HgCommitLazyFields {
     }
 
     fn committer_name(&self) -> Result<Option<&str>> {
-        Ok(self.fields()?.extras.get("committer").map(AsRef::as_ref))
+        Ok(self.fields()?.committer_and_date().map(|v| v.0))
     }
 
     fn author_date(&self) -> Result<HgTime> {
@@ -199,11 +217,9 @@ impl CommitFields for HgCommitLazyFields {
     }
 
     fn committer_date(&self) -> Result<Option<HgTime>> {
-        if let Some(date_str) = self.fields()?.extras.get("committer_date") {
-            let date = parse_date(date_str.as_ref())?.0;
-            Ok(Some(date))
-        } else {
-            Ok(None)
+        match self.fields()?.committer_and_date() {
+            None => Ok(None),
+            Some((_, date_str)) => Ok(Some(parse_date(date_str)?.0)),
         }
     }
 
@@ -423,5 +439,52 @@ mod tests {
             ..fields1.clone()
         };
         assert!(bad_fields.to_text().is_err());
+    }
+
+    #[test]
+    fn test_committer_name_and_date() {
+        let t = |extras: &[(&'static str, &'static str)]| -> String {
+            let fields = HgCommitFields {
+                author: "a".into(),
+                extras: BTreeMap::from_iter(
+                    extras
+                        .iter()
+                        .map(|(k, v)| (Text::from_static(k), Text::from_static(v))),
+                ),
+                ..Default::default()
+            };
+            let lazy_fields = HgCommitLazyFields::new(fields.to_text().unwrap().into());
+            let name = lazy_fields.committer_name().unwrap();
+            let date = lazy_fields.committer_date().unwrap();
+            format!(
+                "{} {:?}",
+                name.unwrap_or("None"),
+                date.map(|t| t.to_tuple())
+            )
+        };
+
+        // "committer" extra contains name and date (used by Mononoke and hg-git)
+        assert_eq!(
+            t(&[("committer", "foo <a@b> 1600 -10")]),
+            "foo <a@b> Some((1600, -10))"
+        );
+        assert_eq!(t(&[("committer", "foo 1600 -10")]), "foo Some((1600, -10))");
+        assert_eq!(
+            t(&[("committer", "committer <> 1590978600 0")]),
+            "committer <> Some((1590978600, 0))"
+        );
+
+        // "committer" and "committer_date" are separate extra fields
+        assert_eq!(
+            t(&[("committer", "foo <a@b>"), ("committer_date", "100 0")]),
+            "foo <a@b> Some((100, 0))"
+        );
+        assert_eq!(
+            t(&[("committer", "f b"), ("committer_date", "100 0")]),
+            "f b Some((100, 0))"
+        );
+
+        // Committer info is absent
+        assert_eq!(t(&[]), "None None");
     }
 }
