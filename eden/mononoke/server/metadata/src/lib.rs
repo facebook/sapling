@@ -216,6 +216,10 @@ impl Metadata {
     pub fn unix_name(&self) -> Option<&str> {
         for identity in self.identities() {
             if identity.id_type() == "USER" {
+                // The identity that's all numeric is likely an FBID, not a unixname
+                if identity.id_data().chars().all(|c| c.is_numeric()) {
+                    continue;
+                }
                 return Some(identity.id_data());
             }
         }
