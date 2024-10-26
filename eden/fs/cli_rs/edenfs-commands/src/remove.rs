@@ -60,6 +60,12 @@ impl RemoveContext {
     }
 }
 
+impl fmt::Display for RemoveContext {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.canonical_path.display())
+    }
+}
+
 #[derive(Debug)]
 struct SanityCheck {}
 impl SanityCheck {
@@ -87,24 +93,18 @@ impl Determination {
         let path = context.canonical_path.as_path();
 
         if path.is_file() {
-            debug!("path {} determined to be a regular file", path.display());
+            debug!("path {} determined to be a regular file", context);
             return Ok(Some(State::RegFile(RegFile {})));
         }
 
         if !path.is_dir() {
-            return Err(anyhow!(format!(
-                "{} is not a file or a directory",
-                path.display()
-            )));
+            return Err(anyhow!(format!("{} is not a file or a directory", context)));
         }
 
-        debug!("{} is determined as a directory", path.display());
+        debug!("{} is determined as a directory", context);
 
         if self.is_active_eden_mount(context) {
-            debug!(
-                "path {} is determined to be an active eden mount",
-                path.display()
-            );
+            debug!("path {} is determined to be an active eden mount", context);
 
             return Ok(Some(State::ActiveEdenMount(ActiveEdenMount {})));
         }
@@ -122,10 +122,7 @@ impl Determination {
         match unix_eden_dot_dir_path.canonicalize() {
             Ok(resolved_path) => resolved_path == context.canonical_path,
             Err(_) => {
-                warn!(
-                    "{} is not an active eden mount",
-                    context.canonical_path.display()
-                );
+                warn!("{} is not an active eden mount", context);
                 false
             }
         }
