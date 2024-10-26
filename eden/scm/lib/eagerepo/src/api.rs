@@ -1372,7 +1372,7 @@ impl SaplingRemoteApi for EagerRepo {
                 Some(raw_text) => raw_text,
             };
             let mut new_raw_text: Vec<u8> = Vec::new();
-            writeln!(new_raw_text, "{}", new_tree_id)?;
+            write!(new_raw_text, "{}", new_tree_id)?;
             new_raw_text.extend_from_slice(&old_raw_text[HgId::hex_len()..]);
 
             let commit_parents = vec![dest_commit];

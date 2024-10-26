@@ -94,9 +94,9 @@ Test pushrebase a diff stack
   o  2bb9d20e471c initial
   $ hg push --to master -q
   $ log
-  @  0359afffc631 update c remote/master
+  @  9237cb52bef6 update c remote/master
   │
-  o  bc98034e098e add c
+  o  d7f85d6d9fc3 add c
   │
   o  ea98a8f95390 changed message
   │
