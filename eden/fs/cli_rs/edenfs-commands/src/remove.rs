@@ -17,6 +17,7 @@ use clap::Parser;
 use dialoguer::Confirm;
 use tracing::debug;
 use tracing::error;
+use tracing::warn;
 
 use crate::ExitCode;
 use crate::Subcommand;
@@ -90,8 +91,50 @@ impl Determination {
             return Ok(Some(State::RegFile(RegFile {})));
         }
 
+        if !path.is_dir() {
+            return Err(anyhow!(format!(
+                "{} is not a file or a directory",
+                path.display()
+            )));
+        }
+
+        debug!("{} is determined as a directory", path.display());
+
+        if self.is_active_eden_mount(context) {
+            debug!(
+                "path {} is determined to be an active eden mount",
+                path.display()
+            );
+
+            return Ok(Some(State::ActiveEdenMount(ActiveEdenMount {})));
+        }
+
         error!("Determination State for directory is not implemented!");
         Err(anyhow!("Rust remove(Determination) is not implemented!"))
+    }
+
+    #[cfg(unix)]
+    fn is_active_eden_mount(&self, context: &RemoveContext) -> bool {
+        // For Linux and Mac, an active Eden mount should have a dir named ".eden" under the
+        // repo root and there should be a symlink named "root" which points to the repo root
+        let unix_eden_dot_dir_path = context.canonical_path.join(".eden").join("root");
+
+        match unix_eden_dot_dir_path.canonicalize() {
+            Ok(resolved_path) => resolved_path == context.canonical_path,
+            Err(_) => {
+                warn!(
+                    "{} is not an active eden mount",
+                    context.canonical_path.display()
+                );
+                false
+            }
+        }
+    }
+
+    #[cfg(windows)]
+    fn is_active_eden_mount(&self, context: &RemoveContext) -> bool {
+        warn!("is_active_eden_mount() unimplemented for Windows");
+        false
     }
 }
 
@@ -111,6 +154,21 @@ impl RegFile {
 }
 
 #[derive(Debug)]
+struct ActiveEdenMount {}
+impl ActiveEdenMount {
+    fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
+        if context.skip_prompt
+            || Confirm::new()
+                .with_prompt("ActiveEdenMount State is not implemented yet... proceed?")
+                .interact()?
+        {
+            return Err(anyhow!("Rust remove(ActiveEdenMount) is not implemented!"));
+        }
+        Ok(None)
+    }
+}
+
+#[derive(Debug)]
 enum State {
     // function states (no real action performed)
     SanityCheck(SanityCheck),
@@ -118,7 +176,7 @@ enum State {
     // Validation,
 
     // // removal states (harmful operations)
-    // ActiveEdenMount,
+    ActiveEdenMount(ActiveEdenMount),
     // InactiveEdenMount,
     // CleanUp,
     RegFile(RegFile),
@@ -134,6 +192,7 @@ impl fmt::Display for State {
                 State::SanityCheck(_) => "SanityCheck",
                 State::Determination(_) => "Determination",
                 State::RegFile(_) => "RegFile",
+                State::ActiveEdenMount(_) => "ActiveEdenMount",
             }
         )
     }
@@ -155,6 +214,7 @@ impl State {
             State::SanityCheck(inner) => inner.next(context),
             State::Determination(inner) => inner.next(context),
             State::RegFile(inner) => inner.next(context),
+            State::ActiveEdenMount(inner) => inner.next(context),
         }
     }
 }
