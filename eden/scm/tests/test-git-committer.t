@@ -25,7 +25,7 @@ Explicitly set author and committer:
   $ sl metaedit -d '3600 -120' -m A2 -u 'user2' --config git.committer='user3' --config git.committer-date='7200 60'
   $ dump_commits
   A2:
-   date: 7200 60
+   date: 3600 -120
    author: user2 <>
    author date: 3600 -120
    committer: user3 <>
@@ -123,13 +123,13 @@ Result:
    committer: test <>
    committer date: 0 0
   B:
-   date: 1670818320 -28800
+   date: 0 0
    author: user <user@example.com>
    author date: 0 0
    committer: committer <committer@example.com>
    committer date: 1670818320 -28800
   C:
-   date: 1670818320 -28800
+   date: 0 0
    author: test <>
    author date: 0 0
    committer: committer <committer@example.com>

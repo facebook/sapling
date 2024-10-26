@@ -30,14 +30,14 @@ another date to make it clear which is being used in each case.
   >  --extra 'author=author <>' --extra 'author_date=1590981300 0'
 
   $ sl log -T 'D: {date|isodate}   C: {committerdate|isodate}   A: {authordate|isodate}   {desc}\n'
-  D: 2020-06-01 03:00 +0000   C: 2020-06-01 03:30 +0000   A: 2020-06-01 03:15 +0000   sapling-git
+  D: 2020-06-01 03:15 +0000   C: 2020-06-01 03:30 +0000   A: 2020-06-01 03:15 +0000   sapling-git
   D: 2020-06-01 02:00 +0000   C: 2020-06-01 02:30 +0000   A: 2020-06-01 02:00 +0000   mononoke-git
   D: 2020-06-01 01:00 +0000   C: 2020-06-01 01:00 +0000   A: 2020-06-01 01:00 +0000   normal
 
   $ sl log
   commit:      ba97f51c2ccc
   user:        test
-  date:        Mon Jun 01 03:00:00 2020 +0000
+  date:        Mon Jun 01 03:15:00 2020 +0000
   summary:     sapling-git
   
   commit:      6a3f92ef44af
@@ -73,7 +73,7 @@ another date to make it clear which is being used in each case.
   >    committer_date: (if .committer_date == null then null else (.committer_date[0] | todate) end),
   >    desc
   >  }'
-  {"date":"2020-06-01T03:00:00Z","author_date":"2020-06-01T03:15:00Z","committer_date":"2020-06-01T03:30:00Z","desc":"sapling-git"}
+  {"date":"2020-06-01T03:15:00Z","author_date":"2020-06-01T03:15:00Z","committer_date":"2020-06-01T03:30:00Z","desc":"sapling-git"}
   {"date":"2020-06-01T02:00:00Z","author_date":null,"committer_date":"2020-06-01T02:30:00Z","desc":"mononoke-git"}
   {"date":"2020-06-01T01:00:00Z","author_date":null,"committer_date":null,"desc":"normal"}
 

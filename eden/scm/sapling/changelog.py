@@ -203,6 +203,59 @@ class changelogrevision:
         return encoding.tolocalstr(self._text[self._offsets[3] + 2 :])
 
 
+class changelogrevision2:
+    """Commit fields parser backed by Rust. Supports Git and Hg formats."""
+
+    __slots__ = ("_inner",)
+
+    def __init__(self, text, format):
+        if not text:
+            text = ""
+        elif isinstance(text, bytes):
+            text = text.decode(errors="ignore")
+        self._inner = bindings.formatutil.CommitFields.from_text(text, format)
+
+    @property
+    def manifest(self):
+        return self._inner.root_tree()
+
+    @property
+    def user(self):
+        return self._inner.author_name()
+
+    @property
+    def date(self):
+        timestamp, tz = self._inner.author_date()
+        # for compatibility, use 'float' for timestamp
+        return float(timestamp), tz
+
+    @property
+    def extra(self):
+        extra = self._inner.extras()
+        if "branch" not in extra:
+            # Is this needed?
+            extra = {"branch": "default", **extra}
+        # For compatibility, also provide committer in one field
+        if "committer" not in extra:
+            committer_name = self._inner.committer_name()
+            committer_date = self._inner.committer_date()
+            if committer_name and committer_date:
+                extra["committer"] = committer_name
+                extra["committer_date"] = "%d %d" % committer_date
+        return extra
+
+    @property
+    def files(self):
+        files = self._inner.files()
+        if files is None:
+            return None
+        return tuple(files)
+
+    @property
+    def description(self):
+        return self._inner.description()
+
+
 def hgcommittext(manifest, files, desc, user, date, extra, use_rust=True):
     """Generate the 'text' of a commit"""
     # Convert to UTF-8 encoded bytestrings as the very first

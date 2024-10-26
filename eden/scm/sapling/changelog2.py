@@ -7,6 +7,7 @@ from __future__ import absolute_import
 
 import time
 import weakref
+from functools import partial
 from typing import IO, Optional, Union
 
 import bindings
@@ -26,7 +27,12 @@ from . import (
     vfs as vfsmod,
     visibility,
 )
-from .changelog import changelogrevision, gitcommittext, hgcommittext
+from .changelog import (
+    changelogrevision,
+    changelogrevision2,
+    gitcommittext,
+    hgcommittext,
+)
 from .i18n import _
 from .node import bin, hex, nullid, nullrev, wdirid, wdirrev
 
@@ -61,7 +67,15 @@ class changelog:
         self._use_rust_hg_unparse = uiconfig.configbool(
             "experimental", "use-rust-hg-unparse", True
         )
-        self._changelogrevision_ctor = changelogrevision
+        if self._isgit or uiconfig.configbool(
+            "experimental", "use-rust-hg-parse", True
+        ):
+            # NOTE: The git commits layer right now translates commit text to hg format.
+            # So we need to parse them as hg.
+            format = "hg"
+            self._changelogrevision_ctor = partial(changelogrevision2, format=format)
+        else:
+            self._changelogrevision_ctor = changelogrevision
 
     @util.propertycache
     def _visibleheads(self):
