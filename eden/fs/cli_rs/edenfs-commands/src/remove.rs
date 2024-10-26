@@ -64,7 +64,7 @@ impl RemoveContext {
 struct SanityCheck {}
 impl SanityCheck {
     /// This is the first step of the remove process. It will verify that the path is valid and exists.
-    fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
+    async fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
         match Path::new(&context.original_path).canonicalize() {
             // cannonicalize() will check if the path exists for us so this is all we need
             Ok(path) => {
@@ -83,7 +83,7 @@ impl SanityCheck {
 #[derive(Debug)]
 struct Determination {}
 impl Determination {
-    fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
+    async fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
         let path = context.canonical_path.as_path();
 
         if path.is_file() {
@@ -141,7 +141,7 @@ impl Determination {
 #[derive(Debug)]
 struct RegFile {}
 impl RegFile {
-    fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
+    async fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
         if context.skip_prompt
             || Confirm::new()
                 .with_prompt("RegFile State is not implemented yet... proceed?")
@@ -156,7 +156,7 @@ impl RegFile {
 #[derive(Debug)]
 struct ActiveEdenMount {}
 impl ActiveEdenMount {
-    fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
+    async fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
         if context.skip_prompt
             || Confirm::new()
                 .with_prompt("ActiveEdenMount State is not implemented yet... proceed?")
@@ -208,13 +208,13 @@ impl State {
     /// 1. Ok(Some(State)) - we succeed in moving to the next state
     /// 2. Ok(None) - we are in a terminal state and the removal is successful
     /// 3. Err - the removal failed
-    fn run(&self, context: &mut RemoveContext) -> Result<Option<State>> {
+    async fn run(&self, context: &mut RemoveContext) -> Result<Option<State>> {
         debug!("State {} running...", self);
         match self {
-            State::SanityCheck(inner) => inner.next(context),
-            State::Determination(inner) => inner.next(context),
-            State::RegFile(inner) => inner.next(context),
-            State::ActiveEdenMount(inner) => inner.next(context),
+            State::SanityCheck(inner) => inner.next(context).await,
+            State::Determination(inner) => inner.next(context).await,
+            State::RegFile(inner) => inner.next(context).await,
+            State::ActiveEdenMount(inner) => inner.next(context).await,
         }
     }
 }
@@ -232,7 +232,7 @@ impl Subcommand for RemoveCmd {
         let mut state = Some(State::start());
 
         while state.is_some() {
-            match state.unwrap().run(&mut context) {
+            match state.unwrap().run(&mut context).await {
                 Ok(next_state) => state = next_state,
                 Err(e) => {
                     // TODO: handling error processing like logging, etc
@@ -273,12 +273,12 @@ mod tests {
         temp_dir
     }
 
-    #[test]
-    fn test_sanity_check_pass() {
+    #[tokio::test]
+    async fn test_sanity_check_pass() {
         let tmp_dir = prepare_directory();
         let path = format!("{}/test/nested/../nested", tmp_dir.path().to_str().unwrap());
         let mut context = RemoveContext::new(path, true);
-        let state = State::start().run(&mut context).unwrap().unwrap();
+        let state = State::start().run(&mut context).await.unwrap().unwrap();
 
         assert!(
             matches!(state, State::Determination(_)),
@@ -287,8 +287,8 @@ mod tests {
         assert!(context.canonical_path.ends_with("test/nested"));
     }
 
-    #[test]
-    fn test_sanity_check_fail() {
+    #[tokio::test]
+    async fn test_sanity_check_fail() {
         let tmp_dir = prepare_directory();
         let path = format!(
             "{}/test/nested/../../nested/inner",
@@ -296,7 +296,7 @@ mod tests {
         );
         let mut context = RemoveContext::new(path, true);
         let state: std::result::Result<Option<State>, anyhow::Error> =
-            State::start().run(&mut context);
+            State::start().run(&mut context).await;
         assert!(state.is_err());
         assert!(
             state
@@ -306,8 +306,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_determine_regular_file() {
+    #[tokio::test]
+    async fn test_determine_regular_file() {
         let temp_dir = prepare_directory();
         let file_path_buf = temp_dir.path().join("temporary-file.txt");
         fs::write(file_path_buf.as_path(), "anything").unwrap_or_else(|err| {
@@ -320,22 +320,26 @@ mod tests {
 
         // When context includes a path to a regular file
         let mut file_context = RemoveContext::new(file_path_buf.display().to_string(), true);
-        let mut state = State::start().run(&mut file_context).unwrap().unwrap();
+        let mut state = State::start()
+            .run(&mut file_context)
+            .await
+            .unwrap()
+            .unwrap();
         assert!(
             matches!(state, State::Determination(_)),
             "Expected Determination state"
         );
-        state = state.run(&mut file_context).unwrap().unwrap();
+        state = state.run(&mut file_context).await.unwrap().unwrap();
         assert!(matches!(state, State::RegFile(_)), "Expected RegFile state");
 
         // When context includes a path to a directory
         let mut dir_context =
             RemoveContext::new(temp_dir.path().to_str().unwrap().to_string(), true);
-        state = State::start().run(&mut dir_context).unwrap().unwrap();
+        state = State::start().run(&mut dir_context).await.unwrap().unwrap();
         assert!(
             matches!(state, State::Determination(_)),
             "Expected Determination state"
         );
-        assert!(state.run(&mut dir_context).is_err());
+        assert!(state.run(&mut dir_context).await.is_err());
     }
 }
