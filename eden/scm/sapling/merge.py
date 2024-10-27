@@ -46,6 +46,7 @@ from . import (
 from .i18n import _
 from .node import addednodeid, bin, hex, nullhex, nullid, wdirhex
 from .pycompat import encodeutf8
+from .utils import subtreeutil
 
 # merge action types
 ACTION_MERGE = "m"
@@ -992,6 +993,13 @@ def manifestmerge(
     for k, v in copy.items():
         reverse_copies[v].append(k)
 
+    subtree_copy_info = subtreeutil.get_branch_info(repo, p2)
+    subtree_copy_dests = (
+        [br["to_path"] for br in subtree_copy_info["branches"]]
+        if subtree_copy_info
+        else []
+    )
+
     actions = {}
     # (n1, fl1) = "local" (m1)
     # (n2, fl2) = "remote" (m2)
@@ -1002,7 +1010,22 @@ def manifestmerge(
         f2 = m2.ungraftedpath(f1) or f1
         fa = ma.ungraftedpath(f1) or f1
 
-        if n1 and n2:  # file exists on both local and remote side
+        na = ma.get(fa)  # na is None when fa does not exist in ma
+        fla = ma.flags(fa)  # fla is '' when fa does not exist in ma
+
+        subtree_copy_dest = subtreeutil.find_enclosing_dest(f1, subtree_copy_dests)
+        if subtree_copy_dest and (n1 != na or fl1 != fla):
+            hint = _("use '@prog@ subtree copy' to re-create the directory branch")
+            if extra_hint := repo.ui.config("subtree", "copy-conflict-hint"):
+                hint = f"{hint}. {extra_hint}"
+            raise error.Abort(
+                _(
+                    "subtree copy dest path '%s' of '%s' has been updated on the other side"
+                )
+                % (subtree_copy_dest, p2),
+                hint=hint,
+            )
+        elif n1 and n2:  # file exists on both local and remote side
             if fa not in ma:
                 fa = copy.get(f1, None)
                 if fa is not None:

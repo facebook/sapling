@@ -6,7 +6,7 @@
 import json
 from operator import itemgetter
 
-from .. import error, node, util
+from .. import error, node, pathutil, util
 from ..i18n import _
 
 # todo: remove the 'test_' prefix when this feature is stable
@@ -122,3 +122,21 @@ def validate_path_overlap(from_paths, to_paths):
                 _("overlapping --from-path '%s' and --to-path '%s'")
                 % (from_path, to_path)
             )
+
+
+def find_enclosing_dest(target_path, paths):
+    """Find the path that contains the target path.
+
+    >>> is_in_subtree_copy_dest("a/b/c", ["a/b"])
+    'a/b'
+    >>> is_in_subtree_copy_dest("a/b/c", ["a/b/c"])
+    'a/b/c'
+    >>> is_in_subtree_copy_dest("a/b/c", ["a/b", "e/f"])
+    'a/b'
+    >>> is_in_subtree_copy_dest("a/b/c", ["a/b/c/d", "e/f"])
+    """
+    target_dir = pathutil.dirname(target_path)
+    for path in paths:
+        if target_dir.startswith(path) or path == target_path:
+            return path
+    return None
