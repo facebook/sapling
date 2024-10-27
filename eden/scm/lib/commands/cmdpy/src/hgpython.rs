@@ -202,6 +202,13 @@ impl HgPython {
     ) -> i32 {
         let gil = Python::acquire_gil();
         let py = gil.python();
+        // Workaround threading cyclic import error from format_py_error
+        // traceback import. Needs importing before the error happens.
+        if let Err(e) = PyModule::import(py, "threading") {
+            let message = format!("error importing python threading module: {:?}", e);
+            let _ = io.write_err(message);
+            return 1;
+        }
         match self.run_hg_py(py, args, io, config, skip_pre_hooks) {
             // The code below considers the following exit scenarios:
             // - `PyResult` is `Ok`. This means that the Python code returned
