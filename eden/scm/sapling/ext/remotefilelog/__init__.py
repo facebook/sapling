@@ -308,7 +308,7 @@ def onetimeclientsetup(ui):
         if shallowrepo.requirement in repo.requirements:
             manifest = mctx.manifest()
             files = []
-            for _f, args, msg in actions["g"]:
+            for _f, args, msg in actions[merge.ACTION_GET]:
                 f2 = args[0]
                 files.append((f2, manifest[f2]))
             # batch fetch the needed files from the server
@@ -327,12 +327,15 @@ def onetimeclientsetup(ui):
             for f, (m, actionargs, msg) in actions.items():
                 if sparsematch and not sparsematch(f):
                     continue
-                if m == "c":
+                if m == merge.ACTION_CREATED:
                     files.append((f, mctx.filenode(f)))
-                elif m == "dc":
+                elif m == merge.ACTION_DELETED_CHANGED:
                     f2 = actionargs[1]
                     files.append((f, mctx.filenode(f2)))
-                elif m in ("dg", "cm"):
+                elif m in (
+                    merge.ACTION_LOCAL_DIR_RENAME_GET,
+                    merge.ACTION_CREATED_MERGE,
+                ):
                     f2 = actionargs[0]
                     files.append((f2, mctx.filenode(f2)))
             # We need history for the files so we can compute the sha(p1, p2,

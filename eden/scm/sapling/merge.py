@@ -621,7 +621,7 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions):
                     path = checkunknowndirs(repo, wctx, f)
                     if path is not None:
                         pathconflicts.add(path)
-            elif m == "dg":
+            elif m == ACTION_LOCAL_DIR_RENAME_GET:
                 count += 1
                 if _checkunknownfile(repo, wctx, mctx, f, args[0]):
                     fileconflicts.add(f)
@@ -1249,7 +1249,7 @@ def calculateupdates(
             # Same for symlink->file change
             if ACTION_REMOVE_GET in bids:
                 ga0 = bids[ACTION_REMOVE_GET][0]
-                if all(a == ga0 for a in bids["rg"][1:]):
+                if all(a == ga0 for a in bids[ACTION_REMOVE_GET][1:]):
                     repo.ui.note(_(" %s: picking 'remove-then-get' action\n") % f)
                     actions[f] = ga0
                     continue
@@ -1263,7 +1263,7 @@ def calculateupdates(
             m, l = list(bids.items())[0]
             repo.ui.warn(_(" %s: ambiguous merge - picked %s action\n") % (f, m))
             actions[f] = l[0]
-            if m == "dm":
+            if m == ACTION_DIR_RENAME_MOVE_LOCAL:
                 dms.append(f)
             continue
         # Work around 'dm' that can cause multiple actions for the same file

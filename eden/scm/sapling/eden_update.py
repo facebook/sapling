@@ -181,28 +181,28 @@ def _is_abort_on_eden_conflict_error_enabled(repo) -> bool:
 def _determine_actions_for_conflicts(repo, src, conflicts, wctx, destctx):
     """Calculate the actions for _applyupdates()."""
     # Build a list of actions to pass to mergemod.applyupdates()
-    actions = dict(
-        (m, [])
-        for m in [
-            "a",  # re-add
-            "am",  # re-add and mark as modified
-            "c",  # remote created
-            "cm",  # remote created, get or merge
-            "cd",  # merge action
-            "dc",  # merge action
-            "dg",  # directory rename, get
-            "dm",  # directory rename, move local
-            "e",  # exec
-            "f",  # forget
-            "g",  # "get": create or modify
-            "k",  # keep
-            "m",  # merge
-            "p",  # path conflicts
-            "pr",  # files to rename
-            "r",  # remove
-            "rg",  # like "g"
-        ]
-    )
+    actions = {
+        m: []
+        for m in (
+            mergemod.ACTION_ADD,
+            mergemod.ACTION_ADD_MODIFIED,
+            mergemod.ACTION_CREATED,
+            mergemod.ACTION_CREATED_MERGE,
+            mergemod.ACTION_CHANGED_DELETED,
+            mergemod.ACTION_DELETED_CHANGED,
+            mergemod.ACTION_LOCAL_DIR_RENAME_GET,
+            mergemod.ACTION_DIR_RENAME_MOVE_LOCAL,
+            mergemod.ACTION_EXEC,
+            mergemod.ACTION_FORGET,
+            mergemod.ACTION_GET,
+            mergemod.ACTION_KEEP,
+            mergemod.ACTION_MERGE,
+            mergemod.ACTION_PATH_CONFLICT,
+            mergemod.ACTION_PATH_CONFLICT_RESOLVE,
+            mergemod.ACTION_REMOVE,
+            mergemod.ACTION_REMOVE_GET,
+        )
+    }
 
     for conflict in conflicts:
         # The action tuple is:
@@ -224,7 +224,7 @@ def _determine_actions_for_conflicts(repo, src, conflicts, wctx, destctx):
                 )
                 continue
         elif conflict_type == "MODIFIED_REMOVED":
-            action_type = "cd"
+            action_type = mergemod.ACTION_CHANGED_DELETED
             action = (path, None, path, False, src.node())
             prompt = "prompt changed/deleted"
         elif conflict_type == "UNTRACKED_ADDED":
@@ -238,7 +238,7 @@ def _determine_actions_for_conflicts(repo, src, conflicts, wctx, destctx):
                 #    and take either version since they're the same.
                 #  - if the file is ignored in the wctx, but tracked in the dest,
                 #    we can just take the remote version.
-                action_type = "g"
+                action_type = mergemod.ACTION_GET
                 action = (path, destctx.manifest().flags(path), False)
                 prompt = "remote created"
             else:
@@ -248,11 +248,11 @@ def _determine_actions_for_conflicts(repo, src, conflicts, wctx, destctx):
                 # manifestmerge(), which is the other possibility when the file
                 # does not exist in the manifest of the common ancestor for the
                 # merge.
-                action_type = "m"
+                action_type = mergemod.ACTION_MERGE
                 action = (path, path, None, False, src.node())
                 prompt = "both created"
         elif conflict_type == "REMOVED_MODIFIED":
-            action_type = "dc"
+            action_type = mergemod.ACTION_DELETED_CHANGED
             action = (None, path, path, False, src.node())
             prompt = "prompt deleted/changed"
         elif conflict_type == "MISSING_REMOVED":
@@ -261,7 +261,7 @@ def _determine_actions_for_conflicts(repo, src, conflicts, wctx, destctx):
             # in the new commit.
             continue
         elif conflict_type == "MODIFIED_MODIFIED":
-            action_type = "m"
+            action_type = mergemod.ACTION_MERGE
             action = (path, path, path, False, src.node())
             prompt = "versions differ"
         elif conflict_type == "DIRECTORY_NOT_EMPTY":
@@ -286,7 +286,14 @@ def _check_actions_and_raise_if_there_are_conflicts(actions):
     for action_type, list_of_tuples in actions.items():
         if len(list_of_tuples) == 0:
             continue  # Note `actions` defaults to [] for all keys.
-        if action_type not in ("g", "k", "e", "r", "rg", "pr"):
+        if action_type not in (
+            mergemod.ACTION_GET,
+            mergemod.ACTION_KEEP,
+            mergemod.ACTION_EXEC,
+            mergemod.ACTION_REMOVE,
+            mergemod.ACTION_REMOVE_GET,
+            mergemod.ACTION_PATH_CONFLICT_RESOLVE,
+        ):
             conflict_paths.extend(t[0] for t in list_of_tuples)
 
     # Report the exact files with conflicts.
