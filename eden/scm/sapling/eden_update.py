@@ -9,7 +9,7 @@ This overrides the dirstate to check with the eden daemon for modifications,
 instead of doing a normal scan of the filesystem.
 """
 
-from . import error, merge as mergemod, progress, pycompat, util
+from . import error, merge as mergemod, progress, util
 from .i18n import _
 
 
