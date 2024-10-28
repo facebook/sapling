@@ -382,6 +382,11 @@ impl<'a> FileStoreBuilder<'a> {
             None
         };
 
+        let cas_cache_threshold_bytes = self
+            .config
+            .get_opt::<ByteCount>("scmstore", "fetch-from-cas-threshold")?
+            .map(|threshold_bytes| threshold_bytes.value());
+
         tracing::trace!(target: "revisionstore::filestore", "constructing FileStore");
         Ok(FileStore {
             lfs_threshold_bytes,
@@ -410,6 +415,8 @@ impl<'a> FileStoreBuilder<'a> {
             lfs_progress: AggregatingProgressBar::new("fetching", "LFS"),
             flush_on_drop: true,
             format,
+
+            cas_cache_threshold_bytes,
         })
     }
 }

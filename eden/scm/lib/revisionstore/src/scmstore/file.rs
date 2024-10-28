@@ -110,6 +110,9 @@ pub struct FileStore {
 
     // The serialization format that the store should use
     pub format: SerializationFormat,
+
+    // The threshold for using CAS cache
+    pub(crate) cas_cache_threshold_bytes: Option<u64>,
 }
 
 impl Drop for FileStore {
@@ -159,6 +162,7 @@ impl FileStore {
             found_tx,
             self.lfs_threshold_bytes.is_some(),
             fetch_mode,
+            self.cas_cache_threshold_bytes,
         );
 
         debug!(
@@ -486,6 +490,8 @@ impl FileStore {
             lfs_progress: AggregatingProgressBar::new("fetching", "LFS"),
             flush_on_drop: true,
             format: SerializationFormat::Hg,
+
+            cas_cache_threshold_bytes: None,
         }
     }
 
@@ -535,6 +541,8 @@ impl FileStore {
             // Conservatively flushing on drop here, didn't see perf problems and might be needed by Python
             flush_on_drop: true,
             format: self.format(),
+
+            cas_cache_threshold_bytes: self.cas_cache_threshold_bytes.clone(),
         }
     }
 

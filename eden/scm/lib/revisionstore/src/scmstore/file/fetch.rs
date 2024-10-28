@@ -85,6 +85,8 @@ pub struct FetchState {
     fetch_mode: FetchMode,
 
     format: SerializationFormat,
+
+    cas_cache_threshold_bytes: Option<u64>,
 }
 
 impl FetchState {
@@ -95,6 +97,7 @@ impl FetchState {
         found_tx: Sender<Result<(Key, StoreFile), KeyFetchError>>,
         lfs_enabled: bool,
         fetch_mode: FetchMode,
+        cas_cache_threshold_bytes: Option<u64>,
     ) -> Self {
         FetchState {
             common: CommonFetchState::new(keys, attrs, found_tx, fetch_mode),
@@ -108,6 +111,7 @@ impl FetchState {
             lfs_enabled,
             format: file_store.format(),
             fetch_mode,
+            cas_cache_threshold_bytes,
         }
     }
 
@@ -734,6 +738,13 @@ impl FetchState {
                         return None;
                     }
                 };
+
+                if let Some(cas_threshold) = self.cas_cache_threshold_bytes {
+                    if aux_data.total_size > cas_threshold {
+                        // If the file's size exceeds the configured threshold, don't fetch it from CAS.
+                        return None;
+                    }
+                }
 
                 if self.common.request_attrs.content_header && !store_file.attrs().content_header {
                     // If the caller wants hg content header but the aux data didn't have it,
