@@ -1832,8 +1832,15 @@ class UnmountCmd(Subcmd):
                 'prefer using "eden rm" instead'
             )
 
-        instance = get_eden_instance(args)
         for path in args.paths:
+            # Removing redirection targets from checkout config to allow deletion of redirected paths
+            instance, checkout, _rel_path = require_checkout(args, path)
+            config = checkout.get_config()
+            config._replace(
+                redirection_targets={},
+            )
+            checkout.save_config(config)
+
             path = normalize_path_arg(path)
             try:
                 instance.unmount(path)
