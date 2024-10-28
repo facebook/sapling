@@ -298,7 +298,6 @@ impl std::ops::Deref for ScsClient {
     }
 }
 
-#[cfg(not(any(target_os = "macos")))]
 trait MaybeWith<T> {
     fn maybe_with<S>(self, optional: Option<S>, f: impl FnOnce(T, S) -> Self) -> Self
     where
@@ -323,7 +322,6 @@ impl MaybeWith<srclient::ClientParams> for srclient::ClientParams {
     }
 }
 
-#[cfg(not(any(target_os = "macos")))]
 impl MaybeWith<x2pclient::X2pClientBuilder> for x2pclient::X2pClientBuilder {
     fn maybe_with<S>(
         self,
