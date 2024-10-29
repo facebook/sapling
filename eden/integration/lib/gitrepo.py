@@ -33,6 +33,11 @@ class GitRepository(repobase.Repository):
         self.git_bin = FindExe.GIT
         self.temp_mgr = temp_mgr or TempFileManager()
 
+    def run(
+        self, *args: str, encoding: str = "utf-8", env: Optional[Dict[str, str]] = None
+    ) -> str:
+        return self.git(*args, encoding=encoding, env=env)
+
     def git(
         self, *args: str, encoding: str = "utf-8", env: Optional[Dict[str, str]] = None
     ) -> str:

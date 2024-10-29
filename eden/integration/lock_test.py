@@ -71,13 +71,13 @@ class LockTest(testcase.EdenRepoTest):
         with open(self.repo.get_path(self.BASE_FILE_NAME), "r") as f:
             self.assertEqual(f.read(), self.BASE_FILE_CONTENTS)
 
-    def check_commit_edit_blocked(self, errmsg=b"abort:") -> None:
+    def check_commit_edit_blocked(self, errmsg=".*abort:.*") -> None:
         # Checks that external programs are not allowed to change the file
         # A process needs both read and write access to a file to edit it.
         with self.assertRaisesRegex(
             subprocess.CalledProcessError,
-            errmsg + ".*",
-            "Editing via changing commits should be blocked",
+            errmsg,
+            msg="Editing via changing commits should be blocked",
         ):
             self.repo.update(self.add_file_commit)
 
@@ -86,13 +86,13 @@ class LockTest(testcase.EdenRepoTest):
         self.repo.update(self.remove_file_commit)
         self.assertFalse(os.path.isfile(self.repo.get_path(self.BASE_FILE_NAME)))
 
-    def check_commit_remove_blocked(self, errmsg=b"abort:") -> None:
+    def check_commit_remove_blocked(self, errmsg=".*abort:.*") -> None:
         # Checks that external programs are not allowed to remove the file
         # A process needs both delete and write access to a file to remove it.
         with self.assertRaisesRegex(
             subprocess.CalledProcessError,
-            errmsg + ".*",
-            "Removing via changing commits should be blocked",
+            errmsg,
+            msg="Removing via changing commits should be blocked",
         ):
             self.repo.update(self.remove_file_commit)
 
@@ -121,29 +121,26 @@ class LockTest(testcase.EdenRepoTest):
 
         # Check that reading is allowed
         self.check_read_allowed(self.UPDATED_FILE_CONTENTS)
-        self.check_commit_edit_blocked(b"abort: error writing files")
+        self.check_commit_edit_blocked(".*abort: error writing files.*")
 
         # BUG ZONE
         # TODO: This should be blocked, but it isn't
         try:
-            self.check_commit_remove_blocked(b"abort: error writing files")
-        except RuntimeError as e:
+            self.check_commit_remove_blocked(".*abort: error writing files.*")
+        except AssertionError as e:
             self.assertEqual(
-                e.args[0], "Removing via changing commits should be blocked"
+                e.args[0],
+                "CalledProcessError not raised : Removing via changing commits should be blocked",
             )
 
         # BUG1 See that the commit has changed
-        cmdoutput = self.repo.run_hg("sl")
-        sl = cmdoutput.stdout.decode("utf-8").split("\n")
-        self.assertEqual(sl[0], f"@  commit:      {self.remove_file_commit[:12]}")
+        self.assertEqual(self.repo.get_head_hash(), self.remove_file_commit)
 
         # BUG1 No changes to the file are reported
-        cmdoutput = self.repo.run_hg("diff")
-        sl = cmdoutput.stdout.decode("utf-8")
-        self.assertEqual(sl, "")
-        cmdoutput = self.repo.run_hg("status")
-        sl = cmdoutput.stdout.decode("utf-8")
-        self.assertEqual(sl, "")
+        cmdoutput = self.repo.run("diff")
+        self.assertEqual(cmdoutput, "")
+        cmdoutput = self.repo.run("status")
+        self.assertEqual(cmdoutput, "")
 
         # BUG1 See that the file still exists
         self.assertTrue(os.path.isfile(self.repo.get_path(self.BASE_FILE_NAME)))
@@ -165,10 +162,10 @@ class LockTest(testcase.EdenRepoTest):
 
         self.check_read_blocked()
         self.check_commit_edit_blocked(
-            b"abort: The process cannot access the file because it is being used by another process."
+            ".*abort: The process cannot access the file because it is being used by another process.*"
         )
         self.check_commit_remove_blocked(
-            b"abort: The process cannot access the file because it is being used by another process."
+            ".*abort: The process cannot access the file because it is being used by another process.*"
         )
 
         # Handle is closed when it is deleted
@@ -184,10 +181,10 @@ class LockTest(testcase.EdenRepoTest):
 
         self.check_read_blocked()
         self.check_commit_edit_blocked(
-            b"abort: The process cannot access the file because it is being used by another process."
+            ".*abort: The process cannot access the file because it is being used by another process.*"
         )
         self.check_commit_remove_blocked(
-            b"abort: The process cannot access the file because it is being used by another process."
+            ".*abort: The process cannot access the file because it is being used by another process.*"
         )
 
         # Handle is closed when it is deleted
@@ -206,13 +203,11 @@ class LockTest(testcase.EdenRepoTest):
         # Same bug as in _test_share_read
         try:
             self.check_commit_remove_blocked(
-                b"abort: The process cannot access the file because it is being used by another process."
+                ".*abort: The process cannot access the file because it is being used by another process.*"
             )
-        except RuntimeError:
+        except AssertionError:
             pass
-        cmdoutput = self.repo.run_hg("sl")
-        sl = cmdoutput.stdout.decode("utf-8").split("\n")
-        self.assertEqual(sl[0], f"@  commit:      {self.remove_file_commit[:12]}")
+        self.assertEqual(self.repo.get_head_hash(), self.remove_file_commit)
 
         # BUG1 See that the file still exists
         self.assertTrue(os.path.isfile(self.repo.get_path(self.BASE_FILE_NAME)))
@@ -240,22 +235,18 @@ class LockTest(testcase.EdenRepoTest):
         # despite not having write access
         try:
             self.check_commit_edit_blocked(
-                b"abort: The process cannot access the file because it is being used by another process."
+                ".*abort: The process cannot access the file because it is being used by another process.*"
             )
-        except RuntimeError:
+        except AssertionError:
             pass
-        cmdoutput = self.repo.run_hg("sl")
-        sl = cmdoutput.stdout.decode("utf-8").split("\n")
-        self.assertEqual(sl[10], f"@  commit:      {self.add_file_commit[:12]}")
+        self.assertEqual(self.repo.get_head_hash(), self.add_file_commit)
 
         with open(self.repo.get_path(self.BASE_FILE_NAME), "r") as f:
             self.assertEqual(f.read(), self.BASE_FILE_CONTENTS)
         # END BUG ZONE
 
         self.check_commit_remove_allowed()
-        cmdoutput = self.repo.run_hg("sl")
-        sl = cmdoutput.stdout.decode("utf-8").split("\n")
-        self.assertEqual(sl[0], f"@  commit:      {self.remove_file_commit[:12]}")
+        self.assertEqual(self.repo.get_head_hash(), self.remove_file_commit)
         self.assertFalse(os.path.isfile(self.repo.get_path(self.BASE_FILE_NAME)))
 
         # Handle is closed when it is deleted
@@ -271,10 +262,10 @@ class LockTest(testcase.EdenRepoTest):
 
         self.check_read_blocked()
         self.check_commit_edit_blocked(
-            b"abort: The process cannot access the file because it is being used by another process."
+            ".*abort: The process cannot access the file because it is being used by another process.*"
         )
         self.check_commit_remove_blocked(
-            b"abort: The process cannot access the file because it is being used by another process."
+            ".*abort: The process cannot access the file because it is being used by another process.*"
         )
 
         # Handle is closed when it is deleted
@@ -303,3 +294,56 @@ class LockTest(testcase.EdenRepoTest):
         self.check_read_allowed(self.UPDATED_FILE_CONTENTS)
         self.repo.update(self.add_file_commit)
         self.check_read_allowed(self.BASE_FILE_CONTENTS)
+
+    def test_read_mode(self) -> None:
+        # Due to issues with running these tests separately causing resource exhaustion on sockets,
+        # we need to run them all in the same test. Reset to the default commit before each test.
+        self._test_share_none(b"r")
+        self.repo.update(self.update_file_commit)
+        self._test_share_read(b"r")
+        self.repo.update(self.update_file_commit)
+        self._test_share_write(b"r")
+        self.repo.update(self.update_file_commit)
+        self._test_share_delete(b"r")
+        self.repo.update(self.update_file_commit)
+        self._test_share_read_write(b"r")
+        self.repo.update(self.update_file_commit)
+        self._test_share_read_delete(b"r")
+        self.repo.update(self.update_file_commit)
+        self._test_share_write_delete(b"r")
+        self.repo.update(self.update_file_commit)
+        self._test_share_read_write_delete(b"r")
+
+    def test_write_mode(self) -> None:
+        self._test_share_none(b"w")
+        self.repo.update(self.update_file_commit)
+        self._test_share_read(b"w")
+        self.repo.update(self.update_file_commit)
+        self._test_share_write(b"w")
+        self.repo.update(self.update_file_commit)
+        self._test_share_delete(b"w")
+        self.repo.update(self.update_file_commit)
+        self._test_share_read_write(b"w")
+        self.repo.update(self.update_file_commit)
+        self._test_share_read_delete(b"w")
+        self.repo.update(self.update_file_commit)
+        self._test_share_write_delete(b"w")
+        self.repo.update(self.update_file_commit)
+        self._test_share_read_write_delete(b"w")
+
+    def test_edit_mode(self) -> None:
+        self._test_share_none(b"+")
+        self.repo.update(self.update_file_commit)
+        self._test_share_read(b"+")
+        self.repo.update(self.update_file_commit)
+        self._test_share_write(b"+")
+        self.repo.update(self.update_file_commit)
+        self._test_share_delete(b"+")
+        self.repo.update(self.update_file_commit)
+        self._test_share_read_write(b"+")
+        self.repo.update(self.update_file_commit)
+        self._test_share_read_delete(b"+")
+        self.repo.update(self.update_file_commit)
+        self._test_share_write_delete(b"+")
+        self.repo.update(self.update_file_commit)
+        self._test_share_read_write_delete(b"+")

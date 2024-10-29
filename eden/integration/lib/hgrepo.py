@@ -229,6 +229,11 @@ class HgRepository(repobase.Repository):
             # practically unreachable, just to make pyre happy.
             raise RuntimeError("either result or error should be set")
 
+    def run(
+        self, *args: str, encoding: str = "utf-8", env: Optional[Dict[str, str]] = None
+    ) -> str:
+        return self.hg(*args, encoding=encoding, env=env)
+
     def hg(
         self,
         *args: str,

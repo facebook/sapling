@@ -9,7 +9,7 @@
 import datetime
 import errno
 import os
-from typing import AnyStr, List, Optional
+from typing import AnyStr, Dict, List, Optional
 
 
 class Repository:
@@ -149,3 +149,9 @@ class Repository:
 
     def push(self, rev: str, target: str, create: bool = False) -> str:
         raise NotImplementedError()
+
+    def run(
+        self, *args: str, encoding: str = "utf-8", env: Optional[Dict[str, str]] = None
+    ) -> str:
+        """Invokes command line args."""
+        raise NotImplementedError("subclasses must implement run()")
