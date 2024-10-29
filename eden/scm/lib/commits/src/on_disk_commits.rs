@@ -22,10 +22,9 @@ use dag::Group;
 use dag::Set;
 use dag::Vertex;
 use dag::VertexListWithOptions;
-use format_util::git_sha1_deserialize;
 use format_util::git_sha1_serialize;
-use format_util::hg_sha1_deserialize;
 use format_util::hg_sha1_serialize;
+use format_util::strip_sha1_header;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use minibytes::Bytes;
@@ -207,11 +206,8 @@ fn get_commit_raw_text(
     let id = Id20::from_slice(vertex.as_ref())?;
     match store.get(id)? {
         Some(bytes) => {
-            let raw_text = match format {
-                SerializationFormat::Hg => hg_sha1_deserialize(bytes.as_ref())?.0,
-                SerializationFormat::Git => git_sha1_deserialize(bytes.as_ref())?.0,
-            };
-            Ok(Some(bytes.slice_to_bytes(raw_text)))
+            let raw_text = strip_sha1_header(&bytes, format)?;
+            Ok(Some(raw_text))
         }
         None => Ok(crate::revlog::get_hard_coded_commit_text(vertex)),
     }
@@ -223,6 +219,7 @@ impl StreamCommitText for OnDiskCommits {
         stream: BoxStream<'static, anyhow::Result<Vertex>>,
     ) -> Result<BoxStream<'static, anyhow::Result<ParentlessHgCommit>>> {
         let zstore = Zstore::open(&self.commits_path)?;
+        let format = self.format;
         let stream = stream.map(move |item| {
             let vertex = item?;
             let id = Id20::from_slice(vertex.as_ref())?;
@@ -231,7 +228,7 @@ impl StreamCommitText for OnDiskCommits {
                 Default::default()
             } else {
                 match zstore.get(id)? {
-                    Some(raw_data) => raw_data.slice(Id20::len() * 2..),
+                    Some(raw_data) => strip_sha1_header(&raw_data, format)?,
                     None => return vertex.not_found().map_err(Into::into),
                 }
             };

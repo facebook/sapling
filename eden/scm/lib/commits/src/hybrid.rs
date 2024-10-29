@@ -29,6 +29,7 @@ use edenapi::types::CommitLocationToHashRequest;
 use edenapi::SaplingRemoteApi;
 use format_util::git_sha1_serialize;
 use format_util::hg_sha1_deserialize;
+use format_util::strip_sha1_header;
 use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
@@ -476,7 +477,10 @@ impl HybridResolver<Vertex, Bytes, anyhow::Error> for Resolver {
             return Ok(Some(Bytes::new()));
         }
         match self.zstore.read().get(id)? {
-            Some(bytes) => Ok(Some(bytes.slice(Id20::len() * 2..))),
+            Some(bytes) => {
+                let text = strip_sha1_header(&bytes, self.format)?;
+                Ok(Some(text))
+            }
             None => Ok(crate::revlog::get_hard_coded_commit_text(vertex)),
         }
     }
