@@ -107,6 +107,14 @@ impl HgTimeExt for HgTime {
     }
 }
 
+/// Produce "title" and indented commit text. Useful for error messages.
+pub(crate) fn with_indented_commit_text(title: &str, text: &str) -> String {
+    let mut result = title.to_string();
+    result.push('\n');
+    let _ = write_multi_line(text, "  ", &mut result);
+    result
+}
+
 #[cfg(test)]
 pub(crate) mod tests {
     use hgtime::HgTime;
