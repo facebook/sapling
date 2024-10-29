@@ -22,6 +22,7 @@ use types::SerializationFormat;
 
 use crate::git_commit::normalize_git_tree_id;
 use crate::normalize_email_user;
+use crate::utils::with_indented_commit_text;
 use crate::utils::write_multi_line;
 use crate::utils::HgTimeExt;
 use crate::CommitFields;
@@ -51,6 +52,12 @@ pub struct GitCommitFields {
 
 impl GitCommitFields {
     fn from_text(text: &Text) -> Result<Self> {
+        Self::from_text_impl(text)
+            .with_context(|| with_indented_commit_text("Failed to parse commit:", &text))
+    }
+
+    // Actual logic of `from_text`.
+    fn from_text_impl(text: &Text) -> Result<Self> {
         // tree {tree_sha}
         // {parents}
         // author {author_name} <{author_email}> {author_date_seconds} {author_date_timezone}

@@ -20,6 +20,7 @@ use types::RepoPath;
 use types::SerializationFormat;
 
 use crate::normalize_email_user;
+use crate::utils::with_indented_commit_text;
 use crate::utils::write_multi_line;
 pub use crate::CommitFields;
 use crate::HgTime;
@@ -44,6 +45,12 @@ pub struct HgCommitFields {
 
 impl HgCommitFields {
     fn from_text(text: &Text) -> Result<Self> {
+        Self::from_text_impl(text)
+            .with_context(|| with_indented_commit_text("Failed to parse commit:", &text))
+    }
+
+    // Actual logic of `from_text`.
+    fn from_text_impl(text: &Text) -> Result<Self> {
         // {tree}
         // {author}
         // {date_seconds} {date timezone} {extra}
