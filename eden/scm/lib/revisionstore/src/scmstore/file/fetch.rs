@@ -898,6 +898,7 @@ impl FetchState {
         self.metrics.cas.fetch(keys_fetch_count);
         self.metrics.cas.err(error);
         self.metrics.cas.hit(keys_found_count);
+        self.metrics.cas.miss(keys_fetch_count - keys_found_count);
         self.metrics
             .cas_backend
             .zdb_bytes(total_stats.total_bytes_zdb);
