@@ -805,6 +805,7 @@ export type ClientToServerMessage =
   | {type: 'unsubscribe'; kind: SubscriptionKind; subscriptionID: string}
   | {type: 'exportStack'; revs: string; assumeTracked?: Array<string>}
   | {type: 'importStack'; stack: ImportStack}
+  | {type: 'fetchQeFlag'; name: string}
   | {type: 'fetchFeatureFlag'; name: string}
   | {type: 'fetchInternalUserInfo'}
   | {
@@ -898,6 +899,7 @@ export type ServerToClientMessage =
       error: string | undefined;
     }
   | {type: 'importedStack'; imported: ImportedStack; error: string | undefined}
+  | {type: 'fetchedQeFlag'; name: string; passes: boolean}
   | {type: 'fetchedFeatureFlag'; name: string; passes: boolean}
   | {type: 'fetchedInternalUserInfo'; info: Serializable}
   | {

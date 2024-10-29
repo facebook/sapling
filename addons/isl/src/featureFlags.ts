@@ -23,6 +23,14 @@ export const featureFlagAsync = atomFamilyWeak((name?: string) => {
   return atom(fetchFeatureFlag(name));
 });
 
+export const qeFlagAsync = atomFamilyWeak((name?: string) => {
+  if (name == null) {
+    // OSS doesn't have access to feature flags, so they are always "false" by setting the name to null
+    return atom(Promise.resolve(false));
+  }
+  return atom(fetchQeFlag(name));
+});
+
 const featureFlagLoadable = atomFamilyWeak((name?: string) => {
   return loadable(featureFlagAsync(name));
 });
@@ -40,6 +48,13 @@ export function getFeatureFlag(name: string | undefined, default_?: boolean): Pr
   return readAtom(featureFlagAsync(name));
 }
 
+export function getQeFlag(name: string | undefined, default_?: boolean): Promise<boolean> {
+  if (name == null) {
+    return Promise.resolve(default_ ?? false);
+  }
+  return readAtom(qeFlagAsync(name));
+}
+
 async function fetchFeatureFlag(name: string | undefined, default_?: boolean): Promise<boolean> {
   if (name == null) {
     return default_ ?? false;
@@ -50,6 +65,21 @@ async function fetchFeatureFlag(name: string | undefined, default_?: boolean): P
   });
   const response = await serverAPI.nextMessageMatching(
     'fetchedFeatureFlag',
+    message => message.name === name,
+  );
+  return response.passes;
+}
+
+async function fetchQeFlag(name: string | undefined, default_?: boolean): Promise<boolean> {
+  if (name == null) {
+    return default_ ?? false;
+  }
+  serverAPI.postMessage({
+    type: 'fetchQeFlag',
+    name,
+  });
+  const response = await serverAPI.nextMessageMatching(
+    'fetchedQeFlag',
     message => message.name === name,
   );
   return response.passes;

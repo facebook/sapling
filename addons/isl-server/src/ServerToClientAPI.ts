@@ -847,6 +847,13 @@ export default class ServerToClientAPI {
         parseExecJson(exec, reply);
         break;
       }
+      case 'fetchQeFlag': {
+        Internal.fetchQeFlag?.(repo.initialConnectionContext, data.name).then((passes: boolean) => {
+          this.logger.info(`qe flag ${data.name} ${passes ? 'PASSES' : 'FAILS'}`);
+          this.postMessage({type: 'fetchedQeFlag', name: data.name, passes});
+        });
+        break;
+      }
       case 'fetchFeatureFlag': {
         Internal.fetchFeatureFlag?.(repo.initialConnectionContext, data.name).then(
           (passes: boolean) => {
