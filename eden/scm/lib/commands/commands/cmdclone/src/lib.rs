@@ -46,6 +46,7 @@ use util::path::create_shared_dir_all;
 
 static SEGMENTED_CHANGELOG_CAPABILITY: &str = "segmented-changelog";
 static COMMIT_GRAPH_SEGMENTS_CAPABILITY: &str = "commit-graph-segments";
+static GIT_FORMAT_CAPABILITY: &str = "git-format";
 
 define_flags! {
     pub struct CloneOpts {
@@ -591,6 +592,10 @@ fn clone_metadata(
                 .binary_search_by_key(&name, AsRef::as_ref)
                 .is_ok()
         };
+
+        if has_capability(GIT_FORMAT_CAPABILITY) {
+            repo.add_store_requirement("git")?;
+        }
 
         let segmented_changelog = has_capability(SEGMENTED_CHANGELOG_CAPABILITY);
         let commit_graph_segments = has_capability(COMMIT_GRAPH_SEGMENTS_CAPABILITY)
