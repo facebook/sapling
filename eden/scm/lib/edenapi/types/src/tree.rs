@@ -22,6 +22,7 @@ use types::AugmentedTree;
 use types::AugmentedTreeEntry;
 use types::AugmentedTreeWithDigest;
 
+use crate::hash::check_hash;
 use crate::Blake3;
 use crate::DirectoryMetadata;
 use crate::FileAuxData;
@@ -128,22 +129,13 @@ impl TreeEntry {
     pub fn data_checked(&self) -> Result<Bytes, TreeError> {
         if let Some(data) = self.data.as_ref() {
             if let Some(parents) = self.parents {
-                let computed = HgId::from_content(data, parents);
-                if computed != self.key.hgid {
-                    let err = InvalidHgId {
-                        expected: self.key.hgid,
-                        computed,
-                        data: data.clone(),
-                        parents,
-                    };
-
-                    return Err(if self.key.path.is_empty() {
+                check_hash(data, parents, "tree", self.key.hgid).map_err(|err| {
+                    if self.key.path.is_empty() {
                         TreeError::MaybeHybridManifest(err)
                     } else {
                         TreeError::Corrupt(err)
-                    });
-                }
-
+                    }
+                })?;
                 Ok(data.clone())
             } else {
                 Err(TreeError::MissingField("parents"))

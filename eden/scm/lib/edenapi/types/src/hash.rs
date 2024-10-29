@@ -5,6 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use types::Id20;
+use types::Parents;
+
+use crate::Bytes;
+use crate::InvalidHgId;
+
 macro_rules! sized_hash {
     ($name: ident, $size: literal) => {
         paste::paste! {
@@ -23,4 +29,24 @@ macro_rules! blake2_hash {
     ($name: ident) => {
         sized_hash!($name, 32);
     };
+}
+
+pub(crate) fn check_hash(
+    data: &Bytes,
+    parents: Parents,
+    kind: &str,
+    id: Id20,
+) -> Result<(), InvalidHgId> {
+    let _ = kind;
+    let computed = Id20::from_content(data, parents);
+    if computed == id {
+        Ok(())
+    } else {
+        Err(InvalidHgId {
+            expected: id,
+            computed,
+            parents,
+            data: data.clone(),
+        })
+    }
 }

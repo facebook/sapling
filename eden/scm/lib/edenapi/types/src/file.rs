@@ -19,6 +19,7 @@ use types::hgid::HgId;
 use types::key::Key;
 use types::parents::Parents;
 
+use crate::hash::check_hash;
 use crate::Blake3;
 use crate::InvalidHgId;
 use crate::ServerError;
@@ -122,17 +123,7 @@ impl FileContent {
             return Err(FileError::Lfs(key.clone(), data.clone()));
         }
 
-        let computed = HgId::from_content(data, parents);
-        if computed != key.hgid {
-            let err = InvalidHgId {
-                expected: key.hgid,
-                computed,
-                parents,
-                data: data.clone(),
-            };
-
-            return Err(FileError::Corrupt(err));
-        }
+        check_hash(data, parents, "blob", key.hgid).map_err(FileError::Corrupt)?;
 
         Ok(data.clone())
     }
