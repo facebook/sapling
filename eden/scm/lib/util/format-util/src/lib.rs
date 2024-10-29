@@ -8,6 +8,7 @@
 //! Utilities interacting with store serialization formats (git or hg).
 
 use anyhow::Result;
+pub use minibytes::Bytes;
 use minibytes::Text;
 use types::Id20;
 
@@ -59,4 +60,13 @@ pub fn commit_text_to_fields(text: Text, format: SerializationFormat) -> Box<dyn
         SerializationFormat::Hg => Box::new(HgCommitLazyFields::new(text)),
         SerializationFormat::Git => Box::new(GitCommitLazyFields::new(text)),
     }
+}
+
+/// `sha1_text` includes header like git's type and size, or hg's header like p1, p2.
+pub fn strip_sha1_header(sha1_text: &Bytes, format: SerializationFormat) -> Result<Bytes> {
+    let text = match format {
+        SerializationFormat::Hg => hg_sha1_deserialize(sha1_text)?.0,
+        SerializationFormat::Git => git_sha1_deserialize(sha1_text)?.0,
+    };
+    Ok(sha1_text.slice_to_bytes(text))
 }
