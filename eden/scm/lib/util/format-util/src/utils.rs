@@ -10,7 +10,9 @@ use std::borrow::Cow;
 use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Result;
+use hgtime::HgTime;
 use memchr::memchr;
+use minibytes::Text;
 use storemodel::SerializationFormat;
 
 /// Normalize " Foo Bar  < a@b.com > " to "Foo Bar <a@b.com>".
@@ -93,6 +95,16 @@ pub(crate) fn write_multi_line(message: &str, line_prefix: &str, out: &mut Strin
         empty = false;
     }
     Ok(empty)
+}
+
+pub(crate) trait HgTimeExt {
+    fn to_text(&self) -> Text;
+}
+
+impl HgTimeExt for HgTime {
+    fn to_text(&self) -> Text {
+        format!("{} {}", self.unixtime, self.offset).into()
+    }
 }
 
 #[cfg(test)]

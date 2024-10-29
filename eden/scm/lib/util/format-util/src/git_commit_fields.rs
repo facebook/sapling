@@ -23,6 +23,7 @@ use types::Id20;
 use crate::git_commit::normalize_git_tree_id;
 use crate::normalize_email_user;
 use crate::utils::write_multi_line;
+use crate::utils::HgTimeExt;
 use crate::CommitFields;
 use crate::HgTime;
 
@@ -88,9 +89,20 @@ impl GitCommitFields {
                 result.parents.push(Id20::from_hex(hex.as_bytes())?);
             } else if let Some(line) = line.strip_prefix("author ") {
                 (result.author, result.date) = parse_name_date(text.slice_to_bytes(line))?;
+                // Set the "author_date" extra to remove ambiguity about what "date" means. Ideally
+                // this does not exist. But the Python side's "date" handling is a mess now, esp.
+                // when git is involved. When removing this extra, check tests like
+                // test-git-committer.t.
+                result
+                    .extras
+                    .insert("author_date".into(), result.date.to_text());
             } else if let Some(line) = line.strip_prefix("committer ") {
                 (result.committer, result.committer_date) =
                     parse_name_date(text.slice_to_bytes(line))?;
+                // We don't set "committer", "committer_date" extras here intentionally,
+                // since dedicated trait methods are provided for them. The Python side
+                // can use the trait methods to access these fields and put the in Python
+                // extras for compatibility.
             } else if let (Some((name, value)), None) = (line.split_once(' '), &current_extra) {
                 current_extra = Some((text.slice_to_bytes(name), value.to_string()));
             } else if line.is_empty() {
@@ -379,7 +391,10 @@ Signed-off-by: Alice <a@example.com>
             fields.root_tree().unwrap().to_hex(),
             "98edb6a9c7a48cae7a1ed9a39600952547daaebb"
         );
-        assert_eq!(format!("{:?}", fields.extras().unwrap()), "{}");
+        assert_eq!(
+            format!("{:?}", fields.extras().unwrap()),
+            "{\"author_date\": \"1714100000 25200\"}"
+        );
 
         let text2 = fields.fields().unwrap().to_text().unwrap();
         assert_eq!(text2, text);
@@ -410,7 +425,7 @@ This is the commit message.
 
         assert_eq!(
             format!("{:?}", fields.extras().unwrap()),
-            r#"{"data1": "foo\nbar", "data2": "foo bar", "gpgsig": "-- BEGIN --\n\nsignature foo bar\n\n-- END --"}"#
+            r#"{"author_date": "1714300000 60", "data1": "foo\nbar", "data2": "foo bar", "gpgsig": "-- BEGIN --\n\nsignature foo bar\n\n-- END --"}"#
         );
         assert_eq!(
             fields.description().unwrap(),
