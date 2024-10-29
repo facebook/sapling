@@ -43,6 +43,7 @@ use metaconfig_types::PushParams;
 use metaconfig_types::PushrebaseFlags;
 use metaconfig_types::PushrebaseParams;
 use metaconfig_types::PushrebaseRemoteMode;
+use metaconfig_types::RemoteDerivationConfig;
 use metaconfig_types::RepoClientKnobs;
 use metaconfig_types::ServiceWriteRestrictions;
 use metaconfig_types::ShardedService;
@@ -88,6 +89,7 @@ use repos::RawPushParams;
 use repos::RawPushrebaseParams;
 use repos::RawPushrebaseRemoteMode;
 use repos::RawPushrebaseRemoteModeRemote;
+use repos::RawRemoteDerivationConfig;
 use repos::RawRepoClientKnobs;
 use repos::RawServiceWriteRestrictions;
 use repos::RawShardedService;
@@ -557,7 +559,29 @@ impl Convert for RawDerivedDataConfig {
                 .map(|(s, raw_config)| Ok((s, raw_config.convert()?)))
                 .collect::<Result<_, anyhow::Error>>()?,
             derivation_queue_scuba_table: self.derivation_queue_scuba_table,
+            remote_derivation_config: self
+                .remote_derivation_config
+                .map(|raw| raw.convert())
+                .transpose()?,
         })
+    }
+}
+
+impl Convert for RawRemoteDerivationConfig {
+    type Output = RemoteDerivationConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        match self {
+            RawRemoteDerivationConfig::smc_tier(smc_tier) => {
+                Ok(RemoteDerivationConfig::SmcTier(smc_tier))
+            }
+            RawRemoteDerivationConfig::host_port(host_port) => {
+                Ok(RemoteDerivationConfig::HostPort(host_port))
+            }
+            RawRemoteDerivationConfig::UnknownField(e) => {
+                anyhow::bail!("Unknown variant of RawRemoteDerivationConfig: {}", e)
+            }
+        }
     }
 }
 

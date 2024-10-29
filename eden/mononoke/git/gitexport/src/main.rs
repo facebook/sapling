@@ -171,8 +171,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let remove_derivation_args = RemoteDerivationArgs {
         derive_remotely: true,
-        derive_remotely_tier: None,
-        derive_remotely_hostport: None,
     };
 
     let default_scuba_logging_args = ScubaLoggingArgs {

@@ -364,6 +364,9 @@ pub struct DerivedDataConfig {
 
     /// Name of scuba table to log all derivation queue operations
     pub derivation_queue_scuba_table: Option<String>,
+
+    /// Config to use for remote derivation
+    pub remote_derivation_config: Option<RemoteDerivationConfig>,
 }
 
 impl DerivedDataConfig {
@@ -481,6 +484,15 @@ pub struct GitDeltaManifestV2Config {
     pub max_inlined_delta_size: u64,
     /// Chunk size for delta instructions.
     pub delta_chunk_size: u64,
+}
+
+/// Config for remote derivation
+#[derive(Eq, Clone, Debug, PartialEq)]
+pub enum RemoteDerivationConfig {
+    /// SMC tier for remote derivation
+    SmcTier(String),
+    /// host:port string for remote derivation
+    HostPort(String),
 }
 
 impl RepoConfig {
