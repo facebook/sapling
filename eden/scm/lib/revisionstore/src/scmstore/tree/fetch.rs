@@ -206,7 +206,9 @@ impl FetchState {
             .collect();
 
         // Include the duplicates in the count.
-        span.record("keys", digest_with_keys.len());
+        let keys_fetch_count = digest_with_keys.len();
+
+        span.record("keys", keys_fetch_count);
 
         let mut digest_to_key: HashMap<CasDigest, Vec<Key>> = HashMap::default();
 
@@ -220,7 +222,7 @@ impl FetchState {
 
         let digests: Vec<CasDigest> = digest_to_key.keys().cloned().collect();
 
-        let mut found = 0;
+        let mut keys_found_count = 0;
         let mut error = 0;
         let mut reqs = 0;
 
@@ -251,7 +253,7 @@ impl FetchState {
                             }
                             Ok(Some(data)) => match AugmentedTree::try_deserialize(&*data) {
                                 Ok(tree) => {
-                                    found += keys.len();
+                                    keys_found_count += keys.len();
                                     tracing::trace!(target: "cas", ?keys, ?digest, "tree found in cas");
 
                                     let lazy_tree = LazyTree::Cas(AugmentedTreeWithDigest {
@@ -311,14 +313,14 @@ impl FetchState {
             }).await;
         });
 
-        span.record("hits", found);
+        span.record("hits", keys_found_count);
         span.record("requests", reqs);
         span.record("time", start_time.elapsed().as_millis() as u64);
 
         let _ = self.metrics.cas.time_from_duration(start_time.elapsed());
-        self.metrics.cas.fetch(digests.len());
+        self.metrics.cas.fetch(keys_fetch_count);
         self.metrics.cas.err(error);
-        self.metrics.cas.hit(found);
+        self.metrics.cas.hit(keys_found_count);
         self.metrics
             .cas_backend
             .zdb_bytes(total_stats.total_bytes_zdb);
