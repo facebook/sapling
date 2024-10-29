@@ -711,6 +711,7 @@ async function maybeWarnAboutRebaseOffWarm(dest: CommitInfo): Promise<boolean> {
 
   const warning = Promise.resolve(Internal.maybeWarnAboutRebaseOffWarm?.(src));
   if (await warning) {
+    tracker.track('WarnAboutRebaseOffWarm');
     return platform.confirm(
       t(
         Internal.warnAboutRebaseOffWarmReason ??
