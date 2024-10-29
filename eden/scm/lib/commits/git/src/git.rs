@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::borrow::Cow;
+
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -663,15 +663,11 @@ fn get_commit_raw_text(repo: &git2::Repository, vertex: &Vertex) -> Result<Optio
         Ok(oid) => oid,
         Err(_) => return Ok(None),
     };
-    let commit = match repo.find_commit(oid) {
-        Ok(commit) => commit,
-        Err(e) if e.code() == git2::ErrorCode::NotFound => {
-            return Ok(get_hard_coded_commit_text(vertex));
-        }
-        Err(e) => return Err(e.into()),
-    };
-    let text = to_hg_text(&commit);
-    Ok(Some(text))
+    match repo.odb()?.read(oid) {
+        Ok(obj) => Ok(Some(Bytes::copy_from_slice(obj.data()))),
+        Err(e) if e.code() == git2::ErrorCode::NotFound => Ok(get_hard_coded_commit_text(vertex)),
+        Err(e) => Err(e.into()),
+    }
 }
 
 // Workaround orphan rule
@@ -706,12 +702,10 @@ impl StreamCommitText for GitSegmentedCommits {
         let git_repo = git2::Repository::open(self.git.git_dir())?;
         let stream = stream.map(move |item| {
             let vertex = item?;
-            let oid = match git2::Oid::from_bytes(vertex.as_ref()) {
-                Ok(oid) => oid,
-                Err(_) => return vertex.not_found().map_err(Into::into),
+            let raw_text = match get_commit_raw_text(&git_repo, &vertex)? {
+                Some(v) => v,
+                None => return vertex.not_found().map_err(Into::into),
             };
-            let commit = git_repo.find_commit(oid)?;
-            let raw_text = to_hg_text(&commit);
             Ok(ParentlessHgCommit { vertex, raw_text })
         });
         Ok(Box::pin(stream))
@@ -754,88 +748,6 @@ Feature Providers:
     fn explain_internals(&self, w: &mut dyn io::Write) -> io::Result<()> {
         write!(w, "{:?}", &*self.dag)
     }
-}
-
-fn to_hex(oid: git2::Oid) -> String {
-    const HEX_CHARS: &[u8] = b"0123456789abcdef";
-    let bytes = oid.as_bytes();
-    let mut v = Vec::with_capacity(bytes.len() * 2);
-    for &byte in bytes {
-        v.push(HEX_CHARS[(byte >> 4) as usize]);
-        v.push(HEX_CHARS[(byte & 0xf) as usize]);
-    }
-    unsafe { String::from_utf8_unchecked(v) }
-}
-
-// For "Wed, 23 Nov 2022 17:47:30 -0800",
-//
-// git commit message: "1669254450 -0800"
-// hg commit message:  "1669254450 28800"
-// libgit2 Time::offset_minutes: -480
-
-fn to_hg_date_text(time: &git2::Time) -> String {
-    // See above. Convert -480 to 28800.
-    let hg_date_offset_seconds = -time.offset_minutes() * 60;
-    format!("{} {}", time.seconds(), hg_date_offset_seconds)
-}
-
-/// Convert a git commit to hg commit text.
-fn to_hg_text(commit: &git2::Commit) -> Bytes {
-    // 222 is calculated from debugshell in linux.git:
-    // max(len(cl.revision(n))-len(repo[n].description().encode('utf8')) for n in cl.dag.all().take(50000))
-    let len = commit.message_bytes().len() + 222;
-    let mut result = Vec::with_capacity(len);
-    let mut write = |s: &[u8]| result.extend_from_slice(s);
-
-    fn utf8<'a>(s: &'a [u8]) -> Cow<'a, str> {
-        String::from_utf8_lossy(s)
-    }
-
-    // Construct the commit using (faked) hg format:
-    // manifest hex + "\n" + user + "\n" + date + (extra) + "\n" + (files) + "\n" + desc
-
-    // manifest hex
-    write(to_hex(commit.tree_id()).as_bytes());
-    write(b"\n");
-
-    let author = commit.author();
-    let committer = commit.committer();
-
-    // author
-    write(utf8(author.name_bytes()).as_bytes());
-    write(b" <");
-    write(utf8(author.email_bytes()).as_bytes());
-    write(b">\n");
-
-    // date
-    // We want the "modified" date to match user expectation. For hg we bump dates on commit
-    // rewrites (rebase, metaedit, amend, ...). So the hg "date" is the "modified" date.
-    // Usually, the committer date is the "modified" date. For tests, to preserve "stable"
-    // hashes the "date.now" is patched to return UNIX epoch. So we pick the maximum date
-    // from author and committer dates for test compatibility.
-    let max_date = committer.when().max(author.when());
-    write(to_hg_date_text(&max_date).as_bytes());
-
-    // extras
-    // The extras format is: "\0".join(f"{key}:{value}"). See "encodeextra" in changelog.py.
-    write(b" author_date:");
-    write(to_hg_date_text(&author.when()).as_bytes());
-    write(b"\0committer:");
-    write(utf8(committer.name_bytes()).as_bytes());
-    write(b" <");
-    write(utf8(committer.email_bytes()).as_bytes());
-    write(b">\0committer_date:");
-    write(to_hg_date_text(&committer.when()).as_bytes());
-    write(b"\n");
-
-    // files
-    // NOTE: currently ignored.
-    write(b"\n");
-
-    // message
-    write(utf8(commit.message_bytes()).as_bytes());
-
-    result.into()
 }
 
 /// Find "deleted" and "changed" references.
