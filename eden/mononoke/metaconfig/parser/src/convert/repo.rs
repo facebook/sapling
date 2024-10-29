@@ -572,6 +572,9 @@ impl Convert for RawRemoteDerivationConfig {
 
     fn convert(self) -> Result<Self::Output> {
         match self {
+            RawRemoteDerivationConfig::shard_manager_tier(shard_manager_tier) => {
+                Ok(RemoteDerivationConfig::ShardManagerTier(shard_manager_tier))
+            }
             RawRemoteDerivationConfig::smc_tier(smc_tier) => {
                 Ok(RemoteDerivationConfig::SmcTier(smc_tier))
             }

@@ -489,6 +489,8 @@ pub struct GitDeltaManifestV2Config {
 /// Config for remote derivation
 #[derive(Eq, Clone, Debug, PartialEq)]
 pub enum RemoteDerivationConfig {
+    /// Shardmanager tier for remote derivation
+    ShardManagerTier(String),
     /// SMC tier for remote derivation
     SmcTier(String),
     /// host:port string for remote derivation

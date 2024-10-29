@@ -1187,6 +1187,7 @@ impl RepoFactory {
             self.env.fb,
             self.env.remote_derivation_options.clone(),
             repo_config,
+            repo_identity.name(),
         )?;
         Ok(Arc::new(RepoDerivedData::new(
             repo_identity.id(),
@@ -1899,12 +1900,20 @@ fn get_derivation_client(
     fb: FacebookInit,
     remote_derivation_options: RemoteDerivationOptions,
     repo_config: &ArcRepoConfig,
+    repo_name: &str,
 ) -> Result<Option<Arc<dyn DerivationClient>>> {
     let derivation_service_client: Option<Arc<dyn DerivationClient>> =
         if remote_derivation_options.derive_remotely {
             #[cfg(fbcode_build)]
             {
                 match &repo_config.derived_data_config.remote_derivation_config {
+                    Some(RemoteDerivationConfig::ShardManagerTier(shard_manager_tier)) => {
+                        Some(Arc::new(DerivationServiceClient::from_sm_tier_name(
+                            fb,
+                            shard_manager_tier.clone(),
+                            repo_name.to_string(),
+                        )?))
+                    }
                     Some(RemoteDerivationConfig::SmcTier(smc_tier)) => Some(Arc::new(
                         DerivationServiceClient::from_tier_name(fb, smc_tier.clone())?,
                     )),
