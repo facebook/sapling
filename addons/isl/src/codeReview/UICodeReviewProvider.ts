@@ -8,7 +8,7 @@
 import type {FieldConfig} from '../CommitInfoView/types';
 import type {Operation} from '../operations/Operation';
 import type {Dag} from '../previews';
-import type {CommitInfo, DiffId, DiffSummary, Hash} from '../types';
+import type {CodeReviewSystem, CommitInfo, DiffId, DiffSummary, Hash} from '../types';
 import type {SyncStatus} from './syncStatus';
 import type {ReactNode} from 'react';
 
@@ -18,6 +18,7 @@ import type {ReactNode} from 'react';
 export interface UICodeReviewProvider {
   name: string;
   label: string;
+  system: CodeReviewSystem;
 
   /** name used to run commands provider-specific commands */
   cliName?: string;

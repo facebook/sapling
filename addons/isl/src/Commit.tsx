@@ -346,6 +346,10 @@ export const Commit = memo(
                   commit.remoteBookmarks.length > 0
                     ? succeedableRevset(commit.remoteBookmarks[0])
                     : latestSuccessorUnlessExplicitlyObsolete(commit);
+                const shouldRebaseOffWarm = await maybeWarnAboutRebaseOffWarm(commit);
+                if (!shouldRebaseOffWarm) {
+                  return;
+                }
                 const shouldContinue = await maybeWarnAboutOldDestination(commit);
                 if (!shouldContinue) {
                   return;
@@ -695,6 +699,29 @@ function maybeWarnAboutOldDestination(dest: CommitInfo): Promise<boolean> {
       },
     ),
   );
+}
+
+async function maybeWarnAboutRebaseOffWarm(dest: CommitInfo): Promise<boolean> {
+  if (dest.stableCommitMetadata == null) {
+    return true;
+  }
+  // iterate through stable commit metadata and see if this commit is warmed up commit
+  const dag = readAtom(dagWithPreviews);
+  const src = findPublicBaseAncestor(dag);
+
+  const warning = Promise.resolve(Internal.maybeWarnAboutRebaseOffWarm?.(src));
+  if (await warning) {
+    return platform.confirm(
+      t(
+        Internal.warnAboutRebaseOffWarmReason ??
+          'The destination commit is a warmed up commit. ' +
+            'Rebasing off a warmed up commit may be slow. ' +
+            'Do you want to `goto` anyway?',
+      ),
+    );
+  }
+
+  return true;
 }
 
 const ObsoleteTip = React.memo(ObsoleteTipInner);
