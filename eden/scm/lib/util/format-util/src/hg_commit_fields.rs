@@ -14,10 +14,10 @@ use anyhow::Result;
 use minibytes::Text;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
-use storemodel::SerializationFormat;
 use types::hgid::NULL_ID;
 use types::Id20;
 use types::RepoPath;
+use types::SerializationFormat;
 
 use crate::normalize_email_user;
 use crate::utils::write_multi_line;

@@ -13,10 +13,10 @@ use std::str::FromStr;
 use anyhow::bail;
 use anyhow::Result;
 use minibytes::Bytes;
-use storemodel::SerializationFormat;
 use types::HgId;
 use types::Key;
 use types::RepoPath;
+use types::SerializationFormat;
 
 /// Mercurial may embed the copy-from information into the blob itself, in which case, the `Delta`
 /// would look like:

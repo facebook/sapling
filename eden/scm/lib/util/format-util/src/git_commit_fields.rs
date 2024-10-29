@@ -15,10 +15,10 @@ use anyhow::Result;
 use minibytes::Text;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
-use storemodel::SerializationFormat;
 use types::hgid::GIT_EMPTY_TREE_ID;
 use types::hgid::NULL_ID;
 use types::Id20;
+use types::SerializationFormat;
 
 use crate::git_commit::normalize_git_tree_id;
 use crate::normalize_email_user;

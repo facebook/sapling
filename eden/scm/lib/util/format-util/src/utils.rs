@@ -13,7 +13,7 @@ use anyhow::Result;
 use hgtime::HgTime;
 use memchr::memchr;
 use minibytes::Text;
-use storemodel::SerializationFormat;
+use types::SerializationFormat;
 
 /// Normalize " Foo Bar  < a@b.com > " to "Foo Bar <a@b.com>".
 /// Reports errors if `name` contains special characters or has unmatched brackets.

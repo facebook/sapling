@@ -44,7 +44,7 @@ pub use hg_sha1::hg_sha1_serialize;
 pub use hg_sha1::hg_sha1_serialize_write;
 pub use hgtime::HgTime;
 pub(crate) use sha1_digest::Sha1Write;
-use storemodel::SerializationFormat;
+use types::SerializationFormat;
 pub(crate) use utils::normalize_email_user;
 
 pub fn commit_text_to_root_tree_id(text: &[u8], format: SerializationFormat) -> Result<Id20> {

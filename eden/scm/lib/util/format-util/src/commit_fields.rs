@@ -9,8 +9,8 @@ use std::collections::BTreeMap;
 
 use anyhow::Result;
 use minibytes::Text;
-use storemodel::SerializationFormat;
 use types::Id20;
+use types::SerializationFormat;
 
 use crate::HgTime;
 
