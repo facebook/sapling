@@ -329,8 +329,8 @@ impl Repo {
     pub fn optional_eden_api(
         &self,
     ) -> Result<Option<Arc<dyn SaplingRemoteApi>>, SaplingRemoteApiError> {
-        if self.store_requirements.contains("git") {
-            tracing::trace!(target: "repo::eden_api", "disabled because of git");
+        if self.store_requirements.contains("git-store") {
+            tracing::trace!(target: "repo::eden_api", "disabled because of gitstore");
             return Ok(None);
         }
         if matches!(
