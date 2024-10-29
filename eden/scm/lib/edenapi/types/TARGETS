@@ -44,6 +44,7 @@ rust_library(
         "//eden/scm/lib/minibytes:minibytes",
         "//eden/scm/lib/revisionstore:revisionstore_types",
         "//eden/scm/lib/types:types",
+        "//eden/scm/lib/util/format-util:format-util",
     ],
 )
 
