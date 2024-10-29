@@ -583,15 +583,17 @@ fn clone_metadata(
     let res = (|| {
         let edenapi = repo.eden_api()?;
 
-        let capabilities: Vec<String> =
+        let mut capabilities: Vec<String> =
             block_on(edenapi.capabilities())?.map_err(|e| e.tag_network())?;
+        capabilities.sort_unstable();
+        let has_capability = |name: &str| -> bool {
+            capabilities
+                .binary_search_by_key(&name, AsRef::as_ref)
+                .is_ok()
+        };
 
-        let segmented_changelog = capabilities
-            .iter()
-            .any(|cap| cap == SEGMENTED_CHANGELOG_CAPABILITY);
-        let commit_graph_segments = capabilities
-            .iter()
-            .any(|cap| cap == COMMIT_GRAPH_SEGMENTS_CAPABILITY)
+        let segmented_changelog = has_capability(SEGMENTED_CHANGELOG_CAPABILITY);
+        let commit_graph_segments = has_capability(COMMIT_GRAPH_SEGMENTS_CAPABILITY)
             && repo
                 .config()
                 .get_or_default::<bool>("clone", "use-commit-graph")?;
