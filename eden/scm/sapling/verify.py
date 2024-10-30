@@ -8,9 +8,9 @@ import tempfile
 
 import bindings
 
-from . import progress
+from . import bookmarks, progress
 from .i18n import _
-from .node import short
+from .node import bin, short
 
 
 def checklazychangelog(repo) -> int:
@@ -59,8 +59,12 @@ def checklazychangelogwithserver(repo) -> int:
     if "lazychangelog" not in repo.storerequirements:
         return 0
     ui = repo.ui
+
+    main = bookmarks.mainbookmark(repo)
+    main_node = bin(repo.edenapi.bookmarks([main])[main])
+
     with progress.spinner(ui, _("getting initial clone data")):
-        data = repo.edenapi.clonedata()
+        data = repo.edenapi.commitgraphsegments([main_node], [])
     with tempfile.TemporaryDirectory(prefix="hg-check-cl") as tmpdir:
         with progress.spinner(ui, _("importing clone data")):
             commits = bindings.dag.commits.openhybrid(
@@ -70,7 +74,11 @@ def checklazychangelogwithserver(repo) -> int:
                 repo.edenapi,
                 lazyhash=True,
             )
-            commits.importclonedata(data)
+            vertexopts = {
+                "reserve_size": 0,
+                "desired_group": 0,
+            }
+            commits.importcommitgraphsegments(data, [(main_node, vertexopts)])
         dag = repo.changelog.dag
         heads = list(dag.heads(dag.mastergroup()))
         with progress.spinner(
