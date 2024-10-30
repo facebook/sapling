@@ -210,8 +210,7 @@ std::unique_ptr<folly::Executor> makeRetryThreadPool(
            * In the long term, we'll want a more comprehensive approach to
            * bounding the parallelism of scheduled work.
            */
-          std::make_unique<folly::UnboundedBlockingQueue<
-              folly::CPUThreadPoolExecutor::CPUTask>>(),
+          folly::CPUThreadPoolExecutor::makeDefaultQueue(),
           std::make_shared<SaplingRetryThreadFactory>(
               repository, stats.copy(), structuredLogger));
 #ifdef EDEN_HAVE_SERVER_OBSERVER
