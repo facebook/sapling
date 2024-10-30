@@ -34,6 +34,8 @@ use dag::Dag;
 use dag::DagAlgorithm;
 use dag::Vertex;
 use dag::VertexListWithOptions;
+use edenapi_types::CommitGraphSegments;
+use edenapi_types::CommitGraphSegmentsEntry;
 use minibytes::Bytes;
 use parking_lot::RwLock;
 use pyedenapi::PyClient;
@@ -110,6 +112,14 @@ py_class!(pub class commits |py| {
         let mut inner = self.inner(py).write();
         block_on(inner.import_pull_data(*data, &heads.0)).map_pyerr(py)?;
         Ok((commits, segments))
+    }
+
+    /// Import commit graph segments (inside PyCell) and flush.
+    def importcommitgraphsegments(&self, segments: Serde<Vec<CommitGraphSegmentsEntry>>, heads: Serde<VertexListWithOptions>) -> PyResult<PyNone> {
+        let clone_data = CommitGraphSegments { segments: segments.0 }.try_into().map_pyerr(py)?;
+        let mut inner = self.inner(py).write();
+        block_on(inner.import_pull_data(clone_data, &heads.0)).map_pyerr(py)?;
+        Ok(PyNone)
     }
 
     /// Strip commits. ONLY used to make LEGACY TESTS running.

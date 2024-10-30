@@ -80,8 +80,9 @@ def debugrebuildchangelog(ui, repo, **opts) -> None:
             "reserve_size": 0,
             "desired_group": 0,
         }
-        data = api.pulllazy([], [main_node])
-        hgcommits.importpulldata(data, [(main_node, vertexopts)])
+
+        data = api.commitgraphsegments([main_node], [])
+        hgcommits.importcommitgraphsegments(data, [(main_node, vertexopts)])
 
         # The "try" block also protects repo lock.__exit__, etc.
         baksuffix = None

@@ -129,7 +129,7 @@ pub struct CommitGraphRequest {
 }
 
 #[auto_wire]
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct CommitGraphSegmentsEntry {
     #[id(1)]
@@ -143,7 +143,7 @@ pub struct CommitGraphSegmentsEntry {
 }
 
 #[auto_wire]
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct CommitGraphSegmentParent {
     #[id(1)]

@@ -13,6 +13,7 @@ configmodel = { version = "0.1.0", path = "../../../../lib/config/model" }
 cpython = { version = "0.7.2", default-features = false }
 cpython_ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 dag = { version = "0.1.0", path = "../../../../lib/dag" }
+edenapi_types = { version = "0.1.0", path = "../../../../lib/edenapi/types" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 minibytes = { version = "0.1.0", path = "../../../../lib/minibytes" }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
