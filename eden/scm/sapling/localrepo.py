@@ -1681,11 +1681,7 @@ class localrepository:
         return self.ui.configbool("phases", "publish")
 
     def cancopy(self):
-        if not self.local():
-            return False
-        if not self.publishing():
-            return True
-        return True
+        return self.local()
 
     def draft_titles(self):
         """return a stream of (draft_node, title), used by namespace"""

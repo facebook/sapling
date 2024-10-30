@@ -73,7 +73,7 @@ nothingness. (But it succeeds in the end.)
   abort: failed reading from pipe: The read operation timed out
   [255]
   $ log -r master_bookmark -r .
-  @  Empty3 [draft;rev=4;*] (glob)
+  @  Empty3 [draft;*] (glob)
   │
   ~
   $
@@ -89,7 +89,7 @@ Non-empty commit can go in via pushrebase
 XXX (not sure why we don't end up on master just after push)
   $ quiet hg up master_bookmark
   $ log -r master_bookmark^::master_bookmark
-  @  Non-empty-4 [public;rev=6;*] remote/master_bookmark (glob)
+  @  Non-empty-4 [public;*] remote/master_bookmark (glob)
   │
   o  non-empty after empty2 [public;rev=3;*] (glob)
   │

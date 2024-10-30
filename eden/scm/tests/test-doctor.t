@@ -53,12 +53,14 @@ Break the repo in various ways:
   $ echo y > $TESTTMP/hgcache/master/manifests/indexedlogdatastore/0/index2-node
   $ mkdir -p .hg/store/mutation/
   $ echo v > .hg/store/mutation/log
-  $ echo xx > .hg/store/metalog/blobs/index2-id
-  $ rm .hg/store/metalog/roots/meta
 #if no-windows
-  $ ln -s foo .hg/store/metalog/roots/meta
+  $ echo xx > .hg/store/metalog/current/blobs/index2-id
+  $ rm .hg/store/metalog/current/roots/meta
+  $ ln -s foo .hg/store/metalog/current/roots/meta
 #else
-  $ echo foo > .hg/store/metalog/roots/meta
+  $ echo xx > .hg/store/metalog/1/blobs/index2-id
+  $ rm .hg/store/metalog/1/roots/meta
+  $ echo foo > .hg/store/metalog/1/roots/meta
 #endif
   $ rm .hg/store/allheads/meta
 
@@ -145,7 +147,7 @@ Test that 'hg doctor' can fix them:
   segments/v1:
     Repairing MultiMeta Log:
       Processing IndexedLog: * (glob)
-      Verified 5 entries, * bytes in log (glob)
+      Verified * entries, * bytes in log (glob)
       Index "reverse" passed integrity check
     Repairing Log idmap2
       Processing IndexedLog: * (glob)

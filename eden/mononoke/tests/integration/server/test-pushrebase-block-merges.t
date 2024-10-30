@@ -53,19 +53,19 @@ Try to push merge commit
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
   $ hg up -q "min(all())"
   $ echo 2 > 2 && hg add 2 && hg ci -m 2
-  $ hg merge -q -r 3 && hg ci -m "merge 1 and 2"
+  $ hg merge -q -r a0c9c5791058 && hg ci -m "merge 1 and 2"
   $ log -r ":"
-  @    merge 1 and 2 [draft;rev=5;3e1c4ca1f9be]
+  @    merge 1 and 2 [draft;rev=*;3e1c4ca1f9be] (glob)
   ├─╮
-  │ o  2 [draft;rev=4;c9b2673d3218]
+  │ o  2 [draft;rev=*;c9b2673d3218] (glob)
   │ │
-  o │  1 [draft;rev=3;a0c9c5791058]
+  o │  1 [draft;rev=*;a0c9c5791058] (glob)
   ├─╯
-  │ o  C [public;rev=2;26805aba1e60] remote/master_bookmark
+  │ o  C [public;rev=*;26805aba1e60] remote/master_bookmark (glob)
   │ │
-  │ o  B [public;rev=1;112478962961]
+  │ o  B [public;rev=*;112478962961] (glob)
   ├─╯
-  o  A [public;rev=0;426bada5c675]
+  o  A [public;rev=*;426bada5c675] (glob)
   $
 
   $ hg push -r . --to master_bookmark

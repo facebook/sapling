@@ -87,10 +87,7 @@ Sync to backup
 
 Check LFS is in backup
   $ cd "$TESTTMP/backup"
-  $ hg pull
-  pulling from mono:backup
-  searching for changes
-  fetching revlog data for 1 commits
+  $ hg pull -q
   $ hg up master_bookmark
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ [ -f lfs-largefile ]; echo "$?"

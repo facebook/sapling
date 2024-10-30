@@ -96,7 +96,6 @@
   $ hg pull -r "$HG_CS_ID"
   pulling from mono:large-mon
   searching for changes
-  fetching revlog data for 3 commits
 
 -- Step 3. now do merge in the large repo that fixed working copy and push it
   $ hg up master_bookmark

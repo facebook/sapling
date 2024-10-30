@@ -56,7 +56,7 @@ blocked by deny_files
   moving remote bookmark test_bookmark from 11f848659bfc to ce81c7d38286
 -- newcommit was correctly pushed to test_bookmark
   $ log -r test_bookmark
-  @  newcommit [public;rev=2;ce81c7d38286] remote/test_bookmark
+  @  newcommit [public;rev=281474976710656;ce81c7d38286] remote/test_bookmark
   │
   ~
 
@@ -64,7 +64,7 @@ blocked by deny_files
   $ cd "$TESTTMP"/large-hg-client
   $ hg pull -q
   $ log -r bookprefix/test_bookmark
-  o  newcommit [public;rev=3;819e91b238b7] remote/bookprefix/test_bookmark
+  o  newcommit [public;rev=281474976710656;819e91b238b7] remote/bookprefix/test_bookmark
   │
   ~
 - compare the working copies
@@ -120,7 +120,7 @@ Commit has been backsynced
   $ cd "$TESTTMP"/small-hg-client
   $ hg pull -q
   $ log -r master_bookmark
-  o  backsync [public;rev=4;cd9bfa9f25eb] remote/master_bookmark
+  o  backsync [public;rev=2;cd9bfa9f25eb] remote/master_bookmark
   │
   ~
 

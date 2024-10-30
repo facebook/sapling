@@ -44,7 +44,6 @@ use util::file::atomic_write;
 use util::path::absolute;
 use util::path::create_shared_dir_all;
 
-static SEGMENTED_CHANGELOG_CAPABILITY: &str = "segmented-changelog";
 static COMMIT_GRAPH_SEGMENTS_CAPABILITY: &str = "commit-graph-segments";
 static GIT_FORMAT_CAPABILITY: &str = "git-format";
 
@@ -597,7 +596,6 @@ fn clone_metadata(
             repo.add_store_requirement("git")?;
         }
 
-        let segmented_changelog = has_capability(SEGMENTED_CHANGELOG_CAPABILITY);
         let commit_graph_segments = has_capability(COMMIT_GRAPH_SEGMENTS_CAPABILITY)
             && repo
                 .config()
@@ -605,7 +603,7 @@ fn clone_metadata(
 
         let mut repo_needs_reload = false;
 
-        if segmented_changelog || commit_graph_segments {
+        if commit_graph_segments {
             repo.add_store_requirement("lazychangelog")?;
 
             let bookmark_names: Vec<String> = get_selective_bookmarks(&repo)?;

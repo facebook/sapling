@@ -133,13 +133,13 @@ Create small repo commits
   │   smallrepofolder1/new_file.txt |  1 +
   │   1 files changed, 1 insertions(+), 0 deletions(-)
   │
-  o  5d44cb1dbffb change large repo file AGAIN
-  │   large_repo_file.txt |  2 +-
-  │   1 files changed, 1 insertions(+), 1 deletions(-)
-  │
   │ o  7faf677d5367 change small repo from large repo
-  ├─╯   smallrepofolder1/new_file.txt |  1 +
-  │     1 files changed, 1 insertions(+), 0 deletions(-)
+  │ │   smallrepofolder1/new_file.txt |  1 +
+  │ │   1 files changed, 1 insertions(+), 0 deletions(-)
+  │ │
+  o │  5d44cb1dbffb change large repo file AGAIN
+  ├─╯   large_repo_file.txt |  2 +-
+  │     1 files changed, 1 insertions(+), 1 deletions(-)
   │
   o  72e1f4df4120 change large repo file
   │   large_repo_file.txt |  1 +

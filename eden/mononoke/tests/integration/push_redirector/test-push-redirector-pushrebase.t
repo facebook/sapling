@@ -185,14 +185,14 @@ Normal pushrebase to a prefixed bookmark
   $ createfile epicfail && hg ci -qm "The epicness of this fail is great"
   $ hg push --to master_bookmark_2 --create -q
   $ log -r master_bookmark_2
-  @  The epicness of this fail is great [public;rev=9;8d22dc8b8a89] remote/master_bookmark_2
+  @  The epicness of this fail is great [public;rev=281474976710656;8d22dc8b8a89] remote/master_bookmark_2
   │
   ~
 -- this should also be present in a large repo, once we pull
   $ cd "$TESTTMP/large-hg-client"
   $ hg pull -q
   $ log -r bookprefix/master_bookmark_2
-  o  The epicness of this fail is great [public;rev=10;030470259cb4] remote/bookprefix/master_bookmark_2
+  o  The epicness of this fail is great [public;rev=281474976710656;030470259cb4] remote/bookprefix/master_bookmark_2
   │
   ~
   $ verify_wc $(hg log -r bookprefix/master_bookmark_2 -T '{node}')
@@ -203,14 +203,14 @@ Normal pushrebase to a prefixed bookmark
   $ hg push --to master_bookmark_2 2>&1 | grep 'updated remote bookmark'
   updated remote bookmark master_bookmark_2 to bd5577e4b538
   $ log -r master_bookmark_2
-  @  The epicness of this fail is greater [public;rev=10;bd5577e4b538] remote/master_bookmark_2
+  @  The epicness of this fail is greater [public;rev=281474976710657;bd5577e4b538] remote/master_bookmark_2
   │
   ~
 -- this should also be present in a large repo, once we pull
   $ cd "$TESTTMP/large-hg-client"
   $ hg pull -q
   $ log -r bookprefix/master_bookmark_2
-  o  The epicness of this fail is greater [public;rev=11;ccbb367ae93a] remote/bookprefix/master_bookmark_2
+  o  The epicness of this fail is greater [public;rev=281474976710657;ccbb367ae93a] remote/bookprefix/master_bookmark_2
   │
   ~
   $ verify_wc $(hg log -r bookprefix/master_bookmark_2 -T '{node}')
@@ -276,7 +276,7 @@ Pushrebase, which replaces a file with a directory
   $ hg push --to master_bookmark 2>&1 | grep 'updated remote bookmark'
   updated remote bookmark master_bookmark to 4d2fda63b03e
   $ log -r master_bookmark
-  @  Replace a file with a directory [public;rev=14;4d2fda63b03e] remote/master_bookmark
+  @  Replace a file with a directory [public;rev=12;4d2fda63b03e] remote/master_bookmark
   │
   ~
 -- this should also be present in a large repo, once we pull
@@ -286,7 +286,7 @@ Pushrebase, which replaces a file with a directory
   $ ls smallrepofolder/subdir
   greatfile
   $ log -r master_bookmark
-  @  Replace a file with a directory [public;rev=15;81b97bd0337e] remote/master_bookmark
+  @  Replace a file with a directory [public;rev=13;81b97bd0337e] remote/master_bookmark
   │
   ~
   $ verify_wc $(hg log -r master_bookmark -T '{node}')

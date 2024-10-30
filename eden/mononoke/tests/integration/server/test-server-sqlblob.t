@@ -42,7 +42,7 @@ Init treemanifest and remotefilelog
   $ cd $TESTTMP
 
 setup repo2
-  $ hg clone -q mono:repo repo2 --noupdate --config clone.prefer-edenapi-clonedata=false
+  $ hg clone -q mono:repo repo2 --noupdate
   $ cd repo2
   $ hg pull -q
 

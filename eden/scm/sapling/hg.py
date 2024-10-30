@@ -602,23 +602,7 @@ def clone(
                     and ui.configbool("remotenames", "selectivepull")
                     and not stream
                     and destrepo.name
-                    and (
-                        (
-                            ui.configbool("clone", "force-edenapi-clonedata")
-                            or destrepo.ui.configbool(
-                                "clone", "force-edenapi-clonedata"
-                            )
-                        )
-                        or (
-                            (
-                                ui.configbool("clone", "prefer-edenapi-clonedata")
-                                or destrepo.ui.configbool(
-                                    "clone", "prefer-edenapi-clonedata"
-                                )
-                            )
-                            and "segmented-changelog" in destrepo.edenapi.capabilities()
-                        )
-                    )
+                    and destrepo.ui.configbool("clone", "use-commit-graph")
                 ):
                     clonecodepath = "segments"
                     ui.status(_("fetching lazy changelog\n"))

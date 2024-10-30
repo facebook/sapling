@@ -54,9 +54,9 @@ pushrebase it directly onto master_bookmark - it will be rewritten without the m
   updated remote bookmark master_bookmark to a05b3505b7d1
 
   $ tglog
-  o  a05b3505b7d1 '1a'
+  @  6ad95cdc8ab9 '1a'
   │
-  │ @  6ad95cdc8ab9 '1a'
+  │ o  a05b3505b7d1 '1a'
   ├─╯
   o  d20a80d4def3 'base'
   
@@ -85,13 +85,13 @@ pushrebase it onto master_bookmark - it will be rebased and rewritten without th
   updated remote bookmark master_bookmark to 7042a534cddc
 
   $ tglog
-  o  7042a534cddc '2a'
+  @  fd935a5d42c4 '2a'
   │
-  │ @  fd935a5d42c4 '2a'
-  │ │
-  o │  a05b3505b7d1 '1a'
-  ├─╯
   │ o  6ad95cdc8ab9 '1a'
+  ├─╯
+  │ o  7042a534cddc '2a'
+  │ │
+  │ o  a05b3505b7d1 '1a'
   ├─╯
   o  d20a80d4def3 'base'
   

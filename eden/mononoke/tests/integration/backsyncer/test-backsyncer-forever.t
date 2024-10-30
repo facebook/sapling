@@ -34,7 +34,7 @@ Before config change
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi small-mon master_bookmark)
   $ hg push -r . --to master_bookmark -q
   $ log -r master_bookmark
-  o  before config change [public;rev=4;*] remote/master_bookmark (glob)
+  o  before config change [public;*] remote/master_bookmark (glob)
   │
   ~
 

@@ -18,13 +18,13 @@ Try to push merge commit
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
   $ hg up -q "min(all())"
   $ echo 2 > 2 && hg add 2 && hg ci -m 2
-  $ hg merge -q -r 3 && hg ci -m "merge 1 and 2"
+  $ hg merge -q -r 26f143b427a3 && hg ci -m "merge 1 and 2"
   $ log -r ":"
-  @    merge 1 and 2 [draft;rev=5;540b69c58d33]
+  @    merge 1 and 2 [draft;rev=281474976710658;540b69c58d33]
   ├─╮
-  │ o  2 [draft;rev=4;d9fe1d08ff73]
+  │ o  2 [draft;rev=281474976710657;d9fe1d08ff73]
   │ │
-  o │  1 [draft;rev=3;26f143b427a3]
+  o │  1 [draft;rev=281474976710656;26f143b427a3]
   ├─╯
   │ o  C [public;rev=2;d3b399ca8757] remote/master_bookmark
   │ │

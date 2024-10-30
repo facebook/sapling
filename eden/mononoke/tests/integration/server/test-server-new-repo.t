@@ -21,7 +21,7 @@ setup repo
   $ echo "a file content" > a
   $ hg add a
   $ hg ci -ma
-  $ hg push -q --to master --create
+  $ hg push -q --to master_bookmark --create
 
 clone from the new repo as well
   $ hg clone -q mono:repo repo-clone
@@ -35,5 +35,5 @@ Push with bookmark
   searching for changes
   exporting bookmark withbook
   $ hg book --remote
-     remote/master                    0e7ec5675652a04069cbf976a42e45b740f3243c
+     remote/master_bookmark           0e7ec5675652a04069cbf976a42e45b740f3243c
      remote/withbook                  11f53bbd855ac06521a8895bd57e6ce5f46a9980

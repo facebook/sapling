@@ -69,7 +69,7 @@ Wait for background hook to touch file.
   ? touched
 
 Reset our hook config:
-  $ rm $HGRCPATH
+  $ sed -i "/\[hooks\]/q" $HGRCPATH
 
 Test fail hooks:
   $ setconfig 'hooks.pre-debugtestcommand=echo PRE'

@@ -79,11 +79,11 @@ Now we can push
 
   $ hg pull -q
   $ tglogp
-  o  1e21255e651f public 'D'
+  @  9c00c53d25b3 draft 'D'
   │
-  │ @  9c00c53d25b3 draft 'D'
+  │ o  1e21255e651f public 'D'
   │ │
-  o │  d3b399ca8757 public 'C'
+  │ o  d3b399ca8757 public 'C'
   ├─╯
   o  80521a640a0c public 'B'
   │

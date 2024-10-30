@@ -465,6 +465,14 @@ so they'll be dumped to files to keep this (already long) integration test short
   $ cd "$TESTTMP/small-hg-client"
   $ hg pull -q
   $ log_globalrev -l 10
+  @  after mapping change from small [draft;globalrev=;a4c70b6f0c57]
+  │
+  ~
+  $
+  o  after merge from small [draft;globalrev=;14c64221d993]
+  │
+  ~
+  $
   o  after merging submodule expansion [public;globalrev=;5bc83a834e83] remote/master_bookmark
   │
   o  Added git repo C as submodule directly in A [public;globalrev=1000157988;69712c3f21b2]
@@ -480,12 +488,6 @@ so they'll be dumped to files to keep this (already long) integration test short
   o  AD [public;globalrev=1000157981;cc919180ea26]
   │
   o  [MEGAREPO GRADUAL MERGE] another merge (0) [public;globalrev=1000157980;6db37bb0eca0]
-  │
-  o  after mapping change from small [public;globalrev=1000157976;ecca553b5690]
-  │
-  ~
-  $
-  @  after mapping change from small [draft;globalrev=;a4c70b6f0c57]
   │
   ~
 
@@ -510,43 +512,43 @@ so they'll be dumped to files to keep this (already long) integration test short
   $ cd "$TESTTMP/small-hg-client"
   $ hg pull -q
   $ hg log -G -T "{desc} [{node|short}]\n" -l 30 --stat
-  o  after live sync and changes to submodule repo [7bea9eac2447]
-  │   file.txt |  2 +-
-  │   1 files changed, 1 insertions(+), 1 deletions(-)
-  │
-  o  after merging submodule expansion [5bc83a834e83]
-  │   baz |  2 +-
-  │   1 files changed, 1 insertions(+), 1 deletions(-)
-  │
-  o  Added git repo C as submodule directly in A [69712c3f21b2]
-  │
-  o  [MEGAREPO GRADUAL MERGE] gradual merge (3) [29f4bdf73e54]
-  │
-  o  [MEGAREPO GRADUAL MERGE] gradual merge (2) [be3eeaa0b9a0]
-  │
-  o  [MEGAREPO GRADUAL MERGE] gradual merge (1) [f5cb09a7ec32]
-  │
-  o  [MEGAREPO GRADUAL MERGE] gradual merge (0) [63782775678a]
-  │
-  o  AD [cc919180ea26]
-  │
-  o  [MEGAREPO GRADUAL MERGE] another merge (0) [6db37bb0eca0]
-  │
-  o  after mapping change from small [ecca553b5690]
+  @  after mapping change from small [a4c70b6f0c57]
   │   bar |  1 +
   │   1 files changed, 1 insertions(+), 0 deletions(-)
   │
-  │ @  after mapping change from small [a4c70b6f0c57]
-  ├─╯   bar |  1 +
-  │     1 files changed, 1 insertions(+), 0 deletions(-)
-  │
-  o  ID [8d707fde6f5e]
-  │
-  o  after merge from small [c17052372d27]
-  │   baz |  2 +-
-  │   1 files changed, 1 insertions(+), 1 deletions(-)
-  │
   │ o  after merge from small [14c64221d993]
+  │ │   baz |  2 +-
+  │ │   1 files changed, 1 insertions(+), 1 deletions(-)
+  │ │
+  │ │ o  after live sync and changes to submodule repo [7bea9eac2447]
+  │ │ │   file.txt |  2 +-
+  │ │ │   1 files changed, 1 insertions(+), 1 deletions(-)
+  │ │ │
+  │ │ o  after merging submodule expansion [5bc83a834e83]
+  │ │ │   baz |  2 +-
+  │ │ │   1 files changed, 1 insertions(+), 1 deletions(-)
+  │ │ │
+  │ │ o  Added git repo C as submodule directly in A [69712c3f21b2]
+  │ │ │
+  │ │ o  [MEGAREPO GRADUAL MERGE] gradual merge (3) [29f4bdf73e54]
+  │ │ │
+  │ │ o  [MEGAREPO GRADUAL MERGE] gradual merge (2) [be3eeaa0b9a0]
+  │ │ │
+  │ │ o  [MEGAREPO GRADUAL MERGE] gradual merge (1) [f5cb09a7ec32]
+  │ │ │
+  │ │ o  [MEGAREPO GRADUAL MERGE] gradual merge (0) [63782775678a]
+  │ │ │
+  │ │ o  AD [cc919180ea26]
+  │ │ │
+  │ │ o  [MEGAREPO GRADUAL MERGE] another merge (0) [6db37bb0eca0]
+  │ │ │
+  │ │ o  after mapping change from small [ecca553b5690]
+  ├───╯   bar |  1 +
+  │ │     1 files changed, 1 insertions(+), 0 deletions(-)
+  │ │
+  o │  ID [8d707fde6f5e]
+  │ │
+  o │  after merge from small [c17052372d27]
   ├─╯   baz |  2 +-
   │     1 files changed, 1 insertions(+), 1 deletions(-)
   │

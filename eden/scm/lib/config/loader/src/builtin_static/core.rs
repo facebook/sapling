@@ -116,4 +116,7 @@ import-pattern:kotlin=re:^\s*import .*$
 import-pattern:rust=re:^\s*use .*$
 import-pattern:csharp=re:^\s*using .*$
 import-pattern:go=re:^\s*using .*$
+
+[clone]
+use-commit-graph=true
 "#);

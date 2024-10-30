@@ -16,7 +16,7 @@ setup repo
   > B
   > |
   > A
-  > # bookmark: B main
+  > # bookmark: B master_bookmark
   > EOF
   A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
   B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
@@ -35,10 +35,10 @@ otherwise, the test is going to be flaky becasue of the eventual consistency mod
   $ mononoke_blobstore_healer -q --iteration-limit=1 --heal-min-age-secs=0 --storage-id=blobstore --sync-queue-limit=100 2>&1 > /dev/null
   $ echo "$(read_blobstore_wal_queue_size)"
   0
-  $ hg push -r . --to main
-  pushing rev 523cda1e6192 to destination mono:repo bookmark main
+  $ hg push -r . --to master_bookmark
+  pushing rev 523cda1e6192 to destination mono:repo bookmark master_bookmark
   searching for changes
-  updating bookmark main
+  updating bookmark master_bookmark
 
 Count number of entries the blobstore sync queue
   $ echo "$(read_blobstore_wal_queue_size)"
