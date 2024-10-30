@@ -53,7 +53,7 @@
           "description": "%settings.showDiffComments.description%",
           "default": true
         },
-        "sapling.diffViewMode": {
+        "sapling.inlineCommentDiffViewMode": {
           "type": "string",
           "enum": [
             "Unified",
