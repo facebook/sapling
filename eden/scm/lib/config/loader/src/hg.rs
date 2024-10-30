@@ -396,24 +396,33 @@ impl ConfigSetHgExt for ConfigSet {
         errors.append(&mut user.load_user(opts.clone(), &ident));
         layers.push(Arc::new(user));
 
-        if let Some(info) = info.as_disk() {
-            if let Some(dotgit_sl_path) = dotgit_sl_path {
-                let mut repo_git = ConfigSet::new().named("repo-git");
-                let path = translated_git_repo_config_path(dotgit_sl_path, ident);
-                errors.append(&mut repo_git.load_hgrc(path, "repo-git"));
-                layers.push(Arc::new(repo_git));
+        let repo_name: Option<String> = match info {
+            RepoInfo::Disk(info) => {
+                if let Some(dotgit_sl_path) = dotgit_sl_path {
+                    let mut repo_git = ConfigSet::new().named("repo-git");
+                    let path = translated_git_repo_config_path(dotgit_sl_path, ident);
+                    errors.append(&mut repo_git.load_hgrc(path, "repo-git"));
+                    layers.push(Arc::new(repo_git));
+                }
+                let mut local = ConfigSet::new().named("repo");
+                errors.append(&mut local.load_repo(info, opts.clone()));
+                layers.push(Arc::new(local));
+                Some(
+                    read_set_repo_name(&layers, self, &info.dot_hg_path)
+                        .map_err(|e| Errors(vec![e]))?,
+                )
             }
-            let mut local = ConfigSet::new().named("repo");
-            errors.append(&mut local.load_repo(info, opts.clone()));
-            layers.push(Arc::new(local));
-            if let Err(e) = read_set_repo_name(&layers, self, &info.dot_hg_path) {
-                errors.push(e);
-            }
-        }
+            RepoInfo::Ephemeral(name) => Some(name.to_string()),
+            RepoInfo::NoRepo => None,
+        };
+
+        #[cfg(not(feature = "fb"))]
+        let _ = repo_name;
 
         #[cfg(feature = "fb")]
         {
             let dynamic = load_dynamic(
+                repo_name,
                 info,
                 opts,
                 &ident,
@@ -862,6 +871,7 @@ pub fn generate_internalconfig(
 /// Returns errors parsing, generating, or fetching the configs.
 #[cfg(feature = "fb")]
 fn load_dynamic(
+    repo_name: Option<String>,
     info: RepoInfo,
     opts: Options,
     identity: &Identity,
@@ -906,6 +916,7 @@ fn load_dynamic(
         }
     }
     let version = headers.get("version").copied();
+    let repo_name_in_file = headers.get("reponame").copied();
 
     let this_version = ::version::VERSION;
 
@@ -925,6 +936,8 @@ fn load_dynamic(
         || vpnless_changed
         // Repo has entered or left AWS mode - need to regenerate.
         || headers.get("domain-override").copied() != domain_override.as_ref().map(|d| d.to_str())
+        // In-hand repo name differs from repo name in file.
+        || repo_name.as_deref() != repo_name_in_file
         // Version mismatch between us and already generated - optionally generate.
         || !opts.minimize_dynamic_gen && version != Some(this_version);
 
@@ -937,33 +950,12 @@ fn load_dynamic(
             vpnless_changed,
             "regenerating dynamic config (version mismatch)",
         );
-        let (repo_name, user_name) = {
+        let user_name = {
             let mut temp_config = ConfigSet::new().named("temp");
             if !temp_config.load_user(opts.clone(), identity).is_empty() {
                 bail!("unable to read user config to get user name");
             }
-
-            let repo_name = match info {
-                RepoInfo::Disk(info) => {
-                    let opts = opts.clone().source("temp").process_hgplain();
-                    // We need to know the repo name, but that's stored in the repository configs at
-                    // the moment. In the long term we need to move that, but for now let's load the
-                    // repo config ahead of time to read the name.
-                    let repo_hgrc_path = info.dot_hg_path.join("hgrc");
-                    if !temp_config.load_path(repo_hgrc_path, &opts).is_empty() {
-                        bail!("unable to read repo config to get repo name");
-                    }
-                    Some(read_set_repo_name(
-                        &temp_config,
-                        &mut ConfigSet::new(),
-                        &info.dot_hg_path,
-                    )?)
-                }
-                RepoInfo::Ephemeral(repo_name) => Some(repo_name.to_string()),
-                RepoInfo::NoRepo => None,
-            };
-
-            (repo_name, temp_config.get_or_default("ui", "username")?)
+            temp_config.get_or_default("ui", "username")?
         };
 
         // Regen inline
