@@ -11,6 +11,7 @@ instead.
 """
 
 import re
+import stat
 import sys
 import tarfile
 from functools import wraps
@@ -357,8 +358,6 @@ def test(args: List[str], arg0: str, env: Env):
                 except FileNotFoundError:
                     istrue = False
             elif op == "-x":
-                import stat
-
                 # pyre-fixme[9]: istrue has type `Optional[bool]`; used as `int`.
                 istrue = fs.stat(arg).st_mode & stat.S_IEXEC
 
@@ -729,31 +728,47 @@ def ln(args: List[str], fs: ShellFS):
 
 @command
 def ls(args: List[str], stdout: BinaryIO, stderr: BinaryIO, fs: ShellFS):
-    entries = []
-
     def listdir(path: str, listall: bool = False, fs=fs) -> List[str]:
         if listall:
             return fs.listdir(path)
         return [f for f in fs.listdir(path) if not f.startswith(".")]
 
     listall = False
+    listlong = False
+    entries = []
+    paths_given = False
     for arg in args:
         if arg == "-a":
             listall = True
+        elif arg == "-l":
+            listlong = True
         elif arg.startswith("-"):
             raise NotImplementedError(f"ls with flag {arg}")
-        elif fs.isdir(arg):
-            entries += listdir(arg, listall=listall)
-        elif fs.lexists(arg):
-            entries.append(arg)
         else:
-            stderr.write(f"ls: {arg}: No such file or directory\n".encode())
-            return 1
+            paths_given = True
+            if fs.isdir(arg):
+                entries += listdir(arg, listall=listall)
+            elif fs.lexists(arg):
+                entries.append(arg)
+            else:
+                stderr.write(f"ls: {arg}: No such file or directory\n".encode())
+                return 1
 
-    if not args or (listall and not entries):
+    if not paths_given:
         entries = listdir("", listall=listall)
     entries = sorted(entries)
-    lines = [f"{path}\n" for path in entries]
+
+    def format_entry(path: str) -> str:
+        if listlong:
+            st = fs.lstat(path)
+            ls_mode = "%s %s" % (stat.filemode(st.st_mode), path)
+            if stat.S_ISLNK(st.st_mode):
+                ls_mode += " -> %s" % (fs.readlink(path),)
+            return ls_mode + "\n"
+        else:
+            return f"{path}\n"
+
+    lines = [format_entry(path) for path in entries]
     stdout.write("".join(lines).encode())
     return 0
 
