@@ -57,7 +57,7 @@ pub(crate) fn convert_to_ts(date_str: Option<&str>) -> Result<Option<i64>> {
         let ts = if let Ok(date) = DateTime::parse_from_str(date_str, "%Y-%m-%d %H:%M:%S %:z") {
             date.timestamp()
         } else if let Ok(naive) = NaiveDateTime::parse_from_str(date_str, "%Y-%m-%d %H:%M:%S") {
-            naive.timestamp()
+            naive.and_utc().timestamp()
         } else {
             date_str.parse::<i64>()?
         };
