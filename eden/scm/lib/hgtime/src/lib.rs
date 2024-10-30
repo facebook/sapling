@@ -127,13 +127,15 @@ impl HgTime {
     }
 
     pub fn to_utc(self) -> DateTime<Utc> {
-        let naive = NaiveDateTime::from_timestamp_opt(self.unixtime, 0).unwrap();
-        naive.and_utc()
+        let naive = DateTime::from_timestamp(self.unixtime, 0).unwrap();
+        naive.to_utc()
     }
 
     /// Converts to `NaiveDateTime` with local timezone specified by `offset`.
     fn to_naive(self) -> NaiveDateTime {
-        NaiveDateTime::from_timestamp_opt(self.unixtime - self.offset as i64, 0).unwrap()
+        DateTime::from_timestamp(self.unixtime - self.offset as i64, 0)
+            .unwrap()
+            .naive_local()
     }
 
     /// Set as the faked "now". Useful for testing.
