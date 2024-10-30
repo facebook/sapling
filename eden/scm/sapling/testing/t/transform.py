@@ -298,7 +298,7 @@ def rewriteblocks(
         ... end''', registertestcase=lambda _case: None))
         #if case1
         <BLANKLINE>
-        if testcase == 'case1':
+        if all([t.hasfeature(f) for f in 'case1'.split()]):
         <BLANKLINE>
             checkoutput(sheval('echo case1\n'), '', src='$ echo case1\n', srcloc=2, outloc=3, endloc=3, indent=2, filename='')
         <BLANKLINE>
@@ -310,7 +310,7 @@ def rewriteblocks(
         #endif
         #if case2
         <BLANKLINE>
-        if testcase == 'case2':
+        if all([t.hasfeature(f) for f in 'case2'.split()]):
         <BLANKLINE>
             checkoutput(sheval('echo case2\n'), '', src='$ echo case2\n', srcloc=7, outloc=8, endloc=8, indent=2, filename='')
         <BLANKLINE>
@@ -364,6 +364,11 @@ def rewriteblocks(
     ifstack = []
 
     testcases = []
+    testcase_feature_names = set()
+
+    def is_rawfeatures_for_testcases(rawfeatures):
+        features = set(rawfeatures.replace("no-", "").split())
+        return features.issubset(testcase_feature_names)
 
     while i < n:
         info = lineinfos[i]
@@ -410,10 +415,14 @@ def rewriteblocks(
             if missing:
                 msg = f"missing feature: {' '.join(missing)}"
                 appendline(f'raise __import__("unittest").SkipTest({repr(msg)})\n')
-        elif info.line.startswith("#testcases "):
+        elif info.line.startswith("#testcases"):
             assert registertestcase is not None
             newcases = parse_testcases(info.line)
             for testcase in newcases:
+                if isinstance(testcase, str):
+                    testcase_feature_names.update([testcase])
+                else:
+                    testcase_feature_names.update(testcase)
                 registertestcase(testcase)
             testcases.extend(newcases)
         elif info.line.startswith("#if "):
@@ -423,9 +432,11 @@ def rewriteblocks(
             appendline(info.line)
             ifstack.append(rawfeatures)
 
-            if rawfeatures in testcases:
+            if is_rawfeatures_for_testcases(rawfeatures):
                 maybeseparate("python")
-                appendline(f"if testcase == '{rawfeatures}':\n")
+                appendline(
+                    f"if all([t.hasfeature(f) for f in '{rawfeatures}'.split()]):\n"
+                )
                 extraindent += 1
                 condition = True
             elif hasfeature and all(hasfeature(f) for f in features):
@@ -435,7 +446,7 @@ def rewriteblocks(
             conditionstack.append((condition, condition and conditionstacktopeval()))
         elif info.line == "#else\n":
             maybeseparate("if")
-            if ifstack[-1] in testcases:
+            if is_rawfeatures_for_testcases(ifstack[-1]):
                 maybeseparate("python")
                 extraindent -= 1
                 appendline(info.line)
@@ -455,7 +466,7 @@ def rewriteblocks(
             except IndexError as e:
                 raise e
 
-            if ifstack.pop() in testcases:
+            if is_rawfeatures_for_testcases(ifstack.pop()):
                 extraindent -= 1
 
             appendline(info.line)
