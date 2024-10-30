@@ -72,7 +72,7 @@ const DEFAULT_FORMATS: [&str; 35] = [
     "%Y-%m",
 ];
 
-const INVALID_OFFSET: i32 = i32::max_value();
+const INVALID_OFFSET: i32 = i32::MAX;
 static DEFAULT_OFFSET: AtomicI32 = AtomicI32::new(INVALID_OFFSET);
 static FORCED_NOW: AtomicU64 = AtomicU64::new(0); // test only
 
@@ -464,16 +464,12 @@ impl PartialOrd for HgTime {
 impl<Tz: TimeZone> TryFrom<DateTime<Tz>> for HgTime {
     type Error = ();
     fn try_from(time: DateTime<Tz>) -> Result<Self, ()> {
-        if time.timestamp() >= i64::min_value() {
-            Self {
-                unixtime: time.timestamp(),
-                offset: time.offset().fix().utc_minus_local(),
-            }
-            .bounded()
-            .ok_or(())
-        } else {
-            Err(())
+        Self {
+            unixtime: time.timestamp(),
+            offset: time.offset().fix().utc_minus_local(),
         }
+        .bounded()
+        .ok_or(())
     }
 }
 
