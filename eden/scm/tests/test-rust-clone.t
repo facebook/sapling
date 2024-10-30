@@ -29,8 +29,6 @@ Test that nonsupported options fallback to python:
   $ hg clone -U -r $D ~/e1 $TESTTMP/rev-clone
   fetching lazy changelog
   populating main commit graph
-  tip commit: 9bc730a19041f9ec7cb33c626e811aa233efb18c
-  fetching selected remote bookmarks
 
   $ git init -q git-source
   $ hg clone --git "$TESTTMP/git-source" $TESTTMP/git-clone

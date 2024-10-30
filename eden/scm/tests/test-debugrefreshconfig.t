@@ -187,7 +187,6 @@ Clear the cached, non-repo dynamic config
   $ hg clone test:server client2 --configfile $TESTTMP/good_hgrc
   fetching lazy changelog
   populating main commit graph
-  fetching selected remote bookmarks
   Hook ran!
   updating to tip
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved

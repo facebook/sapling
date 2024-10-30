@@ -59,7 +59,6 @@ start mononoke
   $ cd repo2
   $ hg pull
   pulling from mono:repo
-  searching for changes
   $ hg up 2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg st --change . -C

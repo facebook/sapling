@@ -478,6 +478,7 @@ def setup_common_hg_configs(
     test_tmp = env.getenv("TESTTMP")
     test_certdir = env.getenv("TEST_CERTDIR")
     override_client_cert = env.getenv("OVERRIDE_CLIENT_CERT", "client0")
+    main_bookmark = env.getenv("MASTER_BOOKMARK", "master_bookmark")
 
     config_content = f"""
 [ui]
@@ -497,7 +498,7 @@ cachepath={test_tmp}/cachepath
 shallowtrees=True
 
 [remotenames]
-selectivepulldefault=master_bookmark
+selectivepulldefault={main_bookmark}
 
 [hint]
 ack=*
@@ -689,6 +690,8 @@ def setup_mononoke_repo_config(
     repo_config_path = f"repos/{reponame_urlencoded}/server.toml"
     repo_definitions_config_path = f"repo_definitions/{reponame_urlencoded}/server.toml"
 
+    main_bookmark = env.getenv("MASTER_BOOKMARK", "master_bookmark")
+
     def append_config(content: str, mode: str = "a"):
         with fs.open(repo_config_path, mode) as f:
             f.write((content + "\n").encode())
@@ -797,9 +800,9 @@ bookmarks=["master"]
     )
 
     append_config(
-        """
+        f"""
 [mononoke_cas_sync_config]
-main_bookmark_to_sync="master_bookmark"
+main_bookmark_to_sync="{main_bookmark}"
 sync_all_bookmarks=true
 """
     )
