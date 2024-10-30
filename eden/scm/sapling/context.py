@@ -570,8 +570,7 @@ class changectx(basectx):
         return [changectx(repo, p) for p in pnodes]
 
     def changeset(self):
-        c = self._changeset
-        return (c.manifest, c.user, c.date, c.files, c.description, c.extra)
+        return self._changeset
 
     def manifestnode(self):
         return self._changeset.manifest
