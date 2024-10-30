@@ -459,7 +459,6 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
             )
             try:
                 commits, segments = bindings.exchange.fastpull(
-                    repo.ui._rcfg,
                     repo.edenapi,
                     repo.changelog.inner,
                     [oldmainnode],

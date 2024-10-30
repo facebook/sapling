@@ -42,7 +42,6 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         py_fn!(
             py,
             fast_pull(
-                config: ImplInto<Arc<dyn Config>>,
                 edenapi: &PyClient,
                 commits: &commits,
                 old: Serde<Vec<HgId>>,
@@ -73,7 +72,6 @@ fn clone(
 
 fn fast_pull(
     py: Python,
-    config: ImplInto<Arc<dyn Config>>,
     edenapi: &PyClient,
     commits: &commits,
     common: Serde<Vec<HgId>>,
@@ -82,5 +80,5 @@ fn fast_pull(
     let client = edenapi.extract_inner(py);
     let commits = commits.get_inner(py);
     let mut commits = commits.write();
-    exchange::fast_pull(&config.into(), client, &mut commits, common.0, missing.0).map_pyerr(py)
+    exchange::fast_pull(client, &mut commits, common.0, missing.0).map_pyerr(py)
 }

@@ -124,7 +124,7 @@ push a master commit with the same content
   updating bookmark master_bookmark
 
 Make sure the server derives the linknode info for public commit.
-  $ mononoke_newadmin derived-data -R repo derive -T hgchangesets -i 6dbc3093b5955d7bb47512155149ec66791c277d
+  $ mononoke_newadmin derived-data -R repo derive -T hgchangesets -T filenodes -B master_bookmark
 
 pull only the master branch into another repo
   $ cd $TESTTMP/repo-pull2
@@ -132,14 +132,7 @@ pull only the master branch into another repo
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg pull -B master_bookmark
   pulling from mono:repo
-  failed to get fast pull data (server responded 404 Not Found for https://localhost:$LOCAL_PORT/edenapi/repo/pull_lazy: . Headers: {
-      "x-request-id": "*", (glob)
-      "x-load": "1",
-      "server": "edenapi_server",
-      "x-mononoke-host": "*", (glob)
-      "date": "*", (glob)
-  }), using fallback path
-  searching for changes
+  imported commit graph for 1 commit (1 segment)
   $ hg up master_bookmark
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -156,7 +149,7 @@ pull only the master branch into another repo
                               "path": "file"},
                              {"node": bin("0000000000000000000000000000000000000000"),
                               "path": ""}],
-                 "linknode": bin("0000000000000000000000000000000000000000")}},
+                 "linknode": bin("6dbc3093b5955d7bb47512155149ec66791c277d")}},
    {"key": {"node": bin("599997c6080f1c12417bbc03894af754eea8dc72"),
             "path": "file"},
     "nodeinfo": {"parents": [{"node": bin("0000000000000000000000000000000000000000"),
@@ -170,7 +163,6 @@ NOTE: the linknode is the public commit
   $ echo othercontent > file2
   $ hg commit -Aqm other
   $ hg log -T '{node} {desc} ({remotenames})\n' -f file
-  linkrevfixup: file b4aa7b980f00bcd3ea58510798c1425dcdc511f3
   6dbc3093b5955d7bb47512155149ec66791c277d master (remote/master_bookmark)
   d998012a9c34a2423757a3d40f8579c78af1b342 base ()
 
@@ -178,16 +170,7 @@ NOTE: linkrevfixup was not called
 
 pull the infinitepush commit again in a new repo
   $ cd $TESTTMP/repo-pull3
-  $ hg pull -r 60ab8a6c8e652ea968be7ffdb658b49de35d3621
-  pulling from mono:repo
-  failed to get fast pull data (server responded 404 Not Found for https://localhost:$LOCAL_PORT/edenapi/repo/pull_lazy: . Headers: {
-      "x-request-id": "*", (glob)
-      "x-load": "1",
-      "server": "edenapi_server",
-      "x-mononoke-host": "*", (glob)
-      "date": "*", (glob)
-  }), using fallback path
-  searching for changes
+  $ hg pull -qr 60ab8a6c8e652ea968be7ffdb658b49de35d3621
   $ hg up 60ab8a6c8e652ea968be7ffdb658b49de35d3621
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

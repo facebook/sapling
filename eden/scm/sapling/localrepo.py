@@ -1220,7 +1220,6 @@ class localrepository:
             for old, new in fastpath:
                 try:
                     commits, segments = bindings.exchange.fastpull(
-                        self.ui._rcfg,
                         self.edenapi,
                         self.changelog.inner,
                         [old],
