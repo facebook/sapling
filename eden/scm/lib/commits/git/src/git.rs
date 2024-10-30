@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
