@@ -100,11 +100,6 @@ class eagerpeer(repository.peer):
                 )
             yield node, parents
 
-    # Clone using dag::CloneData (designed for lazy backend)
-
-    def clonedata(self):
-        return self.edenapi.clonedata()
-
     # The Python "peer" interface.
     # Prefer using EdenAPI to implement them.
 
@@ -138,7 +133,6 @@ class eagerpeer(repository.peer):
             "known",
             "branchmap",
             "addblobs",
-            "clonedata",
         }
 
     def debugwireargs(self, one, two, three=None, four=None, five=None):

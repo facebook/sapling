@@ -58,7 +58,6 @@ pub mod file;
 pub mod history;
 pub mod land;
 pub mod metadata;
-pub mod pull;
 pub mod suffix_query;
 #[cfg(test)]
 pub(crate) mod tests;

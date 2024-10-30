@@ -18,7 +18,6 @@ use edenapi_types::AnyId;
 use edenapi_types::BlameResult;
 use edenapi_types::BonsaiChangesetContent;
 use edenapi_types::BookmarkEntry;
-use edenapi_types::CloneData;
 use edenapi_types::CloudShareWorkspaceRequest;
 use edenapi_types::CloudShareWorkspaceResponse;
 use edenapi_types::CommitGraphEntry;
@@ -128,29 +127,6 @@ pub trait SaplingRemoteApi: Send + Sync + 'static {
     ) -> Result<Response<CommitRevlogData>, SaplingRemoteApiError> {
         let _ = hgids;
         Err(SaplingRemoteApiError::NotSupported)
-    }
-
-    async fn clone_data(&self) -> Result<CloneData<HgId>, SaplingRemoteApiError> {
-        Err(SaplingRemoteApiError::NotSupported)
-    }
-
-    /// Provide data to complete a lazy pull. `common` defines known heads,
-    /// `missing` defines unknown heads.
-    async fn pull_lazy(
-        &self,
-        common: Vec<HgId>,
-        missing: Vec<HgId>,
-    ) -> Result<CloneData<HgId>, SaplingRemoteApiError> {
-        let _ = (common, missing);
-        Err(SaplingRemoteApiError::NotSupported)
-    }
-
-    async fn pull_fast_forward_master(
-        &self,
-        old_master: HgId,
-        new_master: HgId,
-    ) -> Result<CloneData<HgId>, SaplingRemoteApiError> {
-        self.pull_lazy(vec![old_master], vec![new_master]).await
     }
 
     async fn commit_location_to_hash(

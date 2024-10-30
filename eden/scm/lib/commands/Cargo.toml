@@ -33,9 +33,7 @@ cmddebugrevsets = { version = "0.1.0", path = "debugcommands/cmddebugrevsets" }
 cmddebugrunlog = { version = "0.1.0", path = "debugcommands/cmddebugrunlog" }
 cmddebugscmstore = { version = "0.1.0", path = "debugcommands/cmddebugscmstore" }
 cmddebugscmstorereplay = { version = "0.1.0", path = "debugcommands/cmddebugscmstorereplay" }
-cmddebugsegmentclone = { version = "0.1.0", path = "debugcommands/cmddebugsegmentclone" }
 cmddebugsegmentgraph = { version = "0.1.0", path = "debugcommands/cmddebugsegmentgraph" }
-cmddebugsegmentpull = { version = "0.1.0", path = "debugcommands/cmddebugsegmentpull" }
 cmddebugstore = { version = "0.1.0", path = "debugcommands/cmddebugstore" }
 cmddebugstructuredprogress = { version = "0.1.0", path = "debugcommands/cmddebugstructuredprogress" }
 cmddebugtestcommand = { version = "0.1.0", path = "debugcommands/cmddebugtestcommand" }

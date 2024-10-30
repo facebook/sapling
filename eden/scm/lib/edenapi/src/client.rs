@@ -32,7 +32,6 @@ use edenapi_types::BlameResult;
 use edenapi_types::BonsaiChangesetContent;
 use edenapi_types::BookmarkEntry;
 use edenapi_types::BookmarkRequest;
-use edenapi_types::CloneData;
 use edenapi_types::CloudShareWorkspaceRequest;
 use edenapi_types::CloudShareWorkspaceResponse;
 use edenapi_types::CloudWorkspaceRequest;
@@ -141,8 +140,6 @@ use crate::response::ResponseMeta;
 use crate::retryable::RetryableFileAttrs;
 use crate::retryable::RetryableStreamRequest;
 use crate::retryable::RetryableTrees;
-use crate::types::wire::pull::PullFastForwardRequest;
-use crate::types::wire::pull::PullLazyRequest;
 
 const MAX_CONCURRENT_LOOKUPS_PER_REQUEST: usize = 10000;
 const MAX_CONCURRENT_UPLOAD_FILENODES_PER_REQUEST: usize = 10000;
@@ -162,7 +159,6 @@ mod paths {
     pub const ALTER_SNAPSHOT: &str = "snapshot/alter";
     pub const BLAME: &str = "blame";
     pub const BOOKMARKS: &str = "bookmarks";
-    pub const CLONE_DATA: &str = "clone";
     pub const CLOUD_HISTORICAL_VERSIONS: &str = "cloud/historical_versions";
     pub const CLOUD_REFERENCES: &str = "cloud/references";
     pub const CLOUD_RENAME_WORKSPACE: &str = "cloud/rename_workspace";
@@ -189,8 +185,6 @@ mod paths {
     pub const HISTORY: &str = "history";
     pub const LAND_STACK: &str = "land";
     pub const LOOKUP: &str = "lookup";
-    pub const PULL_FAST_FORWARD: &str = "pull_fast_forward_master";
-    pub const PULL_LAZY: &str = "pull_lazy";
     pub const SET_BOOKMARK: &str = "bookmarks/set";
     pub const SUFFIXQUERY: &str = "suffix_query";
     pub const TREES: &str = "trees";
@@ -787,36 +781,6 @@ impl Client {
             .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
 
         self.fetch_single::<AlterSnapshotResponse>(request).await
-    }
-
-    async fn clone_data_attempt(&self) -> Result<CloneData<HgId>, SaplingRemoteApiError> {
-        let url = self.build_url(paths::CLONE_DATA)?;
-        let req = self.configure_request(self.inner.client.post(url))?;
-        self.fetch_single::<CloneData<HgId>>(req).await
-    }
-
-    async fn pull_lazy_attempt(
-        &self,
-        req: PullLazyRequest,
-    ) -> Result<CloneData<HgId>, SaplingRemoteApiError> {
-        let url = self.build_url(paths::PULL_LAZY)?;
-        let req = self
-            .configure_request(self.inner.client.post(url))?
-            .cbor(&req.to_wire())
-            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
-        self.fetch_single::<CloneData<HgId>>(req).await
-    }
-
-    async fn fast_forward_pull_attempt(
-        &self,
-        req: PullFastForwardRequest,
-    ) -> Result<CloneData<HgId>, SaplingRemoteApiError> {
-        let url = self.build_url(paths::PULL_FAST_FORWARD)?;
-        let req = self
-            .configure_request(self.inner.client.post(url))?
-            .cbor(&req.to_wire())
-            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
-        self.fetch_single::<CloneData<HgId>>(req).await
     }
 
     async fn history_attempt(
@@ -1460,55 +1424,6 @@ impl SaplingRemoteApi for Client {
         self.with_retry(|this| {
             this.land_stack_attempt(bookmark.clone(), head, base, pushvars.clone())
                 .boxed()
-        })
-        .await
-    }
-
-    async fn clone_data(&self) -> Result<CloneData<HgId>, SaplingRemoteApiError> {
-        tracing::info!(
-            "Requesting clone data for the '{}' repository",
-            self.repo_name(),
-        );
-        self.with_retry(|this| this.clone_data_attempt().boxed())
-            .await
-    }
-
-    async fn pull_fast_forward_master(
-        &self,
-        old_master: HgId,
-        new_master: HgId,
-    ) -> Result<CloneData<HgId>, SaplingRemoteApiError> {
-        tracing::info!(
-            "Requesting pull fast forward data for the '{}' repository",
-            self.repo_name()
-        );
-
-        self.with_retry(|this| {
-            let req = PullFastForwardRequest {
-                old_master,
-                new_master,
-            };
-            this.fast_forward_pull_attempt(req).boxed()
-        })
-        .await
-    }
-
-    async fn pull_lazy(
-        &self,
-        common: Vec<HgId>,
-        missing: Vec<HgId>,
-    ) -> Result<CloneData<HgId>, SaplingRemoteApiError> {
-        tracing::info!(
-            "Requesting pull lazy data for the '{}' repository",
-            self.repo_name()
-        );
-
-        self.with_retry(|this| {
-            let req = PullLazyRequest {
-                common: common.clone(),
-                missing: missing.clone(),
-            };
-            this.pull_lazy_attempt(req).boxed()
         })
         .await
     }

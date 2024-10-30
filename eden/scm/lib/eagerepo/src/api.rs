@@ -16,7 +16,6 @@ use anyhow::anyhow;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use dag::ops::DagAlgorithm;
-use dag::ops::DagExportCloneData;
 use dag::ops::DagExportPullData;
 use dag::ops::PrefixLookup;
 use dag::protocol::AncestorPath;
@@ -418,43 +417,6 @@ impl SaplingRemoteApi for EagerRepo {
             values.push(Ok(data));
         }
         Ok(convert_to_response(values))
-    }
-
-    async fn clone_data(&self) -> edenapi::Result<dag::CloneData<HgId>> {
-        debug!("clone_data");
-        let clone_data = self
-            .dag()
-            .await
-            .export_clone_data()
-            .await
-            .map_err(map_dag_err)?;
-        convert_clone_data(clone_data)
-    }
-
-    async fn pull_lazy(
-        &self,
-        common: Vec<HgId>,
-        missing: Vec<HgId>,
-    ) -> Result<dag::CloneData<HgId>, SaplingRemoteApiError> {
-        ::fail::fail_point!("eagerepo::api::pulllazy", |_| {
-            Err(SaplingRemoteApiError::NotSupported)
-        });
-
-        debug!("pull_lazy");
-        self.refresh_for_api();
-        let set = self
-            .dag()
-            .await
-            .only(to_set(&missing), to_set(&common))
-            .await
-            .map_err(map_dag_err)?;
-        let clone_data = self
-            .dag()
-            .await
-            .export_pull_data(&set)
-            .await
-            .map_err(map_dag_err)?;
-        convert_clone_data(clone_data)
     }
 
     async fn commit_location_to_hash(
@@ -1779,19 +1741,6 @@ fn to_vec_vertex(ids: &[HgId]) -> Vec<Vertex> {
 fn to_set(ids: &[HgId]) -> Set {
     let vertexes = to_vec_vertex(ids);
     Set::from_static_names(vertexes)
-}
-
-fn convert_clone_data(clone_data: dag::CloneData<Vertex>) -> edenapi::Result<dag::CloneData<HgId>> {
-    check_convert_to_hgid(clone_data.idmap.values())?;
-    let clone_data = dag::CloneData {
-        flat_segments: clone_data.flat_segments,
-        idmap: clone_data
-            .idmap
-            .into_iter()
-            .map(|(k, v)| (k, HgId::from_slice(v.as_ref()).unwrap())) // unwrap: checked above
-            .collect(),
-    };
-    Ok(clone_data)
 }
 
 fn map_dag_err(e: dag::Error) -> SaplingRemoteApiError {

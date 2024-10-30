@@ -17,7 +17,6 @@ use cpython_async::TStream;
 use cpython_ext::convert::Serde;
 use cpython_ext::ExtractInner;
 use cpython_ext::ExtractInnerRef;
-use cpython_ext::PyCell;
 use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
 use edenapi::Builder;
@@ -316,23 +315,6 @@ py_class!(pub class client |py| {
         -> PyResult<Serde<Vec<CommitGraphSegmentsEntry>>>
     {
         self.inner(py).as_ref().commit_graph_segments_py(py, heads.0, common.0)
-    }
-
-    /// clonedata() -> PyCell
-    def clonedata(&self) -> PyResult<PyCell> {
-        self.inner(py).as_ref().clone_data_py(py)
-    }
-
-    /// pullfastforwardmaster(old_master: Bytes, new_master: Bytes) -> PyCell
-    def pullfastforwardmaster(&self, old_master: Serde<HgId>, new_master: Serde<HgId>)
-        -> PyResult<PyCell>
-    {
-        self.inner(py).as_ref().pull_fast_forward_master_py(py, old_master.0, new_master.0)
-    }
-
-    /// pulllazy(common: [node], missing: [node]) -> PyCell
-    def pulllazy(&self, common: Serde<Vec<HgId>>, missing: Serde<Vec<HgId>>) -> PyResult<PyCell> {
-        self.inner(py).as_ref().pull_lazy_py(py, common.0, missing.0)
     }
 
     /// lookup_file_contents(content_ids: [bytes])
