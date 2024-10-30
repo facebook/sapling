@@ -864,6 +864,26 @@ impl<R: Repo> CommitSyncRepos<R> {
             _ => Ok(StripCommitExtras::None),
         }
     }
+
+    pub(crate) fn should_set_committer_info_to_author_info_if_empty(&self) -> Result<bool> {
+        let source_scheme = &self
+            .get_source_repo()
+            .repo_config()
+            .default_commit_identity_scheme;
+        let target_scheme = &self
+            .get_target_repo()
+            .repo_config()
+            .default_commit_identity_scheme;
+
+        match (source_scheme, target_scheme) {
+            (CommitIdentityScheme::HG, CommitIdentityScheme::GIT) => Ok(true),
+            (CommitIdentityScheme::GIT, CommitIdentityScheme::HG) => Ok(false),
+            (CommitIdentityScheme::BONSAI, _) | (_, CommitIdentityScheme::BONSAI) => {
+                bail!("No repos should use bonsai as default scheme")
+            }
+            _ => Ok(false),
+        }
+    }
 }
 
 /// Get the direction of the sync based on the common commit sync config.

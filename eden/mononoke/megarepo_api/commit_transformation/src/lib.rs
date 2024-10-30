@@ -308,6 +308,13 @@ pub struct RewriteOpts {
     pub commit_rewritten_to_empty: CommitRewrittenToEmpty,
     pub empty_commit_from_large_repo: EmptyCommitFromLargeRepo,
     pub strip_commit_extras: StripCommitExtras,
+    /// Hg doesn't have a concept of committer and committer date, so commits
+    /// that are originally created in Hg have these fields empty when synced
+    /// to a git repo.
+    ///
+    /// This setting determines if, in Hg->Git sync, the committer and committer
+    /// date fields should be set to the author and date fields if empty.
+    pub should_set_committer_info_to_author_info_if_empty: bool,
 }
 
 /// Create a version of `cs` with `Mover` applied to all changes
@@ -738,6 +745,30 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
             }
             StripCommitExtras::None => {}
         };
+    }
+
+    let enable_should_set_committer_info_to_author_info_if_empty = justknobs::eval(
+        "scm/mononoke:should_set_committer_info_to_author_info_if_empty",
+        None,
+        None,
+    )?;
+
+    // Hg doesn't have a concept of committer and committer date, so commits
+    // that are originally created in Hg have these fields empty when synced
+    // to a git repo.
+    //
+    // This setting determines if, in Hg->Git sync, the committer and committer
+    // date fields should be set to the author and date fields if empty.
+    if enable_should_set_committer_info_to_author_info_if_empty
+        && rewrite_opts.should_set_committer_info_to_author_info_if_empty
+    {
+        if cs.committer.is_none() {
+            cs.committer = Some(cs.author.clone());
+        }
+
+        if cs.committer_date.is_none() {
+            cs.committer_date = Some(cs.author_date.clone());
+        }
     }
 
     Ok(Some(cs))

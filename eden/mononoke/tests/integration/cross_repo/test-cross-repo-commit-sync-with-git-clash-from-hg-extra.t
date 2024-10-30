@@ -197,14 +197,14 @@ Create small repo commits
   >   rg '.+"translated": \{"Bonsai": bin\("(\w+)"\)\}\}\]' -or '$1')
 
   $ echo "SMALL_REPO_COMMIT_A: $SMALL_REPO_COMMIT_A"
-  SMALL_REPO_COMMIT_A: 86097c1de278a997c434c78f0227e0be9f307ac3c66d39a7a167435d1a4e292c
+  SMALL_REPO_COMMIT_A: 6405c11e11523c644532ffce53c95793f2051de3ecd52115e6a74a81e4cd4d7e
 
   $ SMALL_REPO_COMMIT_B=$(hg debugapi --sort -e committranslateids \
   >   -i "[{'Hg': '$REBASED_HG_COMMIT'}]" -i "'Bonsai'" -i None -i "'$SUBMODULE_REPO_NAME'" | \
   >   rg '.+"translated": \{"Bonsai": bin\("(\w+)"\)\}\}\]' -or '$1')
 
   $ echo "SMALL_REPO_COMMIT_B: $SMALL_REPO_COMMIT_B"
-  SMALL_REPO_COMMIT_B: 86097c1de278a997c434c78f0227e0be9f307ac3c66d39a7a167435d1a4e292c
+  SMALL_REPO_COMMIT_B: 6405c11e11523c644532ffce53c95793f2051de3ecd52115e6a74a81e4cd4d7e
 
 
 -- Now fetch both changeset blobs
@@ -239,8 +239,8 @@ Create small repo commits
   {
     "author": "test",
     "author_date": "1970-01-01T00:00:00-00:00",
-    "committer": null,
-    "committer_date": null
+    "committer": "test",
+    "committer_date": "1970-01-01T00:00:00-00:00"
   }
 
 -- Derive git commit for commit A

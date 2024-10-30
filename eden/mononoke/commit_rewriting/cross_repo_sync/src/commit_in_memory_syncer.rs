@@ -140,6 +140,7 @@ pub(crate) struct CommitInMemorySyncer<'a, R: Repo> {
     /// This is needed to validate submodule expansion in large repo bonsais.
     pub large_repo: InMemoryRepo,
     pub strip_commit_extras: StripCommitExtras,
+    pub should_set_committer_info_to_author_info_if_empty: bool,
 }
 
 impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
@@ -199,6 +200,8 @@ impl<'a, R: Repo> CommitInMemorySyncer<'a, R> {
             commit_rewritten_to_empty,
             empty_commit_from_large_repo,
             strip_commit_extras: self.strip_commit_extras,
+            should_set_committer_info_to_author_info_if_empty: self
+                .should_set_committer_info_to_author_info_if_empty,
         };
         let parent_count = cs.parents().count();
         if parent_count == 0 {

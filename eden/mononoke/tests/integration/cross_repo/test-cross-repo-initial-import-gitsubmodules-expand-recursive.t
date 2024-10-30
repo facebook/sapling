@@ -855,7 +855,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   
   
   Submodule repo commit info using newadmin:
-  BonsaiChangesetId: ee442222a80354fc6e4b8dc910d9938b73a9780608f1762ccd9836dbf2319422
+  BonsaiChangesetId: 8810bc8cf29ac2dce869da1975b8168a43b8f08232d9e1a9dac52013ac2251e2
   Message: Changing small repo in large repo (not submodule)
   FileChanges:
   	 ADDED/MODIFIED: regular_dir/aardvar 58186314bed8b207f5f63a4a58aa858e715f25225a6fcb68e93c12f731b801b1
@@ -882,7 +882,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   
   
   Submodule repo commit info using newadmin:
-  BonsaiChangesetId: defc6005ae4c2ed8d2709c35fbe0c1c646b15d36b29a053ed9f21b15da34ce48
+  BonsaiChangesetId: e1f796a6f06b7aa05fe731821fec48c456f11e9bf44aee5439d112e6c28a0513
   Message: Valid repo_b submodule version bump from large repo
   FileChanges:
   	 ADDED/MODIFIED: git-repo-b b4d69e88f92745803d6fa3a8ff2848098fba6d471db8f40c19f6536891fb5513
@@ -919,7 +919,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   
   
   Submodule repo commit info using newadmin:
-  BonsaiChangesetId: d051734a0ceb7ed0ed25a2ee279242367c53bd23eee1d5a908458bade1c0f8e3
+  BonsaiChangesetId: 478f652e09daebfe62efa122be1cb8a23495fb1da97e2d040750989c2bcdad08
   Message: Valid repo_b and repo_c recursive submodule version bump from large repo
   FileChanges:
   	 ADDED/MODIFIED: git-repo-b 49112bb3c7d5073a6fa052f26a20f029f2cdb847963c9120ddf073199fb3b5ab
