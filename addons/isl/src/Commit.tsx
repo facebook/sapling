@@ -709,7 +709,7 @@ async function maybeWarnAboutRebaseOffWarm(dest: CommitInfo): Promise<boolean> {
   const dag = readAtom(dagWithPreviews);
   const src = findPublicBaseAncestor(dag);
 
-  const warning = Promise.resolve(Internal.maybeWarnAboutRebaseOffWarm?.(src));
+  const warning = Promise.resolve(src ? Internal.maybeWarnAboutRebaseOffWarm?.(src) : src);
   if (await warning) {
     tracker.track('WarnAboutRebaseOffWarm');
     return platform.confirm(
