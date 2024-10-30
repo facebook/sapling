@@ -219,6 +219,30 @@ Create small repo commits
 # $ diff -y -t -T $TESTTMP/commit_a_bonsai $TESTTMP/commit_b_bonsai
 
 
+# Examine committer and committer date, which are not set in the large repo, but
+# should be set on the small git repo.
+  $ mononoke_newadmin fetch -R $LARGE_REPO_NAME -i $REBASED_HG_COMMIT \
+  > --json > $TESTTMP/commit_b_info_large_repo.json
+  $ jq '{author: .author, author_date: .author_date, committer: .committer, committer_date: .committer_date}' \
+  > $TESTTMP/commit_b_info_large_repo.json
+  {
+    "author": "test",
+    "author_date": "1970-01-01T00:00:00-00:00",
+    "committer": null,
+    "committer_date": null
+  }
+
+  $ mononoke_newadmin fetch -R $SUBMODULE_REPO_NAME -i $SMALL_REPO_COMMIT_B \
+  > --json > $TESTTMP/commit_b_info_small_repo.json
+  $ jq '{author: .author, author_date: .author_date, committer: .committer, committer_date: .committer_date}' \
+  > $TESTTMP/commit_b_info_small_repo.json
+  {
+    "author": "test",
+    "author_date": "1970-01-01T00:00:00-00:00",
+    "committer": null,
+    "committer_date": null
+  }
+
 -- Derive git commit for commit A
   $ mononoke_newadmin derived-data -R $SUBMODULE_REPO_NAME \
   >   derive -T git_commits -i "$SMALL_REPO_COMMIT_A"
