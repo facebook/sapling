@@ -1047,6 +1047,6 @@ fn create_acl_provider(
 ) -> Result<Arc<dyn AclProvider>, Error> {
     match matches.value_of(ACL_FILE) {
         Some(file) => InternalAclProvider::from_file(file),
-        None => Ok(DefaultAclProvider::new(fb)),
+        None => Ok(DefaultAclProvider::new(fb)?),
     }
 }

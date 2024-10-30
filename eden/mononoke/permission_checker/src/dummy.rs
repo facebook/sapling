@@ -22,8 +22,8 @@ pub struct DummyAclProvider;
 
 impl DummyAclProvider {
     #[allow(unused)]
-    pub fn new(_fb: FacebookInit) -> Arc<dyn AclProvider> {
-        Arc::new(DummyAclProvider)
+    pub fn new(_fb: FacebookInit) -> Result<Arc<dyn AclProvider>> {
+        Ok(Arc::new(DummyAclProvider))
     }
 }
 

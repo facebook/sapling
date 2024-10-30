@@ -846,7 +846,7 @@ impl TestRepoFactory {
             bonsai_hg_mapping.clone(),
             repo_derived_data.clone(),
             self.ctx.clone(),
-            DummyAclProvider::new(self.fb),
+            DummyAclProvider::new(self.fb)?,
             self.config.commit_cloud_config.clone().into(),
         );
         Ok(Arc::new(cc))

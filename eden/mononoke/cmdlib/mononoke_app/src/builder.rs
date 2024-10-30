@@ -522,7 +522,7 @@ fn create_acl_provider(fb: FacebookInit, acl_args: &AclArgs) -> Result<Arc<dyn A
         Some(acl_file) => InternalAclProvider::from_file(acl_file).with_context(|| {
             format!("Failed to load ACLs from '{}'", acl_file.to_string_lossy())
         })?,
-        None => DefaultAclProvider::new(fb),
+        None => DefaultAclProvider::new(fb)?,
     };
     Ok(acl_provider)
 }
