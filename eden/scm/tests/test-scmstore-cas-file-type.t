@@ -10,9 +10,8 @@
   > EOS
 
   $ newclientrepo client test:repo
-FIXME: wrong file types
   $ ls -l
   -rw-r--r-- A
-  -rw-r--r-- exec
+  -rwxr-xr-x exec
   -rw-r--r-- regular
-  -rw-r--r-- symlink
+  * symlink -> symlink (glob)
