@@ -53,6 +53,15 @@
           "description": "%settings.showDiffComments.description%",
           "default": true
         },
+        "sapling.diffViewMode": {
+          "type": "string",
+          "enum": [
+            "Unified",
+            "Split"
+          ],
+          "description": "%settings.diffViewMode.description%",
+          "default": "Unified"
+        },
         "sapling.markConflictingFilesResolvedOnSave": {
           "type": "boolean",
           "description": "%settings.markConflictingFilesResolvedOnSave.description%",
