@@ -56,7 +56,7 @@ repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity
 scribe_ext = { version = "0.1.0", path = "../../common/scribe_ext" }
 scs_errors = { version = "0.1.0", path = "../scs_errors" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
-serde_json = { version = "1.0.125", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_depth"] }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 source_control = { version = "0.1.0", path = "../if" }
 source_control_services = { version = "0.1.0", path = "../if/services" }

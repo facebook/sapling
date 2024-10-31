@@ -31,7 +31,7 @@ lazy_static = "1.4"
 quickcheck = "1.0"
 rand = { version = "0.8", features = ["small_rng"] }
 serde_cbor = "0.11"
-serde_json = { version = "1.0.125", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_depth"] }
 
 [features]
 default = ["for-tests"]

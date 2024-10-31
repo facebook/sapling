@@ -13,4 +13,4 @@ async-trait = "0.1.71"
 context = { version = "0.1.0", path = "../../server/context" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
-serde_json = { version = "1.0.125", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_depth"] }
