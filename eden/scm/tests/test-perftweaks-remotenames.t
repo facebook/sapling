@@ -17,7 +17,7 @@
   $ hg book foo
 
   $ cd ..
-  $ hg clone -q ssh://user@dummy/master client -r 0
+  $ hg clone -q ssh://user@dummy/master client -u 0
 
 Verify pulling only some commits does not cause errors from the unpulled
 remotenames

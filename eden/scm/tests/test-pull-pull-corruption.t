@@ -21,10 +21,7 @@ create one repo with a long history
 
 create one repo with a shorter history
 
-  $ hg clone -r 0 source1 source2
-  adding changesets
-  adding manifests
-  adding file changes
+  $ hg clone -u 0 source1 source2
   updating to 495a0ec48aafa0ff0dc88b7342dac7597aa8214d
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd source2

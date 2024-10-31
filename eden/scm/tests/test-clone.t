@@ -283,61 +283,6 @@ Same revision checked out in repo a and ua:
   $ rm -r ua
 
 
-Testing -u -r <branch>:
-
-  $ hg clone -u . -r stable a ua
-  adding changesets
-  adding manifests
-  adding file changes
-  updating to 7bc8ee83a26fd5fa6374a25e8f8248ea074e16a3
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-
-Repo ua has branch 'stable' and 'default' (was changed in fd511e9eeea6):
-
-  $ hg -R ua heads
-  commit:      7bc8ee83a26f
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     starting branch stable
-
-Same revision checked out in repo a and ua:
-
-  $ hg -R a parents --template "{node|short}\n"
-  7bc8ee83a26f
-  $ hg -R ua parents --template "{node|short}\n"
-  7bc8ee83a26f
-
-  $ rm -r ua
-
-
-Testing -r <branch>:
-
-  $ hg clone -r stable a ua
-  adding changesets
-  adding manifests
-  adding file changes
-  updating to 4f44d5743f52b70e278b04871eab353996595b1d
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-
-Repo ua has branch 'stable' and 'default' (was changed in fd511e9eeea6):
-
-  $ hg -R ua heads
-  commit:      4f44d5743f52
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     another change for branch stable
-
-Branch 'stable' is checked out:
-
-  $ hg -R ua parents
-  commit:      4f44d5743f52
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     another change for branch stable
-
-  $ rm -r ua
-
-
 Test clone with special '@' bookmark:
   $ cd a
   $ hg bookmark -r a7949464abda @  # branch point of stable from default

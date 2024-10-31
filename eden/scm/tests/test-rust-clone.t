@@ -26,10 +26,6 @@ test rust clone
 Test that nonsupported options fallback to python:
 
   $ cd $TESTTMP
-  $ hg clone -U -r $D ~/e1 $TESTTMP/rev-clone
-  fetching lazy changelog
-  populating main commit graph
-
   $ git init -q git-source
   $ hg clone --git "$TESTTMP/git-source" $TESTTMP/git-clone
 
