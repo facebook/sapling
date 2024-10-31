@@ -8,6 +8,9 @@
   $ . "${TEST_FIXTURES}/library.sh"
   $ setconfig format.use-segmented-changelog=false
 
+# This is the "modern" way to trigger a streaming clone (only streams changelog - not files).
+  $ setconfig clone.use-rust=true clone.use-commit-graph=false
+
 setup configuration
   $ default_setup_blobimport "blob_files"
   hg repo
@@ -38,17 +41,14 @@ Try creating again, this should fail
   [1]
 
   $ start_and_wait_for_mononoke_server
-  $ hg clone --stream mono:repo repo-streamclone
-  streaming all changes
+  $ hg clone mono:repo repo-streamclone
+  Cloning repo into $TESTTMP/repo-streamclone
+  fetching changelog
   2 files to transfer, 357 bytes of data
   transferred 357 bytes in * seconds (*) (glob)
-  searching for changes
-  no changes found
-  adding changesets
-  adding manifests
-  adding file changes
-  updating to tip
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  fetching selected remote bookmarks
+  Checking out 'master_bookmark'
+  3 files updated
 
   $ diff repo-streamclone/.hg/store/00changelog.i repo/.hg/store/00changelog.i
   $ diff repo-streamclone/.hg/store/00changelog.d repo/.hg/store/00changelog.d
@@ -64,17 +64,14 @@ Try creating again, this should fail
   * current max chunk num is None, repo: repo (glob)
   $ rm -rf "$TESTTMP/repo-streamclone"
   $ cd "$TESTTMP"
-  $ hg clone --stream mono:repo repo-streamclone
-  streaming all changes
+  $ hg clone mono:repo repo-streamclone
+  Cloning repo into $TESTTMP/repo-streamclone
+  fetching changelog
   2 files to transfer, 357 bytes of data
   transferred 357 bytes in * seconds (*) (glob)
-  searching for changes
-  no changes found
-  adding changesets
-  adding manifests
-  adding file changes
-  updating to tip
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  fetching selected remote bookmarks
+  Checking out 'master_bookmark'
+  3 files updated
   $ diff repo-streamclone/.hg/store/00changelog.i repo/.hg/store/00changelog.i
   $ diff repo-streamclone/.hg/store/00changelog.d repo/.hg/store/00changelog.d
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select idx_blob_name, data_blob_name from streaming_changelog_chunks where repo_id = 0 order by chunk_num asc;"
@@ -117,16 +114,14 @@ Push a few new commits and update streaming clone
   
 
   $ cd "$TESTTMP"
-  $ hg clone --stream mono:repo repo-streamclone-2
-  streaming all changes
+  $ hg clone mono:repo repo-streamclone-2
+  Cloning repo into $TESTTMP/repo-streamclone-2
+  fetching changelog
   2 files to transfer, 357 bytes of data
   transferred 357 bytes in * seconds (* KB/sec) (glob)
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  updating to tip
-  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  fetching selected remote bookmarks
+  Checking out 'master_bookmark'
+  4 files updated
 
 Check that with last chunk skipping no new batches are uploaded
   $ streaming_clone update --dot-hg-path "$TESTTMP/repo-streamclone-2/.hg" --skip-last-chunk
@@ -145,17 +140,14 @@ Check that with last chunk skipping no new batches are uploaded
 
 Clone it again to make sure saved streaming chunks are valid
   $ cd "$TESTTMP"
-  $ hg clone --stream mono:repo repo-streamclone-3
-  streaming all changes
+  $ hg clone mono:repo repo-streamclone-3
+  Cloning repo into $TESTTMP/repo-streamclone-3
+  fetching changelog
   2 files to transfer, 731 bytes of data
   transferred 731 bytes in 0.0 seconds (* KB/sec) (glob)
-  searching for changes
-  no changes found
-  adding changesets
-  adding manifests
-  adding file changes
-  updating to tip
-  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  fetching selected remote bookmarks
+  Checking out 'master_bookmark'
+  4 files updated
   $ cd repo-streamclone-3
   $ hg log -r tip
   commit:      9e0f64de2fee
