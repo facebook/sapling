@@ -13,5 +13,8 @@ pub const FAILED_DERIVATION: &str = "Failed to generate derived data";
 pub const FAILED_DERIVATION_BATCH: &str = "Failed to generate derived data batch";
 pub const INSERTED_MAPPING: &str = "Inserted mapping";
 pub const FAILED_INSERTING_MAPPING: &str = "Failed to insert mapping";
+pub const REMOTE_DERIVATION_REQUEST: &str = "Requesting remote derivation";
+pub const REMOTE_DERIVATION_FINISHED: &str = "Remote derivation finished";
+pub const REMOTE_DERIVATION_FAILED: &str = "Derived data service failed";
 
 pub const SLOW_DERIVATION: &str = "Slow derivation";
