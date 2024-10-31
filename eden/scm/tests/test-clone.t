@@ -88,23 +88,6 @@ Check that path aliases are expanded:
   $ hg -R f showconfig paths.default
   $TESTTMP/a#0
 
-Use --pull:
-
-  $ hg clone --pull a g
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  updating to tip
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg -R g verify
-  warning: verify does not actually check anything in this repo
-
-Invalid dest '' with --pull must abort (issue2528):
-
-  $ hg clone --pull a ''
-  abort: empty destination path is not valid
-  [255]
 
 Clone to '.':
 
@@ -168,34 +151,6 @@ Testing --noupdate with --updaterev (must abort):
 Testing clone -u:
 
   $ hg clone -u . a ua
-  updating to 7bc8ee83a26fd5fa6374a25e8f8248ea074e16a3
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-
-Repo ua has both heads:
-
-  $ hg -R ua heads
-  commit:      7bc8ee83a26f
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     starting branch stable
-
-Same revision checked out in repo a and ua:
-
-  $ hg -R a parents --template "{node|short}\n"
-  7bc8ee83a26f
-  $ hg -R ua parents --template "{node|short}\n"
-  7bc8ee83a26f
-
-  $ rm -r ua
-
-
-Testing clone --pull -u:
-
-  $ hg clone --pull -u . a ua
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
   updating to 7bc8ee83a26fd5fa6374a25e8f8248ea074e16a3
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -429,7 +384,7 @@ Create repositories to test auto sharing functionality
   $ hg debugobsolete c05d5c47a5cf81401869999f3d05f7d699d2b29a e082c1832e09a7d1e78b7fd49a592d372de854c8
   $ cd ..
 
-  $ hg -q clone --pull source1a source1b
+  $ hg -q clone source1a source1b
   $ cd source1a
   $ hg bookmark bookA
   $ echo 1a > foo

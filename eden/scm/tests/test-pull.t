@@ -19,7 +19,7 @@
 
   $ cd ..
 
-  $ hg clone -q --pull ssh://user@dummy/test copy
+  $ hg clone -q ssh://user@dummy/test copy
 
   $ cd copy
   $ hg verify
