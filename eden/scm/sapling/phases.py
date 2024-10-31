@@ -121,7 +121,7 @@ from .pycompat import encodeutf8, range
 
 _fphasesentry = struct.Struct(">i20s")
 
-allphases = public, draft, secret = list(range(3))
+allphases = public, draft, secret = (0, 1, 2)
 trackedphases = allphases[1:]
 phasenames = ["public", "draft", "secret"]
 
