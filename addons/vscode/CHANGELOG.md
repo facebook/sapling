@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.61
+
+### Oct 31 2024
+
+- Made Changed Files more visually compact
+
 ## 0.1.60
 
 ### Oct 14 2024
