@@ -237,7 +237,7 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
     # have to walk back through drafts to find all interesting
     # public parents.  Typically this will just be one, but if
     # there are merged drafts, we may have multiple parents.
-    if repo[rev].phase() == phases.public:
+    if repo[rev].ispublic():
         public.add(rev)
     else:
         queue = deque()

@@ -90,7 +90,7 @@ def drop(ui, repo, *revs, **opts) -> None:
 
     revid = revs.first()
     changectx = repo[revid]
-    if changectx.phase() == phases.public:
+    if changectx.ispublic():
         raise error.Abort(_("public changeset which landed cannot be dropped"))
 
     node = changectx.node()

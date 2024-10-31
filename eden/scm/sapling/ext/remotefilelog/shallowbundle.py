@@ -117,10 +117,7 @@ class shallowcg1packer(changegroup.cg1packer):
                 with progress.bar(repo.ui, _("manifests"), total=len(mfs)) as prog:
                     for mfnode, clnode in mfs.items():
                         prog.value += 1
-                        if (
-                            filestosend == LocalFiles
-                            and repo[clnode].phase() == phases.public
-                        ):
+                        if filestosend == LocalFiles and repo[clnode].ispublic():
                             continue
                         mfctx = mflog[mfnode]
                         clp1node = clparents(clnode)[0]

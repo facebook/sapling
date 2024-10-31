@@ -634,7 +634,7 @@ def _localbranch(repo, subset, x):
     )
     revs = repo.revs(revstring)
     # we assume that there is only a single rev
-    if repo[revs.first()].phase() == phases.public:
+    if repo[revs.first()].ispublic():
         querystring = revsetlang.formatspec("(children(%d) & draft())::", revs.first())
     else:
         querystring = revsetlang.formatspec("((::%ld) & draft())::", revs)

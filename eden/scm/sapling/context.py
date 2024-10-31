@@ -250,6 +250,9 @@ class basectx:
     def phase(self) -> int:
         raise NotImplementedError()
 
+    def ispublic(self) -> bool:
+        return self.phase() == phases.public
+
     def mutable(self) -> bool:
         return self.phase() > phases.public
 

@@ -1059,7 +1059,7 @@ def createtreepackpart(repo, outgoing, partname, sendtrees=shallowbundle.AllTree
     linknodemap = {}
     for node in outgoing.missing:
         ctx = repo[node]
-        if sendtrees == shallowbundle.AllTrees or ctx.phase() != phases.public:
+        if sendtrees == shallowbundle.AllTrees or not ctx.ispublic():
             mfnode = ctx.manifestnode()
             if mfnode != nullid:
                 mfnodes.append(mfnode)

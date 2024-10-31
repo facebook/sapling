@@ -94,7 +94,7 @@ def push(
 
 
 def is_plain_push(repo, head_node, force):
-    return force or repo[head_node].phase() == phases.public
+    return force or repo[head_node].ispublic()
 
 
 def maybe_log_debug_info(repo, head_node, draft_nodes):

@@ -567,7 +567,7 @@ def getamendcopies(repo, dest, ancestor):
         while ctx.node() not in db:
             ctx = ctx.p1()
             count += 1
-            if ctx == ancestor or count > limit or ctx.phase() == phases.public:
+            if ctx == ancestor or count > limit or ctx.ispublic():
                 return {}
 
         # Load the amend copytrace data from this commit.
