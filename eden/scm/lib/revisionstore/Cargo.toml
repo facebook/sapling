@@ -52,7 +52,7 @@ stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 storemodel = { version = "0.1.0", path = "../storemodel" }
 thiserror = "1.0.64"
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
-tokio-stream = { version = "0.1.14", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
+tokio-stream = { version = "0.1.16", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 types = { version = "0.1.0", path = "../types" }
 url = "2.5.2"

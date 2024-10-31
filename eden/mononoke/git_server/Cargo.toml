@@ -66,8 +66,8 @@ stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 strum = { version = "0.26.2", features = ["derive"] }
 thiserror = "1.0.64"
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
-tokio-stream = { version = "0.1.14", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
-tokio-util = { version = "0.7.10", features = ["full"] }
+tokio-stream = { version = "0.1.16", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
+tokio-util = { version = "0.7.12", features = ["full"] }
 topo_sort = { version = "0.1.0", path = "../common/topo_sort" }
 
 [dev-dependencies]

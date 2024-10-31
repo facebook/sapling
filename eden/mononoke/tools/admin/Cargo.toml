@@ -111,7 +111,7 @@ sql_commit_graph_storage = { version = "0.1.0", path = "../../repo_attributes/co
 sql_query_config = { version = "0.1.0", path = "../../repo_attributes/sql_query_config" }
 synced_commit_mapping = { version = "0.1.0", path = "../../commit_rewriting/synced_commit_mapping" }
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
-tokio-util = { version = "0.7.10", features = ["full"] }
+tokio-util = { version = "0.7.12", features = ["full"] }
 unodes = { version = "0.1.0", path = "../../derived_data/unodes" }
 walkdir = "2.3"
 
