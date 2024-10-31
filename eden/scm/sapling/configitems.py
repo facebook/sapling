@@ -156,7 +156,6 @@ coreconfigitem("commands", "status.relative", default=False)
 coreconfigitem("commands", "status.skipstates", default=[])
 coreconfigitem("commands", "status.verbose", default=False)
 coreconfigitem("commands", "update.check", default="noconflict")
-coreconfigitem("commands", "new-pull", default=True)
 coreconfigitem("commit", "description-size-limit", default=None)
 coreconfigitem("commit", "extras-size-limit", default=None)
 coreconfigitem("committemplate", ".*", default=None, generic=True)
@@ -562,7 +561,3 @@ coreconfigitem("worker", "numcpus", default=None)
 coreconfigitem("experimental", "rebaseskipobsolete", default=True)
 coreconfigitem("rebase", "singletransaction", default=False)
 coreconfigitem("rebase", "experimental.inmemory", default=False)
-
-# Remote names.
-# XXX: Enable selectivepull for tests.
-coreconfigitem("remotenames", "selectivepull", default=lambda: not util.istest())

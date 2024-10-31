@@ -10,9 +10,6 @@ use staticconfig::StaticConfig;
 
 /// Git config applied to `sl clone` `.sl` repos.
 pub static GIT_CONFIG: StaticConfig = static_config!("builtin:git" => r#"
-[commands]
-new-pull=true
-
 [extensions]
 commitcloud=!
 github=
@@ -31,7 +28,6 @@ hoist=remote
 publicheads=remote/master,remote/main
 rename.default=remote
 selectivepulldefault=main,master
-selectivepull=true
 
 [smartlog]
 names=main,master

@@ -4743,112 +4743,7 @@ def pull(ui, repo, source="default", **opts):
     source = hg.parseurl(ui.expandpath(source))
     ui.status_err(_("pulling from %s\n") % util.hidepassword(source))
 
-    hasselectivepull = ui.configbool("remotenames", "selectivepull")
-    if hasselectivepull and ui.configbool("commands", "new-pull"):
-        # Use the new repo.pull API.
-        # - Does not support non-selectivepull.
-        modheads, checkout = _newpull(ui, repo, source, **opts)
-    else:
-        if git.isgitpeer(repo):
-            raise error.Abort(_("pull: branch name in URL is not supported"))
-        # The legacy pull implementation. Problems:
-        # - Remotenames:
-        #   - Inefficiency: Call listkey proto twice.
-        #   - Race condition: Because listkey is called twice, remotenames can
-        #     fail to update properly (if it has moved server-side after
-        #     pulling the commits).
-        # - Features considered as tech-debt:
-        #   - Has named branch support (and overhead listing branchmap).
-        #   - Has "pull everything" (non-selectivepull) support.
-        # - Slow algorithms:
-        #   - visibility.add the entire changeroup can be inefficient.
-        with repo.connectionpool.get(
-            source, opts=opts
-        ) as conn, repo.wlock(), repo.lock(), repo.transaction("pull"):
-            other = conn.peer
-            revs = opts.get("rev") or None
-            checkout = None
-            if revs:
-                checkout = revs[0]
-                revs = autopull.rewritepullrevs(repo, revs)
-
-            implicitbookmarks = set()
-            # If any revision is given, ex. pull -r HASH, include selectivepull
-            # bookmarks automatically. This check exists so the no-argument
-            # pull is unaffected (pulls everything instead of just
-            # selectivepull bookmarks)
-            if revs:
-                remotename = bookmarks.remotenameforurl(
-                    ui, other.url()
-                )  # ex. 'default' or 'remote'
-                # Include selective pull bookmarks automatically.
-                implicitbookmarks.update(
-                    bookmarks.selectivepullbookmarknames(repo, remotename)
-                )
-
-            # If any revision is given, ex. pull -r HASH and the commit is known locally make it visible again.
-            if revs:
-                if visibility.enabled(repo):
-                    visibility.add(
-                        repo,
-                        [
-                            repo[r].node()
-                            for r in revs
-                            if r in repo and repo[r].mutable()
-                        ],
-                    )
-
-            pullopargs = {}
-            if opts.get("bookmark") or implicitbookmarks:
-                if not revs:
-                    revs = []
-                # The list of bookmark used here is not the one used to actually
-                # update the bookmark name. This can result in the revision pulled
-                # not ending up with the name of the bookmark because of a race
-                # condition on the server. (See issue 4689 for details)
-                # TODO: Consider migrate to repo.pull to avoid the race
-                # condition.
-                remotebookmarks = other.listkeys("bookmarks")
-                remotebookmarks = bookmarks.unhexlifybookmarks(remotebookmarks)
-                pullopargs["remotebookmarks"] = remotebookmarks
-                for b in opts["bookmark"]:
-                    b = repo._bookmarks.expandname(b)
-                    if b not in remotebookmarks:
-                        raise error.Abort(_("remote bookmark %s not found!") % b)
-                    revs.append(hex(remotebookmarks[b]))
-                    implicitbookmarks.discard(b)
-                for b in implicitbookmarks:
-                    if b in remotebookmarks:
-                        revs.append(hex(remotebookmarks[b]))
-
-            if revs:
-                try:
-                    # When 'rev' is a bookmark name, we cannot guarantee that it
-                    # will be updated with that name because of a race condition
-                    # server side. (See issue 4689 for details)
-                    oldrevs = revs
-                    revs = []  # actually, nodes
-                    for r in oldrevs:
-                        node = other.lookup(r)
-                        revs.append(node)
-                        if r == checkout:
-                            checkout = node
-                except error.CapabilityError:
-                    err = _(
-                        "other repository doesn't support revision lookup, "
-                        "so a rev cannot be specified."
-                    )
-                    raise error.Abort(err)
-
-            pullopargs.update(opts.get("opargs", {}))
-            modheads = exchange.pull(
-                repo,
-                other,
-                heads=revs,
-                force=opts.get("force"),
-                bookmarks=opts.get("bookmark", ()),
-                opargs=pullopargs,
-            ).cgresult
+    modheads, checkout = _newpull(ui, repo, source, **opts)
 
     # brev is a name, which might be a bookmark to be activated at
     # the end of the update. In other words, it is an explicit
@@ -4883,7 +4778,6 @@ def _newpull(ui, repo, source, **opts):
     Do not use named branches.
     Do not issue duplicated listkey commands.
     No remotenames race conditions.
-    Requires selectivepull.
     """
     revs = opts.get("rev") or []
     bmarks = opts.get("bookmark") or []

@@ -117,12 +117,9 @@ def expush(orig, repo, remote, *args, **kwargs):
     with repo.wlock(), repo.lock(), repo.transaction("push"):
         res = orig(repo, remote, *args, **kwargs)
 
-        if _isselectivepull(repo.ui):
-            remotename = repo.ui.paths.getname(remote.url())
-            remotebookmarkskeys = selectivepullbookmarknames(repo, remotename)
-            remotebookmarks = _listremotebookmarks(remote, remotebookmarkskeys)
-        else:
-            remotebookmarks = remote.listkeys("bookmarks")
+        remotename = repo.ui.paths.getname(remote.url())
+        remotebookmarkskeys = selectivepullbookmarknames(repo, remotename)
+        remotebookmarks = _listremotebookmarks(remote, remotebookmarkskeys)
 
         # ATTENTION: This might get commits that are unknown to the local repo!
         # The correct approach is to get the remote names within "orig". But
@@ -161,10 +158,6 @@ def expushop(
         setattr(pushop, flag, kwargs.pop(flag, None))
 
 
-def _isselectivepull(ui):
-    return ui.configbool("remotenames", "selectivepull")
-
-
 def _listremotebookmarks(remote, bookmarks):
     remotebookmarks = remote.listkeyspatterns("bookmarks", bookmarks)
     result = {}
@@ -187,32 +180,28 @@ def expull(orig, repo, remote, heads=None, force=False, **kwargs):
 def _expull(orig, repo, remote, heads=None, force=False, **kwargs):
     path = activepath(repo.ui, remote)
 
-    isselectivepull = _isselectivepull(repo.ui)
-    if isselectivepull:
-        # if selectivepull is enabled then we don't save all of the remote
-        # bookmarks in remotenames file. Instead we save only bookmarks that
-        # are "interesting" to a user. Moreover, "hg pull" without parameters
-        # pulls only "interesting" bookmarks. There is a config option to
-        # set default "interesting" bookmarks
-        # (see _getselectivepulldefaultbookmarks).
-        # Then bookmark is considered "interesting" if user did
-        # "hg update REMOTE_BOOK_NAME" or "hg pull -B REMOTE_BOOK_NAME".
-        # Selectivepull is helpful when server has too many remote bookmarks
-        # because it may slow down clients.
-        remotebookmarkslist = list(selectivepullbookmarknames(repo, path))
+    # due to selectivepull, we don't save all of the remote
+    # bookmarks in remotenames file. Instead we save only bookmarks that
+    # are "interesting" to a user. Moreover, "hg pull" without parameters
+    # pulls only "interesting" bookmarks. There is a config option to
+    # set default "interesting" bookmarks
+    # (see _getselectivepulldefaultbookmarks).
+    # Then bookmark is considered "interesting" if user did
+    # "hg update REMOTE_BOOK_NAME" or "hg pull -B REMOTE_BOOK_NAME".
+    # Selectivepull is helpful when server has too many remote bookmarks
+    # because it may slow down clients.
+    remotebookmarkslist = list(selectivepullbookmarknames(repo, path))
 
-        if kwargs.get("bookmarks"):
-            remotebookmarkslist.extend(kwargs["bookmarks"])
-            bookmarks = _listremotebookmarks(remote, remotebookmarkslist)
-        else:
-            bookmarks = _listremotebookmarks(remote, remotebookmarkslist)
-            if not heads:
-                heads = []
-            for node in bookmarks.values():
-                heads.append(bin(node))
-            kwargs["bookmarks"] = bookmarks.keys()
+    if kwargs.get("bookmarks"):
+        remotebookmarkslist.extend(kwargs["bookmarks"])
+        bookmarks = _listremotebookmarks(remote, remotebookmarkslist)
     else:
-        bookmarks = remote.listkeys("bookmarks")
+        bookmarks = _listremotebookmarks(remote, remotebookmarkslist)
+        if not heads:
+            heads = []
+        for node in bookmarks.values():
+            heads.append(bin(node))
+        kwargs["bookmarks"] = bookmarks.keys()
 
     res = orig(repo, remote, heads, force, **kwargs)
     pullremotenames(repo, remote, bookmarks)
@@ -294,14 +283,11 @@ def exclone(orig, ui, *args, **opts):
         return (srcpeer, dstpeer)
 
     with repo.wlock(), repo.lock(), repo.transaction("exclone") as tr:
-        if _isselectivepull(ui):
-            remotebookmarkskeys = selectivepullbookmarknames(repo)
-            remotebookmarks = _listremotebookmarks(srcpeer, remotebookmarkskeys)
-            # Clone pulled with selectivepull disabled.  Hide all the commits
-            # so we only get the ones we want.
-            visibility.setvisibleheads(repo, [])
-        else:
-            remotebookmarks = srcpeer.listkeys("bookmarks")
+        remotebookmarkskeys = selectivepullbookmarknames(repo)
+        remotebookmarks = _listremotebookmarks(srcpeer, remotebookmarkskeys)
+        # Clone pulled with selectivepull disabled.  Hide all the commits
+        # so we only get the ones we want.
+        visibility.setvisibleheads(repo, [])
         pullremotenames(repo, srcpeer, remotebookmarks)
 
         if not ui.configbool("remotenames", "syncbookmarks"):
@@ -1188,7 +1174,7 @@ def exbookmarks(orig, ui, repo, *args, **opts):
     if not remote and not subscriptions:
         displaylocalbookmarks(ui, repo, opts, fm)
 
-    if _isselectivepull(ui) and remote:
+    if remote:
         if git.isgitpeer(repo):
             refs, url = _fetchgitrefs(
                 repo, opts.get("remote_path") or "default", list(args)
@@ -1201,7 +1187,7 @@ def exbookmarks(orig, ui, repo, *args, **opts):
             else:
                 remotebookmarks = other.listkeys("bookmarks")
                 _showfetchedbookmarks(ui, other, remotebookmarks, opts, fm)
-    elif remote or subscriptions or opts.get("all"):
+    elif subscriptions or opts.get("all"):
         displayremotebookmarks(ui, repo, opts, fm)
 
     fm.end()

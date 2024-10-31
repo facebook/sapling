@@ -50,9 +50,7 @@ _maxomittedbookmarksoutput = 30
 
 
 def _isremotebookmarkssyncenabled(ui):
-    return ui.configbool("remotenames", "selectivepull") and ui.configbool(
-        "commitcloud", "remotebookmarkssync"
-    )
+    return ui.configbool("commitcloud", "remotebookmarkssync")
 
 
 def _getheads(repo):

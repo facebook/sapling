@@ -1313,7 +1313,6 @@ class pulloperation:
         remotebookmarks=None,
         exactbyteclone=False,
         extras=None,
-        newpull=False,
     ):
         # repo we pull into
         self.repo = repo
@@ -1348,9 +1347,6 @@ class pulloperation:
         self.exactbyteclone = exactbyteclone
         # extra information
         self.extras = extras or {}
-
-        # Did we come from repo.pull()
-        self.newpull = newpull
 
     @util.propertycache
     def pulledsubset(self):
@@ -1480,7 +1476,9 @@ def pull(
             _pullchangeset(pullop)
             if pullop.extras.get("phases", True):
                 _pullphase(pullop)
-            if pullop.extras.get("bookmarks", True):
+            if pullop.remotebookmarks is not None and pullop.extras.get(
+                "bookmarks", True
+            ):
                 _pullbookmarks(pullop)
         pullop.trmanager.close()
     finally:
@@ -1499,7 +1497,7 @@ pulldiscoverymapping = {}
 
 
 def _httpcommitgraphenabled(pullop):
-    return pullop.repo.nullableedenapi and pullop.newpull
+    return pullop.repo.nullableedenapi
 
 
 def pulldiscovery(stepname):

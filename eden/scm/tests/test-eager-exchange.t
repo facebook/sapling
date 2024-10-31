@@ -31,7 +31,6 @@ Push:
   DEBUG sapling::eagerpeer: heads = []
   searching for changes
   DEBUG eagerepo::api: commit_known 748104bd5058bf2c386d074d8dcf2704855380f6
-  TRACE sapling::eagerpeer: known 748104bd5058bf2c386d074d8dcf2704855380f6: False
   DEBUG eagerepo::api: bookmarks master
   DEBUG sapling::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict()
   TRACE sapling::eagerpeer: adding   blob 005d992c5dcf32993668f7cede29d296c494a5d9

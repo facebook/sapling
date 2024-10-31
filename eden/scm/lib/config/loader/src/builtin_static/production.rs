@@ -229,7 +229,6 @@ pushanonheads=False
 pushrev=.
 rename.default=remote
 resolvenodes=False
-selectivepull=True
 selectivepulldefault=master
 
 [server]

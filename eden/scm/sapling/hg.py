@@ -567,7 +567,6 @@ def clone(
                 # client?
                 if (
                     getattr(destrepo, "nullableedenapi", None)
-                    and ui.configbool("remotenames", "selectivepull")
                     and destrepo.name
                     and destrepo.ui.configbool("clone", "use-commit-graph")
                 ):
@@ -575,7 +574,7 @@ def clone(
                     ui.status(_("fetching lazy changelog\n"))
                     clonemod.segmentsclone(srcpeer.url(), destrepo)
                 # Can we use the new code path (stream clone + shallow + selective pull)?
-                elif destrepo and ui.configbool("remotenames", "selectivepull"):
+                elif destrepo:
                     if ui.configbool("unsafe", "emergency-clone"):
                         clonecodepath = "emergency"
                         clonemod.emergencyclone(srcpeer.url(), destrepo)
