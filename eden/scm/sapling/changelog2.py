@@ -36,7 +36,6 @@ from .changelog import (
 from .i18n import _
 from .node import bin, hex, nullid, nullrev, wdirid, wdirrev
 
-
 SEGMENTS_DIR = "segments/v1"
 SEGMENTS_DIR_NEXT = "segments/v1next"  # Used on Windows, for migration.
 HGCOMMITS_DIR = "hgcommits/v1"

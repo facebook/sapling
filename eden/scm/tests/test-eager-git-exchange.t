@@ -16,7 +16,7 @@ Prepare the server repo:
 Clone to a shallow client repo:
 
   $ cd
-  $ sl clone --shallow "test:server-git" client-git
+  $ sl clone "test:server-git" client-git
   Cloning server-git into $TESTTMP/client-git
   Checking out 'master'
   5 files updated

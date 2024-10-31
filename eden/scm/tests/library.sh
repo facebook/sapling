@@ -37,7 +37,7 @@ hgcloneshallow() {
   shift
   dest=$1
   shift
-  hg clone --shallow --config remotefilelog.reponame=master $orig $dest $@
+  hg clone --config remotefilelog.reponame=master $orig $dest $@
   cat >> $dest/.hg/hgrc <<EOF
 [remotefilelog]
 reponame=master

@@ -178,7 +178,7 @@ Trigger file and tree downloading:
 Clone (using edenapi clonedata, bypassing peer interface):
 
   $ cd $TESTTMP
-  $ hg clone -U --shallow test:e1 --config remotefilelog.reponame=x cloned1
+  $ hg clone -U test:e1 --config remotefilelog.reponame=x cloned1
   Cloning x into $TESTTMP/cloned1
   DEBUG eagerepo::api: bookmarks master
   DEBUG eagerepo::api: commit_graph_segments 23d30dc6b70380b2d939023947578ae0e0198999 
@@ -186,7 +186,7 @@ Clone (using edenapi clonedata, bypassing peer interface):
 Clone:
 
   $ cd $TESTTMP
-  $ hg clone -U --shallow test:e1 cloned
+  $ hg clone -U test:e1 cloned
   Cloning e1 into $TESTTMP/cloned
   DEBUG eagerepo::api: bookmarks master
   DEBUG eagerepo::api: commit_graph_segments 23d30dc6b70380b2d939023947578ae0e0198999 

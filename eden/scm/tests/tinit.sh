@@ -62,7 +62,7 @@ newclientrepo() {
   else
     remflog=""
   fi
-  hg clone --config "clone.use-rust=True" $remflog --shallow -q "$server" "$TESTTMP/$reponame"
+  hg clone --config "clone.use-rust=True" $remflog -q "$server" "$TESTTMP/$reponame"
 
   local drawdaginput=""
   while IFS= read line
@@ -133,7 +133,7 @@ clone() {
       serverurl="ssh://user@dummy/$servername"
   fi
 
-  hg clone -q --shallow "$serverurl" "$clientname" "$@" \
+  hg clone -q "$serverurl" "$clientname" "$@" \
     --config "remotefilelog.reponame=$servername" \
     --config "ui.ssh=$(dummysshcmd)" \
     --config "ui.remotecmd=$remotecmd"
