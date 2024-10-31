@@ -1601,14 +1601,11 @@ def cat(ui, repo, file1, *pats, **opts):
             ),
         ),
         ("u", "updaterev", "", _("revision or branch to check out"), _("REV")),
-        ("r", "rev", [], _("include the specified changeset"), _("REV")),
-        ("", "pull", None, _("use pull protocol to copy metadata")),
-        ("", "stream", None, _("clone with minimal data processing")),
         (
             "",
             "shallow",
             True,
-            _("use remotefilelog (only turn it off in legacy tests) (ADVANCED)"),
+            _("use remotefilelog (has no effect) (DEPRECATED)"),
         ),
         ("", "git", None, _("use git protocol (EXPERIMENTAL)")),
     ],
@@ -1630,11 +1627,7 @@ def clone(ui, source, dest=None, **opts):
             opts,
             source,
             dest,
-            pull=opts.get("pull"),
-            stream=opts.get("stream"),
-            rev=opts.get("rev"),
             update=opts.get("updaterev") or not opts.get("noupdate"),
-            shallow=opts.get("shallow"),
         )
 
     return r

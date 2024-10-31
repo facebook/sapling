@@ -58,21 +58,10 @@ define_flags! {
         #[argtype("REV")]
         updaterev: String,
 
-        /// include the specified changeset (DEPRECATED)
-        #[short('r')]
-        #[argtype("REV")]
-        rev: String,
-
-        /// use pull protocol to copy metadata (DEPRECATED)
-        pull: bool,
-
-        /// clone with minimal data processing (DEPRECATED)
-        stream: bool,
-
-        /// "use remotefilelog (only turn it off in legacy tests) (ADVANCED)"
+        /// use remotefilelog (has no effect) (DEPRECATED)
         shallow: bool = true,
 
-        /// "use git protocol (EXPERIMENTAL)"
+        /// use git protocol (EXPERIMENTAL)
         git: bool,
 
         /// enable a sparse profile
@@ -290,7 +279,6 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
     let config = ctx.config();
 
     let deprecated_options = [
-        ("--rev", "rev-option", ctx.opts.rev.is_empty()),
         (
             "--include",
             "clone-include-option",
@@ -322,11 +310,6 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
     abort_if!(
         use_eden && ctx.opts.noupdate,
         "--noupdate is not compatible with --eden",
-    );
-
-    abort_if!(
-        use_eden && !ctx.opts.shallow,
-        "--shallow is required with --eden",
     );
 
     let force_rust = config
@@ -364,10 +347,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
 
     let mut config = ConfigSet::wrap(ctx.config().clone());
 
-    if !ctx.opts.rev.is_empty()
-        || ctx.opts.pull
-        || ctx.opts.stream
-        || ctx.opts.git
+    if ctx.opts.git
         // Allow Rust clone to handle --updaterev if experimental.rust-clone-updaterev is set.
         || (!ctx.opts.updaterev.is_empty() && !config.get_or_default("experimental", "rust-clone-updaterev")?)
     {
@@ -544,25 +524,7 @@ fn clone_metadata(
     let eager_format: bool = config.get_or_default("format", "use-eager-repo")?;
     let remote_eager_path = EagerRepo::url_to_dir(&source);
 
-    if ctx.opts.shallow {
-        config.set("format", "use-remotefilelog", Some("true"), &"clone".into());
-    } else {
-        if !eager_format {
-            fallback!("non-shallow && non-eagerepo");
-        }
-
-        return match remote_eager_path {
-            None => {
-                abort!(
-                    "don't know how to clone {} into eagerepo",
-                    source.clean_str(),
-                );
-            }
-            Some(remote_eager_path) => {
-                eager_clone(ctx, config, source, remote_eager_path, destination)
-            }
-        };
-    }
+    config.set("format", "use-remotefilelog", Some("true"), &"clone".into());
 
     // Enabling segmented changelog too early breaks the revlog_clone that is needed below
     // in some cases, so make sure it isn't on.

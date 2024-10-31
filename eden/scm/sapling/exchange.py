@@ -1311,7 +1311,6 @@ class pulloperation:
         force=False,
         bookmarks=(),
         remotebookmarks=None,
-        streamclonerequested=None,
         exactbyteclone=False,
         extras=None,
         newpull=False,
@@ -1328,8 +1327,6 @@ class pulloperation:
         ]
         # do we force pull?
         self.force = force
-        # whether a streaming clone was requested
-        self.streamclonerequested = streamclonerequested
         # transaction manager
         self.trmanager = None
         # set of common changeset between local and remote before pull
@@ -1427,7 +1424,6 @@ def pull(
     force=False,
     bookmarks=(),
     opargs=None,
-    streamclonerequested=None,
 ):
     """Fetch repository data from a remote.
 
@@ -1441,11 +1437,6 @@ def pull(
     default, all remote bookmarks are pulled.
     ``opargs`` are additional keyword arguments to pass to ``pulloperation``
     initialization.
-    ``streamclonerequested`` is a boolean indicating whether a "streaming
-    clone" is requested. A "streaming clone" is essentially a raw file copy
-    of revlogs from the server. This only works when the local repository is
-    empty. The default value of ``None`` means to respect the server
-    configuration for preferring stream clones.
 
     Returns the ``pulloperation`` created for this pull.
     """
@@ -1457,7 +1448,6 @@ def pull(
         heads,
         force,
         bookmarks=bookmarks,
-        streamclonerequested=streamclonerequested,
         **opargs,
     )
 
@@ -2290,7 +2280,8 @@ def _maybeapplyclonebundle(pullop):
         return
 
     entries = filterclonebundleentries(
-        repo, entries, streamclonerequested=pullop.streamclonerequested
+        repo,
+        entries,
     )
 
     if not entries:
@@ -2371,7 +2362,7 @@ def parseclonebundlesmanifest(repo, s):
     return m
 
 
-def filterclonebundleentries(repo, entries, streamclonerequested=False):
+def filterclonebundleentries(repo, entries):
     """Remove incompatible clone bundle manifest entries.
 
     Accepts a list of entries parsed with ``parseclonebundlesmanifest``
@@ -2387,15 +2378,6 @@ def filterclonebundleentries(repo, entries, streamclonerequested=False):
         if spec:
             try:
                 comp, version, params = parsebundlespec(repo, spec, strict=True)
-
-                # If a stream clone was requested, filter out non-streamclone
-                # entries.
-                if streamclonerequested and (comp != "UN" or version != "s1"):
-                    repo.ui.debug(
-                        "filtering %s because not a stream clone\n" % entry["URL"]
-                    )
-                    continue
-
             except error.InvalidBundleSpecification as e:
                 repo.ui.debug(str(e) + "\n")
                 continue
@@ -2405,14 +2387,6 @@ def filterclonebundleentries(repo, entries, streamclonerequested=False):
                     "spec: %s\n" % (entry["URL"], str(e))
                 )
                 continue
-        # If we don't have a spec and requested a stream clone, we don't know
-        # what the entry is so don't attempt to apply it.
-        elif streamclonerequested:
-            repo.ui.debug(
-                "filtering %s because cannot determine if a stream "
-                "clone bundle\n" % entry["URL"]
-            )
-            continue
 
         if "REQUIRESNI" in entry and not sslutil.hassni:
             repo.ui.debug("filtering %s because SNI not supported\n" % entry["URL"])

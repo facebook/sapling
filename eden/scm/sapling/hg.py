@@ -396,11 +396,7 @@ def clone(
     peeropts,
     source,
     dest=None,
-    pull: bool = False,
-    rev=None,
     update: Union[bool, str] = True,
-    stream: Optional[bool] = False,
-    shallow: bool = False,
 ):
     """Make a copy of an existing repository.
 
@@ -422,14 +418,6 @@ def clone(
 
     dest: URL of destination repository to create (defaults to base
     name of source repository)
-
-    pull: always pull from source repository, even in local case or if the
-    server prefers streaming
-
-    stream: stream raw data uncompressed from repository (fast over
-    LAN, slow over WAN)
-
-    rev: revision to clone up to (implies pull=True)
 
     update: update working directory after clone completes, if
     destination is local repository (True means update to default rev,
@@ -465,9 +453,7 @@ def clone(
         cleanup_path = os.path.join(dest, ui.identity.dotdir())
 
     with bindings.atexit.AtExit.rmtree(cleanup_path) as atexit_rmtree:
-        config_overrides = {}
-        if shallow:
-            config_overrides[("format", "use-remotefilelog")] = "true"
+        config_overrides = {("format", "use-remotefilelog"): "true"}
         # Create the destination repo before we even open the connection to the
         # source, so we can use any repo-specific configuration for the connection.
         try:
@@ -499,16 +485,15 @@ def clone(
             # username overrides (unlikely).
             destrepo.ui.reloadconfigs(destrepo.root)
 
-            if shallow:
-                # Reopen the repo so reposetup in extensions can see the added
-                # requirement.
-                # To keep command line config overrides, reuse the ui from the
-                # old repo object. A cleaner way might be figuring out the
-                # overrides and then set them, in case extensions changes the
-                # class of the ui object.
-                origui = destrepo.ui
-                destrepo = repository(ui, dest)
-                destrepo.ui = origui
+            # Reopen the repo so reposetup in extensions can see the added
+            # requirement.
+            # To keep command line config overrides, reuse the ui from the
+            # old repo object. A cleaner way might be figuring out the
+            # overrides and then set them, in case extensions changes the
+            # class of the ui object.
+            origui = destrepo.ui
+            destrepo = repository(ui, dest)
+            destrepo.ui = origui
 
         # Construct the srcpeer after the destpeer, so we can use the destrepo.ui
         # configs.
@@ -517,22 +502,18 @@ def clone(
             srcpeer = peer(destrepo.ui if destrepo else ui, peeropts, source)
 
         checkout = None
-        if rev:
-            checkout = rev[0]
 
         source = util.urllocalpath(source)
 
         srclock = destlock = destlockw = None
         srcrepo = srcpeer.local()
         try:
-            copy = False
-            if (
+            copy = (
                 srcrepo
                 and srcrepo.cancopy()
                 and islocal(dest)
                 and not phases.hassecret(srcrepo)
-            ):
-                copy = not pull and not rev
+            )
 
             if copy:
                 try:
@@ -582,104 +563,29 @@ def clone(
             else:
                 clonecodepath = "legacy-pull"
 
-                revs = None
-                if rev:
-                    if not srcpeer.capable("lookup"):
-                        raise error.Abort(
-                            _(
-                                "src repository does not support "
-                                "revision lookup and so doesn't "
-                                "support clone by revision"
-                            )
-                        )
-                    revs = [srcpeer.lookup(r) for r in rev]
-                    checkout = revs[0]
-
                 # Can we use EdenAPI CloneData provided by a separate EdenAPI
                 # client?
                 if (
                     getattr(destrepo, "nullableedenapi", None)
                     and ui.configbool("remotenames", "selectivepull")
-                    and not stream
                     and destrepo.name
                     and destrepo.ui.configbool("clone", "use-commit-graph")
                 ):
                     clonecodepath = "segments"
                     ui.status(_("fetching lazy changelog\n"))
                     clonemod.segmentsclone(srcpeer.url(), destrepo)
-                # Can we use the new code path (stream clone + shallow + no
-                # update + selective pull)?
-                elif (
-                    destrepo
-                    and not pull
-                    and not update
-                    and not rev
-                    and shallow
-                    and stream is not False
-                    and ui.configbool("remotenames", "selectivepull")
-                ):
+                # Can we use the new code path (stream clone + shallow + selective pull)?
+                elif destrepo and ui.configbool("remotenames", "selectivepull"):
                     if ui.configbool("unsafe", "emergency-clone"):
                         clonecodepath = "emergency"
                         clonemod.emergencyclone(srcpeer.url(), destrepo)
                     else:
                         clonecodepath = "revlog"
                         clonemod.revlogclone(srcpeer.url(), destrepo)
-                elif destrepo:
-                    reasons = []
-                    if pull:
-                        reasons.append("pull")
-                    if update:
-                        reasons.append("update")
-                    if rev:
-                        reasons.append("rev")
-                    if not shallow:
-                        reasons.append("not-shallow")
-                    if stream is False:
-                        reasons.append("not-stream")
-                    if not ui.configbool("remotenames", "selectivepull"):
-                        reasons.append("not-selectivepull")
-                    ui.log(
-                        "features",
-                        fullargs=repr(pycompat.sysargv),
-                        feature="legacy-clone",
-                        traceback=util.smarttraceback(),
-                        reason=" ".join(reasons),
-                    )
-                    with destrepo.wlock(), destrepo.lock(), destrepo.transaction(
-                        "clone"
-                    ):
-                        if not stream:
-                            if pull:
-                                stream = False
-                            else:
-                                stream = None
-
-                        overrides = {
-                            # internal config: ui.quietbookmarkmove
-                            ("ui", "quietbookmarkmove"): True,
-                            # the normal pull process each commit and so is more expensive
-                            # than streaming bytes from disk to the wire.
-                            # disabling selectivepull allows to run a streamclone
-                            ("remotenames", "selectivepull"): False,
-                        }
-                        opargs = {}
-                        if shallow:
-                            opargs["extras"] = {"shallow": True}
-                        with destrepo.ui.configoverride(overrides, "clone"):
-                            exchange.pull(
-                                destrepo,
-                                # pyre-fixme[61]: `srcpeer` is undefined, or not always
-                                #  defined.
-                                srcpeer,
-                                revs,
-                                streamclonerequested=stream,
-                                opargs=opargs,
-                            )
                 elif srcrepo:
                     exchange.push(
                         srcrepo,
                         destpeer,
-                        revs=revs,
                         bookmarks=srcrepo._bookmarks.keys(),
                     )
                 else:
@@ -723,10 +629,7 @@ def clone(
                 peeropts,
                 source,
                 dest,
-                pull,
-                rev,
                 update,
-                stream,
                 # pyre-fixme[61]: `srcpeer` is undefined, or not always defined.
                 srcpeer,
                 destpeer,
@@ -764,10 +667,7 @@ def clonepreclose(
     peeropts,
     source,
     dest=None,
-    pull: bool = False,
-    rev=None,
     update: Union[bool, str] = True,
-    stream: Optional[bool] = False,
     srcpeer=None,
     destpeer=None,
     clonecodepath=None,
@@ -776,7 +676,6 @@ def clonepreclose(
 
     clonecodepath is one of:
     - "copy": The clone was done by copying local files.
-    - "legacy-pull": The clone was done by the (legacy) pull code path.
     - "revlog": The clone was done by the clone.streamclone code path,
       which is less racy and writes remote bookmarks.
     - "segments": The clone was done by lazy changelog path.
