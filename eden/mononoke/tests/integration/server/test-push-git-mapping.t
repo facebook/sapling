@@ -56,8 +56,6 @@ Push a commit to infinitepush, then move bookmark to it
   $ touch file3
   $ hg ci -Aqm commit1 --extra hg-git-rename-source=git --extra convert_revision=3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c
   $ hg push -q -r . --to "scratch/123" --create
-  abort: Server error: invalid request: Pushrebase failed: No common pushrebase root for scratch/123, all possible roots: {ChangesetId(Blake2(956b4e24cedd3cbffa0273c3750f771302699d4136331995b7ac5a68f8b3a73e))}
-  [255]
 
   $ get_bonsai_git_mapping | sort
   7AF229C8F6ED15A7C73DF5F9B2C2DE5CB588122E29F176397A3C52E41AB96791|1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A1A
@@ -79,8 +77,6 @@ Now push a commit to infinitepush, then force it to be public and then move book
   $ touch file4
   $ hg ci -Aqm commit1 --extra hg-git-rename-source=git --extra convert_revision=4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d
   $ hg push -q -r . --to "scratch/123" --create
-  abort: Server error: invalid request: Pushrebase failed: No common pushrebase root for scratch/123, all possible roots: {ChangesetId(Blake2(98c538b1514d847b3167a3edc58891e1dd3753ad63775948ac6199d99d31664e))}
-  [255]
 
   $ mononoke_newadmin phases -R repo add-public -i $(hg log -r . -T '{node}\n') &> /dev/null
 

@@ -911,12 +911,14 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
 
     edenapi = pushmod.get_edenapi_for_dest(repo, dest)
 
+    is_scratch = False
     if extensions.isenabled(ui, "commitcloud"):
         bookname = opargs["to"] or opargs["delete"]
         scratchmatcher = ccutil.scratchbranchmatcher(ui)
         # infinitepush "scratch" branches don't work over the regular
         # wire protocol, so require edenapi for them.
         if bookname is not None and scratchmatcher.match(bookname):
+            is_scratch = True
             edenapi = repo.edenapi
 
     if opargs["delete"]:
@@ -1036,6 +1038,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
                 force=force,
                 opargs=opargs,
                 edenapi=edenapi,
+                force_plain=is_scratch,
             )
         except error.UnsupportedEdenApiPush as e:
             ui.status_err(_("fallback reason: %s\n") % e)
