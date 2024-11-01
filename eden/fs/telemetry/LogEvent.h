@@ -791,4 +791,21 @@ struct AutoEdenDoctorRunEvent : public EdenFSEvent {
   }
 };
 
+struct CheckoutUpdateError : public EdenFSEvent {
+  std::string path;
+  std::string reason;
+
+  CheckoutUpdateError(std::string path, std::string reason)
+      : path(std::move(path)), reason(std::move(reason)) {}
+
+  void populate(DynamicEvent& event) const override {
+    event.addString("path", path);
+    event.addString("reason", reason);
+  }
+
+  const char* getType() const override {
+    return "checkout_update_error";
+  }
+};
+
 } // namespace facebook::eden

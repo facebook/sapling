@@ -3703,6 +3703,9 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
       auto success = invalidateChannelEntryCache(
           *contents, it->first, it->second.getInodeNumber());
       if (success.hasException()) {
+        getMount()->getServerState()->getStructuredLogger()->logEvent(
+            CheckoutUpdateError{
+                inode->getLogPath(), success.exception().what().toStdString()});
         if (folly::kIsWindows) {
           if (auto* exc = success.tryGetExceptionObject<std::system_error>();
               exc && isEnotempty(*exc)) {
