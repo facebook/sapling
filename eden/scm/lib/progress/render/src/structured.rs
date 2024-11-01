@@ -277,7 +277,7 @@ fn bar_prefix(depth: usize, is_last: bool, is_first: bool, pop_out: usize) -> St
         }
     }
 
-    // Draw the final symbol directly preceeding our bar.
+    // Draw the final symbol directly preceding our bar.
     if is_first && is_last {
         prefix.push_str("─ ");
     } else if is_first && depth == 0 {

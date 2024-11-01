@@ -64,7 +64,7 @@ impl Conflict {
             self.0.proceed
         );
 
-        // This is indented assuming a "(" will preceed the hint when output.
+        // This is indented assuming a "(" will precede the hint when output.
         let _ = write!(
             s,
             "     '{} {}' to abort",

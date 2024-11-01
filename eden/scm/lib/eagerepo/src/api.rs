@@ -1118,7 +1118,7 @@ impl SaplingRemoteApi for EagerRepo {
         prefix: Option<Vec<String>>,
     ) -> Result<Response<SuffixQueryResponse>, SaplingRemoteApiError> {
         debug!("suffix_query");
-        // TODO(T189729875) Make this react to commited files
+        // TODO(T189729875) Make this react to committed files
         //let files = self.files();
         let _ = (commit, prefix);
         let mut res = vec![];

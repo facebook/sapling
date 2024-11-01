@@ -13,7 +13,7 @@ use staticconfig::StaticConfig;
 /// _not_ where you want to add default config values.
 pub static CONFIG: StaticConfig = static_config!("builtin:sapling" => r###"
 [remotefilelog]
-# Internally this will be overriden by dynamic config to be ~/.hgcache.
+# Internally this will be overridden by dynamic config to be ~/.hgcache.
 cachepath=~/.sl_cache
 
 [committemplate]

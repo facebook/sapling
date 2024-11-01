@@ -192,7 +192,7 @@ pub(crate) fn normalize_patterns<I, R>(
     cwd: &Path,
     force_recursive_glob: bool,
     // stdin should always be set at the root level, recursive calls
-    // will recieve `None` as we only allow `listfile:-` at the root
+    // will receive `None` as we only allow `listfile:-` at the root
     mut stdin: Option<&mut R>,
 ) -> Result<(Vec<Pattern>, Vec<String>)>
 where
