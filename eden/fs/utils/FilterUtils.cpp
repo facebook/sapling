@@ -30,8 +30,8 @@ std::tuple<RootId, std::string> parseFilterIdFromRootId(const RootId& rootId) {
       DBG7,
       "Decoded Original RootId Length: {}, Original RootId: {}, FilterID: {}",
       expectedLength.value(),
-      filterId,
-      root.value());
+      root.value(),
+      filterId);
   return {std::move(root), std::move(filterId)};
 }
 } // namespace facebook::eden
