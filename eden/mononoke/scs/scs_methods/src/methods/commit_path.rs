@@ -214,7 +214,17 @@ impl SourceControlServiceImpl {
         let option_include_commit_numbers =
             options.contains(&thrift::BlameFormatOption::INCLUDE_COMMIT_NUMBERS);
 
-        let follow_mutable_file_history = params.follow_mutable_file_history.unwrap_or(false);
+        let follow_mutable_file_history = if justknobs::eval(
+            "scm/mononoke:scs_disable_mutable_blame",
+            None,
+            Some(repo.name()),
+        )
+        .unwrap_or(false)
+        {
+            false
+        } else {
+            params.follow_mutable_file_history.unwrap_or(false)
+        };
 
         // Changeset ids in the order they will be returned.
         let mut indexed_csids = Vec::new();
