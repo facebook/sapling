@@ -8,6 +8,10 @@
 import type {ChildProcess, IOType} from 'node:child_process';
 import type {Stream} from 'node:stream';
 
+import getStream from 'get-stream';
+import {Readable} from 'node:stream';
+// import { Buffer } from 'node:buffer';
+
 export interface EjecaOptions {
   /**
    * Current working directory of the child process.
@@ -112,6 +116,66 @@ interface EjecaChildPromise {
 }
 
 export type EjecaChildProcess = ChildProcess & EjecaChildPromise & Promise<EjecaReturn>;
+
+// The return value is a mixin of `childProcess` and `Promise`
+function getMergePromise(
+  spawned: ChildProcess,
+  promise: Promise<EjecaReturn>,
+): ChildProcess & Promise<EjecaReturn> {
+  const s2 = Object.create(spawned);
+  // @ts-expect-error: we are doing some good old monkey patching here
+  s2.then = (...args) => {
+    return promise.then(...args);
+  };
+  // @ts-expect-error: we are doing some good old monkey patching here
+  s2.catch = (...args) => {
+    return promise.catch(...args);
+  };
+  // @ts-expect-error: we are doing some good old monkey patching here
+  s2.finally = (...args) => {
+    return promise.finally(...args);
+  };
+
+  return s2 as unknown as ChildProcess & Promise<EjecaReturn>;
+}
+
+// Use promises instead of `child_process` events
+async function getSpawnedPromise(spawned: ChildProcess): Promise<EjecaReturn> {
+  const {stdout, stderr} = spawned;
+  const spawnedPromise = new Promise<{exitCode: number; signal?: string}>((resolve, reject) => {
+    spawned.on('exit', (exitCode, signal) => {
+      resolve({exitCode: exitCode ?? 0, signal: signal ?? undefined});
+    });
+
+    spawned.on('error', error => {
+      reject(error);
+    });
+
+    if (spawned.stdin) {
+      spawned.stdin.on('error', error => {
+        reject(error);
+      });
+    }
+  });
+
+  return Promise.all([spawnedPromise, getStreamPromise(stdout), getStreamPromise(stderr)]).then(
+    values => {
+      const [rc, stdout, stderr] = values;
+      return {
+        ...rc,
+        stdout,
+        stderr,
+        killed: false,
+        escapedCommand: '',
+      };
+    },
+  );
+}
+
+async function getStreamPromise(origStream: Stream | null): Promise<string> {
+  const stream = origStream ?? new Readable({read() {}});
+  return getStream(stream, {encoding: 'utf8'});
+}
 
 /**
  * Essentially a wrapper for [`child_process.spawn`](https://nodejs.org/docs/latest-v18.x/api/child_process.html#child_processspawncommand-args-options), which
