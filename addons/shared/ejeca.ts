@@ -10,7 +10,7 @@ import type {Stream} from 'node:stream';
 
 import getStream from 'get-stream';
 import {Readable} from 'node:stream';
-// import { Buffer } from 'node:buffer';
+import os from 'os';
 
 export interface EjecaOptions {
   /**
@@ -65,6 +65,47 @@ interface KillOptions {
 }
 
 type KillParam = number | NodeJS.Signals | undefined;
+const DEFAULT_FORCE_KILL_TIMEOUT = 1000 * 5;
+
+function spawnedKill(
+  kill: ChildProcess['kill'],
+  signal: KillParam = 'SIGTERM',
+  options: KillOptions = {},
+): boolean {
+  const killResult = kill(signal);
+
+  if (shouldForceKill(signal, options, killResult)) {
+    const timeout = getForceKillAfterTimeout(options);
+    setTimeout(() => {
+      kill('SIGKILL');
+    }, timeout);
+  }
+
+  return killResult;
+}
+
+function getForceKillAfterTimeout({forceKillAfterTimeout = true}: KillOptions): number {
+  if (typeof forceKillAfterTimeout !== 'number') {
+    return DEFAULT_FORCE_KILL_TIMEOUT;
+  }
+
+  if (!Number.isFinite(forceKillAfterTimeout) || forceKillAfterTimeout < 0) {
+    throw new TypeError(
+      `Expected the \`forceKillAfterTimeout\` option to be a non-negative integer, got \`${forceKillAfterTimeout}\` (${typeof forceKillAfterTimeout})`,
+    );
+  }
+
+  return forceKillAfterTimeout;
+}
+
+function shouldForceKill(
+  signal: KillParam,
+  {forceKillAfterTimeout}: KillOptions,
+  killResult: boolean,
+): boolean {
+  const isSigTerm = signal === os.constants.signals.SIGTERM || signal == 'SIGTERM';
+  return isSigTerm && forceKillAfterTimeout !== false && killResult;
+}
 
 export interface EjecaReturn {
   /**
