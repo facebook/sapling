@@ -135,6 +135,11 @@ export default defineConfig(({mode}) => ({
   build: {
     outDir: 'dist/webview',
     manifest: true,
+    // FIXME: This means that all webviews will use the same css file.
+    // This is too bloated for the inline comment webview and marginally slows down startup time.
+    // Ideally, we'd load all the relevant css files in the webview, but our current approach
+    // with our own manual copy of html in htmlForWebview does not support this.
+    cssCodeSplit: false,
     rollupOptions: {
       input,
       output: {
