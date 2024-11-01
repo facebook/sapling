@@ -223,6 +223,7 @@ python_unittest(
     runtime_deps = artifacts["deps"],
     deps = [
         "//eden/integration/lib:lib",
+        "//eden/integration/lib:ntapi",
     ],
 )
 
