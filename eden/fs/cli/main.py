@@ -36,6 +36,8 @@ except ImportError:
         def set_sample_rate(self, automation: int) -> None:
             pass
 
+    # pyre-fixme[31]: Expression `eden.fs.cli.main.ParTelemetryStub()` is not a
+    #  valid type.
     par_telemetry = ParTelemetryStub()
 
 from eden.fs.cli.buck import get_buck_command, run_buck_command

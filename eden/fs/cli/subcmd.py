@@ -170,6 +170,7 @@ def add_subcommands(
     # list below where we would have shown the nasty one.
     subparsers = parser.add_subparsers(metavar="COMMAND")
     for cmd_class in sorted(cmds, key=lambda c: c.NAME):
+        # pyre-fixme[45]: Cannot instantiate abstract class `Subcmd`.
         cmd_instance = cmd_class(parser)
         cmd_instance.add_parser(subparsers)
 
