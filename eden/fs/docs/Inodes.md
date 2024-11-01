@@ -20,8 +20,6 @@ data remotely over a network, such as
 Linux filesystem implementation. Rather than storing data on a disk, it calls
 out to a userspace process to allow that userspace process to choose how to
 store and manage data. EdenFS uses FUSE to expose checkouts to users on Linux.
-On macOS EdenFS uses [FUSE for macOS](https://osxfuse.github.io/), which behaves
-very similarly to Linux FUSE and shares the same inode model.
 
 ![Linux VFS Model](img/fuse_vfs.svg)
 
