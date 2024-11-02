@@ -59,7 +59,7 @@ describe('Browse repo url', () => {
     fireEvent.click(screen.getByText('Browse Repo At This Commit'));
   }
 
-  it('opens link to browse repo', async () => {
+  it('opens link to browse repo', () => {
     setCodeBrowserConfig(undefined);
     act(() => {
       fireEvent.contextMenu(screen.getByText('main'));
@@ -148,7 +148,7 @@ describe('Browse repo url', () => {
       });
     });
 
-    it('uses appropricate commit revset', async () => {
+    it('uses appropricate commit revset', () => {
       act(() => {
         openCommitInfoSidebar();
       });

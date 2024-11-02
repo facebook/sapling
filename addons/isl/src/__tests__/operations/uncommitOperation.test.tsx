@@ -20,7 +20,6 @@ import {
 } from '../../testUtils';
 import {CommandRunner} from '../../types';
 import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
-import {wait} from '@testing-library/user-event/dist/utils';
 
 const {withinCommitTree} = CommitTreeListTestUtils;
 
