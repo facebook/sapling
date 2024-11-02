@@ -8,7 +8,7 @@
 
 import os
 
-from .lib import repobase, testcase
+from .lib import hgrepo, repobase, testcase
 
 
 @testcase.eden_test
@@ -33,6 +33,13 @@ class ChownTest(testcase.EdenRepoTest):
 
     def create_repo(self, name: str) -> repobase.Repository:
         return self.create_hg_repo("main")
+
+    def create_eden_repo(self) -> repobase.Repository:
+        return hgrepo.HgRepository(
+            self.mount,
+            system_hgrc=self.system_hgrc,
+            filtered=self.backing_store_type == "filteredhg",
+        )
 
     def setup_eden_test(self) -> None:
         import grp
