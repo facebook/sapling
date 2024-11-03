@@ -5,11 +5,12 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
-  $ REPOTYPE="blob_files"
-  $ ENABLED_DERIVED_DATA='["git_trees", "git_commits", "git_delta_manifests_v2", "ccsm", "skeleton_manifests", "skeleton_manifests_v2"]' setup_common_config $REPOTYPE
   $ GIT_REPO_ORIGIN="${TESTTMP}/origin/repo-git"
   $ GIT_REPO_SUBMODULE="${TESTTMP}/origin/repo-submodule"
   $ GIT_REPO="${TESTTMP}/repo-git"
+
+Disable Mercurial types as they do not support git submodules
+  $ DISABLED_DERIVED_DATA="filenodes hgchangesets hg_augmented_manifests" setup_common_config blob_files
 
 # Setup submodule git repository
   $ mkdir -p "$GIT_REPO_SUBMODULE"

@@ -917,10 +917,40 @@ scuba_table = "file://{}/derived_data_scuba.json"
 """.format(env.getenv("TESTTMP"))
     )
 
-    if env.getenv("ENABLED_DERIVED_DATA"):
-        enabled_derived_data = env.getenv("ENABLED_DERIVED_DATA")
-        append_config(
-            f"""
+    if enabled_derived_data := env.getenv("ENABLED_DERIVED_DATA"):
+        derived_data_types = enabled_derived_data.split()
+    else:
+        derived_data_types = [
+            "blame",
+            "changeset_info",
+            "deleted_manifest",
+            "fastlog",
+            "filenodes",
+            "fsnodes",
+            "git_commits",
+            "git_delta_manifests_v2",
+            "git_trees",
+            "unodes",
+            "hgchangesets",
+            "hg_augmented_manifests",
+            "skeleton_manifests",
+            "skeleton_manifests_v2",
+            "bssm_v3",
+            "ccsm",
+            "test_manifests",
+            "test_sharded_manifests",
+        ]
+
+    if additional_derived_data := env.getenv("ADDITIONAL_DERIVED_DATA"):
+        derived_data_types.extend(additional_derived_data.split())
+    if disabled_derived_data := env.getenv("DISABLED_DERIVED_DATA"):
+        derived_data_types = list(
+            set(derived_data_types) - set(disabled_derived_data.split())
+        )
+
+    enabled_derived_data = json.dumps(derived_data_types)
+    append_config(
+        f"""
 [derived_data_config.available_configs.default]
 types = {enabled_derived_data}
 git_delta_manifest_version = 2
@@ -928,40 +958,10 @@ git_delta_manifest_v2_config.max_inlined_object_size = 20
 git_delta_manifest_v2_config.max_inlined_delta_size = 20
 git_delta_manifest_v2_config.delta_chunk_size = 1000
 """
-        )
-    else:
-        append_config(
-            """
-[derived_data_config.available_configs.default]
-types=[
-  "blame",
-  "changeset_info",
-  "deleted_manifest",
-  "fastlog",
-  "filenodes",
-  "fsnodes",
-  "git_commits",
-  "git_delta_manifests_v2",
-  "git_trees",
-  "unodes",
-  "hgchangesets",
-  "hg_augmented_manifests",
-  "skeleton_manifests",
-  "skeleton_manifests_v2",
-  "bssm_v3",
-  "ccsm",
-  "test_manifests",
-  "test_sharded_manifests"
-]
-git_delta_manifest_version = 2
-git_delta_manifest_v2_config.max_inlined_object_size = 20
-git_delta_manifest_v2_config.max_inlined_delta_size = 20
-git_delta_manifest_v2_config.delta_chunk_size = 1000
-"""
-        )
+    )
 
-    if env.getenv("OTHER_DERIVED_DATA"):
-        other_derived_data = env.getenv("OTHER_DERIVED_DATA")
+    if other_derived_data := env.getenv("OTHER_DERIVED_DATA"):
+        other_derived_data = json.dumps(other_derived_data.split())
         append_config(
             f"""
 [derived_data_config.available_configs.other]

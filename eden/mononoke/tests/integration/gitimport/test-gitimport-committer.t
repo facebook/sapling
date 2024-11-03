@@ -5,9 +5,9 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
-  $ HG_SET_COMMITTER_EXTRA=true ENABLED_DERIVED_DATA='["git_trees", "filenodes", "hgchangesets"]' setup_common_config
   $ GIT_REPO="${TESTTMP}/repo-git"
   $ HG_REPO="${TESTTMP}/repo"
+  $ HG_SET_COMMITTER_EXTRA=true setup_common_config
 
 # Setup git repsitory
   $ mkdir "$GIT_REPO"

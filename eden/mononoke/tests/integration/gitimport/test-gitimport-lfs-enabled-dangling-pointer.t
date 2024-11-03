@@ -6,9 +6,7 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ . "${TEST_FIXTURES}/library-git-lfs.sh"
-  $ REPOTYPE="blob_files"
-  $ ENABLED_DERIVED_DATA='["git_commits", "git_trees", "git_delta_manifests_v2", "unodes", "filenodes", "hgchangesets"]' setup_common_config $REPOTYPE
-Without that bit gitimport is unable to set bookmarks
+  $ setup_common_config blob_files
 
 Use common repo setup
   $ GIT_LFS_INTERPRET_POINTERS=1 test_repos_for_git_lfs_import

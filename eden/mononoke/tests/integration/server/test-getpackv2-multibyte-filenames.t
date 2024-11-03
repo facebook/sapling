@@ -12,7 +12,7 @@
   $ NAME='file-multibyte-€'
   $ BOOKMARK='master_bookmark'
 
-  $ ENABLED_DERIVED_DATA='["git_trees", "filenodes", "hgchangesets"]' setup_common_config
+  $ setup_common_config
 
 # THis is a bit clowntown. There is a bug in our tests right now that prevents
 # us from creating files using UTF-8 names on Mercurial Python 3, so we

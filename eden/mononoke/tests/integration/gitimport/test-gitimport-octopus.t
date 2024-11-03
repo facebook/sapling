@@ -5,11 +5,9 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
-  $ ENABLED_DERIVED_DATA='["git_trees", "filenodes", "hgchangesets"]' setup_common_config "blob_files"
   $ GIT_REPO="${TESTTMP}/repo-git"
   $ HG_REPO="${TESTTMP}/repo"
-  $ REPOTYPE="blob_files"
-  $ setup_common_config $REPOTYPE
+  $ setup_common_config blob_files
   $ setconfig remotenames.selectivepulldefault=master_bookmark,branch1,branch2
 
 # Setup git repsitory
