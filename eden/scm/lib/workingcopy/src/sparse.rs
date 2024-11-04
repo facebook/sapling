@@ -511,7 +511,7 @@ inc
         fn diff<'a, M: pathmatcher::Matcher>(
             &'a self,
             other: &'a Self,
-            matcher: &'a M,
+            matcher: M,
         ) -> anyhow::Result<Box<dyn Iterator<Item = anyhow::Result<manifest::DiffEntry>> + 'a>>
         {
             unimplemented!()

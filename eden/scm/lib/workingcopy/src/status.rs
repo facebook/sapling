@@ -363,7 +363,7 @@ mod tests {
         fn diff<'a, M: Matcher>(
             &'a self,
             other: &'a Self,
-            matcher: &'a M,
+            matcher: M,
         ) -> Result<Box<dyn Iterator<Item = Result<manifest::DiffEntry>> + 'a>> {
             unimplemented!()
         }

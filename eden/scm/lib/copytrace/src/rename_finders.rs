@@ -22,7 +22,6 @@ use lru_cache::LruCache;
 use manifest::DiffType;
 use manifest::FileType;
 use manifest::Manifest;
-use manifest_tree::Diff;
 use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
 use pathmatcher::AlwaysMatcher;
@@ -372,7 +371,7 @@ impl RenameFinderInner {
         let mut added_files = Vec::new();
         let mut deleted_files = Vec::new();
         let matcher = matcher.unwrap_or_else(|| Arc::new(AlwaysMatcher::new()));
-        let diff = Diff::new(old_tree, new_tree, &matcher)?;
+        let diff = old_tree.diff(new_tree, matcher)?;
         for entry in diff {
             let entry = entry?;
             match entry.diff_type {

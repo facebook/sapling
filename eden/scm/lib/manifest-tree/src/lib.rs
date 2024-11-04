@@ -47,7 +47,6 @@ pub use types::PathComponentBuf;
 use types::RepoPath;
 use types::RepoPathBuf;
 
-pub use self::diff::Diff;
 pub(crate) use self::link::Link;
 pub use self::store::Element as TreeElement;
 pub use self::store::Entry as TreeEntry;
@@ -360,12 +359,12 @@ impl Manifest for TreeManifest {
         Box::new(dirs)
     }
 
-    fn diff<'a, M: Matcher>(
+    fn diff<'a, M: 'static + Matcher + Sync + Send>(
         &'a self,
         other: &'a Self,
-        matcher: &'a M,
+        matcher: M,
     ) -> Result<Box<dyn Iterator<Item = Result<DiffEntry>> + 'a>> {
-        Ok(Box::new(Diff::new(self, other, matcher)?))
+        Ok(diff::diff(self, other, Arc::new(matcher)))
     }
 }
 
@@ -1814,7 +1813,7 @@ mod tests {
     fn grafted_diff(a: &TreeManifest, b: &TreeManifest) -> Vec<String> {
         let (a, b) = apply_diff_grafts(a, b).unwrap();
         let mut files = a
-            .diff(&b, &AlwaysMatcher::new())
+            .diff(&b, AlwaysMatcher::new())
             .unwrap()
             .map(|e| Ok(e?.path.into_string()))
             .collect::<Result<Vec<_>>>()

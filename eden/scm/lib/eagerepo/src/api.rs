@@ -1280,7 +1280,7 @@ impl SaplingRemoteApi for EagerRepo {
             let matcher = AlwaysMatcher::new();
 
             // generate new manifest
-            for e in base_manifest.diff(&source_manifest, &matcher)? {
+            for e in base_manifest.diff(&source_manifest, matcher)? {
                 let e = e?;
                 match e.diff_type {
                     DiffType::LeftOnly(_) => {
@@ -1352,14 +1352,14 @@ impl SaplingRemoteApi for EagerRepo {
         ) -> anyhow::Result<Vec<(RepoPathBuf, RepoPathBuf)>> {
             let matcher = AlwaysMatcher::new();
             let mut left = mbase
-                .diff(mleft, &matcher)?
+                .diff(mleft, matcher.clone())?
                 .map(|e| e.map(|e| e.path))
                 .collect::<anyhow::Result<Vec<_>>>()?;
             left.sort_unstable();
             let mut left_iter = left.into_iter();
 
             let mut right = mbase
-                .diff(mright, &matcher)?
+                .diff(mright, matcher)?
                 .map(|e| e.map(|e| e.path))
                 .collect::<anyhow::Result<Vec<_>>>()?;
             right.sort_unstable();

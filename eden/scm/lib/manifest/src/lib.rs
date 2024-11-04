@@ -100,10 +100,10 @@ pub trait Manifest {
     /// Retuns an iterator of all the differences in files between two Manifest instances of the
     /// same type.
     // TODO: add default implementation
-    fn diff<'a, M: Matcher>(
+    fn diff<'a, M: 'static + Matcher + Sync + Send>(
         &'a self,
         other: &'a Self,
-        matcher: &'a M,
+        matcher: M,
     ) -> Result<Box<dyn Iterator<Item = Result<DiffEntry>> + 'a>>;
 }
 
