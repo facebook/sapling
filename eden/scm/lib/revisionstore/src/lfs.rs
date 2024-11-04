@@ -786,26 +786,36 @@ impl LocalStore for LfsStore {
     }
 }
 
+pub(crate) fn content_header_from_pointer(entry: &LfsPointersEntry) -> Bytes {
+    if let Some(copy_from) = &entry.copy_from {
+        let copy_from_path: &[u8] = copy_from.path.as_ref();
+        let mut ret = Vec::with_capacity(copy_from_path.len() + 21);
+        ret.extend_from_slice(b"\x01\n");
+        ret.extend_from_slice(b"copy: ");
+        ret.extend_from_slice(copy_from_path);
+        ret.extend_from_slice(b"\n");
+        ret.extend_from_slice(b"copyrev: ");
+        ret.extend_from_slice(copy_from.hgid.to_hex().as_bytes());
+        ret.extend_from_slice(b"\n");
+        ret.extend_from_slice(b"\x01\n");
+        ret.into()
+    } else {
+        Bytes::default()
+    }
+}
+
 /// When a file was copied, Mercurial expects the blob that the store returns to contain this copy
 /// information
 pub(crate) fn rebuild_metadata(data: Bytes, entry: &LfsPointersEntry) -> Bytes {
-    if let Some(copy_from) = &entry.copy_from {
-        let copy_from_path: &[u8] = copy_from.path.as_ref();
-        let mut ret = Vec::with_capacity(data.len() + copy_from_path.len() + 128);
-
-        ret.extend_from_slice(&b"\x01\n"[..]);
-        ret.extend_from_slice(&b"copy: "[..]);
-        ret.extend_from_slice(copy_from_path);
-        ret.extend_from_slice(&b"\n"[..]);
-        ret.extend_from_slice(&b"copyrev: "[..]);
-        ret.extend_from_slice(copy_from.hgid.to_hex().as_bytes());
-        ret.extend_from_slice(&b"\n"[..]);
-        ret.extend_from_slice(&b"\x01\n"[..]);
+    let header = content_header_from_pointer(entry);
+    if !header.is_empty() {
+        let mut ret = Vec::with_capacity(data.len() + header.len());
+        ret.extend_from_slice(header.as_ref());
         ret.extend_from_slice(data.as_ref());
         ret.into()
     } else if data.as_ref().starts_with(b"\x01\n") {
         let mut ret = Vec::with_capacity(data.len() + 4);
-        ret.extend_from_slice(&b"\x01\n\x01\n"[..]);
+        ret.extend_from_slice(b"\x01\n\x01\n");
         ret.extend_from_slice(data.as_ref());
         ret.into()
     } else {
