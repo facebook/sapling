@@ -22,8 +22,10 @@ https://mercurial-scm.org/wiki/RebaseExtension
 from __future__ import absolute_import
 
 import errno
+import os
 from collections.abc import MutableMapping, MutableSet
 
+import bindings
 from bindings import checkout as nativecheckout
 
 from sapling import (
@@ -37,6 +39,7 @@ from sapling import (
     hg,
     i18n,
     lock,
+    match as matchmod,
     merge as mergemod,
     mergeutil,
     mutation,
@@ -54,7 +57,7 @@ from sapling import (
     visibility,
 )
 from sapling.i18n import _
-from sapling.node import hex, nullid, nullrev, short
+from sapling.node import bin, hex, nullid, nullrev, short
 from sapling.utils import subtreeutil
 
 release = lock.release
@@ -541,6 +544,9 @@ class rebaseruntime:
         # if we fail before the transaction closes.
         self.storestatus()
 
+        if ui.configbool("rebase", "prefetch-trees", True):
+            self._prefetch()
+
         cands = [k for k, v in self.state.items() if v == revtodo]
         total = len(cands)
         pos = 0
@@ -997,6 +1003,51 @@ class rebaseruntime:
             and repo["."].node() == repo._bookmarks[self.activebookmark]
         ):
             bookmarks.activate(repo, self.activebookmark)
+
+    def _prefetch(self):
+        repo = self.repo
+
+        # Collect list of all relevant commits: source commits, dest commits, and their
+        # parent commits.
+        tofetch = bindings.dag.nameset(
+            [n for kv in self.destmap.node2node.items() for n in kv]
+        )
+        tofetch += repo.changelog.dag.parents(tofetch)
+
+        # Batch lazy DAG resolutions.
+        repo.changelog.filternodes(tofetch)
+
+        # Batch fetch commit text (contains root tree node and file list).
+        repo.changelog.inner.getcommitrawtextlist(
+            tofetch,
+        )
+
+        if hasattr(repo, "sparsematch"):
+            matcher = repo.sparsematch()
+        else:
+            matcher = matchmod.always(repo.root, "")
+
+        # Collect list of all directories touched by commits, and all commits' root tree nodes.
+        all_files = set()
+        root_nodes = set()
+        for n in tofetch:
+            ctx = repo[n]
+            for fn in ctx.changeset().files or []:
+                if not matcher(fn):
+                    continue
+
+                # Hard code file name to "file". This keeps our file list small and still
+                # triggers all the same prefetching.
+                fn = os.path.dirname(fn)
+                all_files.add(f"{fn}/file" if fn else "file")
+            root_nodes.add(ctx.manifestnode())
+
+        # Prefetch all relevant files across all commits. Note that this might overfetch
+        # since it doesn't track which fils are relevant to which trees, but the
+        # assumption is it is still better than serial fetching later.
+        bindings.manifest.prefetch(
+            repo.manifestlog.datastore, list(root_nodes), paths=list(all_files)
+        )
 
 
 def _simplemerge(ui, basectx, ctx, p1ctx, manifestbuilder):
