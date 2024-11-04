@@ -48,6 +48,7 @@ use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use skeleton_manifest::RootSkeletonManifestId;
 use slog::debug;
+use slog::error;
 use slog::Logger;
 use sorted_vector_map::SortedVectorMap;
 use thiserror::Error;
@@ -731,7 +732,14 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
     }
 
     let enable_commit_extra_stripping =
-        justknobs::eval("scm/mononoke:strip_commit_extras_in_xrepo_sync", None, None)?;
+        justknobs::eval("scm/mononoke:strip_commit_extras_in_xrepo_sync", None, None)
+            .unwrap_or_else(|err| {
+                error!(
+                    logger,
+                    "Failed to read just knob scm/mononoke:strip_commit_extras_in_xrepo_sync: {err}"
+                );
+                false
+            });
 
     if enable_commit_extra_stripping {
         match rewrite_opts.strip_commit_extras {
@@ -751,7 +759,11 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
         "scm/mononoke:should_set_committer_info_to_author_info_if_empty",
         None,
         None,
-    )?;
+    )
+    .unwrap_or_else(|err| {
+        error!(logger, "Failed to read just knob scm/mononoke:should_set_committer_info_to_author_info_if_empty: {err}");
+        false
+    });
 
     // Hg doesn't have a concept of committer and committer date, so commits
     // that are originally created in Hg have these fields empty when synced
