@@ -3232,7 +3232,7 @@ def newreporequirements(repo) -> Set[str]:
                 "experimental.format.compression not available"
             )
             % compengine,
-            hint=_('run "hg debuginstall" to list available ' "compression engines"),
+            hint=_('run "hg debuginstall" to list available compression engines'),
         )
 
     requirements.add("treestate")

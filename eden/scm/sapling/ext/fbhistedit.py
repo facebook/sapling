@@ -375,7 +375,7 @@ def _rebase(orig, ui, repo, *pats, **opts):
     else:
         base = scmutil.revrange(repo, [basef or "."])
         if not base:
-            ui.status(_('empty "base" revision set - ' "can't compute rebase set\n"))
+            ui.status(_("empty 'base' revision set - can't compute rebase set\n"))
             return 1
         commonanc = repo.revs("ancestor(%ld, %d)", base, dest).first()
         if commonanc is not None:

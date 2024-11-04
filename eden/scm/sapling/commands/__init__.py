@@ -6160,7 +6160,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
 
                 if isinstance(gen, streamclone.streamcloneapplier):
                     raise error.Abort(
-                        _("packed bundles cannot be applied with " '"@prog@ unbundle"'),
+                        _('packed bundles cannot be applied with "@prog@ unbundle"'),
                         hint=_('use "@prog@ debugapplystreamclonebundle"'),
                     )
                 url = "bundle:" + fname

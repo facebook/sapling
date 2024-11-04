@@ -106,8 +106,7 @@ def parsebundlespec(repo, spec, strict=True, externalnames=False):
         for p in paramstr.split(";"):
             if "=" not in p:
                 raise error.InvalidBundleSpecification(
-                    _("invalid bundle specification: " 'missing "=" in parameter: %s')
-                    % p
+                    _('invalid bundle specification: missing "=" in parameter: %s') % p
                 )
 
             key, value = p.split("=", 1)

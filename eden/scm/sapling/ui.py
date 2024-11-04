@@ -1884,8 +1884,7 @@ def pushurlpathoption(ui, path, value):
     # push.
     if u.fragment:
         ui.warn(
-            _('("#fragment" in paths.%s:pushurl not supported; ' "ignoring)\n")
-            % path.name
+            _('("#fragment" in paths.%s:pushurl not supported; ignoring)\n') % path.name
         )
         u.fragment = None
 

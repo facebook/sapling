@@ -586,7 +586,7 @@ def walkfilerevs(orig, repo, match, follow, revs, fncache):
     for filename in match.files():
         if filename not in pctx:
             raise error.Abort(
-                _("cannot follow file not in parent " 'revision: "%s"') % filename
+                _('cannot follow file not in parent revision: "%s"') % filename
             )
         fctx = pctx[filename]
 

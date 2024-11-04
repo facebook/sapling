@@ -33,6 +33,10 @@ import re
 import sys
 
 
+# for not skipping the checking of the code of this file
+SKIP_CODE_CHECK = "no-" + "check-code"
+
+
 def opentext(f):
     return open(f, encoding="utf-8")
 
@@ -605,7 +609,7 @@ def checkfile(
             if debug:
                 print("Skipping %s for %s it doesn't match %s" % (name, match, f))
             continue
-        if "no-" "check-code" in pre:
+        if SKIP_CODE_CHECK in pre:
             # If you're looking at this line, it's because a file has:
             # no- check- code
             # but the reason to output skipping is to make life for

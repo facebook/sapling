@@ -379,7 +379,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, filterfn, *pats, **opt
         merge = len(wctx.parents()) > 1
         if merge:
             raise error.Abort(
-                _("cannot partially commit a merge " '(use "@prog@ commit" instead)')
+                _('cannot partially commit a merge (use "@prog@ commit" instead)')
             )
 
         def fail(f, msg):
@@ -2589,8 +2589,7 @@ def walkfilerevs(repo, match, follow, revs, fncache):
             if follow:
                 if filename not in pctx:
                     raise error.Abort(
-                        _("cannot follow file not in parent " 'revision: "%s"')
-                        % filename
+                        _('cannot follow file not in parent revision: "%s"') % filename
                     )
                 yield filename, pctx[filename].filenode()
             else:
@@ -3055,7 +3054,7 @@ def _makelogrevset(repo, pats, opts, revs):
                                 """did you mean "@prog@ log -r '%s'", or "@prog@ log -r '%s' -f" to follow history?"""
                             ) % (pats[0], pats[0])
                         raise error.Abort(
-                            _("cannot follow file not in parent " 'revision: "%s"') % f,
+                            _('cannot follow file not in parent revision: "%s"') % f,
                             hint=hint,
                         )
 
@@ -3293,7 +3292,7 @@ def getloglinerangerevs(repo, userrevs, opts):
     for fname, (fromline, toline) in _parselinerangelogopt(repo, opts):
         if fname not in wctx:
             raise error.Abort(
-                _("cannot follow file not in parent " 'revision: "%s"') % fname
+                _('cannot follow file not in parent revision: "%s"') % fname
             )
         fctx = wctx.filectx(fname)
         for fctx, linerange in dagop.blockancestors(fctx, fromline, toline):

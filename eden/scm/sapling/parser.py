@@ -773,7 +773,7 @@ class basealiasrules:
             raise error.Abort(a.error)
         if key in expanding:
             raise error.ParseError(
-                _("infinite expansion of %(section)s " '"%(name)s" detected')
+                _('infinite expansion of %(section)s "%(name)s" detected')
                 % {"section": cls._section, "name": a.name}
             )
         # get cacheable replacement tree by expanding aliases recursively

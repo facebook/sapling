@@ -2030,7 +2030,7 @@ class workingctx(committablectx):
                 d = self[f].data()
                 if d == b"" or len(d) >= 1024 or b"\n" in d or util.binary(d):
                     self._repo.ui.debug(
-                        "ignoring suspect symlink placeholder" ' "%s"\n' % f
+                        'ignoring suspect symlink placeholder "%s"\n' % f
                     )
                     continue
             sane.append(f)
