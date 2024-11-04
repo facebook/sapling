@@ -328,11 +328,7 @@ class remotefilelog:
             return rawtext
         if rawtext == constants.REDACTED_CONTENT:
             return constants.REDACTED_MESSAGE
-        flags = store.getmeta(self.filename, node).get(constants.METAKEYFLAG, 0)
-        if flags == 0:
-            return rawtext
-        text, verifyhash = self._processflags(rawtext, flags, "read")
-        return text
+        return rawtext
 
     def _deltachain(self, node):
         """Obtain the delta chain for a revision.
