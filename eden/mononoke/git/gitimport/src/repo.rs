@@ -13,6 +13,7 @@ use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_hg_mapping::ArcBonsaiHgMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_tag_mapping::BonsaiTagMapping;
+use bookmarks::Bookmarks;
 use cacheblob::LeaseOps;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
@@ -58,6 +59,9 @@ pub(crate) struct Repo {
 
     #[facet]
     bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+    #[facet]
+    bookmarks: dyn Bookmarks,
 }
 
 impl DangerousOverride<Arc<dyn Blobstore>> for Repo {

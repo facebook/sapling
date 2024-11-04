@@ -22,6 +22,7 @@ rust_binary(
         "//eden/mononoke/bonsai_git_mapping:bonsai_git_mapping",
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/bonsai_tag_mapping:bonsai_tag_mapping",
+        "//eden/mononoke/bookmarks:bookmarks",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
         "//eden/mononoke/derived_data/mercurial_derivation:mercurial_derivation",
         "//eden/mononoke/filestore:filestore",

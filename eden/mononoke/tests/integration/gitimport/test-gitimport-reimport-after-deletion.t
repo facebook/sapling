@@ -47,9 +47,9 @@
   $ cd ..
 
 
-# Import it into Mononoke
+# Import it into Mononoke. Note: cleanup-mononoke-bookmarks does nothing here, but we want to show that it doesn't.
   $ cd "$TESTTMP"
-  $ with_stripped_logs gitimport "$GIT_REPO" --concurrency 100 --generate-bookmarks full-repo
+  $ with_stripped_logs gitimport "$GIT_REPO" --concurrency 100 --generate-bookmarks --cleanup-mononoke-bookmarks full-repo
   using repo "repo" repoid RepositoryId(0)
   GitRepo:$TESTTMP/repo-git commit 1 of 1 - Oid:8ce3eae4 => Bid:032cd4dc
   Ref: "refs/heads/another_branch": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
@@ -93,7 +93,7 @@
 
 # Re-import
   $ cd "$TESTTMP"
-  $ with_stripped_logs gitimport "$GIT_REPO" --generate-bookmarks full-repo
+  $ with_stripped_logs gitimport "$GIT_REPO" --generate-bookmarks --cleanup-mononoke-bookmarks full-repo
   using repo "repo" repoid RepositoryId(0)
   GitRepo:$TESTTMP/repo-git 1 of 1 commit(s) already exist
   Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
@@ -107,12 +107,11 @@
   Bookmark: "remotes/origin/a_ref_prefixed_by_remotes_origin": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (already up-to-date)
   Bookmark: "tags/changing_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (already up-to-date)
   Bookmark: "tags/recursive_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (already up-to-date)
+  Bookmark: "heads/another_branch": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (deleted)
+  Bookmark: "tags/first_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (deleted)
 
-# The tag and ref should no longer be in Mononoke but still are
+# The tag and ref are no longer in Mononoke
   $ mononoke_newadmin bookmarks -R repo get tags/first_tag
-  Metadata changeset for tag bookmark tags/first_tag: 
-  5ca579c0e3ebea708371b65ce559e5a51b231ad1b6f3cdfd874ca27362a2a6a8
-  Changeset pointed to by the tag bookmark tags/first_tag
-  032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044
+  (not set)
   $ mononoke_newadmin bookmarks -R repo get heads/another_branch
-  032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044
+  (not set)
