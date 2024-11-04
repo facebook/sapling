@@ -309,6 +309,13 @@ impl FetchState {
             wants_aux |= FileAttributes::PURE_CONTENT;
         }
 
+        // If we are querying for content header without content, that can be satisfied
+        // purely from AUX. Otherwise, don't say AUX can satisfy CONTENT_HEADER (to avoid
+        // querying AUX unnecessarily when the header will come with the content).
+        if self.common.request_attrs.content_header && !self.common.request_attrs.pure_content {
+            wants_aux |= FileAttributes::CONTENT_HEADER;
+        }
+
         self.common
             .iter_pending(wants_aux, self.compute_aux_data, |key| {
                 count += 1;

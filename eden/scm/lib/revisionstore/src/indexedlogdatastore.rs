@@ -741,7 +741,7 @@ mod tests {
         store.indexedlog_local = Some(local);
 
         // Attempt fetch.
-        let mut fetched = store
+        let fetched = store
             .fetch(
                 std::iter::once(k),
                 FileAttributes::CONTENT,
@@ -783,7 +783,7 @@ mod tests {
         store.write_batch(std::iter::once((k.clone(), d.data.clone(), meta)))?;
 
         // Attempt fetch.
-        let mut fetched = store
+        let fetched = store
             .fetch(
                 std::iter::once(k),
                 FileAttributes::CONTENT,

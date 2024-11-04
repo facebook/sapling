@@ -43,7 +43,7 @@ impl storemodel::KeyStore for ArcFileStore {
         let iter = fetched
             .into_iter()
             .map(|result| -> anyhow::Result<(Key, Bytes)> {
-                let (key, mut store_file) = result?;
+                let (key, store_file) = result?;
                 let content = store_file.file_content()?;
                 Ok((key, content))
             });
@@ -96,14 +96,13 @@ impl storemodel::FileStore for ArcFileStore {
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Key)>>> {
         let fetched = self
             .0
-            .fetch(keys, FileAttributes::CONTENT, FetchMode::AllowRemote);
+            .fetch(keys, FileAttributes::CONTENT_HEADER, FetchMode::AllowRemote);
         let iter = fetched
             .into_iter()
             .filter_map(|result| -> Option<anyhow::Result<(Key, Key)>> {
                 (move || -> anyhow::Result<Option<(Key, Key)>> {
-                    let (key, mut store_file) = result?;
-                    let (_data, maybe_copy_from) = store_file.file_content_with_copy_info()?;
-                    Ok(maybe_copy_from.map(|copy_from| (key, copy_from)))
+                    let (key, store_file) = result?;
+                    Ok(store_file.copy_info()?.map(|copy_from| (key, copy_from)))
                 })()
                 .transpose()
             });

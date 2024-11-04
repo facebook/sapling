@@ -264,7 +264,7 @@ mod tests {
         store.edenapi = Some(remote_files);
 
         // Attempt fetch.
-        let mut fetched = store
+        let fetched = store
             .fetch(
                 std::iter::once(k.clone()),
                 FileAttributes::CONTENT,
@@ -311,7 +311,7 @@ mod tests {
         store.edenapi = Some(remote_files);
 
         // Attempt fetch.
-        let mut fetched = store
+        let fetched = store
             .fetch(
                 std::iter::once(k.clone()),
                 FileAttributes::CONTENT,

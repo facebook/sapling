@@ -10,7 +10,6 @@ use anyhow::Error;
 use anyhow::Result;
 use edenapi_types::FileEntry;
 use format_util::split_file_metadata;
-use format_util::strip_file_metadata;
 use minibytes::Bytes;
 use storemodel::SerializationFormat;
 use types::HgId;
@@ -53,25 +52,29 @@ impl LazyFile {
     }
 
     /// Compute's the aux data associated with this file from the content.
-    pub(crate) fn aux_data(&mut self) -> Result<FileAuxData> {
-        let aux_data = match self {
-            LazyFile::Lfs(content, _, _) => FileAuxData::from_content(content),
+    pub(crate) fn aux_data(&self) -> Result<FileAuxData> {
+        match self {
             LazyFile::SaplingRemoteApi(entry, _) if entry.aux_data.is_some() => {
                 entry.aux_data().cloned().ok_or_else(|| {
                     anyhow::anyhow!("Invalid SaplingRemoteAPI entry in LazyFile. Aux data is empty")
-                })?
+                })
             }
             _ => {
-                let content = self.file_content()?.0;
-                FileAuxData::from_content(&content)
+                let (content, header) = self.file_content()?;
+                let mut aux_data = FileAuxData::from_content(&content);
+
+                // Content header (i.e. hg copy info) is not in the (pure) content. If we
+                // have header in-hand, also include it in the aux data.
+                aux_data.file_header_metadata = header;
+
+                Ok(aux_data)
             }
-        };
-        Ok(aux_data)
+        }
     }
 
     /// The file content, as would be found in the working copy (stripped of copy header), and the content header.
     /// Content header is `None` iff not available. If available but not set, content header is `Some(b"")`.
-    pub(crate) fn file_content(&mut self) -> Result<(Bytes, Option<Bytes>)> {
+    pub(crate) fn file_content(&self) -> Result<(Bytes, Option<Bytes>)> {
         use LazyFile::*;
         Ok(match self {
             IndexedLog(entry, format) => split_file_metadata(&entry.content()?, *format),
@@ -84,17 +87,6 @@ impl LazyFile {
             }
             SaplingRemoteApi(ref entry, format) => split_file_metadata(&entry.data()?, *format),
             Cas(data) => (data.clone(), None),
-        })
-    }
-
-    /// The file content, as would be found in the working copy, and also with copy info
-    pub(crate) fn file_content_with_copy_info(&mut self) -> Result<(Bytes, Option<Key>)> {
-        use LazyFile::*;
-        Ok(match self {
-            IndexedLog(ref mut entry, format) => strip_file_metadata(&entry.content()?, *format)?,
-            Lfs(ref blob, ref ptr, _) => (blob.clone(), ptr.copy_from().clone()),
-            SaplingRemoteApi(ref entry, format) => strip_file_metadata(&entry.data()?, *format)?,
-            Cas(_) => bail!("CAS data has no copy info"),
         })
     }
 
