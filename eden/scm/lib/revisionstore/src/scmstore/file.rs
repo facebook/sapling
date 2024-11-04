@@ -579,7 +579,6 @@ impl FileStore {
 }
 
 impl HgIdDataStore for FileStore {
-    // Fetch the raw content of a single TreeManifest blob
     fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
         self.metrics.write().api.hg_get.call(0);
         Ok(

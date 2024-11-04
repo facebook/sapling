@@ -52,12 +52,15 @@ pub fn bfs_iter<M: 'static + Matcher + Sync + Send>(
         matcher: Arc::new(matcher),
     };
 
-    // Kick off the search at the root.
-    for root in roots {
-        worker
-            .publish_work(vec![(RepoPathBuf::new(), root.borrow().thread_copy())])
-            .unwrap();
-    }
+    // Kick off the search at the roots.
+    worker
+        .publish_work(
+            roots
+                .iter()
+                .map(|root| (RepoPathBuf::new(), root.borrow().thread_copy()))
+                .collect(),
+        )
+        .unwrap();
 
     const NUM_BFS_WORKERS: usize = 10;
 
@@ -554,11 +557,8 @@ mod tests {
 
         let fetches = store.fetches();
 
-        assert!(fetches.contains(&vec![get_tree_key(&tree1, "")]));
-        assert!(fetches.contains(&vec![get_tree_key(&tree1, "a")]));
-
-        assert!(fetches.contains(&vec![get_tree_key(&tree2, "")]));
-        assert!(fetches.contains(&vec![get_tree_key(&tree2, "c")]));
+        assert!(fetches.contains(&vec![get_tree_key(&tree1, ""), get_tree_key(&tree2, "")]));
+        assert!(fetches.contains(&vec![get_tree_key(&tree1, "a"), get_tree_key(&tree2, "c")]));
     }
 
     fn dirs<M: 'static + Matcher + Sync + Send>(tree: &TreeManifest, matcher: M) -> Vec<String> {
