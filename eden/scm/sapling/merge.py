@@ -1457,6 +1457,31 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
     for m, l in actions.items():
         l.sort()
 
+    # Prefetch content for files to be merged to avoid serial lookups.
+    merge_prefetch = []
+    for f, args, msg in (
+        actions[ACTION_CHANGED_DELETED]
+        + actions[ACTION_DELETED_CHANGED]
+        + actions[ACTION_MERGE]
+    ):
+        f1, f2, fa, move, anc = args
+        if f1 is not None:
+            merge_prefetch.append(wctx[f1])
+        if f2 is not None:
+            merge_prefetch.append(mctx[f2])
+        actx = repo[anc]
+        if fa in actx:
+            merge_prefetch.append(actx[fa])
+    if merge_prefetch and hasattr(repo, "fileservice"):
+        repo.fileservice.prefetch(
+            [
+                (fc.path(), fc.filenode())
+                for fc in merge_prefetch
+                if fc.filenode() not in (None, nullid)
+            ],
+            fetchhistory=False,
+        )
+
     # These are m(erge) actions that aren't actually conflicts, such as remote copying a
     # file. We don't want to expose them to merge drivers since merge drivers might get
     # confused.

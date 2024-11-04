@@ -1042,7 +1042,7 @@ def _makebackup(repo, ui, wctx, fcd, premerge):
         # so we don't disturb the working directory.
         relpath = back[len(repo.wvfs.base) + 1 :]
         if premerge:
-            wctx[relpath].write(fcd.data(), fcd.flags())
+            wctx[relpath].write(fcd, fcd.flags())
         return wctx[relpath]
     else:
         if premerge:

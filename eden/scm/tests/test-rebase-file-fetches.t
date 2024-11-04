@@ -46,7 +46,7 @@ Make sure we batch tree fetches well:
   TRACE tree_fetches: attrs=["content"] keys=["a/b@105dfd91"]
   TRACE file_fetches: attrs=["history"] length=Some(1) keys=["a/b/c2/file"]
 
-FIXME Make sure we batch fetch content for files needing merge:
+Make sure we batch fetch content for files needing merge:
   $ newserver server3
   $ drawdag <<EOS
   >      # C/bar = 2\n2\n3\n
@@ -60,6 +60,7 @@ FIXME Make sure we batch fetch content for files needing merge:
   $ newclientrepo client3 test:server3
   $ LOG=file_fetches=trace,tree_fetches=trace hg rebase -q -r $B -d $C
   TRACE tree_fetches: attrs=["content"] keys=["@52df54bd", "@9e73d36f", "@c0749e87"]
+  TRACE file_fetches: attrs=["content", "header", "aux"] keys=["bar", "bar", "foo", "foo"]
   TRACE file_fetches: attrs=["content", "header"] keys=["bar"]
   TRACE file_fetches: attrs=["content", "header"] keys=["bar"]
   TRACE file_fetches: attrs=["history"] length=Some(1) keys=["bar"]

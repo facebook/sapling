@@ -16,7 +16,6 @@ from sapling.node import bin, hex, nullid, nullrev
 from ..extlib.phabricator import graphql
 from . import shallowutil
 
-
 propertycache = util.propertycache
 conduit = None
 FASTLOG_TIMEOUT_IN_SECS = 0.5
