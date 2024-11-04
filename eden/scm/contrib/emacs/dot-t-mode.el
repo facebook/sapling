@@ -3,6 +3,8 @@
 ;; This software may be used and distributed according to the terms of the
 ;; GNU General Public License version 2.
 
+(require 'compile)
+
 (define-derived-mode dot-t-mode prog-mode "Dot t"
   "Major mode for Sapling .t tests."
 
