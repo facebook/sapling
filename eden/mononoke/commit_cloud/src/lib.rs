@@ -10,6 +10,8 @@ pub mod ctx;
 pub mod references;
 pub mod smartlog;
 pub mod sql;
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fmt::Display;
 use std::sync::Arc;
 
@@ -36,6 +38,7 @@ use commit_cloud_types::WorkspaceSharingData;
 use context::CoreContext;
 use facet::facet;
 use futures_stats::futures03::TimedFutureExt;
+use mercurial_types::HgChangesetId;
 use metaconfig_types::CommitCloudConfig;
 use mononoke_types::DateTime;
 use mononoke_types::Timestamp;
@@ -579,5 +582,93 @@ impl CommitCloud {
         .await?;
 
         historical_versions_from_get_output(results)
+    }
+
+    pub async fn rollback_workspace(
+        &self,
+        cc_ctx: &CommitCloudContext,
+        version: u64,
+    ) -> anyhow::Result<String> {
+        let maybeworkspace =
+            WorkspaceVersion::fetch_from_db(&self.storage, &cc_ctx.workspace, &cc_ctx.reponame)
+                .await?;
+        ensure!(
+            maybeworkspace.is_some(),
+            format!(
+                "'rollback_workspace' failed: workspace {} does not exist in repo {}",
+                cc_ctx.workspace, cc_ctx.reponame
+            )
+        );
+        let workspace_version = maybeworkspace.unwrap();
+
+        let args = GetType::GetHistoryVersion { version };
+        let result = GenericGet::<WorkspaceHistory>::get(
+            &self.storage,
+            cc_ctx.reponame.clone(),
+            cc_ctx.workspace.clone(),
+            args.clone(),
+        )
+        .await?;
+
+        ensure!(
+            !result.is_empty(),
+            format!(
+                "'rollback_workspace' failed: no record found for version {}",
+                version
+            )
+        );
+
+        let destination_workspace = match result.first().unwrap() {
+            GetOutput::WorkspaceHistory(workspace_history) => workspace_history.clone(),
+            _ => bail!("'rollback_workspace' failed: expected output from get_version"),
+        };
+
+        let dst_heads: HashSet<HgChangesetId> = destination_workspace
+            .heads
+            .iter()
+            .map(|h| h.commit.clone())
+            .collect();
+
+        let current_workspace = fetch_references(cc_ctx, &self.storage).await?;
+        let current_heads: HashSet<HgChangesetId> = current_workspace
+            .heads
+            .iter()
+            .map(|h| h.commit.clone())
+            .collect();
+
+        let new_heads: Vec<HgChangesetId> = dst_heads.difference(&current_heads).cloned().collect();
+        let old_heads: Vec<HgChangesetId> = current_heads.difference(&dst_heads).cloned().collect();
+
+        let old_bookmarks: Vec<String> = current_workspace
+            .local_bookmarks
+            .iter()
+            .map(|x| x.name().clone())
+            .collect();
+
+        let new_bookmarks: HashMap<String, HgChangesetId> = destination_workspace
+            .local_bookmarks
+            .iter()
+            .map(|x| (x.name().clone(), x.commit().clone()))
+            .collect();
+
+        let params = UpdateReferencesParams {
+            workspace: cc_ctx.workspace.clone(),
+            reponame: cc_ctx.reponame.clone(),
+            version: workspace_version.version,
+            removed_heads: old_heads,
+            new_heads,
+            updated_bookmarks: new_bookmarks,
+            removed_bookmarks: old_bookmarks,
+            updated_remote_bookmarks: Some(destination_workspace.remote_bookmarks.clone()),
+            removed_remote_bookmarks: Some(current_workspace.remote_bookmarks.clone()),
+            new_snapshots: vec![],
+            removed_snapshots: vec![],
+            client_info: None,
+        };
+
+        self.update_references(cc_ctx, &params)
+            .await
+            .map(|_| "rollback succeeded".to_string())
+            .map_err(|e| anyhow::anyhow!(e.to_string()))
     }
 }
