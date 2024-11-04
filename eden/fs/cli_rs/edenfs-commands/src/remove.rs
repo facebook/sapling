@@ -8,11 +8,15 @@
 //! edenfsctl remove
 use std::fmt;
 use std::fs;
+use std::fs::Permissions;
 use std::io::ErrorKind;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
@@ -55,6 +59,7 @@ struct RemoveContext {
     canonical_path: PathBuf,
     skip_prompt: bool,
     client: Option<Result<EdenFsClient>>,
+    preserve_mount_point: bool,
 }
 
 impl RemoveContext {
@@ -62,6 +67,7 @@ impl RemoveContext {
         original_path: String,
         skip_prompt: bool,
         client: Result<EdenFsClient, EdenFsError>,
+        preserve_mount_point: bool,
     ) -> RemoveContext {
         RemoveContext {
             original_path,
@@ -74,6 +80,7 @@ impl RemoveContext {
                     Some(Err(anyhow!("{e}")))
                 }
             },
+            preserve_mount_point,
         }
     }
 }
@@ -179,7 +186,7 @@ impl ActiveEdenMount {
                 Ok(Some(State::InactiveEdenMount(InactiveEdenMount {})))
             }
             Err(e) => {
-                error!("Failed to unmount {}: {e}", context);
+                error!("Failed to unmount {}: {}", context, e);
                 Ok(None)
             }
         }
@@ -196,10 +203,10 @@ impl ActiveEdenMount {
                             let umount_res = client.unmount(&path).await;
                             match umount_res {
                                 Ok(_) => Ok(()),
-                                Err(e) => Err(anyhow!("Failed to unmount {}: {e}", context)),
+                                Err(e) => Err(anyhow!("Failed to unmount {}: {}", context, e)),
                             }
                         }
-                        Err(e) => Err(anyhow!("Failed to encode path {}: {e}", context)),
+                        Err(e) => Err(anyhow!("Failed to encode path {}: {}", context, e)),
                     }
                 }
 
@@ -229,8 +236,9 @@ impl InactiveEdenMount {
             Ok(_) => Ok(()),
             Err(e) if e.kind() == ErrorKind::NotFound => Ok(()),
             Err(e) => Err(anyhow!(
-                "Failed to remove client config directory for {}: {e}",
-                context
+                "Failed to remove client config directory for {}: {}",
+                context,
+                e
             )),
         }
     }
@@ -241,8 +249,9 @@ impl InactiveEdenMount {
         match instance.remove_path_from_directory_map(&context.canonical_path) {
             Ok(_) => Ok(()),
             Err(e) => Err(anyhow!(
-                "Failed to remove {} from config json file: {e}",
-                context
+                "Failed to remove {} from config json file: {}",
+                context,
+                e
             )),
         }
     }
@@ -252,14 +261,41 @@ impl InactiveEdenMount {
 struct CleanUp {}
 impl CleanUp {
     async fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
-        if context.skip_prompt
-            || Confirm::new()
-                .with_prompt("CleanUp State is not implemented yet... proceed?")
-                .interact()?
-        {
-            return Err(anyhow!("Rust remove(CleanUp) is not implemented!"));
+        if context.preserve_mount_point {
+            warn!(
+                "preserve_mount_point flag is set, not removing the mount point {}!",
+                context
+            );
+        } else {
+            self.clean_mount_point(&context.canonical_path)
+                .with_context(|| anyhow!("Failed to clean mount point {}", context))?;
         }
         Ok(None)
+    }
+
+    #[cfg(unix)]
+    fn clean_mount_point(&self, path: &Path) -> Result<()> {
+        let perms = Permissions::from_mode(0o755);
+        match fs::set_permissions(path, perms) {
+            Ok(_) => match fs::remove_dir_all(path) {
+                Ok(_) => Ok(()),
+                Err(e) => Err(anyhow!(
+                    "Failed to remove mount point {}: {}",
+                    path.display(),
+                    e
+                )),
+            },
+            Err(e) => Err(anyhow!(
+                "failed to set permission 755 for path {}: {}",
+                path.display(),
+                e
+            )),
+        }
+    }
+
+    #[cfg(windows)]
+    fn clean_mount_point(&self, path: &Path) -> Result<()> {
+        Err(anyhow!("Windows clean_mount_point not implemented!!"))
     }
 }
 
@@ -330,7 +366,12 @@ impl Subcommand for RemoveCmd {
         let instance = EdenFsInstance::global();
         let client = instance.connect(None).await;
 
-        let mut context = RemoveContext::new(self.paths[0].clone(), self.skip_prompt, client);
+        let mut context = RemoveContext::new(
+            self.paths[0].clone(),
+            self.skip_prompt,
+            client,
+            self.preserve_mount_point,
+        );
         let mut state = Some(State::start());
 
         while state.is_some() {
@@ -381,6 +422,7 @@ mod tests {
             canonical_path: PathBuf::new(),
             skip_prompt: true,
             client: None,
+            preserve_mount_point: false,
         }
     }
 
