@@ -74,6 +74,16 @@ pub fn parse_copy_from_hg_file_metadata(data: &[u8]) -> Result<Option<Key>> {
     }
 }
 
+pub fn split_file_metadata(data: &Bytes, format: SerializationFormat) -> (Bytes, Option<Bytes>) {
+    match format {
+        SerializationFormat::Hg => {
+            let (content, header) = split_hg_file_metadata(data);
+            (content, Some(header))
+        }
+        SerializationFormat::Git => (data.clone(), None),
+    }
+}
+
 pub fn split_hg_file_metadata(data: &Bytes) -> (Bytes, Bytes) {
     let slice = data.as_ref();
     if !slice.starts_with(b"\x01\n") {

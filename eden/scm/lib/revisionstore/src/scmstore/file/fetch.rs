@@ -388,7 +388,7 @@ impl FetchState {
     fn found_lfs(&mut self, key: Key, entry: LfsStoreEntry) {
         match entry {
             LfsStoreEntry::PointerAndBlob(ptr, blob) => {
-                self.found_attributes(key, LazyFile::Lfs(blob, ptr).into())
+                self.found_attributes(key, LazyFile::Lfs(blob, ptr, self.format).into())
             }
             LfsStoreEntry::PointerOnly(ptr) => self.found_pointer(key, ptr, false),
         }
@@ -979,7 +979,7 @@ impl FetchState {
                 // `pending` and all of its entries were put in `key_map`.
                 for (key, ptr) in key_map.get(&sha256).unwrap().iter() {
                     let file = StoreFile {
-                        content: Some(LazyFile::Lfs(data.clone(), ptr.clone())),
+                        content: Some(LazyFile::Lfs(data.clone(), ptr.clone(), self.format)),
                         ..Default::default()
                     };
 

@@ -37,6 +37,7 @@ pub use hg_commit::hg_commit_text_to_root_tree_id;
 pub use hg_commit_fields::HgCommitFields;
 pub use hg_commit_fields::HgCommitLazyFields;
 pub use hg_filelog::parse_copy_from_hg_file_metadata;
+pub use hg_filelog::split_file_metadata;
 pub use hg_filelog::split_hg_file_metadata;
 pub use hg_filelog::strip_file_metadata;
 pub use hg_sha1::hg_sha1_deserialize;

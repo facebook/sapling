@@ -82,6 +82,7 @@ impl StoreFile {
             .as_mut()
             .ok_or_else(|| anyhow!("no content available"))?
             .file_content()
+            .map(|(content, _header)| content)
     }
 
     // File content including hg copy info header.
@@ -122,7 +123,7 @@ impl StoreFile {
         }) = &self.aux_data
         {
             Ok((
-                content.file_content()?,
+                content.file_content()?.0,
                 parse_copy_from_hg_file_metadata(header)?,
             ))
         } else {

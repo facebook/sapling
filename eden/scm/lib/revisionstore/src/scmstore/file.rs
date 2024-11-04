@@ -703,7 +703,7 @@ impl ContentDataStore for FileStore {
                 )
                 .single()?
             {
-                Some(entry) => StoreResult::Found(entry.content.unwrap().file_content()?),
+                Some(entry) => StoreResult::Found(entry.content.unwrap().file_content()?.0),
                 None => StoreResult::NotFound(key),
             },
         )
@@ -721,7 +721,7 @@ impl ContentDataStore for FileStore {
                 .single()?
             {
                 Some(StoreFile {
-                    content: Some(LazyFile::Lfs(_blob, pointer)),
+                    content: Some(LazyFile::Lfs(_blob, pointer, _format)),
                     ..
                 }) => StoreResult::Found(pointer.into()),
                 Some(_) => StoreResult::NotFound(key),
