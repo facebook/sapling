@@ -37,9 +37,7 @@ use mercurial_types::HgNodeHash;
 use mercurial_types::RepoPath;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::BonsaiChangeset;
-use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
-use repo_blobstore::ArcRepoBlobstore;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -52,16 +50,6 @@ use crate::bonsai_generation::save_bonsai_changeset_object;
 use crate::repo_commit::*;
 use crate::ErrorKind;
 
-type BonsaiChangesetHook = dyn Fn(
-        CoreContext,
-        HgBlobChangeset,
-        Vec<HgManifestId>,
-        Vec<ChangesetId>,
-        ArcRepoBlobstore,
-    ) -> BoxFuture<'static, Result<BonsaiChangeset>>
-    + Send
-    + Sync;
-
 define_stats! {
     prefix = "mononoke.blobrepo";
     create_changeset: timeseries(Rate, Sum),
@@ -71,57 +59,26 @@ define_stats! {
 }
 
 async fn verify_bonsai_changeset_with_origin(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     bcs: BonsaiChangeset,
-    cs: HgBlobChangeset,
-    origin_repo: Option<BackupSourceRepo>,
+    cs: &HgBlobChangeset,
+    origin_repo: &BackupSourceRepo,
 ) -> Result<BonsaiChangeset, Error> {
-    match origin_repo {
-        Some(origin_repo) => {
-            // There are some non-canonical bonsai changesets in the prod repos.
-            // To make the blobimported backup repos exactly the same, we will
-            // fetch bonsai from the prod in case of mismatch
-            let origin_bonsai_id = origin_repo
-                .bonsai_hg_mapping()
-                .get_bonsai_from_hg(&ctx, cs.get_changeset_id())
-                .await?;
-            match origin_bonsai_id {
-                Some(id) if id != bcs.get_changeset_id() => {
-                    id.load(&ctx, origin_repo.repo_blobstore())
-                        .map_err(|e| anyhow!(e))
-                        .await
-                }
-                _ => Ok(bcs),
-            }
+    // There are some non-canonical bonsai changesets in the prod repos.
+    // To make the blobimported backup repos exactly the same, we will
+    // fetch bonsai from the prod in case of mismatch
+    let origin_bonsai_id = origin_repo
+        .bonsai_hg_mapping()
+        .get_bonsai_from_hg(ctx, cs.get_changeset_id())
+        .await?;
+    match origin_bonsai_id {
+        Some(id) if id != bcs.get_changeset_id() => {
+            id.load(ctx, origin_repo.repo_blobstore())
+                .map_err(|e| anyhow!(e))
+                .await
         }
-        None => Ok(bcs),
+        _ => Ok(bcs),
     }
-}
-
-pub fn create_bonsai_changeset_hook(
-    origin_repo: Option<BackupSourceRepo>,
-) -> Arc<BonsaiChangesetHook> {
-    Arc::new(
-        move |ctx: CoreContext,
-              hg_cs: HgBlobChangeset,
-              parent_manifest_hashes: Vec<HgManifestId>,
-              bonsai_parents: Vec<ChangesetId>,
-              repo_blobstore: ArcRepoBlobstore| {
-            cloned!(origin_repo);
-            async move {
-                let bonsai_cs = create_bonsai_changeset_object(
-                    &ctx,
-                    hg_cs.clone(),
-                    parent_manifest_hashes,
-                    bonsai_parents,
-                    &repo_blobstore,
-                )
-                .await?;
-                verify_bonsai_changeset_with_origin(ctx, bonsai_cs, hg_cs, origin_repo).await
-            }
-            .boxed()
-        },
-    )
 }
 
 pub struct CreateChangeset {
@@ -134,7 +91,7 @@ pub struct CreateChangeset {
     pub root_manifest: BoxFuture<'static, Result<Option<(HgManifestId, RepoPath)>>>,
     pub sub_entries: BoxStream<'static, Result<(Entry<HgManifestId, HgFileNodeId>, RepoPath)>>,
     pub cs_metadata: ChangesetMetadata,
-    pub create_bonsai_changeset_hook: Option<Arc<BonsaiChangesetHook>>,
+    pub verify_origin_repo: Option<BackupSourceRepo>,
     /// If set to true, don't update Changesets or BonsaiHgMapping, which should be done
     /// manually after this call. Effectively, the commit will be in the blobstore, but
     /// unreachable.
@@ -188,29 +145,6 @@ impl CreateChangeset {
         let parents_data = handle_parents(scuba_logger.clone(), self.p1, self.p2)
             .map_err(|err| err.context("While waiting for parents to upload data"));
 
-        let create_bonsai_changeset_object = match self.create_bonsai_changeset_hook {
-            Some(hook) => Arc::clone(&hook),
-            None => Arc::new(
-                |ctx: CoreContext,
-                 hg_cs: HgBlobChangeset,
-                 parent_manifest_hashes: Vec<HgManifestId>,
-                 bonsai_parents: Vec<ChangesetId>,
-                 repo_blobstore: ArcRepoBlobstore| {
-                    async move {
-                        create_bonsai_changeset_object(
-                            &ctx,
-                            hg_cs,
-                            parent_manifest_hashes,
-                            bonsai_parents,
-                            &repo_blobstore,
-                        )
-                        .await
-                    }
-                    .boxed()
-                },
-            ),
-        };
-
         let changeset = {
             cloned!(ctx, signal_parent_ready, mut scuba_logger);
             let expected_files = self.expected_files;
@@ -239,14 +173,22 @@ impl CreateChangeset {
 
                 STATS::create_changeset_cf_count.add_value(files.len() as i64);
                 let hg_cs = make_new_changeset(parents, root_mf_id, cs_metadata, files)?;
-                let bonsai_cs = create_bonsai_changeset_object(
-                    ctx.clone(),
-                    hg_cs.clone(),
-                    parent_manifest_hashes.clone(),
-                    bonsai_parents,
-                    blobstore.clone(),
-                )
-                .await?;
+                let bonsai_cs = {
+                    let bonsai_cs = create_bonsai_changeset_object(
+                        &ctx,
+                        hg_cs.clone(),
+                        parent_manifest_hashes.clone(),
+                        bonsai_parents,
+                        &blobstore,
+                    )
+                    .await?;
+                    if let Some(origin_repo) = self.verify_origin_repo.as_ref() {
+                        verify_bonsai_changeset_with_origin(&ctx, bonsai_cs, &hg_cs, origin_repo)
+                            .await?
+                    } else {
+                        bonsai_cs
+                    }
+                };
 
                 let bonsai_blob = bonsai_cs.clone().into_blob();
                 let bcs_id = bonsai_blob.id().clone();
