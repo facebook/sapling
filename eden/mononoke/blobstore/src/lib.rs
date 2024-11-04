@@ -29,6 +29,7 @@ use auto_impl::auto_impl;
 use bytes::Bytes;
 use clap::ValueEnum;
 use context::CoreContext;
+use either::Either;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use strum::AsRefStr;
@@ -624,6 +625,26 @@ pub trait Storable: Sized {
         ctx: &'a CoreContext,
         blobstore: &'a B,
     ) -> Result<Self::Key>;
+}
+
+#[async_trait]
+impl<L, R> Loadable for Either<L, R>
+where
+    L: Loadable + Send + Sync,
+    R: Loadable + Send + Sync,
+{
+    type Value = Either<L::Value, R::Value>;
+
+    async fn load<'a, B: Blobstore>(
+        &'a self,
+        ctx: &'a CoreContext,
+        blobstore: &'a B,
+    ) -> Result<Self::Value, LoadableError> {
+        match self {
+            Either::Left(id) => Ok(Either::Left(id.load(ctx, blobstore).await?)),
+            Either::Right(id) => Ok(Either::Right(id.load(ctx, blobstore).await?)),
+        }
+    }
 }
 
 /// StoreLoadable represents an object that be loaded asynchronously through a given store of type

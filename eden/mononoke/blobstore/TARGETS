@@ -63,6 +63,7 @@ rust_library(
         "fbsource//third-party/rust:auto_impl",
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:either",
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:serde_derive",
         "fbsource//third-party/rust:strum",
