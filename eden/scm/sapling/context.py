@@ -19,6 +19,7 @@ import os
 import re
 import stat
 import sys
+from functools import partial
 from typing import Callable, List, Optional, Tuple, Union
 
 import bindings
@@ -2580,7 +2581,7 @@ class overlayworkingctx(committablectx):
                     repo,
                     memctx,
                     path,
-                    self.data(path),
+                    partial(self.data, path),
                     copied=self._cache[path]["copied"],
                     flags=self.flags(path),
                     filenode=self._cache[path]["filenode"],
@@ -3158,11 +3159,13 @@ class memfilectx(committablefilectx):
             # HACK: Reconstruct filenode from "data()" for submodules.
             # Ideally the callsite provides filenode, but that's not a
             # trivial change.
-            self._filenode = bin(data.rstrip()[-len(nullhex) :])
+            self._filenode = bin(self.data().rstrip()[-len(nullhex) :])
         if copied:
             self._copied = (copied, nullid)
 
     def data(self):
+        if callable(self._data):
+            self._data = self._data()
         return self._data
 
     def remove(self, ignoremissing=False):
@@ -3172,7 +3175,7 @@ class memfilectx(committablefilectx):
 
     def write(self, data: filectx_or_bytes, flags):
         """wraps repo.wwrite"""
-        self._data = filedata(data)
+        self._data = partial(filedata, data)
 
     def filenode(self):
         return self._filenode
