@@ -46,6 +46,10 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
         }
     }
 
+    pub(crate) fn all_keys(&self) -> Vec<Key> {
+        self.pending.keys().cloned().collect()
+    }
+
     pub(crate) fn pending_len(&self) -> usize {
         self.pending.len()
     }

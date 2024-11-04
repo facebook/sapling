@@ -149,6 +149,26 @@ impl TreeStore {
         let found_tx2 = found_tx.clone();
         let mut state = FetchState::new(reqs, attrs, found_tx, fetch_mode);
 
+        if tracing::enabled!(target: "tree_fetches", tracing::Level::TRACE) {
+            let attrs = [
+                attrs.content.then_some("content"),
+                attrs.parents.then_some("parents"),
+                attrs.aux_data.then_some("aux"),
+            ]
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>();
+
+            let mut keys = state.common.all_keys();
+            keys.sort();
+            let keys: Vec<_> = keys
+                .into_iter()
+                .map(|key| format!("{}@{}", key.path, &key.hgid.to_hex()[..8]))
+                .collect();
+
+            tracing::trace!(target: "tree_fetches", ?attrs, ?keys);
+        }
+
         let keys_len = state.common.pending_len();
 
         let indexedlog_cache = self.indexedlog_cache.clone();
