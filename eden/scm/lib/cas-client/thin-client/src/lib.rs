@@ -32,6 +32,8 @@ pub struct ThinCasClient {
     use_streaming_dowloads: bool,
 }
 
+const DEFAULT_SCM_CAS_LOGS_DIR: &str = "scm_cas";
+
 pub fn init() {
     fn construct(config: &dyn Config) -> Result<Option<Arc<dyn CasClient>>> {
         // Kill switch in case something unexpected happens during construction of client.
@@ -71,12 +73,20 @@ impl ThinCasClient {
             if let Some(ref log_dir_path) = log_dir {
                 if !std::path::Path::new(log_dir_path).exists() {
                     if let Err(err) = std::fs::create_dir(log_dir_path) {
-                        tracing::warn!(target: "cas", "failed to create log dir: {}", err);
-                        log_dir = Some(std::env::temp_dir().to_string_lossy().to_string());
+                        tracing::warn!(target: "cas", "failed to create log dir with path {}: {}", log_dir_path, err);
+                        log_dir = None;
                     }
                 }
             } else {
-                log_dir = Some(std::env::temp_dir().to_string_lossy().to_string());
+                let temp_dir = std::env::temp_dir();
+                let log_dir_path = temp_dir.join(DEFAULT_SCM_CAS_LOGS_DIR);
+                log_dir = Some(log_dir_path.to_string_lossy().to_string());
+                if !std::path::Path::new(&log_dir_path).exists() {
+                    if let Err(err) = std::fs::create_dir(&log_dir_path) {
+                        tracing::warn!(target: "cas", "failed to create log dir with path {:?}: {}", log_dir_path, err);
+                        log_dir = None;
+                    }
+                }
             }
         }
 
