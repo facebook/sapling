@@ -162,12 +162,15 @@ class proxyhandler(urlreq.proxyhandler):
         if not self._proxyurl:
             return None
 
+        # "*.foo.com", ".foo.com", and "foo.com" are all equivalent.
         for e in self.no_list:
-            if host == e:
-                return None
-            if e.startswith("*.") and host.endswith(e[2:]):
-                return None
-            if e.startswith(".") and host.endswith(e[1:]):
+            # Normalize e to not start with ".*" or ".".
+            if e.startswith("*."):
+                e = e[2:]
+            elif e.startswith("."):
+                e = e[1:]
+
+            if host == e or host.endswith("." + e):
                 return None
 
         return self._proxyurl
