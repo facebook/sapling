@@ -23,6 +23,7 @@ import subprocess
 import sys
 import traceback
 import typing
+from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple, Type
 
@@ -1190,6 +1191,16 @@ class DoctorCmd(Subcmd):
         if args.current_edenfs_only:
             doctor.run_system_wide_checks = False
         return doctor.cure_what_ails_you()
+
+
+@subcmd("health-report", "Notify critical eden issues")
+class HealthReportCmd(Subcmd):
+    class ErrorCode(Enum):
+        HEALTHY = 0
+
+    def run(self, args: argparse.Namespace) -> int:
+        print_stderr("Warning: `eden health-report` is not yet implemented.")
+        return HealthReportCmd.ErrorCode.HEALTHY.value
 
 
 @subcmd("strace", "Monitor FUSE requests.")
