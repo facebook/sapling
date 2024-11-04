@@ -32,8 +32,6 @@
   TRACE file_fetches: attrs=["content", "header"] keys=["three"]
   TRACE file_fetches: attrs=["content", "header"] keys=["two"]
   TRACE file_fetches: attrs=["content", "header"] keys=["two"]
-  TRACE file_fetches: attrs=["content", "header", "aux"] keys=["two"]
-  TRACE file_fetches: attrs=["history"] keys=["two"]
   TRACE file_fetches: attrs=["history"] keys=["two"]
   TRACE file_fetches: attrs=["content", "header"] keys=["three"]
   TRACE file_fetches: attrs=["content", "header"] keys=["two"]

@@ -64,7 +64,7 @@
   $ hg commit -m a
   ? files fetched over 1 fetches - (? misses, 0.00% hit ratio) over *s (glob) (?)
 
-# local commit where the dirstate is clean -- ensure that we do just one fetch
+# local commit where the dirstate is clean -- ensure that we don't do serial fetches
 # (update to a commit on the server first)
 
   $ hg up 'desc(xy)'
@@ -73,9 +73,6 @@
   $ echo xxxx > x
   $ echo yyyy > y
   $ hg commit -m x --config devel.print-metrics=scmstore.file.fetch.edenapi
-  scmstore.file.fetch.edenapi.hits: 2
-  scmstore.file.fetch.edenapi.keys: 2
-  scmstore.file.fetch.edenapi.requests: 1
 
 # restore state for future tests
 
