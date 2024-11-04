@@ -1546,13 +1546,13 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
             z += 1
             prog.value = (z, f)
 
-        # Flush any pending data to disk before forking workers, so the workers
-        # don't all flush duplicate data.
-        repo.commitpending()
-
         # remove in parallel (must come before resolving path conflicts and
         # getting)
         if rustworkers:
+            # Flush any pending data to disk before forking workers, so the workers
+            # don't all flush duplicate data.
+            repo.commitpending()
+
             # Removing lots of files very quickly is known to cause FSEvents to
             # lose events which forces watchman to recrwawl the entire
             # repository. For very large repository, this can take many
