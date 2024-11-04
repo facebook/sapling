@@ -637,7 +637,7 @@ impl HgIdMutableHistoryStore for TreeStore {
 }
 
 impl RemoteHistoryStore for TreeStore {
-    fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
+    fn prefetch(&self, keys: &[StoreKey], _length: Option<u32>) -> Result<()> {
         self.fetch_batch(
             keys.iter().filter_map(StoreKey::maybe_as_key).cloned(),
             TreeAttributes::PARENTS,

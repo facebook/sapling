@@ -47,20 +47,20 @@ impl SaplingRemoteApiHistoryStore {
 }
 
 impl RemoteHistoryStore for SaplingRemoteApiHistoryStore {
-    fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
+    fn prefetch(&self, keys: &[StoreKey], length: Option<u32>) -> Result<()> {
         let client = self.remote.client.clone();
         let keys = hgid_keys(keys);
 
         if tracing::enabled!(target: "file_fetches", tracing::Level::TRACE) {
             let mut keys: Vec<_> = keys.iter().map(|key| key.path.to_string()).collect();
             keys.sort();
-            tracing::trace!(target: "file_fetches", attrs=?["history"], ?keys);
+            tracing::trace!(target: "file_fetches", attrs=?["history"], ?length, ?keys);
         }
 
         let response = async move {
             let prog = ProgressBar::new_adhoc("Downloading file history over HTTP", 0, "entries");
 
-            let mut response = client.history(keys, None).await?;
+            let mut response = client.history(keys, length).await?;
             while let Some(entry) = response.entries.try_next().await? {
                 self.store.add_entry(&entry)?;
                 prog.increase_position(1);
@@ -75,7 +75,7 @@ impl RemoteHistoryStore for SaplingRemoteApiHistoryStore {
 
 impl HgIdHistoryStore for SaplingRemoteApiHistoryStore {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
-        self.prefetch(&[StoreKey::hgid(key.clone())])?;
+        self.prefetch(&[StoreKey::hgid(key.clone())], Some(1))?;
         self.store.get_node_info(key)
     }
 

@@ -407,6 +407,9 @@ class remotefilelog:
         while missing:
             curname, curnode = missing.pop()
             try:
+                # Prefetch full history since we are walking it.
+                self.repo.fileslog.metadatastore.prefetch([(curname, curnode)])
+
                 ancestors.update(
                     {
                         curnode: self.repo.fileslog.metadatastore.getnodeinfo(

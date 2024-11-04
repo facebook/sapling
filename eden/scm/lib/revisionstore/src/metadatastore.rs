@@ -94,13 +94,13 @@ impl HgIdHistoryStore for MetadataStore {
 }
 
 impl RemoteHistoryStore for MetadataStore {
-    fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
+    fn prefetch(&self, keys: &[StoreKey], length: Option<u32>) -> Result<()> {
         if let Some(remote_store) = self.remote_store.as_ref() {
             let missing = self.get_missing(keys)?;
             if missing == vec![] {
                 Ok(())
             } else {
-                remote_store.prefetch(&missing)
+                remote_store.prefetch(&missing, length)
             }
         } else {
             // There is no remote store, let's pretend everything is fine.

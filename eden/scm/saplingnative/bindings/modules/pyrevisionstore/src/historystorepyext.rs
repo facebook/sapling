@@ -66,7 +66,7 @@ pub trait HgIdMutableHistoryStorePyExt: HgIdHistoryStorePyExt {
 }
 
 pub trait RemoteHistoryStorePyExt: RemoteHistoryStore {
-    fn prefetch_py(&self, py: Python, keys: PyList) -> PyResult<PyObject>;
+    fn prefetch_py(&self, py: Python, keys: PyList, limit: Option<u32>) -> PyResult<PyObject>;
 }
 
 impl<T: HgIdHistoryStore + ?Sized> HgIdHistoryStorePyExt for T {
@@ -241,12 +241,13 @@ impl<T: HgIdMutableHistoryStore + ?Sized> HgIdMutableHistoryStorePyExt for T {
 }
 
 impl<T: RemoteHistoryStore + ?Sized> RemoteHistoryStorePyExt for T {
-    fn prefetch_py(&self, py: Python, keys: PyList) -> PyResult<PyObject> {
+    fn prefetch_py(&self, py: Python, keys: PyList, length: Option<u32>) -> PyResult<PyObject> {
         let keys = keys
             .iter(py)
             .map(|tuple| Ok(StoreKey::from(from_tuple_to_key(py, &tuple)?)))
             .collect::<PyResult<Vec<StoreKey>>>()?;
-        py.allow_threads(|| self.prefetch(&keys)).map_pyerr(py)?;
+        py.allow_threads(|| self.prefetch(&keys, length))
+            .map_pyerr(py)?;
         Ok(Python::None(py))
     }
 }

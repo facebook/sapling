@@ -173,7 +173,7 @@ struct FakeRemoteHistoryStore {
 }
 
 impl RemoteHistoryStore for FakeRemoteHistoryStore {
-    fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
+    fn prefetch(&self, keys: &[StoreKey], _length: Option<u32>) -> Result<()> {
         for k in keys {
             match k {
                 StoreKey::HgId(k) => self
@@ -189,7 +189,7 @@ impl RemoteHistoryStore for FakeRemoteHistoryStore {
 
 impl HgIdHistoryStore for FakeRemoteHistoryStore {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
-        match self.prefetch(&[StoreKey::hgid(key.clone())]) {
+        match self.prefetch(&[StoreKey::hgid(key.clone())], Some(1)) {
             Err(_) => Ok(None),
             Ok(()) => self.store.get_node_info(key),
         }
