@@ -44,32 +44,32 @@ enum Side {
 /// side of the diff, or it may be a pair of directories (with the same
 /// path) whose content is different on either side of the diff.
 #[derive(Debug, Clone, Eq, PartialEq)]
-enum DiffItem {
+enum DiffWork {
     // bool is whether this diff was the result of a path conflict
     Single(DirLink, Side, bool),
     Changed(DirLink, DirLink),
 }
 
-impl DiffItem {
+impl DiffWork {
     fn process(
         self,
-        fetcher: &mut Sender<DiffItem>,
+        fetcher: &mut Sender<DiffWork>,
         store: &InnerStore,
         matcher: &dyn Matcher,
         pending: &mut u64,
     ) -> Result<Vec<DiffEntry>> {
         match self {
-            DiffItem::Single(dir, side, path_conflict) => {
+            DiffWork::Single(dir, side, path_conflict) => {
                 diff_single(dir, fetcher, side, path_conflict, store, matcher, pending)
             }
-            DiffItem::Changed(left, right) => diff(left, right, fetcher, store, matcher, pending),
+            DiffWork::Changed(left, right) => diff(left, right, fetcher, store, matcher, pending),
         }
     }
 
     fn path(&self) -> &RepoPath {
         match self {
-            DiffItem::Single(d, _, _) => &d.path,
-            DiffItem::Changed(d, _) => &d.path,
+            DiffWork::Single(d, _, _) => &d.path,
+            DiffWork::Changed(d, _) => &d.path,
         }
     }
 }
@@ -90,8 +90,8 @@ pub struct Diff<'a> {
     progress_bar: ActiveProgressBar,
     #[allow(dead_code)]
     fetch_thread: Option<JoinHandle<()>>,
-    sender: Option<Sender<DiffItem>>,
-    receiver: Option<Receiver<DiffItem>>,
+    sender: Option<Sender<DiffWork>>,
+    receiver: Option<Receiver<DiffWork>>,
     pending: u64,
 }
 
@@ -115,7 +115,7 @@ impl<'a> Diff<'a> {
         // Don't even attempt to perform a diff if these trees are the same.
         if lroot.hgid() != rroot.hgid() || lroot.hgid().is_none() {
             pending += 1;
-            send_prefetch.send(DiffItem::Changed(lroot, rroot))?;
+            send_prefetch.send(DiffWork::Changed(lroot, rroot))?;
         }
 
         Ok(Diff {
@@ -164,7 +164,7 @@ impl<'a> Diff<'a> {
     }
 }
 
-fn prefetch_thread(receiver: Receiver<DiffItem>, sender: Sender<DiffItem>, store: InnerStore) {
+fn prefetch_thread(receiver: Receiver<DiffWork>, sender: Sender<DiffWork>, store: InnerStore) {
     let limit = 100000;
     let timeout = Duration::from_millis(1);
     let mut received = Vec::with_capacity(limit);
@@ -194,13 +194,13 @@ fn prefetch_thread(receiver: Receiver<DiffItem>, sender: Sender<DiffItem>, store
         let mut keys = Vec::with_capacity(received.len());
         for item in received.iter() {
             match item {
-                DiffItem::Single(dir, side, _) => {
+                DiffWork::Single(dir, side, _) => {
                     match side {
                         Side::Left => dir.key().map(|key| keys.push(key)),
                         Side::Right => dir.key().map(|key| keys.push(key)),
                     };
                 }
-                DiffItem::Changed(left, right) => {
+                DiffWork::Changed(left, right) => {
                     if let Some(key) = left.key() {
                         keys.push(key)
                     }
@@ -262,7 +262,7 @@ impl<'a> Iterator for Diff<'a> {
 /// adds any subdirectories to the next layer to be processed.
 fn diff_single(
     dir: DirLink,
-    fetcher: &mut Sender<DiffItem>,
+    fetcher: &mut Sender<DiffWork>,
     side: Side,
     path_conflict: bool,
     store: &InnerStore,
@@ -274,7 +274,7 @@ fn diff_single(
     for d in dirs.into_iter() {
         if matcher.matches_directory(&d.path)? != DirectoryMatch::Nothing {
             *pending += 1;
-            fetcher.send(DiffItem::Single(d, side, path_conflict))?;
+            fetcher.send(DiffWork::Single(d, side, path_conflict))?;
         }
     }
     let mut entries = Vec::new();
@@ -302,21 +302,15 @@ fn diff_single(
 fn diff(
     left: DirLink,
     right: DirLink,
-    fetcher: &mut Sender<DiffItem>,
+    fetcher: &mut Sender<DiffWork>,
     store: &InnerStore,
     matcher: &dyn Matcher,
     pending: &mut u64,
 ) -> Result<Vec<DiffEntry>> {
     let mut file_diffs: Vec<DiffEntry> = Vec::new();
 
-    let mut self_modified: bool = false;
-
     let mut add_diffs = |l, r| -> Result<()> {
-        let (file_diff, dir_diff, modified) = diff_links(&left.path, l, r);
-
-        if modified {
-            self_modified = true;
-        }
+        let (file_diff, dir_diff) = diff_links(&left.path, l, r);
 
         if let Some(file_diff) = file_diff {
             if matcher.matches_file(&file_diff.path)? {
@@ -358,14 +352,14 @@ fn diff(
     Ok(file_diffs)
 }
 
-// Diff two items (can be directory, file, or None). If both are present, they must have the same name.
-// Returns a file diff, directory diff, and whether the parent dir was modified (i.e. entry added or removed).
-// There can be no diffs returned, just a file diff, just a directory diff, or both.
+// Diff two items (can be directory, file, or None). If both are present, they must have
+// the same name. Returns a file diff and directory diff. There can be no diffs returned,
+// just a file diff, just a directory diff, or both.
 fn diff_links(
     parent_path: &RepoPath,
     left: Option<(&PathComponentBuf, &Link)>,
     right: Option<(&PathComponentBuf, &Link)>,
-) -> (Option<DiffEntry>, Option<DiffItem>, bool) {
+) -> (Option<DiffEntry>, Option<DiffWork>) {
     let name = match (left, right) {
         (Some((lname, _)), Some((rname, _))) => {
             assert_eq!(lname, rname);
@@ -373,7 +367,7 @@ fn diff_links(
         }
         (Some((lname, _)), None) => lname,
         (None, Some((rname, _))) => rname,
-        (None, None) => return (None, None, false),
+        (None, None) => return (None, None),
     };
 
     let left = left.map(|l| l.1);
@@ -386,8 +380,6 @@ fn diff_links(
     };
 
     let (mut dir_diff, mut file_diff) = (None, None);
-
-    let mut modified: bool = false;
 
     match (left.map(|l| l.as_ref()), right.map(|r| r.as_ref())) {
         // Both are files - compare file metadata (including id).
@@ -407,7 +399,7 @@ fn diff_links(
             }
 
             if !equal {
-                dir_diff = Some(DiffItem::Changed(
+                dir_diff = Some(DiffWork::Changed(
                     DirLink::from_link(left.unwrap(), path()).unwrap(),
                     DirLink::from_link(right.unwrap(), path()).unwrap(),
                 ));
@@ -421,8 +413,6 @@ fn diff_links(
                         return;
                     }
 
-                    modified = true;
-
                     file_diff = Some(DiffEntry::new(
                         path(),
                         if side == Side::Left {
@@ -433,15 +423,13 @@ fn diff_links(
                     ));
                 }
                 Durable(_) | Ephemeral(_) => {
-                    modified = true;
-
                     let dir_link = DirLink::from_link(link, path())
                         .expect("non-leaf node must be a valid directory");
 
                     // If we don't have a path conflict here, we don't want to mark
                     // unknown files under us as conflicts.
                     let is_conflict = side != Side::Left || right.is_some();
-                    dir_diff = Some(DiffItem::Single(dir_link, side, is_conflict));
+                    dir_diff = Some(DiffWork::Single(dir_link, side, is_conflict));
                 }
             };
 
@@ -455,7 +443,7 @@ fn diff_links(
         }
     };
 
-    (file_diff, dir_diff, modified)
+    (file_diff, dir_diff)
 }
 
 #[cfg(test)]
@@ -541,12 +529,12 @@ mod tests {
         let dummy = Link::ephemeral();
         let next = vec![receiver.recv().unwrap(), receiver.recv().unwrap()];
         let expected_next = vec![
-            DiffItem::Single(
+            DiffWork::Single(
                 DirLink::from_link(&dummy, repo_path_buf("b")).unwrap(),
                 Side::Left,
                 false,
             ),
-            DiffItem::Single(
+            DiffWork::Single(
                 DirLink::from_link(&dummy, repo_path_buf("d")).unwrap(),
                 Side::Left,
                 false,
