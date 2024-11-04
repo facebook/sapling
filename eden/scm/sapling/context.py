@@ -1659,7 +1659,16 @@ class committablectx(basectx):
                     fctx = self[f]
                     if fctx.filenode() is not None:
                         keys.append((fctx.path(), fctx.filenode()))
-                repo.fileslog.metadatastore.prefetch(keys)
+                if p2.node() == nullid:
+                    # Not merging - only fetch direct file history so we avoid per-file
+                    # fetches for `flog.parents(node)` in _filecommit.
+                    length = 1
+                else:
+                    # If we are merging, _filecommit has some logic with flog history, so
+                    # let's fetch the files' full history to avoid serial history
+                    # fetching.
+                    length = None
+                repo.fileslog.metadatastore.prefetch(keys, length=length)
         for f in progress.each(ui, added, _("committing"), _("files")):
             ui.note(f + "\n")
             try:
