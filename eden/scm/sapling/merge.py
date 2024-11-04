@@ -759,6 +759,7 @@ def _filesindirs(repo, manifest, dirs):
             yield f, dir
 
 
+@perftrace.tracefunc("Check Path Conflicts")
 def checkpathconflicts(repo, wctx, mctx, actions):
     """
     Check if any actions introduce path conflicts in the repository, updating

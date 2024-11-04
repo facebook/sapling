@@ -1004,6 +1004,7 @@ class rebaseruntime:
         ):
             bookmarks.activate(repo, self.activebookmark)
 
+    @perftrace.tracefunc("Rebase Prefetch")
     def _prefetch(self):
         repo = self.repo
 
