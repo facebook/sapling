@@ -7,6 +7,8 @@
 
 //! edenfsctl remove
 use std::fmt;
+use std::fs;
+use std::io::ErrorKind;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -214,14 +216,48 @@ impl ActiveEdenMount {
 struct InactiveEdenMount {}
 impl InactiveEdenMount {
     async fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
+        self.remove_client_config_dir(context)?;
+        self.remove_client_config_entry(context)?;
+
+        Ok(Some(State::CleanUp(CleanUp {})))
+    }
+
+    fn remove_client_config_dir(&self, context: &RemoveContext) -> Result<()> {
+        let instance = EdenFsInstance::global();
+
+        match fs::remove_dir_all(instance.client_dir_for_mount_point(&context.canonical_path)?) {
+            Ok(_) => Ok(()),
+            Err(e) if e.kind() == ErrorKind::NotFound => Ok(()),
+            Err(e) => Err(anyhow!(
+                "Failed to remove client config directory for {}: {e}",
+                context
+            )),
+        }
+    }
+
+    fn remove_client_config_entry(&self, context: &RemoveContext) -> Result<()> {
+        let instance = EdenFsInstance::global();
+
+        match instance.remove_path_from_directory_map(&context.canonical_path) {
+            Ok(_) => Ok(()),
+            Err(e) => Err(anyhow!(
+                "Failed to remove {} from config json file: {e}",
+                context
+            )),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct CleanUp {}
+impl CleanUp {
+    async fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
         if context.skip_prompt
             || Confirm::new()
-                .with_prompt("InactiveEdenMount State is not implemented yet... proceed?")
+                .with_prompt("CleanUp State is not implemented yet... proceed?")
                 .interact()?
         {
-            return Err(anyhow!(
-                "Rust remove(InactiveEdenMount) is not implemented!"
-            ));
+            return Err(anyhow!("Rust remove(CleanUp) is not implemented!"));
         }
         Ok(None)
     }
@@ -237,7 +273,7 @@ enum State {
     // // removal states (harmful operations)
     ActiveEdenMount(ActiveEdenMount),
     InactiveEdenMount(InactiveEdenMount),
-    // CleanUp,
+    CleanUp(CleanUp),
     RegFile(RegFile),
     // Unknown,
 }
@@ -252,6 +288,7 @@ impl fmt::Display for State {
                 State::Determination(_) => "Determination",
                 State::RegFile(_) => "RegFile",
                 State::ActiveEdenMount(_) => "ActiveEdenMount",
+                State::CleanUp(_) => "CleanUp",
                 State::InactiveEdenMount(_) => "InactiveEdenMount",
             }
         )
@@ -276,6 +313,7 @@ impl State {
             State::RegFile(inner) => inner.next(context).await,
             State::ActiveEdenMount(inner) => inner.next(context).await,
             State::InactiveEdenMount(inner) => inner.next(context).await,
+            State::CleanUp(inner) => inner.next(context).await,
         }
     }
 }

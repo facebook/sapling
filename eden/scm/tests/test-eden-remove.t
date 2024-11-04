@@ -32,7 +32,7 @@ eden remove this directory should also see error about Determination state
 remove wcrepo with eden rust cli should see error about InactiveEdenMount state
 
   $ EDENFSCTL_ONLY_RUST=true eden remove -y $TESTTMP/wcrepo
-  Error: Rust remove(InactiveEdenMount) is not implemented!
+  Error: Rust remove(CleanUp) is not implemented!
   [1]
 
 check content under that repo
@@ -43,6 +43,6 @@ check content under that repo
 check eden mount list to make sure it's removed from the mount table
 
   $ eden list | grep "wcrepo"
-  $TESTTMP/wcrepo (not mounted)
+  [1]
 
 #endif

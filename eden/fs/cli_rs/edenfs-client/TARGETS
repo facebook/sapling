@@ -29,6 +29,7 @@ rust_library(
         "fbsource//third-party/rust:async-recursion",
         "fbsource//third-party/rust:byteorder",
         "fbsource//third-party/rust:dirs",
+        "fbsource//third-party/rust:fs2",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:pathdiff",
         "fbsource//third-party/rust:regex",
