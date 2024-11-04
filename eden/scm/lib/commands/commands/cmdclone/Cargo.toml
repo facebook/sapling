@@ -19,7 +19,6 @@ exchange = { version = "0.1.0", path = "../../../exchange" }
 fail = { version = "0.4", features = ["failpoints"] }
 hgplain = { version = "0.1.0", path = "../../../util/hgplain" }
 identity = { version = "0.1.0", path = "../../../identity" }
-metalog = { version = "0.1.0", path = "../../../metalog" }
 migration = { version = "0.1.0", path = "../../../migration" }
 repo = { version = "0.1.0", path = "../../../repo" }
 repourl = { version = "0.1.0", path = "../../../repo/url" }
