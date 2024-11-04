@@ -23,6 +23,7 @@ use futures::TryFutureExt;
 use futures::TryStreamExt;
 use maplit::hashmap;
 use maplit::hashset;
+use mononoke_types::content_manifest::ContentManifestFile;
 use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
@@ -400,6 +401,12 @@ impl<FileId: Hash + Eq> ManifestLeaf for (FileType, FileId) {
 impl ManifestLeaf for FsnodeFile {
     fn reuses(&self, other: &Self) -> bool {
         self.content_id() == other.content_id()
+    }
+}
+
+impl ManifestLeaf for ContentManifestFile {
+    fn reuses(&self, other: &Self) -> bool {
+        self.content_id == other.content_id
     }
 }
 
