@@ -25,6 +25,7 @@ from bindings import (
     worker as rustworker,
     workingcopy as rustworkingcopy,
 )
+
 from sapling import tracing
 
 from . import (
@@ -1376,6 +1377,11 @@ def updateone(repo, fctxfunc, wctx, f, f2, flags, backup=False, backgroundclose=
         return 0
     wctx[f].clearunknown()
     wctx[f].write(fctx, flags, backgroundclose=backgroundclose)
+
+    if wctx.isinmemory():
+        # The "size" return value is only used for logging "Disk Writes" - not imporant
+        # for in-memory work.
+        return 0
 
     if fctx.flags() == "m":
         # size() doesn't seem to work for submodules
