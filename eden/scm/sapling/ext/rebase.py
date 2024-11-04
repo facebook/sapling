@@ -1435,7 +1435,12 @@ def _origrebase(ui, repo, rbsrt, **opts):
         dsguard = None
 
         singletr = ui.configbool("rebase", "singletransaction")
-        if singletr:
+        # Always use single transaction mode during in-memory rebase. Single transaction
+        # mode is a lot faster, and in-memory rebase doesn't really benefit from
+        # per-commit transaction because it is all-or-nothing in nature up until the first
+        # commit with conflicts (at which time we will switch out of single transaction
+        # mode).
+        if singletr or rbsrt.inmemory:
             tr = repo.transaction("rebase")
 
         # If `rebase.singletransaction` is enabled, wrap the entire operation in
@@ -1447,7 +1452,16 @@ def _origrebase(ui, repo, rbsrt, **opts):
             if singletr and not rbsrt.inmemory:
                 dsguard = dirstateguard.dirstateguard(repo, "rebase")
             with util.acceptintervention(dsguard):
-                rbsrt._performrebase(tr)
+                try:
+                    rbsrt._performrebase(tr)
+                except error.AbortMergeToolError:
+                    # Above we run all in-memory rebases in single transaction mode.
+                    # Emulate multi-transaction mode by committing transaction on
+                    # --noconflict error (this saves commits that were rebased before we
+                    # hit a conflict).
+                    if not singletr:
+                        tr.close()
+                    raise
 
         rbsrt._finishrebase()
 
