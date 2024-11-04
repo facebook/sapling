@@ -60,6 +60,8 @@ use edenapi_types::LandStackResponse;
 use edenapi_types::ReferencesDataResponse;
 use edenapi_types::RenameWorkspaceRequest;
 use edenapi_types::RenameWorkspaceResponse;
+use edenapi_types::RollbackWorkspaceRequest;
+use edenapi_types::RollbackWorkspaceResponse;
 use edenapi_types::SetBookmarkResponse;
 use edenapi_types::SnapshotRawData;
 use edenapi_types::SuffixQueryResponse;
@@ -615,6 +617,10 @@ py_class!(pub class client |py| {
     -> PyResult<Serde<HistoricalVersionsResponse>>
     {
         self.inner(py).as_ref().cloud_historical_versions_py(data, py)
+    }
+
+    def cloudrollbackworkspace(&self, data: Serde<RollbackWorkspaceRequest>) -> PyResult<Serde<RollbackWorkspaceResponse>> {
+        self.inner(py).as_ref().cloud_rollback_workspace_py(data, py)
     }
 });
 

@@ -59,6 +59,8 @@ use edenapi_types::LookupResult;
 use edenapi_types::ReferencesDataResponse;
 use edenapi_types::RenameWorkspaceRequest;
 use edenapi_types::RenameWorkspaceResponse;
+use edenapi_types::RollbackWorkspaceRequest;
+use edenapi_types::RollbackWorkspaceResponse;
 use edenapi_types::SaplingRemoteApiServerError;
 use edenapi_types::SetBookmarkResponse;
 use edenapi_types::TreeAttributes;
@@ -784,6 +786,18 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
     ) -> PyResult<Serde<HistoricalVersionsResponse>> {
         let responses = py
             .allow_threads(|| block_unless_interrupted(self.cloud_historical_versions(data.0)))
+            .map_pyerr(py)?
+            .map_pyerr(py)?;
+        Ok(Serde(responses))
+    }
+
+    fn cloud_rollback_workspace_py(
+        &self,
+        data: Serde<RollbackWorkspaceRequest>,
+        py: Python,
+    ) -> PyResult<Serde<RollbackWorkspaceResponse>> {
+        let responses = py
+            .allow_threads(|| block_unless_interrupted(self.cloud_rollback_workspace(data.0)))
             .map_pyerr(py)?
             .map_pyerr(py)?;
         Ok(Serde(responses))

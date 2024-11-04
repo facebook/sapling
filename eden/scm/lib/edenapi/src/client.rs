@@ -83,6 +83,8 @@ use edenapi_types::PushVar;
 use edenapi_types::ReferencesDataResponse;
 use edenapi_types::RenameWorkspaceRequest;
 use edenapi_types::RenameWorkspaceResponse;
+use edenapi_types::RollbackWorkspaceRequest;
+use edenapi_types::RollbackWorkspaceResponse;
 use edenapi_types::SaplingRemoteApiServerError;
 use edenapi_types::ServerError;
 use edenapi_types::SetBookmarkRequest;
@@ -162,6 +164,7 @@ mod paths {
     pub const CLOUD_HISTORICAL_VERSIONS: &str = "cloud/historical_versions";
     pub const CLOUD_REFERENCES: &str = "cloud/references";
     pub const CLOUD_RENAME_WORKSPACE: &str = "cloud/rename_workspace";
+    pub const CLOUD_ROLLBACK_WORKSPACE: &str = "cloud/rollback_workspace";
     pub const CLOUD_SHARE_WORKSPACE: &str = "cloud/share_workspace";
     pub const CLOUD_SMARTLOG_BY_VERSION: &str = "cloud/smartlog_by_version";
     pub const CLOUD_SMARTLOG: &str = "cloud/smartlog";
@@ -1267,6 +1270,25 @@ impl Client {
         self.fetch_single::<HistoricalVersionsResponse>(request)
             .await
     }
+
+    async fn cloud_rollback_workspace_attempt(
+        &self,
+        data: RollbackWorkspaceRequest,
+    ) -> Result<RollbackWorkspaceResponse, SaplingRemoteApiError> {
+        tracing::info!(
+            "Requesting cloud rollback workspace for the workspace '{}' in the repo '{}' ",
+            data.workspace,
+            data.reponame
+        );
+        let url = self.build_url(paths::CLOUD_ROLLBACK_WORKSPACE)?;
+        let request = self
+            .configure_request(self.inner.client.post(url))?
+            .cbor(&data.to_wire())
+            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
+
+        self.fetch_single::<RollbackWorkspaceResponse>(request)
+            .await
+    }
 }
 
 #[async_trait]
@@ -1906,6 +1928,14 @@ impl SaplingRemoteApi for Client {
         data: HistoricalVersionsParams,
     ) -> Result<HistoricalVersionsResponse, SaplingRemoteApiError> {
         self.with_retry(|this| this.cloud_historical_versions_attempt(data.clone()).boxed())
+            .await
+    }
+
+    async fn cloud_rollback_workspace(
+        &self,
+        data: RollbackWorkspaceRequest,
+    ) -> Result<RollbackWorkspaceResponse, SaplingRemoteApiError> {
+        self.with_retry(|this| this.cloud_rollback_workspace_attempt(data.clone()).boxed())
             .await
     }
 

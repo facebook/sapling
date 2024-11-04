@@ -50,6 +50,8 @@ use edenapi_types::LookupResponse;
 use edenapi_types::ReferencesDataResponse;
 use edenapi_types::RenameWorkspaceRequest;
 use edenapi_types::RenameWorkspaceResponse;
+use edenapi_types::RollbackWorkspaceRequest;
+use edenapi_types::RollbackWorkspaceResponse;
 use edenapi_types::SaplingRemoteApiServerError;
 use edenapi_types::SetBookmarkResponse;
 use edenapi_types::SuffixQueryResponse;
@@ -440,6 +442,14 @@ pub trait SaplingRemoteApi: Send + Sync + 'static {
         &self,
         data: HistoricalVersionsParams,
     ) -> Result<HistoricalVersionsResponse, SaplingRemoteApiError> {
+        let _ = data;
+        Err(SaplingRemoteApiError::NotSupported)
+    }
+
+    async fn cloud_rollback_workspace(
+        &self,
+        data: RollbackWorkspaceRequest,
+    ) -> Result<RollbackWorkspaceResponse, SaplingRemoteApiError> {
         let _ = data;
         Err(SaplingRemoteApiError::NotSupported)
     }
