@@ -71,6 +71,4 @@ FIXME Make sure we batch fetch content for files needing merge:
   TRACE file_fetches: attrs=["content", "header"] keys=["foo"]
   TRACE file_fetches: attrs=["history"] length=Some(1) keys=["foo"]
   TRACE file_fetches: attrs=["history"] length=Some(1) keys=["bar"]
-  TRACE file_fetches: attrs=["content", "header"] keys=["bar"]
   TRACE file_fetches: attrs=["history"] length=Some(1) keys=["foo"]
-  TRACE file_fetches: attrs=["content", "header"] keys=["foo"]
