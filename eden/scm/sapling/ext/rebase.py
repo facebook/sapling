@@ -824,7 +824,10 @@ class rebaseruntime:
         if not self.collapsef:
             merging = p2 != nullrev
             editform = cmdutil.mergeeditform(merging, "rebase")
-            editor = cmdutil.getcommiteditor(editform=editform, **opts)
+            if opts.get("edit"):
+                editor = cmdutil.getcommiteditor(editform=editform, **opts)
+            else:
+                editor = None
             if self.wctx.isinmemory():
                 newnode = concludememorynode(
                     repo,
