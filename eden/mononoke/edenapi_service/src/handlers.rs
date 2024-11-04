@@ -104,6 +104,7 @@ pub enum SaplingRemoteApiMethod {
     CloudUpdateReferences,
     CloudWorkspace,
     CloudWorkspaces,
+    CloudRollbackWorkspace,
     CommitGraphSegments,
     CommitGraphV2,
     CommitHashLookup,
@@ -147,6 +148,7 @@ impl fmt::Display for SaplingRemoteApiMethod {
             Self::CloudUpdateReferences => "cloud_update_references",
             Self::CloudWorkspace => "cloud_workspace",
             Self::CloudWorkspaces => "cloud_workspaces",
+            Self::CloudRollbackWorkspace => "cloud_rollback_workspace",
             Self::CommitGraphSegments => "commit_graph_segments",
             Self::CommitGraphV2 => "commit_graph_v2",
             Self::CommitHashLookup => "commit_hash_lookup",
@@ -471,6 +473,7 @@ pub fn build_router<R: Send + Sync + Clone + 'static>(ctx: ServerContext<R>) -> 
         Handlers::setup::<commit_cloud::CommitCloudHistoricalVersions>(route);
         Handlers::setup::<commit_cloud::CommitCloudReferences>(route);
         Handlers::setup::<commit_cloud::CommitCloudRenameWorkspace>(route);
+        Handlers::setup::<commit_cloud::CommitCloudRollbackWorkspace>(route);
         Handlers::setup::<commit_cloud::CommitCloudShareWorkspace>(route);
         Handlers::setup::<commit_cloud::CommitCloudSmartlog>(route);
         Handlers::setup::<commit_cloud::CommitCloudSmartlogByVersion>(route);

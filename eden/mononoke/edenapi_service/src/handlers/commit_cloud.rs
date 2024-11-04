@@ -24,6 +24,8 @@ use edenapi_types::ReferencesData;
 use edenapi_types::ReferencesDataResponse;
 use edenapi_types::RenameWorkspaceRequest;
 use edenapi_types::RenameWorkspaceResponse;
+use edenapi_types::RollbackWorkspaceRequest;
+use edenapi_types::RollbackWorkspaceResponse;
 use edenapi_types::ServerError;
 use edenapi_types::SmartlogData;
 use edenapi_types::SmartlogDataResponse;
@@ -59,6 +61,8 @@ pub struct CommitCloudShareWorkspace;
 pub struct CommitCloudRenameWorkspace;
 pub struct CommitCloudUpdateArchive;
 pub struct CommitCloudHistoricalVersions;
+
+pub struct CommitCloudRollbackWorkspace;
 
 #[async_trait]
 impl SaplingRemoteApiHandler for CommitCloudWorkspace {
@@ -450,5 +454,36 @@ async fn historical_versions<R: MononokeRepo>(
 
     Ok(HistoricalVersionsResponse {
         data: res.map_err(ServerError::from),
+    })
+}
+
+#[async_trait]
+impl SaplingRemoteApiHandler for CommitCloudRollbackWorkspace {
+    type Request = RollbackWorkspaceRequest;
+    type Response = RollbackWorkspaceResponse;
+
+    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudRollbackWorkspace;
+    const ENDPOINT: &'static str = "/cloud/rollback_workspace";
+
+    async fn handler(
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
+        request: Self::Request,
+    ) -> HandlerResult<'async_trait, Self::Response> {
+        let repo = ectx.repo();
+        let res = rollback_workspace(request, repo).boxed();
+        Ok(stream::once(res).boxed())
+    }
+}
+
+async fn rollback_workspace<R: MononokeRepo>(
+    request: RollbackWorkspaceRequest,
+    repo: HgRepoContext<R>,
+) -> anyhow::Result<RollbackWorkspaceResponse, Error> {
+    Ok(RollbackWorkspaceResponse {
+        data: repo
+            .cloud_rollback_workspace(&request.workspace, &request.reponame, request.version)
+            .await
+            .map_err(ServerError::from),
     })
 }

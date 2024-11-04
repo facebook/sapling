@@ -29,6 +29,7 @@ define_stats! {
     cloud_historical_versions_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     cloud_references_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     cloud_rename_workspace_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
+    cloud_rollback_workspace_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     cloud_share_workspace_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 75; P 95; P 99),
     cloud_smartlog_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 75; P 95; P 99),
     cloud_smartlog_by_version: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 75; P 95; P 99),
@@ -100,6 +101,9 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
                 }
                 CloudReferences => STATS::cloud_references_duration_ms.add_value(dur_ms),
                 CloudRenameWorkspace => STATS::cloud_rename_workspace_duration_ms.add_value(dur_ms),
+                CloudRollbackWorkspace => {
+                    STATS::cloud_rollback_workspace_duration_ms.add_value(dur_ms)
+                }
                 CloudShareWorkspace => STATS::cloud_share_workspace_duration_ms.add_value(dur_ms),
                 CloudSmartlog => STATS::cloud_smartlog_duration_ms.add_value(dur_ms),
                 CloudSmartlogByVersion => STATS::cloud_smartlog_by_version.add_value(dur_ms),

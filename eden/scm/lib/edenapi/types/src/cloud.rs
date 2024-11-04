@@ -380,3 +380,24 @@ pub struct HistoricalVersionsResponse {
     #[no_default]
     pub data: Result<HistoricalVersionsData, ServerError>,
 }
+
+#[auto_wire]
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct RollbackWorkspaceRequest {
+    #[id(0)]
+    pub workspace: String,
+    #[id(1)]
+    pub reponame: String,
+    #[id(2)]
+    pub version: u64,
+}
+
+#[auto_wire]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct RollbackWorkspaceResponse {
+    #[id(0)]
+    #[no_default]
+    pub data: Result<String, ServerError>,
+}

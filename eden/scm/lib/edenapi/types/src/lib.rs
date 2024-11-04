@@ -92,6 +92,8 @@ pub use crate::cloud::ReferencesData;
 pub use crate::cloud::ReferencesDataResponse;
 pub use crate::cloud::RenameWorkspaceRequest;
 pub use crate::cloud::RenameWorkspaceResponse;
+pub use crate::cloud::RollbackWorkspaceRequest;
+pub use crate::cloud::RollbackWorkspaceResponse;
 pub use crate::cloud::SmartlogData;
 pub use crate::cloud::SmartlogDataResponse;
 pub use crate::cloud::SmartlogNode;
