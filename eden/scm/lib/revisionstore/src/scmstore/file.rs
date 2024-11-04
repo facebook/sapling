@@ -688,8 +688,6 @@ impl HgIdMutableDeltaStore for FileStore {
     }
 }
 
-// TODO(meyer): Content addressing not supported at all for trees. I could look for HgIds present here and fetch with
-// that if available, but I feel like there's probably something wrong if this is called for trees.
 impl ContentDataStore for FileStore {
     fn blob(&self, key: StoreKey) -> Result<StoreResult<Bytes>> {
         self.metrics.write().api.contentdatastore_blob.call(0);
@@ -710,22 +708,21 @@ impl ContentDataStore for FileStore {
 
     fn metadata(&self, key: StoreKey) -> Result<StoreResult<ContentMetadata>> {
         self.metrics.write().api.contentdatastore_metadata.call(0);
-        Ok(
-            match self
-                .fetch(
-                    std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()),
-                    FileAttributes::CONTENT,
-                    FetchMode::LocalOnly,
-                )
-                .single()?
-            {
-                Some(StoreFile {
-                    content: Some(LazyFile::Lfs(_blob, pointer, _format)),
-                    ..
-                }) => StoreResult::Found(pointer.into()),
-                Some(_) => StoreResult::NotFound(key),
-                None => StoreResult::NotFound(key),
-            },
-        )
+
+        if let Some(cache) = &self.lfs_cache {
+            let result = cache.metadata(key.clone())?;
+            if matches!(result, StoreResult::Found(_)) {
+                return Ok(result);
+            }
+        }
+
+        if let Some(local) = &self.lfs_local {
+            let result = local.metadata(key.clone())?;
+            if matches!(result, StoreResult::Found(_)) {
+                return Ok(result);
+            }
+        }
+
+        Ok(StoreResult::NotFound(key))
     }
 }
