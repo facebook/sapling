@@ -322,8 +322,7 @@ class remotefilelog:
         if len(node) != 20:
             raise error.LookupError(node, self.filename, _("invalid revision input"))
 
-        store = self.repo.fileslog.filestore
-        rawtext = store.get(self.filename, node)
+        rawtext = self.repo.fileslog.get(self.filename, node)
         if raw:
             return rawtext
         if rawtext == constants.REDACTED_CONTENT:
@@ -522,6 +521,7 @@ class remotefileslog(filelog.fileslog):
     def __init__(self, repo):
         super(remotefileslog, self).__init__(repo)
         self.makeruststore(repo)
+        self._content_cache = util.lrucachedict(100)
 
     def makeruststore(self, repo):
         mask = os.umask(0o002)
@@ -575,3 +575,15 @@ class remotefileslog(filelog.fileslog):
             metrics = self.filestore.getmetrics()
             for metric, value in metrics:
                 ui.metrics.gauge(metric, value)
+
+    TEN_MB = 10 * 1024**2
+
+    def get(self, filename, node) -> bytes:
+        data = self._content_cache.get(node, None)
+        if data is not None:
+            return data
+
+        data = self.filestore.get(filename, node)
+        if len(data) < self.TEN_MB:
+            self._content_cache[node] = data
+        return data
