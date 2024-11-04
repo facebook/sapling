@@ -1474,7 +1474,7 @@ def _definedestmap(
     else:
         base = scmutil.revrange(repo, [basef or "."])
         if not base:
-            ui.status(_("empty 'base' revision set - can't compute rebase set\n"))
+            ui.status(_('empty "base" revision set - can\'t compute rebase set\n'))
             return None
 
         # --base does not support multiple destinations
