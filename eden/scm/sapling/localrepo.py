@@ -2607,11 +2607,20 @@ class localrepository:
         if (
             metamatched
             and node is not None
-            # "nodemap" is a remotefilelog detail
             and hasattr(flog, "nodemap")
             and fctx.filelog().parents(node) == (fparent1, fparent2)
         ):
-            if node in flog.nodemap:
+            if (
+                # Assume that if the above `parents(node)` call finds data for node, then
+                # node must already exist in the filelog. For remote entries, parents()
+                # comes from the server, so it should hold. For local entries, we insert
+                # into the "dpack" before "hpack", so I think it also holds.
+                (
+                    self.ui.configbool("experimental", "infer-filenode-available", True)
+                    and "remotefilelog" in self.requirements
+                )
+                or node in flog.nodemap
+            ):
                 changelist.append(fname)
                 self.ui.debug("reusing %s filelog node (exact match)\n" % fname)
                 return node
