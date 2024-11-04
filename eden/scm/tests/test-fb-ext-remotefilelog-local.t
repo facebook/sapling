@@ -72,8 +72,10 @@
   $ clearcache
   $ echo xxxx > x
   $ echo yyyy > y
-  $ hg commit -m x
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
+  $ hg commit -m x --config devel.print-metrics=scmstore.file.fetch.edenapi
+  scmstore.file.fetch.edenapi.hits: 2
+  scmstore.file.fetch.edenapi.keys: 2
+  scmstore.file.fetch.edenapi.requests: 1
 
 # restore state for future tests
 
