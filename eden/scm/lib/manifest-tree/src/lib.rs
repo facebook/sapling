@@ -35,11 +35,13 @@ use manifest::FsNodeMetadata;
 use manifest::List;
 pub use manifest::Manifest;
 use minibytes::Bytes;
+use once_cell::sync::Lazy;
 use once_cell::sync::OnceCell;
 use pathmatcher::Matcher;
 pub use store::Flag;
 use storemodel::SerializationFormat;
 use thiserror::Error;
+use threadpool::ThreadPool;
 use types::HgId;
 pub use types::PathComponent;
 pub use types::PathComponentBuf;
@@ -59,6 +61,9 @@ use crate::link::DurableEntry;
 use crate::link::Ephemeral;
 use crate::link::Leaf;
 use crate::store::InnerStore;
+
+// Shared thread pool for manifest-tree parallelized operations.
+static THREAD_POOL: Lazy<ThreadPool> = Lazy::new(|| ThreadPool::new(10));
 
 /// The Tree implementation of a Manifest dedicates an inner node for each directory in the
 /// repository and a leaf for each file.

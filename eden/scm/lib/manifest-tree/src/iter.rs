@@ -30,6 +30,7 @@ use crate::link::Ephemeral;
 use crate::link::Leaf;
 use crate::link::Link;
 use crate::store::InnerStore;
+use crate::THREAD_POOL;
 
 pub fn bfs_iter<M: 'static + Matcher + Sync + Send>(
     store: InnerStore,
@@ -62,15 +63,15 @@ pub fn bfs_iter<M: 'static + Matcher + Sync + Send>(
         )
         .unwrap();
 
-    const NUM_BFS_WORKERS: usize = 10;
+    let thread_count = THREAD_POOL.max_count();
 
-    for _ in 0..NUM_BFS_WORKERS {
+    for _ in 0..thread_count {
         let worker = worker.clone();
-        std::thread::spawn(move || {
+        THREAD_POOL.execute(move || {
             // If the worker returns an error, that signals we should shutdown
             // the whole operation.
             if worker.run().is_err() {
-                worker.broadcast_shutdown(NUM_BFS_WORKERS);
+                worker.broadcast_shutdown(thread_count);
             }
         });
     }
