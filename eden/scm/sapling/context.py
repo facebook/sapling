@@ -2627,13 +2627,20 @@ class overlayworkingctx(committablectx):
         keys = []
         for path in self._cache.keys():
             cache = self._cache[path]
+            if cache["data"] is None:
+                continue
+
             try:
                 underlying = self._wrappedctx[path]
-                if (
-                    cache["data"] is not None
-                    and underlying.data() == filedata(cache["data"])
-                    and underlying.flags() == cache["flags"]
-                ):
+                fnode, cachenode = underlying.filenode(), cache["filenode"]
+
+                # Do content check using filenodes, if available.
+                if fnode is not None and cachenode is not None:
+                    contents_match = fnode == cachenode
+                else:
+                    contents_match = underlying.data() == filedata(cache["data"])
+
+                if contents_match and underlying.flags() == cache["flags"]:
                     keys.append(path)
             except error.ManifestLookupError:
                 # Path not in the underlying manifest (created).

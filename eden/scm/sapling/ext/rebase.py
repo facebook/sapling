@@ -22,10 +22,10 @@ https://mercurial-scm.org/wiki/RebaseExtension
 from __future__ import absolute_import
 
 import errno
-
 from collections.abc import MutableMapping, MutableSet
 
 from bindings import checkout as nativecheckout
+
 from sapling import (
     bookmarks,
     cmdutil,
@@ -56,7 +56,6 @@ from sapling import (
 from sapling.i18n import _
 from sapling.node import hex, nullid, nullrev, short
 from sapling.utils import subtreeutil
-
 
 release = lock.release
 
@@ -1678,6 +1677,7 @@ def concludememorynode(
             loginfo=loginfo,
             mutinfo=mutinfo,
         )
+
         commitres = repo.commitctx(memctx)
         wctx.clean()  # Might be reused
         return commitres
