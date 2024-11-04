@@ -367,14 +367,6 @@ mod tests {
         ) -> Result<Box<dyn Iterator<Item = Result<manifest::DiffEntry>> + 'a>> {
             unimplemented!()
         }
-
-        fn modified_dirs<'a, M: Matcher>(
-            &'a self,
-            other: &'a Self,
-            matcher: &'a M,
-        ) -> Result<Box<dyn Iterator<Item = Result<manifest::DirDiffEntry>> + 'a>> {
-            unimplemented!()
-        }
     }
 
     /// Compute the status with the given input.

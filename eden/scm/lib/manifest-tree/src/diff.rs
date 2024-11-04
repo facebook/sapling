@@ -16,7 +16,6 @@ use std::time::Duration;
 use anyhow::Result;
 use manifest::DiffEntry;
 use manifest::DiffType;
-use manifest::DirDiffEntry;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::Matcher;
 use progress_model::ActiveProgressBar;
@@ -58,22 +57,12 @@ impl DiffItem {
         store: &InnerStore,
         matcher: &dyn Matcher,
         pending: &mut u64,
-        output_dirs: Option<&mut VecDeque<DirDiffEntry>>,
     ) -> Result<Vec<DiffEntry>> {
         match self {
-            DiffItem::Single(dir, side, path_conflict) => diff_single(
-                dir,
-                fetcher,
-                side,
-                path_conflict,
-                store,
-                matcher,
-                pending,
-                output_dirs,
-            ),
-            DiffItem::Changed(left, right) => {
-                diff(left, right, fetcher, store, matcher, pending, output_dirs)
+            DiffItem::Single(dir, side, path_conflict) => {
+                diff_single(dir, fetcher, side, path_conflict, store, matcher, pending)
             }
+            DiffItem::Changed(left, right) => diff(left, right, fetcher, store, matcher, pending),
         }
     }
 
@@ -104,11 +93,6 @@ pub struct Diff<'a> {
     sender: Option<Sender<DiffItem>>,
     receiver: Option<Receiver<DiffItem>>,
     pending: u64,
-}
-
-pub(crate) struct DirDiff<'a> {
-    diff: Diff<'a>,
-    output: VecDeque<DirDiffEntry>,
 }
 
 impl<'a> Diff<'a> {
@@ -146,13 +130,6 @@ impl<'a> Diff<'a> {
         })
     }
 
-    pub(crate) fn modified_dirs(self) -> DirDiff<'a> {
-        DirDiff {
-            diff: self,
-            output: VecDeque::new(),
-        }
-    }
-
     /// Process the next `DiffItem` for this layer (either a pair of modified directories
     /// or an added/removed directory), potentially generating new `DiffEntry`s for
     /// any changed files contained therein.
@@ -163,10 +140,7 @@ impl<'a> Diff<'a> {
     ///
     /// Returns `true` if there are more items to process after the current one. Once this
     /// method returns `false`, the traversal is complete.
-    fn process_next_item(
-        &mut self,
-        output_dirs: Option<&mut VecDeque<DirDiffEntry>>,
-    ) -> Result<bool> {
+    fn process_next_item(&mut self) -> Result<bool> {
         if self.pending == 0 {
             return Ok(false);
         }
@@ -183,7 +157,6 @@ impl<'a> Diff<'a> {
             self.store,
             self.matcher,
             &mut self.pending,
-            output_dirs,
         )?;
         self.output.extend(entries);
 
@@ -259,7 +232,7 @@ impl<'a> Iterator for Diff<'a> {
         let _scope = span.enter();
 
         loop {
-            let res = match self.process_next_item(None) {
+            let res = match self.process_next_item() {
                 Ok(true) if self.output.is_empty() => continue,
                 Ok(_) => Ok(self.output.pop_front()),
                 Err(err) => Err(err),
@@ -283,23 +256,6 @@ impl<'a> Iterator for Diff<'a> {
     }
 }
 
-impl<'a> Iterator for DirDiff<'a> {
-    type Item = Result<DirDiffEntry>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        while self.output.is_empty() {
-            match self.diff.process_next_item(Some(&mut self.output)) {
-                Ok(true) => continue,
-                Ok(false) => break,
-                Err(e) => return Some(Err(e)),
-            }
-        }
-        // Do not care about the file diff output.
-        self.diff.output.clear();
-        self.output.pop_front().map(Ok)
-    }
-}
-
 /// Process a directory that is only present on one side of the diff.
 ///
 /// Returns diff entries of all of the files in this directory, and
@@ -312,17 +268,8 @@ fn diff_single(
     store: &InnerStore,
     matcher: &dyn Matcher,
     pending: &mut u64,
-    output_dirs: Option<&mut VecDeque<DirDiffEntry>>,
 ) -> Result<Vec<DiffEntry>> {
     let (files, dirs) = dir.list(store)?;
-
-    if let Some(output_dirs) = output_dirs {
-        output_dirs.push_back(DirDiffEntry {
-            path: dir.path,
-            left: side == Side::Left,
-            right: side == Side::Right,
-        });
-    }
 
     for d in dirs.into_iter() {
         if matcher.matches_directory(&d.path)? != DirectoryMatch::Nothing {
@@ -359,7 +306,6 @@ fn diff(
     store: &InnerStore,
     matcher: &dyn Matcher,
     pending: &mut u64,
-    output_dirs: Option<&mut VecDeque<DirDiffEntry>>,
 ) -> Result<Vec<DiffEntry>> {
     let mut file_diffs: Vec<DiffEntry> = Vec::new();
 
@@ -406,16 +352,6 @@ fn diff(
             },
             (Some(_), None) | (None, Some(_)) => add_diffs(llinks.next(), rlinks.next())?,
             (None, None) => break,
-        }
-    }
-
-    if self_modified {
-        if let Some(output_dirs) = output_dirs {
-            output_dirs.push_back(DirDiffEntry {
-                path: left.path.clone(),
-                left: true,
-                right: true,
-            });
         }
     }
 
@@ -587,7 +523,6 @@ mod tests {
             &tree.store,
             &matcher,
             &mut pending,
-            None,
         )
         .unwrap();
 
@@ -1006,57 +941,6 @@ mod tests {
     }
 
     #[test]
-    fn test_modified_dirs() {
-        let store = Arc::new(TestStore::new());
-        let left = make_tree_manifest(
-            store.clone(),
-            &[
-                ("left/a/b", "1"),
-                ("unmodified/a/b", "1"),
-                ("modified/1/a/b", "1"),
-                ("modified/2/a/b", "1"),
-                ("modified/3/a/b", "1"),
-                ("modified/3/b", "1"),
-                ("modified/4/a", "1"),
-            ],
-        );
-        let right = make_tree_manifest(
-            store,
-            &[
-                ("right/a/b", "2"),
-                ("unmodified/a/b", "2"),
-                ("modified/1/b/a", "2"),
-                ("modified/2/a/c", "1"),
-                ("modified/3/b", "1"),
-                ("modified/4/a/b", "1"),
-            ],
-        );
-        let dirs: Vec<String> = Diff::new(&left, &right, &AlwaysMatcher::new())
-            .unwrap()
-            .modified_dirs()
-            .map(|v| dir_diff_entry_to_string(v.unwrap()))
-            .collect();
-        assert_eq!(
-            dirs,
-            [
-                "M ",
-                "R left",
-                "A right",
-                "R left/a",
-                "M modified/1",
-                "M modified/3",
-                "M modified/4",
-                "A right/a",
-                "R modified/1/a",
-                "A modified/1/b",
-                "M modified/2/a",
-                "R modified/3/a",
-                "A modified/4/a"
-            ]
-        );
-    }
-
-    #[test]
     fn test_ignore_unless_conflict() -> Result<()> {
         let store = Arc::new(TestStore::new());
 
@@ -1129,15 +1013,5 @@ mod tests {
         );
 
         Ok(())
-    }
-
-    fn dir_diff_entry_to_string(entry: DirDiffEntry) -> String {
-        let status = match (entry.left, entry.right) {
-            (true, true) => "M",
-            (true, false) => "R",
-            (false, true) => "A",
-            (false, false) => "!",
-        };
-        format!("{} {}", status, entry.path)
     }
 }

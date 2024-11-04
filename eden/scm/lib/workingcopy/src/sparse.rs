@@ -516,15 +516,6 @@ inc
         {
             unimplemented!()
         }
-
-        fn modified_dirs<'a, M: pathmatcher::Matcher>(
-            &'a self,
-            other: &'a Self,
-            matcher: &'a M,
-        ) -> anyhow::Result<Box<dyn Iterator<Item = anyhow::Result<manifest::DirDiffEntry>> + 'a>>
-        {
-            unimplemented!()
-        }
     }
 
     #[async_trait::async_trait]
