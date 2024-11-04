@@ -51,6 +51,12 @@ impl RemoteHistoryStore for SaplingRemoteApiHistoryStore {
         let client = self.remote.client.clone();
         let keys = hgid_keys(keys);
 
+        if tracing::enabled!(target: "file_fetches", tracing::Level::TRACE) {
+            let mut keys: Vec<_> = keys.iter().map(|key| key.path.to_string()).collect();
+            keys.sort();
+            tracing::trace!(target: "file_fetches", attrs=?["history"], ?keys);
+        }
+
         let response = async move {
             let prog = ProgressBar::new_adhoc("Downloading file history over HTTP", 0, "entries");
 

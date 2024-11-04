@@ -165,6 +165,23 @@ impl FileStore {
             self.cas_cache_threshold_bytes,
         );
 
+        if tracing::enabled!(target: "file_fetches", tracing::Level::TRACE) {
+            let attrs = [
+                attrs.pure_content.then_some("content"),
+                attrs.content_header.then_some("header"),
+                attrs.aux_data.then_some("aux"),
+            ]
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>();
+
+            let mut keys = state.all_keys();
+            keys.sort();
+            let keys: Vec<_> = keys.into_iter().map(|key| key.path.into_string()).collect();
+
+            tracing::trace!(target: "file_fetches", ?attrs, ?keys);
+        }
+
         debug!(
             ?attrs,
             ?fetch_mode,
