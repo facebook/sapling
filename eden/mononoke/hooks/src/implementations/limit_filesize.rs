@@ -109,6 +109,12 @@ impl FileHook for LimitFilesize {
             None => return Ok(HookExecution::Accepted),
         };
 
+        if change.git_lfs().is_lfs_pointer() {
+            // LFS pointers are not stored in the repo, so for now they don't count towards the limit
+            // We might want to revise this policy in the future.
+            return Ok(HookExecution::Accepted);
+        }
+
         let len = content_manager
             .get_file_metadata(ctx, change.content_id())
             .await?

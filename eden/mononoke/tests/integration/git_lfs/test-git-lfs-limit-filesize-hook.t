@@ -65,19 +65,11 @@ Push a change to LFS file (this should bypass the limit filesize hook)
   $ echo contents of LFS file with some extra > large_file
   $ git commit -aqm "new LFS change"
   $ quiet git_client push
-  Uploading LFS objects: 100% (1/1), 37 B | 0 B/s, done.
-  To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-   ! [remote rejected] master_bookmark -> master_bookmark (hooks failed:
-    limit_filesize for bfd5dee1920de802ff6183370aa2c9f59b78b87a: File size limit is 10 bytes. You tried to push file large_file that is over the limit (37 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
-  
-  For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
-  error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
-  [1]
   $ mononoke_newadmin fetch -R repo -B heads/master_bookmark
-  BonsaiChangesetId: 198d25da38c153f3feecddeee7e49fe3fa16d7e0085ea919c183372bf42a66d4
-  Author: author
-  Message: C
+  BonsaiChangesetId: bc0b66e9dda60bc3c73dc3b56f7a0b65e4eb830e76af6ab595bd5c3759e8983b
+  Author: mononoke <mononoke@mononoke>
+  Message: new LFS change
+  
   FileChanges:
-  	 ADDED/MODIFIED: C 896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d
-  	 ADDED/MODIFIED (LFS): large_file eb3b8226bb5383aefd8299990543f1f8588344c3b2c2d25182a2a7d1fb691473
+  	 ADDED/MODIFIED (LFS): large_file 408fae710285e464a70ce854d2bdb3d11cba5c9b8d48b135c212c7760681ec31
   
