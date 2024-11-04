@@ -279,7 +279,7 @@ def parsedag(desc):
                 s += c
                 i += 1
                 c = nextch()
-            raise error.Abort(_("invalid character in dag description: " "%s...") % s)
+            raise error.Abort(_("invalid character in dag description: %s...") % s)
 
 
 def dagtextlines(
@@ -317,8 +317,7 @@ def dagtextlines(
                     for p in ps:
                         if p >= r:
                             raise error.Abort(
-                                _("parent id %i is larger than " "current id %i")
-                                % (p, r)
+                                _("parent id %i is larger than current id %i") % (p, r)
                             )
                 wantr += 1
 
@@ -381,7 +380,7 @@ def dagtextlines(
                     yield "\n"
                 else:
                     raise error.Abort(
-                        _("invalid event type in dag: " "('%s', '%s')")
+                        _("invalid event type in dag: ('%s', '%s')")
                         % (util.escapestr(kind), util.escapestr(data))
                     )
         if run:

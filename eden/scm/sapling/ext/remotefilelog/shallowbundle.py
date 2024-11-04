@@ -248,7 +248,7 @@ class shallowcg1packer(changegroup.cg1packer):
         renamed = flog.renamed(node)
         if renamed:
             path, renamednode = renamed
-            pointer += "x-hg-copy %s\n" "x-hg-copyrev %s\n" % (path, hex(renamednode))
+            pointer += "x-hg-copy %s\nx-hg-copyrev %s\n" % (path, hex(renamednode))
 
         pointer += "x-is-binary %d\n" % meta["isbinary"]
 

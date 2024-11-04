@@ -27,7 +27,7 @@ testedwith = "ships-with-fb-ext"
     "reset",
     [
         ("C", "clean", None, _("wipe the working copy clean when resetting")),
-        ("k", "keep", None, _("keeps the old changesets the bookmark pointed" " to")),
+        ("k", "keep", None, _("keeps the old changesets the bookmark pointed to")),
         ("r", "rev", "", _("revision to reset to")),
     ],
     _("@prog@ reset [REV]"),

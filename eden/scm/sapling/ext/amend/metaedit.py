@@ -167,7 +167,7 @@ def metaedit(ui, repo, templ, *revs, **opts) -> Optional[int]:
         else:
             if repo.revs("%ld and public()", revs):
                 raise error.Abort(
-                    _("cannot edit commit information for public " "revisions")
+                    _("cannot edit commit information for public revisions")
                 )
             root = head = repo[revs.first()]
 

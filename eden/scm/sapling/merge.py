@@ -193,7 +193,7 @@ class mergestate:
     def ancestorctxs(self):
         if self._ancestors is None:
             raise error.ProgrammingError(
-                "ancestorctxs accessed but " "self._ancestors aren't set"
+                "ancestorctxs accessed but self._ancestors aren't set"
             )
         return [self._repo[node] for node in self._ancestors]
 
@@ -505,7 +505,7 @@ def _getcheckunknownconfig(repo, section, name):
     if config not in valid:
         validstr = ", ".join(["'" + v + "'" for v in valid])
         raise error.ConfigError(
-            _("%s.%s not valid " "('%s' is none of %s)")
+            _("%s.%s not valid ('%s' is none of %s)")
             % (section, name, config, validstr)
         )
     return config

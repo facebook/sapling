@@ -124,7 +124,7 @@ def _deleteremotebookmarks(ui, repo, path, names) -> None:
     for name in names:
         if name not in remote_bm_names:
             raise error.Abort(
-                _("scratch bookmark '{}' does not exist " "in path '{}'").format(
+                _("scratch bookmark '{}' does not exist in path '{}'").format(
                     name, path
                 )
             )

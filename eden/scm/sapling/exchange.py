@@ -119,7 +119,7 @@ def parsebundlespec(repo, spec, strict=True, externalnames=False):
 
     if strict and "-" not in spec:
         raise error.InvalidBundleSpecification(
-            _("invalid bundle specification; " "must be prefixed with compression: %s")
+            _("invalid bundle specification; must be prefixed with compression: %s")
             % spec
         )
 
@@ -252,13 +252,13 @@ def getbundlespec(ui, fh):
                     version = "v2"
                 else:
                     raise error.Abort(
-                        _("changegroup version %s does not have " "a known bundlespec")
+                        _("changegroup version %s does not have a known bundlespec")
                         % version,
-                        hint=_("try upgrading your @Product@ " "client"),
+                        hint=_("try upgrading your @Product@ client"),
                     )
 
         if not version:
-            raise error.Abort(_("could not identify changegroup version in " "bundle"))
+            raise error.Abort(_("could not identify changegroup version in bundle"))
 
         return "%s-%s" % (comp, version)
     elif isinstance(b, streamclone.streamcloneapplier):
@@ -467,9 +467,9 @@ def push(repo, remote, force=False, revs=None, bookmarks=(), opargs=None):
     if pushop.remote.local():
         missing = set(pushop.repo.requirements) - pushop.remote.local().supported
         if missing:
-            msg = _(
-                "required features are not" " supported in the destination:" " %s"
-            ) % (", ".join(sorted(missing)))
+            msg = _("required features are not supported in the destination: %s") % (
+                ", ".join(sorted(missing))
+            )
             raise error.Abort(msg)
 
     if not pushop.remote.canpush():
@@ -765,7 +765,7 @@ def _pushdiscoverybookmarks(pushop):
         explicit = sorted(explicit)
         # we should probably list all of them
         ui.warn(
-            _("bookmark %s does not exist on the local " "or remote repository!\n")
+            _("bookmark %s does not exist on the local or remote repository!\n")
             % explicit[0]
         )
         pushop.bkresult = 2
@@ -1246,7 +1246,7 @@ def _localphasemove(pushop, nodes, phase=phases.public):
         phasestr = phases.phasenames[phase]
         if actualmoves:
             pushop.ui.status(
-                _("cannot lock source repo, skipping " "local %s phase update\n")
+                _("cannot lock source repo, skipping local %s phase update\n")
                 % phasestr
             )
 
@@ -1451,9 +1451,9 @@ def pull(
     if peerlocal:
         missing = set(peerlocal.requirements) - pullop.repo.supported
         if missing:
-            msg = _(
-                "required features are not" " supported in the destination:" " %s"
-            ) % (", ".join(sorted(missing)))
+            msg = _("required features are not supported in the destination: %s") % (
+                ", ".join(sorted(missing))
+            )
             raise error.Abort(msg)
 
     wlock = lock = None
@@ -2148,7 +2148,7 @@ def check_heads(repo, their_heads, context):
         # someone else committed/pushed/unbundled while we
         # were transferring data
         raise error.PushRaced(
-            "repository changed while %s - " "please try again" % context
+            "repository changed while %s - please try again" % context
         )
 
 
@@ -2294,7 +2294,7 @@ def _maybeapplyclonebundle(pullop):
                 "falling back to regular clone\n"
             )
         )
-        repo.ui.warn(_("(you may want to report this to the server " "operator)\n"))
+        repo.ui.warn(_("(you may want to report this to the server operator)\n"))
         return
 
     entries = sortclonebundleentries(repo.ui, entries)

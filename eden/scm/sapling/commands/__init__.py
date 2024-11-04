@@ -798,7 +798,7 @@ def _dobackout(ui, repo, node=None, rev=None, **opts):
             hg.showstats(repo, stats)
             if stats[3]:
                 repo.ui.status(
-                    _("use '@prog@ resolve' to retry unresolved " "file merges\n")
+                    _("use '@prog@ resolve' to retry unresolved file merges\n")
                 )
                 return 1
         finally:
@@ -813,7 +813,7 @@ def _dobackout(ui, repo, node=None, rev=None, **opts):
         _replayrenames(repo, node)
 
     if opts.get("no_commit"):
-        msg = _("changeset %s backed out, " "don't forget to commit.\n")
+        msg = _("changeset %s backed out, don't forget to commit.\n")
         ui.status(msg % short(node))
         return 0
 
@@ -1021,7 +1021,7 @@ def bisect(
         while size <= changesets:
             tests, size = tests + 1, size * 2
         ui.write(
-            _("Testing changeset %s " "(%d changesets remaining, ~%d tests)\n")
+            _("Testing changeset %s (%d changesets remaining, ~%d tests)\n")
             % (short(node), changesets, tests)
         )
 
@@ -1454,7 +1454,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
     except error.UnsupportedBundleSpecification as e:
         raise error.Abort(
             str(e),
-            hint=_("see '@prog@ help bundlespec' for supported " "values for --type"),
+            hint=_("see '@prog@ help bundlespec' for supported values for --type"),
         )
 
     # Packed bundles are a pseudo bundle format for now.
@@ -1466,9 +1466,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
 
     if opts.get("all"):
         if dest:
-            raise error.Abort(
-                _("--all is incompatible with specifying " "a destination")
-            )
+            raise error.Abort(_("--all is incompatible with specifying a destination"))
         if opts.get("base"):
             ui.warn(_("ignoring --base because --all was specified\n"))
         base = ["null"]
@@ -1481,9 +1479,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
 
     if base:
         if dest:
-            raise error.Abort(
-                _("--base is incompatible with specifying " "a destination")
-            )
+            raise error.Abort(_("--base is incompatible with specifying a destination"))
         common = [repo.lookup(rev) for rev in base]
         heads = revs and list(map(repo.lookup, revs)) or None
         outgoing = discovery.outgoing(repo, common, heads)
@@ -1774,7 +1770,7 @@ def _docommit(ui, repo, *pats, **opts):
             stat = cmdutil.postcommitstatus(repo, pats, opts)
             if stat[3]:
                 ui.status(
-                    _("nothing changed (%d missing files, see " "'@prog@ status')\n")
+                    _("nothing changed (%d missing files, see '@prog@ status')\n")
                     % len(stat[3])
                 )
             else:
@@ -3242,7 +3238,7 @@ def hint(ui, *names, **opts):
             "f",
             "follow",
             None,
-            _("follow changeset history," " or file history across copies and renames"),
+            _("follow changeset history, or file history across copies and renames"),
         ),
         ("i", "ignore-case", None, _("ignore case when matching")),
         (
@@ -3587,7 +3583,7 @@ def identify(
             _("identify is deprecated - use `@prog@ whereami` instead"),
         )
     if not repo and not source:
-        raise error.Abort(_("there is no @Product@ repository here " "(.hg not found)"))
+        raise error.Abort(_("there is no @Product@ repository here (.hg not found)"))
 
     if ui.debugflag:
         hexfunc = hex
@@ -3899,7 +3895,7 @@ def import_(ui, repo, patch1=None, *patches, **opts):
                 if rej:
                     ui.write_err(_("patch applied partially\n"))
                     ui.write_err(
-                        _("(fix the .rej files and run " "`@prog@ commit --amend`)\n")
+                        _("(fix the .rej files and run `@prog@ commit --amend`)\n")
                     )
                     ret = 1
                     break
@@ -4655,7 +4651,7 @@ def phase(ui, repo, *revs, **opts):
         rejected = [n for n in nodes if getphase(unfi, cl.rev(n)) < targetphase]
         if rejected:
             ui.warn(
-                _("cannot move %i changesets to a higher " "phase, use --force\n")
+                _("cannot move %i changesets to a higher phase, use --force\n")
                 % len(rejected)
             )
             ret = 1
@@ -4942,7 +4938,7 @@ def push(ui, repo, dest=None, **opts):
         revs = [repo[rev].node() for rev in revs]
         if not revs:
             raise error.Abort(
-                _("default push revset for path evaluates to an " "empty set")
+                _("default push revset for path evaluates to an empty set")
             )
 
     if ui.configbool("push", "requirereason"):
@@ -5500,7 +5496,7 @@ def revert(ui, repo, *pats, **opts):
                 )
             else:
                 hint = (
-                    _("use --all to revert all files," " or '@prog@ goto %s' to update")
+                    _("use --all to revert all files, or '@prog@ goto %s' to update")
                     % ctx.rev()
                 )
         elif dirty:
@@ -5641,7 +5637,7 @@ def serve(ui, repo, **opts):
     if opts["stdio"]:
         if repo is None:
             raise error.RepoError(
-                _("there is no @Product@ repository here" " (.hg not found)")
+                _("there is no @Product@ repository here (.hg not found)")
             )
         s = sshserver.sshserver(ui, repo)
         s.serve_forever()
@@ -6308,7 +6304,7 @@ def update(
 
     if len([x for x in (clean, check, merge) if x]) > 1:
         raise error.Abort(
-            _("can only specify one of -C/--clean, -c/--check, " "or -m/--merge")
+            _("can only specify one of -C/--clean, -c/--check, or -m/--merge")
         )
 
     if node is None and rev is None and not date:

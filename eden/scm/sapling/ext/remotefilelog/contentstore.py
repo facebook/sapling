@@ -129,7 +129,7 @@ class unioncontentstore:
         raise KeyError((name, hex(node)))
 
     def add(self, name, node, data):
-        raise RuntimeError("cannot add content only to remotefilelog " "contentstore")
+        raise RuntimeError("cannot add content only to remotefilelog contentstore")
 
     def getmissing(self, keys):
         missing = keys

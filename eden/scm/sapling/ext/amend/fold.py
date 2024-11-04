@@ -100,7 +100,7 @@ def fold(ui, repo, *revs, **opts):
         discardedrevs = [r for r in revs if r not in extrevs]
         if discardedrevs:
             msg = _("cannot fold non-linear revisions")
-            hint = _("given revisions are unrelated to parent of working" " directory")
+            hint = _("given revisions are unrelated to parent of working directory")
             raise error.Abort(msg, hint=hint)
         revs = extrevs
     elif opts["exact"]:
@@ -174,16 +174,12 @@ def fold(ui, repo, *revs, **opts):
 def _foldcheck(repo, revs):
     roots = repo.revs("roots(%ld)", revs)
     if len(roots) > 1:
-        raise error.Abort(
-            _("cannot fold non-linear revisions " "(multiple roots given)")
-        )
+        raise error.Abort(_("cannot fold non-linear revisions (multiple roots given)"))
     root = repo[roots.first()]
     if root.phase() <= phases.public:
         raise error.Abort(_("cannot fold public revisions"))
     heads = repo.revs("heads(%ld)", revs)
     if len(heads) > 1:
-        raise error.Abort(
-            _("cannot fold non-linear revisions " "(multiple heads given)")
-        )
+        raise error.Abort(_("cannot fold non-linear revisions (multiple heads given)"))
     head = repo[heads.first()]
     return root, head

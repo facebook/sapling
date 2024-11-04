@@ -101,7 +101,7 @@ def onetimesetup(ui):
             # don't allow cloning from a shallow repo to a full repo
             # since it would require fetching every version of every
             # file in order to create the revlogs.
-            raise error.Abort(_("Cannot clone from a shallow repo " "to a full repo."))
+            raise error.Abort(_("Cannot clone from a shallow repo to a full repo."))
         else:
             for x in orig(repo):
                 yield x

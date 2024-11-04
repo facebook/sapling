@@ -396,7 +396,7 @@ def decodeitem(b: Sized, offset: int = 0):
                 return False, None, readcount2, SPECIAL_NONE
 
             if special != SPECIAL_START_ARRAY:
-                raise CBORDecodeError("expected array after finite set " "semantic tag")
+                raise CBORDecodeError("expected array after finite set semantic tag")
 
             return True, size, readcount + readcount2 + 1, SPECIAL_START_SET
 
@@ -691,7 +691,7 @@ class sansiodecoder:
 
                 elif special == SPECIAL_START_INDEFINITE_BYTESTRING:
                     raise CBORDecodeError(
-                        "indefinite length bytestrings " "not allowed as array values"
+                        "indefinite length bytestrings not allowed as array values"
                     )
 
                 else:
@@ -708,7 +708,7 @@ class sansiodecoder:
 
                 elif special == SPECIAL_START_INDEFINITE_BYTESTRING:
                     raise CBORDecodeError(
-                        "indefinite length bytestrings " "not allowed as map keys"
+                        "indefinite length bytestrings not allowed as map keys"
                     )
 
                 elif special in (
@@ -716,12 +716,12 @@ class sansiodecoder:
                     SPECIAL_START_MAP,
                     SPECIAL_START_SET,
                 ):
-                    raise CBORDecodeError("collections not supported as map " "keys")
+                    raise CBORDecodeError("collections not supported as map keys")
 
                 # We do not allow special values to be used as map keys.
                 else:
                     raise CBORDecodeError(
-                        "unhandled special item when " "expecting map key: %d" % special
+                        "unhandled special item when expecting map key: %d" % special
                     )
 
             # This value becomes the value of the current map key.
@@ -772,7 +772,7 @@ class sansiodecoder:
 
                 elif special == SPECIAL_START_INDEFINITE_BYTESTRING:
                     raise CBORDecodeError(
-                        "indefinite length bytestrings not " "allowed as map values"
+                        "indefinite length bytestrings not allowed as map values"
                     )
 
                 else:
@@ -792,7 +792,7 @@ class sansiodecoder:
 
                 elif special == SPECIAL_START_INDEFINITE_BYTESTRING:
                     raise CBORDecodeError(
-                        "indefinite length bytestrings not " "allowed as set values"
+                        "indefinite length bytestrings not allowed as set values"
                     )
 
                 elif special in (
@@ -800,7 +800,7 @@ class sansiodecoder:
                     SPECIAL_START_MAP,
                     SPECIAL_START_SET,
                 ):
-                    raise CBORDecodeError("collections not allowed as set " "values")
+                    raise CBORDecodeError("collections not allowed as set values")
 
                 # We don't allow non-trivial types to exist as set values.
                 else:

@@ -171,9 +171,7 @@ class http2handler(urlreq.httphandler, urlreq.httpshandler):
             h = conns[0]
         else:
             if allconns:
-                self.ui.debug(
-                    "all connections for %s busy, making a new " "one\n" % host
-                )
+                self.ui.debug("all connections for %s busy, making a new one\n" % host)
             timeout = None
             if req.timeout is not socket._GLOBAL_DEFAULT_TIMEOUT:
                 timeout = req.timeout

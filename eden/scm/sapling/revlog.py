@@ -395,12 +395,12 @@ class revlog:
 
         if self._chunkcachesize <= 0:
             raise RevlogError(
-                _("revlog chunk cache size %r is not greater " "than 0")
+                _("revlog chunk cache size %r is not greater than 0")
                 % self._chunkcachesize
             )
         elif self._chunkcachesize & (self._chunkcachesize - 1):
             raise RevlogError(
-                _("revlog chunk cache size %r is not a power " "of 2")
+                _("revlog chunk cache size %r is not a power of 2")
                 % self._chunkcachesize
             )
 
@@ -452,7 +452,7 @@ class revlog:
         elif fmt == REVLOGV1:
             if flags & ~REVLOGV1_FLAGS:
                 raise RevlogError(
-                    _("unknown flags (%#04x) in version %d " "revlog %s")
+                    _("unknown flags (%#04x) in version %d revlog %s")
                     % (flags >> 16, fmt, self.indexfile)
                 )
         else:

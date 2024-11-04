@@ -208,7 +208,7 @@ class command(_funcregistrarbase):
 
         if cmdtype not in self.possiblecmdtypes:
             raise error.ProgrammingError(
-                "unknown cmdtype value '%s' for " "'%s' command" % (cmdtype, name)
+                "unknown cmdtype value '%s' for '%s' command" % (cmdtype, name)
             )
 
         nameparts = name.split("|")

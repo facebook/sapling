@@ -82,7 +82,7 @@ if __name__ == "__main__":
     signal.signal(signal.SIGTERM, lambda x, y: sys.exit(0))
 
     if options.foreground and options.logfile:
-        parser.error("options --logfile and --foreground are mutually " "exclusive")
+        parser.error("options --logfile and --foreground are mutually exclusive")
     if options.foreground and options.pid:
         parser.error("options --pid and --foreground are mutually exclusive")
 

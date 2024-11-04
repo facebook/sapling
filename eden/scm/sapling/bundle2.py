@@ -372,7 +372,7 @@ class bundleoperation:
     def addhookargs(self, hookargs):
         if self.hookargs is None:
             raise error.ProgrammingError(
-                "attempted to add hookargs to " "operation after transaction started"
+                "attempted to add hookargs to operation after transaction started"
             )
         self.hookargs.update(hookargs)
 
@@ -1268,9 +1268,7 @@ class interrupthandler(unpackermixin):
         return None
 
     def __call__(self):
-        self.ui.debug(
-            "bundle2-input-stream-interrupt:" " opening out of band context\n"
-        )
+        self.ui.debug("bundle2-input-stream-interrupt: opening out of band context\n")
         indebug(self.ui, "bundle2 stream interruption, looking for a part.")
         headerblock = self._readpartheader()
         if headerblock is None:
@@ -1287,9 +1285,7 @@ class interrupthandler(unpackermixin):
         finally:
             if not hardabort:
                 part.consume()
-        self.ui.debug(
-            "bundle2-input-stream-interrupt:" " closing out of band context\n"
-        )
+        self.ui.debug("bundle2-input-stream-interrupt: closing out of band context\n")
 
 
 class interruptoperation:
@@ -1761,7 +1757,7 @@ def writebundle(
         # compression argument is only for the bundle2 case
         assert compression is None
         if cg.version != "01":
-            raise error.Abort(_("old bundle types only supports v1 " "changegroups"))
+            raise error.Abort(_("old bundle types only supports v1 changegroups"))
         header, comp = bundletypes[bundletype]
         if comp not in util.compengines.supportedbundletypes:
             raise error.Abort(_("unknown stream compression type: %s") % comp)
@@ -1976,9 +1972,7 @@ def handlecheckphases(op: "bundleoperation", inpart: "unbundlepart") -> None:
     unfi = op.repo
     cl = unfi.changelog
     phasecache = unfi._phasecache
-    msg = (
-        "repository changed while pushing - please try again " "(%s is %s expected %s)"
-    )
+    msg = "repository changed while pushing - please try again (%s is %s expected %s)"
     for expectedphase, nodes in enumerate(phasetonodes):
         for n in nodes:
             actualphase = phasecache.phase(unfi, cl.rev(n))

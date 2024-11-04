@@ -18,7 +18,7 @@ BIN_HASH_2 = binascii.unhexlify(HASH_2)
 HASH_3 = b"1234567890abcdef0987654321deadbeef0fcafe"
 BIN_HASH_3 = binascii.unhexlify(HASH_3)
 A_SHORT_MANIFEST = (
-    b"bar/baz/qux.py\0%(hash2)s%(flag2)s\n" b"foo\0%(hash1)s%(flag1)s\n"
+    b"bar/baz/qux.py\0%(hash2)s%(flag2)s\nfoo\0%(hash1)s%(flag1)s\n"
 ) % {b"hash1": HASH_1, b"flag1": b"", b"hash2": HASH_2, b"flag2": b"l"}
 
 A_STEM_COMPRESSED_MANIFEST = (
@@ -303,7 +303,7 @@ class basemanifesttests:
         match = matchmod.match("/", "", ["file1", "file200", "file300"])
         m2 = m.matches(match)
 
-        w = (b"file1\0%sx\n" b"file200\0%sl\n" b"file300\0%s\n") % (
+        w = (b"file1\0%sx\nfile200\0%sl\nfile300\0%s\n") % (
             HASH_2,
             HASH_1,
             HASH_1,

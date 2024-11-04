@@ -60,7 +60,7 @@ def githelp(ui, repo, *args, **kwargs):
 
     if len(args) == 0 or (len(args) == 1 and args[0] == "git"):
         raise error.Abort(
-            _("missing git command - " "usage: @prog@ githelp -- <git command>")
+            _("missing git command - usage: @prog@ githelp -- <git command>")
         )
 
     if args[0] == "git":

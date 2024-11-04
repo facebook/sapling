@@ -30,7 +30,7 @@ def get_pr(ui, repo, *args, **opts):
     pr_id = parse_pull_request_arg(pr_arg, repo=repo)
     if pr_id is None:
         raise error.Abort(
-            _("Could not parse pull request arg: '%s'. " "Specify PR by URL or number.")
+            _("Could not parse pull request arg: '%s'. Specify PR by URL or number.")
             % pr_arg
         )
 

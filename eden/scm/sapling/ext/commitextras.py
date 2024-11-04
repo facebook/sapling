@@ -54,9 +54,7 @@ def _commit(orig, ui, repo, *pats, **opts):
             if extras:
                 for raw in extras:
                     if "=" not in raw:
-                        msg = _(
-                            "unable to parse '%s', should follow " "KEY=VALUE format"
-                        )
+                        msg = _("unable to parse '%s', should follow KEY=VALUE format")
                         raise error.Abort(msg % raw)
                     k, v = raw.split("=", 1)
                     if not k:
@@ -69,7 +67,7 @@ def _commit(orig, ui, repo, *pats, **opts):
                         )
                         raise error.Abort(msg)
                     if k in usedinternally:
-                        msg = _("key '%s' is used internally, can't be set " "manually")
+                        msg = _("key '%s' is used internally, can't be set manually")
                         raise error.Abort(msg % k)
                     inneropts["extra"][k] = v
             return origcommit(*innerpats, **inneropts)

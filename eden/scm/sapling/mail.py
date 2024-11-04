@@ -198,12 +198,12 @@ def validateconfig(ui) -> None:
     if method == "smtp":
         if not ui.config("smtp", "host"):
             raise error.Abort(
-                _("smtp specified as email transport, " "but no smtp host configured")
+                _("smtp specified as email transport, but no smtp host configured")
             )
     else:
         if not util.findexe(method):
             raise error.Abort(
-                _("%r specified as email transport, " "but not in PATH") % method
+                _("%r specified as email transport, but not in PATH") % method
             )
 
 

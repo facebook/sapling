@@ -449,7 +449,7 @@ class rebaseruntime:
             "first(children(%ld) - %ld)", rebaseset, rebaseset
         ):
             raise error.Abort(
-                _("can't remove original changesets with" " unrebased descendants"),
+                _("can't remove original changesets with unrebased descendants"),
                 hint=_("use --keep to keep original changesets"),
             )
 
@@ -584,12 +584,13 @@ class rebaseruntime:
             elif rev in self.obsoletenotrebased:
                 succ = self.obsoletenotrebased[rev]
                 if succ is None:
-                    msg = _("note: not rebasing %s, it has no " "successor\n") % desc
+                    msg = _("note: not rebasing %s, it has no successor\n") % desc
                 else:
                     succdesc = _ctxdesc(repo[succ])
-                    msg = _(
-                        "note: not rebasing %s, already in " "destination as %s\n"
-                    ) % (desc, succdesc)
+                    msg = _("note: not rebasing %s, already in destination as %s\n") % (
+                        desc,
+                        succdesc,
+                    )
                 repo.ui.status(msg)
                 # Make clearrebased aware state[rev] is not a true successor
                 self.skipped.add(rev)
@@ -1569,7 +1570,7 @@ def _definedestmap(
                 ui.note(_("skipping %s - empty destination\n") % repo[r])
             else:
                 raise error.Abort(
-                    _("rebase destination for %s is not " "unique") % repo[r]
+                    _("rebase destination for %s is not unique") % repo[r]
                 )
 
     if dest is not None:
@@ -1896,7 +1897,7 @@ def _checkobsrebase(repo, ui, rebaseobsrevs, rebaseobsskipped) -> None:
 
     if divergencebasecandidates and not divergenceok:
         divhashes = (str(repo[r]) for r in divergencebasecandidates)
-        msg = _("this rebase will cause " "divergences from: %s")
+        msg = _("this rebase will cause divergences from: %s")
         h = _(
             "to force the rebase please set "
             "experimental.evolution.allowdivergence=True"

@@ -1454,7 +1454,7 @@ def contextnodesupportingwdir(ctx):
     # Neither `None` nor `wdirid` feels right here:
     if isinstance(ctx, context.overlayworkingctx):
         raise error.ProgrammingError(
-            "contextnodesupportingwdir doesn't support " "overlayworkingctx"
+            "contextnodesupportingwdir doesn't support overlayworkingctx"
         )
 
     return ctx.node()

@@ -58,9 +58,9 @@ def _checkownedpath(path):
     if ownerid in [None, 0, uid]:
         return
     raise error.Abort(
-        _("%s is owned by %s, not you (%s).\n" "you are likely doing something wrong.")
+        _("%s is owned by %s, not you (%s).\nyou are likely doing something wrong.")
         % (path, _describeuser(ownerid), _describeuser(uid)),
-        hint=_("you can skip the check using " "--config extensions.ownercheck=!"),
+        hint=_("you can skip the check using --config extensions.ownercheck=!"),
     )
 
 

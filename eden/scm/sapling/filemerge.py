@@ -592,7 +592,7 @@ def _premerge(repo, fcd, fco, fca, toolconf, files, labels):
         if premerge not in validkeep:
             _valid = ", ".join(["'" + v + "'" for v in validkeep])
             raise error.ConfigError(
-                _("%s.premerge not valid " "('%s' is neither boolean nor %s)")
+                _("%s.premerge not valid ('%s' is neither boolean nor %s)")
                 % (tool, premerge, _valid)
             )
 
@@ -622,7 +622,7 @@ def _ismergeable(repo, mynode, orig, fcd, fco, fca, toolconf, warn=True):
     if symlink:
         if warn:
             repo.ui.warn(
-                _("warning: internal %s cannot merge symlinks " "for %s\n")
+                _("warning: internal %s cannot merge symlinks for %s\n")
                 % (tool, fcd.path())
             )
         return False
@@ -900,7 +900,7 @@ def _xmerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     tool, toolpath, binary, symlink = toolconf
     if fcd.isabsent() or fco.isabsent():
         repo.ui.warn(
-            _("warning: %s cannot merge change/delete conflict " "for %s\n")
+            _("warning: %s cannot merge change/delete conflict for %s\n")
             % (tool, fcd.path())
         )
         return False, 1, None
@@ -1232,7 +1232,7 @@ def _check(repo, r, ui, tool, fcd, files):
     if "prompt" in _toollist(ui, tool, "check"):
         checked = True
         if ui.promptchoice(
-            _("was merge of '%s' successful (yn)?" "$$ &Yes $$ &No") % fd, 1
+            _("was merge of '%s' successful (yn)?$$ &Yes $$ &No") % fd, 1
         ):
             r = 1
 

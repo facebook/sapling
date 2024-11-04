@@ -584,9 +584,7 @@ class transaction(util.transactional):
             self.opener.unlink(self.journal)
         for l, _f, b, c in self._backupentries:
             if l not in self._vfsmap and c:
-                self.report(
-                    "couldn't remove %s: unknown cache location" "%s\n" % (b, l)
-                )
+                self.report("couldn't remove %s: unknown cache location%s\n" % (b, l))
                 continue
             vfs = self._vfsmap[l]
             if b and vfs.exists(b):
@@ -632,7 +630,7 @@ class transaction(util.transactional):
             else:
                 if l not in self._vfsmap and c:
                     self.report(
-                        "couldn't remove %s: unknown cache location" "%s\n" % (b, l)
+                        "couldn't remove %s: unknown cache location%s\n" % (b, l)
                     )
                     continue
                 vfs = self._vfsmap[l]
@@ -774,9 +772,7 @@ def rollback(opener, vfsmap, file, report, checkambigfiles=None) -> None:
                             )
                         backupentries.append((l, f, b, bool(c)))
             else:
-                report(
-                    _("journal was created by a different version of " "@Product@\n")
-                )
+                report(_("journal was created by a different version of @Product@\n"))
 
     _playback(
         file,

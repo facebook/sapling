@@ -230,7 +230,7 @@ def commandprinter(ui, cmdtable, sectionfunc):
                 if optstr.endswith("[+]>"):
                     multioccur = True
             if multioccur:
-                ui.write(_("\n[+] marked option can be specified" " multiple times\n"))
+                ui.write(_("\n[+] marked option can be specified multiple times\n"))
             ui.write("\n")
         # aliases
         if d["aliases"]:

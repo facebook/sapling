@@ -14,7 +14,7 @@ DATETIME_FORMAT = "%Y-%m-%d_%Hh%Mm%Ss"
 
 
 RE_LOG_DIRNAME: Pattern[str] = re.compile(
-    r"(\d{4}-\d\d-\d\d_\d\dh\d\dm\d\ds)_" r"[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}"
+    r"(\d{4}-\d\d-\d\d_\d\dh\d\dm\d\ds)_[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}"
 )
 
 

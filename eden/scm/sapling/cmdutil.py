@@ -986,9 +986,7 @@ def logmessage(repo, opts):
     logfile = opts.get("logfile")
 
     if message and logfile:
-        raise error.Abort(
-            _("options --message and --logfile are mutually " "exclusive")
-        )
+        raise error.Abort(_("options --message and --logfile are mutually exclusive"))
     if not message and logfile:
         try:
             if isstdiofilename(logfile):
@@ -1212,7 +1210,7 @@ def openrevlog(repo, cmd, file_, opts):
         elif dir:
             if "treemanifest" not in repo.requirements:
                 raise error.Abort(
-                    _("--dir can only be used on repos with " "treemanifest enabled")
+                    _("--dir can only be used on repos with treemanifest enabled")
                 )
             dirlog = repo.manifestlog._revlog.dirlog(dir)
             if len(dirlog):
@@ -1275,8 +1273,7 @@ def copy(ui, repo, pats, opts, rename=False):
                     ui.warn(_("%s: not copying - file is not managed\n") % rel)
                 if exact and state == "r":
                     ui.warn(
-                        _("%s: not copying - file has been marked for" " remove\n")
-                        % rel
+                        _("%s: not copying - file has been marked for remove\n") % rel
                     )
                 continue
             # abs: hgsep
@@ -1503,7 +1500,7 @@ def copy(ui, repo, pats, opts, rename=False):
     if not destdirexists:
         if len(pats) > 1 or matchmod.patkind(pats[0]):
             raise error.Abort(
-                _("with multiple sources, destination must be an " "existing directory")
+                _("with multiple sources, destination must be an existing directory")
             )
         if util.endswithsep(dest):
             raise error.Abort(_("destination %s is not a directory") % dest)
@@ -2743,7 +2740,7 @@ def walkchangerevs(repo, match, opts, prepare):
 
         if follow:
             raise error.Abort(
-                _("can only follow copies/renames for explicit " "filenames")
+                _("can only follow copies/renames for explicit filenames")
             )
 
         # The slow path checks files modified in every changeset.
@@ -3625,7 +3622,7 @@ def forget(ui, repo, match, prefix, explicitonly):
                         if repo.dirstate.normalize(f) in repo.dirstate:
                             continue
                         ui.warn(
-                            _("not removing %s: " "file is already untracked\n")
+                            _("not removing %s: file is already untracked\n")
                             % match.rel(f)
                         )
                     bad.append(f)

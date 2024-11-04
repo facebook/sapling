@@ -1578,7 +1578,7 @@ def readsparseprofile(
     try:
         raw = getrawprofile(repo, name, ctx.hex())
     except error.ManifestLookupError:
-        msg = "warning: sparse profile '%s' not found " "in rev %s - ignoring it\n" % (
+        msg = "warning: sparse profile '%s' not found in rev %s - ignoring it\n" % (
             name,
             ctx,
         )
@@ -1724,7 +1724,7 @@ def _discover(ui, repo, rev: Optional[str] = None):
     if profile_directory is not None:
         if os.path.isabs(profile_directory) or profile_directory.startswith("../"):
             raise error.Abort(
-                _("sparse.profile_directory must be relative to the " "repository root")
+                _("sparse.profile_directory must be relative to the repository root")
             )
         if not profile_directory.endswith("/"):
             profile_directory += "/"
@@ -1880,7 +1880,7 @@ def hintlistverbose(profiles, filters, load_matcher) -> Optional[str]:
     hidden_count = sum(1 for p in filter(pred, profiles))
     if hidden_count:
         return (
-            _("%d hidden profiles not shown; " "add '--verbose' to include these")
+            _("%d hidden profiles not shown; add '--verbose' to include these")
             % hidden_count
         )
 
@@ -1897,52 +1897,52 @@ _deprecate = lambda o, l=_("(DEPRECATED)"): (
             "f",
             "force",
             False,
-            _("allow changing rules even with pending changes" "(DEPRECATED)"),
+            _("allow changing rules even with pending changes(DEPRECATED)"),
         ),
         (
             "I",
             "include",
             False,
-            _("include files in the sparse checkout " "(DEPRECATED)"),
+            _("include files in the sparse checkout (DEPRECATED)"),
         ),
         (
             "X",
             "exclude",
             False,
-            _("exclude files in the sparse checkout " "(DEPRECATED)"),
+            _("exclude files in the sparse checkout (DEPRECATED)"),
         ),
-        ("d", "delete", False, _("delete an include/exclude rule " "(DEPRECATED)")),
+        ("d", "delete", False, _("delete an include/exclude rule (DEPRECATED)")),
         (
             "",
             "enable-profile",
             False,
-            _("enables the specified profile " "(DEPRECATED)"),
+            _("enables the specified profile (DEPRECATED)"),
         ),
         (
             "",
             "disable-profile",
             False,
-            _("disables the specified profile " "(DEPRECATED)"),
+            _("disables the specified profile (DEPRECATED)"),
         ),
         ("", "import-rules", False, _("imports rules from a file (DEPRECATED)")),
         (
             "",
             "clear-rules",
             False,
-            _("clears local include/exclude rules " "(DEPRECATED)"),
+            _("clears local include/exclude rules (DEPRECATED)"),
         ),
         (
             "",
             "refresh",
             False,
-            _("updates the working after sparseness changes " "(DEPRECATED)"),
+            _("updates the working after sparseness changes (DEPRECATED)"),
         ),
         ("", "reset", False, _("makes the repo full again (DEPRECATED)")),
         (
             "",
             "cwd-list",
             False,
-            _("list the full contents of the current " "directory (DEPRECATED)"),
+            _("list the full contents of the current directory (DEPRECATED)"),
         ),
     ]
     + [_deprecate(o) for o in commands.templateopts],
@@ -3132,7 +3132,7 @@ def _cwdlist(repo) -> None:
     cwd = "" if cwd == os.curdir else cwd + pycompat.ossep
     if cwd.startswith(os.pardir + pycompat.ossep):
         raise error.Abort(
-            _("the current working directory should begin " "with the root %s") % root
+            _("the current working directory should begin with the root %s") % root
         )
 
     matcher = matchmod.match(repo.root, repo.getcwd(), patterns=["path:" + cwd])

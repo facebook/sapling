@@ -128,7 +128,7 @@ class bmstore(dict):
         self._aclean = False
 
     def __setitem__(self, *args, **kwargs):
-        msg = "'bookmarks[name] = node' is deprecated, " "use 'bookmarks.applychanges'"
+        msg = "'bookmarks[name] = node' is deprecated, use 'bookmarks.applychanges'"
         self._repo.ui.deprecwarn(msg, "4.3")
         self._set(*args, **kwargs)
 
@@ -137,7 +137,7 @@ class bmstore(dict):
         return dict.__setitem__(self, key, value)
 
     def __delitem__(self, key):
-        msg = "'del bookmarks[name]' is deprecated, " "use 'bookmarks.applychanges'"
+        msg = "'del bookmarks[name]' is deprecated, use 'bookmarks.applychanges'"
         self._repo.ui.deprecwarn(msg, "4.3")
         self._del(key)
 
@@ -163,7 +163,7 @@ class bmstore(dict):
         self._recordchange(tr)
 
     def recordchange(self, tr):
-        msg = "'bookmarks.recorchange' is deprecated, " "use 'bookmarks.applychanges'"
+        msg = "'bookmarks.recorchange' is deprecated, use 'bookmarks.applychanges'"
         self._repo.ui.deprecwarn(msg, "4.3")
         return self._recordchange(tr)
 
@@ -248,7 +248,7 @@ class bmstore(dict):
                     )
                     return delbms
             raise error.Abort(
-                _("bookmark '%s' already exists " "(use -f to force)") % mark
+                _("bookmark '%s' already exists (use -f to force)") % mark
             )
         if len(mark) > 3 and not force:
             try:
@@ -812,7 +812,7 @@ def checkformat(repo, mark):
     """
     mark = mark.strip()
     if not mark:
-        raise error.Abort(_("bookmark names cannot consist entirely of " "whitespace"))
+        raise error.Abort(_("bookmark names cannot consist entirely of whitespace"))
     scmutil.checknewlabel(repo, mark, "bookmark")
     return mark
 

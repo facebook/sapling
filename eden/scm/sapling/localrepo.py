@@ -263,7 +263,7 @@ class localpeer(repository.peer):
         return self._repo.pushkey(namespace, key, old, new)
 
     def stream_out(self, shallow=False):
-        raise errormod.Abort(_("cannot perform stream clone against local " "peer"))
+        raise errormod.Abort(_("cannot perform stream clone against local peer"))
 
     def unbundle(self, cg, heads, url):
         """apply a bundle on a repo
@@ -2115,11 +2115,13 @@ class localrepository:
             oldtip = oldlen - 1
 
             if detail and ui.verbose:
-                msg = _(
-                    "repository tip rolled back to revision %d" " (undo %s: %s)\n"
-                ) % (oldtip, desc, detail)
+                msg = _("repository tip rolled back to revision %d (undo %s: %s)\n") % (
+                    oldtip,
+                    desc,
+                    detail,
+                )
             else:
-                msg = _("repository tip rolled back to revision %d" " (undo %s)\n") % (
+                msg = _("repository tip rolled back to revision %d (undo %s)\n") % (
                     oldtip,
                     desc,
                 )
@@ -2129,7 +2131,7 @@ class localrepository:
 
         if not force and self["."] != self["tip"] and desc == "commit":
             raise errormod.Abort(
-                _("rollback of last commit while not checked out " "may lose data"),
+                _("rollback of last commit while not checked out may lose data"),
                 hint=_("use -f to force"),
             )
 
@@ -2162,13 +2164,10 @@ class localrepository:
             parents = tuple([p.rev() for p in self[None].parents()])
             if len(parents) > 1:
                 ui.status(
-                    _("working directory now based on " "revisions %d and %d\n")
-                    % parents
+                    _("working directory now based on revisions %d and %d\n") % parents
                 )
             else:
-                ui.status(
-                    _("working directory now based on " "revision %d\n") % parents
-                )
+                ui.status(_("working directory now based on revision %d\n") % parents)
             mergemod.mergestate.clean(self, self["."].node())
 
         # TODO: if we know which new heads may result from this rollback, pass
@@ -2589,7 +2588,7 @@ class localrepository:
                 fparent1, fparent2 = nullid, newfparent
             else:
                 self.ui.warn(
-                    _("warning: can't find ancestor for '%s' " "copied from '%s'!\n")
+                    _("warning: can't find ancestor for '%s' copied from '%s'!\n")
                     % (fname, cfname)
                 )
 

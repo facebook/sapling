@@ -86,7 +86,7 @@ def canperformstreamclone(
         # This is weird and shouldn't happen with modern servers.
         if not streamreqs:
             pullop.repo.ui.warn(
-                _("warning: stream clone requested but server has them " "disabled\n")
+                _("warning: stream clone requested but server has them disabled\n")
             )
             return False, None
         # This option is used by Mononoke tests.
@@ -423,7 +423,7 @@ def readbundle1header(fp):
     compression = fp.read(2)
     if compression != b"UN":
         raise error.Abort(
-            _("only uncompressed stream clone bundles are " "supported; got %s")
+            _("only uncompressed stream clone bundles are supported; got %s")
             % compression
         )
 
@@ -433,7 +433,7 @@ def readbundle1header(fp):
 
     if not requires.endswith("\0"):
         raise error.Abort(
-            _("malformed stream clone bundle: " "requirements not properly encoded")
+            _("malformed stream clone bundle: requirements not properly encoded")
         )
 
     requirements = set(requires.rstrip("\0").split(","))
@@ -448,13 +448,13 @@ def applybundlev1(repo: "Any", fp: "Any") -> None:
     is at the 2 byte compression identifier.
     """
     if len(repo):
-        raise error.Abort(_("cannot apply stream clone bundle on non-empty " "repo"))
+        raise error.Abort(_("cannot apply stream clone bundle on non-empty repo"))
 
     filecount, bytecount, requirements = readbundle1header(fp)
     missingreqs = requirements - repo.supportedformats
     if missingreqs:
         raise error.Abort(
-            _("unable to apply stream clone: " "unsupported format: %s")
+            _("unable to apply stream clone: unsupported format: %s")
             % ", ".join(sorted(missingreqs))
         )
 

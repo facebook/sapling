@@ -370,7 +370,7 @@ def _findcommonheadsnew(
 
     elapsed = util.timer() - start
     ui.debug("%d total queries in %.4fs\n" % (roundtrips, elapsed))
-    msg = "found %d common and %d unknown server heads," " %d roundtrips in %.4fs\n"
+    msg = "found %d common and %d unknown server heads, %d roundtrips in %.4fs\n"
     remoteonlyheads = set(remoteheads) - commonheads
     ui.log(
         "discovery", msg, len(commonheads), len(remoteonlyheads), roundtrips, elapsed

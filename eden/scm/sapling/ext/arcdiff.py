@@ -149,7 +149,7 @@ def _diff(orig, ui, repo, *pats, **opts):
     phabrev = diffprops.parserevfromcommitmsg(ctx.description())
 
     if phabrev is None:
-        mess = _("local changeset is not associated with a differential " "revision")
+        mess = _("local changeset is not associated with a differential revision")
         raise error.Abort(mess)
 
     rev = _differentialhash(ui, repo, phabrev)

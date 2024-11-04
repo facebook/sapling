@@ -928,7 +928,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
                 flag = f
                 break
         if flag:
-            msg = _("do not specify --delete and " "--%s at the same time") % flag
+            msg = _("do not specify --delete and --%s at the same time") % flag
             raise error.Abort(msg)
         # we want to skip pushing any changesets while deleting a remote
         # bookmark, so we send the null revision

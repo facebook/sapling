@@ -911,7 +911,7 @@ class patchfile:
         if self.exists and self.create:
             if self.copysource:
                 self.ui.warn(
-                    _("cannot create %s: destination already " "exists\n") % self.fname
+                    _("cannot create %s: destination already exists\n") % self.fname
                 )
             else:
                 self.ui.warn(_("file %s already exists\n") % self.fname)
@@ -984,7 +984,7 @@ class patchfile:
                             self.printfile(True)
                             self.ui.warn(msg % (h.number, l + 1, fuzzlen, offset))
                         else:
-                            msg = _("Hunk #%d succeeded at %d " "(offset %d lines).\n")
+                            msg = _("Hunk #%d succeeded at %d (offset %d lines).\n")
                             self.ui.note(msg % (h.number, l + 1, offset))
                         return fuzzlen
         self.printfile(True)
@@ -2315,8 +2315,7 @@ def _applydiff(ui, fp, patcher, backend, store, strip=1, prefix="", eolmode="str
                 if data or mode:
                     if gp.op in ("ADD", "RENAME", "COPY") and backend.exists(gp.path):
                         raise PatchError(
-                            _("cannot create %s: destination " "already exists")
-                            % gp.path
+                            _("cannot create %s: destination already exists") % gp.path
                         )
                     backend.setfile(gp.path, data, mode, gp.oldpath)
             else:
@@ -3342,7 +3341,7 @@ def diffstat(lines, width=80, status=None):
 
     if stats:
         output.append(
-            _(" %d files changed, %d insertions(+), " "%d deletions(-)\n")
+            _(" %d files changed, %d insertions(+), %d deletions(-)\n")
             % (len(stats), totaladds, totalremoves)
         )
 

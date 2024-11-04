@@ -274,7 +274,7 @@ class HTTPResponse:
                     )
                 ):
                     logger.info(
-                        "bogus line endings detected, " "using %r for EOL", bad_eol
+                        "bogus line endings detected, using %r for EOL", bad_eol
                     )
                     self._eol = bad_eol
                     break
@@ -687,7 +687,7 @@ class HTTPConnection:
         path = _ensurebytes(path)
         if self.busy():
             raise httplib.CannotSendRequest(
-                "Can not send another request before " "current response is read!"
+                "Can not send another request before current response is read!"
             )
         self._current_response_taken = False
 
@@ -746,7 +746,7 @@ class HTTPConnection:
                 and not (response and (response.headers or response.continued))
             ):
                 logger.info(
-                    "waiting up to %s seconds for" " continue response from server",
+                    "waiting up to %s seconds for continue response from server",
                     self.continue_timeout,
                 )
                 select_timeout = self.continue_timeout
@@ -780,7 +780,7 @@ class HTTPConnection:
                         if e.args[0] != ssl.SSL_ERROR_WANT_READ:
                             raise
                         logger.debug(
-                            "SSL_ERROR_WANT_READ while sending " "data, retrying..."
+                            "SSL_ERROR_WANT_READ while sending data, retrying..."
                         )
                         continue
                     if not data:
@@ -800,7 +800,7 @@ class HTTPConnection:
                             # things down and let the caller get their
                             # response.
                             logger.info(
-                                "Got an early response, " "aborting remaining request."
+                                "Got an early response, aborting remaining request."
                             )
                             break
                         elif was_first and response is None:
@@ -916,7 +916,7 @@ class HTTPConnection:
         data_left = bool(outgoing_headers or body)
         if data_left:
             logger.info(
-                "stopped sending request early, " "will close the socket to be safe."
+                "stopped sending request early, will close the socket to be safe."
             )
             response.will_close = True
         if response.will_close:

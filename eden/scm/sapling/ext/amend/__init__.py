@@ -130,7 +130,7 @@ RESTACK_DEFAULT = RESTACK_ONLY_TRIVIAL
 @hint("strip-hide")
 def hinthide():
     return _(
-        "'@prog@ strip' may be deprecated in the future - " "use '@prog@ hide' instead"
+        "'@prog@ strip' may be deprecated in the future - use '@prog@ hide' instead"
     )
 
 
@@ -145,7 +145,7 @@ def hintstrip():
 @hint("amend-restack")
 def hintrestack(node):
     return _(
-        "descendants of %s are left behind - use '@prog@ restack' to rebase " "them"
+        "descendants of %s are left behind - use '@prog@ restack' to rebase them"
     ) % short(node)
 
 

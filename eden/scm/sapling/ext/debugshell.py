@@ -119,7 +119,7 @@ def _startipython(ui, repo, env) -> None:
     if getattr(time, "clock", None) is None:
         time.clock = time.time
 
-    bannermsg = "loaded repo:  %s\n" "using source: %s" % (
+    bannermsg = "loaded repo:  %s\nusing source: %s" % (
         repo and repo.root or "(none)",
         sapling.__path__ and sapling.__path__[0],
     ) + (

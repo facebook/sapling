@@ -543,9 +543,7 @@ class hgbuildmo(build):
 
     def run(self):
         if not shutil.which("msgfmt"):
-            self.warn(
-                "could not find msgfmt executable, no translations " "will be built"
-            )
+            self.warn("could not find msgfmt executable, no translations will be built")
             return
 
         podir = "i18n"

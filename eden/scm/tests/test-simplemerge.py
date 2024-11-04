@@ -229,7 +229,7 @@ class TestMerge3(TestCase):
         )
         self.assertEqual(
             b"".join(ml),
-            b"aaa\n" b"bbb\n" b"<< a\n" b"222\n" b"--\n" b"333\n" b">> b\n",
+            b"aaa\nbbb\n<< a\n222\n--\n333\n>> b\n",
         )
         self.assertEqual(conflictscount, 1)
 
@@ -347,9 +347,7 @@ bbb
         )
         m_lines, conflictscount = render_minimized(m3, b"OTHER", b"THIS")
         self.assertEqual(
-            b"<<<<<<< OTHER\r\nc\r\n=======\r\nb\r\n" b">>>>>>> THIS\r\n".splitlines(
-                True
-            ),
+            b"<<<<<<< OTHER\r\nc\r\n=======\r\nb\r\n>>>>>>> THIS\r\n".splitlines(True),
             m_lines,
         )
         self.assertEqual(conflictscount, 1)
@@ -365,7 +363,7 @@ bbb
         )
         m_lines, conflictscount = render_minimized(m3, b"OTHER", b"THIS")
         self.assertEqual(
-            b"<<<<<<< OTHER\rc\r=======\rb\r" b">>>>>>> THIS\r".splitlines(True),
+            b"<<<<<<< OTHER\rc\r=======\rb\r>>>>>>> THIS\r".splitlines(True),
             list(m_lines),
         )
         self.assertEqual(conflictscount, 1)

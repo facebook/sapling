@@ -223,9 +223,7 @@ def _parsejsonrules(rules, state):
                 rest = entry["node"]
             parsedrules += entry["action"] + " " + rest + "\n"
     except KeyError:
-        state.repo.ui.status(
-            _("invalid JSON format, falling back " "to normal parsing\n")
-        )
+        state.repo.ui.status(_("invalid JSON format, falling back to normal parsing\n"))
         return rules
 
     return parsedrules

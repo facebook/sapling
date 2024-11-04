@@ -575,7 +575,7 @@ class remotefilectx(context.filectx):
                     queue.append(parent)
 
         self._repo.ui.debug(
-            "remotefilelog: prefetching %d files " "for annotate\n" % len(fetch)
+            "remotefilelog: prefetching %d files for annotate\n" % len(fetch)
         )
         if fetch:
             self._repo.fileservice.prefetch(fetch)
