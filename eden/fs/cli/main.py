@@ -1197,9 +1197,22 @@ class DoctorCmd(Subcmd):
 class HealthReportCmd(Subcmd):
     class ErrorCode(Enum):
         HEALTHY = 0
+        EDEN_NOT_RUNNING = 1
+
+    def check_if_eden_not_running(self, instance: EdenInstance) -> int:
+        health_info = instance.check_health()
+        if not health_info.is_healthy():
+            print(
+                "EdenFS is not running: {}".format(health_info.detail), file=sys.stderr
+            )
+            return True
+        return False
 
     def run(self, args: argparse.Namespace) -> int:
-        print_stderr("Warning: `eden health-report` is not yet implemented.")
+        instance = get_eden_instance(args)
+
+        if self.check_if_eden_not_running(instance):
+            return HealthReportCmd.ErrorCode.EDEN_NOT_RUNNING.value
         return HealthReportCmd.ErrorCode.HEALTHY.value
 
 
