@@ -15,6 +15,10 @@ use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
 use dialoguer::Confirm;
+use edenfs_client::EdenFsClient;
+use edenfs_client::EdenFsInstance;
+use edenfs_error::EdenFsError;
+use edenfs_utils::bytes_from_path;
 use tracing::debug;
 use tracing::error;
 use tracing::warn;
@@ -48,14 +52,26 @@ struct RemoveContext {
     original_path: String,
     canonical_path: PathBuf,
     skip_prompt: bool,
+    client: Option<Result<EdenFsClient>>,
 }
 
 impl RemoveContext {
-    fn new(original_path: String, skip_prompt: bool) -> RemoveContext {
+    fn new(
+        original_path: String,
+        skip_prompt: bool,
+        client: Result<EdenFsClient, EdenFsError>,
+    ) -> RemoveContext {
         RemoveContext {
             original_path,
             canonical_path: PathBuf::new(),
             skip_prompt,
+            client: match client {
+                Ok(client) => Some(Ok(client)),
+                Err(e) => {
+                    warn!("Failed to initialize EdenFsClient: {e}");
+                    Some(Err(anyhow!("{e}")))
+                }
+            },
         }
     }
 }
@@ -154,12 +170,58 @@ impl RegFile {
 struct ActiveEdenMount {}
 impl ActiveEdenMount {
     async fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
+        // TODO: stop process first
+        match self.unmount(context).await {
+            Ok(_) => {
+                debug!("unmount path {} done", context);
+                Ok(Some(State::InactiveEdenMount(InactiveEdenMount {})))
+            }
+            Err(e) => {
+                error!("Failed to unmount {}: {e}", context);
+                Ok(None)
+            }
+        }
+    }
+
+    async fn unmount(&self, context: &RemoveContext) -> Result<()> {
+        match context.client {
+            Some(ref client_res) => match client_res {
+                Ok(client) => {
+                    debug!("trying to unmount {}", context);
+                    let encoded_path = bytes_from_path(context.canonical_path.clone());
+                    match encoded_path {
+                        Ok(path) => {
+                            let umount_res = client.unmount(&path).await;
+                            match umount_res {
+                                Ok(_) => Ok(()),
+                                Err(e) => Err(anyhow!("Failed to unmount {}: {e}", context)),
+                            }
+                        }
+                        Err(e) => Err(anyhow!("Failed to encode path {}: {e}", context)),
+                    }
+                }
+
+                Err(e) => Err(anyhow!("{e}")),
+            },
+            None => {
+                panic!("Failed to unmount due to missing EdenFsClient!")
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
+struct InactiveEdenMount {}
+impl InactiveEdenMount {
+    async fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
         if context.skip_prompt
             || Confirm::new()
-                .with_prompt("ActiveEdenMount State is not implemented yet... proceed?")
+                .with_prompt("InactiveEdenMount State is not implemented yet... proceed?")
                 .interact()?
         {
-            return Err(anyhow!("Rust remove(ActiveEdenMount) is not implemented!"));
+            return Err(anyhow!(
+                "Rust remove(InactiveEdenMount) is not implemented!"
+            ));
         }
         Ok(None)
     }
@@ -174,7 +236,7 @@ enum State {
 
     // // removal states (harmful operations)
     ActiveEdenMount(ActiveEdenMount),
-    // InactiveEdenMount,
+    InactiveEdenMount(InactiveEdenMount),
     // CleanUp,
     RegFile(RegFile),
     // Unknown,
@@ -190,6 +252,7 @@ impl fmt::Display for State {
                 State::Determination(_) => "Determination",
                 State::RegFile(_) => "RegFile",
                 State::ActiveEdenMount(_) => "ActiveEdenMount",
+                State::InactiveEdenMount(_) => "InactiveEdenMount",
             }
         )
     }
@@ -212,6 +275,7 @@ impl State {
             State::Determination(inner) => inner.next(context).await,
             State::RegFile(inner) => inner.next(context).await,
             State::ActiveEdenMount(inner) => inner.next(context).await,
+            State::InactiveEdenMount(inner) => inner.next(context).await,
         }
     }
 }
@@ -225,7 +289,10 @@ impl Subcommand for RemoveCmd {
             "Currently supporting only one path given per run"
         );
 
-        let mut context = RemoveContext::new(self.paths[0].clone(), self.skip_prompt);
+        let instance = EdenFsInstance::global();
+        let client = instance.connect(None).await;
+
+        let mut context = RemoveContext::new(self.paths[0].clone(), self.skip_prompt, client);
         let mut state = Some(State::start());
 
         while state.is_some() {
@@ -270,11 +337,20 @@ mod tests {
         temp_dir
     }
 
+    fn default_context(original_path: String) -> RemoveContext {
+        RemoveContext {
+            original_path,
+            canonical_path: PathBuf::new(),
+            skip_prompt: true,
+            client: None,
+        }
+    }
+
     #[tokio::test]
     async fn test_sanity_check_pass() {
         let tmp_dir = prepare_directory();
         let path = format!("{}/test/nested/../nested", tmp_dir.path().to_str().unwrap());
-        let mut context = RemoveContext::new(path, true);
+        let mut context = default_context(path);
         let state = State::start().run(&mut context).await.unwrap().unwrap();
 
         assert!(
@@ -291,7 +367,7 @@ mod tests {
             "{}/test/nested/../../nested/inner",
             tmp_dir.path().to_str().unwrap()
         );
-        let mut context = RemoveContext::new(path, true);
+        let mut context = default_context(path);
         let state: std::result::Result<Option<State>, anyhow::Error> =
             State::start().run(&mut context).await;
         assert!(state.is_err());
@@ -316,7 +392,7 @@ mod tests {
         });
 
         // When context includes a path to a regular file
-        let mut file_context = RemoveContext::new(file_path_buf.display().to_string(), true);
+        let mut file_context = default_context(file_path_buf.display().to_string());
         let mut state = State::start()
             .run(&mut file_context)
             .await
@@ -330,8 +406,7 @@ mod tests {
         assert!(matches!(state, State::RegFile(_)), "Expected RegFile state");
 
         // When context includes a path to a directory
-        let mut dir_context =
-            RemoveContext::new(temp_dir.path().to_str().unwrap().to_string(), true);
+        let mut dir_context = default_context(temp_dir.path().to_str().unwrap().to_string());
         state = State::start().run(&mut dir_context).await.unwrap().unwrap();
         assert!(
             matches!(state, State::Determination(_)),

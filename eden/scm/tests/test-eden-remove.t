@@ -29,9 +29,20 @@ eden remove this directory should also see error about Determination state
   Error: Rust remove(Determination) is not implemented!
   [1]
 
-remove wcrepo with eden rust cli should see error about ActiveEdenMount state
+remove wcrepo with eden rust cli should see error about InactiveEdenMount state
 
   $ EDENFSCTL_ONLY_RUST=true eden remove -y $TESTTMP/wcrepo
-  Error: Rust remove(ActiveEdenMount) is not implemented!
+  Error: Rust remove(InactiveEdenMount) is not implemented!
   [1]
+
+check content under that repo
+
+  $ ls $TESTTMP/wcrepo
+  README_EDEN.txt
+
+check eden mount list to make sure it's removed from the mount table
+
+  $ eden list | grep "wcrepo"
+  $TESTTMP/wcrepo (not mounted)
+
 #endif
