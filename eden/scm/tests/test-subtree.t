@@ -85,6 +85,28 @@ test subtree copy
   $ hg dbsh -c 'print(repo["."].extra())'
   {'branch': 'default', 'test_subtree': '[{"deepcopies":[{"from_commit":"d908813f0f7c9078810e26aad1e37bdb32013d4b","from_path":"foo","to_path":"bar"}],"v":1}]'}
 
+test subtree copy metadata sorted by to-path
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B   # B/foo/x = bbb\n
+  > |
+  > A   # A/foo/x = aaa\n
+  >     # A/foo2/y = yyy\n
+  >     # drawdag.defaultfiles=false
+  > EOS
+  $ hg go $B -q
+  $ hg subtree cp -r $A --from-path foo --to-path bar --from-path foo2 --to-path baa -m "subtree copy foo -> bar and foo2 -> baa"
+  copying foo to bar
+  copying foo2 to baa
+  $ hg log -G -T '{node|short} {desc|firstline}\n'
+  @  c37cc3582a27 subtree copy foo -> bar and foo2 -> baa
+  │
+  o  8782b677794f B
+  │
+  o  4c412676b7b9 A
+  $ hg dbsh -c 'print(repo["."].extra())'
+  {'branch': 'default', 'test_subtree': '[{"deepcopies":[{"from_commit":"4c412676b7b9698f29843de329a5c3b654034990","from_path":"foo2","to_path":"baa"},{"from_commit":"4c412676b7b9698f29843de329a5c3b654034990","from_path":"foo","to_path":"bar"}],"v":1}]'}
+
 test subtree copy without skipping source commit check: new commit does not have subtree metadata
   $ newclientrepo
   $ drawdag <<'EOS'
