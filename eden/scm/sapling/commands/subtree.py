@@ -268,6 +268,7 @@ def _docopy(ui, repo, *args, **opts):
     subtreeutil.validate_path_size(from_paths, to_paths, abort_on_empty=True)
     subtreeutil.validate_path_exist(ui, from_ctx, from_paths, abort_on_missing=True)
     subtreeutil.validate_path_overlap(from_paths, to_paths)
+    subtreeutil.validate_source_commit(ui, from_ctx, "copy")
 
     if ui.configbool("subtree", "copy-reuse-tree"):
         _do_cheap_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts)
@@ -281,7 +282,7 @@ def _do_cheap_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
     text = opts.get("message")
 
     extra = {}
-    extra.update(gen_branch_info(from_ctx.hex(), from_paths, to_paths))
+    extra.update(gen_branch_info(repo, from_ctx.hex(), from_paths, to_paths))
 
     summaryfooter = _gen_copy_commit_msg(from_ctx, from_paths, to_paths)
     editform = cmdutil.mergeeditform(repo[None], "subtree.copy")
@@ -375,7 +376,7 @@ def _do_normal_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
     wctx.add(new_files)
 
     extra = {}
-    extra.update(gen_branch_info(from_ctx.hex(), from_paths, to_paths))
+    extra.update(gen_branch_info(repo, from_ctx.hex(), from_paths, to_paths))
 
     summaryfooter = _gen_copy_commit_msg(from_ctx, from_paths, to_paths)
     editform = cmdutil.mergeeditform(repo[None], "subtree.copy")

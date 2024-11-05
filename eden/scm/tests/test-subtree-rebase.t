@@ -1,5 +1,6 @@
   $ setconfig diff.git=True
   $ setconfig subtree.copy-reuse-tree=False
+  $ setconfig subtree.allow-any-source-commit=True
   $ enable rebase
 
 test rebase subtree copy commit and keep the subtree copy metadata

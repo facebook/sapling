@@ -1,5 +1,6 @@
   $ setconfig diff.git=True
   $ setconfig subtree.copy-reuse-tree=False
+  $ setconfig subtree.allow-any-source-commit=True
 
 setup backing repo
 
@@ -30,7 +31,31 @@ test subtree copy paths validation
   abort: path 'nonexist' does not exist in commit d908813f0f7c
   [255]
 
+test subtree copy source commit validation
+  $ hg subtree cp -r $A --from-path foo --to-path bar --config subtree.allow-any-source-commit=False
+  subtree copy from a non-public commit is not recommended. However, you can
+  still proceed and use subtree copy and merge for common cases.
+  (hint: see 'hg help subtree' for the impacts on subtree merge and log)
+  Continue with subtree copy (y/n)?  n
+  abort: subtree copy from a non-public commit is not allowed
+  [255]
+  $ hg subtree cp -r $A --from-path foo --to-path bar --config subtree.allow-any-source-commit=False --config subtree.education-page=https://abc.com/subtree
+  subtree copy from a non-public commit is not recommended. However, you can
+  still proceed and use subtree copy and merge for common cases.
+  (hint: see subtree copy at https://abc.com/subtree for the impacts on subtree merge and log)
+  Continue with subtree copy (y/n)?  n
+  abort: subtree copy from a non-public commit is not allowed
+  [255]
+
 test subtree copy
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B   # B/foo/x = bbb\n
+  > |
+  > A   # A/foo/x = aaa\n
+  >     # drawdag.defaultfiles=false
+  > EOS
+  $ hg go $B -q
   $ hg subtree cp -r $A --from-path foo --to-path bar -m "subtree copy foo -> bar"
   copying foo to bar
   $ hg log -G -T '{node|short} {desc|firstline}\n'
@@ -60,6 +85,33 @@ test subtree copy
   $ hg dbsh -c 'print(repo["."].extra())'
   {'branch': 'default', 'test_subtree_copy': '{"branches":[{"from_commit":"d908813f0f7c9078810e26aad1e37bdb32013d4b","from_path":"foo","to_path":"bar"}],"v":1}'}
 
+test subtree copy without skipping source commit check: new commit does not have subtree metadata
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B   # B/foo/x = bbb\n
+  > |
+  > A   # A/foo/x = aaa\n
+  >     # drawdag.defaultfiles=false
+  > EOS
+  $ hg go $B -q
+  $ setconfig ui.interactive=True
+  $ setconfig subtree.allow-any-source-commit=False
+  $ hg subtree cp -r $A --from-path foo --to-path bar -m "subtree copy foo -> bar"<<EOF
+  > y
+  > EOF
+  subtree copy from a non-public commit is not recommended. However, you can
+  still proceed and use subtree copy and merge for common cases.
+  (hint: see 'hg help subtree' for the impacts on subtree merge and log)
+  Continue with subtree copy (y/n)?  y
+  copying foo to bar
+  $ hg log -G -T '{node|short} {desc|firstline}\n'
+  @  b123ad7c241c subtree copy foo -> bar
+  │
+  o  b9450a0e6ae4 B
+  │
+  o  d908813f0f7c A
+  $ hg dbsh -c 'print(repo["."].extra())'
+  {'branch': 'default'}
 
 abort when subtree copy too many files
 

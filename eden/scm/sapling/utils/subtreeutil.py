@@ -24,7 +24,10 @@ SUBTREE_OPERATION_KEYS = [
 ]
 
 
-def gen_branch_info(from_commit, from_paths, to_paths):
+def gen_branch_info(repo, from_commit, from_paths, to_paths):
+    if not is_source_commit_allowed(repo.ui, repo[from_commit]):
+        return {}
+
     # sort by to_path
     path_mapping = sorted(zip(from_paths, to_paths), key=itemgetter(1))
     value = {
