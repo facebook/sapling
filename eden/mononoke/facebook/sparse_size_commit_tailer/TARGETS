@@ -26,7 +26,6 @@ python_binary(
 
 fbpkg.builder(
     name = "mononoke.sparse_size_commit_tailer",
-    buck_opts = fbpkg.buck_opts(version = "v2"),
     path_actions = {
         "sparse_size_commit_tailer": ":sparse_size_commit_tailer",
         "swift": "//scribeutil/swift:swift",
