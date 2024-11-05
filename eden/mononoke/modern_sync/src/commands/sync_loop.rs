@@ -21,6 +21,7 @@ use fbinit::FacebookInit;
 use mononoke_app::args::MultiRepoArgs;
 use mononoke_app::args::RepoArg;
 use mononoke_app::MononokeApp;
+use repo_identity::RepoIdentityRef;
 use sharding_ext::RepoShard;
 use slog::info;
 use slog::Logger;
@@ -33,18 +34,6 @@ const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
 /// Replays bookmark's moves
 #[derive(Parser)]
 pub struct CommandArgs {}
-
-pub async fn setup_sync(repos_args: &MultiRepoArgs, app: &MononokeApp) -> Result<String> {
-    let repo_count = repos_args.repo_name.len();
-    ensure!(
-        repo_count == 1,
-        "Modern sync only supports one repo at a time for now "
-    );
-
-    info!(app.logger(), "Syncing repos {:?}", repos_args.repo_name);
-
-    Ok(repos_args.repo_name[0].clone())
-}
 
 pub struct ModernSyncProcess {
     app: Arc<MononokeApp>,
@@ -76,10 +65,6 @@ impl RepoShardedProcess for ModernSyncProcess {
     }
 }
 
-pub async fn sync(repo_name: String, _ctx: &CoreContext, app: Arc<MononokeApp>) -> Result<()> {
-    let _repo: Repo = app.open_repo(&RepoArg::Name(repo_name)).await?;
-    Ok(())
-}
 pub struct ModernSyncProcessExecutor {
     fb: FacebookInit,
     logger: Logger,
@@ -108,6 +93,25 @@ impl RepoShardedProcessExecutor for ModernSyncProcessExecutor {
         info!(self.logger, "Finishing modern sync {}", &self.repo_name);
         Ok(())
     }
+}
+
+pub async fn setup_sync(repos_args: &MultiRepoArgs, app: &MononokeApp) -> Result<String> {
+    let repo_count = repos_args.repo_name.len();
+    ensure!(
+        repo_count == 1,
+        "Modern sync only supports one repo at a time for now "
+    );
+
+    info!(app.logger(), "Syncing repos {:?}", repos_args.repo_name);
+
+    Ok(repos_args.repo_name[0].clone())
+}
+
+pub async fn sync(repo_name: String, _ctx: &CoreContext, app: Arc<MononokeApp>) -> Result<()> {
+    let repo: Repo = app.open_repo(&RepoArg::Name(repo_name)).await?;
+    let _repo_id = repo.repo_identity().id();
+
+    Ok(())
 }
 
 pub async fn run(app: MononokeApp, _args: CommandArgs) -> Result<()> {

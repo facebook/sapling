@@ -18,6 +18,7 @@ use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mutable_counters::MutableCounters;
+use repo_identity::RepoIdentity;
 mod commands;
 
 #[derive(Parser)]
@@ -34,6 +35,8 @@ struct ModernSyncArgs {
 pub struct Repo {
     #[facet]
     pub mutable_counters: dyn MutableCounters,
+    #[facet]
+    repo_identity: RepoIdentity,
 }
 
 #[fbinit::main]
