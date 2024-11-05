@@ -319,6 +319,8 @@ pub enum ShardedService {
     RepoMetadataLogger,
     /// Modern Sync Job
     ModernSync,
+    /// Bookmark Service
+    BookmarkService,
 }
 
 /// Indicates types of commit hashes used in a repo context.
