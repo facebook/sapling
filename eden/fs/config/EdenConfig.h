@@ -843,14 +843,6 @@ class EdenConfig : private ConfigSettingManager {
       1024,
       this};
 
-  /**
-   * Whether fetching objects should fall back to hg importer process.
-   */
-  ConfigSetting<bool> hgImporterFetchFallback{
-      "hg:importer-fetch-fallback",
-      true,
-      this};
-
   ConfigSetting<uint32_t> hgActivityBufferSize{
       "hg:activity-buffer-size",
       100,
