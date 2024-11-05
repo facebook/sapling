@@ -11,6 +11,8 @@ license = "GPLv2+"
 anyhow = "1.0.86"
 async-trait = "0.1.71"
 clap = { version = "4.5.20", features = ["derive", "env", "string", "unicode", "wrap_help"] }
+clientinfo = { version = "0.1.0", path = "../../scm/lib/clientinfo" }
+context = { version = "0.1.0", path = "../server/context" }
 executor_lib = { version = "0.1.0", path = "../cmdlib/sharding" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
