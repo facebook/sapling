@@ -904,9 +904,10 @@ export default class ServerToClientAPI {
         }
         repo.runDiff(ctx, data.comparison, /* context lines */ 4).then(diff => {
           Internal.generateSuggestionWithAI?.(repo.initialConnectionContext, {
-            title: data.title,
             context: diff,
             fieldName: data.fieldName,
+            testPlan: data.testPlan,
+            title: data.title,
           })
             .catch((error: Error) => ({error}))
             .then((result: Result<string>) => {
