@@ -162,3 +162,17 @@ test fold subtree copy and subtree merge commits
   $ hg fold --from .^
   abort: cannot combine commits with both subtree copy and merge
   [255]
+
+test split subtree copy commit
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B  # B/foo/x = 1a\n2\n3\n
+  > |
+  > A  # A/foo/x = 1\n2\n3\n
+  > EOS
+  $ hg go -q $B
+  $ hg subtree copy -r $A --from-path foo --to-path bar -m "subtree copy foo to bar"
+  copying foo to bar
+  $ hg split
+  abort: cannot split subtree copy/merge commits
+  [255]

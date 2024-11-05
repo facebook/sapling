@@ -394,3 +394,16 @@ def is_source_commit_allowed(ui, source_ctx) -> bool:
     if source_ctx.ispublic():
         return True
     return False
+
+
+def check_commit_splitability(repo, node):
+    """Check if the given commit can be split into multiple commits.
+
+    This function checks if the given commit contains any subtree metadata.
+    If so, it aborts the command because splitting commits will lose subtree
+    metadata.
+    """
+    extra = repo[node].extra()
+    for key in SUBTREE_OPERATION_KEYS:
+        if key in extra:
+            raise error.Abort(_("cannot split subtree copy/merge commits"))
