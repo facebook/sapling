@@ -396,6 +396,14 @@ def is_source_commit_allowed(ui, source_ctx) -> bool:
     return False
 
 
+def contains_shallow_copy(repo, node):
+    branches = get_subtree_branches(repo, node)
+    for b in branches:
+        if b.branch_type == BranchType.SHALLOW_COPY:
+            return True
+    return False
+
+
 def check_commit_splitability(repo, node):
     """Check if the given commit can be split into multiple commits.
 

@@ -55,7 +55,7 @@ from .node import (
     wdirrev,
 )
 from .pycompat import encodeutf8, isint, range
-from .utils.subtreeutil import SUBTREE_BRANCH_KEY
+from .utils import subtreeutil
 
 filectx_or_bytes = Union["basefilectx", bytes]
 
@@ -591,10 +591,9 @@ class changectx(basectx):
             # The following cases does not provide "files" in commit message,
             # run diff to get it:
             # - git repo
-            # - O(1) subtree copy
-            if (
-                git.isgitformat(self._repo)
-                or SUBTREE_BRANCH_KEY in self._changeset.extra
+            # - subtree shallow copy
+            if git.isgitformat(self._repo) or subtreeutil.contains_shallow_copy(
+                self._repo, self.node()
             ):
                 files = sorted(self.manifest().diff(self.p1().manifest()).keys())
         return files
