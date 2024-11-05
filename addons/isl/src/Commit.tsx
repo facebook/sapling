@@ -709,14 +709,18 @@ async function maybeWarnAboutRebaseOffWarm(dest: CommitInfo): Promise<boolean> {
   const dag = readAtom(dagWithPreviews);
   const src = findPublicBaseAncestor(dag);
 
-  const warning = Promise.resolve(src ? Internal.maybeWarnAboutRebaseOffWarm?.(src) : src);
+  const destBase = findPublicBaseAncestor(dag, dest.hash);
+
+  const warning = Promise.resolve(
+    src ? Internal.maybeWarnAboutRebaseOffWarm?.(src, destBase) : src,
+  );
   if (await warning) {
     tracker.track('WarnAboutRebaseOffWarm');
     return platform.confirm(
       t(
         Internal.warnAboutRebaseOffWarmReason ??
-          'The destination commit is a warmed up commit. ' +
-            'Rebasing off a warmed up commit may be slow. ' +
+          "The commit you're on is a warmed up commit. Rebasing off will cause slower builds and performance.\n" +
+            "If you need fresher changes, it's recommended to reserve a new OD and work off the warm commit.\n" +
             'Do you want to `goto` anyway?',
       ),
     );
