@@ -7,7 +7,7 @@
 
 use faster_hex::hex_string;
 use scuba_ext::MononokeScubaSampleBuilder;
-use source_control::AsyncPingResult;
+use source_control::AsyncPingResponse;
 use source_control::{self as thrift};
 
 /// A trait for logging a thrift `Response` struct to scuba.
@@ -289,16 +289,21 @@ impl AddScubaResponse for thrift::AsyncPingToken {
 
 impl AddScubaResponse for thrift::AsyncPingPollResponse {
     fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
-        match &self.result {
-            None => {
+        match &self {
+            thrift::AsyncPingPollResponse::poll_pending(_) => {
                 scuba.add("response_ready", false);
             }
-            Some(resp) => {
+            thrift::AsyncPingPollResponse::response(response) => {
                 scuba.add("response_ready", true);
-                <AsyncPingResult as AddScubaResponse>::add_scuba_response(resp, scuba);
+                <AsyncPingResponse as AddScubaResponse>::add_scuba_response(response, scuba);
             }
+            thrift::AsyncPingPollResponse::UnknownField(_) => {}
         }
     }
 }
 
-impl AddScubaResponse for thrift::AsyncPingResult {}
+impl AddScubaResponse for thrift::AsyncPingResponse {
+    fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("response_payload", self.payload.clone());
+    }
+}
