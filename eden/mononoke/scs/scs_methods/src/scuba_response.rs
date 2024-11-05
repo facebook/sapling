@@ -135,11 +135,26 @@ impl AddScubaResponse for thrift::CommitSparseProfileSizeResponse {}
 
 impl AddScubaResponse for thrift::CommitSparseProfileSizeToken {
     fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
-        scuba.add("response_token", self.id);
+        scuba.add("token", self.id.to_string());
     }
 }
 
-impl AddScubaResponse for thrift::CommitSparseProfileSizePollResponse {}
+impl AddScubaResponse for thrift::CommitSparseProfileSizePollResponse {
+    fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        match &self {
+            thrift::CommitSparseProfileSizePollResponse::poll_pending(_) => {
+                scuba.add("response_ready", false);
+            }
+            thrift::CommitSparseProfileSizePollResponse::response(response) => {
+                scuba.add("response_ready", true);
+                <thrift::CommitSparseProfileSizeResponse as AddScubaResponse>::add_scuba_response(
+                    response, scuba,
+                );
+            }
+            thrift::CommitSparseProfileSizePollResponse::UnknownField(_) => {}
+        }
+    }
+}
 
 impl AddScubaResponse for thrift::FileChunk {}
 
@@ -268,7 +283,7 @@ impl AddScubaResponse for thrift::RepoStackGitBundleStoreResponse {
 
 impl AddScubaResponse for thrift::AsyncPingToken {
     fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
-        scuba.add("token", self.id);
+        scuba.add("token", self.id.to_string());
     }
 }
 
@@ -276,10 +291,10 @@ impl AddScubaResponse for thrift::AsyncPingPollResponse {
     fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
         match &self.result {
             None => {
-                scuba.add("poll_ready", false);
+                scuba.add("response_ready", false);
             }
             Some(resp) => {
-                scuba.add("poll_ready", true);
+                scuba.add("response_ready", true);
                 <AsyncPingResult as AddScubaResponse>::add_scuba_response(resp, scuba);
             }
         }
