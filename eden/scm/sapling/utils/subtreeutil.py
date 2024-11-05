@@ -32,6 +32,12 @@ SUBTREE_OPERATION_KEYS = [
     SUBTREE_KEY,
 ]
 
+# keys will be removed from commit's extra after folding commits
+DEPRECATED_SUBTREE_METADATA_KEYS = [
+    SUBTREE_BRANCH_KEY,
+    SUBTREE_MERGE_KEY,
+]
+
 
 class BranchType(Enum):
     DEEP_COPY = 1  # O(n) subtree copy
@@ -293,6 +299,13 @@ def merge_subtree_metadata(repo, ctxs):
     if not result:
         return {}
     return _encode_subtree_metadata_list(result)
+
+
+def remove_old_subtree_keys_from_extra(extra):
+    """Remove old subtree metadata keys from commit's extra after folding commits"""
+    for k in DEPRECATED_SUBTREE_METADATA_KEYS:
+        if k in extra:
+            del extra[k]
 
 
 def validate_path_exist(ui, ctx, paths, abort_on_missing=False):
