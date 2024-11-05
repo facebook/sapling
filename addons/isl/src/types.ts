@@ -593,6 +593,11 @@ export type Diagnostic = {
   code?: string;
 };
 
+export type DiagnosticAllowlistValue =
+  | {block: Set<string>; allow?: undefined}
+  | {allow: Set<string>; block?: undefined};
+export type DiagnosticAllowlist = Map<'warning' | 'error', Map<string, DiagnosticAllowlistValue>>;
+
 /* protocol */
 
 /**

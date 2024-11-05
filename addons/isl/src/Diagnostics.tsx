@@ -6,7 +6,8 @@
  */
 
 import type {UseUncommittedSelection} from './partialSelection';
-import type {CommitInfo, Diagnostic} from './types';
+import type {CommitInfo, Diagnostic, DiagnosticAllowlist} from './types';
+import type {ExclusiveOr} from 'isl-components/Types';
 import type {Tracker} from 'isl-server/src/analytics/tracker';
 
 import {spacing} from '../../components/theme/tokens.stylex';
@@ -65,11 +66,13 @@ const styles = stylex.create({
   },
 });
 
-/** Many diagnostics are low-quality and don't reflect what would appear on CI.
- * Start with an allowlist while we validate which signals are worthwhile. */
-const allowlistedCodesBySource = Internal.allowlistedDiagnosticCodes ?? undefined;
-
-function isBlockingDiagnostic(d: Diagnostic): boolean {
+export function isBlockingDiagnostic(
+  d: Diagnostic,
+  /** Many diagnostics are low-quality and don't reflect what would appear on CI.
+   * Start with an allowlist while we validate which signals are worthwhile. */
+  allowlistedCodesBySource: undefined | DiagnosticAllowlist = Internal.allowlistedDiagnosticCodes ??
+    undefined,
+): boolean {
   if (d.source == null || d.code == null) {
     return true;
   }
@@ -86,7 +89,9 @@ function isBlockingDiagnostic(d: Diagnostic): boolean {
   const relevantAllowlist = allowlistedCodesBySource.get(d.severity)?.get(d.source);
   return (
     relevantAllowlist != null &&
-    (relevantAllowlist.has(d.code) === true || relevantAllowlist.has('*') === true)
+    (relevantAllowlist.allow
+      ? relevantAllowlist.allow.has(d.code) === true
+      : relevantAllowlist.block.has(d.code) === false)
   );
 }
 
@@ -139,7 +144,7 @@ export async function confirmNoBlockingDiagnostics(
     if (result.diagnostics.size > 0) {
       const allDiagnostics = [...result.diagnostics.values()];
       const allBlockingErrors = allDiagnostics
-        .map(value => value.filter(isBlockingDiagnostic))
+        .map(value => value.filter(d => isBlockingDiagnostic(d)))
         .flat();
       const totalErrors = allBlockingErrors.length;
 
