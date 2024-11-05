@@ -819,6 +819,7 @@ export type ClientToServerMessage =
       id: string;
       comparison: Comparison;
       fieldName: string;
+      testPlan: string | undefined;
       title: string;
     }
   | {type: 'gotUiState'; state: string}

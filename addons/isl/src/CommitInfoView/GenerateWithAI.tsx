@@ -152,6 +152,11 @@ const generatedSuggestions = atomFamilyWeak((fieldNameAndHashKey: string) =>
 
     const hashOrHead = hashKey.startsWith('commit/') ? 'head' : hashKey;
     const latestFields = readAtom(latestCommitMessageFieldsWithEdits(hashOrHead));
+
+    const latestWrittenTestPlan =
+      fieldName === InternalFieldName.TestPlan
+        ? (latestFields[InternalFieldName.TestPlan] as string)
+        : undefined;
     const latestWrittenTitle = latestFields.Title as string;
 
     // Note: we don't use the FunnelTracker because this event is not needed for funnel analysis,
@@ -167,6 +172,7 @@ const generatedSuggestions = atomFamilyWeak((fieldNameAndHashKey: string) =>
         const response = await nullthrows(Internal.generateSuggestionWithAI)({
           comparison,
           fieldName,
+          testPlan: latestWrittenTestPlan,
           title: latestWrittenTitle,
         });
 
