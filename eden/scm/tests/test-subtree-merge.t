@@ -216,7 +216,7 @@ test multiple subtree merge from dest -> source, then source -> dest
   $ hg ci -m "merge foo to foo2"
 to fix: show a better message when there is no changes for subtree merge
   $ hg subtree merge --from-path foo --to-path foo2
-  merge base: 6066305f2aac
+  merge base: eeb423c321b3
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
   $ hg st

@@ -6,7 +6,6 @@
 import json
 from dataclasses import dataclass
 from enum import Enum
-from operator import itemgetter
 from typing import List
 
 from .. import error, node, pathutil, util
@@ -121,29 +120,35 @@ def _encode_subtree_metadata_list(subtree_metadata):
     return {SUBTREE_KEY: val_str}
 
 
-def gen_merge_info(repo, subtree_merges):
-    subtree_merges = [
+def gen_merge_info(repo, subtree_merges, version=SUBTREE_METADATA_VERSION):
+    merges = [
         m for m in subtree_merges if is_source_commit_allowed(repo.ui, repo[m[0]])
     ]
-    if not subtree_merges:
+    if not merges:
         return {}
 
-    # sort by to_path
-    subtree_merges = sorted(subtree_merges, key=itemgetter(2))
-    value = {
-        "v": 1,
-        "merges": [
-            {
-                "from_commit": node.hex(from_node),
-                "from_path": from_path,
-                "to_path": to_path,
-            }
-            for from_node, from_path, to_path in subtree_merges
-        ],
-    }
-    # compact JSON representation
-    str_val = json.dumps(value, separators=(",", ":"), sort_keys=True)
-    return {SUBTREE_MERGE_KEY: str_val}
+    merges = [
+        SubtreeMerge(
+            version=version,
+            from_commit=node.hex(from_node),
+            from_path=from_path,
+            to_path=to_path,
+        )
+        for from_node, from_path, to_path in subtree_merges
+    ]
+    metadata = _merges_to_dict(merges, version)
+    return _encode_subtree_metadata_list([metadata])
+
+
+def _merges_to_dict(merges: List[SubtreeMerge], version: int):
+    if not merges:
+        return {}
+    merge_dict_list = []
+    sorted_merges = sorted(merges, key=lambda x: x.to_path)
+    for m in sorted_merges:
+        item = m.to_dict()
+        merge_dict_list.append(item)
+    return {"v": version, "merges": merge_dict_list}
 
 
 def get_subtree_metadata(extra):
@@ -194,6 +199,18 @@ def get_subtree_branches(repo, node) -> List[SubtreeBranch]:
 
 def get_subtree_merges(repo, node) -> List[SubtreeMerge]:
     result = []
+    if metadata_list := _get_subtree_metadata(repo, node, SUBTREE_KEY):
+        for metadata in metadata_list:
+            for merge in metadata.get("merges", []):
+                result.append(
+                    SubtreeMerge(
+                        version=metadata["v"],
+                        from_commit=merge["from_commit"],
+                        from_path=merge["from_path"],
+                        to_path=merge["to_path"],
+                    )
+                )
+
     if merge_info := _get_subtree_metadata(repo, node, SUBTREE_MERGE_KEY):
         for m in merge_info.get("merges", []):
             result.append(

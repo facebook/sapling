@@ -404,9 +404,9 @@ test subtree merge
   +4
   $ hg ci -m 'subtree merge foo to bar'
   $ hg dbsh -c 'print(repo["."].extra())'
-  {'branch': 'default', 'test_subtree_merge': '{"merges":[{"from_commit":"907442010f516d83aea80b4382964be22a34214f","from_path":"foo","to_path":"bar"}],"v":1}'}
+  {'branch': 'default', 'test_subtree': '[{"merges":[{"from_commit":"907442010f516d83aea80b4382964be22a34214f","from_path":"foo","to_path":"bar"}],"v":1}]'}
   $ hg show
-  commit:      e436e8bd9eaa
+  commit:      4efbbbca7984
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/x
@@ -430,7 +430,7 @@ should have one parent
   $ hg log -r . -T '{parents}'
   0f9175ec4003  (no-eol)
   $ hg log bar
-  commit:      e436e8bd9eaa
+  commit:      4efbbbca7984
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     subtree merge foo to bar
