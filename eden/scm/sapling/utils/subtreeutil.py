@@ -4,6 +4,7 @@
 # GNU General Public License version 2.
 
 import json
+from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum
 from typing import List
@@ -21,6 +22,7 @@ SUBTREE_MERGE_KEY = "test_subtree_merge"
 # XXX: remove the 'test_' prefix when server-side support is ready
 SUBTREE_KEY = "test_subtree"
 SUBTREE_METADATA_VERSION = 1  # current version of subtree metadata
+SUPPORTED_SUBTREE_METADATA_VERSIONS = {1}
 
 # keys that are used for subtree operations, this list should
 # include the keys for both O(n) copy and O(1) copy
@@ -234,6 +236,63 @@ def _get_subtree_metadata(repo, node, key):
         return json.loads(val_str)
     except json.JSONDecodeError:
         raise error.Abort(f"invalid {key} metadata: {val_str}")
+
+
+def merge_subtree_metadata(repo, ctxs):
+    # XXX: add 'imports' support when implementing 'subtree import' command
+    branches, merges = [], []
+
+    # get subtree metadata
+    for ctx in ctxs:
+        node = ctx.node()
+        branches.extend(get_subtree_branches(repo, node))
+        merges.extend(get_subtree_merges(repo, node))
+
+    if not branches and not merges:
+        return {}
+
+    # metadata merge validation
+    if branches and merges:
+        # Even if we currently reject subtree copy and merge, the following logic
+        # supports it. This allows us to enable it later if needed
+        raise error.Abort(_("cannot combine commits with both subtree copy and merge"))
+
+    from_paths = [b.from_path for b in branches] + [m.from_path for m in merges]
+    to_paths = [b.to_path for b in branches] + [m.to_path for m in merges]
+    try:
+        validate_path_overlap(from_paths, to_paths)
+    except error.Abort as e:
+        raise error.Abort(
+            _("cannot combine commits with overlapping subtree copy/merge paths"),
+            hint=str(e),
+        )
+
+    # group by version
+    version_to_branches = defaultdict(list)
+    version_to_merges = defaultdict(list)
+    for b in branches:
+        version_to_branches[b.version].append(b)
+    for m in merges:
+        version_to_merges[m.version].append(m)
+
+    # validate versions
+    versions = set(version_to_branches.keys()) | set(version_to_merges.keys())
+    if unsupported_versions := versions - SUPPORTED_SUBTREE_METADATA_VERSIONS:
+        raise error.Abort(
+            _("unsupported subtree metadata versions: %s")
+            % ", ".join(map(str, unsupported_versions))
+        )
+
+    # gen merged metadata
+    result = []
+    for v in versions:
+        item = _branches_to_dict(version_to_branches[v], v)
+        item.update(_merges_to_dict(version_to_merges[v], v))
+        result.append(item)
+
+    if not result:
+        return {}
+    return _encode_subtree_metadata_list(result)
 
 
 def validate_path_exist(ui, ctx, paths, abort_on_missing=False):
