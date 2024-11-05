@@ -22,6 +22,7 @@ use pathmatcher::DirectoryMatch;
 use pathmatcher::Matcher;
 use progress_model::ActiveProgressBar;
 use progress_model::ProgressBar;
+use progress_model::Registry;
 use types::PathComponentBuf;
 use types::RepoPath;
 use types::RepoPathBuf;
@@ -90,6 +91,7 @@ struct DiffWorker {
     matcher: Arc<dyn Matcher + Sync + Send>,
     store: InnerStore,
     pending: Arc<AtomicUsize>,
+    progress_bar: Arc<ProgressBar>,
 }
 
 /// A parallel iterator over two trees.
@@ -114,6 +116,10 @@ pub fn diff(
 
     let store = left.store.clone();
 
+    let progress_bar = ProgressBar::new("diffing manifest", 0, "trees");
+    let registry = Registry::main();
+    registry.register_progress_bar(&progress_bar);
+
     let worker = DiffWorker {
         work_recv,
         work_send,
@@ -121,6 +127,7 @@ pub fn diff(
         pending: Arc::new(AtomicUsize::new(0)),
         store,
         matcher: Arc::new(matcher),
+        progress_bar: progress_bar.clone(),
     };
 
     let thread_count = THREAD_POOL.max_count();
@@ -142,7 +149,7 @@ pub fn diff(
 
     Box::new(DiffIter {
         result_recv,
-        progress_bar: ProgressBar::new_adhoc("diffing tree", 18, "depth"),
+        progress_bar: ProgressBar::push_active(progress_bar, registry),
     })
 }
 
@@ -183,6 +190,7 @@ impl DiffWorker {
                 }
                 acc
             });
+            self.progress_bar.increase_position(keys.len() as u64);
             let _ = self.store.prefetch(keys);
 
             // Now process diff work, accumulating work for the next tree level.
@@ -235,6 +243,7 @@ impl DiffWorker {
 
 struct DiffIter {
     result_recv: Receiver<Result<DiffEntry>>,
+    #[allow(unused)]
     progress_bar: ActiveProgressBar,
 }
 
@@ -242,13 +251,7 @@ impl Iterator for DiffIter {
     type Item = Result<DiffEntry>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let next = self.result_recv.recv().ok();
-        if let Some(Ok(DiffEntry { ref path, .. })) = next {
-            // Set "depth" according to item depth.
-            self.progress_bar
-                .set_position(path.ancestors().count() as u64);
-        }
-        next
+        self.result_recv.recv().ok()
     }
 }
 
