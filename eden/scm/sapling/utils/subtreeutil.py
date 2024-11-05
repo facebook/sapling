@@ -9,6 +9,9 @@ from operator import itemgetter
 from .. import error, node, pathutil, util
 from ..i18n import _
 
+# this config is for testing purpose only
+CFG_ALLOW_ANY_SOURCE_COMMIT = "allow-any-source-commit"
+
 # todo: remove the 'test_' prefix when this feature is stable
 SUBTREE_BRANCH_KEY = "test_subtree_copy"
 SUBTREE_MERGE_KEY = "test_subtree_merge"
@@ -140,3 +143,36 @@ def find_enclosing_dest(target_path, paths):
         if target_dir.startswith(path) or path == target_path:
             return path
     return None
+
+
+def validate_source_commit(ui, source_ctx, subcmd_name):
+    if is_source_commit_allowed(ui, source_ctx):
+        return
+
+    if educationpage := ui.config("subtree", "education-page"):
+        hint = _("see subtree %s at %s for the impacts on subtree merge and log") % (
+            subcmd_name,
+            educationpage,
+        )
+    else:
+        hint = _("see '@prog@ help subtree' for the impacts on subtree merge and log")
+    prompt_msg = _(
+        "subtree %s from a non-public commit is not recommended. However, you can\n"
+        "still proceed and use subtree copy and merge for common cases.\n"
+        "(hint: %s)\n"
+        "Continue with subtree %s (y/n)? $$ &Yes $$ &No"
+    ) % (subcmd_name, hint, subcmd_name)
+    if ui.promptchoice(prompt_msg, default=1) != 0:
+        raise error.Abort(
+            f"subtree {subcmd_name} from a non-public commit is not allowed"
+        )
+
+
+def is_source_commit_allowed(ui, source_ctx) -> bool:
+    # Currently, we only allow public commits as source commits
+    # later, we will allow ancestor-draft commits as well.
+    if ui.configbool("subtree", CFG_ALLOW_ANY_SOURCE_COMMIT):
+        return True
+    if source_ctx.ispublic():
+        return True
+    return False
