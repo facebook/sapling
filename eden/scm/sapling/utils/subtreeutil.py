@@ -4,6 +4,8 @@
 # GNU General Public License version 2.
 
 import json
+from dataclasses import dataclass
+from enum import Enum
 from operator import itemgetter
 
 from .. import error, node, pathutil, util
@@ -22,6 +24,52 @@ SUBTREE_OPERATION_KEYS = [
     SUBTREE_BRANCH_KEY,
     SUBTREE_MERGE_KEY,
 ]
+
+
+class BranchType(Enum):
+    DEEP_COPY = 1  # O(n) subtree copy
+    SHALLOW_COPY = 2  # O(1) subtree copy
+
+    def to_key(self):
+        # the `key` is used in subtree metadata
+        if self == BranchType.DEEP_COPY:
+            return "deepcopies"
+        elif self == BranchType.SHALLOW_COPY:
+            return "copies"
+        else:
+            # unreachable
+            raise error.ProgrammingError("unknown branch type")
+
+
+@dataclass
+class SubtreeBranch:
+    version: int
+    branch_type: BranchType
+    from_commit: str
+    from_path: str
+    to_path: str
+
+    def to_dict(self):
+        return {
+            "from_commit": self.from_commit,
+            "from_path": self.from_path,
+            "to_path": self.to_path,
+        }
+
+
+@dataclass
+class SubtreeMerge:
+    version: int
+    from_commit: str
+    from_path: str
+    to_path: str
+
+    def to_dict(self):
+        return {
+            "from_commit": self.from_commit,
+            "from_path": self.from_path,
+            "to_path": self.to_path,
+        }
 
 
 def gen_branch_info(repo, from_commit, from_paths, to_paths):
