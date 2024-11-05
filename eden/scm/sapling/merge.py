@@ -995,12 +995,8 @@ def manifestmerge(
     for k, v in copy.items():
         reverse_copies[v].append(k)
 
-    subtree_copy_info = subtreeutil.get_branch_info(repo, p2)
-    subtree_copy_dests = (
-        [br["to_path"] for br in subtree_copy_info["branches"]]
-        if subtree_copy_info
-        else []
-    )
+    subtree_branches = subtreeutil.get_subtree_branches(repo, p2)
+    subtree_branch_dests = [b.to_path for b in subtree_branches]
 
     actions = {}
     # (n1, fl1) = "local" (m1)
@@ -1015,7 +1011,7 @@ def manifestmerge(
         na = ma.get(fa)  # na is None when fa does not exist in ma
         fla = ma.flags(fa)  # fla is '' when fa does not exist in ma
 
-        subtree_copy_dest = subtreeutil.find_enclosing_dest(f1, subtree_copy_dests)
+        subtree_copy_dest = subtreeutil.find_enclosing_dest(f1, subtree_branch_dests)
         if subtree_copy_dest and (n1 != na or fl1 != fla):
             hint = _("use '@prog@ subtree copy' to re-create the directory branch")
             if extra_hint := repo.ui.config("subtree", "copy-conflict-hint"):

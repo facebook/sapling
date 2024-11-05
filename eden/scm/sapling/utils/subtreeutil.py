@@ -7,6 +7,7 @@ import json
 from dataclasses import dataclass
 from enum import Enum
 from operator import itemgetter
+from typing import List
 
 from .. import error, node, pathutil, util
 from ..i18n import _
@@ -124,12 +125,44 @@ def get_subtree_metadata(extra):
     return {k: v for k, v in extra.items() if k in SUBTREE_OPERATION_KEYS}
 
 
-def get_branch_info(repo, node):
-    return _get_subtree_metadata(repo, node, SUBTREE_BRANCH_KEY)
+def get_subtree_branches(repo, node) -> List[SubtreeBranch]:
+    def detect_branch_type(repo, node):
+        # we have not enabled "subtree.copy-reuse-tree" yet, so we use
+        # a simple method here
+        if not repo[node].changeset().files:
+            return BranchType.SHALLOW_COPY
+        else:
+            return BranchType.DEEP_COPY
+
+    result = []
+    if branch_info := _get_subtree_metadata(repo, node, SUBTREE_BRANCH_KEY):
+        for b in branch_info.get("branches", []):
+            branch_type = detect_branch_type(repo, node)
+            result.append(
+                SubtreeBranch(
+                    version=branch_info["v"],
+                    branch_type=branch_type,
+                    from_commit=b["from_commit"],
+                    from_path=b["from_path"],
+                    to_path=b["to_path"],
+                )
+            )
+    return result
 
 
-def get_merge_info(repo, node):
-    return _get_subtree_metadata(repo, node, SUBTREE_MERGE_KEY)
+def get_subtree_merges(repo, node) -> List[SubtreeMerge]:
+    result = []
+    if merge_info := _get_subtree_metadata(repo, node, SUBTREE_MERGE_KEY):
+        for m in merge_info.get("merges", []):
+            result.append(
+                SubtreeMerge(
+                    version=merge_info["v"],
+                    from_commit=m["from_commit"],
+                    from_path=m["from_path"],
+                    to_path=m["to_path"],
+                )
+            )
+    return result
 
 
 def _get_subtree_metadata(repo, node, key):
