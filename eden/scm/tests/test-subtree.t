@@ -59,13 +59,13 @@ test subtree copy
   $ hg subtree cp -r $A --from-path foo --to-path bar -m "subtree copy foo -> bar"
   copying foo to bar
   $ hg log -G -T '{node|short} {desc|firstline}\n'
-  @  a6c15b42e6a2 subtree copy foo -> bar
+  @  255379dc5cbd subtree copy foo -> bar
   │
   o  b9450a0e6ae4 B
   │
   o  d908813f0f7c A
   $ hg show --git
-  commit:      a6c15b42e6a2
+  commit:      255379dc5cbd
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/x
@@ -83,7 +83,7 @@ test subtree copy
   @@ -0,0 +1,1 @@
   +aaa
   $ hg dbsh -c 'print(repo["."].extra())'
-  {'branch': 'default', 'test_subtree_copy': '{"branches":[{"from_commit":"d908813f0f7c9078810e26aad1e37bdb32013d4b","from_path":"foo","to_path":"bar"}],"v":1}'}
+  {'branch': 'default', 'test_subtree': '[{"deepcopies":[{"from_commit":"d908813f0f7c9078810e26aad1e37bdb32013d4b","from_path":"foo","to_path":"bar"}],"v":1}]'}
 
 test subtree copy without skipping source commit check: new commit does not have subtree metadata
   $ newclientrepo
@@ -213,9 +213,9 @@ test subtree graft
   grafting 78072751cf70 "C"
   merging bar/x and foo/x to bar/x
   $ hg log -G -T '{node|short} {desc|firstline}\n'
-  @  94b9958c85ae Graft "C"
+  @  60262f352c27 Graft "C"
   │
-  o  d52331776b7e subtree copy foo -> bar
+  o  5e3aa22b08c2 subtree copy foo -> bar
   │
   o  78072751cf70 C
   │
@@ -223,7 +223,7 @@ test subtree graft
   │
   o  2f10237b4399 A
   $ hg show
-  commit:      94b9958c85ae
+  commit:      60262f352c27
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/x
@@ -261,7 +261,7 @@ test 'subtree graft -m'
   grafting 78072751cf70 "C"
   merging bar/x and foo/x to bar/x
   $ hg show
-  commit:      785d864769d0
+  commit:      96f7c2084435
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/x
@@ -303,7 +303,7 @@ test 'subtree graft -m' with test plan
   grafting 78072751cf70 "C"
   merging bar/x and foo/x to bar/x
   $ hg show
-  commit:      c479d0be4f82
+  commit:      46512096e501
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/x
@@ -349,7 +349,7 @@ Test 'subtree graft -m' with --no-log
   grafting 78072751cf70 "C"
   merging bar/x and foo/x to bar/x
   $ hg show
-  commit:      87e34c5a2bc6
+  commit:      9a63dfba4f06
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/x
@@ -406,7 +406,7 @@ test subtree merge
   $ hg dbsh -c 'print(repo["."].extra())'
   {'branch': 'default', 'test_subtree_merge': '{"merges":[{"from_commit":"907442010f516d83aea80b4382964be22a34214f","from_path":"foo","to_path":"bar"}],"v":1}'}
   $ hg show
-  commit:      944563f24b78
+  commit:      e436e8bd9eaa
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/x
@@ -428,14 +428,14 @@ test subtree merge
   +4
 should have one parent
   $ hg log -r . -T '{parents}'
-  4658f38ab377  (no-eol)
+  0f9175ec4003  (no-eol)
   $ hg log bar
-  commit:      944563f24b78
+  commit:      e436e8bd9eaa
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     subtree merge foo to bar
   
-  commit:      4658f38ab377
+  commit:      0f9175ec4003
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     subtree copy foo -> bar

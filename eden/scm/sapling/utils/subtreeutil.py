@@ -19,11 +19,16 @@ CFG_ALLOW_ANY_SOURCE_COMMIT = "allow-any-source-commit"
 SUBTREE_BRANCH_KEY = "test_subtree_copy"
 SUBTREE_MERGE_KEY = "test_subtree_merge"
 
+# XXX: remove the 'test_' prefix when server-side support is ready
+SUBTREE_KEY = "test_subtree"
+SUBTREE_METADATA_VERSION = 1  # current version of subtree metadata
+
 # keys that are used for subtree operations, this list should
 # include the keys for both O(n) copy and O(1) copy
 SUBTREE_OPERATION_KEYS = [
     SUBTREE_BRANCH_KEY,
     SUBTREE_MERGE_KEY,
+    SUBTREE_KEY,
 ]
 
 
@@ -73,26 +78,47 @@ class SubtreeMerge:
         }
 
 
-def gen_branch_info(repo, from_commit, from_paths, to_paths):
+def gen_branch_info(
+    repo,
+    from_commit: str,
+    from_paths: List[str],
+    to_paths: List[str],
+    branch_type: BranchType,
+    version: int = SUBTREE_METADATA_VERSION,
+):
     if not is_source_commit_allowed(repo.ui, repo[from_commit]):
         return {}
 
-    # sort by to_path
-    path_mapping = sorted(zip(from_paths, to_paths), key=itemgetter(1))
-    value = {
-        "v": 1,
-        "branches": [
-            {
-                "from_commit": from_commit,
-                "from_path": from_path,
-                "to_path": to_path,
-            }
-            for from_path, to_path in path_mapping
-        ],
-    }
-    # compact JSON representation
-    str_val = json.dumps(value, separators=(",", ":"), sort_keys=True)
-    return {SUBTREE_BRANCH_KEY: str_val}
+    branches = [
+        SubtreeBranch(
+            version=version,
+            branch_type=branch_type,
+            from_commit=from_commit,
+            from_path=from_path,
+            to_path=to_path,
+        )
+        for from_path, to_path in zip(from_paths, to_paths)
+    ]
+    metadata = _branches_to_dict(branches, version)
+    return _encode_subtree_metadata_list([metadata])
+
+
+def _branches_to_dict(branches: List[SubtreeBranch], version: int):
+    if not branches:
+        return {}
+    rs = {}
+    sorted_branches = sorted(branches, key=lambda x: x.to_path)
+    for b in sorted_branches:
+        key = b.branch_type.to_key()
+        item = b.to_dict()
+        rs.setdefault(key, []).append(item)
+    rs["v"] = version
+    return rs
+
+
+def _encode_subtree_metadata_list(subtree_metadata):
+    val_str = json.dumps(subtree_metadata, separators=(",", ":"), sort_keys=True)
+    return {SUBTREE_KEY: val_str}
 
 
 def gen_merge_info(repo, subtree_merges):
@@ -135,6 +161,22 @@ def get_subtree_branches(repo, node) -> List[SubtreeBranch]:
             return BranchType.DEEP_COPY
 
     result = []
+    if metadata_list := _get_subtree_metadata(repo, node, SUBTREE_KEY):
+        for metadata in metadata_list:
+            for branch_type in BranchType:
+                key = branch_type.to_key()
+                branches = metadata.get(key, [])
+                for b in branches:
+                    result.append(
+                        SubtreeBranch(
+                            version=metadata["v"],
+                            branch_type=branch_type,
+                            from_commit=b["from_commit"],
+                            from_path=b["from_path"],
+                            to_path=b["to_path"],
+                        )
+                    )
+
     if branch_info := _get_subtree_metadata(repo, node, SUBTREE_BRANCH_KEY):
         for b in branch_info.get("branches", []):
             branch_type = detect_branch_type(repo, node)

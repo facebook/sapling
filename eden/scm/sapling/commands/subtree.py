@@ -28,6 +28,7 @@ from ..cmdutil import (
 from ..i18n import _
 from ..utils import subtreeutil
 from ..utils.subtreeutil import (
+    BranchType,
     gen_branch_info,
     get_subtree_branches,
     get_subtree_merges,
@@ -282,7 +283,11 @@ def _do_cheap_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
     text = opts.get("message")
 
     extra = {}
-    extra.update(gen_branch_info(repo, from_ctx.hex(), from_paths, to_paths))
+    extra.update(
+        gen_branch_info(
+            repo, from_ctx.hex(), from_paths, to_paths, BranchType.SHALLOW_COPY
+        )
+    )
 
     summaryfooter = _gen_copy_commit_msg(from_ctx, from_paths, to_paths)
     editform = cmdutil.mergeeditform(repo[None], "subtree.copy")
@@ -376,7 +381,11 @@ def _do_normal_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
     wctx.add(new_files)
 
     extra = {}
-    extra.update(gen_branch_info(repo, from_ctx.hex(), from_paths, to_paths))
+    extra.update(
+        gen_branch_info(
+            repo, from_ctx.hex(), from_paths, to_paths, BranchType.DEEP_COPY
+        )
+    )
 
     summaryfooter = _gen_copy_commit_msg(from_ctx, from_paths, to_paths)
     editform = cmdutil.mergeeditform(repo[None], "subtree.copy")

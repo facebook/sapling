@@ -13,7 +13,7 @@ test amend subtree copy commit and keep the subtree copy metadata
   $ hg subtree copy -r $A --from-path foo --to-path foo2 -m "subtree copy foo to foo2"
   copying foo to foo2
   $ hg log -G -T '{node|short} {desc}'
-  @  0a2a689cffc5 subtree copy foo to foo2
+  @  d575b719fc35 subtree copy foo to foo2
   │
   │  Subtree copy from b4cb27eee4e2633aae0d62de87523007d1b5bfdd
   │  - Copied path foo to foo2
@@ -23,7 +23,7 @@ test amend subtree copy commit and keep the subtree copy metadata
   $ echo 4 >> foo/x
   $ hg amend
   $ hg log -G -T '{node|short} {desc}'
-  @  7999ec31e586 subtree copy foo to foo2
+  @  0cad5f90151f subtree copy foo to foo2
   │
   │  Subtree copy from b4cb27eee4e2633aae0d62de87523007d1b5bfdd
   │  - Copied path foo to foo2
@@ -31,7 +31,7 @@ test amend subtree copy commit and keep the subtree copy metadata
   │
   o  b4cb27eee4e2 A
   $ hg dbsh -c 'print(repo["."].extra())'
-  {'branch': 'default', 'amend_source': '0a2a689cffc54d46be66eb9ea4132900c016c1d6', 'test_subtree_copy': '{"branches":[{"from_commit":"b4cb27eee4e2633aae0d62de87523007d1b5bfdd","from_path":"foo","to_path":"foo2"}],"v":1}'}
+  {'branch': 'default', 'amend_source': 'd575b719fc35d1f76d70ce1a76e37baa7274e283', 'test_subtree': '[{"deepcopies":[{"from_commit":"b4cb27eee4e2633aae0d62de87523007d1b5bfdd","from_path":"foo","to_path":"foo2"}],"v":1}]'}
 
 test fold subtree copy commit and keep the subtree copy metadata
   $ newclientrepo
@@ -44,7 +44,7 @@ test fold subtree copy commit and keep the subtree copy metadata
   $ hg subtree copy -r $A --from-path foo --to-path foo2 -m "subtree copy foo to foo2"
   copying foo to foo2
   $ hg log -G -T '{node|short} {desc}'
-  @  0a2a689cffc5 subtree copy foo to foo2
+  @  d575b719fc35 subtree copy foo to foo2
   │
   │  Subtree copy from b4cb27eee4e2633aae0d62de87523007d1b5bfdd
   │  - Copied path foo to foo2
@@ -57,7 +57,7 @@ test fold subtree copy commit and keep the subtree copy metadata
   2 changesets folded
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G -T '{node|short} {desc}'
-  @  333f270b03aa subtree copy foo to foo2
+  @  9a2f428954c2 subtree copy foo to foo2
   │
   │  Subtree copy from b4cb27eee4e2633aae0d62de87523007d1b5bfdd
   │  - Copied path foo to foo2
@@ -68,7 +68,7 @@ test fold subtree copy commit and keep the subtree copy metadata
   │
   o  b4cb27eee4e2 A
   $ hg dbsh -c 'print(repo["."].extra())'
-  {'branch': 'default', 'test_subtree_copy': '{"branches":[{"from_commit":"b4cb27eee4e2633aae0d62de87523007d1b5bfdd","from_path":"foo","to_path":"foo2"}],"v":1}'}
+  {'branch': 'default', 'test_subtree': '[{"deepcopies":[{"from_commit":"b4cb27eee4e2633aae0d62de87523007d1b5bfdd","from_path":"foo","to_path":"foo2"}],"v":1}]'}
 
 test fold two subtree copy commits and merge the subtree copy metadata
   $ newclientrepo
@@ -86,7 +86,7 @@ test fold two subtree copy commits and merge the subtree copy metadata
   2 changesets folded
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G -T '{node|short} {desc}'
-  @  5c9b51a20940 subtree copy foo to foo2
+  @  c14a9893a226 subtree copy foo to foo2
   │
   │  Subtree copy from b4cb27eee4e2633aae0d62de87523007d1b5bfdd
   │  - Copied path foo to foo2
@@ -101,4 +101,4 @@ test fold two subtree copy commits and merge the subtree copy metadata
   o  b4cb27eee4e2 A
 tofix: should merge the subtree metadata
   $ hg dbsh -c 'print(repo["."].extra())'
-  {'branch': 'default', 'test_subtree_copy': '{"branches":[{"from_commit":"b4cb27eee4e2633aae0d62de87523007d1b5bfdd","from_path":"foo","to_path":"foo2"}],"v":1}'}
+  {'branch': 'default', 'test_subtree': '[{"deepcopies":[{"from_commit":"b4cb27eee4e2633aae0d62de87523007d1b5bfdd","from_path":"foo","to_path":"foo2"}],"v":1}]'}
