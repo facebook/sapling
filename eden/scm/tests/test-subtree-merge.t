@@ -277,3 +277,67 @@ test subtree merge from the same directory from a different branch
   @@ -0,0 +1,1 @@
   +111
   $ hg ci -m "merge foo from a descendant"
+
+test subtree merge source commit validation
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B   # B/foo/y = bbb\n
+  > |
+  > A   # A/foo/x = aaa\n
+  >     # drawdag.defaultfiles=false
+  > EOS
+  $ hg go -q $B
+  $ hg subtree copy --from-path foo --to-path foo2
+  copying foo to foo2
+  $ echo "source" >> foo/x && hg ci -m "update foo"
+  $ echo "dest" >> foo2/y && hg ci -m "update foo2"
+  $ setconfig subtree.allow-any-source-commit=False
+  $ hg subtree merge --from-path foo --to-path foo2
+  subtree merge from a non-public commit is not recommended. However, you can
+  still proceed and use subtree copy and merge for common cases.
+  (hint: see 'hg help subtree' for the impacts on subtree merge and log)
+  Continue with subtree merge (y/n)?  n
+  abort: subtree merge from a non-public commit is not allowed
+  [255]
+
+  $ setconfig ui.interactive=True
+  $ hg subtree merge --from-path foo --to-path foo2<<EOF
+  > y
+  > EOF
+  subtree merge from a non-public commit is not recommended. However, you can
+  still proceed and use subtree copy and merge for common cases.
+  (hint: see 'hg help subtree' for the impacts on subtree merge and log)
+  Continue with subtree merge (y/n)?  y
+  merge base: 9998a5c40732
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (subtree merge, don't forget to commit)
+  $ hg st
+  M foo2/x
+  $ hg diff
+  diff --git a/foo2/x b/foo2/x
+  --- a/foo2/x
+  +++ b/foo2/x
+  @@ -1,1 +1,2 @@
+   aaa
+  +source
+  $ hg ci -m "merge foo to foo2"
+  $ hg show
+  commit:      3b4d9456005e
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       foo2/x
+  description:
+  merge foo to foo2
+  
+  Subtree merge from 3a47f1b511d0d6c37ff6330d8a79cf20522a9385
+  - Merged path foo to foo2
+  
+  
+  diff --git a/foo2/x b/foo2/x
+  --- a/foo2/x
+  +++ b/foo2/x
+  @@ -1,1 +1,2 @@
+   aaa
+  +source
+  $ hg dbsh -c 'print(repo["."].extra())'
+  {'branch': 'default'}

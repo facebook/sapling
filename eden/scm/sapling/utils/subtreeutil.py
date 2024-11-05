@@ -46,7 +46,10 @@ def gen_branch_info(repo, from_commit, from_paths, to_paths):
     return {SUBTREE_BRANCH_KEY: str_val}
 
 
-def gen_merge_info(subtree_merges):
+def gen_merge_info(repo, subtree_merges):
+    subtree_merges = [
+        m for m in subtree_merges if is_source_commit_allowed(repo.ui, repo[m[0]])
+    ]
     if not subtree_merges:
         return {}
 

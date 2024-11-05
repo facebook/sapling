@@ -140,6 +140,7 @@ def subtree_merge(ui, repo, **opts):
     subtreeutil.validate_path_overlap(from_paths, to_paths)
     subtreeutil.validate_path_exist(ui, from_ctx, from_paths, abort_on_missing=True)
     subtreeutil.validate_path_exist(ui, ctx, to_paths, abort_on_missing=True)
+    subtreeutil.validate_source_commit(repo.ui, from_ctx, "merge")
 
     merge_base_ctx = _subtree_merge_base(
         repo, ctx, to_paths[0], from_ctx, from_paths[0]
