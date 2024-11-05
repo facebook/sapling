@@ -526,6 +526,9 @@ void SaplingBackingStore::processBlobImportRequests(
       }
       // The blobs were either not found locally, or, when EdenAPI is enabled,
       // not found on the server. Let's retry to import the blob
+      // Note: we don't pass request to this function  to avoid making copies
+      // of the shared ptr (which requires an atomic instruction every time
+      // the refcount changes)
       auto fetchSemiFuture = retryGetBlob(
           request->getRequest<SaplingImportRequest::BlobImport>()->proxyHash,
           request->getContext().copy(),
