@@ -34,7 +34,6 @@ def mononoke_fbpkg(
                 "fbcode.dwp": "true",
             },
             mode = "opt",
-            version = "v2",
         ),
         compress_type = compress_type,
         override_log_paths = list(override_log_paths),
