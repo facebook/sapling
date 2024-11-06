@@ -109,13 +109,6 @@
           "name": "%isl.title%",
           "when": "config.sapling.isl.showInSidebar"
         }
-      ],
-      "scm" : [
-        {
-					"type": "webview",
-					"id": "sapling.comments",
-					"name": "Phabricator Comments"
-				}
       ]
     },
     "commands": [
