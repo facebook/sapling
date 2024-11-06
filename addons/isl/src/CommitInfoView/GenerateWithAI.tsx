@@ -153,6 +153,10 @@ const generatedSuggestions = atomFamilyWeak((fieldNameAndHashKey: string) =>
     const hashOrHead = hashKey.startsWith('commit/') ? 'head' : hashKey;
     const latestFields = readAtom(latestCommitMessageFieldsWithEdits(hashOrHead));
 
+    const latestWrittenSummary =
+      fieldName === InternalFieldName.TestPlan
+        ? (latestFields[InternalFieldName.Summary] as string)
+        : undefined;
     const latestWrittenTestPlan =
       fieldName === InternalFieldName.TestPlan
         ? (latestFields[InternalFieldName.TestPlan] as string)
@@ -172,6 +176,7 @@ const generatedSuggestions = atomFamilyWeak((fieldNameAndHashKey: string) =>
         const response = await nullthrows(Internal.generateSuggestionWithAI)({
           comparison,
           fieldName,
+          summary: latestWrittenSummary,
           testPlan: latestWrittenTestPlan,
           title: latestWrittenTitle,
         });

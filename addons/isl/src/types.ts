@@ -819,6 +819,7 @@ export type ClientToServerMessage =
       id: string;
       comparison: Comparison;
       fieldName: string;
+      summary: string | undefined;
       testPlan: string | undefined;
       title: string;
     }
