@@ -9,8 +9,10 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 use anyhow::ensure;
+use anyhow::format_err;
 use anyhow::Result;
 use async_trait::async_trait;
+use bookmarks::BookmarkUpdateLogRef;
 use clap::Parser;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
@@ -21,6 +23,7 @@ use fbinit::FacebookInit;
 use mononoke_app::args::MultiRepoArgs;
 use mononoke_app::args::RepoArg;
 use mononoke_app::MononokeApp;
+use mutable_counters::MutableCountersRef;
 use repo_identity::RepoIdentityRef;
 use sharding_ext::RepoShard;
 use slog::info;
@@ -30,18 +33,23 @@ use crate::ModernSyncArgs;
 use crate::Repo;
 
 const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
+const MODERN_SYNC_COUNTER_NAME: &str = "modern_sync";
 
 /// Replays bookmark's moves
 #[derive(Parser)]
-pub struct CommandArgs {}
+pub struct CommandArgs {
+    #[clap(long = "start-id", help = "Start id for the sync [default: 0]")]
+    start_id: Option<u64>,
+}
 
 pub struct ModernSyncProcess {
     app: Arc<MononokeApp>,
+    sync_args: Arc<CommandArgs>,
 }
 
 impl ModernSyncProcess {
-    fn new(app: Arc<MononokeApp>) -> Self {
-        Self { app }
+    fn new(app: Arc<MononokeApp>, sync_args: Arc<CommandArgs>) -> Self {
+        Self { app, sync_args }
     }
 }
 
@@ -61,6 +69,7 @@ impl RepoShardedProcess for ModernSyncProcess {
             logger: self.app.logger().clone(),
             repo_name: repo_name.to_string(),
             app: self.app.clone(),
+            sync_args: self.sync_args.clone(),
         }))
     }
 }
@@ -70,6 +79,7 @@ pub struct ModernSyncProcessExecutor {
     logger: Logger,
     repo_name: String,
     app: Arc<MononokeApp>,
+    sync_args: Arc<CommandArgs>,
 }
 
 #[async_trait]
@@ -85,7 +95,13 @@ impl RepoShardedProcessExecutor for ModernSyncProcessExecutor {
             ClientInfo::default_with_entry_point(ClientEntryPoint::ModernSync),
         )
         .clone_with_repo_name(&self.repo_name);
-        let _ = sync(self.repo_name.clone(), &ctx, self.app.clone()).await;
+        sync(
+            self.repo_name.clone(),
+            &ctx,
+            self.app.clone(),
+            self.sync_args.clone(),
+        )
+        .await?;
         Ok(())
     }
 
@@ -107,17 +123,45 @@ pub async fn setup_sync(repos_args: &MultiRepoArgs, app: &MononokeApp) -> Result
     Ok(repos_args.repo_name[0].clone())
 }
 
-pub async fn sync(repo_name: String, _ctx: &CoreContext, app: Arc<MononokeApp>) -> Result<()> {
+pub async fn sync(
+    repo_name: String,
+    ctx: &CoreContext,
+    app: Arc<MononokeApp>,
+    sync_args: Arc<CommandArgs>,
+) -> Result<()> {
     let repo: Repo = app.open_repo(&RepoArg::Name(repo_name)).await?;
-    let _repo_id = repo.repo_identity().id();
+    let repo_id = repo.repo_identity().id();
+
+    info!(app.logger(), "Syncing repo with id {}", repo_id);
+    let _bookmark_update_log = repo.bookmark_update_log();
+    let start_id;
+
+    if let Some(id) = sync_args.start_id {
+        start_id = id
+    } else {
+        start_id = repo
+            .mutable_counters()
+            .get_counter(ctx, MODERN_SYNC_COUNTER_NAME)
+            .await?
+            .map(|val| val.try_into())
+            .transpose()?
+            .ok_or_else(|| {
+                format_err!(
+                    "No start-id or mutable counter {} provided",
+                    MODERN_SYNC_COUNTER_NAME
+                )
+            })?;
+    };
+
+    info!(app.logger(), "Starting with value {}", start_id);
 
     Ok(())
 }
 
-pub async fn run(app: MononokeApp, _args: CommandArgs) -> Result<()> {
+pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let sync_args = &app.args::<ModernSyncArgs>()?;
 
-    let process = Arc::new(ModernSyncProcess::new(Arc::new(app)));
+    let process = Arc::new(ModernSyncProcess::new(Arc::new(app), Arc::new(args)));
     let logger = process.app.logger().clone();
     if let Some(mut executor) = sync_args.sharded_executor_args.clone().build_executor(
         process.app.fb,
@@ -140,7 +184,13 @@ pub async fn run(app: MononokeApp, _args: CommandArgs) -> Result<()> {
             ClientInfo::default_with_entry_point(ClientEntryPoint::ModernSync),
         )
         .clone_with_repo_name(&repo_name);
-        sync(repo_name, &ctx, process.app.clone()).await?;
+        sync(
+            repo_name,
+            &ctx,
+            process.app.clone(),
+            process.sync_args.clone(),
+        )
+        .await?;
     }
     Ok(())
 }

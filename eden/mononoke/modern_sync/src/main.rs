@@ -8,6 +8,7 @@
 #![feature(async_closure)]
 
 use anyhow::Result;
+use bookmarks::BookmarkUpdateLog;
 use clap::Parser;
 use executor_lib::args::ShardedExecutorArgs;
 use fbinit::FacebookInit;
@@ -37,6 +38,8 @@ pub struct Repo {
     pub mutable_counters: dyn MutableCounters,
     #[facet]
     repo_identity: RepoIdentity,
+    #[facet]
+    bookmark_update_log: dyn BookmarkUpdateLog,
 }
 
 #[fbinit::main]

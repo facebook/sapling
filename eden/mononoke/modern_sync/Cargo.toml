@@ -10,6 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.86"
 async-trait = "0.1.71"
+bookmarks = { version = "0.1.0", path = "../bookmarks" }
 clap = { version = "4.5.20", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 clientinfo = { version = "0.1.0", path = "../../scm/lib/clientinfo" }
 context = { version = "0.1.0", path = "../server/context" }
