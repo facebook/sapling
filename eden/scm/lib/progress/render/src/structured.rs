@@ -317,6 +317,15 @@ fn bar_suffix(depth: usize, is_last: bool, is_first: bool, pop_out: usize) -> &'
 
 #[cfg(test)]
 mod test {
+    use std::io::Write;
+    use std::io::{self};
+    use std::time::Duration;
+
+    use progress_model::ProgressBarBuilder;
+    use termwiz::caps::Capabilities;
+    use termwiz::render::terminfo::TerminfoRenderer;
+    use termwiz::render::RenderTty;
+
     use super::*;
 
     #[derive(Debug)]
@@ -461,5 +470,63 @@ mod test {
 ╰ B          ╯
 "
         );
+    }
+
+    struct DumbTty<'a> {
+        w: &'a mut dyn Write,
+    }
+
+    impl RenderTty for DumbTty<'_> {
+        fn get_size_in_cells(&mut self) -> termwiz::Result<(usize, usize)> {
+            Ok((80, 26))
+        }
+    }
+
+    impl io::Write for DumbTty<'_> {
+        fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+            self.w.write(buf)
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            self.w.flush()
+        }
+    }
+
+    #[test]
+    fn test_filtering_children() {
+        let registry = Registry::default();
+
+        // Parent is visible, child is not visible yet (due to delay).
+        let _parent = ProgressBarBuilder::new()
+            .topic("parent")
+            .registry(&registry)
+            .adhoc(false)
+            .active();
+        let _child = ProgressBarBuilder::new()
+            .topic("child")
+            .registry(&registry)
+            .adhoc(true)
+            .active();
+
+        let mut changes = ChangeSequence::new(100, 100);
+        render_progress_bars(
+            &mut changes,
+            &registry.list_progress_bar(),
+            &RenderingConfig {
+                delay: Duration::from_secs(5),
+                ..Default::default()
+            },
+        );
+
+        let mut renderer =
+            TerminfoRenderer::new(Capabilities::new_with_hints(Default::default()).unwrap());
+        let mut buf = Vec::new();
+        renderer
+            .render_to(&changes.consume(), &mut DumbTty { w: &mut buf })
+            .unwrap();
+
+        let got = std::str::from_utf8(buf.as_ref()).unwrap();
+        // FIXME: shouldn't draw with "╭"
+        assert!(got.contains("╭ parent"), "{got}");
     }
 }
