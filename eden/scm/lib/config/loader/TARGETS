@@ -90,6 +90,7 @@ rust_library(
         "fbsource//third-party/rust:tempfile",
         "fbsource//third-party/rust:url",
         "fbsource//third-party/rust:zstd",
+        "//common/rust/fbwhoami:fbwhoami",
         "//common/rust/shed/hostcaps:hostcaps",
         "//eden/scm/lib/hgtime:hgtime",
         "//eden/scm/lib/http-client:http-client",
