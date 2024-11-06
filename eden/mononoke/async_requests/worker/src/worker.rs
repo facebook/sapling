@@ -105,7 +105,7 @@ impl AsyncMethodRequestWorker {
                     format!("{}/{}/{}", tw_job_cluster, tw_job_name, tw_task_id)
                 }
                 _ => format!(
-                    "megarepo_async_requests_worker/{}",
+                    "async_requests_worker/{}",
                     get_hostname().unwrap_or_else(|_| "unknown_hostname".to_string())
                 ),
             }
