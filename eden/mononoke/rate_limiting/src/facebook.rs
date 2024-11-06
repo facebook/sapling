@@ -96,7 +96,7 @@ impl RateLimiter for MononokeRateLimits {
                 (_m, Some(m)) => (m.metric, limit.body.raw_config.limit, m.window),
             };
 
-            if limit.metric != metric {
+            if config_metric != metric {
                 continue;
             }
 
@@ -107,7 +107,7 @@ impl RateLimiter for MononokeRateLimits {
             if loadlimiter::should_throttle(self.fb, self.counter(config_metric), threshold, window)
                 .await?
             {
-                match log_or_enforce_status(&limit.body, metric, scuba) {
+                match log_or_enforce_status(&limit.body, config_metric, scuba) {
                     RateLimitResult::Pass => {
                         break;
                     }
