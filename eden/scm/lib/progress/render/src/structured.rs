@@ -57,22 +57,28 @@ fn render_progress_bars(
     config: &RenderingConfig,
 ) {
     let mut children = HashMap::<u64, Vec<Arc<ProgressBar>>>::new();
+    let mut root_bars = Vec::new();
+    let mut topic_length = MIN_TOPIC_LENGTH;
     for bar in bars {
+        // Filter bars early that we aren't going to render.
+        if bar.adhoc()
+            && config.delay.as_millis() > 0
+            && bar.since_start().unwrap_or_default() < config.delay
+        {
+            continue;
+        }
+
+        topic_length = topic_length.max(bar.topic().graphemes(true).count());
+
         if let Some(parent) = bar.parent() {
             children.entry(parent.id()).or_default().push(bar.clone());
+        } else {
+            root_bars.push(bar.clone());
         }
     }
 
     // Note that we "lose" some topic length as bars nest since they get shorter.
-    let topic_length = bars
-        .iter()
-        .map(|b| b.topic().graphemes(true).count())
-        .max()
-        .unwrap_or_default()
-        .min(MAX_TOPIC_LENGTH)
-        .max(MIN_TOPIC_LENGTH);
-
-    let root_bars = bars.iter().filter(|bar| bar.parent().is_none());
+    topic_length = topic_length.min(MAX_TOPIC_LENGTH);
 
     let mut renderer = Renderer {
         changes,
@@ -80,7 +86,7 @@ fn render_progress_bars(
         topic_length,
         rendered_so_far: 0,
     };
-    renderer.render_bars(root_bars, &children, 0, 0);
+    renderer.render_bars(&root_bars, &children, 0, 0);
 }
 
 struct Renderer<'a> {
@@ -91,24 +97,13 @@ struct Renderer<'a> {
 }
 
 impl Renderer<'_> {
-    fn render_bars<'a>(
+    fn render_bars(
         &mut self,
-        bars: impl IntoIterator<Item = &'a Arc<ProgressBar>>,
+        bars: &[Arc<ProgressBar>],
         id_to_children: &HashMap<u64, Vec<Arc<ProgressBar>>>,
         depth: usize,
         pop_out: usize,
     ) {
-        let bars = bars
-            .into_iter()
-            // Non-adhoc bars are created in advance and should be shown with no
-            // delay (like a checklist of work).
-            .filter(|bar| {
-                !(bar.adhoc()
-                    && self.config.delay.as_millis() > 0
-                    && bar.since_start().unwrap_or_default() < self.config.delay)
-            })
-            .collect::<Vec<_>>();
-
         // Are we the first bar being rendered (at this depth).
         let mut is_first = true;
 
@@ -526,7 +521,7 @@ mod test {
             .unwrap();
 
         let got = std::str::from_utf8(buf.as_ref()).unwrap();
-        // FIXME: shouldn't draw with "╭"
-        assert!(got.contains("╭ parent"), "{got}");
+        // Be sure we draw with "-", not "╭" (i.e. hidden child should not influence rendering).
+        assert!(got.contains("─ parent"), "{got}");
     }
 }
