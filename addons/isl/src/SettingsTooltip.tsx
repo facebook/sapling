@@ -8,6 +8,7 @@
 import type {ThemeColor} from './theme';
 import type {PreferredSubmitCommand} from './types';
 
+import {rebaseOffWarmWarningEnabled} from './Commit';
 import {splitSuggestionEnabled} from './CommitInfoView/SplitSuggestion';
 import {condenseObsoleteStacks} from './CommitTreeList';
 import {Column, Row} from './ComponentUtils';
@@ -131,6 +132,7 @@ function SettingsDropdown({
           <GatedComponent featureFlag={Internal.featureFlags?.ShowSplitSuggestion}>
             <SplitSuggestionSetting />
           </GatedComponent>
+          <RebaseOffWarmWarningSetting />
         </Column>
       </Setting>
       <Setting title={<T>Conflicts</T>}>
@@ -288,6 +290,25 @@ function DeemphasizeIrrelevantCommitsSetting() {
           setValue(checked);
         }}>
         <T>Deemphasize Cwd-Irrelevant Commits</T>
+      </Checkbox>
+    </Tooltip>
+  );
+}
+
+function RebaseOffWarmWarningSetting() {
+  const [value, setValue] = useAtom(rebaseOffWarmWarningEnabled);
+  return (
+    <Tooltip
+      title={t(
+        'Show a warning when rebasing off a commit that is not warm (i.e. not in the current stack).',
+      )}>
+      <Checkbox
+        data-testid="rebase-off-warm-warning-enabled"
+        checked={value}
+        onChange={checked => {
+          setValue(checked);
+        }}>
+        <T>Show Warning on Rebase Off Warm</T>
       </Checkbox>
     </Tooltip>
   );
