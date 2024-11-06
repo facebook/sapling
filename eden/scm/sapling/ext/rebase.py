@@ -1011,12 +1011,10 @@ class rebaseruntime:
     def _prefetch(self):
         repo = self.repo
 
-        # Collect list of all relevant commits: source commits, dest commits, and their
-        # parent commits.
-        tofetch = bindings.dag.nameset(
-            [n for kv in self.destmap.node2node.items() for n in kv]
-        )
+        # Collect list of relevant commits: source commits, their parents, and dest commits.
+        tofetch = bindings.dag.nameset(self.destmap.node2node.keys())
         tofetch += repo.changelog.dag.parents(tofetch)
+        tofetch += self.destmap.node2node.values()
 
         # Batch lazy DAG resolutions.
         repo.changelog.filternodes(tofetch)

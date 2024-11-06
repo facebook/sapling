@@ -35,11 +35,10 @@ Make sure we batch tree fetches well:
 
   $ newclientrepo client2 test:server2
   $ hg pull -qr $C
-FIXME: we don't need to prefetch anything for D:
   $ LOG=file_fetches=trace,tree_fetches=trace hg rebase -q -s $B -d $E
-  TRACE tree_fetches: attrs=["content"] keys=["@0578004a", "@1d3af747", "@1e081eaa", "@3b9f2e11", "@e2120c7c"]
-  TRACE tree_fetches: attrs=["content"] keys=["a@05099e49", "a@1da49c91", "a@82fb1620", "a@bc26d404", "a@ce774d7e"]
-  TRACE tree_fetches: attrs=["content"] keys=["a/b@693cd354", "a/b@7f83a148", "a/b@99574908", "a/b@d48eda77", "a/b@ee58f75d"]
+  TRACE tree_fetches: attrs=["content"] keys=["@0578004a", "@1e081eaa", "@3b9f2e11", "@e2120c7c"]
+  TRACE tree_fetches: attrs=["content"] keys=["a@05099e49", "a@1da49c91", "a@82fb1620", "a@ce774d7e"]
+  TRACE tree_fetches: attrs=["content"] keys=["a/b@693cd354", "a/b@99574908", "a/b@d48eda77", "a/b@ee58f75d"]
   TRACE tree_fetches: attrs=["content"] keys=["a/b/c1@0c8dfc95", "a/b/c1@82bbf75d", "a/b/c2@0c8dfc95", "a/b/c2@1570ca89", "a/b/c2@e98395d2", "a/b/c3@cefe4a92"]
   TRACE file_fetches: attrs=["history"] length=Some(1) keys=["a/b/c1/file"]
   TRACE tree_fetches: attrs=["content"] keys=["@a2e501c5"]
