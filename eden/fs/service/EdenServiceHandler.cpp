@@ -2187,6 +2187,21 @@ EdenServiceHandler::streamChangesSince(
   return {std::move(result), std::move(serverStream)};
 }
 
+apache::thrift::
+    ResponseAndServerStream<ChangesSinceV2Result, ChangeNotificationResult>
+    EdenServiceHandler::streamChangesSinceV2(
+        std::unique_ptr<StreamChangesSinceV2Params> params) {
+  auto helper = INSTRUMENT_THRIFT_CALL_WITH_STAT(
+      DBG3, &ThriftStats::streamChangesSince, *params->mountPoint_ref());
+  auto mountHandle = lookupMount(params->mountPoint());
+  [[maybe_unused]] const auto& fromPosition = *params->fromPosition_ref();
+
+  ChangesSinceV2Result result;
+  return {
+      std::move(result),
+      apache::thrift::ServerStream<ChangeNotificationResult>::createEmpty()};
+}
+
 apache::thrift::ResponseAndServerStream<ChangesSinceResult, ChangedFileResult>
 EdenServiceHandler::streamSelectedChangesSince(
     std::unique_ptr<StreamSelectedChangesSinceParams> params) {
