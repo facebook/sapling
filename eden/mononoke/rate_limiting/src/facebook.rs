@@ -85,6 +85,17 @@ impl RateLimiter for MononokeRateLimits {
         scuba: &mut MononokeScubaSampleBuilder,
     ) -> Result<RateLimitResult, Error> {
         for limit in &self.config.rate_limits {
+            let (config_metric, threshold, window) = match (limit.metric, limit.fci_metric) {
+                // If only old style metric is provided, use it
+                (m, None) => (
+                    m,
+                    limit.body.raw_config.limit * self.config.region_weight,
+                    limit.body.window,
+                ),
+                // If both are provided, use the new one
+                (_m, Some(m)) => (m.metric, limit.body.raw_config.limit, m.window),
+            };
+
             if limit.metric != metric {
                 continue;
             }
@@ -93,13 +104,8 @@ impl RateLimiter for MononokeRateLimits {
                 continue;
             }
 
-            if loadlimiter::should_throttle(
-                self.fb,
-                self.counter(metric),
-                limit.body.raw_config.limit * self.config.region_weight,
-                limit.body.window,
-            )
-            .await?
+            if loadlimiter::should_throttle(self.fb, self.counter(config_metric), threshold, window)
+                .await?
             {
                 match log_or_enforce_status(&limit.body, metric, scuba) {
                     RateLimitResult::Pass => {
