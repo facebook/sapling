@@ -135,14 +135,15 @@ fn get_repo_objects_count_settings(
         .or_else(|| justknobs::get("scm/mononoke:scs_default_repo_objects_count", None).ok())
         .unwrap_or(DEFAULT_REPO_OBJECTS_COUNT);
 
+    // setting the override to 0 means no override
     let maybe_override_objects_count = justknobs::get_as::<i64>(
         "scm/mononoke:scs_override_repo_objects_count",
         Some(repo_name),
     )
     .ok()
-    .or_else(|| repo_config.override_objects_count.clone());
-    // setting the override to 0 means no override
-    let maybe_override_objects_count = maybe_override_objects_count.filter(|x| *x > 0);
+    .filter(|x| *x > 0)
+    .or_else(|| repo_config.override_objects_count.clone())
+    .filter(|x| *x > 0);
 
     let objects_count_multiplier = repo_config
         .objects_count_multiplier
@@ -354,8 +355,7 @@ mod tests {
                 ]),
                 || get_repo_objects_count_settings("repo", repo_config),
             );
-        // FIXME this is supposed to be Some(1000) but the JK override takes precedence even if 0
-        assert!(maybe_override_objects_count.is_none());
+        assert_eq!(maybe_override_objects_count.unwrap(), 1000);
 
         Ok(())
     }
