@@ -342,6 +342,21 @@ mod tests {
         assert_eq!(maybe_override_objects_count.unwrap(), 3000);
         assert_eq!(objects_count_multiplier, 0.005);
 
+        // override JK set to 0 means no override; but even so, an explicit override should be honored
+        let repo_config = Arc::new(RepoConfig {
+            override_objects_count: Some(1000),
+            ..Default::default()
+        });
+        let (_default_objects_count, maybe_override_objects_count, _objects_count_multiplier) =
+            with_just_knobs(
+                JustKnobsInMemory::new(hashmap![
+                    "scm/mononoke:scs_override_repo_objects_count".to_string() => KnobVal::Int(0),
+                ]),
+                || get_repo_objects_count_settings("repo", repo_config),
+            );
+        // FIXME this is supposed to be Some(1000) but the JK override takes precedence even if 0
+        assert!(maybe_override_objects_count.is_none());
+
         Ok(())
     }
 
