@@ -395,7 +395,7 @@ FilteredBackingStore::getGlobFiles(
     const std::vector<std::string>& globs) {
   auto [parsedRootId, parsedFilterId] = parseFilterIdFromRootId(id);
   auto fut = backingStore_->getGlobFiles(parsedRootId, globs);
-  return std::move(fut).thenValue([this, filterId = parsedFilterId](
+  return std::move(fut).thenValue([this, id, filterId = parsedFilterId](
                                       auto&& getGlobFilesResult) {
     std::vector<ImmediateFuture<std::pair<std::string, FilterCoverage>>>
         isFilteredFutures;
@@ -411,7 +411,7 @@ FilteredBackingStore::getGlobFiles(
       isFilteredFutures.emplace_back(std::move(filterFut));
     }
     return collectAllSafe(std::move(isFilteredFutures))
-        .thenValue([rootId = getGlobFilesResult.rootId](
+        .thenValue([rootId = id](
                        std::vector<std::pair<std::string, FilterCoverage>>&&
                            filterCoverageVec) {
           std::vector<std::string> filteredPaths;
