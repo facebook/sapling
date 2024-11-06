@@ -157,7 +157,7 @@ const generatedSuggestions = atomFamilyWeak((fieldNameAndHashKey: string) =>
       fieldName === InternalFieldName.TestPlan
         ? (latestFields[InternalFieldName.TestPlan] as string)
         : undefined;
-    const latestWrittenTitle = latestFields.Title as string;
+    const latestWrittenTitle = latestFields[InternalFieldName.Title] as string;
 
     // Note: we don't use the FunnelTracker because this event is not needed for funnel analysis,
     // only for our own duration / error rate tracking.
