@@ -2468,8 +2468,7 @@ def forget(ui, repo, *pats, **opts):
     ]
     + commitopts2
     + mergetoolopts
-    + dryrunopts
-    + diffgraftopts,
+    + dryrunopts,
     _("[OPTION]... REV..."),
     legacyaliases=["gra", "graf"],
 )
@@ -2621,8 +2620,8 @@ def _dograft(ui, repo, *revs, **opts):
         if not revs:
             return -1
 
-    from_paths = scmutil.rootrelpaths(repo["."], opts.get("from_path"))
-    to_paths = scmutil.rootrelpaths(repo["."], opts.get("to_path"))
+    from_paths = scmutil.rootrelpaths(repo["."], opts.get("from_path", []))
+    to_paths = scmutil.rootrelpaths(repo["."], opts.get("to_path", []))
 
     for pos, ctx in enumerate(repo.set("%ld", revs)):
         desc = '%s "%s"' % (ctx, ctx.description().split("\n", 1)[0])
