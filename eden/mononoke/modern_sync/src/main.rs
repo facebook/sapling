@@ -12,7 +12,7 @@ use bookmarks::BookmarkUpdateLog;
 use clap::Parser;
 use executor_lib::args::ShardedExecutorArgs;
 use fbinit::FacebookInit;
-use mononoke_app::args::MultiRepoArgs;
+use mononoke_app::args::RepoArgs;
 use mononoke_app::args::RepoFilterAppExtension;
 use mononoke_app::fb303::AliveService;
 use mononoke_app::fb303::Fb303AppExtension;
@@ -28,7 +28,7 @@ struct ModernSyncArgs {
     sharded_executor_args: ShardedExecutorArgs,
 
     #[clap(flatten)]
-    pub repos: MultiRepoArgs,
+    pub repo: RepoArgs,
 }
 
 #[facet::container]
