@@ -20,7 +20,7 @@
     "ts-node": "10.9.2"
   },
   "resolutions": {
-    "@stylexjs/babel-plugin": "0.4.1"
+    "@stylexjs/babel-plugin": "0.9.3"
   },
   "scripts": {
     "prettier-check": "prettier --check .",
