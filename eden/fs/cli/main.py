@@ -1274,9 +1274,7 @@ class MinitopCmd(Subcmd):
         return EX_USAGE
 
 
-@subcmd(
-    "notify", "Provides a list of files changed since the specified journal position"
-)
+@subcmd("notify", "Provides a list of filesystem changes since the specified position")
 class NotifyCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         print_stderr("This is not implemented for python edenfsctl.")
