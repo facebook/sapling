@@ -155,8 +155,14 @@ impl Determination {
 
     #[cfg(windows)]
     fn is_active_eden_mount(&self, context: &RemoveContext) -> bool {
-        warn!("is_active_eden_mount() unimplemented for Windows");
-        false
+        // For Windows, an active Eden mount should have a dir named ".eden" under the
+        // repo and there should be a file named "config" under the ".eden" dir
+        let config_path = context.canonical_path.join(".eden").join("config");
+        if !config_path.exists() {
+            warn!("{} is not an active eden mount", context);
+            return false;
+        }
+        true
     }
 }
 
