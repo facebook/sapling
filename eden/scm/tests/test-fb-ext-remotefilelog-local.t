@@ -72,7 +72,23 @@
   $ clearcache
   $ echo xxxx > x
   $ echo yyyy > y
-  $ hg commit -m x --config devel.print-metrics=scmstore.file.fetch.edenapi
+  $ LOG=eagerepo::api=trace,revisionstore::scmstore=trace hg commit --debug -m x --config devel.print-metrics=scmstore.file.fetch.edenapi
+  DEBUG revisionstore::scmstore::tree: fetch_mode=FetchMode(REMOTE | LOCAL) attrs=TreeAttributes { content: true, parents: false, aux_data: false } fetch_children_metadata=false fetch_tree_aux_data=false fetch_local=true fetch_remote=true keys_len=1
+   INFO fetch_edenapi: revisionstore::scmstore::tree::fetch: enter
+  DEBUG fetch_edenapi: revisionstore::scmstore::tree::fetch: attempt to fetch 1 keys from edenapi (Some("eager:$TESTTMP/master"))
+  DEBUG fetch_edenapi: eagerepo::api: trees 960fd206ec076c5e0cd62ea972739158a2ea625c Some(TreeAttributes { manifest_blob: true, parents: true, child_metadata: false, augmented_trees: false })
+  TRACE fetch_edenapi: eagerepo::api:  found: 960fd206ec076c5e0cd62ea972739158a2ea625c, 169 bytes
+   INFO fetch_edenapi{downloaded=0 uploaded=0 requests=0 time=0 latency=0 download_speed="NaN"}: revisionstore::scmstore::tree::fetch: exit
+  committing files:
+  x
+  DEBUG eagerepo::api: history 1406e74118627694268417491f018a4a883152f0
+  TRACE eagerepo::api:  found: 1406e74118627694268417491f018a4a883152f0, 42 bytes
+  y
+  DEBUG eagerepo::api: history 076f5e2225b3ff0400b98c92aa6cdf403ee24cca
+  TRACE eagerepo::api:  found: 076f5e2225b3ff0400b98c92aa6cdf403ee24cca, 42 bytes
+  committing manifest
+  committing changelog
+  committed c9f680bc139617fbc46abc1a1103f36b380bbed0
 
 # restore state for future tests
 
