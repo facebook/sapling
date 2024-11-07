@@ -1275,6 +1275,15 @@ class MinitopCmd(Subcmd):
 
 
 @subcmd(
+    "notify", "Provides a list of files changed since the specified journal position"
+)
+class NotifyCmd(Subcmd):
+    def run(self, args: argparse.Namespace) -> int:
+        print_stderr("This is not implemented for python edenfsctl.")
+        return EX_USAGE
+
+
+@subcmd(
     "prefetch-profile",
     "Create, manage, and use Prefetch Profiles. Use `eden prefetch-profile help` to see more detailed help text.",
     aliases=["pp"],

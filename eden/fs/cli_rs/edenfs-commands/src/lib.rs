@@ -28,6 +28,7 @@ mod gc;
 mod handles;
 mod list;
 mod minitop;
+mod notify;
 mod pid;
 mod prefetch_profile;
 mod redirect;
@@ -107,6 +108,7 @@ pub enum TopLevelSubcommand {
     // Gc(crate::gc::GcCmd),
     List(crate::list::ListCmd),
     Minitop(crate::minitop::MinitopCmd),
+    Notify(crate::notify::NotifyCmd),
     Pid(crate::pid::PidCmd),
     #[clap(subcommand, alias = "pp")]
     PrefetchProfile(crate::prefetch_profile::PrefetchCmd),
@@ -136,6 +138,7 @@ impl TopLevelSubcommand {
             // Gc(cmd) => cmd,
             List(cmd) => cmd,
             Minitop(cmd) => cmd,
+            Notify(cmd) => cmd,
             Pid(cmd) => cmd,
             PrefetchProfile(cmd) => cmd,
             Redirect(cmd) => cmd,
@@ -161,6 +164,7 @@ impl TopLevelSubcommand {
             TopLevelSubcommand::Handles(_) => "handles",
             TopLevelSubcommand::List(_) => "list",
             TopLevelSubcommand::Minitop(_) => "minitop",
+            TopLevelSubcommand::Notify(_) => "notify",
             TopLevelSubcommand::Pid(_) => "pid",
             TopLevelSubcommand::PrefetchProfile(_) => "prefetch-profile",
             TopLevelSubcommand::Redirect(_) => "redirect",
