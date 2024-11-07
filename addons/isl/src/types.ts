@@ -752,6 +752,7 @@ export type LocalStorageName =
   | 'isl.auto-resolve-before-continue'
   | 'isl.warn-about-diagnostics'
   | 'isl.hide-non-blocking-diagnostics'
+  | 'isl.rebase-off-warm-warning-enabled'
   // These keys are prefixes, with further dynamic keys appended afterwards
   | 'isl.edited-commit-messages:';
 

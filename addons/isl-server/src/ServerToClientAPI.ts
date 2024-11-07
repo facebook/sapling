@@ -907,7 +907,7 @@ export default class ServerToClientAPI {
             context: diff,
             fieldName: data.fieldName,
             summary: data.summary,
-            testPlan: data.testPlan,
+            testPlan: data.testPlan ?? '',
             title: data.title,
           })
             .catch((error: Error) => ({error}))
