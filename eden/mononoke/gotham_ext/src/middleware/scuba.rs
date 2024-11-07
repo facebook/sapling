@@ -37,6 +37,8 @@ use crate::response::HeadersMeta;
 use crate::state_ext::StateExt;
 
 const X_FB_PRODUCT_LOG_HEADER: &str = "x-fb-product-log";
+const X_FB_X2PAGENT_REQUEST_ID_HEADER: &str = "x-fb-x2pagent-request-id";
+const X_FB_PRODUCT_LOG_INFO_HEADER: &str = "x-fb-product-log-info";
 const X_FB_GIT_WRAPPER: &str = "x-fb-git-wrapper";
 const X_FB_NETWORK_TYPE: &str = "x-fb-validated-x2pauth-advice-subject-network-type";
 
@@ -89,6 +91,11 @@ pub enum HttpScubaKey {
     ConfigStoreLastUpdatedAt,
     /// Request correlator ID that is recognized and standardized across all traffic infra for E2E tracebility.
     XFBProductLog,
+    /// Request correlator ID that Proxygen sends and can be used as identifier for a request in
+    /// traffic infra.
+    XFBProductLogInfo,
+    // Request id as set by the x2pagentd.
+    XFBX2PAgentRequestId,
     /// Indicates whether the client was using the Meta's git wrapper or not.
     XFBGitWrapper,
     /// Which kind of network type user came from. E.g. corp or vpnless.
@@ -122,6 +129,8 @@ impl AsRef<str> for HttpScubaKey {
             ConfigStoreVersion => "config_store_version",
             ConfigStoreLastUpdatedAt => "config_store_last_updated_at",
             XFBProductLog => "x_fb_product_log",
+            XFBProductLogInfo => "x_fb_product_log_info",
+            XFBX2PAgentRequestId => "x_fb_product_log_info",
             XFBGitWrapper => "git_wrapper",
             XFBNetworkType => "fb_network_type",
         }
@@ -250,6 +259,22 @@ fn populate_scuba(scuba: &mut MononokeScubaSampleBuilder, state: &mut State) {
             headers,
             HttpScubaKey::XFBProductLog,
             X_FB_PRODUCT_LOG_HEADER,
+            |header| header.to_string(),
+        );
+
+        add_header(
+            scuba,
+            headers,
+            HttpScubaKey::XFBProductLogInfo,
+            X_FB_PRODUCT_LOG_INFO_HEADER,
+            |header| header.to_string(),
+        );
+
+        add_header(
+            scuba,
+            headers,
+            HttpScubaKey::XFBX2PAgentRequestId,
+            X_FB_X2PAGENT_REQUEST_ID_HEADER,
             |header| header.to_string(),
         );
 
