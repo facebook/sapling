@@ -8,35 +8,26 @@
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
-use anyhow::format_err;
 use anyhow::Result;
 use async_trait::async_trait;
-use bookmarks::BookmarkUpdateLogRef;
 use clap::Parser;
-use clientinfo::ClientEntryPoint;
-use clientinfo::ClientInfo;
-use context::CoreContext;
 use executor_lib::RepoShardedProcess;
 use executor_lib::RepoShardedProcessExecutor;
 use mononoke_app::args::AsRepoArg;
 use mononoke_app::args::RepoArg;
 use mononoke_app::MononokeApp;
-use mutable_counters::MutableCountersRef;
-use repo_identity::RepoIdentityRef;
 use sharding_ext::RepoShard;
 use slog::info;
 
 use crate::ModernSyncArgs;
-use crate::Repo;
 
 const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
-const MODERN_SYNC_COUNTER_NAME: &str = "modern_sync";
 
 /// Replays bookmark's moves
 #[derive(Parser)]
 pub struct CommandArgs {
     #[clap(long = "start-id", help = "Start id for the sync [default: 0]")]
-    start_id: Option<u64>,
+    start_id: Option<i64>,
 }
 
 pub struct ModernSyncProcess {
@@ -70,9 +61,9 @@ pub struct ModernSyncProcessExecutor {
 #[async_trait]
 impl RepoShardedProcessExecutor for ModernSyncProcessExecutor {
     async fn execute(&self) -> Result<()> {
-        sync(
+        crate::sync::sync(
             self.app.clone(),
-            self.sync_args.clone(),
+            self.sync_args.start_id,
             self.repo_arg.clone(),
         )
         .await?;
@@ -82,47 +73,6 @@ impl RepoShardedProcessExecutor for ModernSyncProcessExecutor {
     async fn stop(&self) -> Result<()> {
         Ok(())
     }
-}
-
-pub async fn sync(
-    app: Arc<MononokeApp>,
-    sync_args: Arc<CommandArgs>,
-    repo_arg: RepoArg,
-) -> Result<()> {
-    let repo: Repo = app.open_repo(&repo_arg).await?;
-    let _repo_id = repo.repo_identity().id();
-    let repo_name = repo.repo_identity().name().to_string();
-
-    let ctx = CoreContext::new_with_logger_and_client_info(
-        app.fb,
-        app.logger().clone(),
-        ClientInfo::default_with_entry_point(ClientEntryPoint::ModernSync),
-    )
-    .clone_with_repo_name(&repo_name);
-
-    let _bookmark_update_log = repo.bookmark_update_log();
-    let start_id;
-
-    if let Some(id) = sync_args.start_id {
-        start_id = id
-    } else {
-        start_id = repo
-            .mutable_counters()
-            .get_counter(&ctx, MODERN_SYNC_COUNTER_NAME)
-            .await?
-            .map(|val| val.try_into())
-            .transpose()?
-            .ok_or_else(|| {
-                format_err!(
-                    "No start-id or mutable counter {} provided",
-                    MODERN_SYNC_COUNTER_NAME
-                )
-            })?;
-    };
-
-    info!(app.logger(), "Starting with value {}", start_id);
-
-    Ok(())
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -145,9 +95,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             .await?;
     } else {
         info!(logger, "Running unsharded sync loop");
-        sync(
+        crate::sync::sync(
             process.app.clone(),
-            process.sync_args.clone(),
+            process.sync_args.start_id.clone(),
             app_args.repo.as_repo_arg().clone(),
         )
         .await?;

@@ -21,6 +21,7 @@ use mononoke_app::MononokeAppBuilder;
 use mutable_counters::MutableCounters;
 use repo_identity::RepoIdentity;
 mod commands;
+mod sync;
 
 #[derive(Parser)]
 struct ModernSyncArgs {
