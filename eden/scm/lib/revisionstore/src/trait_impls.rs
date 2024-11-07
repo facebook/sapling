@@ -145,8 +145,6 @@ impl storemodel::FileStore for ArcFileStore {
     }
 }
 
-const PREFETCH_CHUNK_SIZE: usize = 1000;
-
 pub(crate) fn sha1_digest(opts: &InsertOpts, data: &[u8], format: SerializationFormat) -> Id20 {
     match format {
         SerializationFormat::Hg => {
