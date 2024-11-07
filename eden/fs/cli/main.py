@@ -1271,7 +1271,7 @@ class MinitopCmd(Subcmd):
         print_stderr(
             "This is not implemented for python edenfsctl. Use `top` subcommand instead."
         )
-        return 1
+        return EX_USAGE
 
 
 @subcmd(

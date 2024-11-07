@@ -87,7 +87,7 @@ fn python_fallback() -> Result<Command> {
     Err(anyhow!("unable to locate fallback binary"))
 }
 
-fn fallback(reason: Option<clap::Error>) -> Result<i32> {
+fn fallback(reason: Option<&clap::Error>) -> Result<i32> {
     if std::env::var("EDENFS_LOG").is_ok() {
         setup_logging();
     }
@@ -202,14 +202,28 @@ fn wrapper_main(telemetry_sample: &mut CliUsageSample) -> Result<i32> {
             // If the command isn't defined in Rust then try_parse will fail
             // UnknownArgument (whether or not --help was requested) and we
             // should fall back to Python.
+            //
+            // Otherwise, we have encountered a different error in rust and should
+            // display the rust error. We still return the python error code 64 to differentiate from
+            // edenfsctl errors(2)
             Err(e) => {
-                if (e.kind() == clap::ErrorKind::DisplayHelp
-                    || e.kind() == clap::ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand)
-                    && should_use_rust_help(std::env::args(), &None, &None).unwrap_or(false)
+                if e.kind() == clap::ErrorKind::DisplayHelp
+                    || e.kind() == clap::ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand
                 {
-                    e.exit()
+                    if should_use_rust_help(std::env::args(), &None, &None).unwrap_or(false) {
+                        e.exit()
+                    } else {
+                        fallback(Some(&e))
+                    }
+                } else if e.kind() == clap::ErrorKind::UnknownArgument
+                    || e.kind() == clap::ErrorKind::InvalidSubcommand
+                {
+                    // Failed to parse the command. We should try to fallback to Python.
+                    fallback(Some(&e))
                 } else {
-                    fallback(Some(e))
+                    // Rust command exists, but encountered a different parsing error. Print the error
+                    e.print().ok();
+                    Ok(PYTHON_EDENFSCTL_EX_USAGE)
                 }
             }
         }
