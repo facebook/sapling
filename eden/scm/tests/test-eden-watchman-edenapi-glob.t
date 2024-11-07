@@ -293,7 +293,7 @@ watchman suffix generator uses edenAPI
 watchman suffix expression does not use edenAPI because it resolves to ** and post-filters the results
   $ watchman -j <<-EOT
   > ["query", "$TESTTMP/repo1", {
-  > "expression": ["allof", ["suffix", "txt"], ["type", "f"]],
+  > "expression": ["allof", ["suffix", "txt"], ["type", "f"], ["true"]],
   > "fields": ["name", "type"]
   > }]
   > EOT
