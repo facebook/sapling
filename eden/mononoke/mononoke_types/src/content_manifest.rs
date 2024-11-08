@@ -214,3 +214,51 @@ impl ShardedMapV2Value for ContentManifestEntry {
 
     const WEIGHT_LIMIT: usize = 2000;
 }
+
+pub mod compat {
+    use either::Either;
+
+    use crate::fsnode;
+    use crate::ContentId;
+    use crate::FileType;
+
+    pub type ContentManifestId = Either<super::ContentManifestId, crate::FsnodeId>;
+
+    #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+    pub struct ContentManifestFile(pub Either<super::ContentManifestFile, fsnode::FsnodeFile>);
+
+    impl From<super::ContentManifestFile> for ContentManifestFile {
+        fn from(value: super::ContentManifestFile) -> Self {
+            ContentManifestFile(Either::Left(value))
+        }
+    }
+
+    impl From<fsnode::FsnodeFile> for ContentManifestFile {
+        fn from(value: fsnode::FsnodeFile) -> Self {
+            ContentManifestFile(Either::Right(value))
+        }
+    }
+
+    impl ContentManifestFile {
+        pub fn content_id(&self) -> ContentId {
+            match &self.0 {
+                Either::Left(value) => value.content_id,
+                Either::Right(value) => *value.content_id(),
+            }
+        }
+
+        pub fn file_type(&self) -> FileType {
+            match &self.0 {
+                Either::Left(value) => value.file_type,
+                Either::Right(value) => *value.file_type(),
+            }
+        }
+
+        pub fn size(&self) -> u64 {
+            match &self.0 {
+                Either::Left(value) => value.size,
+                Either::Right(value) => value.size(),
+            }
+        }
+    }
+}
