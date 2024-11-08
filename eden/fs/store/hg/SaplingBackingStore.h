@@ -444,7 +444,8 @@ class SaplingBackingStore final : public BackingStore {
   folly::SemiFuture<BlobPtr> retryGetBlob(
       HgProxyHash hgInfo,
       ObjectFetchContextPtr context,
-      const SaplingImportRequest::FetchType fetch_type);
+      const SaplingImportRequest::FetchType fetch_type,
+      folly::stop_watch<std::chrono::milliseconds> watch);
 
   /**
    * Import multiple blobs at once. The vector parameters have to be the same
@@ -542,15 +543,18 @@ class SaplingBackingStore final : public BackingStore {
   void setPrefetchBlobCounters(
       ObjectFetchContextPtr context,
       ObjectFetchContext::FetchedSource fetchedSource,
+      ObjectFetchContext::FetchResult fetchResult,
       folly::stop_watch<std::chrono::milliseconds> watch);
   void setFetchBlobCounters(
       ObjectFetchContextPtr context,
       ObjectFetchContext::FetchedSource fetchedSource,
+      ObjectFetchContext::FetchResult fetchResult,
       folly::stop_watch<std::chrono::milliseconds> watch);
   void setBlobCounters(
       ObjectFetchContextPtr context,
       SaplingImportRequest::FetchType fetchType,
       ObjectFetchContext::FetchedSource fetchedSource,
+      ObjectFetchContext::FetchResult fetchResult,
       folly::stop_watch<std::chrono::milliseconds> watch);
 
   ImmediateFuture<GetGlobFilesResult> getGlobFiles(
