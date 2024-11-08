@@ -1487,6 +1487,14 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
+  /**
+   * Allowed suffix queries for offloading to EdenAPI
+   */
+  ConfigSetting<std::unordered_set<std::string>> allowedSuffixQueries{
+      "glob:allowed-suffix-queries",
+      {},
+      this};
+
   // [doctor]
 
   /**

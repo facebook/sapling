@@ -141,6 +141,11 @@ bool mountIsUsingFilteredFS(const EdenMountHandle& mount) {
              ->getRepoBackingStoreType() == BackingStoreType::FILTEREDHG;
 }
 
+bool isValidSearchRoot(const PathString& searchRoot) {
+  return searchRoot.empty() || (searchRoot == ".") || (searchRoot == "html") ||
+      (searchRoot == "www/html");
+}
+
 std::string resolveRootId(
     std::string rootId,
     const RootIdOptions& rootIdOptions,
@@ -517,6 +522,7 @@ class GlobFilesRequestScope {
             &ThriftStats::globFilesSaplingRemoteAPISuccess);
       }
     }
+    XLOG(DBG4) << "End of globFiles";
   }
 
   void setLocal(bool isLocal) {
@@ -578,14 +584,6 @@ bool shouldUseSaplingRemoteAPI(
         << ", suppressFileList=" << *params.suppressFileList()
         << ". Falling back to local pathway";
     useSaplingRemoteAPISuffixes = false;
-  } else if (
-      !((*params.searchRoot()).empty()) && !(*params.searchRoot() == ".")) {
-    // searchRoot is relative to root
-    XLOG(DBG3)
-        << "globFiles request cannot be offloaded to SaplingRemoteAPI due to searchRoot '"
-        << *params.searchRoot() << "'" << " not being mount root '.'"
-        << ", falling back to local pathway";
-    useSaplingRemoteAPISuffixes = false;
   } else if (params.predictiveGlob()) {
     XLOG(DBG3)
         << "globFiles request cannot be offloaded to SaplingRemoteAPI due to predictiveGlob, falling back to local pathway";
@@ -597,6 +595,19 @@ bool shouldUseSaplingRemoteAPI(
   }
 
   return useSaplingRemoteAPISuffixes;
+}
+
+bool checkAllowedQuery(
+    const std::vector<std::string>& suffixes,
+    const std::unordered_set<std::string>& allowedSuffixes) {
+  for (auto& suffix : suffixes) {
+    if (allowedSuffixes.count(suffix) == 0) {
+      XLOGF(DBG4, "Suffix {} is not in allowed suffixes", suffix);
+      return false;
+    }
+  }
+  XLOGF(DBG4, "All suffixes allowed");
+  return true;
 }
 
 } // namespace
@@ -3543,7 +3554,15 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
   }
 
   bool requestIsOffloadable = !suffixGlobs.empty() && nonSuffixGlobs.empty() &&
-      (((*params->searchRoot()).empty()) || (*params->searchRoot() == "."));
+      isValidSearchRoot(*params->searchRoot());
+
+  // Allow only specific queries that have been determined to operate faster
+  // when offloaded
+  XLOG(ERR) << "rio " << requestIsOffloadable;
+  requestIsOffloadable = requestIsOffloadable &&
+      checkAllowedQuery(suffixGlobs,
+                        edenConfig->allowedSuffixQueries.getValue());
+  XLOG(ERR) << "rio2 " << requestIsOffloadable;
 
   auto globFilesRequestScope = std::make_shared<GlobFilesRequestScope>(
       server_->getServerState(),
@@ -3552,7 +3571,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
       context);
 
   if (requestIsOffloadable) {
-    XLOG(DBG5)
+    XLOG(DBG4)
         << "globFiles request is only suffix globs, can be offloaded to EdenAPI";
     auto suffixGlobLogString = globber.logString(suffixGlobs);
     suffixGlobRequestScope = std::make_unique<SuffixGlobRequestScope>(
@@ -3564,7 +3583,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
 
   if (useSaplingRemoteAPISuffixes) {
     if (requestIsOffloadable) {
-      XLOG(DBG5) << "globFiles request offloaded to EdenAPI";
+      XLOG(DBG4) << "globFiles request offloaded to EdenAPI";
       // Only use BSSM if there are only suffix queries
       globFilesRequestScope->setLocal(false);
       // Attempt to resolve all EdenAPI futures. If any of
