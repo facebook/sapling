@@ -906,7 +906,7 @@ export default class ServerToClientAPI {
           Internal.generateSuggestionWithAI?.(repo.initialConnectionContext, {
             context: diff,
             fieldName: data.fieldName,
-            summary: data.summary,
+            summary: data.summary ?? '',
             testPlan: data.testPlan ?? '',
             title: data.title,
           })

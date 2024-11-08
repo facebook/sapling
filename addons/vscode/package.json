@@ -110,13 +110,13 @@
           "when": "config.sapling.isl.showInSidebar"
         }
       ],
-      "scm" : [
+      "scm": [
         {
-					"type": "webview",
-					"id": "sapling.comments",
-					"name": "Code Review Comments",
+          "type": "webview",
+          "id": "sapling.comments",
+          "name": "Code Review Comments",
           "when": "isl.inlineCommentSidePanelEnabled"
-				}
+        }
       ]
     },
     "commands": [
