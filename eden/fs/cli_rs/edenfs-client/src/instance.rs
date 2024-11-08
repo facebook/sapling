@@ -320,27 +320,34 @@ impl EdenFsInstance {
         })?;
 
         // Lock acquired, now we can read and write to the "config.json" file
+
+        // On Windows the "Path" crate will append the prefix "\\?\" to the original path when
+        // "canonicalize()" is called to indicate the path is in unicode.
+        // We need to strip the prefix before checking the key in "config.json" file
+        // For non-windows platforms, this is no-op.
+        let entry_key = dunce::simplified(path);
         let mut all_checkout_map = self.get_configured_mounts_map()?;
-        match all_checkout_map.remove(path) {
-            Some(_) => {
-                atomic_write(&config_file_path, CONFIG_JSON_MODE, true, |f| {
-                    serde_json::to_writer_pretty(f, &all_checkout_map)?;
-                    Ok(())
-                })
-                .with_context(|| {
-                    format!(
-                        "Failed to write updated config JSON back to {}",
-                        config_file_path.display()
-                    )
-                })?;
-            }
-            None => {
-                event!(
-                    Level::WARN,
-                    "There is not entry for {} in config.json",
-                    path.display()
-                );
-            }
+        let original_num_of_entries = all_checkout_map.len();
+
+        all_checkout_map.retain(|path, _| dunce::simplified(path) != entry_key);
+
+        if all_checkout_map.len() < original_num_of_entries {
+            atomic_write(&config_file_path, CONFIG_JSON_MODE, true, |f| {
+                serde_json::to_writer_pretty(f, &all_checkout_map)?;
+                Ok(())
+            })
+            .with_context(|| {
+                format!(
+                    "Failed to write updated config JSON back to {}",
+                    config_file_path.display()
+                )
+            })?;
+        } else {
+            event!(
+                Level::WARN,
+                "There is not entry for {} in config.json",
+                path.display()
+            );
         }
 
         // Lock will be released when _lock is dropped

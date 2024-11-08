@@ -28,6 +28,10 @@ eden remove this directory should also see error about Determination state
   Error: Rust remove(Determination) is not implemented!
   [1]
 
+eden list should give two repos
+  $ eden list | wc -l
+  2
+
 #if linuxormacos
 remove wcrepo with eden rust cli should succeed
 
@@ -44,10 +48,14 @@ check to make sure the mount point is cleanly removed
 remove wcrepo with eden rust cli should see error about CleanUp for Windows not implemented
 
   $ EDENFSCTL_ONLY_RUST=true eden remove -y $TESTTMP/wcrepo
-  Error: Failed to clean mount point $TESTTMP/wcrepo
+  Error: Failed to clean mount point $TESTTMP\wcrepo
   
   Caused by:
       Windows clean_mount_point not implemented!!
   [1]
 
 #endif
+
+eden list should now give only one repo
+  $ eden list | wc -l
+  1
