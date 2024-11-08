@@ -224,6 +224,18 @@ pub mod compat {
 
     pub type ContentManifestId = Either<super::ContentManifestId, crate::FsnodeId>;
 
+    impl From<super::ContentManifestId> for ContentManifestId {
+        fn from(value: super::ContentManifestId) -> Self {
+            ContentManifestId::Left(value)
+        }
+    }
+
+    impl From<crate::FsnodeId> for ContentManifestId {
+        fn from(value: crate::FsnodeId) -> Self {
+            ContentManifestId::Right(value)
+        }
+    }
+
     #[derive(Debug, Clone, PartialEq, Eq, Hash)]
     pub struct ContentManifestFile(pub Either<super::ContentManifestFile, fsnode::FsnodeFile>);
 
@@ -236,6 +248,12 @@ pub mod compat {
     impl From<fsnode::FsnodeFile> for ContentManifestFile {
         fn from(value: fsnode::FsnodeFile) -> Self {
             ContentManifestFile(Either::Right(value))
+        }
+    }
+
+    impl From<Either<super::ContentManifestFile, fsnode::FsnodeFile>> for ContentManifestFile {
+        fn from(value: Either<super::ContentManifestFile, fsnode::FsnodeFile>) -> Self {
+            ContentManifestFile(value)
         }
     }
 
