@@ -527,19 +527,6 @@ void SaplingBackingStore::processBlobImportRequests(
             watch);
         continue;
       }
-
-      switch (request->getFetchType()) {
-        case SaplingImportRequest::FetchType::Prefetch:
-          stats_->increment(&SaplingBackingStoreStats::prefetchBlobFailure);
-          break;
-        case SaplingImportRequest::FetchType::Fetch:
-          stats_->increment(&SaplingBackingStoreStats::fetchBlobFailure);
-          break;
-      }
-      if (store_.dogfoodingHost()) {
-        stats_->increment(
-            &SaplingBackingStoreStats::fetchBlobFailureDogfooding);
-      }
       // The blobs were either not found locally, or, when EdenAPI is enabled,
       // not found on the server. Let's retry to import the blob
       // Note: we don't pass request to this function  to avoid making copies
