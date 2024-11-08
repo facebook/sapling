@@ -15,6 +15,7 @@ use blame::RootBlameV2;
 use case_conflict_skeleton_manifest::RootCaseConflictSkeletonManifestId;
 use changeset_info::ChangesetInfo;
 use cloned::cloned;
+use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use deleted_manifest::RootDeletedManifestV2Id;
 use derived_data_manager::BonsaiDerivable;
@@ -321,6 +322,9 @@ fn manager_for_type(
         }
         DerivableType::Ccsm => {
             Arc::new(SingleTypeManager::<RootCaseConflictSkeletonManifestId>::new(manager))
+        }
+        DerivableType::ContentManifests => {
+            Arc::new(SingleTypeManager::<RootContentManifestId>::new(manager))
         }
         DerivableType::ChangesetInfo => Arc::new(SingleTypeManager::<ChangesetInfo>::new(manager)),
         DerivableType::GitTrees => Arc::new(SingleTypeManager::<TreeHandle>::new(manager)),

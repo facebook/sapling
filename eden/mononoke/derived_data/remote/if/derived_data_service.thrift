@@ -79,6 +79,7 @@ union DerivedData {
   19: DerivedDataGitDeltaManifestV2 git_delta_manifest_v2;
   20: DerivedDataSkeletonManifestV2 skeleton_manifest_v2;
   21: DerivedDataCcsm ccsm;
+  22: DerivedDataContentManifest content_manifest;
 }
 
 union DerivedDataFsnode {
@@ -161,6 +162,10 @@ union DerivedDataHgAugmentedManifest {
 }
 union DerivedDataGitDeltaManifestV2 {
   1: git_types_thrift.GitDeltaManifestV2Id root_git_delta_manifest_v2_id;
+}
+
+union DerivedDataContentManifest {
+  1: id.ContentManifestId root_content_manifest_id;
 }
 
 struct DerivedDataTypeNotEnabled {

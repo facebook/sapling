@@ -285,6 +285,7 @@ members = [
   "derived_data/case_conflict_skeleton_manifest",
   "derived_data/changeset_info",
   "derived_data/constants",
+  "derived_data/content_manifest_derivation",
   "derived_data/deleted_manifest",
   "derived_data/fastlog",
   "derived_data/filenodes_derivation",

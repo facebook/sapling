@@ -89,6 +89,31 @@ impl ContentManifest {
             .and_then(|(k, v)| async move { anyhow::Ok((MPathElement::from_smallvec(k)?, v)) })
             .boxed()
     }
+
+    pub fn into_prefix_subentries_after<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+        prefix: &'a [u8],
+        after: &'a [u8],
+    ) -> BoxStream<'a, Result<(MPathElement, ContentManifestEntry)>> {
+        self.subentries
+            .into_prefix_entries_after(ctx, blobstore, prefix.as_ref(), after.as_ref())
+            .and_then(|(k, v)| async move { anyhow::Ok((MPathElement::from_smallvec(k)?, v)) })
+            .boxed()
+    }
+
+    pub fn into_subentries_skip<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+        skip: usize,
+    ) -> BoxStream<'a, Result<(MPathElement, ContentManifestEntry)>> {
+        self.subentries
+            .into_entries_skip(ctx, blobstore, skip)
+            .and_then(|(k, v)| async move { anyhow::Ok((MPathElement::from_smallvec(k)?, v)) })
+            .boxed()
+    }
 }
 
 impl ThriftConvert for ContentManifestFile {
