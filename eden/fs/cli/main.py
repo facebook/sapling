@@ -1216,6 +1216,13 @@ class HealthReportCmd(Subcmd):
         return HealthReportCmd.ErrorCode.HEALTHY.value
 
 
+@subcmd("journal-position", "Returns the current EdenFS journal position")
+class JournalPositionCmd(Subcmd):
+    def run(self, args: argparse.Namespace) -> int:
+        print_stderr("This is not implemented for python edenfsctl.")
+        return EX_USAGE
+
+
 @subcmd("strace", "Monitor FUSE requests.")
 class StraceCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
