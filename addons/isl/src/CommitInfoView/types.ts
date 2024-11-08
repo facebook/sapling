@@ -5,7 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-/** Values for each field key,  */
+/**
+ * Values for each field key in a commit message.
+ */
 export type CommitMessageFields = Record<string, string | Array<string>>;
 
 export type TypeaheadKind =
