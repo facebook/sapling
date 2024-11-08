@@ -16,7 +16,7 @@ use progress_model::ProgressBar as ProgressBarModel;
 use progress_model::Registry;
 
 py_class!(pub class ProgressBar |py| {
-    data model: Arc<ProgressBarModel>;
+    data model: PyPopOnDropBar;
 
     def __new__(
         _cls,
@@ -35,7 +35,7 @@ py_class!(pub class ProgressBar |py| {
             .thread_local_parent()
             .pending();
         ProgressBarModel::set_active(&bar, reg);
-        Self::create_instance(py, bar)
+        Self::create_instance(py, PyPopOnDropBar{bar})
     }
 
     def position_total(&self) -> PyResult<(u64, u64)> {
@@ -66,12 +66,27 @@ py_class!(pub class ProgressBar |py| {
         self.model(py).set_message(message);
         Ok(PyNone)
     }
-
-    def cleanup(&self) -> PyResult<PyNone> {
-        ProgressBarModel::pop_active(self.model(py), Registry::main());
-        Ok(PyNone)
-    }
 });
+
+// This duplicates the behavior of progress_model::ActiveProgressBar, but is `Send` so we
+// can share with Python.
+pub struct PyPopOnDropBar {
+    bar: Arc<ProgressBarModel>,
+}
+
+impl Drop for PyPopOnDropBar {
+    fn drop(&mut self) {
+        ProgressBarModel::pop_active(&self.bar, Registry::main());
+    }
+}
+
+impl std::ops::Deref for PyPopOnDropBar {
+    type Target = Arc<ProgressBarModel>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.bar
+    }
+}
 
 py_class!(pub class CacheStats |py| {
     data model: Arc<CacheStatsModel>;
