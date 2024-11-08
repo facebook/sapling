@@ -114,7 +114,8 @@
         {
 					"type": "webview",
 					"id": "sapling.comments",
-					"name": "Phabricator Comments"
+					"name": "Code Review Comments",
+          "when": "isl.inlineCommentSidePanelEnabled"
 				}
       ]
     },

@@ -59,7 +59,12 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(new DeletedFileContentProvider());
     let inlineCommentsProvider;
     if (enabledSCMApiFeatures.has('comments') && Internal.inlineCommentsProvider) {
-      inlineCommentsProvider = Internal.inlineCommentsProvider(context, reposList, ctx);
+      inlineCommentsProvider = Internal.inlineCommentsProvider(
+        context,
+        reposList,
+        ctx,
+        enabledSCMApiFeatures.has('comments-v1'),
+      );
       context.subscriptions.push(inlineCommentsProvider);
     }
     if (Internal.SaplingISLUriHandler != null) {

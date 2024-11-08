@@ -12,4 +12,4 @@
  * diffview => diff commands, gutters. Requires 'sidebar'.
  * autoresolve => automatically mark merge conflicts as resolved on file save
  * */
-export type EnabledSCMApiFeature = 'blame' | 'sidebar' | 'autoresolve' | 'comments';
+export type EnabledSCMApiFeature = 'blame' | 'sidebar' | 'autoresolve' | 'comments' | 'comments-v1';
