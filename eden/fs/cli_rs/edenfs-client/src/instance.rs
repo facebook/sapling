@@ -9,9 +9,8 @@
 //! [`EdenFsClient`]).
 
 use std::collections::BTreeMap;
-use std::fs::File;
-use std::fs::OpenOptions;
-use std::io::Write;
+#[cfg(windows)]
+use std::fs::remove_file;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::OnceLock;
@@ -19,6 +18,7 @@ use std::time::Duration;
 
 use anyhow::anyhow;
 use anyhow::Context;
+use atomicfile::atomic_write;
 use edenfs_config::EdenFsConfig;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
@@ -29,7 +29,6 @@ use edenfs_utils::strip_unc_prefix;
 #[cfg(fbcode_build)]
 use fbinit::expect_init;
 use fbthrift_socket::SocketTransport;
-use fs2::FileExt;
 #[cfg(fbcode_build)]
 use thrift_streaming_clients::errors::StreamStartStatusError;
 #[cfg(fbcode_build)]
@@ -46,6 +45,7 @@ use thriftclient::TransportType;
 use tokio_uds_compat::UnixStream;
 use tracing::event;
 use tracing::Level;
+use util::lock::PathLock;
 
 use crate::EdenFsClient;
 #[cfg(fbcode_build)]
@@ -62,6 +62,7 @@ static INSTANCE: OnceLock<EdenFsInstance> = OnceLock::new();
 const CLIENTS_DIR: &str = "clients";
 const CONFIG_JSON: &str = "config.json";
 const CONFIG_JSON_LOCK: &str = "config.json.lock";
+const CONFIG_JSON_MODE: u32 = 0o664;
 
 #[derive(Debug)]
 pub struct EdenFsInstance {
@@ -305,57 +306,45 @@ impl EdenFsInstance {
     }
 
     pub fn remove_path_from_directory_map(&self, path: &Path) -> Result<()> {
+        let lock_file_path = self.config_dir.join(CONFIG_JSON_LOCK);
+        let config_file_path = self.config_dir.join(CONFIG_JSON);
+
+        // For Linux and MacOS we have a lock file "config.json.lock" under the config directory
+        // which works as a file lock to prevent the file "config.json" being accessed by
+        // multiple processes at the same time.
+        //
+        // In Python CLI code, FileLock lib is used to create config.json.lock.
+        // In Rust, we use PathLock from "scm/lib/util"
+        let _lock = PathLock::exclusive(&lock_file_path).with_context(|| {
+            format!("Failed to open the lock file {}", lock_file_path.display())
+        })?;
+
+        // Lock acquired, now we can read and write to the "config.json" file
         let mut all_checkout_map = self.get_configured_mounts_map()?;
-
-        let removed_value = all_checkout_map.remove(path);
-        if removed_value.is_some() {
-            match File::open(self.config_dir.join(CONFIG_JSON_LOCK)) {
-                Ok(lock_file) => {
-                    // grab the lock before writing to config.json
-                    match lock_file.lock_exclusive() {
-                        Ok(_) => {
-                            let json_data =
-                                serde_json::to_string_pretty(&all_checkout_map).unwrap();
-
-                            match OpenOptions::new()
-                                .write(true)
-                                .truncate(true)
-                                .open(self.config_dir.join(CONFIG_JSON))
-                            {
-                                Ok(mut config_json_file) => {
-                                    match config_json_file.write_all(json_data.as_bytes()) {
-                                        Ok(_) => Ok(()),
-                                        Err(e) => Err(EdenFsError::Other(anyhow!(
-                                            "Failed to write to {}: {e}",
-                                            CONFIG_JSON
-                                        ))),
-                                    }
-                                }
-                                Err(e) => Err(EdenFsError::Other(anyhow!(
-                                    "Failed to open {} for writing: {e}",
-                                    CONFIG_JSON
-                                ))),
-                            }
-                        }
-                        Err(e) => Err(EdenFsError::Other(anyhow!(
-                            "Failed to lock {}: {e}",
-                            CONFIG_JSON_LOCK
-                        ))),
-                    }
-                }
-                Err(e) => Err(EdenFsError::Other(anyhow!(
-                    "Failed to open {}: {e}",
-                    CONFIG_JSON_LOCK
-                ))),
+        match all_checkout_map.remove(path) {
+            Some(_) => {
+                atomic_write(&config_file_path, CONFIG_JSON_MODE, true, |f| {
+                    serde_json::to_writer_pretty(f, &all_checkout_map)?;
+                    Ok(())
+                })
+                .with_context(|| {
+                    format!(
+                        "Failed to write updated config JSON back to {}",
+                        config_file_path.display()
+                    )
+                })?;
             }
-        } else {
-            event!(
-                Level::WARN,
-                "There is not entry for {} in config.json",
-                path.display()
-            );
-            Ok(())
+            None => {
+                event!(
+                    Level::WARN,
+                    "There is not entry for {} in config.json",
+                    path.display()
+                );
+            }
         }
+
+        // Lock will be released when _lock is dropped
+        Ok(())
     }
 }
 
