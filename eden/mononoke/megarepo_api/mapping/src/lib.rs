@@ -13,6 +13,7 @@ use std::fmt;
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
+use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use context::PerfCounterType;
 use filestore::FilestoreConfigRef;
@@ -25,6 +26,8 @@ pub use megarepo_configs::SourceRevision;
 pub use megarepo_configs::SyncConfigVersion;
 pub use megarepo_configs::SyncTargetConfig;
 pub use megarepo_configs::Target;
+use mononoke_types::content_manifest::compat::ContentManifestFile;
+use mononoke_types::content_manifest::compat::ContentManifestId;
 use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
@@ -35,6 +38,7 @@ use mononoke_types::GitLfs;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
+use repo_identity::RepoIdentityRef;
 use serde::Deserialize;
 use serde::Serialize;
 use sql::Connection;
@@ -43,7 +47,8 @@ use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::mononoke_queries;
 use sql_ext::SqlConnections;
 
-pub trait Repo = RepoDerivedDataRef + RepoBlobstoreRef + FilestoreConfigRef + Sync + Send;
+pub trait Repo =
+    RepoDerivedDataRef + RepoBlobstoreRef + FilestoreConfigRef + RepoIdentityRef + Sync + Send;
 
 mononoke_queries! {
     read GetMappingEntry(
@@ -160,32 +165,35 @@ impl CommitRemappingState {
         repo: &impl Repo,
         cs_id: ChangesetId,
     ) -> Result<Option<Self>, Error> {
-        let root_fsnode_id = repo
-            .repo_derived_data()
-            .derive::<RootFsnodeId>(ctx, cs_id)
-            .await?;
-
         let path = MPath::new(REMAPPING_STATE_FILE)?;
-        let maybe_entry = root_fsnode_id
-            .fsnode_id()
+
+        let root_id: ContentManifestId = if let Ok(true) = justknobs::eval(
+            "scm/mononoke:derived_data_use_content_manifests",
+            None,
+            Some(repo.repo_identity().name()),
+        ) {
+            repo.repo_derived_data()
+                .derive::<RootContentManifestId>(ctx, cs_id)
+                .await?
+                .into_content_manifest_id()
+                .into()
+        } else {
+            repo.repo_derived_data()
+                .derive::<RootFsnodeId>(ctx, cs_id)
+                .await?
+                .into_fsnode_id()
+                .into()
+        };
+
+        let entry = root_id
             .find_entry(ctx.clone(), repo.repo_blobstore().clone(), path)
             .await?;
-
-        let entry = match maybe_entry {
-            Some(entry) => entry,
-            None => {
-                return Ok(None);
-            }
+        let content_id = match entry {
+            Some(Entry::Leaf(file)) => ContentManifestFile(file).content_id(),
+            _ => return Ok(None),
         };
 
-        let file = match entry {
-            Entry::Tree(_) => {
-                return Ok(None);
-            }
-            Entry::Leaf(file) => file,
-        };
-
-        let bytes = filestore::fetch_concat(repo.repo_blobstore(), ctx, *file.content_id()).await?;
+        let bytes = filestore::fetch_concat(repo.repo_blobstore(), ctx, content_id).await?;
         let content = String::from_utf8(bytes.to_vec())
             .with_context(|| format!("{} is not utf8", REMAPPING_STATE_FILE))?;
         let state: CommitRemappingState = serde_json::from_str(&content)?;
