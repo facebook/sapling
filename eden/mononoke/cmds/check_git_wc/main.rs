@@ -22,9 +22,13 @@ use mononoke_app::MononokeAppBuilder;
 use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
+use repo_identity::RepoIdentity;
 
 #[facet::container]
 struct HgRepo {
+    #[facet]
+    repo_identity: RepoIdentity,
+
     #[facet]
     repo_blobstore: RepoBlobstore,
 
