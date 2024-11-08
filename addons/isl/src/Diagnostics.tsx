@@ -7,7 +7,6 @@
 
 import type {UseUncommittedSelection} from './partialSelection';
 import type {CommitInfo, Diagnostic, DiagnosticAllowlist} from './types';
-import type {ExclusiveOr} from 'isl-components/Types';
 import type {Tracker} from 'isl-server/src/analytics/tracker';
 
 import {spacing} from '../../components/theme/tokens.stylex';
@@ -58,7 +57,8 @@ const styles = stylex.create({
     },
   },
   allDiagnostics: {
-    maxHeight: '80vh',
+    maxHeight: 'calc(100vh - 200px)',
+    minHeight: '50px',
     overflowY: 'scroll',
   },
   confirmCheckbox: {
