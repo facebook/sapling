@@ -402,6 +402,10 @@ void SaplingBackingStore::setPrefetchBlobCounters(
     ObjectFetchContext::FetchedSource fetchedSource,
     ObjectFetchContext::FetchResult fetchResult,
     folly::stop_watch<std::chrono::milliseconds> watch) {
+  if (fetchResult == ObjectFetchContext::FetchResult::Failure) {
+    stats_->increment(&SaplingBackingStoreStats::prefetchBlobFailure);
+    return;
+  }
   stats_->addDuration(&SaplingBackingStoreStats::prefetchBlob, watch.elapsed());
 
   if (fetchResult == ObjectFetchContext::FetchResult::Success) {
@@ -423,6 +427,13 @@ void SaplingBackingStore::setFetchBlobCounters(
     ObjectFetchContext::FetchedSource fetchedSource,
     ObjectFetchContext::FetchResult fetchResult,
     folly::stop_watch<std::chrono::milliseconds> watch) {
+  if (fetchResult == ObjectFetchContext::FetchResult::Failure) {
+    stats_->increment(&SaplingBackingStoreStats::fetchBlobFailure);
+    if (store_.dogfoodingHost()) {
+      stats_->increment(&SaplingBackingStoreStats::fetchBlobFailureDogfooding);
+    }
+    return;
+  }
   stats_->addDuration(&SaplingBackingStoreStats::fetchBlob, watch.elapsed());
 
   if (fetchResult == ObjectFetchContext::FetchResult::Success) {
@@ -636,20 +647,12 @@ folly::SemiFuture<BlobPtr> SaplingBackingStore::retryGetBlob(
                 true, // isRetry
                 store_.dogfoodingHost()});
           }
-          switch (fetch_type) {
-            case SaplingImportRequest::FetchType::Prefetch:
-              stats_->increment(
-                  &SaplingBackingStoreStats::prefetchBlobRetryFailure);
-              break;
-            case SaplingImportRequest::FetchType::Fetch:
-              stats_->increment(
-                  &SaplingBackingStoreStats::fetchBlobRetryFailure);
-              break;
-          }
-          if (store_.dogfoodingHost()) {
-            stats_->increment(
-                &SaplingBackingStoreStats::fetchBlobRetryFailureDogfooding);
-          }
+          setBlobCounters(
+              context.copy(),
+              fetch_type,
+              fetched_source,
+              ObjectFetchContext::FetchResult::Failure,
+              watch);
           auto ew = folly::exception_wrapper{blob.exception()};
           result = folly::makeFuture<BlobPtr>(std::move(ew));
         }

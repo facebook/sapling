@@ -69,6 +69,8 @@ class ObjectFetchContext : public RefCounted {
     Success,
     /** The fetch was successful in the retry*/
     SuccessInRetry,
+    /** The fetch request failed in retry*/
+    Failure,
   };
 
   /**
