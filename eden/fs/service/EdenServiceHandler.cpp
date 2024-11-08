@@ -3558,11 +3558,9 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
 
   // Allow only specific queries that have been determined to operate faster
   // when offloaded
-  XLOG(ERR) << "rio " << requestIsOffloadable;
   requestIsOffloadable = requestIsOffloadable &&
       checkAllowedQuery(suffixGlobs,
                         edenConfig->allowedSuffixQueries.getValue());
-  XLOG(ERR) << "rio2 " << requestIsOffloadable;
 
   auto globFilesRequestScope = std::make_shared<GlobFilesRequestScope>(
       server_->getServerState(),
