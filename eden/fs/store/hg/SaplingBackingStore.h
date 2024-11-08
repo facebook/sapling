@@ -539,6 +539,20 @@ class SaplingBackingStore final : public BackingStore {
   void processTreeAuxImportRequests(
       std::vector<std::shared_ptr<SaplingImportRequest>>&& requests);
 
+  void setPrefetchBlobCounters(
+      ObjectFetchContextPtr context,
+      ObjectFetchContext::FetchedSource fetchedSource,
+      folly::stop_watch<std::chrono::milliseconds> watch);
+  void setFetchBlobCounters(
+      ObjectFetchContextPtr context,
+      ObjectFetchContext::FetchedSource fetchedSource,
+      folly::stop_watch<std::chrono::milliseconds> watch);
+  void setBlobCounters(
+      ObjectFetchContextPtr context,
+      SaplingImportRequest::FetchType fetchType,
+      ObjectFetchContext::FetchedSource fetchedSource,
+      folly::stop_watch<std::chrono::milliseconds> watch);
+
   ImmediateFuture<GetGlobFilesResult> getGlobFiles(
       const RootId& id,
       const std::vector<std::string>& globs) override;

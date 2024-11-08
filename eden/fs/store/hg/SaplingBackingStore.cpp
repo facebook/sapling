@@ -397,6 +397,50 @@ void SaplingBackingStore::processHgEvent(const HgImportTraceEvent& event) {
   activityBuffer_.addEvent(event);
 }
 
+void SaplingBackingStore::setPrefetchBlobCounters(
+    ObjectFetchContextPtr context,
+    ObjectFetchContext::FetchedSource fetchedSource,
+    folly::stop_watch<std::chrono::milliseconds> watch) {
+  stats_->addDuration(&SaplingBackingStoreStats::prefetchBlob, watch.elapsed());
+  stats_->increment(&SaplingBackingStoreStats::prefetchBlobSuccess);
+
+  context->setFetchedSource(
+      fetchedSource,
+      ObjectFetchContext::ObjectType::PrefetchBlob,
+      stats_.copy());
+}
+
+void SaplingBackingStore::setFetchBlobCounters(
+    ObjectFetchContextPtr context,
+    ObjectFetchContext::FetchedSource fetchedSource,
+    folly::stop_watch<std::chrono::milliseconds> watch) {
+  stats_->addDuration(&SaplingBackingStoreStats::fetchBlob, watch.elapsed());
+  stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccess);
+
+  context->setFetchedSource(
+      fetchedSource, ObjectFetchContext::ObjectType::Blob, stats_.copy());
+
+  if (store_.dogfoodingHost()) {
+    stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccessDogfooding);
+  }
+}
+
+void SaplingBackingStore::setBlobCounters(
+    ObjectFetchContextPtr context,
+    SaplingImportRequest::FetchType fetchType,
+    ObjectFetchContext::FetchedSource fetchedSource,
+    folly::stop_watch<std::chrono::milliseconds> watch) {
+  switch (fetchType) {
+    case SaplingImportRequest::FetchType::Prefetch:
+      setPrefetchBlobCounters(context.copy(), fetchedSource, watch);
+      break;
+
+    case SaplingImportRequest::FetchType::Fetch:
+      setFetchBlobCounters(context.copy(), fetchedSource, watch);
+      break;
+  }
+}
+
 void SaplingBackingStore::processBlobImportRequests(
     std::vector<std::shared_ptr<SaplingImportRequest>>&& requests) {
   folly::stop_watch<std::chrono::milliseconds> watch;
@@ -434,30 +478,11 @@ void SaplingBackingStore::processBlobImportRequests(
             DBG4,
             "Blob found in Sapling local for {}",
             request->getRequest<SaplingImportRequest::BlobImport>()->hash);
-        switch (request->getFetchType()) {
-          case SaplingImportRequest::FetchType::Prefetch:
-            stats_->addDuration(
-                &SaplingBackingStoreStats::prefetchBlob, watch.elapsed());
-            stats_->increment(&SaplingBackingStoreStats::prefetchBlobSuccess);
-            request->getContext()->setFetchedSource(
-                ObjectFetchContext::FetchedSource::Local,
-                ObjectFetchContext::ObjectType::PrefetchBlob,
-                stats_.copy());
-            break;
-          case SaplingImportRequest::FetchType::Fetch:
-            stats_->addDuration(
-                &SaplingBackingStoreStats::fetchBlob, watch.elapsed());
-            stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccess);
-            request->getContext()->setFetchedSource(
-                ObjectFetchContext::FetchedSource::Local,
-                ObjectFetchContext::ObjectType::Blob,
-                stats_.copy());
-            break;
-        }
-        if (store_.dogfoodingHost()) {
-          stats_->increment(
-              &SaplingBackingStoreStats::fetchBlobSuccessDogfooding);
-        }
+        setBlobCounters(
+            request->getContext().copy(),
+            request->getFetchType(),
+            ObjectFetchContext::FetchedSource::Local,
+            watch);
       } else {
         retryRequest.emplace_back(std::move(request));
       }
@@ -473,42 +498,13 @@ void SaplingBackingStore::processBlobImportRequests(
     for (auto& request : retryRequest) {
       auto* promise = request->getPromise<BlobPtr>();
       if (promise->isFulfilled()) {
-        if (!config_->getEdenConfig()->allowRemoteGetBatch.getValue()) {
-          XLOGF(
-              DBG4,
-              "Blob found in Sapling remote for {}",
-              request->getRequest<SaplingImportRequest::BlobImport>()->hash);
-          switch (request->getFetchType()) {
-            case SaplingImportRequest::FetchType::Prefetch:
-              request->getContext()->setFetchedSource(
-                  ObjectFetchContext::FetchedSource::Remote,
-                  ObjectFetchContext::ObjectType::PrefetchBlob,
-                  stats_.copy());
-              break;
-            case SaplingImportRequest::FetchType::Fetch:
-              request->getContext()->setFetchedSource(
-                  ObjectFetchContext::FetchedSource::Remote,
-                  ObjectFetchContext::ObjectType::Blob,
-                  stats_.copy());
-              break;
-          }
-        }
-        switch (request->getFetchType()) {
-          case SaplingImportRequest::FetchType::Prefetch:
-            stats_->addDuration(
-                &SaplingBackingStoreStats::prefetchBlob, watch.elapsed());
-            stats_->increment(&SaplingBackingStoreStats::prefetchBlobSuccess);
-            break;
-          case SaplingImportRequest::FetchType::Fetch:
-            stats_->addDuration(
-                &SaplingBackingStoreStats::fetchBlob, watch.elapsed());
-            stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccess);
-            break;
-        }
-        if (store_.dogfoodingHost()) {
-          stats_->increment(
-              &SaplingBackingStoreStats::fetchBlobSuccessDogfooding);
-        }
+        setBlobCounters(
+            request->getContext().copy(),
+            request->getFetchType(),
+            config_->getEdenConfig()->allowRemoteGetBatch.getValue()
+                ? ObjectFetchContext::FetchedSource::Unknown
+                : ObjectFetchContext::FetchedSource::Remote,
+            watch);
         continue;
       }
 
