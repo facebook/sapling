@@ -73,9 +73,6 @@ export function isBlockingDiagnostic(
   allowlistedCodesBySource: undefined | DiagnosticAllowlist = Internal.allowlistedDiagnosticCodes ??
     undefined,
 ): boolean {
-  if (d.source == null || d.code == null) {
-    return true;
-  }
   if (allowlistedCodesBySource == null) {
     // In OSS, let's assume all errors are blocking.
     return true;
@@ -86,12 +83,15 @@ export function isBlockingDiagnostic(
   if (allowlistedCodesBySource == null) {
     return true;
   }
-  const relevantAllowlist = allowlistedCodesBySource.get(d.severity)?.get(d.source);
+  // source/code may be missing, but we still want to route that through the allowlist
+  const source = d.source ?? 'undefined';
+  const code = d.code ?? 'undefined';
+  const relevantAllowlist = allowlistedCodesBySource.get(d.severity)?.get(source);
   return (
     relevantAllowlist != null &&
     (relevantAllowlist.allow
-      ? relevantAllowlist.allow.has(d.code) === true
-      : relevantAllowlist.block.has(d.code) === false)
+      ? relevantAllowlist.allow.has(code) === true
+      : relevantAllowlist.block.has(code) === false)
   );
 }
 

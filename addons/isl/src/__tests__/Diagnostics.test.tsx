@@ -126,5 +126,53 @@ describe('Diagnostics', () => {
         ),
       ).toBe(true);
     });
+
+    it('handles undefined source', () => {
+      const policy: DiagnosticAllowlist = new Map([
+        ['warning', new Map([['undefined', {block: new Set(['foo'])}]])],
+      ]);
+      expect(
+        isBlockingDiagnostic(
+          {
+            message: 'sample',
+            range,
+            severity: 'warning',
+            source: undefined,
+            code: 'foo',
+          },
+          policy,
+        ),
+      ).toBe(false);
+      expect(
+        isBlockingDiagnostic(
+          {
+            message: 'sample',
+            range,
+            severity: 'warning',
+            source: undefined,
+            code: 'something_else',
+          },
+          policy,
+        ),
+      ).toBe(true);
+    });
+
+    it('handles undefined code', () => {
+      const policy: DiagnosticAllowlist = new Map([
+        ['warning', new Map([['foo', {block: new Set(['undefined'])}]])],
+      ]);
+      expect(
+        isBlockingDiagnostic(
+          {
+            message: 'sample',
+            range,
+            severity: 'warning',
+            source: 'foo',
+            code: undefined,
+          },
+          policy,
+        ),
+      ).toBe(false);
+    });
   });
 });
