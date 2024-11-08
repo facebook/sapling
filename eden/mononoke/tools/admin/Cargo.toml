@@ -45,6 +45,7 @@ cmdlib_scrubbing = { version = "0.1.0", path = "../../cmdlib/scrubbing" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 commit_graph_types = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph_types" }
 commit_id = { version = "0.1.0", path = "../../cmdlib/commit_id" }
+content_manifest_derivation = { version = "0.1.0", path = "../../derived_data/content_manifest_derivation" }
 context = { version = "0.1.0", path = "../../server/context" }
 cross_repo_sync = { version = "0.1.0", path = "../../commit_rewriting/cross_repo_sync" }
 dag = { version = "0.1.0", path = "../../../scm/lib/dag" }
