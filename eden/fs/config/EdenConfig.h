@@ -994,6 +994,18 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * OBC API is used for a few counters on EdenFS to make them enable on
+   * sandcastle. For now, OBC API is only works on prod/Linux. Then this config
+   * should only be set to true on prod/Linux.
+   * TODO: change this config when EngEnv team enable OBC API on macOS and
+   * Windows.
+   */
+  ConfigSetting<bool> enableOBCOnEden{
+      "telemetry:enable-obc-on-eden",
+      false,
+      this};
+
+  /**
    * Controls which configs we want to send with the request logging.
    * The elements are full config keys, e.g. "hg:import-batch-size".
    * Elements not valid or not present in the config map are silently ignored.

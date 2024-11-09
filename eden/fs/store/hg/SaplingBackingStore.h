@@ -28,6 +28,7 @@
 #include "eden/fs/store/hg/SaplingImportRequestQueue.h"
 #include "eden/fs/telemetry/ActivityBuffer.h"
 #include "eden/scm/lib/backingstore/include/SaplingNativeBackingStore.h"
+#include "monitoring/obc/OBCPxx.h"
 
 namespace facebook::eden {
 
@@ -639,6 +640,13 @@ class SaplingBackingStore final : public BackingStore {
 
   std::shared_ptr<LocalStore> localStore_;
   EdenStatsPtr stats_;
+
+  // This is used to avoid reading config in hot path of get request
+  bool isOBCEnabled_ = false;
+  // TODO: this is a prototype to test OBC API on eden
+  // we should move this to a separate class
+  monitoring::OBCPxx getBlobPerRepoLatencies_; // calculates p10, p50, p95, p99
+  void initializeOBCCounters();
 
   // A set of threads processing Sapling retry requests.
   std::unique_ptr<folly::Executor> retryThreadPool_;

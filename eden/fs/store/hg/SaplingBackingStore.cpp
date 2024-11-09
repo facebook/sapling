@@ -51,6 +51,7 @@
 #ifdef EDEN_HAVE_SERVER_OBSERVER
 #include "common/fb303/cpp/ThreadPoolExecutorCounters.h" // @manual
 #endif
+#include "common/network/Hostname.h"
 
 DEFINE_bool(
     hg_fetch_missing_trees,
@@ -290,6 +291,10 @@ SaplingBackingStore::SaplingBackingStore(
   hgTraceHandle_ = traceBus_->subscribeFunction(
       folly::to<std::string>("hg-activitybuffer-", getRepoName().value_or("")),
       [this](const HgImportTraceEvent& event) { this->processHgEvent(event); });
+
+  if (config_->getEdenConfig()->enableOBCOnEden.getValue()) {
+    initializeOBCCounters();
+  }
 }
 
 /**
@@ -339,6 +344,10 @@ SaplingBackingStore::SaplingBackingStore(
   hgTraceHandle_ = traceBus_->subscribeFunction(
       folly::to<std::string>("hg-activitybuffer-", getRepoName().value_or("")),
       [this](const HgImportTraceEvent& event) { this->processHgEvent(event); });
+
+  if (config_->getEdenConfig()->enableOBCOnEden.getValue()) {
+    initializeOBCCounters();
+  }
 }
 
 SaplingBackingStore::~SaplingBackingStore() {
@@ -346,6 +355,17 @@ SaplingBackingStore::~SaplingBackingStore() {
   for (auto& thread : threads_) {
     thread.join();
   }
+}
+
+void SaplingBackingStore::initializeOBCCounters() {
+  std::string repoName = store_.getRepoName().data();
+  // Get the hostname without the ".facebook.com" suffix
+  auto hostname = facebook::network::getLocalHost(/*stripFbDomain=*/true);
+  getBlobPerRepoLatencies_ = monitoring::OBCPxx(
+      monitoring::OdsCategoryId::ODS_EDEN,
+      fmt::format("eden.store.sapling.fetch_blob_{}_us", repoName),
+      {hostname});
+  isOBCEnabled_ = true;
 }
 
 BackingStore::LocalStoreCachingPolicy
@@ -434,7 +454,12 @@ void SaplingBackingStore::setFetchBlobCounters(
     }
     return;
   }
-  stats_->addDuration(&SaplingBackingStoreStats::fetchBlob, watch.elapsed());
+
+  if (isOBCEnabled_) {
+    getBlobPerRepoLatencies_ += watch.elapsed().count();
+  } else {
+    stats_->addDuration(&SaplingBackingStoreStats::fetchBlob, watch.elapsed());
+  }
 
   if (fetchResult == ObjectFetchContext::FetchResult::Success) {
     stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccess);
