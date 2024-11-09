@@ -727,7 +727,7 @@ async function maybeWarnAboutRebaseOffWarm(dest: CommitInfo): Promise<boolean> {
   );
   if (await warning) {
     tracker.track('WarnAboutRebaseOffWarm');
-    const buttons = [t('Opt Out of Future Warnings'), t('Cancel'), t('Rebase Anyways')];
+    const buttons = [t('Opt Out of Future Warnings'), t('Cancel'), t('Rebase Anyway')];
     const answer = await showModal({
       type: 'confirm',
       buttons,
