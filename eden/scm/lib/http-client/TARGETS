@@ -6,6 +6,7 @@ oncall("sapling")
 rust_library(
     name = "http-client",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {},
     test_deps = [
         "fbsource//third-party/rust:assert_matches",
         "fbsource//third-party/rust:crossbeam",

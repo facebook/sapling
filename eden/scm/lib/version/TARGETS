@@ -17,16 +17,10 @@ buck_genrule(
 
 rust_library(
     name = "rust_version",
-    autocargo = {
-        "cargo_toml_config": {
-            "features": {
-                "generated": [],
-            },
-            "package": {
-                "name": "version",
-            },
-        },
-    },
+    autocargo = {"cargo_toml_config": {
+        "features": {"generated": []},
+        "package": {"name": "version"},
+    }},
     crate = "version",
     features = ["generated"],
     mapped_srcs = {":gen_rust_version_lib.rs": "lib.rs"},

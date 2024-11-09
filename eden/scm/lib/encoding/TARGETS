@@ -5,20 +5,10 @@ oncall("sapling")
 rust_library(
     name = "encoding",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {
-                "target": {
-                    "'cfg(windows)'": {
-                        "dependencies": {
-                            "local-encoding": {"version": "*"},
-                            "winapi": {"version": "0.3"},
-                        },
-                    },
-                },
-            },
-        },
-    },
+    autocargo = {"cargo_toml_config": {"dependencies_override": {"target": {"'cfg(windows)'": {"dependencies": {
+        "local-encoding": {"version": "*"},
+        "winapi": {"version": "0.3"},
+    }}}}}},
     crate_root = "src/lib.rs",
     os_deps = [
         (

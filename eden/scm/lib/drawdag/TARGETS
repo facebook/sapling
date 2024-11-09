@@ -5,13 +5,7 @@ oncall("sapling")
 rust_library(
     name = "drawdag",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "package": {
-                "license": "MIT",
-            },
-        },
-    },
+    autocargo = {"cargo_toml_config": {"package": {"license": "MIT"}}},
     crate_root = "src/lib.rs",
     # A test inside this target is using #[should_panic], setting the backtrace
     # to false here, otherwise the test binary will try to extract the backtrace

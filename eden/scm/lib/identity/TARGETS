@@ -5,15 +5,11 @@ oncall("sapling")
 rust_library(
     name = "identity",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "features": {
-                "default": [],
-                "fb": [],
-                "sl_oss": [],
-            },
-        },
-    },
+    autocargo = {"cargo_toml_config": {"features": {
+        "default": [],
+        "fb": [],
+        "sl_oss": [],
+    }}},
     crate_root = "src/lib.rs",
     test_deps = [
         "fbsource//third-party/rust:tempfile",

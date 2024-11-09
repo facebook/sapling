@@ -6,15 +6,7 @@ oncall("sapling")
 rust_library(
     name = "edenapi_types",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {
-                "dependencies": {
-                    "dag-types": {"features": ["for-tests"]},
-                },
-            },
-        },
-    },
+    autocargo = {"cargo_toml_config": {"dependencies_override": {"dependencies": {"dag-types": {"features": ["for-tests"]}}}}},
     crate_root = "src/lib.rs",
     features = ["for-tests"],
     named_deps = {
@@ -51,9 +43,7 @@ rust_library(
 rust_library(
     name = "type_macros",
     srcs = glob(["proc_macros/*.rs"]),
-    autocargo = {
-        "cargo_toml_dir": "proc_macros",
-    },
+    autocargo = {"cargo_toml_dir": "proc_macros"},
     crate_root = "proc_macros/lib.rs",
     proc_macro = True,
     deps = [

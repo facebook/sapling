@@ -5,18 +5,10 @@ oncall("sapling")
 rust_library(
     name = "copytrace",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {
-                "dependencies": {
-                    "manifest": {"features": ["for-tests"]},
-                },
-                "dev-dependencies": {
-                    "manifest-tree": {"features": ["for-tests"]},
-                },
-            },
-        },
-    },
+    autocargo = {"cargo_toml_config": {"dependencies_override": {
+        "dependencies": {"manifest": {"features": ["for-tests"]}},
+        "dev-dependencies": {"manifest-tree": {"features": ["for-tests"]}},
+    }}},
     crate_root = "src/lib.rs",
     test_deps = [
         "fbsource//third-party/rust:tokio",

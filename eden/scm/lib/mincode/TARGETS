@@ -5,22 +5,18 @@ oncall("sapling")
 rust_library(
     name = "mincode",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "package": {
-                "authors": [
-                    "David Tolnay <dtolnay@gmail.com>",
-                    "Facebook Source Control Team <sourcecontrol-dev@fb.com>",
-                ],
-                "description": "Minimal serialization format",
-                "include": [
-                    "Cargo.toml",
-                    "src/**/*.rs",
-                ],
-                "license": "MIT",
-            },
-        },
-    },
+    autocargo = {"cargo_toml_config": {"package": {
+        "authors": [
+            "David Tolnay <dtolnay@gmail.com>",
+            "Facebook Source Control Team <sourcecontrol-dev@fb.com>",
+        ],
+        "description": "Minimal serialization format",
+        "include": [
+            "Cargo.toml",
+            "src/**/*.rs",
+        ],
+        "license": "MIT",
+    }}},
     crate_root = "src/lib.rs",
     test_deps = ["fbsource//third-party/rust:quickcheck"],
     deps = [

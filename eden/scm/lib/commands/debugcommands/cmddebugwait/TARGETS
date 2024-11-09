@@ -5,21 +5,16 @@ oncall("sapling")
 rust_library(
     name = "cmddebugwait",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "extra_buck_dependencies": {
-                "dependencies": [
-                ],
-            },
-            "features": {
-                "default": [],
-                "eden": [
-                    "edenfs-client",
-                    "workingcopy/eden",
-                ],
-            },
+    autocargo = {"cargo_toml_config": {
+        "extra_buck_dependencies": {"dependencies": []},
+        "features": {
+            "default": [],
+            "eden": [
+                "edenfs-client",
+                "workingcopy/eden",
+            ],
         },
-    },
+    }},
     crate_root = "src/lib.rs",
     features = ["eden"],
     deps = [

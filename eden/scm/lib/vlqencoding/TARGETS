@@ -5,18 +5,16 @@ oncall("sapling")
 rust_library(
     name = "vlqencoding",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "bench": [{
-                "harness": False,
-                "name": "bench",
-            }],
-            "package": {
-                "authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"],
-                "license": "MIT",
-            },
+    autocargo = {"cargo_toml_config": {
+        "bench": [{
+            "harness": False,
+            "name": "bench",
+        }],
+        "package": {
+            "authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"],
+            "license": "MIT",
         },
-    },
+    }},
     crate_root = "src/lib.rs",
     test_deps = ["fbsource//third-party/rust:quickcheck"],
 )

@@ -5,52 +5,40 @@ oncall("sapling")
 rust_library(
     name = "commands",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {
-                "dependencies": {
-                    "anyhow": {
-                        "features": ["backtrace"],
-                    },
-                    "constructors": {"features": ["git"]},
-                    "pytracing": {
-                        "default-features": False,
-                    },
-                    "repo": {"features": ["wdir"]},
-                },
-            },
-            "extra_buck_dependencies": {
-                "dependencies": [
-                    "//eden/scm/saplingnative/bindings/modules/pycheckout:pycheckout",
-                    "//eden/scm/saplingnative/bindings/modules/pyworkingcopyclient:pyworkingcopyclient",
-                    "//eden/scm/saplingnative/bindings/modules/pyworkingcopy:pyworkingcopy",
-                    "//eden/scm/lib/revisionstore:revisionstore",
-                ],
-            },
-            "features": {
-                "default": [],
-                "eden": [
-                    "clidispatch/eden",
-                    "pycheckout/eden",
-                    "pyworkingcopyclient/eden",
-                    "pyworkingcopy/eden",
-                    "cmdgoto/eden",
-                    "cmddebugwait/eden",
-                ],
-                "fb": [
-                    "cmdpy/fb",
-                    "configloader/fb",
-                    "identity/fb",
-                    "cmdversion/fb",
-                    "cmddebugdumpinternalconfig/fb",
-                    "cmddebugrefreshconfig/fb",
-                ],
-                "sl_oss": [
-                    "configloader/sl_oss",
-                ],
-            },
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"dependencies": {
+            "anyhow": {"features": ["backtrace"]},
+            "constructors": {"features": ["git"]},
+            "pytracing": {"default-features": False},
+            "repo": {"features": ["wdir"]},
+        }},
+        "extra_buck_dependencies": {"dependencies": [
+            "//eden/scm/saplingnative/bindings/modules/pycheckout:pycheckout",
+            "//eden/scm/saplingnative/bindings/modules/pyworkingcopyclient:pyworkingcopyclient",
+            "//eden/scm/saplingnative/bindings/modules/pyworkingcopy:pyworkingcopy",
+            "//eden/scm/lib/revisionstore:revisionstore",
+        ]},
+        "features": {
+            "default": [],
+            "eden": [
+                "clidispatch/eden",
+                "pycheckout/eden",
+                "pyworkingcopyclient/eden",
+                "pyworkingcopy/eden",
+                "cmdgoto/eden",
+                "cmddebugwait/eden",
+            ],
+            "fb": [
+                "cmdpy/fb",
+                "configloader/fb",
+                "identity/fb",
+                "cmdversion/fb",
+                "cmddebugdumpinternalconfig/fb",
+                "cmddebugrefreshconfig/fb",
+            ],
+            "sl_oss": ["configloader/sl_oss"],
         },
-    },
+    }},
     crate_root = "src/lib.rs",
     features = [
         "eden",

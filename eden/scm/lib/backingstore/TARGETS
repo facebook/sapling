@@ -39,25 +39,17 @@ rust_library(
     name = "backingstore",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
-        "cargo_target_config": {
-            "crate_type": [
-                "staticlib",
-                "lib",
-            ],
-        },
+        "cargo_target_config": {"crate_type": [
+            "staticlib",
+            "lib",
+        ]},
         "cargo_toml_config": {
-            "dependencies_override": {
-                "dependencies": {
-                    "constructors": {"default-features": False},
-                    "indexedlog": {"features": ["configurable"]},
-                },
-            },
-            "features": {
-                "fb": ["configloader/fb"],
-            },
-            "package": {
-                "authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"],
-            },
+            "dependencies_override": {"dependencies": {
+                "constructors": {"default-features": False},
+                "indexedlog": {"features": ["configurable"]},
+            }},
+            "features": {"fb": ["configloader/fb"]},
+            "package": {"authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]},
         },
     },
     cpp_deps = [

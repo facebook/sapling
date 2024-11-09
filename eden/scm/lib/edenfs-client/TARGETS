@@ -5,17 +5,10 @@ oncall("sapling")
 rust_library(
     name = "edenfs-client",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {
-            },
-            "features": {
-                "fb": [
-                    "identity/fb",
-                ],
-            },
-        },
-    },
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {},
+        "features": {"fb": ["identity/fb"]},
+    }},
     features = ["fb"],
     deps = [
         "fbsource//third-party/rust:anyhow",

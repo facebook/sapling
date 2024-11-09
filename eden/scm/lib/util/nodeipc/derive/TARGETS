@@ -5,6 +5,7 @@ oncall("sapling")
 rust_library(
     name = "nodeipc_derive",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {},
     crate_root = "src/lib.rs",
     proc_macro = True,
     rustc_flags = [

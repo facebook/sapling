@@ -5,33 +5,21 @@ oncall("sapling")
 rust_library(
     name = "manifest",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {
-                "dev-dependencies": {
-                    "types": {
-                        "default-features": False,
-                        "features": ["for-tests"],
-                    },
-                },
-            },
-            "extra_buck_dependencies": {
-                "dev-dependencies": [
-                    "fbsource//third-party/rust:quickcheck",
-                    "//eden/scm/lib/types:types",
-                ],
-            },
-            "features": {
-                "default": [],
-                "for-tests": [
-                    "quickcheck",
-                ],
-            },
-            "package": {
-                "authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"],
-            },
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"dev-dependencies": {"types": {
+            "default-features": False,
+            "features": ["for-tests"],
+        }}},
+        "extra_buck_dependencies": {"dev-dependencies": [
+            "fbsource//third-party/rust:quickcheck",
+            "//eden/scm/lib/types:types",
+        ]},
+        "features": {
+            "default": [],
+            "for-tests": ["quickcheck"],
         },
-    },
+        "package": {"authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]},
+    }},
     crate_root = "src/lib.rs",
     features = ["for-tests"],
     deps = [

@@ -6,13 +6,7 @@ oncall("sapling")
 rust_library(
     name = "dev-logger",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "package": {
-                "license": "MIT",
-            },
-        },
-    },
+    autocargo = {"cargo_toml_config": {"package": {"license": "MIT"}}},
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:ctor",

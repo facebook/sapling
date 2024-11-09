@@ -5,6 +5,7 @@ oncall("sapling")
 rust_library(
     name = "unionconfig",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {},
     crate_root = "src/lib.rs",
     test_deps = [
         "//eden/scm/lib/config/static:staticconfig",

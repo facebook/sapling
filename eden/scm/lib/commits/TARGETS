@@ -5,16 +5,10 @@ oncall("sapling")
 rust_library(
     name = "commits",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {
-                "dependencies": {
-                    "dag": {"features": ["indexedlog-backend"]},
-                    "minibytes": {"features": ["frombytes"]},
-                },
-            },
-        },
-    },
+    autocargo = {"cargo_toml_config": {"dependencies_override": {"dependencies": {
+        "dag": {"features": ["indexedlog-backend"]},
+        "minibytes": {"features": ["frombytes"]},
+    }}}},
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:anyhow",

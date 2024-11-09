@@ -5,6 +5,7 @@ oncall("sapling")
 rust_library(
     name = "rich-cas-client",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {},
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:futures",

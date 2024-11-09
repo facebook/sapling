@@ -5,12 +5,6 @@ oncall("sapling")
 rust_library(
     name = "time-interval",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "package": {
-                "authors": ["Facebook Source Control Team <sourcecontrol-dev@meta.com>"],
-            },
-        },
-    },
+    autocargo = {"cargo_toml_config": {"package": {"authors": ["Facebook Source Control Team <sourcecontrol-dev@meta.com>"]}}},
     crate_root = "src/lib.rs",
 )

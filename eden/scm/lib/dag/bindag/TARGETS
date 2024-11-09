@@ -8,13 +8,7 @@ rust_library(
         "src/**/*.rs",
         "src/*.bindag",
     ]),
-    autocargo = {
-        "cargo_toml_config": {
-            "package": {
-                "license": "GPL-2.0-only",
-            },
-        },
-    },
+    autocargo = {"cargo_toml_config": {"package": {"license": "GPL-2.0-only"}}},
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:tempfile",

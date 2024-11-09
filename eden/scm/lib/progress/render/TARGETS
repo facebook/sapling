@@ -5,6 +5,7 @@ oncall("sapling")
 rust_library(
     name = "progress-render",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {},
     test_deps = [
     ],
     deps = [

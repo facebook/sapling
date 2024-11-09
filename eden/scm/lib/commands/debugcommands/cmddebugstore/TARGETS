@@ -5,6 +5,7 @@ oncall("sapling")
 rust_library(
     name = "cmddebugstore",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {},
     crate_root = "src/lib.rs",
     deps = [
         "//eden/scm/lib/clidispatch:clidispatch",

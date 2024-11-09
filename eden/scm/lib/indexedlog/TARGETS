@@ -6,37 +6,31 @@ oncall("sapling")
 rust_library(
     name = "indexedlog",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "bench": [
-                {
-                    "harness": False,
-                    "name": "index",
-                },
-                {
-                    "harness": False,
-                    "name": "misc",
-                },
-                {
-                    "harness": False,
-                    "name": "log",
-                },
-            ],
-            "extra_buck_dependencies": {
-                "dev-dependencies": [
-                    "fbsource//third-party/rust:rand_chacha",
-                    "//eden/scm/lib/minibench:minibench",
-                ],
+    autocargo = {"cargo_toml_config": {
+        "bench": [
+            {
+                "harness": False,
+                "name": "index",
             },
-            "features": {
-                "configurable": ["configmodel"],
-                "sigbus-handler": [],
+            {
+                "harness": False,
+                "name": "misc",
             },
-            "package": {
-                "license": "MIT",
+            {
+                "harness": False,
+                "name": "log",
             },
+        ],
+        "extra_buck_dependencies": {"dev-dependencies": [
+            "fbsource//third-party/rust:rand_chacha",
+            "//eden/scm/lib/minibench:minibench",
+        ]},
+        "features": {
+            "configurable": ["configmodel"],
+            "sigbus-handler": [],
         },
-    },
+        "package": {"license": "MIT"},
+    }},
     crate_root = "src/lib.rs",
     features = [
         "configurable",

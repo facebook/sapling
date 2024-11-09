@@ -5,6 +5,7 @@ oncall("sapling")
 rust_library(
     name = "clientinfo-cpp",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {},
     crate_root = "src/lib.rs",
     cxx_bridge = "src/lib.rs",
     deps = [

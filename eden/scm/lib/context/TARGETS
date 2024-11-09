@@ -5,6 +5,7 @@ oncall("sapling")
 rust_library(
     name = "context",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {},
     crate_root = "src/lib.rs",
     deps = [
         "//eden/scm/lib/config/model:configmodel",

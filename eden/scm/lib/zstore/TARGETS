@@ -5,15 +5,7 @@ oncall("sapling")
 rust_library(
     name = "zstore",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {
-                "dependencies": {
-                    "minibytes": {"features": ["frombytes"]},
-                },
-            },
-        },
-    },
+    autocargo = {"cargo_toml_config": {"dependencies_override": {"dependencies": {"minibytes": {"features": ["frombytes"]}}}}},
     crate_root = "src/lib.rs",
     test_deps = [
         "fbsource//third-party/rust:quickcheck",

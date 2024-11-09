@@ -6,16 +6,10 @@ oncall("sapling")
 rust_library(
     name = "cmddebugdumpinternalconfig",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "features": {
-                "default": [],
-                "fb": [
-                    "configloader/fb",
-                ],
-            },
-        },
-    },
+    autocargo = {"cargo_toml_config": {"features": {
+        "default": [],
+        "fb": ["configloader/fb"],
+    }}},
     crate_root = "src/lib.rs",
     features = ["fb"],
     deps = [

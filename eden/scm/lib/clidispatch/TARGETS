@@ -5,29 +5,21 @@ oncall("sapling")
 rust_library(
     name = "clidispatch",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {
-                "dependencies": {
-                    "indexedlog": {"features": ["configurable"]},
-                    "repo": {"features": ["wdir"]},
-                    "thrift-types": {"optional": True},
-                },
-            },
-            "features": {
-                "eden": [
-                    "workingcopy/eden",
-                    "thrift-types",
-                ],
-                "sl_oss": [
-                    "identity/sl_oss",
-                ],
-            },
-            "package": {
-                "authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"],
-            },
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"dependencies": {
+            "indexedlog": {"features": ["configurable"]},
+            "repo": {"features": ["wdir"]},
+            "thrift-types": {"optional": True},
+        }},
+        "features": {
+            "eden": [
+                "workingcopy/eden",
+                "thrift-types",
+            ],
+            "sl_oss": ["identity/sl_oss"],
         },
-    },
+        "package": {"authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]},
+    }},
     features = [
         "eden",
     ],

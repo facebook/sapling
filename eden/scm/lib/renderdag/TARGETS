@@ -5,27 +5,15 @@ oncall("sapling")
 rust_library(
     name = "renderdag",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {
-                "dev-dependencies": {
-                    "dag": {"default-features": False},
-                },
-            },
-            "extra_buck_dependencies": {
-                "dependencies": [
-                    "fbsource//third-party/rust:serde",
-                ],
-            },
-            "features": {
-                "default": [],
-                "serialize": ["serde"],
-            },
-            "package": {
-                "license": "MIT",
-            },
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"dev-dependencies": {"dag": {"default-features": False}}},
+        "extra_buck_dependencies": {"dependencies": ["fbsource//third-party/rust:serde"]},
+        "features": {
+            "default": [],
+            "serialize": ["serde"],
         },
-    },
+        "package": {"license": "MIT"},
+    }},
     crate_root = "src/lib.rs",
     features = [],
     test_deps = [

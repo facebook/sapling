@@ -5,6 +5,7 @@ oncall("sapling")
 rust_library(
     name = "testutil",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {},
     deps = [
         "fbsource//third-party/rust:once_cell",
         "fbsource//third-party/rust:parking_lot",

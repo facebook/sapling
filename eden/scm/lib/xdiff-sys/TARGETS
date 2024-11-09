@@ -7,13 +7,7 @@ oncall("sapling")
 rust_library(
     name = "xdiff-sys",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "extra_buck_dependencies": {
-                "build-dependencies": ["fbsource//third-party/rust:cc"],
-            },
-        },
-    },
+    autocargo = {"cargo_toml_config": {"extra_buck_dependencies": {"build-dependencies": ["fbsource//third-party/rust:cc"]}}},
     cpp_deps = ["//eden/scm/lib/third-party/xdiff:xdiff"],
     crate_root = "src/lib.rs",
 )

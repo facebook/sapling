@@ -6,18 +6,14 @@ oncall("sapling")
 rust_library(
     name = "types",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "features": {
-                "default": ["for-tests"],
-                "for-tests": [
-                    "rand",
-                    "quickcheck",
-                    "lazy_static",
-                ],
-            },
-        },
-    },
+    autocargo = {"cargo_toml_config": {"features": {
+        "default": ["for-tests"],
+        "for-tests": [
+            "rand",
+            "quickcheck",
+            "lazy_static",
+        ],
+    }}},
     crate_root = "src/lib.rs",
     features = ["for-tests"],
     named_deps = {

@@ -5,6 +5,7 @@ oncall("sapling")
 rust_library(
     name = "vfs",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {},
     crate_root = "src/lib.rs",
     os_deps = [
         (

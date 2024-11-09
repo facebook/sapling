@@ -9,30 +9,20 @@ rust_library(
     name = "edenfs_ffi",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
-        "cargo_target_config": {
-            "crate_type": [
-                "staticlib",
-                "lib",
-            ],
-        },
+        "cargo_target_config": {"crate_type": [
+            "staticlib",
+            "lib",
+        ]},
         "cargo_toml_config": {
-            "dependencies_override": {
-                "build-dependencies": {
-                    "cxx-build": {"optional": False},
-                },
-            },
-            "extra_buck_dependencies": {
-                "dependencies": [
-                    "//common/rust/shed/fbinit:fbinit",
-                    "//common/rust/shed/stats:stats",
-                ],
-            },
-            "features": {
-                "ods": [
-                    "fbinit",
-                    "stats",
-                ],
-            },
+            "dependencies_override": {"build-dependencies": {"cxx-build": {"optional": False}}},
+            "extra_buck_dependencies": {"dependencies": [
+                "//common/rust/shed/fbinit:fbinit",
+                "//common/rust/shed/stats:stats",
+            ]},
+            "features": {"ods": [
+                "fbinit",
+                "stats",
+            ]},
         },
     },
     cpp_deps = [":edenfs_ffi-wrapper"],

@@ -7,37 +7,19 @@ oncall("sapling")
 rust_library(
     name = "procinfo",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {
-                "target": {
-                    "'cfg(windows)'": {
-                        "dependencies": {
-                            "winapi": {
-                                "features": [
-                                    "handleapi",
-                                    "minwindef",
-                                    "processthreadsapi",
-                                    "psapi",
-                                    "tlhelp32",
-                                ],
-                                "version": "0.3",
-                            },
-                        },
-                    },
-                },
-            },
-            "extra_buck_dependencies": {
-                "target": {
-                    """'cfg(target_os = "macos")'""": {
-                        "build-dependencies": [
-                            "fbsource//third-party/rust:cc",
-                        ],
-                    },
-                },
-            },
-        },
-    },
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"target": {"'cfg(windows)'": {"dependencies": {"winapi": {
+            "features": [
+                "handleapi",
+                "minwindef",
+                "processthreadsapi",
+                "psapi",
+                "tlhelp32",
+            ],
+            "version": "0.3",
+        }}}}},
+        "extra_buck_dependencies": {"target": {'\'cfg(target_os = "macos")\'': {"build-dependencies": ["fbsource//third-party/rust:cc"]}}},
+    }},
     crate_root = "src/lib.rs",
     os_deps = [
         (

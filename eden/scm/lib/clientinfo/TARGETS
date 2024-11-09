@@ -6,6 +6,7 @@ oncall("sapling")
 rust_library(
     name = "clientinfo",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {},
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:anyhow",

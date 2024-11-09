@@ -5,6 +5,7 @@ oncall("sapling")
 rust_library(
     name = "streams",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {},
     crate_root = "src/lib.rs",
     test_deps = [
         "fbsource//third-party/rust:anyhow",

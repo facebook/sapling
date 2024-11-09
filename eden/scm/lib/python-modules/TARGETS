@@ -20,15 +20,7 @@ python_binary(
 rust_library(
     name = "python-modules",
     srcs = ["src/lib.rs"],
-    autocargo = {
-        "cargo_toml_config": {
-            "extra_buck_dependencies": {
-                "build-dependencies": [
-                    "//eden/scm/lib/python-modules/codegen:codegen",
-                ],
-            },
-        },
-    },
+    autocargo = {"cargo_toml_config": {"extra_buck_dependencies": {"build-dependencies": ["//eden/scm/lib/python-modules/codegen:codegen"]}}},
     mapped_srcs = {":gen=compiled.rs": "src/compiled.rs"},
     deps = [
         "fbsource//third-party/rust:once_cell",

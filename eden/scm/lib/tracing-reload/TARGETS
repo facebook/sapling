@@ -5,13 +5,7 @@ oncall("sapling")
 rust_library(
     name = "tracing-reload",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "package": {
-                "authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"],
-            },
-        },
-    },
+    autocargo = {"cargo_toml_config": {"package": {"authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]}}},
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:anyhow",

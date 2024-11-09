@@ -5,28 +5,16 @@ oncall("sapling")
 rust_library(
     name = "mutationstore",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {
-                "dependencies": {
-                    "dag": {
-                        "features": ["render"],
-                    },
-                },
-                "dev-dependencies": {
-                    "types": {
-                        "default-features": False,
-                        "features": ["for-tests"],
-                    },
-                },
-            },
-            "extra_buck_dependencies": {
-                "dev-dependencies": [
-                    "//eden/scm/lib/types:types",
-                ],
-            },
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {
+            "dependencies": {"dag": {"features": ["render"]}},
+            "dev-dependencies": {"types": {
+                "default-features": False,
+                "features": ["for-tests"],
+            }},
         },
-    },
+        "extra_buck_dependencies": {"dev-dependencies": ["//eden/scm/lib/types:types"]},
+    }},
     crate_root = "src/lib.rs",
     test_deps = [
         "fbsource//third-party/rust:rand",

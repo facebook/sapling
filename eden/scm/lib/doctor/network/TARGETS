@@ -5,6 +5,7 @@ oncall("sapling")
 rust_library(
     name = "network-doctor",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {},
     test_deps = ["fbsource//third-party/rust:tempfile"],
     deps = [
         "fbsource//third-party/rust:curl",

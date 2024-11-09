@@ -5,6 +5,7 @@ oncall("sapling")
 rust_library(
     name = "hg-metrics",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {},
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:once_cell",

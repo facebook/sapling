@@ -5,31 +5,25 @@ oncall("sapling")
 rust_library(
     name = "revisionstore",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {
-                "dependencies": {
-                    "minibytes": {"features": ["frombytes"]},
-                    "version": {"path": "../version"},
-                },
-            },
-            "extra_buck_dependencies": {
-                "dependencies": [
-                    "//common/rust/shed/fbinit:fbinit",
-                    "//common/rust/shed/stats:stats",
-                ],
-            },
-            "features": {
-                "default": [],
-                "fb": [],
-                "for-tests": [],
-                "ods": [
-                    "fbinit",
-                    "stats",
-                ],
-            },
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"dependencies": {
+            "minibytes": {"features": ["frombytes"]},
+            "version": {"path": "../version"},
+        }},
+        "extra_buck_dependencies": {"dependencies": [
+            "//common/rust/shed/fbinit:fbinit",
+            "//common/rust/shed/stats:stats",
+        ]},
+        "features": {
+            "default": [],
+            "fb": [],
+            "for-tests": [],
+            "ods": [
+                "fbinit",
+                "stats",
+            ],
         },
-    },
+    }},
     crate = "revisionstore",
     features = [
         "fb",
@@ -109,11 +103,7 @@ rust_library(
     name = "revisionstore_types",
     srcs = glob(["types/**/*.rs"]),
     autocargo = {
-        "cargo_toml_config": {
-            "package": {
-                "authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"],
-            },
-        },
+        "cargo_toml_config": {"package": {"authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]}},
         "cargo_toml_dir": "types",
     },
     crate_root = "types/lib.rs",

@@ -5,6 +5,7 @@ oncall("sapling")
 rust_library(
     name = "webview-app",
     srcs = glob(["src/*"]),
+    autocargo = {},
     crate_root = "src/lib.rs",
     os_deps = [
         (

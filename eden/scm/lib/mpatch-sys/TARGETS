@@ -5,15 +5,7 @@ oncall("sapling")
 rust_library(
     name = "mpatch-sys",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "extra_buck_dependencies": {
-                "build-dependencies": [
-                    "fbsource//third-party/rust:cc",
-                ],
-            },
-        },
-    },
+    autocargo = {"cargo_toml_config": {"extra_buck_dependencies": {"build-dependencies": ["fbsource//third-party/rust:cc"]}}},
     cpp_deps = ["//eden/scm:libmpatch"],
     crate_root = "src/lib.rs",
 )

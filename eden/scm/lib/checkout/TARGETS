@@ -5,29 +5,23 @@ oncall("sapling")
 rust_library(
     name = "checkout",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {
-                "dependencies": {
-                    "edenfs-client": {"optional": True},
-                    "hg-metrics": {"optional": True},
-                    "manifest": {"features": ["for-tests"]},
-                    "toml": {"optional": True},
-                },
-                "dev-dependencies": {
-                    "manifest-tree": {"features": ["for-tests"]},
-                },
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {
+            "dependencies": {
+                "edenfs-client": {"optional": True},
+                "hg-metrics": {"optional": True},
+                "manifest": {"features": ["for-tests"]},
+                "toml": {"optional": True},
             },
-            "features": {
-                "eden": [
-                    "edenfs-client",
-                    "hg-metrics",
-                    "toml",
-                    "workingcopy/eden",
-                ],
-            },
+            "dev-dependencies": {"manifest-tree": {"features": ["for-tests"]}},
         },
-    },
+        "features": {"eden": [
+            "edenfs-client",
+            "hg-metrics",
+            "toml",
+            "workingcopy/eden",
+        ]},
+    }},
     crate_root = "src/lib.rs",
     features = ["eden"],
     os_deps = [

@@ -7,6 +7,7 @@ oncall("sapling")
 rust_library(
     name = "xdiff",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {},
     crate_root = "src/lib.rs",
     deps = [
         "//eden/scm/lib/xdiff-sys:xdiff-sys",

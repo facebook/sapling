@@ -5,6 +5,7 @@ oncall("sapling")
 rust_library(
     name = "thrift-types",
     srcs = ["src/lib.rs"],
+    autocargo = {},
     named_deps = {
         "edenfs": "//eden/fs/service:thrift-rust",
         "edenfs_clients": "//eden/fs/service:thrift-rust-clients",

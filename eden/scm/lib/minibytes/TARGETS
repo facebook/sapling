@@ -5,23 +5,19 @@ oncall("sapling")
 rust_library(
     name = "minibytes",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "features": {
-                "default": [
-                    "frombytes",
-                    "frommmap",
-                    "non-zerocopy-into",
-                ],
-                "frombytes": ["bytes"],
-                "frommmap": ["memmap2"],
-                "non-zerocopy-into": [],
-            },
-            "package": {
-                "license": "MIT",
-            },
+    autocargo = {"cargo_toml_config": {
+        "features": {
+            "default": [
+                "frombytes",
+                "frommmap",
+                "non-zerocopy-into",
+            ],
+            "frombytes": ["bytes"],
+            "frommmap": ["memmap2"],
+            "non-zerocopy-into": [],
         },
-    },
+        "package": {"license": "MIT"},
+    }},
     crate_root = "src/lib.rs",
     features = [
         "frombytes",

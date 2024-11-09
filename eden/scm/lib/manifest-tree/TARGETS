@@ -5,52 +5,44 @@ oncall("sapling")
 rust_library(
     name = "manifest-tree",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "bench": [
-                {
-                    "harness": False,
-                    "name": "bench",
-                    "required-features": ["for-tests"],
-                },
+    autocargo = {"cargo_toml_config": {
+        "bench": [{
+            "harness": False,
+            "name": "bench",
+            "required-features": ["for-tests"],
+        }],
+        "dependencies_override": {"dev-dependencies": {
+            "manifest": {
+                "default-features": False,
+                "features": ["for-tests"],
+            },
+            "types": {
+                "default-features": False,
+                "features": ["for-tests"],
+            },
+        }},
+        "extra_buck_dependencies": {
+            "dependencies": [
+                "fbsource//third-party/rust:quickcheck",
+                "fbsource//third-party/rust:rand",
             ],
-            "dependencies_override": {
-                "dev-dependencies": {
-                    "manifest": {
-                        "default-features": False,
-                        "features": ["for-tests"],
-                    },
-                    "types": {
-                        "default-features": False,
-                        "features": ["for-tests"],
-                    },
-                },
-            },
-            "extra_buck_dependencies": {
-                "dependencies": [
-                    "fbsource//third-party/rust:quickcheck",
-                    "fbsource//third-party/rust:rand",
-                ],
-                "dev-dependencies": [
-                    "fbsource//third-party/rust:rand",
-                    "fbsource//third-party/rust:rand_chacha",
-                    "//eden/scm/lib/manifest:manifest",
-                    "//eden/scm/lib/minibench:minibench",
-                    "//eden/scm/lib/types:types",
-                ],
-            },
-            "features": {
-                "default": [],
-                "for-tests": [
-                    "quickcheck",
-                    "rand",
-                ],
-            },
-            "package": {
-                "authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"],
-            },
+            "dev-dependencies": [
+                "fbsource//third-party/rust:rand",
+                "fbsource//third-party/rust:rand_chacha",
+                "//eden/scm/lib/manifest:manifest",
+                "//eden/scm/lib/minibench:minibench",
+                "//eden/scm/lib/types:types",
+            ],
         },
-    },
+        "features": {
+            "default": [],
+            "for-tests": [
+                "quickcheck",
+                "rand",
+            ],
+        },
+        "package": {"authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]},
+    }},
     crate_root = "src/lib.rs",
     features = ["for-tests"],
     test_deps = [

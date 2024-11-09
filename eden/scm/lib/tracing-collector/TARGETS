@@ -5,27 +5,13 @@ oncall("sapling")
 rust_library(
     name = "tracing-collector",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {
-                "target": {
-                    "'cfg(windows)'": {
-                        "dependencies": {
-                            "winapi": {
-                                "features": ["processthreadsapi"],
-                                "version": "0.3.7",
-                            },
-                        },
-                    },
-                },
-            },
-            "extra_buck_dependencies": {
-                "dependencies": [
-                    (None, "fbsource//third-party/rust:winapi"),
-                ],
-            },
-        },
-    },
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"target": {"'cfg(windows)'": {"dependencies": {"winapi": {
+            "features": ["processthreadsapi"],
+            "version": "0.3.7",
+        }}}}},
+        "extra_buck_dependencies": {"dependencies": [(None, "fbsource//third-party/rust:winapi")]},
+    }},
     crate_root = "src/lib.rs",
     os_deps = [
         (

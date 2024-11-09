@@ -5,6 +5,7 @@ oncall("sapling")
 rust_library(
     name = "repourl",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {},
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:fn-error-context",
