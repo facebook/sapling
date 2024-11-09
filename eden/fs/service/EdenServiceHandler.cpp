@@ -2203,14 +2203,111 @@ apache::thrift::
     EdenServiceHandler::streamChangesSinceV2(
         std::unique_ptr<StreamChangesSinceV2Params> params) {
   auto helper = INSTRUMENT_THRIFT_CALL_WITH_STAT(
-      DBG3, &ThriftStats::streamChangesSince, *params->mountPoint_ref());
+      DBG3, &ThriftStats::streamChangesSinceV2, *params->mountPoint_ref());
+
   auto mountHandle = lookupMount(params->mountPoint());
-  [[maybe_unused]] const auto& fromPosition = *params->fromPosition_ref();
+  const auto& fromPosition = *params->fromPosition_ref();
+
+  checkMountGeneration(
+      fromPosition, mountHandle.getEdenMount(), "fromPosition"sv);
+
+  auto summed = mountHandle.getJournal().accumulateRange(
+      *fromPosition.sequenceNumber_ref() + 1);
 
   ChangesSinceV2Result result;
-  return {
-      std::move(result),
-      apache::thrift::ServerStream<ChangeNotificationResult>::createEmpty()};
+  if (!summed) {
+    // No changes, just return the fromPosition and an empty stream.
+    result.toPosition_ref() = fromPosition;
+
+    return {
+        std::move(result),
+        apache::thrift::ServerStream<ChangeNotificationResult>::createEmpty()};
+  }
+
+  if (summed->isTruncated) {
+    throw newEdenError(
+        EDOM,
+        EdenErrorType::JOURNAL_TRUNCATED,
+        "Journal entry range has been truncated.");
+  }
+
+  auto cancellationSource = std::make_shared<folly::CancellationSource>();
+  auto [serverStream, publisher] =
+      apache::thrift::ServerStream<ChangeNotificationResult>::createPublisher(
+          [cancellationSource] { cancellationSource->requestCancellation(); });
+  auto sharedPublisherLock = std::make_shared<folly::Synchronized<
+      ThriftStreamPublisherOwner<ChangeNotificationResult>>>(
+      ThriftStreamPublisherOwner{std::move(publisher)});
+
+  RootIdCodec& rootIdCodec = mountHandle.getObjectStore();
+
+  JournalPosition toPosition;
+  toPosition.mountGeneration_ref() =
+      mountHandle.getEdenMount().getMountGeneration();
+  toPosition.sequenceNumber_ref() = summed->toSequence;
+  toPosition.snapshotHash_ref() =
+      rootIdCodec.renderRootId(summed->snapshotTransitions.back());
+  result.toPosition_ref() = toPosition;
+
+  // TODO: temporary recycling of `streamChangesSince` logic
+  //       This will need to be updated to reflect the new way of reporting
+  //       changes in large an small sizes. Additionally, the differntiation
+  //       between files and directories.
+  //
+  //       Using this for now to get the end-to-end plumbing working and
+  //       to establish some early testing.
+  for (auto& entry : summed->changedFilesInOverlay) {
+    const auto& changeInfo = entry.second;
+
+    // TODO: add in dtype - requires plumbing through all journal layers
+    // TODO: rework to support renamed, and optionally, replaced
+    //       This likely means moving away from the `accumulateRange` usage
+    //       above and directly processing via `forEachDelta` which gives much
+    //       more info and properly interleaves filesytem and commit transition
+    //       changes
+    SmallChangeNotification smallChange;
+    if (!changeInfo.existedBefore && changeInfo.existedAfter) {
+      Added added;
+      added.path() = entry.first.asString();
+      smallChange.set_added(std::move(added));
+    } else if (changeInfo.existedBefore && !changeInfo.existedAfter) {
+      Removed removed;
+      removed.path() = entry.first.asString();
+      smallChange.set_removed(std::move(removed));
+    } else {
+      Modified modified;
+      modified.path() = entry.first.asString();
+      smallChange.set_modified(std::move(modified));
+    }
+
+    ChangeNotification change;
+    change.set_smallChange(std::move(smallChange));
+
+    ChangeNotificationResult changeNotificationResult;
+    changeNotificationResult.change() = change;
+
+    sharedPublisherLock->rlock()->next(std::move(changeNotificationResult));
+  }
+
+  for (const auto& name : summed->uncleanPaths) {
+    SmallChangeNotification smallChange;
+    Modified modified;
+    modified.path() = name.asString();
+    smallChange.set_modified(std::move(modified));
+
+    ChangeNotification change;
+    change.set_smallChange(std::move(smallChange));
+
+    ChangeNotificationResult changeNotificationResult;
+    changeNotificationResult.change() = change;
+
+    sharedPublisherLock->rlock()->next(std::move(changeNotificationResult));
+  }
+
+  // NOTE: we are not surfacing snapshot transitions
+  //       That will come later when we begin to use `forEachDelta`.
+
+  return {std::move(result), std::move(serverStream)};
 }
 
 apache::thrift::ResponseAndServerStream<ChangesSinceResult, ChangedFileResult>
