@@ -324,7 +324,7 @@ def uploadhgchangesets(repo, revs, force=False, skipknowncheck=False):
                     "time": int(time),
                     "tz": timezone,
                     "extras": extras,
-                    "files": ctx.files(),
+                    "files": ctx.changeset().files,  # "files" should the filelist in the commit text
                     "message": ctx.description().encode(),
                 },
             )

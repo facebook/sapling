@@ -146,7 +146,7 @@ def crdump(ui, repo, *revs, **opts):
                 "commit_cloud": False if ctx.rev() in notbackedup else True,
                 "manifest_node": hex(ctx.manifestnode()),
             }
-            if ctx.p1().phase() != phases.public:
+            if not ctx.p1().ispublic():
                 # we need this only if parent is in the same draft stack
                 rdata["p1"]["differential_revision"] = phabricatorrevision(ctx.p1())
 

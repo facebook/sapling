@@ -320,7 +320,7 @@ py_class!(pub class treemanifest |py| {
         let other_tree = other.underlying(py);
 
         let results: Vec<_> = py.allow_threads(move || -> Result<_> {
-            manifest_tree::Diff::new(&this_tree.read(), &other_tree.read(), &matcher)?.collect()
+            this_tree.read().diff(&other_tree.read(), matcher)?.collect()
         }).map_pyerr(py)?;
         for entry in results {
             let path = PyPathBuf::from(entry.path);
@@ -413,24 +413,6 @@ py_class!(pub class treemanifest |py| {
            .collect())
     }
 
-    /// Find modified directories. Return [(path: str, exist_left: bool, exist_right: bool)].
-    /// Modified directories are added, removed, or metadata changed (direct file or subdir added,
-    /// removed, similar to when OS updates mtime of a directory). File content change does not
-    /// modify its parent directory.
-    def modifieddirs(&self, other: &treemanifest, matcher: Option<PyObject> = None) -> PyResult<Vec<(PyPathBuf, bool, bool)>> {
-        let matcher: Arc<dyn Matcher + Sync + Send> = extract_option_matcher(py, matcher)?;
-        let this_tree = self.underlying(py);
-        let other_tree = other.underlying(py);
-        let results = py.allow_threads(move || -> Result<_> {
-            let this = this_tree.read();
-            let other = other_tree.read();
-            let modified_dirs = this.modified_dirs(&other, &matcher);
-            modified_dirs.and_then(|v| v.collect::<Result<Vec<_>>>())
-        }).map_pyerr(py)?;
-        let results = results.into_iter().map(|i| (i.path.into(), i.left, i.right)).collect();
-        Ok(results)
-    }
-
     def filesnotin(
         &self,
         other: &treemanifest,
@@ -442,7 +424,7 @@ py_class!(pub class treemanifest |py| {
         let matcher: Arc<dyn Matcher + Sync + Send> = extract_option_matcher(py, matcher)?;
 
         let results: Vec<_> = py.allow_threads(move || -> Result<_> {
-            manifest_tree::Diff::new(&this_tree.read(), &other_tree.read(), &matcher)?.collect()
+            this_tree.read().diff(&other_tree.read(), matcher)?.collect()
         }).map_pyerr(py)?;
         for entry in results {
             match entry.diff_type {

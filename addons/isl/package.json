@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@stylexjs/stylex": "^0.7.5",
+    "@stylexjs/stylex": "^0.9.3",
     "@testing-library/jest-dom": "^5.14.1",
     "@testing-library/react": "^15.0.6",
     "@testing-library/user-event": "^13.2.1",

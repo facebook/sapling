@@ -155,7 +155,7 @@ def _threadedworker(ui, func, staticargs, args):
                 # fact that one of workers may be processing a large
                 # task and does not get to handle the interruption.
                 ui.warn(
-                    _("failed to kill worker threads while " "handling an exception\n")
+                    _("failed to kill worker threads while handling an exception\n")
                 )
                 return
 

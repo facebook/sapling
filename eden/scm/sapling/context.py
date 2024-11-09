@@ -19,6 +19,7 @@ import os
 import re
 import stat
 import sys
+from functools import partial
 from typing import Callable, List, Optional, Tuple, Union
 
 import bindings
@@ -54,7 +55,7 @@ from .node import (
     wdirrev,
 )
 from .pycompat import encodeutf8, isint, range
-from .utils.subtreeutil import SUBTREE_BRANCH_KEY
+from .utils import subtreeutil
 
 filectx_or_bytes = Union["basefilectx", bytes]
 
@@ -249,6 +250,9 @@ class basectx:
 
     def phase(self) -> int:
         raise NotImplementedError()
+
+    def ispublic(self) -> bool:
+        return self.phase() == phases.public
 
     def mutable(self) -> bool:
         return self.phase() > phases.public
@@ -570,8 +574,7 @@ class changectx(basectx):
         return [changectx(repo, p) for p in pnodes]
 
     def changeset(self):
-        c = self._changeset
-        return (c.manifest, c.user, c.date, c.files, c.description, c.extra)
+        return self._changeset
 
     def manifestnode(self):
         return self._changeset.manifest
@@ -588,10 +591,9 @@ class changectx(basectx):
             # The following cases does not provide "files" in commit message,
             # run diff to get it:
             # - git repo
-            # - O(1) subtree copy
-            if (
-                git.isgitformat(self._repo)
-                or SUBTREE_BRANCH_KEY in self._changeset.extra
+            # - subtree shallow copy
+            if git.isgitformat(self._repo) or subtreeutil.contains_shallow_copy(
+                self._repo, self.node()
             ):
                 files = sorted(self.manifest().diff(self.p1().manifest()).keys())
         return files
@@ -1657,7 +1659,16 @@ class committablectx(basectx):
                     fctx = self[f]
                     if fctx.filenode() is not None:
                         keys.append((fctx.path(), fctx.filenode()))
-                repo.fileslog.metadatastore.prefetch(keys)
+                if p2.node() == nullid:
+                    # Not merging - only fetch direct file history so we avoid per-file
+                    # fetches for `flog.parents(node)` in _filecommit.
+                    length = 1
+                else:
+                    # If we are merging, _filecommit has some logic with flog history, so
+                    # let's fetch the files' full history to avoid serial history
+                    # fetching.
+                    length = None
+                repo.fileslog.metadatastore.prefetch(keys, length=length)
         for f in progress.each(ui, added, _("committing"), _("files")):
             ui.note(f + "\n")
             try:
@@ -1967,7 +1978,7 @@ class workingctx(committablectx):
             return
         if not (stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode)):
             self._repo.ui.warn(
-                _("copy failed: %s is not a file or a " "symbolic link\n")
+                _("copy failed: %s is not a file or a symbolic link\n")
                 % self._repo.dirstate.pathto(dest)
             )
         else:
@@ -2028,7 +2039,7 @@ class workingctx(committablectx):
                 d = self[f].data()
                 if d == b"" or len(d) >= 1024 or b"\n" in d or util.binary(d):
                     self._repo.ui.debug(
-                        "ignoring suspect symlink placeholder" ' "%s"\n' % f
+                        'ignoring suspect symlink placeholder "%s"\n' % f
                     )
                     continue
             sane.append(f)
@@ -2569,7 +2580,7 @@ class overlayworkingctx(committablectx):
                     repo,
                     memctx,
                     path,
-                    self.data(path),
+                    partial(self.data, path),
                     copied=self._cache[path]["copied"],
                     flags=self.flags(path),
                     filenode=self._cache[path]["filenode"],
@@ -2615,13 +2626,20 @@ class overlayworkingctx(committablectx):
         keys = []
         for path in self._cache.keys():
             cache = self._cache[path]
+            if cache["data"] is None:
+                continue
+
             try:
                 underlying = self._wrappedctx[path]
-                if (
-                    cache["data"] is not None
-                    and underlying.data() == filedata(cache["data"])
-                    and underlying.flags() == cache["flags"]
-                ):
+                fnode, cachenode = underlying.filenode(), cache["filenode"]
+
+                # Do content check using filenodes, if available.
+                if fnode is not None and cachenode is not None:
+                    contents_match = fnode == cachenode
+                else:
+                    contents_match = underlying.data() == filedata(cache["data"])
+
+                if contents_match and underlying.flags() == cache["flags"]:
                     keys.append(path)
             except error.ManifestLookupError:
                 # Path not in the underlying manifest (created).
@@ -3147,11 +3165,13 @@ class memfilectx(committablefilectx):
             # HACK: Reconstruct filenode from "data()" for submodules.
             # Ideally the callsite provides filenode, but that's not a
             # trivial change.
-            self._filenode = bin(data.rstrip()[-len(nullhex) :])
+            self._filenode = bin(self.data().rstrip()[-len(nullhex) :])
         if copied:
             self._copied = (copied, nullid)
 
     def data(self):
+        if callable(self._data):
+            self._data = self._data()
         return self._data
 
     def remove(self, ignoremissing=False):
@@ -3161,7 +3181,7 @@ class memfilectx(committablefilectx):
 
     def write(self, data: filectx_or_bytes, flags):
         """wraps repo.wwrite"""
-        self._data = filedata(data)
+        self._data = partial(filedata, data)
 
     def filenode(self):
         return self._filenode

@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use std::sync::Arc;
@@ -11,7 +11,7 @@ use anyhow::Result;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use manifest::DiffType;
-use manifest_tree::Diff;
+use manifest::Manifest;
 use manifest_tree::TreeManifest;
 use pathmatcher::AlwaysMatcher;
 use pathmatcher::Matcher;
@@ -126,7 +126,7 @@ pub(crate) fn compute_missing_files(
     limit: Option<usize>,
 ) -> Result<Vec<RepoPathBuf>> {
     let matcher = matcher.unwrap_or_else(|| Arc::new(AlwaysMatcher::new()));
-    let diff_entries = Diff::new(old_tree, new_tree, &matcher)?;
+    let diff_entries = old_tree.diff(new_tree, matcher)?;
     let mut missing = Vec::new();
     let limit = limit.unwrap_or(usize::MAX);
     if limit == 0 {

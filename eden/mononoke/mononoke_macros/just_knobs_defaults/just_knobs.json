@@ -1,9 +1,5 @@
 {
   "bools": {
-    "scm/mononoke:async_requests_blobstore_from_common_config": true,
-    "scm/mononoke:async_requests_blobstore_from_legacy_config": false,
-    "scm/mononoke:async_requests_from_common_config": true,
-    "scm/mononoke:async_requests_legacy_config": false,
     "scm/mononoke:backsync_submodule_expansion_changes": true,
     "scm/mononoke:bssm_enable_optimized_derivation": false,
     "scm/mononoke:cross_repo_skip_backsyncing_ordinary_empty_commits": false,
@@ -44,7 +40,8 @@
     "scm/mononoke:remote_gitimport_derive_skeleton_manifests_v2": true,
     "scm/mononoke:remote_gitimport_derive_ccsm": true,
     "scm/mononoke:changeset_path_context_use_skeleton_manifest_v2": true,
-    "scm/mononoke:case_conflicts_check_use_ccsm": true
+    "scm/mononoke:case_conflicts_check_use_ccsm": true,
+    "scm/mononoke:should_set_committer_info_to_author_info_if_empty": true
   },
   "ints": {
     "scm/mononoke_timeouts:repo_client_clone_timeout_secs": 14400,

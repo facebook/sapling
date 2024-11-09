@@ -750,28 +750,17 @@ impl Redirection {
                 .parent()
                 .map(|co_parent| co_parent.join(zzencode(&repo_and_symlink_path.to_string_lossy())))
             {
-                // These files should be created by EdenFS only, let's just remove
-                // it if it's there.
-                if temp_symlink_path.exists() && temp_symlink_path.is_dir() && force {
-                    println!(
-                        "This should be a symlink but it's a directory, deleting because --force was specified: {}",
-                        temp_symlink_path.display()
-                    );
-                }
-
-                if temp_symlink_path.exists() {
-                    std::fs::remove_file(&temp_symlink_path)
+                // These temp files should be created by EdenFS only, let's just remove it if it's there.
+                // `is_dir()` will be true for symlink pointing to a directory
+                if temp_symlink_path.exists() && temp_symlink_path.is_dir() {
+                    // In Windows, symlink pointing to a dir can only be deleted using `remove_dir()`
+                    // Refer: https://stackoverflow.com/a/76407261
+                    std::fs::remove_dir(&temp_symlink_path)
                         .from_err()
                         .with_context(|| {
-                            let extra = if force {
-                                " (consider adding --force)"
-                            } else {
-                                ""
-                            };
                             format!(
-                                "Failed to remove existing file {}{}",
-                                temp_symlink_path.display(),
-                                extra
+                                "Failed to remove temp redirection symlink file {}",
+                                temp_symlink_path.display()
                             )
                         })?;
                 }
@@ -1984,6 +1973,8 @@ mod tests {
     use std::path::Path;
     use std::path::PathBuf;
 
+    #[cfg(target_os = "windows")]
+    use mkscratch::zzencode;
     use rand::distributions::Alphanumeric;
     use rand::distributions::DistString;
     use serde_test::assert_ser_tokens;
@@ -2004,7 +1995,7 @@ mod tests {
             "test_path_{}",
             Alphanumeric.sample_string(&mut rand::thread_rng(), 16)
         );
-        let redir1 = Redirection {
+        let redir = Redirection {
             repo_path: PathBuf::from(rand_file),
             redir_type: RedirectionType::Symlink,
             target: None,
@@ -2014,10 +2005,49 @@ mod tests {
         let fake_checkout = tempdir().expect("failed to create fake checkout");
         let fake_checkout_path = fake_checkout.path();
 
-        let symlink_path = fake_checkout_path.join(&redir1.repo_path());
-        redir1
+        let symlink_path = fake_checkout_path.join(&redir.repo_path());
+        redir
             ._apply_symlink(fake_checkout_path, &symlink_path, false)
             .expect("Failed to create symlink");
+        assert!(symlink_path.is_symlink())
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn test_apply_symlink_with_existing_temp_symlink() {
+        // Arrange
+        // The symlink creation will fail if we try to create a symlink where there's an existing
+        // file. So let's try to prevent collisions by making unique working directory.
+        let rand_path = format!(
+            "test_path_{}",
+            Alphanumeric.sample_string(&mut rand::thread_rng(), 16)
+        );
+        let redir = Redirection {
+            repo_path: PathBuf::from(rand_path),
+            redir_type: RedirectionType::Symlink,
+            target: None,
+            source: REPO_SOURCE.into(),
+            state: None,
+        };
+        let fake_checkout = tempdir().expect("failed to create fake checkout");
+        let fake_checkout_path = fake_checkout.path();
+        let symlink_path = fake_checkout_path.join(redir.repo_path());
+        let fake_target_path = fake_checkout_path.join("target");
+        let temp_symlink_path = fake_checkout_path
+            .parent()
+            .unwrap()
+            .join(zzencode(&symlink_path.to_string_lossy()));
+        std::fs::create_dir_all(&fake_target_path).expect("failed to create target directory");
+        // Create a temp symlink file so that we can test deletion of such file succeeds and we recreate it.
+        std::os::windows::fs::symlink_dir(&fake_target_path, &temp_symlink_path)
+            .expect("failed to create temp symlink");
+
+        // Act
+        redir
+            ._apply_symlink(fake_checkout_path, &symlink_path, false)
+            .expect("Failed to create symlink");
+
+        // Assert
         assert!(symlink_path.is_symlink())
     }
 

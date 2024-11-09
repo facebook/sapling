@@ -39,7 +39,6 @@ use cached_config::ConfigStore;
 use clap_old::ArgMatches;
 use clap_old::OsValues;
 use clap_old::Values;
-use derived_data_remote::Address;
 use derived_data_remote::RemoteDerivationOptions;
 use environment::Caching;
 use environment::MononokeEnvironment;
@@ -90,7 +89,6 @@ use super::app::BLOBSTORE_SCRUB_WRITE_ONLY_MISSING_ARG;
 use super::app::CACHELIB_ATTEMPT_ZSTD_ARG;
 use super::app::CRYPTO_PATH_REGEX_ARG;
 use super::app::DERIVE_REMOTELY;
-use super::app::DERIVE_REMOTELY_TIER;
 use super::app::ENABLE_MCROUTER;
 use super::app::GET_MEAN_DELAY_SECS_ARG;
 use super::app::GET_STDDEV_DELAY_SECS_ARG;
@@ -1040,17 +1038,7 @@ fn parse_remote_derivation_options(
     matches: &ArgMatches<'_>,
 ) -> Result<RemoteDerivationOptions, Error> {
     let derive_remotely = matches.is_present(DERIVE_REMOTELY);
-    let address = match matches
-        .value_of(DERIVE_REMOTELY_TIER)
-        .map(|s| s.to_string())
-    {
-        Some(tier) => Address::SmcTier(tier),
-        None => Address::Empty,
-    };
-    Ok(RemoteDerivationOptions {
-        derive_remotely,
-        address,
-    })
+    Ok(RemoteDerivationOptions { derive_remotely })
 }
 
 fn create_acl_provider(
@@ -1059,6 +1047,6 @@ fn create_acl_provider(
 ) -> Result<Arc<dyn AclProvider>, Error> {
     match matches.value_of(ACL_FILE) {
         Some(file) => InternalAclProvider::from_file(file),
-        None => Ok(DefaultAclProvider::new(fb)),
+        None => Ok(DefaultAclProvider::new(fb)?),
     }
 }

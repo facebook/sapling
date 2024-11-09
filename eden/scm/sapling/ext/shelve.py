@@ -440,7 +440,7 @@ def _nothingtoshelvemessaging(ui, repo, pats, opts) -> None:
     stat = repo.status(match=scmutil.match(repo[None], pats, opts))
     if stat.deleted:
         ui.status(
-            _("nothing changed (%d missing files, see " "'@prog@ status')\n")
+            _("nothing changed (%d missing files, see '@prog@ status')\n")
             % len(stat.deleted)
         )
     else:
@@ -682,7 +682,7 @@ def patchcmds(ui, repo, pats, opts, subcommand) -> None:
 def checkparents(repo, state) -> None:
     """check parent while resuming an unshelve"""
     if state.parents != repo.dirstate.parents():
-        raise error.Abort(_("working directory parents do not match unshelve " "state"))
+        raise error.Abort(_("working directory parents do not match unshelve state"))
 
 
 def pathtofiles(repo, files):
@@ -1028,7 +1028,7 @@ def _dounshelve(ui, repo, *shelved, **opts):
             raise error.Abort(_("cannot use both abort and continue"))
         if shelved:
             raise error.Abort(
-                _("cannot combine abort/continue with " "naming a shelved change")
+                _("cannot combine abort/continue with naming a shelved change")
             )
         if abortf and opts.get("tool", False):
             ui.warn(_("tool option will be ignored\n"))
@@ -1045,9 +1045,7 @@ def _dounshelve(ui, repo, *shelved, **opts):
             ui.debug(str(err) + "\n")
             if continuef:
                 msg = _("corrupted shelved state file")
-                hint = _(
-                    "please run hg unshelve --abort to abort unshelve " "operation"
-                )
+                hint = _("please run hg unshelve --abort to abort unshelve operation")
                 raise error.Abort(msg, hint=hint)
             elif abortf:
                 msg = _(
@@ -1206,7 +1204,7 @@ def shelvecmd(ui, repo, *pats, **opts):
             for i, allowable in allowables:
                 if opts[i] and opt not in allowable:
                     raise error.Abort(
-                        _("options '--%s' and '--%s' may not be " "used together")
+                        _("options '--%s' and '--%s' may not be used together")
                         % (opt, i)
                     )
             return True

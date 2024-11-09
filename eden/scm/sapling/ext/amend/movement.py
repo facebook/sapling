@@ -484,7 +484,7 @@ def _findstacktop(ui, repo, newest=False):
 
 def _findstackbottom(ui, repo):
     """Find the lowest non-public ancestor of the current changeset."""
-    if repo["."].phase() == phases.public:
+    if repo["."].ispublic():
         raise error.Abort(_("current changeset is public"))
     bottoms = list(repo.nodes("roots(draft() & ::.)"))
     if len(bottoms) > 1:

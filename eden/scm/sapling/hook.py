@@ -53,9 +53,9 @@ def _pythonhook(ui, repo, htype, hname, funcname, args, throw):
                     obj = __import__("sapling_ext_%s" % modname)
                 except (ImportError, SyntaxError):
                     e2 = sys.exc_info()
-                    ui.warn(_("exception from first failed import " "attempt:\n"))
+                    ui.warn(_("exception from first failed import attempt:\n"))
                     ui.traceback(e1, force=True)
-                    ui.warn(_("exception from second failed import " "attempt:\n"))
+                    ui.warn(_("exception from second failed import attempt:\n"))
                     ui.traceback(e2, force=True)
 
                     raise error.HookLoadError(
@@ -86,7 +86,7 @@ def _pythonhook(ui, repo, htype, hname, funcname, args, throw):
             ui.warn(_("error: %s hook failed: %s\n") % (hname, exc.args[0]))
         else:
             ui.warn(
-                _("error: %s hook raised an exception: " "%s\n")
+                _("error: %s hook raised an exception: %s\n")
                 % (hname, encoding.strtolocal(str(exc)))
             )
         if throw:

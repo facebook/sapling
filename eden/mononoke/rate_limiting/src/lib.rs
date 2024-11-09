@@ -128,6 +128,8 @@ pub struct RateLimit {
     target: Option<Target>,
     #[allow(dead_code)]
     metric: Metric,
+    #[allow(dead_code)]
+    fci_metric: Option<FciMetric>,
 }
 
 #[cfg(fbcode_build)]
@@ -217,6 +219,19 @@ pub enum Metric {
     TotalManifests,
     GetpackFiles,
     Commits,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum Scope {
+    Global,
+    Regional,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct FciMetric {
+    metric: Metric,
+    window: Duration,
+    scope: Scope,
 }
 
 #[must_use]

@@ -81,6 +81,7 @@ function devModeHtmlForWebview(
   initialScript: string,
   devModeScripts: Array<string>,
   rootClass: string,
+  placeholderHtml?: string,
 ) {
   return `<!DOCTYPE html>
 	<html lang="en">
@@ -112,7 +113,9 @@ function devModeHtmlForWebview(
           .join('\n')}
 	</head>
 	<body>
-		<div id="root" class="${rootClass}">loading (dev mode)</div>
+		<div id="root" class="${rootClass}">
+      ${placeholderHtml ?? 'loading (dev mode)'}
+    </div>
 	</body>
 	</html>`;
 }
@@ -129,6 +132,7 @@ export function htmlForWebview({
   entryPointFile,
   cssEntryPointFile,
   devModeScripts,
+  placeholderHtml,
 }: {
   webview: vscode.Webview;
   context: vscode.ExtensionContext;
@@ -153,6 +157,8 @@ export function htmlForWebview({
   cssEntryPointFile: string;
   /** Entry point scripts used in dev mode, needed for hot reloading */
   devModeScripts: Array<string>;
+  /** Placeholder HTML element to show while the webview is loading */
+  placeholderHtml?: string;
 }) {
   // Only allow accessing resources relative to webview dir,
   // and make paths relative to here.
@@ -161,7 +167,13 @@ export function htmlForWebview({
   );
 
   if (IS_DEV_BUILD) {
-    return devModeHtmlForWebview(extraStyles, initialScript, devModeScripts, rootClass);
+    return devModeHtmlForWebview(
+      extraStyles,
+      initialScript,
+      devModeScripts,
+      rootClass,
+      placeholderHtml,
+    );
   }
 
   const scriptUri = entryPointFile;
@@ -202,7 +214,9 @@ export function htmlForWebview({
 		<script type="module" defer="defer" nonce="${nonce}" src="${scriptUri}"></script>
 	</head>
 	<body>
-		<div id="root" class="${rootClass}">loading...</div>
+		<div id="root" class="${rootClass}">
+      ${placeholderHtml ?? 'loading...'}
+    </div>
 	</body>
 	</html>`;
 }

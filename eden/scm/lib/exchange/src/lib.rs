@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use std::collections::BTreeMap;
@@ -11,6 +11,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_runtime::block_unless_interrupted as block_on;
 use commits::DagCommits;
+use dag::CloneData;
 use dag::Group;
 use dag::Vertex;
 use dag::VertexListWithOptions;
@@ -61,15 +62,10 @@ pub fn clone(
         .iter()
         .map(|h| Vertex::copy_from(h.as_ref()))
         .collect();
-    let clone_data = if config.get_or_default::<bool>("clone", "use-commit-graph")? {
-        let segments =
-            block_on(edenapi.commit_graph_segments(heads, vec![]))?.map_err(|e| e.tag_network())?;
-        CommitGraphSegments { segments }.try_into()?
-    } else {
-        block_on(edenapi.pull_lazy(vec![], heads))?
-            .map_err(|e| e.tag_network())?
-            .convert_vertex(|n| Vertex::copy_from(&n.into_byte_array()))
-    };
+
+    let segments =
+        block_on(edenapi.commit_graph_segments(heads, vec![]))?.map_err(|e| e.tag_network())?;
+    let clone_data = CommitGraphSegments { segments }.try_into()?;
 
     if config.get_or_default::<bool>("clone", "use-import-clone")? {
         block_on(commits.import_clone_data(clone_data))??;
@@ -103,7 +99,6 @@ pub fn clone(
 /// the number of commits and segments downloaded
 #[instrument(skip_all)]
 pub fn fast_pull(
-    config: &dyn Config,
     edenapi: Arc<dyn SaplingRemoteApi>,
     commits: &mut Box<dyn DagCommits + Send + 'static>,
     common: Vec<HgId>,
@@ -113,15 +108,11 @@ pub fn fast_pull(
         .iter()
         .map(|id| Vertex::copy_from(&id.into_byte_array()))
         .collect::<Vec<_>>();
-    let pull_data = if config.get_or_default::<bool>("pull", "use-commit-graph")? {
-        let segments = block_on(edenapi.commit_graph_segments(missing, common))?
-            .map_err(|e| e.tag_network())?;
-        CommitGraphSegments { segments }.try_into()?
-    } else {
-        block_on(edenapi.pull_lazy(common, missing))?
-            .map_err(|e| e.tag_network())?
-            .convert_vertex(|n| Vertex::copy_from(&n.into_byte_array()))
-    };
+
+    let segments =
+        block_on(edenapi.commit_graph_segments(missing, common))?.map_err(|e| e.tag_network())?;
+    let pull_data: CloneData<Vertex> = CommitGraphSegments { segments }.try_into()?;
+
     let commit_count = pull_data.flat_segments.vertex_count();
     let segment_count = pull_data.flat_segments.segment_count();
     block_on(commits.import_pull_data(

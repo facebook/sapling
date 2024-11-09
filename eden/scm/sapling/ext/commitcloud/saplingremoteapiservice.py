@@ -315,7 +315,14 @@ class SaplingRemoteAPIService(baseservice.BaseService):
 
     def rollbackworkspace(self, reponame, workspace, version):
         """Rollback the given workspace to a specific version"""
-        return self.fallback.rollbackworkspace(reponame, workspace, version)
+        self.ui.debug("sending 'rollback_workspace' request\n", component="commitcloud")
+
+        data = {
+            "reponame": reponame,
+            "workspace": workspace,
+            "version": version,
+        }
+        self.repo.edenapi.cloudrollbackworkspace(data)
 
     def cleanupworkspace(self, reponame, workspace):
         """Cleanup unnecessary remote bookmarks from the given workspace"""

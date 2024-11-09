@@ -285,7 +285,7 @@ class peer(_basepeer, _basewirecommands):
             return
 
         raise error.CapabilityError(
-            _("cannot %s; remote repository does not support the %r " "capability")
+            _("cannot %s; remote repository does not support the %r capability")
             % (purpose, name)
         )
 

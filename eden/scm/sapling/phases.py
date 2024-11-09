@@ -121,7 +121,7 @@ from .pycompat import encodeutf8, range
 
 _fphasesentry = struct.Struct(">i20s")
 
-allphases = public, draft, secret = list(range(3))
+allphases = public, draft, secret = (0, 1, 2)
 trackedphases = allphases[1:]
 phasenames = ["public", "draft", "secret"]
 
@@ -712,7 +712,7 @@ def analyzeremotephases(repo, subset, roots):
         if phase == public:
             if node != nullid:
                 repo.ui.warn(
-                    _("ignoring inconsistent public root" " from remote: %s\n") % nhex
+                    _("ignoring inconsistent public root from remote: %s\n") % nhex
                 )
         elif phase == draft:
             if node in nodemap:

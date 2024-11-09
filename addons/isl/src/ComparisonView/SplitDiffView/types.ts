@@ -11,6 +11,8 @@ import type {Comparison} from 'shared/Comparison';
 
 type ContextId = {path: string; comparison: Comparison};
 
+export type DiffViewMode = 'split' | 'unified';
+
 /**
  * Context used to render SplitDiffView
  */
@@ -37,7 +39,7 @@ export type Context = {
    * Whether to render as a side-by-side diff view, or a unified view where deleted and added lines are interleaved.
    * TODO: make this controllable / configurable / responsive based on screen width
    */
-  display: 'split' | 'unified';
+  display: DiffViewMode;
 };
 
 export type OneIndexedLineNumber = Exclude<number, 0>;

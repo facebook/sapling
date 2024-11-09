@@ -510,7 +510,7 @@ impl AddScubaParams for thrift::CommitSparseProfileSizeParamsV2 {
 
 impl AddScubaParams for thrift::CommitSparseProfileSizeToken {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
-        scuba.add("param_token", self.id);
+        scuba.add("token", self.id.to_string());
     }
 }
 
@@ -716,7 +716,7 @@ impl AddScubaParams for thrift::AsyncPingParams {
 
 impl AddScubaParams for thrift::AsyncPingToken {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
-        scuba.add("param_token", self.id);
+        scuba.add("token", self.id.to_string());
     }
 }
 

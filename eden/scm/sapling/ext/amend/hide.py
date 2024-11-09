@@ -28,7 +28,6 @@ from sapling import (
 from sapling.i18n import _, _n
 from sapling.node import short
 
-
 cmdtable = {}
 command = registrar.command(cmdtable)
 
@@ -96,15 +95,14 @@ def hide(ui, repo, *revs, **opts):
         remotebooks = dict()
 
         # allow remote scratch bookmarks
-        if repo.ui.configbool("remotenames", "selectivepull"):
-            rb = repo._remotenames.mark2nodes()
-            for bookmark in bookmarks:
-                if bookmark in rb:
-                    node = rb[bookmark][0]
-                    if repo[node].mutable():
-                        remotebooks[bookmark] = node
-            draftnodes = repo.dageval(lambda: ancestors(remotebooks.values()) & draft())
-            revs += repo.changelog.torevset(draftnodes)
+        rb = repo._remotenames.mark2nodes()
+        for bookmark in bookmarks:
+            if bookmark in rb:
+                node = rb[bookmark][0]
+                if repo[node].mutable():
+                    remotebooks[bookmark] = node
+        draftnodes = repo.dageval(lambda: ancestors(remotebooks.values()) & draft())
+        revs += repo.changelog.torevset(draftnodes)
 
         bookmarks = bookmarks - set(remotebooks.keys())
         if bookmarks:
@@ -202,23 +200,22 @@ def hide(ui, repo, *revs, **opts):
 
         # unsubscribe from the remote bookmarks pointing to hidden changesets
         # they always will be remote scratch bookmarks because hidectxs are all draft
-        if ui.configbool("remotenames", "selectivepull"):
-            node2marks = repo._remotenames.node2marks()
-            marks = sum([node2marks[node] for node in hnodes if node in node2marks], [])
-            bmremove = {key: nodemod.nullhex for key in marks}
-            if bmremove:
-                for bookmark in sorted(marks):
-                    if not ui.quiet:
-                        ui.status(_('unsubscribing remote bookmark "%s"\n') % bookmark)
-                repo._remotenames.applychanges({"bookmarks": bmremove}, override=False)
-                ui.status(
-                    _n(
-                        "%i remote bookmark unsubscribed\n",
-                        "%i remote bookmarks unsubscribed\n",
-                        len(bmremove),
-                    )
-                    % len(bmremove)
+        node2marks = repo._remotenames.node2marks()
+        marks = sum([node2marks[node] for node in hnodes if node in node2marks], [])
+        bmremove = {key: nodemod.nullhex for key in marks}
+        if bmremove:
+            for bookmark in sorted(marks):
+                if not ui.quiet:
+                    ui.status(_('unsubscribing remote bookmark "%s"\n') % bookmark)
+            repo._remotenames.applychanges({"bookmarks": bmremove}, override=False)
+            ui.status(
+                _n(
+                    "%i remote bookmark unsubscribed\n",
+                    "%i remote bookmarks unsubscribed\n",
+                    len(bmremove),
                 )
+                % len(bmremove)
+            )
         hintutil.trigger("undo")
 
 

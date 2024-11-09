@@ -2343,13 +2343,9 @@ struct AsyncPingResponse {
   1: string payload;
 }
 
-union AsyncPingResult {
-  1: AsyncPingResponse success;
-  2: AsyncRequestError error;
-}
-
-struct AsyncPingPollResponse {
-  1: optional AsyncPingResult result;
+union AsyncPingPollResponse {
+  1: PollPending poll_pending;
+  2: AsyncPingResponse response;
 }
 
 /// Exceptions
@@ -3192,5 +3188,6 @@ service SourceControlService extends fb303_core.BaseService {
     1: RequestError request_error,
     2: InternalError internal_error,
     3: OverloadError overload_error,
+    4: PollError poll_error,
   );
 } (rust.request_context, sr.service_name = "mononoke-scs-server")

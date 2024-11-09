@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use std::io::Cursor;
@@ -741,7 +741,7 @@ mod tests {
         store.indexedlog_local = Some(local);
 
         // Attempt fetch.
-        let mut fetched = store
+        let fetched = store
             .fetch(
                 std::iter::once(k),
                 FileAttributes::CONTENT,
@@ -783,7 +783,7 @@ mod tests {
         store.write_batch(std::iter::once((k.clone(), d.data.clone(), meta)))?;
 
         // Attempt fetch.
-        let mut fetched = store
+        let fetched = store
             .fetch(
                 std::iter::once(k),
                 FileAttributes::CONTENT,

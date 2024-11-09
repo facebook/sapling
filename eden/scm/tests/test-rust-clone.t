@@ -26,12 +26,6 @@ test rust clone
 Test that nonsupported options fallback to python:
 
   $ cd $TESTTMP
-  $ hg clone -U -r $D ~/e1 $TESTTMP/rev-clone
-  fetching lazy changelog
-  populating main commit graph
-  tip commit: 9bc730a19041f9ec7cb33c626e811aa233efb18c
-  fetching selected remote bookmarks
-
   $ git init -q git-source
   $ hg clone --git "$TESTTMP/git-source" $TESTTMP/git-clone
 
@@ -213,20 +207,6 @@ Make sure we wrote out the absolute path.
   $ hg -R no_scheme config paths.default
   $TESTTMP/e1
 
-Can clone non-shallow:
-  $ hg clone ./e1 non_shallow --no-shallow
-  Cloning test-repo into $TESTTMP/non_shallow
-  TRACE cmdclone: performing rust clone
-   INFO clone_metadata{repo="test-repo"}: cmdclone: enter
-   INFO clone_metadata{repo="test-repo"}: cmdclone: exit
-   INFO get_update_target: cmdclone: enter
-   INFO get_update_target: cmdclone: return=Some((HgId("9bc730a19041f9ec7cb33c626e811aa233efb18c"), "master"))
-   INFO get_update_target: cmdclone: exit
-  Checking out 'master'
-  5 files updated
-  $ grep eager non_shallow/.hg/store/requires
-  eagerepo
-
 Can pick bookmark or commit using -u:
   $ hg clone -u $D test:e1 d_clone --config experimental.rust-clone-updaterev=true
   Cloning test-repo into $TESTTMP/d_clone
@@ -256,19 +236,6 @@ Can pick bookmark or commit using -u:
   $ hg whereami -R stable_clone
   26805aba1e600a82e93661149f2313866a221a7b
 
-
-Default to "tip" if selectivepulldefault not available.
-  $ hg clone --no-shallow ./e1 no_bookmark --config remotenames.selectivepulldefault=banana
-  Cloning test-repo into $TESTTMP/no_bookmark
-  TRACE cmdclone: performing rust clone
-   INFO clone_metadata{repo="test-repo"}: cmdclone: enter
-   INFO clone_metadata{repo="test-repo"}: cmdclone: exit
-   INFO get_update_target: cmdclone: enter
-  Server has no 'banana' bookmark - trying tip.
-   INFO get_update_target: cmdclone: return=Some((HgId("9bc730a19041f9ec7cb33c626e811aa233efb18c"), "tip"))
-   INFO get_update_target: cmdclone: exit
-  Checking out 'tip'
-  5 files updated
 
 Don't perform any queries for null commit id.
   $ LOG= hg clone -Uq ./e1 no_workingcopy

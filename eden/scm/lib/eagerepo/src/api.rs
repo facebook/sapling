@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use std::cmp::Ordering;
@@ -16,7 +16,6 @@ use anyhow::anyhow;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use dag::ops::DagAlgorithm;
-use dag::ops::DagExportCloneData;
 use dag::ops::DagExportPullData;
 use dag::ops::PrefixLookup;
 use dag::protocol::AncestorPath;
@@ -418,43 +417,6 @@ impl SaplingRemoteApi for EagerRepo {
             values.push(Ok(data));
         }
         Ok(convert_to_response(values))
-    }
-
-    async fn clone_data(&self) -> edenapi::Result<dag::CloneData<HgId>> {
-        debug!("clone_data");
-        let clone_data = self
-            .dag()
-            .await
-            .export_clone_data()
-            .await
-            .map_err(map_dag_err)?;
-        convert_clone_data(clone_data)
-    }
-
-    async fn pull_lazy(
-        &self,
-        common: Vec<HgId>,
-        missing: Vec<HgId>,
-    ) -> Result<dag::CloneData<HgId>, SaplingRemoteApiError> {
-        ::fail::fail_point!("eagerepo::api::pulllazy", |_| {
-            Err(SaplingRemoteApiError::NotSupported)
-        });
-
-        debug!("pull_lazy");
-        self.refresh_for_api();
-        let set = self
-            .dag()
-            .await
-            .only(to_set(&missing), to_set(&common))
-            .await
-            .map_err(map_dag_err)?;
-        let clone_data = self
-            .dag()
-            .await
-            .export_pull_data(&set)
-            .await
-            .map_err(map_dag_err)?;
-        convert_clone_data(clone_data)
     }
 
     async fn commit_location_to_hash(
@@ -1156,7 +1118,7 @@ impl SaplingRemoteApi for EagerRepo {
         prefix: Option<Vec<String>>,
     ) -> Result<Response<SuffixQueryResponse>, SaplingRemoteApiError> {
         debug!("suffix_query");
-        // TODO(T189729875) Make this react to commited files
+        // TODO(T189729875) Make this react to committed files
         //let files = self.files();
         let _ = (commit, prefix);
         let mut res = vec![];
@@ -1318,7 +1280,7 @@ impl SaplingRemoteApi for EagerRepo {
             let matcher = AlwaysMatcher::new();
 
             // generate new manifest
-            for e in base_manifest.diff(&source_manifest, &matcher)? {
+            for e in base_manifest.diff(&source_manifest, matcher)? {
                 let e = e?;
                 match e.diff_type {
                     DiffType::LeftOnly(_) => {
@@ -1390,14 +1352,14 @@ impl SaplingRemoteApi for EagerRepo {
         ) -> anyhow::Result<Vec<(RepoPathBuf, RepoPathBuf)>> {
             let matcher = AlwaysMatcher::new();
             let mut left = mbase
-                .diff(mleft, &matcher)?
+                .diff(mleft, matcher.clone())?
                 .map(|e| e.map(|e| e.path))
                 .collect::<anyhow::Result<Vec<_>>>()?;
             left.sort_unstable();
             let mut left_iter = left.into_iter();
 
             let mut right = mbase
-                .diff(mright, &matcher)?
+                .diff(mright, matcher)?
                 .map(|e| e.map(|e| e.path))
                 .collect::<anyhow::Result<Vec<_>>>()?;
             right.sort_unstable();
@@ -1779,19 +1741,6 @@ fn to_vec_vertex(ids: &[HgId]) -> Vec<Vertex> {
 fn to_set(ids: &[HgId]) -> Set {
     let vertexes = to_vec_vertex(ids);
     Set::from_static_names(vertexes)
-}
-
-fn convert_clone_data(clone_data: dag::CloneData<Vertex>) -> edenapi::Result<dag::CloneData<HgId>> {
-    check_convert_to_hgid(clone_data.idmap.values())?;
-    let clone_data = dag::CloneData {
-        flat_segments: clone_data.flat_segments,
-        idmap: clone_data
-            .idmap
-            .into_iter()
-            .map(|(k, v)| (k, HgId::from_slice(v.as_ref()).unwrap())) // unwrap: checked above
-            .collect(),
-    };
-    Ok(clone_data)
 }
 
 fn map_dag_err(e: dag::Error) -> SaplingRemoteApiError {

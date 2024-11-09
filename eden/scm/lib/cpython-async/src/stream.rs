@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use std::cell::RefCell;
@@ -79,7 +79,7 @@ mod pytypes {
     {
         fn extract(py: Python, obj: &'s PyObject) -> PyResult<Self> {
             let pyiter = obj.iter(py)?.into_object();
-            let iter = itertools::unfold(pyiter, |pyiter| {
+            let iter = std::iter::from_fn(move || {
                 let item = (|pyiter: &PyObject| -> PyResult<Option<T>> {
                     let gil = Python::acquire_gil();
                     let py = gil.python();
@@ -89,7 +89,7 @@ mod pytypes {
                     } else {
                         Ok(None)
                     }
-                })(pyiter);
+                })(&pyiter);
                 item.into_anyhow_result().transpose()
             });
             // async_runtime::iter_to_stream supports blocking `next` calls.

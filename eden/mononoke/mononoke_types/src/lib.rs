@@ -15,6 +15,7 @@ pub mod bonsai_changeset;
 pub mod case_conflict_skeleton_manifest;
 
 pub mod content_chunk;
+pub mod content_manifest;
 pub mod content_metadata_v2;
 pub mod datetime;
 pub mod deleted_manifest_common;
@@ -110,6 +111,7 @@ pub use typed_hash::ChangesetIdPrefix;
 pub use typed_hash::ChangesetIdsResolvedFromPrefix;
 pub use typed_hash::ContentChunkId;
 pub use typed_hash::ContentId;
+pub use typed_hash::ContentManifestId;
 pub use typed_hash::ContentMetadataV2Id;
 pub use typed_hash::DeletedManifestV2Id;
 pub use typed_hash::FastlogBatchId;
@@ -133,6 +135,7 @@ pub mod thrift {
     pub use mononoke_types_serialization::ccsm;
     pub use mononoke_types_serialization::changeset_info;
     pub use mononoke_types_serialization::content;
+    pub use mononoke_types_serialization::content_manifest;
     pub use mononoke_types_serialization::data;
     pub use mononoke_types_serialization::deleted_manifest;
     pub use mononoke_types_serialization::fastlog;

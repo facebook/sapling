@@ -584,7 +584,8 @@ struct JournalStats : StatsGroup<JournalStats> {
 struct ThriftStats : StatsGroup<ThriftStats> {
   Duration streamChangesSince{
       "thrift.StreamingEdenService.streamChangesSince.streaming_time_us"};
-
+  Duration streamChangesSinceV2{
+      "thrift.StreamingEdenService.streamChangesSinceV2.streaming_time_us"};
   Duration streamSelectedChangesSince{
       "thrift.StreamingEdenService.streamSelectedChangesSince.streaming_time_us"};
 

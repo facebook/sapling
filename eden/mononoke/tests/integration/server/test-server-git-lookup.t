@@ -23,6 +23,7 @@ setup repo
   d5b0942fd0ec9189debf6915e9505390564e1247
   4f4a1f2b7bdc23710132eeb620424bf195f95568
   $ hg book -r d5b0942fd0ec9189debf6915e9505390564e1247 _gitlookup_git_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+  $ hg book master_bookmark
 
 blobimport
   $ cd $TESTTMP

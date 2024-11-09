@@ -1,5 +1,6 @@
   $ setconfig diff.git=True
   $ setconfig subtree.copy-reuse-tree=False
+  $ setconfig subtree.allow-any-source-commit=True
 
 setup backing repo
 
@@ -30,17 +31,41 @@ test subtree copy paths validation
   abort: path 'nonexist' does not exist in commit d908813f0f7c
   [255]
 
+test subtree copy source commit validation
+  $ hg subtree cp -r $A --from-path foo --to-path bar --config subtree.allow-any-source-commit=False
+  subtree copy from a non-public commit is not recommended. However, you can
+  still proceed and use subtree copy and merge for common cases.
+  (hint: see 'hg help subtree' for the impacts on subtree merge and log)
+  Continue with subtree copy (y/n)?  n
+  abort: subtree copy from a non-public commit is not allowed
+  [255]
+  $ hg subtree cp -r $A --from-path foo --to-path bar --config subtree.allow-any-source-commit=False --config subtree.education-page=https://abc.com/subtree
+  subtree copy from a non-public commit is not recommended. However, you can
+  still proceed and use subtree copy and merge for common cases.
+  (hint: see subtree copy at https://abc.com/subtree for the impacts on subtree merge and log)
+  Continue with subtree copy (y/n)?  n
+  abort: subtree copy from a non-public commit is not allowed
+  [255]
+
 test subtree copy
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B   # B/foo/x = bbb\n
+  > |
+  > A   # A/foo/x = aaa\n
+  >     # drawdag.defaultfiles=false
+  > EOS
+  $ hg go $B -q
   $ hg subtree cp -r $A --from-path foo --to-path bar -m "subtree copy foo -> bar"
   copying foo to bar
   $ hg log -G -T '{node|short} {desc|firstline}\n'
-  @  a6c15b42e6a2 subtree copy foo -> bar
+  @  255379dc5cbd subtree copy foo -> bar
   │
   o  b9450a0e6ae4 B
   │
   o  d908813f0f7c A
   $ hg show --git
-  commit:      a6c15b42e6a2
+  commit:      255379dc5cbd
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/x
@@ -58,8 +83,57 @@ test subtree copy
   @@ -0,0 +1,1 @@
   +aaa
   $ hg dbsh -c 'print(repo["."].extra())'
-  {'branch': 'default', 'test_subtree_copy': '{"branches":[{"from_commit":"d908813f0f7c9078810e26aad1e37bdb32013d4b","from_path":"foo","to_path":"bar"}],"v":1}'}
+  {'branch': 'default', 'test_subtree': '[{"deepcopies":[{"from_commit":"d908813f0f7c9078810e26aad1e37bdb32013d4b","from_path":"foo","to_path":"bar"}],"v":1}]'}
 
+test subtree copy metadata sorted by to-path
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B   # B/foo/x = bbb\n
+  > |
+  > A   # A/foo/x = aaa\n
+  >     # A/foo2/y = yyy\n
+  >     # drawdag.defaultfiles=false
+  > EOS
+  $ hg go $B -q
+  $ hg subtree cp -r $A --from-path foo --to-path bar --from-path foo2 --to-path baa -m "subtree copy foo -> bar and foo2 -> baa"
+  copying foo to bar
+  copying foo2 to baa
+  $ hg log -G -T '{node|short} {desc|firstline}\n'
+  @  c37cc3582a27 subtree copy foo -> bar and foo2 -> baa
+  │
+  o  8782b677794f B
+  │
+  o  4c412676b7b9 A
+  $ hg dbsh -c 'print(repo["."].extra())'
+  {'branch': 'default', 'test_subtree': '[{"deepcopies":[{"from_commit":"4c412676b7b9698f29843de329a5c3b654034990","from_path":"foo2","to_path":"baa"},{"from_commit":"4c412676b7b9698f29843de329a5c3b654034990","from_path":"foo","to_path":"bar"}],"v":1}]'}
+
+test subtree copy without skipping source commit check: new commit does not have subtree metadata
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B   # B/foo/x = bbb\n
+  > |
+  > A   # A/foo/x = aaa\n
+  >     # drawdag.defaultfiles=false
+  > EOS
+  $ hg go $B -q
+  $ setconfig ui.interactive=True
+  $ setconfig subtree.allow-any-source-commit=False
+  $ hg subtree cp -r $A --from-path foo --to-path bar -m "subtree copy foo -> bar"<<EOF
+  > y
+  > EOF
+  subtree copy from a non-public commit is not recommended. However, you can
+  still proceed and use subtree copy and merge for common cases.
+  (hint: see 'hg help subtree' for the impacts on subtree merge and log)
+  Continue with subtree copy (y/n)?  y
+  copying foo to bar
+  $ hg log -G -T '{node|short} {desc|firstline}\n'
+  @  b123ad7c241c subtree copy foo -> bar
+  │
+  o  b9450a0e6ae4 B
+  │
+  o  d908813f0f7c A
+  $ hg dbsh -c 'print(repo["."].extra())'
+  {'branch': 'default'}
 
 abort when subtree copy too many files
 
@@ -161,9 +235,9 @@ test subtree graft
   grafting 78072751cf70 "C"
   merging bar/x and foo/x to bar/x
   $ hg log -G -T '{node|short} {desc|firstline}\n'
-  @  94b9958c85ae Graft "C"
+  @  60262f352c27 Graft "C"
   │
-  o  d52331776b7e subtree copy foo -> bar
+  o  5e3aa22b08c2 subtree copy foo -> bar
   │
   o  78072751cf70 C
   │
@@ -171,7 +245,7 @@ test subtree graft
   │
   o  2f10237b4399 A
   $ hg show
-  commit:      94b9958c85ae
+  commit:      60262f352c27
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/x
@@ -209,7 +283,7 @@ test 'subtree graft -m'
   grafting 78072751cf70 "C"
   merging bar/x and foo/x to bar/x
   $ hg show
-  commit:      785d864769d0
+  commit:      96f7c2084435
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/x
@@ -251,7 +325,7 @@ test 'subtree graft -m' with test plan
   grafting 78072751cf70 "C"
   merging bar/x and foo/x to bar/x
   $ hg show
-  commit:      c479d0be4f82
+  commit:      46512096e501
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/x
@@ -297,7 +371,7 @@ Test 'subtree graft -m' with --no-log
   grafting 78072751cf70 "C"
   merging bar/x and foo/x to bar/x
   $ hg show
-  commit:      87e34c5a2bc6
+  commit:      9a63dfba4f06
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/x
@@ -352,9 +426,9 @@ test subtree merge
   +4
   $ hg ci -m 'subtree merge foo to bar'
   $ hg dbsh -c 'print(repo["."].extra())'
-  {'branch': 'default', 'test_subtree_merge': '{"merges":[{"from_commit":"907442010f516d83aea80b4382964be22a34214f","from_path":"foo","to_path":"bar"}],"v":1}'}
+  {'branch': 'default', 'test_subtree': '[{"merges":[{"from_commit":"907442010f516d83aea80b4382964be22a34214f","from_path":"foo","to_path":"bar"}],"v":1}]'}
   $ hg show
-  commit:      944563f24b78
+  commit:      4efbbbca7984
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       bar/x
@@ -376,14 +450,14 @@ test subtree merge
   +4
 should have one parent
   $ hg log -r . -T '{parents}'
-  4658f38ab377  (no-eol)
+  0f9175ec4003  (no-eol)
   $ hg log bar
-  commit:      944563f24b78
+  commit:      4efbbbca7984
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     subtree merge foo to bar
   
-  commit:      4658f38ab377
+  commit:      0f9175ec4003
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     subtree copy foo -> bar

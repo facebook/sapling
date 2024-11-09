@@ -5,6 +5,16 @@ oncall("sapling")
 rust_library(
     name = "context",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "context"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "context",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     crate_root = "src/lib.rs",
     deps = [
         "//eden/scm/lib/config/model:configmodel",

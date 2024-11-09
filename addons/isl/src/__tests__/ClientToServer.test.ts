@@ -6,11 +6,7 @@
  */
 
 import clientToServerAPI from '../ClientToServerAPI';
-import {
-  getLastMessagesSentToServer,
-  resetTestMessages,
-  simulateMessageFromServer,
-} from '../testUtils';
+import {resetTestMessages, simulateMessageFromServer} from '../testUtils';
 import {nextTick} from 'shared/testUtils';
 
 describe('ClientToServer', () => {

@@ -155,7 +155,7 @@ py_class!(pub class dagalgo |py| {
     /// suggest_bisect(roots, heads, skip) -> (Optional[node], untested, heads).
     /// Suggest the next commit during bisect.
     /// If `node` is None, then the bisect cannot continue. `untested` includes
-    /// skipped nodes and shows the ambigious nodes on completion. `heads` is
+    /// skipped nodes and shows the ambiguous nodes on completion. `heads` is
     /// the "first good/bad" bisect result when `untested` is empty.
     /// If `node` is not None, suggest bisecting that `node`. `untested` can be
     /// used to show remaining commits and estimated steps.

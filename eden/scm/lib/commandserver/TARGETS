@@ -5,6 +5,16 @@ oncall("sapling")
 rust_library(
     name = "commandserver",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "commandserver"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "commandserver",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     crate_root = "src/lib.rs",
     os_deps = [
         (

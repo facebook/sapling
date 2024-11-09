@@ -38,7 +38,7 @@ union AsynchronousRequestResult {
   3: source_control.MegarepoRemergeSourceResult megarepo_remerge_source_result;
   4: source_control.MegarepoSyncChangesetResult megarepo_sync_changeset_result;
   5: source_control.MegarepoAddBranchingTargetResult megarepo_add_branching_target_result;
-  6: source_control.AsyncPingResult async_ping_result;
+  6: source_control.AsyncPingResponse async_ping_result;
   7: source_control.CommitSparseProfileSizeResponse commit_sparse_profile_size_result;
   8: source_control.AsyncRequestError error;
 }

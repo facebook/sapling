@@ -507,7 +507,7 @@ def _runcatch(req):
 
                 if debugger != "pdb" and debugtrace[debugger] == debugtrace["pdb"]:
                     ui.warn(
-                        _("%s debugger specified " "but its module was not found\n")
+                        _("%s debugger specified but its module was not found\n")
                         % debugger
                     )
                 with demandimport.deactivated():

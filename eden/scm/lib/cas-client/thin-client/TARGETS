@@ -5,6 +5,16 @@ oncall("sapling")
 rust_library(
     name = "thin-cas-client",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "thin-cas-client"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "thin-cas-client",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:futures",

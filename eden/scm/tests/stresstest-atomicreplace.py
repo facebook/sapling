@@ -87,7 +87,7 @@ if __name__ == "__main__":
         "-w",
         type=int,
         default=50,
-        help="half a width of uniform distribution of " "kill times (ms)",
+        help="half a width of uniform distribution of kill times (ms)",
     )
     parser.add_argument(
         "-b",

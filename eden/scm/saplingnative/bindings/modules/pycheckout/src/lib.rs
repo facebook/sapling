@@ -25,7 +25,7 @@ use cpython_ext::ExtractInnerRef;
 use cpython_ext::PyNone;
 use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
-use manifest_tree::Diff;
+use manifest::Manifest;
 use manifest_tree::TreeManifest;
 use pathmatcher::Matcher;
 use progress_model::ProgressBar;
@@ -97,7 +97,7 @@ py_class!(class checkoutplan |py| {
         let mut actions = py.allow_threads(move || {
             let target = target.read();
             let current = current.read();
-            let diff = Diff::new(&current, &target, &matcher)?;
+            let diff = current.diff(&target, matcher)?;
             ActionMap::from_diff(diff)
         }).map_pyerr(py)?;
 

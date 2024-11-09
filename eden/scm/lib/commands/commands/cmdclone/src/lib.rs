@@ -5,9 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::BTreeMap;
 use std::fs;
-use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -32,7 +30,6 @@ use configmodel::Config;
 use configmodel::ConfigExt;
 use configmodel::ValueSource;
 use eagerepo::EagerRepo;
-use exchange::convert_to_remote;
 use migration::feature::deprecate;
 use repo::repo::Repo;
 use repourl::encode_repo_name;
@@ -40,12 +37,10 @@ use repourl::RepoUrl;
 use tracing::instrument;
 use types::HgId;
 use url::Url;
-use util::file::atomic_write;
 use util::path::absolute;
-use util::path::create_shared_dir_all;
 
-static SEGMENTED_CHANGELOG_CAPABILITY: &str = "segmented-changelog";
 static COMMIT_GRAPH_SEGMENTS_CAPABILITY: &str = "commit-graph-segments";
+static GIT_FORMAT_CAPABILITY: &str = "git-format";
 
 define_flags! {
     pub struct CloneOpts {
@@ -58,21 +53,10 @@ define_flags! {
         #[argtype("REV")]
         updaterev: String,
 
-        /// include the specified changeset (DEPRECATED)
-        #[short('r')]
-        #[argtype("REV")]
-        rev: String,
-
-        /// use pull protocol to copy metadata (DEPRECATED)
-        pull: bool,
-
-        /// clone with minimal data processing (DEPRECATED)
-        stream: bool,
-
-        /// "use remotefilelog (only turn it off in legacy tests) (ADVANCED)"
+        /// use remotefilelog (has no effect) (DEPRECATED)
         shallow: bool = true,
 
-        /// "use git protocol (EXPERIMENTAL)"
+        /// use git protocol (EXPERIMENTAL)
         git: bool,
 
         /// enable a sparse profile
@@ -290,7 +274,6 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
     let config = ctx.config();
 
     let deprecated_options = [
-        ("--rev", "rev-option", ctx.opts.rev.is_empty()),
         (
             "--include",
             "clone-include-option",
@@ -322,11 +305,6 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
     abort_if!(
         use_eden && ctx.opts.noupdate,
         "--noupdate is not compatible with --eden",
-    );
-
-    abort_if!(
-        use_eden && !ctx.opts.shallow,
-        "--shallow is required with --eden",
     );
 
     let force_rust = config
@@ -364,10 +342,7 @@ pub fn run(mut ctx: ReqCtx<CloneOpts>) -> Result<u8> {
 
     let mut config = ConfigSet::wrap(ctx.config().clone());
 
-    if !ctx.opts.rev.is_empty()
-        || ctx.opts.pull
-        || ctx.opts.stream
-        || ctx.opts.git
+    if ctx.opts.git
         // Allow Rust clone to handle --updaterev if experimental.rust-clone-updaterev is set.
         || (!ctx.opts.updaterev.is_empty() && !config.get_or_default("experimental", "rust-clone-updaterev")?)
     {
@@ -541,28 +516,7 @@ fn clone_metadata(
         repo_config_file_content.push_str("\n[experimental]\ndynamic-config-domain-override=aws\n");
     }
 
-    let eager_format: bool = config.get_or_default("format", "use-eager-repo")?;
-    let remote_eager_path = EagerRepo::url_to_dir(&source);
-
-    if ctx.opts.shallow {
-        config.set("format", "use-remotefilelog", Some("true"), &"clone".into());
-    } else {
-        if !eager_format {
-            fallback!("non-shallow && non-eagerepo");
-        }
-
-        return match remote_eager_path {
-            None => {
-                abort!(
-                    "don't know how to clone {} into eagerepo",
-                    source.clean_str(),
-                );
-            }
-            Some(remote_eager_path) => {
-                eager_clone(ctx, config, source, remote_eager_path, destination)
-            }
-        };
-    }
+    config.set("format", "use-remotefilelog", Some("true"), &"clone".into());
 
     // Enabling segmented changelog too early breaks the revlog_clone that is needed below
     // in some cases, so make sure it isn't on.
@@ -583,22 +537,27 @@ fn clone_metadata(
     let res = (|| {
         let edenapi = repo.eden_api()?;
 
-        let capabilities: Vec<String> =
+        let mut capabilities: Vec<String> =
             block_on(edenapi.capabilities())?.map_err(|e| e.tag_network())?;
+        capabilities.sort_unstable();
+        let has_capability = |name: &str| -> bool {
+            capabilities
+                .binary_search_by_key(&name, AsRef::as_ref)
+                .is_ok()
+        };
 
-        let segmented_changelog = capabilities
-            .iter()
-            .any(|cap| cap == SEGMENTED_CHANGELOG_CAPABILITY);
-        let commit_graph_segments = capabilities
-            .iter()
-            .any(|cap| cap == COMMIT_GRAPH_SEGMENTS_CAPABILITY)
+        if has_capability(GIT_FORMAT_CAPABILITY) {
+            repo.add_store_requirement("git")?;
+        }
+
+        let commit_graph_segments = has_capability(COMMIT_GRAPH_SEGMENTS_CAPABILITY)
             && repo
                 .config()
                 .get_or_default::<bool>("clone", "use-commit-graph")?;
 
         let mut repo_needs_reload = false;
 
-        if segmented_changelog || commit_graph_segments {
+        if commit_graph_segments {
             repo.add_store_requirement("lazychangelog")?;
 
             let bookmark_names: Vec<String> = get_selective_bookmarks(&repo)?;
@@ -653,67 +612,6 @@ fn clone_metadata(
         abort!("Injected clone failure");
     });
     Ok(repo)
-}
-
-fn eager_clone(
-    ctx: &ReqCtx<CloneOpts>,
-    config: &ConfigSet,
-    source: RepoUrl,
-    eager_path: PathBuf,
-    dest: &Path,
-) -> Result<Repo> {
-    let source_dot_dir = eager_path.join(identity::must_sniff_dir(&eager_path)?.dot_dir());
-
-    let dest_ident = identity::default();
-    let dest_dot_dir = dest.join(dest_ident.dot_dir());
-
-    // Copy over store files.
-    recursive_copy(&source_dot_dir.join("store"), &dest_dot_dir.join("store"))?;
-    // Init working copy.
-    eagerepo::EagerRepo::open(dest)?;
-
-    let config_path = dest_dot_dir.join(dest_ident.config_repo_file());
-    atomic_write(&config_path, |f| {
-        f.write_all(format!("[paths]\ndefault = {}\n", source.clean_str()).as_bytes())
-    })?;
-
-    let repo = Repo::load(
-        dest,
-        &PinnedConfig::from_cli_opts(&ctx.global_opts().config, &ctx.global_opts().configfile),
-    )?;
-
-    // Convert bookmarks to remotenames.
-    let remote_names: BTreeMap<String, HgId> = repo
-        .local_bookmarks()?
-        .iter()
-        .map(|(bm, id)| Ok((convert_to_remote(config, bm)?, id.clone())))
-        .collect::<Result<_>>()?;
-
-    repo.set_remote_bookmarks(&remote_names)?;
-
-    let ml = repo.metalog()?;
-    let mut ml = ml.write();
-    ml.set("bookmarks", b"")?;
-    let mut opts = metalog::CommitOptions::default();
-    opts.message = "eager clone";
-    ml.commit(opts)?;
-
-    Ok(repo)
-}
-
-fn recursive_copy(from: &Path, to: &Path) -> Result<()> {
-    create_shared_dir_all(to)?;
-
-    for entry in fs::read_dir(from)? {
-        let entry = entry?;
-        if entry.file_type()?.is_dir() {
-            recursive_copy(&entry.path(), &to.join(entry.file_name()))?;
-        } else {
-            fs::copy(entry.path(), to.join(entry.file_name()))?;
-        }
-    }
-
-    Ok(())
 }
 
 pub fn revlog_clone(

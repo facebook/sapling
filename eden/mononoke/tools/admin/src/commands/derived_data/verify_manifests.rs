@@ -15,6 +15,7 @@ use blobstore::Loadable;
 use bytes::Bytes;
 use clap::builder::PossibleValuesParser;
 use clap::Args;
+use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use derived_data_manager::BonsaiDerivable;
 use fsnodes::RootFsnodeId;
@@ -46,6 +47,7 @@ const MANIFEST_DERIVED_DATA_TYPES: &[&str] = &[
     MappedHgChangesetId::NAME,
     RootUnodeManifestId::NAME,
     RootSkeletonManifestId::NAME,
+    RootContentManifestId::NAME,
     MappedGitCommitId::NAME,
 ];
 
@@ -117,6 +119,7 @@ enum ManifestType {
     Hg,
     Unodes,
     Skeleton,
+    Content,
     Git,
 }
 
@@ -126,6 +129,7 @@ enum ManifestData {
     Hg(FileType, ContentId),
     Unodes(FileType, ContentId),
     Skeleton,
+    Content(FileType, ContentId, u64),
     Git(FileType, ContentId),
 }
 
@@ -138,6 +142,7 @@ impl fmt::Display for ManifestType {
             Hg => write!(f, "Hg"),
             Unodes => write!(f, "Unodes"),
             Skeleton => write!(f, "Skeleton"),
+            Content => write!(f, "Content"),
             Git => write!(f, "Git"),
         }
     }
@@ -152,6 +157,7 @@ impl ManifestData {
             Hg(..) => ManifestType::Hg,
             Unodes(..) => ManifestType::Unodes,
             Skeleton => ManifestType::Skeleton,
+            Content(..) => ManifestType::Content,
             Git(..) => ManifestType::Git,
         }
     }
@@ -160,6 +166,7 @@ impl ManifestData {
         use ManifestData::*;
 
         match self {
+            Content(ty, id, _size) => Some((*ty, *id)),
             Fsnodes(ty, id) | Hg(ty, id) | Unodes(ty, id) | Git(ty, id) => Some((*ty, *id)),
             Skeleton => None,
         }
@@ -172,6 +179,9 @@ impl fmt::Display for ManifestData {
         match &self {
             Fsnodes(ty, id) | Hg(ty, id) | Unodes(ty, id) | Git(ty, id) => {
                 write!(f, "{}: {}, {}", self.manifest_type(), ty, id)
+            }
+            Content(ty, id, size) => {
+                write!(f, "{}: {}, {}, {}", self.manifest_type(), ty, id, size)
             }
             Skeleton => write!(f, "{}: present", self.manifest_type()),
         }
@@ -289,6 +299,36 @@ async fn list_unodes(
     Ok((ManifestType::Unodes, map))
 }
 
+async fn list_content_manifest(
+    ctx: &CoreContext,
+    repo: &Repo,
+    cs_id: ChangesetId,
+    fetch_derived: bool,
+) -> Result<(ManifestType, HashMap<NonRootMPath, ManifestData>)> {
+    let root_content_manifest_id =
+        derive_or_fetch::<RootContentManifestId>(ctx, repo, cs_id, fetch_derived).await?;
+
+    let content_manifest_id = root_content_manifest_id.into_content_manifest_id();
+    let map: HashMap<_, _> = content_manifest_id
+        .list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
+        .map_ok(|(path, content_manifest_file)| {
+            let val = ManifestData::Content(
+                content_manifest_file.file_type,
+                content_manifest_file.content_id,
+                content_manifest_file.size,
+            );
+            (path, val)
+        })
+        .try_collect()
+        .await?;
+    trace!(
+        ctx.logger(),
+        "Loaded content manifest for {} paths",
+        map.len()
+    );
+    Ok((ManifestType::Content, map))
+}
+
 async fn list_git_tree(
     ctx: &CoreContext,
     repo: &Repo,
@@ -348,6 +388,9 @@ pub(super) async fn verify_manifests(
         } else if ty == RootSkeletonManifestId::NAME {
             manifests.insert(ManifestType::Skeleton);
             futs.push(list_skeleton_manifest(ctx, repo, cs_id, fetch_derived).boxed());
+        } else if ty == RootContentManifestId::NAME {
+            manifests.insert(ManifestType::Content);
+            futs.push(list_content_manifest(ctx, repo, cs_id, fetch_derived).boxed());
         } else if ty == MappedGitCommitId::NAME {
             manifests.insert(ManifestType::Git);
             futs.push(list_git_tree(ctx, repo, cs_id, fetch_derived).boxed());

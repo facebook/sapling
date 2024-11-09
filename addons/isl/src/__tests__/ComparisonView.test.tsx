@@ -10,7 +10,6 @@ import type {RenderResult} from '@testing-library/react';
 import App from '../App';
 import {cancelAllHighlightingTasks} from '../ComparisonView/SplitDiffView/syntaxHighlighting';
 import {parsePatchAndFilter, sortFilesByType} from '../ComparisonView/utils';
-import platform from '../platform';
 import {
   COMMIT,
   expectMessageSentToServer,

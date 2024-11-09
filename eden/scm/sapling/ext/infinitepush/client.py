@@ -43,7 +43,7 @@ def extsetup(ui) -> None:
                 "",
                 "non-forward-move",
                 None,
-                _("allows moving a remote bookmark to an " "arbitrary place"),
+                _("allows moving a remote bookmark to an arbitrary place"),
             )
         )
 

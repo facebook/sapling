@@ -135,14 +135,15 @@ fn get_repo_objects_count_settings(
         .or_else(|| justknobs::get("scm/mononoke:scs_default_repo_objects_count", None).ok())
         .unwrap_or(DEFAULT_REPO_OBJECTS_COUNT);
 
+    // setting the override to 0 means no override
     let maybe_override_objects_count = justknobs::get_as::<i64>(
         "scm/mononoke:scs_override_repo_objects_count",
         Some(repo_name),
     )
     .ok()
-    .or_else(|| repo_config.override_objects_count.clone());
-    // setting the override to 0 means no override
-    let maybe_override_objects_count = maybe_override_objects_count.filter(|x| *x > 0);
+    .filter(|x| *x > 0)
+    .or_else(|| repo_config.override_objects_count.clone())
+    .filter(|x| *x > 0);
 
     let objects_count_multiplier = repo_config
         .objects_count_multiplier
@@ -341,6 +342,20 @@ mod tests {
         assert_eq!(default_objects_count, 1000);
         assert_eq!(maybe_override_objects_count.unwrap(), 3000);
         assert_eq!(objects_count_multiplier, 0.005);
+
+        // override JK set to 0 means no override; but even so, an explicit override should be honored
+        let repo_config = Arc::new(RepoConfig {
+            override_objects_count: Some(1000),
+            ..Default::default()
+        });
+        let (_default_objects_count, maybe_override_objects_count, _objects_count_multiplier) =
+            with_just_knobs(
+                JustKnobsInMemory::new(hashmap![
+                    "scm/mononoke:scs_override_repo_objects_count".to_string() => KnobVal::Int(0),
+                ]),
+                || get_repo_objects_count_settings("repo", repo_config),
+            );
+        assert_eq!(maybe_override_objects_count.unwrap(), 1000);
 
         Ok(())
     }

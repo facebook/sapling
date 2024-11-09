@@ -2,7 +2,7 @@
   "name": "sapling-scm",
   "displayName": "Sapling SCM",
   "description": "Sapling: A Scalable, User-Friendly Source Control System",
-  "version": "0.1.60",
+  "version": "0.1.62",
   "publisher": "meta",
   "license": "MIT",
   "engines": {
@@ -53,6 +53,15 @@
           "description": "%settings.showDiffComments.description%",
           "default": true
         },
+        "sapling.inlineCommentDiffViewMode": {
+          "type": "string",
+          "enum": [
+            "Unified",
+            "Split"
+          ],
+          "description": "%settings.diffViewMode.description%",
+          "default": "Unified"
+        },
         "sapling.markConflictingFilesResolvedOnSave": {
           "type": "boolean",
           "description": "%settings.markConflictingFilesResolvedOnSave.description%",
@@ -99,6 +108,14 @@
           "id": "sapling.isl",
           "name": "%isl.title%",
           "when": "config.sapling.isl.showInSidebar"
+        }
+      ],
+      "scm": [
+        {
+          "type": "webview",
+          "id": "sapling.comments",
+          "name": "Code Review Comments",
+          "when": "isl.inlineCommentSidePanelEnabled"
         }
       ]
     },
@@ -243,7 +260,7 @@
   "devDependencies": {
     "@rollup/plugin-json": "^6.1.0",
     "@rollup/plugin-replace": "^5.0.5",
-    "@stylexjs/stylex": "^0.7.5",
+    "@stylexjs/stylex": "^0.9.3",
     "@types/jest": "29.5.12",
     "@types/node": "^16.11.7",
     "@types/react-dom": "^18.3.0",

@@ -1,26 +1,28 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use std::cmp::Ordering;
-use std::collections::VecDeque;
-use std::sync::mpsc::channel;
-use std::sync::mpsc::Receiver;
-use std::sync::mpsc::Sender;
-use std::thread::JoinHandle;
-use std::time::Duration;
+use std::mem;
+use std::sync::atomic;
+use std::sync::atomic::AtomicUsize;
+use std::sync::Arc;
 
+use anyhow::anyhow;
 use anyhow::Result;
+use crossbeam::channel::unbounded;
+use crossbeam::channel::Receiver;
+use crossbeam::channel::Sender;
 use manifest::DiffEntry;
 use manifest::DiffType;
-use manifest::DirDiffEntry;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::Matcher;
 use progress_model::ActiveProgressBar;
 use progress_model::ProgressBar;
+use progress_model::Registry;
 use types::PathComponentBuf;
 use types::RepoPath;
 use types::RepoPathBuf;
@@ -32,6 +34,7 @@ use crate::store::InnerStore;
 use crate::DirLink;
 use crate::Link;
 use crate::TreeManifest;
+use crate::THREAD_POOL;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum Side {
@@ -45,292 +48,232 @@ enum Side {
 /// side of the diff, or it may be a pair of directories (with the same
 /// path) whose content is different on either side of the diff.
 #[derive(Debug, Clone, Eq, PartialEq)]
-enum DiffItem {
+enum DiffWork {
     // bool is whether this diff was the result of a path conflict
     Single(DirLink, Side, bool),
     Changed(DirLink, DirLink),
 }
 
-impl DiffItem {
+enum WorkerInput {
+    Diff(Vec<DiffWork>),
+    Shutdown,
+}
+
+impl DiffWork {
     fn process(
         self,
-        fetcher: &mut Sender<DiffItem>,
         store: &InnerStore,
         matcher: &dyn Matcher,
-        pending: &mut u64,
-        output_dirs: Option<&mut VecDeque<DirDiffEntry>>,
-    ) -> Result<Vec<DiffEntry>> {
+        work: &mut Vec<DiffWork>,
+        result: Sender<Result<DiffEntry>>,
+    ) -> Result<()> {
         match self {
-            DiffItem::Single(dir, side, path_conflict) => diff_single(
-                dir,
-                fetcher,
-                side,
-                path_conflict,
-                store,
-                matcher,
-                pending,
-                output_dirs,
-            ),
-            DiffItem::Changed(left, right) => {
-                diff(left, right, fetcher, store, matcher, pending, output_dirs)
+            DiffWork::Single(dir, side, path_conflict) => {
+                diff_single(dir, side, path_conflict, store, matcher, work, result)
             }
+            DiffWork::Changed(left, right) => diff_dirs(left, right, store, matcher, work, result),
         }
     }
 
     fn path(&self) -> &RepoPath {
         match self {
-            DiffItem::Single(d, _, _) => &d.path,
-            DiffItem::Changed(d, _) => &d.path,
+            DiffWork::Single(d, _, _) => &d.path,
+            DiffWork::Changed(d, _) => &d.path,
         }
     }
 }
 
-/// A breadth-first diff iterator over two trees.
+#[derive(Clone)]
+struct DiffWorker {
+    work_recv: Receiver<WorkerInput>,
+    work_send: Sender<WorkerInput>,
+    result_send: Sender<Result<DiffEntry>>,
+    matcher: Arc<dyn Matcher + Sync + Send>,
+    store: InnerStore,
+    pending: Arc<AtomicUsize>,
+    progress_bar: Arc<ProgressBar>,
+}
+
+/// A parallel iterator over two trees.
 ///
-/// This struct is an iterator that, given two trees, will iterate
-/// over the directories layer-by-layer, outputting diff entries
-/// for each mismatched file encountered. At the start of each layer
-/// of the traversal, all of the modified directories in that layer
-/// will be prefetched from the store, thereby reducing the total
-/// number of tree fetches required to perform a full-tree diff while
-/// only fetching tree nodes that have actually changed.
-pub struct Diff<'a> {
-    output: VecDeque<DiffEntry>,
-    store: &'a InnerStore,
-    matcher: &'a dyn Matcher,
-    progress_bar: ActiveProgressBar,
-    #[allow(dead_code)]
-    fetch_thread: Option<JoinHandle<()>>,
-    sender: Option<Sender<DiffItem>>,
-    receiver: Option<Receiver<DiffItem>>,
-    pending: u64,
-}
+/// The iteration is breadth first but in parallel, so different depths can be processed
+/// at the same time.
+pub fn diff(
+    left: &TreeManifest,
+    right: &TreeManifest,
+    matcher: Arc<dyn Matcher + Send + Sync>,
+) -> Box<dyn Iterator<Item = Result<DiffEntry>>> {
+    let lroot = DirLink::from_root(&left.root).expect("tree root is not a directory");
+    let rroot = DirLink::from_root(&right.root).expect("tree root is not a directory");
 
-pub(crate) struct DirDiff<'a> {
-    diff: Diff<'a>,
-    output: VecDeque<DirDiffEntry>,
-}
-
-impl<'a> Diff<'a> {
-    pub fn new(
-        left: &'a TreeManifest,
-        right: &'a TreeManifest,
-        matcher: &'a dyn Matcher,
-    ) -> Result<Self> {
-        let lroot = DirLink::from_root(&left.root).expect("tree root is not a directory");
-        let rroot = DirLink::from_root(&right.root).expect("tree root is not a directory");
-
-        let (send_prefetch, receive_prefetch) = channel();
-        let (send_done, receive_done) = channel();
-        let mut pending = 0;
-
-        let store = left.store.clone();
-        let fetch_thread =
-            std::thread::spawn(move || prefetch_thread(receive_prefetch, send_done, store));
-
-        // Don't even attempt to perform a diff if these trees are the same.
-        if lroot.hgid() != rroot.hgid() || lroot.hgid().is_none() {
-            pending += 1;
-            send_prefetch.send(DiffItem::Changed(lroot, rroot))?;
-        }
-
-        Ok(Diff {
-            output: VecDeque::new(),
-            store: &left.store,
-            matcher,
-            progress_bar: ProgressBar::new_adhoc("diffing tree", 18, "depth"),
-            fetch_thread: Some(fetch_thread),
-            sender: Some(send_prefetch),
-            receiver: Some(receive_done),
-            pending,
-        })
+    // Don't even attempt to perform a diff if these trees are the same.
+    if lroot.hgid() == rroot.hgid() && lroot.hgid().is_some() {
+        return Box::new(std::iter::empty());
     }
 
-    pub(crate) fn modified_dirs(self) -> DirDiff<'a> {
-        DirDiff {
-            diff: self,
-            output: VecDeque::new(),
-        }
+    let (result_send, result_recv) = unbounded();
+    let (work_send, work_recv) = unbounded();
+
+    let store = left.store.clone();
+
+    let progress_bar = ProgressBar::new("diffing manifest", 0, "trees");
+    let registry = Registry::main();
+    registry.register_progress_bar(&progress_bar);
+
+    let worker = DiffWorker {
+        work_recv,
+        work_send,
+        result_send,
+        pending: Arc::new(AtomicUsize::new(0)),
+        store,
+        matcher: Arc::new(matcher),
+        progress_bar: progress_bar.clone(),
+    };
+
+    let thread_count = THREAD_POOL.max_count();
+
+    for _ in 0..thread_count {
+        let worker = worker.clone();
+        THREAD_POOL.execute(move || {
+            // If the worker returns an error, that signals we should shutdown
+            // the whole operation.
+            if worker.run().is_err() {
+                worker.broadcast_shutdown(thread_count);
+            }
+        });
     }
 
-    /// Process the next `DiffItem` for this layer (either a pair of modified directories
-    /// or an added/removed directory), potentially generating new `DiffEntry`s for
-    /// any changed files contained therein.
-    ///
-    /// If this method reaches the end of the current layer of the breadth-first traversal,
-    /// it will perform I/O to prefetch the next layer of directories before continuing. As
-    /// such, this function will occassionally block for an extended period of time.
-    ///
-    /// Returns `true` if there are more items to process after the current one. Once this
-    /// method returns `false`, the traversal is complete.
-    fn process_next_item(
-        &mut self,
-        output_dirs: Option<&mut VecDeque<DirDiffEntry>>,
-    ) -> Result<bool> {
-        if self.pending == 0 {
-            return Ok(false);
-        }
+    worker
+        .publish_work(vec![DiffWork::Changed(lroot, rroot)])
+        .unwrap();
 
-        let item = self.receiver.as_ref().unwrap().recv()?;
-        self.pending -= 1;
-
-        // Set "depth" according to item depth.
-        self.progress_bar
-            .set_position(item.path().ancestors().count() as u64);
-
-        let entries = item.process(
-            self.sender.as_mut().unwrap(),
-            self.store,
-            self.matcher,
-            &mut self.pending,
-            output_dirs,
-        )?;
-        self.output.extend(entries);
-
-        Ok(self.pending != 0)
-    }
+    Box::new(DiffIter {
+        result_recv,
+        progress_bar: ProgressBar::push_active(progress_bar, registry),
+    })
 }
 
-fn prefetch_thread(receiver: Receiver<DiffItem>, sender: Sender<DiffItem>, store: InnerStore) {
-    let limit = 100000;
-    let timeout = Duration::from_millis(1);
-    let mut received = Vec::with_capacity(limit);
-    'outer: loop {
-        // Wait for a prefetch request
-        match receiver.recv() {
-            Ok(request) => received.push(request),
-            Err(_) => break,
-        };
+impl DiffWorker {
+    // This value is a balance between a large value to get big remote fetch batches and
+    // a small value to get more parallelism for CPU intensive tree deserialization and
+    // diff operation.
+    // In my basic testing, 1000 was faster than 100 and faster than 5000 for a large diff
+    // operation.
+    const BATCH_SIZE: usize = 1000;
 
-        // Grab a bunch of them at once.
-        loop {
-            use std::sync::mpsc::RecvTimeoutError::*;
-            match receiver.recv_timeout(timeout) {
-                Ok(request) => received.push(request),
-                Err(Timeout) => break,
-                Err(Disconnected) => {
-                    break 'outer;
-                }
+    fn run(&self) -> Result<()> {
+        for work in &self.work_recv {
+            let work = match work {
+                WorkerInput::Diff(work) => work,
+                WorkerInput::Shutdown => return Ok(()),
             };
-            if received.len() >= limit {
-                break;
-            }
-        }
 
-        // Prefetch them
-        let mut keys = Vec::with_capacity(received.len());
-        for item in received.iter() {
-            match item {
-                DiffItem::Single(dir, side, _) => {
-                    match side {
-                        Side::Left => dir.key().map(|key| keys.push(key)),
-                        Side::Right => dir.key().map(|key| keys.push(key)),
-                    };
-                }
-                DiffItem::Changed(left, right) => {
-                    if let Some(key) = left.key() {
-                        keys.push(key)
+            let work_len = work.len();
+
+            // First prefetch everything for this batch.
+            let keys = work.iter().fold(Vec::new(), |mut acc, item| {
+                match item {
+                    DiffWork::Single(dir, side, _) => {
+                        match side {
+                            Side::Left => dir.key().map(|key| acc.push(key)),
+                            Side::Right => dir.key().map(|key| acc.push(key)),
+                        };
                     }
-                    if let Some(key) = right.key() {
-                        keys.push(key)
+                    DiffWork::Changed(left, right) => {
+                        if let Some(key) = left.key() {
+                            acc.push(key);
+                        }
+                        if let Some(key) = right.key() {
+                            acc.push(key);
+                        }
                     }
                 }
+                acc
+            });
+            self.progress_bar.increase_position(keys.len() as u64);
+            let _ = self.store.prefetch(keys);
+
+            // Now process diff work, accumulating work for the next tree level.
+            let mut to_send = Vec::new();
+            for item in work {
+                let res = item.process(
+                    &self.store,
+                    &self.matcher,
+                    &mut to_send,
+                    self.result_send.clone(),
+                );
+                if let Err(err) = res {
+                    self.result_send.send(Err(err))?;
+                }
+
+                if to_send.len() >= Self::BATCH_SIZE {
+                    self.publish_work(mem::take(&mut to_send))?;
+                }
+            }
+            self.publish_work(to_send)?;
+
+            if self.pending.fetch_sub(work_len, atomic::Ordering::AcqRel) == work_len {
+                // If we processed the last work item (i.e. pending has become
+                // 0), return an error which will trigger the shutdown of all
+                // the worker threads.
+                return Err(anyhow!("walk done"));
             }
         }
 
-        if !keys.is_empty() {
-            let _ = store.prefetch(keys);
+        unreachable!("worker owns channel send and recv - channel should not disconnect");
+    }
+
+    fn publish_work(&self, to_send: Vec<DiffWork>) -> Result<()> {
+        if to_send.is_empty() {
+            return Ok(());
         }
 
-        // Notify that we finished
-        for item in received.drain(..) {
-            if sender.send(item).is_err() {
-                break 'outer;
-            }
+        self.pending
+            .fetch_add(to_send.len(), atomic::Ordering::AcqRel);
+        Ok(self.work_send.send(WorkerInput::Diff(to_send))?)
+    }
+
+    fn broadcast_shutdown(&self, num_workers: usize) {
+        // I couldn't think of a better way to handle shutdown.
+        for _ in 0..num_workers {
+            self.work_send.send(WorkerInput::Shutdown).unwrap();
         }
     }
 }
 
-impl<'a> Iterator for Diff<'a> {
+struct DiffIter {
+    result_recv: Receiver<Result<DiffEntry>>,
+    #[allow(unused)]
+    progress_bar: ActiveProgressBar,
+}
+
+impl Iterator for DiffIter {
     type Item = Result<DiffEntry>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let span = tracing::debug_span!("tree::diff::next", path = "");
-        let _scope = span.enter();
-
-        loop {
-            let res = match self.process_next_item(None) {
-                Ok(true) if self.output.is_empty() => continue,
-                Ok(_) => Ok(self.output.pop_front()),
-                Err(err) => Err(err),
-            };
-
-            if !span.is_disabled() {
-                if let Ok(Some(ref result)) = res {
-                    span.record("path", result.path.as_repo_path().as_str());
-                }
-            }
-
-            if matches!(res, Err(_) | Ok(None)) {
-                // Clean up fetch thread as we finish the iterator.
-                self.sender.take();
-                self.receiver.take();
-                let _ = self.fetch_thread.take().unwrap().join();
-            }
-
-            return res.transpose();
-        }
-    }
-}
-
-impl<'a> Iterator for DirDiff<'a> {
-    type Item = Result<DirDiffEntry>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        while self.output.is_empty() {
-            match self.diff.process_next_item(Some(&mut self.output)) {
-                Ok(true) => continue,
-                Ok(false) => break,
-                Err(e) => return Some(Err(e)),
-            }
-        }
-        // Do not care about the file diff output.
-        self.diff.output.clear();
-        self.output.pop_front().map(Ok)
+        self.result_recv.recv().ok()
     }
 }
 
 /// Process a directory that is only present on one side of the diff.
-///
-/// Returns diff entries of all of the files in this directory, and
-/// adds any subdirectories to the next layer to be processed.
+/// Sends diff entries to `result` and adds more work items to `work`.
 fn diff_single(
     dir: DirLink,
-    fetcher: &mut Sender<DiffItem>,
     side: Side,
     path_conflict: bool,
     store: &InnerStore,
     matcher: &dyn Matcher,
-    pending: &mut u64,
-    output_dirs: Option<&mut VecDeque<DirDiffEntry>>,
-) -> Result<Vec<DiffEntry>> {
+    work: &mut Vec<DiffWork>,
+    result: Sender<Result<DiffEntry>>,
+) -> Result<()> {
     let (files, dirs) = dir.list(store)?;
-
-    if let Some(output_dirs) = output_dirs {
-        output_dirs.push_back(DirDiffEntry {
-            path: dir.path,
-            left: side == Side::Left,
-            right: side == Side::Right,
-        });
-    }
 
     for d in dirs.into_iter() {
         if matcher.matches_directory(&d.path)? != DirectoryMatch::Nothing {
-            *pending += 1;
-            fetcher.send(DiffItem::Single(d, side, path_conflict))?;
+            work.push(DiffWork::Single(d, side, path_conflict));
         }
     }
-    let mut entries = Vec::new();
+
     for f in files.into_iter() {
         if !path_conflict && f.meta.ignore_unless_conflict {
             continue;
@@ -341,47 +284,37 @@ fn diff_single(
                 Side::Left => DiffEntry::left(f),
                 Side::Right => DiffEntry::right(f),
             };
-            entries.push(entry);
+            result.send(Ok(entry))?;
         }
     }
-    Ok(entries)
+
+    Ok(())
 }
 
 /// Diff two directories.
 ///
 /// The directories should correspond to the same path on either side of the
-/// diff. Returns diff entries for any changed files, and adds any changed
-/// directories to the next layer to be processed.
-fn diff(
+/// diff. Sends diff entries to `result` and adds more work items to `work`.
+fn diff_dirs(
     left: DirLink,
     right: DirLink,
-    fetcher: &mut Sender<DiffItem>,
     store: &InnerStore,
     matcher: &dyn Matcher,
-    pending: &mut u64,
-    output_dirs: Option<&mut VecDeque<DirDiffEntry>>,
-) -> Result<Vec<DiffEntry>> {
-    let mut file_diffs: Vec<DiffEntry> = Vec::new();
-
-    let mut self_modified: bool = false;
-
+    work: &mut Vec<DiffWork>,
+    result: Sender<Result<DiffEntry>>,
+) -> Result<()> {
     let mut add_diffs = |l, r| -> Result<()> {
-        let (file_diff, dir_diff, modified) = diff_links(&left.path, l, r);
-
-        if modified {
-            self_modified = true;
-        }
+        let (file_diff, dir_diff) = diff_links(&left.path, l, r);
 
         if let Some(file_diff) = file_diff {
             if matcher.matches_file(&file_diff.path)? {
-                file_diffs.push(file_diff);
+                result.send(Ok(file_diff))?;
             }
         }
 
         if let Some(dir_diff) = dir_diff {
             if matcher.matches_directory(dir_diff.path())? != DirectoryMatch::Nothing {
-                *pending += 1;
-                fetcher.send(dir_diff)?;
+                work.push(dir_diff);
             }
         }
 
@@ -409,27 +342,17 @@ fn diff(
         }
     }
 
-    if self_modified {
-        if let Some(output_dirs) = output_dirs {
-            output_dirs.push_back(DirDiffEntry {
-                path: left.path.clone(),
-                left: true,
-                right: true,
-            });
-        }
-    }
-
-    Ok(file_diffs)
+    Ok(())
 }
 
-// Diff two items (can be directory, file, or None). If both are present, they must have the same name.
-// Returns a file diff, directory diff, and whether the parent dir was modified (i.e. entry added or removed).
-// There can be no diffs returned, just a file diff, just a directory diff, or both.
+// Diff two items (can be directory, file, or None). If both are present, they must have
+// the same name. Returns a file diff and directory diff. There can be no diffs returned,
+// just a file diff, just a directory diff, or both.
 fn diff_links(
     parent_path: &RepoPath,
     left: Option<(&PathComponentBuf, &Link)>,
     right: Option<(&PathComponentBuf, &Link)>,
-) -> (Option<DiffEntry>, Option<DiffItem>, bool) {
+) -> (Option<DiffEntry>, Option<DiffWork>) {
     let name = match (left, right) {
         (Some((lname, _)), Some((rname, _))) => {
             assert_eq!(lname, rname);
@@ -437,7 +360,7 @@ fn diff_links(
         }
         (Some((lname, _)), None) => lname,
         (None, Some((rname, _))) => rname,
-        (None, None) => return (None, None, false),
+        (None, None) => return (None, None),
     };
 
     let left = left.map(|l| l.1);
@@ -450,8 +373,6 @@ fn diff_links(
     };
 
     let (mut dir_diff, mut file_diff) = (None, None);
-
-    let mut modified: bool = false;
 
     match (left.map(|l| l.as_ref()), right.map(|r| r.as_ref())) {
         // Both are files - compare file metadata (including id).
@@ -471,7 +392,7 @@ fn diff_links(
             }
 
             if !equal {
-                dir_diff = Some(DiffItem::Changed(
+                dir_diff = Some(DiffWork::Changed(
                     DirLink::from_link(left.unwrap(), path()).unwrap(),
                     DirLink::from_link(right.unwrap(), path()).unwrap(),
                 ));
@@ -485,8 +406,6 @@ fn diff_links(
                         return;
                     }
 
-                    modified = true;
-
                     file_diff = Some(DiffEntry::new(
                         path(),
                         if side == Side::Left {
@@ -497,15 +416,13 @@ fn diff_links(
                     ));
                 }
                 Durable(_) | Ephemeral(_) => {
-                    modified = true;
-
                     let dir_link = DirLink::from_link(link, path())
                         .expect("non-leaf node must be a valid directory");
 
                     // If we don't have a path conflict here, we don't want to mark
                     // unknown files under us as conflicts.
                     let is_conflict = side != Side::Left || right.is_some();
-                    dir_diff = Some(DiffItem::Single(dir_link, side, is_conflict));
+                    dir_diff = Some(DiffWork::Single(dir_link, side, is_conflict));
                 }
             };
 
@@ -519,7 +436,7 @@ fn diff_links(
         }
     };
 
-    (file_diff, dir_diff, modified)
+    (file_diff, dir_diff)
 }
 
 #[cfg(test)]
@@ -575,19 +492,18 @@ mod tests {
         let store = Arc::new(TestStore::new());
         let tree = make_tree_manifest(store, &[("a", "1"), ("b/f", "2"), ("c", "3"), ("d/f", "4")]);
         let dir = DirLink::from_root(&tree.root).unwrap();
-        let (mut sender, receiver) = channel();
-        let mut pending = 0;
+        let (sender, receiver) = unbounded();
+        let mut work = Vec::new();
 
         let matcher = AlwaysMatcher::new();
-        let entries = diff_single(
+        diff_single(
             dir,
-            &mut sender,
             Side::Left,
             false,
             &tree.store,
             &matcher,
-            &mut pending,
-            None,
+            &mut work,
+            sender,
         )
         .unwrap();
 
@@ -601,24 +517,26 @@ mod tests {
                 DiffType::LeftOnly(FileMetadata::new(hgid("3"), FileType::Regular)),
             ),
         ];
-        assert_eq!(entries, expected_entries);
+        assert_eq!(
+            receiver.into_iter().collect::<Result<Vec<_>>>().unwrap(),
+            expected_entries
+        );
 
         let dummy = Link::ephemeral();
-        let next = vec![receiver.recv().unwrap(), receiver.recv().unwrap()];
         let expected_next = vec![
-            DiffItem::Single(
+            DiffWork::Single(
                 DirLink::from_link(&dummy, repo_path_buf("b")).unwrap(),
                 Side::Left,
                 false,
             ),
-            DiffItem::Single(
+            DiffWork::Single(
                 DirLink::from_link(&dummy, repo_path_buf("d")).unwrap(),
                 Side::Left,
                 false,
             ),
         ];
 
-        assert_eq!(next, expected_next);
+        assert_eq!(work, expected_next);
     }
 
     #[test]
@@ -654,7 +572,7 @@ mod tests {
         );
 
         let matcher = AlwaysMatcher::new();
-        let diff = Diff::new(&ltree, &rtree, &matcher).unwrap();
+        let diff = ltree.diff(&rtree, matcher).unwrap();
         let entries = diff
             .collect::<Result<Vec<_>>>()
             .unwrap()
@@ -709,7 +627,7 @@ mod tests {
         );
 
         let matcher = TreeMatcher::from_rules(["d1/**"].iter(), true).unwrap();
-        let diff = Diff::new(&ltree, &rtree, &matcher).unwrap();
+        let diff = ltree.diff(&rtree, matcher).unwrap();
         let entries = diff
             .collect::<Result<Vec<_>>>()
             .unwrap()
@@ -738,7 +656,7 @@ mod tests {
         );
 
         assert_eq!(
-            Diff::new(&left, &right, &AlwaysMatcher::new())
+            left.diff(&right, AlwaysMatcher::new())
                 .unwrap()
                 .collect::<Result<Vec<_>>>()
                 .unwrap(),
@@ -762,7 +680,7 @@ mod tests {
         right.flush().unwrap();
 
         assert_eq!(
-            Diff::new(&left, &right, &AlwaysMatcher::new())
+            left.diff(&right, AlwaysMatcher::new())
                 .unwrap()
                 .collect::<Result<Vec<_>>>()
                 .unwrap(),
@@ -790,7 +708,7 @@ mod tests {
             .unwrap();
 
         assert!(
-            Diff::new(&left, &right, &AlwaysMatcher::new())
+            left.diff(&right, AlwaysMatcher::new())
                 .unwrap()
                 .next()
                 .is_none()
@@ -803,7 +721,7 @@ mod tests {
         let left = TreeManifest::durable(Arc::new(TestStore::new()), hgid("10"));
         let right = TreeManifest::durable(Arc::new(TestStore::new()), hgid("10"));
         assert!(
-            Diff::new(&left, &right, &AlwaysMatcher::new())
+            left.diff(&right, AlwaysMatcher::new())
                 .unwrap()
                 .next()
                 .is_none()
@@ -811,7 +729,7 @@ mod tests {
 
         let right = TreeManifest::durable(Arc::new(TestStore::new()), hgid("20"));
         assert!(
-            Diff::new(&left, &right, &AlwaysMatcher::new())
+            left.diff(&right, AlwaysMatcher::new())
                 .unwrap()
                 .next()
                 .unwrap()
@@ -833,7 +751,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            Diff::new(&left, &right, &AlwaysMatcher::new())
+            left.diff(&right, AlwaysMatcher::new())
                 .unwrap()
                 .collect::<Result<Vec<_>>>()
                 .unwrap(),
@@ -856,7 +774,7 @@ mod tests {
         );
 
         assert_eq!(
-            Diff::new(&left, &right, &AlwaysMatcher::new())
+            left.diff(&right, AlwaysMatcher::new())
                 .unwrap()
                 .collect::<Result<Vec<_>>>()
                 .unwrap(),
@@ -877,7 +795,7 @@ mod tests {
         right.flush().unwrap();
 
         assert_eq!(
-            Diff::new(&left, &right, &AlwaysMatcher::new())
+            left.diff(&right, AlwaysMatcher::new())
                 .unwrap()
                 .collect::<Result<Vec<_>>>()
                 .unwrap(),
@@ -908,10 +826,9 @@ mod tests {
         );
 
         assert_eq!(
-            Diff::new(
-                &left,
+            left.diff(
                 &right,
-                &TreeMatcher::from_rules(["a1/b1/**"].iter(), true).unwrap()
+                TreeMatcher::from_rules(["a1/b1/**"].iter(), true).unwrap()
             )
             .unwrap()
             .collect::<Result<Vec<_>>>()
@@ -922,10 +839,9 @@ mod tests {
             ),)
         );
         assert_eq!(
-            Diff::new(
-                &left,
+            left.diff(
                 &right,
-                &TreeMatcher::from_rules(["a1/b2"].iter(), true).unwrap()
+                TreeMatcher::from_rules(["a1/b2"].iter(), true).unwrap()
             )
             .unwrap()
             .collect::<Result<Vec<_>>>()
@@ -936,10 +852,9 @@ mod tests {
             ),)
         );
         assert_eq!(
-            Diff::new(
-                &left,
+            left.diff(
                 &right,
-                &TreeMatcher::from_rules(["a2/b2/**"].iter(), true).unwrap()
+                TreeMatcher::from_rules(["a2/b2/**"].iter(), true).unwrap()
             )
             .unwrap()
             .collect::<Result<Vec<_>>>()
@@ -950,10 +865,9 @@ mod tests {
             ),)
         );
         assert_eq!(
-            Diff::new(
-                &left,
+            left.diff(
                 &right,
-                &TreeMatcher::from_rules(["*/b2/**"].iter(), true).unwrap()
+                TreeMatcher::from_rules(["*/b2/**"].iter(), true).unwrap()
             )
             .unwrap()
             .collect::<Result<Vec<_>>>()
@@ -970,10 +884,9 @@ mod tests {
             )
         );
         assert!(
-            Diff::new(
-                &left,
+            left.diff(
                 &right,
-                &TreeMatcher::from_rules(["a3/**"].iter(), true).unwrap()
+                TreeMatcher::from_rules(["a3/**"].iter(), true).unwrap()
             )
             .unwrap()
             .next()
@@ -994,7 +907,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            Diff::new(&left, &right, &AlwaysMatcher::new())
+            left.diff(&right, AlwaysMatcher::new())
                 .unwrap()
                 .collect::<Result<Vec<_>>>()
                 .unwrap(),
@@ -1002,57 +915,6 @@ mod tests {
                 repo_path_buf("foo/bar/c.txt"),
                 DiffType::RightOnly(make_meta("30"))
             ),],
-        );
-    }
-
-    #[test]
-    fn test_modified_dirs() {
-        let store = Arc::new(TestStore::new());
-        let left = make_tree_manifest(
-            store.clone(),
-            &[
-                ("left/a/b", "1"),
-                ("unmodified/a/b", "1"),
-                ("modified/1/a/b", "1"),
-                ("modified/2/a/b", "1"),
-                ("modified/3/a/b", "1"),
-                ("modified/3/b", "1"),
-                ("modified/4/a", "1"),
-            ],
-        );
-        let right = make_tree_manifest(
-            store,
-            &[
-                ("right/a/b", "2"),
-                ("unmodified/a/b", "2"),
-                ("modified/1/b/a", "2"),
-                ("modified/2/a/c", "1"),
-                ("modified/3/b", "1"),
-                ("modified/4/a/b", "1"),
-            ],
-        );
-        let dirs: Vec<String> = Diff::new(&left, &right, &AlwaysMatcher::new())
-            .unwrap()
-            .modified_dirs()
-            .map(|v| dir_diff_entry_to_string(v.unwrap()))
-            .collect();
-        assert_eq!(
-            dirs,
-            [
-                "M ",
-                "R left",
-                "A right",
-                "R left/a",
-                "M modified/1",
-                "M modified/3",
-                "M modified/4",
-                "A right/a",
-                "R modified/1/a",
-                "A modified/1/b",
-                "M modified/2/a",
-                "R modified/3/a",
-                "A modified/4/a"
-            ]
         );
     }
 
@@ -1073,7 +935,8 @@ mod tests {
 
         let right = make_tree_manifest(store.clone(), &[("foo/tracked", "1")]);
         assert_eq!(
-            Diff::new(&left, &right, &AlwaysMatcher::new())?.collect::<Result<Vec<_>>>()?,
+            left.diff(&right, AlwaysMatcher::new())?
+                .collect::<Result<Vec<_>>>()?,
             vec![DiffEntry::new(
                 repo_path_buf("foo/tracked"),
                 DiffType::RightOnly(make_meta("1"))
@@ -1085,7 +948,8 @@ mod tests {
         // "foo/untracked" conflicts with new file "foo/untracked".
         let right = make_tree_manifest(store.clone(), &[("foo/untracked", "1")]);
         assert_eq!(
-            Diff::new(&left, &right, &AlwaysMatcher::new())?.collect::<Result<Vec<_>>>()?,
+            left.diff(&right, AlwaysMatcher::new())?
+                .collect::<Result<Vec<_>>>()?,
             vec![DiffEntry::new(
                 repo_path_buf("foo/untracked"),
                 DiffType::Changed(untracked_meta, make_meta("1")),
@@ -1095,7 +959,8 @@ mod tests {
         // Parent directory "foo" conflicts with new file "foo".
         let right = make_tree_manifest(store.clone(), &[("foo", "1")]);
         assert_eq!(
-            Diff::new(&left, &right, &AlwaysMatcher::new())?.collect::<Result<Vec<_>>>()?,
+            left.diff(&right, AlwaysMatcher::new())?
+                .collect::<Result<Vec<_>>>()?,
             vec![
                 DiffEntry::new(repo_path_buf("foo"), DiffType::RightOnly(make_meta("1"))),
                 DiffEntry::new(
@@ -1108,7 +973,8 @@ mod tests {
         // File name "foo/untracked" conflicts with new directory "foo/untracked".
         let right = make_tree_manifest(store.clone(), &[("foo/untracked/bar", "1")]);
         assert_eq!(
-            Diff::new(&left, &right, &AlwaysMatcher::new())?.collect::<Result<Vec<_>>>()?,
+            left.diff(&right, AlwaysMatcher::new())?
+                .collect::<Result<Vec<_>>>()?,
             vec![
                 DiffEntry::new(
                     repo_path_buf("foo/untracked"),
@@ -1124,20 +990,11 @@ mod tests {
         // Should not conflict here.
         let right = make_tree_manifest(store, &[]);
         assert_eq!(
-            Diff::new(&left, &right, &AlwaysMatcher::new())?.collect::<Result<Vec<_>>>()?,
+            left.diff(&right, AlwaysMatcher::new())?
+                .collect::<Result<Vec<_>>>()?,
             vec![],
         );
 
         Ok(())
-    }
-
-    fn dir_diff_entry_to_string(entry: DirDiffEntry) -> String {
-        let status = match (entry.left, entry.right) {
-            (true, true) => "M",
-            (true, false) => "R",
-            (false, true) => "A",
-            (false, false) => "!",
-        };
-        format!("{} {}", status, entry.path)
     }
 }

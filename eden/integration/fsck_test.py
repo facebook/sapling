@@ -14,6 +14,7 @@ from typing import Tuple
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 from .lib import edenclient, overlay as overlay_mod, repobase, testcase
+from .lib.hgrepo import HgRepository
 
 
 @testcase.eden_nfs_repo_test
@@ -36,6 +37,13 @@ class FsckTest(testcase.EdenRepoTest):
 
     def create_repo(self, name: str) -> repobase.Repository:
         return self.create_hg_repo("main")
+
+    def create_eden_repo(self) -> HgRepository:
+        return HgRepository(
+            self.mount,
+            system_hgrc=self.system_hgrc,
+            filtered=self.backing_store_type == "filteredhg",
+        )
 
     def setup_eden_test(self) -> None:
         super().setup_eden_test()

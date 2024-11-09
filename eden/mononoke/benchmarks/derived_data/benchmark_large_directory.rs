@@ -20,6 +20,7 @@ use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::Bookmarks;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
+use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use deleted_manifest::DeletedManifestOps;
 use deleted_manifest::RootDeletedManifestIdCommon;
@@ -45,6 +46,7 @@ use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentity;
 use skeleton_manifest::RootSkeletonManifestId;
+use skeleton_manifest_v2::RootSkeletonManifestV2Id;
 use tests_utils::CreateCommitContext;
 use unodes::RootUnodeManifestId;
 
@@ -187,6 +189,13 @@ async fn derive(ctx: &CoreContext, repo: &Repo, data: &str, csid: ChangesetId) -
             .unwrap()
             .skeleton_manifest_id()
             .to_string(),
+        RootSkeletonManifestV2Id::NAME => repo
+            .repo_derived_data()
+            .derive::<RootSkeletonManifestV2Id>(ctx, csid)
+            .await
+            .unwrap()
+            .into_inner_id()
+            .to_string(),
         RootUnodeManifestId::NAME => repo
             .repo_derived_data()
             .derive::<RootUnodeManifestId>(ctx, csid)
@@ -215,6 +224,13 @@ async fn derive(ctx: &CoreContext, repo: &Repo, data: &str, csid: ChangesetId) -
             .unwrap()
             .hg_augmented_manifest_id()
             .to_string(),
+        RootContentManifestId::NAME => repo
+            .repo_derived_data()
+            .derive::<RootContentManifestId>(ctx, csid)
+            .await
+            .unwrap()
+            .into_content_manifest_id()
+            .to_string(),
         _ => panic!("invalid derived data type: {}", data),
     }
 }
@@ -241,6 +257,19 @@ async fn iterate(ctx: &CoreContext, repo: &Repo, data: &str, csid: ChangesetId) 
             .await
             .unwrap()
             .skeleton_manifest_id()
+            .list_all_entries(ctx.clone(), repo.repo_blobstore().clone())
+            .try_fold(0u64, |acc, _| future::ok(acc + 1))
+            .await
+            .unwrap(),
+        RootSkeletonManifestV2Id::NAME => repo
+            .repo_derived_data()
+            .derive::<RootSkeletonManifestV2Id>(ctx, csid)
+            .await
+            .unwrap()
+            .into_inner_id()
+            .load(ctx, repo.repo_blobstore())
+            .await
+            .unwrap()
             .list_all_entries(ctx.clone(), repo.repo_blobstore().clone())
             .try_fold(0u64, |acc, _| future::ok(acc + 1))
             .await
@@ -280,6 +309,16 @@ async fn iterate(ctx: &CoreContext, repo: &Repo, data: &str, csid: ChangesetId) 
             .await
             .unwrap()
             .hg_augmented_manifest_id()
+            .list_all_entries(ctx.clone(), repo.repo_blobstore().clone())
+            .try_fold(0u64, |acc, _| future::ok(acc + 1))
+            .await
+            .unwrap(),
+        RootContentManifestId::NAME => repo
+            .repo_derived_data()
+            .derive::<RootContentManifestId>(ctx, csid)
+            .await
+            .unwrap()
+            .into_content_manifest_id()
             .list_all_entries(ctx.clone(), repo.repo_blobstore().clone())
             .try_fold(0u64, |acc, _| future::ok(acc + 1))
             .await

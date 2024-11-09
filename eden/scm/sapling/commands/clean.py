@@ -49,7 +49,7 @@ from .cmdtable import command
             "0",
             "print0",
             None,
-            _("end filenames with NUL, for use with xargs" " (implies -p/--print)"),
+            _("end filenames with NUL, for use with xargs (implies -p/--print)"),
         ),
     ]
     + cmdutil.walkopts,

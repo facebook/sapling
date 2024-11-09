@@ -31,7 +31,6 @@ Push:
   DEBUG sapling::eagerpeer: heads = []
   searching for changes
   DEBUG eagerepo::api: commit_known 748104bd5058bf2c386d074d8dcf2704855380f6
-  TRACE sapling::eagerpeer: known 748104bd5058bf2c386d074d8dcf2704855380f6: False
   DEBUG eagerepo::api: bookmarks master
   DEBUG sapling::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict()
   TRACE sapling::eagerpeer: adding   blob 005d992c5dcf32993668f7cede29d296c494a5d9
@@ -178,18 +177,18 @@ Trigger file and tree downloading:
 Clone (using edenapi clonedata, bypassing peer interface):
 
   $ cd $TESTTMP
-  $ hg clone -U --shallow test:e1 --config remotefilelog.reponame=x cloned1
+  $ hg clone -U test:e1 --config remotefilelog.reponame=x cloned1
   Cloning x into $TESTTMP/cloned1
   DEBUG eagerepo::api: bookmarks master
-  DEBUG eagerepo::api: pull_lazy
+  DEBUG eagerepo::api: commit_graph_segments 23d30dc6b70380b2d939023947578ae0e0198999 
 
 Clone:
 
   $ cd $TESTTMP
-  $ hg clone -U --shallow test:e1 cloned
+  $ hg clone -U test:e1 cloned
   Cloning e1 into $TESTTMP/cloned
   DEBUG eagerepo::api: bookmarks master
-  DEBUG eagerepo::api: pull_lazy
+  DEBUG eagerepo::api: commit_graph_segments 23d30dc6b70380b2d939023947578ae0e0198999 
 
   $ cd cloned
 
@@ -309,4 +308,4 @@ Test that filtering revset does not use sequential fetches.
   DEBUG dag::protocol: resolve ids [9] remotely
   DEBUG dag::protocol: resolve ids [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28] remotely
   DEBUG eagerepo::api: revlog_data * (glob)
-  >>> assert _.count('revlog_data') == 1 and 0 < _.count('resolve id') < 3
+  >>> assert _.count('revlog_data') == 1 and 0 <=  _.count('resolve id') < 3

@@ -80,7 +80,7 @@ The following are configs to tune the behavior of copy tracing algorithm:
 import codecs
 from collections import defaultdict
 
-from . import hgdemandimport, json, node, phases, pycompat
+from . import hgdemandimport, json, node, perftrace, pycompat
 
 
 def _chain(src, dst, a, b):
@@ -144,6 +144,7 @@ def _reverse_copies(copies):
     return {v: k for k, v in copies.items()}
 
 
+@perftrace.tracefunc("Path Copies")
 def pathcopies(x, y, match=None):
     """find {dst@y: src@x} copy mapping for directed compare"""
     if x == y or not x or not y:
@@ -167,6 +168,7 @@ def pathcopies(x, y, match=None):
     return dagcopytrace.path_copies(x.node(), y.node(), match)
 
 
+@perftrace.tracefunc("Merge Copies")
 def mergecopies(repo, cdst, csrc, base):
     """Fast copytracing using filename heuristics
 
@@ -567,7 +569,7 @@ def getamendcopies(repo, dest, ancestor):
         while ctx.node() not in db:
             ctx = ctx.p1()
             count += 1
-            if ctx == ancestor or count > limit or ctx.phase() == phases.public:
+            if ctx == ancestor or count > limit or ctx.ispublic():
                 return {}
 
         # Load the amend copytrace data from this commit.

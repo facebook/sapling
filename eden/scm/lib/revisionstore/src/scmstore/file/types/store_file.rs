@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use std::ops::BitOr;
@@ -69,7 +69,7 @@ impl StoreFile {
     pub(crate) fn compute_aux_data(&mut self) -> Result<()> {
         self.aux_data = Some(
             self.content
-                .as_mut()
+                .as_ref()
                 .ok_or_else(|| anyhow!("failed to compute aux data, no content available"))?
                 .aux_data()?,
         );
@@ -77,11 +77,12 @@ impl StoreFile {
     }
 
     // Pure file content without hg copy info.
-    pub fn file_content(&mut self) -> Result<Bytes> {
+    pub fn file_content(&self) -> Result<Bytes> {
         self.content
-            .as_mut()
+            .as_ref()
             .ok_or_else(|| anyhow!("no content available"))?
             .file_content()
+            .map(|(content, _header)| content)
     }
 
     // File content including hg copy info header.
@@ -108,26 +109,22 @@ impl StoreFile {
         }
     }
 
-    pub fn file_content_with_copy_info(&mut self) -> Result<(Bytes, Option<Key>)> {
-        let content = self
-            .content
-            .as_mut()
-            .ok_or_else(|| anyhow!("no content available"))?;
-
-        // Prefer getting content header info from aux data since that is more compatible
-        // with CAS (which won't contain header).
+    pub fn copy_info(&self) -> Result<Option<Key>> {
         if let Some(FileAuxData {
-            file_header_metadata: Some(header),
+            file_header_metadata: Some(ref header),
             ..
-        }) = &self.aux_data
+        }) = self.aux_data
         {
-            Ok((
-                content.file_content()?,
-                parse_copy_from_hg_file_metadata(header)?,
-            ))
-        } else {
-            content.file_content_with_copy_info()
+            return parse_copy_from_hg_file_metadata(header.as_ref());
         }
+
+        if let Some(content) = &self.content {
+            if let (_, Some(header)) = content.file_content()? {
+                return parse_copy_from_hg_file_metadata(header.as_ref());
+            }
+        }
+
+        Ok(None)
     }
 
     fn content_contains_hg_header(&self) -> bool {

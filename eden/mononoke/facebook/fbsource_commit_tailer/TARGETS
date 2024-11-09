@@ -1,4 +1,5 @@
 load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
 
 oncall("scm_server_infra")
 
@@ -16,5 +17,13 @@ python_binary(
         "//justknobs:pyjustknobs",
         "//libfb/py/asyncio:sandcastle",
         "//libfb/py/asyncio:thrift",
+    ],
+)
+
+python_unittest(
+    name = "fbsource_commit_tailer_test",
+    srcs = ["tailer_test.py"],
+    deps = [
+        ":fbsource_commit_tailer-library",
     ],
 )

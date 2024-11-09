@@ -1,3 +1,7 @@
+
+
+
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This software may be used and distributed according to the terms of the
@@ -99,14 +103,8 @@ Before the change
 
 -- Checking imported files
   $ cd "$TESTTMP/large-hg-client"
-  $ hg pull
-  pulling from mono:large-mon
-  searching for changes
-  fetching revlog data for 1 commits
-  $ hg pull -B bookprefix/new_bookmark
-  pulling from mono:large-mon
-  searching for changes
-  fetching revlog data for 4 commits
+  $ hg pull -q
+  $ hg pull -qB bookprefix/new_bookmark
   $ hg up bookprefix/new_bookmark
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

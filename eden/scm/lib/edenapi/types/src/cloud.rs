@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use std::collections::HashMap;
@@ -379,4 +379,25 @@ pub struct HistoricalVersionsResponse {
     #[id(0)]
     #[no_default]
     pub data: Result<HistoricalVersionsData, ServerError>,
+}
+
+#[auto_wire]
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct RollbackWorkspaceRequest {
+    #[id(0)]
+    pub workspace: String,
+    #[id(1)]
+    pub reponame: String,
+    #[id(2)]
+    pub version: u64,
+}
+
+#[auto_wire]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct RollbackWorkspaceResponse {
+    #[id(0)]
+    #[no_default]
+    pub data: Result<String, ServerError>,
 }

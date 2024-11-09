@@ -7,37 +7,27 @@ oncall("sapling")
 rust_library(
     name = "procinfo",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {
-                "target": {
-                    "'cfg(windows)'": {
-                        "dependencies": {
-                            "winapi": {
-                                "features": [
-                                    "handleapi",
-                                    "minwindef",
-                                    "processthreadsapi",
-                                    "psapi",
-                                    "tlhelp32",
-                                ],
-                                "version": "0.3",
-                            },
-                        },
-                    },
-                },
-            },
-            "extra_buck_dependencies": {
-                "target": {
-                    """'cfg(target_os = "macos")'""": {
-                        "build-dependencies": [
-                            "fbsource//third-party/rust:cc",
-                        ],
-                    },
-                },
-            },
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"target": {"'cfg(windows)'": {"dependencies": {"winapi": {
+            "features": [
+                "handleapi",
+                "minwindef",
+                "processthreadsapi",
+                "psapi",
+                "tlhelp32",
+            ],
+            "version": "0.3",
+        }}}}},
+        "extra_buck_dependencies": {"target": {'\'cfg(target_os = "macos")\'': {"build-dependencies": ["fbsource//third-party/rust:cc"]}}},
+        "lib": {"name": "procinfo"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "procinfo",
+            "repository": "https://github.com/facebook/sapling",
         },
-    },
+    }},
     crate_root = "src/lib.rs",
     os_deps = [
         (

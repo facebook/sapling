@@ -6,18 +6,24 @@ oncall("sapling")
 rust_library(
     name = "types",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "features": {
-                "default": ["for-tests"],
-                "for-tests": [
-                    "rand",
-                    "quickcheck",
-                    "lazy_static",
-                ],
-            },
+    autocargo = {"cargo_toml_config": {
+        "features": {
+            "default": ["for-tests"],
+            "for-tests": [
+                "rand",
+                "quickcheck",
+                "lazy_static",
+            ],
         },
-    },
+        "lib": {"name": "types"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "types",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     crate_root = "src/lib.rs",
     features = ["for-tests"],
     named_deps = {

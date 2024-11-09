@@ -564,7 +564,7 @@ def chistedit(ui, repo, *freeargs, **opts):
 
     if os.path.exists(os.path.join(repo.path, "histedit-state")):
         raise error.Abort(
-            _("history edit already in progress, try " "--continue or --abort")
+            _("history edit already in progress, try --continue or --abort")
         )
     revs.extend(freeargs)
     if not revs:
@@ -577,7 +577,7 @@ def chistedit(ui, repo, *freeargs, **opts):
     rr = list(repo.set("roots(%ld)", scmutil.revrange(repo, revs)))
     if len(rr) != 1:
         raise error.Abort(
-            _("The specified revisions must have " "exactly one common root")
+            _("The specified revisions must have exactly one common root")
         )
     root = rr[0].node()
 

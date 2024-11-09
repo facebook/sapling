@@ -5,31 +5,33 @@ oncall("sapling")
 rust_library(
     name = "revisionstore",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {
-                "dependencies": {
-                    "minibytes": {"features": ["frombytes"]},
-                    "version": {"path": "../version"},
-                },
-            },
-            "extra_buck_dependencies": {
-                "dependencies": [
-                    "//common/rust/shed/fbinit:fbinit",
-                    "//common/rust/shed/stats:stats",
-                ],
-            },
-            "features": {
-                "default": [],
-                "fb": [],
-                "for-tests": [],
-                "ods": [
-                    "fbinit",
-                    "stats",
-                ],
-            },
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"dependencies": {
+            "minibytes": {"features": ["frombytes"]},
+            "version": {"path": "../version"},
+        }},
+        "extra_buck_dependencies": {"dependencies": [
+            "//common/rust/shed/fbinit:fbinit",
+            "//common/rust/shed/stats:stats",
+        ]},
+        "features": {
+            "default": [],
+            "fb": [],
+            "for-tests": [],
+            "ods": [
+                "fbinit",
+                "stats",
+            ],
         },
-    },
+        "lib": {"name": "revisionstore"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "revisionstore",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     crate = "revisionstore",
     features = [
         "fb",
@@ -110,8 +112,13 @@ rust_library(
     srcs = glob(["types/**/*.rs"]),
     autocargo = {
         "cargo_toml_config": {
+            "lib": {"name": "revisionstore_types"},
             "package": {
-                "authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"],
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "revisionstore_types",
+                "repository": "https://github.com/facebook/sapling",
             },
         },
         "cargo_toml_dir": "types",

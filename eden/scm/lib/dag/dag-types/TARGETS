@@ -5,25 +5,24 @@ oncall("sapling")
 rust_library(
     name = "dag-types",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {
-                "dependencies": {
-                    "minibytes": {
-                        "default-features": False,
-                        "features": [],
-                    },
-                },
-            },
-            "features": {
-                "for-tests": ["quickcheck"],
-                "serialize-abomonation": ["abomonation"],
-            },
-            "package": {
-                "license": "MIT",
-            },
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"dependencies": {"minibytes": {
+            "default-features": False,
+            "features": [],
+        }}},
+        "features": {
+            "for-tests": ["quickcheck"],
+            "serialize-abomonation": ["abomonation"],
         },
-    },
+        "lib": {"name": "dag-types"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "dag-types",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     crate_root = "src/lib.rs",
     features = [
         "for-tests",

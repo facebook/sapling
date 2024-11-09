@@ -36,6 +36,8 @@ use mononoke_types::basename_suffix_skeleton_manifest_v3::BssmV3Entry;
 use mononoke_types::blame_v2::BlameV2;
 use mononoke_types::case_conflict_skeleton_manifest::CaseConflictSkeletonManifest;
 use mononoke_types::case_conflict_skeleton_manifest::CcsmEntry;
+use mononoke_types::content_manifest::ContentManifest;
+use mononoke_types::content_manifest::ContentManifestEntry;
 use mononoke_types::deleted_manifest_v2::DeletedManifestV2;
 use mononoke_types::fastlog_batch::FastlogBatch;
 use mononoke_types::fsnode::Fsnode;
@@ -115,6 +117,8 @@ pub enum DecodeAs {
     TestManifest,
     TestShardedManifest,
     TestShardedManifestMapNode,
+    ContentManifest,
+    ContentManifestMapNode,
 }
 
 impl DecodeAs {
@@ -170,6 +174,8 @@ impl DecodeAs {
                 ),
                 ("testshardedmanifest.", DecodeAs::TestShardedManifest),
                 ("changeset_info.", DecodeAs::ChangesetInfo),
+                ("contentmf.map2node.", DecodeAs::ContentManifestMapNode),
+                ("contentmf.", DecodeAs::ContentManifest),
             ] {
                 if key[index..].starts_with(prefix) {
                     return Some(auto_decode_as);
@@ -321,6 +327,14 @@ async fn decode(
         }
         DecodeAs::TestShardedManifestMapNode => {
             Decoded::try_debug(ShardedMapV2Node::<TestShardedManifestEntry>::from_bytes(
+                &data.into_raw_bytes(),
+            ))
+        }
+        DecodeAs::ContentManifest => {
+            Decoded::try_debug(ContentManifest::from_bytes(&data.into_raw_bytes()))
+        }
+        DecodeAs::ContentManifestMapNode => {
+            Decoded::try_debug(ShardedMapV2Node::<ContentManifestEntry>::from_bytes(
                 &data.into_raw_bytes(),
             ))
         }

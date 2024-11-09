@@ -14,13 +14,11 @@ use ::commits::HybridCommits;
 use ::commits::MemCommits;
 use ::commits::OnDiskCommits;
 use ::commits::RevlogCommits;
-use anyhow::format_err;
 use async_runtime::try_block_unless_interrupted as block_on;
 use cpython::*;
 use cpython_ext::convert::BytesLike;
 use cpython_ext::convert::Serde;
 use cpython_ext::ExtractInner;
-use cpython_ext::PyCell;
 use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::ResultPyErrExt;
@@ -29,11 +27,12 @@ use dag::ops::DagImportCloneData;
 use dag::ops::DagPersistent;
 use dag::ops::Parents;
 use dag::ops::ToIdSet;
-use dag::CloneData;
 use dag::Dag;
 use dag::DagAlgorithm;
 use dag::Vertex;
 use dag::VertexListWithOptions;
+use edenapi_types::CommitGraphSegments;
+use edenapi_types::CommitGraphSegmentsEntry;
 use minibytes::Bytes;
 use parking_lot::RwLock;
 use pyedenapi::PyClient;
@@ -93,23 +92,12 @@ py_class!(pub class commits |py| {
         Ok(PyNone)
     }
 
-    /// Import clone data (inside PyCell) and flush.
-    def importclonedata(&self, data: PyCell) -> PyResult<PyNone> {
-        let data: Box<CloneData<Vertex>> = data.take(py).ok_or_else(|| format_err!("Data is not CloneData")).map_pyerr(py)?;
+    /// Import commit graph segments (inside PyCell) and flush.
+    def importcommitgraphsegments(&self, segments: Serde<Vec<CommitGraphSegmentsEntry>>, heads: Serde<VertexListWithOptions>) -> PyResult<PyNone> {
+        let clone_data = CommitGraphSegments { segments: segments.0 }.try_into().map_pyerr(py)?;
         let mut inner = self.inner(py).write();
-        block_on(inner.import_clone_data(*data)).map_pyerr(py)?;
+        block_on(inner.import_pull_data(clone_data, &heads.0)).map_pyerr(py)?;
         Ok(PyNone)
-    }
-
-    /// Import pull data (inside PyCell) and flush.
-    /// Returns (commit_count, segment_count) on success.
-    def importpulldata(&self, data: PyCell, heads: Serde<VertexListWithOptions>) -> PyResult<(u64, usize)> {
-        let data: Box<CloneData<Vertex>> = data.take(py).ok_or_else(|| format_err!("Data is not CloneData")).map_pyerr(py)?;
-        let commits = data.flat_segments.vertex_count();
-        let segments = data.flat_segments.segment_count();
-        let mut inner = self.inner(py).write();
-        block_on(inner.import_pull_data(*data, &heads.0)).map_pyerr(py)?;
-        Ok((commits, segments))
     }
 
     /// Strip commits. ONLY used to make LEGACY TESTS running.

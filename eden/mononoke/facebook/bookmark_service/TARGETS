@@ -67,6 +67,8 @@ rust_binary(
         "//eden/mononoke/bookmarks:bookmarks_types",
         "//eden/mononoke/cmdlib:environment",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
+        "//eden/mononoke/cmdlib/sharding:executor_lib",
+        "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/derived_data:derived_data",
         "//eden/mononoke/facebook/bookmark_service/if:BookmarkService-metadata-sys",

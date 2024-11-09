@@ -5,9 +5,9 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
-  $ ENABLED_DERIVED_DATA='["git_trees", "filenodes", "hgchangesets"]' setup_common_config
   $ GIT_REPO="${TESTTMP}/repo-git"
   $ HG_REPO="${TESTTMP}/repo"
+  $ setup_common_config blob_files
 
 # Setup git repository
   $ mkdir "$GIT_REPO"
@@ -68,7 +68,7 @@
 
 # Now rederive HG_SET_COMMITTER_EXTRA=true. This changes hg hash, so we need to run with --rederive and make sure
 # hg hash was overwritten.
-  $ HG_SET_COMMITTER_EXTRA=true ENABLED_DERIVED_DATA='["git_trees", "filenodes", "hgchangesets"]' setup_common_config
+  $ HG_SET_COMMITTER_EXTRA=true setup_common_config blob_files
 
 # If we call derive without the rederive flag, we have the same hg hash as before
   $ mononoke_newadmin derived-data -R repo derive -T hgchangesets -i 1213979c6023f23e70dbe8845d773078ac1e0506bc2ab98382a329da0cb379a7

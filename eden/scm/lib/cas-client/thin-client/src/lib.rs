@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use std::sync::Arc;
@@ -31,6 +31,8 @@ pub struct ThinCasClient {
     fetch_concurrency: usize,
     use_streaming_dowloads: bool,
 }
+
+const DEFAULT_SCM_CAS_LOGS_DIR: &str = "scm_cas";
 
 pub fn init() {
     fn construct(config: &dyn Config) -> Result<Option<Arc<dyn CasClient>>> {
@@ -71,12 +73,20 @@ impl ThinCasClient {
             if let Some(ref log_dir_path) = log_dir {
                 if !std::path::Path::new(log_dir_path).exists() {
                     if let Err(err) = std::fs::create_dir(log_dir_path) {
-                        tracing::warn!(target: "cas", "failed to create log dir: {}", err);
-                        log_dir = Some(std::env::temp_dir().to_string_lossy().to_string());
+                        tracing::warn!(target: "cas", "failed to create log dir with path {}: {}", log_dir_path, err);
+                        log_dir = None;
                     }
                 }
             } else {
-                log_dir = Some(std::env::temp_dir().to_string_lossy().to_string());
+                let temp_dir = std::env::temp_dir();
+                let log_dir_path = temp_dir.join(DEFAULT_SCM_CAS_LOGS_DIR);
+                log_dir = Some(log_dir_path.to_string_lossy().to_string());
+                if !std::path::Path::new(&log_dir_path).exists() {
+                    if let Err(err) = std::fs::create_dir(&log_dir_path) {
+                        tracing::warn!(target: "cas", "failed to create log dir with path {:?}: {}", log_dir_path, err);
+                        log_dir = None;
+                    }
+                }
             }
         }
 

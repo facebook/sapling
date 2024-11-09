@@ -10,17 +10,23 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.86"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
+content_manifest_derivation = { version = "0.1.0", path = "../../derived_data/content_manifest_derivation" }
 context = { version = "0.1.0", path = "../../server/context" }
+either = "1.5"
+filestore = { version = "0.1.0", path = "../../filestore" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 git2 = "0.14"
+justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+manifest = { version = "0.1.0", path = "../../manifest" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
+repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 sha2 = "0.10.6"
 sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
-tokio-stream = { version = "0.1.14", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
+tokio-stream = { version = "0.1.16", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
 
 [dev-dependencies]
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }

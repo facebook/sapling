@@ -69,6 +69,7 @@ rand = { version = "0.8", features = ["small_rng"] }
 regex = "1.9.2"
 repo_blobstore = { version = "0.1.0", path = "blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "repo_attributes/repo_derived_data" }
+repo_identity = { version = "0.1.0", path = "repo_attributes/repo_identity" }
 retry = { version = "0.1.0", path = "common/retry" }
 scuba_ext = { version = "0.1.0", path = "common/scuba_ext" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
@@ -84,11 +85,13 @@ mononoke_macros = { version = "0.1.0", path = "mononoke_macros" }
 [patch.crates-io]
 abomonation = { git = "https://github.com/markbt/abomonation", rev = "0f43346d2afa2aedc64d61f3f4273e8d1e454642" }
 base64urlsafedata = { git = "https://github.com/kanidm/webauthn-rs.git", rev = "d278c56adfa39a0723c79bdcd461644194bc5138" }
-cbindgen = { git = "https://github.com/jsgf/cbindgen.git", rev = "e522aa9c35a9235f9e8ef03b1c54e41ee4cfafbd" }
+cbindgen = { git = "https://github.com/mozilla/cbindgen.git", rev = "89a9faa97cc267e90fc95a1cc6177a001aed5b51" }
 cxx = { package = "cxx", git = "https://github.com/facebookexperimental/cxx.git", rev = "2ea39c564284a70fdc1793fd72c442433e5a2638" }
 cxx-build = { package = "cxx-build", git = "https://github.com/facebookexperimental/cxx.git", rev = "2ea39c564284a70fdc1793fd72c442433e5a2638" }
 displaydoc = { git = "https://github.com/yaahc/displaydoc", rev = "7dc6e324b1788a6b7fb9f3a1953c512923a3e9f0" }
 graphql-parser = { git = "https://github.com/graphql-rust//graphql-parser", rev = "8d76425d83c40670570cc325f57c730262f07456" }
+imgui = { git = "https://github.com/imgui-rs/imgui-rs.git", rev = "2abba18c08fb5e70c699ba7992342e7ff8573b09" }
+imgui-sys = { git = "https://github.com/imgui-rs/imgui-rs.git", rev = "2abba18c08fb5e70c699ba7992342e7ff8573b09" }
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "fdbf843d174c6796d736b2b61dab0297670390f8" }
 perf-event = { version = "0.4", git = "https://github.com/krallin/perf-event.git", rev = "86224a9bc025d5d19f719542f27c8c629a08b167" }
 perf-event-open-sys = { version = "4.0", git = "https://github.com/krallin/perf-event.git", rev = "86224a9bc025d5d19f719542f27c8c629a08b167" }
@@ -283,6 +286,7 @@ members = [
   "derived_data/case_conflict_skeleton_manifest",
   "derived_data/changeset_info",
   "derived_data/constants",
+  "derived_data/content_manifest_derivation",
   "derived_data/deleted_manifest",
   "derived_data/fastlog",
   "derived_data/filenodes_derivation",

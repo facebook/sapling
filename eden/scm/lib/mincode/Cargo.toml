@@ -3,9 +3,11 @@
 [package]
 name = "mincode"
 version = "0.1.0"
-authors = ["David Tolnay <dtolnay@gmail.com>", "Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
+authors = ["David Tolnay <dtolnay@gmail.com>", "Meta Source Control Team <sourcecontrol-dev@meta.com>"]
 edition = "2021"
 description = "Minimal serialization format"
+homepage = "https://sapling-scm.com/"
+repository = "https://github.com/facebook/sapling"
 license = "MIT"
 include = ["Cargo.toml", "src/**/*.rs"]
 

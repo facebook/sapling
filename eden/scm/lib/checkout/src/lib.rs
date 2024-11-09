@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use std::collections::HashMap;
@@ -34,7 +34,6 @@ use fs_err as fs;
 use manifest::FileMetadata;
 use manifest::FileType;
 use manifest::Manifest;
-use manifest_tree::Diff;
 use manifest_tree::TreeManifest;
 use minibytes::Bytes;
 use parking_lot::Mutex;
@@ -1333,7 +1332,7 @@ pub fn filesystem_checkout(
         repo.config(),
         &current_mf,
         &target_mf,
-        &sparse_matcher,
+        sparse_matcher,
         sparse_change,
         progress_path.clone(),
     )?;
@@ -1579,11 +1578,11 @@ fn create_plan(
     config: &dyn Config,
     current_mf: &TreeManifest,
     target_mf: &TreeManifest,
-    matcher: &dyn Matcher,
+    matcher: DynMatcher,
     sparse_change: Option<(DynMatcher, DynMatcher)>,
     progress_path: Option<PathBuf>,
 ) -> Result<CheckoutPlan> {
-    let diff = Diff::new(current_mf, target_mf, &matcher)?;
+    let diff = current_mf.diff(target_mf, matcher)?;
     let mut actions = ActionMap::from_diff(diff)?;
 
     if let Some((old_sparse, new_sparse)) = sparse_change {
@@ -1717,7 +1716,6 @@ mod test {
     use fs_err as fs;
     use manifest_tree::testutil::make_tree_manifest_from_meta;
     use manifest_tree::testutil::TestStore;
-    use manifest_tree::Diff;
     use pathmatcher::AlwaysMatcher;
     use quickcheck::Arbitrary;
     use quickcheck::Gen;
@@ -1863,7 +1861,7 @@ mod test {
         let matcher = AlwaysMatcher::new();
         let left_tree = make_tree_manifest_from_meta(store.clone(), from.iter().cloned());
         let right_tree = make_tree_manifest_from_meta(store, to.iter().cloned());
-        let diff = Diff::new(&left_tree, &right_tree, &matcher).unwrap();
+        let diff = left_tree.diff(&right_tree, matcher).unwrap();
         let vfs = VFS::new(working_path.clone())?;
         let checkout = Checkout::default_config(vfs);
         let plan = checkout

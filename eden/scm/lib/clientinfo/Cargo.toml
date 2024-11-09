@@ -3,7 +3,11 @@
 [package]
 name = "clientinfo"
 version = "0.1.0"
+authors = ["Meta Source Control Team <sourcecontrol-dev@meta.com>"]
 edition = "2021"
+homepage = "https://sapling-scm.com/"
+repository = "https://github.com/facebook/sapling"
+license = "MIT"
 
 [dependencies]
 anyhow = "1.0.86"
@@ -11,5 +15,5 @@ hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 lazy_static = "1.4"
 rand = { version = "0.8", features = ["small_rng"] }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
-serde_json = { version = "1.0.125", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_depth"] }
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }

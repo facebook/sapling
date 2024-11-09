@@ -5,6 +5,16 @@ oncall("sapling")
 rust_library(
     name = "cmdclone",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "cmdclone"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "GPL-2.0-only",
+            "name": "cmdclone",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -21,7 +31,6 @@ rust_library(
         "//eden/scm/lib/eagerepo:eagerepo",
         "//eden/scm/lib/exchange:exchange",
         "//eden/scm/lib/identity:identity",
-        "//eden/scm/lib/metalog:metalog",
         "//eden/scm/lib/migration:migration",
         "//eden/scm/lib/repo:repo",
         "//eden/scm/lib/repo/url:repourl",

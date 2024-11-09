@@ -129,14 +129,37 @@ these predicates use '\0' as a separator:
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ commit -Aqm9
 
+  $ hg log -G -T '{node|short} rev={rev} desc={desc|firstline}\n'
+  @  6d98e1a86580 rev=8 desc=9
+  │
+  │ o  c42d3b18b7b1 rev=7 desc=7
+  │ │
+  │ o  b1166c9cdb4b rev=6 desc=6 issue619
+  ╭─┤
+  │ o  cbd103c35a18 rev=5 desc=5 bug
+  │ │
+  o │  f97e7d943478 rev=4 desc=4
+  │ │
+  │ o  8c386d836a07 rev=3 desc=3
+  │ │
+  o │  ca0049c702f1 rev=2 desc=2
+  ├─╯
+  o  925d80f479bb rev=1 desc=1
+  │
+  o  f7b1eb17ad24 rev=0 desc=0
+
   $ hg book -fr 6 1.0
   $ echo "e0cc66ef77e8b6f711815af4e001a6594fde3ba5 1.0" >> .hgtags
   $ hg add .hgtags
   $ hg commit -Aqm "add 1.0 tag"
   $ hg bookmark -r6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-  $ hg clone --quiet -U -r 7 . ../remote1
-  $ hg clone --quiet -U -r 8 . ../remote2
+  $ hg clone --quiet -U . ../remote1
+Strip 8 leaving 7 as only head
+  $ hg -R ../remote1 debugstrip -r 8
+  $ hg clone --quiet -U . ../remote2
+Strip 3 leaving 8 as only head
+  $ hg -R ../remote2 debugstrip -r 3
   $ echo "[paths]" >> .hg/hgrc
   $ echo "default = ../remote1" >> .hg/hgrc
 

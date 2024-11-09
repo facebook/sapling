@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use std::borrow::Borrow;
@@ -30,6 +30,7 @@ use crate::link::Ephemeral;
 use crate::link::Leaf;
 use crate::link::Link;
 use crate::store::InnerStore;
+use crate::THREAD_POOL;
 
 pub fn bfs_iter<M: 'static + Matcher + Sync + Send>(
     store: InnerStore,
@@ -52,22 +53,25 @@ pub fn bfs_iter<M: 'static + Matcher + Sync + Send>(
         matcher: Arc::new(matcher),
     };
 
-    // Kick off the search at the root.
-    for root in roots {
-        worker
-            .publish_work(vec![(RepoPathBuf::new(), root.borrow().thread_copy())])
-            .unwrap();
-    }
+    // Kick off the search at the roots.
+    worker
+        .publish_work(
+            roots
+                .iter()
+                .map(|root| (RepoPathBuf::new(), root.borrow().thread_copy()))
+                .collect(),
+        )
+        .unwrap();
 
-    const NUM_BFS_WORKERS: usize = 10;
+    let thread_count = THREAD_POOL.max_count();
 
-    for _ in 0..NUM_BFS_WORKERS {
+    for _ in 0..thread_count {
         let worker = worker.clone();
-        std::thread::spawn(move || {
+        THREAD_POOL.execute(move || {
             // If the worker returns an error, that signals we should shutdown
             // the whole operation.
             if worker.run().is_err() {
-                worker.broadcast_shutdown(NUM_BFS_WORKERS);
+                worker.broadcast_shutdown(thread_count);
             }
         });
     }
@@ -554,11 +558,8 @@ mod tests {
 
         let fetches = store.fetches();
 
-        assert!(fetches.contains(&vec![get_tree_key(&tree1, "")]));
-        assert!(fetches.contains(&vec![get_tree_key(&tree1, "a")]));
-
-        assert!(fetches.contains(&vec![get_tree_key(&tree2, "")]));
-        assert!(fetches.contains(&vec![get_tree_key(&tree2, "c")]));
+        assert!(fetches.contains(&vec![get_tree_key(&tree1, ""), get_tree_key(&tree2, "")]));
+        assert!(fetches.contains(&vec![get_tree_key(&tree1, "a"), get_tree_key(&tree2, "c")]));
     }
 
     fn dirs<M: 'static + Matcher + Sync + Send>(tree: &TreeManifest, matcher: M) -> Vec<String> {

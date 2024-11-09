@@ -12,10 +12,12 @@ anyhow = "1.0.86"
 changesets_creation = { version = "0.1.0", path = "../../changesets/changesets_creation" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 commit_transformation = { version = "0.1.0", path = "../../megarepo_api/commit_transformation" }
+content_manifest_derivation = { version = "0.1.0", path = "../../derived_data/content_manifest_derivation" }
 context = { version = "0.1.0", path = "../../server/context" }
 filestore = { version = "0.1.0", path = "../../filestore" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
+justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 manifest = { version = "0.1.0", path = "../../manifest" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 regex = "1.9.2"

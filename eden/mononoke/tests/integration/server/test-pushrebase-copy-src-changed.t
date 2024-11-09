@@ -22,7 +22,7 @@ setup common configuration
 setup repo
   $ hginit_treemanifest repo
   $ cd repo
-  $ hg debugdrawdag <<EOF
+  $ drawdag <<EOF
   > C
   > |
   > B
@@ -34,6 +34,7 @@ Clone the repo
   $ cd ..
   $ hg clone -q mono:repo repo2 --noupdate
   $ cd repo2
+  $ hg go -q $C
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =

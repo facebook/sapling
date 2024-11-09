@@ -7,7 +7,7 @@
 
 use faster_hex::hex_string;
 use scuba_ext::MononokeScubaSampleBuilder;
-use source_control::AsyncPingResult;
+use source_control::AsyncPingResponse;
 use source_control::{self as thrift};
 
 /// A trait for logging a thrift `Response` struct to scuba.
@@ -135,11 +135,26 @@ impl AddScubaResponse for thrift::CommitSparseProfileSizeResponse {}
 
 impl AddScubaResponse for thrift::CommitSparseProfileSizeToken {
     fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
-        scuba.add("response_token", self.id);
+        scuba.add("token", self.id.to_string());
     }
 }
 
-impl AddScubaResponse for thrift::CommitSparseProfileSizePollResponse {}
+impl AddScubaResponse for thrift::CommitSparseProfileSizePollResponse {
+    fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        match &self {
+            thrift::CommitSparseProfileSizePollResponse::poll_pending(_) => {
+                scuba.add("response_ready", false);
+            }
+            thrift::CommitSparseProfileSizePollResponse::response(response) => {
+                scuba.add("response_ready", true);
+                <thrift::CommitSparseProfileSizeResponse as AddScubaResponse>::add_scuba_response(
+                    response, scuba,
+                );
+            }
+            thrift::CommitSparseProfileSizePollResponse::UnknownField(_) => {}
+        }
+    }
+}
 
 impl AddScubaResponse for thrift::FileChunk {}
 
@@ -268,22 +283,27 @@ impl AddScubaResponse for thrift::RepoStackGitBundleStoreResponse {
 
 impl AddScubaResponse for thrift::AsyncPingToken {
     fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
-        scuba.add("token", self.id);
+        scuba.add("token", self.id.to_string());
     }
 }
 
 impl AddScubaResponse for thrift::AsyncPingPollResponse {
     fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
-        match &self.result {
-            None => {
-                scuba.add("poll_ready", false);
+        match &self {
+            thrift::AsyncPingPollResponse::poll_pending(_) => {
+                scuba.add("response_ready", false);
             }
-            Some(resp) => {
-                scuba.add("poll_ready", true);
-                <AsyncPingResult as AddScubaResponse>::add_scuba_response(resp, scuba);
+            thrift::AsyncPingPollResponse::response(response) => {
+                scuba.add("response_ready", true);
+                <AsyncPingResponse as AddScubaResponse>::add_scuba_response(response, scuba);
             }
+            thrift::AsyncPingPollResponse::UnknownField(_) => {}
         }
     }
 }
 
-impl AddScubaResponse for thrift::AsyncPingResult {}
+impl AddScubaResponse for thrift::AsyncPingResponse {
+    fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("response_payload", self.payload.clone());
+    }
+}

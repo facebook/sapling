@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 //! See https://repo.mercurial-scm.org/hg/rev/10519e4cbd02 for the "hg file metadata" format.
@@ -13,10 +13,10 @@ use std::str::FromStr;
 use anyhow::bail;
 use anyhow::Result;
 use minibytes::Bytes;
-use storemodel::SerializationFormat;
 use types::HgId;
 use types::Key;
 use types::RepoPath;
+use types::SerializationFormat;
 
 /// Mercurial may embed the copy-from information into the blob itself, in which case, the `Delta`
 /// would look like:
@@ -71,6 +71,16 @@ pub fn parse_copy_from_hg_file_metadata(data: &[u8]) -> Result<Option<Key>> {
 
         (None, None) => Ok(None),
         (Some(path), Some(hgid)) => Ok(Some(Key::new(path, hgid))),
+    }
+}
+
+pub fn split_file_metadata(data: &Bytes, format: SerializationFormat) -> (Bytes, Option<Bytes>) {
+    match format {
+        SerializationFormat::Hg => {
+            let (content, header) = split_hg_file_metadata(data);
+            (content, Some(header))
+        }
+        SerializationFormat::Git => (data.clone(), None),
     }
 }
 

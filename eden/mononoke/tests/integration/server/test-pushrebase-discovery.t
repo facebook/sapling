@@ -104,15 +104,15 @@ not move a bookmark
   $ hg push -r . --to master_bookmark --pushvar BYPASS_REVIEW=true -q --config push.skip-cleanup-commits=true
   $ hg up -q master_bookmark
   $ log
-  @  to push [public;rev=5;a6205c464622] remote/master_bookmark
+  o  to push [draft;rev=281474976710656;812eca0823f9]
   │
-  o  to push2 [public;rev=4;854b7c3bdd1f]
-  │
-  │ o  to push [draft;rev=3;812eca0823f9]
+  │ @  to push [public;rev=4;a6205c464622] remote/master_bookmark
   │ │
-  o │  C [public;rev=2;26805aba1e60]
+  │ o  to push2 [public;rev=3;854b7c3bdd1f]
   │ │
-  o │  B [public;rev=1;112478962961]
+  │ o  C [public;rev=2;26805aba1e60]
+  │ │
+  │ o  B [public;rev=1;112478962961]
   ├─╯
   o  A [public;rev=0;426bada5c675]
   $
@@ -135,21 +135,21 @@ Now let's push commit cloud commit. Again, it should do pushrebase
   $ hg push -r . --to master_bookmark --pushvar BYPASS_REVIEW=true -q --config push.skip-cleanup-commits=true
   $ hg up -q master_bookmark
   $ log
-  @  commitcloud [public;rev=8;3308f3bd8048] remote/master_bookmark
+  o  commitcloud [draft;rev=281474976710657;17f29bea0858]
   │
-  o  to push3 [public;rev=7;c3f020572849]
-  │
-  │ o  commitcloud [draft;rev=6;17f29bea0858]
+  │ o  to push [draft;rev=281474976710656;812eca0823f9]
+  ├─╯
+  │ @  commitcloud [public;rev=6;3308f3bd8048] remote/master_bookmark
   │ │
-  o │  to push [public;rev=5;a6205c464622]
+  │ o  to push3 [public;rev=5;c3f020572849]
   │ │
-  o │  to push2 [public;rev=4;854b7c3bdd1f]
+  │ o  to push [public;rev=4;a6205c464622]
   │ │
-  │ │ o  to push [draft;rev=3;812eca0823f9]
-  │ ├─╯
-  o │  C [public;rev=2;26805aba1e60]
+  │ o  to push2 [public;rev=3;854b7c3bdd1f]
   │ │
-  o │  B [public;rev=1;112478962961]
+  │ o  C [public;rev=2;26805aba1e60]
+  │ │
+  │ o  B [public;rev=1;112478962961]
   ├─╯
   o  A [public;rev=0;426bada5c675]
   $

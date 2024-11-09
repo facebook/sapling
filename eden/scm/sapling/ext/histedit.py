@@ -1129,11 +1129,11 @@ def _validateargs(ui, repo, state, freeargs, opts, goal, rules, revs):
             raise error.Abort(_("no arguments allowed with --abort"))
     elif goal == "edit-plan":
         if any((revs, freeargs)):
-            raise error.Abort(_("only --commands argument allowed with " "--edit-plan"))
+            raise error.Abort(_("only --commands argument allowed with --edit-plan"))
     else:
         if os.path.exists(os.path.join(repo.path, "histedit-state")):
             raise error.Abort(
-                _("history edit already in progress, try " "--continue or --abort")
+                _("history edit already in progress, try --continue or --abort")
             )
         revs.extend(freeargs)
         if len(revs) == 0:
@@ -1345,7 +1345,7 @@ def _newhistedit(ui, repo, state, revs, freeargs, opts):
     rr = list(repo.set("roots(%ld)", scmutil.revrange(repo, revs)))
     if len(rr) != 1:
         raise error.Abort(
-            _("The specified revisions must have " "exactly one common root")
+            _("The specified revisions must have exactly one common root")
         )
     root = rr[0].node()
 
@@ -1425,7 +1425,7 @@ def between(repo, old, new, keep):
     if ctxs and not keep:
         if not (visibility.tracking(repo)) and repo.revs("(%ld::) - (%ld)", ctxs, ctxs):
             raise error.Abort(
-                _("can only histedit a changeset together " "with all its descendants")
+                _("can only histedit a changeset together with all its descendants")
             )
         if repo.revs("(%ld) and merge()", ctxs):
             raise error.Abort(_("cannot edit history that contains merges"))
@@ -1524,9 +1524,7 @@ def warnverifyactions(ui, repo, actions, state, ctxs):
         verifyactions(actions, state, ctxs)
     except error.ParseError:
         if repo.localvfs.exists("histedit-last-edit.txt"):
-            ui.warn(
-                _("warning: histedit rules saved " "to: .hg/histedit-last-edit.txt\n")
-            )
+            ui.warn(_("warning: histedit rules saved to: .hg/histedit-last-edit.txt\n"))
         raise
 
 

@@ -291,7 +291,7 @@ class KeepAliveHandler:
             # a DIFFERENT exception
             if DEBUG:
                 DEBUG.error(
-                    "unexpected exception - closing " "connection to %s (%d)",
+                    "unexpected exception - closing connection to %s (%d)",
                     host,
                     id(h),
                 )

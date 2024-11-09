@@ -120,7 +120,7 @@ def getdraftstack(headctx, limit=None):
     """
     ctx = headctx
     result = []
-    while ctx.phase() != phases.public and not ctx.obsolete():
+    while not ctx.ispublic() and not ctx.obsolete():
         if limit and len(result) >= limit:
             break
         if len(ctx.parents()) > 1:
@@ -898,7 +898,7 @@ def absorb(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
         stack = getdraftstack(repo["."], limit)
         if limit and len(stack) >= limit:
             ui.warn(
-                _("absorb: only the recent %d changesets will " "be analysed\n") % limit
+                _("absorb: only the recent %d changesets will be analysed\n") % limit
             )
     if not stack:
         raise error.Abort(_("no changeset to change"))
@@ -1089,7 +1089,7 @@ def _amendcmd(flag, orig, ui, repo, *pats, **opts):
                 reason = _("%s files were ignored") % word
             messages.append((symbol, word, path, reason))
     if messages:
-        ui.write(_("\n# changes not applied and left in " "working copy:\n"))
+        ui.write(_("\n# changes not applied and left in working copy:\n"))
         for symbol, word, path, reason in messages:
             ui.write(
                 _("# %s %s : %s\n")

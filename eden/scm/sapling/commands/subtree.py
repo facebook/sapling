@@ -27,7 +27,12 @@ from ..cmdutil import (
 )
 from ..i18n import _
 from ..utils import subtreeutil
-from ..utils.subtreeutil import gen_branch_info, get_branch_info, get_merge_info
+from ..utils.subtreeutil import (
+    BranchType,
+    gen_branch_info,
+    get_subtree_branches,
+    get_subtree_merges,
+)
 from .cmdtable import command
 
 
@@ -140,6 +145,7 @@ def subtree_merge(ui, repo, **opts):
     subtreeutil.validate_path_overlap(from_paths, to_paths)
     subtreeutil.validate_path_exist(ui, from_ctx, from_paths, abort_on_missing=True)
     subtreeutil.validate_path_exist(ui, ctx, to_paths, abort_on_missing=True)
+    subtreeutil.validate_source_commit(repo.ui, from_ctx, "merge")
 
     merge_base_ctx = _subtree_merge_base(
         repo, ctx, to_paths[0], from_ctx, from_paths[0]
@@ -224,21 +230,16 @@ def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path):
                 i = 0
 
         # check merge info
-        if merge_info := get_merge_info(repo, heads[i]):
-            for merge in merge_info["merges"]:
-                if merge["to_path"] == paths[i] and merge["from_path"] == paths[1 - i]:
-                    merge_base_ctx = repo[merge["from_commit"]]
-                    return registerdiffgrafts(merge_base_ctx, i)
+        for merge in get_subtree_merges(repo, heads[i]):
+            if merge.to_path == paths[i] and merge.from_path == paths[1 - i]:
+                merge_base_ctx = repo[merge.from_commit]
+                return registerdiffgrafts(merge_base_ctx, i)
 
         # check branch info
-        if branch_info := get_branch_info(repo, heads[i]):
-            for branch in branch_info["branches"]:
-                if (
-                    branch["to_path"] == paths[i]
-                    and branch["from_path"] == paths[1 - i]
-                ):
-                    merge_base_ctx = repo[branch["from_commit"]]
-                    return registerdiffgrafts(merge_base_ctx, i)
+        for branch in get_subtree_branches(repo, heads[i]):
+            if branch.to_path == paths[i] and branch.from_path == paths[1 - i]:
+                merge_base_ctx = repo[branch.from_commit]
+                return registerdiffgrafts(merge_base_ctx, i)
 
         try:
             # add next node to the list
@@ -268,6 +269,7 @@ def _docopy(ui, repo, *args, **opts):
     subtreeutil.validate_path_size(from_paths, to_paths, abort_on_empty=True)
     subtreeutil.validate_path_exist(ui, from_ctx, from_paths, abort_on_missing=True)
     subtreeutil.validate_path_overlap(from_paths, to_paths)
+    subtreeutil.validate_source_commit(ui, from_ctx, "copy")
 
     if ui.configbool("subtree", "copy-reuse-tree"):
         _do_cheap_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts)
@@ -281,7 +283,11 @@ def _do_cheap_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
     text = opts.get("message")
 
     extra = {}
-    extra.update(gen_branch_info(from_ctx.hex(), from_paths, to_paths))
+    extra.update(
+        gen_branch_info(
+            repo, from_ctx.hex(), from_paths, to_paths, BranchType.SHALLOW_COPY
+        )
+    )
 
     summaryfooter = _gen_copy_commit_msg(from_ctx, from_paths, to_paths)
     editform = cmdutil.mergeeditform(repo[None], "subtree.copy")
@@ -375,7 +381,11 @@ def _do_normal_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
     wctx.add(new_files)
 
     extra = {}
-    extra.update(gen_branch_info(from_ctx.hex(), from_paths, to_paths))
+    extra.update(
+        gen_branch_info(
+            repo, from_ctx.hex(), from_paths, to_paths, BranchType.DEEP_COPY
+        )
+    )
 
     summaryfooter = _gen_copy_commit_msg(from_ctx, from_paths, to_paths)
     editform = cmdutil.mergeeditform(repo[None], "subtree.copy")

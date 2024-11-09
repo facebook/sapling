@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use std::collections::BTreeMap;
@@ -173,7 +173,7 @@ struct FakeRemoteHistoryStore {
 }
 
 impl RemoteHistoryStore for FakeRemoteHistoryStore {
-    fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
+    fn prefetch(&self, keys: &[StoreKey], _length: Option<u32>) -> Result<()> {
         for k in keys {
             match k {
                 StoreKey::HgId(k) => self
@@ -189,7 +189,7 @@ impl RemoteHistoryStore for FakeRemoteHistoryStore {
 
 impl HgIdHistoryStore for FakeRemoteHistoryStore {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
-        match self.prefetch(&[StoreKey::hgid(key.clone())]) {
+        match self.prefetch(&[StoreKey::hgid(key.clone())], Some(1)) {
             Err(_) => Ok(None),
             Ok(()) => self.store.get_node_info(key),
         }

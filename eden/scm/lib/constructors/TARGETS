@@ -5,17 +5,23 @@ oncall("sapling")
 rust_library(
     name = "constructors",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "features": {
-                "default": ["git"],
-                "git": [
-                    "gitstore",
-                    "commits-git",
-                ],
-            },
+    autocargo = {"cargo_toml_config": {
+        "features": {
+            "default": ["git"],
+            "git": [
+                "gitstore",
+                "commits-git",
+            ],
         },
-    },
+        "lib": {"name": "constructors"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "constructors",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     crate_root = "src/lib.rs",
     features = ["git"],
     deps = [

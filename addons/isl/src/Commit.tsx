@@ -40,7 +40,7 @@ import {findPublicBaseAncestor} from './getCommitTree';
 import {t, T} from './i18n';
 import {IconStack} from './icons/IconStack';
 import {IrrelevantCwdIcon} from './icons/IrrelevantCwdIcon';
-import {atomFamilyWeak, readAtom, writeAtom} from './jotaiUtils';
+import {atomFamilyWeak, localStorageBackedAtom, readAtom, writeAtom} from './jotaiUtils';
 import {CONFLICT_SIDE_LABELS} from './mergeConflicts/state';
 import {getAmendToOperation, isAmendToAllowedForCommit} from './operationUtils';
 import {GotoOperation} from './operations/GotoOperation';
@@ -64,6 +64,7 @@ import {editingStackIntentionHashes} from './stackEdit/ui/stackEditState';
 import {latestSuccessorUnlessExplicitlyObsolete} from './successionUtils';
 import {copyAndShowToast} from './toast';
 import {succeedableRevset} from './types';
+import {showModal} from './useModal';
 import {short} from './utils';
 import * as stylex from '@stylexjs/stylex';
 import {Button} from 'isl-components/Button';
@@ -77,6 +78,11 @@ import {useContextMenu} from 'shared/ContextMenu';
 import {MS_PER_DAY} from 'shared/constants';
 import {useAutofocusRef} from 'shared/hooks';
 import {notEmpty, nullthrows} from 'shared/utils';
+
+export const rebaseOffWarmWarningEnabled = localStorageBackedAtom<boolean>(
+  'isl.rebase-off-warm-warning-enabled',
+  true,
+);
 
 /**
  * Some preview types should not allow actions on top of them
@@ -346,6 +352,10 @@ export const Commit = memo(
                   commit.remoteBookmarks.length > 0
                     ? succeedableRevset(commit.remoteBookmarks[0])
                     : latestSuccessorUnlessExplicitlyObsolete(commit);
+                const shouldRebaseOffWarm = await maybeWarnAboutRebaseOffWarm(commit);
+                if (!shouldRebaseOffWarm) {
+                  return;
+                }
                 const shouldContinue = await maybeWarnAboutOldDestination(commit);
                 if (!shouldContinue) {
                   return;
@@ -695,6 +705,48 @@ function maybeWarnAboutOldDestination(dest: CommitInfo): Promise<boolean> {
       },
     ),
   );
+}
+
+async function maybeWarnAboutRebaseOffWarm(dest: CommitInfo): Promise<boolean> {
+  const isRebaseOffWarmWarningEnabled = readAtom(rebaseOffWarmWarningEnabled);
+  if (!isRebaseOffWarmWarningEnabled) {
+    return true;
+  }
+
+  if (dest.stableCommitMetadata == null) {
+    return true;
+  }
+  // iterate through stable commit metadata and see if this commit is warmed up commit
+  const dag = readAtom(dagWithPreviews);
+  const src = findPublicBaseAncestor(dag);
+
+  const destBase = findPublicBaseAncestor(dag, dest.hash);
+
+  const warning = Promise.resolve(
+    src ? Internal.maybeWarnAboutRebaseOffWarm?.(src, destBase) : src,
+  );
+  if (await warning) {
+    tracker.track('WarnAboutRebaseOffWarm');
+    const buttons = [t('Opt Out of Future Warnings'), t('Cancel'), t('Rebase Anyway')];
+    const answer = await showModal({
+      type: 'confirm',
+      buttons,
+      title: <T>Rebase off Warm Commit</T>,
+      message: t(
+        Internal.warnAboutRebaseOffWarmReason ??
+          "The commit you're on is a warmed up commit. Rebasing off will cause slower builds and performance.\n" +
+            "If you need fresher changes, it's recommended to reserve a new OD and work off the warm commit.\n" +
+            'Do you want to `goto` anyway?',
+      ),
+    });
+    if (answer === buttons[0]) {
+      writeAtom(rebaseOffWarmWarningEnabled, false);
+      return true;
+    }
+    return answer === buttons[2];
+  }
+
+  return true;
 }
 
 const ObsoleteTip = React.memo(ObsoleteTipInner);

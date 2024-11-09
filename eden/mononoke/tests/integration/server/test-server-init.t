@@ -187,14 +187,9 @@ to create a fileblob bookmark
 #  $ hg bookmarks
 #     test-bookmark             0:3903775176ed
 
-Do a streaming clone of the repo
-  $ hg clone --stream mono:repo repo-streamclone
-  streaming all changes
-  2 files to transfer, * bytes of data (glob)
-  transferred * bytes in * seconds (* bytes/sec) (glob)
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
+Do a clone of the repo
+  $ hg clone mono:repo repo-streamclone
+  fetching lazy changelog
+  populating main commit graph
   updating to tip
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved

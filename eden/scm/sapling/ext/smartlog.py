@@ -173,7 +173,7 @@ def getdag(ui, repo, revs, masterstring, template):
             prev = None
             for i in range(1, len(results)):
                 pctx = results[i][2]
-                if pctx.phase() == phases.public:
+                if pctx.ispublic():
                     prev = results[i][0]
                     break
             if prev:

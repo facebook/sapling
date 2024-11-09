@@ -12,7 +12,6 @@ from .bookmarks import readremotenames, saveremotenames
 from .i18n import _, _n, _x
 from .node import bin, hex, nullhex, short
 
-
 MUTATION_KEYS = {"mutpred", "mutuser", "mutdate", "mutop", "mutsplit"}
 
 CFG_SECTION = "push"
@@ -48,7 +47,14 @@ def get_edenapi_for_dest(repo, _dest):
 
 
 def push(
-    repo, dest, head_node, remote_bookmark, force=False, opargs=None, edenapi=None
+    repo,
+    dest,
+    head_node,
+    remote_bookmark,
+    force=False,
+    opargs=None,
+    edenapi=None,
+    force_plain=False,
 ):
     """Push via EdenApi (HTTP)"""
     ui = repo.ui
@@ -84,7 +90,7 @@ def push(
                 % remote_bookmark
             )
 
-    if is_plain_push(repo, head_node, force):
+    if force_plain or is_plain_push(repo, head_node, force):
         plain_push(
             repo, edenapi, remote_bookmark, head_node, curr_bookmark_val, force, opargs
         )
@@ -94,7 +100,7 @@ def push(
 
 
 def is_plain_push(repo, head_node, force):
-    return force or repo[head_node].phase() == phases.public
+    return force or repo[head_node].ispublic()
 
 
 def maybe_log_debug_info(repo, head_node, draft_nodes):

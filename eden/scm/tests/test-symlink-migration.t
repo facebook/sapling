@@ -27,7 +27,7 @@ Create a repo to be cloned
 Clone the repo with symlinks disabled and verify that files are regular
 TODO(sggutier): figure out why shallow is necessary here (replacing test with eager renders the same results)
   $ cd
-  $ hg clone --enable-profile all.sparse test:e1 cloned --config experimental.windows-symlinks=False --shallow -q
+  $ hg clone --enable-profile all.sparse test:e1 cloned --config experimental.windows-symlinks=False -q
   $ cd cloned
   $ hg st
   $ hg go master -q

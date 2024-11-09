@@ -106,8 +106,7 @@ def parsebundlespec(repo, spec, strict=True, externalnames=False):
         for p in paramstr.split(";"):
             if "=" not in p:
                 raise error.InvalidBundleSpecification(
-                    _("invalid bundle specification: " 'missing "=" in parameter: %s')
-                    % p
+                    _('invalid bundle specification: missing "=" in parameter: %s') % p
                 )
 
             key, value = p.split("=", 1)
@@ -119,7 +118,7 @@ def parsebundlespec(repo, spec, strict=True, externalnames=False):
 
     if strict and "-" not in spec:
         raise error.InvalidBundleSpecification(
-            _("invalid bundle specification; " "must be prefixed with compression: %s")
+            _("invalid bundle specification; must be prefixed with compression: %s")
             % spec
         )
 
@@ -252,13 +251,13 @@ def getbundlespec(ui, fh):
                     version = "v2"
                 else:
                     raise error.Abort(
-                        _("changegroup version %s does not have " "a known bundlespec")
+                        _("changegroup version %s does not have a known bundlespec")
                         % version,
-                        hint=_("try upgrading your @Product@ " "client"),
+                        hint=_("try upgrading your @Product@ client"),
                     )
 
         if not version:
-            raise error.Abort(_("could not identify changegroup version in " "bundle"))
+            raise error.Abort(_("could not identify changegroup version in bundle"))
 
         return "%s-%s" % (comp, version)
     elif isinstance(b, streamclone.streamcloneapplier):
@@ -467,9 +466,9 @@ def push(repo, remote, force=False, revs=None, bookmarks=(), opargs=None):
     if pushop.remote.local():
         missing = set(pushop.repo.requirements) - pushop.remote.local().supported
         if missing:
-            msg = _(
-                "required features are not" " supported in the destination:" " %s"
-            ) % (", ".join(sorted(missing)))
+            msg = _("required features are not supported in the destination: %s") % (
+                ", ".join(sorted(missing))
+            )
             raise error.Abort(msg)
 
     if not pushop.remote.canpush():
@@ -765,7 +764,7 @@ def _pushdiscoverybookmarks(pushop):
         explicit = sorted(explicit)
         # we should probably list all of them
         ui.warn(
-            _("bookmark %s does not exist on the local " "or remote repository!\n")
+            _("bookmark %s does not exist on the local or remote repository!\n")
             % explicit[0]
         )
         pushop.bkresult = 2
@@ -1246,7 +1245,7 @@ def _localphasemove(pushop, nodes, phase=phases.public):
         phasestr = phases.phasenames[phase]
         if actualmoves:
             pushop.ui.status(
-                _("cannot lock source repo, skipping " "local %s phase update\n")
+                _("cannot lock source repo, skipping local %s phase update\n")
                 % phasestr
             )
 
@@ -1311,10 +1310,8 @@ class pulloperation:
         force=False,
         bookmarks=(),
         remotebookmarks=None,
-        streamclonerequested=None,
         exactbyteclone=False,
         extras=None,
-        newpull=False,
     ):
         # repo we pull into
         self.repo = repo
@@ -1328,8 +1325,6 @@ class pulloperation:
         ]
         # do we force pull?
         self.force = force
-        # whether a streaming clone was requested
-        self.streamclonerequested = streamclonerequested
         # transaction manager
         self.trmanager = None
         # set of common changeset between local and remote before pull
@@ -1351,9 +1346,6 @@ class pulloperation:
         self.exactbyteclone = exactbyteclone
         # extra information
         self.extras = extras or {}
-
-        # Did we come from repo.pull()
-        self.newpull = newpull
 
     @util.propertycache
     def pulledsubset(self):
@@ -1427,7 +1419,6 @@ def pull(
     force=False,
     bookmarks=(),
     opargs=None,
-    streamclonerequested=None,
 ):
     """Fetch repository data from a remote.
 
@@ -1441,11 +1432,6 @@ def pull(
     default, all remote bookmarks are pulled.
     ``opargs`` are additional keyword arguments to pass to ``pulloperation``
     initialization.
-    ``streamclonerequested`` is a boolean indicating whether a "streaming
-    clone" is requested. A "streaming clone" is essentially a raw file copy
-    of revlogs from the server. This only works when the local repository is
-    empty. The default value of ``None`` means to respect the server
-    configuration for preferring stream clones.
 
     Returns the ``pulloperation`` created for this pull.
     """
@@ -1457,7 +1443,6 @@ def pull(
         heads,
         force,
         bookmarks=bookmarks,
-        streamclonerequested=streamclonerequested,
         **opargs,
     )
 
@@ -1465,9 +1450,9 @@ def pull(
     if peerlocal:
         missing = set(peerlocal.requirements) - pullop.repo.supported
         if missing:
-            msg = _(
-                "required features are not" " supported in the destination:" " %s"
-            ) % (", ".join(sorted(missing)))
+            msg = _("required features are not supported in the destination: %s") % (
+                ", ".join(sorted(missing))
+            )
             raise error.Abort(msg)
 
     wlock = lock = None
@@ -1490,7 +1475,9 @@ def pull(
             _pullchangeset(pullop)
             if pullop.extras.get("phases", True):
                 _pullphase(pullop)
-            if pullop.extras.get("bookmarks", True):
+            if pullop.remotebookmarks is not None and pullop.extras.get(
+                "bookmarks", True
+            ):
                 _pullbookmarks(pullop)
         pullop.trmanager.close()
     finally:
@@ -1509,7 +1496,7 @@ pulldiscoverymapping = {}
 
 
 def _httpcommitgraphenabled(pullop):
-    return pullop.repo.nullableedenapi and pullop.newpull
+    return pullop.repo.nullableedenapi
 
 
 def pulldiscovery(stepname):
@@ -2160,7 +2147,7 @@ def check_heads(repo, their_heads, context):
         # someone else committed/pushed/unbundled while we
         # were transferring data
         raise error.PushRaced(
-            "repository changed while %s - " "please try again" % context
+            "repository changed while %s - please try again" % context
         )
 
 
@@ -2290,7 +2277,8 @@ def _maybeapplyclonebundle(pullop):
         return
 
     entries = filterclonebundleentries(
-        repo, entries, streamclonerequested=pullop.streamclonerequested
+        repo,
+        entries,
     )
 
     if not entries:
@@ -2305,7 +2293,7 @@ def _maybeapplyclonebundle(pullop):
                 "falling back to regular clone\n"
             )
         )
-        repo.ui.warn(_("(you may want to report this to the server " "operator)\n"))
+        repo.ui.warn(_("(you may want to report this to the server operator)\n"))
         return
 
     entries = sortclonebundleentries(repo.ui, entries)
@@ -2371,7 +2359,7 @@ def parseclonebundlesmanifest(repo, s):
     return m
 
 
-def filterclonebundleentries(repo, entries, streamclonerequested=False):
+def filterclonebundleentries(repo, entries):
     """Remove incompatible clone bundle manifest entries.
 
     Accepts a list of entries parsed with ``parseclonebundlesmanifest``
@@ -2387,15 +2375,6 @@ def filterclonebundleentries(repo, entries, streamclonerequested=False):
         if spec:
             try:
                 comp, version, params = parsebundlespec(repo, spec, strict=True)
-
-                # If a stream clone was requested, filter out non-streamclone
-                # entries.
-                if streamclonerequested and (comp != "UN" or version != "s1"):
-                    repo.ui.debug(
-                        "filtering %s because not a stream clone\n" % entry["URL"]
-                    )
-                    continue
-
             except error.InvalidBundleSpecification as e:
                 repo.ui.debug(str(e) + "\n")
                 continue
@@ -2405,14 +2384,6 @@ def filterclonebundleentries(repo, entries, streamclonerequested=False):
                     "spec: %s\n" % (entry["URL"], str(e))
                 )
                 continue
-        # If we don't have a spec and requested a stream clone, we don't know
-        # what the entry is so don't attempt to apply it.
-        elif streamclonerequested:
-            repo.ui.debug(
-                "filtering %s because cannot determine if a stream "
-                "clone bundle\n" % entry["URL"]
-            )
-            continue
 
         if "REQUIRESNI" in entry and not sslutil.hassni:
             repo.ui.debug("filtering %s because SNI not supported\n" % entry["URL"])

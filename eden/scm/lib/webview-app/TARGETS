@@ -5,6 +5,16 @@ oncall("sapling")
 rust_library(
     name = "webview-app",
     srcs = glob(["src/*"]),
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "webview-app"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "webview-app",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     crate_root = "src/lib.rs",
     os_deps = [
         (

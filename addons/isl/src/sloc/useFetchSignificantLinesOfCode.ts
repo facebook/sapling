@@ -172,7 +172,7 @@ const fetchPendingAmendSloc = async (
 };
 
 let pendingAmendRequestId = 0;
-const pendingAmendSlocAtom = atom(async get => {
+const pendingAmendSlocAtom = atom(get => {
   const selectedFiles = get(selectedFilesAtom);
   return fetchPendingAmendSloc(get, selectedFiles, pendingAmendRequestId++);
 });
@@ -236,7 +236,7 @@ const fetchPendingSloc = async (
 
 let pendingRequestId = 0;
 
-const pendingChangesSlocAtom = atom(async get => {
+const pendingChangesSlocAtom = atom(get => {
   const selectedFiles = get(selectedFilesAtom);
   return fetchPendingSloc(get, selectedFiles, pendingRequestId++);
 });

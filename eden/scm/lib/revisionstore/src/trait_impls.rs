@@ -1,20 +1,18 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 //! Implement traits defined by other crates.
 
 use std::sync::Arc;
 
-use anyhow::format_err;
 use anyhow::Result;
 use edenapi_types::FileAuxData;
 use format_util::git_sha1_digest;
 use format_util::hg_sha1_digest;
-use format_util::strip_file_metadata;
 use minibytes::Bytes;
 use storemodel::BoxIterator;
 use storemodel::InsertOpts;
@@ -30,89 +28,10 @@ use types::RepoPath;
 
 use crate::scmstore::FileAttributes;
 use crate::scmstore::FileStore;
-use crate::RemoteDataStore;
-use crate::StoreKey;
-use crate::StoreResult;
 
 // Wrapper types to workaround Rust's orphan rule.
 #[derive(Clone)]
 pub struct ArcFileStore(pub Arc<FileStore>);
-
-pub struct ArcRemoteDataStore<T: ?Sized>(pub Arc<T>);
-
-impl<T> storemodel::KeyStore for ArcRemoteDataStore<T>
-where
-    T: RemoteDataStore + 'static + ?Sized,
-{
-    fn get_content_iter(
-        &self,
-        keys: Vec<Key>,
-        _fetch_mode: FetchMode,
-    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Bytes)>>> {
-        let store = Arc::clone(&self.0);
-        let format = self.format();
-        for chunk in keys.chunks(PREFETCH_CHUNK_SIZE) {
-            let store_keys = chunk
-                .iter()
-                .map(|k| StoreKey::HgId(k.clone()))
-                .collect::<Vec<_>>();
-            store.prefetch(&store_keys)?;
-        }
-        let iter = keys.into_iter().map(move |key| {
-            let store_result = store.get(StoreKey::HgId(key.clone()));
-            match store_result {
-                Err(err) => Err(err),
-                Ok(StoreResult::Found(data)) => {
-                    strip_file_metadata(&data.into(), format).map(|(d, _)| (key, d))
-                }
-                Ok(StoreResult::NotFound(k)) => Err(format_err!("{:?} not found in store", k)),
-            }
-        });
-        Ok(Box::new(iter))
-    }
-
-    fn clone_key_store(&self) -> Box<dyn KeyStore> {
-        Box::new(Self(self.0.clone()))
-    }
-}
-
-impl<T> storemodel::FileStore for ArcRemoteDataStore<T>
-where
-    T: RemoteDataStore + 'static + ?Sized,
-{
-    fn get_rename_iter(
-        &self,
-        keys: Vec<Key>,
-    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Key)>>> {
-        let store = Arc::clone(&self.0);
-        let format = self.format();
-        for chunk in keys.chunks(PREFETCH_CHUNK_SIZE) {
-            let store_keys = chunk
-                .iter()
-                .map(|k| StoreKey::HgId(k.clone()))
-                .collect::<Vec<_>>();
-            store.prefetch(&store_keys)?;
-        }
-        let iter = keys.into_iter().filter_map(move |key| {
-            (|| {
-                let store_result = store.get(StoreKey::HgId(key.clone()))?;
-                match store_result {
-                    StoreResult::Found(data) => {
-                        let (_data, maybe_copy_from) = strip_file_metadata(&data.into(), format)?;
-                        Ok(maybe_copy_from.map(|copy_from| (key, copy_from)))
-                    }
-                    StoreResult::NotFound(k) => Err(format_err!("{:?} not found in store", k)),
-                }
-            })()
-            .transpose()
-        });
-        Ok(Box::new(iter))
-    }
-
-    fn clone_file_store(&self) -> Box<dyn storemodel::FileStore> {
-        Box::new(Self(self.0.clone()))
-    }
-}
 
 impl storemodel::KeyStore for ArcFileStore {
     fn get_content_iter(
@@ -124,7 +43,7 @@ impl storemodel::KeyStore for ArcFileStore {
         let iter = fetched
             .into_iter()
             .map(|result| -> anyhow::Result<(Key, Bytes)> {
-                let (key, mut store_file) = result?;
+                let (key, store_file) = result?;
                 let content = store_file.file_content()?;
                 Ok((key, content))
             });
@@ -177,14 +96,13 @@ impl storemodel::FileStore for ArcFileStore {
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Key)>>> {
         let fetched = self
             .0
-            .fetch(keys, FileAttributes::CONTENT, FetchMode::AllowRemote);
+            .fetch(keys, FileAttributes::CONTENT_HEADER, FetchMode::AllowRemote);
         let iter = fetched
             .into_iter()
             .filter_map(|result| -> Option<anyhow::Result<(Key, Key)>> {
                 (move || -> anyhow::Result<Option<(Key, Key)>> {
-                    let (key, mut store_file) = result?;
-                    let (_data, maybe_copy_from) = store_file.file_content_with_copy_info()?;
-                    Ok(maybe_copy_from.map(|copy_from| (key, copy_from)))
+                    let (key, store_file) = result?;
+                    Ok(store_file.copy_info()?.map(|copy_from| (key, copy_from)))
                 })()
                 .transpose()
             });
@@ -226,8 +144,6 @@ impl storemodel::FileStore for ArcFileStore {
         Box::new(self.clone())
     }
 }
-
-const PREFETCH_CHUNK_SIZE: usize = 1000;
 
 pub(crate) fn sha1_digest(opts: &InsertOpts, data: &[u8], format: SerializationFormat) -> Id20 {
     match format {

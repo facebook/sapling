@@ -223,9 +223,7 @@ def _parsejsonrules(rules, state):
                 rest = entry["node"]
             parsedrules += entry["action"] + " " + rest + "\n"
     except KeyError:
-        state.repo.ui.status(
-            _("invalid JSON format, falling back " "to normal parsing\n")
-        )
+        state.repo.ui.status(_("invalid JSON format, falling back to normal parsing\n"))
         return rules
 
     return parsedrules
@@ -377,7 +375,7 @@ def _rebase(orig, ui, repo, *pats, **opts):
     else:
         base = scmutil.revrange(repo, [basef or "."])
         if not base:
-            ui.status(_('empty "base" revision set - ' "can't compute rebase set\n"))
+            ui.status(_('empty "base" revision set - can\'t compute rebase set\n'))
             return 1
         commonanc = repo.revs("ancestor(%ld, %d)", base, dest).first()
         if commonanc is not None:

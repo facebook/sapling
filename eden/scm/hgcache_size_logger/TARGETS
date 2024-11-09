@@ -3,6 +3,7 @@ load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
 oncall("sapling")
 
 python_binary(
+    # @autodeps-skip
     name = "hgcache_size_logger",
     srcs = [
         "hgcache_size_logger.py",

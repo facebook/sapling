@@ -5,10 +5,8 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
-  $ ENABLED_DERIVED_DATA='["ccsm", "unodes", "git_commits", "git_trees", "git_delta_manifests_v2"]' setup_common_config
   $ GIT_REPO="${TESTTMP}/repo-git"
-  $ REPOTYPE="blob_files"
-  $ ENABLED_DERIVED_DATA='["ccsm", "unodes", "git_commits", "git_trees", "git_delta_manifests_v2"]' setup_common_config $REPOTYPE
+  $ setup_common_config blob_files
 
 # Setup git repository
   $ mkdir -p "$GIT_REPO"

@@ -683,7 +683,7 @@ class treemanifestctx:
     def new(self, dir=""):
         if dir != "":
             raise RuntimeError(
-                "native tree manifestlog doesn't support " "subdir creation: '%s'" % dir
+                "native tree manifestlog doesn't support subdir creation: '%s'" % dir
             )
         return _buildtree(self._manifestlog)
 
@@ -719,7 +719,7 @@ class treemanifestctx:
             # This appears to only be used for changegroup creation in
             # upstream changegroup.py. Since we use pack files for all native
             # tree exchanges, we shouldn't need to implement this.
-            raise NotImplemented("native trees don't support shallow " "readdelta yet")
+            raise NotImplemented("native trees don't support shallow readdelta yet")
         else:
             md = _buildtree(self._manifestlog)
             for f, ((n1, fl1), (n2, fl2)) in parentmf.diff(mf).items():
@@ -1059,7 +1059,7 @@ def createtreepackpart(repo, outgoing, partname, sendtrees=shallowbundle.AllTree
     linknodemap = {}
     for node in outgoing.missing:
         ctx = repo[node]
-        if sendtrees == shallowbundle.AllTrees or ctx.phase() != phases.public:
+        if sendtrees == shallowbundle.AllTrees or not ctx.ispublic():
             mfnode = ctx.manifestnode()
             if mfnode != nullid:
                 mfnodes.append(mfnode)

@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 mod fetch;
@@ -110,6 +110,9 @@ pub struct FileStore {
 
     // The serialization format that the store should use
     pub format: SerializationFormat,
+
+    // The threshold for using CAS cache
+    pub(crate) cas_cache_threshold_bytes: Option<u64>,
 }
 
 impl Drop for FileStore {
@@ -159,7 +162,25 @@ impl FileStore {
             found_tx,
             self.lfs_threshold_bytes.is_some(),
             fetch_mode,
+            self.cas_cache_threshold_bytes,
         );
+
+        if tracing::enabled!(target: "file_fetches", tracing::Level::TRACE) {
+            let attrs = [
+                attrs.pure_content.then_some("content"),
+                attrs.content_header.then_some("header"),
+                attrs.aux_data.then_some("aux"),
+            ]
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>();
+
+            let mut keys = state.all_keys();
+            keys.sort();
+            let keys: Vec<_> = keys.into_iter().map(|key| key.path.into_string()).collect();
+
+            tracing::trace!(target: "file_fetches", ?attrs, ?keys);
+        }
 
         debug!(
             ?attrs,
@@ -486,6 +507,8 @@ impl FileStore {
             lfs_progress: AggregatingProgressBar::new("fetching", "LFS"),
             flush_on_drop: true,
             format: SerializationFormat::Hg,
+
+            cas_cache_threshold_bytes: None,
         }
     }
 
@@ -535,6 +558,8 @@ impl FileStore {
             // Conservatively flushing on drop here, didn't see perf problems and might be needed by Python
             flush_on_drop: true,
             format: self.format(),
+
+            cas_cache_threshold_bytes: self.cas_cache_threshold_bytes.clone(),
         }
     }
 
@@ -554,7 +579,6 @@ impl FileStore {
 }
 
 impl HgIdDataStore for FileStore {
-    // Fetch the raw content of a single TreeManifest blob
     fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
         self.metrics.write().api.hg_get.call(0);
         Ok(
@@ -664,8 +688,6 @@ impl HgIdMutableDeltaStore for FileStore {
     }
 }
 
-// TODO(meyer): Content addressing not supported at all for trees. I could look for HgIds present here and fetch with
-// that if available, but I feel like there's probably something wrong if this is called for trees.
 impl ContentDataStore for FileStore {
     fn blob(&self, key: StoreKey) -> Result<StoreResult<Bytes>> {
         self.metrics.write().api.contentdatastore_blob.call(0);
@@ -678,7 +700,7 @@ impl ContentDataStore for FileStore {
                 )
                 .single()?
             {
-                Some(entry) => StoreResult::Found(entry.content.unwrap().file_content()?),
+                Some(entry) => StoreResult::Found(entry.content.unwrap().file_content()?.0),
                 None => StoreResult::NotFound(key),
             },
         )
@@ -686,22 +708,21 @@ impl ContentDataStore for FileStore {
 
     fn metadata(&self, key: StoreKey) -> Result<StoreResult<ContentMetadata>> {
         self.metrics.write().api.contentdatastore_metadata.call(0);
-        Ok(
-            match self
-                .fetch(
-                    std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()),
-                    FileAttributes::CONTENT,
-                    FetchMode::LocalOnly,
-                )
-                .single()?
-            {
-                Some(StoreFile {
-                    content: Some(LazyFile::Lfs(_blob, pointer)),
-                    ..
-                }) => StoreResult::Found(pointer.into()),
-                Some(_) => StoreResult::NotFound(key),
-                None => StoreResult::NotFound(key),
-            },
-        )
+
+        if let Some(cache) = &self.lfs_cache {
+            let result = cache.metadata(key.clone())?;
+            if matches!(result, StoreResult::Found(_)) {
+                return Ok(result);
+            }
+        }
+
+        if let Some(local) = &self.lfs_local {
+            let result = local.metadata(key.clone())?;
+            if matches!(result, StoreResult::Found(_)) {
+                return Ok(result);
+            }
+        }
+
+        Ok(StoreResult::NotFound(key))
     }
 }

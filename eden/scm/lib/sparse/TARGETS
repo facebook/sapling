@@ -5,24 +5,24 @@ oncall("sapling")
 rust_library(
     name = "sparse",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "extra_buck_dependencies": {
-                "dependencies": [
-                    "fbsource//third-party/rust:futures",
-                ],
-                "dev-dependencies": [
-                    "fbsource//third-party/rust:tokio",
-                ],
-            },
-            "features": {
-                "async": [
-                    "futures",
-                ],
-                "default": [],
-            },
+    autocargo = {"cargo_toml_config": {
+        "extra_buck_dependencies": {
+            "dependencies": ["fbsource//third-party/rust:futures"],
+            "dev-dependencies": ["fbsource//third-party/rust:tokio"],
         },
-    },
+        "features": {
+            "async": ["futures"],
+            "default": [],
+        },
+        "lib": {"name": "sparse"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "sparse",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -40,7 +40,19 @@ rust_library(
 rust_library(
     name = "sparse-async",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"ignore_rule": True},
+    autocargo = {
+        "cargo_toml_config": {
+            "lib": {"name": "sparse"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "sparse",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        },
+        "ignore_rule": True,
+    },
     crate = "sparse",
     crate_root = "src/lib.rs",
     features = ["async"],

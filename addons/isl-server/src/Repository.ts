@@ -689,7 +689,7 @@ export class Repository {
       throw new Error(`command "${args.join(' ')}" is not allowed`);
     }
 
-    const execution = execa(command, args, {...options, stdout: 'pipe', stderr: 'pipe'});
+    const execution = execa(command, args, options);
     // It would be more appropriate to call this in reponse to execution.on('spawn'), but
     // this seems to be inconsistent about firing in all versions of node.
     // Just send spawn immediately. Errors during spawn like ENOENT will still be reported by `exit`.

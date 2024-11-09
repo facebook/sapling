@@ -88,8 +88,6 @@ use deletion_log::DeletionLog;
 use deletion_log::SqlDeletionLog;
 #[cfg(fbcode_build)]
 use derived_data_client_library::Client as DerivationServiceClient;
-#[cfg(fbcode_build)]
-use derived_data_remote::Address;
 use derived_data_remote::DerivationClient;
 use derived_data_remote::RemoteDerivationOptions;
 #[cfg(fbcode_build)]
@@ -126,6 +124,7 @@ use metaconfig_types::BlobConfig;
 use metaconfig_types::CommonConfig;
 use metaconfig_types::MetadataDatabaseConfig;
 use metaconfig_types::Redaction;
+use metaconfig_types::RemoteDerivationConfig;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::RepoReadOnly;
 #[cfg(fbcode_build)]
@@ -1184,8 +1183,12 @@ impl RepoFactory {
             config.scuba_table.clone(),
             repo_identity.name(),
         )?;
-        let derivation_service_client =
-            get_derivation_client(self.env.fb, self.env.remote_derivation_options.clone())?;
+        let derivation_service_client = get_derivation_client(
+            self.env.fb,
+            self.env.remote_derivation_options.clone(),
+            repo_config,
+            repo_identity.name(),
+        )?;
         Ok(Arc::new(RepoDerivedData::new(
             repo_identity.id(),
             repo_identity.name().to_string(),
@@ -1896,21 +1899,29 @@ fn build_scuba(
 fn get_derivation_client(
     fb: FacebookInit,
     remote_derivation_options: RemoteDerivationOptions,
+    repo_config: &ArcRepoConfig,
+    repo_name: &str,
 ) -> Result<Option<Arc<dyn DerivationClient>>> {
     let derivation_service_client: Option<Arc<dyn DerivationClient>> =
         if remote_derivation_options.derive_remotely {
             #[cfg(fbcode_build)]
             {
-                let client = match remote_derivation_options.address {
-                    Address::SmcTier(smc_tier) => {
-                        DerivationServiceClient::from_tier_name(fb, smc_tier)?
+                match &repo_config.derived_data_config.remote_derivation_config {
+                    Some(RemoteDerivationConfig::ShardManagerTier(shard_manager_tier)) => {
+                        Some(Arc::new(DerivationServiceClient::from_sm_tier_name(
+                            fb,
+                            shard_manager_tier.clone(),
+                            repo_name.to_string(),
+                        )?))
                     }
-                    Address::HostPort(host_port) => {
-                        DerivationServiceClient::from_host_port(fb, host_port)?
-                    }
-                    Address::Empty => DerivationServiceClient::new(fb)?,
-                };
-                Some(Arc::new(client))
+                    Some(RemoteDerivationConfig::SmcTier(smc_tier)) => Some(Arc::new(
+                        DerivationServiceClient::from_tier_name(fb, smc_tier.clone())?,
+                    )),
+                    Some(RemoteDerivationConfig::HostPort(host_port)) => Some(Arc::new(
+                        DerivationServiceClient::from_host_port(fb, host_port.clone())?,
+                    )),
+                    None => None,
+                }
             }
             #[cfg(not(fbcode_build))]
             {

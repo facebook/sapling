@@ -627,7 +627,7 @@ def _process_landed(
     if publicnode is None or publicnode not in repo:
         return 0
     # skip it if the local repo does not think it's a public commit.
-    if repo[publicnode].phase() != phases.public:
+    if not repo[publicnode].ispublic():
         return 0
     # sanity check - the public commit should have a sane commit message.
     if diffprops.parserevfromcommitmsg(repo[publicnode].description()) != diffid:

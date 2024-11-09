@@ -17,8 +17,7 @@ from sapling.i18n import _
 from sapling.node import bin, hex, nullid
 from sapling.pycompat import isint
 
-from .. import clienttelemetry
-from . import constants, fileserverclient, shallowutil
+from . import constants, shallowutil
 
 
 class remotefilelognodemap:
@@ -78,11 +77,7 @@ class remotefilelog:
         if node is None:
             node = revlog.hash(text, p1, p2)
 
-        if (
-            self.repo.ui.configbool("experimental", "reuse-filenodes", True)
-            and node in self.nodemap
-            and self._localparentsmatch(node, p1, p2)
-        ):
+        if self._reusefilenode(node, p1, p2):
             self.repo.ui.debug("reusing remotefilelog node %s\n" % hex(node))
             return node
 
@@ -132,7 +127,21 @@ class remotefilelog:
             _metatuple=(meta, metaoffset),
         )
 
-    def _localparentsmatch(self, node, p1, p2) -> bool:
+    def _reusefilenode(self, node, p1, p2) -> bool:
+        if not self.repo.ui.configbool("experimental", "reuse-filenodes", True):
+            return False
+
+        # Similar to localrepo._filecommit, skip "nodemap" check assuming that if the
+        # node's parents (via getlocalnodeinfo) are available that means filenide is also
+        # available.
+        if (
+            not self.repo.ui.configbool(
+                "experimental", "infer-filenode-available", True
+            )
+            and node not in self.nodemap
+        ):
+            return False
+
         localinfo = self.repo.fileslog.metadatastore.getlocalnodeinfo(
             self.filename, node
         )
@@ -322,17 +331,12 @@ class remotefilelog:
         if len(node) != 20:
             raise error.LookupError(node, self.filename, _("invalid revision input"))
 
-        store = self.repo.fileslog.filestore
-        rawtext = store.get(self.filename, node)
+        rawtext = self.repo.fileslog.get(self.filename, node)
         if raw:
             return rawtext
         if rawtext == constants.REDACTED_CONTENT:
             return constants.REDACTED_MESSAGE
-        flags = store.getmeta(self.filename, node).get(constants.METAKEYFLAG, 0)
-        if flags == 0:
-            return rawtext
-        text, verifyhash = self._processflags(rawtext, flags, "read")
-        return text
+        return rawtext
 
     def _deltachain(self, node):
         """Obtain the delta chain for a revision.
@@ -407,6 +411,9 @@ class remotefilelog:
         while missing:
             curname, curnode = missing.pop()
             try:
+                # Prefetch full history since we are walking it.
+                self.repo.fileslog.metadatastore.prefetch([(curname, curnode)])
+
                 ancestors.update(
                     {
                         curnode: self.repo.fileslog.metadatastore.getnodeinfo(
@@ -523,6 +530,7 @@ class remotefileslog(filelog.fileslog):
     def __init__(self, repo):
         super(remotefileslog, self).__init__(repo)
         self.makeruststore(repo)
+        self._content_cache = util.lrucachedict(100)
 
     def makeruststore(self, repo):
         mask = os.umask(0o002)
@@ -576,3 +584,15 @@ class remotefileslog(filelog.fileslog):
             metrics = self.filestore.getmetrics()
             for metric, value in metrics:
                 ui.metrics.gauge(metric, value)
+
+    TEN_MB = 10 * 1024**2
+
+    def get(self, filename, node) -> bytes:
+        data = self._content_cache.get(node, None)
+        if data is not None:
+            return data
+
+        data = self.filestore.get(filename, node)
+        if len(data) < self.TEN_MB:
+            self._content_cache[node] = data
+        return data

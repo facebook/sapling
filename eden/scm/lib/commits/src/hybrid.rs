@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use std::collections::HashSet;
@@ -27,6 +27,9 @@ use dag::Vertex;
 use dag::VertexListWithOptions;
 use edenapi::types::CommitLocationToHashRequest;
 use edenapi::SaplingRemoteApi;
+use format_util::git_sha1_serialize;
+use format_util::hg_sha1_deserialize;
+use format_util::strip_sha1_header;
 use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
@@ -427,7 +430,12 @@ impl StreamCommitText for HybridCommitTextReader {
     ) -> Result<BoxStream<'static, anyhow::Result<ParentlessHgCommit>>> {
         let zstore = self.zstore.clone();
         let client = self.client.clone();
-        let resolver = Resolver { client, zstore };
+        let format = self.format;
+        let resolver = Resolver {
+            client,
+            zstore,
+            format,
+        };
         let buffer_size = 10000;
         let retry_limit = 0;
         let stream = HybridStream::new(input, resolver, buffer_size, retry_limit);
@@ -450,6 +458,7 @@ impl StripCommits for HybridCommits {
 struct Resolver {
     client: Arc<dyn SaplingRemoteApi>,
     zstore: Arc<RwLock<Zstore>>,
+    format: SerializationFormat,
 }
 
 impl Drop for Resolver {
@@ -468,7 +477,10 @@ impl HybridResolver<Vertex, Bytes, anyhow::Error> for Resolver {
             return Ok(Some(Bytes::new()));
         }
         match self.zstore.read().get(id)? {
-            Some(bytes) => Ok(Some(bytes.slice(Id20::len() * 2..))),
+            Some(bytes) => {
+                let text = strip_sha1_header(&bytes, self.format)?;
+                Ok(Some(text))
+            }
             None => Ok(crate::revlog::get_hard_coded_commit_text(vertex)),
         }
     }
@@ -485,22 +497,35 @@ impl HybridResolver<Vertex, Bytes, anyhow::Error> for Resolver {
         let client = self.client.clone();
         let response = client.commit_revlog_data(ids).await?;
         let zstore = self.zstore.clone();
+        let format = self.format;
         let commits = response.entries.map(move |e| {
             let e = e?;
-            let written_id = zstore.write().insert(&e.revlog_data, &[])?;
+            let text = match format {
+                // For hg, `e` includes the `p1`, `p2` prefix so its SHA1 can be verified.
+                SerializationFormat::Hg => e.revlog_data.clone(),
+                // For git, the `revlog_data` does not have git framing, we need to add the
+                // framing to verify SHA1.
+                SerializationFormat::Git => {
+                    Bytes::from(git_sha1_serialize(&e.revlog_data, "commit"))
+                }
+            };
+            let written_id = zstore.write().insert(&text, &[])?;
             if !written_id.is_null() && written_id != e.hgid {
                 anyhow::bail!(
-                    "server returned commit-text pair ({}, {:?}) has mismatched SHA1: {}",
+                    "server returned commit-text pair ({}, {:?}) has mismatched {:?} SHA1: {}",
                     e.hgid.to_hex(),
                     e.revlog_data,
+                    format,
                     written_id.to_hex(),
                 );
             }
-            let bytes = &e.revlog_data[Id20::len() * 2..];
-            let input_output = (
-                Vertex::copy_from(e.hgid.as_ref()),
-                Bytes::copy_from_slice(bytes),
-            );
+            let commit_text = match format {
+                SerializationFormat::Hg => e
+                    .revlog_data
+                    .slice_to_bytes(hg_sha1_deserialize(e.revlog_data.as_ref())?.0),
+                SerializationFormat::Git => e.revlog_data.clone(),
+            };
+            let input_output = (Vertex::copy_from(e.hgid.as_ref()), commit_text);
             Ok(input_output)
         });
         Ok(Box::pin(commits) as BoxStream<'_, _>)

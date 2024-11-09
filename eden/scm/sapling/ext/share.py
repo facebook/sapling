@@ -36,7 +36,7 @@ testedwith = "ships-with-hg-core"
             "",
             "relative",
             None,
-            _("point to source using a relative path " "(EXPERIMENTAL)"),
+            _("point to source using a relative path (EXPERIMENTAL)"),
         ),
     ],
     _("[-U] [-B] SOURCE [DEST]"),

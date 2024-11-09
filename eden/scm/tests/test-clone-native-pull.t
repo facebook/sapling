@@ -29,7 +29,7 @@ Prepare Repo:
 
 Clone the lazy repo, pulling master and stable bookmarks:
 
-  $ hg clone -U --shallow test:e1 --config remotefilelog.reponame=x $TESTTMP/cloned1 --config remotenames.selectivepulldefault="master, stable" -q
+  $ hg clone -U test:e1 --config remotefilelog.reponame=x $TESTTMP/cloned1 --config remotenames.selectivepulldefault="master, stable" -q
 
   $ cd $TESTTMP/cloned1
 

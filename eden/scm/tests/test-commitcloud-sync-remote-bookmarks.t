@@ -63,16 +63,15 @@ Setup first client repo and subscribe to the bookmarks "stable" and "warm".
   $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP
   $ hg cloud join -q
   $ showgraph
-  @  a2: public  remote/master
+  o  b1: public  remote/stable
   │
-  o  a1: public
-  │
-  │ o  b1: public  remote/stable
-  ├─╯
   │ o  c1: public  remote/warm
   ├─╯
+  │ @  a2: public  remote/master
+  │ │
+  │ o  a1: public
+  ├─╯
   o  root: public
-  
 Setup the second client repo with enable remote bookmarks sync
 The repo should be subscribed the "stable" and "warm" bookmark because the client1 was.
   $ cd ..
@@ -81,16 +80,15 @@ The repo should be subscribed the "stable" and "warm" bookmark because the clien
   $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP
   $ hg cloud join -q
   $ showgraph
-  @  a2: public  remote/master
+  o  b1: public  remote/stable
   │
-  o  a1: public
-  │
-  │ o  b1: public  remote/stable
-  ├─╯
   │ o  c1: public  remote/warm
   ├─╯
+  │ @  a2: public  remote/master
+  │ │
+  │ o  a1: public
+  ├─╯
   o  root: public
-  
 
 Setup third client repo but do not enable remote bookmarks sync
   $ cd ..
@@ -118,18 +116,17 @@ Common case of unsynchronized remote bookmarks ("master")
   $ showgraph
   @  draft-1: draft
   │
-  o  a3: public  remote/master
-  │
-  o  a2: public
-  │
-  o  a1: public
-  │
   │ o  b1: public  remote/stable
-  ├─╯
-  │ o  c1: public  remote/warm
+  │ │
+  │ │ o  c1: public  remote/warm
+  │ ├─╯
+  o │  a3: public  remote/master
+  │ │
+  o │  a2: public
+  │ │
+  o │  a1: public
   ├─╯
   o  root: public
-  
 
 remote/master should point to the new commit
   $ cd ../client1
@@ -137,18 +134,17 @@ remote/master should point to the new commit
   $ showgraph
   o  draft-1: draft
   │
-  o  a3: public  remote/master
-  │
-  @  a2: public
-  │
-  o  a1: public
-  │
   │ o  b1: public  remote/stable
-  ├─╯
-  │ o  c1: public  remote/warm
+  │ │
+  │ │ o  c1: public  remote/warm
+  │ ├─╯
+  o │  a3: public  remote/master
+  │ │
+  @ │  a2: public
+  │ │
+  o │  a1: public
   ├─╯
   o  root: public
-  
 Subscribe to a new remote bookmark "main" that previously has been only known on the server
   $ cd ../client1
   $ hg pull -q
@@ -157,18 +153,17 @@ Subscribe to a new remote bookmark "main" that previously has been only known on
   $ showgraph
   o  draft-1: draft
   │
-  o  a3: public  remote/master
-  │
-  @  a2: public
-  │
-  o  a1: public
-  │
   │ o  b1: public  remote/main remote/stable
-  ├─╯
-  │ o  c1: public  remote/warm
+  │ │
+  │ │ o  c1: public  remote/warm
+  │ ├─╯
+  o │  a3: public  remote/master
+  │ │
+  @ │  a2: public
+  │ │
+  o │  a1: public
   ├─╯
   o  root: public
-  
   $ hg book --list-subscriptions
      remote/main               b2bfab231667
      remote/master             1b6e90080435
@@ -181,18 +176,17 @@ the other client should be subscribed to this bookmark ("main") as well
   $ showgraph
   @  draft-1: draft
   │
-  o  a3: public  remote/master
-  │
-  o  a2: public
-  │
-  o  a1: public
-  │
   │ o  b1: public  remote/main remote/stable
-  ├─╯
-  │ o  c1: public  remote/warm
+  │ │
+  │ │ o  c1: public  remote/warm
+  │ ├─╯
+  o │  a3: public  remote/master
+  │ │
+  o │  a2: public
+  │ │
+  o │  a1: public
   ├─╯
   o  root: public
-  
   $ hg book --list-subscriptions
      remote/main               b2bfab231667
      remote/master             1b6e90080435
@@ -212,18 +206,17 @@ try to create a commit on top of the remote/stable
   │
   │ @  draft-1: draft
   │ │
+  o │  b1: public  remote/main remote/stable
+  │ │
+  │ │ o  c1: public  remote/warm
+  ├───╯
   │ o  a3: public  remote/master
   │ │
   │ o  a2: public
   │ │
   │ o  a1: public
-  │ │
-  o │  b1: public  remote/main remote/stable
-  ├─╯
-  │ o  c1: public  remote/warm
   ├─╯
   o  root: public
-  
 check that copy with disabled remote bookmarks sync doesn't affect the other copies
   $ cd ../client1
   $ hg up warm -q
@@ -236,18 +229,17 @@ check that copy with disabled remote bookmarks sync doesn't affect the other cop
   │ │
   │ │ o  draft-1: draft
   │ │ │
-  │ │ o  a3: public  remote/master
-  │ │ │
-  │ │ o  a2: public
-  │ │ │
-  │ │ o  a1: public
-  │ │ │
   │ o │  b1: public  remote/main remote/stable
-  │ ├─╯
-  o │  c1: public  remote/warm
-  ├─╯
+  │ │ │
+  o │ │  c1: public  remote/warm
+  ├─╯ │
+  │   o  a3: public  remote/master
+  │   │
+  │   o  a2: public
+  │   │
+  │   o  a1: public
+  ├───╯
   o  root: public
-  
 sync and create a new commit on top of the draft-3
   $ cd ../client3
   $ hg cloud sync -q
@@ -259,19 +251,19 @@ sync and create a new commit on top of the draft-3
   │
   │ o  draft-3: draft
   │ │
+  │ o  c1: draft
+  │ │
   o │  draft-2: draft
   │ │
-  │ │ o  draft-1: draft
-  │ │ │
-  │ │ o  a3: draft
-  │ │ │
-  │ │ o  a2: public  remote/master
-  │ │ │
-  │ │ o  a1: public
-  │ │ │
-  o │ │  b1: draft
-  ├───╯
-  │ o  c1: draft
+  o │  b1: draft
+  ├─╯
+  │ o  draft-1: draft
+  │ │
+  │ o  a3: draft
+  │ │
+  │ o  a2: public  remote/master
+  │ │
+  │ o  a1: public
   ├─╯
   o  root: public
   $ hg cloud sync -q
@@ -287,15 +279,14 @@ sync and create a new commit on top of the draft-3
   │ │
   │ │ @  draft-1: draft
   │ │ │
-  │ │ o  a3: public  remote/master
-  │ │ │
-  │ │ o  a2: public
-  │ │ │
-  │ │ o  a1: public
-  │ │ │
   o │ │  b1: public  remote/main remote/stable
+  │ │ │
+  │ o │  c1: public  remote/warm
+  ├─╯ │
+  │   o  a3: public  remote/master
+  │   │
+  │   o  a2: public
+  │   │
+  │   o  a1: public
   ├───╯
-  │ o  c1: public  remote/warm
-  ├─╯
   o  root: public
-  

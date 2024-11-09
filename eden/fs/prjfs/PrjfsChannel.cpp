@@ -1006,8 +1006,8 @@ HRESULT PrjfsChannelInner::getFileData(
                   basenameFromAppName(clientProcessName.c_str()));
               XLOGF(
                   DBG2,
-                  "PrjFS asked us to read {} bytes out of {}, but there are only"
-                  "{} bytes available in this file. Reading the file likely raced"
+                  "PrjFS asked us to read {} bytes out of {}, but there are only "
+                  "{} bytes available in this file. Reading the file likely raced "
                   "with checkout/reset. Client process: {}. ",
                   length,
                   path,

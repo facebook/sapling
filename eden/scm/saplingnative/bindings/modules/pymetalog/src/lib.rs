@@ -116,7 +116,7 @@ py_class!(pub class metalog |py| {
     }
 
     /// Write pending data to disk. Raise if race condition is detected.
-    def commit(&self, message: &str, time: Option<u64> = None, pending: bool = false) -> PyResult<Bytes> {
+    def commit(&self, message: &str, _time: Option<u64> = None, pending: bool = false) -> PyResult<Bytes> {
         let mut opts = CommitOptions::default();
         opts.detached = pending;
         opts.message = message;

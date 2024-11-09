@@ -401,7 +401,7 @@ class hintedmatcher(basematcher):
                 if k == "set":
                     if not ctx:
                         raise error.ProgrammingError(
-                            "fileset expression with no " "context"
+                            "fileset expression with no context"
                         )
                     fset.update(ctx.getfileset(p))
                 else:

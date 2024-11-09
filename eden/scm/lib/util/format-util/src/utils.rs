@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use std::borrow::Cow;
@@ -10,8 +10,10 @@ use std::borrow::Cow;
 use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Result;
+use hgtime::HgTime;
 use memchr::memchr;
-use storemodel::SerializationFormat;
+use minibytes::Text;
+use types::SerializationFormat;
 
 /// Normalize " Foo Bar  < a@b.com > " to "Foo Bar <a@b.com>".
 /// Reports errors if `name` contains special characters or has unmatched brackets.
@@ -93,6 +95,24 @@ pub(crate) fn write_multi_line(message: &str, line_prefix: &str, out: &mut Strin
         empty = false;
     }
     Ok(empty)
+}
+
+pub(crate) trait HgTimeExt {
+    fn to_text(&self) -> Text;
+}
+
+impl HgTimeExt for HgTime {
+    fn to_text(&self) -> Text {
+        format!("{} {}", self.unixtime, self.offset).into()
+    }
+}
+
+/// Produce "title" and indented commit text. Useful for error messages.
+pub(crate) fn with_indented_commit_text(title: &str, text: &str) -> String {
+    let mut result = title.to_string();
+    result.push('\n');
+    let _ = write_multi_line(text, "  ", &mut result);
+    result
 }
 
 #[cfg(test)]

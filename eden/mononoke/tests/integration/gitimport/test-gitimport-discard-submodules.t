@@ -5,8 +5,7 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
-  $ REPOTYPE="blob_files"
-  $ ENABLED_DERIVED_DATA='["ccsm", "skeleton_manifests", "skeleton_manifests_v2", "git_commits", "git_trees", "git_delta_manifests_v2", "unodes", "filenodes", "hgchangesets"]' setup_common_config $REPOTYPE
+  $ setup_common_config blob_files
   $ GIT_REPO_ORIGIN="${TESTTMP}/origin/repo-git"
   $ GIT_REPO_SUBMODULE="${TESTTMP}/origin/repo-submodule"
   $ GIT_REPO="${TESTTMP}/repo-git"

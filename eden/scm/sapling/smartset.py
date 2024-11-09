@@ -22,7 +22,6 @@ from .i18n import _
 from .node import nullrev
 from .pycompat import range
 
-
 maxrev = bindings.dag.MAX_ID
 dagmod = bindings.dag
 

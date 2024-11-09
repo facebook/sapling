@@ -62,9 +62,7 @@ def getcachepath(ui, allowempty=False):
         if allowempty:
             return None
         else:
-            raise error.Abort(
-                _("could not find config option " "remotefilelog.cachepath")
-            )
+            raise error.Abort(_("could not find config option remotefilelog.cachepath"))
     return util.expandpath(cachepath)
 
 

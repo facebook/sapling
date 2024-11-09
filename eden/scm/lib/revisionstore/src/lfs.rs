@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use std::cmp::min;
@@ -117,7 +117,6 @@ use crate::redacted::is_redacted;
 use crate::remotestore::HgIdRemoteStore;
 use crate::types::ContentHash;
 use crate::types::StoreKey;
-use crate::uniondatastore::UnionHgIdDataStore;
 use crate::util::get_lfs_blobs_path;
 use crate::util::get_lfs_objects_path;
 use crate::util::get_lfs_pointers_path;
@@ -186,18 +185,6 @@ pub struct LfsClient {
 pub struct LfsStore {
     pointers: LfsPointersStore,
     blobs: LfsBlobsStore,
-}
-
-/// When a blob is added to the `LfsMultiplexer`, is will either be written to an `LfsStore`, or to
-/// a regular `HgIdMutableDeltaStore`. The choice is made based on whether the blob is larger than a
-/// user defined threshold, or on whether the blob being added represents an LFS pointer.
-pub struct LfsMultiplexer {
-    lfs: Arc<LfsStore>,
-    non_lfs: Arc<dyn HgIdMutableDeltaStore>,
-
-    threshold: usize,
-
-    union: UnionHgIdDataStore<Arc<dyn HgIdMutableDeltaStore>>,
 }
 
 #[derive(
@@ -799,26 +786,36 @@ impl LocalStore for LfsStore {
     }
 }
 
+pub(crate) fn content_header_from_pointer(entry: &LfsPointersEntry) -> Bytes {
+    if let Some(copy_from) = &entry.copy_from {
+        let copy_from_path: &[u8] = copy_from.path.as_ref();
+        let mut ret = Vec::with_capacity(copy_from_path.len() + 21);
+        ret.extend_from_slice(b"\x01\n");
+        ret.extend_from_slice(b"copy: ");
+        ret.extend_from_slice(copy_from_path);
+        ret.extend_from_slice(b"\n");
+        ret.extend_from_slice(b"copyrev: ");
+        ret.extend_from_slice(copy_from.hgid.to_hex().as_bytes());
+        ret.extend_from_slice(b"\n");
+        ret.extend_from_slice(b"\x01\n");
+        ret.into()
+    } else {
+        Bytes::default()
+    }
+}
+
 /// When a file was copied, Mercurial expects the blob that the store returns to contain this copy
 /// information
 pub(crate) fn rebuild_metadata(data: Bytes, entry: &LfsPointersEntry) -> Bytes {
-    if let Some(copy_from) = &entry.copy_from {
-        let copy_from_path: &[u8] = copy_from.path.as_ref();
-        let mut ret = Vec::with_capacity(data.len() + copy_from_path.len() + 128);
-
-        ret.extend_from_slice(&b"\x01\n"[..]);
-        ret.extend_from_slice(&b"copy: "[..]);
-        ret.extend_from_slice(copy_from_path);
-        ret.extend_from_slice(&b"\n"[..]);
-        ret.extend_from_slice(&b"copyrev: "[..]);
-        ret.extend_from_slice(copy_from.hgid.to_hex().as_bytes());
-        ret.extend_from_slice(&b"\n"[..]);
-        ret.extend_from_slice(&b"\x01\n"[..]);
+    let header = content_header_from_pointer(entry);
+    if !header.is_empty() {
+        let mut ret = Vec::with_capacity(data.len() + header.len());
+        ret.extend_from_slice(header.as_ref());
         ret.extend_from_slice(data.as_ref());
         ret.into()
     } else if data.as_ref().starts_with(b"\x01\n") {
         let mut ret = Vec::with_capacity(data.len() + 4);
-        ret.extend_from_slice(&b"\x01\n\x01\n"[..]);
+        ret.extend_from_slice(b"\x01\n\x01\n");
         ret.extend_from_slice(data.as_ref());
         ret.into()
     } else {
@@ -907,47 +904,6 @@ impl ContentDataStore for LfsStore {
             None => Ok(StoreResult::NotFound(key)),
             Some(pointer_entry) => Ok(StoreResult::Found(pointer_entry.into())),
         }
-    }
-}
-
-impl LfsMultiplexer {
-    /// Build an `LfsMultiplexer`. All blobs bigger than `threshold` will be written to the `lfs`
-    /// store, the others to the `non_lfs` store.
-    pub fn new(
-        lfs: Arc<LfsStore>,
-        non_lfs: Arc<dyn HgIdMutableDeltaStore>,
-        threshold: usize,
-    ) -> Self {
-        let mut union_store = UnionHgIdDataStore::new();
-        union_store.add(non_lfs.clone());
-        union_store.add(lfs.clone());
-
-        Self {
-            lfs,
-            non_lfs,
-            union: union_store,
-            threshold,
-        }
-    }
-}
-
-impl HgIdDataStore for LfsMultiplexer {
-    fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
-        self.union.get(key)
-    }
-
-    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
-        self.union.get_meta(key)
-    }
-
-    fn refresh(&self) -> Result<()> {
-        self.union.refresh()
-    }
-}
-
-impl LocalStore for LfsMultiplexer {
-    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        self.union.get_missing(keys)
     }
 }
 
@@ -1070,32 +1026,6 @@ impl LfsPointersEntry {
     /// Returns the copy_from of the file referenced by this LfsPointersEntry
     pub(crate) fn copy_from(&self) -> &Option<Key> {
         &self.copy_from
-    }
-}
-
-impl HgIdMutableDeltaStore for LfsMultiplexer {
-    /// Add the blob to the store.
-    ///
-    /// Depending on whether the blob represents an LFS pointer, or if it is large enough, it will
-    /// be added either to the lfs store, or to the non-lfs store.
-    fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()> {
-        if metadata.is_lfs() {
-            // This is an lfs pointer blob. Let's parse it and extract what matters.
-            let pointer = LfsPointersEntry::from_bytes(&delta.data, delta.key.hgid.clone())?;
-            return self.lfs.pointers.add(pointer);
-        }
-
-        if delta.data.len() > self.threshold {
-            self.lfs.add(delta, &Default::default())
-        } else {
-            self.non_lfs.add(delta, metadata)
-        }
-    }
-
-    fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
-        let ret = self.non_lfs.flush()?;
-        self.lfs.flush()?;
-        Ok(ret)
     }
 }
 
@@ -1980,78 +1910,6 @@ impl LocalStore for LfsRemoteStore {
     }
 }
 
-/// Wraps another remote store to retry fetching content-keys from their HgId keys.
-///
-/// If for any reason, the LFS server is turned off, we will end up in here for blobs where we have
-/// the pointer locally, but not the blob.  In this case, we want the code to fallback to fetching
-/// the blob with the regular non-LFS protocol, hence this stores merely translates
-/// `StoreKey::Content` onto `StoreKey::HgId` before asking the non-LFS remote store to fetch data
-/// for these.
-pub struct LfsFallbackRemoteStore(Arc<dyn RemoteDataStore>);
-
-impl LfsFallbackRemoteStore {
-    pub fn new(wrapped_store: Arc<dyn RemoteDataStore>) -> Arc<dyn RemoteDataStore> {
-        Arc::new(Self(wrapped_store))
-    }
-}
-
-impl RemoteDataStore for LfsFallbackRemoteStore {
-    fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        let mut not_found = Vec::new();
-        let not_prefetched = self.0.prefetch(
-            &keys
-                .iter()
-                .filter_map(|key| match key {
-                    StoreKey::HgId(_) => {
-                        not_found.push(key.clone());
-                        None
-                    }
-                    StoreKey::Content(_, hgid) => match hgid {
-                        None => {
-                            not_found.push(key.clone());
-                            None
-                        }
-                        Some(hgid) => Some(StoreKey::hgid(hgid.clone())),
-                    },
-                })
-                .collect::<Vec<_>>(),
-        )?;
-
-        not_found.extend(not_prefetched);
-        Ok(not_found)
-    }
-
-    fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        Ok(keys.to_vec())
-    }
-}
-
-impl HgIdDataStore for LfsFallbackRemoteStore {
-    fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
-        match self.prefetch(&[key.clone()]) {
-            Ok(_) => self.0.get(key),
-            Err(_) => Ok(StoreResult::NotFound(key)),
-        }
-    }
-
-    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
-        match self.prefetch(&[key.clone()]) {
-            Ok(_) => self.0.get_meta(key),
-            Err(_) => Ok(StoreResult::NotFound(key)),
-        }
-    }
-
-    fn refresh(&self) -> Result<()> {
-        self.0.refresh()
-    }
-}
-
-impl LocalStore for LfsFallbackRemoteStore {
-    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        self.0.get_missing(keys)
-    }
-}
-
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum RetryStrategy {
     RetryError,
@@ -2121,9 +1979,6 @@ mod tests {
     use types::testutil::*;
 
     use super::*;
-    use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
-    use crate::indexedlogdatastore::IndexedLogHgIdDataStoreConfig;
-    use crate::indexedlogutil::StoreType;
     use crate::testutil::example_blob;
     #[cfg(feature = "fb")]
     use crate::testutil::example_blob2;
@@ -2498,302 +2353,6 @@ mod tests {
         store.add(&delta, &Default::default())?;
         let stored = store.get(StoreKey::hgid(k1))?;
         assert_eq!(StoreResult::Found(delta.data.as_ref().to_vec()), stored);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_multiplexer_smaller_than_threshold() -> Result<()> {
-        let dir = TempDir::new()?;
-        let server = mockito::Server::new();
-        let config = make_lfs_config(&server, &dir, "test_multiplexer_smaller_than_threshold");
-        let lfs = Arc::new(LfsStore::rotated(&dir, &config)?);
-
-        let dir = TempDir::new()?;
-        let indexedlog_config = IndexedLogHgIdDataStoreConfig {
-            max_log_count: None,
-            max_bytes_per_log: None,
-            max_bytes: None,
-        };
-        let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(
-            &config,
-            &dir,
-            &indexedlog_config,
-            StoreType::Rotated,
-            SerializationFormat::Hg,
-        )?);
-
-        let multiplexer = LfsMultiplexer::new(lfs, indexedlog.clone(), 10);
-
-        let k1 = key("a", "2");
-        let delta = Delta {
-            data: Bytes::from(&[1, 2, 3, 4][..]),
-            base: None,
-            key: k1.clone(),
-        };
-
-        multiplexer.add(&delta, &Default::default())?;
-        let k = StoreKey::hgid(k1);
-        let stored = multiplexer.get(k.clone())?;
-        assert_eq!(stored, StoreResult::Found(delta.data.as_ref().to_vec()));
-        assert_eq!(indexedlog.get_missing(&[k])?, vec![]);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_multiplexer_larger_than_threshold() -> Result<()> {
-        let dir = TempDir::new()?;
-        let server = mockito::Server::new();
-        let config = make_lfs_config(&server, &dir, "test_multiplexer_larger_than_threshold");
-        let lfs = Arc::new(LfsStore::rotated(&dir, &config)?);
-
-        let dir = TempDir::new()?;
-        let indexedlog_config = IndexedLogHgIdDataStoreConfig {
-            max_log_count: None,
-            max_bytes_per_log: None,
-            max_bytes: None,
-        };
-        let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(
-            &config,
-            &dir,
-            &indexedlog_config,
-            StoreType::Rotated,
-            SerializationFormat::Hg,
-        )?);
-
-        let multiplexer = LfsMultiplexer::new(lfs, indexedlog.clone(), 4);
-
-        let k1 = key("a", "3");
-        let delta = Delta {
-            data: Bytes::from(&[1, 2, 3, 4, 5][..]),
-            base: None,
-            key: k1.clone(),
-        };
-
-        multiplexer.add(&delta, &Default::default())?;
-        let k = StoreKey::hgid(k1);
-        let stored = multiplexer.get(k.clone())?;
-        assert_eq!(stored, StoreResult::Found(delta.data.as_ref().to_vec()));
-        assert_eq!(indexedlog.get_missing(&[k.clone()])?, vec![k]);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_multiplexer_add_pointer() -> Result<()> {
-        let lfsdir = TempDir::new()?;
-        let server = mockito::Server::new();
-        let config = make_lfs_config(&server, &lfsdir, "test_multiplexer_add_pointer");
-        let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
-
-        let dir = TempDir::new()?;
-        let indexedlog_config = IndexedLogHgIdDataStoreConfig {
-            max_log_count: None,
-            max_bytes_per_log: None,
-            max_bytes: None,
-        };
-        let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(
-            &config,
-            &dir,
-            &indexedlog_config,
-            StoreType::Rotated,
-            SerializationFormat::Hg,
-        )?);
-
-        let multiplexer = LfsMultiplexer::new(lfs, indexedlog.clone(), 4);
-
-        let sha256 =
-            Sha256::from_str("4d7a214614ab2935c943f9e0ff69d22eadbb8f32b1258daaa5e2ca24d17e2393")?;
-        let size = 12345;
-
-        let pointer = format!(
-            "version https://git-lfs.github.com/spec/v1\noid sha256:{}\nsize {}\nx-is-binary 0\n",
-            sha256.to_hex(),
-            size
-        );
-
-        let k1 = key("a", "3");
-        let delta = Delta {
-            data: Bytes::copy_from_slice(pointer.as_bytes()),
-            base: None,
-            key: k1.clone(),
-        };
-
-        multiplexer.add(
-            &delta,
-            &Metadata {
-                size: None,
-                flags: Some(Metadata::LFS_FLAG),
-            },
-        )?;
-        let k = StoreKey::hgid(k1.clone());
-        assert_eq!(indexedlog.get_missing(&[k.clone()])?, vec![k.clone()]);
-        // The blob isn't present, so we cannot get it.
-        assert_eq!(
-            multiplexer.get(k.clone())?,
-            StoreResult::NotFound(StoreKey::Content(
-                ContentHash::Sha256(sha256.clone()),
-                Some(k1.clone())
-            ))
-        );
-
-        multiplexer.flush()?;
-
-        let lfs = LfsStore::rotated(&lfsdir, &config)?;
-        let entry = lfs.pointers.get(&k)?;
-
-        assert!(entry.is_some());
-
-        let entry = entry.unwrap();
-
-        assert_eq!(entry.hgid, k1.hgid);
-        assert_eq!(entry.size, size);
-        assert!(!entry.is_binary);
-        assert_eq!(entry.copy_from, None);
-        assert_eq!(
-            entry.content_hashes[&ContentHashType::Sha256],
-            ContentHash::Sha256(sha256)
-        );
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_multiplexer_add_copy_from_pointer() -> Result<()> {
-        let lfsdir = TempDir::new()?;
-        let server = mockito::Server::new();
-        let config = make_lfs_config(&server, &lfsdir, "test_multiplexer_add_copy_pointer");
-        let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
-
-        let dir = TempDir::new()?;
-        let indexedlog_config = IndexedLogHgIdDataStoreConfig {
-            max_log_count: None,
-            max_bytes_per_log: None,
-            max_bytes: None,
-        };
-        let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(
-            &config,
-            &dir,
-            &indexedlog_config,
-            StoreType::Rotated,
-            SerializationFormat::Hg,
-        )?);
-
-        let multiplexer = LfsMultiplexer::new(lfs, indexedlog.clone(), 4);
-
-        let sha256 =
-            Sha256::from_str("4d7a214614ab2935c943f9e0ff69d22eadbb8f32b1258daaa5e2ca24d17e2393")?;
-        let size = 12345;
-        let copy_from = key("foo/bar", "1234");
-
-        let pointer = format!(
-            "version https://git-lfs.github.com/spec/v1\noid sha256:{}\nsize {}\nx-is-binary 1\nx-hg-copy {}\nx-hg-copyrev {}\n",
-            sha256.to_hex(),
-            size,
-            copy_from.path,
-            copy_from.hgid,
-        );
-
-        let k1 = key("a", "3");
-        let delta = Delta {
-            data: Bytes::copy_from_slice(pointer.as_bytes()),
-            base: None,
-            key: k1.clone(),
-        };
-
-        multiplexer.add(
-            &delta,
-            &Metadata {
-                size: None,
-                flags: Some(Metadata::LFS_FLAG),
-            },
-        )?;
-        let k = StoreKey::hgid(k1.clone());
-        assert_eq!(indexedlog.get_missing(&[k.clone()])?, vec![k.clone()]);
-        // The blob isn't present, so we cannot get it.
-        assert_eq!(
-            multiplexer.get(k.clone())?,
-            StoreResult::NotFound(StoreKey::Content(
-                ContentHash::Sha256(sha256.clone()),
-                Some(k1.clone())
-            ))
-        );
-
-        multiplexer.flush()?;
-
-        let lfs = LfsStore::rotated(&lfsdir, &config)?;
-        let entry = lfs.pointers.get(&k)?;
-
-        assert!(entry.is_some());
-
-        let entry = entry.unwrap();
-
-        assert_eq!(entry.hgid, k1.hgid);
-        assert_eq!(entry.size, size);
-        assert!(entry.is_binary);
-        assert_eq!(entry.copy_from, Some(copy_from));
-        assert_eq!(
-            entry.content_hashes[&ContentHashType::Sha256],
-            ContentHash::Sha256(sha256)
-        );
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_multiplexer_blob_with_header() -> Result<()> {
-        let lfsdir = TempDir::new()?;
-        let server = mockito::Server::new();
-        let config = make_lfs_config(&server, &lfsdir, "test_multiplexer_blob_with_header");
-        let lfs = Arc::new(LfsStore::rotated(&lfsdir, &config)?);
-
-        let dir = TempDir::new()?;
-        let indexedlog_config = IndexedLogHgIdDataStoreConfig {
-            max_log_count: None,
-            max_bytes_per_log: None,
-            max_bytes: None,
-        };
-        let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(
-            &config,
-            &dir,
-            &indexedlog_config,
-            StoreType::Rotated,
-            SerializationFormat::Hg,
-        )?);
-
-        let blob = Bytes::from(&b"\x01\nTHIS IS A BLOB WITH A HEADER"[..]);
-        let ContentHash::Sha256(sha256) = ContentHash::sha256(&blob);
-        let size = blob.len();
-        lfs.blobs.add(&sha256, blob)?;
-
-        let multiplexer = LfsMultiplexer::new(lfs, indexedlog, 4);
-
-        let pointer = format!(
-            "version https://git-lfs.github.com/spec/v1\noid sha256:{}\nsize {}\nx-is-binary 0\n",
-            sha256.to_hex(),
-            size
-        );
-
-        let k1 = key("a", "3");
-        let delta = Delta {
-            data: Bytes::copy_from_slice(pointer.as_bytes()),
-            base: None,
-            key: k1.clone(),
-        };
-
-        multiplexer.add(
-            &delta,
-            &Metadata {
-                size: Some(size.try_into()?),
-                flags: Some(Metadata::LFS_FLAG),
-            },
-        )?;
-
-        let read_blob = multiplexer.get(StoreKey::hgid(k1))?;
-        let expected_blob =
-            StoreResult::Found(b"\x01\n\x01\n\x01\nTHIS IS A BLOB WITH A HEADER".to_vec());
-        assert_eq!(read_blob, expected_blob);
 
         Ok(())
     }

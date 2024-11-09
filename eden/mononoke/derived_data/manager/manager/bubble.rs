@@ -62,6 +62,8 @@ impl DerivedDataManager {
         derivation_context.bonsai_hg_mapping = None;
         derivation_context.filenodes = None;
         derivation_context.blobstore = wrapped_blobstore.boxed();
+        let mut scuba = self.inner.scuba.clone();
+        scuba.add("bubble_id", bubble.bubble_id());
 
         Self {
             inner: Arc::new(DerivedDataManagerInner {
@@ -72,6 +74,7 @@ impl DerivedDataManager {
                             commit_graph: commit_graph.clone(),
                             repo_blobstore: wrapped_blobstore,
                             derivation_context,
+                            scuba,
                             ..self.inner.as_ref().clone()
                         }),
                     },

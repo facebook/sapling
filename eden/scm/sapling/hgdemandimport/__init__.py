@@ -57,7 +57,10 @@ ignore = [
     "__builtin__",
     "builtins",
     "urwid.command_map",  # for pudb
-    "_thread",  # For RLock
+    # threading is locally imported by importlib.util.LazyLoader.exec_module
+    "_weakrefset",
+    "warnings",
+    "threading",  # For RLock
     "_scandir",  # for IPython
     "collections.abc",  # for IPython - pickleshare
     "sqlite3",  # for IPython to detect missing sqlite

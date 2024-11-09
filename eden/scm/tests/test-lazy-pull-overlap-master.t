@@ -47,7 +47,7 @@ Prepare Repo:
 
 Clone the lazy repo (up to master):
 
-  $ hg clone -U --shallow test:e1 --config remotefilelog.reponame=x $TESTTMP/cloned1 -q
+  $ hg clone -U test:e1 --config remotefilelog.reponame=x $TESTTMP/cloned1 -q
 
 Move server-side bookmarks forward:
 

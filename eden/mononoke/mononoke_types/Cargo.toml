@@ -28,6 +28,7 @@ context = { version = "0.1.0", path = "../server/context" }
 derivative = "2.2"
 derived_data_type_if = { version = "0.1.0", path = "../derived_data/if" }
 edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
+either = "1.5"
 faster-hex = "0.6.1"
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
@@ -64,5 +65,5 @@ paste = "1.0.14"
 pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }
 quickcheck_async = "0.1.1"
 rand = { version = "0.8", features = ["small_rng"] }
-serde_json = { version = "1.0.125", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_depth"] }
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }

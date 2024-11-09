@@ -4,7 +4,9 @@ The configuration parameters for Eden are stored in INI files. The default
 'system' parameters are stored in the directory `/etc/eden/` under `config.d`
 and inside files `edenfs.rc` and `edenfs_dynamic.rc`. The files in `/etc/eden`
 generally should not be edited by hand. Instead, these system configs can be
-overridden by the user in the `~/.edenrc` user configuration file.
+overridden by the user in the `~/.edenrc` user configuration file. If the
+`~/.edenrc` file doesn't exist on the machine, user can create it manualy. The
+contents must be valid TOML.
 
 As of February 2024, the different system configs locations have the following
 purposes:

@@ -28,6 +28,7 @@
 #include "eden/fs/store/hg/SaplingImportRequestQueue.h"
 #include "eden/fs/telemetry/ActivityBuffer.h"
 #include "eden/scm/lib/backingstore/include/SaplingNativeBackingStore.h"
+#include "monitoring/obc/OBCPxx.h"
 
 namespace facebook::eden {
 
@@ -444,7 +445,8 @@ class SaplingBackingStore final : public BackingStore {
   folly::SemiFuture<BlobPtr> retryGetBlob(
       HgProxyHash hgInfo,
       ObjectFetchContextPtr context,
-      const SaplingImportRequest::FetchType fetch_type);
+      const SaplingImportRequest::FetchType fetch_type,
+      folly::stop_watch<std::chrono::milliseconds> watch);
 
   /**
    * Import multiple blobs at once. The vector parameters have to be the same
@@ -539,6 +541,23 @@ class SaplingBackingStore final : public BackingStore {
   void processTreeAuxImportRequests(
       std::vector<std::shared_ptr<SaplingImportRequest>>&& requests);
 
+  void setPrefetchBlobCounters(
+      ObjectFetchContextPtr context,
+      ObjectFetchContext::FetchedSource fetchedSource,
+      ObjectFetchContext::FetchResult fetchResult,
+      folly::stop_watch<std::chrono::milliseconds> watch);
+  void setFetchBlobCounters(
+      ObjectFetchContextPtr context,
+      ObjectFetchContext::FetchedSource fetchedSource,
+      ObjectFetchContext::FetchResult fetchResult,
+      folly::stop_watch<std::chrono::milliseconds> watch);
+  void setBlobCounters(
+      ObjectFetchContextPtr context,
+      SaplingImportRequest::FetchType fetchType,
+      ObjectFetchContext::FetchedSource fetchedSource,
+      ObjectFetchContext::FetchResult fetchResult,
+      folly::stop_watch<std::chrono::milliseconds> watch);
+
   ImmediateFuture<GetGlobFilesResult> getGlobFiles(
       const RootId& id,
       const std::vector<std::string>& globs) override;
@@ -621,6 +640,13 @@ class SaplingBackingStore final : public BackingStore {
 
   std::shared_ptr<LocalStore> localStore_;
   EdenStatsPtr stats_;
+
+  // This is used to avoid reading config in hot path of get request
+  bool isOBCEnabled_ = false;
+  // TODO: this is a prototype to test OBC API on eden
+  // we should move this to a separate class
+  monitoring::OBCPxx getBlobPerRepoLatencies_; // calculates p10, p50, p95, p99
+  void initializeOBCCounters();
 
   // A set of threads processing Sapling retry requests.
   std::unique_ptr<folly::Executor> retryThreadPool_;

@@ -26,7 +26,7 @@ export const CommitTreeListTestUtils = {
     const myCommit = screen.queryByTestId(`commit-${commit}`);
     const gotoButton = myCommit?.querySelector('.goto-button button');
     expect(gotoButton).toBeDefined();
-    await act(async () => {
+    await act(() => {
       fireEvent.click(gotoButton as Element);
     });
   },

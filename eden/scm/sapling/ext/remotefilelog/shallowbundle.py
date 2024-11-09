@@ -117,10 +117,7 @@ class shallowcg1packer(changegroup.cg1packer):
                 with progress.bar(repo.ui, _("manifests"), total=len(mfs)) as prog:
                     for mfnode, clnode in mfs.items():
                         prog.value += 1
-                        if (
-                            filestosend == LocalFiles
-                            and repo[clnode].phase() == phases.public
-                        ):
+                        if filestosend == LocalFiles and repo[clnode].ispublic():
                             continue
                         mfctx = mflog[mfnode]
                         clp1node = clparents(clnode)[0]
@@ -251,7 +248,7 @@ class shallowcg1packer(changegroup.cg1packer):
         renamed = flog.renamed(node)
         if renamed:
             path, renamednode = renamed
-            pointer += "x-hg-copy %s\n" "x-hg-copyrev %s\n" % (path, hex(renamednode))
+            pointer += "x-hg-copy %s\nx-hg-copyrev %s\n" % (path, hex(renamednode))
 
         pointer += "x-is-binary %d\n" % meta["isbinary"]
 

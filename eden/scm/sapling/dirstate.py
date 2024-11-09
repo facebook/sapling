@@ -358,7 +358,7 @@ class dirstate:
         """
         if self._parentwriters == 0:
             raise ValueError(
-                "cannot set dirstate parent without " "calling dirstate.parentchange"
+                "cannot set dirstate parent without calling dirstate.parentchange"
             )
 
         self._dirty = True
@@ -506,7 +506,7 @@ class dirstate:
         """Mark as coming from the other parent, always dirty."""
         if self._pl[1] == nullid:
             raise error.Abort(
-                _("setting %r to other parent " "only allowed in merges") % f
+                _("setting %r to other parent only allowed in merges") % f
             )
 
         entry = self._map.get(f)

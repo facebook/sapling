@@ -518,9 +518,9 @@ py_class!(class metadatastore |py| {
         store.flush_py(py)
     }
 
-    def prefetch(&self, keys: PyList) -> PyResult<PyObject> {
+    def prefetch(&self, keys: PyList, length: Option<u32> = None) -> PyResult<PyObject> {
         let store = self.store(py);
-        store.prefetch_py(py, keys)
+        store.prefetch_py(py, keys, length)
     }
 
     def markforrefresh(&self) -> PyResult<PyNone> {

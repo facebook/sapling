@@ -5,6 +5,16 @@ oncall("sapling")
 rust_library(
     name = "metalog",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "metalog"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "metalog",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     crate_root = "src/lib.rs",
     test_deps = [
         "fbsource//third-party/rust:parking_lot",

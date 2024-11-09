@@ -98,7 +98,7 @@ def debugancestor(ui, repo, *args) -> None:
     elif len(args) == 2:
         if not repo:
             raise error.Abort(
-                _("there is no @Product@ repository here " "(.hg not found)")
+                _("there is no @Product@ repository here (.hg not found)")
             )
         rev1, rev2 = args
         r = repo.changelog
@@ -984,7 +984,7 @@ def debugcreatestreamclonebundle(ui, repo, fname: Optional[str]) -> None:
     # TODO we may want to turn this into an abort when this functionality
     # is moved into `hg bundle`.
     if phases.hassecret(repo):
-        ui.warn(_("(warning: stream clone bundle will contain secret " "revisions)\n"))
+        ui.warn(_("(warning: stream clone bundle will contain secret revisions)\n"))
 
     requirements, gen = streamclone.generatebundlev1(repo)
     changegroup.writechunks(ui, gen, fname)
@@ -1233,46 +1233,6 @@ def debugdifftree(ui, repo, *pats, **opts) -> None:
             oldnode=oldhex,
             newnode=newhex,
         )
-    fm.end()
-
-
-@command(
-    "debugdiffdirs",
-    [("r", "rev", [], "revs to diff (2 revs)")]
-    + cmdutil.walkopts
-    + cmdutil.templateopts,
-)
-def debugdiffdirs(ui, repo, *pats, **opts) -> None:
-    """print the changed directories between two commits
-
-    Print the directories who have had children added or removed. Modified
-    children do not count and will not cause a directory to be printed.
-
-    Used for watchman integration.
-    """
-    revs = scmutil.revrange(repo, opts.get("rev"))
-    oldrev = revs.first()
-    newrev = revs.last()
-    oldctx = repo[oldrev]
-    newctx = repo[newrev]
-
-    oldmf = oldctx.manifest()
-    newmf = newctx.manifest()
-    matcher = scmutil.match(newctx, pats, opts)
-    diff = oldmf.modifieddirs(newmf, matcher)
-
-    fm = ui.formatter("debugdifftree", opts)
-
-    statuslist = [" ", "R", "A", "M"]
-    for path, inold, innew in diff:
-        # Skip the root path.
-        if not path:
-            continue
-        statusindex = inold | (innew << 1)
-        status = statuslist[statusindex]
-        fm.write("status path", "%s %s\n", status, path)
-        fm.data(path=path, status=status)
-
     fm.end()
 
 
@@ -1819,7 +1779,7 @@ def debuginstall(ui, **opts) -> int:
     fm.condwrite(
         err,
         "encodingerror",
-        _(" %s\n" " (check that your locale is properly set)\n"),
+        _(" %s\n (check that your locale is properly set)\n"),
         err,
     )
 
@@ -1894,7 +1854,7 @@ def debuginstall(ui, **opts) -> int:
     )
     fm.write(
         "compenginesavail",
-        _("checking available compression engines " "(%s)\n"),
+        _("checking available compression engines (%s)\n"),
         fm.formatlist(
             sorted(e.name() for e in compengines if e.available()),
             name="compengine",
@@ -1905,7 +1865,7 @@ def debuginstall(ui, **opts) -> int:
     wirecompengines = util.compengines.supportedwireengines(util.SERVERROLE)
     fm.write(
         "compenginesserver",
-        _("checking available compression engines " "for wire protocol (%s)\n"),
+        _("checking available compression engines for wire protocol (%s)\n"),
         fm.formatlist(
             [e.name() for e in wirecompengines if e.wireprotosupport()],
             name="compengine",
@@ -1992,7 +1952,7 @@ def debuginstall(ui, **opts) -> int:
     fm.condwrite(
         problems,
         "problems",
-        _("%d problems detected," " please check your install!\n"),
+        _("%d problems detected, please check your install!\n"),
         problems,
     )
     fm.end()
@@ -2130,7 +2090,7 @@ def debuglistpythonstd(ui, **opts):
     [
         ("L", "force-lock", None, _("free the store lock (DEPRECATED)")),
         ("W", "force-wlock", None, _("free the working state lock (DEPRECATED)")),
-        ("U", "force-undolog-lock", None, _("free the undolog lock " "(DEPRECATED)")),
+        ("U", "force-undolog-lock", None, _("free the undolog lock (DEPRECATED)")),
         ("s", "set-lock", None, _("set the store lock until stopped")),
         ("S", "set-wlock", None, _("set the working state lock until stopped")),
         ("", "wait", None, _("wait for the lock when setting it")),
@@ -2346,7 +2306,7 @@ def debugnamecomplete(ui, repo, *args, **opts) -> None:
             "",
             "exclusive",
             False,
-            _("restrict display to markers only " "relevant to REV"),
+            _("restrict display to markers only relevant to REV"),
         ),
         ("", "index", False, _("display index of the marker")),
     ]
@@ -2887,7 +2847,7 @@ def debugrevspec(ui, repo, expr, **opts) -> Optional[int]:
     if opts["no_optimized"]:
         stages = stages[:-1]
     if opts["verify_optimized"] and opts["no_optimized"]:
-        raise error.Abort(_("cannot use --verify-optimized with " "--no-optimized"))
+        raise error.Abort(_("cannot use --verify-optimized with --no-optimized"))
     stagenames = set(n for n, f in stages)
 
     showalways = set()
@@ -3084,14 +3044,12 @@ def debugssl(ui, repo, source=None, **opts) -> None:
     of the SSL error is likely another issue.
     """
     if not pycompat.iswindows:
-        raise error.Abort(
-            _("certificate chain building is only possible on " "Windows")
-        )
+        raise error.Abort(_("certificate chain building is only possible on Windows"))
 
     if not source:
         if not repo:
             raise error.Abort(
-                _("there is no @Product@ repository here, and no " "server specified")
+                _("there is no @Product@ repository here, and no server specified")
             )
         source = "default"
 
@@ -3227,7 +3185,7 @@ def debugtemplate(ui, repo, tmpl, **opts) -> None:
     if opts[r"rev"]:
         if repo is None:
             raise error.RepoError(
-                _("there is no @Product@ repository here " "(.hg not found)")
+                _("there is no @Product@ repository here (.hg not found)")
             )
         revs = scmutil.revrange(repo, opts[r"rev"])
 

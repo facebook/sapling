@@ -61,8 +61,16 @@ mononoke_fbpkg(
     },
 )
 
+# deprecated, replaced by mononoke.async_requests_worker
 mononoke_fbpkg(
     name = "mononoke.megarepo_async_requests_worker",
+    path_actions = {
+        "async_requests_worker": "//eden/mononoke/async_requests/worker:worker",
+    },
+)
+
+mononoke_fbpkg(
+    name = "mononoke.async_requests_worker",
     path_actions = {
         "async_requests_worker": "//eden/mononoke/async_requests/worker:worker",
     },

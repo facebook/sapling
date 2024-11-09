@@ -5,9 +5,16 @@ oncall("sapling")
 rust_library(
     name = "minibench",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {"package": {
-        "autoexamples": False,
-        "license": "MIT",
-    }}},
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "minibench"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "autoexamples": False,
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "minibench",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     crate_root = "src/lib.rs",
 )

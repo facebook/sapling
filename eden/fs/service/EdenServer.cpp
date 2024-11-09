@@ -2761,7 +2761,10 @@ void EdenServer::runEdenDoctor() {
   folly::CPUThreadPoolExecutor executor(1);
   auto systemConfigDir = config_->getEdenConfig()->getSystemConfigDir();
   auto edenDir = getEdenDir();
-  executor.add([systemConfigDir, edenDir] {
+  auto structuredLogger = structuredLogger_;
+  executor.add([systemConfigDir, edenDir, structuredLogger] {
+    auto doctorRunStatus = AutoEdenDoctorRunEvent::Success;
+    auto statusReason = std::string();
     try {
       XLOG(INFO, "Running periodic eden doctor dry-run.");
       // Not passing Options field cause "0x57" error. ref: D59783277
@@ -2794,11 +2797,19 @@ void EdenServer::runEdenDoctor() {
         XLOG(
             ERR,
             "EdenFS doctor dry run failed or timed-out. Check edenfs doctor scuba logs for more info.");
+        doctorRunStatus = AutoEdenDoctorRunEvent::TimeoutOrFailure;
       }
     } catch (const std::exception& e) {
       XLOG(ERR)
           << "Exception occurred while trying to run periodic doctor dry-run: "
           << e.what();
+      doctorRunStatus = AutoEdenDoctorRunEvent::ProcessCreationFailure;
+      statusReason = e.what();
+    }
+
+    if (structuredLogger) {
+      structuredLogger->logEvent(
+          AutoEdenDoctorRunEvent{doctorRunStatus, statusReason});
     }
   });
 }

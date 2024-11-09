@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 #![allow(unexpected_cfgs)]
@@ -92,6 +92,8 @@ pub use crate::cloud::ReferencesData;
 pub use crate::cloud::ReferencesDataResponse;
 pub use crate::cloud::RenameWorkspaceRequest;
 pub use crate::cloud::RenameWorkspaceResponse;
+pub use crate::cloud::RollbackWorkspaceRequest;
+pub use crate::cloud::RollbackWorkspaceResponse;
 pub use crate::cloud::SmartlogData;
 pub use crate::cloud::SmartlogDataResponse;
 pub use crate::cloud::SmartlogNode;

@@ -263,7 +263,7 @@ class localpeer(repository.peer):
         return self._repo.pushkey(namespace, key, old, new)
 
     def stream_out(self, shallow=False):
-        raise errormod.Abort(_("cannot perform stream clone against local " "peer"))
+        raise errormod.Abort(_("cannot perform stream clone against local peer"))
 
     def unbundle(self, cg, heads, url):
         """apply a bundle on a repo
@@ -1220,7 +1220,6 @@ class localrepository:
             for old, new in fastpath:
                 try:
                     commits, segments = bindings.exchange.fastpull(
-                        self.ui._rcfg,
                         self.edenapi,
                         self.changelog.inner,
                         [old],
@@ -1282,7 +1281,7 @@ class localrepository:
                     "obsolete": False,
                     "updatevisibility": False,
                 }
-                opargs = {"extras": extras, "newpull": True}
+                opargs = {"extras": extras}
                 pullheads = sorted(pullheads)
                 exchange.pull(
                     self,
@@ -1681,11 +1680,7 @@ class localrepository:
         return self.ui.configbool("phases", "publish")
 
     def cancopy(self):
-        if not self.local():
-            return False
-        if not self.publishing():
-            return True
-        return True
+        return self.local()
 
     def draft_titles(self):
         """return a stream of (draft_node, title), used by namespace"""
@@ -2120,11 +2115,13 @@ class localrepository:
             oldtip = oldlen - 1
 
             if detail and ui.verbose:
-                msg = _(
-                    "repository tip rolled back to revision %d" " (undo %s: %s)\n"
-                ) % (oldtip, desc, detail)
+                msg = _("repository tip rolled back to revision %d (undo %s: %s)\n") % (
+                    oldtip,
+                    desc,
+                    detail,
+                )
             else:
-                msg = _("repository tip rolled back to revision %d" " (undo %s)\n") % (
+                msg = _("repository tip rolled back to revision %d (undo %s)\n") % (
                     oldtip,
                     desc,
                 )
@@ -2134,7 +2131,7 @@ class localrepository:
 
         if not force and self["."] != self["tip"] and desc == "commit":
             raise errormod.Abort(
-                _("rollback of last commit while not checked out " "may lose data"),
+                _("rollback of last commit while not checked out may lose data"),
                 hint=_("use -f to force"),
             )
 
@@ -2167,13 +2164,10 @@ class localrepository:
             parents = tuple([p.rev() for p in self[None].parents()])
             if len(parents) > 1:
                 ui.status(
-                    _("working directory now based on " "revisions %d and %d\n")
-                    % parents
+                    _("working directory now based on revisions %d and %d\n") % parents
                 )
             else:
-                ui.status(
-                    _("working directory now based on " "revision %d\n") % parents
-                )
+                ui.status(_("working directory now based on revision %d\n") % parents)
             mergemod.mergestate.clean(self, self["."].node())
 
         # TODO: if we know which new heads may result from this rollback, pass
@@ -2594,7 +2588,7 @@ class localrepository:
                 fparent1, fparent2 = nullid, newfparent
             else:
                 self.ui.warn(
-                    _("warning: can't find ancestor for '%s' " "copied from '%s'!\n")
+                    _("warning: can't find ancestor for '%s' copied from '%s'!\n")
                     % (fname, cfname)
                 )
 
@@ -2613,11 +2607,20 @@ class localrepository:
         if (
             metamatched
             and node is not None
-            # "nodemap" is a remotefilelog detail
             and hasattr(flog, "nodemap")
             and fctx.filelog().parents(node) == (fparent1, fparent2)
         ):
-            if node in flog.nodemap:
+            if (
+                # Assume that if the above `parents(node)` call finds data for node, then
+                # node must already exist in the filelog. For remote entries, parents()
+                # comes from the server, so it should hold. For local entries, we insert
+                # into the "dpack" before "hpack", so I think it also holds.
+                (
+                    self.ui.configbool("experimental", "infer-filenode-available", True)
+                    and "remotefilelog" in self.requirements
+                )
+                or node in flog.nodemap
+            ):
                 changelist.append(fname)
                 self.ui.debug("reusing %s filelog node (exact match)\n" % fname)
                 return node
@@ -3238,7 +3241,7 @@ def newreporequirements(repo) -> Set[str]:
                 "experimental.format.compression not available"
             )
             % compengine,
-            hint=_('run "hg debuginstall" to list available ' "compression engines"),
+            hint=_('run "hg debuginstall" to list available compression engines'),
         )
 
     requirements.add("treestate")

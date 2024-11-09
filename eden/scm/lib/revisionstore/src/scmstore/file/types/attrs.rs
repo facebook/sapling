@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use std::ops::BitAnd;
@@ -28,8 +28,8 @@ pub struct FileAttributes {
 impl From<FileAttributes> for SaplingRemoteApiFileAttributes {
     fn from(v: FileAttributes) -> Self {
         SaplingRemoteApiFileAttributes {
-            content: v.pure_content || v.content_header,
-            aux_data: v.aux_data,
+            content: v.pure_content,
+            aux_data: v.aux_data || (v.content_header && !v.pure_content),
         }
     }
 }
@@ -69,6 +69,12 @@ impl FileAttributes {
         pure_content: false,
         content_header: false,
         aux_data: true,
+    };
+
+    pub const CONTENT_HEADER: Self = FileAttributes {
+        pure_content: false,
+        content_header: true,
+        aux_data: false,
     };
 }
 

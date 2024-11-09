@@ -45,6 +45,7 @@ cmdlib_scrubbing = { version = "0.1.0", path = "../../cmdlib/scrubbing" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 commit_graph_types = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph_types" }
 commit_id = { version = "0.1.0", path = "../../cmdlib/commit_id" }
+content_manifest_derivation = { version = "0.1.0", path = "../../derived_data/content_manifest_derivation" }
 context = { version = "0.1.0", path = "../../server/context" }
 cross_repo_sync = { version = "0.1.0", path = "../../commit_rewriting/cross_repo_sync" }
 dag = { version = "0.1.0", path = "../../../scm/lib/dag" }
@@ -102,7 +103,7 @@ repo_factory = { version = "0.1.0", path = "../../repo_factory" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 repo_lock = { version = "0.1.0", path = "../../repo_attributes/repo_lock/repo_lock" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
-serde_json = { version = "1.0.125", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_depth"] }
 skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -111,7 +112,7 @@ sql_commit_graph_storage = { version = "0.1.0", path = "../../repo_attributes/co
 sql_query_config = { version = "0.1.0", path = "../../repo_attributes/sql_query_config" }
 synced_commit_mapping = { version = "0.1.0", path = "../../commit_rewriting/synced_commit_mapping" }
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
-tokio-util = { version = "0.7.10", features = ["full"] }
+tokio-util = { version = "0.7.12", features = ["full"] }
 unodes = { version = "0.1.0", path = "../../derived_data/unodes" }
 walkdir = "2.3"
 

@@ -7,14 +7,24 @@
 
 //! edenfsctl remove
 use std::fmt;
+use std::fs;
+use std::fs::Permissions;
+use std::io::ErrorKind;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
 use dialoguer::Confirm;
+use edenfs_client::EdenFsClient;
+use edenfs_client::EdenFsInstance;
+use edenfs_error::EdenFsError;
+use edenfs_utils::bytes_from_path;
 use tracing::debug;
 use tracing::error;
 use tracing::warn;
@@ -48,14 +58,29 @@ struct RemoveContext {
     original_path: String,
     canonical_path: PathBuf,
     skip_prompt: bool,
+    client: Option<Result<EdenFsClient>>,
+    preserve_mount_point: bool,
 }
 
 impl RemoveContext {
-    fn new(original_path: String, skip_prompt: bool) -> RemoveContext {
+    fn new(
+        original_path: String,
+        skip_prompt: bool,
+        client: Result<EdenFsClient, EdenFsError>,
+        preserve_mount_point: bool,
+    ) -> RemoveContext {
         RemoveContext {
             original_path,
             canonical_path: PathBuf::new(),
             skip_prompt,
+            client: match client {
+                Ok(client) => Some(Ok(client)),
+                Err(e) => {
+                    warn!("Failed to initialize EdenFsClient: {e}");
+                    Some(Err(anyhow!("{e}")))
+                }
+            },
+            preserve_mount_point,
         }
     }
 }
@@ -130,8 +155,14 @@ impl Determination {
 
     #[cfg(windows)]
     fn is_active_eden_mount(&self, context: &RemoveContext) -> bool {
-        warn!("is_active_eden_mount() unimplemented for Windows");
-        false
+        // For Windows, an active Eden mount should have a dir named ".eden" under the
+        // repo and there should be a file named "config" under the ".eden" dir
+        let config_path = context.canonical_path.join(".eden").join("config");
+        if !config_path.exists() {
+            warn!("{} is not an active eden mount", context);
+            return false;
+        }
+        true
     }
 }
 
@@ -154,14 +185,123 @@ impl RegFile {
 struct ActiveEdenMount {}
 impl ActiveEdenMount {
     async fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
-        if context.skip_prompt
-            || Confirm::new()
-                .with_prompt("ActiveEdenMount State is not implemented yet... proceed?")
-                .interact()?
-        {
-            return Err(anyhow!("Rust remove(ActiveEdenMount) is not implemented!"));
+        // TODO: stop process first
+        match self.unmount(context).await {
+            Ok(_) => {
+                debug!("unmount path {} done", context);
+                Ok(Some(State::InactiveEdenMount(InactiveEdenMount {})))
+            }
+            Err(e) => {
+                error!("Failed to unmount {}: {}", context, e);
+                Ok(None)
+            }
+        }
+    }
+
+    async fn unmount(&self, context: &RemoveContext) -> Result<()> {
+        match context.client {
+            Some(ref client_res) => match client_res {
+                Ok(client) => {
+                    debug!("trying to unmount {}", context);
+                    let encoded_path = bytes_from_path(context.canonical_path.clone());
+                    match encoded_path {
+                        Ok(path) => {
+                            let umount_res = client.unmount(&path).await;
+                            match umount_res {
+                                Ok(_) => Ok(()),
+                                Err(e) => Err(anyhow!("Failed to unmount {}: {}", context, e)),
+                            }
+                        }
+                        Err(e) => Err(anyhow!("Failed to encode path {}: {}", context, e)),
+                    }
+                }
+
+                Err(e) => Err(anyhow!("{e}")),
+            },
+            None => {
+                panic!("Failed to unmount due to missing EdenFsClient!")
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
+struct InactiveEdenMount {}
+impl InactiveEdenMount {
+    async fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
+        self.remove_client_config_dir(context)?;
+        self.remove_client_config_entry(context)?;
+
+        Ok(Some(State::CleanUp(CleanUp {})))
+    }
+
+    fn remove_client_config_dir(&self, context: &RemoveContext) -> Result<()> {
+        let instance = EdenFsInstance::global();
+
+        match fs::remove_dir_all(instance.client_dir_for_mount_point(&context.canonical_path)?) {
+            Ok(_) => Ok(()),
+            Err(e) if e.kind() == ErrorKind::NotFound => Ok(()),
+            Err(e) => Err(anyhow!(
+                "Failed to remove client config directory for {}: {}",
+                context,
+                e
+            )),
+        }
+    }
+
+    fn remove_client_config_entry(&self, context: &RemoveContext) -> Result<()> {
+        let instance = EdenFsInstance::global();
+
+        match instance.remove_path_from_directory_map(&context.canonical_path) {
+            Ok(_) => Ok(()),
+            Err(e) => Err(anyhow!(
+                "Failed to remove {} from config json file: {}",
+                context,
+                e
+            )),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct CleanUp {}
+impl CleanUp {
+    async fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
+        if context.preserve_mount_point {
+            warn!(
+                "preserve_mount_point flag is set, not removing the mount point {}!",
+                context
+            );
+        } else {
+            self.clean_mount_point(&context.canonical_path)
+                .with_context(|| anyhow!("Failed to clean mount point {}", context))?;
         }
         Ok(None)
+    }
+
+    #[cfg(unix)]
+    fn clean_mount_point(&self, path: &Path) -> Result<()> {
+        let perms = Permissions::from_mode(0o755);
+        match fs::set_permissions(path, perms) {
+            Ok(_) => match fs::remove_dir_all(path) {
+                Ok(_) => Ok(()),
+                Err(e) => Err(anyhow!(
+                    "Failed to remove mount point {}: {}",
+                    path.display(),
+                    e
+                )),
+            },
+            Err(e) => Err(anyhow!(
+                "failed to set permission 755 for path {}: {}",
+                path.display(),
+                e
+            )),
+        }
+    }
+
+    #[cfg(windows)]
+    fn clean_mount_point(&self, path: &Path) -> Result<()> {
+        Err(anyhow!("Windows clean_mount_point not implemented!!"))
     }
 }
 
@@ -174,8 +314,8 @@ enum State {
 
     // // removal states (harmful operations)
     ActiveEdenMount(ActiveEdenMount),
-    // InactiveEdenMount,
-    // CleanUp,
+    InactiveEdenMount(InactiveEdenMount),
+    CleanUp(CleanUp),
     RegFile(RegFile),
     // Unknown,
 }
@@ -190,6 +330,8 @@ impl fmt::Display for State {
                 State::Determination(_) => "Determination",
                 State::RegFile(_) => "RegFile",
                 State::ActiveEdenMount(_) => "ActiveEdenMount",
+                State::CleanUp(_) => "CleanUp",
+                State::InactiveEdenMount(_) => "InactiveEdenMount",
             }
         )
     }
@@ -212,6 +354,8 @@ impl State {
             State::Determination(inner) => inner.next(context).await,
             State::RegFile(inner) => inner.next(context).await,
             State::ActiveEdenMount(inner) => inner.next(context).await,
+            State::InactiveEdenMount(inner) => inner.next(context).await,
+            State::CleanUp(inner) => inner.next(context).await,
         }
     }
 }
@@ -225,7 +369,15 @@ impl Subcommand for RemoveCmd {
             "Currently supporting only one path given per run"
         );
 
-        let mut context = RemoveContext::new(self.paths[0].clone(), self.skip_prompt);
+        let instance = EdenFsInstance::global();
+        let client = instance.connect(None).await;
+
+        let mut context = RemoveContext::new(
+            self.paths[0].clone(),
+            self.skip_prompt,
+            client,
+            self.preserve_mount_point,
+        );
         let mut state = Some(State::start());
 
         while state.is_some() {
@@ -270,11 +422,21 @@ mod tests {
         temp_dir
     }
 
+    fn default_context(original_path: String) -> RemoveContext {
+        RemoveContext {
+            original_path,
+            canonical_path: PathBuf::new(),
+            skip_prompt: true,
+            client: None,
+            preserve_mount_point: false,
+        }
+    }
+
     #[tokio::test]
     async fn test_sanity_check_pass() {
         let tmp_dir = prepare_directory();
         let path = format!("{}/test/nested/../nested", tmp_dir.path().to_str().unwrap());
-        let mut context = RemoveContext::new(path, true);
+        let mut context = default_context(path);
         let state = State::start().run(&mut context).await.unwrap().unwrap();
 
         assert!(
@@ -291,7 +453,7 @@ mod tests {
             "{}/test/nested/../../nested/inner",
             tmp_dir.path().to_str().unwrap()
         );
-        let mut context = RemoveContext::new(path, true);
+        let mut context = default_context(path);
         let state: std::result::Result<Option<State>, anyhow::Error> =
             State::start().run(&mut context).await;
         assert!(state.is_err());
@@ -316,7 +478,7 @@ mod tests {
         });
 
         // When context includes a path to a regular file
-        let mut file_context = RemoveContext::new(file_path_buf.display().to_string(), true);
+        let mut file_context = default_context(file_path_buf.display().to_string());
         let mut state = State::start()
             .run(&mut file_context)
             .await
@@ -330,8 +492,7 @@ mod tests {
         assert!(matches!(state, State::RegFile(_)), "Expected RegFile state");
 
         // When context includes a path to a directory
-        let mut dir_context =
-            RemoveContext::new(temp_dir.path().to_str().unwrap().to_string(), true);
+        let mut dir_context = default_context(temp_dir.path().to_str().unwrap().to_string());
         state = State::start().run(&mut dir_context).await.unwrap().unwrap();
         assert!(
             matches!(state, State::Determination(_)),

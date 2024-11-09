@@ -324,6 +324,7 @@ rust_binary(
         "//eden/mononoke/git/check_git_wc:check_git_wc",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
+        "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/server/context:context",
     ],
 )

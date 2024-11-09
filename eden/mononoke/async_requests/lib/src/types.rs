@@ -658,17 +658,16 @@ impl_async_svc_method_types_legacy! {
 
 // Params and result types for async_ping
 
-impl_async_svc_method_types_legacy! {
+impl_async_svc_method_types! {
     method_name => "async_ping",
     request_struct => AsyncPing,
 
     params_value_thrift_type => AsyncPingParams,
     params_union_variant => async_ping_params,
 
-    result_value_thrift_type => AsyncPingResult,
+    response_type => AsyncPingResponse,
     result_union_variant => async_ping_result,
 
-    response_type => AsyncPingResponse,
     poll_response_type => AsyncPingPollResponse,
     token_type => AsyncPingToken,
     token_thrift_type => AsyncPingToken,

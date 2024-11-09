@@ -3,7 +3,11 @@
 [package]
 name = "http-client"
 version = "0.1.0"
+authors = ["Meta Source Control Team <sourcecontrol-dev@meta.com>"]
 edition = "2021"
+homepage = "https://sapling-scm.com/"
+repository = "https://github.com/facebook/sapling"
+license = "MIT"
 
 [[bin]]
 name = "http_cli"
@@ -30,11 +34,11 @@ pin-project = "0.4.30"
 regex = "1.9.2"
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_cbor = "0.11"
-serde_json = { version = "1.0.125", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_depth"] }
 structopt = "0.3.26"
 thiserror = "1.0.64"
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
-tokio-util = { version = "0.7.10", features = ["full"] }
+tokio-util = { version = "0.7.12", features = ["full"] }
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 url = "2.5.2"
 

@@ -42,7 +42,7 @@ Init treemanifest and remotefilelog
   $ cd $TESTTMP
 
 setup repo2
-  $ hg clone -q mono:repo repo2 --noupdate --config clone.prefer-edenapi-clonedata=false
+  $ hg clone -q mono:repo repo2 --noupdate
   $ cd repo2
   $ hg pull -q
 
@@ -185,9 +185,7 @@ to create a fileblob bookmark
 #  $ hg bookmarks
 #     test-bookmark             0:3903775176ed
 
-Do a streaming clone of the repo
-  $ hg clone -U --stream mono:repo repo-streamclone
-  fetching changelog
-  2 files to transfer, * bytes of data (glob)
-  transferred * bytes in * seconds (* bytes/sec) (glob)
-  fetching selected remote bookmarks
+Do a clone of the repo
+  $ hg clone -U mono:repo repo-streamclone
+  fetching lazy changelog
+  populating main commit graph

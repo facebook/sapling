@@ -356,6 +356,7 @@ Test push --to to a repo without pushrebase on (i.e. the default remotenames beh
   $ cd ..
   $ hg clone -q ssh://user@dummy/oldserver newclient
   $ cd newclient
+  $ hg go -q remote/serverfeature
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase=
@@ -396,6 +397,7 @@ that requires pushrebase.
   $ cd ..
   $ hg clone -q ssh://user@dummy/pushrebaseserver remotenamesonlyclient
   $ cd remotenamesonlyclient
+  $ hg go -q remote/serverfeature
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase=!

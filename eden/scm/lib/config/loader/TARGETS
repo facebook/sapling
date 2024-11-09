@@ -8,29 +8,17 @@ rust_library(
     name = "configloader",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
-        "cargo_target_config": {
-            "crate_type": [
-                "staticlib",
-                "lib",
-            ],
-        },
+        "cargo_target_config": {"crate_type": [
+            "staticlib",
+            "lib",
+        ]},
         "cargo_toml_config": {
-            "bench": [
-                {
-                    "harness": False,
-                    "name": "bench",
-                },
-            ],
-            "dependencies_override": {
-                "dependencies": {
-                    "version": {"path": "../../version"},
-                },
-            },
-            "extra_buck_dependencies": {
-                "dev-dependencies": [
-                    "//eden/scm/lib/minibench:minibench",
-                ],
-            },
+            "bench": [{
+                "harness": False,
+                "name": "bench",
+            }],
+            "dependencies_override": {"dependencies": {"version": {"path": "../../version"}}},
+            "extra_buck_dependencies": {"dev-dependencies": ["//eden/scm/lib/minibench:minibench"]},
             "features": {
                 "default": [],
                 "fb": [
@@ -49,6 +37,14 @@ rust_library(
                     "sha2",
                 ],
                 "sl_oss": [],
+            },
+            "lib": {"name": "configloader"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "configloader",
+                "repository": "https://github.com/facebook/sapling",
             },
         },
     },
@@ -90,6 +86,7 @@ rust_library(
         "fbsource//third-party/rust:tempfile",
         "fbsource//third-party/rust:url",
         "fbsource//third-party/rust:zstd",
+        "//common/rust/fbwhoami:fbwhoami",
         "//common/rust/shed/hostcaps:hostcaps",
         "//eden/scm/lib/hgtime:hgtime",
         "//eden/scm/lib/http-client:http-client",

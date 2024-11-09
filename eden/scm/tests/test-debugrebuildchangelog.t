@@ -17,16 +17,7 @@
 Clone:
 
   $ cd $TESTTMP
-  $ hg clone --no-shallow --stream ssh://user@dummy/server client --traceback --config devel.collapse-traceback=false
-  streaming all changes
-  * (glob)
-  transferred * bytes in 0.0 seconds (*) (glob)
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  updating to tip
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg clone -q ssh://user@dummy/server client
 
 Add drafts:
 

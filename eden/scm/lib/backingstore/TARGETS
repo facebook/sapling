@@ -39,24 +39,23 @@ rust_library(
     name = "backingstore",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
-        "cargo_target_config": {
-            "crate_type": [
-                "staticlib",
-                "lib",
-            ],
-        },
+        "cargo_target_config": {"crate_type": [
+            "staticlib",
+            "lib",
+        ]},
         "cargo_toml_config": {
-            "dependencies_override": {
-                "dependencies": {
-                    "constructors": {"default-features": False},
-                    "indexedlog": {"features": ["configurable"]},
-                },
-            },
-            "features": {
-                "fb": ["configloader/fb"],
-            },
+            "dependencies_override": {"dependencies": {
+                "constructors": {"default-features": False},
+                "indexedlog": {"features": ["configurable"]},
+            }},
+            "features": {"fb": ["configloader/fb"]},
+            "lib": {"name": "backingstore"},
             "package": {
-                "authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"],
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "backingstore",
+                "repository": "https://github.com/facebook/sapling",
             },
         },
     },

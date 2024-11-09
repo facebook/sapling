@@ -47,6 +47,7 @@ cpp_library(
         ":hg_proxy_hash",
         ":sapling_import_request",
         "//common/fb303/cpp:thread_pool_executor_counters",  # @manual
+        "//common/network:hostname",
         "//eden/common/telemetry:structured_logger",
         "//eden/common/utils:bug",
         "//eden/common/utils:enum",
@@ -86,6 +87,7 @@ cpp_library(
         "//eden/scm/lib/backingstore:sapling_native_backingstore",
         "//folly:range",
         "//folly:synchronized",
+        "//monitoring/obc:obc_lib",
     ],
     external_deps = [
         "re2",

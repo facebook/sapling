@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 //! manifest - The contents of the repository at a specific commit.
@@ -100,27 +100,11 @@ pub trait Manifest {
     /// Retuns an iterator of all the differences in files between two Manifest instances of the
     /// same type.
     // TODO: add default implementation
-    fn diff<'a, M: Matcher>(
+    fn diff<'a, M: 'static + Matcher + Sync + Send>(
         &'a self,
         other: &'a Self,
-        matcher: &'a M,
+        matcher: M,
     ) -> Result<Box<dyn Iterator<Item = Result<DiffEntry>> + 'a>>;
-
-    /// Calculates modified directories between two Manifests.
-    ///
-    /// A directory is considered "modified" if:
-    /// - It only exists in one Manifest.
-    /// - It exists in both Manifests. A direct sub-item (file or dir)
-    ///   is added, removed, or renamed.
-    ///
-    /// Similar to when the OS needs to update directory mtime.
-    /// Modifying content of a file alone does not count as modifying its
-    /// parent directory.
-    fn modified_dirs<'a, M: Matcher>(
-        &'a self,
-        other: &'a Self,
-        matcher: &'a M,
-    ) -> Result<Box<dyn Iterator<Item = Result<DirDiffEntry>> + 'a>>;
 }
 
 /// The result of a list operation. Given a path, the manifest will return:
@@ -231,16 +215,6 @@ impl FileMetadata {
 pub struct DiffEntry {
     pub path: RepoPathBuf,
     pub diff_type: DiffType,
-}
-
-#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
-pub struct DirDiffEntry {
-    /// Path of the directory.
-    pub path: RepoPathBuf,
-    /// Exist on the left side.
-    pub left: bool,
-    /// Exist on the right side.
-    pub right: bool,
 }
 
 impl DiffEntry {

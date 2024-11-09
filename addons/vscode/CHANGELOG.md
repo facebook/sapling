@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.62
+
+### Nov 5 2024
+
+- Fixed ISL not respecting your VS Code theme
+
+## 0.1.61
+
+### Oct 31 2024
+
+- Made Changed Files more visually compact
+
 ## 0.1.60
 
 ### Oct 14 2024

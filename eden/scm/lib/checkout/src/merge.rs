@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use std::collections::HashSet;
@@ -53,9 +53,9 @@ impl Merge {
         base: &M,
     ) -> Result<MergeResult<M>> {
         let matcher = AlwaysMatcher::new();
-        let diff = base.diff(dest, &matcher)?;
+        let diff = base.diff(dest, matcher.clone())?;
         let dest_actions = ActionMap::from_diff(diff)?;
-        let diff = base.diff(src, &matcher)?;
+        let diff = base.diff(src, matcher)?;
         let src_actions = ActionMap::from_diff(diff)?;
         let dest_files: HashSet<_> = dest_actions.keys().collect();
         let src_files = src_actions.keys().collect();

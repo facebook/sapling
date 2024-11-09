@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use std::str::FromStr;
@@ -91,7 +91,7 @@ impl ToItems for TokenStream {
 }
 
 // Only allow unambigious atoms.
-// ex. ">>" is ambigious since it can be part of "Result<Vec<T>>".
+// ex. ">>" is ambiguous since it can be part of "Result<Vec<T>>".
 fn is_punct_pair_atom(p1: &Punct, p2: &Punct) -> bool {
     matches!(p1.spacing(), Spacing::Joint)
         && matches!(

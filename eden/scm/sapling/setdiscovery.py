@@ -154,19 +154,12 @@ def _findcommonheadsnew(
     dag = cl.dag
     start = util.timer()
 
-    isselectivepull = local.ui.configbool(
-        "remotenames", "selectivepull"
-    ) and local.ui.configbool("remotenames", "selectivepulldiscovery")
-
     if ancestorsof is None:
-        if isselectivepull:
-            # With selectivepull, limit heads for discovery for both local and
-            # remote repo - no invisible heads for the local repo.
-            localheads = local.heads()
-            if cl.algorithmbackend == "segments":
-                localheads = list(set(localheads) | set(dag.heads(dag.mastergroup())))
-        else:
-            localheads = list(dag.headsancestors(dag.all()))
+        # With selectivepull, limit heads for discovery for both local and
+        # remote repo - no invisible heads for the local repo.
+        localheads = local.heads()
+        if cl.algorithmbackend == "segments":
+            localheads = list(set(localheads) | set(dag.heads(dag.mastergroup())))
     else:
         localheads = ancestorsof
 
@@ -229,8 +222,7 @@ def _findcommonheadsnew(
 
     def httpenabled():
         return (
-            isselectivepull
-            and ui.configbool("pull", "httpbookmarks")
+            ui.configbool("pull", "httpbookmarks")
             and ui.configbool("exchange", "httpcommitlookup")
             and local.nullableedenapi is not None
         )
@@ -263,36 +255,22 @@ def _findcommonheadsnew(
         remoteheads = {bm: n for (bm, n) in fetchedbookmarks.items() if n is not None}
         commonsample = httpcommitlookup(local, sample)
     else:
-        if isselectivepull:
-            # With selectivepull, limit heads for discovery for both local and
-            # remote repo - only list selected heads on remote.
-            # Return type: sorteddict[name: str, hex: str].
-            batch.listkeyspatterns("bookmarks", patterns=selected)
-        else:
-            # Legacy pull: list all heads on remote.
-            # Return type: List[node: bytes].
-            batch.heads()
+        # With selectivepull, limit heads for discovery for both local and
+        # remote repo - only list selected heads on remote.
+        # Return type: sorteddict[name: str, hex: str].
+        batch.listkeyspatterns("bookmarks", patterns=selected)
         batch.known(sample)
         batch.submit()
         remoteheads, remotehassample = batch.results()
         commonsample = {n for n, known in zip(sample, remotehassample) if known}
 
-    # If the server has no selected names (ex. master), fallback to fetch all
-    # heads.
-    #
-    # Note: This behavior is not needed for production use-cases. However, many
-    # tests setup the server repo without a "master" bookmark. They need the
-    # fallback path to not error out like "repository is unrelated" (details
-    # in the note below).
-    if not remoteheads and isselectivepull:
-        isselectivepull = False
-        remoteheads = remote.heads()
-
-    # Normalize 'remoteheads' to Set[node].
-    if isselectivepull:
-        remoteheads = set(bin(h) for h in remoteheads.values())
+    # If the server has no selected names (ex. master), fallback to fetch all heads. This
+    # is only used by test-setdiscovery.t, which is annoying to migrate.
+    if not remoteheads:
+        remoteheads = set(remote.heads())
     else:
-        remoteheads = set(remoteheads)
+        # Normalize 'remoteheads' to Set[node].
+        remoteheads = set(bin(h) for h in remoteheads.values())
 
     # Unconditionally include 'explicitremoteheads', if selectivepull is used.
     #
@@ -304,7 +282,7 @@ def _findcommonheadsnew(
     # tests relying on scratch heads _not_ visible in "remote.heads()" to
     # return early (both commonheads and remoteheads are empty) and not error
     # out like "repository is unrelated".
-    if explicitremoteheads and isselectivepull:
+    if explicitremoteheads:
         remoteheads = remoteheads.union(explicitremoteheads)
     # Remove 'nullid' that the Rust layer dislikes.
     remoteheads = sorted(h for h in remoteheads if h != nullid)
@@ -392,7 +370,7 @@ def _findcommonheadsnew(
 
     elapsed = util.timer() - start
     ui.debug("%d total queries in %.4fs\n" % (roundtrips, elapsed))
-    msg = "found %d common and %d unknown server heads," " %d roundtrips in %.4fs\n"
+    msg = "found %d common and %d unknown server heads, %d roundtrips in %.4fs\n"
     remoteonlyheads = set(remoteheads) - commonheads
     ui.log(
         "discovery", msg, len(commonheads), len(remoteonlyheads), roundtrips, elapsed

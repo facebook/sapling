@@ -13,7 +13,6 @@ use ::manifest::Entry;
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
-use blobrepo_hg::create_bonsai_changeset_hook;
 use blobrepo_hg::ChangesetHandle;
 use blobrepo_hg::CreateChangeset;
 use bytes::Bytes;
@@ -369,8 +368,6 @@ impl<R: BlobimportRepoLike + Clone + 'static> UploadChangesets<R> {
             concurrent_blobs,
         )));
 
-        let create_and_verify_bonsai = create_bonsai_changeset_hook(origin_repo);
-
         changesets
             .and_then({
                 cloned!(ctx, revlogrepo, repo);
@@ -490,7 +487,7 @@ impl<R: BlobimportRepoLike + Clone + 'static> UploadChangesets<R> {
                     root_manifest: rootmf.compat().boxed(),
                     sub_entries: entries.compat().boxed(),
                     cs_metadata,
-                    create_bonsai_changeset_hook: Some(create_and_verify_bonsai.clone()),
+                    verify_origin_repo: origin_repo.clone(),
                     upload_to_blobstore_only: false,
                 };
                 let cshandle = create_changeset.create(ctx.clone(), &repo, scuba_logger.clone());

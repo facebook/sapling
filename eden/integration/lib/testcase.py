@@ -541,6 +541,8 @@ class EdenRepoTest(EdenTestCase):
 
     # pyre-fixme[13]: Attribute `repo` is never initialized.
     repo: repobase.Repository
+    # pyre-fixme[13]: Attribute `repo` is never initialized.
+    eden_repo: repobase.Repository
     # pyre-fixme[13]: Attribute `repo_name` is never initialized.
     repo_name: str
     # pyre-fixme[13]: Attribute `repo_type` is never initialized.
@@ -584,6 +586,7 @@ class EdenRepoTest(EdenTestCase):
             enable_windows_symlinks=self.enable_windows_symlinks,
             backing_store=self.backing_store_type,
         )
+        self.eden_repo = self.create_eden_repo()
         self.report_time("eden clone done")
         actual_case_sensitive = self.eden.is_case_sensitive(self.mount)
         if self.is_case_sensitive is None:
@@ -608,6 +611,17 @@ class EdenRepoTest(EdenTestCase):
         """
         raise NotImplementedError(
             "test subclasses must implement create_repo().  This is normally"
+            " implemented automatically by @eden_repo_test"
+        )
+
+    def create_eden_repo(self) -> repobase.Repository:
+        """
+        Creates a new repository object that refers to the eden client.
+        Should be implemented by subclasses is used by the test.
+        Implemented automatically by @eden_repo_test (Non-Default)
+        """
+        raise NotImplementedError(
+            "test subclasses must implement create_eden_repo().  This is normally"
             " implemented automatically by @eden_repo_test"
         )
 
@@ -813,6 +827,16 @@ class HgRepoTestMixin:
             filtered=filtered,
         )
 
+    def create_eden_repo(self) -> repobase.Repository:
+        return hgrepo.HgRepository(
+            # pyre-fixme[16]: `HgRepoTestMixin` has no attribute `mount`.
+            self.mount,
+            # pyre-fixme[16]: `HgRepoTestMixin` has no attribute `system_hgrc`.
+            system_hgrc=self.system_hgrc,
+            # pyre-fixme[16]: `HgRepoTestMixin` has no attribute `backing_store_type`.
+            filtered=self.backing_store_type == "filteredhg",
+        )
+
 
 class FilteredHgTestMixin(HgRepoTestMixin):
     backing_store_type: Optional[str] = "filteredhg"
@@ -827,6 +851,11 @@ class GitRepoTestMixin:
     def create_repo(self, name: str) -> repobase.Repository:
         # pyre-fixme[16]: `GitRepoTestMixin` has no attribute `create_git_repo`.
         return self.create_git_repo(name)
+
+    def create_eden_repo(self) -> repobase.Repository:
+        # pyre-fixme[16]: `GitRepoTestMixin` has no attribute `mount`.
+        # pyre-fixme[16]: `GitRepoTestMixin` has no attribute `temp_mgr`.
+        return gitrepo.GitRepository(self.mount, temp_mgr=self.temp_mgr)
 
 
 class NFSTestMixin:

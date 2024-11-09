@@ -109,6 +109,13 @@ class GenericStatsTest(testcase.EdenRepoTest):
     def create_repo(self, name: str) -> HgRepository:
         return self.create_hg_repo(name)
 
+    def create_eden_repo(self) -> HgRepository:
+        return HgRepository(
+            self.mount,
+            system_hgrc=self.system_hgrc,
+            filtered=self.backing_store_type == "filteredhg",
+        )
+
     def populate_repo(self) -> None:
         self.repo.write_file("file", "hello world!\n")
         self.repo.commit("Initial commit.")
@@ -140,6 +147,13 @@ class ObjectStoreStatsTest(testcase.EdenRepoTest):
     def create_repo(self, name: str) -> HgRepository:
         return self.create_hg_repo(name)
 
+    def create_eden_repo(self) -> HgRepository:
+        return HgRepository(
+            self.mount,
+            system_hgrc=self.system_hgrc,
+            filtered=self.backing_store_type == "filteredhg",
+        )
+
     def populate_repo(self) -> None:
         self.repo.write_file("foo.txt", "foo\n")
 
@@ -164,6 +178,13 @@ class ObjectStoreStatsTest(testcase.EdenRepoTest):
 class ObjectCacheStatsTest(testcase.EdenRepoTest):
     def create_repo(self, name: str) -> HgRepository:
         return self.create_hg_repo(name)
+
+    def create_eden_repo(self) -> HgRepository:
+        return HgRepository(
+            self.mount,
+            system_hgrc=self.system_hgrc,
+            filtered=self.backing_store_type == "filteredhg",
+        )
 
     def populate_repo(self) -> None:
         self.repo.mkdir("dir")
@@ -323,6 +344,13 @@ class FSChannelStatsTest(testcase.EdenRepoTest):
     def create_repo(self, name: str) -> HgRepository:
         return self.create_hg_repo(name)
 
+    def create_eden_repo(self) -> HgRepository:
+        return HgRepository(
+            self.mount,
+            system_hgrc=self.system_hgrc,
+            filtered=self.backing_store_type == "filteredhg",
+        )
+
     def populate_repo(self) -> None:
         # This file evades EdenFS' automatic prefetching by being two levels
         # inside the root.
@@ -409,6 +437,13 @@ class SaplingBackingStoreStatsTest(testcase.EdenRepoTest):
 
     def create_repo(self, name: str) -> HgRepository:
         return self.create_hg_repo(name)
+
+    def create_eden_repo(self) -> HgRepository:
+        return HgRepository(
+            self.mount,
+            system_hgrc=self.system_hgrc,
+            filtered=self.backing_store_type == "filteredhg",
+        )
 
     def populate_repo(self) -> None:
         # This file evades EdenFS' automatic prefetching by being two levels

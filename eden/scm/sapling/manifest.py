@@ -688,14 +688,14 @@ class memmanifestctx:
     def parents(self):
         if self._parents is None:
             raise error.ProgrammingError(
-                "accessing memmanifestctx.parents " "before write()"
+                "accessing memmanifestctx.parents before write()"
             )
         return self._parents
 
     def node(self):
         if self._node is None:
             raise error.ProgrammingError(
-                "accessing memmanifestctx.node() " "before write()"
+                "accessing memmanifestctx.node() before write()"
             )
         return self._node
 
@@ -703,7 +703,7 @@ class memmanifestctx:
     def linknode(self):
         if self._linkrev is None:
             raise error.ProgrammingError(
-                _("accessing memmanifestctx.linknode " "before write()")
+                _("accessing memmanifestctx.linknode before write()")
             )
         return self._manifestlog._maplinkrev(self._linkrev)
 

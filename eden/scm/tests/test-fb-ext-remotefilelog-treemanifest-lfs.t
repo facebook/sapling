@@ -19,8 +19,6 @@
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   fetching lazy changelog
   populating main commit graph
-  tip commit: 17c1120490576a2c8322e09881534341089e946d
-  fetching selected remote bookmarks
   updating to tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

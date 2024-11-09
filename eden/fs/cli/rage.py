@@ -302,6 +302,8 @@ def print_diagnostic_info(
         with io.StringIO() as stats_stream:
             stats_mod.do_stats_general(
                 instance,
+                # pyre-fixme[6]: For 1st argument expected `TextIOWrapper[Any]` but
+                #  got `StringIO`.
                 stats_mod.StatsGeneralOptions(out=stats_stream),
             )
             out.write(stats_stream.getvalue().encode())
@@ -775,6 +777,7 @@ def print_crashed_edenfs_logs(processor: str, out: IO[bytes], dry_run: bool) -> 
 
     section_title("EdenFS crashes and dumps:", out)
     num_uploads = 0
+    # pyre-fixme[10]: Name `crashes_paths` is used but not defined.
     for crashes_path in crashes_paths:
         try:
             if not crashes_path.exists():
@@ -819,6 +822,7 @@ def trace_running_edenfs(
 
     section_title("EdenFS process trace", out)
     try:
+        # pyre-fixme[10]: Name `trace_fn` is used but not defined.
         paste_output(lambda sink: trace_fn(pid, sink), processor, out, dry_run)
     except Exception as e:
         out.write(b"Error getting EdenFS trace: %s.\n" % str(e).encode())

@@ -88,23 +88,6 @@ Check that path aliases are expanded:
   $ hg -R f showconfig paths.default
   $TESTTMP/a#0
 
-Use --pull:
-
-  $ hg clone --pull a g
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  updating to tip
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg -R g verify
-  warning: verify does not actually check anything in this repo
-
-Invalid dest '' with --pull must abort (issue2528):
-
-  $ hg clone --pull a ''
-  abort: empty destination path is not valid
-  [255]
 
 Clone to '.':
 
@@ -189,34 +172,6 @@ Same revision checked out in repo a and ua:
   $ rm -r ua
 
 
-Testing clone --pull -u:
-
-  $ hg clone --pull -u . a ua
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  updating to 7bc8ee83a26fd5fa6374a25e8f8248ea074e16a3
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-
-Repo ua has both heads:
-
-  $ hg -R ua heads
-  commit:      7bc8ee83a26f
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     starting branch stable
-
-Same revision checked out in repo a and ua:
-
-  $ hg -R a parents --template "{node|short}\n"
-  7bc8ee83a26f
-  $ hg -R ua parents --template "{node|short}\n"
-  7bc8ee83a26f
-
-  $ rm -r ua
-
-
 Testing clone -u <branch>:
 
   $ hg clone -u stable a ua
@@ -279,61 +234,6 @@ Same revision checked out in repo a and ua:
   7bc8ee83a26f
   $ hg -R ua parents --template "{node|short}\n"
   7bc8ee83a26f
-
-  $ rm -r ua
-
-
-Testing -u -r <branch>:
-
-  $ hg clone -u . -r stable a ua
-  adding changesets
-  adding manifests
-  adding file changes
-  updating to 7bc8ee83a26fd5fa6374a25e8f8248ea074e16a3
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-
-Repo ua has branch 'stable' and 'default' (was changed in fd511e9eeea6):
-
-  $ hg -R ua heads
-  commit:      7bc8ee83a26f
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     starting branch stable
-
-Same revision checked out in repo a and ua:
-
-  $ hg -R a parents --template "{node|short}\n"
-  7bc8ee83a26f
-  $ hg -R ua parents --template "{node|short}\n"
-  7bc8ee83a26f
-
-  $ rm -r ua
-
-
-Testing -r <branch>:
-
-  $ hg clone -r stable a ua
-  adding changesets
-  adding manifests
-  adding file changes
-  updating to 4f44d5743f52b70e278b04871eab353996595b1d
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-
-Repo ua has branch 'stable' and 'default' (was changed in fd511e9eeea6):
-
-  $ hg -R ua heads
-  commit:      4f44d5743f52
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     another change for branch stable
-
-Branch 'stable' is checked out:
-
-  $ hg -R ua parents
-  commit:      4f44d5743f52
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     another change for branch stable
 
   $ rm -r ua
 
@@ -484,7 +384,7 @@ Create repositories to test auto sharing functionality
   $ hg debugobsolete c05d5c47a5cf81401869999f3d05f7d699d2b29a e082c1832e09a7d1e78b7fd49a592d372de854c8
   $ cd ..
 
-  $ hg -q clone --pull source1a source1b
+  $ hg -q clone source1a source1b
   $ cd source1a
   $ hg bookmark bookA
   $ echo 1a > foo

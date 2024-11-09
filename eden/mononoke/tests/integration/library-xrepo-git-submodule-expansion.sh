@@ -177,6 +177,8 @@ function merge_repo_a_to_large_repo {
   SYNCED_HEAD=$(rg ".+synced as (\w+) in.+" -or '$1' "$TESTTMP/xrepo_mapping_change.out")
   printf "\nSYNCED_HEAD: %s\n\n" "$SYNCED_HEAD"
 
+  sleep 2
+
   clone_and_log_large_repo "$SYNCED_HEAD"
 
   hg co -q "$MASTER_BOOKMARK_NAME"

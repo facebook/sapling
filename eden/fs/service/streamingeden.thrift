@@ -62,6 +62,63 @@ const i64 FS_EVENT_READ = 1;
 const i64 FS_EVENT_WRITE = 2;
 const i64 FS_EVENT_OTHER = 4;
 
+struct Added {
+  1: eden.Dtype fileType;
+  3: eden.PathString path;
+}
+
+struct Modified {
+  1: eden.Dtype fileType;
+  3: eden.PathString path;
+}
+
+struct Renamed {
+  1: eden.Dtype fileType;
+  2: eden.PathString from;
+  3: eden.PathString to;
+}
+
+struct Replaced {
+  1: eden.Dtype fileType;
+  2: eden.PathString from;
+  3: eden.PathString to;
+}
+
+struct Removed {
+  1: eden.Dtype fileType;
+  3: eden.PathString path;
+}
+
+union SmallChangeNotification {
+  // @lint-ignore-every FBTHRIFTCOMPAT FBTHRIFTCOMPAT1 FBTHRIFTCOMPAT2
+  1: Added added;
+  // @lint-ignore-every FBTHRIFTCOMPAT FBTHRIFTCOMPAT1 FBTHRIFTCOMPAT2
+  2: Modified modified;
+  // @lint-ignore-every FBTHRIFTCOMPAT FBTHRIFTCOMPAT1 FBTHRIFTCOMPAT2
+  3: Renamed renamed;
+  4: Replaced replaced;
+  5: Removed removed;
+}
+
+struct DirectoryRenamed {
+  1: eden.PathString from;
+  2: eden.PathString to;
+}
+struct CommitTransition {
+  1: eden.ThriftRootId from;
+  2: eden.ThriftRootId to;
+}
+
+union LargeChangeNotification {
+  1: DirectoryRenamed directoryRenamed;
+  2: CommitTransition commitTransition;
+}
+
+union ChangeNotification {
+  1: SmallChangeNotification smallChange;
+  2: LargeChangeNotification largeChange;
+}
+
 /**
  * The value of a stream item.
  *
@@ -83,6 +140,23 @@ struct ChangesSinceResult {
 }
 
 /**
+ * The value of a stream item in a streamChangedSinceV2 result stream.
+ *
+ * Each stream item refers to a single change notification
+ * since the notification clock provided.
+ */
+struct ChangeNotificationResult {
+  1: ChangeNotification change;
+}
+
+/**
+ * Return value of the streamChangedSinceV2 API
+ */
+struct ChangesSinceV2Result {
+  1: eden.JournalPosition toPosition;
+}
+
+/**
  * Argument to streamChangesSince API.
  */
 struct StreamChangesSinceParams {
@@ -96,6 +170,14 @@ struct StreamChangesSinceParams {
 struct StreamSelectedChangesSinceParams {
   1: StreamChangesSinceParams changesParams;
   2: list<string> globs;
+}
+
+/**
+ * Argument to streamChangedSinceV2 API
+ */
+struct StreamChangesSinceV2Params {
+  1: eden.PathString mountPoint;
+  2: eden.JournalPosition fromPosition;
 }
 
 struct TraceTaskEventsRequest {}
@@ -193,6 +275,18 @@ service StreamingEdenService extends eden.EdenService {
   ChangesSinceResult, stream<
     ChangedFileResult throws (1: eden.EdenError ex)
   > streamChangesSince(1: StreamChangesSinceParams params) throws (
+    1: eden.EdenError ex,
+  );
+
+  /**
+   * Returns a stream of change notifications for a given path since a specific point in time.
+   *
+   * This does not resolve expensive operations like moving a directory or changing
+   * commits. Callers must query Sapling to evaluate those potentially expensive operations.
+   */
+  ChangesSinceV2Result, stream<
+    ChangeNotificationResult throws (1: eden.EdenError ex)
+  > streamChangesSinceV2(1: StreamChangesSinceV2Params params) throws (
     1: eden.EdenError ex,
   );
 

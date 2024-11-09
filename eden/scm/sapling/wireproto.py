@@ -45,7 +45,7 @@ urlerr = util.urlerr
 urlreq = util.urlreq
 
 bundle2requiredmain = _("incompatible @Product@ client; bundle2 required")
-bundle2requiredhint = _("see https://www.mercurial-scm.org/wiki/" "IncompatibleClient")
+bundle2requiredhint = _("see https://www.mercurial-scm.org/wiki/IncompatibleClient")
 bundle2required = "%s\n(%s)\n" % (bundle2requiredmain, bundle2requiredhint)
 
 
@@ -101,7 +101,7 @@ class remoteiterbatcher(peer.iterbatcher):
         fn = getattr(self._remote, name)
         if not getattr(fn, "batchable", None):
             raise error.ProgrammingError(
-                "Attempted to batch a non-batchable " "call to %r" % name
+                "Attempted to batch a non-batchable call to %r" % name
             )
 
         return super(remoteiterbatcher, self).__getattr__(name)
@@ -863,7 +863,7 @@ def supportedcompengines(ui, proto, role):
 
     if not compengines:
         raise error.Abort(
-            _("%s config option does not specify any known " "compression engines")
+            _("%s config option does not specify any known compression engines")
             % config,
             hint=_("usable compression engines: %s") % ", ".sorted(validnames),
         )

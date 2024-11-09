@@ -51,9 +51,9 @@ Push commits that will be obsoleted
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
   $ echo 2 > 2 && hg add 2 && hg ci -m 2
   $ log -r "all()"
-  @  2 [draft;rev=4;0c67ec8c24b9]
+  @  2 [draft;rev=281474976710657;0c67ec8c24b9]
   │
-  o  1 [draft;rev=3;a0c9c5791058]
+  o  1 [draft;rev=281474976710656;a0c9c5791058]
   │
   │ o  C [public;rev=2;26805aba1e60] remote/master_bookmark
   │ │
@@ -73,9 +73,9 @@ Push commits that will be obsoleted
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updated remote bookmark master_bookmark to dc31470c8386
   $ log -r "all()"
-  @  2 [public;rev=6;dc31470c8386] remote/master_bookmark
+  @  2 [public;rev=4;dc31470c8386] remote/master_bookmark
   │
-  o  1 [public;rev=5;c2e526aacb51]
+  o  1 [public;rev=3;c2e526aacb51]
   │
   o  C [public;rev=2;26805aba1e60]
   │
@@ -88,11 +88,11 @@ Push commits that will not be obsoleted
   $ hg up -q dc31470c8386
   $ echo 3 > 3 && hg add 3 && hg ci -m 3
   $ log -r "all()"
-  @  3 [draft;rev=7;6398085ceb9d]
+  @  3 [draft;rev=281474976710658;6398085ceb9d]
   │
-  o  2 [public;rev=6;dc31470c8386] remote/master_bookmark
+  o  2 [public;rev=4;dc31470c8386] remote/master_bookmark
   │
-  o  1 [public;rev=5;c2e526aacb51]
+  o  1 [public;rev=3;c2e526aacb51]
   │
   o  C [public;rev=2;26805aba1e60]
   │
@@ -112,11 +112,11 @@ Push commits that will not be obsoleted
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updated remote bookmark master_bookmark to 6398085ceb9d
   $ log -r "all()"
-  @  3 [public;rev=7;6398085ceb9d] remote/master_bookmark
+  @  3 [public;rev=5;6398085ceb9d] remote/master_bookmark
   │
-  o  2 [public;rev=6;dc31470c8386]
+  o  2 [public;rev=4;dc31470c8386]
   │
-  o  1 [public;rev=5;c2e526aacb51]
+  o  1 [public;rev=3;c2e526aacb51]
   │
   o  C [public;rev=2;26805aba1e60]
   │

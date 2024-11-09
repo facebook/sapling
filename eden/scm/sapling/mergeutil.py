@@ -18,9 +18,7 @@ from .i18n import _
 
 def checkunresolved(ms):
     if list(ms.unresolved()):
-        raise error.Abort(
-            _("unresolved merge conflicts " "(see '@prog@ help resolve')")
-        )
+        raise error.Abort(_("unresolved merge conflicts (see '@prog@ help resolve')"))
     if ms.mdstate() != "s" or list(ms.driverresolved()):
         raise error.Abort(
             _("driver-resolved merge conflicts"),

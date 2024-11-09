@@ -143,7 +143,7 @@ py_class!(pub class repo |py| {
         let _ = repo.tree_store().map_pyerr(py)?;
         let tree_scm_store = repo.tree_scm_store().unwrap();
 
-        let caching_store = Some(repo.caching_tree_store().map_pyerr(py)?);
+        let caching_store = Some(repo.tree_store().map_pyerr(py)?);
 
         PyTreeScmStore::create_instance(py, tree_scm_store, caching_store)
     }

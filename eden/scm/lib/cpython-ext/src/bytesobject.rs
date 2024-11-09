@@ -1,19 +1,19 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use std::mem;
 use std::os::raw::c_char;
+use std::ptr::addr_of_mut;
 use std::slice;
 
 use cpython::PyObject as RustPyObject;
 use cpython::Python as RustPythonGILGuard;
 use ffi::PyBytes_Type;
 use ffi::PyObject;
-use ffi::PyTypeObject;
 use ffi::PyVarObject;
 use ffi::Py_hash_t;
 use ffi::Py_ssize_t;
@@ -34,7 +34,7 @@ struct PyBytesObject {
 pub fn allocate_pybytes(py: RustPythonGILGuard<'_>, size: usize) -> (RustPyObject, &mut [u8]) {
     unsafe {
         let ptr: *mut PyVarObject = _PyObject_NewVar(
-            &mut PyBytes_Type as *mut PyTypeObject,
+            addr_of_mut!(PyBytes_Type),
             (size + mem::size_of::<PyBytesObject>()) as Py_ssize_t,
         );
         let mut ptr: *mut PyObject = mem::transmute(ptr);

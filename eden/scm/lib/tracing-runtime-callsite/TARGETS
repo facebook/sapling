@@ -5,13 +5,16 @@ oncall("sapling")
 rust_library(
     name = "tracing-runtime-callsite",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "package": {
-                "authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"],
-            },
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "tracing-runtime-callsite"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "tracing-runtime-callsite",
+            "repository": "https://github.com/facebook/sapling",
         },
-    },
+    }},
     crate_root = "src/lib.rs",
     test_deps = [
         "fbsource//third-party/rust:regex",

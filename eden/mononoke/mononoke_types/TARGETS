@@ -32,6 +32,7 @@ rust_library(
         "fbsource//third-party/rust:chrono",
         "fbsource//third-party/rust:chrono-english",
         "fbsource//third-party/rust:derivative",
+        "fbsource//third-party/rust:either",
         "fbsource//third-party/rust:faster-hex",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:gix-date",

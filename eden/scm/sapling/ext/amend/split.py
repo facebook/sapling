@@ -31,6 +31,7 @@ from sapling import (
 from sapling.ext import rebase
 from sapling.i18n import _
 from sapling.node import hex
+from sapling.utils import subtreeutil
 
 from ..extlib.phabricator import diffprops
 from . import common
@@ -75,6 +76,8 @@ def split(ui, repo, *revs, **opts):
         torebase = ()
     else:
         torebase = list(map(hex, repo.nodes("descendants(%d) - (%d)", rev, rev)))
+
+    subtreeutil.check_commit_splitability(repo, rev)
 
     with repo.wlock(), repo.lock():
         cmdutil.bailifchanged(repo)

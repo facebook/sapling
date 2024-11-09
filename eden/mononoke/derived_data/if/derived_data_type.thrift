@@ -35,4 +35,5 @@ enum DerivedDataType {
   GIT_DELTA_MANIFEST_V2 = 19,
   SKELETON_MANIFEST_V2 = 20,
   CCSM = 21,
+  CONTENT_MANIFEST = 22,
 } (rust.exhaustive)

@@ -379,7 +379,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, filterfn, *pats, **opt
         merge = len(wctx.parents()) > 1
         if merge:
             raise error.Abort(
-                _("cannot partially commit a merge " '(use "@prog@ commit" instead)')
+                _('cannot partially commit a merge (use "@prog@ commit" instead)')
             )
 
         def fail(f, msg):
@@ -986,9 +986,7 @@ def logmessage(repo, opts):
     logfile = opts.get("logfile")
 
     if message and logfile:
-        raise error.Abort(
-            _("options --message and --logfile are mutually " "exclusive")
-        )
+        raise error.Abort(_("options --message and --logfile are mutually exclusive"))
     if not message and logfile:
         try:
             if isstdiofilename(logfile):
@@ -1212,7 +1210,7 @@ def openrevlog(repo, cmd, file_, opts):
         elif dir:
             if "treemanifest" not in repo.requirements:
                 raise error.Abort(
-                    _("--dir can only be used on repos with " "treemanifest enabled")
+                    _("--dir can only be used on repos with treemanifest enabled")
                 )
             dirlog = repo.manifestlog._revlog.dirlog(dir)
             if len(dirlog):
@@ -1275,8 +1273,7 @@ def copy(ui, repo, pats, opts, rename=False):
                     ui.warn(_("%s: not copying - file is not managed\n") % rel)
                 if exact and state == "r":
                     ui.warn(
-                        _("%s: not copying - file has been marked for" " remove\n")
-                        % rel
+                        _("%s: not copying - file has been marked for remove\n") % rel
                     )
                 continue
             # abs: hgsep
@@ -1503,7 +1500,7 @@ def copy(ui, repo, pats, opts, rename=False):
     if not destdirexists:
         if len(pats) > 1 or matchmod.patkind(pats[0]):
             raise error.Abort(
-                _("with multiple sources, destination must be an " "existing directory")
+                _("with multiple sources, destination must be an existing directory")
             )
         if util.endswithsep(dest):
             raise error.Abort(_("destination %s is not a directory") % dest)
@@ -2592,8 +2589,7 @@ def walkfilerevs(repo, match, follow, revs, fncache):
             if follow:
                 if filename not in pctx:
                     raise error.Abort(
-                        _("cannot follow file not in parent " 'revision: "%s"')
-                        % filename
+                        _('cannot follow file not in parent revision: "%s"') % filename
                     )
                 yield filename, pctx[filename].filenode()
             else:
@@ -2743,7 +2739,7 @@ def walkchangerevs(repo, match, opts, prepare):
 
         if follow:
             raise error.Abort(
-                _("can only follow copies/renames for explicit " "filenames")
+                _("can only follow copies/renames for explicit filenames")
             )
 
         # The slow path checks files modified in every changeset.
@@ -3058,7 +3054,7 @@ def _makelogrevset(repo, pats, opts, revs):
                                 """did you mean "@prog@ log -r '%s'", or "@prog@ log -r '%s' -f" to follow history?"""
                             ) % (pats[0], pats[0])
                         raise error.Abort(
-                            _("cannot follow file not in parent " 'revision: "%s"') % f,
+                            _('cannot follow file not in parent revision: "%s"') % f,
                             hint=hint,
                         )
 
@@ -3296,7 +3292,7 @@ def getloglinerangerevs(repo, userrevs, opts):
     for fname, (fromline, toline) in _parselinerangelogopt(repo, opts):
         if fname not in wctx:
             raise error.Abort(
-                _("cannot follow file not in parent " 'revision: "%s"') % fname
+                _('cannot follow file not in parent revision: "%s"') % fname
             )
         fctx = wctx.filectx(fname)
         for fctx, linerange in dagop.blockancestors(fctx, fromline, toline):
@@ -3625,7 +3621,7 @@ def forget(ui, repo, match, prefix, explicitonly):
                         if repo.dirstate.normalize(f) in repo.dirstate:
                             continue
                         ui.warn(
-                            _("not removing %s: " "file is already untracked\n")
+                            _("not removing %s: file is already untracked\n")
                             % match.rel(f)
                         )
                     bad.append(f)

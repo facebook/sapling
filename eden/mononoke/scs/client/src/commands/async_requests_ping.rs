@@ -13,7 +13,7 @@ use anyhow::Result;
 use clap::Parser;
 use scs_client_raw::thrift;
 use serde::Serialize;
-use source_control::AsyncPingPollResponse;
+use source_control_clients::errors::AsyncPingPollError;
 
 use crate::render::Render;
 use crate::ScscApp;
@@ -24,27 +24,14 @@ pub(super) struct CommandArgs {}
 
 #[derive(Serialize)]
 struct PingOutput {
-    response: AsyncPingPollResponse,
+    response: thrift::AsyncPingResponse,
 }
 
 impl Render for PingOutput {
     type Args = CommandArgs;
 
     fn render(&self, _args: &Self::Args, w: &mut dyn Write) -> Result<()> {
-        match &self.response.result {
-            Some(res) => match res {
-                source_control::AsyncPingResult::success(success) => {
-                    write!(w, "{}\n", success.payload)
-                }
-                source_control::AsyncPingResult::error(error) => {
-                    write!(w, "request failed: {:?}\n", error)
-                }
-                source_control::AsyncPingResult::UnknownField(_) => {
-                    write!(w, "unexpected result: {:?}\n", res)
-                }
-            },
-            None => write!(w, "empty result returned\n"),
-        }?;
+        write!(w, "received: {}\n", self.response.payload);
         Ok(())
     }
 
@@ -66,9 +53,33 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         token.id
     );
 
-    let res = conn.async_ping_poll(&token).await?;
+    let response = {
+        loop {
+            let res = conn.async_ping_poll(&token).await;
+            match res {
+                Ok(res) => match res {
+                    source_control::AsyncPingPollResponse::response(success) => {
+                        break success;
+                    }
+                    source_control::AsyncPingPollResponse::poll_pending(_) => {
+                        println!("ping is not ready yet, waiting some more...");
+                    }
+                    source_control::AsyncPingPollResponse::UnknownField(t) => {
+                        return Err(anyhow::anyhow!(
+                            "request failed with unknown result: {:?}",
+                            t
+                        ));
+                    }
+                },
+                Err(e) => match e {
+                    AsyncPingPollError::poll_error(_) => {
+                        // retry
+                    }
+                    _ => return Err(anyhow::anyhow!("request failed with error: {:?}", e)),
+                },
+            }
+        }
+    };
 
-    app.target
-        .render_one(&args, PingOutput { response: res })
-        .await
+    app.target.render_one(&args, PingOutput { response }).await
 }

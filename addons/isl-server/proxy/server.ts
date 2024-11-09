@@ -151,9 +151,9 @@ export function startServer({
     });
 
     /**
-     * Listen on provided port, on all network interfaces.
+     * Listen on localhost:port.
      */
-    const httpServer = server.listen(port);
+    const httpServer = server.listen(port, 'localhost');
     const wsServer = new WebSocket.Server({noServer: true, path: '/ws'});
     wsServer.on('connection', async (socket, connectionRequest) => {
       // We require websocket connections to contain the token as a URL search parameter.

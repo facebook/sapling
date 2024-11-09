@@ -1215,13 +1215,13 @@ class ui:
     ):
         if action is None:
             self.develwarn(
-                "action is None but will soon be a required " "parameter to ui.edit()"
+                "action is None but will soon be a required parameter to ui.edit()"
             )
         extra_defaults = {"prefix": "editor", "suffix": ".txt"}
         if extra is not None:
             if extra.get("suffix") is not None:
                 self.develwarn(
-                    "extra.suffix is not None but will soon be " "ignored by ui.edit()"
+                    "extra.suffix is not None but will soon be ignored by ui.edit()"
                 )
             extra_defaults.update(extra)
         extra = extra_defaults
@@ -1678,7 +1678,7 @@ class ui:
         ):
             return
         msg += (
-            "\n(compatibility will be dropped after Mercurial-%s," " update your code.)"
+            "\n(compatibility will be dropped after Mercurial-%s, update your code.)"
         ) % version
         self.develwarn(msg, stacklevel=2, config="deprec-warn")
 
@@ -1884,8 +1884,7 @@ def pushurlpathoption(ui, path, value):
     # push.
     if u.fragment:
         ui.warn(
-            _('("#fragment" in paths.%s:pushurl not supported; ' "ignoring)\n")
-            % path.name
+            _('("#fragment" in paths.%s:pushurl not supported; ignoring)\n') % path.name
         )
         u.fragment = None
 
@@ -1935,7 +1934,7 @@ class path:
         # location is valid.
         if not name and not u.scheme and not self._isvalidlocalpath(self.loc):
             raise ValueError(
-                "location is not a URL or path to a local " "repo: %s" % rawloc
+                "location is not a URL or path to a local repo: %s" % rawloc
             )
 
         suboptions = suboptions or {}

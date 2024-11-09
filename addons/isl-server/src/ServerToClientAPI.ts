@@ -847,6 +847,13 @@ export default class ServerToClientAPI {
         parseExecJson(exec, reply);
         break;
       }
+      case 'fetchQeFlag': {
+        Internal.fetchQeFlag?.(repo.initialConnectionContext, data.name).then((passes: boolean) => {
+          this.logger.info(`qe flag ${data.name} ${passes ? 'PASSES' : 'FAILS'}`);
+          this.postMessage({type: 'fetchedQeFlag', name: data.name, passes});
+        });
+        break;
+      }
       case 'fetchFeatureFlag': {
         Internal.fetchFeatureFlag?.(repo.initialConnectionContext, data.name).then(
           (passes: boolean) => {
@@ -897,9 +904,11 @@ export default class ServerToClientAPI {
         }
         repo.runDiff(ctx, data.comparison, /* context lines */ 4).then(diff => {
           Internal.generateSuggestionWithAI?.(repo.initialConnectionContext, {
-            title: data.title,
             context: diff,
             fieldName: data.fieldName,
+            summary: data.summary ?? '',
+            testPlan: data.testPlan ?? '',
+            title: data.title,
           })
             .catch((error: Error) => ({error}))
             .then((result: Result<string>) => {

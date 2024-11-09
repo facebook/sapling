@@ -37,6 +37,7 @@ use bookmarks_types::BookmarkPrefix;
 use case_conflict_skeleton_manifest::RootCaseConflictSkeletonManifestId;
 use changeset_info::ChangesetInfo;
 use cloned::cloned;
+use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use context::SessionClass;
 use deleted_manifest::RootDeletedManifestV2Id;
@@ -270,6 +271,11 @@ impl WarmBookmarksCacheBuilder {
             DerivableType::Ccsm => Some(create_derived_data_warmer::<
                 RootCaseConflictSkeletonManifestId,
             >(&self.ctx, repo_derived_data.clone())),
+            DerivableType::ContentManifests => Some(create_derived_data_warmer::<
+                RootContentManifestId,
+            >(
+                &self.ctx, repo_derived_data.clone()
+            )),
             DerivableType::ChangesetInfo => Some(create_derived_data_warmer::<ChangesetInfo>(
                 &self.ctx,
                 repo_derived_data.clone(),

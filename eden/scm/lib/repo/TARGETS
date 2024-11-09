@@ -5,30 +5,26 @@ oncall("sapling")
 rust_library(
     name = "repo",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {
-                "dependencies": {
-                    "constructors": {"default-features": False},
-                },
-            },
-            "extra_buck_dependencies": {
-                "dependencies": [
-                    "//eden/scm/lib/revisionstore:revisionstore",
-                ],
-            },
-            "features": {
-                "default": [],
-                "fb": [
-                    "configloader/fb",
-                    "revisionstore/ods",
-                ],
-                "wdir": [
-                    "workingcopy",
-                ],
-            },
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"dependencies": {"constructors": {"default-features": False}}},
+        "extra_buck_dependencies": {"dependencies": ["//eden/scm/lib/revisionstore:revisionstore"]},
+        "features": {
+            "default": [],
+            "fb": [
+                "configloader/fb",
+                "revisionstore/ods",
+            ],
+            "wdir": ["workingcopy"],
         },
-    },
+        "lib": {"name": "repo"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "repo",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     crate_root = "src/lib.rs",
     features = [
         "fb",

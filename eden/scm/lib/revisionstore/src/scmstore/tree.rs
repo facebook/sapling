@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use std::borrow::Borrow;
@@ -148,6 +148,26 @@ impl TreeStore {
         let (found_tx, found_rx) = unbounded();
         let found_tx2 = found_tx.clone();
         let mut state = FetchState::new(reqs, attrs, found_tx, fetch_mode);
+
+        if tracing::enabled!(target: "tree_fetches", tracing::Level::TRACE) {
+            let attrs = [
+                attrs.content.then_some("content"),
+                attrs.parents.then_some("parents"),
+                attrs.aux_data.then_some("aux"),
+            ]
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>();
+
+            let mut keys = state.common.all_keys();
+            keys.sort();
+            let keys: Vec<_> = keys
+                .into_iter()
+                .map(|key| format!("{}@{}", key.path, &key.hgid.to_hex()[..8]))
+                .collect();
+
+            tracing::trace!(target: "tree_fetches", ?attrs, ?keys);
+        }
 
         let keys_len = state.common.pending_len();
 
@@ -637,7 +657,7 @@ impl HgIdMutableHistoryStore for TreeStore {
 }
 
 impl RemoteHistoryStore for TreeStore {
-    fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
+    fn prefetch(&self, keys: &[StoreKey], _length: Option<u32>) -> Result<()> {
         self.fetch_batch(
             keys.iter().filter_map(StoreKey::maybe_as_key).cloned(),
             TreeAttributes::PARENTS,

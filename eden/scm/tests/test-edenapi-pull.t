@@ -28,6 +28,7 @@ Push:
   pushing rev 178c10ffbc2f to destination test:e1 bookmark master
   DEBUG exchange::httpcommitlookup: edenapi commitknown: {'hgid': b'\x17\x8c\x10\xff\xbc/\x92\xd5@|\x14G\x8a\xe9\xd9\xde\xa8\x1f#.', 'known': {'Ok': False}}
   searching for changes
+  DEBUG exchange::httpcommitlookup: edenapi commitknown: {'hgid': b"t\x81\x04\xbdPX\xbf,8m\x07M\x8d\xcf'\x04\x85S\x80\xf6", 'known': {'Ok': False}}
   exporting bookmark master
   $ hg push -r $B --to remotebook --create
   pushing rev 99dac869f01e to destination test:e1 bookmark remotebook

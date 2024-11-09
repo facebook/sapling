@@ -365,7 +365,8 @@ def runttest(testid: TestId, exts: List[str], mismatchcb: Callable[[Mismatch], N
         registertestcase=testcases.append,
     )
 
-    testcases = [f"_run_once(testcase='{tc}')\n" for tc in testcases]
+    testcases = [f"_run_once(testcase={repr(tc)})\n" for tc in testcases]
+
     if not testcases:
         testcases.append("_run_once()\n")
 

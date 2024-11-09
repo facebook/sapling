@@ -16,7 +16,6 @@ from sapling.node import bin, hex, nullid, nullrev
 from ..extlib.phabricator import graphql
 from . import shallowutil
 
-
 propertycache = util.propertycache
 conduit = None
 FASTLOG_TIMEOUT_IN_SECS = 0.5
@@ -575,7 +574,7 @@ class remotefilectx(context.filectx):
                     queue.append(parent)
 
         self._repo.ui.debug(
-            "remotefilelog: prefetching %d files " "for annotate\n" % len(fetch)
+            "remotefilelog: prefetching %d files for annotate\n" % len(fetch)
         )
         if fetch:
             self._repo.fileservice.prefetch(fetch)

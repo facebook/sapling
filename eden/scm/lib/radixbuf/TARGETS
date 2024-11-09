@@ -5,22 +5,22 @@ oncall("sapling")
 rust_library(
     name = "radixbuf",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "bench": [
-                {
-                    "harness": False,
-                    "name": "bench",
-                },
-            ],
-            "extra_buck_dependencies": {
-                "dev-dependencies": [
-                    "//eden/scm/lib/minibench:minibench",
-                ],
-            },
-            "features": {},
+    autocargo = {"cargo_toml_config": {
+        "bench": [{
+            "harness": False,
+            "name": "bench",
+        }],
+        "extra_buck_dependencies": {"dev-dependencies": ["//eden/scm/lib/minibench:minibench"]},
+        "features": {},
+        "lib": {"name": "radixbuf"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "radixbuf",
+            "repository": "https://github.com/facebook/sapling",
         },
-    },
+    }},
     features = ["nobench"],
     test_deps = [
         "fbsource//third-party/rust:quickcheck",

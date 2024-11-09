@@ -7,7 +7,6 @@
 
 import type {CommitPreview, WithPreviewType} from '../previews';
 import type {
-  ChangedFile,
   CommitInfo,
   CommitPhaseType,
   Hash,

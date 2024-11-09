@@ -1,13 +1,18 @@
-
 #require no-eden
 
+#testcases single-transaction multi-transaction
+
+#if single-transaction
+  $ setconfig rebase.singletransaction=true
+#else
+  $ setconfig rebase.singletransaction=false
+#endif
 
   $ configure mutation-norecord
 Tests the --noconflict rebase flag
 
   $ enable amend morestatus rebase
   $ setconfig morestatus.show=True
-  $ setconfig rebase.singletransaction=True
   $ setconfig rebase.experimental.inmemory=True
   $ setconfig rebase.experimental.inmemorywarning="rebasing in-memory!"
   $ configure modern
@@ -79,3 +84,45 @@ Confirm that it rebases a three-way merge, but no conflict:
   merging a
   $ hg cat -r tip a | wc -l
   11
+
+
+Test state of non-conflicting parts of stack after conflict:
+
+  $ newclientrepo
+  $ drawdag <<EOS
+  >   D  # D/B = conflict
+  >   |
+  > B C
+  > |/
+  > A
+  > EOS
+  $ hg rebase -s $C -d $B --noconflict
+  rebasing in-memory!
+  rebasing dc0947a82db8 "C"
+  rebasing afeb1d864871 "D"
+  merging B
+  hit merge conflicts (in B) and --noconflict passed; exiting
+
+#if single-transaction
+Single transaction undoes everything:
+  $ tglog
+  o  afeb1d864871 'D'
+  │
+  o  dc0947a82db8 'C'
+  │
+  │ o  112478962961 'B'
+  ├─╯
+  o  426bada5c675 'A'
+#else
+Multi-transaction leaves partial rebase reults:
+  $ tglog
+  o  bbfdd6cb49aa 'C'
+  │
+  │ o  afeb1d864871 'D'
+  │ │
+  │ x  dc0947a82db8 'C'
+  │ │
+  o │  112478962961 'B'
+  ├─╯
+  o  426bada5c675 'A'
+#endif

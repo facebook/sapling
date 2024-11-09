@@ -88,4 +88,3 @@ Try to pull it
   $ hg pull -r 68394cf51f7e96952fe832a3c05d17a9b49e8b4b
   pulling from mono:repo
   searching for changes
-  fetching revlog data for 1 commits

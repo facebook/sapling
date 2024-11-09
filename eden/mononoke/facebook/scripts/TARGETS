@@ -20,7 +20,6 @@ buck_filegroup(
 fbpkg.builder(
     name = "mononoke.scripts",
     architectures = ["noarch"],
-    buck_opts = fbpkg.buck_opts(version = "v2"),
     override_log_paths = [
         "eden/mononoke/facebook/scripts",
     ],

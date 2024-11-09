@@ -130,7 +130,7 @@ RESTACK_DEFAULT = RESTACK_ONLY_TRIVIAL
 @hint("strip-hide")
 def hinthide():
     return _(
-        "'@prog@ strip' may be deprecated in the future - " "use '@prog@ hide' instead"
+        "'@prog@ strip' may be deprecated in the future - use '@prog@ hide' instead"
     )
 
 
@@ -145,7 +145,7 @@ def hintstrip():
 @hint("amend-restack")
 def hintrestack(node):
     return _(
-        "descendants of %s are left behind - use '@prog@ restack' to rebase " "them"
+        "descendants of %s are left behind - use '@prog@ restack' to rebase them"
     ) % short(node)
 
 
@@ -355,7 +355,7 @@ def amend(ui, repo, *pats, **opts):
         return
 
     old = repo["."]
-    if old.phase() == phases.public:
+    if old.ispublic():
         raise error.Abort(_("cannot amend public changesets"))
     if len(repo[None].parents()) > 1:
         raise error.Abort(_("cannot amend while merging"))
@@ -504,7 +504,7 @@ def amendtocommit(ui, repo, commitspec, pats=None, opts=None):
             raise error.Abort(_("cannot amend non-linear stack"))
 
         dest = draftctxs.pop(0)
-        if dest.phase() == phases.public:
+        if dest.ispublic():
             raise error.Abort(_("cannot amend public changesets"))
 
         # Generate patch from wctx and apply to dest commit.

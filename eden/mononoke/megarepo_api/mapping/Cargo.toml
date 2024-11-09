@@ -9,16 +9,19 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.86"
+content_manifest_derivation = { version = "0.1.0", path = "../../derived_data/content_manifest_derivation" }
 context = { version = "0.1.0", path = "../../server/context" }
 filestore = { version = "0.1.0", path = "../../filestore" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
+justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 manifest = { version = "0.1.0", path = "../../manifest" }
 megarepo_configs = { version = "0.1.0", path = "../if/megarepo_configs" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
+repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
-serde_json = { version = "1.0.125", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_depth"] }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }

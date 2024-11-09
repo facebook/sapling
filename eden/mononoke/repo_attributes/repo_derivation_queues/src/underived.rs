@@ -21,6 +21,7 @@ use futures::future;
 use futures::future::FutureExt;
 use futures::join;
 use futures::stream::StreamExt;
+use itertools::Itertools;
 use mononoke_types::ChangesetId;
 use parking_lot::Mutex;
 use slog::debug;
@@ -119,7 +120,7 @@ pub async fn build_underived_batched_graph<'a>(
                     root_cs_id,
                     head_cs_id,
                     bubble_id,
-                    deps.collect(),
+                    deps.unique().collect(),
                     ctx.metadata().client_info(),
                 )?;
 

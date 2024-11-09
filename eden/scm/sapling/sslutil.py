@@ -195,7 +195,7 @@ def _hostsettings(ui, hostname) -> Dict[str, Any]:
         if not (fingerprint.startswith(("sha1:", "sha256:", "sha512:"))):
             raise error.Abort(
                 _("invalid fingerprint for %s: %s") % (hostname, fingerprint),
-                hint=_('must begin with "sha1:", "sha256:", ' 'or "sha512:"'),
+                hint=_('must begin with "sha1:", "sha256:", or "sha512:"'),
             )
 
         alg, fingerprint = fingerprint.split(":", 1)
@@ -320,7 +320,7 @@ def protocolsettings(protocol: str) -> Tuple[ssl._SSLMethod, int, str]:
     if supportedprotocols == {"tls1.0"}:
         if protocol != "tls1.0":
             raise error.Abort(
-                _("current Python does not support protocol " "setting %s") % protocol,
+                _("current Python does not support protocol setting %s") % protocol,
                 hint=_(
                     "upgrade Python or disable setting since "
                     "only TLS 1.0 is supported"
@@ -371,9 +371,9 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
     for f in (keyfile, certfile):
         if f and not os.path.exists(f):
             raise error.Abort(
-                _("certificate file (%s) does not exist; " "cannot connect to %s")
+                _("certificate file (%s) does not exist; cannot connect to %s")
                 % (f, serverhostname),
-                hint=_("restore missing file or fix references " "in @Product@ config"),
+                hint=_("restore missing file or fix references in @Product@ config"),
             )
 
     settings = _hostsettings(ui, pycompat.ensurestr(serverhostname))
@@ -574,9 +574,7 @@ def wrapserversocket(
     # doesn't have to be as detailed as for wrapsocket().
     for f in (certfile, keyfile, cafile):
         if f and not os.path.exists(f):
-            raise error.Abort(
-                _("referenced certificate file (%s) does not " "exist") % f
-            )
+            raise error.Abort(_("referenced certificate file (%s) does not exist") % f)
 
     protocol, options, _protocolui = protocolsettings("tls1.0")
 
@@ -869,7 +867,7 @@ def validatesocket(sock) -> None:
         raise error.Abort(_("%s ssl connection error") % host)
 
     if not peercert:
-        raise error.Abort(_("%s certificate error: " "no certificate received") % host)
+        raise error.Abort(_("%s certificate error: no certificate received") % host)
 
     if settings["disablecertverification"]:
         # We don't print the certificate fingerprint because it shouldn't
@@ -931,7 +929,7 @@ def validatesocket(sock) -> None:
             # pyre-fixme[61]: `hash` is undefined, or not always defined.
             nice = "%s:%s" % (hash, fmtfingerprint(peerfingerprints[hash]))
         raise error.Abort(
-            _("certificate for %s has unexpected " "fingerprint %s") % (host, nice),
+            _("certificate for %s has unexpected fingerprint %s") % (host, nice),
             hint=_("check %s configuration") % section,
         )
 

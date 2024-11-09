@@ -843,14 +843,6 @@ class EdenConfig : private ConfigSettingManager {
       1024,
       this};
 
-  /**
-   * Whether fetching objects should fall back to hg importer process.
-   */
-  ConfigSetting<bool> hgImporterFetchFallback{
-      "hg:importer-fetch-fallback",
-      true,
-      this};
-
   ConfigSetting<uint32_t> hgActivityBufferSize{
       "hg:activity-buffer-size",
       100,
@@ -999,6 +991,18 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<std::chrono::nanoseconds> updateNFSStatsInterval{
       "telemetry:update-nfs-stats-interval",
       std::chrono::seconds{0},
+      this};
+
+  /**
+   * OBC API is used for a few counters on EdenFS to make them enable on
+   * sandcastle. For now, OBC API is only works on prod/Linux. Then this config
+   * should only be set to true on prod/Linux.
+   * TODO: change this config when EngEnv team enable OBC API on macOS and
+   * Windows.
+   */
+  ConfigSetting<bool> enableOBCOnEden{
+      "telemetry:enable-obc-on-eden",
+      false,
       this};
 
   /**
@@ -1493,6 +1497,14 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> enableEdenAPISuffixQuery{
       "glob:use-edenapi-suffix-query",
       false,
+      this};
+
+  /**
+   * Allowed suffix queries for offloading to EdenAPI
+   */
+  ConfigSetting<std::unordered_set<std::string>> allowedSuffixQueries{
+      "glob:allowed-suffix-queries",
+      {},
       this};
 
   // [doctor]

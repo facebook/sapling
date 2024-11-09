@@ -8,7 +8,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ ENABLED_DERIVED_DATA='["unodes"]' OTHER_DERIVED_DATA='["skeleton_manifests"]' setup_common_config
+  $ ENABLED_DERIVED_DATA="unodes" OTHER_DERIVED_DATA="skeleton_manifests" setup_common_config
 
   $ testtool_drawdag -R repo << 'EOF'
   > D F

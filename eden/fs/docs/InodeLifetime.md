@@ -116,9 +116,8 @@ However, there is one important item to note here: updates done via `InodePtr`
 copying can never increment the reference count from 0 to 1. The lookup APIs
 (`TreeInode::getOrLoadChild()` and `InodeMap::lookupInode()`) are the only two
 places that can ever increment the reference count from 0 to 1. Both of these
-lookup APIs hold a lock when potentially updating the reference count from 0 to
-
-1.
+lookup APIs hold a lock when potentially updating the reference count from 0
+to 1.
 
 `TreeInode::getOrLoadChild()` holds the parent `TreeInode`'s `contents_` lock,
 and `InodeMap::lookupInode()` holds the `InodeMap` lock. This means that if you

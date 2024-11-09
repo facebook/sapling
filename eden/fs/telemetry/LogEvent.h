@@ -752,4 +752,60 @@ struct FileAccessEvent : public EdenFSFileAccessEvent {
   }
 };
 
+/**
+ * Used to log status of automatic doctor runs
+ */
+struct AutoEdenDoctorRunEvent : public EdenFSEvent {
+  enum RunStatus : uint8_t {
+    Success = 0,
+    ProcessCreationFailure = 1,
+    TimeoutOrFailure = 2
+  };
+
+  RunStatus run_status;
+  std::string failure_reason;
+
+  explicit AutoEdenDoctorRunEvent(
+      RunStatus run_status,
+      std::string failure_reason)
+      : run_status(run_status), failure_reason(std::move(failure_reason)) {}
+
+  void populate(DynamicEvent& event) const override {
+    if (run_status == Success) {
+      event.addString("run_status", "Success");
+    } else if (run_status == ProcessCreationFailure) {
+      event.addString("run_status", "ProcessCreationFailure");
+    } else if (run_status == TimeoutOrFailure) {
+      event.addString("run_status", "TimeoutOrFailure");
+    } else {
+      // Logging numerical value in case there is no string mapping here
+      event.addString("run_status", std::to_string(run_status));
+    }
+
+    // Re-using existing column
+    event.addString("reason", failure_reason);
+  }
+
+  const char* getType() const override {
+    return "auto_eden_doctor_run_events";
+  }
+};
+
+struct CheckoutUpdateError : public EdenFSEvent {
+  std::string path;
+  std::string reason;
+
+  CheckoutUpdateError(std::string path, std::string reason)
+      : path(std::move(path)), reason(std::move(reason)) {}
+
+  void populate(DynamicEvent& event) const override {
+    event.addString("path", path);
+    event.addString("reason", reason);
+  }
+
+  const char* getType() const override {
+    return "checkout_update_error";
+  }
+};
+
 } // namespace facebook::eden

@@ -236,10 +236,11 @@ bundle single branch
 
 == bundling
 
+  $ hg pull -q -B head0 -B head2
   $ hg bundle bundle.hg test:branchy_server --debug --config progress.debug=true
   query 1; heads
   searching for changes
-  local heads: 1; remote heads: 1 (explicit: 0); initial common: 1
+  local heads: 1; remote heads: 2 (explicit: 0); initial common: 2
   sampling from both directions (1 of 1)
   sampling undecided commits (1 of 1)
   progress: searching: checking 1 commits, 0 left 2 queries
@@ -267,7 +268,7 @@ bundle single branch
 
 == Test bundling no commits
 
-  $ hg bundle -r 'public()' no-output.hg
+  $ hg bundle -r 'desc("banana")' no-output.hg
   abort: no commits to bundle
   [255]
 

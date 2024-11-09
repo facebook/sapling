@@ -25,7 +25,6 @@ from bindings import threading as rustthreading
 from . import pycompat, util
 from .i18n import _, _x
 
-
 _tracer = util.tracer
 
 
@@ -338,7 +337,6 @@ class basebar:
             _tracer.edit(spanid, [("total", str(total))])
         _tracer.exit(spanid)
 
-        self._rust_model.cleanup()
         self._rust_model = None
 
         return self.exit(exctype, excvalue, traceback)

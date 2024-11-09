@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use std::io;
@@ -98,6 +98,17 @@ impl AugmentedTree {
                 }
                 AugmentedTreeEntry::FileNode(file) => {
                     w.write_all(file.filenode.to_hex().as_bytes())?;
+                    match file.file_type {
+                        FileType::Regular => {}
+                        FileType::Executable => w.write_all(b"x")?,
+                        FileType::Symlink => w.write_all(b"l")?,
+                        FileType::GitSubmodule => {
+                            return Err(io::Error::new(
+                                io::ErrorKind::Other,
+                                anyhow!("submodules not supported in augmented manifests"),
+                            ));
+                        }
+                    }
                 }
             };
             w.write_all(b"\n")?;

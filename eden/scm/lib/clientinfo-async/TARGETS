@@ -5,6 +5,16 @@ oncall("sapling")
 rust_library(
     name = "clientinfo_async",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "clientinfo_async"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "clientinfo_async",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:tokio",

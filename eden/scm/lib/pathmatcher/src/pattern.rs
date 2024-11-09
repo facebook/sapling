@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use std::path::Path;
@@ -192,7 +192,7 @@ pub(crate) fn normalize_patterns<I, R>(
     cwd: &Path,
     force_recursive_glob: bool,
     // stdin should always be set at the root level, recursive calls
-    // will recieve `None` as we only allow `listfile:-` at the root
+    // will receive `None` as we only allow `listfile:-` at the root
     mut stdin: Option<&mut R>,
 ) -> Result<(Vec<Pattern>, Vec<String>)>
 where

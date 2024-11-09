@@ -769,7 +769,7 @@ def bookmark(repo, subset, x):
                     matchrevs.add(bmrev)
             if not matchrevs:
                 raise error.RepoLookupError(
-                    _("no bookmarks exist" " that match '%s'") % pattern
+                    _("no bookmarks exist that match '%s'") % pattern
                 )
             for bmrev in matchrevs:
                 bms.add(repo[bmrev].rev())
@@ -796,7 +796,7 @@ def branch(repo, subset, x):
 @predicate("bumped()", safe=True)
 def bumped(repo, subset, x):
     "(HIDDEN)"
-    msg = "'bumped()' is deprecated, " "use 'phasedivergent()'"
+    msg = "'bumped()' is deprecated, use 'phasedivergent()'"
     repo.ui.deprecwarn(msg, "4.4")
     repo.ui.deprecate(
         "bumped-revset", "bumped() has been replaced with phasedivergent()"
@@ -1066,7 +1066,7 @@ def destination(repo, subset, x):
 @predicate("divergent()", safe=True)
 def divergent(repo, subset, x):
     "(HIDDEN)"
-    msg = "'divergent()' is deprecated, " "use 'contentdivergent()'"
+    msg = "'divergent()' is deprecated, use 'contentdivergent()'"
     repo.ui.deprecwarn(msg, "4.4")
     repo.ui.deprecate(
         "divergent-revset", "divergent() has been replaced with contentdivergent()"
@@ -1120,14 +1120,12 @@ def extra(repo, subset, x):
         # i18n: "extra" is a keyword
         raise error.ParseError(_("extra takes at least 1 argument"))
     # i18n: "extra" is a keyword
-    label = getstring(args["label"], _("first argument to extra must be " "a string"))
+    label = getstring(args["label"], _("first argument to extra must be a string"))
     value = None
 
     if "value" in args:
         # i18n: "extra" is a keyword
-        value = getstring(
-            args["value"], _("second argument to extra must be " "a string")
-        )
+        value = getstring(args["value"], _("second argument to extra must be a string"))
         kind, value, matcher = util.stringmatcher(value)
 
     def _matchvalue(r):
@@ -1358,14 +1356,12 @@ def _matchfiles(repo, subset, x):
             exc.append(value)
         elif prefix == "r:":
             if rev is not None:
-                raise error.ParseError("_matchfiles expected at most one " "revision")
+                raise error.ParseError("_matchfiles expected at most one revision")
             if value != "":  # empty means working directory; leave rev as None
                 rev = value
         elif prefix == "d:":
             if default is not None:
-                raise error.ParseError(
-                    "_matchfiles expected at most one " "default mode"
-                )
+                raise error.ParseError("_matchfiles expected at most one default mode")
             default = value
         else:
             raise error.ParseError("invalid _matchfiles prefix: %s" % prefix)
@@ -1400,7 +1396,7 @@ def _matchfiles(repo, subset, x):
     return subset.prefetch("text").filter(
         matches,
         condrepr=(
-            "<matchfiles patterns=%r, include=%r " "exclude=%r, default=%r, rev=%r>",
+            "<matchfiles patterns=%r, include=%r exclude=%r, default=%r, rev=%r>",
             pats,
             inc,
             exc,
@@ -1593,7 +1589,7 @@ def named(repo, subset, x):
                 namespaces.add(ns)
         if not namespaces:
             raise error.RepoLookupError(
-                _("no namespace exists" " that match '%s'") % pattern
+                _("no namespace exists that match '%s'") % pattern
             )
 
     names = set()
@@ -2011,7 +2007,7 @@ def matching(repo, subset, x):
         fieldlist = getstring(
             l[1],
             # i18n: "matching" is a keyword
-            _("matching requires a string " "as its second argument"),
+            _("matching requires a string as its second argument"),
         ).split()
 
     # Make sure that there are no repeated fields,
@@ -2156,7 +2152,7 @@ def _getsortargs(x):
     if len(keyflags) > 1 and any(k == "topo" for k, reverse in keyflags):
         # i18n: "topo" is a keyword
         raise error.ParseError(
-            _("topo sort order cannot be combined " "with other sort keys")
+            _("topo sort order cannot be combined with other sort keys")
         )
 
     opts = {}
@@ -2166,7 +2162,7 @@ def _getsortargs(x):
         else:
             # i18n: "topo" and "topo.firstbranch" are keywords
             raise error.ParseError(
-                _("topo.firstbranch can only be used " "when using the topo sort key")
+                _("topo.firstbranch can only be used when using the topo sort key")
             )
 
     return args["set"], keyflags, opts
@@ -2390,7 +2386,7 @@ def _substringmatcher(pattern, casesensitive=True):
 @predicate("unstable()", safe=True)
 def unstable(repo, subset, x):
     "(HIDDEN)"
-    msg = "'unstable()' is deprecated, " "use 'orphan()'"
+    msg = "'unstable()' is deprecated, use 'orphan()'"
     repo.ui.deprecwarn(msg, "4.4")
     repo.ui.deprecate("unstable-revset", "unstable() has been replaced with orphan()")
 

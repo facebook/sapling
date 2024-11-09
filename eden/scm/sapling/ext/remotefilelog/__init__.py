@@ -305,7 +305,9 @@ def onetimeclientsetup(ui):
     def applyupdates(
         orig, repo, actions, wctx, mctx, overwrite, labels=None, ancestors=None
     ):
-        if shallowrepo.requirement in repo.requirements:
+        # Don't prefetch GETs for in-memory merge. We likely don't need the file content
+        # at all.
+        if shallowrepo.requirement in repo.requirements and not wctx.isinmemory():
             manifest = mctx.manifest()
             files = []
             for _f, args, msg in actions[merge.ACTION_GET]:
@@ -321,7 +323,9 @@ def onetimeclientsetup(ui):
 
     # Prefetch merge checkunknownfiles
     def checkunknownfiles(orig, repo, wctx, mctx, force, actions, *args, **kwargs):
-        if shallowrepo.requirement in repo.requirements:
+        # Don't prefetch file content for in-memory merge. We likely don't need the file
+        # content at all.
+        if shallowrepo.requirement in repo.requirements and not wctx.isinmemory():
             files = []
             sparsematch = repo.maybesparsematch(mctx.rev())
             for f, (m, actionargs, msg) in actions.items():
@@ -586,7 +590,7 @@ def walkfilerevs(orig, repo, match, follow, revs, fncache):
     for filename in match.files():
         if filename not in pctx:
             raise error.Abort(
-                _("cannot follow file not in parent " 'revision: "%s"') % filename
+                _('cannot follow file not in parent revision: "%s"') % filename
             )
         fctx = pctx[filename]
 

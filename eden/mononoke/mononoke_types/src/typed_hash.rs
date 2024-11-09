@@ -33,6 +33,8 @@ use crate::bonsai_changeset::BonsaiChangeset;
 use crate::case_conflict_skeleton_manifest::CaseConflictSkeletonManifest;
 use crate::case_conflict_skeleton_manifest::CcsmEntry;
 use crate::content_chunk::ContentChunk;
+use crate::content_manifest::ContentManifest;
+use crate::content_manifest::ContentManifestEntry;
 use crate::content_metadata_v2::ContentMetadataV2;
 use crate::deleted_manifest_v2::DeletedManifestV2;
 use crate::fastlog_batch::FastlogBatch;
@@ -188,6 +190,14 @@ pub struct ShardedMapV2NodeCcsmId(Blake2);
 /// An identifier for an fsnode
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct FsnodeId(Blake2);
+
+/// An identifier for a content manifest
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+pub struct ContentManifestId(Blake2);
+
+/// An identifier for a sharded map node used in content manifest
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+pub struct ShardedMapV2NodeContentManifestId(Blake2);
 
 /// An identifier for a skeleton manifest
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
@@ -659,6 +669,22 @@ impl_typed_hash! {
 }
 
 impl_typed_hash! {
+    hash_type => ContentManifestId,
+    thrift_hash_type => thrift::id::ContentManifestId,
+    value_type => ContentManifest,
+    context_type => ContentManifestIdContext,
+    context_key => "contentmf",
+}
+
+impl_typed_hash! {
+    hash_type => ShardedMapV2NodeContentManifestId,
+    thrift_hash_type => thrift::id::ShardedMapV2NodeId,
+    value_type => ShardedMapV2Node<ContentManifestEntry>,
+    context_type => ShardedMapV2NodeContentManifestContext,
+    context_key => "contentmf.map2node",
+}
+
+impl_typed_hash! {
     hash_type => RedactionKeyListId,
     thrift_hash_type => thrift::id::RedactionKeyListId,
     value_type => RedactionKeyList,
@@ -895,6 +921,15 @@ mod test {
         let id = FsnodeId::from_byte_array([1; 32]);
         assert_eq!(id.blobstore_key(), format!("fsnode.blake2.{}", id));
 
+        let id = ContentManifestId::from_byte_array([1; 32]);
+        assert_eq!(id.blobstore_key(), format!("contentmf.blake2.{}", id));
+
+        let id = ShardedMapV2NodeContentManifestId::from_byte_array([1; 32]);
+        assert_eq!(
+            id.blobstore_key(),
+            format!("contentmf.map2node.blake2.{}", id)
+        );
+
         let id = SkeletonManifestId::from_byte_array([1; 32]);
         assert_eq!(
             id.blobstore_key(),
@@ -987,6 +1022,11 @@ mod test {
         let id = FsnodeId::from_byte_array([1; 32]);
         let serialized = serde_json::to_string(&id).unwrap();
         let deserialized = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(id, deserialized);
+
+        let id: ContentManifestId = ContentManifestId::from_byte_array([1; 32]);
+        let serialized = serde_json::to_string(&id).unwrap();
+        let deserialized: ContentManifestId = serde_json::from_str(&serialized).unwrap();
         assert_eq!(id, deserialized);
 
         let id = SkeletonManifestId::from_byte_array([1; 32]);

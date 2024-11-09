@@ -81,7 +81,7 @@
   $ start_and_wait_for_mononoke_server
 # Clone the repository
   $ cd "$TESTTMP"
-  $ hg clone -q mono:repo "$HG_REPO"
+  $ hg clone -q mono:repo "$HG_REPO" --config remotenames.selectivepulldefault=heads/master_bookmark
   $ cd "$HG_REPO"
 
 # Add more commits to the HG repo

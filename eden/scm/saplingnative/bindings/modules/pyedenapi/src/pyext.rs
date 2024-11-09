@@ -18,11 +18,9 @@ use cpython_async::PyFuture;
 use cpython_async::TStream;
 use cpython_ext::convert::Serde;
 use cpython_ext::ExtractInner;
-use cpython_ext::PyCell;
 use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
 use dag_types::Location;
-use dag_types::Vertex;
 use edenapi::Response;
 use edenapi::SaplingRemoteApi;
 use edenapi::SaplingRemoteApiError;
@@ -61,6 +59,8 @@ use edenapi_types::LookupResult;
 use edenapi_types::ReferencesDataResponse;
 use edenapi_types::RenameWorkspaceRequest;
 use edenapi_types::RenameWorkspaceResponse;
+use edenapi_types::RollbackWorkspaceRequest;
+use edenapi_types::RollbackWorkspaceResponse;
 use edenapi_types::SaplingRemoteApiServerError;
 use edenapi_types::SetBookmarkResponse;
 use edenapi_types::TreeAttributes;
@@ -350,61 +350,6 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
             .map_pyerr(py)?;
 
         Ok(Serde(responses))
-    }
-
-    /// Get the "CloneData" serialized using mincode.
-    fn clone_data_py(&self, py: Python) -> PyResult<PyCell> {
-        let data = py
-            .allow_threads(|| {
-                block_unless_interrupted(async move {
-                    self.clone_data().await.map(|data| {
-                        data.convert_vertex(|hgid| Vertex(hgid.as_ref().to_vec().into()))
-                    })
-                })
-            })
-            .map_pyerr(py)?
-            .map_pyerr(py)?;
-        PyCell::new(py, data)
-    }
-
-    /// Get pll data for master pull fast path
-    fn pull_fast_forward_master_py(
-        &self,
-        py: Python,
-        old_master: HgId,
-        new_master: HgId,
-    ) -> PyResult<PyCell> {
-        let data = {
-            py.allow_threads(|| {
-                block_unless_interrupted(async move {
-                    match self.pull_fast_forward_master(old_master, new_master).await {
-                        Err(e) => Err(e),
-                        Ok(data) => Ok(data
-                            .convert_vertex(|hgid| Vertex(hgid.into_byte_array().to_vec().into()))),
-                    }
-                })
-            })
-            .map_pyerr(py)?
-            .map_pyerr(py)?
-        };
-        PyCell::new(py, data)
-    }
-
-    fn pull_lazy_py(&self, py: Python, common: Vec<HgId>, missing: Vec<HgId>) -> PyResult<PyCell> {
-        let data = {
-            py.allow_threads(|| {
-                block_unless_interrupted(async move {
-                    match self.pull_lazy(common, missing).await {
-                        Err(e) => Err(e),
-                        Ok(data) => Ok(data
-                            .convert_vertex(|hgid| Vertex(hgid.into_byte_array().to_vec().into()))),
-                    }
-                })
-            })
-            .map_pyerr(py)?
-            .map_pyerr(py)?
-        };
-        PyCell::new(py, data)
     }
 
     fn lookup_file_contents(
@@ -841,6 +786,18 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
     ) -> PyResult<Serde<HistoricalVersionsResponse>> {
         let responses = py
             .allow_threads(|| block_unless_interrupted(self.cloud_historical_versions(data.0)))
+            .map_pyerr(py)?
+            .map_pyerr(py)?;
+        Ok(Serde(responses))
+    }
+
+    fn cloud_rollback_workspace_py(
+        &self,
+        data: Serde<RollbackWorkspaceRequest>,
+        py: Python,
+    ) -> PyResult<Serde<RollbackWorkspaceResponse>> {
+        let responses = py
+            .allow_threads(|| block_unless_interrupted(self.cloud_rollback_workspace(data.0)))
             .map_pyerr(py)?
             .map_pyerr(py)?;
         Ok(Serde(responses))

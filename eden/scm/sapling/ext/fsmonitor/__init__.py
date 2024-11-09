@@ -270,7 +270,7 @@ def wrappurge(orig, dirstate, match, findfiles, finddirs, includeignored):
                 )
             )
         except Exception:
-            ui.debug("fsmonitor: fallback to core purge, " "query dirs failed")
+            ui.debug("fsmonitor: fallback to core purge, query dirs failed")
             dirs = None
 
     if findfiles or dirs is None:

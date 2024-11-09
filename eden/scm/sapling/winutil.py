@@ -77,12 +77,12 @@ def checkwinfilename(path: str) -> "Optional[str]":
             continue
         for c in n:
             if c in _winreservedchars:
-                return _("filename contains '%s', which is reserved " "on Windows") % c
+                return _("filename contains '%s', which is reserved on Windows") % c
             if ord(c) <= 31:
-                return _("filename contains %r, which is invalid " "on Windows") % c
+                return _("filename contains %r, which is invalid on Windows") % c
         base = n.split(".")[0]
         if base and base.lower() in _winreservednames:
-            return _("filename contains '%s', which is reserved " "on Windows") % base
+            return _("filename contains '%s', which is reserved on Windows") % base
         t = n[-1:]
         if t in ". " and n not in "..":
-            return _("filename ends with '%s', which is not allowed " "on Windows") % t
+            return _("filename ends with '%s', which is not allowed on Windows") % t

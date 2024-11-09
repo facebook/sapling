@@ -133,13 +133,13 @@ Create small repo commits
   │   smallrepofolder1/new_file.txt |  1 +
   │   1 files changed, 1 insertions(+), 0 deletions(-)
   │
-  o  5d44cb1dbffb change large repo file AGAIN
-  │   large_repo_file.txt |  2 +-
-  │   1 files changed, 1 insertions(+), 1 deletions(-)
-  │
   │ o  7faf677d5367 change small repo from large repo
-  ├─╯   smallrepofolder1/new_file.txt |  1 +
-  │     1 files changed, 1 insertions(+), 0 deletions(-)
+  │ │   smallrepofolder1/new_file.txt |  1 +
+  │ │   1 files changed, 1 insertions(+), 0 deletions(-)
+  │ │
+  o │  5d44cb1dbffb change large repo file AGAIN
+  ├─╯   large_repo_file.txt |  2 +-
+  │     1 files changed, 1 insertions(+), 1 deletions(-)
   │
   o  72e1f4df4120 change large repo file
   │   large_repo_file.txt |  1 +
@@ -197,14 +197,14 @@ Create small repo commits
   >   rg '.+"translated": \{"Bonsai": bin\("(\w+)"\)\}\}\]' -or '$1')
 
   $ echo "SMALL_REPO_COMMIT_A: $SMALL_REPO_COMMIT_A"
-  SMALL_REPO_COMMIT_A: 86097c1de278a997c434c78f0227e0be9f307ac3c66d39a7a167435d1a4e292c
+  SMALL_REPO_COMMIT_A: 6405c11e11523c644532ffce53c95793f2051de3ecd52115e6a74a81e4cd4d7e
 
   $ SMALL_REPO_COMMIT_B=$(hg debugapi --sort -e committranslateids \
   >   -i "[{'Hg': '$REBASED_HG_COMMIT'}]" -i "'Bonsai'" -i None -i "'$SUBMODULE_REPO_NAME'" | \
   >   rg '.+"translated": \{"Bonsai": bin\("(\w+)"\)\}\}\]' -or '$1')
 
   $ echo "SMALL_REPO_COMMIT_B: $SMALL_REPO_COMMIT_B"
-  SMALL_REPO_COMMIT_B: 86097c1de278a997c434c78f0227e0be9f307ac3c66d39a7a167435d1a4e292c
+  SMALL_REPO_COMMIT_B: 6405c11e11523c644532ffce53c95793f2051de3ecd52115e6a74a81e4cd4d7e
 
 
 -- Now fetch both changeset blobs
@@ -218,6 +218,30 @@ Create small repo commits
 -- To debug the raw bonsais, uncomment the line below
 # $ diff -y -t -T $TESTTMP/commit_a_bonsai $TESTTMP/commit_b_bonsai
 
+
+# Examine committer and committer date, which are not set in the large repo, but
+# should be set on the small git repo.
+  $ mononoke_newadmin fetch -R $LARGE_REPO_NAME -i $REBASED_HG_COMMIT \
+  > --json > $TESTTMP/commit_b_info_large_repo.json
+  $ jq '{author: .author, author_date: .author_date, committer: .committer, committer_date: .committer_date}' \
+  > $TESTTMP/commit_b_info_large_repo.json
+  {
+    "author": "test",
+    "author_date": "1970-01-01T00:00:00-00:00",
+    "committer": null,
+    "committer_date": null
+  }
+
+  $ mononoke_newadmin fetch -R $SUBMODULE_REPO_NAME -i $SMALL_REPO_COMMIT_B \
+  > --json > $TESTTMP/commit_b_info_small_repo.json
+  $ jq '{author: .author, author_date: .author_date, committer: .committer, committer_date: .committer_date}' \
+  > $TESTTMP/commit_b_info_small_repo.json
+  {
+    "author": "test",
+    "author_date": "1970-01-01T00:00:00-00:00",
+    "committer": "test",
+    "committer_date": "1970-01-01T00:00:00-00:00"
+  }
 
 -- Derive git commit for commit A
   $ mononoke_newadmin derived-data -R $SUBMODULE_REPO_NAME \

@@ -50,9 +50,7 @@ _maxomittedbookmarksoutput = 30
 
 
 def _isremotebookmarkssyncenabled(ui):
-    return ui.configbool("remotenames", "selectivepull") and ui.configbool(
-        "commitcloud", "remotebookmarkssync"
-    )
+    return ui.configbool("commitcloud", "remotebookmarkssync")
 
 
 def _getheads(repo):
@@ -459,7 +457,6 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
             )
             try:
                 commits, segments = bindings.exchange.fastpull(
-                    repo.ui._rcfg,
                     repo.edenapi,
                     repo.changelog.inner,
                     [oldmainnode],

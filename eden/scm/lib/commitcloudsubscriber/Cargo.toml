@@ -3,6 +3,7 @@
 [package]
 name = "commitcloudsubscriber"
 version = "0.1.0"
+authors = ["Meta Source Control Team <sourcecontrol-dev@meta.com>"]
 edition = "2021"
 description = """
     Cross platform client for subscribing to Commit Cloud eventsource (http server-sent events)
@@ -16,6 +17,9 @@ description = """
     * the library also contains a module to find OAuth token,
         this logic should be in sync with `hg cloud auth` command.
 """
+homepage = "https://sapling-scm.com/"
+repository = "https://github.com/facebook/sapling"
+license = "MIT"
 
 [dependencies]
 anyhow = "1.0.86"
@@ -31,7 +35,7 @@ parking_lot = { version = "0.12.1", features = ["send_guard"] }
 regex = "1.9.2"
 reqwest = { version = "0.11.18", features = ["blocking", "cookies", "gzip", "json", "multipart", "native-tls", "rustls-tls", "rustls-tls-native-roots", "socks", "stream"] }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
-serde_json = { version = "1.0.125", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_depth"] }
 thiserror = "1.0.64"
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
 

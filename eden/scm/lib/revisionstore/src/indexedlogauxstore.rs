@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use std::io::Cursor;
@@ -425,7 +425,7 @@ mod tests {
             blake3: Blake3::from_str(
                 "2078b4229b5353de0268efc7f64b68f3c99fb8829e9c052117b4e1e090b2603a",
             )?,
-            file_header_metadata: None,
+            file_header_metadata: Some(Default::default()),
         };
         // Attempt fetch.
         let fetched = store

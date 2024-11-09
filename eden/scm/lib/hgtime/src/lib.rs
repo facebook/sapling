@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 //! # parsedate
@@ -72,7 +72,7 @@ const DEFAULT_FORMATS: [&str; 35] = [
     "%Y-%m",
 ];
 
-const INVALID_OFFSET: i32 = i32::max_value();
+const INVALID_OFFSET: i32 = i32::MAX;
 static DEFAULT_OFFSET: AtomicI32 = AtomicI32::new(INVALID_OFFSET);
 static FORCED_NOW: AtomicU64 = AtomicU64::new(0); // test only
 
@@ -127,13 +127,15 @@ impl HgTime {
     }
 
     pub fn to_utc(self) -> DateTime<Utc> {
-        let naive = NaiveDateTime::from_timestamp_opt(self.unixtime, 0).unwrap();
-        naive.and_utc()
+        let naive = DateTime::from_timestamp(self.unixtime, 0).unwrap();
+        naive.to_utc()
     }
 
     /// Converts to `NaiveDateTime` with local timezone specified by `offset`.
     fn to_naive(self) -> NaiveDateTime {
-        NaiveDateTime::from_timestamp_opt(self.unixtime - self.offset as i64, 0).unwrap()
+        DateTime::from_timestamp(self.unixtime - self.offset as i64, 0)
+            .unwrap()
+            .naive_local()
     }
 
     /// Set as the faked "now". Useful for testing.
@@ -462,16 +464,12 @@ impl PartialOrd for HgTime {
 impl<Tz: TimeZone> TryFrom<DateTime<Tz>> for HgTime {
     type Error = ();
     fn try_from(time: DateTime<Tz>) -> Result<Self, ()> {
-        if time.timestamp() >= i64::min_value() {
-            Self {
-                unixtime: time.timestamp(),
-                offset: time.offset().fix().utc_minus_local(),
-            }
-            .bounded()
-            .ok_or(())
-        } else {
-            Err(())
+        Self {
+            unixtime: time.timestamp(),
+            offset: time.offset().fix().utc_minus_local(),
         }
+        .bounded()
+        .ok_or(())
     }
 }
 

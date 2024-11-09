@@ -46,6 +46,7 @@ use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityArc;
 use repo_identity::RepoIdentityRef;
+use scuba::ScubaValue;
 use serde::Deserialize;
 use serde::Serialize;
 use sql::mysql_async::prelude::ConvIr;
@@ -165,6 +166,12 @@ impl FromStr for BubbleId {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         NonZeroU64::from_str(s).map(Self)
+    }
+}
+
+impl From<BubbleId> for ScubaValue {
+    fn from(bubble_id: BubbleId) -> Self {
+        ScubaValue::from(bubble_id.0.get())
     }
 }
 

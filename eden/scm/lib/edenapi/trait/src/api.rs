@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use std::collections::HashMap;
@@ -18,7 +18,6 @@ use edenapi_types::AnyId;
 use edenapi_types::BlameResult;
 use edenapi_types::BonsaiChangesetContent;
 use edenapi_types::BookmarkEntry;
-use edenapi_types::CloneData;
 use edenapi_types::CloudShareWorkspaceRequest;
 use edenapi_types::CloudShareWorkspaceResponse;
 use edenapi_types::CommitGraphEntry;
@@ -51,6 +50,8 @@ use edenapi_types::LookupResponse;
 use edenapi_types::ReferencesDataResponse;
 use edenapi_types::RenameWorkspaceRequest;
 use edenapi_types::RenameWorkspaceResponse;
+use edenapi_types::RollbackWorkspaceRequest;
+use edenapi_types::RollbackWorkspaceResponse;
 use edenapi_types::SaplingRemoteApiServerError;
 use edenapi_types::SetBookmarkResponse;
 use edenapi_types::SuffixQueryResponse;
@@ -128,29 +129,6 @@ pub trait SaplingRemoteApi: Send + Sync + 'static {
     ) -> Result<Response<CommitRevlogData>, SaplingRemoteApiError> {
         let _ = hgids;
         Err(SaplingRemoteApiError::NotSupported)
-    }
-
-    async fn clone_data(&self) -> Result<CloneData<HgId>, SaplingRemoteApiError> {
-        Err(SaplingRemoteApiError::NotSupported)
-    }
-
-    /// Provide data to complete a lazy pull. `common` defines known heads,
-    /// `missing` defines unknown heads.
-    async fn pull_lazy(
-        &self,
-        common: Vec<HgId>,
-        missing: Vec<HgId>,
-    ) -> Result<CloneData<HgId>, SaplingRemoteApiError> {
-        let _ = (common, missing);
-        Err(SaplingRemoteApiError::NotSupported)
-    }
-
-    async fn pull_fast_forward_master(
-        &self,
-        old_master: HgId,
-        new_master: HgId,
-    ) -> Result<CloneData<HgId>, SaplingRemoteApiError> {
-        self.pull_lazy(vec![old_master], vec![new_master]).await
     }
 
     async fn commit_location_to_hash(
@@ -464,6 +442,14 @@ pub trait SaplingRemoteApi: Send + Sync + 'static {
         &self,
         data: HistoricalVersionsParams,
     ) -> Result<HistoricalVersionsResponse, SaplingRemoteApiError> {
+        let _ = data;
+        Err(SaplingRemoteApiError::NotSupported)
+    }
+
+    async fn cloud_rollback_workspace(
+        &self,
+        data: RollbackWorkspaceRequest,
+    ) -> Result<RollbackWorkspaceResponse, SaplingRemoteApiError> {
         let _ = data;
         Err(SaplingRemoteApiError::NotSupported)
     }

@@ -99,7 +99,7 @@ class displayer:
     def show(self, ctx, copies=None, matchfn=None, hunksfilterfn=None, **props):
         ui = ctx.repo().ui
         shorthex = short(ctx.node())
-        if ctx.phase() == phases.public:
+        if ctx.ispublic():
             shorthex = ui.label(shorthex, "changeset.public")
             desc = ""
         else:

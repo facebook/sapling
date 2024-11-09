@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use std::ops::Deref;
@@ -53,7 +53,7 @@ pub trait RemoteHistoryStore: HgIdHistoryStore + Send + Sync {
     /// When implemented on a pure remote store, like the `SaplingRemoteApi`, the method will always fetch
     /// everything that was asked. On a higher level store, such as the `MetadataStore`, this will
     /// avoid fetching data that is already present locally.
-    fn prefetch(&self, keys: &[StoreKey]) -> Result<()>;
+    fn prefetch(&self, keys: &[StoreKey], length: Option<u32>) -> Result<()>;
 }
 
 /// Implement `HgIdHistoryStore` for all types that can be `Deref` into a `HgIdHistoryStore`.
@@ -80,7 +80,7 @@ impl<T: HgIdMutableHistoryStore + ?Sized, U: Deref<Target = T> + Send + Sync>
 }
 
 impl<T: RemoteHistoryStore + ?Sized, U: Deref<Target = T> + Send + Sync> RemoteHistoryStore for U {
-    fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
-        T::prefetch(self, keys)
+    fn prefetch(&self, keys: &[StoreKey], length: Option<u32>) -> Result<()> {
+        T::prefetch(self, keys, length)
     }
 }

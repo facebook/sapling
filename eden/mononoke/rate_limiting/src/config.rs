@@ -19,11 +19,13 @@ use serde::Deserialize;
 pub use crate::facebook::get_region_capacity;
 #[cfg(not(fbcode_build))]
 pub use crate::oss::get_region_capacity;
+use crate::FciMetric;
 use crate::LoadShedLimit;
 use crate::Metric;
 use crate::MononokeRateLimitConfig;
 use crate::RateLimit;
 use crate::RateLimitBody;
+use crate::Scope;
 use crate::StaticSlice;
 use crate::Target;
 
@@ -55,7 +57,7 @@ impl TryFrom<rate_limiting_config::Target> for Target {
                     nonce: s.nonce,
                 }))
             }
-            rate_limiting_config::Target::client_main_id(i) => {
+            rate_limiting_config::Target::main_client_id(i) => {
                 Ok(Target::MainClientId(FromStr::from_str(&i)?))
             }
             _ => Err(anyhow!("Invalid target")),
@@ -90,6 +92,48 @@ impl TryFrom<rate_limiting_config::RegionalMetric> for Metric {
     }
 }
 
+impl TryFrom<rate_limiting_config::FciMetricKey> for Metric {
+    type Error = Error;
+
+    fn try_from(value: rate_limiting_config::FciMetricKey) -> Result<Self, Self::Error> {
+        match value {
+            rate_limiting_config::FciMetricKey::EgressBytes => Ok(Metric::EgressBytes),
+            rate_limiting_config::FciMetricKey::TotalManifests => Ok(Metric::TotalManifests),
+            rate_limiting_config::FciMetricKey::GetpackFiles => Ok(Metric::GetpackFiles),
+            rate_limiting_config::FciMetricKey::Commits => Ok(Metric::Commits),
+            _ => Err(anyhow!("Invalid FciMetricKey")),
+        }
+    }
+}
+
+impl TryFrom<rate_limiting_config::FciMetricScope> for Scope {
+    type Error = Error;
+
+    fn try_from(value: rate_limiting_config::FciMetricScope) -> Result<Self, Self::Error> {
+        match value {
+            rate_limiting_config::FciMetricScope::Global => Ok(Scope::Global),
+            rate_limiting_config::FciMetricScope::Regional => Ok(Scope::Regional),
+            _ => Err(anyhow!("Invalid Scope")),
+        }
+    }
+}
+
+impl TryFrom<rate_limiting_config::FciMetric> for FciMetric {
+    type Error = Error;
+
+    fn try_from(value: rate_limiting_config::FciMetric) -> Result<Self, Self::Error> {
+        let metric: Metric = value.metric.try_into().context("Invalid metric")?;
+        let window: u64 = value.window.try_into().context("Invalid window")?;
+        let scope: Scope = value.scope.try_into().context("Invalid scope")?;
+
+        Ok(Self {
+            metric,
+            window: Duration::from_secs(window),
+            scope,
+        })
+    }
+}
+
 impl TryFrom<rate_limiting_config::RateLimit> for RateLimit {
     type Error = Error;
 
@@ -109,10 +153,18 @@ impl TryFrom<rate_limiting_config::RateLimit> for RateLimit {
 
         let metric = value.metric.clone().try_into().context("Invalid metric")?;
 
+        let fci_metric = value
+            .fci_metric
+            .clone()
+            .map(FciMetric::try_from)
+            .transpose()
+            .context("Invalid fci metric")?;
+
         Ok(Self {
             body,
             metric,
             target,
+            fci_metric,
         })
     }
 }

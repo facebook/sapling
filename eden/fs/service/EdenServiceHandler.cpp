@@ -141,6 +141,11 @@ bool mountIsUsingFilteredFS(const EdenMountHandle& mount) {
              ->getRepoBackingStoreType() == BackingStoreType::FILTEREDHG;
 }
 
+bool isValidSearchRoot(const PathString& searchRoot) {
+  return searchRoot.empty() || (searchRoot == ".") || (searchRoot == "html") ||
+      (searchRoot == "www/html");
+}
+
 std::string resolveRootId(
     std::string rootId,
     const RootIdOptions& rootIdOptions,
@@ -517,6 +522,7 @@ class GlobFilesRequestScope {
             &ThriftStats::globFilesSaplingRemoteAPISuccess);
       }
     }
+    XLOG(DBG4) << "End of globFiles";
   }
 
   void setLocal(bool isLocal) {
@@ -578,14 +584,6 @@ bool shouldUseSaplingRemoteAPI(
         << ", suppressFileList=" << *params.suppressFileList()
         << ". Falling back to local pathway";
     useSaplingRemoteAPISuffixes = false;
-  } else if (
-      !((*params.searchRoot()).empty()) && !(*params.searchRoot() == ".")) {
-    // searchRoot is relative to root
-    XLOG(DBG3)
-        << "globFiles request cannot be offloaded to SaplingRemoteAPI due to searchRoot '"
-        << *params.searchRoot() << "'" << " not being mount root '.'"
-        << ", falling back to local pathway";
-    useSaplingRemoteAPISuffixes = false;
   } else if (params.predictiveGlob()) {
     XLOG(DBG3)
         << "globFiles request cannot be offloaded to SaplingRemoteAPI due to predictiveGlob, falling back to local pathway";
@@ -597,6 +595,19 @@ bool shouldUseSaplingRemoteAPI(
   }
 
   return useSaplingRemoteAPISuffixes;
+}
+
+bool checkAllowedQuery(
+    const std::vector<std::string>& suffixes,
+    const std::unordered_set<std::string>& allowedSuffixes) {
+  for (auto& suffix : suffixes) {
+    if (allowedSuffixes.count(suffix) == 0) {
+      XLOGF(DBG4, "Suffix {} is not in allowed suffixes", suffix);
+      return false;
+    }
+  }
+  XLOGF(DBG4, "All suffixes allowed");
+  return true;
 }
 
 } // namespace
@@ -2187,6 +2198,118 @@ EdenServiceHandler::streamChangesSince(
   return {std::move(result), std::move(serverStream)};
 }
 
+apache::thrift::
+    ResponseAndServerStream<ChangesSinceV2Result, ChangeNotificationResult>
+    EdenServiceHandler::streamChangesSinceV2(
+        std::unique_ptr<StreamChangesSinceV2Params> params) {
+  auto helper = INSTRUMENT_THRIFT_CALL_WITH_STAT(
+      DBG3, &ThriftStats::streamChangesSinceV2, *params->mountPoint_ref());
+
+  auto mountHandle = lookupMount(params->mountPoint());
+  const auto& fromPosition = *params->fromPosition_ref();
+
+  checkMountGeneration(
+      fromPosition, mountHandle.getEdenMount(), "fromPosition"sv);
+
+  auto summed = mountHandle.getJournal().accumulateRange(
+      *fromPosition.sequenceNumber_ref() + 1);
+
+  ChangesSinceV2Result result;
+  if (!summed) {
+    // No changes, just return the fromPosition and an empty stream.
+    result.toPosition_ref() = fromPosition;
+
+    return {
+        std::move(result),
+        apache::thrift::ServerStream<ChangeNotificationResult>::createEmpty()};
+  }
+
+  if (summed->isTruncated) {
+    throw newEdenError(
+        EDOM,
+        EdenErrorType::JOURNAL_TRUNCATED,
+        "Journal entry range has been truncated.");
+  }
+
+  auto cancellationSource = std::make_shared<folly::CancellationSource>();
+  auto [serverStream, publisher] =
+      apache::thrift::ServerStream<ChangeNotificationResult>::createPublisher(
+          [cancellationSource] { cancellationSource->requestCancellation(); });
+  auto sharedPublisherLock = std::make_shared<folly::Synchronized<
+      ThriftStreamPublisherOwner<ChangeNotificationResult>>>(
+      ThriftStreamPublisherOwner{std::move(publisher)});
+
+  RootIdCodec& rootIdCodec = mountHandle.getObjectStore();
+
+  JournalPosition toPosition;
+  toPosition.mountGeneration_ref() =
+      mountHandle.getEdenMount().getMountGeneration();
+  toPosition.sequenceNumber_ref() = summed->toSequence;
+  toPosition.snapshotHash_ref() =
+      rootIdCodec.renderRootId(summed->snapshotTransitions.back());
+  result.toPosition_ref() = toPosition;
+
+  // TODO: temporary recycling of `streamChangesSince` logic
+  //       This will need to be updated to reflect the new way of reporting
+  //       changes in large an small sizes. Additionally, the differntiation
+  //       between files and directories.
+  //
+  //       Using this for now to get the end-to-end plumbing working and
+  //       to establish some early testing.
+  for (auto& entry : summed->changedFilesInOverlay) {
+    const auto& changeInfo = entry.second;
+
+    // TODO: add in dtype - requires plumbing through all journal layers
+    // TODO: rework to support renamed, and optionally, replaced
+    //       This likely means moving away from the `accumulateRange` usage
+    //       above and directly processing via `forEachDelta` which gives much
+    //       more info and properly interleaves filesytem and commit transition
+    //       changes
+    SmallChangeNotification smallChange;
+    if (!changeInfo.existedBefore && changeInfo.existedAfter) {
+      Added added;
+      added.path() = entry.first.asString();
+      smallChange.set_added(std::move(added));
+    } else if (changeInfo.existedBefore && !changeInfo.existedAfter) {
+      Removed removed;
+      removed.path() = entry.first.asString();
+      smallChange.set_removed(std::move(removed));
+    } else {
+      Modified modified;
+      modified.path() = entry.first.asString();
+      smallChange.set_modified(std::move(modified));
+    }
+
+    ChangeNotification change;
+    change.set_smallChange(std::move(smallChange));
+
+    ChangeNotificationResult changeNotificationResult;
+    changeNotificationResult.change() = change;
+
+    sharedPublisherLock->rlock()->next(std::move(changeNotificationResult));
+  }
+
+  for (const auto& name : summed->uncleanPaths) {
+    SmallChangeNotification smallChange;
+    Modified modified;
+    modified.path() = name.asString();
+    smallChange.set_modified(std::move(modified));
+
+    ChangeNotification change;
+    change.set_smallChange(std::move(smallChange));
+
+    ChangeNotificationResult changeNotificationResult;
+    changeNotificationResult.change() = change;
+
+    sharedPublisherLock->rlock()->next(std::move(changeNotificationResult));
+  }
+
+  // NOTE: we are not surfacing snapshot transitions
+  //       That will come later when we begin to use `forEachDelta`.
+
+  return {std::move(result), std::move(serverStream)};
+}
+
 apache::thrift::ResponseAndServerStream<ChangesSinceResult, ChangedFileResult>
 EdenServiceHandler::streamSelectedChangesSince(
     std::unique_ptr<StreamSelectedChangesSinceParams> params) {
@@ -3528,7 +3651,13 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
   }
 
   bool requestIsOffloadable = !suffixGlobs.empty() && nonSuffixGlobs.empty() &&
-      (((*params->searchRoot()).empty()) || (*params->searchRoot() == "."));
+      isValidSearchRoot(*params->searchRoot());
+
+  // Allow only specific queries that have been determined to operate faster
+  // when offloaded
+  requestIsOffloadable = requestIsOffloadable &&
+      checkAllowedQuery(suffixGlobs,
+                        edenConfig->allowedSuffixQueries.getValue());
 
   auto globFilesRequestScope = std::make_shared<GlobFilesRequestScope>(
       server_->getServerState(),
@@ -3537,7 +3666,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
       context);
 
   if (requestIsOffloadable) {
-    XLOG(DBG5)
+    XLOG(DBG4)
         << "globFiles request is only suffix globs, can be offloaded to EdenAPI";
     auto suffixGlobLogString = globber.logString(suffixGlobs);
     suffixGlobRequestScope = std::make_unique<SuffixGlobRequestScope>(
@@ -3549,7 +3678,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
 
   if (useSaplingRemoteAPISuffixes) {
     if (requestIsOffloadable) {
-      XLOG(DBG5) << "globFiles request offloaded to EdenAPI";
+      XLOG(DBG4) << "globFiles request offloaded to EdenAPI";
       // Only use BSSM if there are only suffix queries
       globFilesRequestScope->setLocal(false);
       // Attempt to resolve all EdenAPI futures. If any of

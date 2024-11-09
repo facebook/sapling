@@ -5,52 +5,48 @@ oncall("sapling")
 rust_library(
     name = "commands",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {
-                "dependencies": {
-                    "anyhow": {
-                        "features": ["backtrace"],
-                    },
-                    "constructors": {"features": ["git"]},
-                    "pytracing": {
-                        "default-features": False,
-                    },
-                    "repo": {"features": ["wdir"]},
-                },
-            },
-            "extra_buck_dependencies": {
-                "dependencies": [
-                    "//eden/scm/saplingnative/bindings/modules/pycheckout:pycheckout",
-                    "//eden/scm/saplingnative/bindings/modules/pyworkingcopyclient:pyworkingcopyclient",
-                    "//eden/scm/saplingnative/bindings/modules/pyworkingcopy:pyworkingcopy",
-                    "//eden/scm/lib/revisionstore:revisionstore",
-                ],
-            },
-            "features": {
-                "default": [],
-                "eden": [
-                    "clidispatch/eden",
-                    "pycheckout/eden",
-                    "pyworkingcopyclient/eden",
-                    "pyworkingcopy/eden",
-                    "cmdgoto/eden",
-                    "cmddebugwait/eden",
-                ],
-                "fb": [
-                    "cmdpy/fb",
-                    "configloader/fb",
-                    "identity/fb",
-                    "cmdversion/fb",
-                    "cmddebugdumpinternalconfig/fb",
-                    "cmddebugrefreshconfig/fb",
-                ],
-                "sl_oss": [
-                    "configloader/sl_oss",
-                ],
-            },
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"dependencies": {
+            "anyhow": {"features": ["backtrace"]},
+            "constructors": {"features": ["git"]},
+            "pytracing": {"default-features": False},
+            "repo": {"features": ["wdir"]},
+        }},
+        "extra_buck_dependencies": {"dependencies": [
+            "//eden/scm/saplingnative/bindings/modules/pycheckout:pycheckout",
+            "//eden/scm/saplingnative/bindings/modules/pyworkingcopyclient:pyworkingcopyclient",
+            "//eden/scm/saplingnative/bindings/modules/pyworkingcopy:pyworkingcopy",
+            "//eden/scm/lib/revisionstore:revisionstore",
+        ]},
+        "features": {
+            "default": [],
+            "eden": [
+                "clidispatch/eden",
+                "pycheckout/eden",
+                "pyworkingcopyclient/eden",
+                "pyworkingcopy/eden",
+                "cmdgoto/eden",
+                "cmddebugwait/eden",
+            ],
+            "fb": [
+                "cmdpy/fb",
+                "configloader/fb",
+                "identity/fb",
+                "cmdversion/fb",
+                "cmddebugdumpinternalconfig/fb",
+                "cmddebugrefreshconfig/fb",
+            ],
+            "sl_oss": ["configloader/sl_oss"],
         },
-    },
+        "lib": {"name": "commands"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "GPL-2.0-only",
+            "name": "commands",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     crate_root = "src/lib.rs",
     features = [
         "eden",
@@ -134,9 +130,7 @@ rust_library(
         "//eden/scm/lib/commands/debugcommands/cmddebugrunlog:cmddebugrunlog",
         "//eden/scm/lib/commands/debugcommands/cmddebugscmstore:cmddebugscmstore",
         "//eden/scm/lib/commands/debugcommands/cmddebugscmstorereplay:cmddebugscmstorereplay",
-        "//eden/scm/lib/commands/debugcommands/cmddebugsegmentclone:cmddebugsegmentclone",
         "//eden/scm/lib/commands/debugcommands/cmddebugsegmentgraph:cmddebugsegmentgraph",
-        "//eden/scm/lib/commands/debugcommands/cmddebugsegmentpull:cmddebugsegmentpull",
         "//eden/scm/lib/commands/debugcommands/cmddebugstore:cmddebugstore",
         "//eden/scm/lib/commands/debugcommands/cmddebugstructuredprogress:cmddebugstructuredprogress",
         "//eden/scm/lib/commands/debugcommands/cmddebugtestcommand:cmddebugtestcommand",

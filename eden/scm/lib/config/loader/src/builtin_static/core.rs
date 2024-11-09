@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use staticconfig::static_config;
@@ -73,7 +73,6 @@ enable-merge-tool-script=true
 
 [remotenames]
 autocleanupthreshold=50
-selectivepull=true
 selectivepulldefault=master
 selectivepulldiscovery=true
 autopullhoistpattern=
@@ -116,4 +115,7 @@ import-pattern:kotlin=re:^\s*import .*$
 import-pattern:rust=re:^\s*use .*$
 import-pattern:csharp=re:^\s*using .*$
 import-pattern:go=re:^\s*using .*$
+
+[clone]
+use-commit-graph=true
 "#);

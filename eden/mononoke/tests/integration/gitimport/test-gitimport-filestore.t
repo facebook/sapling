@@ -7,9 +7,9 @@
   $ export FILESTORE=1
   $ export FILESTORE_CHUNK_SIZE=10
   $ . "${TEST_FIXTURES}/library.sh"
-  $ ENABLED_DERIVED_DATA='["git_trees", "filenodes", "hgchangesets"]' setup_common_config
   $ GIT_REPO="${TESTTMP}/repo-git"
   $ HG_REPO="${TESTTMP}/repo"
+  $ setup_common_config blob_files
 
 # Setup git repsitory
   $ mkdir "$GIT_REPO"

@@ -119,6 +119,7 @@ export type DiffComment = {
   /** Suggestion for how to change the code, as a patch */
   suggestedChange?: SuggestedChange;
   codePatchSuggestedChange?: SuggestedChange;
+  signalSuggestedChange?: SuggestedChange;
   replies: Array<DiffComment>;
   /** If this comment has been resolved. true => "resolved", false => "unresolved", null => the comment is not resolvable, don't show any UI for it */
   isResolved?: boolean;
@@ -592,6 +593,11 @@ export type Diagnostic = {
   code?: string;
 };
 
+export type DiagnosticAllowlistValue =
+  | {block: Set<string>; allow?: undefined}
+  | {allow: Set<string>; block?: undefined};
+export type DiagnosticAllowlist = Map<'warning' | 'error', Map<string, DiagnosticAllowlistValue>>;
+
 /* protocol */
 
 /**
@@ -746,6 +752,7 @@ export type LocalStorageName =
   | 'isl.auto-resolve-before-continue'
   | 'isl.warn-about-diagnostics'
   | 'isl.hide-non-blocking-diagnostics'
+  | 'isl.rebase-off-warm-warning-enabled'
   // These keys are prefixes, with further dynamic keys appended afterwards
   | 'isl.edited-commit-messages:';
 
@@ -805,6 +812,7 @@ export type ClientToServerMessage =
   | {type: 'unsubscribe'; kind: SubscriptionKind; subscriptionID: string}
   | {type: 'exportStack'; revs: string; assumeTracked?: Array<string>}
   | {type: 'importStack'; stack: ImportStack}
+  | {type: 'fetchQeFlag'; name: string}
   | {type: 'fetchFeatureFlag'; name: string}
   | {type: 'fetchInternalUserInfo'}
   | {
@@ -812,6 +820,8 @@ export type ClientToServerMessage =
       id: string;
       comparison: Comparison;
       fieldName: string;
+      summary: string | undefined;
+      testPlan: string | undefined;
       title: string;
     }
   | {type: 'gotUiState'; state: string}
@@ -898,6 +908,7 @@ export type ServerToClientMessage =
       error: string | undefined;
     }
   | {type: 'importedStack'; imported: ImportedStack; error: string | undefined}
+  | {type: 'fetchedQeFlag'; name: string; passes: boolean}
   | {type: 'fetchedFeatureFlag'; name: string; passes: boolean}
   | {type: 'fetchedInternalUserInfo'; info: Serializable}
   | {

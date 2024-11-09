@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use std::fs;
@@ -382,6 +382,11 @@ impl<'a> FileStoreBuilder<'a> {
             None
         };
 
+        let cas_cache_threshold_bytes = self
+            .config
+            .get_opt::<ByteCount>("scmstore", "fetch-from-cas-threshold")?
+            .map(|threshold_bytes| threshold_bytes.value());
+
         tracing::trace!(target: "revisionstore::filestore", "constructing FileStore");
         Ok(FileStore {
             lfs_threshold_bytes,
@@ -410,6 +415,8 @@ impl<'a> FileStoreBuilder<'a> {
             lfs_progress: AggregatingProgressBar::new("fetching", "LFS"),
             flush_on_drop: true,
             format,
+
+            cas_cache_threshold_bytes,
         })
     }
 }

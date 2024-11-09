@@ -6,15 +6,17 @@ oncall("sapling")
 rust_library(
     name = "edenapi_types",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {
-                "dependencies": {
-                    "dag-types": {"features": ["for-tests"]},
-                },
-            },
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"dependencies": {"dag-types": {"features": ["for-tests"]}}},
+        "lib": {"name": "edenapi_types"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "edenapi_types",
+            "repository": "https://github.com/facebook/sapling",
         },
-    },
+    }},
     crate_root = "src/lib.rs",
     features = ["for-tests"],
     named_deps = {
@@ -44,6 +46,7 @@ rust_library(
         "//eden/scm/lib/minibytes:minibytes",
         "//eden/scm/lib/revisionstore:revisionstore_types",
         "//eden/scm/lib/types:types",
+        "//eden/scm/lib/util/format-util:format-util",
     ],
 )
 
@@ -51,6 +54,16 @@ rust_library(
     name = "type_macros",
     srcs = glob(["proc_macros/*.rs"]),
     autocargo = {
+        "cargo_toml_config": {
+            "lib": {"name": "type_macros"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "type_macros",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        },
         "cargo_toml_dir": "proc_macros",
     },
     crate_root = "proc_macros/lib.rs",

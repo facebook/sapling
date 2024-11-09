@@ -6,6 +6,16 @@ oncall("sapling")
 rust_library(
     name = "http-client",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "http-client"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "http-client",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     test_deps = [
         "fbsource//third-party/rust:assert_matches",
         "fbsource//third-party/rust:crossbeam",

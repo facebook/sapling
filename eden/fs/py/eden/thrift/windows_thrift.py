@@ -291,6 +291,7 @@ class WindowsSocketHandle:
         self._checkReturnCode(bind(self.fd, ctypes.pointer(addr), ctypes.sizeof(addr)))
         self.address = address
 
+    # pyre-fixme[24]: Generic type `memoryview` expects 1 type parameter.
     def send(self, buff: "bytes | memoryview") -> int:
         size = len(buff)
 
@@ -321,6 +322,8 @@ class WindowsSocketHandle:
     # pyre-fixme[3]: Return type must be annotated.
     def recv_into(self, buffer: Buffer, size: int = 0):
         if size == 0:
+            # pyre-fixme[6]: For 1st argument expected
+            #  `pyre_extensions.PyreReadOnly[Sized]` but got `Buffer`.
             size = len(buffer)
 
         dest = (ctypes.c_char * size).from_buffer(buffer)

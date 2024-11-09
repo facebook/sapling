@@ -6,6 +6,7 @@ setup backing repo
   $ cat > $TESTTMP/.edenrc <<EOF
   > [glob]
   > use-edenapi-suffix-query = true
+  > allowed-suffix-queries = [ ".ico", ".cur", ".ttf", ".otf", ".woff", ".woff2", ".eot", ".xap", ".mp3", ".m4a", ".svg", ".manifest", ".kf", ".mov", ".bcmap"]
   > EOF
   $ newclientrepo
   $ drawdag <<'EOS'
@@ -13,12 +14,14 @@ setup backing repo
   > |
   > A
   > EOS
+  $ echo '{"eden_enable_simple_suffix": true}' > $TESTTMP/repo1/.watchmanconfig
 #if no-windows
   $ eden restart 2>1 > /dev/null
 #else
   $ eden --home-dir $TESTTMP restart 2>1 > /dev/null
 #endif
   $ eden debug logging eden/fs/service=DBG4 > /dev/null
+  $ eden debug logging eden=DBG4 > /dev/null
   $ watchman watch $TESTTMP/repo1 > /dev/null
   $ mkdir base
   $ cd base
@@ -61,6 +64,7 @@ watchman without files flag will only look at local
 #if osx
   $ sleep 10
 #endif
+  $ sleep 2
   $ eden debug thrift getCounters --json | egrep '(store.sapling.fetch_glob_files_success.count"|thrift.EdenServiceHandler.glob_files.local_success.count")'
     "store.sapling.fetch_glob_files_success.count": 0,
     "thrift.EdenServiceHandler.glob_files.local_success.count": 1,
@@ -91,6 +95,7 @@ watchman with d file type expression will only look at local
 #if osx
   $ sleep 10
 #endif
+  $ sleep 2
   $ eden debug thrift getCounters --json | egrep '(store.sapling.fetch_glob_files_success.count"|thrift.EdenServiceHandler.glob_files.local_success.count")'
     "store.sapling.fetch_glob_files_success.count": 0,
     "thrift.EdenServiceHandler.glob_files.local_success.count": 2,
@@ -122,10 +127,11 @@ test missing files will trigger fallback
   $ sleep 10
 #endif
 # this value represents the success of the EdenAPI call, not the success of the overall globFiles usage of it
+  $ sleep 2
   $ eden debug thrift getCounters --json | egrep '(store.sapling.fetch_glob_files_success.count"|thrift.EdenServiceHandler.glob_files.local_success.count"|thrift.EdenServiceHandler.glob_files.sapling_remote_api_fallback.count"|thrift.EdenServiceHandler.glob_files.sapling_remote_api_success.count")'
-    "store.sapling.fetch_glob_files_success.count": 1,
-    "thrift.EdenServiceHandler.glob_files.local_success.count": 2,
-    "thrift.EdenServiceHandler.glob_files.sapling_remote_api_fallback.count": 1,
+    "store.sapling.fetch_glob_files_success.count": 0,
+    "thrift.EdenServiceHandler.glob_files.local_success.count": 3,
+    "thrift.EdenServiceHandler.glob_files.sapling_remote_api_fallback.count": 0,
     "thrift.EdenServiceHandler.glob_files.sapling_remote_api_success.count": 0,
 
 
@@ -173,11 +179,12 @@ watchman with not d file type expression will use edenAPI
 #if osx
   $ sleep 10
 #endif
+  $ sleep 2
   $ eden debug thrift getCounters --json | egrep '(store.sapling.fetch_glob_files_success.count"|thrift.EdenServiceHandler.glob_files.local_success.count"|thrift.EdenServiceHandler.glob_files.sapling_remote_api_fallback.count"|thrift.EdenServiceHandler.glob_files.sapling_remote_api_success.count")'
-    "store.sapling.fetch_glob_files_success.count": 2,
-    "thrift.EdenServiceHandler.glob_files.local_success.count": 2,
-    "thrift.EdenServiceHandler.glob_files.sapling_remote_api_fallback.count": 1,
-    "thrift.EdenServiceHandler.glob_files.sapling_remote_api_success.count": 1,
+    "store.sapling.fetch_glob_files_success.count": 0,
+    "thrift.EdenServiceHandler.glob_files.local_success.count": 4,
+    "thrift.EdenServiceHandler.glob_files.sapling_remote_api_fallback.count": 0,
+    "thrift.EdenServiceHandler.glob_files.sapling_remote_api_success.count": 0,
 
 
 watchman with f or l file type expression will use edenAPI
@@ -211,13 +218,13 @@ watchman with f or l file type expression will use edenAPI
       }
   }
 #if osx
-  $ sleep 10
 #endif
+  $ sleep 2
   $ eden debug thrift getCounters --json | egrep '(store.sapling.fetch_glob_files_success.count"|thrift.EdenServiceHandler.glob_files.local_success.count"|thrift.EdenServiceHandler.glob_files.sapling_remote_api_fallback.count"|thrift.EdenServiceHandler.glob_files.sapling_remote_api_success.count")'
-    "store.sapling.fetch_glob_files_success.count": 3,
-    "thrift.EdenServiceHandler.glob_files.local_success.count": 2,
-    "thrift.EdenServiceHandler.glob_files.sapling_remote_api_fallback.count": 1,
-    "thrift.EdenServiceHandler.glob_files.sapling_remote_api_success.count": 2,
+    "store.sapling.fetch_glob_files_success.count": 0,
+    "thrift.EdenServiceHandler.glob_files.local_success.count": 5,
+    "thrift.EdenServiceHandler.glob_files.sapling_remote_api_fallback.count": 0,
+    "thrift.EdenServiceHandler.glob_files.sapling_remote_api_success.count": 0,
   $ watchman -j <<-EOT
   > ["query", "$TESTTMP/repo1", {
   > "glob": ["**/*.txt"],
@@ -242,11 +249,12 @@ watchman with f or l file type expression will use edenAPI
 #if osx
   $ sleep 10
 #endif
+  $ sleep 2
   $ eden debug thrift getCounters --json | egrep '(store.sapling.fetch_glob_files_success.count"|thrift.EdenServiceHandler.glob_files.local_success.count"|thrift.EdenServiceHandler.glob_files.sapling_remote_api_fallback.count"|thrift.EdenServiceHandler.glob_files.sapling_remote_api_success.count")'
-    "store.sapling.fetch_glob_files_success.count": 4,
-    "thrift.EdenServiceHandler.glob_files.local_success.count": 2,
-    "thrift.EdenServiceHandler.glob_files.sapling_remote_api_fallback.count": 1,
-    "thrift.EdenServiceHandler.glob_files.sapling_remote_api_success.count": 3,
+    "store.sapling.fetch_glob_files_success.count": 0,
+    "thrift.EdenServiceHandler.glob_files.local_success.count": 6,
+    "thrift.EdenServiceHandler.glob_files.sapling_remote_api_fallback.count": 0,
+    "thrift.EdenServiceHandler.glob_files.sapling_remote_api_success.count": 0,
 
 
 
@@ -255,45 +263,6 @@ watchman suffix generator uses edenAPI
   > ["query", "$TESTTMP/repo1", {
   > "suffix": ["txt"],
   > "expression": ["type", "f"],
-  > "fields": ["name", "type"]
-  > }]
-  > EOT
-  {
-      * (glob)
-      "files": [
-          {
-              "type": "f",
-              "name": "base/txt.txt"
-          },
-          {
-              "type": "f",
-              "name": "baz.txt"
-          },
-          {
-              "type": "f",
-              "name": "foo.txt"
-          }
-      ],
-      * (glob)
-      "clock": * (glob)
-      "debug": {
-          "cookie_files": []
-      }
-  }
-#if osx
-  $ sleep 10
-#endif
-  $ eden debug thrift getCounters --json | egrep '(store.sapling.fetch_glob_files_success.count"|thrift.EdenServiceHandler.glob_files.local_success.count"|thrift.EdenServiceHandler.glob_files.sapling_remote_api_fallback.count"|thrift.EdenServiceHandler.glob_files.sapling_remote_api_success.count")'
-    "store.sapling.fetch_glob_files_success.count": 5,
-    "thrift.EdenServiceHandler.glob_files.local_success.count": 2,
-    "thrift.EdenServiceHandler.glob_files.sapling_remote_api_fallback.count": 1,
-    "thrift.EdenServiceHandler.glob_files.sapling_remote_api_success.count": 4,
-
-
-watchman suffix expression does not use edenAPI because it resolves to ** and post-filters the results
-  $ watchman -j <<-EOT
-  > ["query", "$TESTTMP/repo1", {
-  > "expression": ["allof", ["suffix", "txt"], ["type", "f"]],
   > "fields": ["name", "type"]
   > }]
   > EOT
@@ -326,11 +295,56 @@ watchman suffix expression does not use edenAPI because it resolves to ** and po
 #if osx
   $ sleep 10
 #endif
+  $ sleep 2
   $ eden debug thrift getCounters --json | egrep '(store.sapling.fetch_glob_files_success.count"|thrift.EdenServiceHandler.glob_files.local_success.count"|thrift.EdenServiceHandler.glob_files.sapling_remote_api_fallback.count"|thrift.EdenServiceHandler.glob_files.sapling_remote_api_success.count")'
-    "store.sapling.fetch_glob_files_success.count": 5,
-    "thrift.EdenServiceHandler.glob_files.local_success.count": 3,
-    "thrift.EdenServiceHandler.glob_files.sapling_remote_api_fallback.count": 1,
-    "thrift.EdenServiceHandler.glob_files.sapling_remote_api_success.count": 4,
+    "store.sapling.fetch_glob_files_success.count": 0,
+    "thrift.EdenServiceHandler.glob_files.local_success.count": 7,
+    "thrift.EdenServiceHandler.glob_files.sapling_remote_api_fallback.count": 0,
+    "thrift.EdenServiceHandler.glob_files.sapling_remote_api_success.count": 0,
+
+
+watchman suffix expression does not use edenAPI because it resolves to ** and post-filters the results
+  $ watchman -j <<-EOT
+  > ["query", "$TESTTMP/repo1", {
+  > "expression": ["allof", ["suffix", "txt"], ["type", "f"], ["true"]],
+  > "fields": ["name", "type"]
+  > }]
+  > EOT
+  {
+      * (glob)
+      "files": [
+          {
+              "type": "f",
+              "name": ".hg/last-message.txt"
+          },
+          {
+              "type": "f",
+              "name": "base/txt.txt"
+          },
+          {
+              "type": "f",
+              "name": "baz.txt"
+          },
+          {
+              "type": "f",
+              "name": "foo.txt"
+          }
+      ],
+      * (glob)
+      "clock": * (glob)
+      "debug": {
+          "cookie_files": []
+      }
+  }
+#if osx
+  $ sleep 10
+#endif
+  $ sleep 2
+  $ eden debug thrift getCounters --json | egrep '(store.sapling.fetch_glob_files_success.count"|thrift.EdenServiceHandler.glob_files.local_success.count"|thrift.EdenServiceHandler.glob_files.sapling_remote_api_fallback.count"|thrift.EdenServiceHandler.glob_files.sapling_remote_api_success.count")'
+    "store.sapling.fetch_glob_files_success.count": 0,
+    "thrift.EdenServiceHandler.glob_files.local_success.count": 8,
+    "thrift.EdenServiceHandler.glob_files.sapling_remote_api_fallback.count": 0,
+    "thrift.EdenServiceHandler.glob_files.sapling_remote_api_success.count": 0,
 
 Deleting a file locally will hide it from display even if it's in the remote
   $ rm foo.txt
@@ -346,6 +360,10 @@ Deleting a file locally will hide it from display even if it's in the remote
       "files": [
           {
               "type": "f",
+              "name": ".hg/last-message.txt"
+          },
+          {
+              "type": "f",
               "name": "base/txt.txt"
           },
           {
@@ -359,9 +377,33 @@ Deleting a file locally will hide it from display even if it's in the remote
           "cookie_files": []
       }
   }
-  $ sleep 10
+  $ sleep 2
   $ eden debug thrift getCounters --json | egrep '(store.sapling.fetch_glob_files_success.count"|thrift.EdenServiceHandler.glob_files.local_success.count"|thrift.EdenServiceHandler.glob_files.sapling_remote_api_fallback.count"|thrift.EdenServiceHandler.glob_files.sapling_remote_api_success.count")'
-    "store.sapling.fetch_glob_files_success.count": 6,
-    "thrift.EdenServiceHandler.glob_files.local_success.count": 3,
-    "thrift.EdenServiceHandler.glob_files.sapling_remote_api_fallback.count": 1,
-    "thrift.EdenServiceHandler.glob_files.sapling_remote_api_success.count": 5,
+    "store.sapling.fetch_glob_files_success.count": 0,
+    "thrift.EdenServiceHandler.glob_files.local_success.count": 9,
+    "thrift.EdenServiceHandler.glob_files.sapling_remote_api_fallback.count": 0,
+    "thrift.EdenServiceHandler.glob_files.sapling_remote_api_success.count": 0,
+
+Testing allowed suffix offloading
+  $ watchman -j <<-EOT
+  > ["query", "$TESTTMP/repo1", {
+  > "relative_root":"",
+  > "expression":["allof",["type","f"],["suffix",["ico", "cur", "ttf", "otf", "woff", "woff2", "eot", "xap", "mp3", "m4a", "svg", "manifest", "kf", "mov", "bcmap"]]],
+  > "fields": ["name", "content.sha1hex"]
+  > }]
+  > EOT
+  {
+      * (glob)
+      "files": [],
+      * (glob)
+      "clock": * (glob)
+      "debug": {
+          "cookie_files": []
+      }
+  }
+  $ sleep 2
+  $ eden debug thrift getCounters --json | egrep '(store.sapling.fetch_glob_files_success.count"|thrift.EdenServiceHandler.glob_files.local_success.count"|thrift.EdenServiceHandler.glob_files.sapling_remote_api_fallback.count"|thrift.EdenServiceHandler.glob_files.sapling_remote_api_success.count")'
+    "store.sapling.fetch_glob_files_success.count": 1,
+    "thrift.EdenServiceHandler.glob_files.local_success.count": 9,
+    "thrift.EdenServiceHandler.glob_files.sapling_remote_api_fallback.count": 0,
+    "thrift.EdenServiceHandler.glob_files.sapling_remote_api_success.count": 1,

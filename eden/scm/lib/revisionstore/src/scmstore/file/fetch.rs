@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use std::collections::HashMap;
@@ -85,6 +85,8 @@ pub struct FetchState {
     fetch_mode: FetchMode,
 
     format: SerializationFormat,
+
+    cas_cache_threshold_bytes: Option<u64>,
 }
 
 impl FetchState {
@@ -95,6 +97,7 @@ impl FetchState {
         found_tx: Sender<Result<(Key, StoreFile), KeyFetchError>>,
         lfs_enabled: bool,
         fetch_mode: FetchMode,
+        cas_cache_threshold_bytes: Option<u64>,
     ) -> Self {
         FetchState {
             common: CommonFetchState::new(keys, attrs, found_tx, fetch_mode),
@@ -108,6 +111,7 @@ impl FetchState {
             lfs_enabled,
             format: file_store.format(),
             fetch_mode,
+            cas_cache_threshold_bytes,
         }
     }
 
@@ -116,7 +120,7 @@ impl FetchState {
     }
 
     pub(crate) fn all_keys(&self) -> Vec<Key> {
-        self.common.pending.keys().cloned().collect()
+        self.common.all_keys()
     }
 
     pub(crate) fn metrics(&self) -> &FileStoreFetchMetrics {
@@ -305,6 +309,13 @@ impl FetchState {
             wants_aux |= FileAttributes::PURE_CONTENT;
         }
 
+        // If we are querying for content header without content, that can be satisfied
+        // purely from AUX. Otherwise, don't say AUX can satisfy CONTENT_HEADER (to avoid
+        // querying AUX unnecessarily when the header will come with the content).
+        if self.common.request_attrs.content_header && !self.common.request_attrs.pure_content {
+            wants_aux |= FileAttributes::CONTENT_HEADER;
+        }
+
         self.common
             .iter_pending(wants_aux, self.compute_aux_data, |key| {
                 count += 1;
@@ -384,7 +395,7 @@ impl FetchState {
     fn found_lfs(&mut self, key: Key, entry: LfsStoreEntry) {
         match entry {
             LfsStoreEntry::PointerAndBlob(ptr, blob) => {
-                self.found_attributes(key, LazyFile::Lfs(blob, ptr).into())
+                self.found_attributes(key, LazyFile::Lfs(blob, ptr, self.format).into())
             }
             LfsStoreEntry::PointerOnly(ptr) => self.found_pointer(key, ptr, false),
         }
@@ -735,6 +746,13 @@ impl FetchState {
                     }
                 };
 
+                if let Some(cas_threshold) = self.cas_cache_threshold_bytes {
+                    if aux_data.total_size > cas_threshold {
+                        // If the file's size exceeds the configured threshold, don't fetch it from CAS.
+                        return None;
+                    }
+                }
+
                 if self.common.request_attrs.content_header && !store_file.attrs().content_header {
                     // If the caller wants hg content header but the aux data didn't have it,
                     // we won't find it in CAS, so don't bother fetching content from CAS.
@@ -753,7 +771,9 @@ impl FetchState {
             .collect();
 
         // Include the duplicates in the count.
-        span.record("keys", digest_with_keys.len());
+        let keys_fetch_count = digest_with_keys.len();
+
+        span.record("keys", keys_fetch_count);
 
         let mut digest_to_key: HashMap<CasDigest, Vec<Key>> = HashMap::default();
 
@@ -767,7 +787,7 @@ impl FetchState {
 
         let digests: Vec<CasDigest> = digest_to_key.keys().cloned().collect();
 
-        let mut found = 0;
+        let mut keys_found_count = 0;
         let mut error = 0;
         let mut reqs = 0;
 
@@ -789,7 +809,7 @@ impl FetchState {
                                 tracing::error!("got CAS result for unrequested digest {:?}", digest);
                                 continue;
                             };
-                            found += keys.len();
+                            keys_found_count += keys.len();
                             tracing::trace!(target: "cas", ?keys, ?digest, "file(s) prefetched in cas");
                             for key in keys {
                                 self.found_attributes(
@@ -837,7 +857,7 @@ impl FetchState {
                                     // miss
                                 }
                                 Ok(Some(data)) => {
-                                    found += keys.len();
+                                    keys_found_count += keys.len();
                                     tracing::trace!(target: "cas", ?keys, ?digest, "file(s) found in cas");
                                     if !keys.is_empty() {
                                         let last = keys.pop().unwrap();
@@ -877,14 +897,15 @@ impl FetchState {
             });
         }
 
-        span.record("hits", found);
+        span.record("hits", keys_found_count);
         span.record("requests", reqs);
         span.record("time", start_time.elapsed().as_millis() as u64);
 
         let _ = self.metrics.cas.time_from_duration(start_time.elapsed());
-        self.metrics.cas.fetch(digests.len());
+        self.metrics.cas.fetch(keys_fetch_count);
         self.metrics.cas.err(error);
-        self.metrics.cas.hit(found);
+        self.metrics.cas.hit(keys_found_count);
+        self.metrics.cas.miss(keys_fetch_count - keys_found_count);
         self.metrics
             .cas_backend
             .zdb_bytes(total_stats.total_bytes_zdb);
@@ -965,7 +986,7 @@ impl FetchState {
                 // `pending` and all of its entries were put in `key_map`.
                 for (key, ptr) in key_map.get(&sha256).unwrap().iter() {
                     let file = StoreFile {
-                        content: Some(LazyFile::Lfs(data.clone(), ptr.clone())),
+                        content: Some(LazyFile::Lfs(data.clone(), ptr.clone(), self.format)),
                         ..Default::default()
                     };
 

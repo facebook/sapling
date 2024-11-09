@@ -5,6 +5,16 @@ oncall("sapling")
 rust_library(
     name = "cmdstatus",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "cmdstatus"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "GPL-2.0-only",
+            "name": "cmdstatus",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:anyhow",

@@ -36,7 +36,6 @@ from .changelog import (
 from .i18n import _
 from .node import bin, hex, nullid, nullrev, wdirid, wdirrev
 
-
 SEGMENTS_DIR = "segments/v1"
 SEGMENTS_DIR_NEXT = "segments/v1next"  # Used on Windows, for migration.
 HGCOMMITS_DIR = "hgcommits/v1"
@@ -70,9 +69,7 @@ class changelog:
         if self._isgit or uiconfig.configbool(
             "experimental", "use-rust-hg-parse", True
         ):
-            # NOTE: The git commits layer right now translates commit text to hg format.
-            # So we need to parse them as hg.
-            format = "hg"
+            format = self._isgit and "git" or "hg"
             self._changelogrevision_ctor = partial(changelogrevision2, format=format)
         else:
             self._changelogrevision_ctor = changelogrevision

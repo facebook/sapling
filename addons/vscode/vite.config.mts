@@ -30,6 +30,7 @@ const input = [normalizeInputPath('webview.html')];
 if (isInternal) {
   // Currently, the inline comment webview is not used in OSS
   input.push(normalizeInputPath('inlineCommentWebview.html'));
+  input.push(normalizeInputPath('inlineCommentSidePanelWebview.html'));
 }
 
 console.log(isInternal ? 'Building internal version' : 'Building OSS version');
@@ -135,6 +136,11 @@ export default defineConfig(({mode}) => ({
   build: {
     outDir: 'dist/webview',
     manifest: true,
+    // FIXME: This means that all webviews will use the same css file.
+    // This is too bloated for the inline comment webview and marginally slows down startup time.
+    // Ideally, we'd load all the relevant css files in the webview, but our current approach
+    // with our own manual copy of html in htmlForWebview does not support this.
+    cssCodeSplit: false,
     rollupOptions: {
       input,
       output: {

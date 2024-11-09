@@ -15,10 +15,10 @@ Function to test discovery between two repos in both directions, using both the 
   >     hg init foo
   >     cd foo
   >     hg debugbuilddag "$3"
-  >     hg clone . a $1 --quiet
-  >     hg -R a pull -q $1
-  >     hg clone . b $2 --quiet
-  >     hg -R b pull -q $2
+  >     hg init a -q
+  >     hg -q -R a pull . $1
+  >     hg init b -q
+  >     hg -q -R b pull . $2
   >     echo
   >     echo "% -- a -> b set"
   >     hg -R a debugdiscovery b --verbose --debug --config progress.debug=true
@@ -424,8 +424,10 @@ generate new bundles:
   $ hg -R r2 bundle -qa $TESTDIR/bundles/issue4438-r2.hg
 #else
 use existing bundles:
-  $ hg clone -q $TESTDIR/bundles/issue4438-r1.hg r1
-  $ hg clone -q $TESTDIR/bundles/issue4438-r2.hg r2
+  $ hg init r1
+  $ hg -R r1 unbundle -q $TESTDIR/bundles/issue4438-r1.hg
+  $ hg init r2
+  $ hg -R r2 unbundle -q $TESTDIR/bundles/issue4438-r2.hg
 #endif
 
 Set iteration order could cause wrong and unstable results - fixed in 73cfaa348650:

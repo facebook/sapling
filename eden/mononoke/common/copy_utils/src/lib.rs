@@ -17,6 +17,7 @@ use changesets_creation::save_changesets;
 use commit_graph::CommitGraphRef;
 use commit_graph::CommitGraphWriterRef;
 use commit_transformation::copy_file_contents;
+use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use filestore::FilestoreConfigRef;
 use fsnodes::RootFsnodeId;
@@ -24,7 +25,8 @@ use futures::future::try_join;
 use futures::TryStreamExt;
 use manifest::Entry;
 use manifest::ManifestOps;
-use mononoke_types::fsnode::FsnodeFile;
+use mononoke_types::content_manifest::compat::ContentManifestFile;
+use mononoke_types::content_manifest::compat::ContentManifestId;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
@@ -93,7 +95,7 @@ pub async fn copy(
             from_entries.ok_or_else(|| Error::msg("from directory does not exist!"))?;
         let to_entries = to_entries.unwrap_or_else(BTreeMap::new);
 
-        for (from_suffix, fsnode_file) in from_entries {
+        for (from_suffix, file) in from_entries {
             if let Some(ref regex) = options.maybe_exclude_file_regex {
                 if from_suffix.matches_regex(regex) {
                     continue;
@@ -103,8 +105,8 @@ pub async fn copy(
             let from_path = from_dir.join(&from_suffix);
             let to_path = to_dir.join(&from_suffix);
 
-            if let Some(to_fsnode) = to_entries.get(&from_suffix) {
-                if to_fsnode == &fsnode_file {
+            if let Some(to_file) = to_entries.get(&from_suffix) {
+                if to_file == &file {
                     continue;
                 }
 
@@ -123,17 +125,17 @@ pub async fn copy(
                 "from {}, to {}, size: {}",
                 from_path,
                 to_path,
-                fsnode_file.size()
+                file.size(),
             );
-            file_changes.insert(to_path, Some((from_path, fsnode_file)));
+            file_changes.insert(to_path, Some((from_path, file.clone())));
 
             if !same_repo {
-                contents_to_upload.insert(fsnode_file.content_id().clone());
+                contents_to_upload.insert(file.content_id());
             }
 
             if let Some(lfs_threshold) = limits.lfs_threshold {
-                if fsnode_file.size() < lfs_threshold.get() {
-                    total_file_size += fsnode_file.size();
+                if file.size() < lfs_threshold.get() {
+                    total_file_size += file.size();
                 } else {
                     debug!(
                         ctx.logger(),
@@ -141,7 +143,7 @@ pub async fn copy(
                     );
                 }
             } else {
-                total_file_size += fsnode_file.size();
+                total_file_size += file.size();
             }
 
             if let Some(limit) = limits.total_file_num_limit {
@@ -183,7 +185,7 @@ pub async fn copy(
 async fn create_changesets(
     ctx: &CoreContext,
     repo: &impl Repo,
-    file_changes: Vec<BTreeMap<NonRootMPath, Option<(NonRootMPath, FsnodeFile)>>>,
+    file_changes: Vec<BTreeMap<NonRootMPath, Option<(NonRootMPath, ContentManifestFile)>>>,
     mut parent: ChangesetId,
     author: String,
     msg: String,
@@ -199,16 +201,16 @@ async fn create_changesets(
         let mut fc = BTreeMap::new();
         for (to_path, maybe_fsnode) in path_to_maybe_fsnodes {
             let file_change = match maybe_fsnode {
-                Some((from_path, fsnode_file)) => {
+                Some((from_path, file)) => {
                     let copy_from = if record_copy_from {
                         Some((from_path, parent))
                     } else {
                         None
                     };
                     FileChange::tracked(
-                        *fsnode_file.content_id(),
-                        *fsnode_file.file_type(),
-                        fsnode_file.size(),
+                        file.content_id(),
+                        file.file_type(),
+                        file.size(),
                         copy_from,
                         GitLfs::FullContent,
                     )
@@ -294,30 +296,40 @@ async fn list_directory(
     repo: &impl Repo,
     cs_id: ChangesetId,
     path: &NonRootMPath,
-) -> Result<Option<BTreeMap<NonRootMPath, FsnodeFile>>, Error> {
-    let root = repo
-        .repo_derived_data()
-        .derive::<RootFsnodeId>(ctx, cs_id)
-        .await?;
+) -> Result<Option<BTreeMap<NonRootMPath, ContentManifestFile>>, Error> {
+    let root_id: ContentManifestId = if let Ok(true) = justknobs::eval(
+        "scm/mononoke:derived_data_use_content_manifests",
+        None,
+        Some(repo.repo_identity().name()),
+    ) {
+        repo.repo_derived_data()
+            .derive::<RootContentManifestId>(ctx, cs_id)
+            .await?
+            .into_content_manifest_id()
+            .into()
+    } else {
+        repo.repo_derived_data()
+            .derive::<RootFsnodeId>(ctx, cs_id)
+            .await?
+            .fsnode_id()
+            .clone()
+            .into()
+    };
 
-    let entries = root
-        .fsnode_id()
-        .find_entries(
+    let entry = root_id
+        .find_entry(
             ctx.clone(),
             repo.repo_blobstore().clone(),
-            vec![path.clone()],
+            path.clone().into(),
         )
-        .try_collect::<Vec<_>>()
         .await?;
 
-    let entry = entries.first();
-
-    let fsnode_id = match entry {
-        Some((_, Entry::Tree(fsnode_id))) => fsnode_id,
+    let tree_id = match entry {
+        Some(Entry::Tree(tree_id)) => tree_id,
         None => {
             return Ok(None);
         }
-        Some((_, Entry::Leaf(_))) => {
+        Some(Entry::Leaf(_)) => {
             return Err(anyhow!(
                 "{} is a file, but expected to be a directory",
                 path
@@ -325,8 +337,9 @@ async fn list_directory(
         }
     };
 
-    let leaf_entries = fsnode_id
+    let leaf_entries = tree_id
         .list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
+        .map_ok(|(path, file)| (path, file.into()))
         .try_collect::<BTreeMap<_, _>>()
         .await?;
 

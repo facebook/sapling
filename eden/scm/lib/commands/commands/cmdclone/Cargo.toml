@@ -3,7 +3,11 @@
 [package]
 name = "cmdclone"
 version = "0.1.0"
+authors = ["Meta Source Control Team <sourcecontrol-dev@meta.com>"]
 edition = "2021"
+homepage = "https://sapling-scm.com/"
+repository = "https://github.com/facebook/sapling"
+license = "GPL-2.0-only"
 
 [dependencies]
 anyhow = "1.0.86"
@@ -19,7 +23,6 @@ exchange = { version = "0.1.0", path = "../../../exchange" }
 fail = { version = "0.4", features = ["failpoints"] }
 hgplain = { version = "0.1.0", path = "../../../util/hgplain" }
 identity = { version = "0.1.0", path = "../../../identity" }
-metalog = { version = "0.1.0", path = "../../../metalog" }
 migration = { version = "0.1.0", path = "../../../migration" }
 repo = { version = "0.1.0", path = "../../../repo" }
 repourl = { version = "0.1.0", path = "../../../repo/url" }

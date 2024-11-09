@@ -709,7 +709,7 @@ class backgroundfilecloser:
     def close(self, fh):
         """Schedule a file for closing."""
         if not self._entered:
-            raise error.Abort(_("can only call close() when context manager " "active"))
+            raise error.Abort(_("can only call close() when context manager active"))
 
         # If a background thread encountered an exception, raise now so we fail
         # fast. Otherwise we may potentially go on for minutes until the error

@@ -127,7 +127,9 @@ Fetching only aux data does not trigger a remote query:
               total_size: 1,
               sha1: Sha1("ae4f281df5a5d0ff3cad6371f76d5c29b6d953ec"),
               blake3: Blake3("5667f2421ac250c4bb9af657b5ead3cdbd940bfbc350b2bfee47454643832b48"),
-              file_header_metadata: None,
+              file_header_metadata: Some(
+                  b"",
+              ),
           },
       ),
   }

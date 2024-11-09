@@ -9,6 +9,8 @@
 //! [`EdenFsClient`]).
 
 use std::collections::BTreeMap;
+#[cfg(windows)]
+use std::fs::remove_file;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::OnceLock;
@@ -16,6 +18,7 @@ use std::time::Duration;
 
 use anyhow::anyhow;
 use anyhow::Context;
+use atomicfile::atomic_write;
 use edenfs_config::EdenFsConfig;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
@@ -42,6 +45,7 @@ use thriftclient::TransportType;
 use tokio_uds_compat::UnixStream;
 use tracing::event;
 use tracing::Level;
+use util::lock::PathLock;
 
 use crate::EdenFsClient;
 #[cfg(fbcode_build)]
@@ -57,6 +61,8 @@ static INSTANCE: OnceLock<EdenFsInstance> = OnceLock::new();
 /// These paths are relative to the user's client directory.
 const CLIENTS_DIR: &str = "clients";
 const CONFIG_JSON: &str = "config.json";
+const CONFIG_JSON_LOCK: &str = "config.json.lock";
+const CONFIG_JSON_MODE: u32 = 0o664;
 
 #[derive(Debug)]
 pub struct EdenFsInstance {
@@ -293,6 +299,59 @@ impl EdenFsInstance {
 
     pub fn config_directory(&self, client_name: &str) -> PathBuf {
         self.clients_dir().join(client_name)
+    }
+
+    pub fn client_dir_for_mount_point(&self, path: &Path) -> Result<PathBuf> {
+        Ok(self.clients_dir().join(self.client_name(path)?))
+    }
+
+    pub fn remove_path_from_directory_map(&self, path: &Path) -> Result<()> {
+        let lock_file_path = self.config_dir.join(CONFIG_JSON_LOCK);
+        let config_file_path = self.config_dir.join(CONFIG_JSON);
+
+        // For Linux and MacOS we have a lock file "config.json.lock" under the config directory
+        // which works as a file lock to prevent the file "config.json" being accessed by
+        // multiple processes at the same time.
+        //
+        // In Python CLI code, FileLock lib is used to create config.json.lock.
+        // In Rust, we use PathLock from "scm/lib/util"
+        let _lock = PathLock::exclusive(&lock_file_path).with_context(|| {
+            format!("Failed to open the lock file {}", lock_file_path.display())
+        })?;
+
+        // Lock acquired, now we can read and write to the "config.json" file
+
+        // On Windows the "Path" crate will append the prefix "\\?\" to the original path when
+        // "canonicalize()" is called to indicate the path is in unicode.
+        // We need to strip the prefix before checking the key in "config.json" file
+        // For non-windows platforms, this is no-op.
+        let entry_key = dunce::simplified(path);
+        let mut all_checkout_map = self.get_configured_mounts_map()?;
+        let original_num_of_entries = all_checkout_map.len();
+
+        all_checkout_map.retain(|path, _| dunce::simplified(path) != entry_key);
+
+        if all_checkout_map.len() < original_num_of_entries {
+            atomic_write(&config_file_path, CONFIG_JSON_MODE, true, |f| {
+                serde_json::to_writer_pretty(f, &all_checkout_map)?;
+                Ok(())
+            })
+            .with_context(|| {
+                format!(
+                    "Failed to write updated config JSON back to {}",
+                    config_file_path.display()
+                )
+            })?;
+        } else {
+            event!(
+                Level::WARN,
+                "There is not entry for {} in config.json",
+                path.display()
+            );
+        }
+
+        // Lock will be released when _lock is dropped
+        Ok(())
     }
 }
 

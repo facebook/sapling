@@ -39,12 +39,12 @@ quiet_stream = { version = "0.1.0", path = "../quiet_stream" }
 rate_limiting = { version = "0.1.0", path = "../rate_limiting" }
 scopeguard = "1.0.0"
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
-serde_json = { version = "1.0.125", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_depth"] }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
 tokio-openssl = "0.6"
-tokio-util = { version = "0.7.10", features = ["full"] }
+tokio-util = { version = "0.7.12", features = ["full"] }
 trust-dns-resolver = "0.20"
 yield_stream = { version = "0.1.0", path = "../common/yield_stream" }
 

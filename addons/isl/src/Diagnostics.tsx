@@ -6,7 +6,7 @@
  */
 
 import type {UseUncommittedSelection} from './partialSelection';
-import type {CommitInfo, Diagnostic} from './types';
+import type {CommitInfo, Diagnostic, DiagnosticAllowlist} from './types';
 import type {Tracker} from 'isl-server/src/analytics/tracker';
 
 import {spacing} from '../../components/theme/tokens.stylex';
@@ -57,7 +57,8 @@ const styles = stylex.create({
     },
   },
   allDiagnostics: {
-    maxHeight: '80vh',
+    maxHeight: 'calc(100vh - 200px)',
+    minHeight: '50px',
     overflowY: 'scroll',
   },
   confirmCheckbox: {
@@ -65,14 +66,13 @@ const styles = stylex.create({
   },
 });
 
-/** Many diagnostics are low-quality and don't reflect what would appear on CI.
- * Start with an allowlist while we validate which signals are worthwhile. */
-const allowlistedCodesBySource = Internal.allowlistedDiagnosticCodes ?? undefined;
-
-function isBlockingDiagnostic(d: Diagnostic): boolean {
-  if (d.source == null || d.code == null) {
-    return true;
-  }
+export function isBlockingDiagnostic(
+  d: Diagnostic,
+  /** Many diagnostics are low-quality and don't reflect what would appear on CI.
+   * Start with an allowlist while we validate which signals are worthwhile. */
+  allowlistedCodesBySource: undefined | DiagnosticAllowlist = Internal.allowlistedDiagnosticCodes ??
+    undefined,
+): boolean {
   if (allowlistedCodesBySource == null) {
     // In OSS, let's assume all errors are blocking.
     return true;
@@ -83,10 +83,15 @@ function isBlockingDiagnostic(d: Diagnostic): boolean {
   if (allowlistedCodesBySource == null) {
     return true;
   }
-  const relevantAllowlist = allowlistedCodesBySource.get(d.severity)?.get(d.source);
+  // source/code may be missing, but we still want to route that through the allowlist
+  const source = d.source ?? 'undefined';
+  const code = d.code ?? 'undefined';
+  const relevantAllowlist = allowlistedCodesBySource.get(d.severity)?.get(source);
   return (
     relevantAllowlist != null &&
-    (relevantAllowlist.has(d.code) === true || relevantAllowlist.has('*') === true)
+    (relevantAllowlist.allow
+      ? relevantAllowlist.allow.has(code) === true
+      : relevantAllowlist.block.has(code) === false)
   );
 }
 
@@ -139,7 +144,7 @@ export async function confirmNoBlockingDiagnostics(
     if (result.diagnostics.size > 0) {
       const allDiagnostics = [...result.diagnostics.values()];
       const allBlockingErrors = allDiagnostics
-        .map(value => value.filter(isBlockingDiagnostic))
+        .map(value => value.filter(d => isBlockingDiagnostic(d)))
         .flat();
       const totalErrors = allBlockingErrors.length;
 

@@ -355,4 +355,24 @@ impl<R: MononokeRepo> HgRepoContext<R> {
             .get_historical_versions(&cc_ctx)
             .await?)
     }
+
+    pub async fn cloud_rollback_workspace(
+        &self,
+        workspace: &str,
+        reponame: &str,
+        version: u64,
+    ) -> Result<String, MononokeError> {
+        let mut cc_ctx = CommitCloudContext::new(workspace, reponame)?;
+        let authz = self.repo_ctx().authorization_context();
+        authz
+            .require_commitcloud_operation(self.ctx(), self.repo_ctx().repo(), &mut cc_ctx, "write")
+            .await?;
+
+        Ok(self
+            .repo_ctx()
+            .repo()
+            .commit_cloud()
+            .rollback_workspace(&cc_ctx, version)
+            .await?)
+    }
 }

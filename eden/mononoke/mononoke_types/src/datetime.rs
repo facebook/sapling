@@ -18,7 +18,6 @@ use chrono::Duration as ChronoDuration;
 use chrono::FixedOffset;
 use chrono::Local;
 use chrono::LocalResult;
-use chrono::NaiveDateTime;
 use chrono::TimeZone;
 use chrono_english::parse_date_string;
 use chrono_english::Dialect;
@@ -268,10 +267,9 @@ impl From<Timestamp> for DateTime {
     fn from(ts: Timestamp) -> Self {
         let ts_secs = ts.timestamp_seconds();
         let ts_nsecs = (ts.0 % SEC_IN_NS) as u32;
-        DateTime::new(ChronoDateTime::<FixedOffset>::from_naive_utc_and_offset(
-            NaiveDateTime::from_timestamp_opt(ts_secs, ts_nsecs).unwrap(),
-            FixedOffset::west_opt(0).unwrap(),
-        ))
+        let dt_utc = ChronoDateTime::from_timestamp(ts_secs, ts_nsecs).unwrap();
+        let tz_utc = FixedOffset::west_opt(0).unwrap();
+        DateTime::new(dt_utc.with_timezone(&tz_utc))
     }
 }
 

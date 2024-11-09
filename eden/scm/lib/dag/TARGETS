@@ -5,47 +5,44 @@ oncall("sapling")
 rust_library(
     name = "dag",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {
-                "dependencies": {
-                    "dag-types": {
-                        "default-features": False,
-                        "features": [],
-                    },
-                    "minibytes": {
-                        "default-features": False,
-                        "features": [],
-                    },
-                },
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"dependencies": {
+            "dag-types": {
+                "default-features": False,
+                "features": [],
             },
-            "extra_buck_dependencies": {
-                "dev-dependencies": [
-                    "fbsource//third-party/rust:fs2",
-                    "fbsource//third-party/rust:tokio",
-                    "//eden/scm/lib/dag/dag-types:dag-types",
-                    "//eden/scm/lib/indexedlog:indexedlog",
-                ],
+            "minibytes": {
+                "default-features": False,
+                "features": [],
             },
-            "features": {
-                "default": [
-                    "indexedlog-backend",
-                    "render",
-                ],
-                "indexedlog-backend": [
-                    "fs2",
-                    "indexedlog",
-                    "tempfile",
-                ],
-                "render": [
-                    "renderdag",
-                ],
-            },
-            "package": {
-                "license": "MIT",
-            },
+        }},
+        "extra_buck_dependencies": {"dev-dependencies": [
+            "fbsource//third-party/rust:fs2",
+            "fbsource//third-party/rust:tokio",
+            "//eden/scm/lib/dag/dag-types:dag-types",
+            "//eden/scm/lib/indexedlog:indexedlog",
+        ]},
+        "features": {
+            "default": [
+                "indexedlog-backend",
+                "render",
+            ],
+            "indexedlog-backend": [
+                "fs2",
+                "indexedlog",
+                "tempfile",
+            ],
+            "render": ["renderdag"],
         },
-    },
+        "lib": {"name": "dag"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "dag",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     crate_root = "src/lib.rs",
     features = [
         "indexedlog-backend",
@@ -90,7 +87,19 @@ rust_library(
 rust_library(
     name = "dag-lite",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"ignore_rule": True},
+    autocargo = {
+        "cargo_toml_config": {
+            "lib": {"name": "dag"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "dag",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        },
+        "ignore_rule": True,
+    },
     crate = "dag",
     crate_root = "src/lib.rs",
     features = [

@@ -112,6 +112,7 @@ this should bundle the same 5 revisions that outgoing reported, but it
 
 actually bundles 7
 
+  $ hg pull -q -B book
   $ hg bundle foo.bundle test:repo1_server
   searching for changes
   5 changesets found

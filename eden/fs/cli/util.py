@@ -648,6 +648,7 @@ def split_inodes_by_operation_type(
 
 
 def fdatasync(fd: int) -> None:
+    # pyre-fixme [16]: Undefined attribute
     getattr(os, "fdatasync", os.fsync)(fd)
 
 

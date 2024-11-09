@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use std::collections::HashMap;
@@ -57,22 +57,28 @@ fn render_progress_bars(
     config: &RenderingConfig,
 ) {
     let mut children = HashMap::<u64, Vec<Arc<ProgressBar>>>::new();
+    let mut root_bars = Vec::new();
+    let mut topic_length = MIN_TOPIC_LENGTH;
     for bar in bars {
+        // Filter bars early that we aren't going to render.
+        if bar.adhoc()
+            && config.delay.as_millis() > 0
+            && bar.since_start().unwrap_or_default() < config.delay
+        {
+            continue;
+        }
+
+        topic_length = topic_length.max(bar.topic().graphemes(true).count());
+
         if let Some(parent) = bar.parent() {
             children.entry(parent.id()).or_default().push(bar.clone());
+        } else {
+            root_bars.push(bar.clone());
         }
     }
 
     // Note that we "lose" some topic length as bars nest since they get shorter.
-    let topic_length = bars
-        .iter()
-        .map(|b| b.topic().graphemes(true).count())
-        .max()
-        .unwrap_or_default()
-        .min(MAX_TOPIC_LENGTH)
-        .max(MIN_TOPIC_LENGTH);
-
-    let root_bars = bars.iter().filter(|bar| bar.parent().is_none());
+    topic_length = topic_length.min(MAX_TOPIC_LENGTH);
 
     let mut renderer = Renderer {
         changes,
@@ -80,7 +86,7 @@ fn render_progress_bars(
         topic_length,
         rendered_so_far: 0,
     };
-    renderer.render_bars(root_bars, &children, 0, 0);
+    renderer.render_bars(&root_bars, &children, 0, 0);
 }
 
 struct Renderer<'a> {
@@ -91,24 +97,13 @@ struct Renderer<'a> {
 }
 
 impl Renderer<'_> {
-    fn render_bars<'a>(
+    fn render_bars(
         &mut self,
-        bars: impl IntoIterator<Item = &'a Arc<ProgressBar>>,
+        bars: &[Arc<ProgressBar>],
         id_to_children: &HashMap<u64, Vec<Arc<ProgressBar>>>,
         depth: usize,
         pop_out: usize,
     ) {
-        let bars = bars
-            .into_iter()
-            // Non-adhoc bars are created in advance and should be shown with no
-            // delay (like a checklist of work).
-            .filter(|bar| {
-                !(bar.adhoc()
-                    && self.config.delay.as_millis() > 0
-                    && bar.since_start().unwrap_or_default() < self.config.delay)
-            })
-            .collect::<Vec<_>>();
-
         // Are we the first bar being rendered (at this depth).
         let mut is_first = true;
 
@@ -277,7 +272,7 @@ fn bar_prefix(depth: usize, is_last: bool, is_first: bool, pop_out: usize) -> St
         }
     }
 
-    // Draw the final symbol directly preceeding our bar.
+    // Draw the final symbol directly preceding our bar.
     if is_first && is_last {
         prefix.push_str("─ ");
     } else if is_first && depth == 0 {
@@ -317,6 +312,15 @@ fn bar_suffix(depth: usize, is_last: bool, is_first: bool, pop_out: usize) -> &'
 
 #[cfg(test)]
 mod test {
+    use std::io::Write;
+    use std::io::{self};
+    use std::time::Duration;
+
+    use progress_model::ProgressBarBuilder;
+    use termwiz::caps::Capabilities;
+    use termwiz::render::terminfo::TerminfoRenderer;
+    use termwiz::render::RenderTty;
+
     use super::*;
 
     #[derive(Debug)]
@@ -461,5 +465,63 @@ mod test {
 ╰ B          ╯
 "
         );
+    }
+
+    struct DumbTty<'a> {
+        w: &'a mut dyn Write,
+    }
+
+    impl RenderTty for DumbTty<'_> {
+        fn get_size_in_cells(&mut self) -> termwiz::Result<(usize, usize)> {
+            Ok((80, 26))
+        }
+    }
+
+    impl io::Write for DumbTty<'_> {
+        fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+            self.w.write(buf)
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            self.w.flush()
+        }
+    }
+
+    #[test]
+    fn test_filtering_children() {
+        let registry = Registry::default();
+
+        // Parent is visible, child is not visible yet (due to delay).
+        let _parent = ProgressBarBuilder::new()
+            .topic("parent")
+            .registry(&registry)
+            .adhoc(false)
+            .active();
+        let _child = ProgressBarBuilder::new()
+            .topic("child")
+            .registry(&registry)
+            .adhoc(true)
+            .active();
+
+        let mut changes = ChangeSequence::new(100, 100);
+        render_progress_bars(
+            &mut changes,
+            &registry.list_progress_bar(),
+            &RenderingConfig {
+                delay: Duration::from_secs(5),
+                ..Default::default()
+            },
+        );
+
+        let mut renderer =
+            TerminfoRenderer::new(Capabilities::new_with_hints(Default::default()).unwrap());
+        let mut buf = Vec::new();
+        renderer
+            .render_to(&changes.consume(), &mut DumbTty { w: &mut buf })
+            .unwrap();
+
+        let got = std::str::from_utf8(buf.as_ref()).unwrap();
+        // Be sure we draw with "-", not "╭" (i.e. hidden child should not influence rendering).
+        assert!(got.contains("─ parent"), "{got}");
     }
 }

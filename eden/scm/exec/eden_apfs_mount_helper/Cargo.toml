@@ -16,7 +16,7 @@ libc = "0.2.139"
 once_cell = "1.12"
 plist = "1.4.3"
 serde = { version = "1.0.185", features = ["derive", "rc"] }
-serde_json = { version = "1.0.125", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_depth"] }
 sha2 = "0.10.6"
 structopt = "0.3.26"
 

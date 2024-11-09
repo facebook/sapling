@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 mod diff;
@@ -26,7 +26,6 @@ use format_util::git_sha1_digest;
 use format_util::hg_sha1_digest;
 use iter::bfs_iter;
 use manifest::DiffEntry;
-use manifest::DirDiffEntry;
 use manifest::Directory;
 use manifest::File;
 use manifest::FileMetadata;
@@ -35,18 +34,19 @@ use manifest::FsNodeMetadata;
 use manifest::List;
 pub use manifest::Manifest;
 use minibytes::Bytes;
+use once_cell::sync::Lazy;
 use once_cell::sync::OnceCell;
 use pathmatcher::Matcher;
 pub use store::Flag;
 use storemodel::SerializationFormat;
 use thiserror::Error;
+use threadpool::ThreadPool;
 use types::HgId;
 pub use types::PathComponent;
 pub use types::PathComponentBuf;
 use types::RepoPath;
 use types::RepoPathBuf;
 
-pub use self::diff::Diff;
 pub(crate) use self::link::Link;
 pub use self::store::Element as TreeElement;
 pub use self::store::Entry as TreeEntry;
@@ -59,6 +59,9 @@ use crate::link::DurableEntry;
 use crate::link::Ephemeral;
 use crate::link::Leaf;
 use crate::store::InnerStore;
+
+// Shared thread pool for manifest-tree parallelized operations.
+static THREAD_POOL: Lazy<ThreadPool> = Lazy::new(|| ThreadPool::new(10));
 
 /// The Tree implementation of a Manifest dedicates an inner node for each directory in the
 /// repository and a leaf for each file.
@@ -356,20 +359,12 @@ impl Manifest for TreeManifest {
         Box::new(dirs)
     }
 
-    fn diff<'a, M: Matcher>(
+    fn diff<'a, M: 'static + Matcher + Sync + Send>(
         &'a self,
         other: &'a Self,
-        matcher: &'a M,
+        matcher: M,
     ) -> Result<Box<dyn Iterator<Item = Result<DiffEntry>> + 'a>> {
-        Ok(Box::new(Diff::new(self, other, matcher)?))
-    }
-
-    fn modified_dirs<'a, M: Matcher>(
-        &'a self,
-        other: &'a Self,
-        matcher: &'a M,
-    ) -> Result<Box<dyn Iterator<Item = Result<DirDiffEntry>> + 'a>> {
-        Ok(Box::new(Diff::new(self, other, matcher)?.modified_dirs()))
+        Ok(diff::diff(self, other, Arc::new(matcher)))
     }
 }
 
@@ -1818,7 +1813,7 @@ mod tests {
     fn grafted_diff(a: &TreeManifest, b: &TreeManifest) -> Vec<String> {
         let (a, b) = apply_diff_grafts(a, b).unwrap();
         let mut files = a
-            .diff(&b, &AlwaysMatcher::new())
+            .diff(&b, AlwaysMatcher::new())
             .unwrap()
             .map(|e| Ok(e?.path.into_string()))
             .collect::<Result<Vec<_>>>()

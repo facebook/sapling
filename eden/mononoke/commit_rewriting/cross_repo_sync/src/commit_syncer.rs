@@ -807,6 +807,9 @@ where
         let large_repo = self.get_large_repo();
         let large_in_memory_repo = InMemoryRepo::from_repo(large_repo, fallback_repos)?;
         let strip_commit_extras = self.repos.get_strip_commit_extras()?;
+        let should_set_committer_info_to_author_info_if_empty = self
+            .repos
+            .should_set_committer_info_to_author_info_if_empty()?;
 
         CommitInMemorySyncer {
             ctx,
@@ -818,6 +821,7 @@ where
             submodule_deps,
             large_repo: large_in_memory_repo,
             strip_commit_extras,
+            should_set_committer_info_to_author_info_if_empty,
         }
         .unsafe_sync_commit_in_memory(ctx, cs, commit_sync_context, expected_version)
         .await?

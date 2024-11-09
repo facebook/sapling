@@ -14,14 +14,18 @@ use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Result;
 use blobstore::Loadable;
+use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
+use either::Either;
 use fsnodes::RootFsnodeId;
-use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use git2::Repository;
-use mononoke_types::fsnode::FsnodeEntry;
+use manifest::Entry;
+use manifest::Manifest;
 use mononoke_types::hash;
+use mononoke_types::hash::Sha256;
+use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileType;
 use mononoke_types::MPathElement;
@@ -29,12 +33,13 @@ use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
+use repo_identity::RepoIdentityRef;
 use sorted_vector_map::SortedVectorMap;
 use tokio::sync::mpsc;
 
 mod git_walker;
 
-pub trait HgRepo = RepoBlobstoreRef + RepoDerivedDataRef + Send + Sync;
+pub trait HgRepo = RepoBlobstoreRef + RepoDerivedDataRef + RepoIdentityRef + Send + Sync;
 
 #[derive(Debug)]
 pub(crate) enum CheckEntry {
@@ -50,7 +55,7 @@ pub(crate) struct CheckNode {
 
 async fn check_node(
     node: CheckNode,
-    entries: SortedVectorMap<MPathElement, FsnodeEntry>,
+    entries: SortedVectorMap<MPathElement, Entry<(), (FileType, Sha256)>>,
 ) -> Result<()> {
     let CheckNode { path, mut contents } = node;
 
@@ -62,35 +67,35 @@ async fn check_node(
             .ok_or_else(|| anyhow!("File {}/{} in Bonsai but not git", path, filename))?;
         match git_entry {
             CheckEntry::Directory => match fsnode_entry {
-                FsnodeEntry::File(_) => {
+                Entry::Leaf(_) => {
                     let entry_path =
                         RepoPath::dir(NonRootMPath::join_opt_element(path.mpath(), &filename))?;
                     bail!("{} is a file in Mononoke", entry_path);
                 }
-                FsnodeEntry::Directory(_) => {}
+                Entry::Tree(_) => {}
             },
-            CheckEntry::File(filetype, sha256) => match fsnode_entry {
-                FsnodeEntry::File(fsnode_file) => {
+            CheckEntry::File(git_file_type, git_sha256) => match fsnode_entry {
+                Entry::Leaf((file_type, sha256)) => {
                     let entry_path =
                         RepoPath::file(NonRootMPath::join_opt_element(path.mpath(), &filename))?;
-                    if *fsnode_file.file_type() != filetype {
+                    if file_type != git_file_type {
                         bail!(
                             "{} is type {} in git and {} in Mononoke",
                             path,
-                            filetype,
-                            *fsnode_file.file_type()
+                            git_file_type,
+                            file_type,
                         );
                     }
-                    if *fsnode_file.content_sha256() != sha256 {
+                    if sha256 != git_sha256 {
                         bail!(
                             "{} has hash {} in git and {} in Mononoke",
                             entry_path,
+                            git_sha256,
                             sha256,
-                            *fsnode_file.content_sha256()
                         );
                     }
                 }
-                FsnodeEntry::Directory(_) => {
+                Entry::Tree(_) => {
                     let entry_path =
                         RepoPath::file(NonRootMPath::join_opt_element(path.mpath(), &filename))?;
                     bail!("{} is a directory in Mononoke", entry_path);
@@ -115,45 +120,63 @@ async fn check_receiver(
     rx: mpsc::Receiver<CheckNode>,
     scheduled_max: usize,
 ) -> Result<()> {
-    let root_fsnode = hg_repo
-        .repo_derived_data()
-        .derive::<RootFsnodeId>(ctx, cs)
-        .await?
-        .into_fsnode_id()
-        .load(ctx, hg_repo.repo_blobstore())
-        .await?;
+    let root_content_mf = if let Ok(true) = justknobs::eval(
+        "scm/mononoke:derived_data_use_content_manifests",
+        None,
+        Some(hg_repo.repo_identity().name()),
+    ) {
+        Either::Left(
+            hg_repo
+                .repo_derived_data()
+                .derive::<RootContentManifestId>(ctx, cs)
+                .await?
+                .into_content_manifest_id()
+                .load(ctx, hg_repo.repo_blobstore())
+                .await?,
+        )
+    } else {
+        Either::Right(
+            hg_repo
+                .repo_derived_data()
+                .derive::<RootFsnodeId>(ctx, cs)
+                .await?
+                .into_fsnode_id()
+                .load(ctx, hg_repo.repo_blobstore())
+                .await?,
+        )
+    };
 
-    let path_to_fsnode = Mutex::new(HashMap::new());
-    let path_to_fsnode = &path_to_fsnode;
-    path_to_fsnode
+    let path_to_content_mf = Mutex::new(HashMap::new());
+    let path_to_content_mf = &path_to_content_mf;
+    path_to_content_mf
         .lock()
         .expect("lock poisoned")
-        .insert(None, Some(root_fsnode));
+        .insert(MPath::ROOT, Some(root_content_mf));
     let rx = tokio_stream::wrappers::ReceiverStream::new(rx);
 
     rx.map(Result::Ok)
         .and_then(move |node| async move {
             // This relies on git_walker doing a top-down traversal and only visiting each directory once
             let path = &node.path;
-            let this_fsnode = path_to_fsnode
+            let this_content_mf = path_to_content_mf
                 .lock()
                 .expect("lock poisoned")
-                .remove(&path.mpath().cloned())
+                .remove(path.mpath().into())
                 .ok_or_else(|| anyhow!("{} not found in Mononoke", path))?
                 .ok_or_else(|| anyhow!("{} in git is a file in Mononoke", path))?;
             // Fetch all children in parallel, storing them in the map
-            stream::iter(this_fsnode.list().map(Result::Ok))
+            this_content_mf
+                .list(ctx, hg_repo.repo_blobstore())
+                .await?
                 .try_for_each_concurrent(scheduled_max, move |(element, entry)| async move {
                     let old_entry = {
-                        let fsnode = match entry {
-                            FsnodeEntry::File(_) => None,
-                            FsnodeEntry::Directory(dir) => {
-                                Some(dir.id().load(ctx, hg_repo.repo_blobstore()).await?)
-                            }
+                        let content_mf = match entry {
+                            Entry::Leaf(_) => None,
+                            Entry::Tree(id) => Some(id.load(ctx, hg_repo.repo_blobstore()).await?),
                         };
-                        path_to_fsnode.lock().expect("lock poisoned").insert(
-                            Some(NonRootMPath::join_opt_element(path.mpath(), element)),
-                            fsnode,
+                        path_to_content_mf.lock().expect("lock poisoned").insert(
+                            <&MPath>::from(path.mpath()).join_element(Some(&element)),
+                            content_mf,
                         )
                     };
                     if old_entry.is_some() {
@@ -164,10 +187,38 @@ async fn check_receiver(
                 })
                 .await?;
 
-            // Pass on this node for comparison to git
-            Ok((node, this_fsnode.into_subentries()))
+            // Collect the type and sha256 of the subentries and pass on to git for comparison
+            let subentries = this_content_mf
+                .list(ctx, hg_repo.repo_blobstore())
+                .await?
+                .map_ok(|(element, entry)| async move {
+                    match entry {
+                        Entry::Tree(_) => Ok((element, Entry::Tree(()))),
+                        Entry::Leaf(Either::Left(file)) => {
+                            let metadata = filestore::get_metadata(
+                                hg_repo.repo_blobstore(),
+                                ctx,
+                                &file.content_id.into(),
+                            )
+                            .await?
+                            .ok_or_else(|| {
+                                anyhow!("Content metadata missing for {}", file.content_id)
+                            })?;
+                            Ok((element, Entry::Leaf((file.file_type, metadata.sha256))))
+                        }
+                        Entry::Leaf(Either::Right(file)) => Ok((
+                            element,
+                            Entry::Leaf((file.file_type().clone(), file.content_sha256().clone())),
+                        )),
+                    }
+                })
+                .try_buffered(100)
+                .try_collect()
+                .await?;
+
+            Ok((node, subentries))
         })
-        .map_ok(|(node, fsnode)| check_node(node, fsnode))
+        .map_ok(|(node, subentries)| check_node(node, subentries))
         .try_for_each(|f| async move { tokio::spawn(f).await? })
         .await
 }

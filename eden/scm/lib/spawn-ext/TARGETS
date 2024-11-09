@@ -6,25 +6,23 @@ oncall("sapling")
 rust_library(
     name = "spawn-ext",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {
-                "target": {
-                    "'cfg(windows)'": {
-                        "dependencies": {
-                            "winapi": {
-                                "features": [
-                                    "handleapi",
-                                    "winbase",
-                                ],
-                                "version": "0.3",
-                            },
-                        },
-                    },
-                },
-            },
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"target": {"'cfg(windows)'": {"dependencies": {"winapi": {
+            "features": [
+                "handleapi",
+                "winbase",
+            ],
+            "version": "0.3",
+        }}}}},
+        "lib": {"name": "spawn-ext"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "spawn-ext",
+            "repository": "https://github.com/facebook/sapling",
         },
-    },
+    }},
     crate_root = "src/lib.rs",
     os_deps = [
         (

@@ -1308,6 +1308,7 @@ mod test {
                     },],
                     scuba_table: None,
                     derivation_queue_scuba_table: None,
+                    remote_derivation_config: None,
                 },
                 enforce_lfs_acl_check: false,
                 repo_client_use_warm_bookmarks_cache: true,

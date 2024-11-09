@@ -25,6 +25,7 @@ from bindings import (
     worker as rustworker,
     workingcopy as rustworkingcopy,
 )
+
 from sapling import tracing
 
 from . import (
@@ -193,7 +194,7 @@ class mergestate:
     def ancestorctxs(self):
         if self._ancestors is None:
             raise error.ProgrammingError(
-                "ancestorctxs accessed but " "self._ancestors aren't set"
+                "ancestorctxs accessed but self._ancestors aren't set"
             )
         return [self._repo[node] for node in self._ancestors]
 
@@ -505,7 +506,7 @@ def _getcheckunknownconfig(repo, section, name):
     if config not in valid:
         validstr = ", ".join(["'" + v + "'" for v in valid])
         raise error.ConfigError(
-            _("%s.%s not valid " "('%s' is none of %s)")
+            _("%s.%s not valid ('%s' is none of %s)")
             % (section, name, config, validstr)
         )
     return config
@@ -758,6 +759,7 @@ def _filesindirs(repo, manifest, dirs):
             yield f, dir
 
 
+@perftrace.tracefunc("Check Path Conflicts")
 def checkpathconflicts(repo, wctx, mctx, actions):
     """
     Check if any actions introduce path conflicts in the repository, updating
@@ -993,12 +995,8 @@ def manifestmerge(
     for k, v in copy.items():
         reverse_copies[v].append(k)
 
-    subtree_copy_info = subtreeutil.get_branch_info(repo, p2)
-    subtree_copy_dests = (
-        [br["to_path"] for br in subtree_copy_info["branches"]]
-        if subtree_copy_info
-        else []
-    )
+    subtree_branches = subtreeutil.get_subtree_branches(repo, p2)
+    subtree_branch_dests = [b.to_path for b in subtree_branches]
 
     actions = {}
     # (n1, fl1) = "local" (m1)
@@ -1013,7 +1011,7 @@ def manifestmerge(
         na = ma.get(fa)  # na is None when fa does not exist in ma
         fla = ma.flags(fa)  # fla is '' when fa does not exist in ma
 
-        subtree_copy_dest = subtreeutil.find_enclosing_dest(f1, subtree_copy_dests)
+        subtree_copy_dest = subtreeutil.find_enclosing_dest(f1, subtree_branch_dests)
         if subtree_copy_dest and (n1 != na or fl1 != fla):
             hint = _("use '@prog@ subtree copy' to re-create the directory branch")
             if extra_hint := repo.ui.config("subtree", "copy-conflict-hint"):
@@ -1377,6 +1375,11 @@ def updateone(repo, fctxfunc, wctx, f, f2, flags, backup=False, backgroundclose=
     wctx[f].clearunknown()
     wctx[f].write(fctx, flags, backgroundclose=backgroundclose)
 
+    if wctx.isinmemory():
+        # The "size" return value is only used for logging "Disk Writes" - not imporant
+        # for in-memory work.
+        return 0
+
     if fctx.flags() == "m":
         # size() doesn't seem to work for submodules
         return len(fctx.data())
@@ -1449,6 +1452,31 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
     moves = []
     for m, l in actions.items():
         l.sort()
+
+    # Prefetch content for files to be merged to avoid serial lookups.
+    merge_prefetch = []
+    for f, args, msg in (
+        actions[ACTION_CHANGED_DELETED]
+        + actions[ACTION_DELETED_CHANGED]
+        + actions[ACTION_MERGE]
+    ):
+        f1, f2, fa, move, anc = args
+        if f1 is not None:
+            merge_prefetch.append(wctx[f1])
+        if f2 is not None:
+            merge_prefetch.append(mctx[f2])
+        actx = repo[anc]
+        if fa in actx:
+            merge_prefetch.append(actx[fa])
+    if merge_prefetch and hasattr(repo, "fileservice"):
+        repo.fileservice.prefetch(
+            [
+                (fc.path(), fc.filenode())
+                for fc in merge_prefetch
+                if fc.filenode() not in (None, nullid)
+            ],
+            fetchhistory=False,
+        )
 
     # These are m(erge) actions that aren't actually conflicts, such as remote copying a
     # file. We don't want to expose them to merge drivers since merge drivers might get
@@ -1539,13 +1567,13 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
             z += 1
             prog.value = (z, f)
 
-        # Flush any pending data to disk before forking workers, so the workers
-        # don't all flush duplicate data.
-        repo.commitpending()
-
         # remove in parallel (must come before resolving path conflicts and
         # getting)
         if rustworkers:
+            # Flush any pending data to disk before forking workers, so the workers
+            # don't all flush duplicate data.
+            repo.commitpending()
+
             # Removing lots of files very quickly is known to cause FSEvents to
             # lose events which forces watchman to recrwawl the entire
             # repository. For very large repository, this can take many

@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 // Union history store
@@ -38,13 +38,13 @@ impl<T: HgIdHistoryStore> HgIdHistoryStore for UnionHgIdHistoryStore<T> {
 }
 
 impl<T: RemoteHistoryStore> RemoteHistoryStore for UnionHgIdHistoryStore<T> {
-    fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
+    fn prefetch(&self, keys: &[StoreKey], length: Option<u32>) -> Result<()> {
         let initial_keys = Ok(keys.to_vec());
         self.into_iter()
             .fold(initial_keys, |missing_keys, store| match missing_keys {
                 Ok(missing_keys) => {
                     if !missing_keys.is_empty() {
-                        store.prefetch(&missing_keys)?;
+                        store.prefetch(&missing_keys, length)?;
                         store.get_missing(&missing_keys)
                     } else {
                         Ok(vec![])

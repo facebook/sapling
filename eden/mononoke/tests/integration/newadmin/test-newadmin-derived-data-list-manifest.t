@@ -8,7 +8,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ setup_common_config
+  $ ADDITIONAL_DERIVED_DATA="content_manifests" setup_common_config
   $ testtool_drawdag -R repo <<'EOF'
   > A-B-C
   > # modify: A "a/foo.txt" "a_foo"
@@ -71,6 +71,22 @@ Fsnodes from B's root path (recursive)
   script	f3fffae72590e3c9b4bd8801665ac3c9e16f35c63ba77c4642a54e1c0ad1d3f8	type=symlink	size=9
   script.sh	7944a589808e894931ed482c1cb0543524483a49aaf9568e60959a34fe9700d9	type=executable	size=4
 
+Content manifests
+  $ with_stripped_logs mononoke_newadmin derived-data -R repo list-manifest -p "a" -B main -t content-manifests --derive | sort
+  a/b/	6c6855704970b38c87329e762932ff95eebcfb2b60ec2e93150f6b5270b42e1f
+  a/foo.txt	67f9f510b6a13f94986928ba0f270ec005b194edd77b22a13dec797471a4fe85	type=regular	size=5
+Content manifests from root path, recursive
+  $ with_stripped_logs mononoke_newadmin derived-data -R repo list-manifest -p "" -B main -t content-manifests --recursive | sort
+  A	eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9	type=regular	size=1
+  B	55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f	type=regular	size=1
+  C	896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d	type=regular	size=1
+  a/b/bar.txt	638aceddb6283739ca98ac2cb18bf6d8d5358439ea187fd4ab0257d24d6d6e47	type=regular	size=5
+  a/b/c/foo.txt	a2ad79422b22799f40b07486efbe522add2d31b7ebd809989a20d74fea833684	type=regular	size=5
+  a/b/c/hoo.txt	3ce7f4c533d5a93f131f1f7dc6f887642d5da12e47496afaa589e5aabb29fa8a	type=regular	size=5
+  a/foo.txt	67f9f510b6a13f94986928ba0f270ec005b194edd77b22a13dec797471a4fe85	type=regular	size=5
+  script	f3fffae72590e3c9b4bd8801665ac3c9e16f35c63ba77c4642a54e1c0ad1d3f8	type=symlink	size=9
+  script.sh	7944a589808e894931ed482c1cb0543524483a49aaf9568e60959a34fe9700d9	type=executable	size=4
+
 Unodes of main's a directory
   $ with_stripped_logs mononoke_newadmin derived-data -R repo list-manifest -p "a" -B main -t unodes --derive
   a/b/	102bf16d65a69acdfc009c57dcb04a5320793d4127f3380a563f4321dec5e188
@@ -111,6 +127,6 @@ Note that `b/` appears because the directory was fully deleted.
   script.sh	30d74d258442c7c65512eafab474568dd706c430	mode=100755
 
 Validate all these manifests are equivalent
-  $ with_stripped_logs mononoke_newadmin derived-data -R repo verify-manifests -i "$A" -T fsnodes -T hgchangesets -T unodes -T skeleton_manifests -T git_commits
-  $ with_stripped_logs mononoke_newadmin derived-data -R repo verify-manifests -i "$B" -T fsnodes -T hgchangesets -T unodes -T skeleton_manifests -T git_commits
-  $ with_stripped_logs mononoke_newadmin derived-data -R repo verify-manifests -i "$C" -T fsnodes -T hgchangesets -T unodes -T skeleton_manifests -T git_commits
+  $ with_stripped_logs mononoke_newadmin derived-data -R repo verify-manifests -i "$A" -T fsnodes -T hgchangesets -T unodes -T skeleton_manifests -T git_commits -T content_manifests
+  $ with_stripped_logs mononoke_newadmin derived-data -R repo verify-manifests -i "$B" -T fsnodes -T hgchangesets -T unodes -T skeleton_manifests -T git_commits -T content_manifests
+  $ with_stripped_logs mononoke_newadmin derived-data -R repo verify-manifests -i "$C" -T fsnodes -T hgchangesets -T unodes -T skeleton_manifests -T git_commits -T content_manifests

@@ -34,7 +34,7 @@ def _loadfile(filename):
         # if the json file is badly formatted
         if "Expecting property name" in str(ex):
             raise ArcConfigError(
-                "Configuration file %s " "is not a proper JSON file." % filename
+                "Configuration file %s is not a proper JSON file." % filename
             )
         raise
 

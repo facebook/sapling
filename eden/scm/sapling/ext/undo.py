@@ -634,7 +634,7 @@ def _localbranch(repo, subset, x):
     )
     revs = repo.revs(revstring)
     # we assume that there is only a single rev
-    if repo[revs.first()].phase() == phases.public:
+    if repo[revs.first()].ispublic():
         querystring = revsetlang.formatspec("(children(%d) & draft())::", revs.first())
     else:
         querystring = revsetlang.formatspec("((::%ld) & draft())::", revs)
@@ -807,14 +807,14 @@ def oldworkingparenttemplate(context, mapping, args):
             "a",
             "absolute",
             False,
-            _("absolute based on command index instead of " "relative undo"),
+            _("absolute based on command index instead of relative undo"),
         ),
-        ("b", "branch", "", _("local branch undo, accepts commit hash " "(ADVANCED)")),
+        ("b", "branch", "", _("local branch undo, accepts commit hash (ADVANCED)")),
         ("f", "force", False, _("undo across missing undo history (ADVANCED)")),
         ("i", "interactive", False, _("use interactive ui for undo")),
         ("k", "keep", False, _("keep working copy changes")),
         ("n", "step", 1, _("how many steps to undo back")),
-        ("p", "preview", False, _("see smartlog-like preview of future undo " "state")),
+        ("p", "preview", False, _("see smartlog-like preview of future undo state")),
     ],
 )
 def undo(ui, repo, **opts):
@@ -885,7 +885,7 @@ def undo(ui, repo, **opts):
             )
         except IndexError:
             raise error.Abort(
-                _("cannot undo this far - undo extension was not" " enabled")
+                _("cannot undo this far - undo extension was not enabled")
             )
 
     if branch and preview:
@@ -918,9 +918,7 @@ def undo(ui, repo, **opts):
                     "legend: red - to hide; green - to revive\n",
                 )
                 repo.ui.status(text)
-                repo.ui.status(
-                    _("<-: newer  " "->: older  " "q: abort  " "enter: confirm\n")
-                )
+                repo.ui.status(_("<-: newer  ->: older  q: abort  enter: confirm\n"))
                 return ui.popbuffer().splitlines(), None
 
             def handlekeypress(self, key):
@@ -949,7 +947,7 @@ def undo(ui, repo, **opts):
         cmdutil.checkunfinished(repo)
         cmdutil.bailifchanged(repo)
         if not (opts.get("force") or _gapcheck(ui, repo, reverseindex)):
-            raise error.Abort(_("attempted risky undo across" " missing history"))
+            raise error.Abort(_("attempted risky undo across missing history"))
         _tryundoto(ui, repo, reverseindex, keep=keep, branch=branch)
 
         # store undo data
@@ -1133,7 +1131,7 @@ def _undoto(ui, repo, reverseindex, keep=False, branch=None):
             "(olddraft(0) - olddraft(%d)) and _localbranch(%%s)" % reverseindex, branch
         )
         localremoves = revsetlang.formatspec(
-            "(olddraft(%d) - olddraft(0)) and" " _localbranch(%%s)" % reverseindex,
+            "(olddraft(%d) - olddraft(0)) and _localbranch(%%s)" % reverseindex,
             branch,
         )
         smarthide(repo, localadds, removedrevs)
@@ -1377,7 +1375,7 @@ def _preview(ui, repo, reverseindex):
 
     # override "UNDOINDEX" as a variable usable in template
     if not _gapcheck(ui, repo, reverseindex):
-        repo.ui.status(_("WARN: missing history between present and this" " state\n"))
+        repo.ui.status(_("WARN: missing history between present and this state\n"))
     overrides = {("templates", "UNDOINDEX"): str(reverseindex)}
 
     opts = {}
@@ -1439,7 +1437,7 @@ def _preview(ui, repo, reverseindex):
         uimessage = _("undo to %s, before %s\n") % (time, commandstr)
         repo.ui.status(uimessage)
     except IndexError:
-        repo.ui.status(_("most recent state: undoing here won't change" " anything\n"))
+        repo.ui.status(_("most recent state: undoing here won't change anything\n"))
     return 0
 
 

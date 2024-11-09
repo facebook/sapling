@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use std::collections::BTreeMap;
@@ -14,12 +14,13 @@ use anyhow::Result;
 use minibytes::Text;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
-use storemodel::SerializationFormat;
 use types::hgid::NULL_ID;
 use types::Id20;
 use types::RepoPath;
+use types::SerializationFormat;
 
 use crate::normalize_email_user;
+use crate::utils::with_indented_commit_text;
 use crate::utils::write_multi_line;
 pub use crate::CommitFields;
 use crate::HgTime;
@@ -44,6 +45,12 @@ pub struct HgCommitFields {
 
 impl HgCommitFields {
     fn from_text(text: &Text) -> Result<Self> {
+        Self::from_text_impl(text)
+            .with_context(|| with_indented_commit_text("Failed to parse commit:", &text))
+    }
+
+    // Actual logic of `from_text`.
+    fn from_text_impl(text: &Text) -> Result<Self> {
         // {tree}
         // {author}
         // {date_seconds} {date timezone} {extra}

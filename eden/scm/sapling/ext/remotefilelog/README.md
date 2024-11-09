@@ -70,10 +70,10 @@ An example largefiles style client configuration:
 Usage
 =====
 
-Once you have configured the server, you can get a shallow clone by doing:
+Once you have configured the server, you can get a clone by doing:
 
     :::bash
-    @prog@ clone --shallow ssh://server//path/repo
+    @prog@ clone ssh://server//path/repo
 
 After that, all normal mercurial commands should work.
 

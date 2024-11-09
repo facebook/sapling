@@ -5,17 +5,20 @@ oncall("sapling")
 rust_library(
     name = "lz4-pyframe",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "bench": [{
-                "harness": False,
-                "name": "bench",
-            }],
-            "package": {
-                "authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"],
-            },
+    autocargo = {"cargo_toml_config": {
+        "bench": [{
+            "harness": False,
+            "name": "bench",
+        }],
+        "lib": {"name": "lz4-pyframe"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "lz4-pyframe",
+            "repository": "https://github.com/facebook/sapling",
         },
-    },
+    }},
     crate_root = "src/lib.rs",
     test_deps = ["fbsource//third-party/rust:quickcheck"],
     deps = [

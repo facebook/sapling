@@ -12,6 +12,7 @@ eden/mononoke/mononoke_types/serialization/bssm.thrift crate //eden/mononoke/mon
 eden/mononoke/mononoke_types/serialization/ccsm.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/changeset_info.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/content.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+eden/mononoke/mononoke_types/serialization/content_manifest.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/data.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/deleted_manifest.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/fastlog.thrift crate //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
@@ -44,6 +45,7 @@ fn main() {
             "../ccsm.thrift",
             "../changeset_info.thrift",
             "../content.thrift",
+            "../content_manifest.thrift",
             "../data.thrift",
             "../deleted_manifest.thrift",
             "../fastlog.thrift",

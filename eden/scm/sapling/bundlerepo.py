@@ -372,9 +372,7 @@ class bundlerepository(localrepo.localrepository):
             for part in bundle.iterparts(seekable=True):
                 if part.type == "changegroup":
                     if cgpart:
-                        raise NotImplementedError(
-                            "can't process " "multiple changegroups"
-                        )
+                        raise NotImplementedError("can't process multiple changegroups")
                     cgpart = part
 
                 self._handlebundle2part(bundle, part)

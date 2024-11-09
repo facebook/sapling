@@ -20,15 +20,17 @@ python_binary(
 rust_library(
     name = "python-modules",
     srcs = ["src/lib.rs"],
-    autocargo = {
-        "cargo_toml_config": {
-            "extra_buck_dependencies": {
-                "build-dependencies": [
-                    "//eden/scm/lib/python-modules/codegen:codegen",
-                ],
-            },
+    autocargo = {"cargo_toml_config": {
+        "extra_buck_dependencies": {"build-dependencies": ["//eden/scm/lib/python-modules/codegen:codegen"]},
+        "lib": {"name": "python-modules"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "GPL-2.0-only",
+            "name": "python-modules",
+            "repository": "https://github.com/facebook/sapling",
         },
-    },
+    }},
     mapped_srcs = {":gen=compiled.rs": "src/compiled.rs"},
     deps = [
         "fbsource//third-party/rust:once_cell",

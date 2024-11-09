@@ -42,7 +42,7 @@ def peersetup(ui, peer):
         def getflogheads(self, path):
             if not self.capable("getflogheads"):
                 raise error.Abort(
-                    "configured remotefile server does not " "support getflogheads"
+                    "configured remotefile server does not support getflogheads"
                 )
             f = wireproto.future()
             yield {"path": path}, f

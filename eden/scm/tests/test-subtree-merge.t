@@ -1,5 +1,6 @@
   $ setconfig diff.git=True
   $ setconfig subtree.cheap-copy=False
+  $ setconfig subtree.allow-any-source-commit=True
 
 setup backing repo
 
@@ -16,10 +17,10 @@ test subtree merge path validation
   $ hg subtree cp -r $A --from-path foo --to-path bar -m "subtree copy foo -> bar"
   copying foo to bar
   $ hg subtree merge --from-path foo --to-path not-exists
-  abort: path 'not-exists' does not exist in commit a6c15b42e6a2
+  abort: path 'not-exists' does not exist in commit 255379dc5cbd
   [255]
   $ hg subtree merge --from-path not-exists --to-path bar
-  abort: path 'not-exists' does not exist in commit a6c15b42e6a2
+  abort: path 'not-exists' does not exist in commit 255379dc5cbd
   [255]
   $ hg subtree merge --from-path foo/bar --to-path foo
   abort: overlapping --from-path 'foo/bar' and --to-path 'foo'
@@ -103,7 +104,7 @@ test multiple subtree merge from source -> dest
   $ hg ci -m "merge foo to foo2"
   $ echo "source2" >> foo/x && hg ci -m "update foo again"
   $ hg subtree merge --from-path foo --to-path foo2
-  merge base: 3a47f1b511d0
+  merge base: a1e3d459ad62
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
   $ hg diff
@@ -136,7 +137,7 @@ test multiple subtree merge from dest -> source
   $ hg ci -m "merge foo2 to foo"
   $ echo "dest2" >> foo2/y && hg ci -m "update foo2 again"
   $ hg subtree merge --from-path foo2 --to-path foo
-  merge base: 3a47f1b511d0
+  merge base: a1e3d459ad62
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
   $ hg diff
@@ -168,7 +169,7 @@ test multiple subtree merge from source -> dest, then dest -> source
   $ hg ci -m "merge foo to foo2"
   $ echo "dest2" >> foo2/y && hg ci -m "update foo2 again"
   $ hg subtree merge --from-path foo2 --to-path foo
-  merge base: 3a47f1b511d0
+  merge base: a1e3d459ad62
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
   $ hg diff
@@ -201,7 +202,7 @@ test multiple subtree merge from dest -> source, then source -> dest
   $ hg ci -m "merge foo2 to foo"
   $ echo "source2" >> foo/x && hg ci -m "update foo again"
   $ hg subtree merge --from-path foo --to-path foo2
-  merge base: 3a47f1b511d0
+  merge base: a1e3d459ad62
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
   $ hg diff
@@ -215,7 +216,7 @@ test multiple subtree merge from dest -> source, then source -> dest
   $ hg ci -m "merge foo to foo2"
 to fix: show a better message when there is no changes for subtree merge
   $ hg subtree merge --from-path foo --to-path foo2
-  merge base: 10b55f445a8e
+  merge base: eeb423c321b3
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
   $ hg st
@@ -276,3 +277,67 @@ test subtree merge from the same directory from a different branch
   @@ -0,0 +1,1 @@
   +111
   $ hg ci -m "merge foo from a descendant"
+
+test subtree merge source commit validation
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B   # B/foo/y = bbb\n
+  > |
+  > A   # A/foo/x = aaa\n
+  >     # drawdag.defaultfiles=false
+  > EOS
+  $ hg go -q $B
+  $ hg subtree copy --from-path foo --to-path foo2
+  copying foo to foo2
+  $ echo "source" >> foo/x && hg ci -m "update foo"
+  $ echo "dest" >> foo2/y && hg ci -m "update foo2"
+  $ setconfig subtree.allow-any-source-commit=False
+  $ hg subtree merge --from-path foo --to-path foo2
+  subtree merge from a non-public commit is not recommended. However, you can
+  still proceed and use subtree copy and merge for common cases.
+  (hint: see 'hg help subtree' for the impacts on subtree merge and log)
+  Continue with subtree merge (y/n)?  n
+  abort: subtree merge from a non-public commit is not allowed
+  [255]
+
+  $ setconfig ui.interactive=True
+  $ hg subtree merge --from-path foo --to-path foo2<<EOF
+  > y
+  > EOF
+  subtree merge from a non-public commit is not recommended. However, you can
+  still proceed and use subtree copy and merge for common cases.
+  (hint: see 'hg help subtree' for the impacts on subtree merge and log)
+  Continue with subtree merge (y/n)?  y
+  merge base: 9998a5c40732
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (subtree merge, don't forget to commit)
+  $ hg st
+  M foo2/x
+  $ hg diff
+  diff --git a/foo2/x b/foo2/x
+  --- a/foo2/x
+  +++ b/foo2/x
+  @@ -1,1 +1,2 @@
+   aaa
+  +source
+  $ hg ci -m "merge foo to foo2"
+  $ hg show
+  commit:      a61481db255e
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       foo2/x
+  description:
+  merge foo to foo2
+  
+  Subtree merge from a1e3d459ad62ee74bdfa703d95cd4f63f21fcd3d
+  - Merged path foo to foo2
+  
+  
+  diff --git a/foo2/x b/foo2/x
+  --- a/foo2/x
+  +++ b/foo2/x
+  @@ -1,1 +1,2 @@
+   aaa
+  +source
+  $ hg dbsh -c 'print(repo["."].extra())'
+  {'branch': 'default'}

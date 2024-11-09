@@ -6,30 +6,28 @@ oncall("sapling")
 rust_library(
     name = "fsinfo",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {
-                "target": {
-                    "'cfg(windows)'": {
-                        "dependencies": {
-                            "winapi": {
-                                "features": [
-                                    "fileapi",
-                                    "handleapi",
-                                    "ioapiset",
-                                    "minwindef",
-                                    "winbase",
-                                    "winerror",
-                                    "winioctl",
-                                ],
-                                "version": "0.3",
-                            },
-                        },
-                    },
-                },
-            },
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"target": {"'cfg(windows)'": {"dependencies": {"winapi": {
+            "features": [
+                "fileapi",
+                "handleapi",
+                "ioapiset",
+                "minwindef",
+                "winbase",
+                "winerror",
+                "winioctl",
+            ],
+            "version": "0.3",
+        }}}}},
+        "lib": {"name": "fsinfo"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "fsinfo",
+            "repository": "https://github.com/facebook/sapling",
         },
-    },
+    }},
     crate_root = "src/lib.rs",
     os_deps = [
         (

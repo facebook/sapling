@@ -10,6 +10,7 @@ mod errors;
 use anyhow::Error;
 use blobstore::Blobstore;
 use blobstore::Loadable;
+use blobstore::LoadableError;
 use bytes::BytesMut;
 use cas_client::CasClient;
 use context::CoreContext;
@@ -312,7 +313,13 @@ where
         blobstore: &'a impl Blobstore,
         manifest_id: &HgAugmentedManifestId,
     ) -> Result<bool, Error> {
-        let augmented_manifest_envelope = manifest_id.load(ctx, blobstore).await?;
+        let augmented_manifest_envelope = match manifest_id.load(ctx, blobstore).await {
+            Ok(envelope) => envelope,
+            // The augmented manifest can be missing if it's not derived.
+            // This is not an error as we can still derive it.
+            Err(LoadableError::Missing(_)) => return Ok(false),
+            Err(LoadableError::Error(err)) => return Err(err),
+        };
         let digest = MononokeDigest(
             augmented_manifest_envelope.augmented_manifest_id(),
             augmented_manifest_envelope.augmented_manifest_size(),

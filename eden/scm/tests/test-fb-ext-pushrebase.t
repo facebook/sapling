@@ -654,8 +654,6 @@ Test date rewriting
   $ hg clone ssh://user@dummy/rewritedate rewritedateclient
   fetching lazy changelog
   populating main commit graph
-  tip commit: 0e067c57feba1a5694ca4844f05588bb1bf82342
-  fetching selected remote bookmarks
   updating to tip
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd rewritedateclient
@@ -790,8 +788,6 @@ Test force pushes
   $ hg clone ssh://user@dummy/forcepushserver forcepushclient
   fetching lazy changelog
   populating main commit graph
-  tip commit: cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
-  fetching selected remote bookmarks
   updating to tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd forcepushserver

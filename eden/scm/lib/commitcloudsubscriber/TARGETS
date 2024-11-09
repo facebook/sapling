@@ -5,24 +5,17 @@ oncall("sapling")
 rust_library(
     name = "commitcloudsubscriber",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "package": {
-                "description": """\
-    Cross platform client for subscribing to Commit Cloud eventsource (http server-sent events)
-    The workflow is the following:
-    * define 'subscription' as a unique [repo_name, workspace] pair
-    * read set of 'subscribers', defined as [repo_name, workspace, repo_root]
-    * runs a Commit Cloud eventsource listener in a separate thread for every 'subscription'
-        (and a set of 'subscribers' (repo_roots))
-    * triggers `hg cloud sync` command on notifications in all 'subscribers' (repo_roots)
-        for a given 'subscription'
-    * the library also contains a module to find OAuth token,
-        this logic should be in sync with `hg cloud auth` command.
-""",
-            },
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "commitcloudsubscriber"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "description": "    Cross platform client for subscribing to Commit Cloud eventsource (http server-sent events)\n    The workflow is the following:\n    * define 'subscription' as a unique [repo_name, workspace] pair\n    * read set of 'subscribers', defined as [repo_name, workspace, repo_root]\n    * runs a Commit Cloud eventsource listener in a separate thread for every 'subscription'\n        (and a set of 'subscribers' (repo_roots))\n    * triggers `hg cloud sync` command on notifications in all 'subscribers' (repo_roots)\n        for a given 'subscription'\n    * the library also contains a module to find OAuth token,\n        this logic should be in sync with `hg cloud auth` command.\n",
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "commitcloudsubscriber",
+            "repository": "https://github.com/facebook/sapling",
         },
-    },
+    }},
     crate_root = "src/lib.rs",
     test_deps = ["fbsource//third-party/rust:tempfile"],
     deps = [

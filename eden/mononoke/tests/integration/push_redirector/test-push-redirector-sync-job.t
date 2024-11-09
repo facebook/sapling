@@ -29,7 +29,7 @@
 -- newcommit was correctly pushed to master_bookmark (we need to update, as it's a new commit with date rewriting)
   $ hg up -q master_bookmark
   $ log -r master_bookmark
-  @  newcommit [public;rev=3;*] remote/master_bookmark (glob)
+  @  newcommit [public;*] remote/master_bookmark (glob)
   │
   ~
 -- newcommit is also present in the large repo (after a pull)

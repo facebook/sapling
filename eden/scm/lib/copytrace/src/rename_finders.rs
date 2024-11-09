@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use std::collections::HashMap;
@@ -22,7 +22,6 @@ use lru_cache::LruCache;
 use manifest::DiffType;
 use manifest::FileType;
 use manifest::Manifest;
-use manifest_tree::Diff;
 use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
 use pathmatcher::AlwaysMatcher;
@@ -208,6 +207,7 @@ impl RenameFinder for MetadataRenameFinder {
             let renames = self.inner.file_reader.get_rename_iter(keys)?;
             let renames = renames
                 .filter_map(|x| x.ok())
+                // PERF: possible serial remote fetches here
                 .filter(|(_, v)| old_tree.contains_file(&v.path).unwrap_or(false))
                 .map(|(k, v)| (k.path, v.path))
                 .collect();
@@ -371,7 +371,7 @@ impl RenameFinderInner {
         let mut added_files = Vec::new();
         let mut deleted_files = Vec::new();
         let matcher = matcher.unwrap_or_else(|| Arc::new(AlwaysMatcher::new()));
-        let diff = Diff::new(old_tree, new_tree, &matcher)?;
+        let diff = old_tree.diff(new_tree, matcher)?;
         for entry in diff {
             let entry = entry?;
             match entry.diff_type {

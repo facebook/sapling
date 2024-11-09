@@ -5,52 +5,51 @@ oncall("sapling")
 rust_library(
     name = "manifest-tree",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "bench": [
-                {
-                    "harness": False,
-                    "name": "bench",
-                    "required-features": ["for-tests"],
-                },
+    autocargo = {"cargo_toml_config": {
+        "bench": [{
+            "harness": False,
+            "name": "bench",
+            "required-features": ["for-tests"],
+        }],
+        "dependencies_override": {"dev-dependencies": {
+            "manifest": {
+                "default-features": False,
+                "features": ["for-tests"],
+            },
+            "types": {
+                "default-features": False,
+                "features": ["for-tests"],
+            },
+        }},
+        "extra_buck_dependencies": {
+            "dependencies": [
+                "fbsource//third-party/rust:quickcheck",
+                "fbsource//third-party/rust:rand",
             ],
-            "dependencies_override": {
-                "dev-dependencies": {
-                    "manifest": {
-                        "default-features": False,
-                        "features": ["for-tests"],
-                    },
-                    "types": {
-                        "default-features": False,
-                        "features": ["for-tests"],
-                    },
-                },
-            },
-            "extra_buck_dependencies": {
-                "dependencies": [
-                    "fbsource//third-party/rust:quickcheck",
-                    "fbsource//third-party/rust:rand",
-                ],
-                "dev-dependencies": [
-                    "fbsource//third-party/rust:rand",
-                    "fbsource//third-party/rust:rand_chacha",
-                    "//eden/scm/lib/manifest:manifest",
-                    "//eden/scm/lib/minibench:minibench",
-                    "//eden/scm/lib/types:types",
-                ],
-            },
-            "features": {
-                "default": [],
-                "for-tests": [
-                    "quickcheck",
-                    "rand",
-                ],
-            },
-            "package": {
-                "authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"],
-            },
+            "dev-dependencies": [
+                "fbsource//third-party/rust:rand",
+                "fbsource//third-party/rust:rand_chacha",
+                "//eden/scm/lib/manifest:manifest",
+                "//eden/scm/lib/minibench:minibench",
+                "//eden/scm/lib/types:types",
+            ],
         },
-    },
+        "features": {
+            "default": [],
+            "for-tests": [
+                "quickcheck",
+                "rand",
+            ],
+        },
+        "lib": {"name": "manifest-tree"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "manifest-tree",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     crate_root = "src/lib.rs",
     features = ["for-tests"],
     test_deps = [
@@ -63,6 +62,7 @@ rust_library(
         "fbsource//third-party/rust:once_cell",
         "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:threadpool",
         "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/manifest:manifest",
         "//eden/scm/lib/minibytes:minibytes",

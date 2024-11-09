@@ -25,6 +25,7 @@ use commit_transformation::create_directory_source_to_target_multi_mover;
 use commit_transformation::create_source_to_target_multi_mover;
 use commit_transformation::DirectoryMultiMover;
 use commit_transformation::MultiMover;
+use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use fsnodes::RootFsnodeId;
 use futures::future::try_join;
@@ -56,6 +57,8 @@ use mononoke_api::ChangesetContext;
 use mononoke_api::Mononoke;
 use mononoke_api::MononokeRepo;
 use mononoke_api::RepoContext;
+use mononoke_types::content_manifest::compat::ContentManifestFile;
+use mononoke_types::content_manifest::compat::ContentManifestId;
 use mononoke_types::path::MPath;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
@@ -403,19 +406,34 @@ pub trait MegarepoOp<R> {
     where
         R: Repo,
     {
-        let root_fsnode_id = repo
-            .repo_derived_data()
-            .derive::<RootFsnodeId>(ctx, cs_id)
-            .await
-            .map_err(Error::from)?;
-        let fsnode_id = root_fsnode_id.fsnode_id();
-        let entries = fsnode_id
+        let root_id: ContentManifestId = if let Ok(true) = justknobs::eval(
+            "scm/mononoke:derived_data_use_content_manifests",
+            None,
+            Some(repo.repo_identity().name()),
+        ) {
+            repo.repo_derived_data()
+                .derive::<RootContentManifestId>(ctx, cs_id)
+                .await
+                .map_err(Error::from)?
+                .into_content_manifest_id()
+                .into()
+        } else {
+            repo.repo_derived_data()
+                .derive::<RootFsnodeId>(ctx, cs_id)
+                .await
+                .map_err(Error::from)?
+                .into_fsnode_id()
+                .into()
+        };
+
+        let entries = root_id
             .list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
+            .map_ok(|(path, file)| (path, ContentManifestFile(file)))
             .try_collect::<Vec<_>>()
             .await?;
 
-        let mut file_changes = vec![];
-        for (path, fsnode) in entries {
+        let mut file_changes: Vec<(NonRootMPath, FileChange)> = vec![];
+        for (path, file) in entries {
             let moved = mover(&path)?;
 
             // Check that path doesn't move to itself - in that case we don't need to
@@ -426,9 +444,9 @@ pub trait MegarepoOp<R> {
 
             file_changes.extend(moved.into_iter().map(|target| {
                 let fc = FileChange::tracked(
-                    *fsnode.content_id(),
-                    *fsnode.file_type(),
-                    fsnode.size(),
+                    file.content_id(),
+                    file.file_type(),
+                    file.size(),
                     Some((path.clone(), cs_id)),
                     GitLfs::FullContent,
                 );

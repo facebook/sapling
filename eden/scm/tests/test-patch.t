@@ -33,10 +33,7 @@ This test checks that:
 check custom patch options are honored
 
   $ hg --cwd a export -o ../a.diff tip
-  $ hg clone -r 0 a b
-  adding changesets
-  adding manifests
-  adding file changes
+  $ hg clone -u 0 a b
   updating to 8580ff50825a50c8f716709acdf8de0deddcd6ab
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -72,10 +69,7 @@ Prepare source repo and patch:
 Clone and apply patch:
 
   $ setconfig remotefilelog.cachepath=$TESTTMP/cache
-  $ hg clone -r 0 c d --config ui.ignorerevnum=0
-  adding changesets
-  adding manifests
-  adding file changes
+  $ hg clone -u 0 c d --config ui.ignorerevnum=0
   updating to 7fadb901d4035fb3ae61dca0aededab9b996ad25
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd d

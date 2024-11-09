@@ -23,6 +23,7 @@ import subprocess
 import sys
 import traceback
 import typing
+from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple, Type
 
@@ -36,6 +37,8 @@ except ImportError:
         def set_sample_rate(self, automation: int) -> None:
             pass
 
+    # pyre-fixme[31]: Expression `eden.fs.cli.main.ParTelemetryStub()` is not a
+    #  valid type.
     par_telemetry = ParTelemetryStub()
 
 from eden.fs.cli.buck import get_buck_command, run_buck_command
@@ -1190,6 +1193,36 @@ class DoctorCmd(Subcmd):
         return doctor.cure_what_ails_you()
 
 
+@subcmd("health-report", "Notify critical eden issues")
+class HealthReportCmd(Subcmd):
+    class ErrorCode(Enum):
+        HEALTHY = 0
+        EDEN_NOT_RUNNING = 1
+
+    def check_if_eden_not_running(self, instance: EdenInstance) -> int:
+        health_info = instance.check_health()
+        if not health_info.is_healthy():
+            print(
+                "EdenFS is not running: {}".format(health_info.detail), file=sys.stderr
+            )
+            return True
+        return False
+
+    def run(self, args: argparse.Namespace) -> int:
+        instance = get_eden_instance(args)
+
+        if self.check_if_eden_not_running(instance):
+            return HealthReportCmd.ErrorCode.EDEN_NOT_RUNNING.value
+        return HealthReportCmd.ErrorCode.HEALTHY.value
+
+
+@subcmd("journal-position", "Returns the current EdenFS journal position")
+class JournalPositionCmd(Subcmd):
+    def run(self, args: argparse.Namespace) -> int:
+        print_stderr("This is not implemented for python edenfsctl.")
+        return EX_USAGE
+
+
 @subcmd("strace", "Monitor FUSE requests.")
 class StraceCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
@@ -1245,7 +1278,14 @@ class MinitopCmd(Subcmd):
         print_stderr(
             "This is not implemented for python edenfsctl. Use `top` subcommand instead."
         )
-        return 1
+        return EX_USAGE
+
+
+@subcmd("notify", "Provides a list of filesystem changes since the specified position")
+class NotifyCmd(Subcmd):
+    def run(self, args: argparse.Namespace) -> int:
+        print_stderr("This is not implemented for python edenfsctl.")
+        return EX_USAGE
 
 
 @subcmd(
@@ -1832,8 +1872,15 @@ class UnmountCmd(Subcmd):
                 'prefer using "eden rm" instead'
             )
 
-        instance = get_eden_instance(args)
         for path in args.paths:
+            # Removing redirection targets from checkout config to allow deletion of redirected paths
+            instance, checkout, _rel_path = require_checkout(args, path)
+            config = checkout.get_config()
+            config._replace(
+                redirection_targets={},
+            )
+            checkout.save_config(config)
+
             path = normalize_path_arg(path)
             try:
                 instance.unmount(path)

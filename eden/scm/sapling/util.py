@@ -320,7 +320,7 @@ def nouideprecwarn(msg, version, stacklevel=1):
     """
     if _dowarn:
         msg += (
-            "\n(compatibility will be dropped after Mercurial-%s," " update your code.)"
+            "\n(compatibility will be dropped after Mercurial-%s, update your code.)"
         ) % version
         warnings.warn(msg, DeprecationWarning, stacklevel + 1)
 
@@ -3563,7 +3563,7 @@ class compressormanager:
             wiretype = wiresupport.name
             if wiretype in self._wiretypes:
                 raise error.Abort(
-                    _("wire protocol compression %s already " "registered by %s")
+                    _("wire protocol compression %s already registered by %s")
                     % (wiretype, self._wiretypes[wiretype])
                 )
 

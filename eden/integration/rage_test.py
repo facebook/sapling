@@ -8,7 +8,7 @@
 
 import logging
 
-from .lib import repobase, testcase
+from .lib import hgrepo, repobase, testcase
 
 
 @testcase.eden_nfs_repo_test
@@ -19,6 +19,13 @@ class RageTest(testcase.EdenRepoTest):
 
     def create_repo(self, name: str) -> repobase.Repository:
         return self.create_hg_repo(name)
+
+    def create_eden_repo(self) -> repobase.Repository:
+        return hgrepo.HgRepository(
+            self.mount,
+            system_hgrc=self.system_hgrc,
+            filtered=self.backing_store_type == "filteredhg",
+        )
 
     def test_rage_output(self) -> None:
         output = self.eden.run_cmd("rage", "--stdout")

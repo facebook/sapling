@@ -12,6 +12,7 @@ use async_stream::try_stream;
 use clap::Args;
 use clap::ValueEnum;
 use cloned::cloned;
+use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use deleted_manifest::DeletedManifestOps;
 use deleted_manifest::RootDeletedManifestIdCommon;
@@ -36,11 +37,13 @@ use mercurial_types::HgAugmentedManifestId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mononoke_app::args::ChangesetArgs;
+use mononoke_types::content_manifest::ContentManifestFile;
 use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
 use mononoke_types::deleted_manifest_v2::DeletedManifestV2;
 use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::path::MPath;
 use mononoke_types::ChangesetId;
+use mononoke_types::ContentManifestId;
 use mononoke_types::DeletedManifestV2Id;
 use mononoke_types::FileType;
 use mononoke_types::FileUnodeId;
@@ -60,6 +63,7 @@ use super::Repo;
 #[derive(Copy, Clone, Debug, ValueEnum)]
 enum ListManifestType {
     SkeletonManifests,
+    ContentManifests,
     Fsnodes,
     Unodes,
     DeletedManifests,
@@ -135,6 +139,20 @@ impl std::fmt::Display for ListItem {
 
 trait Listable {
     fn list_item(self) -> String;
+}
+
+impl Listable for Entry<ContentManifestId, ContentManifestFile> {
+    fn list_item(self) -> String {
+        match self {
+            Entry::Tree(tree) => tree.to_string(),
+            Entry::Leaf(file) => {
+                format!(
+                    "{}\ttype={}\tsize={}",
+                    file.content_id, file.file_type, file.size
+                )
+            }
+        }
+    }
 }
 
 impl Listable for Entry<SkeletonManifestId, ()> {
@@ -384,6 +402,13 @@ pub(super) async fn list_manifest(
                 fetch_or_derive_root::<RootSkeletonManifestId>(ctx, repo, cs_id, args.derive)
                     .await?
                     .into_skeleton_manifest_id();
+            list(ctx, repo, root_id, path, args.directory, args.recursive).await?
+        }
+        ListManifestType::ContentManifests => {
+            let root_id =
+                fetch_or_derive_root::<RootContentManifestId>(ctx, repo, cs_id, args.derive)
+                    .await?
+                    .into_content_manifest_id();
             list(ctx, repo, root_id, path, args.directory, args.recursive).await?
         }
         ListManifestType::Fsnodes => {

@@ -40,8 +40,6 @@ export default async function queryGraphQL<TData, TVariables>(
 
   try {
     const {stdout} = await execa('gh', args, {
-      stdout: 'pipe',
-      stderr: 'pipe',
       env: {
         ...((await Internal.additionalGhEnvVars?.()) ?? {}),
       },
@@ -79,8 +77,6 @@ export async function isGithubEnterprise(hostname: string): Promise<boolean> {
 
   try {
     await execa('gh', args, {
-      stdout: 'pipe',
-      stderr: 'pipe',
       env: {
         ...((await Internal.additionalGhEnvVars?.()) ?? {}),
       },

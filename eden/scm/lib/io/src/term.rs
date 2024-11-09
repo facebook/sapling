@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 use std::io;
@@ -81,13 +81,45 @@ impl<W: ResettableTty + io::Write> DumbTerm<W> {
     }
 }
 
+struct BufTty<'a> {
+    w: &'a mut dyn io::Write,
+    size: (usize, usize),
+}
+
+impl RenderTty for BufTty<'_> {
+    fn get_size_in_cells(&mut self) -> termwiz::Result<(usize, usize)> {
+        Ok(self.size)
+    }
+}
+
+impl io::Write for BufTty<'_> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.w.write(buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.w.flush()
+    }
+}
+
 impl<W: ResettableTty + io::Write> Term for DumbTerm<W> {
     fn render(&mut self, changes: &[Change]) -> Result<()> {
-        self.renderer.render_to(changes, &mut self.tty)?;
+        // Buffer the progress output so we can write it in a single `write_all()`,
+        // minimizing flickering.
+        let mut buf = Vec::new();
+        self.renderer.render_to(
+            changes,
+            &mut BufTty {
+                w: &mut buf,
+                size: self.tty.get_size_in_cells()?,
+            },
+        )?;
         if let Some(sep) = self.separator {
-            self.tty.write_all(&[sep])?;
-            self.tty.flush()?;
+            buf.push(sep);
         }
+
+        self.tty.write_all(&buf)?;
+        self.tty.flush()?;
         Ok(())
     }
 

@@ -23,6 +23,11 @@ use blobstore::Loadable;
 use bonsai_hg_mapping::ArcBonsaiHgMapping;
 use bonsai_hg_mapping::MemWritesBonsaiHgMapping;
 use bonsai_tag_mapping::BonsaiTagMappingRef;
+use bookmarks::BookmarkCategory;
+use bookmarks::BookmarkKind;
+use bookmarks::BookmarkPagination;
+use bookmarks::BookmarkPrefix;
+use bookmarks::BookmarksRef;
 use cacheblob::dummy::DummyLease;
 use cacheblob::LeaseOps;
 use cacheblob::MemWritesBlobstore;
@@ -33,6 +38,7 @@ use clientinfo::ClientInfo;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::future;
+use futures::TryStreamExt;
 use git_symbolic_refs::GitSymbolicRefsRef;
 use import_tools::bookmark::BookmarkOperationErrorReporting;
 use import_tools::create_changeset_for_annotated_tag;
@@ -192,6 +198,12 @@ struct GitimportArgs {
     /// before deciding that the file is missing.
     #[clap(long, default_value_t = 5)]
     lfs_import_max_attempts: u32,
+    /// If any bookmarks were present in Mononoke but are not present in Git, delete them in
+    /// Mononoke.
+    /// This is necessary for a catch-up import situation if a Git branch was deleted between both
+    /// imports.
+    #[clap(long)]
+    cleanup_mononoke_bookmarks: bool,
 }
 
 #[derive(Subcommand)]
@@ -374,7 +386,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         let refs = import_tools::read_git_refs(path, &prefs)
             .await
             .context("read_git_refs failed")?;
-        let mapping = refs
+        let git_ref_mapping = refs
             .into_iter()
             .map(|(git_ref, commit)| {
                 Ok((
@@ -391,7 +403,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
             })
             .collect::<anyhow::Result<Vec<_>>>()?;
         if !args.suppress_ref_mapping {
-            for (_, name, changeset) in &mapping {
+            for (_, name, changeset) in &git_ref_mapping {
                 info!(ctx.logger(), "Ref: {:?}: {:?}", name, changeset);
             }
         }
@@ -426,8 +438,16 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 )
                 .await?,
             );
+            let pushvars = if args.bypass_readonly {
+                Some(HashMap::from_iter([(
+                    "BYPASS_READONLY".to_string(),
+                    bytes::Bytes::from("true"),
+                )]))
+            } else {
+                None
+            };
             for (maybe_tag_id, name, changeset) in
-                mapping
+                git_ref_mapping
                     .iter()
                     .filter_map(|(maybe_tag_id, name, changeset)| {
                         // Exclude the ref if its specified in the exclude-list OR if its not explicitly specified in the include-list (if exists)
@@ -475,14 +495,6 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 }
                 let bookmark_key = BookmarkKey::new(&name)?;
 
-                let pushvars = if args.bypass_readonly {
-                    Some(HashMap::from_iter([(
-                        "BYPASS_READONLY".to_string(),
-                        bytes::Bytes::from("true"),
-                    )]))
-                } else {
-                    None
-                };
                 let old_changeset = repo_context
                     .resolve_bookmark(&bookmark_key, BookmarkFreshness::MostRecent)
                     .await
@@ -500,6 +512,46 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     BookmarkOperationErrorReporting::WithContext,
                 )
                 .await?;
+            }
+            if args.cleanup_mononoke_bookmarks {
+                let mononoke_bookmarks = repo
+                    .bookmarks()
+                    .list(
+                        ctx.clone(),
+                        BookmarkFreshness::MostRecent,
+                        &BookmarkPrefix::empty(),
+                        BookmarkCategory::ALL,
+                        BookmarkKind::ALL,
+                        &BookmarkPagination::FromStart,
+                        u64::MAX,
+                    )
+                    .try_collect::<Vec<_>>()
+                    .await?;
+                for (mononoke_bookmark, old_changeset) in mononoke_bookmarks.iter() {
+                    if !git_ref_mapping
+                        .iter()
+                        .filter_map(|(_, git_ref, _)| git_ref.strip_prefix("refs/"))
+                        .filter(|ref_name| ref_name != &"heads/HEAD")
+                        .any(|ref_name| ref_name == format!("{}", mononoke_bookmark.name()))
+                    {
+                        let allow_non_fast_forward = true;
+                        let operation = BookmarkOperation::new(
+                            mononoke_bookmark.key().clone(),
+                            Some(*old_changeset),
+                            None,
+                        )?;
+
+                        set_bookmark(
+                            &ctx,
+                            &repo_context,
+                            &operation,
+                            pushvars.as_ref(),
+                            allow_non_fast_forward,
+                            BookmarkOperationErrorReporting::WithContext,
+                        )
+                        .await?;
+                    }
+                }
             }
         };
     }

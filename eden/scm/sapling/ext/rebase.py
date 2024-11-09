@@ -22,10 +22,12 @@ https://mercurial-scm.org/wiki/RebaseExtension
 from __future__ import absolute_import
 
 import errno
-
+import os
 from collections.abc import MutableMapping, MutableSet
 
+import bindings
 from bindings import checkout as nativecheckout
+
 from sapling import (
     bookmarks,
     cmdutil,
@@ -37,6 +39,7 @@ from sapling import (
     hg,
     i18n,
     lock,
+    match as matchmod,
     merge as mergemod,
     mergeutil,
     mutation,
@@ -54,9 +57,8 @@ from sapling import (
     visibility,
 )
 from sapling.i18n import _
-from sapling.node import hex, nullid, nullrev, short
+from sapling.node import bin, hex, nullid, nullrev, short
 from sapling.utils import subtreeutil
-
 
 release = lock.release
 
@@ -449,7 +451,7 @@ class rebaseruntime:
             "first(children(%ld) - %ld)", rebaseset, rebaseset
         ):
             raise error.Abort(
-                _("can't remove original changesets with" " unrebased descendants"),
+                _("can't remove original changesets with unrebased descendants"),
                 hint=_("use --keep to keep original changesets"),
             )
 
@@ -542,6 +544,9 @@ class rebaseruntime:
         # if we fail before the transaction closes.
         self.storestatus()
 
+        if ui.configbool("rebase", "prefetch-trees", True):
+            self._prefetch()
+
         cands = [k for k, v in self.state.items() if v == revtodo]
         total = len(cands)
         pos = 0
@@ -584,12 +589,13 @@ class rebaseruntime:
             elif rev in self.obsoletenotrebased:
                 succ = self.obsoletenotrebased[rev]
                 if succ is None:
-                    msg = _("note: not rebasing %s, it has no " "successor\n") % desc
+                    msg = _("note: not rebasing %s, it has no successor\n") % desc
                 else:
                     succdesc = _ctxdesc(repo[succ])
-                    msg = _(
-                        "note: not rebasing %s, already in " "destination as %s\n"
-                    ) % (desc, succdesc)
+                    msg = _("note: not rebasing %s, already in destination as %s\n") % (
+                        desc,
+                        succdesc,
+                    )
                 repo.ui.status(msg)
                 # Make clearrebased aware state[rev] is not a true successor
                 self.skipped.add(rev)
@@ -818,7 +824,10 @@ class rebaseruntime:
         if not self.collapsef:
             merging = p2 != nullrev
             editform = cmdutil.mergeeditform(merging, "rebase")
-            editor = cmdutil.getcommiteditor(editform=editform, **opts)
+            if opts.get("edit"):
+                editor = cmdutil.getcommiteditor(editform=editform, **opts)
+            else:
+                editor = None
             if self.wctx.isinmemory():
                 newnode = concludememorynode(
                     repo,
@@ -997,6 +1006,50 @@ class rebaseruntime:
             and repo["."].node() == repo._bookmarks[self.activebookmark]
         ):
             bookmarks.activate(repo, self.activebookmark)
+
+    @perftrace.tracefunc("Rebase Prefetch")
+    def _prefetch(self):
+        repo = self.repo
+
+        # Collect list of relevant commits: source commits, their parents, and dest commits.
+        tofetch = bindings.dag.nameset(self.destmap.node2node.keys())
+        tofetch += repo.changelog.dag.parents(tofetch)
+        tofetch += self.destmap.node2node.values()
+
+        # Batch lazy DAG resolutions.
+        repo.changelog.filternodes(tofetch)
+
+        # Batch fetch commit text (contains root tree node and file list).
+        repo.changelog.inner.getcommitrawtextlist(
+            tofetch,
+        )
+
+        if hasattr(repo, "sparsematch"):
+            matcher = repo.sparsematch()
+        else:
+            matcher = matchmod.always(repo.root, "")
+
+        # Collect list of all directories touched by commits, and all commits' root tree nodes.
+        all_files = set()
+        root_nodes = set()
+        for n in tofetch:
+            ctx = repo[n]
+            for fn in ctx.changeset().files or []:
+                if not matcher(fn):
+                    continue
+
+                # Hard code file name to "file". This keeps our file list small and still
+                # triggers all the same prefetching.
+                fn = os.path.dirname(fn)
+                all_files.add(f"{fn}/file" if fn else "file")
+            root_nodes.add(ctx.manifestnode())
+
+        # Prefetch all relevant files across all commits. Note that this might overfetch
+        # since it doesn't track which fils are relevant to which trees, but the
+        # assumption is it is still better than serial fetching later.
+        bindings.manifest.prefetch(
+            repo.manifestlog.datastore, list(root_nodes), paths=list(all_files)
+        )
 
 
 def _simplemerge(ui, basectx, ctx, p1ctx, manifestbuilder):
@@ -1380,7 +1433,12 @@ def _origrebase(ui, repo, rbsrt, **opts):
         dsguard = None
 
         singletr = ui.configbool("rebase", "singletransaction")
-        if singletr:
+        # Always use single transaction mode during in-memory rebase. Single transaction
+        # mode is a lot faster, and in-memory rebase doesn't really benefit from
+        # per-commit transaction because it is all-or-nothing in nature up until the first
+        # commit with conflicts (at which time we will switch out of single transaction
+        # mode).
+        if singletr or rbsrt.inmemory:
             tr = repo.transaction("rebase")
 
         # If `rebase.singletransaction` is enabled, wrap the entire operation in
@@ -1392,7 +1450,16 @@ def _origrebase(ui, repo, rbsrt, **opts):
             if singletr and not rbsrt.inmemory:
                 dsguard = dirstateguard.dirstateguard(repo, "rebase")
             with util.acceptintervention(dsguard):
-                rbsrt._performrebase(tr)
+                try:
+                    rbsrt._performrebase(tr)
+                except error.AbortMergeToolError:
+                    # Above we run all in-memory rebases in single transaction mode.
+                    # Emulate multi-transaction mode by committing transaction on
+                    # --noconflict error (this saves commits that were rebased before we
+                    # hit a conflict).
+                    if not singletr:
+                        tr.close()
+                    raise
 
         rbsrt._finishrebase()
 
@@ -1473,7 +1540,7 @@ def _definedestmap(
     else:
         base = scmutil.revrange(repo, [basef or "."])
         if not base:
-            ui.status(_('empty "base" revision set - ' "can't compute rebase set\n"))
+            ui.status(_('empty "base" revision set - can\'t compute rebase set\n'))
             return None
 
         # --base does not support multiple destinations
@@ -1508,7 +1575,7 @@ def _definedestmap(
             if list(base) == [dest.rev()]:
                 if basef:
                     ui.status(
-                        _('nothing to rebase - %s is both "base"' " and destination\n")
+                        _('nothing to rebase - %s is both "base" and destination\n')
                         % dest
                     )
                 else:
@@ -1569,7 +1636,7 @@ def _definedestmap(
                 ui.note(_("skipping %s - empty destination\n") % repo[r])
             else:
                 raise error.Abort(
-                    _("rebase destination for %s is not " "unique") % repo[r]
+                    _("rebase destination for %s is not unique") % repo[r]
                 )
 
     if dest is not None:
@@ -1677,6 +1744,7 @@ def concludememorynode(
             loginfo=loginfo,
             mutinfo=mutinfo,
         )
+
         commitres = repo.commitctx(memctx)
         wctx.clean()  # Might be reused
         return commitres
@@ -1896,7 +1964,7 @@ def _checkobsrebase(repo, ui, rebaseobsrevs, rebaseobsskipped) -> None:
 
     if divergencebasecandidates and not divergenceok:
         divhashes = (str(repo[r]) for r in divergencebasecandidates)
-        msg = _("this rebase will cause " "divergences from: %s")
+        msg = _("this rebase will cause divergences from: %s")
         h = _(
             "to force the rebase please set "
             "experimental.evolution.allowdivergence=True"

@@ -62,6 +62,18 @@ class ObjectFetchContext : public RefCounted {
   };
 
   /**
+   * It shows that the fetch was successful or not.
+   */
+  enum class FetchResult : uint8_t {
+    /** The fetch was successful in the first try*/
+    Success,
+    /** The fetch was successful in the retry*/
+    SuccessInRetry,
+    /** The fetch request failed in retry*/
+    Failure,
+  };
+
+  /**
    * Which cache satisfied a lookup request.
    *
    * Suitable for use as an index into an array of size kOriginEnumMax.

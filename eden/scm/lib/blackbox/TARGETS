@@ -5,21 +5,21 @@ oncall("sapling")
 rust_library(
     name = "blackbox",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "bench": [
-                {
-                    "harness": False,
-                    "name": "blackbox",
-                },
-            ],
-            "extra_buck_dependencies": {
-                "dev-dependencies": [
-                    "//eden/scm/lib/minibench:minibench",
-                ],
-            },
+    autocargo = {"cargo_toml_config": {
+        "bench": [{
+            "harness": False,
+            "name": "blackbox",
+        }],
+        "extra_buck_dependencies": {"dev-dependencies": ["//eden/scm/lib/minibench:minibench"]},
+        "lib": {"name": "blackbox"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "blackbox",
+            "repository": "https://github.com/facebook/sapling",
         },
-    },
+    }},
     crate_root = "src/lib.rs",
     test_deps = ["fbsource//third-party/rust:tempfile"],
     deps = [
