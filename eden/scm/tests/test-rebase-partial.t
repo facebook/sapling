@@ -104,3 +104,50 @@ Abort doesn't lose the commits that were already in the right place
   ├─╯
   o  426bada5c675 'A' A
   
+test rebase sapling copy commit can introduce partial changes
+  $ newclientrepo partial
+  $ drawdag <<'EOS'
+  > C    # C/foo/y = 1'\n2\n3\n
+  > |    # C/foo/x = 1'\n2\n3\n
+  > B    # B/foo/y = 1\n2\n3\n
+  > |
+  > A    # A/foo/x = 1\n2\n3\n
+  >      # A/foo2/x = 1\n2\n3\n
+  > EOS
+  $ hg go -q $B
+  $ ls foo2
+  x
+  $ hg rm foo2 -q
+  $ hg cp foo foo2 -q
+  $ hg ci -m 'cp foo foo2'
+  $ ls foo2
+  x
+  y
+  $ hg rebase -r . -d $C
+  rebasing d62b595077f8 "cp foo foo2"
+  merging foo/y and foo2/y to foo2/y
+  $ hg log -G -T '{node|short} {desc|firstline}\n'
+  @  deee512b4511 cp foo foo2
+  │
+  o  cb9362f65bb1 C
+  │
+  o  78fd32924038 B
+  │
+  o  de0c4b853cce A
+rebase introduce partial changes of commit C
+  $ hg show
+  commit:      deee512b4511
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       foo2/y
+  description:
+  cp foo foo2
+  
+  
+  diff -r cb9362f65bb1 -r deee512b4511 foo2/y
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/foo2/y	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,3 @@
+  +1'
+  +2
+  +3
