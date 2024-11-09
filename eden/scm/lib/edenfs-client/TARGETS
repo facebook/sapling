@@ -8,6 +8,14 @@ rust_library(
     autocargo = {"cargo_toml_config": {
         "dependencies_override": {},
         "features": {"fb": ["identity/fb"]},
+        "lib": {"name": "edenfs-client"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "edenfs-client",
+            "repository": "https://github.com/facebook/sapling",
+        },
     }},
     features = ["fb"],
     deps = [

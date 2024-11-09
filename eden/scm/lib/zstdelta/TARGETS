@@ -11,6 +11,14 @@ rust_library(
             "name": "zstdelta",
         }],
         "dependencies_override": {"dependencies": {"zstd-sys": {"features": ["experimental"]}}},
+        "lib": {"name": "zstdelta"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "zstdelta",
+            "repository": "https://github.com/facebook/sapling",
+        },
     }},
     crate_root = "src/lib.rs",
     test_deps = [

@@ -11,7 +11,14 @@ rust_library(
             "features": ["for-tests"],
         }}},
         "extra_buck_dependencies": {"dev-dependencies": ["//eden/scm/lib/types:types"]},
-        "package": {"authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]},
+        "lib": {"name": "nodemap"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "nodemap",
+            "repository": "https://github.com/facebook/sapling",
+        },
     }},
     crate_root = "src/lib.rs",
     test_deps = [

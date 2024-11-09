@@ -29,7 +29,14 @@ rust_library(
             "configurable": ["configmodel"],
             "sigbus-handler": [],
         },
-        "package": {"license": "MIT"},
+        "lib": {"name": "indexedlog"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "indexedlog",
+            "repository": "https://github.com/facebook/sapling",
+        },
     }},
     crate_root = "src/lib.rs",
     features = [

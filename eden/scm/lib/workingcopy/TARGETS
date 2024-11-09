@@ -8,6 +8,14 @@ rust_library(
     autocargo = {"cargo_toml_config": {
         "dependencies_override": {"dependencies": {"edenfs-client": {"optional": True}}},
         "features": {"eden": ["edenfs-client"]},
+        "lib": {"name": "workingcopy"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "workingcopy",
+            "repository": "https://github.com/facebook/sapling",
+        },
     }},
     crate_root = "src/lib.rs",
     features = [

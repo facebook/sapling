@@ -5,10 +5,20 @@ oncall("sapling")
 rust_library(
     name = "commits",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {"dependencies_override": {"dependencies": {
-        "dag": {"features": ["indexedlog-backend"]},
-        "minibytes": {"features": ["frombytes"]},
-    }}}},
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"dependencies": {
+            "dag": {"features": ["indexedlog-backend"]},
+            "minibytes": {"features": ["frombytes"]},
+        }},
+        "lib": {"name": "commits"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "commits",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:anyhow",

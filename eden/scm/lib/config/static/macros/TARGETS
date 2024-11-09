@@ -5,7 +5,16 @@ oncall("sapling")
 rust_library(
     name = "staticconfig_macros",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {},
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "staticconfig_macros"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "staticconfig_macros",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     crate_root = "src/lib.rs",
     proc_macro = True,
     rustc_flags = [

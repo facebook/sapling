@@ -11,6 +11,14 @@ rust_library(
             "version": "0.3.7",
         }}}}},
         "extra_buck_dependencies": {"dependencies": [(None, "fbsource//third-party/rust:winapi")]},
+        "lib": {"name": "tracing-collector"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "tracing-collector",
+            "repository": "https://github.com/facebook/sapling",
+        },
     }},
     crate_root = "src/lib.rs",
     os_deps = [

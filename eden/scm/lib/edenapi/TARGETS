@@ -5,7 +5,17 @@ oncall("sapling")
 rust_library(
     name = "edenapi",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {"dependencies_override": {"dependencies": {"version": {"path": "../version"}}}}},
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"dependencies": {"version": {"path": "../version"}}},
+        "lib": {"name": "edenapi"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "edenapi",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",

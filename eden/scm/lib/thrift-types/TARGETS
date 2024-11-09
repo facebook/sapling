@@ -5,7 +5,16 @@ oncall("sapling")
 rust_library(
     name = "thrift-types",
     srcs = ["src/lib.rs"],
-    autocargo = {},
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "thrift-types"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "thrift-types",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     named_deps = {
         "edenfs": "//eden/fs/service:thrift-rust",
         "edenfs_clients": "//eden/fs/service:thrift-rust-clients",

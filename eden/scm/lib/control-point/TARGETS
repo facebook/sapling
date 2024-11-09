@@ -5,7 +5,16 @@ oncall("sapling")
 rust_library(
     name = "control-point",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {},
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "control-point"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "control-point",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     crate_root = "src/lib.rs",
     test_deps = [
         "fbsource//third-party/rust:tempfile",

@@ -11,6 +11,14 @@ rust_library(
             "default": [],
             "eden": ["checkout/eden"],
         },
+        "lib": {"name": "cmdgoto"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "GPL-2.0-only",
+            "name": "cmdgoto",
+            "repository": "https://github.com/facebook/sapling",
+        },
     }},
     crate_root = "src/lib.rs",
     deps = [

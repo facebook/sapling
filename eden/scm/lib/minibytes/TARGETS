@@ -16,7 +16,14 @@ rust_library(
             "frommmap": ["memmap2"],
             "non-zerocopy-into": [],
         },
-        "package": {"license": "MIT"},
+        "lib": {"name": "minibytes"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "minibytes",
+            "repository": "https://github.com/facebook/sapling",
+        },
     }},
     crate_root = "src/lib.rs",
     features = [

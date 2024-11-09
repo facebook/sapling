@@ -5,7 +5,16 @@ oncall("sapling")
 rust_library(
     name = "metrics-render",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {},
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "metrics-render"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "metrics-render",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:once_cell",

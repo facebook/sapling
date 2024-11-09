@@ -49,7 +49,14 @@ rust_library(
                 "indexedlog": {"features": ["configurable"]},
             }},
             "features": {"fb": ["configloader/fb"]},
-            "package": {"authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]},
+            "lib": {"name": "backingstore"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "backingstore",
+                "repository": "https://github.com/facebook/sapling",
+            },
         },
     },
     cpp_deps = [

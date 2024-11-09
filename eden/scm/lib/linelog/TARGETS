@@ -5,10 +5,20 @@ oncall("sapling")
 rust_library(
     name = "linelog",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {"dependencies_override": {"dependencies": {"im": {
-        "default-features": False,
-        "features": [],
-    }}}}},
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"dependencies": {"im": {
+            "default-features": False,
+            "features": [],
+        }}},
+        "lib": {"name": "linelog"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "linelog",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     crate_root = "src/lib.rs",
     test_deps = [
         "fbsource//third-party/rust:rand_chacha",

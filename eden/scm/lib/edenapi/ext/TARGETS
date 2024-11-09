@@ -5,7 +5,16 @@ oncall("sapling")
 rust_library(
     name = "edenapi_ext",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {},
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "edenapi_ext"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "edenapi_ext",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:blake2",

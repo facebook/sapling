@@ -18,7 +18,14 @@ rust_library(
             ],
             "sl_oss": ["identity/sl_oss"],
         },
-        "package": {"authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]},
+        "lib": {"name": "clidispatch"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "clidispatch",
+            "repository": "https://github.com/facebook/sapling",
+        },
     }},
     features = [
         "eden",

@@ -12,6 +12,14 @@ rust_library(
         }],
         "extra_buck_dependencies": {"dev-dependencies": ["//eden/scm/lib/minibench:minibench"]},
         "features": {},
+        "lib": {"name": "radixbuf"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "radixbuf",
+            "repository": "https://github.com/facebook/sapling",
+        },
     }},
     features = ["nobench"],
     test_deps = [

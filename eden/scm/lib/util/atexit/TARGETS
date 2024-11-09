@@ -5,7 +5,16 @@ oncall("sapling")
 rust_library(
     name = "atexit",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {"package": {"authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]}}},
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "atexit"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "atexit",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:once_cell",

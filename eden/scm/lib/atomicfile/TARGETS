@@ -5,7 +5,16 @@ oncall("sapling")
 rust_library(
     name = "atomicfile",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {"package": {"license": "MIT"}}},
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "atomicfile"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "atomicfile",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:tempfile",

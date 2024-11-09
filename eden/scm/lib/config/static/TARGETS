@@ -5,7 +5,16 @@ oncall("sapling")
 rust_library(
     name = "staticconfig",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {},
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "staticconfig"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "staticconfig",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     crate_root = "src/lib.rs",
     deps = [
         "fbsource//third-party/rust:phf",

@@ -5,7 +5,16 @@ oncall("sapling")
 rust_library(
     name = "procutil",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {"cargo_toml_config": {"package": {"authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]}}},
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "procutil"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "procutil",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     crate_root = "src/lib.rs",
     os_deps = [
         (

@@ -5,7 +5,16 @@ oncall("sapling")
 rust_library(
     name = "progress-model",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {},
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "progress-model"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "progress-model",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
     deps = [
         "fbsource//third-party/rust:arc-swap",
         "fbsource//third-party/rust:once_cell",

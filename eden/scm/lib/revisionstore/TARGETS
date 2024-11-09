@@ -23,6 +23,14 @@ rust_library(
                 "stats",
             ],
         },
+        "lib": {"name": "revisionstore"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "revisionstore",
+            "repository": "https://github.com/facebook/sapling",
+        },
     }},
     crate = "revisionstore",
     features = [
@@ -103,7 +111,16 @@ rust_library(
     name = "revisionstore_types",
     srcs = glob(["types/**/*.rs"]),
     autocargo = {
-        "cargo_toml_config": {"package": {"authors": ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]}},
+        "cargo_toml_config": {
+            "lib": {"name": "revisionstore_types"},
+            "package": {
+                "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "revisionstore_types",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        },
         "cargo_toml_dir": "types",
     },
     crate_root = "types/lib.rs",

@@ -19,7 +19,14 @@ rust_library(
     name = "rust_version",
     autocargo = {"cargo_toml_config": {
         "features": {"generated": []},
-        "package": {"name": "version"},
+        "lib": {"name": "version"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "version",
+            "repository": "https://github.com/facebook/sapling",
+        },
     }},
     crate = "version",
     features = ["generated"],

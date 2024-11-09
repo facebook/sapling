@@ -14,7 +14,14 @@ rust_library(
             "for-tests": ["quickcheck"],
             "serialize-abomonation": ["abomonation"],
         },
-        "package": {"license": "MIT"},
+        "lib": {"name": "dag-types"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "dag-types",
+            "repository": "https://github.com/facebook/sapling",
+        },
     }},
     crate_root = "src/lib.rs",
     features = [
