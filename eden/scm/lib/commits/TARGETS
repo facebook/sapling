@@ -7,15 +7,15 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
         "dependencies_override": {"dependencies": {
-            "dag": {"features": ["indexedlog-backend"]},
-            "minibytes": {"features": ["frombytes"]},
+            "sapling-dag": {"features": ["indexedlog-backend"]},
+            "sapling-minibytes": {"features": ["frombytes"]},
         }},
         "lib": {"name": "commits"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
-            "name": "commits",
+            "name": "sapling-commits",
             "repository": "https://github.com/facebook/sapling",
         },
     }},

@@ -11,9 +11,6 @@ license = "GPL-2.0-only"
 
 [dependencies]
 anyhow = { version = "1.0.86", features = ["backtrace"] }
-atexit = { version = "0.1.0", path = "../util/atexit" }
-blackbox = { version = "0.1.0", path = "../blackbox" }
-clidispatch = { version = "0.1.0", path = "../clidispatch" }
 cmdclone = { version = "0.1.0", path = "commands/cmdclone" }
 cmdconfig = { version = "0.1.0", path = "commands/cmdconfig" }
 cmdconfigfile = { version = "0.1.0", path = "commands/cmdconfigfile" }
@@ -49,47 +46,50 @@ cmdroot = { version = "0.1.0", path = "commands/cmdroot" }
 cmdstatus = { version = "0.1.0", path = "commands/cmdstatus" }
 cmdversion = { version = "0.1.0", path = "commands/cmdversion" }
 cmdwhereami = { version = "0.1.0", path = "commands/cmdwhereami" }
-commandserver = { version = "0.1.0", path = "../commandserver" }
-configloader = { version = "0.1.0", path = "../config/loader" }
-configmodel = { version = "0.1.0", path = "../config/model" }
-constructors = { version = "0.1.0", path = "../constructors", features = ["git"] }
 ctrlc = { version = "3.4.5", features = ["termination"] }
 fail = { version = "0.4", features = ["failpoints"] }
 flate2 = { version = "1.0.33", features = ["rust_backend"], default-features = false }
-hg-http = { version = "0.1.0", path = "../hg-http" }
-hg-metrics = { version = "0.1.0", path = "../hg-metrics" }
-hgplain = { version = "0.1.0", path = "../util/hgplain" }
 hostname = "0.3"
-identity = { version = "0.1.0", path = "../identity" }
 libc = "0.2.139"
-metrics = { version = "0.1.0", path = "../metrics" }
-metrics-render = { version = "0.1.0", path = "../metrics/render" }
-mincode = { version = "0.1.0", path = "../mincode" }
-nodeipc = { version = "0.1.0", path = "../util/nodeipc" }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
-procinfo = { version = "0.1.0", path = "../procinfo" }
-progress-model = { version = "0.1.0", path = "../progress/model" }
-progress-render = { version = "0.1.0", path = "../progress/render" }
 pycheckout = { version = "0.1.0", path = "../../saplingnative/bindings/modules/pycheckout" }
 pytracing = { version = "0.1.0", path = "../../saplingnative/bindings/modules/pytracing", default-features = false }
 pyworkingcopy = { version = "0.1.0", path = "../../saplingnative/bindings/modules/pyworkingcopy" }
 pyworkingcopyclient = { version = "0.1.0", path = "../../saplingnative/bindings/modules/pyworkingcopyclient" }
-repo = { version = "0.1.0", path = "../repo", features = ["wdir"] }
-repourl = { version = "0.1.0", path = "../repo/url" }
-revisionstore = { version = "0.1.0", path = "../revisionstore" }
-runlog = { version = "0.1.0", path = "../runlog" }
-sampling = { version = "0.1.0", path = "../sampling" }
+sapling-atexit = { version = "0.1.0", path = "../util/atexit" }
+sapling-blackbox = { version = "0.1.0", path = "../blackbox" }
+sapling-clidispatch = { version = "0.1.0", path = "../clidispatch" }
+sapling-commandserver = { version = "0.1.0", path = "../commandserver" }
+sapling-configloader = { version = "0.1.0", path = "../config/loader" }
+sapling-configmodel = { version = "0.1.0", path = "../config/model" }
+sapling-constructors = { version = "0.1.0", path = "../constructors", features = ["git"] }
+sapling-hg-http = { version = "0.1.0", path = "../hg-http" }
+sapling-hg-metrics = { version = "0.1.0", path = "../hg-metrics" }
+sapling-hgplain = { version = "0.1.0", path = "../util/hgplain" }
+sapling-identity = { version = "0.1.0", path = "../identity" }
+sapling-metrics = { version = "0.1.0", path = "../metrics" }
+sapling-metrics-render = { version = "0.1.0", path = "../metrics/render" }
+sapling-mincode = { version = "0.1.0", path = "../mincode" }
+sapling-nodeipc = { version = "0.1.0", path = "../util/nodeipc" }
+sapling-procinfo = { version = "0.1.0", path = "../procinfo" }
+sapling-progress-model = { version = "0.1.0", path = "../progress/model" }
+sapling-progress-render = { version = "0.1.0", path = "../progress/render" }
+sapling-repo = { version = "0.1.0", path = "../repo", features = ["wdir"] }
+sapling-repourl = { version = "0.1.0", path = "../repo/url" }
+sapling-revisionstore = { version = "0.1.0", path = "../revisionstore" }
+sapling-runlog = { version = "0.1.0", path = "../runlog" }
+sapling-sampling = { version = "0.1.0", path = "../sampling" }
+sapling-tracing-collector = { version = "0.1.0", path = "../tracing-collector" }
+sapling-tracing-reload = { version = "0.1.0", path = "../tracing-reload" }
+sapling-tracing-sampler = { version = "0.1.0", path = "../tracing-sampler" }
+sapling-version = { version = "0.1.0", path = "../version" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
-tracing-collector = { version = "0.1.0", path = "../tracing-collector" }
-tracing-reload = { version = "0.1.0", path = "../tracing-reload" }
-tracing-sampler = { version = "0.1.0", path = "../tracing-sampler" }
 tracing-subscriber = { version = "0.3.18", features = ["chrono", "env-filter", "json", "local-time", "parking_lot", "registry"] }
-version = { version = "0.1.0", path = "../version" }
 zstd = { version = "0.13", features = ["experimental", "zstdmt"] }
 
 [features]
 default = []
-eden = ["clidispatch/eden", "cmddebugwait/eden", "cmdgoto/eden", "pycheckout/eden", "pyworkingcopy/eden", "pyworkingcopyclient/eden"]
-fb = ["cmddebugdumpinternalconfig/fb", "cmddebugrefreshconfig/fb", "cmdpy/fb", "cmdversion/fb", "configloader/fb", "identity/fb"]
-sl_oss = ["configloader/sl_oss"]
+eden = ["cmddebugwait/eden", "cmdgoto/eden", "pycheckout/eden", "pyworkingcopy/eden", "pyworkingcopyclient/eden", "sapling-clidispatch/eden"]
+fb = ["cmddebugdumpinternalconfig/fb", "cmddebugrefreshconfig/fb", "cmdpy/fb", "cmdversion/fb", "sapling-configloader/fb", "sapling-identity/fb"]
+sl_oss = ["sapling-configloader/sl_oss"]

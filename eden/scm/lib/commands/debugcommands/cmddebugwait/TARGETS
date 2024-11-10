@@ -10,8 +10,8 @@ rust_library(
         "features": {
             "default": [],
             "eden": [
-                "edenfs-client",
-                "workingcopy/eden",
+                "sapling-edenfs-client",
+                "sapling-workingcopy/eden",
             ],
         },
         "lib": {"name": "cmddebugwait"},

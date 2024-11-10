@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 cpython = { version = "0.7.2", default-features = false }
-cpython_ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
-status = { version = "0.1.0", path = "../../../../lib/status" }
-types = { version = "0.1.0", path = "../../../../lib/types" }
-util = { version = "0.1.0", path = "../../../../lib/util" }
+sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
+sapling-status = { version = "0.1.0", path = "../../../../lib/status" }
+sapling-types = { version = "0.1.0", path = "../../../../lib/types" }
+sapling-util = { version = "0.1.0", path = "../../../../lib/util" }

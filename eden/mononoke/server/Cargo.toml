@@ -12,7 +12,6 @@ anyhow = "1.0.86"
 async-trait = "0.1.71"
 cache_warmup = { version = "0.1.0", path = "../cache_warmup" }
 clap = { version = "4.5.20", features = ["derive", "env", "string", "unicode", "wrap_help"] }
-clientinfo = { version = "0.1.0", path = "../../scm/lib/clientinfo" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib_logging = { version = "0.1.0", path = "../cmdlib/log" }
 environment = { version = "0.1.0", path = "../cmdlib/environment" }
@@ -26,6 +25,7 @@ openssl = "0.10.63"
 pushrebase_client = { version = "0.1.0", path = "../pushrebase/client" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 repo_listener = { version = "0.1.0", path = "repo_listener" }
+sapling-clientinfo = { version = "0.1.0", path = "../../scm/lib/clientinfo" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 secure_utils = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sharding_ext = { version = "0.1.0", path = "../cmdlib/sharding_ext" }

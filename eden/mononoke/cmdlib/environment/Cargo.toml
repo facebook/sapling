@@ -14,7 +14,6 @@ path = "lib.rs"
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 clap = { version = "4.5.20", features = ["derive", "env", "string", "unicode", "wrap_help"] }
-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
 commit_graph_types = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph_types" }
 derived_data_remote = { version = "0.1.0", path = "../../derived_data/remote" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -22,6 +21,7 @@ megarepo_config = { version = "0.1.0", path = "../../megarepo_api/megarepo_confi
 observability = { version = "0.1.0", path = "../../observability" }
 permission_checker = { version = "0.1.0", path = "../../permission_checker" }
 rendezvous = { version = "0.1.0", path = "../../common/rendezvous" }
+sapling-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }

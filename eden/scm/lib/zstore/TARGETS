@@ -6,13 +6,13 @@ rust_library(
     name = "zstore",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"dependencies": {"minibytes": {"features": ["frombytes"]}}},
+        "dependencies_override": {"dependencies": {"sapling-minibytes": {"features": ["frombytes"]}}},
         "lib": {"name": "zstore"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
-            "name": "zstore",
+            "name": "sapling-zstore",
             "repository": "https://github.com/facebook/sapling",
         },
     }},

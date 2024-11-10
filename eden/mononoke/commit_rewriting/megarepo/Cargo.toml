@@ -24,7 +24,6 @@ borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 changesets_creation = { version = "0.1.0", path = "../../changesets/changesets_creation" }
 clap = "2.34.0"
-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib = { version = "0.1.0", path = "../../cmdlib" }
 cmdlib_x_repo = { version = "0.1.0", path = "../../cmdlib/x_repo" }
@@ -59,6 +58,7 @@ repo_bookmark_attrs = { version = "0.1.0", path = "../../repo_attributes/repo_bo
 repo_cross_repo = { version = "0.1.0", path = "../../repo_attributes/repo_cross_repo" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
+sapling-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }

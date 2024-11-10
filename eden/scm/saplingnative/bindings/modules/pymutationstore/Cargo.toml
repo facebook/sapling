@@ -7,12 +7,12 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.86"
-async-runtime = { version = "0.1.0", path = "../../../../lib/async-runtime" }
 byteorder = "1.3"
 cpython = { version = "0.7.2", default-features = false }
-cpython_ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
-mutationstore = { version = "0.1.0", path = "../../../../lib/mutationstore" }
 pydag = { version = "0.1.0", path = "../pydag" }
+sapling-async-runtime = { version = "0.1.0", path = "../../../../lib/async-runtime" }
+sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
+sapling-mutationstore = { version = "0.1.0", path = "../../../../lib/mutationstore" }
+sapling-types = { version = "0.1.0", path = "../../../../lib/types" }
+sapling-vlqencoding = { version = "0.1.0", path = "../../../../lib/vlqencoding" }
 thiserror = "1.0.64"
-types = { version = "0.1.0", path = "../../../../lib/types" }
-vlqencoding = { version = "0.1.0", path = "../../../../lib/vlqencoding" }

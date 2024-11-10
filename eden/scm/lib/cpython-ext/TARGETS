@@ -5,23 +5,21 @@ oncall("sapling")
 rust_python_library(
     name = "cpython-ext",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {
-                "dependencies": {
-                    "cpython": {
-                        "features": ["python3-sys"],
-                        "git": None,
-                        "rev": None,
-                    },
-                    "python3-sys": {
-                        "git": None,
-                        "rev": None,
-                    },
-                },
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"dependencies": {
+            "cpython": {
+                "features": ["python3-sys"],
+                "git": None,
+                "rev": None,
             },
-        },
-    },
+            "python3-sys": {
+                "git": None,
+                "rev": None,
+            },
+        }},
+        "lib": {"name": "cpython-ext"},
+        "package": {"name": "sapling-cpython-ext"},
+    }},
     crate_root = "src/lib.rs",
     include_python_sys = True,
     test_deps = [

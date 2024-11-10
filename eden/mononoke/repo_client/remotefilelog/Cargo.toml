@@ -25,7 +25,7 @@ mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 redactedblobstore = { version = "0.1.0", path = "../../blobstore/redactedblobstore" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
-revisionstore_types = { version = "0.1.0", path = "../../../scm/lib/revisionstore/types" }
+sapling-revisionstore_types = { version = "0.1.0", path = "../../../scm/lib/revisionstore/types" }
 thiserror = "1.0.64"
 
 [dev-dependencies]

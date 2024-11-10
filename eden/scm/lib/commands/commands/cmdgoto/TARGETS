@@ -6,10 +6,10 @@ rust_library(
     name = "cmdgoto",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"dependencies": {"repo": {"features": ["wdir"]}}},
+        "dependencies_override": {"dependencies": {"sapling-repo": {"features": ["wdir"]}}},
         "features": {
             "default": [],
-            "eden": ["checkout/eden"],
+            "eden": ["sapling-checkout/eden"],
         },
         "lib": {"name": "cmdgoto"},
         "package": {

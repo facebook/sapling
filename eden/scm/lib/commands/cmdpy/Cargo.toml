@@ -7,18 +7,18 @@ edition = "2021"
 
 [dependencies]
 bindings = { version = "0.1.0", path = "../../../saplingnative/bindings", default-features = false }
-clidispatch = { version = "0.1.0", path = "../../clidispatch" }
-commandserver = { version = "0.1.0", path = "../../commandserver" }
-configmodel = { version = "0.1.0", path = "../../config/model" }
-context = { version = "0.1.0", path = "../../context" }
 cpython = { version = "0.7.2", features = ["python3-sys"], default-features = false }
-cpython_ext = { version = "0.1.0", path = "../../cpython-ext" }
 libc = "0.2.139"
-nodeipc = { version = "0.1.0", path = "../../util/nodeipc" }
 pycontext = { version = "0.1.0", path = "../../../saplingnative/bindings/modules/pycontext" }
 pyio = { version = "0.1.0", path = "../../../saplingnative/bindings/modules/pyio" }
 pymodules = { version = "0.1.0", path = "../../../saplingnative/bindings/modules/pymodules" }
 python3-sys = "0.7.2"
+sapling-clidispatch = { version = "0.1.0", path = "../../clidispatch" }
+sapling-commandserver = { version = "0.1.0", path = "../../commandserver" }
+sapling-configmodel = { version = "0.1.0", path = "../../config/model" }
+sapling-context = { version = "0.1.0", path = "../../context" }
+sapling-cpython-ext = { version = "0.1.0", path = "../../cpython-ext" }
+sapling-nodeipc = { version = "0.1.0", path = "../../util/nodeipc" }
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 
 [features]

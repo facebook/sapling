@@ -8,10 +8,10 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.86"
 cpython = { version = "0.7.2", default-features = false }
-cpython_ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
-pathmatcher = { version = "0.1.0", path = "../../../../lib/pathmatcher" }
 pypathmatcher = { version = "0.1.0", path = "../pypathmatcher" }
-treestate = { version = "0.1.0", path = "../../../../lib/treestate" }
-types = { version = "0.1.0", path = "../../../../lib/types" }
-vfs = { version = "0.1.0", path = "../../../../lib/vfs" }
+sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
+sapling-pathmatcher = { version = "0.1.0", path = "../../../../lib/pathmatcher" }
+sapling-treestate = { version = "0.1.0", path = "../../../../lib/treestate" }
+sapling-types = { version = "0.1.0", path = "../../../../lib/types" }
+sapling-vfs = { version = "0.1.0", path = "../../../../lib/vfs" }

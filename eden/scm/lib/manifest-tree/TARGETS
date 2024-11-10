@@ -12,11 +12,11 @@ rust_library(
             "required-features": ["for-tests"],
         }],
         "dependencies_override": {"dev-dependencies": {
-            "manifest": {
+            "sapling-manifest": {
                 "default-features": False,
                 "features": ["for-tests"],
             },
-            "types": {
+            "sapling-types": {
                 "default-features": False,
                 "features": ["for-tests"],
             },
@@ -46,7 +46,7 @@ rust_library(
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
-            "name": "manifest-tree",
+            "name": "sapling-manifest-tree",
             "repository": "https://github.com/facebook/sapling",
         },
     }},

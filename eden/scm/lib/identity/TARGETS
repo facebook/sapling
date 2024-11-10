@@ -16,7 +16,7 @@ rust_library(
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
-            "name": "identity",
+            "name": "sapling-identity",
             "repository": "https://github.com/facebook/sapling",
         },
     }},

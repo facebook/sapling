@@ -6,8 +6,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-clidispatch = { version = "0.1.0", path = "../../../../lib/clidispatch" }
 cpython = { version = "0.7.2", default-features = false }
-cpython_ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 pipe = "0.2"
-streampager = { version = "0.10.3", path = "../../../../lib/third-party/streampager" }
+sapling-clidispatch = { version = "0.1.0", path = "../../../../lib/clidispatch" }
+sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
+sapling-streampager = { version = "0.10.3", path = "../../../../lib/third-party/streampager" }

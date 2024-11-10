@@ -12,7 +12,7 @@ rust_library(
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
-            "name": "clientinfo",
+            "name": "sapling-clientinfo",
             "repository": "https://github.com/facebook/sapling",
         },
     }},

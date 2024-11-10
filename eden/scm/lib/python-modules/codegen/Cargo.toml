@@ -6,4 +6,4 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-zstdelta = { version = "0.1.0", path = "../../zstdelta" }
+sapling-zstdelta = { version = "0.1.0", path = "../../zstdelta" }

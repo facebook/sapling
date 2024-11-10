@@ -36,12 +36,10 @@ commit_cloud_types = { version = "0.1.0", path = "../commit_cloud/types" }
 commit_graph = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "../server/context" }
 cross_repo_sync = { version = "0.1.0", path = "../commit_rewriting/cross_repo_sync" }
-dag-types = { version = "0.1.0", path = "../../scm/lib/dag/dag-types" }
 deleted_manifest = { version = "0.1.0", path = "../derived_data/deleted_manifest" }
 derivative = "2.2"
 derived_data = { version = "0.1.0", path = "../derived_data" }
 derived_data_manager = { version = "0.1.0", path = "../derived_data/manager" }
-edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
 ephemeral_blobstore = { version = "0.1.0", path = "../blobstore/ephemeral_blobstore" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filenodes = { version = "0.1.0", path = "../filenodes" }
@@ -73,7 +71,6 @@ mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
 mutable_renames = { version = "0.1.0", path = "../mutable_renames" }
 packfile = { version = "0.1.0", path = "../git/packfile" }
-pathmatcher = { version = "0.1.0", path = "../../scm/lib/pathmatcher" }
 phases = { version = "0.1.0", path = "../phases" }
 protocol = { version = "0.1.0", path = "../git/protocol" }
 pushrebase = { version = "0.1.0", path = "../pushrebase" }
@@ -91,24 +88,27 @@ repo_permission_checker = { version = "0.1.0", path = "../repo_attributes/repo_p
 repo_sparse_profiles = { version = "0.1.0", path = "../repo_attributes/repo_sparse_profiles" }
 repo_stats_logger = { version = "0.1.0", path = "../repo_stats_logger" }
 repo_update_logger = { version = "0.1.0", path = "../features/repo_update_logger" }
+sapling-dag-types = { version = "0.1.0", path = "../../scm/lib/dag/dag-types" }
+sapling-edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
+sapling-pathmatcher = { version = "0.1.0", path = "../../scm/lib/pathmatcher" }
+sapling-sparse = { version = "0.1.0", path = "../../scm/lib/sparse", features = ["async"] }
+sapling-types = { version = "0.1.0", path = "../../scm/lib/types" }
+sapling-xdiff = { version = "0.1.0", path = "../../scm/lib/xdiff" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 skeleton_manifest = { version = "0.1.0", path = "../derived_data/skeleton_manifest" }
 skeleton_manifest_v2 = { version = "0.1.0", path = "../derived_data/skeleton_manifest_v2" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
 sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-sparse = { version = "0.1.0", path = "../../scm/lib/sparse", features = ["async"] }
 sql_query_config = { version = "0.1.0", path = "../repo_attributes/sql_query_config" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 streaming_clone = { version = "0.1.0", path = "../repo_client/streaming_clone" }
 synced_commit_mapping = { version = "0.1.0", path = "../commit_rewriting/synced_commit_mapping" }
 thiserror = "1.0.64"
-types = { version = "0.1.0", path = "../../scm/lib/types" }
 unbundle = { version = "0.1.0", path = "../repo_client/unbundle" }
 unodes = { version = "0.1.0", path = "../derived_data/unodes" }
 vec1 = { version = "1", features = ["serde"] }
 wireproto_handler = { version = "0.1.0", path = "../wireproto_handler" }
-xdiff = { version = "0.1.0", path = "../../scm/lib/xdiff" }
 
 [dev-dependencies]
 assert_matches = "1.5"

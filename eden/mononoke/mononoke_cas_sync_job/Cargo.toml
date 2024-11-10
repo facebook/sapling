@@ -17,7 +17,6 @@ borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 cas_client = { version = "0.1.0", path = "../cas_client/client" }
 changesets_uploader = { version = "0.1.0", path = "../cas_client/changesets_uploader" }
 clap_old = { package = "clap", version = "2.34.0" }
-clientinfo = { version = "0.1.0", path = "../../scm/lib/clientinfo" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib = { version = "0.1.0", path = "../cmdlib" }
 commit_graph = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph" }
@@ -37,8 +36,9 @@ mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
-repourl = { version = "0.1.0", path = "../../scm/lib/repo/url" }
 retry = { version = "0.1.0", path = "../common/retry" }
+sapling-clientinfo = { version = "0.1.0", path = "../../scm/lib/clientinfo" }
+sapling-repourl = { version = "0.1.0", path = "../../scm/lib/repo/url" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 sharding_ext = { version = "0.1.0", path = "../cmdlib/sharding_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }

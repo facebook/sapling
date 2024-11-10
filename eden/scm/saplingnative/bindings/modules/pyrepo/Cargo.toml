@@ -6,10 +6,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-checkout = { version = "0.1.0", path = "../../../../lib/checkout" }
-context = { version = "0.1.0", path = "../../../../lib/context" }
 cpython = { version = "0.7.2", default-features = false }
-cpython_ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 pyconfigloader = { version = "0.1.0", path = "../pyconfigloader" }
 pydag = { version = "0.1.0", path = "../pydag" }
@@ -18,8 +15,11 @@ pyedenapi = { version = "0.1.0", path = "../pyedenapi" }
 pymetalog = { version = "0.1.0", path = "../pymetalog" }
 pyrevisionstore = { version = "0.1.0", path = "../pyrevisionstore" }
 pyworkingcopy = { version = "0.1.0", path = "../pyworkingcopy" }
-repo = { version = "0.1.0", path = "../../../../lib/repo" }
-repolock = { version = "0.1.0", path = "../../../../lib/repolock" }
-types = { version = "0.1.0", path = "../../../../lib/types" }
-util = { version = "0.1.0", path = "../../../../lib/util" }
-workingcopy = { version = "0.1.0", path = "../../../../lib/workingcopy" }
+sapling-checkout = { version = "0.1.0", path = "../../../../lib/checkout" }
+sapling-context = { version = "0.1.0", path = "../../../../lib/context" }
+sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
+sapling-repo = { version = "0.1.0", path = "../../../../lib/repo" }
+sapling-repolock = { version = "0.1.0", path = "../../../../lib/repolock" }
+sapling-types = { version = "0.1.0", path = "../../../../lib/types" }
+sapling-util = { version = "0.1.0", path = "../../../../lib/util" }
+sapling-workingcopy = { version = "0.1.0", path = "../../../../lib/workingcopy" }

@@ -12,7 +12,7 @@ rust_library(
             "description": "    Cross platform client for subscribing to Commit Cloud eventsource (http server-sent events)\n    The workflow is the following:\n    * define 'subscription' as a unique [repo_name, workspace] pair\n    * read set of 'subscribers', defined as [repo_name, workspace, repo_root]\n    * runs a Commit Cloud eventsource listener in a separate thread for every 'subscription'\n        (and a set of 'subscribers' (repo_roots))\n    * triggers `hg cloud sync` command on notifications in all 'subscribers' (repo_roots)\n        for a given 'subscription'\n    * the library also contains a module to find OAuth token,\n        this logic should be in sync with `hg cloud auth` command.\n",
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
-            "name": "commitcloudsubscriber",
+            "name": "sapling-commitcloudsubscriber",
             "repository": "https://github.com/facebook/sapling",
         },
     }},

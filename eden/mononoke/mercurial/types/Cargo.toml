@@ -21,7 +21,6 @@ blobstore = { version = "0.1.0", path = "../../blobstore" }
 bytes = { version = "1.6.0", features = ["serde"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../../server/context" }
-edenapi_types = { version = "0.1.0", path = "../../../scm/lib/edenapi/types" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../../filestore" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
@@ -35,6 +34,8 @@ quickcheck = "1.0"
 quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 rand = { version = "0.8", features = ["small_rng"] }
 rand_distr = "0.4"
+sapling-edenapi_types = { version = "0.1.0", path = "../../../scm/lib/edenapi/types" }
+sapling-types = { version = "0.1.0", path = "../../../scm/lib/types" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_derive = "1.0.185"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
@@ -43,7 +44,6 @@ sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-s
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "1.0.64"
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
-types = { version = "0.1.0", path = "../../../scm/lib/types" }
 
 [dev-dependencies]
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }

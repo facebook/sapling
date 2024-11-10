@@ -6,19 +6,19 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-auth = { version = "0.1.0", path = "../../../../lib/auth" }
-checkout = { version = "0.1.0", path = "../../../../lib/checkout" }
-configmodel = { version = "0.1.0", path = "../../../../lib/config/model" }
 cpython = { version = "0.7.2", default-features = false }
-cpython_ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
-dag = { version = "0.1.0", path = "../../../../lib/dag" }
-edenapi = { version = "0.1.0", path = "../../../../lib/edenapi" }
-http-client = { version = "0.1.0", path = "../../../../lib/http-client" }
-indexedlog = { version = "0.1.0", path = "../../../../lib/indexedlog" }
-metalog = { version = "0.1.0", path = "../../../../lib/metalog" }
-pathmatcher = { version = "0.1.0", path = "../../../../lib/pathmatcher" }
-repo = { version = "0.1.0", path = "../../../../lib/repo" }
-repolock = { version = "0.1.0", path = "../../../../lib/repolock" }
-revisionstore = { version = "0.1.0", path = "../../../../lib/revisionstore" }
-revlogindex = { version = "0.1.0", path = "../../../../lib/revlogindex" }
-types = { version = "0.1.0", path = "../../../../lib/types" }
+sapling-auth = { version = "0.1.0", path = "../../../../lib/auth" }
+sapling-checkout = { version = "0.1.0", path = "../../../../lib/checkout" }
+sapling-configmodel = { version = "0.1.0", path = "../../../../lib/config/model" }
+sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
+sapling-dag = { version = "0.1.0", path = "../../../../lib/dag" }
+sapling-edenapi = { version = "0.1.0", path = "../../../../lib/edenapi" }
+sapling-http-client = { version = "0.1.0", path = "../../../../lib/http-client" }
+sapling-indexedlog = { version = "0.1.0", path = "../../../../lib/indexedlog" }
+sapling-metalog = { version = "0.1.0", path = "../../../../lib/metalog" }
+sapling-pathmatcher = { version = "0.1.0", path = "../../../../lib/pathmatcher" }
+sapling-repo = { version = "0.1.0", path = "../../../../lib/repo" }
+sapling-repolock = { version = "0.1.0", path = "../../../../lib/repolock" }
+sapling-revisionstore = { version = "0.1.0", path = "../../../../lib/revisionstore" }
+sapling-revlogindex = { version = "0.1.0", path = "../../../../lib/revlogindex" }
+sapling-types = { version = "0.1.0", path = "../../../../lib/types" }

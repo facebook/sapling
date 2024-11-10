@@ -8,25 +8,25 @@ rust_library(
     autocargo = {"cargo_toml_config": {
         "dependencies_override": {
             "dependencies": {
-                "edenfs-client": {"optional": True},
-                "hg-metrics": {"optional": True},
-                "manifest": {"features": ["for-tests"]},
+                "sapling-edenfs-client": {"optional": True},
+                "sapling-hg-metrics": {"optional": True},
+                "sapling-manifest": {"features": ["for-tests"]},
                 "toml": {"optional": True},
             },
-            "dev-dependencies": {"manifest-tree": {"features": ["for-tests"]}},
+            "dev-dependencies": {"sapling-manifest-tree": {"features": ["for-tests"]}},
         },
         "features": {"eden": [
-            "edenfs-client",
-            "hg-metrics",
+            "sapling-edenfs-client",
+            "sapling-hg-metrics",
             "toml",
-            "workingcopy/eden",
+            "sapling-workingcopy/eden",
         ]},
         "lib": {"name": "checkout"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
-            "name": "checkout",
+            "name": "sapling-checkout",
             "repository": "https://github.com/facebook/sapling",
         },
     }},

@@ -7,11 +7,11 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
         "dependencies_override": {"dependencies": {
-            "dag-types": {
+            "sapling-dag-types": {
                 "default-features": False,
                 "features": [],
             },
-            "minibytes": {
+            "sapling-minibytes": {
                 "default-features": False,
                 "features": [],
             },
@@ -29,17 +29,17 @@ rust_library(
             ],
             "indexedlog-backend": [
                 "fs2",
-                "indexedlog",
+                "sapling-indexedlog",
                 "tempfile",
             ],
-            "render": ["renderdag"],
+            "render": ["sapling-renderdag"],
         },
         "lib": {"name": "dag"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
-            "name": "dag",
+            "name": "sapling-dag",
             "repository": "https://github.com/facebook/sapling",
         },
     }},
@@ -94,7 +94,7 @@ rust_library(
                 "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
                 "homepage": "https://sapling-scm.com/",
                 "license": "MIT",
-                "name": "dag",
+                "name": "sapling-dag",
                 "repository": "https://github.com/facebook/sapling",
             },
         },

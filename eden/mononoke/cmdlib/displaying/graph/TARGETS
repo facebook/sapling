@@ -5,27 +5,16 @@ oncall("scm_server_infra")
 rust_library(
     name = "print_graph",
     srcs = glob(["src/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {
-                "dependencies": {
-                    "dag-types": {"features": [
-                        "for-tests",
-                        "serialize-abomonation",
-                    ]},
-                },
-            },
-            "extra_buck_dependencies": {
-                # This rule already depends on dag-lite, but it doesn't have a
-                # generated Cargo.toml file. Instead depend on dag and enable
-                # only lite features on it.
-                "dependencies": [
-                    "//eden/scm/lib/dag:dag",
-                    "//eden/scm/lib/dag/dag-types:dag-types",
-                ],
-            },
-        },
-    },
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"dependencies": {"sapling-dag-types": {"features": [
+            "for-tests",
+            "serialize-abomonation",
+        ]}}},
+        "extra_buck_dependencies": {"dependencies": [
+            "//eden/scm/lib/dag:dag",
+            "//eden/scm/lib/dag/dag-types:dag-types",
+        ]},
+    }},
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:futures",

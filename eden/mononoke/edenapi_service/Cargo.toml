@@ -16,12 +16,9 @@ blobstore = { version = "0.1.0", path = "../blobstore" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bookmarks_movement = { version = "0.1.0", path = "../bookmarks/bookmarks_movement" }
 bytes = { version = "1.6.0", features = ["serde"] }
-clientinfo = { version = "0.1.0", path = "../../scm/lib/clientinfo" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 commit_cloud_types = { version = "0.1.0", path = "../commit_cloud/types" }
 context = { version = "0.1.0", path = "../server/context" }
-dag-types = { version = "0.1.0", path = "../../scm/lib/dag/dag-types" }
-edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
 ephemeral_blobstore = { version = "0.1.0", path = "../blobstore/ephemeral_blobstore" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../filestore" }
@@ -53,7 +50,11 @@ rand = { version = "0.8", features = ["small_rng"] }
 rate_limiting = { version = "0.1.0", path = "../rate_limiting" }
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
-revisionstore_types = { version = "0.1.0", path = "../../scm/lib/revisionstore/types" }
+sapling-clientinfo = { version = "0.1.0", path = "../../scm/lib/clientinfo" }
+sapling-dag-types = { version = "0.1.0", path = "../../scm/lib/dag/dag-types" }
+sapling-edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
+sapling-revisionstore_types = { version = "0.1.0", path = "../../scm/lib/revisionstore/types" }
+sapling-types = { version = "0.1.0", path = "../../scm/lib/types" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_cbor = "0.11"
@@ -63,5 +64,4 @@ stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 thiserror = "1.0.64"
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
-types = { version = "0.1.0", path = "../../scm/lib/types" }
 vec1 = { version = "1", features = ["serde"] }

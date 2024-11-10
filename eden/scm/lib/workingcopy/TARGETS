@@ -6,14 +6,14 @@ rust_library(
     name = "workingcopy",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"dependencies": {"edenfs-client": {"optional": True}}},
-        "features": {"eden": ["edenfs-client"]},
+        "dependencies_override": {"dependencies": {"sapling-edenfs-client": {"optional": True}}},
+        "features": {"eden": ["sapling-edenfs-client"]},
         "lib": {"name": "workingcopy"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
-            "name": "workingcopy",
+            "name": "sapling-workingcopy",
             "repository": "https://github.com/facebook/sapling",
         },
     }},

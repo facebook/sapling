@@ -11,10 +11,10 @@ license = "GPL-2.0-only"
 
 [dependencies]
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
-clidispatch = { version = "0.1.0", path = "../../../clidispatch" }
-cliparser = { version = "0.1.0", path = "../../../cliparser" }
 cmdutil = { version = "0.1.0", path = "../../cmdutil" }
 comfy-table = "7.1.0"
-debugtop = { version = "0.1.0", path = "../../../debugtop" }
-repo = { version = "0.1.0", path = "../../../repo" }
-runlog = { version = "0.1.0", path = "../../../runlog" }
+sapling-clidispatch = { version = "0.1.0", path = "../../../clidispatch" }
+sapling-cliparser = { version = "0.1.0", path = "../../../cliparser" }
+sapling-debugtop = { version = "0.1.0", path = "../../../debugtop" }
+sapling-repo = { version = "0.1.0", path = "../../../repo" }
+sapling-runlog = { version = "0.1.0", path = "../../../runlog" }

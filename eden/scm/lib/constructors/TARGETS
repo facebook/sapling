@@ -9,8 +9,8 @@ rust_library(
         "features": {
             "default": ["git"],
             "git": [
-                "gitstore",
-                "commits-git",
+                "sapling-gitstore",
+                "sapling-commits-git",
             ],
         },
         "lib": {"name": "constructors"},
@@ -18,7 +18,7 @@ rust_library(
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
-            "name": "constructors",
+            "name": "sapling-constructors",
             "repository": "https://github.com/facebook/sapling",
         },
     }},

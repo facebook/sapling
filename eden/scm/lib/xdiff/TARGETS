@@ -13,7 +13,7 @@ rust_library(
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
-            "name": "xdiff",
+            "name": "sapling-xdiff",
             "repository": "https://github.com/facebook/sapling",
         },
     }},

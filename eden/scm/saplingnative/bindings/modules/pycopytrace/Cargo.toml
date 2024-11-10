@@ -6,11 +6,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-async-runtime = { version = "0.1.0", path = "../../../../lib/async-runtime" }
-configmodel = { version = "0.1.0", path = "../../../../lib/config/model" }
-copytrace = { version = "0.1.0", path = "../../../../lib/copytrace" }
 cpython = { version = "0.7.2", default-features = false }
-cpython_ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
-dag = { version = "0.1.0", path = "../../../../lib/dag" }
 pypathmatcher = { version = "0.1.0", path = "../pypathmatcher" }
-storemodel = { version = "0.1.0", path = "../../../../lib/storemodel" }
+sapling-async-runtime = { version = "0.1.0", path = "../../../../lib/async-runtime" }
+sapling-configmodel = { version = "0.1.0", path = "../../../../lib/config/model" }
+sapling-copytrace = { version = "0.1.0", path = "../../../../lib/copytrace" }
+sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
+sapling-dag = { version = "0.1.0", path = "../../../../lib/dag" }
+sapling-storemodel = { version = "0.1.0", path = "../../../../lib/storemodel" }

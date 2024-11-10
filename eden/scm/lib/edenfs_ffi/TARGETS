@@ -28,7 +28,7 @@ rust_library(
                 "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
                 "homepage": "https://sapling-scm.com/",
                 "license": "MIT",
-                "name": "edenfs_ffi",
+                "name": "sapling-edenfs_ffi",
                 "repository": "https://github.com/facebook/sapling",
             },
         },

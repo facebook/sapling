@@ -7,15 +7,15 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
         "dependencies_override": {
-            "dependencies": {"manifest": {"features": ["for-tests"]}},
-            "dev-dependencies": {"manifest-tree": {"features": ["for-tests"]}},
+            "dependencies": {"sapling-manifest": {"features": ["for-tests"]}},
+            "dev-dependencies": {"sapling-manifest-tree": {"features": ["for-tests"]}},
         },
         "lib": {"name": "copytrace"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
-            "name": "copytrace",
+            "name": "sapling-copytrace",
             "repository": "https://github.com/facebook/sapling",
         },
     }},

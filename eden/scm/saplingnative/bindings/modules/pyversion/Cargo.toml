@@ -7,4 +7,4 @@ edition = "2021"
 
 [dependencies]
 cpython = { version = "0.7.2", features = ["python3-sys"], default-features = false }
-version = { version = "0.1.0", path = "../../../../lib/version" }
+sapling-version = { version = "0.1.0", path = "../../../../lib/version" }

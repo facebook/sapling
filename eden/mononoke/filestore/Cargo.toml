@@ -16,12 +16,12 @@ bytes = { version = "1.6.0", features = ["serde"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../server/context" }
 digest = "0.10"
-edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 itertools = "0.13.0"
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 pin-project = "0.4.30"
+sapling-edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
 sha1 = "0.10.5"
 sha2 = "0.10.6"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }

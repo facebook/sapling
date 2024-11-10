@@ -6,7 +6,7 @@ rust_library(
     name = "manifest",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"dev-dependencies": {"types": {
+        "dependencies_override": {"dev-dependencies": {"sapling-types": {
             "default-features": False,
             "features": ["for-tests"],
         }}},
@@ -23,7 +23,7 @@ rust_library(
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
-            "name": "manifest",
+            "name": "sapling-manifest",
             "repository": "https://github.com/facebook/sapling",
         },
     }},

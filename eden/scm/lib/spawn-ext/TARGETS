@@ -19,7 +19,7 @@ rust_library(
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
-            "name": "spawn-ext",
+            "name": "sapling-spawn-ext",
             "repository": "https://github.com/facebook/sapling",
         },
     }},

@@ -27,7 +27,6 @@ cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 context = { version = "0.1.0", path = "../server/context" }
 derivative = "2.2"
 derived_data_type_if = { version = "0.1.0", path = "../derived_data/if" }
-edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
 either = "1.5"
 faster-hex = "0.6.1"
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
@@ -43,6 +42,8 @@ nonzero_ext = "0.2"
 quickcheck = "1.0"
 quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 regex = "1.9.2"
+sapling-edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
+sapling-xdiff = { version = "0.1.0", path = "../../scm/lib/xdiff" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_derive = "1.0.185"
 sha1 = "0.10.5"
@@ -53,7 +54,6 @@ strum = { version = "0.26.2", features = ["derive"] }
 thiserror = "1.0.64"
 thrift_convert = { version = "0.1.0", path = "../common/thrift_convert" }
 vec_map = "0.8"
-xdiff = { version = "0.1.0", path = "../../scm/lib/xdiff" }
 
 [dev-dependencies]
 crossbeam = "0.8"

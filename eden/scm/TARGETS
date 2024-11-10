@@ -117,66 +117,54 @@ export_file(
 hg_binary(
     name = "hg",
     autocargo = {
-        "cargo_target_config": {
-            "name": "hgmain",
-        },
+        "cargo_target_config": {"name": "hgmain"},
         "cargo_toml_config": {
             "dependencies_override": {
                 "dependencies": {
                     "commands": {"default-features": False},
-                    # Not covered by autocargo, so declare explicitly
                     "pyblackbox": {"path": "../../saplingnative/bindings/modules/pyblackbox"},
                 },
                 "target": {
-                    """'cfg(target_os = "linux")'""": {
-                        "dependencies": {
-                            "dirs": {"optional": True},
-                            "identity": {"optional": True},
-                        },
-                    },
-                    """'cfg(target_os = "macos")'""": {
-                        "dependencies": {
-                            "dirs": {"optional": True},
-                            "identity": {"optional": True},
-                        },
-                    },
+                    '\'cfg(target_os = "linux")\'': {"dependencies": {
+                        "dirs": {"optional": True},
+                        "sapling-identity": {"optional": True},
+                    }},
+                    '\'cfg(target_os = "macos")\'': {"dependencies": {
+                        "dirs": {"optional": True},
+                        "sapling-identity": {"optional": True},
+                    }},
                 },
             },
-            "extra_buck_dependencies": {
-                "dependencies": [
-                    # Remove rust-shed for Cargo.toml
-                    (None, "//common/rust/shed/fbinit:fbinit"),
-                    ("configparser", "//eden/scm/lib/config/loader:configloader"),
-                ],
-            },
+            "extra_buck_dependencies": {"dependencies": [
+                (None, "//common/rust/shed/fbinit:fbinit"),
+                ("configparser", "//eden/scm/lib/config/loader:configloader"),
+            ]},
             "features": {
                 "buildinfo": [],
                 "default": [],
                 "eden": [
-                    "clidispatch/eden",
+                    "sapling-clidispatch/eden",
                     "commands/eden",
                 ],
                 "fb": ["commands/fb"],
                 "sl_oss": [
-                    "clidispatch/sl_oss",
+                    "sapling-clidispatch/sl_oss",
                     "commands/sl_oss",
                 ],
                 "with_chg": [
                     "dirs",
-                    "identity",
+                    "sapling-identity",
                 ],
             },
             "package": {
                 "build": "build.rs",
                 "name": "hgmain",
             },
-            "profile": {
-                "release": {
-                    "debug": True,
-                    "incremental": True,
-                    "lto": False,
-                },
-            },
+            "profile": {"release": {
+                "debug": True,
+                "incremental": True,
+                "lto": False,
+            }},
         },
         "cargo_toml_dir": "exec/hgmain",
     },

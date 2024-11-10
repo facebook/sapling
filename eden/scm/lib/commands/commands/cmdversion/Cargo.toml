@@ -10,10 +10,10 @@ repository = "https://github.com/facebook/sapling"
 license = "GPL-2.0-only"
 
 [dependencies]
-clidispatch = { version = "0.1.0", path = "../../../clidispatch" }
 cmdutil = { version = "0.1.0", path = "../../cmdutil" }
-identity = { version = "0.1.0", path = "../../../identity" }
-version = { version = "0.1.0", path = "../../../version" }
+sapling-clidispatch = { version = "0.1.0", path = "../../../clidispatch" }
+sapling-identity = { version = "0.1.0", path = "../../../identity" }
+sapling-version = { version = "0.1.0", path = "../../../version" }
 
 [features]
 default = []

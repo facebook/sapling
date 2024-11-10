@@ -15,7 +15,7 @@ rust_library(
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
-            "name": "hgtime",
+            "name": "sapling-hgtime",
             "repository": "https://github.com/facebook/sapling",
         },
     }},

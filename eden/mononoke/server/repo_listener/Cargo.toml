@@ -15,7 +15,6 @@ bytes = { version = "1.6.0", features = ["serde"] }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cats = { version = "0.1.0", path = "../../cats" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
 connection_security_checker = { version = "0.1.0", path = "../../common/connection_security_checker" }
 context = { version = "0.1.0", path = "../context" }
 edenapi_service = { version = "0.1.0", path = "../../edenapi_service" }
@@ -49,6 +48,7 @@ rate_limiting = { version = "0.1.0", path = "../../rate_limiting" }
 repo_client = { version = "0.1.0", path = "../../repo_client" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 repo_permission_checker = { version = "0.1.0", path = "../../repo_attributes/repo_permission_checker" }
+sapling-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
 scribe_ext = { version = "0.1.0", path = "../../common/scribe_ext" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_depth"] }

@@ -8,9 +8,9 @@ rust_library(
     autocargo = {"cargo_toml_config": {
         "dependencies_override": {"dependencies": {
             "anyhow": {"features": ["backtrace"]},
-            "constructors": {"features": ["git"]},
             "pytracing": {"default-features": False},
-            "repo": {"features": ["wdir"]},
+            "sapling-constructors": {"features": ["git"]},
+            "sapling-repo": {"features": ["wdir"]},
         }},
         "extra_buck_dependencies": {"dependencies": [
             "//eden/scm/saplingnative/bindings/modules/pycheckout:pycheckout",
@@ -21,7 +21,7 @@ rust_library(
         "features": {
             "default": [],
             "eden": [
-                "clidispatch/eden",
+                "sapling-clidispatch/eden",
                 "pycheckout/eden",
                 "pyworkingcopyclient/eden",
                 "pyworkingcopy/eden",
@@ -30,13 +30,13 @@ rust_library(
             ],
             "fb": [
                 "cmdpy/fb",
-                "configloader/fb",
-                "identity/fb",
+                "sapling-configloader/fb",
+                "sapling-identity/fb",
                 "cmdversion/fb",
                 "cmddebugdumpinternalconfig/fb",
                 "cmddebugrefreshconfig/fb",
             ],
-            "sl_oss": ["configloader/sl_oss"],
+            "sl_oss": ["sapling-configloader/sl_oss"],
         },
         "lib": {"name": "commands"},
         "package": {

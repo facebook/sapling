@@ -7,23 +7,23 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
         "dependencies_override": {"dependencies": {
-            "indexedlog": {"features": ["configurable"]},
-            "repo": {"features": ["wdir"]},
-            "thrift-types": {"optional": True},
+            "sapling-indexedlog": {"features": ["configurable"]},
+            "sapling-repo": {"features": ["wdir"]},
+            "sapling-thrift-types": {"optional": True},
         }},
         "features": {
             "eden": [
-                "workingcopy/eden",
-                "thrift-types",
+                "sapling-workingcopy/eden",
+                "sapling-thrift-types",
             ],
-            "sl_oss": ["identity/sl_oss"],
+            "sl_oss": ["sapling-identity/sl_oss"],
         },
         "lib": {"name": "clidispatch"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
-            "name": "clidispatch",
+            "name": "sapling-clidispatch",
             "repository": "https://github.com/facebook/sapling",
         },
     }},

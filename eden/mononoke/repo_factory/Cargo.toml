@@ -25,7 +25,6 @@ cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
 cachelib = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 caching_commit_graph_storage = { version = "0.1.0", path = "../repo_attributes/commit_graph/caching_commit_graph_storage" }
 caching_ext = { version = "0.1.0", path = "../common/rust/caching_ext" }
-clientinfo = { version = "0.1.0", path = "../../scm/lib/clientinfo" }
 commit_cloud = { version = "0.1.0", path = "../commit_cloud" }
 commit_graph = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph" }
 commit_graph_types = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph_types" }
@@ -73,6 +72,7 @@ repo_metadata_checkpoint = { version = "0.1.0", path = "../repo_metadata_checkpo
 repo_permission_checker = { version = "0.1.0", path = "../repo_attributes/repo_permission_checker" }
 repo_sparse_profiles = { version = "0.1.0", path = "../repo_attributes/repo_sparse_profiles" }
 repo_stats_logger = { version = "0.1.0", path = "../repo_stats_logger" }
+sapling-clientinfo = { version = "0.1.0", path = "../../scm/lib/clientinfo" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sql_commit_graph_storage = { version = "0.1.0", path = "../repo_attributes/commit_graph/sql_commit_graph_storage" }

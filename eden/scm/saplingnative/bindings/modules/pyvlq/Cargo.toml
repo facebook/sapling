@@ -7,6 +7,6 @@ edition = "2021"
 
 [dependencies]
 cpython = { version = "0.7.2", default-features = false }
-cpython_ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 pyio = { version = "0.1.0", path = "../pyio" }
-vlqencoding = { version = "0.1.0", path = "../../../../lib/vlqencoding" }
+sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
+sapling-vlqencoding = { version = "0.1.0", path = "../../../../lib/vlqencoding" }

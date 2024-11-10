@@ -7,11 +7,11 @@ edition = "2021"
 
 [dependencies]
 cpython = { version = "0.7.2", default-features = false }
-cpython_ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
-edenfs-client = { version = "0.1.0", path = "../../../../lib/edenfs-client", optional = true }
-types = { version = "0.1.0", path = "../../../../lib/types" }
-workingcopy = { version = "0.1.0", path = "../../../../lib/workingcopy" }
+sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
+sapling-edenfs-client = { version = "0.1.0", path = "../../../../lib/edenfs-client", optional = true }
+sapling-types = { version = "0.1.0", path = "../../../../lib/types" }
+sapling-workingcopy = { version = "0.1.0", path = "../../../../lib/workingcopy" }
 
 [features]
 default = []
-eden = ["edenfs-client"]
+eden = ["sapling-edenfs-client"]

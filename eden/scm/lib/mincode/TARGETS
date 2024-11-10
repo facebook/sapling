@@ -19,7 +19,7 @@ rust_library(
                 "src/**/*.rs",
             ],
             "license": "MIT",
-            "name": "mincode",
+            "name": "sapling-mincode",
             "repository": "https://github.com/facebook/sapling",
         },
     }},

@@ -7,11 +7,11 @@ edition = "2021"
 license = "GPL-2.0-only"
 
 [dependencies]
-bindag = { version = "0.1.0", path = "../bindag" }
-dag = { version = "0.1.0", path = ".." }
-dev-logger = { version = "0.1.0", path = "../../dev-logger" }
-mincode = { version = "0.1.0", path = "../../mincode" }
-minibench = { version = "0.1.0", path = "../../minibench" }
-nonblocking = { version = "0.1.0", path = "../../nonblocking" }
+sapling-bindag = { version = "0.1.0", path = "../bindag" }
+sapling-dag = { version = "0.1.0", path = ".." }
+sapling-dev-logger = { version = "0.1.0", path = "../../dev-logger" }
+sapling-mincode = { version = "0.1.0", path = "../../mincode" }
+sapling-minibench = { version = "0.1.0", path = "../../minibench" }
+sapling-nonblocking = { version = "0.1.0", path = "../../nonblocking" }
 serde_cbor = "0.11"
 tempfile = "3.8"

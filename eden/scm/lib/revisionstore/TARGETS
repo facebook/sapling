@@ -7,8 +7,8 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
         "dependencies_override": {"dependencies": {
-            "minibytes": {"features": ["frombytes"]},
-            "version": {"path": "../version"},
+            "sapling-minibytes": {"features": ["frombytes"]},
+            "sapling-version": {"path": "../version"},
         }},
         "extra_buck_dependencies": {"dependencies": [
             "//common/rust/shed/fbinit:fbinit",
@@ -28,7 +28,7 @@ rust_library(
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
-            "name": "revisionstore",
+            "name": "sapling-revisionstore",
             "repository": "https://github.com/facebook/sapling",
         },
     }},
@@ -117,7 +117,7 @@ rust_library(
                 "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
                 "homepage": "https://sapling-scm.com/",
                 "license": "MIT",
-                "name": "revisionstore_types",
+                "name": "sapling-revisionstore_types",
                 "repository": "https://github.com/facebook/sapling",
             },
         },

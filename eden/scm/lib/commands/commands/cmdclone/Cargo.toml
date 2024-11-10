@@ -11,22 +11,22 @@ license = "GPL-2.0-only"
 
 [dependencies]
 anyhow = "1.0.86"
-async-runtime = { version = "0.1.0", path = "../../../async-runtime" }
-clidispatch = { version = "0.1.0", path = "../../../clidispatch" }
-clone = { version = "0.1.0", path = "../../../clone" }
 cmdpy = { version = "0.1.0", path = "../../cmdpy" }
 cmdutil = { version = "0.1.0", path = "../../cmdutil" }
-configloader = { version = "0.1.0", path = "../../../config/loader" }
-configmodel = { version = "0.1.0", path = "../../../config/model" }
-eagerepo = { version = "0.1.0", path = "../../../eagerepo" }
-exchange = { version = "0.1.0", path = "../../../exchange" }
 fail = { version = "0.4", features = ["failpoints"] }
-hgplain = { version = "0.1.0", path = "../../../util/hgplain" }
-identity = { version = "0.1.0", path = "../../../identity" }
-migration = { version = "0.1.0", path = "../../../migration" }
-repo = { version = "0.1.0", path = "../../../repo" }
-repourl = { version = "0.1.0", path = "../../../repo/url" }
+sapling-async-runtime = { version = "0.1.0", path = "../../../async-runtime" }
+sapling-clidispatch = { version = "0.1.0", path = "../../../clidispatch" }
+sapling-clone = { version = "0.1.0", path = "../../../clone" }
+sapling-configloader = { version = "0.1.0", path = "../../../config/loader" }
+sapling-configmodel = { version = "0.1.0", path = "../../../config/model" }
+sapling-eagerepo = { version = "0.1.0", path = "../../../eagerepo" }
+sapling-exchange = { version = "0.1.0", path = "../../../exchange" }
+sapling-hgplain = { version = "0.1.0", path = "../../../util/hgplain" }
+sapling-identity = { version = "0.1.0", path = "../../../identity" }
+sapling-migration = { version = "0.1.0", path = "../../../migration" }
+sapling-repo = { version = "0.1.0", path = "../../../repo" }
+sapling-repourl = { version = "0.1.0", path = "../../../repo/url" }
+sapling-types = { version = "0.1.0", path = "../../../types" }
+sapling-util = { version = "0.1.0", path = "../../../util" }
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
-types = { version = "0.1.0", path = "../../../types" }
 url = "2.5.2"
-util = { version = "0.1.0", path = "../../../util" }

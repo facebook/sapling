@@ -9,7 +9,7 @@ rust_library(
     autocargo = {"cargo_toml_config": {
         "features": {
             "default": [],
-            "fb": ["configloader/fb"],
+            "fb": ["sapling-configloader/fb"],
         },
         "lib": {"name": "cmddebugdumpinternalconfig"},
         "package": {

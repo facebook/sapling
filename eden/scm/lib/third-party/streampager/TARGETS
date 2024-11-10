@@ -5,36 +5,32 @@ oncall("sapling")
 rust_library(
     name = "streampager",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {
-                "dependencies": {
-                    "smallvec": {
-                        "default-features": False,
-                        "features": [],
-                    },
-                },
-            },
-            "package": {
-                "authors": [
-                    "Mark Juggurnauth-Thomas <markbt@efaref.net>",
-                    "Facebook Source Control Team <sourcecontrol-dev@fb.com>",
-                ],
-                "categories": [
-                    "command-line-utilities",
-                    "text-processing",
-                ],
-                "description": "streampager is a pager for command output or large files",
-                "keywords": [
-                    "pager",
-                    "less",
-                    "more",
-                ],
-                "license": "MIT",
-                "version": "0.10.3",
-            },
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"dependencies": {"smallvec": {
+            "default-features": False,
+            "features": [],
+        }}},
+        "lib": {"name": "streampager"},
+        "package": {
+            "authors": [
+                "Mark Juggurnauth-Thomas <markbt@efaref.net>",
+                "Facebook Source Control Team <sourcecontrol-dev@fb.com>",
+            ],
+            "categories": [
+                "command-line-utilities",
+                "text-processing",
+            ],
+            "description": "streampager is a pager for command output or large files",
+            "keywords": [
+                "pager",
+                "less",
+                "more",
+            ],
+            "license": "MIT",
+            "name": "sapling-streampager",
+            "version": "0.10.3",
         },
-    },
+    }},
     deps = [
         "fbsource//third-party/rust:bit-set",
         "fbsource//third-party/rust:dirs",

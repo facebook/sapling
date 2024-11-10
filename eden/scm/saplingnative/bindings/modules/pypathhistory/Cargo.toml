@@ -6,10 +6,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-async-runtime = { version = "0.1.0", path = "../../../../lib/async-runtime" }
 cpython = { version = "0.7.2", default-features = false }
-cpython_ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
-dag = { version = "0.1.0", path = "../../../../lib/dag" }
-pathhistory = { version = "0.1.0", path = "../../../../lib/pathhistory" }
-storemodel = { version = "0.1.0", path = "../../../../lib/storemodel" }
-types = { version = "0.1.0", path = "../../../../lib/types" }
+sapling-async-runtime = { version = "0.1.0", path = "../../../../lib/async-runtime" }
+sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
+sapling-dag = { version = "0.1.0", path = "../../../../lib/dag" }
+sapling-pathhistory = { version = "0.1.0", path = "../../../../lib/pathhistory" }
+sapling-storemodel = { version = "0.1.0", path = "../../../../lib/storemodel" }
+sapling-types = { version = "0.1.0", path = "../../../../lib/types" }

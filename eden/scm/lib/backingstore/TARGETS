@@ -45,16 +45,16 @@ rust_library(
         ]},
         "cargo_toml_config": {
             "dependencies_override": {"dependencies": {
-                "constructors": {"default-features": False},
-                "indexedlog": {"features": ["configurable"]},
+                "sapling-constructors": {"default-features": False},
+                "sapling-indexedlog": {"features": ["configurable"]},
             }},
-            "features": {"fb": ["configloader/fb"]},
+            "features": {"fb": ["sapling-configloader/fb"]},
             "lib": {"name": "backingstore"},
             "package": {
                 "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
                 "homepage": "https://sapling-scm.com/",
                 "license": "MIT",
-                "name": "backingstore",
+                "name": "sapling-backingstore",
                 "repository": "https://github.com/facebook/sapling",
             },
         },

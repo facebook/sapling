@@ -29,13 +29,13 @@ percent-encoding = "2.1"
 phases = { version = "0.1.0", path = "../../phases" }
 pin-project = "0.4.30"
 quickcheck = "1.0"
-revisionstore_types = { version = "0.1.0", path = "../../../scm/lib/revisionstore/types" }
+sapling-revisionstore_types = { version = "0.1.0", path = "../../../scm/lib/revisionstore/types" }
+sapling-types = { version = "0.1.0", path = "../../../scm/lib/types" }
+sapling-vlqencoding = { version = "0.1.0", path = "../../../scm/lib/vlqencoding" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 thiserror = "1.0.64"
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
 tokio-util = { version = "0.7.12", features = ["full"] }
-types = { version = "0.1.0", path = "../../../scm/lib/types" }
-vlqencoding = { version = "0.1.0", path = "../../../scm/lib/vlqencoding" }
 
 [dev-dependencies]
 assert_matches = "1.5"

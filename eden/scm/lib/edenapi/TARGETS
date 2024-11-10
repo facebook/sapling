@@ -6,13 +6,13 @@ rust_library(
     name = "edenapi",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"dependencies": {"version": {"path": "../version"}}},
+        "dependencies_override": {"dependencies": {"sapling-version": {"path": "../version"}}},
         "lib": {"name": "edenapi"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
-            "name": "edenapi",
+            "name": "sapling-edenapi",
             "repository": "https://github.com/facebook/sapling",
         },
     }},

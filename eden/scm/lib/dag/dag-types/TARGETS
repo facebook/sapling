@@ -6,7 +6,7 @@ rust_library(
     name = "dag-types",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"dependencies": {"minibytes": {
+        "dependencies_override": {"dependencies": {"sapling-minibytes": {
             "default-features": False,
             "features": [],
         }}},
@@ -19,7 +19,7 @@ rust_library(
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
-            "name": "dag-types",
+            "name": "sapling-dag-types",
             "repository": "https://github.com/facebook/sapling",
         },
     }},

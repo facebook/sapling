@@ -7,25 +7,25 @@ edition = "2021"
 build = "build.rs"
 
 [dependencies]
-atexit = { version = "0.1.0", path = "../../lib/util/atexit" }
-clidispatch = { version = "0.1.0", path = "../../lib/clidispatch" }
 commands = { version = "0.1.0", path = "../../lib/commands", default-features = false }
-configparser = { package = "configloader", version = "0.1.0", path = "../../lib/config/loader" }
+configparser = { package = "sapling-configloader", version = "0.1.0", path = "../../lib/config/loader" }
 pyblackbox = { path = "../../saplingnative/bindings/modules/pyblackbox" }
+sapling-atexit = { version = "0.1.0", path = "../../lib/util/atexit" }
+sapling-clidispatch = { version = "0.1.0", path = "../../lib/clidispatch" }
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 dirs = { version = "2.0", optional = true }
-encoding = { version = "0.1.0", path = "../../lib/encoding" }
-identity = { version = "0.1.0", path = "../../lib/identity", optional = true }
 libc = "0.2.139"
+sapling-encoding = { version = "0.1.0", path = "../../lib/encoding" }
+sapling-identity = { version = "0.1.0", path = "../../lib/identity", optional = true }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 dirs = { version = "2.0", optional = true }
-encoding = { version = "0.1.0", path = "../../lib/encoding" }
-identity = { version = "0.1.0", path = "../../lib/identity", optional = true }
 libc = "0.2.139"
-webview-app = { version = "0.1.0", path = "../../lib/webview-app" }
+sapling-encoding = { version = "0.1.0", path = "../../lib/encoding" }
+sapling-identity = { version = "0.1.0", path = "../../lib/identity", optional = true }
+sapling-webview-app = { version = "0.1.0", path = "../../lib/webview-app" }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 anyhow = "1.0.86"
@@ -34,10 +34,10 @@ winapi = { version = "0.3", features = ["everything", "std"] }
 [features]
 buildinfo = []
 default = []
-eden = ["clidispatch/eden", "commands/eden"]
+eden = ["commands/eden", "sapling-clidispatch/eden"]
 fb = ["commands/fb"]
-sl_oss = ["clidispatch/sl_oss", "commands/sl_oss"]
-with_chg = ["dirs", "identity"]
+sl_oss = ["commands/sl_oss", "sapling-clidispatch/sl_oss"]
+with_chg = ["dirs", "sapling-identity"]
 
 [profile.release]
 debug = true

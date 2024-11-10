@@ -7,8 +7,8 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.86"
-auth = { version = "0.1.0", path = "../../../../lib/auth" }
 cpython = { version = "0.7.2", default-features = false }
-cpython_ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 pyconfigloader = { version = "0.1.0", path = "../pyconfigloader" }
+sapling-auth = { version = "0.1.0", path = "../../../../lib/auth" }
+sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 url = "2.5.2"

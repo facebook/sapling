@@ -5,29 +5,25 @@ oncall("sapling")
 rust_python_library(
     name = "pycheckout",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {
-                "dependencies": {
-                    "cpython": {
-                        "features": [],
-                        "git": None,
-                        "rev": None,
-                    },
-                    "io": {"optional": True},
-                    "workingcopy": {"optional": True},
-                },
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"dependencies": {
+            "cpython": {
+                "features": [],
+                "git": None,
+                "rev": None,
             },
-            "features": {
-                "default": [],
-                "eden": [
-                    "checkout/eden",
-                    "io",
-                    "workingcopy",
-                ],
-            },
+            "sapling-io": {"optional": True},
+            "sapling-workingcopy": {"optional": True},
+        }},
+        "features": {
+            "default": [],
+            "eden": [
+                "sapling-checkout/eden",
+                "sapling-io",
+                "sapling-workingcopy",
+            ],
         },
-    },
+    }},
     crate_root = "src/lib.rs",
     features = ["eden"],
     deps = [

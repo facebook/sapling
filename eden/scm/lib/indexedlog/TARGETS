@@ -26,7 +26,7 @@ rust_library(
             "//eden/scm/lib/minibench:minibench",
         ]},
         "features": {
-            "configurable": ["configmodel"],
+            "configurable": ["sapling-configmodel"],
             "sigbus-handler": [],
         },
         "lib": {"name": "indexedlog"},
@@ -34,7 +34,7 @@ rust_library(
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
-            "name": "indexedlog",
+            "name": "sapling-indexedlog",
             "repository": "https://github.com/facebook/sapling",
         },
     }},

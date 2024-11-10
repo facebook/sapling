@@ -12,7 +12,7 @@ rust_library(
             "autoexamples": False,
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
-            "name": "minibench",
+            "name": "sapling-minibench",
             "repository": "https://github.com/facebook/sapling",
         },
     }},

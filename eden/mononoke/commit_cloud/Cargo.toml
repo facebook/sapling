@@ -16,7 +16,6 @@ anyhow = "1.0.86"
 async-trait = "0.1.71"
 bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
 changeset_info = { version = "0.1.0", path = "../derived_data/changeset_info" }
-clientinfo = { version = "0.1.0", path = "../../scm/lib/clientinfo" }
 commit_cloud_helpers = { version = "0.1.0", path = "helpers" }
 commit_cloud_types = { version = "0.1.0", path = "types" }
 context = { version = "0.1.0", path = "../server/context" }
@@ -27,6 +26,7 @@ metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
 repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }
+sapling-clientinfo = { version = "0.1.0", path = "../../scm/lib/clientinfo" }
 serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_depth"] }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }

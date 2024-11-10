@@ -7,8 +7,8 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
         "dependencies_override": {
-            "dependencies": {"dag": {"features": ["render"]}},
-            "dev-dependencies": {"types": {
+            "dependencies": {"sapling-dag": {"features": ["render"]}},
+            "dev-dependencies": {"sapling-types": {
                 "default-features": False,
                 "features": ["for-tests"],
             }},
@@ -19,7 +19,7 @@ rust_library(
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
-            "name": "mutationstore",
+            "name": "sapling-mutationstore",
             "repository": "https://github.com/facebook/sapling",
         },
     }},

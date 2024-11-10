@@ -5,22 +5,10 @@ oncall("scm_server_infra")
 rust_library(
     name = "mononoke_api",
     srcs = glob(["src/**/*.rs"]),
-    autocargo = {
-        "cargo_toml_config": {
-            "dependencies_override": {
-                "dependencies": {
-                    "sparse": {
-                        "features": ["async"],
-                    },
-                },
-            },
-            "extra_buck_dependencies": {
-                "dependencies": [
-                    "//eden/scm/lib/sparse:sparse",
-                ],
-            },
-        },
-    },
+    autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"dependencies": {"sapling-sparse": {"features": ["async"]}}},
+        "extra_buck_dependencies": {"dependencies": ["//eden/scm/lib/sparse:sparse"]},
+    }},
     test_deps = [
         "fbsource//third-party/rust:assert_matches",
         "fbsource//third-party/rust:gix-object",

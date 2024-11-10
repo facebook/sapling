@@ -21,7 +21,6 @@ bonsai_svnrev_mapping = { version = "0.1.0", path = "../../bonsai_svnrev_mapping
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 clap = { version = "4.5.20", features = ["derive", "env", "string", "unicode", "wrap_help"] }
-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
 cmdlib_caching = { version = "0.1.0", path = "../caching" }
 cmdlib_logging = { version = "0.1.0", path = "../log" }
 commit_graph_types = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph_types" }
@@ -52,6 +51,7 @@ regex = "1.9.2"
 rendezvous = { version = "0.1.0", path = "../../common/rendezvous" }
 repo_factory = { version = "0.1.0", path = "../../repo_factory" }
 running = { version = "0.1.0", path = "../../common/running" }
+sapling-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 services = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 shutdown_timeout = { version = "0.1.0", path = "shutdown_timeout" }
