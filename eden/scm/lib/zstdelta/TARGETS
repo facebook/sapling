@@ -9,6 +9,7 @@ rust_library(
         "bin": [{
             "doc": False,
             "name": "zstdelta",
+            "path": "src/main.rs",
         }],
         "dependencies_override": {"dependencies": {"zstd-sys": {"features": ["experimental"]}}},
         "lib": {"name": "zstdelta"},
