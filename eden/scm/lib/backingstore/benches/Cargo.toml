@@ -16,4 +16,4 @@ sapling-types = { version = "0.1.0", path = "../../types" }
 tempfile = "3.8"
 
 [features]
-fb = ["configloader/fb"]
+fb = ["sapling-configloader/fb"]

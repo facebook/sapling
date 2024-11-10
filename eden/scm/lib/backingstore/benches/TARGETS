@@ -7,18 +7,10 @@ rust_binary(
     srcs = glob([
         "src/**/*.rs",
     ]),
-    autocargo = {
-        "cargo_toml_config": {
-            "extra_buck_dependencies": {
-                "dependencies": [
-                    "//eden/scm/lib/config/loader:configloader",
-                ],
-            },
-            "features": {
-                "fb": ["configloader/fb"],
-            },
-        },
-    },
+    autocargo = {"cargo_toml_config": {
+        "extra_buck_dependencies": {"dependencies": ["//eden/scm/lib/config/loader:configloader"]},
+        "features": {"fb": ["sapling-configloader/fb"]},
+    }},
     crate_root = "src/main.rs",
     metadata = {
         "buck.cfg_modifiers": [
