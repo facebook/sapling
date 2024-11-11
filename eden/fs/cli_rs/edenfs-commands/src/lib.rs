@@ -26,7 +26,6 @@ mod debug;
 mod du;
 mod gc;
 mod handles;
-mod journal_position;
 mod list;
 mod minitop;
 mod notify;
@@ -106,10 +105,10 @@ pub enum TopLevelSubcommand {
     Debug(crate::debug::DebugCmd),
     Du(crate::du::DiskUsageCmd),
     Fsconfig(crate::config::FsConfigCmd),
-    JournalPosition(crate::journal_position::JournalPositionCmd),
     // Gc(crate::gc::GcCmd),
     List(crate::list::ListCmd),
     Minitop(crate::minitop::MinitopCmd),
+    #[clap(alias = "notification")]
     Notify(crate::notify::NotifyCmd),
     Pid(crate::pid::PidCmd),
     #[clap(subcommand, alias = "pp")]
@@ -137,7 +136,6 @@ impl TopLevelSubcommand {
             Fsconfig(cmd) => cmd,
             Debug(cmd) => cmd,
             Du(cmd) => cmd,
-            JournalPosition(cmd) => cmd,
             // Gc(cmd) => cmd,
             List(cmd) => cmd,
             Minitop(cmd) => cmd,
@@ -165,7 +163,6 @@ impl TopLevelSubcommand {
             //TopLevelSubcommand::Gc(_) => "gc",
             #[cfg(target_os = "windows")]
             TopLevelSubcommand::Handles(_) => "handles",
-            TopLevelSubcommand::JournalPosition(_) => "journal-position",
             TopLevelSubcommand::List(_) => "list",
             TopLevelSubcommand::Minitop(_) => "minitop",
             TopLevelSubcommand::Notify(_) => "notify",

@@ -24,9 +24,9 @@ use crate::ExitCode;
 // TODO: add a --mount_point flag to specify which mount to query
 #[derive(Parser, Debug)]
 #[clap(about = "Returns the current EdenFS journal position")]
-pub struct JournalPositionCmd {}
+pub struct GetPositionCmd {}
 
-impl JournalPositionCmd {
+impl GetPositionCmd {
     //TODO: refactor subscribe::get_mount_point into a separate crate
     pub fn get_mount_point(&self) -> Result<PathBuf> {
         locate_repo_root(
@@ -38,7 +38,7 @@ impl JournalPositionCmd {
 }
 
 #[async_trait]
-impl crate::Subcommand for JournalPositionCmd {
+impl crate::Subcommand for GetPositionCmd {
     async fn run(&self) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
         let client = instance.connect(None).await?;

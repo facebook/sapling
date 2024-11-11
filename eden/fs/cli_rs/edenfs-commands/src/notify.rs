@@ -12,22 +12,32 @@ use async_trait::async_trait;
 use clap::Parser;
 
 use crate::ExitCode;
+use crate::Subcommand;
+
+mod get_position;
 
 #[derive(Parser, Debug)]
 #[clap(about = "Provides a list of filesystem changes since the specified position")]
 pub struct NotifyCmd {
-    #[clap(
-        short,
-        long,
-        help = "Return filesystem changes starting from this position to the current one. Returns the current position at time of call."
-    )]
-    position: String,
+    #[clap(subcommand)]
+    subcommand: NotifySubcommand,
+}
+
+#[derive(Parser, Debug)]
+pub enum NotifySubcommand {
+    GetPosition(get_position::GetPositionCmd),
 }
 
 #[async_trait]
-impl crate::Subcommand for NotifyCmd {
+impl Subcommand for NotifyCmd {
     async fn run(&self) -> Result<ExitCode> {
-        println!("Not Implemented. Args: position: {:?}", self.position);
-        Ok(0)
+        use NotifySubcommand::*;
+        let sc: &(dyn Subcommand + Send + Sync) = match &self.subcommand {
+            GetPosition(cmd) => cmd,
+            _ => {
+                unimplemented!()
+            }
+        };
+        sc.run().await
     }
 }
