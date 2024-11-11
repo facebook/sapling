@@ -6,10 +6,22 @@ rust_library(
     name = "streampager",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"dependencies": {"smallvec": {
-            "default-features": False,
-            "features": [],
-        }}},
+        "dependencies_override": {"dependencies": {
+            "indexmap": {"features": []},
+            "serde": {"features": ["derive"]},
+            "smallvec": {
+                "default-features": False,
+                "features": [],
+            },
+            "termwiz": {"features": []},
+        }},
+        "extra_buck_dependencies": {"dependencies": [
+            "fbsource//third-party/rust:notify",
+        ]},
+        "features": {
+            "keymap-file": [],
+            "load_file": ["notify"],
+        },
         "lib": {"name": "streampager"},
         "package": {
             "authors": [
