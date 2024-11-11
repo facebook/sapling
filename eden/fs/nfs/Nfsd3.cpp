@@ -9,6 +9,7 @@
 
 #include <memory>
 
+#include <folly/String.h>
 #include <folly/Utility.h>
 #include <folly/executors/SerialExecutor.h>
 #include <folly/futures/Future.h>
@@ -2128,20 +2129,20 @@ folly::SemiFuture<folly::Unit> Nfsd3::unmount() {
 
 void Nfsd3::invalidate(AbsolutePath path, mode_t mode) {
   invalidationExecutor_->add([path = std::move(path), mode]() {
-    try {
-      XLOG(DBG9) << "Invalidating: " << path.c_str() << " mode: " << mode;
-      { chmod(path.c_str(), mode); }
+    XLOG(DBG9) << "Invalidating: " << path.c_str() << " mode: " << mode;
+    if (chmod(path.c_str(), mode) == 0) {
       XLOG(DBG9) << "Finished invalidating: " << path.c_str();
-    } catch (const std::exception& ex) {
-      if (const auto* system_error =
-              dynamic_cast<const std::system_error*>(&ex)) {
-        if (isEnoent(*system_error)) {
-          // A removed path would result in an ENOENT error, this is expected,
-          // don't warn about it.
-          return;
-        }
-      }
-      XLOGF(ERR, "Couldn't invalidate {}: {}", path, folly::exceptionStr(ex));
+    } else if (errno == ENOENT) {
+      // ENOENT is expected after removing files.
+      XLOG(DBG9) << "Finished invalidating (no longer exists): "
+                 << path.c_str();
+    } else {
+      XLOGF(
+          DFATAL,
+          "Error invalidating path {} to mode {} using chmod: {}",
+          path,
+          mode,
+          folly::errnoStr(errno));
     }
   });
 }
