@@ -1,4 +1,4 @@
-#require git no-eden
+#require git no-eden no-windows
 
   $ eagerepo
   $ enable github

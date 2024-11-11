@@ -9,8 +9,10 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::io;
+use std::io::Write as _;
 use std::path::Path;
 use std::path::PathBuf;
+use std::process::Stdio;
 use std::sync::Arc;
 
 use anyhow::bail;
@@ -39,6 +41,7 @@ use dag::VertexOptions;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use gitcompat::BareGit;
+use gitcompat::GitCmd as _;
 use gitcompat::ReferenceValue;
 use gitdag::git2;
 use gitdag::GitDag;
@@ -46,6 +49,7 @@ use metalog::MetaLog;
 use minibytes::Bytes;
 use parking_lot::Mutex;
 use paste::paste;
+use spawn_ext::CommandError;
 use storemodel::ReadRootTreeIds;
 use storemodel::SerializationFormat;
 use types::HgId;
@@ -435,7 +439,7 @@ impl GitSegmentedCommits {
             metalog.root_id().to_hex()
         );
         let repo = self.git_repo.lock();
-        let mut ref_to_change = HashMap::<String, Option<git2::Oid>>::new();
+        let mut ref_to_change = HashMap::<String, Option<HgId>>::new();
 
         let new_bookmarks = metalog.get_bookmarks()?;
         let new_git_refs = metalog.get_git_refs()?;
@@ -454,7 +458,7 @@ impl GitSegmentedCommits {
             let mut git_visibleheads = HashSet::with_capacity(visibleheads.len());
             // Delete non-existed visibleheads.
             for reference in repo.references()? {
-                let mut reference = reference?;
+                let reference = reference?;
                 let ref_name = match reference.name() {
                     Some(n) => n,
                     None => continue,
@@ -468,20 +472,19 @@ impl GitSegmentedCommits {
                         _ => true,
                     };
                     if should_delete {
-                        tracing::debug!(ref_name = &ref_name, "deleting visiblehead ref");
-                        reference.delete()?;
+                        tracing::trace!(ref_name, "removing visiblehead");
+                        ref_to_change.insert(ref_name.to_string(), None);
                     }
                 }
             }
             // Insert new visibleheads.
             for id in visibleheads.difference(&git_visibleheads) {
                 if new_visible_oids.contains(id) {
-                    tracing::debug!(?id, "skipping visiblehead - matches another ref");
+                    tracing::trace!(?id, "skipping visiblehead - matches another ref");
                 } else {
                     let ref_name = format!("refs/visibleheads/{}", id.to_hex());
-                    let oid = hgid_to_git_oid(*id);
-                    tracing::debug!(ref_name = &ref_name, "adding visiblehead ref");
-                    repo.reference(&ref_name, oid, true, &reflog_message)?;
+                    tracing::trace!(ref_name, ?id, "setting visiblehead");
+                    ref_to_change.insert(ref_name, Some(*id));
                 }
             }
         }
@@ -490,7 +493,9 @@ impl GitSegmentedCommits {
         'update_changes: {
             let parent = match metalog.parent()? {
                 None => {
-                    tracing::debug!("metalog parent is missing - skip updating changes");
+                    tracing::debug!(
+                        "metalog parent is missing - skip updating non-visiblehead refs"
+                    );
                     break 'update_changes; // skip - no parent
                 }
                 Some(v) => v,
@@ -506,39 +511,59 @@ impl GitSegmentedCommits {
                     }
                     _ => format!("refs/remotes/{}", name),
                 };
-                tracing::debug!(ref_name=&ref_name, id=?optional_id, "updating remotename ref");
-                ref_to_change.insert(ref_name, optional_id.map(hgid_to_git_oid));
+                tracing::trace!(ref_name=&ref_name, id=?optional_id, "updating remotename ref");
+                ref_to_change.insert(ref_name, optional_id);
             }
             for (name, optional_id) in find_changes(&old_bookmarks, &new_bookmarks) {
                 let ref_name = format!("refs/heads/{}", name);
-                tracing::debug!(ref_name=&ref_name, id=?optional_id, "updating bookmark ref");
-                ref_to_change.insert(ref_name, optional_id.map(hgid_to_git_oid));
+                tracing::trace!(ref_name=&ref_name, id=?optional_id, "updating bookmark ref");
+                ref_to_change.insert(ref_name, optional_id);
             }
             for (ref_name, optional_id) in find_changes(&old_git_refs, &new_git_refs) {
-                tracing::debug!(ref_name=&ref_name, id=?optional_id, "updating git ref");
-                ref_to_change.insert(ref_name.clone(), optional_id.map(hgid_to_git_oid));
+                tracing::trace!(ref_name=&ref_name, id=?optional_id, "updating git ref");
+                ref_to_change.insert(ref_name.clone(), optional_id);
             }
+        }
 
-            if !ref_to_change.is_empty() {
-                for reference in repo.references()? {
-                    let mut reference = reference?;
-                    let ref_name = match reference.name() {
-                        Some(n) => n,
-                        None => continue,
-                    };
-                    match ref_to_change.remove(ref_name) {
-                        None => continue,
-                        Some(None) => reference.delete()?,
-                        Some(Some(oid)) => {
-                            repo.reference(ref_name, oid, true, &reflog_message)?;
-                        }
+        // Run `git update-ref` to apply updates.
+        if !ref_to_change.is_empty() {
+            tracing::debug!(?ref_to_change, "updating git ref");
+
+            let mut update_ref_stdin = String::new();
+            for (name, value) in ref_to_change {
+                match value {
+                    Some(oid) => {
+                        update_ref_stdin.push_str(&format!(
+                            "update {}\0{}\0\0",
+                            name,
+                            oid.to_hex()
+                        ));
+                    }
+                    None => {
+                        update_ref_stdin.push_str(&format!("delete {}\0\0", name));
                     }
                 }
-                for (ref_name, optional_oid) in ref_to_change {
-                    if let Some(oid) = optional_oid {
-                        repo.reference(&ref_name, oid, true, &reflog_message)?;
-                    }
-                }
+            }
+            let mut cmd = self.git.git_cmd(
+                "update-ref",
+                &[
+                    "-m",
+                    reflog_message.as_str(),
+                    "--no-deref",
+                    "--create-reflog",
+                    "--stdin",
+                    "-z",
+                ],
+            );
+            let mut child = cmd.stdin(Stdio::piped()).spawn()?;
+            if let Some(mut stdin) = child.stdin.take() {
+                stdin.write_all(update_ref_stdin.as_bytes())?;
+                drop(stdin);
+            }
+            let status = child.wait()?;
+            if !status.success() {
+                let err = CommandError::new(&cmd, None).with_status(&status);
+                return Err(err.into());
             }
         }
 
