@@ -14,7 +14,7 @@ license = "MIT"
 name = "dag_types"
 
 [dependencies]
-abomonation = { version = "0.7", features = ["smallvec"], optional = true }
+abomonation = { version = "0.7", optional = true }
 abomonation_derive = "0.5"
 quickcheck = { version = "1.0", optional = true }
 sapling-minibytes = { version = "0.1.0", path = "../../minibytes", default-features = false }

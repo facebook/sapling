@@ -6,10 +6,13 @@ rust_library(
     name = "dag-types",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"dependencies": {"sapling-minibytes": {
-            "default-features": False,
-            "features": [],
-        }}},
+        "dependencies_override": {"dependencies": {
+            "abomonation": {"features": []},
+            "sapling-minibytes": {
+                "default-features": False,
+                "features": [],
+            },
+        }},
         "features": {
             "for-tests": ["quickcheck"],
             "serialize-abomonation": ["abomonation"],
