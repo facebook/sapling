@@ -820,6 +820,7 @@ export type ClientToServerMessage =
       id: string;
       comparison: Comparison;
       fieldName: string;
+      phabricatorDiffNumber: string | undefined;
       summary: string | undefined;
       testPlan: string | undefined;
       title: string;

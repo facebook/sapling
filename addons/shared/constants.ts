@@ -10,6 +10,7 @@ export const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
 /** Diff authoring field names for internal users */
 export enum InternalFieldName {
+  DifferentialRevision = 'Differential Revision',
   Summary = 'Summary',
   TestPlan = 'Test Plan',
   Title = 'Title',
