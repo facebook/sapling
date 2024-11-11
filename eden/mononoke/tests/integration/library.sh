@@ -329,6 +329,18 @@ function mononoke_hg_sync_loop_regenerate {
     ssh://user@dummy/"$repo" sync-loop --start-id "$start_id" "$@"
 }
 
+function mononoke_modern_sync {
+  START_ID="$1"
+  shift
+
+  GLOG_minloglevel=5 "$MONONOKE_MODERN_SYNC" \
+    "${CACHE_ARGS[@]}" \
+    "${COMMON_ARGS[@]}" \
+    --repo-id "$REPOID" \
+    --mononoke-config-path "$TESTTMP/mononoke-config" \
+     sync-loop --start-id "$START_ID"
+}
+
 function mononoke_newadmin {
   GLOG_minloglevel=5 "$MONONOKE_NEWADMIN" \
     "${CACHE_ARGS[@]}" \
