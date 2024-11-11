@@ -959,16 +959,6 @@ void EdenServer::updatePeriodicTaskIntervals(const EdenConfig& config) {
   } else {
     detectNfsCrawlTask_.updateInterval(0s);
   }
-
-#ifdef _WIN32
-  // Using 1 minute as threshold for reporting slowness.
-  // P99 of `eden doctor --dry-run` run is ~25s.
-  // (https://fburl.com/scuba/edenfs_cli_usage/0ky3mf6q)
-  edenDoctorTask_.updateInterval(
-      std::chrono::duration_cast<std::chrono::milliseconds>(
-          config.edenDoctorInterval.getValue()),
-      60s);
-#endif
 }
 
 void EdenServer::scheduleCallbackOnMainEventBase(
@@ -2751,67 +2741,6 @@ void EdenServer::detectNfsCrawl() {
       }
     }
   }
-}
-
-void EdenServer::runEdenDoctor() {
-  // We are creating a new thread after a long time of inactivity and hence
-  // it makes sense to create a new thread pool executor for each run rather
-  // than reusing it. Explanation on why CPUThreadPoolExecutor-
-  // https://www.internalfb.com/intern/staticdocs/fbcref/guides/Executors/.
-  folly::CPUThreadPoolExecutor executor(1);
-  auto systemConfigDir = config_->getEdenConfig()->getSystemConfigDir();
-  auto edenDir = getEdenDir();
-  auto structuredLogger = structuredLogger_;
-  executor.add([systemConfigDir, edenDir, structuredLogger] {
-    auto doctorRunStatus = AutoEdenDoctorRunEvent::Success;
-    auto statusReason = std::string();
-    try {
-      XLOG(INFO, "Running periodic eden doctor dry-run.");
-      // Not passing Options field cause "0x57" error. ref: D59783277
-      SpawnedProcess::Options opts;
-#ifdef _WIN32
-      opts.creationFlags(CREATE_NO_WINDOW);
-      opts.nullStderr();
-      opts.nullStdin();
-      opts.nullStdout();
-#endif // _WIN32
-      // Assuming, this will only be run from windows user's system,
-      // we are using the plain vanilla version of eden doctor dry run.
-      // This can be modified in the future to pass config-dir param.
-      auto proc = SpawnedProcess(
-          {"c:\\tools\\eden\\bin\\edenfsctl.exe",
-           "--etc-eden-dir",
-           systemConfigDir.c_str(),
-           "--config-dir",
-           edenDir.asString(),
-           "doctor",
-           "--dry-run",
-           "--fast"},
-          std::move(opts));
-      XLOG(INFO, "Checking status for eden doctor dry-run.");
-      // Setting the timeout to terminate process to 2.5 minutes.
-      // P99.9 to run eden doctor dry-run is ~2 minutes.
-      // (https://fburl.com/scuba/edenfs_cli_usage/0ky3mf6q)
-      auto status = proc.waitOrTerminateOrKill(150s, 5s);
-      if (status.exitStatus() != 0) {
-        XLOG(
-            ERR,
-            "EdenFS doctor dry run failed or timed-out. Check edenfs doctor scuba logs for more info.");
-        doctorRunStatus = AutoEdenDoctorRunEvent::TimeoutOrFailure;
-      }
-    } catch (const std::exception& e) {
-      XLOG(ERR)
-          << "Exception occurred while trying to run periodic doctor dry-run: "
-          << e.what();
-      doctorRunStatus = AutoEdenDoctorRunEvent::ProcessCreationFailure;
-      statusReason = e.what();
-    }
-
-    if (structuredLogger) {
-      structuredLogger->logEvent(
-          AutoEdenDoctorRunEvent{doctorRunStatus, statusReason});
-    }
-  });
 }
 
 void EdenServer::reloadConfig() {
