@@ -11,6 +11,8 @@ use std::time::Duration;
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
+use permission_checker::MononokeIdentity;
+use permission_checker::MononokeIdentitySet;
 use serde::de::Deserializer;
 use serde::de::Error as _;
 use serde::Deserialize;
@@ -27,6 +29,7 @@ use crate::RateLimit;
 use crate::RateLimitBody;
 use crate::Scope;
 use crate::StaticSlice;
+use crate::StaticSliceTarget;
 use crate::Target;
 
 impl TryFrom<rate_limiting_config::Target> for Target {
@@ -34,19 +37,6 @@ impl TryFrom<rate_limiting_config::Target> for Target {
 
     fn try_from(value: rate_limiting_config::Target) -> Result<Self, Self::Error> {
         match value {
-            rate_limiting_config::Target::not_target(t) => {
-                Ok(Target::NotTarget(Box::new((*t).try_into()?)))
-            }
-            rate_limiting_config::Target::and_target(t) => Ok(Target::AndTarget(
-                t.into_iter()
-                    .map(|t| t.try_into())
-                    .collect::<Result<Vec<_>, _>>()?,
-            )),
-            rate_limiting_config::Target::or_target(t) => Ok(Target::OrTarget(
-                t.into_iter()
-                    .map(|t| t.try_into())
-                    .collect::<Result<Vec<_>, _>>()?,
-            )),
             rate_limiting_config::Target::identity(i) => {
                 Ok(Target::Identity(FromStr::from_str(&i)?))
             }
@@ -55,10 +45,37 @@ impl TryFrom<rate_limiting_config::Target> for Target {
                 Ok(Target::StaticSlice(StaticSlice {
                     slice_pct,
                     nonce: s.nonce,
+                    target: s.target.try_into()?,
                 }))
             }
             rate_limiting_config::Target::main_client_id(i) => {
                 Ok(Target::MainClientId(FromStr::from_str(&i)?))
+            }
+            rate_limiting_config::Target::identities(i) => Ok(Target::Identities(
+                i.into_iter()
+                    .map(|s| MononokeIdentity::from_str(&s))
+                    .collect::<Result<MononokeIdentitySet, _>>()?,
+            )),
+            _ => Err(anyhow!(
+                "Invalid target. Are you using deprecated `and`, `or` or `not` targets?"
+            )),
+        }
+    }
+}
+
+impl TryFrom<rate_limiting_config::StaticSliceTarget> for StaticSliceTarget {
+    type Error = Error;
+    fn try_from(value: rate_limiting_config::StaticSliceTarget) -> Result<Self, Self::Error> {
+        match value {
+            rate_limiting_config::StaticSliceTarget::main_client_id(i) => {
+                Ok(StaticSliceTarget::MainClientId(FromStr::from_str(&i)?))
+            }
+            rate_limiting_config::StaticSliceTarget::identities(i) => {
+                Ok(StaticSliceTarget::Identities(
+                    i.into_iter()
+                        .map(|s| MononokeIdentity::from_str(&s))
+                        .collect::<Result<MononokeIdentitySet, _>>()?,
+                ))
             }
             _ => Err(anyhow!("Invalid target")),
         }
