@@ -10,6 +10,7 @@ rust_library(
         "lib": {"name": "dev-logger"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "description": "Print or examine tracing output in unit tests.",
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
             "name": "sapling-dev-logger",

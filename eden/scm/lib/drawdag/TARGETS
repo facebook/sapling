@@ -9,7 +9,8 @@ rust_library(
         "lib": {"name": "drawdag"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-            "homepage": "https://sapling-scm.com/",
+            "description": "Parse an ASCII DAG into graph edges.",
+            "homepage": "https://sapling-scm.com/docs/dev/internals/drawdag",
             "license": "MIT",
             "name": "sapling-drawdag",
             "repository": "https://github.com/facebook/sapling",

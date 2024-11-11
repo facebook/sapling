@@ -5,6 +5,7 @@ name = "sapling-dev-logger"
 version = "0.1.0"
 authors = ["Meta Source Control Team <sourcecontrol-dev@meta.com>"]
 edition = "2021"
+description = "Print or examine tracing output in unit tests."
 homepage = "https://sapling-scm.com/"
 repository = "https://github.com/facebook/sapling"
 license = "MIT"

@@ -13,6 +13,7 @@ rust_library(
         "lib": {"name": "hgtime"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "description": "Parse time from strings.",
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
             "name": "sapling-hgtime",

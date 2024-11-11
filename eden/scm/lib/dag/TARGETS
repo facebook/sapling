@@ -37,6 +37,7 @@ rust_library(
         "lib": {"name": "dag"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "description": "An implementation of a DAG used for source control.",
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
             "name": "sapling-dag",

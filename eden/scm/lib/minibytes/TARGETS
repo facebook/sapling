@@ -19,6 +19,7 @@ rust_library(
         "lib": {"name": "minibytes"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "description": "Shared reference-counted bytes and str with zero-copy slicing support.",
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
             "name": "sapling-minibytes",

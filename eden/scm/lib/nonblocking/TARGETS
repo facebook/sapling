@@ -9,6 +9,7 @@ rust_library(
         "lib": {"name": "nonblocking"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "description": "Call non-blocking async Rust from non-async Rust.",
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
             "name": "sapling-nonblocking",

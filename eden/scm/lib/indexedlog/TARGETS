@@ -32,6 +32,7 @@ rust_library(
         "lib": {"name": "indexedlog"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "description": "Append-only on-disk storage with integrity checks and radix tree indexing.",
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
             "name": "sapling-indexedlog",

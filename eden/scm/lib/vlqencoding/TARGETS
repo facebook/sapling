@@ -13,6 +13,7 @@ rust_library(
         "lib": {"name": "vlqencoding"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "description": "VLQ encoding (https://en.wikipedia.org/wiki/Variable-length_quantity).",
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
             "name": "sapling-vlqencoding",

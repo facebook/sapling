@@ -17,6 +17,7 @@ rust_library(
         "lib": {"name": "dag-types"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "description": "A subset of types used by sapling-dag",
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
             "name": "sapling-dag-types",

@@ -12,7 +12,7 @@ rust_library(
                 "David Tolnay <dtolnay@gmail.com>",
                 "Meta Source Control Team <sourcecontrol-dev@meta.com>",
             ],
-            "description": "Minimal serialization format",
+            "description": "Bincode-like serialization with VLQ encoded integers.",
             "homepage": "https://sapling-scm.com/",
             "include": [
                 "Cargo.toml",

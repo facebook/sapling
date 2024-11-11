@@ -10,6 +10,7 @@ rust_library(
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
             "autoexamples": False,
+            "description": "Minimal benchmark library.",
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
             "name": "sapling-minibench",
