@@ -792,6 +792,7 @@ pub fn generate_internalconfig(
     tracing::debug!(
         repo_path = ?info.map(|i| &i.path),
         canary = ?canary,
+        has_info = info.is_some(),
         "generate_internalconfig",
     );
 
@@ -800,10 +801,10 @@ pub fn generate_internalconfig(
 
     // Verify that the filesystem is writable, otherwise exit early since we won't be able to write
     // the config.
-    if tempfile_in(&config_dir).is_err() {
+    if let Err(e) = tempfile_in(&config_dir) {
         return Err(IOError::new(
             ErrorKind::PermissionDenied,
-            format!("no write access to {:?}", config_dir),
+            format!("no write access to {:?} ({:?})", config_dir, e),
         )
         .into());
     }
@@ -836,6 +837,7 @@ pub fn generate_internalconfig(
         )),
         _ => config_dir.join("hgrc.dynamic"),
     };
+    tracing::debug!("hgrc path is {}", hgrc_path.display());
 
     let global_config_dir = get_config_dir(None)?;
 
@@ -948,7 +950,7 @@ fn load_dynamic(
             version=%this_version,
             ?domain_override,
             vpnless_changed,
-            "regenerating dynamic config (version mismatch)",
+            "regenerating (sync) dynamic config (version mismatch)",
         );
         let user_name = {
             let mut temp_config = ConfigSet::new().named("temp");
@@ -971,6 +973,7 @@ fn load_dynamic(
             domain_override,
         );
         if let Err(e) = res {
+            tracing::warn!(error=?e, "failed to regenerate (sync)");
             let is_perm_error = e
                 .chain()
                 .any(|cause| match cause.downcast_ref::<IOError>() {
