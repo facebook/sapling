@@ -127,8 +127,6 @@ pub struct RateLimit {
     #[allow(dead_code)]
     target: Option<Target>,
     #[allow(dead_code)]
-    metric: Metric,
-    #[allow(dead_code)]
     fci_metric: Option<FciMetric>,
 }
 

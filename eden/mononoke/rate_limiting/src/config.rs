@@ -151,8 +151,6 @@ impl TryFrom<rate_limiting_config::RateLimit> for RateLimit {
             .transpose()
             .context("Invalid target")?;
 
-        let metric = value.metric.clone().try_into().context("Invalid metric")?;
-
         let fci_metric = value
             .fci_metric
             .clone()
@@ -162,7 +160,6 @@ impl TryFrom<rate_limiting_config::RateLimit> for RateLimit {
 
         Ok(Self {
             body,
-            metric,
             target,
             fci_metric,
         })
