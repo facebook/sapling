@@ -20,6 +20,7 @@ use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mutable_counters::MutableCounters;
 use repo_identity::RepoIdentity;
+mod bul_util;
 mod commands;
 mod sync;
 

@@ -27,7 +27,7 @@ const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
 #[derive(Parser)]
 pub struct CommandArgs {
     #[clap(long = "start-id", help = "Start id for the sync [default: 0]")]
-    start_id: Option<i64>,
+    start_id: Option<u64>,
 }
 
 pub struct ModernSyncProcess {
