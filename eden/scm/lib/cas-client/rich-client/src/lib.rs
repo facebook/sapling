@@ -20,15 +20,28 @@ use re_client_lib::REClient;
 use re_client_lib::REClientBuilder;
 use re_client_lib::RemoteCASdAddress;
 use re_client_lib::RemoteCacheConfig;
+use re_client_lib::RemoteCacheManagerMode;
 use re_client_lib::RemoteExecutionMetadata;
+use re_client_lib::RemoteFetchPolicy;
 
 pub const CAS_SOCKET_PATH: &str = "/run/casd/casd.socket";
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum CasCacheModeLocalFetch {
+    /// All files are fetched from the storages (zgw, zdb, manifold, etc) directly (rich client mode),
+    AllFilesLocally,
+    /// Small files are fetched from the storages (zgw, zdb, manifold, etc) directly (rich client mode), while the large files are fetched from the CASd daemon via UDS.
+    SmallFilesLocally,
+    /// All files are fetched from the CASd daemon via UDS.
+    AllRemote,
+}
 
 pub struct RichCasClient {
     client: re_cas_common::OnceCell<REClient>,
     verbose: bool,
     metadata: RemoteExecutionMetadata,
     use_casd_cache: bool,
+    cas_cache_mode_local_fetch: Option<CasCacheModeLocalFetch>,
     fetch_limit: ByteCount,
     fetch_concurrency: usize,
     use_streaming_dowloads: bool,
@@ -67,6 +80,20 @@ impl RichCasClient {
 
         let use_casd_cache = config.get_or("cas", "use-shared-cache", || true)?;
 
+        let mut cas_cache_mode_local_fetch = None;
+
+        if use_casd_cache {
+            cas_cache_mode_local_fetch = Some(CasCacheModeLocalFetch::AllRemote);
+
+            if config.get_or("cas", "shared_cache.local.small_files", || false)? {
+                cas_cache_mode_local_fetch = Some(CasCacheModeLocalFetch::SmallFilesLocally);
+            }
+
+            if config.get_or("cas", "shared_cache.local.all_files", || false)? {
+                cas_cache_mode_local_fetch = Some(CasCacheModeLocalFetch::AllFilesLocally);
+            }
+        }
+
         let default_fetch_limit = ByteCount::try_from_str("200MB")?;
 
         Ok(Some(Self {
@@ -77,6 +104,7 @@ impl RichCasClient {
                 ..Default::default()
             },
             use_casd_cache,
+            cas_cache_mode_local_fetch,
             fetch_limit: config
                 .get_or::<ByteCount>("cas", "max-batch-bytes", || default_fetch_limit)?,
             fetch_concurrency: config.get_or("cas", "fetch-concurrency", || 4)?,
@@ -96,10 +124,32 @@ impl RichCasClient {
             ..Default::default()
         };
         if self.use_casd_cache {
-            embedded_config.remote_cache_config = Some(RemoteCacheConfig {
+            let mut remote_cache_config = RemoteCacheConfig {
                 address: RemoteCASdAddress::uds_path(CAS_SOCKET_PATH.to_string()),
                 ..Default::default()
-            });
+            };
+            if let Some(cas_cache_mode_local_fetch) = self.cas_cache_mode_local_fetch {
+                match cas_cache_mode_local_fetch {
+                    // In EdenFS we only use the inline blobs fetches, there the sync is not yet implemented.
+                    // So, "WITH_SYNC" is no op.
+                    // The local fetch means that the data is fetched from the storages (zgw, zdb, manifold, etc) directly (rich client mode),
+                    // while the remote fetch means that the data is fetched from the CASd daemon via UDS.
+                    CasCacheModeLocalFetch::AllFilesLocally => {
+                        remote_cache_config.mode = RemoteCacheManagerMode::ALL_FILES;
+                        remote_cache_config.small_files = RemoteFetchPolicy::LOCAL_FETCH_WITH_SYNC;
+                        remote_cache_config.large_files = RemoteFetchPolicy::LOCAL_FETCH_WITH_SYNC;
+                    }
+                    CasCacheModeLocalFetch::SmallFilesLocally => {
+                        remote_cache_config.mode = RemoteCacheManagerMode::ALL_FILES;
+                        remote_cache_config.small_files = RemoteFetchPolicy::LOCAL_FETCH_WITH_SYNC;
+                        remote_cache_config.large_files = RemoteFetchPolicy::REMOTE_FETCH;
+                    }
+                    CasCacheModeLocalFetch::AllRemote => {
+                        // this is the default behavior
+                    }
+                }
+            }
+            embedded_config.remote_cache_config = Some(remote_cache_config);
             embedded_config.cache_config.writable_cache = false;
         }
         re_config.cas_client_config = CASDaemonClientCfg::embedded_config(embedded_config);
