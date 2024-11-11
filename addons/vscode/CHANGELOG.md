@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.63
+
+### Nov 11 2024
+
+- Improvements to warning diagnostics when submitting for review
+
 ## 0.1.62
 
 ### Nov 5 2024
