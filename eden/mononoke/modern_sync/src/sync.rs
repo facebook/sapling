@@ -11,10 +11,12 @@ use anyhow::format_err;
 use anyhow::Result;
 use bookmarks::BookmarkUpdateLogArc;
 use bookmarks::BookmarkUpdateLogId;
+use changeset_info::ChangesetInfo;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use context::CoreContext;
 use futures::StreamExt;
+use futures::TryStreamExt;
 use mononoke_app::args::RepoArg;
 use mononoke_app::MononokeApp;
 use mutable_counters::MutableCountersRef;
@@ -65,11 +67,28 @@ pub async fn sync(
     )
     .await;
 
-    info!(
-        app.logger(),
-        "Starting with values {:?}",
-        entries.collect::<Vec<_>>().await
-    );
+    let entries_vec = entries.collect::<Vec<_>>().await;
+
+    for entry in entries_vec {
+        info!(app.logger(), "Entry {:?}", entry);
+        let raw_entry = entry?;
+        let from = raw_entry.from_changeset_id.map_or(vec![], |val| vec![val]);
+        let to = raw_entry.to_changeset_id.map_or(vec![], |val| vec![val]);
+
+        let mut res = repo
+            .commit_graph
+            .ancestors_difference_stream(&ctx, to, from)
+            .await?;
+
+        while let Some(cs_id) = res.try_next().await? {
+            info!(app.logger(), "Found commit {:?}", cs_id);
+            let cs_info = repo
+                .repo_derived_data
+                .derive::<ChangesetInfo>(&ctx, cs_id.clone())
+                .await?;
+            info!(app.logger(), "Commit info {:?}", cs_info);
+        }
+    }
 
     Ok(())
 }

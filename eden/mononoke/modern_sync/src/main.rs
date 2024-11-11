@@ -10,6 +10,7 @@
 use anyhow::Result;
 use bookmarks::BookmarkUpdateLog;
 use clap::Parser;
+use commit_graph::CommitGraph;
 use executor_lib::args::ShardedExecutorArgs;
 use fbinit::FacebookInit;
 use mononoke_app::args::RepoArgs;
@@ -19,6 +20,7 @@ use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mutable_counters::MutableCounters;
+use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 mod bul_util;
 mod commands;
@@ -42,6 +44,10 @@ pub struct Repo {
     repo_identity: RepoIdentity,
     #[facet]
     bookmark_update_log: dyn BookmarkUpdateLog,
+    #[facet]
+    commit_graph: CommitGraph,
+    #[facet]
+    repo_derived_data: RepoDerivedData,
 }
 
 #[fbinit::main]
