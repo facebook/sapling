@@ -5,6 +5,7 @@ name = "sapling-factory"
 version = "0.1.0"
 authors = ["Meta Source Control Team <sourcecontrol-dev@meta.com>"]
 edition = "2021"
+description = "Global registry for constructors."
 homepage = "https://sapling-scm.com/"
 repository = "https://github.com/facebook/sapling"
 license = "MIT"

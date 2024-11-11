@@ -5,6 +5,7 @@ name = "sapling-lazystr"
 version = "0.1.0"
 authors = ["Meta Source Control Team <sourcecontrol-dev@meta.com>"]
 edition = "2021"
+description = "Thin abstraction for maybe lazily generated str."
 homepage = "https://sapling-scm.com/"
 repository = "https://github.com/facebook/sapling"
 license = "MIT"

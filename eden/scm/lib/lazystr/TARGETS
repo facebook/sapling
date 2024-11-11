@@ -9,6 +9,7 @@ rust_library(
         "lib": {"name": "lazystr"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "description": "Thin abstraction for maybe lazily generated str.",
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
             "name": "sapling-lazystr",

@@ -9,6 +9,7 @@ rust_library(
         "lib": {"name": "configmodel"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "description": "Configuration types used by Sapling.",
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
             "name": "sapling-configmodel",

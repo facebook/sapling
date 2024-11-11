@@ -15,6 +15,7 @@ rust_library(
         "lib": {"name": "rewrite-macros"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "description": "Proc macros to rewrite code used by Sapling.",
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
             "name": "sapling-rewrite-macros",
