@@ -151,7 +151,7 @@ Import stack:
       # Simple linear stack
         $ newrepo
         $ hg debugimportstack << EOS | marks
-        > [["commit", {"author": "test1", "date": [3600, 3600], "text": "A", "mark": ":1", "parents": ["."],
+        > [["commit", {"author": "test1", "date": [3600.1, 3600], "text": "A", "mark": ":1", "parents": ["."],
         >   "files": {"A": {"data": "A"}}}],
         >  ["commit", {"author": "test2", "date": [7200, 0], "text": "B", "mark": ":2", "parents": [":1"],
         >   "files": {"B": {"dataBase85": "LNN", "flags": "l"}}}],

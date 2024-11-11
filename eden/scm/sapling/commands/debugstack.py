@@ -517,8 +517,8 @@ def _create_commits(repo, commit_infos, marks: Marks, amend=False):
         text = commit_info["text"]
         user = commit_info.get("author")
         date = commit_info.get("date")
-        if isinstance(date, list):
-            date = tuple(date)
+        if isinstance(date, (list, tuple)):
+            date = (int(date[0]), date[1])
         files_dict = commit_info.get("files") or {}
         split_nodes = None
         if len(pred_nodes) == 1:
