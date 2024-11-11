@@ -14,6 +14,8 @@ use std::io::ErrorKind;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::path::PathBuf;
+#[cfg(windows)]
+use std::process::Command;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -21,6 +23,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
 use dialoguer::Confirm;
+use edenfs_client::fsutil::forcefully_remove_dir_all;
 use edenfs_client::EdenFsClient;
 use edenfs_client::EdenFsInstance;
 use edenfs_error::EdenFsError;
@@ -274,16 +277,17 @@ impl CleanUp {
             );
         } else {
             self.clean_mount_point(&context.canonical_path)
+                .await
                 .with_context(|| anyhow!("Failed to clean mount point {}", context))?;
         }
         Ok(None)
     }
 
     #[cfg(unix)]
-    fn clean_mount_point(&self, path: &Path) -> Result<()> {
+    async fn clean_mount_point(&self, path: &Path) -> Result<()> {
         let perms = Permissions::from_mode(0o755);
         match fs::set_permissions(path, perms) {
-            Ok(_) => match fs::remove_dir_all(path) {
+            Ok(_) => match forcefully_remove_dir_all(path) {
                 Ok(_) => Ok(()),
                 Err(e) => Err(anyhow!(
                     "Failed to remove mount point {}: {}",
@@ -300,8 +304,23 @@ impl CleanUp {
     }
 
     #[cfg(windows)]
-    fn clean_mount_point(&self, path: &Path) -> Result<()> {
-        Err(anyhow!("Windows clean_mount_point not implemented!!"))
+    async fn clean_mount_point(&self, path: &Path) -> Result<()> {
+        // forcefully_remove_dir_all() is simply a wrapper of remove_dir_all() which handles the retry logic.
+        //
+        // There is a chance that remove_dir_all() can hit the error:
+        // """
+        // Failed to remove mount point \\?\C:\open\repo-for-safe-remove: The provider that supports,
+        // file system virtualization is temporarily unavailable. (os error 369)
+        // """
+        //
+        // Hopefully, retrying the command will fix the issue since it's temporary.
+        // But if we keep seeing this error even after retrying, we should consider implementing
+        // something similar to Remove-Item(rm) cmdlet from PowerShell.
+        //
+        // Note: It's known that "rm -f -r" should be able to remove the repo but we should not rely
+        // on it from the code.
+        forcefully_remove_dir_all(path)
+            .with_context(|| anyhow!("Failed to remove repo directory {}", path.display()))
     }
 }
 
