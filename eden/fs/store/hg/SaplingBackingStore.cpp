@@ -365,6 +365,10 @@ void SaplingBackingStore::initializeOBCCounters() {
       monitoring::OdsCategoryId::ODS_EDEN,
       fmt::format("eden.store.sapling.fetch_blob_{}_us", repoName),
       {hostname});
+  getTreePerRepoLatencies_ = monitoring::OBCPxx(
+      monitoring::OdsCategoryId::ODS_EDEN,
+      fmt::format("eden.store.sapling.fetch_tree_{}_us", repoName),
+      {hostname});
   isOBCEnabled_ = true;
 }
 
@@ -786,8 +790,12 @@ void SaplingBackingStore::processTreeImportRequests(
             ObjectFetchContext::FetchedSource::Local,
             ObjectFetchContext::ObjectType::Tree,
             stats_.copy());
-        stats_->addDuration(
-            &SaplingBackingStoreStats::fetchTree, watch.elapsed());
+        if (isOBCEnabled_) {
+          getTreePerRepoLatencies_ += watch.elapsed().count();
+        } else {
+          stats_->addDuration(
+              &SaplingBackingStoreStats::fetchTree, watch.elapsed());
+        }
         stats_->increment(&SaplingBackingStoreStats::fetchTreeSuccess);
         if (store_.dogfoodingHost()) {
           stats_->increment(
@@ -817,8 +825,12 @@ void SaplingBackingStore::processTreeImportRequests(
               ObjectFetchContext::ObjectType::Tree,
               stats_.copy());
         }
-        stats_->addDuration(
-            &SaplingBackingStoreStats::fetchTree, watch.elapsed());
+        if (isOBCEnabled_) {
+          getTreePerRepoLatencies_ += watch.elapsed().count();
+        } else {
+          stats_->addDuration(
+              &SaplingBackingStoreStats::fetchTree, watch.elapsed());
+        }
         stats_->increment(&SaplingBackingStoreStats::fetchTreeSuccess);
         if (store_.dogfoodingHost()) {
           stats_->increment(

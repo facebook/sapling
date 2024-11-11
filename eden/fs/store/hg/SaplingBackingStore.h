@@ -644,8 +644,9 @@ class SaplingBackingStore final : public BackingStore {
   // This is used to avoid reading config in hot path of get request
   bool isOBCEnabled_ = false;
   // TODO: this is a prototype to test OBC API on eden
-  // we should move this to a separate class
+  // we should move these to a separate class
   monitoring::OBCPxx getBlobPerRepoLatencies_; // calculates p10, p50, p95, p99
+  monitoring::OBCPxx getTreePerRepoLatencies_; // calculates p10, p50, p95, p99
   void initializeOBCCounters();
 
   // A set of threads processing Sapling retry requests.
