@@ -99,18 +99,11 @@ struct SanityCheck {}
 impl SanityCheck {
     /// This is the first step of the remove process. It will verify that the path is valid and exists.
     async fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
-        match Path::new(&context.original_path).canonicalize() {
-            // cannonicalize() will check if the path exists for us so this is all we need
-            Ok(path) => {
-                context.canonical_path = path;
-                Ok(Some(State::Determination(Determination {})))
-            }
-            Err(e) => Err(anyhow!(
-                "Error canonicalizing path {}: {}",
-                context.original_path,
-                e
-            )),
-        }
+        let path = Path::new(&context.original_path)
+            .canonicalize()
+            .with_context(|| format!("Error canonicalizing path {}", context.original_path))?;
+        context.canonical_path = path;
+        Ok(Some(State::Determination(Determination {})))
     }
 }
 
@@ -206,17 +199,12 @@ impl ActiveEdenMount {
             Some(ref client_res) => match client_res {
                 Ok(client) => {
                     debug!("trying to unmount {}", context);
-                    let encoded_path = bytes_from_path(context.canonical_path.clone());
-                    match encoded_path {
-                        Ok(path) => {
-                            let umount_res = client.unmount(&path).await;
-                            match umount_res {
-                                Ok(_) => Ok(()),
-                                Err(e) => Err(anyhow!("Failed to unmount {}: {}", context, e)),
-                            }
-                        }
-                        Err(e) => Err(anyhow!("Failed to encode path {}: {}", context, e)),
-                    }
+                    let encoded_path = bytes_from_path(context.canonical_path.clone())
+                        .with_context(|| format!("Failed to encode path {}", context))?;
+                    client
+                        .unmount(&encoded_path)
+                        .await
+                        .with_context(|| format!("Failed to unmount {}", context))
                 }
 
                 Err(e) => Err(anyhow!("{e}")),
@@ -255,14 +243,9 @@ impl InactiveEdenMount {
     fn remove_client_config_entry(&self, context: &RemoveContext) -> Result<()> {
         let instance = EdenFsInstance::global();
 
-        match instance.remove_path_from_directory_map(&context.canonical_path) {
-            Ok(_) => Ok(()),
-            Err(e) => Err(anyhow!(
-                "Failed to remove {} from config json file: {}",
-                context,
-                e
-            )),
-        }
+        instance
+            .remove_path_from_directory_map(&context.canonical_path)
+            .with_context(|| format!("Failed to remove {} from config json file", context))
     }
 }
 
@@ -286,21 +269,10 @@ impl CleanUp {
     #[cfg(unix)]
     async fn clean_mount_point(&self, path: &Path) -> Result<()> {
         let perms = Permissions::from_mode(0o755);
-        match fs::set_permissions(path, perms) {
-            Ok(_) => match forcefully_remove_dir_all(path) {
-                Ok(_) => Ok(()),
-                Err(e) => Err(anyhow!(
-                    "Failed to remove mount point {}: {}",
-                    path.display(),
-                    e
-                )),
-            },
-            Err(e) => Err(anyhow!(
-                "failed to set permission 755 for path {}: {}",
-                path.display(),
-                e
-            )),
-        }
+        fs::set_permissions(path, perms)
+            .with_context(|| format!("Failed to set permission 755 for path {}", path.display()))?;
+        forcefully_remove_dir_all(path)
+            .with_context(|| format!("Failed to remove mount point {}", path.display()))
     }
 
     #[cfg(windows)]
@@ -479,6 +451,7 @@ mod tests {
         assert!(
             state
                 .unwrap_err()
+                .root_cause()
                 .to_string()
                 .contains(PATH_NOT_FOUND_ERROR_MSG)
         );
