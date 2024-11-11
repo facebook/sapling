@@ -20,8 +20,9 @@ import {readAtom} from '../jotaiUtils';
 import {uncommittedChangesWithPreviews} from '../previews';
 import {authorString} from '../serverAPIState';
 import {Operation} from './Operation';
+import {CommitBaseOperation} from './CommitBaseOperation';
 
-export class CommitOperation extends Operation {
+export class CommitOperation extends CommitBaseOperation {
   private beforeCommitDate: Date;
 
   /**
@@ -32,9 +33,9 @@ export class CommitOperation extends Operation {
   constructor(
     public message: string,
     private originalHeadHash: Hash,
-    private filesPathsToCommit?: Array<RepoRelativePath>,
+    protected filesPathsToCommit?: Array<RepoRelativePath>,
   ) {
-    super(filesPathsToCommit ? 'CommitFileSubsetOperation' : 'CommitOperation');
+    super(message, filesPathsToCommit);
 
     // New commit should have a greater date.
     this.beforeCommitDate = new Date();
@@ -51,24 +52,6 @@ export class CommitOperation extends Operation {
   }
 
   private optimisticChangedFiles: Array<ChangedFile>;
-
-  static opName = 'Commit';
-
-  getArgs() {
-    const args: Array<CommandArg> = ['commit', '--addremove', '--message', this.message];
-    if (this.filesPathsToCommit) {
-      args.push(
-        ...this.filesPathsToCommit.map(file =>
-          // tag file arguments specialy so the remote repo can convert them to the proper cwd-relative format.
-          ({
-            type: 'repo-relative-file' as const,
-            path: file,
-          }),
-        ),
-      );
-    }
-    return args;
-  }
 
   makeOptimisticUncommittedChangesApplier?(
     context: UncommittedChangesPreviewContext,

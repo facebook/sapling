@@ -12,18 +12,11 @@ import {YOU_ARE_HERE_VIRTUAL_COMMIT} from '../dag/virtualCommit';
 import {t} from '../i18n';
 import {CommitPreview} from '../previews';
 import {latestSuccessor} from '../successionUtils';
-import {Operation} from './Operation';
+import {GotoBaseOperation} from './GotoBaseOperation';
 
-export class GotoOperation extends Operation {
-  constructor(private destination: SucceedableRevset | ExactRevset | OptimisticRevset) {
-    super('GotoOperation');
-  }
-
-  static opName = 'Goto';
-
-  getArgs() {
-    const args = ['goto', '--rev', this.destination];
-    return args;
+export class GotoOperation extends GotoBaseOperation {
+  constructor(protected destination: SucceedableRevset | ExactRevset | OptimisticRevset) {
+    super(destination);
   }
 
   getInitialInlineProgress(): [hash: string, message: string][] {
