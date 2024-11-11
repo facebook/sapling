@@ -802,12 +802,24 @@ pub fn generate_internalconfig(
 
     // Verify that the filesystem is writable, otherwise exit early since we won't be able to write
     // the config.
-    if let Err(e) = config_dir.access(AccessMode::WRITE) {
-        return Err(IOError::new(
-            ErrorKind::PermissionDenied,
-            format!("no write access to {:?} ({:?})", config_dir, e),
-        )
-        .into());
+    for _attempt in 0..2 {
+        if let Err(e) = config_dir.access(AccessMode::WRITE) {
+            tracing::debug!("directory {} is not writable: {}", config_dir.display(), &e);
+            if e.kind() == io::ErrorKind::NotFound {
+                // Attempt to create the directory (ex. ".git/sl") and try again.
+                fs::create_dir_all(&config_dir)?;
+                continue;
+            } else {
+                return Err(IOError::new(
+                    ErrorKind::PermissionDenied,
+                    format!("no write access to {:?} ({:?})", config_dir, e),
+                )
+                .into());
+            }
+        } else {
+            tracing::debug!("directory {} is writable", config_dir.display());
+            break;
+        }
     }
 
     let version = ::version::VERSION;
