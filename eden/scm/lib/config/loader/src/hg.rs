@@ -785,9 +785,10 @@ pub fn generate_internalconfig(
 ) -> Result<()> {
     use std::io::Write;
 
+    use faccess::AccessMode;
+    use faccess::PathExt;
     use filetime::set_file_mtime;
     use filetime::FileTime;
-    use tempfile::tempfile_in;
 
     tracing::debug!(
         repo_path = ?info.map(|i| &i.path),
@@ -801,7 +802,7 @@ pub fn generate_internalconfig(
 
     // Verify that the filesystem is writable, otherwise exit early since we won't be able to write
     // the config.
-    if let Err(e) = tempfile_in(&config_dir) {
+    if let Err(e) = config_dir.access(AccessMode::WRITE) {
         return Err(IOError::new(
             ErrorKind::PermissionDenied,
             format!("no write access to {:?} ({:?})", config_dir, e),
