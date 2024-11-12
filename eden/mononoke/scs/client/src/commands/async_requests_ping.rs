@@ -31,7 +31,7 @@ impl Render for PingOutput {
     type Args = CommandArgs;
 
     fn render(&self, _args: &Self::Args, w: &mut dyn Write) -> Result<()> {
-        write!(w, "received: {}\n", self.response.payload);
+        writeln!(w, "received: {}", self.response.payload)?;
         Ok(())
     }
 
