@@ -147,7 +147,7 @@ impl CommitGraphWriter for LoggingCommitGraphWriter {
 
         match self.inner_writer.add(ctx, cs_id, parents).try_timed().await {
             Err(err) => {
-                scuba.add("error", err.to_string());
+                scuba.add("error", format!("{:#}", err));
                 scuba.log_with_msg("Insertion failed", None);
 
                 Err(err)
