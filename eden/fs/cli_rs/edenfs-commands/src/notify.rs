@@ -14,6 +14,7 @@ use clap::Parser;
 use crate::ExitCode;
 use crate::Subcommand;
 
+mod changes_since;
 mod get_position;
 
 #[derive(Parser, Debug)]
@@ -26,6 +27,7 @@ pub struct NotifyCmd {
 #[derive(Parser, Debug)]
 pub enum NotifySubcommand {
     GetPosition(get_position::GetPositionCmd),
+    ChangesSince(changes_since::ChangesSinceCmd),
 }
 
 #[async_trait]
@@ -34,6 +36,7 @@ impl Subcommand for NotifyCmd {
         use NotifySubcommand::*;
         let sc: &(dyn Subcommand + Send + Sync) = match &self.subcommand {
             GetPosition(cmd) => cmd,
+            ChangesSince(cmd) => cmd,
         };
         sc.run().await
     }
