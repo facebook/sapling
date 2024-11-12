@@ -15,7 +15,7 @@ import {defer} from 'shared/utils';
 export type IncomingMessage = ServerToClientMessage;
 export type OutgoingMessage = ClientToServerMessage;
 
-export const debugLogMessageTraffic = {shoudlLog: false};
+export const debugLogMessageTraffic = {shouldLog: false};
 
 export interface ClientToServerAPI {
   dispose(): void;
@@ -41,7 +41,7 @@ class ClientToServerAPIImpl implements ClientToServerAPI {
   >();
   private incomingListener = this.messageBus.onMessage(event => {
     const data = deserializeFromString(event.data as string) as IncomingMessage;
-    if (debugLogMessageTraffic.shoudlLog) {
+    if (debugLogMessageTraffic.shouldLog) {
       // eslint-disable-next-line no-console
       console.log('%c ⬅ Incoming ', 'color:white;background-color:tomato', data);
     }
@@ -178,7 +178,7 @@ class ClientToServerAPIImpl implements ClientToServerAPI {
 
   postMessage(message: ClientToServerMessage) {
     this.messageBus.postMessage(serializeToString(message));
-    if (debugLogMessageTraffic.shoudlLog) {
+    if (debugLogMessageTraffic.shouldLog) {
       // eslint-disable-next-line no-console
       console.log('%c Outgoing ⮕ ', 'color:white;background-color:royalblue', message);
     }

@@ -251,9 +251,9 @@ function InternalState() {
 }
 
 const logMessagesState = atomWithOnChange(
-  atom(debugLogMessageTraffic.shoudlLog),
+  atom(debugLogMessageTraffic.shouldLog),
   newValue => {
-    debugLogMessageTraffic.shoudlLog = newValue;
+    debugLogMessageTraffic.shouldLog = newValue;
     console.log(`----- ${newValue ? 'Enabled' : 'Disabled'} Logging Messages -----`);
   },
   /* skipInitialCall */ true,
