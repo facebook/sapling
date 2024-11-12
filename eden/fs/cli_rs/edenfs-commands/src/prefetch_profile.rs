@@ -554,7 +554,7 @@ impl PrefetchCmd {
         checkout
             .prefetch_profiles(
                 instance,
-                &vec![],
+                &[],
                 !options.foreground,
                 directories_only,
                 !options.options.verbose,

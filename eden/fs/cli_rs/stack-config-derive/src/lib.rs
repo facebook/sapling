@@ -41,17 +41,16 @@ struct StackConfig {
 /// Visitor related impls
 impl StackConfig {
     fn take_attr(&self, attrs: &mut Vec<Attribute>) -> Option<Attribute> {
-        if let Some(pos) = attrs.iter().position(|attr| {
-            if let Ok(meta) = attr.parse_meta() {
-                meta.path().is_ident("stack")
-            } else {
-                false
-            }
-        }) {
-            Some(attrs.remove(pos))
-        } else {
-            None
-        }
+        attrs
+            .iter()
+            .position(|attr| {
+                if let Ok(meta) = attr.parse_meta() {
+                    meta.path().is_ident("stack")
+                } else {
+                    false
+                }
+            })
+            .map(|pos| attrs.remove(pos))
     }
 }
 

@@ -118,15 +118,13 @@ impl EdenFsInstance {
         let socket_path = self.config_dir.join("socket");
 
         let connect = self._connect(&socket_path);
-        let res = if let Some(timeout) = timeout {
+        if let Some(timeout) = timeout {
             tokio::time::timeout(timeout, connect)
                 .await
                 .map_err(|_| EdenFsError::ThriftConnectionTimeout(socket_path))?
         } else {
             connect.await
-        };
-
-        res
+        }
     }
 
     #[cfg(fbcode_build)]

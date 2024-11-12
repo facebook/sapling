@@ -1029,7 +1029,7 @@ impl EdenFsCheckout {
     pub async fn prefetch_profiles(
         &self,
         instance: &EdenFsInstance,
-        profiles: &Vec<String>,
+        profiles: &[String],
         background: bool,
         directories_only: bool,
         silent: bool,
@@ -1038,7 +1038,7 @@ impl EdenFsCheckout {
         predictive: bool,
         predictive_num_dirs: u32,
     ) -> Result<()> {
-        let mut profiles_to_fetch = profiles.clone();
+        let mut profiles_to_fetch = profiles.to_owned();
 
         let config = instance
             .get_config()

@@ -72,7 +72,7 @@ impl ConfigField {
     pub fn new_with_meta(name: Ident, meta: &Meta) -> Self {
         // We have two struct here because I can't find a way to let darling accept an optional
         // argument. i.e. `stack(default)` and `stack(default = "func")`.
-        if let Ok(args) = MetaArgsFlag::from_meta(&meta) {
+        if let Ok(args) = MetaArgsFlag::from_meta(meta) {
             let nested = args.nested.is_present();
 
             if args.default.is_some() && nested {
@@ -91,7 +91,7 @@ impl ConfigField {
                 nested,
                 merge,
             }
-        } else if let Ok(args) = MetaArgsFunc::from_meta(&meta) {
+        } else if let Ok(args) = MetaArgsFunc::from_meta(meta) {
             let nested = args.nested.is_present();
 
             if nested {
@@ -159,22 +159,20 @@ impl ConfigField {
             quote! {
                 self.#field.merge(other.#field);
             }
-        } else {
-            if let Some(merge) = &self.merge {
-                quote! {
-                    if let Some(val) = other.#field {
-                        if let Some(current) = self.#field.as_mut() {
-                            #merge(current, val);
-                        } else {
-                            self.#field = Some(val);
-                        }
-                    }
-                }
-            } else {
-                quote! {
-                    if let Some(val) = other.#field {
+        } else if let Some(merge) = &self.merge {
+            quote! {
+                if let Some(val) = other.#field {
+                    if let Some(current) = self.#field.as_mut() {
+                        #merge(current, val);
+                    } else {
                         self.#field = Some(val);
                     }
+                }
+            }
+        } else {
+            quote! {
+                if let Some(val) = other.#field {
+                    self.#field = Some(val);
                 }
             }
         }

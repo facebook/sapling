@@ -111,7 +111,7 @@ fn merge_table(lhs: &mut toml::value::Table, rhs: toml::value::Table) {
 }
 
 fn load_path(loader: &mut EdenFsConfigLoader, path: &Path) -> Result<()> {
-    let content = String::from_utf8(std::fs::read(&path)?)?;
+    let content = String::from_utf8(std::fs::read(path)?)?;
     trace!(?content, ?path, "Loading config");
     loader.load(toml::from_str(&content)?);
     Ok(())
@@ -177,7 +177,7 @@ pub fn load_config(
 ) -> Result<EdenFsConfig, EdenFsError> {
     let mut loader = EdenFsConfig::loader();
 
-    if let Err(e) = load_system(&mut loader, &etc_eden_dir) {
+    if let Err(e) = load_system(&mut loader, etc_eden_dir) {
         event!(
             Level::INFO,
             etc_eden_dir = ?etc_eden_dir,
@@ -188,7 +188,7 @@ pub fn load_config(
         event!(Level::DEBUG, "System configuration loaded");
     }
 
-    if let Err(e) = load_system_rcs(&mut loader, &etc_eden_dir) {
+    if let Err(e) = load_system_rcs(&mut loader, etc_eden_dir) {
         event!(
             Level::INFO,
             etc_eden_dir = ?etc_eden_dir,
@@ -211,7 +211,7 @@ pub fn load_config(
     }
 
     if let Some(home) = home_dir {
-        if let Err(e) = load_user(&mut loader, &home) {
+        if let Err(e) = load_user(&mut loader, home) {
             event!(Level::INFO, home = ?home, "Unable to load user configuration, skipped: {:?}", e);
         } else {
             event!(Level::DEBUG, "User configuration loaded");
@@ -223,5 +223,5 @@ pub fn load_config(
         );
     }
 
-    Ok(loader.build().map_err(EdenFsError::ConfigurationError)?)
+    loader.build().map_err(EdenFsError::ConfigurationError)
 }

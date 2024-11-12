@@ -18,7 +18,6 @@ use std::path::PathBuf;
 use std::process::Command;
 #[cfg(target_os = "macos")]
 use std::process::Stdio;
-use std::u64;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -391,7 +390,7 @@ impl DiskUsageCmd {
     /// instance.
     fn get_mounts(&self, instance: &EdenFsInstance) -> Result<Vec<PathBuf>> {
         if !self.mounts.is_empty() {
-            Ok((&self.mounts).to_vec())
+            Ok((self.mounts).to_vec())
         } else {
             let config_paths: Vec<PathBuf> = instance
                 .get_configured_mounts_map()?
@@ -411,7 +410,7 @@ impl DiskUsageCmd {
                     "\n{}",
                     format!("Reclaiming space from directory: {}", dir.display()).blue()
                 );
-                match fs::remove_dir_all(&dir) {
+                match fs::remove_dir_all(dir) {
                     Ok(_) => println!("{}", "Space reclaimed. Directory removed.".blue()),
                     Err(e) => println!(
                         "{}",
@@ -490,13 +489,13 @@ fn get_redirections(
 
 /// Get all the checkous associated with the passed in mounts.
 fn get_checkouts(mounts: &[PathBuf], instance: &EdenFsInstance) -> Result<Vec<EdenFsCheckout>> {
-    Ok(mounts
+    mounts
         .iter()
         .map(|mount| {
             find_checkout(instance, mount)
                 .with_context(|| format!("Failed to find checkout for {}", mount.display()))
         })
-        .collect::<Result<_, anyhow::Error>>()?)
+        .collect::<Result<_, anyhow::Error>>()
 }
 
 /// Get all the fsck directories for the pssed in checkouts.
@@ -687,10 +686,10 @@ impl crate::Subcommand for DiskUsageCmd {
         let client = instance.connect(None).await?;
 
         let mounts = self
-            .get_mounts(&instance)
+            .get_mounts(instance)
             .context("Failed to get EdenFS mounts")?;
         let checkouts =
-            get_checkouts(&mounts, &instance).context("Failed to get EdenFS checkouts")?;
+            get_checkouts(&mounts, instance).context("Failed to get EdenFS checkouts")?;
         let backing_repos = get_backing_repos(&checkouts);
         let (redirections, buck_redirections) =
             get_redirections(&checkouts).context("Failed to get EdenFS redirections")?;
@@ -864,7 +863,7 @@ impl crate::Subcommand for DiskUsageCmd {
                 if !orphaned_redirections.is_empty() {
                     if self.clean_orphaned || self.should_clean() {
                         for redir in orphaned_redirections.iter() {
-                            fs::remove_dir_all(&redir).with_context(|| {
+                            fs::remove_dir_all(redir).with_context(|| {
                                 format!("Failed to recursively remove {}", redir.display())
                             })?;
                         }

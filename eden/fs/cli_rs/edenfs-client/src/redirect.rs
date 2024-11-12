@@ -157,7 +157,7 @@ impl RepoPathDisposition {
         // symlink_metadata() returns an error type if the path DNE and it returns the file
         // metadata otherwise. We can leverage this to tell whether or not the file exists, and
         // whether it's a symlink if it does exist.
-        if let Ok(file_type) = std::fs::symlink_metadata(&path).map(|m| m.file_type()) {
+        if let Ok(file_type) = std::fs::symlink_metadata(path).map(|m| m.file_type()) {
             if file_type.is_symlink() {
                 return Ok(RepoPathDisposition::IsSymlink);
             }
@@ -1377,7 +1377,7 @@ fn resolve_repo_relative_path(checkout: &EdenFsCheckout, repo_rel_path: &Path) -
         // to correctly relativize for that case, so we'll allow an absolute
         // path to be specified.
         if repo_rel_path.starts_with(&checkout_path) {
-            let canonical_path = absolute(&repo_rel_path).from_err().with_context(|| {
+            let canonical_path = absolute(repo_rel_path).from_err().with_context(|| {
                 format!(
                     "Failed to find absolute and normalized path: {}",
                     repo_rel_path.display()
@@ -2005,7 +2005,7 @@ mod tests {
         let fake_checkout = tempdir().expect("failed to create fake checkout");
         let fake_checkout_path = fake_checkout.path();
 
-        let symlink_path = fake_checkout_path.join(&redir.repo_path());
+        let symlink_path = fake_checkout_path.join(redir.repo_path());
         redir
             ._apply_symlink(fake_checkout_path, &symlink_path, false)
             .expect("Failed to create symlink");

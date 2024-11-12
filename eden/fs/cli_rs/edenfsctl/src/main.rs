@@ -137,7 +137,7 @@ fn rust_main(cmd: edenfs_commands::MainCommand) -> Result<i32> {
     if cmd.debug {
         setup_logging();
     }
-    Ok(cmd.run()?)
+    cmd.run()
 }
 
 /// This function takes care of the fallback logic, hijack supported subcommand
