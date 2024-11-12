@@ -70,11 +70,13 @@ from pathlib import Path
 # to the path automatically, so let's add it manually.
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 try:
+    # pyre-fixme[21]: Could not find module `features`.
     import features
 except:
     features = None
 
 try:
+    # pyre-fixme[21]: Could not find module `Queue`.
     import Queue as queue
 except ImportError:
     import queue
@@ -86,11 +88,13 @@ try:
 except (ImportError, AttributeError):
     import pipes
 
+    # pyre-fixme[9]: shellquote has type `(s: str) -> str`; used as `(s: str) -> str`.
     shellquote = pipes.quote
 
 RLock = threading.RLock
 
 try:
+    # pyre-fixme[21]: Could not find module `libfb.py.pathutils`.
     import libfb.py.pathutils as pathutils
 
     def buckpath(rulename, ruletype):
@@ -99,13 +103,18 @@ try:
             return None
         return path
 
+    # pyre-fixme[16]: Module `py` has no attribute `pathutils`.
     buckruletype = pathutils.BuildRuleTypes
 except ImportError:
+    # pyre-fixme[9]: buckpath has type `(rulename: unknown, ruletype: unknown) ->
+    #  Any`; used as `None`.
     buckpath = buckruletype = None
 
+# pyre-fixme[21]: Could not find module `watchman`.
 from watchman import Watchman, WatchmanTimeout
 
 if os.environ.get("HGTEST_USE_EDEN", "0") == "1":
+    # pyre-fixme[21]: Could not find module `edenfs`.
     from edenfs import EdenFsManager
 
     use_edenfs = True
@@ -114,7 +123,9 @@ else:
 
 if os.environ.get("RTUNICODEPEDANTRY", False):
     try:
+        # pyre-fixme[10]: Name `reload` is used but not defined.
         reload(sys)
+        # pyre-fixme[16]: Module `sys` has no attribute `setdefaultencoding`.
         sys.setdefaultencoding("undefined")
     except NameError:
         pass
@@ -127,9 +138,15 @@ if os.name != "nt":
     try:  # is pygments installed
         import pygments
         import pygments.formatters as formatters
+
+        # pyre-fixme[21]: Could not find module `pygments.lexer`.
         import pygments.lexer as lexer
         import pygments.lexers as lexers
+
+        # pyre-fixme[21]: Could not find module `pygments.style`.
         import pygments.style as style
+
+        # pyre-fixme[21]: Could not find module `pygments.token`.
         import pygments.token as token
 
         pygmentspresent = True
@@ -139,12 +156,16 @@ if os.name != "nt":
         pass
 
 if pygmentspresent:
-
+    # pyre-fixme[11]: Annotation `Style` is not defined as a type.
     class TestRunnerStyle(style.Style):
         default_style = ""
+        # pyre-fixme[16]: Module `pygments` has no attribute `token`.
         skipped = token.string_to_tokentype("Token.Generic.Skipped")
+        # pyre-fixme[16]: Module `pygments` has no attribute `token`.
         failed = token.string_to_tokentype("Token.Generic.Failed")
+        # pyre-fixme[16]: Module `pygments` has no attribute `token`.
         skippedname = token.string_to_tokentype("Token.Generic.SName")
+        # pyre-fixme[16]: Module `pygments` has no attribute `token`.
         failedname = token.string_to_tokentype("Token.Generic.FName")
         styles = {
             skipped: "#e5e5e5",
@@ -153,19 +174,27 @@ if pygmentspresent:
             failedname: "#ff0000",
         }
 
+    # pyre-fixme[11]: Annotation `RegexLexer` is not defined as a type.
     class TestRunnerLexer(lexer.RegexLexer):
         tokens = {
             "root": [
+                # pyre-fixme[16]: Module `pygments` has no attribute `token`.
                 (r"^Skipped", token.Generic.Skipped, "skipped"),
+                # pyre-fixme[16]: Module `pygments` has no attribute `token`.
                 (r"^Failed ", token.Generic.Failed, "failed"),
+                # pyre-fixme[16]: Module `pygments` has no attribute `token`.
                 (r"^ERROR: ", token.Generic.Failed, "failed"),
             ],
             "skipped": [
+                # pyre-fixme[16]: Module `pygments` has no attribute `token`.
                 (r"[\w-]+\.(t|py)", token.Generic.SName),
+                # pyre-fixme[16]: Module `pygments` has no attribute `token`.
                 (r":.*", token.Generic.Skipped),
             ],
             "failed": [
+                # pyre-fixme[16]: Module `pygments` has no attribute `token`.
                 (r"[\w-]+\.(t|py)", token.Generic.FName),
+                # pyre-fixme[16]: Module `pygments` has no attribute `token`.
                 (r"(:| ).*", token.Generic.Failed),
             ],
         }
@@ -721,6 +750,7 @@ def parseargs(args, parser):
     options.anycoverage = options.cover or options.annotate or options.htmlcov
     if options.anycoverage:
         try:
+            # pyre-fixme[21]: Could not find module `coverage`.
             import coverage
 
             coverage.__version__
@@ -813,6 +843,10 @@ _unified_diff = difflib.unified_diff
 if PYTHON3:
     import functools
 
+    # pyre-fixme[9]: _unified_diff has type `(a: Sequence[str], b: Sequence[str],
+    #  fromfile: str = ..., tofile: str = ..., fromfiledate: str = ..., tofiledate: str
+    #  = ..., n: int = ..., lineterm: str = ...) -> Iterator[str]`; used as
+    #  `partial[Iterator[bytes]]`.
     _unified_diff = functools.partial(difflib.diff_bytes, difflib.unified_diff)
 
 
@@ -971,6 +1005,7 @@ def terminate(proc):
 
 
 def killdaemons(pidfile):
+    # pyre-fixme[21]: Could not find module `killdaemons`.
     import killdaemons as killmod
 
     return killmod.killdaemons(pidfile, tryhard=False, remove=True, logfn=vlog)
@@ -1623,6 +1658,7 @@ class Test(unittest.TestCase):
         """Create an hgrc file for this test."""
         # If you want to update the default hgrc, update `default_hgrc.py`
         # so it applies to all test runners ideally.
+        # pyre-fixme[21]: Could not find module `default_hgrc`.
         import default_hgrc
 
         # Note: This code path is not run for 'debugruntest' tests.
@@ -1804,6 +1840,7 @@ class PythonTest(Test):
 
 bchr = chr
 if PYTHON3:
+    # pyre-fixme[9]: bchr has type `(int) -> str`; used as `(x: Any) -> bytes`.
     bchr = lambda x: bytes([x])
 
 
@@ -1815,6 +1852,8 @@ class TTest(Test):
 
     ESCAPESUB = re.compile(rb"[\x00-\x08\x0b-\x1f\\\x7f-\xff]").sub
     ESCAPEMAP = dict((bchr(i), rb"\x%02x" % i) for i in range(256))
+    # pyre-fixme[6]: For 1st argument expected `SupportsKeysAndGetItem[str, bytes]`
+    #  but got `Dict[bytes, bytes]`.
     ESCAPEMAP.update({b"\\": b"\\\\", b"\r": rb"\r"})
 
     def __init__(self, path, *args, **kwds):
@@ -2428,6 +2467,7 @@ if os.name == "nt":
     PROCESS_SET_QUOTA = 0x0100
     PROCESS_TERMINATE = 0x0001
 
+    # pyre-fixme[16]: Module `ctypes` has no attribute `WinDLL`.
     _kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 
     _kernel32.CreateJobObjectA.argtypes = [_LPVOID, _LPVOID]
@@ -3404,6 +3444,7 @@ class TestRunner:
             self._checktools()
             testdescs = self.findtests(tests)
             if options.profile_runner:
+                # pyre-fixme[21]: Could not find module `statprof`.
                 import statprof
 
                 statprof.start()
@@ -4205,8 +4246,11 @@ def main() -> None:
     try:
         import msvcrt
 
+        # pyre-fixme[16]: Module `msvcrt` has no attribute `setmode`.
         msvcrt.setmode(sys.stdin.fileno(), os.O_BINARY)
+        # pyre-fixme[16]: Module `msvcrt` has no attribute `setmode`.
         msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
+        # pyre-fixme[16]: Module `msvcrt` has no attribute `setmode`.
         msvcrt.setmode(sys.stderr.fileno(), os.O_BINARY)
     except ImportError:
         pass

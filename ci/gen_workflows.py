@@ -217,6 +217,7 @@ COPY --from=populate-offline-cache /root/npm-packages-offline-cache /root/npm-pa
             f"sapling-cli-ubuntu-{ubuntu_version}-image.yml", gh_action_build_image
         )
 
+    # pyre-fixme[7]: Expected `str` but got implicit return value of `None`.
     def gen_ubuntu_ci(self, *, ubuntu_version: str) -> str:
         gh_action = {
             "name": f"CI - Ubuntu {ubuntu_version}",
@@ -229,6 +230,7 @@ COPY --from=populate-offline-cache /root/npm-packages-offline-cache /root/npm-pa
         }
         self._write_file(f"sapling-cli-ubuntu-{ubuntu_version}-ci.yml", gh_action)
 
+    # pyre-fixme[7]: Expected `str` but got implicit return value of `None`.
     def gen_ubuntu_release(self, *, ubuntu_version: str) -> str:
         """Logic for releases is modeled after wezterm's GitHub Actions:
         https://github.com/wez/wezterm/tree/6962d6805abf/.github/workflows
@@ -301,6 +303,7 @@ COPY --from=populate-offline-cache /root/npm-packages-offline-cache /root/npm-pa
             ],
         }
 
+    # pyre-fixme[7]: Expected `str` but got implicit return value of `None`.
     def gen_windows_release(self) -> str:
         BUILD = "build"
         artifact_key = "windows-amd64"
@@ -370,6 +373,7 @@ COPY --from=populate-offline-cache /root/npm-packages-offline-cache /root/npm-pa
         }
         self._write_file("sapling-cli-windows-amd64-release.yml", gh_action)
 
+    # pyre-fixme[7]: Expected `str` but got implicit return value of `None`.
     def gen_homebrew_macos_release(self, arch, target, runson, mac_release) -> str:
         BUILD = "build"
         artifact_key = f"macos-homebrew-{arch}-bottle"

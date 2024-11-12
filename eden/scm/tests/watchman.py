@@ -118,6 +118,8 @@ class Watchman:
             process.terminate()
             process.kill()
 
+    # pyre-fixme[3]: Return type must be annotated.
+    # pyre-fixme[2]: Parameter must be annotated.
     def generate_watchman_cli_wrapper(self, watchmanpath: Path, cmd, env):
         cmd = [str(s) for s in cmd]
         binpath = watchmanpath.parents[1] / "install" / "bin" / "watchmanscript"

@@ -107,6 +107,7 @@ overrides = "{{}}"
         ex = None
         with override_environ(overrides):
             try:
+                # pyre-fixme[16]: `EdenFsManager` has no attribute `eden`.
                 self.eden = edenclient.EdenFS(
                     base_dir=edenfs_dir,
                     storage_engine="memory",
@@ -161,7 +162,9 @@ enable-eden-menu = "false"
         if ex:
             raise ex
 
+    # pyre-fixme[3]: Return type must be annotated.
     def generate_eden_cli_wrapper(self, binpath: Path):
+        # pyre-fixme[16]: `EdenFsManager` has no attribute `eden`.
         cmd, env = self.eden.get_edenfsctl_cmd_env("", config_dir=True, home_dir=False)
 
         edenpath = binpath.parents[1] / "install" / "bin" / "eden"
