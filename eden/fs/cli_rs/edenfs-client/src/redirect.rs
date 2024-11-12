@@ -922,12 +922,16 @@ To detect and kill such processes, follow https://fburl.com/edenfs-redirection-n
             }
         }
 
-        if disposition == RepoPathDisposition::IsNonEmptyDir {
-            return self._handle_non_empty_dir(checkout, force_remove, cli_name);
-        }
+        if self.redir_type == RedirectionType::Symlink
+            || (self.redir_type == RedirectionType::Bind && cfg!(windows))
+        {
+            if disposition == RepoPathDisposition::IsNonEmptyDir {
+                return self._handle_non_empty_dir(checkout, force_remove, cli_name);
+            }
 
-        if disposition == RepoPathDisposition::IsFile {
-            return self._handle_file_repo_path(checkout, force_remove, cli_name);
+            if disposition == RepoPathDisposition::IsFile {
+                return self._handle_file_repo_path(checkout, force_remove, cli_name);
+            }
         }
 
         Ok(disposition)
