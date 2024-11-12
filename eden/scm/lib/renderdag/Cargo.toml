@@ -18,8 +18,7 @@ bitflags = { version = "2.6", features = ["serde"] }
 serde = { version = "1.0.185", features = ["derive", "rc"], optional = true }
 
 [dev-dependencies]
-sapling-dag = { version = "0.1.0", path = "../dag", default-features = false }
-sapling-nonblocking = { version = "0.1.0", path = "../nonblocking" }
+sapling-drawdag = { version = "0.1.0", path = "../drawdag" }
 unicode-width = "=0.1.12"
 
 [features]

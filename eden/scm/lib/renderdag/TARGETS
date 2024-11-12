@@ -6,7 +6,6 @@ rust_library(
     name = "renderdag",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"dev-dependencies": {"sapling-dag": {"default-features": False}}},
         "extra_buck_dependencies": {"dependencies": ["fbsource//third-party/rust:serde"]},
         "features": {
             "default": [],
@@ -26,8 +25,7 @@ rust_library(
     features = [],
     test_deps = [
         "fbsource//third-party/rust:unicode-width",
-        "//eden/scm/lib/dag:dag",
-        "//eden/scm/lib/nonblocking:nonblocking",
+        "//eden/scm/lib/drawdag:drawdag",
     ],
     deps = [
         "fbsource//third-party/rust:bitflags",

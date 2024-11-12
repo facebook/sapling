@@ -5,15 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-use dag::dag::MemDag;
-use dag::ops::ImportAscii;
-use dag::set::SyncSetQuery;
-use dag::DagAlgorithm;
-use dag::Vertex;
-use nonblocking::non_blocking_result;
 use unicode_width::UnicodeWidthStr;
 
 use super::render::Ancestor;
@@ -22,14 +18,60 @@ use super::test_fixtures::TestFixture;
 
 pub(crate) fn render_string(
     fixture: &TestFixture,
-    renderer: &mut dyn Renderer<Vertex, Output = String>,
+    renderer: &mut dyn Renderer<String, Output = String>,
 ) -> String {
     render_string_with_order(fixture, renderer, None)
 }
 
+#[derive(Default)]
+struct MiniDag {
+    parents: BTreeMap<String, BTreeSet<String>>,
+    name_to_rev: BTreeMap<String, usize>,
+    rev_to_name: Vec<String>,
+}
+
+impl MiniDag {
+    fn from_drawdag(ascii: &str) -> Self {
+        Self {
+            parents: drawdag::parse(ascii),
+            ..Default::default()
+        }
+    }
+
+    fn assign_rev(&mut self, name: &str) -> usize {
+        if let Some(&rev) = self.name_to_rev.get(name) {
+            rev
+        } else {
+            if let Some(parents) = self.parents.get(name).cloned() {
+                for p in parents {
+                    self.assign_rev(p.as_str());
+                }
+            }
+            let rev = self.rev_to_name.len();
+            self.rev_to_name.push(name.to_owned());
+            self.name_to_rev.insert(name.to_owned(), rev);
+            rev
+        }
+    }
+
+    /// All names, in DESC order.
+    fn all(&self) -> Vec<String> {
+        let mut all = self.rev_to_name.clone();
+        all.reverse();
+        all
+    }
+
+    fn parent_names(&self, name: &str) -> Vec<String> {
+        match self.parents.get(name) {
+            Some(names) => names.iter().cloned().collect(),
+            None => Default::default(),
+        }
+    }
+}
+
 pub(crate) fn render_string_with_order(
     fixture: &TestFixture,
-    renderer: &mut dyn Renderer<Vertex, Output = String>,
+    renderer: &mut dyn Renderer<String, Output = String>,
     order: Option<&[&str]>,
 ) -> String {
     let TestFixture {
@@ -40,63 +82,52 @@ pub(crate) fn render_string_with_order(
         ancestors,
         missing,
     } = fixture;
-    let mut dag = MemDag::new();
-    dag.import_ascii_with_heads(ascii, Some(heads)).unwrap();
-    // str -> Vertex
-    let v = |s: &str| Vertex::copy_from(s.as_bytes());
 
-    let ancestors: HashSet<_> = ancestors
-        .iter()
-        .map(|(desc, anc)| (v(desc), v(anc)))
-        .collect();
-    let missing: HashSet<_> = missing.iter().map(|s| v(s)).collect();
+    let mut dag = MiniDag::from_drawdag(ascii);
+    for head in heads.iter() {
+        dag.assign_rev(head);
+    }
 
-    reserve
-        .iter()
-        .cloned()
-        .map(v)
-        .for_each(|s| renderer.reserve(s));
+    let ancestors: HashSet<(&str, &str)> = ancestors.into_iter().copied().collect();
+    let missing: HashSet<&str> = missing.into_iter().copied().collect();
+
+    reserve.iter().for_each(|s| renderer.reserve(s.to_string()));
 
     let messages: HashMap<_, _> = messages.iter().cloned().collect();
 
-    let iter: Vec<_> = match order {
-        None => non_blocking_result(dag.all())
-            .unwrap()
-            .iter()
-            .unwrap()
-            .map(|v| v.unwrap())
-            .collect(),
-        Some(order) => order.iter().map(|name| v(name)).collect(),
+    let iter: Vec<String> = match order {
+        None => dag.all(),
+        Some(order) => order.iter().map(|name| name.to_string()).collect(),
     };
 
     let mut out = String::new();
     for node in iter {
-        if missing.contains(&node) {
+        if missing.contains(node.as_str()) {
             continue;
         }
-        let parents = non_blocking_result(dag.parent_names(node.clone()))
-            .unwrap()
+        let parents = dag
+            .parent_names(&node)
             .into_iter()
             .map(|parent| {
-                if missing.contains(&parent) {
+                if missing.contains(parent.as_str()) {
                     Ancestor::Anonymous
-                } else if ancestors.contains(&(node.clone(), parent.clone())) {
+                } else if ancestors.contains(&(node.as_str(), parent.as_str())) {
                     Ancestor::Ancestor(parent)
                 } else {
                     Ancestor::Parent(parent)
                 }
             })
             .collect();
-        let name = String::from_utf8(node.as_ref().to_vec()).unwrap();
+        let name = &node;
         let message = match messages.get(name.as_str()) {
             Some(message) => format!("{}\n{}", name, message),
             None => name.clone(),
         };
         let width = renderer.width(Some(&node), Some(&parents));
-        let row = renderer.next_row(node, parents, String::from("o"), message);
+        let row = renderer.next_row(node.to_string(), parents, String::from("o"), message);
         let row_indent = row
             .lines()
-            .filter_map(|line| line.find(&name).map(|offset| &line[..offset]))
+            .filter_map(|line| line.find(name.as_str()).map(|offset| &line[..offset]))
             .next()
             .expect("name should be in the output");
         assert_eq!(
