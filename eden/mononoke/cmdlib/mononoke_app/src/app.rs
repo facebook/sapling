@@ -11,6 +11,7 @@ use std::collections::HashSet;
 use std::fs;
 use std::future::Future;
 use std::path::Path;
+use std::sync::atomic::AtomicI64;
 use std::sync::Arc;
 use std::time::Duration;
 use std::time::Instant;
@@ -28,6 +29,7 @@ use cached_config::ConfigStore;
 use clap::ArgMatches;
 use clap::Error as ClapError;
 use clap::FromArgMatches;
+use clientinfo::ClientRequestInfo;
 use context::CoreContext;
 use environment::MononokeEnvironment;
 use facet::AsyncBuildable;
@@ -244,6 +246,7 @@ impl MononokeApp {
         shutdown_grace_period: Duration,
         shutdown: ShutdownFut,
         shutdown_timeout: Duration,
+        requests_counter: Option<Arc<AtomicI64>>,
     ) -> Result<()>
     where
         ServerFn: FnOnce(MononokeApp) -> ServerFut + Send + 'static,
@@ -264,6 +267,7 @@ impl MononokeApp {
             shutdown_grace_period,
             shutdown,
             shutdown_timeout,
+            requests_counter,
         ))
     }
 
@@ -281,6 +285,7 @@ impl MononokeApp {
         shutdown_grace_period: Duration,
         shutdown: ShutdownFut,
         shutdown_timeout: Duration,
+        requests_counter: Option<Arc<AtomicI64>>,
     ) -> Result<()>
     where
         QuiesceFn: FnOnce(),
@@ -302,6 +307,7 @@ impl MononokeApp {
             shutdown_grace_period,
             shutdown,
             shutdown_timeout,
+            requests_counter,
         )
     }
 

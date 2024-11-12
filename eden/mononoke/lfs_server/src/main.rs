@@ -388,6 +388,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             // gets from Hyper, tell them to gracefully shutdown, then wait for them to complete
         },
         args.shutdown_timeout_args.shutdown_timeout,
+        None,
     )?;
 
     info!(&logger, "Exiting...");

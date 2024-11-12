@@ -36,6 +36,8 @@ pub struct LoadMiddleware {
     // therefore isn't super sensitive, let's be a bit conservative and try to do something
     // reasonable on underflow by using an AtomicI64.
     requests: Arc<AtomicI64>,
+    // TODO move to core context?
+    // move it to some persistent context of a server
 }
 
 impl LoadMiddleware {
@@ -43,6 +45,10 @@ impl LoadMiddleware {
         Self {
             requests: Arc::new(AtomicI64::new(0)),
         }
+    }
+
+    pub fn new_with_requests_counter(counter: Arc<AtomicI64>) -> Self {
+        Self { requests: counter }
     }
 }
 

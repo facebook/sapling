@@ -386,6 +386,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             .await;
         },
         args.shutdown_timeout_args.shutdown_timeout,
+        None,
     )?;
 
     info!(logger, "Exiting...");

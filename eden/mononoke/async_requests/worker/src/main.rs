@@ -235,6 +235,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 info!(logger, "Shutdown");
             },
             args.shutdown_timeout_args.shutdown_timeout,
+            None,
         )?;
     } else {
         let logger = logger.clone();
@@ -286,6 +287,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 info!(logger, "Shutdown");
             },
             args.shutdown_timeout_args.shutdown_timeout,
+            None,
         )?;
     }
 

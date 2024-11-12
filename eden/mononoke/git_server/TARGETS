@@ -24,6 +24,7 @@ rust_binary(
         "fbsource//third-party/rust:gotham_derive",
         "fbsource//third-party/rust:http",
         "fbsource//third-party/rust:hyper",
+        "fbsource//third-party/rust:mime",
         "fbsource//third-party/rust:rustc-hash",
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:slog",

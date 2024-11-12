@@ -404,5 +404,6 @@ fn main(fb: FacebookInit) -> Result<()> {
             repo_listener::wait_for_connections_closed(&root_log).await;
         },
         args.shutdown_timeout_args.shutdown_timeout,
+        None,
     )
 }

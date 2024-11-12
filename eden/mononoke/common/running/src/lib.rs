@@ -6,6 +6,8 @@
  */
 
 use std::future::Future;
+use std::sync::atomic::AtomicI64;
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Error;
@@ -43,6 +45,7 @@ pub async fn run_until_terminated<Server, QuiesceFn, ShutdownFut>(
     shutdown_grace_period: Duration,
     shutdown: ShutdownFut,
     shutdown_timeout: Duration,
+    requests_counter: Option<Arc<AtomicI64>>,
 ) -> Result<(), Error>
 where
     Server: Future<Output = Result<(), Error>> + Send + 'static,
@@ -95,13 +98,43 @@ where
 
     // Shutting down: wait for the grace period.
     quiesce();
-    info!(
-        &logger,
-        "Waiting {}s before shutting down server",
-        shutdown_grace_period.as_secs(),
-    );
 
-    time::sleep(shutdown_grace_period).await;
+    let wait_start = std::time::Instant::now();
+    if let Some(requests_counter) = requests_counter {
+        loop {
+            let requests_in_flight = requests_counter.load(std::sync::atomic::Ordering::Relaxed);
+            let waited = std::time::Instant::now() - wait_start;
+
+            match (waited, requests_in_flight) {
+                (_, req) if req <= 0 => {
+                    info!(&logger, "No requests still in flight!");
+                    break;
+                }
+                (waited, req) if waited > shutdown_grace_period => {
+                    info!(
+                        &logger,
+                        "Still {} requests in flight but we already waited {}s while the shutdown grace period is {}s. We're dropping the remaining requests.",
+                        req,
+                        waited.as_secs(),
+                        shutdown_grace_period.as_secs(),
+                    );
+                    break;
+                }
+                (_, req) => {
+                    info!(&logger, "Still {} requests in flight. Waiting", req);
+                }
+            }
+
+            time::sleep(Duration::from_secs(5)).await;
+        }
+    } else {
+        info!(
+            &logger,
+            "Waiting {}s before shutting down server",
+            shutdown_grace_period.as_secs(),
+        );
+        time::sleep(shutdown_grace_period).await;
+    }
 
     let shutdown = async move {
         shutdown.await;

@@ -13,6 +13,7 @@ use std::fs::File;
 use std::io::Write;
 use std::net::ToSocketAddrs;
 use std::sync::atomic::AtomicBool;
+use std::sync::atomic::AtomicI64;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
@@ -219,9 +220,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     app.start_monitoring(SERVICE_NAME, AliveService)?;
     app.start_stats_aggregation()?;
 
+    let requests_counter = Arc::new(AtomicI64::new(0));
     let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
     let server = {
-        cloned!(logger, will_exit);
+        cloned!(logger, will_exit, requests_counter);
         let tls_args = args.tls_params.clone();
         move |app: MononokeApp| async move {
             let repos_mgr = Arc::new(app.open_managed_repos(service_name).await?);
@@ -278,7 +280,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .add(PushvarsParsingMiddleware {})
                 .add(ResponseContentTypeMiddleware {})
                 .add(PostResponseMiddleware::default())
-                .add(LoadMiddleware::new())
+                .add(LoadMiddleware::new_with_requests_counter(requests_counter))
                 .add(log_middleware)
                 .add(OdsMiddleware::new())
                 .add(<ScubaMiddleware<MononokeGitScubaHandler>>::new(scuba))
@@ -355,6 +357,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             // gets from Hyper, tell them to gracefully shutdown, then wait for them to complete
         },
         args.shutdown_timeout_args.shutdown_timeout,
+        // TODO
+        Some(requests_counter),
     )?;
 
     info!(&logger, "Exiting...");

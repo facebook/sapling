@@ -54,6 +54,14 @@ function killandwait {
   true
 }
 
+function termandwait {
+  # sends TERM to the given process and waits for it so that nothing is printed
+  # to the terminal on MacOS
+  { kill -s SIGTERM "$1" && tail --pid="$1" -f /dev/null; } > /dev/null 2>&1
+  # We don't care for wait exit code
+  true
+}
+
 function get_free_socket {
   "$GET_FREE_SOCKET"
 }
