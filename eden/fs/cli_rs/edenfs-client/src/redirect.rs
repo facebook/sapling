@@ -1233,10 +1233,6 @@ fn is_symlink_correct(redir: &Redirection, checkout: &EdenFsCheckout) -> Result<
     }
 }
 
-fn is_dir_with_data(path: &Path) -> Result<bool> {
-    Ok(path.is_dir() && !is_empty_dir(path)?)
-}
-
 /// Computes the complete set of redirections that are currently in effect.
 /// This is based on the explicitly configured settings but also factors in
 /// effective configuration by reading the mount table.
