@@ -14,7 +14,6 @@ cpp_unittest(
         "//eden/common/utils:process",
         "//eden/fs/service:startup_logger",
         "//eden/fs/service:startup_status_subscriber",
-        "//folly:exception",
         "//folly:file",
         "//folly:file_util",
         "//folly/init:init",

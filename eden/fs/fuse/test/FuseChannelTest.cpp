@@ -9,7 +9,6 @@
 
 #include <folly/Random.h>
 #include <folly/executors/GlobalExecutor.h>
-#include <folly/logging/xlog.h>
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 

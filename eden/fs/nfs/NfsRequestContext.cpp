@@ -6,7 +6,6 @@
  */
 
 #include "eden/fs/nfs/NfsRequestContext.h"
-#include <folly/Utility.h>
 
 namespace facebook::eden {
 

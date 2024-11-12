@@ -19,7 +19,6 @@ cpp_unittest(
         "//eden/fs/testharness:test_dispatcher",
         "//folly:random",
         "//folly/executors:global_executor",
-        "//folly/logging:logging",
         "//folly/portability:gtest",
         "//folly/test:test_utils",
     ],

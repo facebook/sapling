@@ -212,7 +212,6 @@ cpp_library(
     deps = [
         "//eden/common/utils:immediate_future",
         "//folly:map_util",
-        "//folly:string",
         "//folly/futures:core",
     ],
     exported_deps = [

@@ -6,7 +6,6 @@
  */
 
 #include "eden/fs/inodes/VirtualInodeLoader.h"
-#include <folly/Exception.h>
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 #include <folly/testing/TestUtil.h>

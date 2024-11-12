@@ -7,7 +7,6 @@
 
 #include "eden/fs/inodes/sqlitecatalog/SqliteTreeStore.h"
 
-#include <folly/logging/xlog.h>
 #include <folly/portability/GTest.h>
 #include <memory>
 #include <optional>

@@ -8,7 +8,6 @@
 #include "eden/fs/testharness/FakeObjectStore.h"
 
 #include <folly/MapUtil.h>
-#include <folly/String.h>
 #include <folly/futures/Future.h>
 
 #include "eden/common/utils/ImmediateFuture.h"

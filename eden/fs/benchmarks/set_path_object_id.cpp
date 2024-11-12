@@ -6,7 +6,6 @@
  */
 
 #include <boost/uuid/random_generator.hpp>
-#include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <folly/io/async/EventBaseThread.h>
 #include <folly/portability/GFlags.h>

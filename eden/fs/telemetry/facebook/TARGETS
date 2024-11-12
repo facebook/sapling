@@ -14,18 +14,13 @@ cpp_library(
         "//eden/fs/config:config",
         "//eden/fs/inodes:inodes",
         "//eden/fs/store:store",
-        "//folly:random",
         "//folly/logging:logging",
-        "//folly/system:thread_name",
     ],
     exported_deps = [
         "//eden/fs/telemetry:scribe_logger",
         "//folly/synchronization:lifo_sem",
         "//rfe/scubadata:scubadata",
         "//scribe/api/producer:local_producer",
-    ],
-    external_deps = [
-        "re2",
     ],
 )
 

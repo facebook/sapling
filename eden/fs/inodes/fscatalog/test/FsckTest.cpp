@@ -18,7 +18,6 @@
 #include "eden/common/testharness/TempFile.h"
 #include "eden/common/utils/FileUtils.h"
 #include "eden/fs/inodes/fscatalog/FsInodeCatalog.h"
-#include "eden/fs/inodes/memcatalog/MemInodeCatalog.h"
 #include "eden/fs/inodes/overlay/OverlayChecker.h"
 #include "eden/fs/inodes/sqlitecatalog/SqliteInodeCatalog.h"
 #include "eden/fs/model/ObjectId.h"

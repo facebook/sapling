@@ -93,7 +93,6 @@ cpp_benchmark(
     deps = [
         "fbsource//third-party/benchmark:benchmark",
         "//eden/common/utils:process_info_cache",
-        "//eden/common/utils/benchharness:benchharness",
         "//eden/fs/utils:process_access_log",
     ],
 )

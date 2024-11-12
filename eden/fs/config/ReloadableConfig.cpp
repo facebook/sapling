@@ -11,8 +11,6 @@
 #include "eden/common/utils/EnumValue.h"
 #include "eden/fs/config/EdenConfig.h"
 
-#include <folly/logging/xlog.h>
-
 namespace {
 /// Throttle change checks to a maximum of one per
 /// kEdenConfigMinimumPollDuration.

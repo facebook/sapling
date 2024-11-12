@@ -9,7 +9,6 @@
 
 #include <folly/portability/GTest.h>
 #include "eden/fs/inodes/FileInode.h"
-#include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"

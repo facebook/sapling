@@ -33,7 +33,6 @@ cpp_library(
         "//eden/common/telemetry:structured_logger",
         "//eden/common/utils:throw",
         "//eden/fs/telemetry:log_info",
-        "//folly:exception",
         "//folly:string",
         "//folly/futures:core",
         "//folly/io:iobuf",

@@ -7,7 +7,6 @@
 
 #include <folly/SocketAddress.h>
 #include <folly/init/Init.h>
-#include <folly/logging/Init.h>
 #include <folly/logging/LogConfigParser.h>
 #include <folly/logging/xlog.h>
 #include "eden/fs/nfs/portmap/PortmapClient.h"

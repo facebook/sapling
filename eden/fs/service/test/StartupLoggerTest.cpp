@@ -31,7 +31,6 @@
 #include "eden/fs/service/StartupLogger.h"
 #include "eden/common/telemetry/SessionId.h"
 
-#include <folly/Exception.h>
 #include <folly/File.h>
 #include <folly/FileUtil.h>
 #include <folly/init/Init.h>

@@ -7,8 +7,6 @@
 
 #include "eden/fs/service/EdenMain.h"
 
-#include <folly/logging/xlog.h>
-
 using namespace facebook::eden;
 
 int main(int argc, char** argv) {

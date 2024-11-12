@@ -9,7 +9,6 @@
 
 #include <folly/portability/Time.h>
 
-#include <chrono>
 #include <system_error>
 
 namespace facebook::eden {

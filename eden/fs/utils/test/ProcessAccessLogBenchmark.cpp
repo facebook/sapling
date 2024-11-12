@@ -9,7 +9,6 @@
 
 #include <benchmark/benchmark.h>
 #include "eden/common/utils/ProcessInfoCache.h"
-#include "eden/common/utils/benchharness/Bench.h"
 
 using namespace facebook::eden;
 

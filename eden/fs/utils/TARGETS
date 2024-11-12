@@ -188,7 +188,6 @@ cpp_library(
     deps = [
         "//eden/common/utils:process_info_cache",
         "//folly:exception",
-        "//folly:map_util",
         "//folly:micro_lock",
         "//folly:thread_local",
     ],

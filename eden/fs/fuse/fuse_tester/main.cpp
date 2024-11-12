@@ -10,7 +10,6 @@
 #include <folly/init/Init.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/io/async/EventBaseThread.h>
-#include <folly/logging/Init.h>
 #include <folly/logging/LogConfigParser.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/GFlags.h>

@@ -7,7 +7,6 @@
 
 #include <folly/portability/GMock.h>
 #include <folly/portability/GTest.h>
-#include <sys/types.h>
 #include <utility>
 
 #include "eden/common/utils/ProcessInfoCache.h"

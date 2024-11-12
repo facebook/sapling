@@ -12,7 +12,6 @@
 
 #include <boost/filesystem.hpp>
 #include <folly/MapUtil.h>
-#include <folly/String.h>
 #include <folly/logging/xlog.h>
 #include <thrift/lib/cpp/util/EnumUtils.h>
 

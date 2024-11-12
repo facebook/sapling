@@ -7,7 +7,6 @@
 
 #include "eden/fs/inodes/lmdbcatalog/LMDBInodeCatalog.h"
 
-#include <folly/Range.h>
 #include <folly/io/Cursor.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 

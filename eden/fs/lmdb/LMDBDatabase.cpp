@@ -9,8 +9,6 @@
 
 #include <folly/logging/xlog.h>
 
-#include <sys/stat.h>
-
 namespace facebook::eden {
 
 // Maximum size of the LMDB database

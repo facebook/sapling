@@ -9,7 +9,6 @@
 
 #include <tuple>
 
-#include <folly/Exception.h>
 #include <folly/String.h>
 #include <folly/futures/Future.h>
 #include <folly/io/IOBufQueue.h>

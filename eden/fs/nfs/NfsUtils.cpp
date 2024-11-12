@@ -7,8 +7,6 @@
 
 #include "eden/fs/nfs/NfsUtils.h"
 
-#include <utility>
-
 namespace facebook::eden {
 uint32_t getEffectiveAccessRights(
     const struct stat& stat,

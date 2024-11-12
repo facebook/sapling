@@ -13,7 +13,6 @@
 
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
-#include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/TreeInode.h"
 
 using std::vector;

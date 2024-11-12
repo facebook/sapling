@@ -8,7 +8,6 @@
 #include "eden/fs/model/git/GitTree.h"
 #include <fmt/format.h>
 #include <folly/io/Cursor.h>
-#include <cstdio>
 #include <cstring>
 #include "eden/common/utils/Throw.h"
 #include "eden/fs/model/Hash.h"

@@ -13,7 +13,6 @@
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/TreeInode.h"
-#include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"

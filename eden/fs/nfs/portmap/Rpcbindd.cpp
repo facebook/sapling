@@ -8,7 +8,6 @@
 #include "eden/fs/nfs/portmap/Rpcbindd.h"
 
 #include <memory>
-#include <unordered_map>
 
 #include <folly/Synchronized.h>
 #include <folly/Utility.h>

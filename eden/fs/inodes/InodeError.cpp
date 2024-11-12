@@ -7,7 +7,6 @@
 
 #include "eden/fs/inodes/InodeError.h"
 
-#include <folly/String.h>
 #include "eden/fs/inodes/TreeInode.h"
 
 namespace facebook::eden {

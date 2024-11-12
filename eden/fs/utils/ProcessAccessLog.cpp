@@ -8,7 +8,6 @@
 #include "eden/fs/utils/ProcessAccessLog.h"
 
 #include <folly/Exception.h>
-#include <folly/MapUtil.h>
 #include <folly/MicroLock.h>
 #include <folly/ThreadLocal.h>
 

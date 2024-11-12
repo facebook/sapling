@@ -14,7 +14,6 @@ cpp_unittest(
         "//eden/common/utils:file_utils",
         "//eden/common/utils:path",
         "//eden/common/utils:string",
-        "//eden/common/utils:throw",
         "//eden/common/utils:try",
         "//eden/fs/facebook:normalized_hostname",
         "//folly:file",

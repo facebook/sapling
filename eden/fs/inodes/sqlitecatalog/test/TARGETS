@@ -9,7 +9,6 @@ cpp_unittest(
     deps = [
         "//eden/common/telemetry:structured_logger",
         "//eden/common/testharness:temp_file",
-        "//eden/common/utils:utils",
         "//eden/fs/config:config",
         "//eden/fs/inodes:inode_number",
         "//eden/fs/inodes:inodes",
@@ -19,7 +18,6 @@ cpp_unittest(
         "//eden/fs/inodes/test:overlay_test_util",
         "//eden/fs/telemetry:stats",
         "//eden/fs/testharness:fake_backing_store_and_tree_builder",
-        "//eden/fs/testharness:test_checks",
         "//eden/fs/testharness:test_mount",
         "//folly/portability:gtest",
         "//folly/test:test_utils",
@@ -38,7 +36,6 @@ cpp_unittest(
         "//eden/fs/inodes/sqlitecatalog:sqlitetreestore",
         "//eden/fs/model:model",
         "//eden/fs/sqlite:sqlite",
-        "//folly/logging:logging",
         "//folly/portability:gtest",
     ],
 )
