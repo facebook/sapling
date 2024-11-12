@@ -43,6 +43,10 @@ pub struct CasFetchedStats {
     pub queries_zgw: u64,
     pub queries_manifold: u64,
     pub queries_hedwig: u64,
+    pub hits_files_local_cache: u64,
+    pub hits_bytes_local_cache: u64,
+    pub misses_files_local_cache: u64,
+    pub misses_bytes_local_cache: u64,
 }
 
 impl CasFetchedStats {
@@ -55,6 +59,10 @@ impl CasFetchedStats {
         self.queries_zgw += other.queries_zgw;
         self.queries_manifold += other.queries_manifold;
         self.queries_hedwig += other.queries_hedwig;
+        self.hits_files_local_cache += other.hits_files_local_cache;
+        self.hits_bytes_local_cache += other.hits_bytes_local_cache;
+        self.misses_files_local_cache += other.misses_files_local_cache;
+        self.misses_bytes_local_cache += other.misses_bytes_local_cache;
     }
 }
 

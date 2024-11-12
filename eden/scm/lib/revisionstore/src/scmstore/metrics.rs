@@ -247,6 +247,18 @@ pub struct CasBackendMetrics {
 
     /// Total number of queries to the CAS Hedwig backend
     hedwig_queries: u64,
+
+    /// Total number of files fetched from the CAS Local Cache
+    local_cache_hits_files: u64,
+
+    /// Total number of bytes fetched from the CAS Local Cache
+    local_cache_hits_bytes: u64,
+
+    /// Total number of files not found in the CAS Local Cache
+    local_cache_misses_files: u64,
+
+    /// Total number of bytes not found in the CAS Local Cache
+    local_cache_misses_bytes: u64,
 }
 
 impl CasBackendMetrics {
@@ -274,6 +286,18 @@ impl CasBackendMetrics {
     pub(crate) fn hedwig_queries(&mut self, queries: u64) {
         self.hedwig_queries += queries;
     }
+    pub(crate) fn local_cache_hits_files(&mut self, files: u64) {
+        self.local_cache_hits_files += files;
+    }
+    pub(crate) fn local_cache_hits_bytes(&mut self, bytes: u64) {
+        self.local_cache_hits_bytes += bytes;
+    }
+    pub(crate) fn local_cache_misses_files(&mut self, files: u64) {
+        self.local_cache_misses_files += files;
+    }
+    pub(crate) fn local_cache_misses_bytes(&mut self, bytes: u64) {
+        self.local_cache_misses_bytes += bytes;
+    }
     pub(crate) fn metrics(&self) -> impl Iterator<Item = (&'static str, usize)> {
         [
             ("zdb.bytes", self.zdb_bytes as usize),
@@ -284,6 +308,22 @@ impl CasBackendMetrics {
             ("zgw.queries", self.zgw_queries as usize),
             ("manifold.queries", self.manifold_queries as usize),
             ("hedwig.queries", self.hedwig_queries as usize),
+            (
+                "local_cache.hits.files",
+                self.local_cache_hits_files as usize,
+            ),
+            (
+                "local_cache.hits.bytes",
+                self.local_cache_hits_bytes as usize,
+            ),
+            (
+                "local_cache.misses.files",
+                self.local_cache_misses_files as usize,
+            ),
+            (
+                "local_cache.misses.bytes",
+                self.local_cache_misses_bytes as usize,
+            ),
         ]
         .into_iter()
         .filter(|&(_, v)| v != 0)
@@ -300,5 +340,9 @@ impl AddAssign for CasBackendMetrics {
         self.zgw_queries += rhs.zgw_queries;
         self.manifold_queries += rhs.manifold_queries;
         self.hedwig_queries += rhs.hedwig_queries;
+        self.local_cache_hits_files += rhs.local_cache_hits_files;
+        self.local_cache_hits_bytes += rhs.local_cache_hits_bytes;
+        self.local_cache_misses_files += rhs.local_cache_misses_files;
+        self.local_cache_misses_bytes += rhs.local_cache_misses_bytes;
     }
 }

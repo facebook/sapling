@@ -930,6 +930,22 @@ impl FetchState {
         self.metrics
             .cas_backend
             .hedwig_queries(total_stats.queries_hedwig);
+
+        self.metrics
+            .cas_backend
+            .local_cache_hits_files(total_stats.hits_files_local_cache);
+
+        self.metrics
+            .cas_backend
+            .local_cache_hits_bytes(total_stats.hits_bytes_local_cache);
+
+        self.metrics
+            .cas_backend
+            .local_cache_misses_files(total_stats.misses_files_local_cache);
+
+        self.metrics
+            .cas_backend
+            .local_cache_misses_bytes(total_stats.misses_bytes_local_cache);
     }
 
     pub(crate) fn fetch_lfs_remote(

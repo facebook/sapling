@@ -37,6 +37,7 @@ macro_rules! re_client {
         use re_client_lib::THashAlgo;
         use re_client_lib::TStorageBackendType;
         use re_client_lib::TStorageBackendStats;
+        use re_client_lib::TLocalCacheStats;
 
         impl $struct {
             fn client(&self) -> Result<&REClient> {
@@ -60,7 +61,7 @@ macro_rules! re_client {
             })
         }
 
-        fn parse_stats(stats_entries: impl Iterator<Item=(TStorageBackendType, TStorageBackendStats)>) -> $crate::CasFetchedStats {
+        fn parse_stats(stats_entries: impl Iterator<Item=(TStorageBackendType, TStorageBackendStats)>, local_cache_stats: TLocalCacheStats) -> $crate::CasFetchedStats {
             let mut stats = $crate::CasFetchedStats::default();
             for (backend, dstats) in stats_entries {
                 match backend {
@@ -71,6 +72,10 @@ macro_rules! re_client {
                         _ => {}
                 }
             }
+            stats.hits_files_local_cache = local_cache_stats.hits_files as u64;
+            stats.hits_bytes_local_cache = local_cache_stats.hits_bytes as u64;
+            stats.misses_files_local_cache = local_cache_stats.misses_files as u64;
+            stats.misses_bytes_local_cache = local_cache_stats.misses_bytes as u64;
             stats
         }
 
@@ -132,7 +137,9 @@ macro_rules! re_client {
                             .download(self.metadata.clone(), request)
                             .await?;
 
-                        let stats = parse_stats(response.storage_stats.per_backend_stats.into_iter());
+                        let local_cache_stats = response.local_cache_stats;
+
+                        let stats = parse_stats(response.storage_stats.per_backend_stats.into_iter(), local_cache_stats);
 
                         let data = response.inlined_blobs
                             .unwrap_or_default()
@@ -195,8 +202,9 @@ macro_rules! re_client {
                     }
 
                     let response = response?;
+                    let local_cache_stats = response.local_cache_stats;
 
-                    let stats = parse_stats(response.storage_stats.per_backend_stats.into_iter());
+                    let stats = parse_stats(response.storage_stats.per_backend_stats.into_iter(), local_cache_stats);
 
                     let (digests_prefetched, digests_not_found) = response.digests_with_status
                         .into_iter()
