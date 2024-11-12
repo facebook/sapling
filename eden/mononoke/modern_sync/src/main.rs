@@ -20,10 +20,13 @@ use mononoke_app::fb303::Fb303AppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mutable_counters::MutableCounters;
+use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
+
 mod bul_util;
 mod commands;
+mod sender;
 mod sync;
 
 #[derive(Parser)]
@@ -48,6 +51,8 @@ pub struct Repo {
     commit_graph: CommitGraph,
     #[facet]
     repo_derived_data: RepoDerivedData,
+    #[facet]
+    repo_blobstore: RepoBlobstore,
 }
 
 #[fbinit::main]
