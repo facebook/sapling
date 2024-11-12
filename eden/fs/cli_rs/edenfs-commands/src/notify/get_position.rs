@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-//! edenfsctl notify
+//! edenfsctl notify get-position
 
 use std::path::PathBuf;
 
@@ -46,6 +46,13 @@ impl GetPositionCmd {
 
 #[async_trait]
 impl crate::Subcommand for GetPositionCmd {
+    #[cfg(not(fbcode_build))]
+    async fn run(&self) -> Result<ExitCode> {
+        eprintln!("not supported in non-fbcode build");
+        Ok(1)
+    }
+
+    #[cfg(fbcode_build)]
     async fn run(&self) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
         let client = instance.connect(None).await?;

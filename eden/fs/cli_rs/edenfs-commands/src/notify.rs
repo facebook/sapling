@@ -34,9 +34,6 @@ impl Subcommand for NotifyCmd {
         use NotifySubcommand::*;
         let sc: &(dyn Subcommand + Send + Sync) = match &self.subcommand {
             GetPosition(cmd) => cmd,
-            _ => {
-                unimplemented!()
-            }
         };
         sc.run().await
     }

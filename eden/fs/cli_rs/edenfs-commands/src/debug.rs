@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-//! edenfsctl config
+//! edenfsctl debug
 
 use anyhow::Result;
 use async_trait::async_trait;
