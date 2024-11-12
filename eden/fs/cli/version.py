@@ -7,7 +7,7 @@
 # pyre-strict
 
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import cast, Optional, Tuple
 
@@ -18,13 +18,13 @@ from typing import cast, Optional, Tuple
 
 @dataclass
 class VersionInfo:
-    running_version: Optional[str]
-    running_version_age: Optional[int]
-    installed_version: Optional[str]
-    installed_version_age: Optional[int]
-    ages_deltas: Optional[int]
-    is_eden_running: bool
-    is_dev: bool
+    running_version: Optional[str] = field(default=None)
+    running_version_age: Optional[int] = field(default=None)
+    installed_version: Optional[str] = field(default=None)
+    installed_version_age: Optional[int] = field(default=None)
+    ages_deltas: Optional[int] = field(default=None)
+    is_eden_running: bool = field(default=False)
+    is_dev: bool = field(default=False)
 
 
 def get_version_info(

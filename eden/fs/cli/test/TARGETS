@@ -18,6 +18,7 @@ python_unittest(
         "//eden/fs/cli:main_lib",
         "//eden/fs/cli:proc_utils",
         "//eden/fs/cli:telemetry",
+        "//eden/fs/cli:version",
         "//eden/fs/cli/doctor/test/lib:lib",
         "//eden/fs/cli/test/lib:lib",
         "//eden/fs/service:thrift-py-deprecated",

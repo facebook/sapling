@@ -50,13 +50,13 @@ from eden.fs.cli.util import (
     is_apple_silicon,
     wait_for_instance_healthy,
 )
+from eden.fs.cli.version import VersionInfo
 from eden.thrift.legacy import EdenClient, EdenNotRunningError
 from facebook.eden import EdenService
 from facebook.eden.ttypes import ChangeOwnershipRequest, MountState
 from fb303_core.ttypes import fb303_status
 
 from . import (
-    buck,
     config as config_mod,
     daemon,
     daemon_util,
@@ -1196,24 +1196,81 @@ class DoctorCmd(Subcmd):
 @subcmd("health-report", "Notify critical eden issues")
 class HealthReportCmd(Subcmd):
     class ErrorCode(Enum):
-        HEALTHY = 0
         EDEN_NOT_RUNNING = 1
+        STALE_EDEN_VERSION = 2
 
-    def check_if_eden_not_running(self, instance: EdenInstance) -> int:
+        def description(self) -> str:
+            descriptions = {
+                self.EDEN_NOT_RUNNING: "The EdenFS daemon is not running",
+                self.STALE_EDEN_VERSION: "The running EdenFS daemon is over 30 days out-of-date",
+            }
+            return descriptions[self]
+
+    running_version: str = ""
+    version_info: VersionInfo = VersionInfo()
+    error_codes: Set[ErrorCode] = set()
+
+    def is_eden_running(self, instance: EdenInstance) -> bool:
         health_info = instance.check_health()
         if not health_info.is_healthy():
-            print(
-                "EdenFS is not running: {}".format(health_info.detail), file=sys.stderr
-            )
-            return True
-        return False
+            self.error_codes.add(HealthReportCmd.ErrorCode.EDEN_NOT_RUNNING)
+            return False
+
+        try:
+            self.running_version = instance.get_running_version()
+        except EdenNotRunningError:
+            self.error_codes.add(HealthReportCmd.ErrorCode.EDEN_NOT_RUNNING)
+            return False
+
+        self.version_info = version_mod.get_version_info(self.running_version)
+        if not self.version_info.is_eden_running:
+            self.error_codes.add(HealthReportCmd.ErrorCode.EDEN_NOT_RUNNING)
+            return False
+        return True
+
+    def is_eden_up_to_date(self) -> bool:
+        # if running EdenFS version is stale
+        if (
+            self.version_info.ages_deltas is not None
+            and self.version_info.ages_deltas >= 30
+        ):
+            self.error_codes.add(HealthReportCmd.ErrorCode.STALE_EDEN_VERSION)
+            return False
+        return True
+
+    @staticmethod
+    def print_error_codes_json(out: ui.Output) -> None:
+        """
+        Serialize and print error codes in JSON format.
+        Args:
+            out (ui.Output): Output stream to write the JSON data to.
+        Notes:
+            This method takes the set of error codes stored in `self.error_codes` and
+            converts them into a JSON string. The resulting JSON object has error code
+            names as keys and their corresponding descriptions as values.
+        """
+        data = [
+            {"error": error_code.name, "description": error_code.description()}
+            for error_code in HealthReportCmd.error_codes
+        ]
+        json_str = json.dumps(data, indent=2)
+        out.writeln(json_str)
 
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
+        out = ui.get_output()
+        exit_code = 0
 
-        if self.check_if_eden_not_running(instance):
-            return HealthReportCmd.ErrorCode.EDEN_NOT_RUNNING.value
-        return HealthReportCmd.ErrorCode.HEALTHY.value
+        if not self.is_eden_running(instance):
+            exit_code = 1
+        else:
+            is_up_to_date = self.is_eden_up_to_date()
+            if not is_up_to_date:
+                exit_code = 1
+
+        self.print_error_codes_json(out)
+
+        return exit_code
 
 
 @subcmd("strace", "Monitor FUSE requests.")
