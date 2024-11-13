@@ -249,6 +249,7 @@ cpp_library(
         "//folly:string",
         "//folly/logging:logging",
         "//folly/portability:unistd",
+        "//folly/portability:windows",
     ],
     exported_deps = [
         "//eden/common/utils:path",

@@ -10,6 +10,8 @@
 #include "eden/common/utils/PathFuncs.h"
 
 #ifdef _WIN32
+#include <folly/portability/Windows.h>
+
 // We will use the known path to HG executable instead of searching in the
 // path. This would make sure we are picking the right mercurial. In future
 // we should find a chef config to lookup the path.
