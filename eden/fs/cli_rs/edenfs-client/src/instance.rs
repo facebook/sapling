@@ -31,6 +31,12 @@ use edenfs_utils::strip_unc_prefix;
 use fbinit::expect_init;
 use fbthrift_socket::SocketTransport;
 #[cfg(fbcode_build)]
+use thrift_streaming::ChangesSinceV2Result;
+#[cfg(fbcode_build)]
+use thrift_streaming::StreamChangesSinceV2Params;
+#[cfg(fbcode_build)]
+use thrift_streaming_clients::errors::StreamChangesSinceV2Error;
+#[cfg(fbcode_build)]
 use thrift_streaming_clients::errors::StreamStartStatusError;
 #[cfg(fbcode_build)]
 use thrift_streaming_thriftclients::build_StreamingEdenService_client;
@@ -50,6 +56,8 @@ use tracing::Level;
 use util::lock::PathLock;
 
 use crate::utils::get_mount_point;
+#[cfg(fbcode_build)]
+use crate::ChangesSinceV2Stream;
 use crate::EdenFsClient;
 #[cfg(fbcode_build)]
 use crate::StartStatusStream;
@@ -261,6 +269,33 @@ impl EdenFsInstance {
             .getCurrentJournalPosition(&mount_point)
             .await
             .from_err()
+    }
+
+    #[cfg(fbcode_build)]
+    pub async fn get_changes_since(
+        &self,
+        mount_point: &Option<PathBuf>,
+        from_position: &JournalPosition,
+        timeout: Option<Duration>,
+    ) -> Result<(ChangesSinceV2Result, ChangesSinceV2Stream)> {
+        let client = self
+            .connect_streaming(timeout)
+            .await
+            .context("Unable to connect to EdenFS daemon")?;
+        let params = StreamChangesSinceV2Params {
+            mountPoint: bytes_from_path(get_mount_point(mount_point)?)?,
+            fromPosition: from_position.clone(),
+            ..Default::default()
+        };
+        let result = client.streamChangesSinceV2(&params).await;
+        match result {
+            Err(StreamChangesSinceV2Error::ApplicationException(e))
+                if e.type_ == ApplicationExceptionErrorCode::UnknownMethod =>
+            {
+                Err(EdenFsError::UnknownMethod(e.message))
+            }
+            r => r.from_err(),
+        }
     }
 
     /// Returns a map of mount paths to mount names
