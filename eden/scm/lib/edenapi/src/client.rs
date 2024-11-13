@@ -1410,16 +1410,29 @@ impl SaplingRemoteApi for Client {
         &self,
         bookmarks: Vec<String>,
     ) -> Result<Vec<BookmarkEntry>, SaplingRemoteApiError> {
+        let request_len = bookmarks.len();
         tracing::info!("Requesting {} bookmarks", bookmarks.len());
         let url = self.build_url(paths::BOOKMARKS)?;
         let bookmark_req = BookmarkRequest { bookmarks };
         self.log_request(&bookmark_req, "bookmarks");
+        let bookmarks_wire = bookmark_req.to_wire();
         let req = self
             .configure_request(self.inner.client.post(url))?
-            .cbor(&bookmark_req.to_wire())
+            .cbor(&bookmarks_wire)
             .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
 
-        self.fetch_vec_with_retry::<BookmarkEntry>(vec![req]).await
+        let response = self
+            .fetch_vec_with_retry::<BookmarkEntry>(vec![req])
+            .await?;
+        if response.len() != request_len {
+            let bookmarks = bookmarks_wire.bookmarks;
+            let message = format!(
+                "Requested bookmarks {:?} but only got {:?}.",
+                bookmarks, &response
+            );
+            return Err(SaplingRemoteApiError::IncompleteResponse(message));
+        }
+        Ok(response)
     }
 
     async fn set_bookmark(
