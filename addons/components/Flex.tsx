@@ -41,17 +41,25 @@ const styles = stylex.create({
   alignCenter: {
     alignItems: 'center',
   },
+  alignCustom: alignItems => ({
+    alignItems,
+  }),
 });
 
 /** Vertical flex layout */
 export function Column(
   props: ContainerProps &
     (
-      | {alignStart: true; alignCenter?: undefined | false}
-      | {alignStart?: undefined | false; alignCenter: true}
+      | {alignStart: true; alignCenter?: undefined | false; alignItems?: undefined}
+      | {alignStart?: undefined | false; alignCenter?: true; alignItems?: undefined}
+      | {
+          alignStart?: undefined | false;
+          alignCenter?: undefined | false;
+          alignItems: 'stretch' | 'normal' | 'end';
+        }
     ),
 ) {
-  const {xstyle, alignStart, alignCenter, ...rest} = props;
+  const {xstyle, alignStart, alignCenter, alignItems, ...rest} = props;
   return (
     <div
       {...rest}
@@ -61,6 +69,7 @@ export function Column(
         xstyle,
         alignStart && styles.alignStart,
         alignCenter && styles.alignCenter,
+        alignItems && styles.alignCustom(alignItems),
       )}
     />
   );
