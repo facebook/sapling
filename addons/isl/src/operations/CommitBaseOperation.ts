@@ -6,6 +6,7 @@
  */
 
 import type {CommandArg, RepoRelativePath} from '../types';
+
 import {Operation} from './Operation';
 
 export class CommitBaseOperation extends Operation {

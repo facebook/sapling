@@ -19,8 +19,8 @@ import {t} from '../i18n';
 import {readAtom} from '../jotaiUtils';
 import {uncommittedChangesWithPreviews} from '../previews';
 import {authorString} from '../serverAPIState';
-import {Operation} from './Operation';
 import {CommitBaseOperation} from './CommitBaseOperation';
+import {Operation} from './Operation';
 
 export class CommitOperation extends CommitBaseOperation {
   private beforeCommitDate: Date;
