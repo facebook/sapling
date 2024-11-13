@@ -103,7 +103,7 @@ if sys.platform == "win32":
         ],
         "unixsocket_test.UnixSocketTestHg": True,
         "userinfo_test.UserInfoTest": True,
-        "xattr_test.XattrTestHg": True,
+
         #
         # Test classes from the hg integration test binary
         #
@@ -293,9 +293,6 @@ elif sys.platform.startswith("darwin"):
 
     # OSError: AF_UNIX path too long
     TEST_DISABLED["unixsocket_test.UnixSocketTest"] = True
-
-    # EdenFS on macOS uses NFSv3, which doesn't support extended attributes.
-    TEST_DISABLED["xattr_test.XattrTest"] = True
 
     # fsck doesn't work on macOS?
     TEST_DISABLED["fsck.basic_snapshot_tests.Basic20210712TestDefault"] = True
