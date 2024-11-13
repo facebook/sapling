@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Result} from '../types';
+import type {InternalCommitMessageFields, Result} from '../types';
 import type {RefObject} from 'react';
 import type {Comparison} from 'shared/Comparison';
 
@@ -151,7 +151,10 @@ const generatedSuggestions = atomFamilyWeak((fieldNameAndHashKey: string) =>
     }
 
     const hashOrHead = hashKey.startsWith('commit/') ? 'head' : hashKey;
-    const latestFields = readAtom(latestCommitMessageFieldsWithEdits(hashOrHead));
+
+    const latestFields = readAtom(
+      latestCommitMessageFieldsWithEdits(hashOrHead),
+    ) as InternalCommitMessageFields;
 
     const latestWrittenPhabricatorDiffNumber =
       fieldName === InternalFieldName.TestPlan
@@ -180,6 +183,7 @@ const generatedSuggestions = atomFamilyWeak((fieldNameAndHashKey: string) =>
         const response = await nullthrows(Internal.generateSuggestionWithAI)({
           comparison,
           fieldName,
+          latestFields,
           phabricatorDiffNumber: latestWrittenPhabricatorDiffNumber,
           summary: latestWrittenSummary,
           testPlan: latestWrittenTestPlan,

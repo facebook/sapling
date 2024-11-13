@@ -85,6 +85,8 @@ export type DiffCommentReaction = {
     | 'THUMBS_UP';
 };
 
+export type InternalCommitMessageFields = InternalTypes['InternalCommitMessageFields'];
+
 export enum CodePatchSuggestionStatus {
   Accepted = 'ACCEPTED',
   Declined = 'DECLINED',
@@ -820,6 +822,7 @@ export type ClientToServerMessage =
       id: string;
       comparison: Comparison;
       fieldName: string;
+      latestFields: InternalCommitMessageFields;
       phabricatorDiffNumber: string | undefined;
       summary: string | undefined;
       testPlan: string | undefined;
