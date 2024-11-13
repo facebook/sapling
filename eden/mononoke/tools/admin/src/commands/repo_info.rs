@@ -15,6 +15,8 @@ use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
+use sql_commit_graph_storage::CommitGraphBulkFetcher;
+use sql_commit_graph_storage::CommitGraphBulkFetcherRef;
 
 /// Show information about a repository
 #[derive(Parser)]
@@ -31,6 +33,9 @@ pub struct Repo {
 
     #[facet]
     bookmarks: dyn Bookmarks,
+
+    #[facet]
+    commit_graph_bulk_fetcher: CommitGraphBulkFetcher,
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -56,5 +61,12 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         main_bookmark,
         main_bookmark_value.as_deref().unwrap_or("(not set)")
     );
+
+    let commits = repo
+        .commit_graph_bulk_fetcher()
+        .fetch_commit_count(&ctx, repo.repo_identity().id())
+        .await?;
+
+    println!("Commits: {}", commits);
     Ok(())
 }

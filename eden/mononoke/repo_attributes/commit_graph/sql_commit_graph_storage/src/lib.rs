@@ -931,6 +931,10 @@ mononoke_queries! {
             LIMIT {limit}"
         )
     }
+
+    read GetCommitCount(id: RepositoryId) -> (u64) {
+        "SELECT COUNT(*) FROM commit_graph_edges WHERE repo_id={id}"
+    }
 }
 
 type FetchedEdgesRow = (
@@ -1367,6 +1371,14 @@ impl SqlCommitGraphStorage {
             &limit,
         )
         .await
+    }
+
+    // Returns the amount of commits in a repo.  Only to be used for ad-hoc internal operations
+    pub async fn fetch_commit_count(&self, ctx: &CoreContext, id: RepositoryId) -> Result<u64> {
+        let conn = self.read_conn(true);
+        let result =
+            GetCommitCount::maybe_traced_query(conn, ctx.client_request_info(), &id).await?;
+        Ok(result.first().map_or(0, |(count,)| *count))
     }
 }
 

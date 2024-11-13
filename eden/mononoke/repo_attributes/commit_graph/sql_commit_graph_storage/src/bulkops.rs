@@ -15,6 +15,7 @@ use futures::Stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use mononoke_types::ChangesetId;
+use mononoke_types::RepositoryId;
 
 use crate::SqlCommitGraphStorage;
 
@@ -192,6 +193,10 @@ impl CommitGraphBulkFetcher {
             },
         )
         .try_flatten()
+    }
+
+    pub async fn fetch_commit_count(&self, ctx: &CoreContext, id: RepositoryId) -> Result<u64> {
+        self.storage.fetch_commit_count(ctx, id).await
     }
 }
 
