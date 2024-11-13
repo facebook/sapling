@@ -156,20 +156,6 @@ const generatedSuggestions = atomFamilyWeak((fieldNameAndHashKey: string) =>
       latestCommitMessageFieldsWithEdits(hashOrHead),
     ) as InternalCommitMessageFields;
 
-    const latestWrittenPhabricatorDiffNumber =
-      fieldName === InternalFieldName.TestPlan
-        ? latestFields[InternalFieldName.DifferentialRevision][0] ?? ''
-        : undefined;
-    const latestWrittenSummary =
-      fieldName === InternalFieldName.TestPlan
-        ? (latestFields[InternalFieldName.Summary] as string)
-        : undefined;
-    const latestWrittenTestPlan =
-      fieldName === InternalFieldName.TestPlan
-        ? (latestFields[InternalFieldName.TestPlan] as string)
-        : undefined;
-    const latestWrittenTitle = latestFields[InternalFieldName.Title] as string;
-
     // Note: we don't use the FunnelTracker because this event is not needed for funnel analysis,
     // only for our own duration / error rate tracking.
     const resultPromise = tracker.operation(
@@ -184,10 +170,6 @@ const generatedSuggestions = atomFamilyWeak((fieldNameAndHashKey: string) =>
           comparison,
           fieldName,
           latestFields,
-          phabricatorDiffNumber: latestWrittenPhabricatorDiffNumber,
-          summary: latestWrittenSummary,
-          testPlan: latestWrittenTestPlan,
-          title: latestWrittenTitle,
         });
 
         return response;

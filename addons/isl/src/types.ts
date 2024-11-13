@@ -823,10 +823,6 @@ export type ClientToServerMessage =
       comparison: Comparison;
       fieldName: string;
       latestFields: InternalCommitMessageFields;
-      phabricatorDiffNumber: string | undefined;
-      summary: string | undefined;
-      testPlan: string | undefined;
-      title: string;
     }
   | {type: 'gotUiState'; state: string}
   | CodeReviewProviderSpecificClientToServerMessages
