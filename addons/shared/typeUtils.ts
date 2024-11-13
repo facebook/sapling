@@ -54,3 +54,12 @@ type StrictUnionHelper<T, TAll> = T extends unknown
  * ```
  */
 export type StrictUnion<T> = StrictUnionHelper<T, T>;
+
+/**
+ * Construct a type with the properties of T except for those in type K,
+ * applicable to T being a union type.
+ * ```
+ * UnionOmit<foo | bar, 'baz'> => Omit<foo, 'baz'> | Omit<bar, 'baz'>
+ * ```
+ */
+export type UnionOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
