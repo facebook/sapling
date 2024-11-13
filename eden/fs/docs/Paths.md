@@ -30,7 +30,7 @@ is stored or non-stored (`Piece`).
 ### `AbsolutePath`/`AbsolutePathPiece`
 
 - Must begin with a "/" or "\\?\" on Windows
-- On Windows, the path separator is always a "\"
+- On Windows, the path separator is always a "\\"
 - May be composed with `PathComponent`s and `RelativePath`s
 - May not be composed with other `AbsolutePath`s
 
@@ -135,3 +135,26 @@ stored path is small enough that the SSO kicks-in.
 - `removeRecursively()` - Recursively removes a directory tree. Returns false if
   the directory did not exist in the first place, and true if the directory was
   successfully removed. Throws an exception on error.
+
+# Length Limitations
+
+- Each PathComponent is limited to 255 characters. This restriction is
+  self-imposed in an attempt to maintain compatability with other filesystems.
+- The total path length is not enforced by EdenFS, but operating systems on
+  which EdenFS runs may impose their own limits. As of November 2024, the
+  following limits are known.
+  - Linux: Paths must be less than 4096 characters
+    - Check `getconf NAME_MAX $PATH` to check the path component limits for a
+      given filesystem
+    - Check `getconf PATH_MAX $PATH` to check the total path length limits for a
+      given filesystem
+  - macOS: Paths must be under 1024 characters
+    - Use the same commands as described above for Linux to check max path
+      lengths on macOS
+  - Windows:
+    [There are 2 different limits](https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation?tabs=registry)
+    - Regular paths must be less than 260 characters total
+    - UNC paths are allowed to be much longer: 32,767 total characters
+- NOTE: Mononoke (the source control server component) enforces its own max path
+  length restrictions. As of November 2024, the max path length that Mononoke
+  allows is 980 characters.
