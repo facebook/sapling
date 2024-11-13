@@ -13,7 +13,7 @@ import unittest
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 
-from eden.fs.cli.version import date_from_version, VersionInfo
+from eden.fs.cli.version import VersionInfo
 
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
@@ -85,6 +85,8 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         mock_argument_parser = MagicMock(spec=argparse.ArgumentParser)
         return (mock_argument_parser, args)
 
+    @patch("eden.fs.cli.doctor.facebook.check_x509.find_x509_path")
+    @patch("eden.fs.cli.doctor.facebook.check_x509.validate_x509")
     @patch("eden.fs.cli.config.EdenInstance.get_running_version")
     @patch("eden.fs.cli.version.get_version_info")
     @patch("eden.fs.cli.util.HealthStatus.is_healthy")
@@ -93,12 +95,16 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         mock_is_healthy: MagicMock,
         mock_get_version_info: MagicMock,
         mock_get_running_version: MagicMock,
+        mock_validate_x509: MagicMock,
+        mock_find_x509_path: MagicMock,
     ) -> None:
         mock_argument_parser, args = self.setup()
 
         mock_get_running_version.return_value = latest_version
         mock_get_version_info.return_value = latest_running_version_info
         mock_is_healthy.return_value = True
+        mock_find_x509_path.return_value = ("some_cert_path",)
+        mock_validate_x509.return_value = True
 
         test_health_report_cmd = HealthReportCmd(mock_argument_parser)
         result = test_health_report_cmd.run(args)
@@ -121,19 +127,25 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
 
         self.assertEqual(result, 1)
 
+    @patch("eden.fs.cli.doctor.facebook.check_x509.find_x509_path")
+    @patch("eden.fs.cli.doctor.facebook.check_x509.validate_x509")
     @patch("eden.fs.cli.config.EdenInstance.get_running_version")
     @patch("eden.fs.cli.version.get_version_info")
     @patch("eden.fs.cli.util.HealthStatus.is_healthy")
     def test_health_report_check_for_stale_eden_version_prompt_error(
         self,
-        mock_get_running_version: MagicMock,
-        mock_get_version_info: MagicMock,
         mock_is_healthy: MagicMock,
+        mock_get_version_info: MagicMock,
+        mock_get_running_version: MagicMock,
+        mock_validate_x509: MagicMock,
+        mock_find_x509_path: MagicMock,
     ) -> None:
         mock_argument_parser, args = self.setup()
         mock_get_running_version.return_value = stale_version
         mock_get_version_info.return_value = stale_running_version_info
         mock_is_healthy.return_value = True
+        mock_find_x509_path.return_value = ("some_cert_path",)
+        mock_validate_x509.return_value = True
 
         test_health_report_cmd = HealthReportCmd(mock_argument_parser)
         result = test_health_report_cmd.run(args)
@@ -142,21 +154,56 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         )
         self.assertEqual(result, 1)
 
+    @patch("eden.fs.cli.doctor.facebook.check_x509.find_x509_path")
+    @patch("eden.fs.cli.doctor.facebook.check_x509.validate_x509")
     @patch("eden.fs.cli.config.EdenInstance.get_running_version")
     @patch("eden.fs.cli.version.get_version_info")
     @patch("eden.fs.cli.util.HealthStatus.is_healthy")
     def test_health_report_check_for_stale_eden_version_no_error(
         self,
-        mock_get_running_version: MagicMock,
-        mock_get_version_info: MagicMock,
         mock_is_healthy: MagicMock,
+        mock_get_version_info: MagicMock,
+        mock_get_running_version: MagicMock,
+        mock_validate_x509: MagicMock,
+        mock_find_x509_path: MagicMock,
     ) -> None:
         mock_argument_parser, args = self.setup()
+        mock_get_running_version.return_value = acceptable_version
+        mock_get_version_info.return_value = acceptable_running_version_info
+        mock_is_healthy.return_value = True
+        mock_find_x509_path.return_value = ("some_cert_path",)
+        mock_validate_x509.return_value = True
+
+        test_health_report_cmd = HealthReportCmd(mock_argument_parser)
+        # test_health_report_cmd.error_codes.clear()
+        result = test_health_report_cmd.run(args)
+        self.assertEqual(HealthReportCmd.error_codes, set())
+        self.assertEqual(result, 0)
+
+    @patch("eden.fs.cli.doctor.facebook.check_x509.find_x509_path")
+    @patch("eden.fs.cli.doctor.facebook.check_x509.validate_x509")
+    @patch("eden.fs.cli.config.EdenInstance.get_running_version")
+    @patch("eden.fs.cli.version.get_version_info")
+    @patch("eden.fs.cli.util.HealthStatus.is_healthy")
+    def test_health_report_check_for_invalid_certs(
+        self,
+        mock_is_healthy: MagicMock,
+        mock_get_version_info: MagicMock,
+        mock_get_running_version: MagicMock,
+        mock_validate_x509: MagicMock,
+        mock_find_x509_path: MagicMock,
+    ) -> None:
+        mock_argument_parser, args = self.setup()
+        mock_find_x509_path.return_value = ("some_cert_path",)
+        mock_validate_x509.return_value = False
         mock_get_running_version.return_value = acceptable_version
         mock_get_version_info.return_value = acceptable_running_version_info
         mock_is_healthy.return_value = True
 
         test_health_report_cmd = HealthReportCmd(mock_argument_parser)
         result = test_health_report_cmd.run(args)
-        self.assertEqual(HealthReportCmd.error_codes, set())
-        self.assertEqual(result, 0)
+        self.assertEqual(
+            HealthReportCmd.error_codes, {HealthReportCmd.ErrorCode.INVALID_CERTS}
+        )
+
+        self.assertEqual(result, 1)

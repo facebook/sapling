@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple, Type
 
 import thrift.transport
+from eden.fs.cli.version import VersionInfo
 
 try:
     from cli.py import par_telemetry
@@ -43,6 +44,7 @@ except ImportError:
 
 from eden.fs.cli.buck import get_buck_command, run_buck_command
 from eden.fs.cli.config import HG_REPO_TYPES
+from eden.fs.cli.doctor.facebook import check_x509
 from eden.fs.cli.telemetry import TelemetrySample
 from eden.fs.cli.util import (
     check_health_using_lockfile,
@@ -50,7 +52,6 @@ from eden.fs.cli.util import (
     is_apple_silicon,
     wait_for_instance_healthy,
 )
-from eden.fs.cli.version import VersionInfo
 from eden.thrift.legacy import EdenClient, EdenNotRunningError
 from facebook.eden import EdenService
 from facebook.eden.ttypes import ChangeOwnershipRequest, MountState
@@ -1198,11 +1199,13 @@ class HealthReportCmd(Subcmd):
     class ErrorCode(Enum):
         EDEN_NOT_RUNNING = 1
         STALE_EDEN_VERSION = 2
+        INVALID_CERTS = 3
 
         def description(self) -> str:
             descriptions = {
                 self.EDEN_NOT_RUNNING: "The EdenFS daemon is not running",
                 self.STALE_EDEN_VERSION: "The running EdenFS daemon is over 30 days out-of-date",
+                self.INVALID_CERTS: "The EdenFS cannot find a valid user certificate",
             }
             return descriptions[self]
 
@@ -1229,7 +1232,6 @@ class HealthReportCmd(Subcmd):
         return True
 
     def is_eden_up_to_date(self) -> bool:
-        # if running EdenFS version is stale
         if (
             self.version_info.ages_deltas is not None
             and self.version_info.ages_deltas >= 30
@@ -1237,6 +1239,13 @@ class HealthReportCmd(Subcmd):
             self.error_codes.add(HealthReportCmd.ErrorCode.STALE_EDEN_VERSION)
             return False
         return True
+
+    def are_certs_valid(self) -> bool:
+        if (cert := check_x509.find_x509_path()) and check_x509.validate_x509(cert):
+            return True
+        # cert error!
+        self.error_codes.add(HealthReportCmd.ErrorCode.INVALID_CERTS)
+        return False
 
     @staticmethod
     def print_error_codes_json(out: ui.Output) -> None:
@@ -1261,12 +1270,10 @@ class HealthReportCmd(Subcmd):
         out = ui.get_output()
         exit_code = 0
 
-        if not self.is_eden_running(instance):
+        if not self.is_eden_running(instance) or not all(
+            f() for f in [self.is_eden_up_to_date, self.are_certs_valid]
+        ):
             exit_code = 1
-        else:
-            is_up_to_date = self.is_eden_up_to_date()
-            if not is_up_to_date:
-                exit_code = 1
 
         self.print_error_codes_json(out)
 
