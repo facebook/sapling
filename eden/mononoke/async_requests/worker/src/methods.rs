@@ -25,6 +25,7 @@ use context::CoreContext;
 use ephemeral_blobstore::BubbleId;
 use ephemeral_blobstore::RepoEphemeralStore;
 use futures::future::BoxFuture;
+use futures::try_join;
 use futures::Future;
 use futures::FutureExt;
 use megarepo_api::MegarepoApi;
@@ -37,12 +38,26 @@ use mononoke_api::Repo;
 use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
 use repo_authorization::AuthorizationContext;
+use scs_errors::ServiceErrorResultExt;
+#[cfg(fbcode_build)]
+use scs_methods::commit_sparse_profile_info::commit_sparse_profile_delta_impl;
 #[cfg(fbcode_build)]
 use scs_methods::commit_sparse_profile_info::commit_sparse_profile_size_impl;
 use scs_methods::from_request::FromRequest;
 use scs_methods::specifiers::SpecifierExt;
 use source_control as thrift;
 use source_control::CommitSpecifier;
+
+#[cfg(not(fbcode_build))]
+pub async fn commit_sparse_profile_delta_impl(
+    ctx: &CoreContext,
+    repo: RepoContext<Repo>,
+    changeset: ChangesetContext<Repo>,
+    other: ChangesetContext<Repo>,
+    profiles: thrift::SparseProfiles,
+) -> Result<thrift::CommitSparseProfileSizeResponse, scs_errors::ServiceError> {
+    todo!()
+}
 
 #[cfg(not(fbcode_build))]
 pub async fn commit_sparse_profile_size_impl(
@@ -242,7 +257,14 @@ pub(crate) async fn megarepo_async_request_compute<R: MononokeRepo>(
                 .map_err(|e| e.into())
                 .into())
         }
-        async_requests_types_thrift::AsynchronousRequestParams::commit_sparse_profile_delta_params(_) => todo!(),
+        async_requests_types_thrift::AsynchronousRequestParams::commit_sparse_profile_delta_params(params) => {
+            let (repo, changeset, other) = repo_changeset_pair(ctx.clone(), mononoke, &params.commit, &params.other_id)
+                .await.map_err(|e| anyhow!("error finding changeset pair: {:?}", e))?;
+
+            Ok(commit_sparse_profile_delta_impl(ctx, repo, changeset, other, params.profiles).await
+                .map_err(|e| e.into())
+                .into())
+        }
         async_requests_types_thrift::AsynchronousRequestParams::UnknownField(union_tag) => {
              bail!(
                 "this type of request (AsynchronousRequestParams tag {}) not supported by this worker!", union_tag
@@ -266,6 +288,59 @@ async fn get_repo_and_changeset(
         .ok_or_else(|| scs_errors::commit_not_found(commit.description()))?;
 
     Ok((repo, changeset))
+}
+
+/// Get the repo and pair of changesets specified by a `thrift::CommitSpecifier`
+/// and `thrift::CommitId` pair.
+async fn repo_changeset_pair(
+    ctx: CoreContext,
+    mononoke: Arc<Mononoke<Repo>>,
+    commit: &thrift::CommitSpecifier,
+    other_commit: &thrift::CommitId,
+) -> Result<
+    (
+        RepoContext<Repo>,
+        ChangesetContext<Repo>,
+        ChangesetContext<Repo>,
+    ),
+    scs_errors::ServiceError,
+> {
+    let changeset_specifier =
+        ChangesetSpecifier::from_request(&commit.id).context("invalid target commit id")?;
+    let other_changeset_specifier = ChangesetSpecifier::from_request(other_commit)
+        .context("invalid or missing other commit id")?;
+    if other_changeset_specifier.in_bubble() {
+        Err(scs_errors::invalid_request(format!(
+            "Can't compare against a snapshot: {}",
+            other_changeset_specifier
+        )))?
+    }
+    let bubble_fetcher = bubble_fetcher_for_changeset(ctx.clone(), changeset_specifier.clone());
+    let repo = repo_impl(ctx, mononoke, &commit.repo, bubble_fetcher).await?;
+    let (changeset, other_changeset) = try_join!(
+        async {
+            Ok::<_, scs_errors::ServiceError>(
+                repo.changeset(changeset_specifier)
+                    .await
+                    .context("failed to resolve target commit")?
+                    .ok_or_else(|| scs_errors::commit_not_found(commit.description()))?,
+            )
+        },
+        async {
+            Ok::<_, scs_errors::ServiceError>(
+                repo.changeset(other_changeset_specifier)
+                    .await
+                    .context("failed to resolve other commit")?
+                    .ok_or_else(|| {
+                        scs_errors::commit_not_found(format!(
+                            "repo={} commit={}",
+                            commit.repo.name, other_commit
+                        ))
+                    })?,
+            )
+        },
+    )?;
+    Ok((repo, changeset, other_changeset))
 }
 
 fn bubble_fetcher_for_changeset(
