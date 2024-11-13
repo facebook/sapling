@@ -84,7 +84,7 @@ colortable = {
 
 def reposetup(ui, repo):
     common.reposetup(ui, repo)
-    if common.isserver(ui) and repo.local():
+    if common.isserver(ui):
         repo.bundlestore = bundlestore.bundlestore(repo)
 
 

@@ -201,9 +201,6 @@ def extsetup(ui) -> None:
 
 
 def reposetup(ui, repo) -> None:
-    if not repo.local():
-        return
-
     # The sparse extension should never be enabled in Eden repositories;
     # Eden automatically only fetches the parts of the repository that are
     # actually required.

@@ -342,10 +342,6 @@ def reposetup(ui, repo):
             )
             return
 
-    # We only work with local repositories
-    if not repo.local():
-        return
-
     # For Eden-backed repositories the eden extension already handles optimizing
     # dirstate operations.  Let the eden extension manage the dirstate in this case.
     if "eden" in repo.requirements:

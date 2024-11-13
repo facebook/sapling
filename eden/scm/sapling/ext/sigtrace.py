@@ -116,8 +116,6 @@ _runningpid = None
 
 def reposetup(ui, repo) -> None:
     # Do not track known long-running commands.
-    if not repo.local():
-        return
     interval = ui.configint("sigtrace", "interval")
     if not interval or interval <= 0:
         return

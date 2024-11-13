@@ -57,9 +57,6 @@ def reposetup(ui, repo):
             )
             return
 
-    if not repo.local():
-        return
-
     # Ensure there is a Watchman client associated with the repo that
     # state_update() can use later.
     watchmanclient.createclientforrepo(repo)

@@ -96,7 +96,7 @@ def uisetup(ui) -> None:
 
 
 def reposetup(ui, repo) -> None:
-    if not repo.local() or "edensparse" not in repo.requirements:
+    if "edensparse" not in repo.requirements:
         return
 
     _wraprepo(ui, repo)

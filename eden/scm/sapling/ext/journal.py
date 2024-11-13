@@ -65,16 +65,15 @@ def extsetup(ui) -> None:
 
 
 def reposetup(ui, repo) -> None:
-    if repo.local():
-        repo.journal = journalstorage(repo)
-        repo._wlockfreeprefix.add("namejournal")
+    repo.journal = journalstorage(repo)
+    repo._wlockfreeprefix.add("namejournal")
 
-        dirstate, cached = localrepo.isfilecached(repo, "dirstate")
-        if cached:
-            # already instantiated dirstate isn't yet marked as
-            # "journal"-ing, even though repo.dirstate() was already
-            # wrapped by own wrapdirstate()
-            _setupdirstate(repo, dirstate)
+    dirstate, cached = localrepo.isfilecached(repo, "dirstate")
+    if cached:
+        # already instantiated dirstate isn't yet marked as
+        # "journal"-ing, even though repo.dirstate() was already
+        # wrapped by own wrapdirstate()
+        _setupdirstate(repo, dirstate)
 
 
 def runcommand(orig, lui, repo, cmd, fullargs, *args):

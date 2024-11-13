@@ -233,12 +233,6 @@ def uisetup(ui) -> None:
 
 
 def reposetup(ui, repo) -> None:
-    # During 'hg pull' a httppeer repo is created to represent the remote repo.
-    # It doesn't have a .hg directory to put a blackbox in, so we don't do
-    # the blackbox setup for it.
-    if not repo.local():
-        return
-
     if hasattr(ui, "setrepo"):
         ui.setrepo(repo)
 
