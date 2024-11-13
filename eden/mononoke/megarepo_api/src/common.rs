@@ -463,8 +463,15 @@ pub trait MegarepoOp<R> {
         )
         .freeze()?;
 
-        let mutable_renames = self
-            .create_mutable_renames(
+        let mutable_renames = if let Ok(true) = justknobs::eval(
+            "scm/mononoke:megarepo_disable_mutable_rename_creation",
+            None,
+            Some(repo.repo_identity().name()),
+        ) {
+            // Skip creating mutable renames
+            Vec::new()
+        } else {
+            self.create_mutable_renames(
                 ctx,
                 repo,
                 cs_id,
@@ -472,7 +479,8 @@ pub trait MegarepoOp<R> {
                 mover,
                 directory_mover,
             )
-            .await?;
+            .await?
+        };
 
         let source_and_moved_changeset = SourceAndMovedChangesets {
             source: cs_id,
