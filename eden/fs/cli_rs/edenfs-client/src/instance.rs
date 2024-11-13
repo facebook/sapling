@@ -23,6 +23,7 @@ use edenfs_config::EdenFsConfig;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
+use edenfs_utils::bytes_from_path;
 use edenfs_utils::get_executable;
 #[cfg(windows)]
 use edenfs_utils::strip_unc_prefix;
@@ -34,6 +35,7 @@ use thrift_streaming_clients::errors::StreamStartStatusError;
 #[cfg(fbcode_build)]
 use thrift_streaming_thriftclients::build_StreamingEdenService_client;
 use thrift_types::edenfs::DaemonInfo;
+use thrift_types::edenfs::JournalPosition;
 use thrift_types::edenfs_clients::EdenService;
 use thrift_types::fb303_core::fb303_status;
 use thrift_types::fbthrift::binary_protocol::BinaryProtocol;
@@ -47,6 +49,7 @@ use tracing::event;
 use tracing::Level;
 use util::lock::PathLock;
 
+use crate::utils::get_mount_point;
 use crate::EdenFsClient;
 #[cfg(fbcode_build)]
 use crate::StartStatusStream;
@@ -240,6 +243,24 @@ impl EdenFsInstance {
             }
             r => r.from_err(),
         }
+    }
+
+    #[cfg(fbcode_build)]
+    pub async fn get_journal_position(
+        &self,
+        mount_point: &Option<PathBuf>,
+        timeout: Option<Duration>,
+    ) -> Result<JournalPosition> {
+        let client = self
+            .connect(timeout)
+            .await
+            .context("Unable to connect to EdenFS daemon")?;
+        let mount_point_path = get_mount_point(mount_point)?;
+        let mount_point = bytes_from_path(mount_point_path)?;
+        client
+            .getCurrentJournalPosition(&mount_point)
+            .await
+            .from_err()
     }
 
     /// Returns a map of mount paths to mount names

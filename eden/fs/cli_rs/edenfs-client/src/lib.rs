@@ -21,6 +21,7 @@ pub mod fsutil;
 pub mod instance;
 mod mounttable;
 pub mod redirect;
+pub mod utils;
 
 pub use instance::DaemonHealthy;
 pub use instance::EdenFsInstance;

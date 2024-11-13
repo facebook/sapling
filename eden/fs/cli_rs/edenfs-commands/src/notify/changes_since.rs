@@ -14,11 +14,11 @@ use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
+use edenfs_client::utils::locate_repo_root;
 use edenfs_client::EdenFsInstance;
 use edenfs_utils::bytes_from_path;
 use hg_util::path::expand_path;
 
-use crate::util::locate_repo_root;
 use crate::ExitCode;
 
 // TODO: add a --json flag to print the output in JSON format

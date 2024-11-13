@@ -23,6 +23,7 @@ use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
+use edenfs_client::utils::locate_repo_root;
 use edenfs_client::EdenFsInstance;
 use futures::StreamExt;
 use hg_util::path::expand_path;
@@ -33,7 +34,6 @@ use tokio::sync::Notify;
 use tokio::time;
 
 use crate::util::jsonrpc::ResponseBuilder;
-use crate::util::locate_repo_root;
 use crate::ExitCode;
 
 // Defines a few helper functions to make the debug format easier to read.

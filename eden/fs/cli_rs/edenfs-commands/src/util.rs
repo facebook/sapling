@@ -39,12 +39,6 @@ pub fn remove_trailing_slash(path: &Path) -> PathBuf {
     )
 }
 
-/// Traverse up and locate the repository root
-pub fn locate_repo_root(path: &Path) -> Option<&Path> {
-    path.ancestors()
-        .find(|p| p.join(".hg").is_dir() || p.join(".git").is_dir())
-}
-
 pub fn locate_eden_config_dir(path: &Path) -> Option<PathBuf> {
     // Check whether we're in an Eden mount. If we are, some parent directory will contain
     // a .eden dir that contains a socket file. This socket file is symlinked to the
