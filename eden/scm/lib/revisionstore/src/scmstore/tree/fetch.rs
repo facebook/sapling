@@ -266,29 +266,27 @@ impl FetchState {
                                         cache_child_aux_data(&lazy_tree, aux_cache, tree_aux_store)
                                     {
                                         self.errors.multiple_keyed_error(keys, "cache child aux data failed", err);
-                                    } else {
-                                        if !keys.is_empty() {
-                                            let last = keys.pop().unwrap();
-                                            for key in keys {
-                                                self.common.found(
-                                                    key,
-                                                    StoreTree {
-                                                        content: Some(lazy_tree.clone()),
-                                                        parents: None,
-                                                        aux_data: None,
-                                                    },
-                                                );
-                                            }
-                                            // no clones needed
+                                    } else if !keys.is_empty() {
+                                        let last = keys.pop().unwrap();
+                                        for key in keys {
                                             self.common.found(
-                                                last,
+                                                key,
                                                 StoreTree {
-                                                    content: Some(lazy_tree),
+                                                    content: Some(lazy_tree.clone()),
                                                     parents: None,
                                                     aux_data: None,
                                                 },
                                             );
                                         }
+                                        // no clones needed
+                                        self.common.found(
+                                            last,
+                                            StoreTree {
+                                                content: Some(lazy_tree),
+                                                parents: None,
+                                                aux_data: None,
+                                            },
+                                        );
                                     }
                                 }
                                 Err(err) => {
