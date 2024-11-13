@@ -200,7 +200,7 @@
     json5 "^2.2.3"
     semver "^6.3.1"
 
-"@babel/core@^7.25.8":
+"@babel/core@^7.23.6":
   version "7.26.0"
   resolved "https://registry.yarnpkg.com/@babel/core/-/core-7.26.0.tgz#d78b6023cc8f3114ccf049eb219613f74a747b40"
   integrity sha512-i1SLeK+DzNnQ3LL/CswPCa/E5u4lh1k6IAEphON8F+cXt0t9euTshDru0q7/IqMa1PMPz5RnHuHscF8/ZJsStg==
@@ -1193,6 +1193,19 @@
     debug "^4.1.0"
     globals "^11.1.0"
 
+"@babel/traverse@^7.23.6", "@babel/traverse@^7.25.9":
+  version "7.25.9"
+  resolved "https://registry.yarnpkg.com/@babel/traverse/-/traverse-7.25.9.tgz#a50f8fe49e7f69f53de5bea7e413cd35c5e13c84"
+  integrity sha512-ZCuvfwOwlz/bawvAuvcj8rrithP2/N55Tzz342AkTvq4qaWbGfmCk/tKhNaV2cthijKrPAA8SRJV5WWe7IBMJw==
+  dependencies:
+    "@babel/code-frame" "^7.25.9"
+    "@babel/generator" "^7.25.9"
+    "@babel/parser" "^7.25.9"
+    "@babel/template" "^7.25.9"
+    "@babel/types" "^7.25.9"
+    debug "^4.3.1"
+    globals "^11.1.0"
+
 "@babel/traverse@^7.23.7":
   version "7.23.7"
   resolved "https://registry.yarnpkg.com/@babel/traverse/-/traverse-7.23.7.tgz#9a7bf285c928cb99b5ead19c3b1ce5b310c9c305"
@@ -1254,19 +1267,6 @@
     debug "^4.3.1"
     globals "^11.1.0"
 
-"@babel/traverse@^7.25.7", "@babel/traverse@^7.25.9":
-  version "7.25.9"
-  resolved "https://registry.yarnpkg.com/@babel/traverse/-/traverse-7.25.9.tgz#a50f8fe49e7f69f53de5bea7e413cd35c5e13c84"
-  integrity sha512-ZCuvfwOwlz/bawvAuvcj8rrithP2/N55Tzz342AkTvq4qaWbGfmCk/tKhNaV2cthijKrPAA8SRJV5WWe7IBMJw==
-  dependencies:
-    "@babel/code-frame" "^7.25.9"
-    "@babel/generator" "^7.25.9"
-    "@babel/parser" "^7.25.9"
-    "@babel/template" "^7.25.9"
-    "@babel/types" "^7.25.9"
-    debug "^4.3.1"
-    globals "^11.1.0"
-
 "@babel/types@^7.0.0", "@babel/types@^7.16.8", "@babel/types@^7.18.6", "@babel/types@^7.18.9", "@babel/types@^7.3.0", "@babel/types@^7.3.3":
   version "7.18.9"
   resolved "https://registry.npmjs.org/@babel/types/-/types-7.18.9.tgz"
@@ -1320,7 +1320,7 @@
     "@babel/helper-validator-identifier" "^7.24.7"
     to-fast-properties "^2.0.0"
 
-"@babel/types@^7.25.8", "@babel/types@^7.25.9", "@babel/types@^7.26.0":
+"@babel/types@^7.25.9", "@babel/types@^7.26.0":
   version "7.26.0"
   resolved "https://registry.yarnpkg.com/@babel/types/-/types-7.26.0.tgz#deabd08d6b753bc8e0f198f8709fb575e31774ff"
   integrity sha512-Z/yiTPj+lDVnF7lWeKCIJzaIkI0vYO87dMpZ4bg4TDrFe4XXLFWL1TbXU27gBP3QccxV9mZICCrnjnYlJjXHOA==
@@ -2578,27 +2578,36 @@
   dependencies:
     "@sinonjs/commons" "^3.0.0"
 
-"@stylexjs/babel-plugin@0.9.3", "@stylexjs/babel-plugin@^0.7.0":
-  version "0.9.3"
-  resolved "https://registry.yarnpkg.com/@stylexjs/babel-plugin/-/babel-plugin-0.9.3.tgz#d3097c622d6c8eb5f6a957af82513db8073bf451"
-  integrity sha512-D/zWrxddlEmVOKSMB0Ei+IOtpxK/U5ghQPaByKEUKIHVlH2Di4dYQiR8W1DjZJamD6NigR5ULB5Lait15p4gdg==
+"@stylexjs/babel-plugin@0.4.1", "@stylexjs/babel-plugin@^0.7.0":
+  version "0.4.1"
+  resolved "https://registry.yarnpkg.com/@stylexjs/babel-plugin/-/babel-plugin-0.4.1.tgz#4ec4f3851a93d3b1f686a92a502c1b439ec07d27"
+  integrity sha512-usG7HFvq04ELD44BAukQlTzKwmw3B0isOgsYzO97iGTkHMi7CJN4hniag7Fj96hrTob8Kq6MBbbQkLeKzbjqIg==
   dependencies:
-    "@babel/core" "^7.25.8"
+    "@babel/core" "^7.23.6"
     "@babel/helper-module-imports" "^7.22.15"
-    "@babel/traverse" "^7.25.7"
-    "@babel/types" "^7.25.8"
-    "@stylexjs/shared" "0.9.3"
-    "@stylexjs/stylex" "0.9.3"
-    esm-resolve "^1.0.11"
+    "@babel/traverse" "^7.23.6"
+    "@babel/types" "^7.23.6"
+    "@stylexjs/shared" "0.4.1"
+    "@stylexjs/stylex" "0.4.1"
 
-"@stylexjs/shared@0.9.3":
-  version "0.9.3"
-  resolved "https://registry.yarnpkg.com/@stylexjs/shared/-/shared-0.9.3.tgz#1a18c8d78a9846cf6b8a8b134efb633166222bb1"
-  integrity sha512-0gtKFjZxAvDdUdoZTuvukovboD3K12BxkswKHHBRvzfcrM0rQXGMXoHS1gLRMQJ9kllJaa/I3sclbeWKyELm6Q==
+"@stylexjs/shared@0.4.1":
+  version "0.4.1"
+  resolved "https://registry.yarnpkg.com/@stylexjs/shared/-/shared-0.4.1.tgz#bd181c627c6b682f3c14b7639dd237efedd70234"
+  integrity sha512-4h1rVuwE9iPN0yor0kvtHhMo7XjWrG3DdPYWZI9c6V4AquAbh53KxN6v6X9woM2HKUbt0GzjyCsEjc6Ci6Lo4w==
   dependencies:
     postcss-value-parser "^4.1.0"
 
-"@stylexjs/stylex@0.9.3", "@stylexjs/stylex@^0.9.3":
+"@stylexjs/stylex@0.4.1":
+  version "0.4.1"
+  resolved "https://registry.yarnpkg.com/@stylexjs/stylex/-/stylex-0.4.1.tgz#6048571a93a9440131b25c3e9957d4e1933562a6"
+  integrity sha512-xc3hjEtqpluoZ1RcJZ1c59bdMITMHPh0FmCNi/01amaPhEw040WqgR/KGFHIqxIer9wt5mOeED3iM9tSrljeaQ==
+  dependencies:
+    css-mediaquery "^0.1.2"
+    invariant "^2.2.4"
+    styleq "0.1.3"
+    utility-types "^3.10.0"
+
+"@stylexjs/stylex@^0.9.3":
   version "0.9.3"
   resolved "https://registry.yarnpkg.com/@stylexjs/stylex/-/stylex-0.9.3.tgz#adc6fd48fbe7b03b74175011580d6ddba597a335"
   integrity sha512-q3kYZ5bMXlVyF6Wh8b8Uwl701aSu8aEhim0AlQTaAXKMt0J6nTCWOjSwq6GNR74Ez4pcm2Ha4NDqhkYhKYGBcQ==
@@ -4549,11 +4558,6 @@ eslint@^8.11.0:
     strip-json-comments "^3.1.0"
     text-table "^0.2.0"
     v8-compile-cache "^2.0.3"
-
-esm-resolve@^1.0.11:
-  version "1.0.11"
-  resolved "https://registry.yarnpkg.com/esm-resolve/-/esm-resolve-1.0.11.tgz#93f0021d5c06fb9bed77fcd010eb9de54538e1db"
-  integrity sha512-LxF0wfUQm3ldUDHkkV2MIbvvY0TgzIpJ420jHSV1Dm+IlplBEWiJTKWM61GtxUfvjV6iD4OtTYFGAGM2uuIUWg==
 
 espree@^9.3.2:
   version "9.3.2"
@@ -7930,6 +7934,11 @@ util-deprecate@^1.0.1:
   version "1.0.2"
   resolved "https://registry.npmjs.org/util-deprecate/-/util-deprecate-1.0.2.tgz"
   integrity sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==
+
+utility-types@^3.10.0:
+  version "3.11.0"
+  resolved "https://registry.yarnpkg.com/utility-types/-/utility-types-3.11.0.tgz#607c40edb4f258915e901ea7995607fdf319424c"
+  integrity sha512-6Z7Ma2aVEWisaL6TvBCy7P8rm2LQoPv6dJ7ecIaIixHcwfbJ0x7mWdbcwlIM5IGQxPZSFYeqRCqlOOeKoJYMkw==
 
 v8-compile-cache-lib@^3.0.1:
   version "3.0.1"
