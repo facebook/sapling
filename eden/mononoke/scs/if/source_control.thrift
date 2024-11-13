@@ -1485,6 +1485,18 @@ struct CommitSparseProfileDeltaParams {
   2: SparseProfiles profiles;
 }
 
+struct CommitSparseProfileDeltaToken {
+  1: i64 id;
+}
+
+struct CommitSparseProfileDeltaParamsV2 {
+  1: CommitSpecifier commit;
+  /// Revision on which inspect sparse profiles
+  2: CommitId other_id;
+  /// list of sparse profiles for which calculate size change
+  3: SparseProfiles profiles;
+}
+
 struct CommitSparseProfileSizeParams {
   /// list of sparse profiles for which calculate total size
   1: SparseProfiles profiles;
@@ -2084,6 +2096,11 @@ struct CommitMultiplePathLastChangedResponse {
 struct CommitSparseProfileDeltaResponse {
   /// If any sparse profile changed, this contains change for each profile
   1: optional SparseProfileDeltaSizes changed_sparse_profiles;
+}
+
+union CommitSparseProfileDeltaPollResponse {
+  1: PollPending poll_pending;
+  2: CommitSparseProfileDeltaResponse response;
 }
 
 struct CommitSparseProfileSizeResponse {
@@ -2847,6 +2864,25 @@ service SourceControlService extends fb303_core.BaseService {
     3: OverloadError overload_error,
   );
 
+  /// Calculate the size change for each sparse profile for a given commit
+  CommitSparseProfileDeltaToken commit_sparse_profile_delta_async(
+    1: CommitSparseProfileDeltaParamsV2 params,
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
+
+  /// Poll for completion of a commit_sparse_profile_delta_async call.
+  CommitSparseProfileDeltaPollResponse commit_sparse_profile_delta_poll(
+    1: CommitSparseProfileDeltaToken token,
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+    4: PollError poll_error,
+  );
+
   /// Calculate the total size of each sparse profiles
   CommitSparseProfileSizeResponse commit_sparse_profile_size(
     1: CommitSpecifier commit,
@@ -2866,7 +2902,7 @@ service SourceControlService extends fb303_core.BaseService {
     3: OverloadError overload_error,
   );
 
-  /// Calculate the total size of each sparse profiles
+  /// Poll for completion of a commit_sparse_profile_size_async call.
   CommitSparseProfileSizePollResponse commit_sparse_profile_size_poll(
     1: CommitSparseProfileSizeToken token,
   ) throws (

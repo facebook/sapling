@@ -22,6 +22,7 @@ typedef id.Id MegarepoRemergeSourceParamsId (rust.newtype)
 typedef id.Id MegarepoSyncChangesetParamsId (rust.newtype)
 typedef id.Id AsyncPingParamsId (rust.newtype)
 typedef id.Id CommitSparseProfileSizeParamsId (rust.newtype)
+typedef id.Id CommitSparseProfileDeltaParamsId (rust.newtype)
 
 typedef id.Id MegarepoSyncChangesetResultId (rust.newtype)
 typedef id.Id MegarepoAddTargetResultId (rust.newtype)
@@ -30,6 +31,7 @@ typedef id.Id MegarepoRemergeSourceResultId (rust.newtype)
 typedef id.Id MegarepoChangeTargetConfigResultId (rust.newtype)
 typedef id.Id AsyncPingResultId (rust.newtype)
 typedef id.Id CommitSparseProfileSizeResultId (rust.newtype)
+typedef id.Id CommitSparseProfileDeltaResultId (rust.newtype)
 
 typedef id.Id AsynchronousRequestResultId (rust.newtype)
 union AsynchronousRequestResult {
@@ -41,6 +43,7 @@ union AsynchronousRequestResult {
   6: source_control.AsyncPingResponse async_ping_result;
   7: source_control.CommitSparseProfileSizeResponse commit_sparse_profile_size_result;
   8: source_control.AsyncRequestError error;
+  9: source_control.CommitSparseProfileDeltaResponse commit_sparse_profile_delta_result;
 }
 
 typedef id.Id AsynchronousRequestParamsId (rust.newtype)
@@ -52,4 +55,5 @@ union AsynchronousRequestParams {
   5: source_control.MegarepoAddBranchingTargetParams megarepo_add_branching_target_params;
   6: source_control.AsyncPingParams async_ping_params;
   7: source_control.CommitSparseProfileSizeParamsV2 commit_sparse_profile_size_params;
+  8: source_control.CommitSparseProfileDeltaParamsV2 commit_sparse_profile_delta_params;
 }

@@ -702,6 +702,32 @@ impl_async_svc_method_types! {
     }
 }
 
+// Params and result types for commit_sparse_profile_delta_async
+
+impl_async_svc_method_types! {
+    method_name => "commit_sparse_profile_delta_async",
+    request_struct => CommitSparseProfileDelta,
+
+    params_value_thrift_type => CommitSparseProfileDeltaParamsV2,
+    params_union_variant => commit_sparse_profile_delta_params,
+
+    response_type => CommitSparseProfileDeltaResponse,
+    result_union_variant => commit_sparse_profile_delta_result,
+
+    poll_response_type => CommitSparseProfileDeltaPollResponse,
+    token_type => CommitSparseProfileDeltaToken,
+    token_thrift_type => CommitSparseProfileDeltaToken,
+
+    fn target(&self: ThriftParams) -> String {
+        format!(
+            "repo: {}, commit: {}, other: {}",
+            self.commit.repo,
+            self.commit.id,
+            self.other_id,
+        )
+    }
+}
+
 impl_async_svc_stored_type! {
     handle_type => AsynchronousRequestParamsId,
     handle_thrift_type => ThriftAsynchronousRequestParamsId,
@@ -753,6 +779,9 @@ impl AsynchronousRequestParams {
             }
             ThriftAsynchronousRequestParams::async_ping_params(params) => Ok(params.target()),
             ThriftAsynchronousRequestParams::commit_sparse_profile_size_params(params) => {
+                Ok(params.target())
+            }
+            ThriftAsynchronousRequestParams::commit_sparse_profile_delta_params(params) => {
                 Ok(params.target())
             }
             ThriftAsynchronousRequestParams::UnknownField(union_tag) => {
