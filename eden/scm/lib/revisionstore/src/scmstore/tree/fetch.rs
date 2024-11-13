@@ -229,8 +229,9 @@ impl FetchState {
         let start_time = Instant::now();
         let mut total_stats = CasFetchedStats::default();
 
-        block_on(async {
-            cas_client.fetch(&digests, CasDigestType::Tree).await.for_each(|results| match results {
+        async_runtime::block_in_place(|| {
+            block_on(async {
+                cas_client.fetch(&digests, CasDigestType::Tree).await.for_each(|results| match results {
                 Ok((stats, results)) => {
                     reqs += 1;
                     total_stats.add(&stats);
@@ -309,6 +310,7 @@ impl FetchState {
                     future::ready(())
                 }
             }).await;
+            })
         });
 
         span.record("hits", keys_found_count);
