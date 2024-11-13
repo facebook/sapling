@@ -1003,6 +1003,14 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::CommitSparseProfileDeltaParams,
         ) -> Result<thrift::CommitSparseProfileDeltaResponse, service::CommitSparseProfileDeltaExn>;
 
+        async fn commit_sparse_profile_delta_async(
+            params: thrift::CommitSparseProfileDeltaParamsV2,
+        ) -> Result<thrift::CommitSparseProfileDeltaToken, service::CommitSparseProfileDeltaAsyncExn>;
+
+        async fn commit_sparse_profile_delta_poll(
+            token: thrift::CommitSparseProfileDeltaToken,
+        ) -> Result<thrift::CommitSparseProfileDeltaPollResponse, service::CommitSparseProfileDeltaPollExn>;
+
         async fn commit_sparse_profile_size(
             commit: thrift::CommitSpecifier,
             params: thrift::CommitSparseProfileSizeParams,

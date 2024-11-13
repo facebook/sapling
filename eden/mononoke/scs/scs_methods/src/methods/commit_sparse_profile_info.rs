@@ -6,6 +6,7 @@
  */
 
 use anyhow::Result;
+use async_requests::types::CommitSparseProfileDeltaToken;
 use async_requests::types::CommitSparseProfileSizeToken;
 use context::CoreContext;
 use mononoke_api::sparse_profile::get_profile_delta_size;
@@ -66,6 +67,30 @@ impl SourceControlServiceImpl {
     ) -> Result<thrift::CommitSparseProfileSizePollResponse, scs_errors::ServiceError> {
         let token = CommitSparseProfileSizeToken(token);
         poll::<CommitSparseProfileSizeToken>(&ctx, &self.async_requests_queue, token).await
+    }
+
+    pub(crate) async fn commit_sparse_profile_delta_async(
+        &self,
+        ctx: CoreContext,
+        params: thrift::CommitSparseProfileDeltaParamsV2,
+    ) -> Result<thrift::CommitSparseProfileDeltaToken, scs_errors::ServiceError> {
+        let (repo, _changeset) = self.repo_changeset(ctx.clone(), &params.commit).await?;
+        enqueue::<thrift::CommitSparseProfileDeltaParamsV2>(
+            &ctx,
+            &self.async_requests_queue,
+            Some(&repo.repoid()),
+            params,
+        )
+        .await
+    }
+
+    pub(crate) async fn commit_sparse_profile_delta_poll(
+        &self,
+        ctx: CoreContext,
+        token: thrift::CommitSparseProfileDeltaToken,
+    ) -> Result<thrift::CommitSparseProfileDeltaPollResponse, scs_errors::ServiceError> {
+        let token = CommitSparseProfileDeltaToken(token);
+        poll::<CommitSparseProfileDeltaToken>(&ctx, &self.async_requests_queue, token).await
     }
 }
 

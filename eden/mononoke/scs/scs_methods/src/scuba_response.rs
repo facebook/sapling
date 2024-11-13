@@ -131,11 +131,34 @@ impl AddScubaResponse for thrift::CommitMultiplePathLastChangedResponse {}
 
 impl AddScubaResponse for thrift::CommitSparseProfileDeltaResponse {}
 
+impl AddScubaResponse for thrift::CommitSparseProfileDeltaToken {
+    fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("token", self.id.to_string());
+    }
+}
+
 impl AddScubaResponse for thrift::CommitSparseProfileSizeResponse {}
 
 impl AddScubaResponse for thrift::CommitSparseProfileSizeToken {
     fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("token", self.id.to_string());
+    }
+}
+
+impl AddScubaResponse for thrift::CommitSparseProfileDeltaPollResponse {
+    fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        match &self {
+            thrift::CommitSparseProfileDeltaPollResponse::poll_pending(_) => {
+                scuba.add("response_ready", false);
+            }
+            thrift::CommitSparseProfileDeltaPollResponse::response(response) => {
+                scuba.add("response_ready", true);
+                <thrift::CommitSparseProfileDeltaResponse as AddScubaResponse>::add_scuba_response(
+                    response, scuba,
+                );
+            }
+            thrift::CommitSparseProfileDeltaPollResponse::UnknownField(_) => {}
+        }
     }
 }
 
