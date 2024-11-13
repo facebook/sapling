@@ -8,9 +8,18 @@
 
 import os
 import subprocess
+import sys
 
 from .lib import testcase
 
+if sys.platform == "win32":
+    try:
+        from .lib.ntapi import open_file_handle
+    except ImportError:
+        # TODO(T150221518): We should add the ntapi extension module to the
+        # getdeps build, but for now we have to account for the possibility that
+        # it may not be present.
+        pass
 
 GENERIC_READ = 0x80000000
 GENERIC_WRITE = 0x40000000
@@ -87,6 +96,21 @@ class LockTest(testcase.EdenRepoTest):
         ):
             self.eden_repo.update(self.remove_file_commit)
 
+    def _test_share_read_write_delete(self, open_mode) -> None:
+        # Need to hold open the file until the end of the test
+        handle = open_file_handle(  # noqa: F841
+            self.repo.get_path(self.BASE_FILE_NAME),
+            open_mode,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        )
+
+        self.check_read_allowed(self.UPDATED_FILE_CONTENTS)
+        self.check_commit_edit_allowed()
+        self.check_commit_remove_allowed()
+
+        # Handle is closed when it is deleted
+        del handle
+
     def test_no_lock(self) -> None:
         self.check_read_allowed(self.UPDATED_FILE_CONTENTS)
         self.check_commit_edit_allowed()
@@ -95,3 +119,14 @@ class LockTest(testcase.EdenRepoTest):
         self.check_read_allowed(self.UPDATED_FILE_CONTENTS)
         self.eden_repo.update(self.add_file_commit)
         self.check_read_allowed(self.BASE_FILE_CONTENTS)
+
+    def test_read_mode(self) -> None:
+        # Due to issues with running these tests separately causing resource exhaustion on sockets,
+        # we need to run them all in the same test. Reset to the default commit before each test.
+        self._test_share_read_write_delete(b"r")
+
+    def test_write_mode(self) -> None:
+        self._test_share_read_write_delete(b"w")
+
+    def test_edit_mode(self) -> None:
+        self._test_share_read_write_delete(b"+")
