@@ -5,7 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-/** Either a commit hash or "commit/aaaaa" when making a new commit on top of hash aaaaa  */
+/**
+ * Either a commit hash, or 'commit/foo' when making a new commit on top of commit hash 'foo'.
+ */
 export type HashKey = `commit/${string}` | string;
 
 /**
