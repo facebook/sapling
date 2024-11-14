@@ -136,10 +136,13 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
     }
 
     pub(crate) fn results(self, errors: FetchErrors) {
-        // Combine and collect errors
+        // Only emit keyed errors for items that are stuck in pending.
+        // We may have, for example, gotten an error fetching a key from CAS, but then succeeded in
+        // fetching it from SLAPI. In that case, `fetch_errors` contains the CAS error, but the
+        // requested item won't be in `pending` since it was satisfied via SLAPI.
         let mut incomplete = errors.fetch_errors;
         for (key, _value) in self.pending.into_iter() {
-            incomplete.entry(key).or_insert_with(|| {
+            let err = incomplete.remove(&key).unwrap_or_else(|| {
                 let msg = if self.mode.is_local() {
                     "not found locally and not contacting server"
                 } else if self.mode.is_remote() {
@@ -151,12 +154,9 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
                 };
                 anyhow!("{}", msg)
             });
-        }
-
-        for (key, error) in incomplete {
             let _ = self
                 .found_tx
-                .send(Err(KeyFetchError::KeyedError(KeyedError(key, error))));
+                .send(Err(KeyFetchError::KeyedError(KeyedError(key, err))));
         }
 
         for err in errors.other_errors {
