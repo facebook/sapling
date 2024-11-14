@@ -19,6 +19,8 @@ use crate::args::sparse_profiles::SparseProfilesArgs;
 use crate::render::Render;
 use crate::ScscApp;
 
+const POLL_SLEEP_DURATION: std::time::Duration = std::time::Duration::from_secs(1);
+
 #[derive(clap::Parser)]
 /// Calculate the total size of each sparse profile for a given commit
 pub(super) struct CommandArgs {
@@ -85,6 +87,8 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         let token = conn.commit_sparse_profile_size_async(&params).await?;
 
         loop {
+            // reopening the connection on retry might allow SR to send us to a different server
+            let conn = app.get_connection(Some(&repo.name))?;
             let res = conn.commit_sparse_profile_size_poll(&token).await;
             match res {
                 Ok(res) => match res {
@@ -92,7 +96,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                         break success;
                     }
                     source_control::CommitSparseProfileSizePollResponse::poll_pending(_) => {
-                        println!("sparse profile size is not ready yet, waiting some more...");
+                        eprintln!("sparse profile size is not ready yet, waiting some more...");
                     }
                     source_control::CommitSparseProfileSizePollResponse::UnknownField(t) => {
                         return Err(anyhow::anyhow!(
@@ -103,11 +107,12 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                 },
                 Err(e) => match e {
                     CommitSparseProfileSizePollError::poll_error(_) => {
-                        // retry
+                        eprintln!("poll error, retrying...");
                     }
                     _ => return Err(anyhow::anyhow!("request failed with error: {:?}", e)),
                 },
             }
+            tokio::time::sleep(POLL_SLEEP_DURATION).await;
         }
     } else {
         let params = thrift::CommitSparseProfileSizeParams {
