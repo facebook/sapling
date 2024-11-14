@@ -15,7 +15,6 @@ use anyhow::Error;
 use async_trait::async_trait;
 use cached_config::ConfigHandle;
 use fbinit::FacebookInit;
-use permission_checker::MononokeIdentity;
 use permission_checker::MononokeIdentitySet;
 use permission_checker::MononokeIdentitySetExt;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -243,7 +242,6 @@ pub enum RateLimitReason {
 
 #[derive(Debug, Clone)]
 pub enum Target {
-    Identity(MononokeIdentity),
     StaticSlice(StaticSlice),
     MainClientId(String),
     Identities(MononokeIdentitySet),
@@ -295,10 +293,6 @@ impl Target {
                     None => false,
                 }
             }
-            Self::Identity(i) => match identities {
-                Some(client_idents) => client_idents.contains(i),
-                None => false,
-            },
             Self::MainClientId(id) => match main_client_id {
                 Some(client_id) => client_id == id,
                 None => false,
@@ -357,6 +351,7 @@ fn in_throttled_slice(
 #[cfg(test)]
 mod test {
     use mononoke_macros::mononoke;
+    use permission_checker::MononokeIdentity;
 
     use super::*;
 

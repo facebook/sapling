@@ -37,9 +37,6 @@ impl TryFrom<rate_limiting_config::Target> for Target {
 
     fn try_from(value: rate_limiting_config::Target) -> Result<Self, Self::Error> {
         match value {
-            rate_limiting_config::Target::identity(i) => {
-                Ok(Target::Identity(FromStr::from_str(&i)?))
-            }
             rate_limiting_config::Target::static_slice(s) => {
                 let slice_pct = s.slice_pct.try_into()?;
                 Ok(Target::StaticSlice(StaticSlice {
