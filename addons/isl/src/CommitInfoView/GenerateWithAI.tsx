@@ -61,28 +61,33 @@ export function GenerateAIButton({
       ? `commit/${currentCommit.hash}`
       : currentCommit.hash;
 
+  const fieldNameAndHashKey = `${fieldName}+${hashKey}`;
+
   useThrottledEffect(
     () => {
       if (currentCommit != null && featureEnabled && hashKey != null) {
-        FunnelTracker.get(hashKey)?.track(
+        FunnelTracker.get(fieldNameAndHashKey)?.track(
           GeneratedMessageTrackEventName.ButtonImpression,
           fieldName,
         );
       }
     },
     100,
-    [hashKey, featureEnabled],
+    [fieldNameAndHashKey, featureEnabled],
   );
 
   const onDismiss = useCallback(() => {
     if (hashKey != null) {
-      const hasAcceptedState = readAtom(hasAcceptedAIMessageSuggestion(hashKey));
+      const hasAcceptedState = readAtom(hasAcceptedAIMessageSuggestion(fieldNameAndHashKey));
       if (hasAcceptedState === true) {
         return;
       }
-      FunnelTracker.get(hashKey)?.track(GeneratedMessageTrackEventName.Dismiss, fieldName);
+      FunnelTracker.get(fieldNameAndHashKey)?.track(
+        GeneratedMessageTrackEventName.Dismiss,
+        fieldName,
+      );
     }
-  }, [hashKey, fieldName]);
+  }, [fieldNameAndHashKey, hashKey, fieldName]);
 
   const fieldKey = convertFieldNameToKey(fieldName);
 
@@ -183,7 +188,7 @@ const generatedSuggestions = atomFamilyWeak((fieldNameAndHashKey: string) =>
   }),
 );
 
-const hasAcceptedAIMessageSuggestion = atomFamilyWeak((_key: HashKey) => atom<boolean>(false));
+const hasAcceptedAIMessageSuggestion = atomFamilyWeak((_key: string) => atom<boolean>(false));
 
 function GenerateAIModal({
   hashKey,
@@ -201,7 +206,7 @@ function GenerateAIModal({
 
   const [content, refetch] = useAtom(generatedSuggestions(fieldNameAndHashKey));
 
-  const setHasAccepted = useSetAtom(hasAcceptedAIMessageSuggestion(hashKey));
+  const setHasAccepted = useSetAtom(hasAcceptedAIMessageSuggestion(fieldNameAndHashKey));
 
   const error =
     content.state === 'hasError'
@@ -209,30 +214,31 @@ function GenerateAIModal({
       : content.state === 'hasData'
       ? (content.data.error as Error)
       : undefined;
-  const suggestionId = FunnelTracker.suggestionIdForHashKey(hashKey);
+
+  const suggestionId = FunnelTracker.getSuggestionId(fieldNameAndHashKey);
 
   useThrottledEffect(
     () => {
-      FunnelTracker.get(hashKey)?.track(
+      FunnelTracker.get(fieldNameAndHashKey)?.track(
         GeneratedMessageTrackEventName.SuggestionRequested,
         fieldName,
       );
     },
     100,
-    [suggestionId], // ensure we track again if the hash key hasn't changed but a new suggestionID was generated
+    [suggestionId], // ensure we track again if fieldNameAndHashKey hasn't changed, but a new suggestion identifier was generated
   );
 
   useThrottledEffect(
     () => {
       if (content.state === 'hasData' && content.data.value != null) {
-        FunnelTracker.get(hashKey)?.track(
+        FunnelTracker.get(fieldNameAndHashKey)?.track(
           GeneratedMessageTrackEventName.ResponseImpression,
           fieldName,
         );
       }
     },
     100,
-    [hashKey, content],
+    [fieldNameAndHashKey, content],
   );
 
   return (
@@ -261,10 +267,13 @@ function GenerateAIModal({
         <Button
           disabled={content.state === 'loading' || error != null}
           onClick={() => {
-            FunnelTracker.get(hashKey)?.track(GeneratedMessageTrackEventName.RetryClick, fieldName);
+            FunnelTracker.get(fieldNameAndHashKey)?.track(
+              GeneratedMessageTrackEventName.RetryClick,
+              fieldName,
+            );
             cachedSuggestions.delete(fieldNameAndHashKey); // make sure we don't re-use cached value
             setHasAccepted(false);
-            FunnelTracker.restartFunnel(hashKey);
+            FunnelTracker.restartFunnel(fieldNameAndHashKey);
             refetch();
           }}>
           <Icon icon="refresh" />
@@ -278,7 +287,7 @@ function GenerateAIModal({
             if (value) {
               appendToTextArea(value);
             }
-            FunnelTracker.get(hashKey)?.track(
+            FunnelTracker.get(fieldNameAndHashKey)?.track(
               GeneratedMessageTrackEventName.InsertClick,
               fieldName,
             );
@@ -322,37 +331,38 @@ export enum GeneratedMessageTrackEventName {
  * we log the funnel event name as undefined.
  *
  * Since it's possible to have multiple suggestions generated for different commits simultaneously,
- * there is one FunnelTracker per funnel / hashKey / suggestion identifier, indexed by HashKey.
+ * there is one FunnelTracker per funnel / fieldNameAndHashKey / suggestion identifier, indexed by fieldNameAndHashKey.
  *
  * Note: After retrying a suggestion, we destroy the FunnelTracker so that it is recreated with a new
  * suggestion identifier, aka acts as a new funnel entirely from then on.
  */
 class FunnelTracker {
-  static trackersByHashKey = new Map<string, FunnelTracker>();
+  static trackersByFieldNameAndHashKey = new Map<string, FunnelTracker>();
 
-  /** Get or create the funnel tracker for this hashKey */
-  static get(hashKey: HashKey): FunnelTracker {
-    if (this.trackersByHashKey.has(hashKey)) {
-      return nullthrows(this.trackersByHashKey.get(hashKey));
+  /** Get or create the funnel tracker for a given fieldNameAndHashKey */
+  static get(fieldNameAndHashKey: string): FunnelTracker {
+    if (this.trackersByFieldNameAndHashKey.has(fieldNameAndHashKey)) {
+      return nullthrows(this.trackersByFieldNameAndHashKey.get(fieldNameAndHashKey));
     }
     const tracker = new FunnelTracker();
-    this.trackersByHashKey.set(hashKey, tracker);
+    this.trackersByFieldNameAndHashKey.set(fieldNameAndHashKey, tracker);
     return tracker;
   }
 
-  static suggestionIdForHashKey(hashKey: HashKey): string {
-    const tracker = FunnelTracker.get(hashKey);
+  /** Get the suggestion identifier of the funnel tracker for a given fieldNameAndHashKey */
+  static getSuggestionId(fieldNameAndHashKey: string): string {
+    const tracker = FunnelTracker.get(fieldNameAndHashKey);
     return tracker.suggestionId;
   }
 
-  /** Restart the funnel for a given `hashKey`, so it generates a new suggestion identifier  */
-  static restartFunnel(hashKey: HashKey): void {
-    this.trackersByHashKey.delete(hashKey);
+  /** Restart the funnel tracker for a given fieldNameAndHashKey, so it generates a new suggestion identifier */
+  static restartFunnel(fieldNameAndHashKey: string): void {
+    this.trackersByFieldNameAndHashKey.delete(fieldNameAndHashKey);
   }
 
   /** Reset internal storage, useful for resetting between tests */
   static resetAllState() {
-    this.trackersByHashKey.clear();
+    this.trackersByFieldNameAndHashKey.clear();
   }
 
   private alreadyTrackedFunnelEvents = new Set<FunnelEvent>();
