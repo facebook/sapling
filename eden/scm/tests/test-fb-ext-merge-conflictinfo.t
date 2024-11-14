@@ -44,8 +44,8 @@
   
   $ hg merge a
   merging F1
-  merging F2
   warning: 1 conflicts while merging F1! (edit, then use 'hg resolve --mark')
+  merging F2
   warning: 1 conflicts while merging F2! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 2 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon

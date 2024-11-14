@@ -168,8 +168,8 @@ Verify conflicting merge pulls in the conflicting changes
   $ hg merge e7901640ca22b6074f2724228278811021be5bd9
   temporarily included 1 file(s) in the sparse checkout for merging
   merging backend.sparse
-  merging data.py
   warning: 1 conflicts while merging backend.sparse! (edit, then use 'hg resolve --mark')
+  merging data.py
   warning: 1 conflicts while merging data.py! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 2 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
@@ -234,8 +234,8 @@ Verify rebase conflicts pulls in the conflicting changes
   rebasing e7901640ca22 "edit profile"
   temporarily included 1 file(s) in the sparse checkout for merging
   merging backend.sparse
-  merging data.py
   warning: 1 conflicts while merging backend.sparse! (edit, then use 'hg resolve --mark')
+  merging data.py
   warning: 1 conflicts while merging data.py! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]

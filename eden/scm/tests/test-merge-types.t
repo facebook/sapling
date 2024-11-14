@@ -332,9 +332,12 @@ h: l vs l, different
 
   $ hg merge
   merging a
+  warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   warning: cannot merge flags for b without common ancestor - keeping local flags
   merging b
+  warning: 1 conflicts while merging b! (edit, then use 'hg resolve --mark')
   merging bx
+  warning: 1 conflicts while merging bx! (edit, then use 'hg resolve --mark')
   warning: cannot merge flags for c without common ancestor - keeping local flags
   merging d
   warning: internal :merge cannot merge symlinks for d
@@ -345,9 +348,6 @@ h: l vs l, different
   merging h
   warning: internal :merge cannot merge symlinks for h
   warning: 1 conflicts while merging h! (edit, then use 'hg resolve --mark')
-  warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
-  warning: 1 conflicts while merging b! (edit, then use 'hg resolve --mark')
-  warning: 1 conflicts while merging bx! (edit, then use 'hg resolve --mark')
   3 files updated, 0 files merged, 0 files removed, 6 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]
@@ -395,9 +395,12 @@ h: l vs l, different
   $ hg up -Cqr'desc(1)'
   $ hg merge
   merging a
+  warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   warning: cannot merge flags for b without common ancestor - keeping local flags
   merging b
+  warning: 1 conflicts while merging b! (edit, then use 'hg resolve --mark')
   merging bx
+  warning: 1 conflicts while merging bx! (edit, then use 'hg resolve --mark')
   warning: cannot merge flags for c without common ancestor - keeping local flags
   merging d
   warning: internal :merge cannot merge symlinks for d
@@ -408,9 +411,6 @@ h: l vs l, different
   merging h
   warning: internal :merge cannot merge symlinks for h
   warning: 1 conflicts while merging h! (edit, then use 'hg resolve --mark')
-  warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
-  warning: 1 conflicts while merging b! (edit, then use 'hg resolve --mark')
-  warning: 1 conflicts while merging bx! (edit, then use 'hg resolve --mark')
   3 files updated, 0 files merged, 0 files removed, 6 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
   [1]

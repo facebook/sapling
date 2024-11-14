@@ -257,8 +257,8 @@ resolve without arguments should suggest --all
 resolve --all should re-merge all unresolved files
   $ hg resolve --all
   merging file1
-  merging file2
   warning: 1 conflicts while merging file1! (edit, then use 'hg resolve --mark')
+  merging file2
   warning: 1 conflicts while merging file2! (edit, then use 'hg resolve --mark')
   [1]
   $ cat file1.orig
@@ -272,8 +272,8 @@ resolve --all should re-merge all unresolved files
   $ hg resolve --all --verbose --config 'ui.origbackuppath=.hg/origbackups'
   merging file1
   creating directory: $TESTTMP/repo/.hg/origbackups
-  merging file2
   warning: 1 conflicts while merging file1! (edit, then use 'hg resolve --mark')
+  merging file2
   warning: 1 conflicts while merging file2! (edit, then use 'hg resolve --mark')
   [1]
   $ ls .hg/origbackups

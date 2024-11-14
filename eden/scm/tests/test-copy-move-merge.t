@@ -41,13 +41,11 @@ Test for the full copytracing algorithm
   picked tool ':merge' for path=b binary=False symlink=False changedelete=False
   merging a and b to b
   my b@add3f11052fa+ other b@17c05bb7fcb6 ancestor a@b8bf91eeebbc
-   premerge successful
    c: remote moved from a -> m (premerge)
   picktool() hgmerge internal:merge
   picked tool ':merge' for path=c binary=False symlink=False changedelete=False
   merging a and c to c
   my c@add3f11052fa+ other c@17c05bb7fcb6 ancestor a@b8bf91eeebbc
-   premerge successful
   0 files updated, 2 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 

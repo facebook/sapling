@@ -41,13 +41,11 @@ we get conflicts that shouldn't be there
   picked tool ':merge' for path=bar binary=False symlink=False changedelete=False
   merging foo and bar to bar
   my bar@6a0df1dad128+ other bar@484bf6903104 ancestor foo@e6dc8efe11cc
-   premerge successful
    foo: versions differ -> m (premerge)
   picktool() hgmerge internal:merge
   picked tool ':merge' for path=foo binary=False symlink=False changedelete=False
   merging foo
   my foo@6a0df1dad128+ other foo@484bf6903104 ancestor foo@e6dc8efe11cc
-   premerge successful
   0 files updated, 2 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 

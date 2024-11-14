@@ -736,7 +736,7 @@ def _merge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels, mode):
     return True, r, False
 
 
-@internaltool("union", fullmerge, _describefailure, precheck=_ismergeable)
+@internaltool("union", mergeonly, _describefailure, precheck=_ismergeable)
 def _iunion(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     """
     Uses the internal non-interactive simple merge algorithm for merging
@@ -745,7 +745,7 @@ def _iunion(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     return _merge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels, "union")
 
 
-@internaltool("merge", fullmerge, _describefailure, precheck=_ismergeable)
+@internaltool("merge", mergeonly, _describefailure, precheck=_ismergeable)
 def _imerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     """
     Uses the internal non-interactive simple merge algorithm for merging
@@ -755,7 +755,7 @@ def _imerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     return _merge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels, "merge")
 
 
-@internaltool("merge3", fullmerge, _describefailure, precheck=_ismergeable)
+@internaltool("merge3", mergeonly, _describefailure, precheck=_ismergeable)
 def _imerge3(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     """
     Uses the internal non-interactive simple merge algorithm for merging
@@ -771,7 +771,7 @@ def _imerge3(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
 
 @internaltool(
     "mergediff",
-    fullmerge,
+    mergeonly,
     _(
         "warning: conflicts while merging %s! "
         "(edit, then use '@prog@ resolve --mark')\n"
@@ -796,7 +796,7 @@ def _imergediff(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None)
 
 @internaltool(
     "mergediffs",
-    fullmerge,
+    mergeonly,
     _(
         "warning: conflicts while merging %s! "
         "(edit, then use '@prog@ resolve --mark')\n"

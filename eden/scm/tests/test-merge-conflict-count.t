@@ -23,10 +23,10 @@ Encountering a merge conflict prints the number of textual conflicts in each fil
   $ hg rebase -r d -d e
   rebasing 211accd27e10 "d" (d)
   merging a
-  merging b
   warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
    1 commits might have introduced this conflict:
     - [21906429c027] c
+  merging b
   warning: 2 conflicts while merging b! (edit, then use 'hg resolve --mark')
    1 commits might have introduced this conflict:
     - [21906429c027] c
@@ -78,10 +78,10 @@ A merge conflict prints the possible conflicting commits:
   $ hg rebase -r d -d j
   rebasing 211accd27e10 "d" (d)
   merging a
-  merging b
   warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
    1 commits might have introduced this conflict:
     - [395beecc0ab6] g
+  merging b
   warning: 2 conflicts while merging b! (edit, then use 'hg resolve --mark')
    3 commits might have introduced this conflict:
     - [0942ca9aff3d] h

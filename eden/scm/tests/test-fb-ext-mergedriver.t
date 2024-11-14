@@ -38,8 +38,8 @@ basic merge driver: just lists out files and contents, doesn't resolve any files
   U bar.txt
   U foo.txt
   merging bar.txt
-  merging foo.txt
   warning: 1 conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
+  merging foo.txt
   warning: 1 conflicts while merging foo.txt! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 2 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
@@ -337,8 +337,8 @@ XXX shouldn't output a warning
   * preprocess called
   warning: preprocess hook failed
   merging bar.txt
-  merging foo.txt
   warning: 1 conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
+  merging foo.txt
   warning: 1 conflicts while merging foo.txt! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 2 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
@@ -537,8 +537,8 @@ this should proceed as if there's no merge driver
   $ hg merge 'desc(b)' --config experimental.mergedriver=python:fail
   loading preprocess hook failed: [Errno 2] $ENOENT$: '$TESTTMP/repo1/fail'
   merging bar.txt
-  merging foo.txt
   warning: 1 conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
+  merging foo.txt
   warning: 1 conflicts while merging foo.txt! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 2 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
@@ -552,8 +552,8 @@ ensure the right path to load the merge driver hook
   $ hg -R repo1 merge 'desc(b)' --config experimental.mergedriver=python:fail
   loading preprocess hook failed: [Errno 2] $ENOENT$: '$TESTTMP/repo1/fail'
   merging repo1/bar.txt
-  merging repo1/foo.txt
   warning: 1 conflicts while merging repo1/bar.txt! (edit, then use 'hg resolve --mark')
+  merging repo1/foo.txt
   warning: 1 conflicts while merging repo1/foo.txt! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 2 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
