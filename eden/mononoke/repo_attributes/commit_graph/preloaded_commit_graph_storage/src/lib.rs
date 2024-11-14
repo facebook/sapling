@@ -60,8 +60,8 @@ pub struct PreloadedEdgesLoader {
 
 #[derive(Debug, Default)]
 pub struct PreloadedEdges {
-    pub cs_id_to_edges: HashMap<ChangesetId, CompactChangesetEdges>,
-    pub unique_id_to_cs_id: HashMap<NonZeroU32, ChangesetId>,
+    pub cs_id_to_edges: HashMap<ChangesetId, Box<CompactChangesetEdges>>,
+    pub unique_id_to_cs_id: HashMap<NonZeroU32, Box<ChangesetId>>,
     pub max_sql_id: Option<u64>,
 }
 
@@ -76,7 +76,7 @@ impl PreloadedEdges {
                         .cs_id_to_edges
                         .get(cs_id)
                         .ok_or_else(|| anyhow!("Missing changeset edges for {}", cs_id))?
-                        .to_thrift(*cs_id, *unique_id))
+                        .to_thrift(**cs_id, *unique_id))
                 })
                 .collect::<Result<_>>()?,
             max_sql_id: self.max_sql_id.map(|id| id as i64),
@@ -84,35 +84,28 @@ impl PreloadedEdges {
     }
 
     pub fn from_thrift(preloaded_edges: thrift::PreloadedEdges) -> Result<Self> {
-        let unique_id_to_cs_id = preloaded_edges
-            .edges
-            .iter()
-            .map(|edges| {
-                Ok((
-                    NonZeroU32::new(edges.unique_id as u32)
-                        .ok_or_else(|| anyhow!("Couldn't convert unique_id to NonZeroU32"))?,
-                    ChangesetId::from_thrift(edges.cs_id.clone())?,
-                ))
-            })
-            .collect::<Result<_>>()?;
+        let mut unique_id_to_cs_id = HashMap::with_capacity(preloaded_edges.edges.len());
+        let mut cs_id_to_edges = HashMap::with_capacity(preloaded_edges.edges.len());
+
+        for edge in preloaded_edges.edges {
+            let cs_id = ChangesetId::from_thrift(edge.cs_id.clone())?;
+            unique_id_to_cs_id.insert(
+                NonZeroU32::new(edge.unique_id as u32)
+                    .ok_or_else(|| anyhow!("Couldn't convert unique_id to NonZeroU32"))?,
+                Box::new(cs_id),
+            );
+            cs_id_to_edges.insert(cs_id, Box::new(CompactChangesetEdges::from_thrift(edge)?));
+        }
+
         Ok(Self {
             unique_id_to_cs_id,
-            cs_id_to_edges: preloaded_edges
-                .edges
-                .into_iter()
-                .map(|edges| {
-                    Ok((
-                        ChangesetId::from_thrift(edges.cs_id.clone())?,
-                        CompactChangesetEdges::from_thrift(edges)?,
-                    ))
-                })
-                .collect::<Result<_>>()?,
+            cs_id_to_edges,
             max_sql_id: preloaded_edges.max_sql_id.map(|id| id as u64),
         })
     }
 
     fn get_node(&self, unique_id: NonZeroU32) -> Result<ChangesetNode> {
-        let cs_id = *self
+        let cs_id = **self
             .unique_id_to_cs_id
             .get(&unique_id)
             .ok_or_else(|| anyhow!("Missing changeset id for unique id: {}", unique_id))?;
@@ -178,7 +171,7 @@ impl ExtendablePreloadedEdges {
         let cs_id_to_unique_id = preloaded_edges
             .unique_id_to_cs_id
             .iter()
-            .map(|(unique_id, cs_id)| (*cs_id, *unique_id))
+            .map(|(unique_id, cs_id)| (**cs_id, *unique_id))
             .collect();
         Self {
             preloaded_edges,
@@ -198,7 +191,7 @@ impl ExtendablePreloadedEdges {
                 self.cs_id_to_unique_id.insert(cs_id, unique_id);
                 self.preloaded_edges
                     .unique_id_to_cs_id
-                    .insert(unique_id, cs_id);
+                    .insert(unique_id, Box::new(cs_id));
                 unique_id
             }
         }
@@ -226,7 +219,7 @@ impl ExtendablePreloadedEdges {
 
         match self.preloaded_edges.cs_id_to_edges.insert(
             edges.node.cs_id,
-            CompactChangesetEdges {
+            Box::new(CompactChangesetEdges {
                 generation: edges.node.generation.value() as u32,
                 skip_tree_depth: edges.node.skip_tree_depth as u32,
                 p1_linear_depth: edges.node.p1_linear_depth as u32,
@@ -235,7 +228,7 @@ impl ExtendablePreloadedEdges {
                 skip_tree_parent,
                 skip_tree_skew_ancestor,
                 p1_linear_skew_ancestor,
-            },
+            }),
         ) {
             Some(old_edges) => Err(anyhow!("Duplicate changeset edges found: {:?}", old_edges)),
             None => Ok(()),
