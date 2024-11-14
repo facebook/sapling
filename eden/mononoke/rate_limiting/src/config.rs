@@ -168,8 +168,7 @@ impl TryFrom<rate_limiting_config::RateLimit> for RateLimit {
         let fci_metric = value
             .fci_metric
             .clone()
-            .map(FciMetric::try_from)
-            .transpose()
+            .try_into()
             .context("Invalid fci metric")?;
 
         Ok(Self {

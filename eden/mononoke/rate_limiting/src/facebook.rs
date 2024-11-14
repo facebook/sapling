@@ -8,7 +8,6 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Error;
 use async_trait::async_trait;
 use fbinit::FacebookInit;
@@ -86,12 +85,9 @@ impl RateLimiter for MononokeRateLimits {
         scuba: &mut MononokeScubaSampleBuilder,
     ) -> Result<RateLimitResult, Error> {
         for limit in &self.config.rate_limits {
-            let (config_metric, threshold, window) = match limit.fci_metric {
-                Some(m) => (m.metric, limit.body.raw_config.limit, m.window),
-                None => return Err(anyhow!("No FCI metric found for rate limit")),
-            };
+            let fci_metric = limit.fci_metric.metric;
 
-            if config_metric != metric {
+            if fci_metric != metric {
                 continue;
             }
 
@@ -99,10 +95,15 @@ impl RateLimiter for MononokeRateLimits {
                 continue;
             }
 
-            if loadlimiter::should_throttle(self.fb, self.counter(config_metric), threshold, window)
-                .await?
+            if loadlimiter::should_throttle(
+                self.fb,
+                self.counter(fci_metric),
+                limit.body.raw_config.limit,
+                limit.fci_metric.window,
+            )
+            .await?
             {
-                match log_or_enforce_status(&limit.body, config_metric, scuba) {
+                match log_or_enforce_status(&limit.body, fci_metric, scuba) {
                     RateLimitResult::Pass => {
                         break;
                     }
