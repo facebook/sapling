@@ -31,7 +31,8 @@ impl Render for PingOutput {
     type Args = CommandArgs;
 
     fn render(&self, _args: &Self::Args, w: &mut dyn Write) -> Result<()> {
-        Ok(writeln!(w, "received: {}", self.response.payload)?)
+        writeln!(w, "received: {}", self.response.payload)?;
+        Ok(())
     }
 
     fn render_json(&self, _args: &Self::Args, w: &mut dyn Write) -> Result<()> {
