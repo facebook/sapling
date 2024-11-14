@@ -602,7 +602,8 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions):
     ignoredconfig = _getcheckunknownconfig(repo, "merge", "checkignored")
     pathconfig = repo.ui.configbool("experimental", "merge.checkpathconflicts")
 
-    progiter = lambda itr: progress.each(repo.ui, itr, "check untracked")
+    def progiter(itr):
+        return progress.each(repo.ui, itr, "check untracked")
 
     if not force:
 
@@ -1300,7 +1301,7 @@ def calculateupdates(
 
     _resolvetrivial(repo, wctx, mctx, ancestors[0], actions)
 
-    if wctx.rev() is None:
+    if wctx.rev() is None and not wctx.isinmemory():
         fractions = _forgetremoved(wctx, mctx, branchmerge)
         actions.update(fractions)
 
