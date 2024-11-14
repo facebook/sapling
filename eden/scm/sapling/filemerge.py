@@ -1163,7 +1163,7 @@ def _filemerge(premerge, repo, wctx, mynode, orig, fcd, fco, fca, labels=None):
         markerstyle = ui.config("ui", "mergemarkers")
         if not labels:
             labels = _defaultconflictlabels
-        if markerstyle != "basic":
+        if markerstyle != "basic" and not wctx.isinmemory():
             labels = _formatlabels(repo, fcd, fco, fca, labels)
 
         if premerge and mergetype == fullmerge:
