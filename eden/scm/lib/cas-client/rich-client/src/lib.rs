@@ -145,7 +145,9 @@ impl RichCasClient {
                         remote_cache_config.large_files = RemoteFetchPolicy::REMOTE_FETCH;
                     }
                     CasCacheModeLocalFetch::AllRemote => {
-                        // this is the default behavior
+                        remote_cache_config.mode = RemoteCacheManagerMode::ALL_FILES;
+                        remote_cache_config.small_files = RemoteFetchPolicy::REMOTE_FETCH;
+                        remote_cache_config.large_files = RemoteFetchPolicy::REMOTE_FETCH;
                     }
                 }
             }
