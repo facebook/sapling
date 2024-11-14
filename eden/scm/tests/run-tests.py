@@ -7,6 +7,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+# pyre-unsafe
+
 # Modifying this script is tricky because it has many modes:
 #   - serial vs parallel (default) (-jN, N > 1)
 #   - no coverage (default) vs coverage (-c, -C, -s)
