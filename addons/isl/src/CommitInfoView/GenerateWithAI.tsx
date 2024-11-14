@@ -6,6 +6,7 @@
  */
 
 import type {InternalCommitMessageFields, Result} from '../types';
+import type {HashKey} from './types';
 import type {RefObject} from 'react';
 import type {Comparison} from 'shared/Comparison';
 
@@ -35,9 +36,6 @@ import {useThrottledEffect} from 'shared/hooks';
 import {randomId, nullthrows} from 'shared/utils';
 
 import './GenerateWithAI.css';
-
-/** Either a commit hash or "commit/aaaaa" when making a new commit on top of hash aaaaa  */
-type HashKey = `commit/${string}` | string;
 
 export function GenerateAIButton({
   textAreaRef,
