@@ -143,7 +143,7 @@ FileChangeMonitor::checkIfUpdated(bool noThrottle) {
   // Even if we skip open/fstat, we will indicate the file is updated
   folly::File file;
   if (openErrno_ || !statErrno_) {
-    auto fileDescriptor = open(filePath_.c_str(), O_RDONLY);
+    auto fileDescriptor = folly::fileops::open(filePath_.c_str(), O_RDONLY);
     if (fileDescriptor != -1) {
       file = folly::File(fileDescriptor, /**ownsFd=*/true);
       auto current = getFileStat(file.fd());

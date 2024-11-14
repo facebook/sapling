@@ -56,7 +56,7 @@ FileChangeReason TomlFileConfigSource::shouldReload() {
 void TomlFileConfigSource::reload(
     const ConfigVariables& substitutions,
     ConfigSettingMap& map) {
-  auto fd = open(path_.c_str(), O_RDONLY);
+  auto fd = folly::fileops::open(path_.c_str(), O_RDONLY);
   if (fd == -1) {
     auto err = errno;
     if (err != ENOENT) {
