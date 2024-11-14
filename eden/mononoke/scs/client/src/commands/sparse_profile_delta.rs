@@ -11,6 +11,7 @@ use anyhow::bail;
 use anyhow::Result;
 use scs_client_raw::thrift;
 use serde::Serialize;
+use source_control_clients::errors::CommitSparseProfileDeltaPollError;
 
 use crate::args::commit_id::resolve_commit_ids;
 use crate::args::commit_id::CommitIdsArgs;
@@ -18,6 +19,8 @@ use crate::args::repo::RepoArgs;
 use crate::args::sparse_profiles::SparseProfilesArgs;
 use crate::render::Render;
 use crate::ScscApp;
+
+const POLL_SLEEP_DURATION: std::time::Duration = std::time::Duration::from_secs(1);
 
 #[derive(clap::Parser)]
 /// Calculate the size change for each sparse profile between two given commits
@@ -30,6 +33,9 @@ pub(super) struct CommandArgs {
 
     #[clap(flatten)]
     sparse_profiles_args: SparseProfilesArgs,
+
+    #[clap(long = "async")]
+    asynchronous: bool,
 }
 
 #[derive(Serialize)]
@@ -100,13 +106,51 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         ..Default::default()
     };
 
-    let params = thrift::CommitSparseProfileDeltaParams {
-        other_id: commit_ids[1].clone(),
-        profiles,
-        ..Default::default()
-    };
+    let response = if args.asynchronous {
+        let params = thrift::CommitSparseProfileDeltaParamsV2 {
+            commit: commit.clone(),
+            other_id: commit_ids[1].clone(),
+            profiles,
+            ..Default::default()
+        };
+        let token = conn.commit_sparse_profile_delta_async(&params).await?;
 
-    let response = conn.commit_sparse_profile_delta(&commit, &params).await?;
+        loop {
+            // reopening the connection on retry might allow SR to send us to a different server
+            let conn = app.get_connection(Some(&repo.name))?;
+            let res = conn.commit_sparse_profile_delta_poll(&token).await;
+            match res {
+                Ok(res) => match res {
+                    source_control::CommitSparseProfileDeltaPollResponse::response(success) => {
+                        break success;
+                    }
+                    source_control::CommitSparseProfileDeltaPollResponse::poll_pending(_) => {
+                        eprintln!("sparse profile size is not ready yet, waiting some more...");
+                    }
+                    source_control::CommitSparseProfileDeltaPollResponse::UnknownField(t) => {
+                        return Err(anyhow::anyhow!(
+                            "request failed with unknown result: {:?}",
+                            t
+                        ));
+                    }
+                },
+                Err(e) => match e {
+                    CommitSparseProfileDeltaPollError::poll_error(_) => {
+                        eprintln!("poll error, retrying...");
+                    }
+                    _ => return Err(anyhow::anyhow!("request failed with error: {:?}", e)),
+                },
+            }
+            tokio::time::sleep(POLL_SLEEP_DURATION).await;
+        }
+    } else {
+        let params = thrift::CommitSparseProfileDeltaParams {
+            other_id: commit_ids[1].clone(),
+            profiles,
+            ..Default::default()
+        };
+        conn.commit_sparse_profile_delta(&commit, &params).await?
+    };
 
     let output = SparseProfileDeltaOutput {
         changed_sparse_profiles: response.changed_sparse_profiles,
