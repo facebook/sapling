@@ -168,3 +168,10 @@ Count duplicate key fetches properly:
   scmstore.file.fetch.cas.keys: 2
   scmstore.file.fetch.cas.requests: 1
   scmstore.file.fetch.cas.time: * (glob)
+
+
+FIXME Make sure fall back to non-CAS fetching works:
+  $ FAILPOINTS=eagerepo::cas=return hg cat -r $A dir/file
+  abort: "unable to find the following nodes locally or on the server: ('', 7cdcd3e44b0bbf75d7f9e972890e8c0d4f16e231)"
+  (commit: 6e57e5c17b2f39744ddbd800a56893120dd9fcec)
+  [255]

@@ -192,6 +192,10 @@ impl EagerRepoStore {
     /// Read CAS data for digest.
     #[tracing::instrument(skip(self), level = "trace")]
     pub fn get_cas_blob(&self, digest: CasDigest) -> Result<Option<Bytes>> {
+        ::fail::fail_point!("eagerepo::cas", |_| {
+            Err(anyhow!("stub eagerepo CAS error").into())
+        });
+
         let Some(pointer_data) = self.get_sha1_blob(digest_id(digest))? else {
             tracing::trace!("no CAS pointer data");
             return Ok(None);
