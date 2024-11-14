@@ -6,7 +6,7 @@
  */
 
 import type {InternalCommitMessageFields, Result} from '../types';
-import type {HashKey} from './types';
+import type {FieldNameAndHashKey, HashKey} from './types';
 import type {RefObject} from 'react';
 import type {Comparison} from 'shared/Comparison';
 
@@ -61,7 +61,7 @@ export function GenerateAIButton({
       ? `commit/${currentCommit.hash}`
       : currentCommit.hash;
 
-  const fieldNameAndHashKey = `${fieldName}+${hashKey}`;
+  const fieldNameAndHashKey: FieldNameAndHashKey = `${fieldName}+${hashKey}`;
 
   useThrottledEffect(
     () => {
@@ -124,7 +124,7 @@ const cachedSuggestions = new Map<
 >();
 const ONE_HOUR = 60 * 60 * 1000;
 const MAX_SUGGESTION_CACHE_AGE = 24 * ONE_HOUR; // cache aggressively since we have an explicit button to invalidate
-const generatedSuggestions = atomFamilyWeak((fieldNameAndHashKey: string) =>
+const generatedSuggestions = atomFamilyWeak((fieldNameAndHashKey: FieldNameAndHashKey) =>
   atomLoadableWithRefresh((get): Promise<Result<string>> => {
     if (Internal.generateSuggestionWithAI == null) {
       return Promise.resolve({value: ''});
@@ -133,7 +133,7 @@ const generatedSuggestions = atomFamilyWeak((fieldNameAndHashKey: string) =>
     const fieldNameAndHashKeyArray = fieldNameAndHashKey.split('+');
 
     const fieldName = fieldNameAndHashKeyArray[0];
-    const hashKey = fieldNameAndHashKeyArray[1];
+    const hashKey: HashKey = fieldNameAndHashKeyArray[1];
 
     const cached = cachedSuggestions.get(fieldNameAndHashKey);
     if (cached && Date.now() - cached.lastFetch < MAX_SUGGESTION_CACHE_AGE) {
@@ -202,7 +202,7 @@ function GenerateAIModal({
   appendToTextArea: (toAdd: string) => unknown;
   fieldName: string;
 }) {
-  const fieldNameAndHashKey = `${fieldName}+${hashKey}`;
+  const fieldNameAndHashKey: FieldNameAndHashKey = `${fieldName}+${hashKey}`;
 
   const [content, refetch] = useAtom(generatedSuggestions(fieldNameAndHashKey));
 
@@ -337,10 +337,10 @@ export enum GeneratedMessageTrackEventName {
  * suggestion identifier, aka acts as a new funnel entirely from then on.
  */
 class FunnelTracker {
-  static trackersByFieldNameAndHashKey = new Map<string, FunnelTracker>();
+  static trackersByFieldNameAndHashKey = new Map<FieldNameAndHashKey, FunnelTracker>();
 
   /** Get or create the funnel tracker for a given fieldNameAndHashKey */
-  static get(fieldNameAndHashKey: string): FunnelTracker {
+  static get(fieldNameAndHashKey: FieldNameAndHashKey): FunnelTracker {
     if (this.trackersByFieldNameAndHashKey.has(fieldNameAndHashKey)) {
       return nullthrows(this.trackersByFieldNameAndHashKey.get(fieldNameAndHashKey));
     }
@@ -350,13 +350,13 @@ class FunnelTracker {
   }
 
   /** Get the suggestion identifier of the funnel tracker for a given fieldNameAndHashKey */
-  static getSuggestionId(fieldNameAndHashKey: string): string {
+  static getSuggestionId(fieldNameAndHashKey: FieldNameAndHashKey): string {
     const tracker = FunnelTracker.get(fieldNameAndHashKey);
     return tracker.suggestionId;
   }
 
   /** Restart the funnel tracker for a given fieldNameAndHashKey, so it generates a new suggestion identifier */
-  static restartFunnel(fieldNameAndHashKey: string): void {
+  static restartFunnel(fieldNameAndHashKey: FieldNameAndHashKey): void {
     this.trackersByFieldNameAndHashKey.delete(fieldNameAndHashKey);
   }
 
