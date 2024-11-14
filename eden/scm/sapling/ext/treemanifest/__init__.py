@@ -853,28 +853,6 @@ def debuggetroottree(ui, repo, rootnode):
         repo.prefetchtrees([bin(rootnode)])
 
 
-def _difftoaddremove(diff):
-    added = []
-    removed = []
-    for filename, (old, new) in diff.items():
-        if new is not None and new[0] is not None:
-            added.append((filename, new[0], new[1]))
-        else:
-            removed.append(filename)
-    return added, removed
-
-
-def _getnewtree(parenttree, added, removed):
-    newtree = parenttree.copy()
-    for fname in removed:
-        del newtree[fname]
-
-    for fname, fnode, fflags in added:
-        newtree.set(fname, fnode, fflags)
-
-    return newtree
-
-
 def _unpackmanifestscg3(orig, self, repo, *args, **kwargs):
     if not treeenabled(repo.ui):
         return orig(self, repo, *args, **kwargs)
@@ -1144,55 +1122,6 @@ def _postpullprefetch(ui, repo):
         basemfnodes.difference_update(n for k, n in missingbases)
 
         repo.prefetchtrees(mfnodes, basemfnodes=basemfnodes)
-
-
-@util.timefunction("findrecenttrees")
-def _findrecenttree(repo, startnode, targetmfnodes):
-    cl = repo.changelog
-    mfstore = repo.manifestlog.datastore
-    targetmfnodes = set(targetmfnodes)
-
-    with progress.spinner(repo.ui, _("finding nearest trees")):
-        # Look up and down from the given rev
-        ancestors = iter(
-            repo.revs(
-                "limit(reverse(ancestors(%n)), %z) & public()",
-                startnode,
-                BASENODESEARCHMAX,
-            )
-        )
-
-        descendantquery = "limit(descendants(%n), %z) & public()"
-        if extensions.enabled().get("remotenames", False):
-            descendantquery += " & ::remotenames()"
-        descendants = iter(repo.revs(descendantquery, startnode, BASENODESEARCHMAX))
-
-        revs = []
-
-        # Zip's the iterators together, using the fillvalue when the shorter
-        # iterator runs out of values.
-        candidates = zip_longest(ancestors, descendants, fillvalue=None)
-        for revs in candidates:
-            for rev in revs:
-                if rev is None:
-                    continue
-
-                mfnode = cl.changelogrevision(rev).manifest
-
-                # In theory none of the target mfnodes should be in the store at
-                # all, since that's why we're trying to prefetch them now, but
-                # we've seen cases where getmissing claims they are in the
-                # store, and therefore we return the target mfnode as the recent
-                # tree, which is an invalid request to the server. Let's prevent
-                # this while we track down the root cause.
-                if mfnode in targetmfnodes:
-                    continue
-
-                missing = mfstore.getmissing([("", mfnode)])
-                if not missing:
-                    return [mfnode]
-
-    return []
 
 
 def clientgettreepack(remote, rootdir, mfnodes, basemfnodes, directories, depth):
