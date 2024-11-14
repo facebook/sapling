@@ -97,6 +97,7 @@ export type SuggestedChange = {
   id?: string;
   codePatchSuggestionID?: string;
   status?: CodePatchSuggestionStatus;
+  commitHashBefore?: string;
   patch?: ParsedDiff;
   oldPath?: string;
   currentPath?: string;
