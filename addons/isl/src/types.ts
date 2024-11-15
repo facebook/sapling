@@ -93,8 +93,15 @@ export enum CodePatchSuggestionStatus {
   Unset = 'UNSET',
 }
 
+export enum SuggestedChangeType {
+  HUMAN_SUGGESTION = 'HUMAN_SUGGESTION',
+  METAMATE_SUGGESTION = 'METAMATE_SUGGESTION',
+  CI_SIGNAL = 'CI_SIGNAL',
+}
+
 export type SuggestedChange = {
   id?: string;
+  type?: SuggestedChangeType;
   codePatchSuggestionID?: string;
   status?: CodePatchSuggestionStatus;
   commitHashBefore?: string;
@@ -121,8 +128,8 @@ export type DiffComment = {
   reactions: Array<DiffCommentReaction>;
   /** Suggestion for how to change the code, as a patch */
   suggestedChange?: SuggestedChange;
-  codePatchSuggestedChange?: SuggestedChange;
-  signalSuggestedChange?: SuggestedChange;
+  // codePatchSuggestedChange?: SuggestedChange;
+  // signalSuggestedChange?: SuggestedChange;
   replies: Array<DiffComment>;
   /** If this comment has been resolved. true => "resolved", false => "unresolved", null => the comment is not resolvable, don't show any UI for it */
   isResolved?: boolean;
