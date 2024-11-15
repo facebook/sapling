@@ -83,6 +83,37 @@ test subtree merge from copy dest -> copy source
    bbb
   +dest
 
+test subtree merge from copy dest -> copy source with conflicts
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B   # B/foo/y = bbb\n
+  > |
+  > A   # A/foo/x = aaa\n
+  >     # drawdag.defaultfiles=false
+  > EOS
+  $ hg go -q $B
+  $ hg subtree copy --from-path foo --to-path foo2
+  copying foo to foo2
+  $ echo "source" >> foo/x && hg ci -m "update foo/x"
+  $ echo "dest" >> foo2/x && hg ci -m "update foo2/x"
+tofix: should use the ":merge3" merge tool
+  $ hg subtree merge --from-path foo2 --to-path foo -t :merge3
+  merge base: 9998a5c40732
+  merging foo/x and foo2/x to foo/x
+  warning: 1 conflicts while merging foo/x! (edit, then use 'hg resolve --mark')
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg goto -C .' to abandon
+  [1]
+  $ hg st
+  M foo/x
+  ? foo/x.orig
+  $ cat foo/x
+  aaa
+  <<<<<<< working copy: 33b9c9564908 - test: update foo2/x
+  source
+  =======
+  dest
+  >>>>>>> merge rev:    33b9c9564908 - test: update foo2/x
 
 test multiple subtree merge from source -> dest
   $ newclientrepo
