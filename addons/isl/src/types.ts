@@ -846,6 +846,7 @@ export type ClientToServerMessage =
       comparison: Comparison;
       fieldName: string;
       latestFields: InternalCommitMessageFields;
+      suggestionId: string;
     }
   | {type: 'gotUiState'; state: string}
   | CodeReviewProviderSpecificClientToServerMessages

@@ -169,10 +169,14 @@ const generatedSuggestions = atomFamilyWeak((fieldNameAndHashKey: FieldNameAndHa
         const comparison: Comparison = hashKey.startsWith('commit/')
           ? {type: ComparisonType.UncommittedChanges}
           : {type: ComparisonType.Committed, hash: hashKey};
+
+        const suggestionId = FunnelTracker.getSuggestionId(fieldNameAndHashKey);
+
         const response = await nullthrows(Internal.generateSuggestionWithAI)({
           comparison,
           fieldName,
           latestFields,
+          suggestionId,
         });
 
         return response;
