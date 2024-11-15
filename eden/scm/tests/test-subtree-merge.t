@@ -96,7 +96,6 @@ test subtree merge from copy dest -> copy source with conflicts
   copying foo to foo2
   $ echo "source" >> foo/x && hg ci -m "update foo/x"
   $ echo "dest" >> foo2/x && hg ci -m "update foo2/x"
-tofix: should use the ":merge3" merge tool
   $ hg subtree merge --from-path foo2 --to-path foo -t :merge3
   merge base: 9998a5c40732
   merging foo/x and foo2/x to foo/x
@@ -111,6 +110,7 @@ tofix: should use the ":merge3" merge tool
   aaa
   <<<<<<< working copy: 33b9c9564908 - test: update foo2/x
   source
+  ||||||| base
   =======
   dest
   >>>>>>> merge rev:    33b9c9564908 - test: update foo2/x

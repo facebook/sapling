@@ -153,26 +153,30 @@ def subtree_merge(ui, repo, **opts):
     ui.status("merge base: %s\n" % merge_base_ctx)
     cmdutil.registerdiffgrafts(from_paths, to_paths, ctx, from_ctx)
 
-    labels = ["working copy", "merge rev"]
-    stats = mergemod.merge(
-        repo,
-        from_ctx,
-        force=False,
-        ancestor=merge_base_ctx,
-        mergeancestor=False,
-        labels=labels,
-    )
-    hg.showstats(repo, stats)
-    if stats[3]:
-        repo.ui.status(
-            _(
-                "use '@prog@ resolve' to retry unresolved file merges "
-                "or '@prog@ goto -C .' to abandon\n"
-            )
+    try:
+        repo.ui.setconfig("ui", "forcemerge", opts.get("tool", ""), "merge")
+        labels = ["working copy", "merge rev"]
+        stats = mergemod.merge(
+            repo,
+            from_ctx,
+            force=False,
+            ancestor=merge_base_ctx,
+            mergeancestor=False,
+            labels=labels,
         )
-    else:
-        repo.ui.status(_("(subtree merge, don't forget to commit)\n"))
-    return stats[3] > 0
+        hg.showstats(repo, stats)
+        if stats[3]:
+            repo.ui.status(
+                _(
+                    "use '@prog@ resolve' to retry unresolved file merges "
+                    "or '@prog@ goto -C .' to abandon\n"
+                )
+            )
+        else:
+            repo.ui.status(_("(subtree merge, don't forget to commit)\n"))
+        return stats[3] > 0
+    finally:
+        ui.setconfig("ui", "forcemerge", "", "merge")
 
 
 def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path):
