@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ChildProcess, IOType} from 'node:child_process';
+import type {ChildProcess, IOType, SpawnOptionsWithoutStdio} from 'node:child_process';
 import type {Stream} from 'node:stream';
 
 import getStream from 'get-stream';
@@ -240,6 +240,14 @@ function getStreamPromise(origStream: Stream | null): Promise<string> {
   return getStream(stream, {encoding: 'utf8'});
 }
 
+function commonToSpawnOptions(options: EjecaOptions): SpawnOptionsWithoutStdio {
+  const env = options.env ? {...process.env, ...options.env} : process.env;
+  return {
+    cwd: options.cwd || process.cwd(),
+    env,
+  };
+}
+
 /**
  * Essentially a wrapper for [`child_process.spawn`](https://nodejs.org/docs/latest-v18.x/api/child_process.html#child_processspawncommand-args-options), which
  * additionally makes the result awaitable through `EjecaChildPromise`. `_file`, `_argumentos` and `_options`
@@ -252,11 +260,18 @@ function getStreamPromise(origStream: Stream | null): Promise<string> {
 export function ejeca(
   file: string,
   argumentos: readonly string[],
-  _options?: EjecaOptions,
+  options?: EjecaOptions,
 ): EjecaChildProcess {
-  const spawned = spawn(file, argumentos);
+  const spawnOptions = options ? commonToSpawnOptions(options) : undefined;
+  const spawned = spawn(file, argumentos, spawnOptions);
   const spawnedPromise = getSpawnedPromise(spawned);
   const mergedPromise = getMergePromise(spawned, spawnedPromise);
+
+  // TODO: Handle streams
+  if (options && options.input) {
+    mergedPromise.stdin?.end(options.input);
+  }
+
   const ecp = Object.create(mergedPromise);
   ecp.kill = (p: KillParam, o?: KillOptions) => {
     return spawnedKill(s => mergedPromise.kill(s), p, o);

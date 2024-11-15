@@ -25,4 +25,9 @@ describe('test running binaries', () => {
     expect(result.stderr).toBe('dos');
     expect(streamErr).toBe('dos\n');
   });
+
+  it('we can set pass stdin as a string', async () => {
+    const spawned = ejeca('node', [], {input: 'console.log("hemlo")'});
+    expect((await spawned).stdout).toBe('hemlo');
+  });
 });
