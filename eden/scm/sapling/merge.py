@@ -2354,8 +2354,9 @@ def _update(
         elif not overwrite:
             if p1 == p2:  # no-op update
                 # call the hooks and exit early
-                repo.hook("preupdate", throw=True, parent1=xp2, parent2="")
-                repo.hook("update", parent1=xp2, parent2="", error=0)
+                if not wc.isinmemory():
+                    repo.hook("preupdate", throw=True, parent1=xp2, parent2="")
+                    repo.hook("update", parent1=xp2, parent2="", error=0)
                 return 0, 0, 0, 0
 
         if overwrite:
@@ -2501,7 +2502,9 @@ def _update(
             ctx = p2
             mctx = None
         git.submodulecheckout(ctx, force=force, mctx=mctx)
-    repo.hook("update", parent1=xp1, parent2=xp2, error=stats[3])
+
+    if not wc.isinmemory():
+        repo.hook("update", parent1=xp1, parent2=xp2, error=stats[3])
 
     # Log the number of files updated.
     repo.ui.log("update_size", update_filecount=sum(stats))
@@ -2671,7 +2674,8 @@ def donativecheckout(repo, p1, p2, force, wc):
             if hasattr(repo, "_persistprofileconfigs"):
                 repo._persistprofileconfigs()
 
-    repo.hook("update", parent1=xp1, parent2=xp2, error=stats[3])
+        repo.hook("update", parent1=xp1, parent2=xp2, error=stats[3])
+
     return stats
 
 
