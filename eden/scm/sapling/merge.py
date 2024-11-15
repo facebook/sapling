@@ -117,6 +117,11 @@ class mergestate:
         self._repo = repo
         self._dirty = False
 
+        # Optimize various aspects during "in-memory" merges.
+        self._optimize_inmemory = repo.ui.configbool(
+            "experimental", "optimize-in-memory-merge-state", True
+        )
+
     def reset(self, node=None, other=None, labels=None, ancestors=None):
         shutil.rmtree(self._repo.localvfs.join("merge"), True)
 
@@ -142,6 +147,8 @@ class mergestate:
 
         self._results = {}
         self._dirty = False
+
+        self._inmemory_to_be_merged = {}
 
         # Note: _ancestors isn't written into the state file since the current
         # state file predates it.
@@ -249,7 +256,7 @@ class mergestate:
             self._repo._rsrepo.workingcopy().writemergestate(self._rust_ms)
 
     def add(self, fcl, fco, fca, fd):
-        """add a new (potentially?) conflicting file the merge state
+        """add a new (potentially?) conflicting file to the merge state
         fcl: file context for local,
         fco: file context for remote,
         fca: file context for ancestors,
@@ -261,7 +268,14 @@ class mergestate:
             hash = nullhex
         else:
             hash = hex(hashlib.sha1(encodeutf8(fcl.path())).digest())
-            self._repo.localvfs.write("merge/" + hash, fcl.data())
+            wctx = fcl.changectx()
+            if wctx.isinmemory() and self._optimize_inmemory:
+                # Detach data to maintain laziness, but disassociate the data from wctx
+                # so it isn't influenced by wctx modifications (such as
+                # `wctx.remove(path)`).
+                self._inmemory_to_be_merged[hash] = fcl.detacheddata()
+            else:
+                self._repo.localvfs.write("merge/" + hash, fcl.data())
         self._rust_ms.insert(
             fd,
             [
@@ -359,9 +373,12 @@ class mergestate:
         if preresolve:
             # restore local
             if dnode != nullid:
-                f = self._repo.localvfs("merge/" + hexdnode)
-                wctx[dfile].write(f.read(), flags)
-                f.close()
+                if wctx.isinmemory() and self._optimize_inmemory:
+                    wctx.write(dfile, self._inmemory_to_be_merged[hexdnode], flags)
+                else:
+                    f = self._repo.localvfs("merge/" + hexdnode)
+                    wctx[dfile].write(f.read(), flags)
+                    f.close()
             else:
                 wctx[dfile].remove(ignoremissing=True)
             while True:

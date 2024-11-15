@@ -26,7 +26,6 @@ import bindings
 
 from . import (
     annotate,
-    encoding,
     error,
     fileset,
     git,
@@ -57,14 +56,30 @@ from .node import (
 from .pycompat import encodeutf8, isint, range
 from .utils import subtreeutil
 
-filectx_or_bytes = Union["basefilectx", bytes]
+bytes_or_lazy_bytes = Union[bytes, Callable[[], bytes]]
+
+filectx_or_bytes = Union["basefilectx", bytes_or_lazy_bytes]
 
 
+# Evaluate maybe-lazy data, returning bytes.
 def filedata(data: filectx_or_bytes) -> bytes:
     if isinstance(data, bytes):
         return data
+    elif callable(data):
+        return data()
     else:
         return data.data()
+
+
+# Get a "detach" friendly bytes, prefering to keep lazy. If `data` is
+# a filectx, we "detach" the data from the context so the data will
+# not be affected if the associated path in the parent changectx is
+# later mutated.
+def detacheddata(data: filectx_or_bytes) -> bytes_or_lazy_bytes:
+    if isinstance(data, bytes) or callable(data):
+        return data
+    else:
+        return data.detacheddata()
 
 
 propertycache = util.propertycache
@@ -834,6 +849,13 @@ class basefilectx:
 
     def data(self) -> bytes:
         raise NotImplementedError()
+
+    # Get a maybe-lazy handle to the data bytes. The returned bytes
+    # should be change if the parent change context mutates its entry
+    # for our path.
+    def detacheddata(self) -> bytes_or_lazy_bytes:
+        # Default impl is not lazy, since that is safest.
+        return self.data()
 
     def flags(self):
         return self._flags
@@ -2401,6 +2423,19 @@ class overlayworkingctx(committablectx):
         else:
             return self._wrappedctx[path].data()
 
+    # Similar to data(), but try to keep data lazy.
+    def detacheddata(self, path) -> bytes_or_lazy_bytes:
+        if self.isdirty(path):
+            if self._cache[path]["exists"]:
+                if (data := self._cache[path]["data"]) is not None:
+                    return detacheddata(data)
+                else:
+                    # No data - fall through to _wrappedctx
+                    pass
+            else:
+                raise error.ProgrammingError("No such file or directory: %s" % path)
+        return self._wrappedctx[path].detacheddata()
+
     @propertycache
     def _manifest(self):
         parents = self.parents()
@@ -2538,7 +2573,11 @@ class overlayworkingctx(committablectx):
     def size(self, path):
         if self.isdirty(path):
             if self._cache[path]["exists"]:
-                return len(filedata(self._cache[path]["data"]))
+                if (data := self._cache[path]["data"]) is not None:
+                    return len(filedata(data))
+                else:
+                    # No data - fall through to _wrappedctx
+                    pass
             else:
                 raise error.ProgrammingError("No such file or directory: %s" % path)
         return self._wrappedctx[path].size()
@@ -2734,6 +2773,9 @@ class overlayworkingfilectx(committablefilectx):
 
     def clearunknown(self):
         pass
+
+    def detacheddata(self) -> bytes_or_lazy_bytes:
+        return self._parent.detacheddata(self._path)
 
 
 class workingcommitctx(workingctx):
@@ -3172,6 +3214,10 @@ class memfilectx(committablefilectx):
     def data(self):
         if callable(self._data):
             self._data = self._data()
+        return self._data
+
+    # Similar to data(), but try to keep data lazy.
+    def detacheddata(self, path) -> bytes_or_lazy_bytes:
         return self._data
 
     def remove(self, ignoremissing=False):
