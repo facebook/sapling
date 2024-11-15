@@ -202,8 +202,13 @@ function getMergePromise(
   return s2 as unknown as ChildProcess & Promise<EjecaReturn>;
 }
 
+function escapedCmd(file: string, argumentos: readonly string[]): string {
+  const allargs = [file, ...argumentos.map(arg => `"${arg.replace(/"/g, '\\"')}"`)];
+  return allargs.join(' ');
+}
+
 // Use promises instead of `child_process` events
-function getSpawnedPromise(spawned: ChildProcess): Promise<EjecaReturn> {
+function getSpawnedPromise(spawned: ChildProcess, escapedCommand: string): Promise<EjecaReturn> {
   const {stdout, stderr} = spawned;
   const spawnedPromise = new Promise<{exitCode: number; signal?: string}>((resolve, reject) => {
     spawned.on('exit', (exitCode, signal) => {
@@ -230,11 +235,12 @@ function getSpawnedPromise(spawned: ChildProcess): Promise<EjecaReturn> {
         stdout: stripFinalNewline(stdout),
         stderr: stripFinalNewline(stderr),
         killed: false,
-        escapedCommand: '',
+        escapedCommand,
       };
       if (exitCode !== 0 || signal != undefined) {
         const err = new Error(
-          signal != null ? 'Command was killed' : 'Command exited with non-zero status',
+          `Command \`${ret.escapedCommand.slice(0, 50)}\` ` +
+            (signal != null ? 'was killed' : 'exited with non-zero status'),
         ) as unknown as EjecaError;
         err.exitCode = ret.exitCode;
         err.signal = ret.signal;
@@ -278,7 +284,7 @@ export function ejeca(
 ): EjecaChildProcess {
   const spawnOptions = options ? commonToSpawnOptions(options) : undefined;
   const spawned = spawn(file, argumentos, spawnOptions);
-  const spawnedPromise = getSpawnedPromise(spawned);
+  const spawnedPromise = getSpawnedPromise(spawned, escapedCmd(file, argumentos));
   const mergedPromise = getMergePromise(spawned, spawnedPromise);
 
   // TODO: Handle streams

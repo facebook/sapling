@@ -30,6 +30,16 @@ describe('test running binaries', () => {
     const spawned = ejeca('node', [], {input: 'console.log("hemlo")'});
     expect((await spawned).stdout).toBe('hemlo');
   });
+
+  it('when erroring out the command name is present', async () => {
+    const spawned = ejeca('node', ['-', 'foo("bar")'], {input: 'babar'});
+    await expect(spawned).rejects.toThrow(
+      expect.objectContaining({
+        escapedCommand: 'node "-" "foo(\\"bar\\")"',
+        message: 'Command `node "-" "foo(\\"bar\\")"` exited with non-zero status',
+      }),
+    );
+  });
 });
 
 describe('test killing process', () => {
