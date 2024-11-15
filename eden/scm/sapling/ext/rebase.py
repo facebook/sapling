@@ -786,7 +786,10 @@ class rebaseruntime:
             repo, rev, self.destmap, self.state, self.skipped, self.obsoletenotrebased
         )
         self.storestatus(tr=tr)
-        storecollapsemsg(repo, self.collapsemsg)
+
+        if self.collapsef:
+            storecollapsemsg(repo, self.collapsemsg)
+
         if len(repo[None].parents()) == 2:
             repo.ui.debug("resuming interrupted rebase\n")
         else:
@@ -1044,8 +1047,8 @@ class rebaseruntime:
                 all_files.add(f"{fn}/file" if fn else "file")
             root_nodes.add(ctx.manifestnode())
 
-        # Prefetch all relevant files across all commits. Note that this might overfetch
-        # since it doesn't track which fils are relevant to which trees, but the
+        # Prefetch all relevant trees across all commits. Note that this might overfetch
+        # since it doesn't track which files are relevant to which trees, but the
         # assumption is it is still better than serial fetching later.
         bindings.manifest.prefetch(
             repo.manifestlog.datastore, list(root_nodes), paths=list(all_files)
