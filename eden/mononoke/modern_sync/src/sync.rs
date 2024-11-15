@@ -31,10 +31,16 @@ use crate::sender::ModernSyncSender;
 use crate::Repo;
 const MODERN_SYNC_COUNTER_NAME: &str = "modern_sync";
 
+pub enum ExecutionType {
+    SyncOnce,
+    Tail,
+}
+
 pub async fn sync(
     app: Arc<MononokeApp>,
     start_id_arg: Option<u64>,
     repo_arg: RepoArg,
+    _exec_type: ExecutionType,
 ) -> Result<()> {
     let repo: Repo = app.open_repo(&repo_arg).await?;
     let _repo_id = repo.repo_identity().id();

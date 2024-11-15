@@ -346,7 +346,7 @@ function mononoke_modern_sync {
     "${COMMON_ARGS[@]}" \
     --repo-id "$REPOID" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
-     sync-loop --start-id "$START_ID"
+     sync-once --start-id "$START_ID"
 }
 
 function mononoke_newadmin {

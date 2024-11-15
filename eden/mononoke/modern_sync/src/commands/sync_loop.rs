@@ -19,6 +19,7 @@ use mononoke_app::MononokeApp;
 use sharding_ext::RepoShard;
 use slog::info;
 
+use crate::sync::ExecutionType;
 use crate::ModernSyncArgs;
 
 const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
@@ -65,6 +66,7 @@ impl RepoShardedProcessExecutor for ModernSyncProcessExecutor {
             self.app.clone(),
             self.sync_args.start_id,
             self.repo_arg.clone(),
+            ExecutionType::Tail,
         )
         .await?;
         Ok(())
@@ -99,6 +101,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             process.app.clone(),
             process.sync_args.start_id.clone(),
             app_args.repo.as_repo_arg().clone(),
+            ExecutionType::Tail,
         )
         .await?;
     }
