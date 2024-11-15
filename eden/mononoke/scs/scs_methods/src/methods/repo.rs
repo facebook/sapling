@@ -21,6 +21,7 @@ use futures::stream::FuturesOrdered;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::try_join;
+use futures_watchdog::WatchdogExt;
 use maplit::btreemap;
 use metaconfig_types::CommitIdentityScheme;
 use mononoke_api::BookmarkFreshness;
@@ -250,7 +251,11 @@ impl SourceControlServiceImpl {
         } else {
             None
         };
-        let repo = self.repo(ctx, &repo).await?;
+        let repo = self
+            .repo(ctx.clone(), &repo)
+            .watched(ctx.logger())
+            .with_max_poll(50)
+            .await?;
         let bookmarks = repo
             .list_bookmarks(
                 params.include_scratch,
@@ -258,8 +263,12 @@ impl SourceControlServiceImpl {
                 params.after.as_deref(),
                 limit,
             )
+            .watched(ctx.logger())
+            .with_max_poll(50)
             .await?
             .try_collect::<Vec<_>>()
+            .watched(ctx.logger())
+            .with_max_poll(50)
             .await?;
         let continue_after = match limit {
             Some(limit) if bookmarks.len() as u64 >= limit => {
@@ -268,7 +277,10 @@ impl SourceControlServiceImpl {
             _ => None,
         };
         let ids = bookmarks.iter().map(|(_name, cs_id)| *cs_id).collect();
-        let id_mapping = map_commit_identities(&repo, ids, &params.identity_schemes).await?;
+        let id_mapping = map_commit_identities(&repo, ids, &params.identity_schemes)
+            .watched(ctx.logger())
+            .with_max_poll(50)
+            .await?;
         let bookmarks = bookmarks
             .into_iter()
             .map(|(name, cs_id)| match id_mapping.get(&cs_id) {

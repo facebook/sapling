@@ -48,6 +48,7 @@ fsnodes = { version = "0.1.0", path = "../derived_data/fsnodes" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 futures_lazy_shared = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+futures_watchdog = { version = "0.1.0", path = "../common/futures_watchdog" }
 git_source_of_truth = { version = "0.1.0", path = "../git_source_of_truth" }
 git_symbolic_refs = { version = "0.1.0", path = "../git_symbolic_refs" }
 git_types = { version = "0.1.0", path = "../git/git_types" }
@@ -105,6 +106,7 @@ stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 streaming_clone = { version = "0.1.0", path = "../repo_client/streaming_clone" }
 synced_commit_mapping = { version = "0.1.0", path = "../commit_rewriting/synced_commit_mapping" }
 thiserror = "1.0.64"
+tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
 unbundle = { version = "0.1.0", path = "../repo_client/unbundle" }
 unodes = { version = "0.1.0", path = "../derived_data/unodes" }
 vec1 = { version = "1", features = ["serde"] }

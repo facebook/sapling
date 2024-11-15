@@ -87,6 +87,7 @@ use futures::stream::TryStreamExt;
 use futures::try_join;
 use futures::Future;
 use futures::TryFutureExt;
+use futures_watchdog::WatchdogExt;
 use git_source_of_truth::GitSourceOfTruthConfig;
 use git_symbolic_refs::GitSymbolicRefs;
 use git_types::MappedGitCommitId;
@@ -1293,6 +1294,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                     limit.unwrap_or(u64::MAX),
                 )
                 .try_filter_map(move |(bookmark, cs_id)| async move {
+                    tokio::task::yield_now().await;
                     if bookmark.kind() == &BookmarkKind::Scratch {
                         Ok(Some((bookmark.into_key().into_string(), cs_id)))
                     } else {
@@ -1302,7 +1304,11 @@ impl<R: MononokeRepo> RepoContext<R> {
                         // has no warm value, this might mean we have to
                         // filter this bookmark out.
                         let bookmark_name = bookmark.into_key();
-                        let maybe_cs_id = cache.get(&self.ctx, &bookmark_name).await?;
+                        let maybe_cs_id = cache
+                            .get(&self.ctx, &bookmark_name)
+                            .watched(self.ctx.logger())
+                            .with_max_poll(50)
+                            .await?;
                         Ok(maybe_cs_id.map(|cs_id| (bookmark_name.into_string(), cs_id)))
                     }
                 })
@@ -1312,11 +1318,15 @@ impl<R: MononokeRepo> RepoContext<R> {
         } else {
             // Public bookmarks can be fetched from the warm bookmarks cache.
             let cache = self.warm_bookmarks_cache();
-            Ok(
-                stream::iter(cache.list(&self.ctx, &prefix, &pagination, limit).await?)
-                    .map(|(bookmark, (cs_id, _kind))| Ok((bookmark.into_string(), cs_id)))
-                    .boxed(),
+            Ok(stream::iter(
+                cache
+                    .list(&self.ctx, &prefix, &pagination, limit)
+                    .watched(self.ctx.logger())
+                    .with_max_poll(50)
+                    .await?,
             )
+            .map(|(bookmark, (cs_id, _kind))| Ok((bookmark.into_string(), cs_id)))
+            .boxed())
         }
     }
 
