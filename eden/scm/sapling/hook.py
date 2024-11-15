@@ -16,6 +16,7 @@ import os
 import sys
 
 import bindings
+
 from sapling import hgdemandimport as demandimport
 
 from . import encoding, error, extensions, pycompat, util
@@ -221,23 +222,7 @@ def runhooks(ui, repo, htype, hooks, throw: bool = False, **args):
         if callable(cmd):
             r, raised = _pythonhook(ui, repo, htype, hname, cmd, args, throw)
         elif cmd.startswith("python:"):
-            if cmd.count(":") >= 2:
-                path, cmd = cmd[7:].rsplit(":", 1)
-                path = util.expandpath(path)
-                if repo:
-                    path = os.path.join(repo.root, path)
-                try:
-                    mod = extensions.loadpath(path, "hghook.%s" % hname)
-                except Exception as e:
-                    ui.write(_("loading %s hook failed: %s\n") % (hname, e))
-                    raise
-                hookfn = getattr(mod, cmd)
-            else:
-                hookfn = cmd[7:].strip()
-                # Compatibility: Change "ext" to "sapling.ext"
-                # automatically.
-                if hookfn.startswith("ext."):
-                    hookfn = "sapling." + hookfn
+            hookfn = _getpyhook(ui, repo, hname, cmd)
             r, raised = _pythonhook(ui, repo, htype, hname, hookfn, args, throw)
         elif cmd.startswith("background:"):
             # Run a shell command in background. Do not throw.
@@ -258,3 +243,28 @@ def runhooks(ui, repo, htype, hooks, throw: bool = False, **args):
         util.stderr.flush()
 
     return res
+
+
+def _getpyhook(ui, repo, hname, cmd):
+    if not cmd.startswith("python:"):
+        raise error.ProgrammingError("getpyhook called without python: prefix")
+
+    if cmd.count(":") >= 2:
+        path, cmd = cmd[7:].rsplit(":", 1)
+        path = util.expandpath(path)
+        if repo:
+            path = os.path.join(repo.root, path)
+        try:
+            mod = extensions.loadpath(path, "hghook.%s" % hname)
+        except Exception as e:
+            ui.write(_("loading %s hook failed: %s\n") % (hname, e))
+            raise
+        hookfn = getattr(mod, cmd)
+    else:
+        hookfn = cmd[7:].strip()
+        # Compatibility: Change "ext" to "sapling.ext"
+        # automatically.
+        if hookfn.startswith("ext."):
+            hookfn = "sapling." + hookfn
+
+    return hookfn
