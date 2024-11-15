@@ -53,6 +53,9 @@ class remotefilectx(context.filectx):
         # If we're comparing against a file context that isn't yet committed, a
         # full comparison is always necessary.
         if self._filenode is not None and fctx.filenode() is not None:
+            if self._filenode == fctx.filenode():
+                return False
+
             try:
                 selfmeta = fileslog.filestore.metadata(self._path, self._filenode)
                 othermeta = fileslog.filestore.metadata(fctx.path(), fctx.filenode())
