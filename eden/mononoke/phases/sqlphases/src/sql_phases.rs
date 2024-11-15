@@ -265,6 +265,10 @@ impl Phases for SqlPhases {
             repo_id: self.repo_id,
         })
     }
+
+    async fn count_all_public(&self, ctx: &CoreContext, id: RepositoryId) -> Result<u64, Error> {
+        self.phases_store.count_all_public(ctx, id).await
+    }
 }
 
 /// Mark all commits reachable from `public_heads` as public

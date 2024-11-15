@@ -13,6 +13,8 @@ use bookmarks::BookmarksRef;
 use clap::Parser;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::MononokeApp;
+use phases::Phases;
+use phases::PhasesRef;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
 use sql_commit_graph_storage::CommitGraphBulkFetcher;
@@ -23,6 +25,9 @@ use sql_commit_graph_storage::CommitGraphBulkFetcherRef;
 pub struct CommandArgs {
     #[clap(flatten)]
     repo: RepoArgs,
+    /// Show total, public and draft commit counts (this can be expensive for large repos)
+    #[clap(long)]
+    show_commit_count: bool,
 }
 
 #[derive(Clone)]
@@ -36,6 +41,9 @@ pub struct Repo {
 
     #[facet]
     commit_graph_bulk_fetcher: CommitGraphBulkFetcher,
+
+    #[facet]
+    phases: dyn Phases,
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -45,7 +53,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         .open_repo(&args.repo)
         .await
         .context("Failed to open repo")?;
-
+    let id = repo.repo_identity().id();
     println!("Repo: {}", repo.repo_identity().name());
     println!("Repo-Id: {}", repo.repo_identity().id());
     let main_bookmark = BookmarkKey::new("master")?;
@@ -61,12 +69,21 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         main_bookmark,
         main_bookmark_value.as_deref().unwrap_or("(not set)")
     );
+    if args.show_commit_count {
+        let commits = repo
+            .commit_graph_bulk_fetcher()
+            .fetch_commit_count(&ctx, id)
+            .await?;
 
-    let commits = repo
-        .commit_graph_bulk_fetcher()
-        .fetch_commit_count(&ctx, repo.repo_identity().id())
-        .await?;
+        let public = repo.phases().count_all_public(&ctx, id).await?;
 
-    println!("Commits: {}", commits);
+        println!(
+            "Commits: {} (Public: {}, Draft: {})",
+            commits,
+            public,
+            commits - public
+        );
+    }
+
     Ok(())
 }

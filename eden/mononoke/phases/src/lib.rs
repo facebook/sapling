@@ -16,6 +16,7 @@ use async_trait::async_trait;
 use context::CoreContext;
 pub use errors::PhasesError;
 use mononoke_types::ChangesetId;
+use mononoke_types::RepositoryId;
 
 #[derive(Abomonation, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Phase {
@@ -103,6 +104,9 @@ pub trait Phases: Send + Sync {
     /// Return a copy of this phases object with the set of public
     /// heads frozen.
     fn with_frozen_public_heads(&self, heads: Vec<ChangesetId>) -> ArcPhases;
+
+    /// Return a the count of all public commits.
+    async fn count_all_public(&self, ctx: &CoreContext, id: RepositoryId) -> Result<u64>;
 }
 
 #[cfg(test)]

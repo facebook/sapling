@@ -173,6 +173,20 @@ impl SqlPhasesStore {
         .await?;
         Ok(ans.into_iter().map(|x| x.0).collect())
     }
+
+    pub async fn count_all_public(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+    ) -> Result<u64, Error> {
+        let ans = CountAllPublic::maybe_traced_query(
+            &self.read_connection,
+            ctx.client_request_info(),
+            &repo_id,
+        )
+        .await?;
+        Ok(ans.first().map_or(0, |(count,)| *count))
+    }
 }
 
 impl MemcacheEntity for SqlPhase {
@@ -294,5 +308,12 @@ mononoke_queries! {
             WHERE repo_id = {repo_id}
                 AND phase like 'Public'"
         )
+    }
+
+    read CountAllPublic(repo_id: RepositoryId) -> (u64 ) {
+            "SELECT count(*)
+            FROM phases
+            WHERE repo_id = {repo_id}
+                AND phase = 'Public'"
     }
 }
