@@ -30,6 +30,7 @@ futures = { version = "0.3.30", features = ["async-await", "compat"] }
 futures-util = "0.3.30"
 futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+futures_watchdog = { version = "0.1.0", path = "../../common/futures_watchdog" }
 git_types = { version = "0.1.0", path = "../../git/git_types" }
 gix-hash = { git = "https://github.com/pierrechevalier83/gitoxide", rev = "a080348c2fefb7a300ec80f4481617f870065589" }
 hooks = { version = "0.1.0", path = "../../hooks" }

@@ -28,6 +28,7 @@ use futures::FutureExt;
 use futures_ext::FbFutureExt;
 use futures_stats::FutureStats;
 use futures_stats::TimedFutureExt;
+use futures_watchdog::WatchdogExt;
 use identity::Identity;
 use login_objects_thrift::EnvironmentType;
 use megarepo_api::MegarepoApi;
@@ -115,6 +116,7 @@ pub struct SourceControlServiceImpl {
     pub(crate) async_requests_queue: Option<Arc<AsyncMethodRequestQueue>>,
     identity_proxy_checker: Arc<ConnectionSecurityChecker>,
     pub(crate) acl_provider: Arc<dyn AclProvider>,
+    pub(crate) enable_futures_watchdog: bool,
 }
 
 pub struct SourceControlServiceThriftImpl(Arc<SourceControlServiceImpl>);
@@ -133,6 +135,7 @@ impl SourceControlServiceImpl {
         common_config: &CommonConfig,
         factory_group: Option<Arc<FactoryGroup<2>>>,
         async_requests_queue: Option<Arc<AsyncMethodRequestQueue>>,
+        enable_futures_watchdog: bool,
     ) -> Result<Self, anyhow::Error> {
         scuba_builder.add_common_server_data();
 
@@ -152,6 +155,7 @@ impl SourceControlServiceImpl {
             factory_group,
             async_requests_queue,
             acl_provider: app.environment().acl_provider.clone(),
+            enable_futures_watchdog,
         })
     }
 
@@ -824,6 +828,7 @@ macro_rules! impl_thrift_methods {
             {
                 let fut = async move {
                     let svc = self.0.clone();
+                    let enable_futures_watchdog = self.0.enable_futures_watchdog;
                     let ctx = create_ctx!(svc, $method_name, req_ctxt, $( $param_name ),*).await?;
                     let handler = {
                         cloned!(ctx);
@@ -832,7 +837,14 @@ macro_rules! impl_thrift_methods {
                             STATS::total_request_start.add_value(1);
                             let (stats, res) = async {
                                 check_memory_usage(&ctx, stringify!($method_name), start_mem_stats.as_ref())?;
-                                svc.$method_name(ctx.clone(), $( $param_name ),* ).await
+                                let f = svc.$method_name(ctx.clone(), $( $param_name ),* );
+                                if enable_futures_watchdog {
+                                    f.watched(ctx.logger())
+                                    .with_label(stringify!($method_name))
+                                    .with_max_poll(100).await
+                                } else {
+                                    f.await
+                                }
                             }
                             .timed()
                             .on_cancel_with_data(|stats| log_cancelled(&ctx, stringify!($method_name), &stats, start_mem_stats.as_ref()))

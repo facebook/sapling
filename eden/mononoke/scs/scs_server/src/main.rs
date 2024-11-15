@@ -117,6 +117,9 @@ struct ScsServerArgs {
     /// Some long-running requests are processed asynchronously by default. This flag disables that behavior; requests will fail.
     #[clap(long, default_value = "false")]
     disable_async_requests: bool,
+    /// Enable the futures watchdog; this will log stack traces for futures that take longer than 0.5 seconds to complete.
+    #[clap(long, default_value = "false")]
+    enable_futures_watchdog: bool,
 }
 
 #[derive(ValueEnum, Clone, Copy, Debug, PartialEq, Eq)]
@@ -294,6 +297,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             &app.repo_configs().common,
             maybe_factory_group,
             async_requests_queue_client,
+            args.enable_futures_watchdog,
         ))?
     };
 

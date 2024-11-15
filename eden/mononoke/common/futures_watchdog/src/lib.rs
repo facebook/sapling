@@ -22,6 +22,20 @@ pub struct WatchedFuture<R, F> {
     reporter: R,
     #[pin]
     inner: F,
+    max_poll: Duration,
+    label: Option<String>,
+}
+
+impl<R, F> WatchedFuture<R, F> {
+    pub fn with_max_poll(mut self, max_poll: u64) -> Self {
+        self.max_poll = Duration::from_millis(max_poll);
+        self
+    }
+
+    pub fn with_label(mut self, label: &str) -> Self {
+        self.label = Some(label.to_string());
+        self
+    }
 }
 
 impl<R, F> Future for WatchedFuture<R, F>
@@ -36,27 +50,29 @@ where
 
         let now = Instant::now();
         let ret = this.inner.poll(cx);
-        this.reporter.report(now.elapsed());
+        this.reporter
+            .report(this.label, this.max_poll, now.elapsed());
 
         ret
     }
 }
 
 pub trait Reporter {
-    fn report(&self, poll: Duration);
+    fn report(&self, name: &Option<String>, max_poll: &Duration, poll: Duration);
 }
 
 pub struct SlogReporter<'a> {
     logger: MaybeOwned<'a, Logger>,
     location: slog::RecordLocation,
-    max_poll: Duration,
 }
 
 impl Reporter for SlogReporter<'_> {
-    fn report(&self, poll: Duration) {
-        if poll <= self.max_poll {
+    fn report(&self, name: &Option<String>, max_poll: &Duration, poll: Duration) {
+        if poll <= *max_poll {
             return;
         }
+
+        let name = name.as_deref().unwrap_or("");
 
         self.logger.log(&Record::new(
             &slog::RecordStatic {
@@ -64,7 +80,7 @@ impl Reporter for SlogReporter<'_> {
                 level: slog::Level::Warning,
                 tag: "futures_watchdog",
             },
-            &format_args!("Slow poll() ran for {:?}", poll),
+            &format_args!("Slow poll({}) ran for {:?}", name, poll),
             slog::b!(),
         ));
     }
@@ -101,15 +117,13 @@ where
         // This is a bit arbitrary but generally a very conservative default.
         let max_poll = Duration::from_millis(500);
 
-        let reporter = SlogReporter {
-            logger,
-            location,
-            max_poll,
-        };
+        let reporter = SlogReporter { logger, location };
 
         WatchedFuture {
             reporter,
             inner: self,
+            label: None,
+            max_poll,
         }
     }
 }
