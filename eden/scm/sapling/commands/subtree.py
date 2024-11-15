@@ -157,7 +157,7 @@ def subtree_merge(ui, repo, **opts):
     stats = mergemod.merge(
         repo,
         from_ctx,
-        force=True,
+        force=False,
         ancestor=merge_base_ctx,
         mergeancestor=False,
         labels=labels,
