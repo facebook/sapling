@@ -21,7 +21,6 @@
 #include <string.h>
 
 #include "eden/scm/sapling/bdiff.h"
-#include "eden/scm/sapling/bitmanipulation.h"
 #include "eden/scm/sapling/compat.h"
 
 /* Hash implementation from diffutils */

@@ -23,7 +23,6 @@ cpp_library(
     ],
     deps = [
         "fbsource//third-party/python:python",
-        ":util",
         "//eden/scm:core_headers",
         "//eden/scm:libbdiff",
     ],

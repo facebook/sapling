@@ -8,7 +8,6 @@ cpp_binary(
     deps = [
         "//eden/common/utils:path",
         "//eden/common/utils:user_info",
-        "//eden/fs:config",
         "//eden/fs/inodes:inodes",
         "//eden/fs/service:init",
         "//eden/fs/service:startup_logger",

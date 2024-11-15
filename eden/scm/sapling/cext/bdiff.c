@@ -24,7 +24,6 @@
 
 #include "eden/scm/sapling/bdiff.h"
 #include "eden/scm/sapling/bitmanipulation.h"
-#include "eden/scm/sapling/cext/util.h"
 
 static PyObject* blocks(PyObject* self, PyObject* args) {
   PyObject *sa, *sb, *rl = NULL, *m;

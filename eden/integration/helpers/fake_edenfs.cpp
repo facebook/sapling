@@ -17,7 +17,6 @@
 #include <array>
 #include <chrono>
 #include <cstdio>
-#include <fstream>
 #include <iterator>
 #include <optional>
 #include <string>
@@ -26,7 +25,6 @@
 
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/UserInfo.h"
-#include "eden/fs/eden-config.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/service/EdenInit.h"
 #include "eden/fs/service/StartupLogger.h"

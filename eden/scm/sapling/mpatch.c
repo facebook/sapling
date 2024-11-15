@@ -31,7 +31,6 @@
 #include <string.h>
 
 #include "eden/scm/sapling/bitmanipulation.h"
-#include "eden/scm/sapling/compat.h"
 #include "eden/scm/sapling/mpatch.h"
 
 static struct mpatch_flist* lalloc(ssize_t size) {
