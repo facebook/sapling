@@ -9,8 +9,30 @@ import type {ChildProcess, IOType} from 'node:child_process';
 import type {Stream} from 'node:stream';
 
 import getStream from 'get-stream';
+import {spawn} from 'node:child_process';
 import {Readable} from 'node:stream';
 import os from 'os';
+
+const LF = '\n';
+const LF_BINARY = LF.codePointAt(0);
+const CR = '\r';
+const CR_BINARY = CR.codePointAt(0);
+
+function stripFinalNewline<T extends string | Uint8Array>(input: T): T {
+  const isString = typeof input === 'string';
+  const LF = isString ? '\n' : '\n'.codePointAt(0);
+  const CR = isString ? '\r' : '\r'.codePointAt(0);
+  if (typeof input === 'string') {
+    const w = input.slice;
+    const stripped = input.at(-1) === LF ? input.slice(0, input.at(-2) === CR ? -2 : -1) : input;
+    return stripped as T;
+  }
+
+  const stripped =
+    input.at(-1) === LF_BINARY ? input.subarray(0, input.at(-2) === CR_BINARY ? -2 : -1) : input;
+
+  return stripped as T;
+}
 
 export interface EjecaOptions {
   /**
@@ -181,7 +203,7 @@ function getMergePromise(
 }
 
 // Use promises instead of `child_process` events
-async function getSpawnedPromise(spawned: ChildProcess): Promise<EjecaReturn> {
+function getSpawnedPromise(spawned: ChildProcess): Promise<EjecaReturn> {
   const {stdout, stderr} = spawned;
   const spawnedPromise = new Promise<{exitCode: number; signal?: string}>((resolve, reject) => {
     spawned.on('exit', (exitCode, signal) => {
@@ -204,8 +226,8 @@ async function getSpawnedPromise(spawned: ChildProcess): Promise<EjecaReturn> {
       const [rc, stdout, stderr] = values;
       return {
         ...rc,
-        stdout,
-        stderr,
+        stdout: stripFinalNewline(stdout),
+        stderr: stripFinalNewline(stderr),
         killed: false,
         escapedCommand: '',
       };
@@ -213,7 +235,7 @@ async function getSpawnedPromise(spawned: ChildProcess): Promise<EjecaReturn> {
   );
 }
 
-async function getStreamPromise(origStream: Stream | null): Promise<string> {
+function getStreamPromise(origStream: Stream | null): Promise<string> {
   const stream = origStream ?? new Readable({read() {}});
   return getStream(stream, {encoding: 'utf8'});
 }
@@ -228,9 +250,17 @@ async function getStreamPromise(origStream: Stream | null): Promise<string> {
  * - Allows feeding to stdin through `_options.input`
  */
 export function ejeca(
-  _file: string,
-  _argumentos: readonly string[],
+  file: string,
+  argumentos: readonly string[],
   _options?: EjecaOptions,
 ): EjecaChildProcess {
-  throw new Error('Not implemented');
+  const spawned = spawn(file, argumentos);
+  const spawnedPromise = getSpawnedPromise(spawned);
+  const mergedPromise = getMergePromise(spawned, spawnedPromise);
+  const ecp = Object.create(mergedPromise);
+  ecp.kill = (p: KillParam, o?: KillOptions) => {
+    return spawnedKill(s => mergedPromise.kill(s), p, o);
+  };
+
+  return ecp as unknown as EjecaChildProcess;
 }
