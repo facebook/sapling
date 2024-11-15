@@ -96,11 +96,17 @@ class mergestate:
     statepath = "merge/state2"
 
     @staticmethod
-    def clean(repo, node=None, other=None, labels=None, ancestors=None):
+    def clean(repo, node=None, other=None, labels=None, ancestors=None, inmemory=False):
         """Initialize a brand new merge state, removing any existing state on
         disk."""
         ms = mergestate(repo)
-        ms.reset(node=node, other=other, labels=labels, ancestors=ancestors)
+        ms.reset(
+            node=node,
+            other=other,
+            labels=labels,
+            ancestors=ancestors,
+            inmemory=inmemory,
+        )
         return ms
 
     @staticmethod
@@ -122,13 +128,15 @@ class mergestate:
             "experimental", "optimize-in-memory-merge-state", True
         )
 
-    def reset(self, node=None, other=None, labels=None, ancestors=None):
+    def reset(self, node=None, other=None, labels=None, ancestors=None, inmemory=False):
         shutil.rmtree(self._repo.localvfs.join("merge"), True)
 
         self._read(rustworkingcopy.mergestate(node, other, labels))
 
         if ancestors:
             self._ancestors = ancestors
+
+        self._inmemory = inmemory
 
     def _read(self, rust_ms):
         """Analyse each record content to restore a serialized state from disk
@@ -147,6 +155,7 @@ class mergestate:
 
         self._results = {}
         self._dirty = False
+        self._inmemory = False
 
         self._inmemory_to_be_merged = {}
 
@@ -247,6 +256,12 @@ class mergestate:
 
     def commit(self):
         """Write current state on disk (if necessary)"""
+
+        if self._inmemory and self._optimize_inmemory:
+            # Don't bother writing out to disk if we are doing an "in memory" merge.
+            # There should be no need for cross-process merge state persistence.
+            return
+
         if self._dirty:
             if md := self.mergedriver:
                 self._rust_ms.setmergedriver((md, self._mdstate))
@@ -1462,6 +1477,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
             else None
         ),
         labels=labels,
+        inmemory=wctx.isinmemory(),
     )
 
     for from_path, to_path in mctx.manifest().diffgrafts():
