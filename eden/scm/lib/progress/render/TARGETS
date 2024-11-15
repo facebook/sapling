@@ -18,9 +18,12 @@ rust_library(
     test_deps = [
     ],
     deps = [
+        "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:termwiz",
+        "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:unicode-segmentation",
         "fbsource//third-party/rust:unicode-width",
         "//eden/scm/lib/progress/model:progress-model",
+        "//eden/scm/lib/util/nodeipc:nodeipc",
     ],
 )

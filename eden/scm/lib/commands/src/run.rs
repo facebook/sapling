@@ -501,11 +501,6 @@ fn spawn_progress_thread(
         disable_rendering = true;
     }
 
-    let assume_tty = config.get_or("progress", "assume-tty", || false)?;
-    if !assume_tty && !io.error().is_tty() {
-        disable_rendering = true;
-    }
-
     if global_opts.quiet || hgplain::is_plain(Some("progress")) {
         disable_rendering = true;
     }
@@ -515,8 +510,14 @@ fn spawn_progress_thread(
         disable_rendering = true;
     }
 
+    let assume_tty = config.get_or("progress", "assume-tty", || false)?;
+    if !assume_tty && !io.error().is_tty() && renderer_name != "nodeipc" {
+        disable_rendering = true;
+    }
+
     let render_function = match renderer_name.as_str() {
         "structured" => progress_render::structured::render,
+        "nodeipc" => progress_render::nodeipc::render,
         _ => progress_render::simple::render,
     };
 
