@@ -907,6 +907,7 @@ export default class ServerToClientAPI {
             context: diff,
             fieldName: data.fieldName,
             latestFields: data.latestFields,
+            suggestionId: data.suggestionId,
           })
             .catch((error: Error) => ({error}))
             .then((result: Result<string>) => {
