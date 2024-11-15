@@ -216,6 +216,7 @@ pub enum Metric {
     TotalManifests,
     GetpackFiles,
     Commits,
+    CommitsPerAuthor,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]

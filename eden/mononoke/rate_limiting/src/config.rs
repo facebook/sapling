@@ -92,20 +92,6 @@ impl TryFrom<rate_limiting_config::RateLimitBody> for RateLimitBody {
     }
 }
 
-impl TryFrom<rate_limiting_config::RegionalMetric> for Metric {
-    type Error = Error;
-
-    fn try_from(value: rate_limiting_config::RegionalMetric) -> Result<Self, Self::Error> {
-        match value {
-            rate_limiting_config::RegionalMetric::EgressBytes => Ok(Metric::EgressBytes),
-            rate_limiting_config::RegionalMetric::TotalManifests => Ok(Metric::TotalManifests),
-            rate_limiting_config::RegionalMetric::GetpackFiles => Ok(Metric::GetpackFiles),
-            rate_limiting_config::RegionalMetric::Commits => Ok(Metric::Commits),
-            _ => Err(anyhow!("Invalid RegionalMetric")),
-        }
-    }
-}
-
 impl TryFrom<rate_limiting_config::FciMetricKey> for Metric {
     type Error = Error;
 
@@ -115,6 +101,7 @@ impl TryFrom<rate_limiting_config::FciMetricKey> for Metric {
             rate_limiting_config::FciMetricKey::TotalManifests => Ok(Metric::TotalManifests),
             rate_limiting_config::FciMetricKey::GetpackFiles => Ok(Metric::GetpackFiles),
             rate_limiting_config::FciMetricKey::Commits => Ok(Metric::Commits),
+            rate_limiting_config::FciMetricKey::CommitsPerAuthor => Ok(Metric::CommitsPerAuthor),
             _ => Err(anyhow!("Invalid FciMetricKey")),
         }
     }
