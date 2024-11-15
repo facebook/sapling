@@ -6,6 +6,7 @@
  */
 
 use std::sync::Arc;
+use std::time::Instant;
 
 use anyhow::Result;
 use cas_client::CasClient;
@@ -111,6 +112,7 @@ impl ThinCasClient {
     }
 
     fn build(&self) -> Result<REClient> {
+        let start = Instant::now();
         let mut re_config = create_default_config();
 
         re_config.client_name = Some("sapling".to_string());
@@ -135,7 +137,10 @@ impl ThinCasClient {
             builder = builder.with_wdb_cas_daemon(self.connection_count);
         }
 
-        builder.build()
+        let client = builder.build();
+        let elapsed = start.elapsed();
+        tracing::debug!(target: "cas", "creating RE CAS client took {} ms", elapsed.as_millis());
+        client
     }
 }
 
