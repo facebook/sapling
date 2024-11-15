@@ -207,7 +207,7 @@ function getSpawnedPromise(spawned: ChildProcess): Promise<EjecaReturn> {
   const {stdout, stderr} = spawned;
   const spawnedPromise = new Promise<{exitCode: number; signal?: string}>((resolve, reject) => {
     spawned.on('exit', (exitCode, signal) => {
-      resolve({exitCode: exitCode ?? 0, signal: signal ?? undefined});
+      resolve({exitCode: exitCode ?? -1, signal: signal ?? undefined});
     });
 
     spawned.on('error', error => {
@@ -223,14 +223,28 @@ function getSpawnedPromise(spawned: ChildProcess): Promise<EjecaReturn> {
 
   return Promise.all([spawnedPromise, getStreamPromise(stdout), getStreamPromise(stderr)]).then(
     values => {
-      const [rc, stdout, stderr] = values;
-      return {
-        ...rc,
+      const [{exitCode, signal}, stdout, stderr] = values;
+      const ret = {
+        exitCode,
+        signal,
         stdout: stripFinalNewline(stdout),
         stderr: stripFinalNewline(stderr),
         killed: false,
         escapedCommand: '',
       };
+      if (exitCode !== 0 || signal != undefined) {
+        const err = new Error(
+          signal != null ? 'Command was killed' : 'Command exited with non-zero status',
+        ) as unknown as EjecaError;
+        err.exitCode = ret.exitCode;
+        err.signal = ret.signal;
+        err.stdout = ret.stdout;
+        err.stderr = ret.stderr;
+        err.killed = ret.killed;
+        err.escapedCommand = ret.escapedCommand;
+        throw err;
+      }
+      return ret;
     },
   );
 }

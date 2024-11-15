@@ -69,12 +69,24 @@ console.log("Goodbye");
     pythonArgs: string[] = [],
     expectedOut: string = '',
     killArgs: Parameters<EjecaChildProcess['kill']> = [],
+    expectedSignal?: string,
   ) => {
     let spawned = ejeca('node', ['-', ...pythonArgs], {
       input: sighandlerScript,
     });
     setTimeout(() => spawned.kill(...killArgs), 1000);
-    expect((await spawned).stdout).toBe(expectedOut);
+    let outo = '';
+    let signalo = undefined;
+    try {
+      outo = (await spawned).stdout;
+    } catch (err) {
+      if (err != null && typeof err === 'object' && 'stdout' in err && 'signal' in err) {
+        outo = err.stdout as string;
+        signalo = err.signal;
+      }
+    }
+    expect(outo).toBe(expectedOut);
+    expect(signalo).toBe(expectedSignal);
   };
 
   it('kill as sends sigterm by default', async () => {
@@ -82,13 +94,15 @@ console.log("Goodbye");
   });
 
   it('sigkill can be set through force kill after a timeout', async () => {
-    await spawnAndKill(['4', 'dontExitOnSigterm'], 'Hello\nI was asked to stop politely', [
-      'SIGTERM',
-      {forceKillAfterTimeout: 2000},
-    ]);
+    await spawnAndKill(
+      ['4', 'dontExitOnSigterm'],
+      'Hello\nI was asked to stop politely',
+      ['SIGTERM', {forceKillAfterTimeout: 2000}],
+      'SIGKILL',
+    );
   });
 
   it('sending sigkill just kills', async () => {
-    await spawnAndKill(['100000000000'], 'Hello', ['SIGKILL']);
+    await spawnAndKill(['100000000000'], 'Hello', ['SIGKILL'], 'SIGKILL');
   });
 });
