@@ -31,6 +31,7 @@ use mononoke_types::blame_v2::BlameV2;
 use mononoke_types::blame_v2::BlameV2Id;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
+use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
@@ -57,8 +58,8 @@ impl Default for BlameDeriveOptions {
 pub enum BlameError {
     #[error("No such path: {0}")]
     NoSuchPath(NonRootMPath),
-    #[error("Blame is not available for directories: {0}")]
-    IsDirectory(NonRootMPath),
+    #[error("Blame is not available for directories: {0:?}")]
+    IsDirectory(MPath),
     #[error(transparent)]
     Rejected(#[from] BlameRejected),
     #[error(transparent)]
@@ -89,7 +90,7 @@ pub async fn fetch_blame_v2(
         .await?
         .ok_or_else(|| BlameError::NoSuchPath(path.clone()))?
         .into_leaf()
-        .ok_or(BlameError::IsDirectory(path))?;
+        .ok_or(BlameError::IsDirectory(path.into()))?;
     let blame = BlameV2Id::from(file_unode_id).load(ctx, &blobstore).await?;
     Ok((blame, file_unode_id))
 }

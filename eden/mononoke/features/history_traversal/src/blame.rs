@@ -82,7 +82,7 @@ async fn fetch_mutable_blame(
             .await?
             .context("Unode missing")?
             .into_leaf()
-            .ok_or_else(|| BlameError::IsDirectory(path.clone()))?;
+            .ok_or_else(|| BlameError::IsDirectory(path.clone().into()))?;
         let my_content = fetch_content_for_blame(ctx, repo, unode)
             .await?
             .into_bytes()?;
@@ -189,7 +189,7 @@ pub async fn blame(
     let path = path
         .clone()
         .into_optional_non_root_path()
-        .ok_or_else(|| anyhow!("Blame is not available for directory: `/`"))?;
+        .ok_or_else(|| BlameError::IsDirectory(path.clone()))?;
     if follow_mutable_file_history {
         fetch_mutable_blame(ctx, repo, csid, &path, &mut HashSet::new())
             .timed()
