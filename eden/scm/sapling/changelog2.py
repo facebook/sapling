@@ -74,6 +74,9 @@ class changelog:
         else:
             self._changelogrevision_ctor = changelogrevision
 
+        # Cache for node->changeset
+        self._cs_cache = util.lrucachedict(100)
+
     @util.propertycache
     def _visibleheads(self):
         # TODO: Consider moving visibleheads out?
@@ -332,7 +335,20 @@ class changelog:
 
     def changelogrevision(self, nodeorrev):
         """Obtain a ``changelogrevision`` for a node or revision."""
-        return self._changelogrevision_ctor(self.revision(nodeorrev))
+
+        # Be sure to cache by node, not rev. Revision numbers can be re-assigned.
+        if isinstance(nodeorrev, bytes):
+            node = nodeorrev
+        else:
+            node = self.node(nodeorrev)
+
+        cs = self._cs_cache.get(node, None)
+        if cs is not None:
+            return cs
+
+        cs = self._changelogrevision_ctor(self.revision(node))
+        self._cs_cache[node] = cs
+        return cs
 
     def readfiles(self, node):
         """
@@ -459,9 +475,11 @@ class changelog:
             node = nodeorrev
         else:
             node = self.node(nodeorrev)
+
         text = self.inner.getcommitrawtext(node)
         if text is None:
             raise error.LookupError(node, self.indexfile, _("no node"))
+
         # Do not verify hg hash if git hash is being used.
         if verify and not self._isgit:
             # check HG SHA1 hash
