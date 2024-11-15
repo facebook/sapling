@@ -99,11 +99,26 @@ export enum SuggestedChangeType {
   CI_SIGNAL = 'CI_SIGNAL',
 }
 
+export enum ArchivedStateType {
+  ARCHIVED = 'ARCHIVED',
+  NOT_ARCHIVED = 'NOT_ARCHIVED',
+}
+
+export enum ArchivedReasonType {
+  APPLIED_MERGED = 'APPLIED_MERGED',
+  APPLIED_STACKED_DIFF = 'APPLIED_STACKED_DIFF',
+  AUTHOR_DISCARDED = 'AUTHOR_DISCARDED',
+  STALE_DIFF_CLOSED = 'STALE_DIFF_CLOSED',
+  STALE_FILE_CHANGED = 'STALE_FILE_CHANGED',
+}
+
 export type SuggestedChange = {
   id?: string;
   type?: SuggestedChangeType;
   codePatchSuggestionID?: string;
   status?: CodePatchSuggestionStatus;
+  archivedState?: ArchivedStateType;
+  archivedReason?: ArchivedReasonType;
   commitHashBefore?: string;
   patch?: ParsedDiff;
   oldPath?: string;
