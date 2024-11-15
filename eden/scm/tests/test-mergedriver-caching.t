@@ -23,11 +23,10 @@ In-memory rebase + merge driver not used:
   > |/    # A/bar = 1\n2\n3\n
   > A     # A/foo = a\nb\nc\n
   > EOS
-FIXME: we reload the merge driver for every commit:
+Don't reload the merge driver for every commit:
   $ hg rebase -q -s $C -d $B --config rebase.experimental.inmemory=true
   EXPENSIVE
   PREPROCESS
-  EXPENSIVE
   PREPROCESS
 
 On-disk rebase + merge driver not used:

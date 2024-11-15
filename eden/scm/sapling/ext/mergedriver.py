@@ -9,6 +9,7 @@ from __future__ import absolute_import
 
 import errno
 import sys
+import weakref
 
 from sapling import commands, error, extensions, hook, merge, perftrace
 from sapling.i18n import _
@@ -108,6 +109,13 @@ def wrapresolve(orig, ui, repo, *pats, **opts):
         return ret
 
 
+# Cache the loaded preprocess func to avoid completely reloading the mergedriver for every
+# commit during in-memory rebase.
+#
+# Looks like (weakref.ref(wctx), set(sys.modules.keys()), preprocess func)
+_cached_driver = None
+
+
 def _rundriver(repo, ms, op, wctx, labels):
     ui = repo.ui
     mergedriver = ms.mergedriver
@@ -120,19 +128,50 @@ def _rundriver(repo, ms, op, wctx, labels):
     # drivers changed during a rebase from being loaded inconsistently.
     origbytecodesetting = sys.dont_write_bytecode
     sys.dont_write_bytecode = True
+
+    # Only try caching for in-memory "preprocess" step. If we aren't in memory, we need to
+    # re-load the merge driver code from disk each time. If we are in memory, we can cache
+    # based on wctx. Note that in-memory rebase still loads merge driver code from disk.
+    # We only cache for "preprocess" to keep things a tad simpler (in-memory rebase never
+    # gets to the conclude() step).
+    try_caching = wctx.isinmemory() and op == "preprocess"
+
+    global _cached_driver
+
+    hookfn = None
     origmodules = set(sys.modules.keys())
+
+    # Check wctx for "equality" using `is`. We basically just want to check we are dealing
+    # with the same wctx object as last time, even though it's parent node has changed.
+    if try_caching and _cached_driver and _cached_driver[0]() is wctx:
+        origmodules = _cached_driver[1]
+        hookfn = _cached_driver[2]
+    elif _cached_driver:
+        # If we aren't using the cached value, unload all modules loaded by the currently
+        # cached merge driver (so we do a fresh load below).
+        for mod in set(sys.modules.keys()) - _cached_driver[1]:
+            del sys.modules[mod]
+        _cached_driver = None
+
     try:
-        res = hook.runhooks(
+        if not hookfn:
+            hookfn = hook._getpyhook(ui, repo, op, f"{mergedriver}:{op}")
+            if try_caching:
+                _cached_driver = (weakref.ref(wctx), origmodules, hookfn)
+
+        r, raised = hook._pythonhook(
             ui,
             repo,
             "mergedriver-%s" % op,
-            [(op, "%s:%s" % (mergedriver, op))],
-            throw=False,
-            mergestate=ms,
-            wctx=wctx,
-            labels=labels,
+            op,
+            hookfn,
+            {
+                "mergestate": ms,
+                "wctx": wctx,
+                "labels": labels,
+            },
+            False,
         )
-        r, raised = res[op]
     except ImportError:
         # underlying function prints out warning
         r = True
@@ -148,13 +187,14 @@ def _rundriver(repo, ms, op, wctx, labels):
             r = True
             raised = True
     finally:
-        # Evict the loaded module and all of its imports from memory. This is
-        # necessary to ensure we always use the latest driver code from ., and
-        # prevent cases with a half-loaded driver (where some of the cached
-        # modules were loaded from an older commit.)
-        loadedmodules = set(sys.modules.keys()) - origmodules
-        for mod in loadedmodules:
-            del sys.modules[mod]
+        if not _cached_driver:
+            # Evict the loaded module and all of its imports from memory. This is
+            # necessary to ensure we always use the latest driver code from ., and
+            # prevent cases with a half-loaded driver (where some of the cached
+            # modules were loaded from an older commit.)
+            loadedmodules = set(sys.modules.keys()) - origmodules
+            for mod in loadedmodules:
+                del sys.modules[mod]
         sys.dont_write_bytecode = origbytecodesetting
     return r, raised
 
