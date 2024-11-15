@@ -14,7 +14,6 @@
 #include <folly/String.h>
 #include <folly/futures/Future.h>
 #include <folly/io/Cursor.h>
-#include <folly/io/IOBuf.h>
 #include <folly/lang/Bits.h>
 #include <folly/logging/xlog.h>
 #include <rocksdb/convenience.h>

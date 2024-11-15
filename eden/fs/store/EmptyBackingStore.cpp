@@ -9,7 +9,6 @@
 
 #include <folly/futures/Future.h>
 #include "eden/fs/model/Blob.h"
-#include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 

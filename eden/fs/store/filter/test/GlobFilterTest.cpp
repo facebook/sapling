@@ -15,9 +15,7 @@
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/ObjectStore.h"
-#include "eden/fs/store/TreeCache.h"
 #include "eden/fs/store/filter/GlobFilter.h"
-#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 
 using namespace facebook::eden;

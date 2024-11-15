@@ -6,7 +6,6 @@
  */
 
 #include "eden/fs/store/MemoryLocalStore.h"
-#include <folly/String.h>
 #include "eden/fs/store/StoreResult.h"
 #include "eden/fs/telemetry/EdenStats.h"
 

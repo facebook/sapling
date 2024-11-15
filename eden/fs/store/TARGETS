@@ -77,9 +77,7 @@ cpp_library(
     headers = SQLITE_HEADERS,
     deps = [
         "//eden/fs/telemetry:stats",
-        "//folly:string",
         "//folly/container:array",
-        "//folly/logging:logging",
     ],
     exported_deps = [
         ":store",
@@ -193,7 +191,6 @@ cpp_library(
         "//eden/fs/utils:eden_error",
         "//folly:conv",
         "//folly:exception_wrapper",
-        "//folly:expected",
         "//folly:portability",
         "//folly:string",
         "//folly:varint",

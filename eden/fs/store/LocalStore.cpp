@@ -8,8 +8,6 @@
 #include "eden/fs/store/LocalStore.h"
 
 #include <folly/ExceptionWrapper.h>
-#include <folly/Expected.h>
-#include <folly/String.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/lang/Bits.h>

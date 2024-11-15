@@ -11,7 +11,6 @@
 #include <folly/logging/xlog.h>
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/model/Tree.h"
-#include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/store/ObjectStore.h"
 
 namespace facebook::eden {

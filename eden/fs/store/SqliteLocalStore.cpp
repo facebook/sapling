@@ -7,9 +7,7 @@
 
 #include "eden/fs/store/SqliteLocalStore.h"
 
-#include <folly/String.h>
 #include <folly/container/Array.h>
-#include <folly/logging/xlog.h>
 
 #include "eden/fs/sqlite/SqliteStatement.h"
 #include "eden/fs/store/StoreResult.h"

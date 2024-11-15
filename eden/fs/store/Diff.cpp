@@ -8,7 +8,6 @@
 #include "eden/fs/store/Diff.h"
 
 #include <folly/Portability.h>
-#include <folly/Synchronized.h>
 #include <folly/logging/xlog.h>
 #include <memory>
 #include <vector>

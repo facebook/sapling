@@ -14,7 +14,6 @@
 #include <folly/container/Array.h>
 #include <folly/container/Enumerate.h>
 #include <folly/init/Init.h>
-#include <folly/logging/Init.h>
 #include <folly/logging/LogConfigParser.h>
 #include <folly/logging/xlog.h>
 #include <folly/stop_watch.h>
