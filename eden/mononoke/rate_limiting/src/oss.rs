@@ -19,10 +19,11 @@ use crate::LoadCost;
 use crate::LoadShedResult;
 use crate::Metric;
 use crate::MononokeRateLimitConfig;
+use crate::RateLimit;
 use crate::RateLimitBody;
-use crate::RateLimitReason;
 use crate::RateLimitResult;
 use crate::RateLimiter;
+use crate::Scope;
 
 pub fn get_region_capacity(_datacenter_capacity: &BTreeMap<String, i32>) -> Option<i32> {
     None
@@ -62,7 +63,7 @@ impl RateLimiter for FakeLimiter {
         LoadShedResult::Pass
     }
 
-    fn bump_load(&self, _metric: Metric, _load: LoadCost) {}
+    fn bump_load(&self, _metric: Metric, _scope: Scope, _load: LoadCost) {}
 
     fn category(&self) -> &str {
         &self.category

@@ -70,6 +70,7 @@ use phases::Phase;
 use phases::Phases;
 use phases::PhasesRef;
 use rate_limiting::Metric;
+use rate_limiting::Scope;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
@@ -221,7 +222,7 @@ pub async fn find_commits_to_send(
             .collect();
 
     ctx.session()
-        .bump_load(Metric::Commits, nodes_to_send.len() as f64);
+        .bump_load(Metric::Commits, Scope::Regional, nodes_to_send.len() as f64);
     ctx.perf_counters().add_to_counter(
         PerfCounterType::GetbundleNumCommits,
         nodes_to_send.len() as i64,

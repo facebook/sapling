@@ -54,6 +54,7 @@ use mononoke_api_hg::HgDataContext;
 use mononoke_api_hg::HgDataId;
 use mononoke_api_hg::HgRepoContext;
 use rate_limiting::Metric;
+use rate_limiting::Scope;
 use revisionstore_types::Metadata;
 use serde::Deserialize;
 use types::key::Key;
@@ -139,7 +140,8 @@ impl SaplingRemoteApiHandler for Files2Handler {
             .inspect(move |response| {
                 if let Ok(result) = &response {
                     if result.result.is_ok() {
-                        ctx.session().bump_load(Metric::GetpackFiles, 1.0);
+                        ctx.session()
+                            .bump_load(Metric::GetpackFiles, Scope::Regional, 1.0);
                     }
                 }
             })

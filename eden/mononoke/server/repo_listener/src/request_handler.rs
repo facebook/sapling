@@ -36,6 +36,7 @@ use qps::Qps;
 use rate_limiting::LoadShedResult;
 use rate_limiting::Metric;
 use rate_limiting::RateLimitEnvironment;
+use rate_limiting::Scope;
 use repo_client::RepoClient;
 use repo_permission_checker::RepoPermissionCheckerRef;
 use scribe_ext::Scribe;
@@ -192,7 +193,9 @@ pub async fn request_handler(
     // send responses back
     let endres = proto_handler
         .into_stream()
-        .inspect_ok(move |bytes| session.bump_load(Metric::EgressBytes, bytes.len() as f64))
+        .inspect_ok(move |bytes| {
+            session.bump_load(Metric::EgressBytes, Scope::Regional, bytes.len() as f64)
+        })
         .map_err(Error::from)
         .map_ok(|b| Bytes::copy_from_slice(b.as_ref()))
         .forward(stdout.sink_map_err(Error::from))

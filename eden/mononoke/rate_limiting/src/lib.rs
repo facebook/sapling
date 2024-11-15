@@ -63,7 +63,7 @@ pub trait RateLimiter {
         scuba: &mut MononokeScubaSampleBuilder,
     ) -> LoadShedResult;
 
-    fn bump_load(&self, metric: Metric, load: LoadCost);
+    fn bump_load(&self, metric: Metric, scope: Scope, load: LoadCost);
 
     fn category(&self) -> &str;
 

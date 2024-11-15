@@ -123,6 +123,7 @@ use nonzero_ext::nonzero;
 use phases::PhasesArc;
 use rand::Rng;
 use rate_limiting::Metric;
+use rate_limiting::Scope;
 use remotefilelog::create_getpack_v1_blob;
 use remotefilelog::create_getpack_v2_blob;
 use remotefilelog::get_unordered_file_history_for_multiple_nodes;
@@ -580,7 +581,8 @@ impl<R: Repo> RepoClient<R> {
                     ctx.perf_counters()
                         .increment_counter(PerfCounterType::GettreepackNumTreepacks);
 
-                    ctx.session().bump_load(Metric::TotalManifests, 1.0);
+                    ctx.session()
+                        .bump_load(Metric::TotalManifests, Scope::Regional, 1.0);
                     STATS::total_tree_count.add_value(1);
                     if ctx.session().is_quicksand() {
                         STATS::quicksand_tree_count.add_value(1);
@@ -655,7 +657,11 @@ impl<R: Repo> RepoClient<R> {
                                         getpack_params.push((path.clone(), filenodes.clone()));
                                     }
 
-                                    ctx.session().bump_load(Metric::GetpackFiles, 1.0);
+                                    ctx.session().bump_load(
+                                        Metric::GetpackFiles,
+                                        Scope::Regional,
+                                        1.0,
+                                    );
 
                                     let blob_futs: Vec<_> = filenodes
                                         .iter()

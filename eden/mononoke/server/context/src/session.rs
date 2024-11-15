@@ -19,6 +19,7 @@ use rate_limiting::Metric;
 use rate_limiting::RateLimitReason;
 use rate_limiting::RateLimitResult;
 use rate_limiting::RateLimiter;
+use rate_limiting::Scope;
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
@@ -110,9 +111,9 @@ impl SessionContainer {
         }
     }
 
-    pub fn bump_load(&self, metric: Metric, load: LoadCost) {
+    pub fn bump_load(&self, metric: Metric, scope: Scope, load: LoadCost) {
         if let Some(limiter) = self.rate_limiter() {
-            limiter.bump_load(metric, load)
+            limiter.bump_load(metric, scope, load)
         }
     }
 

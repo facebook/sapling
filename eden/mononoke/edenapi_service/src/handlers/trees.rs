@@ -52,6 +52,7 @@ use mononoke_api_hg::HgDataId;
 use mononoke_api_hg::HgRepoContext;
 use mononoke_api_hg::HgTreeContext;
 use rate_limiting::Metric;
+use rate_limiting::Scope;
 use repo_blobstore::RepoBlobstoreRef;
 use serde::Deserialize;
 use types::Key;
@@ -128,7 +129,8 @@ fn fetch_all_trees<R: MononokeRepo>(
     stream::iter(fetches)
         .buffer_unordered(MAX_CONCURRENT_TREE_FETCHES_PER_REQUEST)
         .inspect_ok(move |_| {
-            ctx.session().bump_load(Metric::TotalManifests, 1.0);
+            ctx.session()
+                .bump_load(Metric::TotalManifests, Scope::Regional, 1.0);
         })
 }
 

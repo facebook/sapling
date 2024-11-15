@@ -27,6 +27,7 @@ use crate::RateLimitBody;
 use crate::RateLimitReason;
 use crate::RateLimitResult;
 use crate::RateLimiter;
+use crate::Scope;
 
 pub fn get_region_capacity(datacenter_capacity: &BTreeMap<String, i32>) -> Option<i32> {
     let whoami = FbWhoAmI::get().expect("Failed to get fbwhoami information");
@@ -85,9 +86,9 @@ impl RateLimiter for MononokeRateLimits {
         scuba: &mut MononokeScubaSampleBuilder,
     ) -> Result<RateLimitResult, Error> {
         for limit in &self.config.rate_limits {
-            let fci_metric = limit.fci_metric.metric;
+            let fci_metric = limit.fci_metric;
 
-            if fci_metric != metric {
+            if fci_metric.metric != metric {
                 continue;
             }
 
@@ -97,13 +98,13 @@ impl RateLimiter for MononokeRateLimits {
 
             if loadlimiter::should_throttle(
                 self.fb,
-                self.counter(fci_metric),
+                self.counter(fci_metric.metric, fci_metric.scope),
                 limit.body.raw_config.limit,
                 limit.fci_metric.window,
             )
             .await?
             {
-                match log_or_enforce_status(&limit.body, fci_metric, scuba) {
+                match log_or_enforce_status(&limit.body, fci_metric.metric, scuba) {
                     RateLimitResult::Pass => {
                         break;
                     }
@@ -130,8 +131,8 @@ impl RateLimiter for MononokeRateLimits {
         LoadShedResult::Pass
     }
 
-    fn bump_load(&self, metric: Metric, load: LoadCost) {
-        loadlimiter::bump_load(self.fb, self.counter(metric), load)
+    fn bump_load(&self, metric: Metric, scope: Scope, load: LoadCost) {
+        loadlimiter::bump_load(self.fb, self.counter(metric, scope), load)
     }
 
     fn category(&self) -> &str {
@@ -167,29 +168,29 @@ impl std::fmt::Debug for MononokeRateLimits {
 
 #[derive(Debug)]
 struct LoadLimitsInner {
-    egress_bytes: LoadLimitCounter,
-    total_manifests: LoadLimitCounter,
-    getpack_files: LoadLimitCounter,
-    commits: LoadLimitCounter,
+    regional_egress_bytes: LoadLimitCounter,
+    regional_total_manifests: LoadLimitCounter,
+    regional_getpack_files: LoadLimitCounter,
+    regional_commits: LoadLimitCounter,
 }
 
 impl LoadLimitsInner {
     pub fn new(category: String) -> Self {
         Self {
-            egress_bytes: LoadLimitCounter {
+            regional_egress_bytes: LoadLimitCounter {
                 category: category.clone(),
                 key: make_regional_limit_key("egress-bytes"),
             },
-            total_manifests: LoadLimitCounter {
+            regional_total_manifests: LoadLimitCounter {
                 category: category.clone(),
                 key: make_regional_limit_key("egress-total-manifests"),
             },
-            getpack_files: LoadLimitCounter {
+            regional_getpack_files: LoadLimitCounter {
                 category: category.clone(),
                 key: make_regional_limit_key("egress-getpack-files"),
             },
-            commits: LoadLimitCounter {
-                category,
+            regional_commits: LoadLimitCounter {
+                category: category.clone(),
                 key: make_regional_limit_key("egress-commits"),
             },
         }
@@ -206,12 +207,13 @@ fn make_regional_limit_key(prefix: &str) -> String {
 }
 
 impl MononokeRateLimits {
-    fn counter(&self, metric: Metric) -> &LoadLimitCounter {
-        match metric {
-            Metric::EgressBytes => &self.load_limits.egress_bytes,
-            Metric::TotalManifests => &self.load_limits.total_manifests,
-            Metric::GetpackFiles => &self.load_limits.getpack_files,
-            Metric::Commits => &self.load_limits.commits,
+    fn counter(&self, metric: Metric, scope: Scope) -> &LoadLimitCounter {
+        match (metric, scope) {
+            (Metric::EgressBytes, Scope::Regional) => &self.load_limits.regional_egress_bytes,
+            (Metric::TotalManifests, Scope::Regional) => &self.load_limits.regional_total_manifests,
+            (Metric::GetpackFiles, Scope::Regional) => &self.load_limits.regional_getpack_files,
+            (Metric::Commits, Scope::Regional) => &self.load_limits.regional_commits,
+            _ => panic!("Unsupported metric/scope combination"),
         }
     }
 }
