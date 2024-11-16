@@ -13,46 +13,56 @@ namespace facebook::eden {
 
 FileChangeJournalDelta::FileChangeJournalDelta(
     RelativePathPiece fileName,
+    dtype_t type,
     FileChangeJournalDelta::Created)
     : path1{fileName.copy()},
       info1{PathChangeInfo{false, true}},
-      isPath1Valid{true} {}
+      isPath1Valid{true},
+      type{type} {}
 
 FileChangeJournalDelta::FileChangeJournalDelta(
     RelativePathPiece fileName,
+    dtype_t type,
     FileChangeJournalDelta::Removed)
     : path1{fileName.copy()},
       info1{PathChangeInfo{true, false}},
-      isPath1Valid{true} {}
+      isPath1Valid{true},
+      type{type} {}
 
 FileChangeJournalDelta::FileChangeJournalDelta(
     RelativePathPiece fileName,
+    dtype_t type,
     FileChangeJournalDelta::Changed)
     : path1{fileName.copy()},
       info1{PathChangeInfo{true, true}},
-      isPath1Valid{true} {}
+      isPath1Valid{true},
+      type{type} {}
 
 FileChangeJournalDelta::FileChangeJournalDelta(
     RelativePathPiece oldName,
     RelativePathPiece newName,
+    dtype_t type,
     FileChangeJournalDelta::Renamed)
     : path1{oldName.copy()},
       path2{newName.copy()},
       info1{PathChangeInfo{true, false}},
       info2{PathChangeInfo{false, true}},
       isPath1Valid{true},
-      isPath2Valid{true} {}
+      isPath2Valid{true},
+      type{type} {}
 
 FileChangeJournalDelta::FileChangeJournalDelta(
     RelativePathPiece oldName,
     RelativePathPiece newName,
+    dtype_t type,
     FileChangeJournalDelta::Replaced)
     : path1{oldName.copy()},
       path2{newName.copy()},
       info1{PathChangeInfo{true, false}},
       info2{PathChangeInfo{true, true}},
       isPath1Valid{true},
-      isPath2Valid{true} {}
+      isPath2Valid{true},
+      type{type} {}
 
 size_t FileChangeJournalDelta::estimateMemoryUsage() const {
   size_t mem = sizeof(FileChangeJournalDelta);

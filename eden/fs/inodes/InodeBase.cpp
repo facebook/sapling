@@ -386,7 +386,7 @@ ObjectStore& InodeBase::getObjectStore() const {
 void InodeBase::updateJournal() {
   auto path = getPath();
   if (path.has_value()) {
-    getMount()->getJournal().recordChanged(std::move(path.value()));
+    getMount()->getJournal().recordChanged(std::move(path.value()), getType());
   }
 }
 

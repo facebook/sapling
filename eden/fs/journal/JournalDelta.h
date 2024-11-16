@@ -11,6 +11,7 @@
 #include <type_traits>
 #include <unordered_set>
 #include <variant>
+#include "eden/common/utils/DirType.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/model/RootId.h"
 
@@ -74,9 +75,9 @@ class FileChangeJournalDelta : public JournalDelta {
   FileChangeJournalDelta& operator=(FileChangeJournalDelta&&) = default;
   FileChangeJournalDelta(const FileChangeJournalDelta&) = delete;
   FileChangeJournalDelta& operator=(const FileChangeJournalDelta&) = delete;
-  FileChangeJournalDelta(RelativePathPiece fileName, Created);
-  FileChangeJournalDelta(RelativePathPiece fileName, Removed);
-  FileChangeJournalDelta(RelativePathPiece fileName, Changed);
+  FileChangeJournalDelta(RelativePathPiece fileName, dtype_t type, Created);
+  FileChangeJournalDelta(RelativePathPiece fileName, dtype_t type, Removed);
+  FileChangeJournalDelta(RelativePathPiece fileName, dtype_t type, Changed);
 
   /**
    * "Renamed" means that that newName was created as a result of the mv(1).
@@ -84,6 +85,7 @@ class FileChangeJournalDelta : public JournalDelta {
   FileChangeJournalDelta(
       RelativePathPiece oldName,
       RelativePathPiece newName,
+      dtype_t type,
       Renamed);
 
   /**
@@ -93,6 +95,7 @@ class FileChangeJournalDelta : public JournalDelta {
   FileChangeJournalDelta(
       RelativePathPiece oldName,
       RelativePathPiece newName,
+      dtype_t type,
       Replaced);
 
   /** Which of these paths actually contain information */
@@ -102,6 +105,16 @@ class FileChangeJournalDelta : public JournalDelta {
   PathChangeInfo info2;
   bool isPath1Valid = false;
   bool isPath2Valid = false;
+
+  /**
+   * What type of paths do these represent
+   * Single file operations (Created, Removed, Changed) are obvious.
+   * Rename does not change the type of the file, but the name - so the type
+   * does not change.
+   * Replace overwrites one file with another, so the type is that of the
+   * source.
+   */
+  dtype_t type;
 
   std::unordered_map<RelativePath, PathChangeInfo> getChangedFilesInOverlay()
       const;

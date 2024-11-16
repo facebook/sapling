@@ -72,20 +72,26 @@ class Journal {
 
   // Functions to record writes:
 
-  void recordCreated(RelativePathPiece fileName);
-  void recordRemoved(RelativePathPiece fileName);
-  void recordChanged(RelativePathPiece fileName);
+  void recordCreated(RelativePathPiece fileName, dtype_t type);
+  void recordRemoved(RelativePathPiece fileName, dtype_t type);
+  void recordChanged(RelativePathPiece fileName, dtype_t type);
 
   /**
    * "Renamed" means that that newName was created as a result of the mv(1).
    */
-  void recordRenamed(RelativePathPiece oldName, RelativePathPiece newName);
+  void recordRenamed(
+      RelativePathPiece oldName,
+      RelativePathPiece newName,
+      dtype_t type);
 
   /**
    * "Replaced" means that that newName was overwritten by oldName as a result
    * of the mv(1).
    */
-  void recordReplaced(RelativePathPiece oldName, RelativePathPiece newName);
+  void recordReplaced(
+      RelativePathPiece oldName,
+      RelativePathPiece newName,
+      dtype_t type);
 
   /**
    * Creates a journal delta that updates the root to this new hash

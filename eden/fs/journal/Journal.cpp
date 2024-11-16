@@ -101,30 +101,35 @@ Journal::Journal(EdenStatsPtr edenStats) : edenStats_{std::move(edenStats)} {
   edenStats_->increment(&JournalStats::truncatedReads, 0);
 }
 
-void Journal::recordCreated(RelativePathPiece fileName) {
-  addDelta(FileChangeJournalDelta(fileName, FileChangeJournalDelta::CREATED));
+void Journal::recordCreated(RelativePathPiece fileName, dtype_t type) {
+  addDelta(
+      FileChangeJournalDelta(fileName, type, FileChangeJournalDelta::CREATED));
 }
 
-void Journal::recordRemoved(RelativePathPiece fileName) {
-  addDelta(FileChangeJournalDelta(fileName, FileChangeJournalDelta::REMOVED));
+void Journal::recordRemoved(RelativePathPiece fileName, dtype_t type) {
+  addDelta(
+      FileChangeJournalDelta(fileName, type, FileChangeJournalDelta::REMOVED));
 }
 
-void Journal::recordChanged(RelativePathPiece fileName) {
-  addDelta(FileChangeJournalDelta(fileName, FileChangeJournalDelta::CHANGED));
+void Journal::recordChanged(RelativePathPiece fileName, dtype_t type) {
+  addDelta(
+      FileChangeJournalDelta(fileName, type, FileChangeJournalDelta::CHANGED));
 }
 
 void Journal::recordRenamed(
     RelativePathPiece oldName,
-    RelativePathPiece newName) {
+    RelativePathPiece newName,
+    dtype_t type) {
   addDelta(FileChangeJournalDelta(
-      oldName, newName, FileChangeJournalDelta::RENAMED));
+      oldName, newName, type, FileChangeJournalDelta::RENAMED));
 }
 
 void Journal::recordReplaced(
     RelativePathPiece oldName,
-    RelativePathPiece newName) {
+    RelativePathPiece newName,
+    dtype_t type) {
   addDelta(FileChangeJournalDelta(
-      oldName, newName, FileChangeJournalDelta::REPLACED));
+      oldName, newName, type, FileChangeJournalDelta::REPLACED));
 }
 
 void Journal::recordHashUpdate(RootId toHash) {

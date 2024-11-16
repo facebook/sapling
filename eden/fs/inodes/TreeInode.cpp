@@ -1212,7 +1212,7 @@ FileInodePtr TreeInode::createImpl(
     invalidateChannelDirCache(*contents).get();
   }
 
-  getMount()->getJournal().recordCreated(targetName);
+  getMount()->getJournal().recordCreated(targetName, inode->getType());
 
   return inode;
 }
@@ -1426,7 +1426,7 @@ TreeInodePtr TreeInode::mkdir(
         targetName));
   }
 
-  getMount()->getJournal().recordCreated(targetName);
+  getMount()->getJournal().recordCreated(targetName, newChild->getType());
 
   return newChild;
 }
@@ -1669,7 +1669,7 @@ ImmediateFuture<folly::Unit> TreeInode::removeImpl(
   if (errnoValue == 0) {
     // We successfully removed the child.
     // Record the change in the journal.
-    getMount()->getJournal().recordRemoved(targetName);
+    getMount()->getJournal().recordRemoved(targetName, child->getType());
 
     return folly::unit;
   }
@@ -2188,10 +2188,14 @@ ImmediateFuture<Unit> TreeInode::doRename(
   if (srcPath.has_value() && destPath.has_value()) {
     if (destChildExists) {
       getMount()->getJournal().recordReplaced(
-          srcPath.value() + srcName, destPath.value() + destName);
+          srcPath.value() + srcName,
+          destPath.value() + destName,
+          childInode->getType());
     } else {
       getMount()->getJournal().recordRenamed(
-          srcPath.value() + srcName, destPath.value() + destName);
+          srcPath.value() + srcName,
+          destPath.value() + destName,
+          childInode->getType());
     }
   }
 

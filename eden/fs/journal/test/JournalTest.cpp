@@ -39,7 +39,7 @@ TEST_F(JournalTest, accumulate_range_all_changes) {
   EXPECT_EQ(nullptr, journal.accumulateRange());
 
   // Make an initial entry.
-  journal.recordChanged("foo/bar"_relpath);
+  journal.recordChanged("foo/bar"_relpath, dtype_t::Dir);
 
   // Sanity check that the latest information matches.
   auto latest = journal.getLatest();
@@ -47,7 +47,7 @@ TEST_F(JournalTest, accumulate_range_all_changes) {
   EXPECT_EQ(1, latest->sequenceID);
 
   // Add a second entry.
-  journal.recordChanged("baz"_relpath);
+  journal.recordChanged("baz"_relpath, dtype_t::Dir);
 
   // Sanity check that the latest information matches.
   latest = journal.getLatest();
@@ -82,7 +82,7 @@ TEST_F(JournalTest, accumulate_range_mix_hg_changes) {
   EXPECT_EQ(nullptr, journal.accumulateRange());
 
   // Make an initial entry.
-  journal.recordChanged("foo/bar"_relpath);
+  journal.recordChanged("foo/bar"_relpath, dtype_t::Dir);
 
   // Sanity check that the latest information matches.
   auto latest = journal.getLatest();
@@ -92,7 +92,7 @@ TEST_F(JournalTest, accumulate_range_mix_hg_changes) {
   EXPECT_FALSE(summed->containsHgOnlyChanges);
 
   // Record changes under .hg folder
-  journal.recordChanged(".hg/foo/bar"_relpath);
+  journal.recordChanged(".hg/foo/bar"_relpath, dtype_t::Dir);
 
   // get accumulated data for the tip of journal
   latest = journal.getLatest();
@@ -108,11 +108,11 @@ TEST_F(JournalTest, accumulate_range_mix_hg_changes) {
 
 TEST_F(JournalTest, accumulateRangeRemoveCreateUpdate) {
   // Remove test.txt
-  journal.recordRemoved("test.txt"_relpath);
+  journal.recordRemoved("test.txt"_relpath, dtype_t::Regular);
   // Create test.txt
-  journal.recordCreated("test.txt"_relpath);
+  journal.recordCreated("test.txt"_relpath, dtype_t::Regular);
   // Modify test.txt
-  journal.recordChanged("test.txt"_relpath);
+  journal.recordChanged("test.txt"_relpath, dtype_t::Regular);
 
   // Sanity check that the latest information matches.
   auto latest = journal.getLatest();
@@ -210,21 +210,21 @@ TEST_F(JournalTest, accumulate_range_with_hash_updates) {
   EXPECT_EQ(nullptr, journal.accumulateRange());
 
   // Make an initial entry.
-  journal.recordChanged("foo/bar"_relpath);
+  journal.recordChanged("foo/bar"_relpath, dtype_t::Dir);
   checkHashMatches({hash0}, journal);
 
   // Update to a new hash using 'to' syntax
   journal.recordHashUpdate(hash1);
   checkHashMatches({hash0, hash1}, journal);
 
-  journal.recordChanged("foo/bar"_relpath);
+  journal.recordChanged("foo/bar"_relpath, dtype_t::Dir);
   checkHashMatches({hash1}, journal);
 
   // Update to a new hash using 'from/to' syntax
   journal.recordHashUpdate(hash1, hash2);
   checkHashMatches({hash1, hash2}, journal);
 
-  journal.recordChanged("foo/bar"_relpath);
+  journal.recordChanged("foo/bar"_relpath, dtype_t::Dir);
   checkHashMatches({hash2}, journal);
 
   auto uncleanPaths = std::unordered_set<RelativePath>();
@@ -232,17 +232,17 @@ TEST_F(JournalTest, accumulate_range_with_hash_updates) {
   journal.recordUncleanPaths(hash2, hash1, std::move(uncleanPaths));
   checkHashMatches({hash2, hash1}, journal);
 
-  journal.recordChanged("foo/bar"_relpath);
+  journal.recordChanged("foo/bar"_relpath, dtype_t::Dir);
   checkHashMatches({hash1}, journal);
 }
 
 TEST_F(JournalTest, debugRawJournalInfoRemoveCreateUpdate) {
   // Remove test.txt
-  journal.recordRemoved("test.txt"_relpath);
+  journal.recordRemoved("test.txt"_relpath, dtype_t::Regular);
   // Create test.txt
-  journal.recordCreated("test.txt"_relpath);
+  journal.recordCreated("test.txt"_relpath, dtype_t::Regular);
   // Modify test.txt
-  journal.recordChanged("test.txt"_relpath);
+  journal.recordChanged("test.txt"_relpath, dtype_t::Regular);
 
   long mountGen = 333;
 
@@ -294,7 +294,7 @@ TEST_F(JournalTest, debugRawJournalInfoHashUpdates) {
   // Go from hash0 to hash1
   journal.recordHashUpdate(hash0, hash1);
   // Create test.txt
-  journal.recordCreated("test.txt"_relpath);
+  journal.recordCreated("test.txt"_relpath, dtype_t::Regular);
   // Go from hash1 to hash2
   journal.recordHashUpdate(hash1, hash2);
 
@@ -342,7 +342,7 @@ TEST_F(JournalTest, destruction_does_not_overflow_stack_on_long_chain) {
 #endif
       ;
   for (size_t i = 0; i < N; ++i) {
-    journal.recordChanged("foo/bar"_relpath);
+    journal.recordChanged("foo/bar"_relpath, dtype_t::Dir);
   }
 }
 
@@ -353,7 +353,7 @@ TEST_F(JournalTest, empty_journal_returns_none_for_stats) {
 
 TEST_F(JournalTest, basic_journal_stats) {
   // Journal with 1 entry
-  journal.recordRemoved("test.txt"_relpath);
+  journal.recordRemoved("test.txt"_relpath, dtype_t::Regular);
   ASSERT_TRUE(journal.getLatest());
   auto from1 = journal.getLatest()->time;
   auto to1 = journal.getLatest()->time;
@@ -364,7 +364,7 @@ TEST_F(JournalTest, basic_journal_stats) {
   ASSERT_EQ(to1, stats->latestTimestamp);
 
   // Journal with 2 entries
-  journal.recordCreated("test.txt"_relpath);
+  journal.recordCreated("test.txt"_relpath, dtype_t::Regular);
   stats = journal.getStats();
   ASSERT_TRUE(journal.getLatest());
   auto to2 = journal.getLatest()->time;
@@ -376,8 +376,8 @@ TEST_F(JournalTest, basic_journal_stats) {
 
 TEST_F(JournalTest, truncated_read_stats) {
   journal.setMemoryLimit(0);
-  journal.recordCreated("test1.txt"_relpath);
-  journal.recordRemoved("test1.txt"_relpath);
+  journal.recordCreated("test1.txt"_relpath, dtype_t::Regular);
+  journal.recordRemoved("test1.txt"_relpath, dtype_t::Regular);
 
   auto data = facebook::fb303::ServiceData::get();
   constexpr folly::StringPiece key = "journal.truncated_reads.sum";
@@ -408,8 +408,8 @@ TEST_F(JournalTest, truncated_read_stats) {
 }
 
 TEST_F(JournalTest, files_accumulated_stats) {
-  journal.recordCreated("test1.txt"_relpath);
-  journal.recordRemoved("test1.txt"_relpath);
+  journal.recordCreated("test1.txt"_relpath, dtype_t::Regular);
+  journal.recordRemoved("test1.txt"_relpath, dtype_t::Regular);
 
   auto data = facebook::fb303::ServiceData::get();
   constexpr folly::StringPiece key = "journal.files_accumulated.sum";
@@ -444,9 +444,9 @@ TEST_F(JournalTest, memory_usage) {
   uint64_t prevMem = journal.estimateMemoryUsage();
   for (int i = 0; i < 10; i++) {
     if (i % 2 == 0) {
-      journal.recordCreated("test.txt"_relpath);
+      journal.recordCreated("test.txt"_relpath, dtype_t::Regular);
     } else {
-      journal.recordRemoved("test.txt"_relpath);
+      journal.recordRemoved("test.txt"_relpath, dtype_t::Regular);
     }
     stats = journal.getStats();
     uint64_t newMem = journal.estimateMemoryUsage();
@@ -465,9 +465,9 @@ TEST_F(JournalTest, set_get_memory_limit) {
 }
 
 TEST_F(JournalTest, truncation_by_flush) {
-  journal.recordCreated("file1.txt"_relpath);
-  journal.recordCreated("file2.txt"_relpath);
-  journal.recordCreated("file3.txt"_relpath);
+  journal.recordCreated("file1.txt"_relpath, dtype_t::Regular);
+  journal.recordCreated("file2.txt"_relpath, dtype_t::Regular);
+  journal.recordCreated("file3.txt"_relpath, dtype_t::Regular);
   auto summed = journal.accumulateRange(1);
   ASSERT_TRUE(summed);
   EXPECT_FALSE(summed->isTruncated);
@@ -482,7 +482,7 @@ TEST_F(JournalTest, limit_of_zero_holds_one_entry) {
   journal.setMemoryLimit(0);
   // With 1 file we should be able to accumulate from anywhere without
   // truncation, nullptr returned for sequenceID's > 1 (empty ranges)
-  journal.recordCreated("file1.txt"_relpath);
+  journal.recordCreated("file1.txt"_relpath, dtype_t::Regular);
   auto summed = journal.accumulateRange(1);
   ASSERT_TRUE(summed);
   EXPECT_FALSE(summed->isTruncated);
@@ -496,8 +496,8 @@ TEST_F(JournalTest, limit_of_zero_truncates_after_one_entry) {
   // With 2 files but only one entry in the journal we can only accumulate from
   // sequenceID 2 and above without truncation, nullptr returned for
   // sequenceID's > 2 (empty ranges)
-  journal.recordCreated("file1.txt"_relpath);
-  journal.recordCreated("file2.txt"_relpath);
+  journal.recordCreated("file1.txt"_relpath, dtype_t::Regular);
+  journal.recordCreated("file2.txt"_relpath, dtype_t::Regular);
   auto summed = journal.accumulateRange(1);
   ASSERT_TRUE(summed);
   EXPECT_TRUE(summed->isTruncated);
@@ -516,9 +516,9 @@ TEST_F(JournalTest, truncation_nonzero) {
   // Keep looping until we get a decent amount of truncation
   do {
     if (totalEntries % 2 == 0) {
-      journal.recordCreated("file1.txt"_relpath);
+      journal.recordCreated("file1.txt"_relpath, dtype_t::Regular);
     } else {
-      journal.recordRemoved("file1.txt"_relpath);
+      journal.recordRemoved("file1.txt"_relpath, dtype_t::Regular);
     }
     ++totalEntries;
     rememberedEntries = journal.getStats()->entryCount;
@@ -548,7 +548,7 @@ TEST_F(JournalTest, truncation_nonzero) {
 }
 
 TEST_F(JournalTest, compaction) {
-  journal.recordCreated("file1.txt"_relpath);
+  journal.recordCreated("file1.txt"_relpath, dtype_t::Regular);
   auto stats = journal.getStats();
   ASSERT_TRUE(stats.has_value());
   ASSERT_EQ(1, stats->entryCount);
@@ -556,7 +556,7 @@ TEST_F(JournalTest, compaction) {
   ASSERT_TRUE(latest);
   ASSERT_EQ(1, latest->sequenceID);
 
-  journal.recordChanged("file1.txt"_relpath);
+  journal.recordChanged("file1.txt"_relpath, dtype_t::Regular);
   stats = journal.getStats();
   ASSERT_TRUE(stats.has_value());
   ASSERT_EQ(2, stats->entryCount);
@@ -571,7 +571,7 @@ TEST_F(JournalTest, compaction) {
 
   // Changing file1.txt again should just change the sequenceID of the last
   // delta to be 3
-  journal.recordChanged("file1.txt"_relpath);
+  journal.recordChanged("file1.txt"_relpath, dtype_t::Regular);
   stats = journal.getStats();
   ASSERT_TRUE(stats.has_value());
   ASSERT_EQ(2, stats->entryCount);
@@ -637,11 +637,11 @@ TEST_F(JournalTest, subscribers_are_notified_of_changes) {
   (void)sub;
 
   EXPECT_EQ(0u, calls);
-  journal.recordChanged("foo"_relpath);
+  journal.recordChanged("foo"_relpath, dtype_t::Dir);
   EXPECT_EQ(1u, calls);
   EXPECT_EQ(1u, journal.getLatest()->sequenceID);
 
-  journal.recordChanged("foo"_relpath);
+  journal.recordChanged("foo"_relpath, dtype_t::Dir);
   EXPECT_EQ(2u, calls);
   EXPECT_EQ(2u, journal.getLatest()->sequenceID);
 }
@@ -654,12 +654,12 @@ TEST_F(
   (void)sub;
 
   EXPECT_EQ(0u, calls);
-  journal.recordChanged("foo"_relpath);
+  journal.recordChanged("foo"_relpath, dtype_t::Regular);
   EXPECT_EQ(1u, calls);
-  journal.recordChanged("foo"_relpath);
+  journal.recordChanged("foo"_relpath, dtype_t::Regular);
   EXPECT_EQ(1u, calls);
   EXPECT_EQ(2u, journal.getLatest()->sequenceID);
-  journal.recordChanged("foo"_relpath);
+  journal.recordChanged("foo"_relpath, dtype_t::Regular);
   EXPECT_EQ(2u, calls);
   EXPECT_EQ(3u, journal.getLatest()->sequenceID);
 }
@@ -675,19 +675,19 @@ TEST_F(JournalTest, all_subscribers_are_notified_after_any_observation) {
   EXPECT_EQ(0u, calls1);
   EXPECT_EQ(0u, calls2);
 
-  journal.recordChanged("foo"_relpath);
-  journal.recordChanged("foo"_relpath);
+  journal.recordChanged("foo"_relpath, dtype_t::Regular);
+  journal.recordChanged("foo"_relpath, dtype_t::Regular);
 
   EXPECT_EQ(1u, calls1);
   EXPECT_EQ(1u, calls2);
 
   EXPECT_EQ(2u, journal.getLatest()->sequenceID);
-  journal.recordChanged("foo"_relpath);
+  journal.recordChanged("foo"_relpath, dtype_t::Regular);
 
   EXPECT_EQ(2u, calls1);
   EXPECT_EQ(2u, calls2);
 
-  journal.recordChanged("foo"_relpath);
+  journal.recordChanged("foo"_relpath, dtype_t::Regular);
 
   EXPECT_EQ(2u, calls1);
   EXPECT_EQ(2u, calls2);

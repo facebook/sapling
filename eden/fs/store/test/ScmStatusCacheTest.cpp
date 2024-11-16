@@ -247,9 +247,9 @@ TEST_F(ScmStatusCacheTest, check_sequence_range_validity) {
       rawEdenConfig.get(), makeRefPtr<EdenStats>(), journal);
 
   // Create test.txt
-  journal->recordCreated("test.txt"_relpath);
+  journal->recordCreated("test.txt"_relpath, dtype_t::Regular);
   // Modify test.txt
-  journal->recordChanged("test.txt"_relpath);
+  journal->recordChanged("test.txt"_relpath, dtype_t::Regular);
 
   // Sanity check that the latest information matches.
   auto latest = journal->getLatest();
@@ -261,8 +261,8 @@ TEST_F(ScmStatusCacheTest, check_sequence_range_validity) {
       cachedSeq, currentSeq)); // dummy test so we cover the code path
 
   // normal changes
-  journal->recordCreated("test1.txt"_relpath);
-  journal->recordChanged("test1.txt"_relpath);
+  journal->recordCreated("test1.txt"_relpath, dtype_t::Regular);
+  journal->recordChanged("test1.txt"_relpath, dtype_t::Regular);
 
   currentSeq = journal->getLatest()->sequenceID;
   EXPECT_FALSE(cache->isSequenceValid(currentSeq, cachedSeq));
@@ -271,9 +271,9 @@ TEST_F(ScmStatusCacheTest, check_sequence_range_validity) {
   cachedSeq = currentSeq;
 
   // .hg-only changes
-  journal->recordChanged(".hg/what"_relpath);
-  journal->recordChanged(".hg/is"_relpath);
-  journal->recordChanged(".hg/this"_relpath);
+  journal->recordChanged(".hg/what"_relpath, dtype_t::Regular);
+  journal->recordChanged(".hg/is"_relpath, dtype_t::Regular);
+  journal->recordChanged(".hg/this"_relpath, dtype_t::Regular);
 
   currentSeq = journal->getLatest()->sequenceID;
   EXPECT_TRUE(cache->isSequenceValid(currentSeq, cachedSeq));
