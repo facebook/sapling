@@ -14,8 +14,12 @@ use anyhow::anyhow;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
+use edenfs_client::ChangeNotification;
 use edenfs_client::EdenFsInstance;
+use edenfs_client::LargeChangeNotification;
+use edenfs_client::SmallChangeNotification;
 use edenfs_error::EdenFsError;
+use edenfs_utils::path_from_bytes;
 use futures::stream::StreamExt;
 use hg_util::path::expand_path;
 use thrift_types::edenfs::JournalPosition;
@@ -60,6 +64,92 @@ pub struct ChangesSinceCmd {
 }
 
 impl ChangesSinceCmd {
+    fn display_small_change_notifcation(
+        &self,
+        small_change_notification: &SmallChangeNotification,
+    ) {
+        print!("small: ");
+        match small_change_notification {
+            SmallChangeNotification::added(added) => println!(
+                "added: '{}'",
+                path_from_bytes(&added.path)
+                    .expect("Invalid path.")
+                    .to_string_lossy()
+            ),
+            SmallChangeNotification::modified(modified) => println!(
+                "modified: '{}'",
+                path_from_bytes(&modified.path)
+                    .expect("Invalid path.")
+                    .to_string_lossy()
+            ),
+            SmallChangeNotification::renamed(renamed) => println!(
+                "renamed: '{}' -> '{}'",
+                path_from_bytes(&renamed.from)
+                    .expect("Invalid path.")
+                    .to_string_lossy(),
+                path_from_bytes(&renamed.to)
+                    .expect("Invalid path.")
+                    .to_string_lossy()
+            ),
+            SmallChangeNotification::replaced(replaced) => println!(
+                "replaced: '{}' -> '{}'",
+                path_from_bytes(&replaced.from)
+                    .expect("Invalid path.")
+                    .to_string_lossy(),
+                path_from_bytes(&replaced.to)
+                    .expect("Invalid path.")
+                    .to_string_lossy()
+            ),
+            SmallChangeNotification::removed(removed) => println!(
+                "removed: '{}'",
+                path_from_bytes(&removed.path)
+                    .expect("Invalid path.")
+                    .to_string_lossy()
+            ),
+            _ => println!("unknown: {:?}", small_change_notification),
+        }
+    }
+
+    fn display_large_change_notifcation(
+        &self,
+        large_change_notification: &LargeChangeNotification,
+    ) {
+        print!("large: ");
+        match large_change_notification {
+            LargeChangeNotification::commitTransition(commit_transition) => {
+                println!(
+                    "commit transition: '{}' -> '{}'",
+                    hex::encode(&commit_transition.from),
+                    hex::encode(&commit_transition.to)
+                )
+            }
+            LargeChangeNotification::directoryRenamed(directory_renamed) => println!(
+                "directory renamed: '{}' -> '{}'",
+                path_from_bytes(&directory_renamed.from)
+                    .expect("Invalid path.")
+                    .to_string_lossy(),
+                path_from_bytes(&directory_renamed.to)
+                    .expect("Invalid path.")
+                    .to_string_lossy(),
+            ),
+            _ => println!("unknonwn: {:?}", large_change_notification),
+        }
+    }
+
+    fn display_change_notifcation(&self, change_notification: &ChangeNotification) {
+        match change_notification {
+            ChangeNotification::smallChange(small_change) => {
+                self.display_small_change_notifcation(small_change)
+            }
+            ChangeNotification::largeChange(large_change) => {
+                self.display_large_change_notifcation(large_change)
+            }
+            _ => {
+                println!("unknonwn: {:?}", change_notification);
+            }
+        }
+    }
+
     #[cfg(fbcode_build)]
     async fn get_changes_since(
         &self,
@@ -75,8 +165,8 @@ impl ChangesSinceCmd {
             Ok((result, mut stream)) => {
                 while let Some(value) = stream.next().await {
                     match value {
-                        Ok(change) => {
-                            println!("{:?}", change);
+                        Ok(change_notification_result) => {
+                            self.display_change_notifcation(&change_notification_result.change);
                         }
                         Err(e) => {
                             println!("Error received from EdenFS while starting: {}", e);
@@ -105,7 +195,7 @@ impl crate::Subcommand for ChangesSinceCmd {
         let instance = EdenFsInstance::global();
         let postition = self.get_changes_since(instance).await?;
         println!(
-            "{}:{}:{}",
+            "position: {}:{}:{}",
             postition.mountGeneration,
             postition.sequenceNumber,
             hex::encode(postition.snapshotHash)
