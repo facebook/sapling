@@ -128,13 +128,9 @@ class Journal {
 
   /**
    * Enumerates over all deltas with sequence number >= limitSequence.
-   *
-   * TODO: add comments to reflect the new behavior when completed.
-   *
    */
-  // TODO: return a flag enumeration indicating whether the journal is
-  // truncated, contains Sl only changes, or contains a root update, etc.
-  void forEachDelta(
+  // return bool indicating whether the journal is truncated
+  bool forEachDelta(
       JournalDelta::SequenceNumber from,
       std::optional<size_t> lengthLimit,
       FileChangeCallback&& fileChangeCallback,

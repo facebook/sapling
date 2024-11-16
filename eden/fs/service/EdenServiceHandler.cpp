@@ -2211,27 +2211,6 @@ apache::thrift::
   checkMountGeneration(
       fromPosition, mountHandle.getEdenMount(), "fromPosition"sv);
 
-  // TODO: remove accumulate range when forEachDelta replacement is done.
-  auto summed = mountHandle.getJournal().accumulateRange(
-      *fromPosition.sequenceNumber_ref() + 1);
-
-  ChangesSinceV2Result result;
-  if (!summed) {
-    // No changes, just return the fromPosition and an empty stream.
-    result.toPosition_ref() = fromPosition;
-
-    return {
-        std::move(result),
-        apache::thrift::ServerStream<ChangeNotificationResult>::createEmpty()};
-  }
-
-  if (summed->isTruncated) {
-    throw newEdenError(
-        EDOM,
-        EdenErrorType::JOURNAL_TRUNCATED,
-        "Journal entry range has been truncated.");
-  }
-
   auto cancellationSource = std::make_shared<folly::CancellationSource>();
   auto [serverStream, publisher] =
       apache::thrift::ServerStream<ChangeNotificationResult>::createPublisher(
@@ -2242,21 +2221,18 @@ apache::thrift::
 
   RootIdCodec& rootIdCodec = mountHandle.getObjectStore();
 
-  bool foundTo = false;
-  JournalDelta::SequenceNumber toSequence;
-  std::chrono::steady_clock::time_point toTime;
+  std::optional<JournalDelta::SequenceNumber> toSequence;
   auto latestJournalEntry = mountHandle.getJournal().getLatest();
   RootId toSnapshotHash =
       latestJournalEntry.has_value() ? latestJournalEntry->toHash : RootId{};
   RootId currentHash = toSnapshotHash;
 
-  mountHandle.getJournal().forEachDelta(
+  const auto isTruncated = mountHandle.getJournal().forEachDelta(
       *fromPosition.sequenceNumber_ref() + 1,
       std::nullopt,
       [&](const FileChangeJournalDelta& current) -> void {
-        if (!foundTo) {
+        if (!toSequence.has_value()) {
           toSequence = current.sequenceID;
-          toTime = current.time;
         }
 
         if (!current.isPath1Valid) {
@@ -2312,9 +2288,8 @@ apache::thrift::
         sharedPublisherLock->rlock()->next(std::move(changeNotificationResult));
       },
       [&](const RootUpdateJournalDelta& current) -> void {
-        if (!foundTo) {
+        if (!toSequence.has_value()) {
           toSequence = current.sequenceID;
-          toTime = current.time;
         }
 
         CommitTransition commitTransition;
@@ -2333,13 +2308,26 @@ apache::thrift::
         sharedPublisherLock->rlock()->next(std::move(changeNotificationResult));
       });
 
-  JournalPosition toPosition;
-  toPosition.mountGeneration_ref() =
-      mountHandle.getEdenMount().getMountGeneration();
-  toPosition.sequenceNumber_ref() = summed->toSequence;
-  toPosition.snapshotHash_ref() =
-      rootIdCodec.renderRootId(summed->snapshotTransitions.back());
-  result.toPosition_ref() = toPosition;
+  if (isTruncated) {
+    throw newEdenError(
+        EDOM,
+        EdenErrorType::JOURNAL_TRUNCATED,
+        "Journal entry range has been truncated.");
+  }
+
+  ChangesSinceV2Result result;
+  if (!toSequence.has_value()) {
+    // No changes, just use fromPosition.
+    result.toPosition_ref() = fromPosition;
+  } else {
+    JournalPosition toPosition;
+    toPosition.mountGeneration_ref() =
+        mountHandle.getEdenMount().getMountGeneration();
+    toPosition.sequenceNumber_ref() = toSequence.value();
+    toPosition.snapshotHash_ref() = rootIdCodec.renderRootId(toSnapshotHash);
+
+    result.toPosition_ref() = std::move(toPosition);
+  }
 
   return {std::move(result), std::move(serverStream)};
 }

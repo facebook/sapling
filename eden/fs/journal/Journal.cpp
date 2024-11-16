@@ -485,7 +485,7 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
   return result;
 }
 
-void Journal::forEachDelta(
+bool Journal::forEachDelta(
     SequenceNumber from,
     std::optional<size_t> lengthLimit,
     FileChangeCallback&& fileChangeCallback,
@@ -494,7 +494,7 @@ void Journal::forEachDelta(
   auto deltaState = deltaState_.lock();
   // If this is going to be truncated, handle it before iterating.
   if (!deltaState->empty() && deltaState->getFrontSequenceID() > from) {
-    // TODO: handle truncated case
+    return true;
   } else {
     forEachDelta(
         *deltaState,
@@ -504,6 +504,7 @@ void Journal::forEachDelta(
         std::forward<HashUpdateCallback>(hashUpdateCallback));
   }
   deltaState->lastModificationHasBeenObserved = true;
+  return false;
 }
 
 std::vector<DebugJournalDelta> Journal::getDebugRawJournalInfo(
