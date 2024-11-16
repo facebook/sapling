@@ -71,19 +71,22 @@ impl ChangesSinceCmd {
         print!("small: ");
         match small_change_notification {
             SmallChangeNotification::added(added) => println!(
-                "added: '{}'",
+                "added ({}): '{}'",
+                added.fileType,
                 path_from_bytes(&added.path)
                     .expect("Invalid path.")
                     .to_string_lossy()
             ),
             SmallChangeNotification::modified(modified) => println!(
-                "modified: '{}'",
+                "modified ({}): '{}'",
+                modified.fileType,
                 path_from_bytes(&modified.path)
                     .expect("Invalid path.")
                     .to_string_lossy()
             ),
             SmallChangeNotification::renamed(renamed) => println!(
-                "renamed: '{}' -> '{}'",
+                "renamed ({}): '{}' -> '{}'",
+                renamed.fileType,
                 path_from_bytes(&renamed.from)
                     .expect("Invalid path.")
                     .to_string_lossy(),
@@ -92,7 +95,8 @@ impl ChangesSinceCmd {
                     .to_string_lossy()
             ),
             SmallChangeNotification::replaced(replaced) => println!(
-                "replaced: '{}' -> '{}'",
+                "replaced ({}): '{}' -> '{}'",
+                replaced.fileType,
                 path_from_bytes(&replaced.from)
                     .expect("Invalid path.")
                     .to_string_lossy(),
@@ -101,7 +105,8 @@ impl ChangesSinceCmd {
                     .to_string_lossy()
             ),
             SmallChangeNotification::removed(removed) => println!(
-                "removed: '{}'",
+                "removed ({}): '{}'",
+                removed.fileType,
                 path_from_bytes(&removed.path)
                     .expect("Invalid path.")
                     .to_string_lossy()
