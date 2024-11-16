@@ -2240,49 +2240,65 @@ apache::thrift::
               << "FileChangeJournalDetal::isPath1Valid should never be false";
         }
 
+        ChangeNotification change;
+        LargeChangeNotification largeChange;
         SmallChangeNotification smallChange;
         if (current.isPath2Valid) {
           const auto& info = current.info2;
           // NOTE: we could do a bunch of runtime checks here to validate the
           //       infoX states would be a lot simpler if we removed thise infoX
           //       state and replaced them with a simple enum
-          if (info.existedAfter) {
+          if (info.existedBefore) {
             // Replaced
             Replaced replaced;
             replaced.from() = current.path1.asString();
             replaced.to() = current.path2.asString();
+            replaced.fileType() = static_cast<Dtype>(current.type);
             smallChange.replaced_ref() = std::move(replaced);
+            change.smallChange_ref() = std::move(smallChange);
           } else {
             // Renamed
-            // TODO: handle directory moves differently
-            Renamed renamed;
-            renamed.from() = current.path1.asString();
-            renamed.to() = current.path2.asString();
-            smallChange.renamed_ref() = std::move(renamed);
+            if (current.type == dtype_t::Dir) {
+              DirectoryRenamed directoryRenamed;
+              directoryRenamed.from() = current.path1.asString();
+              directoryRenamed.to() = current.path2.asString();
+              largeChange.directoryRenamed_ref() = std::move(directoryRenamed);
+              change.largeChange_ref() = std::move(largeChange);
+            } else {
+              Renamed renamed;
+              renamed.from() = current.path1.asString();
+              renamed.to() = current.path2.asString();
+              renamed.fileType() = static_cast<Dtype>(current.type);
+              smallChange.renamed_ref() = std::move(renamed);
+              change.smallChange_ref() = std::move(smallChange);
+            }
           }
-
         } else {
           const auto& info = current.info1;
           if (!info.existedBefore) {
             // Added
             Added added;
             added.path() = current.path1.asString();
+            added.fileType() = static_cast<Dtype>(current.type);
             smallChange.added_ref() = std::move(added);
+            change.smallChange_ref() = std::move(smallChange);
           } else if (!info.existedAfter) {
             // Removed
             Removed removed;
             removed.path() = current.path1.asString();
+            removed.fileType() = static_cast<Dtype>(current.type);
             smallChange.removed_ref() = std::move(removed);
+            change.smallChange_ref() = std::move(smallChange);
           } else {
             // Modified
             Modified modified;
             modified.path() = current.path1.asString();
+            modified.fileType() = static_cast<Dtype>(current.type);
             smallChange.modified_ref() = std::move(modified);
+            change.smallChange_ref() = std::move(smallChange);
           }
         }
 
-        ChangeNotification change;
-        change.smallChange_ref() = std::move(smallChange);
         ChangeNotificationResult changeNotificationResult;
         changeNotificationResult.change_ref() = std::move(change);
         sharedPublisherLock->rlock()->next(std::move(changeNotificationResult));
