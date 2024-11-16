@@ -31,15 +31,13 @@ use edenfs_utils::strip_unc_prefix;
 use fbinit::expect_init;
 use fbthrift_socket::SocketTransport;
 #[cfg(fbcode_build)]
-use thrift_streaming::ChangesSinceV2Result;
-#[cfg(fbcode_build)]
-use thrift_streaming::StreamChangesSinceV2Params;
-#[cfg(fbcode_build)]
-use thrift_streaming_clients::errors::StreamChangesSinceV2Error;
-#[cfg(fbcode_build)]
 use thrift_streaming_clients::errors::StreamStartStatusError;
 #[cfg(fbcode_build)]
 use thrift_streaming_thriftclients::build_StreamingEdenService_client;
+#[cfg(fbcode_build)]
+use thrift_types::edenfs::ChangesSinceV2Params;
+#[cfg(fbcode_build)]
+use thrift_types::edenfs::ChangesSinceV2Result;
 use thrift_types::edenfs::DaemonInfo;
 use thrift_types::edenfs::JournalPosition;
 use thrift_types::edenfs_clients::EdenService;
@@ -56,8 +54,6 @@ use tracing::Level;
 use util::lock::PathLock;
 
 use crate::utils::get_mount_point;
-#[cfg(fbcode_build)]
-use crate::ChangesSinceV2Stream;
 use crate::EdenFsClient;
 #[cfg(fbcode_build)]
 use crate::StartStatusStream;
@@ -277,25 +273,17 @@ impl EdenFsInstance {
         mount_point: &Option<PathBuf>,
         from_position: &JournalPosition,
         timeout: Option<Duration>,
-    ) -> Result<(ChangesSinceV2Result, ChangesSinceV2Stream)> {
+    ) -> Result<ChangesSinceV2Result> {
         let client = self
-            .connect_streaming(timeout)
+            .connect(timeout)
             .await
             .context("Unable to connect to EdenFS daemon")?;
-        let params = StreamChangesSinceV2Params {
+        let params = ChangesSinceV2Params {
             mountPoint: bytes_from_path(get_mount_point(mount_point)?)?,
             fromPosition: from_position.clone(),
             ..Default::default()
         };
-        let result = client.streamChangesSinceV2(&params).await;
-        match result {
-            Err(StreamChangesSinceV2Error::ApplicationException(e))
-                if e.type_ == ApplicationExceptionErrorCode::UnknownMethod =>
-            {
-                Err(EdenFsError::UnknownMethod(e.message))
-            }
-            r => r.from_err(),
-        }
+        client.changesSinceV2(&params).await.from_err()
     }
 
     /// Returns a map of mount paths to mount names

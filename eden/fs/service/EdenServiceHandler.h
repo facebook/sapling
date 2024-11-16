@@ -254,10 +254,9 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   apache::thrift::ResponseAndServerStream<ChangesSinceResult, ChangedFileResult>
   streamChangesSince(std::unique_ptr<StreamChangesSinceParams> params) override;
 
-  apache::thrift::
-      ResponseAndServerStream<ChangesSinceV2Result, ChangeNotificationResult>
-      streamChangesSinceV2(
-          std::unique_ptr<StreamChangesSinceV2Params> params) override;
+  void sync_changesSinceV2(
+      ChangesSinceV2Result& result,
+      std::unique_ptr<ChangesSinceV2Params> params) override;
 
   apache::thrift::ResponseAndServerStream<ChangesSinceResult, ChangedFileResult>
   streamSelectedChangesSince(

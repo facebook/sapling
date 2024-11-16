@@ -9,11 +9,7 @@ use std::sync::Arc;
 
 use futures::stream::BoxStream;
 #[cfg(fbcode_build)]
-use thrift_streaming::ChangeNotificationResult;
-#[cfg(fbcode_build)]
 use thrift_streaming::EdenStartStatusUpdate;
-#[cfg(fbcode_build)]
-use thrift_streaming_clients::errors::StreamChangesSinceV2StreamError;
 #[cfg(fbcode_build)]
 use thrift_streaming_clients::errors::StreamStartStatusStreamError;
 #[cfg(fbcode_build)]
@@ -43,5 +39,3 @@ pub type StreamingEdenFsClient = Arc<dyn StreamingEdenService + Sync>;
 #[cfg(fbcode_build)]
 pub type StartStatusStream =
     BoxStream<'static, Result<EdenStartStatusUpdate, StreamStartStatusStreamError>>;
-pub type ChangesSinceV2Stream =
-    BoxStream<'static, Result<ChangeNotificationResult, StreamChangesSinceV2StreamError>>;

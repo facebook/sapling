@@ -2198,26 +2198,22 @@ EdenServiceHandler::streamChangesSince(
   return {std::move(result), std::move(serverStream)};
 }
 
-apache::thrift::
-    ResponseAndServerStream<ChangesSinceV2Result, ChangeNotificationResult>
-    EdenServiceHandler::streamChangesSinceV2(
-        std::unique_ptr<StreamChangesSinceV2Params> params) {
-  auto helper = INSTRUMENT_THRIFT_CALL_WITH_STAT(
-      DBG3, &ThriftStats::streamChangesSinceV2, *params->mountPoint_ref());
-
+void EdenServiceHandler::sync_changesSinceV2(
+    ChangesSinceV2Result& result,
+    std::unique_ptr<ChangesSinceV2Params> params) {
   auto mountHandle = lookupMount(params->mountPoint());
   const auto& fromPosition = *params->fromPosition_ref();
+  auto helper = INSTRUMENT_THRIFT_CALL(
+      DBG3,
+      *params->mountPoint(),
+      fmt::format(
+          "fromPosition={}:{}:{}",
+          fromPosition.mountGeneration().value(),
+          fromPosition.sequenceNumber().value(),
+          fromPosition.snapshotHash().value()));
 
   checkMountGeneration(
       fromPosition, mountHandle.getEdenMount(), "fromPosition"sv);
-
-  auto cancellationSource = std::make_shared<folly::CancellationSource>();
-  auto [serverStream, publisher] =
-      apache::thrift::ServerStream<ChangeNotificationResult>::createPublisher(
-          [cancellationSource] { cancellationSource->requestCancellation(); });
-  auto sharedPublisherLock = std::make_shared<folly::Synchronized<
-      ThriftStreamPublisherOwner<ChangeNotificationResult>>>(
-      ThriftStreamPublisherOwner{std::move(publisher)});
 
   RootIdCodec& rootIdCodec = mountHandle.getObjectStore();
 
@@ -2299,9 +2295,7 @@ apache::thrift::
           }
         }
 
-        ChangeNotificationResult changeNotificationResult;
-        changeNotificationResult.change_ref() = std::move(change);
-        sharedPublisherLock->rlock()->next(std::move(changeNotificationResult));
+        result.changes_ref()->push_back(std::move(change));
       },
       [&](const RootUpdateJournalDelta& current) -> void {
         if (!toSequence.has_value()) {
@@ -2319,9 +2313,7 @@ apache::thrift::
         ChangeNotification change;
         change.largeChange_ref() = std::move(largeChange);
 
-        ChangeNotificationResult changeNotificationResult;
-        changeNotificationResult.change_ref() = std::move(change);
-        sharedPublisherLock->rlock()->next(std::move(changeNotificationResult));
+        result.changes_ref()->push_back(std::move(change));
       });
 
   if (isTruncated) {
@@ -2331,7 +2323,6 @@ apache::thrift::
         "Journal entry range has been truncated.");
   }
 
-  ChangesSinceV2Result result;
   if (!toSequence.has_value()) {
     // No changes, just use fromPosition.
     result.toPosition_ref() = fromPosition;
@@ -2344,8 +2335,6 @@ apache::thrift::
 
     result.toPosition_ref() = std::move(toPosition);
   }
-
-  return {std::move(result), std::move(serverStream)};
 }
 
 apache::thrift::ResponseAndServerStream<ChangesSinceResult, ChangedFileResult>

@@ -8,7 +8,6 @@
 //! edenfsctl notify changes-since
 
 use std::path::PathBuf;
-use std::time::Duration;
 
 use anyhow::anyhow;
 use anyhow::Result;
@@ -18,12 +17,9 @@ use edenfs_client::ChangeNotification;
 use edenfs_client::EdenFsInstance;
 use edenfs_client::LargeChangeNotification;
 use edenfs_client::SmallChangeNotification;
-use edenfs_error::EdenFsError;
 use edenfs_utils::path_from_bytes;
-use futures::stream::StreamExt;
 use hg_util::path::expand_path;
 use thrift_types::edenfs::JournalPosition;
-use tokio::time;
 
 use crate::ExitCode;
 
@@ -160,30 +156,14 @@ impl ChangesSinceCmd {
         &self,
         instance: &EdenFsInstance,
     ) -> edenfs_error::Result<JournalPosition> {
-        let result_and_stream = instance.get_changes_since(&self.mount_point, &self.position, None);
         // TODO: add support for timeout (see `status::get_status_blocking_on_startup`)
-        let result_and_stream = time::timeout(Duration::MAX, result_and_stream)
-            .await
-            .map_err(edenfs_error::EdenFsError::RequestTimeout)?;
-
-        match result_and_stream {
-            Ok((result, mut stream)) => {
-                while let Some(value) = stream.next().await {
-                    match value {
-                        Ok(change_notification_result) => {
-                            self.display_change_notifcation(&change_notification_result.change);
-                        }
-                        Err(e) => {
-                            println!("Error received from EdenFS while starting: {}", e);
-                            break;
-                        }
-                    }
-                }
-                Ok(result.toPosition)
-            }
-            Err(EdenFsError::Other(e)) => Err(EdenFsError::Other(e)),
-            Err(e) => Err(e),
-        }
+        let result = instance
+            .get_changes_since(&self.mount_point, &self.position, None)
+            .await?;
+        result.changes.iter().for_each(|change| {
+            self.display_change_notifcation(change);
+        });
+        Ok(result.toPosition)
     }
 }
 
