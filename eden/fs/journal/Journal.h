@@ -62,6 +62,8 @@ class Journal {
   using SequenceNumber = JournalDelta::SequenceNumber;
   using SubscriberId = uint64_t;
   using SubscriberCallback = std::function<void()>;
+  using FileChangeCallback = std::function<void(const FileChangeJournalDelta&)>;
+  using HashUpdateCallback = std::function<void(const RootUpdateJournalDelta&)>;
 
   explicit Journal(EdenStatsPtr edenStats);
 
@@ -123,6 +125,20 @@ class Journal {
    */
   std::unique_ptr<JournalDeltaRange> accumulateRange(
       SequenceNumber limitSequence = 1);
+
+  /**
+   * Enumerates over all deltas with sequence number >= limitSequence.
+   *
+   * TODO: add comments to reflect the new behavior when completed.
+   *
+   */
+  // TODO: return a flag enumeration indicating whether the journal is
+  // truncated, contains Sl only changes, or contains a root update, etc.
+  void forEachDelta(
+      JournalDelta::SequenceNumber from,
+      std::optional<size_t> lengthLimit,
+      FileChangeCallback&& fileChangeCallback,
+      HashUpdateCallback&& hashUpdateCallback);
 
   // Subscription functionality:
 
@@ -277,13 +293,12 @@ class Journal {
    * is not nullopt then checks at most 'lengthLimit' entries) and runs
    * deltaActor on each entry encountered.
    * */
-  template <class FileChangeFunc, class HashUpdateFunc>
   void forEachDelta(
       const DeltaState& deltaState,
       JournalDelta::SequenceNumber from,
       std::optional<size_t> lengthLimit,
-      FileChangeFunc&& fileChangeDeltaCallback,
-      HashUpdateFunc&& hashUpdateDeltaCallback) const;
+      FileChangeCallback&& fileChangeDeltaCallback,
+      HashUpdateCallback&& hashUpdateDeltaCallback) const;
 
   folly::Synchronized<SubscriberState> subscriberState_;
 

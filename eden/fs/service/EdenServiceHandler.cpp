@@ -2211,6 +2211,7 @@ apache::thrift::
   checkMountGeneration(
       fromPosition, mountHandle.getEdenMount(), "fromPosition"sv);
 
+  // TODO: remove accumulate range when forEachDelta replacement is done.
   auto summed = mountHandle.getJournal().accumulateRange(
       *fromPosition.sequenceNumber_ref() + 1);
 
@@ -2241,6 +2242,97 @@ apache::thrift::
 
   RootIdCodec& rootIdCodec = mountHandle.getObjectStore();
 
+  bool foundTo = false;
+  JournalDelta::SequenceNumber toSequence;
+  std::chrono::steady_clock::time_point toTime;
+  auto latestJournalEntry = mountHandle.getJournal().getLatest();
+  RootId toSnapshotHash =
+      latestJournalEntry.has_value() ? latestJournalEntry->toHash : RootId{};
+  RootId currentHash = toSnapshotHash;
+
+  mountHandle.getJournal().forEachDelta(
+      *fromPosition.sequenceNumber_ref() + 1,
+      std::nullopt,
+      [&](const FileChangeJournalDelta& current) -> void {
+        if (!foundTo) {
+          toSequence = current.sequenceID;
+          toTime = current.time;
+        }
+
+        if (!current.isPath1Valid) {
+          XLOG(DFATAL)
+              << "FileChangeJournalDetal::isPath1Valid should never be false";
+        }
+
+        SmallChangeNotification smallChange;
+        if (current.isPath2Valid) {
+          const auto& info = current.info2;
+          // NOTE: we could do a bunch of runtime checks here to validate the
+          //       infoX states would be a lot simpler if we removed thise infoX
+          //       state and replaced them with a simple enum
+          if (info.existedAfter) {
+            // Replaced
+            Replaced replaced;
+            replaced.from() = current.path1.asString();
+            replaced.to() = current.path2.asString();
+            smallChange.replaced_ref() = std::move(replaced);
+          } else {
+            // Renamed
+            // TODO: handle directory moves differently
+            Renamed renamed;
+            renamed.from() = current.path1.asString();
+            renamed.to() = current.path2.asString();
+            smallChange.renamed_ref() = std::move(renamed);
+          }
+
+        } else {
+          const auto& info = current.info1;
+          if (!info.existedBefore) {
+            // Added
+            Added added;
+            added.path() = current.path1.asString();
+            smallChange.added_ref() = std::move(added);
+          } else if (!info.existedAfter) {
+            // Removed
+            Removed removed;
+            removed.path() = current.path1.asString();
+            smallChange.removed_ref() = std::move(removed);
+          } else {
+            // Modified
+            Modified modified;
+            modified.path() = current.path1.asString();
+            smallChange.modified_ref() = std::move(modified);
+          }
+        }
+
+        ChangeNotification change;
+        change.smallChange_ref() = std::move(smallChange);
+        ChangeNotificationResult changeNotificationResult;
+        changeNotificationResult.change_ref() = std::move(change);
+        sharedPublisherLock->rlock()->next(std::move(changeNotificationResult));
+      },
+      [&](const RootUpdateJournalDelta& current) -> void {
+        if (!foundTo) {
+          toSequence = current.sequenceID;
+          toTime = current.time;
+        }
+
+        CommitTransition commitTransition;
+        commitTransition.from_ref() = rootIdCodec.renderRootId(currentHash);
+        commitTransition.to_ref() = rootIdCodec.renderRootId(current.fromHash);
+        currentHash = current.fromHash;
+
+        LargeChangeNotification largeChange;
+        largeChange.commitTransition_ref() = std::move(commitTransition);
+
+        ChangeNotification change;
+        change.largeChange_ref() = std::move(largeChange);
+
+        ChangeNotificationResult changeNotificationResult;
+        changeNotificationResult.change_ref() = std::move(change);
+        sharedPublisherLock->rlock()->next(std::move(changeNotificationResult));
+      });
+
   JournalPosition toPosition;
   toPosition.mountGeneration_ref() =
       mountHandle.getEdenMount().getMountGeneration();
@@ -2248,64 +2340,6 @@ apache::thrift::
   toPosition.snapshotHash_ref() =
       rootIdCodec.renderRootId(summed->snapshotTransitions.back());
   result.toPosition_ref() = toPosition;
-
-  // TODO: temporary recycling of `streamChangesSince` logic
-  //       This will need to be updated to reflect the new way of reporting
-  //       changes in large an small sizes. Additionally, the differntiation
-  //       between files and directories.
-  //
-  //       Using this for now to get the end-to-end plumbing working and
-  //       to establish some early testing.
-  for (auto& entry : summed->changedFilesInOverlay) {
-    const auto& changeInfo = entry.second;
-
-    // TODO: add in dtype - requires plumbing through all journal layers
-    // TODO: rework to support renamed, and optionally, replaced
-    //       This likely means moving away from the `accumulateRange` usage
-    //       above and directly processing via `forEachDelta` which gives much
-    //       more info and properly interleaves filesytem and commit transition
-    //       changes
-    SmallChangeNotification smallChange;
-    if (!changeInfo.existedBefore && changeInfo.existedAfter) {
-      Added added;
-      added.path() = entry.first.asString();
-      smallChange.set_added(std::move(added));
-    } else if (changeInfo.existedBefore && !changeInfo.existedAfter) {
-      Removed removed;
-      removed.path() = entry.first.asString();
-      smallChange.set_removed(std::move(removed));
-    } else {
-      Modified modified;
-      modified.path() = entry.first.asString();
-      smallChange.set_modified(std::move(modified));
-    }
-
-    ChangeNotification change;
-    change.set_smallChange(std::move(smallChange));
-
-    ChangeNotificationResult changeNotificationResult;
-    changeNotificationResult.change() = change;
-
-    sharedPublisherLock->rlock()->next(std::move(changeNotificationResult));
-  }
-
-  for (const auto& name : summed->uncleanPaths) {
-    SmallChangeNotification smallChange;
-    Modified modified;
-    modified.path() = name.asString();
-    smallChange.set_modified(std::move(modified));
-
-    ChangeNotification change;
-    change.set_smallChange(std::move(smallChange));
-
-    ChangeNotificationResult changeNotificationResult;
-    changeNotificationResult.change() = change;
-
-    sharedPublisherLock->rlock()->next(std::move(changeNotificationResult));
-  }
-
-  // NOTE: we are not surfacing snapshot transitions
-  //       That will come later when we begin to use `forEachDelta`.
 
   return {std::move(result), std::move(serverStream)};
 }

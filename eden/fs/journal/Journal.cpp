@@ -485,6 +485,27 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
   return result;
 }
 
+void Journal::forEachDelta(
+    SequenceNumber from,
+    std::optional<size_t> lengthLimit,
+    FileChangeCallback&& fileChangeCallback,
+    HashUpdateCallback&& hashUpdateCallback) {
+  XDCHECK(from > 0);
+  auto deltaState = deltaState_.lock();
+  // If this is going to be truncated, handle it before iterating.
+  if (!deltaState->empty() && deltaState->getFrontSequenceID() > from) {
+    // TODO: handle truncated case
+  } else {
+    forEachDelta(
+        *deltaState,
+        from,
+        lengthLimit,
+        std::forward<FileChangeCallback>(fileChangeCallback),
+        std::forward<HashUpdateCallback>(hashUpdateCallback));
+  }
+  deltaState->lastModificationHasBeenObserved = true;
+}
+
 std::vector<DebugJournalDelta> Journal::getDebugRawJournalInfo(
     SequenceNumber from,
     std::optional<size_t> limit,
@@ -548,17 +569,12 @@ std::vector<DebugJournalDelta> Journal::getDebugRawJournalInfo(
   return result;
 }
 
-/**
- * FileChangeFunc: void(const FileChangeJournalDelta&)
- * HashUpdateFunc: void(const RootUpdateJournalDelta&)
- */
-template <class FileChangeFunc, class HashUpdateFunc>
 void Journal::forEachDelta(
     const DeltaState& deltaState,
     JournalDelta::SequenceNumber from,
     std::optional<size_t> lengthLimit,
-    FileChangeFunc&& fileChangeDeltaCallback,
-    HashUpdateFunc&& hashUpdateDeltaCallback) const {
+    FileChangeCallback&& fileChangeDeltaCallback,
+    HashUpdateCallback&& hashUpdateDeltaCallback) const {
   size_t iters = 0;
   auto fileChangeIt = deltaState.fileChangeDeltas.rbegin();
   auto hashUpdateIt = deltaState.hashUpdateDeltas.rbegin();
