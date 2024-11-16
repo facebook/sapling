@@ -2246,7 +2246,7 @@ apache::thrift::
         if (current.isPath2Valid) {
           const auto& info = current.info2;
           // NOTE: we could do a bunch of runtime checks here to validate the
-          //       infoX states would be a lot simpler if we removed thise infoX
+          //       infoN states would be a lot simpler if we removed this infoN
           //       state and replaced them with a simple enum
           if (info.existedBefore) {
             // Replaced

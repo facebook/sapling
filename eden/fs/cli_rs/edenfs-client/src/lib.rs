@@ -9,21 +9,21 @@ use std::sync::Arc;
 
 use futures::stream::BoxStream;
 #[cfg(fbcode_build)]
-pub use thrift_streaming::ChangeNotification;
-#[cfg(fbcode_build)]
 use thrift_streaming::ChangeNotificationResult;
 #[cfg(fbcode_build)]
 use thrift_streaming::EdenStartStatusUpdate;
-#[cfg(fbcode_build)]
-pub use thrift_streaming::LargeChangeNotification;
-#[cfg(fbcode_build)]
-pub use thrift_streaming::SmallChangeNotification;
 #[cfg(fbcode_build)]
 use thrift_streaming_clients::errors::StreamChangesSinceV2StreamError;
 #[cfg(fbcode_build)]
 use thrift_streaming_clients::errors::StreamStartStatusStreamError;
 #[cfg(fbcode_build)]
 use thrift_streaming_clients::StreamingEdenService;
+#[cfg(fbcode_build)]
+pub use thrift_types::edenfs::ChangeNotification;
+#[cfg(fbcode_build)]
+pub use thrift_types::edenfs::LargeChangeNotification;
+#[cfg(fbcode_build)]
+pub use thrift_types::edenfs::SmallChangeNotification;
 use thrift_types::edenfs_clients::EdenService;
 
 pub mod checkout;
