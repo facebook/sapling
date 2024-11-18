@@ -219,13 +219,18 @@ export class VSCodeRepo implements vscode.QuickDiffProvider {
     this.updateResourceGroups();
   }
 
-  /** If this uri is for a file inside the repo, return the repo-relative path. Otherwise, return undefined.  */
-  public repoRelativeFsPath(uri: vscode.Uri): string | undefined {
-    return uri.scheme === this.rootUri.scheme &&
+  /** If this uri is for file inside the repo or not */
+  public containsUri(uri: vscode.Uri): boolean {
+    return (
+      uri.scheme === this.rootUri.scheme &&
       uri.authority === this.rootUri.authority &&
       uri.fsPath.startsWith(this.rootPath)
-      ? path.relative(this.rootPath, uri.fsPath)
-      : undefined;
+    );
+  }
+
+  /** If this uri is for a file inside the repo, return the repo-relative path. Otherwise, return undefined.  */
+  public repoRelativeFsPath(uri: vscode.Uri): string | undefined {
+    return this.containsUri(uri) ? path.relative(this.rootPath, uri.fsPath) : undefined;
   }
 
   private autoResolveFilesOnSave(): vscode.Disposable {
