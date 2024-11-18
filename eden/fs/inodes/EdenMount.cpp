@@ -2298,10 +2298,7 @@ folly::Future<folly::Unit> EdenMount::fsChannelMount(bool readOnly) {
             "failMountInitialization", mountPath.view());
         return serverState_->getPrivHelper()
             ->fuseMount(
-                mountPath.view(),
-                readOnly,
-                std::make_optional<folly::StringPiece>(
-                    edenConfig->fuseVfsType.getValue()))
+                mountPath.view(), readOnly, edenConfig->fuseVfsType.getValue())
             .thenTry(
                 [mountPath, mountPromise, this](Try<folly::File>&& fuseDevice)
                     -> folly::Future<folly::Unit> {

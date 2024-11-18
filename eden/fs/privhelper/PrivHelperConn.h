@@ -94,7 +94,7 @@ class PrivHelperConn {
       uint32_t xid,
       folly::StringPiece mountPoint,
       bool readOnly,
-      std::optional<folly::StringPiece> vfsType);
+      folly::StringPiece vfsType);
   static void parseMountRequest(
       folly::io::Cursor& cursor,
       std::string& mountPoint,

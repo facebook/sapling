@@ -52,7 +52,7 @@ class FakePrivHelper final : public PrivHelper {
   folly::Future<folly::File> fuseMount(
       folly::StringPiece mountPath,
       bool readOnly,
-      std::optional<folly::StringPiece> vfsType) override;
+      folly::StringPiece vfsType) override;
   folly::Future<folly::Unit> nfsMount(
       folly::StringPiece mountPath,
       folly::SocketAddress mountdAddr,

@@ -108,7 +108,7 @@ class PrivHelperClientImpl : public PrivHelper,
   Future<File> fuseMount(
       folly::StringPiece mountPath,
       bool readOnly,
-      std::optional<StringPiece> vfsType) override;
+      StringPiece vfsType) override;
   Future<Unit> nfsMount(
       folly::StringPiece mountPath,
       folly::SocketAddress mountdAddr,
@@ -379,42 +379,17 @@ class PrivHelperClientImpl : public PrivHelper,
 Future<File> PrivHelperClientImpl::fuseMount(
     StringPiece mountPath,
     bool readOnly,
-    std::optional<StringPiece> vfsType) {
+    StringPiece vfsType) {
   auto xid = getNextXid();
   auto request =
       PrivHelperConn::serializeMountRequest(xid, mountPath, readOnly, vfsType);
   return sendAndRecv(xid, std::move(request))
       .thenValue(
-          [this,
-           mountPath = mountPath.str(),
-           readOnly,
-           vfsTypeIsNull =
-               (vfsType == std::nullopt)](UnixSocket::Message&& response)
+          [](UnixSocket::Message&& response)
               -> folly::Future<UnixSocket::Message> {
-            try {
-              PrivHelperConn::parseEmptyResponse(
-                  PrivHelperConn::REQ_MOUNT_FUSE, response);
-              return std::move(response);
-            } catch (const PrivHelperError&) {
-              // TODO(T185425877): kmancini this should be unessecary by
-              // may 2024. Once the privhelper server runs the new code.
-              if (vfsTypeIsNull) {
-                throw; // rethrow the exception, we didn't set th vfsType last
-                       // time
-              }
-              // the version of the privhelper might not be able to handle using
-              // a specific VFS type. Let's retry the request again without the
-              // vfs type.
-              auto retry_xid = getNextXid();
-              auto retry_request = PrivHelperConn::serializeMountRequest(
-                  retry_xid, mountPath, readOnly, std::nullopt);
-              return sendAndRecv(retry_xid, std::move(retry_request))
-                  .thenValue([](UnixSocket::Message&& retry_response) {
-                    PrivHelperConn::parseEmptyResponse(
-                        PrivHelperConn::REQ_MOUNT_FUSE, retry_response);
-                    return std::move(retry_response);
-                  });
-            }
+            PrivHelperConn::parseEmptyResponse(
+                PrivHelperConn::REQ_MOUNT_FUSE, response);
+            return std::move(response);
           })
       .thenValue([](UnixSocket::Message&& response) {
         if (response.files.size() != 1) {
@@ -819,7 +794,7 @@ class StubPrivHelper final : public PrivHelper {
   folly::Future<folly::File> fuseMount(
       folly::StringPiece mountPath,
       bool readOnly,
-      std::optional<folly::StringPiece> vfsType) override {
+      folly::StringPiece vfsType) override {
     (void)mountPath;
     (void)readOnly;
     (void)vfsType;

@@ -220,15 +220,13 @@ UnixSocket::Message PrivHelperConn::serializeMountRequest(
     uint32_t xid,
     StringPiece mountPoint,
     bool readOnly,
-    std::optional<StringPiece> vfsType) {
+    StringPiece vfsType) {
   auto msg = serializeRequestPacket(xid, REQ_MOUNT_FUSE);
   Appender appender(&msg.data, kDefaultBufferSize);
 
   serializeString(appender, mountPoint);
   serializeBool(appender, readOnly);
-  if (vfsType.has_value()) {
-    serializeString(appender, vfsType.value());
-  }
+  serializeString(appender, vfsType);
   return msg;
 }
 
@@ -239,11 +237,7 @@ void PrivHelperConn::parseMountRequest(
     string& vfsType) {
   mountPoint = deserializeString(cursor);
   readOnly = deserializeBool(cursor);
-  if (!cursor.isAtEnd()) {
-    vfsType = deserializeString(cursor);
-  } else {
-    vfsType = "fuse";
-  }
+  vfsType = deserializeString(cursor);
   checkAtEnd(cursor, "mount request");
 }
 
