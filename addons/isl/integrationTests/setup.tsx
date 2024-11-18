@@ -7,7 +7,7 @@
 
 import type {MessageBusStatus} from '../src/MessageBus';
 import type {Disposable, RepoRelativePath} from '../src/types';
-import type {Options as ExecaOptions} from 'execa';
+import type {EjecaOptions} from 'shared/ejeca';
 import type {Logger} from 'isl-server/src/logger';
 import type {ServerPlatform} from 'isl-server/src/serverPlatform';
 import type {RepositoryContext} from 'isl-server/src/serverTypes';
@@ -151,7 +151,7 @@ export async function initRepo() {
     tracker: mockTracker,
   };
 
-  async function sl(args: Array<string>, options?: ExecaOptions) {
+  async function sl(args: Array<string>, options?: EjecaOptions) {
     testLogger.log(ctx.cmd, ...args);
     const result = await runCommand(ctx, args, {
       ...options,

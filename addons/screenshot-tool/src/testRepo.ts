@@ -6,7 +6,7 @@
  */
 
 import {getCacheDir, sha1} from './utils';
-import {execa} from 'execa';
+import {ejeca} from 'shared/ejeca';
 import * as fs from 'node:fs/promises';
 import {join} from 'node:path';
 import {dirSync} from 'tmp';
@@ -72,7 +72,7 @@ export class TestRepo {
   async run(args: Array<string>, input = ''): Promise<string> {
     const env = {...process.env, SL_AUTOMATION: '1', HGPLAIN: '1'};
     logger.info('Running', this.command, args.join(' '));
-    const child = await execa(this.command, args, {
+    const child = await ejeca(this.command, args, {
       cwd: this.repoPath,
       input: Buffer.from(input),
       env,
