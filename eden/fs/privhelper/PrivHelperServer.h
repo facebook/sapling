@@ -119,7 +119,8 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
       folly::SocketAddress nfsdPort,
       bool readOnly,
       uint32_t iosize,
-      bool useReaddirplus);
+      bool useReaddirplus,
+      bool useSoftMount);
   virtual void unmount(const char* mountPath);
   // Both clientPath and mountPath must be existing directories.
   virtual void bindMount(const char* clientPath, const char* mountPath);

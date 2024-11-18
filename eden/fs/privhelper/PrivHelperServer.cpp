@@ -572,7 +572,8 @@ void PrivHelperServer::nfsMount(
     folly::SocketAddress nfsdAddr,
     bool readOnly,
     uint32_t iosize,
-    bool useReaddirplus) {
+    bool useReaddirplus,
+    [[maybe_unused]] bool useSoftMount) {
 #ifdef __APPLE__
   if (shouldLoadNfsKext()) {
     XLOG(DBG3, "Apple nfs.kext is not loaded. Attempting to load");
@@ -878,7 +879,7 @@ UnixSocket::Message PrivHelperServer::processMountMsg(Cursor& cursor) {
 UnixSocket::Message PrivHelperServer::processMountNfsMsg(Cursor& cursor) {
   string mountPath;
   folly::SocketAddress mountdAddr, nfsdAddr;
-  bool readOnly, useReaddirplus;
+  bool readOnly, useReaddirplus, useSoftMount;
   uint32_t iosize;
   PrivHelperConn::parseMountNfsRequest(
       cursor,
@@ -887,12 +888,20 @@ UnixSocket::Message PrivHelperServer::processMountNfsMsg(Cursor& cursor) {
       nfsdAddr,
       readOnly,
       iosize,
-      useReaddirplus);
+      useReaddirplus,
+      useSoftMount);
   XLOGF(DBG3, "mount.nfs \"{}\"", mountPath);
 
   sanityCheckMountPoint(mountPath, true /* isNfs */);
 
-  nfsMount(mountPath, mountdAddr, nfsdAddr, readOnly, iosize, useReaddirplus);
+  nfsMount(
+      mountPath,
+      mountdAddr,
+      nfsdAddr,
+      readOnly,
+      iosize,
+      useReaddirplus,
+      useSoftMount);
   mountPoints_.insert(mountPath);
 
   return makeResponse();

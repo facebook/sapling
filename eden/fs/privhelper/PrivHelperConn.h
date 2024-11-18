@@ -108,7 +108,8 @@ class PrivHelperConn {
       folly::SocketAddress nfsdAddr,
       bool readOnly,
       uint32_t iosize,
-      bool useReaddirplus);
+      bool useReaddirplus,
+      std::optional<bool> useSoftMount);
   static void parseMountNfsRequest(
       folly::io::Cursor& cursor,
       std::string& mountPoint,
@@ -116,7 +117,8 @@ class PrivHelperConn {
       folly::SocketAddress& nfsdAddr,
       bool& readOnly,
       uint32_t& iosize,
-      bool& useReaddirplus);
+      bool& useReaddirplus,
+      bool& useSoftMount);
 
   static UnixSocket::Message serializeUnmountRequest(
       uint32_t xid,

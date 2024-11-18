@@ -115,7 +115,8 @@ class PrivHelperClientImpl : public PrivHelper,
       folly::SocketAddress nfsdAddr,
       bool readOnly,
       uint32_t iosize,
-      bool useReaddirplus) override;
+      bool useReaddirplus,
+      bool useSoftMount) override;
   Future<Unit> fuseUnmount(StringPiece mountPath) override;
   Future<Unit> nfsUnmount(StringPiece mountPath) override;
   Future<Unit> bindMount(StringPiece clientPath, StringPiece mountPath)
@@ -432,15 +433,57 @@ Future<Unit> PrivHelperClientImpl::nfsMount(
     folly::SocketAddress nfsdAddr,
     bool readOnly,
     uint32_t iosize,
-    bool useReaddirplus) {
+    bool useReaddirplus,
+    bool useSoftMount) {
   auto xid = getNextXid();
   auto request = PrivHelperConn::serializeMountNfsRequest(
-      xid, mountPath, mountdAddr, nfsdAddr, readOnly, iosize, useReaddirplus);
+      xid,
+      mountPath,
+      mountdAddr,
+      nfsdAddr,
+      readOnly,
+      iosize,
+      useReaddirplus,
+      useSoftMount);
+
   return sendAndRecv(xid, std::move(request))
-      .thenValue([](UnixSocket::Message&& response) {
-        PrivHelperConn::parseEmptyResponse(
-            PrivHelperConn::REQ_MOUNT_NFS, response);
-      });
+      .thenValue(
+          [this,
+           mountPath = mountPath.str(),
+           mountdAddr,
+           nfsdAddr,
+           readOnly,
+           iosize,
+           useReaddirplus,
+           useSoftMount](UnixSocket::Message&& response) -> Future<Unit> {
+            (void)useSoftMount;
+            try {
+              PrivHelperConn::parseEmptyResponse(
+                  PrivHelperConn::REQ_MOUNT_NFS, response);
+              return folly::unit;
+            } catch (const PrivHelperError&) {
+              // T207191725: The PrivHelper we're utilizing may be out of date
+              // and therefore can't handle parsing an nfsMount request with
+              // soft/hard info. We can retry the request without that
+              // additional info. Clean this up after 2-3 months.
+              auto retry_xid = getNextXid();
+              auto retry_request = PrivHelperConn::serializeMountNfsRequest(
+                  retry_xid,
+                  mountPath,
+                  mountdAddr,
+                  nfsdAddr,
+                  readOnly,
+                  iosize,
+                  useReaddirplus,
+                  std::nullopt);
+              return sendAndRecv(retry_xid, std::move(retry_request))
+                  .thenValue([](UnixSocket::Message&& retry_response) {
+                    PrivHelperConn::parseEmptyResponse(
+                        PrivHelperConn::REQ_MOUNT_NFS, retry_response);
+                    return folly::unit;
+                  });
+            }
+          });
 }
 
 Future<Unit> PrivHelperClientImpl::fuseUnmount(StringPiece mountPath) {
@@ -789,13 +832,15 @@ class StubPrivHelper final : public PrivHelper {
       folly::SocketAddress nfsdAddr,
       bool readOnly,
       uint32_t iosize,
-      bool useReaddirplus) override {
+      bool useReaddirplus,
+      bool useSoftMount) override {
     (void)mountPath;
     (void)mountdAddr;
     (void)nfsdAddr;
     (void)readOnly;
     (void)iosize;
     (void)useReaddirplus;
+    (void)useSoftMount;
     // TODO: We do support NFS on Windows. Should the mount flow be
     // implemented here?
     NOT_IMPLEMENTED();

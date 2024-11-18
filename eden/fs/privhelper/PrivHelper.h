@@ -76,7 +76,8 @@ class PrivHelper {
       folly::SocketAddress nfsdAddr,
       bool readOnly,
       uint32_t iosize,
-      bool useReaddirplus) = 0;
+      bool useReaddirplus,
+      bool useSoftMount) = 0;
 
   /**
    * Ask the privileged helper process to perform a fuse unmount.

@@ -104,7 +104,8 @@ Future<Unit> FakePrivHelper::nfsMount(
     folly::SocketAddress /*nfsdPort*/,
     bool /*readOnly*/,
     uint32_t /*iosize*/,
-    bool /*useReaddirplus*/) {
+    bool /*useReaddirplus*/,
+    bool /*useSoftMount*/) {
   return makeFuture<Unit>(
       runtime_error("FakePrivHelper::nfsMount() not implemented"));
 }

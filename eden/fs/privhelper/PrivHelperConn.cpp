@@ -254,7 +254,8 @@ UnixSocket::Message PrivHelperConn::serializeMountNfsRequest(
     folly::SocketAddress nfsdAddr,
     bool readOnly,
     uint32_t iosize,
-    bool useReaddirplus) {
+    bool useReaddirplus,
+    std::optional<bool> useSoftMount) {
   auto msg = serializeRequestPacket(xid, REQ_MOUNT_NFS);
   Appender appender(&msg.data, kDefaultBufferSize);
 
@@ -264,6 +265,9 @@ UnixSocket::Message PrivHelperConn::serializeMountNfsRequest(
   serializeBool(appender, readOnly);
   serializeUint32(appender, iosize);
   serializeBool(appender, useReaddirplus);
+  if (useSoftMount.has_value()) {
+    serializeBool(appender, useSoftMount.value());
+  }
   return msg;
 }
 
@@ -274,13 +278,19 @@ void PrivHelperConn::parseMountNfsRequest(
     folly::SocketAddress& nfsdAddr,
     bool& readOnly,
     uint32_t& iosize,
-    bool& useReaddirplus) {
+    bool& useReaddirplus,
+    bool& useSoftMount) {
   mountPoint = deserializeString(cursor);
   mountdAddr = deserializeSocketAddress(cursor);
   nfsdAddr = deserializeSocketAddress(cursor);
   readOnly = deserializeBool(cursor);
   iosize = deserializeUint32(cursor);
   useReaddirplus = deserializeBool(cursor);
+  if (!cursor.isAtEnd()) {
+    useSoftMount = deserializeBool(cursor);
+  } else {
+    useSoftMount = folly::kIsLinux ? true : false;
+  }
   checkAtEnd(cursor, "mount nfs request");
 }
 
