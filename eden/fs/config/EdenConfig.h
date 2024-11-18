@@ -642,6 +642,22 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> allowAppleDouble{"nfs:allow-apple-double", true, this};
 
+  /**
+   * When set to true, NFS mounts are mounted with the "soft" mount option. This
+   * setting applies to all NFS mounts. Behavior when set to false differs
+   * between platforms:
+   *
+   * - macOS: Hard mount with INTR mount option is used.
+   * - Linux: Hard mount is used (no INTR). Intr is unsupported after Linux
+   *          kernel version 2.6.25.
+   *
+   * Note: setting to "true" does not turn off the "INTR" option on macOS.
+   */
+  ConfigSetting<bool> useSoftMounts{
+      "nfs:use-soft-mounts",
+      folly::kIsLinux ? true : false,
+      this};
+
   // [prjfs]
 
   /**

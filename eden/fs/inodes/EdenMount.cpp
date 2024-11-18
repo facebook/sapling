@@ -2198,8 +2198,7 @@ folly::Future<folly::Unit> EdenMount::fsChannelMount(bool readOnly) {
         if (shouldBeOrIsNfsChannel()) {
           auto iosize = edenConfig->nfsIoSize.getValue();
           auto useReaddirplus = edenConfig->useReaddirplus.getValue();
-          // TODO(cuev): Read soft vs hard mount option from the EdenConfig
-          auto useSoftMount = folly::kIsLinux ? true : false;
+          auto useSoftMount = edenConfig->useSoftMounts.getValue();
 
           // Make sure that we are running on the EventBase while registering
           // the mount point.
