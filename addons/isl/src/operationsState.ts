@@ -176,7 +176,7 @@ registerDisposable(
           }
 
           const newCommandOutput = [...(currentOperation?.commandOutput ?? [])];
-          if (newCommandOutput.at(-1) !== progress.progress.message) {
+          if (newCommandOutput.at(-1)?.trim() !== progress.progress.message) {
             // also add progress message as if it was on stdout,
             // so you can see it when reading back the final output,
             // but only if it's a different progress message than we've seen.
