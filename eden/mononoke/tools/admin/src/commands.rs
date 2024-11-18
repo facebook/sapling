@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-//! Subcommands for `mononoke_newadmin`.
+//! Subcommands for `mononoke_admin`.
 //!
 //! The admin interface should be designed to be used by administrators of
 //! Mononoke, who may not use the tool very frequently.  As such the commands

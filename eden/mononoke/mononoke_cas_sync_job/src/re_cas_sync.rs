@@ -74,7 +74,7 @@ pub async fn try_expand_bookmark_creation_entry<'a>(
     if estimate > DEFAULT_MAX_COMMITS_PER_BOOKMARK_CREATION {
         error!(
             ctx.logger(),
-            "Too many commits to upload for the bookmark creation entry {}: {}, limit is {}. Please, consider recursive uploading a revision with mononoke_newadmin instead",
+            "Too many commits to upload for the bookmark creation entry {}: {}, limit is {}. Please, consider recursive uploading a revision with mononoke_admin instead",
             bookmark,
             estimate,
             DEFAULT_MAX_COMMITS_PER_BOOKMARK_CREATION

@@ -224,7 +224,7 @@ pub async fn do_sync_diamond_merge(
 
     warn!(
         ctx.logger(),
-        "It is recommended to run 'mononoke_newadmin cross-repo verify-working-copy' for {}!",
+        "It is recommended to run 'mononoke_admin cross-repo verify-working-copy' for {}!",
         new_merge_cs_id
     );
     Ok(())
