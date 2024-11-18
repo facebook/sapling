@@ -261,7 +261,11 @@ function getStreamPromise(origStream: Stream | null): Promise<string> {
 }
 
 function commonToSpawnOptions(options: EjecaOptions): SpawnOptionsWithoutStdio {
-  const env = options.env ? {...process.env, ...options.env} : process.env;
+  const env = options.env
+    ? options.extendEnv ?? true
+      ? {...process.env, ...options.env}
+      : options.env
+    : process.env;
   return {
     cwd: options.cwd || process.cwd(),
     env,

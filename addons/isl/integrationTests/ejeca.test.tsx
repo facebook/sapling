@@ -40,6 +40,24 @@ describe('test running binaries', () => {
       }),
     );
   });
+
+  it('handles env var options correctly', async () => {
+    // We use yarn for our tests, so YARN_IGNORE_PATH should always be set
+    const input =
+      'console.log("YARN_IGNORE_PATH" in process.env ? process.env.YARN_IGNORE_PATH : "not set")';
+    let spawned = ejeca('node', ['-'], {input});
+    expect((await spawned).stdout).not.toBe('babar');
+    spawned = ejeca('node', ['-'], {input, env: {YARN_IGNORE_PATH: 'babar'}});
+    expect((await spawned).stdout).toBe('babar');
+    spawned = ejeca('node', ['-'], {input, env: {YARN_IGNORE_PATH: 'babar'}, extendEnv: true});
+    expect((await spawned).stdout).toBe('babar');
+    spawned = ejeca('node', ['-'], {
+      input,
+      env: {FOO: 'bar', PATH: process.env.PATH},
+      extendEnv: false,
+    });
+    expect((await spawned).stdout).toBe('not set');
+  });
 });
 
 describe('test killing process', () => {
