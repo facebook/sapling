@@ -40,7 +40,7 @@ import type {
   CwdInfo,
 } from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
-import type {EjecaOptions, EjecaError} from 'shared/ejeca';
+import type {EjecaChildProcess, EjecaOptions, EjecaError} from 'shared/ejeca';
 
 import {Internal} from './Internal';
 import {OperationQueue} from './OperationQueue';
@@ -654,6 +654,52 @@ export class Repository {
     return {args, stdin};
   }
 
+  private async operationIPC(
+    ctx: RepositoryContext,
+    onProgress: OperationCommandProgressReporter,
+    child: EjecaChildProcess,
+    options: EjecaOptions,
+  ): Promise<void> {
+    if (!options.ipc) {
+      return;
+    }
+
+    interface IpcProgressBar {
+      id: number;
+      topic: string;
+      unit: string;
+      total: number;
+      position: number;
+      parent_id?: number;
+    }
+
+    while (true) {
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        const message = await child.getOneMessage();
+        if (
+          message === null ||
+          typeof message !== 'object' ||
+          !('progress_bar_update' in message)
+        ) {
+          break;
+        }
+        const bars = message.progress_bar_update as IpcProgressBar[];
+        const blen = bars.length;
+        if (blen > 0) {
+          const msg = bars[blen - 1];
+          onProgress('progress', {
+            message: msg.topic,
+            progress: msg.position,
+            progressTotal: msg.total,
+          });
+        }
+      } catch (err) {
+        break;
+      }
+    }
+  }
+
   /**
    * Called by this.operationQueue in response to runOrQueueOperation when an operation is ready to actually run.
    */
@@ -671,11 +717,12 @@ export class Repository {
       this.getMergeToolEnvVars(ctx),
     ]);
 
+    const ipc = (ctx.knownConfigs?.get('isl.sl-progress-enabled') ?? 'false') === 'true';
     const {command, args, options} = getExecParams(
       this.info.command,
       cwdRelativeArgs,
       cwd,
-      stdin ? {input: stdin} : undefined,
+      stdin ? {input: stdin, ipc} : {ipc},
       {
         ...env[0],
         ...env[1],
@@ -705,6 +752,7 @@ export class Repository {
     });
     handleAbortSignalOnProcess(execution, signal);
     try {
+      this.operationIPC(ctx, onProgress, execution, options);
       const result = await execution;
       onProgress('exit', result.exitCode || 0);
     } catch (err) {

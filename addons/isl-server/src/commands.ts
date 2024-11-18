@@ -204,7 +204,7 @@ export function getExecParams(
     // allow looking up diff numbers even in plain mode.
     // allow constructing the `.git/sl` repo regardless of the identity.
     // allow automatically setting ui.username.
-    SL_AUTOMATION_EXCEPT: 'ghrevset,phrevset,sniff,username',
+    SL_AUTOMATION_EXCEPT: 'ghrevset,phrevset,progress,sniff,username',
     EDITOR: undefined,
     VISUAL: undefined,
     HGUSER: undefined,
@@ -224,6 +224,10 @@ export function getExecParams(
   if (args_[0] === 'status') {
     // Take a lock when running status so that multiple status calls in parallel don't overload watchman
     args.push('--config', 'fsmonitor.watchman-query-lock=True');
+  }
+
+  if (options.ipc) {
+    args.push('--config', 'progress.renderer=nodeipc');
   }
 
   // TODO: we could run with systemd for better OOM protection when on linux
