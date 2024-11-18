@@ -19,7 +19,6 @@ mononoke  local commit cloud backend
   > [extensions]
   > amend =
   > commitcloud =
-  > infinitepush =
   > rebase =
   > share =
   > [commitcloud]
@@ -178,9 +177,7 @@ The eden api version performs a remote lookup with the `--remote` option only
 
 Try pull an uploaded commit from another client
   $ cd client2
-  $ hg pull -r 65289540f44d80cecffca8a3fd655c0ca6243cd9
-  pulling from mono:repo
-  searching for changes
+  $ hg pull -qr 65289540f44d80cecffca8a3fd655c0ca6243cd9
 
   $ tglogm
   o  65289540f44d 'New files Dir2'
@@ -223,9 +220,7 @@ Also, check that upload will not reupload file contents again.
   $ cd ..
 
   $ cd client2
-  $ hg pull -r a8c7c28d0391c5948f0a40f43e8b16d7172289cf
-  pulling from mono:repo
-  searching for changes
+  $ hg pull -qr a8c7c28d0391c5948f0a40f43e8b16d7172289cf
 
   $ tglogm --hidden
   o  a8c7c28d0391 'New files Dir2'

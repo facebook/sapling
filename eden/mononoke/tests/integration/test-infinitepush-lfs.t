@@ -30,7 +30,6 @@ Setup common client configuration for these tests
   $ cat >> "$HGRCPATH" <<EOF
   > [extensions]
   > amend=
-  > infinitepush=
   > commitcloud=
   > [infinitepush]
   > server=False
@@ -56,32 +55,7 @@ Do infinitepush (aka commit cloud) push
   $ yes A 2>/dev/null | head -c 200 > large
   $ hg addremove -q
   $ hg ci -m new
-  $ hg push -r . --bundle-store --debug --allow-anon
-  pushing to mono:repo
-  sending hello command
-  sending clienttelemetry command
-  query 1; heads
-  searching for changes
-  local heads: 1; remote heads: 1 (explicit: 0); initial common: 1
-  1 total queries in 0.0000s
-  checking for updated bookmarks
-  preparing listkeys for "bookmarks"
-  sending listkeys command
-  received listkey for "bookmarks": 57 bytes
-  1 changesets found
-  list of changesets:
-  68394cf51f7e96952fe832a3c05d17a9b49e8b4b
-  sending unbundle command
-  bundle2-output-bundle: "HG20", (1 params) 3 parts total
-  bundle2-output-part: "replycaps" * bytes payload (glob)
-  bundle2-output-part: "B2X:INFINITEPUSH" (params: 1 advisory) streamed payload
-  bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
-  bundle2-input-bundle: 1 params no-transaction
-  bundle2-input-part: "reply:changegroup" (params: 2 mandatory) supported
-  bundle2-input-bundle: 0 parts total
-  preparing listkeys for "bookmarks" with pattern "['master_bookmark']"
-  sending listkeyspatterns command
-  received listkey for "bookmarks": 56 bytes
+  $ hg cloud upload -qr .
 
 Try to pull it
   $ cd "${TESTTMP}/repo-pull"

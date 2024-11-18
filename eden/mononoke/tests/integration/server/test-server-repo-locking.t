@@ -31,7 +31,7 @@ Show it is locked
 Can still clone the repo
   $ hg clone -q mono:repo repo
   $ cd repo
-  $ enable infinitepush commitcloud pushrebase
+  $ enable commitcloud pushrebase
   $ hg checkout -q '.^' 
   $ echo D > D
   $ hg commit -Aqm D

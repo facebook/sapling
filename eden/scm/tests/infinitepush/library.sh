@@ -22,7 +22,6 @@ setupcommon() {
   cat >> $HGRCPATH << EOF
 [extensions]
 commitcloud=
-infinitepush=
 fbcodereview=
 [ui]
 ssh=$(dummysshcmd)

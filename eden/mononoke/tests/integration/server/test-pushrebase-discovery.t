@@ -35,7 +35,6 @@ setup common configuration
   > ssh="$DUMMYSSH"
   > [extensions]
   > amend=
-  > infinitepush=
   > commitcloud=
   > EOF
 

@@ -4,7 +4,7 @@
 
 
   $ configure dummyssh
-  $ enable infinitepush commitcloud
+  $ enable commitcloud
   $ enable amend
   $ setconfig infinitepush.branchpattern="re:scratch/.*"
   $ setconfig commitcloud.hostname=testhost

@@ -60,6 +60,8 @@ _ignoreextensions = {
     "hgcia",
     "hgk",
     "hiddenerror",
+    "infinitepush",
+    "infinitepushbackup",
     "inotify",
     "interhg",
     "lfs",

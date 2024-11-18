@@ -33,5 +33,5 @@ Can use (bogus) Bonsai hash:
   summary:     foo
 
   $ hg pull -r 1f7b0de80e118a7ffde47b646b0d4e9ab57252fd000000000000000000000000
-  rewriting pull rev '1f7b0de80e118a7ffde47b646b0d4e9ab57252fd000000000000000000000000' into '1f7b0de80e118a7ffde47b646b0d4e9ab57252fd'
   pulling from test:repo1_server
+  rewriting pull rev '1f7b0de80e118a7ffde47b646b0d4e9ab57252fd000000000000000000000000' into '1f7b0de80e118a7ffde47b646b0d4e9ab57252fd'

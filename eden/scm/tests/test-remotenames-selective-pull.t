@@ -178,7 +178,7 @@ Check that `--remote` shows real remote bookmarks from default remote
     "remotebookmark": "default/thirdbook"
    }
   ]
-  $ hg --config extensions.infinitepush= book --remote --remote-path test:secondremoterepo
+  $ hg book --remote --remote-path test:secondremoterepo
      secondremote/master                    0238718db2b174d2622ae9c4c75d61745eb12b25
      secondremote/thirdbook                 1449e7934ec1c4d0c2eefb1194c1cb70e78ba232
 

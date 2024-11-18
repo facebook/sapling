@@ -4,7 +4,7 @@
 
 
   $ configure dummyssh mutation-norecord
-  $ enable amend arcdiff commitcloud infinitepush rebase share
+  $ enable amend arcdiff commitcloud rebase share
   $ setconfig extensions.arcconfig="$TESTDIR/../sapling/ext/extlib/phabricator/arcconfig.py"
   $ setconfig infinitepush.branchpattern="re:scratch/.*" commitcloud.hostname=testhost
   $ readconfig <<EOF

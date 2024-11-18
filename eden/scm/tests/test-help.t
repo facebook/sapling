@@ -330,9 +330,6 @@ Test extension help:
        hgevents      publishes state-enter and state-leave events to Watchman
        hgsql         sync hg repos with MySQL
        histedit      interactive history editing
-       infinitepush  store draft commits in the cloud
-       infinitepushbackup
-                     back up draft commits in the cloud
        interactiveui
                      (no help text available)
        logginghelper

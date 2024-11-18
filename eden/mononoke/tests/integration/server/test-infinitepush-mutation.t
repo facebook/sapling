@@ -11,10 +11,11 @@ setup configuration
   $ cd $TESTTMP
 
 setup common configuration for these tests
-  $ enable amend infinitepush commitcloud
+  $ enable amend commitcloud
   $ setconfig ui.ssh="\"$DUMMYSSH\""
   $ setconfig mutation.date="0 0" mutation.enabled=true mutation.record=true visibility.enabled=true
   $ setconfig experimental.evolution=obsolete
+  $ setconfig remotenames.selectivepull=true
 
 setup repo
 
@@ -63,9 +64,7 @@ Do initial infinitepush of a small stack
   │
   o  df4f53cec30a public 'base'
   
-  $ hg push -r . --bundle-store --allow-anon
-  pushing to mono:repo
-  searching for changes
+  $ hg cloud upload -qr .
 
 Amend the bottom commit
   $ hg prev
@@ -83,9 +82,7 @@ Amend the bottom commit
   │
   o  df4f53cec30a public 'base'
   
-  $ hg push -r . --bundle-store --allow-anon
-  pushing to mono:repo
-  searching for changes
+  $ hg cloud upload -qr .
   $ hg debugmutation -r "draft()"
    *  a8543df036f16781d7f37d40d4f177056fc816a5 amend by test at 1970-01-01T00:00:00 from:
       9b5a540873ab29fbced488597365cf798918a356
@@ -124,9 +121,7 @@ Amend the stack again.
   $ hg next
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [647398] B1
-  $ hg push -r . --bundle-store --allow-anon
-  pushing to mono:repo
-  searching for changes
+  $ hg cloud upload -qr .
 
 Pull the amended stack to the other repo.
   $ cd $TESTTMP/repo-pull
@@ -170,9 +165,7 @@ Do some more complicated mutations
   │
   o  df4f53cec30a 'base'
   
-  $ hg push -r . --bundle-store --allow-anon
-  pushing to mono:repo
-  searching for changes
+  $ hg cloud upload -qr .
 
 Pull the modified stack to the other repo.
   $ cd $TESTTMP/repo-pull

@@ -3,7 +3,7 @@
 #require no-eden
 
 
-  $ enable amend commitcloud infinitepush
+  $ enable amend commitcloud
   $ configure dummyssh
   $ setconfig remotenames.autopullhoistpattern=re:.*
   $ setconfig commitcloud.hostname=testhost

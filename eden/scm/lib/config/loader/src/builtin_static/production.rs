@@ -143,7 +143,6 @@ githelp=
 gitrevset=!
 hgsubversion=!
 histedit=
-infinitepush=!
 journal=
 logginghelper=
 morestatus=

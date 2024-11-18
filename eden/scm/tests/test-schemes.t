@@ -4,8 +4,6 @@
 
 #inprocess-hg-incompatible
 
-
-  $ enable infinitepush
   $ . "$TESTDIR/library.sh"
 
   $ mkcommit() {
@@ -71,9 +69,11 @@ expanding an unknown scheme emits the input
 
   $ mkcommit something
   $ hg push -r . --to scratch/test123 --create
-  pushing to push:server
+  pushing rev 6e16a5f9c216 to destination push:server bookmark scratch/test123
   searching for changes
-  remote: pushing 1 commit:
-  remote:     6e16a5f9c216  something
+  exporting bookmark scratch/test123
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
 
   $ hg pull -qr 6e16a5f9c216

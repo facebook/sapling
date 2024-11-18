@@ -44,9 +44,9 @@ blobimport them into Mononoke storage and start Mononoke
 
 start mononoke
   $ start_and_wait_for_mononoke_server
-switch to client and enable infinitepush extension
+switch to client and enable extension
   $ cd repo-client
-  $ setconfig extensions.infinitepush= extensions.commitcloud=
+  $ setconfig extensions.commitcloud=
 
 match with glob pattern
   $ hg book --list-remote test/*

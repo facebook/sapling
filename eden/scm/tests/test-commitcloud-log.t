@@ -3,7 +3,7 @@
 
   $ eagerepo
 
-  $ enable infinitepush commitcloud
+  $ enable commitcloud
   $ configure dummyssh
   $ setconfig infinitepush.branchpattern="re:scratch/.*"
   $ setconfig commitcloud.hostname=testhost

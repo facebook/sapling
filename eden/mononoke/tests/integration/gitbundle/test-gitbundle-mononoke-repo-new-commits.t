@@ -14,13 +14,12 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > amend=
-  > infinitepush=
   > commitcloud=
   > EOF
 
-# Enable infinite push and commit cloud for the test
+# Enable commit cloud for the test
   $ cd $TESTTMP
-  $ enable amend infinitepush commitcloud
+  $ enable amend commitcloud
 
 # Setup git repository
   $ mkdir -p "$GIT_REPO_ORIGIN"

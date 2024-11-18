@@ -124,7 +124,6 @@ evolution=obsolete
 [extensions]
 amend=
 commitcloud=
-infinitepush=
 
 [mutation]
 enabled=true

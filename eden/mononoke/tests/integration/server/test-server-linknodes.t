@@ -37,7 +37,6 @@ setup repo-push and repo-pull
   >   cat >> repo-$name/.hg/hgrc <<EOF
   > [extensions]
   > loglinkrevfixup = $TESTTMP/loglinkrevfixup.py
-  > infinitepush =
   > commitcloud =
   > [infinitepush]
   > branchpattern = re:scratch/.*

@@ -10,7 +10,7 @@
 
   $ eagerepo
   $ configure dummyssh
-  $ enable commitcloud infinitepush
+  $ enable commitcloud
 
   $ cat >> $HGRCPATH << EOF
   > [commitcloud]

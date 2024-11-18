@@ -54,7 +54,7 @@ start mononoke
 clone
   $ hg clone -q mono:repo repo2 --noupdate
   $ cd repo2
-  $ enable pushrebase infinitepush commitcloud
+  $ enable pushrebase commitcloud
   $ setconfig infinitepush.server=false infinitepush.branchpattern='re:scratch/.+'
 
 attempt to push a case conflict onto master_bookmark
@@ -77,9 +77,7 @@ attempt to push a case conflict onto master_bookmark
   [255]
 
 it's ok to push it on to a scratch bookmark, though
-  $ hg push -r . --to scratch/conflict1 --create
-  pushing to mono:repo
-  searching for changes
+  $ hg push -qr . --to scratch/conflict1 --create
 
 if we stack a commit that fixes the case conflict, we still can't land the stack
   $ hg rm caseconflict.txt
@@ -113,9 +111,7 @@ attempt to push a commit that introduces a case conflict onto master_bookmark
   [255]
 
 again, it's ok to push this to a scratch branch
-  $ hg push -r . --to scratch/conflict2 --create
-  pushing to mono:repo
-  searching for changes
+  $ hg push -qr . --to scratch/conflict2 --create
 
 we can move the bookmark to a commit with a pre-existing case conflict via bookmark-only pushrebase
   $ hg push -r other --to master_bookmark --pushvar NON_FAST_FORWARD=true

@@ -4,7 +4,7 @@
 
 #require jq no-eden
   $ configure mutation-norecord dummyssh
-  $ enable amend commitcloud infinitepush rebase share smartlog
+  $ enable amend commitcloud rebase share smartlog
 
   $ setconfig infinitepush.branchpattern="re:scratch/.*"
   $ setconfig commitcloud.hostname=testhost commitcloud.max_sync_age=14 commitcloud.pullsizelimit=1

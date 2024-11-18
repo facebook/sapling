@@ -196,7 +196,7 @@ configure() {
             visibility.enabled=false
         ;;
       commitcloud)
-        enable commitcloud infinitepush
+        enable commitcloud
         setconfig commitcloud.hostname=testhost
         setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP
         setconfig commitcloud.remotebookmarkssync=True

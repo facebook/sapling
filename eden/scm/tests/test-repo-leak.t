@@ -75,7 +75,7 @@ Fine extension: sparse
 Fine extension: commitcloud
 
   $ newclientrepo >/dev/null
-  $ setconfig extensions.infinitepush= extensions.commitcloud=
+  $ setconfig extensions.commitcloud=
   $ hg log -r . -T '{manifest % "{node}"}\n'
   0000000000000000000000000000000000000000
   __del__ called
@@ -124,7 +124,6 @@ Somehow problematic: With many extensions
   > grpcheck=
   > hgevents=
   > histedit=
-  > infinitepush=
   > journal=
   > logginghelper=
   > lz4revlog=

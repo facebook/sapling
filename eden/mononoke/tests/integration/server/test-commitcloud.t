@@ -19,7 +19,6 @@ mononoke + local commit cloud backend
   > [extensions]
   > amend =
   > commitcloud =
-  > infinitepush =
   > rebase =
   > share =
   > [infinitepush]

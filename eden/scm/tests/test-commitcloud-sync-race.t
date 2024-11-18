@@ -27,7 +27,7 @@
   >    return ret
   > EOF
 
-  $ enable commitcloud infinitepush amend rebase
+  $ enable commitcloud amend rebase
   $ configure dummyssh
   $ setconfig commitcloud.hostname=testhost
   $ setconfig remotefilelog.reponame=testrepo

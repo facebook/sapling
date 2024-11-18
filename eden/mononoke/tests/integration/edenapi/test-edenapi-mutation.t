@@ -20,7 +20,6 @@ Set up local hgrc and Mononoke config, with commit cloud, http pull and upload.
   > [extensions]
   > amend =
   > commitcloud =
-  > infinitepush =
   > rebase =
   > share =
   > [commitcloud]

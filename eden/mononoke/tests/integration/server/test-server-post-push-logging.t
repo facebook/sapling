@@ -178,7 +178,6 @@ Use infinitepush push
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > commitcloud=
-  > infinitepush=
   > [infinitepush]
   > server=False
   > branchpattern=re:^scratch/.+$
@@ -189,11 +188,7 @@ Stop tracking master_bookmark
   $ echo infinitepush > infinitepush
   $ hg add -q infinitepush
   $ hg ci -m 'infinitepush'
-  $ hg push -r . --to "scratch/123" --create
-  pushing to mono:repo
-  searching for changes
-  $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq 'select(.is_public == false)' | jq .bookmark
-  "scratch/123"
+  $ hg push -qr . --to "scratch/123" --create
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq 'select(.is_public == false)' | jq .changeset_id
   "06b8cee4d65704bcb81b988c1153daee3063d9e565f4d65e9e68475676b2438b"
 
@@ -210,7 +205,7 @@ Stop tracking master_bookmark
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .operation
   "create"
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .update_reason
-  "push"
+  "apirequest"
   $ rm "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY"
 
 Update the scratch/123 bookmark
@@ -218,9 +213,7 @@ Update the scratch/123 bookmark
   $ echo new_commit > new_commit
   $ hg add -q new_commit
   $ hg ci -m 'new commit'
-  $ hg push -r . --to "scratch/123"
-  pushing to mono:repo
-  searching for changes
+  $ hg push -qr . --to "scratch/123" --force
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .repo_name
   "repo"
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .bookmark_name
@@ -234,7 +227,7 @@ Update the scratch/123 bookmark
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .operation
   "update"
   $ cat "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY" | jq .update_reason
-  "push"
+  "apirequest"
   $ rm "$TESTTMP/scribe_logs/$BOOKMARK_SCRIBE_CATEGORY"
 
 Delete the master_bookmark

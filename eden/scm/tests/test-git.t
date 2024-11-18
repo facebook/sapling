@@ -228,10 +228,6 @@ Test pull:
   $ hg pull
   pulling from file:/*/$TESTTMP/gitrepo/.git (glob)
 
-- infinitepush compatibility
-  $ hg pull --config extensions.infinitepush=
-  pulling from file:/*/$TESTTMP/gitrepo/.git (glob)
-
 Test error message display:
 
   $ mkdir $TESTTMP/errortest
@@ -366,9 +362,6 @@ Test push:
   alpha3 remote/foo remote/parent_change_beta
   beta.change 
 
-- infinitepush compatibility
-  $ hg push -q -r '.^' --to push_with_infinitepush --config extensions.infinitepush=
-
 - push with --force
 
   $ cd "$TESTTMP"
@@ -486,7 +479,7 @@ Tags are ignored during clone and pull:
 
 Cloud sync does not crash:
 
-  $ enable commitcloud infinitepush
+  $ enable commitcloud
   $ hg cloud sync
   abort: commitcloud: workspace error: undefined workspace
   (your repo is not connected to any workspace)

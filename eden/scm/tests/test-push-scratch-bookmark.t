@@ -1,5 +1,4 @@
   $ enable commitcloud
-  $ disable infinitepush
   $ setconfig infinitepush.branchpattern="re:scratch/.+"
 
   $ newclientrepo

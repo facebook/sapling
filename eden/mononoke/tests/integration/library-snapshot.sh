@@ -18,7 +18,6 @@ function base_snapshot_repo_setup {
 [extensions]
 snapshot =
 commitcloud =
-infinitepush =
 amend =
 EOF
 

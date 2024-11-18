@@ -19,7 +19,6 @@ setup common configuration for these tests
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > amend=
-  > infinitepush=
   > commitcloud=
   > EOF
   $ setconfig pull.use-commit-graph=true
@@ -64,9 +63,7 @@ push some draft commits
   $ hg commit -m draft1
   $ echo 2 >> newfile
   $ hg commit -m draft2
-  $ hg push -r . --bundle-store --allow-anon
-  pushing to mono:repo
-  searching for changes
+  $ hg cloud upload -qr .
 
   $ graphlog
   @  fc8f2fba9ac9 draft 'draft2'
@@ -85,9 +82,7 @@ pull these draft commits
   > server=False
   > branchpattern=re:scratch/.+
   > EOF
-  $ hg pull -r fc8f2fba9ac9
-  pulling from mono:repo
-  searching for changes
+  $ hg pull -qr fc8f2fba9ac9
 
   $ graphlog
   o  fc8f2fba9ac9 draft 'draft2'
@@ -110,9 +105,7 @@ land the first draft commit
 put a new draft commit on top
   $ echo 3 >> newfile
   $ hg commit -m draft3
-  $ hg push -r . --bundle-store --allow-anon
-  pushing to mono:repo
-  searching for changes
+  $ hg cloud upload -qr .
 
 add a new public branch
   $ hg up 0
@@ -129,9 +122,7 @@ add some draft commits to the branch
   $ hg commit -Aqm branch2
   $ echo 3 >> branchfile
   $ hg commit -Aqm branch3
-  $ hg push -r . --bundle-store --allow-anon
-  pushing to mono:repo
-  searching for changes
+  $ hg cloud upload -qr .
 
   $ graphlog
   @  3e86159717e8 draft 'branch3'

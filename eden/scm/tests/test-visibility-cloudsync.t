@@ -4,7 +4,7 @@
 
 
   $ configure dummyssh
-  $ enable amend directaccess commitcloud infinitepush rebase undo
+  $ enable amend directaccess commitcloud rebase undo
   $ setconfig infinitepush.branchpattern="re:scratch/.*"
   $ setconfig commitcloud.hostname=testhost
   $ setconfig visibility.enabled=true

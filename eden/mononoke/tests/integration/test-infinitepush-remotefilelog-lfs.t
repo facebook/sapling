@@ -30,7 +30,6 @@ Setup common client configuration for these tests
   $ cat >> "$HGRCPATH" <<EOF
   > [extensions]
   > amend=
-  > infinitepush=
   > commitcloud=
   > [infinitepush]
   > server=False
