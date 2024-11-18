@@ -14,7 +14,7 @@ dott_test(
     deps = [
         "//eden/mononoke/git_server:git_server",
         "//eden/mononoke/lfs_server:lfs_server",
-        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )

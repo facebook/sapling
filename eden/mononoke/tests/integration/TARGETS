@@ -102,7 +102,7 @@ dott_test(
     dott_files = ["test-bonsai-verify.t"],
     deps = [
         "//eden/mononoke:bonsai_verify",
-        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )
@@ -123,7 +123,7 @@ dott_test(
     ]),
     deps = [
         "//eden/mononoke:mononoke",
-        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )
@@ -157,7 +157,7 @@ dott_test(
     deps = [
         "//eden/mononoke:mononoke",
         "//eden/mononoke/microwave:builder",
-        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )
@@ -188,7 +188,7 @@ dott_test(
     deps = [
         "//eden/mononoke:blobimport",
         "//eden/mononoke:mononoke",
-        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/admin:admin",
     ],
 )
 
@@ -208,7 +208,7 @@ dott_test(
         "test-testtool-*.t",
     ]),
     deps = [
-        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )

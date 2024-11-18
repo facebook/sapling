@@ -15,7 +15,7 @@ dott_test(
     deps = [
         "//eden/mononoke:mononoke",
         "//eden/mononoke/git/gitimport:gitimport",
-        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )

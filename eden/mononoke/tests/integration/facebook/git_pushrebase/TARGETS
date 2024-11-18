@@ -19,7 +19,7 @@ dott_test(
         "//eden/mononoke/git_server:git_server",
         "//eden/mononoke/scs/client:scsc",
         "//eden/mononoke/scs/scs_server:scs_server",
-        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )

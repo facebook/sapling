@@ -28,7 +28,7 @@ mononoke_fbpkg(
     name = "mononoke.admin",
     compress_type = None,
     path_actions = {
-        "admin": "//eden/mononoke/tools/admin:newadmin",
+        "admin": "//eden/mononoke/tools/admin:admin",
         "newadmin": fbpkg.symlink("admin"),
     },
 )
@@ -105,7 +105,7 @@ mononoke_fbpkg(
     name = "mononoke.blob_cleanup",
     compress_type = None,
     path_actions = {
-        "blob_deletion": "//eden/mononoke/tools/admin:newadmin",
+        "blob_deletion": "//eden/mononoke/tools/admin:admin",
         "blobkey_copy.par": "//eden/mononoke/facebook/blobstore_deletion:manifold_copy",
         "blobkey_download.par": "//eden/mononoke/facebook/blobstore_deletion:manifold_key_download",
     },

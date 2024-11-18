@@ -10,7 +10,7 @@ dott_test(
     dott_files = glob(["*.t"]),
     deps = [
         "//eden/mononoke:blobimport",
-        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )

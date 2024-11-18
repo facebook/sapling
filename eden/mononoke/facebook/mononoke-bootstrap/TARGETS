@@ -11,7 +11,7 @@ buck_sh_test(
     # Those are used to expose Buck-built binary to mononoke-bootstrap.
     # Normally, we don't use those, but we do it for tests.
     env = env_for_binaries([
-        ("tools/admin", "newadmin"),
+        ("tools/admin", "admin"),
     ]),
     test = "check.sh",
 )
@@ -38,6 +38,6 @@ buck_genrule(
         ("git/gitimport", "gitimport"),
         ("lfs_server", "lfs_server"),
         ("scs/scs_server", "scs_server"),
-        ("tools/admin", "newadmin"),
+        ("tools/admin", "admin"),
     ]),
 )

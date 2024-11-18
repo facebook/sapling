@@ -4,7 +4,7 @@ load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 oncall("scm_server_infra")
 
 rust_binary(
-    name = "newadmin",
+    name = "admin",
     srcs = glob([
         "src/**/*.rs",
     ]),

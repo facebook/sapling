@@ -12,7 +12,7 @@ dott_test(
     deps = [
         "//eden/mononoke:blobimport",
         "//eden/mononoke:packer",
-        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
         "//eden/mononoke/walker:walker",
     ],

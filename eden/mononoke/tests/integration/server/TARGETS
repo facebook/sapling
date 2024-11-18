@@ -21,7 +21,7 @@ dott_test(
         # dep can be removed.
         "//eden/mononoke/git/gitimport:gitimport",
         "//eden/mononoke/tests/integration:urlencode",
-        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
         "//eden/mononoke:blobstore_healer",
     ],
@@ -40,7 +40,7 @@ dott_test(
     deps = [
         "//eden/mononoke:blobimport",
         "//eden/mononoke:mononoke",
-        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )

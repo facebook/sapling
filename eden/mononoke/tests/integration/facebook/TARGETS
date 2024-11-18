@@ -62,7 +62,7 @@ dott_test(
         "//eden/mononoke/facebook/derived_data_service:derived_data_service",
         "//eden/mononoke/scs/client:scsc",
         "//eden/mononoke/scs/scs_server:scs_server",
-        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/facebook/backfill_bonsai_blob_mapping:backfill_bonsai_blob_mapping",
         "//eden/mononoke/tools/testtool:testtool",
         "//zeus/zelos/interactive_cli:zeloscli",
@@ -74,7 +74,7 @@ dott_test(
     disable_all_network_access_target = False,
     dott_files = glob(["test-derived-data-tailer*.t"]),
     deps = [
-        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/facebook/derived_data_tailer:derived_data_tailer",
         "//eden/mononoke/tools/testtool:testtool",
     ],
@@ -118,7 +118,7 @@ dott_test(
         "//eden/mononoke/lfs_server:lfs_server",
         "//eden/mononoke/scs/client:scsc",
         "//eden/mononoke/scs/scs_server:scs_server",
-        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/admin:admin",
     ],
 )
 
@@ -181,7 +181,7 @@ dott_test(
         "//eden/mononoke:blobimport",
         "//eden/mononoke/commit_rewriting/megarepo:megarepotool",
         "//eden/mononoke/facebook/mirror_hg_commits:mirror_hg_commits",
-        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )
@@ -259,7 +259,7 @@ dott_test(
         "//eden/mononoke/mononoke_hg_sync_job:mononoke_hg_sync_job",
         "//eden/mononoke/scs/client:scsc",
         "//eden/mononoke/scs/scs_server:scs_server",
-        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )
@@ -273,7 +273,7 @@ dott_test(
         "//eden/mononoke/git/gitimport:gitimport",
         "//eden/mononoke/scs/client:scsc",
         "//eden/mononoke/scs/scs_server:scs_server",
-        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )
@@ -288,7 +288,7 @@ dott_test(
         "//eden/mononoke/land_service/facebook/server:land_service",
         "//eden/mononoke/scs/client:scsc",
         "//eden/mononoke/scs/scs_server:scs_server",
-        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )
@@ -303,7 +303,7 @@ dott_test(
         "//eden/mononoke/commit_rewriting/backsyncer:backsyncer_cmd",
         "//eden/mononoke/land_service/facebook/server:land_service",
         "//eden/mononoke/mononoke_hg_sync_job:mononoke_hg_sync_job",
-        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )
@@ -316,7 +316,7 @@ dott_test(
         "//eden/mononoke:mononoke",
         "//eden/mononoke/scs/client:scsc",
         "//eden/mononoke/scs/scs_server:scs_server",
-        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )
@@ -332,7 +332,7 @@ dott_test(
         "//eden/mononoke/commit_rewriting/megarepo:megarepotool",
         "//eden/mononoke/facebook/slow_bookmark_mover:slow_bookmark_mover",
         "//eden/mononoke/mononoke_hg_sync_job:mononoke_hg_sync_job",
-        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )
@@ -349,7 +349,7 @@ dott_test(
         "//eden/mononoke/lfs_server:lfs_server",
         "//eden/mononoke/scs/client:scsc",
         "//eden/mononoke/scs/scs_server:scs_server",
-        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/admin:admin",
     ],
 )
 
@@ -371,7 +371,7 @@ dott_test(
         "//eden/mononoke/mononoke_hg_sync_job:mononoke_hg_sync_job",
         "//eden/mononoke/scs/client:scsc",
         "//eden/mononoke/scs/scs_server:scs_server",
-        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )
@@ -381,7 +381,7 @@ dott_test(
     dott_files = glob(["test-newadmin-*.t"]),
     deps = [
         "//eden/mononoke:mononoke",
-        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/facebook/backfill_bonsai_blob_mapping:backfill_bonsai_blob_mapping",
         "//eden/mononoke/tools/testtool:testtool",
     ],
@@ -393,7 +393,7 @@ dott_test(
     dott_files = glob(["test-backfill-bonsai-blob-mapping-*.t"]),
     deps = [
         "//eden/mononoke:mononoke",
-        "//eden/mononoke/tools/admin:newadmin",
+        "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/facebook/backfill_bonsai_blob_mapping:backfill_bonsai_blob_mapping",
         "//eden/mononoke/tools/testtool:testtool",
     ],
