@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ChildProcess, IOType, SpawnOptions} from 'node:child_process';
+import type {ChildProcess, IOType, SpawnOptions, Serializable} from 'node:child_process';
 import type {Stream} from 'node:stream';
 
 import getStream from 'get-stream';
@@ -26,7 +26,6 @@ function maybeStripFinalNewline<T extends string | Uint8Array>(input: T, strip: 
   const LF = isString ? '\n' : '\n'.codePointAt(0);
   const CR = isString ? '\r' : '\r'.codePointAt(0);
   if (typeof input === 'string') {
-    const w = input.slice;
     const stripped = input.at(-1) === LF ? input.slice(0, input.at(-2) === CR ? -2 : -1) : input;
     return stripped as T;
   }
@@ -78,6 +77,12 @@ export interface EjecaOptions {
    * @default true
    */
   readonly stripFinalNewline?: boolean;
+
+  /**
+   * Whether a NodeIPC channel should be open. See the docs about [`stdio`](https://nodejs.org/docs/latest-v18.x/api/child_process.html#optionsstdio) for more info.
+   * @default false
+   */
+  readonly ipc?: boolean;
 }
 
 interface KillOptions {
@@ -179,6 +184,8 @@ interface EjecaChildPromise {
    * didn't successfully terminate the process. This behavior is configurable through the `options` option.
    */
   kill(signal?: KillParam, options?: KillOptions): boolean;
+
+  getOneMessage(): Promise<Serializable>;
 }
 
 export type EjecaChildProcess = ChildProcess & EjecaChildPromise & Promise<EjecaReturn>;
@@ -277,7 +284,7 @@ function commonToSpawnOptions(options: EjecaOptions): SpawnOptions {
   return {
     cwd: options.cwd || process.cwd(),
     env,
-    stdio: [options.stdin, 'pipe', 'pipe'],
+    stdio: options.ipc ? [options.stdin, 'pipe', 'pipe', 'ipc'] : [options.stdin, 'pipe', 'pipe'],
   };
 }
 
@@ -310,6 +317,45 @@ export function ejeca(
   ecp.kill = (p: KillParam, o?: KillOptions) => {
     return spawnedKill(s => mergedPromise.kill(s), p, o);
   };
+
+  if (options && options.ipc) {
+    ecp._ipcMessagesQueue = [];
+    ecp._ipcPendingPromises = [];
+    mergedPromise.on('message', message => {
+      if (ecp._ipcPendingPromises.length > 0) {
+        const resolve = ecp._ipcPendingPromises.shift()[0];
+        resolve(message);
+      } else {
+        ecp._ipcMessagesQueue.push(message);
+      }
+    });
+    mergedPromise.on('error', error => {
+      while (ecp._ipcPendingPromises.length > 0) {
+        const reject = ecp._ipcPendingPromises.shift()[1];
+        reject(error);
+      }
+    });
+    mergedPromise.on('exit', (_exitCode, _signal) => {
+      while (ecp._ipcPendingPromises.length > 0) {
+        const reject = ecp._ipcPendingPromises.shift()[1];
+        reject(new Error('IPC channel closed before receiving a message'));
+      }
+    });
+
+    ecp.getOneMessage = () => {
+      return new Promise<string>((resolve, reject) => {
+        if (ecp._ipcMessagesQueue.length > 0) {
+          resolve(ecp._ipcMessagesQueue.shift());
+        } else {
+          ecp._ipcPendingPromises.push([resolve, reject]);
+        }
+      });
+    };
+  } else {
+    ecp.getOneMessage = () => {
+      throw new Error('IPC not enabled');
+    };
+  }
 
   return ecp as unknown as EjecaChildProcess;
 }
