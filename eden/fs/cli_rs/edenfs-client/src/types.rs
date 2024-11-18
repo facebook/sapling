@@ -13,8 +13,9 @@ use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
 use edenfs_utils::path_from_bytes;
+use serde::Serialize;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct JournalPosition {
     pub mount_generation: i64,
     pub sequence_number: u64,
