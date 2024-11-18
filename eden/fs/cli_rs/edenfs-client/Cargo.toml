@@ -19,6 +19,7 @@ edenfs-utils = { version = "0.1.0", path = "../edenfs-utils" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbthrift_socket = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
+hex = "0.4.3"
 pathdiff = "0.2"
 regex = "1.9.2"
 sapling-atomicfile = { version = "0.1.0", path = "../../../scm/lib/atomicfile" }

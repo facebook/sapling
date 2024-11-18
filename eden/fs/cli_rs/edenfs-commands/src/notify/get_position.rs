@@ -40,12 +40,7 @@ impl crate::Subcommand for GetPositionCmd {
         let position = instance
             .get_journal_position(&self.mount_point, None)
             .await?;
-        println!(
-            "{}:{}:{}",
-            position.mountGeneration,
-            position.sequenceNumber,
-            hex::encode(position.snapshotHash)
-        );
+        println!("{}", position);
         Ok(0)
     }
 }

@@ -14,12 +14,6 @@ use thrift_streaming::EdenStartStatusUpdate;
 use thrift_streaming_clients::errors::StreamStartStatusStreamError;
 #[cfg(fbcode_build)]
 use thrift_streaming_clients::StreamingEdenService;
-#[cfg(fbcode_build)]
-pub use thrift_types::edenfs::ChangeNotification;
-#[cfg(fbcode_build)]
-pub use thrift_types::edenfs::LargeChangeNotification;
-#[cfg(fbcode_build)]
-pub use thrift_types::edenfs::SmallChangeNotification;
 use thrift_types::edenfs_clients::EdenService;
 
 pub mod checkout;
@@ -27,6 +21,7 @@ pub mod fsutil;
 pub mod instance;
 mod mounttable;
 pub mod redirect;
+pub mod types;
 pub mod utils;
 
 pub use instance::DaemonHealthy;

@@ -36,10 +36,7 @@ use thrift_streaming_clients::errors::StreamStartStatusError;
 use thrift_streaming_thriftclients::build_StreamingEdenService_client;
 #[cfg(fbcode_build)]
 use thrift_types::edenfs::ChangesSinceV2Params;
-#[cfg(fbcode_build)]
-use thrift_types::edenfs::ChangesSinceV2Result;
 use thrift_types::edenfs::DaemonInfo;
-use thrift_types::edenfs::JournalPosition;
 use thrift_types::edenfs_clients::EdenService;
 use thrift_types::fb303_core::fb303_status;
 use thrift_types::fbthrift::binary_protocol::BinaryProtocol;
@@ -254,7 +251,7 @@ impl EdenFsInstance {
         &self,
         mount_point: &Option<PathBuf>,
         timeout: Option<Duration>,
-    ) -> Result<JournalPosition> {
+    ) -> Result<crate::types::JournalPosition> {
         let client = self
             .connect(timeout)
             .await
@@ -264,6 +261,7 @@ impl EdenFsInstance {
         client
             .getCurrentJournalPosition(&mount_point)
             .await
+            .map(|p| p.into())
             .from_err()
     }
 
@@ -271,19 +269,23 @@ impl EdenFsInstance {
     pub async fn get_changes_since(
         &self,
         mount_point: &Option<PathBuf>,
-        from_position: &JournalPosition,
+        from_position: &crate::types::JournalPosition,
         timeout: Option<Duration>,
-    ) -> Result<ChangesSinceV2Result> {
+    ) -> Result<crate::types::ChangesSinceV2Result> {
         let client = self
             .connect(timeout)
             .await
             .context("Unable to connect to EdenFS daemon")?;
         let params = ChangesSinceV2Params {
             mountPoint: bytes_from_path(get_mount_point(mount_point)?)?,
-            fromPosition: from_position.clone(),
+            fromPosition: from_position.clone().into(),
             ..Default::default()
         };
-        client.changesSinceV2(&params).await.from_err()
+        client
+            .changesSinceV2(&params)
+            .await
+            .map(|r| r.into())
+            .from_err()
     }
 
     /// Returns a map of mount paths to mount names
