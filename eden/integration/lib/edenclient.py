@@ -332,10 +332,6 @@ class EdenFS:
 
     def get_extra_daemon_args(self) -> List[str]:
         extra_daemon_args: List[str] = [
-            # Defaulting to 8 import processes is excessive when the test
-            # framework runs tests on each CPU core.
-            "--num_hg_import_threads",
-            "2",
             "--local_storage_engine_unsafe",
             self._storage_engine,
         ]

@@ -121,7 +121,7 @@ of requests that are sent to Sapling at once.
 Any Sapling requests that fail due to SaplingAPI errors are placed on the
 `SaplingBackingStore::retryThreadPool_` where they are subsequently retried. The
 number of threads in this pool defaults to 8, but it configurable via
-`FLAGS_num_hg_import_threads`.
+`hg:num-retry-threads`.
 
 ### Post Processing
 

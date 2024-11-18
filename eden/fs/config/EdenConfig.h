@@ -914,6 +914,18 @@ class EdenConfig : private ConfigSettingManager {
       10000,
       this};
 
+  /**
+   * The number of threads to use for retrying failed Sapling import requests
+   * (per repo).
+   *
+   * Why 8? 1 is materially slower but 24 is no better than 4 in a simple
+   * microbenchmark that touches all files.  8 is better than 4 in the case
+   * that we need to fetch a bunch from the network.
+   * See benchmarks in the doc linked from D5067763.
+   * Note: this number would benefit from occasional revisiting.
+   */
+  ConfigSetting<uint8_t> hgNumRetryThreads{"hg:num-retry-threads", 8, this};
+
   // [backingstore]
 
   /**

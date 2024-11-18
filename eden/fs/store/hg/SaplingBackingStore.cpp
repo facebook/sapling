@@ -60,16 +60,6 @@ DEFINE_bool(
     "trees from the remote mercurial server.  This is generally only useful "
     "for testing/debugging purposes");
 
-DEFINE_int32(
-    num_hg_import_threads,
-    // Why 8? 1 is materially slower but 24 is no better than 4 in a simple
-    // microbenchmark that touches all files.  8 is better than 4 in the case
-    // that we need to fetch a bunch from the network.
-    // See benchmarks in the doc linked from D5067763.
-    // Note that this number would benefit from occasional revisiting.
-    8,
-    "the number of sapling import threads per repo");
-
 namespace facebook::eden {
 
 namespace {
@@ -195,10 +185,11 @@ TreePtr fromRawTree(
 std::unique_ptr<folly::Executor> makeRetryThreadPool(
     AbsolutePathPiece repository,
     const EdenStatsPtr& stats,
-    std::shared_ptr<StructuredLogger> structuredLogger) {
+    std::shared_ptr<StructuredLogger> structuredLogger,
+    uint8_t num_threads) {
   std::unique_ptr<folly::CPUThreadPoolExecutor> retryThreadPool =
       std::make_unique<folly::CPUThreadPoolExecutor>(
-          FLAGS_num_hg_import_threads,
+          num_threads,
           /* Eden performance will degrade when, for example, a status operation
            * causes a large number of import requests to be scheduled before a
            * lightweight operation needs to check the RocksDB cache. In that
@@ -259,8 +250,11 @@ SaplingBackingStore::SaplingBackingStore(
     FaultInjector* FOLLY_NONNULL faultInjector)
     : localStore_(std::move(localStore)),
       stats_(stats.copy()),
-      retryThreadPool_(
-          makeRetryThreadPool(repository, stats, structuredLogger)),
+      retryThreadPool_(makeRetryThreadPool(
+          repository,
+          stats,
+          structuredLogger,
+          config->getEdenConfig()->hgNumRetryThreads.getValue())),
       config_(config),
       serverThreadPool_(serverThreadPool),
       queue_(std::move(config)),
