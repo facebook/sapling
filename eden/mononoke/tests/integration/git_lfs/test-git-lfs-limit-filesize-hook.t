@@ -22,8 +22,8 @@
   A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
   B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
   C=198d25da38c153f3feecddeee7e49fe3fa16d7e0085ea919c183372bf42a66d4
-  $ mononoke_newadmin derived-data -R repo derive -T git_trees -T git_commits -T git_delta_manifests_v2 -T unodes --all-bookmarks
-  $ mononoke_newadmin git-symref -R repo create --symref-name HEAD --ref-name master_bookmark --ref-type branch
+  $ mononoke_admin derived-data -R repo derive -T git_trees -T git_commits -T git_delta_manifests_v2 -T unodes --all-bookmarks
+  $ mononoke_admin git-symref -R repo create --symref-name HEAD --ref-name master_bookmark --ref-type branch
   Symbolic ref HEAD pointing to branch master_bookmark has been added
 
 # Start up the LFS server
@@ -65,7 +65,7 @@ Push a change to LFS file (this should bypass the limit filesize hook)
   $ echo contents of LFS file with some extra > large_file
   $ git commit -aqm "new LFS change"
   $ quiet git_client push
-  $ mononoke_newadmin fetch -R repo -B heads/master_bookmark
+  $ mononoke_admin fetch -R repo -B heads/master_bookmark
   BonsaiChangesetId: bc0b66e9dda60bc3c73dc3b56f7a0b65e4eb830e76af6ab595bd5c3759e8983b
   Author: mononoke <mononoke@mononoke>
   Message: new LFS change

@@ -22,7 +22,7 @@ setup configuration
 
 
 exactly one of `-T` or `--all-flags` are provided:
-  $ mononoke_newadmin derived-data -R repo derive -B main
+  $ mononoke_admin derived-data -R repo derive -B main
   error: the following required arguments were not provided:
     <--derived-data-types <DERIVED_DATA_TYPES>|--all-types>
   
@@ -30,7 +30,7 @@ exactly one of `-T` or `--all-flags` are provided:
   
   For more information, try '--help'.
   [2]
-  $ mononoke_newadmin derived-data -R repo derive --all-types -T unodes -B main
+  $ mononoke_admin derived-data -R repo derive --all-types -T unodes -B main
   error: the argument '--all-types' cannot be used with '--derived-data-types <DERIVED_DATA_TYPES>'
   
   Usage: admin derived-data <--repo-id <REPO_ID>|--repo-name <REPO_NAME>> derive <--commit-id <COMMIT_ID>|--bookmark <BOOKMARK>|--all-bookmarks> <--derived-data-types <DERIVED_DATA_TYPES>|--all-types>
@@ -40,26 +40,26 @@ exactly one of `-T` or `--all-flags` are provided:
 
 
 derive all types:
-  $ mononoke_newadmin derived-data -R repo derive --all-types -B main
-  $ mononoke_newadmin derived-data -R repo derive --all-types -B main
+  $ mononoke_admin derived-data -R repo derive --all-types -B main
+  $ mononoke_admin derived-data -R repo derive --all-types -B main
 
 
 confirm everything was derived:
-  $ mononoke_newadmin derived-data -R repo exists -B main -T blame
+  $ mononoke_admin derived-data -R repo exists -B main -T blame
   Derived: e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
-  $ mononoke_newadmin derived-data -R repo exists -B main -T changeset_info
+  $ mononoke_admin derived-data -R repo exists -B main -T changeset_info
   Derived: e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
-  $ mononoke_newadmin derived-data -R repo exists -B main -T deleted_manifest
+  $ mononoke_admin derived-data -R repo exists -B main -T deleted_manifest
   Derived: e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
-  $ mononoke_newadmin derived-data -R repo exists -B main -T fastlog
+  $ mononoke_admin derived-data -R repo exists -B main -T fastlog
   Derived: e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
-  $ mononoke_newadmin derived-data -R repo exists -B main -T filenodes
+  $ mononoke_admin derived-data -R repo exists -B main -T filenodes
   Derived: e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
-  $ mononoke_newadmin derived-data -R repo exists -B main -T fsnodes
+  $ mononoke_admin derived-data -R repo exists -B main -T fsnodes
   Derived: e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
-  $ mononoke_newadmin derived-data -R repo exists -B main -T unodes
+  $ mononoke_admin derived-data -R repo exists -B main -T unodes
   Derived: e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
-  $ mononoke_newadmin derived-data -R repo exists -B main -T hgchangesets
+  $ mononoke_admin derived-data -R repo exists -B main -T hgchangesets
   Derived: e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
-  $ mononoke_newadmin derived-data -R repo exists -B main -T skeleton_manifests
+  $ mononoke_admin derived-data -R repo exists -B main -T skeleton_manifests
   Derived: e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2

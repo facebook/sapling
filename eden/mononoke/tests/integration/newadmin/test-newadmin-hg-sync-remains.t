@@ -24,44 +24,44 @@ setup configuration
   4|0|2222222222222222222222222222222222222222222222222222222222222222|blobimport
 
 it should count remaining entries
-  $ mononoke_newadmin hg-sync -R repo last-processed --set 0
+  $ mononoke_admin hg-sync -R repo last-processed --set 0
   No counter found for repo (0)
   Counter for repo (0) set to 0
-  $ mononoke_newadmin hg-sync -R repo remains
+  $ mononoke_admin hg-sync -R repo remains
   Remaining bundles to replay in repo (0): 4
-  $ mononoke_newadmin hg-sync -R repo last-processed --set 1
+  $ mononoke_admin hg-sync -R repo last-processed --set 1
   Counter for repo (0) has value 0
   Counter for repo (0) set to 1
-  $ mononoke_newadmin hg-sync -R repo remains
+  $ mononoke_admin hg-sync -R repo remains
   Remaining bundles to replay in repo (0): 3
-  $ mononoke_newadmin hg-sync -R repo last-processed --set 10
+  $ mononoke_admin hg-sync -R repo last-processed --set 10
   Counter for repo (0) has value 1
   Counter for repo (0) set to 10
-  $ mononoke_newadmin hg-sync -R repo remains
+  $ mononoke_admin hg-sync -R repo remains
   Remaining bundles to replay in repo (0): 0
 
 it should count remaining entries excluding blobimport
-  $ mononoke_newadmin hg-sync -R repo last-processed --set 0
+  $ mononoke_admin hg-sync -R repo last-processed --set 0
   Counter for repo (0) has value 10
   Counter for repo (0) set to 0
-  $ mononoke_newadmin hg-sync -R repo remains --without-blobimport
+  $ mononoke_admin hg-sync -R repo remains --without-blobimport
   Remaining non-blobimport bundles to replay in repo (0): 2
-  $ mononoke_newadmin hg-sync -R repo last-processed --set 1
+  $ mononoke_admin hg-sync -R repo last-processed --set 1
   Counter for repo (0) has value 0
   Counter for repo (0) set to 1
-  $ mononoke_newadmin hg-sync -R repo remains --without-blobimport
+  $ mononoke_admin hg-sync -R repo remains --without-blobimport
   Remaining non-blobimport bundles to replay in repo (0): 1
-  $ mononoke_newadmin hg-sync -R repo last-processed --set 10
+  $ mononoke_admin hg-sync -R repo last-processed --set 10
   Counter for repo (0) has value 1
   Counter for repo (0) set to 10
-  $ mononoke_newadmin hg-sync -R repo remains --without-blobimport
+  $ mononoke_admin hg-sync -R repo remains --without-blobimport
   Remaining non-blobimport bundles to replay in repo (0): 0
 
 it should support --quiet
-  $ mononoke_newadmin hg-sync -R repo last-processed --set 0
+  $ mononoke_admin hg-sync -R repo last-processed --set 0
   Counter for repo (0) has value 10
   Counter for repo (0) set to 0
-  $ mononoke_newadmin hg-sync -R repo remains --quiet
+  $ mononoke_admin hg-sync -R repo remains --quiet
   4
-  $ mononoke_newadmin hg-sync -R repo remains --quiet --without-blobimport
+  $ mononoke_admin hg-sync -R repo remains --quiet --without-blobimport
   2

@@ -109,7 +109,7 @@
 
 # Regenerate the Git repo out of the Mononoke repo using stored packfile items and verify that it when the stored
 # packfile items are missing, the tool regenerates them
-  $ mononoke_newadmin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH" --packfile-item-inclusion fetch-and-store
+  $ mononoke_admin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH" --packfile-item-inclusion fetch-and-store
 
 # Ensure that Git considers this a valid bundle
   $ cd $GIT_REPO

@@ -44,8 +44,8 @@
 
 
 # Derive the git commit for this commit
-  $ mononoke_newadmin derived-data -R repo derive --rederive -T git_commits -i 53be2f28390c43721be5fc1cdd54f24e1bc7875e0774b2e1bf9b4da150b21fa8
-  $ mononoke_newadmin git-objects -R repo fetch --id 9695b5ce077c0fba96f8e75694a4c02e4813bb87
+  $ mononoke_admin derived-data -R repo derive --rederive -T git_commits -i 53be2f28390c43721be5fc1cdd54f24e1bc7875e0774b2e1bf9b4da150b21fa8
+  $ mononoke_admin git-objects -R repo fetch --id 9695b5ce077c0fba96f8e75694a4c02e4813bb87
   The object is a Git Commit
   
   Commit {
@@ -73,7 +73,7 @@
       message: "Commit with offset date time\n",
       extra_headers: [],
   }
-  $ mononoke_newadmin fetch -R repo -i 53be2f28390c43721be5fc1cdd54f24e1bc7875e0774b2e1bf9b4da150b21fa8
+  $ mononoke_admin fetch -R repo -i 53be2f28390c43721be5fc1cdd54f24e1bc7875e0774b2e1bf9b4da150b21fa8
   BonsaiChangesetId: 53be2f28390c43721be5fc1cdd54f24e1bc7875e0774b2e1bf9b4da150b21fa8
   Author: mononoke <mononoke@mononoke>
   Message: Commit with offset date time

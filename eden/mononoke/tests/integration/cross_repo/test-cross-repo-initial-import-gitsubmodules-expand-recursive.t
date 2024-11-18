@@ -389,7 +389,7 @@ Run the x-repo with submodules setup
   
   
   
-  Running mononoke_newadmin to verify mapping
+  Running mononoke_admin to verify mapping
   
   RewrittenAs([(ChangesetId(Blake2(eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
   
@@ -480,7 +480,7 @@ Run the x-repo with submodules setup
   ad7b606 Add regular_dir/aardvar
   8c33a27 Add root_file
 
-  $ mononoke_newadmin bookmarks -R "$SUBMODULE_REPO_NAME" list -S hg
+  $ mononoke_admin bookmarks -R "$SUBMODULE_REPO_NAME" list -S hg
   heads/master_bookmark
 
 -- Import the changes from the git repos B and C into their Mononoke repos
@@ -662,7 +662,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   >   local hg_hash=$1; shift;
   >   
   >   printf "Check mapping in database with Mononoke admin\n"
-  >   with_stripped_logs mononoke_newadmin \
+  >   with_stripped_logs mononoke_admin \
   >     cross-repo --source-repo-id $LARGE_REPO_ID --target-repo-id $SUBMODULE_REPO_ID map -i $hg_hash | rg -v "using repo"
   >   
   >   printf "\n\nCall hg committranslateids\n" 
@@ -808,11 +808,11 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   >   SYNCED_BONSAI=$(rg '"translated": \{"Bonsai": bin\("(\w+)"\)\}\}\]' -or '$1' $TESTTMP/lookup_commit);
   >   
   >   printf "\n\nSubmodule repo commit info using newadmin:\n"
-  >   mononoke_newadmin fetch -R "$SUBMODULE_REPO_NAME" -i "$SYNCED_BONSAI" \
+  >   mononoke_admin fetch -R "$SUBMODULE_REPO_NAME" -i "$SYNCED_BONSAI" \
   >     | rg -v "Author"
   > 
   >   printf "\n\nDeriving all enabled types except hgchangesets and filenodes\n";
-  >   (mononoke_newadmin derived-data -R "$SUBMODULE_REPO_NAME" derive -i $SYNCED_BONSAI \
+  >   (mononoke_admin derived-data -R "$SUBMODULE_REPO_NAME" derive -i $SYNCED_BONSAI \
   >     -T fsnodes -T unodes -T fastlog -T fsnodes -T blame -T changeset_info \
   >     -T skeleton_manifests -T deleted_manifest -T bssm_v3 \
   >     -T git_commits -T git_trees -T git_delta_manifests_v2 \

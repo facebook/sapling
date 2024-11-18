@@ -101,7 +101,7 @@
   Bookmark: "tags/tag_version": ChangesetId(Blake2(*)) (created) (glob)
 
 # Regenerate the Git repo out of the Mononoke repo using stored packfile items and verify that it works
-  $ mononoke_newadmin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH" --packfile-item-inclusion fetch-only
+  $ mononoke_admin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH" --packfile-item-inclusion fetch-only
 # Ensure that Git considers this a valid bundle
   $ cd $GIT_REPO
   $ git bundle verify -q $BUNDLE_PATH

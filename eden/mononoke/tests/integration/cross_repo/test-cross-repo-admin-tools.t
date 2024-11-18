@@ -50,21 +50,21 @@ blobimport hg servers repos into Mononoke repos
   $ REPOID=1 blobimport small/.hg small
 
 Try to insert with invalid version name
-  $ mononoke_newadmin cross-repo --source-repo-id 0 --target-repo-id 1 insert equivalent-working-copy \
+  $ mononoke_admin cross-repo --source-repo-id 0 --target-repo-id 1 insert equivalent-working-copy \
   > --source-commit-id "$LARGE_EQ_WC_HASH" --target-commit-id "$SMALL_EQ_WC_HASH" --version-name invalid  2>&1
   Error: invalid version does not exist
   [1]
 
 Now insert with valid version name
-  $ mononoke_newadmin cross-repo --source-repo-id 0 --target-repo-id 1 insert equivalent-working-copy \
+  $ mononoke_admin cross-repo --source-repo-id 0 --target-repo-id 1 insert equivalent-working-copy \
   > --source-commit-id "$LARGE_EQ_WC_HASH" --target-commit-id "$SMALL_EQ_WC_HASH" --version-name TEST_VERSION_NAME 2>&1
   * successfully inserted equivalent working copy (glob)
-  $ mononoke_newadmin cross-repo --source-repo-id 0 --target-repo-id 1 map -i "$LARGE_EQ_WC_HASH" 2>&1 | grep EquivalentWorking
+  $ mononoke_admin cross-repo --source-repo-id 0 --target-repo-id 1 map -i "$LARGE_EQ_WC_HASH" 2>&1 | grep EquivalentWorking
   EquivalentWorkingCopyAncestor(ChangesetId(Blake2(a246023ccc3b1dc56076a2524cd644fb4cb4a99ee2141b2277677f9ce82f0f13)), CommitSyncConfigVersion("TEST_VERSION_NAME"))
 
 Now insert not sync candidate entry
-  $ mononoke_newadmin cross-repo --source-repo-id 0 --target-repo-id 1 insert not-sync-candidate \
+  $ mononoke_admin cross-repo --source-repo-id 0 --target-repo-id 1 insert not-sync-candidate \
   > --large-commit-id "$NOT_SYNC_CANDIDATE_HASH" --version-name TEST_VERSION_NAME 2>&1
   * successfully inserted not sync candidate entry (glob)
-  $ mononoke_newadmin cross-repo --source-repo-id 0 --target-repo-id 1 map -i "$NOT_SYNC_CANDIDATE_HASH" 2>&1 | grep NotSyncCandidate
+  $ mononoke_admin cross-repo --source-repo-id 0 --target-repo-id 1 map -i "$NOT_SYNC_CANDIDATE_HASH" 2>&1 | grep NotSyncCandidate
   NotSyncCandidate(CommitSyncConfigVersion("TEST_VERSION_NAME"))

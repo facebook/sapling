@@ -34,14 +34,14 @@ setup configuration
   J=55e5dbaa7f26e0cfa1c2ee95479e2af088bf81caae4c2356d6eb8dfa6c114284
 
 Returns D, E, F and G
-  $ mononoke_newadmin commit-graph -R repo descendants --cs-ids $D
+  $ mononoke_admin commit-graph -R repo descendants --cs-ids $D
   5a25c0a76794bbcc5180da0949a652750101597f0fbade488e611d5c0917e7be
   f0c81a03319da010415f712831abe8469ba3c30b93b0b07af175302b8c15f0e6
   48779d8d497815015031dc3f3e9888abc8cf8273184ebd9ca8a395e24d501c90
   9711852ec4f4b42937dd5b760c7b3f84345bf48c74b7ef3ca7118d1d7928744d
 
 Returns C, D, E, F, G, H, I and J. Order is non-deterministic so glob instead
-  $ mononoke_newadmin commit-graph -R repo descendants --cs-ids $C,$D
+  $ mononoke_admin commit-graph -R repo descendants --cs-ids $C,$D
   * (glob)
   * (glob)
   * (glob)

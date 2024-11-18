@@ -23,9 +23,9 @@ setup configuration
 
 Check we can upload and fetch an arbitrary blob.
   $ echo value > "$TESTTMP/value"
-  $ mononoke_newadmin blobstore -R repo upload --key somekey --value-file "$TESTTMP/value"
+  $ mononoke_admin blobstore -R repo upload --key somekey --value-file "$TESTTMP/value"
   Writing 6 bytes to blobstore key somekey
-  $ mononoke_newadmin blobstore -R repo fetch -q somekey -o "$TESTTMP/fetched_value"
+  $ mononoke_admin blobstore -R repo fetch -q somekey -o "$TESTTMP/fetched_value"
   $ diff "$TESTTMP/value" "$TESTTMP/fetched_value"
 
 Test we can unlink a blob
@@ -33,13 +33,13 @@ Test we can unlink a blob
 NOTE: The blobstore-unlink command doesn't construct the blobstore in the usual way,
 so we need to give the full key.
 
-  $ mononoke_newadmin blobstore-unlink -R repo repo0000.somekey
+  $ mononoke_admin blobstore-unlink -R repo repo0000.somekey
   Unlinking key repo0000.somekey successfully in one underlying blobstore
-  $ mononoke_newadmin blobstore -R repo fetch -q somekey -o "$TESTTMP/fetched_value_unlinked"
+  $ mononoke_admin blobstore -R repo fetch -q somekey -o "$TESTTMP/fetched_value_unlinked"
   No blob exists for somekey
 
 Examine some of the data
-  $ mononoke_newadmin blobstore -R repo fetch changeset.blake2.f9d662054cf779809fd1a55314f760dc7577eac63f1057162c1b8e56aa0f02a1
+  $ mononoke_admin blobstore -R repo fetch changeset.blake2.f9d662054cf779809fd1a55314f760dc7577eac63f1057162c1b8e56aa0f02a1
   Key: changeset.blake2.f9d662054cf779809fd1a55314f760dc7577eac63f1057162c1b8e56aa0f02a1
   Ctime: * (glob)
   Size: 194
@@ -107,14 +107,14 @@ Test --blobstore-scrub-action works
   $ rm $TESTTMP/blobstore/1/blobs/*changeset.blake2.f9d662054cf779809fd1a55314f760dc7577eac63f1057162c1b8e56aa0f02a1*
   $ ls $TESTTMP/blobstore/1/blobs | wc -l
   33
-  $ with_stripped_logs mononoke_newadmin --blobstore-scrub-action=ReportOnly blobstore -R repo fetch -q changeset.blake2.f9d662054cf779809fd1a55314f760dc7577eac63f1057162c1b8e56aa0f02a1 | rg scrub
+  $ with_stripped_logs mononoke_admin --blobstore-scrub-action=ReportOnly blobstore -R repo fetch -q changeset.blake2.f9d662054cf779809fd1a55314f760dc7577eac63f1057162c1b8e56aa0f02a1 | rg scrub
   scrub: blobstore_id BlobstoreId(1) not repaired for repo0000.changeset.blake2.f9d662054cf779809fd1a55314f760dc7577eac63f1057162c1b8e56aa0f02a1
-  $ with_stripped_logs mononoke_newadmin --blobstore-scrub-action=Repair blobstore -R repo fetch -q changeset.blake2.f9d662054cf779809fd1a55314f760dc7577eac63f1057162c1b8e56aa0f02a1 | rg scrub
+  $ with_stripped_logs mononoke_admin --blobstore-scrub-action=Repair blobstore -R repo fetch -q changeset.blake2.f9d662054cf779809fd1a55314f760dc7577eac63f1057162c1b8e56aa0f02a1 | rg scrub
   scrub: blobstore_id BlobstoreId(1) repaired for repo0000.changeset.blake2.f9d662054cf779809fd1a55314f760dc7577eac63f1057162c1b8e56aa0f02a1
 
   $ ls $TESTTMP/blobstore/1/blobs | wc -l
   34
-  $ mononoke_newadmin blobstore --storage-name blobstore fetch repo0000.content.blake2.6e07d9ecc025ae219c0ed4dead08757d8962ca7532daf5d89484cadc5aae99d8
+  $ mononoke_admin blobstore --storage-name blobstore fetch repo0000.content.blake2.6e07d9ecc025ae219c0ed4dead08757d8962ca7532daf5d89484cadc5aae99d8
   Key: repo0000.content.blake2.6e07d9ecc025ae219c0ed4dead08757d8962ca7532daf5d89484cadc5aae99d8
   Ctime: * (glob)
   Size: 21
@@ -122,5 +122,5 @@ Test --blobstore-scrub-action works
   00000000: 7465737420636f6e74656e7420aa2065  test content . e
   00000010: 6e64                              nd
 
-  $ mononoke_newadmin blobstore-unlink -R repo repo0000.content.blake2.6e07d9ecc025ae219c0ed4dead08757d8962ca7532daf5d89484cadc5aae99d8
+  $ mononoke_admin blobstore-unlink -R repo repo0000.content.blake2.6e07d9ecc025ae219c0ed4dead08757d8962ca7532daf5d89484cadc5aae99d8
   Unlinking key repo0000.content.blake2.6e07d9ecc025ae219c0ed4dead08757d8962ca7532daf5d89484cadc5aae99d8 successfully in one underlying blobstore

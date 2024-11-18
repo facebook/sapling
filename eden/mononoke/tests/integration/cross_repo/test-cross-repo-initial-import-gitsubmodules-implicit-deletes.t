@@ -73,7 +73,7 @@ Create commit that modifies git submodule in small repo
   
   
   
-  Running mononoke_newadmin to verify mapping
+  Running mononoke_admin to verify mapping
   
   RewrittenAs([(ChangesetId(Blake2(4ab1f8925a8b6a48eaafb3bb8ce5bfb351bd4301c78d557cd799b721b5a4c6e9)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
   

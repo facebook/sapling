@@ -117,7 +117,7 @@
   Bookmark: "tags/first_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (created)
 
 # We can see that the bonsai changesets graph we created looks correct
-  $ mononoke_newadmin changelog -R repo graph -i 4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e -M -I
+  $ mononoke_admin changelog -R repo graph -i 4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e -M -I
   o  message: Add a new submodule
   │  , id: 4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e
   │
@@ -130,7 +130,7 @@
 # Look at the commit that introduced the submodule:
 # While the edit to the normal file: `.gitmodules` is preserved, the addition of the submodule itself was removed
 # from the commit at import time.
-  $ mononoke_newadmin fetch -R repo -i 4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e
+  $ mononoke_admin fetch -R repo -i 4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e
   BonsaiChangesetId: 4cd77220f6dcf9154b8cd4dc0f33b72b19a765d73a770cce612ee094191e7d9e
   Author: mononoke <mononoke@mononoke>
   Message: Add a new submodule
@@ -139,7 +139,7 @@
   	 ADDED/MODIFIED: .gitmodules 2b6c6b2889a7b56e04e646b89d236f31552baf7271957b807b84cb0b77fa9e1d
   
 # Note: with the current git-bundle implementation, we cannot generate a bundle from this at the moment
-  $ mononoke_newadmin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH"
+  $ mononoke_admin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH"
   Error: Error in generating pack item stream
   
   Caused by:

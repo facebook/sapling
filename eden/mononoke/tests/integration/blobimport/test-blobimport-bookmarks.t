@@ -16,18 +16,18 @@
   $ REPOID=0 setup_common_config
   $ cd $TESTTMP
   $ REPOID=0 blobimport repo-hg/.hg repo
-  $ mononoke_newadmin bookmarks --repo-id=0 list
+  $ mononoke_admin bookmarks --repo-id=0 list
   * master (glob)
   $ rm -rf repo
 
   $ REPOID=1 setup_common_config
   $ cd $TESTTMP
   $ REPOID=1 blobimport repo-hg/.hg repo --no-bookmark
-  $ mononoke_newadmin bookmarks --repo-id=1 list
+  $ mononoke_admin bookmarks --repo-id=1 list
   $ rm -rf repo
 
   $ REPOID=2 setup_common_config
   $ cd $TESTTMP
   $ REPOID=2 blobimport repo-hg/.hg repo --prefix-bookmark myrepo/
-  $ mononoke_newadmin bookmarks --repo-id=2 list
+  $ mononoke_admin bookmarks --repo-id=2 list
   * myrepo/master (glob)

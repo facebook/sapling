@@ -115,21 +115,21 @@
 
 # Check if we derived all the types for imported commits. Checking last one after bookmark move, before setting it to the merge commit.
   $ MERGE_PARENT_GIT="11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9"
-  $ mononoke_newadmin derived-data -R repo exists -T changeset_info -i $MERGE_PARENT_GIT
+  $ mononoke_admin derived-data -R repo exists -T changeset_info -i $MERGE_PARENT_GIT
   Derived: 11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9
-  $ mononoke_newadmin derived-data -R repo exists -T blame -i $MERGE_PARENT_GIT
+  $ mononoke_admin derived-data -R repo exists -T blame -i $MERGE_PARENT_GIT
   Derived: 11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9
-  $ mononoke_newadmin derived-data -R repo exists -T deleted_manifest -i $MERGE_PARENT_GIT
+  $ mononoke_admin derived-data -R repo exists -T deleted_manifest -i $MERGE_PARENT_GIT
   Derived: 11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9
-  $ mononoke_newadmin derived-data -R repo exists -T fastlog -i $MERGE_PARENT_GIT
+  $ mononoke_admin derived-data -R repo exists -T fastlog -i $MERGE_PARENT_GIT
   Derived: 11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9
-  $ mononoke_newadmin derived-data -R repo exists -T filenodes -i $MERGE_PARENT_GIT
+  $ mononoke_admin derived-data -R repo exists -T filenodes -i $MERGE_PARENT_GIT
   Derived: 11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9
-  $ mononoke_newadmin derived-data -R repo exists -T fsnodes -i $MERGE_PARENT_GIT
+  $ mononoke_admin derived-data -R repo exists -T fsnodes -i $MERGE_PARENT_GIT
   Derived: 11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9
-  $ mononoke_newadmin derived-data -R repo exists -T hgchangesets -i $MERGE_PARENT_GIT
+  $ mononoke_admin derived-data -R repo exists -T hgchangesets -i $MERGE_PARENT_GIT
   Derived: 11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9
-  $ mononoke_newadmin derived-data -R repo exists -T unodes -i $MERGE_PARENT_GIT
+  $ mononoke_admin derived-data -R repo exists -T unodes -i $MERGE_PARENT_GIT
   Derived: 11b1e6976133cca327762371e8c523d3a0cd3ff2abe34385c8253df72cc989a9
 
 # Check the recovery file

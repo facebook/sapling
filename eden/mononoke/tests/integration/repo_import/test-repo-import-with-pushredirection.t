@@ -20,7 +20,7 @@ Setup configuration
 
 Before the change
 -- push to a small repo
-  $ quiet mononoke_newadmin cross-repo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL \
+  $ quiet mononoke_admin cross-repo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL \
   > pushredirection prepare-rollout
 
   $ enable_pushredirect 1
@@ -46,11 +46,11 @@ Before the change
 
 -- Make a version change
   $ update_commit_sync_map_first_option
-  $ mononoke_newadmin cross-repo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL pushredirection change-mapping-version \
+  $ mononoke_admin cross-repo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL pushredirection change-mapping-version \
   > --author author \
   > --large-repo-bookmark master_bookmark \
   > --version-name new_version &> /dev/null
-  $ mononoke_newadmin cross-repo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL \
+  $ mononoke_admin cross-repo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL \
   > pushredirection prepare-rollout &> /dev/null
 
   $ enable_pushredirect 1 false true

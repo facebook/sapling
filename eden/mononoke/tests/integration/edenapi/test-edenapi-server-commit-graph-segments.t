@@ -186,7 +186,7 @@ Add some new commits, move the master bookmark and do a pull
   W=d728ac072e7662d3ce354b3a13dbd7d3ca853591
   X=262080717826d7e3df89d22278d80710f78457e6
 
-  $ mononoke_newadmin bookmarks -R repo set master_bookmark "$X"
+  $ mononoke_admin bookmarks -R repo set master_bookmark "$X"
   Updating publishing bookmark master_bookmark from 2f7f5cd90b7b58f14d6b20b83b95478d5b0ab8c1e5bf429bc317256813516895 to e4b2425dd7affae8fd14348623eb66fa78e9a7ead9330b203d828dae0ec19f79
 
   $ flush_mononoke_bookmarks

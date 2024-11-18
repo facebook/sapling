@@ -33,7 +33,7 @@ setup configuration
   I=03ffabc887d3d9a81be514037b1dfa3020466af9145bafbc33a8880fd8808c01
   J=55e5dbaa7f26e0cfa1c2ee95479e2af088bf81caae4c2356d6eb8dfa6c114284
 
-  $ mononoke_newadmin changelog -R repo graph -i $G,$J -M -I
+  $ mononoke_admin changelog -R repo graph -i $G,$J -M -I
   o  message: G, id: 9711852ec4f4b42937dd5b760c7b3f84345bf48c74b7ef3ca7118d1d7928744d
   │
   │ o  message: J, id: 55e5dbaa7f26e0cfa1c2ee95479e2af088bf81caae4c2356d6eb8dfa6c114284
@@ -54,7 +54,7 @@ setup configuration
   │
   o  message: A, id: aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
 
-  $ mononoke_newadmin changelog -R repo graph -i $G,$J -l 3 -M -I
+  $ mononoke_admin changelog -R repo graph -i $G,$J -l 3 -M -I
   o  message: G, id: 9711852ec4f4b42937dd5b760c7b3f84345bf48c74b7ef3ca7118d1d7928744d
   │
   │ o  message: J, id: 55e5dbaa7f26e0cfa1c2ee95479e2af088bf81caae4c2356d6eb8dfa6c114284
@@ -73,7 +73,7 @@ setup configuration
   ├───╯
   ~
 
-  $ mononoke_newadmin changelog -R repo graph -i $C,$D,$G,$J -l 1 -M -I
+  $ mononoke_admin changelog -R repo graph -i $C,$D,$G,$J -l 1 -M -I
   o  message: G, id: 9711852ec4f4b42937dd5b760c7b3f84345bf48c74b7ef3ca7118d1d7928744d
   │
   │ o  message: J, id: 55e5dbaa7f26e0cfa1c2ee95479e2af088bf81caae4c2356d6eb8dfa6c114284
@@ -93,7 +93,7 @@ setup configuration
   │
   ~
 
-  $ mononoke_newadmin changelog -R repo graph -i $G,$J -M -I -A -D
+  $ mononoke_admin changelog -R repo graph -i $G,$J -M -I -A -D
   o  message: G, id: 9711852ec4f4b42937dd5b760c7b3f84345bf48c74b7ef3ca7118d1d7928744d, author: author, author date: 1970-01-01 00:00:00 +00:00
   │
   │ o  message: J, id: 55e5dbaa7f26e0cfa1c2ee95479e2af088bf81caae4c2356d6eb8dfa6c114284, author: author, author date: 1970-01-01 00:00:00 +00:00

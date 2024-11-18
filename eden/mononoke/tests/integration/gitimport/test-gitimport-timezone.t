@@ -36,7 +36,7 @@
   Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(d37ab14503b5323dd32b54f6b1da45c3e8add4dce31d6d28da89b9f3f27550b3)))
 
 # Set master_bookmark (gitimport does not do this yet)
-  $ mononoke_newadmin bookmarks -R repo set master_bookmark d37ab14503b5323dd32b54f6b1da45c3e8add4dce31d6d28da89b9f3f27550b3
+  $ mononoke_admin bookmarks -R repo set master_bookmark d37ab14503b5323dd32b54f6b1da45c3e8add4dce31d6d28da89b9f3f27550b3
   Creating publishing bookmark master_bookmark at d37ab14503b5323dd32b54f6b1da45c3e8add4dce31d6d28da89b9f3f27550b3
 
 # Start Mononoke

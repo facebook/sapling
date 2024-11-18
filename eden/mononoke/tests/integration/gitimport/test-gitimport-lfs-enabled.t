@@ -12,7 +12,7 @@ Use common repo setup
   $ GIT_LFS_INTERPRET_POINTERS=1 test_repos_for_git_lfs_import
 
 But it's available on the separate lfs server
-  $ mononoke_newadmin filestore -R legacy_lfs fetch --content-sha256 6c54a4de10537e482e9f91281fb85ab614e0e0f62307047f9b9f3ccea2de8204
+  $ mononoke_admin filestore -R legacy_lfs fetch --content-sha256 6c54a4de10537e482e9f91281fb85ab614e0e0f62307047f9b9f3ccea2de8204
   laaaaaaaaaarge file
 
 Git Import
@@ -20,7 +20,7 @@ Git Import
   Uploading LFS large_file sha256:6c54a4de size:20
   Uploading LFS large_file_non_canonical_pointer sha256:6c54a4de size:20
 We store full file contents for non-LFS file
-  $ mononoke_newadmin fetch -R repo -B heads/master_bookmark --path small_file
+  $ mononoke_admin fetch -R repo -B heads/master_bookmark --path small_file
   File-Type: regular
   Size: 8
   Content-Id: 5db7cda483f4d35a023d447b8210bd317497193813e9b7ac57268f525277b509
@@ -31,7 +31,7 @@ We store full file contents for non-LFS file
   sml fle
   
 We store just LFS pointer for LFS file
-  $ mononoke_newadmin fetch -R repo -B heads/master_bookmark --path large_file
+  $ mononoke_admin fetch -R repo -B heads/master_bookmark --path large_file
   File-Type: regular
   Size: 20
   Content-Id: 48ef00ac63821b09154b55f1b380d253f936afb076a873e1bcc1d137c8b5bab2
@@ -41,7 +41,7 @@ We store just LFS pointer for LFS file
   
   laaaaaaaaaarge file
   
-  $ mononoke_newadmin fetch -R repo -B heads/master_bookmark --path large_file_non_canonical_pointer
+  $ mononoke_admin fetch -R repo -B heads/master_bookmark --path large_file_non_canonical_pointer
   File-Type: regular
   Size: 20
   Content-Id: 48ef00ac63821b09154b55f1b380d253f936afb076a873e1bcc1d137c8b5bab2
@@ -59,13 +59,13 @@ This repo has 3 file content blobs stored (small + two LFS pointers + one large 
   $TESTTMP/blobstore/blobs/blob-repo0000.content.blake2.5db7cda483f4d35a023d447b8210bd317497193813e9b7ac57268f525277b509
 
 The actual file content is uploaded to the repo (this is the hash from pointer)
-  $ mononoke_newadmin filestore -R repo fetch  --content-sha256 6c54a4de10537e482e9f91281fb85ab614e0e0f62307047f9b9f3ccea2de8204
+  $ mononoke_admin filestore -R repo fetch  --content-sha256 6c54a4de10537e482e9f91281fb85ab614e0e0f62307047f9b9f3ccea2de8204
   laaaaaaaaaarge file
 
 Show that we still have all the original git objects
   $ BUNDLE_PATH="${TESTTMP}/repo_bundle.bundle"
   $ GIT_REPO_FROM_BUNDLE="${TESTTMP}/repo-git-from-bundle"
-  $ mononoke_newadmin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH"
+  $ mononoke_admin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH"
   $ git clone "$BUNDLE_PATH" "$GIT_REPO_FROM_BUNDLE"
   Cloning into '$TESTTMP/repo-git-from-bundle'...
   $ cd "$GIT_REPO_CLIENT"
@@ -81,15 +81,15 @@ Show that we still have all the original git objects
   100644 blob 1ab2b3357e304fef596198d92807d8d7e3580f0d	large_file
   100644 blob 8910fc3d7dae273e6ffd1d3982af8dfc418af416	small_file
 
-  $ mononoke_newadmin filestore -R repo fetch --content-git-sha1 8910fc3d7dae273e6ffd1d3982af8dfc418af416
+  $ mononoke_admin filestore -R repo fetch --content-git-sha1 8910fc3d7dae273e6ffd1d3982af8dfc418af416
   sml fle
-  $ mononoke_newadmin filestore -R repo fetch --content-git-sha1 1ab2b3357e304fef596198d92807d8d7e3580f0d
+  $ mononoke_admin filestore -R repo fetch --content-git-sha1 1ab2b3357e304fef596198d92807d8d7e3580f0d
   version https://git-lfs.github.com/spec/v1
   oid sha256:6c54a4de10537e482e9f91281fb85ab614e0e0f62307047f9b9f3ccea2de8204
   size 20
 
 Inspect bonsai change
-  $ mononoke_newadmin fetch -R repo -B heads/master_bookmark
+  $ mononoke_admin fetch -R repo -B heads/master_bookmark
   BonsaiChangesetId: 84fd51b5fa2a956b4c6135697f3e626655fbf2eb7c8478e4f3d5159b153effef
   Author: mononoke <mononoke@mononoke>
   Message: add large file non canonical pointer
@@ -98,7 +98,7 @@ Inspect bonsai change
   	 ADDED/MODIFIED (LFS, non-canonical pointer: 0356a836e448b746fa1f83ebdfd27d039bdf6038168d4fdba6074633d1af82a4): large_file_non_canonical_pointer 48ef00ac63821b09154b55f1b380d253f936afb076a873e1bcc1d137c8b5bab2
   
 
-  $ mononoke_newadmin git-objects -R repo fetch --id afae45be853e0e99e21ef1b1a0beba60e41d9753
+  $ mononoke_admin git-objects -R repo fetch --id afae45be853e0e99e21ef1b1a0beba60e41d9753
   The object is a Git Tree
   
   Tree {

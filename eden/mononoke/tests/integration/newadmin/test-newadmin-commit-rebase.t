@@ -28,10 +28,10 @@ setup configuration
   F=7d7e98c04f7dd3f4be0916b4f0b95fa44747b065f105bd36b87252356ae0d0f5
   G=afd6205b79a8c12bece065ad3788632f1dca072ccb7d0802237bf10e7ad4a620
 
-  $ mononoke_newadmin commit -R repo rebase -s $D -d $C --skip-rebase-validity-checks
+  $ mononoke_admin commit -R repo rebase -s $D -d $C --skip-rebase-validity-checks
   f41e886d61d03021b73d006acf237244086eb7a5d9c7989e44e59b76d3c3f2b5
 
-  $ mononoke_newadmin changelog -R repo graph -i $G,f41e886d61d03021b73d006acf237244086eb7a5d9c7989e44e59b76d3c3f2b5 -M -I
+  $ mononoke_admin changelog -R repo graph -i $G,f41e886d61d03021b73d006acf237244086eb7a5d9c7989e44e59b76d3c3f2b5 -M -I
   o  message: G, id: afd6205b79a8c12bece065ad3788632f1dca072ccb7d0802237bf10e7ad4a620
   │
   │ o  message: D, id: f41e886d61d03021b73d006acf237244086eb7a5d9c7989e44e59b76d3c3f2b5
@@ -46,12 +46,12 @@ setup configuration
   │
   o  message: A, id: aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
 
-  $ mononoke_newadmin commit -R repo rebase -s $E -t $G -d $C --skip-rebase-validity-checks
+  $ mononoke_admin commit -R repo rebase -s $E -t $G -d $C --skip-rebase-validity-checks
   c4300546b70e88ad3c00bc1014c68a182782d089cadb54fec05b1d8790580c3a
   6ce9ac91c1bf4fe665c1817373ec92e0a02ee14476a054b624ed2d0f6e8db9a8
   b22799d5d4e4bfbce8b21b0a073739d999e51add1e087ff940fe65ba68c5e58b
 
-  $ mononoke_newadmin changelog -R repo graph -i b22799d5d4e4bfbce8b21b0a073739d999e51add1e087ff940fe65ba68c5e58b,f41e886d61d03021b73d006acf237244086eb7a5d9c7989e44e59b76d3c3f2b5 -M -I
+  $ mononoke_admin changelog -R repo graph -i b22799d5d4e4bfbce8b21b0a073739d999e51add1e087ff940fe65ba68c5e58b,f41e886d61d03021b73d006acf237244086eb7a5d9c7989e44e59b76d3c3f2b5 -M -I
   o  message: G, id: b22799d5d4e4bfbce8b21b0a073739d999e51add1e087ff940fe65ba68c5e58b
   │
   o  message: F, id: 6ce9ac91c1bf4fe665c1817373ec92e0a02ee14476a054b624ed2d0f6e8db9a8

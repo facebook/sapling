@@ -115,7 +115,7 @@ function gitimport_repos_a_b_c {
 
   GIT_REPO_A_HEAD=$(rg ".*Ref: \"refs/heads/master_bookmark\": Some\(ChangesetId\(Blake2\((\w+).+" -or '$1' "$TESTTMP/gitimport_output")
 
-  GIT_REPO_A_HEAD_PARENT=$(mononoke_newadmin fetch -R "$SUBMODULE_REPO_NAME" -i "$GIT_REPO_A_HEAD" --json | jq -r .parents[0])
+  GIT_REPO_A_HEAD_PARENT=$(mononoke_admin fetch -R "$SUBMODULE_REPO_NAME" -i "$GIT_REPO_A_HEAD" --json | jq -r .parents[0])
 
 
   printf "\nGIT_REPO_A_HEAD: %s\n" "$GIT_REPO_A_HEAD"
@@ -146,7 +146,7 @@ function merge_repo_a_to_large_repo {
     --version-name "$IMPORT_CONFIG_VERSION_NAME" 2>&1 | tee "$TESTTMP/initial_import_output"
 
   print_section "Large repo bookmarks"
-  mononoke_newadmin bookmarks -R "$LARGE_REPO_NAME" list -S hg
+  mononoke_admin bookmarks -R "$LARGE_REPO_NAME" list -S hg
 
   IMPORTED_HEAD=$(rg ".+synced as (\w+) in.+" -or '$1' "$TESTTMP/initial_import_output")
   printf "\nIMPORTED_HEAD: %s\n\n" "$IMPORTED_HEAD"
@@ -189,17 +189,17 @@ function merge_repo_a_to_large_repo {
 
   sleep 2;
   print_section "Deriving all data types"
-  mononoke_newadmin derived-data -R "$LARGE_REPO_NAME" \
+  mononoke_admin derived-data -R "$LARGE_REPO_NAME" \
     derive -i "$SYNCED_HEAD" --all-types
 
   print_section "Count underived data types"
-  mononoke_newadmin derived-data -R "$LARGE_REPO_NAME" \
+  mononoke_admin derived-data -R "$LARGE_REPO_NAME" \
     count-underived -i "$SYNCED_HEAD" -T fsnodes
 
-  mononoke_newadmin derived-data -R "$LARGE_REPO_NAME" \
+  mononoke_admin derived-data -R "$LARGE_REPO_NAME" \
     count-underived -i "$SYNCED_HEAD" -T changeset_info
 
-  mononoke_newadmin derived-data -R "$LARGE_REPO_NAME" \
+  mononoke_admin derived-data -R "$LARGE_REPO_NAME" \
     count-underived -i "$SYNCED_HEAD" -T hgchangesets
 
 }
@@ -285,7 +285,7 @@ function create_repo_b_commits_for_submodule_pointer_update {
   echo "REPO_B_BONSAI: $REPO_B_BONSAI"
   # GIT_REPO_B_HEAD: 3cd7a66e604714b2b96af41e9c595be692f1f5f0713af3f7b2dc3426b05407bd
 
-  REPO_B_GIT_COMMIT_HASH=$(mononoke_newadmin convert --repo-id "$REPO_B_ID" -f bonsai -t git "$REPO_B_BONSAI")
+  REPO_B_GIT_COMMIT_HASH=$(mononoke_admin convert --repo-id "$REPO_B_ID" -f bonsai -t git "$REPO_B_BONSAI")
   echo "REPO_B_GIT_COMMIT_HASH: $REPO_B_GIT_COMMIT_HASH"
   # REPO_B_GIT_HASH: e412b2106ae18eab108f1f8d7ed6e4527d0296cc
 }
@@ -318,7 +318,7 @@ function create_repo_a_commit {
   GIT_REPO_A_HEAD=$(rg ".*Ref: \"refs/heads/master_bookmark\": Some\(ChangesetId\(Blake2\((\w+).+" -or '$1' "$TESTTMP/gitimport_repo_a_output")
   echo "GIT_REPO_A_HEAD: $GIT_REPO_A_HEAD"
 
-  REPO_A_GIT_HASH=$(mononoke_newadmin convert --repo-id "$SUBMODULE_REPO_ID" -f bonsai -t git "$GIT_REPO_A_HEAD")
+  REPO_A_GIT_HASH=$(mononoke_admin convert --repo-id "$SUBMODULE_REPO_ID" -f bonsai -t git "$GIT_REPO_A_HEAD")
   echo "REPO_A_GIT_HASH: $REPO_A_GIT_HASH"
 }
 
@@ -344,7 +344,7 @@ function create_repo_c_commit {
   GIT_REPO_C_HEAD=$(rg ".*Ref: \"refs/heads/master_bookmark\": Some\(ChangesetId\(Blake2\((\w+).+" -or '$1' "$TESTTMP/gitimport_repo_c_output")
   echo "GIT_REPO_C_HEAD: $GIT_REPO_C_HEAD"
 
-  REPO_C_GIT_HASH=$(mononoke_newadmin convert --repo-id "$REPO_C_ID" -f bonsai -t git "$GIT_REPO_C_HEAD")
+  REPO_C_GIT_HASH=$(mononoke_admin convert --repo-id "$REPO_C_ID" -f bonsai -t git "$GIT_REPO_C_HEAD")
   echo "REPO_C_GIT_HASH: $REPO_C_GIT_HASH"
 }
 
@@ -372,7 +372,7 @@ function create_repo_c_and_repo_b_commits_for_submodule_pointer_update {
   GIT_REPO_B_HEAD=$(rg ".*Ref: \"refs/heads/master_bookmark\": Some\(ChangesetId\(Blake2\((\w+).+" -or '$1' "$TESTTMP/gitimport_output")
   echo "GIT_REPO_B_HEAD: $GIT_REPO_B_HEAD"
 
-  REPO_B_GIT_COMMIT_HASH=$(mononoke_newadmin convert --repo-id "$REPO_B_ID" -f bonsai -t git "$GIT_REPO_B_HEAD")
+  REPO_B_GIT_COMMIT_HASH=$(mononoke_admin convert --repo-id "$REPO_B_ID" -f bonsai -t git "$GIT_REPO_B_HEAD")
   echo "REPO_B_GIT_COMMIT_HASH: $REPO_B_GIT_COMMIT_HASH"
 
 }
@@ -409,7 +409,7 @@ function switch_source_of_truth_to_large_repo {
 
   # Set the backsyncer mutable counter
   print_section "Get current large repo bookmark update log id to set the backsyncer counter"
-  LARGE_REPO_BOOKMARK_UPDATE_LOG_ID=$(mononoke_newadmin bookmarks \
+  LARGE_REPO_BOOKMARK_UPDATE_LOG_ID=$(mononoke_admin bookmarks \
     --repo-id "$large_repo" log "$MASTER_BOOKMARK_NAME" -S bonsai,hg -l1 \
     | cut -d " " -f1)
 

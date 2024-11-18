@@ -35,14 +35,14 @@ setup configuration
 
 
 
-  $ mononoke_newadmin commit-graph -R repo is-ancestor -i $C -i $J
+  $ mononoke_admin commit-graph -R repo is-ancestor -i $C -i $J
   true
 
-  $ mononoke_newadmin commit-graph -R repo is-ancestor -i $I -i $F
+  $ mononoke_admin commit-graph -R repo is-ancestor -i $I -i $F
   false
 
-  $ mononoke_newadmin commit-graph -R repo is-ancestor -i $I -i $H
+  $ mononoke_admin commit-graph -R repo is-ancestor -i $I -i $H
   false
 
-  $ mononoke_newadmin commit-graph -R repo is-ancestor -i $A -i $F
+  $ mononoke_admin commit-graph -R repo is-ancestor -i $A -i $F
   true

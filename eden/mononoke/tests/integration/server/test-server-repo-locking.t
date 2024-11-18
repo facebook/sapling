@@ -17,15 +17,15 @@
 
   $ start_and_wait_for_mononoke_server
 
-  $ mononoke_newadmin locking status
+  $ mononoke_admin locking status
   repo                 Unlocked
 
 Lock the repo
-  $ mononoke_newadmin locking lock -R repo --reason "integration test"
+  $ mononoke_admin locking lock -R repo --reason "integration test"
   repo locked
 
 Show it is locked
-  $ mononoke_newadmin locking status
+  $ mononoke_admin locking status
   repo                 Locked("integration test")
 
 Can still clone the repo
@@ -65,7 +65,7 @@ Cannot push to the server
   [255]
 
 Unlock the repo
-  $ mononoke_newadmin locking unlock -R repo
+  $ mononoke_admin locking unlock -R repo
   repo unlocked
 
 Now we can push

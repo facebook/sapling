@@ -125,7 +125,7 @@ Before config change
   successful sync of head 65f0b76c034d87adf7dac6f0b5a5442ab3f62edda21adb8e8ec57d1a99fb5905
   X Repo Sync execution finished from small repo imported_repo to large repo large-mon
 
-  $ mononoke_newadmin fetch -R $LARGE_REPO_NAME  -i ecc8ec74d00988653ae64ebf206a9ed42898449125b91f59ecd1d8a0a93f4a97 --json | jq .parents
+  $ mononoke_admin fetch -R $LARGE_REPO_NAME  -i ecc8ec74d00988653ae64ebf206a9ed42898449125b91f59ecd1d8a0a93f4a97 --json | jq .parents
   [
     "fa5173cebb32a908f52fd6f01b442a76f013bda5b3d4bbcf3e29af0227bbb74f"
   ]
@@ -264,7 +264,7 @@ Before config change
   IE=ee275b10c734fa09ff52acf808a3baafd24348114fa937e8f41958490b9b6857
   IF=20d91840623a3e0e6f3bc3c46ce6755d5f4c9ce6cfb49dae7b9cc8d9d0acfae9
   IG=2daec24778b88c326d1ba0f830d43a2d24d471dc22c48c8307096d0f60c9477f
-  $ quiet mononoke_newadmin mutable-counters --repo-id $LARGE_REPO_ID set xreposync_from_$IMPORTED_REPO_ID 2
+  $ quiet mononoke_admin mutable-counters --repo-id $LARGE_REPO_ID set xreposync_from_$IMPORTED_REPO_ID 2
   $ PREV_BOOK_VALUE=$(get_bookmark_value_edenapi $LARGE_REPO_NAME $MASTER_BOOKMARK)
   $ quiet mononoke_x_repo_sync "$IMPORTED_REPO_ID"  "$LARGE_REPO_ID" tail --bookmark-regex "heads/$MASTER_BOOKMARK" --catch-up-once
 
@@ -307,7 +307,7 @@ Before config change
   successful sync of head 156943c35cda314d72b0177b06d5edf3c92dc9c9505d7b3171b9230f7c1768bb
   X Repo Sync execution finished from small repo another_repo to large repo large-mon
 
-  $ mononoke_newadmin fetch -R $LARGE_REPO_NAME  -i 0a9797a0fa6b3284b9d73ec43357f06a9b00d6fa402122d1bbfbeac16e3a2c39 --json | jq .parents
+  $ mononoke_admin fetch -R $LARGE_REPO_NAME  -i 0a9797a0fa6b3284b9d73ec43357f06a9b00d6fa402122d1bbfbeac16e3a2c39 --json | jq .parents
   [
     "7b877236dc63b9df21954f78b6c8ce8b69a844e786fe58a2932de04ac685075d"
   ]
@@ -371,7 +371,7 @@ Before config change
 
   $ FINAL_BOOK_VALUE=$(x_repo_lookup $IMPORTED_REPO_NAME $LARGE_REPO_NAME $II)
 
-  $ mononoke_newadmin changelog -R $LARGE_REPO_NAME graph -i $FINAL_BOOK_VALUE -M
+  $ mononoke_admin changelog -R $LARGE_REPO_NAME graph -i $FINAL_BOOK_VALUE -M
   o  message: II
   │
   o  message: IH

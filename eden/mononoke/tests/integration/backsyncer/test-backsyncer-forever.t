@@ -67,8 +67,8 @@ Config change
 
 -- wait a second to give backsyncer some time to catch up
   $ wait_for_bookmark_move_away_edenapi small-mon master_bookmark  "$PREV_BOOK_VALUE"
-  $ LARGE_MASTER_BONSAI=$(mononoke_newadmin bookmarks --repo-id $REPOIDLARGE get master_bookmark)
-  $ SMALL_MASTER_BONSAI=$(mononoke_newadmin bookmarks --repo-id $REPOIDSMALL get master_bookmark)
+  $ LARGE_MASTER_BONSAI=$(mononoke_admin bookmarks --repo-id $REPOIDLARGE get master_bookmark)
+  $ SMALL_MASTER_BONSAI=$(mononoke_admin bookmarks --repo-id $REPOIDSMALL get master_bookmark)
   $ update_mapping_version "$REPOIDSMALL" "$SMALL_MASTER_BONSAI" "$REPOIDLARGE" "$LARGE_MASTER_BONSAI" "new_version"
 
 -- restart the backsyncer to empty the synced commit mapping cache

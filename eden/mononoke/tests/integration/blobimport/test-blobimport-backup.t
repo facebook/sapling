@@ -33,10 +33,10 @@ setup configuration
   (activating bookmark master_bookmark)
 
 # Check content_id for file B
-  $ mononoke_newadmin filestore -R repo store B
+  $ mononoke_admin filestore -R repo store B
   Wrote 55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f (1 bytes)
 # Upload C as it wasn't imported
-  $ mononoke_newadmin filestore -R repo store C
+  $ mononoke_admin filestore -R repo store C
   Wrote 896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d (1 bytes)
   $ cd $TESTTMP
 
@@ -79,14 +79,14 @@ setup configuration
   > EOF
   $ mononoke_testtool create-bonsai -R repo bonsai_file
   Created bonsai changeset 4b71c845e8783e58fce825fa80254840eba291d323a5d69218ad927fc801153c for Hg changeset 26805aba1e600a82e93661149f2313866a221a7b
-  $ mononoke_newadmin bookmarks -R repo set master_bookmark 26805aba1e600a82e93661149f2313866a221a7b
+  $ mononoke_admin bookmarks -R repo set master_bookmark 26805aba1e600a82e93661149f2313866a221a7b
   Creating publishing bookmark master_bookmark at 4b71c845e8783e58fce825fa80254840eba291d323a5d69218ad927fc801153c
-  $ mononoke_newadmin bookmarks -R repo list
+  $ mononoke_admin bookmarks -R repo list
   4b71c845e8783e58fce825fa80254840eba291d323a5d69218ad927fc801153c master_bookmark
 
   $ REPOID=2 blobimport repo/.hg backup --backup-from-repo-name repo
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select * from mutable_counters";
   0|highest-imported-gen-num|2
   2|highest-imported-gen-num|3
-  $ mononoke_newadmin bookmarks --repo-id=2 list
+  $ mononoke_admin bookmarks --repo-id=2 list
   4b71c845e8783e58fce825fa80254840eba291d323a5d69218ad927fc801153c master_bookmark

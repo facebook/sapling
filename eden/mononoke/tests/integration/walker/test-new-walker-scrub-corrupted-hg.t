@@ -24,7 +24,7 @@ Configs are generated from scratch so we don't have to update them in fixtures t
   $ cd "$TESTTMP"
   $ tar --strip-components=1 -xf "$TEST_FIXTURES/fixtures/repo_with_newline_author_commit.tar.xz" repo_with_newline_author_commit/blobstore repo_with_newline_author_commit/monsql
 Check that indeed the bad commit is bad
-  $ mononoke_newadmin fetch -R repo -B bad
+  $ mononoke_admin fetch -R repo -B bad
   Error: Failed to load changeset c567ecc582f8822cf1529a127dec105db78a440fbeaa21221ce2abc4affff6ec
   
   Caused by:

@@ -34,7 +34,7 @@
 
 # Set test bookmark
 
-  $ mononoke_newadmin bookmarks -R repo set "$BOOKMARK" 0b82d99309fc23ae5ae39c8eb93aaee9178a746f6cd882afddc183e0d3217195
+  $ mononoke_admin bookmarks -R repo set "$BOOKMARK" 0b82d99309fc23ae5ae39c8eb93aaee9178a746f6cd882afddc183e0d3217195
   Creating publishing bookmark master_bookmark at 0b82d99309fc23ae5ae39c8eb93aaee9178a746f6cd882afddc183e0d3217195
 
 # Start Mononoke

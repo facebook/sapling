@@ -44,7 +44,7 @@
   $ find -type f -name '*git_object*' -delete
 
 # Regenerate git commits and trees
-  $ quiet mononoke_newadmin derived-data -R repo derive -T git_trees -T git_commits -T git_delta_manifests_v2 -T unodes --all-bookmarks
+  $ quiet mononoke_admin derived-data -R repo derive -T git_trees -T git_commits -T git_delta_manifests_v2 -T unodes --all-bookmarks
 
 # Capture the new bonsai_git_mapping output representing the git commits re-generated for the bonsais
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT hex(git_sha1) as git_id, hex(bcs_id) as bonsai_id FROM bonsai_git_mapping ORDER BY hex(git_sha1)" > new_bonsai_git_mapping

@@ -25,11 +25,11 @@ setup configuration
   snapshot: Snapshot created with id 2a4cebaabddd194bda1812da6b762215dfbbe7f9ed1cfe03d3b1e02ea6e9c320
 
 List the blob contents of a bubble without passing any argument:
-  $ mononoke_newadmin ephemeral-store -R repo list
+  $ mononoke_admin ephemeral-store -R repo list
   Error: Need to provide either changeset ID or bubble ID as input
   [1]
 List the blob contents of a bubble using the bubble ID:
-  $ mononoke_newadmin ephemeral-store -R repo list -b 1 --ordered
+  $ mononoke_admin ephemeral-store -R repo list -b 1 --ordered
   eph1.repo0000.alias.gitsha1.6b9963d7b81521bc09655857e272bf0f130e6bc3
   eph1.repo0000.alias.gitsha1.6fd97149d33202f1315d756e358078299c30bd7c
   eph1.repo0000.alias.gitsha1.904cb6675fad760f9fa1c27385e0c0c3d102820e
@@ -69,11 +69,11 @@ List the blob contents of a bubble using the bubble ID:
   eph1.repo0000.content_metadata2.blake2.d39ff8be35d80756c6c65a40b8c4d1e7c64f04ff6f99d77d2fadda34cb3dc6b1
 
 List the blob contents of a bubble using invalid bubble ID:
-  $ mononoke_newadmin ephemeral-store -R repo list -b 100001
+  $ mononoke_admin ephemeral-store -R repo list -b 100001
   Error: bubble 100001 does not exist, or has expired
   [1]
 List the blob contents of a bubble using the changeset ID:
-  $ mononoke_newadmin ephemeral-store -R repo list -i 2a4cebaabddd194bda1812da6b762215dfbbe7f9ed1cfe03d3b1e02ea6e9c320 --ordered
+  $ mononoke_admin ephemeral-store -R repo list -i 2a4cebaabddd194bda1812da6b762215dfbbe7f9ed1cfe03d3b1e02ea6e9c320 --ordered
   eph1.repo0000.alias.gitsha1.6b9963d7b81521bc09655857e272bf0f130e6bc3
   eph1.repo0000.alias.gitsha1.6fd97149d33202f1315d756e358078299c30bd7c
   eph1.repo0000.alias.gitsha1.904cb6675fad760f9fa1c27385e0c0c3d102820e
@@ -114,23 +114,23 @@ List the blob contents of a bubble using the changeset ID:
 
 
 List the blob contents of a bubble using invalid changeset ID:
-  $ mononoke_newadmin ephemeral-store -R repo list -i ofcourse_this_is_invalid
+  $ mononoke_admin ephemeral-store -R repo list -i ofcourse_this_is_invalid
   Error: invalid blake2 input: need exactly 64 hex digits
   [1]
 
 List the blob contents of a bubble using non-matching changeset ID:
-  $ mononoke_newadmin ephemeral-store -R repo list -i 39c49a9ad363e4a2f0c314093683a84a85bfaa7b4da83046e58ccb4fbeb2f6c5
+  $ mononoke_admin ephemeral-store -R repo list -i 39c49a9ad363e4a2f0c314093683a84a85bfaa7b4da83046e58ccb4fbeb2f6c5
   Error: No bubble exists for changeset ID 39c49a9ad363e4a2f0c314093683a84a85bfaa7b4da83046e58ccb4fbeb2f6c5
   [1]
 
 List the blob contents of a bubble after limiting the results:
-  $ mononoke_newadmin ephemeral-store -R repo list -b 1 -l 4 --start-from repo0000.content_metadata.blake2 --ordered
+  $ mononoke_admin ephemeral-store -R repo list -b 1 -l 4 --start-from repo0000.content_metadata.blake2 --ordered
   eph1.repo0000.content_metadata2.blake2.* (glob)
   eph1.repo0000.content_metadata2.blake2.* (glob)
   eph1.repo0000.content_metadata2.blake2.* (glob)
   eph1.repo0000.content_metadata2.blake2.* (glob)
 List the blob contents of a bubble after a specified key:
-  $ mononoke_newadmin ephemeral-store -R repo list -b 1 --start-from repo0000.content_metadata --ordered
+  $ mononoke_admin ephemeral-store -R repo list -b 1 --start-from repo0000.content_metadata --ordered
   eph1.repo0000.content_metadata2.blake2.4f3fc85925a86f48ba4052a20c4d70ac9c8024f4e2d984870f5a292ffb701f4d
   eph1.repo0000.content_metadata2.blake2.6b0f000404b62473b82f51e1faa119c2ed7652e03188bf2770b0f701cae5c699
   eph1.repo0000.content_metadata2.blake2.74561488c4d96fb423fa43522623d710eb4cad120d5d63565ecdab5e9c2d5dc2

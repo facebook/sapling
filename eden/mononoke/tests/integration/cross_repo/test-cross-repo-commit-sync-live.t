@@ -61,14 +61,14 @@ Before the change
 Make a config change
   $ update_commit_sync_map_first_option
 -- try to create mapping commit with incorrect file - this should fail
-  $ mononoke_newadmin cross-repo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL pushredirection change-mapping-version \
+  $ mononoke_admin cross-repo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL pushredirection change-mapping-version \
   > --author author \
   > --large-repo-bookmark master_bookmark \
   > --version-name new_version \
   > --dump-mapping-large-repo-path mapping.json 2>&1 | grep 'cannot dump'
   * cannot dump mapping to a file because path doesn't rewrite to a small repo (glob)
 -- now fix the filename - it should succeed
-  $ mononoke_newadmin cross-repo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL pushredirection change-mapping-version \
+  $ mononoke_admin cross-repo --source-repo-id $REPOIDLARGE --target-repo-id $REPOIDSMALL pushredirection change-mapping-version \
   > --author author \
   > --large-repo-bookmark master_bookmark \
   > --version-name new_version \
@@ -142,5 +142,5 @@ After the change
   smallrepofolder_after/mapping.json
 
 -- Show the actual mapping version used for the operation
-  $ with_stripped_logs mononoke_newadmin cross-repo --source-repo-id 0 --target-repo-id 1 map -i $(hg whereami)
+  $ with_stripped_logs mononoke_admin cross-repo --source-repo-id 0 --target-repo-id 1 map -i $(hg whereami)
   RewrittenAs([(ChangesetId(Blake2(*)), CommitSyncConfigVersion("new_version"))]) (glob)

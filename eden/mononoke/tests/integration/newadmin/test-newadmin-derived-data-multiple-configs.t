@@ -28,25 +28,25 @@ setup configuration
 
 
 Deriving unodes using the "default" config succeeds since it's enabled
-  $ mononoke_newadmin derived-data -R repo derive -T unodes -i $D
-  $ mononoke_newadmin derived-data -R repo exists -T unodes -i $D
+  $ mononoke_admin derived-data -R repo derive -T unodes -i $D
+  $ mononoke_admin derived-data -R repo exists -T unodes -i $D
   Derived: f41e886d61d03021b73d006acf237244086eb7a5d9c7989e44e59b76d3c3f2b5
 
 Deriving skeleton_manifests using the "default" config fails because it's not enabled
-  $ mononoke_newadmin derived-data -R repo derive -T skeleton_manifests -i $D
+  $ mononoke_admin derived-data -R repo derive -T skeleton_manifests -i $D
   Error: Derivation of skeleton_manifests is not enabled for repo=repo repoid=0
   [1]
-  $ mononoke_newadmin derived-data -R repo -c other exists -T skeleton_manifests -i $D
+  $ mononoke_admin derived-data -R repo -c other exists -T skeleton_manifests -i $D
   Not Derived: f41e886d61d03021b73d006acf237244086eb7a5d9c7989e44e59b76d3c3f2b5
 
 Deriving unodes using the "other" config fails
-  $ mononoke_newadmin derived-data -R repo -c other derive -T unodes -i $F
+  $ mononoke_admin derived-data -R repo -c other derive -T unodes -i $F
   Error: Derivation of unodes is not enabled for repo=repo repoid=0
   [1]
-  $ mononoke_newadmin derived-data -R repo exists -T unodes -i $F
+  $ mononoke_admin derived-data -R repo exists -T unodes -i $F
   Not Derived: 7d7e98c04f7dd3f4be0916b4f0b95fa44747b065f105bd36b87252356ae0d0f5
 
 Deriving skeleton_manifests using the "other" config succeeds
-  $ mononoke_newadmin derived-data -R repo -c other derive -T skeleton_manifests -i $F
-  $ mononoke_newadmin derived-data -R repo -c other exists -T skeleton_manifests -i $F
+  $ mononoke_admin derived-data -R repo -c other derive -T skeleton_manifests -i $F
+  $ mononoke_admin derived-data -R repo -c other exists -T skeleton_manifests -i $F
   Derived: 7d7e98c04f7dd3f4be0916b4f0b95fa44747b065f105bd36b87252356ae0d0f5

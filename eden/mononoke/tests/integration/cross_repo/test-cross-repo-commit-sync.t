@@ -11,9 +11,9 @@
   $ init_two_small_one_large_repo
 
 -- get some bonsai hashes to avoid magic strings later
-  $ FBSOURCE_MASTER_BONSAI=$(mononoke_newadmin bookmarks --repo-id 1 get master_bookmark)
-  $ OVRSOURCE_MASTER_BONSAI=$(mononoke_newadmin bookmarks --repo-id 2 get master_bookmark)
-  $ MEGAREPO_MERGE_BONSAI=$(mononoke_newadmin bookmarks --repo-id 0 get master_bookmark)
+  $ FBSOURCE_MASTER_BONSAI=$(mononoke_admin bookmarks --repo-id 1 get master_bookmark)
+  $ OVRSOURCE_MASTER_BONSAI=$(mononoke_admin bookmarks --repo-id 2 get master_bookmark)
+  $ MEGAREPO_MERGE_BONSAI=$(mononoke_admin bookmarks --repo-id 0 get master_bookmark)
 
 -- insert sync mapping entry
   $ add_synced_commit_mapping_entry 1 $FBSOURCE_MASTER_BONSAI 0 $MEGAREPO_MERGE_BONSAI TEST_VERSION_NAME
@@ -90,14 +90,14 @@
   * processing log entry * (glob)
   * processing log entry * (glob)
   * processing log entry * (glob)
-  $ REPOIDLARGE=0 REPOIDSMALL=1 verify_wc $(mononoke_newadmin bookmarks --repo-id 0 get master_bookmark)
-  $ REPOIDLARGE=0 REPOIDSMALL=1 verify_wc $(mononoke_newadmin bookmarks --repo-id 0 get fbsource/somebook)
+  $ REPOIDLARGE=0 REPOIDSMALL=1 verify_wc $(mononoke_admin bookmarks --repo-id 0 get master_bookmark)
+  $ REPOIDLARGE=0 REPOIDSMALL=1 verify_wc $(mononoke_admin bookmarks --repo-id 0 get fbsource/somebook)
 
 -- sync ovrsource
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES (0, 'xreposync_from_2', 2)"
   $ mononoke_x_repo_sync 2 0 tail --catch-up-once |& grep processing
   * processing log entry * (glob)
-  $ REPOIDLARGE=0 REPOIDSMALL=2 verify_wc $(mononoke_newadmin bookmarks --repo-id 0 get master_bookmark)
+  $ REPOIDLARGE=0 REPOIDSMALL=2 verify_wc $(mononoke_admin bookmarks --repo-id 0 get master_bookmark)
 
 -- one more push from fbsource to make sure resuming works
 -- it also tests rewrite dates mode
@@ -174,14 +174,14 @@ but let's  say we synced that commit manually
   * target cs id is Some(ChangesetId(Blake2(5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb))) (glob)
 
 it still doesn't have any data derived
-  $ mononoke_newadmin derived-data -R meg-mon exists -T changeset_info -i 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
+  $ mononoke_admin derived-data -R meg-mon exists -T changeset_info -i 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
   Not Derived: 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
 
 and tried again, this time in dry run mode with limit 0 to ensure such command wouldn't do anything
   $ crossrepo_verify_bookmarks 0 2 --update-large-repo-bookmarks --no-bookmark-updates --limit 0|& grep bookmark | strip_glog | sort
 
 it still doesn't have any data derived
-  $ mononoke_newadmin derived-data -R meg-mon exists -T changeset_info -i 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
+  $ mononoke_admin derived-data -R meg-mon exists -T changeset_info -i 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
   Not Derived: 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
 
 and tried again, this time in dry run mode with no limit
@@ -190,7 +190,7 @@ and tried again, this time in dry run mode with no limit
   skipping master_bookmark because it's a common bookmark
 
 and the data is derived
-  $ mononoke_newadmin derived-data -R meg-mon exists -T changeset_info -i 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
+  $ mononoke_admin derived-data -R meg-mon exists -T changeset_info -i 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
   Derived: 5ec36a79a341b4235da29af79ff591881a994b44c94acaa10c3f583bdef4f2fb
 
 and tried again

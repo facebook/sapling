@@ -83,12 +83,12 @@
    - [deleted]         another_branch
 
 # For now, the tag and ref are still in Mononoke
-  $ mononoke_newadmin bookmarks -R repo get tags/first_tag
+  $ mononoke_admin bookmarks -R repo get tags/first_tag
   Metadata changeset for tag bookmark tags/first_tag: 
   5ca579c0e3ebea708371b65ce559e5a51b231ad1b6f3cdfd874ca27362a2a6a8
   Changeset pointed to by the tag bookmark tags/first_tag
   032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044
-  $ mononoke_newadmin bookmarks -R repo get heads/another_branch
+  $ mononoke_admin bookmarks -R repo get heads/another_branch
   032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044
 
 # Re-import
@@ -111,7 +111,7 @@
   Bookmark: "tags/first_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (deleted)
 
 # The tag and ref are no longer in Mononoke
-  $ mononoke_newadmin bookmarks -R repo get tags/first_tag
+  $ mononoke_admin bookmarks -R repo get tags/first_tag
   (not set)
-  $ mononoke_newadmin bookmarks -R repo get heads/another_branch
+  $ mononoke_admin bookmarks -R repo get heads/another_branch
   (not set)

@@ -21,10 +21,10 @@ setup configuration
   C=aa6be8217bef1e8a02b7667b71a3ea721e9f41710e0f33f06b6cb77969be7777
   D=f448ac19bb6ef701966225d5fb556bd6454673e567e5459b367490e8892008b7
 
-  $ mononoke_newadmin convert -R repo -f bonsai -t hg 7bf3f69aa62ffa25186bbb6e6869f0cc297f556bce05a3c639b56f1e3f6f0cf4
+  $ mononoke_admin convert -R repo -f bonsai -t hg 7bf3f69aa62ffa25186bbb6e6869f0cc297f556bce05a3c639b56f1e3f6f0cf4
   06cc1e6d132edcab226ad7f30976254dc0ce7025
 
-  $ mononoke_newadmin convert -R repo -t bonsai,hg 06cc1e6d132edcab226ad7f30976254dc0ce7025
+  $ mononoke_admin convert -R repo -t bonsai,hg 06cc1e6d132edcab226ad7f30976254dc0ce7025
   bonsai: 7bf3f69aa62ffa25186bbb6e6869f0cc297f556bce05a3c639b56f1e3f6f0cf4
   hg: 06cc1e6d132edcab226ad7f30976254dc0ce7025
 

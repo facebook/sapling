@@ -122,7 +122,7 @@ push a master commit with the same content
   updating bookmark master_bookmark
 
 Make sure the server derives the linknode info for public commit.
-  $ mononoke_newadmin derived-data -R repo derive -T hgchangesets -T filenodes -B master_bookmark
+  $ mononoke_admin derived-data -R repo derive -T hgchangesets -T filenodes -B master_bookmark
 
 pull only the master branch into another repo
   $ cd $TESTTMP/repo-pull2

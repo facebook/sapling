@@ -71,7 +71,7 @@
 
 -- insert sync mapping entry for SA and DA which are equivalent
   $ add_synced_commit_mapping_entry 1 $SA 0 $LA test_version
-  $ mononoke_newadmin bookmarks --repo-name large list
+  $ mononoke_admin bookmarks --repo-name large list
   b32ac5e4bcae0f9e8a25327e30674cf4f81ade62b6fb6fdf4e561f5099ec396a common_bookmark
   b32ac5e4bcae0f9e8a25327e30674cf4f81ade62b6fb6fdf4e561f5099ec396a master_bookmark
 
@@ -95,7 +95,7 @@
   * successful sync bookmark update log #3 (glob)
   * X Repo Sync execution finished from small repo small to large repo large (glob)
 
-  $ mononoke_newadmin bookmarks --repo-name large list
+  $ mononoke_admin bookmarks --repo-name large list
   b32ac5e4bcae0f9e8a25327e30674cf4f81ade62b6fb6fdf4e561f5099ec396a common_bookmark
   b32ac5e4bcae0f9e8a25327e30674cf4f81ade62b6fb6fdf4e561f5099ec396a master_bookmark
   b32ac5e4bcae0f9e8a25327e30674cf4f81ade62b6fb6fdf4e561f5099ec396a small_repo_prefix/heads/common_bookmark
@@ -147,7 +147,7 @@
   * successful sync bookmark update log #4 (glob)
   * X Repo Sync execution finished from small repo small to large repo large (glob)
 
-  $ mononoke_newadmin bookmarks --repo-name large list
+  $ mononoke_admin bookmarks --repo-name large list
   d52189c4c92bc5d3c99269e794afb72c31caf9ed4eba39abbb3c2739f010096d common_bookmark
   e3c1a924a6c56bf0dfbd0173601239a4776b6ed17075617270c27c80456e12fb master_bookmark
   b32ac5e4bcae0f9e8a25327e30674cf4f81ade62b6fb6fdf4e561f5099ec396a small_repo_prefix/heads/common_bookmark
@@ -194,7 +194,7 @@
   X Repo Sync execution finished from small repo small to large repo large
 
 -- check the state of bookmarks in the large repo
-  $ mononoke_newadmin bookmarks --repo-name large list
+  $ mononoke_admin bookmarks --repo-name large list
   d52189c4c92bc5d3c99269e794afb72c31caf9ed4eba39abbb3c2739f010096d common_bookmark
   e3c1a924a6c56bf0dfbd0173601239a4776b6ed17075617270c27c80456e12fb master_bookmark
   b149e7a688c2bac6a2f25dc4b846060f774967ae82eeac54cc1a7c148b215b27 small_repo_prefix/heads/common_bookmark
@@ -202,7 +202,7 @@
   ccca231a326f5060eebc66ed1f1ad6aaa1490f1d7faa40cc469e59bf5a4e1ee9 small_repo_prefix/tags/release_b
 
 -- check the graph after all the syncing
-  $ mononoke_newadmin changelog -R large graph -i d52189c4c92bc5d3c99269e794afb72c31caf9ed4eba39abbb3c2739f010096d,e3c1a924a6c56bf0dfbd0173601239a4776b6ed17075617270c27c80456e12fb,b149e7a688c2bac6a2f25dc4b846060f774967ae82eeac54cc1a7c148b215b27,ccca231a326f5060eebc66ed1f1ad6aaa1490f1d7faa40cc469e59bf5a4e1ee9,f2f336ed26e996561dc4156ce6a5b647a30abe6b0584615c5739caaf8f6d153e,540414777d82df622b2762dc79dfba2d92f994481105e34d47274c4742dbedb0 -M
+  $ mononoke_admin changelog -R large graph -i d52189c4c92bc5d3c99269e794afb72c31caf9ed4eba39abbb3c2739f010096d,e3c1a924a6c56bf0dfbd0173601239a4776b6ed17075617270c27c80456e12fb,b149e7a688c2bac6a2f25dc4b846060f774967ae82eeac54cc1a7c148b215b27,ccca231a326f5060eebc66ed1f1ad6aaa1490f1d7faa40cc469e59bf5a4e1ee9,f2f336ed26e996561dc4156ce6a5b647a30abe6b0584615c5739caaf8f6d153e,540414777d82df622b2762dc79dfba2d92f994481105e34d47274c4742dbedb0 -M
   o  message: SC
   │
   o  message: SB

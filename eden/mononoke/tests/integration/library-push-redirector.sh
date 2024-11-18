@@ -10,7 +10,7 @@
 function verify_wc() {
    local large_repo_commit
    large_repo_commit="$1"
-   "$MONONOKE_NEWADMIN" \
+   "$MONONOKE_ADMIN" \
      "${CACHE_ARGS[@]}" \
      "${COMMON_ARGS[@]}" --log-level ERROR \
      --mononoke-config-path  "$TESTTMP"/mononoke-config \
@@ -757,7 +757,7 @@ function enable_pushredirect {
   setup_acls
   mkdir -p "$TESTTMP"/mononoke-config
   # redirecting stderr is not nice, but avoids a lot of noise in the "disable-all-network-access" case
-  "$MONONOKE_NEWADMIN" \
+  "$MONONOKE_ADMIN" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" --log-level ERROR \
     --mononoke-config-path  "$TESTTMP"/mononoke-config \

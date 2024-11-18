@@ -168,7 +168,7 @@ function clone_and_log_large_repo {
   cd "$LARGE_REPO_NAME" || exit
 
   for LARGE_BCS_ID in "${LARGE_BCS_IDS[@]}"; do
-    LARGE_CS_ID=$(mononoke_newadmin convert --from bonsai --to hg -R "$LARGE_REPO_NAME" "$LARGE_BCS_ID" --derive)
+    LARGE_CS_ID=$(mononoke_admin convert --from bonsai --to hg -R "$LARGE_REPO_NAME" "$LARGE_BCS_ID" --derive)
     if [ -n "$LARGE_CS_ID" ]; then
       hg pull -q -r "$LARGE_CS_ID"
     fi
@@ -176,14 +176,14 @@ function clone_and_log_large_repo {
 
   sl_log --stat -r "sort(all(), desc)"
 
-  printf "\n\nRunning mononoke_newadmin to verify mapping\n\n"
+  printf "\n\nRunning mononoke_admin to verify mapping\n\n"
   for LARGE_BCS_ID in "${LARGE_BCS_IDS[@]}"; do
-    quiet_grep RewrittenAs -- with_stripped_logs mononoke_newadmin cross-repo --source-repo-id "$LARGE_REPO_ID" --target-repo-id "$SUBMODULE_REPO_ID" map -i "$LARGE_BCS_ID"
+    quiet_grep RewrittenAs -- with_stripped_logs mononoke_admin cross-repo --source-repo-id "$LARGE_REPO_ID" --target-repo-id "$SUBMODULE_REPO_ID" map -i "$LARGE_BCS_ID"
   done
 
   printf "\nDeriving all the enabled derived data types\n"
   for LARGE_BCS_ID in "${LARGE_BCS_IDS[@]}"; do
-    quiet mononoke_newadmin derived-data -R "$LARGE_REPO_NAME" derive --all-types \
+    quiet mononoke_admin derived-data -R "$LARGE_REPO_NAME" derive --all-types \
       -i "$LARGE_BCS_ID" 2>&1| rg "Error" || true # filter to keep only Error line if there is an error
   done
 }

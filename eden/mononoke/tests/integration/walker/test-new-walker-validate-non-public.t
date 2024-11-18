@@ -35,7 +35,7 @@ Record the filenode info
   $ FILENODEC=$(sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT hex(filenode) FROM filenodes where linknode=x'$HGCOMMITC' and path_hash=x'$PATHHASHC'")
 
 Make a really non-public commit by importing it and not advancing bookmarks
-  $ BONSAIPUBLIC=$(mononoke_newadmin bookmarks --repo-id $REPOID get master_bookmark)
+  $ BONSAIPUBLIC=$(mononoke_admin bookmarks --repo-id $REPOID get master_bookmark)
   $ cd repo
   $ HGCOMMITC=$(hg log -r tip -T '{node}')
   $ mkcommit C

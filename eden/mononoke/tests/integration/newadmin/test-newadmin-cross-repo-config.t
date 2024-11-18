@@ -10,12 +10,12 @@ setup configerator configs
   $ setup_mononoke_config
   $ setup_configerator_configs
 
-  $ mononoke_newadmin cross-repo-config -R repo list
+  $ mononoke_admin cross-repo-config -R repo list
   TEST_VERSION_NAME
   TEST_VERSION_NAME_COMPLEX
   TEST_VERSION_NAME_OLD
 
-  $ mononoke_newadmin cross-repo-config -R repo list --with-contents
+  $ mononoke_admin cross-repo-config -R repo list --with-contents
   TEST_VERSION_NAME:
     large repo: 0
     common pushrebase bookmarks: [BookmarkKey { name: BookmarkName { bookmark: "master_bookmark" }, category: Branch }]
@@ -76,7 +76,7 @@ setup configerator configs
         xplat->.ovrsource-rest/xplat
   
   
-  $ mononoke_newadmin cross-repo-config -R repo by-version TEST_VERSION_NAME_OLD
+  $ mononoke_admin cross-repo-config -R repo by-version TEST_VERSION_NAME_OLD
   large repo: 0
   common pushrebase bookmarks: [BookmarkKey { name: BookmarkName { bookmark: "master_bookmark" }, category: Branch }]
   version name: TEST_VERSION_NAME_OLD

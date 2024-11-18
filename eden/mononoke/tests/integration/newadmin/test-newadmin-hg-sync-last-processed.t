@@ -42,75 +42,75 @@ setup stub data
   8|0|6666666666666666666666666666666666666666666666666666666666666666|blobimport
   9|0|7777777777777777777777777777777777777777777777777777777777777777|blobimport
 Check that we have no counter
-  $ mononoke_newadmin hg-sync -R repo last-processed
+  $ mononoke_admin hg-sync -R repo last-processed
   No counter found for repo (0)
 
 Skipping ahead from the start of a series of regular changes should fail
-  $ mononoke_newadmin hg-sync -R repo last-processed --set 1
+  $ mononoke_admin hg-sync -R repo last-processed --set 1
   No counter found for repo (0)
   Counter for repo (0) set to 1
-  $ mononoke_newadmin hg-sync -R repo last-processed --skip-blobimport --dry-run
+  $ mononoke_admin hg-sync -R repo last-processed --skip-blobimport --dry-run
   Counter for repo (0) has value 1
   Error: No valid counter position to skip ahead to
   [1]
-  $ mononoke_newadmin hg-sync -R repo last-processed --skip-blobimport
+  $ mononoke_admin hg-sync -R repo last-processed --skip-blobimport
   Counter for repo (0) has value 1
   Error: No valid counter position to skip ahead to
   [1]
 Skipping ahead from the middle of a series of regular changes should fail (1)
-  $ mononoke_newadmin hg-sync -R repo last-processed --set 5
+  $ mononoke_admin hg-sync -R repo last-processed --set 5
   Counter for repo (0) has value 1
   Counter for repo (0) set to 5
-  $ mononoke_newadmin hg-sync -R repo last-processed --skip-blobimport --dry-run
+  $ mononoke_admin hg-sync -R repo last-processed --skip-blobimport --dry-run
   Counter for repo (0) has value 5
   Error: No valid counter position to skip ahead to
   [1]
-  $ mononoke_newadmin hg-sync -R repo last-processed --skip-blobimport
+  $ mononoke_admin hg-sync -R repo last-processed --skip-blobimport
   Counter for repo (0) has value 5
   Error: No valid counter position to skip ahead to
   [1]
 Skipping ahead from the middle of a series of regular changes should fail (2)
-  $ mononoke_newadmin hg-sync -R repo last-processed --set 6
+  $ mononoke_admin hg-sync -R repo last-processed --set 6
   Counter for repo (0) has value 5
   Counter for repo (0) set to 6
-  $ mononoke_newadmin hg-sync -R repo last-processed --skip-blobimport --dry-run
+  $ mononoke_admin hg-sync -R repo last-processed --skip-blobimport --dry-run
   Counter for repo (0) has value 6
   Error: No valid counter position to skip ahead to
   [1]
-  $ mononoke_newadmin hg-sync -R repo last-processed --skip-blobimport
+  $ mononoke_admin hg-sync -R repo last-processed --skip-blobimport
   Counter for repo (0) has value 6
   Error: No valid counter position to skip ahead to
   [1]
 Skipping ahead from the edge of a series of regular changes should fail
-  $ mononoke_newadmin hg-sync -R repo last-processed --set 4
+  $ mononoke_admin hg-sync -R repo last-processed --set 4
   Counter for repo (0) has value 6
   Counter for repo (0) set to 4
-  $ mononoke_newadmin hg-sync -R repo last-processed --skip-blobimport --dry-run
+  $ mononoke_admin hg-sync -R repo last-processed --skip-blobimport --dry-run
   Counter for repo (0) has value 4
   Error: No valid counter position to skip ahead to
   [1]
-  $ mononoke_newadmin hg-sync -R repo last-processed --skip-blobimport
+  $ mononoke_admin hg-sync -R repo last-processed --skip-blobimport
   Counter for repo (0) has value 4
   Error: No valid counter position to skip ahead to
   [1]
 Skipping ahead from the edge of a series of blobimports should succeed
-  $ mononoke_newadmin hg-sync -R repo last-processed --set 2
+  $ mononoke_admin hg-sync -R repo last-processed --set 2
   Counter for repo (0) has value 4
   Counter for repo (0) set to 2
-  $ mononoke_newadmin hg-sync -R repo last-processed --skip-blobimport --dry-run
+  $ mononoke_admin hg-sync -R repo last-processed --skip-blobimport --dry-run
   Counter for repo (0) has value 2
   Counter for repo (0) would be updated to 4
-  $ mononoke_newadmin hg-sync -R repo last-processed --skip-blobimport
+  $ mononoke_admin hg-sync -R repo last-processed --skip-blobimport
   Counter for repo (0) has value 2
   Counter for repo (0) was updated to 4
 Skipping ahead from the middle of a series of blobimports should succeed
-  $ mononoke_newadmin hg-sync -R repo last-processed --set 3
+  $ mononoke_admin hg-sync -R repo last-processed --set 3
   Counter for repo (0) has value 4
   Counter for repo (0) set to 3
-  $ mononoke_newadmin hg-sync -R repo last-processed --skip-blobimport --dry-run
+  $ mononoke_admin hg-sync -R repo last-processed --skip-blobimport --dry-run
   Counter for repo (0) has value 3
   Counter for repo (0) would be updated to 4
-  $ mononoke_newadmin hg-sync -R repo last-processed --skip-blobimport
+  $ mononoke_admin hg-sync -R repo last-processed --skip-blobimport
   Counter for repo (0) has value 3
   Counter for repo (0) was updated to 4
 Skipping ahead with No valid candidate should fail
@@ -128,39 +128,39 @@ Skipping ahead with No valid candidate should fail
   9|0|7777777777777777777777777777777777777777777777777777777777777777|blobimport
   10|0|8888888888888888888888888888888888888888888888888888888888888888|blobimport
   11|0|9999999999999999999999999999999999999999999999999999999999999999|blobimport
-  $ mononoke_newadmin hg-sync -R repo last-processed --set 8
+  $ mononoke_admin hg-sync -R repo last-processed --set 8
   Counter for repo (0) has value 4
   Counter for repo (0) set to 8
-  $ mononoke_newadmin hg-sync -R repo last-processed --skip-blobimport --dry-run
+  $ mononoke_admin hg-sync -R repo last-processed --skip-blobimport --dry-run
   Counter for repo (0) has value 8
   Error: No valid counter position to skip ahead to
   [1]
-  $ mononoke_newadmin hg-sync -R repo last-processed --skip-blobimport
+  $ mononoke_admin hg-sync -R repo last-processed --skip-blobimport
   Counter for repo (0) has value 8
   Error: No valid counter position to skip ahead to
   [1]
 It ignores unrelated repos when locating the first non-blobimport
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "UPDATE bookmarks_update_log SET repo_id = 1 WHERE id > 4;"
-  $ mononoke_newadmin hg-sync -R repo last-processed --set 2
+  $ mononoke_admin hg-sync -R repo last-processed --set 2
   Counter for repo (0) has value 8
   Counter for repo (0) set to 2
-  $ mononoke_newadmin hg-sync -R repo last-processed --skip-blobimport --dry-run
+  $ mononoke_admin hg-sync -R repo last-processed --skip-blobimport --dry-run
   Counter for repo (0) has value 2
   Error: No valid counter position to skip ahead to
   [1]
-  $ mononoke_newadmin hg-sync -R repo last-processed --skip-blobimport
+  $ mononoke_admin hg-sync -R repo last-processed --skip-blobimport
   Counter for repo (0) has value 2
   Error: No valid counter position to skip ahead to
   [1]
 It ignores unrelated repos when locating the last blobimport
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "UPDATE bookmarks_update_log SET repo_id = 0;"
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "UPDATE bookmarks_update_log SET repo_id = 1 WHERE id = 4;"
-  $ mononoke_newadmin hg-sync -R repo last-processed --set 2
+  $ mononoke_admin hg-sync -R repo last-processed --set 2
   Counter for repo (0) has value 2
   Counter for repo (0) set to 2
-  $ mononoke_newadmin hg-sync -R repo last-processed --skip-blobimport --dry-run
+  $ mononoke_admin hg-sync -R repo last-processed --skip-blobimport --dry-run
   Counter for repo (0) has value 2
   Counter for repo (0) would be updated to 3
-  $ mononoke_newadmin hg-sync -R repo last-processed --skip-blobimport
+  $ mononoke_admin hg-sync -R repo last-processed --skip-blobimport
   Counter for repo (0) has value 2
   Counter for repo (0) was updated to 3

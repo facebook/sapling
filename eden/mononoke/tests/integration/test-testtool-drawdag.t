@@ -66,10 +66,10 @@ The tool will print the commit hash of each commit.
   Y=0496bee16414ecd92d98379f536e2306252990c72001f64fe01a6229a3a2c136
   Z=fc81a9a2f936daba3d461f8a3ee00c542903197bf9964c05dcbdc1e7f62e98db
 
-  $ mononoke_newadmin fetch -R repo -i $Z -p Z
+  $ mononoke_admin fetch -R repo -i $Z -p Z
   Error: Path does not exist: Z
   [1]
-  $ mononoke_newadmin fetch -R repo -i $Z -p Y
+  $ mononoke_admin fetch -R repo -i $Z -p Y
   File-Type: regular
   Size: 1
   Content-Id: 35ccfd1831564764439349755068b3400612b615d0c85e4d73af0cee786c963e
@@ -79,7 +79,7 @@ The tool will print the commit hash of each commit.
   
   Y
 
-  $ mononoke_newadmin blobstore -R repo fetch changeset.blake2.$Z
+  $ mononoke_admin blobstore -R repo fetch changeset.blake2.$Z
   Key: changeset.blake2.fc81a9a2f936daba3d461f8a3ee00c542903197bf9964c05dcbdc1e7f62e98db
   Ctime: * (glob)
   Size: 126
@@ -148,7 +148,7 @@ Test HG hashes and setting the commit message and author:
   BB=d005ae50b8698478630ac396568f337d3c24063c
   CC=2d21fd53ce56b2c798dab5af7f2fce72411fcb6e
 
-  $ mononoke_newadmin fetch -R repo -i $AA -p file
+  $ mononoke_admin fetch -R repo -i $AA -p file
   File-Type: regular
   Size: 7
   Content-Id: 95b845f64a4cb04cf60a55e9715210fcea6e187813221ab49e766b1478dbaa13
@@ -158,7 +158,7 @@ Test HG hashes and setting the commit message and author:
   
   content
 
-  $ mononoke_newadmin fetch -R repo -i $CC
+  $ mononoke_admin fetch -R repo -i $CC
   BonsaiChangesetId: 3a29cc35f0e5cdfe1305159710f1baf48c08034a1964e871b24559d9ef5fcbee
   Author: Test Y. Testovich <test@meta.com>
   Message: just a commit message

@@ -92,7 +92,7 @@ Create small repo commits
   
   
   
-  Running mononoke_newadmin to verify mapping
+  Running mononoke_admin to verify mapping
   
   RewrittenAs([(ChangesetId(Blake2(2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
   
@@ -172,7 +172,7 @@ Add more commits to small repo
   
   
   
-  Running mononoke_newadmin to verify mapping
+  Running mononoke_admin to verify mapping
   
   RewrittenAs([(ChangesetId(Blake2(d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
   

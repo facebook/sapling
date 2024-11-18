@@ -60,7 +60,7 @@
   Bookmark: "tags/recursive_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (created)
 
 # Regenerate the Git repo out of the Mononoke repo
-  $ mononoke_newadmin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH"
+  $ mononoke_admin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH"
 # Ensure that Git considers this a valid bundle
   $ cd $GIT_REPO
   $ git bundle verify -q $BUNDLE_PATH
@@ -107,7 +107,7 @@
   Bookmark: "tags/recursive_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (already up-to-date)
 
 # Regenerate the Git repo out of the Mononoke repo
-  $ mononoke_newadmin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH"
+  $ mononoke_admin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH"
 # Ensure that Git considers this a valid bundle
   $ cd $GIT_REPO
   $ git bundle verify -q $BUNDLE_PATH

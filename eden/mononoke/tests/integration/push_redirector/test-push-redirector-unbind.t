@@ -91,7 +91,7 @@
 -- Step 2. then we need to sync new small repo commits to a large repo
   $ megarepo_tool_multirepo --source-repo-id 1 --target-repo-id 0 sync-commit-and-ancestors --commit-hash "$SMALL_NODE" 2>&1 | grep remapped
   * remapped to RewrittenAs(ChangesetId(Blake2(146b951933c6d1554a377d733af183659f61794da5c6537c5de68e52acd5e949)), CommitSyncConfigVersion("test_version")) (glob)
-  $ HG_CS_ID="$(mononoke_newadmin convert --repo-id 0 --from bonsai --to hg --derive 146b951933c6d1554a377d733af183659f61794da5c6537c5de68e52acd5e949)"
+  $ HG_CS_ID="$(mononoke_admin convert --repo-id 0 --from bonsai --to hg --derive 146b951933c6d1554a377d733af183659f61794da5c6537c5de68e52acd5e949)"
   $ cd "$TESTTMP/large-hg-client"
   $ hg pull -r "$HG_CS_ID"
   pulling from mono:large-mon
@@ -119,12 +119,12 @@
 -- Step 5. mark commits that fix working copy as rewritten
   $ megarepo_tool_multirepo --source-repo-id 1 --target-repo-id 0 check-push-redirection-prereqs "$SMALL_REBINDING" "$LARGE_REBINDING" test_version 2>&1 | grep 'all is well!'
   * all is well! (glob)
-  $ mononoke_newadmin cross-repo --source-repo-id 0 --target-repo-id 1 insert rewritten \
+  $ mononoke_admin cross-repo --source-repo-id 0 --target-repo-id 1 insert rewritten \
   > --source-commit-id "$LARGE_REBINDING" --target-commit-id "$SMALL_REBINDING" --version-name test_version 2>&1 | grep 'successfully inserted'
   * successfully inserted rewritten mapping entry (glob)
 
 -- Step 6. Rebind repositories and wait until it propagates
-  $ mononoke_newadmin cross-repo --source-repo-name large-mon --target-repo-name small-mon pushredirection prepare-rollout &> /dev/null
+  $ mononoke_admin cross-repo --source-repo-name large-mon --target-repo-name small-mon pushredirection prepare-rollout &> /dev/null
   $ enable_pushredirect 1
   $ force_update_configerator
 

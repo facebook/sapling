@@ -46,5 +46,5 @@ Sync all bookmarks moves (the second move is a merge commit)
   Finished mononoke RE CAS sync command execution for repo repo, repo: repo
 
 Verify that all the blobs are in CAS for the merge commit F
-  $ with_stripped_logs mononoke_newadmin cas-store --repo-name repo upload --full --hg-id $F
+  $ with_stripped_logs mononoke_admin cas-store --repo-name repo upload --full --hg-id $F
   Upload completed. Upload stats: uploaded digests: 0, already present digests: 6, uploaded bytes: 0 B, the largest uploaded blob: 0 B

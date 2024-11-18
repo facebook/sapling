@@ -78,7 +78,7 @@
 
 
 # Regenerate the Git repo out of the Mononoke repo
-  $ mononoke_newadmin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH"
+  $ mononoke_admin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH"
 # Ensure that Git considers this a valid bundle
   $ cd $GIT_REPO
   $ git bundle verify -q $BUNDLE_PATH

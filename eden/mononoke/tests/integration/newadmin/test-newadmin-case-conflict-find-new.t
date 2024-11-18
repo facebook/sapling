@@ -21,11 +21,11 @@ setup configuration
   C=c8f78ccda6be9fcb22d28ea4380af40784d6869fb6b0b1101c65f6623ff37bfc
   D=240cdc894102f0376b0affc868ee7411ea9f1d687f025febe3868196c1013aca
 
-  $ mononoke_newadmin case-conflict -R repo find-new -i aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
+  $ mononoke_admin case-conflict -R repo find-new -i aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
   No new case conflicts found
-  $ mononoke_newadmin case-conflict -R repo find-new -i 03649f61e7717da595b97394f4788b1d54cc213496adafc56937b544216f1fa6
+  $ mononoke_admin case-conflict -R repo find-new -i 03649f61e7717da595b97394f4788b1d54cc213496adafc56937b544216f1fa6
   No new case conflicts found
-  $ mononoke_newadmin case-conflict -R repo find-new -i c8f78ccda6be9fcb22d28ea4380af40784d6869fb6b0b1101c65f6623ff37bfc
+  $ mononoke_admin case-conflict -R repo find-new -i c8f78ccda6be9fcb22d28ea4380af40784d6869fb6b0b1101c65f6623ff37bfc
   Found new case conflict: (NonRootMPath("eden/moNOnoke"), NonRootMPath("eden/mononoke"))
-  $ mononoke_newadmin case-conflict -R repo find-new -i 240cdc894102f0376b0affc868ee7411ea9f1d687f025febe3868196c1013aca
+  $ mononoke_admin case-conflict -R repo find-new -i 240cdc894102f0376b0affc868ee7411ea9f1d687f025febe3868196c1013aca
   No new case conflicts found

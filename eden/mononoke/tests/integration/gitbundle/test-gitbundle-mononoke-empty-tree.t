@@ -24,9 +24,9 @@ Setup repository starting with empty tree and ending with empty tree
   C=d670a93c7d77e055ce95f568fcf4cbf6176af1b290762c61aa76ee3f34c74ed0
 
 Generate Git repo out of the Mononoke repo
-  $ mononoke_newadmin git-symref -R repo create --symref-name HEAD --ref-name master_bookmark --ref-type branch
+  $ mononoke_admin git-symref -R repo create --symref-name HEAD --ref-name master_bookmark --ref-type branch
   Symbolic ref HEAD pointing to branch master_bookmark has been added
-  $ mononoke_newadmin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH"
+  $ mononoke_admin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH"
 Test bundled repo verification
   $ git init -q empty_repo
   $ cd empty_repo
@@ -38,4 +38,4 @@ Test cloning the bundled repo
   Cloning into bare repository 'cloned_git_repo'...
 
 Test batched derivation
-  $ mononoke_newadmin derived-data -R "repo" derive --all-types -i "$C"
+  $ mononoke_admin derived-data -R "repo" derive --all-types -i "$C"

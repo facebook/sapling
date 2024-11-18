@@ -82,26 +82,26 @@ start mononoke
   $ hg up -q 14961831bd3a
 
 Redact file 'c' in commit '7389ca6413976090442f3003d4329990bc688ef7'
-  $ mononoke_newadmin redaction create-key-list -R repo -i 7389ca6413976090442f3003d4329990bc688ef7 c --main-bookmark master_bookmark --output-file rs_0
+  $ mononoke_admin redaction create-key-list -R repo -i 7389ca6413976090442f3003d4329990bc688ef7 c --main-bookmark master_bookmark --output-file rs_0
   Checking redacted content doesn't exist in 'master_bookmark' bookmark
   No files would be redacted in the main bookmark (master_bookmark)
   Redaction saved as: db4bf834eb70b32345de6a2ad146811a6d0591e24cc507b81e30070d01bf2798
   To finish the redaction process, you need to commit this id to scm/mononoke/redaction/redaction_sets.cconf in configerator
 
-  $ mononoke_newadmin redaction fetch-key-list -R repo --output-file "$TESTTMP/keys" db4bf834eb70b32345de6a2ad146811a6d0591e24cc507b81e30070d01bf2798
+  $ mononoke_admin redaction fetch-key-list -R repo --output-file "$TESTTMP/keys" db4bf834eb70b32345de6a2ad146811a6d0591e24cc507b81e30070d01bf2798
   $ cat "$TESTTMP/keys"
   content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2
 
 Attempt to redact file 'b' in commit '14961831bd3af3a6331fef7e63367d61cb6c9f6b'
 This initially fails because it is still reachable in 'master'
-  $ mononoke_newadmin redaction create-key-list -R repo -i 14961831bd3af3a6331fef7e63367d61cb6c9f6b b --main-bookmark master_bookmark
+  $ mononoke_admin redaction create-key-list -R repo -i 14961831bd3af3a6331fef7e63367d61cb6c9f6b b --main-bookmark master_bookmark
   Checking redacted content doesn't exist in 'master_bookmark' bookmark
   Redacted content in main bookmark: b content.blake2.21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9
   Error: Refusing to create key list because 1 files would be redacted in the main bookmark (master_bookmark)
   [1]
 
 Try again with --force
-  $ mononoke_newadmin redaction create-key-list -R repo -i 14961831bd3af3a6331fef7e63367d61cb6c9f6b b --main-bookmark master_bookmark --force --output-file rs_1
+  $ mononoke_admin redaction create-key-list -R repo -i 14961831bd3af3a6331fef7e63367d61cb6c9f6b b --main-bookmark master_bookmark --force --output-file rs_1
   Checking redacted content doesn't exist in 'master_bookmark' bookmark
   Redacted content in main bookmark: b content.blake2.21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9
   Creating key list despite 1 files being redacted in the main bookmark (master_bookmark) (--force)
@@ -119,12 +119,12 @@ Try again with --force
   $ rm rs_0 rs_1
 
 The files should now be marked as redacted
-  $ mononoke_newadmin redaction list -R repo -i 14961831bd3af3a6331fef7e63367d61cb6c9f6b
+  $ mononoke_admin redaction list -R repo -i 14961831bd3af3a6331fef7e63367d61cb6c9f6b
   Searching for redacted paths in c58e5684f660c327e9fd4cc0aba5e010bd444b0e0ee23fe4aa0cace2f44c0b46
   Found 1 redacted paths
   T1                  : b
 
-  $ mononoke_newadmin redaction list -R repo -i 7389ca6413976090442f3003d4329990bc688ef7
+  $ mononoke_admin redaction list -R repo -i 7389ca6413976090442f3003d4329990bc688ef7
   Searching for redacted paths in 39101456281e9b3d34041ded0c91b1712418c9eb59fbfc2bd06e873f3df9a6a4
   Found 1 redacted paths
   T0                  : c (log only)
@@ -149,7 +149,7 @@ Should gives us the tombstone file since it is redacted
 
 
 Mononoke newadmin also won't give us the content
-  $ mononoke_newadmin blobstore -R repo fetch content.blake2.21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9
+  $ mononoke_admin blobstore -R repo fetch content.blake2.21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9
   Error: Failed to fetch blob
   
   Caused by:

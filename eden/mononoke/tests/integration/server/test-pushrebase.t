@@ -27,7 +27,7 @@ Pushrebase commit 1
   pushrebasing stack (20ca2a4749a4, 26f143b427a3] (1 commit) to remote bookmark master_bookmark
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updated remote bookmark master_bookmark to c39a1f67cdbc
-  $ mononoke_newadmin derived-data -R repo derive -T filenodes --all-bookmarks
+  $ mononoke_admin derived-data -R repo derive -T filenodes --all-bookmarks
 
   $ log -r "all()"
   @  1 [public;rev=3;c39a1f67cdbc] remote/master_bookmark
@@ -376,7 +376,7 @@ Test non-fast-forward force pushrebase
   edenapi: uploaded 1 tree
   edenapi: uploaded 1 changeset
   moving remote bookmark newbook from db727ac656f2 to 10b6d4d89240
-  $ mononoke_newadmin derived-data -R repo derive -T filenodes --all-bookmarks
+  $ mononoke_admin derived-data -R repo derive -T filenodes --all-bookmarks
 -- "20 draft newbook" gets moved to 26 and 20 gets hidden.
   $ log -r "99a124548fb0::"
   @  26 [public;rev=281474976710668;10b6d4d89240] remote/newbook

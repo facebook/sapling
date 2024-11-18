@@ -349,8 +349,8 @@ function mononoke_modern_sync {
      sync-once --start-id "$START_ID"
 }
 
-function mononoke_newadmin {
-  GLOG_minloglevel=5 "$MONONOKE_NEWADMIN" \
+function mononoke_admin {
+  GLOG_minloglevel=5 "$MONONOKE_ADMIN" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
@@ -809,7 +809,7 @@ function wait_for_bookmark_move_away_edenapi() {
 function get_bookmark_value_bonsai {
   local repo="$1"
   local bookmark="$2"
-  mononoke_newadmin bookmarks -R "$repo" get "$bookmark"
+  mononoke_admin bookmarks -R "$repo" get "$bookmark"
 }
 
 function wait_for_bookmark_move_away_bonsai() {
@@ -1329,7 +1329,7 @@ function add_synced_commit_mapping_entry() {
   large_repo_id="$3"
   large_bcs_id="$4"
   version="$5"
-  quiet mononoke_newadmin cross-repo --source-repo-id "$small_repo_id" --target-repo-id "$large_repo_id" insert rewritten --source-commit-id "$small_bcs_id" \
+  quiet mononoke_admin cross-repo --source-repo-id "$small_repo_id" --target-repo-id "$large_repo_id" insert rewritten --source-commit-id "$small_bcs_id" \
     --target-commit-id "$large_bcs_id" \
     --version-name "$version"
 }
@@ -1340,7 +1340,7 @@ function crossrepo_verify_bookmarks() {
   shift
   large_repo_id="$1"
   shift
-  mononoke_newadmin cross-repo --source-repo-id "$small_repo_id" --target-repo-id "$large_repo_id" verify-bookmarks "$@"
+  mononoke_admin cross-repo --source-repo-id "$small_repo_id" --target-repo-id "$large_repo_id" verify-bookmarks "$@"
 }
 
 function read_blobstore_wal_queue_size() {
@@ -1831,7 +1831,7 @@ function wait_for_bookmark_move_to_commit {
 
   local attempts=150
   for _ in $(seq 1 $attempts); do
-    mononoke_newadmin fetch -R "$repo" -B "$bookmark" | rg -q "$commit_title" && return
+    mononoke_admin fetch -R "$repo" -B "$bookmark" | rg -q "$commit_title" && return
     sleep 0.1
   done
 

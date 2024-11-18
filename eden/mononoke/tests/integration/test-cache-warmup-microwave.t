@@ -39,7 +39,7 @@ Regenerate microwave snapshot. This will fail because we have no derived data:
 
 Derive data, then regenerate microwave snapshot:
 
-  $ quiet mononoke_newadmin derived-data -R repo derive --all-types --all-bookmarks
+  $ quiet mononoke_admin derived-data -R repo derive --all-types --all-bookmarks
   $ quiet microwave_builder --debug blobstore
 
 Start Mononoke again, check that the microwave snapshot was used

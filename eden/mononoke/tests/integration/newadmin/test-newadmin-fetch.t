@@ -18,14 +18,14 @@ setup configuration
   B=749add4e33cf83fda6cce6f4fb4e3037a171dd8068acef09b336fd8ae027bf6f
   C=93cd0903625ea3162047e2699c2ea20d531b634df84180dbeeeb4b62f8afa8cd
 
-  $ mononoke_newadmin fetch -R repo -i 93cd0903625ea3162047e2699c2ea20d531b634df84180dbeeeb4b62f8afa8cd
+  $ mononoke_admin fetch -R repo -i 93cd0903625ea3162047e2699c2ea20d531b634df84180dbeeeb4b62f8afa8cd
   BonsaiChangesetId: 93cd0903625ea3162047e2699c2ea20d531b634df84180dbeeeb4b62f8afa8cd
   Author: author
   Message: C
   FileChanges:
   	 ADDED/MODIFIED: C 896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d
   
-  $ mononoke_newadmin fetch -R repo -i c1c5eb4a15a4c71edae31c84f8b23ec5008ad16be07fba5b872fe010184b16ba --json | jq -S .
+  $ mononoke_admin fetch -R repo -i c1c5eb4a15a4c71edae31c84f8b23ec5008ad16be07fba5b872fe010184b16ba --json | jq -S .
   {
     "author": "author",
     "author_date": "1970-01-01T00:00:00Z",
@@ -57,12 +57,12 @@ setup configuration
     "parents": []
   }
 
-  $ mononoke_newadmin fetch -R repo -B main -p "" -k hg
+  $ mononoke_admin fetch -R repo -B main -p "" -k hg
   A 005d992c5dcf32993668f7cede29d296c494a5d9 regular
   B 35e7525ce3a48913275d7061dd9a867ffef1e34d regular
   C a2e456504a5e61f763f1a0b36a6c247c7541b2b3 regular
 
-  $ mononoke_newadmin fetch -R repo -B main -p "" -k fsnode
+  $ mononoke_admin fetch -R repo -B main -p "" -k fsnode
   Summary:
   Simple-Format-SHA1: f8af839f2ffaa63aa251fafdbea413cb21ae9176
   Simple-Format-SHA256: 17ffd9c91c2ff10a13f8689b098fd41c90d0b45b0c14ad96eede1217b56418a5
@@ -73,7 +73,7 @@ setup configuration
   B 55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f regular
   C 896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d regular
 
-  $ mononoke_newadmin fetch -R repo -B main -p "A" -k fsnode
+  $ mononoke_admin fetch -R repo -B main -p "A" -k fsnode
   File-Type: regular
   Size: 1
   Content-Id: eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9

@@ -93,7 +93,7 @@ Create small repo commits
   
   
   
-  Running mononoke_newadmin to verify mapping
+  Running mononoke_admin to verify mapping
   
   RewrittenAs([(ChangesetId(Blake2(738630e43445144e9f5ddbe1869730cfbaf8ff6bf95b25b8410cb35ca92f25c7)), CommitSyncConfigVersion("INITIAL_IMPORT_SYNC_CONFIG"))])
   
@@ -174,19 +174,19 @@ Create small repo commits
 -- Backup all commits to commit cloud
   $ hg cloud backup -q
 
-  $ ORIG_BONSAI_HASH=$(mononoke_newadmin convert -R $LARGE_REPO_NAME -f hg -t bonsai $ORIGINAL_HG_COMMIT)
+  $ ORIG_BONSAI_HASH=$(mononoke_admin convert -R $LARGE_REPO_NAME -f hg -t bonsai $ORIGINAL_HG_COMMIT)
   $ echo "ORIG_BONSAI_HASH: $ORIG_BONSAI_HASH"
   ORIG_BONSAI_HASH: 45b0a006e9f7012884ec6d8799e45eeaac7583f4b4a0cd06eec06e839b7748a7
 
-  $ REBASED_BONSAI_HASH=$(mononoke_newadmin convert -R $LARGE_REPO_NAME -f hg -t bonsai $REBASED_HG_COMMIT)
+  $ REBASED_BONSAI_HASH=$(mononoke_admin convert -R $LARGE_REPO_NAME -f hg -t bonsai $REBASED_HG_COMMIT)
   $ echo "REBASED_BONSAI_HASH: $REBASED_BONSAI_HASH"
   REBASED_BONSAI_HASH: 3bac370e50ea100cc1eb8b0559209335d7069c7c57235bc9dad51fdf453d76a1
 
 
-  $ mononoke_newadmin blobstore -R $LARGE_REPO_NAME fetch \
+  $ mononoke_admin blobstore -R $LARGE_REPO_NAME fetch \
   >   "changeset.blake2.$ORIG_BONSAI_HASH" > $TESTTMP/large_repo_original_bonsai
 
-  $ mononoke_newadmin blobstore -R $LARGE_REPO_NAME fetch \
+  $ mononoke_admin blobstore -R $LARGE_REPO_NAME fetch \
   >   "changeset.blake2.$REBASED_BONSAI_HASH" > $TESTTMP/large_repo_rebased_bonsai
 
 
@@ -209,10 +209,10 @@ Create small repo commits
 
 -- Now fetch both changeset blobs
 
-  $ mononoke_newadmin blobstore -R $SUBMODULE_REPO_NAME fetch \
+  $ mononoke_admin blobstore -R $SUBMODULE_REPO_NAME fetch \
   >   "changeset.blake2.$SMALL_REPO_COMMIT_A" > $TESTTMP/commit_a_bonsai
 
-  $ mononoke_newadmin blobstore -R $SUBMODULE_REPO_NAME fetch \
+  $ mononoke_admin blobstore -R $SUBMODULE_REPO_NAME fetch \
   >   "changeset.blake2.$SMALL_REPO_COMMIT_B" > $TESTTMP/commit_b_bonsai
 
 -- To debug the raw bonsais, uncomment the line below
@@ -221,7 +221,7 @@ Create small repo commits
 
 # Examine committer and committer date, which are not set in the large repo, but
 # should be set on the small git repo.
-  $ mononoke_newadmin fetch -R $LARGE_REPO_NAME -i $REBASED_HG_COMMIT \
+  $ mononoke_admin fetch -R $LARGE_REPO_NAME -i $REBASED_HG_COMMIT \
   > --json > $TESTTMP/commit_b_info_large_repo.json
   $ jq '{author: .author, author_date: .author_date, committer: .committer, committer_date: .committer_date}' \
   > $TESTTMP/commit_b_info_large_repo.json
@@ -232,7 +232,7 @@ Create small repo commits
     "committer_date": null
   }
 
-  $ mononoke_newadmin fetch -R $SUBMODULE_REPO_NAME -i $SMALL_REPO_COMMIT_B \
+  $ mononoke_admin fetch -R $SUBMODULE_REPO_NAME -i $SMALL_REPO_COMMIT_B \
   > --json > $TESTTMP/commit_b_info_small_repo.json
   $ jq '{author: .author, author_date: .author_date, committer: .committer, committer_date: .committer_date}' \
   > $TESTTMP/commit_b_info_small_repo.json
@@ -244,9 +244,9 @@ Create small repo commits
   }
 
 -- Derive git commit for commit A
-  $ mononoke_newadmin derived-data -R $SUBMODULE_REPO_NAME \
+  $ mononoke_admin derived-data -R $SUBMODULE_REPO_NAME \
   >   derive -T git_commits -i "$SMALL_REPO_COMMIT_A"
 
 -- Derivation of commit B will succeed because hg extra is stripped
-  $ mononoke_newadmin derived-data -R $SUBMODULE_REPO_NAME \
+  $ mononoke_admin derived-data -R $SUBMODULE_REPO_NAME \
   >   derive -T git_commits -i "$SMALL_REPO_COMMIT_B"

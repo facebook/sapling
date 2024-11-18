@@ -53,7 +53,7 @@
   Bookmark: "tags/first_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (created)
 
 # Regenerate the Git repo out of the Mononoke repo
-  $ mononoke_newadmin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH"
+  $ mononoke_admin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH"
 
 # Create a new empty folder for containing the repo
   $ mkdir $TESTTMP/git_client_repo  
@@ -121,7 +121,7 @@
 
 # We already have the repo generated uptill da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c from the earlier clone from bundle
 # Let's generate a bundle of the partial state of the repo after the known head
-  $ mononoke_newadmin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH" --have-heads da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c
+  $ mononoke_admin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH" --have-heads da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c
 # Ensure that Git considers this a valid bundle
   $ cd $GIT_REPO
   $ git bundle verify -q $BUNDLE_PATH

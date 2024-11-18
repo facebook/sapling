@@ -25,7 +25,7 @@ setup configuration
   snapshot: Snapshot created with id 2a2db020a9a64a3541d655f0b8a14c4df3f26ce584d5e1945da2b5ef4aefe43c
 
 Fetch info about a bubble that exists:
-  $ mononoke_newadmin ephemeral-store -R repo info -b 1
+  $ mononoke_admin ephemeral-store -R repo info -b 1
   BubbleID: 1
   ChangesetIDs: [ChangesetId(Blake2(60ba9e25af931d7b1669e121cb4f42ad0eeca14462e8e8126140ca63a25bee8e))]
   RepoID: 0
@@ -34,12 +34,12 @@ Fetch info about a bubble that exists:
   BlobstorePrefix: eph1.
 
 Fetch info about a bubble that doesn't exist:
-  $ mononoke_newadmin ephemeral-store -R repo info -b 100001
+  $ mononoke_admin ephemeral-store -R repo info -b 100001
   Error: bubble 100001 does not exist, or has expired
   [1]
 
 Fetch info about a bubble based on a valid changeset ID:
-  $ mononoke_newadmin ephemeral-store -R repo info -i 41b1e99e2b81202d04b4817e3fa7ebdb936184626f74af23b865a80fa71b5561
+  $ mononoke_admin ephemeral-store -R repo info -i 41b1e99e2b81202d04b4817e3fa7ebdb936184626f74af23b865a80fa71b5561
   BubbleID: 2
   ChangesetIDs: [ChangesetId(Blake2(41b1e99e2b81202d04b4817e3fa7ebdb936184626f74af23b865a80fa71b5561))]
   RepoID: 0
@@ -48,10 +48,10 @@ Fetch info about a bubble based on a valid changeset ID:
   BlobstorePrefix: eph2.
 
 Fetch info about a bubble based on an invalid changeset ID:
-  $ mononoke_newadmin ephemeral-store -R repo info -i ofcourse_this_is_invalid
+  $ mononoke_admin ephemeral-store -R repo info -i ofcourse_this_is_invalid
   Error: invalid blake2 input: need exactly 64 hex digits
   [1]
 Fetch info about a bubble based on a non-matching changeset ID:
-  $ mononoke_newadmin ephemeral-store -R repo info -i 49c49a9ad363e4a2f0c314093683a84a85bfaa7b4da83046e58ccb4fbeb2f6c5
+  $ mononoke_admin ephemeral-store -R repo info -i 49c49a9ad363e4a2f0c314093683a84a85bfaa7b4da83046e58ccb4fbeb2f6c5
   Error: No bubble exists for changeset ID 49c49a9ad363e4a2f0c314093683a84a85bfaa7b4da83046e58ccb4fbeb2f6c5
   [1]

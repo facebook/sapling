@@ -21,14 +21,14 @@ setup configuration
   2|0|0000000000000000000000000000000000000000000000000000000000000000|testmove
 
 it defaults to zero
-  $ mononoke_newadmin hg-sync -R repo verify
+  $ mononoke_admin hg-sync -R repo verify
   All remaining bundles in repo (0) are non-blobimports (found 2)
 
 it is satisfied with only non-blobimport entries
-  $ mononoke_newadmin hg-sync -R repo last-processed --set 1
+  $ mononoke_admin hg-sync -R repo last-processed --set 1
   No counter found for repo (0)
   Counter for repo (0) set to 1
-  $ mononoke_newadmin hg-sync -R repo verify
+  $ mononoke_admin hg-sync -R repo verify
   All remaining bundles in repo (0) are non-blobimports (found 1)
 
 it is satisfied with only blobimport entries
@@ -39,22 +39,22 @@ it is satisfied with only blobimport entries
   2|0|0000000000000000000000000000000000000000000000000000000000000000|testmove
   3|0|1111111111111111111111111111111111111111111111111111111111111111|blobimport
   4|0|2222222222222222222222222222222222222222222222222222222222222222|blobimport
-  $ mononoke_newadmin hg-sync -R repo last-processed --set 2
+  $ mononoke_admin hg-sync -R repo last-processed --set 2
   Counter for repo (0) has value 1
   Counter for repo (0) set to 2
-  $ mononoke_newadmin hg-sync -R repo verify
+  $ mononoke_admin hg-sync -R repo verify
   All remaining bundles in repo (0) are blobimports (found 2)
 
 it reports a conflict
-  $ mononoke_newadmin hg-sync -R repo last-processed --set 1
+  $ mononoke_admin hg-sync -R repo last-processed --set 1
   Counter for repo (0) has value 2
   Counter for repo (0) set to 1
-  $ mononoke_newadmin hg-sync -R repo verify
+  $ mononoke_admin hg-sync -R repo verify
   Remaining bundles to replay in repo (0) are not consistent: found 2 blobimports and 1 non-blobimports
 
 it reports correctly when there is nothing to be found
-  $ mononoke_newadmin hg-sync -R repo last-processed --set 10
+  $ mononoke_admin hg-sync -R repo last-processed --set 10
   Counter for repo (0) has value 1
   Counter for repo (0) set to 10
-  $ mononoke_newadmin hg-sync -R repo verify
+  $ mononoke_admin hg-sync -R repo verify
   No replay data found in repo (0)

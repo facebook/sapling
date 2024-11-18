@@ -7,6 +7,6 @@
   $ . "${TEST_FIXTURES}/library.sh"
   $ BLOB_TYPE="blob_files" quiet default_setup_blobimport
 
-  $ mononoke_newadmin hg-sync -R repo inspect 1
+  $ mononoke_admin hg-sync -R repo inspect 1
   Bookmark: master_bookmark
   Created at: c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd

@@ -30,5 +30,5 @@
   Hg: Sha1(0ecc922af7b11d796a715f3c093673914b060164): HgManifestId(HgNodeHash(Sha1(4f16e4ceeccf36b18e4a72e183c16a9bea650e1d)))
   Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(7f859bbf14ca886913f4beb855cc0d01cfe7a5e65173bdb68333033cfbc629c5)))
 
-  $ mononoke_newadmin filestore -R repo is-chunked -i 48ef00ac63821b09154b55f1b380d253f936afb076a873e1bcc1d137c8b5bab2
+  $ mononoke_admin filestore -R repo is-chunked -i 48ef00ac63821b09154b55f1b380d253f936afb076a873e1bcc1d137c8b5bab2
   chunked

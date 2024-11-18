@@ -26,7 +26,7 @@ setup repo
   > EOF
   A=546ab8adb92af7ef882231ea89d5f3d6d1d0345f761aa7b3a25ff08f25aa0e85
 
-  $ HG_ID=$(mononoke_newadmin convert --repo-name repo  --derive --from bonsai --to hg $A)
+  $ HG_ID=$(mononoke_admin convert --repo-name repo  --derive --from bonsai --to hg $A)
 
 
 smoke test to ensure bonsai_verify works

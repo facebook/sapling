@@ -74,7 +74,7 @@ Force push of unrelated commit stack containing empty tree
   $ mkcommit unrelated3
   $ hg push -r . --to newbook --non-forward-move --create --force -q
 move back
-  $ mononoke_newadmin bookmarks -R repo set newbook "$BOOK_LOC"
+  $ mononoke_admin bookmarks -R repo set newbook "$BOOK_LOC"
   Updating publishing bookmark newbook from 37ea8302245e8e828fa0745759441d4e9cd99cb0e4ffb045096c5fadc3207274 to 9243ee8d4ea76ca29fb3135f85b9596eb51688fd06347983c449ed1eec255345
 
 Delete a bookmark

@@ -14,8 +14,8 @@
   A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
   B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
   C=e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
-  $ mononoke_newadmin derived-data -R repo derive -T git_trees -T git_commits -T git_delta_manifests_v2 -T unodes --all-bookmarks
-  $ mononoke_newadmin git-symref -R repo create --symref-name HEAD --ref-name master_bookmark --ref-type branch
+  $ mononoke_admin derived-data -R repo derive -T git_trees -T git_commits -T git_delta_manifests_v2 -T unodes --all-bookmarks
+  $ mononoke_admin git-symref -R repo create --symref-name HEAD --ref-name master_bookmark --ref-type branch
   Symbolic ref HEAD pointing to branch master_bookmark has been added
 
 # Start up the Mononoke Git Service, **intentionally setting up with master_bookmark lfs server as fallback**
@@ -42,7 +42,7 @@
   fatal: the remote end hung up unexpectedly
   Everything up-to-date
   [1]
-  $ mononoke_newadmin fetch -R repo -B heads/master_bookmark
+  $ mononoke_admin fetch -R repo -B heads/master_bookmark
   BonsaiChangesetId: e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
   Author: author
   Message: C

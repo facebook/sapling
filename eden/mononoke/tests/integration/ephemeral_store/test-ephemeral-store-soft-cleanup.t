@@ -31,21 +31,21 @@ setup configuration
   $ sleep 10
 
 Cleanup expired bubbles in dry-run mode:
-  $ mononoke_newadmin ephemeral-store -R repo cleanup -n -c 0
+  $ mononoke_admin ephemeral-store -R repo cleanup -n -c 0
   Fetched 4 expired bubbles for deletion
   Executing cleanup in dry-run mode. The following bubbles were fetched for deletion:
   [BubbleId(1), BubbleId(2), BubbleId(3), BubbleId(4)]
 
 Cleanup expired bubbles with too high cut-off
-  $ mononoke_newadmin ephemeral-store -R repo cleanup -n -c 100000
+  $ mononoke_admin ephemeral-store -R repo cleanup -n -c 100000
   No expired bubbles found for deletion based on input provided
 
 Cleanup expired bubbles with zero as the limit
-  $ mononoke_newadmin ephemeral-store -R repo cleanup -l 0
+  $ mononoke_admin ephemeral-store -R repo cleanup -l 0
   No expired bubbles found for deletion based on input provided
 
 Cleanup expired bubbles in dry-run mode with non-zero as the limit
-  $ mononoke_newadmin ephemeral-store -R repo cleanup -l 2 -n -c 0
+  $ mononoke_admin ephemeral-store -R repo cleanup -l 2 -n -c 0
   Fetched 2 expired bubbles for deletion
   Executing cleanup in dry-run mode. The following bubbles were fetched for deletion:
   [BubbleId(1), BubbleId(2)]
@@ -56,7 +56,7 @@ Before doing actual clean-up, verify that the blob indeed exists
   Blob still present
 
 Cleanup expired bubbles with no cut-off
-  $ mononoke_newadmin ephemeral-store -R repo cleanup -c 0
+  $ mononoke_admin ephemeral-store -R repo cleanup -c 0
   Fetched 4 expired bubbles for deletion
   Cleaned up bubble 1 and deleted 0 blob keys contained in it
   Cleaned up bubble 2 and deleted 0 blob keys contained in it

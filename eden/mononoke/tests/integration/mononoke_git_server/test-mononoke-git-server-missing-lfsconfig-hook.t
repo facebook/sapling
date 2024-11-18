@@ -14,8 +14,8 @@
   A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
   B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
   C=e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
-  $ mononoke_newadmin derived-data -R repo derive -T git_trees -T git_commits -T git_delta_manifests_v2 -T unodes --all-bookmarks
-  $ mononoke_newadmin git-symref -R repo create --symref-name HEAD --ref-name master_bookmark --ref-type branch
+  $ mononoke_admin derived-data -R repo derive -T git_trees -T git_commits -T git_delta_manifests_v2 -T unodes --all-bookmarks
+  $ mononoke_admin git-symref -R repo create --symref-name HEAD --ref-name master_bookmark --ref-type branch
   Symbolic ref HEAD pointing to branch master_bookmark has been added
 
 # Setup hooks
@@ -61,7 +61,7 @@
   $ git add .lfsconfig
   $ git commit --amend -aqm "new LFS change with .lfsconfig"
   $ quiet git_client push origin master_bookmark
-  $ mononoke_newadmin fetch -R repo -B heads/master_bookmark
+  $ mononoke_admin fetch -R repo -B heads/master_bookmark
   BonsaiChangesetId: f43135737efc212651cdf8ab6fadb217305ac4d274e269673522198f6b57b53b
   Author: mononoke <mononoke@mononoke>
   Message: new LFS change with .lfsconfig
@@ -71,7 +71,7 @@
   	 ADDED/MODIFIED: .lfsconfig b6d78c0e31f537cc0367b8be3505d609a0dffd4713024110b8d37dade4321c10
   	 ADDED/MODIFIED (LFS): large_file 978e55f6ff83794e598f13fb0f4f30bca32dd1dda8b57df5983a4dba00cc7ef2
   
-  $ mononoke_newadmin filestore -R repo fetch  --content-id 978e55f6ff83794e598f13fb0f4f30bca32dd1dda8b57df5983a4dba00cc7ef2
+  $ mononoke_admin filestore -R repo fetch  --content-id 978e55f6ff83794e598f13fb0f4f30bca32dd1dda8b57df5983a4dba00cc7ef2
   contents of LFS file that will be uploaded to legacy server
 
 # Add commit with regular file

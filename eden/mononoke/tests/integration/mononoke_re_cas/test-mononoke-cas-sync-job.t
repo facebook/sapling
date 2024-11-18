@@ -50,9 +50,9 @@ Sync all bookmarks moves
 
 Validate that the whole working copy for the top commit D is already present in CAS, nothing should be uploaded if incremental sync is correct.
 All trees and blobs should be present!
-  $ with_stripped_logs mononoke_newadmin cas-store --repo-name repo upload --full --hg-id $D
+  $ with_stripped_logs mononoke_admin cas-store --repo-name repo upload --full --hg-id $D
   Upload completed. Upload stats: uploaded digests: 0, already present digests: 6, uploaded bytes: 0 B, the largest uploaded blob: 0 B
 
 Validate the same for a middle commit B
-  $ with_stripped_logs mononoke_newadmin cas-store --repo-name repo upload --full --hg-id $B
+  $ with_stripped_logs mononoke_admin cas-store --repo-name repo upload --full --hg-id $B
   Upload completed. Upload stats: uploaded digests: 0, already present digests: 4, uploaded bytes: 0 B, the largest uploaded blob: 0 B

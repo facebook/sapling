@@ -34,16 +34,16 @@ setup configuration
   J=55e5dbaa7f26e0cfa1c2ee95479e2af088bf81caae4c2356d6eb8dfa6c114284
 
 returns nothing as there are no ancestors of C that are not also ancestors of I
-  $ mononoke_newadmin commit-graph -R repo ancestors-difference --heads $C --common $I
+  $ mononoke_admin commit-graph -R repo ancestors-difference --heads $C --common $I
 
 returns E, F and G
-  $ mononoke_newadmin commit-graph -R repo ancestors-difference --heads $G --common $C,$D
+  $ mononoke_admin commit-graph -R repo ancestors-difference --heads $G --common $C,$D
   9711852ec4f4b42937dd5b760c7b3f84345bf48c74b7ef3ca7118d1d7928744d
   48779d8d497815015031dc3f3e9888abc8cf8273184ebd9ca8a395e24d501c90
   f0c81a03319da010415f712831abe8469ba3c30b93b0b07af175302b8c15f0e6
 
 returns D, E, F, G, H, I and J (order can vary since there are two branches so we only compare the quantity).
-  $ mononoke_newadmin commit-graph -R repo ancestors-difference --heads $J,$G --common $C
+  $ mononoke_admin commit-graph -R repo ancestors-difference --heads $J,$G --common $C
   * (glob)
   * (glob)
   * (glob)

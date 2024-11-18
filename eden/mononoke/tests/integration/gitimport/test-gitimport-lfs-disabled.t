@@ -26,7 +26,7 @@ Git Import
   Bookmark: "heads/master_bookmark": ChangesetId(Blake2(63ca8c6ff5810be0626a3d9d84f08e39ff4236b6e9907cc2aeaaba73d520a0c7)) (created)
 
 We store full file contents for non-LFS file
-  $ mononoke_newadmin fetch -R repo -B heads/master_bookmark --path small_file
+  $ mononoke_admin fetch -R repo -B heads/master_bookmark --path small_file
   File-Type: regular
   Size: 8
   Content-Id: 5db7cda483f4d35a023d447b8210bd317497193813e9b7ac57268f525277b509
@@ -37,7 +37,7 @@ We store full file contents for non-LFS file
   sml fle
   
 We store just LFS pointer for LFS file
-  $ mononoke_newadmin fetch -R repo -B heads/master_bookmark --path large_file
+  $ mononoke_admin fetch -R repo -B heads/master_bookmark --path large_file
   File-Type: regular
   Size: 127
   Content-Id: 46eb1ec21f0a347eb1397b55b6b9bc3cd5a39bf5898728251c25679f987fff57
@@ -50,7 +50,7 @@ We store just LFS pointer for LFS file
   size 20
   
 
-  $ mononoke_newadmin fetch -R repo -B heads/master_bookmark --path large_file_non_canonical_pointer
+  $ mononoke_admin fetch -R repo -B heads/master_bookmark --path large_file_non_canonical_pointer
   File-Type: regular
   Size: 126
   Content-Id: 0356a836e448b746fa1f83ebdfd27d039bdf6038168d4fdba6074633d1af82a4
@@ -69,25 +69,25 @@ This repo has just 3 file content blobs stored (small + two LFS pointers)
   $TESTTMP/blobstore/blobs/blob-repo0000.content.blake2.5db7cda483f4d35a023d447b8210bd317497193813e9b7ac57268f525277b509
 
 The actual file content is not uploaded to the repo (this is the hash from pointer)
-  $ mononoke_newadmin filestore -R repo fetch  --content-sha256 6c54a4de10537e482e9f91281fb85ab614e0e0f62307047f9b9f3ccea2de8204
+  $ mononoke_admin filestore -R repo fetch  --content-sha256 6c54a4de10537e482e9f91281fb85ab614e0e0f62307047f9b9f3ccea2de8204
   Error: Content not found
   [1]
 
 But it's available on the separate lfs server
-  $ mononoke_newadmin filestore -R legacy_lfs fetch --content-sha256 6c54a4de10537e482e9f91281fb85ab614e0e0f62307047f9b9f3ccea2de8204
+  $ mononoke_admin filestore -R legacy_lfs fetch --content-sha256 6c54a4de10537e482e9f91281fb85ab614e0e0f62307047f9b9f3ccea2de8204
   laaaaaaaaaarge file
 
 Show that we still have all the original git objects
   $ BUNDLE_PATH="${TESTTMP}/repo_bundle.bundle"
   $ GIT_REPO_FROM_BUNDLE="${TESTTMP}/repo-git-from-bundle"
-  $ mononoke_newadmin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH"
+  $ mononoke_admin git-bundle create from-repo -R repo --output-location "$BUNDLE_PATH"
   $ git clone "$BUNDLE_PATH" "$GIT_REPO_FROM_BUNDLE"
   Cloning into '$TESTTMP/repo-git-from-bundle'...
 
-  $ mononoke_newadmin filestore -R repo fetch --content-git-sha1 8910fc3d7dae273e6ffd1d3982af8dfc418af416
+  $ mononoke_admin filestore -R repo fetch --content-git-sha1 8910fc3d7dae273e6ffd1d3982af8dfc418af416
   sml fle
 
-  $ mononoke_newadmin filestore -R repo fetch --content-git-sha1 1ab2b3357e304fef596198d92807d8d7e3580f0d
+  $ mononoke_admin filestore -R repo fetch --content-git-sha1 1ab2b3357e304fef596198d92807d8d7e3580f0d
   version https://git-lfs.github.com/spec/v1
   oid sha256:6c54a4de10537e482e9f91281fb85ab614e0e0f62307047f9b9f3ccea2de8204
   size 20
