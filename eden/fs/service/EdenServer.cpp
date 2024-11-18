@@ -462,7 +462,8 @@ EdenServer::EdenServer(
           std::move(edenStats),
           std::move(sessionInfo),
           std::move(privHelper),
-          std::make_shared<EdenCPUThreadPool>(),
+          std::make_shared<EdenCPUThreadPool>(
+              edenConfig->edenCpuPoolNumThreads.getValue()),
           makeFsChannelThreads(edenConfig),
           std::make_shared<UnixClock>(),
           std::make_shared<ProcessInfoCache>(),

@@ -133,10 +133,9 @@ so these requests are placed onto the `SaplingBackingStore::serverThreadPool_`
 ## Miscellaneous tasks
 
 Eden also creates the `EdenCPUThreadPool` (aka `ServerState::threadPool_`), a
-CPU pool (12 threads as of Nov 2024) for miscellaneous background tasks. These
-threads handle post-mount initialization, prefetching, and post-retry logic. The
-number of threads can be configured via the `FLAGS_num_eden_threads` daemon
-option.
+CPU pool (12 threads as of Nov 2024, configurable via EdenConfig's
+`core:eden-cpu-pool-num-threads`) for miscellaneous background tasks. These
+threads handle post-mount initialization, prefetching, and post-retry logic.
 
 The queue to the miscellaneous CPU pool must be unbounded because, if it could
 block, there could be a deadlock between it and the other pools. To use a

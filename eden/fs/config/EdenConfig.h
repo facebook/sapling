@@ -223,6 +223,14 @@ class EdenConfig : private ConfigSettingManager {
       true,
       this};
 
+  /**
+   * How many threads to use for the misc EdenCPUThreadPool.
+   */
+  ConfigSetting<uint8_t> edenCpuPoolNumThreads{
+      "core:eden-cpu-pool-num-threads",
+      12,
+      this};
+
   // [config]
 
   /**

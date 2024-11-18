@@ -14,7 +14,7 @@ namespace facebook::eden {
 // The Eden CPU thread pool is intended for miscellaneous background tasks.
 class EdenCPUThreadPool : public UnboundedQueueExecutor {
  public:
-  explicit EdenCPUThreadPool();
+  explicit EdenCPUThreadPool(uint8_t numThreads);
 };
 
 } // namespace facebook::eden
