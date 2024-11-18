@@ -153,8 +153,9 @@ def subtree_merge(ui, repo, **opts):
     ui.status("merge base: %s\n" % merge_base_ctx)
     cmdutil.registerdiffgrafts(from_paths, to_paths, ctx, from_ctx)
 
-    try:
-        repo.ui.setconfig("ui", "forcemerge", opts.get("tool", ""), "merge")
+    with ui.configoverride(
+        {("ui", "forcemerge"): opts.get("tool", "")}, "subtree_merge"
+    ):
         labels = ["working copy", "merge rev"]
         stats = mergemod.merge(
             repo,
@@ -175,8 +176,6 @@ def subtree_merge(ui, repo, **opts):
         else:
             repo.ui.status(_("(subtree merge, don't forget to commit)\n"))
         return stats[3] > 0
-    finally:
-        ui.setconfig("ui", "forcemerge", "", "merge")
 
 
 def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path):

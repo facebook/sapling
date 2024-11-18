@@ -643,12 +643,10 @@ def applychanges(ui, repo, ctx, opts):
             cmdutil.revert(ui, repo, ctx, (wcpar, node.nullid), all=True)
             stats = None
         else:
-            try:
-                # ui.forcemerge is an internal variable, do not document
-                repo.ui.setconfig("ui", "forcemerge", opts.get("tool", ""), "histedit")
+            with repo.ui.configoverride(
+                {("ui", "forcemerge"): opts.get("tool", "")}, "histedit"
+            ):
                 stats = mergemod.graft(repo, ctx, ctx.p1(), ["local", "histedit"])
-            finally:
-                repo.ui.setconfig("ui", "forcemerge", "", "histedit")
     return stats
 
 

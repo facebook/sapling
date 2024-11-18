@@ -840,11 +840,8 @@ def _dobackout(ui, repo, node=None, rev=None, **opts):
     if opts.get("merge") and op1 != node:
         hg.clean(repo, op1, show_stats=False)
         ui.status(_("merging with changeset %s\n") % nice(repo.changelog.tip()))
-        try:
-            ui.setconfig("ui", "forcemerge", opts.get("tool", ""), "backout")
+        with ui.configoverride({("ui", "forcemerge"): opts.get("tool", "")}, "backout"):
             return hg.merge(repo, hex(repo.changelog.tip()))
-        finally:
-            ui.setconfig("ui", "forcemerge", "", "")
     return 0
 
 
@@ -2653,17 +2650,15 @@ def _dograft(ui, repo, *revs, **opts):
         # we don't merge the first commit when continuing
         if not cont:
             # perform the graft merge with p1(rev) as 'ancestor'
-            try:
-                # ui.forcemerge is an internal variable, do not document
-                repo.ui.setconfig("ui", "forcemerge", opts.get("tool", ""), "graft")
+            with repo.ui.configoverride(
+                {("ui", "forcemerge"): opts.get("tool", "")}, "graft"
+            ):
                 stats = mergemod.graft(
                     repo,
                     ctx,
                     ctx.p1(),
                     ["local", "graft"],
                 )
-            finally:
-                repo.ui.setconfig("ui", "forcemerge", "", "graft")
             # report any conflicts
             if stats and stats[3] > 0:
                 # write out state for --continue
@@ -4413,14 +4408,11 @@ def merge(ui, repo, node=None, **opts):
         displayer.close()
         return 0
 
-    try:
-        # ui.forcemerge is an internal variable, do not document
-        repo.ui.setconfig("ui", "forcemerge", opts.get("tool", ""), "merge")
+    # ui.forcemerge is an internal variable, do not document
+    with ui.configoverride({("ui", "forcemerge"): opts.get("tool", "")}, "merge"):
         force = opts.get("force")
         labels = ["working copy", "merge rev"]
         return hg.merge(repo, node, force=force, labels=labels)
-    finally:
-        ui.setconfig("ui", "forcemerge", "", "merge")
 
 
 @command(

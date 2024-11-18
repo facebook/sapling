@@ -793,8 +793,9 @@ class rebaseruntime:
         if len(repo[None].parents()) == 2:
             repo.ui.debug("resuming interrupted rebase\n")
         else:
-            try:
-                ui.setconfig("ui", "forcemerge", opts.get("tool", ""), "rebase")
+            with ui.configoverride(
+                {("ui", "forcemerge"): opts.get("tool", "")}, "rebase"
+            ):
                 stats = rebasenode(
                     repo,
                     rev,
@@ -822,8 +823,6 @@ class rebaseruntime:
                                 "resolve, then @prog@ rebase --continue)"
                             )
                         )
-            finally:
-                ui.setconfig("ui", "forcemerge", "", "rebase")
         if not self.collapsef:
             merging = p2 != nullrev
             editform = cmdutil.mergeeditform(merging, "rebase")
