@@ -18,7 +18,10 @@ const LF_BINARY = LF.codePointAt(0);
 const CR = '\r';
 const CR_BINARY = CR.codePointAt(0);
 
-function stripFinalNewline<T extends string | Uint8Array>(input: T): T {
+function maybeStripFinalNewline<T extends string | Uint8Array>(input: T, strip: boolean): T {
+  if (!strip) {
+    return input;
+  }
   const isString = typeof input === 'string';
   const LF = isString ? '\n' : '\n'.codePointAt(0);
   const CR = isString ? '\r' : '\r'.codePointAt(0);
@@ -208,7 +211,11 @@ function escapedCmd(file: string, argumentos: readonly string[]): string {
 }
 
 // Use promises instead of `child_process` events
-function getSpawnedPromise(spawned: ChildProcess, escapedCommand: string): Promise<EjecaReturn> {
+function getSpawnedPromise(
+  spawned: ChildProcess,
+  escapedCommand: string,
+  options?: EjecaOptions,
+): Promise<EjecaReturn> {
   const {stdout, stderr} = spawned;
   const spawnedPromise = new Promise<{exitCode: number; signal?: string}>((resolve, reject) => {
     spawned.on('exit', (exitCode, signal) => {
@@ -229,11 +236,12 @@ function getSpawnedPromise(spawned: ChildProcess, escapedCommand: string): Promi
   return Promise.all([spawnedPromise, getStreamPromise(stdout), getStreamPromise(stderr)]).then(
     values => {
       const [{exitCode, signal}, stdout, stderr] = values;
+      const stripfinalNl = options?.stripFinalNewline ?? true;
       const ret = {
         exitCode,
         signal,
-        stdout: stripFinalNewline(stdout),
-        stderr: stripFinalNewline(stderr),
+        stdout: maybeStripFinalNewline(stdout, stripfinalNl),
+        stderr: maybeStripFinalNewline(stderr, stripfinalNl),
         killed: false,
         escapedCommand,
       };
@@ -288,7 +296,7 @@ export function ejeca(
 ): EjecaChildProcess {
   const spawnOptions = options ? commonToSpawnOptions(options) : undefined;
   const spawned = spawn(file, argumentos, spawnOptions);
-  const spawnedPromise = getSpawnedPromise(spawned, escapedCmd(file, argumentos));
+  const spawnedPromise = getSpawnedPromise(spawned, escapedCmd(file, argumentos), options);
   const mergedPromise = getMergePromise(spawned, spawnedPromise);
 
   // TODO: Handle streams

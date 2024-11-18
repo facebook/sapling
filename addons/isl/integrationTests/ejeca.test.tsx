@@ -58,6 +58,17 @@ describe('test running binaries', () => {
     });
     expect((await spawned).stdout).toBe('not set');
   });
+
+  it('can specify whether to strip the final line', async () => {
+    const input = 'console.log("hello")';
+    let spawned;
+    spawned = ejeca('node', ['-'], {input});
+    expect((await spawned).stdout).toBe('hello');
+    spawned = ejeca('node', ['-'], {input, stripFinalNewline: true});
+    expect((await spawned).stdout).toBe('hello');
+    spawned = ejeca('node', ['-'], {input, stripFinalNewline: false});
+    expect((await spawned).stdout).toBe('hello\n');
+  });
 });
 
 describe('test killing process', () => {
