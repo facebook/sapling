@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ChildProcess, IOType, SpawnOptionsWithoutStdio} from 'node:child_process';
+import type {ChildProcess, IOType, SpawnOptions} from 'node:child_process';
 import type {Stream} from 'node:stream';
 
 import getStream from 'get-stream';
@@ -268,7 +268,7 @@ function getStreamPromise(origStream: Stream | null): Promise<string> {
   return getStream(stream, {encoding: 'utf8'});
 }
 
-function commonToSpawnOptions(options: EjecaOptions): SpawnOptionsWithoutStdio {
+function commonToSpawnOptions(options: EjecaOptions): SpawnOptions {
   const env = options.env
     ? options.extendEnv ?? true
       ? {...process.env, ...options.env}
@@ -277,6 +277,7 @@ function commonToSpawnOptions(options: EjecaOptions): SpawnOptionsWithoutStdio {
   return {
     cwd: options.cwd || process.cwd(),
     env,
+    stdio: [options.stdin, 'pipe', 'pipe'],
   };
 }
 
@@ -295,7 +296,8 @@ export function ejeca(
   options?: EjecaOptions,
 ): EjecaChildProcess {
   const spawnOptions = options ? commonToSpawnOptions(options) : undefined;
-  const spawned = spawn(file, argumentos, spawnOptions);
+  const spawned =
+    spawnOptions === undefined ? spawn(file, argumentos) : spawn(file, argumentos, spawnOptions);
   const spawnedPromise = getSpawnedPromise(spawned, escapedCmd(file, argumentos), options);
   const mergedPromise = getMergePromise(spawned, spawnedPromise);
 

@@ -69,6 +69,16 @@ describe('test running binaries', () => {
     spawned = ejeca('node', ['-'], {input, stripFinalNewline: false});
     expect((await spawned).stdout).toBe('hello\n');
   });
+
+  it('we can specify stdin', async () => {
+    let spawned;
+    spawned = ejeca('node', [], {input: 'console.log("hemlo")'});
+    expect((await spawned).stdout).toBe('hemlo');
+    spawned = ejeca('node', [], {input: 'console.log("hemlo")', stdin: 'pipe'});
+    expect((await spawned).stdout).toBe('hemlo');
+    spawned = ejeca('node', [], {input: 'console.log("hemlo")', stdin: 'ignore'});
+    expect((await spawned).stdout).toBe('');
+  });
 });
 
 describe('test killing process', () => {
