@@ -14,7 +14,6 @@ use anyhow::Result;
 use async_trait::async_trait;
 use blobstore_factory::MetadataSqlFactory;
 use bookmarks::BookmarkKey;
-use cmdlib::helpers;
 use cmdlib_cross_repo::create_commit_syncers_from_app;
 use context::CoreContext;
 use cross_repo_sync::CommitSyncer;
@@ -46,7 +45,7 @@ use zk_leader_election::ZkMode;
 use crate::cli::ForwardSyncerCommand;
 use crate::reporting::add_common_fields;
 use crate::run_in_initial_import_mode;
-use crate::run_in_single_commit_mode;
+use crate::run_in_single_sync_mode;
 use crate::run_in_tailing_mode;
 use crate::sharding::ForwardSyncerCommand::InitialImport;
 use crate::sharding::ForwardSyncerCommand::Once;
@@ -212,17 +211,21 @@ impl XRepoSyncProcessExecutor {
                     .clone()
                     .map(BookmarkKey::new)
                     .transpose()?;
-                let bcs =
-                    helpers::csid_resolve(ctx, &self.small_repo, &once_cmd_args.commit.as_str())
-                        .await?;
+
+                let resolved_csids = once_cmd_args
+                    .changeset_args
+                    .resolve_changesets(ctx, &self.small_repo)
+                    .boxed()
+                    .await?;
+
                 let new_version = once_cmd_args
                     .new_version
                     .clone()
                     .map(CommitSyncConfigVersion);
 
-                run_in_single_commit_mode(
+                run_in_single_sync_mode(
                     ctx,
-                    bcs,
+                    resolved_csids,
                     self.commit_syncer.clone(),
                     self.scuba_sample.clone(),
                     maybe_target_bookmark,

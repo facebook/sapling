@@ -121,53 +121,67 @@ const SM_CLEANUP_TIMEOUT_SECS: u64 = 60;
 
 /// Sync and all of its unsynced ancestors **if the given commit has at least
 /// one synced ancestor**.
-async fn run_in_single_commit_mode(
+async fn run_in_single_sync_mode(
     ctx: &CoreContext,
-    bcs: ChangesetId,
+    bcs_ids: Vec<ChangesetId>,
     commit_syncer: CommitSyncer<Arc<Repo>>,
     scuba_sample: MononokeScubaSampleBuilder,
-    maybe_bookmark: Option<BookmarkKey>,
+    mb_target_bookmark: Option<BookmarkKey>,
     common_bookmarks: HashSet<BookmarkKey>,
     pushrebase_rewrite_dates: PushrebaseRewriteDates,
     new_version: Option<CommitSyncConfigVersion>,
     unsafe_force_rewrite_parent_to_target_bookmark: bool,
 ) -> Result<(), Error> {
+    let mb_target_bookmark = mb_target_bookmark.map(Target);
+
     log_info(
         ctx,
         format!(
-            "Checking if {} is already synced {}->{}",
-            bcs,
-            commit_syncer.repos.get_source_repo().repo_identity().id(),
-            commit_syncer.repos.get_target_repo().repo_identity().id(),
+            "Syncing {} commits and all of their unsynced ancestors",
+            bcs_ids.len()
         ),
     );
-    if commit_syncer
-        .commit_sync_outcome_exists(ctx, Source(bcs))
-        .await?
-    {
-        log_info(ctx, format!("{} is already synced", bcs));
-        return Ok(());
+
+    for bcs_id in bcs_ids {
+        log_info(
+            ctx,
+            format!(
+                "Checking if {} is already synced {}->{}",
+                bcs_id,
+                commit_syncer.repos.get_source_repo().repo_identity().id(),
+                commit_syncer.repos.get_target_repo().repo_identity().id(),
+            ),
+        );
+        if commit_syncer
+            .commit_sync_outcome_exists(ctx, Source(bcs_id))
+            .await?
+        {
+            log_info(ctx, format!("{} is already synced", bcs_id));
+            continue;
+        }
+
+        let res = sync_commit_and_ancestors(
+            ctx,
+            &commit_syncer,
+            None, // from_cs_id,
+            bcs_id,
+            &mb_target_bookmark,
+            &common_bookmarks,
+            scuba_sample.clone(),
+            pushrebase_rewrite_dates,
+            None,
+            &new_version,
+            unsafe_force_rewrite_parent_to_target_bookmark,
+        )
+        .await;
+
+        if res.is_ok() {
+            log_info(ctx, "successful sync");
+        }
+        res.map(|_| ())?
     }
 
-    let res = sync_commit_and_ancestors(
-        ctx,
-        &commit_syncer,
-        None, // from_cs_id,
-        bcs,
-        &maybe_bookmark.map(Target),
-        &common_bookmarks,
-        scuba_sample,
-        pushrebase_rewrite_dates,
-        None,
-        &new_version,
-        unsafe_force_rewrite_parent_to_target_bookmark,
-    )
-    .await;
-
-    if res.is_ok() {
-        log_info(ctx, "successful sync");
-    }
-    res.map(|_| ())
+    Ok(())
 }
 
 async fn run_in_initial_import_mode_for_single_head(

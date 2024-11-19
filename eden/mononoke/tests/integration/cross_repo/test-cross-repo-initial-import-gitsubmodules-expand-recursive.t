@@ -245,7 +245,7 @@ Run the x-repo with submodules setup
   NOTE: Changing commit sync mapping version
   Starting session with id * (glob)
   Starting up X Repo Sync from small repo small_repo to large repo large_repo
-  changeset resolved as: ChangesetId(Blake2(eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c))
+  Syncing 1 commits and all of their unsynced ancestors
   Checking if eef414bd5fc8f7dcc129318276af6945117fe32bb5cfda6b0e6d43036107f61c is already synced 11->10
   Changing mapping version during pushrebase to INITIAL_IMPORT_SYNC_CONFIG
   UNSAFE: Bypass working copy validation is enabled!

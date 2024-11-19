@@ -48,8 +48,10 @@ pub struct InitialImportCommandArgs {
 pub struct OnceCommandArgs {
     #[clap(long)]
     pub target_bookmark: Option<String>,
-    #[clap(long = "commit", short = 'i')]
-    pub commit: String,
+
+    /// Commits to sync
+    #[clap(flatten)]
+    pub changeset_args: ChangesetArgs,
     // Performs mapping version change.
     #[clap(long = "unsafe-change-version-to")]
     pub new_version: Option<String>,

@@ -162,7 +162,7 @@ Create a branch merge in a small repo
 
 Push a single premerge commit and sync it to megarepo
   $ hg push -r 68360e2c98f0 --to with_merge_master -q
-  $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark --commit with_merge_master  &> /dev/null
+  $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark -B with_merge_master  &> /dev/null
 
 Push a commit from another small repo that modifies existing file
   $ cd "$TESTTMP"/another_hg
@@ -171,14 +171,14 @@ Push a commit from another small repo that modifies existing file
   $ hg ci -m 'modify file.txt'
   $ hg push -r . --to another_master -q
 
-  $ mononoke_x_repo_sync 2 0 once --target-bookmark master_bookmark --commit another_master  &> /dev/null
+  $ mononoke_x_repo_sync 2 0 once --target-bookmark master_bookmark -B another_master  &> /dev/null
 
   $ cd "$TESTTMP"/with_merge_hg
 Push and sync commits before a diamond commit
   $ hg push -r 7a7632995e68 --to with_merge_master -q
-  $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark --commit with_merge_master  &> /dev/null
+  $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark -B with_merge_master  &> /dev/null
   $ hg push -r be5140c7bfcc --to with_merge_master -q
-  $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark --commit with_merge_master  &> /dev/null
+  $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark -B with_merge_master  &> /dev/null
 
 Push one more commit from another small repo
   $ cd "$TESTTMP"/another_hg
@@ -187,7 +187,7 @@ Push one more commit from another small repo
   $ hg ci -m 'second modification of file.txt'
   $ hg push -r . --to another_master -q
 
-  $ mononoke_x_repo_sync 2 0 once --target-bookmark master_bookmark --commit another_master  &> /dev/null
+  $ mononoke_x_repo_sync 2 0 once --target-bookmark master_bookmark -B another_master  &> /dev/null
 
 Push diamond commit
   $ cd "$TESTTMP"/with_merge_hg
@@ -196,7 +196,7 @@ Push diamond commit
   $ hg push -r 62dba675d1b3 --to with_merge_master -q &> /dev/null
 
 Try to sync it automatically, it's expected to fail
-  $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark --commit with_merge_master 2>&1 | grep 'unsupported merge'
+  $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark -B with_merge_master 2>&1 | grep 'unsupported merge'
   * unsupported merge - only merges of new repos are supported (glob)
 
 Now sync with the tool
@@ -273,10 +273,10 @@ Merge with preserved ancestors
 
 -- sync p1
   $ cd "$TESTTMP"
-  $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark --commit $(hg log -T "{node}" -r pre_merge_p1 --cwd "$TESTTMP/with_merge_hg") |& grep -v "using repo"
+  $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark --commit-id $(hg log -T "{node}" -r pre_merge_p1 --cwd "$TESTTMP/with_merge_hg") |& grep -v "using repo"
   * Starting session with id * (glob)
   * Starting up X Repo Sync from small repo with_merge to large repo meg (glob)
-  * changeset resolved as: ChangesetId(Blake2(87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d)) (glob)
+  * Syncing 1 commits and all of their unsynced ancestors (glob)
   * Checking if 87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d is already synced 1->0 (glob)
   * 1 unsynced ancestors of 87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d (glob)
   * syncing 87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d via pushrebase for master_bookmark (glob)

@@ -28,7 +28,6 @@ rust_binary(
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/blobstore:blobstore_factory",
         "//eden/mononoke/bookmarks:bookmarks",
-        "//eden/mononoke/cmdlib:cmdlib",
         "//eden/mononoke/cmdlib:cmdlib_cross_repo",
         "//eden/mononoke/cmdlib:cmdlib_logging",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",

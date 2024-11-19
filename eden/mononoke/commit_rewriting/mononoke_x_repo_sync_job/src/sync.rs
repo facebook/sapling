@@ -153,7 +153,8 @@ pub async fn sync_commit_and_ancestors<R>(
     commit_syncer: &CommitSyncer<R>,
     from_cs_id: Option<ChangesetId>,
     to_cs_id: ChangesetId,
-    target_bookmark: &Option<Target<BookmarkKey>>,
+    // When provided, sync commits to this bookmark using pushrebase.
+    mb_target_bookmark: &Option<Target<BookmarkKey>>,
     common_pushrebase_bookmarks: &HashSet<BookmarkKey>,
     scuba_sample: MononokeScubaSampleBuilder,
     pushrebase_rewrite_dates: PushrebaseRewriteDates,
@@ -169,7 +170,10 @@ where
         format!("Syncing commit {to_cs_id} from commit {0:#?}", from_cs_id),
     );
 
-    log_debug(ctx, format!("Targeting bookmark {0:#?}", target_bookmark));
+    log_debug(
+        ctx,
+        format!("Targeting bookmark {0:#?}", mb_target_bookmark),
+    );
 
     if let Some(new_version) = unsafe_change_mapping_version_during_pushrebase {
         log_warning(
@@ -181,7 +185,7 @@ where
         log_warning(ctx, "UNSAFE: Bypass working copy validation is enabled!");
     };
 
-    let hint = match target_bookmark {
+    let hint = match mb_target_bookmark {
         Some(target_bookmark) if common_pushrebase_bookmarks.contains(target_bookmark) => Some(
             CandidateSelectionHint::AncestorOfBookmark(
                 target_bookmark.clone(),
@@ -222,7 +226,7 @@ where
     let len = unsynced_ancestors.len();
     log_info(ctx, format!("{} unsynced ancestors of {}", len, to_cs_id));
 
-    if let Some(target_bookmark) = target_bookmark {
+    if let Some(target_bookmark) = mb_target_bookmark {
         // This is forward sync. The direction is small to large, so the source bookmark is the small
         // bookmark which is the key in the common_pushrebase_bookmarks
         // Source: small, e.g. `heads/main`
@@ -307,7 +311,7 @@ where
     let maybe_remapped_cs_id = find_remapped_cs_id(ctx, commit_syncer, to_cs_id).await?;
     let remapped_cs_id =
         maybe_remapped_cs_id.ok_or_else(|| format_err!("unknown sync outcome for {}", to_cs_id))?;
-    if let Some(target_bookmark) = target_bookmark {
+    if let Some(target_bookmark) = mb_target_bookmark {
         move_or_create_bookmark(
             ctx,
             commit_syncer.get_target_repo(),

@@ -74,10 +74,10 @@ insert sync mapping entry
   $ add_synced_commit_mapping_entry 1 $FBSOURCE_C1_BONSAI 0 $MEGAREPO_MERGE_BONSAI TEST_VERSION_NAME
 
 run the sync again
-  $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark --commit fbsource_master |& grep -v "using repo"
+  $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark -B fbsource_master |& grep -v "using repo"
   * Starting session with id * (glob)
   * Starting up X Repo Sync from small repo fbs-mon to large repo meg-mon (glob)
-  * changeset resolved as: ChangesetId(Blake2(*)) (glob)
+  * Syncing 1 commits and all of their unsynced ancestors (glob)
   * Checking if * is already synced 1->0 (glob)
   * 2 unsynced ancestors of 46bab414a4d4a87666622accf4af5e1450feba6bfd5f41467f5b5d671b41aa55 (glob)
   * syncing 6d7f84d613e4cccb4ec27259b7b59335573cdd65ee5dc78887056a5eeb6e6a47 (glob)

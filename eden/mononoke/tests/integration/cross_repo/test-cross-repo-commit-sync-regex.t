@@ -82,28 +82,23 @@
   Error: Missing outcome for * from small repo (glob)
 
 -- sync the missing commits
--- TODO: support syncing multiple bookmarks with bookmark regex
-  $ with_stripped_logs mononoke_x_repo_sync 2 0 once -i somebookmark 
+  $ with_stripped_logs mononoke_x_repo_sync 2 0 once --bookmark-regex ".+bookmark"
   Starting session with id * (glob)
   Starting up X Repo Sync from small repo ovr-mon to large repo meg-mon
-  changeset resolved as: ChangesetId(Blake2(de4dfe2c590fda9c42549a2f6a2ea8eb7fab5b3b9690573e499e5814fff5ba7c))
+  Syncing 3 commits and all of their unsynced ancestors
+  Checking if 1c0ab9ee548f45eaabe8e81d8a67b2cd0748dff1453fccbed0a67a153c1bb48b is already synced 2->0
+  1c0ab9ee548f45eaabe8e81d8a67b2cd0748dff1453fccbed0a67a153c1bb48b is already synced
+  Checking if 195e3fd3952a97ff2714800a399751f1f52ac87454e745f9871403db5a377696 is already synced 2->0
+  1 unsynced ancestors of 195e3fd3952a97ff2714800a399751f1f52ac87454e745f9871403db5a377696
+  syncing 195e3fd3952a97ff2714800a399751f1f52ac87454e745f9871403db5a377696
+  changeset 195e3fd3952a97ff2714800a399751f1f52ac87454e745f9871403db5a377696 synced as 5c59f83b8a6fb9b56902be03e0bda3d7bbf2bd629a1caead56a4a8385e5cc8f5 in * (glob)
+  successful sync
   Checking if de4dfe2c590fda9c42549a2f6a2ea8eb7fab5b3b9690573e499e5814fff5ba7c is already synced 2->0
   2 unsynced ancestors of de4dfe2c590fda9c42549a2f6a2ea8eb7fab5b3b9690573e499e5814fff5ba7c
   syncing cdd71132c0062819766a1d6eb6c0b3384a4db3070c9936bd98920c142506f940
   changeset cdd71132c0062819766a1d6eb6c0b3384a4db3070c9936bd98920c142506f940 synced as 9d6f30edf25f7b5d72295ff3dae947aee3f74dbbf09077f16e5ce0c970875b3e in * (glob)
   syncing de4dfe2c590fda9c42549a2f6a2ea8eb7fab5b3b9690573e499e5814fff5ba7c
   changeset de4dfe2c590fda9c42549a2f6a2ea8eb7fab5b3b9690573e499e5814fff5ba7c synced as 160490009025590980be0fd659300a0c9fc6cf39b05f2a922cf844f11919fc5d in * (glob)
-  successful sync
-  X Repo Sync execution finished from small repo ovr-mon to large repo meg-mon
-
-  $ with_stripped_logs mononoke_x_repo_sync 2 0 once -i anotherbookmark
-  Starting session with id * (glob)
-  Starting up X Repo Sync from small repo ovr-mon to large repo meg-mon
-  changeset resolved as: ChangesetId(Blake2(195e3fd3952a97ff2714800a399751f1f52ac87454e745f9871403db5a377696))
-  Checking if 195e3fd3952a97ff2714800a399751f1f52ac87454e745f9871403db5a377696 is already synced 2->0
-  1 unsynced ancestors of 195e3fd3952a97ff2714800a399751f1f52ac87454e745f9871403db5a377696
-  syncing 195e3fd3952a97ff2714800a399751f1f52ac87454e745f9871403db5a377696
-  changeset 195e3fd3952a97ff2714800a399751f1f52ac87454e745f9871403db5a377696 synced as 5c59f83b8a6fb9b56902be03e0bda3d7bbf2bd629a1caead56a4a8385e5cc8f5 in * (glob)
   successful sync
   X Repo Sync execution finished from small repo ovr-mon to large repo meg-mon
 

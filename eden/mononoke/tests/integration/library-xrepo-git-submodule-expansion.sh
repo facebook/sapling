@@ -170,7 +170,7 @@ function merge_repo_a_to_large_repo {
 
   print_section "Changing commit sync mapping version"
   with_stripped_logs mononoke_x_repo_sync "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID" \
-    once --unsafe-force-rewrite-parent-to-target-bookmark --commit "$GIT_REPO_A_HEAD" \
+    once --unsafe-force-rewrite-parent-to-target-bookmark --commit-id "$GIT_REPO_A_HEAD" \
     --unsafe-change-version-to "$FINAL_CONFIG_VERSION_NAME" \
     --target-bookmark "$MASTER_BOOKMARK_NAME" 2>&1 | tee "$TESTTMP/xrepo_mapping_change.out"
 
