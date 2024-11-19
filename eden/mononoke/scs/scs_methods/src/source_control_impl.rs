@@ -169,17 +169,18 @@ impl SourceControlServiceImpl {
         req_ctxt: &RequestContext,
         specifier: Option<&dyn SpecifierExt>,
         params: &dyn AddScubaParams,
-    ) -> Result<CoreContext, scs_errors::ServiceError> {
+    ) -> Result<(CoreContext, String), scs_errors::ServiceError> {
         let session = self.create_session(req_ctxt).await?;
         let identities = session.metadata().identities();
         let mut scuba = self.create_scuba(name, req_ctxt, specifier, params, identities)?;
         if let Some(client_info) = session.metadata().client_request_info() {
             scuba.add_client_request_info(client_info);
         }
-        scuba.add("session_uuid", session.metadata().session_id().to_string());
+        let session_uuid = session.metadata().session_id().to_string();
+        scuba.add("session_uuid", session_uuid.clone());
 
         let ctx = session.new_context_with_scribe(self.logger.clone(), scuba, self.scribe.clone());
-        Ok(ctx)
+        Ok((ctx, session_uuid))
     }
 
     /// Create and configure a scuba sample builder for a request.
@@ -829,7 +830,7 @@ macro_rules! impl_thrift_methods {
                 let fut = async move {
                     let svc = self.0.clone();
                     let enable_futures_watchdog = self.0.enable_futures_watchdog;
-                    let ctx = create_ctx!(svc, $method_name, req_ctxt, $( $param_name ),*).await?;
+                    let (ctx, session_uuid) = create_ctx!(svc, $method_name, req_ctxt, $( $param_name ),*).await?;
                     let handler = {
                         cloned!(ctx);
                         async move {
@@ -841,7 +842,8 @@ macro_rules! impl_thrift_methods {
                                 if enable_futures_watchdog {
                                     f.watched(ctx.logger())
                                     .with_label(stringify!($method_name))
-                                    .with_max_poll(100).await
+                                    .with_unique_id(&session_uuid)
+                                    .with_max_poll(50).await
                                 } else {
                                     f.await
                                 }

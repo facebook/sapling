@@ -24,6 +24,7 @@ pub struct WatchedFuture<R, F> {
     inner: F,
     max_poll: Duration,
     label: Option<String>,
+    unique_id: Option<String>,
 }
 
 impl<R, F> WatchedFuture<R, F> {
@@ -34,6 +35,11 @@ impl<R, F> WatchedFuture<R, F> {
 
     pub fn with_label(mut self, label: &str) -> Self {
         self.label = Some(label.to_string());
+        self
+    }
+
+    pub fn with_unique_id(mut self, unique_id: &str) -> Self {
+        self.unique_id = Some(unique_id.to_string());
         self
     }
 }
@@ -51,14 +57,20 @@ where
         let now = Instant::now();
         let ret = this.inner.poll(cx);
         this.reporter
-            .report(this.label, this.max_poll, now.elapsed());
+            .report(this.label, this.unique_id, this.max_poll, now.elapsed());
 
         ret
     }
 }
 
 pub trait Reporter {
-    fn report(&self, name: &Option<String>, max_poll: &Duration, poll: Duration);
+    fn report(
+        &self,
+        name: &Option<String>,
+        unique_id: &Option<String>,
+        max_poll: &Duration,
+        poll: Duration,
+    );
 }
 
 pub struct SlogReporter<'a> {
@@ -67,12 +79,22 @@ pub struct SlogReporter<'a> {
 }
 
 impl Reporter for SlogReporter<'_> {
-    fn report(&self, name: &Option<String>, max_poll: &Duration, poll: Duration) {
+    fn report(
+        &self,
+        name: &Option<String>,
+        unique_id: &Option<String>,
+        max_poll: &Duration,
+        poll: Duration,
+    ) {
         if poll <= *max_poll {
             return;
         }
 
         let name = name.as_deref().unwrap_or("");
+        let unique_id_suffix = match unique_id {
+            Some(unique_id) => format!(", unique_id={}", unique_id),
+            None => "".to_string(),
+        };
 
         self.logger.log(&Record::new(
             &slog::RecordStatic {
@@ -80,7 +102,7 @@ impl Reporter for SlogReporter<'_> {
                 level: slog::Level::Warning,
                 tag: "futures_watchdog",
             },
-            &format_args!("Slow poll({}) ran for {:?}", name, poll),
+            &format_args!("Slow poll({}) ran for {:?}{}", name, poll, unique_id_suffix),
             slog::b!(),
         ));
     }
@@ -123,6 +145,7 @@ where
             reporter,
             inner: self,
             label: None,
+            unique_id: None,
             max_poll,
         }
     }
