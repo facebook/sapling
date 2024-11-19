@@ -555,7 +555,10 @@ fn retryable_mysql_errno(errno: u32) -> bool {
 }
 
 #[cfg(fbcode_build)]
-fn should_retry_mysql_query(err: &anyhow::Error) -> bool {
+/// Classifies the errors returned by MySQL as retryable or not
+/// useful for retry logic that has to cover greater span than single query
+/// like retrying the whole transaction.
+pub fn should_retry_mysql_query(err: &anyhow::Error) -> bool {
     use mysql_client::MysqlError;
     use MysqlError::*;
     match err.downcast_ref::<MysqlError>() {
@@ -566,7 +569,7 @@ fn should_retry_mysql_query(err: &anyhow::Error) -> bool {
 }
 
 #[cfg(not(fbcode_build))]
-fn should_retry_mysql_query(_err: &anyhow::Error) -> bool {
+pub fn should_retry_mysql_query(_err: &anyhow::Error) -> bool {
     false
 }
 

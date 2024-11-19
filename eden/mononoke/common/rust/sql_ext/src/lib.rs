@@ -18,6 +18,8 @@ pub use sqlite::open_existing_sqlite_path;
 pub use sqlite::open_sqlite_in_memory;
 pub use sqlite::open_sqlite_path;
 
+pub use crate::mononoke_queries::should_retry_mysql_query as should_retry_query;
+
 #[must_use]
 pub enum TransactionResult {
     Succeeded(Transaction),
