@@ -69,7 +69,10 @@
   Error: found 2 inconsistencies
  
 
--- TODO: support verifying bookmarks from a regex
+-- use verify-bookmarks, but passing a regex.
+  $ with_stripped_logs crossrepo_verify_bookmarks 2 0 --update-large-repo-bookmarks \
+  > --no-bookmark-updates --bookmark-regex "master_bookmark"
+  all is well!
 
 
 -- updating large repo bookmark will not work, bc there are unsynced commits.

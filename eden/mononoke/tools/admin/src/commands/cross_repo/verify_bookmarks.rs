@@ -12,6 +12,7 @@ use context::CoreContext;
 use cross_repo_sync::UpdateLargeRepoBookmarksMode;
 use cross_repo_sync::VerifyBookmarksRunMode;
 use mononoke_app::MononokeApp;
+use regex::Regex;
 
 use super::Repo;
 
@@ -29,6 +30,10 @@ pub struct VerifyBookmarksArgs {
     /// Limit on number of bookmarks to update in the large repo. Default is no limit.
     #[clap(long)]
     limit: Option<usize>,
+
+    /// Optional regex to filter bookmarks to verify.
+    #[clap(long)]
+    bookmark_regex: Option<String>,
 }
 
 pub async fn verify_bookmarks(
@@ -39,6 +44,10 @@ pub async fn verify_bookmarks(
     args: VerifyBookmarksArgs,
 ) -> Result<()> {
     let commit_syncers = create_commit_syncers_from_app(ctx, app, source_repo, target_repo).await?;
+
+    let mb_bookmark_regex: Option<Regex> = args
+        .bookmark_regex
+        .map_or(Ok(None), |re_str| Regex::new(re_str.as_str()).map(Some))?;
 
     let mode = if args.update_large_repo_bookmarks {
         VerifyBookmarksRunMode::UpdateLargeRepoBookmarks {
@@ -53,5 +62,5 @@ pub async fn verify_bookmarks(
         VerifyBookmarksRunMode::JustVerify
     };
 
-    cross_repo_sync::verify_bookmarks(ctx, commit_syncers, mode).await
+    cross_repo_sync::verify_bookmarks(ctx, commit_syncers, mode, mb_bookmark_regex).await
 }

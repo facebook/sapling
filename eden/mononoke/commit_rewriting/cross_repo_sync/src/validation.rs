@@ -47,6 +47,7 @@ use mononoke_types::ContentId;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 use movers::Mover;
+use regex::Regex;
 use slog::debug;
 use slog::error;
 use slog::info;
@@ -1434,8 +1435,18 @@ pub async fn verify_bookmarks<R: Repo>(
     ctx: &CoreContext,
     syncers: Syncers<R>,
     run_mode: VerifyBookmarksRunMode,
+    mb_bookmark_regex: Option<Regex>,
 ) -> Result<(), Error> {
     let diff = find_bookmark_diff(ctx.clone(), &syncers.large_to_small).await?;
+
+    let diff: Vec<_> = diff
+        .into_iter()
+        .filter(|d| {
+            mb_bookmark_regex.as_ref().map_or(true, |bookmark_regex| {
+                bookmark_regex.is_match(d.target_bookmark().as_str())
+            })
+        })
+        .collect();
 
     let source_repo_name = syncers
         .large_to_small

@@ -35,6 +35,7 @@ rust_library(
         "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:rand",
         "fbsource//third-party/rust:ref-cast",
+        "fbsource//third-party/rust:regex",
         "fbsource//third-party/rust:scopeguard",
         "fbsource//third-party/rust:slog",
         "fbsource//third-party/rust:static_assertions",
