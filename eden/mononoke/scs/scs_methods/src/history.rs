@@ -8,10 +8,12 @@
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
+use cloned::cloned;
 use futures::stream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use futures_watchdog::WatchdogExt;
 use mononoke_api::ChangesetContext;
 use mononoke_api::CoreContext;
 use mononoke_api::MononokeError;
@@ -21,7 +23,7 @@ use source_control as thrift;
 use crate::into_response::AsyncIntoResponseWith;
 
 pub(crate) async fn collect_history(
-    _ctx: &CoreContext,
+    ctx: &CoreContext,
     history_stream: impl Stream<Item = Result<ChangesetContext<Repo>, MononokeError>>,
     skip: usize,
     limit: usize,
@@ -39,7 +41,7 @@ pub(crate) async fn collect_history(
             .map(move |changeset| async move {
                 let changeset = changeset?;
                 if after_timestamp.is_some() || before_timestamp.is_some() {
-                    let date = changeset.author_date().await?;
+                    let date = changeset.author_date().watched(ctx.logger()).await?;
 
                     if let Some(after) = after_timestamp {
                         if after > date.timestamp() {
@@ -72,12 +74,17 @@ pub(crate) async fn collect_history(
             let commit_infos: Vec<_> = history
                 .map(|changeset| async {
                     match changeset {
-                        Ok(cs) => cs.into_response_with(identity_schemes).await,
+                        Ok(cs) => {
+                            cs.into_response_with(identity_schemes)
+                                .watched(ctx.logger())
+                                .await
+                        }
                         Err(err) => Err(err),
                     }
                 })
                 .buffered(100)
                 .try_collect()
+                .watched(ctx.logger())
                 .await?;
             Ok(thrift::History::commit_infos(commit_infos))
         }
@@ -89,10 +96,12 @@ pub(crate) async fn collect_history(
                 .map(|chunk| chunk.into_iter().collect::<Result<Vec<_>, _>>())
                 .and_then(move |changesets: Vec<ChangesetContext<Repo>>| {
                     let identity_schemes = identity_schemes.clone();
+                    cloned!(ctx);
                     async move {
                         Ok(stream::iter(
                             changesets
                                 .into_response_with(&identity_schemes)
+                                .watched(ctx.logger())
                                 .await?
                                 .into_iter()
                                 .map(Ok::<_, scs_errors::ServiceError>)
@@ -102,6 +111,7 @@ pub(crate) async fn collect_history(
                 })
                 .try_flatten()
                 .try_collect()
+                .watched(ctx.logger())
                 .await?;
             Ok(thrift::History::commit_ids(commit_ids))
         }

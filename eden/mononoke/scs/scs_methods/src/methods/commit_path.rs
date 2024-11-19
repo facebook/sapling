@@ -17,6 +17,7 @@ use dedupmap::DedupMap;
 use futures::future;
 use futures::stream::TryStreamExt;
 use futures::try_join;
+use futures_watchdog::WatchdogExt;
 use maplit::btreeset;
 use mononoke_api::ChangesetPathHistoryOptions;
 use mononoke_api::MononokeError;
@@ -445,13 +446,19 @@ impl SourceControlServiceImpl {
     ) -> Result<thrift::CommitPathHistoryResponse, scs_errors::ServiceError> {
         let (repo, changeset) = self
             .repo_changeset(ctx.clone(), &commit_path.commit)
+            .watched(ctx.logger())
             .await?;
-        let path = changeset.path_with_history(&commit_path.path).await?;
+        let path = changeset
+            .path_with_history(&commit_path.path)
+            .watched(ctx.logger())
+            .await?;
         let (descendants_of, exclude_changeset_and_ancestors) = try_join!(
             async {
                 if let Some(descendants_of) = &params.descendants_of {
                     Ok::<_, scs_errors::ServiceError>(Some(
-                        self.changeset_id(&repo, descendants_of).await?,
+                        self.changeset_id(&repo, descendants_of)
+                            .watched(ctx.logger())
+                            .await?,
                     ))
                 } else {
                     Ok(None)
@@ -463,6 +470,7 @@ impl SourceControlServiceImpl {
                 {
                     Ok::<_, scs_errors::ServiceError>(Some(
                         self.changeset_id(&repo, exclude_changeset_and_ancestors)
+                            .watched(ctx.logger())
                             .await?,
                     ))
                 } else {
@@ -504,6 +512,7 @@ impl SourceControlServiceImpl {
                 follow_history_across_deletions: params.follow_history_across_deletions,
                 follow_mutable_file_history: params.follow_mutable_file_history.unwrap_or(false),
             })
+            .watched(ctx.logger())
             .await?;
         let history = collect_history(
             &ctx,
@@ -515,6 +524,7 @@ impl SourceControlServiceImpl {
             params.format,
             &params.identity_schemes,
         )
+        .watched(ctx.logger())
         .await?;
 
         Ok(thrift::CommitPathHistoryResponse {
