@@ -1647,6 +1647,15 @@ class EdenConfig : private ConfigSettingManager {
       std::nullopt,
       this};
 
+  // [notify]
+  /**
+   * This is the maximum number of changes that changesSinceV2 will return.
+   */
+  ConfigSetting<uint64_t> notifyMaxNumberOfChanges{
+      "notify:max-num-changes",
+      10000,
+      this};
+
 // [facebook]
 // Facebook internal
 

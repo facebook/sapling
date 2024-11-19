@@ -2241,6 +2241,9 @@ void EdenServiceHandler::sync_changesSinceV2(
 
     result.changes_ref()->push_back(std::move(change));
   } else {
+    auto state = server_->getServerState();
+    auto config = state->getEdenConfig();
+    auto maxNumberOfChanges = config->notifyMaxNumberOfChanges.getValue();
     const auto isTruncated = mountHandle.getJournal().forEachDelta(
         *fromPosition.sequenceNumber_ref() + 1,
         std::nullopt,
@@ -2255,9 +2258,9 @@ void EdenServiceHandler::sync_changesSinceV2(
           SmallChangeNotification smallChange;
           if (current.isPath2Valid) {
             const auto& info = current.info2;
-            // NOTE: we could do a bunch of runtime checks here to validate the
-            //       infoN states would be a lot simpler if we removed this
-            //       infoN state and replaced them with a simple enum
+            // NOTE: we could do a bunch of runtime checks here to validate
+            // the infoN states would be a lot simpler if we removed this
+            // infoN state and replaced them with a simple enum
             if (info.existedBefore) {
               // Replaced
               Replaced replaced;
@@ -2328,9 +2331,11 @@ void EdenServiceHandler::sync_changesSinceV2(
           result.changes_ref()->push_back(std::move(change));
         });
 
-    if (isTruncated) {
+    if (isTruncated || result.changes_ref()->size() > maxNumberOfChanges) {
       LostChanges lostChanges;
-      lostChanges.reason_ref() = LostChangesReason::JOURNAL_TRUNCATED;
+      lostChanges.reason_ref() = isTruncated
+          ? LostChangesReason::JOURNAL_TRUNCATED
+          : LostChangesReason::TOO_MANY_CHANGES;
 
       LargeChangeNotification largeChange;
       largeChange.lostChanges_ref() = std::move(lostChanges);
