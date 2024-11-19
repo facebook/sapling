@@ -9,9 +9,11 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.86"
+assembly_line = { version = "0.1.0", path = "../common/assembly_line" }
 async-trait = "0.1.71"
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 changeset_info = { version = "0.1.0", path = "../derived_data/changeset_info" }
 clap = { version = "4.5.20", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

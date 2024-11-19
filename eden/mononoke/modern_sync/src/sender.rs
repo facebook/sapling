@@ -10,6 +10,7 @@ use mononoke_types::FileContents;
 use slog::info;
 use slog::Logger;
 
+#[derive(Clone)]
 pub struct ModernSyncSender {
     logger: Logger,
 }

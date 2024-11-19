@@ -9,13 +9,16 @@ use std::sync::Arc;
 
 use anyhow::format_err;
 use anyhow::Result;
+use assembly_line::TryAssemblyLine;
 use blobstore::Loadable;
 use bookmarks::BookmarkUpdateLogArc;
-use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::BookmarkUpdateLogId;
+use borrowed::borrowed;
 use changeset_info::ChangesetInfo;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
+use cloned::cloned;
+use commit_graph::CommitGraphArc;
 use context::CoreContext;
 use futures::StreamExt;
 use futures::TryStreamExt;
@@ -52,19 +55,19 @@ pub async fn sync(
     let repo: Repo = app.open_repo(&repo_arg).await?;
     let _repo_id = repo.repo_identity().id();
     let repo_name = repo.repo_identity().name().to_string();
-
+    let logger = app.logger().clone();
     let ctx = CoreContext::new_with_logger_and_client_info(
         app.fb,
-        app.logger().clone(),
+        logger.clone(),
         ClientInfo::default_with_entry_point(ClientEntryPoint::ModernSync),
     )
     .clone_with_repo_name(&repo_name);
-
+    borrowed!(ctx);
     let start_id = if let Some(id) = start_id_arg {
         id
     } else {
         repo.mutable_counters()
-            .get_counter(&ctx, MODERN_SYNC_COUNTER_NAME)
+            .get_counter(ctx, MODERN_SYNC_COUNTER_NAME)
             .await?
             .map(|val| val.try_into())
             .transpose()?
@@ -76,44 +79,56 @@ pub async fn sync(
             })?
     };
 
-    let entries = bul_util::read_bookmark_update_log(
-        &ctx,
+    let sender = ModernSyncSender::new(logger.clone());
+    let commit_graph = repo.commit_graph_arc();
+    let derived_data = repo.repo_derived_data_arc();
+    let repo_blobstore = repo.repo_blobstore_arc();
+
+    bul_util::read_bookmark_update_log(
+        ctx,
         BookmarkUpdateLogId(start_id),
         exec_type,
         repo.bookmark_update_log_arc(),
-    );
-
-    // TODO: This is a bit of a hack. We should be able to get the entries as a stream
-    let entries_vec: Vec<BookmarkUpdateLogEntry> = entries
-        .collect::<Vec<_>>()
-        .await
-        .into_iter() // Propagate errors
-        .collect::<Result<Vec<Vec<BookmarkUpdateLogEntry>>>>() // Collect into a Result of Vec of Vecs
-        .map(|vecs| vecs.into_iter().flatten().collect())?;
-
-    let sender = ModernSyncSender::new(app.logger().clone());
-    for raw_entry in entries_vec {
-        info!(app.logger(), "Entry {:?}", raw_entry);
-        let from = raw_entry.from_changeset_id.map_or(vec![], |val| vec![val]);
-        let to = raw_entry.to_changeset_id.map_or(vec![], |val| vec![val]);
-
-        let mut res = repo
-            .commit_graph
-            .ancestors_difference_stream(&ctx, to, from)
-            .await?;
-
-        while let Some(cs_id) = res.try_next().await? {
-            process_one_changeset(
-                &cs_id,
-                &ctx,
-                repo.repo_derived_data_arc(),
-                repo.repo_blobstore_arc(),
-                app.logger(),
-                &sender,
-            )
-            .await?;
+    )
+    .then(|entries| {
+        cloned!(commit_graph, derived_data, repo_blobstore, logger, sender);
+        borrowed!(ctx);
+        async move {
+            match entries {
+                Err(e) => {
+                    info!(
+                        logger,
+                        "Found error while getting bookmark update log entry {:#?}", e
+                    );
+                    Err(e)
+                }
+                Ok(entries) => {
+                    bul_util::get_commit_stream(entries, commit_graph, ctx)
+                        .await
+                        .fuse()
+                        .try_next_step(move |cs_id| {
+                            cloned!(ctx, derived_data, repo_blobstore, logger, sender);
+                            async move {
+                                process_one_changeset(
+                                    &cs_id,
+                                    &ctx,
+                                    derived_data,
+                                    repo_blobstore,
+                                    &logger,
+                                    &sender,
+                                )
+                                .await
+                            }
+                        })
+                        .try_collect::<()>()
+                        .await
+                }
+            }
+            // TODO Update counter after processing one entry
         }
-    }
+    })
+    .try_collect::<()>()
+    .await?;
 
     Ok(())
 }
