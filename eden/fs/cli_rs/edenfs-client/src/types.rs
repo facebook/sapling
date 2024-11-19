@@ -77,7 +77,7 @@ impl From<JournalPosition> for thrift_types::edenfs::JournalPosition {
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
 pub struct Dtype(pub i32);
 
 impl Dtype {
@@ -128,7 +128,7 @@ impl fmt::Display for Dtype {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 pub struct Added {
     pub file_type: Dtype,
     pub path: Vec<u8>,
@@ -156,7 +156,7 @@ impl From<thrift_types::edenfs::Added> for Added {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 pub struct Modified {
     pub file_type: Dtype,
     pub path: Vec<u8>,
@@ -184,7 +184,7 @@ impl From<thrift_types::edenfs::Modified> for Modified {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 pub struct Renamed {
     pub file_type: Dtype,
     pub from: Vec<u8>,
@@ -217,7 +217,7 @@ impl From<thrift_types::edenfs::Renamed> for Renamed {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 pub struct Replaced {
     pub file_type: Dtype,
     pub from: Vec<u8>,
@@ -250,7 +250,7 @@ impl From<thrift_types::edenfs::Replaced> for Replaced {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 pub struct Removed {
     pub file_type: Dtype,
     pub path: Vec<u8>,
@@ -278,6 +278,7 @@ impl From<thrift_types::edenfs::Removed> for Removed {
     }
 }
 
+#[derive(Serialize)]
 pub enum SmallChangeNotification {
     Added(Added),
     Modified(Modified),
@@ -321,6 +322,7 @@ impl From<thrift_types::edenfs::SmallChangeNotification> for SmallChangeNotifica
     }
 }
 
+#[derive(Serialize)]
 pub struct DirectoryRenamed {
     pub from: Vec<u8>,
     pub to: Vec<u8>,
@@ -350,6 +352,7 @@ impl From<thrift_types::edenfs::DirectoryRenamed> for DirectoryRenamed {
     }
 }
 
+#[derive(Serialize)]
 pub struct CommitTransition {
     pub from: Vec<u8>,
     pub to: Vec<u8>,
@@ -375,6 +378,7 @@ impl From<thrift_types::edenfs::CommitTransition> for CommitTransition {
     }
 }
 
+#[derive(Serialize)]
 pub enum LargeChangeNotification {
     DirectoryRenamed(DirectoryRenamed),
     CommitTransition(CommitTransition),
@@ -407,6 +411,7 @@ impl From<thrift_types::edenfs::LargeChangeNotification> for LargeChangeNotifica
     }
 }
 
+#[derive(Serialize)]
 pub enum ChangeNotification {
     SmallChange(SmallChangeNotification),
     LargeChange(LargeChangeNotification),
@@ -439,6 +444,7 @@ impl From<thrift_types::edenfs::ChangeNotification> for ChangeNotification {
     }
 }
 
+#[derive(Serialize)]
 pub struct ChangesSinceV2Result {
     pub to_position: JournalPosition,
     pub changes: Vec<ChangeNotification>,

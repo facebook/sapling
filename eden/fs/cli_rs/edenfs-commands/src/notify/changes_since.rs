@@ -19,7 +19,6 @@ use hg_util::path::expand_path;
 use crate::ExitCode;
 
 // TODO: add a --timeout flag
-// TODO: add a --json flag to print the output in JSON format
 #[derive(Parser, Debug)]
 #[clap(about = "Returns the changes since the given EdenFS journal position")]
 pub struct ChangesSinceCmd {
@@ -30,6 +29,9 @@ pub struct ChangesSinceCmd {
     #[clap(parse(from_str = expand_path))]
     /// Path to the mount point
     mount_point: Option<PathBuf>,
+
+    #[clap(long, help = "Print the output in JSON format")]
+    json: bool,
 }
 
 #[async_trait]
@@ -46,7 +48,14 @@ impl crate::Subcommand for ChangesSinceCmd {
         let result = instance
             .get_changes_since(&self.mount_point, &self.position, None)
             .await?;
-        println!("{result}");
+        println!(
+            "{}",
+            if self.json {
+                serde_json::to_string(&result)?
+            } else {
+                result.to_string()
+            }
+        );
         Ok(0)
     }
 }
