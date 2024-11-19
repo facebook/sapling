@@ -11,6 +11,7 @@ use anyhow::format_err;
 use anyhow::Result;
 use blobstore::Loadable;
 use bookmarks::BookmarkUpdateLogArc;
+use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::BookmarkUpdateLogId;
 use changeset_info::ChangesetInfo;
 use clientinfo::ClientEntryPoint;
@@ -31,6 +32,7 @@ use crate::sender::ModernSyncSender;
 use crate::Repo;
 const MODERN_SYNC_COUNTER_NAME: &str = "modern_sync";
 
+#[derive(Clone)]
 pub enum ExecutionType {
     SyncOnce,
     Tail,
@@ -40,7 +42,7 @@ pub async fn sync(
     app: Arc<MononokeApp>,
     start_id_arg: Option<u64>,
     repo_arg: RepoArg,
-    _exec_type: ExecutionType,
+    exec_type: ExecutionType,
 ) -> Result<()> {
     let repo: Repo = app.open_repo(&repo_arg).await?;
     let _repo_id = repo.repo_identity().id();
@@ -69,19 +71,24 @@ pub async fn sync(
             })?
     };
 
-    // TODO: Implement tailing mode for entries
-    let entries = bul_util::get_one_entry(
+    let entries = bul_util::read_bookmark_update_log(
         &ctx,
-        repo.bookmark_update_log_arc(),
         BookmarkUpdateLogId(start_id),
-    )
-    .await;
+        exec_type,
+        repo.bookmark_update_log_arc(),
+    );
 
-    let entries_vec = entries.collect::<Vec<_>>().await;
+    // TODO: This is a bit of a hack. We should be able to get the entries as a stream
+    let entries_vec: Vec<BookmarkUpdateLogEntry> = entries
+        .collect::<Vec<_>>()
+        .await
+        .into_iter() // Propagate errors
+        .collect::<Result<Vec<Vec<BookmarkUpdateLogEntry>>>>() // Collect into a Result of Vec of Vecs
+        .map(|vecs| vecs.into_iter().flatten().collect())?;
+
     let sender = ModernSyncSender::new(app.logger().clone());
-    for entry in entries_vec {
-        info!(app.logger(), "Entry {:?}", entry);
-        let raw_entry = entry?;
+    for raw_entry in entries_vec {
+        info!(app.logger(), "Entry {:?}", raw_entry);
         let from = raw_entry.from_changeset_id.map_or(vec![], |val| vec![val]);
         let to = raw_entry.to_changeset_id.map_or(vec![], |val| vec![val]);
 
