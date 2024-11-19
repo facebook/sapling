@@ -57,6 +57,7 @@ export const SplitDiffTable = React.memo(
     const isAdded = patch.type === 'Added';
 
     const unified = ctx.display === 'unified';
+    const displayLineNumbers = ctx.displayLineNumbers ?? true;
 
     const {hunks} = patch;
     const lastHunkIndex = hunks.length - 1;
@@ -88,7 +89,15 @@ export const SplitDiffTable = React.memo(
           }
         }
 
-        addRowsForHunk(unified, hunk, path, rows, tokenization?.[index], ctx.openFileToLine);
+        addRowsForHunk(
+          unified,
+          hunk,
+          path,
+          rows,
+          tokenization?.[index],
+          ctx.openFileToLine,
+          displayLineNumbers,
+        );
 
         const isLast = index === lastHunkIndex;
         const nextHunk = hunks[index + 1];
@@ -138,8 +147,8 @@ export const SplitDiffTable = React.memo(
           }
           {...tableSelectionProps}>
           <colgroup>
-            <col width={50} />
-            <col width={50} />
+            {displayLineNumbers && <col width={50} />}
+            {displayLineNumbers && <col width={50} />}
             <col width={'100%'} />
           </colgroup>
           <tbody>{rows}</tbody>
@@ -151,9 +160,9 @@ export const SplitDiffTable = React.memo(
         className={'split-diff-view-hunk-table display-split ' + (tableSelectionClassName ?? '')}
         {...tableSelectionProps}>
         <colgroup>
-          <col width={50} />
+          {displayLineNumbers && <col width={50} />}
           <col width={'50%'} />
-          <col width={50} />
+          {displayLineNumbers && <col width={50} />}
           <col width={'50%'} />
         </colgroup>
         <tbody>{rows}</tbody>
@@ -184,6 +193,7 @@ function addRowsForHunk(
   rows: React.ReactElement[],
   tokenization: TokenizedDiffHunk | undefined,
   openFileToLine?: (line: OneIndexedLineNumber) => unknown,
+  displayLineNumbers: boolean = true,
 ): void {
   const {oldStart, newStart, lines} = hunk;
   const groups = organizeLinesIntoGroups(lines);
@@ -206,6 +216,7 @@ function addRowsForHunk(
       tokenization?.[0].slice(beforeTokenizedIndex),
       tokenization?.[1].slice(afterTokenizedIndex),
       openFileToLine,
+      displayLineNumbers,
     );
     beforeLineNumber += common.length;
     afterLineNumber += common.length;
@@ -250,24 +261,24 @@ function addRowsForHunk(
         if (unified) {
           linesA.push(
             <tr key={`${beforeLineNumber}/${afterLineNumber}:b`}>
-              {beforeLine}
-              <BlankLineNumber before />
+              {displayLineNumbers && beforeLine}
+              {displayLineNumbers && <BlankLineNumber before />}
               {beforeChange}
             </tr>,
           );
           linesB.push(
             <tr key={`${beforeLineNumber}/${afterLineNumber}:a`}>
-              <BlankLineNumber after />
-              {afterLine}
+              {displayLineNumbers && <BlankLineNumber after />}
+              {displayLineNumbers && afterLine}
               {afterChange}
             </tr>,
           );
         } else {
           linesA.push(
             <tr key={`${beforeLineNumber}/${afterLineNumber}`}>
-              {beforeLine}
+              {displayLineNumbers && beforeLine}
               {beforeChange}
-              {afterLine}
+              {displayLineNumbers && afterLine}
               {afterChange}
             </tr>,
           );
@@ -294,17 +305,17 @@ function addRowsForHunk(
         if (unified) {
           linesA.push(
             <tr key={`${beforeLineNumber}/`}>
-              {beforeLine}
-              <BlankLineNumber before />
+              {displayLineNumbers && beforeLine}
+              {displayLineNumbers && <BlankLineNumber before />}
               {beforeChange}
             </tr>,
           );
         } else {
           linesA.push(
             <tr key={`${beforeLineNumber}/`}>
-              {beforeLine}
+              {displayLineNumbers && beforeLine}
               {beforeChange}
-              {afterLine}
+              {displayLineNumbers && afterLine}
               {afterChange}
             </tr>,
           );
@@ -329,17 +340,17 @@ function addRowsForHunk(
         if (unified) {
           linesB.push(
             <tr key={`/${afterLineNumber}`}>
-              <BlankLineNumber after />
-              {afterLine}
+              {displayLineNumbers && <BlankLineNumber after />}
+              {displayLineNumbers && afterLine}
               {afterChange}
             </tr>,
           );
         } else {
           linesA.push(
             <tr key={`/${afterLineNumber}`}>
-              {beforeLine}
+              {displayLineNumbers && beforeLine}
               {beforeChange}
-              {afterLine}
+              {displayLineNumbers && afterLine}
               {afterChange}
             </tr>,
           );
@@ -378,6 +389,7 @@ function addUnmodifiedRows(
   tokenizationBefore?: TokenizedHunk | undefined,
   tokenizationAfter?: TokenizedHunk | undefined,
   openFileToLine?: (line: OneIndexedLineNumber) => unknown,
+  displayLineNumbers: boolean = true,
 ): void {
   let beforeLineNumber = initialBeforeLineNumber;
   let afterLineNumber = initialAfterLineNumber;
@@ -401,17 +413,17 @@ function addUnmodifiedRows(
     if (unified) {
       rows.push(
         <tr key={`${beforeLineNumber}/${afterLineNumber}`}>
-          {beforeLine}
-          {afterLine}
+          {displayLineNumbers && beforeLine}
+          {displayLineNumbers && afterLine}
           {beforeChange}
         </tr>,
       );
     } else {
       rows.push(
         <tr key={`${beforeLineNumber}/${afterLineNumber}`}>
-          {beforeLine}
+          {displayLineNumbers && beforeLine}
           {beforeChange}
-          {afterLine}
+          {displayLineNumbers && afterLine}
           {afterChange}
         </tr>,
       );
@@ -546,6 +558,7 @@ function ExpandingSeparator({
     tokenization,
     tokenization,
     ctx.openFileToLine,
+    ctx.displayLineNumbers,
   );
   return <>{rows}</>;
 }
