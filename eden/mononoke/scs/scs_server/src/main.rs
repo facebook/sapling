@@ -12,6 +12,7 @@ use std::io::Write;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -105,6 +106,9 @@ struct ScsServerArgs {
     /// Thrift queue size
     #[clap(long, default_value = "0")]
     thrift_queue_size: usize,
+    /// Thrift queue timeout in milliseconds
+    #[clap(long, default_value = "500")]
+    thrift_queue_timeout: u64,
     /// Number of Thrift workers
     #[clap(long, default_value = "1000")]
     thrift_workers_num: usize,
@@ -319,6 +323,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             let (factory, _processing_handle) = runtime.block_on(async move {
                 ThriftFactoryBuilder::new(fb, "main-thrift-incoming", args.thrift_workers_num)
                     .with_queueing_limit(args.thrift_queue_size)
+                    .with_queueing_timeout(Some(Duration::from_millis(args.thrift_queue_timeout)))
                     .build()
                     .await
                     .expect("Failed to build thrift factory")
