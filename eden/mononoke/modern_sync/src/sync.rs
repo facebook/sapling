@@ -21,11 +21,16 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use mononoke_app::args::RepoArg;
 use mononoke_app::MononokeApp;
+use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
 use mutable_counters::MutableCountersRef;
-use repo_blobstore::RepoBlobstoreRef;
+use repo_blobstore::RepoBlobstore;
+use repo_blobstore::RepoBlobstoreArc;
+use repo_derived_data::RepoDerivedData;
+use repo_derived_data::RepoDerivedDataArc;
 use repo_identity::RepoIdentityRef;
 use slog::info;
+use slog::Logger;
 
 use crate::bul_util;
 use crate::sender::ModernSyncSender;
@@ -98,30 +103,49 @@ pub async fn sync(
             .await?;
 
         while let Some(cs_id) = res.try_next().await? {
-            info!(app.logger(), "Found commit {:?}", cs_id);
-            let cs_info = repo
-                .repo_derived_data
-                .derive::<ChangesetInfo>(&ctx, cs_id.clone())
-                .await?;
-            info!(app.logger(), "Commit info {:?}", cs_info);
-            let bs = cs_id.load(&ctx, &repo.repo_blobstore()).await?;
-            let thing: Vec<_> = bs.file_changes().collect();
-
-            for (_path, file_change) in thing {
-                info!(app.logger(), "File change {:?}", file_change);
-                let bs = match file_change {
-                    FileChange::Change(change) => Some(change.content_id()),
-                    FileChange::UntrackedChange(change) => Some(change.content_id()),
-                    _ => None,
-                };
-
-                if let Some(bs) = bs {
-                    let blob = bs.load(&ctx, &repo.repo_blobstore()).await?;
-                    sender.upload_content(bs, blob);
-                }
-            }
+            process_one_changeset(
+                &cs_id,
+                &ctx,
+                repo.repo_derived_data_arc(),
+                repo.repo_blobstore_arc(),
+                app.logger(),
+                &sender,
+            )
+            .await?;
         }
     }
 
+    Ok(())
+}
+
+async fn process_one_changeset(
+    cs_id: &ChangesetId,
+    ctx: &CoreContext,
+    derived_data: Arc<RepoDerivedData>,
+    blobstore: Arc<RepoBlobstore>,
+    logger: &Logger,
+    sender: &ModernSyncSender,
+) -> Result<()> {
+    info!(logger, "Found commit {:?}", cs_id);
+    let cs_info = derived_data
+        .derive::<ChangesetInfo>(ctx, cs_id.clone())
+        .await?;
+    info!(logger, "Commit info {:?}", cs_info);
+    let bs = cs_id.load(ctx, &blobstore).await?;
+    let thing: Vec<_> = bs.file_changes().collect();
+
+    for (_path, file_change) in thing {
+        info!(logger, "File change {:?}", file_change);
+        let bs = match file_change {
+            FileChange::Change(change) => Some(change.content_id()),
+            FileChange::UntrackedChange(change) => Some(change.content_id()),
+            _ => None,
+        };
+
+        if let Some(bs) = bs {
+            let blob = bs.load(ctx, &blobstore).await?;
+            sender.upload_content(bs, blob);
+        }
+    }
     Ok(())
 }
