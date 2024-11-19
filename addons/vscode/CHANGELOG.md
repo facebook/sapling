@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.64
+
+### Nov 19 2024
+
+- Sapling commands now show progress bars (requires a recent Sapling version)
+
 ## 0.1.63
 
 ### Nov 11 2024
