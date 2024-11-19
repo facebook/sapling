@@ -2317,10 +2317,17 @@ void EdenServiceHandler::sync_changesSinceV2(
       });
 
   if (isTruncated) {
-    throw newEdenError(
-        EDOM,
-        EdenErrorType::JOURNAL_TRUNCATED,
-        "Journal entry range has been truncated.");
+    LostChanges lostChanges;
+    lostChanges.reason_ref() = LostChangesReason::JOURNAL_TRUNCATED;
+
+    LargeChangeNotification largeChange;
+    largeChange.lostChanges_ref() = std::move(lostChanges);
+
+    ChangeNotification change;
+    change.largeChange_ref() = std::move(largeChange);
+
+    result.changes_ref()->clear();
+    result.changes_ref()->push_back(std::move(change));
   }
 
   if (!toSequence.has_value()) {

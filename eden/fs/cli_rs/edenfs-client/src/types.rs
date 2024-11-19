@@ -77,7 +77,7 @@ impl From<JournalPosition> for thrift_types::edenfs::JournalPosition {
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
+#[derive(PartialEq, Serialize)]
 pub struct Dtype(pub i32);
 
 impl Dtype {
@@ -128,7 +128,7 @@ impl fmt::Display for Dtype {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
+#[derive(Serialize)]
 pub struct Added {
     pub file_type: Dtype,
     pub path: Vec<u8>,
@@ -156,7 +156,7 @@ impl From<thrift_types::edenfs::Added> for Added {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
+#[derive(Serialize)]
 pub struct Modified {
     pub file_type: Dtype,
     pub path: Vec<u8>,
@@ -184,7 +184,7 @@ impl From<thrift_types::edenfs::Modified> for Modified {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
+#[derive(Serialize)]
 pub struct Renamed {
     pub file_type: Dtype,
     pub from: Vec<u8>,
@@ -217,7 +217,7 @@ impl From<thrift_types::edenfs::Renamed> for Renamed {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
+#[derive(Serialize)]
 pub struct Replaced {
     pub file_type: Dtype,
     pub from: Vec<u8>,
@@ -250,7 +250,7 @@ impl From<thrift_types::edenfs::Replaced> for Replaced {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
+#[derive(Serialize)]
 pub struct Removed {
     pub file_type: Dtype,
     pub path: Vec<u8>,
@@ -378,10 +378,71 @@ impl From<thrift_types::edenfs::CommitTransition> for CommitTransition {
     }
 }
 
+#[derive(PartialEq, Serialize)]
+pub struct LostChangesReason(pub i32);
+
+impl LostChangesReason {
+    pub const UNKNOWN: Self = LostChangesReason(0);
+    pub const EDENFS_REMOUNTED: Self = LostChangesReason(1);
+    pub const JOURNAL_TRUNCATED: Self = LostChangesReason(2);
+    pub const TOO_MANY_CHANGES: Self = LostChangesReason(3);
+}
+
+impl From<LostChangesReason> for i32 {
+    fn from(x: LostChangesReason) -> Self {
+        x.0
+    }
+}
+
+impl From<i32> for LostChangesReason {
+    fn from(x: i32) -> Self {
+        Self(x)
+    }
+}
+
+impl From<thrift_types::edenfs::LostChangesReason> for LostChangesReason {
+    fn from(x: thrift_types::edenfs::LostChangesReason) -> Self {
+        Self(x.0)
+    }
+}
+
+impl fmt::Display for LostChangesReason {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let display_str = match *self {
+            LostChangesReason::UNKNOWN => "Unknown",
+            LostChangesReason::EDENFS_REMOUNTED => "EdenFSRemounted",
+            LostChangesReason::JOURNAL_TRUNCATED => "JournalTruncated",
+            LostChangesReason::TOO_MANY_CHANGES => "TooManyChanges",
+            _ => "Undefined",
+        };
+        write!(f, "{}", display_str)
+    }
+}
+
+#[derive(Serialize)]
+pub struct LostChanges {
+    pub reason: LostChangesReason,
+}
+
+impl fmt::Display for LostChanges {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.reason)
+    }
+}
+
+impl From<thrift_types::edenfs::LostChanges> for LostChanges {
+    fn from(from: thrift_types::edenfs::LostChanges) -> Self {
+        LostChanges {
+            reason: from.reason.into(),
+        }
+    }
+}
+
 #[derive(Serialize)]
 pub enum LargeChangeNotification {
     DirectoryRenamed(DirectoryRenamed),
     CommitTransition(CommitTransition),
+    LostChanges(LostChanges),
 }
 
 impl fmt::Display for LargeChangeNotification {
@@ -392,6 +453,9 @@ impl fmt::Display for LargeChangeNotification {
             }
             LargeChangeNotification::CommitTransition(commit_transition) => {
                 write!(f, "commit_transition {}", commit_transition)
+            }
+            LargeChangeNotification::LostChanges(lost_changes) => {
+                write!(f, "lost_changes {}", lost_changes)
             }
         }
     }
@@ -405,6 +469,9 @@ impl From<thrift_types::edenfs::LargeChangeNotification> for LargeChangeNotifica
             }
             thrift_types::edenfs::LargeChangeNotification::commitTransition(commit_transition) => {
                 LargeChangeNotification::CommitTransition(commit_transition.into())
+            }
+            thrift_types::edenfs::LargeChangeNotification::lostChanges(lost_changes) => {
+                LargeChangeNotification::LostChanges(lost_changes.into())
             }
             _ => panic!("Unknown LargeChangeNotification"),
         }
