@@ -734,7 +734,8 @@ async function maybeWarnAboutRebaseOffWarm(dest: CommitInfo): Promise<boolean> {
       title: <T>Rebase off Warm Commit</T>,
       message: t(
         Internal.warnAboutRebaseOffWarmReason ??
-          "The commit you're on is a warmed up commit. Rebasing off will cause slower builds and performance.\n" +
+          "The commit you're on is a warmed up commit. Moving off will cause slower builds and performance.\n" +
+            "It's recommended to rebase your changes onto the warmed up commit instead.\n" +
             "If you need fresher changes, it's recommended to reserve a new OD and work off the warm commit.\n" +
             'Do you want to `goto` anyway?',
       ),
