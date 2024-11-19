@@ -377,8 +377,8 @@ dott_test(
 )
 
 dott_test(
-    name = "newadmin",
-    dott_files = glob(["test-newadmin-*.t"]),
+    name = "admin",
+    dott_files = glob(["test-admin-*.t"]),
     deps = [
         "//eden/mononoke:mononoke",
         "//eden/mononoke/tools/admin:admin",
