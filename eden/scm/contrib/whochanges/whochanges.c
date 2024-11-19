@@ -66,7 +66,6 @@ static void handle_events(int fd) {
   ssize_t path_len;
   char procexe_path[PATH_MAX];
   char procfd_path[PATH_MAX];
-  struct fanotify_response response;
   struct stat st;
 
   /* Loop while events can be read from fanotify file descriptor */
