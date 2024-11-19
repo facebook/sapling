@@ -2212,113 +2212,26 @@ void EdenServiceHandler::sync_changesSinceV2(
           fromPosition.sequenceNumber().value(),
           fromPosition.snapshotHash().value()));
 
-  checkMountGeneration(
-      fromPosition, mountHandle.getEdenMount(), "fromPosition"sv);
-
+  auto latestJournalEntry = mountHandle.getJournal().getLatest();
+  std::optional<JournalDelta::SequenceNumber> toSequence;
+  RootId toSnapshotHash = RootId{};
+  if (latestJournalEntry.has_value()) {
+    toSequence = latestJournalEntry->sequenceID;
+    toSnapshotHash = latestJournalEntry->toHash;
+  }
+  RootId currentHash = toSnapshotHash;
   RootIdCodec& rootIdCodec = mountHandle.getObjectStore();
 
-  std::optional<JournalDelta::SequenceNumber> toSequence;
-  auto latestJournalEntry = mountHandle.getJournal().getLatest();
-  RootId toSnapshotHash =
-      latestJournalEntry.has_value() ? latestJournalEntry->toHash : RootId{};
-  RootId currentHash = toSnapshotHash;
-
-  const auto isTruncated = mountHandle.getJournal().forEachDelta(
-      *fromPosition.sequenceNumber_ref() + 1,
-      std::nullopt,
-      [&](const FileChangeJournalDelta& current) -> void {
-        if (!toSequence.has_value()) {
-          toSequence = current.sequenceID;
-        }
-
-        if (!current.isPath1Valid) {
-          XLOG(DFATAL)
-              << "FileChangeJournalDetal::isPath1Valid should never be false";
-        }
-
-        ChangeNotification change;
-        LargeChangeNotification largeChange;
-        SmallChangeNotification smallChange;
-        if (current.isPath2Valid) {
-          const auto& info = current.info2;
-          // NOTE: we could do a bunch of runtime checks here to validate the
-          //       infoN states would be a lot simpler if we removed this infoN
-          //       state and replaced them with a simple enum
-          if (info.existedBefore) {
-            // Replaced
-            Replaced replaced;
-            replaced.from() = current.path1.asString();
-            replaced.to() = current.path2.asString();
-            replaced.fileType() = static_cast<Dtype>(current.type);
-            smallChange.replaced_ref() = std::move(replaced);
-            change.smallChange_ref() = std::move(smallChange);
-          } else {
-            // Renamed
-            if (current.type == dtype_t::Dir) {
-              DirectoryRenamed directoryRenamed;
-              directoryRenamed.from() = current.path1.asString();
-              directoryRenamed.to() = current.path2.asString();
-              largeChange.directoryRenamed_ref() = std::move(directoryRenamed);
-              change.largeChange_ref() = std::move(largeChange);
-            } else {
-              Renamed renamed;
-              renamed.from() = current.path1.asString();
-              renamed.to() = current.path2.asString();
-              renamed.fileType() = static_cast<Dtype>(current.type);
-              smallChange.renamed_ref() = std::move(renamed);
-              change.smallChange_ref() = std::move(smallChange);
-            }
-          }
-        } else {
-          const auto& info = current.info1;
-          if (!info.existedBefore) {
-            // Added
-            Added added;
-            added.path() = current.path1.asString();
-            added.fileType() = static_cast<Dtype>(current.type);
-            smallChange.added_ref() = std::move(added);
-            change.smallChange_ref() = std::move(smallChange);
-          } else if (!info.existedAfter) {
-            // Removed
-            Removed removed;
-            removed.path() = current.path1.asString();
-            removed.fileType() = static_cast<Dtype>(current.type);
-            smallChange.removed_ref() = std::move(removed);
-            change.smallChange_ref() = std::move(smallChange);
-          } else {
-            // Modified
-            Modified modified;
-            modified.path() = current.path1.asString();
-            modified.fileType() = static_cast<Dtype>(current.type);
-            smallChange.modified_ref() = std::move(modified);
-            change.smallChange_ref() = std::move(smallChange);
-          }
-        }
-
-        result.changes_ref()->push_back(std::move(change));
-      },
-      [&](const RootUpdateJournalDelta& current) -> void {
-        if (!toSequence.has_value()) {
-          toSequence = current.sequenceID;
-        }
-
-        CommitTransition commitTransition;
-        commitTransition.from_ref() = rootIdCodec.renderRootId(currentHash);
-        commitTransition.to_ref() = rootIdCodec.renderRootId(current.fromHash);
-        currentHash = current.fromHash;
-
-        LargeChangeNotification largeChange;
-        largeChange.commitTransition_ref() = std::move(commitTransition);
-
-        ChangeNotification change;
-        change.largeChange_ref() = std::move(largeChange);
-
-        result.changes_ref()->push_back(std::move(change));
-      });
-
-  if (isTruncated) {
+  // Has EdenFS restarted or remounted
+  if (folly::to_unsigned(*fromPosition.mountGeneration()) !=
+      mountHandle.getEdenMount().getMountGeneration()) {
+    if (!toSequence.has_value()) {
+      // If there is no journal entry after restart/remount it should be
+      // OK to use the initial SequenceNumber - 1.
+      toSequence = 1;
+    }
     LostChanges lostChanges;
-    lostChanges.reason_ref() = LostChangesReason::JOURNAL_TRUNCATED;
+    lostChanges.reason_ref() = LostChangesReason::EDENFS_REMOUNTED;
 
     LargeChangeNotification largeChange;
     largeChange.lostChanges_ref() = std::move(lostChanges);
@@ -2326,8 +2239,108 @@ void EdenServiceHandler::sync_changesSinceV2(
     ChangeNotification change;
     change.largeChange_ref() = std::move(largeChange);
 
-    result.changes_ref()->clear();
     result.changes_ref()->push_back(std::move(change));
+  } else {
+    const auto isTruncated = mountHandle.getJournal().forEachDelta(
+        *fromPosition.sequenceNumber_ref() + 1,
+        std::nullopt,
+        [&](const FileChangeJournalDelta& current) -> void {
+          if (!current.isPath1Valid) {
+            XLOG(DFATAL)
+                << "FileChangeJournalDetal::isPath1Valid should never be false";
+          }
+
+          ChangeNotification change;
+          LargeChangeNotification largeChange;
+          SmallChangeNotification smallChange;
+          if (current.isPath2Valid) {
+            const auto& info = current.info2;
+            // NOTE: we could do a bunch of runtime checks here to validate the
+            //       infoN states would be a lot simpler if we removed this
+            //       infoN state and replaced them with a simple enum
+            if (info.existedBefore) {
+              // Replaced
+              Replaced replaced;
+              replaced.from() = current.path1.asString();
+              replaced.to() = current.path2.asString();
+              replaced.fileType() = static_cast<Dtype>(current.type);
+              smallChange.replaced_ref() = std::move(replaced);
+              change.smallChange_ref() = std::move(smallChange);
+            } else {
+              // Renamed
+              if (current.type == dtype_t::Dir) {
+                DirectoryRenamed directoryRenamed;
+                directoryRenamed.from() = current.path1.asString();
+                directoryRenamed.to() = current.path2.asString();
+                largeChange.directoryRenamed_ref() =
+                    std::move(directoryRenamed);
+                change.largeChange_ref() = std::move(largeChange);
+              } else {
+                Renamed renamed;
+                renamed.from() = current.path1.asString();
+                renamed.to() = current.path2.asString();
+                renamed.fileType() = static_cast<Dtype>(current.type);
+                smallChange.renamed_ref() = std::move(renamed);
+                change.smallChange_ref() = std::move(smallChange);
+              }
+            }
+          } else {
+            const auto& info = current.info1;
+            if (!info.existedBefore) {
+              // Added
+              Added added;
+              added.path() = current.path1.asString();
+              added.fileType() = static_cast<Dtype>(current.type);
+              smallChange.added_ref() = std::move(added);
+              change.smallChange_ref() = std::move(smallChange);
+            } else if (!info.existedAfter) {
+              // Removed
+              Removed removed;
+              removed.path() = current.path1.asString();
+              removed.fileType() = static_cast<Dtype>(current.type);
+              smallChange.removed_ref() = std::move(removed);
+              change.smallChange_ref() = std::move(smallChange);
+            } else {
+              // Modified
+              Modified modified;
+              modified.path() = current.path1.asString();
+              modified.fileType() = static_cast<Dtype>(current.type);
+              smallChange.modified_ref() = std::move(modified);
+              change.smallChange_ref() = std::move(smallChange);
+            }
+          }
+
+          result.changes_ref()->push_back(std::move(change));
+        },
+        [&](const RootUpdateJournalDelta& current) -> void {
+          CommitTransition commitTransition;
+          commitTransition.from_ref() = rootIdCodec.renderRootId(currentHash);
+          commitTransition.to_ref() =
+              rootIdCodec.renderRootId(current.fromHash);
+          currentHash = current.fromHash;
+
+          LargeChangeNotification largeChange;
+          largeChange.commitTransition_ref() = std::move(commitTransition);
+
+          ChangeNotification change;
+          change.largeChange_ref() = std::move(largeChange);
+
+          result.changes_ref()->push_back(std::move(change));
+        });
+
+    if (isTruncated) {
+      LostChanges lostChanges;
+      lostChanges.reason_ref() = LostChangesReason::JOURNAL_TRUNCATED;
+
+      LargeChangeNotification largeChange;
+      largeChange.lostChanges_ref() = std::move(lostChanges);
+
+      ChangeNotification change;
+      change.largeChange_ref() = std::move(largeChange);
+
+      result.changes_ref()->clear();
+      result.changes_ref()->push_back(std::move(change));
+    }
   }
 
   if (!toSequence.has_value()) {
@@ -3222,8 +3235,9 @@ EdenServiceHandler::semifuture_setPathObjectId(
   objects.reserve(objectSize);
   object_strings.reserve(objectSize);
 
-  // TODO deprecate non-batch fields once all clients moves to the batch fields.
-  // Rust clients might set to default and is_set() would return false negative
+  // TODO deprecate non-batch fields once all clients moves to the batch
+  // fields. Rust clients might set to default and is_set() would return false
+  // negative
   if (params->objectId().is_set() && !params->objectId()->empty()) {
     SetPathObjectIdObjectAndPath objectAndPath;
     objectAndPath.path = RelativePath{*params->path()};
@@ -3321,8 +3335,8 @@ folly::SemiFuture<std::unique_ptr<ReturnType>> serialDetachIfBackgrounded(
     ImmediateFuture<std::unique_ptr<ReturnType>> future,
     EdenServer* const server,
     bool background) {
-  // If we're already using serial execution across the board, just do a normal
-  // detachIfBackgrounded
+  // If we're already using serial execution across the board, just do a
+  // normal detachIfBackgrounded
   if (server->usingThriftSerialExecution()) {
     return detachIfBackgrounded(
                std::move(future), server->getServerState(), background)
@@ -3370,8 +3384,8 @@ folly::SemiFuture<folly::Unit> serialDetachIfBackgrounded(
     ImmediateFuture<folly::Unit> future,
     EdenServer* const server,
     bool background) {
-  // If we're already using serial execution across the board, just do a normal
-  // detachIfBackgrounded
+  // If we're already using serial execution across the board, just do a
+  // normal detachIfBackgrounded
   if (server->usingThriftSerialExecution()) {
     return detachIfBackgrounded(
                std::move(future), server->getServerState(), background)
@@ -3617,9 +3631,9 @@ EdenServiceHandler::semifuture_predictiveGlobFiles(
           ->getEdenConfig()
           ->runSerialPrefetch.getValue()) {
     // The glob code has a very large fan-out that can easily overload the
-    // Thrift CPU worker pool. To combat with that, we limit the execution to a
-    // single thread by using `folly::SerialExecutor` so the glob queries will
-    // not overload the executor.
+    // Thrift CPU worker pool. To combat with that, we limit the execution to
+    // a single thread by using `folly::SerialExecutor` so the glob queries
+    // will not overload the executor.
     return serialDetachIfBackgrounded<Glob>(
         std::move(future), server_, isBackground);
   } else {
@@ -3796,8 +3810,8 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                                       std::move(originHash)}};
                                 });
                       } else {
-                        // TODO(T192408118) get the root tree a single time per
-                        // glob instead of per-entry
+                        // TODO(T192408118) get the root tree a single time
+                        // per glob instead of per-entry
                         entryFuture =
                             edenMount->getObjectStore()
                                 ->getRootTree(
@@ -3896,8 +3910,8 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                           globber = std::move(globber),
                           &context](
                              const folly::exception_wrapper& ex) mutable {
-                // Fallback to local if an error was encountered while using the
-                // SaplingRemoteAPI method
+                // Fallback to local if an error was encountered while using
+                // the SaplingRemoteAPI method
                 XLOG(DBG3) << "Encountered error when evaluating globFiles: "
                            << ex.what();
                 XLOG(DBG3) << "Using local globFiles";
@@ -3950,10 +3964,10 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
        suffixGlobRequestScope = std::move(suffixGlobRequestScope),
        globFilesRequestScope = std::move(globFilesRequestScope)] {});
 
-  // The glob code has a very large fan-out that can easily overload the Thrift
-  // CPU worker pool. To combat with that, we limit the execution to a single
-  // thread by using `folly::SerialExecutor` so the glob queries will not
-  // overload the executor.
+  // The glob code has a very large fan-out that can easily overload the
+  // Thrift CPU worker pool. To combat with that, we limit the execution to a
+  // single thread by using `folly::SerialExecutor` so the glob queries will
+  // not overload the executor.
   return serialDetachIfBackgrounded<Glob>(
       std::move(globFut), server_, isBackground);
 }
@@ -4010,9 +4024,9 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_prefetchFiles(
           ->getEdenConfig()
           ->runSerialPrefetch.getValue()) {
     // The glob code has a very large fan-out that can easily overload the
-    // Thrift CPU worker pool. To combat with that, we limit the execution to a
-    // single thread by using `folly::SerialExecutor` so the glob queries will
-    // not overload the executor.
+    // Thrift CPU worker pool. To combat with that, we limit the execution to
+    // a single thread by using `folly::SerialExecutor` so the glob queries
+    // will not overload the executor.
     return serialDetachIfBackgrounded(
         std::move(globFut), server_, isBackground);
   } else {
@@ -4087,9 +4101,9 @@ EdenServiceHandler::semifuture_prefetchFilesV2(
           ->getEdenConfig()
           ->runSerialPrefetch.getValue()) {
     // The glob code has a very large fan-out that can easily overload the
-    // Thrift CPU worker pool. To combat with that, we limit the execution to a
-    // single thread by using `folly::SerialExecutor` so the glob queries will
-    // not overload the executor.
+    // Thrift CPU worker pool. To combat with that, we limit the execution to
+    // a single thread by using `folly::SerialExecutor` so the glob queries
+    // will not overload the executor.
     return serialDetachIfBackgrounded<PrefetchResult>(
         std::move(prefetchResult), server_, isBackground);
   } else {
@@ -4151,8 +4165,8 @@ EdenServiceHandler::semifuture_getScmStatusV2(
 
   auto mountHandle = lookupMount(params->mountPoint());
 
-  // If we were passed a FilterID, create a RootID that contains the filter and
-  // a varint that indicates the length of the original hash.
+  // If we were passed a FilterID, create a RootID that contains the filter
+  // and a varint that indicates the length of the original hash.
   std::string parsedCommit = resolveRootId(
       std::move(*params->commit_ref()), rootIdOptions, mountHandle);
   auto rootId = mountHandle.getObjectStore().parseRootId(parsedCommit);
@@ -4200,10 +4214,10 @@ EdenServiceHandler::semifuture_getScmStatus(
   // callers of this method can deal with the error.
   auto mountHandle = lookupMount(mountPoint);
 
-  // parseRootId assumes that the passed in hash will contain information about
-  // the active filter. This legacy code path does not respect filters, so the
-  // last active filter will always be passed in if it exists. For non-FFS
-  // repos, the last filterID will be std::nullopt.
+  // parseRootId assumes that the passed in hash will contain information
+  // about the active filter. This legacy code path does not respect filters,
+  // so the last active filter will always be passed in if it exists. For
+  // non-FFS repos, the last filterID will be std::nullopt.
   std::string parsedCommit =
       resolveRootIdWithLastFilter(std::move(*commitHash), mountHandle);
   auto hash = mountHandle.getObjectStore().parseRootId(parsedCommit);
@@ -4234,10 +4248,10 @@ EdenServiceHandler::semifuture_getScmStatusBetweenRevisions(
   auto mountHandle = lookupMount(mountPoint);
   auto& fetchContext = helper->getFetchContext();
 
-  // parseRootId assumes that the passed in hash will contain information about
-  // the active filter. This legacy code path does not respect filters, so the
-  // last active filter will always be passed in if it exists. For non-FFS
-  // repos, the last filterID will be std::nullopt.
+  // parseRootId assumes that the passed in hash will contain information
+  // about the active filter. This legacy code path does not respect filters,
+  // so the last active filter will always be passed in if it exists. For
+  // non-FFS repos, the last filterID will be std::nullopt.
   std::string resolvedOldHash =
       resolveRootIdWithLastFilter(std::move(*oldHash), mountHandle);
   std::string resolvedNewHash =
@@ -4691,15 +4705,15 @@ class InodeStatusCallbacks : public TraversalCallbacks {
               mount_->getOverlayFileAccess()->getFileSize(
                   entry.ino, entry.loadedChild.get());
 #else
-          // This following code ends up doing a stat in the working directory.
-          // This is safe to do as Windows works very differently from
-          // Linux/macOS when dealing with materialized files. In this code, we
-          // know that the file is materialized because we do not have a hash
-          // for it, and every materialized file is present on disk and
-          // reading/stating it is guaranteed to be done without EdenFS
-          // involvement. If somehow EdenFS is wrong, and this ends up
-          // triggering a recursive call into EdenFS, we are detecting this and
-          // simply bailing out very early in the callback.
+          // This following code ends up doing a stat in the working
+          // directory. This is safe to do as Windows works very differently
+          // from Linux/macOS when dealing with materialized files. In this
+          // code, we know that the file is materialized because we do not
+          // have a hash for it, and every materialized file is present on
+          // disk and reading/stating it is guaranteed to be done without
+          // EdenFS involvement. If somehow EdenFS is wrong, and this ends up
+          // triggering a recursive call into EdenFS, we are detecting this
+          // and simply bailing out very early in the callback.
           auto filePath = mount_->getPath() + path + entry.name;
           struct stat fileStat;
           if (::stat(filePath.c_str(), &fileStat) == 0) {
@@ -5346,9 +5360,10 @@ EdenServiceHandler::semifuture_invalidateKernelInodeCache(
                              canonicalMountPoint + RelativePath{*path},
                              stat.st_mode);
                          const auto treePtr = inode.asTreePtrOrNull();
-                         // Invalidate all children as well. There isn't really
-                         // a way to invalidate the entry cache for nfs so we
-                         // settle for invalidating the children themselves.
+                         // Invalidate all children as well. There isn't
+                         // really a way to invalidate the entry cache for nfs
+                         // so we settle for invalidating the children
+                         // themselves.
                          if (treePtr != nullptr) {
                            const auto& dir = treePtr->getContents().rlock();
                            std::vector<ImmediateFuture<folly::Unit>>
@@ -5674,8 +5689,8 @@ EdenServiceHandler::streamStartStatus() {
       // We raced with eden start completing. Let's re-collect the status and
       // return as if EdenFS has completed. The EdenFS status should be set
       // before the startup logger completes, so at this point the status
-      // should be something other than starting. Client should not necessarily
-      // rely on this though.
+      // should be something other than starting. Client should not
+      // necessarily rely on this though.
       fillDaemonInfo(result);
       return {
           result,
