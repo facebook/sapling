@@ -148,7 +148,7 @@ Should gives us the tombstone file since it is redacted
   This version of the file is redacted and you are not allowed to access it. Update or rebase to a newer commit.
 
 
-Mononoke newadmin also won't give us the content
+Mononoke admin also won't give us the content
   $ mononoke_admin blobstore -R repo fetch content.blake2.21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9
   Error: Failed to fetch blob
   

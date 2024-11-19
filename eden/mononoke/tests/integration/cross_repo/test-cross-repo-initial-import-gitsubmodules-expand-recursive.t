@@ -807,7 +807,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   >   if [ $SYNC_EXIT_CODE -ne 0 ]; then return $SYNC_EXIT_CODE; fi
   >   SYNCED_BONSAI=$(rg '"translated": \{"Bonsai": bin\("(\w+)"\)\}\}\]' -or '$1' $TESTTMP/lookup_commit);
   >   
-  >   printf "\n\nSubmodule repo commit info using newadmin:\n"
+  >   printf "\n\nSubmodule repo commit info using admin:\n"
   >   mononoke_admin fetch -R "$SUBMODULE_REPO_NAME" -i "$SYNCED_BONSAI" \
   >     | rg -v "Author"
   > 
@@ -830,7 +830,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   Success!
   
   
-  Submodule repo commit info using newadmin:
+  Submodule repo commit info using admin:
   BonsaiChangesetId: de0a58fea04aaf7e162bcb87017752be9d3c838525df6d75a0b897ffaa068a28
   Message: Remove repo C submodule from repo A
   
@@ -854,7 +854,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   Success!
   
   
-  Submodule repo commit info using newadmin:
+  Submodule repo commit info using admin:
   BonsaiChangesetId: 8810bc8cf29ac2dce869da1975b8168a43b8f08232d9e1a9dac52013ac2251e2
   Message: Changing small repo in large repo (not submodule)
   FileChanges:
@@ -881,7 +881,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   Success!
   
   
-  Submodule repo commit info using newadmin:
+  Submodule repo commit info using admin:
   BonsaiChangesetId: e1f796a6f06b7aa05fe731821fec48c456f11e9bf44aee5439d112e6c28a0513
   Message: Valid repo_b submodule version bump from large repo
   FileChanges:
@@ -918,7 +918,7 @@ TODO(T174902563): Fix deletion of submodules in EXPAND submodule action.
   Success!
   
   
-  Submodule repo commit info using newadmin:
+  Submodule repo commit info using admin:
   BonsaiChangesetId: 478f652e09daebfe62efa122be1cb8a23495fb1da97e2d040750989c2bcdad08
   Message: Valid repo_b and repo_c recursive submodule version bump from large repo
   FileChanges:
