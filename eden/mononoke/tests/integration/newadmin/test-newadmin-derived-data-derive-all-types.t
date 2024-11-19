@@ -26,14 +26,14 @@ exactly one of `-T` or `--all-flags` are provided:
   error: the following required arguments were not provided:
     <--derived-data-types <DERIVED_DATA_TYPES>|--all-types>
   
-  Usage: admin derived-data <--repo-id <REPO_ID>|--repo-name <REPO_NAME>> derive <--commit-id <COMMIT_ID>|--bookmark <BOOKMARK>|--all-bookmarks> <--derived-data-types <DERIVED_DATA_TYPES>|--all-types>
+  Usage: admin derived-data <--repo-id <REPO_ID>|--repo-name <REPO_NAME>> derive <--commit-id <COMMIT_ID>|--bookmark <BOOKMARK>|--all-bookmarks|--bookmark-regex <BOOKMARK_REGEX>> <--derived-data-types <DERIVED_DATA_TYPES>|--all-types>
   
   For more information, try '--help'.
   [2]
   $ mononoke_admin derived-data -R repo derive --all-types -T unodes -B main
   error: the argument '--all-types' cannot be used with '--derived-data-types <DERIVED_DATA_TYPES>'
   
-  Usage: admin derived-data <--repo-id <REPO_ID>|--repo-name <REPO_NAME>> derive <--commit-id <COMMIT_ID>|--bookmark <BOOKMARK>|--all-bookmarks> <--derived-data-types <DERIVED_DATA_TYPES>|--all-types>
+  Usage: admin derived-data <--repo-id <REPO_ID>|--repo-name <REPO_NAME>> derive <--commit-id <COMMIT_ID>|--bookmark <BOOKMARK>|--all-bookmarks|--bookmark-regex <BOOKMARK_REGEX>> <--derived-data-types <DERIVED_DATA_TYPES>|--all-types>
   
   For more information, try '--help'.
   [2]

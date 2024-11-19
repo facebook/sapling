@@ -29,7 +29,6 @@ use cached_config::ConfigStore;
 use clap::ArgMatches;
 use clap::Error as ClapError;
 use clap::FromArgMatches;
-use clientinfo::ClientRequestInfo;
 use context::CoreContext;
 use environment::MononokeEnvironment;
 use facet::AsyncBuildable;

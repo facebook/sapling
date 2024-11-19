@@ -23,11 +23,13 @@ use clap::ArgGroup;
 use clap::Args;
 use commit_id::parse_commit_id;
 use context::CoreContext;
+use futures::future;
 use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use itertools::Itertools;
 use mononoke_types::ChangesetId;
+use regex::Regex;
 
 pub trait Repo = BookmarksRef
     + BonsaiHgMappingRef
@@ -40,7 +42,7 @@ pub trait Repo = BookmarksRef
 #[clap(group(
     ArgGroup::new("changeset")
         .required(true)
-        .args(&["commit_id", "bookmark", "all_bookmarks"]),
+        .args(&["commit_id", "bookmark", "all_bookmarks", "bookmark_regex"]),
 ))]
 pub struct ChangesetArgs {
     /// Commit Id
@@ -54,6 +56,10 @@ pub struct ChangesetArgs {
     /// All bookmarks
     #[clap(long)]
     all_bookmarks: bool,
+
+    /// All bookmarks matching a regex
+    #[clap(long)]
+    bookmark_regex: Vec<String>,
 }
 
 impl ChangesetArgs {
@@ -76,6 +82,12 @@ impl ChangesetArgs {
         ctx: &CoreContext,
         repo: &impl Repo,
     ) -> Result<Vec<ChangesetId>> {
+        let bookmark_regex: Vec<Regex> = self
+            .bookmark_regex
+            .iter()
+            .map(|re_str| Regex::new(re_str.as_str()).map_err(anyhow::Error::from))
+            .collect::<Result<_>>()?;
+
         stream::iter(self.bookmark.iter())
             .then(|bookmark| async move {
                 repo.bookmarks()
@@ -106,6 +118,25 @@ impl ChangesetArgs {
                         .map_ok(|(_name, cs_id)| cs_id)
                 }))
                 .flatten(),
+            )
+            .chain(
+                stream::iter(bookmark_regex)
+                    .map(|regex| {
+                        repo.bookmarks()
+                            .list(
+                                ctx.clone(),
+                                Freshness::MostRecent,
+                                &BookmarkPrefix::empty(),
+                                BookmarkCategory::ALL,
+                                BookmarkKind::ALL_PUBLISHING,
+                                &BookmarkPagination::FromStart,
+                                u64::MAX,
+                            )
+                            .try_filter_map(move |(name, cs_id)| {
+                                future::ok(regex.is_match(name.name().as_str()).then_some(cs_id))
+                            })
+                    })
+                    .flatten(),
             )
             .collect::<Vec<_>>()
             .await
