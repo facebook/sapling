@@ -273,6 +273,8 @@ pub struct RepoConfig {
     pub mononoke_cas_sync_config: Option<MononokeCasSyncConfig>,
     /// All Git related configs (e.g. Git Server and Git-only repos)
     pub git_configs: GitConfigs,
+    /// Configuration for the modern sync job
+    pub modern_sync_config: Option<ModernSyncConfig>,
 }
 
 /// Config determining if the repo is deep sharded in the context of a service.
@@ -1844,6 +1846,13 @@ pub struct MononokeCasSyncConfig {
     pub main_bookmark_to_sync: String,
     /// Enabling it would expand the sync to all the bookmarks
     pub sync_all_bookmarks: bool,
+}
+
+/// Repo-specific configuration parameters for modern sync job for a specific job variant
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct ModernSyncConfig {
+    /// Edenapi url to use for modern sync
+    pub url: String,
 }
 
 /// Destination for telemetry logging.

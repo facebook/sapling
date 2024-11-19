@@ -38,6 +38,7 @@ use metaconfig_types::InfinitepushParams;
 use metaconfig_types::LfsParams;
 use metaconfig_types::LoggingDestination;
 use metaconfig_types::MetadataLoggerConfig;
+use metaconfig_types::ModernSyncConfig;
 use metaconfig_types::MononokeCasSyncConfig;
 use metaconfig_types::PushParams;
 use metaconfig_types::PushrebaseFlags;
@@ -85,6 +86,7 @@ use repos::RawLfsParams;
 use repos::RawLoggingDestination;
 use repos::RawLoggingDestinationScribe;
 use repos::RawMetadataLoggerConfig;
+use repos::RawModernSyncConfig;
 use repos::RawPushParams;
 use repos::RawPushrebaseParams;
 use repos::RawPushrebaseRemoteMode;
@@ -705,6 +707,14 @@ impl Convert for RawCasSyncConfig {
             main_bookmark_to_sync: self.main_bookmark_to_sync,
             sync_all_bookmarks: self.sync_all_bookmarks,
         })
+    }
+}
+
+impl Convert for RawModernSyncConfig {
+    type Output = ModernSyncConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        Ok(ModernSyncConfig { url: self.url })
     }
 }
 

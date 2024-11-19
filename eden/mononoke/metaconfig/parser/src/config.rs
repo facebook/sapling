@@ -243,6 +243,7 @@ fn parse_with_repo_definition(
         x_repo_sync_source_mapping,
         mononoke_cas_sync_config,
         git_configs,
+        modern_sync_config,
         ..
     } = named_repo_config;
 
@@ -366,6 +367,7 @@ fn parse_with_repo_definition(
 
     let commit_cloud_config = commit_cloud_config.convert()?.unwrap_or_default();
     let mononoke_cas_sync_config = mononoke_cas_sync_config.convert()?;
+    let modern_sync_config = modern_sync_config.convert()?;
 
     let objects_count_multiplier = objects_count_multiplier.map(ObjectsCountMultiplier::new);
 
@@ -420,6 +422,7 @@ fn parse_with_repo_definition(
         commit_cloud_config,
         mononoke_cas_sync_config,
         git_configs,
+        modern_sync_config,
     })
 }
 
@@ -1407,6 +1410,7 @@ mod test {
                     git_lfs_interpret_pointers: false,
                     fetch_message: None,
                 },
+                modern_sync_config: None,
             },
         );
 
@@ -1485,6 +1489,7 @@ mod test {
                     git_lfs_interpret_pointers: false,
                     fetch_message: None,
                 },
+                modern_sync_config: None,
             },
         );
         assert_eq!(
