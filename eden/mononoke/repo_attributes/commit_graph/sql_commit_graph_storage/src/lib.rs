@@ -1380,15 +1380,12 @@ impl SqlCommitGraphStorage {
             GetCommitCount::maybe_traced_query(conn, ctx.client_request_info(), &id).await?;
         Ok(result.first().map_or(0, |(count,)| *count))
     }
-}
 
-#[async_trait]
-impl CommitGraphStorage for SqlCommitGraphStorage {
-    fn repo_id(&self) -> RepositoryId {
-        self.repo_id
-    }
-
-    async fn add_many(&self, ctx: &CoreContext, many_edges: Vec1<ChangesetEdges>) -> Result<usize> {
+    async fn _add_many(
+        &self,
+        ctx: &CoreContext,
+        many_edges: Vec1<ChangesetEdges>,
+    ) -> Result<usize> {
         // If we're inserting a single changeset, use the faster single insertion method.
         if many_edges.len() == 1 {
             return Ok(self.add(ctx, many_edges.split_off_first().0).await? as usize);
@@ -1536,6 +1533,17 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
             .increment_counter(PerfCounterType::SqlWrites);
 
         Ok(modified.try_into()?)
+    }
+}
+
+#[async_trait]
+impl CommitGraphStorage for SqlCommitGraphStorage {
+    fn repo_id(&self) -> RepositoryId {
+        self.repo_id
+    }
+
+    async fn add_many(&self, ctx: &CoreContext, many_edges: Vec1<ChangesetEdges>) -> Result<usize> {
+        self._add_many(ctx, many_edges).await
     }
 
     async fn add(&self, ctx: &CoreContext, edges: ChangesetEdges) -> Result<bool> {
