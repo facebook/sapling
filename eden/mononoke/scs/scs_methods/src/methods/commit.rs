@@ -810,7 +810,7 @@ impl SourceControlServiceImpl {
         commit: thrift::CommitSpecifier,
         params: thrift::CommitHistoryParams,
     ) -> Result<thrift::CommitHistoryResponse, scs_errors::ServiceError> {
-        let (repo, changeset) = self.repo_changeset(ctx, &commit).await?;
+        let (repo, changeset) = self.repo_changeset(ctx.clone(), &commit).await?;
         let (descendants_of, exclude_changeset_and_ancestors) = try_join!(
             async {
                 if let Some(descendants_of) = &params.descendants_of {
@@ -868,6 +868,7 @@ impl SourceControlServiceImpl {
             })
             .await?;
         let history = collect_history(
+            &ctx,
             history_stream,
             skip,
             limit,
@@ -890,7 +891,7 @@ impl SourceControlServiceImpl {
         commit: thrift::CommitSpecifier,
         params: thrift::CommitLinearHistoryParams,
     ) -> Result<thrift::CommitLinearHistoryResponse, scs_errors::ServiceError> {
-        let (repo, changeset) = self.repo_changeset(ctx, &commit).await?;
+        let (repo, changeset) = self.repo_changeset(ctx.clone(), &commit).await?;
         let (descendants_of, exclude_changeset_and_ancestors) = try_join!(
             async {
                 if let Some(descendants_of) = &params.descendants_of {
@@ -926,6 +927,7 @@ impl SourceControlServiceImpl {
             })
             .await?;
         let history = collect_history(
+            &ctx,
             history_stream,
             // We set the skip to 0 as skipping is already done as part of ChangesetContext::linear_history.
             0,

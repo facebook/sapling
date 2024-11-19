@@ -13,6 +13,7 @@ use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use mononoke_api::ChangesetContext;
+use mononoke_api::CoreContext;
 use mononoke_api::MononokeError;
 use mononoke_api::Repo;
 use source_control as thrift;
@@ -20,6 +21,7 @@ use source_control as thrift;
 use crate::into_response::AsyncIntoResponseWith;
 
 pub(crate) async fn collect_history(
+    _ctx: &CoreContext,
     history_stream: impl Stream<Item = Result<ChangesetContext<Repo>, MononokeError>>,
     skip: usize,
     limit: usize,

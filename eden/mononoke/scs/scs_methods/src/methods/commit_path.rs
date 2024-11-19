@@ -443,7 +443,9 @@ impl SourceControlServiceImpl {
         commit_path: thrift::CommitPathSpecifier,
         params: thrift::CommitPathHistoryParams,
     ) -> Result<thrift::CommitPathHistoryResponse, scs_errors::ServiceError> {
-        let (repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
+        let (repo, changeset) = self
+            .repo_changeset(ctx.clone(), &commit_path.commit)
+            .await?;
         let path = changeset.path_with_history(&commit_path.path).await?;
         let (descendants_of, exclude_changeset_and_ancestors) = try_join!(
             async {
@@ -504,6 +506,7 @@ impl SourceControlServiceImpl {
             })
             .await?;
         let history = collect_history(
+            &ctx,
             history_stream,
             skip,
             limit,
