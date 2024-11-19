@@ -24,6 +24,7 @@ rust_library(
         "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/shed/sql:sql",
         "//eden/mononoke/common/rendezvous:rendezvous",
+        "//eden/mononoke/common/retry:retry",
         "//eden/mononoke/common/rust/sql_ext:sql_ext",
         "//eden/mononoke/common/sql_construct:sql_construct",
         "//eden/mononoke/mononoke_types:mononoke_types",
