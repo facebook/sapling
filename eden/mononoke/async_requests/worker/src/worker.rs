@@ -37,6 +37,7 @@ use futures::pin_mut;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::Stream;
+use futures_stats::TimedFutureExt;
 use hostname::get_hostname;
 use megarepo_api::MegarepoApi;
 use mononoke_api::Mononoke;
@@ -298,7 +299,8 @@ impl AsyncMethodRequestWorker {
 
         // Do the actual work.
         STATS::requested.add_value(1);
-        let work_fut = megarepo_async_request_compute(&ctx, self.mononoke, &self.megarepo, params);
+        let work_fut =
+            megarepo_async_request_compute(&ctx, self.mononoke, &self.megarepo, params).timed();
 
         // Start the loop that would keep saying that request is still being
         // processed
@@ -312,16 +314,16 @@ impl AsyncMethodRequestWorker {
         pin_mut!(work_fut);
         pin_mut!(keep_alive);
         match select(work_fut, keep_alive).await {
-            Either::Left((result, _)) => {
+            Either::Left(((stats, result), _)) => {
                 // We completed the request - let's mark it as complete
                 keep_alive_abort_handle.abort();
                 info!(
                     ctx.logger(),
                     "[{}] request complete, saving result", &req_id.0
                 );
-                ctx.scuba()
-                    .clone()
-                    .log_with_msg("Request complete, saving result", None);
+                let mut scuba = ctx.scuba().clone();
+                scuba.add_future_stats(&stats);
+                scuba.log_with_msg("Request complete, saving result", None);
 
                 // Save the result.
                 match result {
@@ -381,6 +383,7 @@ impl AsyncMethodRequestWorker {
     fn prepare_ctx(&self, ctx: &CoreContext, req_id: &RequestId, target: &str) -> CoreContext {
         let ctx = ctx.with_mutated_scuba(|mut scuba| {
             scuba.add("request_id", req_id.0.0);
+            scuba.add("request_type", req_id.1.0.clone());
             scuba
         });
 

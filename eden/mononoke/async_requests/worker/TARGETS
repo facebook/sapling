@@ -21,6 +21,7 @@ rust_binary(
         "fbsource//third-party/rust:tokio",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/futures_stats:futures_stats",
         "//common/rust/shed/hostname:hostname",
         "//common/rust/shed/stats:stats",
         "//eden/mononoke/async_requests:async_requests",
