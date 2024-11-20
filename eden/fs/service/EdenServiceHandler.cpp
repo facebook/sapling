@@ -2345,6 +2345,13 @@ void EdenServiceHandler::sync_changesSinceV2(
 
       result.changes_ref()->clear();
       result.changes_ref()->push_back(std::move(change));
+    } else {
+      // TODO: this will be replace soon with in order processing. For now
+      // we can accept a slight performance hit here by reversing the vector.
+
+      // Results are neither truncated nor too many to return - reverse the
+      // order to be oldest to newest
+      std::reverse(result.changes_ref()->begin(), result.changes_ref()->end());
     }
   }
 
