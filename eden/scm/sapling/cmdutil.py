@@ -3826,22 +3826,6 @@ def commit(ui, repo, commitfunc, pats, opts):
         return commitfunc(ui, repo, message, matcher, opts)
 
 
-def samefile(f, ctx1, ctx2, m1=None, m2=None):
-    if m1 is None:
-        m1 = ctx1.manifest()
-    if m2 is None:
-        m2 = ctx2.manifest()
-    if f in m1:
-        a = ctx1.filectx(f)
-        if f in m2:
-            b = ctx2.filectx(f)
-            return not a.cmp(b) and a.flags() == b.flags()
-        else:
-            return False
-    else:
-        return f not in m2
-
-
 def amend(ui, repo, old, extra, pats, opts):
     wctx = repo[None]
     matcher = scmutil.match(wctx, pats, opts)
