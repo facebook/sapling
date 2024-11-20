@@ -182,6 +182,7 @@ rust_library(
         ":megarepo_error",
         ":megarepo_mapping",
         "//common/rust/shed/async_once_cell:async_once_cell",
+        "//common/rust/shed/futures_stats:futures_stats",
         "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/shed/sorted_vector_map:sorted_vector_map",
         "//eden/mononoke/blobrepo:repo_blobstore",

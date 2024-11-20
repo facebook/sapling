@@ -10,7 +10,6 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use anyhow::anyhow;
-use bulk_derivation::BulkDerivation;
 use context::CoreContext;
 use itertools::EitherOrBoth;
 use itertools::Itertools;
@@ -28,8 +27,8 @@ use mononoke_api::MononokeRepo;
 use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
 use mutable_renames::MutableRenames;
-use repo_derived_data::RepoDerivedDataRef;
 
+use crate::common::derive_all_types;
 use crate::common::find_target_bookmark_and_value;
 use crate::common::find_target_sync_config;
 use crate::common::MegarepoOp;
@@ -294,20 +293,7 @@ impl<'a, R: MononokeRepo> ChangeTargetConfig<'a, R> {
         );
 
         // Derrive all the necessary data before moving the bookmark
-        let derived_data_types = target_repo
-            .repo()
-            .repo_derived_data()
-            .active_config()
-            .types
-            .iter()
-            .copied()
-            .collect::<Vec<_>>();
-        target_repo
-            .repo()
-            .repo_derived_data()
-            .manager()
-            .derive_bulk(ctx, &[final_merge], None, &derived_data_types, None)
-            .await?;
+        derive_all_types(ctx, target_repo.repo(), final_merge).await?;
 
         // Move bookmark
         self.move_bookmark_conditionally(

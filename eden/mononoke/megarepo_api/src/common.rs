@@ -18,6 +18,7 @@ use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
+use bulk_derivation::BulkDerivation;
 use bytes::Bytes;
 use changesets_creation::save_changesets;
 use commit_graph::CommitGraph;
@@ -34,6 +35,7 @@ use futures::stream;
 use futures::StreamExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
+use futures_stats::TimedTryFutureExt;
 use itertools::EitherOrBoth;
 use itertools::Itertools;
 use manifest::bonsai_diff;
@@ -614,7 +616,7 @@ pub trait MegarepoOp<R> {
     where
         R: MononokeRepo,
     {
-        let moved_commits = stream::iter(sources.iter().cloned().map(Ok))
+        let move_commits = stream::iter(sources.iter().cloned().map(Ok))
             .map_ok(|source_config| {
                 async move {
                     let source_repo = self.find_repo_by_id(ctx, source_config.repo_id).await?;
@@ -664,7 +666,7 @@ pub trait MegarepoOp<R> {
         // Keep track of all files created in all sources so that we can check
         // if there's a conflict between
         let mut all_files_in_target = HashMap::new();
-        for (source_name, moved) in &moved_commits {
+        for (source_name, moved) in &move_commits {
             add_and_check_all_paths(
                 &mut all_files_in_target,
                 source_name,
@@ -679,30 +681,48 @@ pub trait MegarepoOp<R> {
         save_changesets(
             ctx,
             repo,
-            moved_commits
+            move_commits
                 .iter()
                 .map(|(_, css)| css.moved.clone())
                 .collect(),
         )
         .await?;
 
-        let mutable_renames_count: usize = moved_commits
+        let mutable_renames_count: usize = move_commits
             .iter()
             .map(|(_, css)| css.mutable_renames.len())
             .sum();
-        let mut scuba = ctx.scuba().clone();
-        scuba.add("mutable_renames_count", mutable_renames_count);
-        scuba.log_with_msg("Started saving mutable renames", None);
-        self.save_mutable_renames(
-            ctx,
-            repo.commit_graph(),
-            mutable_renames,
-            moved_commits.iter().map(|(_, css)| &css.mutable_renames),
-        )
-        .await?;
-        scuba.log_with_msg("Saved mutable renames", None);
+        if mutable_renames_count > 0 {
+            let mut scuba = ctx.scuba().clone();
+            scuba.add("mutable_renames_count", mutable_renames_count);
+            scuba.log_with_msg("Started saving mutable renames", None);
+            self.save_mutable_renames(
+                ctx,
+                repo.commit_graph(),
+                mutable_renames,
+                move_commits.iter().map(|(_, css)| &css.mutable_renames),
+            )
+            .await?;
+            scuba.log_with_msg("Saved mutable renames", None);
+        }
 
-        Ok(moved_commits)
+        let mut scuba = ctx.scuba().clone();
+        scuba.add("move_commits_count", move_commits.len());
+        scuba.log_with_msg("Started deriving move commits", None);
+        let cs_ids = move_commits
+            .iter()
+            .map(|(_, css)| css.moved.get_changeset_id())
+            .collect::<Vec<_>>();
+        let (stats, ()) = stream::iter(cs_ids)
+            .map(|cs_id| Ok(derive_all_types(ctx, repo, cs_id)))
+            .try_buffered(10)
+            .try_for_each(|_| async { Ok(()) })
+            .try_timed()
+            .await?;
+        scuba.add_future_stats(&stats);
+        scuba.log_with_msg("Derived move commits", None);
+
+        Ok(move_commits)
     }
 
     async fn save_mutable_renames<'a>(
@@ -918,6 +938,7 @@ pub trait MegarepoOp<R> {
         };
 
         let mut merges = vec![];
+        let mut merge_cs_ids = vec![];
         let mut cur_parents = vec![];
         for (source_name, css) in first_moved_commits {
             cur_parents.push(css.moved.get_changeset_id());
@@ -930,6 +951,7 @@ pub trait MegarepoOp<R> {
                 )?;
                 let merge = bcs.freeze()?;
                 cur_parents = vec![merge.get_changeset_id()];
+                merge_cs_ids.push(merge.get_changeset_id());
                 merges.push(merge);
             }
         }
@@ -949,7 +971,24 @@ pub trait MegarepoOp<R> {
         }
         let final_merge = final_merge.freeze()?;
         merges.push(final_merge.clone());
+        merge_cs_ids.push(final_merge.get_changeset_id());
         save_changesets(ctx, repo, merges).await?;
+
+        let mut scuba = ctx.scuba().clone();
+        scuba.add("merge_commits_count", merge_cs_ids.len());
+        scuba.log_with_msg("Started deriving merge commits", None);
+        let (stats, ()) = async {
+            for cs_ids in merge_cs_ids.chunks(10) {
+                if let Some(cs_id) = cs_ids.last() {
+                    derive_all_types(ctx, repo, *cs_id).await?;
+                }
+            }
+            anyhow::Ok(())
+        }
+        .try_timed()
+        .await?;
+        scuba.add_future_stats(&stats);
+        scuba.log_with_msg("Derived merge commits", None);
 
         Ok(final_merge.get_changeset_id())
     }
@@ -1373,6 +1412,25 @@ pub async fn save_sync_target_config_in_changeset(
         ));
     }
 
+    Ok(())
+}
+
+pub(crate) async fn derive_all_types(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    cs_id: ChangesetId,
+) -> Result<(), Error> {
+    let derived_data_types = repo
+        .repo_derived_data()
+        .active_config()
+        .types
+        .iter()
+        .copied()
+        .collect::<Vec<_>>();
+    repo.repo_derived_data()
+        .manager()
+        .derive_bulk(ctx, &[cs_id], None, &derived_data_types, None)
+        .await?;
     Ok(())
 }
 
