@@ -45,11 +45,13 @@ from __future__ import absolute_import
 from typing import Sized
 
 import bindings
+
 from sapling import (
     context,
     error,
     extensions,
     localrepo,
+    match as matchmod,
     pycompat,
     scmutil,
     tracing,
@@ -60,7 +62,6 @@ from sapling.i18n import _
 from sapling.node import bin
 from sapling.scmutil import status
 from sapling.util import sortdict
-
 
 testedwith = "ships-with-fb-ext"
 EXCLUDE_PATHS = "exclude"
@@ -183,8 +184,7 @@ def configstomatcher(configs):
         for mirror in mirrors:
             assert mirror.endswith("/"), "getconfigs() ensures this"
             rules.add("%s**" % mirror)
-    m = bindings.pathmatcher.treematcher(sorted(rules), case_sensitive=True)
-    return m
+    return matchmod.treematcher("", "", rules=sorted(rules))
 
 
 def getmirrors(maps, filename):
@@ -216,7 +216,7 @@ def getmirrors(maps, filename):
     return None, []
 
 
-def _mctxstatus(ctx, matcher=None):
+def _mctxstatus(ctx, matcher):
     """Figure out what has changed that need to be synced
 
     Return (mctx, status).
@@ -293,7 +293,7 @@ def _mctxstatus(ctx, matcher=None):
     # the amend/absorb) and add any removes that happened since the predecessor.
     if predctx:
         if predctx.p1() == ctx.p1() or ctx.p1().node() in _nodemirrored:
-            status = _adjuststatus(status, predctx, ctx)
+            status = _adjuststatus(status, predctx, ctx, matcher)
 
     return mctx, status
 
@@ -318,15 +318,18 @@ def dirsyncctx(ctx, matcher=None):
         return resultctx, resultmirrored
 
     needsync = configstomatcher(maps)
+
+    if matcher:
+        matcher = matchmod.intersectmatchers(matcher, needsync)
+    else:
+        matcher = needsync
+
     repo = ctx.repo()
-    mctx, status = _mctxstatus(ctx)
+    mctx, status = _mctxstatus(ctx, matcher)
 
     added = set(status.added)
     modified = set(status.modified)
     removed = set(status.removed)
-
-    if matcher is None:
-        matcher = lambda path: True
 
     for action, paths in (
         ("a", status.added),
@@ -334,8 +337,6 @@ def dirsyncctx(ctx, matcher=None):
         ("r", status.removed),
     ):
         for src in paths:
-            if not needsync.matches(src) or not matcher(src):
-                continue
             srcmirror, mirrors = getmirrors(maps, src)
             if not mirrors:
                 continue
@@ -426,7 +427,7 @@ def _mirrorpath(srcdir: Sized, dstdir, src):
         return None
 
 
-def _adjuststatus(status, ctx1, ctx2) -> status:
+def _adjuststatus(status, ctx1, ctx2, matcher) -> status:
     """Adjusts the status result to remove item that don't differ between ctx1
     and ctx2
 
@@ -473,6 +474,9 @@ def _adjuststatus(status, ctx1, ctx2) -> status:
         (status.added, newadded),
     ]:
         for path in oldpaths:
+            if not matcher(path):
+                continue
+
             # No real changes? (case 1)
             if path in ctx1 and path in ctx2:
                 f1 = ctx1[path]
@@ -483,6 +487,9 @@ def _adjuststatus(status, ctx1, ctx2) -> status:
             newpaths.append(path)
 
     for path in status.removed:
+        if not matcher(path):
+            continue
+
         # No real changes (case 1)
         if path not in ctx1 and path not in ctx2:
             skipped.add(path)
@@ -491,6 +498,9 @@ def _adjuststatus(status, ctx1, ctx2) -> status:
 
     # Add files that have been reverted.
     for oldpath in ctx1.files():
+        if not matcher(oldpath):
+            continue
+
         if (
             oldpath in ctx1
             and oldpath not in ctx2
