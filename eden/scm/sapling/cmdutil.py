@@ -45,6 +45,7 @@ from . import (
     json,
     match as matchmod,
     mdiff,
+    merge as mergemod,
     mergeutil,
     mutation,
     patch,
@@ -346,8 +347,6 @@ def recordfilter(ui, originalhunks, operation=None):
 
 
 def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, filterfn, *pats, **opts):
-    from . import merge as mergemod
-
     if not ui.interactive():
         if cmdsuggest:
             msg = _("running non-interactively, use %s instead") % cmdsuggest
@@ -706,9 +705,6 @@ def _commentlines(raw):
 
 
 def _conflictsmsg(repo):
-    # avoid merge cycle
-    from . import merge as mergemod
-
     mergestate = mergemod.mergestate.read(repo)
     if not mergestate.active():
         return
@@ -3908,9 +3904,6 @@ def _amend(ui, repo, wctx, old, extra, opts, matcher):
             raise error.Abort(
                 _("failed to mark all new/missing files as added/removed")
             )
-
-        # avoid cycle (TODO: should be removed in default branch)
-        from . import merge as mergemod
 
         ms = mergemod.mergestate.read(repo)
         mergeutil.checkunresolved(ms)
