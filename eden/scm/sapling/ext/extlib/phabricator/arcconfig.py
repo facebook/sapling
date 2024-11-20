@@ -13,7 +13,6 @@ import os
 
 from sapling import encoding, error, pycompat, registrar
 
-
 cmdtable = {}
 command = registrar.command(cmdtable)
 
@@ -52,10 +51,16 @@ def loadforpath(path):
     # Use their own file as a basis
     userconfig = _loadfile(os.path.join(homedir, ".arcrc")) or {}
 
+    testtmp = encoding.environ.get("TESTTMP")
+
     # Walk up the path and augment with an .arcconfig if we find it,
     # terminating the search at that point.
     path = os.path.abspath(path)
     while len(path) > 1:
+        if testtmp and os.path.commonprefix([path, testtmp]) != testtmp:
+            # Don't allow search for .arcconfig to escape $TESTTMP.
+            break
+
         config = _loadfile(os.path.join(path, ".arcconfig"))
         if config is not None:
             userconfig.update(config)

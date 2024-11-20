@@ -1580,6 +1580,7 @@ class Test(unittest.TestCase):
         env["TESTFILE"] = self.path
         env["HOME"] = self._testtmp  # Unix
         env["USERPROFILE"] = self._testtmp  # Windows
+        env["APPDATA"] = self._testtmp  # Windows
         if self._usechg:
             env["CHGDISABLE"] = "never"
         else:
