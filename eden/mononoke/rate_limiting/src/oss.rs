@@ -69,7 +69,7 @@ impl RateLimiter for FakeLimiter {
         &self.category
     }
 
-    fn commits_per_author_limit(&self) -> Option<RateLimitBody> {
+    fn commits_per_author_limit(&self) -> Option<RateLimit> {
         None
     }
 

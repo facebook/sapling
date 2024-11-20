@@ -139,8 +139,12 @@ impl RateLimiter for MononokeRateLimits {
         &self.category
     }
 
-    fn commits_per_author_limit(&self) -> Option<RateLimitBody> {
-        Some(self.config.commits_per_author.clone())
+    fn commits_per_author_limit(&self) -> Option<crate::RateLimit> {
+        self.config
+            .rate_limits
+            .iter()
+            .find(|r| r.fci_metric.metric == Metric::CommitsPerAuthor)
+            .cloned()
     }
 
     fn total_file_changes_limit(&self) -> Option<RateLimitBody> {
@@ -172,6 +176,7 @@ struct LoadLimitsInner {
     regional_total_manifests: LoadLimitCounter,
     regional_getpack_files: LoadLimitCounter,
     regional_commits: LoadLimitCounter,
+    commits_per_author: LoadLimitCounter,
 }
 
 impl LoadLimitsInner {
@@ -193,6 +198,10 @@ impl LoadLimitsInner {
                 category: category.clone(),
                 key: make_regional_limit_key("egress-commits"),
             },
+            commits_per_author: LoadLimitCounter {
+                category,
+                key: "commits_per_author".to_string(),
+            },
         }
     }
 }
@@ -213,6 +222,7 @@ impl MononokeRateLimits {
             (Metric::TotalManifests, Scope::Regional) => &self.load_limits.regional_total_manifests,
             (Metric::GetpackFiles, Scope::Regional) => &self.load_limits.regional_getpack_files,
             (Metric::Commits, Scope::Regional) => &self.load_limits.regional_commits,
+            (Metric::CommitsPerAuthor, Scope::Global) => &self.load_limits.commits_per_author,
             _ => panic!("Unsupported metric/scope combination"),
         }
     }

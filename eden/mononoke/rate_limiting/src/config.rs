@@ -232,12 +232,6 @@ impl<'de> Deserialize<'de> for MononokeRateLimitConfig {
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| D::Error::custom(format!("{:?}", e)))?;
 
-        let commits_per_author = raw_config
-            .commits_per_author
-            .clone()
-            .try_into()
-            .map_err(|e| D::Error::custom(format!("{:?}", e)))?;
-
         let total_file_changes = raw_config
             .total_file_changes
             .clone()
@@ -249,7 +243,6 @@ impl<'de> Deserialize<'de> for MononokeRateLimitConfig {
             region_weight,
             rate_limits,
             load_shed_limits,
-            commits_per_author,
             total_file_changes,
         })
     }

@@ -67,7 +67,7 @@ pub trait RateLimiter {
 
     fn category(&self) -> &str;
 
-    fn commits_per_author_limit(&self) -> Option<RateLimitBody>;
+    fn commits_per_author_limit(&self) -> Option<RateLimit>;
 
     fn total_file_changes_limit(&self) -> Option<RateLimitBody>;
 }
@@ -114,8 +114,6 @@ pub struct MononokeRateLimitConfig {
     pub region_weight: f64,
     pub rate_limits: Vec<RateLimit>,
     pub load_shed_limits: Vec<LoadShedLimit>,
-    #[allow(dead_code)]
-    commits_per_author: RateLimitBody,
     #[allow(dead_code)]
     total_file_changes: Option<RateLimitBody>,
 }

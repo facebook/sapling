@@ -186,14 +186,14 @@ async fn enforce_commit_rate_limits_on_commits<'a, I: Iterator<Item = &'a Bonsai
         None => return Ok(()),
     };
 
-    let enforced = match limit.raw_config.status {
+    let enforced = match limit.body.raw_config.status {
         RateLimitStatus::Disabled => return Ok(()),
         RateLimitStatus::Tracked => false,
         RateLimitStatus::Enforced => true,
         // NOTE: Thrift enums aren't real enums once in Rust. We have to account for other values
         // here.
         _ => {
-            let e = anyhow!("Invalid limit status: {:?}", limit.raw_config.status);
+            let e = anyhow!("Invalid limit status: {:?}", limit.body.raw_config.status);
             return Err(BundleResolverError::Error(e));
         }
     };
@@ -204,13 +204,13 @@ async fn enforce_commit_rate_limits_on_commits<'a, I: Iterator<Item = &'a Bonsai
     }
 
     let counters = build_counters(ctx, category, groups);
-    let checks = dispatch_counter_checks_and_bumps(ctx, &limit, counters, enforced);
+    let checks = dispatch_counter_checks_and_bumps(ctx, &limit.body, counters, enforced);
 
     match timeout(RATELIM_FETCH_TIMEOUT, try_join_all(checks)).await {
         Ok(Ok(_)) => Ok(()),
         Ok(Err((author, count))) => Err(BundleResolverError::RateLimitExceeded {
             limit_name: COMMITS_PER_AUTHOR_LIMIT_NAME.to_string(),
-            limit: limit.clone(),
+            limit: limit.body.clone(),
             entity: author,
             value: count,
         }),
