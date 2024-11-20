@@ -205,7 +205,7 @@ pub trait ChangesetHook: Send + Sync {
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
         hook_name: &str,
-        scuba: MononokeScubaSampleBuilder,
+        mut scuba: MononokeScubaSampleBuilder,
         log_only: bool,
     ) -> Result<HookOutcome, Error> {
         let (stats, mut result) = self
@@ -228,6 +228,7 @@ pub trait ChangesetHook: Send + Sync {
             })
             .timed()
             .await;
+        scuba.add("hash", changeset.get_changeset_id().to_string());
         log_execution_stats(scuba, stats, &mut result, log_only);
         result.map_err(|e| e.context(format!("while executing hook {}", hook_name)))
     }
