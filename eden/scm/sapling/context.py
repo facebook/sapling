@@ -195,6 +195,20 @@ class basectx:
         if mf1.hasgrafts():
             dmf1, dmf2 = bindings.manifest.treemanifest.applydiffgrafts(mf1, mf2)
         d = dmf1.diff(dmf2, matcher=match)
+
+        prefetch = []
+        for fn, (left, right) in d.items():
+            if left and right and left[0] and right[0] and left[1] == right[1]:
+                for side in (left, right):
+                    if side[0] != modifiednodeid:
+                        prefetch.append((fn, side[0]))
+
+        # Prefetch file contents and file parents to avoid serial fetches in below
+        # `fctx.cmp(fctx)` call.
+        if len(prefetch) > 1 and "remotefilelog" in self._repo.requirements:
+            self._repo.fileslog.filestore.prefetch(prefetch)
+            self._repo.fileslog.metadatastore.prefetch(prefetch, length=1)
+
         for fn, value in d.items():
             if listclean:
                 cleanset.discard(fn)
@@ -2133,7 +2147,13 @@ class workingctx(committablectx):
 
         man = parents[0].manifest().copy()
 
-        ff = self._flagfunc
+        # Bulk fetch all the paths to avoid serial fetching bellow.
+        man.walkfiles(
+            matchmod.exact(
+                "", "", status.deleted + status.removed + status.added + status.modified
+            )
+        )
+
         for f in status.deleted + status.removed:
             if f in man:
                 del man[f]
@@ -2142,6 +2162,8 @@ class workingctx(committablectx):
             submodulestatus = git.submodulestatus(self)
         else:
             submodulestatus = {}
+
+        ff = self._flagfunc
         for i, l in ((addednodeid, status.added), (modifiednodeid, status.modified)):
             for f in l:
                 submodulenodes = submodulestatus.get(f)
