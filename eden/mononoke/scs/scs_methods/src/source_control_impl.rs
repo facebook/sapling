@@ -117,6 +117,7 @@ pub struct SourceControlServiceImpl {
     identity_proxy_checker: Arc<ConnectionSecurityChecker>,
     pub(crate) acl_provider: Arc<dyn AclProvider>,
     pub(crate) enable_futures_watchdog: bool,
+    pub(crate) watchdog_max_poll: u64,
 }
 
 pub struct SourceControlServiceThriftImpl(Arc<SourceControlServiceImpl>);
@@ -136,6 +137,7 @@ impl SourceControlServiceImpl {
         factory_group: Option<Arc<FactoryGroup<2>>>,
         async_requests_queue: Option<Arc<AsyncMethodRequestQueue>>,
         enable_futures_watchdog: bool,
+        watchdog_max_poll: u64,
     ) -> Result<Self, anyhow::Error> {
         scuba_builder.add_common_server_data();
 
@@ -156,6 +158,7 @@ impl SourceControlServiceImpl {
             async_requests_queue,
             acl_provider: app.environment().acl_provider.clone(),
             enable_futures_watchdog,
+            watchdog_max_poll,
         })
     }
 
@@ -830,6 +833,7 @@ macro_rules! impl_thrift_methods {
                 let fut = async move {
                     let svc = self.0.clone();
                     let enable_futures_watchdog = self.0.enable_futures_watchdog;
+                    let watchdog_max_poll = self.0.watchdog_max_poll;
                     let (ctx, session_uuid) = create_ctx!(svc, $method_name, req_ctxt, $( $param_name ),*).await?;
                     let handler = {
                         cloned!(ctx);
@@ -843,7 +847,7 @@ macro_rules! impl_thrift_methods {
                                     f.watched(ctx.logger())
                                     .with_label(stringify!($method_name))
                                     .with_unique_id(&session_uuid)
-                                    .with_max_poll(50).await
+                                    .with_max_poll(watchdog_max_poll).await
                                 } else {
                                     f.await
                                 }

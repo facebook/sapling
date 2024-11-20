@@ -124,6 +124,9 @@ struct ScsServerArgs {
     /// Enable the futures watchdog; this will log stack traces for futures that take longer than 0.5 seconds to complete.
     #[clap(long, default_value = "false")]
     enable_futures_watchdog: bool,
+    /// Sets the threshold for watchdog logging of top-level SCS methods. As a rule of thumb this should the same or lower than thrift_queue_timeout.
+    #[clap(long, default_value = "500")]
+    watchdog_method_max_poll: u64,
 }
 
 #[derive(ValueEnum, Clone, Copy, Debug, PartialEq, Eq)]
@@ -302,6 +305,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             maybe_factory_group,
             async_requests_queue_client,
             args.enable_futures_watchdog,
+            args.watchdog_method_max_poll,
         ))?
     };
 
