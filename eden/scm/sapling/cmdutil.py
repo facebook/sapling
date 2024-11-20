@@ -30,6 +30,7 @@ from sapling import tracing
 from . import (
     bookmarks,
     changelog,
+    context,
     copies,
     crecord as crecordmod,
     dagop,
@@ -1581,9 +1582,6 @@ def amend_copy(repo, to_amend, rename, force):
                         hint=_("use --force to skip similarity check"),
                     )
 
-        # Actual amend
-        from . import context
-
         mctx = context.memctx.mirrorformutation(ctx, "amend")
         for src_path, dst_path in to_amend:
             mctx[dst_path] = context.overlayfilectx(
@@ -1649,8 +1647,6 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
     :updatefunc: a function that update a repo to a given node
                  updatefunc(<repo>, <node>)
     """
-    # avoid cycle context -> cmdutil
-    from . import context
 
     extractdata = patch.extract(ui, hunk)
     tmpname = extractdata.get("filename")
@@ -3860,9 +3856,6 @@ def amend(ui, repo, old, extra, pats, opts):
 
 
 def _amend(ui, repo, wctx, old, extra, opts, matcher):
-    # avoid cycle context -> subrepo -> cmdutil
-    from . import context
-
     ui.note(_("amending changeset %s\n") % old)
     base = old.p1()
 
