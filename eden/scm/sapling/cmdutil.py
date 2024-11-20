@@ -3933,7 +3933,7 @@ def _amend(ui, repo, wctx, old, extra, opts, matcher):
             # deleted), old X must be preserved.
             with perftrace.trace("Prune files reverted by amend"):
                 statusmanifest = wctx.buildstatusmanifest(status)
-                for f in filestoamend:
+                for f in sorted(filestoamend):
                     if (
                         not samefile(f, wctx, base, m1=statusmanifest)
                         or f in status.deleted
