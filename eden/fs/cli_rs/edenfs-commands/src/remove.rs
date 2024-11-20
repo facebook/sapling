@@ -59,6 +59,15 @@ pub struct RemoveCmd {
     #[clap(short = 'q', long = "quiet", hide = true)]
     suppress_output: bool,
 
+    // Answer no for any prompt.
+    // This is only used in testing the path when a user does not confirm upon the prompt
+    // I have to this because dialoguer::Confirm does not accept input from non-terminal
+    // https://github.com/console-rs/dialoguer/issues/170
+    //
+    // When provided with "-y": undefined!
+    #[clap(short = 'n', long = "answer-no", hide = true)]
+    no: bool,
+
     #[clap(long, hide = true)]
     preserve_mount_point: bool,
 }
@@ -168,11 +177,16 @@ impl RegFile {
     async fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
         if context
             .io
-            .prompt_user("RegFile State is not implemented yet...".to_string())?
+            .prompt_user("{} is a file, do you still want to remove it?".to_string())?
         {
-            return Err(anyhow!("Rust remove(RegFile) is not implemented!"));
+            fs::remove_file(context.canonical_path.as_path())
+                .with_context(|| format!("Failed to remove mount point {}", context))?;
+            return Ok(None);
         }
-        Ok(None)
+
+        Err(anyhow!(
+            "User did not confirm the removal. Stopping. Nothing removed!"
+        ))
     }
 }
 
@@ -404,7 +418,14 @@ impl Subcommand for RemoveCmd {
             "Currently supporting only one path given per run"
         );
 
-        let messenger = Messenger::new(IO::stdio(), self.skip_prompt, self.suppress_output);
+        if self.skip_prompt && self.no {
+            return Err(anyhow!(
+                "Both '-y' and '-n' are provided. This is not supported.\nExisting."
+            ));
+        }
+
+        let messenger =
+            Messenger::new(IO::stdio(), self.skip_prompt, self.suppress_output, self.no);
 
         let mut context =
             RemoveContext::new(self.paths[0].clone(), self.preserve_mount_point, messenger);
@@ -431,13 +452,15 @@ impl Subcommand for RemoveCmd {
 struct Messenger {
     logger: TermLogger,
     skip_prompt: bool,
+    answer_no: bool,
 }
 
 impl Messenger {
-    fn new(io: IO, skip_prompt: bool, suppress_output: bool) -> Messenger {
+    fn new(io: IO, skip_prompt: bool, suppress_output: bool, answer_no: bool) -> Messenger {
         Messenger {
             logger: TermLogger::new(&io).with_quiet(suppress_output),
             skip_prompt,
+            answer_no,
         }
     }
 
@@ -462,6 +485,10 @@ impl Messenger {
     }
 
     fn prompt_user(&self, prompt: String) -> Result<bool> {
+        if self.answer_no {
+            return Ok(false);
+        }
+
         if !self.skip_prompt {
             self.logger.info(prompt);
             let res = Confirm::new().with_prompt("Proceed?").interact()?;
@@ -513,7 +540,7 @@ mod tests {
     }
 
     fn default_context(original_path: String) -> RemoveContext {
-        let messenger = Messenger::new(IO::null(), true, true);
+        let messenger = Messenger::new(IO::null(), true, true, false);
         RemoveContext {
             original_path,
             canonical_path: PathBuf::new(),

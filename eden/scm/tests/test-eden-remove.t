@@ -8,12 +8,30 @@ setup backing repo
   Cloning new repository at $TESTTMP/wcrepo...
   Success.  Checked out commit 00000000
 
+Do not provide both '-y' and '-n'
+  $ EDENFSCTL_ONLY_RUST=true eden remove -q -y -n $TESTTMP/wcrepo/test_dir
+  Error: Both '-y' and '-n' are provided. This is not supported.
+  Existing.
+  [1]
+
 touch a test file
   $ touch $TESTTMP/wcrepo/file.txt
 
-eden remove this file should see error about RegFile state
+eden remove this file, answer no when there is prompt
+  $ EDENFSCTL_ONLY_RUST=true eden remove -q -n $TESTTMP/wcrepo/file.txt
+  Error: User did not confirm the removal. Stopping. Nothing removed!
+  [1]
+
+the file is still there
+  $ ls $TESTTMP/wcrepo/file.txt | wc -l
+  1
+
+eden remove this file, skip prompt with "yes"
   $ EDENFSCTL_ONLY_RUST=true eden remove -q -y $TESTTMP/wcrepo/file.txt
-  Error: Rust remove(RegFile) is not implemented!
+
+file is now gone
+  $ ls $TESTTMP/wcrepo/file.txt
+  ls: $TESTTMP/wcrepo/file.txt: $ENOENT$
   [1]
 
 create a test directory
