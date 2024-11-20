@@ -23,6 +23,7 @@ use pathmatcher::AlwaysMatcher;
 use pathmatcher::DifferenceMatcher;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::DynMatcher;
+use pathmatcher::ExactMatcher;
 use pathmatcher::GitignoreMatcher;
 use pathmatcher::HintedMatcher;
 use pathmatcher::IntersectMatcher;
@@ -343,6 +344,24 @@ pub fn extract_matcher(
         }
         "alwaysmatcher" => Ok((Arc::new(AlwaysMatcher::new()), true)),
         "nevermatcher" => Ok((Arc::new(NeverMatcher::new()), true)),
+        "exactmatcher" => {
+            let files: PyList = matcher.getattr(py, "_files")?.extract(py)?;
+            let files: Vec<RepoPathBuf> = files
+                .iter(py)
+                .map(|p| {
+                    p.extract::<PyPathBuf>(py)
+                        .and_then(|p| p.to_repo_path_buf().map_pyerr(py))
+                })
+                .collect::<PyResult<_>>()?;
+            Ok((
+                Arc::new(ExactMatcher::new(
+                    files.iter(),
+                    // case_sensitive=true - this matches match.py `exactmatcher` behavior.
+                    true,
+                )),
+                true,
+            ))
+        }
         _ => {
             warn!("using Python matcher");
             Ok((Arc::new(ThreadPythonMatcher::new(matcher)), false))
