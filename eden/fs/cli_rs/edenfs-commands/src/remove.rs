@@ -24,6 +24,7 @@ use async_trait::async_trait;
 use clap::Parser;
 use crossterm::style::Stylize;
 use dialoguer::Confirm;
+use edenfs_client::checkout::get_mounts;
 use edenfs_client::fsutil::forcefully_remove_dir_all;
 use edenfs_client::EdenFsInstance;
 use edenfs_utils::bytes_from_path;
@@ -259,6 +260,7 @@ impl CleanUp {
                 "preserve_mount_point flag is set, not removing the mount point {}!",
                 context.original_path
             ));
+            Ok(None)
         } else {
             context.io.info(format!(
                 "Cleaning up the directory left by repo {} ...",
@@ -268,8 +270,9 @@ impl CleanUp {
                 .await
                 .with_context(|| anyhow!("Failed to clean mount point {}", context))?;
             context.io.done();
+
+            Ok(Some(State::Validation))
         }
-        Ok(None)
     }
 
     #[cfg(unix)]
@@ -302,12 +305,45 @@ impl CleanUp {
     }
 }
 
+async fn validate_state_run(context: &mut RemoveContext) -> Result<Option<State>> {
+    context
+        .io
+        .info("Checking eden mount list and file system to verify the removal...".to_string());
+    // check eden list
+    let mut mounts = get_mounts(EdenFsInstance::global())
+        .await
+        .with_context(|| anyhow!("Failed to call eden list"))?;
+    let entry_key = dunce::simplified(context.canonical_path.as_path());
+    mounts.retain(|mount_path_key, _| dunce::simplified(mount_path_key) == entry_key);
+    if !mounts.is_empty() {
+        return Err(anyhow!("Repo {} is still mounted", context));
+    }
+
+    // check directory clean up
+    if !context.preserve_mount_point {
+        match context.canonical_path.try_exists() {
+            Ok(false) => {
+                context.io.done();
+                Ok(None)
+            }
+            Ok(true) => Err(anyhow!("Directory left by repo {} is not removed", context)),
+            Err(e) => Err(anyhow!(
+                "Failed to check the status of path {}: {}",
+                context,
+                e
+            )),
+        }
+    } else {
+        Ok(None)
+    }
+}
+
 #[derive(Debug)]
 enum State {
     // function states (no real action performed)
     SanityCheck(SanityCheck),
     Determination(Determination),
-    // Validation,
+    Validation,
 
     // // removal states (harmful operations)
     ActiveEdenMount(ActiveEdenMount),
@@ -329,6 +365,7 @@ impl fmt::Display for State {
                 State::ActiveEdenMount(_) => "ActiveEdenMount",
                 State::CleanUp(_) => "CleanUp",
                 State::InactiveEdenMount(_) => "InactiveEdenMount",
+                State::Validation => "Validation",
             }
         )
     }
@@ -353,6 +390,7 @@ impl State {
             State::ActiveEdenMount(inner) => inner.next(context).await,
             State::InactiveEdenMount(inner) => inner.next(context).await,
             State::CleanUp(inner) => inner.next(context).await,
+            State::Validation => validate_state_run(context).await,
         }
     }
 }
