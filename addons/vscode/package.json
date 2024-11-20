@@ -181,6 +181,10 @@
         "command": "sapling.copy-remote-file-link",
         "title": "Copy Code Review Link",
         "enablement": "sapling:hasRemoteLinkRepo"
+      },
+      {
+        "command": "sapling.open-comments",
+        "title": "%sapling.open-comments-command%"
       }
     ],
     "keybindings": [
@@ -195,6 +199,11 @@
         "key": "ctrl-shift-'",
         "mac": "cmd-shift-'",
         "when": "activeWebviewPanelId != 'sapling.isl'"
+      },
+      {
+        "command": "sapling.open-comments",
+        "key": "ctrl-shift-g",
+        "mac": "cmd-shift-g"
       }
     ],
     "menus": {

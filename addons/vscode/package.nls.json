@@ -21,5 +21,6 @@
   "settings.comparisonPanelMode.enumDescriptions.always-separate-panel": "Always open a separate panel to view comparisons",
   "isl.confirmModalOK": "OK",
   "isl.title": "Interactive Smartlog",
-  "isl.loading-text": "Loading..."
+  "isl.loading-text": "Loading...",
+  "sapling.open-comments-command": "Open Code Review Comments Panel"
 }
