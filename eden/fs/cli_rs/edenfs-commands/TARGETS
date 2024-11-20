@@ -34,6 +34,7 @@ rust_library(
         "fbsource//third-party/rust:crossterm",
         "fbsource//third-party/rust:dialoguer",
         "fbsource//third-party/rust:dirs",
+        "fbsource//third-party/rust:dunce",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:hex",
         "fbsource//third-party/rust:once_cell",
@@ -50,6 +51,8 @@ rust_library(
         "//eden/fs/cli_rs/edenfs-error:edenfs-error",
         "//eden/fs/cli_rs/edenfs-utils:edenfs-utils",
         "//eden/fs/cli_rs/facebook/edenfs-telemetry:edenfs-telemetry",
+        "//eden/scm/lib/io:io",
+        "//eden/scm/lib/io/term/logger:termlogger",
         "//eden/scm/lib/thrift-types:thrift-types",
     ],
 )

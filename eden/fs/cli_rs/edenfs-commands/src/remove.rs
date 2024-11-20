@@ -22,12 +22,13 @@ use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
+use crossterm::style::Stylize;
 use dialoguer::Confirm;
 use edenfs_client::fsutil::forcefully_remove_dir_all;
-use edenfs_client::EdenFsClient;
 use edenfs_client::EdenFsInstance;
-use edenfs_error::EdenFsError;
 use edenfs_utils::bytes_from_path;
+use io::IO;
+use termlogger::TermLogger;
 use tracing::debug;
 use tracing::error;
 use tracing::warn;
@@ -53,6 +54,10 @@ pub struct RemoveCmd {
         )]
     skip_prompt: bool,
 
+    // Do not print to stdout. This is independent with '--no-prompt'
+    #[clap(short = 'q', long = "quiet", hide = true)]
+    suppress_output: bool,
+
     #[clap(long, hide = true)]
     preserve_mount_point: bool,
 }
@@ -60,30 +65,17 @@ pub struct RemoveCmd {
 struct RemoveContext {
     original_path: String,
     canonical_path: PathBuf,
-    skip_prompt: bool,
-    client: Option<Result<EdenFsClient>>,
     preserve_mount_point: bool,
+    io: Messenger,
 }
 
 impl RemoveContext {
-    fn new(
-        original_path: String,
-        skip_prompt: bool,
-        client: Result<EdenFsClient, EdenFsError>,
-        preserve_mount_point: bool,
-    ) -> RemoveContext {
+    fn new(original_path: String, preserve_mount_point: bool, io: Messenger) -> RemoveContext {
         RemoveContext {
             original_path,
             canonical_path: PathBuf::new(),
-            skip_prompt,
-            client: match client {
-                Ok(client) => Some(Ok(client)),
-                Err(e) => {
-                    warn!("Failed to initialize EdenFsClient: {e}");
-                    Some(Err(anyhow!("{e}")))
-                }
-            },
             preserve_mount_point,
+            io,
         }
     }
 }
@@ -103,7 +95,14 @@ impl SanityCheck {
             .canonicalize()
             .with_context(|| format!("Error canonicalizing path {}", context.original_path))?;
         context.canonical_path = path;
-        Ok(Some(State::Determination(Determination {})))
+
+        if context.io.prompt_user(construct_start_prompt(context))? {
+            return Ok(Some(State::Determination(Determination {})));
+        }
+
+        Err(anyhow!(
+            "User did not confirm the removal. Stopping. Nothing removed!"
+        ))
     }
 }
 
@@ -166,10 +165,9 @@ impl Determination {
 struct RegFile {}
 impl RegFile {
     async fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
-        if context.skip_prompt
-            || Confirm::new()
-                .with_prompt("RegFile State is not implemented yet... proceed?")
-                .interact()?
+        if context
+            .io
+            .prompt_user("RegFile State is not implemented yet...".to_string())?
         {
             return Err(anyhow!("Rust remove(RegFile) is not implemented!"));
         }
@@ -182,37 +180,34 @@ struct ActiveEdenMount {}
 impl ActiveEdenMount {
     async fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
         // TODO: stop process first
+
+        context
+            .io
+            .info(format!("Unmounting repo at {} ...", context.original_path));
+
         match self.unmount(context).await {
             Ok(_) => {
-                debug!("unmount path {} done", context);
+                context.io.done();
                 Ok(Some(State::InactiveEdenMount(InactiveEdenMount {})))
             }
-            Err(e) => {
-                error!("Failed to unmount {}: {}", context, e);
-                Ok(None)
-            }
+            Err(e) => Err(anyhow!(
+                "Failed to unmount mount point at {}: {}",
+                context,
+                e
+            )),
         }
     }
 
     async fn unmount(&self, context: &RemoveContext) -> Result<()> {
-        match context.client {
-            Some(ref client_res) => match client_res {
-                Ok(client) => {
-                    debug!("trying to unmount {}", context);
-                    let encoded_path = bytes_from_path(context.canonical_path.clone())
-                        .with_context(|| format!("Failed to encode path {}", context))?;
-                    client
-                        .unmount(&encoded_path)
-                        .await
-                        .with_context(|| format!("Failed to unmount {}", context))
-                }
-
-                Err(e) => Err(anyhow!("{e}")),
-            },
-            None => {
-                panic!("Failed to unmount due to missing EdenFsClient!")
-            }
-        }
+        debug!("trying to unmount {}", context);
+        let encoded_path = bytes_from_path(context.canonical_path.clone())
+            .with_context(|| format!("Failed to encode path {}", context))?;
+        let instance = EdenFsInstance::global();
+        let client = instance.connect(None).await?;
+        client
+            .unmount(&encoded_path)
+            .await
+            .with_context(|| format!("Failed to unmount {}", context))
     }
 }
 
@@ -220,8 +215,14 @@ impl ActiveEdenMount {
 struct InactiveEdenMount {}
 impl InactiveEdenMount {
     async fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
+        context.io.info(format!(
+            "Unregistering repo {} from Eden configs...",
+            context.original_path
+        ));
         self.remove_client_config_dir(context)?;
         self.remove_client_config_entry(context)?;
+
+        context.io.done();
 
         Ok(Some(State::CleanUp(CleanUp {})))
     }
@@ -254,14 +255,19 @@ struct CleanUp {}
 impl CleanUp {
     async fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
         if context.preserve_mount_point {
-            warn!(
+            context.io.warn(format!(
                 "preserve_mount_point flag is set, not removing the mount point {}!",
-                context
-            );
+                context.original_path
+            ));
         } else {
+            context.io.info(format!(
+                "Cleaning up the directory left by repo {} ...",
+                context.original_path
+            ));
             self.clean_mount_point(&context.canonical_path)
                 .await
                 .with_context(|| anyhow!("Failed to clean mount point {}", context))?;
+            context.io.done();
         }
         Ok(None)
     }
@@ -360,29 +366,84 @@ impl Subcommand for RemoveCmd {
             "Currently supporting only one path given per run"
         );
 
-        let instance = EdenFsInstance::global();
-        let client = instance.connect(None).await;
+        let messenger = Messenger::new(IO::stdio(), self.skip_prompt, self.suppress_output);
 
-        let mut context = RemoveContext::new(
-            self.paths[0].clone(),
-            self.skip_prompt,
-            client,
-            self.preserve_mount_point,
-        );
+        let mut context =
+            RemoveContext::new(self.paths[0].clone(), self.preserve_mount_point, messenger);
         let mut state = Some(State::start());
 
         while state.is_some() {
             match state.unwrap().run(&mut context).await {
                 Ok(next_state) => state = next_state,
                 Err(e) => {
-                    // TODO: handling error processing like logging, etc
                     return Err(e);
                 }
             }
         }
 
+        context
+            .io
+            .success(format!("\nSuccessfully removed {}", context.original_path));
         Ok(0)
     }
+}
+
+// Object responsible to print messages to stdout or generate prompt
+// for the user and receive response
+struct Messenger {
+    logger: TermLogger,
+    skip_prompt: bool,
+}
+
+impl Messenger {
+    fn new(io: IO, skip_prompt: bool, suppress_output: bool) -> Messenger {
+        Messenger {
+            logger: TermLogger::new(&io).with_quiet(suppress_output),
+            skip_prompt,
+        }
+    }
+
+    fn info(&self, msg: String) {
+        self.logger.info(msg);
+    }
+
+    fn warn(&self, msg: String) {
+        self.logger.warn(msg.yellow().to_string());
+    }
+
+    fn error(&self, msg: String) {
+        self.logger.warn(msg.red().to_string());
+    }
+
+    fn success(&self, msg: String) {
+        self.logger.info(msg.green().to_string());
+    }
+
+    fn done(&self) {
+        self.success("✓".to_string());
+    }
+
+    fn prompt_user(&self, prompt: String) -> Result<bool> {
+        if !self.skip_prompt {
+            self.logger.info(prompt);
+            let res = Confirm::new().with_prompt("Proceed?").interact()?;
+            return Ok(res);
+        }
+        Ok(true)
+    }
+}
+
+fn construct_start_prompt(context: &RemoveContext) -> String {
+    format!(
+        "Warning: this operation will permanently delete the following checkouts:\n\
+         \n\
+         {}\n\
+         \n\
+         Any uncommitted changes and shelves in this checkout will be lost forever.\n",
+        dunce::simplified(&context.canonical_path).to_string_lossy(),
+    )
+    .yellow()
+    .to_string()
 }
 
 #[cfg(test)]
@@ -414,12 +475,12 @@ mod tests {
     }
 
     fn default_context(original_path: String) -> RemoveContext {
+        let messenger = Messenger::new(IO::null(), true, true);
         RemoveContext {
             original_path,
             canonical_path: PathBuf::new(),
-            skip_prompt: true,
-            client: None,
             preserve_mount_point: false,
+            io: messenger,
         }
     }
 
