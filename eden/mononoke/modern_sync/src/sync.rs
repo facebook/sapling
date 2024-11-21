@@ -36,6 +36,7 @@ use slog::info;
 use slog::Logger;
 
 use crate::bul_util;
+use crate::sender::dummy::DummySender;
 use crate::sender::ModernSyncSender;
 use crate::Repo;
 const MODERN_SYNC_COUNTER_NAME: &str = "modern_sync";
@@ -79,7 +80,7 @@ pub async fn sync(
             })?
     };
 
-    let sender = ModernSyncSender::new(logger.clone());
+    let sender = Arc::new(DummySender::new(logger.clone()));
     let commit_graph = repo.commit_graph_arc();
     let derived_data = repo.repo_derived_data_arc();
     let repo_blobstore = repo.repo_blobstore_arc();
@@ -115,7 +116,7 @@ pub async fn sync(
                                     derived_data,
                                     repo_blobstore,
                                     &logger,
-                                    &sender,
+                                    sender,
                                 )
                                 .await
                             }
@@ -139,7 +140,7 @@ async fn process_one_changeset(
     derived_data: Arc<RepoDerivedData>,
     blobstore: Arc<RepoBlobstore>,
     logger: &Logger,
-    sender: &ModernSyncSender,
+    sender: Arc<dyn ModernSyncSender + Send + Sync>,
 ) -> Result<()> {
     info!(logger, "Found commit {:?}", cs_id);
     let cs_info = derived_data
