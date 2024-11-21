@@ -261,6 +261,9 @@ impl HookManager {
         if let Some(user) = user_option {
             scuba.add("user", user);
         }
+        if let Some(cri) = ctx.metadata().client_request_info() {
+            scuba.add_client_request_info(cri);
+        }
 
         for hook_name in hooks {
             let hook = self
@@ -317,6 +320,13 @@ impl HookManager {
         if let Some(user) = user_option {
             scuba.add("user", user);
         }
+        if let Some(cri) = ctx.metadata().client_request_info() {
+            scuba.add_client_request_info(cri);
+        }
+
+        if let Some(user) = user_option {
+            scuba.add("user", user);
+        }
 
         let (batched, individual) = hooks
             .map(|hook_name| {
@@ -331,7 +341,7 @@ impl HookManager {
             .collect::<Result<Vec<_>>>()?
             .into_iter()
             // Skip any hook that's entirely bypassed due to a pushvar
-            .filter(|(hook_name, hook)| {
+            .filter(|(_hook_name, hook)| {
                 log_if_bypassed_by_pushvar(&scuba, hook, changesets, maybe_pushvars)
             })
             .map(|(hook_name, hook)| {
