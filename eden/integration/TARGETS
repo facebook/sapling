@@ -28,6 +28,18 @@ python_unittest(
 )
 
 python_unittest(
+    name = "changes",
+    srcs = ["changes_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    runtime_deps = artifacts["deps"],
+    deps = [
+        "//eden/fs/service:thrift-py-deprecated",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
     name = "chown",
     srcs = ["chown_test.py"],
     env = artifacts["env"],
