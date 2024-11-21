@@ -174,8 +174,9 @@ def get_subtree_branches(repo, node) -> List[SubtreeBranch]:
         else:
             return BranchType.DEEP_COPY
 
+    extra = repo[node].extra()
     result = []
-    if metadata_list := _get_subtree_metadata(repo, node, SUBTREE_KEY):
+    if metadata_list := _get_subtree_metadata(extra, SUBTREE_KEY):
         for metadata in metadata_list:
             for branch_type in BranchType:
                 key = branch_type.to_key()
@@ -191,7 +192,7 @@ def get_subtree_branches(repo, node) -> List[SubtreeBranch]:
                         )
                     )
 
-    if branch_info := _get_subtree_metadata(repo, node, SUBTREE_BRANCH_KEY):
+    if branch_info := _get_subtree_metadata(extra, SUBTREE_BRANCH_KEY):
         for b in branch_info.get("branches", []):
             branch_type = detect_branch_type(repo, node)
             result.append(
@@ -207,8 +208,9 @@ def get_subtree_branches(repo, node) -> List[SubtreeBranch]:
 
 
 def get_subtree_merges(repo, node) -> List[SubtreeMerge]:
+    extra = repo[node].extra()
     result = []
-    if metadata_list := _get_subtree_metadata(repo, node, SUBTREE_KEY):
+    if metadata_list := _get_subtree_metadata(extra, SUBTREE_KEY):
         for metadata in metadata_list:
             for merge in metadata.get("merges", []):
                 result.append(
@@ -220,7 +222,7 @@ def get_subtree_merges(repo, node) -> List[SubtreeMerge]:
                     )
                 )
 
-    if merge_info := _get_subtree_metadata(repo, node, SUBTREE_MERGE_KEY):
+    if merge_info := _get_subtree_metadata(extra, SUBTREE_MERGE_KEY):
         for m in merge_info.get("merges", []):
             result.append(
                 SubtreeMerge(
@@ -233,8 +235,7 @@ def get_subtree_merges(repo, node) -> List[SubtreeMerge]:
     return result
 
 
-def _get_subtree_metadata(repo, node, key):
-    extra = repo[node].extra()
+def _get_subtree_metadata(extra, key):
     try:
         val_str = extra[key]
     except KeyError:
