@@ -262,6 +262,7 @@ from sapling import (
 from sapling.i18n import _
 from sapling.pycompat import range
 
+
 # pyre-fixme[11]: Annotation `pickle` is not defined as a type.
 pickle = util.pickle
 release = lock.release
@@ -670,11 +671,17 @@ def collapse(repo, first, commitopts, skipprompt=False):
             )
     base = first.p1()
 
+    # commit a new version of the old changeset, including the update
+    # collect all files which might be affected
+    files = set()
+    for ctx in ctxs:
+        files.update(ctx.files())
+
     # Recompute copies (avoid recording a -> b -> a)
     copied = copies.pathcopies(base, last)
 
-    files = [fn for st in base.status(last)[:4] for fn in st]
-
+    # prune files which were reverted by the updates
+    files = [f for f in files if not cmdutil.samefile(f, last, base)]
     # commit version of these files as defined by head
     headmf = last.manifest()
 

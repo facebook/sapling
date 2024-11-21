@@ -166,9 +166,7 @@ class basectx:
         """
         return match
 
-    def _buildstatus(
-        self, other, s, match, wcmatch, listignored, listclean, listunknown
-    ):
+    def _buildstatus(self, other, s, match, listignored, listclean, listunknown):
         """build a status with respect to another context"""
         # Load earliest manifest first for caching reasons. More specifically,
         # if you have revisions 1000 and 1001, 1001 is probably stored as a
@@ -392,8 +390,6 @@ class basectx:
         listignored=False,
         listclean=False,
         listunknown=False,
-        # matcher that only applies to dirstate status
-        wcmatch=None,
     ):
         """return status of files between two nodes or node and working
         directory.
@@ -425,13 +421,8 @@ class basectx:
 
         match = match or matchmod.always(self._repo.root, self._repo.getcwd())
         match = ctx2._matchstatus(ctx1, match)
-        if wcmatch is None:
-            wcmatch = match
-
         r = scmutil.status([], [], [], [], [], [], [])
-        r = ctx2._buildstatus(
-            ctx1, r, match, wcmatch, listignored, listclean, listunknown
-        )
+        r = ctx2._buildstatus(ctx1, r, match, listignored, listclean, listunknown)
 
         if reversed:
             # Reverse added and removed. Clear deleted, unknown and ignored as
@@ -2180,9 +2171,7 @@ class workingctx(committablectx):
 
         return man
 
-    def _buildstatus(
-        self, other, s, match, wcmatch, listignored, listclean, listunknown
-    ):
+    def _buildstatus(self, other, s, match, listignored, listclean, listunknown):
         """build a status with respect to another context
 
         This includes logic for maintaining the fast path of status when
@@ -2198,14 +2187,14 @@ class workingctx(committablectx):
         # consistent before and after.
         pctx = self._repo["."]
 
-        s = self._dirstatestatus(wcmatch, listignored, listclean, listunknown)
+        s = self._dirstatestatus(match, listignored, listclean, listunknown)
         # Filter out symlinks that, in the case of FAT32 and NTFS filesystems,
         # might have accidentally ended up with the entire contents of the file
         # they are supposed to be linking to.
         s.modified[:] = self._filtersuspectsymlink(s.modified)
         if other != pctx:
             s = super(workingctx, self)._buildstatus(
-                other, s, match, wcmatch, listignored, listclean, listunknown
+                other, s, match, listignored, listclean, listunknown
             )
         return s
 

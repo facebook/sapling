@@ -3826,6 +3826,22 @@ def commit(ui, repo, commitfunc, pats, opts):
         return commitfunc(ui, repo, message, matcher, opts)
 
 
+def samefile(f, ctx1, ctx2, m1=None, m2=None):
+    if m1 is None:
+        m1 = ctx1.manifest()
+    if m2 is None:
+        m2 = ctx2.manifest()
+    if f in m1:
+        a = ctx1.filectx(f)
+        if f in m2:
+            b = ctx2.filectx(f)
+            return not a.cmp(b) and a.flags() == b.flags()
+        else:
+            return False
+    else:
+        return f not in m2
+
+
 def amend(ui, repo, old, extra, pats, opts):
     wctx = repo[None]
     matcher = scmutil.match(wctx, pats, opts)
@@ -3868,8 +3884,12 @@ def _amend(ui, repo, wctx, old, extra, opts, matcher):
         # Parse the date to allow comparison between date and old.date()
         date = util.parsedate(date)
 
-        ms = mergemod.mergestate.read(repo)
-        mergeutil.checkunresolved(ms)
+        if len(old.parents()) > 1:
+            # ctx.files() isn't reliable for merges, so fall back to the
+            # slower repo.status() method
+            files = set([fn for st in repo.status(base, old)[:3] for fn in st])
+        else:
+            files = set(old.files())
 
         # add/remove the files to the working copy if the "addremove" option
         # was specified.
@@ -3878,10 +3898,8 @@ def _amend(ui, repo, wctx, old, extra, opts, matcher):
                 _("failed to mark all new/missing files as added/removed")
             )
 
-        # Compute status from base through wctx. This will naturally prune files in `old`
-        # which were undone in wctx (e.g. `old` added file "foo" and wctx removes/renames
-        # it, or `old` modified file "foo" and wctx reverts it).
-        files = [fn for st in base.status(wctx, wcmatch=matcher)[:4] for fn in st]
+        ms = mergemod.mergestate.read(repo)
+        mergeutil.checkunresolved(ms)
 
         status = repo.status(match=matcher)
         filestoamend = set(status.modified + status.added + status.removed)
@@ -3892,6 +3910,24 @@ def _amend(ui, repo, wctx, old, extra, opts, matcher):
             copied = copies.pathcopies(base, wctx, matcher)
             if old.p2:
                 copied.update(copies.pathcopies(old.p2(), wctx, matcher))
+
+            # Prune files which were reverted by the updates: if old
+            # introduced file X and the file was renamed in the working
+            # copy, then those two files are the same and
+            # we can discard X from our list of files. Likewise if X
+            # was removed, it's no longer relevant. If X is missing (aka
+            # deleted), old X must be preserved.
+            with perftrace.trace("Prune files reverted by amend"):
+                statusmanifest = wctx.buildstatusmanifest(status)
+                for f in sorted(filestoamend):
+                    if (
+                        not samefile(f, wctx, base, m1=statusmanifest)
+                        or f in status.deleted
+                    ):
+                        files.add(f)
+                    else:
+                        files.discard(f)
+                files = list(files)
 
             def filectxfn(repo, ctx_, path):
                 try:
