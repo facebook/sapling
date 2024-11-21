@@ -17,10 +17,6 @@ use serde::de::Deserializer;
 use serde::de::Error as _;
 use serde::Deserialize;
 
-#[cfg(fbcode_build)]
-pub use crate::facebook::get_region_capacity;
-#[cfg(not(fbcode_build))]
-pub use crate::oss::get_region_capacity;
 use crate::FciMetric;
 use crate::LoadShedLimit;
 use crate::Metric;
@@ -205,17 +201,6 @@ impl<'de> Deserialize<'de> for MononokeRateLimitConfig {
     {
         let raw_config = rate_limiting_config::MononokeRateLimits::deserialize(deserializer)?;
 
-        let dc_prefix_capacity = &raw_config.datacenter_prefix_capacity;
-
-        // We scale the limits used for RegionalMetrics according to the amount of capacity in a
-        // region. Calculate the fraction of tasks that this region accounts for.
-        let region_weight = match get_region_capacity(dc_prefix_capacity) {
-            Some(capacity) => {
-                capacity as f64 / dc_prefix_capacity.values().map(|c| *c as f64).sum::<f64>()
-            }
-            None => 1.0,
-        };
-
         let rate_limits = raw_config
             .rate_limits
             .clone()
@@ -240,7 +225,6 @@ impl<'de> Deserialize<'de> for MononokeRateLimitConfig {
             .map_err(|e| D::Error::custom(format!("{:?}", e)))?;
 
         Ok(Self {
-            region_weight,
             rate_limits,
             load_shed_limits,
             total_file_changes,

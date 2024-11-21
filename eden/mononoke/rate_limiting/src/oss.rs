@@ -25,10 +25,6 @@ use crate::RateLimitResult;
 use crate::RateLimiter;
 use crate::Scope;
 
-pub fn get_region_capacity(_datacenter_capacity: &BTreeMap<String, i32>) -> Option<i32> {
-    None
-}
-
 pub fn create_rate_limiter(
     _fb: FacebookInit,
     category: String,

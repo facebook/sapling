@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use anyhow::Error;
@@ -28,14 +27,6 @@ use crate::RateLimitReason;
 use crate::RateLimitResult;
 use crate::RateLimiter;
 use crate::Scope;
-
-pub fn get_region_capacity(datacenter_capacity: &BTreeMap<String, i32>) -> Option<i32> {
-    let whoami = FbWhoAmI::get().expect("Failed to get fbwhoami information");
-
-    datacenter_capacity
-        .get(whoami.region_datacenter_prefix.as_ref()?)
-        .copied()
-}
 
 pub fn create_rate_limiter(
     fb: FacebookInit,
@@ -164,7 +155,6 @@ impl std::fmt::Debug for MononokeRateLimits {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         f.debug_struct("MononokeRateLimits")
             .field("category", &self.category)
-            .field("region_weight", &self.config.region_weight)
             .field("load_limits", &self.load_limits)
             .finish()
     }

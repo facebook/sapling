@@ -28,12 +28,8 @@ mod oss;
 
 #[cfg(fbcode_build)]
 pub use facebook::create_rate_limiter;
-#[cfg(fbcode_build)]
-pub use facebook::get_region_capacity;
 #[cfg(not(fbcode_build))]
 pub use oss::create_rate_limiter;
-#[cfg(not(fbcode_build))]
-pub use oss::get_region_capacity;
 pub use rate_limiting_config::RateLimitStatus;
 
 pub mod config;
@@ -111,7 +107,6 @@ pub struct RateLimitBody {
 
 #[derive(Debug, Clone)]
 pub struct MononokeRateLimitConfig {
-    pub region_weight: f64,
     pub rate_limits: Vec<RateLimit>,
     pub load_shed_limits: Vec<LoadShedLimit>,
     #[allow(dead_code)]
