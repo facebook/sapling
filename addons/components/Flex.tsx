@@ -46,19 +46,17 @@ const styles = stylex.create({
   }),
 });
 
+export type ColumnAlignmentProps =
+  | {alignStart: true; alignCenter?: undefined | false; alignItems?: undefined}
+  | {alignStart?: undefined | false; alignCenter?: true; alignItems?: undefined}
+  | {
+      alignStart?: undefined | false;
+      alignCenter?: undefined | false;
+      alignItems: 'stretch' | 'normal' | 'end';
+    };
+
 /** Vertical flex layout */
-export function Column(
-  props: ContainerProps &
-    (
-      | {alignStart: true; alignCenter?: undefined | false; alignItems?: undefined}
-      | {alignStart?: undefined | false; alignCenter?: true; alignItems?: undefined}
-      | {
-          alignStart?: undefined | false;
-          alignCenter?: undefined | false;
-          alignItems: 'stretch' | 'normal' | 'end';
-        }
-    ),
-) {
+export function Column(props: ContainerProps & ColumnAlignmentProps) {
   const {xstyle, alignStart, alignCenter, alignItems, ...rest} = props;
   return (
     <div

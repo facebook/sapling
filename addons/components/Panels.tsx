@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ColumnAlignmentProps} from './Flex';
 import type {ReactNode} from 'react';
 
 import {Column, Row} from './Flex';
@@ -37,23 +38,27 @@ const styles = stylex.create({
   },
 });
 
-type PanelInfo = {render: () => ReactNode; label: ReactNode};
+export type PanelInfo = {render: () => ReactNode; label: ReactNode};
 export function Panels<T extends string>({
   panels,
   xstyle,
   tabXstyle,
+  tabListXstyle,
+  alignmentProps,
   active,
   onSelect,
 }: {
   panels: Record<T, PanelInfo>;
   xstyle?: stylex.StyleXStyles;
   tabXstyle?: stylex.StyleXStyles;
+  tabListXstyle?: stylex.StyleXStyles;
+  alignmentProps?: ColumnAlignmentProps;
   active: T;
   onSelect: (item: T) => void;
 }) {
   return (
-    <Column xstyle={xstyle} alignStart>
-      <Row xstyle={styles.tabList} role="tablist">
+    <Column xstyle={xstyle} {...(alignmentProps ?? {alignStart: true})}>
+      <Row xstyle={[styles.tabList, tabListXstyle]} role="tablist">
         {(Object.entries(panels) as Array<[T, PanelInfo]>).map(([name, value]) => {
           return (
             <button
