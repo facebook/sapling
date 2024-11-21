@@ -52,7 +52,7 @@ impl RepoMinimalInfo {
             None => bail!("repository {} not found!", path.display()),
         };
 
-        let (dot_git_path, dot_hg_path) = if ident.dot_dir() == ".git/sl" {
+        let (dot_git_path, dot_hg_path) = if ident.is_dot_git() {
             let dot_git_path = follow_dotgit_path(path.join(".git"));
             let dot_dir = "sl";
             let dot_sl_path = dot_git_path.join(dot_dir);

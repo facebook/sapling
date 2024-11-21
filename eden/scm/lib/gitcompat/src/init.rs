@@ -33,8 +33,7 @@ use crate::BareGit;
 ///
 /// `dot_dir` is expected to be something like `<prefix>/.git/sl`.
 pub fn maybe_init_inside_dotgit(root_path: &Path, ident: Identity) -> Result<()> {
-    let dot_dir = ident.dot_dir();
-    if dot_dir != ".git/sl" {
+    if !ident.is_dot_git() {
         return Ok(());
     }
 

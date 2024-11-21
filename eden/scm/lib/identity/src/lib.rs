@@ -279,6 +279,10 @@ impl Identity {
         tmpl.replace("@prog@", self.cli_name())
             .replace("@Product@", self.product_name())
     }
+
+    pub fn is_dot_git(&self) -> bool {
+        self.dot_dir() == SL_GIT.repo.dot_dir
+    }
 }
 
 /// Split the HGRCPATH. Return items matching at least one of the given prefix.
