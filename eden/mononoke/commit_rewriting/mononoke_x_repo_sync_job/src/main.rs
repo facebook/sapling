@@ -413,12 +413,9 @@ async fn tail(
         let entry_id = entry.id;
         scuba_sample.add("entry_id", u64::from(entry.id));
 
-        let mut skip = false;
-        if let Some(regex) = maybe_bookmark_regex {
-            if !regex.is_match(entry.bookmark_name.as_str()) {
-                skip = true;
-            }
-        }
+        let skip = maybe_bookmark_regex
+            .as_ref()
+            .map_or(false, |regex| !regex.is_match(entry.bookmark_name.as_str()));
 
         if !skip {
             let (stats, res) = sync_single_bookmark_update_log(
