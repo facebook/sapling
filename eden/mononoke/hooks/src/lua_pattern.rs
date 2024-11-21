@@ -237,13 +237,13 @@ mod tests {
 
     #[mononoke::test]
     fn test_matching() {
-        let pattern: LuaPattern = "^[.]git/"
+        let pattern: LuaPattern = r"^[.]git/"
             .try_into()
             .expect("Could not map pattern to regex");
         assert!(pattern.is_match(".git/foo"));
         assert!(!pattern.is_match("./git/foo"));
 
-        let pattern: LuaPattern = "^buck%-out/"
+        let pattern: LuaPattern = r"^buck%-out/"
             .try_into()
             .expect("Could not map pattern to regex");
         assert!(pattern.is_match("buck-out/file"));
@@ -252,13 +252,13 @@ mod tests {
 
     #[mononoke::test]
     fn test_re_matching() {
-        let pattern: LuaPattern = "re:^[.]git/"
+        let pattern: LuaPattern = r"re:^[.]git/"
             .try_into()
             .expect("Could not map pattern to regex");
         assert!(pattern.is_match(".git/foo"));
         assert!(!pattern.is_match("./git/foo"));
 
-        let pattern: LuaPattern = "re:^buck-out/"
+        let pattern: LuaPattern = r"re:^buck-out/"
             .try_into()
             .expect("Could not map pattern to regex");
         assert!(pattern.is_match("buck-out/file"));
@@ -267,7 +267,7 @@ mod tests {
 
     #[mononoke::test]
     fn test_fancy_re_matching() {
-        let pattern: LuaPattern = "re:^www/(?!html/(xplat-react|megarepo))"
+        let pattern: LuaPattern = r"re:^www/(?!html/(xplat-react|megarepo))"
             .try_into()
             .expect("Could not map pattern to regex");
         assert!(pattern.is_match("www/html/foo"));
