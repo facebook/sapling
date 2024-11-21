@@ -1218,12 +1218,10 @@ impl LfsRemote {
 
                     // Set up client_request_info fetched from a task local
                     if let Some(client_request_info) = get_client_request_info_task_local() {
-                        if let Ok(client_info) =
-                            ClientInfo::new_with_client_request_info(client_request_info)
-                        {
-                            if let Ok(client_info_json) = client_info.to_json() {
-                                req.set_client_info(&Some(client_info_json));
-                            }
+                        let client_info =
+                            ClientInfo::new_with_client_request_info(client_request_info);
+                        if let Ok(client_info_json) = client_info.to_json() {
+                            req.set_client_info(&Some(client_info_json));
                         }
                     }
 

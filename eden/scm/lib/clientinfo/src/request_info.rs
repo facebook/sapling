@@ -147,6 +147,7 @@ pub enum ClientEntryPoint {
     BookmarkService,
     BookmarkServiceClientCli,
     MononokeGitServer,
+    Git,
     ModernSync,
 }
 
@@ -236,6 +237,7 @@ impl Display for ClientEntryPoint {
             ClientEntryPoint::BookmarkService => "bookmark_service",
             ClientEntryPoint::BookmarkServiceClientCli => "bookmark_service_client_cli",
             ClientEntryPoint::MononokeGitServer => "mononoke_git_server",
+            ClientEntryPoint::Git => "git",
         };
         write!(f, "{}", out)
     }
@@ -278,6 +280,7 @@ impl TryFrom<&str> for ClientEntryPoint {
             "bookmark_service" => Ok(ClientEntryPoint::BookmarkService),
             "bookmark_service_client_clie" => Ok(ClientEntryPoint::BookmarkServiceClientCli),
             "mononoke_git_server" => Ok(ClientEntryPoint::MononokeGitServer),
+            "git" => Ok(ClientEntryPoint::Git),
             _ => Err(anyhow!("Invalid client entry point")),
         }
     }
@@ -460,6 +463,11 @@ mod tests {
             Some(ClientEntryPoint::MononokeGitServer),
             ClientEntryPoint::try_from(ClientEntryPoint::MononokeGitServer.to_string().as_ref())
                 .ok()
+        );
+
+        assert_eq!(
+            Some(ClientEntryPoint::Git),
+            ClientEntryPoint::try_from(ClientEntryPoint::Git.to_string().as_ref()).ok()
         );
     }
 }

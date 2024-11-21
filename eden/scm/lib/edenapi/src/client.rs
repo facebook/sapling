@@ -313,7 +313,7 @@ impl Client {
 
         if let Some(client_info) = get_client_request_info_task_local() {
             let client_info_json: String =
-                ClientInfo::new_with_client_request_info(client_info)?.to_json()?;
+                ClientInfo::new_with_client_request_info(client_info).to_json()?;
             req.set_client_info(&Some(client_info_json));
         }
 
