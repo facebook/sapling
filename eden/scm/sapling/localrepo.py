@@ -59,7 +59,6 @@ from . import (
     namespaces,
     peer,
     phases,
-    progress,
     pushkey,
     pycompat,
     repository,
