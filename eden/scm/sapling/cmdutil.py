@@ -3919,10 +3919,18 @@ def _amend(ui, repo, wctx, old, extra, opts, matcher):
             # deleted), old X must be preserved.
             with perftrace.trace("Prune files reverted by amend"):
                 statusmanifest = wctx.buildstatusmanifest(status)
+
+                if "remotefilelog" in repo.requirements:
+                    # Prefetch files in `base` to avoid serial lookups.
+                    fileids = base.manifest().walkfiles(
+                        matchmod.exact("", "", status.modified + status.added)
+                    )
+                    repo.fileslog.filestore.prefetch(fileids)
+                    repo.fileslog.metadatastore.prefetch(fileids, length=1)
+
                 for f in sorted(filestoamend):
-                    if (
-                        not samefile(f, wctx, base, m1=statusmanifest)
-                        or f in status.deleted
+                    if f in status.deleted or not samefile(
+                        f, wctx, base, m1=statusmanifest
                     ):
                         files.add(f)
                     else:

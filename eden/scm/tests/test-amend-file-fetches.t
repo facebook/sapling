@@ -24,9 +24,9 @@ Make sure we minimize content fetches:
   TRACE tree_fetches: attrs=["content"] keys=["@eaa109a0"]
   TRACE file_fetches: attrs=["content"] keys=[".hgdirsync"]
   TRACE tree_fetches: attrs=["content"] keys=["a_dir@4f20beec", "b_dir@79a5124d", "c_dir@bc250767"]
+  TRACE file_fetches: attrs=["content", "header", "aux"] keys=["b_dir/b", "c_dir/c"]
+  TRACE file_fetches: attrs=["history"] length=Some(1) keys=["b_dir/b", "c_dir/c"]
   TRACE file_fetches: attrs=["content", "header"] keys=["b_dir/b"]
   TRACE file_fetches: attrs=["content", "header"] keys=["c_dir/c"]
   TRACE file_fetches: attrs=["content"] keys=[".hgdirsync"] (?)
   TRACE file_fetches: attrs=["content", "header"] keys=[".hgdirsync"]
-  TRACE file_fetches: attrs=["history"] length=Some(1) keys=["b_dir/b"]
-  TRACE file_fetches: attrs=["history"] length=Some(1) keys=["c_dir/c"]

@@ -247,6 +247,7 @@ from sapling import (
     extensions,
     hg,
     lock,
+    match as matchmod,
     merge as mergemod,
     mergeutil,
     mutation,
@@ -261,7 +262,6 @@ from sapling import (
 )
 from sapling.i18n import _
 from sapling.pycompat import range
-
 
 # pyre-fixme[11]: Annotation `pickle` is not defined as a type.
 pickle = util.pickle
@@ -679,6 +679,12 @@ def collapse(repo, first, commitopts, skipprompt=False):
 
     # Recompute copies (avoid recording a -> b -> a)
     copied = copies.pathcopies(base, last)
+
+    if "remotefilelog" in repo.requirements:
+        # Prefetch files in `base` to avoid serial lookups.
+        fileids = base.manifest().walkfiles(matchmod.exact("", "", files))
+        repo.fileslog.filestore.prefetch(fileids)
+        repo.fileslog.metadatastore.prefetch(fileids, length=1)
 
     # prune files which were reverted by the updates
     files = [f for f in files if not cmdutil.samefile(f, last, base)]
