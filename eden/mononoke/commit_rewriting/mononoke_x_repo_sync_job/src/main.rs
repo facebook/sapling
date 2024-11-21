@@ -403,78 +403,78 @@ async fn tail(
 
     if log_entries.is_empty() {
         log_noop_iteration(scuba_sample.clone());
-        Ok(false)
-    } else {
-        scuba_sample.add("queue_size", remaining_entries);
-        log_info(ctx, format!("queue size is {}", remaining_entries));
+        return Ok(false);
+    };
 
-        for entry in log_entries {
-            let entry_id = entry.id;
-            scuba_sample.add("entry_id", u64::from(entry.id));
+    scuba_sample.add("queue_size", remaining_entries);
+    log_info(ctx, format!("queue size is {}", remaining_entries));
 
-            let mut skip = false;
-            if let Some(regex) = maybe_bookmark_regex {
-                if !regex.is_match(entry.bookmark_name.as_str()) {
-                    skip = true;
-                }
+    for entry in log_entries {
+        let entry_id = entry.id;
+        scuba_sample.add("entry_id", u64::from(entry.id));
+
+        let mut skip = false;
+        if let Some(regex) = maybe_bookmark_regex {
+            if !regex.is_match(entry.bookmark_name.as_str()) {
+                skip = true;
             }
-
-            if !skip {
-                let (stats, res) = sync_single_bookmark_update_log(
-                    ctx,
-                    commit_syncer,
-                    entry,
-                    common_pushrebase_bookmarks,
-                    scuba_sample.clone(),
-                    pushrebase_rewrite_dates,
-                )
-                .timed()
-                .await;
-
-                log_bookmark_update_result(ctx, entry_id, scuba_sample.clone(), &res, stats);
-                let maybe_synced_css = res?;
-
-                if let SyncResult::Synced(synced_css) = maybe_synced_css {
-                    commit_syncer
-                        .get_target_repo()
-                        .repo_derived_data()
-                        .manager()
-                        .derive_bulk(ctx, &synced_css, None, derived_data_types, None)
-                        .await?;
-
-                    maybe_apply_backpressure(
-                        ctx,
-                        backpressure_params,
-                        commit_syncer.get_target_repo(),
-                        scuba_sample.clone(),
-                        sleep_duration,
-                    )
-                    .boxed()
-                    .await?;
-                }
-            } else {
-                log_info(
-                    ctx,
-                    format!(
-                        "skipping log entry #{} for {}",
-                        entry.id, entry.bookmark_name,
-                    ),
-                );
-                let mut scuba_sample = scuba_sample.clone();
-                scuba_sample.add("source_bookmark_name", format!("{}", entry.bookmark_name));
-                scuba_sample.add("skipped", true);
-                scuba_sample.log();
-            }
-
-            // Note that updating the counter might fail after successful sync of the commits.
-            // This is expected - next run will try to update the counter again without
-            // re-syncing the commits.
-            target_mutable_counters
-                .set_counter(ctx, &counter, entry_id.try_into()?, None)
-                .await?;
         }
-        Ok(true)
+
+        if !skip {
+            let (stats, res) = sync_single_bookmark_update_log(
+                ctx,
+                commit_syncer,
+                entry,
+                common_pushrebase_bookmarks,
+                scuba_sample.clone(),
+                pushrebase_rewrite_dates,
+            )
+            .timed()
+            .await;
+
+            log_bookmark_update_result(ctx, entry_id, scuba_sample.clone(), &res, stats);
+            let maybe_synced_css = res?;
+
+            if let SyncResult::Synced(synced_css) = maybe_synced_css {
+                commit_syncer
+                    .get_target_repo()
+                    .repo_derived_data()
+                    .manager()
+                    .derive_bulk(ctx, &synced_css, None, derived_data_types, None)
+                    .await?;
+
+                maybe_apply_backpressure(
+                    ctx,
+                    backpressure_params,
+                    commit_syncer.get_target_repo(),
+                    scuba_sample.clone(),
+                    sleep_duration,
+                )
+                .boxed()
+                .await?;
+            }
+        } else {
+            log_info(
+                ctx,
+                format!(
+                    "skipping log entry #{} for {}",
+                    entry.id, entry.bookmark_name,
+                ),
+            );
+            let mut scuba_sample = scuba_sample.clone();
+            scuba_sample.add("source_bookmark_name", format!("{}", entry.bookmark_name));
+            scuba_sample.add("skipped", true);
+            scuba_sample.log();
+        }
+
+        // Note that updating the counter might fail after successful sync of the commits.
+        // This is expected - next run will try to update the counter again without
+        // re-syncing the commits.
+        target_mutable_counters
+            .set_counter(ctx, &counter, entry_id.try_into()?, None)
+            .await?;
     }
+    Ok(true)
 }
 
 async fn maybe_apply_backpressure(
