@@ -124,6 +124,7 @@ def _branches_to_dict(branches: List[SubtreeBranch], version: int):
 
 
 def _encode_subtree_metadata_list(subtree_metadata):
+    subtree_metadata = sorted(subtree_metadata, key=lambda x: x["v"])
     val_str = json.dumps(subtree_metadata, separators=(",", ":"), sort_keys=True)
     return {SUBTREE_KEY: val_str}
 
