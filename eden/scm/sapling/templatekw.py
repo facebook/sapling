@@ -440,6 +440,18 @@ def showdate(repo, ctx, templ, **args):
     return ctx.date()
 
 
+@templatekeyword("changesetdate")
+def showchangesetdate(repo, ctx, templ, **args):
+    """Date information.  The default date for changeset display (defined by ui.changesetdate)."""
+    datekind = repo.ui.config("ui", "changesetdate")
+    if datekind == "authordate":
+        return showauthordate(repo, ctx, templ, **args)
+    elif datekind == "committerdate":
+        return showcommitterdate(repo, ctx, templ, **args)
+    else:
+        return showdate(repo, ctx, templ, **args)
+
+
 @templatekeyword("desc")
 def showdescription(repo, ctx, templ, **args):
     """String. The text of the changeset description."""

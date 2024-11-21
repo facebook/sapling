@@ -29,10 +29,15 @@ another date to make it clear which is being used in each case.
   >  --extra 'committer=committer <>' --extra 'committer_date=1590982200 0' \
   >  --extra 'author=author <>' --extra 'author_date=1590981300 0'
 
-  $ sl log -T 'D: {date|isodate}   C: {committerdate|isodate}   A: {authordate|isodate}   {desc}\n'
-  D: 2020-06-01 03:15 +0000   C: 2020-06-01 03:30 +0000   A: 2020-06-01 03:15 +0000   sapling-git
-  D: 2020-06-01 02:00 +0000   C: 2020-06-01 02:30 +0000   A: 2020-06-01 02:00 +0000   mononoke-git
-  D: 2020-06-01 01:00 +0000   C: 2020-06-01 01:00 +0000   A: 2020-06-01 01:00 +0000   normal
+  $ sl log -T 'D: {date|isodate}   C: {committerdate|isodate}   A: {authordate|isodate}   CS: {changesetdate|isodate}   {desc}\n'
+  D: 2020-06-01 03:15 +0000   C: 2020-06-01 03:30 +0000   A: 2020-06-01 03:15 +0000   CS: 2020-06-01 03:15 +0000   sapling-git
+  D: 2020-06-01 02:00 +0000   C: 2020-06-01 02:30 +0000   A: 2020-06-01 02:00 +0000   CS: 2020-06-01 02:00 +0000   mononoke-git
+  D: 2020-06-01 01:00 +0000   C: 2020-06-01 01:00 +0000   A: 2020-06-01 01:00 +0000   CS: 2020-06-01 01:00 +0000   normal
+
+  $ sl log -T 'D: {date|isodate}   C: {committerdate|isodate}   A: {authordate|isodate}   CS: {changesetdate|isodate}   {desc}\n' --config ui.changesetdate=committerdate
+  D: 2020-06-01 03:15 +0000   C: 2020-06-01 03:30 +0000   A: 2020-06-01 03:15 +0000   CS: 2020-06-01 03:30 +0000   sapling-git
+  D: 2020-06-01 02:00 +0000   C: 2020-06-01 02:30 +0000   A: 2020-06-01 02:00 +0000   CS: 2020-06-01 02:30 +0000   mononoke-git
+  D: 2020-06-01 01:00 +0000   C: 2020-06-01 01:00 +0000   A: 2020-06-01 01:00 +0000   CS: 2020-06-01 01:00 +0000   normal
 
   $ sl log
   commit:      ba97f51c2ccc
