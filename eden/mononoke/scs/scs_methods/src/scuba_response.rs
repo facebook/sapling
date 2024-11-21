@@ -11,7 +11,7 @@ use source_control::AsyncPingResponse;
 use source_control::{self as thrift};
 
 /// A trait for logging a thrift `Response` struct to scuba.
-pub(crate) trait AddScubaResponse: Send + Sync {
+pub(crate) trait AddScubaResponse {
     fn add_scuba_response(&self, _scuba: &mut MononokeScubaSampleBuilder) {}
 }
 
@@ -100,6 +100,10 @@ impl AddScubaResponse for thrift::CommitFileDiffsResponse {
 }
 
 impl AddScubaResponse for thrift::CommitFindFilesResponse {}
+
+impl AddScubaResponse for thrift::CommitFindFilesStreamResponse {}
+
+impl AddScubaResponse for thrift::CommitFindFilesStreamItem {}
 
 impl AddScubaResponse for thrift::CommitInfo {}
 
@@ -328,5 +332,17 @@ impl AddScubaResponse for thrift::AsyncPingPollResponse {
 impl AddScubaResponse for thrift::AsyncPingResponse {
     fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("response_payload", self.payload.clone());
+    }
+}
+
+// For the streaming response we log the initial response first, stream is wrapped with log_result later
+impl<R, S, I> AddScubaResponse for (R, S)
+where
+    R: Send + Sync + AddScubaResponse,
+    S: futures::Stream<Item = I>,
+{
+    fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        let (response, _stream) = self;
+        response.add_scuba_response(scuba);
     }
 }

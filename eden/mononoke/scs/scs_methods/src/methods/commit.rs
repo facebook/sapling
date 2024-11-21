@@ -12,7 +12,9 @@ use std::sync::Arc;
 
 use bytes::Bytes;
 use context::CoreContext;
+use futures::pin_mut;
 use futures::stream;
+use futures::stream::BoxStream;
 use futures::stream::FuturesOrdered;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
@@ -803,6 +805,81 @@ impl SourceControlServiceImpl {
         })
     }
 
+    /// Returns files that match the criteria
+    pub(crate) async fn commit_find_files_stream(
+        &self,
+        ctx: CoreContext,
+        commit: thrift::CommitSpecifier,
+        params: thrift::CommitFindFilesParams,
+    ) -> Result<
+        (
+            thrift::CommitFindFilesStreamResponse,
+            BoxStream<'static, Result<thrift::CommitFindFilesStreamItem, scs_errors::ServiceError>>,
+        ),
+        scs_errors::ServiceError,
+    > {
+        let (_repo, changeset) = self.repo_changeset(ctx.clone(), &commit).await?;
+        let limit: usize = check_range_and_convert("limit", params.limit, 0..=i64::MAX)?;
+        let prefixes: Option<Vec<_>> = match &params.prefixes {
+            Some(prefixes) => Some(
+                prefixes
+                    .iter()
+                    .map(|prefix| {
+                        MPath::try_from(prefix).map_err(|e| {
+                            scs_errors::invalid_request(format!(
+                                "invalid prefix '{}': {}",
+                                prefix, e
+                            ))
+                        })
+                    })
+                    .collect::<Result<Vec<_>, _>>()?,
+            ),
+            None => None,
+        };
+        let ordering = match &params.after {
+            Some(after) => {
+                let after = Some(MPath::try_from(after).map_err(|e| {
+                    scs_errors::invalid_request(format!(
+                        "invalid continuation path '{}': {}",
+                        after, e
+                    ))
+                })?);
+                ChangesetFileOrdering::Ordered { after }
+            }
+            None => ChangesetFileOrdering::Unordered,
+        };
+
+        let files_stream = (async_stream::stream! {
+            let s = changeset
+            .find_files(
+                prefixes,
+                params.basenames,
+                params.basename_suffixes,
+                ordering,
+            )
+            .await?
+            .take(limit)
+            .map_ok(|path| path.to_string())
+            .try_chunks(1000)
+            .map_ok(|files| thrift::CommitFindFilesStreamItem {
+                files,
+                ..Default::default()
+            })
+            .map_err(|err| scs_errors::ServiceError::from(err.1)).boxed();
+            pin_mut!(s);
+            while let Some(value) = s.next().await {
+                yield value;
+            }
+        })
+        .boxed();
+
+        Ok((
+            thrift::CommitFindFilesStreamResponse {
+                ..Default::default()
+            },
+            files_stream,
+        ))
+    }
     /// Returns the history of a commit
     pub(crate) async fn commit_history(
         &self,

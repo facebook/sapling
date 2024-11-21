@@ -1993,6 +1993,13 @@ struct CommitFindFilesResponse {
   1: list<string> files;
 }
 
+struct CommitFindFilesStreamResponse {}
+
+struct CommitFindFilesStreamItem {
+  /// The files that match.
+  1: list<string> files;
+}
+
 struct CommitHistoryResponse {
   1: History history;
 }
@@ -2738,6 +2745,22 @@ service SourceControlService extends fb303_core.BaseService {
 
   /// Find files within the commit that match criteria.
   CommitFindFilesResponse commit_find_files(
+    1: CommitSpecifier commit,
+    2: CommitFindFilesParams params,
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
+
+  /// Find files within the commit that match criteria.
+  CommitFindFilesStreamResponse, stream<
+    CommitFindFilesStreamItem throws (
+      1: RequestError request_error,
+      2: InternalError internal_error,
+      3: OverloadError overload_error,
+    )
+  > commit_find_files_stream(
     1: CommitSpecifier commit,
     2: CommitFindFilesParams params,
   ) throws (

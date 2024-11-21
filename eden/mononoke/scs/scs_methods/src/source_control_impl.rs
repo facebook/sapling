@@ -10,7 +10,11 @@ use std::future::Future;
 use std::net::IpAddr;
 use std::num::NonZeroU64;
 use std::pin::Pin;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::sync::OnceLock;
+use std::time::Duration;
 
 use async_requests::AsyncMethodRequestQueue;
 use clientinfo::ClientEntryPoint;
@@ -23,11 +27,16 @@ use ephemeral_blobstore::RepoEphemeralStore;
 use factory_group::FactoryGroup;
 use fbinit::FacebookInit;
 use futures::future::BoxFuture;
+use futures::stream::BoxStream;
 use futures::try_join;
 use futures::FutureExt;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use futures_ext::FbFutureExt;
 use futures_stats::FutureStats;
 use futures_stats::TimedFutureExt;
+use futures_stats::TimedTryStreamExt;
+use futures_stats::TryStreamStats;
 use futures_watchdog::WatchdogExt;
 use identity::Identity;
 use login_objects_thrift::EnvironmentType;
@@ -56,6 +65,7 @@ use permission_checker::MononokeIdentity;
 use permission_checker::MononokeIdentitySet;
 use repo_authorization::AuthorizationContext;
 use scribe_ext::Scribe;
+use scs_errors::LoggableError;
 use scs_errors::ServiceErrorResultExt;
 use scs_errors::Status;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -90,6 +100,13 @@ define_stats! {
     total_request_invalid: timeseries(Rate, Sum),
     total_request_cancelled: timeseries(Rate, Sum),
     total_request_overloaded: timeseries(Rate, Sum),
+
+    total_chunk_start: timeseries(Rate, Sum),
+    total_chunk_success: timeseries(Rate, Sum),
+    total_chunk_internal_failure: timeseries(Rate, Sum),
+    total_chunk_invalid: timeseries(Rate, Sum),
+    total_chunk_cancelled: timeseries(Rate, Sum),
+    total_chunk_overloaded: timeseries(Rate, Sum),
 
     // permille is used in canaries, because canaries do not allow for tracking formulas
     total_request_internal_failure_permille: timeseries(Average),
@@ -654,6 +671,7 @@ fn add_request_end_memory_stats(
 
 fn log_result<T: AddScubaResponse>(
     ctx: CoreContext,
+    tag: &'static str,
     method: &str,
     stats: &FutureStats,
     result: &Result<T, impl scs_errors::LoggableError>,
@@ -699,6 +717,141 @@ fn log_result<T: AddScubaResponse>(
     ctx.perf_counters().insert_perf_counters(&mut scuba);
 
     scuba.add_future_stats(stats);
+    scuba.add("status", status);
+    if let Some(error) = error {
+        let scs_error_log_sampling =
+            justknobs::eval("scm/mononoke:scs_error_log_sampling", None, None).unwrap_or(true);
+        if !scs_error_log_sampling {
+            scuba.unsampled();
+        }
+        scuba.add("error", error.as_str());
+    }
+    scuba.log_with_msg(tag, None);
+}
+
+fn log_stream_chunk<T: AddScubaResponse>(
+    ctx: CoreContext,
+    method: &str,
+    result: &Result<T, impl scs_errors::LoggableError>,
+    count: u64,
+) {
+    let mut scuba = ctx.scuba().clone();
+
+    let (status, error, invalid_request, internal_failure, overloaded) = match result {
+        Ok(response) => {
+            response.add_scuba_response(&mut scuba);
+            ("SUCCESS", None, 0, 0, 0)
+        }
+        Err(err) => {
+            let (status, desc) = err.status_and_description();
+            match status {
+                Status::RequestError => ("REQUEST_ERROR", Some(desc), 1, 0, 0),
+                Status::InternalError => ("INTERNAL_ERROR", Some(desc), 0, 1, 0),
+                Status::OverloadError => ("OVERLOAD_ERROR", Some(desc), 0, 0, 1),
+                Status::PollError => ("POLL_ERROR", Some(desc), 0, 0, 1),
+            }
+        }
+    };
+    let success = if error.is_none() { 1 } else { 0 };
+
+    STATS::total_chunk_success.add_value(success);
+    STATS::total_chunk_internal_failure.add_value(internal_failure);
+    STATS::total_chunk_invalid.add_value(invalid_request);
+    STATS::total_chunk_cancelled.add_value(0);
+    STATS::total_chunk_overloaded.add_value(overloaded);
+
+    ctx.perf_counters().insert_perf_counters(&mut scuba);
+
+    scuba.add("stream_chunk_count", count);
+    scuba.add("status", status);
+    if let Some(error) = error {
+        scuba.add("error", error.as_str());
+    }
+    let sampling_rate = NonZeroU64::new(
+        justknobs::get_as::<u64>(
+            "scm/mononoke:scs_stream_chunk_scuba_sampling_rate",
+            Some(method),
+        )
+        .ok()
+        .unwrap_or(1000),
+    ); // 1:1000 by default to avoid spamming scuba
+    if let Some(sampling_rate) = sampling_rate {
+        scuba.sampled(sampling_rate);
+    }
+    scuba.log_with_msg("Request stream chunk", None);
+}
+
+fn log_stream_complete(
+    ctx: CoreContext,
+    method: &str,
+    initial_future_stats: &FutureStats,
+    stream_stats: &TryStreamStats,
+    mb_status_and_description: Option<(Status, String)>,
+    start_mem_stats: Option<&MemoryStats>,
+) {
+    let mut scuba = ctx.scuba().clone();
+
+    add_request_end_memory_stats(&mut scuba, method, start_mem_stats);
+
+    let (status, error, invalid_request, internal_failure, overloaded) =
+        match mb_status_and_description {
+            Some((status, desc)) => match status {
+                Status::RequestError => ("REQUEST_ERROR", Some(desc), 1, 0, 0),
+                Status::InternalError => ("INTERNAL_ERROR", Some(desc), 0, 1, 0),
+                Status::OverloadError => ("OVERLOAD_ERROR", Some(desc), 0, 0, 1),
+                Status::PollError => ("POLL_ERROR", Some(desc), 0, 1, 0),
+            },
+            None => ("SUCCESS", None, 0, 0, 0),
+        };
+
+    if let Ok(true) = justknobs::eval("scm/mononoke:scs_alert_on_methods", None, Some(method)) {
+        STATS::total_method_requests.add_value(1, (method.to_string(),));
+        if status == "INTERNAL_ERROR" {
+            STATS::total_method_internal_failure.add_value(1, (method.to_string(),));
+        } else {
+            STATS::total_method_internal_failure.add_value(0, (method.to_string(),));
+        }
+    }
+    let success = if stream_stats.error_count > 0 { 0 } else { 1 };
+
+    STATS::total_request_success.add_value(success);
+    STATS::total_request_internal_failure.add_value(internal_failure);
+    STATS::total_request_invalid.add_value(invalid_request);
+    STATS::total_request_cancelled.add_value(0);
+    STATS::total_request_internal_failure_permille.add_value(internal_failure * 1000);
+    STATS::total_request_invalid_permille.add_value(invalid_request * 1000);
+    STATS::total_request_overloaded.add_value(overloaded);
+
+    ctx.perf_counters().insert_perf_counters(&mut scuba);
+
+    // This function combines the stats from the initial phase generating the stream
+    // object with stats from stream polling.
+    //
+    // It might have been more obvious to log those separately but from experience
+    // most scuba queries to out table are filtering by "Request complete" tag so
+    // having aggregated stats encompassing entirety of request might be easier to
+    // interpret and query.
+    let mut combined_stats = stream_stats.clone();
+    combined_stats.stream_stats.poll_count += initial_future_stats.poll_count;
+    combined_stats.stream_stats.poll_time += initial_future_stats.poll_time;
+    combined_stats.stream_stats.max_poll_time = std::cmp::max(
+        combined_stats.stream_stats.max_poll_time,
+        initial_future_stats.max_poll_time,
+    );
+    combined_stats.stream_stats.completion_time = Some(
+        initial_future_stats.completion_time
+            + combined_stats
+                .stream_stats
+                .completion_time
+                .unwrap_or(Duration::ZERO),
+    );
+    // The initial processing counts towards first item time
+    combined_stats.stream_stats.first_item_time = combined_stats
+        .stream_stats
+        .first_item_time
+        .map(|t| t + initial_future_stats.completion_time);
+
+    scuba.add_try_stream_stats(&combined_stats);
     scuba.add("status", status);
     if let Some(error) = error {
         let scs_error_log_sampling =
@@ -855,7 +1008,7 @@ macro_rules! impl_thrift_methods {
                             .timed()
                             .on_cancel_with_data(|stats| log_cancelled(&ctx, stringify!($method_name), &stats, start_mem_stats.as_ref()))
                             .await;
-                            log_result(ctx, stringify!($method_name), &stats, &res, start_mem_stats.as_ref());
+                            log_result(ctx, "Request complete", stringify!($method_name), &stats, &res, start_mem_stats.as_ref());
                             let method = stringify!($method_name).to_string();
                             STATS::method_completion_time_ms.add_value(stats.completion_time.as_millis_unchecked() as i64, (method,));
                             res.map_err(Into::into)
@@ -878,6 +1031,90 @@ macro_rules! impl_thrift_methods {
     }
 }
 
+macro_rules! impl_thrift_stream_methods {
+    ( $( async fn $method_name:ident($( $param_name:ident : $param_type:ty, )*) -> Result<$ok_type:ty, $err_type:ty>; )* ) => {
+        $(
+            fn $method_name<'implementation, 'req_ctxt, 'async_trait>(
+                &'implementation self,
+                req_ctxt: &'req_ctxt RequestContext,
+                $( $param_name: $param_type ),*
+            ) -> Pin<Box<dyn Future<Output = Result<$ok_type, $err_type>> + Send + 'async_trait>>
+            where
+                'implementation: 'async_trait,
+                'req_ctxt: 'async_trait,
+                Self: Sync + 'async_trait,
+            {
+                let fut = async move {
+                    let svc = self.0.clone();
+                    let enable_futures_watchdog = self.0.enable_futures_watchdog;
+                    let (ctx, session_uuid) = create_ctx!(svc, $method_name, req_ctxt, $( $param_name ),*).await?;
+                    let handler = {
+                        cloned!(ctx);
+                        async move {
+                            let start_mem_stats = log_start(&ctx, stringify!($method_name));
+                            STATS::total_request_start.add_value(1);
+                            let (stats, res) = async {
+                                check_memory_usage(&ctx, stringify!($method_name), start_mem_stats.as_ref())?;
+                                let f = svc.$method_name(ctx.clone(), $( $param_name ),* );
+                                if enable_futures_watchdog {
+                                    f.watched(ctx.logger())
+                                    .with_label(stringify!($method_name))
+                                    .with_unique_id(&session_uuid)
+                                    .with_max_poll(50).await
+                                } else {
+                                    f.await
+                                }
+                            }
+                            .timed()
+                            .on_cancel_with_data(|stats| log_cancelled(&ctx, stringify!($method_name), &stats, start_mem_stats.as_ref()))
+                            .await;
+                            if res.is_ok() {
+                                log_result(ctx.clone(), "Request stream started", stringify!($method_name), &stats, &res, start_mem_stats.as_ref());
+                            }
+                            else {
+                                log_result(ctx.clone(), "Request complete", stringify!($method_name), &stats, &res, start_mem_stats.as_ref());
+                            }
+                            let method = stringify!($method_name).to_string();
+                            STATS::method_completion_time_ms.add_value(stats.completion_time.as_millis_unchecked() as i64, (method,));
+                            let first_error = Arc::new(OnceLock::new());
+                            let chunk_counter = AtomicU64::new(0);
+                            res.map_err(Into::into).map(move |(res, stream)| {
+                                let stream = stream.inspect({
+                                    cloned!(ctx, first_error);
+                                    move |res| {
+                                        let count = chunk_counter.fetch_add(1, Ordering::Relaxed);
+                                        log_stream_chunk(ctx.clone(), stringify!($method_name), &res, count);
+                                        if let Err(err) = res {
+                                            let (status, desc) = err.status_and_description();
+                                            let _ = first_error.set((status, desc));
+                                        }
+                                    }
+                                }).boxed().try_timed({
+                                    cloned!(ctx, first_error);
+                                    move |stream_stats| {
+                                        log_stream_complete(ctx, stringify!($method_name), &stats, &stream_stats, first_error.get().cloned() ,start_mem_stats.as_ref());
+                                    }
+                                }).map_err(Into::into).boxed();
+                                (res, stream)
+                            })
+                        }
+                    };
+
+                    if let Some(factory_group) = &self.0.factory_group {
+                        let group = factory_group.clone();
+                        let queue: usize =
+                            justknobs::get_as::<u64>("scm/mononoke:scs_factory_queue_for_method", Some(stringify!($method_name))).unwrap_or(0) as usize;
+                        group.execute(queue, handler, None).await.map_err(|e| scs_errors::internal_error(e.to_string()))?
+                    } else {
+                        let res: Result<$ok_type, $err_type> = handler.await;
+                        res
+                    }
+                };
+                Box::pin(fut)
+            }
+        )*
+    }
+}
 impl SourceControlService for SourceControlServiceThriftImpl {
     type RequestContext = RequestContext;
 
@@ -1222,5 +1459,17 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::AsyncPingToken,
         ) -> Result<thrift::AsyncPingPollResponse, service::AsyncPingPollExn>;
 
+    }
+
+    impl_thrift_stream_methods! {
+        async fn commit_find_files_stream(
+            commit: thrift::CommitSpecifier,
+            params: thrift::CommitFindFilesParams,
+        ) -> Result<
+            (
+                thrift::CommitFindFilesStreamResponse,
+                BoxStream<'static, Result<thrift::CommitFindFilesStreamItem, service::CommitFindFilesStreamStreamExn>>,
+            ),
+            service::CommitFindFilesStreamExn>;
     }
 }

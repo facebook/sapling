@@ -331,6 +331,8 @@ impl_into_thrift_error!(service::CommitGenerationExn);
 impl_into_thrift_error!(service::CommitCompareExn);
 impl_into_thrift_error!(service::CommitIsAncestorOfExn);
 impl_into_thrift_error!(service::CommitFindFilesExn);
+impl_into_thrift_error!(service::CommitFindFilesStreamExn);
+impl_into_thrift_error!(service::CommitFindFilesStreamStreamExn);
 impl_into_thrift_error!(service::CommitHistoryExn);
 impl_into_thrift_error!(service::CommitLinearHistoryExn);
 impl_into_thrift_error!(service::CommitListDescendantBookmarksExn);

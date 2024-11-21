@@ -16,6 +16,7 @@ use clientinfo::ClientRequestInfo;
 use fbinit::FacebookInit;
 use futures_stats::FutureStats;
 use futures_stats::StreamStats;
+use futures_stats::TryStreamStats;
 use memory::MemoryStats;
 use metadata::Metadata;
 use nonzero_ext::nonzero;
@@ -290,6 +291,41 @@ impl MononokeScubaSampleBuilder {
                 "completion_time_us",
                 stats.completion_time.as_micros_unchecked(),
             );
+
+        self
+    }
+
+    pub fn add_try_stream_stats(&mut self, stats: &TryStreamStats) -> &mut Self {
+        self.inner
+            .add("poll_count", stats.stream_stats.poll_count)
+            .add(
+                "poll_time_us",
+                stats.stream_stats.poll_time.as_micros_unchecked(),
+            )
+            .add(
+                "max_poll_time_us",
+                stats.stream_stats.max_poll_time.as_micros_unchecked(),
+            )
+            .add(
+                "completion_time_us",
+                stats
+                    .stream_stats
+                    .completion_time
+                    .unwrap_or(Duration::ZERO)
+                    .as_micros_unchecked(),
+            )
+            .add(
+                "first_item_time_us",
+                stats
+                    .stream_stats
+                    .completion_time
+                    .unwrap_or(Duration::ZERO)
+                    .as_micros_unchecked(),
+            )
+            .add("stream_chunk_count", stats.stream_stats.count)
+            .add("stream_error_count", stats.error_count)
+            .add("first_error_position", stats.first_error_position)
+            .add("stream_completed", stats.stream_stats.completed as u32);
 
         self
     }

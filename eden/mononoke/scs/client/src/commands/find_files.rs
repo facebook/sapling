@@ -10,6 +10,7 @@ use std::io::Write;
 use anyhow::Context;
 use anyhow::Result;
 use clap::Parser;
+use futures::TryStreamExt;
 use scs_client_raw::thrift;
 use serde::Serialize;
 
@@ -42,6 +43,9 @@ pub(super) struct CommandArgs {
     #[clap(long, default_value_t = 100)]
     /// Maximum number of paths to return
     limit: u64,
+    #[clap(long)]
+    /// EXPERIMENTAL: stream the output from the server rather than obtaining it in one go
+    stream: bool,
 }
 
 #[derive(Serialize)]
@@ -85,8 +89,20 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         prefixes,
         ..Default::default()
     };
-    let response = conn.commit_find_files(&commit_specifier, &params).await?;
-    app.target
-        .render_one(&args, FileListOutput(response.files))
-        .await
+
+    if args.stream {
+        let (_initial_response, response_stream) = conn
+            .commit_find_files_stream(&commit_specifier, &params)
+            .await?;
+
+        let response = response_stream
+            .map_ok(|entry| FileListOutput(entry.files))
+            .map_err(Into::into);
+        app.target.render(&args, response).await
+    } else {
+        let response = conn.commit_find_files(&commit_specifier, &params).await?;
+        app.target
+            .render_one(&args, FileListOutput(response.files))
+            .await
+    }
 }
