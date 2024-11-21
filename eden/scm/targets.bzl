@@ -52,6 +52,9 @@ def gen_hgpython(hg_target, suffix = ""):
 def is_experimental_cas_build():
     return read_bool("sl", "cas", False)
 
+def fetch_as_eden():
+    return read_bool("sl", "fetch_as_eden", False)
+
 def hg_binary(name, extra_deps = [], extra_features = [], **kwargs):
     rust_binary(
         name = name,
