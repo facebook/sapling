@@ -251,11 +251,7 @@ impl SourceControlServiceImpl {
         } else {
             None
         };
-        let repo = self
-            .repo(ctx.clone(), &repo)
-            .watched(ctx.logger())
-            .with_max_poll(50)
-            .await?;
+        let repo = self.repo(ctx.clone(), &repo).watched(ctx.logger()).await?;
         let bookmarks = repo
             .list_bookmarks(
                 params.include_scratch,
@@ -264,11 +260,9 @@ impl SourceControlServiceImpl {
                 limit,
             )
             .watched(ctx.logger())
-            .with_max_poll(50)
             .await?
             .try_collect::<Vec<_>>()
             .watched(ctx.logger())
-            .with_max_poll(50)
             .await?;
         let continue_after = match limit {
             Some(limit) if bookmarks.len() as u64 >= limit => {
@@ -279,7 +273,6 @@ impl SourceControlServiceImpl {
         let ids = bookmarks.iter().map(|(_name, cs_id)| *cs_id).collect();
         let id_mapping = map_commit_identities(&repo, ids, &params.identity_schemes)
             .watched(ctx.logger())
-            .with_max_poll(50)
             .await?;
         let bookmarks = bookmarks
             .into_iter()
