@@ -239,7 +239,7 @@ async fn async_main_impl(
 
     let auth_ctx = AuthorizationContext::new_bypass_access_control();
     let repo_ctx: RepoContext<Repo> = RepoContext::new(
-        ctx,
+        ctx.clone(),
         auth_ctx.into(),
         repo,
         None,
@@ -297,6 +297,7 @@ async fn async_main_impl(
     );
 
     let graph_info = build_partial_commit_graph_for_export(
+        &ctx,
         &logger,
         export_path_infos.clone(),
         args.oldest_commit_ts,

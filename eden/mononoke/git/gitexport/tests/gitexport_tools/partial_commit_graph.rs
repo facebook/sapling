@@ -78,7 +78,8 @@ async fn test_partial_commit_graph_for_single_export_path(fb: FacebookInit) -> R
         .ok_or(anyhow!("Couldn't find master bookmark in source repo."))?;
 
     let graph_info =
-        build_partial_commit_graph_for_export(&logger, vec![(export_dir, master_cs)], None).await?;
+        build_partial_commit_graph_for_export(&ctx, &logger, vec![(export_dir, master_cs)], None)
+            .await?;
 
     let relevant_cs_ids = graph_info
         .changesets
@@ -122,6 +123,7 @@ async fn test_directories_with_merge_commits_fail_hard(fb: FacebookInit) -> Resu
         .ok_or(anyhow!("Couldn't find master bookmark in source repo."))?;
 
     let error = build_partial_commit_graph_for_export(
+        &ctx,
         &logger,
         vec![
             (export_dir, master_cs.clone()),
@@ -189,6 +191,7 @@ async fn test_partial_commit_graph_for_multiple_export_paths(fb: FacebookInit) -
         .ok_or(anyhow!("Couldn't find master bookmark in source repo."))?;
 
     let graph_info = build_partial_commit_graph_for_export(
+        &ctx,
         &logger,
         vec![
             (export_dir, master_cs.clone()),
@@ -265,6 +268,7 @@ async fn test_oldest_commit_ts_option(fb: FacebookInit) -> Result<()> {
     let oldest_ts = fifth_cs.author_date().await?.timestamp();
 
     let graph_info = build_partial_commit_graph_for_export(
+        &ctx,
         &logger,
         vec![
             (export_dir, master_cs.clone()),
@@ -296,6 +300,7 @@ async fn test_oldest_commit_ts_option(fb: FacebookInit) -> Result<()> {
 /// NOTE: changesets are passed as string slices and they're ids and changeset
 /// contexts are fetched after the test repo is built.
 async fn test_renamed_export_paths_are_followed<R: MononokeRepo>(
+    ctx: &CoreContext,
     source_repo_ctx: RepoContext<R>,
     changeset_ids: BTreeMap<String, ChangesetId>,
     // Path and the name of its upper bounds changeset
@@ -342,7 +347,7 @@ async fn test_renamed_export_paths_are_followed<R: MononokeRepo>(
         .await?;
 
     let graph_info =
-        build_partial_commit_graph_for_export(&logger, export_path_infos, None).await?;
+        build_partial_commit_graph_for_export(&ctx, &logger, export_path_infos, None).await?;
 
     let relevant_cs_ids = graph_info
         .changesets
@@ -376,6 +381,7 @@ async fn test_renamed_export_paths_are_followed_manually_passing_old(
 
     // Passing the old name of the export path manually
     test_renamed_export_paths_are_followed(
+        &ctx,
         source_repo_ctx,
         changeset_ids,
         vec![(new_export_dir.clone(), head_id), (old_export_dir, "E")],
@@ -404,6 +410,7 @@ async fn test_renamed_export_paths_are_not_followed_automatically(fb: FacebookIn
     let head_id: &str = test_data.head_id;
 
     test_renamed_export_paths_are_followed(
+        &ctx,
         source_repo_ctx,
         changeset_ids,
         vec![(new_export_dir.clone(), head_id)],
@@ -430,6 +437,7 @@ async fn test_partial_graph_with_two_renamed_export_directories(fb: FacebookInit
     let new_foo = NonRootMPath::new(relevant_paths["new_foo_dir"]).unwrap();
 
     test_renamed_export_paths_are_followed(
+        &ctx,
         source_repo_ctx,
         changeset_ids,
         vec![(new_bar.clone(), head_id), (new_foo.clone(), head_id)],

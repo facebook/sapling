@@ -543,6 +543,7 @@ impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
     /// a history of the path.
     pub async fn history(
         &self,
+        _ctx: &CoreContext,
         opts: ChangesetPathHistoryOptions,
     ) -> Result<BoxStream<'_, Result<ChangesetContext<R>, MononokeError>>, MononokeError> {
         let repo = self.repo_ctx().repo().clone();

@@ -214,10 +214,13 @@ async fn commit_path_history(fb: FacebookInit) -> Result<()> {
     // History of file "a" includes commits that modified "a".
     let a_path = cs.path_with_history("a").await?;
     let a_history: Vec<_> = a_path
-        .history(ChangesetPathHistoryOptions {
-            follow_history_across_deletions: true,
-            ..Default::default()
-        })
+        .history(
+            &ctx,
+            ChangesetPathHistoryOptions {
+                follow_history_across_deletions: true,
+                ..Default::default()
+            },
+        )
         .await?
         .and_then(|cs| async move { Ok(cs.id()) })
         .try_collect()
@@ -236,10 +239,13 @@ async fn commit_path_history(fb: FacebookInit) -> Result<()> {
     // History of directory "dir2" includes commits that modified "dir2/b".
     let dir2_path = cs.path_with_history("dir2").await?;
     let dir2_history: Vec<_> = dir2_path
-        .history(ChangesetPathHistoryOptions {
-            follow_history_across_deletions: true,
-            ..Default::default()
-        })
+        .history(
+            &ctx,
+            ChangesetPathHistoryOptions {
+                follow_history_across_deletions: true,
+                ..Default::default()
+            },
+        )
         .await?
         .and_then(|cs| async move { Ok(cs.id()) })
         .try_collect()
@@ -257,10 +263,13 @@ async fn commit_path_history(fb: FacebookInit) -> Result<()> {
     // History of directory "dir3" includes some commits on all branches.
     let dir3_path = cs.path_with_history("dir3").await?;
     let dir3_history: Vec<_> = dir3_path
-        .history(ChangesetPathHistoryOptions {
-            follow_history_across_deletions: true,
-            ..Default::default()
-        })
+        .history(
+            &ctx,
+            ChangesetPathHistoryOptions {
+                follow_history_across_deletions: true,
+                ..Default::default()
+            },
+        )
         .await?
         .and_then(|cs| async move { Ok(cs.id()) })
         .try_collect()
@@ -282,10 +291,13 @@ async fn commit_path_history(fb: FacebookInit) -> Result<()> {
     // Root path history includes all commits except the empty ones.
     let root_path = cs.path_with_history("").await?;
     let root_history: Vec<_> = root_path
-        .history(ChangesetPathHistoryOptions {
-            follow_history_across_deletions: true,
-            ..Default::default()
-        })
+        .history(
+            &ctx,
+            ChangesetPathHistoryOptions {
+                follow_history_across_deletions: true,
+                ..Default::default()
+            },
+        )
         .await?
         .and_then(|cs| async move { Ok(cs.id()) })
         .try_collect()
@@ -309,11 +321,14 @@ async fn commit_path_history(fb: FacebookInit) -> Result<()> {
 
     // Setting until_timestamp omits some commits.
     let a_history_with_time_filter: Vec<_> = a_path
-        .history(ChangesetPathHistoryOptions {
-            until_timestamp: Some(2500),
-            follow_history_across_deletions: true,
-            ..Default::default()
-        })
+        .history(
+            &ctx,
+            ChangesetPathHistoryOptions {
+                until_timestamp: Some(2500),
+                follow_history_across_deletions: true,
+                ..Default::default()
+            },
+        )
         .await?
         .and_then(|cs| async move { Ok(cs.id()) })
         .try_collect()
@@ -325,11 +340,14 @@ async fn commit_path_history(fb: FacebookInit) -> Result<()> {
 
     // Setting descendants_of omits more commits.
     let a_history_with_descendants_of: Vec<_> = a_path
-        .history(ChangesetPathHistoryOptions {
-            descendants_of: Some(changesets["b1"]),
-            follow_history_across_deletions: true,
-            ..Default::default()
-        })
+        .history(
+            &ctx,
+            ChangesetPathHistoryOptions {
+                descendants_of: Some(changesets["b1"]),
+                follow_history_across_deletions: true,
+                ..Default::default()
+            },
+        )
         .await?
         .and_then(|cs| async move { Ok(cs.id()) })
         .try_collect()
@@ -340,11 +358,14 @@ async fn commit_path_history(fb: FacebookInit) -> Result<()> {
     );
 
     let a_history_with_exclusion: Vec<_> = a_path
-        .history(ChangesetPathHistoryOptions {
-            exclude_changeset_and_ancestors: Some(changesets["a3"]),
-            follow_history_across_deletions: true,
-            ..Default::default()
-        })
+        .history(
+            &ctx,
+            ChangesetPathHistoryOptions {
+                exclude_changeset_and_ancestors: Some(changesets["a3"]),
+                follow_history_across_deletions: true,
+                ..Default::default()
+            },
+        )
         .await?
         .and_then(|cs| async move { Ok(cs.id()) })
         .try_collect()
@@ -355,12 +376,15 @@ async fn commit_path_history(fb: FacebookInit) -> Result<()> {
     );
 
     let a_history_with_exclusion: Vec<_> = a_path
-        .history(ChangesetPathHistoryOptions {
-            exclude_changeset_and_ancestors: Some(changesets["b1"]),
-            until_timestamp: Some(2500),
-            follow_history_across_deletions: true,
-            ..Default::default()
-        })
+        .history(
+            &ctx,
+            ChangesetPathHistoryOptions {
+                exclude_changeset_and_ancestors: Some(changesets["b1"]),
+                until_timestamp: Some(2500),
+                follow_history_across_deletions: true,
+                ..Default::default()
+            },
+        )
         .await?
         .and_then(|cs| async move { Ok(cs.id()) })
         .try_collect()
