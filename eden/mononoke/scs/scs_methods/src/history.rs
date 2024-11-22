@@ -13,6 +13,7 @@ use futures::stream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use futures_ext::FbStreamExt;
 use futures_watchdog::WatchdogExt;
 use mononoke_api::ChangesetContext;
 use mononoke_api::CoreContext;
@@ -82,7 +83,9 @@ pub(crate) async fn collect_history(
                         Err(err) => Err(err),
                     }
                 })
-                .buffered(100)
+                .buffered(10)
+                .yield_periodically()
+                .with_logger(ctx.logger())
                 .try_collect()
                 .watched(ctx.logger())
                 .await?;
