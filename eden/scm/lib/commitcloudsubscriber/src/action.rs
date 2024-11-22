@@ -46,7 +46,7 @@ impl CloudSyncTrigger {
                 .arg("--use-bgssh")
                 .arg("--best-effort")
                 .args(&workspace_args)
-                .args(&vec!["--reason", &reason])
+                .args(vec!["--reason", &reason])
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .spawn()?; // do not retry if failed to start

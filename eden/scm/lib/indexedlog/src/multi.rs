@@ -437,7 +437,7 @@ impl OpenOptionsRepair for OpenOptions {
         if selected_meta.is_none() {
             // For legacy MultiLog, the MultiMeta is stored in the file.
             let mut mmeta = MultiMeta::default();
-            if mmeta.read_file(&multi_meta_path(path)).is_ok() {
+            if mmeta.read_file(multi_meta_path(path)).is_ok() {
                 selected_meta = Some(mmeta);
             }
         }
@@ -609,7 +609,7 @@ impl MultiMeta {
         log.clear_dirty()?;
         log.sync()?;
         if let Some(Ok(last_data)) = log.lookup(INDEX_REVERSE, INDEX_REVERSE_KEY)?.next() {
-            if last_data == &data {
+            if last_data == data {
                 // log does not change. Do not write redundant data.
                 return Ok(());
             }

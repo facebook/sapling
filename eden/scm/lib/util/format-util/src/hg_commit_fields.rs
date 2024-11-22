@@ -46,7 +46,7 @@ pub struct HgCommitFields {
 impl HgCommitFields {
     fn from_text(text: &Text) -> Result<Self> {
         Self::from_text_impl(text)
-            .with_context(|| with_indented_commit_text("Failed to parse commit:", &text))
+            .with_context(|| with_indented_commit_text("Failed to parse commit:", text))
     }
 
     // Actual logic of `from_text`.

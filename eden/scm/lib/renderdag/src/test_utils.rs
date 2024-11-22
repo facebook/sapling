@@ -88,8 +88,8 @@ pub(crate) fn render_string_with_order(
         dag.assign_rev(head);
     }
 
-    let ancestors: HashSet<(&str, &str)> = ancestors.into_iter().copied().collect();
-    let missing: HashSet<&str> = missing.into_iter().copied().collect();
+    let ancestors: HashSet<(&str, &str)> = ancestors.iter().copied().collect();
+    let missing: HashSet<&str> = missing.iter().copied().collect();
 
     reserve.iter().for_each(|s| renderer.reserve(s.to_string()));
 

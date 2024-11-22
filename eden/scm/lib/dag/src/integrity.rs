@@ -187,7 +187,7 @@ where
             let parents = graph.parents(merges.clone()).await?;
             let prefetch = merges | parents;
             let mut iter = prefetch.iter().await?;
-            while let Some(_) = iter.next().await {}
+            while (iter.next().await).is_some() {}
         }
         tracing::trace!("prefetched merges and parents");
 
@@ -247,7 +247,7 @@ where
                     continue;
                 }
             };
-            let other_count = set.count_slow().await? as u64;
+            let other_count = set.count_slow().await?;
             if other_count != this_count {
                 add_problem(format!(
                     "length mismatch: {} != {}",

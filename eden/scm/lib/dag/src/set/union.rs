@@ -316,7 +316,7 @@ mod tests {
 
     #[test]
     fn test_size_hint_sets() {
-        check_size_hint_sets(|a, b| UnionSet::new(a, b));
+        check_size_hint_sets(UnionSet::new);
         check_size_hint_sets(|a, b| UnionSet::new(a, b).with_order(UnionOrder::Zip));
     }
 

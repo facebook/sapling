@@ -94,7 +94,7 @@ impl MetaLog {
             Id20::from_hex(rest.as_bytes()).ok()
         });
         match parent_id {
-            None => return Ok(None),
+            None => Ok(None),
             Some(id) => Ok(Some(self.checkout(id)?)),
         }
     }

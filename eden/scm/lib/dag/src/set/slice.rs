@@ -92,7 +92,7 @@ impl SliceSet {
 
         // Use iter() to populate take_cache.
         let mut iter = self.iter().await?;
-        while let Some(_) = iter.next().await {}
+        while (iter.next().await).is_some() {}
         assert!(self.is_take_cache_complete());
 
         Ok(())
@@ -267,7 +267,7 @@ impl AsyncSetQuery for SliceSet {
     async fn count(&self) -> Result<u64> {
         let count = self.inner.count().await?;
         // consider skip_count
-        let count = (count as u64).max(self.skip_count) - self.skip_count;
+        let count = count.max(self.skip_count) - self.skip_count;
         // consider take_count
         let count = count.min(self.take_count.unwrap_or(u64::MAX));
         Ok(count)

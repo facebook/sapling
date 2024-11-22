@@ -440,7 +440,7 @@ impl<'a, DagStore: IdDagStore> Process<ResponseIdNamePair, ()>
 // via nonblocking.
 
 thread_local! {
-    static NON_BLOCKING_DEPTH: RefCell<usize> = RefCell::new(0);
+    static NON_BLOCKING_DEPTH: RefCell<usize> = const { RefCell::new(0) };
 }
 
 /// Check if the current future is running inside a "non-blocking" block.

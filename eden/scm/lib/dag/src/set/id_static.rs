@@ -93,7 +93,7 @@ impl Iter {
                     .contains_vertex_id_locally(&[id])
                     .await
                     .unwrap_or_default();
-                if contains == &[true] {
+                if contains == [true] {
                     Some((map.vertex_name(id).await, self))
                 } else {
                     // On demand prefetch in batch.
@@ -312,6 +312,7 @@ impl IdStaticSet {
     /// If `lhs` and `rhs` are compatible, return a new IdStaticSet with:
     /// - `map` and `dag` set to the newer version of `lhs` and `rhs`.
     /// - `spans` set to `edit_spans(&lhs.spans, &rhs.spans)`.
+    ///
     /// Otherwise return `None`.
     ///
     /// Iteration order will not be preserved.
@@ -1222,7 +1223,7 @@ pub(crate) mod tests {
                         b'<' => {
                             if seen_left {
                                 if out.head.is_empty() {
-                                    out.head = &s[..i].trim();
+                                    out.head = s[..i].trim();
                                     out.len += out.head.len();
                                 }
                                 let (nested, rest) = Self::parse(&s[i..]);
@@ -1237,7 +1238,7 @@ pub(crate) mod tests {
                             }
                         }
                         b'>' => {
-                            out.tail = &s[..i + 1].trim();
+                            out.tail = s[..i + 1].trim();
                             out.len += out.tail.len();
                             if out.head.is_empty() {
                                 (out.head, out.tail) = out.tail.split_once(' ').unwrap();

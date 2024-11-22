@@ -51,7 +51,7 @@ mod tests {
 "#,
         );
         assert_eq!(
-            unparse(&syncify(attr, code)),
+            unparse(syncify(attr, code)),
             r#"
             fn foo (x : usize) -> usize {
                 { bar (x) + 1 }
@@ -71,7 +71,7 @@ mod tests {
 "#,
         );
         assert_eq!(
-            unparse(&syncify(attr, code)),
+            unparse(syncify(attr, code)),
             r#"
             # [test] fn test_foo () {
                 assert ! (g ());

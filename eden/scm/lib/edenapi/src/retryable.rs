@@ -226,9 +226,9 @@ mod tests {
         assert_eq!(retryable.lock().keys.len(), 0);
         let results: HashSet<String> =
             HashSet::from_iter(results.into_iter().map(|k| k.unwrap().path.into_string()));
-        assert!(results.contains(&"1".to_string()));
-        assert!(results.contains(&"2".to_string()));
-        assert!(results.contains(&"3".to_string()));
+        assert!(results.contains("1"));
+        assert!(results.contains("2"));
+        assert!(results.contains("3"));
 
         Ok(())
     }

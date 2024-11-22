@@ -77,7 +77,7 @@ mod tests {
         let py = gil.python();
 
         let list = vec![5, 10, 15];
-        let iter1 = list.clone().into_iter().map(|v| Ok::<_, anyhow::Error>(v));
+        let iter1 = list.clone().into_iter().map(Ok::<_, anyhow::Error>);
         let py_iter1 = PyIter::new(py, iter1).unwrap();
 
         struct S(usize);

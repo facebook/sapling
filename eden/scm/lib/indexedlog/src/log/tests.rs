@@ -580,7 +580,7 @@ fn test_index_lag_threshold() {
                 // This is optional, but makes the test more interesting.
                 log = open_opts.open(dir.path()).unwrap();
             }
-            log.append(&vec![i as u8; 100]).unwrap();
+            log.append(vec![i as u8; 100]).unwrap();
             log.sync().unwrap();
             let index_size_after = get_index_size();
             let index_should_change = unindexed_entries >= *lag_entries;
@@ -726,7 +726,7 @@ fn log_with_index(path: &Path, lag: u64) -> Log {
 /// Insert entries to a log
 fn insert_entries(log: &mut Log, start: u64, n: u64) {
     for i in start..(start + n) {
-        let buf: [u8; 8] = unsafe { std::mem::transmute(i) };
+        let buf: [u8; 8] = i.to_ne_bytes();
         log.append(&buf[..]).unwrap();
     }
 }

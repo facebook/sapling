@@ -301,7 +301,7 @@ impl OpenOptions {
             for &id in ids.iter() {
                 let name = id.to_string();
                 message += &format!("Attempt to repair log {:?}\n", name);
-                match self.log_open_options.repair(&dir.join(name)) {
+                match self.log_open_options.repair(dir.join(name)) {
                     Ok(log) => message += &log,
                     Err(err) => message += &format!("Failed: {}\n", err),
                 }
@@ -1619,7 +1619,7 @@ mod tests {
             .create(true)
             .index_defs(vec![
                 IndexDef::new("idx", |_| vec![IndexOutput::Reference(0..2)])
-                    .lag_threshold(u64::max_value()),
+                    .lag_threshold(u64::MAX),
             ])
             .max_bytes_per_log(100)
             .max_log_count(3);

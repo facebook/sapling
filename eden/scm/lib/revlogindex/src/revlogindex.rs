@@ -777,7 +777,6 @@ impl RevlogIndex {
             .read(true)
             .create(true)
             .append(true)
-            .write(true)
             .open(revlog_data_path)?;
         let mut revlog_index = fs::OpenOptions::new()
             .read(true)
@@ -1392,7 +1391,7 @@ impl DagAlgorithm for RevlogIndex {
             .into());
         }
         let revs: Vec<u32> = id_set.iter_desc().map(|id| id.0 as u32).collect();
-        let gcas = self.gca_revs(&revs, usize::max_value())?;
+        let gcas = self.gca_revs(&revs, usize::MAX)?;
         let spans = IdSet::from_spans(gcas.into_iter().map(|r| Id(r as _)));
         let result = Set::from_id_set_dag(spans, self)?;
         Ok(result)

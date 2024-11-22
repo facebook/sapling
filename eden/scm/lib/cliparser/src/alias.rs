@@ -19,6 +19,7 @@ use crate::utils::get_prefix_bounds;
 /// * `lookup` - A function to expand a command name to another shell-like command.
 ///
 /// * `args` - The original arguments to resolve aliases from.
+///
 /// The first argument should be the command name.
 ///
 /// On success, returns a tuple of Vec<String>.  The first is the expanded arguments.  The second
@@ -233,9 +234,9 @@ fn expand_shell_alias_args(command_args: &[String], shell_alias: &str) -> Vec<St
 /// will be returned with a vector of possibilities to choose from.
 ///
 /// * `command_map` - The mapping of a command name ( key ) -> some id ( val ).
-/// This is important because some command_names are really the same command
-/// e.g. 'id' and 'identify'.  If commands point to the same id they are assumed
-/// to be equivalent.
+///   This is important because some command_names are really the same command
+///   e.g. 'id' and 'identify'.  If commands point to the same id they are assumed
+///   to be equivalent.
 ///
 /// * `arg` - The command prefix to expand.
 ///

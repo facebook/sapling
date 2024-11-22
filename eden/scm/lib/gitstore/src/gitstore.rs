@@ -54,7 +54,7 @@ impl Deref for GitStore {
     type Target = GitStoreInner;
 
     fn deref(&self) -> &Self::Target {
-        &*self.0
+        &self.0
     }
 }
 
@@ -94,7 +94,7 @@ impl GitStore {
         impl Opaque for UnsafeForceSync<git2::Repository> {}
 
         // safety: `odb` is alive as long as `git_repo` is alive.
-        let odb = unsafe { std::mem::transmute(odb) };
+        let odb = unsafe { std::mem::transmute::<git2::Odb<'_>, git2::Odb<'static>>(odb) };
         // safety: we don't access `opaque_repo` in multiple threads.
         // Cast to `Opaque` and prevents access to `git_repo`.
         let opaque_repo: Box<dyn Opaque + Send + Sync> = Box::new(UnsafeForceSync(git_repo));

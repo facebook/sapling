@@ -439,11 +439,11 @@ where
 
         for (name, entry) in entries.iter_mut() {
             let mut path = path.push(name);
-            let (sub_result, count) = match entry {
-                &mut NodeEntry::Directory(ref mut node) => {
+            let (sub_result, count) = match *entry {
+                NodeEntry::Directory(ref mut node) => {
                     node.visit(store, &mut path, visitor, visit_dir, visit_file)?
                 }
-                &mut NodeEntry::File(ref mut file) => {
+                NodeEntry::File(ref mut file) => {
                     if visit_file(path.as_ref(), file) {
                         (visitor(path.as_ref(), file)?, 1)
                     } else {
@@ -472,14 +472,14 @@ where
         store: &dyn StoreView,
     ) -> Result<Option<(Vec<KeyRef<'node>>, &'node T)>> {
         for (name, entry) in self.load_entries(store)?.iter_mut() {
-            match entry {
-                &mut NodeEntry::Directory(ref mut node) => {
+            match *entry {
+                NodeEntry::Directory(ref mut node) => {
                     if let Some((mut next_name, next_file)) = node.get_first(store)? {
                         next_name.push(name);
                         return Ok(Some((next_name, next_file)));
                     }
                 }
-                &mut NodeEntry::File(ref file) => {
+                NodeEntry::File(ref file) => {
                     return Ok(Some((vec![name], file)));
                 }
             }
@@ -505,8 +505,8 @@ where
             .load_entries(store)?
             .range_mut((Bound::Included(elem), Bound::Unbounded))
         {
-            match entry {
-                &mut NodeEntry::Directory(ref mut node) => {
+            match *entry {
+                NodeEntry::Directory(ref mut node) => {
                     // The entry is a directory, check inside it.
                     if elem != &entry_name[..] {
                         // This directory is not the one we were initially looking inside.  We
@@ -526,7 +526,7 @@ where
                         return Ok(Some((next_name, next_file)));
                     }
                 }
-                &mut NodeEntry::File(ref file) => {
+                NodeEntry::File(ref file) => {
                     // This entry is a file.  Skip over it if it is the original file.
                     if elem != &entry_name[..] {
                         return Ok(Some((vec![entry_name], file)));
@@ -802,13 +802,13 @@ where
         FA: Fn(&T) -> bool,
     {
         for (_name, entry) in self.load_entries(store)?.iter_mut() {
-            match entry {
-                &mut NodeEntry::Directory(ref mut node) => {
+            match *entry {
+                NodeEntry::Directory(ref mut node) => {
                     if node.path_complete_check(store, acceptable)? {
                         return Ok(true);
                     }
                 }
-                &mut NodeEntry::File(ref mut file) => {
+                NodeEntry::File(ref mut file) => {
                     if acceptable(file) {
                         return Ok(true);
                     }
@@ -856,8 +856,8 @@ where
                     // This entry is no longer a prefix.
                     break;
                 }
-                match entry {
-                    &mut NodeEntry::Directory(ref mut node) => {
+                match *entry {
+                    NodeEntry::Directory(ref mut node) => {
                         if full_paths {
                             let mut path = path.push(entry_name);
                             // The entry is a directory, and the caller has asked for full paths.
@@ -885,7 +885,7 @@ where
                             }
                         }
                     }
-                    &mut NodeEntry::File(ref mut file) => {
+                    NodeEntry::File(ref mut file) => {
                         // This entry is a file.
                         if acceptable(file) {
                             let path = path.push(entry_name);

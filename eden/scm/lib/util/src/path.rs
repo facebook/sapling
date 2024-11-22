@@ -107,7 +107,7 @@ pub fn atomic_write_symlink(path: &Path, data: &[u8]) -> io::Result<()> {
                 let entry = entry.path_context("error reading atomic symlink dir entry", dir)?;
                 let name = entry.file_name();
                 if name != prefix && looks_like_atomic(&name, prefix) && name != real_file_name {
-                    let _ = remove_file(&entry.path());
+                    let _ = remove_file(entry.path());
                 }
             }
         }

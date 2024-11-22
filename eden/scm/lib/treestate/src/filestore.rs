@@ -87,7 +87,7 @@ impl FileStore {
                 .into(),
         );
         let mut file = FileReaderWriter::new(writer, path)?;
-        file.write(&MAGIC)?;
+        file.write_all(&MAGIC)?;
         file.write_u32::<BigEndian>(VERSION)?;
         let file = Arc::new(Mutex::new(Box::new(file) as Box<dyn FileReadWrite>));
         Ok(FileStore {
@@ -121,7 +121,6 @@ impl FileStore {
     /// access is not permitted, falls back to opening the file in read-only mode.  When open
     /// in read-only mode, new blocks of data cannot be appended.
     pub fn open(path: &Path) -> Result<FileStore> {
-        let path = path.as_ref();
         tracing::trace!(target: "treestate::filestore::open", ?path);
         let mut read_only = false;
         let file = OpenOptions::new()
@@ -161,6 +160,7 @@ impl FileStore {
         })
     }
 
+    #[allow(clippy::uninit_vec)]
     pub fn cache(&mut self) -> Result<()> {
         if self.cache.is_none() {
             let mut file = self.file.lock().unwrap();
@@ -202,7 +202,7 @@ impl Store for FileStore {
             file.seek(SeekFrom::Start(self.position))?;
             *at_end = true;
         }
-        assert!(data.len() <= std::u32::MAX as usize, "data too long");
+        assert!(data.len() <= u32::MAX as usize, "data too long");
         file.write_u32::<BigEndian>(data.len() as u32)?;
         file.write_all(data)?;
         self.position += 4 + data.len() as u64;
@@ -237,6 +237,7 @@ impl Store for FileStore {
 }
 
 impl StoreView for FileStore {
+    #[allow(clippy::uninit_vec)]
     fn read<'a>(&'a self, id: BlockId) -> Result<Cow<'a, [u8]>> {
         // Check the ID is in range.
         if id.0 < HEADER_LEN || id.0 > self.position - 4 {
@@ -379,7 +380,7 @@ mod tests {
             .truncate(true)
             .open(&p)
             .unwrap();
-        file.write(b"not a store file").unwrap();
+        file.write_all(b"not a store file").unwrap();
         drop(file);
         assert!(
             FileStore::open(&p)
@@ -401,7 +402,7 @@ mod tests {
             .open(&p)
             .unwrap();
         // Version 0 is not supported.
-        file.write(b"appendstore\n\x00\x00\x00\x00").unwrap();
+        file.write_all(b"appendstore\n\x00\x00\x00\x00").unwrap();
         drop(file);
         assert_eq!(
             FileStore::open(&p)
@@ -455,7 +456,7 @@ mod tests {
             .open(&p)
             .unwrap();
         // Version 0 is not supported.
-        file.write(b"appendstore\n\x00\x00\x00\x01\x00\x00\xff\xffdata")
+        file.write_all(b"appendstore\n\x00\x00\x00\x01\x00\x00\xff\xffdata")
             .unwrap();
         drop(file);
         let f = FileStore::open(&p).expect("file should be opened");

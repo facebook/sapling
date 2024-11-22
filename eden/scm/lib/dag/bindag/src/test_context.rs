@@ -50,7 +50,7 @@ pub type OctopusTestContext = GeneralTestContext<Vec<usize>>;
 
 impl TestContext {
     pub fn from_bin(bin: &[u8]) -> Self {
-        Self::from_bin_sliced(bin, 0..usize::max_value())
+        Self::from_bin_sliced(bin, 0..usize::MAX)
     }
 
     pub fn from_bin_sliced(bin: &[u8], range: Range<usize>) -> Self {

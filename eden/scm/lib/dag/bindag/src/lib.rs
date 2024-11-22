@@ -30,7 +30,7 @@ pub static MOZILLA: &[u8] = include_bytes!("mozilla-central.bindag");
 pub struct ParentRevs([usize; 2]);
 
 impl ParentRevs {
-    const NONE: usize = usize::max_value();
+    const NONE: usize = usize::MAX;
     const EMPTY: Self = Self([Self::NONE; 2]);
 }
 

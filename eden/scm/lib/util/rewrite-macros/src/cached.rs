@@ -117,7 +117,7 @@ mod tests {
 "#,
         );
         assert_eq!(
-            unparse(&cached_field(attr, code)),
+            unparse(cached_field(attr, code)),
             r#"
             pub fn foo (& self) -> Result < Arc < RwLock < Data >>> {
                 :: tracing :: trace ! (stringify ! (foo));
@@ -150,7 +150,7 @@ mod tests {
 "#,
         );
         assert_eq!(
-            unparse(&cached_field(attr, code)),
+            unparse(cached_field(attr, code)),
             r#"
             pub fn foo (& self) -> Result < Arc < dyn Trait >> {
                 :: tracing :: trace ! (stringify ! (foo));
@@ -217,7 +217,7 @@ mod tests {
 "#,
         );
         assert_eq!(
-            unparse(&cached_field(attr, code)),
+            unparse(cached_field(attr, code)),
             r#"
             impl MyStruct {
                 pub fn baz (& self , x : usize) -> usize { x + 1 } pub fn foo (& self) -> Result < String > {

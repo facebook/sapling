@@ -161,7 +161,7 @@ mod tests {
 "#,
         );
         assert_eq!(
-            unparse(&demomo(attr, code)),
+            unparse(demomo(attr, code)),
             r#"
             fn f (p : impl AsRef < Path >) -> String {
                 fn inner (p : & Path) -> String { read (p) } inner (p . as_ref () ,)
@@ -181,7 +181,7 @@ mod tests {
 "#,
         );
         assert_eq!(
-            unparse(&demomo(attr, code)),
+            unparse(demomo(attr, code)),
             r#"
             fn f (x : impl ToString) -> usize {
                 fn inner (x : String) -> usize {
@@ -204,7 +204,7 @@ mod tests {
 "#,
         );
         assert_eq!(
-            unparse(&demomo(attr, code)),
+            unparse(demomo(attr, code)),
             r#"
             fn f (x : impl Into < Vec < u8 >>) -> Vec < u8 > {
                 fn inner (x : Vec < u8 >) -> Vec < u8 > {
@@ -228,7 +228,7 @@ mod tests {
 "#,
         );
         assert_eq!(
-            unparse(&demomo(attr, code)),
+            unparse(demomo(attr, code)),
             r#"
             fn f (x : impl AsRef < Path >, y : impl ToString , z : impl Into < Vec < u8 >>) -> Result < usize > {
                 fn inner (x : & Path , y : String , z : Vec < u8 >) -> Result < usize > {
@@ -254,7 +254,7 @@ mod tests {
             "#,
         );
         assert_eq!(
-            unparse(&demomo(attr, code)),
+            unparse(demomo(attr, code)),
             r#"
             fn f (x : impl ToString , inner_ : T) {
                 fn inner___ (x : String , inner_ : T) {
@@ -279,7 +279,7 @@ mod tests {
 "#,
         );
         assert_eq!(
-            unparse(&demomo(attr, code)),
+            unparse(demomo(attr, code)),
             r#"
             impl Foo {
                 fn f (self : & mut Self , x : impl ToString) -> & mut Self {
@@ -305,7 +305,7 @@ mod tests {
 "#,
         );
         assert_eq!(
-            unparse(&demomo(attr, code)),
+            unparse(demomo(attr, code)),
             r#"
             fn f (x : impl ToString) -> Result < () > {
                 fn inner (x : String) -> Result < () > {

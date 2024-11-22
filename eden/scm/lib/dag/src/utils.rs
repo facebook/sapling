@@ -137,7 +137,7 @@ pub async fn filter_known<'a>(
                 .roots(remaining.clone())
                 .await?
                 .union(&subdag.heads(remaining.clone()).await?)
-                .union(&remaining.skip((remaining_old_len as u64) / 2).take(1))
+                .union(&remaining.skip(remaining_old_len / 2).take(1))
         };
         let sample: Vec<Vertex> = sample.iter().await?.try_collect().await?;
         let new_known = filter_known_func(&sample).await?;

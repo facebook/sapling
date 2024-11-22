@@ -61,7 +61,7 @@ impl ActivityLogger {
                 duration_millis: dur.as_millis(),
             },
         )?;
-        self.f.write_all(&[b'\n'])?;
+        self.f.write_all(b"\n")?;
         Ok(())
     }
 }

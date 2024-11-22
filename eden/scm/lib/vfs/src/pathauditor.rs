@@ -87,7 +87,7 @@ impl PathAuditor {
         audit_invalid_components(path.as_str())
             .with_context(|| format!("invalid component in \"{}\"", path))?;
 
-        let mut needs_recording_index = std::usize::MAX;
+        let mut needs_recording_index = usize::MAX;
         for (i, parent) in path.reverse_parents().enumerate() {
             // First fast check w/ read lock
             if !self.audited.contains_key(parent) {
@@ -106,7 +106,7 @@ impl PathAuditor {
             }
         }
 
-        if needs_recording_index != std::usize::MAX {
+        if needs_recording_index != usize::MAX {
             for (i, parent) in path.reverse_parents().enumerate() {
                 self.audited.entry(parent.to_owned()).or_default();
                 if needs_recording_index == i {
@@ -140,6 +140,7 @@ fn valid_windows_component(component: &str) -> bool {
 /// - `.`, dot/period, unix current directory
 /// - `..`, double dot, unix parent directory
 /// - `.sl` or `.hg`,
+///
 /// It also checks that no trailing dots are part of the component and checks that shortnames
 /// on Windows are valid.
 fn audit_invalid_components(path: &str) -> Result<(), AuditError> {

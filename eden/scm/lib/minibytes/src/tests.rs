@@ -20,7 +20,7 @@ quickcheck! {
     fn test_shallow_slice(v: Vec<u8>) -> bool {
         let a: Bytes = v.into();
         let b: Bytes = a.slice(..a.len() / 2);
-        b == &a[..b.len()] && (b.is_empty() || a.as_ptr() == b.as_ptr())
+        b == a[..b.len()] && (b.is_empty() || a.as_ptr() == b.as_ptr())
     }
 
     fn test_range_of_slice(v: Vec<u8>) -> bool {

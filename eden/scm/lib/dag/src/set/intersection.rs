@@ -331,7 +331,7 @@ mod tests {
 
     #[test]
     fn test_size_hint_sets() {
-        check_size_hint_sets(|a, b| IntersectionSet::new(a, b));
+        check_size_hint_sets(IntersectionSet::new);
     }
 
     quickcheck::quickcheck! {

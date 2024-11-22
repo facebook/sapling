@@ -22,6 +22,7 @@ use types::RepoPathBuf;
 /// between file a and file b is: (len(a.lines()) - edit_cost(a, b)) / len(a.lines())
 ///   * 1.0 means exact match
 ///   * 0.0 means not match at all
+///
 /// The default value is 0.8.
 const DEFAULT_SIMILARITY_THRESHOLD: f32 = 0.8;
 

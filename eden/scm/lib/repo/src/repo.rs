@@ -341,11 +341,11 @@ impl Repo {
         match self.config.get_nonempty_opt::<RepoUrl>("paths", "default") {
             Err(err) => {
                 tracing::warn!(target: "repo::eden_api", ?err, "disabled because error parsing paths.default");
-                return Ok(None);
+                Ok(None)
             }
             Ok(None) => {
                 tracing::trace!(target: "repo::eden_api", "disabled because paths.default is not set");
-                return Ok(None);
+                Ok(None)
             }
             Ok(Some(path)) => {
                 // EagerRepo URLs (test:, eager: file path, dummyssh).

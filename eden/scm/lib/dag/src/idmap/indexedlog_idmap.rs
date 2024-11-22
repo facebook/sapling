@@ -440,7 +440,7 @@ impl fmt::Debug for IdMap {
             let name = if name.len() >= 20 {
                 Vertex::copy_from(name).to_hex()
             } else {
-                String::from_utf8_lossy(&name).to_string()
+                String::from_utf8_lossy(name).to_string()
             };
             write!(f, "  {}: {},\n", name, id)?;
         }

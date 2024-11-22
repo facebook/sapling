@@ -294,7 +294,7 @@ py_class!(class wrapfunc |py| {
             let name = self.name(py);
             let module = self.module(py);
             let line = self.lineno(py);
-            let basic_meta: [(&str, &str); 3] = [("name", &name), ("module_path", &module), ("line", &line)];
+            let basic_meta: [(&str, &str); 3] = [("name", name), ("module_path", module), ("line", line)];
 
             // Okay to lock - pure Rust code.
             let mut data = DATA.lock();
@@ -453,7 +453,7 @@ py_class!(class wrapiter |py| {
         let espan_id = {
             let last_id = self.last_espan_id(py).get();
             let name = self.name(py);
-            let meta: [(&str, &str); 2] = [("name", &name), ("cat", "generator")];
+            let meta: [(&str, &str); 2] = [("name", name), ("cat", "generator")];
             let mut data = DATA.lock();
             let espan_id = data.add_espan(&meta[..], Some(last_id));
             data.add_action(espan_id, Action::EnterSpan);

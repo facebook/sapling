@@ -181,8 +181,8 @@ impl EagerRepoStore {
             None => Ok(None),
             Some(data) => {
                 let content = match self.format() {
-                    SerializationFormat::Hg => hg_sha1_deserialize(&*data)?.0,
-                    SerializationFormat::Git => git_sha1_deserialize(&*data)?.0,
+                    SerializationFormat::Hg => hg_sha1_deserialize(&data)?.0,
+                    SerializationFormat::Git => git_sha1_deserialize(&data)?.0,
                 };
                 Ok(Some(data.slice_to_bytes(content)))
             }

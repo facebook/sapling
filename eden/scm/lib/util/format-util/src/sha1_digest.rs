@@ -25,8 +25,8 @@ impl io::Write for Sha1Write {
     }
 }
 
-impl Into<Id20> for Sha1Write {
-    fn into(self) -> Id20 {
-        Id20::from_byte_array(self.0.finalize().into())
+impl From<Sha1Write> for Id20 {
+    fn from(val: Sha1Write) -> Self {
+        Id20::from_byte_array(val.0.finalize().into())
     }
 }

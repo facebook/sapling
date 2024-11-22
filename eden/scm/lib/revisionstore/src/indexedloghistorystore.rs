@@ -97,6 +97,7 @@ impl Entry {
     /// - p1 hgid: <20 bytes>
     /// - p2 hgid: <20 bytes>
     /// - linknode: <20 bytes>
+    ///
     /// Optionally:
     /// - copy from len: 2 unsigned bytes, big-endian
     /// - copy from: <copy from len> bytes

@@ -435,7 +435,7 @@ py_class!(class RGeneratorIter |py| {
         // Cannot rely on Python GIL because iternext.call(py) might release it.
         let mutex = rgen.iternext_mutex(py);
         let locked = mutex.try_lock();
-        if let Ok(_) = locked {
+        if locked.is_ok() {
             if let Some(next) = &*rgen.iternext(py).borrow() {
                 self.next_internal(py, next)
             } else {

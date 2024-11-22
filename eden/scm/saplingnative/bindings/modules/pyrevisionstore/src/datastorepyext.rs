@@ -130,7 +130,7 @@ impl<T: HgIdDataStore + ?Sized> HgIdDataStorePyExt for T {
             key,
         };
 
-        let deltachain = vec![delta];
+        let deltachain = [delta];
 
         let pychain = deltachain
             .iter()

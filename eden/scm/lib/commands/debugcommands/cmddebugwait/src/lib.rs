@@ -98,13 +98,13 @@ pub fn run(ctx: ReqCtx<Opts>, repo: &Repo) -> Result<u8> {
         let mut working_copy = repo.working_copy()?;
         let repo_path = repo.path().to_owned();
         let mut wait =
-            workingcopy::wait::Wait::new(&ctx.core, &*working_copy.read(), repo.dot_hg_path())?;
+            workingcopy::wait::Wait::new(&ctx.core, &working_copy.read(), repo.dot_hg_path())?;
         let core_ctx = ctx.core.clone();
         spawn_wait_thread(
             "wdir-content",
             Box::new(move || -> anyhow::Result<()> {
                 loop {
-                    let v = wait.wait_for_change(&core_ctx, &*working_copy.read())?;
+                    let v = wait.wait_for_change(&core_ctx, &working_copy.read())?;
                     if v.should_reload_working_copy() {
                         let repo = Repo::load(&repo_path, &[])?;
                         working_copy = repo.working_copy()?;

@@ -222,7 +222,7 @@ py_class!(pub class treemanifest |py| {
     def listdir(&self, path: PyPathBuf) -> PyResult<Vec<PyPathBuf>> {
         let repo_path = path.to_repo_path().map_pyerr(py)?;
         let tree = self.underlying(py).read();
-        let result = match tree.list(&repo_path).map_pyerr(py)? {
+        let result = match tree.list(repo_path).map_pyerr(py)? {
             manifest::List::NotFound | manifest::List::File => vec![],
             manifest::List::Directory(components) =>
                 components.into_iter().map(|(component, _)|
@@ -662,7 +662,7 @@ pub fn subdir_diff(
     let mut result = vec![];
     for (path, node, others, bytes) in diff {
         use types::HgId;
-        let p1 = others.get(0).unwrap_or(HgId::null_id()).clone();
+        let p1 = others.first().unwrap_or(HgId::null_id()).clone();
         let p2 = others.get(1).unwrap_or(HgId::null_id()).clone();
         let tuple = PyTuple::new(
             py,

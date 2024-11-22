@@ -80,7 +80,7 @@ pub fn generate_repo_paths(count: usize, qc_gen: &mut Gen) -> Vec<RepoPathBuf> {
     impl<'a> Generator<'a> {
         fn generate_directory(&mut self) {
             let dir_components_cnt = if self.current_component_length == 0 {
-                std::usize::MAX
+                usize::MAX
             } else {
                 self.directory_component_min
                     + usize::arbitrary(self.qc_gen)

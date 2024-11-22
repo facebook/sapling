@@ -922,12 +922,12 @@ mod test {
         fs::create_dir_all(dir_b.join(TEST.repo.sniff_dot_dir()))?;
         fs::create_dir_all(&dir_c)?;
 
-        assert_eq!(sniff_root(&dir)?.unwrap().1.repo, TEST.repo);
+        assert_eq!(sniff_root(dir)?.unwrap().1.repo, TEST.repo);
         assert_eq!(sniff_root(&dir_c)?.unwrap().1.repo, SL.repo);
         assert_eq!(sniff_root(&dir_b)?.unwrap().1.repo, SL.repo);
         assert_eq!(sniff_root(&dir_a)?.unwrap().1.repo, SL.repo);
 
-        assert_eq!(sniff_dir(&dir)?.unwrap().repo, TEST.repo);
+        assert_eq!(sniff_dir(dir)?.unwrap().repo, TEST.repo);
         assert_eq!(sniff_dir(&dir_a)?.unwrap().repo, SL.repo);
         assert_eq!(sniff_dir(&dir_b)?.unwrap().repo, TEST.repo);
         assert!(sniff_dir(&dir_c)?.is_none());

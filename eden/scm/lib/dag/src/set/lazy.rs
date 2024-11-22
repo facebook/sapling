@@ -153,7 +153,7 @@ impl LazySet {
 
     async fn load_all(&self) -> Result<MutexGuard<'_, Inner>> {
         let mut inner = self.inner.lock().await;
-        inner.load_more(usize::max_value(), None).await?;
+        inner.load_more(usize::MAX, None).await?;
         Ok(inner)
     }
 }
@@ -183,7 +183,7 @@ impl AsyncSetQuery for LazySet {
         let min = inner.visited.len() as u64;
         let max = match inner.state {
             State::Incomplete => None,
-            State::Complete => Some(min as u64),
+            State::Complete => Some(min),
             State::Error => None,
         };
         (min, max)

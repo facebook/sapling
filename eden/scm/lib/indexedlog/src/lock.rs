@@ -296,7 +296,6 @@ mod tests {
         // Spawn N threads. Half read-only, half read-write.
         let threads: Vec<_> = (0..N)
             .map(|i| {
-                let i = i;
                 let path = dir.path().join("f");
                 thread::spawn(move || {
                     let write = i % 2 == 0;
@@ -353,7 +352,6 @@ mod tests {
         // Spawn N threads. Half read-only, half read-write.
         let threads: Vec<_> = (0..N)
             .map(|i| {
-                let i = i;
                 let path = dir.path().join("f");
                 let dir_path = dir.path().to_path_buf();
                 thread::spawn(move || {
@@ -453,7 +451,7 @@ mod tests {
 
         let l1 = ScopedDirLock::new_with_options(path, &opts).unwrap();
         let mut buf1 = l1.shared_mmap_mut(v1.len()).unwrap();
-        buf1.as_mut().write_all(&v1).unwrap();
+        buf1.as_mut().write_all(v1).unwrap();
 
         let l2 = ScopedDirLock::new_with_options(path, &opts).unwrap();
         let buf2 = l2.shared_mmap_mut(v1.len()).unwrap();
@@ -463,7 +461,7 @@ mod tests {
         // The buffer can be used even if the ScopedDirLock is dropped (which closes the files).
         drop((l1, l2));
         v1 = &[99u8, 98, 97, 96, 95, 94, 93, 92][..];
-        buf1.as_mut().write_all(&v1).unwrap();
+        buf1.as_mut().write_all(v1).unwrap();
         buf2.as_ref().read_exact(&mut v2).unwrap();
         assert_eq!(v1, v2);
 

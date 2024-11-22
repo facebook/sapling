@@ -251,9 +251,8 @@ impl HttpClient {
                 }
                 self.report_result_and_drop_receiver(res)
             })
-            .map(|stats| {
-                self.event_listeners.trigger_stats(&stats);
-                stats
+            .inspect(|stats| {
+                self.event_listeners.trigger_stats(stats);
             });
 
         drop(driver);

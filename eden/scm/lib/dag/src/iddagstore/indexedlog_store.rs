@@ -573,9 +573,9 @@ impl IndexedLogStore {
         }
         // FIXME: check correctness
         if ascending {
-            result.sort_unstable_by(|seg1, seg2| seg1.head().ok().cmp(&seg2.head().ok()));
+            result.sort_unstable_by_key(|seg1| seg1.head().ok());
         } else {
-            result.sort_unstable_by(|seg1, seg2| seg2.head().ok().cmp(&seg1.head().ok()));
+            result.sort_unstable_by_key(|seg2| std::cmp::Reverse(seg2.head().ok()));
         }
         result
     }

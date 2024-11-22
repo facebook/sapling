@@ -75,6 +75,7 @@ pub struct MetaLog {
 
 /// Options used by the `commit` API.
 #[derive(Default)]
+#[non_exhaustive]
 pub struct CommitOptions<'a> {
     pub message: &'a str,
 
@@ -93,9 +94,6 @@ pub struct CommitOptions<'a> {
     /// The function should try to set resolved contents on the current MetaLog and
     /// return `Ok(())` if it is able to resolve everything cleanly.
     pub resolver: Option<Box<dyn FnMut(&mut MetaLog, &MetaLog, &MetaLog) -> Result<()>>>,
-
-    /// Prevent constructing via fields.
-    _private: (),
 }
 
 impl MetaLog {
@@ -544,7 +542,7 @@ impl Repair<()> for MetaLog {
 }
 
 fn find_last_root_id(log: &ilog::Log) -> Result<Id20> {
-    for entry in log.lookup(INDEX_REVERSE, INDEX_REVERSE_KEY)? {
+    if let Some(entry) = (log.lookup(INDEX_REVERSE, INDEX_REVERSE_KEY)?).next() {
         // The linked list in the index is in the reversed order.
         // So the first entry contains the last root id.
         return Ok(Id20::from_slice(entry?)?);

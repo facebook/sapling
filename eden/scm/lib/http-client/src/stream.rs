@@ -291,7 +291,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mid_stream_error() -> Result<()> {
-        let items = vec![TestItem::new("foo"), TestItem::new("bar")];
+        let items = [TestItem::new("foo"), TestItem::new("bar")];
 
         let bytes_and_errors = vec![
             Ok(serde_cbor::to_vec(&items[0])?),

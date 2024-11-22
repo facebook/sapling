@@ -74,12 +74,12 @@ pub(crate) fn check_hash(
         }
     }
 
-    return Err(InvalidHgId {
+    Err(InvalidHgId {
         expected: id,
         computed: first_computed,
         parents,
         data: data.clone(),
-    });
+    })
 }
 
 // 0: [hg, git]; _: [git, hg]

@@ -364,7 +364,7 @@ pub(crate) fn fix_perm_symlink(path: &Path) -> io::Result<()> {
 }
 
 thread_local! {
-    static THREAD_RAND_U64: RefCell<u64> = RefCell::new(0);
+    static THREAD_RAND_U64: RefCell<u64> = const { RefCell::new(0) };
 }
 
 /// Return a value that is likely changing over time.

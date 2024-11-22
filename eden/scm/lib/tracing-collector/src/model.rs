@@ -296,6 +296,7 @@ fn next_espan_id_offset() -> EspanId {
 }
 
 thread_local! {
+    #[allow(clippy::never_loop)]
     pub static THREAD_ID: u64 = loop {
         #[cfg(target_os = "linux")]
         {
@@ -911,6 +912,7 @@ where
 
 /// Options used to control behavior of writing ASCII graph.
 #[derive(Default)]
+#[non_exhaustive]
 pub struct AsciiOptions {
     /// Hide a "Duration Span" if a span takes less than the specified
     /// microseconds.
@@ -924,10 +926,6 @@ pub struct AsciiOptions {
     /// but it is more than the specified percentage of the parent's
     /// duration. Not effective if it's 0.
     pub min_duration_parent_percentage_to_show: u8,
-
-    // Prevent constructing this struct using fields so more fields
-    // can be added later.
-    _private: (),
 }
 
 /// Spans that form a Tree. Internal used by write_ascii functions.
@@ -1031,12 +1029,7 @@ impl fmt::Display for Rows {
                     .max()
                     .unwrap_or(0)
                     .max(self.column_min_widths.get(i).cloned().unwrap_or(0))
-                    .min(
-                        self.column_max_widths
-                            .get(i)
-                            .cloned()
-                            .unwrap_or(usize::max_value()),
-                    )
+                    .min(self.column_max_widths.get(i).cloned().unwrap_or(usize::MAX))
             })
             .collect();
         for row in self.rows.iter() {

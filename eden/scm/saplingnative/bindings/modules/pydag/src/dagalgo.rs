@@ -162,10 +162,7 @@ py_class!(pub class dagalgo |py| {
     def suggest_bisect(&self, roots: Names, heads: Names, skip: Names) -> PyResult<(Option<PyBytes>, Names, Names)> {
         let dag = self.dag(py);
         let (node, untested, heads) = block_on(dag.suggest_bisect(roots.0, heads.0, skip.0)).map_pyerr(py)?;
-        let node = match node {
-            Some(v) => Some(PyBytes::new(py, v.as_ref())),
-            None => None,
-        };
+        let node = node.map(|v| PyBytes::new(py, v.as_ref()));
         Ok((node, Names(untested), Names(heads)))
     }
 
@@ -227,7 +224,7 @@ py_class!(pub class dagalgo |py| {
 });
 
 impl dagalgo {
-    pub fn from_dag(py: Python, dag: impl DagAlgorithm + Send + Sync + 'static) -> PyResult<Self> {
+    pub fn from_dag(py: Python, dag: impl DagAlgorithm + 'static) -> PyResult<Self> {
         Self::create_instance(py, Arc::new(dag))
     }
 

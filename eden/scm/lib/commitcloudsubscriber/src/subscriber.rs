@@ -63,12 +63,14 @@ pub struct Subscription {
 ///         "start_subscriptions"
 ///         "restart_subscriptions"
 ///         "cancel_subscriptions"
-///     if a command comes, gracefully cancel all previous subscriptions
-///     and restart if requested
-///     main use case:
-///     if a cient (hg) add itself as a new subscriber (hg cloud join),
+///             if a command comes, gracefully cancel all previous subscriptions
+///             and restart if requested
+///
+/// main use case:
+///   * if a cient (hg) add itself as a new subscriber (hg cloud join),
 ///     it is also client's responsibility to send "restart_subscriptions" command
 ///     same for unsubscribing (hg cloud leave)
+///
 /// The serve function starts the service
 
 pub struct WorkspaceSubscriberService {

@@ -63,6 +63,7 @@ pub struct RepoPathBuf(String);
 ///    * ``, empty, implies that paths can't start with, end or contain consecutive `SEPARATOR`s
 ///    * `.`, dot/period, unix current directory
 ///    * `..`, double dot, unix parent directory
+///      
 /// TODO: There is more validation that could be done here. Windows has a broad list of illegal
 /// characters and reseved words.
 ///

@@ -397,7 +397,6 @@ where
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
-    use std::mem::transmute;
 
     use quickcheck::quickcheck;
 
@@ -539,7 +538,7 @@ mod tests {
         fn test_compare_with_stdset_sparse(std_set: HashSet<u64>) -> bool {
             let std_set: HashSet<[u8; 10]> = std_set.iter().map(|&x|  {
                 let mut buf = [0u8; 10];
-                let slice: [u8; 8] = unsafe { transmute(x) };
+                let slice: [u8; 8] = x.to_ne_bytes();
                 buf[0..8].copy_from_slice(&slice);
                 buf
             }).collect();
@@ -549,7 +548,7 @@ mod tests {
         fn test_compare_with_stdset_dense(std_set: HashSet<u16>) -> bool {
             let std_set: HashSet<[u8; 10]> = std_set.iter().map(|&x|  {
                 let mut buf = [0u8; 10];
-                let slice: [u8; 2] = unsafe { transmute(x) };
+                let slice: [u8; 2] = x.to_ne_bytes();
                 buf[0..2].copy_from_slice(&slice);
                 buf
             }).collect();

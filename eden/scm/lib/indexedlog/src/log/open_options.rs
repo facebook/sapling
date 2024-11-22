@@ -348,6 +348,7 @@ impl OpenOptions {
     /// - Data are kind of "snapshotted and frozen" at open time. Mutating
     ///   files do not affect the view of instantiated [`Log`]s.
     /// - Writes are buffered until [`Log::sync`] is called.
+    ///
     /// This maps to traditional "database transaction" concepts: a [`Log`] is
     /// always bounded to a transaction. [`Log::sync`] is like committing the
     /// transaction. Dropping the [`Log`] instance is like abandoning a

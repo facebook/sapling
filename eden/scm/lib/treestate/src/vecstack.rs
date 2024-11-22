@@ -114,7 +114,7 @@ impl<'outer, T: ?Sized> VecStack<'outer, T> {
             "cannot push if vec is changed"
         );
         let vec: &'inner mut Vec<&'inner T> =
-            unsafe { &mut *(self.inner as *mut Vec<&'outer T>).cast::<std::vec::Vec<&T>>() };
+            unsafe { &mut *self.inner.cast::<std::vec::Vec<&T>>() };
         let postdrop_len = vec.len();
         vec.push(elem);
         let prepush_len = vec.len();

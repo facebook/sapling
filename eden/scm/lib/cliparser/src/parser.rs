@@ -823,18 +823,18 @@ mod tests {
         let flags = flags();
         let parser = ParseOptions::new().flags(flags).into_parser();
 
-        assert!(parser.short_map.get(&'v').is_some());
-        assert!(parser.short_map.get(&'h').is_some());
-        assert!(parser.short_map.get(&'c').is_some());
-        assert!(parser.short_map.get(&'q').is_some());
+        assert!(parser.short_map.contains_key(&'v'));
+        assert!(parser.short_map.contains_key(&'h'));
+        assert!(parser.short_map.contains_key(&'c'));
+        assert!(parser.short_map.contains_key(&'q'));
 
-        assert!(parser.long_map.get("verbose").is_some());
-        assert!(parser.long_map.get("help").is_some());
-        assert!(parser.long_map.get("config").is_some());
-        assert!(parser.long_map.get("quiet").is_some());
+        assert!(parser.long_map.contains_key("verbose"));
+        assert!(parser.long_map.contains_key("help"));
+        assert!(parser.long_map.contains_key("config"));
+        assert!(parser.long_map.contains_key("quiet"));
 
-        assert!(parser.short_map.get(&'t').is_none());
-        assert!(parser.long_map.get("random").is_none());
+        assert!(!parser.short_map.contains_key(&'t'));
+        assert!(!parser.long_map.contains_key("random"));
     }
 
     #[test]
@@ -1020,9 +1020,9 @@ mod tests {
 
         let config_path: Vec<String> = result.pick("config");
 
-        assert!(result.opts.get("quiet").is_some());
-        assert!(result.opts.get("help").is_some());
-        assert!(result.opts.get("verbose").is_some());
+        assert!(result.opts.contains_key("quiet"));
+        assert!(result.opts.contains_key("help"));
+        assert!(result.opts.contains_key("verbose"));
 
         assert_eq!(config_path[0], "PATH/TO/FILE".to_string());
     }

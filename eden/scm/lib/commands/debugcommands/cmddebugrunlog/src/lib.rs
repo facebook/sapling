@@ -59,7 +59,7 @@ pub fn run(ctx: ReqCtx<DebugRunlogOpts>, repo: &Repo) -> Result<u8> {
             }
             Format::Json => {
                 serde_json::to_writer(&mut stdout, &entry)?;
-                stdout.write_all(&[b'\n'])?;
+                stdout.write_all(b"\n")?;
             }
         }
     }

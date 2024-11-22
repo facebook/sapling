@@ -381,6 +381,10 @@ impl TreeState {
         self.tree.file_count() as usize
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.tree.file_count() == 0
+    }
+
     pub fn set_metadata_bytes<T: AsRef<[u8]>>(&mut self, metadata: T) {
         self.root
             .set_metadata(Vec::from(metadata.as_ref()).into_boxed_slice());

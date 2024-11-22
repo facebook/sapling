@@ -56,6 +56,7 @@ pub fn get_global_fsync() -> bool {
 /// - The kernel might read ahead.
 /// - We don't de-duplicate reads of a same region.
 /// - We don't count (frequent, small) index read for performance reasons.
+///
 /// The `madvise(..., MADV_DONTNEED)` might not take immediate effect.
 /// See its manual page for details.
 ///

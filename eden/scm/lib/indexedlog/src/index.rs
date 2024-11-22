@@ -1116,7 +1116,7 @@ impl MemRadix {
         // Prepare data to write
         let mut flag = 0;
         let mut bitmap = 0;
-        let u32_max = ::std::u32::MAX as u64;
+        let u32_max = u32::MAX as u64;
 
         let link_offset = if !self.link_offset.is_null() {
             flag |= RADIX_FLAG_HAVE_LINK;
@@ -1231,8 +1231,8 @@ impl MemLeaf {
         writer: &mut Vec<u8>,
         buf: &[u8],
         buf_offset: u64,
-        dirty_ext_keys: &mut Vec<MemExtKey>,
-        dirty_links: &mut Vec<MemLink>,
+        dirty_ext_keys: &mut [MemExtKey],
+        dirty_links: &mut [MemLink],
         offset_map: &mut OffsetMap,
     ) -> crate::Result<bool> {
         debug_assert!(!self.is_unused());
@@ -2163,7 +2163,6 @@ impl OpenOptions {
             } else {
                 fs::OpenOptions::new()
                     .read(true)
-                    .write(true)
                     .create(true)
                     .append(true)
                     .open(path)
@@ -4580,7 +4579,7 @@ Disk[410]: Root { radix: Disk[402] }
     /// Extract keys from the [`RangeIter`]. Verify different iteration
     /// directions, and returned link offsets. A `key` has link offset `i`
     /// if that key matches `keys[i]`.
-    fn iter_to_keys(index: &Index, keys: &Vec<&[u8]>, iter: &RangeIter) -> Vec<Vec<u8>> {
+    fn iter_to_keys(index: &Index, keys: &[&[u8]], iter: &RangeIter) -> Vec<Vec<u8>> {
         let it_forward = iter.clone_with_index(index);
         let it_backward = iter.clone_with_index(index);
         let mut it_both_ends = iter.clone_with_index(index);
@@ -4723,11 +4722,11 @@ Disk[410]: Root { radix: Disk[402] }
         index.clear_dirty();
         assert!(index.get(&"foo").unwrap().is_null());
 
-        index.set_meta(&vec![42]);
+        index.set_meta(vec![42]);
         index.insert(&"foo", 1).unwrap();
         index.flush().unwrap();
 
-        index.set_meta(&vec![43]);
+        index.set_meta(vec![43]);
         index.insert(&"bar", 2).unwrap();
 
         assert_eq!(index.get_original_meta(), [42]);

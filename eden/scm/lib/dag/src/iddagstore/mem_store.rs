@@ -353,18 +353,18 @@ impl MemStore {
     }
 
     fn get_segment(&self, store_id: &StoreId) -> Segment {
-        match store_id {
-            &StoreId::Master(offset) => self.segments[0][offset].clone(),
-            &StoreId::NonMaster(offset) => self.segments[1][offset].clone(),
-            &StoreId::Virtual(offset) => self.segments[2][offset].clone(),
+        match *store_id {
+            StoreId::Master(offset) => self.segments[0][offset].clone(),
+            StoreId::NonMaster(offset) => self.segments[1][offset].clone(),
+            StoreId::Virtual(offset) => self.segments[2][offset].clone(),
         }
     }
 
     fn set_segment(&mut self, store_id: &StoreId, segment: Segment) {
-        match store_id {
-            &StoreId::Master(offset) => self.segments[0][offset] = segment,
-            &StoreId::NonMaster(offset) => self.segments[1][offset] = segment,
-            &StoreId::Virtual(offset) => self.segments[2][offset] = segment,
+        match *store_id {
+            StoreId::Master(offset) => self.segments[0][offset] = segment,
+            StoreId::NonMaster(offset) => self.segments[1][offset] = segment,
+            StoreId::Virtual(offset) => self.segments[2][offset] = segment,
         }
     }
 }

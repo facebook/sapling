@@ -54,13 +54,11 @@ pub struct BlackboxOptions {
 ///
 /// It adds two fields: `timestamp` and `session_id`.
 #[derive(Debug)]
+#[non_exhaustive]
 pub struct Entry {
     pub timestamp: u64,
     pub session_id: u64,
     pub data: Event,
-
-    // Prevent constructing `Entry` directly.
-    phantom: (),
 }
 
 /// Convert to JSON Value for pattern matching.
@@ -485,7 +483,6 @@ impl Entry {
                     timestamp,
                     session_id,
                     data,
-                    phantom: (),
                 };
                 return Some(entry);
             }
@@ -510,7 +507,7 @@ impl Entry {
 
 fn u64_to_slice(value: u64) -> [u8; 8] {
     // The field can be used for index range query. So it has to be BE.
-    unsafe { std::mem::transmute(value.to_be()) }
+    value.to_be_bytes()
 }
 
 fn u64_to_boxed_slice(value: u64) -> Box<[u8]> {

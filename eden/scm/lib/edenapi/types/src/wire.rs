@@ -18,21 +18,21 @@
 //! and requirements for all types defined inside this module:
 //!
 //! 1. Every field should be renamed to a unique natural number using
-//! `#[serde(rename = "0")]`. New fields should never re-use a field identifier
-//! that has been used before. If a field changes semantically, it should be
-//! considered a new field, and be given a new identifier.
+//!    `#[serde(rename = "0")]`. New fields should never re-use a field identifier
+//!    that has been used before. If a field changes semantically, it should be
+//!    considered a new field, and be given a new identifier.
 //!
 //! 2. Every enum should have an "Unknown" variant as the last variant in the
-//! enum. This variant should be annotated with `#[serde(other, rename = "0")]`
+//!    enum. This variant should be annotated with `#[serde(other, rename = "0")]`
 //!
 //! 3. When practical, fields should be annotated with
-//! `#[serde(default, skip_serializing_if = "is_default")` to save space on the
-//! wire. Do not use `#[serde(default)]` on the container.
+//!    `#[serde(default, skip_serializing_if = "is_default")` to save space on the
+//!    wire. Do not use `#[serde(default)]` on the container.
 //!
 //! 4. All fields should be wrapped in `Option` or in a container that may be
-//! empty, such as `Vec`. If an empty container has special semantics (other
-//! than ignoring the field), please wrap that field in an `Option` as well to
-//! distinguish between "empty" and "not present".
+//!    empty, such as `Vec`. If an empty container has special semantics (other
+//!    than ignoring the field), please wrap that field in an `Option` as well to
+//!    distinguish between "empty" and "not present".
 //!
 //! Things to update when making a change to a wire type:
 //!
@@ -43,7 +43,7 @@
 //! 5. The `Arbitrary` implementations for the modified types.
 //! 6. If a new type is introduced, add a quickcheck serialize round trip test.
 //! 7. If the type has a corresponding API type, add a quickcheck wire-API round
-//! trip test.
+//!    trip test.
 
 #[macro_use]
 pub mod hash;

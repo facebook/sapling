@@ -36,7 +36,7 @@ impl KeyStore for GitStore {
                         return Ok(None);
                     }
                 }
-                Err(e.into())
+                Err(e)
             }
         }
     }

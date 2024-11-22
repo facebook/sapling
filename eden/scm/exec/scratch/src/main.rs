@@ -63,6 +63,7 @@ enum ScratchStyle {
 /// * The file ~/.scratch.toml
 /// * The file identified by the $SCRATCH_CONFIG_PATH environmental
 ///   variable.
+///
 /// Example configuration file might look like:
 ///
 /// ```

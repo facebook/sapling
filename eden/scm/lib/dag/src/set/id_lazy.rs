@@ -218,7 +218,7 @@ impl IdLazySet {
 
     fn load_all(&self) -> Result<MutexGuard<Inner>> {
         let mut inner = self.inner.lock().unwrap();
-        inner.load_more(usize::max_value(), None)?;
+        inner.load_more(usize::MAX, None)?;
         Ok(inner)
     }
 }
@@ -382,7 +382,7 @@ pub(crate) mod test_utils {
     impl IdConvert for StrIdMap {
         async fn vertex_id(&self, name: Vertex) -> Result<Id> {
             let slice: [u8; 8] = name.as_ref().try_into().unwrap();
-            let id = u64::from_le(unsafe { std::mem::transmute(slice) });
+            let id = u64::from_le(unsafe { std::mem::transmute::<[u8; 8], u64>(slice) });
             Ok(Id(id))
         }
         async fn vertex_id_with_max_group(
@@ -398,7 +398,7 @@ pub(crate) mod test_utils {
             }
         }
         async fn vertex_name(&self, id: Id) -> Result<Vertex> {
-            let buf: [u8; 8] = unsafe { std::mem::transmute(id.0.to_le()) };
+            let buf: [u8; 8] = id.0.to_le().to_ne_bytes();
             Ok(Vertex::copy_from(&buf))
         }
         async fn contains_vertex_name(&self, name: &Vertex) -> Result<bool> {

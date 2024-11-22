@@ -198,10 +198,7 @@ impl ::io::IsTty for ClosedIO {
 }
 
 /// Wrap a Rust Write trait object into a Python object.
-pub(crate) fn wrap_rust_write(
-    py: Python,
-    w: impl ::io::Write + Send + 'static,
-) -> PyResult<PyRustIO> {
+pub(crate) fn wrap_rust_write(py: Python, w: impl ::io::Write + 'static) -> PyResult<PyRustIO> {
     PyRustIO::create_instance(
         py,
         RefCell::new(None),
@@ -211,10 +208,7 @@ pub(crate) fn wrap_rust_write(
 }
 
 /// Wrap a Rust Read trait object into a Python object.
-pub(crate) fn wrap_rust_read(
-    py: Python,
-    r: impl ::io::Read + Send + 'static,
-) -> PyResult<PyRustIO> {
+pub(crate) fn wrap_rust_read(py: Python, r: impl ::io::Read + 'static) -> PyResult<PyRustIO> {
     PyRustIO::create_instance(
         py,
         RefCell::new(Some(io::BufReader::new(Box::new(r)))),

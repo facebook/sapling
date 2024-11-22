@@ -88,7 +88,7 @@ impl Hooks {
                 cmd.env("HG_HOOKNAME", h.name.as_ref());
                 cmd.env(
                     "SAPLING_CLIENT_ENTRY_POINT",
-                    &format!("{}", client_info.entry_point),
+                    format!("{}", client_info.entry_point),
                 );
                 cmd.env("SAPLING_CLIENT_CORRELATOR", &client_info.correlator);
 
