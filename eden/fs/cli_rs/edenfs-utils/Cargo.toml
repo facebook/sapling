@@ -18,10 +18,10 @@ tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 lazy_static = "1.4"
 
 [target.'cfg(target_os = "linux")'.dependencies]
-nix = "0.25"
+nix = "0.26.4"
 
 [target.'cfg(target_os = "macos")'.dependencies]
-nix = "0.25"
+nix = "0.26.4"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winapi = { version = "0.3", features = ["everything", "std"] }
