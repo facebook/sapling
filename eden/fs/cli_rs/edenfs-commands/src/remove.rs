@@ -472,6 +472,7 @@ impl Messenger {
         self.logger.warn(msg.yellow().to_string());
     }
 
+    #[allow(dead_code)]
     fn error(&self, msg: String) {
         self.logger.warn(msg.red().to_string());
     }
