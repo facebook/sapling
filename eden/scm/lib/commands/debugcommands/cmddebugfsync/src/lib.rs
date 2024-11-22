@@ -25,6 +25,7 @@ pub fn run(_ctx: ReqCtx<NoOpts>, repo: &Repo) -> Result<u8> {
         "metalog/**/*",
         "allheads/**/*",
         "lfs/**/*",
+        "manifests/**/*",
     ];
     fsyncglob::fsync_glob(store_path, &patterns, None);
 
@@ -36,7 +37,7 @@ pub fn run(_ctx: ReqCtx<NoOpts>, repo: &Repo) -> Result<u8> {
         .config()
         .get_opt::<String>("remotefilelog", "cachepath")
     {
-        let patterns = ["*/indexedlog*/*", "*/lfs/*"];
+        let patterns = ["*/indexedlog*/*", "*/lfs/*", "*/manifests/**/*"];
         fsyncglob::fsync_glob(Path::new(&cache_path), &patterns, None);
     }
 
