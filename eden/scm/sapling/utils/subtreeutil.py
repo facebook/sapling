@@ -406,6 +406,20 @@ def contains_shallow_copy(repo, node):
     return False
 
 
+def extra_contains_shallow_copy(extra) -> bool:
+    """Check if the given commitctx extra contains any shallow copy metadata.
+
+    N.B. This function does not apply to "v0" subtree metadata because "v0" does
+    not have shallow copy type. It is used for newly incoming commits.
+    """
+    shallow_copy_key = BranchType.SHALLOW_COPY.to_key()
+    if metadata_list := _get_subtree_metadata(extra, SUBTREE_KEY):
+        for metadata in metadata_list:
+            if shallow_copy_key in metadata:
+                return True
+    return False
+
+
 def check_commit_splitability(repo, node):
     """Check if the given commit can be split into multiple commits.
 

@@ -75,6 +75,7 @@ from . import (
 from .i18n import _, _n
 from .node import bin, hex, nullhex, nullid
 from .pycompat import range
+from .utils import subtreeutil
 
 release = lockmod.release
 urlerr = util.urlerr
@@ -2825,6 +2826,12 @@ class localrepository:
             extra = ctx.extra().copy()
             if isgit:
                 git.update_extra_with_git_committer(self.ui, ctx, extra)
+
+            if subtreeutil.extra_contains_shallow_copy(extra):
+                # the file list can be large for a shallow copy, so don't
+                # put it in the files of commit text
+                files = []
+
             n = self.changelog.add(
                 mn,
                 files,
