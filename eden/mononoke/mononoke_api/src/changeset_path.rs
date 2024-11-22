@@ -28,7 +28,9 @@ use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use futures_ext::stream::FbStreamExt;
 use futures_lazy_shared::LazyShared;
+use futures_watchdog::WatchdogExt;
 use history_traversal::list_file_history;
 use history_traversal::CsAndPath;
 use history_traversal::FastlogError;
@@ -543,7 +545,7 @@ impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
     /// a history of the path.
     pub async fn history(
         &self,
-        _ctx: &CoreContext,
+        ctx: &CoreContext,
         opts: ChangesetPathHistoryOptions,
     ) -> Result<BoxStream<'_, Result<ChangesetContext<R>, MononokeError>>, MononokeError> {
         let repo = self.repo_ctx().repo().clone();
@@ -556,6 +558,7 @@ impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
                     descendants_of,
                     self.changeset().id(),
                 )
+                .watched(ctx.logger())
                 .await?
             {
                 return Ok(stream::empty().boxed());
@@ -583,14 +586,19 @@ impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
                         let info = if cs_info_enabled {
                             repo.repo_derived_data()
                                 .derive::<ChangesetInfo>(ctx, cs_id)
+                                .watched(ctx.logger())
                                 .await
                         } else {
-                            let bonsai = cs_id.load(ctx, repo.repo_blobstore()).await?;
+                            let bonsai = cs_id
+                                .load(ctx, repo.repo_blobstore())
+                                .watched(ctx.logger())
+                                .await?;
                             Ok(ChangesetInfo::new(cs_id, bonsai))
                         }?;
                         let timestamp = info.author_date().as_chrono().timestamp();
                         Ok::<_, Error>((timestamp >= until_ts).then_some((cs_id, path)))
                     }))
+                    .watched(ctx.logger())
                     .await?
                     .into_iter()
                     .filter_map(std::convert::identity)
@@ -602,6 +610,7 @@ impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
                         if repo
                             .commit_graph()
                             .is_ancestor(ctx, descendants_of, cs_id)
+                            .watched(ctx.logger())
                             .await?
                         {
                             anyhow::Ok(Some((cs_id, path)))
@@ -609,6 +618,7 @@ impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
                             anyhow::Ok(None)
                         }
                     }))
+                    .watched(ctx.logger())
                     .await?
                     .into_iter()
                     .filter_map(std::convert::identity)
@@ -621,6 +631,7 @@ impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
                         if repo
                             .commit_graph()
                             .is_ancestor(ctx, cs_id, exclude_changeset_and_ancestors)
+                            .watched(ctx.logger())
                             .await?
                         {
                             Ok::<_, MononokeError>(None)
@@ -628,6 +639,7 @@ impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
                             Ok::<_, MononokeError>(Some((cs_id, path)))
                         }
                     }))
+                    .watched(ctx.logger())
                     .await?
                     .into_iter()
                     .filter_map(std::convert::identity)
@@ -651,7 +663,10 @@ impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
                 {
                     Ok(res)
                 } else {
-                    Ok(self._visit(ctx, repo, descendant_cs_id, cs_ids).await?)
+                    Ok(self
+                        ._visit(ctx, repo, descendant_cs_id, cs_ids)
+                        .watched(ctx.logger())
+                        .await?)
                 }
             }
 
@@ -661,19 +676,18 @@ impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
                 repo: &impl history_traversal::Repo,
                 descendant_id_cs_ids: Vec<(Option<CsAndPath>, Vec<CsAndPath>)>,
             ) -> Result<(), Error> {
-                try_join_all(
-                    descendant_id_cs_ids
-                        .into_iter()
-                        .map(|(descendant_cs_id, cs_ids)| {
-                            self._visit(ctx, repo, descendant_cs_id.clone(), cs_ids.clone())
-                                .map_ok(move |res| ((descendant_cs_id, cs_ids), res))
-                        }),
-                )
-                .await?
-                .into_iter()
-                .for_each(|(k, v)| {
+                let items = stream::iter(descendant_id_cs_ids.into_iter())
+                    .map(|(descendant_cs_id, cs_ids)| {
+                        self._visit(ctx, repo, descendant_cs_id.clone(), cs_ids.clone())
+                            .map_ok(move |res| ((descendant_cs_id, cs_ids), res))
+                    })
+                    .buffered(10)
+                    .yield_periodically()
+                    .try_collect::<Vec<_>>()
+                    .await?;
+                for (k, v) in items {
                     self.cache.insert(k, v);
-                });
+                }
                 Ok(())
             }
         }
@@ -709,6 +723,7 @@ impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
                 repo.commit_graph_arc(),
             ),
         )
+        .watched(ctx.logger())
         .await
         .map_err(|error| match error {
             FastlogError::InternalError(e) => MononokeError::from(anyhow!(e)),

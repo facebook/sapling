@@ -44,6 +44,7 @@ rust_library(
         "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/facet:facet",
+        "//common/rust/shed/futures_ext:futures_ext",
         "//common/rust/shed/futures_lazy_shared:futures_lazy_shared",
         "//common/rust/shed/futures_stats:futures_stats",
         "//common/rust/shed/justknobs_stub:justknobs",
