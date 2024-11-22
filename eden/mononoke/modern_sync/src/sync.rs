@@ -27,10 +27,8 @@ use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
 use mutable_counters::MutableCountersRef;
-use repo_blobstore::RepoBlobstore;
-use repo_blobstore::RepoBlobstoreArc;
-use repo_derived_data::RepoDerivedData;
-use repo_derived_data::RepoDerivedDataArc;
+use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use slog::info;
 use slog::Logger;
@@ -101,10 +99,6 @@ pub async fn sync(
         Arc::new(EdenapiSender::new(Url::parse(&config.url)?, repo_name)?)
     };
 
-    let commit_graph = repo.commit_graph_arc();
-    let derived_data = repo.repo_derived_data_arc();
-    let repo_blobstore = repo.repo_blobstore_arc();
-
     bul_util::read_bookmark_update_log(
         ctx,
         BookmarkUpdateLogId(start_id),
@@ -112,7 +106,7 @@ pub async fn sync(
         repo.bookmark_update_log_arc(),
     )
     .then(|entries| {
-        cloned!(commit_graph, derived_data, repo_blobstore, logger, sender);
+        cloned!(repo, logger, sender);
         borrowed!(ctx);
         async move {
             match entries {
@@ -124,21 +118,13 @@ pub async fn sync(
                     Err(e)
                 }
                 Ok(entries) => {
-                    bul_util::get_commit_stream(entries, commit_graph, ctx)
+                    bul_util::get_commit_stream(entries, repo.commit_graph_arc(), ctx)
                         .await
                         .fuse()
                         .try_next_step(move |cs_id| {
-                            cloned!(ctx, derived_data, repo_blobstore, logger, sender);
+                            cloned!(ctx, repo, logger, sender);
                             async move {
-                                process_one_changeset(
-                                    &cs_id,
-                                    &ctx,
-                                    derived_data,
-                                    repo_blobstore,
-                                    &logger,
-                                    sender,
-                                )
-                                .await
+                                process_one_changeset(&cs_id, &ctx, repo, &logger, sender).await
                             }
                         })
                         .try_collect::<()>()
@@ -157,17 +143,17 @@ pub async fn sync(
 async fn process_one_changeset(
     cs_id: &ChangesetId,
     ctx: &CoreContext,
-    derived_data: Arc<RepoDerivedData>,
-    blobstore: Arc<RepoBlobstore>,
+    repo: Repo,
     logger: &Logger,
     sender: Arc<dyn ModernSyncSender + Send + Sync>,
 ) -> Result<()> {
     info!(logger, "Found commit {:?}", cs_id);
-    let cs_info = derived_data
+    let cs_info = repo
+        .repo_derived_data()
         .derive::<ChangesetInfo>(ctx, cs_id.clone())
         .await?;
     info!(logger, "Commit info {:?}", cs_info);
-    let bs = cs_id.load(ctx, &blobstore).await?;
+    let bs = cs_id.load(ctx, repo.repo_blobstore()).await?;
     let thing: Vec<_> = bs.file_changes().collect();
 
     for (_path, file_change) in thing {
@@ -179,7 +165,7 @@ async fn process_one_changeset(
         };
 
         if let Some(bs) = bs {
-            let blob = bs.load(ctx, &blobstore).await?;
+            let blob = bs.load(ctx, &repo.repo_blobstore()).await?;
             sender.upload_content(bs, blob);
         }
     }
