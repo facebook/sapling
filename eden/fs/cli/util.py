@@ -36,6 +36,8 @@ if TYPE_CHECKING:
 
 if sys.platform != "win32":
     import pwd
+else:
+    import winreg
 
 
 class RepoError(Exception):
@@ -895,3 +897,31 @@ def get_enable_sqlite_overlay(overlay_type: Optional[str]) -> bool:
         return sys.platform == "win32"
 
     return overlay_type == "sqlite"
+
+
+if sys.platform == "win32":
+
+    def get_windows_build():
+        try:
+            with winreg.OpenKey(
+                winreg.HKEY_LOCAL_MACHINE,
+                r"SOFTWARE\Microsoft\Windows NT\CurrentVersion",
+            ) as key:
+                ubr, _ = winreg.QueryValueEx(key, "UBR")
+                build, _ = winreg.QueryValueEx(key, "CurrentBuild")
+                return (int(build), int(ubr))
+        except FileNotFoundError:
+            return None
+
+
+def can_enable_windows_symlinks() -> bool:
+    if sys.platform != "win32":
+        return False
+    else:
+        build = get_windows_build()
+        # There is an issue with symlinks on Windows 10 on builds older than
+        # 19045.4957 (a.k.a., KB5043131). Here 19045 corresponds to the Build
+        # number and 4957 corresponds to the Update Build Revision. Windows 10
+        # 22H2 is 19045 and Windows 11 starts at 22000. Also, see:
+        # https://en.wikipedia.org/wiki/List_of_Microsoft_Windows_versions
+        return build and build >= (19045, 4957)

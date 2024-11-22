@@ -93,7 +93,12 @@ if sys.platform == "win32":
 from .prompt import prompt_confirmation
 from .stats_print import format_size
 from .subcmd import Subcmd
-from .util import get_environment_suitable_for_subprocess, print_stderr, ShutdownError
+from .util import (
+    can_enable_windows_symlinks,
+    get_environment_suitable_for_subprocess,
+    print_stderr,
+    ShutdownError,
+)
 
 try:
     from .facebook.util import (
@@ -953,6 +958,10 @@ is case-sensitive. This is not recommended and is intended only for testing."""
 
         # Find the repository information
         try:
+            enable_windows_symlinks = (
+                args.enable_windows_symlinks
+                or instance.get_config_bool("experimental.windows-symlinks", False)
+            ) and can_enable_windows_symlinks()
             repo, repo_config = config_mod.get_repo_info(
                 instance,
                 args.repo,
@@ -962,8 +971,7 @@ is case-sensitive. This is not recommended and is intended only for testing."""
                 args.overlay_type,
                 args.backing_store,
                 args.re_use_case,
-                args.enable_windows_symlinks
-                or instance.get_config_bool("experimental.windows-symlinks", False),
+                enable_windows_symlinks,
             )
         except util.RepoError as ex:
             print_stderr("error: {}", ex)
