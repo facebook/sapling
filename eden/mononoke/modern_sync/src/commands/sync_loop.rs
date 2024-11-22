@@ -29,6 +29,12 @@ const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
 pub struct CommandArgs {
     #[clap(long = "start-id", help = "Start id for the sync [default: 0]")]
     start_id: Option<u64>,
+    #[clap(
+        long,
+        default_value_t = true,
+        help = "Print sent items without actually syncing"
+    )]
+    dry_run: bool,
 }
 
 pub struct ModernSyncProcess {
@@ -67,6 +73,7 @@ impl RepoShardedProcessExecutor for ModernSyncProcessExecutor {
             self.sync_args.start_id,
             self.repo_arg.clone(),
             ExecutionType::Tail,
+            self.sync_args.dry_run,
         )
         .await?;
         Ok(())
@@ -102,6 +109,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             process.sync_args.start_id.clone(),
             app_args.repo.as_repo_arg().clone(),
             ExecutionType::Tail,
+            process.sync_args.dry_run.clone(),
         )
         .await?;
     }

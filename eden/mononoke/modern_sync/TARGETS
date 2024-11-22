@@ -13,6 +13,7 @@ rust_binary(
         "fbsource//third-party/rust:clap",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:url",
         "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/facet:facet",
@@ -25,6 +26,7 @@ rust_binary(
         "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
         "//eden/mononoke/common/assembly_line:assembly_line",
         "//eden/mononoke/derived_data:changeset_info",
+        "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/mutable_counters:mutable_counters",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
@@ -32,5 +34,6 @@ rust_binary(
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/server/context:context",
         "//eden/scm/lib/clientinfo:clientinfo",
+        "//eden/scm/lib/edenapi:edenapi",
     ],
 )

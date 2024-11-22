@@ -13,6 +13,7 @@ use clap::Parser;
 use commit_graph::CommitGraph;
 use executor_lib::args::ShardedExecutorArgs;
 use fbinit::FacebookInit;
+use metaconfig_types::RepoConfig;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::args::RepoFilterAppExtension;
 use mononoke_app::fb303::AliveService;
@@ -25,6 +26,7 @@ use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 
 mod bul_util;
+
 mod commands;
 mod sender;
 mod sync;
@@ -53,6 +55,8 @@ pub struct Repo {
     repo_derived_data: RepoDerivedData,
     #[facet]
     repo_blobstore: RepoBlobstore,
+    #[facet]
+    pub repo_config: RepoConfig,
 }
 
 #[fbinit::main]

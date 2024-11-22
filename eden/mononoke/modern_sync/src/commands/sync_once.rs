@@ -21,6 +21,12 @@ use crate::ModernSyncArgs;
 pub struct CommandArgs {
     #[clap(long = "start-id", help = "Start id for the sync [default: 0]")]
     start_id: Option<u64>,
+    #[clap(
+        long,
+        default_value_t = true,
+        help = "Print sent items without actually syncing"
+    )]
+    dry_run: bool,
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -32,6 +38,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         args.start_id.clone(),
         app_args.repo.as_repo_arg().clone(),
         ExecutionType::SyncOnce,
+        args.dry_run,
     )
     .await?;
 

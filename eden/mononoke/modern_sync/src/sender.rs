@@ -8,6 +8,7 @@
 use mononoke_types::ContentId;
 use mononoke_types::FileContents;
 pub mod dummy;
+pub mod edenapi;
 
 pub trait ModernSyncSender {
     fn upload_content(&self, content_id: ContentId, _blob: FileContents);
