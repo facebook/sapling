@@ -273,4 +273,52 @@ mod tests {
         assert!(pattern.is_match("www/html/foo"));
         assert!(!pattern.is_match("www/html/xplat-react"));
     }
+
+    #[mononoke::test]
+    fn test_fbsource_xplat_react_deny_pattern() {
+        // IMPORTANT: make sure to keep the regex the same as fbsource_deny_patterns in https://fburl.com/code/zkbmc661
+        // Goal: Match everything in www/html/xplat-react, UNLESS
+        // - exact filename: package.json
+        // - filename suffix: relay_schema_metadata.json
+        // - exact file extensions (.js, .keep, .flow, etc)
+        let pattern: LuaPattern = r"re:^www/html/xplat-react.*[.](?!js$|keep$|flow$|md$|res$|snap$|patch$|unpatched$|proto$|graphql$|json$)[^.]+$"
+            .try_into()
+            .expect("Could not map pattern to regex");
+
+        // ALLOWED file extensions
+        assert!(!pattern.is_match("www/html/xplat-react/foo.flow"));
+        assert!(!pattern.is_match("www/html/xplat-react/foo.js"));
+        assert!(!pattern.is_match("www/html/xplat-react/foo.graphql"));
+        assert!(!pattern.is_match("www/html/xplat-react/foo.keep"));
+        assert!(!pattern.is_match("www/html/xplat-react/foo.md"));
+        assert!(!pattern.is_match("www/html/xplat-react/foo.res"));
+        assert!(!pattern.is_match("www/html/xplat-react/foo.snap"));
+        assert!(!pattern.is_match("www/html/xplat-react/foo.patch"));
+        assert!(!pattern.is_match("www/html/xplat-react/foo.proto"));
+        assert!(!pattern.is_match("www/html/xplat-react/foo.unpatched"));
+        assert!(!pattern.is_match("www/html/xplat-react/foo/bar/Baz.js"));
+        assert!(!pattern.is_match("www/html/xplat-react/__generated__/CometJSRouteMapMeerkatStep/single_source/FXAccountsCenter/FXAccountsCenterRouteMapResolvers.js"));
+
+        // ALLOWED file names
+        assert!(!pattern.is_match("www/html/xplat-react/package.json"));
+        assert!(!pattern.is_match("www/html/xplat-react/foo/package.json"));
+        assert!(!pattern.is_match("www/html/xplat-react/relay_schema_metadata.json"));
+        assert!(!pattern.is_match("www/html/xplat-react/atomic_relay_schema_metadata.json"));
+
+        // Should be ALLOWED: Outside of xplat-react
+        // assert!(!pattern.is_match("www/html/xplat-react1/foo.bar"));
+
+        // DENIED
+        assert!(pattern.is_match("www/html/xplat-react/image.baz"));
+        assert!(pattern.is_match("www/html/xplat-react/foo/bar/image.png"));
+        assert!(pattern.is_match("www/html/xplat-react/foo.js.foo"));
+        assert!(pattern.is_match("www/html/xplat-react/foo.foojs"));
+        assert!(pattern.is_match("www/html/xplat-react/bar/baz.js1"));
+        assert!(pattern.is_match("www/html/xplat-react/foo/package.json1"));
+
+        // Should be DENIED
+        // assert!(pattern.is_match("www/html/xplat-react/bar/bazpackage.json"));
+        // assert!(pattern.is_match("www/html/xplat-react/foo/metadata.json"));
+        // assert!(pattern.is_match("www/html/xplat-react/ajs"));
+    }
 }
