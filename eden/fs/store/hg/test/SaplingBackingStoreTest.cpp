@@ -370,6 +370,43 @@ TEST_F(SaplingBackingStoreNoFaultInjectorTest, cachingPolicyConstruction) {
       BackingStore::LocalStoreCachingPolicy::Anything);
 }
 
+// Duplicate requests with same nodeID in one request batch will crash Eden with
+// `folly::PromiseAlreadySatisfied` exception. It caused S463588 in the past.
+// More info on the investication doc
+// https://docs.google.com/document/d/1TvDxEN53oxLbItNWQyqmst3ry5xvcCO5aeCtGjyt4Es
+// This test is to make sure we don't have duplicate requests in one batch.
+TEST_F(
+    SaplingBackingStoreNoFaultInjectorTest,
+    sameRequestsDifferentFetchCause) {
+  auto treeHash = HgProxyHash::makeEmbeddedProxyHash1(
+      queuedBackingStore->getManifestNode(ObjectId::fromHex(commit1.value()))
+          .value(),
+      RelativePathPiece{});
+
+  HgProxyHash proxyHash =
+      HgProxyHash::load(localStore.get(), treeHash, "getTree", *stats);
+
+  auto fsRequestContext = ObjectFetchContext::getNullFsContext();
+  auto prefetchRequestContext = ObjectFetchContext::getNullPrefetchContext();
+  auto fsRequest = SaplingImportRequest::makeTreeImportRequest(
+      treeHash, proxyHash, fsRequestContext);
+  auto prefetchRequest = SaplingImportRequest::makeTreeImportRequest(
+      treeHash, proxyHash, prefetchRequestContext);
+
+  auto executor = std::make_shared<folly::CPUThreadPoolExecutor>(1);
+  auto treeFuture = via(executor.get(), [&]() {
+    queuedBackingStore->getTreeBatch(
+        std::vector{fsRequest, prefetchRequest}, sapling::FetchMode::LocalOnly);
+  });
+
+  std::move(treeFuture).get();
+  auto tree1 = fsRequest->getPromise<TreePtr>()->getFuture().get();
+
+  ASSERT_THAT(
+      getTreeNames(tree1),
+      ::testing::ElementsAre(PathComponent{"foo"}, PathComponent{"src"}));
+}
+
 TEST_F(SaplingBackingStoreWithFaultInjectorIgnoreConfigTest, getTreeBatch) {
   // force a reload
   updateTestEdenConfig(

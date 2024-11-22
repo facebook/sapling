@@ -36,6 +36,34 @@ class NullObjectFetchContext : public ObjectFetchContext {
   std::optional<std::string_view> causeDetail_;
 };
 
+class NullFSObjectFetchContext : public ObjectFetchContext {
+ public:
+  NullFSObjectFetchContext() = default;
+
+  Cause getCause() const override {
+    return Cause::Fs;
+  }
+
+  const std::unordered_map<std::string, std::string>* FOLLY_NULLABLE
+  getRequestInfo() const override {
+    return nullptr;
+  }
+};
+
+class NullPrefetchObjectFetchContext : public ObjectFetchContext {
+ public:
+  NullPrefetchObjectFetchContext() = default;
+
+  Cause getCause() const override {
+    return Cause::Prefetch;
+  }
+
+  const std::unordered_map<std::string, std::string>* FOLLY_NULLABLE
+  getRequestInfo() const override {
+    return nullptr;
+  }
+};
+
 } // namespace
 
 namespace facebook::eden {
@@ -49,6 +77,16 @@ ObjectFetchContextPtr ObjectFetchContext::getNullContextWithCauseDetail(
     std::string_view causeDetail) {
   return ObjectFetchContextPtr::singleton(
       *new NullObjectFetchContext{causeDetail});
+}
+
+ObjectFetchContextPtr ObjectFetchContext::getNullFsContext() {
+  static auto* p = new NullFSObjectFetchContext;
+  return ObjectFetchContextPtr::singleton(*p);
+}
+
+ObjectFetchContextPtr ObjectFetchContext::getNullPrefetchContext() {
+  static auto* p = new NullPrefetchObjectFetchContext;
+  return ObjectFetchContextPtr::singleton(*p);
 }
 
 } // namespace facebook::eden

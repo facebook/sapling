@@ -185,6 +185,16 @@ class ObjectFetchContext : public RefCounted {
   static ObjectFetchContextPtr getNullContextWithCauseDetail(
       std::string_view causeDetail);
 
+  /**
+   * Return a no-op fetch context with Cause::Fs for tests.
+   */
+  static ObjectFetchContextPtr getNullFsContext();
+
+  /**
+   * Return a no-op fetch context with Cause::Prefetch for tests.
+   */
+  static ObjectFetchContextPtr getNullPrefetchContext();
+
  private:
   ObjectFetchContext(const ObjectFetchContext&) = delete;
   ObjectFetchContext& operator=(const ObjectFetchContext&) = delete;

@@ -305,6 +305,9 @@ class SaplingBackingStore final : public BackingStore {
   FRIEND_TEST(SaplingBackingStoreNoFaultInjectorTest, getGlobFilesMultiple);
   FRIEND_TEST(SaplingBackingStoreNoFaultInjectorTest, getGlobFilesNested);
   FRIEND_TEST(SaplingBackingStoreNoFaultInjectorTest, getGlobFilesNone);
+  FRIEND_TEST(
+      SaplingBackingStoreNoFaultInjectorTest,
+      sameRequestsDifferentFetchCause);
   FRIEND_TEST(SaplingBackingStoreWithFaultInjectorTest, getTreeBatch);
   FRIEND_TEST(
       SaplingBackingStoreWithFaultInjectorIgnoreConfigTest,
