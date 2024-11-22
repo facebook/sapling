@@ -616,6 +616,9 @@ class SaplingBackingStore final : public BackingStore {
       const ImportRequestsList& importRequests,
       const SaplingImportObject& requestType);
 
+  ObjectFetchContext::Cause getHighestPriorityFetchCause(
+      const ImportRequestsList& importRequestsForId) const;
+
   /**
    * Processes hg events from the trace bus by subscribing it.
    * Adds/Updates/Removes event to the outstanding hg events based on event

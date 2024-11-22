@@ -1018,29 +1018,38 @@ SaplingBackingStore::prepareRequests(
   }
 
   // Indexable vector of nodeIds - required by SaplingNativeBackingStore API.
-  // With the current implementation, we can't efficiently deduplicate the
-  // requests only based on nodeId since multiple requests for the same nodeId
-  // can have different FetchCauses, which might trigger different behaviors in
-  // the backingstore.
+  // In addition, we pass the fetchCause for each request. If we have multiple
+  // fetchCauses for the same nodeID, we will take the highest priority one.
+  //
+  // NOTE: Currently, backingstore ignores the fetchCause of the request. In the
+  // future, backingstore may use different fetchCauses to change the fetch
+  // behavior.
   std::vector<sapling::SaplingRequest> requests;
   for (const auto& importRequestsIdPair : importRequestsMap) {
-    // Deduplicate the requests for a given nodeId based on the FetchCause.
-    std::set<ObjectFetchContext::Cause> seenCausesForId;
     const ImportRequestsList& importRequestsForId =
         importRequestsIdPair.second.first;
-    for (const auto& request : importRequestsForId) {
-      if (request &&
-          (seenCausesForId.find(request->getCause()) ==
-           seenCausesForId.end())) {
-        requests.push_back(sapling::SaplingRequest{
-            importRequestsIdPair.first, request->getCause()});
-        // Mark this cause as seen
-        seenCausesForId.insert(request->getCause());
-      }
-    }
+    ObjectFetchContext::Cause fetchCause =
+        getHighestPriorityFetchCause(importRequestsForId);
+    requests.push_back(
+        sapling::SaplingRequest{importRequestsIdPair.first, fetchCause});
   }
 
   return std::make_pair(std::move(importRequestsMap), std::move(requests));
+}
+
+// The priority is defined in ObjectFetchContext::Cause
+// FS -> Thrift -> Prefetch -> Unknown
+ObjectFetchContext::Cause SaplingBackingStore::getHighestPriorityFetchCause(
+    const ImportRequestsList& importRequestsForId) const {
+  ObjectFetchContext::Cause highestPriorityCause =
+      ObjectFetchContext::Cause::Unknown;
+  for (const auto& request : importRequestsForId) {
+    if (request) {
+      highestPriorityCause =
+          std::max(highestPriorityCause, request->getCause());
+    }
+  }
+  return highestPriorityCause;
 }
 
 void SaplingBackingStore::processBlobAuxImportRequests(

@@ -26,13 +26,14 @@ pub(crate) mod ffi {
     #[namespace = "facebook::eden"]
     #[repr(u8)]
     pub enum FetchCause {
+        // Lowest Prioity - Unknown orginination
         Unknown,
-        // The request originated from FUSE/NFS/PrjFS
-        Fs,
-        // The request originated from a Thrift endpoint
-        Thrift,
         // The request originated from a Thrift prefetch endpoint
         Prefetch,
+        // The request originated from a Thrift endpoint
+        Thrift,
+        // Highest Priority - The request originated from FUSE/NFS/PrjFS
+        Fs,
     }
 
     #[namespace = "facebook::eden"]

@@ -92,15 +92,19 @@ class ObjectFetchContext : public RefCounted {
 
   /**
    * Why did EdenFS fetch these objects?
+   * The enum values are based on the priority of the request
+   * that can trigger different behavior in the backingstore.
+   * If you add a new cause, ensure the priority order is correct.
    */
   enum Cause : uint8_t {
-    Unknown,
-    /** The request originated from FUSE/NFS/PrjFS */
-    Fs,
-    /** The request originated from a Thrift endpoint */
-    Thrift,
+    /** Lowest Priority - unknown origination */
+    Unknown = 0,
     /** The request originated from a Thrift prefetch endpoint */
-    Prefetch
+    Prefetch = 1,
+    /** The request originated from a Thrift endpoint */
+    Thrift = 2,
+    /** Highest Priority - The request originated from FUSE/NFS/PrjFS */
+    Fs = 3,
   };
 
   ObjectFetchContext() = default;
