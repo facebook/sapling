@@ -30,7 +30,6 @@ from .. import (
     identity,
     localrepo,
     progress,
-    revlog,
     revsetlang,
     scmutil,
     treestate,

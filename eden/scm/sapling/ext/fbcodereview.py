@@ -56,17 +56,13 @@ from sapling import (
     util,
     visibility,
 )
-
 from sapling.autopull import pullattempt
 from sapling.i18n import _, _n, _x
-
 from sapling.namespaces import namespace
-
 from sapling.node import bin, hex, nullhex, short
 from sapling.templatekw import _hybrid
 
 from .extlib.phabricator import arcconfig, diffprops, graphql
-
 
 configtable = {}
 configitem = registrar.configitem(configtable)
@@ -260,10 +256,17 @@ def getdiffstatus(repo, *diffid):
         return []
     timeout = repo.ui.configint("ssl", "timeout", 10)
     signalstatus = repo.ui.configbool("ssl", "signal_status", True)
+    batchsize = repo.ui.configint("fbcodereview", "max-diff-count", 50)
 
     try:
         client = graphql.Client(repodir=pycompat.getcwd(), repo=repo)
-        statuses = client.getrevisioninfo(timeout, signalstatus, diffid)
+        statuses = {}
+        # Limit how many we request at once to avoid timeouts.
+        # Use itertools.batched once we are on Python 3.12.
+        for i in range(0, len(diffid), batchsize):
+            statuses.update(
+                client.getrevisioninfo(timeout, signalstatus, diffid[i : i + batchsize])
+            )
     except arcconfig.ArcConfigError as ex:
         msg = _(
             "arcconfig configuration problem. No diff information can be provided.\n"
