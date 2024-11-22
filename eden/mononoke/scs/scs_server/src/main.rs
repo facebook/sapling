@@ -121,7 +121,7 @@ struct ScsServerArgs {
     /// Some long-running requests are processed asynchronously by default. This flag disables that behavior; requests will fail.
     #[clap(long, default_value = "false")]
     disable_async_requests: bool,
-    /// Enable the futures watchdog; this will log stack traces for futures that take longer than 0.5 seconds to complete.
+    /// Unused, will go away soon
     #[clap(long, default_value = "false")]
     enable_futures_watchdog: bool,
     /// Sets the threshold for watchdog logging of top-level SCS methods. As a rule of thumb this should the same or lower than thrift_queue_timeout.
@@ -304,7 +304,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             &app.repo_configs().common,
             maybe_factory_group,
             async_requests_queue_client,
-            args.enable_futures_watchdog,
             args.watchdog_method_max_poll,
         ))?
     };
