@@ -99,7 +99,6 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         mock_find_x509_path: MagicMock,
     ) -> None:
         mock_argument_parser, args = self.setup()
-
         mock_get_running_version.return_value = latest_version
         mock_get_version_info.return_value = latest_running_version_info
         mock_is_healthy.return_value = True
@@ -108,7 +107,7 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
 
         test_health_report_cmd = HealthReportCmd(mock_argument_parser)
         result = test_health_report_cmd.run(args)
-        self.assertEqual(HealthReportCmd.error_codes, set())
+        self.assertEqual(HealthReportCmd.error_codes, {})
         self.assertEqual(result, 0)
 
     @patch("eden.fs.cli.util.HealthStatus.is_healthy")
@@ -122,7 +121,10 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         test_health_report_cmd = HealthReportCmd(mock_argument_parser)
         result = test_health_report_cmd.run(args)
         self.assertEqual(
-            HealthReportCmd.error_codes, {HealthReportCmd.ErrorCode.EDEN_NOT_RUNNING}
+            HealthReportCmd.error_codes,
+            {
+                HealthReportCmd.ErrorCode.EDEN_NOT_RUNNING: "Could not find EdenFS daemon pid.",
+            },
         )
 
         self.assertEqual(result, 1)
@@ -150,7 +152,10 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         test_health_report_cmd = HealthReportCmd(mock_argument_parser)
         result = test_health_report_cmd.run(args)
         self.assertEqual(
-            HealthReportCmd.error_codes, {HealthReportCmd.ErrorCode.STALE_EDEN_VERSION}
+            HealthReportCmd.error_codes,
+            {
+                HealthReportCmd.ErrorCode.STALE_EDEN_VERSION: "Running EdenFS version: 20240928-144752 installed EdenFS version: 20241030-165642"
+            },
         )
         self.assertEqual(result, 1)
 
@@ -175,9 +180,8 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         mock_validate_x509.return_value = True
 
         test_health_report_cmd = HealthReportCmd(mock_argument_parser)
-        # test_health_report_cmd.error_codes.clear()
         result = test_health_report_cmd.run(args)
-        self.assertEqual(HealthReportCmd.error_codes, set())
+        self.assertEqual(HealthReportCmd.error_codes, {})
         self.assertEqual(result, 0)
 
     @patch("eden.fs.cli.doctor.facebook.check_x509.find_x509_path")
@@ -203,7 +207,10 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         test_health_report_cmd = HealthReportCmd(mock_argument_parser)
         result = test_health_report_cmd.run(args)
         self.assertEqual(
-            HealthReportCmd.error_codes, {HealthReportCmd.ErrorCode.INVALID_CERTS}
+            HealthReportCmd.error_codes,
+            {
+                HealthReportCmd.ErrorCode.INVALID_CERTS: "Couldn't validate x509 certificates."
+            },
         )
 
         self.assertEqual(result, 1)

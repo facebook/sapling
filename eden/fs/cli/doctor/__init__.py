@@ -29,13 +29,12 @@ from eden.fs.cli.config import EdenInstance
 from eden.fs.cli.doctor.util import (
     CheckoutInfo,
     format_approx_duration,
+    get_checkouts_info,
     get_dependent_repos,
     hg_doctor_in_backing_repo,
 )
 
-from facebook.eden.constants import STATS_MOUNTS_STATS
-
-from facebook.eden.ttypes import GetStatInfoParams, MountState
+from facebook.eden.ttypes import MountState
 from fb303_core.ttypes import fb303_status
 
 from . import (
@@ -296,67 +295,7 @@ class EdenDoctorChecker:
             )
 
     def _get_checkouts_info(self) -> Dict[Path, CheckoutInfo]:
-        checkouts: Dict[Path, CheckoutInfo] = {}
-        # Get information about the checkouts currently known to the running
-        # edenfs process
-        with self.instance.get_thrift_client_legacy() as client:
-            internal_stats = client.getStatInfo(
-                GetStatInfoParams(statsMask=STATS_MOUNTS_STATS)
-            )
-            mount_point_info = internal_stats.mountPointInfo or {}
-
-            for mount in client.listMounts():
-                # Old versions of edenfs did not return a mount state field.
-                # These versions only listed running mounts, so treat the mount state
-                # as running in this case.
-                mount_state = (
-                    mount.state if mount.state is not None else MountState.RUNNING
-                )
-                path = Path(os.fsdecode(mount.mountPoint))
-                checkout = CheckoutInfo(
-                    self.instance,
-                    path,
-                    backing_repo=(
-                        Path(os.fsdecode(mount.backingRepoPath))
-                        if mount.backingRepoPath is not None
-                        else None
-                    ),
-                    running_state_dir=Path(os.fsdecode(mount.edenClientPath)),
-                    state=mount_state,
-                    mount_inode_info=mount_point_info.get(mount.mountPoint),
-                )
-                checkouts[path] = checkout
-
-        # Get information about the checkouts listed in the config file
-        missing_checkouts = []
-        for configured_checkout in self.instance.get_checkouts():
-            checkout_info = checkouts.get(configured_checkout.path, None)
-            if checkout_info is None:
-                checkout_info = CheckoutInfo(self.instance, configured_checkout.path)
-                checkout_info.configured_state_dir = configured_checkout.state_dir
-                checkouts[checkout_info.path] = checkout_info
-
-            if checkout_info.backing_repo is None:
-                try:
-                    checkout_info.backing_repo = (
-                        configured_checkout.get_config().backing_repo
-                    )
-                except Exception as ex:
-                    # Config file is missing or invalid.
-                    # Without it we can't know what the backing repo is, so
-                    # we collect all checkouts with missing configs and report
-                    # a single error at the end.
-                    missing_checkouts.append(
-                        f"{configured_checkout.path} (error: {ex})"
-                    )
-                    continue
-
-            checkout_info.configured_state_dir = configured_checkout.state_dir
-        if missing_checkouts:
-            errmsg = "\n".join(missing_checkouts)
-            raise RuntimeError(errmsg)
-
-        return checkouts
+        return get_checkouts_info(self.instance)
 
     def check_privhelper(self) -> None:
         try:

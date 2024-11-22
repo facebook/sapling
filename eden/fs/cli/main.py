@@ -1208,34 +1208,42 @@ class HealthReportCmd(Subcmd):
         EDEN_NOT_RUNNING = 1
         STALE_EDEN_VERSION = 2
         INVALID_CERTS = 3
+        NO_REPO_MOUNT_FOUND = 4
 
         def description(self) -> str:
             descriptions = {
-                self.EDEN_NOT_RUNNING: "The EdenFS daemon is not running",
-                self.STALE_EDEN_VERSION: "The running EdenFS daemon is over 30 days out-of-date",
-                self.INVALID_CERTS: "The EdenFS cannot find a valid user certificate",
+                self.EDEN_NOT_RUNNING: "The EdenFS daemon is not running.",
+                self.STALE_EDEN_VERSION: "The running EdenFS daemon is over 30 days out-of-date.",
+                self.INVALID_CERTS: "The EdenFS couldn't find a valid user certificate.",
+                self.NO_REPO_MOUNT_FOUND: "One or more checkouts are unmounted: ",
             }
             return descriptions[self]
 
     running_version: str = ""
     version_info: VersionInfo = VersionInfo()
-    error_codes: Set[ErrorCode] = set()
+    error_codes: Dict[ErrorCode, str] = {}
 
     def is_eden_running(self, instance: EdenInstance) -> bool:
         health_info = instance.check_health()
         if not health_info.is_healthy():
-            self.error_codes.add(HealthReportCmd.ErrorCode.EDEN_NOT_RUNNING)
+            self.error_codes[HealthReportCmd.ErrorCode.EDEN_NOT_RUNNING] = (
+                "Could not find EdenFS daemon pid."
+            )
             return False
 
         try:
             self.running_version = instance.get_running_version()
         except EdenNotRunningError:
-            self.error_codes.add(HealthReportCmd.ErrorCode.EDEN_NOT_RUNNING)
+            self.error_codes[HealthReportCmd.ErrorCode.EDEN_NOT_RUNNING] = (
+                "Couldn't retrieve EdenFS running version."
+            )
             return False
 
         self.version_info = version_mod.get_version_info(self.running_version)
         if not self.version_info.is_eden_running:
-            self.error_codes.add(HealthReportCmd.ErrorCode.EDEN_NOT_RUNNING)
+            self.error_codes[HealthReportCmd.ErrorCode.EDEN_NOT_RUNNING] = (
+                "Couldn't retrieve EdenFS running version."
+            )
             return False
         return True
 
@@ -1244,7 +1252,12 @@ class HealthReportCmd(Subcmd):
             self.version_info.ages_deltas is not None
             and self.version_info.ages_deltas >= 30
         ):
-            self.error_codes.add(HealthReportCmd.ErrorCode.STALE_EDEN_VERSION)
+            self.error_codes[HealthReportCmd.ErrorCode.STALE_EDEN_VERSION] = (
+                "Running EdenFS version: "
+                + (self.version_info.running_version or "")
+                + " installed EdenFS version: "
+                + (self.version_info.installed_version or "")
+            )
             return False
         return True
 
@@ -1252,8 +1265,26 @@ class HealthReportCmd(Subcmd):
         if (cert := check_x509.find_x509_path()) and check_x509.validate_x509(cert):
             return True
         # cert error!
-        self.error_codes.add(HealthReportCmd.ErrorCode.INVALID_CERTS)
+        self.error_codes[HealthReportCmd.ErrorCode.INVALID_CERTS] = (
+            "Couldn't validate x509 certificates."
+        )
         return False
+
+    def is_repo_mounted(self, instance: EdenInstance) -> bool:
+        try:
+            checkouts_info = doctor_mod.get_checkouts_info(instance)
+            unmounted_repos = set()
+            for checkout in checkouts_info.values():
+                if checkout.state is None:
+                    unmounted_repos.add(str(checkout.path))
+            if len(unmounted_repos) > 0:
+                self.error_codes[HealthReportCmd.ErrorCode.NO_REPO_MOUNT_FOUND] = (
+                    ", ".join(unmounted_repos)
+                )
+                return False
+        except Exception as ex:
+            print(f"Couldn't retrieve EdenFS checkouts info.: {ex}", file=sys.stderr)
+        return True
 
     @staticmethod
     def print_error_codes_json(out: ui.Output) -> None:
@@ -1267,8 +1298,11 @@ class HealthReportCmd(Subcmd):
             names as keys and their corresponding descriptions as values.
         """
         data = [
-            {"error": error_code.name, "description": error_code.description()}
-            for error_code in HealthReportCmd.error_codes
+            {
+                "error": error_code.name,
+                "description": error_code.description() + "." + error_additional_info,
+            }
+            for error_code, error_additional_info in HealthReportCmd.error_codes.items()
         ]
         json_str = json.dumps(data, indent=2)
         out.writeln(json_str)
@@ -1278,13 +1312,23 @@ class HealthReportCmd(Subcmd):
         out = ui.get_output()
         exit_code = 0
 
-        if not self.is_eden_running(instance) or not all(
-            f() for f in [self.is_eden_up_to_date, self.are_certs_valid]
-        ):
-            exit_code = 1
+        try:
+            if (
+                not self.is_eden_running(instance)
+                or not self.is_repo_mounted(instance)
+                or not all(
+                    f()
+                    for f in [
+                        self.is_eden_up_to_date,
+                        self.are_certs_valid,
+                    ]
+                )
+            ):
+                exit_code = 1
+        except Exception as ex:
+            print(ex)
 
         self.print_error_codes_json(out)
-
         return exit_code
 
 

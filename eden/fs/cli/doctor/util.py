@@ -8,10 +8,11 @@
 import math
 import os
 import subprocess
+import sys
 import traceback
 from datetime import timedelta
 from pathlib import Path
-from typing import List, Optional, Set
+from typing import Dict, List, Optional, Set
 
 from eden.fs.cli.config import EdenCheckout, EdenInstance
 from eden.fs.cli.util import get_environment_suitable_for_subprocess
@@ -214,3 +215,73 @@ def get_mount_inode_info(checkout_info: CheckoutInfo) -> Optional[MountInodeInfo
         mount_point_info = internal_stats.mountPointInfo or {}
         return mount_point_info.get(bytes(checkout_info.path))
     return None
+
+
+def get_checkouts_info(instance: EdenInstance) -> Dict[Path, CheckoutInfo]:
+    checkouts: Dict[Path, CheckoutInfo] = {}
+    # Get information about the checkouts currently known to the running
+    # edenfs process
+    try:
+        with instance.get_thrift_client_legacy() as client:
+            internal_stats = client.getStatInfo(
+                GetStatInfoParams(statsMask=STATS_MOUNTS_STATS)
+            )
+            mount_point_info = internal_stats.mountPointInfo or {}
+
+            for mount in client.listMounts():
+                # Old versions of edenfs did not return a mount state field.
+                # These versions only listed running mounts, so treat the mount state
+                # as running in this case.
+                mount_state = (
+                    mount.state if mount.state is not None else MountState.RUNNING
+                )
+                path = Path(os.fsdecode(mount.mountPoint))
+                checkout = CheckoutInfo(
+                    instance,
+                    path,
+                    backing_repo=(
+                        Path(os.fsdecode(mount.backingRepoPath))
+                        if mount.backingRepoPath is not None
+                        else None
+                    ),
+                    running_state_dir=Path(os.fsdecode(mount.edenClientPath)),
+                    state=mount_state,
+                    mount_inode_info=mount_point_info.get(mount.mountPoint),
+                )
+                checkouts[path] = checkout
+
+        # Get information about the checkouts listed in the config file
+        missing_checkouts = []
+        for configured_checkout in instance.get_checkouts():
+            checkout_info = checkouts.get(configured_checkout.path, None)
+            if checkout_info is None:
+                checkout_info = CheckoutInfo(instance, configured_checkout.path)
+                checkout_info.configured_state_dir = configured_checkout.state_dir
+                checkouts[checkout_info.path] = checkout_info
+
+            if checkout_info.backing_repo is None:
+                try:
+                    checkout_info.backing_repo = (
+                        configured_checkout.get_config().backing_repo
+                    )
+                except Exception as ex:
+                    # Config file is missing or invalid.
+                    # Without it we can't know what the backing repo is, so
+                    # we collect all checkouts with missing configs and report
+                    # a single error at the end.
+                    missing_checkouts.append(
+                        f"{configured_checkout.path} (error: {ex})"
+                    )
+                    continue
+
+            checkout_info.configured_state_dir = configured_checkout.state_dir
+        if missing_checkouts:
+            errmsg = "\n".join(missing_checkouts)
+            print(
+                f"An error occurred while getting checkouts info: {errmsg}",
+                file=sys.stderr,
+            )
+        return checkouts
+    except Exception as ex:
+        print(f"An error occurred while getting checkouts info: {ex}", file=sys.stderr)
+        return {}
