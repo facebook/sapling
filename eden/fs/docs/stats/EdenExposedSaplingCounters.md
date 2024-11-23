@@ -52,7 +52,22 @@ These are all the signals that are recorded when Sapling fulfills a {xxx} (file
 - {yyy} = `time` : `scmstore.file.fetch.edenapi.time`
   - The total time that spend to fetch files from Mononoke
 
-**C-** `eden.edenffi.ffs.{xxx}` :
+**C-** `scmstore.{xxx}.fetch.cas.{yyy}`:
+
+These are all the signals that are recorded when Sapling fulfills a {xxx} (file
+| tree) request from CAS.
+
+- {yyy} = `hits` : `scmstore.file.fetch.cas.hits`
+  - The number of files that are fulfilled in CAS
+- {yyy} = `keys` : `scmstore.file.fetch.cas.keys`
+  - The total number of files that are requested from CAS
+- {yyy} = `requests` : `scmstore.file.fetch.cas.requests`
+  - The total number of requests that are sent to CAS. Each request has a batch
+    of some keys.
+- {yyy} = `time` : `scmstore.file.fetch.cas.time`
+  - The total time that spend to fetch files from CAS
+
+**D-** `eden.edenffi.ffs.{xxx}` :
 
 FileteredFS backing store sends a request to Sapling to check the filter for a
 request object. Sapling collects the following stats which are reported in
