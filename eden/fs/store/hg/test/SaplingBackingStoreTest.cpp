@@ -373,7 +373,7 @@ TEST_F(SaplingBackingStoreNoFaultInjectorTest, cachingPolicyConstruction) {
 // Duplicate requests with same nodeID in one request batch will crash Eden with
 // `folly::PromiseAlreadySatisfied` exception. It caused S463588 in the past.
 // More info on the investication doc
-// https://docs.google.com/document/d/1TvDxEN53oxLbItNWQyqmst3ry5xvcCO5aeCtGjyt4Es
+// https://fburl.com/gdoc/7mgp3fhe
 // This test is to make sure we don't have duplicate requests in one batch.
 TEST_F(
     SaplingBackingStoreNoFaultInjectorTest,
