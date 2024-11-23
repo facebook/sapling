@@ -30,7 +30,7 @@ const input = [normalizeInputPath('webview.html')];
 if (isInternal) {
   // Currently, the inline comment webview is not used in OSS
   input.push(normalizeInputPath('inlineCommentWebview.html'));
-  input.push(normalizeInputPath('inlineCommentSidePanelWebview.html'));
+  input.push(normalizeInputPath('DiffCommentPanelWebview.html'));
 }
 
 console.log(isInternal ? 'Building internal version' : 'Building OSS version');
