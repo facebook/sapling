@@ -1166,6 +1166,17 @@ impl SaplingRemoteApi for EagerRepo {
                     let file_path = from_string.unwrap();
                     res.push(Ok(SuffixQueryResponse { file_path }));
                 }
+                ".bcmap" => {
+                    let from_string = RepoPathBuf::from_string("foo.bcmap".to_string());
+                    let file_path = from_string.unwrap();
+                    res.push(Ok(SuffixQueryResponse { file_path }));
+                    let from_string = RepoPathBuf::from_string("html/baz.bcmap".to_string());
+                    let file_path = from_string.unwrap();
+                    res.push(Ok(SuffixQueryResponse { file_path }));
+                    let from_string = RepoPathBuf::from_string("www/html/baz.bcmap".to_string());
+                    let file_path = from_string.unwrap();
+                    res.push(Ok(SuffixQueryResponse { file_path }));
+                }
                 _ => {}
             }
         }

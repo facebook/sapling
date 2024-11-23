@@ -143,7 +143,7 @@ bool mountIsUsingFilteredFS(const EdenMountHandle& mount) {
 
 bool isValidSearchRoot(const PathString& searchRoot) {
   return searchRoot.empty() || (searchRoot == ".") || (searchRoot == "html") ||
-      (searchRoot == "www/html");
+      (searchRoot == "www/html") || (searchRoot == "www\\html");
 }
 
 std::string resolveRootId(
@@ -3783,6 +3783,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                           wantDtype = params->wantDtype_ref().value(),
                           includeDotfiles =
                               params->includeDotfiles_ref().value(),
+                          searchRoot = params->searchRoot_ref().value(),
                           &context](auto&& globResults) mutable {
                 auto edenMount = mountHandle.getEdenMountPtr();
                 std::vector<ImmediateFuture<GlobEntry>> globEntryFuts;
@@ -3881,8 +3882,15 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                   }
                 }
                 return collectAllSafe(std::move(globEntryFuts))
-                    .thenValue([wantDtype](auto&& globEntries) {
-                      XLOG(DBG5) << "Building Glob";
+                    .thenValue([searchRoot,
+                                wantDtype](auto&& globEntries) mutable {
+                      // Windows
+                      XLOG(DBG5)
+                          << "Building Glob with searchroot " << searchRoot;
+                      size_t pos = searchRoot.find("\\");
+                      if (pos != std::string::npos) {
+                        searchRoot.replace(pos, 1, "/");
+                      }
                       auto glob = std::make_unique<Glob>();
                       std::sort(
                           globEntries.begin(),
@@ -3891,8 +3899,21 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                             return a.file < b.file;
                           });
                       for (GlobEntry& globEntry : globEntries) {
+                        // Check that the files match the relative root,
+                        // if there is one
+                        std::string filePath = globEntry.file;
+                        if (!searchRoot.empty() && searchRoot != ".") {
+                          // If the file is in the relative root, remove the
+                          // prefix and pass it through. Otherwise drop it
+                          if (filePath.rfind(searchRoot, 0) == 0) {
+                            // Remove the prefix and the leading /
+                            filePath = filePath.substr(searchRoot.length() + 1);
+                          } else {
+                            continue;
+                          }
+                        }
                         glob->matchingFiles_ref().value().emplace_back(
-                            globEntry.file);
+                            std::move(filePath));
                         if (wantDtype) {
                           // This can happen if a file is missing on disk but
                           // exists on the server. Instead of silently failing

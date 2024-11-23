@@ -385,6 +385,12 @@ Deleting a file locally will hide it from display even if it's in the remote
     "thrift.EdenServiceHandler.glob_files.sapling_remote_api_success.count": 0,
 
 Testing allowed suffix offloading
+  $ touch foo.bcmap
+  $ mkdir html
+  $ mkdir www
+  $ mkdir www/html
+  $ touch html/baz.bcmap
+  $ touch www/html/baz.bcmap
   $ watchman -j <<-EOT
   > ["query", "$TESTTMP/repo1", {
   > "relative_root":"",
@@ -394,7 +400,20 @@ Testing allowed suffix offloading
   > EOT
   {
       * (glob)
-      "files": [],
+      "files": [
+          {
+              "content.sha1hex": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+              "name": "foo.bcmap"
+          },
+          {
+              "content.sha1hex": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+              "name": "html/baz.bcmap"
+          },
+          {
+              "content.sha1hex": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+              "name": "www/html/baz.bcmap"
+          }
+      ],
       * (glob)
       "clock": * (glob)
       "debug": {
