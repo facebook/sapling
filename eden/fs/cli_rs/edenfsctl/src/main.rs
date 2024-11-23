@@ -23,7 +23,9 @@ use edenfs_telemetry::EDENFSCTL_CLI_USAGE;
 use edenfs_utils::execute_par;
 #[cfg(windows)]
 use edenfs_utils::strip_unc_prefix;
+use fail::fail_point;
 use fbinit::FacebookInit;
+use testutil::failpoint;
 use tracing_subscriber::filter::EnvFilter;
 
 #[cfg(not(fbcode_build))]
@@ -289,6 +291,10 @@ fn main(_fb: FacebookInit) -> Result<()> {
     #[cfg(not(fbcode_build))]
     let mut sample = CliUsageSample;
 
+    let scenario = failpoint::setup_fail_points();
+
+    fail_point!("edenfsctl:main");
+
     let code = match wrapper_main(&mut sample) {
         Ok(code) => Ok(code),
         Err(e) => {
@@ -297,6 +303,10 @@ fn main(_fb: FacebookInit) -> Result<()> {
             Err(e)
         }
     };
+
+    if let Some(scenario) = scenario {
+        failpoint::teardown_fail_points(scenario);
+    }
 
     #[cfg(fbcode_build)]
     {

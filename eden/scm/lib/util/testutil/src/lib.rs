@@ -6,3 +6,4 @@
  */
 
 pub mod envs;
+pub mod failpoint;

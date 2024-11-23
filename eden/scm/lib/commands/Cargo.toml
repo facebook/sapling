@@ -47,7 +47,6 @@ cmdstatus = { version = "0.1.0", path = "commands/cmdstatus" }
 cmdversion = { version = "0.1.0", path = "commands/cmdversion" }
 cmdwhereami = { version = "0.1.0", path = "commands/cmdwhereami" }
 ctrlc = { version = "3.4.5", features = ["termination"] }
-fail = { version = "0.4", features = ["failpoints"] }
 flate2 = { version = "1.0.33", features = ["rust_backend"], default-features = false }
 hostname = "0.3"
 libc = "0.2.139"
@@ -79,6 +78,7 @@ sapling-repourl = { version = "0.1.0", path = "../repo/url" }
 sapling-revisionstore = { version = "0.1.0", path = "../revisionstore" }
 sapling-runlog = { version = "0.1.0", path = "../runlog" }
 sapling-sampling = { version = "0.1.0", path = "../sampling" }
+sapling-testutil = { version = "0.1.0", path = "../util/testutil" }
 sapling-tracing-collector = { version = "0.1.0", path = "../tracing-collector" }
 sapling-tracing-reload = { version = "0.1.0", path = "../tracing-reload" }
 sapling-tracing-sampler = { version = "0.1.0", path = "../tracing-sampler" }

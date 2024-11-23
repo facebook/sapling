@@ -18,7 +18,6 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
-use std::sync::atomic::Ordering::SeqCst;
 use std::sync::mpsc::channel;
 use std::sync::Arc;
 use std::sync::Weak;
@@ -41,10 +40,10 @@ use configloader::config::ConfigSet;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use configmodel::Text;
-use fail::FailScenario;
 use parking_lot::Mutex;
 use progress_model::Registry;
 use repo::repo::Repo;
+use testutil::failpoint;
 use tracing::dispatcher;
 use tracing::dispatcher::Dispatch;
 use tracing::metadata::LevelFilter;
@@ -127,7 +126,7 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
 
     setup_ctrlc();
 
-    let scenario = setup_fail_points();
+    let scenario = failpoint::setup_fail_points();
     constructors::init();
 
     // This is intended to be "process start". "exec/hgmain" seems to be
@@ -197,8 +196,7 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
     blackbox::sync();
 
     if let Some(scenario) = scenario {
-        scenario.teardown();
-        FAIL_SETUP.store(false, SeqCst);
+        failpoint::teardown_fail_points(scenario);
     }
 
     exit_code
@@ -986,21 +984,6 @@ mod exitcode {
 fn setup_http(global_opts: &HgGlobalOpts) {
     if global_opts.insecure {
         hg_http::enable_insecure_mode();
-    }
-}
-
-static FAIL_SETUP: AtomicBool = AtomicBool::new(false);
-
-fn setup_fail_points<'a>() -> Option<FailScenario<'a>> {
-    if std::env::var("FAILPOINTS").is_err() {
-        // No need to setup failpoints.
-        return None;
-    }
-    if FAIL_SETUP.fetch_or(true, SeqCst) {
-        // Already setup.
-        None
-    } else {
-        Some(FailScenario::setup())
     }
 }
 

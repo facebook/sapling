@@ -19,10 +19,12 @@ rust_binary(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:clap-3",
+        "fbsource//third-party/rust:fail",
         "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:tracing-subscriber",
         "//common/rust/shed/fbinit:fbinit",
         "//eden/fs/cli_rs/edenfs-commands:edenfs-commands",
         "//eden/fs/cli_rs/facebook/edenfs-telemetry:edenfs-telemetry",
+        "//eden/scm/lib/util/testutil:testutil",
     ],
 )
