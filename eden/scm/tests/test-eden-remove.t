@@ -59,3 +59,13 @@ check to make sure the mount point is cleanly removed
   $ ls $TESTTMP/wcrepo
   ls: $TESTTMP/wcrepo: $ENOENT$
   [1]
+
+reclone a repo for testing validation error
+  $ eden clone --allow-empty-repo $TESTTMP/backingrepo $TESTTMP/wcrepo
+  Cloning new repository at $TESTTMP/wcrepo...
+  Success.  Checked out commit 00000000
+  
+remove with failpoint set so the validation step will fail
+  $ FAILPOINTS=remove:validate=return EDENFSCTL_ONLY_RUST=true eden remove -q -y $TESTTMP/wcrepo/
+  Error: failpoint: expected failure
+  [1]

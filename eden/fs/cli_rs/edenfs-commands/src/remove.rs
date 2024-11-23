@@ -28,6 +28,7 @@ use edenfs_client::checkout::get_mounts;
 use edenfs_client::fsutil::forcefully_remove_dir_all;
 use edenfs_client::EdenFsInstance;
 use edenfs_utils::bytes_from_path;
+use fail::fail_point;
 use io::IO;
 use termlogger::TermLogger;
 use tracing::debug;
@@ -332,6 +333,10 @@ async fn validate_state_run(context: &mut RemoveContext) -> Result<Option<State>
     if !mounts.is_empty() {
         return Err(anyhow!("Repo {} is still mounted", context));
     }
+
+    fail_point!("remove:validate", |_| {
+        Err(anyhow!("failpoint: expected failure"))
+    });
 
     // check directory clean up
     if !context.preserve_mount_point {
