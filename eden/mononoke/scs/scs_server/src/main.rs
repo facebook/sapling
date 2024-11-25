@@ -121,9 +121,6 @@ struct ScsServerArgs {
     /// Some long-running requests are processed asynchronously by default. This flag disables that behavior; requests will fail.
     #[clap(long, default_value = "false")]
     disable_async_requests: bool,
-    /// Unused, will go away soon
-    #[clap(long, default_value = "false")]
-    enable_futures_watchdog: bool,
     /// Sets the threshold for watchdog logging of top-level SCS methods. As a rule of thumb this should the same or lower than thrift_queue_timeout.
     #[clap(long, default_value = "500")]
     watchdog_method_max_poll: u64,
