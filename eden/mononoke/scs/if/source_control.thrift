@@ -1478,13 +1478,6 @@ struct CommitMultiplePathLastChangedParams {
   2: set<CommitIdentityScheme> identity_schemes;
 }
 
-struct CommitSparseProfileDeltaParams {
-  /// Revision on which inspect sparse profiles
-  1: CommitId other_id;
-  /// list of sparse profiles for which calculate size change
-  2: SparseProfiles profiles;
-}
-
 struct CommitSparseProfileDeltaToken {
   1: i64 id;
 }
@@ -1495,11 +1488,6 @@ struct CommitSparseProfileDeltaParamsV2 {
   2: CommitId other_id;
   /// list of sparse profiles for which calculate size change
   3: SparseProfiles profiles;
-}
-
-struct CommitSparseProfileSizeParams {
-  /// list of sparse profiles for which calculate total size
-  1: SparseProfiles profiles;
 }
 
 struct CommitSparseProfileSizeToken {
@@ -2878,16 +2866,6 @@ service SourceControlService extends fb303_core.BaseService {
   );
 
   /// Calculate the size change for each sparse profile for a given commit
-  CommitSparseProfileDeltaResponse commit_sparse_profile_delta(
-    1: CommitSpecifier commit,
-    2: CommitSparseProfileDeltaParams params,
-  ) throws (
-    1: RequestError request_error,
-    2: InternalError internal_error,
-    3: OverloadError overload_error,
-  );
-
-  /// Calculate the size change for each sparse profile for a given commit
   CommitSparseProfileDeltaToken commit_sparse_profile_delta_async(
     1: CommitSparseProfileDeltaParamsV2 params,
   ) throws (
@@ -2904,16 +2882,6 @@ service SourceControlService extends fb303_core.BaseService {
     2: InternalError internal_error,
     3: OverloadError overload_error,
     4: PollError poll_error,
-  );
-
-  /// Calculate the total size of each sparse profiles
-  CommitSparseProfileSizeResponse commit_sparse_profile_size(
-    1: CommitSpecifier commit,
-    2: CommitSparseProfileSizeParams params,
-  ) throws (
-    1: RequestError request_error,
-    2: InternalError internal_error,
-    3: OverloadError overload_error,
   );
 
   /// Calculate the total size of each sparse profiles

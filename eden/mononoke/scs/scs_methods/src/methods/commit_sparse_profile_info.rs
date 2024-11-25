@@ -23,28 +23,6 @@ use crate::async_requests::poll;
 use crate::source_control_impl::SourceControlServiceImpl;
 
 impl SourceControlServiceImpl {
-    pub(crate) async fn commit_sparse_profile_size(
-        &self,
-        ctx: CoreContext,
-        commit: thrift::CommitSpecifier,
-        params: thrift::CommitSparseProfileSizeParams,
-    ) -> Result<thrift::CommitSparseProfileSizeResponse, scs_errors::ServiceError> {
-        let (repo, changeset) = self.repo_changeset(ctx.clone(), &commit).await?;
-        commit_sparse_profile_size_impl(&ctx, repo, changeset, params.profiles).await
-    }
-
-    pub(crate) async fn commit_sparse_profile_delta(
-        &self,
-        ctx: CoreContext,
-        commit: thrift::CommitSpecifier,
-        params: thrift::CommitSparseProfileDeltaParams,
-    ) -> Result<thrift::CommitSparseProfileDeltaResponse, scs_errors::ServiceError> {
-        let (repo, changeset, other) = self
-            .repo_changeset_pair(ctx.clone(), &commit, &params.other_id)
-            .await?;
-        commit_sparse_profile_delta_impl(&ctx, repo, changeset, other, params.profiles).await
-    }
-
     pub(crate) async fn commit_sparse_profile_size_async(
         &self,
         ctx: CoreContext,
