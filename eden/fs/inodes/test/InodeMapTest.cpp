@@ -29,21 +29,6 @@ constexpr auto loadTimeoutLimit = 1000ms;
 // for EdenFS to finish loading all it's initial inodes.
 constexpr auto maxWaitForLoads = 60;
 
-#ifdef _WIN32
-// TODO(puneetk): Defining these flags here to fix the linker issue. These
-// symbols should come from ThriftProtocol.lib. But, for some reason it's not
-// getting imported from the lib on Windows, even though it's linking against
-// the lib.
-DEFINE_int32(
-    thrift_cpp2_protocol_reader_string_limit,
-    0,
-    "Limit on string size when deserializing thrift, 0 is no limit");
-DEFINE_int32(
-    thrift_cpp2_protocol_reader_container_limit,
-    0,
-    "Limit on container size when deserializing thrift, 0 is no limit");
-#endif
-
 TEST(InodeMap, invalidInodeNumber) {
   FakeTreeBuilder builder;
   builder.setFile("Makefile", "all:\necho success\n");
