@@ -32,9 +32,6 @@ pub(super) struct CommandArgs {
 
     #[clap(flatten)]
     sparse_profiles_args: SparseProfilesArgs,
-
-    #[clap(long = "async")]
-    asynchronous: bool,
 }
 
 #[derive(Serialize)]
