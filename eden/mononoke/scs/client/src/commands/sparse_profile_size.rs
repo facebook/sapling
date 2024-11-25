@@ -78,48 +78,40 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         ..Default::default()
     };
 
-    let response = if args.asynchronous {
-        let params = thrift::CommitSparseProfileSizeParamsV2 {
-            commit: commit.clone(),
-            profiles,
-            ..Default::default()
-        };
-        let token = conn.commit_sparse_profile_size_async(&params).await?;
+    let params = thrift::CommitSparseProfileSizeParamsV2 {
+        commit: commit.clone(),
+        profiles,
+        ..Default::default()
+    };
+    let token = conn.commit_sparse_profile_size_async(&params).await?;
 
-        loop {
-            // reopening the connection on retry might allow SR to send us to a different server
-            let conn = app.get_connection(Some(&repo.name))?;
-            let res = conn.commit_sparse_profile_size_poll(&token).await;
-            match res {
-                Ok(res) => match res {
-                    source_control::CommitSparseProfileSizePollResponse::response(success) => {
-                        break success;
-                    }
-                    source_control::CommitSparseProfileSizePollResponse::poll_pending(_) => {
-                        eprintln!("sparse profile size is not ready yet, waiting some more...");
-                    }
-                    source_control::CommitSparseProfileSizePollResponse::UnknownField(t) => {
-                        return Err(anyhow::anyhow!(
-                            "request failed with unknown result: {:?}",
-                            t
-                        ));
-                    }
-                },
-                Err(e) => match e {
-                    CommitSparseProfileSizePollError::poll_error(_) => {
-                        eprintln!("poll error, retrying...");
-                    }
-                    _ => return Err(anyhow::anyhow!("request failed with error: {:?}", e)),
-                },
-            }
-            tokio::time::sleep(POLL_SLEEP_DURATION).await;
+    let response = loop {
+        // reopening the connection on retry might allow SR to send us to a different server
+        let conn = app.get_connection(Some(&repo.name))?;
+        let res = conn.commit_sparse_profile_size_poll(&token).await;
+        match res {
+            Ok(res) => match res {
+                source_control::CommitSparseProfileSizePollResponse::response(success) => {
+                    break success;
+                }
+                source_control::CommitSparseProfileSizePollResponse::poll_pending(_) => {
+                    eprintln!("sparse profile size is not ready yet, waiting some more...");
+                }
+                source_control::CommitSparseProfileSizePollResponse::UnknownField(t) => {
+                    return Err(anyhow::anyhow!(
+                        "request failed with unknown result: {:?}",
+                        t
+                    ));
+                }
+            },
+            Err(e) => match e {
+                CommitSparseProfileSizePollError::poll_error(_) => {
+                    eprintln!("poll error, retrying...");
+                }
+                _ => return Err(anyhow::anyhow!("request failed with error: {:?}", e)),
+            },
         }
-    } else {
-        let params = thrift::CommitSparseProfileSizeParams {
-            profiles,
-            ..Default::default()
-        };
-        conn.commit_sparse_profile_size(&commit, &params).await?
+        tokio::time::sleep(POLL_SLEEP_DURATION).await;
     };
 
     let output = SparseProfileSizeOutput {

@@ -106,50 +106,41 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         ..Default::default()
     };
 
-    let response = if args.asynchronous {
-        let params = thrift::CommitSparseProfileDeltaParamsV2 {
-            commit: commit.clone(),
-            other_id: commit_ids[1].clone(),
-            profiles,
-            ..Default::default()
-        };
-        let token = conn.commit_sparse_profile_delta_async(&params).await?;
+    let params = thrift::CommitSparseProfileDeltaParamsV2 {
+        commit: commit.clone(),
+        other_id: commit_ids[1].clone(),
+        profiles,
+        ..Default::default()
+    };
+    let token = conn.commit_sparse_profile_delta_async(&params).await?;
 
-        loop {
-            // reopening the connection on retry might allow SR to send us to a different server
-            let conn = app.get_connection(Some(&repo.name))?;
-            let res = conn.commit_sparse_profile_delta_poll(&token).await;
-            match res {
-                Ok(res) => match res {
-                    source_control::CommitSparseProfileDeltaPollResponse::response(success) => {
-                        break success;
-                    }
-                    source_control::CommitSparseProfileDeltaPollResponse::poll_pending(_) => {
-                        eprintln!("sparse profile size is not ready yet, waiting some more...");
-                    }
-                    source_control::CommitSparseProfileDeltaPollResponse::UnknownField(t) => {
-                        return Err(anyhow::anyhow!(
-                            "request failed with unknown result: {:?}",
-                            t
-                        ));
-                    }
-                },
-                Err(e) => match e {
-                    CommitSparseProfileDeltaPollError::poll_error(_) => {
-                        eprintln!("poll error, retrying...");
-                    }
-                    _ => return Err(anyhow::anyhow!("request failed with error: {:?}", e)),
-                },
-            }
-            tokio::time::sleep(POLL_SLEEP_DURATION).await;
+    let response = loop {
+        // reopening the connection on retry might allow SR to send us to a different server
+        let conn = app.get_connection(Some(&repo.name))?;
+        let res = conn.commit_sparse_profile_delta_poll(&token).await;
+        match res {
+            Ok(res) => match res {
+                source_control::CommitSparseProfileDeltaPollResponse::response(success) => {
+                    break success;
+                }
+                source_control::CommitSparseProfileDeltaPollResponse::poll_pending(_) => {
+                    eprintln!("sparse profile size is not ready yet, waiting some more...");
+                }
+                source_control::CommitSparseProfileDeltaPollResponse::UnknownField(t) => {
+                    return Err(anyhow::anyhow!(
+                        "request failed with unknown result: {:?}",
+                        t
+                    ));
+                }
+            },
+            Err(e) => match e {
+                CommitSparseProfileDeltaPollError::poll_error(_) => {
+                    eprintln!("poll error, retrying...");
+                }
+                _ => return Err(anyhow::anyhow!("request failed with error: {:?}", e)),
+            },
         }
-    } else {
-        let params = thrift::CommitSparseProfileDeltaParams {
-            other_id: commit_ids[1].clone(),
-            profiles,
-            ..Default::default()
-        };
-        conn.commit_sparse_profile_delta(&commit, &params).await?
+        tokio::time::sleep(POLL_SLEEP_DURATION).await;
     };
 
     let output = SparseProfileDeltaOutput {
