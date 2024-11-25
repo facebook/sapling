@@ -73,6 +73,7 @@ rust_library(
         "//eden/mononoke/scs/if:source_control-rust",
         "//eden/mononoke/scs/if:source_control-rust-clients",
         "//eden/mononoke/server/context:context",
+        "//eden/scm/lib/clientinfo:clientinfo",
         "//infrasec/authorization/if:if-aclchecker-rust",
         "//infrasec/authorization/if:if-aclchecker-rust-clients",
         "//infrasec/authorization/if:if-aclchecker-rust-srclients",
