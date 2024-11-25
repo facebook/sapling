@@ -6,8 +6,8 @@
  */
 
 import {Internal} from '../Internal';
-import {isEjecaError} from '../utils';
-import {ejeca} from 'shared/ejeca';
+import {isExecaError} from '../utils';
+import execa from 'execa';
 
 export default async function queryGraphQL<TData, TVariables>(
   query: string,
@@ -39,7 +39,7 @@ export default async function queryGraphQL<TData, TVariables>(
   args.push('-f', `query=${query}`);
 
   try {
-    const {stdout} = await ejeca('gh', args, {
+    const {stdout} = await execa('gh', args, {
       env: {
         ...((await Internal.additionalGhEnvVars?.()) ?? {}),
       },
@@ -52,7 +52,7 @@ export default async function queryGraphQL<TData, TVariables>(
 
     return json.data;
   } catch (error: unknown) {
-    if (isEjecaError(error)) {
+    if (isExecaError(error)) {
       if (error.code === 'ENOENT' || error.code === 'EACCES') {
         // `gh` not installed on path
         throw new Error(`GhNotInstalledError: ${(error as Error).stack}`);
@@ -76,7 +76,7 @@ export async function isGithubEnterprise(hostname: string): Promise<boolean> {
   args.push('--hostname', hostname);
 
   try {
-    await ejeca('gh', args, {
+    await execa('gh', args, {
       env: {
         ...((await Internal.additionalGhEnvVars?.()) ?? {}),
       },

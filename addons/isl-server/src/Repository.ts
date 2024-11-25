@@ -10,6 +10,7 @@ import type {KindOfChange, PollKind} from './WatchForChanges';
 import type {TrackEventName} from './analytics/eventNames';
 import type {ConfigLevel, ResolveCommandConflictOutput} from './commands';
 import type {RepositoryContext} from './serverTypes';
+import type {ExecaError} from 'execa';
 import type {
   CommitInfo,
   Disposable,
@@ -40,7 +41,6 @@ import type {
   CwdInfo,
 } from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
-import type {EjecaChildProcess, EjecaOptions, EjecaError} from 'shared/ejeca';
 
 import {Internal} from './Internal';
 import {OperationQueue} from './OperationQueue';
@@ -76,9 +76,10 @@ import {
 import {
   findPublicAncestor,
   handleAbortSignalOnProcess,
-  isEjecaError,
+  isExecaError,
   serializeAsyncCall,
 } from './utils';
+import execa from 'execa';
 import {
   settableConfigNames,
   allConfigNames,
@@ -91,7 +92,6 @@ import {revsetArgsForComparison} from 'shared/Comparison';
 import {LRU} from 'shared/LRU';
 import {RateLimiter} from 'shared/RateLimiter';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
-import {ejeca} from 'shared/ejeca';
 import {exists} from 'shared/fs';
 import {removeLeadingPathSep} from 'shared/pathUtils';
 import {notEmpty, randomId, nullthrows} from 'shared/utils';
@@ -654,52 +654,6 @@ export class Repository {
     return {args, stdin};
   }
 
-  private async operationIPC(
-    ctx: RepositoryContext,
-    onProgress: OperationCommandProgressReporter,
-    child: EjecaChildProcess,
-    options: EjecaOptions,
-  ): Promise<void> {
-    if (!options.ipc) {
-      return;
-    }
-
-    interface IpcProgressBar {
-      id: number;
-      topic: string;
-      unit: string;
-      total: number;
-      position: number;
-      parent_id?: number;
-    }
-
-    while (true) {
-      try {
-        // eslint-disable-next-line no-await-in-loop
-        const message = await child.getOneMessage();
-        if (
-          message === null ||
-          typeof message !== 'object' ||
-          !('progress_bar_update' in message)
-        ) {
-          break;
-        }
-        const bars = message.progress_bar_update as IpcProgressBar[];
-        const blen = bars.length;
-        if (blen > 0) {
-          const msg = bars[blen - 1];
-          onProgress('progress', {
-            message: msg.topic,
-            progress: msg.position,
-            progressTotal: msg.total,
-          });
-        }
-      } catch (err) {
-        break;
-      }
-    }
-  }
-
   /**
    * Called by this.operationQueue in response to runOrQueueOperation when an operation is ready to actually run.
    */
@@ -717,12 +671,11 @@ export class Repository {
       this.getMergeToolEnvVars(ctx),
     ]);
 
-    const ipc = (ctx.knownConfigs?.get('isl.sl-progress-enabled') ?? 'false') === 'true';
     const {command, args, options} = getExecParams(
       this.info.command,
       cwdRelativeArgs,
       cwd,
-      stdin ? {input: stdin, ipc} : {ipc},
+      stdin ? {input: stdin} : undefined,
       {
         ...env[0],
         ...env[1],
@@ -736,7 +689,7 @@ export class Repository {
       throw new Error(`command "${args.join(' ')}" is not allowed`);
     }
 
-    const execution = ejeca(command, args, options);
+    const execution = execa(command, args, options);
     // It would be more appropriate to call this in reponse to execution.on('spawn'), but
     // this seems to be inconsistent about firing in all versions of node.
     // Just send spawn immediately. Errors during spawn like ENOENT will still be reported by `exit`.
@@ -752,11 +705,10 @@ export class Repository {
     });
     handleAbortSignalOnProcess(execution, signal);
     try {
-      this.operationIPC(ctx, onProgress, execution, options);
       const result = await execution;
       onProgress('exit', result.exitCode || 0);
     } catch (err) {
-      onProgress('exit', isEjecaError(err) ? err.exitCode : -1);
+      onProgress('exit', isExecaError(err) ? err.exitCode : -1);
       throw err;
     }
   }
@@ -837,7 +789,7 @@ export class Repository {
       this.uncommittedChangesEmitter.emit('change', this.uncommittedChanges);
     } catch (err) {
       let error = err;
-      if (isEjecaError(error)) {
+      if (isExecaError(error)) {
         if (error.stderr.includes('checkout is currently in progress')) {
           this.initialConnectionContext.logger.info(
             'Ignoring `sl status` error caused by in-progress checkout',
@@ -847,8 +799,8 @@ export class Repository {
       }
 
       this.initialConnectionContext.logger.error('Error fetching files: ', error);
-      if (isEjecaError(error)) {
-        error = simplifyEjecaError(error);
+      if (isExecaError(error)) {
+        error = simplifyExecaError(error);
       }
 
       // emit an error, but don't save it to this.uncommittedChanges
@@ -943,13 +895,13 @@ export class Repository {
       if (internalError) {
         error = internalError;
       }
-      if (isEjecaError(error) && error.stderr.includes('Please check your internet connection')) {
+      if (isExecaError(error) && error.stderr.includes('Please check your internet connection')) {
         error = Error('Network request failed. Please check your internet connection.');
       }
 
       this.initialConnectionContext.logger.error('Error fetching commits: ', error);
-      if (isEjecaError(error)) {
-        error = simplifyEjecaError(error);
+      if (isExecaError(error)) {
+        error = simplifyExecaError(error);
       }
 
       this.smartlogCommitsChangesEmitter.emit('change', {
@@ -1421,7 +1373,7 @@ export class Repository {
     /** Which event name to track for this command. If undefined, generic 'RunCommand' is used. */
     eventName: TrackEventName | undefined,
     ctx: RepositoryContext,
-    options?: EjecaOptions,
+    options?: execa.Options,
     timeout?: number,
   ) {
     const id = randomId();
@@ -1556,8 +1508,8 @@ function isUnhealthyEdenFs(cwd: string): Promise<boolean> {
 }
 
 /**
- * Extract the actually useful stderr part of the Ejeca Error, to avoid the long command args being printed first.
+ * Extract the actually useful stderr part of the Execa Error, to avoid the long command args being printed first.
  * */
-function simplifyEjecaError(error: EjecaError): Error {
+function simplifyExecaError(error: ExecaError): Error {
   return new Error(error.stderr.trim() || error.message);
 }

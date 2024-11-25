@@ -6,12 +6,11 @@
  */
 
 import type {RepositoryContext} from './serverTypes';
-import type {EjecaOptions, EjecaReturn} from 'shared/ejeca';
 
-import {isEjecaError} from './utils';
+import {isExecaError} from './utils';
+import execa from 'execa';
 import {ConflictType, type AbsolutePath, type MergeConflicts} from 'isl/src/types';
 import os from 'node:os';
-import {ejeca} from 'shared/ejeca';
 
 export const MAX_FETCHED_FILES_PER_COMMIT = 25;
 export const MAX_SIMULTANEOUS_CAT_CALLS = 4;
@@ -53,12 +52,12 @@ export type ResolveCommandConflictOutput = [
 export async function runCommand(
   ctx: RepositoryContext,
   args_: Array<string>,
-  options_?: EjecaOptions,
+  options_?: execa.Options,
   timeout: number = READ_COMMAND_TIMEOUT_MS,
-): Promise<EjecaReturn> {
+): Promise<execa.ExecaReturnValue<string>> {
   const {command, args, options} = getExecParams(ctx.cmd, args_, ctx.cwd, options_);
   ctx.logger.log('run command: ', ctx.cwd, command, args[0]);
-  const result = ejeca(command, args, options);
+  const result = execa(command, args, options);
 
   let timedOut = false;
   let timeoutId: NodeJS.Timeout | undefined;
@@ -77,7 +76,7 @@ export async function runCommand(
     const val = await result;
     return val;
   } catch (err: unknown) {
-    if (isEjecaError(err)) {
+    if (isExecaError(err)) {
       if (err.killed) {
         if (timedOut) {
           throw new Error('Timed out');
@@ -175,12 +174,12 @@ export function getExecParams(
   command: string,
   args_: Array<string>,
   cwd: string,
-  options_?: EjecaOptions,
+  options_?: execa.Options,
   env?: NodeJS.ProcessEnv | Record<string, string>,
 ): {
   command: string;
   args: Array<string>;
-  options: EjecaOptions;
+  options: execa.Options;
 } {
   let args = [...args_, '--noninteractive'];
   // expandHomeDir is not supported on windows
@@ -204,7 +203,7 @@ export function getExecParams(
     // allow looking up diff numbers even in plain mode.
     // allow constructing the `.git/sl` repo regardless of the identity.
     // allow automatically setting ui.username.
-    SL_AUTOMATION_EXCEPT: 'ghrevset,phrevset,progress,sniff,username',
+    SL_AUTOMATION_EXCEPT: 'ghrevset,phrevset,sniff,username',
     EDITOR: undefined,
     VISUAL: undefined,
     HGUSER: undefined,
@@ -215,7 +214,7 @@ export function getExecParams(
     langEnv = 'C.UTF-8';
   }
   newEnv.LANG = langEnv;
-  const options: EjecaOptions = {
+  const options: execa.Options = {
     ...options_,
     env: newEnv,
     cwd,
@@ -224,10 +223,6 @@ export function getExecParams(
   if (args_[0] === 'status') {
     // Take a lock when running status so that multiple status calls in parallel don't overload watchman
     args.push('--config', 'fsmonitor.watchman-query-lock=True');
-  }
-
-  if (options.ipc) {
-    args.push('--config', 'progress.renderer=nodeipc');
   }
 
   // TODO: we could run with systemd for better OOM protection when on linux
