@@ -46,6 +46,7 @@ use crate::context::ServerContext;
 use crate::handlers::build_router;
 use crate::middleware::OdsMiddleware;
 use crate::middleware::RequestDumperMiddleware;
+use crate::middleware::ThrottleMiddleware;
 use crate::scuba::SaplingRemoteApiScubaHandler;
 
 pub type SaplingRemoteApi = MononokeHttpHandler<Router>;
@@ -103,6 +104,7 @@ pub fn build<R: Send + Sync + Clone + 'static>(
             fb,
             common_config.edenapi_dumper_scuba_table.clone(),
         ))
+        .add(ThrottleMiddleware::new())
         .add(LoadMiddleware::new())
         .add(log_middleware)
         .add(OdsMiddleware::new())
