@@ -17,6 +17,7 @@ use futures::FutureExt;
 use maplit::hashmap;
 use mercurial_revlog::changeset::RevlogChangeset;
 use mononoke_types::BonsaiChangeset;
+use rate_limiting::Metric;
 use rate_limiting::RateLimitBody;
 use rate_limiting::RateLimitStatus;
 use sha2::Digest;
@@ -181,7 +182,7 @@ async fn enforce_commit_rate_limits_on_commits<'a, I: Iterator<Item = &'a Bonsai
 
     let category = rate_limiter.category();
 
-    let limit = match rate_limiter.commits_per_author_limit() {
+    let limit = match rate_limiter.find_rate_limit(Metric::CommitsPerAuthor) {
         Some(limit) => limit,
         None => return Ok(()),
     };

@@ -130,11 +130,11 @@ impl RateLimiter for MononokeRateLimits {
         &self.category
     }
 
-    fn commits_per_author_limit(&self) -> Option<crate::RateLimit> {
+    fn find_rate_limit(&self, metric: Metric) -> Option<crate::RateLimit> {
         self.config
             .rate_limits
             .iter()
-            .find(|r| r.fci_metric.metric == Metric::CommitsPerAuthor)
+            .find(|r| r.fci_metric.metric == metric)
             .cloned()
     }
 

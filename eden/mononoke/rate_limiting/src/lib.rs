@@ -63,9 +63,9 @@ pub trait RateLimiter {
 
     fn category(&self) -> &str;
 
-    fn commits_per_author_limit(&self) -> Option<RateLimit>;
-
     fn total_file_changes_limit(&self) -> Option<RateLimitBody>;
+
+    fn find_rate_limit(&self, metric: Metric) -> Option<RateLimit>;
 }
 
 define_stats! {
@@ -210,6 +210,7 @@ pub enum Metric {
     GetpackFiles,
     Commits,
     CommitsPerAuthor,
+    EdenApiQps,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]

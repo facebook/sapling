@@ -65,11 +65,11 @@ impl RateLimiter for FakeLimiter {
         &self.category
     }
 
-    fn commits_per_author_limit(&self) -> Option<RateLimit> {
+    fn total_file_changes_limit(&self) -> Option<RateLimitBody> {
         None
     }
 
-    fn total_file_changes_limit(&self) -> Option<RateLimitBody> {
+    fn find_rate_limit(&self, metric: Metric) -> Option<RateLimit> {
         None
     }
 }
