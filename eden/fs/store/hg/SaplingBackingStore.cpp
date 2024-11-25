@@ -832,14 +832,8 @@ void SaplingBackingStore::processTreeImportRequests(
         }
         continue;
       }
-
-      // The trees were either not found locally, or, when EdenAPI is enabled,
-      // not found on the server. Let's retry to import the trees
-      stats_->increment(&SaplingBackingStoreStats::fetchTreeFailure);
-      if (store_.dogfoodingHost()) {
-        stats_->increment(
-            &SaplingBackingStoreStats::fetchTreeFailureDogfooding);
-      }
+      // The tree was not found in the first try. Let's retry to import the tree
+      // from backingstore
       auto* treeImport =
           request->getRequest<SaplingImportRequest::TreeImport>();
       auto treeSemiFuture =
@@ -2029,29 +2023,6 @@ folly::Future<TreePtr> SaplingBackingStore::importTreeManifestImpl(
     return folly::makeFuture(std::move(tree.value()));
   }
   // retry once if the initial fetch failed
-  switch (type) {
-    case ObjectFetchContext::ObjectType::Tree:
-      // getTree never gets here. We add this case only for completeness
-      stats_->increment(&SaplingBackingStoreStats::fetchTreeFailure);
-      break;
-    case ObjectFetchContext::ObjectType::RootTree:
-      stats_->increment(&SaplingBackingStoreStats::getRootTreeFailure);
-      break;
-    case ObjectFetchContext::ObjectType::ManifestForRoot:
-      stats_->increment(
-          &SaplingBackingStoreStats::importManifestForRootFailure);
-      break;
-      // The following types cannot get here. It is just for completeness
-    case ObjectFetchContext::TreeAuxData:
-    case ObjectFetchContext::Blob:
-    case ObjectFetchContext::BlobAuxData:
-    case ObjectFetchContext::PrefetchBlob:
-    case ObjectFetchContext::kObjectTypeEnumMax:
-      break;
-  }
-  if (store_.dogfoodingHost()) {
-    stats_->increment(&SaplingBackingStoreStats::fetchTreeFailureDogfooding);
-  }
   return retryGetTree(manifestNode, objectId, path, context.copy(), type);
 }
 
@@ -2244,16 +2215,14 @@ folly::Future<TreePtr> SaplingBackingStore::retryGetTreeImpl(
 
           switch (type) {
             case ObjectFetchContext::ObjectType::Tree:
-              stats_->increment(
-                  &SaplingBackingStoreStats::fetchTreeRetryFailure);
+              stats_->increment(&SaplingBackingStoreStats::fetchTreeFailure);
               break;
             case ObjectFetchContext::ObjectType::RootTree:
-              stats_->increment(
-                  &SaplingBackingStoreStats::getRootTreeRetryFailure);
+              stats_->increment(&SaplingBackingStoreStats::getRootTreeFailure);
               break;
             case ObjectFetchContext::ObjectType::ManifestForRoot:
               stats_->increment(
-                  &SaplingBackingStoreStats::importManifestForRootRetryFailure);
+                  &SaplingBackingStoreStats::importManifestForRootFailure);
               break;
             // The following types cannot get here. It is just for completeness
             case ObjectFetchContext::TreeAuxData:
@@ -2265,7 +2234,7 @@ folly::Future<TreePtr> SaplingBackingStore::retryGetTreeImpl(
           }
           if (store_.dogfoodingHost()) {
             stats_->increment(
-                &SaplingBackingStoreStats::fetchTreeRetryFailureDogfooding);
+                &SaplingBackingStoreStats::fetchTreeFailureDogfooding);
           }
           auto ew = folly::exception_wrapper{tree.exception()};
           result = folly::makeFuture<TreePtr>(std::move(ew));

@@ -503,15 +503,12 @@ struct SaplingBackingStoreStats : StatsGroup<SaplingBackingStoreStats> {
   Counter fetchTreeSuccess{"store.sapling.fetch_tree_success"};
   Counter fetchTreeFailure{"store.sapling.fetch_tree_failure"};
   Counter fetchTreeRetrySuccess{"store.sapling.fetch_tree_retry_success"};
-  Counter fetchTreeRetryFailure{"store.sapling.fetch_tree_retry_failure"};
   Counter fetchTreeSuccessDogfooding{
       "store.sapling.fetch_tree_success_dogfooding"};
   Counter fetchTreeFailureDogfooding{
       "store.sapling.fetch_tree_failure_dogfooding"};
   Counter fetchTreeRetrySuccessDogfooding{
       "store.sapling.fetch_tree_retry_success_dogfooding"};
-  Counter fetchTreeRetryFailureDogfooding{
-      "store.sapling.fetch_tree_retry_failure_dogfooding"};
   Duration getTreeAuxData{"store.sapling.get_tree_metadata_us"};
   Duration fetchTreeAuxData{"store.sapling.fetch_tree_metadata_us"};
   Counter fetchTreeAuxDataLocal{"store.sapling.fetch_tree_metadata_local"};
@@ -523,7 +520,6 @@ struct SaplingBackingStoreStats : StatsGroup<SaplingBackingStoreStats> {
   Counter getRootTreeSuccess{"store.sapling.get_root_tree_success"};
   Counter getRootTreeFailure{"store.sapling.get_root_tree_failure"};
   Counter getRootTreeRetrySuccess{"store.sapling.get_root_tree_retry_success"};
-  Counter getRootTreeRetryFailure{"store.sapling.get_root_tree_retry_failure"};
   Counter importManifestForRootLocal{
       "store.sapling.import_manifest_for_root_local"};
   Counter importManifestForRootRemote{
@@ -534,8 +530,6 @@ struct SaplingBackingStoreStats : StatsGroup<SaplingBackingStoreStats> {
       "store.sapling.import_manifest_for_root_failure"};
   Counter importManifestForRootRetrySuccess{
       "store.sapling.import_manifest_for_root_retry_success"};
-  Counter importManifestForRootRetryFailure{
-      "store.sapling.import_manifest_for_root_retry_failure"};
   Duration getBlob{"store.sapling.get_blob_us"};
   Duration fetchBlob{"store.sapling.fetch_blob_us"};
   Counter fetchBlobLocal{"store.sapling.fetch_blob_local"};
