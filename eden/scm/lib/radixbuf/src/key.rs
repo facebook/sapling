@@ -44,7 +44,7 @@ macro_rules! impl_convert {
             #[allow(unused_comparisons)]
             #[inline]
             fn from(v: $T) -> Self {
-                if v > 0xffff_ffff || v < 0 {
+                if !(0..=0xffff_ffff).contains(&v) {
                     panic!("KeyId out of range")
                 }
                 KeyId(v as u32)
