@@ -11,15 +11,17 @@ use radixbuf::key::FixedKey;
 use radixbuf::key::KeyId;
 use radixbuf::radix::radix_insert;
 use radixbuf::radix::radix_lookup;
-use rand::ChaChaRng;
-use rand::RngCore;
+use rand_chacha::rand_core::RngCore;
+use rand_chacha::rand_core::SeedableRng;
+use rand_chacha::ChaChaRng;
 
 const N: usize = 204800;
 
 /// Generate random buffer
 fn gen_buf(size: usize) -> Vec<u8> {
     let mut buf = vec![0u8; size];
-    ChaChaRng::new_unseeded().fill_bytes(buf.as_mut());
+    let mut rng = ChaChaRng::from_seed([0u8; 32]);
+    rng.fill_bytes(buf.as_mut());
     buf
 }
 

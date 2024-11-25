@@ -23,4 +23,5 @@ thiserror = "1.0.64"
 [dev-dependencies]
 quickcheck = "1.0"
 rand = { version = "0.8", features = ["small_rng"] }
+rand_chacha = "0.3"
 sapling-minibench = { version = "0.1.0", path = "../minibench" }
