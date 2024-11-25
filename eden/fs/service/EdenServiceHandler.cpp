@@ -2198,6 +2198,40 @@ EdenServiceHandler::streamChangesSince(
   return {std::move(result), std::move(serverStream)};
 }
 
+/*
+ * Determines if a given path should be returned based on the include and
+ * exclude filters provided by the caller of changesSinceV2.
+ *
+ * TODO: repalce vcsDirectories wtih computed include and exclude filters
+ */
+bool isPathIncluded(
+    const std::unordered_set<RelativePath>& vcsDirectories,
+    RelativePath path) {
+  // TODO: Replaces simple VCS directory filtering with complete include and
+  // exclude filtering. Open question as to whether we will require callers
+  // to explictiy specify VCS directories to be include/excluded or use a simple
+  // flag (e.g., includeVCS, default is false). Either way, the include
+  // exclude filters should already have taken into account any VCS directories.
+  //
+  // Plan:
+  //  if include filter is emtpy, include path
+  //  else if path matches filter, include path
+  //  else exclude path
+  //  - then -
+  //  if exclude filter is empty, include path
+  //  else if path matches exclude filter, exclude path
+  //  else include path
+
+  for (const auto& vcsDirectory : vcsDirectories) {
+    if (vcsDirectory.isParentDirOf(path)) {
+      // Exclude VCS Directories from results
+      return false;
+    }
+  }
+
+  return true;
+}
+
 void EdenServiceHandler::sync_changesSinceV2(
     ChangesSinceV2Result& result,
     std::unique_ptr<ChangesSinceV2Params> params) {
@@ -2241,9 +2275,9 @@ void EdenServiceHandler::sync_changesSinceV2(
 
     result.changes_ref()->push_back(std::move(change));
   } else {
-    auto state = server_->getServerState();
-    auto config = state->getEdenConfig();
+    auto config = server_->getServerState()->getEdenConfig();
     auto maxNumberOfChanges = config->notifyMaxNumberOfChanges.getValue();
+    auto vcsDirectories = config->vcsDirectories.getValue();
     const auto isTruncated = mountHandle.getJournal().forEachDelta(
         *fromPosition.sequenceNumber_ref() + 1,
         std::nullopt,
@@ -2253,41 +2287,55 @@ void EdenServiceHandler::sync_changesSinceV2(
                 << "FileChangeJournalDetal::isPath1Valid should never be false";
           }
 
+          // Changes can effect either path1 or both paths
+          // Determine if path1 pass the filters and default path2 to not
+          bool includePath1 = isPathIncluded(vcsDirectories, current.path1);
+          bool includePath2 = false;
+
           ChangeNotification change;
           LargeChangeNotification largeChange;
           SmallChangeNotification smallChange;
           if (current.isPath2Valid) {
-            const auto& info = current.info2;
-            // NOTE: we could do a bunch of runtime checks here to validate
-            // the infoN states would be a lot simpler if we removed this
-            // infoN state and replaced them with a simple enum
-            if (info.existedBefore) {
-              // Replaced
-              Replaced replaced;
-              replaced.from() = current.path1.asString();
-              replaced.to() = current.path2.asString();
-              replaced.fileType() = static_cast<Dtype>(current.type);
-              smallChange.replaced_ref() = std::move(replaced);
-              change.smallChange_ref() = std::move(smallChange);
-            } else {
-              // Renamed
-              if (current.type == dtype_t::Dir) {
-                DirectoryRenamed directoryRenamed;
-                directoryRenamed.from() = current.path1.asString();
-                directoryRenamed.to() = current.path2.asString();
-                largeChange.directoryRenamed_ref() =
-                    std::move(directoryRenamed);
-                change.largeChange_ref() = std::move(largeChange);
-              } else {
-                Renamed renamed;
-                renamed.from() = current.path1.asString();
-                renamed.to() = current.path2.asString();
-                renamed.fileType() = static_cast<Dtype>(current.type);
-                smallChange.renamed_ref() = std::move(renamed);
+            // Determine if path2 passes filters, but only if path1 one doesn't
+            // to avoid an extra lookup
+            includePath2 = includePath1
+                ? false
+                : isPathIncluded(vcsDirectories, current.path2);
+            if (includePath1 || includePath2) {
+              const auto& info = current.info2;
+              // NOTE: we could do a bunch of runtime checks here to validate
+              // the infoN states would be a lot simpler if we removed this
+              // infoN state and replaced them with a simple enum
+              if (info.existedBefore) {
+                // Replaced
+                Replaced replaced;
+                replaced.from() = current.path1.asString();
+                replaced.to() = current.path2.asString();
+                replaced.fileType() = static_cast<Dtype>(current.type);
+                smallChange.replaced_ref() = std::move(replaced);
                 change.smallChange_ref() = std::move(smallChange);
+              } else {
+                // Renamed
+                if (current.type == dtype_t::Dir) {
+                  DirectoryRenamed directoryRenamed;
+                  directoryRenamed.from() = current.path1.asString();
+                  directoryRenamed.to() = current.path2.asString();
+                  largeChange.directoryRenamed_ref() =
+                      std::move(directoryRenamed);
+                  change.largeChange_ref() = std::move(largeChange);
+                } else {
+                  Renamed renamed;
+                  renamed.from() = current.path1.asString();
+                  renamed.to() = current.path2.asString();
+                  renamed.fileType() = static_cast<Dtype>(current.type);
+                  smallChange.renamed_ref() = std::move(renamed);
+                  change.smallChange_ref() = std::move(smallChange);
+                }
               }
             }
-          } else {
+          }
+          // All single file changes have path1 pass the filters
+          else if (includePath1) {
             const auto& info = current.info1;
             if (!info.existedBefore) {
               // Added
@@ -2313,7 +2361,10 @@ void EdenServiceHandler::sync_changesSinceV2(
             }
           }
 
-          result.changes_ref()->push_back(std::move(change));
+          // Include a change if either path passes the filters
+          if (includePath1 || includePath2) {
+            result.changes_ref()->push_back(std::move(change));
+          }
         },
         [&](const RootUpdateJournalDelta& current) -> void {
           CommitTransition commitTransition;
