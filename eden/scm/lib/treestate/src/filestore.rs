@@ -217,7 +217,6 @@ impl Store for FileStore {
 }
 
 impl StoreView for FileStore {
-    #[allow(clippy::uninit_vec)]
     fn read<'a>(&'a self, id: BlockId) -> Result<Cow<'a, [u8]>> {
         // Check the ID is in range.
         if id.0 < HEADER_LEN || id.0 > self.position - 4 {
@@ -254,11 +253,7 @@ impl StoreView for FileStore {
             // must have been given an invalid ID.
             bail!(ErrorKind::InvalidStoreId(id.0));
         }
-        let mut buffer: Vec<u8> = Vec::with_capacity(size as usize);
-        unsafe {
-            // This is safe as we've just allocated the buffer and are about to read into it.
-            buffer.set_len(size as usize);
-        }
+        let mut buffer: Vec<u8> = vec![0; size as usize];
         file.read_exact(&mut buffer[..])?;
 
         Ok(Cow::from(buffer))
