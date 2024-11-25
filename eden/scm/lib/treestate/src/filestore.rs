@@ -160,26 +160,6 @@ impl FileStore {
         })
     }
 
-    #[allow(clippy::uninit_vec)]
-    pub fn cache(&mut self) -> Result<()> {
-        if self.cache.is_none() {
-            let mut file = self.file.lock().unwrap();
-            file.flush()?;
-            file.seek(SeekFrom::Start(0))?;
-            *self.at_end.get_mut() = false;
-            let mut buffer = Vec::with_capacity(self.position as usize);
-            unsafe {
-                // This is safe as we've just allocated the buffer and are about to read into it.
-                buffer.set_len(self.position as usize);
-            }
-            file.read_exact(buffer.as_mut_slice())?;
-            file.seek(SeekFrom::Start(self.position))?;
-            *self.at_end.get_mut() = true;
-            self.cache = Some(buffer);
-        }
-        Ok(())
-    }
-
     pub fn position(&self) -> u64 {
         self.position
     }
@@ -410,38 +390,6 @@ mod tests {
                 .expect("file should not be opened")
                 .to_string(),
             "store file version not supported: 0"
-        );
-    }
-
-    #[test]
-    fn cache() {
-        let dir = tempdir().expect("create temp dir");
-        let p = dir.path().join("store");
-        let mut s = FileStore::create(&p).expect("create store");
-        let lock = s.lock().unwrap();
-        let id1 = s.append("data block 1".as_bytes()).expect("write block 1");
-        let id2 = s
-            .append("data block two".as_bytes())
-            .expect("write block 2");
-        s.flush().expect("flush");
-        assert_eq!(s.read(id1).expect("read 1"), "data block 1".as_bytes());
-        assert_eq!(s.read(id2).expect("read 2"), "data block two".as_bytes());
-        drop(lock);
-        drop(s);
-
-        let mut s = FileStore::open(&p).expect("open store");
-        let _lock = s.lock().unwrap();
-        s.cache().expect("can cache");
-        assert_eq!(s.read(id1).expect("read 1"), "data block 1".as_bytes());
-        assert_eq!(s.read(id2).expect("read 2"), "data block two".as_bytes());
-        let id3 = s
-            .append("third data block".as_bytes())
-            .expect("write block 3");
-        s.flush().expect("flush");
-        assert_eq!(s.read(id3).expect("read 3"), "third data block".as_bytes());
-        assert_eq!(
-            s.read(BlockId(id3.0 - 2)).unwrap_err().to_string(),
-            format!("invalid store id: {}", id3.0 - 2)
         );
     }
 
