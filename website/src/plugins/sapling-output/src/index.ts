@@ -6,7 +6,6 @@
  */
 
 // See project README.md for how to use this plugin in markdown.
-const Convert = require('ansi-to-html');
 const {execFile} = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -20,7 +19,7 @@ const EXAMPLE_HEADER = String.raw`
 # hide begin
   $ cat >> "$HGRCPATH" << 'EOF'
   > [ui]
-  > color=always
+  > # color=always
   > [init]
   > prefer-git=false
   > [templatealias]
@@ -125,7 +124,7 @@ const COLORS = {
   15: '#F2F2F2',
 };
 
-// Render `example` (in .t test format without "  " prefix) into HTML.
+// Render `example` (in .t test format without "  " prefix) into text.
 async function renderExample(example: string): Promise<string> {
   // Prepare input.
   const isDebug = process.env.MDX_SAPLING_OUTPUT_DEBUG != null;
@@ -149,16 +148,13 @@ async function renderExample(example: string): Promise<string> {
   // Convert to HTML.
   const rawOutput = await fs.promises.readFile(examplePath, {encoding: 'utf8'});
   const output = processOutput(rawOutput);
-  const convert = new Convert({colors: COLORS});
-  const body = convert.toHtml(output);
-  const html = `<pre class="sapling-example">${body}</pre>`;
 
   // Cleanup.
   if (!isDebug) {
     tmpDir.cleanup();
   }
 
-  return html;
+  return output;
 }
 
 interface Node {
@@ -190,7 +186,6 @@ module.exports = function (options: any) {
     // Process them.
     await Promise.all(
       nodes.map(async (node: Node) => {
-        node.type = 'html';
         node.value = await renderExample(node.value);
       }),
     );
