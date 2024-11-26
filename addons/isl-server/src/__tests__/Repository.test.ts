@@ -13,19 +13,15 @@ import type {RunnableOperation} from 'isl/src/types';
 import {absolutePathForFileInRepo, Repository} from '../Repository';
 import {makeServerSideTracker} from '../analytics/serverSideTracker';
 import {extractRepoInfoFromUrl, setConfigOverrideForTests} from '../commands';
-import * as execa from 'execa';
 import {CommandRunner, type MergeConflicts, type ValidatedRepoInfo} from 'isl/src/types';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import * as ejeca from 'shared/ejeca';
 import * as fsUtils from 'shared/fs';
 import {clone, mockLogger, nextTick} from 'shared/testUtils';
 
 /* eslint-disable require-await */
-
-jest.mock('execa', () => {
-  return jest.fn();
-});
 
 jest.mock('../WatchForChanges', () => {
   class MockWatchForChanges {
@@ -42,12 +38,12 @@ const mockTracker = makeServerSideTracker(
   jest.fn(),
 );
 
-function mockExeca(
+function mockEjeca(
   cmds: Array<[RegExp, (() => {stdout: string} | Error) | {stdout: string} | Error]>,
 ) {
-  return jest.spyOn(execa, 'default').mockImplementation(((cmd: string, args: Array<string>) => {
+  return jest.spyOn(ejeca, 'ejeca').mockImplementation(((cmd: string, args: Array<string>) => {
     const argStr = cmd + ' ' + args?.join(' ');
-    const execaOther = {
+    const ejecaOther = {
       kill: jest.fn(),
       on: jest.fn((event, cb) => {
         // immediately call exit cb to teardown timeout
@@ -65,15 +61,15 @@ function mockExeca(
         if (value instanceof Error) {
           throw value;
         }
-        return {...execaOther, ...value};
+        return {...ejecaOther, ...value};
       }
     }
-    return {...execaOther, stdout: ''};
-  }) as unknown as typeof execa.default);
+    return {...ejecaOther, stdout: ''};
+  }) as unknown as typeof ejeca.ejeca);
 }
 
-function processExitError(code: number, message: string): execa.ExecaError {
-  const err = new Error(message) as execa.ExecaError;
+function processExitError(code: number, message: string): ejeca.EjecaError {
+  const err = new Error(message) as ejeca.EjecaError;
   err.exitCode = code;
   return err;
 }
@@ -94,9 +90,9 @@ describe('Repository', () => {
   });
 
   it('setting command name', async () => {
-    const execaSpy = mockExeca([]);
+    const ejecaSpy = mockEjeca([]);
     await Repository.getRepoInfo({...ctx, cmd: 'slb'});
-    expect(execaSpy).toHaveBeenCalledWith(
+    expect(ejecaSpy).toHaveBeenCalledWith(
       'slb',
       expect.arrayContaining(['root']),
       expect.anything(),
@@ -106,7 +102,7 @@ describe('Repository', () => {
   describe('extracting github repo info', () => {
     beforeEach(() => {
       setConfigOverrideForTests([['github.pull_request_domain', 'github.com']]);
-      mockExeca([
+      mockEjeca([
         [/^sl root --dotdir/, {stdout: '/path/to/myRepo/.sl'}],
         [/^sl root/, {stdout: '/path/to/myRepo'}],
         [
@@ -184,7 +180,7 @@ describe('Repository', () => {
   it('extracting repo info', async () => {
     setConfigOverrideForTests([]);
     setPathsDefault('mononoke://0.0.0.0/fbsource');
-    mockExeca([
+    mockEjeca([
       [/^sl root --dotdir/, {stdout: '/path/to/myRepo/.sl'}],
       [/^sl root/, {stdout: '/path/to/myRepo'}],
     ]);
@@ -203,7 +199,7 @@ describe('Repository', () => {
   it('handles cwd not exists', async () => {
     const err = new Error('cwd does not exist') as Error & {code: string};
     err.code = 'ENOENT';
-    mockExeca([[/^sl root/, err]]);
+    mockEjeca([[/^sl root/, err]]);
     const info = (await Repository.getRepoInfo(ctx)) as ValidatedRepoInfo;
     expect(info).toEqual({
       type: 'cwdDoesNotExist',
@@ -213,7 +209,7 @@ describe('Repository', () => {
 
   it('handles missing executables on windows', async () => {
     const osSpy = jest.spyOn(os, 'platform').mockImplementation(() => 'win32');
-    mockExeca([
+    mockEjeca([
       [
         /^sl root/,
         processExitError(
@@ -235,7 +231,7 @@ describe('Repository', () => {
   it('prevents setting configs not in the allowlist', async () => {
     setConfigOverrideForTests([]);
     setPathsDefault('mononoke://0.0.0.0/fbsource');
-    mockExeca([
+    mockEjeca([
       [/^sl root --dotdir/, {stdout: '/path/to/myRepo/.sl'}],
       [/^sl root/, {stdout: '/path/to/myRepo'}],
     ]);
@@ -257,9 +253,9 @@ describe('Repository', () => {
       pullRequestDomain: undefined,
     };
 
-    let execaSpy: ReturnType<typeof mockExeca>;
+    let ejecaSpy: ReturnType<typeof mockEjeca>;
     beforeEach(() => {
-      execaSpy = mockExeca([]);
+      ejecaSpy = mockEjeca([]);
     });
 
     async function runOperation(op: Partial<RunnableOperation>) {
@@ -284,7 +280,7 @@ describe('Repository', () => {
         args: ['commit', '--message', 'hi'],
       });
 
-      expect(execaSpy).toHaveBeenCalledWith(
+      expect(ejecaSpy).toHaveBeenCalledWith(
         'sl',
         ['commit', '--message', 'hi', '--noninteractive'],
         expect.anything(),
@@ -296,7 +292,7 @@ describe('Repository', () => {
         args: ['rebase', '--rev', {type: 'succeedable-revset', revset: 'aaa'}],
       });
 
-      expect(execaSpy).toHaveBeenCalledWith(
+      expect(ejecaSpy).toHaveBeenCalledWith(
         'sl',
         ['rebase', '--rev', 'max(successors(aaa))', '--noninteractive'],
         expect.anything(),
@@ -308,7 +304,7 @@ describe('Repository', () => {
         args: ['rebase', '--rev', {type: 'exact-revset', revset: 'aaa'}],
       });
 
-      expect(execaSpy).toHaveBeenCalledWith(
+      expect(ejecaSpy).toHaveBeenCalledWith(
         'sl',
         ['rebase', '--rev', 'aaa', '--noninteractive'],
         expect.anything(),
@@ -320,7 +316,7 @@ describe('Repository', () => {
         args: ['add', {type: 'repo-relative-file', path: 'path/to/file.txt'}],
       });
 
-      expect(execaSpy).toHaveBeenCalledWith(
+      expect(ejecaSpy).toHaveBeenCalledWith(
         'sl',
         ['add', '../repo/path/to/file.txt', '--noninteractive'],
         expect.anything(),
@@ -332,7 +328,7 @@ describe('Repository', () => {
         args: ['commit', {type: 'config', key: 'ui.allowemptycommit', value: 'True'}],
       });
 
-      expect(execaSpy).toHaveBeenCalledWith(
+      expect(ejecaSpy).toHaveBeenCalledWith(
         'sl',
         ['commit', '--config', 'ui.allowemptycommit=True', '--noninteractive'],
         expect.anything(),
@@ -344,7 +340,7 @@ describe('Repository', () => {
         args: ['debugsh'],
       });
 
-      expect(execaSpy).not.toHaveBeenCalledWith(
+      expect(ejecaSpy).not.toHaveBeenCalledWith(
         'sl',
         ['debugsh', '--noninteractive'],
         expect.anything(),
@@ -356,7 +352,7 @@ describe('Repository', () => {
         args: ['commit', {type: 'config', key: 'foo.bar', value: '1'}],
       });
 
-      expect(execaSpy).not.toHaveBeenCalledWith(
+      expect(ejecaSpy).not.toHaveBeenCalledWith(
         'sl',
         expect.arrayContaining(['commit', '--config', 'foo.bar=1']),
         expect.anything(),
@@ -368,7 +364,7 @@ describe('Repository', () => {
         args: ['commit', '--config', 'foo.bar=1'],
       });
 
-      expect(execaSpy).not.toHaveBeenCalledWith(
+      expect(ejecaSpy).not.toHaveBeenCalledWith(
         'sl',
         expect.arrayContaining(['commit', '--config', 'foo.bar=1']),
         expect.anything(),
@@ -394,10 +390,10 @@ www/flib/intern/entity/diff/EntPhabricatorDiffSchema.php                        
     it('parses sloc', async () => {
       const repo = new Repository(repoInfo, ctx);
 
-      const execaSpy = mockExeca([[/^sl diff/, () => ({stdout: EXAMPLE_DIFFSTAT})]]);
+      const ejecaSpy = mockEjeca([[/^sl diff/, () => ({stdout: EXAMPLE_DIFFSTAT})]]);
       const results = repo.fetchSignificantLinesOfCode(ctx, 'abcdef', ['generated.file']);
       await expect(results).resolves.toEqual({sloc: 45, strictSloc: 45});
-      expect(execaSpy).toHaveBeenCalledWith(
+      expect(ejecaSpy).toHaveBeenCalledWith(
         'sl',
         expect.arrayContaining([
           'diff',
@@ -415,9 +411,9 @@ www/flib/intern/entity/diff/EntPhabricatorDiffSchema.php                        
 
     it('handles empty generated list', async () => {
       const repo = new Repository(repoInfo, ctx);
-      const execaSpy = mockExeca([[/^sl diff/, () => ({stdout: EXAMPLE_DIFFSTAT})]]);
+      const ejecaSpy = mockEjeca([[/^sl diff/, () => ({stdout: EXAMPLE_DIFFSTAT})]]);
       repo.fetchSignificantLinesOfCode(ctx, 'abcdef', []);
-      expect(execaSpy).toHaveBeenCalledWith(
+      expect(ejecaSpy).toHaveBeenCalledWith(
         'sl',
         expect.arrayContaining(['diff', '-B', '-X', '**__generated__**', '-c', 'abcdef']),
         expect.anything(),
@@ -426,11 +422,11 @@ www/flib/intern/entity/diff/EntPhabricatorDiffSchema.php                        
 
     it('handles multiple generated files', async () => {
       const repo = new Repository(repoInfo, ctx);
-      const execaSpy = mockExeca([[/^sl diff/, () => ({stdout: EXAMPLE_DIFFSTAT})]]);
+      const ejecaSpy = mockEjeca([[/^sl diff/, () => ({stdout: EXAMPLE_DIFFSTAT})]]);
       const generatedFiles = ['generated1.file', 'generated2.file'];
       repo.fetchSignificantLinesOfCode(ctx, 'abcdef', generatedFiles);
       await nextTick();
-      expect(execaSpy).toHaveBeenCalledWith(
+      expect(ejecaSpy).toHaveBeenCalledWith(
         'sl',
         expect.arrayContaining([
           'diff',
@@ -470,33 +466,33 @@ www/flib/intern/entity/diff/EntPhabricatorDiffSchema.php                        
     it('uses correct revset in normal case', async () => {
       const repo = new Repository(repoInfo, ctx);
 
-      const execaSpy = mockExeca([]);
+      const ejecaSpy = mockEjeca([]);
 
       await repo.fetchSmartlogCommits();
       expectCalledWithRevset(
-        execaSpy,
+        ejecaSpy,
         'smartlog(((interestingbookmarks() + heads(draft())) & date(-14)) + .)',
       );
     });
 
     it('updates revset when changing date range', async () => {
-      const execaSpy = mockExeca([]);
+      const ejecaSpy = mockEjeca([]);
       const repo = new Repository(repoInfo, ctx);
 
       repo.nextVisibleCommitRangeInDays();
       await repo.fetchSmartlogCommits();
       expectCalledWithRevset(
-        execaSpy,
+        ejecaSpy,
         'smartlog(((interestingbookmarks() + heads(draft())) & date(-60)) + .)',
       );
 
       repo.nextVisibleCommitRangeInDays();
       await repo.fetchSmartlogCommits();
-      expectCalledWithRevset(execaSpy, 'smartlog((interestingbookmarks() + heads(draft())) + .)');
+      expectCalledWithRevset(ejecaSpy, 'smartlog((interestingbookmarks() + heads(draft())) + .)');
     });
 
     it('fetches additional revsets', async () => {
-      const execaSpy = mockExeca([]);
+      const ejecaSpy = mockEjeca([]);
       const repo = new Repository(repoInfo, ctx);
 
       repo.stableLocations = [
@@ -504,7 +500,7 @@ www/flib/intern/entity/diff/EntPhabricatorDiffSchema.php                        
       ];
       await repo.fetchSmartlogCommits();
       expectCalledWithRevset(
-        execaSpy,
+        ejecaSpy,
         'smartlog(((interestingbookmarks() + heads(draft())) & date(-14)) + . + present(aaa))',
       );
 
@@ -514,7 +510,7 @@ www/flib/intern/entity/diff/EntPhabricatorDiffSchema.php                        
       ];
       await repo.fetchSmartlogCommits();
       expectCalledWithRevset(
-        execaSpy,
+        ejecaSpy,
         'smartlog(((interestingbookmarks() + heads(draft())) & date(-14)) + . + present(aaa) + present(bbb))',
       );
 
@@ -522,7 +518,7 @@ www/flib/intern/entity/diff/EntPhabricatorDiffSchema.php                        
       repo.nextVisibleCommitRangeInDays();
       await repo.fetchSmartlogCommits();
       expectCalledWithRevset(
-        execaSpy,
+        ejecaSpy,
         'smartlog((interestingbookmarks() + heads(draft())) + . + present(aaa) + present(bbb))',
       );
     });
@@ -610,7 +606,7 @@ ${MARK_OUT}
     const MOCK_CONFLICT_WITH_FILE1_RESOLVED: ResolveCommandConflictOutput = clone(MOCK_CONFLICT);
     MOCK_CONFLICT_WITH_FILE1_RESOLVED[0].conflicts.splice(0, 1);
 
-    // these mock values are returned by execa / fs mocks
+    // these mock values are returned by ejeca / fs mocks
     // default: start in a not-in-conflict state
     let slMergeDirExists = false;
     let conflictData: ResolveCommandConflictOutput = NOT_IN_CONFLICT;
@@ -629,7 +625,7 @@ ${MARK_OUT}
 
       jest.spyOn(fsUtils, 'exists').mockImplementation(() => Promise.resolve(slMergeDirExists));
 
-      mockExeca([
+      mockEjeca([
         [
           /^sl resolve --tool internal:dumpjson --all/,
           () => ({stdout: JSON.stringify(conflictData)}),
@@ -810,7 +806,7 @@ ${MARK_OUT}
     });
 
     it('handles errors from `sl resolve`', async () => {
-      mockExeca([
+      mockEjeca([
         [/^sl resolve --tool internal:dumpjson --all/, new Error('failed to do the thing')],
       ]);
 
@@ -995,7 +991,7 @@ describe('absolutePathForFileInRepo', () => {
 
 describe('getCwdInfo', () => {
   it('computes cwd path and labels', async () => {
-    mockExeca([[/^sl root/, {stdout: '/path/to/myRepo'}]]);
+    mockEjeca([[/^sl root/, {stdout: '/path/to/myRepo'}]]);
     jest.spyOn(fs.promises, 'realpath').mockImplementation(async (path, _opts) => {
       return path as string;
     });
@@ -1014,7 +1010,7 @@ describe('getCwdInfo', () => {
   });
 
   it('uses realpath', async () => {
-    mockExeca([[/^sl root/, {stdout: '/data/users/name/myRepo'}]]);
+    mockEjeca([[/^sl root/, {stdout: '/data/users/name/myRepo'}]]);
     jest.spyOn(fs.promises, 'realpath').mockImplementation(async (path, _opts) => {
       return (path as string).replace(/^\/home\/name\//, '/data/users/name/');
     });
@@ -1033,7 +1029,7 @@ describe('getCwdInfo', () => {
   });
 
   it('returns null for non-repos', async () => {
-    mockExeca([[/^sl root/, new Error('not a repository')]]);
+    mockEjeca([[/^sl root/, new Error('not a repository')]]);
     await expect(
       Repository.getCwdInfo({
         cmd: 'sl',

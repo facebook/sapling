@@ -717,6 +717,7 @@ export const allConfigNames = [
   'isl.download-commit-rebase-type',
   'isl.experimental-features',
   'isl.hold-off-refresh-ms',
+  'isl.sl-progress-enabled',
   'isl.use-sl-graphql',
   'github.preferred_submit_command',
   'isl.open-file-cmd',

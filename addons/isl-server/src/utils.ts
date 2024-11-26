@@ -5,9 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type execa from 'execa';
-import type {ExecaChildProcess, ExecaError} from 'execa';
 import type {CommitInfo, SmartlogCommits} from 'isl/src/types';
+import type {EjecaError, EjecaReturn, EjecaChildProcess} from 'shared/ejeca';
 
 import os from 'node:os';
 import {truncate} from 'shared/utils';
@@ -79,7 +78,7 @@ export function serializeAsyncCall<T>(asyncFun: () => Promise<T>): () => Promise
  * This is slightly more robust than execa 6.0 and nodejs' `signal` support:
  * if a process was stopped (by `SIGTSTP` or `SIGSTOP`), it can still be killed.
  */
-export function handleAbortSignalOnProcess(child: ExecaChildProcess, signal: AbortSignal) {
+export function handleAbortSignalOnProcess(child: EjecaChildProcess, signal: AbortSignal) {
   signal.addEventListener('abort', () => {
     if (os.platform() == 'win32') {
       // Signals are ignored on Windows.
@@ -130,7 +129,7 @@ export function findPublicAncestor(
  * Return a JSON object. On error, the JSON object has property "error".
  */
 export function parseExecJson<T>(
-  exec: Promise<execa.ExecaReturnValue<string>>,
+  exec: Promise<EjecaReturn>,
   reply: (parsed?: T, error?: string) => void,
 ) {
   exec
@@ -165,7 +164,7 @@ export function parseExecJson<T>(
     });
 }
 
-export function isExecaError(s: unknown): s is ExecaError & {code?: string} {
+export function isEjecaError(s: unknown): s is EjecaError & {code?: string} {
   return s != null && typeof s === 'object' && 'exitCode' in s;
 }
 

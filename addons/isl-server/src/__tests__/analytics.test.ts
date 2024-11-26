@@ -13,7 +13,7 @@ import type {RepositoryContext} from '../serverTypes';
 import {Repository} from '../Repository';
 import {makeServerSideTracker} from '../analytics/serverSideTracker';
 import {setConfigOverrideForTests} from '../commands';
-import * as execa from 'execa';
+import * as ejeca from 'shared/ejeca';
 import {mockLogger} from 'shared/testUtils';
 import {defer} from 'shared/utils';
 
@@ -41,16 +41,12 @@ jest.mock('../WatchForChanges', () => {
   return {WatchForChanges: MockWatchForChanges};
 });
 
-jest.mock('execa', () => {
-  return jest.fn();
-});
-
-function mockExeca(
+function mockEjeca(
   cmds: Array<[RegExp, (() => {stdout: string} | Error) | {stdout: string} | Error]>,
 ) {
-  return jest.spyOn(execa, 'default').mockImplementation(((cmd: string, args: Array<string>) => {
+  return jest.spyOn(ejeca, 'ejeca').mockImplementation(((cmd: string, args: Array<string>) => {
     const argStr = cmd + ' ' + args?.join(' ');
-    const execaOther = {
+    const ejecaOther = {
       kill: jest.fn(),
       on: jest.fn((event, cb) => {
         // immediately call exit cb to teardown timeout
@@ -68,11 +64,11 @@ function mockExeca(
         if (value instanceof Error) {
           throw value;
         }
-        return {...execaOther, ...value};
+        return {...ejecaOther, ...value};
       }
     }
-    return {...execaOther, stdout: ''};
-  }) as unknown as typeof execa.default);
+    return {...ejecaOther, stdout: ''};
+  }) as unknown as typeof ejeca.ejeca);
 }
 
 describe('track', () => {
@@ -124,7 +120,7 @@ describe('track', () => {
       ['path.default', 'https://github.com/facebook/sapling.git'],
       ['github.pull_request_domain', 'github.com'],
     ]);
-    const execaSpy = mockExeca([
+    const ejecaSpy = mockEjeca([
       [/^sl root --dotdir/, {stdout: '/path/to/myRepo/.sl'}],
       [/^sl root/, {stdout: '/path/to/myRepo'}],
       [
@@ -160,7 +156,7 @@ describe('track', () => {
       mockLogger,
     );
     repo.dispose();
-    execaSpy.mockClear();
+    ejecaSpy.mockClear();
   });
 
   it('uses consistent session id, but different track ids', () => {
