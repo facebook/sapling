@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 #include "eden/scm/lib/backingstore/include/SaplingNativeBackingStore.h"
@@ -260,17 +260,22 @@ folly::Try<std::shared_ptr<GlobFilesResponse>>
 SaplingNativeBackingStore::getGlobFiles(
     // Human Readable 40b commit id
     std::string_view commit_id,
-    const std::vector<std::string>& suffixes) {
+    const std::vector<std::string>& suffixes,
+    const std::vector<std::string>& prefixes) {
   rust::Vec<rust::String> rust_suffixes;
+  rust::Vec<rust::String> rust_prefixes;
   std::copy(
       suffixes.begin(), suffixes.end(), std::back_inserter(rust_suffixes));
+  std::copy(
+      prefixes.begin(), prefixes.end(), std::back_inserter(rust_prefixes));
 
   auto br = folly::ByteRange(commit_id);
   return folly::makeTryWith([&] {
     auto globFiles = sapling_backingstore_get_glob_files(
         *store_.get(),
         rust::Slice<const uint8_t>{br.data(), br.size()},
-        rust_suffixes);
+        rust_suffixes,
+        rust_prefixes);
 
     XCHECK(
         globFiles.get(),

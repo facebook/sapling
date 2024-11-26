@@ -223,6 +223,7 @@ pub(crate) mod ffi {
             store: &BackingStore,
             commit_id: &[u8],
             suffixes: Vec<String>,
+            prefixes: Vec<String>,
         ) -> Result<SharedPtr<GlobFilesResponse>>;
 
         pub fn sapling_dogfooding_host(store: &BackingStore) -> Result<bool>;
@@ -407,9 +408,14 @@ pub fn sapling_backingstore_get_glob_files(
     store: &BackingStore,
     commit_id: &[u8],
     suffixes: Vec<String>,
+    prefixes: Vec<String>,
 ) -> Result<SharedPtr<ffi::GlobFilesResponse>> {
+    let prefix_opt = match prefixes.len() {
+        0 => None,
+        _ => Some(prefixes),
+    };
     let files = store
-        .get_glob_files(commit_id, suffixes)
+        .get_glob_files(commit_id, suffixes, prefix_opt)
         .and_then(|opt| opt.ok_or_else(|| Error::msg("failed to retrieve glob file")))?;
     Ok(SharedPtr::new(ffi::GlobFilesResponse { files }))
 }

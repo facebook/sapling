@@ -154,7 +154,8 @@ class FilteredBackingStore
 
   ImmediateFuture<GetGlobFilesResult> getGlobFiles(
       const RootId& id,
-      const std::vector<std::string>& globs) override;
+      const std::vector<std::string>& globs,
+      const std::vector<std::string>& prefixes) override;
 
   /*
    * Does the actual filtering logic for tree and root-tree objects.

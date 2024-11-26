@@ -522,7 +522,10 @@ TEST_F(ObjectStoreTest, glob_files_test) {
   auto globs = std::vector<std::string>{".txt"};
 
   auto fut = objectStore->getGlobFiles(
-      rootId, globs, context.as<ObjectFetchContext>());
+      rootId,
+      globs,
+      std::vector<std::string>{},
+      context.as<ObjectFetchContext>());
   auto result = std::move(fut).get(0ms);
   EXPECT_EQ(result.globFiles.size(), 2);
   auto sorted_result = result.globFiles;

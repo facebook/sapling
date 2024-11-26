@@ -65,6 +65,7 @@ getLocalGlobResults(
     const std::shared_ptr<ServerState>& serverState,
     bool includeDotfiles,
     const std::vector<std::string>& suffixGlobs,
+    const std::vector<std::string>& prefixes,
     const TreeInodePtr& rootInode,
     const ObjectFetchContextPtr& context);
 

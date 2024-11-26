@@ -232,7 +232,8 @@ class FakeBackingStore final : public BackingStore {
       const ObjectFetchContextPtr& context) override;
   ImmediateFuture<GetGlobFilesResult> getGlobFiles(
       const RootId& id,
-      const std::vector<std::string>& globs) override;
+      const std::vector<std::string>& globs,
+      const std::vector<std::string>& prefixes) override;
 
   LocalStoreCachingPolicy localStoreCachingPolicy_;
   std::shared_ptr<ServerState> serverState_;

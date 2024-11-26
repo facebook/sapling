@@ -265,7 +265,8 @@ GitBackingStore::getBlobAuxData(const ObjectId&, const ObjectFetchContextPtr&) {
 
 ImmediateFuture<BackingStore::GetGlobFilesResult> GitBackingStore::getGlobFiles(
     const RootId& /* id */,
-    const std::vector<std::string>& /* globs */) {
+    const std::vector<std::string>& /* globs */,
+    const std::vector<std::string>& /* prefixes */) {
   return folly::makeFuture<GetGlobFilesResult>(
       std::runtime_error("getGlobFiles() is not supported on git"));
 };

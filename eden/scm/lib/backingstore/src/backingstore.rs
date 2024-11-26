@@ -278,6 +278,7 @@ impl BackingStore {
         &self,
         commit_id: &[u8],
         suffixes: Vec<String>,
+        prefixes: Option<Vec<String>>,
     ) -> Result<Option<Vec<String>>> {
         // Lots of room for future optimizations here, such as handling the string conversion inside
         // the Response, probably by implementing map similar to how then is currently implemented.
@@ -287,7 +288,7 @@ impl BackingStore {
             BlockingResponse::from_async(self.maybe_reload().repo.eden_api()?.suffix_query(
                 CommitId::Hg(HgId::from_hex(commit_id)?),
                 suffixes,
-                None,
+                prefixes,
             ))?
             .entries
             .iter()

@@ -2288,10 +2288,11 @@ folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
 ImmediateFuture<BackingStore::GetGlobFilesResult>
 SaplingBackingStore::getGlobFiles(
     const RootId& id,
-    const std::vector<std::string>& globs) {
+    const std::vector<std::string>& globs,
+    const std::vector<std::string>& prefixes) {
   folly::stop_watch<std::chrono::milliseconds> watch;
   using GetGlobFilesResult = folly::Try<GetGlobFilesResult>;
-  auto globFilesResult = store_.getGlobFiles(id.value(), globs);
+  auto globFilesResult = store_.getGlobFiles(id.value(), globs, prefixes);
 
   if (globFilesResult.hasValue()) {
     std::vector<std::string> files;

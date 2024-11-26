@@ -3794,11 +3794,19 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
       globFilesRequestScope->setLocal(false);
       // Attempt to resolve all EdenAPI futures. If any of
       // them result in an error we will fall back to local lookup
+
+      auto searchRoot = params->searchRoot_ref().value();
+      size_t pos = 0;
+      while ((pos = searchRoot.find("\\", pos)) != std::string::npos) {
+        searchRoot.replace(pos, 1, "/");
+      }
+
       auto combinedFuture =
           std::move(backgroundFuture)
               .thenValue([revisions = params->revisions_ref().value(),
                           mountHandle,
                           suffixGlobs = std::move(suffixGlobs),
+                          searchRoot,
                           serverState = server_->getServerState(),
                           includeDotfiles = *params->includeDotfiles(),
                           context = context.copy()](auto&&) mutable {
@@ -3806,12 +3814,20 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                 const auto& edenMount = mountHandle.getEdenMountPtr();
                 const auto& rootInode = mountHandle.getRootInode();
 
+                std::vector<std::string> prefixes;
+                // Despite the API supporting multiple prefixes, we only use one
+                // derived from the search root
+                if (!searchRoot.empty() && searchRoot != ".") {
+                  prefixes.push_back(searchRoot);
+                }
+
                 if (revisions.empty()) {
                   return getLocalGlobResults(
                       edenMount,
                       serverState,
                       includeDotfiles,
                       suffixGlobs,
+                      prefixes,
                       rootInode,
                       context);
                 }
@@ -3822,7 +3838,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                   // text version globFiles takes as input the human readable
                   // version, so convert using the store's parse method
                   globFilesResultFutures.push_back(store.getGlobFiles(
-                      store.parseRootId(id), suffixGlobs, context));
+                      store.parseRootId(id), suffixGlobs, prefixes, context));
                 }
                 return collectAllSafe(std::move(globFilesResultFutures));
               });
@@ -3834,7 +3850,7 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                           wantDtype = params->wantDtype_ref().value(),
                           includeDotfiles =
                               params->includeDotfiles_ref().value(),
-                          searchRoot = params->searchRoot_ref().value(),
+                          searchRoot,
                           &context](auto&& globResults) mutable {
                 auto edenMount = mountHandle.getEdenMountPtr();
                 std::vector<ImmediateFuture<GlobEntry>> globEntryFuts;
@@ -3938,10 +3954,6 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                       // Windows
                       XLOG(DBG5)
                           << "Building Glob with searchroot " << searchRoot;
-                      size_t pos = searchRoot.find("\\");
-                      if (pos != std::string::npos) {
-                        searchRoot.replace(pos, 1, "/");
-                      }
                       auto glob = std::make_unique<Glob>();
                       std::sort(
                           globEntries.begin(),

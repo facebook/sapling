@@ -186,7 +186,8 @@ FakeBackingStore::getBlobAuxData(
 ImmediateFuture<BackingStore::GetGlobFilesResult>
 FakeBackingStore::getGlobFiles(
     const RootId& id,
-    const std::vector<std::string>& globs) {
+    const std::vector<std::string>& globs,
+    const std::vector<std::string>& /*prefixes*/) {
   // Since unordered map can't take a vec for testing purposes only use the
   // first entry in the query
   auto suffixQuery = std::pair<RootId, std::string>(id, globs[0]);

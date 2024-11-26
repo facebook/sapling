@@ -209,8 +209,9 @@ TEST_F(SaplingBackingStoreWithFaultInjectorTest, getBlob) {
 
 TEST_F(SaplingBackingStoreNoFaultInjectorTest, getGlobFilesMultiple) {
   auto suffixes = std::vector<std::string>{".txt"};
-  auto globFiles =
-      queuedBackingStore->getGlobFiles(commit1, suffixes).get(kTestTimeout);
+  auto prefixes = std::vector<std::string>{};
+  auto globFiles = queuedBackingStore->getGlobFiles(commit1, suffixes, prefixes)
+                       .get(kTestTimeout);
   auto paths = globFiles.globFiles;
   auto commitId = queuedBackingStore->renderRootId(globFiles.rootId);
 
@@ -229,8 +230,9 @@ TEST_F(SaplingBackingStoreNoFaultInjectorTest, getGlobFilesMultiple) {
 
 TEST_F(SaplingBackingStoreNoFaultInjectorTest, getGlobFilesSingle) {
   auto suffixes = std::vector<std::string>{".rs"};
-  auto globFiles =
-      queuedBackingStore->getGlobFiles(commit1, suffixes).get(kTestTimeout);
+  auto prefixes = std::vector<std::string>{};
+  auto globFiles = queuedBackingStore->getGlobFiles(commit1, suffixes, prefixes)
+                       .get(kTestTimeout);
   auto paths = globFiles.globFiles;
   auto commitId = queuedBackingStore->renderRootId(globFiles.rootId);
 
@@ -246,8 +248,9 @@ TEST_F(SaplingBackingStoreNoFaultInjectorTest, getGlobFilesSingle) {
 }
 TEST_F(SaplingBackingStoreNoFaultInjectorTest, getGlobFilesNone) {
   auto suffixes = std::vector<std::string>{".bzl"};
-  auto globFiles =
-      queuedBackingStore->getGlobFiles(commit1, suffixes).get(kTestTimeout);
+  auto prefixes = std::vector<std::string>{};
+  auto globFiles = queuedBackingStore->getGlobFiles(commit1, suffixes, prefixes)
+                       .get(kTestTimeout);
   auto paths = globFiles.globFiles;
   auto commitId = queuedBackingStore->renderRootId(globFiles.rootId);
 
@@ -261,8 +264,9 @@ TEST_F(SaplingBackingStoreNoFaultInjectorTest, getGlobFilesNone) {
 
 TEST_F(SaplingBackingStoreNoFaultInjectorTest, getGlobFilesNested) {
   auto suffixes = std::vector<std::string>{".cpp"};
-  auto globFiles =
-      queuedBackingStore->getGlobFiles(commit1, suffixes).get(kTestTimeout);
+  auto prefixes = std::vector<std::string>{};
+  auto globFiles = queuedBackingStore->getGlobFiles(commit1, suffixes, prefixes)
+                       .get(kTestTimeout);
   auto paths = globFiles.globFiles;
   auto commitId = queuedBackingStore->renderRootId(globFiles.rootId);
 

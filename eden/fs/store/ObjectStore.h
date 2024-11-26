@@ -285,6 +285,7 @@ class ObjectStore : public IObjectStore,
   ImmediateFuture<BackingStore::GetGlobFilesResult> getGlobFiles(
       const RootId& id,
       const std::vector<std::string>& globs,
+      const std::vector<std::string>& prefixes,
       const ObjectFetchContextPtr& context) const;
 
   /**
@@ -393,6 +394,7 @@ class ObjectStore : public IObjectStore,
   ImmediateFuture<BackingStore::GetGlobFilesResult> getGlobFilesImpl(
       const RootId& id,
       const std::vector<std::string>& globs,
+      const std::vector<std::string>& prefixes,
       const ObjectFetchContextPtr& context) const;
 
   /**

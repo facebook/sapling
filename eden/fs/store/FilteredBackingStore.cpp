@@ -392,9 +392,10 @@ folly::SemiFuture<folly::Unit> FilteredBackingStore::prefetchBlobs(
 ImmediateFuture<BackingStore::GetGlobFilesResult>
 FilteredBackingStore::getGlobFiles(
     const RootId& id,
-    const std::vector<std::string>& globs) {
+    const std::vector<std::string>& globs,
+    const std::vector<std::string>& prefixes) {
   auto [parsedRootId, parsedFilterId] = parseFilterIdFromRootId(id);
-  auto fut = backingStore_->getGlobFiles(parsedRootId, globs);
+  auto fut = backingStore_->getGlobFiles(parsedRootId, globs, prefixes);
   return std::move(fut).thenValue([this, id, filterId = parsedFilterId](
                                       auto&& getGlobFilesResult) {
     std::vector<ImmediateFuture<std::pair<std::string, FilterCoverage>>>

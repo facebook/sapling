@@ -64,7 +64,8 @@ class EmptyBackingStore final : public BijectiveBackingStore {
 
   ImmediateFuture<GetGlobFilesResult> getGlobFiles(
       const RootId& id,
-      const std::vector<std::string>& globs) override;
+      const std::vector<std::string>& globs,
+      const std::vector<std::string>& prefixes) override;
 
   LocalStoreCachingPolicy localStoreCachingPolicy_ =
       LocalStoreCachingPolicy::NoCaching;

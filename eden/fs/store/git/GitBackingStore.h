@@ -84,7 +84,8 @@ class GitBackingStore final : public BijectiveBackingStore {
       const ObjectFetchContextPtr& context) override;
   ImmediateFuture<GetGlobFilesResult> getGlobFiles(
       const RootId& id,
-      const std::vector<std::string>& globs) override;
+      const std::vector<std::string>& globs,
+      const std::vector<std::string>& prefixes) override;
 
   TreePtr getTreeImpl(const ObjectId& id);
   BlobPtr getBlobImpl(const ObjectId& id);

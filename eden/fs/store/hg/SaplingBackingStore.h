@@ -563,7 +563,8 @@ class SaplingBackingStore final : public BackingStore {
 
   ImmediateFuture<GetGlobFilesResult> getGlobFiles(
       const RootId& id,
-      const std::vector<std::string>& globs) override;
+      const std::vector<std::string>& globs,
+      const std::vector<std::string>& prefixes) override;
 
   /**
    * The worker runloop function.

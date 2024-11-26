@@ -287,7 +287,8 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
    */
   virtual ImmediateFuture<GetGlobFilesResult> getGlobFiles(
       const RootId& id,
-      const std::vector<std::string>& globs) = 0;
+      const std::vector<std::string>& globs,
+      const std::vector<std::string>& prefixes) = 0;
 
   /**
    * Prefetch all the blobs represented by the HashRange.

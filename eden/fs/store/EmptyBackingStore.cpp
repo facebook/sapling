@@ -76,7 +76,8 @@ SemiFuture<BackingStore::GetBlobAuxResult> EmptyBackingStore::getBlobAuxData(
 ImmediateFuture<BackingStore::GetGlobFilesResult>
 EmptyBackingStore::getGlobFiles(
     const RootId& /* id */,
-    const std::vector<std::string>& /* globs */) {
+    const std::vector<std::string>& /* globs */,
+    const std::vector<std::string>& /* prefixes */) {
   return makeSemiFuture<GetGlobFilesResult>(
       std::domain_error("empty backing store"));
 }

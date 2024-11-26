@@ -834,26 +834,41 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, getGlobFiles) {
   // Get the glob files
   auto executor = folly::ManualExecutor();
 
-  auto filteredFut1 =
-      filteredStore_->getGlobFiles(rootId, std::vector<std::string>{"foo"})
-          .semi()
-          .via(&executor);
-  auto filteredFut2 =
-      filteredStore_->getGlobFiles(rootId2, std::vector<std::string>{"foo"})
-          .semi()
-          .via(&executor);
-  auto filteredFut3 =
-      filteredStore_->getGlobFiles(rootId3, std::vector<std::string>{"foo"})
-          .semi()
-          .via(&executor);
-  auto filteredFut4 =
-      filteredStore_->getGlobFiles(rootId4, std::vector<std::string>{"foo"})
-          .semi()
-          .via(&executor);
-  auto filteredFut5 =
-      filteredStore_->getGlobFiles(rootId5, std::vector<std::string>{"foo"})
-          .semi()
-          .via(&executor);
+  auto filteredFut1 = filteredStore_
+                          ->getGlobFiles(
+                              rootId,
+                              std::vector<std::string>{"foo"},
+                              std::vector<std::string>{})
+                          .semi()
+                          .via(&executor);
+  auto filteredFut2 = filteredStore_
+                          ->getGlobFiles(
+                              rootId2,
+                              std::vector<std::string>{"foo"},
+                              std::vector<std::string>{})
+                          .semi()
+                          .via(&executor);
+  auto filteredFut3 = filteredStore_
+                          ->getGlobFiles(
+                              rootId3,
+                              std::vector<std::string>{"foo"},
+                              std::vector<std::string>{})
+                          .semi()
+                          .via(&executor);
+  auto filteredFut4 = filteredStore_
+                          ->getGlobFiles(
+                              rootId4,
+                              std::vector<std::string>{"foo"},
+                              std::vector<std::string>{})
+                          .semi()
+                          .via(&executor);
+  auto filteredFut5 = filteredStore_
+                          ->getGlobFiles(
+                              rootId5,
+                              std::vector<std::string>{"foo"},
+                              std::vector<std::string>{})
+                          .semi()
+                          .via(&executor);
   executor.drain();
   EXPECT_TRUE(filteredFut1.isReady());
   EXPECT_TRUE(filteredFut2.isReady());

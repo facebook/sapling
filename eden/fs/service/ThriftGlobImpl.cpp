@@ -367,13 +367,14 @@ getLocalGlobResults(
     const std::shared_ptr<ServerState>& serverState,
     bool includeDotfiles,
     const std::vector<std::string>& suffixGlobs,
+    const std::vector<std::string>& prefixes,
     const TreeInodePtr& rootInode,
     const ObjectFetchContextPtr& context) {
   // Use current commit hash
   XLOG(DBG3) << "No commit hash in input, using current hash";
   auto rootId = edenMount->getCheckedOutRootId();
   auto& store = edenMount->getObjectStore();
-  return store->getGlobFiles(rootId, suffixGlobs, context)
+  return store->getGlobFiles(rootId, suffixGlobs, prefixes, context)
       .thenValue([edenMount,
                   serverState,
                   includeDotfiles,
