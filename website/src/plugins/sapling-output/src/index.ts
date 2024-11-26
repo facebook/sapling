@@ -63,7 +63,7 @@ function processInput(text: string): string {
     let newLine = line;
     if (line.startsWith("# hide")) {
       // Insert an empty line separator so it does not get treated as output.
-      newLine = `\n  ${line}`;
+      newLine = `\n${line}`;
     } else if (line.length > 0) {
       newLine = `  ${line}`;
     }
