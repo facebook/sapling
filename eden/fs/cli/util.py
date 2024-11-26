@@ -917,6 +917,12 @@ if sys.platform == "win32":
 def can_enable_windows_symlinks() -> bool:
     if sys.platform != "win32":
         return False
+    elif (
+        "INTEGRATION_TEST" in os.environ
+        or "EDENFS_UNITTEST" in os.environ
+        or "TESTTMP" in os.environ
+    ):
+        return True
     else:
         build = get_windows_build()
         # There is an issue with symlinks on Windows 10 on builds older than
