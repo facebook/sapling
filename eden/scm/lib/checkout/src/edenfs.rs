@@ -439,22 +439,28 @@ pub fn edenfs_redirect_fixup(
     config: &dyn Config,
     wc: &WorkingCopy,
 ) -> anyhow::Result<()> {
+    use minibytes::Text;
+
     let is_okay = match is_edenfs_redirect_okay(wc).unwrap_or(Some(false)) {
         Some(r) => r,
         None => return Ok(()),
     };
-    let arg0 = config.get_or("edenfs", "command", || "edenfsctl".to_owned())?;
-    let args_raw = config.get_or("edenfs", "redirect-fixup", || "redirect fixup".to_owned())?;
-    let args = args_raw.split_whitespace().collect::<Vec<_>>();
-    let mut cmd0 = Command::new(arg0);
-    let cmd = cmd0.args(args);
+    let arg0: Text = config
+        .get_nonempty("edenfs", "command")
+        .unwrap_or("edenfsctl".into());
+    let args_raw: Text = config
+        .get_nonempty("edenfs", "redirect-fixup")
+        .unwrap_or("redirect fixup".into());
+    let mut cmd0 = Command::new(arg0.as_ref());
+    let cmd = cmd0.args(args_raw.split_whitespace());
     if is_okay {
         cmd.spawn_detached()?;
     } else {
         lgr.io().disable_progress(true)?;
         let status = cmd.status();
         lgr.io().disable_progress(false)?;
-        status?;
+        status
+            .with_context(|| format!("running EdenFS redirect fixup command {arg0} {args_raw}"))?;
     }
     Ok(())
 }
