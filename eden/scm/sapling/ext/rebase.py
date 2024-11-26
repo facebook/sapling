@@ -250,6 +250,7 @@ class rebaseruntime:
 
         self.collapsef = opts.get("collapse", False)
         self.collapsemsg = cmdutil.logmessage(repo, opts)
+        self.contf = opts.get("continue", False)
         self.date = opts.get("date", None)
 
         e = opts.get("extrafn")  # internal, used by e.g. hgsubversion
@@ -674,6 +675,7 @@ class rebaseruntime:
                             _("%s (in %s); switching to on-disk merge\n")
                             % (kindstr, pathstr)
                         )
+                        cmdutil.bailifchanged(repo)
                     ui.log(
                         "rebase",
                         rebase_imm_new_restart=str(True).lower(),
@@ -790,7 +792,7 @@ class rebaseruntime:
         if self.collapsef:
             storecollapsemsg(repo, self.collapsemsg)
 
-        if len(repo[None].parents()) == 2:
+        if self.contf and len(repo[None].parents()) == 2:
             repo.ui.debug("resuming interrupted rebase\n")
         else:
             with ui.configoverride(
