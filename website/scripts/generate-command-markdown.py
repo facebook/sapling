@@ -106,7 +106,7 @@ def generate_commands_json(command_list: List[str]) -> Dict:
             "--config",
             "extensions.github=",
             "debugshell",
-            subprocess_cwd / "extract-command-documentation.py",
+            os.path.realpath(subprocess_cwd / "extract-command-documentation.py"),
             json.dumps(command_list, indent=2),
         ],
         capture_output=True,
@@ -151,7 +151,7 @@ def rst_to_markdown(rsts: Dict[str, str]) -> Dict[str, str]:
         [
             get_sapling(),
             "debugshell",
-            subprocess_cwd / "rst-to-md.py",
+            os.path.realpath(subprocess_cwd / "rst-to-md.py"),
         ],
         capture_output=True,
         input=json.dumps(rsts).encode("utf-8"),
