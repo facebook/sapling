@@ -217,15 +217,15 @@ def follow_cmd(ui, repo, *revs, **opts):
             "L",
             "limit",
             30,
-            _("maximum number of items to fetch (default 30)"),
+            _("maximum number of items to fetch"),
             _("int"),
         ),
         ("S", "search", "", _("search pull requests with query"), _("query")),
         (
             "s",
             "state",
-            "",
-            _('filter by state: {open|closed|merged|all} (default "open")'),
+            "open",
+            _("filter by state: open, closed, merged, all"),
             _("string"),
         ),
         (
