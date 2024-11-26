@@ -5,16 +5,18 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import DrawDagInput from "@site/src/components/DrawDagInput";
+import DrawDagInput from '@site/src/components/DrawDagInput';
 import React from 'react';
-import RenderDag from "@site/src/components/RenderDag";
+import RenderDag from '@site/src/components/RenderDag';
 
 export default function DrawDagExample({initValue, showParents = false}) {
-  const [state, setState] = React.useState(() => { return {
-    parents: new Map(),
-    dag: null,
-    subset: null,
-  }});
+  const [state, setState] = React.useState(() => {
+    return {
+      parents: new Map(),
+      dag: null,
+      subset: null,
+    };
+  });
 
   // Limit nodes to show if there are too many.
   function getSubset({input, parents, dag, bindings}) {
@@ -53,13 +55,17 @@ export default function DrawDagExample({initValue, showParents = false}) {
           const text = `${prefix}: ${parents.join(', ')}`;
           const x = cx;
           const y = cy + r + 2;
-          labels.push(<text x={x} y={y} textAnchor="middle" alignmentBaseline="hanging" fontSize="0.7em" key={name}>{text}</text>);
+          labels.push(
+            <text x={x} y={y} textAnchor="middle" alignmentBaseline="hanging" fontSize="0.7em" key={name}>
+              {text}
+            </text>,
+          );
           updateViewbox(x - 50, y + 10);
           updateViewbox(x + 50, y + 10);
         }
       }
       return <g fill="var(--ifm-color-content)">{labels}</g>;
-    }
+    };
   }
 
   function onDagParentsChange({input, parents, bindings}) {
@@ -78,9 +84,9 @@ export default function DrawDagExample({initValue, showParents = false}) {
   }
 
   const containerStyle = {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   };
 
   const renderDagStyle = {
@@ -89,17 +95,14 @@ export default function DrawDagExample({initValue, showParents = false}) {
 
   const columnWidth = showParents ? 22 : 14;
 
-  return <div className="drawdag row" style={containerStyle}>
-    <div className="col col--6">
-      <DrawDagInput initValue={initValue} onDagParentsChange={onDagParentsChange} />
+  return (
+    <div className="drawdag row" style={containerStyle}>
+      <div className="col col--6">
+        <DrawDagInput initValue={initValue} onDagParentsChange={onDagParentsChange} />
+      </div>
+      <div className="col col--6" style={renderDagStyle}>
+        <RenderDag dag={state.dag} subset={state.subset} drawExtra={getDrawExtra(state)} columnWidth={columnWidth} />
+      </div>
     </div>
-    <div className="col col--6" style={renderDagStyle}>
-      <RenderDag
-        dag={state.dag}
-        subset={state.subset}
-        drawExtra={getDrawExtra(state)}
-        columnWidth={columnWidth}
-      />
-    </div>
-  </div>;
-};
+  );
+}

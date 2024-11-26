@@ -8,26 +8,32 @@
 import React from 'react';
 import Editor from 'react-simple-code-editor';
 import equal from 'deep-equal';
-import importBindings from "@site/src/utils/importBindings";
+import importBindings from '@site/src/utils/importBindings';
 
 export default function DrawDagInput({initValue, style, padding = 10, onDagParentsChange}) {
-  const [state, setState] = React.useState(() => { return {
-    input: (initValue ?? '').replace(/^\n+|\s+$/g, ''),
-    parents: new Map(),
-    comments: '',
-    bindings: null,
-    dropped: false,
-  }});
+  const [state, setState] = React.useState(() => {
+    return {
+      input: (initValue ?? '').replace(/^\n+|\s+$/g, ''),
+      parents: new Map(),
+      comments: '',
+      bindings: null,
+      dropped: false,
+    };
+  });
 
   React.useEffect(() => {
-    importBindings().then((bindings) => {
-      if (!state.bindings && !state.dropped) {
-        setState((state) => { return {...state, bindings}; });
-      }
-    }).catch(console.error);
+    importBindings()
+      .then((bindings) => {
+        if (!state.bindings && !state.dropped) {
+          setState((state) => {
+            return {...state, bindings};
+          });
+        }
+      })
+      .catch(console.error);
     return function cleanup() {
       state.dropped = true;
-    }
+    };
   }, []);
 
   // Trigger onDagParentsChange.
@@ -41,8 +47,8 @@ export default function DrawDagInput({initValue, style, padding = 10, onDagParen
     }
     if (onDagParentsChange) {
       try {
-        const inputWithoutComments = input.replace(/#.*$/mg, '');
-        const newComments = input.replace(/.*#$/mg, '');
+        const inputWithoutComments = input.replace(/#.*$/gm, '');
+        const newComments = input.replace(/.*#$/gm, '');
         const newParents = bindings.drawdag(inputWithoutComments);
         if (!equal(state.parents, newParents) || comments !== newComments) {
           onDagParentsChange({parents: newParents, bindings, input});
@@ -55,7 +61,7 @@ export default function DrawDagInput({initValue, style, padding = 10, onDagParen
     }
     return function cleanup() {
       state.dropped = true;
-    }
+    };
   }, [state.bindings, state.input]);
 
   function onValueChange(input) {
@@ -73,14 +79,16 @@ export default function DrawDagInput({initValue, style, padding = 10, onDagParen
     borderRadius: 'var(--ifm-global-radius)',
     fontFamily: 'var(--ifm-font-family-monospace)',
     lineHeight: 1,
-    ...style
+    ...style,
   };
 
-  return <Editor
-    value={state.input}
-    highlight={(c) => c}
-    padding={padding}
-    style={mergedStyle}
-    onValueChange={onValueChange}
-  />
+  return (
+    <Editor
+      value={state.input}
+      highlight={(c) => c}
+      padding={padding}
+      style={mergedStyle}
+      onValueChange={onValueChange}
+    />
+  );
 }

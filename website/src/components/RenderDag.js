@@ -39,7 +39,7 @@ export default function RenderDag({
   columnWidth = 14,
   padding = 4,
   bypassSize = 4,
-  dashArray = "4,2",
+  dashArray = '4,2',
   rotate = true,
   drawExtra,
 }) {
@@ -50,8 +50,8 @@ export default function RenderDag({
   const circles = new Map();
 
   // Rotate helpers, (x, y) => (-y, -x)
-  const xys = (x, y) => rotate ? `${-y} ${-x}` : `${x} ${y}`;
-  const xyt = (x, y) => rotate ? [-y, -x] : [x, y];
+  const xys = (x, y) => (rotate ? `${-y} ${-x}` : `${x} ${y}`);
+  const xyt = (x, y) => (rotate ? [-y, -x] : [x, y]);
 
   // Aliases
   const r = circleRadius;
@@ -111,32 +111,42 @@ export default function RenderDag({
 
   function drawVerticalBypassLine(dashed) {
     const dash = dashed ? dashArray : null;
-    svgPaths.push(<path d={`M ${xys(x + dx, y)} l ${xys(0, dy - bypassSize)} q ${xys(bypassSize, bypassSize)}, ${xys(0, bypassSize * 2)} l ${xys(0, dy - bypassSize)}`} strokeDasharray={dash} key={`b${x}.${y}`} />);
+    svgPaths.push(
+      <path
+        d={`M ${xys(x + dx, y)} l ${xys(0, dy - bypassSize)} q ${xys(bypassSize, bypassSize)}, ${xys(0, bypassSize * 2)} l ${xys(0, dy - bypassSize)}`}
+        strokeDasharray={dash}
+        key={`b${x}.${y}`}
+      />,
+    );
   }
 
   function drawCircle(name) {
     const [cx, cy] = xyt(x + dx, y + dy);
     svgCircles.push(<circle cx={cx} cy={cy} r={r} key={name} />);
-    svgTexts.push(<text x={cx} y={cy} textAnchor="middle" alignmentBaseline="middle" key={name}>{name}</text>);
-    circles.set(name, { cx, cy, name });
+    svgTexts.push(
+      <text x={cx} y={cy} textAnchor="middle" alignmentBaseline="middle" key={name}>
+        {name}
+      </text>,
+    );
+    circles.set(name, {cx, cy, name});
   }
 
-  function drawNodeOrPadLines(lines, nodeGlyph=null) {
-    const needDashLine = lines.some((l) => l == "Ancestor");
-    dy = nodeGlyph ? circleRadius : (needDashLine ? linkLineHeight : padLineHeight);
+  function drawNodeOrPadLines(lines, nodeGlyph = null) {
+    const needDashLine = lines.some((l) => l == 'Ancestor');
+    dy = nodeGlyph ? circleRadius : needDashLine ? linkLineHeight : padLineHeight;
     x = padding;
     for (const line of lines) {
       switch (line) {
-        case "Ancestor":
+        case 'Ancestor':
           drawLine(0, -1, 0, 1, true);
           break;
-        case "Parent":
+        case 'Parent':
           drawLine(0, -1, 0, 1);
           break;
-        case "Node":
+        case 'Node':
           drawCircle(nodeGlyph);
           break;
-        case "Blank":
+        case 'Blank':
           break;
       }
       stepX();
@@ -209,10 +219,14 @@ export default function RenderDag({
 
   let svgExtra = null;
   if (drawExtra) {
-    svgExtra = drawExtra({circles, r, updateViewbox: (x, y) => {
-      const [xt, yt] = xyt(x, y);
-      updateViewbox(xt, yt);
-    }});
+    svgExtra = drawExtra({
+      circles,
+      r,
+      updateViewbox: (x, y) => {
+        const [xt, yt] = xyt(x, y);
+        updateViewbox(xt, yt);
+      },
+    });
   }
 
   function calcBounds() {
@@ -226,7 +240,7 @@ export default function RenderDag({
       height,
       viewBox: `${x} ${y} ${width} ${height}`,
       width,
-    }
+    };
   }
 
   const {viewBox, height, width} = calcBounds();
@@ -239,22 +253,23 @@ export default function RenderDag({
     justifyContent: 'center',
     width: '100%',
     display: 'flex',
-    ...style
+    ...style,
   };
 
-  return <div className="svgdag" style={mergedStyle}>
-    <svg viewBox={viewBox} width={Math.abs(width)}>
-      <g stroke="var(--ifm-color-primary-darkest)" fill="none" strokeWidth={2}>
-        {svgPaths}
-      </g>
-      <g stroke="var(--ifm-color-primary-darkest)" fill="var(--ifm-color-primary)" strokeWidth={2}>
-        {svgCircles}
-      </g>
-      <g stroke="none" fill="var(--ifm-color-content-inverse)">
-        {svgTexts}
-      </g>
-      {svgExtra}
-    </svg>
-  </div>;
-};
-
+  return (
+    <div className="svgdag" style={mergedStyle}>
+      <svg viewBox={viewBox} width={Math.abs(width)}>
+        <g stroke="var(--ifm-color-primary-darkest)" fill="none" strokeWidth={2}>
+          {svgPaths}
+        </g>
+        <g stroke="var(--ifm-color-primary-darkest)" fill="var(--ifm-color-primary)" strokeWidth={2}>
+          {svgCircles}
+        </g>
+        <g stroke="none" fill="var(--ifm-color-content-inverse)">
+          {svgTexts}
+        </g>
+        {svgExtra}
+      </svg>
+    </div>
+  );
+}

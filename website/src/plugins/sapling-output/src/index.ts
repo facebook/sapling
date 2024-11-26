@@ -33,7 +33,7 @@ const EXAMPLE_HEADER = String.raw`
   $ export HGCOLORS=16
   $ export SL_COLORS=16
 # hide end
-`
+`;
 
 // Compatibility for internal systems where sl is not installed but hg can be
 // used as an alternative.
@@ -43,15 +43,15 @@ const HG_COMPAT_HEADER = String.raw`
   >   HGIDENTITY=sl hg "$@"
   > }
 # hide end
-`
+`;
 
 // Replace each line with lineFunc(line).
 // Skip a line if lineFunc(line) returns null.
 function processLines(text: string, lineFunc: (line: string) => string | null): string {
-  const lines = text.split("\n");
-  const outputLines = lines.map(lineFunc).filter(line => line != null);
-  return outputLines.join("\n") + "\n";
-};
+  const lines = text.split('\n');
+  const outputLines = lines.map(lineFunc).filter((line) => line != null);
+  return outputLines.join('\n') + '\n';
+}
 
 // Change example code in mdx to a `.t` test format by:
 // - adding EXAMPLE_HEADER.
@@ -61,7 +61,7 @@ function processInput(text: string): string {
   let firstLine = true;
   return processLines(text, (line) => {
     let newLine = line;
-    if (line.startsWith("# hide")) {
+    if (line.startsWith('# hide')) {
       // Insert an empty line separator so it does not get treated as output.
       newLine = `\n${line}`;
     } else if (line.length > 0) {
@@ -76,7 +76,7 @@ function processInput(text: string): string {
     }
     return newLine;
   });
-};
+}
 
 // Clean up output (in `.t` format) by:
 // - removing `# hide` lines, and blocks between `# hide begin` and
@@ -87,7 +87,7 @@ function processOutput(output: string): string {
   let hiding = 0;
   return processLines(output, (line) => {
     // Skip leading spaces.
-    if (firstLine && line === "") {
+    if (firstLine && line === '') {
       return null;
     }
     firstLine = false;
@@ -103,33 +103,33 @@ function processOutput(output: string): string {
     }
     return null;
   });
-};
+}
 
 const COLORS = {
   // Campbell
-  0: "#0C0C0C",
-  1: "#C50F1F",
-  2: "#13A10E",
-  3: "#C19C00",
-  4: "#0037DA",
-  5: "#881798",
-  6: "#3A96DD",
-  7: "#CCCCCC",
-  8: "#767676",
-  9: "#E74856",
-  10: "#16C60C",
-  11: "#F9F1A5",
-  12: "#3B78FF",
-  13: "#B4009E",
-  14: "#61D6D6",
-  15: "#F2F2F2",
-}
+  0: '#0C0C0C',
+  1: '#C50F1F',
+  2: '#13A10E',
+  3: '#C19C00',
+  4: '#0037DA',
+  5: '#881798',
+  6: '#3A96DD',
+  7: '#CCCCCC',
+  8: '#767676',
+  9: '#E74856',
+  10: '#16C60C',
+  11: '#F9F1A5',
+  12: '#3B78FF',
+  13: '#B4009E',
+  14: '#61D6D6',
+  15: '#F2F2F2',
+};
 
 // Render `example` (in .t test format without "  " prefix) into HTML.
 async function renderExample(example: string): Promise<string> {
   // Prepare input.
   const isDebug = process.env.MDX_SAPLING_OUTPUT_DEBUG != null;
-  const tmpDir = await tmp.dir({ prefix: "mdx-sapling-output", unsafeCleanup: !isDebug });
+  const tmpDir = await tmp.dir({prefix: 'mdx-sapling-output', unsafeCleanup: !isDebug});
   const examplePath = path.join(tmpDir.path, 'example.t');
   const data = EXAMPLE_HEADER + processInput(example);
   await fs.promises.writeFile(examplePath, data);
@@ -137,7 +137,7 @@ async function renderExample(example: string): Promise<string> {
   // Use `debugruntest --fix` to fill the output.
   const exePath = getSaplingCLI();
   try {
-    await promisify(execFile)(exePath, ["debugruntest", "-q", "--fix", examplePath]);
+    await promisify(execFile)(exePath, ['debugruntest', '-q', '--fix', examplePath]);
   } catch (e) {
     // exitcode = 1 means "at least one mismatch", which is expected.
     // @ts-ignore
@@ -147,7 +147,7 @@ async function renderExample(example: string): Promise<string> {
   }
 
   // Convert to HTML.
-  const rawOutput = await fs.promises.readFile(examplePath, {"encoding": "utf8"});
+  const rawOutput = await fs.promises.readFile(examplePath, {encoding: 'utf8'});
   const output = processOutput(rawOutput);
   const convert = new Convert({colors: COLORS});
   const body = convert.toHtml(output);
@@ -162,13 +162,13 @@ async function renderExample(example: string): Promise<string> {
 }
 
 interface Node {
-  type: string
-  value: string
+  type: string;
+  value: string;
 }
 
 interface CodeNode extends Node {
-  type: 'code'
-  lang: string
+  type: 'code';
+  lang: string;
 }
 
 module.exports = function (options: any) {
@@ -188,10 +188,12 @@ module.exports = function (options: any) {
     });
 
     // Process them.
-    await Promise.all(nodes.map(async (node: Node) => {
-      node.type = 'html';
-      node.value = await renderExample(node.value);
-    }));
+    await Promise.all(
+      nodes.map(async (node: Node) => {
+        node.type = 'html';
+        node.value = await renderExample(node.value);
+      }),
+    );
   };
 };
 

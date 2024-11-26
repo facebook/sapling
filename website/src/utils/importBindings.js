@@ -30,7 +30,7 @@ export default async function importBindings() {
     if (cached) {
       return cached;
     }
-    const bindings = await import("@site/static/wasm/wasm_bindings.js");
+    const bindings = await import('@site/static/wasm/wasm_bindings.js');
     await bindings.default();
     cached = bindings;
     if (process.env.NODE_ENV === 'development') {
@@ -40,4 +40,4 @@ export default async function importBindings() {
     }
     return bindings;
   });
-};
+}
