@@ -188,11 +188,7 @@ def translate_json_to_markdown(
     for name in command_list:
         command = commands_json.get(name)
         if not command:
-            raise KeyError(
-                f"No command information generated for {command}. "
-                "Do you need to regenerate the commands.json? Try running this "
-                "command again with out `--only-rerender`"
-            )
+            raise KeyError(f"No command information generated for {command}.")
         doc = command.get("doc")
         if doc:
             # Add bold emphasis to the command summary (which is the first line).
@@ -263,11 +259,7 @@ sidebar_position: {index}
 
         command = commands_json.get(name)
         if not command:
-            raise KeyError(
-                f"No command information generated for {name}. "
-                "Do you need to regenerate the commands.json? Try running this "
-                "command again with `--full-build`"
-            )
+            raise KeyError(f"No command information generated for {name}.")
 
         alias = "## " + " | ".join(command["aliases"])
 
@@ -409,24 +401,16 @@ def main(args):
     if args.commands is not None:
         command_list = args.commands.split(",")
 
-    extract_docs_from_sapling = args.extract_docs_from_sapling or args.full_build
-    rst_to_md = args.rst_to_md or args.full_build
-    rerender = args.rerender or args.full_build
+    extract_docs_from_sapling = True
+    rst_to_md = True
 
     commands_json = get_commands_json(
         extract_docs_from_sapling, command_list, command_docs_json_path
     )
 
-    if not rst_to_md and not rerender:
-        return
-
     markdown_commands_json = get_markdown_commands_json(
         rst_to_md, command_list, commands_json, command_docs_markdown_json_path
     )
-
-    if not rerender:
-        return
-
     command_list, markdown_commands_json = _combine_commands_and_builtin_alias(
         command_list, commands_json, DEFAULT_ALIAS_DICT
     )
@@ -449,8 +433,6 @@ Generate markdown pages for Sapling commands for the OSS docusaurus website.
 By default this script will only regenerate the markdown from the latest
 cached version of the hg documentation (in command-markdown.json). Though it
 will build any missing caches.
-Use `--full-build` to force a slower rebuild of the caches and markdown. You
-could also rebuild the cache files with there coresponding options.
 
 Commands markdown page files are placed in website/docs/commands/.
 This script will create the files with the name specified in the default values
@@ -464,32 +446,6 @@ we create a new command file. For example, "--commands update" will delete a
 determine the sidebar positioning of each of the pages.
 """,
         formatter_class=formatter,
-    )
-    parser.add_argument(
-        "--extract-docs-from-sapling",
-        action="store_true",
-        help="Reextract the raw documentation out of Sapling for each of the "
-        "commands. This recreates 'command.json'.",
-    )
-    parser.add_argument(
-        "--rst-to-md",
-        action="store_true",
-        help="Reconvert the raw Sapling rst command description to markdown "
-        "for each command. This recreates 'command-markdown.json'. ",
-    )
-    parser.add_argument(
-        "--rerender",
-        type=bool,
-        default=True,
-        help="Regenerate the website pages. This is probably the option you "
-        "want for quick iteration on the formating of the webpages.",
-    )
-    parser.add_argument(
-        "--full-build",
-        action="store_true",
-        help="Rebuild the website pages from scratch (extracts documentation "
-        "out of sapling, converts the rst to markdown, and then generates the "
-        "webpages).",
     )
     parser.add_argument(
         "--commands",
