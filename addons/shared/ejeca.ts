@@ -275,16 +275,17 @@ function getStreamPromise(origStream: Stream | null): Promise<string> {
   return getStream(stream, {encoding: 'utf8'});
 }
 
-function commonToSpawnOptions(options: EjecaOptions): SpawnOptions {
-  const env = options.env
+function commonToSpawnOptions(options?: EjecaOptions): SpawnOptions {
+  const env = options?.env
     ? options.extendEnv ?? true
       ? {...process.env, ...options.env}
       : options.env
     : process.env;
   return {
-    cwd: options.cwd || process.cwd(),
+    cwd: options?.cwd || process.cwd(),
     env,
-    stdio: options.ipc ? [options.stdin, 'pipe', 'pipe', 'ipc'] : [options.stdin, 'pipe', 'pipe'],
+    stdio: options?.ipc ? [options.stdin, 'pipe', 'pipe', 'ipc'] : [options?.stdin, 'pipe', 'pipe'],
+    windowsHide: true,
   };
 }
 
@@ -302,9 +303,7 @@ export function ejeca(
   argumentos: readonly string[],
   options?: EjecaOptions,
 ): EjecaChildProcess {
-  const spawnOptions = options ? commonToSpawnOptions(options) : undefined;
-  const spawned =
-    spawnOptions === undefined ? spawn(file, argumentos) : spawn(file, argumentos, spawnOptions);
+  const spawned = spawn(file, argumentos, commonToSpawnOptions(options));
   const spawnedPromise = getSpawnedPromise(spawned, escapedCmd(file, argumentos), options);
   const mergedPromise = getMergePromise(spawned, spawnedPromise);
 
