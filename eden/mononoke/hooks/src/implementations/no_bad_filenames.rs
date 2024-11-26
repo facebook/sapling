@@ -37,6 +37,20 @@ pub struct NoBadFilenamesConfig {
     illegal_filename_message: String,
 }
 
+impl NoBadFilenamesConfig {
+    pub fn new(
+        allowlist_regex: Option<&str>,
+        illegal_regex: &str,
+        illegal_filename_message: &str,
+    ) -> Result<Self> {
+        Ok(Self {
+            allowlist_regex: allowlist_regex.map(Regex::new).transpose()?,
+            illegal_regex: Regex::new(illegal_regex)?,
+            illegal_filename_message: illegal_filename_message.to_string(),
+        })
+    }
+}
+
 /// Hook to block commits containing files with illegal name patterns
 #[derive(Clone, Debug)]
 pub struct NoBadFilenamesHook {

@@ -27,7 +27,6 @@ mod limit_path_length;
 pub(crate) mod limit_submodule_edits;
 pub(crate) mod limit_tag_updates;
 pub(crate) mod missing_lfsconfig;
-pub(crate) mod no_bad_extensions;
 pub(crate) mod no_bad_filenames;
 mod no_executable_binaries;
 mod no_insecure_filenames;
@@ -151,11 +150,6 @@ pub fn make_file_hook(
         "no_bad_filenames" => Some(Box::new(no_bad_filenames::NoBadFilenamesHook::new(
             &params.config,
         )?)),
-        "no_bad_extensions" => Some(Box::new(
-            no_bad_extensions::NoBadExtensions::builder()
-                .set_from_config(&params.config)
-                .build()?,
-        )),
         "no_executable_binaries" => Some(Box::new(
             no_executable_binaries::NoExecutableBinariesHook::new(&params.config)?,
         )),
