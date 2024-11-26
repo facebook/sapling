@@ -670,7 +670,9 @@ def formatmd(blocks):
             indentation_translation = []
 
         if btype == "paragraph":
-            text = "\n".join(lines)
+            import html
+
+            text = "\n".join(map(html.escape, lines))
             out.append(f"\n{text}\n")
         elif btype == "literal":
             text = "\n".join(lines)
