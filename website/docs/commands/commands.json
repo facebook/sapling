@@ -181,7 +181,7 @@
         "shortname": "",
         "fullname": "to",
         "default": "",
-        "description": "amend to a specific commit in the current stack (ADVANCED)"
+        "description": "amend to a specific commit in the current stack"
       },
       {
         "shortname": "",
@@ -513,6 +513,12 @@
         "description": "remove tracking for this bookmark"
       },
       {
+        "shortname": "",
+        "fullname": "list-remote",
+        "default": null,
+        "description": "list remote bookmarks. Positional arguments are interpreted as wildcard patterns. Only allowed wildcard is '*' in the end of the pattern. If no positional arguments are specified then it will list the most \"important\" remote bookmarks. Otherwise it will list remote bookmarks that match at least one pattern "
+      },
+      {
         "shortname": "a",
         "fullname": "all",
         "default": null,
@@ -609,7 +615,7 @@
     "aliases": [
       "clone"
     ],
-    "doc": "make a copy of an existing repository\n\n    Create a copy of an existing repository in a new directory.\n\n    If no destination directory name is specified, it defaults to the\n    basename of the source.\n\n    The location of the source is added to the new repository's\n    config file as the default to be used for future pulls.\n\n    Sources are typically URLs. The following URL schemes are assumed\n    to be a Git repo: ``git``, ``git+file``, ``git+ftp``, ``git+ftps``,\n    ``git+http``, ``git+https``, ``git+ssh``, ``ssh`` and ``https``.\n\n    Scp-like URLs of the form ``user@host:path`` are converted to\n    ``ssh://user@host/path``.\n\n    Other URL schemes are assumed to point to an EdenAPI capable repo.\n\n    The ``--git`` option forces the source to be interpreted as a Git repo.\n\n    To check out a particular version, use ``-u/--update``, or\n    ``-U/--noupdate`` to create a clone with no working copy.\n\n    If specified, the ``--enable-profile`` option should refer to a\n    sparse profile within the source repo to filter the contents of\n    the new working copy. See :prog:`help -e sparse` for details.\n\n    .. container:: verbose\n\n      Examples:\n\n      - clone a remote repository to a new directory named some_repo::\n\n          @prog@ clone https://example.com/some_repo\n\n    .. container:: verbose\n\n      As an experimental feature, if specified the source URL fragment\n      is persisted as the repo's main bookmark.\n\n    Returns 0 on success.",
+    "doc": "make a copy of an existing repository\n\n    Create a copy of an existing repository in a new directory.\n\n    If no destination directory name is specified, it defaults to the\n    basename of the source.\n\n    The location of the source is added to the new repository's\n    config file as the default to be used for future pulls.\n\n    Sources are typically URLs. The following URL schemes are assumed\n    to be a Git repo: ``git``, ``git+file``, ``git+ftp``, ``git+ftps``,\n    ``git+http``, ``git+https``, ``git+ssh``, ``ssh`` and ``https``.\n\n    Scp-like URLs of the form ``user@host:path`` are converted to\n    ``ssh://user@host/path``.\n\n    Other URL schemes are assumed to point to an SaplingRemoteAPI capable repo.\n\n    The ``--git`` option forces the source to be interpreted as a Git repo.\n\n    To check out a particular version, use ``-u/--update``, or\n    ``-U/--noupdate`` to create a clone with no working copy.\n\n    If specified, the ``--enable-profile`` option should refer to a\n    sparse profile within the source repo to filter the contents of\n    the new working copy. See :prog:`help -e sparse` for details.\n\n    .. container:: verbose\n\n      Examples:\n\n      - clone a remote repository to a new directory named some_repo::\n\n          @prog@ clone https://example.com/some_repo\n\n    .. container:: verbose\n\n      As an experimental feature, if specified the source URL fragment\n      is persisted as the repo's main bookmark.\n\n    Returns 0 on success.",
     "args": [
       {
         "shortname": "U",
@@ -624,34 +630,16 @@
         "description": "revision or branch to check out"
       },
       {
-        "shortname": "r",
-        "fullname": "rev",
-        "default": "",
-        "description": "include the specified changeset (DEPRECATED)"
-      },
-      {
-        "shortname": "",
-        "fullname": "pull",
-        "default": false,
-        "description": "use pull protocol to copy metadata (DEPRECATED)"
-      },
-      {
-        "shortname": "",
-        "fullname": "stream",
-        "default": false,
-        "description": "clone with minimal data processing (DEPRECATED)"
-      },
-      {
         "shortname": "",
         "fullname": "shallow",
-        "default": null,
-        "description": "\"use remotefilelog (only turn it off in legacy tests) (ADVANCED)\""
+        "default": true,
+        "description": "use remotefilelog (has no effect) (DEPRECATED)"
       },
       {
         "shortname": "",
         "fullname": "git",
         "default": false,
-        "description": "\"use git protocol (EXPERIMENTAL)\""
+        "description": "use git protocol (EXPERIMENTAL)"
       },
       {
         "shortname": "",
@@ -674,7 +662,7 @@
       {
         "shortname": "",
         "fullname": "eden",
-        "default": false,
+        "default": null,
         "description": "use EdenFS (EXPERIMENTAL)"
       },
       {
@@ -682,6 +670,12 @@
         "fullname": "eden-backing-repo",
         "default": "",
         "description": "location of the backing repo to be used or created (EXPERIMENTAL)"
+      },
+      {
+        "shortname": "",
+        "fullname": "aws",
+        "default": false,
+        "description": "configure repo to run against AWS (EXPERIMENTAL)"
       }
     ],
     "subcommands": null
@@ -776,7 +770,7 @@
         "shortname": "",
         "fullname": "to",
         "default": "",
-        "description": "(with --amend) amend to a specific commit in the current stack (ADVANCED) (DEPRECATED)"
+        "description": "(with --amend) amend to a specific commit in the current stack (DEPRECATED)"
       },
       {
         "shortname": "",
@@ -864,7 +858,7 @@
       "diff",
       "d"
     ],
-    "doc": "show differences between commits\n\n    Show the differences between two commits. If only one commit is specified,\n    show the differences between the specified commit and your working copy.\n    If no commits are specified, show your pending changes.\n\n    Specify ``-c`` to see the changes in the specified commit relative to its\n    parent.\n\n    By default, this command skips binary files. To override this behavior,\n    specify ``-a`` to include binary files in the diff.\n\n    By default, diffs are shown using the unified diff format. Specify ``-g``\n    to generate diffs in the git extended diff format. For more information,\n    see :prog:`help diffs`.\n\n    .. note::\n\n       :prog:`diff` might generate unexpected results during merges because it\n       defaults to comparing against your working copy's first parent commit\n       if no commits are specified.\n\n    .. container:: verbose\n\n      Examples:\n\n      - compare a file in the current working directory to its parent::\n\n          @prog@ diff foo.c\n\n      - compare two historical versions of a directory, with rename info::\n\n          @prog@ diff --git -r 5be761874:431ec8e07 lib/\n\n      - get change stats relative to the last change on some date::\n\n          @prog@ diff --stat -r \"date('may 2')\"\n\n      - diff all newly-added files that contain a keyword::\n\n          @prog@ diff \"set:added() and grep(GNU)\"\n\n      - compare a revision and its parents::\n\n          @prog@ diff -c 340f3fef5              # compare against first parent\n          @prog@ diff -r 340f3fef5^:340f3fef5   # same using revset syntax\n          @prog@ diff -r 340f3fef5^2:340f3fef5  # compare against the second parent\n\n    Returns 0 on success.\n    ",
+    "doc": "show differences between commits\n\n    Show the differences between two commits. If only one commit is specified,\n    show the differences between the specified commit and your working copy.\n    If no commits are specified, show your pending changes.\n\n    Specify ``-c`` to see the changes in the specified commit relative to its\n    parent.\n\n    By default, this command skips binary files. To override this behavior,\n    specify ``-a`` to include binary files in the diff.\n\n    By default, diffs are shown using the unified diff format. Specify ``-g``\n    to generate diffs in the git extended diff format. For more information,\n    see :prog:`help diffs`.\n\n    ``--from-path`` and ``--to-path`` allow diffing between directories.\n    Files outside ``--from-path`` in the left side are ignored. See\n    :prog:`help directorybranching` for more information.\n\n    .. note::\n\n       :prog:`diff` might generate unexpected results during merges because it\n       defaults to comparing against your working copy's first parent commit\n       if no commits are specified.\n\n    .. container:: verbose\n\n      Examples:\n\n      - compare a file in the current working directory to its parent::\n\n          @prog@ diff foo.c\n\n      - compare two historical versions of a directory, with rename info::\n\n          @prog@ diff --git -r 5be761874:431ec8e07 lib/\n\n      - get change stats relative to the last change on some date::\n\n          @prog@ diff --stat -r \"date('may 2')\"\n\n      - diff all newly-added files that contain a keyword::\n\n          @prog@ diff \"set:added() and grep(GNU)\"\n\n      - compare a revision and its parents::\n\n          @prog@ diff -c 340f3fef5              # compare against first parent\n          @prog@ diff -r 340f3fef5^:340f3fef5   # same using revset syntax\n          @prog@ diff -r 340f3fef5^2:340f3fef5  # compare against the second parent\n\n    Returns 0 on success.\n    ",
     "args": [
       {
         "shortname": "r",
@@ -982,6 +976,18 @@
       },
       {
         "shortname": "",
+        "fullname": "from-path",
+        "default": [],
+        "description": "re-map this path to correspondong --to-path (ADVANCED)"
+      },
+      {
+        "shortname": "",
+        "fullname": "to-path",
+        "default": [],
+        "description": "re-map corresponding --from-path to this path (ADVANCED)"
+      },
+      {
+        "shortname": "",
         "fullname": "per-file-stat-json",
         "default": null,
         "description": "show diff stat per file in json (ADVANCED)"
@@ -991,6 +997,18 @@
         "fullname": "sparse",
         "default": null,
         "description": "only show changes in files in the sparse config"
+      },
+      {
+        "shortname": "",
+        "fullname": "since-last-submit",
+        "default": null,
+        "description": "show changes since last Phabricator submit"
+      },
+      {
+        "shortname": "",
+        "fullname": "since-last-submit-2o",
+        "default": null,
+        "description": "show diff of current diff and last Phabricator submit"
       }
     ],
     "subcommands": null
@@ -1257,7 +1275,7 @@
     "aliases": [
       "graft"
     ],
-    "doc": "copy commits from a different location\n\n    Use @Product@'s merge logic to copy individual commits from other\n    locations without making merge commits. This is sometimes known as\n    'backporting' or 'cherry-picking'. By default, graft will also\n    copy user and description from the source commits. If you want to\n    keep the date of the source commits, you can add below config to your\n    configuration file::\n\n      [tweakdefaults]\n      graftkeepdate = True\n\n    Source commits will be skipped if they are ancestors of the\n    current commit, have already been grafted, or are merges.\n\n    If ``--log`` is specified, commit messages will have a comment appended\n    of the form::\n\n      (grafted from COMMITHASH)\n\n    If ``--force`` is specified, commits will be grafted even if they\n    are already ancestors of, or have been grafted to, the destination.\n    This is useful when the commits have since been backed out.\n\n    If a graft results in conflicts, the graft process is interrupted\n    so that the current merge can be manually resolved. Once all\n    conflicts are resolved, the graft process can be continued with\n    the ``-c/--continue`` option.\n\n    .. note::\n\n       The ``-c/--continue`` operation does not remember options from\n       the original invocation, except for ``--force``.\n\n    .. container:: verbose\n\n      Examples:\n\n      - copy a single change to the stable branch and edit its description::\n\n          @prog@ goto stable\n          @prog@ graft --edit ba7e89595\n\n      - graft a range of changesets with one exception, updating dates::\n\n          @prog@ graft -D \"0e13e529c::224010e02 and not 85c0535a4\"\n\n      - continue a graft after resolving conflicts::\n\n          @prog@ graft -c\n\n      - abort an interrupted graft::\n\n          @prog@ graft --abort\n\n      - show the source of a grafted changeset::\n\n          @prog@ log --debug -r .\n\n    See :prog:`help revisions` for more about specifying revisions.\n\n    Returns 0 on success.\n    ",
+    "doc": "copy commits from a different location\n\n    Use @Product@'s merge logic to copy individual commits from other\n    locations without making merge commits. This is sometimes known as\n    'backporting' or 'cherry-picking'. By default, graft will also\n    copy user and description from the source commits. If you want to\n    keep the date of the source commits, you can add below config to your\n    configuration file::\n\n      [tweakdefaults]\n      graftkeepdate = True\n\n    Source commits will be skipped if they are ancestors of the\n    current commit, have already been grafted, or are merges.\n\n    If ``--log`` is specified, commit messages will have a comment appended\n    of the form::\n\n      (grafted from COMMITHASH)\n\n    If ``--force`` is specified, commits will be grafted even if they\n    are already ancestors of, or have been grafted to, the destination.\n    This is useful when the commits have since been backed out.\n\n    If a graft results in conflicts, the graft process is interrupted\n    so that the current merge can be manually resolved. Once all\n    conflicts are resolved, the graft process can be continued with\n    the ``-c/--continue`` option.\n\n    ``--from-path`` and ``--to-path`` allow copying commits between\n    directories. Files in the grafted commit(s) outside of\n    ``--from-path`` are ignored. See :prog:`help directorybranching` for\n    more information.\n\n    .. note::\n\n       The ``-c/--continue`` operation does not remember options from\n       the original invocation, except for ``--force``.\n\n    .. container:: verbose\n\n      Examples:\n\n      - copy a single change to the stable branch and edit its description::\n\n          @prog@ goto stable\n          @prog@ graft --edit ba7e89595\n\n      - graft a range of changesets with one exception, updating dates::\n\n          @prog@ graft -D \"0e13e529c::224010e02 and not 85c0535a4\"\n\n      - continue a graft after resolving conflicts::\n\n          @prog@ graft -c\n\n      - abort an interrupted graft::\n\n          @prog@ graft --abort\n\n      - show the source of a grafted changeset::\n\n          @prog@ log --debug -r .\n\n    See :prog:`help revisions` for more about specifying revisions.\n\n    Returns 0 on success.\n    ",
     "args": [
       {
         "shortname": "r",
@@ -1990,7 +2008,7 @@
             "shortname": "L",
             "fullname": "limit",
             "default": 30,
-            "description": "maximum number of items to fetch (default 30)"
+            "description": "maximum number of items to fetch"
           },
           {
             "shortname": "S",
@@ -2001,8 +2019,8 @@
           {
             "shortname": "s",
             "fullname": "state",
-            "default": "",
-            "description": "filter by state: {open|closed|merged|all} (default \"open\")"
+            "default": "open",
+            "description": "filter by state: open, closed, merged, all"
           },
           {
             "shortname": "t",
@@ -2170,10 +2188,10 @@
         "description": "variables that can be sent to server (ADVANCED)"
       },
       {
-        "shortname": "t",
+        "shortname": "",
         "fullname": "to",
         "default": "",
-        "description": "push commits to this bookmark"
+        "description": "server revision to rebase onto"
       },
       {
         "shortname": "",
@@ -2207,7 +2225,7 @@
     "aliases": [
       "rebase"
     ],
-    "doc": "move commits from one location to another\n\n    Move commits from one part of the commit graph to another. This\n    behavior is achieved by creating a copy of the commit at the\n    destination and hiding the original commit.\n\n    Use ``-k/--keep`` to skip the hiding and keep the original commits visible.\n\n    If the commits being rebased have bookmarks, rebase moves the bookmarks\n    onto the new versions of the commits. Bookmarks are moved even if ``--keep``\n    is specified.\n\n    Public commits cannot be rebased unless you use the ``--keep`` option\n    to copy them.\n\n    Use the following options to select the commits you want to rebase:\n\n      1. ``-r/--rev`` to explicitly select commits\n\n      2. ``-s/--source`` to select a root commit and include all of its\n         descendants\n\n      3. ``-b/--base`` to select a commit and its ancestors and descendants\n\n    If no option is specified to select commits, ``-b .`` is used by default.\n\n      .. container:: verbose\n\n        If ``--source`` or ``--rev`` is used, special names ``SRC`` and ``ALLSRC``\n        can be used in ``--dest``. Destination would be calculated per source\n        revision with ``SRC`` substituted by that single source revision and\n        ``ALLSRC`` substituted by all source revisions.\n\n    If multiple ``--rev``s are specified, they can be paired with multiple\n    ``--dest``s. For example::\n\n        rebase -r A+B -d X -r C::E -d Y\n\n    will rebase ``A+B`` to ``X``, and rebase ``C::E`` to ``Y``.\n\n    If commits that you are rebasing consist entirely of changes that are\n    already present in the destination, those commits are not moved (in\n    other words, they are rebased out).\n\n    Sometimes conflicts can occur when you rebase. When this happens, by\n    default, @Product@ launches an editor for every conflict. Conflict markers\n    are inserted into affected files, like::\n\n        <<<<\n        dest\n        ====\n        source\n        >>>>\n\n    To fix the conflicts, for each file, remove the markers and replace the\n    whole block of code with the correctly merged code.\n\n    If you close the editor without resolving the conflict, the rebase is\n    interrupted and you are returned to the command line. At this point, you\n    can resolve conflicts in manual resolution mode. See :prog:`help resolve` for\n    details.\n\n    After manually resolving conflicts, resume the rebase with\n    :prog:`rebase --continue`. If you are not able to successfully\n    resolve all conflicts, run :prog:`rebase --abort` to abort the\n    rebase.\n\n    Alternatively, you can use a custom merge tool to automate conflict\n    resolution. To specify a custom merge tool, use the ``--tool`` flag. See\n    :prog:`help merge-tools` for a list of available tools and for information\n    about configuring the default merge behavior.\n\n    .. container:: verbose\n\n      Examples:\n\n      - Move a single commit to master::\n\n          @prog@ rebase -r 5f493448 -d master\n\n      - Move a commit and all its descendants to another part of the commit graph::\n\n          @prog@ rebase --source c0c3 --dest 4cf9\n\n      - Rebase everything on a local branch marked by a bookmark to master::\n\n          @prog@ rebase --base myfeature --dest master\n\n      - Rebase orphaned commits onto the latest version of their parents::\n\n          @prog@ rebase --restack\n\n      Configuration Options:\n\n      By default, rebase will close the transaction after each commit. For\n      performance purposes, you can configure rebase to use a single transaction\n      across the entire rebase. WARNING: This setting introduces a significant\n      risk of losing the work you've done in a rebase if the rebase aborts\n      unexpectedly::\n\n        [rebase]\n        singletransaction = True\n\n      By default, rebase writes to the working copy, but you can configure it\n      to run in-memory for for better performance, and to allow it to run if the\n      current checkout is dirty::\n\n        [rebase]\n        experimental.inmemory = True\n\n      It will also print a configurable warning::\n\n        [rebase]\n        experimental.inmemorywarning = Using experimental in-memory rebase\n\n    Returns 0 on success (also when nothing to rebase), 1 if there are\n    unresolved conflicts.\n\n    ",
+    "doc": "move commits from one location to another\n\n    Move commits from one part of the commit graph to another. This\n    behavior is achieved by creating a copy of the commit at the\n    destination and hiding the original commit.\n\n    Use ``-k/--keep`` to skip the hiding and keep the original commits visible.\n\n    If the commits being rebased have bookmarks, rebase moves the bookmarks\n    onto the new versions of the commits. Bookmarks are moved even if ``--keep``\n    is specified.\n\n    Public commits cannot be rebased unless you use the ``--keep`` option\n    to copy them.\n\n    Use the following options to select the commits you want to rebase:\n\n      1. ``-r/--rev`` to explicitly select commits\n\n      2. ``-s/--source`` to select a root commit and include all of its\n         descendants\n\n      3. ``-b/--base`` to select a commit and its ancestors and descendants\n\n    If no option is specified to select commits, ``-b .`` is used by default.\n\n      .. container:: verbose\n\n        If ``--source`` or ``--rev`` is used, special names ``SRC`` and ``ALLSRC``\n        can be used in ``--dest``. Destination would be calculated per source\n        revision with ``SRC`` substituted by that single source revision and\n        ``ALLSRC`` substituted by all source revisions.\n\n    If multiple ``--rev``s are specified, they can be paired with multiple\n    ``--dest``s. For example::\n\n        rebase -r A+B -d X -r C::E -d Y\n\n    will rebase ``A+B`` to ``X``, and rebase ``C::E`` to ``Y``.\n\n    If commits that you are rebasing consist entirely of changes that are\n    already present in the destination, those commits are not moved (in\n    other words, they are rebased out).\n\n    Sometimes conflicts can occur when you rebase. When this happens, by\n    default, @Product@ launches an editor for every conflict. Conflict markers\n    are inserted into affected files, like::\n\n        <<<<\n        dest\n        ====\n        source\n        >>>>\n\n    To fix the conflicts, for each file, remove the markers and replace the\n    whole block of code with the correctly merged code.\n\n    If you close the editor without resolving the conflict, the rebase is\n    interrupted and you are returned to the command line. At this point, you\n    can resolve conflicts in manual resolution mode. See :prog:`help resolve` for\n    details.\n\n    After manually resolving conflicts, resume the rebase with\n    :prog:`rebase --continue`. If you are not able to successfully\n    resolve all conflicts, run :prog:`rebase --abort` to abort the\n    entire rebase; or run :prog:`rebase --quit` to quit the interrupted\n    rebase state and keep the already rebased commits.\n\n    Alternatively, you can use a custom merge tool to automate conflict\n    resolution. To specify a custom merge tool, use the ``--tool`` flag. See\n    :prog:`help merge-tools` for a list of available tools and for information\n    about configuring the default merge behavior.\n\n    .. container:: verbose\n\n      Examples:\n\n      - Move a single commit to master::\n\n          @prog@ rebase -r 5f493448 -d master\n\n      - Move a commit and all its descendants to another part of the commit graph::\n\n          @prog@ rebase --source c0c3 --dest 4cf9\n\n      - Rebase everything on a local branch marked by a bookmark to master::\n\n          @prog@ rebase --base myfeature --dest master\n\n      - Rebase orphaned commits onto the latest version of their parents::\n\n          @prog@ rebase --restack\n\n      Configuration Options:\n\n      By default, rebase will close the transaction after each commit. For\n      performance purposes, you can configure rebase to use a single transaction\n      across the entire rebase. WARNING: This setting introduces a significant\n      risk of losing the work you've done in a rebase if the rebase aborts\n      unexpectedly::\n\n        [rebase]\n        singletransaction = True\n\n      By default, rebase writes to the working copy, but you can configure it\n      to run in-memory for for better performance, and to allow it to run if the\n      current checkout is dirty::\n\n        [rebase]\n        experimental.inmemory = True\n\n      It will also print a configurable warning::\n\n        [rebase]\n        experimental.inmemorywarning = Using experimental in-memory rebase\n\n    Returns 0 on success (also when nothing to rebase), 1 if there are\n    unresolved conflicts.\n\n    ",
     "args": [
       {
         "shortname": "s",
@@ -2286,6 +2304,12 @@
         "fullname": "abort",
         "default": false,
         "description": "abort an interrupted rebase"
+      },
+      {
+        "shortname": "",
+        "fullname": "quit",
+        "default": false,
+        "description": "quit an interrupted rebase and keep the already rebased commits"
       },
       {
         "shortname": "",
@@ -2434,7 +2458,7 @@
     "aliases": [
       "root"
     ],
-    "doc": "print the repository's root (top) of the current working directory\n\n    Print the root directory of the current repository.\n\n    Frequently useful in shells scripts and automation to run commands like::\n\n       $  ./$(sl root)/bin/script.py\n\n    Returns 0 on success.",
+    "doc": "print the repository's root (top) of the current working directory\n\n    Print the root directory of the current repository.\n\n    Frequently useful in shells scripts and automation to run commands like::\n\n       $ $(@prog@ root)/bin/script.py\n\n    Returns 0 on success.",
     "args": [
       {
         "shortname": "",

@@ -4,7 +4,7 @@ sidebar_position: 11
 
 ## diff | d
 <!--
-  @generated SignedSource<<436d8d5f631816632d6e8c15fb2a179c>>
+  @generated SignedSource<<64d3c2005fdd3f676089abc4d2f37ce9>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -25,8 +25,12 @@ By default, diffs are shown using the unified diff format. Specify `-g`
 to generate diffs in the git extended diff format. For more information,
 see `sl help diffs`.
 
+`--from-path` and `--to-path` allow diffing between directories.
+Files outside `--from-path` in the left side are ignored. See
+`sl help directorybranching` for more information.
+
 `sl diff` might generate unexpected results during merges because it
-defaults to comparing against your working copy's first parent commit
+defaults to comparing against your working copy&#x27;s first parent commit
 if no commits are specified.
 
 Examples:
@@ -88,3 +92,5 @@ Returns 0 on success.
 | `-I`| `--include`| | include files matching the given patterns|
 | `-X`| `--exclude`| | exclude files matching the given patterns|
 | `-s`| `--sparse`| | only show changes in files in the sparse config|
+| | `--since-last-submit`| | show changes since last Phabricator submit|
+| | `--since-last-submit-2o`| | show diff of current diff and last Phabricator submit|

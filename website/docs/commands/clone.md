@@ -4,7 +4,7 @@ sidebar_position: 8
 
 ## clone
 <!--
-  @generated SignedSource<<23b566b1dfc4ab075608655b22d6d5bd>>
+  @generated SignedSource<<a4d5e57eb0972054dc0c2bf63112841c>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -16,7 +16,7 @@ Create a copy of an existing repository in a new directory.
 If no destination directory name is specified, it defaults to the
 basename of the source.
 
-The location of the source is added to the new repository's
+The location of the source is added to the new repository&#x27;s
 config file as the default to be used for future pulls.
 
 Sources are typically URLs. The following URL schemes are assumed
@@ -26,7 +26,7 @@ to be a Git repo: `git`, `git+file`, `git+ftp`, `git+ftps`,
 Scp-like URLs of the form `user@host:path` are converted to
 `ssh://user@host/path`.
 
-Other URL schemes are assumed to point to an EdenAPI capable repo.
+Other URL schemes are assumed to point to an SaplingRemoteAPI capable repo.
 
 The `--git` option forces the source to be interpreted as a Git repo.
 
@@ -46,7 +46,7 @@ sl clone https://example.com/some_repo
 ```
 
 As an experimental feature, if specified the source URL fragment
-is persisted as the repo's main bookmark.
+is persisted as the repo&#x27;s main bookmark.
 
 Returns 0 on success.
 

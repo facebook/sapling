@@ -4,7 +4,7 @@ sidebar_position: 3
 
 ## amend | am
 <!--
-  @generated SignedSource<<be3b152b1962a051650c4e39a8a48ded>>
+  @generated SignedSource<<b06b5a1332b4ac0afab84ba76196baf7>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -53,6 +53,7 @@ conflict resolution process. Alternatively:
 | `-e`| `--edit`| | prompt to edit the commit message|
 | `-i`| `--interactive`| | use interactive mode|
 | | `--rebase`| | rebases children after the amend|
+| | `--to`| | amend to a specific commit in the current stack|
 | `-T`| `--template`| | display with template|
 | `-I`| `--include`| | include files matching the given patterns|
 | `-X`| `--exclude`| | exclude files matching the given patterns|

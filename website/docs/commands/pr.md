@@ -4,7 +4,7 @@ sidebar_position: 26
 
 ## pr
 <!--
-  @generated SignedSource<<371911003623ba9e2a880dae7e1ba9d8>>
+  @generated SignedSource<<fc6158ddf46cd171e3a8b88651836a6e>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -21,7 +21,7 @@ Commit(s) will be pushed to `default-push`, if configured, else
 `default` (see `sl help urls` and `sl help path`).
 
 Pull request(s) will be created against `default`. If
-`default` is a fork, they will be created against default's
+`default` is a fork, they will be created against default&#x27;s
 upstream repository.
 
 Returns 0 on success.
@@ -58,16 +58,16 @@ A PULL_REQUEST can be specified in a number of formats:
 | `-r`| `--rev`| | revision to link|
 ### unlink
 
-remove a commit's association with a GitHub pull request
+remove a commit&#x27;s association with a GitHub pull request
 
 | shortname | fullname | default | description |
 | - | - | - | - |
 | `-r`| `--rev`| | revisions to unlink|
 ### follow
 
-join the nearest desecendant's pull request
+join the nearest desecendant&#x27;s pull request
 
-Marks commits to become part of their nearest desecendant's pull request
+Marks commits to become part of their nearest desecendant&#x27;s pull request
 instead of starting as the head of a new pull request.
 
 Use `pr unlink` to undo.
@@ -90,8 +90,8 @@ calls `gh pr list [flags]` with the current repo as the value of --repo
 | `-q`| `--jq`| | filter JSON output using a jq expression|
 | | `--json`| | output JSON with the specified fields|
 | `-l`| `--label`| | filter by label|
-| `-L`| `--limit`| `30`| maximum number of items to fetch (default 30)|
+| `-L`| `--limit`| `30`| maximum number of items to fetch|
 | `-S`| `--search`| | search pull requests with query|
-| `-s`| `--state`| | filter by state: {open|closed|merged|all} (default &quot;open&quot;)|
+| `-s`| `--state`| `"open"`| filter by state: open, closed, merged, all|
 | `-t`| `--template`| | format JSON output using a Go template; see &quot;gh help formatting&quot;|
 | `-w`| `--web`| `false`| list pull requests in the web browser|

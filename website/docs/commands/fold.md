@@ -4,7 +4,7 @@ sidebar_position: 12
 
 ## fold | squash
 <!--
-  @generated SignedSource<<80d8c349ed3d7c3540b7f056df618e54>>
+  @generated SignedSource<<a2bb6da56cb045d674f3df3642745d5b>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -43,7 +43,7 @@ sl fold --from e254371c1::be57079e4
 
 - Fold commits e254371c1 and be57079e4:
 
-sl fold "e254371c1 + be57079e4" --exact
+sl fold &quot;e254371c1 + be57079e4&quot; --exact
 
 - Only fold commits linearly between foo and .:
 

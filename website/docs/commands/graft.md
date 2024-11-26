@@ -4,16 +4,16 @@ sidebar_position: 17
 
 ## graft
 <!--
-  @generated SignedSource<<3fae06d099fa81f29a5129128ae62874>>
+  @generated SignedSource<<2916ee1e69673f2f5c65cc2de31078a1>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
 
 **copy commits from a different location**
 
-Use Sapling's merge logic to copy individual commits from other
+Use Sapling&#x27;s merge logic to copy individual commits from other
 locations without making merge commits. This is sometimes known as
-'backporting' or 'cherry-picking'. By default, graft will also
+&#x27;backporting&#x27; or &#x27;cherry-picking&#x27;. By default, graft will also
 copy user and description from the source commits. If you want to
 keep the date of the source commits, you can add below config to your
 configuration file:
@@ -41,6 +41,11 @@ If a graft results in conflicts, the graft process is interrupted
 so that the current merge can be manually resolved. Once all
 conflicts are resolved, the graft process can be continued with
 the `-c/--continue` option.
+
+`--from-path` and `--to-path` allow copying commits between
+directories. Files in the grafted commit(s) outside of
+`--from-path` are ignored. See `sl help directorybranching` for
+more information.
 
 The `-c/--continue` operation does not remember options from
 the original invocation, except for `--force`.

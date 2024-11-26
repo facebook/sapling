@@ -4,7 +4,7 @@ sidebar_position: 29
 
 ## push
 <!--
-  @generated SignedSource<<bc486b5c75e310fa81d8033e6bfe2086>>
+  @generated SignedSource<<119fe0f040b5956dd7fcf9c504dec59d>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -22,7 +22,7 @@ To add a named remote destination, see `sl path --add`.
 `-r/--rev` specifies the commit(s) (including ancestors) to push to
 the remote repository. Defaults to the current commit.
 
-Add `--create` to create the remote bookmark if it doesn't already exist.
+Add `--create` to create the remote bookmark if it doesn&#x27;t already exist.
 
 The `-f/--force` flag allows non-fast-forward pushes.
 
@@ -55,6 +55,6 @@ Returns 0 on success.
 | - | - | - | - |
 | `-f`| `--force`| | force push|
 | `-r`| `--rev`| | a commit to push|
-| `-t`| `--to`| | push commits to this bookmark|
+| | `--to`| | server revision to rebase onto|
 | | `--delete`| | delete remote bookmark|
 | | `--create`| | create a new remote bookmark|
