@@ -253,6 +253,21 @@ tw.container(
 )
 
 tw.container(
+    name = "tw.mononoke.modern_sync_job",
+    features = [
+        tw.build_fbpkg(
+            mononoke_fbpkg(
+                name = "mononoke.modern_sync_job",
+                path_actions = {
+                    "mononoke_modern_sync_job": "//eden/mononoke/modern_sync:mononoke_modern_sync_job",
+                },
+            ),
+        ),
+    ],
+    oncall = "scm_server_infra",
+)
+
+tw.container(
     name = "tw.mononoke.git_server_push_poller",
     custom_image_opts = tw.image.opts(),
     features = [
