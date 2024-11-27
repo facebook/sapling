@@ -1,0 +1,15 @@
+load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+
+oncall("mononoke")
+
+python_binary(
+    name = "source_control_members_configerator_sync",
+    srcs = ["source_control_members_configerator_sync.py"],
+    labels = ["autodeps2_generated"],
+    main_module = "eden.mononoke.facebook.source_control_members_configerator_sync.source_control_members_configerator_sync",
+    deps = [
+        "//configerator/configo/client/thrift_py3:client",
+        "//infrasec/authorization/if:if-service-python-clients",
+        "//servicerouter/client/python:sync_client",
+    ],
+)
