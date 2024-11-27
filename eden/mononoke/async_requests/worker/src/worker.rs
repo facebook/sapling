@@ -52,6 +52,7 @@ use stats::define_stats;
 use stats::prelude::*;
 
 use crate::methods::megarepo_async_request_compute;
+use crate::scuba::log_start;
 use crate::AsyncRequestsWorkerArgs;
 
 const DEQUEUE_STREAM_SLEEP_TIME: u64 = 1000;
@@ -296,6 +297,7 @@ impl AsyncMethodRequestWorker {
     ) -> Result<bool, AsyncRequestsError> {
         let target = params.target()?;
         let ctx = self.prepare_ctx(&ctx, &req_id, &target);
+        log_start(&ctx);
 
         // Do the actual work.
         STATS::requested.add_value(1);

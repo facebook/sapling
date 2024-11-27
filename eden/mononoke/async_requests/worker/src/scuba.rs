@@ -35,3 +35,8 @@ impl AsyncMethodRequestWorker {
         ctx
     }
 }
+
+pub(crate) fn log_start(ctx: &CoreContext) {
+    let mut scuba = ctx.scuba().clone();
+    scuba.log_with_msg("Request start", None);
+}
