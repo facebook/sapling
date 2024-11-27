@@ -29,11 +29,7 @@ const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
 pub struct CommandArgs {
     #[clap(long = "start-id", help = "Start id for the sync [default: 0]")]
     start_id: Option<u64>,
-    #[clap(
-        long,
-        default_value_t = true,
-        help = "Print sent items without actually syncing"
-    )]
+    #[clap(long, help = "Print sent items without actually syncing")]
     dry_run: bool,
 }
 
