@@ -10,7 +10,6 @@ use std::sync::Arc;
 
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarksRef;
-use bulk_derivation::BulkDerivation;
 use context::CoreContext;
 use futures::TryFutureExt;
 use megarepo_config::verify_config;
@@ -24,8 +23,8 @@ use mononoke_api::MononokeRepo;
 use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
 use mutable_renames::MutableRenames;
-use repo_derived_data::RepoDerivedDataRef;
 
+use crate::common::derive_all_types;
 use crate::common::MegarepoOp;
 
 // Create a new sync target given a config.
@@ -136,30 +135,15 @@ impl<'a, R: MononokeRepo> AddSyncTarget<'a, R> {
 
         // For now let's just retry a few times so that we don't have to start over
         // because of flakiness
-        let mut i = 0;
-        loop {
-            i += 1;
-            let derived_data_types = repo
-                .repo()
-                .repo_derived_data()
-                .active_config()
-                .types
-                .iter()
-                .copied()
-                .collect::<Vec<_>>();
-            let res = repo
-                .repo()
-                .repo_derived_data()
-                .manager()
-                .derive_bulk(ctx, &[top_merge_cs_id], None, &derived_data_types, None)
-                .await;
-            match res {
+        for attempt in 1.. {
+            let result = derive_all_types(ctx, repo.repo(), top_merge_cs_id).await;
+            match result {
                 Ok(()) => {
                     break;
                 }
                 Err(err) => {
                     scuba.log_with_msg("Derived data failed, retrying", Some(format!("{:#}", err)));
-                    if i >= 5 {
+                    if attempt >= 5 {
                         return Err(err.into());
                     }
                 }

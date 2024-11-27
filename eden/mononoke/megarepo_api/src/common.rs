@@ -66,6 +66,7 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
+use mononoke_types::DerivableType;
 use mononoke_types::FileChange;
 use mononoke_types::FileType;
 use mononoke_types::GitLfs;
@@ -1426,6 +1427,10 @@ pub(crate) async fn derive_all_types(
         .types
         .iter()
         .copied()
+        .filter(|t| {
+            // Filenodes cannot be derived for draft commits
+            *t != DerivableType::FileNodes
+        })
         .collect::<Vec<_>>();
     repo.repo_derived_data()
         .manager()
