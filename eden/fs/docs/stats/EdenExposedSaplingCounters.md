@@ -83,6 +83,23 @@ EdenFS counters:
 - {xxx} = `repo_cache_misses` : The total number of filter object requests that
   have to recreate the repo object. It is not available in the cache
 
+**E-** `scmstore.{xxx}.fetch.cas.{yyy}.bytes` : These are all the signals that
+are recorded when Sapling fulfills a {xxx} (file | tree) request from CAS.
+
+- {yyy} = `zdb` : Total number of bytes fetched from the CAS ZippyDb backend
+- {yyy} = `zgw` : Total number of bytes fetched from the CAS ZGW backend
+- {yyy} = `manifold` : Total number of bytes fetched from the CAS Manifold
+  backend
+- {yyy} = `hedwig` : Total number of bytes fetched from the CAS Hedwig backend
+
+**F-** `scmstore.{xxx}.fetch.cas.{yyy}.queries` : These are all the signals that
+are recorded when Sapling fulfills a {xxx} (file | tree) request from CAS.
+
+- {yyy} = `zdb` : Total number of queries to the CAS ZippyDb backend
+- {yyy} = `zgw` : Total number of queries to the CAS ZGW backend
+- {yyy} = `manifold` : Total number of queries to the CAS Manifold backend
+- {yyy} = `hedwig` : Total number of queries to the CAS Hedwig backend
+
 **Note:** This
 [commit](https://github.com/facebook/sapling/commit/d5392b1e72f0443a2cb0f4e76d19a58d615cb27b)
 is a good examples of how to add counters to Sapling.
