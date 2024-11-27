@@ -8,6 +8,7 @@
 #![feature(async_closure)]
 
 mod methods;
+mod scuba;
 mod worker;
 
 use std::sync::atomic::AtomicBool;
