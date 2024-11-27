@@ -12,6 +12,9 @@ pub struct FetchMetrics {
     /// Number of requests / batches
     requests: usize,
 
+    /// Number of entities requested unbatched (i.e. not part of a batch)
+    singles: usize,
+
     /// Numbers of entities requested
     keys: usize,
 
@@ -34,6 +37,7 @@ pub struct FetchMetrics {
 impl AddAssign for FetchMetrics {
     fn add_assign(&mut self, rhs: Self) {
         self.requests += rhs.requests;
+        self.singles += rhs.singles;
         self.keys += rhs.keys;
         self.hits += rhs.hits;
         self.misses += rhs.misses;
@@ -46,6 +50,9 @@ impl AddAssign for FetchMetrics {
 impl FetchMetrics {
     pub(crate) fn fetch(&mut self, keys: usize) {
         self.requests += 1;
+        if keys == 1 {
+            self.singles += 1;
+        }
         self.keys += keys;
     }
 
@@ -86,6 +93,7 @@ impl FetchMetrics {
     pub(crate) fn metrics(&self) -> impl Iterator<Item = (&'static str, usize)> {
         [
             ("requests", self.requests),
+            ("singles", self.singles),
             ("keys", self.keys),
             ("hits", self.hits),
             ("misses", self.misses),

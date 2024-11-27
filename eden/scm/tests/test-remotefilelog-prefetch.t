@@ -25,29 +25,36 @@ Prefetch (and also check we get counters):
   scmstore.file.fetch.aux.cache.keys: 1
   scmstore.file.fetch.aux.cache.misses: 1
   scmstore.file.fetch.aux.cache.requests: 1
+  scmstore.file.fetch.aux.cache.singles: 1
   scmstore.file.fetch.aux.cache.time: * (glob) (?)
   scmstore.file.fetch.edenapi.hits: 1
   scmstore.file.fetch.edenapi.keys: 1
   scmstore.file.fetch.edenapi.requests: 1
+  scmstore.file.fetch.edenapi.singles: 1
   scmstore.file.fetch.edenapi.time: * (glob) (?)
   scmstore.file.fetch.indexedlog.cache.keys: 1
   scmstore.file.fetch.indexedlog.cache.misses: 1
   scmstore.file.fetch.indexedlog.cache.requests: 1
+  scmstore.file.fetch.indexedlog.cache.singles: 1
   scmstore.file.fetch.indexedlog.cache.time: * (glob) (?)
   scmstore.file.fetch.indexedlog.local.keys: 1
   scmstore.file.fetch.indexedlog.local.misses: 1
   scmstore.file.fetch.indexedlog.local.requests: 1
+  scmstore.file.fetch.indexedlog.local.singles: 1
   scmstore.file.fetch.indexedlog.local.time: * (glob) (?)
   scmstore.tree.fetch.edenapi.keys: 1
   scmstore.tree.fetch.edenapi.requests: 1
+  scmstore.tree.fetch.edenapi.singles: 1
   scmstore.tree.fetch.edenapi.time: * (glob) (?)
   scmstore.tree.fetch.indexedlog.cache.keys: 1
   scmstore.tree.fetch.indexedlog.cache.misses: 1
   scmstore.tree.fetch.indexedlog.cache.requests: 1
+  scmstore.tree.fetch.indexedlog.cache.singles: 1
   scmstore.tree.fetch.indexedlog.cache.time: * (glob) (?)
   scmstore.tree.fetch.indexedlog.local.keys: 1
   scmstore.tree.fetch.indexedlog.local.misses: 1
   scmstore.tree.fetch.indexedlog.local.requests: 1
+  scmstore.tree.fetch.indexedlog.local.singles: 1
   scmstore.tree.fetch.indexedlog.local.time: * (glob) (?)
 
 Now we do have aux data locally:
@@ -137,4 +144,5 @@ Fetching only aux data does not trigger a remote query:
   scmstore.file.fetch.aux.cache.keys: 1
   scmstore.file.fetch.aux.cache.misses: 1
   scmstore.file.fetch.aux.cache.requests: 1
+  scmstore.file.fetch.aux.cache.singles: 1
   scmstore.file.fetch.aux.cache.time: * (glob) (?)
