@@ -52,6 +52,7 @@ use stats::define_stats;
 use stats::prelude::*;
 
 use crate::methods::megarepo_async_request_compute;
+use crate::scuba::log_result;
 use crate::scuba::log_start;
 use crate::AsyncRequestsWorkerArgs;
 
@@ -323,34 +324,28 @@ impl AsyncMethodRequestWorker {
                     ctx.logger(),
                     "[{}] request complete, saving result", &req_id.0
                 );
-                let mut scuba = ctx.scuba().clone();
-                scuba.add_future_stats(&stats);
-                scuba.log_with_msg("Request complete, saving result", None);
 
                 // Save the result.
                 match result {
-                    Ok(result) => {
+                    Ok(ref res) => {
                         STATS::process_succeeded.add_value(1);
-                        let updated_res = self.queue.complete(&ctx, &req_id, result).await;
+                        let updated_res = self.queue.complete(&ctx, &req_id, res.clone()).await;
                         let updated = match updated_res {
                             Ok(updated) => {
                                 info!(ctx.logger(), "[{}] result saved", &req_id.0);
-                                ctx.scuba().clone().log_with_msg("Result saved", None);
+                                log_result(ctx.clone(), "Request complete", &stats, &result);
                                 updated
                             }
                             Err(err) => {
                                 STATS::process_complete_failed.add_value(1);
-                                ctx.scuba().clone().log_with_msg(
-                                    "Failed to save result",
-                                    Some(format!("{:?}", err)),
-                                );
+                                log_result(ctx.clone(), "Request complete", &stats, &result);
                                 return Err(err.into());
                             }
                         };
 
                         Ok(updated)
                     }
-                    Err(err) => {
+                    Err(ref err) => {
                         STATS::process_failed.add_value(1);
                         info!(
                             ctx.logger(),
@@ -358,9 +353,7 @@ impl AsyncMethodRequestWorker {
                             &req_id.0,
                             err
                         );
-                        ctx.scuba()
-                            .clone()
-                            .log_with_msg("Failed to process request", Some(format!("{:?}", err)));
+                        log_result(ctx.clone(), "Request complete", &stats, &result);
                         Ok(false)
                     }
                 }

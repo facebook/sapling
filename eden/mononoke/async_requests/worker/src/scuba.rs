@@ -5,8 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Result;
+use async_requests::types::AsynchronousRequestResult;
 use async_requests::RequestId;
 use context::CoreContext;
+use futures_stats::FutureStats;
 use slog::info;
 
 use crate::worker::AsyncMethodRequestWorker;
@@ -39,4 +42,27 @@ impl AsyncMethodRequestWorker {
 pub(crate) fn log_start(ctx: &CoreContext) {
     let mut scuba = ctx.scuba().clone();
     scuba.log_with_msg("Request start", None);
+}
+
+pub(crate) fn log_result(
+    ctx: CoreContext,
+    tag: &'static str,
+    stats: &FutureStats,
+    result: &Result<AsynchronousRequestResult>,
+) {
+    let mut scuba = ctx.scuba().clone();
+
+    let (status, error) = match result {
+        Ok(_response) => ("SUCCESS", None),
+        Err(err) => ("ERROR", Some(err.to_string())),
+    };
+
+    scuba.add_future_stats(stats);
+    scuba.add("status", status);
+
+    if let Some(error) = error {
+        scuba.unsampled();
+        scuba.add("error", error.as_str());
+    }
+    scuba.log_with_msg(tag, None);
 }
