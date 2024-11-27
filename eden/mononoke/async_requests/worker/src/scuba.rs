@@ -8,6 +8,7 @@
 use anyhow::Result;
 use async_requests::types::AsynchronousRequestResult;
 use async_requests::RequestId;
+use async_requests_types_thrift::AsynchronousRequestResult as ThriftAsynchronousRequestResult;
 use context::CoreContext;
 use futures_stats::FutureStats;
 use slog::info;
@@ -53,8 +54,13 @@ pub(crate) fn log_result(
     let mut scuba = ctx.scuba().clone();
 
     let (status, error) = match result {
-        Ok(_response) => ("SUCCESS", None),
-        Err(err) => ("ERROR", Some(err.to_string())),
+        Ok(response) => match response.thrift() {
+            ThriftAsynchronousRequestResult::error(error) => {
+                ("ERROR", Some(format!("{:?}", error)))
+            }
+            _ => ("SUCCESS", None),
+        },
+        Err(err) => ("TEMPORARY WORKER ERROR", Some(err.to_string())),
     };
 
     scuba.add_future_stats(stats);
