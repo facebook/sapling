@@ -16,6 +16,8 @@ pyo3-build-config = { package = "pyo3-build-config", version = "0.21.2", git = "
 quickcheck = { git = "https://github.com/jakoschiko/quickcheck", rev = "6ecdf5bb4b0132ce66670b4d46453aa022ea892c" }
 riscv = { git = "https://github.com/rust-embedded/riscv.git", rev = "28e9b02d45827055188be0dbd1f800ba64bc75e6" }
 tracing-attributes = { git = "https://github.com/tokio-rs/tracing.git", rev = "70a867877d5232b686d5fd70bbb4cbf37f4b38c6" }
+uefisettings = { git = "https://github.com/linuxboot/uefisettings", rev = "f16daed1d2bd1216204fd24e876c6477d03aebb3" }
+uefisettings_backend_thrift = { git = "https://github.com/linuxboot/uefisettings", rev = "f16daed1d2bd1216204fd24e876c6477d03aebb3" }
 
 [workspace]
 members = [
