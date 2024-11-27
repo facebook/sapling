@@ -378,6 +378,13 @@ impl HttpClientBuilder {
         self.http_config.convert_cert = enable;
         self
     }
+
+    /// Specify settings for the underlying HTTP client for non-Sapling
+    /// edenapi clients.
+    pub fn http_config(mut self, http_config: http_client::Config) -> Self {
+        self.http_config = http_config;
+        self
+    }
 }
 
 fn get_config<T: FromConfigValue>(

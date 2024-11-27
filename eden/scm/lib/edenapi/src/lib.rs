@@ -18,6 +18,7 @@ pub use edenapi_trait::Entries;
 pub use edenapi_trait::Response;
 pub use edenapi_trait::ResponseMeta;
 pub use edenapi_types as types;
+pub use http_client::Config as HttpClientConfig;
 pub use http_client::Stats;
 
 pub use crate::api::SaplingRemoteApi;
