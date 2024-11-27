@@ -1223,6 +1223,15 @@ class HealthReportCmd(Subcmd):
     version_info: VersionInfo = VersionInfo()
     error_codes: Dict[ErrorCode, str] = {}
 
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--mounts",
+            default=[],
+            nargs="*",
+            help="path of the mount points",
+            dest="mounts",
+        )
+
     def is_eden_running(self, instance: EdenInstance) -> bool:
         health_info = instance.check_health()
         if not health_info.is_healthy():
@@ -1270,21 +1279,25 @@ class HealthReportCmd(Subcmd):
         )
         return False
 
-    def is_repo_mounted(self, instance: EdenInstance) -> bool:
+    def is_repo_mounted(self, instance: EdenInstance, mounts: List[str]) -> bool:
         try:
             checkouts_info = doctor_mod.get_checkouts_info(instance)
-            unmounted_repos = set()
-            for checkout in checkouts_info.values():
-                if checkout.state is None:
-                    unmounted_repos.add(str(checkout.path))
-            if len(unmounted_repos) > 0:
+            unmounted_repos = {
+                str(checkout.path)
+                for path, checkout in checkouts_info.items()
+                if checkout.state is None and (not mounts or str(path) in mounts)
+            }
+
+            if unmounted_repos:
                 self.error_codes[HealthReportCmd.ErrorCode.NO_REPO_MOUNT_FOUND] = (
                     ", ".join(unmounted_repos)
                 )
                 return False
+
+            return True
         except Exception as ex:
             print(f"Couldn't retrieve EdenFS checkouts info.: {ex}", file=sys.stderr)
-        return True
+            return True
 
     @staticmethod
     def print_error_codes_json(out: ui.Output) -> None:
@@ -1309,13 +1322,14 @@ class HealthReportCmd(Subcmd):
 
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
+        mounts = args.mounts or []
         out = ui.get_output()
         exit_code = 0
 
         try:
             if (
                 not self.is_eden_running(instance)
-                or not self.is_repo_mounted(instance)
+                or not self.is_repo_mounted(instance, mounts)
                 or not all(
                     f()
                     for f in [

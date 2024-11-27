@@ -81,6 +81,11 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
             home_dir="/home/johndoe",
             mount=eden_path,
             only_repo_source=True,
+            mounts=[
+                "/data/users/vinigupta/configerator_test",
+                "/data/users/vinigupta/fbsource_test",
+                "/data/users/vinigupta/opsfiles_test",
+            ],
         )
         mock_argument_parser = MagicMock(spec=argparse.ArgumentParser)
         return (mock_argument_parser, args)
