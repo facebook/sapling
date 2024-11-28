@@ -19,11 +19,11 @@ SOURCE_REPO_LOG="$TESTTMP/source_repo_log"
 GIT_BUNDLE_OUTPUT="$TESTTMP/git_bundle"
 GIT_REPO="$TESTTMP/git_repo"
 GIT_REPO_LOG="$TESTTMP/git_repo_log"
-SCUBA_LOGS_FILE="file://$TESTTMP/scuba_gitexport_logs"
+SCUBA_LOG_FILE="$TESTTMP/scuba_gitexport_logs"
 
 # Call gitexport with the proper arguments for all integration tests
 function test_gitexport {
-  gitexport --repo-name "repo" -B "master_bookmark" --scuba-dataset="$SCUBA_LOGS_FILE" --git-output "$GIT_BUNDLE_OUTPUT" "$@"
+  gitexport --repo-name "repo" -B "master_bookmark" --scuba-log-file "$SCUBA_LOG_FILE" --git-output "$GIT_BUNDLE_OUTPUT" "$@"
 }
 
 

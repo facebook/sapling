@@ -24,7 +24,7 @@ Setup repo
 Blobimport the hg repo to Mononoke
 
   $ blobimport repo/.hg repo
-  $ mononoke --scuba-dataset "file://$TESTTMP/log.json"
+  $ mononoke --scuba-log-file "$TESTTMP/log.json"
   $ wait_for_mononoke
 
 

@@ -34,7 +34,7 @@
   >    }
   > }
   > EOF
-  $ lfs_root="$(CACHE_ARGS=--cache-mode=disabled lfs_server --log "$lfs_log" --always-wait-for-upstream --scuba-dataset "file://$SCUBA" --live-config "$(get_configerator_relative_path "${LIVE_CONFIG}")")"
+  $ lfs_root="$(CACHE_ARGS=--cache-mode=disabled lfs_server --log "$lfs_log" --always-wait-for-upstream --scuba-log-file "$SCUBA" --live-config "$(get_configerator_relative_path "${LIVE_CONFIG}")")"
 
 # `lfs_server` sends a health check request (via `lfs_health`), which will emit
 # a (sampled) log entry. In most cases that's ok, and logs are sample anyway.

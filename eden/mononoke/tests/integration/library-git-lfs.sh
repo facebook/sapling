@@ -37,7 +37,7 @@ EOF
     # start LFS server
     LFS_LOG_LEGACY="${TESTTMP}/lfs-legacy.log"
     LFS_LOG="${TESTTMP}/lfs.log"
-    quiet lfs_server --tls --log "$LFS_LOG_LEGACY" --scuba-dataset "file://$SCUBA_LEGACY_LFS"
+    quiet lfs_server --tls --log "$LFS_LOG_LEGACY" --scuba-log-file "$SCUBA_LEGACY_LFS"
     export LEGACY_LFS_URL
     LEGACY_LFS_URL="$BASE_LFS_URL/legacy_lfs"
     if  [ "$LFS_USE_UPSTREAM" == "1" ]; then
@@ -63,7 +63,7 @@ function test_repos_for_git_lfs_import {
     test_repos_for_lfs_with_upstream
     # Start SCS
     if [ "$START_SCS" == "1" ]; then
-        start_and_wait_for_scs_server --scuba-dataset "file://$TESTTMP/scuba.json"
+        start_and_wait_for_scs_server --scuba-log-file "$TESTTMP/scuba.json"
         export SCSC_WRITES_ENABLED=true
     fi
     cd "$TESTTMP"|| return 1

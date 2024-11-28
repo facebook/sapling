@@ -23,7 +23,7 @@ setup configuration
   blobimporting
 
   $ LOG_FILE="$TESTTMP/log_file"
-  $ streaming_clone --scuba-dataset "file://$LOG_FILE" create --dot-hg-path "$TESTTMP/repo/.hg"
+  $ streaming_clone --scuba-log-file "$LOG_FILE" create --dot-hg-path "$TESTTMP/repo/.hg"
   * using repo "repo" repoid RepositoryId(0) (glob)
   * current sizes in database: index: 0, data: 0, repo: repo (glob)
   * about to upload 1 entries, repo: repo (glob)

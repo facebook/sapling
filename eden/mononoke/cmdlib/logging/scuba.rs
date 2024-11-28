@@ -8,6 +8,7 @@
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hash;
 use std::hash::Hasher;
+use std::path::PathBuf;
 
 use anyhow::Error;
 use anyhow::Result;
@@ -20,10 +21,12 @@ use scuba_ext::MononokeScubaSampleBuilder;
 /// Command line arguments that control scuba logging
 #[derive(Args, Debug)]
 pub struct ScubaLoggingArgs {
-    /// The name of the scuba dataset to log to
-    /// Prefix `file://` will direct logging to local file
+    /// Set the name of the scuba dataset to log to
     #[clap(long)]
     pub scuba_dataset: Option<String>,
+    /// Write scuba logs to a log file
+    #[clap(long)]
+    pub scuba_log_file: Option<PathBuf>,
     /// Do not use the default scuba dataset for this app
     #[clap(long)]
     pub no_default_scuba_dataset: bool,
@@ -40,16 +43,26 @@ impl ScubaLoggingArgs {
         observability_context: &ObservabilityContext,
         default_scuba_set: &Option<String>,
     ) -> Result<MononokeScubaSampleBuilder> {
-        let scuba_logger = if let Some(scuba_dataset) = &self.scuba_dataset {
-            MononokeScubaSampleBuilder::new(fb, scuba_dataset.as_str())?
-        } else if let Some(default_scuba_dataset) = default_scuba_set {
-            if self.no_default_scuba_dataset {
-                MononokeScubaSampleBuilder::with_discard()
-            } else {
+        let scuba_logger = if self.scuba_dataset.is_none()
+            && self.scuba_log_file.is_none()
+            && !self.no_default_scuba_dataset
+        {
+            // No scuba args specified, so use the default scuba dataset (if any)
+            if let Some(default_scuba_dataset) = default_scuba_set {
                 MononokeScubaSampleBuilder::new(fb, default_scuba_dataset)?
+            } else {
+                MononokeScubaSampleBuilder::with_discard()
             }
         } else {
-            MononokeScubaSampleBuilder::with_discard()
+            let mut scuba_logger = if let Some(scuba_dataset) = &self.scuba_dataset {
+                MononokeScubaSampleBuilder::new(fb, scuba_dataset.as_str())?
+            } else {
+                MononokeScubaSampleBuilder::with_discard()
+            };
+            if let Some(scuba_log_file) = &self.scuba_log_file {
+                scuba_logger = scuba_logger.with_log_file(scuba_log_file)?;
+            }
+            scuba_logger
         };
         let mut scuba_logger = scuba_logger
             .with_observability_context(observability_context.clone())

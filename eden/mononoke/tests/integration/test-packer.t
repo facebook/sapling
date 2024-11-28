@@ -49,9 +49,9 @@
   $ echo 'repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a' >> $TESTTMP/pack_key_files3/reporepo.store0.part0.keys.txt
 
 # Pack content individually, to show recompression effect
-  $ packer --zstd-level 10 --scuba-dataset file://pack-individually.json --keys-dir $TESTTMP/pack_key_files1/ --tuning-info-scuba-table "file://${TESTTMP}/tuning_scuba.json"
-  $ packer --zstd-level 10 --scuba-dataset file://pack-individually.json --keys-dir $TESTTMP/pack_key_files2/ --tuning-info-scuba-table "file://${TESTTMP}/tuning_scuba.json"
-  $ packer --zstd-level 10 --scuba-dataset file://pack-individually.json --keys-dir $TESTTMP/pack_key_files3/ --tuning-info-scuba-table "file://${TESTTMP}/tuning_scuba.json"
+  $ packer --zstd-level 10 --scuba-log-file pack-individually.json --keys-dir $TESTTMP/pack_key_files1/ --tuning-info-scuba-table "file://${TESTTMP}/tuning_scuba.json"
+  $ packer --zstd-level 10 --scuba-log-file pack-individually.json --keys-dir $TESTTMP/pack_key_files2/ --tuning-info-scuba-table "file://${TESTTMP}/tuning_scuba.json"
+  $ packer --zstd-level 10 --scuba-log-file pack-individually.json --keys-dir $TESTTMP/pack_key_files3/ --tuning-info-scuba-table "file://${TESTTMP}/tuning_scuba.json"
 
 # Check logging for individually packed keys (last 3 digits of the compressed size are matched by glob because they can change on zstd crate updates)
   $ jq -r '.int * .normal | [ .blobstore_id, .blobstore_key, .uncompressed_size, .compressed_size ] | @csv' < pack-individually.json | sort | uniq
@@ -78,7 +78,7 @@
   $ echo 'repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a' >> $TESTTMP/pack_key_files4/reporepo.store0.part0.keys.txt
 
 # Pack content into a pack
-  $ packer --zstd-level 19 --scuba-dataset file://packed.json --keys-dir $TESTTMP/pack_key_files4/ --tuning-info-scuba-table "file://${TESTTMP}/tuning_scuba.json"
+  $ packer --zstd-level 19 --scuba-log-file packed.json --keys-dir $TESTTMP/pack_key_files4/ --tuning-info-scuba-table "file://${TESTTMP}/tuning_scuba.json"
 
 # Check logging for packed keys (last 3 digits of the compressed size are matched by glob because they can change on zstd crate updates)
   $ jq -r '.int * .normal | [ .blobstore_id, .blobstore_key, .pack_key, .uncompressed_size, .compressed_size ] | @csv' < packed.json | sort | uniq

@@ -14,7 +14,7 @@
 # Disable local caching as we want to check each access.
   $ SCUBA="$TESTTMP/scuba.json"
   $ lfs_log="$TESTTMP/lfs.log"
-  $ lfs_root="$(CACHE_ARGS=--cache-mode=disabled lfs_server --log "$lfs_log" --always-wait-for-upstream --scuba-dataset "file://$SCUBA")"
+  $ lfs_root="$(CACHE_ARGS=--cache-mode=disabled lfs_server --log "$lfs_log" --always-wait-for-upstream --scuba-log-file "$SCUBA")"
 
 # Send some data
   $ yes A 2>/dev/null | head -c 2KiB | hg debuglfssend "${lfs_root}/lfs1"

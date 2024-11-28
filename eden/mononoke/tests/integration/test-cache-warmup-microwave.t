@@ -45,7 +45,7 @@ Derive data, then regenerate microwave snapshot:
 Start Mononoke again, check that the microwave snapshot was used
 
   $ SCUBA="$TESTTMP/scuba.json"
-  $ start_and_wait_for_mononoke_server --scuba-dataset "file://$SCUBA"
+  $ start_and_wait_for_mononoke_server --scuba-log-file "$SCUBA"
   $ wait_for_mononoke_cache_warmup
   $ grep primed "$TESTTMP/mononoke.out"
   * primed filenodes cache with 1 entries, repo: repo (glob)

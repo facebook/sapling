@@ -643,7 +643,7 @@ function backsync_large_to_small_forever {
     --scribe-logging-directory "$TESTTMP/scribe_logs" \
     --source-repo-id "$REPOIDLARGE" \
     --target-repo-id "$REPOIDSMALL" \
-    --scuba-dataset "file://$TESTTMP/scuba_backsyncer.json" \
+    --scuba-log-file "$TESTTMP/scuba_backsyncer.json" \
     "$@" \
     backsync-forever >> "$TESTTMP/backsyncer.out" 2>&1 &
 
@@ -660,7 +660,7 @@ function mononoke_x_repo_sync_forever() {
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
-    --scuba-dataset "file://$TESTTMP/x_repo_sync_scuba_logs" \
+    --scuba-log-file "$TESTTMP/x_repo_sync_scuba_logs" \
     --source-repo-id "$source_repo_id" \
     --target-repo-id "$target_repo_id" \
     "$@" \

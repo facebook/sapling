@@ -82,7 +82,7 @@ Specify a bookmark
 Specify a changeset id
 # This run can't use the `test_gitexport` abbreviation because it uses the `-i`
 # flag and it conflicts with the default `-B "master_bookmark"` arg used in the abbreviation.
-  $ gitexport -R "repo" --scuba-dataset="$SCUBA_LOGS_FILE" -o "$GIT_BUNDLE_OUTPUT" --log-level ERROR -p $EXPORT_DIR -i "$C"
+  $ gitexport -R "repo" --scuba-log-file "$SCUBA_LOG_FILE" -o "$GIT_BUNDLE_OUTPUT" --log-level ERROR -p $EXPORT_DIR -i "$C"
   $ git clone $GIT_BUNDLE_OUTPUT $GIT_REPO
   Cloning into '$TESTTMP/git_repo'...
 

@@ -27,7 +27,7 @@ Blobimport the hg repo to Mononoke
 Start Mononoke with LFS enabled.
   $ start_and_wait_for_mononoke_server
 Start Mononoke API server, to serve LFS blobs
-  $ lfs_uri="$(lfs_server --scuba-dataset "file://$TESTTMP/scuba.json")/repo"
+  $ lfs_uri="$(lfs_server --scuba-log-file "$TESTTMP/scuba.json")/repo"
 
 Create a new client repository. Enable LFS there.
   $ hg clone -q mono:repo repo-lfs --noupdate

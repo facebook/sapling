@@ -9,7 +9,7 @@
 Start up SaplingRemoteAPI server.
   $ setup_mononoke_config
   $ SCUBA="$TESTTMP/scuba.json"
-  $ start_and_wait_for_mononoke_server --scuba-dataset "file://$SCUBA"
+  $ start_and_wait_for_mononoke_server --scuba-log-file "$SCUBA"
   $ testtool_drawdag -R repo --print-hg-hashes <<'EOF'
   > A-B-C
   > EOF
