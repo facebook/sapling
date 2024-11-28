@@ -11,6 +11,7 @@ use std::io;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::path::Path;
+use std::path::PathBuf;
 use std::time::Instant;
 
 use anyhow::bail;
@@ -64,14 +65,13 @@ struct MononokePackerArgs {
     #[clap(long, help = "If true, print the progress of the packing")]
     print_progress: bool,
 
-    /// The scuba table that contains the tuning debug information,
-    /// for example, the time used for finding the best packing strategy
-    #[clap(
-        long,
-        default_value_t = String::from("file:///tmp/packer_tuning_log.json"),
-        help = "The scuba table that contains the tuning debug information"
-    )]
-    tuning_info_scuba_table: String,
+    /// Scuba table to log tuning information to
+    #[clap(long, alias = "tuning-info-scuba-dataset")]
+    tuning_info_scuba_table: Option<String>,
+
+    /// File to log tuning information to
+    #[clap(long)]
+    tuning_info_scuba_log_file: Option<PathBuf>,
 }
 
 const PACK_PREFIX: &str = "multiblob-";
@@ -145,7 +145,6 @@ fn main(fb: FacebookInit) -> Result<()> {
     let max_parallelism = args.scheduled_max;
     let keys_dir = args.keys_dir;
     let print_progress = args.print_progress;
-    let tuning_info_scuba_table = args.tuning_info_scuba_table;
 
     let env = app.environment();
     let logger = app.logger();
@@ -161,8 +160,14 @@ fn main(fb: FacebookInit) -> Result<()> {
         .collect::<Result<Vec<_>, io::Error>>()?;
     keys_file_entries.shuffle(&mut thread_rng());
 
-    // prepare the tuning info scuba table
-    let tuning_info_scuba_builder = MononokeScubaSampleBuilder::new(fb, &tuning_info_scuba_table)?;
+    let mut tuning_info_scuba_builder = match args.tuning_info_scuba_table {
+        Some(table) => MononokeScubaSampleBuilder::new(fb, &table)?,
+        None => MononokeScubaSampleBuilder::with_discard(),
+    };
+
+    if let Some(file) = args.tuning_info_scuba_log_file {
+        tuning_info_scuba_builder = tuning_info_scuba_builder.with_log_file(file)?;
+    }
 
     let total_file_count = keys_file_entries.len();
     for (cur, entry) in keys_file_entries.iter().enumerate() {
