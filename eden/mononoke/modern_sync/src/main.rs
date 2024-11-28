@@ -38,6 +38,9 @@ struct ModernSyncArgs {
 
     #[clap(flatten)]
     pub repo: RepoArgs,
+
+    #[clap(long, hide = true)] // To be used only in integration tests
+    pub dest_socket: Option<u64>,
 }
 
 #[facet::container]

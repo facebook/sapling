@@ -807,11 +807,10 @@ sync_all_bookmarks=true
 """
     )
 
-    mononoke_socket = env.getenv("MONONOKE_SOCKET")
     append_config(
         f"""
 [modern_sync_config]
-url=\"https://localhost:{mononoke_socket}/edenapi/\"
+url=\"https://localhost\"
 """
     )
 

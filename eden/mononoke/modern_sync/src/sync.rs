@@ -38,6 +38,7 @@ use crate::bul_util;
 use crate::sender::dummy::DummySender;
 use crate::sender::edenapi::EdenapiSender;
 use crate::sender::ModernSyncSender;
+use crate::ModernSyncArgs;
 use crate::Repo;
 const MODERN_SYNC_COUNTER_NAME: &str = "modern_sync";
 
@@ -96,7 +97,13 @@ pub async fn sync(
     let sender: Arc<dyn ModernSyncSender + Send + Sync> = if dry_run {
         Arc::new(DummySender::new(logger.clone()))
     } else {
-        Arc::new(EdenapiSender::new(Url::parse(&config.url)?, repo_name)?)
+        let url = if let Some(socket) = app.args::<ModernSyncArgs>()?.dest_socket {
+            // Only for integration tests
+            format!("{}:{}/edenapi/", &config.url, socket)
+        } else {
+            format!("{}/edenapi/", &config.url)
+        };
+        Arc::new(EdenapiSender::new(Url::parse(&url)?, repo_name, logger.clone()).await?)
     };
 
     bul_util::read_bookmark_update_log(
