@@ -23,6 +23,7 @@ class ProcUtilsTests(unittest.TestCase):
     def setUp(self) -> None:
         self.maxDiff: Optional[int] = None
         self.tmpdir = Path(tempfile.mkdtemp(prefix="eden_test."))
+        # pyre-fixme[6]: For 1st positional argument, expected `typing.Callable[unittest.case._P, object]` but got `_RmtreeType`.
         self.addCleanup(shutil.rmtree, self.tmpdir)
         self.proc_utils = FakeProcUtils(str(self.tmpdir))
 
