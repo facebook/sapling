@@ -29,7 +29,7 @@ smallvec = { version = "1.6.1", default-features = false }
 tempfile = "3.8"
 terminfo = "0.8"
 termwiz = "0.22"
-thiserror = "1.0.64"
+thiserror = "2"
 toml = "0.8.4"
 unicode-segmentation = "1.6.0"
 unicode-width = "=0.1.12"

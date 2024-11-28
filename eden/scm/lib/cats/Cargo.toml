@@ -19,5 +19,5 @@ sapling-configmodel = { version = "0.1.0", path = "../config/model" }
 sapling-util = { version = "0.1.0", path = "../util" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_depth"] }
-thiserror = "1.0.64"
+thiserror = "2"
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }

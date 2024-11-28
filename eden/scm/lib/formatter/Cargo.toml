@@ -18,4 +18,4 @@ sapling-configmodel = { version = "0.1.0", path = "../config/model" }
 sapling-termstyle = { version = "0.1.0", path = "../io/term/style" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_depth"] }
-thiserror = "1.0.64"
+thiserror = "2"

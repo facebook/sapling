@@ -44,7 +44,7 @@ sapling-treestate = { version = "0.1.0", path = "../treestate" }
 sapling-types = { version = "0.1.0", path = "../types" }
 sapling-util = { version = "0.1.0", path = "../util" }
 sapling-workingcopy = { version = "0.1.0", path = "../workingcopy", optional = true }
-thiserror = "1.0.64"
+thiserror = "2"
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 
 [dev-dependencies]

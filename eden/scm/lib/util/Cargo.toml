@@ -24,7 +24,7 @@ sapling-lazystr = { version = "0.1.0", path = "../lazystr" }
 sapling-rewrite-macros = { version = "0.1.0", path = "rewrite-macros" }
 shell-escape = "0.1.5"
 shellexpand = "2.1.2"
-thiserror = "1.0.64"
+thiserror = "2"
 
 [dev-dependencies]
 memmap2 = "0.5.10"

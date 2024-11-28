@@ -14,4 +14,4 @@ name = "migration"
 
 [dependencies]
 sapling-configmodel = { version = "0.1.0", path = "../config/model" }
-thiserror = "1.0.64"
+thiserror = "2"

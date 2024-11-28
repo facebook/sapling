@@ -37,7 +37,7 @@ sapling-repourl = { version = "0.1.0", path = "../repo/url" }
 sapling-storemodel = { version = "0.1.0", path = "../storemodel" }
 sapling-zstore = { version = "0.1.0", path = "../zstore" }
 sha1 = "0.10.5"
-thiserror = "1.0.64"
+thiserror = "2"
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 
 [dev-dependencies]

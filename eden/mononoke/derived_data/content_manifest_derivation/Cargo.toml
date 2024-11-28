@@ -20,4 +20,4 @@ either = "1.5"
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 manifest = { version = "0.1.0", path = "../../manifest" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-thiserror = "1.0.64"
+thiserror = "2"

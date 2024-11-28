@@ -16,7 +16,7 @@ name = "nodemap"
 anyhow = "1.0.86"
 sapling-indexedlog = { version = "0.1.0", path = "../indexedlog" }
 sapling-types = { version = "0.1.0", path = "../types" }
-thiserror = "1.0.64"
+thiserror = "2"
 
 [dev-dependencies]
 quickcheck = "1.0"

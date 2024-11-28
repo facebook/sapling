@@ -41,7 +41,7 @@ sapling-util = { version = "0.1.0", path = "../util" }
 sapling-vfs = { version = "0.1.0", path = "../vfs" }
 sapling-workingcopy = { version = "0.1.0", path = "../workingcopy" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
-thiserror = "1.0.64"
+thiserror = "2"
 toml = { version = "0.8.4", optional = true }
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 watchman_client = { version = "0.9.0", git = "https://github.com/facebook/watchman.git", branch = "main" }

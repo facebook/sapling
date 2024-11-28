@@ -32,7 +32,7 @@ sapling-pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 sapling-progress-model = { version = "0.1.0", path = "../progress/model" }
 sapling-storemodel = { version = "0.1.0", path = "../storemodel" }
 sapling-types = { version = "0.1.0", path = "../types" }
-thiserror = "1.0.64"
+thiserror = "2"
 threadpool = "1.8.1"
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 
