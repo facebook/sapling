@@ -95,7 +95,6 @@ rust_binary(
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/futures_stats:futures_stats",
         "//eden/mononoke/bookmarks:bookmarks_types",
-        "//eden/mononoke/cmdlib:cmdlib_logging",
         "//eden/mononoke/cmdlib/commit_id:commit_id",
         "//eden/mononoke/cmdlib/displaying/graph:print_graph",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",

@@ -9,7 +9,6 @@ use anyhow::Result;
 use clap::command;
 use clap::Args;
 use clap::Parser;
-use cmdlib_logging::ScubaLoggingArgs;
 use executor_lib::args::ShardedExecutorArgs;
 use fbinit::FacebookInit;
 use mononoke_app::args::ChangesetArgs;
@@ -117,26 +116,12 @@ pub struct ForwardSyncerArgs {
 
     #[clap(flatten)]
     pub sharded_executor_args: ShardedExecutorArgs,
-
-    // TODO(gustavoavena): remove the default scuba logging after all tw
-    // tasks have been updated.
-    /// Temporary argument that does nothing but is needed to maintain backwards
-    /// compatibility.
-    #[clap(long)]
-    pub log_to_scuba: bool,
 }
 
 pub fn create_app(fb: FacebookInit) -> Result<MononokeApp> {
-    // TODO(gustavoavena): remove the default scuba logging after all tw
-    // tasks have been updated.
-    let default_scuba_logging_args = ScubaLoggingArgs {
-        scuba_dataset: Some(SCUBA_TABLE.to_string()),
-        no_default_scuba_dataset: false,
-        warm_bookmark_cache_scuba_dataset: None,
-    };
     let app: MononokeApp = MononokeAppBuilder::new(fb)
-        .with_arg_defaults(default_scuba_logging_args)
         .with_app_extension(Fb303AppExtension {})
+        .with_default_scuba_dataset(SCUBA_TABLE)
         .build::<ForwardSyncerArgs>()?;
 
     Ok(app)
