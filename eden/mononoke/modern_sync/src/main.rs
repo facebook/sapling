@@ -66,6 +66,7 @@ pub struct Repo {
 fn main(fb: FacebookInit) -> Result<()> {
     let subcommands = commands::subcommands();
     let app = MononokeAppBuilder::new(fb)
+        .with_default_scuba_dataset("mononoke_modern_sync")
         .with_app_extension(MonitoringAppExtension {})
         .with_app_extension(RepoFilterAppExtension {})
         .build_with_subcommands::<ModernSyncArgs>(subcommands)?;

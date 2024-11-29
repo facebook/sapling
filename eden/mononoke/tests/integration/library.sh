@@ -347,6 +347,7 @@ function mononoke_modern_sync {
     --repo-id "$REPOID" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --dest-socket $MONONOKE_SOCKET \
+    --scuba-log-file "$TESTTMP/modern_sync_scuba_logs" \
     sync-once --start-id "$START_ID"
 }
 

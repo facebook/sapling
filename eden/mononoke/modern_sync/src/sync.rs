@@ -15,8 +15,6 @@ use bookmarks::BookmarkUpdateLogArc;
 use bookmarks::BookmarkUpdateLogId;
 use borrowed::borrowed;
 use changeset_info::ChangesetInfo;
-use clientinfo::ClientEntryPoint;
-use clientinfo::ClientInfo;
 use cloned::cloned;
 use commit_graph::CommitGraphArc;
 use context::CoreContext;
@@ -70,12 +68,12 @@ pub async fn sync(
 
     let logger = app.logger().clone();
 
-    let ctx = CoreContext::new_with_logger_and_client_info(
+    let ctx = CoreContext::new_with_logger_and_scuba(
         app.fb,
         logger.clone(),
-        ClientInfo::default_with_entry_point(ClientEntryPoint::ModernSync),
+        app.environment().scuba_sample_builder.clone(),
     )
-    .clone_with_repo_name(&repo_name);
+    .clone_with_repo_name(&repo_name.clone());
 
     borrowed!(ctx);
     let start_id = if let Some(id) = start_id_arg {
@@ -103,8 +101,14 @@ pub async fn sync(
         } else {
             format!("{}/edenapi/", &config.url)
         };
-        Arc::new(EdenapiSender::new(Url::parse(&url)?, repo_name, logger.clone()).await?)
+        Arc::new(EdenapiSender::new(Url::parse(&url)?, repo_name.clone(), logger.clone()).await?)
     };
+
+    let mut scuba_sample = ctx.scuba().clone();
+    scuba_sample.add("repo", repo_name);
+    scuba_sample.add("start_id", start_id);
+    scuba_sample.add("dry_run", dry_run);
+    scuba_sample.log();
 
     bul_util::read_bookmark_update_log(
         ctx,

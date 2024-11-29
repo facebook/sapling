@@ -65,3 +65,8 @@ Sync all bookmarks moves
   Uploading content with id: ContentId(Blake2(55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f))
   File change Change(TrackedFileChange { inner: BasicFileChange { content_id: ContentId(Blake2(fbc4b9b407225e86008840c4095edb4f66a62bad80529b6e120bfa7d605f9423)), file_type: Regular, size: 5, git_lfs: FullContent }, copy_from: None })
   Uploading content with id: ContentId(Blake2(fbc4b9b407225e86008840c4095edb4f66a62bad80529b6e120bfa7d605f9423))
+
+  $ cat  $TESTTMP/modern_sync_scuba_logs | jq | rg "start_id|dry_run|repo"
+      "start_id": 0,
+      "dry_run": "false",
+      "repo": "repo"* (glob)
