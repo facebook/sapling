@@ -81,10 +81,10 @@ impl DenyFilesBuilder {
 
 pub struct DenyFiles {
     /// Deny patterns for all sources of pushes
-    all_push_sources_deny_patterns: Vec<LuaPattern>,
+    pub all_push_sources_deny_patterns: Vec<LuaPattern>,
     /// Deny patterns for pushes, originally intended to this repo
     /// (as opposed to push-redirected ones)
-    native_push_only_deny_patterns: Vec<LuaPattern>,
+    pub native_push_only_deny_patterns: Vec<LuaPattern>,
 }
 
 impl DenyFiles {

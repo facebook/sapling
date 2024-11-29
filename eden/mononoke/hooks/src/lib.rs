@@ -31,4 +31,6 @@ pub use hook_manager::HookRejectionInfo;
 pub use hook_manager::HookStateProvider;
 pub use hook_manager::PathContent;
 pub use hook_manager::PushAuthoredBy;
+pub use implementations::deny_files::DenyFiles;
+pub use lua_pattern::LuaPattern;
 pub use metaconfig_types::HookConfig;
