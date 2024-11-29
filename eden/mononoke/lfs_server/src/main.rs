@@ -51,8 +51,8 @@ use mononoke_app::args::ReadonlyArgs;
 use mononoke_app::args::RepoFilterAppExtension;
 use mononoke_app::args::ShutdownTimeoutArgs;
 use mononoke_app::args::TLSArgs;
-use mononoke_app::fb303::AliveService;
-use mononoke_app::fb303::Fb303AppExtension;
+use mononoke_app::monitoring::AliveService;
+use mononoke_app::monitoring::MonitoringAppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_configs::MononokeConfigs;
@@ -189,7 +189,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let app = MononokeAppBuilder::new(fb)
         .with_entry_point(ClientEntryPoint::LfsServer)
-        .with_app_extension(Fb303AppExtension {})
+        .with_app_extension(MonitoringAppExtension {})
         .with_app_extension(RepoFilterAppExtension {})
         .with_cachelib_settings(cachelib_settings)
         .build::<LfsServerArgs>()?;

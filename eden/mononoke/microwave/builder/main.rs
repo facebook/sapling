@@ -41,8 +41,8 @@ use mercurial_derivation::MappedHgChangesetId;
 use metaconfig_types::CacheWarmupParams;
 use microwave::Snapshot;
 use microwave::SnapshotLocation;
-use mononoke_app::fb303::AliveService;
-use mononoke_app::fb303::Fb303AppExtension;
+use mononoke_app::monitoring::AliveService;
+use mononoke_app::monitoring::MonitoringAppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use repo_blobstore::RepoBlobstore;
@@ -256,7 +256,7 @@ struct LocalPath {
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
     let app = MononokeAppBuilder::new(fb)
-        .with_app_extension(Fb303AppExtension {})
+        .with_app_extension(MonitoringAppExtension {})
         .with_arg_defaults(BlobstoreArgDefaults {
             put_behaviour: Some(PutBehaviour::Overwrite),
             ..Default::default()

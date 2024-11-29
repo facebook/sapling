@@ -26,7 +26,7 @@ use futures::stream;
 use futures::stream::TryStreamExt;
 use metaconfig_types::BlobConfig;
 use metaconfig_types::BlobstoreId;
-use mononoke_app::fb303::Fb303AppExtension;
+use mononoke_app::monitoring::MonitoringAppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use rand::seq::SliceRandom;
@@ -136,7 +136,7 @@ fn lines_from_file(filename: impl AsRef<Path>) -> Vec<String> {
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
     let app: MononokeApp = MononokeAppBuilder::new(fb)
-        .with_app_extension(Fb303AppExtension {})
+        .with_app_extension(MonitoringAppExtension {})
         .build::<MononokePackerArgs>()?;
 
     let args: MononokePackerArgs = app.args()?;

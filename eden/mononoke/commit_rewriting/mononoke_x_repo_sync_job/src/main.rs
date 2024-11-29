@@ -87,7 +87,7 @@ use metaconfig_types::CommitSyncConfigVersion;
 use metadata::Metadata;
 use mononoke_api::Repo;
 use mononoke_app::args::MultiRepoArgs;
-use mononoke_app::fb303::AliveService;
+use mononoke_app::monitoring::AliveService;
 use mononoke_app::MononokeApp;
 use mononoke_hg_sync_job_helper_lib::wait_for_latest_log_id_to_be_synced;
 use mononoke_types::ChangesetId;

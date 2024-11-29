@@ -77,7 +77,7 @@ use crate::args::SourceAndTargetRepoArgs;
 use crate::extension::AppExtension;
 use crate::extension::AppExtensionArgsBox;
 use crate::extension::BoxedAppExtensionArgs;
-use crate::fb303::Fb303AppExtension;
+use crate::monitoring::MonitoringAppExtension;
 use crate::repos_manager::MononokeReposManager;
 
 define_stats! {
@@ -147,13 +147,13 @@ impl MononokeApp {
         ))
     }
 
-    /// Start the FB303 monitoring server for the provided service.
+    /// Start the monitoring server for the provided service.
     pub fn start_monitoring<Service>(&self, app_name: &str, service: Service) -> Result<()>
     where
         Service: Fb303Service + Sync + Send + 'static,
     {
-        let fb303_args = self.extension_args::<Fb303AppExtension>()?;
-        fb303_args.start_fb303_server(self.fb, app_name, self.logger(), service)?;
+        let monitoring_args = self.extension_args::<MonitoringAppExtension>()?;
+        monitoring_args.start_monitoring_server(self.fb, app_name, self.logger(), service)?;
         Ok(())
     }
 

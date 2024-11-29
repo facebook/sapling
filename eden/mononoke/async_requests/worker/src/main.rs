@@ -43,8 +43,8 @@ use mononoke_app::args::HooksAppExtension;
 use mononoke_app::args::RepoFilterAppExtension;
 use mononoke_app::args::ShutdownTimeoutArgs;
 use mononoke_app::args::WarmBookmarksCacheExtension;
-use mononoke_app::fb303::AliveService;
-use mononoke_app::fb303::Fb303AppExtension;
+use mononoke_app::monitoring::AliveService;
+use mononoke_app::monitoring::MonitoringAppExtension;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_app::MononokeReposManager;
 use requests_table::LongRunningRequestsQueue;
@@ -155,7 +155,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         })
         .with_app_extension(WarmBookmarksCacheExtension {})
         .with_app_extension(HooksAppExtension {})
-        .with_app_extension(Fb303AppExtension {})
+        .with_app_extension(MonitoringAppExtension {})
         .with_app_extension(RepoFilterAppExtension {})
         .build::<AsyncRequestsWorkerArgs>()?;
 

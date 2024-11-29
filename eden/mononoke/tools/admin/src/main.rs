@@ -12,8 +12,8 @@ use anyhow::Result;
 use clap::Parser;
 use cmdlib_scrubbing::ScrubAppExtension;
 use fbinit::FacebookInit;
-use mononoke_app::fb303::AliveService;
-use mononoke_app::fb303::Fb303AppExtension;
+use mononoke_app::monitoring::AliveService;
+use mononoke_app::monitoring::MonitoringAppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 
@@ -42,7 +42,7 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let app = MononokeAppBuilder::new(fb)
         .with_app_extension(ScrubAppExtension::new())
-        .with_app_extension(Fb303AppExtension {})
+        .with_app_extension(MonitoringAppExtension {})
         .build_with_subcommands::<AdminArgs>(subcommands)?;
 
     let args: AdminArgs = app.args()?;

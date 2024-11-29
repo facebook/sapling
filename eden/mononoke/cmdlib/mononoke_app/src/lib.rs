@@ -12,7 +12,7 @@ mod app;
 pub mod args;
 mod builder;
 mod extension;
-pub mod fb303;
+pub mod monitoring;
 mod repos_manager;
 
 pub use app::MononokeApp;

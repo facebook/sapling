@@ -36,8 +36,8 @@ use mononoke_api::CoreContext;
 use mononoke_api::MononokeRepo;
 use mononoke_api::Repo;
 use mononoke_api::RepoContext;
-use mononoke_app::fb303::AliveService;
-use mononoke_app::fb303::Fb303AppExtension;
+use mononoke_app::monitoring::AliveService;
+use mononoke_app::monitoring::MonitoringAppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_repos::MononokeRepos;
@@ -176,7 +176,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .with_arg_defaults(read_only_storage)
         .with_arg_defaults(remove_derivation_args)
         .with_default_scuba_dataset("mononoke_gitexport")
-        .with_app_extension(Fb303AppExtension {})
+        .with_app_extension(MonitoringAppExtension {})
         .build::<GitExportArgs>()?;
 
     app.run_with_monitoring_and_logging(async_main, "gitexport", AliveService)

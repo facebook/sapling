@@ -15,8 +15,8 @@ use fbinit::FacebookInit;
 use git2::Repository;
 use git2::RepositoryOpenFlags;
 use mononoke_app::args::RepoArgs;
-use mononoke_app::fb303::AliveService;
-use mononoke_app::fb303::Fb303AppExtension;
+use mononoke_app::monitoring::AliveService;
+use mononoke_app::monitoring::MonitoringAppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_types::ChangesetId;
@@ -90,7 +90,7 @@ async fn run_check_git_wc(app: MononokeApp) -> Result<()> {
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
     let app = MononokeAppBuilder::new(fb)
-        .with_app_extension(Fb303AppExtension {})
+        .with_app_extension(MonitoringAppExtension {})
         .build::<CheckGitWCArgs>()?;
     app.run_with_monitoring_and_logging(run_check_git_wc, "check_git_wc", AliveService)
 }

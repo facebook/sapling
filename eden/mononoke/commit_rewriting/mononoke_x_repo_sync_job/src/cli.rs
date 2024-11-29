@@ -13,7 +13,7 @@ use executor_lib::args::ShardedExecutorArgs;
 use fbinit::FacebookInit;
 use mononoke_app::args::ChangesetArgs;
 use mononoke_app::args::OptSourceAndTargetRepoArgs;
-use mononoke_app::fb303::Fb303AppExtension;
+use mononoke_app::monitoring::MonitoringAppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 
@@ -120,7 +120,7 @@ pub struct ForwardSyncerArgs {
 
 pub fn create_app(fb: FacebookInit) -> Result<MononokeApp> {
     let app: MononokeApp = MononokeAppBuilder::new(fb)
-        .with_app_extension(Fb303AppExtension {})
+        .with_app_extension(MonitoringAppExtension {})
         .with_default_scuba_dataset(SCUBA_TABLE)
         .build::<ForwardSyncerArgs>()?;
 

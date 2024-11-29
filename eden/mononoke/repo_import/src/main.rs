@@ -65,8 +65,8 @@ use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
 use metaconfig_types::RepoConfig;
 use mononoke_app::args::RepoArgs;
-use mononoke_app::fb303::AliveService;
-use mononoke_app::fb303::Fb303AppExtension;
+use mononoke_app::monitoring::AliveService;
+use mononoke_app::monitoring::MonitoringAppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_hg_sync_job_helper_lib::wait_for_latest_log_id_to_be_synced;
@@ -1552,7 +1552,7 @@ async fn check_megarepo_large_repo_import_requirements(
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
     let app = MononokeAppBuilder::new(fb)
-        .with_app_extension(Fb303AppExtension {})
+        .with_app_extension(MonitoringAppExtension {})
         .build::<MononokeRepoImportArgs>()?;
 
     app.run_with_monitoring_and_logging(async_main, "repo_import", AliveService)

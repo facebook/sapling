@@ -25,8 +25,8 @@ use cmdlib_scrubbing::ScrubAppExtension;
 use fbinit::FacebookInit;
 use metaconfig_types::WalkerJobType;
 use mononoke_app::args::MultiRepoArgs;
-use mononoke_app::fb303::Fb303AppExtension;
-use mononoke_app::fb303::ReadyFlagService;
+use mononoke_app::monitoring::MonitoringAppExtension;
+use mononoke_app::monitoring::ReadyFlagService;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use multiplexedblob::SrubWriteOnly;
@@ -88,7 +88,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .with_arg_defaults(CacheMode::LocalOnly)
         .with_arg_defaults(blobstore_defaults)
         .with_arg_defaults(read_only_storage)
-        .with_app_extension(Fb303AppExtension {})
+        .with_app_extension(MonitoringAppExtension {})
         .build_with_subcommands::<WalkerArgs>(subcommands)?;
 
     // TODO: we may want to set_ready after the repo setup is done

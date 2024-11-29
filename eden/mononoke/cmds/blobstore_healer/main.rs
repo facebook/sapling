@@ -48,8 +48,8 @@ use metaconfig_types::BlobstoreId;
 use metaconfig_types::MultiplexedStoreType;
 use metaconfig_types::ShardedDatabaseConfig;
 use metaconfig_types::StorageConfig;
-use mononoke_app::fb303::AliveService;
-use mononoke_app::fb303::Fb303AppExtension;
+use mononoke_app::monitoring::AliveService;
+use mononoke_app::monitoring::MonitoringAppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use slog::info;
@@ -344,7 +344,7 @@ async fn schedule_healing(
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
     let app = MononokeAppBuilder::new(fb)
-        .with_app_extension(Fb303AppExtension {})
+        .with_app_extension(MonitoringAppExtension {})
         .build::<MononokeBlobstoreHealerArgs>()?;
 
     app.run_with_monitoring_and_logging(async_main, "blobstore_healer", AliveService)

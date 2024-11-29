@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::thread;
 
@@ -15,7 +13,6 @@ use anyhow::Result;
 use clap::Args;
 use fbinit::FacebookInit;
 use services::Fb303Service;
-use services::FbStatus;
 use slog::info;
 use slog::Logger;
 use slog::Never;
@@ -33,45 +30,13 @@ pub struct Fb303Args {
     pub fb303_thrift_port: Option<i32>,
 }
 
-// Re-eport AliveService for convenience so callers do not have to get the services dependency to
-// get AliveService.
-pub use services::AliveService;
-
-/// A FB303 service that reports healthy once set_ready has been called.
-#[derive(Clone)]
-pub struct ReadyFlagService {
-    ready: Arc<AtomicBool>,
-}
-
-impl ReadyFlagService {
-    pub fn new() -> Self {
-        Self {
-            ready: Arc::new(AtomicBool::new(false)),
-        }
-    }
-
-    pub fn set_ready(&self) {
-        self.ready.store(true, Ordering::Relaxed);
-    }
-}
-
-impl Fb303Service for ReadyFlagService {
-    fn getStatus(&self) -> FbStatus {
-        if self.ready.load(Ordering::Relaxed) {
-            FbStatus::Alive
-        } else {
-            FbStatus::Starting
-        }
-    }
-}
-
 impl Fb303Args {
     /// This is a lower-level function that requires you to spawn the stats aggregation future
     /// yourself. This is useful if you'd like to be able to drop it in order to cancel it.
     ///
     /// Usually starting the fb303 server and stats aggregation is done by functions like
     /// `MononokeApp::run_with_monitoring_and_logging`.
-    pub fn start_fb303_server<S: Fb303Service + Sync + Send + 'static>(
+    pub fn start_monitoring_server<S: Fb303Service + Sync + Send + 'static>(
         &self,
         fb: FacebookInit,
         service_name: &str,

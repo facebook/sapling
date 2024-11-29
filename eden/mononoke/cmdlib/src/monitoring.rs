@@ -11,7 +11,7 @@ use std::thread;
 
 use anyhow::Error;
 use fbinit::FacebookInit;
-pub use mononoke_app::fb303::ReadyFlagService;
+pub use mononoke_app::monitoring::ReadyFlagService;
 // Re-eport AliveService for convenience so callers do not have to get the services dependency to
 // get AliveService.
 pub use services::AliveService;
@@ -23,7 +23,7 @@ use crate::args::MononokeMatches;
 
 /// This is a lower-level function that requires you to spawn the stats aggregation future
 /// yourself. This is useful if you'd like to be able to drop it in order to cancel it.
-pub fn start_fb303_server<S: Fb303Service + Sync + Send + 'static>(
+pub fn start_monitoring_server<S: Fb303Service + Sync + Send + 'static>(
     fb: FacebookInit,
     service_name: &str,
     logger: &Logger,

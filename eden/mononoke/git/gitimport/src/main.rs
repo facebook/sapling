@@ -61,8 +61,8 @@ use mononoke_api::BookmarkKey;
 use mononoke_api::RepoContext;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::args::TLSArgs;
-use mononoke_app::fb303::AliveService;
-use mononoke_app::fb303::Fb303AppExtension;
+use mononoke_app::monitoring::AliveService;
+use mononoke_app::monitoring::MonitoringAppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_types::hash::GitSha1;
@@ -228,7 +228,7 @@ enum GitimportSubcommand {
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
     let app = MononokeAppBuilder::new(fb)
-        .with_app_extension(Fb303AppExtension {})
+        .with_app_extension(MonitoringAppExtension {})
         .build::<GitimportArgs>()?;
 
     app.run_with_monitoring_and_logging(async_main, "gitimport", AliveService)

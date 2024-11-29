@@ -38,7 +38,7 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mononoke_app::args::AsRepoArg;
 use mononoke_app::args::RepoArgs;
-use mononoke_app::fb303::Fb303AppExtension;
+use mononoke_app::monitoring::MonitoringAppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_types::ChangesetId;
@@ -479,7 +479,7 @@ struct MononokeBlobImportArgs {
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
     let app = MononokeAppBuilder::new(fb)
-        .with_app_extension(Fb303AppExtension {})
+        .with_app_extension(MonitoringAppExtension {})
         .build::<MononokeBlobImportArgs>()?;
     app.run_with_monitoring_and_logging(async_main, "blobimport", AliveService)
 }

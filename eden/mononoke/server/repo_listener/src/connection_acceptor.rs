@@ -45,7 +45,7 @@ use metaconfig_types::CommonConfig;
 use metadata::Metadata;
 use mononoke_api::Mononoke;
 use mononoke_api::Repo;
-use mononoke_app::fb303::ReadyFlagService;
+use mononoke_app::monitoring::ReadyFlagService;
 use mononoke_configs::MononokeConfigs;
 use openssl::ssl::Ssl;
 use openssl::ssl::SslAcceptor;

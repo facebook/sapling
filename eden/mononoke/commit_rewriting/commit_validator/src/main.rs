@@ -37,8 +37,8 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use metadata::Metadata;
 use mononoke_app::args::AsRepoArg;
-use mononoke_app::fb303::AliveService;
-use mononoke_app::fb303::Fb303AppExtension;
+use mononoke_app::monitoring::AliveService;
+use mononoke_app::monitoring::MonitoringAppExtension;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mutable_counters::MutableCountersRef;
@@ -250,7 +250,7 @@ async fn async_main(app: MononokeApp) -> Result<()> {
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
     let app = MononokeAppBuilder::new(fb)
-        .with_app_extension(Fb303AppExtension {})
+        .with_app_extension(MonitoringAppExtension {})
         .build::<MononokeCommitValidatorArgs>()?;
 
     app.run_with_monitoring_and_logging(async_main, SERVICE_NAME, AliveService)

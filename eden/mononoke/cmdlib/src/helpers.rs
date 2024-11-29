@@ -208,7 +208,7 @@ fn block_execute_impl<F, Out, S: Fb303Service + Sync + Send + 'static>(
 where
     F: Future<Output = Result<Out, Error>>,
 {
-    monitoring::start_fb303_server(fb, app_name, logger, matches, service)?;
+    monitoring::start_monitoring_server(fb, app_name, logger, matches, service)?;
 
     let result = matches.runtime().block_on(async {
         let stats_agg = stats::schedule_stats_aggregation_preview()

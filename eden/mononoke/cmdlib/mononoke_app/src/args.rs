@@ -52,7 +52,7 @@ pub use shutdown_timeout::ShutdownTimeoutArgs;
 pub use tls::TLSArgs;
 pub use wbc::WarmBookmarksCacheExtension;
 
-pub use crate::fb303::Fb303Args;
+pub use crate::monitoring::MonitoringArgs;
 pub use crate::repo_args;
 pub use crate::repo_args_optional;
 
