@@ -14,6 +14,7 @@ use std::time::Duration;
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
+use cats::CatsSection;
 use configmodel::convert::FromConfigValue;
 use configmodel::ConfigExt;
 use http_client::Encoding;
@@ -194,6 +195,11 @@ impl HttpClientBuilder {
             "User-Agent".to_string(),
             format!("{}/{}", source, version::VERSION),
         );
+
+        let cats = CatsSection::from_config(&config, "cats").get_cats();
+        if let Ok(Some(cats)) = cats {
+            headers.insert("x-forwarded-cats".to_string(), cats.clone());
+        }
 
         let max_requests = get_config(config, "edenapi", "maxrequests")?;
         let try_route_consistently =

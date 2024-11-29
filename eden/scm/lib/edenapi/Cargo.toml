@@ -21,6 +21,7 @@ itertools = "0.13.0"
 once_cell = "1.12"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 sapling-async-runtime = { version = "0.1.0", path = "../async-runtime" }
+sapling-cats = { version = "0.1.0", path = "../cats" }
 sapling-clientinfo = { version = "0.1.0", path = "../clientinfo" }
 sapling-clientinfo_async = { version = "0.1.0", path = "../clientinfo-async" }
 sapling-configmodel = { version = "0.1.0", path = "../config/model" }
