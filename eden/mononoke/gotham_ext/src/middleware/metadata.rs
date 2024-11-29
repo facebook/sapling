@@ -39,6 +39,7 @@ const ENCODED_CLIENT_IDENTITY: &str = "x-fb-validated-client-encoded-identity";
 const CLIENT_IP: &str = "tfb-orig-client-ip";
 const CLIENT_PORT: &str = "tfb-orig-client-port";
 const HEADER_REVPROXY_REGION: &str = "x-fb-revproxy-region";
+const HEADER_FORWARDED_CATS: &str = "x-forwarded-cats";
 
 #[derive(StateData, Default)]
 pub struct MetadataState(Metadata);
@@ -149,6 +150,13 @@ impl Middleware for MetadataMiddleware {
 
             if let Some(revproxy_region) = revproxy_region_from_headers(headers) {
                 metadata.add_revproxy_region(revproxy_region);
+            }
+            if let Some(vi_cats) = headers
+                .get(HEADER_FORWARDED_CATS)
+                .and_then(|x| x.to_str().ok())
+                .map(|x| x.to_string())
+            {
+                metadata.add_raw_encoded_cats(vi_cats);
             }
 
             let maybe_identities = if self.mtls_disabled {
