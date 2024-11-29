@@ -30,6 +30,7 @@ use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use slog::info;
 use slog::Logger;
+use stats::prelude::*;
 use url::Url;
 
 use crate::bul_util;
@@ -39,6 +40,12 @@ use crate::sender::ModernSyncSender;
 use crate::ModernSyncArgs;
 use crate::Repo;
 const MODERN_SYNC_COUNTER_NAME: &str = "modern_sync";
+
+define_stats! {
+    prefix = "mononoke.modern_sync";
+    completion_duration_secs: timeseries(Average, Sum, Count),
+    synced_commits:  dynamic_timeseries("{}.commits_synced", (repo: String); Rate, Sum),
+}
 
 #[derive(Clone)]
 pub enum ExecutionType {
@@ -159,6 +166,7 @@ async fn process_one_changeset(
     sender: Arc<dyn ModernSyncSender + Send + Sync>,
 ) -> Result<()> {
     info!(logger, "Found commit {:?}", cs_id);
+
     let cs_info = repo
         .repo_derived_data()
         .derive::<ChangesetInfo>(ctx, cs_id.clone())
@@ -180,5 +188,7 @@ async fn process_one_changeset(
             sender.upload_content(bs, blob);
         }
     }
+
+    STATS::synced_commits.add_value(1, (repo.repo_identity().name().to_string(),));
     Ok(())
 }
