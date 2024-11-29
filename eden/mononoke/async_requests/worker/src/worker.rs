@@ -25,7 +25,7 @@ use async_requests::AsyncMethodRequestQueue;
 use async_requests::AsyncRequestsError;
 use async_requests::ClaimedBy;
 use async_requests::RequestId;
-use async_stream::try_stream;
+use async_stream::stream;
 use async_trait::async_trait;
 use cloned::cloned;
 use context::CoreContext;
@@ -35,7 +35,6 @@ use futures::future::select;
 use futures::future::Either;
 use futures::pin_mut;
 use futures::stream::StreamExt;
-use futures::stream::TryStreamExt;
 use futures::Stream;
 use futures_stats::TimedFutureExt;
 use hostname::get_hostname;
@@ -66,6 +65,7 @@ const STATS_LOOP_INTERNAL: Duration = Duration::from_secs(5 * 60);
 define_stats! {
     prefix = "async_requests.worker";
     dequeue_called: timeseries("dequeue.called"; Count),
+    cleanup_error: timeseries("cleanup.error"; Count),
     dequeue_error: timeseries("dequeue.error"; Count),
     process_aborted: timeseries("process.aborted"; Count),
     process_complete_failed: timeseries("process.complete.failed"; Count),
@@ -159,19 +159,21 @@ impl RepoShardedProcessExecutor for AsyncMethodRequestWorker {
         );
 
         request_stream
-            .try_for_each_concurrent(
+            .for_each_concurrent(
                 Some(self.concurrency_limit),
                 |(req_id, params)| async move {
                     let worker = self.clone();
                     let ctx = CoreContext::clone(&self.ctx);
-                    let _updated =
-                        tokio::spawn(worker.compute_and_mark_completed(ctx, req_id, params))
-                            .await
-                            .map_err(AsyncRequestsError::internal)??;
-                    Ok(())
+                    if let Err(e) =
+                        tokio::spawn(worker.compute_and_mark_completed(ctx, req_id, params)).await
+                    {
+                        warn!(self.ctx.logger(), "Error spawning request: {:?}", e);
+                    }
                 },
             )
-            .await?;
+            .await;
+
+        info!(self.ctx.logger(), "Worker exiting");
 
         stats_abort_handle.abort();
 
@@ -191,8 +193,7 @@ impl AsyncMethodRequestWorker {
         ctx: &CoreContext,
         queue: Arc<AsyncMethodRequestQueue>,
         will_exit: Arc<AtomicBool>,
-    ) -> impl Stream<Item = Result<(RequestId, AsynchronousRequestParams), AsyncRequestsError>>
-    {
+    ) -> impl Stream<Item = (RequestId, AsynchronousRequestParams)> {
         let claimed_by = ClaimedBy(self.name.clone());
         let sleep_time = Duration::from_millis(DEQUEUE_STREAM_SLEEP_TIME);
         Self::request_stream_inner(
@@ -212,44 +213,39 @@ impl AsyncMethodRequestWorker {
         will_exit: Arc<AtomicBool>,
         sleep_time: Duration,
         abandoned_threshold_secs: i64,
-    ) -> impl Stream<Item = Result<(RequestId, AsynchronousRequestParams), AsyncRequestsError>>
-    {
-        try_stream! {
-            'outer: loop {
+    ) -> impl Stream<Item = (RequestId, AsynchronousRequestParams)> {
+        stream! {
+            loop {
                 STATS::dequeue_called.add_value(1);
 
-                let mut yielded = false;
-                Self::cleanup_abandoned_requests(
-                    &ctx,
-                    &queue,
-                    abandoned_threshold_secs
-                ).await?;
-
-                if will_exit.load(Ordering::Relaxed) {
-                    break 'outer;
-                }
-                let res = queue.dequeue(&ctx, &claimed_by).await;
-                if res.is_err() {
-                    STATS::dequeue_error.add_value(1);
+                if let Err(e) =
+                    Self::cleanup_abandoned_requests(&ctx, &queue, abandoned_threshold_secs).await
+                {
+                    STATS::cleanup_error.add_value(1);
                     warn!(
                         ctx.logger(),
-                        "error while dequeueing, skipping: {}", res.err().unwrap()
+                        "error while cleaning up abandoned requests, skipping: {}", e
                     );
-                    continue;
-                }
-                if let Some((request_id, params)) = res? {
-                    yield (request_id, params);
-                    yielded = true;
+                };
+
+                if will_exit.load(Ordering::Relaxed) {
+                    break;
                 }
 
-                if ! yielded {
-                    // No requests in the queues, sleep before trying again.
-                    debug!(
-                        ctx.logger(),
-                        "nothing to do, sleeping",
-                    );
-                    tokio::time::sleep(sleep_time).await;
-
+                match queue.dequeue(&ctx, &claimed_by).await {
+                    Err(e) => {
+                        STATS::dequeue_error.add_value(1);
+                        warn!(ctx.logger(), "error while dequeueing, skipping: {}", e);
+                        tokio::time::sleep(sleep_time).await;
+                    }
+                    Ok(Some((request_id, params))) => {
+                        yield (request_id, params);
+                    }
+                    Ok(None) => {
+                        // No requests in the queues, sleep before trying again.
+                        debug!(ctx.logger(), "nothing to do, sleeping",);
+                        tokio::time::sleep(sleep_time).await;
+                    }
                 }
             }
         }
@@ -295,8 +291,15 @@ impl AsyncMethodRequestWorker {
         ctx: CoreContext,
         req_id: RequestId,
         params: AsynchronousRequestParams,
-    ) -> Result<bool, AsyncRequestsError> {
-        let target = params.target()?;
+    ) {
+        let target = match params.target() {
+            Ok(target) => target,
+            Err(err) => {
+                STATS::process_failed.add_value(1);
+                error!(ctx.logger(), "Error getting target: {:?}", err);
+                return;
+            }
+        };
         let ctx = self.prepare_ctx(&ctx, &req_id, &target);
         log_start(&ctx);
 
@@ -322,30 +325,33 @@ impl AsyncMethodRequestWorker {
                 keep_alive_abort_handle.abort();
                 info!(
                     ctx.logger(),
-                    "[{}] request complete, saving result", &req_id.0
+                    "[{}] request complete, saving result (processed: {})",
+                    &req_id.0,
+                    result.is_ok()
                 );
+                log_result(ctx.clone(), "Request complete", &stats, &result);
 
                 // Save the result.
                 match result {
-                    Ok(ref res) => {
+                    Ok(work_result) => {
                         STATS::process_succeeded.add_value(1);
-                        let updated_res = self.queue.complete(&ctx, &req_id, res.clone()).await;
-                        let updated = match updated_res {
+                        match self.queue.complete(&ctx, &req_id, work_result).await {
                             Ok(updated) => {
-                                info!(ctx.logger(), "[{}] result saved", &req_id.0);
-                                log_result(ctx.clone(), "Request complete", &stats, &result);
-                                updated
+                                info!(
+                                    ctx.logger(),
+                                    "[{}] result saved (updated: {})", &req_id.0, updated
+                                );
                             }
                             Err(err) => {
                                 STATS::process_complete_failed.add_value(1);
-                                log_result(ctx.clone(), "Request complete", &stats, &result);
-                                return Err(err.into());
+                                error!(
+                                    ctx.logger(),
+                                    "[{}] failed to save result: {:?}", &req_id.0, err
+                                );
                             }
                         };
-
-                        Ok(updated)
                     }
-                    Err(ref err) => {
+                    Err(err) => {
                         STATS::process_failed.add_value(1);
                         info!(
                             ctx.logger(),
@@ -353,24 +359,19 @@ impl AsyncMethodRequestWorker {
                             &req_id.0,
                             err
                         );
-                        log_result(ctx.clone(), "Request complete", &stats, &result);
-                        Ok(false)
                     }
                 }
             }
-            Either::Right((res, _)) => {
+            Either::Right((_, _)) => {
                 // We haven't completed the request, and failed to update
                 // inprogress timestamp. Most likely it means that other
                 // worker has completed it
 
                 STATS::process_aborted.add_value(1);
-                res.map_err(AsyncRequestsError::internal)?
-                    .map_err(AsyncRequestsError::internal)?;
                 info!(
                     ctx.logger(),
                     "[{}] was completed by other worker, stopping", &req_id.0
                 );
-                Ok(false)
             }
         }
     }
@@ -487,10 +488,10 @@ mod test {
             ABANDONED_REQUEST_THRESHOLD_SECS,
         );
 
-        let s = tokio::spawn(s.try_collect::<Vec<_>>());
+        let s = tokio::spawn(s.collect::<Vec<_>>());
         tokio::time::sleep(Duration::from_secs(1)).await;
         will_exit.store(true, Ordering::Relaxed);
-        let res = s.await??;
+        let res = s.await?;
         assert_eq!(res.len(), 1);
         assert_eq!(
             res[0].0.1,
@@ -533,10 +534,10 @@ mod test {
             ABANDONED_REQUEST_THRESHOLD_SECS,
         );
 
-        let s = tokio::spawn(s.try_collect::<Vec<_>>());
+        let s = tokio::spawn(s.collect::<Vec<_>>());
         tokio::time::sleep(Duration::from_secs(1)).await;
         will_exit.store(true, Ordering::Relaxed);
-        let res = s.await??;
+        let res = s.await?;
         assert_eq!(res, vec![]);
 
         // ... now make it "abandoned", and make sure we reclaim it
@@ -551,10 +552,10 @@ mod test {
             1, // 1 second
         );
 
-        let s = tokio::spawn(s.try_collect::<Vec<_>>());
+        let s = tokio::spawn(s.collect::<Vec<_>>());
         tokio::time::sleep(Duration::from_secs(1)).await;
         will_exit.store(true, Ordering::Relaxed);
-        let res = s.await??;
+        let res = s.await?;
         assert_eq!(res.len(), 1);
 
         Ok(())
