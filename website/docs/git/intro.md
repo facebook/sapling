@@ -39,7 +39,7 @@ See the dedicated [Sapling Stack](./sapling-stack.md) page for more information.
 
 **Cons:**
 
-- Creates "overlapping" pull requests that may be confusing to reviewers using the GitHub pull request UI. Reviewers are strongly encouraged to use [ReviewStack](../addons/reviewstack.md) for code review instead of GitHub.
+- If submitters have not set `sl config --local github.pr_workflow single`, `sl pr` creates "overlapping" pull requests that may be confusing to reviewers using the GitHub pull request UI. Reviewers are strongly encouraged to use [ReviewStack](../addons/reviewstack.md) for code review instead of GitHub in that case.
 
 :::tip
 
