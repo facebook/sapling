@@ -15,11 +15,15 @@ use bookmarks::BookmarkUpdateLogArc;
 use bookmarks::BookmarkUpdateLogId;
 use borrowed::borrowed;
 use changeset_info::ChangesetInfo;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use cloned::cloned;
 use commit_graph::CommitGraphArc;
 use context::CoreContext;
+use context::SessionContainer;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use metadata::Metadata;
 use mononoke_app::args::RepoArg;
 use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;
@@ -75,12 +79,21 @@ pub async fn sync(
 
     let logger = app.logger().clone();
 
-    let ctx = CoreContext::new_with_logger_and_scuba(
-        app.fb,
-        logger.clone(),
-        app.environment().scuba_sample_builder.clone(),
-    )
-    .clone_with_repo_name(&repo_name.clone());
+    let mut metadata = Metadata::default();
+    metadata.add_client_info(ClientInfo::default_with_entry_point(
+        ClientEntryPoint::ModernSync,
+    ));
+
+    let mut scuba = app.environment().scuba_sample_builder.clone();
+    scuba.add_metadata(&metadata);
+
+    let session_container = SessionContainer::builder(app.fb)
+        .metadata(Arc::new(metadata))
+        .build();
+
+    let ctx = session_container
+        .new_context(app.logger().clone(), scuba)
+        .clone_with_repo_name(&repo_name.clone());
 
     borrowed!(ctx);
     let start_id = if let Some(id) = start_id_arg {

@@ -24,12 +24,14 @@ facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
+metadata = { version = "0.1.0", path = "../server/metadata" }
 mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
+sapling-clientinfo = { version = "0.1.0", path = "../../scm/lib/clientinfo" }
 sapling-edenapi = { version = "0.1.0", path = "../../scm/lib/edenapi" }
 sharding_ext = { version = "0.1.0", path = "../cmdlib/sharding_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
