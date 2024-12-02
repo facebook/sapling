@@ -8,14 +8,13 @@
 //! edenfsctl remove
 use std::fmt;
 use std::fs;
+#[cfg(unix)]
 use std::fs::Permissions;
 use std::io::ErrorKind;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::path::PathBuf;
-#[cfg(windows)]
-use std::process::Command;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -32,8 +31,6 @@ use fail::fail_point;
 use io::IO;
 use termlogger::TermLogger;
 use tracing::debug;
-use tracing::error;
-use tracing::warn;
 
 use crate::ExitCode;
 use crate::Subcommand;
@@ -107,13 +104,7 @@ impl SanityCheck {
             .with_context(|| format!("Error canonicalizing path {}", context.original_path))?;
         context.canonical_path = path;
 
-        if context.io.prompt_user(construct_start_prompt(context))? {
-            return Ok(Some(State::Determination(Determination {})));
-        }
-
-        Err(anyhow!(
-            "User did not confirm the removal. Stopping. Nothing removed!"
-        ))
+        Ok(Some(State::Determination(Determination {})))
     }
 }
 
@@ -134,38 +125,61 @@ impl Determination {
 
         debug!("{} is determined as a directory", context);
 
-        if self.is_active_eden_mount(context) {
+        if self.is_active_eden_mount(&context.canonical_path) {
             debug!("path {} is determined to be an active eden mount", context);
 
             return Ok(Some(State::ActiveEdenMount(ActiveEdenMount {})));
         }
 
-        error!("Determination State for directory is not implemented!");
-        Err(anyhow!("Rust remove(Determination) is not implemented!"))
+        debug!("{} is not an active eden mount", path.display());
+
+        // Check if it's a directory managed under eden
+        let mut path_copy = context.canonical_path.clone();
+        loop {
+            if path_copy.pop() {
+                if self.is_active_eden_mount(&path_copy) {
+                    return Err(anyhow!(
+                        "{} is not the root of checkout {}, not deleting",
+                        context,
+                        path_copy.display()
+                    ));
+                } else {
+                    continue;
+                }
+            }
+            break;
+        }
+
+        // Maybe it's a directory that is left after unmount
+        // If so, unregister it and clean from there
+        if path_in_eden_config(context.canonical_path.as_path()).await? {
+            return Ok(Some(State::InactiveEdenMount(InactiveEdenMount {})));
+        }
+
+        // It's a directory that is not listed inside config.json
+        // We don't know how to handle it properly, so move to "Unknown" state
+        // and try to handle from there with "the best efforts".
+        Ok(Some(State::Unknown(Unknown {})))
     }
 
     #[cfg(unix)]
-    fn is_active_eden_mount(&self, context: &RemoveContext) -> bool {
+    fn is_active_eden_mount(&self, path: &Path) -> bool {
         // For Linux and Mac, an active Eden mount should have a dir named ".eden" under the
         // repo root and there should be a symlink named "root" which points to the repo root
-        let unix_eden_dot_dir_path = context.canonical_path.join(".eden").join("root");
+        let unix_eden_dot_dir_path = path.join(".eden").join("root");
 
         match unix_eden_dot_dir_path.canonicalize() {
-            Ok(resolved_path) => resolved_path == context.canonical_path,
-            Err(_) => {
-                warn!("{} is not an active eden mount", context);
-                false
-            }
+            Ok(resolved_path) => resolved_path == path,
+            _ => false,
         }
     }
 
     #[cfg(windows)]
-    fn is_active_eden_mount(&self, context: &RemoveContext) -> bool {
+    fn is_active_eden_mount(&self, path: &Path) -> bool {
         // For Windows, an active Eden mount should have a dir named ".eden" under the
         // repo and there should be a file named "config" under the ".eden" dir
-        let config_path = context.canonical_path.join(".eden").join("config");
+        let config_path = path.join(".eden").join("config");
         if !config_path.exists() {
-            warn!("{} is not an active eden mount", context);
             return false;
         }
         true
@@ -196,6 +210,11 @@ struct ActiveEdenMount {}
 impl ActiveEdenMount {
     async fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
         // TODO: stop process first
+        if !context.io.prompt_user(construct_start_prompt(context))? {
+            return Err(anyhow!(
+                "User did not confirm the removal. Stopping. Nothing removed!"
+            ));
+        }
 
         context
             .io
@@ -278,7 +297,7 @@ impl CleanUp {
             Ok(None)
         } else {
             context.io.info(format!(
-                "Cleaning up the directory left by repo {} ...",
+                "Cleaning up the directory {} ...",
                 context.original_path
             ));
             self.clean_mount_point(&context.canonical_path)
@@ -325,12 +344,7 @@ async fn validate_state_run(context: &mut RemoveContext) -> Result<Option<State>
         .io
         .info("Checking eden mount list and file system to verify the removal...".to_string());
     // check eden list
-    let mut mounts = get_mounts(EdenFsInstance::global())
-        .await
-        .with_context(|| anyhow!("Failed to call eden list"))?;
-    let entry_key = dunce::simplified(context.canonical_path.as_path());
-    mounts.retain(|mount_path_key, _| dunce::simplified(mount_path_key) == entry_key);
-    if !mounts.is_empty() {
+    if path_in_eden_config(context.canonical_path.as_path()).await? {
         return Err(anyhow!("Repo {} is still mounted", context));
     }
 
@@ -358,18 +372,49 @@ async fn validate_state_run(context: &mut RemoveContext) -> Result<Option<State>
 }
 
 #[derive(Debug)]
+struct Unknown {}
+impl Unknown {
+    async fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
+        // If this directory is empty, we want to let the user know and let the
+        // user decide if we should proceed
+        // Otherwise, ask the user if we should try our best to remove it
+        let prompt = match fs::read_dir(context.canonical_path.as_path())
+            .with_context(|| format!("Failed to list contents under {}", context))?
+            .count()
+            == 0
+        {
+            true => format!("{} is not an eden mount and it's empty.", context),
+            false => format!(
+                "{} is a non-empty directory that is not an eden mount.\n\
+                Any files in this directory will be lost forever. \n\
+                Do you still want to remove it?",
+                context
+            ),
+        };
+
+        if context.io.prompt_user(prompt)? {
+            return Ok(Some(State::CleanUp(CleanUp {})));
+        }
+
+        Err(anyhow!(
+            "User did not confirm the removal. Stopping. Nothing removed!"
+        ))
+    }
+}
+
+#[derive(Debug)]
 enum State {
     // function states (no real action performed)
     SanityCheck(SanityCheck),
     Determination(Determination),
     Validation,
 
-    // // removal states (harmful operations)
+    // removal states (harmful operations)
     ActiveEdenMount(ActiveEdenMount),
     InactiveEdenMount(InactiveEdenMount),
     CleanUp(CleanUp),
     RegFile(RegFile),
-    // Unknown,
+    Unknown(Unknown),
 }
 
 impl fmt::Display for State {
@@ -385,6 +430,7 @@ impl fmt::Display for State {
                 State::CleanUp(_) => "CleanUp",
                 State::InactiveEdenMount(_) => "InactiveEdenMount",
                 State::Validation => "Validation",
+                State::Unknown(_) => "Unknown",
             }
         )
     }
@@ -410,6 +456,7 @@ impl State {
             State::InactiveEdenMount(inner) => inner.next(context).await,
             State::CleanUp(inner) => inner.next(context).await,
             State::Validation => validate_state_run(context).await,
+            State::Unknown(inner) => inner.next(context).await,
         }
     }
 }
@@ -450,6 +497,16 @@ impl Subcommand for RemoveCmd {
             .success(format!("\nSuccessfully removed {}", context.original_path));
         Ok(0)
     }
+}
+
+async fn path_in_eden_config(path: &Path) -> Result<bool> {
+    let mut mounts = get_mounts(EdenFsInstance::global())
+        .await
+        .with_context(|| anyhow!("Failed to call eden list"))?;
+    let entry_key = dunce::simplified(path);
+    mounts.retain(|mount_path_key, _| dunce::simplified(mount_path_key) == entry_key);
+
+    Ok(!mounts.is_empty())
 }
 
 // Object responsible to print messages to stdout or generate prompt
@@ -622,6 +679,5 @@ mod tests {
             matches!(state, State::Determination(_)),
             "Expected Determination state"
         );
-        assert!(state.run(&mut dir_context).await.is_err());
     }
 }
