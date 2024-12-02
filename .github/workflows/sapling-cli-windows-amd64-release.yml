@@ -39,7 +39,7 @@ jobs:
       working-directory: ./eden/scm/artifacts
       run: ${{ format('Rename-Item sapling_windows_amd64.zip -NewName sapling_windows_{0}_amd64.zip', env.SAPLING_VERSION) }}
     - name: Upload Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: windows-amd64
         path: ./eden/scm/artifacts/sapling_windows_*.zip

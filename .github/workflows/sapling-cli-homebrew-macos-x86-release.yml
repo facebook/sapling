@@ -33,7 +33,7 @@ jobs:
     - name: Rename bottle to some platform specific name
       run: mv sapling*monterey.bottle*.tar.gz sapling_${{ env.SAPLING_VERSION }}.monterey.bottle.tar.gz
     - name: Upload Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: macos-homebrew-x86-bottle
         path: sapling*monterey.bottle*.tar.gz
