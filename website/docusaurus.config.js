@@ -33,6 +33,10 @@ const config = {
   onBrokenMarkdownLinks: 'warn',
   favicon: 'img/Sapling_favicon-light-green-transparent-big.svg',
 
+  future: {
+    experimental_faster: true,
+  },
+
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
   organizationName: 'facebook',
@@ -46,15 +50,13 @@ const config = {
         docs: {
           sidebarPath: require.resolve('./sidebars.js'),
           editUrl: fbContent({
-            internal:
-              'https://www.internalfb.com/code/fbsource/fbcode/eden/website/',
+            internal: 'https://www.internalfb.com/code/fbsource/fbcode/eden/website/',
             // This does not exist yet...
-            external:
-              'https://github.com/facebook/sapling/tree/main/website',
+            external: 'https://github.com/facebook/sapling/tree/main/website',
           }),
           remarkPlugins: [
-            [require('remark-github'), {repository: "facebook/sapling"}],
-            require('sapling-output-plugin')
+            [require('remark-github'), {repository: 'facebook/sapling'}],
+            require('sapling-output-plugin'),
           ],
         },
         staticDocsProject: 'sapling',
