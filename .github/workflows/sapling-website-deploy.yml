@@ -44,7 +44,7 @@ jobs:
         run: ${{ format('./scripts/gen_release_data.py --repo {0} --out ./src/rawReleaseData.ts', github.repository) }}
 
       - name: Generate docstring docs
-        run: ./scripts/generate-command-markdown.py --full-build
+        run: ./scripts/generate-command-markdown.py
 
       - name: Build website
         run: yarn build
