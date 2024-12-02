@@ -45,6 +45,8 @@ pub struct RichCasClient {
     fetch_limit: ByteCount,
     fetch_concurrency: usize,
     use_streaming_dowloads: bool,
+    private_cache_path: Option<String>,
+    private_cache_size: ByteCount,
 }
 
 pub fn init() {
@@ -96,6 +98,16 @@ impl RichCasClient {
 
         let default_fetch_limit = ByteCount::try_from_str("200MB")?;
 
+        let private_cache_path = config.get_opt::<String>("cas", "private-cache-path")?;
+        if private_cache_path.is_some() && use_casd_cache {
+            return Err(anyhow::anyhow!(
+                "cas.private-cache-path and cas.use-shared-cache cannot be used together"
+            ));
+        }
+        let default_private_cache_size = ByteCount::try_from_str("100GB")?;
+        let private_cache_size = config
+            .get_or::<ByteCount>("cas", "private-cache-size", || default_private_cache_size)?;
+
         Ok(Some(Self {
             client: Default::default(),
             verbose: config.get_or_default("cas", "verbose")?,
@@ -109,6 +121,8 @@ impl RichCasClient {
                 .get_or::<ByteCount>("cas", "max-batch-bytes", || default_fetch_limit)?,
             fetch_concurrency: config.get_or("cas", "fetch-concurrency", || 4)?,
             use_streaming_dowloads: config.get_or("cas", "use-streaming-downloads", || true)?,
+            private_cache_path,
+            private_cache_size,
         }))
     }
 
@@ -153,6 +167,17 @@ impl RichCasClient {
             }
             embedded_config.remote_cache_config = Some(remote_cache_config);
             embedded_config.cache_config.writable_cache = false;
+        }
+        // We check that the modes use_casd_cache and private_cache_path do not conflict while parcing the sapling config.
+        // So, if we are here, we know that the private cache is enabled.
+        if let Some(ref private_cache_path) = self.private_cache_path {
+            embedded_config.cache_config.downloads_cache_config.dir_path =
+                Some(private_cache_path.clone());
+            embedded_config
+                .cache_config
+                .downloads_cache_config
+                .size_bytes = self.private_cache_size.value() as i64;
+            embedded_config.cache_config.writable_cache = true;
         }
         re_config.cas_client_config = CASDaemonClientCfg::embedded_config(embedded_config);
 
