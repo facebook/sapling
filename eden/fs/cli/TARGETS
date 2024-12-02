@@ -65,6 +65,7 @@ python_binary(
 python_binary(
     name = "edenfsctl",
     srcs = [],
+    imports_monitor = "log:0.0005%",
     main_function = "eden.fs.cli.main.zipapp_main",
     deps = [
         ":main_lib",
