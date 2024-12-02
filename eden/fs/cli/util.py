@@ -53,6 +53,9 @@ FUSE_MOUNT_PROTOCOL_STRING = "fuse"
 PRJFS_MOUNT_PROTOCOL_STRING = "prjfs"
 
 INODE_CATALOG_TYPE_IN_MEMORY_STRING = "inmemory"
+CHEF_LOG_PATH_DARWIN = "/var/chef/outputs/chef.last.run_stats"
+CHEF_LOG_PATH_LINUX = "/var/chef/outputs/chef.last.run_stats"
+CHEF_LOG_PATH_WIN32 = "C:\\chef\\outputs\\chef.last.run_stats"
 
 
 class EdenStartError(Exception):
@@ -290,6 +293,17 @@ def wait_for_instance_healthy(instance: "EdenInstance", timeout: float) -> Healt
 
     timeout_ex = EdenStartError("timed out waiting for edenfs to become healthy")
     return poll_until(check_daemon_health, timeout=timeout, timeout_ex=timeout_ex)
+
+
+def get_chef_log_path(platform: str) -> Optional[str]:
+    """Get the path to the Chef log file."""
+    if platform == "Darwin":
+        return CHEF_LOG_PATH_DARWIN
+    elif platform == "Linux":
+        return CHEF_LOG_PATH_LINUX
+    elif platform == "Windows":
+        return CHEF_LOG_PATH_WIN32
+    return None
 
 
 def get_home_dir() -> Path:

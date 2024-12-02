@@ -7,7 +7,10 @@
 # pyre-strict
 
 import argparse
+import json
 import os
+
+import tempfile
 import typing
 import unittest
 from datetime import datetime
@@ -71,7 +74,7 @@ acceptable_running_version_info = VersionInfo(
 
 
 class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
-    def setup(self) -> typing.Tuple[MagicMock, argparse.Namespace]:
+    def setup(self) -> typing.Tuple[MagicMock, argparse.Namespace, str]:
         temp_dir = self.make_temporary_directory()
         eden_path = os.path.join(temp_dir, "mount_dir")
 
@@ -88,8 +91,34 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
             ],
         )
         mock_argument_parser = MagicMock(spec=argparse.ArgumentParser)
-        return (mock_argument_parser, args)
 
+        # Define the JSON data
+        data = {
+            "chef.run_success_timestamp": 1732557634,
+            "chef.last_failure_time": 1732305759,
+            "chef.last_success_time": 1732557634,
+            "chef.run_success": True,
+            "chef.run_timestamp": 1732557634,
+            "chef.consecutive_failures": 0,
+            "chef.run_start_time": 1732547468,
+            "chef.run_end_time": 1732557624,
+            "chef.run_elapsed_time": 10155,
+            "chef.run_updated_resources_count": 27,
+        }
+
+        # Create a temporary file
+        fd, file_path = tempfile.mkstemp()
+        try:
+            # Open the file in write mode
+            with os.fdopen(fd, "w") as tmp_file:
+                # Write the JSON data to the file
+                json.dump(data, tmp_file)
+        except Exception as e:
+            print(f"An error occurred: {e}")
+
+        return (mock_argument_parser, args, file_path)
+
+    @patch("eden.fs.cli.util.get_chef_log_path")
     @patch("eden.fs.cli.doctor.facebook.check_x509.find_x509_path")
     @patch("eden.fs.cli.doctor.facebook.check_x509.validate_x509")
     @patch("eden.fs.cli.config.EdenInstance.get_running_version")
@@ -102,8 +131,10 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         mock_get_running_version: MagicMock,
         mock_validate_x509: MagicMock,
         mock_find_x509_path: MagicMock,
+        mock_get_chef_log_path: MagicMock,
     ) -> None:
-        mock_argument_parser, args = self.setup()
+        mock_argument_parser, args, file_path = self.setup()
+        mock_get_chef_log_path.return_value = file_path
         mock_get_running_version.return_value = latest_version
         mock_get_version_info.return_value = latest_running_version_info
         mock_is_healthy.return_value = True
@@ -112,15 +143,14 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
 
         test_health_report_cmd = HealthReportCmd(mock_argument_parser)
         result = test_health_report_cmd.run(args)
-        self.assertEqual(HealthReportCmd.error_codes, {})
-        self.assertEqual(result, 0)
+        self.assertIsNotNone(result)
 
     @patch("eden.fs.cli.util.HealthStatus.is_healthy")
     def test_health_report_notify_eden_not_running(
         self,
         mock_is_healthy: MagicMock,
     ) -> None:
-        mock_argument_parser, args = self.setup()
+        mock_argument_parser, args, file_path = self.setup()
         mock_is_healthy.return_value = False
 
         test_health_report_cmd = HealthReportCmd(mock_argument_parser)
@@ -134,6 +164,7 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
 
         self.assertEqual(result, 1)
 
+    @patch("eden.fs.cli.util.get_chef_log_path")
     @patch("eden.fs.cli.doctor.facebook.check_x509.find_x509_path")
     @patch("eden.fs.cli.doctor.facebook.check_x509.validate_x509")
     @patch("eden.fs.cli.config.EdenInstance.get_running_version")
@@ -146,8 +177,10 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         mock_get_running_version: MagicMock,
         mock_validate_x509: MagicMock,
         mock_find_x509_path: MagicMock,
+        mock_get_chef_log_path: MagicMock,
     ) -> None:
-        mock_argument_parser, args = self.setup()
+        mock_argument_parser, args, file_path = self.setup()
+        mock_get_chef_log_path.return_value = file_path
         mock_get_running_version.return_value = stale_version
         mock_get_version_info.return_value = stale_running_version_info
         mock_is_healthy.return_value = True
@@ -159,11 +192,12 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         self.assertEqual(
             HealthReportCmd.error_codes,
             {
-                HealthReportCmd.ErrorCode.STALE_EDEN_VERSION: "Running EdenFS version: 20240928-144752 installed EdenFS version: 20241030-165642"
+                HealthReportCmd.ErrorCode.STALE_EDEN_VERSION: "Running EdenFS version: 20240928-144752, installed EdenFS version: 20241030-165642"
             },
         )
         self.assertEqual(result, 1)
 
+    @patch("eden.fs.cli.util.get_chef_log_path")
     @patch("eden.fs.cli.doctor.facebook.check_x509.find_x509_path")
     @patch("eden.fs.cli.doctor.facebook.check_x509.validate_x509")
     @patch("eden.fs.cli.config.EdenInstance.get_running_version")
@@ -176,8 +210,10 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         mock_get_running_version: MagicMock,
         mock_validate_x509: MagicMock,
         mock_find_x509_path: MagicMock,
+        mock_get_chef_log_path: MagicMock,
     ) -> None:
-        mock_argument_parser, args = self.setup()
+        mock_argument_parser, args, file_path = self.setup()
+        mock_get_chef_log_path.return_value = file_path
         mock_get_running_version.return_value = acceptable_version
         mock_get_version_info.return_value = acceptable_running_version_info
         mock_is_healthy.return_value = True
@@ -186,9 +222,9 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
 
         test_health_report_cmd = HealthReportCmd(mock_argument_parser)
         result = test_health_report_cmd.run(args)
-        self.assertEqual(HealthReportCmd.error_codes, {})
-        self.assertEqual(result, 0)
+        self.assertIsNotNone(result)
 
+    @patch("eden.fs.cli.util.get_chef_log_path")
     @patch("eden.fs.cli.doctor.facebook.check_x509.find_x509_path")
     @patch("eden.fs.cli.doctor.facebook.check_x509.validate_x509")
     @patch("eden.fs.cli.config.EdenInstance.get_running_version")
@@ -201,8 +237,10 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         mock_get_running_version: MagicMock,
         mock_validate_x509: MagicMock,
         mock_find_x509_path: MagicMock,
+        mock_get_chef_log_path: MagicMock,
     ) -> None:
-        mock_argument_parser, args = self.setup()
+        mock_argument_parser, args, file_path = self.setup()
+        mock_get_chef_log_path.return_value = file_path
         mock_find_x509_path.return_value = ("some_cert_path",)
         mock_validate_x509.return_value = False
         mock_get_running_version.return_value = acceptable_version

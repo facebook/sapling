@@ -23,9 +23,18 @@ import subprocess
 import sys
 import traceback
 import typing
+from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple, Type
+
+from eden.fs.cli.util import get_chef_log_path
+
+# Constants
+CHEF_LOG_TIMESTAMP_KEY = "chef.run_success_timestamp"
+# It is very common for users to get chef warnings on Mondays if this
+# time period is shorter than 4 days. So, we report a problem after two weeks.
+CHEF_RUN_AGE_PROBLEM = timedelta(days=14)
 
 import thrift.transport
 from eden.fs.cli.version import VersionInfo
@@ -1209,6 +1218,7 @@ class HealthReportCmd(Subcmd):
         STALE_EDEN_VERSION = 2
         INVALID_CERTS = 3
         NO_REPO_MOUNT_FOUND = 4
+        CHEF_NOT_RUNNING = 5
 
         def description(self) -> str:
             descriptions = {
@@ -1216,6 +1226,7 @@ class HealthReportCmd(Subcmd):
                 self.STALE_EDEN_VERSION: "The running EdenFS daemon is over 30 days out-of-date.",
                 self.INVALID_CERTS: "The EdenFS couldn't find a valid user certificate.",
                 self.NO_REPO_MOUNT_FOUND: "One or more checkouts are unmounted: ",
+                self.CHEF_NOT_RUNNING: "Chef is not running on your machine.",
             }
             return descriptions[self]
 
@@ -1264,7 +1275,7 @@ class HealthReportCmd(Subcmd):
             self.error_codes[HealthReportCmd.ErrorCode.STALE_EDEN_VERSION] = (
                 "Running EdenFS version: "
                 + (self.version_info.running_version or "")
-                + " installed EdenFS version: "
+                + ", installed EdenFS version: "
                 + (self.version_info.installed_version or "")
             )
             return False
@@ -1299,6 +1310,46 @@ class HealthReportCmd(Subcmd):
             print(f"Couldn't retrieve EdenFS checkouts info.: {ex}", file=sys.stderr)
             return True
 
+    def is_chef_running(self) -> bool:
+        """Examine the status of Chef."""
+        chef_log_path = get_chef_log_path(platform.system())
+        if chef_log_path is None or chef_log_path == "":
+            print(f"Skipping chef run check for platform {platform.system()}.")
+            return True
+        try:
+            with open(chef_log_path, "r") as f:
+                chef_log_raw = f.read()
+                chef_log = json.loads(chef_log_raw)
+                last_chef_run_sec = chef_log[CHEF_LOG_TIMESTAMP_KEY]
+
+                if not isinstance(last_chef_run_sec, (int, float)):
+                    raise ValueError(
+                        f"Invalid/missing timestamp in {CHEF_LOG_TIMESTAMP_KEY}"
+                    )
+
+                last_chef_run = datetime.fromtimestamp(last_chef_run_sec)
+
+                ms_since_last_run = (
+                    datetime.now() - last_chef_run
+                ).total_seconds() * 1000
+
+                if ms_since_last_run >= CHEF_RUN_AGE_PROBLEM.total_seconds() * 1000:
+                    self.error_codes[HealthReportCmd.ErrorCode.CHEF_NOT_RUNNING] = (
+                        "Last run was "
+                        + str((ms_since_last_run / 3600000))
+                        + " hours ago."
+                    )
+                    return False
+                return True
+        except Exception as e:
+            self.error_codes[HealthReportCmd.ErrorCode.CHEF_NOT_RUNNING] = (
+                "Failed to load chef log at "
+                + str(chef_log_path)
+                + " with error: "
+                + str(e.args[0])
+            )
+            return False
+
     @staticmethod
     def print_error_codes_json(out: ui.Output) -> None:
         """
@@ -1313,7 +1364,7 @@ class HealthReportCmd(Subcmd):
         data = [
             {
                 "error": error_code.name,
-                "description": error_code.description() + "." + error_additional_info,
+                "description": error_code.description() + error_additional_info,
             }
             for error_code, error_additional_info in HealthReportCmd.error_codes.items()
         ]
@@ -1335,6 +1386,7 @@ class HealthReportCmd(Subcmd):
                     for f in [
                         self.is_eden_up_to_date,
                         self.are_certs_valid,
+                        self.is_chef_running,
                     ]
                 )
             ):
