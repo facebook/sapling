@@ -3946,6 +3946,16 @@ def init(ui, dest=".", **opts):
             initial_config = None
             bindings.repo.repo.initialize(destpath, ui._rcfg, initial_config)
 
+            if util.istest():
+                # Mark legacy repos in tests with "eagercompat" requirement. This
+                # indicates they use an eager store under the hood and implement
+                # SaplingRemoteAPI.
+                repo = hg.repository(ui, destpath)
+                if repo.storage_format() == "revlog":
+                    with repo.lock():
+                        repo.storerequirements.add("eagercompat")
+                        repo._writestorerequirements()
+
 
 @command(
     "locate|loc|loca|locat",

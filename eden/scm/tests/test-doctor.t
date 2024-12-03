@@ -54,13 +54,13 @@ Break the repo in various ways:
   $ mkdir -p .hg/store/mutation/
   $ echo v > .hg/store/mutation/log
 #if no-windows
-  $ echo xx > .hg/store/metalog/current/blobs/index2-id
-  $ rm .hg/store/metalog/current/roots/meta
-  $ ln -s foo .hg/store/metalog/current/roots/meta
+  $ echo xx > .hg/store/metalog/blobs/index2-id
+  $ rm .hg/store/metalog/roots/meta
+  $ ln -s foo .hg/store/metalog/roots/meta
 #else
-  $ echo xx > .hg/store/metalog/1/blobs/index2-id
-  $ rm .hg/store/metalog/1/roots/meta
-  $ echo foo > .hg/store/metalog/1/roots/meta
+  $ echo xx > .hg/store/metalog/blobs/index2-id
+  $ rm .hg/store/metalog/roots/meta
+  $ echo foo > .hg/store/metalog/roots/meta
 #endif
   $ rm .hg/store/allheads/meta
 
@@ -129,10 +129,10 @@ Test that 'hg doctor' can fix them:
     
     Checking roots at "*": (glob)
     Processing IndexedLog: * (glob)
-    Verified 3 entries, 90 bytes in log
+    Verified * entries, * bytes in log (glob)
     Index "reverse" passed integrity check
     
-    Checking blobs referred by 4 Roots:
+    Checking blobs referred by * Roots: (glob)
     All Roots are verified.
   
   

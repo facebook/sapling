@@ -649,9 +649,7 @@ class localrepository:
 
         # needed by revlog2
         sfmt = self.storage_format()
-        if not create and (
-            sfmt == "revlog" or not extensions.isenabled(self.ui, "treemanifest")
-        ):
+        if not create and sfmt == "revlog":
             from . import revlog2
 
             revlog2.patch_types()

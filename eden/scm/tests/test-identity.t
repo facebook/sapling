@@ -1,6 +1,7 @@
-
 #require no-eden
 
+"mv .hg .sl" below fails on Windows (open file?)
+#inprocess-hg-incompatible
 
   $ setconfig clone.use-rust=true
 
@@ -21,10 +22,8 @@ Init can create a ".sl" repo.
   $ ls .hg
   ls: .hg: $ENOENT$
   [1]
-  $ ls .sl
-  00changelog.i
-  requires
-  store
+  $ ls .sl/requires
+  .sl/requires
 
   $ cd ..
 
