@@ -10,6 +10,7 @@
 pub mod caching;
 pub mod constants;
 pub mod errors;
+pub mod files;
 mod init;
 pub mod repo;
 mod trait_impls;
