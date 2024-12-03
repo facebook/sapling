@@ -2198,37 +2198,74 @@ EdenServiceHandler::streamChangesSince(
   return {std::move(result), std::move(serverStream)};
 }
 
+std::pair<std::vector<RelativePath>, std::vector<RelativePath>>
+buildIncludedAndExcludedRoots(
+    bool includeVCSRoots,
+    const std::vector<RelativePath>& vcsDirectories,
+    const std::vector<PathString>& includedRoots,
+    const std::vector<PathString>& excludedRoots) {
+  std::vector<RelativePath> outIncludedRoots(includedRoots.size());
+  std::transform(
+      includedRoots.begin(),
+      includedRoots.end(),
+      outIncludedRoots.begin(),
+      [](PathString root) { return RelativePath{root}; });
+
+  std::vector<RelativePath> outExcludedRoots(excludedRoots.size());
+  std::transform(
+      excludedRoots.begin(),
+      excludedRoots.end(),
+      outExcludedRoots.begin(),
+      [](PathString root) { return RelativePath{root}; });
+
+  if (includeVCSRoots) {
+    outIncludedRoots.insert(
+        outIncludedRoots.end(), vcsDirectories.begin(), vcsDirectories.end());
+  } else {
+    outExcludedRoots.insert(
+        outExcludedRoots.end(), vcsDirectories.begin(), vcsDirectories.end());
+  }
+
+  return std::make_pair(
+      std::move(outIncludedRoots), std::move(outExcludedRoots));
+}
+
 /*
- * Determines if a given path should be returned based on the include and
- * exclude filters provided by the caller of changesSinceV2.
+ * Determines if a given path should be returned based on the includedRoots and
+ * excludedRoots provided by the caller of changesSinceV2.
  *
- * TODO: repalce vcsDirectories wtih computed include and exclude filters
  */
 bool isPathIncluded(
-    const std::unordered_set<RelativePath>& vcsDirectories,
+    const std::vector<RelativePath>& includedRoots,
+    const std::vector<RelativePath>& excludedRoots,
     RelativePath path) {
-  // TODO: Replaces simple VCS directory filtering with complete include and
-  // exclude filtering. Open question as to whether we will require callers
-  // to explictiy specify VCS directories to be include/excluded or use a simple
-  // flag (e.g., includeVCS, default is false). Either way, the include
-  // exclude filters should already have taken into account any VCS directories.
-  //
-  // Plan:
-  //  if include filter is emtpy, include path
-  //  else if path matches filter, include path
-  //  else exclude path
-  //  - then -
-  //  if exclude filter is empty, include path
-  //  else if path matches exclude filter, exclude path
-  //  else include path
+  if (!includedRoots.empty()) {
+    bool included = false;
+    // test to see if path matches includedRoots - include the path
+    for (const auto& includedRoot : includedRoots) {
+      if (includedRoot == path || includedRoot.isParentDirOf(path)) {
+        included = true;
+        break;
+      }
+    }
 
-  for (const auto& vcsDirectory : vcsDirectories) {
-    if (vcsDirectory.isParentDirOf(path)) {
-      // Exclude VCS Directories from results
+    // includedRoots not empty and no match - do not include the path
+    if (!included) {
       return false;
     }
   }
 
+  // if exclude filter is not empty
+  if (!excludedRoots.empty()) {
+    // test to see if path matches excludedRoots - exclude the path
+    for (const auto& excludedRoot : excludedRoots) {
+      if (excludedRoot == path || excludedRoot.isParentDirOf(path)) {
+        return false;
+      }
+    }
+  }
+
+  // Path should be included
   return true;
 }
 
@@ -2275,9 +2312,23 @@ void EdenServiceHandler::sync_changesSinceV2(
 
     result.changes_ref()->push_back(std::move(change));
   } else {
+    // TODO: move to helper
     auto config = server_->getServerState()->getEdenConfig();
     auto maxNumberOfChanges = config->notifyMaxNumberOfChanges.getValue();
-    auto vcsDirectories = config->vcsDirectories.getValue();
+    auto includedRoots = params->includedRoots_ref().has_value()
+        ? params->includedRoots_ref().value()
+        : std::vector<PathString>{};
+    auto excludedRoots = params->excludedRoots_ref().has_value()
+        ? params->excludedRoots_ref().value()
+        : std::vector<PathString>{};
+    auto includedAndExcludeRoots = buildIncludedAndExcludedRoots(
+        params->includeVCSRoots().has_value()
+            ? params->includeVCSRoots().value()
+            : false,
+        config->vcsDirectories.getValue(),
+        includedRoots,
+        excludedRoots);
+
     const auto isTruncated = mountHandle.getJournal().forEachDelta(
         *fromPosition.sequenceNumber_ref() + 1,
         std::nullopt,
@@ -2289,23 +2340,29 @@ void EdenServiceHandler::sync_changesSinceV2(
 
           // Changes can effect either path1 or both paths
           // Determine if path1 pass the filters and default path2 to not
-          bool includePath1 = isPathIncluded(vcsDirectories, current.path1);
+          bool includePath1 = isPathIncluded(
+              includedAndExcludeRoots.first,
+              includedAndExcludeRoots.second,
+              current.path1);
           bool includePath2 = false;
 
           ChangeNotification change;
           LargeChangeNotification largeChange;
           SmallChangeNotification smallChange;
           if (current.isPath2Valid) {
-            // Determine if path2 passes filters, but only if path1 one doesn't
-            // to avoid an extra lookup
-            includePath2 = includePath1
-                ? false
-                : isPathIncluded(vcsDirectories, current.path2);
+            // Determine if path2 passes filters, but only if path1 one
+            // doesn't to avoid an extra lookup
+            includePath2 = includePath1 ? false
+                                        : isPathIncluded(
+                                              includedAndExcludeRoots.first,
+                                              includedAndExcludeRoots.second,
+                                              current.path2);
             if (includePath1 || includePath2) {
               const auto& info = current.info2;
-              // NOTE: we could do a bunch of runtime checks here to validate
-              // the infoN states would be a lot simpler if we removed this
-              // infoN state and replaced them with a simple enum
+              // NOTE: we could do a bunch of runtime checks here to
+              // validate the infoN states would be a lot simpler if we
+              // removed this infoN state and replaced them with a simple
+              // enum
               if (info.existedBefore) {
                 // Replaced
                 Replaced replaced;
@@ -3377,7 +3434,6 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_removeRecursively(
 }
 
 namespace {
-
 template <typename ReturnType>
 ImmediateFuture<std::unique_ptr<ReturnType>> detachIfBackgrounded(
     ImmediateFuture<std::unique_ptr<ReturnType>> future,
