@@ -56,7 +56,7 @@ def unlink_closed_pr_hint() -> str:
     )
 
 
-def uisetup(ui):
+def reposetup(ui, repo):
     ui.setconfig("hooks", "post-pull.prmarker", pr_marker.cleanup_landed_pr_hook)
 
 

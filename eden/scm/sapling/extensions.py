@@ -741,7 +741,7 @@ def maybe_wrap_wrapper(wrapper):
     extname = _extension_being_loaded
 
     def wrapperwrapper(origfn, *args, **kwargs):
-        if extname and not extname in _loaded_extensions:
+        if extname not in _loaded_extensions:
             return origfn(*args, **kwargs)
         return wrapper(origfn, *args, **kwargs)
 

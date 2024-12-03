@@ -359,9 +359,12 @@ class TestTmp:
             fullpath = os.path.realpath(fullpath)
         # add a function for sheval
         orig_path = os.pathsep.join([str(self.path / "bin"), self._origpathenv])
-        self.shenv.cmdtable[name] = shext.wrapexe(
-            fullpath, env_override={"PATH": orig_path}
-        )
+        for allowed in (name, fullpath):
+            # Allow shell to run the short name (e.g. "hg") or the fullpath (e.g.
+            # "/some/long/path/build-dir/hg").
+            self.shenv.cmdtable[allowed] = shext.wrapexe(
+                fullpath, env_override={"PATH": orig_path}
+            )
         # write a shim in $TESTTMP/bin for os.system
         self.path.joinpath("bin").mkdir(exist_ok=True)
         if symlink:

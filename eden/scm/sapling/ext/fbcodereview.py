@@ -747,7 +747,9 @@ def uisetup(ui) -> None:
 
         extensions.wrapfunction(uimod, "_auto_username", _auto_username)
 
-    ui.setconfig(
+
+def reposetup(ui, repo):
+    repo.ui.setconfig(
         "hooks", "post-pull.marklanded", _get_shell_cmd(ui, ["debugmarklanded"])
     )
 

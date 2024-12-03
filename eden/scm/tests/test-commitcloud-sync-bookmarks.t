@@ -2,9 +2,6 @@
 
 #require no-eden
 
-#inprocess-hg-incompatible
-
-
   $ enable amend commitcloud rebase fbcodereview
   $ configure dummyssh
   $ setconfig commitcloud.hostname=testhost

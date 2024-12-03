@@ -26,7 +26,6 @@ from sapling.error import Abort
 from sapling.extensions import wrapcommand
 from sapling.i18n import _
 
-
 UPDATEARGS = "updateargs"
 
 configtable = {}
@@ -231,15 +230,15 @@ STATES = (
 
 
 def extsetup(ui):
-    if ui.configbool("morestatus", "show") and not ui.plain():
-        wrapcommand(commands.table, "status", statuscmd)
+    wrapcommand(commands.table, "status", statuscmd)
+    localrepo.localrepository._wlockfreeprefix.add(UPDATEARGS)
 
-        localrepo.localrepository._wlockfreeprefix.add(UPDATEARGS)
 
-        # Write down `hg update` args to show the continue command in
-        # interrupted update state.
-        ui.setconfig("hooks", "pre-update.morestatus", saveupdateargs)
-        ui.setconfig("hooks", "post-update.morestatus", cleanupdateargs)
+def reposetup(ui, repo):
+    # Write down `hg update` args to show the continue command in
+    # interrupted update state.
+    ui.setconfig("hooks", "pre-update.morestatus", saveupdateargs)
+    ui.setconfig("hooks", "post-update.morestatus", cleanupdateargs)
 
 
 def saveupdateargs(repo, args: str, **kwargs) -> None:
@@ -260,6 +259,8 @@ def statuscmd(orig, ui, repo, *pats, **opts):
     """
 
     ret = orig(ui, repo, *pats, **opts)
+    if not ui.configbool("morestatus", "show") or ui.plain():
+        return ret
 
     statetuple = getrepostate(repo)
     if statetuple:

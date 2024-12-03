@@ -49,7 +49,6 @@ from . import (
 )
 from .i18n import _, _x
 
-
 cliparser = bindings.cliparser
 rscontext = bindings.context.context
 
@@ -738,7 +737,8 @@ def runcommand(
     for name in namesforhooks:
         # run pre-hook, and abort if it fails
         hook.hook(
-            lui,
+            # Prefer using repo's ui, which may have config mutations from extensions.
+            getattr(repo, "ui", lui),
             repo,
             "pre-%s" % name,
             True,
@@ -762,7 +762,8 @@ def runcommand(
         # run post-hook, passing command result
         for name in namesforhooks:
             hook.hook(
-                lui,
+                # Prefer using repo's ui, which may have config mutations from extensions.
+                getattr(repo, "ui", lui),
                 repo,
                 "post-%s" % name,
                 False,
