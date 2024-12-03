@@ -24,11 +24,13 @@ impl AsyncMethodRequestWorker {
         target: &str,
     ) -> CoreContext {
         let ctx = ctx.with_mutated_scuba(|mut scuba| {
-            // Legacy column logging the token as an integer
+            // Legacy columns
             scuba.add("request_id", req_id.0.0);
-            // New name to match the mononoke_scs_server table
-            scuba.add("token", format!("{}", req_id.0.0));
             scuba.add("request_type", req_id.1.0.clone());
+
+            // New column names to match the mononoke_scs_server table
+            scuba.add("token", format!("{}", req_id.0.0));
+            scuba.add("method", req_id.1.0.clone());
             scuba
         });
 
