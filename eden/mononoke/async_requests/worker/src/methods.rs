@@ -55,7 +55,7 @@ pub async fn commit_sparse_profile_delta_impl(
     changeset: ChangesetContext<Repo>,
     other: ChangesetContext<Repo>,
     profiles: thrift::SparseProfiles,
-) -> Result<thrift::CommitSparseProfileSizeResponse, scs_errors::ServiceError> {
+) -> Result<thrift::CommitSparseProfileDeltaResponse, scs_errors::ServiceError> {
     Err(scs_errors::ServiceError::Request(
         scs_errors::not_implemented("not implemented in non-fbcode build".to_string()),
     ))
