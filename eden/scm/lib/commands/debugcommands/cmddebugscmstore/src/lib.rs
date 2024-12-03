@@ -199,8 +199,8 @@ fn fetch_files(
         );
     }
 
-    for (key, err) in missing.into_iter() {
-        write!(stdout, "Failed to fetch file: {key:#?}\nError: {err:?}\n")?;
+    for incomplete in missing.into_iter() {
+        write!(stdout, "Failed to fetch file: {:#?}\n", incomplete)?;
     }
 
     Ok(())

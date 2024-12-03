@@ -13,6 +13,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
+use ::types::errors::KeyedError;
 use ::types::fetch_mode::FetchMode;
 use ::types::HgId;
 use ::types::Key;
@@ -53,6 +54,7 @@ use crate::lfs::LfsStore;
 use crate::scmstore::activitylogger::ActivityLogger;
 use crate::scmstore::fetch::FetchResults;
 use crate::scmstore::metrics::StoreLocation;
+use crate::scmstore::KeyFetchError;
 use crate::ContentDataStore;
 use crate::ContentMetadata;
 use crate::Delta;
@@ -113,6 +115,9 @@ pub struct FileStore {
 
     // The threshold for using CAS cache
     pub(crate) cas_cache_threshold_bytes: Option<u64>,
+
+    /// Immediately return empty results for non-REMOTE fetches with CAS enabled.
+    pub noop_cas_local: bool,
 }
 
 impl Drop for FileStore {
@@ -152,6 +157,26 @@ impl FileStore {
         let mut keys = keys.into_iter().peekable();
         if keys.peek().is_none() {
             return FetchResults::new(Box::new(std::iter::empty()));
+        }
+
+        let fetch_local = fetch_mode.contains(FetchMode::LOCAL);
+        let fetch_remote = fetch_mode.contains(FetchMode::REMOTE);
+        let cas_client = self.cas_client.clone();
+
+        if self.noop_cas_local && !fetch_remote && cas_client.is_some() {
+            // Make LOCAL mode a no-op for CAS to save work since LOCAL mode doesn't
+            // attempt fetching from CAS.
+            tracing::debug!("skipping local fetch with CAS enabled");
+            return FetchResults::new(Box::new(
+                keys.map(|key| {
+                    Err(KeyFetchError::KeyedError(KeyedError(
+                        key,
+                        anyhow!("cas no-op"),
+                    )))
+                })
+                .collect::<Vec<_>>()
+                .into_iter(),
+            ));
         }
 
         let (found_tx, found_rx) = unbounded();
@@ -197,14 +222,10 @@ impl FileStore {
         let lfs_cache = self.lfs_cache.clone();
         let lfs_local = self.lfs_local.clone();
         let edenapi = self.edenapi.clone();
-        let cas_client = self.cas_client.clone();
         let lfs_remote = self.lfs_remote.clone();
         let metrics = self.metrics.clone();
         let activity_logger = self.activity_logger.clone();
         let format = self.format();
-
-        let fetch_local = fetch_mode.contains(FetchMode::LOCAL);
-        let fetch_remote = fetch_mode.contains(FetchMode::REMOTE);
 
         let process_func = move || {
             let start_instant = Instant::now();
@@ -509,6 +530,8 @@ impl FileStore {
             format: SerializationFormat::Hg,
 
             cas_cache_threshold_bytes: None,
+
+            noop_cas_local: false,
         }
     }
 
@@ -560,6 +583,8 @@ impl FileStore {
             format: self.format(),
 
             cas_cache_threshold_bytes: self.cas_cache_threshold_bytes.clone(),
+
+            noop_cas_local: self.noop_cas_local,
         }
     }
 

@@ -417,6 +417,8 @@ impl<'a> FileStoreBuilder<'a> {
             format,
 
             cas_cache_threshold_bytes,
+
+            noop_cas_local: self.config.get_or("scmstore", "noop-local-cas", || true)?,
         })
     }
 }
@@ -743,6 +745,7 @@ impl<'a> TreeStoreBuilder<'a> {
             fetch_tree_aux_data,
             flush_on_drop: true,
             metrics: Default::default(),
+            noop_cas_local: self.config.get_or("scmstore", "noop-local-cas", || true)?,
             format,
         })
     }
