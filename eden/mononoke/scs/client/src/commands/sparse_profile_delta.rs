@@ -111,7 +111,12 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     };
     let token = conn.commit_sparse_profile_delta_async(&params).await?;
 
+    let now = std::time::Instant::now();
     let response = loop {
+        if now.elapsed() > std::time::Duration::from_secs(10) {
+            return Err(anyhow::anyhow!("request timed out"));
+        }
+
         // reopening the connection on retry might allow SR to send us to a different server
         let conn = app.get_connection(Some(&repo.name))?;
         let res = conn.commit_sparse_profile_delta_poll(&token).await;

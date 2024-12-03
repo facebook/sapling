@@ -18,6 +18,8 @@ use source_control_clients::errors::AsyncPingPollError;
 use crate::render::Render;
 use crate::ScscApp;
 
+const POLL_SLEEP_DURATION: std::time::Duration = std::time::Duration::from_secs(1);
+
 #[derive(Parser)]
 /// List repositories
 pub(super) struct CommandArgs {}
@@ -53,8 +55,15 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         token.id
     );
 
+    let now = std::time::Instant::now();
     let response = {
         loop {
+            if now.elapsed() > std::time::Duration::from_secs(10) {
+                return Err(anyhow::anyhow!("request timed out"));
+            }
+
+            // reopening the connection on retry might allow SR to send us to a different server
+            let conn = app.get_connection(None)?;
             let res = conn.async_ping_poll(&token).await;
             match res {
                 Ok(res) => match res {
@@ -73,11 +82,12 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                 },
                 Err(e) => match e {
                     AsyncPingPollError::poll_error(_) => {
-                        // retry
+                        eprintln!("poll error, retrying...");
                     }
                     _ => return Err(anyhow::anyhow!("request failed with error: {:?}", e)),
                 },
             }
+            tokio::time::sleep(POLL_SLEEP_DURATION).await;
         }
     };
 
