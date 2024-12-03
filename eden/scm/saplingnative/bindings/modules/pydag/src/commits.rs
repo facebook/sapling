@@ -128,11 +128,7 @@ py_class!(pub class commits |py| {
 
     /// Convert Set to IdSet. For compatibility with legacy code only.
     def torevs(&self, set: Names) -> PyResult<Spans> {
-        // Attempt to use IdMap bound to `set` if possible for performance.
-        let id_map = match set.0.hints().id_map() {
-            Some(map) => map,
-            None => self.inner(py).read().id_map_snapshot().map_pyerr(py)?,
-        };
+        let id_map = self.inner(py).read().id_map_snapshot().map_pyerr(py)?;
         let id_set = block_on(id_map.to_id_set(&set.0)).map_pyerr(py)?;
         Ok(Spans::from_id_set(id_set))
     }

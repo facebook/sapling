@@ -28,8 +28,8 @@ class PyDagTests(unittest.TestCase):
         # Flush the commit to the MASTER group. This reassigns the node to "MASTER".
         commits.flush([a_node])
         self.assertEqual(list(commits.torevs([a_node])), [0])
-        # FIXME: `torevs(old_nodes)` does not respect the id reassignment
-        self.assertEqual(list(commits.torevs(a_nodes)), [non_master_id(0)])
+        # `torevs(old_nodes)` respects the id reassignment too.
+        self.assertEqual(list(commits.torevs(a_nodes)), [0])
 
 
 git_commit_hash = functools.partial(bindings.formatutil.git_sha1_digest, kind="commit")
