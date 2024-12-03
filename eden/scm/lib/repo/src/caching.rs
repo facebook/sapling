@@ -5,6 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::borrow::Borrow;
+use std::collections::HashMap;
+use std::hash::Hash;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -21,19 +24,66 @@ use types::HgId;
 use types::Key;
 use types::RepoPath;
 
+trait CachingKeyCache<K: Eq + Hash, V>: Send {
+    fn get_mut(&mut self, k: &HgId) -> Option<&mut V>
+    where
+        K: Borrow<HgId>;
+
+    fn insert(&mut self, k: K, v: V) -> Option<V>;
+
+    fn cache_size(&self) -> Option<usize>;
+}
+
+impl CachingKeyCache<HgId, Bytes> for LruCache<HgId, Bytes> {
+    fn get_mut(&mut self, k: &HgId) -> Option<&mut Bytes> {
+        <LruCache<HgId, Bytes>>::get_mut(self, k)
+    }
+
+    fn insert(&mut self, k: HgId, v: Bytes) -> Option<Bytes> {
+        <LruCache<HgId, Bytes>>::insert(self, k, v)
+    }
+
+    fn cache_size(&self) -> Option<usize> {
+        Some(self.capacity())
+    }
+}
+
+impl CachingKeyCache<HgId, Bytes> for HashMap<HgId, Bytes> {
+    fn get_mut(&mut self, k: &HgId) -> Option<&mut Bytes> {
+        <HashMap<HgId, Bytes>>::get_mut(self, k)
+    }
+
+    fn insert(&mut self, k: HgId, v: Bytes) -> Option<Bytes> {
+        <HashMap<HgId, Bytes>>::insert(self, k, v)
+    }
+
+    fn cache_size(&self) -> Option<usize> {
+        None
+    }
+}
+
 pub struct CachingKeyStore {
     store: Arc<dyn KeyStore>,
-    cache: Arc<Mutex<LruCache<HgId, Bytes>>>,
+    cache: Arc<Mutex<dyn CachingKeyCache<HgId, Bytes>>>,
 }
 
 static CACHE_HITS: Counter = Counter::new_counter("keystore.cache.hits");
 static CACHE_REQS: Counter = Counter::new_counter("keystore.cache.reqs");
 
 impl CachingKeyStore {
+    /// Create a new caching key store with a given cache size. If the cache size is 0, the cache
+    /// is unbounded (i.e. a HashMap is used instead of an LRU cache).
     pub fn new(store: Arc<dyn KeyStore>, size: usize) -> Self {
-        Self {
-            store,
-            cache: Arc::new(Mutex::new(LruCache::new(size))),
+        if size == 0 {
+            Self {
+                store,
+                cache: Arc::new(Mutex::new(HashMap::new())),
+            }
+        } else {
+            Self {
+                store,
+                cache: Arc::new(Mutex::new(LruCache::new(size))),
+            }
         }
     }
 
@@ -154,7 +204,7 @@ impl KeyStore for CachingKeyStore {
 // An Iterator that lazily populates tree cache during iteration.
 struct CachingIter {
     iter: BoxIterator<Result<(Key, Bytes)>>,
-    cache: Arc<Mutex<LruCache<HgId, Bytes>>>,
+    cache: Arc<Mutex<dyn CachingKeyCache<HgId, Bytes>>>,
 }
 
 impl Iterator for CachingIter {
@@ -185,8 +235,10 @@ mod test {
     #[test]
     fn test_key_cache() -> Result<()> {
         let inner_store = Arc::new(TestStore::new());
+        let cache_size: usize = 5;
 
-        let caching_store = CachingKeyStore::new(inner_store.clone(), 5);
+        let caching_store = CachingKeyStore::new(inner_store.clone(), cache_size);
+        assert_eq!(caching_store.cache.lock().cache_size(), Some(cache_size));
 
         let val1 = RepoPathBuf::from_string("val1".to_string())?;
         let val2 = RepoPathBuf::from_string("val2".to_string())?;
@@ -250,5 +302,15 @@ mod test {
         assert_eq!(cached_value, b"val3");
 
         Ok(())
+    }
+
+    #[test]
+    fn test_unbounded_key_cache() {
+        let inner_store = Arc::new(TestStore::new());
+        // Indicates unbounded cache
+        let cache_size: usize = 0;
+
+        let caching_store = CachingKeyStore::new(inner_store.clone(), cache_size);
+        assert_eq!(caching_store.cache.lock().cache_size(), None);
     }
 }
