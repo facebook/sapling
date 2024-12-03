@@ -30,6 +30,21 @@ pub struct ChangesSinceCmd {
     /// Path to the mount point
     mount_point: Option<PathBuf>,
 
+    #[clap(long, help = "Include VCS roots in the output")]
+    include_vcs_roots: bool,
+
+    #[clap(
+        long,
+        help = "Included roots in the output. None means include all roots"
+    )]
+    included_roots: Option<Vec<PathBuf>>,
+
+    #[clap(
+        long,
+        help = "Excluded roots in the output. None means exclude no roots"
+    )]
+    excluded_roots: Option<Vec<PathBuf>>,
+
     #[clap(long, help = "Print the output in JSON format")]
     json: bool,
 }
@@ -46,7 +61,14 @@ impl crate::Subcommand for ChangesSinceCmd {
     async fn run(&self) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
         let result = instance
-            .get_changes_since(&self.mount_point, &self.position, None)
+            .get_changes_since(
+                &self.mount_point,
+                &self.position,
+                self.include_vcs_roots,
+                &self.included_roots,
+                &self.excluded_roots,
+                None,
+            )
             .await?;
         println!(
             "{}",

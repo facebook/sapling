@@ -270,6 +270,9 @@ impl EdenFsInstance {
         &self,
         mount_point: &Option<PathBuf>,
         from_position: &crate::types::JournalPosition,
+        include_vcs_roots: bool,
+        included_roots: &Option<Vec<PathBuf>>,
+        excluded_roots: &Option<Vec<PathBuf>>,
         timeout: Option<Duration>,
     ) -> Result<crate::types::ChangesSinceV2Result> {
         let client = self
@@ -279,6 +282,17 @@ impl EdenFsInstance {
         let params = ChangesSinceV2Params {
             mountPoint: bytes_from_path(get_mount_point(mount_point)?)?,
             fromPosition: from_position.clone().into(),
+            includeVCSRoots: Some(include_vcs_roots),
+            includedRoots: included_roots.as_ref().map(|irs| {
+                irs.iter()
+                    .map(|ir| bytes_from_path(ir.to_path_buf()).expect("Invalid included_roots"))
+                    .collect::<Vec<_>>()
+            }),
+            excludedRoots: excluded_roots.as_ref().map(|ers| {
+                ers.iter()
+                    .map(|er| bytes_from_path(er.to_path_buf()).expect("Invalid excluded_roots"))
+                    .collect::<Vec<_>>()
+            }),
             ..Default::default()
         };
         client
