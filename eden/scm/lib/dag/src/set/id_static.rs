@@ -596,6 +596,7 @@ pub(crate) mod tests {
     use super::super::Set;
     use super::*;
     use crate::ops::IdMapSnapshot;
+    use crate::ops::ToIdSet;
     use crate::set::difference::DifferenceSet;
     use crate::set::intersection::IntersectionSet;
     use crate::set::slice::SliceSet;
@@ -943,6 +944,27 @@ pub(crate) mod tests {
                 Ok(())
             })
         })
+    }
+
+    #[test]
+    fn test_to_id_set_no_fast_paths() -> Result<()> {
+        let dag1 = build_segments("Z-A", "A", 2).name_dag;
+        let dag2 = build_segments("A", "A", 2).name_dag;
+        let dag1_a_set = r(dag1.sort(&"A".into()))?;
+        let dag2_a_set = r(dag2.sort(&"A".into()))?;
+        // For dag1, "A" is assigned Id(1). For dag2, "A" is assigned Id(0).
+        let dag1_a_id_set = r(dag1.to_id_set(&dag1_a_set))?;
+        let dag2_a_id_set = r(dag2.to_id_set(&dag2_a_set))?;
+        assert_eq!(dbg(dag1_a_id_set), "1");
+        assert_eq!(dbg(dag2_a_id_set), "0");
+        // If we use dag2.to_id_set, it should report "A" in dag2, aka. "0".
+        // If we use dag1.to_id_set, it should report "A" in dag1, aka. "1".
+        let dag21_a_id_set = r(dag2.to_id_set(&dag1_a_set))?;
+        let dag12_a_id_set = r(dag1.to_id_set(&dag2_a_set))?;
+        // FIXME: Not the case
+        assert_eq!(dbg(dag21_a_id_set), "1");
+        assert_eq!(dbg(dag12_a_id_set), "0");
+        Ok(())
     }
 
     #[test]
