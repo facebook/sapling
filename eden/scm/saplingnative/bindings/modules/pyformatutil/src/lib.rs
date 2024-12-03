@@ -17,6 +17,7 @@ use format_util::HgCommitFields;
 use format_util::HgTime;
 use minibytes::Text;
 use storemodel::SerializationFormat;
+use types::hgid::NULL_ID;
 use types::Id20;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -33,6 +34,16 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         py_fn!(py, git_commit_fields_to_text(fields: Serde<GitCommitFields>)),
     )?;
     m.add_class::<CommitFields>(py)?;
+    m.add(
+        py,
+        "hg_sha1_digest",
+        py_fn!(py, hg_sha1_digest(raw_text: PyBytes, p1: Serde<Id20> = Serde(NULL_ID), p2: Serde<Id20> = Serde(NULL_ID))),
+    )?;
+    m.add(
+        py,
+        "git_sha1_digest",
+        py_fn!(py, git_sha1_digest(raw_text: PyBytes, kind: &str)),
+    )?;
     Ok(m)
 }
 
@@ -129,4 +140,21 @@ fn hg_commit_fields_to_text(py: Python, fields: Serde<HgCommitFields>) -> PyResu
 
 fn git_commit_fields_to_text(py: Python, fields: Serde<GitCommitFields>) -> PyResult<String> {
     fields.0.to_text().map_pyerr(py)
+}
+
+fn hg_sha1_digest(
+    py: Python,
+    raw_text: PyBytes,
+    p1: Serde<Id20>,
+    p2: Serde<Id20>,
+) -> PyResult<Serde<Id20>> {
+    let raw_text = raw_text.data(py);
+    let id = format_util::hg_sha1_digest(raw_text, &p1.0, &p2.0);
+    Ok(Serde(id))
+}
+
+fn git_sha1_digest(py: Python, raw_text: PyBytes, kind: &str) -> PyResult<Serde<Id20>> {
+    let raw_text = raw_text.data(py);
+    let id = format_util::git_sha1_digest(raw_text, kind);
+    Ok(Serde(id))
 }
