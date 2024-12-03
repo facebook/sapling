@@ -1661,7 +1661,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<std::unordered_set<RelativePath>> vcsDirectories{
       "notify:vcs-directories",
-      {RelativePath{".hg"}, RelativePath{".git"}},
+      {RelativePath{".hg"}, RelativePath{".git"}, RelativePath{".sl"}},
       this};
 
 // [facebook]
