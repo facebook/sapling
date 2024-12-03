@@ -1,0 +1,18 @@
+load(
+    "//eden/mononoke/tests/integration/facebook:fb_manifest_deps.bzl",
+    "dott_test",
+)
+
+oncall("scm_server_infra")
+
+dott_test(
+    name = "modern_sync",
+    dott_files =
+        glob([
+            "*.t",
+        ]),
+    deps = [
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/modern_sync:mononoke_modern_sync_job",
+    ],
+)

@@ -1,0 +1,27 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("sapling")
+
+rust_library(
+    name = "re-cas-common",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "re-cas-common"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "sapling-re-cas-common",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:itertools",
+        "fbsource//third-party/rust:once_cell",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/cas-client:cas-client",
+        "//eden/scm/lib/types:types",
+    ],
+)

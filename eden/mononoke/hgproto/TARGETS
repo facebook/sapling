@@ -1,0 +1,35 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("scm_server_infra")
+
+rust_library(
+    name = "hgproto",
+    srcs = glob(["src/**/*.rs"]),
+    test_deps = [
+        "fbsource//third-party/rust:maplit",
+        "fbsource//third-party/rust:quickcheck",
+        "//eden/mononoke/mercurial:mercurial_types-mocks",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
+    ],
+    test_srcs = [
+        "fixtures/min.bundle",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-stream",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:hex",
+        "fbsource//third-party/rust:itertools",
+        "fbsource//third-party/rust:nom-old",
+        "fbsource//third-party/rust:pin-project",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tokio-util",
+        "//eden/mononoke/mercurial:mercurial_bundles",
+        "//eden/mononoke/mercurial:mercurial_types",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/server/qps:qps",
+    ],
+)

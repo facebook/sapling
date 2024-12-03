@@ -1,0 +1,36 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("sapling")
+
+rust_library(
+    name = "radixbuf",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "bench": [{
+            "harness": False,
+            "name": "bench",
+        }],
+        "extra_buck_dependencies": {"dev-dependencies": [
+            "//eden/scm/lib/minibench:minibench",
+            "fbsource//third-party/rust:rand_chacha",
+        ]},
+        "features": {},
+        "lib": {"name": "radixbuf"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "sapling-radixbuf",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
+    features = ["nobench"],
+    test_deps = [
+        "fbsource//third-party/rust:quickcheck",
+        "fbsource//third-party/rust:rand",
+    ],
+    deps = [
+        "fbsource//third-party/rust:thiserror",
+        "//eden/scm/lib/vlqencoding:vlqencoding",
+    ],
+)

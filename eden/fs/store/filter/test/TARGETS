@@ -1,0 +1,25 @@
+load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
+
+oncall("scm_client_infra")
+
+cpp_unittest(
+    name = "test",
+    srcs = glob(["*Test.cpp"]),
+    supports_static_listing = False,
+    deps = [
+        "//eden/common/telemetry:structured_logger",
+        "//eden/common/utils:path",
+        "//eden/common/utils:process_info_cache",
+        "//eden/fs/config:config",
+        "//eden/fs/model:model",
+        "//eden/fs/store:backing_store_interface",
+        "//eden/fs/store:store",
+        "//eden/fs/store/filter:filtered_object_id",
+        "//eden/fs/store/filter:glob_filter",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//folly:range",
+        "//folly/executors:manual_executor",
+        "//folly/logging:logging",
+        "//folly/portability:gtest",
+    ],
+)

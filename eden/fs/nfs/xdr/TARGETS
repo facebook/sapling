@@ -1,0 +1,13 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "xdr",
+    srcs = ["Xdr.cpp"],
+    headers = ["Xdr.h"],
+    exported_deps = [
+        "//folly:preprocessor",
+        "//folly/io:iobuf",
+    ],
+)

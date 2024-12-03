@@ -1,0 +1,79 @@
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("sapling")
+
+rust_library(
+    name = "types",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "features": {
+            "default": ["for-tests"],
+            "for-tests": [
+                "rand",
+                "quickcheck",
+                "lazy_static",
+            ],
+        },
+        "lib": {"name": "types"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "sapling-types",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
+    crate_root = "src/lib.rs",
+    features = ["for-tests"],
+    named_deps = {
+        "blake3-constants": "//blake3:blake3-constants-rust-nothrift",
+    },
+    test_deps = [
+        "fbsource//third-party/rust:assert_matches",
+        "fbsource//third-party/rust:lazy_static",
+        "fbsource//third-party/rust:quickcheck",
+        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:serde_cbor",
+        "fbsource//third-party/rust:serde_json",
+        "//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",
+    ],
+    # A test inside this target is using #[should_panic], setting the backtrace
+    # to false here, otherwise the test binary will try to extract the backtrace
+    # and the test will fail with leak sanatizer.
+    test_env = {"RUST_BACKTRACE": "0"},
+    test_labels = ["tpx-rust-no-backtrace-workaround"],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:base64",
+        "fbsource//third-party/rust:bitflags",
+        "fbsource//third-party/rust:blake3",
+        "fbsource//third-party/rust:byteorder",
+        "fbsource//third-party/rust:lazy_static",
+        "fbsource//third-party/rust:quickcheck",
+        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:ref-cast",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_bytes",
+        "fbsource//third-party/rust:serde_derive",
+        "fbsource//third-party/rust:sha1",
+        "fbsource//third-party/rust:thiserror",
+        "//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",
+        "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/util:util",
+        "//eden/scm/lib/vlqencoding:vlqencoding",
+    ],
+)
+
+rust_binary(
+    name = "benchmark_types",
+    srcs = ["bench/main.rs"],
+    autocargo = {"ignore_rule": True},
+    deps = [
+        "fbsource//third-party/rust:criterion",
+        "fbsource//third-party/rust:faster-hex",
+        "fbsource//third-party/rust:hex",
+        "fbsource//third-party/rust:sha1",
+        "//eden/scm/lib/types:types",
+    ],
+)

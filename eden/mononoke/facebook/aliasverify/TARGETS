@@ -1,0 +1,10 @@
+load("//fbpkg:fbpkg.bzl", "fbpkg")
+
+oncall("scm_server_infra")
+
+fbpkg.builder(
+    name = "mononoke.aliasverify",
+    path_actions = {
+        "aliasverify": "//eden/mononoke:aliasverify",
+    },
+)

@@ -1,0 +1,11 @@
+load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
+
+oncall("scm_client_infra")
+
+python_unittest(
+    name = "test",
+    srcs = glob(["*.py"]),
+    deps = [
+        "//eden/fs/py/eden:dirstate",
+    ],
+)

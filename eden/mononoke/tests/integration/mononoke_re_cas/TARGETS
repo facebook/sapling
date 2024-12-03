@@ -1,0 +1,34 @@
+load("@fbcode//target_determinator/macros:ci_hint.bzl", "ci_hint")
+load(
+    "//eden/mononoke/tests/integration/facebook:fb_manifest_deps.bzl",
+    "dott_test",
+)
+
+oncall("scm_server_infra")
+
+# Test suit for testing of Mononoke CAS Sync and also
+# for testing Sapling/Cas integration when a repo is synced
+
+dott_test(
+    name = "mononoke_re_cas",
+    disable_all_network_access_target = False,
+    dott_files = glob([
+        "*.t",
+    ]),
+    deps = [
+        "//eden/mononoke:mononoke",
+        "//eden/mononoke/mononoke_cas_sync_job:mononoke_cas_sync_job",
+        "//eden/mononoke/tools/admin:admin",
+        "//eden/mononoke/tools/testtool:testtool",
+    ],
+)
+
+# This adds some artificial direct dependecies to CI graph to make it look like deps are closer
+ci_hint(
+    ci_deps = [
+        "fbcode//remote_execution/client_lib/wrappers/rust:re_client_lib",
+        "fbcode//remote_execution/client_lib/wrappers/rust:external_re_client_lib",
+    ],
+    reason = "Those tests should be triggered on RE diffs despite the longer CI distance",
+    target = "mononoke_re_cas",
+)

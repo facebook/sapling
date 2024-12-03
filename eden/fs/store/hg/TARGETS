@@ -1,0 +1,119 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "sapling_import_request",
+    srcs = ["SaplingImportRequest.cpp"],
+    headers = ["SaplingImportRequest.h"],
+    deps = [
+        "//folly:try",
+    ],
+    exported_deps = [
+        ":hg_proxy_hash",
+        "//eden/common/telemetry:telemetry",
+        "//eden/common/utils:bug",
+        "//eden/common/utils:utils",
+        "//eden/fs/model:model",
+        "//eden/fs/model:model-fwd",
+        "//eden/fs/store:context",
+        "//folly/futures:core",
+    ],
+)
+
+cpp_library(
+    name = "sapling_import_request_queue",
+    srcs = ["SaplingImportRequestQueue.cpp"],
+    headers = ["SaplingImportRequestQueue.h"],
+    deps = [
+        "//eden/common/utils:immediate_future",
+        "//eden/fs/config:config",
+        "//folly:map_util",
+    ],
+    exported_deps = [
+        ":sapling_import_request",
+        "//eden/fs/model:model",
+        "//folly:synchronized",
+        "//folly:try",
+        "//folly/container:f14_hash",
+    ],
+)
+
+cpp_library(
+    name = "sapling_backing_store",
+    srcs = ["SaplingBackingStore.cpp"],
+    headers = ["SaplingBackingStore.h"],
+    deps = [
+        ":hg_proxy_hash",
+        ":sapling_import_request",
+        "//common/fb303/cpp:thread_pool_executor_counters",  # @manual
+        "//common/network:hostname",
+        "//eden/common/telemetry:structured_logger",
+        "//eden/common/utils:bug",
+        "//eden/common/utils:enum",
+        "//eden/common/utils:fault_injector",
+        "//eden/common/utils:path",
+        "//eden/common/utils:throw",
+        "//eden/common/utils:utils",
+        "//eden/fs/config:config",
+        "//eden/fs/service:thrift_util",
+        "//eden/fs/telemetry:log_info",
+        "//eden/fs/telemetry:stats",
+        "//eden/fs/utils:static_assert",
+        "//folly:executor",
+        "//folly:string",
+        "//folly/executors:cpu_thread_pool_executor",
+        "//folly/executors/task_queue:unbounded_blocking_queue",
+        "//folly/executors/thread_factory:init_thread_factory",
+        "//folly/futures:core",
+        "//folly/logging:logging",
+        "//folly/portability:gflags",
+        "//folly/system:thread_name",
+    ],
+    exported_deps = [
+        "fbsource//third-party/googletest:gtest_headers",
+        ":sapling_backing_store_options",
+        ":sapling_import_request_queue",
+        "//eden/common/telemetry:telemetry",
+        "//eden/common/utils:ref_ptr",
+        "//eden/fs:config",
+        "//eden/fs/model:model",
+        "//eden/fs/store:backing_store_interface",
+        "//eden/fs/store:context",
+        "//eden/fs/store:store",
+        "//eden/fs/telemetry:activity_buffer",
+        "//eden/scm/lib/backingstore:backingstore",  # @manual
+        "//eden/scm/lib/backingstore:backingstore@header",  # @manual
+        "//eden/scm/lib/backingstore:sapling_native_backingstore",
+        "//folly:range",
+        "//folly:synchronized",
+        "//monitoring/obc:obc_lib",
+    ],
+    external_deps = [
+        "re2",
+    ],
+)
+
+cpp_library(
+    name = "sapling_backing_store_options",
+    headers = ["SaplingBackingStoreOptions.h"],
+)
+
+cpp_library(
+    name = "hg_proxy_hash",
+    srcs = ["HgProxyHash.cpp"],
+    headers = ["HgProxyHash.h"],
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        "//eden/common/utils:bug",
+        "//eden/common/utils:throw",
+        "//eden/fs/telemetry:stats",
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        "//eden/common/utils:path",
+        "//eden/fs/config:config",
+        "//eden/fs/model:model",
+        "//eden/fs/store:store",
+    ],
+)

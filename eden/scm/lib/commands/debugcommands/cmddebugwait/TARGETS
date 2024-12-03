@@ -1,0 +1,38 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("sapling")
+
+rust_library(
+    name = "cmddebugwait",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "extra_buck_dependencies": {"dependencies": []},
+        "features": {
+            "default": [],
+            "eden": [
+                "sapling-edenfs-client",
+                "sapling-workingcopy/eden",
+            ],
+        },
+        "lib": {"name": "cmddebugwait"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "GPL-2.0-only",
+            "name": "cmddebugwait",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
+    crate_root = "src/lib.rs",
+    features = ["eden"],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/clidispatch:clidispatch",
+        "//eden/scm/lib/commands/cmdutil:cmdutil",
+        "//eden/scm/lib/edenfs-client:edenfs-client",
+        "//eden/scm/lib/repo:repo",
+        "//eden/scm/lib/treestate:treestate",
+        "//eden/scm/lib/workingcopy:workingcopy",
+    ],
+)

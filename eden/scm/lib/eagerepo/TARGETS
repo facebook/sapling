@@ -1,0 +1,51 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("sapling")
+
+rust_library(
+    name = "eagerepo",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "eagerepo"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "sapling-eagerepo",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
+    crate_root = "src/lib.rs",
+    test_deps = [
+        "fbsource//third-party/rust:tempfile",
+        "fbsource//third-party/rust:tokio",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:fail",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:http",
+        "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:sha1",
+        "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/cas-client:cas-client",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/dag:dag",
+        "//eden/scm/lib/edenapi/trait:edenapi_trait",
+        "//eden/scm/lib/identity:identity",
+        "//eden/scm/lib/manifest:manifest",
+        "//eden/scm/lib/manifest-tree:manifest-tree",
+        "//eden/scm/lib/metalog:metalog",
+        "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/mutationstore:mutationstore",
+        "//eden/scm/lib/nonblocking:nonblocking",
+        "//eden/scm/lib/pathmatcher:pathmatcher",
+        "//eden/scm/lib/repo/url:repourl",
+        "//eden/scm/lib/storemodel:storemodel",
+        "//eden/scm/lib/util/factory:factory",
+        "//eden/scm/lib/util/format-util:format-util",
+        "//eden/scm/lib/zstore:zstore",
+    ],
+)

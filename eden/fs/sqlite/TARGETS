@@ -1,0 +1,19 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "sqlite",
+    srcs = glob(["*.cpp"]),
+    headers = glob(["*.h"]),
+    deps = [
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        "//eden/common/utils:path",
+        "//folly:synchronized",
+    ],
+    exported_external_deps = [
+        ("sqlite", None, "sqlite"),
+    ],
+)

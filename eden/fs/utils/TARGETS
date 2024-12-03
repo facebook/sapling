@@ -1,0 +1,306 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+
+oncall("scm_client_infra")
+
+cpp_library(
+    name = "event_base_state",
+    headers = ["EventBaseState.h"],
+    exported_deps = [
+        "//folly/io/async:async_base",
+    ],
+)
+
+cpp_library(
+    name = "eden_task_queue",
+    srcs = [
+        "EdenTaskQueue.cpp",
+    ],
+    headers = [
+        "EdenTaskQueue.h",
+    ],
+    exported_deps = [
+        "//folly/concurrency:dynamic_bounded_queue",
+        "//folly/executors:cpu_thread_pool_executor",
+    ],
+)
+
+cpp_library(
+    name = "win_stacktrace",
+    srcs = [
+        "WinStackTrace.cpp",
+    ],
+    headers = [
+        "WinStackTrace.h",
+    ],
+    os_deps = [
+        (
+            "windows",
+            ["fbsource//third-party/toolchains/win:dbghelp.lib"],
+        ),
+    ],
+    deps = [
+        "//eden/common/utils:path",
+        "//eden/common/utils:stringconv",
+        "//eden/common/utils:win_error",
+        "//folly:c_portability",
+        "//folly/portability:windows",
+    ],
+)
+
+cpp_library(
+    name = "bufvec",
+    headers = [
+        "BufVec.h",
+    ],
+    exported_deps = [
+        "//folly/io:iobuf",
+    ],
+)
+
+cpp_library(
+    name = "matcher",
+    srcs = [
+        "GlobMatcher.cpp",
+    ],
+    headers = [
+        "GlobMatcher.h",
+    ],
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        "//eden/common/utils:case_sensitivity",
+        "//folly:expected",
+    ],
+)
+
+cpp_library(
+    name = "glob",
+    srcs = [
+        "GlobNodeImpl.cpp",
+        "GlobTree.cpp",
+    ],
+    headers = [
+        "GlobNodeImpl.h",
+        "GlobResult.h",
+        "GlobTree.h",
+    ],
+    exported_deps = [
+        ":matcher",
+        "//eden/common/utils:case_sensitivity",
+        "//eden/common/utils:enum",
+        "//eden/common/utils:path",
+        "//eden/common/utils:utils",
+        "//eden/fs/model:model",
+        "//eden/fs/store:store",
+        "//eden/fs/telemetry:task_trace",
+        "//folly/futures:core",
+    ],
+)
+
+cpp_library(
+    name = "eden_error",
+    srcs = [
+        "EdenError.cpp",
+    ],
+    headers = [
+        "EdenError.h",
+        "NotImplemented.h",
+    ],
+    deps = [
+        "//eden/common/utils:system_error",
+        "//eden/common/utils:win_error",
+    ],
+    exported_deps = [
+        "fbsource//third-party/fmt:fmt",
+        "//eden/common/utils:utf8",
+        "//eden/fs/service:thrift-cpp2-types",
+        "//folly:exception_wrapper",
+    ],
+)
+
+cpp_library(
+    name = "file_hash",
+    srcs = [
+        "FileHash.cpp",
+    ],
+    headers = [
+        "FileHash.h",
+    ],
+    deps = [
+        "//eden/common/utils:win_error",
+        "//eden/fs/digest:blake3_hash",
+        "//folly/portability:openssl",
+    ],
+    exported_deps = [
+        "//eden/common/utils:path",
+        "//eden/fs/model:model",
+    ],
+)
+
+cpp_library(
+    name = "filter_utils",
+    srcs = [
+        "FilterUtils.cpp",
+    ],
+    headers = [
+        "FilterUtils.h",
+    ],
+    deps = [
+        "//eden/common/utils:throw",
+        "//folly:varint",
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        "//eden/fs/model:model",
+        "//folly:range",
+    ],
+)
+
+cpp_library(
+    name = "proc_util",
+    srcs = ["ProcUtil.cpp"],
+    headers = ["ProcUtil.h"],
+    deps = [
+        "//eden/common/utils:file_utils",
+        "//folly:conv",
+        "//folly:file_util",
+        "//folly:string",
+        "//folly/logging:logging",
+        "//folly/portability:unistd",
+    ],
+    exported_deps = [
+        "//eden/common/utils:path",
+        "//eden/common/utils:process_info_cache",
+        "//folly:range",
+    ],
+)
+
+cpp_library(
+    name = "process_access_log",
+    srcs = [
+        "ProcessAccessLog.cpp",
+    ],
+    headers = [
+        "ProcessAccessLog.h",
+    ],
+    deps = [
+        "//eden/common/utils:process_info_cache",
+        "//folly:exception",
+        "//folly:micro_lock",
+        "//folly:thread_local",
+    ],
+    exported_deps = [
+        "//eden/common/utils:enum",
+        "//eden/common/utils:utils",
+        "//eden/fs/service:thrift-cpp2-types",
+        "//folly:synchronized",
+    ],
+)
+
+cpp_library(
+    name = "ring_buffer",
+    headers = ["RingBuffer.h"],
+)
+
+cpp_library(
+    name = "static_assert",
+    headers = ["StaticAssert.h"],
+)
+
+cpp_library(
+    name = "dir_type",
+    srcs = [
+        "DirType.cpp",
+    ],
+    deps = [
+        "//eden/common/utils:utils",
+        "//eden/fs/service:thrift-cpp2-types",
+        "//folly:utility",
+    ],
+)
+
+cpp_library(
+    name = "chrono",
+    srcs = [
+        "ChronoParse.cpp",
+        "ChronoUnit.cpp",
+    ],
+    deps = [
+        "//folly:conv",
+        "//folly:string",
+        "//folly/logging:logging",
+    ],
+    exported_deps = [
+        "//folly:cpp_attributes",
+        "//folly:expected",
+        "//folly:portability",
+        "//folly:range",
+    ],
+)
+
+cpp_library(
+    name = "thread",
+    srcs = ["Thread.cpp"],
+    external_deps = [
+        ("glibc", None, "pthread"),
+    ],
+)
+
+cpp_library(
+    name = "clock",
+    srcs = ["Clock.cpp"],
+    headers = ["Clock.h"],
+    deps = [
+        "//folly/portability:time",
+    ],
+)
+
+cpp_library(
+    name = "nfs_socket",
+    srcs = ["NfsSocket.cpp"],
+    headers = ["NfsSocket.h"],
+    deps = [
+        "//folly:exception",
+    ],
+    exported_deps = [
+        "//eden/common/utils:path",
+        "//folly:network_address",
+    ],
+)
+
+cpp_library(
+    name = "fs_channel_types",
+    headers = ["FsChannelTypes.h"],
+    os_deps = [
+        (
+            "linux",
+            ["//eden/fs/third-party:fuse_kernel"],
+        ),
+        (
+            "macos",
+            ["//eden/fs/third-party:fuse_kernel"],
+        ),
+    ],
+    exported_deps = [
+        "//folly:file",
+    ],
+)
+
+cpp_library(
+    name = "source_location",
+    headers = ["SourceLocation.h"],
+)
+
+cpp_library(
+    name = "projfs_util",
+    srcs = ["ProjfsUtil.cpp"],
+    headers = ["ProjfsUtil.h"],
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        "//eden/common/utils:file_utils",
+        "//eden/common/utils:stringconv",
+        "//folly:try",
+    ],
+)

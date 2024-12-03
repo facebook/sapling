@@ -1,0 +1,31 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("scm_server_infra")
+
+rust_library(
+    name = "fixtures",
+    srcs = glob(["src/**/*.rs"]),
+    test_deps = [
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
+    ],
+    deps = [
+        "fbcode//common/rust/shed/facet:facet",
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:futures",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/sorted_vector_map:sorted_vector_map",
+        "//eden/mononoke/bookmarks:bookmarks",
+        "//eden/mononoke/changesets/changesets_creation:changesets_creation",
+        "//eden/mononoke/derived_data/mercurial_derivation:mercurial_derivation",
+        "//eden/mononoke/filestore:filestore",
+        "//eden/mononoke/mercurial:mercurial_types",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/repo_factory:test_repo_factory",
+        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/tests/utils:tests_utils",
+    ],
+)

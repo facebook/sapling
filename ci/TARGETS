@@ -1,0 +1,16 @@
+load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
+
+oncall("scm_client_infra")
+
+# This cannot live in the eden/oss/.github/workflows/ folder because the
+# ".github" in the path is incompatible with main_module.
+python_binary(
+    name = "gen_workflows",
+    srcs = [
+        "gen_workflows.py",
+    ],
+    main_function = "eden.oss.ci.gen_workflows.main",
+    deps = [
+        "fbsource//third-party/pypi/pyyaml:pyyaml",
+    ],
+)

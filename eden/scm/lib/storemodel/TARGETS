@@ -1,0 +1,34 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("sapling")
+
+rust_library(
+    name = "storemodel",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "storemodel"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "sapling-storemodel",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:once_cell",
+        "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:serde",
+        "//eden/scm/lib/config/model:configmodel",
+        "//eden/scm/lib/edenapi/trait:edenapi_trait",
+        "//eden/scm/lib/edenapi/types:edenapi_types",
+        "//eden/scm/lib/metalog:metalog",
+        "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/lib/util/factory:factory",
+    ],
+)

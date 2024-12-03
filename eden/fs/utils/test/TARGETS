@@ -1,0 +1,115 @@
+load("@fbcode_macros//build_defs:cpp_benchmark.bzl", "cpp_benchmark")
+load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
+
+oncall("scm_client_infra")
+
+cpp_unittest(
+    name = "chrono",
+    srcs = ["ChronoTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/utils:chrono",
+        "//folly:conv",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "chrono_unit",
+    srcs = ["ChronoUnitTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/utils:chrono",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "proc_util",
+    srcs = ["ProcUtilTest.cpp"],
+    env = {
+        "TEST_DATA": "$(location //eden/fs/utils/test/test-data:test-data)",
+    },
+    supports_static_listing = False,
+    deps = [
+        "//eden/common/utils:path",
+        "//eden/fs/utils:proc_util",
+        "//folly:portability",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "process_access_log",
+    srcs = ["ProcessAccessLogTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/common/utils:process_info_cache",
+        "//eden/fs/utils:process_access_log",
+        "//folly/portability:gmock",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "ring_buffer",
+    srcs = ["RingBufferTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/utils:ring_buffer",
+        "//folly/portability:gmock",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "source_location",
+    srcs = ["SourceLocationTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        "//eden/fs/utils:source_location",
+        "//folly/portability:gmock",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_unittest(
+    name = "glob_test",
+    srcs = ["GlobMatcherTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+        "//eden/fs/utils:matcher",
+        "//folly/portability:gtest",
+    ],
+)
+
+cpp_benchmark(
+    name = "bench",
+    srcs = [
+        "ProcessAccessLogBenchmark.cpp",
+    ],
+    deps = [
+        "fbsource//third-party/benchmark:benchmark",
+        "//eden/common/utils:process_info_cache",
+        "//eden/fs/utils:process_access_log",
+    ],
+)
+
+# This cpp_benchmark() rule depends on a library watchman.
+# We disable it on non-Facebook internal builds, just so that the open source
+# build doesn't depend on watchman.  This is the only thing that requires
+# watchman.
+cpp_benchmark(
+    name = "glob_bench_mark",
+    srcs = ["GlobBenchMark.cpp"],
+    deps = [
+        "fbsource//third-party/benchmark:benchmark",
+        "//eden/fs/utils:matcher",
+        "//watchman/thirdparty/wildmatch:wildmatch",
+    ],
+    external_deps = [
+        "re2",
+    ],
+)

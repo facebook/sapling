@@ -1,0 +1,49 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("sapling")
+
+rust_library(
+    name = "minibytes",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "features": {
+            "default": [
+                "frombytes",
+                "frommmap",
+                "non-zerocopy-into",
+            ],
+            "frombytes": ["bytes"],
+            "frommmap": ["memmap2"],
+            "non-zerocopy-into": [],
+        },
+        "lib": {"name": "minibytes"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "description": "Shared reference-counted bytes and str with zero-copy slicing support.",
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "sapling-minibytes",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
+    crate_root = "src/lib.rs",
+    features = [
+        "frombytes",
+        "frommmap",
+        "non-zerocopy-into",
+    ],
+    test_deps = [
+        "fbsource//third-party/rust:quickcheck",
+        "fbsource//third-party/rust:serde_cbor",
+    ],
+    # A test inside this target is using #[should_panic], setting the backtrace
+    # to false here, otherwise the test binary will try to extract the backtrace
+    # and the test will fail with leak sanatizer.
+    test_env = {"RUST_BACKTRACE": "0"},
+    test_labels = ["tpx-rust-no-backtrace-workaround"],
+    deps = [
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:memmap2",
+        "fbsource//third-party/rust:serde",
+    ],
+)

@@ -1,0 +1,88 @@
+load("@fbcode//eden:defs.bzl", "get_dev_edenfsctl_env", "get_oss_suffix")
+load("@fbcode_macros//build_defs:native_rules.bzl", "buck_command_alias")
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+
+oncall("scm_client_infra")
+
+rust_binary(
+    name = "edenfsctl-wrapper",
+    srcs = ["facebook/edenfsctl.rs"],
+    autocargo = {
+        "ignore_rule": True,
+    },
+    crate_root = "facebook/edenfsctl.rs",
+    resources = {
+        "edenfsctl": "//eden/fs/cli_rs/edenfsctl:edenfsctl",
+        "edenfsctl_python": "//eden/fs/cli:edenfsctl",
+    },
+    deps = [
+        "fbsource//third-party/rust:buck-resources",
+    ],
+)
+
+rust_binary(
+    name = "edenfsctl-wrapper-with-privhelper",
+    srcs = ["facebook/edenfsctl.rs"],
+    autocargo = {
+        "ignore_rule": True,
+    },
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    crate_root = "facebook/edenfsctl.rs",
+    resources = {
+        "edenfsctl": "//eden/fs/cli_rs/edenfsctl:edenfsctl",
+        "edenfsctl_python": "//eden/fs/cli:edenfsctl",
+    },
+    deps = [
+        "fbsource//third-party/rust:buck-resources",
+        "//eden/fs/privhelper:privhelper",
+    ],
+)
+
+# Similar to the Python version of this alias
+# (found in fbcode/eden/fs/cli/TARGETS), this exists to compile and bake the
+# correct locations of helper binaries into the environment so
+# `buck run edenfsctl` works from source. Uses the system privhelper for
+# privileged actions (such as mounting) as long as no external sources set the
+# EDENFS_PRIVHELPER_PATH environment variable.
+buck_command_alias(
+    name = "edenfsctl-run",
+    env = get_dev_edenfsctl_env(),
+    exe = ":edenfsctl-wrapper",
+    metadata = {
+        "buck.cfg_modifiers": [
+            "fbcode//eden/scm/lib/backingstore:edenfs-include-cas",
+        ],
+    },
+)
+
+buck_command_alias(
+    name = "edenfsctl-run-oss",
+    env = get_dev_edenfsctl_env(
+        suffix = get_oss_suffix(),
+    ),
+    exe = ":edenfsctl-wrapper",
+)
+
+# Similar to above alias, but this target will utilize a development privhelper
+# instead of the system (setuid-root) privhelper. This will require the use of
+# passwordless sudo when starting EdenFS.
+buck_command_alias(
+    name = "edenfsctl-dev-run",
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    env = get_dev_edenfsctl_env({
+        # Add those so that they get materialized.
+        "EDENFS_PRIVHELPER_PATH": "$(location //eden/fs/service:edenfs_privhelper)",
+    }),
+    exe = ":edenfsctl-wrapper-with-privhelper",
+    metadata = {
+        "buck.cfg_modifiers": [
+            "fbcode//eden/scm/lib/backingstore:edenfs-include-cas",
+        ],
+    },
+)

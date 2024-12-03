@@ -1,0 +1,66 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs:rust_binary.bzl", "rust_binary")
+load("//eden/mononoke/facebook:lib.bzl", "tokio_dependency_test")
+
+oncall("scm_server_infra")
+
+rust_binary(
+    name = "scs_server",
+    srcs = glob(["src/**/*.rs"]),
+    cpp_deps = [
+        ":metadata",
+    ],
+    cxx_bridge = "src/metadata.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:cxx",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tokio-stream",
+        "fbsource//third-party/rust:tracing",
+        "fbsource//third-party/rust:tracing-glog",
+        "fbsource//third-party/rust:tracing-subscriber",
+        "//common/rust/base_controller:factory_group",
+        "//common/rust/base_controller:thrift_factory",
+        "//common/rust/shed/cloned:cloned",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/panichandler:panichandler",
+        "//common/rust/srserver:srserver",
+        "//eden/mononoke/async_requests:async_requests_client",
+        "//eden/mononoke/cmdlib:cmdlib_logging",
+        "//eden/mononoke/cmdlib:environment",
+        "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
+        "//eden/mononoke/cmdlib/sharding:executor_lib",
+        "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
+        "//eden/mononoke/common/connection_security_checker:connection_security_checker",
+        "//eden/mononoke/common/memory:memory",
+        "//eden/mononoke/megarepo_api:megarepo_api",
+        "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/mononoke_api:mononoke_api",
+        "//eden/mononoke/scs/if:source_control-rust-services",
+        "//eden/mononoke/scs/scs_methods:scs_methods",
+        "//eden/scm/lib/clientinfo:clientinfo",
+        "//fb303/thrift:fb303_core-rust",
+        "//fb303/thrift:fb303_core-rust-services",
+    ],
+)
+
+cpp_library(
+    name = "metadata",
+    srcs = ["metadata.cpp"],
+    headers = ["metadata.h"],
+    deps = [
+        "//eden/mononoke/scs/if:source_control-cpp2-metadata",
+    ],
+    exported_deps = [
+        "//common/rust/srserver:metadata-header",
+    ],
+)
+
+tokio_dependency_test(
+    name = "tokio_check",
+    rule = ":scs_server",
+)

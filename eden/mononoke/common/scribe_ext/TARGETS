@@ -1,0 +1,17 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
+
+oncall("scm_server_infra")
+
+rust_library(
+    name = "scribe_ext",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "//common/rust/shed/fbinit:fbinit",
+    ] + ([] if rust_oss.is_oss_build() else [
+        # buildifier: keep sorted
+        "//common/rust/scribe:scribe",
+        "//common/rust/shed/scuba_stub:scuba",
+    ]),
+)

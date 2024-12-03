@@ -1,0 +1,36 @@
+load("@fbcode_macros//build_defs:rust_library.bzl", "rust_library")
+
+oncall("sapling")
+
+rust_library(
+    name = "constructors",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "features": {
+            "default": ["git"],
+            "git": [
+                "sapling-gitstore",
+                "sapling-commits-git",
+            ],
+        },
+        "lib": {"name": "constructors"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "sapling-constructors",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
+    crate_root = "src/lib.rs",
+    features = ["git"],
+    deps = [
+        "fbsource//third-party/rust:once_cell",
+        "//eden/scm/lib/commits:commits",
+        "//eden/scm/lib/commits/git:commits-git",
+        "//eden/scm/lib/eagerepo:eagerepo",
+        "//eden/scm/lib/edenapi:edenapi",
+        "//eden/scm/lib/gitstore:gitstore",
+        "//eden/scm/lib/manifest-tree:manifest-tree",
+    ],
+)
