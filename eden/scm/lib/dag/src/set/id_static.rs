@@ -961,9 +961,8 @@ pub(crate) mod tests {
         // If we use dag1.to_id_set, it should report "A" in dag1, aka. "1".
         let dag21_a_id_set = r(dag2.to_id_set(&dag1_a_set))?;
         let dag12_a_id_set = r(dag1.to_id_set(&dag2_a_set))?;
-        // FIXME: Not the case
-        assert_eq!(dbg(dag21_a_id_set), "1");
-        assert_eq!(dbg(dag12_a_id_set), "0");
+        assert_eq!(dbg(dag21_a_id_set), "0");
+        assert_eq!(dbg(dag12_a_id_set), "1");
         Ok(())
     }
 

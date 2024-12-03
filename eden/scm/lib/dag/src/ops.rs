@@ -725,8 +725,10 @@ impl<T: IdConvert + IdMapSnapshot> ToIdSet for T {
 
         // Fast path: flatten to IdStaticSet. This works for UnionSet(...) cases.
         if let Some(set) = set.specialized_flatten_id() {
-            tracing::debug!(target: "dag::algo::to_id_set", "{:6?} (fast path 2)", set);
-            return Ok(set.id_set_losing_order().clone());
+            if None < version && version <= Some(self.map_version()) {
+                tracing::debug!(target: "dag::algo::to_id_set", "{:6?} (fast path 2)", set);
+                return Ok(set.id_set_losing_order().clone());
+            }
         }
 
         // Convert IdLazySet to IdStaticSet. Bypass hash lookups.
