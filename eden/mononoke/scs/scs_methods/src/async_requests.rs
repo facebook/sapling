@@ -11,6 +11,7 @@ use async_requests::types::Request;
 use async_requests::types::ThriftParams;
 use async_requests::types::Token;
 use async_requests::AsyncMethodRequestQueue;
+use async_requests::PollError;
 use context::CoreContext;
 use mononoke_api::RepositoryId;
 
@@ -45,10 +46,17 @@ pub(crate) async fn poll<T: Token>(
     token: T,
 ) -> Result<<T::R as Request>::PollResponse, scs_errors::ServiceError> {
     match queue {
-        Some(queue) => Ok(queue
-            .poll(ctx, token)
-            .await
-            .map_err(scs_errors::poll_error)?),
+        Some(queue) => match queue.poll(ctx, token).await {
+            Ok(res) => Ok(res),
+            Err(e) => match e {
+                PollError::Poll(err) => Err(scs_errors::poll_error(format!(
+                    "Failed to poll the results: {}",
+                    err
+                ))
+                .into()),
+                PollError::Fatal(err) => Err(err.into()),
+            },
+        },
         None => Err(async_requests_disabled()),
     }
 }

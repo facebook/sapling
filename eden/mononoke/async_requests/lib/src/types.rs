@@ -321,6 +321,9 @@ macro_rules! impl_async_svc_method_types_result {
             fn try_from(r: AsynchronousRequestResult) -> Result<thrift::$result_value_thrift_type, Self::Error> {
                 match r.thrift {
                     ThriftAsynchronousRequestResult::$result_union_variant(payload) => Ok(payload),
+                    ThriftAsynchronousRequestResult::error(e) => {
+                        Err(e.into())
+                    }
                     ThriftAsynchronousRequestResult::UnknownField(x) => {
                         // TODO: maybe use structured error?
                         Err(AsyncRequestsError::internal(
@@ -445,6 +448,9 @@ macro_rules! impl_async_svc_method_types {
                 match r.thrift {
                     ThriftAsynchronousRequestResult::$result_union_variant(payload) => {
                         Ok(thrift::$poll_response_type::response(payload))
+                    }
+                    ThriftAsynchronousRequestResult::error(e) => {
+                        Err(e.into())
                     }
                     ThriftAsynchronousRequestResult::UnknownField(x) => {
                         // TODO: maybe use structured error?

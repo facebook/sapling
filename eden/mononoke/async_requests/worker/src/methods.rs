@@ -15,12 +15,12 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Result;
 use async_requests::types::AsynchronousRequestParams;
 use async_requests::types::AsynchronousRequestResult;
 use async_requests::types::IntoConfigFormat;
+use async_requests::AsyncRequestsError;
 use context::CoreContext;
 use ephemeral_blobstore::BubbleId;
 use ephemeral_blobstore::RepoEphemeralStore;
@@ -205,6 +205,35 @@ async fn megarepo_remerge_source<R: MononokeRepo>(
     })
 }
 
+pub async fn commit_sparse_profile_size(
+    ctx: &CoreContext,
+    mononoke: Arc<Mononoke<Repo>>,
+    params: thrift::CommitSparseProfileSizeParamsV2,
+) -> Result<thrift::CommitSparseProfileSizeResponse, AsyncRequestsError> {
+    let (repo, changeset) = get_repo_and_changeset(ctx, mononoke, &params.commit)
+        .await
+        .map_err(<scs_errors::ServiceError as Into<AsyncRequestsError>>::into)?;
+
+    commit_sparse_profile_size_impl(ctx, repo, changeset, params.profiles)
+        .await
+        .map_err(<scs_errors::ServiceError as Into<AsyncRequestsError>>::into)
+}
+
+pub async fn commit_sparse_profile_delta(
+    ctx: &CoreContext,
+    mononoke: Arc<Mononoke<Repo>>,
+    params: thrift::CommitSparseProfileDeltaParamsV2,
+) -> Result<thrift::CommitSparseProfileDeltaResponse, AsyncRequestsError> {
+    let (repo, changeset, other) =
+        repo_changeset_pair(ctx.clone(), mononoke, &params.commit, &params.other_id)
+            .await
+            .map_err(<scs_errors::ServiceError as Into<AsyncRequestsError>>::into)?;
+
+    commit_sparse_profile_delta_impl(ctx, repo, changeset, other, params.profiles)
+        .await
+        .map_err(<scs_errors::ServiceError as Into<AsyncRequestsError>>::into)
+}
+
 /// Given the request params dispatches the request to the right processing
 /// function and returns the computation result. Both successfull computation
 /// and error are part of the `AsynchronousRequestResult` structure. We only
@@ -253,21 +282,10 @@ pub(crate) async fn megarepo_async_request_compute<R: MononokeRepo>(
             }).into())
         }
         async_requests_types_thrift::AsynchronousRequestParams::commit_sparse_profile_size_params(params) => {
-            let (repo, changeset ) = get_repo_and_changeset(ctx, mononoke, &params.commit).await
-                .map_err(|e| anyhow!("error finding changeset: {:?}", e))?;
-
-            Ok(commit_sparse_profile_size_impl(ctx, repo, changeset, params.profiles)
-                .await
-                .map_err(|e| e.into())
-                .into())
+            Ok(commit_sparse_profile_size(ctx, mononoke, params).await.into())
         }
         async_requests_types_thrift::AsynchronousRequestParams::commit_sparse_profile_delta_params(params) => {
-            let (repo, changeset, other) = repo_changeset_pair(ctx.clone(), mononoke, &params.commit, &params.other_id)
-                .await.map_err(|e| anyhow!("error finding changeset pair: {:?}", e))?;
-
-            Ok(commit_sparse_profile_delta_impl(ctx, repo, changeset, other, params.profiles).await
-                .map_err(|e| e.into())
-                .into())
+            Ok(commit_sparse_profile_delta(ctx, mononoke, params).await.into())
         }
         async_requests_types_thrift::AsynchronousRequestParams::UnknownField(union_tag) => {
              bail!(

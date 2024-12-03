@@ -163,6 +163,29 @@ impl From<AsyncRequestsError> for scs_thrift::AsyncRequestError {
     }
 }
 
+impl From<scs_thrift::AsyncRequestError> for AsyncRequestsError {
+    fn from(e: scs_thrift::AsyncRequestError) -> Self {
+        match e {
+            scs_thrift::AsyncRequestError::request_error(e) => Self::RequestError(RequestError(
+                Arc::new(anyhow::anyhow!("RequestError: {}", e.reason)),
+            )),
+            scs_thrift::AsyncRequestError::internal_error(e) => {
+                let mut error = anyhow::anyhow!("InternalError: {}", e.reason);
+                if let Some(backtrace) = e.backtrace {
+                    error = error.context(backtrace);
+                }
+                if !e.source_chain.is_empty() {
+                    error = error.context(format!("Source chain: {:?}", e.source_chain));
+                }
+                Self::InternalError(InternalError(Arc::new(error)))
+            }
+            scs_thrift::AsyncRequestError::UnknownField(_) => {
+                unreachable!("Unknown field in AsyncRequestError")
+            }
+        }
+    }
+}
+
 impl From<AsyncRequestsError> for scs_thrift::MegarepoAsynchronousRequestError {
     fn from(e: AsyncRequestsError) -> Self {
         match e {

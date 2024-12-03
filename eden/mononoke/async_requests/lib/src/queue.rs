@@ -42,6 +42,7 @@ use crate::types::AsynchronousRequestResult;
 use crate::types::Request;
 use crate::types::ThriftParams;
 use crate::types::Token;
+use crate::AsyncRequestsError;
 
 const INITIAL_POLL_DELAY_MS: u64 = 1000;
 const MAX_POLL_DURATION: Duration = Duration::from_secs(60);
@@ -69,6 +70,21 @@ pub struct AsyncMethodRequestQueue {
     blobstore: Arc<dyn Blobstore>,
     table: Arc<dyn LongRunningRequestsQueue>,
     repos: Option<Vec<RepositoryId>>,
+}
+
+#[derive(Debug)]
+pub enum PollError {
+    Poll(Error),
+    Fatal(AsyncRequestsError),
+}
+
+impl From<PollError> for Error {
+    fn from(err: PollError) -> Self {
+        match err {
+            PollError::Poll(e) => e,
+            PollError::Fatal(e) => e.into(),
+        }
+    }
 }
 
 impl AsyncMethodRequestQueue {
@@ -205,8 +221,13 @@ impl AsyncMethodRequestQueue {
         &self,
         ctx: &CoreContext,
         req_id: &RequestId,
-    ) -> Result<Option<<R as Request>::ThriftResult>, Error> {
-        let maybe_result_blobstore_key = match self.table.poll(ctx, req_id).await? {
+    ) -> Result<Option<<R as Request>::ThriftResult>, PollError> {
+        let maybe_result_blobstore_key = match self
+            .table
+            .poll(ctx, req_id)
+            .await
+            .map_err(PollError::Poll)?
+        {
             None => return Ok(None),
             Some((_, entry)) => entry.result_blobstore_key,
         };
@@ -214,24 +235,28 @@ impl AsyncMethodRequestQueue {
         let result_blobstore_key = match maybe_result_blobstore_key {
             Some(rbk) => rbk,
             None => {
-                return Err(anyhow!(
+                return Err(PollError::Fatal(anyhow!(
                     "Programming error: successful poll with empty result_blobstore_key for {:?}",
                     req_id
-                ));
+                ).into()));
             }
         };
 
         let result: AsynchronousRequestResult =
             AsynchronousRequestResult::load_from_key(ctx, &self.blobstore, &result_blobstore_key.0)
-                .await?;
-        Ok(Some(result.try_into()?))
+                .await
+                .map_err(PollError::Fatal)?;
+        match result.try_into() {
+            Ok(res) => Ok(Some(res)),
+            Err(e) => Err(PollError::Fatal(e)),
+        }
     }
 
     pub async fn poll<T: Token>(
         &self,
         ctx: &CoreContext,
         token: T,
-    ) -> Result<<T::R as Request>::PollResponse, Error> {
+    ) -> Result<<T::R as Request>::PollResponse, PollError> {
         STATS::poll_called.add_value(1);
         self.poll_inner(ctx, token)
             .await
@@ -245,10 +270,10 @@ impl AsyncMethodRequestQueue {
         &self,
         ctx: &CoreContext,
         token: T,
-    ) -> Result<<T::R as Request>::PollResponse, Error> {
+    ) -> Result<<T::R as Request>::PollResponse, PollError> {
         let mut backoff_ms = INITIAL_POLL_DELAY_MS;
         let before = Instant::now();
-        let row_id = token.to_db_id()?;
+        let row_id = token.to_db_id().map_err(PollError::Fatal)?;
         let req_id = RequestId(row_id, RequestType(T::R::NAME.to_owned()));
 
         loop {
@@ -478,7 +503,7 @@ mod tests {
 
                 // Verify that poll_once on this request in a "new" state
                 // returns None
-                let new_poll = q.poll_once::<$request_struct>(&ctx, &req_id).await?;
+                let new_poll = q.poll_once::<$request_struct>(&ctx, &req_id).await.map_err(|e| Into::<Error>::into(e))?;
                 assert!(new_poll.is_none());
 
                 // Simulate the tailer and grab the element from the queue, this should return the params
@@ -501,7 +526,7 @@ mod tests {
 
                 // Verify that poll_once on this request in a "in_progress" state
                 // returns None
-                let in_progress_poll = q.poll_once::<$request_struct>(&ctx,  &req_id).await?;
+                let in_progress_poll = q.poll_once::<$request_struct>(&ctx,  &req_id).await.map_err(|e| Into::<Error>::into(e))?;
                 assert!(in_progress_poll.is_none());
 
                 // Inject a result for this request
@@ -510,7 +535,7 @@ mod tests {
                 let fake_specific_result: $result = Default::default();
                 let fake_result: AsynchronousRequestResult = fake_specific_result.clone().into();
                 q.complete(&ctx, &req_id, fake_result).await?;
-                let ready_poll = q.poll_once::<$request_struct>(&ctx, &req_id).await?;
+                let ready_poll = q.poll_once::<$request_struct>(&ctx, &req_id).await.map_err(|e| Into::<Error>::into(e))?;
                 let ready_poll_response = ready_poll.unwrap();
                 assert_eq!(ready_poll_response, fake_specific_result);
 

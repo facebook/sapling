@@ -16,6 +16,7 @@ pub use error::AsyncRequestsError;
 mod queue;
 pub use queue::AsyncMethodRequestQueue;
 pub use queue::ClaimedBy;
+pub use queue::PollError;
 pub use queue::RequestId;
 
 pub mod tokens {
