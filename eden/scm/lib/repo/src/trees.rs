@@ -10,12 +10,10 @@ use std::sync::Arc;
 use anyhow::bail;
 use anyhow::Result;
 use commits_trait::DagCommits;
-use lru_cache::LruCache;
 use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
 use manifest_tree::TreeStore;
 use metrics::Counter;
-use parking_lot::Mutex;
 use parking_lot::RwLock;
 use storemodel::BoxIterator;
 use storemodel::Bytes;
@@ -29,6 +27,8 @@ use types::hgid;
 use types::HgId;
 use types::Key;
 use types::RepoPath;
+
+use crate::caching::CachingKeyStore;
 
 pub struct TreeManifestResolver {
     dag_commits: Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>,
@@ -79,61 +79,92 @@ impl ReadTreeManifest for TreeManifestResolver {
     }
 }
 
-static CACHE_HITS: Counter = Counter::new_counter("treeresolver.cache.hits");
-static CACHE_REQS: Counter = Counter::new_counter("treeresolver.cache.reqs");
+static CACHE_HITS: Counter = Counter::new_counter("treestore.cache.hits");
+static CACHE_REQS: Counter = Counter::new_counter("treestore.cache.reqs");
 
 // TreeStore wrapper which caches trees in an LRU cache.
 #[derive(Clone)]
 pub(crate) struct CachingTreeStore {
+    key_store: Arc<CachingKeyStore>,
     store: Arc<dyn TreeStore>,
-    cache: Arc<Mutex<LruCache<HgId, Bytes>>>,
 }
 
 impl CachingTreeStore {
     pub fn new(store: Arc<dyn TreeStore>, size: usize) -> Self {
         Self {
-            store,
-            cache: Arc::new(Mutex::new(LruCache::new(size))),
+            key_store: CachingKeyStore::new(store.clone_key_store().into(), size).into(),
+            store: store.clone(),
         }
     }
 
-    // Fetch a single item from cache.
+    /// Fetch a single item from cache.
     fn cached_single(&self, id: &HgId) -> Option<Bytes> {
         CACHE_REQS.add(1);
-
-        let cached = self.cache.lock().get_mut(id).cloned();
-        if cached.is_some() {
+        let result = self.key_store.cached_single(id);
+        if result.is_some() {
             CACHE_HITS.add(1);
         }
-        cached
+        result
     }
 
-    // Fetch multiple items from cache, returning (misses, hits).
-    fn cached_multi(&self, mut keys: Vec<Key>) -> (Vec<Key>, Vec<(Key, Bytes)>) {
+    /// Fetch multiple items from cache, returning (misses, hits).
+    fn cached_multi(&self, keys: Vec<Key>) -> (Vec<Key>, Vec<(Key, Bytes)>) {
         CACHE_REQS.add(keys.len());
-
-        let mut cache = self.cache.lock();
-
-        let mut found = Vec::new();
-        keys.retain(|key| {
-            if let Some(data) = cache.get_mut(&key.hgid) {
-                found.push((key.clone(), data.clone()));
-                false
-            } else {
-                true
-            }
-        });
-
-        CACHE_HITS.add(found.len());
-
-        (keys, found)
+        let found = self.key_store.cached_multi(keys);
+        CACHE_HITS.add(found.0.len());
+        found
     }
 
     /// Insert a (key, value) pair into the cache.
     /// Note: this does not insert the value into the underlying store
     fn cache_with_key(&self, key: HgId, data: Bytes) -> Result<()> {
-        self.cache.lock().insert(key, data.clone());
-        Ok(())
+        self.key_store.cache_with_key(key, data)
+    }
+}
+
+impl KeyStore for CachingTreeStore {
+    fn get_content_iter(
+        &self,
+        keys: Vec<Key>,
+        fetch_mode: FetchMode,
+    ) -> Result<BoxIterator<Result<(Key, Bytes)>>> {
+        self.key_store.get_content_iter(keys, fetch_mode)
+    }
+
+    fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> Result<Option<Bytes>> {
+        self.key_store.get_local_content(path, hgid)
+    }
+
+    fn get_content(&self, path: &RepoPath, hgid: HgId, fetch_mode: FetchMode) -> Result<Bytes> {
+        self.key_store.get_content(path, hgid, fetch_mode)
+    }
+
+    fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
+        self.key_store.prefetch(keys)
+    }
+
+    fn insert_data(&self, opts: InsertOpts, path: &RepoPath, data: &[u8]) -> Result<HgId> {
+        self.key_store.insert_data(opts, path, data)
+    }
+
+    fn flush(&self) -> Result<()> {
+        self.key_store.flush()
+    }
+
+    fn refresh(&self) -> Result<()> {
+        self.key_store.refresh()
+    }
+
+    fn format(&self) -> SerializationFormat {
+        self.key_store.format()
+    }
+
+    fn statistics(&self) -> Vec<(String, usize)> {
+        self.store.statistics()
+    }
+
+    fn clone_key_store(&self) -> Box<dyn KeyStore> {
+        self.store.clone_key_store()
     }
 }
 
@@ -177,187 +208,98 @@ impl TreeStore for CachingTreeStore {
     }
 
     fn clone_tree_store(&self) -> Box<dyn TreeStore> {
-        Box::new(self.clone())
+        self.store.clone_tree_store()
     }
 }
 
-impl KeyStore for CachingTreeStore {
-    fn get_content_iter(
-        &self,
-        keys: Vec<Key>,
-        fetch_mode: FetchMode,
-    ) -> Result<BoxIterator<Result<(Key, Bytes)>>> {
-        let (keys, cached) = self.cached_multi(keys);
-
-        let uncached = CachingIter {
-            iter: self.store.get_content_iter(keys, fetch_mode)?,
-            cache: self.cache.clone(),
-        };
-
-        Ok(Box::new(uncached.chain(cached.into_iter().map(Ok))))
-    }
-
-    fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> Result<Option<Bytes>> {
-        if let Some(cached) = self.cached_single(&hgid) {
-            Ok(Some(cached))
-        } else {
-            match self.store.get_local_content(path, hgid) {
-                Ok(Some(data)) => {
-                    self.cache.lock().insert(hgid, data.clone());
-                    Ok(Some(data))
-                }
-                r => r,
-            }
-        }
-    }
-
-    fn get_content(&self, path: &RepoPath, hgid: HgId, fetch_mode: FetchMode) -> Result<Bytes> {
-        if let Some(cached) = self.cached_single(&hgid) {
-            Ok(cached)
-        } else {
-            match self.store.get_content(path, hgid, fetch_mode) {
-                Ok(data) => {
-                    self.cache.lock().insert(hgid, data.clone());
-                    Ok(data)
-                }
-                r => r,
-            }
-        }
-    }
-
-    fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
-        // Intercept prefetch() so we can prime our cache. This is what manifest-tree
-        // operations like bfs_iter and diff use when walking trees.
-        self.get_content_iter(keys, FetchMode::AllowRemote)?
-            .for_each(|_| ());
-        Ok(())
-    }
-
-    fn insert_data(&self, opts: InsertOpts, path: &RepoPath, data: &[u8]) -> Result<HgId> {
-        self.store.insert_data(opts, path, data)
-    }
-
-    fn flush(&self) -> Result<()> {
-        self.store.flush()
-    }
-
-    fn refresh(&self) -> Result<()> {
-        self.store.refresh()
-    }
-
-    fn format(&self) -> SerializationFormat {
-        self.store.format()
-    }
-
-    fn statistics(&self) -> Vec<(String, usize)> {
-        self.store.statistics()
-    }
-
-    fn clone_key_store(&self) -> Box<dyn KeyStore> {
-        Box::new(self.clone())
-    }
-}
-
-// An Iterator that lazily populates tree cache during iteration.
-struct CachingIter {
-    iter: BoxIterator<Result<(Key, Bytes)>>,
-    cache: Arc<Mutex<LruCache<HgId, Bytes>>>,
-}
-
-impl Iterator for CachingIter {
-    type Item = Result<(Key, Bytes)>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.iter.next() {
-            Some(item) => {
-                if let Ok((key, data)) = &item {
-                    self.cache.lock().insert(key.hgid, data.clone());
-                }
-                Some(item)
-            }
-            None => None,
-        }
-    }
-}
-
+/// Tests that only exercise CachingKeyStore code-paths should go in the CachingKeyStore module.
+/// This test module is specifically for TreeStore tests.
 #[cfg(test)]
 mod test {
+    use manifest_tree::init;
     use manifest_tree::testutil::TestStore;
     use rand_chacha::rand_core::SeedableRng;
     use rand_chacha::ChaChaRng;
+    use storemodel::basic_serialize_tree;
+    use storemodel::Kind;
+    use storemodel::TreeItemFlag;
     use types::RepoPathBuf;
 
     use super::*;
 
     #[test]
     fn test_tree_cache() -> Result<()> {
+        init();
         let inner_store = Arc::new(TestStore::new());
 
-        let caching_store = CachingTreeStore {
-            store: inner_store.clone(),
-            cache: Arc::new(Mutex::new(LruCache::new(5))),
-        };
+        let caching_store = CachingTreeStore::new(inner_store.clone(), 5);
 
-        let dir1_path = RepoPathBuf::from_string("dir1".to_string())?;
-        let dir2_path = RepoPathBuf::from_string("dir2".to_string())?;
+        let top_level_path = RepoPathBuf::from_string("dir1".to_string()).expect("to create path");
+        let dir2_path = RepoPathBuf::from_string("dir1/dir2".to_string()).expect("to create path");
+        let dir3_path = RepoPathBuf::from_string("dir1/dir3".to_string()).expect("to create path");
 
-        let dir1_id = caching_store.insert_data(Default::default(), &dir1_path, b"dir1")?;
-        let dir2_id = caching_store.insert_data(Default::default(), &dir2_path, b"dir2")?;
+        // The ID of the cached trees doesn't actually matter
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let dir3_id = HgId::random(&mut rng);
+        let top_level_id = HgId::random(&mut rng);
 
-        assert_eq!(inner_store.key_fetch_count(), 0);
+        // Insert a tree into the underlying store
+        let dir2_id = caching_store
+            .insert_tree(
+                InsertOpts {
+                    kind: Kind::Tree,
+                    ..Default::default()
+                },
+                &dir2_path,
+                vec![],
+            )
+            .expect("to create id");
 
-        assert_eq!(
-            caching_store.get_content(&dir1_path, dir1_id, FetchMode::AllowRemote)?,
-            b"dir1"
-        );
-        assert_eq!(inner_store.key_fetch_count(), 1);
-
-        // Fetch again - make sure we cached it.
-        assert_eq!(
-            caching_store.get_content(&dir1_path, dir1_id, FetchMode::AllowRemote)?,
-            b"dir1"
-        );
-        assert_eq!(inner_store.key_fetch_count(), 1);
-
-        // Fetch both via iterator.
-        let key1 = Key::new(dir1_path.clone(), dir1_id);
-        let key2 = Key::new(dir2_path.clone(), dir2_id);
-        assert_eq!(
-            caching_store
-                .get_content_iter(vec![key1.clone(), key2.clone()], FetchMode::AllowRemote)?
-                .collect::<Result<Vec<_>>>()?,
+        // Insert two trees into the cache (not the underlying store).
+        let dir3_data = basic_serialize_tree(vec![], caching_store.format())?;
+        let top_level_data = basic_serialize_tree(
             vec![
-                (key2.clone(), b"dir2".as_ref().into()),
-                (key1.clone(), b"dir1".as_ref().into()),
-            ]
-        );
-        // Should only have done 1 additional fetch for dir2.
-        assert_eq!(inner_store.key_fetch_count(), 2);
+                (
+                    dir2_path.clone().last_component().unwrap().to_owned(),
+                    dir2_id,
+                    TreeItemFlag::Directory,
+                ),
+                (
+                    dir3_path.clone().last_component().unwrap().to_owned(),
+                    dir3_id,
+                    TreeItemFlag::Directory,
+                ),
+            ],
+            caching_store.format(),
+        )?;
+        caching_store
+            .cache_with_key(dir3_id, dir3_data)
+            .expect("to create id");
+        caching_store
+            .cache_with_key(top_level_id, top_level_data.clone())
+            .expect("to create id");
 
-        assert_eq!(
-            caching_store
-                .get_content_iter(vec![key1.clone(), key2.clone()], FetchMode::AllowRemote)?
-                .collect::<Result<Vec<_>>>()?,
+        let trees = caching_store.get_tree_iter(
             vec![
-                (key1.clone(), b"dir1".as_ref().into()),
-                (key2.clone(), b"dir2".as_ref().into()),
-            ]
-        );
+                Key::new(dir2_path.clone(), dir2_id),
+                Key::new(top_level_path.clone(), top_level_id),
+            ],
+            FetchMode::LocalOnly,
+        )?;
 
-        caching_store.prefetch(vec![key1.clone(), key2.clone()])?;
-
-        assert_eq!(inner_store.key_fetch_count(), 2);
-
-        // Ensure only the cache is modified; not the underlying store
-        let insert_count = inner_store.insert_count();
-        caching_store.cache_with_key(dir3_id.clone(), b"dir3".as_ref().into())?;
-        assert_eq!(insert_count, inner_store.insert_count());
-        let cached_value = caching_store
-            .cached_single(&dir3_id)
-            .expect("value to be cached");
-        assert_eq!(cached_value, b"dir3");
+        // TreeStore methods will only contain results from the underlying store. Any cached trees
+        // will not be returned.
+        for tree in trees {
+            match tree {
+                Ok(x) => {
+                    assert_eq!(dir2_id, x.0.hgid);
+                    assert_eq!(dir2_path, x.0.path);
+                }
+                Err(e) => {
+                    e.to_string().contains(top_level_id.to_string().as_str());
+                }
+            }
+        }
 
         Ok(())
     }

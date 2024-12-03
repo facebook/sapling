@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use lru_cache::LruCache;
+use metrics::Counter;
 use parking_lot::Mutex;
 use storemodel::BoxIterator;
 use storemodel::Bytes;
@@ -25,6 +26,9 @@ pub struct CachingKeyStore {
     cache: Arc<Mutex<LruCache<HgId, Bytes>>>,
 }
 
+static CACHE_HITS: Counter = Counter::new_counter("keystore.cache.hits");
+static CACHE_REQS: Counter = Counter::new_counter("keystore.cache.reqs");
+
 impl CachingKeyStore {
     pub fn new(store: Arc<dyn KeyStore>, size: usize) -> Self {
         Self {
@@ -35,16 +39,23 @@ impl CachingKeyStore {
 
     // Fetch a single item from cache.
     pub(crate) fn cached_single(&self, id: &HgId) -> Option<Bytes> {
-        self.cache.lock().get_mut(id).cloned()
+        CACHE_REQS.increment();
+        let result = self.cache.lock().get_mut(id).cloned();
+        if result.is_some() {
+            CACHE_HITS.increment();
+        }
+        result
     }
 
     // Fetch multiple items from cache, returning (misses, hits).
     pub(crate) fn cached_multi(&self, mut keys: Vec<Key>) -> (Vec<Key>, Vec<(Key, Bytes)>) {
+        CACHE_REQS.add(keys.len());
         let mut cache = self.cache.lock();
 
         let mut found = Vec::new();
         keys.retain(|key| {
             if let Some(data) = cache.get_mut(&key.hgid) {
+                CACHE_HITS.increment();
                 found.push((key.clone(), data.clone()));
                 false
             } else {
