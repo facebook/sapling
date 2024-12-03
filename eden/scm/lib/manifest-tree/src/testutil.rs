@@ -15,6 +15,7 @@ use manifest::testutil::*;
 use manifest::Manifest;
 use minibytes::Bytes;
 use parking_lot::RwLock;
+use storemodel::FileStore;
 use storemodel::InsertOpts;
 use storemodel::KeyStore;
 use storemodel::SerializationFormat;
@@ -141,6 +142,12 @@ impl KeyStore for TestStore {
 
 impl TreeStore for TestStore {
     fn clone_tree_store(&self) -> Box<dyn TreeStore> {
+        Box::new(self.clone())
+    }
+}
+
+impl FileStore for TestStore {
+    fn clone_file_store(&self) -> Box<dyn FileStore + 'static> {
         Box::new(self.clone())
     }
 }
