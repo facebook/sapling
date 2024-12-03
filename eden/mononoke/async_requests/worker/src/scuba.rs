@@ -12,6 +12,7 @@ use async_requests_types_thrift::AsynchronousRequestResult as ThriftAsynchronous
 use context::CoreContext;
 use futures_stats::FutureStats;
 use slog::info;
+use source_control::AsyncRequestError;
 
 use crate::worker::AsyncMethodRequestWorker;
 
@@ -55,12 +56,20 @@ pub(crate) fn log_result(
 
     let (status, error) = match result {
         Ok(response) => match response.thrift() {
-            ThriftAsynchronousRequestResult::error(error) => {
-                ("ERROR", Some(format!("{:?}", error)))
-            }
+            ThriftAsynchronousRequestResult::error(error) => match error {
+                AsyncRequestError::request_error(error) => {
+                    ("REQUEST_ERROR", Some(format!("{:?}", error)))
+                }
+                AsyncRequestError::internal_error(error) => {
+                    ("INTERNAL_ERROR", Some(format!("{:?}", error)))
+                }
+                AsyncRequestError::UnknownField(error) => {
+                    ("UNKNOWN_ERROR", Some(format!("unknown error: {:?}", error)))
+                }
+            },
             _ => ("SUCCESS", None),
         },
-        Err(err) => ("TEMPORARY WORKER ERROR", Some(err.to_string())),
+        Err(err) => ("POLL_ERROR", Some(err.to_string())),
     };
 
     scuba.add_future_stats(stats);
