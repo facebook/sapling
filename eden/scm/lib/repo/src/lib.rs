@@ -7,6 +7,7 @@
 
 #![allow(dead_code)]
 
+pub mod caching;
 pub mod constants;
 pub mod errors;
 mod init;
