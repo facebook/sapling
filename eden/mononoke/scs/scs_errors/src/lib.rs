@@ -292,6 +292,22 @@ impl From<DerivationError> for ServiceError {
 }
 
 macro_rules! impl_into_thrift_error {
+    // new-style poll methods can return a Poll error
+    (poll $t:ty) => {
+        impl From<ServiceError> for $t {
+            fn from(e: ServiceError) -> Self {
+                match e {
+                    ServiceError::Request(e) => e.into(),
+                    ServiceError::Internal(e) => e.into(),
+                    ServiceError::Overload(e) => e.into(),
+                    ServiceError::Poll(e) => e.into(),
+                }
+            }
+        }
+    };
+
+    // Old-style poll methods can't distinguish between a Poll error and an Internal error, so let's do our best.
+    // This also works just fine for non-poll methods that won't be returning `ServiceError::Poll` anyway.
     ($t:ty) => {
         impl From<ServiceError> for $t {
             fn from(e: ServiceError) -> Self {
@@ -299,7 +315,7 @@ macro_rules! impl_into_thrift_error {
                     ServiceError::Request(e) => e.into(),
                     ServiceError::Internal(e) => e.into(),
                     ServiceError::Overload(e) => e.into(),
-                    ServiceError::Poll(_) => todo!(),
+                    ServiceError::Poll(e) => internal_error(format!("poll error: {}", e)).into(), // this shouldn't happen
                 }
             }
         }
@@ -345,9 +361,9 @@ impl_into_thrift_error!(service::CommitPathHistoryExn);
 impl_into_thrift_error!(service::CommitPathLastChangedExn);
 impl_into_thrift_error!(service::CommitMultiplePathLastChangedExn);
 impl_into_thrift_error!(service::CommitSparseProfileDeltaAsyncExn);
-impl_into_thrift_error!(service::CommitSparseProfileDeltaPollExn);
+impl_into_thrift_error!(poll service::CommitSparseProfileDeltaPollExn);
 impl_into_thrift_error!(service::CommitSparseProfileSizeAsyncExn);
-impl_into_thrift_error!(service::CommitSparseProfileSizePollExn);
+impl_into_thrift_error!(poll service::CommitSparseProfileSizePollExn);
 impl_into_thrift_error!(service::TreeExistsExn);
 impl_into_thrift_error!(service::TreeListExn);
 impl_into_thrift_error!(service::FileExistsExn);
@@ -378,7 +394,7 @@ impl_into_thrift_error!(service::CloudWorkspaceInfoExn);
 impl_into_thrift_error!(service::CloudUserWorkspacesExn);
 impl_into_thrift_error!(service::CloudWorkspaceSmartlogExn);
 impl_into_thrift_error!(service::AsyncPingExn);
-impl_into_thrift_error!(service::AsyncPingPollExn);
+impl_into_thrift_error!(poll service::AsyncPingPollExn);
 
 pub fn invalid_request(reason: impl ToString) -> thrift::RequestError {
     thrift::RequestError {
