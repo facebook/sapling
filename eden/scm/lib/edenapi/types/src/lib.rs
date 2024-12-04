@@ -74,6 +74,7 @@ pub use crate::blame::BlameRequest;
 pub use crate::blame::BlameResult;
 pub use crate::bookmark::BookmarkEntry;
 pub use crate::bookmark::BookmarkRequest;
+pub use crate::bookmark::BookmarkResult;
 pub use crate::bookmark::SetBookmarkRequest;
 pub use crate::bookmark::SetBookmarkResponse;
 pub use crate::cloud::CloudShareWorkspaceRequest;

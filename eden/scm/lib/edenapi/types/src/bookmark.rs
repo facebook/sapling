@@ -58,3 +58,12 @@ pub struct SetBookmarkResponse {
     #[no_default]
     pub data: Result<(), ServerError>,
 }
+
+#[auto_wire]
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct BookmarkResult {
+    #[id(0)]
+    #[no_default]
+    pub data: Result<BookmarkEntry, ServerError>,
+}

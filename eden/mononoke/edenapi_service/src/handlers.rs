@@ -93,6 +93,7 @@ pub enum SaplingRemoteApiMethod {
     AlterSnapshot,
     Blame,
     Bookmarks,
+    Bookmarks2,
     Capabilities,
     CloudHistoricalVersions,
     CloudReferences,
@@ -137,6 +138,7 @@ impl fmt::Display for SaplingRemoteApiMethod {
             Self::AlterSnapshot => "alter_snapshot",
             Self::Blame => "blame",
             Self::Bookmarks => "bookmarks",
+            Self::Bookmarks2 => "bookmarks2",
             Self::Capabilities => "capabilities",
             Self::CloudHistoricalVersions => "cloud_historical_versions",
             Self::CloudReferences => "cloud_references",
@@ -470,6 +472,7 @@ pub fn build_router<R: Send + Sync + Clone + 'static>(ctx: ServerContext<R>) -> 
         Handlers::setup::<blame::BlameHandler>(route);
         Handlers::setup::<bookmarks::BookmarksHandler>(route);
         Handlers::setup::<bookmarks::SetBookmarkHandler>(route);
+        Handlers::setup::<bookmarks::Bookmarks2Handler>(route);
         Handlers::setup::<commit_cloud::CommitCloudHistoricalVersions>(route);
         Handlers::setup::<commit_cloud::CommitCloudReferences>(route);
         Handlers::setup::<commit_cloud::CommitCloudRenameWorkspace>(route);

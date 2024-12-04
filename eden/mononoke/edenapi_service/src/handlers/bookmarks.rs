@@ -15,6 +15,7 @@ use bookmarks::Freshness;
 use bytes::Bytes;
 use edenapi_types::BookmarkEntry;
 use edenapi_types::BookmarkRequest;
+use edenapi_types::BookmarkResult;
 use edenapi_types::HgId;
 use edenapi_types::ServerError;
 use edenapi_types::SetBookmarkRequest;
@@ -24,6 +25,7 @@ use futures::StreamExt;
 use gotham_ext::handler::SlapiCommitIdentityScheme;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
+use mononoke_api::MononokeError;
 use mononoke_api::MononokeRepo;
 use mononoke_api::Repo;
 use mononoke_api_hg::HgRepoContext;
@@ -39,6 +41,7 @@ const MAX_CONCURRENT_FETCHES_PER_REQUEST: usize = 100;
 
 /// Resolve the bookmarks requested by the client.
 pub struct BookmarksHandler;
+pub struct Bookmarks2Handler;
 
 #[async_trait]
 impl SaplingRemoteApiHandler for BookmarksHandler {
@@ -214,4 +217,43 @@ async fn set_bookmark<R: MononokeRepo>(
             ));
         }
     })
+}
+
+/// Error wrapped bookmarks
+
+#[async_trait]
+impl SaplingRemoteApiHandler for Bookmarks2Handler {
+    type Request = BookmarkRequest;
+    type Response = BookmarkResult;
+
+    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::Bookmarks2;
+    const ENDPOINT: &'static str = "/bookmarks2";
+    const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[
+        SlapiCommitIdentityScheme::Hg,
+        SlapiCommitIdentityScheme::Git,
+    ];
+
+    async fn handler(
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
+        request: Self::Request,
+    ) -> HandlerResult<'async_trait, Self::Response> {
+        let slapi_flavour = ectx.slapi_flavour().clone();
+        let repo = ectx.repo();
+        let fetches = request.bookmarks.into_iter().map(move |bookmark| {
+            let repo_ctx = repo.clone();
+            async move {
+                Ok(BookmarkResult {
+                    data: fetch_bookmark(repo_ctx, bookmark, slapi_flavour)
+                        .await
+                        .map_err(MononokeError::from)
+                        .map_err(ServerError::from),
+                })
+            }
+        });
+
+        Ok(stream::iter(fetches)
+            .buffer_unordered(MAX_CONCURRENT_FETCHES_PER_REQUEST)
+            .boxed())
+    }
 }
