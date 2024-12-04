@@ -42,7 +42,8 @@
     "scm/mononoke:changeset_path_context_use_skeleton_manifest_v2": true,
     "scm/mononoke:case_conflicts_check_use_ccsm": true,
     "scm/mononoke:should_set_committer_info_to_author_info_if_empty": true,
-    "scm/mononoke:megarepo_disable_mutable_rename_creation": false
+    "scm/mononoke:megarepo_disable_mutable_rename_creation": false,
+    "scm/mononoke:land_service_find_region_using_db_locator": true
   },
   "ints": {
     "scm/mononoke_timeouts:repo_client_clone_timeout_secs": 14400,

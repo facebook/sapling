@@ -94,13 +94,11 @@ rust_library(
     name = "pushrebase_client",
     srcs = glob(["client/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "client"},
-    deps = [
+    deps = ([
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:slog",
-        "//common/rust/smc-thrift:smc-thrift",
-        "//common/smc/if:Smc2-rust-clients",
         "//eden/mononoke/bookmarks:bookmarks",
         "//eden/mononoke/bookmarks:bookmarks_movement",
         "//eden/mononoke/bookmarks:bookmarks_types",
@@ -114,9 +112,13 @@ rust_library(
         "//eden/mononoke/server/context:context",
     ] + ([] if rust_oss.is_oss_build() else [
         "fbsource//third-party/rust:arc-swap",
-        "fbsource//third-party/rust:regex",
         "//eden/mononoke/land_service/if:land_service_if-rust",
         "//eden/mononoke/land_service/if:land_service_if-rust-clients",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
-    ]),
+        "//common/rust/mysql:mysql_client",
+        "fbsource//third-party/rust:regex",
+        "//common/rust/shed/justknobs_stub:justknobs",
+        "//common/rust/smc-thrift:smc-thrift",
+        "//common/smc/if:Smc2-rust-clients",
+    ])),
 )
