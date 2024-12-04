@@ -76,9 +76,7 @@ define_stats! {
     cleanup_error: timeseries("cleanup.error"; Count),
     dequeue_error: timeseries("dequeue.error"; Count),
     process_aborted: timeseries("process.aborted"; Count),
-    process_complete_failed: timeseries("process.complete.failed"; Count),
     process_failed: timeseries("process.failed"; Count),
-    process_succeeded: timeseries("process.succeeded"; Count),
     requested: timeseries("requested"; Count),
 
     stats_error: timeseries("stats.error"; Count),
@@ -341,7 +339,6 @@ impl AsyncMethodRequestWorker {
                 // Save the result.
                 match result {
                     Ok(work_result) => {
-                        STATS::process_succeeded.add_value(1);
                         let complete_result = self
                             .queue
                             .complete(&ctx, &req_id, work_result.clone())
@@ -355,7 +352,6 @@ impl AsyncMethodRequestWorker {
                                 );
                             }
                             Err(err) => {
-                                STATS::process_complete_failed.add_value(1);
                                 error!(
                                     ctx.logger(),
                                     "[{}] failed to save result: {:?}", &req_id.0, err
@@ -364,7 +360,6 @@ impl AsyncMethodRequestWorker {
                         };
                     }
                     Err(err) => {
-                        STATS::process_failed.add_value(1);
                         info!(
                             ctx.logger(),
                             "[{}] worker failed to process request, will retry: {:?}",
