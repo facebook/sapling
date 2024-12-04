@@ -21,6 +21,7 @@ use std::time::Duration;
 use anyhow::Error;
 use anyhow::Result;
 use async_requests::types::AsynchronousRequestParams;
+use async_requests::types::RequestStatus;
 use async_requests::AsyncMethodRequestQueue;
 use async_requests::AsyncRequestsError;
 use async_requests::ClaimedBy;
@@ -61,6 +62,12 @@ const DEQUEUE_STREAM_SLEEP_TIME: u64 = 1000;
 const ABANDONED_REQUEST_THRESHOLD_SECS: i64 = 5 * 60;
 const KEEP_ALIVE_INTERVAL: Duration = Duration::from_secs(10);
 const STATS_LOOP_INTERNAL: Duration = Duration::from_secs(5 * 60);
+const STATUSES: [RequestStatus; 4] = [
+    RequestStatus::New,
+    RequestStatus::InProgress,
+    RequestStatus::Ready,
+    RequestStatus::Polled,
+];
 
 define_stats! {
     prefix = "async_requests.worker";
@@ -420,14 +427,15 @@ impl AsyncMethodRequestWorker {
             let res = queue.get_queue_stats(ctx).await;
             match res {
                 Ok(res) => {
-                    for (status, count) in res.queue_length_by_status.iter() {
+                    for status in STATUSES {
+                        let count = res.queue_length_by_status.get(&status).unwrap_or(&0);
                         STATS::queue_length_by_status.set_value(
                             ctx.fb,
                             *count as i64,
                             (status.to_string(),),
                         );
-                    }
-                    for (status, ts) in res.queue_age_by_status.iter() {
+
+                        let ts = res.queue_age_by_status.get(&status).unwrap_or(&now);
                         let diff = now.timestamp_seconds() - ts.timestamp_seconds();
                         STATS::queue_age_by_status.set_value(ctx.fb, diff, (status.to_string(),));
                     }
