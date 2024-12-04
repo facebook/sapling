@@ -51,6 +51,7 @@ pub async fn counter_check_and_bump<'a>(
     counter: BoxGlobalTimeWindowCounter,
     rate_limit_name: &'a str,
     max_value: f64,
+    time_window: u32,
     enforced: bool,
     scuba_extras: HashMap<&'a str, &'a str>,
 ) -> Result<(), Error> {
@@ -59,7 +60,7 @@ pub async fn counter_check_and_bump<'a>(
         scuba.add(key, val);
     }
 
-    match timeout(RATELIM_FETCH_TIMEOUT, counter.get(1)).await {
+    match timeout(RATELIM_FETCH_TIMEOUT, counter.get(time_window)).await {
         Ok(Ok(count)) => {
             let new_value = count + 1.0;
             if new_value <= max_value {
@@ -161,6 +162,7 @@ mod test {
             counter,
             rate_limit_name,
             max_value,
+            1,
             true,
             scuba_extras.clone(),
         )
@@ -175,6 +177,7 @@ mod test {
             counter,
             rate_limit_name,
             max_value,
+            1,
             true,
             scuba_extras.clone(),
         )
@@ -189,6 +192,7 @@ mod test {
             counter,
             rate_limit_name,
             max_value,
+            1,
             true,
             scuba_extras.clone(),
         )
@@ -204,6 +208,7 @@ mod test {
             counter,
             rate_limit_name,
             max_value,
+            1,
             false,
             scuba_extras.clone(),
         )
