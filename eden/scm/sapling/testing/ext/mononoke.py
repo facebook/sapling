@@ -1347,6 +1347,8 @@ def setup_environment_variables(stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
         "--with-test-megarepo-configs-client=true",
         "--acl-file",
         acl_file,
+        "--runtime-threads",
+        "6",
     ]
     all_args = " ".join(common_args)
     env.setenv("COMMON_ARGS_U", all_args)
