@@ -148,12 +148,23 @@ impl MononokeApp {
     }
 
     /// Start the monitoring server for the provided service.
-    pub fn start_monitoring<Service>(&self, app_name: &str, service: Service) -> Result<()>
+    pub fn start_monitoring<Service>(
+        &self,
+        handle: &Handle,
+        app_name: &str,
+        service: Service,
+    ) -> Result<()>
     where
         Service: Fb303Service + Sync + Send + 'static,
     {
         let monitoring_args = self.extension_args::<MonitoringAppExtension>()?;
-        monitoring_args.start_monitoring_server(self.fb, app_name, self.logger(), service)?;
+        monitoring_args.start_monitoring_server(
+            self.fb,
+            handle,
+            app_name,
+            self.logger(),
+            service,
+        )?;
         Ok(())
     }
 
@@ -201,14 +212,14 @@ impl MononokeApp {
         Fut: Future<Output = Result<()>>,
         Service: Fb303Service + Sync + Send + 'static,
     {
-        self.start_monitoring(app_name, service)?;
-        self.start_stats_aggregation()?;
-
-        let logger = self.logger().clone();
         let runtime = self
             .runtime
             .take()
             .ok_or_else(|| anyhow!("MononokeApp already started"))?;
+        self.start_monitoring(runtime.handle(), app_name, service)?;
+        self.start_stats_aggregation()?;
+
+        let logger = self.logger().clone();
         let result = runtime.block_on(main(self));
 
         if let Err(e) = result {

@@ -246,7 +246,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         LogMiddleware::slog(logger.clone())
     };
 
-    app.start_monitoring(SERVICE_NAME, AliveService)?;
+    app.start_monitoring(app.runtime(), SERVICE_NAME, AliveService)?;
     app.start_stats_aggregation()?;
 
     let common = &app.repo_configs().common;

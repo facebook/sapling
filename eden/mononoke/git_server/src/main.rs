@@ -217,7 +217,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .sharded_service_name
         .as_ref()
         .map(|_| ShardedService::MononokeGitServer);
-    app.start_monitoring(SERVICE_NAME, AliveService)?;
+    app.start_monitoring(app.runtime(), SERVICE_NAME, AliveService)?;
     app.start_stats_aggregation()?;
 
     let requests_counter = Arc::new(AtomicI64::new(0));

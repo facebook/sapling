@@ -312,7 +312,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         .sharded_service_name
         .as_ref()
         .map(|_| ShardedService::SaplingRemoteApi);
-    app.start_monitoring("mononoke_server", service.clone())?;
+    app.start_monitoring(&runtime, "mononoke_server", service.clone())?;
     app.start_stats_aggregation()?;
 
     let repo_listeners = {

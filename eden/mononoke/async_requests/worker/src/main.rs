@@ -181,7 +181,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let blobstore = runtime.block_on(open_blobstore(fb, &app))?;
     let will_exit = Arc::new(AtomicBool::new(false));
 
-    app.start_monitoring(SERVICE_NAME, AliveService)?;
+    app.start_monitoring(app.runtime(), SERVICE_NAME, AliveService)?;
     app.start_stats_aggregation()?;
 
     if let Some(mut executor) = args.sharded_executor_args.clone().build_executor(
