@@ -1842,3 +1842,7 @@ function wait_for_bookmark_move_to_commit {
   exit 1
 
 }
+
+function fb303-status() {
+  $FB303_STATUS "$@"
+}

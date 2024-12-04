@@ -58,6 +58,7 @@ MONONOKE_TARGETS_TO_ENV = {
     "//eden/mononoke:mononoke": "MONONOKE_SERVER",
     "//eden/mononoke:packer": "MONONOKE_PACKER",
     "//eden/mononoke:sqlblob_gc": "MONONOKE_SQLBLOB_GC",
+    "//metalos/facebook/fb303-status:fb303-status": "FB303_STATUS",  # used to test our fb303 counters
     "//security/source_control/verify_integrity/service:verify_integrity_service": "VERIFY_INTEGRITY_SERVICE",
     "//security/source_control/verify_integrity:verify_integrity": "VERIFY_INTEGRITY",
     "//signedsources:fixtures": "SIGNED_SOURCES_FIXTURES",
