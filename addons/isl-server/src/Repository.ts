@@ -1185,7 +1185,7 @@ export class Repository {
     ctx: RepositoryContext,
     hash: Hash,
     excludedFiles: string[],
-  ): Promise<{sloc: number; strictSloc: number}> {
+  ): Promise<number | undefined> {
     const exclusions = excludedFiles.flatMap(file => [
       '-X',
       absolutePathForFileInRepo(file, this) ?? file,
@@ -1200,24 +1200,18 @@ export class Repository {
     ).stdout;
 
     const sloc = this.parseSlocFrom(output);
-    const strictSloc = this.parseStrictSlocFrom(output);
 
-    ctx.logger.info(
-      'Fetched SLOC for commit:',
-      hash,
-      output,
-      `SLOC: ${sloc} Strict SLOC: ${strictSloc}`,
-    );
-    return {sloc, strictSloc};
+    ctx.logger.info('Fetched SLOC for commit:', hash, output, `SLOC: ${sloc}`);
+    return sloc;
   }
 
   public async fetchPendingAmendSignificantLinesOfCode(
     ctx: RepositoryContext,
     hash: Hash,
     includedFiles: string[],
-  ): Promise<{sloc: number; strictSloc: number}> {
+  ): Promise<number | undefined> {
     if (includedFiles.length === 0) {
-      return {sloc: 0, strictSloc: 0}; // don't bother running sl diff if there are no files to include
+      return undefined;
     }
     const inclusions = includedFiles.flatMap(file => [
       '-I',
@@ -1233,29 +1227,22 @@ export class Repository {
     ).stdout;
 
     if (output.trim() === '') {
-      return {sloc: 0, strictSloc: 0};
+      return undefined;
     }
 
     const sloc = this.parseSlocFrom(output);
-    const strictSloc = this.parseStrictSlocFrom(output);
 
-    ctx.logger.info(
-      'Fetched Pending AMEND SLOC for commit:',
-      hash,
-      output,
-      `SLOC: ${sloc} Strict SLOC: ${strictSloc}`,
-    );
-
-    return {sloc, strictSloc};
+    ctx.logger.info('Fetched Pending AMEND SLOC for commit:', hash, output, `SLOC: ${sloc}`);
+    return sloc;
   }
 
   public async fetchPendingSignificantLinesOfCode(
     ctx: RepositoryContext,
     hash: Hash,
     includedFiles: string[],
-  ): Promise<{sloc: number; strictSloc: number}> {
+  ): Promise<number | undefined> {
     if (includedFiles.length === 0) {
-      return {sloc: 0, strictSloc: 0}; // don't bother running sl diff if there are no files to include
+      return undefined; // don't bother running sl diff if there are no files to include
     }
     const inclusions = includedFiles.flatMap(file => [
       '-I',
@@ -1271,15 +1258,9 @@ export class Repository {
     ).stdout;
 
     const sloc = this.parseSlocFrom(output);
-    const strictSloc = this.parseStrictSlocFrom(output);
 
-    ctx.logger.info(
-      'Fetched Pending SLOC for commit:',
-      hash,
-      output,
-      `SLOC: ${sloc} Strict SLOC: ${strictSloc}`,
-    );
-    return {sloc, strictSloc};
+    ctx.logger.info('Fetched Pending SLOC for commit:', hash, output, `SLOC: ${sloc}`);
+    return sloc;
   }
 
   private parseSlocFrom(output: string) {
@@ -1290,25 +1271,6 @@ export class Repository {
     const insertions = parseInt(diffStatMatch?.[1] ?? '0', 10);
     const deletions = parseInt(diffStatMatch?.[2] ?? '0', 10);
     const sloc = insertions + deletions;
-    return sloc;
-  }
-
-  private parseStrictSlocFrom(output: string) {
-    let sloc = 0;
-    const lines = output.trim().split('\n');
-
-    for (let i = 0; i < lines.length - 1; i++) {
-      const fileChange = lines[i];
-      const [path, lineChange] = fileChange.split('|');
-      const trimmedPath = path.trim();
-
-      if (!trimmedPath.includes('/__tests__/') && !trimmedPath.endsWith('.md')) {
-        const lineChangeMatch = lineChange.match(/\d+/);
-        const lineChangeCount = lineChangeMatch ? parseInt(lineChangeMatch[0]) : 0;
-        sloc += lineChangeCount;
-      }
-    }
-
     return sloc;
   }
 

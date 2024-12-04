@@ -64,8 +64,7 @@ async function fetchSignificantLinesOfCode(
   const slocData = await serverAPI
     .nextMessageMatching('fetchedSignificantLinesOfCode', message => message.hash === commit.hash)
     .then(result => ({
-      sloc: result.result.value?.linesOfCode,
-      strictSloc: result.result.value?.strictLinesOfCode,
+      sloc: result.result.value,
     }));
 
   return slocData;
@@ -125,7 +124,7 @@ const fetchPendingAmendSloc = async (
   }
 
   if (filteredFiles.length === 0) {
-    return {sloc: 0, strictSloc: 0};
+    return {sloc: 0};
   }
 
   //the calculation here is a bit tricky but in nutshell it is:
@@ -151,8 +150,7 @@ const fetchPendingAmendSloc = async (
       message => message.requestId === requestId && message.hash === commit.hash,
     )
     .then(result => ({
-      sloc: result.result.value?.linesOfCode,
-      strictSloc: result.result.value?.strictLinesOfCode,
+      sloc: result.result.value,
     }));
 
   if (unselectedCommittedSlocInfo === undefined) {
@@ -165,7 +163,6 @@ const fetchPendingAmendSloc = async (
 
   const slocInfo = {
     sloc: (unselectedCommittedSlocInfo.sloc ?? 0) + (pendingLoc.sloc ?? 0),
-    strictSloc: (unselectedCommittedSlocInfo.strictSloc ?? 0) + (pendingLoc.strictSloc ?? 0),
   };
 
   return slocInfo;
@@ -211,7 +208,7 @@ const fetchPendingSloc = async (
   }
 
   if (filteredFiles.length === 0) {
-    return {sloc: 0, strictSloc: 0};
+    return {sloc: 0};
   }
 
   serverAPI.postMessage({
@@ -227,8 +224,7 @@ const fetchPendingSloc = async (
       message => message.requestId === requestId && message.hash === commit.hash,
     )
     .then(result => ({
-      sloc: result.result.value?.linesOfCode,
-      strictSloc: result.result.value?.strictLinesOfCode,
+      sloc: result.result.value,
     }));
 
   return pendingLocData;

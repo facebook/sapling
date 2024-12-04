@@ -593,7 +593,7 @@ export default class ServerToClientAPI {
                 type: 'fetchedPendingSignificantLinesOfCode',
                 requestId: data.requestId,
                 hash: data.hash,
-                result: {value: {linesOfCode: value.sloc, strictLinesOfCode: value.strictSloc}},
+                result: {value: value ?? 0},
               });
             })
             .catch(err => {
@@ -614,7 +614,7 @@ export default class ServerToClientAPI {
               this.postMessage({
                 type: 'fetchedSignificantLinesOfCode',
                 hash: data.hash,
-                result: {value: {linesOfCode: value.sloc, strictLinesOfCode: value.strictSloc}},
+                result: {value: value ?? 0},
               });
             })
             .catch(err => {
@@ -635,7 +635,7 @@ export default class ServerToClientAPI {
                 type: 'fetchedPendingAmendSignificantLinesOfCode',
                 requestId: data.requestId,
                 hash: data.hash,
-                result: {value: {linesOfCode: value.sloc, strictLinesOfCode: value.strictSloc}},
+                result: {value: value ?? 0},
               });
             })
             .catch(err => {

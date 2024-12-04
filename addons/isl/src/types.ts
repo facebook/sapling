@@ -291,8 +291,6 @@ export type StableInfo = {
 export type SlocInfo = {
   /** Significant lines of code for commit */
   sloc: number | undefined;
-  /** Significant lines of code for commit (filtering out test and markdown files) */
-  strictSloc: number | undefined;
 };
 
 export type CommitInfo = {
@@ -950,19 +948,19 @@ export type ServerToClientMessage =
   | {
       type: 'fetchedSignificantLinesOfCode';
       hash: Hash;
-      result: Result<{linesOfCode: number; strictLinesOfCode: number}>;
+      result: Result<number>;
     }
   | {
       type: 'fetchedPendingSignificantLinesOfCode';
       requestId: number;
       hash: Hash;
-      result: Result<{linesOfCode: number; strictLinesOfCode: number}>;
+      result: Result<number>;
     }
   | {
       type: 'fetchedPendingAmendSignificantLinesOfCode';
       requestId: number;
       hash: Hash;
-      result: Result<{linesOfCode: number; strictLinesOfCode: number}>;
+      result: Result<number>;
     };
 export type Disposable = {
   dispose(): void;
