@@ -6,6 +6,7 @@
  */
 
 use anyhow::Error;
+use anyhow::Result;
 use async_requests::types::AsynchronousRequestResult;
 use async_requests::RequestId;
 use async_requests_types_thrift::AsynchronousRequestResult as ThriftAsynchronousRequestResult;
@@ -54,6 +55,7 @@ pub(crate) fn log_result(
     ctx: CoreContext,
     stats: &FutureStats,
     result: &AsynchronousRequestResult,
+    complete_result: &Result<bool>,
 ) {
     let mut scuba = ctx.scuba().clone();
 
@@ -69,7 +71,10 @@ pub(crate) fn log_result(
                 ("UNKNOWN_ERROR", Some(format!("unknown error: {:?}", error)))
             }
         },
-        _ => ("SUCCESS", None),
+        _ => match complete_result {
+            Ok(_complete) => ("SUCCESS", None),
+            Err(err) => ("SAVE_ERROR", Some(err.to_string())),
+        },
     };
 
     scuba.add_future_stats(stats);

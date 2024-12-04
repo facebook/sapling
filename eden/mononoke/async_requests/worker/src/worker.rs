@@ -342,8 +342,12 @@ impl AsyncMethodRequestWorker {
                 match result {
                     Ok(work_result) => {
                         STATS::process_succeeded.add_value(1);
-                        log_result(ctx.clone(), &stats, &work_result);
-                        match self.queue.complete(&ctx, &req_id, work_result).await {
+                        let complete_result = self
+                            .queue
+                            .complete(&ctx, &req_id, work_result.clone())
+                            .await;
+                        log_result(ctx.clone(), &stats, &work_result, &complete_result);
+                        match complete_result {
                             Ok(updated) => {
                                 info!(
                                     ctx.logger(),
