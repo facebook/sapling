@@ -454,7 +454,11 @@ def sed(args: List[str], stdin: BinaryIO, stdout: BinaryIO, fs: ShellFS) -> str:
 
 
 def _sedscript(script: str, lines: List[str]) -> List[str]:
-    """run sed script on lines"""
+    """run sed script on lines
+
+    >>> _sedscript("/bar/q", ["cat foo" ,"dog bar", "cow baz"])
+    ['cat foo', 'dog bar']
+    """
     import re
 
     if script == "d":
@@ -475,23 +479,23 @@ def _sedscript(script: str, lines: List[str]) -> List[str]:
             # insert before match
             insert = rest[1:].replace("\\\n", "").replace("\\n", "\n") + "\n"
             for line in lines:
-                if patre.match(line):
+                if patre.search(line):
                     newlines.append(insert)
                 newlines.append(line)
         elif rest == "p":
             # duplicate matched lines
             for line in lines:
-                if patre.match(line):
+                if patre.search(line):
                     newlines.append(line)
                 newlines.append(line)
         elif rest == "d":
             for line in lines:
-                if not patre.match(line):
+                if not patre.search(line):
                     newlines.append(line)
         elif rest == "q":
             for line in lines:
                 newlines.append(line)
-                if patre.match(line):
+                if patre.search(line):
                     break
         else:
             raise NotImplementedError(f"sed {script=}")
