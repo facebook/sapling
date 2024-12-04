@@ -18,7 +18,6 @@ import {Center} from '../ComponentUtils';
 import {confirmNoBlockingDiagnostics} from '../Diagnostics';
 import {getCachedGeneratedFileStatuses, useGeneratedFileStatuses} from '../GeneratedFile';
 import {numPendingImageUploads} from '../ImageUpload';
-import {Internal} from '../Internal';
 import {Link} from '../Link';
 import {OperationDisabledButton} from '../OperationDisabledButton';
 import {SubmitSelectionButton} from '../SubmitSelectionButton';
@@ -35,7 +34,6 @@ import {
 import {submitAsDraft, SubmitAsDraftCheckbox} from '../codeReview/DraftCheckbox';
 import {showBranchingPrModal} from '../codeReview/github/BranchingPrModal';
 import {overrideDisabledSubmitModes} from '../codeReview/github/branchPrState';
-import GatedComponent from '../components/GatedComponent';
 import {FoldButton, useRunFoldPreview} from '../fold';
 import {t, T} from '../i18n';
 import {IrrelevantCwdIcon} from '../icons/IrrelevantCwdIcon';
@@ -393,9 +391,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
               <T>Files Changed</T>
               <Badge>{commit.totalFileCount}</Badge>
             </SmallCapsTitle>
-            <GatedComponent featureFlag={Internal.featureFlags?.ShowSplitSuggestion}>
-              <DiffStats commit={commit} />
-            </GatedComponent>
+            <DiffStats commit={commit} />
             <div className="changed-file-list">
               <div className="button-row">
                 <OpenComparisonViewButton
