@@ -19,7 +19,9 @@ import sys
 import traceback
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Callable, cast, Dict, Generator, IO, List, Optional, Tuple
+from typing import Callable, cast, Dict, Generator, IO, Iterable, List, Optional, Tuple
+
+from eden.scm.sapling import redact
 
 from . import (
     debug as debug_mod,
@@ -86,13 +88,29 @@ except ImportError:
         return None
 
 
+class IOWithRedaction:
+    def __init__(self, wrapped: IO[bytes]) -> None:
+        self.wrapped = wrapped
+
+    def write(self, s: str) -> int:
+        redacted = redact.redactsensitiveinfo(s)
+        return self.wrapped.write(redacted.encode())
+
+    def writelines(self, lines: Iterable[str]) -> None:
+        for line in lines:
+            self.write(line)
+
+    def flush(self) -> None:
+        self.wrapped.flush()
+
+
 THRIFT_COUNTER_REGEX = (
     r"thrift\.(EdenService|BaseService)\..*(time|num_samples|num_calls).*"
 )
 
 
-def section_title(message: str, out: IO[bytes]) -> None:
-    out.write(util_mod.underlined(message).encode())
+def section_title(message: str, out: IOWithRedaction) -> None:
+    out.write(util_mod.underlined(message))
 
 
 def get_watchman_log_path() -> Optional[Path]:
@@ -152,8 +170,12 @@ def get_config_log_path() -> Optional[Path]:
 
 
 def print_diagnostic_info(
-    instance: EdenInstance, out: IO[bytes], dry_run: bool
+    instance: EdenInstance, unsafe_out: IO[bytes], dry_run: bool
 ) -> None:
+    # Wrap output stream with redaction logic so that we don't print secrets
+    # (such as auth tokens) to the output buffer.
+    out = IOWithRedaction(unsafe_out)
+
     section_title("System info:", out)
     user = getpass.getuser()
     host = hostname_mod.get_normalized_hostname()
@@ -162,7 +184,7 @@ def print_diagnostic_info(
         f"Hostname                : {host}\n"
         f"Version                 : {version_mod.get_current_version()}\n"
     )
-    out.write(header.encode())
+    out.write(header)
     if sys.platform != "win32":
         # We attempt to report the RPM version on Linux as well as Mac, since Mac OS
         # can use RPMs as well.  If the RPM command fails this will just report that
@@ -171,14 +193,14 @@ def print_diagnostic_info(
     print_os_version(out)
     if sys.platform == "darwin":
         cpu = "arm64" if util_mod.is_apple_silicon() else "x86_64"
-        out.write(f"Architecture            : {cpu}\n".encode())
+        out.write(f"Architecture            : {cpu}\n")
 
     health_status = instance.check_health()
     if health_status.is_healthy():
         section_title("Build info:", out)
-        debug_mod.do_buildinfo(instance, out)
-        out.write(b"uptime: ")
-        instance.do_uptime(pretty=False, out=out)
+        debug_mod.do_buildinfo(instance, out.wrapped)
+        out.write("uptime: ")
+        instance.do_uptime(pretty=False, out=out.wrapped)
 
     # Running eden doctor inside a hanged eden checkout can cause issues.
     # We will disable this until we figure out a work-around.
@@ -188,7 +210,7 @@ def print_diagnostic_info(
     host_dashboard_url = get_host_dashboard_url(host, datetime.now())
     if host_dashboard_url:
         section_title("Host dashboard:", out)
-        out.write(b"%s\n" % host_dashboard_url.encode())
+        out.write(f"{host_dashboard_url}\n")
 
     processor = instance.get_config_value("rage.reporter", default="")
     if not dry_run and processor:
@@ -205,7 +227,7 @@ def print_diagnostic_info(
 
     if watchman_log_path:
         section_title("Watchman logs:", out)
-        out.write(b"Logs from: %s\n" % str(watchman_log_path).encode())
+        out.write(f"Logs from: {watchman_log_path}\n")
         paste_output(
             lambda sink: print_log_file(
                 watchman_log_path,
@@ -221,7 +243,7 @@ def print_diagnostic_info(
 
     if upgrade_log_path:
         section_title("EdenFS Upgrade logs:", out)
-        out.write(b"Logs from: %s\n" % str(upgrade_log_path).encode())
+        out.write(f"Logs from: {upgrade_log_path}\n")
         paste_output(
             lambda sink: print_log_file(
                 upgrade_log_path,
@@ -234,13 +256,13 @@ def print_diagnostic_info(
         )
     elif sys.platform != "win32":
         section_title("EdenFS Upgrade logs:", out)
-        out.write(b"Log file does not exist\n")
+        out.write("Log file does not exist\n")
 
     config_log_path = get_config_log_path()
 
     if config_log_path:
         section_title("EdenFS Config logs:", out)
-        out.write(b"Logs from: %s\n" % str(config_log_path).encode())
+        out.write(f"Logs from: {config_log_path}\n")
         paste_output(
             lambda sink: print_log_file(
                 config_log_path,
@@ -253,7 +275,7 @@ def print_diagnostic_info(
         )
     elif sys.platform != "win32":
         section_title("EdenFS Config logs:", out)
-        out.write(b"Log file does not exist\n")
+        out.write("Log file does not exist\n")
 
     print_tail_of_log_file(instance.get_log_path(), out)
     print_running_eden_process(out)
@@ -271,7 +293,7 @@ def print_diagnostic_info(
     section_title("List of mount points:", out)
     mountpoint_paths = []
     for key in sorted(instance.get_mount_paths()):
-        out.write(key.encode() + b"\n")
+        out.write(f"{key}\n")
         mountpoint_paths.append(key)
     mounts = instance.get_mounts()
     mounts_data = {
@@ -283,7 +305,7 @@ def print_diagnostic_info(
             nested_checkout, __ = detect_checkout_path_problem(checkout_path, instance)
         except Exception:
             nested_checkout = None
-        out.write(b"\nMount point info for path %s:\n" % checkout_path.encode())
+        out.write(f"\nMount point info for path {checkout_path}:\n")
         checkout_data = instance.get_checkout_info(checkout_path)
         mount_data = mounts_data.get(checkout_path, {})
         # "data_dir" in mount_data and "state_dir" in checkout_data are duplicates
@@ -296,7 +318,7 @@ def print_diagnostic_info(
             mount_data["nested_checkout"] = False
         checkout_data.update(mount_data)
         for k, v in checkout_data.items():
-            out.write("{:>20} : {}\n".format(k, v).encode())
+            out.write("{:>20} : {}\n".format(k, v))
     if health_status.is_healthy():
         # TODO(zeyi): enable this when memory usage collecting is implemented on Windows
         with io.StringIO() as stats_stream:
@@ -306,7 +328,7 @@ def print_diagnostic_info(
                 #  got `StringIO`.
                 stats_mod.StatsGeneralOptions(out=stats_stream),
             )
-            out.write(stats_stream.getvalue().encode())
+            out.write(stats_stream.getvalue())
 
     print_counters(instance, "EdenFS", top_mod.COUNTER_REGEX, out)
     print_counters(
@@ -364,15 +386,15 @@ def report_edenfs_bug(instance: EdenInstance, reporter: str) -> None:
     _report_edenfs_bug(rage_lambda, instance, reporter)
 
 
-def print_rpm_version(out: IO[bytes]) -> None:
+def print_rpm_version(out: IOWithRedaction) -> None:
     try:
         rpm_version = version_mod.get_installed_eden_rpm_version()
-        out.write(f"RPM Version             : {rpm_version}\n".encode())
+        out.write(f"RPM Version             : {rpm_version}\n")
     except Exception as e:
-        out.write(f"Error getting the RPM version : {e}\n".encode())
+        out.write(f"Error getting the RPM version : {e}\n")
 
 
-def print_os_version(out: IO[bytes]) -> None:
+def print_os_version(out: IOWithRedaction) -> None:
     version = None
     if sys.platform == "linux":
         release_file_name = "/etc/os-release"
@@ -410,10 +432,10 @@ def print_os_version(out: IO[bytes]) -> None:
     if not version:
         version = platform.system() + " " + platform.version()
 
-    out.write(f"OS Version              : {version}\n".encode("utf-8"))
+    out.write(f"OS Version              : {version}\n")
 
 
-def print_eden_doctor_report(instance: EdenInstance, out: IO[bytes]) -> None:
+def print_eden_doctor_report(instance: EdenInstance, out: IOWithRedaction) -> None:
     doctor_output = io.StringIO()
     try:
         doctor_rc = doctor_mod.cure_what_ails_you(
@@ -421,10 +443,10 @@ def print_eden_doctor_report(instance: EdenInstance, out: IO[bytes]) -> None:
         )
         doctor_report_title = f"eden doctor --dry-run (exit code {doctor_rc}):"
         section_title(doctor_report_title, out)
-        out.write(doctor_output.getvalue().encode())
+        out.write(doctor_output.getvalue())
     except Exception:
-        out.write(b"\nUnexpected exception thrown while running eden doctor checks:\n")
-        out.write(traceback.format_exc().encode("utf-8") + b"\n")
+        out.write("\nUnexpected exception thrown while running eden doctor checks:\n")
+        out.write(f"{traceback.format_exc()}\n")
 
 
 def read_chunk(logfile: IO[bytes]) -> Generator[bytes, None, None]:
@@ -437,7 +459,7 @@ def read_chunk(logfile: IO[bytes]) -> Generator[bytes, None, None]:
 
 
 def print_log_file(
-    path: Path, out: IO[bytes], whole_file: bool, size: int = 1000000
+    path: Path, out: IOWithRedaction, whole_file: bool, size: int = 1000000
 ) -> None:
     try:
         with path.open("rb") as logfile:
@@ -446,33 +468,33 @@ def print_log_file(
                 size = logfile.seek(0, io.SEEK_END)
                 logfile.seek(max(0, size - LOG_AMOUNT), io.SEEK_SET)
             for data in read_chunk(logfile):
-                out.write(data)
+                out.write(data.decode("utf-8"))
     except Exception as e:
-        out.write(b"Error reading the log file: %s\n" % str(e).encode())
+        out.write(f"Error reading the log file: {e}\n")
 
 
 def paste_output(
-    output_generator: Callable[[IO[bytes]], None],
+    output_generator: Callable[[IOWithRedaction], None],
     processor: str,
-    out: IO[bytes],
+    out: IOWithRedaction,
     dry_run: bool,
 ) -> int:
     if dry_run:
         out.write(
-            b"Skipping generation of external paste output due `--dry-run` mode being used. Re-run without `--dry-run` to generate this section.\n"
+            "Skipping generation of external paste output due `--dry-run` mode being used. Re-run without `--dry-run` to generate this section.\n"
         )
         return 0
     try:
         proc = subprocess.Popen(
             shlex.split(processor), stdin=subprocess.PIPE, stdout=subprocess.PIPE
         )
-        sink = cast(IO[bytes], proc.stdin)
+        sink = IOWithRedaction(cast(IO[bytes], proc.stdin))
         output = cast(IO[bytes], proc.stdout)
 
         try:
             output_generator(sink)
         finally:
-            sink.close()
+            sink.wrapped.close()
 
             stdout = output.read().decode("utf-8")
 
@@ -485,27 +507,27 @@ def paste_output(
         match = pattern.match(stdout)
 
         if not match:
-            out.write(stdout.encode())
+            out.write(stdout)
         else:
             paste, _ = stdout.split("\n")[1].split(": ")
-            out.write(paste.encode())
+            out.write(paste)
         return 0
     except Exception as e:
-        out.write(b"Error generating paste: %s\n" % str(e).encode())
+        out.write(f"Error generating paste: {e}\n")
         return 1
 
 
-def print_tail_of_log_file(path: Path, out: IO[bytes]) -> None:
+def print_tail_of_log_file(path: Path, out: IOWithRedaction) -> None:
     try:
         section_title("Most recent EdenFS logs:", out)
         LOG_AMOUNT = 20 * 1024
-        with path.open("rb") as logfile:
+        with path.open("r") as logfile:
             size = logfile.seek(0, io.SEEK_END)
             logfile.seek(max(0, size - LOG_AMOUNT), io.SEEK_SET)
             data = logfile.read()
             out.write(data)
     except Exception as e:
-        out.write(b"Error reading the log file: %s\n" % str(e).encode())
+        out.write(f"Error reading the log file: {e}\n")
 
 
 def _get_running_eden_process_windows() -> List[Tuple[str, str, str, str, str, str]]:
@@ -533,7 +555,7 @@ def _get_running_eden_process_windows() -> List[Tuple[str, str, str, str, str, s
     return lines
 
 
-def print_running_eden_process(out: IO[bytes]) -> None:
+def print_running_eden_process(out: IOWithRedaction) -> None:
     try:
         section_title("List of running EdenFS processes:", out)
         if sys.platform == "win32":
@@ -552,18 +574,16 @@ def print_running_eden_process(out: IO[bytes]) -> None:
 
         format_str = "{:>20} {:>20} {:>20} {:>20} {}\n"
         out.write(
-            format_str.format(
-                "Pid", "PPid", "Start Time", "Elapsed Time", "Command"
-            ).encode()
+            format_str.format("Pid", "PPid", "Start Time", "Elapsed Time", "Command")
         )
         for line in lines:
-            out.write(format_str.format(*line).encode())
+            out.write(format_str.format(*line))
     except Exception as e:
-        out.write(b"Error getting the EdenFS processes: %s\n" % str(e).encode())
-        out.write(traceback.format_exc().encode() + b"\n")
+        out.write(f"Error getting the EdenFS processes: {e}\n")
+        out.write(f"{traceback.format_exc()}\n")
 
 
-def print_edenfs_process_tree(pid: int, out: IO[bytes]) -> None:
+def print_edenfs_process_tree(pid: int, out: IOWithRedaction) -> None:
     if sys.platform != "linux":
         return
     try:
@@ -574,60 +594,60 @@ def print_edenfs_process_tree(pid: int, out: IO[bytes]) -> None:
         output = subprocess.check_output(
             ["ps", "f", "-o", "pid,s,comm,start_time,etime,cputime,drs", "-s", sid]
         )
-        out.write(output)
+        out.write(output.decode("utf-8"))
     except Exception as e:
-        out.write(b"Error getting edenfs process tree: %s\n" % str(e).encode())
+        out.write(f"Error getting edenfs process tree: {e}\n")
 
 
-def print_eden_redirections(instance: EdenInstance, out: IO[bytes]) -> None:
+def print_eden_redirections(instance: EdenInstance, out: IOWithRedaction) -> None:
     try:
         section_title("EdenFS redirections:", out)
         checkouts = instance.get_checkouts()
         for checkout in checkouts:
-            out.write(bytes(checkout.path) + b"\n")
+            out.write("checkout.path\n")
             output = redirect_mod.prepare_redirection_list(checkout, instance)
             # append a tab at the beginning of every new line to indent
             output = output.replace("\n", "\n\t")
-            out.write(b"\t" + output.encode() + b"\n")
+            out.write(f"\t{output}\n")
     except Exception as e:
-        out.write(b"Error getting EdenFS redirections %s\n" % str(e).encode())
-        out.write(traceback.format_exc().encode() + b"\n")
+        out.write(f"Error getting EdenFS redirections {e}\n")
+        out.write(f"{traceback.format_exc()}\n")
 
 
 def print_counters(
-    instance: EdenInstance, counter_type: str, regex: str, out: IO[bytes]
+    instance: EdenInstance, counter_type: str, regex: str, out: IOWithRedaction
 ) -> None:
     try:
         section_title(f"{counter_type} counters:", out)
         with instance.get_thrift_client_legacy(timeout=3) as client:
             counters = client.getRegexCounters(regex)
             for key, value in counters.items():
-                out.write(f"{key}: {value}\n".encode())
+                out.write(f"{key}: {value}\n")
     except Exception as e:
-        out.write(f"Error getting {counter_type} Thrift counters: {e}\n".encode())
+        out.write(f"Error getting {counter_type} Thrift counters: {e}\n")
 
 
-def print_env_variables(out: IO[bytes]) -> None:
+def print_env_variables(out: IOWithRedaction) -> None:
     try:
         section_title("Environment variables:", out)
         for k, v in os.environ.items():
-            out.write(f"{k}={v}\n".encode())
+            out.write(f"{k}={v}\n")
     except Exception as e:
-        out.write(f"Error getting environment variables: {e}\n".encode())
+        out.write(f"Error getting environment variables: {e}\n")
 
 
-def print_system_mount_table(out: IO[bytes]) -> None:
+def print_system_mount_table(out: IOWithRedaction) -> None:
     if sys.platform == "win32":
         return
     try:
         section_title("Mount table:", out)
         output = subprocess.check_output(["mount"])
-        out.write(output)
+        out.write(output.decode("utf-8"))
     except Exception as e:
-        out.write(f"Error printing system mount table: {e}\n".encode())
+        out.write(f"Error printing system mount table: {e}\n")
 
 
-def print_disk_space_usage(out: IO[bytes]) -> None:
+def print_disk_space_usage(out: IOWithRedaction) -> None:
     section_title("Disk space usage:", out)
     cmds = [["eden", "du", "--fast"]]
     if sys.platform == "darwin":
@@ -645,18 +665,23 @@ def print_disk_space_usage(out: IO[bytes]) -> None:
         cmds.extend([["df", "-h"]])
     for i, cmd in enumerate(cmds):
         try:
-            output = subprocess.run(cmd, capture_output=True, shell=False).stdout
-            out.write(output)
+            subprocess.run(
+                cmd,
+                check=True,
+                stderr=subprocess.STDOUT,
+                stdout=out.wrapped,
+                shell=False,
+            )
             if i < len(cmds) - 1:
                 out.write(
-                    b"\n-------------------------------------------------------------------\n"
+                    "\n-------------------------------------------------------------------\n"
                 )
 
         except Exception as e:
-            out.write(f"Error running {cmd}: {e}\n\n".encode())
+            out.write(f"Error running {cmd}: {e}\n\n")
 
 
-def print_system_load(out: IO[bytes]) -> None:
+def print_system_load(out: IOWithRedaction) -> None:
     if sys.platform not in ("darwin", "linux"):
         return
 
@@ -677,26 +702,27 @@ def print_system_load(out: IO[bytes]) -> None:
             output_lines = output.decode("utf-8").split(os.linesep)
             output_lines = output_lines[len(output_lines) // 2 :]
 
-        # pyre-fixme[61]: `output_lines` is undefined, or not always defined.
-        out.write(os.linesep.join(output_lines).encode("utf-8"))
+        out.write(os.linesep.join(output_lines))
     except Exception as e:
-        out.write(f"Error printing system load: {e}\n".encode())
+        out.write(f"Error printing system load: {e}\n")
 
 
 def run_cmd(
-    cmd: List[str], sink: IO[bytes], out: IO[bytes], timeout: float = 10
+    cmd: List[str], sink: IOWithRedaction, out: IOWithRedaction, timeout: float = 10
 ) -> None:
     try:
         subprocess.run(
-            cmd, check=True, stderr=subprocess.STDOUT, stdout=sink, timeout=timeout
+            cmd,
+            check=True,
+            stderr=subprocess.STDOUT,
+            stdout=sink.wrapped,
+            timeout=timeout,
         )
     except subprocess.TimeoutExpired:
-        out.write(
-            f"Command {' '.join(cmd)} timed out after {timeout} seconds\n".encode()
-        )
+        out.write(f"Command {' '.join(cmd)} timed out after {timeout} seconds\n")
 
 
-def print_eden_doctor(processor: str, out: IO[bytes], dry_run: bool) -> None:
+def print_eden_doctor(processor: str, out: IOWithRedaction, dry_run: bool) -> None:
     section_title("EdenFS doctor:", out)
     cmd = ["edenfsctl", "doctor"]
     try:
@@ -707,11 +733,11 @@ def print_eden_doctor(processor: str, out: IO[bytes], dry_run: bool) -> None:
             dry_run,
         )
     except Exception as e:
-        out.write(f"Error printing {cmd}: {e}\n".encode())
+        out.write(f"Error printing {cmd}: {e}\n")
 
 
 def print_eden_config(
-    instance: EdenInstance, processor: str, out: IO[bytes], dry_run: bool
+    instance: EdenInstance, processor: str, out: IOWithRedaction, dry_run: bool
 ) -> None:
     section_title("EdenFS config:", out)
     fsconfig_cmd = ["edenfsctl", "fsconfig", "--all"]
@@ -725,14 +751,14 @@ def print_eden_config(
     if result == 0:
         return
 
-    out.write("Falling back to manually parsing config\n".encode())
+    out.write("Falling back to manually parsing config\n")
     try:
-        instance.print_full_config(out)
+        instance.print_full_config(out.wrapped)
     except Exception as e:
-        out.write(f"Error printing EdenFS config: {e}\n".encode())
+        out.write(f"Error printing EdenFS config: {e}\n")
 
 
-def print_prefetch_profiles_list(instance: EdenInstance, out: IO[bytes]) -> None:
+def print_prefetch_profiles_list(instance: EdenInstance, out: IOWithRedaction) -> None:
     try:
         section_title("Prefetch Profiles list:", out)
         checkouts = instance.get_checkouts()
@@ -747,18 +773,20 @@ def print_prefetch_profiles_list(instance: EdenInstance, out: IO[bytes]) -> None
                 ]
             )
             if profiles:
-                out.write(f"{checkout.path}:\n".encode())
+                out.write(f"{checkout.path}:\n")
                 output_lines = profiles.decode("utf-8").split(os.linesep)
                 # The first line of output is "NAMES"; skip that and only list profiles
                 for name in output_lines[1:]:
-                    out.write(f"  - {name}\n".encode())
+                    out.write(f"  - {name}\n")
             else:
-                out.write(f"{checkout.path}: []\n".encode())
+                out.write(f"{checkout.path}: []\n")
     except Exception as e:
-        out.write(f"Error printing Prefetch Profiles list: {e}\n".encode())
+        out.write(f"Error printing Prefetch Profiles list: {e}\n")
 
 
-def print_crashed_edenfs_logs(processor: str, out: IO[bytes], dry_run: bool) -> None:
+def print_crashed_edenfs_logs(
+    processor: str, out: IOWithRedaction, dry_run: bool
+) -> None:
     if sys.platform == "darwin":
         crashes_paths = [
             Path("/Library/Logs/DiagnosticReports"),
@@ -789,7 +817,7 @@ def print_crashed_edenfs_logs(processor: str, out: IO[bytes], dry_run: bool) -> 
                 if crash.name.startswith("edenfs"):
                     crash_time = datetime.fromtimestamp(crash.stat().st_mtime)
                     human_crash_time = crash_time.strftime("%b %d %H:%M:%S")
-                    out.write(f"{str(crash.name)} from {human_crash_time}: ".encode())
+                    out.write(f"{str(crash.name)} from {human_crash_time}: ")
                     if crash_time > date_threshold and num_uploads <= 2:
                         num_uploads += 1
                         paste_output(
@@ -801,17 +829,15 @@ def print_crashed_edenfs_logs(processor: str, out: IO[bytes], dry_run: bool) -> 
                             dry_run,
                         )
                     else:
-                        out.write(
-                            " not uploaded due to age or max num dumps\n".encode()
-                        )
+                        out.write(" not uploaded due to age or max num dumps\n")
         except Exception as e:
-            out.write(f"Error accessing crash file at {crashes_path}: {e}\n".encode())
+            out.write(f"Error accessing crash file at {crashes_path}: {e}\n")
 
-    out.write("\n".encode())
+    out.write("\n")
 
 
 def trace_running_edenfs(
-    processor: str, pid: int, out: IO[bytes], dry_run: bool
+    processor: str, pid: int, out: IOWithRedaction, dry_run: bool
 ) -> None:
     if sys.platform == "darwin":
         trace_fn = print_sample_trace
@@ -825,10 +851,10 @@ def trace_running_edenfs(
         # pyre-fixme[10]: Name `trace_fn` is used but not defined.
         paste_output(lambda sink: trace_fn(pid, sink), processor, out, dry_run)
     except Exception as e:
-        out.write(b"Error getting EdenFS trace: %s.\n" % str(e).encode())
+        out.write(f"Error getting EdenFS trace:{e}.\n")
 
 
-def print_recent_events(processor: str, out: IO[bytes], dry_run: bool) -> None:
+def print_recent_events(processor: str, out: IOWithRedaction, dry_run: bool) -> None:
     section_title("EdenFS recent events", out)
     for opt in ["thrift", "sl", "inode"]:
         trace_cmd = [
@@ -839,7 +865,7 @@ def print_recent_events(processor: str, out: IO[bytes], dry_run: bool) -> None:
         ]
 
         try:
-            out.write(f"{opt}: ".encode())
+            out.write(f"{opt}: ")
             paste_output(
                 lambda sink, trace_cmd=trace_cmd: run_cmd(trace_cmd, sink, out),
                 processor,
@@ -847,7 +873,7 @@ def print_recent_events(processor: str, out: IO[bytes], dry_run: bool) -> None:
                 dry_run,
             )
         except Exception as e:
-            out.write(b"Error getting EdenFS trace events: %s.\n" % str(e).encode())
+            out.write(f"Error getting EdenFS trace events: {e}.\n")
 
 
 def find_cdb() -> Optional[Path]:
@@ -908,7 +934,9 @@ def print_sample_trace(pid: int, sink: IO[bytes]) -> None:
     )
 
 
-def print_third_party_vscode_extensions(instance: EdenInstance, out: IO[bytes]) -> None:
+def print_third_party_vscode_extensions(
+    instance: EdenInstance, out: IOWithRedaction
+) -> None:
     problematic_extensions = (
         VSCodeExtensionsChecker().find_problematic_vscode_extensions(instance)
     )
@@ -918,25 +946,25 @@ def print_third_party_vscode_extensions(instance: EdenInstance, out: IO[bytes]) 
 
     section_title("Visual Studio Code Extensions:", out)
 
-    out.write(b"Harmful extensions installed:\n")
+    out.write("Harmful extensions installed:\n")
     for extension in problematic_extensions.harmful:
-        out.write(f"{extension}\n".encode())
+        out.write(f"{extension}\n")
     if len(problematic_extensions.harmful) == 0:
-        out.write(b"None\n")
+        out.write("None\n")
 
-    out.write(b"\nUnsupported extensions installed:\n")
+    out.write("\nUnsupported extensions installed:\n")
     for extension in problematic_extensions.unsupported:
-        out.write(f"{extension}\n".encode())
+        out.write(f"{extension}\n")
     if len(problematic_extensions.unsupported) == 0:
-        out.write(b"None\n")
+        out.write("None\n")
 
 
-def print_ulimits(out: IO[bytes]) -> None:
+def print_ulimits(out: IOWithRedaction) -> None:
     if sys.platform == "win32":
         return
     try:
         section_title("ulimit -a:", out)
         output = subprocess.check_output(["ulimit", "-a"])
-        out.write(output)
+        out.write(output.decode("utf-8"))
     except Exception as e:
-        out.write(f"Error retrieving ulimit values: {e}\n".encode())
+        out.write(f"Error retrieving ulimit values: {e}\n")

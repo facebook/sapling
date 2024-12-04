@@ -93,6 +93,15 @@ python_library(
     resources = glob(["fb/staticfiles/opt/facebook/bin/**"]),
 )
 
+python_library(
+    name = "redact",
+    srcs = [
+        # This file is used as a standalone Python library outside Sapling.
+        # Do not import Sapling-only modules like `bindings`.
+        "sapling/redact.py",
+    ],
+)
+
 buck_filegroup(
     name = "etc_mercurial",
     srcs = glob([
