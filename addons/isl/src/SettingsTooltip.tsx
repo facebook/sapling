@@ -9,7 +9,6 @@ import type {ThemeColor} from './theme';
 import type {PreferredSubmitCommand} from './types';
 
 import {rebaseOffWarmWarningEnabled} from './Commit';
-import {splitSuggestionEnabled} from './CommitInfoView/SplitSuggestion';
 import {condenseObsoleteStacks} from './CommitTreeList';
 import {Column, Row} from './ComponentUtils';
 import {confirmShouldSubmitEnabledAtom} from './ConfirmSubmitStack';
@@ -129,9 +128,6 @@ function SettingsDropdown({
           <RenderCompactSetting />
           <CondenseObsoleteSetting />
           <DeemphasizeIrrelevantCommitsSetting />
-          <GatedComponent featureFlag={Internal.featureFlags?.ShowSplitSuggestion}>
-            <SplitSuggestionSetting />
-          </GatedComponent>
           <RebaseOffWarmWarningSetting />
         </Column>
       </Setting>
@@ -309,22 +305,6 @@ function RebaseOffWarmWarningSetting() {
           setValue(checked);
         }}>
         <T>Show Warning on Rebase Off Warm</T>
-      </Checkbox>
-    </Tooltip>
-  );
-}
-
-function SplitSuggestionSetting() {
-  const [value, setValue] = useAtom(splitSuggestionEnabled);
-  return (
-    <Tooltip title={t('Suggest splitting up large commits with a banner')}>
-      <Checkbox
-        data-testid="split-suggestion-enabled"
-        checked={value}
-        onChange={checked => {
-          setValue(checked);
-        }}>
-        <T>Show Split Suggestion</T>
       </Checkbox>
     </Tooltip>
   );

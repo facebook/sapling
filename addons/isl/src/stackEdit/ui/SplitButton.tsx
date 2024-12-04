@@ -23,7 +23,6 @@ import {useAtomValue, useSetAtom} from 'jotai';
 export function SplitButton({
   commit,
   trackerEventName,
-  ...rest
 }: {commit: CommitInfo; trackerEventName: TrackEventName} & React.ComponentProps<typeof Button>) {
   const confirmUnsavedEditsBeforeSplit = useConfirmUnsavedEditsBeforeSplit();
   const setEditStackIntentionHashes = useSetAtom(editingStackIntentionHashes);
@@ -45,7 +44,7 @@ export function SplitButton({
     <Tooltip
       title={hasUncommittedChanges ? t('Cannot currently split with uncommitted changes') : ''}
       trigger={hasUncommittedChanges ? 'hover' : 'disabled'}>
-      <Button onClick={onClick} disabled={hasUncommittedChanges} {...rest}>
+      <Button icon onClick={onClick} disabled={hasUncommittedChanges}>
         <SplitCommitIcon />
         <T>Split</T>
       </Button>

@@ -59,6 +59,7 @@ import {CommitPreview, dagWithPreviews, uncommittedChangesWithPreviews} from '..
 import {repoRelativeCwd, useIsIrrelevantToCwd} from '../repositoryData';
 import {selectedCommits} from '../selection';
 import {commitByHash, latestHeadCommit, repositoryInfo} from '../serverAPIState';
+import {SplitButton} from '../stackEdit/ui/SplitButton';
 import {latestSuccessorUnlessExplicitlyObsolete} from '../successionUtils';
 import {showToast} from '../toast';
 import {GeneratedStatus, succeedableRevset} from '../types';
@@ -86,7 +87,6 @@ import {
 } from './CommitMessageFields';
 import {DiffStats, PendingDiffStats} from './DiffStats';
 import {FillCommitMessage} from './FillCommitMessage';
-import SplitSuggestion from './SplitSuggestion';
 import {CommitTitleByline, getFieldToAutofocus, Section, SmallCapsTitle} from './utils';
 import deepEqual from 'fast-deep-equal';
 import {Badge} from 'isl-components/Badge';
@@ -402,6 +402,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
                   comparison={{type: ComparisonType.Committed, hash: commit.hash}}
                 />
                 <OpenAllFilesButton commit={commit} />
+                <SplitButton trackerEventName="SplitOpenFromSplitSuggestion" commit={commit} />
               </div>
               <ChangedFilesWithFetching commit={commit} />{' '}
             </div>
@@ -414,7 +415,6 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
             <FoldPreviewActions />
           ) : (
             <>
-              {isSplitSuggestionSupported ? <SplitSuggestion commit={commit} /> : null}
               <ActionsBar
                 commit={commit}
                 latestMessage={parsedFields}
