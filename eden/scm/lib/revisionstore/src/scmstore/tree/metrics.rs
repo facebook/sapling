@@ -51,12 +51,13 @@ impl TreeStoreFetchMetrics {
     /// the `ods` feature flag.
     #[cfg(feature = "ods")]
     pub(crate) fn update_ods(&self) -> anyhow::Result<()> {
+        // Just give up if fbinit hasn't been called (e.g. in tests or from sl).
+        if !fbinit::was_performed() {
+            return Ok(());
+        }
+        let fb = fbinit::expect_init();
         for (metric, value) in self.metrics() {
-            // SAFETY: this is called from C++ and was init'd there
-            unsafe {
-                let fb = fbinit::assume_init();
-                STATS::fetch.increment_value(fb, value.try_into()?, (metric,));
-            }
+            STATS::fetch.increment_value(fb, value.try_into()?, (metric,));
         }
         Ok(())
     }
