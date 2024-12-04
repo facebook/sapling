@@ -23,9 +23,9 @@ flate2 = { version = "1.0.33", features = ["rust_backend"], default-features = f
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
 git_delta = { version = "0.1.0", path = "../../third_party/git_delta" }
 git_types_thrift = { version = "0.1.0", path = "if" }
-gix-actor = { git = "https://github.com/pierrechevalier83/gitoxide", rev = "a080348c2fefb7a300ec80f4481617f870065589" }
-gix-hash = { git = "https://github.com/pierrechevalier83/gitoxide", rev = "a080348c2fefb7a300ec80f4481617f870065589" }
-gix-object = { git = "https://github.com/pierrechevalier83/gitoxide", rev = "a080348c2fefb7a300ec80f4481617f870065589" }
+gix-actor = "0.33.1"
+gix-hash = "0.15.1"
+gix-object = "0.46.0"
 itertools = "0.13.0"
 lazy_static = "1.4"
 manifest = { version = "0.1.0", path = "../../manifest" }

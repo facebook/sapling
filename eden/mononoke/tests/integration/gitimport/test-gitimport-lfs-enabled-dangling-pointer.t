@@ -124,16 +124,12 @@ Inspect bonsai change
   Tree {
       entries: [
           Entry {
-              mode: EntryMode(
-                  33188,
-              ),
+              mode: EntryMode(0o100644),
               filename: "large_file",
               oid: Sha1(1ab2b3357e304fef596198d92807d8d7e3580f0d),
           },
           Entry {
-              mode: EntryMode(
-                  33188,
-              ),
+              mode: EntryMode(0o100644),
               filename: "small_file",
               oid: Sha1(8910fc3d7dae273e6ffd1d3982af8dfc418af416),
           },
