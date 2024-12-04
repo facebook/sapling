@@ -168,7 +168,7 @@ def extsetup(ui) -> None:
             "tweakdefaults: _computeobsoletenotrebased or "
             + "_checkobsrebase are not what we expect them to be"
         )
-        ui.warning(msg)
+        ui.warn(msg)
 
     try:
         remotenames = extensions.find("remotenames")
