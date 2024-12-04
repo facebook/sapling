@@ -53,6 +53,7 @@ use stats::prelude::*;
 
 use crate::methods::megarepo_async_request_compute;
 use crate::scuba::log_result;
+use crate::scuba::log_retriable_error;
 use crate::scuba::log_start;
 use crate::AsyncRequestsWorkerArgs;
 
@@ -336,12 +337,12 @@ impl AsyncMethodRequestWorker {
                     &req_id.0,
                     result.is_ok()
                 );
-                log_result(ctx.clone(), "Request complete", &stats, &result);
 
                 // Save the result.
                 match result {
                     Ok(work_result) => {
                         STATS::process_succeeded.add_value(1);
+                        log_result(ctx.clone(), &stats, &work_result);
                         match self.queue.complete(&ctx, &req_id, work_result).await {
                             Ok(updated) => {
                                 info!(
@@ -366,6 +367,7 @@ impl AsyncMethodRequestWorker {
                             &req_id.0,
                             err
                         );
+                        log_retriable_error(ctx.clone(), &stats, err);
                     }
                 }
             }

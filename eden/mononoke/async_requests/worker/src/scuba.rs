@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Result;
+use anyhow::Error;
 use async_requests::types::AsynchronousRequestResult;
 use async_requests::RequestId;
 use async_requests_types_thrift::AsynchronousRequestResult as ThriftAsynchronousRequestResult;
@@ -48,30 +48,28 @@ pub(crate) fn log_start(ctx: &CoreContext) {
     scuba.log_with_msg("Request start", None);
 }
 
+/// Log the result of a request: either a success or a final error. Retriable errors (i.e. where the worker
+/// internally failed and will retry) are logged separately.
 pub(crate) fn log_result(
     ctx: CoreContext,
-    tag: &'static str,
     stats: &FutureStats,
-    result: &Result<AsynchronousRequestResult>,
+    result: &AsynchronousRequestResult,
 ) {
     let mut scuba = ctx.scuba().clone();
 
-    let (status, error) = match result {
-        Ok(response) => match response.thrift() {
-            ThriftAsynchronousRequestResult::error(error) => match error {
-                AsyncRequestError::request_error(error) => {
-                    ("REQUEST_ERROR", Some(format!("{:?}", error)))
-                }
-                AsyncRequestError::internal_error(error) => {
-                    ("INTERNAL_ERROR", Some(format!("{:?}", error)))
-                }
-                AsyncRequestError::UnknownField(error) => {
-                    ("UNKNOWN_ERROR", Some(format!("unknown error: {:?}", error)))
-                }
-            },
-            _ => ("SUCCESS", None),
+    let (status, error) = match result.thrift() {
+        ThriftAsynchronousRequestResult::error(error) => match error {
+            AsyncRequestError::request_error(error) => {
+                ("REQUEST_ERROR", Some(format!("{:?}", error)))
+            }
+            AsyncRequestError::internal_error(error) => {
+                ("INTERNAL_ERROR", Some(format!("{:?}", error)))
+            }
+            AsyncRequestError::UnknownField(error) => {
+                ("UNKNOWN_ERROR", Some(format!("unknown error: {:?}", error)))
+            }
         },
-        Err(err) => ("POLL_ERROR", Some(err.to_string())),
+        _ => ("SUCCESS", None),
     };
 
     scuba.add_future_stats(stats);
@@ -81,5 +79,17 @@ pub(crate) fn log_result(
         scuba.unsampled();
         scuba.add("error", error.as_str());
     }
-    scuba.log_with_msg(tag, None);
+    scuba.log_with_msg("Request complete", None);
+}
+
+/// Log a retriable error, i.e. one that failed because of internal worker issues and will be retried.
+pub(crate) fn log_retriable_error(ctx: CoreContext, stats: &FutureStats, error: Error) {
+    let mut scuba = ctx.scuba().clone();
+
+    scuba.add_future_stats(stats);
+    scuba.add("status", "RETRIABLE_ERROR");
+    scuba.unsampled();
+    scuba.add("error", format!("{:?}", error));
+
+    scuba.log_with_msg("Request complete", None);
 }
