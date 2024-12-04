@@ -167,7 +167,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .with_entry_point(ClientEntryPoint::MononokeGitServer)
         .with_bookmarks_cache(BookmarkCacheOptions {
             cache_kind: BookmarkCacheKind::Local,
-            derived_data: BookmarkCacheDerivedData::NoDerivation, // Derivation is already done at push time
+            derived_data: BookmarkCacheDerivedData::GitOnly, // Although derivation is already done at push time, commits landed through SCS still need WBC
         })
         .with_app_extension(WarmBookmarksCacheExtension {})
         .with_app_extension(McrouterAppExtension {})
