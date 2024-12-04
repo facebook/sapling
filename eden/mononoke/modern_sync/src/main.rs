@@ -16,6 +16,7 @@ use fbinit::FacebookInit;
 use metaconfig_types::RepoConfig;
 use mononoke_app::args::RepoArgs;
 use mononoke_app::args::RepoFilterAppExtension;
+use mononoke_app::args::TLSArgs;
 use mononoke_app::monitoring::AliveService;
 use mononoke_app::monitoring::MonitoringAppExtension;
 use mononoke_app::MononokeApp;
@@ -41,6 +42,10 @@ struct ModernSyncArgs {
 
     #[clap(long, hide = true)] // To be used only in integration tests
     pub dest_socket: Option<u64>,
+
+    /// TLS parameters for this service
+    #[clap(flatten)]
+    tls_params: Option<TLSArgs>,
 }
 
 #[facet::container]
