@@ -31,7 +31,6 @@ import os
 import sys
 from contextlib import contextmanager
 from pathlib import Path
-
 from typing import Dict, Generator
 
 from eden.integration.lib import edenclient
@@ -119,6 +118,7 @@ overrides = "{{}}"
                         """
 [experimental]
 enable-nfs-server = "true"
+allow-remote-get-batch = "false"
 """
                     )
 
