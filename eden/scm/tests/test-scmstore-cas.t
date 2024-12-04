@@ -173,26 +173,3 @@ Count duplicate key fetches properly:
 Make sure fall back to non-CAS fetching works:
   $ FAILPOINTS=eagerepo::cas=return hg cat -r $A dir/file
   contents (no-eol)
-
-
-Don't do any work for LOCAL mode:
-  $ hg debugscmstore -r $A --mode tree --fetch-mode LOCAL "dir" --config devel.print-metrics=scmstore.tree.fetch
-  Failed to fetch tree: (
-      Key {
-          path: RepoPathBuf(
-              "dir",
-          ),
-          hgid: HgId("1d12614b1101689fa2c31b749d0c17fa9ad10564"),
-      },
-      "cas no-op",
-  )
-  $ hg debugscmstore -r $A --mode file --fetch-mode LOCAL "dir/file" --config devel.print-metrics=scmstore.file.fetch
-  Failed to fetch file: (
-      Key {
-          path: RepoPathBuf(
-              "dir/file",
-          ),
-          hgid: HgId("755659c90eeec95dba978cb076b6aab1a02fb313"),
-      },
-      "cas no-op",
-  )

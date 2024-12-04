@@ -17,10 +17,4 @@
   $ cat B
   B (no-eol)
   $ echo C > C
-  $ hg ci -Aqm C 2>&1 | sed '/Error/q'
-  transaction abort!
-  rollback completed
-  abort: EdenService::resetParentCommits failed with ApplicationException
-  
-  Caused by:
-      Unknown: rust::cxxbridge1::Error: Network Error: server responded 404 Not Found for eager://$TESTTMP/server/trees: eadd25abb6eb44211634adf30647c754a76c10f6 cannot be found. Headers: {}
+  $ hg ci -Aqm C

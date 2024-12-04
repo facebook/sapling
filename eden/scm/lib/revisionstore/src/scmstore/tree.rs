@@ -10,7 +10,6 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
-use ::types::errors::KeyedError;
 use ::types::fetch_mode::FetchMode;
 use ::types::hgid::NULL_ID;
 use ::types::tree::TreeItemFlag;
@@ -124,9 +123,6 @@ pub struct TreeStore {
     pub(crate) metrics: Arc<RwLock<TreeStoreMetrics>>,
 
     pub format: SerializationFormat,
-
-    /// Immediately return empty results for non-REMOTE fetches with CAS enabled.
-    pub noop_cas_local: bool,
 }
 
 impl Drop for TreeStore {
@@ -147,26 +143,6 @@ impl TreeStore {
         let mut reqs = reqs.peekable();
         if reqs.peek().is_none() {
             return FetchResults::new(Box::new(std::iter::empty()));
-        }
-
-        let fetch_local = fetch_mode.contains(FetchMode::LOCAL);
-        let fetch_remote = fetch_mode.contains(FetchMode::REMOTE);
-        let cas_client = self.cas_client.clone();
-
-        if self.noop_cas_local && !fetch_remote && cas_client.is_some() {
-            // Make LOCAL mode a no-op for CAS to save work since LOCAL mode doesn't
-            // attempt fetching from CAS.
-            tracing::debug!("skipping local fetch with CAS enabled");
-            return FetchResults::new(Box::new(
-                reqs.map(|key| {
-                    Err(KeyFetchError::KeyedError(KeyedError(
-                        key,
-                        anyhow!("cas no-op"),
-                    )))
-                })
-                .collect::<Vec<_>>()
-                .into_iter(),
-            ));
         }
 
         let (found_tx, found_rx) = unbounded();
@@ -205,6 +181,7 @@ impl TreeStore {
         let cache_to_local_cache = self.cache_to_local_cache;
         let aux_cache = self.filestore.as_ref().and_then(|fs| fs.aux_cache.clone());
         let tree_aux_store = self.tree_aux_store.clone();
+        let cas_client = self.cas_client.clone();
 
         let fetch_children_metadata = match self.tree_metadata_mode {
             TreeMetadataMode::Always => true,
@@ -213,6 +190,9 @@ impl TreeStore {
         };
         let fetch_tree_aux_data = self.fetch_tree_aux_data || attrs.aux_data;
         let fetch_parents = attrs.parents || self.prefetch_tree_parents;
+
+        let fetch_local = fetch_mode.contains(FetchMode::LOCAL);
+        let fetch_remote = fetch_mode.contains(FetchMode::REMOTE);
 
         tracing::debug!(
             ?fetch_mode,
@@ -440,7 +420,6 @@ impl TreeStore {
             metrics: Default::default(),
             prefetch_tree_parents: false,
             format: SerializationFormat::Hg,
-            noop_cas_local: false,
         }
     }
 
@@ -511,7 +490,6 @@ impl TreeStore {
             metrics: self.metrics.clone(),
             prefetch_tree_parents: false,
             format: self.format(),
-            noop_cas_local: self.noop_cas_local,
         }
     }
 
