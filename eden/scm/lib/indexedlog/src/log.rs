@@ -46,6 +46,8 @@ use std::io::Write;
 use std::ops::RangeBounds;
 use std::path::Path;
 use std::pin::Pin;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 use byteorder::ByteOrder;
@@ -110,6 +112,9 @@ const ENTRY_FLAG_HAS_XXHASH32: u32 = 2;
 
 // 1MB index checksum. This makes checksum file within one block (4KB) for 512MB index.
 const INDEX_CHECKSUM_CHUNK_SIZE_LOGARITHM: u32 = 20;
+
+pub static SYNC_COUNT: AtomicU64 = AtomicU64::new(0);
+pub static AUTO_SYNC_COUNT: AtomicU64 = AtomicU64::new(0);
 
 /// An append-only storage with indexes and integrity checks.
 ///
@@ -321,6 +326,7 @@ impl Log {
 
             if let Some(threshold) = self.open_options.auto_sync_threshold {
                 if self.mem_buf.len() as u64 >= threshold {
+                    AUTO_SYNC_COUNT.fetch_add(1, Ordering::Relaxed);
                     self.sync()
                         .context("sync triggered by auto_sync_threshold")?;
                 }
@@ -455,6 +461,8 @@ impl Log {
     ///
     /// For in-memory-only Logs, this function does nothing, and returns 0.
     pub fn sync(&mut self) -> crate::Result<u64> {
+        SYNC_COUNT.fetch_add(1, Ordering::Relaxed);
+
         let result: crate::Result<_> = (|| {
             let span = debug_span!("Log::sync", dirty_bytes = self.mem_buf.len());
             if let Some(dir) = &self.dir.as_opt_path() {

@@ -445,6 +445,7 @@ impl TreeStore {
     }
 
     #[allow(unused_must_use)]
+    #[tracing::instrument(level = "debug", skip(self))]
     pub fn flush(&self) -> Result<()> {
         let mut result = Ok(());
         let mut handle_error = |error| {
@@ -476,7 +477,7 @@ impl TreeStore {
         for (k, v) in metrics.metrics() {
             hg_metrics::increment_counter(k, v as u64);
         }
-
+        hg_metrics::increment_counter("scmstore.tree.flush", 1);
         if let Err(err) = metrics.fetch.update_ods() {
             tracing::error!(?err, "error updating tree ods counters");
         }

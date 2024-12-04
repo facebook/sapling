@@ -55,14 +55,31 @@ impl FileStoreFetchMetrics {
     /// the `ods` feature flag.
     #[cfg(feature = "ods")]
     pub(crate) fn update_ods(&self) -> anyhow::Result<()> {
+        use std::sync::atomic::Ordering;
+
+        use indexedlog::log::AUTO_SYNC_COUNT;
+        use indexedlog::log::SYNC_COUNT;
+
         // Just give up if fbinit hasn't been called (e.g. in tests or from sl).
         if !fbinit::was_performed() {
             return Ok(());
         }
+
         let fb = fbinit::expect_init();
+
         for (metric, value) in self.metrics() {
             STATS::fetch.increment_value(fb, value.try_into()?, (metric,));
         }
+
+        // Assume we are called from flush()
+        STATS::flush.increment_value(fb, 1);
+
+        // These aren't technically filestore specific, but we don't have a convenient generic ODS logging spot.
+        STATS::indexedlog_sync
+            .increment_value(fb, SYNC_COUNT.swap(0, Ordering::Relaxed).try_into()?);
+        STATS::indexedlog_auto_sync
+            .increment_value(fb, AUTO_SYNC_COUNT.swap(0, Ordering::Relaxed).try_into()?);
+
         Ok(())
     }
     #[cfg(not(feature = "ods"))]
@@ -184,6 +201,9 @@ impl FileStoreMetrics {
 
 #[cfg(feature = "ods")]
 define_stats! {
-    prefix = "scmstore.file";
-    fetch: dynamic_singleton_counter("fetch.{}", (specific_counter: String)),
+    prefix = "scmstore";
+    fetch: dynamic_singleton_counter("file.fetch.{}", (specific_counter: String)),
+    flush: singleton_counter("file"),
+    indexedlog_sync: singleton_counter("indexedlog.sync"),
+    indexedlog_auto_sync: singleton_counter("indexedlog.auto_sync"),
 }

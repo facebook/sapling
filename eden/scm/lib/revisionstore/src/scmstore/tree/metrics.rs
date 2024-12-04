@@ -59,6 +59,10 @@ impl TreeStoreFetchMetrics {
         for (metric, value) in self.metrics() {
             STATS::fetch.increment_value(fb, value.try_into()?, (metric,));
         }
+
+        // Assume we are called from flush()
+        STATS::flush.increment_value(fb, 1);
+
         Ok(())
     }
 
@@ -87,4 +91,5 @@ impl TreeStoreMetrics {
 define_stats! {
     prefix = "scmstore.tree";
     fetch: dynamic_singleton_counter("fetch.{}", (specific_counter: String)),
+    flush: singleton_counter(),
 }
