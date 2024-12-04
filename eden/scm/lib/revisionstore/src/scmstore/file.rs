@@ -339,9 +339,6 @@ impl FileStore {
             state.derive_computable(aux_cache.as_ref().map(|s| s.as_ref()));
 
             metrics.write().fetch += state.metrics().clone();
-            if let Err(err) = state.metrics().update_ods() {
-                tracing::error!("Error updating ods fetch metrics: {}", err);
-            }
             state.finish();
 
             if let Some(activity_logger) = activity_logger {
@@ -482,11 +479,13 @@ impl FileStore {
             aux_cache.flush().map_err(&mut handle_error);
         }
 
-        let mut metrics = self.metrics.write();
+        let metrics = std::mem::take(&mut *self.metrics.write());
         for (k, v) in metrics.metrics() {
             hg_metrics::increment_counter(k, v as u64);
         }
-        *metrics = Default::default();
+        if let Err(err) = metrics.fetch.update_ods() {
+            tracing::error!("Error updating ods fetch metrics: {}", err);
+        }
 
         result
     }

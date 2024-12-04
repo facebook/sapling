@@ -388,11 +388,6 @@ impl TreeStore {
 
             // TODO(meyer): Report incomplete / not found, handle errors better instead of just always failing the batch, etc
             state.common.results(state.errors);
-
-            if let Err(err) = state.metrics.update_ods() {
-                tracing::error!(?err, "error updating tree ods counters");
-            }
-
             store_metrics.write().fetch += state.metrics;
 
             Ok(())
@@ -477,11 +472,14 @@ impl TreeStore {
             historystore_cache.flush().map_err(&mut handle_error);
         }
 
-        let mut metrics = self.metrics.write();
+        let metrics = std::mem::take(&mut *self.metrics.write());
         for (k, v) in metrics.metrics() {
             hg_metrics::increment_counter(k, v as u64);
         }
-        *metrics = Default::default();
+
+        if let Err(err) = metrics.fetch.update_ods() {
+            tracing::error!(?err, "error updating tree ods counters");
+        }
 
         result
     }
