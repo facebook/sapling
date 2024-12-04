@@ -21,6 +21,7 @@ use futures::stream;
 use futures::Future;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures_watchdog::WatchdogExt;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 use mononoke_types::FIRST_GENERATION;
@@ -191,6 +192,8 @@ impl CommitGraph {
         target_generation: Generation,
     ) -> Result<()> {
         loop {
+            tokio::task::consume_budget().await;
+
             match frontier.last_key_value() {
                 None => return Ok(()),
                 Some((generation, _)) if *generation <= target_generation => {
@@ -205,6 +208,7 @@ impl CommitGraph {
                 move |node| future::ready(Ok(node.generation < target_generation)),
                 Prefetch::for_exact_skip_tree_traversal(target_generation),
             )
+            .watched(ctx.logger())
             .await?;
         }
     }
