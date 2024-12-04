@@ -589,6 +589,7 @@ export type ProgressStep = {
   message: string;
   progress?: number;
   progressTotal?: number;
+  unit?: string;
 };
 
 export type OperationCommandProgressReporter = (

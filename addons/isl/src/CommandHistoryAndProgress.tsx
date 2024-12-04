@@ -272,11 +272,12 @@ export function CommandHistoryAndProgress() {
         {showLastLineOfOutput ? (
           <div className="progress-container-row">
             <div className="progress-container-last-output">
-              {progress.currentProgress != null ? (
+              {progress.currentProgress != null && progress.currentProgress.unit != null ? (
                 <ProgressLine
                   progress={progress.currentProgress.progress}
                   progressTotal={progress.currentProgress.progressTotal}>
-                  {progress.currentProgress.message}
+                  {progress.currentProgress.message +
+                    ` - ${progress.currentProgress.progress}/${progress.currentProgress.progressTotal} ${progress.currentProgress.unit}`}
                 </ProgressLine>
               ) : (
                 processedLines.length > 0 && <ProgressLine>{processedLines.at(-1)}</ProgressLine>

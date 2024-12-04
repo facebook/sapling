@@ -692,6 +692,7 @@ export class Repository {
             message: msg.topic,
             progress: msg.position,
             progressTotal: msg.total,
+            unit: msg.unit,
           });
         }
       } catch (err) {
