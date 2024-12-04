@@ -28,6 +28,7 @@ pub mod cbor;
 pub mod commit_cloud_types;
 pub mod convert;
 pub mod monitor;
+pub mod rate_limit;
 
 pub use cbor::cbor_mime;
 pub use cbor::cbor_stream_filtered_errors;
@@ -39,6 +40,8 @@ pub use convert::to_create_change;
 pub use convert::to_hg_path;
 pub use convert::to_mpath;
 pub use convert::to_revlog_changeset;
+pub use rate_limit::build_counter;
+pub use rate_limit::counter_check_and_bump;
 
 pub async fn get_repo<R: MononokeRepo>(
     sctx: &ServerContext<R>,
