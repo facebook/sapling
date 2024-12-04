@@ -9,7 +9,6 @@ import type {CommitInfo} from '../types';
 
 import {Row} from '../ComponentUtils';
 import {T, t} from '../i18n';
-import {SLOC_THRESHOLD_FOR_SPLIT_SUGGESTIONS} from '../sloc/diffStatConstants';
 import {
   useFetchSignificantLinesOfCode,
   useFetchPendingSignificantLinesOfCode,
@@ -41,80 +40,46 @@ export function LoadingDiffStatsView() {
 export function DiffStats({commit}: Props) {
   const {slocInfo, isLoading} = useFetchSignificantLinesOfCode(commit);
   const significantLinesOfCode = slocInfo?.sloc;
-  const strictSignificantLinesOfCode = slocInfo?.strictSloc;
 
   if (isLoading && significantLinesOfCode == null) {
     return <LoadingDiffStatsView />;
   } else if (!isLoading && significantLinesOfCode == null) {
     return null;
   }
-
-  return (
-    <ResolvedDiffStatsView
-      significantLinesOfCode={significantLinesOfCode}
-      strictSignificantLinesOfCode={strictSignificantLinesOfCode}
-    />
-  );
+  return <ResolvedDiffStatsView significantLinesOfCode={significantLinesOfCode} />;
 }
 
-export function PendingDiffStats({showWarning = false}: {showWarning?: boolean}) {
+export function PendingDiffStats() {
   return (
     <ErrorBoundary>
-      <PendingDiffStatsView showWarning={showWarning} />
+      <PendingDiffStatsView />
     </ErrorBoundary>
   );
 }
 
-export function PendingDiffStatsView({showWarning = false}: {showWarning?: boolean}) {
+export function PendingDiffStatsView() {
   const {slocInfo, isLoading} = useFetchPendingSignificantLinesOfCode();
   const significantLinesOfCode = slocInfo?.sloc;
-  const strictSignificantLinesOfCode = slocInfo?.strictSloc;
 
   if (isLoading && significantLinesOfCode == null) {
     return <LoadingDiffStatsView />;
   } else if (!isLoading && significantLinesOfCode == null) {
     return null;
   }
-
-  return (
-    <ResolvedDiffStatsView
-      significantLinesOfCode={significantLinesOfCode}
-      strictSignificantLinesOfCode={strictSignificantLinesOfCode}
-      showWarning={showWarning}
-    />
-  );
+  return <ResolvedDiffStatsView significantLinesOfCode={significantLinesOfCode} />;
 }
 
 function ResolvedDiffStatsView({
   significantLinesOfCode,
-  strictSignificantLinesOfCode,
-  showWarning,
 }: {
   significantLinesOfCode: number | undefined;
-  strictSignificantLinesOfCode: number | undefined;
-  showWarning?: boolean;
 }) {
   if (significantLinesOfCode == null) {
     return null;
   }
-  const extras =
-    showWarning &&
-    strictSignificantLinesOfCode &&
-    strictSignificantLinesOfCode > SLOC_THRESHOLD_FOR_SPLIT_SUGGESTIONS ? (
-      <Tooltip
-        title={t(
-          //formatting this on multiple lines to look good in the tooltip
-          `Consider unselecting some of these changes.
-
-Small Diffs lead to quicker review times.
-`,
-        )}>
-        <Icon icon="warning" color="yellow" />
-      </Tooltip>
-    ) : null;
 
   return (
-    <DiffStatsView extras={extras}>
+    <DiffStatsView>
       <T replace={{$num: significantLinesOfCode}}>$num lines</T>
     </DiffStatsView>
   );

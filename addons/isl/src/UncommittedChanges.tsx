@@ -731,11 +731,9 @@ export function UncommittedChanges({place}: {place: Place}) {
       <UnsavedFilesCount />
       {conflicts != null || place !== 'main' ? null : (
         <div className="button-rows">
-          <GatedComponent featureFlag={Internal.featureFlags?.ShowSplitSuggestion}>
-            <div className="button-row">
-              <PendingDiffStats showWarning={true} />
-            </div>
-          </GatedComponent>
+          <div className="button-row">
+            <PendingDiffStats />
+          </div>
           <div className="button-row">
             <span className="quick-commit-inputs">
               <Button

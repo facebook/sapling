@@ -377,11 +377,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
                 {uncommittedChanges.length}
               </Badge>
             </SmallCapsTitle>
-            {uncommittedChanges.length > 0 ? (
-              <GatedComponent featureFlag={Internal.featureFlags?.ShowSplitSuggestion}>
-                <PendingDiffStats />
-              </GatedComponent>
-            ) : null}
+            {uncommittedChanges.length > 0 ? <PendingDiffStats /> : null}
             {uncommittedChanges.length === 0 ? (
               <Subtle>
                 {isCommitMode ? <T>No changes to commit</T> : <T>No changes to amend</T>}
