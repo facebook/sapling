@@ -30,6 +30,7 @@ use bytes::Bytes;
 use clap::ValueEnum;
 use context::CoreContext;
 use either::Either;
+use futures_watchdog::WatchdogExt;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use strum::AsRefStr;
@@ -643,8 +644,18 @@ where
         blobstore: &'a B,
     ) -> Result<Self::Value, LoadableError> {
         match self {
-            Either::Left(id) => Ok(Either::Left(id.load(ctx, blobstore).await?)),
-            Either::Right(id) => Ok(Either::Right(id.load(ctx, blobstore).await?)),
+            Either::Left(id) => Ok(Either::Left(
+                id.load(ctx, blobstore)
+                    .watched(ctx.logger())
+                    .with_max_poll(BLOBSTORE_MAX_POLL_TIME_MS)
+                    .await?,
+            )),
+            Either::Right(id) => Ok(Either::Right(
+                id.load(ctx, blobstore)
+                    .watched(ctx.logger())
+                    .with_max_poll(BLOBSTORE_MAX_POLL_TIME_MS)
+                    .await?,
+            )),
         }
     }
 }
@@ -666,7 +677,7 @@ pub trait StoreLoadable<S> {
 
 /// For convenience, all Blobstore Loadables are StoreLoadable through any Blobstore.
 #[async_trait]
-impl<L: Loadable + Sync, S: Blobstore> StoreLoadable<S> for L {
+impl<L: Loadable + Sync + std::fmt::Debug, S: Blobstore> StoreLoadable<S> for L {
     type Value = <L as Loadable>::Value;
 
     async fn load<'a>(
@@ -674,7 +685,11 @@ impl<L: Loadable + Sync, S: Blobstore> StoreLoadable<S> for L {
         ctx: &'a CoreContext,
         store: &'a S,
     ) -> Result<Self::Value, LoadableError> {
-        self.load(ctx, store).await
+        self.load(ctx, store)
+            .watched(ctx.logger())
+            .with_label(format!("{:?}", self).as_str())
+            .with_max_poll(BLOBSTORE_MAX_POLL_TIME_MS)
+            .await
     }
 }
 
@@ -711,7 +726,7 @@ impl<'a, A: Blobstore, B: Blobstore> BlobCopier for GenericBlobstoreCopier<'a, A
 impl<T, L> Loadable for (T, L)
 where
     T: Copy + Send + Sync + 'static,
-    L: Loadable + Sync,
+    L: Loadable + Sync + fmt::Debug,
 {
     type Value = (T, L::Value);
 
@@ -721,6 +736,13 @@ where
         blobstore: &'a B,
     ) -> Result<Self::Value, LoadableError> {
         let (t, id) = self;
-        Ok((*t, id.load(ctx, blobstore).await?))
+        Ok((
+            *t,
+            id.load(ctx, blobstore)
+                .watched(ctx.logger())
+                .with_label(format!("{:?}", id).as_str())
+                .with_max_poll(BLOBSTORE_MAX_POLL_TIME_MS)
+                .await?,
+        ))
     }
 }

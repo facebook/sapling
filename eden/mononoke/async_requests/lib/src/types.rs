@@ -21,6 +21,7 @@ use blobstore::impl_loadable_storable;
 use blobstore::Blobstore;
 use context::CoreContext;
 use fbthrift::compact_protocol;
+use futures_watchdog::WatchdogExt;
 pub use megarepo_config::SyncTargetConfig;
 pub use megarepo_config::Target;
 use mononoke_api::Mononoke;

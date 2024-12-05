@@ -15,6 +15,7 @@ blobstore = { version = "0.1.0", path = "../../blobstore" }
 context = { version = "0.1.0", path = "../../server/context" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
+futures_watchdog = { version = "0.1.0", path = "../../common/futures_watchdog" }
 megarepo_config = { version = "0.1.0", path = "../../megarepo_api/megarepo_config" }
 megarepo_error = { version = "0.1.0", path = "../../megarepo_api/megarepo_error" }
 memblob = { version = "0.1.0", path = "../../blobstore/memblob" }

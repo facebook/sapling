@@ -85,7 +85,11 @@ macro_rules! impl_loadable_storable {
                 blobstore: &'a B,
             ) -> Result<Self::Value, $crate::private::LoadableError> {
                 let id = *self;
-                let bytes = blobstore.get(ctx, &id.blobstore_key()).await?;
+                let bytes = blobstore
+                    .get(ctx, &id.blobstore_key())
+                    .watched(ctx.logger())
+                    .with_max_poll($crate::BLOBSTORE_MAX_POLL_TIME_MS)
+                    .await?;
                 match bytes {
                     Some(bytes) => bytes
                         .try_into()

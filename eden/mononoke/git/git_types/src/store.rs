@@ -17,6 +17,7 @@ use filestore::fetch_with_size;
 use filestore::hash_bytes;
 use filestore::Sha1IncrementalHasher;
 use futures::TryStreamExt;
+use futures_watchdog::WatchdogExt;
 use gix_hash::ObjectId;
 use gix_object::WriteTo;
 use mononoke_types::hash::GitSha1;
