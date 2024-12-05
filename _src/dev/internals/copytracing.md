@@ -52,7 +52,7 @@ the previous solutions have become too slow for production use:
   was copied from another file (N). For each pair of files, Sapling was walking
   through the file history (H) to check the copy-from the relationship.
   - The time complexity of this algorithm is `O(M * N * H)`, where N and H are huge.
-    - Typically M (source) << N (destination)
+    - Typically M (source) &lt;&lt; N (destination)
   - Sapling records rename information directly in file headers, eliminating the
     need to compute file content similarity, which is different from Git's approach.
 - **Heuristics copy tracing** assumes that moves or renames fall into one of two

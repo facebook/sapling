@@ -4,7 +4,7 @@ sidebar_position: 8
 
 ## clone
 <!--
-  @generated SignedSource<<171b44586ac12d58efb9c7e40f6d5de2>>
+  @generated SignedSource<<a4d5e57eb0972054dc0c2bf63112841c>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -16,7 +16,7 @@ Create a copy of an existing repository in a new directory.
 If no destination directory name is specified, it defaults to the
 basename of the source.
 
-The location of the source is added to the new repository's
+The location of the source is added to the new repository&#x27;s
 config file as the default to be used for future pulls.
 
 Sources are typically URLs. The following URL schemes are assumed
@@ -46,7 +46,7 @@ sl clone https://example.com/some_repo
 ```
 
 As an experimental feature, if specified the source URL fragment
-is persisted as the repo's main bookmark.
+is persisted as the repo&#x27;s main bookmark.
 
 Returns 0 on success.
 

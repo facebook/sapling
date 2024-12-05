@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkwebsite=self.webpackChunkwebsite||[]).push([["9105"],{97084:function(t){t.exports=JSON.parse('{"categoryGeneratedIndex":{"title":"Introduction","slug":"/category/introduction","permalink":"/docs/category/introduction","sidebar":"tutorialSidebar","navigation":{"next":{"title":"Sapling SCM","permalink":"/docs/introduction/"}}}}')}}]);

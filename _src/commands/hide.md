@@ -4,7 +4,7 @@ sidebar_position: 19
 
 ## hide
 <!--
-  @generated SignedSource<<69fac9195301773ee3329600102aa324>>
+  @generated SignedSource<<bf8f01c1e780e68c0c9acedff0fd2336>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -31,7 +31,7 @@ checked out.
 To hide obsolete stacks (stacks that have a newer version), run
 `sl hide --cleanup`. This command is equivalent to:
 
-`sl hide 'obsolete() - ancestors(draft() & not obsolete())'`
+`sl hide &#x27;obsolete() - ancestors(draft() &amp; not obsolete())&#x27;`
 
 `--cleanup` skips obsolete commits with non-obsolete descendants.
 

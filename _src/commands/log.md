@@ -4,7 +4,7 @@ sidebar_position: 23
 
 ## log
 <!--
-  @generated SignedSource<<a726ffd6c682dc3d16b9dee343e5bec5>>
+  @generated SignedSource<<a34ecc5b436582c6feecb5493e75172d>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -23,7 +23,7 @@ copies, use the `-f/-- follow` option. If the `--follow`
 option is used without a filename, only the ancestors or
 descendants of the starting revision are shown.
 
-By default, `sl log` prints the commit's hash, non-trivial
+By default, `sl log` prints the commit&#x27;s hash, non-trivial
 parents, user, date, time, and the single-line summary. When the
 `-v/--verbose` option is used, the list of changed files and
 full commit message are shown.

@@ -4,7 +4,7 @@ sidebar_position: 30
 
 ## rebase
 <!--
-  @generated SignedSource<<94e5e47995f103ffe84f795fb37f9ec1>>
+  @generated SignedSource<<ffecc697ec9f203d3a4e272b418092b7>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -75,7 +75,8 @@ details.
 After manually resolving conflicts, resume the rebase with
 `sl rebase --continue`. If you are not able to successfully
 resolve all conflicts, run `sl rebase --abort` to abort the
-rebase.
+entire rebase; or run `sl rebase --quit` to quit the interrupted
+rebase state and keep the already rebased commits.
 
 Alternatively, you can use a custom merge tool to automate conflict
 resolution. To specify a custom merge tool, use the `--tool` flag. See
@@ -113,7 +114,7 @@ Configuration Options:
 By default, rebase will close the transaction after each commit. For
 performance purposes, you can configure rebase to use a single transaction
 across the entire rebase. WARNING: This setting introduces a significant
-risk of losing the work you've done in a rebase if the rebase aborts
+risk of losing the work you&#x27;ve done in a rebase if the rebase aborts
 unexpectedly:
 
 ```
@@ -155,5 +156,6 @@ unresolved conflicts.
 | `-t`| `--tool`| | specify merge tool|
 | `-c`| `--continue`| `false`| continue an interrupted rebase|
 | `-a`| `--abort`| `false`| abort an interrupted rebase|
+| | `--quit`| `false`| quit an interrupted rebase and keep the already rebased commits|
 | | `--restack`| `false`| rebase all changesets in the current stack onto the latest version of their respective parents|
 | `-i`| `--interactive`| `false`| interactive rebase|

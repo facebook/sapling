@@ -1,5 +1,11 @@
 # Submodule
 
+:::note
+
+This page is about using the [`.sl` mode](git_support_modes#sl-mode). Submodule support for the [`.git` mode](git_support_modes#git-mode) is WIP.
+
+:::
+
 Sapling has basic support for Git submodules.
 
 Sapling does not have a `submodule` command. Commands that change the working

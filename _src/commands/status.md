@@ -4,7 +4,7 @@ sidebar_position: 41
 
 ## status | st
 <!--
-  @generated SignedSource<<e9101cde37ab8cdfe8a10e8b1a181c78>>
+  @generated SignedSource<<a3c52cd22ade381d4bfcb2b663c552d6>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -51,9 +51,9 @@ reports changes relative to one merge parent.
 
 The `-t/--terse` option abbreviates the output by showing only the directory
 name if all the files in it share the same status. The option takes an
-argument indicating the statuses to abbreviate: 'm' for 'modified', 'a'
-for 'added', 'r' for 'removed', 'd' for 'deleted', 'u' for 'unknown', 'i'
-for 'ignored' and 'c' for clean.
+argument indicating the statuses to abbreviate: &#x27;m&#x27; for &#x27;modified&#x27;, &#x27;a&#x27;
+for &#x27;added&#x27;, &#x27;r&#x27; for &#x27;removed&#x27;, &#x27;d&#x27; for &#x27;deleted&#x27;, &#x27;u&#x27; for &#x27;unknown&#x27;, &#x27;i&#x27;
+for &#x27;ignored&#x27; and &#x27;c&#x27; for clean.
 
 It abbreviates only those statuses which are passed. Note that clean and
 ignored files are not displayed with `--terse ic` unless the `-c/--clean`
@@ -64,8 +64,8 @@ unfinished merge, shelve, rebase state, etc. You can have this behavior
 turned on by default by enabling the `commands.status.verbose` config option.
 
 You can skip displaying some of these states by setting
-`commands.status.skipstates` to one or more of: 'bisect', 'graft',
-'histedit', 'merge', 'rebase', or 'unshelve'.
+`commands.status.skipstates` to one or more of: &#x27;bisect&#x27;, &#x27;graft&#x27;,
+&#x27;histedit&#x27;, &#x27;merge&#x27;, &#x27;rebase&#x27;, or &#x27;unshelve&#x27;.
 
 Examples:
 

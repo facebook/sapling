@@ -1,7 +1,3 @@
----
-sidebar_position: 2
----
-
 import {Command} from '@site/elements'
 
 # Sapling stack

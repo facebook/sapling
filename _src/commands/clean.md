@@ -4,7 +4,7 @@ sidebar_position: 7
 
 ## clean | purge
 <!--
-  @generated SignedSource<<d452edccaab5cb1ddd0f2705c07d714a>>
+  @generated SignedSource<<98b5cb7370d82107ca055986d5826da7>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -12,7 +12,7 @@ sidebar_position: 7
 **delete untracked files**
 
 Delete all untracked files in your working copy. Untracked files are files
-that are unknown to Sapling. They are marked with "?" when you run
+that are unknown to Sapling. They are marked with &quot;?&quot; when you run
 `sl status`.
 
 By default, `sl clean` implies `--files`, so only untracked

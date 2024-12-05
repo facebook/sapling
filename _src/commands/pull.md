@@ -4,7 +4,7 @@ sidebar_position: 28
 
 ## pull
 <!--
-  @generated SignedSource<<6aff9248b359c19059123b5153495d02>>
+  @generated SignedSource<<4e2d9f1d07afc1e3f83b9310e6a034e3>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -12,7 +12,7 @@ sidebar_position: 28
 **pull commits from the specified source**
 
 Pull commits from a remote repository to a local one. This command modifies
-the commit graph, but doesn't mutate local commits or the working copy.
+the commit graph, but doesn&#x27;t mutate local commits or the working copy.
 
 Use `-B/--bookmark` to specify a remote bookmark to pull. For Git
 repos, remote bookmarks correspond to branches. If no bookmark is

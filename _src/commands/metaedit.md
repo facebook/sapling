@@ -4,7 +4,7 @@ sidebar_position: 24
 
 ## metaedit | meta | me
 <!--
-  @generated SignedSource<<1816677a4e3e3aee318358a45e0ebea0>>
+  @generated SignedSource<<4e45797360094c6ddaf344324bf6aca3>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
@@ -23,7 +23,7 @@ specify the commit message on the command line.
 
 You can edit other pieces of commit metadata such as the user or
 date, by specifying `-u` or `-d`, respectively. The expected
-format for the user is 'Full Name <user@example.com>'.
+format for the user is &#x27;Full Name &lt;user@example.com&gt;&#x27;.
 
 There is also an automation-friendly JSON input mode which allows
 the caller to provide the mapping between commit and new message
