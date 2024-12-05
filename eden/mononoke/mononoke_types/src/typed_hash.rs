@@ -23,6 +23,7 @@ use edenapi_types::BonsaiChangesetId as EdenapiBonsaiChangesetId;
 use edenapi_types::CommitId as EdenapiCommitId;
 use edenapi_types::ContentId as EdenapiContentId;
 use edenapi_types::FsnodeId as EdenapiFsnodeId;
+pub use slog;
 use sql::mysql;
 
 use crate::basename_suffix_skeleton_manifest_v3::BssmV3Directory;
@@ -56,6 +57,8 @@ use crate::thrift;
 use crate::unode::FileUnode;
 use crate::unode::ManifestUnode;
 use crate::ThriftConvert;
+
+pub const SLOW_DESERIAZLIZATION_THRESHOLD_MS: u128 = 100;
 
 // There is no NULL_HASH for typed hashes. Any places that need a null hash should use an
 // Option type, or perhaps a list as desired.
@@ -440,9 +443,17 @@ macro_rules! impl_typed_hash_loadable {
                 let blobstore_key = id.blobstore_key();
                 let get = blobstore.get(ctx, &blobstore_key);
 
-                let bytes = get.await?.ok_or(LoadableError::Missing(blobstore_key))?;
+                let bytes = get.await?.ok_or(LoadableError::Missing(blobstore_key.clone()))?;
+
+                let now = std::time::Instant::now();
                 let blob: Blob<$typed> = Blob::new(id, bytes.into_raw_bytes());
-                <Self::Value as BlobstoreValue>::from_blob(blob).map_err(LoadableError::Error)
+                let len = blob.len();
+                let ret = <Self::Value as BlobstoreValue>::from_blob(blob).map_err(LoadableError::Error);
+                let diff = now.elapsed().as_millis();
+                if diff > $crate::typed_hash::SLOW_DESERIAZLIZATION_THRESHOLD_MS {
+                    $crate::typed_hash::slog::warn!(ctx.logger(), "Slow load of {} ({} bytes) took {:?}", blobstore_key, len, now.elapsed());
+                }
+                ret
             }
         }
 
