@@ -673,6 +673,11 @@ impl Request {
         easy.verbose(self.verbose)?;
         easy.unix_socket_path(self.auth_proxy_socket_path)?;
 
+        match std::env::var("HTTP_PROXY") {
+            Ok(proxy) => easy.proxy(&proxy)?,
+            Err(_) => (),
+        }
+
         // Configure the handle for the desired HTTP method.
         match easy.get_ref().request_context().method() {
             Method::Get => {}
