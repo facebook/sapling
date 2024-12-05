@@ -14,8 +14,6 @@ use clap::Args;
 use clap::Command;
 use clap::FromArgMatches;
 use environment::MononokeEnvironment;
-use slog::Never;
-use slog::SendSyncRefUnwindSafeDrain;
 
 /// Trait implemented by things that need to extend the app building process,
 /// including adding additional arguments and modifying the environment before
@@ -32,15 +30,6 @@ pub trait AppExtension: Send + Sync + 'static {
     /// Hook executed after creating the environment before initializing Mononoke.
     fn environment_hook(&self, _args: &Self::Args, _env: &mut MononokeEnvironment) -> Result<()> {
         Ok(())
-    }
-
-    /// Hook executed after creating the log drain allowing for augmenting the logging.
-    fn log_drain_hook(
-        &self,
-        _args: &Self::Args,
-        drain: Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>,
-    ) -> Result<Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>> {
-        Ok(drain)
     }
 }
 
@@ -94,10 +83,6 @@ impl<T: Any> Downcast for T {
 // Internal trait to hide the concrete extension args type.
 pub(crate) trait BoxedAppExtensionArgs: Downcast + Send + Sync + 'static {
     fn environment_hook(&self, env: &mut MononokeEnvironment) -> Result<()>;
-    fn log_drain_hook(
-        &self,
-        drain: Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>,
-    ) -> Result<Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>>;
 }
 
 // Box to store an app extension and its parsed args.
@@ -115,12 +100,5 @@ impl<Ext: AppExtension> AppExtensionArgsBox<Ext> {
 impl<Ext: AppExtension> BoxedAppExtensionArgs for AppExtensionArgsBox<Ext> {
     fn environment_hook(&self, env: &mut MononokeEnvironment) -> Result<()> {
         self.ext.environment_hook(&self.args, env)
-    }
-
-    fn log_drain_hook(
-        &self,
-        drain: Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>,
-    ) -> Result<Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>> {
-        self.ext.log_drain_hook(&self.args, drain)
     }
 }

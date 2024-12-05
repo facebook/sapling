@@ -21,8 +21,6 @@ use services::Fb303Service;
 use services::FbStatus;
 use slog::info;
 use slog::Logger;
-use slog::Never;
-use slog::SendSyncRefUnwindSafeDrain;
 use tokio::runtime::Handle;
 
 use crate::AppExtension;
@@ -102,19 +100,6 @@ pub struct MonitoringAppExtension;
 
 impl AppExtension for MonitoringAppExtension {
     type Args = MonitoringArgs;
-
-    /// Hook executed after creating the log drain allowing for augmenting the logging.
-    fn log_drain_hook(
-        &self,
-        args: &MonitoringArgs,
-        drain: Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>,
-    ) -> Result<Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>> {
-        if args.fb303_thrift_port.is_some() {
-            Ok(Arc::new(slog_stats::StatsDrain::new(drain)))
-        } else {
-            Ok(drain)
-        }
-    }
 }
 
 /// A FB303 service that reports healthy once set_ready has been called.

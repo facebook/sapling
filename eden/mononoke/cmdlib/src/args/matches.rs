@@ -174,7 +174,7 @@ impl<'a> MononokeMatches<'a> {
             create_observability_context(&matches, &config_store, log_level)
                 .context("Faled to initialize observability context")?;
 
-        let logger = create_logger(&matches, root_log_drain).context("Failed to create logger")?;
+        let logger = create_logger(root_log_drain).context("Failed to create logger")?;
         let scuba_sample_builder =
             create_scuba_sample_builder(fb, &matches, &app_data, &observability_context)
                 .context("Failed to create scuba sample builder")?;
@@ -457,14 +457,10 @@ fn create_root_log_drain(
     Ok(root_log_drain)
 }
 
-fn create_logger(matches: &ArgMatches<'_>, root_log_drain: impl Drain + Clone) -> Result<Logger> {
+fn create_logger(root_log_drain: impl Drain + Clone) -> Result<Logger> {
     let kv = FacebookKV::new().context("Failed to initialize FacebookKV")?;
 
-    let logger = if matches.is_present("fb303-thrift-port") {
-        Logger::root(slog_stats::StatsDrain::new(root_log_drain), o![kv])
-    } else {
-        Logger::root(root_log_drain, o![kv])
-    };
+    let logger = Logger::root(root_log_drain, o![kv]);
 
     Ok(logger)
 }

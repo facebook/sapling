@@ -68,7 +68,6 @@ use crate::args::RuntimeArgs;
 use crate::extension::AppExtension;
 use crate::extension::AppExtensionBox;
 use crate::extension::BoxedAppExtension;
-use crate::extension::BoxedAppExtensionArgs;
 
 pub struct MononokeAppBuilder {
     fb: FacebookInit,
@@ -257,11 +256,7 @@ impl MononokeAppBuilder {
 
         let env_args = EnvironmentArgs::from_arg_matches(&args)?;
         let config_mode = env_args.config_args.mode();
-        let mut env = self.build_environment(
-            &runtime,
-            env_args,
-            extension_args.iter().map(|(_type_id, ext)| ext.as_ref()),
-        )?;
+        let mut env = self.build_environment(&runtime, env_args)?;
 
         for (_type_id, ext) in extension_args.iter() {
             ext.environment_hook(&mut env)?;
@@ -277,11 +272,10 @@ impl MononokeAppBuilder {
         )
     }
 
-    fn build_environment<'a>(
+    fn build_environment(
         &self,
         runtime: &Runtime,
         env_args: EnvironmentArgs,
-        extension_args: impl IntoIterator<Item = &'a dyn BoxedAppExtensionArgs> + Clone,
     ) -> Result<MononokeEnvironment> {
         let EnvironmentArgs {
             blobstore_args,
@@ -307,12 +301,11 @@ impl MononokeAppBuilder {
         let log_level = logging_args.create_log_level();
         #[cfg(fbcode_build)]
         cmdlib_logging::glog::set_glog_log_level(self.fb, log_level)?;
-        let mut root_log_drain = Arc::new(
+        let root_log_drain = Arc::new(
             logging_args
                 .create_root_log_drain(self.fb, log_level)
                 .context("Failed to create root log drain")?,
-        )
-            as Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>;
+        ) as Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>;
 
         let config_store = config_args
             .create_config_store(self.fb, Logger::root(root_log_drain.clone(), o![]))
@@ -321,10 +314,6 @@ impl MononokeAppBuilder {
         let observability_context = logging_args
             .create_observability_context(&config_store, log_level)
             .context("Failed to initialize observability context")?;
-
-        for ext in extension_args {
-            root_log_drain = ext.log_drain_hook(root_log_drain)?;
-        }
 
         let logger = logging_args.create_logger(root_log_drain)?;
 
