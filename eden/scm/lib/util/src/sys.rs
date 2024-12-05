@@ -16,15 +16,13 @@ pub fn hostname() -> String {
         // Also, this may fix some debugruntest issues on mac due to whoami issues.
         "test-hostname".to_owned()
     } else {
-        std::env::var_os(if cfg!(windows) {
-            "COMPUTERNAME"
-        } else if cfg!(target_os = "macos") {
-            "HOST"
-        } else {
-            "HOSTNAME"
-        })
-        .and_then(|h| h.to_str().map(|s| s.to_string()))
-        .unwrap_or("".to_owned())
+        match whoami::fallible::hostname() {
+            Ok(hostname) => hostname,
+            Err(err) => {
+                tracing::error!(?err, "error getting hostname");
+                "<UNKNOWN HOSTNAME>".to_string()
+            }
+        }
     }
 }
 
