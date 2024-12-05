@@ -261,7 +261,6 @@ class EdenTestCase(EdenTestCaseBase):
         """
         configs = {
             "experimental": ["enable-nfs-server = true\nwindows-symlinks = false"],
-            "thrift": ["request-tree-metadata = true"],
             # Defaulting to 8 retry threads is excessive when the test
             # framework runs tests on each CPU core.
             "hg": ['num-retry-threads = "2"'],
