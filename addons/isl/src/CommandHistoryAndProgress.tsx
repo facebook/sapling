@@ -268,6 +268,14 @@ export function CommandHistoryAndProgress() {
         <div className="progress-container-row">
           {icon}
           {label}
+          {progress.warnings?.map(warning => (
+            <Banner
+              icon={<Icon icon="warning" color="yellow" />}
+              alwaysShowButtons
+              kind={BannerKind.warning}>
+              <T replace={{$provider: warning}}>$provider</T>
+            </Banner>
+          ))}
         </div>
         {showLastLineOfOutput ? (
           <div className="progress-container-row">

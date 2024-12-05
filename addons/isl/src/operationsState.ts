@@ -33,6 +33,7 @@ export type OperationInfo = {
   hasCompletedUncommittedChangesOptimisticState?: boolean;
   /** if true, the operation process has exited AND there's no more optimistic changes to merge conflicts to show */
   hasCompletedMergeConflictsOptimisticState?: boolean;
+  warnings?: Array<string>;
 } & EnsureAssignedTogether<{
   endTime: Date;
   exitCode: number;
@@ -189,6 +190,22 @@ registerDisposable(
               ...currentOperation,
               commandOutput: newCommandOutput,
               currentProgress: progress.progress,
+            },
+          };
+        });
+        break;
+      case 'warning':
+        writeAtom(operationList, current => {
+          const currentOperation = current.currentOperation;
+          if (currentOperation == null) {
+            return current;
+          }
+          const warnings = [...(currentOperation?.warnings ?? []), progress.warning];
+          return {
+            ...current,
+            currentOperation: {
+              ...currentOperation,
+              warnings,
             },
           };
         });

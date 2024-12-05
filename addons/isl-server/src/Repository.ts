@@ -677,23 +677,25 @@ export class Repository {
       try {
         // eslint-disable-next-line no-await-in-loop
         const message = await child.getOneMessage();
-        if (
-          message === null ||
-          typeof message !== 'object' ||
-          !('progress_bar_update' in message)
-        ) {
+        if (message === null || typeof message !== 'object') {
           break;
         }
-        const bars = message.progress_bar_update as IpcProgressBar[];
-        const blen = bars.length;
-        if (blen > 0) {
-          const msg = bars[blen - 1];
-          onProgress('progress', {
-            message: msg.topic,
-            progress: msg.position,
-            progressTotal: msg.total,
-            unit: msg.unit,
-          });
+        if ('progress_bar_update' in message) {
+          const bars = message.progress_bar_update as IpcProgressBar[];
+          const blen = bars.length;
+          if (blen > 0) {
+            const msg = bars[blen - 1];
+            onProgress('progress', {
+              message: msg.topic,
+              progress: msg.position,
+              progressTotal: msg.total,
+              unit: msg.unit,
+            });
+          }
+        } else if ('warning' in message) {
+          onProgress('warning', message.warning as string);
+        } else {
+          break;
         }
       } catch (err) {
         break;

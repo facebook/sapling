@@ -80,6 +80,9 @@ export class OperationQueue {
         case 'inlineProgress':
           onProgress({id: operation.id, kind: 'inlineProgress', hash: args[1], message: args[2]});
           break;
+        case 'warning':
+          onProgress({id: operation.id, kind: 'warning', warning: args[1]});
+          break;
         case 'stderr':
           onProgress({id: operation.id, kind: 'stderr', message: args[1]});
           break;
