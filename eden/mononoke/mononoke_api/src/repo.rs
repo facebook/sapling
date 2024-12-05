@@ -88,6 +88,7 @@ use futures::try_join;
 use futures::Future;
 use futures::TryFutureExt;
 use futures_watchdog::WatchdogExt;
+use git_ref_content_mapping::GitRefContentMapping;
 use git_source_of_truth::GitSourceOfTruthConfig;
 use git_symbolic_refs::GitSymbolicRefs;
 use git_types::MappedGitCommitId;
@@ -206,6 +207,9 @@ pub struct Repo {
 
     #[facet]
     pub bonsai_git_mapping: dyn BonsaiGitMapping,
+
+    #[facet]
+    pub git_ref_content_mapping: dyn GitRefContentMapping,
 
     #[facet]
     pub bonsai_globalrev_mapping: dyn BonsaiGlobalrevMapping,

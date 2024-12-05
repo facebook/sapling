@@ -17,6 +17,7 @@ use commit_graph::CommitGraphRef;
 use commit_graph::CommitGraphWriterRef;
 use context::CoreContext;
 use filestore::FilestoreConfigRef;
+use git_ref_content_mapping::GitRefContentMappingRef;
 use gix_hash::ObjectId;
 use import_tools::git_uploader::check_commit_uploaded;
 use import_tools::git_uploader::finalize_batch;
@@ -31,6 +32,7 @@ use import_tools::GitUploader;
 use import_tools::GitimportAccumulator;
 use import_tools::TagMetadata;
 use mononoke_api::repo::git::create_annotated_tag;
+use mononoke_api::repo::git::generate_ref_content_mapping;
 use mononoke_api::repo::git::upload_packfile_base_item;
 use mononoke_api::repo::upload_non_blob_git_object;
 use mononoke_types::bonsai_changeset::BonsaiAnnotatedTag;
@@ -77,6 +79,7 @@ where
         + RepoBlobstoreRef
         + BonsaiGitMappingRef
         + BonsaiTagMappingRef
+        + GitRefContentMappingRef
         + FilestoreConfigRef
         + RepoDerivedDataRef
         + RepoIdentityRef
@@ -199,5 +202,17 @@ where
         )
         .await
         .context("Failure in creating changeset for tag")
+    }
+
+    async fn generate_ref_content_mapping(
+        &self,
+        _ctx: &CoreContext,
+        ref_name: String,
+        git_hash: ObjectId,
+        is_tree: bool,
+    ) -> Result<(), Error> {
+        generate_ref_content_mapping(&*self.inner, ref_name, git_hash, is_tree)
+            .await
+            .context("Failure in generating ref content mapping")
     }
 }

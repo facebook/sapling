@@ -134,6 +134,17 @@ pub trait GitUploader: Clone + Send + Sync + 'static {
         git_bytes: Bytes,
     ) -> Result<(), Error>;
 
+    /// Generate Git ref content mapping for a given ref name that points to
+    /// either a blob or tree object, where `git_hash` is the hash of the object
+    /// that is pointed to by the ref
+    async fn generate_ref_content_mapping(
+        &self,
+        ctx: &CoreContext,
+        ref_name: String,
+        git_hash: ObjectId,
+        is_tree: bool,
+    ) -> Result<(), Error>;
+
     /// Generate the intermediate representation of a single Bonsai changeset
     ///
     /// The Bonsai Changeset ID will be generated later in finalize_batch when the

@@ -230,6 +230,40 @@ pub async fn create_changeset_for_annotated_tag<Uploader: GitUploader, Reader: G
     Ok(changeset_id)
 }
 
+pub async fn upload_git_object<Uploader: GitUploader, Reader: GitReader>(
+    ctx: &CoreContext,
+    uploader: Arc<Uploader>,
+    reader: Arc<Reader>,
+    object_id: &ObjectId,
+) -> Result<()> {
+    let object_bytes = reader
+        .read_raw_object(object_id)
+        .await
+        .with_context(|| format_err!("Failed to fetch git object {}", object_id))?;
+    let raw_object_bytes = object_bytes.clone();
+    // Upload Packfile Item for the Git object
+    let upload_packfile = async {
+        uploader
+            .upload_packfile_base_item(ctx, *object_id, object_bytes)
+            .await
+            .with_context(|| {
+                format_err!(
+                    "Failed to upload packfile item for git object {}",
+                    object_id
+                )
+            })
+    };
+    // Upload Git object
+    let upload_git_object = async {
+        uploader
+            .upload_object(ctx, *object_id, raw_object_bytes)
+            .await
+            .with_context(|| format_err!("Failed to upload raw git object {}", object_id))
+    };
+    try_join!(upload_packfile, upload_git_object)?;
+    Ok(())
+}
+
 pub fn upload_git_tag<'a, Uploader: GitUploader, Reader: GitReader>(
     ctx: &'a CoreContext,
     uploader: Arc<Uploader>,
@@ -248,28 +282,7 @@ pub fn upload_git_tag<'a, Uploader: GitUploader, Reader: GitReader>(
             upload_git_tag(ctx, uploader.clone(), reader.clone(), &target).await?;
         }
 
-        let tag_bytes = reader
-            .read_raw_object(tag_id)
-            .await
-            .with_context(|| format_err!("Failed to fetch git tag {}", tag_id))?;
-        let raw_tag_bytes = tag_bytes.clone();
-        // Upload Packfile Item for the Git Tag
-        let upload_packfile = async {
-            uploader
-                .upload_packfile_base_item(ctx, *tag_id, tag_bytes)
-                .await
-                .with_context(|| {
-                    format_err!("Failed to upload packfile item for git tag {}", tag_id)
-                })
-        };
-        // Upload Git Tag
-        let upload_git_tag = async {
-            uploader
-                .upload_object(ctx, *tag_id, raw_tag_bytes)
-                .await
-                .with_context(|| format_err!("Failed to upload raw git tag {}", tag_id))
-        };
-        try_join!(upload_packfile, upload_git_tag)?;
+        upload_git_object(ctx, uploader, reader, tag_id).await?;
         Ok(())
     }
     .boxed()

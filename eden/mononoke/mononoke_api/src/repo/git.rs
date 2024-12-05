@@ -20,6 +20,8 @@ use commit_graph::CommitGraphRef;
 use commit_graph::CommitGraphWriterRef;
 use context::CoreContext;
 use filestore::FilestoreConfigRef;
+use git_ref_content_mapping::GitRefContentMappingEntry;
+use git_ref_content_mapping::GitRefContentMappingRef;
 use git_symbolic_refs::GitSymbolicRefsRef;
 use git_types::GitError;
 use gix_hash::ObjectId;
@@ -240,6 +242,25 @@ pub async fn create_git_tree(
     changesets_creation::save_changesets(ctx, repo, vec![changeset])
         .await
         .map_err(|e| GitError::StorageFailure(git_tree_hash.to_hex().to_string(), e.into()))
+}
+
+/// Free function for generating Git ref content mapping for a given ref name that points to
+/// either a blob or tree object, where `git_hash` is the hash of the object that is pointed
+/// to by the ref.
+pub async fn generate_ref_content_mapping(
+    repo: &impl GitRefContentMappingRef,
+    ref_name: String,
+    git_hash: ObjectId,
+    is_tree: bool,
+) -> Result<(), GitError> {
+    let git_hash = GitSha1::from_bytes(git_hash.as_bytes())
+        .map_err(|_| GitError::InvalidHash(git_hash.to_string()))?;
+    repo.git_ref_content_mapping()
+        .add_or_update_mappings(vec![GitRefContentMappingEntry::new(
+            ref_name, git_hash, is_tree,
+        )])
+        .await
+        .map_err(|e| GitError::StorageFailure(git_hash.to_string(), e.into()))
 }
 
 /// Free function for creating a new annotated tag in the repository.

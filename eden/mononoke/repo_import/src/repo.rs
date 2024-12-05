@@ -15,6 +15,7 @@ use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
+use git_ref_content_mapping::GitRefContentMapping;
 use metaconfig_types::RepoConfig;
 use mononoke_types::RepositoryId;
 use mutable_counters::MutableCounters;
@@ -53,6 +54,9 @@ pub struct Repo {
 
     #[facet]
     bonsai_tag_mapping: dyn BonsaiTagMapping,
+
+    #[facet]
+    git_ref_content_mapping: dyn GitRefContentMapping,
 
     #[facet]
     bonsai_globalrev_mapping: dyn BonsaiGlobalrevMapping,
