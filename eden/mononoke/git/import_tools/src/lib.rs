@@ -230,16 +230,12 @@ pub async fn create_changeset_for_annotated_tag<Uploader: GitUploader, Reader: G
     Ok(changeset_id)
 }
 
-pub async fn upload_git_object<Uploader: GitUploader, Reader: GitReader>(
+async fn upload_git_object_by_content<Uploader: GitUploader>(
     ctx: &CoreContext,
     uploader: Arc<Uploader>,
-    reader: Arc<Reader>,
     object_id: &ObjectId,
+    object_bytes: Bytes,
 ) -> Result<()> {
-    let object_bytes = reader
-        .read_raw_object(object_id)
-        .await
-        .with_context(|| format_err!("Failed to fetch git object {}", object_id))?;
     let raw_object_bytes = object_bytes.clone();
     // Upload Packfile Item for the Git object
     let upload_packfile = async {
@@ -261,6 +257,20 @@ pub async fn upload_git_object<Uploader: GitUploader, Reader: GitReader>(
             .with_context(|| format_err!("Failed to upload raw git object {}", object_id))
     };
     try_join!(upload_packfile, upload_git_object)?;
+    Ok(())
+}
+
+pub async fn upload_git_object<Uploader: GitUploader, Reader: GitReader>(
+    ctx: &CoreContext,
+    uploader: Arc<Uploader>,
+    reader: Arc<Reader>,
+    object_id: &ObjectId,
+) -> Result<()> {
+    let object_bytes = reader
+        .read_raw_object(object_id)
+        .await
+        .with_context(|| format_err!("Failed to fetch git object {}", object_id))?;
+    upload_git_object_by_content(ctx, uploader, object_id, object_bytes).await?;
     Ok(())
 }
 
@@ -490,7 +500,14 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
     let mut commits_with_file_changes = stream::iter(relevant_commits)
         .map(Ok)
         .map_ok(|oid| {
-            cloned!(ctx, reader, uploader, prefs.lfs, prefs.submodules, prefs.stream_for_changed_trees);
+            cloned!(
+                ctx,
+                reader,
+                uploader,
+                prefs.lfs,
+                prefs.submodules,
+                prefs.stream_for_changed_trees
+            );
             async move {
                 task::spawn({
                     async move {
@@ -507,53 +524,23 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
                         // Before generating the corresponding changeset at Mononoke end, upload the raw git commit
                         // and the git tree pointed to by the git commit.
                         let entries_stream = if !stream_for_changed_trees {
-                            stream::iter(extracted_commit
-                            .changed_trees(&ctx, &reader)
-                            .try_collect::<Vec<_>>()
-                            .await?).map(Ok).boxed()
+                            stream::iter(
+                                extracted_commit
+                                    .changed_trees(&ctx, &reader)
+                                    .try_collect::<Vec<_>>()
+                                    .await?,
+                            )
+                            .map(Ok)
+                            .boxed()
                         } else {
                             extracted_commit.changed_trees(&ctx, &reader).boxed()
                         };
                         entries_stream
                             .map_ok(|entry| {
-                                cloned!(oid, uploader, reader, ctx);
+                                cloned!(uploader, reader, ctx);
                                 async move {
                                     tokio::spawn(async move {
-                                        let tree_for_commit =
-                                            reader.read_raw_object(&entry.0).await.with_context(|| {
-                                                format_err!(
-                                                    "Failed to fetch git tree {} for commit {}",
-                                                    entry.0,
-                                                    oid
-                                                )
-                                            })?;
-                                        let tree_bytes = tree_for_commit.clone();
-                                        // Upload packfile base item for given tree object and the raw Git tree
-                                        let packfile_item_upload = async {
-                                            uploader
-                                            .upload_packfile_base_item(&ctx, entry.0, tree_for_commit)
-                                            .await
-                                            .with_context(|| {
-                                                format_err!(
-                                                    "Failed to upload packfile item for git tree {} for commit {}",
-                                                    entry.0,
-                                                    oid
-                                                )
-                                            })
-                                        };
-                                        let git_tree_upload = async {
-                                            uploader
-                                                .upload_object(&ctx, entry.0, tree_bytes)
-                                                .await
-                                                .with_context(|| {
-                                                    format_err!(
-                                                        "Failed to upload raw git tree {} for commit {}",
-                                                        entry.0,
-                                                        oid
-                                                    )
-                                                })
-                                        };
-                                        try_join!(packfile_item_upload, git_tree_upload)?;
+                                        upload_git_object(&ctx, uploader, reader, &entry.0).await?;
                                         anyhow::Ok(())
                                     })
                                     .await?
@@ -563,21 +550,14 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
                             .try_collect::<()>()
                             .await?;
                         // Upload packfile base item for Git commit and the raw Git commit
-                        let packfile_item_upload = async {
-                            uploader
-                                .upload_packfile_base_item(&ctx, oid, extracted_commit.original_commit.clone())
-                                .await
-                                .with_context(|| {
-                                    format_err!("Failed to upload packfile item for git commit {}", oid)
-                                })
-                        };
-                        let git_commit_upload = async {
-                            uploader
-                                .upload_object(&ctx, oid, extracted_commit.original_commit.clone())
-                                .await
-                                .with_context(|| format_err!("Failed to upload raw git commit {}", oid))
-                        };
-                        try_join!(packfile_item_upload, git_commit_upload)?;
+                        upload_git_object_by_content(
+                            &ctx,
+                            uploader,
+                            &oid,
+                            extracted_commit.original_commit.clone(),
+                        )
+                        .await?;
+
                         Result::<_, Error>::Ok((extracted_commit, file_changes))
                     }
                 })
