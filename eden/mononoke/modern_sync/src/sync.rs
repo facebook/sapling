@@ -170,7 +170,8 @@ pub async fn sync(
                         .try_next_step(move |cs_id| {
                             cloned!(ctx, repo, logger, sender);
                             async move {
-                                process_one_changeset(&cs_id, &ctx, repo, &logger, sender).await
+                                process_one_changeset(&cs_id, &ctx, repo, &logger, sender, false)
+                                    .await
                             }
                         })
                         .try_collect::<()>()
@@ -186,12 +187,13 @@ pub async fn sync(
     Ok(())
 }
 
-async fn process_one_changeset(
+pub async fn process_one_changeset(
     cs_id: &ChangesetId,
     ctx: &CoreContext,
     repo: Repo,
     logger: &Logger,
     sender: Arc<dyn ModernSyncSender + Send + Sync>,
+    log_completion: bool,
 ) -> Result<()> {
     info!(logger, "Found commit {:?}", cs_id);
 
@@ -217,6 +219,9 @@ async fn process_one_changeset(
         }
     }
 
-    STATS::synced_commits.add_value(1, (repo.repo_identity().name().to_string(),));
+    if log_completion {
+        STATS::synced_commits.add_value(1, (repo.repo_identity().name().to_string(),));
+    }
+
     Ok(())
 }
