@@ -22,8 +22,6 @@ export const latestReleaseVersion = latestReleaseAssets.name;
 
 export const macArmAsset = findAssetWithFilenameSubstr('arm64_ventura.bottle.tar.gz');
 
-export const macIntelAsset = findAssetWithFilenameSubstr('.monterey.bottle.tar.gz');
-
 export const ubuntu20 = findAssetWithFilenameSubstr('Ubuntu20.04.deb');
 
 export const ubuntu22 = findAssetWithFilenameSubstr('Ubuntu22.04.deb');
