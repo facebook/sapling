@@ -41,6 +41,7 @@ use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
+use futures_watchdog::WatchdogExt;
 use itertools::Itertools;
 use memwrites_commit_graph_storage::MemWritesCommitGraphStorage;
 use mononoke_types::ChangesetId;
@@ -546,7 +547,9 @@ impl CommitGraph {
             };
 
             // lower v_frontier to the highest generation of u_frontier
-            self.lower_frontier(ctx, &mut v_frontier, u_gen).await?;
+            self.lower_frontier(ctx, &mut v_frontier, u_gen)
+                .watched(ctx.logger())
+                .await?;
 
             // Check if the highest generation of u_frontier intersects with v_frontier
             // and return the intersection if so.
@@ -560,7 +563,12 @@ impl CommitGraph {
                 .last_key_value()
                 .and_then(|(_, cs_ids)| cs_ids.iter().next())
             {
-                Some(cs_id) => self.storage.fetch_edges(ctx, *cs_id).await?,
+                Some(cs_id) => {
+                    self.storage
+                        .fetch_edges(ctx, *cs_id)
+                        .watched(ctx.logger())
+                        .await?
+                }
                 None => return Ok(vec![]),
             };
 
@@ -573,8 +581,10 @@ impl CommitGraph {
                 let mut lowered_v_frontier = v_frontier.clone();
 
                 self.lower_frontier(ctx, &mut lowered_u_frontier, ancestor.generation)
+                    .watched(ctx.logger())
                     .await?;
                 self.lower_frontier(ctx, &mut lowered_v_frontier, ancestor.generation)
+                    .watched(ctx.logger())
                     .await?;
 
                 // If the two lowered frontier are disjoint then it's safe to lower,
@@ -590,6 +600,7 @@ impl CommitGraph {
             // If we could lower u_frontier using the skip tree skew ancestor
             // lower only the highest generation instead.
             self.lower_frontier_highest_generation(ctx, &mut u_frontier)
+                .watched(ctx.logger())
                 .await?;
         }
     }

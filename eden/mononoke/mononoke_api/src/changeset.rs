@@ -42,6 +42,7 @@ use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures_lazy_shared::LazyShared;
+use futures_watchdog::WatchdogExt;
 use git_types::MappedGitCommitId;
 use hooks::CrossRepoPushSource;
 use hooks::HookOutcome;
@@ -760,6 +761,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
             .repo()
             .commit_graph()
             .common_base(self.ctx(), self.id, other_commit)
+            .watched(self.ctx().logger())
             .await?;
         Ok(lca.first().map(|id| Self::new(self.repo_ctx.clone(), *id)))
     }
@@ -779,6 +781,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
             ChangesetFileOrdering::Unordered,
             None,
         )
+        .watched(self.ctx().logger())
         .await
     }
 
