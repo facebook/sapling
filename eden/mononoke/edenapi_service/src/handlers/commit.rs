@@ -66,8 +66,10 @@ use gotham_ext::handler::SlapiCommitIdentityScheme;
 use gotham_ext::middleware::request_context::RequestContext;
 use gotham_ext::middleware::scuba::ScubaMiddlewareState;
 use gotham_ext::response::TryIntoResponse;
+use maplit::hashmap;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
+use mononoke_api::CoreContext;
 use mononoke_api::CreateInfo;
 use mononoke_api::MononokeError;
 use mononoke_api::MononokeRepo;
@@ -82,7 +84,10 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::Globalrev;
+use rate_limiting::Metric;
+use rate_limiting::RateLimitStatus;
 use serde::Deserialize;
+use slog::debug;
 use types::HgId;
 use types::Parents;
 
@@ -95,7 +100,9 @@ use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 use crate::handlers::git_objects::fetch_git_object;
 use crate::middleware::request_dumper::RequestDumper;
+use crate::utils::build_counter;
 use crate::utils::cbor_stream_filtered_errors;
+use crate::utils::counter_check_and_bump;
 use crate::utils::custom_cbor_stream;
 use crate::utils::get_repo;
 use crate::utils::parse_cbor_request;
@@ -110,6 +117,8 @@ const MAX_CONCURRENT_FETCHES_PER_REQUEST: usize = 100;
 const HASH_TO_LOCATION_BATCH_SIZE: usize = 100;
 
 const PHASES_CHECK_LIMIT: usize = 10;
+
+const COMMITS_PER_USER_RATE_LIMIT: &str = "commits_per_user";
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct HashToLocationParams {
@@ -168,6 +177,62 @@ async fn translate_location<R: MononokeRepo>(
         hgids,
     };
     Ok(answer)
+}
+
+/// Ratelimit commit creation
+async fn ratelimit_commit_creation(ctx: CoreContext) -> Result<(), Error> {
+    let rate_limiter = match ctx.session().rate_limiter() {
+        Some(rate_limiter) => rate_limiter,
+        None => {
+            debug!(ctx.logger(), "No rate_limiter info found");
+            return Ok(());
+        }
+    };
+    let category = rate_limiter.category();
+    let limit = match rate_limiter.find_rate_limit(Metric::CommitsPerUser) {
+        Some(limit) => limit,
+        None => {
+            debug!(ctx.logger(), "No commits_per_user rate limit found");
+            return Ok(());
+        }
+    };
+
+    let enforced = match limit.body.raw_config.status {
+        RateLimitStatus::Disabled => return Ok(()),
+        RateLimitStatus::Tracked => false,
+        RateLimitStatus::Enforced => true,
+        _ => panic!("Invalid limit status: {:?}", limit.body.raw_config.status),
+    };
+    let max_value = limit.body.raw_config.limit;
+    let time_window = limit.body.window.as_secs() as u32;
+
+    let client_request_info = match ctx.client_request_info() {
+        Some(client_request_info) => client_request_info,
+        None => {
+            debug!(ctx.logger(), "No client request info found");
+            return Ok(());
+        }
+    };
+
+    let main_client_id = match &client_request_info.main_id {
+        Some(main_client_id) => main_client_id,
+        None => {
+            debug!(ctx.logger(), "No main client id found");
+            return Ok(());
+        }
+    };
+
+    let counter = build_counter(&ctx, category, COMMITS_PER_USER_RATE_LIMIT, main_client_id);
+    counter_check_and_bump(
+        &ctx,
+        counter,
+        COMMITS_PER_USER_RATE_LIMIT,
+        max_value,
+        time_window,
+        enforced,
+        hashmap! {"main_client_id" => main_client_id.as_str() },
+    )
+    .await
 }
 
 #[async_trait]
@@ -430,6 +495,12 @@ impl SaplingRemoteApiHandler for UploadHgChangesetsHandler {
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
         let changesets = request.changesets;
+
+        let ctx = repo.ctx().clone();
+        ratelimit_commit_creation(ctx)
+            .await
+            .map_err(HttpError::e429)?;
+
         let mutations = request.mutations;
         let changesets_data = changesets
             .into_iter()
@@ -486,6 +557,12 @@ impl SaplingRemoteApiHandler for UploadBonsaiChangesetHandler {
         let bubble_id = query.bubble_id.map(BubbleId::new);
         let cs = request.changeset;
         let repo = &repo;
+
+        let ctx = repo.ctx().clone();
+        ratelimit_commit_creation(ctx)
+            .await
+            .map_err(HttpError::e429)?;
+
         let parents = stream::iter(cs.hg_parents)
             .then(|hgid| async move {
                 repo.get_bonsai_from_hg(hgid.into())
