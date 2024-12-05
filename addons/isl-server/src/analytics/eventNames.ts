@@ -86,6 +86,7 @@ export type TrackEventName =
   | 'PartialCommitOperation'
   | 'PartialAmendOperation'
   | 'PartialDiscardOperation'
+  | 'PhabricatorGenAIFunnelEvent'
   | 'PrSubmitOperation'
   | 'PullOperation'
   | 'PullRevOperation'
