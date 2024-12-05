@@ -324,6 +324,8 @@ where
 
                             let mut stream = left_mf.list(ctx, &store).await?;
                             while let Some((name, left)) = stream.try_next().await? {
+                                tokio::task::consume_budget().await;
+
                                 let path = path.join(&name);
                                 if let Some(right) =
                                     right_mf.lookup(ctx, &other_store, &name).await?
@@ -357,6 +359,8 @@ where
                             }
                             let mut stream = right_mf.list(ctx, &other_store).await?;
                             while let Some((name, right)) = stream.try_next().await? {
+                                tokio::task::consume_budget().await;
+
                                 if left_mf.lookup(ctx, &store, &name).await?.is_none() {
                                     let path = path.join(&name);
                                     match right {
