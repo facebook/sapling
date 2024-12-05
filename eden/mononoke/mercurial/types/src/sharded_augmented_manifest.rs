@@ -27,6 +27,7 @@ use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures_ext::FbStreamExt;
+use futures_watchdog::WatchdogExt;
 use manifest::Entry;
 use manifest::Manifest;
 use mononoke_types::hash::Blake2;
@@ -571,6 +572,8 @@ impl HgAugmentedManifestEnvelope {
             let blobstore_key = manifestid.blobstore_key();
             let bytes = blobstore
                 .get(ctx, &blobstore_key)
+                .watched(ctx.logger())
+                .with_max_poll(blobstore::BLOBSTORE_MAX_POLL_TIME_MS)
                 .await
                 .context("While fetching aurmented manifest envelope blob")?;
             (|| {
@@ -591,6 +594,8 @@ impl HgAugmentedManifestEnvelope {
                 blobstore_key,
             ))
         }
+        .watched(ctx.logger())
+        .with_max_poll(blobstore::BLOBSTORE_MAX_POLL_TIME_MS)
         .await
         .context(format!(
             "Failed to load manifest {} from blobstore",

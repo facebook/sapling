@@ -22,6 +22,7 @@ use context::CoreContext;
 use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
+use futures_watchdog::WatchdogExt;
 use manifest::Entry;
 use manifest::Manifest;
 use mononoke_types::SortedVectorTrieMap;
@@ -185,12 +186,17 @@ impl HgBlobManifest {
             }))
         } else {
             async {
-                let envelope = fetch_manifest_envelope_opt(ctx, blobstore, manifestid).await?;
+                let envelope = fetch_manifest_envelope_opt(ctx, blobstore, manifestid)
+                    .watched(ctx.logger())
+                    .with_max_poll(blobstore::BLOBSTORE_MAX_POLL_TIME_MS)
+                    .await?;
                 match envelope {
                     Some(envelope) => Ok(Some(Self::parse(envelope)?)),
                     None => Result::<_>::Ok(None),
                 }
             }
+            .watched(ctx.logger())
+            .with_max_poll(blobstore::BLOBSTORE_MAX_POLL_TIME_MS)
             .await
             .context(format!(
                 "When loading manifest {} from blobstore",
@@ -257,6 +263,8 @@ impl Loadable for HgManifestId {
     ) -> Result<Self::Value, LoadableError> {
         let id = *self;
         HgBlobManifest::load(ctx, blobstore, id)
+            .watched(ctx.logger())
+            .with_max_poll(blobstore::BLOBSTORE_MAX_POLL_TIME_MS)
             .await?
             .ok_or_else(|| LoadableError::Missing(id.blobstore_key()))
     }

@@ -19,6 +19,7 @@ use blobstore::Loadable;
 use blobstore::LoadableError;
 use bytes::Bytes;
 use context::CoreContext;
+use futures_watchdog::WatchdogExt;
 use itertools::Itertools;
 use mononoke_types::hash::Sha256;
 
@@ -40,7 +41,11 @@ impl Loadable for HgFileNodeId {
         blobstore: &'a B,
     ) -> Result<Self::Value, LoadableError> {
         let blobstore_key = self.blobstore_key();
-        let bytes = blobstore.get(ctx, &blobstore_key).await?;
+        let bytes = blobstore
+            .get(ctx, &blobstore_key)
+            .watched(ctx.logger())
+            .with_max_poll(blobstore::BLOBSTORE_MAX_POLL_TIME_MS)
+            .await?;
         let blobstore_bytes = match bytes {
             Some(bytes) => bytes,
             None => return Err(LoadableError::Missing(blobstore_key)),

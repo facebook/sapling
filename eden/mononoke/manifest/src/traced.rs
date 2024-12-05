@@ -16,6 +16,7 @@ use blobstore::LoadableError;
 use context::CoreContext;
 use futures::stream::BoxStream;
 use futures::stream::TryStreamExt;
+use futures_watchdog::WatchdogExt;
 use mononoke_types::MPathElement;
 use mononoke_types::SortedVectorTrieMap;
 
@@ -200,7 +201,12 @@ impl<I: Clone + 'static + Send + Sync, M: Loadable + Send + Sync> Loadable for T
         blobstore: &'a B,
     ) -> Result<Self::Value, LoadableError> {
         let id = self.0.clone();
-        let v = self.1.load(ctx, blobstore).await?;
+        let v = self
+            .1
+            .load(ctx, blobstore)
+            .watched(ctx.logger())
+            .with_max_poll(blobstore::BLOBSTORE_MAX_POLL_TIME_MS)
+            .await?;
         Ok(Traced(id, v))
     }
 }

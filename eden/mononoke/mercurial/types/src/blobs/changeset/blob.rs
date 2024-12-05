@@ -19,6 +19,7 @@ use blobstore::Loadable;
 use blobstore::LoadableError;
 use bytes::Bytes;
 use context::CoreContext;
+use futures_watchdog::WatchdogExt;
 use mononoke_types::DateTime;
 
 use super::revlog::serialize_extras;
@@ -207,7 +208,10 @@ impl HgBlobChangeset {
         blobstore: &'a B,
         changesetid: HgChangesetId,
     ) -> Result<Option<Self>> {
-        let got = RevlogChangeset::load(ctx, blobstore, changesetid).await?;
+        let got = RevlogChangeset::load(ctx, blobstore, changesetid)
+            .watched(ctx.logger())
+            .with_max_poll(blobstore::BLOBSTORE_MAX_POLL_TIME_MS)
+            .await?;
         Ok(got.map(|revlogcs| {
             HgBlobChangeset::new_with_id(changesetid, HgChangesetContent::from_revlogcs(revlogcs))
         }))

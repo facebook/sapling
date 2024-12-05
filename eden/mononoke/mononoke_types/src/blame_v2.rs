@@ -24,6 +24,7 @@ use blobstore::Loadable;
 use blobstore::LoadableError;
 use context::CoreContext;
 use fbthrift::compact_protocol;
+use futures_watchdog::WatchdogExt;
 use thiserror::Error;
 use vec_map::VecMap;
 use xdiff::diff_hunks;
@@ -84,7 +85,11 @@ impl Loadable for BlameV2Id {
         let blobstore_key = self.blobstore_key();
         let fetch = blobstore.get(ctx, &blobstore_key);
 
-        let bytes = fetch.await?.ok_or(LoadableError::Missing(blobstore_key))?;
+        let bytes = fetch
+            .watched(ctx.logger())
+            .with_max_poll(blobstore::BLOBSTORE_MAX_POLL_TIME_MS)
+            .await?
+            .ok_or(LoadableError::Missing(blobstore_key))?;
         let blame_t = compact_protocol::deserialize(bytes.as_raw_bytes().as_ref())?;
         let blame = BlameV2::from_thrift(blame_t)?;
         Ok(blame)

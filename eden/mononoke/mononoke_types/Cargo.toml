@@ -31,6 +31,7 @@ either = "1.5"
 faster-hex = "0.6.1"
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
+futures_watchdog = { version = "0.1.0", path = "../common/futures_watchdog" }
 gix-date = "0.9.2"
 gix-hash = "0.15.1"
 itertools = "0.13.0"

@@ -27,6 +27,7 @@ use futures::try_join;
 use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures_watchdog::WatchdogExt;
 use itertools::Either;
 use itertools::Itertools;
 use nonzero_ext::nonzero;
@@ -146,6 +147,8 @@ impl<Value: ShardedMapV2Value> LoadableShardedMapV2Node<Value> {
             Self::Stored(stored) => stored
                 .id
                 .load(ctx, blobstore)
+                .watched(ctx.logger())
+                .with_max_poll(blobstore::BLOBSTORE_MAX_POLL_TIME_MS)
                 .await
                 .with_context(|| "Failed to load stored sharded map node"),
         }
@@ -1332,7 +1335,10 @@ mod test {
             &self,
             map: LoadableShardedMapV2Node<TestValue>,
         ) -> Result<ShardedMapV2Node<TestValue>> {
-            map.load(&self.0, &self.1).await
+            map.load(&self.0, &self.1)
+                .watched(self.0.logger())
+                .with_max_poll(blobstore::BLOBSTORE_MAX_POLL_TIME_MS)
+                .await
         }
 
         async fn get_entries_and_partial_maps(

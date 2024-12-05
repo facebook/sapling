@@ -72,6 +72,8 @@ pub struct BlobstoreGetData {
 const UNCOMPRESSED: u8 = b'0';
 const COMPRESSED: u8 = b'1';
 
+pub const BLOBSTORE_MAX_POLL_TIME_MS: u64 = 100;
+
 impl BlobstoreGetData {
     #[inline]
     pub fn new(meta: BlobstoreMetadata, bytes: BlobstoreBytes) -> Self {

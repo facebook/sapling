@@ -18,6 +18,7 @@ context = { version = "0.1.0", path = "../server/context" }
 digest = "0.10"
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
+futures_watchdog = { version = "0.1.0", path = "../common/futures_watchdog" }
 itertools = "0.13.0"
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 pin-project = "0.4.30"

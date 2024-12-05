@@ -16,6 +16,7 @@ use blobstore::LoadableError;
 use blobstore::Storable;
 use context::CoreContext;
 use edenapi_types::AnyFileContentId;
+use futures_watchdog::WatchdogExt;
 use mononoke_types::errors::MononokeTypeError;
 use mononoke_types::hash;
 use mononoke_types::BlobstoreKey;
@@ -136,7 +137,13 @@ impl Loadable for FetchKey {
     ) -> Result<Self::Value, LoadableError> {
         match self {
             FetchKey::Canonical(content_id) => Ok(*content_id),
-            FetchKey::Aliased(alias) => alias.load(ctx, blobstore).await,
+            FetchKey::Aliased(alias) => {
+                alias
+                    .load(ctx, blobstore)
+                    .watched(ctx.logger())
+                    .with_max_poll(blobstore::BLOBSTORE_MAX_POLL_TIME_MS)
+                    .await
+            }
         }
     }
 }
@@ -173,7 +180,10 @@ impl Loadable for Alias {
     ) -> Result<Self::Value, LoadableError> {
         let key = self.blobstore_key();
         let get = blobstore.get(ctx, &key);
-        let maybe_alias = get.await?;
+        let maybe_alias = get
+            .watched(ctx.logger())
+            .with_max_poll(blobstore::BLOBSTORE_MAX_POLL_TIME_MS)
+            .await?;
         let blob = maybe_alias.ok_or_else(|| LoadableError::Missing(key.clone()))?;
 
         ContentAlias::from_bytes(blob.into_raw_bytes())

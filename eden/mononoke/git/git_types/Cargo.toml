@@ -21,6 +21,7 @@ digest = "0.10"
 filestore = { version = "0.1.0", path = "../../filestore" }
 flate2 = { version = "1.0.33", features = ["rust_backend"], default-features = false }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
+futures_watchdog = { version = "0.1.0", path = "../../common/futures_watchdog" }
 git_delta = { version = "0.1.0", path = "../../third_party/git_delta" }
 git_types_thrift = { version = "0.1.0", path = "if" }
 gix-actor = "0.33.1"

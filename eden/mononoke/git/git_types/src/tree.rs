@@ -15,6 +15,7 @@ use context::CoreContext;
 use futures::stream;
 use futures::stream::BoxStream;
 use futures::StreamExt;
+use futures_watchdog::WatchdogExt;
 use gix_hash::ObjectId;
 use gix_object::tree;
 use gix_object::Tree;
@@ -214,6 +215,8 @@ impl Loadable for GitTreeId {
         blobstore: &'a B,
     ) -> Result<Self::Value, LoadableError> {
         fetch_non_blob_git_object(ctx, blobstore, &self.0)
+            .watched(ctx.logger())
+            .with_max_poll(blobstore::BLOBSTORE_MAX_POLL_TIME_MS)
             .await
             .map_err(anyhow::Error::from)
             .map_err(LoadableError::Error)?
