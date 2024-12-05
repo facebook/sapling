@@ -167,6 +167,8 @@ struct LoadLimitsInner {
     regional_getpack_files: LoadLimitCounter,
     regional_commits: LoadLimitCounter,
     commits_per_author: LoadLimitCounter,
+    commits_per_user: LoadLimitCounter,
+    edenapi_qps: LoadLimitCounter,
 }
 
 impl LoadLimitsInner {
@@ -189,8 +191,16 @@ impl LoadLimitsInner {
                 key: make_regional_limit_key("egress-commits"),
             },
             commits_per_author: LoadLimitCounter {
-                category,
+                category: category.clone(),
                 key: "commits_per_author".to_string(),
+            },
+            commits_per_user: LoadLimitCounter {
+                category: category.clone(),
+                key: "commits_per_author".to_string(),
+            },
+            edenapi_qps: LoadLimitCounter {
+                category,
+                key: "edenapi_qps".to_string(),
             },
         }
     }
@@ -213,6 +223,8 @@ impl MononokeRateLimits {
             (Metric::GetpackFiles, Scope::Regional) => &self.load_limits.regional_getpack_files,
             (Metric::Commits, Scope::Regional) => &self.load_limits.regional_commits,
             (Metric::CommitsPerAuthor, Scope::Global) => &self.load_limits.commits_per_author,
+            (Metric::CommitsPerUser, Scope::Global) => &self.load_limits.commits_per_user,
+            (Metric::EdenApiQps, Scope::Global) => &self.load_limits.edenapi_qps,
             _ => panic!("Unsupported metric/scope combination"),
         }
     }

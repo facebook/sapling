@@ -98,6 +98,8 @@ impl TryFrom<rate_limiting_config::FciMetricKey> for Metric {
             rate_limiting_config::FciMetricKey::GetpackFiles => Ok(Metric::GetpackFiles),
             rate_limiting_config::FciMetricKey::Commits => Ok(Metric::Commits),
             rate_limiting_config::FciMetricKey::CommitsPerAuthor => Ok(Metric::CommitsPerAuthor),
+            rate_limiting_config::FciMetricKey::CommitsPerUser => Ok(Metric::CommitsPerUser),
+            rate_limiting_config::FciMetricKey::EdenApiQps => Ok(Metric::EdenApiQps),
             _ => Err(anyhow!("Invalid FciMetricKey")),
         }
     }

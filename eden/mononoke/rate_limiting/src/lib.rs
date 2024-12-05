@@ -210,6 +210,7 @@ pub enum Metric {
     GetpackFiles,
     Commits,
     CommitsPerAuthor,
+    CommitsPerUser,
     EdenApiQps,
 }
 
