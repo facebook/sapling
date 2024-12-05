@@ -12,25 +12,10 @@ use anyhow::Error;
 use observability_config::ObservabilityConfig as CfgrObservabilityConfig;
 use observability_config::ScubaObservabilityConfig as CfgrScubaObservabilityConfig;
 use observability_config::ScubaVerbosityLevel as CfgrScubaVerbosityLevel;
-use observability_config::SlogLoggingLevel as CfgrLoggingLevel;
-use observability_config::SlogObservabilityConfig as CfgrSlogObservabilityConfig;
 use regex::Regex;
 use serde::de::Deserializer;
 use serde::de::Error as _;
 use serde::Deserialize;
-use slog::Level;
-
-fn cfgr_to_slog_level(level: CfgrLoggingLevel) -> Result<Level, Error> {
-    match level {
-        CfgrLoggingLevel::Trace => Ok(Level::Trace),
-        CfgrLoggingLevel::Debug => Ok(Level::Debug),
-        CfgrLoggingLevel::Info => Ok(Level::Info),
-        CfgrLoggingLevel::Warning => Ok(Level::Warning),
-        CfgrLoggingLevel::Error => Ok(Level::Error),
-        CfgrLoggingLevel::Critical => Ok(Level::Critical),
-        other => Err(anyhow!("unexpected SlogLoggingLevel: {:?}", other)),
-    }
-}
 
 fn cfgr_to_scuba_level(level: &CfgrScubaVerbosityLevel) -> Result<ScubaVerbosityLevel, Error> {
     match *level {
@@ -46,10 +31,6 @@ pub enum ScubaVerbosityLevel {
     Verbose,
 }
 
-pub struct SlogObservabilityConfig {
-    pub level: Level,
-}
-
 pub struct ScubaObservabilityConfig {
     pub level: ScubaVerbosityLevel,
     pub verbose_sessions: Vec<String>,
@@ -58,17 +39,7 @@ pub struct ScubaObservabilityConfig {
 }
 
 pub struct ObservabilityConfig {
-    pub slog_config: SlogObservabilityConfig,
     pub scuba_config: ScubaObservabilityConfig,
-}
-
-impl TryFrom<CfgrSlogObservabilityConfig> for SlogObservabilityConfig {
-    type Error = Error;
-    fn try_from(value: CfgrSlogObservabilityConfig) -> Result<Self, Error> {
-        Ok(Self {
-            level: cfgr_to_slog_level(value.level)?,
-        })
-    }
 }
 
 impl TryFrom<CfgrScubaObservabilityConfig> for ScubaObservabilityConfig {
@@ -99,14 +70,9 @@ impl TryFrom<CfgrObservabilityConfig> for ObservabilityConfig {
     type Error = Error;
 
     fn try_from(value: CfgrObservabilityConfig) -> Result<Self, Error> {
-        let CfgrObservabilityConfig {
-            slog_config,
-            scuba_config,
-            ..
-        } = value;
+        let CfgrObservabilityConfig { scuba_config, .. } = value;
 
         Ok(Self {
-            slog_config: slog_config.try_into()?,
             scuba_config: scuba_config.try_into()?,
         })
     }

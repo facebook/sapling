@@ -47,7 +47,6 @@ use maybe_owned::MaybeOwned;
 use megarepo_config::MononokeMegarepoConfigsOptions;
 use metaconfig_types::PackFormat;
 use mononoke_app::args::parse_config_spec_to_path;
-use observability::DynamicLevelDrain;
 use observability::ObservabilityContext;
 use panichandler::Fate;
 use permission_checker::AclProvider;
@@ -175,8 +174,7 @@ impl<'a> MononokeMatches<'a> {
             create_observability_context(&matches, &config_store, log_level)
                 .context("Faled to initialize observability context")?;
 
-        let logger = create_logger(&matches, root_log_drain, observability_context.clone())
-            .context("Failed to create logger")?;
+        let logger = create_logger(&matches, root_log_drain).context("Failed to create logger")?;
         let scuba_sample_builder =
             create_scuba_sample_builder(fb, &matches, &app_data, &observability_context)
                 .context("Failed to create scuba sample builder")?;
@@ -435,40 +433,31 @@ fn create_root_log_drain(
             None => Arc::new(glog_drain),
         };
 
-    let root_log_drain = if let Some(filter_fn) = log_filter_fn {
-        Arc::new(slog::IgnoreResult::new(slog::Filter::new(
-            root_log_drain,
-            filter_fn,
-        )))
+    let root_log_drain: Arc<dyn Drain> = if let Some(filter_fn) = log_filter_fn {
+        Arc::new(
+            root_log_drain
+                .filter(filter_fn)
+                .filter_level(log_level)
+                .ignore_res(),
+        )
     } else {
-        root_log_drain
+        Arc::new(root_log_drain.filter_level(log_level).ignore_res())
     };
 
-    // NOTE: We pass an unfiltered Logger to init_stdlog_once. That's because we do the filtering
-    // at the stdlog level there.
     let stdlog_logger = Logger::root(root_log_drain.clone(), o![]);
     let stdlog_level = cmdlib_logging::log::init_stdlog_once(stdlog_logger, stdlog_env)?;
 
     // Note what level we enabled stdlog at, so that if someone is trying to debug they get
     // informed of potentially needing to set RUST_LOG.
     debug!(
-        Logger::root(
-            root_log_drain.clone().filter_level(log_level).ignore_res(),
-            o![]
-        ),
+        Logger::root(root_log_drain.clone(), o![]),
         "enabled stdlog with level: {:?} (set {} to configure)", stdlog_level, stdlog_env
     );
 
     Ok(root_log_drain)
 }
 
-fn create_logger(
-    matches: &ArgMatches<'_>,
-    root_log_drain: impl Drain + Clone,
-    observability_context: ObservabilityContext,
-) -> Result<Logger> {
-    let root_log_drain = DynamicLevelDrain::new(root_log_drain, observability_context);
-
+fn create_logger(matches: &ArgMatches<'_>, root_log_drain: impl Drain + Clone) -> Result<Logger> {
     let kv = FacebookKV::new().context("Failed to initialize FacebookKV")?;
 
     let logger = if matches.is_present("fb303-thrift-port") {

@@ -32,11 +32,6 @@ impl CfgrObservabilityContextInner {
         Ok(Self { config_handle })
     }
 
-    fn get_logging_level(&self) -> Level {
-        let config = self.config_handle.get();
-        config.slog_config.level
-    }
-
     fn should_log_scuba_sample(
         &self,
         verbosity_level: ScubaVerbosityLevel,
@@ -63,10 +58,6 @@ impl TestObservabilityContextInner {
         self.level = level;
     }
 
-    fn get_logging_level(&self) -> Level {
-        self.level
-    }
-
     fn should_log_scuba_sample(
         &self,
         _verbosity_level: ScubaVerbosityLevel,
@@ -79,6 +70,7 @@ impl TestObservabilityContextInner {
 /// A static `ObservabilityContext` to represent
 /// traditional behavior with predefined log levels
 #[derive(Debug, Clone)]
+#[allow(unused)]
 pub struct StaticObservabilityContextInner {
     level: Level,
 }
@@ -86,10 +78,6 @@ pub struct StaticObservabilityContextInner {
 impl StaticObservabilityContextInner {
     fn new(level: Level) -> Self {
         Self { level }
-    }
-
-    fn get_logging_level(&self) -> Level {
-        self.level
     }
 
     fn should_log_scuba_sample(
@@ -121,14 +109,6 @@ impl ObservabilityContextInner {
 
     fn new_test(inner: Arc<Mutex<TestObservabilityContextInner>>) -> Self {
         Self::Test(inner)
-    }
-
-    fn get_logging_level(&self) -> Level {
-        match self {
-            Self::Dynamic(octx) => octx.get_logging_level(),
-            Self::Test(octx) => octx.lock().expect("poisoned lock").get_logging_level(),
-            Self::Static(octx) => octx.get_logging_level(),
-        }
     }
 
     pub fn should_log_scuba_sample(
@@ -173,10 +153,6 @@ impl ObservabilityContext {
         Self {
             inner: ObservabilityContextInner::new_static(level),
         }
-    }
-
-    pub fn get_logging_level(&self) -> Level {
-        self.inner.get_logging_level()
     }
 
     pub fn should_log_scuba_sample(

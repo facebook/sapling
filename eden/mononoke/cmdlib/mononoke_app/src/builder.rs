@@ -42,7 +42,6 @@ use environment::MononokeEnvironment;
 use fbinit::FacebookInit;
 use megarepo_config::MegarepoConfigsArgs;
 use megarepo_config::MononokeMegarepoConfigsOptions;
-use observability::DynamicLevelDrain;
 use permission_checker::AclProvider;
 use permission_checker::DefaultAclProvider;
 use permission_checker::InternalAclProvider;
@@ -308,9 +307,12 @@ impl MononokeAppBuilder {
         let log_level = logging_args.create_log_level();
         #[cfg(fbcode_build)]
         cmdlib_logging::glog::set_glog_log_level(self.fb, log_level)?;
-        let root_log_drain = logging_args
-            .create_root_log_drain(self.fb, log_level)
-            .context("Failed to create root log drain")?;
+        let mut root_log_drain = Arc::new(
+            logging_args
+                .create_root_log_drain(self.fb, log_level)
+                .context("Failed to create root log drain")?,
+        )
+            as Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>>;
 
         let config_store = config_args
             .create_config_store(self.fb, Logger::root(root_log_drain.clone(), o![]))
@@ -320,11 +322,6 @@ impl MononokeAppBuilder {
             .create_observability_context(&config_store, log_level)
             .context("Failed to initialize observability context")?;
 
-        let mut root_log_drain: Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>> =
-            Arc::new(DynamicLevelDrain::new(
-                root_log_drain,
-                observability_context.clone(),
-            ));
         for ext in extension_args {
             root_log_drain = ext.log_drain_hook(root_log_drain)?;
         }

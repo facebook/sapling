@@ -175,13 +175,12 @@ impl LoggingArgs {
         let stdlog_logger = Logger::root(root_log_drain.clone(), o![]);
         let stdlog_level = crate::log::init_stdlog_once(stdlog_logger, stdlog_env)?;
 
+        let root_log_drain = root_log_drain.filter_level(log_level).ignore_res();
+
         // Note what level we enabled stdlog at, so that if someone is trying to debug they get
         // informed of potentially needing to set RUST_LOG.
         debug!(
-            Logger::root(
-                root_log_drain.clone().filter_level(log_level).ignore_res(),
-                o![]
-            ),
+            Logger::root(root_log_drain.clone(), o![]),
             "enabled stdlog with level: {:?} (set {} to configure)", stdlog_level, stdlog_env
         );
 

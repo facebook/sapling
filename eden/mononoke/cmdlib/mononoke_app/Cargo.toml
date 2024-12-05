@@ -43,7 +43,6 @@ mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_configs = { version = "0.1.0", path = "../../mononoke_configs" }
 mononoke_repos = { version = "0.1.0", path = "../../mononoke_repos" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-observability = { version = "0.1.0", path = "../../observability" }
 permission_checker = { version = "0.1.0", path = "../../permission_checker" }
 prefixblob = { version = "0.1.0", path = "../../blobstore/prefixblob" }
 redactedblobstore = { version = "0.1.0", path = "../../blobstore/redactedblobstore" }
