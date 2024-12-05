@@ -104,6 +104,8 @@ use filenodes::ArcFilenodes;
 use filestore::ArcFilestoreConfig;
 use filestore::FilestoreConfig;
 use futures_watchdog::WatchdogExt;
+use git_ref_content_mapping::ArcGitRefContentMapping;
+use git_ref_content_mapping::SqlGitRefContentMappingBuilder;
 use git_source_of_truth::ArcGitSourceOfTruthConfig;
 use git_source_of_truth::SqlGitSourceOfTruthConfigBuilder;
 use git_symbolic_refs::ArcGitSymbolicRefs;
@@ -778,6 +780,9 @@ pub enum RepoFactoryError {
     #[error("Error opening bonsai-tag mapping")]
     BonsaiTagMapping,
 
+    #[error("Error opening git-ref-content mapping")]
+    GitRefContentMapping,
+
     #[error("Error opening git-symbolic-refs")]
     GitSymbolicRefs,
 
@@ -1029,6 +1034,20 @@ impl RepoFactory {
             .build(repo_identity.id());
         // Caching is not enabled for now, but can be added later if required.
         Ok(Arc::new(bonsai_tag_mapping))
+    }
+
+    pub async fn git_ref_content_mapping(
+        &self,
+        repo_config: &ArcRepoConfig,
+        repo_identity: &ArcRepoIdentity,
+    ) -> Result<ArcGitRefContentMapping> {
+        let git_ref_content_mapping = self
+            .open_sql::<SqlGitRefContentMappingBuilder>(repo_config)
+            .await
+            .context(RepoFactoryError::GitRefContentMapping)?
+            .build(repo_identity.id());
+        // TODO(rajshar): Add caching for git_ref_content_mapping
+        Ok(Arc::new(git_ref_content_mapping))
     }
 
     pub async fn git_symbolic_refs(

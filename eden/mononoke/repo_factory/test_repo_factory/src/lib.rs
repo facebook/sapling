@@ -46,6 +46,8 @@ use fbinit::FacebookInit;
 use filenodes::ArcFilenodes;
 use filestore::ArcFilestoreConfig;
 use filestore::FilestoreConfig;
+use git_ref_content_mapping::ArcGitRefContentMapping;
+use git_ref_content_mapping::SqlGitRefContentMappingBuilder;
 use git_source_of_truth::ArcGitSourceOfTruthConfig;
 use git_source_of_truth::SqlGitSourceOfTruthConfigBuilder;
 use git_symbolic_refs::ArcGitSymbolicRefs;
@@ -485,6 +487,18 @@ impl TestRepoFactory {
     ) -> Result<ArcBonsaiTagMapping> {
         Ok(Arc::new(
             SqlBonsaiTagMappingBuilder::from_sql_connections(self.metadata_db.clone())
+                .build(repo_identity.id()),
+        ))
+    }
+
+    /// Construct Git Ref Content Mapping using the in-memory metadata
+    /// database.
+    pub fn git_ref_content_mapping(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+    ) -> Result<ArcGitRefContentMapping> {
+        Ok(Arc::new(
+            SqlGitRefContentMappingBuilder::from_sql_connections(self.metadata_db.clone())
                 .build(repo_identity.id()),
         ))
     }
