@@ -18,6 +18,7 @@ use cacheblob::LeaseOps;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
 use filestore::FilestoreConfig;
+use git_ref_content_mapping::GitRefContentMapping;
 use git_symbolic_refs::GitSymbolicRefs;
 use metaconfig_types::RepoConfig;
 use repo_blobstore::RepoBlobstore;
@@ -53,6 +54,9 @@ pub(crate) struct Repo {
 
     #[facet]
     bonsai_tag_mapping: dyn BonsaiTagMapping,
+
+    #[facet]
+    git_ref_content_mapping: dyn GitRefContentMapping,
 
     #[facet]
     git_symbolic_refs: dyn GitSymbolicRefs,
