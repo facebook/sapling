@@ -637,7 +637,8 @@ impl SaplingRemoteApiHandler for FetchSnapshotHandler {
         let bubble_id = repo
             .ephemeral_store()
             .bubble_from_changeset(repo.ctx(), &cs_id)
-            .await?
+            .await
+            .context("Failure in fetching bubble from changeset")?
             .context("Snapshot not in a bubble")?;
         let labels = repo
             .ephemeral_store()
@@ -648,6 +649,7 @@ impl SaplingRemoteApiHandler for FetchSnapshotHandler {
         let cs = cs_id
             .load(repo.ctx(), &blobstore)
             .await
+            .context("Failed to load bonsai changeset through bubble blobstore")
             .map_err(MononokeError::from)?
             .into_mut();
         let time = cs.author_date.timestamp_secs();
