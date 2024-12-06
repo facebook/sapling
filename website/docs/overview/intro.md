@@ -1,7 +1,7 @@
 ---
 sidebar_position: 0
 ---
-# Intro
+# Introduction
 
 This overview highlights a few of the interesting areas of Sapling's
 user experience. It is by no means exhaustive (quite the opposite, really), nor
