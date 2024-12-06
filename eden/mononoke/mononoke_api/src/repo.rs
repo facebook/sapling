@@ -1311,7 +1311,6 @@ impl<R: MononokeRepo> RepoContext<R> {
                         let maybe_cs_id = cache
                             .get(&self.ctx, &bookmark_name)
                             .watched(self.ctx.logger())
-                            .with_max_poll(50)
                             .await?;
                         Ok(maybe_cs_id.map(|cs_id| (bookmark_name.into_string(), cs_id)))
                     }
@@ -1326,7 +1325,6 @@ impl<R: MononokeRepo> RepoContext<R> {
                 cache
                     .list(&self.ctx, &prefix, &pagination, limit)
                     .watched(self.ctx.logger())
-                    .with_max_poll(50)
                     .await?,
             )
             .map(|(bookmark, (cs_id, _kind))| Ok((bookmark.into_string(), cs_id)))
