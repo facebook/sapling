@@ -1387,13 +1387,13 @@ class EdenCheckout:
             if isinstance(value, str):
                 return value
             raise CheckoutConfigCorruptedError(
-                f"{config_path} is missing {key} in " "[repository]"
+                f"{config_path} is missing {key} in [repository]"
             )
 
         scm_type = get_field("type")
         if scm_type not in SUPPORTED_REPOS:
             raise CheckoutConfigCorruptedError(
-                f'repository "{config_path}" has unsupported type ' f'"{scm_type}"'
+                f'repository "{config_path}" has unsupported type "{scm_type}"'
             )
 
         mount_protocol = repository.get("protocol")

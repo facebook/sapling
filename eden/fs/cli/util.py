@@ -395,7 +395,7 @@ class HgRepo(Repo):
         self._hg_binary = os.environ.get("EDEN_HG_BINARY", "hg")
 
     def __repr__(self) -> str:
-        return f"HgRepo(source={self.source!r}, " f"working_dir={self.working_dir!r})"
+        return f"HgRepo(source={self.source!r}, working_dir={self.working_dir!r})"
 
     # pyre-fixme[2]: Parameter must be annotated.
     def _run_hg(self, args: List[str], stderr_output=None) -> bytes:
@@ -420,7 +420,7 @@ class GitRepo(Repo):
         super(GitRepo, self).__init__("git", source, working_dir)
 
     def __repr__(self) -> str:
-        return f"GitRepo(source={self.source!r}, " f"working_dir={self.working_dir!r})"
+        return f"GitRepo(source={self.source!r}, working_dir={self.working_dir!r})"
 
     def _run_git(self, args: List[str]) -> bytes:
         cmd = ["git"] + args

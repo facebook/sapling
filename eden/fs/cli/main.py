@@ -881,17 +881,15 @@ class CloneCmd(Subcmd):
         # mount, but check this here just to fail early if things look wrong.)
         try:
             for _ in os.listdir(args.path):
-                print_stderr(f"error: destination path {args.path} " "is not empty")
+                print_stderr(f"error: destination path {args.path} is not empty")
                 return 1
         except OSError as ex:
             if ex.errno == errno.ENOTDIR:
-                print_stderr(
-                    f"error: destination path {args.path} " "is not a directory"
-                )
+                print_stderr(f"error: destination path {args.path} is not a directory")
                 return 1
             elif ex.errno != errno.ENOENT:
                 print_stderr(
-                    f"error: unable to access destination path " f"{args.path}: {ex}"
+                    f"error: unable to access destination path {args.path}: {ex}"
                 )
                 return 1
 
@@ -994,7 +992,7 @@ is case-sensitive. This is not recommended and is intended only for testing."""
                     commit = repo.get_commit_hash(args.rev)
                 except Exception as ex:
                     print_stderr(
-                        f"error: unable to find hash for commit " f"{args.rev!r}: {ex}"
+                        f"error: unable to find hash for commit {args.rev!r}: {ex}"
                     )
                     return 1
             else:
