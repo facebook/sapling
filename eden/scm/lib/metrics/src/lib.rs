@@ -16,8 +16,7 @@ use parking_lot::RwLock;
 
 pub struct Counter {
     name: &'static str,
-    inner: AtomicUsize,
-    registered: OnceCell<()>,
+    counter: OnceCell<AtomicUsize>,
     gauge: bool,
 }
 
@@ -28,8 +27,7 @@ impl Counter {
         // Unfortunately we can't check name this here because of const restriction
         Self {
             name,
-            inner: AtomicUsize::new(0),
-            registered: OnceCell::new(),
+            counter: OnceCell::new(),
             gauge: false,
         }
     }
@@ -45,15 +43,15 @@ impl Counter {
     }
 
     pub fn add(&'static self, val: usize) {
-        self.inner().fetch_add(val, Ordering::Relaxed);
+        self.counter().fetch_add(val, Ordering::Relaxed);
     }
 
     pub fn sub(&'static self, val: usize) {
-        self.inner().fetch_sub(val, Ordering::Relaxed);
+        self.counter().fetch_sub(val, Ordering::Relaxed);
     }
 
     pub fn value(&'static self) -> usize {
-        self.inner().load(Ordering::Relaxed)
+        self.counter().load(Ordering::Relaxed)
     }
 
     /// Increment counter by v and decrement it back by v when returned guard is dropped
@@ -66,10 +64,11 @@ impl Counter {
         self.gauge
     }
 
-    fn inner(&'static self) -> &AtomicUsize {
-        self.registered
-            .get_or_init(|| Registry::global().register_counter(self));
-        &self.inner
+    fn counter(&'static self) -> &AtomicUsize {
+        self.counter.get_or_init(|| {
+            Registry::global().register_counter(self);
+            AtomicUsize::new(0)
+        })
     }
 }
 
@@ -116,7 +115,7 @@ impl Registry {
 
     pub fn reset(&self) {
         for counter in self.counters.read().values() {
-            counter.inner().store(0, Ordering::Relaxed);
+            counter.counter().store(0, Ordering::Relaxed);
         }
     }
 }
