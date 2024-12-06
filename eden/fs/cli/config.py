@@ -930,17 +930,58 @@ Do you want to run `eden mount %s` instead?"""
         old_rmtree_safe_fd = shutil._rmtree_safe_fd
 
         with Spinner("Deleting: ") as spinner:
+            # pyre-ignore[2]: Parameter must be annotated.
+            # pyre-fixme[3]: Return type must be annotated.
+            def args_parser_for_rmtree_unsafe(args):
+                try:
+                    # as of Python 3.12, _rmtree_unsafe has the signature below
+                    #
+                    # def _rmtree_unsafe(path, onexc):
+                    return str(args[0])
+                except Exception:
+                    return "directory and files ..."
+
             shutil._rmtree_unsafe = util.hook_recursive_with_spinner(
                 # We're gently caressing an internal shutil function
                 # pyre-ignore[16]: Module shutil has no attribute _rmtree_unsafe.
                 shutil._rmtree_unsafe,
                 spinner,
+                args_parser_for_rmtree_unsafe,
             )
+
+            # pyre-ignore[2]: Parameter must be annotated.
+            # pyre-fixme[3]: Return type must be annotated.
+            def args_parser_for_rmtree_safe_fd(args):
+                try:
+                    if sys.version_info >= (3, 12):
+                        # as of Python 3.12, _rmtree_safe_fd has the signature below
+                        #
+                        # def _rmtree_safe_fd(stack, onexc):
+                        #
+                        # where "stack" has the structure:
+                        # [
+                        #  (
+                        #    <built-in function rmdir>,
+                        #    None,
+                        #    PosixPath('/data/users/myUser/eden-dev-state/clients/fbsource-test-remove-4'),
+                        #    None
+                        #  )
+                        # ]
+                        return str(args[0][0][2])
+                    else:
+                        # for Python 3.11 and below, the signature is:
+                        # def _rmtree_safe_fd(topfd, path, onerror):
+                        return str(args[1])
+
+                except Exception:
+                    return "directory and files ..."
+
             shutil._rmtree_safe_fd = util.hook_recursive_with_spinner(
                 # We're gently caressing an internal shutil function
                 # pyre-ignore[16]: Module shutil has no attribute _rmtree_safe_fd.
                 shutil._rmtree_safe_fd,
                 spinner,
+                args_parser_for_rmtree_safe_fd,
             )
 
             path = Path(path)
