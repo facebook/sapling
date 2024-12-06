@@ -10,9 +10,11 @@ mod metrics;
 mod types;
 
 use std::path::PathBuf;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Instant;
 
+use ::metrics::Counter;
 use ::types::fetch_mode::FetchMode;
 use ::types::HgId;
 use ::types::Key;
@@ -24,6 +26,8 @@ use cas_client::CasClient;
 use clientinfo::get_client_request_info_thread_local;
 use clientinfo::set_client_request_info_thread_local;
 use crossbeam::channel::unbounded;
+use indexedlog::log::AUTO_SYNC_COUNT;
+use indexedlog::log::SYNC_COUNT;
 use itertools::Itertools;
 use minibytes::Bytes;
 use parking_lot::Mutex;
@@ -133,6 +137,10 @@ macro_rules! try_local_content {
     };
 }
 
+static FILESTORE_FLUSH_COUNT: Counter = Counter::new_counter("scmstore.file.flush");
+static INDEXEDLOG_SYNC_COUNT: Counter = Counter::new_counter("scmstore.indexedlog.sync");
+static INDEXEDLOG_AUTO_SYNC_COUNT: Counter = Counter::new_counter("scmstore.indexedlog.auto_sync");
+
 impl FileStore {
     /// Get the "local content" without going through the heavyweight "fetch" API.
     pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<Bytes>> {
@@ -199,7 +207,6 @@ impl FileStore {
         let edenapi = self.edenapi.clone();
         let cas_client = self.cas_client.clone();
         let lfs_remote = self.lfs_remote.clone();
-        let metrics = self.metrics.clone();
         let activity_logger = self.activity_logger.clone();
         let format = self.format();
 
@@ -317,8 +324,11 @@ impl FileStore {
 
             state.derive_computable(aux_cache.as_ref().map(|s| s.as_ref()));
 
-            metrics.write().fetch += state.metrics().clone();
             state.finish();
+
+            // These aren't technically filestore specific, but this will keep them updated.
+            INDEXEDLOG_SYNC_COUNT.add(SYNC_COUNT.swap(0, Ordering::Relaxed) as usize);
+            INDEXEDLOG_AUTO_SYNC_COUNT.add(AUTO_SYNC_COUNT.swap(0, Ordering::Relaxed) as usize);
 
             if let Some(activity_logger) = activity_logger {
                 if let Err(err) = activity_logger.lock().log_file_fetch(
@@ -463,10 +473,8 @@ impl FileStore {
         for (k, v) in metrics.metrics() {
             hg_metrics::increment_counter(k, v as u64);
         }
-        hg_metrics::increment_counter("scmstore.file.flush", 1);
-        if let Err(err) = metrics.fetch.update_ods() {
-            tracing::error!("Error updating ods fetch metrics: {}", err);
-        }
+
+        FILESTORE_FLUSH_COUNT.increment();
 
         result
     }

@@ -37,6 +37,7 @@ use types::CasFetchedStats;
 use types::Key;
 use types::Sha256;
 
+use super::metrics;
 use crate::error::ClonableError;
 use crate::indexedlogauxstore::AuxStore;
 use crate::indexedlogdatastore::Entry;
@@ -75,7 +76,7 @@ pub struct FetchState {
     lfs_progress: Arc<AggregatingProgressBar>,
 
     /// Track fetch metrics,
-    metrics: FileStoreFetchMetrics,
+    metrics: &'static FileStoreFetchMetrics,
 
     // Config
     compute_aux_data: bool,
@@ -102,7 +103,7 @@ impl FetchState {
         FetchState {
             common: CommonFetchState::new(keys, attrs, found_tx, fetch_mode),
             errors: FetchErrors::new(),
-            metrics: FileStoreFetchMetrics::default(),
+            metrics: &metrics::FILE_STORE_FETCH_METRICS,
 
             lfs_pointers: HashMap::new(),
 

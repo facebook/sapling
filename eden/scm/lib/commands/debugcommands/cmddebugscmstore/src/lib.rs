@@ -115,6 +115,8 @@ pub fn run(ctx: ReqCtx<DebugScmStoreOpts>, repo: &Repo) -> Result<u8> {
     // We downloaded trees above when handling args. Let's make a
     // fresh repo to recreate the cache state before we were invoked.
     let fresh_repo = Repo::load_with_config(repo.path(), ConfigSet::wrap(repo.config().clone()))?;
+    // And reset counters so tests don't see counters from above arg handling.
+    metrics::Registry::global().reset();
 
     let fetch_mode = FetchMode::deserialize(StringDeserializer::<value::Error>::new(
         ctx.opts

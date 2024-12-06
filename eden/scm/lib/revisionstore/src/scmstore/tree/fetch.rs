@@ -26,6 +26,7 @@ use types::Key;
 use types::NodeInfo;
 
 use super::metrics::TreeStoreFetchMetrics;
+use super::metrics::TREE_STORE_FETCH_METRICS;
 use super::types::StoreTree;
 use super::types::TreeAttributes;
 use crate::indexedlogtreeauxstore::TreeAuxStore;
@@ -47,7 +48,7 @@ pub struct FetchState {
     pub(crate) errors: FetchErrors,
 
     /// Track fetch metrics,
-    pub(crate) metrics: TreeStoreFetchMetrics,
+    pub(crate) metrics: &'static TreeStoreFetchMetrics,
 }
 
 impl FetchState {
@@ -60,7 +61,7 @@ impl FetchState {
         FetchState {
             common: CommonFetchState::new(keys, attrs, found_tx, fetch_mode),
             errors: FetchErrors::new(),
-            metrics: TreeStoreFetchMetrics::default(),
+            metrics: &TREE_STORE_FETCH_METRICS,
         }
     }
 

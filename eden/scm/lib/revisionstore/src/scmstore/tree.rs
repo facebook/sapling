@@ -10,6 +10,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
+use ::metrics::Counter;
 use ::types::fetch_mode::FetchMode;
 use ::types::hgid::NULL_ID;
 use ::types::tree::TreeItemFlag;
@@ -34,14 +35,12 @@ use edenapi_types::TreeChildEntry;
 use fetch::FetchState;
 use minibytes::Bytes;
 use once_cell::sync::OnceCell;
-use parking_lot::RwLock;
 use storemodel::BoxIterator;
 use storemodel::InsertOpts;
 use storemodel::KeyStore;
 use storemodel::SerializationFormat;
 use storemodel::TreeEntry;
 
-pub use self::metrics::TreeStoreMetrics;
 use crate::datastore::HgIdDataStore;
 use crate::historystore::HistoryStore;
 use crate::indexedlogdatastore::Entry;
@@ -79,6 +78,8 @@ pub enum TreeMetadataMode {
     Always,
     OptIn,
 }
+
+static TREESTORE_FLUSH_COUNT: Counter = Counter::new_counter("scmstore.tree.flush");
 
 #[derive(Clone)]
 pub struct TreeStore {
@@ -119,8 +120,6 @@ pub struct TreeStore {
 
     /// Whether to fetch trees aux data from remote (provided by the augmented trees)
     pub fetch_tree_aux_data: bool,
-
-    pub(crate) metrics: Arc<RwLock<TreeStoreMetrics>>,
 
     pub format: SerializationFormat,
 }
@@ -203,8 +202,6 @@ impl TreeStore {
             fetch_remote,
             keys_len
         );
-
-        let store_metrics = self.metrics.clone();
 
         let process_func = move || -> Result<()> {
             let fetch_cas = fetch_remote && cas_client.is_some();
@@ -368,7 +365,6 @@ impl TreeStore {
 
             // TODO(meyer): Report incomplete / not found, handle errors better instead of just always failing the batch, etc
             state.common.results(state.errors);
-            store_metrics.write().fetch += state.metrics;
 
             Ok(())
         };
@@ -417,7 +413,6 @@ impl TreeStore {
             flush_on_drop: true,
             tree_metadata_mode: TreeMetadataMode::Never,
             fetch_tree_aux_data: false,
-            metrics: Default::default(),
             prefetch_tree_parents: false,
             format: SerializationFormat::Hg,
         }
@@ -452,14 +447,7 @@ impl TreeStore {
             historystore_cache.flush().map_err(&mut handle_error);
         }
 
-        let metrics = std::mem::take(&mut *self.metrics.write());
-        for (k, v) in metrics.metrics() {
-            hg_metrics::increment_counter(k, v as u64);
-        }
-        hg_metrics::increment_counter("scmstore.tree.flush", 1);
-        if let Err(err) = metrics.fetch.update_ods() {
-            tracing::error!(?err, "error updating tree ods counters");
-        }
+        TREESTORE_FLUSH_COUNT.increment();
 
         result
     }
@@ -487,7 +475,6 @@ impl TreeStore {
             flush_on_drop: true,
             tree_metadata_mode: TreeMetadataMode::Never,
             fetch_tree_aux_data: false,
-            metrics: self.metrics.clone(),
             prefetch_tree_parents: false,
             format: self.format(),
         }

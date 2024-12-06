@@ -742,7 +742,6 @@ impl<'a> TreeStoreBuilder<'a> {
             tree_metadata_mode,
             fetch_tree_aux_data,
             flush_on_drop: true,
-            metrics: Default::default(),
             format,
         })
     }

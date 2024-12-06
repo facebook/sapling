@@ -9,83 +9,41 @@ use std::ops::AddAssign;
 use std::sync::Arc;
 
 use parking_lot::RwLock;
-#[cfg(feature = "ods")]
-use stats::prelude::*;
 
 use crate::scmstore::metrics::namespaced;
+use crate::scmstore::metrics::static_cas_backend_metrics;
+use crate::scmstore::metrics::static_fetch_metrics;
+use crate::scmstore::metrics::static_local_cache_fetch_metrics;
 use crate::scmstore::metrics::ApiMetrics;
 use crate::scmstore::metrics::CasBackendMetrics;
 use crate::scmstore::metrics::FetchMetrics;
 use crate::scmstore::metrics::LocalAndCacheFetchMetrics;
 use crate::scmstore::metrics::WriteMetrics;
 
-#[derive(Clone, Debug, Default)]
+static_local_cache_fetch_metrics!(INDEXEDLOG, "scmstore.file.fetch.indexedlog");
+static_local_cache_fetch_metrics!(LFS, "scmstore.file.fetch.lfs");
+static_local_cache_fetch_metrics!(AUX, "scmstore.file.fetch.aux");
+static_fetch_metrics!(EDENAPI, "scmstore.file.fetch.edenapi");
+static_fetch_metrics!(CAS, "scmstore.file.fetch.cas");
+
+static_cas_backend_metrics!(CAS_BACKEND, "scmstore.file.fetch.cas");
+
+pub(crate) static FILE_STORE_FETCH_METRICS: FileStoreFetchMetrics = FileStoreFetchMetrics {
+    indexedlog: &INDEXEDLOG,
+    lfs: &LFS,
+    aux: &AUX,
+    edenapi: &EDENAPI,
+    cas: &CAS,
+    cas_backend: &CAS_BACKEND,
+};
+
 pub struct FileStoreFetchMetrics {
-    pub(crate) indexedlog: LocalAndCacheFetchMetrics,
-    pub(crate) lfs: LocalAndCacheFetchMetrics,
-    pub(crate) aux: LocalAndCacheFetchMetrics,
-    pub(crate) edenapi: FetchMetrics,
-    pub(crate) cas: FetchMetrics,
-    pub(crate) cas_backend: CasBackendMetrics,
-}
-
-impl AddAssign for FileStoreFetchMetrics {
-    fn add_assign(&mut self, rhs: Self) {
-        self.indexedlog += rhs.indexedlog;
-        self.lfs += rhs.lfs;
-        self.aux += rhs.aux;
-        self.edenapi += rhs.edenapi;
-        self.cas += rhs.cas;
-        self.cas_backend += rhs.cas_backend;
-    }
-}
-
-impl FileStoreFetchMetrics {
-    fn metrics(&self) -> impl Iterator<Item = (String, usize)> {
-        namespaced("indexedlog", self.indexedlog.metrics())
-            .chain(namespaced("lfs", self.lfs.metrics()))
-            .chain(namespaced("aux", self.aux.metrics()))
-            .chain(namespaced("edenapi", self.edenapi.metrics()))
-            .chain(namespaced("cas", self.cas.metrics()))
-            .chain(namespaced("cas", self.cas_backend.metrics()))
-    }
-    /// Update ODS stats.
-    /// This assumes that fbinit was called higher up the stack.
-    /// It is meant to be used when called from eden which uses the `revisionstore` with
-    /// the `ods` feature flag.
-    #[cfg(feature = "ods")]
-    pub(crate) fn update_ods(&self) -> anyhow::Result<()> {
-        use std::sync::atomic::Ordering;
-
-        use indexedlog::log::AUTO_SYNC_COUNT;
-        use indexedlog::log::SYNC_COUNT;
-
-        // Just give up if fbinit hasn't been called (e.g. in tests or from sl).
-        if !fbinit::was_performed() {
-            return Ok(());
-        }
-
-        let fb = fbinit::expect_init();
-
-        for (metric, value) in self.metrics() {
-            STATS::fetch.increment_value(fb, value.try_into()?, (metric,));
-        }
-
-        // Assume we are called from flush()
-        STATS::flush.increment_value(fb, 1);
-
-        // These aren't technically filestore specific, but we don't have a convenient generic ODS logging spot.
-        STATS::indexedlog_sync
-            .increment_value(fb, SYNC_COUNT.swap(0, Ordering::Relaxed).try_into()?);
-        STATS::indexedlog_auto_sync
-            .increment_value(fb, AUTO_SYNC_COUNT.swap(0, Ordering::Relaxed).try_into()?);
-
-        Ok(())
-    }
-    #[cfg(not(feature = "ods"))]
-    pub(crate) fn update_ods(&self) -> anyhow::Result<()> {
-        Ok(())
-    }
+    pub(crate) indexedlog: &'static LocalAndCacheFetchMetrics,
+    pub(crate) lfs: &'static LocalAndCacheFetchMetrics,
+    pub(crate) aux: &'static LocalAndCacheFetchMetrics,
+    pub(crate) edenapi: &'static FetchMetrics,
+    pub(crate) cas: &'static FetchMetrics,
+    pub(crate) cas_backend: &'static CasBackendMetrics,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -179,7 +137,6 @@ impl FileStoreApiMetrics {
 
 #[derive(Debug, Default, Clone)]
 pub struct FileStoreMetrics {
-    pub(crate) fetch: FileStoreFetchMetrics,
     pub(crate) write: FileStoreWriteMetrics,
     pub(crate) api: FileStoreApiMetrics,
 }
@@ -192,18 +149,7 @@ impl FileStoreMetrics {
     pub fn metrics(&self) -> impl Iterator<Item = (String, usize)> {
         namespaced(
             "scmstore.file",
-            namespaced("fetch", self.fetch.metrics())
-                .chain(namespaced("write", self.write.metrics()))
-                .chain(namespaced("api", self.api.metrics())),
+            namespaced("write", self.write.metrics()).chain(namespaced("api", self.api.metrics())),
         )
     }
-}
-
-#[cfg(feature = "ods")]
-define_stats! {
-    prefix = "scmstore";
-    fetch: dynamic_singleton_counter("file.fetch.{}", (specific_counter: String)),
-    flush: singleton_counter("file"),
-    indexedlog_sync: singleton_counter("indexedlog.sync"),
-    indexedlog_auto_sync: singleton_counter("indexedlog.auto_sync"),
 }

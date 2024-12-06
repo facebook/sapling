@@ -7,80 +7,116 @@
 
 use std::ops::AddAssign;
 
-#[derive(Clone, Debug, Default)]
+use ::metrics::Counter;
+
 pub struct FetchMetrics {
     /// Number of requests / batches
-    requests: usize,
+    pub(crate) requests: &'static Counter,
 
     /// Number of entities requested unbatched (i.e. not part of a batch)
-    singles: usize,
+    pub(crate) singles: &'static Counter,
 
     /// Numbers of entities requested
-    keys: usize,
+    pub(crate) keys: &'static Counter,
 
     /// Number of successfully fetched entities
-    hits: usize,
+    pub(crate) hits: &'static Counter,
 
     /// Number of entities which were not found
-    misses: usize,
+    pub(crate) misses: &'static Counter,
 
     /// Number of entities which returned a fetch error (including batch errors)
-    errors: usize,
+    pub(crate) errors: &'static Counter,
 
     // Total time spent completing the fetch
-    time: usize,
+    pub(crate) time: &'static Counter,
 
     // Number of times data was computed/derved (i.e. aux data based on content).
-    computed: usize,
+    pub(crate) computed: &'static Counter,
 }
 
-impl AddAssign for FetchMetrics {
-    fn add_assign(&mut self, rhs: Self) {
-        self.requests += rhs.requests;
-        self.singles += rhs.singles;
-        self.keys += rhs.keys;
-        self.hits += rhs.hits;
-        self.misses += rhs.misses;
-        self.errors += rhs.errors;
-        self.time += rhs.time;
-        self.computed += rhs.computed;
+/// Define a static Counter for FetchMetrics fields, and then construct a static FetchMetrics instance.
+macro_rules! static_fetch_metrics {
+    ($name:ident, $prefix:expr) => {
+        paste::paste! {
+            mod [<fetch_metrics_ $name:lower>] {
+                pub static REQUESTS: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".requests"));
+                pub static SINGLES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".singles"));
+                pub static KEYS: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".keys"));
+                pub static HITS: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".hits"));
+                pub static MISSES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".misses"));
+                pub static ERRORS: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".errors"));
+                pub static TIME: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".time"));
+                pub static COMPUTED: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".computed"));
+            }
+
+            static $name: $crate::scmstore::metrics::FetchMetrics = $crate::scmstore::metrics::FetchMetrics {
+                requests: &[<fetch_metrics_ $name:lower>]::REQUESTS,
+                singles: &[<fetch_metrics_ $name:lower>]::SINGLES,
+                keys: &[<fetch_metrics_ $name:lower>]::KEYS,
+                hits: &[<fetch_metrics_ $name:lower>]::HITS,
+                misses: &[<fetch_metrics_ $name:lower>]::MISSES,
+                errors: &[<fetch_metrics_ $name:lower>]::ERRORS,
+                time: &[<fetch_metrics_ $name:lower>]::TIME,
+                computed: &[<fetch_metrics_ $name:lower>]::COMPUTED,
+            };
+        }
+    };
+}
+
+pub(crate) use static_fetch_metrics;
+
+/// Construct a static LocalAndCacheFetchMetrics instance.
+macro_rules! static_local_cache_fetch_metrics {
+    ($name:ident, $prefix:tt) => {
+        paste::paste! {
+            $crate::scmstore::metrics::static_fetch_metrics!([<FETCH_METRICS_ $name _LOCAL>], concat!($prefix, ".local"));
+            $crate::scmstore::metrics::static_fetch_metrics!([<FETCH_METRICS_ $name _CACHE>], concat!($prefix, ".cache"));
+
+            static $name: $crate::scmstore::metrics::LocalAndCacheFetchMetrics = $crate::scmstore::metrics::LocalAndCacheFetchMetrics {
+                local: &[<FETCH_METRICS_ $name _LOCAL>],
+                cache: &[<FETCH_METRICS_ $name _CACHE>],
+            };
+        }
     }
 }
+
+pub(crate) use static_local_cache_fetch_metrics;
 
 impl FetchMetrics {
-    pub(crate) fn fetch(&mut self, keys: usize) {
-        self.requests += 1;
+    pub(crate) fn fetch(&self, keys: usize) {
+        self.requests.increment();
         if keys == 1 {
-            self.singles += 1;
+            self.singles.increment();
         }
-        self.keys += keys;
+        self.keys.add(keys);
     }
 
-    pub(crate) fn hit(&mut self, keys: usize) {
-        self.hits += keys;
+    pub(crate) fn hit(&self, keys: usize) {
+        self.hits.add(keys);
     }
 
-    pub(crate) fn miss(&mut self, keys: usize) {
-        self.misses += keys;
+    pub(crate) fn miss(&self, keys: usize) {
+        self.misses.add(keys);
     }
 
-    pub(crate) fn err(&mut self, keys: usize) {
-        self.errors += keys;
+    pub(crate) fn err(&self, keys: usize) {
+        self.errors.add(keys);
     }
 
-    pub(crate) fn computed(&mut self, keys: usize) {
-        self.computed += keys;
+    pub(crate) fn computed(&self, keys: usize) {
+        self.computed.add(keys);
     }
 
     // Provide the time as microseconds
-    pub(crate) fn time(&mut self, keys: usize) {
-        self.time += keys;
+    pub(crate) fn time(&self, keys: usize) {
+        self.time.add(keys);
     }
 
     // Given a duration, perform a best effort conversion to microseconds and
     // record the value.
     pub(crate) fn time_from_duration(
-        &mut self,
+        &self,
         keys: std::time::Duration,
     ) -> Result<(), anyhow::Error> {
         // We expect fetch times in microseconds to be << MAX_USIZE, so this
@@ -88,21 +124,6 @@ impl FetchMetrics {
         let usize: usize = keys.as_micros().try_into()?;
         self.time(usize);
         Ok(())
-    }
-
-    pub(crate) fn metrics(&self) -> impl Iterator<Item = (&'static str, usize)> {
-        [
-            ("requests", self.requests),
-            ("singles", self.singles),
-            ("keys", self.keys),
-            ("hits", self.hits),
-            ("misses", self.misses),
-            ("errors", self.errors),
-            ("time", self.time),
-            ("computed", self.computed),
-        ]
-        .into_iter()
-        .filter(|&(_, v)| v != 0)
     }
 }
 
@@ -118,10 +139,10 @@ pub(crate) fn namespaced(
     metrics.map(move |(k, v)| (namespace.to_string() + "." + k.as_ref(), v))
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone)]
 pub struct LocalAndCacheFetchMetrics {
-    local: FetchMetrics,
-    cache: FetchMetrics,
+    pub(crate) local: &'static FetchMetrics,
+    pub(crate) cache: &'static FetchMetrics,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -131,22 +152,11 @@ pub enum StoreLocation {
 }
 
 impl LocalAndCacheFetchMetrics {
-    pub(crate) fn store(&mut self, loc: StoreLocation) -> &mut FetchMetrics {
+    pub(crate) fn store(&self, loc: StoreLocation) -> &'static FetchMetrics {
         match loc {
-            StoreLocation::Local => &mut self.local,
-            StoreLocation::Cache => &mut self.cache,
+            StoreLocation::Local => self.local,
+            StoreLocation::Cache => self.cache,
         }
-    }
-
-    pub(crate) fn metrics(&self) -> impl Iterator<Item = (String, usize)> {
-        namespaced("local", self.local.metrics()).chain(namespaced("cache", self.cache.metrics()))
-    }
-}
-
-impl AddAssign for LocalAndCacheFetchMetrics {
-    fn add_assign(&mut self, rhs: Self) {
-        self.local += rhs.local;
-        self.cache += rhs.cache;
     }
 }
 
@@ -230,127 +240,117 @@ impl ApiMetrics {
     }
 }
 
-#[derive(Clone, Debug, Default)]
 pub struct CasBackendMetrics {
     /// Total number of bytes fetched from the CAS ZippyDb backend
-    zdb_bytes: u64,
+    pub(crate) zdb_bytes: &'static Counter,
 
     /// Total number of queries to the CAS ZippyDb backend
-    zdb_queries: u64,
+    pub(crate) zdb_queries: &'static Counter,
 
     /// Total number of bytes fetched from the CAS ZGW backend
-    zgw_bytes: u64,
+    pub(crate) zgw_bytes: &'static Counter,
 
     /// Total number of queries to the CAS ZGW backend
-    zgw_queries: u64,
+    pub(crate) zgw_queries: &'static Counter,
 
     /// Total number of bytes fetched from the CAS Manifold backend
-    manifold_bytes: u64,
+    pub(crate) manifold_bytes: &'static Counter,
 
     /// Total number of queries to the CAS Manifold backend
-    manifold_queries: u64,
+    pub(crate) manifold_queries: &'static Counter,
 
     /// Total number of bytes fetched from the CAS Hedwig backend
-    hedwig_bytes: u64,
+    pub(crate) hedwig_bytes: &'static Counter,
 
     /// Total number of queries to the CAS Hedwig backend
-    hedwig_queries: u64,
+    pub(crate) hedwig_queries: &'static Counter,
 
     /// Total number of files fetched from the CAS Local Cache
-    local_cache_hits_files: u64,
+    pub(crate) local_cache_hits_files: &'static Counter,
 
     /// Total number of bytes fetched from the CAS Local Cache
-    local_cache_hits_bytes: u64,
+    pub(crate) local_cache_hits_bytes: &'static Counter,
 
     /// Total number of files not found in the CAS Local Cache
-    local_cache_misses_files: u64,
+    pub(crate) local_cache_misses_files: &'static Counter,
 
     /// Total number of bytes not found in the CAS Local Cache
-    local_cache_misses_bytes: u64,
+    pub(crate) local_cache_misses_bytes: &'static Counter,
 }
+
+macro_rules! static_cas_backend_metrics {
+    ($name:ident, $prefix:tt) => {
+        paste::paste! {
+            mod [<cas_metrics_ $name:lower>] {
+                pub static ZDB_BYTES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".zdb.bytes"));
+                pub static ZDB_QUERIES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".zdb.queries"));
+                pub static ZGW_BYTES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".zgw.bytes"));
+                pub static ZGW_QUERIES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".zgw.queries"));
+                pub static MANIFOLD_BYTES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".manifold.bytes"));
+                pub static MANIFOLD_QUERIES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".manifold.queries"));
+                pub static HEDWIG_BYTES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".hedwig.bytes"));
+                pub static HEDWIG_QUERIES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".hedwig.queries"));
+                pub static LOCAL_CACHE_HITS_FILES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".local_cache.hits.files"));
+                pub static LOCAL_CACHE_HITS_BYTES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".local_cache.hits.bytes"));
+                pub static LOCAL_CACHE_MISSES_FILES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".local_cache.misses.files"));
+                pub static LOCAL_CACHE_MISSES_BYTES: ::metrics::Counter = ::metrics::Counter::new_counter(concat!($prefix, ".local_cache.misses.bytes"));
+            }
+
+            static $name: $crate::scmstore::metrics::CasBackendMetrics = $crate::scmstore::metrics::CasBackendMetrics {
+                zdb_bytes: &[<cas_metrics_ $name:lower>]::ZDB_BYTES,
+                zdb_queries: &[<cas_metrics_ $name:lower>]::ZDB_QUERIES,
+                zgw_bytes: &[<cas_metrics_ $name:lower>]::ZGW_BYTES,
+                zgw_queries: &[<cas_metrics_ $name:lower>]::ZGW_QUERIES,
+                manifold_bytes: &[<cas_metrics_ $name:lower>]::MANIFOLD_BYTES,
+                manifold_queries: &[<cas_metrics_ $name:lower>]::MANIFOLD_QUERIES,
+                hedwig_bytes: &[<cas_metrics_ $name:lower>]::HEDWIG_BYTES,
+                hedwig_queries: &[<cas_metrics_ $name:lower>]::HEDWIG_QUERIES,
+                local_cache_hits_files: &[<cas_metrics_ $name:lower>]::LOCAL_CACHE_HITS_FILES,
+                local_cache_hits_bytes: &[<cas_metrics_ $name:lower>]::LOCAL_CACHE_HITS_BYTES,
+                local_cache_misses_files: &[<cas_metrics_ $name:lower>]::LOCAL_CACHE_MISSES_FILES,
+                local_cache_misses_bytes: &[<cas_metrics_ $name:lower>]::LOCAL_CACHE_MISSES_BYTES,
+            };
+        }
+    };
+}
+
+pub(crate) use static_cas_backend_metrics;
 
 impl CasBackendMetrics {
-    pub(crate) fn zdb_bytes(&mut self, bytes: u64) {
-        self.zdb_bytes += bytes;
+    pub(crate) fn zdb_bytes(&self, bytes: u64) {
+        self.zdb_bytes.add(bytes as usize);
     }
-    pub(crate) fn zdb_queries(&mut self, queries: u64) {
-        self.zdb_queries += queries;
+    pub(crate) fn zdb_queries(&self, queries: u64) {
+        self.zdb_queries.add(queries as usize);
     }
-    pub(crate) fn zgw_bytes(&mut self, bytes: u64) {
-        self.zgw_bytes += bytes;
+    pub(crate) fn zgw_bytes(&self, bytes: u64) {
+        self.zgw_bytes.add(bytes as usize);
     }
-    pub(crate) fn zgw_queries(&mut self, queries: u64) {
-        self.zgw_queries += queries;
+    pub(crate) fn zgw_queries(&self, queries: u64) {
+        self.zgw_queries.add(queries as usize);
     }
-    pub(crate) fn manifold_bytes(&mut self, bytes: u64) {
-        self.manifold_bytes += bytes;
+    pub(crate) fn manifold_bytes(&self, bytes: u64) {
+        self.manifold_bytes.add(bytes as usize);
     }
-    pub(crate) fn manifold_queries(&mut self, queries: u64) {
-        self.manifold_queries += queries;
+    pub(crate) fn manifold_queries(&self, queries: u64) {
+        self.manifold_queries.add(queries as usize);
     }
-    pub(crate) fn hedwig_bytes(&mut self, bytes: u64) {
-        self.hedwig_bytes += bytes;
+    pub(crate) fn hedwig_bytes(&self, bytes: u64) {
+        self.hedwig_bytes.add(bytes as usize);
     }
-    pub(crate) fn hedwig_queries(&mut self, queries: u64) {
-        self.hedwig_queries += queries;
+    pub(crate) fn hedwig_queries(&self, queries: u64) {
+        self.hedwig_queries.add(queries as usize);
     }
-    pub(crate) fn local_cache_hits_files(&mut self, files: u64) {
-        self.local_cache_hits_files += files;
+    pub(crate) fn local_cache_hits_files(&self, files: u64) {
+        self.local_cache_hits_files.add(files as usize);
     }
-    pub(crate) fn local_cache_hits_bytes(&mut self, bytes: u64) {
-        self.local_cache_hits_bytes += bytes;
+    pub(crate) fn local_cache_hits_bytes(&self, bytes: u64) {
+        self.local_cache_hits_bytes.add(bytes as usize);
     }
-    pub(crate) fn local_cache_misses_files(&mut self, files: u64) {
-        self.local_cache_misses_files += files;
+    pub(crate) fn local_cache_misses_files(&self, files: u64) {
+        self.local_cache_misses_files.add(files as usize);
     }
-    pub(crate) fn local_cache_misses_bytes(&mut self, bytes: u64) {
-        self.local_cache_misses_bytes += bytes;
-    }
-    pub(crate) fn metrics(&self) -> impl Iterator<Item = (&'static str, usize)> {
-        [
-            ("zdb.bytes", self.zdb_bytes as usize),
-            ("zgw.bytes", self.zgw_bytes as usize),
-            ("manifold.bytes", self.manifold_bytes as usize),
-            ("hedwig.bytes", self.hedwig_bytes as usize),
-            ("zdb.queries", self.zdb_queries as usize),
-            ("zgw.queries", self.zgw_queries as usize),
-            ("manifold.queries", self.manifold_queries as usize),
-            ("hedwig.queries", self.hedwig_queries as usize),
-            (
-                "local_cache.hits.files",
-                self.local_cache_hits_files as usize,
-            ),
-            (
-                "local_cache.hits.bytes",
-                self.local_cache_hits_bytes as usize,
-            ),
-            (
-                "local_cache.misses.files",
-                self.local_cache_misses_files as usize,
-            ),
-            (
-                "local_cache.misses.bytes",
-                self.local_cache_misses_bytes as usize,
-            ),
-        ]
-        .into_iter()
-        .filter(|&(_, v)| v != 0)
-    }
-}
-
-impl AddAssign for CasBackendMetrics {
-    fn add_assign(&mut self, rhs: Self) {
-        self.zdb_bytes += rhs.zdb_bytes;
-        self.zgw_bytes += rhs.zgw_bytes;
-        self.manifold_bytes += rhs.manifold_bytes;
-        self.hedwig_bytes += rhs.hedwig_bytes;
-        self.zdb_queries += rhs.zdb_queries;
-        self.zgw_queries += rhs.zgw_queries;
-        self.manifold_queries += rhs.manifold_queries;
-        self.hedwig_queries += rhs.hedwig_queries;
-        self.local_cache_hits_files += rhs.local_cache_hits_files;
-        self.local_cache_hits_bytes += rhs.local_cache_hits_bytes;
-        self.local_cache_misses_files += rhs.local_cache_misses_files;
-        self.local_cache_misses_bytes += rhs.local_cache_misses_bytes;
+    pub(crate) fn local_cache_misses_bytes(&self, bytes: u64) {
+        self.local_cache_misses_bytes.add(bytes as usize);
     }
 }

@@ -14,6 +14,7 @@ cmdutil = { version = "0.1.0", path = "../../cmdutil" }
 sapling-async-runtime = { version = "0.1.0", path = "../../../async-runtime" }
 sapling-clidispatch = { version = "0.1.0", path = "../../../clidispatch" }
 sapling-manifest = { version = "0.1.0", path = "../../../manifest" }
+sapling-metrics = { version = "0.1.0", path = "../../../metrics" }
 sapling-repo = { version = "0.1.0", path = "../../../repo" }
 sapling-revisionstore = { version = "0.1.0", path = "../../../revisionstore" }
 sapling-types = { version = "0.1.0", path = "../../../types" }

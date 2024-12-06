@@ -890,7 +890,7 @@ fn log_metrics(io: &IO, config: &dyn Config) -> Result<()> {
             .counters()
             .into_iter()
             .filter_map(|(n, c)| {
-                if c.is_gauge() {
+                if c.is_gauge() || c.value() == 0 {
                     None
                 } else {
                     Some((n.to_string(), c.value() as u64))

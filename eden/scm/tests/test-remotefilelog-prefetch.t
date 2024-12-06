@@ -43,6 +43,7 @@ Prefetch (and also check we get counters):
   scmstore.file.fetch.indexedlog.local.singles: 1
   scmstore.file.fetch.indexedlog.local.time: * (glob) (?)
   scmstore.file.flush: * (glob)
+  scmstore.indexedlog.sync: * (glob)
   scmstore.tree.fetch.edenapi.keys: 1
   scmstore.tree.fetch.edenapi.requests: 1
   scmstore.tree.fetch.edenapi.singles: 1
