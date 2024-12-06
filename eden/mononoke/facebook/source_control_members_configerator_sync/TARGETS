@@ -6,7 +6,7 @@ python_binary(
     name = "source_control_members_configerator_sync",
     srcs = ["source_control_members_configerator_sync.py"],
     labels = ["autodeps2_generated"],
-    main_module = "eden.mononoke.facebook.source_control_members_configerator_sync.source_control_members_configerator_sync",
+    main_function = "eden.mononoke.facebook.source_control_members_configerator_sync.source_control_members_configerator_sync.main",
     deps = [
         "//configerator/configo/client/thrift_py3:client",
         "//infrasec/authorization/if:if-service-python-clients",
