@@ -8,11 +8,11 @@
 use std::collections::HashMap;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
-use std::sync::RwLock;
 
 use futures::Future;
 use once_cell::sync::Lazy;
 use once_cell::sync::OnceCell;
+use parking_lot::RwLock;
 
 pub struct Counter {
     name: &'static str,
@@ -103,7 +103,6 @@ impl Registry {
         if self
             .counters
             .write()
-            .unwrap()
             .insert(counter.name, counter)
             .is_some()
         {
@@ -112,11 +111,11 @@ impl Registry {
     }
 
     pub fn counters(&self) -> HashMap<&'static str, &'static Counter> {
-        self.counters.read().unwrap().clone()
+        self.counters.read().clone()
     }
 
     pub fn reset(&self) {
-        for counter in self.counters.read().unwrap().values() {
+        for counter in self.counters.read().values() {
             counter.inner().store(0, Ordering::Relaxed);
         }
     }
