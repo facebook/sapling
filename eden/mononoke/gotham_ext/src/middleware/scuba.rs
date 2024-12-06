@@ -130,7 +130,7 @@ impl AsRef<str> for HttpScubaKey {
             ConfigStoreLastUpdatedAt => "config_store_last_updated_at",
             XFBProductLog => "x_fb_product_log",
             XFBProductLogInfo => "x_fb_product_log_info",
-            XFBX2PAgentRequestId => "x_fb_product_log_info",
+            XFBX2PAgentRequestId => "x_fb_x2pagent_request_id",
             XFBGitWrapper => "git_wrapper",
             XFBNetworkType => "fb_network_type",
         }
