@@ -117,6 +117,7 @@ export type SuggestedChange = {
   id?: string;
   type?: SuggestedChangeType;
   codePatchSuggestionID?: string;
+  codePatchID?: string;
   status?: CodePatchSuggestionStatus;
   archivedState?: ArchivedStateType;
   archivedReason?: ArchivedReasonType;
