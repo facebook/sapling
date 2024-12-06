@@ -16,7 +16,7 @@ import subprocess
 import sys
 import tempfile
 import xml.etree.ElementTree as ET
-from typing import Any, Dict, List, NamedTuple, Optional, Set
+from typing import Any, Dict, List, NamedTuple, Optional
 
 import click
 
