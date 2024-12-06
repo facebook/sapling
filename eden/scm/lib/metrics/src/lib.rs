@@ -14,9 +14,12 @@ use once_cell::sync::Lazy;
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 
+#[cfg_attr(not(feature = "ods"), path = "dummy_ods.rs")]
+mod ods;
+
 pub struct Counter {
     name: &'static str,
-    counter: OnceCell<AtomicUsize>,
+    counter: OnceCell<(AtomicUsize, ods::Counter)>,
     gauge: bool,
 }
 
@@ -43,15 +46,19 @@ impl Counter {
     }
 
     pub fn add(&'static self, val: usize) {
-        self.counter().fetch_add(val, Ordering::Relaxed);
+        let (counter, ods) = self.counter();
+        counter.fetch_add(val, Ordering::Relaxed);
+        ods::increment(ods, val as i64);
     }
 
     pub fn sub(&'static self, val: usize) {
-        self.counter().fetch_sub(val, Ordering::Relaxed);
+        let (counter, ods) = self.counter();
+        counter.fetch_sub(val, Ordering::Relaxed);
+        ods::increment(ods, -(val as i64));
     }
 
     pub fn value(&'static self) -> usize {
-        self.counter().load(Ordering::Relaxed)
+        self.counter().0.load(Ordering::Relaxed)
     }
 
     /// Increment counter by v and decrement it back by v when returned guard is dropped
@@ -64,10 +71,10 @@ impl Counter {
         self.gauge
     }
 
-    fn counter(&'static self) -> &AtomicUsize {
+    fn counter(&'static self) -> &(AtomicUsize, ods::Counter) {
         self.counter.get_or_init(|| {
             Registry::global().register_counter(self);
-            AtomicUsize::new(0)
+            (AtomicUsize::new(0), ods::new_counter(self.name))
         })
     }
 }
@@ -115,7 +122,7 @@ impl Registry {
 
     pub fn reset(&self) {
         for counter in self.counters.read().values() {
-            counter.counter().store(0, Ordering::Relaxed);
+            counter.counter().0.store(0, Ordering::Relaxed);
         }
     }
 }
