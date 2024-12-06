@@ -187,8 +187,8 @@ def read(
                 )
         else:
             raise DirstateParseException(
-                "Unexpected header byte " "when reading {:s}: 0x{:x}.".format(
-                    filename, header
+                "Unexpected header byte when reading {:s}: 0x{:x}.".format(
+                    filename, header[0]
                 )
                 + " Ignoring remaining dirstate data.\n"
             )
