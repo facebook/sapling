@@ -18,6 +18,7 @@ use parking_lot::MutexGuard;
 use serde::ser::Serialize;
 use serde::ser::SerializeMap;
 use serde::Serializer;
+pub use serde_json;
 use serde_json::Serializer as JsonSerializer;
 
 pub static CONFIG: OnceLock<Option<Arc<SamplingConfig>>> = OnceLock::new();
@@ -129,6 +130,22 @@ impl SamplingConfig {
 
         Ok(())
     }
+}
+
+/// Similar to `tracing::info!(target: $target, $key = $value, ...)`, but `$value`
+/// can be any serde type, not just tracing's limited `Value`.
+#[macro_export]
+macro_rules! log {
+    (target: $target:expr $(, $key:ident = $value:expr)*) => {
+        'block: {
+            if let Some(Some(config)) = $crate::CONFIG.get() {
+                if let Some(category) = config.category($target) {
+                    break 'block config.append(category, &$crate::serde_json::json!({$(stringify!($key): $value),*}));
+                }
+            }
+            Ok(())
+        }
+    };
 }
 
 // Returns tuple of output path and whether it's okay if the path already exists.
