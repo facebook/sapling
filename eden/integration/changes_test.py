@@ -275,6 +275,29 @@ class ChangesTestCommon(testBase):
         )
         self.assertTrue(self.check_changes(changes.changes, expected_changes))
 
+    def test_include_directory(self):
+        expected_changes = []
+        oldPosition = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.mkdir("ignored_dir")
+        self.mkdir("ignored_dir2/nested_ignored_dir")
+        expected_changes += self.add_folder_expect("want_dir")
+        expected_changes += self.add_folder_expect("want_dir/ignored_dir")
+        self.add_file_expect("ignored_dir/test_file", "contents", add=False)
+        expected_changes += self.add_file_expect(
+            "want_dir/test_file", "contents", add=False
+        )
+        self.add_file_expect(
+            "ignored_dir2/nested_ignored_dir/test_file", "contents", add=False
+        )
+        expected_changes += self.add_file_expect(
+            "want_dir/ignored_dir/test_file", "contents", add=False
+        )
+        changes = self.getChangesSinceV2(
+            oldPosition,
+            included_roots=["want_dir"],
+        )
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
     def test_modify_file(self):
         self.repo_write_file("test_file", "", add=False)
         position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
