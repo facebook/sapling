@@ -2862,7 +2862,9 @@ To reclone the corrupted repo, run: `fbclone $REPO --reclone --eden`"""
             """\
 <yellow>- Found problem:<reset>
 Encountered an error checking connection to Source Control Servers: command 'hg debugnetworkdoctor' reported an error:
+Stdout:
 stdout
+Stderr:
 stderror
 
 Please check your network connection. If you are connected to the VPN, please try reconnecting.
@@ -2893,8 +2895,10 @@ Please check your network connection. If you are connected to the VPN, please tr
             out.getvalue(),
             """\
 <yellow>- Found problem:<reset>
-Encountered an error checking connection to Source Control Servers: hg debugnetwork --connection reported an error:
+Encountered an error checking connection to Source Control Servers: command 'hg debugnetwork --connection' reported an error:
+Stdout:
 stdout
+Stderr:
 stderror
 
 Please check your network connection. If you are connected to the VPN, please try reconnecting.
@@ -2927,7 +2931,9 @@ Please check your network connection. If you are connected to the VPN, please tr
             """\
 <yellow>- Found problem:<reset>
 Failed to verify speed of connection to eden services: 
+Stdout:
 stdout
+Stderr:
 stderror
 
 Check the speed report in hg debugnetwork --speed
@@ -2947,7 +2953,7 @@ Check the speed report in hg debugnetwork --speed
         mock_subprocess_run: MagicMock,
     ) -> None:
         timeout = subprocess.TimeoutExpired(
-            "test", timeout=1, output="stdout", stderr="stderror"
+            "test", timeout=1.0, output=b"stdout", stderr=b"stderror"
         )
         mock_subprocess_run.side_effect = [timeout, None, timeout, None, None, timeout]
         for method in [
@@ -2961,11 +2967,24 @@ Check the speed report in hg debugnetwork --speed
             self.assertEqual(fixer.num_fixed_problems, 0)
             self.assertEqual(fixer.num_manual_fixes, 1)
             self.assertEqual(list(fixer.problem_manual_fixes)[0], "ConnectivityProblem")
+            suffix = (
+                "timed out:"
+                if "speed" not in method
+                else (
+                    "exceeded timeout of 15.0s.\n"
+                    "Your network might be too slow, please check the stdout for more details.\n"
+                    "There should be 2 rounds of download and upload speed tests."
+                )
+            )
             self.assertEqual(
                 out.getvalue(),
                 f"""\
 <yellow>- Found problem:<reset>
-Encountered an error checking connection to Source Control Servers: command 'hg {method}' timed out.
+Encountered an error checking connection to Source Control Servers: command 'hg {method}' {suffix}
+Stdout:
+stdout
+Stderr:
+stderror
 
 Please check your network connection. If you are connected to the VPN, please try reconnecting.
 
@@ -2997,7 +3016,9 @@ Please check your network connection. If you are connected to the VPN, please tr
             """\
 <yellow>- Found problem:<reset>
 Failed to verify speed of connection to eden services: 
+Stdout:
 stdout
+Stderr:
 stderror
 
 Check the speed report in hg debugnetwork --speed

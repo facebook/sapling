@@ -13,7 +13,6 @@ from pathlib import Path
 
 from typing import List
 
-from eden.fs.cli.config import EdenCheckout
 from eden.fs.cli.doctor.problem import Problem, ProblemSeverity, ProblemTracker
 from eden.fs.cli.util import get_environment_suitable_for_subprocess
 
@@ -74,6 +73,23 @@ def parse_latency(latency: str) -> float:
     return float(value) * magnitude[unit]
 
 
+def fmtProblemMessage(
+    description: str, ex: subprocess.TimeoutExpired | subprocess.CalledProcessError
+) -> str:
+    def fmtExcMsg(errmsg: str | bytes | None) -> str:
+        if errmsg is None:
+            return "None"
+        elif type(errmsg) is str:
+            return errmsg
+        else:
+            decoded = errmsg.decode()
+            if len(decoded) == 0:
+                return "None"
+            return decoded
+
+    return f"{description}\nStdout:\n{fmtExcMsg(ex.stdout)}\nStderr:\n{fmtExcMsg(ex.stderr)}\n"
+
+
 class NetworkChecker:
     def run_command(
         self, args: List[str], cwd: Path
@@ -107,13 +123,17 @@ class NetworkChecker:
         except subprocess.CalledProcessError as ex:
             tracker.add_problem(
                 ConnectivityProblem(
-                    f"command 'hg debugnetworkdoctor' reported an error:\n{ex.stdout}\n{ex.stderr}\n"
+                    fmtProblemMessage(
+                        "command 'hg debugnetworkdoctor' reported an error:", ex
+                    )
                 )
             )
             return
-        except subprocess.TimeoutExpired:
+        except subprocess.TimeoutExpired as ex:
             tracker.add_problem(
-                ConnectivityProblem("command 'hg debugnetworkdoctor' timed out.\n")
+                ConnectivityProblem(
+                    fmtProblemMessage("command 'hg debugnetworkdoctor' timed out:", ex)
+                )
             )
             return
 
@@ -128,14 +148,19 @@ class NetworkChecker:
                 # in the future.
                 tracker.add_problem(
                     ConnectivityProblem(
-                        f"hg debugnetwork --connection reported an error:\n{ex.stdout}\n{ex.stderr}\n"
+                        fmtProblemMessage(
+                            "command 'hg debugnetwork --connection' reported an error:",
+                            ex,
+                        )
                     )
                 )
                 return
-            except subprocess.TimeoutExpired:
+            except subprocess.TimeoutExpired as ex:
                 tracker.add_problem(
                     ConnectivityProblem(
-                        "command 'hg debugnetwork --connection' timed out.\n"
+                        fmtProblemMessage(
+                            "command 'hg debugnetwork --connection' timed out:", ex
+                        )
                     )
                 )
                 return
@@ -148,14 +173,17 @@ class NetworkChecker:
                 # TODO: debugnetwork returns a variety of error numbers depending on the specific failure
                 # but it should be covered by stdout. Noting in case we want to try to fix any of them
                 # in the future.
-                tracker.add_problem(
-                    NetworkSpeedProblem(f"\n{ex.stdout}\n{ex.stderr}\n")
-                )
+                tracker.add_problem(NetworkSpeedProblem(fmtProblemMessage("", ex)))
                 return
-            except subprocess.TimeoutExpired:
+            except subprocess.TimeoutExpired as ex:
                 tracker.add_problem(
                     ConnectivityProblem(
-                        "command 'hg debugnetwork --speed' timed out.\n"
+                        fmtProblemMessage(
+                            f"command 'hg debugnetwork --speed' exceeded timeout of {NETWORK_TIMEOUT}s.\n"
+                            "Your network might be too slow, please check the stdout for more details.\n"
+                            f"There should be 2 rounds of download and upload speed tests.",
+                            ex,
+                        )
                     )
                 )
                 return
