@@ -12,7 +12,7 @@ This section will walk you through cloning your first repo, making commits, and 
 
 ## Setting your identity
 
-Once you have `sl` [installed](./installation.md) on the command line, you should start out by configuring the identity you wish to use when authoring commits:
+Once you have `sl` [installed](/docs/introduction/installation.md) on the command line, you should start out by configuring the identity you wish to use when authoring commits:
 
 ```
 sl config --user ui.username "Alyssa P. Hacker <alyssa@example.com>"
@@ -101,7 +101,7 @@ You can also use the <Command name="next" /> and <Command name="prev" /> command
 
 ## Manipulating your stack
 
-See [Basic Commands](../overview/basic-commands.md) to learn more about manipulating your stack from the command line.
+See [Basic Commands](/docs/overview/basic-commands.md) to learn more about manipulating your stack from the command line.
 
 You may also want to try Sapling's built-in GUI that runs in the browser . Run <SLCommand name="web" /> to launch it from the command line:
 
@@ -111,7 +111,7 @@ Listening on http://localhost:3011/?token=929fa2b3d75aa4330e0b7b0a10822ee0&cwd=%
 Server logs will be written to /var/folders/5c/f3nk25tn7gd7nds59hy_nj7r0000gn/T/isl-server-logKktwaj/isl-server.log
 ```
 
-Sapling will open the URL automatically in your browser. See the docs on [Interactive Smartlog](../addons/isl.md) to learn more about its many features. Interactive Smartlog is also available in our [VS Code Extension](../addons/vscode).
+Sapling will open the URL automatically in your browser. See the docs on [Interactive Smartlog](/docs/addons/isl.md) to learn more about its many features. Interactive Smartlog is also available in our [VS Code Extension](/docs/addons/vscode.md).
 
 ## Submitting pull requests
 
@@ -140,11 +140,11 @@ $ sl pr submit
 no pull requests to update
 ```
 
-As shown, running `sl pr submit` creates a pull request (PR) for every commit in your local stack. Note this creates "overlapping pull requests," which means each PR uses the associated commit as the head of the PR and `remote/main` as the base. Reviewing overlapping pull requests on GitHub can be confusing, so we also provide [ReviewStack](../addons/reviewstack.md) as an alternative code review tool that handles these kinds of pull requests better.
+As shown, running `sl pr submit` creates a pull request (PR) for every commit in your local stack. Note this creates "overlapping pull requests," which means each PR uses the associated commit as the head of the PR and `remote/main` as the base. Reviewing overlapping pull requests on GitHub can be confusing, so we also provide [ReviewStack](/docs/addons/reviewstack.md) as an alternative code review tool that handles these kinds of pull requests better.
 
 After you have created an initial series of pull requests using <Command name="pr" sl={true} />, you will likely make local changes to your commits that need to be submitted for review. To publish these local changes to GitHub, simply run <Command name="pr" sl={true} /> again to update your existing PRs. Note if you have introduced new commits in your stack that are not linked to a PR, <Command name="pr" sl={true} /> will create pull requests for those, as well.
 
-The "overlapping pull requests" approach may not be an appropriate solution for your project. To that end, we also support an alternative pull request workflow, <Command name="ghstack" sl={true} />, which avoids the "overlapping pull requests" issue, but may not be an option for all projects. See the [Pull Requests section](../git/intro.md#pull-requests) in **Using Sapling with GitHub** to determine which workflow is right for you.
+The "overlapping pull requests" approach may not be an appropriate solution for your project. To that end, we also support an alternative pull request workflow, <Command name="ghstack" sl={true} />, which avoids the "overlapping pull requests" issue, but may not be an option for all projects. See the [Pull Requests section](/docs/git/github.md#pull-requests) in **Using Sapling with GitHub** to determine which workflow is right for you.
 
 ## Browsing pull requests
 
@@ -166,7 +166,7 @@ o  f22585511  Oct 06 at 17:40  remote/main
 ~
 ```
 
-In addition to reviewing pull requests on github.com, you may also want to try [ReviewStack](../addons/reviewstack.md), which is our novel user interface for GitHub pull requests with custom support for _stacked changes_.
+In addition to reviewing pull requests on github.com, you may also want to try [ReviewStack](/docs/addons/reviewstack.md), which is our novel user interface for GitHub pull requests with custom support for _stacked changes_.
 
 To view a GitHub pull request on ReviewStack, take the original URL:
 
@@ -176,7 +176,7 @@ and replace the `github.com` domain with `reviewstack.dev`:
 
 > https://reviewstack.dev/facebook/react/pull/25506
 
-On ReviewStack, the diff and the timeline for a pull request are displayed side-by-side rather than split across tabs. Read the [ReviewStack docs](../addons/reviewstack.md) to learn more about the various features it offers.
+On ReviewStack, the diff and the timeline for a pull request are displayed side-by-side rather than split across tabs. Read the [ReviewStack docs](/docs/addons/reviewstack.md) to learn more about the various features it offers.
 
 <ReviewStackScreenshot />
 

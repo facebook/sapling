@@ -153,7 +153,7 @@ interesting to the test. It will make deprecation of those features easier.
 ``hg debugdrawdag`` (or ``drawdag`` defined in ``tinit.sh``) can be used to
 create commits in a more readable, and efficient way. `newclientrepo` (also
 defined on `tinit.sh`) can also take the same input as `drawdag`. See
-[the drawdag page](../internals/drawdag) for more info.
+[the drawdag page](/docs/dev/internals/drawdag.md) for more info.
 
 #### Avoid depending on context
 

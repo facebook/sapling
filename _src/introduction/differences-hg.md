@@ -5,7 +5,7 @@ sidebar_position: 50
 
 While Sapling began 10 years ago as a variant of Mercurial, it has evolved into its own source control system and has many incompatible differences with Mercurial.
 
-The list of differences below is not comprehensive, nor is it meant to be a competitive comparison of Mercurial and Sapling. It just highlights some interesting differences for curious people who are already familiar with Mercurial. Many of the differences from Git also apply to Mercurial and [that list](./differences-git.md) should be referred to as well. Sapling has substantial scaling, implementation, and format differences as well that are not covered here.
+The list of differences below is not comprehensive, nor is it meant to be a competitive comparison of Mercurial and Sapling. It just highlights some interesting differences for curious people who are already familiar with Mercurial. Many of the differences from Git also apply to Mercurial and [that list](/docs/introduction/differences-git.md) should be referred to as well. Sapling has substantial scaling, implementation, and format differences as well that are not covered here.
 
 #### Sapling has different default behavior and options for many commands.
 Sapling removes or changes the behavior of a number of Mercurial commands in order to make the behavior more consistent with modern expectations. For instance, in Sapling ‘sl log’ by default shows the history from your current commit. In Mercurial `hg log` shows the history of the entire repository at once.

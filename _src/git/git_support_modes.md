@@ -12,8 +12,8 @@ Sapling supports Git in 2 modes. Here is a quick comparison:
 | Repo directory | `.git` | `.sl` |
 | `git` commands | ✅ Supported | ⚠️ Not supported |
 | [Git LFS](https://git-lfs.com/) | Partially supported [^1] | ⚠️ Not supported |
-| Submodules | Work-In-Progress | [Supported without EdenFS](submodule) |
-| [ISL](../addons/isl) (graphic interface) | ✅ Supported | ✅ Supported |
+| Submodules | Work-In-Progress | [Supported without EdenFS](/docs/git/submodule.md) |
+| [ISL](/docs/addons/isl.md) (graphic interface) | ✅ Supported | ✅ Supported |
 | EdenFS (virtual filesystem) | ⚠️ Not supported | ✅ Supported (experimental [^2]) |
 | Git network protocol (Git or Mononoke server) | ✅ Supported | ✅ Supported |
 | Sapling network protocol (Mononoke server) | ⚠️ Not supported | ✅ Supported (experimental [^2]) |
@@ -24,7 +24,7 @@ Sapling supports Git in 2 modes. Here is a quick comparison:
 
 ## `.git` mode
 
-In this mode, Sapling tries to be compatible with `.git/` file formats so you can run `git` commands. For features not natively supported by Git like [mutation](../dev/internals/visibility-and-mutation#commit-mutation), Sapling will store them in the `.git/sl` directory.
+In this mode, Sapling tries to be compatible with `.git/` file formats so you can run `git` commands. For features not natively supported by Git like [mutation](/docs/dev/internals/visibility-and-mutation.md#commit-mutation), Sapling will store them in the `.git/sl` directory.
 
 There are some caveats using the `.git` mode:
 
@@ -49,5 +49,5 @@ For the working copy implementation, Sapling can use its own implementations:
 
 For server protocols, Sapling can use dedicated lazy commit graph protocols so `clone` and `pull` are roughly O(merges) both in time and space usage.
 
-For local storage, Sapling can use its [own structure](../dev/internals/indexedlog) and [compression](../dev/internals/zstdelta) so the file count is bounded and there is no need to repack. Note: This is not fully implemented for the git format yet but is the direction we'd like to go.
+For local storage, Sapling can use its [own structure](/docs/dev/internals/indexedlog.md) and [compression](/docs/dev/internals/zstdelta.md) so the file count is bounded and there is no need to repack. Note: This is not fully implemented for the git format yet but is the direction we'd like to go.
 

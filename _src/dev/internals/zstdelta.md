@@ -25,5 +25,5 @@ In Python, `bindings.zstd` provides access to the `diff` and `apply` functions:
 
 The `zstore` Rust library provides an on-disk content store with internal
 delta-chain management. It uses the above `zstdelta` library for delta
-calculation and [IndexedLog](./indexedlog) for on-disk storage. It is used by
-[MetaLog](./metalog).
+calculation and [IndexedLog](/docs/dev/internals/indexedlog.md) for on-disk storage. It is used by
+[MetaLog](/docs/dev/internals/metalog.md).

@@ -15,7 +15,7 @@ Sapling provides an extension for [Visual Studio Code](https://code.visualstudio
 Sapling must be installed through the normal installation instructions in order for
 the VS Code extension to work properly.
 
-[See installation instructions.](../introduction/installation.md)
+[See installation instructions.](/docs/introduction/installation.md)
 
 :::
 
@@ -23,7 +23,7 @@ the VS Code extension to work properly.
 
 
 ### Embedded interactive smartlog
-Access the [Interactive Smartlog (ISL)](./isl.md) interface directly within VS Code,
+Access the [Interactive Smartlog (ISL)](/docs/addons/isl.md) interface directly within VS Code,
 without needing to launch it with <SLCommand name="web" />.
 Just run the **Sapling: Open Interactive Smartlog** command from the [command palette](https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette).
 

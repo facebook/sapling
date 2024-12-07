@@ -28,7 +28,7 @@ sl revert -r 060f340a9 my_file.txt
 | Add a remote       | `git remote add REMOTE URL`               | `sl path --add REMOTE URL`               |
 | Pull from a remote | `git fetch REMOTE`                        | `sl pull REMOTE`                         |
 
-Sapling [only](differences-git#sapling-may-not-download-all-the-repository-data-during-clonepull) clones and pulls a subset of remote branches.
+Sapling [only](/docs/introduction/differences-git.md#sapling-may-not-download-all-the-repository-data-during-clonepull) clones and pulls a subset of remote branches.
 
 ### Understanding the repository
 
