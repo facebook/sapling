@@ -9,7 +9,7 @@
 import sys
 import time
 import unittest
-from typing import Optional
+from typing import List, Optional
 
 from facebook.eden.ttypes import (
     Added,
@@ -46,7 +46,7 @@ def getLargeChangeSafe(
 
 
 def buildSmallChange(
-    changeType: SmallChangeNotification,
+    changeType: int,
     fileType: Dtype,
     path: Optional[bytes] = None,
     from_path: Optional[bytes] = None,
@@ -129,10 +129,15 @@ class ChangesTestBase(testcase.EdenRepoTest):
         print(changes)
         return False
 
-    def getChangesSinceV2(self, position) -> ChangesSinceV2Result:
+    def getChangesSinceV2(
+        self, position, included_roots=None, excluded_roots=None
+    ) -> ChangesSinceV2Result:
         return self.client.changesSinceV2(
             ChangesSinceV2Params(
-                mountPoint=self.mount_path_bytes, fromPosition=position
+                mountPoint=self.mount_path_bytes,
+                fromPosition=position,
+                includedRoots=included_roots,
+                excludedRoots=excluded_roots,
             )
         )
 
@@ -152,6 +157,27 @@ class ChangesTestBase(testcase.EdenRepoTest):
 
     def repo_rmdir(self, path) -> None:
         self.rmdir(path)
+
+    def add_file_expect(
+        self, path, contents, mode=None, add=True
+    ) -> List[ChangeNotification]:
+        self.repo_write_file(path, contents, mode, add)
+        return [
+            buildSmallChange(
+                SmallChangeNotification.ADDED, Dtype.REGULAR, path=path.encode()
+            ),
+            buildSmallChange(
+                SmallChangeNotification.MODIFIED, Dtype.REGULAR, path=path.encode()
+            ),
+        ]
+
+    def add_folder_expect(self, path) -> List[ChangeNotification]:
+        self.mkdir(path)
+        return [
+            buildSmallChange(
+                SmallChangeNotification.ADDED, Dtype.DIR, path=path.encode()
+            ),
+        ]
 
 
 class WindowsTestBase(ChangesTestBase):
@@ -192,6 +218,16 @@ class WindowsTestBase(ChangesTestBase):
         super().rmdir(path)
         self.syncProjFS(position)
 
+    def add_file_expect(
+        self, path, contents, mode=None, add=True
+    ) -> List[ChangeNotification]:
+        self.repo_write_file(path, contents, mode, add)
+        return [
+            buildSmallChange(
+                SmallChangeNotification.ADDED, Dtype.REGULAR, path=path.encode()
+            ),
+        ]
+
 
 if sys.platform == "win32":
     testBase = WindowsTestBase
@@ -214,6 +250,30 @@ class ChangesTestCommon(testBase):
             largeChange.get_lostChanges().reason,
             LostChangesReason.EDENFS_REMOUNTED,
         )
+
+    def test_exclude_directory(self):
+        expected_changes = []
+        oldPosition = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.add_folder_expect("ignored_dir")
+        self.add_folder_expect("ignored_dir2/nested_ignored_dir")
+        expected_changes += self.add_folder_expect("want_dir")
+        # same name in subdir should not be ignored
+        expected_changes += self.add_folder_expect("want_dir/ignored_dir")
+        self.add_file_expect("ignored_dir/test_file", "contents", add=False)
+        expected_changes += self.add_file_expect(
+            "want_dir/test_file", "contents", add=False
+        )
+        self.add_file_expect(
+            "ignored_dir2/nested_ignored_dir/test_file", "contents", add=False
+        )
+        expected_changes += self.add_file_expect(
+            "want_dir/ignored_dir/test_file", "contents", add=False
+        )
+        changes = self.getChangesSinceV2(
+            oldPosition,
+            excluded_roots=["ignored_dir", "ignored_dir2/nested_ignored_dir"],
+        )
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
 
     def test_modify_file(self):
         self.repo_write_file("test_file", "", add=False)
