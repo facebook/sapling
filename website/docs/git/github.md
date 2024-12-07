@@ -11,7 +11,7 @@ When using Sapling with GitHub, we **strongly** recommend the following:
 
 In order for Sapling to work with GitHub pull requests on your behalf, you must provide it with a [Personal Access Token (PAT)](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token). While the GitHub CLI is not the only way to obtain a PAT, it is certainly one of the most convenient.
 
-While we ultimately plan to remove the requirement of installing the GitHub CLI to use Sapling with GitHub (though the PAT will still be necessary), you will still need some mechanism to cache your GitHub credentials in Git to enjoy the best experience with Sapling. For example, a graphical interface like [Interactive Smartlog](../addons/isl.md) would be unpleasant to use if it prompted your for a password every time it needed to talk to GitHub. To avoid this, [GitHub recommends two solutions for caching your GitHub credentials](https://docs.github.com/en/get-started/getting-started-with-git/caching-your-github-credentials-in-git), the GitHub CLI being the primary choice.
+While we ultimately plan to remove the requirement of installing the GitHub CLI to use Sapling with GitHub (though the PAT will still be necessary), you will still need some mechanism to cache your GitHub credentials in Git to enjoy the best experience with Sapling. For example, a graphical interface like [Interactive Smartlog](/docs/addons/isl.md) would be unpleasant to use if it prompted your for a password every time it needed to talk to GitHub. To avoid this, [GitHub recommends two solutions for caching your GitHub credentials](https://docs.github.com/en/get-started/getting-started-with-git/caching-your-github-credentials-in-git), the GitHub CLI being the primary choice.
 
 While GitHub [gives you the option](https://docs.github.com/en/get-started/getting-started-with-git/about-remote-repositories) of cloning a repo with either HTTPS or SSH URLs, HTTPS is generally considered easier to use because HTTPS default port 443 is far less likely to be blocked by a firewall than SSH default port 22.
 
@@ -31,7 +31,7 @@ When it comes to working with pull requests from Sapling, you have two options: 
 
 ### `sl pr` (aka "Sapling stack")
 
-See the dedicated [Sapling Stack](./sapling-stack.md) page for more information.
+See the dedicated [Sapling Stack](/docs/git/sapling-stack.md) page for more information.
 
 **Pros:**
 
@@ -39,7 +39,7 @@ See the dedicated [Sapling Stack](./sapling-stack.md) page for more information.
 
 **Cons:**
 
-- Creates "overlapping" pull requests that may be confusing to reviewers using the GitHub pull request UI. Reviewers are strongly encouraged to use [ReviewStack](../addons/reviewstack.md) for code review instead of GitHub.
+- Creates "overlapping" pull requests that may be confusing to reviewers using the GitHub pull request UI. Reviewers are strongly encouraged to use [ReviewStack](/docs/addons/reviewstack.md) for code review instead of GitHub.
 
 :::tip
 

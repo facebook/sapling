@@ -2,7 +2,7 @@
 
 :::note
 
-This page is about using the [`.sl` mode](git_support_modes#sl-mode). Submodule support for the [`.git` mode](git_support_modes#git-mode) is WIP.
+This page is about using the [`.sl` mode](/docs/git/git_support_modes.md#sl-mode). Submodule support for the [`.git` mode](/docs/git/git_support_modes.md#git-mode) is WIP.
 
 :::
 

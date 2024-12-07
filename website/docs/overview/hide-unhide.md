@@ -73,5 +73,5 @@ There are a variety of ways to find which hidden commit you want to unhide.
 
 * `sl smartlog --rev "hidden()"` to view all hidden commits using the “hidden()” revset.
 * `sl log -r "predecessors(COMMIT)"` to view the hidden previous versions of a certain commit (that is, the version from before a rebase, amend, etc).
-* See [Undo](undo.md) and [Journal](../commands/journal.md) for more ways to view your past repository actions.
+* See [Undo](/docs/overview/undo.md) and [Journal](/docs/commands/journal.md) for more ways to view your past repository actions.
 

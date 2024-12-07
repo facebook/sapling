@@ -179,4 +179,4 @@ python3 .\\packaging\\windows\\build_windows_zip.py
 `}
 </pre>
 
-Once you have Sapling installed, follow the [Getting Started](./getting-started.md) instructions.
+Once you have Sapling installed, follow the [Getting Started](/docs/introduction/getting-started.md) instructions.

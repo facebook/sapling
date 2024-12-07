@@ -33,9 +33,9 @@ Here are the most commonly used commands in Sapling:
 
 Many of Sapling’s basic commands will be familiar, and perhaps even unremarkable, to existing Git and Mercurial users.  For example, Sapling supports <Command name="clone" />, <Command name="checkout" />, <Command name="commit" />, <Command name="rebase" />, <Command name="push" />, etc. The goal was not to reinvent the wheel, but to make an intuitive, yet powerful, source control system.
 
-This document is a casual introduction to some of the basic commands. It is not comprehensive, nor is it a walkthrough of an end-to-end workflow (see the [Introduction](../introduction/introduction.md) for a simple, end-to-end example). Commands with interesting nuance or for more advanced cases are covered in other documents.
+This document is a casual introduction to some of the basic commands. It is not comprehensive, nor is it a walkthrough of an end-to-end workflow (see the [Introduction](/docs/introduction/introduction.md) for a simple, end-to-end example). Commands with interesting nuance or for more advanced cases are covered in other documents.
 
-Many of these examples use the `sl smartlog` output to explain the repo state. See the [Smartlog doc](./smartlog) for an overview of the output format.
+Many of these examples use the `sl smartlog` output to explain the repo state. See the [Smartlog doc](/docs/overview/smartlog.md) for an overview of the output format.
 
 ## Cloning and checking out
 
@@ -66,11 +66,11 @@ For Git support, Sapling uses Git under the hood for clones, pushes, and pulls. 
 
 :::
 
-Related topics: [Push/Pull](push-pull.md), Sparse
+Related topics: [Push/Pull](/docs/overview/push-pull.md), Sparse
 
 #### Goto/Checkout
 
-`sl goto` or `sl go` allows you to checkout a specific commit.  See the [Navigation](navigation.md) document for a variety of other ways to move around your repository.
+`sl goto` or `sl go` allows you to checkout a specific commit.  See the [Navigation](/docs/overview/navigation.md) document for a variety of other ways to move around your repository.
 
 ```sl-shell-example
 # You can checkout commits by their long or short hash.
@@ -102,7 +102,7 @@ Notable options:
 
 * `-C/--clean`  will remove any pending changes.
 
-Related topics: [Navigation](navigation.md), [top/bottom](navigation.md#topbottom), [pull](push-pull.md)
+Related topics: [Navigation](/docs/overview/navigation.md), [top/bottom](/docs/overview/navigation.md#topbottom), [pull](/docs/overview/push-pull.md)
 
 ## Working copy
 
@@ -160,7 +160,7 @@ $ sl diff file.txt
 
 The diff output is compatible with Git’s diff format.
 
-Related topics: [Show](basic-commands.md#show)
+Related topics: [Show](/docs/overview/basic-commands.md#show)
 
 #### Add/Remove/Forget
 
@@ -271,7 +271,7 @@ Related topics: Amend
 
 ## Viewing history
 
-Related: [smartlog](smartlog.md)
+Related: [smartlog](/docs/overview/smartlog.md)
 
 #### Show
 

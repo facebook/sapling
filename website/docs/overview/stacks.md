@@ -9,7 +9,7 @@ Sapling provides first-class support for editing and manipulating stacks of comm
 
 ### Amend
 
-You can edit any commit in your stack by going to that commit (via <Command name="goto" />), making the desired modifications, and then running <Command name="amend" /> to edit the commit. Keep in mind that if you make a mistake, you can always [Undo](undo.md) your changes!
+You can edit any commit in your stack by going to that commit (via <Command name="goto" />), making the desired modifications, and then running <Command name="amend" /> to edit the commit. Keep in mind that if you make a mistake, you can always [Undo](/docs/overview/undo.md) your changes!
 
 
 ```sl-shell-example

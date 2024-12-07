@@ -88,4 +88,4 @@ o  <span class="sl-public">ecf6ca5e1</span>  Yesterday at 12:23<br />
 
 An interactive smartlog GUI is available by running `sl web`. This shows similar information to `sl smartlog` while also refreshing automatically, and allows you to run commands or drag and drop commits to rebase them.
 
-[See Interactive Smartlog Documentation](../addons/isl.md)
+[See Interactive Smartlog Documentation](/docs/addons/isl.md)

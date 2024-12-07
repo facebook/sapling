@@ -51,7 +51,7 @@ You can drag and drop commits to rebase them. This is the easiest way to re-arra
 Note that drag-and-drop rebasing is not allowed while you have uncommitted changes, since it's harder to deal with merge conflicts.
 Commit any uncommitted changes first to work around this.
 
-Drag-and-drop performs a <Command name="rebase" linkText="sl rebase" />, including all commits stacked on top of the commit being dragged. If you want to re-arrange commits within your stack, consider using [`sl histedit`](../commands/histedit.md).
+Drag-and-drop performs a <Command name="rebase" linkText="sl rebase" />, including all commits stacked on top of the commit being dragged. If you want to re-arrange commits within your stack, consider using [`sl histedit`](/docs/commands/histedit.md).
 
 
 ### Running commands
@@ -95,7 +95,7 @@ let you create or amend your commit using your message.
 
 :::tip
 
-In order to interact with GitHub for code review in ISL, be sure to install the `gh` GitHub CLI. [Learn more.](../git/intro.md)
+In order to interact with GitHub for code review in ISL, be sure to install the `gh` GitHub CLI. [Learn more.](/docs/git/intro.md)
 
 :::
 
@@ -111,12 +111,12 @@ ISL will prompt you for your choice the first time you try to submit. This can a
 sl config --local github.preferred_submit_command <ghstack or pr>
 ```
 
-See documentation on [Using Sapling with GitHub](../git/intro.md) for more information.
+See documentation on [Using Sapling with GitHub](/docs/git/intro.md) for more information.
 
 <ThemedImage alt="Pull Request Badges" light="/img/isl/pr_light.png" dark="/img/isl/pr_dark.png" />
 
 Commits in your tree which are associated with a GitHub Pull Request will show a badge underneath showing the status of that Pull Request.
-You can click this badge to open the Pull Request in GitHub (or [configure it to open alternate domains](../introduction/getting-started#browsing-pull-requests)).
+You can click this badge to open the Pull Request in GitHub (or [configure it to open alternate domains](/docs/introduction/getting-started.md#browsing-pull-requests)).
 
 This badge also shows the CI build status and how many comments there are.
 

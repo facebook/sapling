@@ -22,7 +22,7 @@ data to answer questions like how and when bookmarks changed, etc.
 ### Structure
 
 MetaLog maintains 2 structures:
-- A blob store backed by [ZStore](./zstdelta#zstore). Blobs are keyed by their
+- A blob store backed by [ZStore](/docs/dev/internals/zstdelta.md#zstore). Blobs are keyed by their
   content SHA1s. There are 2 kinds of blobs: root, and content.
 - A log of keys of roots. It provides a way to get the latest root, and also
   historical roots.
@@ -37,7 +37,7 @@ itself. That is part of the reason for the naming.
 
 ### Concurrent writes
 
-Similar to [IndexedLog](./indexedlog#concurrent-writes), changes are buffered
+Similar to [IndexedLog](/docs/dev/internals/indexedlog.md#concurrent-writes), changes are buffered
 in memory until an explicit flush to disk.
 
 Unlike IndexedLog, if MetaLog notices that the latest root is changed on disk,
