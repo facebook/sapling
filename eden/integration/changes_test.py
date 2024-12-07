@@ -150,6 +150,9 @@ class ChangesTestBase(testcase.EdenRepoTest):
         self.rename("test_file", "best_file")
         return self.getChangesSinceV2(position=position)
 
+    def repo_rmdir(self, path) -> None:
+        self.rmdir(path)
+
 
 class WindowsTestBase(ChangesTestBase):
     SYNC_MAX: int = 1
@@ -177,6 +180,16 @@ class WindowsTestBase(ChangesTestBase):
     def rename(self, from_path, to_path) -> None:
         position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
         super().rename(from_path, to_path)
+        self.syncProjFS(position)
+
+    def mkdir(self, path) -> None:
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        super().mkdir(path)
+        self.syncProjFS(position)
+
+    def repo_rmdir(self, path) -> None:
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        super().rmdir(path)
         self.syncProjFS(position)
 
 
@@ -224,6 +237,34 @@ class ChangesTestCommon(testBase):
                 SmallChangeNotification.REMOVED,
                 Dtype.REGULAR,
                 path=b"test_file",
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    def test_add_folder(self):
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        # self.repo_write_file("test_folder/test_file", "", add=False)
+        self.mkdir("test_folder")
+        changes = self.getChangesSinceV2(position=position)
+        expected_changes = [
+            buildSmallChange(
+                SmallChangeNotification.ADDED,
+                Dtype.DIR,
+                path=b"test_folder",
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    def test_remove_folder(self):
+        self.mkdir("test_folder")
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.repo_rmdir("test_folder")
+        changes = self.getChangesSinceV2(position=position)
+        expected_changes = [
+            buildSmallChange(
+                SmallChangeNotification.REMOVED,
+                Dtype.DIR,
+                path=b"test_folder",
             ),
         ]
         self.assertTrue(self.check_changes(changes.changes, expected_changes))
