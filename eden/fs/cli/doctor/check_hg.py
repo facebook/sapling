@@ -342,7 +342,14 @@ class AbandonedTransactionChecker(HgChecker):
         return []
 
     def repair(self) -> None:
-        self.backing_repo._run_hg(["recover"])
+        try:
+            self.backing_repo._run_hg(["recover"], subprocess.PIPE)
+        except subprocess.CalledProcessError as ex:
+            # hg recover exits unsuccessfully when there is nothing to recover
+            # Journal has been cleaned up before we could, just ignore the error
+            if ex.stderr.decode() == "no interrupted transaction available\n":
+                return
+            raise ex
 
 
 class PreviousEdenFSCrashedDuringCheckout(Problem):
