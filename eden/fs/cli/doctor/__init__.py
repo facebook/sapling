@@ -275,7 +275,12 @@ class EdenDoctorChecker:
                 # Run network checks without a backing repo
                 try:
                     self.network_checker.check_network(
-                        self.tracker, Path(os.getcwd()), set(), False
+                        # On windows, if run in a mount when eden is stopped, it will
+                        # report an error, so run in a neutral location
+                        self.tracker,
+                        Path("/"),
+                        set(),
+                        False,
                     )
                 except Exception as ex:
                     raise RuntimeError("Failed to check network for mount") from ex
