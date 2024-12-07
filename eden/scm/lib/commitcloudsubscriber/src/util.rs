@@ -205,18 +205,15 @@ pub fn read_or_generate_access_token(user_token_path: &Option<PathBuf>) -> Resul
 
     // Try to issue a CAT token automatically.
     // These tokens generation work differently for Icebreaker and InternGraph
-    let clicat_tool = if hostcaps::is_prod() {
-        "clicat"
-    } else {
-        "corp_clicat"
-    };
+    let from_prod = hostcaps::is_prod();
+    let clicat_tool = if from_prod { "clicat" } else { "corp_clicat" };
     info!(
         "Token Lookup: generating a CAT token via {} ...",
         clicat_tool
     );
     let token_timeout_seconds = 1200;
     let payload = base64::engine::general_purpose::STANDARD
-        .encode(json!({"app":COMMIT_CLOUD_APP_ID}).to_string());
+        .encode(json!({"app":COMMIT_CLOUD_APP_ID, "x2p": !from_prod}).to_string());
     let output = Command::new(clicat_tool)
         .args(vec![
             "create",
