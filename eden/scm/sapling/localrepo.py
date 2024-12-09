@@ -86,6 +86,8 @@ urlreq = util.urlreq
 # - '' for svfs relative paths
 _cachedfiles = set()
 
+SECONDS_IN_A_DAY = 60 * 60 * 24
+
 
 class _basefilecache(scmutil.filecache):
     """filecache usage on repo"""
@@ -2872,6 +2874,8 @@ class localrepository:
             if diffnumber is not None:
                 loginfo.update({"phabricator_diff_number": diffnumber})
 
+            _set_public_base_age(self, p1, loginfo)
+
             self.ui.log(
                 "commit_info",
                 node=hex(n),
@@ -3386,4 +3390,15 @@ def _validate_committable_ctx(ui, ctx):
             _("commit file count (%d) exceeds configured limit (%d)")
             % (len(ctx.files()), file_count_limit),
             hint=hint,
+        )
+
+
+def _set_public_base_age(repo, ctx, loginfo):
+    if publicbase := scmutil.publicbase(repo, ctx):
+        age = int(time.time() - publicbase.date()[0]) / SECONDS_IN_A_DAY
+        loginfo.update(
+            {
+                "public_base": publicbase.hex(),
+                "public_base_age": age,
+            }
         )
