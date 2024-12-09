@@ -113,6 +113,15 @@ export enum ArchivedReasonType {
   STALE_FILE_CHANGED = 'STALE_FILE_CHANGED',
 }
 
+export type CodeChange = {
+  oldContent?: string;
+  newContent?: string;
+  oldLineNumber?: number;
+  trimmedLineNumber?: number;
+  trimmedLength?: number;
+  adjustedLineNumber?: number;
+};
+
 export type SuggestedChange = {
   id?: string;
   type?: SuggestedChangeType;
@@ -125,9 +134,7 @@ export type SuggestedChange = {
   patch?: ParsedDiff;
   oldPath?: string;
   currentPath?: string;
-  oldContent?: string;
-  newContent?: string;
-  oldLineNumber?: number;
+  codeChange?: CodeChange[];
 };
 
 export type DiffComment = {
