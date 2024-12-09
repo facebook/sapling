@@ -120,6 +120,7 @@ export type CodeChange = {
   trimmedLineNumber?: number;
   trimmedLength?: number;
   adjustedLineNumber?: number;
+  patch?: ParsedDiff;
 };
 
 export type SuggestedChange = {
