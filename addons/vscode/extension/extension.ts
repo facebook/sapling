@@ -65,7 +65,9 @@ export async function activate(context: vscode.ExtensionContext) {
         ctx,
         enabledSCMApiFeatures.has('comments-v1'),
       );
-      context.subscriptions.push(inlineCommentsProvider);
+      if (inlineCommentsProvider != null) {
+        context.subscriptions.push(inlineCommentsProvider);
+      }
     }
     if (Internal.SaplingISLUriHandler != null) {
       context.subscriptions.push(
