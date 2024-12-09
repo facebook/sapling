@@ -100,6 +100,9 @@ struct RepoIdentity {
     /// This is useful to avoid potential risks that (potentially used in automation)
     /// that "hg root" succeeding in a `.git` repo.
     sniff_initial_cli_names: Option<&'static str>,
+
+    /// Function. Turn (working_copy_root, dot_dir) to full_dot_dir.
+    resolve_dot_dir_func: fn(&Path, &'static str) -> PathBuf,
 }
 
 impl Identity {
@@ -115,8 +118,20 @@ impl Identity {
         self.user.long_product_name
     }
 
+    /// Obtain the static ".hg" or ".sl", or ".git/sl" directory name.
+    ///
+    /// Note: In complex cases (ex. dotgit + submodule) the full dot_dir is not
+    /// as simple as `repo_root.join(dot_dir)`. Use `resolve_dot_dir` instead.
     pub fn dot_dir(&self) -> &'static str {
         self.repo.dot_dir
+    }
+
+    /// Obtain the full ".hg" or ".sl", or ".git/sl" path, given the working
+    /// copy root. This function handles complexity like dotgit and submodules.
+    ///
+    /// `root` is the "repo root" that matches `sl root` output.
+    pub fn resolve_full_dot_dir(&self, root: &Path) -> PathBuf {
+        (self.repo.resolve_dot_dir_func)(root, self.repo.dot_dir)
     }
 
     pub fn config_repo_file(&self) -> &'static str {
@@ -285,6 +300,10 @@ impl Identity {
     }
 }
 
+fn default_resolve_dot_dir_func(root: &Path, dot_dir: &'static str) -> PathBuf {
+    root.join(dot_dir)
+}
+
 /// Split the HGRCPATH. Return items matching at least one of the given prefix.
 ///
 /// `;` can be used as the separator on all platforms.
@@ -370,6 +389,7 @@ const HG: Identity = Identity {
         sniff_dot_dir_required_files: &["requires"],
         sniff_root_priority: 0,
         sniff_initial_cli_names: None,
+        resolve_dot_dir_func: default_resolve_dot_dir_func,
     },
 };
 
@@ -397,6 +417,7 @@ const SL: Identity = Identity {
         sniff_dot_dir_required_files: &["requires"],
         sniff_root_priority: 0,
         sniff_initial_cli_names: None,
+        resolve_dot_dir_func: default_resolve_dot_dir_func,
     },
 };
 
@@ -435,6 +456,7 @@ const TEST: Identity = Identity {
         sniff_dot_dir_required_files: &[],
         sniff_root_priority: 5,
         sniff_initial_cli_names: None,
+        resolve_dot_dir_func: default_resolve_dot_dir_func,
     },
 };
 
