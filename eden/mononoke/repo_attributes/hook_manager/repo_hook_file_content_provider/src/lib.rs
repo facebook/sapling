@@ -20,7 +20,11 @@ use bonsai_tag_mapping::ArcBonsaiTagMapping;
 use bonsai_tag_mapping::BonsaiTagMappingArc;
 use bonsai_tag_mapping::Freshness;
 use bookmarks::ArcBookmarks;
+use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKey;
+use bookmarks::BookmarkKind;
+use bookmarks::BookmarkPagination;
+use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarksArc;
 use bytes::Bytes;
 use changeset_info::ChangesetInfo;
@@ -287,6 +291,30 @@ impl HookStateProvider for RepoHookStateProvider {
         } else {
             Ok(BookmarkState::New)
         }
+    }
+
+    async fn bookmark_exists_with_prefix<'a, 'b>(
+        &'a self,
+        ctx: CoreContext,
+        prefix: &'b BookmarkPrefix,
+    ) -> Result<bool, HookStateProviderError> {
+        let bookmark_with_prefix_count = self
+            .bookmarks
+            .list(
+                ctx,
+                bookmarks::Freshness::MaybeStale,
+                prefix,
+                BookmarkCategory::ALL,
+                BookmarkKind::ALL_PUBLISHING,
+                &BookmarkPagination::FromStart,
+                1,
+            )
+            .try_collect::<Vec<_>>()
+            .await
+            .with_context(|| format!("Error fetching bookmarks with prefix {prefix}"))?
+            .len();
+
+        Ok(bookmark_with_prefix_count > 0)
     }
 
     async fn get_tag_type<'a, 'b>(

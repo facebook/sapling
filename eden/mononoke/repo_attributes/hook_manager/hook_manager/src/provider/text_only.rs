@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use bookmarks_types::BookmarkKey;
+use bookmarks_types::BookmarkPrefix;
 use bytes::Bytes;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
@@ -122,6 +123,14 @@ impl<T: HookStateProvider + 'static> HookStateProvider for TextOnlyHookStateProv
         bookmark: &'b BookmarkKey,
     ) -> Result<BookmarkState, HookStateProviderError> {
         self.inner.get_bookmark_state(ctx, bookmark).await
+    }
+
+    async fn bookmark_exists_with_prefix<'a, 'b>(
+        &'a self,
+        ctx: CoreContext,
+        prefix: &'b BookmarkPrefix,
+    ) -> Result<bool, HookStateProviderError> {
+        self.inner.bookmark_exists_with_prefix(ctx, prefix).await
     }
 
     async fn get_tag_type<'a, 'b>(

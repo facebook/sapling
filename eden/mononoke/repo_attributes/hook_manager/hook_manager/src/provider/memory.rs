@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use bookmarks_types::BookmarkKey;
+use bookmarks_types::BookmarkPrefix;
 use bytes::Bytes;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
@@ -155,6 +156,17 @@ impl HookStateProvider for InMemoryHookStateProvider {
             anyhow!("`get_bookmark_state` is not implemented for `InMemoryHookStateProvider`")
                 .into(),
         )
+    }
+
+    async fn bookmark_exists_with_prefix<'a, 'b>(
+        &'a self,
+        _ctx: CoreContext,
+        _prefix: &'b BookmarkPrefix,
+    ) -> Result<bool, HookStateProviderError> {
+        Err(anyhow!(
+            "`bookmark_exists_with_prefix` is not implemented for `InMemoryHookStateProvider`"
+        )
+        .into())
     }
 
     async fn get_tag_type<'a, 'b>(

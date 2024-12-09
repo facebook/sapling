@@ -12,6 +12,7 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use bookmarks_types::BookmarkKey;
+use bookmarks_types::BookmarkPrefix;
 use bytes::Bytes;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
@@ -79,6 +80,14 @@ pub trait HookStateProvider: Send + Sync {
         ctx: &'a CoreContext,
         bookmark: &'b BookmarkKey,
     ) -> Result<BookmarkState, HookStateProviderError>;
+
+    /// Returns true if there already exists a bookmark with the given prefix for the
+    /// given repo
+    async fn bookmark_exists_with_prefix<'a, 'b>(
+        &'a self,
+        ctx: CoreContext,
+        prefix: &'b BookmarkPrefix,
+    ) -> Result<bool, HookStateProviderError>;
 
     /// The type of a tag at the time the push is being run. Useful for determining
     /// if the bookmark being pushed is a tag or not and if its a tag, if its a simple
