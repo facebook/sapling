@@ -10,6 +10,7 @@ use bookmarks_movement::BookmarkKindRestrictions;
 use bookmarks_movement::HookRejection;
 use borrowed::borrowed;
 use context::CoreContext;
+use futures_watchdog::WatchdogExt;
 use hooks::PushAuthoredBy;
 use mononoke_api::ChangesetSpecifier;
 use mononoke_api::MononokeError;
@@ -141,16 +142,19 @@ impl SourceControlServiceImpl {
             PushAuthoredBy::User
         };
         let repo = self
-            .repo_for_service(ctx, &repo, params.service_identity)
+            .repo_for_service(ctx.clone(), &repo, params.service_identity)
+            .watched(ctx.logger())
             .await?;
         borrowed!(params.head, params.base);
         let head = repo
             .changeset(ChangesetSpecifier::from_request(head)?)
+            .watched(ctx.logger())
             .await
             .context("failed to resolve head commit")?
             .ok_or_else(|| scs_errors::commit_not_found(head.to_string()))?;
         let base = repo
             .changeset(ChangesetSpecifier::from_request(base)?)
+            .watched(ctx.logger())
             .await
             .context("failed to resolve base commit")?
             .ok_or_else(|| scs_errors::commit_not_found(base.to_string()))?;
@@ -175,12 +179,14 @@ impl SourceControlServiceImpl {
                 push_authored_by,
                 force_local_pushrebase,
             )
+            .watched(ctx.logger())
             .await?
             .into_response_with(&(
                 repo.clone(),
                 params.identity_schemes,
                 params.old_identity_schemes,
             ))
+            .watched(ctx.logger())
             .await?;
 
         Ok(thrift::RepoLandStackResponse {
