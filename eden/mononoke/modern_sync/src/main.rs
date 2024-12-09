@@ -46,6 +46,12 @@ struct ModernSyncArgs {
     /// TLS parameters for this service
     #[clap(flatten)]
     tls_params: Option<TLSArgs>,
+
+    #[clap(
+        long,
+        help = "Dest repo name (in case it's different from source repo name)"
+    )]
+    dest_repo_name: Option<String>,
 }
 
 #[facet::container]

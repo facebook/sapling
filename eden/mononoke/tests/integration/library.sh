@@ -339,12 +339,15 @@ function mononoke_hg_sync_loop_regenerate {
 
 function mononoke_modern_sync {
   START_ID="$1"
+  ORIG_REPO="$2"
+  DEST_REPO="$3"
   shift
 
   GLOG_minloglevel=5 "$MONONOKE_MODERN_SYNC" \
     "${CACHE_ARGS[@]}" \
     "${COMMON_ARGS[@]}" \
-    --repo-id "$REPOID" \
+    --repo-name "$ORIG_REPO" \
+    --dest-repo-name "$DEST_REPO" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --dest-socket $MONONOKE_SOCKET \
     --tls-ca "$TEST_CERTDIR/root-ca.crt" \

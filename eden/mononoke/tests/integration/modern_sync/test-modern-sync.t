@@ -5,12 +5,35 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
-  $ setup_common_config
+
+  $ cat >> "$ACL_FILE" << ACLS
+  > {
+  >   "repos": {
+  >     "orig": {
+  >       "actions": {
+  >         "read": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA"],
+  >         "write": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA"],
+  >         "bypass_readonly": ["$CLIENT0_ID_TYPE:$CLIENT0_ID_DATA"]
+  >       }
+  >     },
+  >     "dest": {
+  >       "actions": {
+  >         "read": ["SERVICE_IDENTITY:server"],
+  >         "write": ["SERVICE_IDENTITY:server"],
+  >          "bypass_readonly": ["SERVICE_IDENTITY:server"]
+  >       }
+  >     }
+  >   }
+  > }
+  > ACLS
+
+  $ REPOID=0 REPONAME=orig ACL_NAME=orig setup_common_config 
+  $ REPOID=1 REPONAME=dest ACL_NAME=dest setup_common_config 
 
   $ start_and_wait_for_mononoke_server
 
-  $ hg clone -q mono:repo repo
-  $ cd repo
+  $ hg clone -q mono:orig orig
+  $ cd orig
   $ drawdag << EOS
   > E # E/dir1/dir2/fifth = abcdefg\n
   > |
@@ -31,7 +54,7 @@
   $ hg push -r . --to master_bookmark -q
 
 Sync all bookmarks moves
-  $ with_stripped_logs mononoke_modern_sync 0 
+  $ with_stripped_logs mononoke_modern_sync 0 orig dest
   Running sync-once loop
   Connectign to https://localhost:$LOCAL_PORT/edenapi/
   Health check outcome: Ok(ResponseMeta { version: HTTP/2.0, status: 200, server: Some("edenapi_server"), request_id: Some("*"), tw_task_handle: None, tw_task_version: None, tw_canary_id: None, server_load: Some(1), content_length: Some(10), content_encoding: None, mononoke_host: Some("*") }) (glob)
@@ -69,4 +92,4 @@ Sync all bookmarks moves
   $ cat  $TESTTMP/modern_sync_scuba_logs | jq | rg "start_id|dry_run|repo"
       "start_id": 0,
       "dry_run": "false",
-      "repo": "repo"* (glob)
+      "repo": "orig"* (glob)

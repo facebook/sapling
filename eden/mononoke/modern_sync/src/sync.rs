@@ -128,15 +128,9 @@ pub async fn sync(
             .clone()
             .ok_or_else(|| format_err!("TLS params not found for repo {}", repo_name))?;
 
-        Arc::new(
-            EdenapiSender::new(
-                Url::parse(&url)?,
-                repo_name.clone(),
-                logger.clone(),
-                tls_args,
-            )
-            .await?,
-        )
+        let dest_repo = app_args.dest_repo_name.clone().unwrap_or(repo_name.clone());
+
+        Arc::new(EdenapiSender::new(Url::parse(&url)?, dest_repo, logger.clone(), tls_args).await?)
     };
 
     let mut scuba_sample = ctx.scuba().clone();
