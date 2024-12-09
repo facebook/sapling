@@ -16,7 +16,6 @@ name = "repo_minimal_info"
 anyhow = "1.0.86"
 fs-err = { version = "2.6.0", features = ["tokio"] }
 phf = { version = "0.11", features = ["macros"] }
-sapling-gitcompat = { version = "0.1.0", path = "../../gitcompat" }
 sapling-identity = { version = "0.1.0", path = "../../identity" }
 sapling-util = { version = "0.1.0", path = "../../util" }
 

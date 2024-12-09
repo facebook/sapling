@@ -16,12 +16,12 @@ use anyhow::Result;
 use filetime::set_file_mtime;
 use filetime::FileTime;
 use fs_err as fs;
+use identity::dotgit::follow_dotgit_path;
 use identity::Identity;
 use tracing::debug;
 use types::HgId;
 
 use crate::refs::ReferenceValue;
-use crate::utils::follow_dotgit_path;
 use crate::BareGit;
 
 /// Initialize and update Sapling's dotdir inside `.git/`.

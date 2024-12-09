@@ -19,6 +19,7 @@ use anyhow::Error;
 use anyhow::Result;
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
+pub mod dotgit;
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub struct Identity {

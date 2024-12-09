@@ -16,7 +16,7 @@ use anyhow::Result;
 use constants::SUPPORTED_DEFAULT_REQUIREMENTS;
 use constants::SUPPORTED_STORE_REQUIREMENTS;
 use fs_err as fs;
-use gitcompat::utils::follow_dotgit_path;
+use identity::dotgit::follow_dotgit_path;
 pub use requirements::Requirements;
 
 /// RepoMinimalInfo contains:

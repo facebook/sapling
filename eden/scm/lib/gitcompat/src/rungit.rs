@@ -16,9 +16,8 @@ use std::process::Output;
 
 use configmodel::Config;
 use configmodel::ConfigExt;
+use identity::dotgit::follow_dotgit_path;
 use spawn_ext::CommandExt;
-
-use crate::utils::follow_dotgit_path;
 
 /// Run `git` outside a repo.
 #[derive(Default, Clone)]
