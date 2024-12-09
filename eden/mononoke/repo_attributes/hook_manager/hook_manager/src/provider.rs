@@ -41,6 +41,10 @@ impl BookmarkState {
         }
         false
     }
+
+    pub fn is_existing(&self) -> bool {
+        !self.is_new()
+    }
 }
 
 /// Enum describing the type of a tag for which hooks are being run.

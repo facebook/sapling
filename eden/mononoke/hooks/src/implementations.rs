@@ -16,6 +16,7 @@ mod block_files;
 pub(crate) mod block_invalid_symlinks;
 pub(crate) mod block_merge_commits;
 pub(crate) mod block_new_bookmark_creations_by_name;
+pub(crate) mod block_new_bookmark_creations_by_prefix;
 pub(crate) mod block_unannotated_tags;
 pub(crate) mod block_unclean_merge_commits;
 pub(crate) mod deny_files;
@@ -63,6 +64,11 @@ pub async fn make_bookmark_hook(
         )),
         "block_new_bookmark_creations_by_name" => Some(b(
             block_new_bookmark_creations_by_name::BlockNewBookmarkCreationsByNameHook::new(
+                &params.config,
+            )?,
+        )),
+        "block_new_bookmark_creations_by_prefix" => Some(b(
+            block_new_bookmark_creations_by_prefix::BlockNewBookmarkCreationsByPrefixHook::new(
                 &params.config,
             )?,
         )),
