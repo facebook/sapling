@@ -25,6 +25,7 @@ use ephemeral_blobstore::BubbleId;
 use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures_stats::TimedTryFutureExt;
 use logger_ext::Loggable;
 use metaconfig_types::RepoConfigRef;
 #[cfg(fbcode_build)]
@@ -359,40 +360,45 @@ pub async fn find_draft_ancestors(
         .clone()
         .log_with_msg("Started finding draft ancestors", None);
 
-    let phases = repo.phases();
-    let mut queue = VecDeque::new();
-    let mut visited = HashSet::new();
-    let mut drafts = vec![];
-    queue.push_back(to_cs_id);
-    visited.insert(to_cs_id);
+    let (stats, drafts) = async move {
+        let phases = repo.phases();
+        let mut queue = VecDeque::new();
+        let mut visited = HashSet::new();
+        let mut drafts = vec![];
+        queue.push_back(to_cs_id);
+        visited.insert(to_cs_id);
 
-    while let Some(cs_id) = queue.pop_front() {
-        let public = phases
-            .get_public(ctx, vec![cs_id], false /*ephemeral_derive*/)
-            .await?;
+        while let Some(cs_id) = queue.pop_front() {
+            let public = phases
+                .get_public(ctx, vec![cs_id], false /*ephemeral_derive*/)
+                .await?;
 
-        if public.contains(&cs_id) {
-            continue;
-        }
-        drafts.push(cs_id);
+            if public.contains(&cs_id) {
+                continue;
+            }
+            drafts.push(cs_id);
 
-        let parents = repo.commit_graph().changeset_parents(ctx, cs_id).await?;
-        for p in parents {
-            if visited.insert(p) {
-                queue.push_back(p);
+            let parents = repo.commit_graph().changeset_parents(ctx, cs_id).await?;
+            for p in parents {
+                if visited.insert(p) {
+                    queue.push_back(p);
+                }
             }
         }
-    }
 
-    let drafts = stream::iter(drafts)
-        .map(Ok)
-        .map_ok(|cs_id| async move { cs_id.load(ctx, repo.repo_blobstore()).await })
-        .try_buffer_unordered(100)
-        .try_collect::<Vec<_>>()
-        .await?;
+        stream::iter(drafts)
+            .map(Ok)
+            .map_ok(|cs_id| async move { cs_id.load(ctx, repo.repo_blobstore()).await })
+            .try_buffer_unordered(100)
+            .try_collect::<Vec<_>>()
+            .await
+    }
+    .try_timed()
+    .await?;
 
     ctx.scuba()
         .clone()
+        .add_future_stats(&stats)
         .log_with_msg("Found draft ancestors", Some(format!("{}", drafts.len())));
     Ok(drafts)
 }
