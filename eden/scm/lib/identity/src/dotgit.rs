@@ -37,5 +37,5 @@ pub fn follow_dotgit_path(mut git_dir: PathBuf) -> PathBuf {
         }
         break;
     }
-    git_dir
+    util::path::normalize(&git_dir)
 }

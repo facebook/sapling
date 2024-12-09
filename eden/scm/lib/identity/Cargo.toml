@@ -17,6 +17,7 @@ anyhow = "1.0.86"
 dirs = "2.0"
 once_cell = "1.12"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
+sapling-util = { version = "0.1.0", path = "../util" }
 tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
