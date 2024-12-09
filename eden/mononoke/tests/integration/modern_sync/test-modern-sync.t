@@ -54,7 +54,7 @@
   $ hg push -r . --to master_bookmark -q
 
 Sync all bookmarks moves
-  $ with_stripped_logs mononoke_modern_sync 0 orig dest
+  $ with_stripped_logs mononoke_modern_sync sync-once orig dest --start-id 0 
   Running sync-once loop
   Connectign to https://localhost:$LOCAL_PORT/edenapi/
   Health check outcome: Ok(ResponseMeta { version: HTTP/2.0, status: 200, server: Some("edenapi_server"), request_id: Some("*"), tw_task_handle: None, tw_task_version: None, tw_canary_id: None, server_load: Some(1), content_length: Some(10), content_encoding: None, mononoke_host: Some("*") }) (glob)

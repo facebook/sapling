@@ -338,9 +338,11 @@ function mononoke_hg_sync_loop_regenerate {
 }
 
 function mononoke_modern_sync {
-  START_ID="$1"
+  COMMAND="$1"
   ORIG_REPO="$2"
   DEST_REPO="$3"
+  shift
+  shift
   shift
 
   GLOG_minloglevel=5 "$MONONOKE_MODERN_SYNC" \
@@ -354,7 +356,7 @@ function mononoke_modern_sync {
     --tls-private-key "$TEST_CERTDIR/localhost.key" \
     --tls-certificate "$TEST_CERTDIR/localhost.crt" \
     --scuba-log-file "$TESTTMP/modern_sync_scuba_logs" \
-    sync-once --start-id "$START_ID"
+    "$COMMAND" "$@"
 }
 
 function mononoke_admin {
