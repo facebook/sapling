@@ -41,6 +41,7 @@ use futures::stream::BoxStream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use futures_ext::FbStreamExt;
 use futures_lazy_shared::LazyShared;
 use futures_watchdog::WatchdogExt;
 use git_types::MappedGitCommitId;
@@ -1350,7 +1351,10 @@ impl<R: MononokeRepo> ChangesetContext<R> {
         let diff_trees = diff_items.contains(&ChangesetDiffItem::TREES);
 
         self.find_entries(to_vec1(path_restrictions), ordering)
+            .watched(self.ctx().logger())
             .await?
+            .yield_periodically()
+            .with_logger(self.ctx().logger())
             .try_filter_map(|(path, entry)| async move {
                 match (path.into_optional_non_root_path(), entry) {
                     (Some(mpath), ManifestEntry::Leaf(_)) if diff_files => Ok(Some(mpath)),
@@ -1367,6 +1371,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
                 ))
             })
             .try_collect::<Vec<_>>()
+            .watched(self.ctx().logger())
             .await
     }
 
