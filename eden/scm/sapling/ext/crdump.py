@@ -13,7 +13,7 @@ import shutil
 import tempfile
 from os import path
 
-from sapling import encoding, error, extensions, phases, registrar, scmutil
+from sapling import encoding, error, extensions, registrar, scmutil
 from sapling.i18n import _
 from sapling.node import hex
 
@@ -152,7 +152,7 @@ def crdump(ui, repo, *revs, **opts):
 
             rdata["branch"] = ""
 
-            pbctx = publicbase(repo, ctx)
+            pbctx = scmutil.publicbase(repo, ctx)
             if pbctx:
                 rdata["public_base"] = {"node": hex(pbctx.node())}
                 try:
@@ -255,13 +255,6 @@ def dumpbinaryfiles(ui, repo, ctx, outdir):
 def phabricatorrevision(ctx):
     match = DIFFERENTIAL_REGEX.search(ctx.description())
     return match.group(1) if match else ""
-
-
-def publicbase(repo, ctx):
-    base = repo.revs("max(::%d & public())", ctx.rev())
-    if len(base):
-        return repo[base.first()]
-    return None
 
 
 def dumpmarkers(rawmarkers):

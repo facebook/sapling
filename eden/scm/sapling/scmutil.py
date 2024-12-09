@@ -1576,3 +1576,10 @@ def walkfiles(repo, walkctx, matcher, base=None):
     else:
         basemf = repo[base or nullid].manifest()
         return [(p, n[0]) for p, (n, _o) in mf.diff(basemf, matcher).items() if n[0]]
+
+
+def publicbase(repo, ctx):
+    base = repo.revs("max(::%d & public())", ctx.rev())
+    if len(base):
+        return repo[base.first()]
+    return None
