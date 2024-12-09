@@ -50,3 +50,18 @@ Status from submodule:
   $ touch c
   $ sl status
   ? c
+
+Committing from submodule:
+FIXME: does not work yet
+
+  $ sl add c
+  $ sl commit -m c
+  abort: error reading file: '$TESTTMP/parent/sub/.git/sl/graftstate': $ENOTDIR$ (os error 20)
+  [255]
+
+Checking out from submodule:
+FIXME: does not work yet
+
+  $ sl prev
+  abort: error reading file: '$TESTTMP/parent/sub/.git/sl/graftstate': $ENOTDIR$ (os error 20)
+  [255]
