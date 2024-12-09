@@ -157,7 +157,13 @@ where
                 root,
                 matcher,
                 include_directories,
-                dot_dir,
+                // dot_dir is only used to avoid walking into nested repos.
+                // If dot_dir is ".git/sl". Then turn it into ".git".
+                dot_dir: if dot_dir.contains('/') {
+                    dot_dir.split('/').next().unwrap_or("").to_string()
+                } else {
+                    dot_dir
+                },
                 skip_dirs: skip_dirs
                     .into_iter()
                     .map(|p| Ok(p.try_into()?))

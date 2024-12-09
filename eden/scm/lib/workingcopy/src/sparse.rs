@@ -199,6 +199,7 @@ pub fn sparse_matcher(
     for manifest in manifests.iter() {
         if let Some((matcher, _hash)) = repo_matcher(
             vfs,
+            // XXX: This does not work for dotgit submodule.
             &vfs.root().join(dot_dir),
             manifest.as_ref(),
             store.clone(),

@@ -341,6 +341,7 @@ impl FileSystem for EdenFileSystem {
             &self.vfs,
             manifests,
             self.store.clone(),
+            // XXX: This does not work for dotgit submodule.
             &self.vfs.root().join(dot_dir),
         )
     }

@@ -47,7 +47,6 @@ use treestate::treestate::TreeState;
 use types::hgid::NULL_ID;
 use types::repo::StorageFormat;
 use types::HgId;
-use types::RepoPath;
 use types::RepoPathBuf;
 use util::file::atomic_write;
 use util::file::read_to_string_if_exists;
@@ -183,7 +182,7 @@ impl WorkingCopy {
                 return Err(errors::RepoNotFound(root.to_string_lossy().to_string()).into());
             }
         };
-        let dot_hg_path = vfs.join(RepoPath::from_str(ident.dot_dir())?);
+        let dot_hg_path = ident.resolve_full_dot_dir(vfs.root());
         let journal = Journal::open(dot_hg_path.clone())?;
 
         Ok(WorkingCopy {
