@@ -5,6 +5,16 @@
  * GNU General Public License version 2.
  */
 
+/*
+ * Git has this limitation that since refs are stored in the file system, a user cannot create two refs like
+ * `refs/heads/some_branch` and `refs/heads/some_branch/another` because storing the latter ref would require
+ * creating folders `refs`, `heads` and `some_branch` while creating the former would require creating `some_branch`
+ * as a file. We cannot have a file and a directory with the same name at the same level, hence this behavior is disallowed.
+ *
+ * Mononoke does not prevent this by default since refs (bookmarks) in Mononoke are stored as entries in a DB table
+ * so there is no such restriction. However, to maintain parity with vanilla Git, we have to put this check in place as a hook.
+ */
+
 use std::str::FromStr;
 
 use anyhow::Error;
