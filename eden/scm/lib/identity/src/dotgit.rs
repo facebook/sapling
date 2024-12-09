@@ -6,6 +6,7 @@
  */
 
 use std::fs;
+use std::path::Path;
 use std::path::PathBuf;
 
 /// Usually `.git` is a directory. However, submodule repo created by `git`
@@ -38,4 +39,11 @@ pub fn follow_dotgit_path(mut git_dir: PathBuf) -> PathBuf {
         break;
     }
     util::path::normalize(&git_dir)
+}
+
+/// `.git` mode specific logic to resolve `dot_dir`.
+pub fn resolve_dot_dir_func(root: &Path, dot_dir: &'static str) -> PathBuf {
+    assert!(dot_dir.starts_with(".git"));
+    let dot_git_path = &follow_dotgit_path(root.join(".git"));
+    dot_git_path.join("sl")
 }

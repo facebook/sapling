@@ -430,6 +430,7 @@ const SL_GIT: Identity = Identity {
         sniff_dot_dir_required_files: &[],
         sniff_root_priority: 10, // lowest
         sniff_initial_cli_names: Some("sl"),
+        resolve_dot_dir_func: dotgit::resolve_dot_dir_func,
         ..*SL.repo
     },
     ..SL
@@ -974,6 +975,27 @@ mod test {
         // sniff_root should ignore a/b/.sl (no "requires") and use a/.sl (has "requires").
         let sniffed_path = sniff_root(&dir_a_b)?.unwrap().0;
         assert_eq!(sniffed_path, dir_a);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_dotgit_submodule() -> Result<()> {
+        let dir = tempfile::tempdir()?;
+        let dir = dir.path();
+
+        let git_module_dir = dir.join(".git").join("modules").join("sub1");
+        fs::create_dir_all(&git_module_dir)?;
+
+        let submodule_dir = dir.join("sub1");
+        fs::create_dir_all(&submodule_dir)?;
+        fs::write(submodule_dir.join(".git"), "gitdir: ../.git/modules/sub1")?;
+
+        let id = sniff_dir(dir)?.unwrap();
+        assert_eq!(id.repo, SL_GIT.repo);
+
+        let full_dot_dir = id.resolve_full_dot_dir(&submodule_dir);
+        assert_eq!(full_dot_dir, git_module_dir.join("sl"));
 
         Ok(())
     }
