@@ -32,6 +32,7 @@ use edenapi_types::BlameResult;
 use edenapi_types::BonsaiChangesetContent;
 use edenapi_types::BookmarkEntry;
 use edenapi_types::BookmarkRequest;
+use edenapi_types::BookmarkResult;
 use edenapi_types::CloudShareWorkspaceRequest;
 use edenapi_types::CloudShareWorkspaceResponse;
 use edenapi_types::CloudWorkspaceRequest;
@@ -161,6 +162,7 @@ mod paths {
     pub const ALTER_SNAPSHOT: &str = "snapshot/alter";
     pub const BLAME: &str = "blame";
     pub const BOOKMARKS: &str = "bookmarks";
+    pub const BOOKMARKS2: &str = "bookmarks2";
     pub const CLOUD_HISTORICAL_VERSIONS: &str = "cloud/historical_versions";
     pub const CLOUD_REFERENCES: &str = "cloud/references";
     pub const CLOUD_RENAME_WORKSPACE: &str = "cloud/rename_workspace";
@@ -1423,6 +1425,38 @@ impl SaplingRemoteApi for Client {
 
         let response = self
             .fetch_vec_with_retry::<BookmarkEntry>(vec![req])
+            .await?;
+        if response.len() != request_len {
+            let bookmarks = bookmarks_wire.bookmarks;
+            let message = format!(
+                "Requested bookmarks {:?} but only got {:?}.",
+                bookmarks, &response
+            );
+            return Err(SaplingRemoteApiError::IncompleteResponse(message));
+        }
+        Ok(response)
+    }
+
+    async fn bookmarks2(
+        &self,
+        bookmarks: Vec<String>,
+    ) -> Result<Vec<BookmarkResult>, SaplingRemoteApiError> {
+        let request_len = bookmarks.len();
+        tracing::info!(
+            "Requesting {} bookmarks through bookmarks2",
+            bookmarks.len()
+        );
+        let url = self.build_url(paths::BOOKMARKS2)?;
+        let bookmark_req = BookmarkRequest { bookmarks };
+        self.log_request(&bookmark_req, "bookmarks2");
+        let bookmarks_wire = bookmark_req.to_wire();
+        let req = self
+            .configure_request(self.inner.client.post(url))?
+            .cbor(&bookmarks_wire)
+            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
+
+        let response = self
+            .fetch_vec_with_retry::<BookmarkResult>(vec![req])
             .await?;
         if response.len() != request_len {
             let bookmarks = bookmarks_wire.bookmarks;

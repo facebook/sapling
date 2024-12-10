@@ -48,6 +48,35 @@ Check response.
    "alpha": "426bada5c67598ca65036d57d9e4b64b0c1ce7a0",
    "unknown": None}
 
+Check response for error propagating endpoint 
+  $ hg debugapi -e bookmarks2 -i '["alpha", "beta", "unknown"]' | sed -E 's/"hgid": bin\("([^"]+)"\)/"hgid": "\1"/g; s/None/null/g' | jq 'sort_by(.data.Ok.bookmark)'
+  [
+    {
+      "data": {
+        "Ok": {
+          "hgid": "426bada5c67598ca65036d57d9e4b64b0c1ce7a0",
+          "bookmark": "alpha"
+        }
+      }
+    },
+    {
+      "data": {
+        "Ok": {
+          "hgid": "112478962961147124edd43549aedd1a335e44bf",
+          "bookmark": "beta"
+        }
+      }
+    },
+    {
+      "data": {
+        "Ok": {
+          "hgid": null,
+          "bookmark": "unknown"
+        }
+      }
+    }
+  ]
+
 Check response for slapigit.
   $ hg --config edenapi.url=https://localhost:$MONONOKE_SOCKET/slapigit/ debugapi -e bookmarks -i '["alpha", "beta", "unknown"]'
   {"beta": "6cfc1c8c1f96fda3264583d15e8ef8b2a3436dca",

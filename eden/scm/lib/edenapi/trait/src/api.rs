@@ -18,6 +18,7 @@ use edenapi_types::AnyId;
 use edenapi_types::BlameResult;
 use edenapi_types::BonsaiChangesetContent;
 use edenapi_types::BookmarkEntry;
+use edenapi_types::BookmarkResult;
 use edenapi_types::CloudShareWorkspaceRequest;
 use edenapi_types::CloudShareWorkspaceResponse;
 use edenapi_types::CommitGraphEntry;
@@ -202,6 +203,14 @@ pub trait SaplingRemoteApi: Send + Sync + 'static {
         &self,
         bookmarks: Vec<String>,
     ) -> Result<Vec<BookmarkEntry>, SaplingRemoteApiError> {
+        let _ = bookmarks;
+        Err(SaplingRemoteApiError::NotSupported)
+    }
+
+    async fn bookmarks2(
+        &self,
+        bookmarks: Vec<String>,
+    ) -> Result<Vec<BookmarkResult>, SaplingRemoteApiError> {
         let _ = bookmarks;
         Err(SaplingRemoteApiError::NotSupported)
     }

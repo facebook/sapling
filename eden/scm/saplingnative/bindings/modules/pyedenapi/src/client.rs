@@ -29,6 +29,7 @@ use edenapi_types::AlterSnapshotRequest;
 use edenapi_types::AlterSnapshotResponse;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::BlameResult;
+use edenapi_types::BookmarkResult;
 use edenapi_types::CloudShareWorkspaceRequest;
 use edenapi_types::CloudShareWorkspaceResponse;
 use edenapi_types::CommitGraphEntry;
@@ -209,6 +210,15 @@ py_class!(pub class client |py| {
         bookmarks: Vec<String>
     ) -> PyResult<PyDict> {
         self.inner(py).as_ref().bookmarks_py(py, bookmarks)
+    }
+
+    /// bookmarks([name]) -> {name: node|None}
+    ///
+    /// Resolve remote bookmarks.
+    def bookmarks2(&self, bookmarks: Vec<String>)
+        -> PyResult<Serde<Vec<BookmarkResult>>>
+    {
+        self.inner(py).as_ref().bookmarks2_py(py, bookmarks)
     }
 
     /// setbookmark(bookmark, to, from, pushvars)

@@ -31,6 +31,7 @@ use edenapi_types::AlterSnapshotRequest;
 use edenapi_types::AlterSnapshotResponse;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
+use edenapi_types::BookmarkResult;
 use edenapi_types::CloudShareWorkspaceRequest;
 use edenapi_types::CloudShareWorkspaceResponse;
 use edenapi_types::CommitGraphEntry;
@@ -220,6 +221,18 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
             bookmarks.set_item(py, entry.bookmark, entry.hgid.map(|id| id.to_hex()))?;
         }
         Ok(bookmarks)
+    }
+
+    fn bookmarks2_py(
+        &self,
+        py: Python,
+        bookmarks: Vec<String>,
+    ) -> PyResult<Serde<Vec<BookmarkResult>>> {
+        let items = py
+            .allow_threads(|| block_unless_interrupted(self.bookmarks2(bookmarks)))
+            .map_pyerr(py)?
+            .map_pyerr(py)?;
+        Ok(Serde(items))
     }
 
     fn set_bookmark_py(
