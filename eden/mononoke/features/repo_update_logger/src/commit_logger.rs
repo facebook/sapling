@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashSet;
-use std::collections::VecDeque;
 use std::num::NonZeroU64;
 
 use anyhow::anyhow;
@@ -17,6 +15,7 @@ use blobstore::Loadable;
 use bonsai_globalrev_mapping::BonsaiGlobalrevMappingRef;
 use bookmarks_types::BookmarkKey;
 use bookmarks_types::BookmarkKind;
+use borrowed::borrowed;
 use chrono::DateTime;
 use chrono::Utc;
 use commit_graph::CommitGraphRef;
@@ -25,6 +24,7 @@ use ephemeral_blobstore::BubbleId;
 use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures_ext::stream::FbStreamExt;
 use futures_stats::TimedTryFutureExt;
 use logger_ext::Loggable;
 use metaconfig_types::RepoConfigRef;
@@ -353,43 +353,42 @@ pub async fn find_draft_ancestors(
          + BonsaiGlobalrevMappingRef
          + CommitGraphRef
          + RepoBlobstoreRef
+         + std::marker::Sync
      ),
     to_cs_id: ChangesetId,
 ) -> Result<Vec<BonsaiChangeset>, Error> {
     ctx.scuba()
         .clone()
         .log_with_msg("Started finding draft ancestors", None);
-
     let (stats, drafts) = async move {
-        let phases = repo.phases();
-        let mut queue = VecDeque::new();
-        let mut visited = HashSet::new();
-        let mut drafts = vec![];
-        queue.push_back(to_cs_id);
-        visited.insert(to_cs_id);
-
-        while let Some(cs_id) = queue.pop_front() {
-            let public = phases
-                .get_public(ctx, vec![cs_id], false /*ephemeral_derive*/)
-                .await?;
-
-            if public.contains(&cs_id) {
-                continue;
-            }
-            drafts.push(cs_id);
-
-            let parents = repo.commit_graph().changeset_parents(ctx, cs_id).await?;
-            for p in parents {
-                if visited.insert(p) {
-                    queue.push_back(p);
+        let public_frontier: Vec<ChangesetId> = repo
+            .commit_graph()
+            .ancestors_frontier_with(ctx, vec![to_cs_id], |csid| {
+                borrowed!(ctx, repo);
+                async move {
+                    Ok(repo
+                        .phases()
+                        .get_public(ctx, vec![csid], false)
+                        .await?
+                        .contains(&csid))
                 }
-            }
-        }
+            })
+            .await?
+            .into_iter()
+            .collect();
 
-        stream::iter(drafts)
-            .map(Ok)
-            .map_ok(|cs_id| async move { cs_id.load(ctx, repo.repo_blobstore()).await })
-            .try_buffer_unordered(100)
+        repo.commit_graph()
+            .ancestors_difference_stream(ctx, vec![to_cs_id], public_frontier)
+            .await?
+            .yield_periodically()
+            .map(move |res| async move {
+                match res {
+                    Ok(bcs_id) => Ok(bcs_id.load(ctx, repo.repo_blobstore()).await?),
+                    Err(e) => Err(e),
+                }
+            })
+            .buffered(1000)
+            .boxed()
             .try_collect::<Vec<_>>()
             .await
     }
