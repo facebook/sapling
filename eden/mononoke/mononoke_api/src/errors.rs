@@ -28,6 +28,7 @@ use mononoke_types::ChangesetId;
 use pushrebase::PushrebaseError;
 use repo_authorization::AuthorizationError;
 use thiserror::Error;
+use tokio::task::JoinError;
 
 #[derive(Clone, Debug)]
 pub struct InternalError(Arc<Error>);
@@ -211,5 +212,11 @@ impl From<CommitCloudError> for MononokeError {
             }
             CommitCloudError::UserError(e) => MononokeError::InvalidRequest(e.to_string()),
         }
+    }
+}
+
+impl From<JoinError> for MononokeError {
+    fn from(e: JoinError) -> Self {
+        MononokeError::from(anyhow::Error::from(e))
     }
 }

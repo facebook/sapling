@@ -530,7 +530,9 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
             copy_info,
         };
         // The base is the target, so we diff in the opposite direction.
-        let raw_diff = xdiff::diff_unified(other_file, base_file, opts);
+        let raw_diff =
+            tokio::task::spawn_blocking(move || xdiff::diff_unified(other_file, base_file, opts))
+                .await?;
         Ok(UnifiedDiff {
             raw_diff,
             is_binary,
