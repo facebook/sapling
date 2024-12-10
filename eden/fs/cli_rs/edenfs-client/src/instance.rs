@@ -411,6 +411,22 @@ impl EdenFsInstance {
         // Lock will be released when _lock is dropped
         Ok(())
     }
+
+    pub async fn unmount(&self, path: &Path) -> Result<()> {
+        let client = self
+            .connect(None)
+            .await
+            .with_context(|| "Unable to connect to EdenFS daemon")?;
+
+        let encoded_path = bytes_from_path(path.to_path_buf())
+            .with_context(|| format!("Failed to encode path {}", path.display()))?;
+
+        client
+            .unmount(&encoded_path)
+            .await
+            .with_context(|| format!("Failed to unmount {}", path.display()))?;
+        Ok(())
+    }
 }
 
 pub trait DaemonHealthy {

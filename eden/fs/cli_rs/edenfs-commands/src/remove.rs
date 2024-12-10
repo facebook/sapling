@@ -26,7 +26,6 @@ use dialoguer::Confirm;
 use edenfs_client::checkout::get_mounts;
 use edenfs_client::fsutil::forcefully_remove_dir_all;
 use edenfs_client::EdenFsInstance;
-use edenfs_utils::bytes_from_path;
 use fail::fail_point;
 use io::IO;
 use termlogger::TermLogger;
@@ -126,12 +125,15 @@ impl Determination {
         debug!("{} is determined as a directory", context);
 
         if self.is_active_eden_mount(&context.canonical_path) {
-            debug!("path {} is determined to be an active eden mount", context);
+            debug!(
+                "path {} is determined to be an active EdenFS mount",
+                context
+            );
 
             return Ok(Some(State::ActiveEdenMount(ActiveEdenMount {})));
         }
 
-        debug!("{} is not an active eden mount", path.display());
+        debug!("{} is not an active EdenFS mount", path.display());
 
         // Check if it's a directory managed under eden
         let mut path_copy = context.canonical_path.clone();
@@ -176,7 +178,7 @@ impl Determination {
 
     #[cfg(windows)]
     fn is_active_eden_mount(&self, path: &Path) -> bool {
-        // For Windows, an active Eden mount should have a dir named ".eden" under the
+        // For Windows, an active EdenFS mount should have a dir named ".eden" under the
         // repo and there should be a file named "config" under the ".eden" dir
         let config_path = path.join(".eden").join("config");
         if !config_path.exists() {
@@ -220,7 +222,9 @@ impl ActiveEdenMount {
             .io
             .info(format!("Unmounting repo at {} ...", context.original_path));
 
-        match self.unmount(context).await {
+        let instance = EdenFsInstance::global();
+
+        match instance.unmount(&context.canonical_path).await {
             Ok(_) => {
                 context.io.done();
                 Ok(Some(State::InactiveEdenMount(InactiveEdenMount {})))
@@ -232,18 +236,6 @@ impl ActiveEdenMount {
             )),
         }
     }
-
-    async fn unmount(&self, context: &RemoveContext) -> Result<()> {
-        debug!("trying to unmount {}", context);
-        let encoded_path = bytes_from_path(context.canonical_path.clone())
-            .with_context(|| format!("Failed to encode path {}", context))?;
-        let instance = EdenFsInstance::global();
-        let client = instance.connect(None).await?;
-        client
-            .unmount(&encoded_path)
-            .await
-            .with_context(|| format!("Failed to unmount {}", context))
-    }
 }
 
 #[derive(Debug)]
@@ -251,7 +243,7 @@ struct InactiveEdenMount {}
 impl InactiveEdenMount {
     async fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
         context.io.info(format!(
-            "Unregistering repo {} from Eden configs...",
+            "Unregistering repo {} from EdenFS configs...",
             context.original_path
         ));
         self.remove_client_config_dir(context)?;
@@ -383,9 +375,9 @@ impl Unknown {
             .count()
             == 0
         {
-            true => format!("{} is not an eden mount and it's empty.", context),
+            true => format!("{} is not an EdenFS mount and it's empty.", context),
             false => format!(
-                "{} is a non-empty directory that is not an eden mount.\n\
+                "{} is a non-empty directory that is not an EdenFS mount.\n\
                 Any files in this directory will be lost forever. \n\
                 Do you still want to remove it?",
                 context
