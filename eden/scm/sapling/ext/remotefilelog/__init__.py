@@ -332,7 +332,8 @@ def onetimeclientsetup(ui):
                 if sparsematch and not sparsematch(f):
                     continue
                 if m == merge.ACTION_CREATED:
-                    files.append((f, mctx.filenode(f)))
+                    f2 = actionargs[0]
+                    files.append((f, mctx.filenode(f2)))
                 elif m == merge.ACTION_DELETED_CHANGED:
                     f2 = actionargs[1]
                     files.append((f, mctx.filenode(f2)))

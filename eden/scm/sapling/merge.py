@@ -650,7 +650,8 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions):
         for f, (m, args, msg) in progiter(actions.items()):
             if m in (ACTION_CREATED, ACTION_DELETED_CHANGED):
                 count += 1
-                if _checkunknownfile(repo, wctx, mctx, f):
+                f2 = args[0] if m == ACTION_CREATED else args[1]
+                if _checkunknownfile(repo, wctx, mctx, f, f2):
                     fileconflicts.add(f)
                 elif pathconfig and f not in wctx:
                     path = checkunknowndirs(repo, wctx, f)
@@ -731,8 +732,8 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions):
                 or f in pathconflicts
                 or any(p in pathconflicts for p in util.finddirs(f))
             )
-            (flags,) = args
-            actions[f] = (ACTION_GET, (f, flags, backup), msg)
+            (f2, flags) = args
+            actions[f] = (ACTION_GET, (f2, flags, backup), msg)
 
 
 def _forgetremoved(wctx, mctx, branchmerge):
@@ -884,14 +885,16 @@ def checkpathconflicts(repo, wctx, mctx, actions):
                 if m in (ACTION_DELETED_CHANGED, ACTION_MERGE):
                     # Action was merge, just update target.
                     actions[pnew] = (m, args, msg)
-                else:
+                elif m in (ACTION_CREATED, ACTION_CREATED_MERGE):
                     # Action was create, change to renamed get action.
-                    fl = args[0]
+                    fl = args[1]
                     actions[pnew] = (
                         ACTION_LOCAL_DIR_RENAME_GET,
                         (p, fl),
                         "remote path conflict",
                     )
+                else:
+                    raise error.ProgrammingError(f"unexpected action type '{m}'")
                 actions[p] = (ACTION_PATH_CONFLICT, (pnew, "r"), "path conflict")
                 remoteconflicts.remove(p)
                 break
@@ -1164,9 +1167,9 @@ def manifestmerge(
                 # Checking whether the files are different is expensive, so we
                 # don't do that when we can avoid it.
                 if not force:
-                    actions[f1] = (ACTION_CREATED, (fl2,), "remote created")
+                    actions[f1] = (ACTION_CREATED, (f2, fl2), "remote created")
                 elif not branchmerge:
-                    actions[f1] = (ACTION_CREATED, (fl2,), "remote created")
+                    actions[f1] = (ACTION_CREATED, (f2, fl2), "remote created")
                 else:
                     actions[f1] = (
                         ACTION_CREATED_MERGE,
@@ -1175,7 +1178,11 @@ def manifestmerge(
                     )
             elif n2 != ma[fa]:
                 if acceptremote:
-                    actions[f1] = (ACTION_CREATED, (fl2,), "remote recreating")
+                    actions[f1] = (
+                        ACTION_CREATED,
+                        (f2, fl2),
+                        "remote recreating",
+                    )
                 else:
                     actions[f1] = (
                         ACTION_DELETED_CHANGED,
