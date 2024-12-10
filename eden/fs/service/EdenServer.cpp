@@ -65,7 +65,7 @@
 #include "eden/fs/config/MountProtocol.h"
 #include "eden/fs/config/TomlConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
-#include "eden/fs/inodes/FileAccessLogger.h"
+#include "eden/fs/inodes/InodeAccessLogger.h"
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/ServerState.h"

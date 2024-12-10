@@ -31,7 +31,7 @@ class EdenStats;
 class FaultInjector;
 class FsEventLogger;
 class IScribeLogger;
-class FileAccessLogger;
+class InodeAccessLogger;
 class NfsServer;
 class Notifier;
 class PrivHelper;
@@ -183,13 +183,13 @@ class ServerState {
   }
 
   /**
-   * Returns a FileAccessLogger that can be used to send log events to external
+   * Returns a InodeAccessLogger that can be used to send log events to external
    * long term storage for offline consumption. Prefer this method if the
    * caller needs to own a reference due to lifetime mismatch with the
    * ServerState
    */
-  const std::shared_ptr<FileAccessLogger>& getFileAccessLogger() const {
-    return fileAccessLogger_;
+  const std::shared_ptr<InodeAccessLogger>& getInodeAccessLogger() const {
+    return inodeAccessLogger_;
   }
 
   /**
@@ -229,7 +229,7 @@ class ServerState {
   folly::Synchronized<CachedParsedFileMonitor<GitIgnoreFileParser>>
       systemIgnoreFileMonitor_;
   std::shared_ptr<Notifier> notifier_;
-  std::shared_ptr<FileAccessLogger> fileAccessLogger_;
+  std::shared_ptr<InodeAccessLogger> inodeAccessLogger_;
   std::shared_ptr<FsEventLogger> fsEventLogger_;
 };
 } // namespace facebook::eden

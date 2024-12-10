@@ -16,7 +16,7 @@
 #include "eden/common/utils/UnboundedQueueExecutor.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
-#include "eden/fs/inodes/FileAccessLogger.h"
+#include "eden/fs/inodes/InodeAccessLogger.h"
 #include "eden/fs/model/git/TopLevelIgnores.h"
 #include "eden/fs/nfs/NfsServer.h"
 #include "eden/fs/telemetry/EdenStats.h"
@@ -88,7 +88,7 @@ ServerState::ServerState(
           initialConfig.systemIgnoreFile.getValue(),
           kSystemIgnoreMinPollSeconds}},
       notifier_{std::move(notifier)},
-      fileAccessLogger_{std::make_shared<FileAccessLogger>(
+      inodeAccessLogger_{std::make_shared<InodeAccessLogger>(
           config_,
           makeDefaultStructuredLogger<FileAccessStructuredLogger, EdenStatsPtr>(
               config_->getEdenConfig()->scribeLogger.getValue(),

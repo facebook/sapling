@@ -11,7 +11,7 @@
 #include <folly/logging/xlog.h>
 
 #include "eden/fs/inodes/EdenMount.h"
-#include "eden/fs/inodes/FileAccessLogger.h"
+#include "eden/fs/inodes/InodeAccessLogger.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/ParentInodeInfo.h"
@@ -424,12 +424,13 @@ void InodeBase::logAccess(const ObjectFetchContext& fetchContext) {
     fetchDetail.emplace(std::string{detail.value()});
   }
 
-  getMount()->getServerState()->getFileAccessLogger()->logFileAccess(FileAccess{
-      ino,
-      getType(),
-      fetchContext.getCause(),
-      std::move(fetchDetail),
-      getMount()->getWeakMount()});
+  getMount()->getServerState()->getInodeAccessLogger()->logInodeAccess(
+      InodeAccess{
+          ino,
+          getType(),
+          fetchContext.getCause(),
+          std::move(fetchDetail),
+          getMount()->getWeakMount()});
 }
 
 } // namespace facebook::eden

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/inodes/FileAccessLogger.h"
+#include "eden/fs/inodes/InodeAccessLogger.h"
 
 #include <folly/Random.h>
 #include <folly/logging/xlog.h>
@@ -32,29 +32,29 @@ constexpr folly::StringPiece kFbsource{"fbsource"};
 const static RE2 kFbsourceFilter("xplat\\/toolchains\\/minimal_xcode");
 } // namespace
 
-FileAccessLogger::FileAccessLogger(
+InodeAccessLogger::InodeAccessLogger(
     std::shared_ptr<ReloadableConfig> reloadableConfig,
     std::shared_ptr<StructuredLogger> structuredLogger)
     : reloadableConfig_{std::move(reloadableConfig)},
       structuredLogger_{std::move(structuredLogger)} {
   workerThread_ = std::thread{[this] {
-    folly::setThreadName("FileAccessLoggerProcessor");
-    processFileAccessEvents();
+    folly::setThreadName("InodeAccessLoggerProcessor");
+    processInodeAccessEvents();
   }};
 }
 
-FileAccessLogger::~FileAccessLogger() {
+InodeAccessLogger::~InodeAccessLogger() {
   state_.wlock()->workerThreadShouldStop = true;
   // Do one final post here to ensure the thread wakes up, sees that
-  // workerThreadShouldStop, and returns from processFileAccessEvents().
+  // workerThreadShouldStop, and returns from processInodeAccessEvents().
   // Otherwise, the workerThread_ would be stuck waiting on the semaphore in
-  // the infinite work loop in processFileAccessEvents and would never join
+  // the infinite work loop in processInodeAccessEvents and would never join
   sem_.post();
   workerThread_.join();
-  XLOG(INFO) << "FileAccessLogger shut down";
+  XLOG(INFO) << "InodeAccessLogger shut down";
 }
 
-bool FileAccessLogger::filterDirectory(
+bool InodeAccessLogger::filterDirectory(
     folly::StringPiece directory,
     folly::StringPiece repo) {
   // Don't log events from the .eden or .hg directories. startsWith has an
@@ -72,8 +72,8 @@ bool FileAccessLogger::filterDirectory(
   return false;
 }
 
-void FileAccessLogger::processFileAccessEvents() {
-  std::vector<FileAccess> work;
+void InodeAccessLogger::processInodeAccessEvents() {
+  std::vector<InodeAccess> work;
 
   for (;;) {
     work.clear();
@@ -91,7 +91,7 @@ void FileAccessLogger::processFileAccessEvents() {
       work.swap(state->work);
     }
 
-    // logFileAccess posts for every event added to the work queue, but we wait
+    // logInodeAccess posts for every event added to the work queue, but we wait
     // on the semaphore only once per batch of events. For example, we could
     // post multiple times before this single wait, and we will pull and process
     // all the events on the queue for just a single wait. This makes the
@@ -117,7 +117,7 @@ void FileAccessLogger::processFileAccessEvents() {
               mount->getObjectStore()->getBackingStore()->getRepoName();
           if (repo_optional == std::nullopt) {
             XLOG(DBG5)
-                << "FileAccessLogger couldn't get repo name from backing store";
+                << "InodeAccessLogger couldn't get repo name from backing store";
             continue;
           }
           repo = repo_optional.value();
@@ -212,7 +212,7 @@ void FileAccessLogger::processFileAccessEvents() {
       // a memory bounded LRU cache and coalesce the events by directory,
       // source, source_detail, and filename (if applicable). Then, a periodic
       // task can flush this cache to Scuba. This would make it possible to
-      // increase the FileAccessesPercentage without overwhelming Scribe.
+      // increase the InodeAccessesPercentage without overwhelming Scribe.
 
       structuredLogger_->logEvent(FileAccessEvent{
           repo.str(),
@@ -224,7 +224,7 @@ void FileAccessLogger::processFileAccessEvents() {
   }
 }
 
-void FileAccessLogger::logFileAccess(FileAccess access) {
+void InodeAccessLogger::logInodeAccess(InodeAccess access) {
   if (!reloadableConfig_->getEdenConfig()->logFileAccesses.getValue()) {
     return;
   }

@@ -20,7 +20,7 @@ namespace facebook::eden {
 class StructuredLogger;
 class EdenMount;
 
-struct FileAccess {
+struct InodeAccess {
   InodeNumber inodeNumber;
   dtype_t dtype;
   ObjectFetchContext::Cause cause;
@@ -28,22 +28,22 @@ struct FileAccess {
   std::weak_ptr<EdenMount> edenMount;
 };
 
-class FileAccessLogger {
+class InodeAccessLogger {
  public:
-  FileAccessLogger(
+  InodeAccessLogger(
       std::shared_ptr<ReloadableConfig> reloadableConfig,
       std::shared_ptr<StructuredLogger> structuredLogger);
-  ~FileAccessLogger();
+  ~InodeAccessLogger();
 
   /**
-   * Puts a FileAccess event on a worker thread to be processed asynchronously
+   * Puts a InodeAccess event on a worker thread to be processed asynchronously
    */
-  void logFileAccess(FileAccess access);
+  void logInodeAccess(InodeAccess access);
 
  private:
   struct State {
     bool workerThreadShouldStop = false;
-    std::vector<FileAccess> work;
+    std::vector<InodeAccess> work;
   };
 
   /**
@@ -56,7 +56,7 @@ class FileAccessLogger {
    * Uses the workerThread_ to process expensive computations for file
    * access events. Specifically, looking up the file path for an Inode
    */
-  void processFileAccessEvents();
+  void processInodeAccessEvents();
 
   folly::Synchronized<State> state_;
   // We use a LifoSem here due to the fact that it is faster than a std::mutex

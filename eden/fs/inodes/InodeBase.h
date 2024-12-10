@@ -482,7 +482,7 @@ class InodeBase {
   void notifyParentOfStat(bool isFile, const ObjectFetchContext& context);
 
   /**
-   * Log accesses via the ServerState's FileAccessLogger.
+   * Log accesses via the ServerState's InodeAccessLogger.
    */
   void logAccess(const ObjectFetchContext& fetchContext);
 
