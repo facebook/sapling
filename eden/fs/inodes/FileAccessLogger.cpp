@@ -144,7 +144,14 @@ void FileAccessLogger::processFileAccessEvents() {
         continue;
       }
 
-      std::string directory = path->dirname().asString();
+      dtype_t dtype = event.dtype;
+      std::string directory;
+
+      if (dtype == dtype_t::Dir) {
+        directory = path->asString();
+      } else {
+        directory = path->dirname().asString();
+      }
 
       // Check if this directory matches one of the in place global or repo
       // specific filters
@@ -160,8 +167,9 @@ void FileAccessLogger::processFileAccessEvents() {
       auto denominator = reloadableConfig_->getEdenConfig()
                              ->logFileAccessesSamplingDenominator.getValue();
 
-      // Only log the filename if we're logging 100% of file accesses.
-      if (denominator == 1) {
+      // Only log the filename if we're logging 100% of file accesses and the
+      // path is not to a directory
+      if (denominator == 1 && dtype != dtype_t::Dir) {
         filename = path->basename().asString();
       } else {
         // If we're not logging filenames, and the directory is empty (meaning

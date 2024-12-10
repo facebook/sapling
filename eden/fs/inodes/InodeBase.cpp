@@ -426,6 +426,7 @@ void InodeBase::logAccess(const ObjectFetchContext& fetchContext) {
 
   getMount()->getServerState()->getFileAccessLogger()->logFileAccess(FileAccess{
       ino,
+      getType(),
       fetchContext.getCause(),
       std::move(fetchDetail),
       getMount()->getWeakMount()});

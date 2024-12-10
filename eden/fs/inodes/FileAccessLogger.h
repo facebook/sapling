@@ -10,6 +10,7 @@
 #include <folly/synchronization/LifoSem.h>
 #include <vector>
 
+#include "eden/common/utils/DirType.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/store/ObjectFetchContext.h"
@@ -21,6 +22,7 @@ class EdenMount;
 
 struct FileAccess {
   InodeNumber inodeNumber;
+  dtype_t dtype;
   ObjectFetchContext::Cause cause;
   std::optional<std::string> causeDetail;
   std::weak_ptr<EdenMount> edenMount;
