@@ -83,6 +83,27 @@ test subtree merge from copy dest -> copy source
    bbb
   +dest
 
+test subtree merge from copy dest -> copy source, with new file in copy dest
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B   # B/foo/y = bbb\n
+  > |
+  > A   # A/foo/x = aaa\n
+  >     # drawdag.defaultfiles=false
+  > EOS
+  $ hg go -q $B
+  $ hg subtree copy --from-path foo --to-path foo2
+  copying foo to foo2
+  $ echo 1 >> foo2/new
+  $ hg ci -Aqm "add foo2/new"
+tofix: should not abort with not found in manifest
+  $ hg subtree merge --from-path foo2 --to-path foo
+  merge base: 9998a5c40732
+  abort: foo/new@b25c37d96b54: not found in manifest!
+  [255]
+  $ hg st
+  $ hg diff
+
 test subtree merge from copy dest -> copy source with conflicts
   $ newclientrepo
   $ drawdag <<'EOS'
