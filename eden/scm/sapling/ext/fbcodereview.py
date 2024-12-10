@@ -137,7 +137,7 @@ def singlepublicbase(repo, ctx, templ, **args):
 
 @templatekeyword("reviewers")
 def showreviewers(repo, ctx, templ, **args):
-    """String. Return the phabricator diff id for a given @prog@ rev."""
+    """String. Return a space-separated list of diff reviewers for a given @prog@ rev."""
     if ctx.node() is None:
         # working copy - use committemplate.reviewers, which can be found at
         # templ.t.cache.
