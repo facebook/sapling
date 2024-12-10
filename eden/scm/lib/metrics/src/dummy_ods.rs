@@ -11,4 +11,8 @@ pub(crate) fn new_counter(_name: &'static str) -> Counter {
     ()
 }
 
-pub(crate) fn increment(_counter: &Counter, _value: i64) {}
+pub fn initialize_obc_client() -> anyhow::Result<()> {
+    Ok(())
+}
+
+pub(crate) fn increment(_counter: &Counter, _name: &str, _value: i64) {}

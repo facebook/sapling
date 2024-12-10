@@ -15,7 +15,7 @@ use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 
 #[cfg_attr(not(feature = "ods"), path = "dummy_ods.rs")]
-mod ods;
+pub mod ods;
 
 pub struct Counter {
     name: &'static str,
@@ -48,13 +48,13 @@ impl Counter {
     pub fn add(&'static self, val: usize) {
         let (counter, ods) = self.counter();
         counter.fetch_add(val, Ordering::Relaxed);
-        ods::increment(ods, val as i64);
+        ods::increment(ods, self.name, val as i64);
     }
 
     pub fn sub(&'static self, val: usize) {
         let (counter, ods) = self.counter();
         counter.fetch_sub(val, Ordering::Relaxed);
-        ods::increment(ods, -(val as i64));
+        ods::increment(ods, self.name, -(val as i64));
     }
 
     pub fn value(&'static self) -> usize {
