@@ -8,11 +8,17 @@
 use std::collections::HashSet;
 
 use anyhow::Result;
+use async_trait::async_trait;
+use clientinfo::ClientEntryPoint;
+use clientinfo::ClientInfo;
 use edenapi::Client;
 use edenapi::HttpClientBuilder;
 use edenapi::HttpClientConfig;
 use edenapi::SaplingRemoteApi;
+use edenapi_types::AnyFileContentId;
+use futures::TryStreamExt;
 use mononoke_app::args::TLSArgs;
+use mononoke_types::FileContents;
 use slog::info;
 use slog::Logger;
 use url::Url;
@@ -32,13 +38,14 @@ impl EdenapiSender {
         logger: Logger,
         tls_args: TLSArgs,
     ) -> Result<Self> {
+        let ci = ClientInfo::new_with_entry_point(ClientEntryPoint::ModernSync)?.to_json()?;
         let http_config = HttpClientConfig {
             cert_path: Some(tls_args.tls_certificate.into()),
             key_path: Some(tls_args.tls_private_key.into()),
             ca_path: Some(tls_args.tls_ca.into()),
             convert_cert: false,
 
-            client_info: None,
+            client_info: Some(ci),
             disable_tls_verification: false,
             max_concurrent_requests: None,
             unix_socket_domains: HashSet::new(),
@@ -60,12 +67,36 @@ impl EdenapiSender {
         Ok(Self { client, logger })
     }
 }
+
+#[async_trait]
 impl ModernSyncSender for EdenapiSender {
-    fn upload_content(
+    async fn upload_content(
         &self,
         content_id: mononoke_types::ContentId,
-        _blob: mononoke_types::FileContents,
-    ) {
-        info!(&self.logger, "Uploading content with id: {:?}", content_id)
+        blob: FileContents,
+    ) -> Result<()> {
+        info!(&self.logger, "Uploading content with id: {:?}", content_id);
+
+        match blob {
+            FileContents::Bytes(bytes) => {
+                info!(&self.logger, "Uploading bytes: {:?}", bytes);
+                let response = self
+                    .client
+                    .process_files_upload(
+                        vec![(AnyFileContentId::ContentId(content_id.into()), bytes.into())],
+                        None,
+                        None,
+                    )
+                    .await?;
+                info!(
+                    &self.logger,
+                    "Upload response: {:?}",
+                    response.entries.try_collect::<Vec<_>>().await?
+                );
+            }
+            _ => (),
+        }
+
+        Ok(())
     }
 }

@@ -208,8 +208,9 @@ pub async fn process_one_changeset(
         };
 
         if let Some(bs) = bs {
+            info!(logger, "Blob {:?}", bs);
             let blob = bs.load(ctx, &repo.repo_blobstore()).await?;
-            sender.upload_content(bs, blob);
+            sender.upload_content(bs, blob).await?;
         }
     }
 

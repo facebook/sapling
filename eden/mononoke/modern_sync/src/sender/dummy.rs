@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Result;
+use async_trait::async_trait;
 use mononoke_types::ContentId;
 use mononoke_types::FileContents;
 use slog::info;
@@ -23,8 +25,10 @@ impl DummySender {
     }
 }
 
+#[async_trait]
 impl ModernSyncSender for DummySender {
-    fn upload_content(&self, content_id: ContentId, _blob: FileContents) {
-        info!(&self.logger, "Uploading content with id: {:?}", content_id)
+    async fn upload_content(&self, content_id: ContentId, _blob: FileContents) -> Result<()> {
+        info!(&self.logger, "Uploading content with id: {:?}", content_id);
+        Ok(())
     }
 }

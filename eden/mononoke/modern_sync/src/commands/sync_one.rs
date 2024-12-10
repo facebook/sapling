@@ -69,7 +69,6 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let sender: Arc<dyn ModernSyncSender + Send + Sync> = if args.dry_run {
         Arc::new(DummySender::new(logger.clone()))
     } else {
-        let app_args = app.args::<ModernSyncArgs>()?;
         let url = if let Some(socket) = app_args.dest_socket {
             // Only for integration tests
             format!("{}:{}/edenapi/", &config.url, socket)
@@ -82,15 +81,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             .clone()
             .ok_or_else(|| format_err!("TLS params not found for repo {}", repo_name))?;
 
-        Arc::new(
-            EdenapiSender::new(
-                Url::parse(&url)?,
-                repo_name.clone(),
-                logger.clone(),
-                tls_args,
-            )
-            .await?,
-        )
+        let dest_repo = app_args.dest_repo_name.clone().unwrap_or(repo_name.clone());
+
+        Arc::new(EdenapiSender::new(Url::parse(&url)?, dest_repo, logger.clone(), tls_args).await?)
     };
 
     crate::sync::process_one_changeset(&args.cs_id, &ctx, repo, &logger, sender, false).await?;
