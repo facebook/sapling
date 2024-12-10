@@ -246,7 +246,6 @@ impl EdenFsInstance {
         }
     }
 
-    #[cfg(fbcode_build)]
     pub async fn get_journal_position(
         &self,
         mount_point: &Option<PathBuf>,

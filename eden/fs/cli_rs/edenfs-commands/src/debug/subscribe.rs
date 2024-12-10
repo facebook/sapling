@@ -23,6 +23,7 @@ use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
+use edenfs_client::types::JournalPosition;
 use edenfs_client::utils::locate_repo_root;
 use edenfs_client::EdenFsInstance;
 use futures::StreamExt;
@@ -123,17 +124,16 @@ mod fmt {
 #[derive(Debug, Serialize)]
 struct SubscribeResponse {
     mount_generation: i64,
-    // Thrift somehow generates i64 for unsigned64 type
-    sequence_number: i64,
+    sequence_number: u64,
     snapshot_hash: String,
 }
 
-impl From<edenfs_thrift::JournalPosition> for SubscribeResponse {
-    fn from(from: edenfs_thrift::JournalPosition) -> Self {
+impl From<JournalPosition> for SubscribeResponse {
+    fn from(from: JournalPosition) -> Self {
         Self {
-            mount_generation: from.mountGeneration,
-            sequence_number: from.sequenceNumber,
-            snapshot_hash: hex::encode(from.snapshotHash),
+            mount_generation: from.mount_generation,
+            sequence_number: from.sequence_number,
+            snapshot_hash: hex::encode(from.snapshot_hash),
         }
     }
 }
@@ -198,9 +198,20 @@ fn decide_should_notify(changes: edenfs_thrift::FileDelta) -> bool {
 impl SubscribeCmd {
     async fn _make_notify_event(
         mount_point: &Vec<u8>,
-        last_position: &mut Option<edenfs_thrift::JournalPosition>,
+        mount_point_path: &Option<PathBuf>,
+        last_position: &mut Option<edenfs_client::types::JournalPosition>,
     ) -> Option<ResponseBuilder> {
         let instance = EdenFsInstance::global();
+
+        let journal = match instance.get_journal_position(mount_point_path, None).await {
+            Ok(journal) => journal,
+            Err(e) => {
+                return Some(ResponseBuilder::error(&format!(
+                    "error while getting current journal position: {e:?}",
+                )));
+            }
+        };
+
         let client = match instance.connect(None).await {
             Ok(client) => client,
             Err(e) => {
@@ -210,17 +221,8 @@ impl SubscribeCmd {
             }
         };
 
-        let journal = match client.getCurrentJournalPosition(mount_point).await {
-            Ok(journal) => journal,
-            Err(e) => {
-                return Some(ResponseBuilder::error(&format!(
-                    "error while getting current journal position: {e:?}",
-                )));
-            }
-        };
-
         let should_notify = if let Some(last_position) = last_position.replace(journal.clone()) {
-            if last_position.sequenceNumber == journal.sequenceNumber {
+            if last_position.sequence_number == journal.sequence_number {
                 tracing::trace!(
                     ?journal,
                     ?last_position,
@@ -230,7 +232,7 @@ impl SubscribeCmd {
             }
 
             let changes = client
-                .getFilesChangedSince(mount_point, &last_position)
+                .getFilesChangedSince(mount_point, &last_position.into())
                 .await;
 
             match changes {
@@ -306,21 +308,29 @@ impl crate::Subcommand for SubscribeCmd {
                     stdout.write_all(&bytes).await.ok();
                 }
 
-                let mut last_position = {
-                    if let Ok(client) = EdenFsInstance::global().connect(None).await {
-                        client.getCurrentJournalPosition(&mount_point).await.ok()
-                    } else {
-                        None
-                    }
+                let mount_point_path_opt = Some(mount_point_path);
+
+                let instance = EdenFsInstance::global();
+                let mut last_position = match instance
+                    .get_journal_position(&mount_point_path_opt, None)
+                    .await
+                {
+                    Ok(journal) => Some(journal),
+                    Err(_) => None,
                 };
 
                 loop {
                     notify.notified().await;
-                    let response =
-                        match Self::_make_notify_event(&mount_point, &mut last_position).await {
-                            None => continue,
-                            Some(response) => response.build(),
-                        };
+                    let response = match Self::_make_notify_event(
+                        &mount_point,
+                        &mount_point_path_opt,
+                        &mut last_position,
+                    )
+                    .await
+                    {
+                        None => continue,
+                        Some(response) => response.build(),
+                    };
 
                     match serde_json::to_vec(&response) {
                         Ok(mut bytes) => {
