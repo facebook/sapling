@@ -48,6 +48,8 @@ import {localStorageBackedAtom, readAtom, useAtomGet, writeAtom} from './jotaiUt
 import {
   AutoResolveSettingCheckbox,
   shouldAutoResolveAllBeforeContinue,
+  shouldPartialAbort,
+  PartialAbortSettingCheckbox,
 } from './mergeConflicts/state';
 import {AbortMergeOperation} from './operations/AbortMergeOperation';
 import {AddRemoveOperation} from './operations/AddRemoveOperation';
@@ -911,7 +913,9 @@ function MergeConflictButtons({
         key="abort"
         disabled={shouldDisableButtons}
         onClick={() => {
-          runOperation(new AbortMergeOperation(conflicts));
+          const partialAbortAvailable = conflicts?.command === 'rebase';
+          const isPartialAbort = partialAbortAvailable && readAtom(shouldPartialAbort);
+          runOperation(new AbortMergeOperation(conflicts, isPartialAbort));
         }}>
         <Icon slot="start" icon={isRunningAbort ? 'loading' : 'circle-slash'} />
         <T>Abort</T>
@@ -980,6 +984,7 @@ function MergeConflictButtons({
       {Internal.showInlineAutoRunMergeDriversOption === true && (
         <AutoResolveSettingCheckbox subtle />
       )}
+      {conflicts?.command === 'rebase' && <PartialAbortSettingCheckbox subtle />}
     </Row>
   );
 }

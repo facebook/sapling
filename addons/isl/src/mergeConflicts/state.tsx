@@ -38,6 +38,21 @@ export function AutoResolveSettingCheckbox({subtle}: {subtle?: boolean}) {
   );
 }
 
+export const shouldPartialAbort = localStorageBackedAtom<boolean>('isl.partial-abort', false);
+
+export function PartialAbortSettingCheckbox({subtle}: {subtle?: boolean}) {
+  const [isPartialAbort, setShouldPartialAbort] = useAtom(shouldPartialAbort);
+
+  const label = <T>Keep Rebased Commits on Abort</T>;
+  return (
+    <Tooltip title={t('Keep already rebased commits when aborting a rebase operation.')}>
+      <Checkbox checked={isPartialAbort} onChange={setShouldPartialAbort}>
+        {subtle ? <Subtle>{label}</Subtle> : label}
+      </Checkbox>
+    </Tooltip>
+  );
+}
+
 export const CONFLICT_SIDE_LABELS = {
   /* Label used for the local / destination side of a conflict */
   local: t('dest - rebasing onto'),

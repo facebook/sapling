@@ -10,7 +10,7 @@ import type {MergeConflicts} from '../types';
 import {Operation} from './Operation';
 
 export class AbortMergeOperation extends Operation {
-  constructor(private conflicts: MergeConflicts) {
+  constructor(private conflicts: MergeConflicts, private isPartialAbort: boolean) {
     super('AbortMergeOperation');
   }
 
@@ -19,6 +19,10 @@ export class AbortMergeOperation extends Operation {
   // `sl abort` isn't a real command like `sl continue` is.
   // however, the merge conflict data we've fetched includes the command to abort
   getArgs() {
+    if (this.isPartialAbort) {
+      // only rebase supports partial aborts
+      return ['rebase', '--quit'];
+    }
     if (this.conflicts.toAbort == null) {
       // if conflicts are still loading we don't know the right command...
       // just try `rebase --abort`...

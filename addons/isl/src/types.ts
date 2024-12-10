@@ -791,7 +791,8 @@ export type LocalStorageName =
   | 'isl.hide-non-blocking-diagnostics'
   | 'isl.rebase-off-warm-warning-enabled'
   // These keys are prefixes, with further dynamic keys appended afterwards
-  | 'isl.edited-commit-messages:';
+  | 'isl.edited-commit-messages:'
+  | 'isl.partial-abort';
 
 export type ClientToServerMessage =
   | {type: 'heartbeat'; id: string}
