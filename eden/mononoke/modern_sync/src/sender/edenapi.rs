@@ -16,6 +16,7 @@ use edenapi::HttpClientBuilder;
 use edenapi::HttpClientConfig;
 use edenapi::SaplingRemoteApi;
 use edenapi_types::AnyFileContentId;
+use edenapi_types::HgFilenodeData;
 use edenapi_types::UploadTreeEntry;
 use futures::TryStreamExt;
 use mononoke_app::args::TLSArgs;
@@ -106,6 +107,16 @@ impl ModernSyncSender for EdenapiSender {
         info!(
             &self.logger,
             "Upload tree response: {:?}",
+            res.entries.try_collect::<Vec<_>>().await?
+        );
+        Ok(())
+    }
+
+    async fn upload_filenodes(&self, filenodes: Vec<HgFilenodeData>) -> Result<()> {
+        let res = self.client.upload_filenodes_batch(filenodes).await?;
+        info!(
+            &self.logger,
+            "Upload filenodes response: {:?}",
             res.entries.try_collect::<Vec<_>>().await?
         );
         Ok(())
