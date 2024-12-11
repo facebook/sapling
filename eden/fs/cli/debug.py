@@ -1360,17 +1360,14 @@ class LogCmd(Subcmd):
         proc: Optional[subprocess.Popen] = None
         if rage_processor and not args.stdout:
             proc = subprocess.Popen(shlex.split(rage_processor), stdin=subprocess.PIPE)
-            sink = proc.stdin
+            sink = rage_mod.IOWithRedaction(cast(IO[bytes], proc.stdin))
         else:
             proc = None
-            sink = sys.stdout.buffer
+            sink = rage_mod.IOWithRedaction(sys.stdout.buffer)
 
-        # pyre-fixme[6]: Expected `IO[bytes]` for 2nd param but got
-        #  `Optional[typing.IO[typing.Any]]`.
         rage_mod.print_log_file(eden_log_path, sink, args.full, args.size)
         if proc:
-            # pyre-fixme[16]: `Optional` has no attribute `close`.
-            sink.close()
+            sink.wrapped.close()
             proc.wait()
         return 0
 
