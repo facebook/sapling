@@ -29,12 +29,14 @@ use manifest::Entry;
 use manifest::ManifestOps;
 use mercurial_derivation::derive_hg_changeset::DeriveHgChangeset;
 use mercurial_types::blobs::HgBlobManifest;
+use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use metadata::Metadata;
 use mononoke_app::args::RepoArg;
 use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
+use mononoke_types::MPath;
 use mutable_counters::MutableCountersRef;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
@@ -238,7 +240,16 @@ pub async fn process_one_changeset(
     let hg_cs = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
     let hg_mf_id = hg_cs.manifestid();
 
-    sync_manifest_changes(logger, ctx, repo.repo_blobstore(), hg_mf_id, mf_ids_p).await?;
+    let (mf_ids, file_ids) =
+        sync_manifest_changes(ctx, repo.repo_blobstore(), hg_mf_id, mf_ids_p).await?;
+
+    for mf_id in mf_ids {
+        info!(logger, "Manifest {:?}", mf_id);
+    }
+
+    for file_id in file_ids {
+        info!(logger, "File {:?}", file_id);
+    }
 
     if log_completion {
         STATS::synced_commits.add_value(1, (repo.repo_identity().name().to_string(),));
@@ -248,58 +259,83 @@ pub async fn process_one_changeset(
 }
 
 async fn sync_manifest_changes(
-    logger: &Logger,
     ctx: &CoreContext,
     repo_blobstore: &RepoBlobstore,
     mf_id: HgManifestId,
     mf_ids_p: Vec<HgManifestId>,
-) -> Result<()> {
+) -> Result<(Vec<mercurial_types::HgManifestId>, Vec<HgFileNodeId>)> {
+    let mut mf_ids: Vec<mercurial_types::HgManifestId> = vec![];
+    let mut file_ids: Vec<HgFileNodeId> = vec![];
+
     let comparison_stream =
         compare_manifest_tree::<HgBlobManifest, _>(ctx, repo_blobstore, mf_id, mf_ids_p);
     futures::pin_mut!(comparison_stream);
+
     while let Some(mf) = comparison_stream.try_next().await? {
         match mf {
             Comparison::New(_elem, entry) => {
-                info!(logger, "New manifest");
-                match entry {
-                    Entry::Tree(mf_id) => {
-                        info!(logger, "Tree {:?}", mf_id);
-                        let entries = mf_id
-                            .list_all_entries(ctx.clone(), repo_blobstore.clone())
-                            .try_collect::<Vec<_>>()
-                            .await?;
-                        info!(logger, "Tree entries {:?}", entries);
-                    }
-                    Entry::Leaf((_ftype, nodeid)) => {
-                        info!(logger, "Leaf {:?}", nodeid);
-                    }
-                }
-            }
-            Comparison::Changed(_path, _mf_id, _changes) => {
-                info!(logger, "Changed manifest");
+                process_new_entry(entry, &mut mf_ids, &mut file_ids, ctx, repo_blobstore).await?;
             }
             Comparison::ManyNew(_path, _prefix, map) => {
-                info!(logger, "Many new or changed manifests");
                 for (_path, entry) in map {
-                    match entry {
-                        Entry::Tree(mf_id) => {
-                            info!(logger, "Tree {:?}", mf_id);
-                            let entries = mf_id
-                                .list_all_entries(ctx.clone(), repo_blobstore.clone())
-                                .try_collect::<Vec<_>>()
-                                .await?;
-
-                            info!(logger, "Tree entries {:?}", entries);
-                        }
-                        Entry::Leaf((_ftype, nodeid)) => {
-                            info!(logger, "Found filenode id {:?}", nodeid);
-                        }
-                    }
+                    process_new_entry(entry, &mut mf_ids, &mut file_ids, ctx, repo_blobstore)
+                        .await?;
                 }
             }
+            Comparison::Changed(_path, entry, _changes) => match entry {
+                Entry::Tree(mf_id) => {
+                    mf_ids.push(mf_id);
+                }
+                Entry::Leaf((_ftype, nodeid)) => {
+                    file_ids.push(nodeid);
+                }
+            },
+
             _ => (),
         }
     }
 
+    Ok((mf_ids, file_ids))
+}
+
+async fn process_new_entry(
+    entry: Entry<mercurial_types::HgManifestId, (mononoke_types::FileType, HgFileNodeId)>,
+    mf_ids: &mut Vec<mercurial_types::HgManifestId>,
+    file_ids: &mut Vec<HgFileNodeId>,
+    ctx: &CoreContext,
+    repo_blobstore: &RepoBlobstore,
+) -> Result<()> {
+    match entry {
+        Entry::Tree(mf_id) => {
+            let entries = mf_id
+                .list_all_entries(ctx.clone(), repo_blobstore.clone())
+                .try_collect::<Vec<_>>()
+                .await?;
+            classify_entries(entries, mf_ids, file_ids);
+        }
+        Entry::Leaf((_ftype, nodeid)) => {
+            file_ids.push(nodeid);
+        }
+    }
     Ok(())
+}
+
+fn classify_entries(
+    entries: Vec<(
+        MPath,
+        Entry<mercurial_types::HgManifestId, (mononoke_types::FileType, HgFileNodeId)>,
+    )>,
+    mf_ids: &mut Vec<mercurial_types::HgManifestId>,
+    file_ids: &mut Vec<HgFileNodeId>,
+) {
+    for (_path, entry) in entries {
+        match entry {
+            Entry::Tree(mf_id) => {
+                mf_ids.push(mf_id);
+            }
+            Entry::Leaf((_ftype, nodeid)) => {
+                file_ids.push(nodeid);
+            }
+        }
+    }
 }
