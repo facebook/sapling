@@ -23,12 +23,20 @@ use context::CoreContext;
 use context::SessionContainer;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use manifest::compare_manifest_tree;
+use manifest::Comparison;
+use manifest::Entry;
+use manifest::ManifestOps;
+use mercurial_derivation::derive_hg_changeset::DeriveHgChangeset;
+use mercurial_types::blobs::HgBlobManifest;
+use mercurial_types::HgManifestId;
 use metadata::Metadata;
 use mononoke_app::args::RepoArg;
 use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
 use mutable_counters::MutableCountersRef;
+use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
@@ -158,6 +166,8 @@ pub async fn sync(
                     Err(e)
                 }
                 Ok(entries) => {
+                    // TODO: We probably want to get these in inverse order so once we derive the top parent
+                    // the children will already be derived.
                     bul_util::get_commit_stream(entries, repo.commit_graph_arc(), ctx)
                         .await
                         .fuse()
@@ -214,8 +224,81 @@ pub async fn process_one_changeset(
         }
     }
 
+    let mut mf_ids_p = vec![];
+
+    // TODO: Parallelize
+    for parent in cs_info.parents() {
+        let hg_cs_id = repo.derive_hg_changeset(ctx, parent).await?;
+        let hg_cs = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
+        let hg_mf_id = hg_cs.manifestid();
+        mf_ids_p.push(hg_mf_id);
+    }
+
+    let hg_cs_id = repo.derive_hg_changeset(ctx, *cs_id).await?;
+    let hg_cs = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
+    let hg_mf_id = hg_cs.manifestid();
+
+    sync_manifest_changes(logger, ctx, repo.repo_blobstore(), hg_mf_id, mf_ids_p).await?;
+
     if log_completion {
         STATS::synced_commits.add_value(1, (repo.repo_identity().name().to_string(),));
+    }
+
+    Ok(())
+}
+
+async fn sync_manifest_changes(
+    logger: &Logger,
+    ctx: &CoreContext,
+    repo_blobstore: &RepoBlobstore,
+    mf_id: HgManifestId,
+    mf_ids_p: Vec<HgManifestId>,
+) -> Result<()> {
+    let comparison_stream =
+        compare_manifest_tree::<HgBlobManifest, _>(ctx, repo_blobstore, mf_id, mf_ids_p);
+    futures::pin_mut!(comparison_stream);
+    while let Some(mf) = comparison_stream.try_next().await? {
+        match mf {
+            Comparison::New(_elem, entry) => {
+                info!(logger, "New manifest");
+                match entry {
+                    Entry::Tree(mf_id) => {
+                        info!(logger, "Tree {:?}", mf_id);
+                        let entries = mf_id
+                            .list_all_entries(ctx.clone(), repo_blobstore.clone())
+                            .try_collect::<Vec<_>>()
+                            .await?;
+                        info!(logger, "Tree entries {:?}", entries);
+                    }
+                    Entry::Leaf((_ftype, nodeid)) => {
+                        info!(logger, "Leaf {:?}", nodeid);
+                    }
+                }
+            }
+            Comparison::Changed(_path, _mf_id, _changes) => {
+                info!(logger, "Changed manifest");
+            }
+            Comparison::ManyNew(_path, _prefix, map) => {
+                info!(logger, "Many new or changed manifests");
+                for (_path, entry) in map {
+                    match entry {
+                        Entry::Tree(mf_id) => {
+                            info!(logger, "Tree {:?}", mf_id);
+                            let entries = mf_id
+                                .list_all_entries(ctx.clone(), repo_blobstore.clone())
+                                .try_collect::<Vec<_>>()
+                                .await?;
+
+                            info!(logger, "Tree entries {:?}", entries);
+                        }
+                        Entry::Leaf((_ftype, nodeid)) => {
+                            info!(logger, "Found filenode id {:?}", nodeid);
+                        }
+                    }
+                }
+            }
+            _ => (),
+        }
     }
 
     Ok(())

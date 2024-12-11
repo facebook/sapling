@@ -69,6 +69,10 @@
   Uploading content with id: ContentId(Blake2(be87911855af0fc33a75f2c1cba2269dd90faa7f5c5358eb640d9d65f55fced3))
   Uploading bytes: b"abc\n"
   Upload response: [UploadToken { data: UploadTokenData { id: AnyFileContentId(ContentId(ContentId("be87911855af0fc33a75f2c1cba2269dd90faa7f5c5358eb640d9d65f55fced3"))), bubble_id: None, metadata: Some(FileContentTokenMetadata(FileContentTokenMetadata { content_size: 4 })) }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } }]
+  Many new or changed manifests
+  Found filenode id HgFileNodeId(HgNodeHash(Sha1(005d992c5dcf32993668f7cede29d296c494a5d9)))
+  Tree HgManifestId(HgNodeHash(Sha1(c1afe800646ee45232ab5e70c57247b78dbf3899)))
+  Tree entries [(MPath(""), Tree(HgManifestId(HgNodeHash(Sha1(c1afe800646ee45232ab5e70c57247b78dbf3899))))), (MPath("dir2"), Tree(HgManifestId(HgNodeHash(Sha1(53b19c5f23977836390e5880ec30fd252a311384))))), (MPath("dir2/first"), Leaf((Regular, HgFileNodeId(HgNodeHash(Sha1(f9304d84edb8a8ee2d3ce3f9de3ea944c82eba8f))))))]
 
   $ mononoke_admin filestore -R orig fetch --content-id eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9
   A (no-eol)
