@@ -241,7 +241,7 @@ pub async fn process_one_changeset(
     let hg_mf_id = hg_cs.manifestid();
 
     let (mf_ids, file_ids) =
-        sync_manifest_changes(ctx, repo.repo_blobstore(), hg_mf_id, mf_ids_p).await?;
+        sort_manifest_changes(ctx, repo.repo_blobstore(), hg_mf_id, mf_ids_p).await?;
 
     for mf_id in mf_ids {
         info!(logger, "Manifest {:?}", mf_id);
@@ -258,7 +258,7 @@ pub async fn process_one_changeset(
     Ok(())
 }
 
-async fn sync_manifest_changes(
+async fn sort_manifest_changes(
     ctx: &CoreContext,
     repo_blobstore: &RepoBlobstore,
     mf_id: HgManifestId,
