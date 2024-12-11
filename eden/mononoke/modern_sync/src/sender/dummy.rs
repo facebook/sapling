@@ -7,6 +7,7 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
+use edenapi_types::UploadTreeEntry;
 use mononoke_types::ContentId;
 use mononoke_types::FileContents;
 use slog::info;
@@ -29,6 +30,13 @@ impl DummySender {
 impl ModernSyncSender for DummySender {
     async fn upload_content(&self, content_id: ContentId, _blob: FileContents) -> Result<()> {
         info!(&self.logger, "Uploading content with id: {:?}", content_id);
+        Ok(())
+    }
+
+    async fn upload_tree(&self, trees: Vec<UploadTreeEntry>) -> Result<()> {
+        for tree in trees {
+            info!(&self.logger, "Uploading tree with id {:?}", tree.node_id);
+        }
         Ok(())
     }
 }
