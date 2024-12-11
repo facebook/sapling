@@ -192,7 +192,7 @@ impl ClientRequestInfo {
         } else {
             thread_rng()
                 .sample_iter(Alphanumeric)
-                .take(16)
+                .take(8)
                 .map(char::from)
                 .collect()
         }
