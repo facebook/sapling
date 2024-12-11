@@ -16,6 +16,7 @@ use context::SessionContainer;
 use metadata::Metadata;
 use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;
+use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use url::Url;
 
@@ -83,7 +84,17 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
 
         let dest_repo = app_args.dest_repo_name.clone().unwrap_or(repo_name.clone());
 
-        Arc::new(EdenapiSender::new(Url::parse(&url)?, dest_repo, logger.clone(), tls_args).await?)
+        Arc::new(
+            EdenapiSender::new(
+                Url::parse(&url)?,
+                dest_repo,
+                logger.clone(),
+                tls_args,
+                ctx.clone(),
+                repo.repo_blobstore().clone(),
+            )
+            .await?,
+        )
     };
 
     crate::sync::process_one_changeset(&args.cs_id, &ctx, repo, &logger, sender, false).await?;

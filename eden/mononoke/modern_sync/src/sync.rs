@@ -140,7 +140,17 @@ pub async fn sync(
 
         let dest_repo = app_args.dest_repo_name.clone().unwrap_or(repo_name.clone());
 
-        Arc::new(EdenapiSender::new(Url::parse(&url)?, dest_repo, logger.clone(), tls_args).await?)
+        Arc::new(
+            EdenapiSender::new(
+                Url::parse(&url)?,
+                dest_repo,
+                logger.clone(),
+                tls_args,
+                ctx.clone(),
+                repo.repo_blobstore().clone(),
+            )
+            .await?,
+        )
     };
 
     let mut scuba_sample = ctx.scuba().clone();

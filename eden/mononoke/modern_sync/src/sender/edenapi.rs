@@ -11,6 +11,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
+use context::CoreContext;
 use edenapi::Client;
 use edenapi::HttpClientBuilder;
 use edenapi::HttpClientConfig;
@@ -21,6 +22,7 @@ use edenapi_types::UploadTreeEntry;
 use futures::TryStreamExt;
 use mononoke_app::args::TLSArgs;
 use mononoke_types::FileContents;
+use repo_blobstore::RepoBlobstore;
 use slog::info;
 use slog::Logger;
 use url::Url;
@@ -31,6 +33,8 @@ use crate::sender::ModernSyncSender;
 pub struct EdenapiSender {
     client: Client,
     logger: Logger,
+    ctx: CoreContext,
+    repo_blobstore: RepoBlobstore,
 }
 
 impl EdenapiSender {
@@ -39,6 +43,8 @@ impl EdenapiSender {
         reponame: String,
         logger: Logger,
         tls_args: TLSArgs,
+        ctx: CoreContext,
+        repo_blobstore: RepoBlobstore,
     ) -> Result<Self> {
         let ci = ClientInfo::new_with_entry_point(ClientEntryPoint::ModernSync)?.to_json()?;
         let http_config = HttpClientConfig {
@@ -66,7 +72,12 @@ impl EdenapiSender {
 
         let res = client.health().await;
         info!(logger, "Health check outcome: {:?}", res);
-        Ok(Self { client, logger })
+        Ok(Self {
+            client,
+            logger,
+            ctx,
+            repo_blobstore,
+        })
     }
 }
 
