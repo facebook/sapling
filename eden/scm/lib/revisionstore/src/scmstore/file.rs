@@ -28,6 +28,7 @@ use clientinfo::set_client_request_info_thread_local;
 use crossbeam::channel::unbounded;
 use indexedlog::log::AUTO_SYNC_COUNT;
 use indexedlog::log::SYNC_COUNT;
+use indexedlog::rotate::ROTATE_COUNT;
 use itertools::Itertools;
 use minibytes::Bytes;
 use parking_lot::Mutex;
@@ -140,6 +141,7 @@ macro_rules! try_local_content {
 static FILESTORE_FLUSH_COUNT: Counter = Counter::new_counter("scmstore.file.flush");
 static INDEXEDLOG_SYNC_COUNT: Counter = Counter::new_counter("scmstore.indexedlog.sync");
 static INDEXEDLOG_AUTO_SYNC_COUNT: Counter = Counter::new_counter("scmstore.indexedlog.auto_sync");
+static INDEXEDLOG_ROTATE_COUNT: Counter = Counter::new_counter("scmstore.indexedlog.rotate");
 
 impl FileStore {
     /// Get the "local content" without going through the heavyweight "fetch" API.
@@ -329,6 +331,7 @@ impl FileStore {
             // These aren't technically filestore specific, but this will keep them updated.
             INDEXEDLOG_SYNC_COUNT.add(SYNC_COUNT.swap(0, Ordering::Relaxed) as usize);
             INDEXEDLOG_AUTO_SYNC_COUNT.add(AUTO_SYNC_COUNT.swap(0, Ordering::Relaxed) as usize);
+            INDEXEDLOG_ROTATE_COUNT.add(ROTATE_COUNT.swap(0, Ordering::Relaxed) as usize);
 
             if let Some(activity_logger) = activity_logger {
                 if let Err(err) = activity_logger.lock().log_file_fetch(
