@@ -11,7 +11,7 @@ use std::fmt::Display;
 
 use anyhow::anyhow;
 use anyhow::Result;
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use rand::distributions::Alphanumeric;
 use rand::thread_rng;
 use rand::Rng;
@@ -27,9 +27,7 @@ const DEFAULT_CLIENT_ENTRY_POINT_SAPLING: ClientEntryPoint = ClientEntryPoint::S
 const DEFAULT_CLIENT_ENTRY_POINT_EDENFS: ClientEntryPoint = ClientEntryPoint::EdenFs;
 
 // The global static ClientRequestInfo
-lazy_static! {
-    pub static ref CLIENT_REQUEST_INFO: ClientRequestInfo = new_client_request_info();
-}
+pub static CLIENT_REQUEST_INFO: Lazy<ClientRequestInfo> = Lazy::new(new_client_request_info);
 
 /// Get a copy of the global static ClientRequestInfo
 pub fn get_client_request_info() -> ClientRequestInfo {
