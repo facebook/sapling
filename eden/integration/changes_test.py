@@ -8,11 +8,16 @@
 
 import sys
 
-from facebook.eden.ttypes import Dtype, LostChangesReason, SmallChangeNotification
+from facebook.eden.ttypes import (
+    Dtype,
+    LargeChangeNotification,
+    LostChangesReason,
+    SmallChangeNotification,
+)
 
 from .lib import testcase
 from .lib.journal_test_base import JournalTestBase, WindowsJournalTestBase
-from .lib.thrift_objects import buildSmallChange, getLargeChangeSafe
+from .lib.thrift_objects import buildLargeChange, buildSmallChange, getLargeChangeSafe
 
 
 if sys.platform == "win32":
@@ -230,6 +235,20 @@ class ChangesTestNix(JournalTestBase):
                 SmallChangeNotification.MODIFIED,
                 Dtype.DIR,
                 path=b"test_folder_chown",
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    def test_rename_folder(self):
+        self.mkdir("test_folder")
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.rename("test_folder", "best_folder")
+        changes = self.getChangesSinceV2(position=position)
+        expected_changes = [
+            buildLargeChange(
+                LargeChangeNotification.DIRECTORYRENAMED,
+                from_bytes=b"test_folder",
+                to_bytes=b"best_folder",
             ),
         ]
         self.assertTrue(self.check_changes(changes.changes, expected_changes))

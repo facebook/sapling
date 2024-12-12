@@ -11,8 +11,12 @@ from typing import Optional
 from facebook.eden.ttypes import (
     Added,
     ChangeNotification,
+    CommitTransition,
+    DirectoryRenamed,
     Dtype,
     LargeChangeNotification,
+    LostChanges,
+    LostChangesReason,
     Modified,
     Removed,
     Renamed,
@@ -83,5 +87,36 @@ def buildSmallChange(
         assert path
         return ChangeNotification(
             SmallChangeNotification(removed=Removed(fileType=fileType, path=path))
+        )
+    return ChangeNotification()
+
+
+def buildLargeChange(
+    changeType: int,
+    from_bytes: Optional[bytes] = None,
+    to_bytes: Optional[bytes] = None,
+    lost_change_reason: Optional[LostChangesReason] = None,
+) -> ChangeNotification:
+    if changeType == LargeChangeNotification.DIRECTORYRENAMED:
+        return ChangeNotification(
+            largeChange=LargeChangeNotification(
+                directoryRenamed=DirectoryRenamed(
+                    from_PY_RESERVED_KEYWORD=from_bytes, to=to_bytes
+                )
+            )
+        )
+    elif changeType == LargeChangeNotification.COMMITTRANSITION:
+        return ChangeNotification(
+            largeChange=LargeChangeNotification(
+                commitTransition=CommitTransition(
+                    from_PY_RESERVED_KEYWORD=from_bytes, to=to_bytes
+                )
+            )
+        )
+    elif changeType == LargeChangeNotification.LOSTCHANGES:
+        return ChangeNotification(
+            largeChange=LargeChangeNotification(
+                lostChanges=LostChanges(reason=lost_change_reason)
+            )
         )
     return ChangeNotification()
