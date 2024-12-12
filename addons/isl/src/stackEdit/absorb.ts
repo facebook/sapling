@@ -7,20 +7,22 @@
 
 import type {LineInfo} from '../linelog';
 import type {Rev} from './fileStackState';
+import type {RecordOf} from 'immutable';
 
 import {assert} from '../utils';
 import {FileStackState} from './fileStackState';
+import {List, Record} from 'immutable';
 import {diffLines, splitLines} from 'shared/diff';
 import {dedup, nullthrows} from 'shared/utils';
 
 /** A diff chunk analyzed by `analyseFileStack`. */
-export type AbsorbDiffChunk = {
+export type AbsorbDiffChunkProps = {
   /** The start line of the old content (start from 0, inclusive). */
   oldStart: number;
   /** The end line of the old content (start from 0, exclusive). */
   oldEnd: number;
   /** The new content to replace the old content. */
-  newLines: string[];
+  newLines: List<string>;
   /**
    * Which rev introduces the "old" chunk.
    * The following revs are expected to contain this chunk too.
@@ -37,12 +39,21 @@ export type AbsorbDiffChunk = {
   selectedRev: Rev | null;
 };
 
+export const AbsorbDiffChunk = Record<AbsorbDiffChunkProps>({
+  oldStart: 0,
+  oldEnd: 0,
+  newLines: List(),
+  introductionRev: 0,
+  selectedRev: null,
+});
+export type AbsorbDiffChunk = RecordOf<AbsorbDiffChunkProps>;
+
 /**
  * Given a stack and the latest changes (usually at the stack top),
  * calculate the diff chunks and the revs that they might be absorbed to.
  * The rev 0 of the file stack should come from a "public" (immutable) commit.
  */
-export function analyseFileStack(stack: FileStackState, newText: string): Array<AbsorbDiffChunk> {
+export function analyseFileStack(stack: FileStackState, newText: string): List<AbsorbDiffChunk> {
   assert(stack.revLength > 0, 'stack should not be empty');
   const linelog = stack.convertToLineLog();
   const oldRev = stack.revLength - 1;
@@ -69,24 +80,28 @@ export function analyseFileStack(stack: FileStackState, newText: string): Array<
       // Only one rev. Set selectedRev to this.
       // For simplicity, we're not checking the "continuous" lines here yet (different from Python).
       const introductionRev = involvedRevs[0];
-      result.push({
-        oldStart: a1,
-        oldEnd: a2,
-        newLines: newLines.slice(b1, b2),
-        introductionRev,
-        selectedRev: introductionRev,
-      });
+      result.push(
+        AbsorbDiffChunk({
+          oldStart: a1,
+          oldEnd: a2,
+          newLines: List(newLines.slice(b1, b2)),
+          introductionRev,
+          selectedRev: introductionRev,
+        }),
+      );
     } else if (b1 === b2) {
       // Deletion. Break the chunk into sub-chunks with different selectedRevs.
       // For simplicity, we're not checking the "continuous" lines here yet (different from Python).
       splitChunk(a1, a2, oldLineInfos, (oldStart, oldEnd, introductionRev) => {
-        result.push({
-          oldStart,
-          oldEnd,
-          newLines: [],
-          introductionRev,
-          selectedRev: introductionRev,
-        });
+        result.push(
+          AbsorbDiffChunk({
+            oldStart,
+            oldEnd,
+            newLines: List([]),
+            introductionRev,
+            selectedRev: introductionRev,
+          }),
+        );
       });
     } else if (a2 - a1 === b2 - b1 && involvedLineInfos.every(info => info.rev > 0)) {
       // Line count matches on both side. No public lines.
@@ -95,13 +110,15 @@ export function analyseFileStack(stack: FileStackState, newText: string): Array<
       // still break the chunks to individual lines.
       const delta = b1 - a1;
       splitChunk(a1, a2, oldLineInfos, (oldStart, oldEnd, introductionRev) => {
-        result.push({
-          oldStart,
-          oldEnd,
-          newLines: newLines.slice(oldStart + delta, oldEnd + delta),
-          introductionRev,
-          selectedRev: introductionRev,
-        });
+        result.push(
+          AbsorbDiffChunk({
+            oldStart,
+            oldEnd,
+            newLines: List(newLines.slice(oldStart + delta, oldEnd + delta)),
+            introductionRev,
+            selectedRev: introductionRev,
+          }),
+        );
       });
     } else {
       // Other cases, like replacing 10 lines from 3 revs to 20 lines.
@@ -111,16 +128,18 @@ export function analyseFileStack(stack: FileStackState, newText: string): Array<
       // For now, we just report this chunk as a whole chunk that can
       // only be absorbed to the "max" rev where the left side is
       // "settled" down.
-      result.push({
-        oldStart: a1,
-        oldEnd: a2,
-        newLines: newLines.slice(b1, b2),
-        introductionRev: Math.max(0, ...involvedRevs),
-        selectedRev: null,
-      });
+      result.push(
+        AbsorbDiffChunk({
+          oldStart: a1,
+          oldEnd: a2,
+          newLines: List(newLines.slice(b1, b2)),
+          introductionRev: Math.max(0, ...involvedRevs),
+          selectedRev: null,
+        }),
+      );
     }
   });
-  return result;
+  return List(result);
 }
 
 /**
@@ -129,7 +148,7 @@ export function analyseFileStack(stack: FileStackState, newText: string): Array<
  */
 export function applyFileStackEdits(
   stack: FileStackState,
-  chunks: readonly AbsorbDiffChunk[],
+  chunks: Iterable<AbsorbDiffChunk>,
 ): FileStackState {
   // See also [apply](https://github.com/facebook/sapling/blob/6f29531e83daa62d9bd3bc58b712755d34f41493/eden/scm/sapling/ext/absorb/__init__.py#L321)
   assert(stack.revLength > 0, 'stack should not be empty');
@@ -139,12 +158,15 @@ export function applyFileStackEdits(
   const oldRev = stack.revLength - 1;
   // Apply the changes. Assuming there are no overlapping chunks, we apply
   // from end to start so the line numbers won't need change.
-  const sortedChunks = chunks
+  const sortedChunks = [...chunks]
     .filter(c => c.selectedRev != null)
     .toSorted((a, b) => b.oldEnd - a.oldEnd);
   sortedChunks.forEach(chunk => {
     const targetRev = nullthrows(chunk.selectedRev);
-    assert(targetRev >= chunk.introductionRev, 'selectedRev must be >= introductionRev');
+    assert(
+      targetRev >= chunk.introductionRev,
+      `selectedRev ${targetRev} must be >= introductionRev ${chunk.introductionRev}`,
+    );
     assert(
       targetRev > 0,
       'selectedRev must be > 0 since rev 0 is from the immutable public commit',
@@ -156,7 +178,7 @@ export function applyFileStackEdits(
       chunk.oldStart,
       chunk.oldEnd,
       targetRev * 2 + 1,
-      chunk.newLines,
+      chunk.newLines.toArray(),
     );
   });
   const texts = Array.from({length: stack.revLength}, (_, i) => linelog.checkOut(i * 2 + 1));

@@ -130,10 +130,10 @@ describe('analyseFileStack', () => {
       const chunks = analyseFileStack(stack, injectNewLines('abc'));
       expect(applyChunks(stack, chunks)).toMatchInlineSnapshot(`" a ab abc"`);
       // Tweak the `selectedRev` so the 1->a, 2->b changes happen at the last rev.
-      const chunks2 = chunks.map(c => ({...c, selectedRev: 3}));
+      const chunks2 = chunks.map(c => c.set('selectedRev', 3));
       expect(applyChunks(stack, chunks2)).toMatchInlineSnapshot(`" 1 12 abc"`);
       // Drop the "2->b" change by setting selectedRev to `null`.
-      const chunks3 = chunks.map(c => (c.oldStart === 1 ? {...c, selectedRev: null} : c));
+      const chunks3 = chunks.map(c => (c.oldStart === 1 ? c.set('selectedRev', null) : c));
       expect(applyChunks(stack, chunks3)).toMatchInlineSnapshot(`" a a2 a2c"`);
     });
 
@@ -164,7 +164,7 @@ describe('analyseFileStack', () => {
       .join('\n');
   }
 
-  function applyChunks(stack: FileStackState, chunks: AbsorbDiffChunk[]): string {
+  function applyChunks(stack: FileStackState, chunks: Iterable<AbsorbDiffChunk>): string {
     return compactTexts(applyFileStackEdits(stack, chunks).convertToPlainText());
   }
 
