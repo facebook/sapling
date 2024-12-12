@@ -18,6 +18,7 @@ import {Internal} from './Internal';
 import {Link} from './Link';
 import {RestackBehaviorSetting} from './RestackBehavior';
 import {Setting} from './Setting';
+import {hasExperimentalFeatures} from './atoms/experimentalFeatureAtoms';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {showDiffNumberConfig} from './codeReview/DiffBadge';
 import {SubmitAsDraftCheckbox} from './codeReview/DraftCheckbox';
@@ -457,6 +458,8 @@ function DebugToolsField() {
   const provider = useAtomValue(codeReviewProvider);
 
   const [branchPrsEnabled, setBranchPrsEnabled] = useAtom(experimentalBranchPRsEnabled);
+  const [experimentalFeaturesEnabled, setExperimentalFeaturesEnabled] =
+    useAtom(hasExperimentalFeatures);
 
   return (
     <DropdownField title={t('Debug Tools & Experimental')}>
@@ -467,6 +470,13 @@ function DebugToolsField() {
             setIsDebug(checked);
           }}>
           <T>Enable Debug Tools</T>
+        </Checkbox>
+        <Checkbox
+          checked={experimentalFeaturesEnabled}
+          onChange={checked => {
+            setExperimentalFeaturesEnabled(checked);
+          }}>
+          <T>Enable Experimental Features</T>
         </Checkbox>
         {provider?.submitDisabledReason?.() != null && (
           <Checkbox
