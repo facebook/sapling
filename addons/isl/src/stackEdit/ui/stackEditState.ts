@@ -6,8 +6,10 @@
  */
 
 import type {Hash} from '../../types';
+import type {AbsorbDiffChunk} from '../absorb';
 import type {CommitState} from '../commitStackState';
 import type {RecordOf} from 'immutable';
+import type {RepoPath} from 'shared/types/common';
 import type {ExportStack} from 'shared/types/stack';
 
 import clientToServerAPI from '../../ClientToServerAPI';
@@ -23,17 +25,38 @@ import {waitForNothingRunning} from '../../operationsState';
 import {uncommittedSelection} from '../../partialSelection';
 import {CommitStackState} from '../../stackEdit/commitStackState';
 import {assert, registerDisposable} from '../../utils';
-import {List, Record} from 'immutable';
+import {List, Record, Map as ImMap} from 'immutable';
 import {atom, useAtom} from 'jotai';
 import {nullthrows} from 'shared/utils';
 
+/**
+ * The "edit stack" dialog state that works with undo/redo in the dialog.
+ * Extra states that do not need undo/redo support (ex. which tab is active)
+ * are not here.
+ */
 type StackStateWithOperationProps = {
   op: StackEditOpDescription;
   state: CommitStackState;
+  // Extra states for different kinds of operations.
+  /** The split range selected in the "Split" tab. */
   splitRange: SplitRangeRecord;
+  /**
+   * The absorb chunks state is basically a mapping from
+   * "diff chunk" to ["candidate commits", "selected commit"].
+   * Once absorbed into the stack, it's no longer possible to figure
+   * out the diff chunks or the candidate commits. So we need to
+   * track them separately and hold the state, buffer the user
+   * commit selections, and only perform the actual absorb at the
+   * end. Since the absorb diff chunks would be different if the
+   * stack is changed, we also need to disallow editing the stack
+   * when absorbChunks is non-empty (or, re-calculate the absorbChunks
+   * when the stack is edited).
+   */
+  absorbChunks: AbsorbChunks;
 };
+type AbsorbChunks = ImMap<RepoPath, List<AbsorbDiffChunk>>;
 
-type Intention = 'general' | 'split';
+type Intention = 'general' | 'split' | 'absorb';
 
 /** Description of a stack edit operation. Used for display purpose. */
 export type StackEditOpDescription =
@@ -65,10 +88,12 @@ type SplitRangeProps = {
 export const SplitRangeRecord = Record<SplitRangeProps>({startKey: '', endKey: ''});
 export type SplitRangeRecord = RecordOf<SplitRangeProps>;
 
+// See `StackStateWithOperationProps`.
 const StackStateWithOperation = Record<StackStateWithOperationProps>({
   op: {name: 'import'},
   state: new CommitStackState([]),
   splitRange: SplitRangeRecord(),
+  absorbChunks: ImMap(),
 });
 type StackStateWithOperation = RecordOf<StackStateWithOperationProps>;
 
@@ -92,12 +117,21 @@ class History extends HistoryRecord {
   push(
     state: CommitStackState,
     op: StackEditOpDescription,
-    splitRange?: SplitRangeRecord,
+    extras?: {
+      splitRange?: SplitRangeRecord;
+      absorbChunks?: AbsorbChunks;
+    },
   ): History {
-    const newSplitRange = splitRange ?? this.current.splitRange;
-    const newHistory = this.history
-      .slice(0, this.currentIndex + 1)
-      .push(StackStateWithOperation({op, state, splitRange: newSplitRange}));
+    const newSplitRange = extras?.splitRange ?? this.current.splitRange;
+    const newAbsorbChunks = extras?.absorbChunks ?? this.current.absorbChunks;
+    const newHistory = this.history.slice(0, this.currentIndex + 1).push(
+      StackStateWithOperation({
+        op,
+        state,
+        splitRange: newSplitRange,
+        absorbChunks: newAbsorbChunks,
+      }),
+    );
     return new History({
       history: newHistory,
       currentIndex: newHistory.size - 1,
@@ -110,12 +144,21 @@ class History extends HistoryRecord {
   replaceTop(
     state: CommitStackState,
     op: StackEditOpDescription,
-    splitRange?: SplitRangeRecord,
+    extras?: {
+      splitRange?: SplitRangeRecord;
+      absorbChunks?: AbsorbChunks;
+    },
   ): History {
-    const newSplitRange = splitRange ?? this.current.splitRange;
-    const newHistory = this.history
-      .slice(0, this.currentIndex)
-      .push(StackStateWithOperation({op, state, splitRange: newSplitRange}));
+    const newSplitRange = extras?.splitRange ?? this.current.splitRange;
+    const newAbsorbChunks = extras?.absorbChunks ?? this.current.absorbChunks;
+    const newHistory = this.history.slice(0, this.currentIndex).push(
+      StackStateWithOperation({
+        op,
+        state,
+        splitRange: newSplitRange,
+        absorbChunks: newAbsorbChunks,
+      }),
+    );
     return new History({
       history: newHistory,
       currentIndex: newHistory.size - 1,
@@ -124,6 +167,17 @@ class History extends HistoryRecord {
 
   setSplitRange(range: SplitRangeRecord): History {
     const newHistory = this.history.set(this.currentIndex, this.current.set('splitRange', range));
+    return new History({
+      history: newHistory,
+      currentIndex: newHistory.size - 1,
+    });
+  }
+
+  setAbsorbChunks(absorbChunks: AbsorbChunks): History {
+    const newHistory = this.history.set(
+      this.currentIndex,
+      this.current.set('absorbChunks', absorbChunks),
+    );
     return new History({
       history: newHistory,
       currentIndex: newHistory.size - 1,
@@ -430,7 +484,7 @@ class UseStackEditState {
       // Wrong stack. Discard.
       return;
     }
-    const newHistory = this.history.push(commitStack, op, splitRange);
+    const newHistory = this.history.push(commitStack, op, {splitRange});
     this.setHistory(newHistory);
   }
 
@@ -441,13 +495,16 @@ class UseStackEditState {
   replaceTopOperation(
     commitStack: CommitStackState,
     op: StackEditOpDescription,
-    splitRange?: SplitRangeRecord,
+    extras?: {
+      splitRange?: SplitRangeRecord;
+      absorbChunks?: AbsorbChunks;
+    },
   ) {
     if (commitStack.originalStack !== this.commitStack.originalStack) {
       // Wrong stack. Discard.
       return;
     }
-    const newHistory = this.history.replaceTop(commitStack, op, splitRange);
+    const newHistory = this.history.replaceTop(commitStack, op, extras);
     this.setHistory(newHistory);
   }
 
