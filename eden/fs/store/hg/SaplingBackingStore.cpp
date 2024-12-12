@@ -1016,48 +1016,12 @@ void SaplingBackingStore::processTreeAuxImportRequests(
     XLOGF(DBG4, "Processing tree aux request for {}", treeAuxImport->hash);
   }
 
-  std::vector<std::shared_ptr<SaplingImportRequest>> retryRequest;
-  retryRequest.reserve(requests.size());
-  if (config_->getEdenConfig()->allowRemoteGetBatch.getValue()) {
-    getTreeAuxDataBatch(requests, sapling::FetchMode::AllowRemote);
-    retryRequest = std::move(requests);
-  } else {
-    getTreeAuxDataBatch(requests, sapling::FetchMode::LocalOnly);
+  getTreeAuxDataBatch(requests, sapling::FetchMode::AllowRemote);
+
+  {
     for (auto& request : requests) {
       auto* promise = request->getPromise<TreeAuxDataPtr>();
       if (promise->isFulfilled()) {
-        XLOGF(
-            DBG4,
-            "TreeAuxData found in Sapling local for {}",
-            request->getRequest<SaplingImportRequest::TreeAuxImport>()->hash);
-        request->getContext()->setFetchedSource(
-            ObjectFetchContext::FetchedSource::Local,
-            ObjectFetchContext::ObjectType::TreeAuxData,
-            stats_.copy());
-        stats_->addDuration(
-            &SaplingBackingStoreStats::fetchTreeAuxData, watch.elapsed());
-        stats_->increment(&SaplingBackingStoreStats::fetchTreeAuxDataSuccess);
-      } else {
-        retryRequest.emplace_back(std::move(request));
-      }
-    }
-    getTreeAuxDataBatch(retryRequest, sapling::FetchMode::RemoteOnly);
-  }
-
-  {
-    for (auto& request : retryRequest) {
-      auto* promise = request->getPromise<TreeAuxDataPtr>();
-      if (promise->isFulfilled()) {
-        if (!config_->getEdenConfig()->allowRemoteGetBatch.getValue()) {
-          XLOGF(
-              DBG4,
-              "TreeAuxData found in Sapling remote for {}",
-              request->getRequest<SaplingImportRequest::TreeAuxImport>()->hash);
-          request->getContext()->setFetchedSource(
-              ObjectFetchContext::FetchedSource::Remote,
-              ObjectFetchContext::ObjectType::TreeAuxData,
-              stats_.copy());
-        }
         stats_->addDuration(
             &SaplingBackingStoreStats::fetchTreeAuxData, watch.elapsed());
         stats_->increment(&SaplingBackingStoreStats::fetchTreeAuxDataSuccess);
