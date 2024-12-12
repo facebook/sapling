@@ -973,48 +973,12 @@ void SaplingBackingStore::processBlobAuxImportRequests(
     XLOGF(DBG4, "Processing blob aux request for {}", blobAuxImport->hash);
   }
 
-  std::vector<std::shared_ptr<SaplingImportRequest>> retryRequest;
-  retryRequest.reserve(requests.size());
-  if (config_->getEdenConfig()->allowRemoteGetBatch.getValue()) {
-    getBlobAuxDataBatch(requests, sapling::FetchMode::AllowRemote);
-    retryRequest = std::move(requests);
-  } else {
-    getBlobAuxDataBatch(requests, sapling::FetchMode::LocalOnly);
+  getBlobAuxDataBatch(requests, sapling::FetchMode::AllowRemote);
+
+  {
     for (auto& request : requests) {
       auto* promise = request->getPromise<BlobAuxDataPtr>();
       if (promise->isFulfilled()) {
-        XLOGF(
-            DBG4,
-            "BlobAuxData found in Sapling local for {}",
-            request->getRequest<SaplingImportRequest::BlobAuxImport>()->hash);
-        request->getContext()->setFetchedSource(
-            ObjectFetchContext::FetchedSource::Local,
-            ObjectFetchContext::ObjectType::BlobAuxData,
-            stats_.copy());
-        stats_->addDuration(
-            &SaplingBackingStoreStats::fetchBlobAuxData, watch.elapsed());
-        stats_->increment(&SaplingBackingStoreStats::fetchBlobAuxDataSuccess);
-      } else {
-        retryRequest.emplace_back(std::move(request));
-      }
-    }
-    getBlobAuxDataBatch(retryRequest, sapling::FetchMode::RemoteOnly);
-  }
-
-  {
-    for (auto& request : retryRequest) {
-      auto* promise = request->getPromise<BlobAuxDataPtr>();
-      if (promise->isFulfilled()) {
-        if (!config_->getEdenConfig()->allowRemoteGetBatch.getValue()) {
-          XLOGF(
-              DBG4,
-              "BlobAuxData found in Sapling remote for {}",
-              request->getRequest<SaplingImportRequest::BlobAuxImport>()->hash);
-          request->getContext()->setFetchedSource(
-              ObjectFetchContext::FetchedSource::Remote,
-              ObjectFetchContext::ObjectType::BlobAuxData,
-              stats_.copy());
-        }
         stats_->addDuration(
             &SaplingBackingStoreStats::fetchBlobAuxData, watch.elapsed());
         stats_->increment(&SaplingBackingStoreStats::fetchBlobAuxDataSuccess);
