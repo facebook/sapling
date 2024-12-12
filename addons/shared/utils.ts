@@ -200,3 +200,8 @@ export function* mapIterable<T, R>(iterable: Iterable<T>, mapFn: (t: T) => R): I
 export function base64Decode(data: string): ArrayBuffer {
   return Buffer.from(data, 'base64');
 }
+
+/** Deduplicate items in an array. */
+export function dedup<T>(arr: Array<T>): Array<T> {
+  return Array.from(new Set(arr));
+}
