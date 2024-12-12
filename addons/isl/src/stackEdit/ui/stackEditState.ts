@@ -20,6 +20,7 @@ import {getTracker} from '../../analytics/globalTracker';
 import {t} from '../../i18n';
 import {readAtom, writeAtom} from '../../jotaiUtils';
 import {waitForNothingRunning} from '../../operationsState';
+import {uncommittedSelection} from '../../partialSelection';
 import {CommitStackState} from '../../stackEdit/commitStackState';
 import {assert, registerDisposable} from '../../utils';
 import {List, Record} from 'immutable';
@@ -253,7 +254,10 @@ registerDisposable(
         return {
           hashes,
           intention,
-          history: {state: 'loading', exportedStack: rewriteCommitMessagesInStack(event.stack)},
+          history: {
+            state: 'loading',
+            exportedStack: rewriteWdirContent(rewriteCommitMessagesInStack(event.stack)),
+          },
         };
       }
     });
@@ -281,8 +285,43 @@ function rewriteCommitMessagesInStack(stack: ExportStack): ExportStack {
 }
 
 /**
+ * Update the file content of "wdir()" to match the current partial selection.
+ * `sl` does not know the current partial selection state tracked exclusively in ISL.
+ * So let's patch the `wdir()` commit (if exists) with the right content.
+ */
+function rewriteWdirContent(stack: ExportStack): ExportStack {
+  // Run `sl debugexportstack -r "wdir()" | python3 -m json.tool` to get a sense of the `ExportStack` format.
+  return stack.map(c => {
+    // 'f' * 40 means the wdir() commit.
+    if (c.node === WDIR_NODE) {
+      const selection = readAtom(uncommittedSelection);
+      if (c.files != null) {
+        for (const path in c.files) {
+          const selected = selection.getSimplifiedSelection(path);
+          if (selected === false) {
+            // Not selected. Drop the path.
+            delete c.files[path];
+          } else if (typeof selected === 'string') {
+            // Chunk-selected. Rewrite the content.
+            c.files[path] = {
+              ...c.files[path],
+              data: selected,
+            };
+          }
+        }
+      }
+    }
+    return c;
+  });
+}
+
+/** The "wdir()" virtual hash. */
+const WDIR_NODE = 'ffffffffffffffffffffffffffffffffffffffff';
+
+/**
  * Commit hashes being stack edited for general purpose.
- * Setting to a non-empty value triggers server-side loading.
+ * Setting to a non-empty value (which can be using the revsetlang)
+ * triggers server-side loading.
  */
 export const editingStackIntentionHashes = atom<
   [Intention, Set<Hash>],
@@ -310,6 +349,12 @@ export const editingStackIntentionHashes = atom<
     }
     if (hashes.size > 0) {
       const revs = joinRevs(hashes);
+      // Search for 'exportedStack' below for code handling the response.
+      // For absorb's use-case, there could be untracked ('?') files that are selected.
+      // Those would not be reported by `exportStack -r "wdir()""`. However, absorb
+      // currently only works for edited files. So it's okay to ignore '?' selected
+      // files by not passing `--assume-tracked FILE` to request content of these files.
+      // In the future, we might want to make absorb support newly added files.
       clientToServerAPI.postMessage({type: 'exportStack', revs});
     }
     set(stackEditState, {
