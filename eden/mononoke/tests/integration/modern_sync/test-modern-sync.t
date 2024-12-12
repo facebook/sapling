@@ -139,6 +139,8 @@ Sync all bookmarks moves
   File HgFileNodeId(HgNodeHash(Sha1(35e7525ce3a48913275d7061dd9a867ffef1e34d)))
   File HgFileNodeId(HgNodeHash(Sha1(778675f9ec8d35ff2fce23a34f68edd15d783853)))
 
+  $ mononoke_admin mutable-counters --repo-name orig get modern_sync
+  Some(2)
   $ cat  $TESTTMP/modern_sync_scuba_logs | jq | rg "start_id|dry_run|repo"
       "start_id": 0,
       "dry_run": "false",

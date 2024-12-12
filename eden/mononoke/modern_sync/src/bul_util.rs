@@ -15,12 +15,10 @@ use bookmarks::BookmarkUpdateLogEntry;
 use bookmarks::BookmarkUpdateLogId;
 use bookmarks::Freshness;
 use cloned::cloned;
-use commit_graph::CommitGraph;
 use context::CoreContext;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use mononoke_types::ChangesetId;
 
 use crate::sync::ExecutionType;
 
@@ -73,25 +71,4 @@ pub async fn get_one_entry(
         .await;
 
     stream::iter(entries)
-}
-
-/// Takes a vec of BookmarkUpdateLogEntry and returns a stream of all the ChangesetIds in these movements
-pub async fn get_commit_stream(
-    entries: Vec<BookmarkUpdateLogEntry>,
-    commit_graph: Arc<CommitGraph>,
-    ctx: &CoreContext,
-) -> impl stream::Stream<Item = Result<ChangesetId, Error>> + '_ {
-    let entries_stream = stream::iter(entries);
-    entries_stream
-        .then(move |entry| {
-            cloned!(ctx, commit_graph);
-            async move {
-                let from = entry.from_changeset_id.map_or(vec![], |val| vec![val]);
-                let to = entry.to_changeset_id.map_or(vec![], |val| vec![val]);
-                commit_graph
-                    .ancestors_difference_stream(&ctx, to, from)
-                    .await
-            }
-        })
-        .try_flatten()
 }

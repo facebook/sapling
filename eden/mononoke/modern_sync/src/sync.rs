@@ -18,7 +18,7 @@ use changeset_info::ChangesetInfo;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use cloned::cloned;
-use commit_graph::CommitGraphArc;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use context::SessionContainer;
 use futures::StreamExt;
@@ -121,11 +121,10 @@ pub async fn sync(
                 )
             })?
     };
-
+    let app_args = app.args::<ModernSyncArgs>()?;
     let sender: Arc<dyn ModernSyncSender + Send + Sync> = if dry_run {
         Arc::new(DummySender::new(logger.clone()))
     } else {
-        let app_args = app.args::<ModernSyncArgs>()?;
         let url = if let Some(socket) = app_args.dest_socket {
             // Only for integration tests
             format!("{}:{}/edenapi/", &config.url, socket)
@@ -178,23 +177,35 @@ pub async fn sync(
                     Err(e)
                 }
                 Ok(entries) => {
-                    // TODO: We probably want to get these in inverse order so once we derive the top parent
-                    // the children will already be derived.
-                    bul_util::get_commit_stream(entries, repo.commit_graph_arc(), ctx)
-                        .await
-                        .fuse()
-                        .try_next_step(move |cs_id| {
-                            cloned!(ctx, repo, logger, sender);
-                            async move {
-                                process_one_changeset(&cs_id, &ctx, repo, &logger, sender, false)
+                    for entry in entries {
+                        let from = entry.from_changeset_id.into_iter().collect();
+                        let to = entry.to_changeset_id.into_iter().collect();
+
+                        repo.commit_graph()
+                            .ancestors_difference_stream(ctx, to, from)
+                            .await?
+                            .fuse()
+                            .try_next_step(|cs_id| {
+                                cloned!(ctx, repo, logger, sender);
+                                async move {
+                                    process_one_changeset(
+                                        &cs_id, &ctx, repo, &logger, sender, false,
+                                    )
                                     .await
-                            }
-                        })
-                        .try_collect::<()>()
-                        .await
+                                }
+                            })
+                            .try_collect::<()>()
+                            .await?;
+
+                        if app_args.update_counters {
+                            repo.mutable_counters()
+                                .set_counter(ctx, MODERN_SYNC_COUNTER_NAME, entry.id.0 as i64, None)
+                                .await?;
+                        }
+                    }
+                    Ok(())
                 }
             }
-            // TODO Update counter after processing one entry
         }
     })
     .try_collect::<()>()

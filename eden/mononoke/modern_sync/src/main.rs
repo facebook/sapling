@@ -47,11 +47,13 @@ struct ModernSyncArgs {
     #[clap(flatten)]
     tls_params: Option<TLSArgs>,
 
-    #[clap(
-        long,
-        help = "Dest repo name (in case it's different from source repo name)"
-    )]
+    #[clap(long)]
+    /// "Dest repo name (in case it's different from source repo name)"
     dest_repo_name: Option<String>,
+
+    #[clap(long)]
+    /// Update counters in the source repo (prod and tests only)
+    update_counters: bool,
 }
 
 #[facet::container]
