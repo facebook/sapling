@@ -265,10 +265,7 @@ pub async fn process_one_changeset(
         sort_manifest_changes(ctx, repo.repo_blobstore(), hg_mf_id, mf_ids_p).await?;
 
     sender.upload_trees(mf_ids).await?;
-
-    for file_id in file_ids {
-        info!(logger, "File {:?}", file_id);
-    }
+    sender.upload_filenodes(file_ids).await?;
 
     if log_completion {
         STATS::synced_commits.add_value(1, (repo.repo_identity().name().to_string(),));

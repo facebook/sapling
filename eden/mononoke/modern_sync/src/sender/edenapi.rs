@@ -9,6 +9,7 @@ use std::collections::HashSet;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use blobstore::Loadable;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use context::CoreContext;
@@ -17,13 +18,16 @@ use edenapi::HttpClientBuilder;
 use edenapi::HttpClientConfig;
 use edenapi::SaplingRemoteApi;
 use edenapi_types::AnyFileContentId;
+use edenapi_types::AnyId;
 use edenapi_types::HgFilenodeData;
 use edenapi_types::Parents;
+use edenapi_types::UploadToken;
 use edenapi_types::UploadTreeEntry;
 use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use mercurial_types::fetch_manifest_envelope;
+use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mononoke_app::args::TLSArgs;
 use mononoke_types::FileContents;
@@ -138,7 +142,17 @@ impl ModernSyncSender for EdenapiSender {
         Ok(())
     }
 
-    async fn upload_filenodes(&self, filenodes: Vec<HgFilenodeData>) -> Result<()> {
+    async fn upload_filenodes(&self, fn_ids: Vec<HgFileNodeId>) -> Result<()> {
+        let filenodes = stream::iter(fn_ids)
+            .map(|file_id| {
+                let ctx = self.ctx.clone();
+                let repo_blobstore = self.repo_blobstore.clone();
+                async move { from_id_to_filenode(file_id, &ctx, &repo_blobstore).await }
+            })
+            .buffer_unordered(10)
+            .try_collect::<Vec<_>>()
+            .await?;
+
         let res = self.client.upload_filenodes_batch(filenodes).await?;
         info!(
             &self.logger,
@@ -168,5 +182,28 @@ pub async fn from_tree_to_entry(
         node_id: envelope.node_id().into(),
         data: content.to_vec(),
         parents,
+    })
+}
+
+pub async fn from_id_to_filenode(
+    file_id: HgFileNodeId,
+    ctx: &CoreContext,
+    repo_blobstore: &RepoBlobstore,
+) -> Result<HgFilenodeData> {
+    let file_node = file_id.load(ctx, repo_blobstore).await?;
+
+    // These tokens are mostly implemented to make sure client sends content before uplaoding filenodes
+    // but they're not really verified, given we're indeed sending the content, let's use a placeholder
+    let content_id = file_node.content_id();
+    let token = UploadToken::new_fake_token(
+        AnyId::AnyFileContentId(AnyFileContentId::ContentId(content_id.into())),
+        None,
+    );
+
+    Ok(HgFilenodeData {
+        node_id: file_id.into_nodehash().into(),
+        parents: file_node.hg_parents().into(),
+        metadata: file_node.metadata().clone().to_vec(),
+        file_content_upload_token: token,
     })
 }

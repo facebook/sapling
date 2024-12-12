@@ -7,7 +7,7 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use edenapi_types::HgFilenodeData;
+use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mononoke_types::ContentId;
 use mononoke_types::FileContents;
@@ -41,12 +41,9 @@ impl ModernSyncSender for DummySender {
         Ok(())
     }
 
-    async fn upload_filenodes(&self, filenodes: Vec<HgFilenodeData>) -> Result<()> {
+    async fn upload_filenodes(&self, filenodes: Vec<HgFileNodeId>) -> Result<()> {
         for filenode in filenodes {
-            info!(
-                &self.logger,
-                "Uploading filenode with id {:?}", filenode.node_id
-            );
+            info!(&self.logger, "Uploading filenode with id {}", filenode);
         }
         Ok(())
     }
