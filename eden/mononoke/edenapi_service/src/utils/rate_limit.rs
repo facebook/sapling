@@ -19,7 +19,7 @@ use time_window_counter::BoxGlobalTimeWindowCounter;
 use time_window_counter::GlobalTimeWindowCounterBuilder;
 use tokio::time::timeout;
 
-const TIME_WINDOW_MIN: u32 = 10;
+const TIME_WINDOW_MIN: u32 = 1;
 const TIME_WINDOW_MAX: u32 = 3600;
 const RATELIM_FETCH_TIMEOUT: Duration = Duration::from_secs(1);
 
@@ -32,7 +32,7 @@ pub fn build_counter(
     let key = make_key(rate_limit_name, identifier);
     debug!(
         ctx.logger(),
-        "Associating key {:?} with author {:?}", key, identifier
+        "Associating key {:?} with client_id {:?}", key, identifier
     );
     GlobalTimeWindowCounterBuilder::build(ctx.fb, category, key, TIME_WINDOW_MIN, TIME_WINDOW_MAX)
 }
@@ -71,8 +71,6 @@ pub async fn counter_check_and_bump<'a>(
                     count,
                     max_value,
                 );
-                let msg = format!("{}: Passed", rate_limit_name);
-                scuba.log_with_msg(&msg, None);
                 counter.bump(1.0);
                 Ok(())
             } else if !enforced {
