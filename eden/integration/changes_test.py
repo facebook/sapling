@@ -298,3 +298,63 @@ class ChangesTestWin(WindowsJournalTestBase):
         self.repo_write_file("gone_file", "replaced_contents", add=False)
         with self.assertRaises(FileExistsError):
             self.rename("test_file", "gone_file")
+
+    # Renaming uncommitted folders in windows is an add and delete
+    def test_rename_folder(self):
+        self.mkdir("test_folder")
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.rename("test_folder", "best_folder")
+        changes = self.getChangesSinceV2(position=position)
+        expected_changes = [
+            buildSmallChange(
+                SmallChangeNotification.REMOVED, Dtype.DIR, path=b"test_folder"
+            ),
+            buildSmallChange(
+                SmallChangeNotification.ADDED, Dtype.DIR, path=b"best_folder"
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    # Renaming uncomitted folders with a file
+    def test_rename_folder_uncommitted_file(self):
+        self.mkdir("test_folder")
+        self.repo_write_file("test_folder/test_file", "contents", add=True)
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.rename("test_folder", "best_folder")
+        position2 = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        # ensure that the file change is synced to the new folder
+        self.syncProjFS(position2)
+        changes = self.getChangesSinceV2(position=position)
+        expected_changes = [
+            buildSmallChange(
+                SmallChangeNotification.REMOVED, Dtype.DIR, path=b"test_folder"
+            ),
+            buildSmallChange(
+                SmallChangeNotification.ADDED, Dtype.DIR, path=b"best_folder"
+            ),
+            # No REMOVED for test_file, on ProjFS, there's no change reported
+            # for subfolders and files if the parent folder gets moved
+            buildSmallChange(
+                SmallChangeNotification.ADDED,
+                Dtype.REGULAR,
+                path=b"best_folder/test_file",
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    # Renaming folders that have been checked out is not allowed
+    def test_rename_folder_committed_file(self):
+        # Files created in setup.
+        with self.assertRaises(OSError):
+            self.rename(self.get_path("the_land"), self.get_path("deepest_blue"))
+
+        # In windows, files that were checked out via checkout cannot be renamed
+        self.mkdir("test_folder")
+        self.repo_write_file("test_folder/test_file", "contents", add=True)
+        self.eden_repo.hg()
+        commit1 = self.eden_repo.commit("commit 1")
+        self.eden_repo.hg("goto", self.commit0)
+        self.eden_repo.hg("goto", commit1)
+
+        with self.assertRaises(OSError):
+            self.rename(self.get_path("test_folder"), self.get_path("best_folder"))

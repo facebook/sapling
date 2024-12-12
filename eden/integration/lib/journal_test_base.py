@@ -26,6 +26,7 @@ class JournalTestBase(testcase.EdenRepoTest):
     def populate_repo(self) -> None:
         # Create the initial repo. It requires at least 1 file and 1 commit
         self.repo.write_file("hello", "bonjour\n")
+        self.repo.write_file("the_land/is", "cloaked\n")
         self.commit0 = self.repo.commit("Commit 0.")
 
     def setUp(self) -> None:
