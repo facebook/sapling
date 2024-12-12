@@ -36,10 +36,10 @@ import {Row} from './ComponentUtils';
 import {FileTree, FileTreeFolderHeader} from './FileTree';
 import {useGeneratedFileStatuses} from './GeneratedFile';
 import {Internal} from './Internal';
+import {AbsorbButton} from './StackActions';
 import {UnsavedFilesCount, confirmUnsavedFiles} from './UnsavedFiles';
 import {tracker} from './analytics';
 import {latestCommitMessageFields} from './codeReview/CodeReviewInfo';
-import GatedComponent from './components/GatedComponent';
 import {islDrawerState} from './drawerState';
 import {externalMergeToolAtom} from './externalMergeTool';
 import {T, t} from './i18n';
@@ -707,6 +707,7 @@ export function UncommittedChanges({place}: {place: Place}) {
                 <T>Discard</T>
               </Button>
             </Tooltip>
+            <AbsorbButton />
           </>
         )}
       </div>

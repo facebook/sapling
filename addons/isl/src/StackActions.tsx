@@ -14,11 +14,13 @@ import {shouldShowSubmitStackConfirmation, useShowConfirmSubmitStack} from './Co
 import {HighlightCommitsWhileHovering} from './HighlightedCommits';
 import {OperationDisabledButton} from './OperationDisabledButton';
 import {showSuggestedRebaseForStack, SuggestedRebaseButton} from './SuggestedRebase';
+import {hasExperimentalFeatures} from './atoms/experimentalFeatureAtoms';
 import {codeReviewProvider, allDiffSummaries} from './codeReview/CodeReviewInfo';
 import {SyncStatus, syncStatusAtom} from './codeReview/syncStatus';
 import {T, t} from './i18n';
 import {IconStack} from './icons/IconStack';
 import {useRunOperation} from './operationsState';
+import {useUncommittedSelection} from './partialSelection';
 import {dagWithPreviews} from './previews';
 import {latestUncommittedChangesData} from './serverAPIState';
 import {useConfirmUnsavedEditsBeforeSplit} from './stackEdit/ui/ConfirmUnsavedEditsBeforeSplit';
@@ -312,5 +314,51 @@ function StackEditButton({info}: {info: DagCommitInfo}): React.ReactElement | nu
         </Button>
       </Tooltip>
     </HighlightCommitsWhileHovering>
+  );
+}
+
+export function AbsorbButton() {
+  const experimentalFeatures = useAtomValue(hasExperimentalFeatures);
+  const selection = useUncommittedSelection();
+  const dag = useAtomValue(dagWithPreviews);
+
+  if (!experimentalFeatures) {
+    return null;
+  }
+
+  let disableReason = null;
+  const dot = dag.resolve('.');
+  const stack = dag.ancestors(dot == null ? [] : [dot.hash], {within: dag.draft()});
+  if (dot == null) {
+    disableReason = t('Absorb requires a working copy');
+  } else if (dot.phase === 'public') {
+    disableReason = t('Absorb only works for draft commits');
+  } else if (stack.size <= 1) {
+    disableReason = t('Absorb works for a stack of more than one commit. Use "Amend" instead.');
+  } else if (dag.merge(stack).size > 0) {
+    disableReason = t('Absorb does not work for merge commits');
+  } else if (selection.isNothingSelected()) {
+    disableReason = t('No files are selected. Absorb requires at least one file.');
+  }
+
+  const tooltipText =
+    disableReason ??
+    t(
+      'Absorb changes into the stack. Amend each change to the commit that introduced the surrounding line changes. You can customize the amend destination in a dialog.',
+    );
+
+  return (
+    <Tooltip title={tooltipText}>
+      <Button
+        icon
+        key="absorb"
+        disabled={disableReason != null}
+        onClick={() => {
+          // TODO: Implement absorb modal.
+        }}>
+        <Icon slot="start" icon="replace-all" />
+        <T>Absorb</T>
+      </Button>
+    </Tooltip>
   );
 }
