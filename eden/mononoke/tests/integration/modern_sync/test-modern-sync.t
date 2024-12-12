@@ -70,8 +70,7 @@ Sync all bookmarks moves
   Uploading content with id: ContentId(Blake2(be87911855af0fc33a75f2c1cba2269dd90faa7f5c5358eb640d9d65f55fced3))
   Uploading bytes: b"abc\n"
   Upload response: [UploadToken { data: UploadTokenData { id: AnyFileContentId(ContentId(ContentId("be87911855af0fc33a75f2c1cba2269dd90faa7f5c5358eb640d9d65f55fced3"))), bubble_id: None, metadata: Some(FileContentTokenMetadata(FileContentTokenMetadata { content_size: 4 })) }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } }]
-  Manifest HgManifestId(HgNodeHash(Sha1(c1afe800646ee45232ab5e70c57247b78dbf3899)))
-  Manifest HgManifestId(HgNodeHash(Sha1(53b19c5f23977836390e5880ec30fd252a311384)))
+  Upload tree response: [UploadTreeResponse { token: UploadToken { data: UploadTokenData { id: HgTreeId(HgId("c1afe800646ee45232ab5e70c57247b78dbf3899")), bubble_id: None, metadata: None }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } } }, UploadTreeResponse { token: UploadToken { data: UploadTokenData { id: HgTreeId(HgId("53b19c5f23977836390e5880ec30fd252a311384")), bubble_id: None, metadata: None }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } } }]
   File HgFileNodeId(HgNodeHash(Sha1(005d992c5dcf32993668f7cede29d296c494a5d9)))
   File HgFileNodeId(HgNodeHash(Sha1(f9304d84edb8a8ee2d3ce3f9de3ea944c82eba8f)))
   Found commit ChangesetId(Blake2(5b1c7130dde8e54b4285b9153d8e56d69fbf4ae685eaf9e9766cc409861995f8))
@@ -86,8 +85,7 @@ Sync all bookmarks moves
   Uploading content with id: ContentId(Blake2(96475ef07b63bf02679e9964ff65f0f96883f53d0718671bd44cce830bbf2ebd))
   Uploading bytes: b"abcdefg\n"
   Upload response: [UploadToken { data: UploadTokenData { id: AnyFileContentId(ContentId(ContentId("96475ef07b63bf02679e9964ff65f0f96883f53d0718671bd44cce830bbf2ebd"))), bubble_id: None, metadata: Some(FileContentTokenMetadata(FileContentTokenMetadata { content_size: 8 })) }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } }]
-  Manifest HgManifestId(HgNodeHash(Sha1(5e3e3ee682cdb8a61b7537cfc1a821b6283c8bb5)))
-  Manifest HgManifestId(HgNodeHash(Sha1(33ac88b3b11b11c3fd33fe71cec4c8852ba2eeef)))
+  Upload tree response: [UploadTreeResponse { token: UploadToken { data: UploadTokenData { id: HgTreeId(HgId("5e3e3ee682cdb8a61b7537cfc1a821b6283c8bb5")), bubble_id: None, metadata: None }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } } }, UploadTreeResponse { token: UploadToken { data: UploadTokenData { id: HgTreeId(HgId("33ac88b3b11b11c3fd33fe71cec4c8852ba2eeef")), bubble_id: None, metadata: None }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } } }]
   File HgFileNodeId(HgNodeHash(Sha1(dba92ad67dc1f3732ab73a5f51b77129275a1724)))
   File HgFileNodeId(HgNodeHash(Sha1(b31c6c30a54b89020d5ac28a67917349512d75eb)))
   Found commit ChangesetId(Blake2(ba1a2b3ca64cead35117cb2b707da1211cf43639ade917aee655f3875f4922c3))
@@ -102,8 +100,7 @@ Sync all bookmarks moves
   Uploading content with id: ContentId(Blake2(5d3bfab620332130430c7f540f9fe0b3b0079d0b9b632e0dae96a1424a7a4242))
   Uploading bytes: b"abcdef\n"
   Upload response: [UploadToken { data: UploadTokenData { id: AnyFileContentId(ContentId(ContentId("5d3bfab620332130430c7f540f9fe0b3b0079d0b9b632e0dae96a1424a7a4242"))), bubble_id: None, metadata: Some(FileContentTokenMetadata(FileContentTokenMetadata { content_size: 7 })) }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } }]
-  Manifest HgManifestId(HgNodeHash(Sha1(553b84eb92dd53cf5d757e536be1b42e46458017)))
-  Manifest HgManifestId(HgNodeHash(Sha1(fd1a9570853c1a068efbf6175c547a554015f850)))
+  Upload tree response: [UploadTreeResponse { token: UploadToken { data: UploadTokenData { id: HgTreeId(HgId("553b84eb92dd53cf5d757e536be1b42e46458017")), bubble_id: None, metadata: None }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } } }, UploadTreeResponse { token: UploadToken { data: UploadTokenData { id: HgTreeId(HgId("fd1a9570853c1a068efbf6175c547a554015f850")), bubble_id: None, metadata: None }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } } }]
   File HgFileNodeId(HgNodeHash(Sha1(4eec8cfdabce9565739489483b6ad93ef7657ea9)))
   File HgFileNodeId(HgNodeHash(Sha1(aae2838d921bcc14ccbb9212f4175f300fd9f2f8)))
   Found commit ChangesetId(Blake2(41deea4804cd27d1f4efbec135d839338804a5dfcaf364863bd0289067644db5))
@@ -118,8 +115,7 @@ Sync all bookmarks moves
   Uploading content with id: ContentId(Blake2(c86e7a7ee4c102efc1e5166dd95c1c73fcbff59dc3b04dc79fbbf3d1d10350ed))
   Uploading bytes: b"abcde\n"
   Upload response: [UploadToken { data: UploadTokenData { id: AnyFileContentId(ContentId(ContentId("c86e7a7ee4c102efc1e5166dd95c1c73fcbff59dc3b04dc79fbbf3d1d10350ed"))), bubble_id: None, metadata: Some(FileContentTokenMetadata(FileContentTokenMetadata { content_size: 6 })) }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } }]
-  Manifest HgManifestId(HgNodeHash(Sha1(144ae30be86d40d8a0617b7ec37a70e618df4840)))
-  Manifest HgManifestId(HgNodeHash(Sha1(3b6d87c4e93a918020513a57279573f4325109ef)))
+  Upload tree response: [UploadTreeResponse { token: UploadToken { data: UploadTokenData { id: HgTreeId(HgId("144ae30be86d40d8a0617b7ec37a70e618df4840")), bubble_id: None, metadata: None }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } } }, UploadTreeResponse { token: UploadToken { data: UploadTokenData { id: HgTreeId(HgId("3b6d87c4e93a918020513a57279573f4325109ef")), bubble_id: None, metadata: None }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } } }]
   File HgFileNodeId(HgNodeHash(Sha1(a2e456504a5e61f763f1a0b36a6c247c7541b2b3)))
   File HgFileNodeId(HgNodeHash(Sha1(9bad1c227e9133a5bbae1652c889406d35e6dac1)))
   Found commit ChangesetId(Blake2(8a9d572a899acdef764b88671c24b94a8b0780c1591a5a9bca97184c2ef0f304))
@@ -134,8 +130,7 @@ Sync all bookmarks moves
   Uploading content with id: ContentId(Blake2(fbc4b9b407225e86008840c4095edb4f66a62bad80529b6e120bfa7d605f9423))
   Uploading bytes: b"abcd\n"
   Upload response: [UploadToken { data: UploadTokenData { id: AnyFileContentId(ContentId(ContentId("fbc4b9b407225e86008840c4095edb4f66a62bad80529b6e120bfa7d605f9423"))), bubble_id: None, metadata: Some(FileContentTokenMetadata(FileContentTokenMetadata { content_size: 5 })) }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } }]
-  Manifest HgManifestId(HgNodeHash(Sha1(83af7e770afc39d483b9cd198c49fe919ef0461a)))
-  Manifest HgManifestId(HgNodeHash(Sha1(0652870aff7b4cb5e2172325519652378ae063e7)))
+  Upload tree response: [UploadTreeResponse { token: UploadToken { data: UploadTokenData { id: HgTreeId(HgId("83af7e770afc39d483b9cd198c49fe919ef0461a")), bubble_id: None, metadata: None }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } } }, UploadTreeResponse { token: UploadToken { data: UploadTokenData { id: HgTreeId(HgId("0652870aff7b4cb5e2172325519652378ae063e7")), bubble_id: None, metadata: None }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } } }]
   File HgFileNodeId(HgNodeHash(Sha1(35e7525ce3a48913275d7061dd9a867ffef1e34d)))
   File HgFileNodeId(HgNodeHash(Sha1(778675f9ec8d35ff2fce23a34f68edd15d783853)))
 

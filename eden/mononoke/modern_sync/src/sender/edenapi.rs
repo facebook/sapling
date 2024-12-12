@@ -18,8 +18,13 @@ use edenapi::HttpClientConfig;
 use edenapi::SaplingRemoteApi;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::HgFilenodeData;
+use edenapi_types::Parents;
 use edenapi_types::UploadTreeEntry;
+use futures::stream;
+use futures::StreamExt;
 use futures::TryStreamExt;
+use mercurial_types::fetch_manifest_envelope;
+use mercurial_types::HgManifestId;
 use mononoke_app::args::TLSArgs;
 use mononoke_types::FileContents;
 use repo_blobstore::RepoBlobstore;
@@ -113,8 +118,18 @@ impl ModernSyncSender for EdenapiSender {
         Ok(())
     }
 
-    async fn upload_tree(&self, trees: Vec<UploadTreeEntry>) -> Result<()> {
-        let res = self.client.upload_trees_batch(trees).await?;
+    async fn upload_trees(&self, trees: Vec<HgManifestId>) -> Result<()> {
+        let entries = stream::iter(trees)
+            .map(|mf_id| {
+                let ctx = self.ctx.clone();
+                let repo_blobstore = self.repo_blobstore.clone();
+                async move { from_tree_to_entry(mf_id, &ctx, &repo_blobstore).await }
+            })
+            .buffer_unordered(10)
+            .try_collect::<Vec<_>>()
+            .await?;
+
+        let res = self.client.upload_trees_batch(entries).await?;
         info!(
             &self.logger,
             "Upload tree response: {:?}",
@@ -132,4 +147,26 @@ impl ModernSyncSender for EdenapiSender {
         );
         Ok(())
     }
+}
+
+pub async fn from_tree_to_entry(
+    id: HgManifestId,
+    ctx: &CoreContext,
+    repo_blobstore: &RepoBlobstore,
+) -> Result<UploadTreeEntry> {
+    let envelope = fetch_manifest_envelope(ctx, repo_blobstore, id).await?;
+    let content = envelope.contents();
+
+    let parents = match envelope.parents() {
+        (None, None) => Parents::None,
+        (Some(p1), None) => Parents::One(p1.into()),
+        (None, Some(p2)) => Parents::One(p2.into()),
+        (Some(p1), Some(p2)) => Parents::Two(p1.into(), p2.into()),
+    };
+
+    Ok(UploadTreeEntry {
+        node_id: envelope.node_id().into(),
+        data: content.to_vec(),
+        parents,
+    })
 }

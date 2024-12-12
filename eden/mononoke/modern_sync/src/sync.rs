@@ -264,9 +264,7 @@ pub async fn process_one_changeset(
     let (mf_ids, file_ids) =
         sort_manifest_changes(ctx, repo.repo_blobstore(), hg_mf_id, mf_ids_p).await?;
 
-    for mf_id in mf_ids {
-        info!(logger, "Manifest {:?}", mf_id);
-    }
+    sender.upload_trees(mf_ids).await?;
 
     for file_id in file_ids {
         info!(logger, "File {:?}", file_id);

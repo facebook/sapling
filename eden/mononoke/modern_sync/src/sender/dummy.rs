@@ -8,7 +8,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use edenapi_types::HgFilenodeData;
-use edenapi_types::UploadTreeEntry;
+use mercurial_types::HgManifestId;
 use mononoke_types::ContentId;
 use mononoke_types::FileContents;
 use slog::info;
@@ -34,9 +34,9 @@ impl ModernSyncSender for DummySender {
         Ok(())
     }
 
-    async fn upload_tree(&self, trees: Vec<UploadTreeEntry>) -> Result<()> {
+    async fn upload_trees(&self, trees: Vec<HgManifestId>) -> Result<()> {
         for tree in trees {
-            info!(&self.logger, "Uploading tree with id {:?}", tree.node_id);
+            info!(&self.logger, "Uploading tree with id {:?}", tree);
         }
         Ok(())
     }
