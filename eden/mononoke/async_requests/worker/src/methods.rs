@@ -28,6 +28,7 @@ use futures::future::BoxFuture;
 use futures::try_join;
 use futures::Future;
 use futures::FutureExt;
+use futures_watchdog::WatchdogExt;
 use megarepo_api::MegarepoApi;
 use megarepo_error::MegarepoError;
 use mononoke_api::ChangesetContext;
@@ -47,6 +48,8 @@ use scs_methods::from_request::FromRequest;
 use scs_methods::specifiers::SpecifierExt;
 use source_control as thrift;
 use source_control::CommitSpecifier;
+
+const METHOD_MAX_POLL_TIME_MS: u64 = 100;
 
 #[cfg(not(fbcode_build))]
 pub async fn commit_sparse_profile_delta_impl(
@@ -89,6 +92,7 @@ async fn megarepo_sync_changeset<R: MononokeRepo>(
             params.target.into_config_format(&megarepo_api.mononoke())?,
             target_location,
         )
+        .watched(ctx.logger())
         .await?
         .as_ref()
         .into();
@@ -247,30 +251,45 @@ pub(crate) async fn megarepo_async_request_compute<R: MononokeRepo>(
     match params.into() {
         async_requests_types_thrift::AsynchronousRequestParams::megarepo_add_target_params(params) => {
             Ok(megarepo_add_sync_target(ctx, megarepo_api, params)
+                .watched(ctx.logger())
+                .with_max_poll(METHOD_MAX_POLL_TIME_MS)
+                .with_label("megarepo_add_sync_target")
                 .await
                 .map_err(|e| e.into())
                 .into())
         }
         async_requests_types_thrift::AsynchronousRequestParams::megarepo_add_branching_target_params(params) => {
             Ok(megarepo_add_branching_sync_target(ctx, megarepo_api, params)
+                .watched(ctx.logger())
+                .with_max_poll(METHOD_MAX_POLL_TIME_MS)
+                .with_label("megarepo_add_branching_sync_target")
                 .await
                 .map_err(|e| e.into())
                 .into())
         }
         async_requests_types_thrift::AsynchronousRequestParams::megarepo_change_target_params(params) => {
             Ok(megarepo_change_target_config(ctx, megarepo_api, params)
+                .watched(ctx.logger())
+                .with_max_poll(METHOD_MAX_POLL_TIME_MS)
+                .with_label("megarepo_change_target_config")
                 .await
                 .map_err(|e| e.into())
                 .into())
         }
         async_requests_types_thrift::AsynchronousRequestParams::megarepo_remerge_source_params(params) => {
             Ok(megarepo_remerge_source(ctx, megarepo_api, params)
+                .watched(ctx.logger())
+                .with_max_poll(METHOD_MAX_POLL_TIME_MS)
+                .with_label("megarepo_remerge_source")
                 .await
                 .map_err(|e| e.into())
                 .into())
         }
         async_requests_types_thrift::AsynchronousRequestParams::megarepo_sync_changeset_params(params) => {
             Ok(megarepo_sync_changeset(ctx, megarepo_api, params)
+                .watched(ctx.logger())
+                .with_max_poll(METHOD_MAX_POLL_TIME_MS)
+                .with_label("megarepo_sync_changeset")
                 .await
                 .map_err(|e| e.into())
                 .into())
@@ -282,10 +301,20 @@ pub(crate) async fn megarepo_async_request_compute<R: MononokeRepo>(
             }).into())
         }
         async_requests_types_thrift::AsynchronousRequestParams::commit_sparse_profile_size_params(params) => {
-            Ok(commit_sparse_profile_size(ctx, mononoke, params).await.into())
+            Ok(commit_sparse_profile_size(ctx, mononoke, params)
+                .watched(ctx.logger())
+                .with_max_poll(METHOD_MAX_POLL_TIME_MS)
+                .with_label("commit_sparse_profile_size")
+                .await
+                .into())
         }
         async_requests_types_thrift::AsynchronousRequestParams::commit_sparse_profile_delta_params(params) => {
-            Ok(commit_sparse_profile_delta(ctx, mononoke, params).await.into())
+            Ok(commit_sparse_profile_delta(ctx, mononoke, params)
+                .watched(ctx.logger())
+                .with_max_poll(METHOD_MAX_POLL_TIME_MS)
+                .with_label("commit_sparse_profile_delta")
+                .await
+                .into())
         }
         async_requests_types_thrift::AsynchronousRequestParams::UnknownField(union_tag) => {
              bail!(
