@@ -515,48 +515,19 @@ void SaplingBackingStore::processBlobImportRequests(
     XLOGF(DBG4, "Processing blob request for {}", blobImport->hash);
   }
 
-  std::vector<std::shared_ptr<SaplingImportRequest>> retryRequest;
-  retryRequest.reserve(requests.size());
-  if (config_->getEdenConfig()->allowRemoteGetBatch.getValue()) {
-    getBlobBatch(requests, sapling::FetchMode::AllowRemote);
-    retryRequest = std::move(requests);
-  } else {
-    getBlobBatch(requests, sapling::FetchMode::LocalOnly);
+  getBlobBatch(requests, sapling::FetchMode::AllowRemote);
+
+  {
+    std::vector<folly::SemiFuture<folly::Unit>> futures;
+    futures.reserve(requests.size());
 
     for (auto& request : requests) {
       auto* promise = request->getPromise<BlobPtr>();
       if (promise->isFulfilled()) {
-        XLOGF(
-            DBG4,
-            "Blob found in Sapling local for {}",
-            request->getRequest<SaplingImportRequest::BlobImport>()->hash);
         setBlobCounters(
             request->getContext().copy(),
             request->getFetchType(),
-            ObjectFetchContext::FetchedSource::Local,
-            ObjectFetchContext::FetchResult::Success,
-            watch);
-      } else {
-        retryRequest.emplace_back(std::move(request));
-      }
-    }
-
-    getBlobBatch(retryRequest, sapling::FetchMode::RemoteOnly);
-  }
-
-  {
-    std::vector<folly::SemiFuture<folly::Unit>> futures;
-    futures.reserve(retryRequest.size());
-
-    for (auto& request : retryRequest) {
-      auto* promise = request->getPromise<BlobPtr>();
-      if (promise->isFulfilled()) {
-        setBlobCounters(
-            request->getContext().copy(),
-            request->getFetchType(),
-            config_->getEdenConfig()->allowRemoteGetBatch.getValue()
-                ? ObjectFetchContext::FetchedSource::Unknown
-                : ObjectFetchContext::FetchedSource::Remote,
+            ObjectFetchContext::FetchedSource::Unknown,
             ObjectFetchContext::FetchResult::Success,
             watch);
         continue;
@@ -628,35 +599,14 @@ folly::SemiFuture<BlobPtr> SaplingBackingStore::retryGetBlob(
         // Retry using datapackStore (SaplingNativeBackingStore).
         auto result = folly::makeFuture<BlobPtr>(BlobPtr{nullptr});
 
-        auto fetch_mode =
-            config_->getEdenConfig()->allowRemoteGetBatch.getValue()
-            ? sapling::FetchMode::AllowRemote
-            : sapling::FetchMode::LocalOnly;
-        auto blob = getBlobFromBackingStore(hgInfo, fetch_mode);
-        if (!blob.hasValue() && fetch_mode == sapling::FetchMode::LocalOnly) {
-          // Retry using remote
-          fetch_mode = sapling::FetchMode::RemoteOnly;
-          blob = getBlobFromBackingStore(hgInfo, fetch_mode);
-        }
-        auto fetched_source = ObjectFetchContext::FetchedSource::Unknown;
-        switch (fetch_mode) {
-          case sapling::FetchMode::LocalOnly:
-            fetched_source = ObjectFetchContext::FetchedSource::Local;
-            break;
-          case sapling::FetchMode::RemoteOnly:
-            fetched_source = ObjectFetchContext::FetchedSource::Remote;
-            break;
-          case sapling::FetchMode::AllowRemote:
-          case sapling::FetchMode::AllowRemotePrefetch:
-            fetched_source = ObjectFetchContext::FetchedSource::Unknown;
-            break;
-        }
+        auto blob =
+            getBlobFromBackingStore(hgInfo, sapling::FetchMode::AllowRemote);
 
         if (blob.hasValue()) {
           setBlobCounters(
               context.copy(),
               fetch_type,
-              fetched_source,
+              ObjectFetchContext::FetchedSource::Unknown,
               ObjectFetchContext::FetchResult::SuccessInRetry,
               watch);
           result = blob.value();
@@ -673,7 +623,7 @@ folly::SemiFuture<BlobPtr> SaplingBackingStore::retryGetBlob(
           setBlobCounters(
               context.copy(),
               fetch_type,
-              fetched_source,
+              ObjectFetchContext::FetchedSource::Unknown,
               ObjectFetchContext::FetchResult::Failure,
               watch);
           auto ew = folly::exception_wrapper{blob.exception()};
