@@ -13,7 +13,7 @@ mod errors;
 mod handlers;
 mod middleware;
 mod scuba;
-mod utils;
+pub mod utils;
 
 use std::path::Path;
 use std::sync::atomic::AtomicBool;

@@ -7,6 +7,7 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
+use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mononoke_types::ContentId;
@@ -44,6 +45,17 @@ impl ModernSyncSender for DummySender {
     async fn upload_filenodes(&self, filenodes: Vec<HgFileNodeId>) -> Result<()> {
         for filenode in filenodes {
             info!(&self.logger, "Uploading filenode with id {}", filenode);
+        }
+        Ok(())
+    }
+
+    async fn upload_hg_changeset(&self, hg_css: Vec<HgBlobChangeset>) -> Result<()> {
+        for hg_cs in hg_css {
+            info!(
+                &self.logger,
+                "Uploading hg changeset with id {}",
+                hg_cs.get_changeset_id()
+            );
         }
         Ok(())
     }

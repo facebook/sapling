@@ -7,6 +7,7 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
+use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mononoke_types::ContentId;
@@ -18,9 +19,9 @@ pub mod edenapi;
 pub trait ModernSyncSender {
     async fn upload_content(&self, content_id: ContentId, _blob: FileContents) -> Result<()>;
 
-    #[allow(unused)]
     async fn upload_trees(&self, trees: Vec<HgManifestId>) -> Result<()>;
 
-    #[allow(unused)]
     async fn upload_filenodes(&self, filenodes: Vec<HgFileNodeId>) -> Result<()>;
+
+    async fn upload_hg_changeset(&self, hg_css: Vec<HgBlobChangeset>) -> Result<()>;
 }

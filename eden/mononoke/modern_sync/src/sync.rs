@@ -261,11 +261,12 @@ pub async fn process_one_changeset(
     let hg_cs = hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
     let hg_mf_id = hg_cs.manifestid();
 
-    let (mf_ids, file_ids) =
+    let (mut mf_ids, file_ids) =
         sort_manifest_changes(ctx, repo.repo_blobstore(), hg_mf_id, mf_ids_p).await?;
-
+    mf_ids.push(hg_mf_id);
     sender.upload_trees(mf_ids).await?;
     sender.upload_filenodes(file_ids).await?;
+    sender.upload_hg_changeset(vec![hg_cs]).await?;
 
     if log_completion {
         STATS::synced_commits.add_value(1, (repo.repo_identity().name().to_string(),));
