@@ -281,12 +281,6 @@ export const commitFetchError = atom(get => {
   return get(latestCommitsData).error;
 });
 
-export const hasExperimentalFeatures = configBackedAtom<boolean | null>(
-  'isl.experimental-features',
-  false,
-  true /* read-only */,
-);
-
 export const authorString = configBackedAtom<string | null>(
   'ui.username',
   null,
