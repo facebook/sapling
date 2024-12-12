@@ -4654,25 +4654,27 @@ Unlike Subversion, the branched directories live side-by-side as normal director
 Branch Creation
 ===============
 
-To create a branch, simply copy the directory::
+To branch the directory "my-project" of commit A into the directory "my-branch", use ``subtree copy``::
 
-    $ @prog@ cp my-project my-branch
-    $ @prog@ commit -m "branch my-project"
+    $ @prog@ subtree cp -r A --from-path my-project --to-path my-branch
 
 
 Grafting Between Branches (AKA Cherry Picking)
 ==============================================
 
-Use the ``graft`` command to copy a commit from one branch to another::
+Use ``subtree graft`` to copy a commit from one branch to another::
 
     $ touch my-project/file
-    $ @prog@ commit -m "add file"
-    $ @prog@ graft -r . --from-path my-project --to-path my-branch
+    $ @prog@ commit -Am "add file"
+    $ @prog@ subtree graft -r . --from-path my-project --to-path my-branch
 
 Files in the grafted commit(s) outside of ``--from-path`` are ignored,
 and files in the destination commit outside of ``--to-path`` are
 ignored.
 
+
+If you’ve already created a directory branch using the ``@prog@ cp`` or ``cp`` commands,
+you can still use ``subtree graft`` to move changes between directories.
 
 Comparing Branches
 ==================
@@ -4693,15 +4695,13 @@ Multiple Branches
 Directory branching aware operations support multiple ``--from-path``/``--to-path`` mappings::
 
     # Create two directory branches:
-    $ @prog@ cp my-project my-branch1
-    $ @prog@ cp my-project my-branch2
-    $ @prog@ commit -m "add branches"
+    $ @prog@ subtree cp --from-path my-project --to-path my-branch1 --from-path my-project --to-path my-branch2
 
     $ touch my-project/file
     $ @prog@ commit -m "add file"
 
     # Copy working parent commit "." onto both my-branch1 and my-branch2 directories:
-    $ @prog@ graft -r . --from-path my-project --to-path my-branch1 --from-path my-project --to-path my-branch2
+    $ @prog@ subtree graft -r . --from-path my-project --to-path my-branch1 --from-path my-project --to-path my-branch2
 
     # Modify "file" in both branches and then diff both branches against "my-project":
     $ echo branch1 > my-branch1/file
