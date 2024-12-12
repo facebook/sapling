@@ -5,7 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {analyseFileStack} from '../absorb';
+import type {AbsorbDiffChunk} from '../absorb';
+import type {List} from 'immutable';
+
+import {analyseFileStack, applyFileStackEdits} from '../absorb';
 import {FileStackState} from '../fileStackState';
 
 // See also [test-fb-ext-absorb-filefixupstate.py](https://github.com/facebook/sapling/blob/eb3d35d/eden/scm/tests/test-fb-ext-absorb-filefixupstate.py#L75)
@@ -120,6 +123,31 @@ describe('analyseFileStack', () => {
     `);
   });
 
+  describe('applyFileStackEdits', () => {
+    it('edits 3 lines by 3 insertions', () => {
+      // Replace ['1','2','3'] to ['a','b','c'], 1->a, 2->b, 3->c.
+      const stack = createStack(['', '1', '12', '123']);
+      const chunks = analyseFileStack(stack, injectNewLines('abc'));
+      expect(applyChunks(stack, chunks)).toMatchInlineSnapshot(`" a ab abc"`);
+      // Tweak the `selectedRev` so the 1->a, 2->b changes happen at the last rev.
+      const chunks2 = chunks.map(c => ({...c, selectedRev: 3}));
+      expect(applyChunks(stack, chunks2)).toMatchInlineSnapshot(`" 1 12 abc"`);
+      // Drop the "2->b" change by setting selectedRev to `null`.
+      const chunks3 = chunks.map(c => (c.oldStart === 1 ? {...c, selectedRev: null} : c));
+      expect(applyChunks(stack, chunks3)).toMatchInlineSnapshot(`" a a2 a2c"`);
+    });
+
+    it('edits do not need to be 1:1 line mapping', () => {
+      // Replace ['111','2','333'] to ['aaaa','2','cc']. 111->aaaa. 333->cc.
+      const stack = createStack(['', '2', '1112333']);
+      const chunks = analyseFileStack(stack, injectNewLines('aaaa2cc'));
+      expect(applyChunks(stack, chunks)).toMatchInlineSnapshot(`" 2 aaaa2cc"`);
+      // Drop the "1->aaa" change by setting selectedRev to `null`.
+      const chunks3 = chunks.map(c => (c.oldStart === 0 ? {...c, selectedRev: null} : c));
+      expect(applyChunks(stack, chunks3)).toMatchInlineSnapshot(`" 2 1112cc"`);
+    });
+  });
+
   function createStack(texts: string[]): FileStackState {
     return new FileStackState(texts.map(t => injectNewLines(t)));
   }
@@ -136,11 +164,20 @@ describe('analyseFileStack', () => {
       .join('\n');
   }
 
+  function applyChunks(stack: FileStackState, chunks: AbsorbDiffChunk[]): string {
+    return compactTexts(applyFileStackEdits(stack, chunks).convertToPlainText());
+  }
+
   /** Turn "abc" to "a\nb\nc\n". */
   function injectNewLines(text: string): string {
     return text
       .split('')
       .map(l => `${l}\n`)
       .join('');
+  }
+
+  /** Turn ["a\n", "a\nb\n"] to "a ab". */
+  function compactTexts(texts: List<string>): string {
+    return texts.map(t => t.replace(/\n/g, '')).join(' ');
   }
 });
