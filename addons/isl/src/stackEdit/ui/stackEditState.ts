@@ -242,7 +242,7 @@ registerDisposable(
   clientToServerAPI.onMessageOfType('exportedStack', event => {
     writeAtom(stackEditState, (prev): StackEditState => {
       const {hashes, intention} = prev;
-      const revs = getRevs(hashes);
+      const revs = joinRevs(hashes);
       if (revs !== event.revs) {
         // Wrong stack. Ignore it.
         return prev;
@@ -309,7 +309,7 @@ export const editingStackIntentionHashes = atom<
       await waiter;
     }
     if (hashes.size > 0) {
-      const revs = getRevs(hashes);
+      const revs = joinRevs(hashes);
       clientToServerAPI.postMessage({type: 'exportStack', revs});
     }
     set(stackEditState, {
@@ -456,7 +456,7 @@ export function useStackEditState() {
 }
 
 /** Get revset expression for requested hashes. */
-function getRevs(hashes: Set<Hash>): string {
+function joinRevs(hashes: Set<Hash>): string {
   return [...hashes].join('|');
 }
 
