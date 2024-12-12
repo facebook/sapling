@@ -171,6 +171,9 @@ elif sys.platform.startswith("linux") and not os.path.exists("/etc/redhat-releas
     # The ChownTest.setUp() code tries to look up the "nobody" group, which doesn't
     # exist on Ubuntu.
     TEST_DISABLED["chown_test.ChownTest"] = True
+    TEST_DISABLED["changes_test.ChangesTestNix"] = [
+        "test_modify_folder_chown",
+    ]
 
     # These tests try to run "hg whereami", which isn't available on Ubuntu.
     # This command is provided by the scm telemetry wrapper rather than by hg
@@ -438,6 +441,11 @@ if "SANDCASTLE" in os.environ:
     elif isinstance(class_skipped, list):
         if method_name not in class_skipped:
             class_skipped.append(method_name)
+
+    # We don't have passwordless sudo on sandcastle
+    TEST_DISABLED["changes_test.ChangesTestNix"] = [
+        "test_modify_folder_chown",
+    ]
 
 try:
     from eden.integration.facebook.lib.skip import add_fb_specific_skips

@@ -6,6 +6,7 @@
 
 # pyre-unsafe
 
+import subprocess
 import time
 from typing import List
 
@@ -105,6 +106,15 @@ class JournalTestBase(testcase.EdenRepoTest):
             ),
         ]
 
+    def repo_chmod(self, fd, mode) -> None:
+        self.chmod(fd, mode)
+
+    def repo_chown(self, fd) -> None:
+        # because chown needs sudo to change to nobody
+        fullpath = self.eden_repo.get_path(fd)
+        cmd = ["sudo", "chown", "nobody:nobody", fullpath]
+        subprocess.call(cmd)
+
 
 class WindowsJournalTestBase(JournalTestBase):
     # This class is intended to test the journal system for EdenFS on Windows.
@@ -145,6 +155,16 @@ class WindowsJournalTestBase(JournalTestBase):
     def repo_rmdir(self, path) -> None:
         position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
         super().rmdir(path)
+        self.syncProjFS(position)
+
+    def repo_chmod(self, fd, mode) -> None:
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.chmod(fd, mode)
+        self.syncProjFS(position)
+
+    def repo_chown(self, fd) -> None:
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        super().repo_chown(fd)
         self.syncProjFS(position)
 
     def add_file_expect(

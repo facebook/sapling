@@ -126,7 +126,6 @@ class ChangesTestCommon(testBase):
 
     def test_add_folder(self):
         position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
-        # self.repo_write_file("test_folder/test_file", "", add=False)
         self.mkdir("test_folder")
         changes = self.getChangesSinceV2(position=position)
         expected_changes = [
@@ -200,6 +199,37 @@ class ChangesTestNix(JournalTestBase):
                 Dtype.REGULAR,
                 from_path=b"test_file",
                 to_path=b"gone_file",
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    # Python's chmod/chown only work on nix systems
+    def test_modify_folder_chmod(self):
+        self.mkdir("test_folder_chmod")
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.repo_chmod("test_folder_chmod", 0o777)
+        changes = self.getChangesSinceV2(position=position)
+        expected_changes = [
+            buildSmallChange(
+                SmallChangeNotification.MODIFIED,
+                Dtype.DIR,
+                path=b"test_folder_chmod",
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    def test_modify_folder_chown(self):
+        # Due to platform differences and root permission requirements,
+        # this test doesn't run on Sandcastle
+        self.eden_repo.mkdir("test_folder_chown")
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.repo_chown("test_folder_chown")
+        changes = self.getChangesSinceV2(position=position)
+        expected_changes = [
+            buildSmallChange(
+                SmallChangeNotification.MODIFIED,
+                Dtype.DIR,
+                path=b"test_folder_chown",
             ),
         ]
         self.assertTrue(self.check_changes(changes.changes, expected_changes))
