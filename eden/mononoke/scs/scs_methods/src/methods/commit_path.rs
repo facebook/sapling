@@ -93,14 +93,7 @@ impl SourceControlServiceImpl {
                 }
             }
             PathEntry::File(file, file_type) => {
-                let metadata = file.metadata().await?;
-                let file_info = thrift::FileInfo {
-                    id: metadata.content_id.as_ref().to_vec(),
-                    file_size: metadata.total_size as i64,
-                    content_sha1: metadata.sha1.as_ref().to_vec(),
-                    content_sha256: metadata.sha256.as_ref().to_vec(),
-                    ..Default::default()
-                };
+                let file_info = file.metadata().await?.into_response();
                 thrift::CommitPathInfoResponse {
                     exists: true,
                     r#type: Some(file_type.into_response()),
