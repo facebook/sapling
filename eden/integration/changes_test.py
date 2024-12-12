@@ -298,6 +298,20 @@ class ChangesTestCommon(testBase):
         )
         self.assertTrue(self.check_changes(changes.changes, expected_changes))
 
+    def test_include_exclude_directory(self):
+        # if directory is both included and excluded, it should be ignored
+        oldPosition = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.mkdir("include_exclude_dir")
+        self.mkdir("ignored_dir")
+        self.add_file_expect("ignored_dir/test_file", "contents", add=False)
+        self.add_file_expect("include_exclude_dir/test_file", "contents", add=False)
+        changes = self.getChangesSinceV2(
+            oldPosition,
+            included_roots=["include_exclude_dir"],
+            excluded_roots=["include_exclude_dir"],
+        )
+        self.assertEqual(changes.changes, [])
+
     def test_modify_file(self):
         self.repo_write_file("test_file", "", add=False)
         position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
