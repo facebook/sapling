@@ -9,7 +9,6 @@ use std::sync::Arc;
 
 use anyhow::format_err;
 use anyhow::Result;
-use assembly_line::TryAssemblyLine;
 use blobstore::Loadable;
 use bookmarks::BookmarkUpdateLogArc;
 use bookmarks::BookmarkUpdateLogId;
@@ -21,6 +20,7 @@ use cloned::cloned;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use context::SessionContainer;
+use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use manifest::compare_manifest_tree;
@@ -181,11 +181,15 @@ pub async fn sync(
                         let from = entry.from_changeset_id.into_iter().collect();
                         let to = entry.to_changeset_id.into_iter().collect();
 
-                        repo.commit_graph()
-                            .ancestors_difference_stream(ctx, to, from)
-                            .await?
-                            .fuse()
-                            .try_next_step(|cs_id| {
+                        let mut commits = repo
+                            .commit_graph()
+                            .ancestors_difference(ctx, to, from)
+                            .await?;
+
+                        commits.reverse();
+
+                        stream::iter(commits.into_iter().map(Ok))
+                            .try_for_each(|cs_id| {
                                 cloned!(ctx, repo, logger, sender);
                                 async move {
                                     process_one_changeset(
@@ -194,7 +198,6 @@ pub async fn sync(
                                     .await
                                 }
                             })
-                            .try_collect::<()>()
                             .await?;
 
                         if app_args.update_counters {
