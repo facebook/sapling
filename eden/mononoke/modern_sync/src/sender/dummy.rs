@@ -8,6 +8,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use mercurial_types::blobs::HgBlobChangeset;
+use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mononoke_types::ContentId;
@@ -57,6 +58,19 @@ impl ModernSyncSender for DummySender {
                 hg_cs.get_changeset_id()
             );
         }
+        Ok(())
+    }
+
+    async fn set_bookmark(
+        &self,
+        bookmark: String,
+        from: Option<HgChangesetId>,
+        to: Option<HgChangesetId>,
+    ) -> Result<()> {
+        info!(
+            &self.logger,
+            "Uploading moving bookmark {} from {:?} to {:?}", bookmark, from, to
+        );
         Ok(())
     }
 }

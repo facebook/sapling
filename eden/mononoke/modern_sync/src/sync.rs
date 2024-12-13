@@ -204,6 +204,26 @@ pub async fn sync(
                             repo.mutable_counters()
                                 .set_counter(ctx, MODERN_SYNC_COUNTER_NAME, entry.id.0 as i64, None)
                                 .await?;
+
+                            let from_changeset = if let Some(cs_id) = entry.from_changeset_id {
+                                Some(repo.derive_hg_changeset(ctx, cs_id).await?)
+                            } else {
+                                None
+                            };
+
+                            let to_changeset = if let Some(cs_id) = entry.to_changeset_id {
+                                Some(repo.derive_hg_changeset(ctx, cs_id).await?)
+                            } else {
+                                None
+                            };
+
+                            sender
+                                .set_bookmark(
+                                    entry.bookmark_name.name().to_string(),
+                                    from_changeset,
+                                    to_changeset,
+                                )
+                                .await?;
                         }
                     }
                     Ok(())

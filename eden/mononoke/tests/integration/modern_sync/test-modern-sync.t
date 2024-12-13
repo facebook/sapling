@@ -53,6 +53,8 @@
   $ hg goto E -q
   $ hg push -r . --to master_bookmark -q
 
+  $ hg log > $TESTTMP/hglog.out
+
 Sync all bookmarks moves
   $ with_stripped_logs mononoke_modern_sync sync-once orig dest --start-id 0 
   Running sync-once loop
@@ -73,6 +75,7 @@ Sync all bookmarks moves
   Upload tree response: [UploadTreeResponse { token: UploadToken { data: UploadTokenData { id: HgTreeId(HgId("c1afe800646ee45232ab5e70c57247b78dbf3899")), bubble_id: None, metadata: None }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } } }, UploadTreeResponse { token: UploadToken { data: UploadTokenData { id: HgTreeId(HgId("53b19c5f23977836390e5880ec30fd252a311384")), bubble_id: None, metadata: None }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } } }, UploadTreeResponse { token: UploadToken { data: UploadTokenData { id: HgTreeId(HgId("dbdaef03fd04c4a28dc29fb3fbe10c5ed7a090ec")), bubble_id: None, metadata: None }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } } }]
   Upload filenodes response: [UploadTokensResponse { token: UploadToken { data: UploadTokenData { id: HgFilenodeId(HgId("005d992c5dcf32993668f7cede29d296c494a5d9")), bubble_id: None, metadata: None }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } } }, UploadTokensResponse { token: UploadToken { data: UploadTokenData { id: HgFilenodeId(HgId("f9304d84edb8a8ee2d3ce3f9de3ea944c82eba8f")), bubble_id: None, metadata: None }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } } }]
   Upload hg changeset response: [UploadTokensResponse { token: UploadToken { data: UploadTokenData { id: HgChangesetId(HgId("e20237022b1290d98c3f14049931a8f498c18c53")), bubble_id: None, metadata: None }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } } }]
+  Move bookmark response SetBookmarkResponse { data: Ok(()) }
   Found commit ChangesetId(Blake2(8a9d572a899acdef764b88671c24b94a8b0780c1591a5a9bca97184c2ef0f304))
   Commit info ChangesetInfo { changeset_id: ChangesetId(Blake2(8a9d572a899acdef764b88671c24b94a8b0780c1591a5a9bca97184c2ef0f304)), parents: [ChangesetId(Blake2(53b034a90fe3002a707a7da9cdf6eac3dea460ad72f7c6969dfb88fd0e69f856))], author: "test", author_date: DateTime(1970-01-01T00:00:00+00:00), committer: None, committer_date: None, message: Message("B"), hg_extra: {}, git_extra_headers: None }
   File change Change(TrackedFileChange { inner: BasicFileChange { content_id: ContentId(Blake2(55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f)), file_type: Regular, size: 1, git_lfs: FullContent }, copy_from: None })
@@ -133,6 +136,7 @@ Sync all bookmarks moves
   Upload tree response: [UploadTreeResponse { token: UploadToken { data: UploadTokenData { id: HgTreeId(HgId("5e3e3ee682cdb8a61b7537cfc1a821b6283c8bb5")), bubble_id: None, metadata: None }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } } }, UploadTreeResponse { token: UploadToken { data: UploadTokenData { id: HgTreeId(HgId("33ac88b3b11b11c3fd33fe71cec4c8852ba2eeef")), bubble_id: None, metadata: None }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } } }, UploadTreeResponse { token: UploadToken { data: UploadTokenData { id: HgTreeId(HgId("d6c162600b768f8478ea0557302b6027ed43105d")), bubble_id: None, metadata: None }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } } }]
   Upload filenodes response: [UploadTokensResponse { token: UploadToken { data: UploadTokenData { id: HgFilenodeId(HgId("dba92ad67dc1f3732ab73a5f51b77129275a1724")), bubble_id: None, metadata: None }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } } }, UploadTokensResponse { token: UploadToken { data: UploadTokenData { id: HgFilenodeId(HgId("b31c6c30a54b89020d5ac28a67917349512d75eb")), bubble_id: None, metadata: None }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } } }]
   Upload hg changeset response: [UploadTokensResponse { token: UploadToken { data: UploadTokenData { id: HgChangesetId(HgId("8c3947e5d8bd4fe70259eca001b8885651c75850")), bubble_id: None, metadata: None }, signature: UploadTokenSignature { signature: [102, 97, 107, 101, 116, 111, 107, 101, 110, 115, 105, 103, 110, 97, 116, 117, 114, 101] } } }]
+  Move bookmark response SetBookmarkResponse { data: Ok(()) }
 
   $ mononoke_admin mutable-counters --repo-name orig get modern_sync
   Some(2)
@@ -147,13 +151,18 @@ Sync all bookmarks moves
   $ cd dest
   $ hg pull 
   pulling from mono:dest
-  $ hg log 
-  $ hg show
-  commit:      000000000000
-  user:        
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  
-  
+
+  $ hg log > $TESTTMP/hglog2.out
+  $ hg up master_bookmark 
+  10 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ ls dir1/dir2
+  fifth
+  first
+  forth
+  second
+  third
+
+  $ diff  $TESTTMP/hglog.out  $TESTTMP/hglog2.out 
 
   $ mononoke_admin repo-info  --repo-name dest --show-commit-count
   Repo: dest

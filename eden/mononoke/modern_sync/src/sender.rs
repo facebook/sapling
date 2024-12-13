@@ -8,6 +8,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use mercurial_types::blobs::HgBlobChangeset;
+use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mononoke_types::ContentId;
@@ -24,4 +25,11 @@ pub trait ModernSyncSender {
     async fn upload_filenodes(&self, filenodes: Vec<HgFileNodeId>) -> Result<()>;
 
     async fn upload_hg_changeset(&self, hg_css: Vec<HgBlobChangeset>) -> Result<()>;
+
+    async fn set_bookmark(
+        &self,
+        bookmark: String,
+        from: Option<HgChangesetId>,
+        to: Option<HgChangesetId>,
+    ) -> Result<()>;
 }

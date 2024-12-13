@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::collections::HashSet;
 
 use anyhow::Result;
@@ -32,6 +33,7 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::fetch_manifest_envelope;
+use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mononoke_app::args::TLSArgs;
@@ -179,6 +181,25 @@ impl ModernSyncSender for EdenapiSender {
             "Upload hg changeset response: {:?}",
             res.entries.try_collect::<Vec<_>>().await?
         );
+        Ok(())
+    }
+
+    async fn set_bookmark(
+        &self,
+        bookmark: String,
+        from: Option<HgChangesetId>,
+        to: Option<HgChangesetId>,
+    ) -> Result<()> {
+        let res = self
+            .client
+            .set_bookmark(
+                bookmark,
+                to.map(|cs| cs.into()),
+                from.map(|cs| cs.into()),
+                HashMap::new(),
+            )
+            .await?;
+        info!(&self.logger, "Move bookmark response {:?}", res);
         Ok(())
     }
 }
