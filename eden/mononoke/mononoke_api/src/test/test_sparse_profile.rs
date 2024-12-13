@@ -245,9 +245,11 @@ async fn sparse_profile_parsing(fb: FacebookInit) -> Result<()> {
     let changeset = ChangesetContext::new(repo_ctx, a);
 
     let path = "sparse/include".to_string();
-    let content = fetch(path.clone(), &changeset).await?.unwrap();
+    let content = fetch(&ctx, path.clone(), &changeset).await?.unwrap();
     let profile = sparse::Root::from_bytes(content, path)?;
-    let matcher = profile.matcher(|path| fetch(path, &changeset)).await?;
+    let matcher = profile
+        .matcher(|path| fetch(&ctx, path, &changeset))
+        .await?;
 
     assert!(!matcher.matches_file(RepoPath::from_str("1")?)?);
     assert!(!matcher.matches_file(RepoPath::from_str("dir1/file1")?)?);
