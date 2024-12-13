@@ -121,6 +121,9 @@ pub enum Error {
 
     #[error(transparent)]
     GlobsetError(#[from] globset::Error),
+
+    #[error(transparent)]
+    Internal(anyhow::Error),
 }
 
 #[cfg_attr(not(feature="async"), syncify([B: Future<Output = anyhow::Result<Option<Vec<u8>>>> + Send] => [], [B] => [anyhow::Result<Option<Vec<u8>>>], [Send + Sync] => []))]
@@ -226,10 +229,9 @@ impl Root {
                 only_v1 = false;
 
                 let (matcher_rules, origins) = prepare_rules(child_rules)?;
-                matchers.push(build_tree_matcher_from_rules(
-                    matcher_rules,
-                    self.prof.case_sensitive,
-                )?);
+                matchers.push(
+                    build_tree_matcher_from_rules(matcher_rules, self.prof.case_sensitive).await?,
+                );
                 rule_origins.push(origins);
             } else {
                 for rule in child_rules {
@@ -254,10 +256,8 @@ impl Root {
         ));
 
         let (matcher_rules, origins) = prepare_rules(rules)?;
-        matchers.push(build_tree_matcher_from_rules(
-            matcher_rules,
-            self.prof.case_sensitive,
-        )?);
+        matchers
+            .push(build_tree_matcher_from_rules(matcher_rules, self.prof.case_sensitive).await?);
         rule_origins.push(origins);
 
         Ok(Matcher::new(matchers, rule_origins))
@@ -274,6 +274,7 @@ impl Root {
     }
 }
 
+#[cfg(not(feature = "async"))]
 fn build_tree_matcher_from_rules(
     matcher_rules: Vec<String>,
     case_sensitive: bool,
@@ -282,6 +283,19 @@ fn build_tree_matcher_from_rules(
         matcher_rules.iter(),
         case_sensitive,
     )?)
+}
+
+#[cfg(feature = "async")]
+async fn build_tree_matcher_from_rules(
+    matcher_rules: Vec<String>,
+    case_sensitive: bool,
+) -> Result<TreeMatcher, Error> {
+    let matcher = tokio::task::spawn_blocking(move || {
+        TreeMatcher::from_rules(matcher_rules.iter(), case_sensitive)
+    })
+    .await
+    .map_err(|e| Error::Internal(e.into()))?;
+    Ok(matcher?)
 }
 
 #[cfg_attr(not(feature="async"), syncify([B: Future<Output = anyhow::Result<Option<Vec<u8>>>> + Send] => [], [B] => [anyhow::Result<Option<Vec<u8>>>], [Send + Sync] => []))]
