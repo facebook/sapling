@@ -226,8 +226,8 @@ impl Root {
                 only_v1 = false;
 
                 let (matcher_rules, origins) = prepare_rules(child_rules)?;
-                matchers.push(TreeMatcher::from_rules(
-                    matcher_rules.iter(),
+                matchers.push(build_tree_matcher_from_rules(
+                    matcher_rules,
                     self.prof.case_sensitive,
                 )?);
                 rule_origins.push(origins);
@@ -254,8 +254,8 @@ impl Root {
         ));
 
         let (matcher_rules, origins) = prepare_rules(rules)?;
-        matchers.push(TreeMatcher::from_rules(
-            matcher_rules.iter(),
+        matchers.push(build_tree_matcher_from_rules(
+            matcher_rules,
             self.prof.case_sensitive,
         )?);
         rule_origins.push(origins);
@@ -272,6 +272,16 @@ impl Root {
         let repo_path = RepoPath::from_str(path).unwrap();
         !matcher.matches(repo_path).unwrap_or(true)
     }
+}
+
+fn build_tree_matcher_from_rules(
+    matcher_rules: Vec<String>,
+    case_sensitive: bool,
+) -> Result<TreeMatcher, Error> {
+    Ok(TreeMatcher::from_rules(
+        matcher_rules.iter(),
+        case_sensitive,
+    )?)
 }
 
 #[cfg_attr(not(feature="async"), syncify([B: Future<Output = anyhow::Result<Option<Vec<u8>>>> + Send] => [], [B] => [anyhow::Result<Option<Vec<u8>>>], [Send + Sync] => []))]
