@@ -11,6 +11,7 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use bytes::Bytes;
+use context::CoreContext;
 use derivative::Derivative;
 use futures::try_join;
 use lazy_static::lazy_static;
@@ -461,6 +462,7 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
 
     // Helper for getting file information.
     async fn get_file_data(
+        _ctx: &CoreContext,
         path: Option<&ChangesetPathContentContext<R>>,
         mode: UnifiedDiffMode,
     ) -> Result<Option<xdiff::DiffFile<String, Bytes>>, MononokeError> {
@@ -516,12 +518,13 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
     /// but just generates a placeholder diff that says that the files differ.
     pub async fn unified_diff(
         &self,
+        ctx: &CoreContext,
         context_lines: usize,
         mode: UnifiedDiffMode,
     ) -> Result<UnifiedDiff, MononokeError> {
         let (base_file, other_file) = try_join!(
-            Self::get_file_data(self.base(), mode),
-            Self::get_file_data(self.other(), mode)
+            Self::get_file_data(ctx, self.base(), mode),
+            Self::get_file_data(ctx, self.other(), mode)
         )?;
         let is_binary = xdiff::file_is_binary(&base_file) || xdiff::file_is_binary(&other_file);
         let copy_info = self.copy_info();
@@ -539,7 +542,7 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
         })
     }
 
-    pub async fn metadata_diff(&self) -> Result<MetadataDiff, MononokeError> {
+    pub async fn metadata_diff(&self, _ctx: &CoreContext) -> Result<MetadataDiff, MononokeError> {
         let (new_file_type, mut new_file) = match self.base() {
             Some(path) => try_join!(path.file_type(), path.file())?,
             None => (None, None),

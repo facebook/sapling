@@ -11,6 +11,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use bytes::Bytes;
+use cloned::cloned;
 use context::CoreContext;
 use futures::pin_mut;
 use futures::stream;
@@ -181,12 +182,13 @@ impl CommitFileDiffsItem {
 
     async fn response_element(
         &self,
+        ctx: &CoreContext,
         format: thrift::DiffFormat,
         context_lines: usize,
     ) -> Result<CommitFileDiffsResponseElement, scs_errors::ServiceError> {
         match format {
-            thrift::DiffFormat::RAW_DIFF => self.raw_diff(context_lines).await,
-            thrift::DiffFormat::METADATA_DIFF => self.metadata_diff().await,
+            thrift::DiffFormat::RAW_DIFF => self.raw_diff(ctx, context_lines).await,
+            thrift::DiffFormat::METADATA_DIFF => self.metadata_diff(ctx).await,
             unknown => Err(scs_errors::invalid_request(format!(
                 "invalid diff format: {:?}",
                 unknown
@@ -197,6 +199,7 @@ impl CommitFileDiffsItem {
 
     async fn raw_diff(
         &self,
+        ctx: &CoreContext,
         context_lines: usize,
     ) -> Result<CommitFileDiffsResponseElement, scs_errors::ServiceError> {
         let mode = if self.placeholder {
@@ -206,15 +209,16 @@ impl CommitFileDiffsItem {
         };
         let diff = self
             .path_diff_context
-            .unified_diff(context_lines, mode)
+            .unified_diff(ctx, context_lines, mode)
             .await?;
         Ok(CommitFileDiffsResponseElement::RawDiff { diff })
     }
 
     async fn metadata_diff(
         &self,
+        ctx: &CoreContext,
     ) -> Result<CommitFileDiffsResponseElement, scs_errors::ServiceError> {
-        let metadata_diff = self.path_diff_context.metadata_diff().await?;
+        let metadata_diff = self.path_diff_context.metadata_diff(ctx).await?;
         Ok(CommitFileDiffsResponseElement::MetadataDiff { metadata_diff })
     }
 }
@@ -331,12 +335,12 @@ impl SourceControlServiceImpl {
         let (base_commit, other_commit) = match params.other_commit_id {
             Some(other_commit_id) => {
                 let (_repo, base_commit, other_commit) = self
-                    .repo_changeset_pair(ctx, &commit, &other_commit_id)
+                    .repo_changeset_pair(ctx.clone(), &commit, &other_commit_id)
                     .await?;
                 (base_commit, Some(other_commit))
             }
             None => {
-                let (_repo, base_commit) = self.repo_changeset(ctx, &commit).await?;
+                let (_repo, base_commit) = self.repo_changeset(ctx.clone(), &commit).await?;
                 (base_commit, None)
             }
         };
@@ -476,9 +480,12 @@ impl SourceControlServiceImpl {
         let mut stopped_at_pair = None;
 
         let path_diffs = stream::iter(items)
-            .map(|item| async move {
-                let element = item.response_element(params.format, context).await?;
-                Ok::<_, scs_errors::ServiceError>((item, element))
+            .map(|item| {
+                cloned!(ctx);
+                async move {
+                    let element = item.response_element(&ctx, params.format, context).await?;
+                    Ok::<_, scs_errors::ServiceError>((item, element))
+                }
             })
             .boxed() // Prevents compiler error
             .buffered(20)
