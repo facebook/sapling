@@ -6,6 +6,7 @@
 
 # pyre-unsafe
 
+import os
 import sys
 
 from facebook.eden.ttypes import (
@@ -232,6 +233,50 @@ class ChangesTestCommon(testBase):
             ),
         ]
         self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    def test_commit_transition(self):
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.mkdir("test_folder")
+        self.repo_write_file("test_folder/test_file", "contents", add=True)
+        commit1 = self.eden_repo.commit("commit 1")
+        changes1 = self.getChangesSinceV2(position=position)
+        expected_changes1 = [
+            buildSmallChange(
+                SmallChangeNotification.ADDED,
+                Dtype.DIR,
+                path=b"test_folder",
+            ),
+            buildSmallChange(
+                SmallChangeNotification.ADDED,
+                Dtype.REGULAR,
+                path=b"test_folder/test_file",
+            ),
+            buildSmallChange(
+                SmallChangeNotification.MODIFIED,
+                Dtype.REGULAR,
+                path=b"test_folder/test_file",
+            ),
+            # For CommitTransition, from_bytes is the current hash and to_bytes is the previous hash
+            buildLargeChange(
+                LargeChangeNotification.COMMITTRANSITION,
+                from_bytes=bytes.fromhex(commit1),
+                to_bytes=bytes.fromhex(self.commit0),
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes1.changes, expected_changes1))
+
+        self.eden_repo.hg("goto", self.commit0)
+        changes2 = self.getChangesSinceV2(position=changes1.toPosition)
+        expected_changes2 = [
+            buildLargeChange(
+                LargeChangeNotification.COMMITTRANSITION,
+                from_bytes=bytes.fromhex(self.commit0),
+                to_bytes=bytes.fromhex(commit1),
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes2.changes, expected_changes2))
+        # Check that the file was removed when going down a commit
+        self.assertFalse(os.path.exists(self.get_path("/test_folder/test_file")))
 
 
 # The following tests have different results based on platform

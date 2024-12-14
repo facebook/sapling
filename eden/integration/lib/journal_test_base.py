@@ -32,6 +32,9 @@ class JournalTestBase(testcase.EdenRepoTest):
     def setUp(self) -> None:
         # needs to be done before set up because these need to be created
         # for populate_repo() and the supers set up will call this.
+        if self.repo_type == "git":
+            self.skipTest("File watching is not enabled on git")
+
         self.commit0 = ""
         self.commit1 = ""
 
