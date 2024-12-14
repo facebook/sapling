@@ -278,6 +278,70 @@ class ChangesTestCommon(testBase):
         # Check that the file was removed when going down a commit
         self.assertFalse(os.path.exists(self.get_path("/test_folder/test_file")))
 
+    def test_truncated_journal(self):
+        # Tests that when the journal has been truncated, we get a lost changes notification
+        # We expect the following
+        # Changes before the truncation are reported normally when there is no truncation
+        # When there is a truncation in between the start position and the current poistion,
+        #   we only report that there has been a truncated journal. Neither changes before and
+        #   within the window are reported.
+        # Changes after the truncation are reported when the start position is after the truncation
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.mkdir("not_seen_folder")
+        self.repo_write_file("not_seen_folder/not_seen_file", "missing", add=True)
+        changes0 = self.getChangesSinceV2(position=position)
+        self.eden.run_cmd("debug", "flush_journal", self.mount_path)
+        position2 = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.mkdir("test_folder")
+        self.repo_write_file("test_folder/test_file", "contents", add=True)
+        changes = self.getChangesSinceV2(position=position)
+        changes2 = self.getChangesSinceV2(position=changes.toPosition)
+        changes3 = self.getChangesSinceV2(position=position2)
+        expected_changes0 = [
+            buildSmallChange(
+                SmallChangeNotification.ADDED,
+                Dtype.DIR,
+                path=b"not_seen_folder",
+            ),
+            buildSmallChange(
+                SmallChangeNotification.ADDED,
+                Dtype.REGULAR,
+                path=b"not_seen_folder/not_seen_file",
+            ),
+            buildSmallChange(
+                SmallChangeNotification.MODIFIED,
+                Dtype.REGULAR,
+                path=b"not_seen_folder/not_seen_file",
+            ),
+        ]
+        expected_changes = [
+            buildLargeChange(
+                LargeChangeNotification.LOSTCHANGES,
+                lost_change_reason=LostChangesReason.JOURNAL_TRUNCATED,
+            ),
+        ]
+        expected_changes3 = [
+            buildSmallChange(
+                SmallChangeNotification.ADDED,
+                Dtype.DIR,
+                path=b"test_folder",
+            ),
+            buildSmallChange(
+                SmallChangeNotification.ADDED,
+                Dtype.REGULAR,
+                path=b"test_folder/test_file",
+            ),
+            buildSmallChange(
+                SmallChangeNotification.MODIFIED,
+                Dtype.REGULAR,
+                path=b"test_folder/test_file",
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes0.changes, expected_changes0))
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+        self.assertEqual(changes2.changes, [])
+        self.assertTrue(self.check_changes(changes3.changes, expected_changes3))
+
 
 # The following tests have different results based on platform
 
