@@ -8,6 +8,7 @@
 use std::num::NonZeroU64;
 use std::str::FromStr;
 
+use anyhow::ensure;
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
@@ -46,6 +47,7 @@ use gotham_ext::handler::SlapiCommitIdentityScheme;
 use gotham_ext::middleware::request_context::RequestContext;
 use gotham_ext::response::TryIntoResponse;
 use hyper::Body;
+use mercurial_types::blobs::File;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgNodeHash;
 use mononoke_api::MononokeRepo;
@@ -367,8 +369,20 @@ async fn store_hg_filenode<R: MononokeRepo>(
 
     let metadata = Bytes::from(item.data.metadata);
 
-    repo.store_hg_filenode(filenode, p1, p2, content_id, content_size, metadata)
-        .await?;
+    // If a file is both merged and copied, we must store the parent in the "p2" field and leave the "p1" field null.
+    // Detect that through the presence of copy metadata.
+    if let Some(_copy_from) = File::extract_copied_from(&metadata)? {
+        ensure!(
+            p2.is_none(),
+            "Copy metadata is not valid for merged filenodes: {}",
+            filenode
+        );
+        repo.store_hg_filenode(filenode, None, p1, content_id, content_size, metadata)
+            .await?;
+    } else {
+        repo.store_hg_filenode(filenode, p1, p2, content_id, content_size, metadata)
+            .await?;
+    }
 
     Ok(UploadTokensResponse {
         token: UploadToken::new_fake_token(AnyId::HgFilenodeId(node_id), None),
