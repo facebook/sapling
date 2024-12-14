@@ -8,7 +8,7 @@
 
 import subprocess
 import time
-from typing import List
+from typing import Dict, List, Optional
 
 from facebook.eden.ttypes import (
     ChangeNotification,
@@ -23,6 +23,12 @@ from .thrift_objects import buildSmallChange
 
 
 class JournalTestBase(testcase.EdenRepoTest):
+    def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
+        configs = super().edenfs_extra_config()
+        if configs:
+            configs["notify"] = ['max-num-changes = "100"']
+        return configs
+
     def populate_repo(self) -> None:
         # Create the initial repo. It requires at least 1 file and 1 commit
         self.repo.write_file("hello", "bonjour\n")

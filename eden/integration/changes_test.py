@@ -342,6 +342,31 @@ class ChangesTestCommon(testBase):
         self.assertEqual(changes2.changes, [])
         self.assertTrue(self.check_changes(changes3.changes, expected_changes3))
 
+    def test_too_many_changes(self):
+        self.mkdir("test_folder")
+        expected_changes1 = []
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        # usually the max changes is 10k but for test speed reasons we set it to 100
+        # Each file add creates 2 changes, one for the add and one for the modify
+        for i in range(50):
+            expected_changes1 += self.add_file_expect(
+                f"test_folder/test_file{i}", f"{i}"
+            )
+        changes1 = self.getChangesSinceV2(position=position)
+        self.repo_write_file("test_folder/last_file", "i")
+        changes2 = self.getChangesSinceV2(position=position)
+        expected_changes2 = [
+            buildLargeChange(
+                LargeChangeNotification.LOSTCHANGES,
+                lost_change_reason=LostChangesReason.TOO_MANY_CHANGES,
+            ),
+        ]
+        self.assertTrue(len(expected_changes1) == 100)
+        self.assertTrue(len(changes1.changes) == 100)
+        self.assertTrue(len(changes2.changes) == 1)
+        self.assertTrue(self.check_changes(changes1.changes, expected_changes1))
+        self.assertTrue(self.check_changes(changes2.changes, expected_changes2))
+
 
 # The following tests have different results based on platform
 
