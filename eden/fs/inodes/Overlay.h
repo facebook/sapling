@@ -255,16 +255,6 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   struct statfs statFs();
 #endif // !_WIN32
 
-  struct InternalOverlayStats {
-    size_t dirCount{0};
-    size_t fileCount{0};
-  };
-
-  /**
-   * Get stats about how many objects are materialized in Overlay.
-   */
-  InternalOverlayStats getOverlayStats() const;
-
   void addChild(
       InodeNumber parent,
       const std::pair<PathComponent, DirEntry>& childEntry,
@@ -394,8 +384,6 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   bool filterAppleDouble_;
 
   const AbsolutePath localDir_;
-
-  folly::Synchronized<InternalOverlayStats> overlayStats_;
 
 #ifndef _WIN32
   /**

@@ -203,17 +203,6 @@ enum class CounterName {
    * inodes.
    */
   PERIODIC_UNLINKED_INODE_UNLOAD,
-
-  /**
-   * Represents the number of directories that were materialized in the overlay.
-   */
-  OVERLAY_DIR_COUNT,
-
-  /**
-   * Represents the number of files that were materialized in the overlay.
-   */
-  OVERLAY_FILE_COUNT
-
 };
 
 /**
