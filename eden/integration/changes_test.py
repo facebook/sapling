@@ -156,6 +156,83 @@ class ChangesTestCommon(testBase):
         ]
         self.assertTrue(self.check_changes(changes.changes, expected_changes))
 
+    def test_rename_include(self):
+        # Tests if a folder is renamed from an included directory to an not included directory
+        # and vice versa it shows up
+        self.mkdir("included_folder")
+        self.mkdir("not_included_folder")
+        self.mkdir("not_included_folder2")
+        self.repo_write_file("included_folder/test_file", "contents", add=False)
+        self.repo_write_file("not_included_folder/test_file2", "contents", add=False)
+        self.repo_write_file("not_included_folder/test_file3", "contents", add=False)
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.rename("included_folder/test_file", "not_included_folder/test_file")
+        self.rename("not_included_folder/test_file2", "included_folder/test_file2")
+        self.rename("not_included_folder/test_file3", "not_included_folder2/test_file3")
+        changes = self.getChangesSinceV2(
+            position=position, included_roots=["included_folder"]
+        )
+        # We expect changes involving included folders to be present and changes involving
+        # not_included folders to be ignored if they are not renamed to an included folder
+        expected_changes = [
+            buildSmallChange(
+                SmallChangeNotification.RENAMED,
+                Dtype.REGULAR,
+                from_path=b"included_folder/test_file",
+                to_path=b"not_included_folder/test_file",
+            ),
+            buildSmallChange(
+                SmallChangeNotification.RENAMED,
+                Dtype.REGULAR,
+                from_path=b"not_included_folder/test_file2",
+                to_path=b"included_folder/test_file2",
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    def test_rename_exclude(self):
+        # Tests if a folder is renamed from an excluded directory to an not excluded directory
+        # and vice versa it shows up
+
+        self.mkdir("not_excluded_folder")
+        self.mkdir("not_excluded_folder2")
+        self.mkdir("excluded_folder")
+        self.repo_write_file("not_excluded_folder/test_file", "contents", add=False)
+        self.repo_write_file("excluded_folder/test_file2", "contents", add=False)
+        self.repo_write_file("not_excluded_folder/test_file3", "contents", add=False)
+        self.repo_write_file("excluded_folder/test_file4", "contents", add=False)
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.rename("not_excluded_folder/test_file", "excluded_folder/test_file")
+        self.rename("excluded_folder/test_file2", "not_excluded_folder/test_file2")
+        self.rename("not_excluded_folder/test_file3", "not_excluded_folder2/test_file3")
+        self.rename("excluded_folder/test_file4", "excluded_folder/test_file4")
+        changes = self.getChangesSinceV2(
+            position=position, excluded_roots=["excluded_folder"]
+        )
+        # We expect changes involving not_excluded folders to be present and changes involving
+        # excluded folders to be ignored if they are not renamed to a not_excluded folder
+        expected_changes = [
+            buildSmallChange(
+                SmallChangeNotification.RENAMED,
+                Dtype.REGULAR,
+                from_path=b"not_excluded_folder/test_file",
+                to_path=b"excluded_folder/test_file",
+            ),
+            buildSmallChange(
+                SmallChangeNotification.RENAMED,
+                Dtype.REGULAR,
+                from_path=b"excluded_folder/test_file2",
+                to_path=b"not_excluded_folder/test_file2",
+            ),
+            buildSmallChange(
+                SmallChangeNotification.RENAMED,
+                Dtype.REGULAR,
+                from_path=b"not_excluded_folder/test_file3",
+                to_path=b"not_excluded_folder2/test_file3",
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
 
 # The following tests have different results based on platform
 
