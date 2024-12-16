@@ -43,6 +43,7 @@ use slog::info;
 use slog::Logger;
 use url::Url;
 
+use crate::sender::Entry;
 use crate::sender::ModernSyncSender;
 
 #[allow(dead_code)]
@@ -99,6 +100,11 @@ impl EdenapiSender {
 
 #[async_trait]
 impl ModernSyncSender for EdenapiSender {
+    async fn enqueue_entry(&self, _entry: Entry) -> Result<()> {
+        // TODO: implement using mpsc channels
+        Ok(())
+    }
+
     async fn upload_content(
         &self,
         content_id: mononoke_types::ContentId,

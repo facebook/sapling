@@ -16,8 +16,22 @@ use mononoke_types::FileContents;
 pub mod dummy;
 pub mod edenapi;
 
+pub enum Entry {
+    #[allow(unused)]
+    Content(ContentId, FileContents),
+    #[allow(unused)]
+    Tree(HgManifestId),
+    #[allow(unused)]
+    FileNode(HgFileNodeId),
+    #[allow(unused)]
+    HgChangeset(HgBlobChangeset),
+}
+
 #[async_trait]
 pub trait ModernSyncSender {
+    #[allow(unused)]
+    async fn enqueue_entry(&self, entry: Entry) -> Result<()>;
+
     async fn upload_content(&self, content_id: ContentId, _blob: FileContents) -> Result<()>;
 
     async fn upload_trees(&self, trees: Vec<HgManifestId>) -> Result<()>;
