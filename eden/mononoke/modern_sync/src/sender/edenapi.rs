@@ -79,7 +79,7 @@ impl EdenapiSender {
             verbose_stats: false,
         };
 
-        info!(logger, "Connectign to {}", url.to_string());
+        info!(logger, "Connecting to {}", url.to_string());
 
         let client = HttpClientBuilder::new()
             .repo_name(&reponame)
