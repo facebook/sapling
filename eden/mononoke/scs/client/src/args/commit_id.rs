@@ -101,7 +101,7 @@ fn add_commit_id_args_impl(
                 .num_args(num_args)
                 .number_of_values(1)
                 .action(ArgAction::Append)
-                .help("Commit ID to query (bonsai or Hg)"),
+                .help("Commit ID to query (bonsai, hg or git), can be a prefix"),
         )
         .arg(
             Arg::new(ARG_BOOKMARK)
@@ -684,23 +684,32 @@ async fn try_resolve_git_sha1(
     repo: &thrift::RepoSpecifier,
     value: impl AsRef<str>,
 ) -> Result<Option<thrift::CommitId>, Error> {
-    let mut id = [0; 20];
-    if hex_decode(value.as_ref().as_bytes(), &mut id).is_err() {
+    // Possible prefix should be valid to be passed to `repo_resolve_commit_prefix`:
+    if value.as_ref().len() > 40 || value.as_ref().chars().any(|c| !c.is_ascii_hexdigit()) {
         return Ok(None);
     }
-    let params = thrift::CommitLookupParams {
-        identity_schemes: Some(thrift::CommitIdentityScheme::BONSAI)
-            .into_iter()
-            .collect(),
-        ..Default::default()
-    };
-    let commit = thrift::CommitSpecifier {
-        repo: repo.clone(),
-        id: thrift::CommitId::git(id.to_vec()),
-        ..Default::default()
-    };
-    let response = conn.commit_lookup(&commit, &params).await?;
-    Ok(response
+
+    let resp = conn
+        .repo_resolve_commit_prefix(
+            repo,
+            &thrift::RepoResolveCommitPrefixParams {
+                identity_schemes: Some(thrift::CommitIdentityScheme::BONSAI)
+                    .into_iter()
+                    .collect(),
+                prefix_scheme: thrift::CommitIdentityScheme::GIT,
+                prefix: value.as_ref().into(),
+                ..Default::default()
+            },
+        )
+        .await?;
+
+    if let thrift::RepoResolveCommitPrefixResponseType::AMBIGUOUS = resp.resolved_type {
+        eprintln!(
+            "note: several git commits with the prefix '{}' exist",
+            value.as_ref()
+        );
+    }
+    Ok(resp
         .ids
         .and_then(|ids| ids.get(&thrift::CommitIdentityScheme::BONSAI).cloned()))
 }
