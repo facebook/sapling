@@ -245,18 +245,16 @@ pub async fn process_one_changeset(
     sender: Arc<dyn ModernSyncSender + Send + Sync>,
     log_completion: bool,
 ) -> Result<()> {
-    info!(logger, "Found commit {:?}", cs_id);
+    info!(logger, "Processing commit {:?}", cs_id);
 
     let cs_info = repo
         .repo_derived_data()
         .derive::<ChangesetInfo>(ctx, cs_id.clone())
         .await?;
-    info!(logger, "Commit info {:?}", cs_info);
     let bs = cs_id.load(ctx, repo.repo_blobstore()).await?;
     let thing: Vec<_> = bs.file_changes().collect();
 
     for (_path, file_change) in thing {
-        info!(logger, "File change {:?}", file_change);
         let bs = match file_change {
             FileChange::Change(change) => Some(change.content_id()),
             FileChange::UntrackedChange(change) => Some(change.content_id()),
@@ -264,7 +262,6 @@ pub async fn process_one_changeset(
         };
 
         if let Some(bs) = bs {
-            info!(logger, "Blob {:?}", bs);
             let blob = bs.load(ctx, &repo.repo_blobstore()).await?;
             sender.upload_content(bs, blob).await?;
         }
