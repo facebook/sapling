@@ -20,6 +20,7 @@ use cloned::cloned;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use context::SessionContainer;
+use edenapi_types::AnyFileContentId;
 use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
@@ -254,18 +255,21 @@ pub async fn process_one_changeset(
     let bs = cs_id.load(ctx, repo.repo_blobstore()).await?;
     let thing: Vec<_> = bs.file_changes().collect();
 
+    let mut contents = Vec::new();
+
     for (_path, file_change) in thing {
-        let bs = match file_change {
+        let cid = match file_change {
             FileChange::Change(change) => Some(change.content_id()),
             FileChange::UntrackedChange(change) => Some(change.content_id()),
             _ => None,
         };
 
-        if let Some(bs) = bs {
-            let blob = bs.load(ctx, &repo.repo_blobstore()).await?;
-            sender.upload_content(bs, blob).await?;
+        if let Some(cid) = cid {
+            let blob = cid.load(ctx, &repo.repo_blobstore()).await?;
+            contents.push((AnyFileContentId::ContentId(cid.into()), blob));
         }
     }
+    sender.upload_contents(contents).await?;
 
     let mut mf_ids_p = vec![];
 

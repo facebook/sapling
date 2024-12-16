@@ -105,31 +105,33 @@ impl ModernSyncSender for EdenapiSender {
         Ok(())
     }
 
-    async fn upload_content(
-        &self,
-        content_id: mononoke_types::ContentId,
-        blob: FileContents,
-    ) -> Result<()> {
-        info!(&self.logger, "Uploading content with id: {:?}", content_id);
+    async fn upload_contents(&self, contents: Vec<(AnyFileContentId, FileContents)>) -> Result<()> {
+        info!(
+            &self.logger,
+            "Uploading contents: {:?}",
+            contents
+                .clone()
+                .into_iter()
+                .map(|(first, _)| first)
+                .collect::<Vec<_>>()
+        );
 
-        match blob {
-            FileContents::Bytes(bytes) => {
-                info!(&self.logger, "Uploading bytes: {:?}", bytes);
-                let response = self
-                    .client
-                    .process_files_upload(
-                        vec![(AnyFileContentId::ContentId(content_id.into()), bytes.into())],
-                        None,
-                        None,
-                    )
-                    .await?;
-                info!(
-                    &self.logger,
-                    "Upload response: {:?}",
-                    response.entries.try_collect::<Vec<_>>().await?
-                );
+        for (id, blob) in contents {
+            match blob {
+                FileContents::Bytes(bytes) => {
+                    info!(&self.logger, "Uploading bytes: {:?}", bytes);
+                    let response = self
+                        .client
+                        .process_files_upload(vec![(id, bytes.into())], None, None)
+                        .await?;
+                    info!(
+                        &self.logger,
+                        "Upload response: {:?}",
+                        response.entries.try_collect::<Vec<_>>().await?
+                    );
+                }
+                _ => (),
             }
-            _ => (),
         }
 
         Ok(())

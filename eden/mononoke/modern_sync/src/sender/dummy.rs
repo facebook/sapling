@@ -7,11 +7,11 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
+use edenapi_types::AnyFileContentId;
 use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
-use mononoke_types::ContentId;
 use mononoke_types::FileContents;
 use slog::info;
 use slog::Logger;
@@ -34,15 +34,20 @@ impl DummySender {
 impl ModernSyncSender for DummySender {
     async fn enqueue_entry(&self, entry: Entry) -> Result<()> {
         match entry {
-            Entry::Content(content_id, blob) => self.upload_content(content_id, blob).await,
+            Entry::Content(content_id, blob) => {
+                self.upload_contents(vec![(content_id, blob)]).await
+            }
             Entry::Tree(tree_id) => self.upload_trees(vec![tree_id]).await,
             Entry::FileNode(filenode_id) => self.upload_filenodes(vec![filenode_id]).await,
             Entry::HgChangeset(hg_css) => self.upload_hg_changeset(vec![hg_css]).await,
         }
     }
 
-    async fn upload_content(&self, content_id: ContentId, _blob: FileContents) -> Result<()> {
-        info!(&self.logger, "Uploading content with id: {:?}", content_id);
+    async fn upload_contents(&self, contents: Vec<(AnyFileContentId, FileContents)>) -> Result<()> {
+        for (content_id, _blob) in contents {
+            info!(&self.logger, "Uploading content with id: {:?}", content_id);
+        }
+
         Ok(())
     }
 
