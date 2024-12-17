@@ -988,3 +988,9 @@ export type MessageBusStatus =
   | {type: 'open'}
   | {type: 'reconnecting'}
   | {type: 'error'; error?: string};
+
+export type ArcStableGKInfo = {
+  gk: string;
+  id: string;
+  label: string;
+};
