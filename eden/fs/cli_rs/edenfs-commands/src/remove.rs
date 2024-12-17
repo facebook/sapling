@@ -141,7 +141,7 @@ impl Determination {
             if path_copy.pop() {
                 if self.is_active_eden_mount(&path_copy) {
                     return Err(anyhow!(
-                        "{} is not the root of checkout {}, not deleting",
+                        "{} is not the root of checkout {}, not removing",
                         context,
                         path_copy.display()
                     ));

@@ -74,7 +74,7 @@ create a test directory inside eden
 
 eden remove this directory should just give error since it's not the root dir
   $ EDENFSCTL_ONLY_RUST=true eden remove -q -y $TESTTMP/wcrepo/test_dir
-  Error: $TESTTMP/wcrepo/test_dir is not the root of checkout $TESTTMP/wcrepo, not deleting
+  Error: $TESTTMP/wcrepo/test_dir is not the root of checkout $TESTTMP/wcrepo, not removing
   [1]
 
 eden list should give two repos
