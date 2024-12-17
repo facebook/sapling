@@ -53,5 +53,5 @@ tempfile = "3.8"
 
 [features]
 default = []
-fb = ["sapling-configloader/fb", "sapling-revisionstore/ods"]
+fb = ["sapling-configloader/fb"]
 wdir = ["sapling-workingcopy"]
