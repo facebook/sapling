@@ -41,21 +41,14 @@ setup common configuration
 setup repo
   $ hginit_treemanifest repo
   $ cd repo
-  $ drawdag <<EOF
+  $ quiet testtool_drawdag -R repo <<EOF
   > C
   > |
   > B
   > |
   > A
+  > # bookmark: C master_bookmark
   > EOF
-
-create master bookmark
-
-  $ hg bookmark master_bookmark -r tip
-
-blobimport them into Mononoke storage and start Mononoke
-  $ cd ..
-  $ blobimport repo/.hg repo
 
 start mononoke
   $ start_and_wait_for_mononoke_server
@@ -73,16 +66,16 @@ Clone the repo
 
 Unsuccessful push creates a draft commit on the server
   $ hg push -r . --to master_bookmark
-  pushing rev 812eca0823f9 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  pushing rev 5dc36aa279ca to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload
   edenapi: uploaded 1 file
   edenapi: queue 1 tree for upload
   edenapi: uploaded 1 tree
   edenapi: uploaded 1 changeset
-  pushrebasing stack (426bada5c675, 812eca0823f9] (1 commit) to remote bookmark master_bookmark
+  pushrebasing stack (20ca2a4749a4, 5dc36aa279ca] (1 commit) to remote bookmark master_bookmark
   abort: Server error: hooks failed:
-    always_fail_changeset for 15813a35298ec5ddc75d8d1c963f8d53435e00867cef3db930a54d173fec366f: This hook always fails
+    always_fail_changeset for 598ea1738330329fd1367f9a9360bfd936dbe7215d39b6544aabd86ba2b80854: This hook always fails
   [255]
 
 In order to hit an edge case the master on the server needs to point to another commit.
@@ -103,17 +96,17 @@ not move a bookmark
   $ hg push -r . --to master_bookmark --pushvar BYPASS_REVIEW=true -q --config push.skip-cleanup-commits=true
   $ hg up -q master_bookmark
   $ log
-  o  to push [draft;rev=281474976710656;812eca0823f9]
+  o  to push [draft;rev=281474976710656;5dc36aa279ca]
   │
-  │ @  to push [public;rev=4;a6205c464622] remote/master_bookmark
+  │ @  to push [public;rev=4;610ecf8e3aab] remote/master_bookmark
   │ │
-  │ o  to push2 [public;rev=3;854b7c3bdd1f]
+  │ o  to push2 [public;rev=3;f85d7a869e26]
   │ │
-  │ o  C [public;rev=2;26805aba1e60]
+  │ o  C [public;rev=2;d3b399ca8757]
   │ │
-  │ o  B [public;rev=1;112478962961]
+  │ o  B [public;rev=1;80521a640a0c]
   ├─╯
-  o  A [public;rev=0;426bada5c675]
+  o  A [public;rev=0;20ca2a4749a4]
   $
 
 The same procedure, but with commit cloud commit
@@ -134,21 +127,21 @@ Now let's push commit cloud commit. Again, it should do pushrebase
   $ hg push -r . --to master_bookmark --pushvar BYPASS_REVIEW=true -q --config push.skip-cleanup-commits=true
   $ hg up -q master_bookmark
   $ log
-  o  commitcloud [draft;rev=281474976710657;17f29bea0858]
+  o  commitcloud [draft;rev=281474976710657;7f9c51154226]
   │
-  │ o  to push [draft;rev=281474976710656;812eca0823f9]
+  │ o  to push [draft;rev=281474976710656;5dc36aa279ca]
   ├─╯
-  │ @  commitcloud [public;rev=6;3308f3bd8048] remote/master_bookmark
+  │ @  commitcloud [public;rev=6;22dac764478d] remote/master_bookmark
   │ │
-  │ o  to push3 [public;rev=5;c3f020572849]
+  │ o  to push3 [public;rev=5;cd1563745af3]
   │ │
-  │ o  to push [public;rev=4;a6205c464622]
+  │ o  to push [public;rev=4;610ecf8e3aab]
   │ │
-  │ o  to push2 [public;rev=3;854b7c3bdd1f]
+  │ o  to push2 [public;rev=3;f85d7a869e26]
   │ │
-  │ o  C [public;rev=2;26805aba1e60]
+  │ o  C [public;rev=2;d3b399ca8757]
   │ │
-  │ o  B [public;rev=1;112478962961]
+  │ o  B [public;rev=1;80521a640a0c]
   ├─╯
-  o  A [public;rev=0;426bada5c675]
+  o  A [public;rev=0;20ca2a4749a4]
   $

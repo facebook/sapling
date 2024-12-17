@@ -12,18 +12,10 @@ setup configuration
   $ cd $TESTTMP
 
 setup repo
-  $ hginit_treemanifest repo
-  $ cd repo
-  $ echo "a file content" > a
-  $ hg add a
-  $ hg ci -ma
-
-create master bookmark
-  $ hg bookmark master_bookmark -r tip
-
-setup data
-  $ cd $TESTTMP
-  $ blobimport repo/.hg repo
+  $ testtool_drawdag -R repo << EOF
+  > A
+  > EOF
+  A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
 
 start mononoke
   $ start_and_wait_for_mononoke_server

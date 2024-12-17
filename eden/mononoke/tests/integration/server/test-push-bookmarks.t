@@ -14,20 +14,14 @@ setup configuration
 
 setup repo
 
-  $ hginit_treemanifest repo
-  $ cd repo
-  $ echo "a file content" > a
-  $ hg add a
-  $ hg ci -ma
+  $ testtool_drawdag -R repo << EOF
+  > A
+  > # bookmark: A master_bookmark
+  > EOF
+  A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
 
-setup master bookmark
-
-  $ hg bookmark master_bookmark -r tip
-
-blobimport
-
-  $ cd $TESTTMP
-  $ blobimport repo/.hg repo
+start mononoke
+  $ start_and_wait_for_mononoke_server
 
 setup two repos: one will be used to push from, another will be used
 to pull these pushed commits
@@ -35,15 +29,13 @@ to pull these pushed commits
   $ hg clone -q mono:repo repo-push
   $ hg clone -q mono:repo repo-pull
 
-start mononoke
 
-  $ start_and_wait_for_mononoke_server
 Push with bookmark
   $ cd repo-push
   $ echo withbook > withbook && hg addremove && hg ci -m withbook
   adding withbook
   $ hg push --to withbook --create
-  pushing rev 11f53bbd855a to destination mono:repo bookmark withbook
+  pushing rev cdbb2b8b2cf1 to destination mono:repo bookmark withbook
   searching for changes
   exporting bookmark withbook
 
@@ -52,33 +44,33 @@ Pull the bookmark
 
   $ hg pull -q
   $ hg book --remote
-     remote/master_bookmark           0e7ec5675652a04069cbf976a42e45b740f3243c
-     remote/withbook                  11f53bbd855ac06521a8895bd57e6ce5f46a9980
+     remote/master_bookmark           20ca2a4749a439b459125ef0f6a4f26e88ee7538
+     remote/withbook                  cdbb2b8b2cf1612cd6a1271c96a7a89d98b36dd4
 
 Update the bookmark
   $ cd ../repo-push
   $ echo update > update && hg addremove && hg ci -m update
   adding update
   $ hg push --to withbook
-  pushing rev 66b9c137712a to destination mono:repo bookmark withbook
+  pushing rev 31b9c167eeea to destination mono:repo bookmark withbook
   searching for changes
   updating bookmark withbook
   $ cd ../repo-pull
   $ hg pull -q
   $ hg book --remote
-     remote/master_bookmark           0e7ec5675652a04069cbf976a42e45b740f3243c
-     remote/withbook                  66b9c137712a551f5404e8840d5cdbc8227b8fd8
+     remote/master_bookmark           20ca2a4749a439b459125ef0f6a4f26e88ee7538
+     remote/withbook                  31b9c167eeeaeb53634df68ea168918a7395bed7
 
 Try non fastforward moves (backwards and across branches)
   $ cd ../repo-push
   $ hg update -q master_bookmark
   $ echo other_commit > other_commit && hg -q addremove && hg ci -m other_commit
   $ hg push --to master_bookmark
-  pushing rev a075b5221b92 to destination mono:repo bookmark master_bookmark
+  pushing rev 638df78bae5c to destination mono:repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
-  $ hg push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 0e7ec5675652 --to master_bookmark
-  pushing rev 0e7ec5675652 to destination mono:repo bookmark master_bookmark
+  $ hg push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 20ca2a4749a4 --to master_bookmark
+  pushing rev 20ca2a4749a4 to destination mono:repo bookmark master_bookmark
   searching for changes
   no changes found
   remote: Command failed
@@ -86,12 +78,12 @@ Try non fastforward moves (backwards and across branches)
   remote:     While doing a push
   remote: 
   remote:   Root cause:
-  remote:     Non fast-forward bookmark move of 'master_bookmark' from 29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5 to 30c62517c166c69dc058930d510a6924d03d917d4e3a1354213faf4594d6e473
+  remote:     Non fast-forward bookmark move of 'master_bookmark' from 9b9805995990bb9a787f5290e75bd7926146098df1f2ce3420e91063d41789b7 to aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
   remote: 
   remote:   Caused by:
   remote:     Failed to move bookmark
   remote:   Caused by:
-  remote:     Non fast-forward bookmark move of 'master_bookmark' from 29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5 to 30c62517c166c69dc058930d510a6924d03d917d4e3a1354213faf4594d6e473
+  remote:     Non fast-forward bookmark move of 'master_bookmark' from 9b9805995990bb9a787f5290e75bd7926146098df1f2ce3420e91063d41789b7 to aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
   remote: 
   remote:   Debug context:
   remote:     Error {
@@ -106,18 +98,18 @@ Try non fastforward moves (backwards and across branches)
   remote:                     category: Branch,
   remote:                 },
   remote:                 from: ChangesetId(
-  remote:                     Blake2(29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5),
+  remote:                     Blake2(9b9805995990bb9a787f5290e75bd7926146098df1f2ce3420e91063d41789b7),
   remote:                 ),
   remote:                 to: ChangesetId(
-  remote:                     Blake2(30c62517c166c69dc058930d510a6924d03d917d4e3a1354213faf4594d6e473),
+  remote:                     Blake2(aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675),
   remote:                 ),
   remote:             },
   remote:         },
   remote:     }
   abort: unexpected EOL, expected netstring digit
   [255]
-  $ hg push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 66b9c137712a --to master_bookmark
-  pushing rev 66b9c137712a to destination mono:repo bookmark master_bookmark
+  $ hg push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 31b9c167eeea --to master_bookmark
+  pushing rev 31b9c167eeea to destination mono:repo bookmark master_bookmark
   searching for changes
   no changes found
   remote: Command failed
@@ -125,12 +117,12 @@ Try non fastforward moves (backwards and across branches)
   remote:     While doing a push
   remote: 
   remote:   Root cause:
-  remote:     Non fast-forward bookmark move of 'master_bookmark' from 29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5 to b1a2d38c877a990517a50f9bf928770dd7d3b5b9dbef412d7dafd2ccd2ede0fb
+  remote:     Non fast-forward bookmark move of 'master_bookmark' from 9b9805995990bb9a787f5290e75bd7926146098df1f2ce3420e91063d41789b7 to 99853792aa9e4c9ab4519940c25bd2c840dd7af70f1b2f8aaf5e52beec5fc372
   remote: 
   remote:   Caused by:
   remote:     Failed to move bookmark
   remote:   Caused by:
-  remote:     Non fast-forward bookmark move of 'master_bookmark' from 29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5 to b1a2d38c877a990517a50f9bf928770dd7d3b5b9dbef412d7dafd2ccd2ede0fb
+  remote:     Non fast-forward bookmark move of 'master_bookmark' from 9b9805995990bb9a787f5290e75bd7926146098df1f2ce3420e91063d41789b7 to 99853792aa9e4c9ab4519940c25bd2c840dd7af70f1b2f8aaf5e52beec5fc372
   remote: 
   remote:   Debug context:
   remote:     Error {
@@ -145,31 +137,31 @@ Try non fastforward moves (backwards and across branches)
   remote:                     category: Branch,
   remote:                 },
   remote:                 from: ChangesetId(
-  remote:                     Blake2(29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5),
+  remote:                     Blake2(9b9805995990bb9a787f5290e75bd7926146098df1f2ce3420e91063d41789b7),
   remote:                 ),
   remote:                 to: ChangesetId(
-  remote:                     Blake2(b1a2d38c877a990517a50f9bf928770dd7d3b5b9dbef412d7dafd2ccd2ede0fb),
+  remote:                     Blake2(99853792aa9e4c9ab4519940c25bd2c840dd7af70f1b2f8aaf5e52beec5fc372),
   remote:                 ),
   remote:             },
   remote:         },
   remote:     }
   abort: unexpected EOL, expected netstring digit
   [255]
-  $ hg push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 0e7ec5675652 --to withbook
-  pushing rev 0e7ec5675652 to destination mono:repo bookmark withbook
+  $ hg push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 20ca2a4749a4 --to withbook
+  pushing rev 20ca2a4749a4 to destination mono:repo bookmark withbook
   searching for changes
   no changes found
   updating bookmark withbook
   $ cd ../repo-pull
   $ hg pull -q
   $ hg book --remote
-     remote/master_bookmark           a075b5221b925b04d4251d67730fc28b3c14a687
-     remote/withbook                  0e7ec5675652a04069cbf976a42e45b740f3243c
+     remote/master_bookmark           638df78bae5c6ebbe95ab00886b7b15c9ee143ee
+     remote/withbook                  20ca2a4749a439b459125ef0f6a4f26e88ee7538
 
 Try non fastfoward moves on regex bookmark
-  $ hg push -r a075b5221b92 --to ffonly_bookmark --create -q
-  $ hg push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 0e7ec5675652 --to ffonly_bookmark
-  pushing rev 0e7ec5675652 to destination mono:repo bookmark ffonly_bookmark
+  $ hg push -r 638df78bae5c --to ffonly_bookmark --create -q
+  $ hg push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 20ca2a4749a4 --to ffonly_bookmark
+  pushing rev 20ca2a4749a4 to destination mono:repo bookmark ffonly_bookmark
   searching for changes
   no changes found
   remote: Command failed
@@ -177,12 +169,12 @@ Try non fastfoward moves on regex bookmark
   remote:     While doing a push
   remote: 
   remote:   Root cause:
-  remote:     Non fast-forward bookmark move of 'ffonly_bookmark' from 29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5 to 30c62517c166c69dc058930d510a6924d03d917d4e3a1354213faf4594d6e473
+  remote:     Non fast-forward bookmark move of 'ffonly_bookmark' from 9b9805995990bb9a787f5290e75bd7926146098df1f2ce3420e91063d41789b7 to aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
   remote: 
   remote:   Caused by:
   remote:     Failed to move bookmark
   remote:   Caused by:
-  remote:     Non fast-forward bookmark move of 'ffonly_bookmark' from 29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5 to 30c62517c166c69dc058930d510a6924d03d917d4e3a1354213faf4594d6e473
+  remote:     Non fast-forward bookmark move of 'ffonly_bookmark' from 9b9805995990bb9a787f5290e75bd7926146098df1f2ce3420e91063d41789b7 to aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
   remote: 
   remote:   Debug context:
   remote:     Error {
@@ -197,10 +189,10 @@ Try non fastfoward moves on regex bookmark
   remote:                     category: Branch,
   remote:                 },
   remote:                 from: ChangesetId(
-  remote:                     Blake2(29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5),
+  remote:                     Blake2(9b9805995990bb9a787f5290e75bd7926146098df1f2ce3420e91063d41789b7),
   remote:                 ),
   remote:                 to: ChangesetId(
-  remote:                     Blake2(30c62517c166c69dc058930d510a6924d03d917d4e3a1354213faf4594d6e473),
+  remote:                     Blake2(aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675),
   remote:                 ),
   remote:             },
   remote:         },
@@ -254,5 +246,5 @@ Delete the bookmark
   $ cd ../repo-pull
   $ hg pull -q
   $ hg book --remote
-     remote/ffonly_bookmark           a075b5221b925b04d4251d67730fc28b3c14a687
-     remote/master_bookmark           a075b5221b925b04d4251d67730fc28b3c14a687
+     remote/ffonly_bookmark           638df78bae5c6ebbe95ab00886b7b15c9ee143ee
+     remote/master_bookmark           638df78bae5c6ebbe95ab00886b7b15c9ee143ee

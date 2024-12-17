@@ -27,34 +27,20 @@ setup configuration
 
 setup repo
 
-  $ hginit_treemanifest repo
-  $ cd repo
-  $ echo "a file content" > a
-  $ hg add a
-  $ hg ci -ma
+  $ testtool_drawdag -R repo << EOF
+  > A
+  > # bookmark: A master_bookmark
+  > EOF
+  A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
 
-setup master bookmarks
+start mononoke
+  $ start_and_wait_for_mononoke_server
 
-  $ hg bookmark master_bookmark -r 'tip'
-
-verify content
-  $ hg log
-  commit:      0e7ec5675652
-  bookmark:    master_bookmark
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     a
-   (re)
-
-  $ cd $TESTTMP
-  $ blobimport repo/.hg repo
 
 setup push source repo
   $ hg clone -q mono:repo repo2
 
-start mononoke
 
-  $ start_and_wait_for_mononoke_server
 create new commit in repo2 and check that push to a bookmark fails
 
   $ cd repo2
@@ -67,7 +53,7 @@ create new commit in repo2 and check that push to a bookmark fails
   $ hg push --to master_bookmark --force --debug
   sending hello command
   sending clienttelemetry command
-  pushing rev bb0985934a0f to destination mono:repo bookmark master_bookmark
+  pushing rev 4bdc98495893 to destination mono:repo bookmark master_bookmark
   query 1; heads
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 1
@@ -77,7 +63,7 @@ create new commit in repo2 and check that push to a bookmark fails
   received listkey for "bookmarks": 56 bytes
   1 changesets found
   list of changesets:
-  bb0985934a0f8a493887892173b68940ceb40b4f
+  4bdc9849589377925a3c7b0f1e72f4c4f7adfb87
   sending unbundle command
   bundle2-output-bundle: "HG20", 4 parts total
   bundle2-output-part: "replycaps" * bytes payload (glob)
@@ -111,7 +97,7 @@ create new commit in repo2 and check that push to a bookmark fails
 
 Try to bypass the check
   $ hg push --force --to master_bookmark --pushvars "BYPASS_READONLY=true"
-  pushing rev bb0985934a0f to destination mono:repo bookmark master_bookmark
+  pushing rev 4bdc98495893 to destination mono:repo bookmark master_bookmark
   searching for changes
   no changes found
   updating bookmark master_bookmark
