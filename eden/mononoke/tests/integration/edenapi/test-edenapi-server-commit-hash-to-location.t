@@ -11,12 +11,8 @@ Set up local hgrc and Mononoke config.
   $ setup_configerator_configs
   $ cd $TESTTMP
 
-Initialize test repo.
-  $ hginit_treemanifest repo
-  $ cd repo
-
 Populate test repo
-  $ drawdag << EOS
+  $ testtool_drawdag -R repo --print-hg-hashes << EOF
   >   G
   >   |
   >   F
@@ -30,31 +26,26 @@ Populate test repo
   >   B
   >   |
   >   A
-  > EOS
-  $ hg bookmark -r "$G" "master_bookmark"
-  $ hg log -G -T '{node} {desc}\n' -r "all()"
-  o  43195508e3bb704c08d24c40375bdd826789dd72 G
-  │
-  o  a194cadd16930608adaa649035ad4c16930cbd0f F
-  │
-  o  9bc730a19041f9ec7cb33c626e811aa233efb18c E
-  │
-  o  f585351a92f85104bff7c284233c338b10eb1df7 D
-  │
-  o  26805aba1e600a82e93661149f2313866a221a7b C
-  │
-  o  112478962961147124edd43549aedd1a335e44bf B
-  │
-  o  426bada5c67598ca65036d57d9e4b64b0c1ce7a0 A
-  
+  > # bookmark: G master_bookmark
+  > EOF
+  A=20ca2a4749a439b459125ef0f6a4f26e88ee7538
+  B=80521a640a0c8f51dcc128c2658b224d595840ac
+  C=d3b399ca8757acdb81c3681b052eb978db6768d8
+  D=74dbcd84493ad579ee26bb326c4272983098f69c
+  E=2576855b2ced4f17d5cf3daa80dd1b9d4b35ddce
+  F=f62bbd4a42386754afbb006e366387d8dc03687c
+  G=ca68c421d5180ec8ca69aae4746952dd6be3e1c3
 
-Blobimport test repo.
-  $ cd ..
-  $ blobimport repo/.hg repo
+
 
 Start up SaplingRemoteAPI server.
   $ setup_mononoke_config
   $ start_and_wait_for_mononoke_server
+
+Clone repo
+  $ hg clone -q mono:repo repo
+  $ cd repo
+
 Create and send request.
   $ cat > master_heads << EOF
   > ["$F"]
@@ -75,28 +66,28 @@ Create and send request.
   > EOF
 
   $ hg debugapi mono:repo -e commithashtolocation -f master_heads -f hgids
-  [{"hgid": bin("a194cadd16930608adaa649035ad4c16930cbd0f"),
+  [{"hgid": bin("f62bbd4a42386754afbb006e366387d8dc03687c"),
     "result": {"Ok": {"distance": 0,
-                      "descendant": bin("a194cadd16930608adaa649035ad4c16930cbd0f")}}},
-   {"hgid": bin("9bc730a19041f9ec7cb33c626e811aa233efb18c"),
+                      "descendant": bin("f62bbd4a42386754afbb006e366387d8dc03687c")}}},
+   {"hgid": bin("2576855b2ced4f17d5cf3daa80dd1b9d4b35ddce"),
     "result": {"Ok": {"distance": 1,
-                      "descendant": bin("a194cadd16930608adaa649035ad4c16930cbd0f")}}},
-   {"hgid": bin("f585351a92f85104bff7c284233c338b10eb1df7"),
+                      "descendant": bin("f62bbd4a42386754afbb006e366387d8dc03687c")}}},
+   {"hgid": bin("74dbcd84493ad579ee26bb326c4272983098f69c"),
     "result": {"Ok": {"distance": 2,
-                      "descendant": bin("a194cadd16930608adaa649035ad4c16930cbd0f")}}},
-   {"hgid": bin("26805aba1e600a82e93661149f2313866a221a7b"),
+                      "descendant": bin("f62bbd4a42386754afbb006e366387d8dc03687c")}}},
+   {"hgid": bin("d3b399ca8757acdb81c3681b052eb978db6768d8"),
     "result": {"Ok": {"distance": 3,
-                      "descendant": bin("a194cadd16930608adaa649035ad4c16930cbd0f")}}},
-   {"hgid": bin("112478962961147124edd43549aedd1a335e44bf"),
+                      "descendant": bin("f62bbd4a42386754afbb006e366387d8dc03687c")}}},
+   {"hgid": bin("80521a640a0c8f51dcc128c2658b224d595840ac"),
     "result": {"Ok": {"distance": 4,
-                      "descendant": bin("a194cadd16930608adaa649035ad4c16930cbd0f")}}},
-   {"hgid": bin("426bada5c67598ca65036d57d9e4b64b0c1ce7a0"),
+                      "descendant": bin("f62bbd4a42386754afbb006e366387d8dc03687c")}}},
+   {"hgid": bin("20ca2a4749a439b459125ef0f6a4f26e88ee7538"),
     "result": {"Ok": {"distance": 5,
-                      "descendant": bin("a194cadd16930608adaa649035ad4c16930cbd0f")}}},
-   {"hgid": bin("a194cadd16930608adaa649035ad4c16930cbd0f"),
+                      "descendant": bin("f62bbd4a42386754afbb006e366387d8dc03687c")}}},
+   {"hgid": bin("f62bbd4a42386754afbb006e366387d8dc03687c"),
     "result": {"Ok": {"distance": 0,
-                      "descendant": bin("a194cadd16930608adaa649035ad4c16930cbd0f")}}},
-   {"hgid": bin("43195508e3bb704c08d24c40375bdd826789dd72"),
+                      "descendant": bin("f62bbd4a42386754afbb006e366387d8dc03687c")}}},
+   {"hgid": bin("ca68c421d5180ec8ca69aae4746952dd6be3e1c3"),
     "result": {"Ok": None}},
    {"hgid": bin("000000000000000000000000000000123456789a"),
     "result": {"Ok": None}}]

@@ -9,9 +9,7 @@
   $ setconfig experimental.edenapi-suffixquery=true
 
   $ start_and_wait_for_mononoke_server
-  $ hg clone -q mono:repo repo
-  $ cd repo
-  $ drawdag << EOS
+  $ quiet testtool_drawdag -R repo << EOF
   > D # D/bar = zero\nuno\ntwo\n
   > |
   > C # C/bar = zero\none\ntwo\n (renamed from foo)
@@ -19,7 +17,14 @@
   > B # B/foo = one\ntwo\n
   > |
   > A # A/foo = one\n
-  > EOS
+  > EOF
+
+  $ hg clone mono:repo repo
+  fetching lazy changelog
+  populating main commit graph
+  updating to tip
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd repo
 
 Test suffix query output errors if commit not on server:
   $ hg debugapi -e suffix_query -i "{'Hg': '$(hg whereami)'}" -i "['.txt']" -i None

@@ -2,7 +2,7 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License found in the LICENSE file in the root
-# directory of this source tree. 
+# directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ configure modern
@@ -19,19 +19,15 @@ Custom smartlog
   > }
 
 Initialize test repo.
-  $ hginit_treemanifest repo
-  $ cd repo
-  $ mkcommit base_commit
-  $ hg log -T '{short(node)}\n'
-  8b2dca0c8a72
-  $ hg bookmark master_bookmark -r 8b2dca0c8a72
+  $ testtool_drawdag -R repo << EOF
+  > base_commit
+  > # bookmark: base_commit master_bookmark
+  > EOF
+  base_commit=555161ff1f9b160e55d741c854581c8a537b6687b225c6257aeae5433110535b
 
 
 Import and start mononoke
-  $ cd $TESTTMP
-  $ blobimport repo/.hg repo
-  $ mononoke
-  $ wait_for_mononoke
+  $ start_and_wait_for_mononoke_server
 
 Clone 1 and 2
   $ hg clone mono:repo client1
@@ -41,20 +37,22 @@ Clone 1 and 2
   $ hg clone mono:repo client2 -q
   $ cd client1
   $ smartlog
-  @  8b2dca0c8a72 public 'base_commit'  remote/master_bookmark
+  @  eb9c16dd0f62 public 'base_commit'  remote/master_bookmark
   
+
   $ hg up remote/master_bookmark
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo a > a && hg commit -m "new commit" -A a
   $ hg push --to master_bookmark
-  pushing rev 8ca8131de573 to destination mono:repo bookmark master_bookmark
+  pushing rev 8071ade9a0b0 to destination mono:repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
   $ smartlog
-  @  8ca8131de573 public 'new commit'  remote/master_bookmark
+  @  8071ade9a0b0 public 'new commit'  remote/master_bookmark
   │
-  o  8b2dca0c8a72 public 'base_commit'
+  o  eb9c16dd0f62 public 'base_commit'
   
+
 
 Clone 3
   $ cd $TESTTMP
@@ -65,16 +63,17 @@ This is a hack, it seems WBC may be stale, causing the test to be flaky. It need
   Checking out 'master_bookmark'
   2 files updated
   $ cd client3
-  $ hg up remote/master_bookmark 
+  $ hg up remote/master_bookmark
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ smartlog
-  @  8ca8131de573 public 'new commit'  remote/master_bookmark
+  @  8071ade9a0b0 public 'new commit'  remote/master_bookmark
   │
-  o  8b2dca0c8a72 public 'base_commit'
+  o  eb9c16dd0f62 public 'base_commit'
   
+
   $ echo b > a && hg commit -m "newer commit"
   $ hg push --to master_bookmark
-  pushing rev 6b51b03e4f04 to destination mono:repo bookmark master_bookmark
+  pushing rev 9430ba18cb53 to destination mono:repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
 
@@ -86,12 +85,13 @@ This is a hack, it seems WBC may be stale, causing the test to be flaky. It need
   pulling from mono:repo
   searching for changes
   $ smartlog
-  o  6b51b03e4f04 public 'newer commit'  remote/master_bookmark
+  o  9430ba18cb53 public 'newer commit'  remote/master_bookmark
   │
-  @  8ca8131de573 public 'new commit'
+  @  8071ade9a0b0 public 'new commit'
   │
-  o  8b2dca0c8a72 public 'base_commit'
+  o  eb9c16dd0f62 public 'base_commit'
   
+
   $ hg up remote/master_bookmark
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -101,9 +101,9 @@ On clone 2 with tailer
   pulling from mono:repo
   searching for changes
   $ smartlog
-  o  6b51b03e4f04 public 'newer commit'  remote/master_bookmark
+  o  9430ba18cb53 public 'newer commit'  remote/master_bookmark
   │
-  o  8ca8131de573 public 'new commit'
+  o  8071ade9a0b0 public 'new commit'
   │
-  @  8b2dca0c8a72 public 'base_commit'
+  @  eb9c16dd0f62 public 'base_commit'
   

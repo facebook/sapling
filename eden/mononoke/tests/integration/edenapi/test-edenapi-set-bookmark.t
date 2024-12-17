@@ -12,12 +12,9 @@ Set up local hgrc and Mononoke config.
   $ setconfig remotenames.selectivepulldefault=master_bookmark,to_delete,create_bookmark
   $ cd $TESTTMP
 
-Initialize test repo.
-  $ hginit_treemanifest repo
-  $ cd repo
 
 Populate test repo
-  $ drawdag << EOS
+  $ testtool_drawdag -R repo  --print-hg-hashes << EOF
   >   E
   >   |
   >   D
@@ -27,24 +24,14 @@ Populate test repo
   >   B
   >   |
   >   A
-  > EOS
-  $ hg bookmark -r "$C" "master_bookmark"
-  $ hg bookmark -r "$E" "to_delete"
-  $ hg log -G -T '{node} {desc} {bookmarks}\n' -r "all()"
-  o  9bc730a19041f9ec7cb33c626e811aa233efb18c E to_delete
-  │
-  o  f585351a92f85104bff7c284233c338b10eb1df7 D
-  │
-  o  26805aba1e600a82e93661149f2313866a221a7b C master_bookmark
-  │
-  o  112478962961147124edd43549aedd1a335e44bf B
-  │
-  o  426bada5c67598ca65036d57d9e4b64b0c1ce7a0 A
-  
-
-Blobimport test repo.
-  $ cd ..
-  $ blobimport repo/.hg repo
+  > # bookmark: C master_bookmark
+  > # bookmark: E to_delete
+  > EOF
+  A=20ca2a4749a439b459125ef0f6a4f26e88ee7538
+  B=80521a640a0c8f51dcc128c2658b224d595840ac
+  C=d3b399ca8757acdb81c3681b052eb978db6768d8
+  D=74dbcd84493ad579ee26bb326c4272983098f69c
+  E=2576855b2ced4f17d5cf3daa80dd1b9d4b35ddce
 
 Start up SaplingRemoteAPI server.
   $ setup_mononoke_config
@@ -61,16 +48,17 @@ Test move bookmark
 Inspect results
   $ hg pull -q
   $ hg log -G -T '{node} {desc} {remotenames}\n' -r "all()"
-  o  9bc730a19041f9ec7cb33c626e811aa233efb18c E remote/master_bookmark remote/to_delete
+  o  2576855b2ced4f17d5cf3daa80dd1b9d4b35ddce E remote/master_bookmark remote/to_delete
   │
-  o  f585351a92f85104bff7c284233c338b10eb1df7 D
+  o  74dbcd84493ad579ee26bb326c4272983098f69c D
   │
-  o  26805aba1e600a82e93661149f2313866a221a7b C
+  o  d3b399ca8757acdb81c3681b052eb978db6768d8 C
   │
-  o  112478962961147124edd43549aedd1a335e44bf B
+  o  80521a640a0c8f51dcc128c2658b224d595840ac B
   │
-  o  426bada5c67598ca65036d57d9e4b64b0c1ce7a0 A
+  o  20ca2a4749a439b459125ef0f6a4f26e88ee7538 A
   
+
 
 Test delete bookmark
   $ hg debugapi -e setbookmark -i "'to_delete'" -i "None" -i "'$E'"
@@ -79,16 +67,17 @@ Test delete bookmark
 Inspect results
   $ hg pull -q
   $ hg log -G -T '{node} {desc} {remotenames}\n' -r "all()"
-  o  9bc730a19041f9ec7cb33c626e811aa233efb18c E remote/master_bookmark
+  o  2576855b2ced4f17d5cf3daa80dd1b9d4b35ddce E remote/master_bookmark
   │
-  o  f585351a92f85104bff7c284233c338b10eb1df7 D
+  o  74dbcd84493ad579ee26bb326c4272983098f69c D
   │
-  o  26805aba1e600a82e93661149f2313866a221a7b C
+  o  d3b399ca8757acdb81c3681b052eb978db6768d8 C
   │
-  o  112478962961147124edd43549aedd1a335e44bf B
+  o  80521a640a0c8f51dcc128c2658b224d595840ac B
   │
-  o  426bada5c67598ca65036d57d9e4b64b0c1ce7a0 A
+  o  20ca2a4749a439b459125ef0f6a4f26e88ee7538 A
   
+
 
 Test create bookmark
   $ hg debugapi -e setbookmark -i "'create_bookmark'" -i "'$B'" -i "None"
@@ -97,16 +86,17 @@ Test create bookmark
 Inspect results
   $ hg pull -q
   $ hg log -G -T '{node} {desc} {remotenames}\n' -r "all()"
-  o  9bc730a19041f9ec7cb33c626e811aa233efb18c E remote/master_bookmark
+  o  2576855b2ced4f17d5cf3daa80dd1b9d4b35ddce E remote/master_bookmark
   │
-  o  f585351a92f85104bff7c284233c338b10eb1df7 D
+  o  74dbcd84493ad579ee26bb326c4272983098f69c D
   │
-  o  26805aba1e600a82e93661149f2313866a221a7b C
+  o  d3b399ca8757acdb81c3681b052eb978db6768d8 C
   │
-  o  112478962961147124edd43549aedd1a335e44bf B remote/create_bookmark
+  o  80521a640a0c8f51dcc128c2658b224d595840ac B remote/create_bookmark
   │
-  o  426bada5c67598ca65036d57d9e4b64b0c1ce7a0 A
+  o  20ca2a4749a439b459125ef0f6a4f26e88ee7538 A
   
+
 
 Test bookmark failure (empty from and to)
   $ hg debugapi -e setbookmark -i "'master_bookmark'" -i "None" -i "None"
@@ -121,16 +111,17 @@ Test move bookmark failure (invalid from)
 Inspect results
   $ hg pull -q
   $ hg log -G -T '{node} {desc} {remotenames}\n' -r "all()"
-  o  9bc730a19041f9ec7cb33c626e811aa233efb18c E remote/master_bookmark
+  o  2576855b2ced4f17d5cf3daa80dd1b9d4b35ddce E remote/master_bookmark
   │
-  o  f585351a92f85104bff7c284233c338b10eb1df7 D
+  o  74dbcd84493ad579ee26bb326c4272983098f69c D
   │
-  o  26805aba1e600a82e93661149f2313866a221a7b C
+  o  d3b399ca8757acdb81c3681b052eb978db6768d8 C
   │
-  o  112478962961147124edd43549aedd1a335e44bf B remote/create_bookmark
+  o  80521a640a0c8f51dcc128c2658b224d595840ac B remote/create_bookmark
   │
-  o  426bada5c67598ca65036d57d9e4b64b0c1ce7a0 A
+  o  20ca2a4749a439b459125ef0f6a4f26e88ee7538 A
   
+
 
 
 Test delete bookmark failure (invalid from)
@@ -141,16 +132,17 @@ Test delete bookmark failure (invalid from)
 Inspect results
   $ hg pull -q
   $ hg log -G -T '{node} {desc} {remotenames}\n' -r "all()"
-  o  9bc730a19041f9ec7cb33c626e811aa233efb18c E remote/master_bookmark
+  o  2576855b2ced4f17d5cf3daa80dd1b9d4b35ddce E remote/master_bookmark
   │
-  o  f585351a92f85104bff7c284233c338b10eb1df7 D
+  o  74dbcd84493ad579ee26bb326c4272983098f69c D
   │
-  o  26805aba1e600a82e93661149f2313866a221a7b C
+  o  d3b399ca8757acdb81c3681b052eb978db6768d8 C
   │
-  o  112478962961147124edd43549aedd1a335e44bf B remote/create_bookmark
+  o  80521a640a0c8f51dcc128c2658b224d595840ac B remote/create_bookmark
   │
-  o  426bada5c67598ca65036d57d9e4b64b0c1ce7a0 A
+  o  20ca2a4749a439b459125ef0f6a4f26e88ee7538 A
   
+
 
 
 Test create bookmark failure (already exists)
@@ -161,13 +153,13 @@ Test create bookmark failure (already exists)
 Inspect results
   $ hg pull -q
   $ hg log -G -T '{node} {desc} {remotenames}\n' -r "all()"
-  o  9bc730a19041f9ec7cb33c626e811aa233efb18c E remote/master_bookmark
+  o  2576855b2ced4f17d5cf3daa80dd1b9d4b35ddce E remote/master_bookmark
   │
-  o  f585351a92f85104bff7c284233c338b10eb1df7 D
+  o  74dbcd84493ad579ee26bb326c4272983098f69c D
   │
-  o  26805aba1e600a82e93661149f2313866a221a7b C
+  o  d3b399ca8757acdb81c3681b052eb978db6768d8 C
   │
-  o  112478962961147124edd43549aedd1a335e44bf B remote/create_bookmark
+  o  80521a640a0c8f51dcc128c2658b224d595840ac B remote/create_bookmark
   │
-  o  426bada5c67598ca65036d57d9e4b64b0c1ce7a0 A
+  o  20ca2a4749a439b459125ef0f6a4f26e88ee7538 A
   

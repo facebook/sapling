@@ -45,38 +45,32 @@ Custom smartlog
   > }
 
 Initialize test repo.
-  $ hginit_treemanifest repo
-  $ cd repo
-  $ mkcommit base_commit
-  $ hg log -T '{short(node)}\n'
-  8b2dca0c8a72
-
+  $ testtool_drawdag -R repo --print-hg-hashes << EOF
+  > base_commit
+  > # bookmark: base_commit master_bookmark
+  > EOF
+  base_commit=eb9c16dd0f62fa641290156c4988cf35c48c5fbe
 
 Import and start mononoke
-  $ cd $TESTTMP
+  $ start_and_wait_for_mononoke_server
   $ hg clone -q mono:repo client1 --noupdate
   $ hg clone -q mono:repo client2 --noupdate
-  $ blobimport repo/.hg repo
-  $ start_and_wait_for_mononoke_server
+
 Test mutations on client 1
   $ cd client1
-  $ hg up 8b2dca0c8a72 -q
-  DEBUG pull::httpbookmarks: edenapi fetched bookmarks: {'master_bookmark': None}
-  DEBUG pull::httphashlookup: edenapi hash lookups: ['8b2dca0c8a726d66bf26d47835a356cc4286facd']
-  DEBUG pull::httpgraph: edenapi fetched 1 graph nodes
-  DEBUG pull::httpgraph: edenapi fetched graph with known 0 draft commits
+  $ hg up eb9c16dd0f62 -q
   $ hg cloud join -q
   $ mkcommitedenapi A
   $ hg log -T{node} -r .
-  929f2b9071cf032d9422b3cce9773cbe1c574822 (no-eol)
+  88be7633b9a1204e3f5746bb619e8acacf4bb742 (no-eol)
   $ hg cloud upload -q
   $ hg debugapi -e commitmutations -i '["929f2b9071cf032d9422b3cce9773cbe1c574822"]'
   []
   $ hg metaedit -r . -m new_message
   $ hg log -T{node} -r .
-  f643b098cd183f085ba3e6107b6867ca472e87d1 (no-eol)
+  7dfd038512d12efc5be9148650e7043f3516f458 (no-eol)
   $ hg cloud upload -q
-  $ hg debugapi -e commitmutations -i '["f643b098cd183f085ba3e6107b6867ca472e87d1"]'
+  $ hg debugapi -e commitmutations -i '["7dfd038512d12efc5be9148650e7043f3516f458"]'
   [{"op": "metaedit",
     "tz": 0,
     "time": 0,
@@ -86,22 +80,22 @@ Test mutations on client 1
              116],
     "split": [],
     "extras": [],
-    "successor": bin("f643b098cd183f085ba3e6107b6867ca472e87d1"),
-    "predecessors": [bin("929f2b9071cf032d9422b3cce9773cbe1c574822")]}]
+    "successor": bin("7dfd038512d12efc5be9148650e7043f3516f458"),
+    "predecessors": [bin("88be7633b9a1204e3f5746bb619e8acacf4bb742")]}]
   $ hg debugapi -e commitmutations -i '["929f2b9071cf032d9422b3cce9773cbe1c574822"]'
   []
 Test phases from commitgraph
-  $ hg debugapi -e commitgraph -i '["f643b098cd183f085ba3e6107b6867ca472e87d1", "929f2b9071cf032d9422b3cce9773cbe1c574822"]' -i '[]' --sort
-  [{"hgid": bin("8b2dca0c8a726d66bf26d47835a356cc4286facd"),
-    "parents": [],
-    "is_draft": False},
-   {"hgid": bin("929f2b9071cf032d9422b3cce9773cbe1c574822"),
-    "parents": [bin("8b2dca0c8a726d66bf26d47835a356cc4286facd")],
+  $ hg debugapi -e commitgraph -i '["7dfd038512d12efc5be9148650e7043f3516f458", "88be7633b9a1204e3f5746bb619e8acacf4bb742"]' -i '[]' --sort
+  [{"hgid": bin("88be7633b9a1204e3f5746bb619e8acacf4bb742"),
+    "parents": [bin("eb9c16dd0f62fa641290156c4988cf35c48c5fbe")],
     "is_draft": True},
-   {"hgid": bin("f643b098cd183f085ba3e6107b6867ca472e87d1"),
-    "parents": [bin("8b2dca0c8a726d66bf26d47835a356cc4286facd")],
+   {"hgid": bin("eb9c16dd0f62fa641290156c4988cf35c48c5fbe"),
+    "parents": [],
+    "is_draft": True},
+   {"hgid": bin("7dfd038512d12efc5be9148650e7043f3516f458"),
+    "parents": [bin("eb9c16dd0f62fa641290156c4988cf35c48c5fbe")],
     "is_draft": True}]
-  $ hg debugapi -e commitmutations -i '["f643b098cd183f085ba3e6107b6867ca472e87d1", "929f2b9071cf032d9422b3cce9773cbe1c574822"]'
+  $ hg debugapi -e commitmutations -i '["7dfd038512d12efc5be9148650e7043f3516f458", "88be7633b9a1204e3f5746bb619e8acacf4bb742"]'
   [{"op": "metaedit",
     "tz": 0,
     "time": 0,
@@ -111,33 +105,36 @@ Test phases from commitgraph
              116],
     "split": [],
     "extras": [],
-    "successor": bin("f643b098cd183f085ba3e6107b6867ca472e87d1"),
-    "predecessors": [bin("929f2b9071cf032d9422b3cce9773cbe1c574822")]}]
+    "successor": bin("7dfd038512d12efc5be9148650e7043f3516f458"),
+    "predecessors": [bin("88be7633b9a1204e3f5746bb619e8acacf4bb742")]}]
   $ smartlog
-  @  f643b098cd18 'new_message'
+  @  7dfd038512d1 'new_message'
   │
-  │ x  929f2b9071cf 'A' (Rewritten using metaedit into f643b098cd18)
+  │ x  88be7633b9a1 'A' (Rewritten using metaedit into 7dfd038512d1)
   ├─╯
-  o  8b2dca0c8a72 'base_commit'
+  o  eb9c16dd0f62 'base_commit'
   
+
 
 Test how they are propagated to client 2
   $ cd ../client2
   $ hg debugchangelog --migrate lazy
-  $ hg pull -r f643b098cd18 -q
-  DEBUG pull::httpbookmarks: edenapi fetched bookmarks: {'master_bookmark': None}
-  DEBUG pull::httphashlookup: edenapi hash lookups: ['f643b098cd183f085ba3e6107b6867ca472e87d1']
-  DEBUG pull::httpgraph: edenapi fetched 2 graph nodes
+  $ hg pull -r 7dfd038512d1 -q
+  DEBUG pull::httpbookmarks: edenapi fetched bookmarks: {'master_bookmark': 'eb9c16dd0f62fa641290156c4988cf35c48c5fbe'}
+  DEBUG pull::fastpath: master_bookmark: eb9c16dd0f62fa641290156c4988cf35c48c5fbe (unchanged)
+  DEBUG pull::httphashlookup: edenapi hash lookups: ['7dfd038512d12efc5be9148650e7043f3516f458']
+  DEBUG pull::httpgraph: edenapi fetched 1 graph nodes
   DEBUG pull::httpgraph: edenapi fetched graph with known 1 draft commits
-  $ hg pull -r 929f2b9071cf -q
-  DEBUG pull::httpbookmarks: edenapi fetched bookmarks: {'master_bookmark': None}
-  DEBUG pull::httphashlookup: edenapi hash lookups: ['929f2b9071cf032d9422b3cce9773cbe1c574822']
+  $ hg pull -r 88be7633b9a1 -q
+  DEBUG pull::httpbookmarks: edenapi fetched bookmarks: {'master_bookmark': 'eb9c16dd0f62fa641290156c4988cf35c48c5fbe'}
+  DEBUG pull::fastpath: master_bookmark: eb9c16dd0f62fa641290156c4988cf35c48c5fbe (unchanged)
+  DEBUG pull::httphashlookup: edenapi hash lookups: ['88be7633b9a1204e3f5746bb619e8acacf4bb742']
   DEBUG pull::httpgraph: edenapi fetched 1 graph nodes
   DEBUG pull::httpgraph: edenapi fetched graph with known 1 draft commits
   $ smartlog
-  x  929f2b9071cf 'A' (Rewritten using metaedit into f643b098cd18)
+  x  88be7633b9a1 'A' (Rewritten using metaedit into 7dfd038512d1)
   │
-  │ o  f643b098cd18 'new_message'
+  │ o  7dfd038512d1 'new_message'
   ├─╯
-  o  8b2dca0c8a72 'base_commit'
+  o  eb9c16dd0f62 'base_commit'
   
