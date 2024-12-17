@@ -18,7 +18,7 @@ blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
 cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
 clap = { version = "4.5.20", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 context = { version = "0.1.0", path = "../../server/context" }
-criterion = "=0.3.1"
+criterion = "0.5.1"
 environment = { version = "0.1.0", path = "../../cmdlib/environment" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }

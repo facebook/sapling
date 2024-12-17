@@ -66,7 +66,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<(), Error> {
         criterion = criterion.save_baseline(baseline.to_string());
     }
     if let Some(baseline) = &args.use_baseline {
-        criterion = criterion.retain_baseline(baseline.to_string());
+        criterion = criterion.retain_baseline(baseline.to_string(), true);
     }
 
     for filter in args.filter.iter() {
