@@ -15,7 +15,6 @@ dott_test(
             ],
         ),
     deps = [
-        "//eden/mononoke:blobimport",
         "//eden/mononoke:blobstore_healer",
         "//eden/mononoke:mononoke",
         "//eden/mononoke/tests/integration:urlencode",
