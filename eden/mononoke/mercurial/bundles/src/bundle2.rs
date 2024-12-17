@@ -85,13 +85,10 @@ where
             yield StreamEvent::Next(Bundle2Item::Start(start));
 
             while let Some(res) = stream.try_next().await? {
-                eprintln!("XXXX {:?}", res);
                 match res {
                     Err(e) => match e.downcast::<ErrorKind>() {
                         Ok(ek) => {
-                            eprintln!("IS EK");
                             if ek.is_app_error() {
-                                eprintln!("IS AE");
                                 if let Some(app_errors) = app_errors.as_ref() {
                                     app_errors.lock().unwrap().push(ek);
                                 }
