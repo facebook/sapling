@@ -18,7 +18,6 @@ use edenfs_client::EdenFsInstance;
 #[cfg(windows)]
 use edenfs_utils::find_python;
 use hg_util::path::expand_path;
-use thrift_types::edenfs::GetConfigParams;
 use thrift_types::edenfs_config::ConfigSourceType;
 
 use crate::ExitCode;
@@ -204,10 +203,7 @@ pub struct FsConfigCmd {
 impl crate::Subcommand for FsConfigCmd {
     async fn run(&self) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
-        let client = instance.connect(None).await?;
-
-        let params: GetConfigParams = Default::default();
-        let config_data = client.getConfig(&params).await?;
+        let config_data = instance.get_config_default().await?;
 
         let mut current_section: Option<String> = None;
 

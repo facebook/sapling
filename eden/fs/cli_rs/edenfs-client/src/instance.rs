@@ -37,6 +37,7 @@ use thrift_streaming_thriftclients::build_StreamingEdenService_client;
 #[cfg(fbcode_build)]
 use thrift_types::edenfs::ChangesSinceV2Params;
 use thrift_types::edenfs::DaemonInfo;
+use thrift_types::edenfs::GetConfigParams;
 use thrift_types::edenfs::GetCurrentSnapshotInfoRequest;
 use thrift_types::edenfs::GetScmStatusParams;
 use thrift_types::edenfs::MountId;
@@ -538,6 +539,19 @@ impl EdenFsInstance {
             .with_context(|| "failed remove bind mount thrift call")?;
 
         Ok(())
+    }
+
+    pub async fn get_config_default(&self) -> Result<thrift_types::edenfs_config::EdenConfigData> {
+        let client = self
+            .connect(None)
+            .await
+            .with_context(|| "Unable to connect to EdenFS daemon")?;
+
+        let params: GetConfigParams = Default::default();
+        client
+            .getConfig(&params)
+            .await
+            .map_err(|_| EdenFsError::Other(anyhow!("failed to get default eden config data")))
     }
 }
 
