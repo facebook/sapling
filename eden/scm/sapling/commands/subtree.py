@@ -204,6 +204,12 @@ def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path):
             cmdutil.registerdiffgrafts([to_path], [from_path], merge_base_ctx)
         return merge_base_ctx
 
+    def get_p1(dag, node):
+        try:
+            return dag.parentnames(node)[0]
+        except IndexError:
+            return None
+
     dag = repo.changelog.dag
     if from_path == to_path:
         nodes = [from_ctx.node(), to_ctx.node()]
@@ -248,12 +254,8 @@ def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path):
             # add next node to the list
             heads[i] = next(iters[i])
         except StopIteration:
-            try:
-                # no branch info, use the first parent
-                p1 = dag.parentnames(heads[i])[0]
-                return registerdiffgrafts(repo[p1], i)
-            except IndexError:
-                return repo[node.nullid]
+            p1 = get_p1(dag, heads[i]) or node.nullid
+            return registerdiffgrafts(repo[p1], i)
 
     # should never reach here
     raise error.Abort("cannot find a merge base")
