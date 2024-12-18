@@ -408,6 +408,7 @@ test subtree merge
   $ hg subtree copy -r $B --from-path foo --to-path bar -m 'subtree copy foo -> bar'
   copying foo to bar
   $ hg subtree merge -r $D --from-path foo --to-path bar
+  computing merge base (timeout: 120 seconds)...
   merge base: 55ff286fb56f
   merging bar/x and foo/x to bar/x
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
@@ -474,6 +475,7 @@ test subtree merge with normal copy
   > EOS
   $ hg go $C -q
   $ hg subtree merge -r $C --from-path foo --to-path bar
+  computing merge base (timeout: 120 seconds)...
   merge base: 2f10237b4399
   merging bar/x and foo/x to bar/x
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
@@ -507,6 +509,7 @@ test subtree merge with no copy
   > EOS
   $ hg go $C -q
   $ hg subtree merge -r $C --from-path foo --to-path bar
+  computing merge base (timeout: 120 seconds)...
   merge base: 2f10237b4399
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
@@ -542,7 +545,8 @@ test subtree merge with no common base
   │
   o  2f10237b4399 A
   $ hg subtree merge -r $C --from-path foo --to-path bar
-  merge base: 000000000000
+  computing merge base (timeout: 120 seconds)...
+  merge base: 19915b669dd5
   merging bar/x and foo/x to bar/x
   warning: 1 conflicts while merging bar/x! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved

@@ -146,6 +146,7 @@ test fold subtree copy and subtree merge commits
   o  b4cb27eee4e2 A
   $ hg go -q ee6785824a72
   $ hg subtree merge -r fe8ce627cbe8 --from-path foo --to-path bar
+  computing merge base (timeout: 120 seconds)...
   merge base: b4cb27eee4e2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
