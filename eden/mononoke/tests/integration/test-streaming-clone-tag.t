@@ -12,15 +12,12 @@
   $ setconfig clone.use-rust=true clone.use-commit-graph=false
 
 setup configuration
-  $ default_setup_blobimport "blob_files"
-  hg repo
-  o  C [draft;rev=2;26805aba1e60]
-  │
-  o  B [draft;rev=1;112478962961]
-  │
-  o  A [draft;rev=0;426bada5c675]
-  $
-  blobimporting
+  $ BLOB_TYPE="blob_files" default_setup_drawdag
+  A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
+  B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
+  C=e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
+  $ cd $TESTTMP
+  $ hg clone mono:repo repo -q
 
 Try creating with a tag
   $ TAG=another_mainline
@@ -31,8 +28,10 @@ Try creating with a tag
   * inserting into streaming clone database, tag: another_mainline, repo: repo (glob)
   * current max chunk num is None, tag: another_mainline, repo: repo (glob)
 
+
   $ start_and_wait_for_mononoke_server
 Clone - check that no bytes were transferred from streaming clone because no tags were used
+  $ cd $TESTTMP
   $ hg clone mono:repo repo-streamclone
   Cloning repo into $TESTTMP/repo-streamclone
   fetching changelog
@@ -45,14 +44,14 @@ Clone - check that no bytes were transferred from streaming clone because no tag
   $ diff repo-streamclone/.hg/store/00changelog.i repo/.hg/store/00changelog.i
   $ diff repo-streamclone/.hg/store/00changelog.d repo/.hg/store/00changelog.d
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select tag, idx_blob_name, data_blob_name from streaming_changelog_chunks where repo_id = 0 order by tag, chunk_num asc;"
-  another_mainline|streaming_clone-chunk000000-d1de0dadf747295f0e1ea4db829b8e87437476f94cefcb948cd3b366b599d49e5a7c74b2777372b74c4962c513f71c72252bf673a8c880387ea84a5317abb14b-idx|streaming_clone-chunk000000-a5750ff674daa16106403d02aebff7d19ad96a33886c026427002f30c9eea7bac76387c4dd5f5c42a9e3ab1ecd9c9b5d3c2a079406e127146bddd9dcc8c63e23-data
+  another_mainline|streaming_clone-chunk000000-a7711e0aa3614708cef4ee3f0ea0f9eafd3473ed38f5dd54a1cf05dc81f14460270ba3928982ad7bd0dc5d767dad4527f7da9d8c5bd242ce26dc91e0296c5476-idx|streaming_clone-chunk000000-9e7ee04d9382d5fec57c9aac2c515065f50571b9ac8317a106afcbd5e18398ff894236cf450e76591710cab7dd0c293c3eeadc64a38e4f4fc3f2d433ede18bcf-data
 
 Now clone with tag, make sure that streaming clone was used
   $ hg clone mono:repo repo-streamclone-tag --config stream_out_shallow.tag="$TAG"
   Cloning repo into $TESTTMP/repo-streamclone-tag
   fetching changelog
-  2 files to transfer, 357 bytes of data
-  transferred 357 bytes in * seconds (*) (glob)
+  2 files to transfer, 363 bytes of data
+  transferred 363 bytes in * seconds (*) (glob)
   fetching selected remote bookmarks
   Checking out 'master_bookmark'
   3 files updated
