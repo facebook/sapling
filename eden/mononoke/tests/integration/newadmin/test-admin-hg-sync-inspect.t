@@ -5,8 +5,8 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
-  $ BLOB_TYPE="blob_files" quiet default_setup_blobimport
+  $ BLOB_TYPE="blob_files" quiet default_setup_drawdag
 
   $ mononoke_admin hg-sync -R repo inspect 1
   Bookmark: master_bookmark
-  Created at: c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd
+  Created at: e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2

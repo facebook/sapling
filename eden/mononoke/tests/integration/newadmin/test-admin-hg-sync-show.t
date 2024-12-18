@@ -5,10 +5,10 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
-  $ BLOB_TYPE="blob_files" quiet default_setup_blobimport
+  $ BLOB_TYPE="blob_files" quiet default_setup_drawdag
 
   $ mononoke_admin hg-sync -R repo show
-  1 (master_bookmark) 26805aba1e600a82e93661149f2313866a221a7b blobimport * (glob)
+  1 (master_bookmark) d3b399ca8757acdb81c3681b052eb978db6768d8 testmove * (glob)
 
   $ mononoke_admin hg-sync -R repo last-processed --set 1
   No counter found for repo (0)
