@@ -37,9 +37,7 @@ use edenfs_client::checkout::EdenFsCheckout;
 use edenfs_client::redirect;
 use edenfs_client::redirect::get_effective_redirections;
 use edenfs_client::redirect::scratch::usage_for_dir;
-use edenfs_client::EdenFsClient;
 use edenfs_client::EdenFsInstance;
-use edenfs_utils::bytes_from_path;
 use edenfs_utils::get_buck_command;
 use edenfs_utils::get_env_with_buck_version;
 use edenfs_utils::get_environment_suitable_for_subprocess;
@@ -47,9 +45,6 @@ use edenfs_utils::path_from_bytes;
 use serde::Serialize;
 use subprocess::Exec;
 use subprocess::Redirection as SubprocessRedirection;
-use thrift_types::edenfs::GetCurrentSnapshotInfoRequest;
-use thrift_types::edenfs::GetScmStatusParams;
-use thrift_types::edenfs::MountId;
 use thrift_types::edenfs::RootIdOptions;
 
 use crate::ExitCode;
@@ -274,42 +269,29 @@ impl fmt::Display for AggregatedUsageCounts {
     }
 }
 
-async fn ignored_usage_counts_for_mount(
-    checkout: &EdenFsCheckout,
-    client: &EdenFsClient,
-) -> Result<u64> {
-    let mount_point = bytes_from_path(checkout.path())?;
-
+async fn ignored_usage_counts_for_mount(checkout: &EdenFsCheckout) -> Result<u64> {
     // FilteredFS mounts require a filterId to be passed into status calls
     let mut root_id_options = RootIdOptions {
         filterId: None,
         ..Default::default()
     };
-    let snapshot_info_params = GetCurrentSnapshotInfoRequest {
-        mountId: MountId {
-            mountPoint: mount_point,
-            ..Default::default()
-        },
-        cri: None,
-        ..Default::default()
-    };
-    let snapshot_info = client.getCurrentSnapshotInfo(&snapshot_info_params).await;
+
+    let edenfs_instance = EdenFsInstance::global();
+    let snapshot_info = edenfs_instance
+        .get_current_snapshot_info(checkout.path())
+        .await;
+
     if let Ok(snapshot_info) = snapshot_info {
         root_id_options.filterId = snapshot_info.filterId;
     }
 
-    let scm_status = client
-        .getScmStatusV2(&GetScmStatusParams {
-            mountPoint: bytes_from_path(checkout.path())?,
-            commit: checkout
-                .get_snapshot()?
-                .working_copy_parent
-                .as_bytes()
-                .to_vec(),
-            listIgnored: true,
-            rootIdOptions: Some(root_id_options),
-            ..Default::default()
-        })
+    let scm_status = edenfs_instance
+        .get_scm_status_v2(
+            checkout.path(),
+            checkout.get_snapshot()?.working_copy_parent,
+            true,
+            Some(root_id_options),
+        )
         .await?
         .status;
 
@@ -683,7 +665,6 @@ fn get_redirect_usage_count(
 impl crate::Subcommand for DiskUsageCmd {
     async fn run(&self) -> Result<ExitCode> {
         let instance = EdenFsInstance::global();
-        let client = instance.connect(None).await?;
 
         let mounts = self
             .get_mounts(instance)
@@ -730,8 +711,7 @@ impl crate::Subcommand for DiskUsageCmd {
             mount_failed_file_checks.extend(failed_file_checks);
 
             // GET SUMMARY INFO for ignored counts
-            aggregated_usage_counts.ignored +=
-                ignored_usage_counts_for_mount(checkout, &client).await?;
+            aggregated_usage_counts.ignored += ignored_usage_counts_for_mount(checkout).await?;
         }
 
         for fsck_dir in fsck_dirs.iter() {
