@@ -14,7 +14,7 @@ from __future__ import absolute_import
 
 import subprocess
 import textwrap
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple, Union
 
 import bindings
 
@@ -312,7 +312,7 @@ def gitcommittext(
     parents: List[bytes],
     desc: str,
     user: str,
-    date: Optional[str],
+    date: Optional[Union[str, Tuple[Union[int, float], int]]],
     extra: Optional[Dict[str, str]],
     gpgkeyid: Optional[str] = None,
 ) -> bytes:
@@ -390,12 +390,14 @@ def gitcommittext(
     if date != authordate and date != committerdate:
         authordate = date
 
+    author_time, author_tz = util.parsedate(authordate)
+
     # see Rust format-util GitCommitFields for available fields
     fields = {
         "tree": tree,
         "parents": parents,
         "author": user,
-        "date": util.parsedate(authordate),
+        "date": (int(author_time), author_tz),
         "committer": committer,
         "committer_date": util.parsedate(committerdate),
         "message": desc,

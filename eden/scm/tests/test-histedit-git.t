@@ -15,25 +15,18 @@ setup repo
 
 folding should work
 
-FIXME: histedit should work
-  $ hg histedit -q --commands - 2>&1 << EOF | tail -n 5
+  $ hg histedit --commands - << EOF
   > pick fd2a67d81220 'A1'
   > pick bc8bd49c677f 'A2'
   > fold 081c9e396fa1 'A3'
   > pick 91ad706dafee 'A4'
   > EOF
-    File *, in add (glob)
-      text = gitcommittext(
-    File *, in gitcommittext (glob)
-      text = to_text(fields).encode()
-  TypeError: 'float' object cannot be interpreted as an integer
   $ hg st
-  A A3
   $ tglog
-  o  91ad706dafee 'A4'
+  @  17e3aa7dc15f 'A4'
   │
-  o  081c9e396fa1 'A3'
+  o  594d4e89c0ff 'A2
   │
-  @  bc8bd49c677f 'A2'
-  │
+  │  ***
+  │  A3'
   o  fd2a67d81220 'A1'
