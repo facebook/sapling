@@ -20,34 +20,20 @@ setup configuration
   $ setup_commitsyncmap
   $ setup_configerator_configs
 
-  $ cd "$TESTTMP"
-  $ hginit_treemanifest large
-  $ cd large
-  $ mkdir -p .fbsource-rest/arvr
-  $ echo 1 > .fbsource-rest/arvr/1
-  $ hg add .fbsource-rest/arvr/1
-  $ hg commit -m 'equivalent wc'
-  $ LARGE_EQ_WC_HASH="$(hg log -r . -T '{node}')"
-  $ hg up -q null
-  $ echo 1 > 1
-  $ hg add 1
-  $ hg ci -m 'not sync candidate'
-  $ NOT_SYNC_CANDIDATE_HASH="$(hg log -r . -T '{node}')"
+  $ testtool_drawdag -R large --print-hg-hashes <<EOF
+  > NOT_SYNC_CANDIDATE_HASH
+  > |
+  > LARGE_EQ_WC_HASH
+  > # modify: LARGE_EQ_WC_HASH "fbsource-rest/arvr/1" "1"
+  > EOF
+  LARGE_EQ_WC_HASH=5fe58731966e85c3b25fbb512863c4f17dd0d364
+  NOT_SYNC_CANDIDATE_HASH=f2b4261b972e70228a40203a1bf10b52c8735057
 
-
-  $ cd "$TESTTMP"
-  $ hginit_treemanifest small
-  $ cd small
-  $ mkdir arvr
-  $ echo 1 > arvr/1
-  $ hg add arvr/1
-  $ hg commit -m 'equivalent wc'
-  $ SMALL_EQ_WC_HASH="$(hg log -r . -T '{node}')"
-
-blobimport hg servers repos into Mononoke repos
-  $ cd "$TESTTMP"
-  $ REPOID=0 blobimport large/.hg large
-  $ REPOID=1 blobimport small/.hg small
+  $ testtool_drawdag -R small --print-hg-hashes <<EOF
+  > SMALL_EQ_WC_HASH
+  > # modify: LARGE_EQ_WC_HASH "arvr/1" "1"
+  > EOF
+  SMALL_EQ_WC_HASH=f33b9d91ec2d0c6476e6acd383f02fb4ccb570d2
 
 Try to insert with invalid version name
   $ mononoke_admin cross-repo --source-repo-id 0 --target-repo-id 1 insert equivalent-working-copy \
@@ -60,7 +46,7 @@ Now insert with valid version name
   > --source-commit-id "$LARGE_EQ_WC_HASH" --target-commit-id "$SMALL_EQ_WC_HASH" --version-name TEST_VERSION_NAME 2>&1
   * successfully inserted equivalent working copy (glob)
   $ mononoke_admin cross-repo --source-repo-id 0 --target-repo-id 1 map -i "$LARGE_EQ_WC_HASH" 2>&1 | grep EquivalentWorking
-  EquivalentWorkingCopyAncestor(ChangesetId(Blake2(a246023ccc3b1dc56076a2524cd644fb4cb4a99ee2141b2277677f9ce82f0f13)), CommitSyncConfigVersion("TEST_VERSION_NAME"))
+  EquivalentWorkingCopyAncestor(ChangesetId(Blake2(e306c30d70aad31205b4bbfa9cbf620531da64cbec56593acda219cd85edcd17)), CommitSyncConfigVersion("TEST_VERSION_NAME"))
 
 Now insert not sync candidate entry
   $ mononoke_admin cross-repo --source-repo-id 0 --target-repo-id 1 insert not-sync-candidate \
