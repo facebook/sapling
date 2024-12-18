@@ -257,13 +257,14 @@ def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path):
                     i = 0
 
             # check merge info
-            for merge in get_subtree_merges(repo, heads[i]):
+            curr_node = heads[i]
+            for merge in get_subtree_merges(repo, curr_node):
                 if merge.to_path == paths[i] and merge.from_path == paths[1 - i]:
                     merge_base_ctx = repo[merge.from_commit]
                     return registerdiffgrafts(merge_base_ctx, i)
 
             # check branch info
-            for branch in get_subtree_branches(repo, heads[i]):
+            for branch in get_subtree_branches(repo, curr_node):
                 if branch.to_path == paths[i] and branch.from_path == paths[1 - i]:
                     merge_base_ctx = repo[branch.from_commit]
                     return registerdiffgrafts(merge_base_ctx, i)
@@ -272,7 +273,7 @@ def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path):
                 # add next node to the list
                 heads[i] = next(iters[i])
             except StopIteration:
-                p1 = get_p1(dag, heads[i]) or heads[i]
+                p1 = get_p1(dag, curr_node) or curr_node
                 return registerdiffgrafts(repo[p1], i)
 
     # merge base computation timed out
