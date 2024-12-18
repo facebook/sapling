@@ -2380,7 +2380,7 @@ def _update(
             followcopies = False
 
         ### calculate phase
-        with progress.spinner(repo.ui, "calculating"):
+        with progress.spinner(repo.ui, "calculating merge actions"):
             actionbyfile = calculateupdates(
                 repo,
                 wc,
