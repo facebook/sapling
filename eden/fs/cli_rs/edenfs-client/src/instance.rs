@@ -479,6 +479,66 @@ impl EdenFsInstance {
             .await
             .map_err(|_| EdenFsError::Other(anyhow!("failed to get scm status v2 result")))
     }
+
+    #[cfg(target_os = "linux")]
+    pub async fn add_bind_mount(
+        &self,
+        mount_path: &Path,
+        repo_path: &Path,
+        target_path: &Path,
+    ) -> Result<()> {
+        let mount_path = bytes_from_path(mount_path.to_path_buf()).with_context(|| {
+            format!(
+                "Failed to get mount point '{}' as str",
+                mount_path.display()
+            )
+        })?;
+
+        let repo_path = bytes_from_path(repo_path.to_path_buf()).with_context(|| {
+            format!("Failed to get repo point '{}' as str", repo_path.display())
+        })?;
+
+        let target_path = bytes_from_path(target_path.to_path_buf())
+            .with_context(|| format!("Failed to get target '{}' as str", target_path.display()))?;
+
+        let client = self
+            .connect(None)
+            .await
+            .with_context(|| "Unable to connect to EdenFS daemon")?;
+
+        client
+            .addBindMount(&mount_path, &repo_path, &target_path)
+            .await
+            .with_context(|| "failed add bind mount thrift call")?;
+
+        Ok(())
+    }
+
+    #[cfg(target_os = "linux")]
+    pub async fn remove_bind_mount(&self, mount_path: &Path, repo_path: &Path) -> Result<()> {
+        let mount_path = bytes_from_path(mount_path.to_path_buf()).with_context(|| {
+            format!(
+                "Failed to get mount point '{}' as str",
+                mount_path.display()
+            )
+        })?;
+
+        let repo_path = bytes_from_path(repo_path.to_path_buf()).with_context(|| {
+            format!("Failed to get repo point '{}' as str", repo_path.display())
+        })?;
+
+        let client = self
+            .connect(None)
+            .await
+            .with_context(|| "Unable to connect to EdenFS daemon")?;
+
+        client
+            .removeBindMount(&mount_path, &repo_path)
+            .await
+            .with_context(|| "failed remove bind mount thrift call")?;
+
+        Ok(())
+    }
 }
 
 pub trait DaemonHealthy {

@@ -418,7 +418,8 @@ impl Redirection {
             // list of bind mounts, we first speculatively try asking the
             // eden daemon to unmount it first, ignoring any error that
             // might raise.
-            _remove_bind_mount_thrift_call(checkout_path, &self.repo_path)
+            EdenFsInstance::global()
+                .remove_bind_mount(checkout_path, &self.repo_path)
                 .await
                 .ok();
         }
@@ -434,7 +435,8 @@ impl Redirection {
                     abs_mount_path_in_repo.display()
                 )
             })?;
-        _add_bind_mount_thrift_call(checkout_path, &self.repo_path, target)
+        EdenFsInstance::global()
+            .add_bind_mount(checkout_path, &self.repo_path, target)
             .await
             .with_context(|| {
                 format!(
@@ -625,7 +627,8 @@ impl Redirection {
 
     #[cfg(target_os = "linux")]
     async fn _bind_unmount_linux(&self, checkout: &EdenFsCheckout) -> Result<()> {
-        _remove_bind_mount_thrift_call(&checkout.path(), &self.repo_path)
+        EdenFsInstance::global()
+            .remove_bind_mount(&checkout.path(), &self.repo_path)
             .await
             .with_context(|| {
                 format!(
@@ -1084,71 +1087,6 @@ where
     }
 
     Ok(map)
-}
-
-#[cfg(target_os = "linux")]
-async fn _add_bind_mount_thrift_call(
-    mount_path: &Path,
-    repo_path: &Path,
-    target: &Path,
-) -> Result<()> {
-    let client = EdenFsInstance::global()
-        .connect(None)
-        .await
-        .with_context(|| "Unable to connect to EdenFS for add_bind_mount thrift call")?;
-    let co_path = mount_path
-        .to_str()
-        .with_context(|| {
-            format!(
-                "Failed to get mount point '{}' as str",
-                mount_path.display()
-            )
-        })?
-        .as_bytes()
-        .to_vec();
-    let repo_path = repo_path
-        .to_str()
-        .with_context(|| format!("Failed to get repo path '{}' as str", repo_path.display()))?
-        .as_bytes()
-        .to_vec();
-    let target_path = target
-        .to_str()
-        .with_context(|| format!("Failed to get target '{}' as str", target.display()))?
-        .as_bytes()
-        .to_vec();
-    client
-        .addBindMount(&co_path, &repo_path, &target_path)
-        .await
-        .with_context(|| "failed add bind mount thrift call")?;
-    Ok(())
-}
-
-#[cfg(target_os = "linux")]
-async fn _remove_bind_mount_thrift_call(mount_path: &Path, repo_path: &Path) -> Result<()> {
-    let client = EdenFsInstance::global()
-        .connect(None)
-        .await
-        .with_context(|| "Unable to connect to EdenFS for remove_bind_mount thrift call")?;
-    let co_path = mount_path
-        .to_str()
-        .with_context(|| {
-            format!(
-                "Failed to get mount point '{}' as str",
-                mount_path.display()
-            )
-        })?
-        .as_bytes()
-        .to_vec();
-    let repo_path = repo_path
-        .to_str()
-        .with_context(|| format!("Failed to get repo path '{}' as str", repo_path.display()))?
-        .as_bytes()
-        .to_vec();
-    client
-        .removeBindMount(&co_path, &repo_path)
-        .await
-        .with_context(|| "failed remove bind mount thrift call")?;
-    Ok(())
 }
 
 /// Returns the explicitly configured redirection configuration.
