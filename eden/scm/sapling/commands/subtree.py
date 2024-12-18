@@ -17,14 +17,18 @@ from .. import (
     node,
     pathutil,
     progress,
+    registrar,
     scmutil,
 )
 from ..cmdutil import (
     commitopts,
     commitopts2,
+    diffopts,
+    diffopts2,
     dryrunopts,
     mergetoolopts,
     subtree_path_opts,
+    walkopts,
 )
 from ..i18n import _
 from ..utils import subtreeutil
@@ -40,11 +44,13 @@ from .cmdtable import command
 MAX_SUBTREE_COPY_FILE_COUNT = 10_000
 MERGE_BASE_TIMEOUT_SECS = 120
 
+readonly = registrar.command.readonly
+
 
 @command(
     "subtree",
     [],
-    _("<copy|graft|merge>"),
+    _("<copy|graft|merge|diff>"),
 )
 def subtree(ui, repo, *pats, **opts) -> None:
     """subtree (directory or file) branching in monorepo"""
@@ -178,6 +184,26 @@ def subtree_merge(ui, repo, **opts):
         else:
             repo.ui.status(_("(subtree merge, don't forget to commit)\n"))
         return stats[3] > 0
+
+
+@subtree_subcmd(
+    "diff",
+    [
+        ("r", "rev", [], _("revision"), _("REV")),
+    ]
+    + diffopts
+    + diffopts2
+    + walkopts
+    + subtree_path_opts,
+    _("[OPTION]... ([-r REV1 [-r REV2]])"),
+    inferrepo=True,
+    cmdtype=readonly,
+)
+def subtree_diff(ui, repo, *args, **opts):
+    """show differences between directory branches"""
+    from sapling.commands import do_diff
+
+    return do_diff(ui, repo, *args, **opts)
 
 
 def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path):

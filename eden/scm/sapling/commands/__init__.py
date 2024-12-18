@@ -2193,6 +2193,10 @@ def diff(ui, repo, *pats, **opts):
     Returns 0 on success.
     """
 
+    do_diff(ui, repo, *pats, **opts)
+
+
+def do_diff(ui, repo, *pats, **opts):
     revs = opts.get("rev")
     change = opts.get("change")
     stat = opts.get("stat")
