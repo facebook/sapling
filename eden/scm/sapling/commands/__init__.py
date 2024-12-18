@@ -2218,6 +2218,8 @@ def do_diff(ui, repo, *pats, **opts):
 
     from_paths = scmutil.rootrelpaths(ctx1, opts.get("from_path"))
     to_paths = scmutil.rootrelpaths(ctx1, opts.get("to_path"))
+    subtreeutil.validate_path_exist(ui, ctx1, from_paths, abort_on_missing=True)
+    subtreeutil.validate_path_exist(ui, ctx2, to_paths, abort_on_missing=True)
     cmdutil.registerdiffgrafts(from_paths, to_paths, ctx1)
 
     if onlyfilesinrevs:

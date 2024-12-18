@@ -11,6 +11,14 @@
   >    # A/bar/onlybar = onlybar\n
   > EOS
 
+validate from/to paths:
+  $ hg subtree diff -r $A -r $A --from-path foo --to-path barbar
+  abort: path 'barbar' does not exist in commit 112bacaa6bb9
+  [255]
+  $ hg subtree diff -r $A -r $A --from-path foofoo --to-path bar
+  abort: path 'foofoo' does not exist in commit 112bacaa6bb9
+  [255]
+
 Basic diff with add, modify, and remove:
   $ hg subtree diff -r $A -r $A --from-path foo --to-path bar
   diff --git a/foo/differs b/bar/differs
