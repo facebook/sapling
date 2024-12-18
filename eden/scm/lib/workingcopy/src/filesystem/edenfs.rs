@@ -22,6 +22,8 @@ use configmodel::ConfigExt;
 use context::CoreContext;
 use edenfs_client::EdenFsClient;
 use edenfs_client::FileStatus;
+use fs_err::remove_file;
+use fs_err::File;
 use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
 use pathmatcher::DynMatcher;
@@ -119,13 +121,11 @@ impl EdenFileSystem {
         let mut propagate_derace_error = false;
 
         if let DeraceMode::On(timeout, fatal) = self.derace_mode {
+            let touch_path = self.vfs.join(derace_touch_file);
             // Note: this touch file approach will be ineffective if the touch file
             // already exists. The assumption is that will be very rare. We clean up the
             // touch file aggressively below.
-            if let Err(err) = self
-                .vfs
-                .write(derace_touch_file, b"", vfs::UpdateFlag::Regular)
-            {
+            if let Err(err) = File::create(&touch_path) {
                 tracing::trace!(target: "eden_derace_info", eden_derace_error="error creating");
                 tracing::error!(?err, %derace_touch_file, "error writing derace touch file");
             } else {
@@ -142,7 +142,8 @@ impl EdenFileSystem {
             // Handle derace touch file regardless of whether we created it. We want to
             // ignore it and clean it up if it leaked previously.
             if status_map.remove(derace_touch_file).is_some() {
-                if let Err(err) = self.vfs.remove(derace_touch_file) {
+                let touch_path = self.vfs.join(derace_touch_file);
+                if let Err(err) = remove_file(&touch_path) {
                     tracing::trace!(target: "eden_derace_info", eden_derace_error="error removing");
                     tracing::error!(?err, %derace_touch_file, "error removing derace touch file");
                 }
