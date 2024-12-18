@@ -10,7 +10,6 @@ use std::collections::HashSet;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::Loadable;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use context::CoreContext;
@@ -19,20 +18,10 @@ use edenapi::HttpClientBuilder;
 use edenapi::HttpClientConfig;
 use edenapi::SaplingRemoteApi;
 use edenapi_types::AnyFileContentId;
-use edenapi_types::AnyId;
-use edenapi_types::Extra;
-use edenapi_types::HgChangesetContent;
-use edenapi_types::HgFilenodeData;
-use edenapi_types::Parents;
-use edenapi_types::RepoPathBuf;
-use edenapi_types::UploadHgChangeset;
-use edenapi_types::UploadToken;
-use edenapi_types::UploadTreeEntry;
 use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use mercurial_types::blobs::HgBlobChangeset;
-use mercurial_types::fetch_manifest_envelope;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
@@ -42,6 +31,8 @@ use repo_blobstore::RepoBlobstore;
 use slog::info;
 use slog::Logger;
 use url::Url;
+
+mod util;
 
 use crate::sender::Entry;
 use crate::sender::ModernSyncSender;
@@ -142,7 +133,7 @@ impl ModernSyncSender for EdenapiSender {
             .map(|mf_id| {
                 let ctx = self.ctx.clone();
                 let repo_blobstore = self.repo_blobstore.clone();
-                async move { from_tree_to_entry(mf_id, &ctx, &repo_blobstore).await }
+                async move { util::from_tree_to_entry(mf_id, &ctx, &repo_blobstore).await }
             })
             .buffer_unordered(10)
             .try_collect::<Vec<_>>()
@@ -162,7 +153,7 @@ impl ModernSyncSender for EdenapiSender {
             .map(|file_id| {
                 let ctx = self.ctx.clone();
                 let repo_blobstore = self.repo_blobstore.clone();
-                async move { from_id_to_filenode(file_id, &ctx, &repo_blobstore).await }
+                async move { util::from_id_to_filenode(file_id, &ctx, &repo_blobstore).await }
             })
             .buffer_unordered(10)
             .try_collect::<Vec<_>>()
@@ -179,7 +170,7 @@ impl ModernSyncSender for EdenapiSender {
 
     async fn upload_hg_changeset(&self, hg_css: Vec<HgBlobChangeset>) -> Result<()> {
         let entries = stream::iter(hg_css)
-            .map(to_upload_hg_changeset)
+            .map(util::to_upload_hg_changeset)
             .try_collect::<Vec<_>>()
             .await?;
 
@@ -210,82 +201,4 @@ impl ModernSyncSender for EdenapiSender {
         info!(&self.logger, "Move bookmark response {:?}", res);
         Ok(())
     }
-}
-
-pub async fn from_tree_to_entry(
-    id: HgManifestId,
-    ctx: &CoreContext,
-    repo_blobstore: &RepoBlobstore,
-) -> Result<UploadTreeEntry> {
-    let envelope = fetch_manifest_envelope(ctx, repo_blobstore, id).await?;
-    let content = envelope.contents();
-
-    let parents = match envelope.parents() {
-        (None, None) => Parents::None,
-        (Some(p1), None) => Parents::One(p1.into()),
-        (None, Some(p2)) => Parents::One(p2.into()),
-        (Some(p1), Some(p2)) => Parents::Two(p1.into(), p2.into()),
-    };
-
-    Ok(UploadTreeEntry {
-        node_id: envelope.node_id().into(),
-        data: content.to_vec(),
-        parents,
-    })
-}
-
-pub async fn from_id_to_filenode(
-    file_id: HgFileNodeId,
-    ctx: &CoreContext,
-    repo_blobstore: &RepoBlobstore,
-) -> Result<HgFilenodeData> {
-    let file_node = file_id.load(ctx, repo_blobstore).await?;
-
-    // These tokens are mostly implemented to make sure client sends content before uplaoding filenodes
-    // but they're not really verified, given we're indeed sending the content, let's use a placeholder
-    let content_id = file_node.content_id();
-    let token = UploadToken::new_fake_token(
-        AnyId::AnyFileContentId(AnyFileContentId::ContentId(content_id.into())),
-        None,
-    );
-
-    Ok(HgFilenodeData {
-        node_id: file_id.into_nodehash().into(),
-        parents: file_node.hg_parents().into(),
-        metadata: file_node.metadata().clone().to_vec(),
-        file_content_upload_token: token,
-    })
-}
-
-pub fn to_upload_hg_changeset(hg_cs: HgBlobChangeset) -> Result<UploadHgChangeset> {
-    let extra = hg_cs
-        .extra()
-        .iter()
-        .map(|(k, v)| Extra {
-            key: k.to_vec(),
-            value: v.to_vec(),
-        })
-        .collect();
-
-    let hg_files: Result<Vec<RepoPathBuf>> = hg_cs
-        .files()
-        .iter()
-        .map(edenapi_service::utils::to_hg_path)
-        .collect();
-
-    let hg_content = HgChangesetContent {
-        parents: hg_cs.parents().into(),
-        manifestid: hg_cs.manifestid().into_nodehash().into(),
-        user: hg_cs.user().to_vec(),
-        time: hg_cs.time().timestamp_secs(),
-        tz: hg_cs.time().tz_offset_secs(),
-        extras: extra,
-        files: hg_files?,
-        message: hg_cs.message().to_vec(),
-    };
-
-    Ok(UploadHgChangeset {
-        node_id: hg_cs.get_changeset_id().into_nodehash().into(),
-        changeset_content: hg_content,
-    })
 }
