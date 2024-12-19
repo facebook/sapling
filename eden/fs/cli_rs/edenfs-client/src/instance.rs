@@ -572,6 +572,33 @@ impl EdenFsInstance {
             .map_err(|_| EdenFsError::Other(anyhow!("failed to call clearAndCompactLocalStore")))
     }
 
+    pub async fn flush_stats_now(&self, client: Option<&EdenFsClient>) -> Result<()> {
+        let client = match client {
+            Some(client) => client,
+            None => &self.get_connected_thrift_client(None).await?,
+        };
+        client
+            .flushStatsNow()
+            .await
+            .map_err(|_| EdenFsError::Other(anyhow!("failed to call flushstatsNow")))
+    }
+
+    pub async fn get_regex_counters(
+        &self,
+        arg_regex: &str,
+        client: Option<&EdenFsClient>,
+    ) -> Result<BTreeMap<String, i64>> {
+        let client = match client {
+            Some(client) => client,
+            None => &self.get_connected_thrift_client(None).await?,
+        };
+
+        client
+            .getRegexCounters(arg_regex)
+            .await
+            .map_err(|_| EdenFsError::Other(anyhow!("failed to get regex counters")))
+    }
+
     pub async fn get_connected_thrift_client(
         &self,
         timeout: Option<Duration>,

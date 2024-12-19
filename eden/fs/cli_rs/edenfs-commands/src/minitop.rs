@@ -262,7 +262,9 @@ struct ImportStat {
 async fn get_pending_import_counts(client: &EdenFsClient) -> Result<BTreeMap<String, ImportStat>> {
     let mut imports = BTreeMap::<String, ImportStat>::new();
 
-    let counters = client.getRegexCounters(PENDING_COUNTER_REGEX).await?;
+    let counters = EdenFsInstance::global()
+        .get_regex_counters(PENDING_COUNTER_REGEX, Some(client))
+        .await?;
     for import_type in IMPORT_OBJECT_TYPES {
         let counter_prefix = format!("store.sapling.pending_import.{}", import_type);
         let number_requests = counters
@@ -286,7 +288,9 @@ async fn get_pending_import_counts(client: &EdenFsClient) -> Result<BTreeMap<Str
 
 async fn get_live_import_counts(client: &EdenFsClient) -> Result<BTreeMap<String, ImportStat>> {
     let mut imports = BTreeMap::<String, ImportStat>::new();
-    let counters = client.getRegexCounters(LIVE_COUNTER_REGEX).await?;
+    let counters = EdenFsInstance::global()
+        .get_regex_counters(LIVE_COUNTER_REGEX, Some(client))
+        .await?;
     for import_type in IMPORT_OBJECT_TYPES {
         let single_prefix = format!("store.sapling.live_import.{}", import_type);
         let batched_prefix = format!("store.sapling.live_import.batched_{}", import_type);
@@ -412,7 +416,9 @@ impl Cursor {
 #[async_trait]
 impl crate::Subcommand for MinitopCmd {
     async fn run(&self) -> Result<ExitCode> {
-        let client = EdenFsInstance::global().connect(None).await?;
+        let client = EdenFsInstance::global()
+            .get_connected_thrift_client(None)
+            .await?;
         let mut tracked_processes = TrackedProcesses::new();
 
         let mut system = System::new();
@@ -434,7 +440,9 @@ impl crate::Subcommand for MinitopCmd {
             if self.interactive {
                 queue!(stdout, terminal::Clear(terminal::ClearType::All))?;
             }
-            client.flushStatsNow().await?;
+            EdenFsInstance::global()
+                .flush_stats_now(Some(&client))
+                .await?;
             system.refresh_processes();
             cursor.refresh_terminal_size()?;
 
