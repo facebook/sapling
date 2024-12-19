@@ -19,6 +19,7 @@ from .. import (
     progress,
     registrar,
     scmutil,
+    util,
 )
 from ..cmdutil import (
     commitopts,
@@ -447,6 +448,8 @@ def _do_normal_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
                 else:
                     with open(os_abs_dest, "wb") as f:
                         f.write(fctx.data())
+                    if fctx.isexec():
+                        util.setflags(os_abs_dest, l=False, x=True)
 
     wctx = repo[None]
     wctx.add(new_files)

@@ -186,6 +186,30 @@ test subtree copy with symlinks
   $ cat foo2/b
   aaa
 
+#if execbit
+test subtree copy with execs
+  $ newclientrepo
+  $ mkdir foo
+  $ echo "aaa" > foo/a
+  $ chmod +x foo/a
+  $ echo "bbb" > foo/b
+  $ hg ci -Aqm 'first'
+  $ echo "bbb" > foo/a
+  $ hg ci -m 'second'
+  $ hg subtree cp -r "desc(first)" --from-path foo --to-path foo2
+  copying foo to foo2
+  $ f -m foo/a foo/b foo2/a foo2/b
+  foo/a: mode=755
+  foo/b: mode=644
+  foo2/a: mode=755
+  foo2/b: mode=644
+  $ hg dbsh -c 'for x in ["foo/a", "foo/b", "foo2/a", "foo2/b"]: print([x, repo["."].manifest().flags(x)])'
+  ['foo/a', 'x']
+  ['foo/b', '']
+  ['foo2/a', 'x']
+  ['foo2/b', '']
+#endif
+
 test subtree copy to tracked directory
   $ newclientrepo
   $ drawdag <<'EOS'
