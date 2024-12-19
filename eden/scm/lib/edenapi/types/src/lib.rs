@@ -136,6 +136,7 @@ pub use crate::commit::FetchSnapshotRequest;
 pub use crate::commit::FetchSnapshotResponse;
 pub use crate::commit::HgChangesetContent;
 pub use crate::commit::HgMutationEntryContent;
+pub use crate::commit::IdenticalChangesetContent;
 pub use crate::commit::SnapshotRawData;
 pub use crate::commit::SnapshotRawFiles;
 pub use crate::commit::UploadBonsaiChangesetRequest;

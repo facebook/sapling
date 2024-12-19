@@ -74,6 +74,7 @@ use edenapi_types::HistoricalVersionsResponse;
 use edenapi_types::HistoryEntry;
 use edenapi_types::HistoryRequest;
 use edenapi_types::HistoryResponseChunk;
+use edenapi_types::IdenticalChangesetContent;
 use edenapi_types::IndexableId;
 use edenapi_types::LandStackRequest;
 use edenapi_types::LandStackResponse;
@@ -104,6 +105,7 @@ use edenapi_types::UploadBonsaiChangesetRequest;
 use edenapi_types::UploadHgChangeset;
 use edenapi_types::UploadHgChangesetsRequest;
 use edenapi_types::UploadHgFilenodeRequest;
+use edenapi_types::UploadIdenticalChangesetsRequest;
 use edenapi_types::UploadToken;
 use edenapi_types::UploadTokenMetadata;
 use edenapi_types::UploadTokensResponse;
@@ -197,6 +199,7 @@ mod paths {
     pub const UPLOAD_CHANGESETS: &str = "upload/changesets";
     pub const UPLOAD_FILENODES: &str = "upload/filenodes";
     pub const UPLOAD_TREES: &str = "upload/trees";
+    pub const UPLOAD_IDENTICAL_CHANGESET: &str = "upload/changesets/identical";
     pub const UPLOAD: &str = "upload/";
 }
 
@@ -680,6 +683,34 @@ impl Client {
             mutations,
         }
         .to_wire();
+
+        // Currently, server sends the "upload_changesets" response once it is fully completed,
+        // disable min speed transfer check to avoid premature termination of requests.
+        let request = self
+            .configure_request(self.inner.client.post(url))?
+            .min_transfer_speed(None)
+            .cbor(&req)
+            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
+
+        self.fetch::<UploadTokensResponse>(vec![request])
+    }
+
+    // the request isn't batched, batching should be done outside if needed
+    async fn upload_identical_changesets_attempt(
+        &self,
+        changesets: Vec<IdenticalChangesetContent>,
+    ) -> Result<Response<UploadTokensResponse>, SaplingRemoteApiError> {
+        tracing::info!(
+            "Requesting identical changesets upload for {} item(s)",
+            changesets.len(),
+        );
+
+        if changesets.is_empty() {
+            return Ok(Response::empty());
+        }
+
+        let url = self.build_url(paths::UPLOAD_IDENTICAL_CHANGESET)?;
+        let req = UploadIdenticalChangesetsRequest { changesets }.to_wire();
 
         // Currently, server sends the "upload_changesets" response once it is fully completed,
         // disable min speed transfer check to avoid premature termination of requests.
@@ -1792,6 +1823,17 @@ impl SaplingRemoteApi for Client {
     ) -> Result<Response<UploadTokensResponse>, SaplingRemoteApiError> {
         self.with_retry(|this| {
             this.upload_changesets_attempt(changesets.clone(), mutations.clone())
+                .boxed()
+        })
+        .await
+    }
+
+    async fn upload_identical_changesets(
+        &self,
+        changesets: Vec<IdenticalChangesetContent>,
+    ) -> Result<Response<UploadTokensResponse>, SaplingRemoteApiError> {
+        self.with_retry(|this| {
+            this.upload_identical_changesets_attempt(changesets.clone())
                 .boxed()
         })
         .await

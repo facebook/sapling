@@ -46,6 +46,7 @@ use edenapi_types::HgMutationEntryContent;
 use edenapi_types::HistoricalVersionsParams;
 use edenapi_types::HistoricalVersionsResponse;
 use edenapi_types::HistoryEntry;
+use edenapi_types::IdenticalChangesetContent;
 use edenapi_types::LandStackResponse;
 use edenapi_types::LookupResponse;
 use edenapi_types::ReferencesDataResponse;
@@ -299,6 +300,15 @@ pub trait SaplingRemoteApi: Send + Sync + 'static {
         mutations: Vec<HgMutationEntryContent>,
     ) -> Result<Response<UploadTokensResponse>, SaplingRemoteApiError> {
         let _ = (changesets, mutations);
+        Err(SaplingRemoteApiError::NotSupported)
+    }
+
+    /// Upload list of changesets with bonsai and hg info
+    async fn upload_identical_changesets(
+        &self,
+        changesets: Vec<IdenticalChangesetContent>,
+    ) -> Result<Response<UploadTokensResponse>, SaplingRemoteApiError> {
+        let _ = changesets;
         Err(SaplingRemoteApiError::NotSupported)
     }
 
