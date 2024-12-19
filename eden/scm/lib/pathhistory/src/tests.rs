@@ -445,6 +445,24 @@ async fn test_log_dirs() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_log_when_a_prefix_was_not_directory() {
+    let t = TestHistory::from_history(&[
+        (0, "a/b", 1, R),
+        (50, "a/b", 0, R),
+        (100, "a/b/c/e", 2, R),
+        (150, "a/b/c/e", 0, R),
+        (200, "h/i/j/k", 5, E),
+        (250, "a/b/c/f", 3, R),
+    ]);
+
+    let mut h = t.paths_history(300, &["a/b/c"]).await;
+    assert_eq!(h.next_n(5).await, [250, 150, 100]);
+
+    let mut h = t.paths_history(300, &["a/b"]).await;
+    assert_eq!(h.next_n(5).await, [250, 150, 100, 50, 0]);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_log_with_roots() {
     // Use a commit graph with a few roots.
     let t = TestHistory::from_history(&[(0, "a", 1, R)]);

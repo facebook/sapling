@@ -184,6 +184,11 @@ impl<'a> State<'a> {
             None | Some(None) => return Ok(None),
             Some(Some(item)) => item,
         };
+        if item.flag != Flag::Directory {
+            // This happens when the path was a file (or symlink)
+            tracing::debug!("   load_tree_entry: {:?} is not a directory", item);
+            return Ok(None);
+        }
         if item.loaded.is_none() {
             let entry = tree_store.get_content(item.path, item.id, FetchMode::AllowRemote)?;
             let format = tree_store.format();
