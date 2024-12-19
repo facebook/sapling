@@ -47,8 +47,10 @@ use edenapi_types::EphemeralPrepareRequest;
 use edenapi_types::EphemeralPrepareResponse;
 use edenapi_types::FetchSnapshotRequest;
 use edenapi_types::FetchSnapshotResponse;
+use edenapi_types::HgChangesetContent;
 use edenapi_types::UploadBonsaiChangesetRequest;
 use edenapi_types::UploadHgChangesetsRequest;
+use edenapi_types::UploadIdenticalChangesetsRequest;
 use edenapi_types::UploadToken;
 use edenapi_types::UploadTokensResponse;
 use ephemeral_blobstore::BubbleId;
@@ -1130,5 +1132,65 @@ impl SaplingRemoteApiHandler for CommitTranslateId {
             .collect();
 
         Ok(stream::iter(translations).boxed())
+    }
+}
+
+/// For modern sync usage only
+pub struct UploadIdenticalChangesetsHandler;
+
+#[async_trait]
+impl SaplingRemoteApiHandler for UploadIdenticalChangesetsHandler {
+    type Request = UploadIdenticalChangesetsRequest;
+    type Response = UploadTokensResponse;
+
+    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::UploadIdenticalChangesets;
+    const ENDPOINT: &'static str = "/upload/changesets/identical";
+
+    async fn handler(
+        ectx: SaplingRemoteApiContext<Self::PathExtractor, Self::QueryStringExtractor, Repo>,
+        request: Self::Request,
+    ) -> HandlerResult<'async_trait, Self::Response> {
+        let repo = ectx.repo();
+        let changesets = request.changesets;
+
+        let ctx = repo.ctx().clone();
+        ratelimit_commit_creation(ctx.clone())
+            .await
+            .map_err(HttpError::e429)?;
+
+        let mut changesets_data = Vec::new();
+        for changeset in changesets {
+            let bs_c = BonsaiChangesetContent::from(changeset.clone());
+            let bcs_id = upload_bonsai_changeset(bs_c, &repo, None).await?;
+            let blobstore = repo.repo_ctx().repo_blobstore();
+            let bcs = bcs_id
+                .load(&ctx, &blobstore)
+                .await
+                .map_err(MononokeError::from)?;
+
+            let item = (
+                HgChangesetId::new(HgNodeHash::from(changeset.hg_info.node_id)),
+                to_revlog_changeset(HgChangesetContent::from(changeset))?,
+                Some(bcs),
+            );
+            changesets_data.push(item);
+        }
+
+        let results = repo
+            .store_hg_changesets(changesets_data, vec![])
+            .await?
+            .into_iter()
+            .map(move |r| {
+                r.map(|(hg_cs_id, _bonsai_cs_id)| {
+                    let hgid = HgId::from(hg_cs_id.into_nodehash());
+                    UploadTokensResponse {
+                        token: UploadToken::new_fake_token(AnyId::HgChangesetId(hgid), None),
+                    }
+                })
+                .map_err(Error::from)
+            });
+
+        Ok(stream::iter(results).boxed())
     }
 }

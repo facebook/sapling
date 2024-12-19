@@ -141,6 +141,7 @@ pub use crate::commit::SnapshotRawFiles;
 pub use crate::commit::UploadBonsaiChangesetRequest;
 pub use crate::commit::UploadHgChangeset;
 pub use crate::commit::UploadHgChangesetsRequest;
+pub use crate::commit::UploadIdenticalChangesetsRequest;
 pub use crate::commit::UploadSnapshotResponse;
 pub use crate::commitid::BonsaiChangesetId;
 pub use crate::commitid::CommitId;
