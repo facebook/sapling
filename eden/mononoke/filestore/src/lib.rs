@@ -50,6 +50,7 @@ pub use chunk::make_chunks;
 pub use chunk::Chunks;
 pub use copy::copy;
 pub use expected_size::ExpectedSize;
+pub use fetch::stream_file_bytes;
 pub use fetch::Range;
 pub use fetch_key::Alias;
 pub use fetch_key::AliasBlob;

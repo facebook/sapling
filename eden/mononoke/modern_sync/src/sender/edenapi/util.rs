@@ -7,6 +7,8 @@
 
 use anyhow::Result;
 use blobstore::Loadable;
+use bytes::Bytes;
+use bytes::BytesMut;
 use context::CoreContext;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
@@ -100,4 +102,12 @@ pub fn to_upload_hg_changeset(hg_cs: HgBlobChangeset) -> Result<UploadHgChangese
         node_id: hg_cs.get_changeset_id().into_nodehash().into(),
         changeset_content: hg_content,
     })
+}
+
+pub fn concatenate_bytes(vec_of_bytes: Vec<Bytes>) -> Bytes {
+    let mut bytes_mut = BytesMut::new();
+    for b in vec_of_bytes {
+        bytes_mut.extend_from_slice(&b);
+    }
+    bytes_mut.freeze()
 }

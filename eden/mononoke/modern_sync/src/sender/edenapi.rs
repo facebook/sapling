@@ -12,12 +12,15 @@ use anyhow::Result;
 use async_trait::async_trait;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
+use cloned::cloned;
 use context::CoreContext;
 use edenapi::Client;
 use edenapi::HttpClientBuilder;
 use edenapi::HttpClientConfig;
 use edenapi::SaplingRemoteApi;
 use edenapi_types::AnyFileContentId;
+use filestore::stream_file_bytes;
+use filestore::Range;
 use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
@@ -37,7 +40,8 @@ mod util;
 use crate::sender::Entry;
 use crate::sender::ModernSyncSender;
 
-#[allow(dead_code)]
+const MAX_BLOB_BYTES: u64 = 100 * 1024 * 1024; // 100 MB
+
 pub struct EdenapiSender {
     client: Client,
     logger: Logger,
@@ -107,22 +111,46 @@ impl ModernSyncSender for EdenapiSender {
                 .collect::<Vec<_>>()
         );
 
+        // Batch contents by size
+        let mut batches = Vec::new();
+        let mut current_batch = Vec::new();
+        let mut current_size = 0;
         for (id, blob) in contents {
-            match blob {
-                FileContents::Bytes(bytes) => {
-                    info!(&self.logger, "Uploading bytes: {:?}", bytes);
-                    let response = self
-                        .client
-                        .process_files_upload(vec![(id, bytes.into())], None, None)
-                        .await?;
-                    info!(
-                        &self.logger,
-                        "Upload response: {:?}",
-                        response.entries.try_collect::<Vec<_>>().await?
-                    );
-                }
-                _ => (),
+            let size = blob.size();
+            if current_size + size > MAX_BLOB_BYTES {
+                let batch = std::mem::take(&mut current_batch);
+                batches.push(batch);
+                current_size = 0;
             }
+            current_batch.push((id, blob));
+            current_size += size;
+        }
+        if !current_batch.is_empty() {
+            batches.push(current_batch);
+        }
+
+        let repo_blobstore = self.repo_blobstore.clone();
+        let ctx = self.ctx.clone();
+        for batch in batches {
+            let mut full_items = Vec::new();
+
+            for (id, blob) in batch {
+                cloned!(ctx, repo_blobstore);
+                let stream = stream_file_bytes(&repo_blobstore, &ctx, blob, Range::all())?;
+                let bytes = util::concatenate_bytes(stream.try_collect::<Vec<_>>().await?);
+                full_items.push((id, bytes.into()));
+            }
+
+            let response = self
+                .client
+                .process_files_upload(full_items, None, None)
+                .await?;
+
+            info!(
+                &self.logger,
+                "Upload response: {:?}",
+                response.entries.try_collect::<Vec<_>>().await?
+            );
         }
 
         Ok(())
