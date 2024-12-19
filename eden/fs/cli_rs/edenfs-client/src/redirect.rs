@@ -1071,7 +1071,7 @@ where
                 PathBuf::from(
                     // Convert path separator to backslash on Windows
                     if cfg!(windows) {
-                        key.replace("/", "\\")
+                        key.replace("\\\\", "\\").replace('/', "\\")
                     } else {
                         key
                     },

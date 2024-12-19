@@ -39,6 +39,7 @@ use edenfs_utils::path_from_bytes;
 #[cfg(windows)]
 use edenfs_utils::strip_unc_prefix;
 use edenfs_utils::varint::decode_varint;
+use serde::ser::SerializeMap;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
@@ -311,12 +312,16 @@ struct PredictivePrefetch {
 pub struct CheckoutConfig {
     repository: Repository,
 
-    #[serde(deserialize_with = "deserialize_redirections")]
+    #[serde(
+        deserialize_with = "deserialize_redirections",
+        serialize_with = "serialize_path_map"
+    )]
     redirections: BTreeMap<PathBuf, RedirectionType>,
 
     #[serde(
         rename = "redirection-targets",
         deserialize_with = "deserialize_redirection_targets",
+        serialize_with = "serialize_path_map",
         default = "default_redirection_targets"
     )]
     redirection_targets: BTreeMap<PathBuf, PathBuf>,
@@ -330,6 +335,36 @@ pub struct CheckoutConfig {
 // Initialize it to empty map to ensure backward compatibility
 fn default_redirection_targets() -> BTreeMap<PathBuf, PathBuf> {
     BTreeMap::new()
+}
+
+fn serialize_path_map<V, S>(map: &BTreeMap<PathBuf, V>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+    V: Serialize,
+{
+    let mut map_serializer = serializer.serialize_map(Some(map.len()))?;
+    for (key, value) in map {
+        let serialized_key = if cfg!(windows) {
+            // On Windows, we need to escape backslashes in the path, since
+            // TOML uses backslashes as an escape character.
+            // temp_key is used to make sure that the path is not already escaped
+            // from previous serialization, since we don't want to double-escape it.
+            let temp_key = key.display().to_string().replace("\\\\", "\\");
+            temp_key.replace('\\', "\\\\")
+        } else {
+            key.to_string_lossy().into_owned()
+        };
+        match map_serializer.serialize_entry(&serialized_key, value) {
+            Ok(_) => continue,
+            Err(e) => {
+                return Err(serde::ser::Error::custom(format!(
+                    "Unsupported redirection. Target must be string. Error: {}",
+                    e
+                )));
+            }
+        }
+    }
+    map_serializer.end()
 }
 
 fn deserialize_redirection_targets<'de, D>(
@@ -346,7 +381,7 @@ where
                 PathBuf::from(
                     // Convert path separator to backslash on Windows
                     if cfg!(windows) {
-                        key.replace("/", "\\")
+                        key.replace("\\\\", "\\").replace('/', "\\")
                     } else {
                         key
                     },
