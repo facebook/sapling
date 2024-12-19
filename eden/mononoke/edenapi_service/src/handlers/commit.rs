@@ -22,6 +22,7 @@ use edenapi_types::AlterSnapshotResponse;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
 use edenapi_types::Batch;
+use edenapi_types::BonsaiChangesetContent;
 use edenapi_types::BonsaiFileChange;
 use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitGraphRequest;
@@ -111,7 +112,6 @@ use crate::utils::to_create_change;
 use crate::utils::to_hg_path;
 use crate::utils::to_mpath;
 use crate::utils::to_revlog_changeset;
-
 /// XXX: This number was chosen arbitrarily.
 const MAX_CONCURRENT_FETCHES_PER_REQUEST: usize = 100;
 const HASH_TO_LOCATION_BATCH_SIZE: usize = 100;
@@ -564,46 +564,7 @@ impl SaplingRemoteApiHandler for UploadBonsaiChangesetHandler {
             .await
             .map_err(HttpError::e429)?;
 
-        let parents = stream::iter(cs.hg_parents)
-            .then(|hgid| async move {
-                repo.get_bonsai_from_hg(hgid.into())
-                    .await?
-                    .ok_or_else(|| anyhow!("Parent HgId {} is invalid", hgid))
-            })
-            .try_collect()
-            .await?;
-        let (_hg_extra, cs_ctx) = repo
-            .repo_ctx()
-            .create_changeset(
-                parents,
-                CreateInfo {
-                    author: cs.author,
-                    author_date: DateTime::from_timestamp(cs.time, cs.tz)?.into(),
-                    committer: None,
-                    committer_date: None,
-                    message: cs.message,
-                    extra: cs.extra.into_iter().map(|e| (e.key, e.value)).collect(),
-                    // TODO(rajshar): Need to allow passing git_extra_headers through Eden API as well.
-                    git_extra_headers: None,
-                },
-                cs.file_changes
-                    .into_iter()
-                    .map(|(path, fc)| {
-                        let create_change = to_create_change(fc, bubble_id)
-                            .with_context(|| anyhow!("Parsing file changes for {}", path))?;
-                        Ok((to_mpath(path)?, create_change))
-                    })
-                    .collect::<anyhow::Result<_>>()?,
-                match bubble_id {
-                    Some(id) => Some(repo.open_bubble(id).await?),
-                    None => None,
-                }
-                .as_ref(),
-            )
-            .await
-            .with_context(|| anyhow!("When creating bonsai changeset"))?;
-
-        let cs_id = cs_ctx.id();
+        let cs_id = upload_bonsai_changeset(cs.clone(), repo, bubble_id).await?;
 
         Ok(stream::once(async move {
             Ok(UploadTokensResponse {
@@ -615,6 +576,54 @@ impl SaplingRemoteApiHandler for UploadBonsaiChangesetHandler {
         })
         .boxed())
     }
+}
+
+async fn upload_bonsai_changeset(
+    cs: BonsaiChangesetContent,
+    repo: &HgRepoContext<Repo>,
+    bubble_id: Option<BubbleId>,
+) -> anyhow::Result<ChangesetId> {
+    let parents = stream::iter(cs.hg_parents)
+        .then(|hgid| async move {
+            repo.get_bonsai_from_hg(hgid.into())
+                .await?
+                .ok_or_else(|| anyhow!("Parent HgId {} is invalid", hgid))
+        })
+        .try_collect()
+        .await?;
+
+    let (_hg_extra, cs_ctx) = repo
+        .repo_ctx()
+        .create_changeset(
+            parents,
+            CreateInfo {
+                author: cs.author,
+                author_date: DateTime::from_timestamp(cs.time, cs.tz)?.into(),
+                committer: None,
+                committer_date: None,
+                message: cs.message,
+                extra: cs.extra.into_iter().map(|e| (e.key, e.value)).collect(),
+                // TODO(rajshar): Need to allow passing git_extra_headers through Eden API as well.
+                git_extra_headers: None,
+            },
+            cs.file_changes
+                .into_iter()
+                .map(|(path, fc)| {
+                    let create_change = to_create_change(fc, bubble_id)
+                        .with_context(|| anyhow!("Parsing file changes for {}", path))?;
+                    Ok((to_mpath(path)?, create_change))
+                })
+                .collect::<anyhow::Result<_>>()?,
+            match bubble_id {
+                Some(id) => Some(repo.open_bubble(id).await?),
+                None => None,
+            }
+            .as_ref(),
+        )
+        .await
+        .with_context(|| anyhow!("When creating bonsai changeset"))?;
+
+    Ok(cs_ctx.id())
 }
 
 /// Get information about a snapshot changeset

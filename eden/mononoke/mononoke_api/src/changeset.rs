@@ -599,7 +599,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
     }
 
     /// Get the `BonsaiChangeset` information for this changeset.
-    async fn bonsai_changeset(&self) -> Result<BonsaiChangeset, MononokeError> {
+    pub async fn bonsai_changeset(&self) -> Result<BonsaiChangeset, MononokeError> {
         self.bonsai_changeset
             .get_or_init(|| {
                 let ctx = self.ctx().clone();
