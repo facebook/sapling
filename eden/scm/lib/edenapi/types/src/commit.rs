@@ -501,6 +501,94 @@ pub struct CommitTranslateIdResponse {
     pub translated: CommitId,
 }
 
+#[auto_wire]
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct UploadIdenticalChangesetsRequest {
+    /// list of changesets to upload, changesets must be sorted topologically
+    #[id(1)]
+    pub changesets: Vec<IdenticalChangesetContent>,
+}
+
+#[auto_wire]
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct HgInfo {
+    #[id(1)]
+    pub node_id: HgId,
+    #[id(2)]
+    pub manifestid: HgId,
+    #[id(3)]
+    pub extras: Vec<Extra>,
+}
+
+#[auto_wire]
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct IdenticalChangesetContent {
+    #[id(1)]
+    pub bcs_id: BonsaiChangesetId,
+    #[id(2)]
+    pub parents: Parents,
+    #[id(3)]
+    pub author: String,
+    #[id(4)]
+    pub time: i64,
+    #[id(5)]
+    pub tz: i32,
+    #[id(6)]
+    pub extras: Vec<BonsaiExtra>,
+    #[id(7)]
+    pub file_changes: Vec<(RepoPathBuf, BonsaiFileChange)>,
+    #[id(8)]
+    pub message: String,
+    #[id(9)]
+    pub is_snapshot: bool,
+    #[id(10)]
+    pub hg_info: HgInfo,
+}
+
+impl From<IdenticalChangesetContent> for HgChangesetContent {
+    fn from(changeset: IdenticalChangesetContent) -> Self {
+        Self {
+            parents: changeset.parents,
+            manifestid: changeset.hg_info.manifestid,
+            user: changeset.author.into_bytes(),
+            time: changeset.time,
+            tz: changeset.tz,
+            extras: changeset
+                .extras
+                .into_iter()
+                .map(|extra| Extra {
+                    key: extra.key.into_bytes(),
+                    value: extra.value,
+                })
+                .collect(),
+            files: changeset
+                .file_changes
+                .into_iter()
+                .map(|(path, _)| path)
+                .collect(),
+            message: changeset.message.into_bytes(),
+        }
+    }
+}
+
+impl From<IdenticalChangesetContent> for BonsaiChangesetContent {
+    fn from(changeset: IdenticalChangesetContent) -> Self {
+        Self {
+            hg_parents: changeset.parents,
+            author: changeset.author,
+            time: changeset.time,
+            tz: changeset.tz,
+            extra: changeset.extras,
+            file_changes: changeset.file_changes,
+            message: changeset.message,
+            is_snapshot: changeset.is_snapshot,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
