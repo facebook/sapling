@@ -315,6 +315,7 @@ pub enum BonsaiFileChange {
         /// Token proving the file was uploaded, and containing its content id and size
         upload_token: UploadToken,
         file_type: FileType,
+        copy_info: Option<(RepoPathBuf, usize)>,
     },
     Deletion,
     UntrackedChange {
@@ -449,6 +450,7 @@ impl Arbitrary for BonsaiFileChange {
             0..=49 => Self::Change {
                 upload_token: Arbitrary::arbitrary(g),
                 file_type: Arbitrary::arbitrary(g),
+                copy_info: Arbitrary::arbitrary(g),
             },
             50..=79 => Self::Deletion,
             80..=94 => Self::UntrackedChange {

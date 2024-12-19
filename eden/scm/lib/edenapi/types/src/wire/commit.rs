@@ -298,6 +298,9 @@ pub enum WireBonsaiFileChange {
     #[serde(rename = "4")]
     Deletion,
 
+    #[serde(rename = "5")]
+    ChangeWithCopyInfo(WireUploadToken, WireFileType, (WireRepoPathBuf, usize)),
+
     #[serde(other, rename = "0")]
     Unknown,
 }
@@ -339,7 +342,15 @@ impl ToWire for BonsaiFileChange {
             Self::Change {
                 upload_token,
                 file_type,
-            } => WireBonsaiFileChange::Change(upload_token.to_wire(), file_type.to_wire()),
+                copy_info,
+            } => match copy_info {
+                Some((path, index)) => WireBonsaiFileChange::ChangeWithCopyInfo(
+                    upload_token.to_wire(),
+                    file_type.to_wire(),
+                    (path.to_wire(), index.to_wire()),
+                ),
+                None => WireBonsaiFileChange::Change(upload_token.to_wire(), file_type.to_wire()),
+            },
             Self::UntrackedChange {
                 upload_token,
                 file_type,
@@ -380,7 +391,15 @@ impl ToApi for WireBonsaiFileChange {
             Self::Change(upload_token, file_type) => Ok(BonsaiFileChange::Change {
                 upload_token: upload_token.to_api()?,
                 file_type: file_type.to_api()?,
+                copy_info: None,
             }),
+            Self::ChangeWithCopyInfo(upload_token, file_type, (path, index)) => {
+                Ok(BonsaiFileChange::Change {
+                    upload_token: upload_token.to_api()?,
+                    file_type: file_type.to_api()?,
+                    copy_info: Some((path.to_api()?, index)),
+                })
+            }
             Self::UntrackedChange(upload_token, file_type) => {
                 Ok(BonsaiFileChange::UntrackedChange {
                     upload_token: upload_token.to_api()?,

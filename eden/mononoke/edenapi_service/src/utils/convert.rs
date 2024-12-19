@@ -39,6 +39,7 @@ use mercurial_types::HgNodeHash;
 use mononoke_api::CreateChange;
 use mononoke_api::CreateChangeFile;
 use mononoke_api::CreateChangeFileContents;
+use mononoke_api::CreateCopyInfo;
 use mononoke_types::path::MPath;
 use mononoke_types::DateTime;
 use mononoke_types::NonRootMPath;
@@ -102,6 +103,7 @@ pub fn to_create_change(fc: BonsaiFileChange, bubble_id: Option<BubbleId>) -> Re
         BonsaiFileChange::Change {
             file_type,
             upload_token,
+            copy_info,
         } => {
             verify(&upload_token)?;
             if let UploadTokenData {
@@ -119,8 +121,11 @@ pub fn to_create_change(fc: BonsaiFileChange, bubble_id: Option<BubbleId>) -> Re
                         file_type: file_type.into(),
                         git_lfs: None,
                     },
-                    // TODO(yancouto): Add copy info on tracked changes
-                    None,
+                    copy_info
+                        .map(|(path, index)| {
+                            anyhow::Ok(CreateCopyInfo::new(to_mpath(path)?, index))
+                        })
+                        .transpose()?,
                 ))
             } else {
                 bail!("Invalid upload token format, missing content id")

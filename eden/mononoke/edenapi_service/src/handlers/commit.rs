@@ -699,6 +699,7 @@ impl SaplingRemoteApiHandler for FetchSnapshotHandler {
                                     Some(bubble_id.into()),
                                 ),
                                 file_type: tc.file_type().try_into()?,
+                                copy_info: None, // TODO: Add copy info on tracked changes
                             },
                             FileChange::UntrackedChange(uc) => BonsaiFileChange::UntrackedChange {
                                 upload_token: UploadToken::new_fake_token(

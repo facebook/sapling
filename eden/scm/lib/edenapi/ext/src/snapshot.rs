@@ -173,6 +173,7 @@ pub async fn upload_snapshot(
                             BonsaiFileChange::Change {
                                 file_type,
                                 upload_token,
+                                copy_info: None, // TODO(yancouto): Add copy info on tracked changes
                             }
                         } else {
                             BonsaiFileChange::UntrackedChange {
