@@ -42,6 +42,7 @@ use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
 use mononoke_types::deleted_manifest_v2::DeletedManifestV2;
 use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::path::MPath;
+use mononoke_types::skeleton_manifest_v2::SkeletonManifestV2;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentManifestId;
 use mononoke_types::DeletedManifestV2Id;
@@ -55,6 +56,7 @@ use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use skeleton_manifest::RootSkeletonManifestId;
+use skeleton_manifest_v2::RootSkeletonManifestV2Id;
 use unodes::RootUnodeManifestId;
 
 use super::Repo;
@@ -63,6 +65,7 @@ use super::Repo;
 #[derive(Copy, Clone, Debug, ValueEnum)]
 enum ListManifestType {
     SkeletonManifests,
+    SkeletonManifests2,
     ContentManifests,
     Fsnodes,
     Unodes,
@@ -160,6 +163,15 @@ impl Listable for Entry<SkeletonManifestId, ()> {
         match self {
             Entry::Tree(tree) => tree.to_string(),
             Entry::Leaf(()) => String::from("exists"),
+        }
+    }
+}
+
+impl Listable for Entry<SkeletonManifestV2, ()> {
+    fn list_item(self) -> String {
+        match self {
+            Entry::Tree(tree) => format!("tree\tcount={}", tree.rollup_count().into_inner()),
+            Entry::Leaf(()) => String::from("file"),
         }
     }
 }
@@ -403,6 +415,15 @@ pub(super) async fn list_manifest(
                     .await?
                     .into_skeleton_manifest_id();
             list(ctx, repo, root_id, path, args.directory, args.recursive).await?
+        }
+        ListManifestType::SkeletonManifests2 => {
+            let root =
+                fetch_or_derive_root::<RootSkeletonManifestV2Id>(ctx, repo, cs_id, args.derive)
+                    .await?
+                    .into_inner_id()
+                    .load(ctx, repo.repo_blobstore())
+                    .await?;
+            list(ctx, repo, root, path, args.directory, args.recursive).await?
         }
         ListManifestType::ContentManifests => {
             let root_id =

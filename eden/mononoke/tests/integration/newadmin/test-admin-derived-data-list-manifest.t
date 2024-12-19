@@ -56,6 +56,16 @@ Skeleton manifest of main's root directory (recursive)
   a/foo.txt	exists
   script	exists
   script.sh	exists
+  $ with_stripped_logs mononoke_admin derived-data -R repo list-manifest -B main -t skeleton-manifests2 --derive | sort
+  A	file
+  B	file
+  C	file
+  a/	tree	count=7
+  script	file
+  script.sh	file
+  $ with_stripped_logs mononoke_admin derived-data -R repo list-manifest -B main -p "a" -t skeleton-manifests2 --derive | sort
+  a/b/	tree	count=5
+  a/foo.txt	file
 
 Fsnodes of main's a directory
   $ with_stripped_logs mononoke_admin derived-data -R repo list-manifest -p "a" -B main -t fsnodes --derive | sort
