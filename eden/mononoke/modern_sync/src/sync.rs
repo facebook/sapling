@@ -10,8 +10,10 @@ use std::sync::Arc;
 use anyhow::format_err;
 use anyhow::Result;
 use blobstore::Loadable;
+use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogArc;
 use bookmarks::BookmarkUpdateLogId;
+use bookmarks::BookmarksRef;
 use borrowed::borrowed;
 use changeset_info::ChangesetInfo;
 use clientinfo::ClientEntryPoint;
@@ -60,6 +62,7 @@ define_stats! {
     prefix = "mononoke.modern_sync";
     completion_duration_secs: timeseries(Average, Sum, Count),
     synced_commits:  dynamic_timeseries("{}.commits_synced", (repo: String); Rate, Sum),
+    lag_to_master:  dynamic_timeseries("{}.lag_to_master", (repo: String); Rate, Sum),
 }
 
 #[derive(Clone)]
@@ -194,7 +197,12 @@ pub async fn sync(
                                 cloned!(ctx, repo, logger, sender);
                                 async move {
                                     process_one_changeset(
-                                        &cs_id, &ctx, repo, &logger, sender, false,
+                                        &cs_id,
+                                        &ctx,
+                                        repo,
+                                        &logger,
+                                        sender,
+                                        app_args.log_to_ods,
                                     )
                                     .await
                                 }
@@ -226,6 +234,42 @@ pub async fn sync(
                                 )
                                 .await?;
                         }
+
+                        if app_args.log_to_ods {
+                            // Get current master commit
+                            if let Some(cs_id) = repo
+                                .bookmarks()
+                                .get(
+                                    ctx.clone(),
+                                    &BookmarkKey::new(entry.bookmark_name.name().to_string())?,
+                                )
+                                .await?
+                            {
+                                let cs = cs_id.load(ctx, repo.repo_blobstore()).await?;
+                                let master_time = cs.author_date().timestamp_secs();
+
+                                // Latest synced commmit
+                                if let Some(cs_id) = entry.to_changeset_id {
+                                    let cs = cs_id.load(ctx, repo.repo_blobstore()).await?;
+                                    let commit_time = cs.author_date().timestamp_secs();
+
+                                    info!(
+                                        logger,
+                                        "Commit {} is {} seconds behind master",
+                                        cs_id,
+                                        master_time - commit_time
+                                    );
+                                    STATS::lag_to_master.add_value(
+                                        master_time - commit_time,
+                                        (repo.repo_identity().name().to_string(),),
+                                    );
+                                } else {
+                                    info!(logger, "No dest commit for entry {} found", entry.id);
+                                }
+                            } else {
+                                info!(logger, "Bookmark {} not found", entry.bookmark_name.name());
+                            }
+                        }
                     }
                     Ok(())
                 }
@@ -244,7 +288,7 @@ pub async fn process_one_changeset(
     repo: Repo,
     logger: &Logger,
     sender: Arc<dyn ModernSyncSender + Send + Sync>,
-    log_completion: bool,
+    log_to_ods: bool,
 ) -> Result<()> {
     info!(logger, "Processing commit {:?}", cs_id);
 
@@ -292,7 +336,7 @@ pub async fn process_one_changeset(
     sender.upload_filenodes(file_ids).await?;
     sender.upload_identical_changeset(vec![(hg_cs, bs)]).await?;
 
-    if log_completion {
+    if log_to_ods {
         STATS::synced_commits.add_value(1, (repo.repo_identity().name().to_string(),));
     }
 

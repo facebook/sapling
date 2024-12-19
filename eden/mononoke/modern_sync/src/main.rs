@@ -9,6 +9,7 @@
 
 use anyhow::Result;
 use bookmarks::BookmarkUpdateLog;
+use bookmarks::Bookmarks;
 use clap::Parser;
 use commit_graph::CommitGraph;
 use executor_lib::args::ShardedExecutorArgs;
@@ -54,6 +55,10 @@ struct ModernSyncArgs {
     #[clap(long)]
     /// Update counters in the source repo (prod and tests only)
     update_counters: bool,
+
+    #[clap(long)]
+    /// Update ODS counters
+    log_to_ods: bool,
 }
 
 #[facet::container]
@@ -73,6 +78,8 @@ pub struct Repo {
     repo_blobstore: RepoBlobstore,
     #[facet]
     pub repo_config: RepoConfig,
+    #[facet]
+    bookmarks: dyn Bookmarks,
 }
 
 #[fbinit::main]
