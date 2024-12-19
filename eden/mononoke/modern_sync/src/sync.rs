@@ -290,7 +290,7 @@ pub async fn process_one_changeset(
     mf_ids.push(hg_mf_id);
     sender.upload_trees(mf_ids).await?;
     sender.upload_filenodes(file_ids).await?;
-    sender.upload_hg_changeset(vec![hg_cs]).await?;
+    sender.upload_identical_changeset(vec![(hg_cs, bs)]).await?;
 
     if log_completion {
         STATS::synced_commits.add_value(1, (repo.repo_identity().name().to_string(),));

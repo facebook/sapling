@@ -5,16 +5,24 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::ensure;
+use anyhow::Error;
 use anyhow::Result;
 use blobstore::Loadable;
 use bytes::Bytes;
 use bytes::BytesMut;
 use context::CoreContext;
+use edenapi_service::utils::to_hg_path;
+use edenapi_types::commit::BonsaiExtra;
+use edenapi_types::commit::BonsaiParents;
+use edenapi_types::commit::HgInfo;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
+use edenapi_types::BonsaiFileChange;
 use edenapi_types::Extra;
 use edenapi_types::HgChangesetContent;
 use edenapi_types::HgFilenodeData;
+use edenapi_types::IdenticalChangesetContent;
 use edenapi_types::Parents;
 use edenapi_types::RepoPathBuf;
 use edenapi_types::UploadHgChangeset;
@@ -24,7 +32,13 @@ use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::fetch_manifest_envelope;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
+use mononoke_types::BonsaiChangeset;
+use mononoke_types::BonsaiChangesetMut;
+use mononoke_types::ChangesetId;
+use mononoke_types::FileChange;
+use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstore;
+use sorted_vector_map::SortedVectorMap;
 
 pub async fn from_tree_to_entry(
     id: HgManifestId,
@@ -110,4 +124,118 @@ pub fn concatenate_bytes(vec_of_bytes: Vec<Bytes>) -> Bytes {
         bytes_mut.extend_from_slice(&b);
     }
     bytes_mut.freeze()
+}
+
+pub fn to_identical_changeset(
+    css: (HgBlobChangeset, BonsaiChangeset),
+) -> Result<IdenticalChangesetContent> {
+    let (hg_cs, bcs) = css;
+    let BonsaiChangesetMut {
+        parents,
+        author,
+        author_date,
+        committer: _,
+        committer_date: _,
+        message,
+        hg_extra: _,
+        git_extra_headers,
+        file_changes,
+        is_snapshot,
+        git_tree_hash,
+        git_annotated_tag,
+    } = bcs.clone().into_mut();
+
+    let hg_info = HgInfo {
+        node_id: hg_cs.get_changeset_id().into_nodehash().into(),
+        manifestid: hg_cs.manifestid().into_nodehash().into(),
+        extras: hg_cs
+            .extra()
+            .iter()
+            .map(|(key, value)| Extra {
+                key: key.to_vec(),
+                value: value.to_vec(),
+            })
+            .collect(),
+    };
+
+    let bonsai_parents = BonsaiParents::from_iter(parents.iter().map(|p| (*p).into()));
+
+    // Ensure items are indeed equivalent between bonsai and hg changeset
+    ensure!(author.as_bytes() == hg_cs.user(), "Author mismatch");
+    ensure!(author_date == *hg_cs.time(), "Time mismatch");
+    ensure!(message.as_bytes() == hg_cs.message(), "Message mismatch");
+    ensure!(git_tree_hash.is_none(), "Unexpected git tree hash found");
+    ensure!(
+        git_annotated_tag.is_none(),
+        "Unexpected git annotated tag found"
+    );
+    ensure!(
+        git_extra_headers.is_none(),
+        "Unexpected git extra headers found"
+    );
+
+    Ok(IdenticalChangesetContent {
+        bcs_id: bcs.get_changeset_id().into(),
+        hg_parents: hg_cs.parents().into(),
+        bonsai_parents,
+        author: author.to_string(),
+        time: author_date.timestamp_secs(),
+        tz: author_date.tz_offset_secs(),
+        extras: bcs
+            .hg_extra()
+            .map(|(key, value)| BonsaiExtra {
+                key: key.to_string(),
+                value: value.to_vec(),
+            })
+            .collect(),
+        file_changes: to_file_change(&file_changes, bcs.parents())?,
+        message: message.to_string(),
+        is_snapshot,
+        hg_info,
+    })
+}
+
+fn to_file_change(
+    map: &SortedVectorMap<NonRootMPath, FileChange>,
+    mut parents: impl Iterator<Item = ChangesetId>,
+) -> Result<Vec<(RepoPathBuf, BonsaiFileChange)>> {
+    let res = map
+        .into_iter()
+        .map(|(path, fc)| {
+            let path = RepoPathBuf::from_string(path.to_string())?;
+            let fc = match fc {
+                FileChange::Deletion => BonsaiFileChange::Deletion,
+                FileChange::UntrackedDeletion => BonsaiFileChange::UntrackedDeletion,
+                FileChange::Change(tc) => BonsaiFileChange::Change {
+                    upload_token: UploadToken::new_fake_token(
+                        AnyId::AnyFileContentId(AnyFileContentId::ContentId(
+                            tc.content_id().into(),
+                        )),
+                        None,
+                    ),
+                    file_type: tc.file_type().try_into()?,
+                    copy_info: match tc.copy_from() {
+                        Some((path, cs_id)) => {
+                            let index = parents.position(|parent| parent == *cs_id).ok_or(
+                                anyhow::anyhow!("Error: Copy from info doesn't match parents"),
+                            )?;
+                            Some((to_hg_path(path)?, index))
+                        }
+                        None => None,
+                    },
+                },
+                FileChange::UntrackedChange(uc) => BonsaiFileChange::UntrackedChange {
+                    upload_token: UploadToken::new_fake_token(
+                        AnyId::AnyFileContentId(AnyFileContentId::ContentId(
+                            uc.content_id().into(),
+                        )),
+                        None,
+                    ),
+                    file_type: uc.file_type().try_into()?,
+                },
+            };
+            Ok((path, fc))
+        })
+        .collect::<Result<Vec<(RepoPathBuf, BonsaiFileChange)>, Error>>()?;
+    Ok(res)
 }

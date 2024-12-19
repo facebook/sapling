@@ -12,6 +12,7 @@ use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
+use mononoke_types::BonsaiChangeset;
 use mononoke_types::FileContents;
 use slog::info;
 use slog::Logger;
@@ -86,6 +87,21 @@ impl ModernSyncSender for DummySender {
             &self.logger,
             "Uploading moving bookmark {} from {:?} to {:?}", bookmark, from, to
         );
+        Ok(())
+    }
+
+    async fn upload_identical_changeset(
+        &self,
+        css: Vec<(HgBlobChangeset, BonsaiChangeset)>,
+    ) -> Result<()> {
+        for (hg_cs, bs_cs) in css {
+            info!(
+                &self.logger,
+                "Uploading hg changeset with hgid {} and bsid{}",
+                hg_cs.get_changeset_id(),
+                bs_cs.get_changeset_id()
+            );
+        }
         Ok(())
     }
 }

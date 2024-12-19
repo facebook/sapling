@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::iter::Iterator;
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -29,6 +30,7 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mononoke_app::args::TLSArgs;
+use mononoke_types::BonsaiChangeset;
 use mononoke_types::FileContents;
 use repo_blobstore::RepoBlobstore;
 use slog::info;
@@ -227,6 +229,25 @@ impl ModernSyncSender for EdenapiSender {
             )
             .await?;
         info!(&self.logger, "Move bookmark response {:?}", res);
+        Ok(())
+    }
+
+    async fn upload_identical_changeset(
+        &self,
+        css: Vec<(HgBlobChangeset, BonsaiChangeset)>,
+    ) -> Result<()> {
+        let entries = stream::iter(css)
+            .map(util::to_identical_changeset)
+            .try_collect::<Vec<_>>()
+            .await?;
+
+        let res = self.client.upload_identical_changesets(entries).await?;
+        info!(
+            &self.logger,
+            "Upload hg changeset response: {:?}",
+            res.entries.try_collect::<Vec<_>>().await?
+        );
+
         Ok(())
     }
 }

@@ -12,6 +12,7 @@ use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
+use mononoke_types::BonsaiChangeset;
 use mononoke_types::FileContents;
 pub mod dummy;
 pub mod edenapi;
@@ -39,6 +40,11 @@ pub trait ModernSyncSender {
     async fn upload_filenodes(&self, filenodes: Vec<HgFileNodeId>) -> Result<()>;
 
     async fn upload_hg_changeset(&self, hg_css: Vec<HgBlobChangeset>) -> Result<()>;
+
+    async fn upload_identical_changeset(
+        &self,
+        css: Vec<(HgBlobChangeset, BonsaiChangeset)>,
+    ) -> Result<()>;
 
     async fn set_bookmark(
         &self,

@@ -566,7 +566,16 @@ impl SaplingRemoteApiHandler for UploadBonsaiChangesetHandler {
             .await
             .map_err(HttpError::e429)?;
 
-        let cs_id = upload_bonsai_changeset(cs.clone(), repo, bubble_id).await?;
+        let parents = stream::iter(cs.hg_parents)
+            .then(|hgid| async move {
+                repo.get_bonsai_from_hg(hgid.into())
+                    .await?
+                    .ok_or_else(|| anyhow!("Parent HgId {} is invalid", hgid))
+            })
+            .try_collect()
+            .await?;
+
+        let cs_id = upload_bonsai_changeset(cs.clone(), repo, bubble_id, parents).await?;
 
         Ok(stream::once(async move {
             Ok(UploadTokensResponse {
@@ -584,16 +593,8 @@ async fn upload_bonsai_changeset(
     cs: BonsaiChangesetContent,
     repo: &HgRepoContext<Repo>,
     bubble_id: Option<BubbleId>,
+    parents: Vec<ChangesetId>,
 ) -> anyhow::Result<ChangesetId> {
-    let parents = stream::iter(cs.hg_parents)
-        .then(|hgid| async move {
-            repo.get_bonsai_from_hg(hgid.into())
-                .await?
-                .ok_or_else(|| anyhow!("Parent HgId {} is invalid", hgid))
-        })
-        .try_collect()
-        .await?;
-
     let (_hg_extra, cs_ctx) = repo
         .repo_ctx()
         .create_changeset(
@@ -1163,7 +1164,14 @@ impl SaplingRemoteApiHandler for UploadIdenticalChangesetsHandler {
         let mut changesets_data = Vec::new();
         for changeset in changesets {
             let bs_c = BonsaiChangesetContent::from(changeset.clone());
-            let bcs_id = upload_bonsai_changeset(bs_c, &repo, None).await?;
+
+            let parents = changeset
+                .bonsai_parents
+                .to_vec()
+                .into_iter()
+                .map(|p| p.into())
+                .collect();
+            let bcs_id = upload_bonsai_changeset(bs_c, &repo, None, parents).await?;
             let blobstore = repo.repo_ctx().repo_blobstore();
             let bcs = bcs_id
                 .load(&ctx, &blobstore)

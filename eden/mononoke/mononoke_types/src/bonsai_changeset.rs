@@ -362,6 +362,11 @@ impl BonsaiChangeset {
         self.inner.git_tree_hash.as_ref()
     }
 
+    /// Get the git annotated tag corresponding to the current changeset
+    pub fn git_annotated_tag(&self) -> Option<&BonsaiAnnotatedTag> {
+        self.inner.git_annotated_tag.as_ref()
+    }
+
     /// Get the changeset ID of this changeset.
     pub fn get_changeset_id(&self) -> ChangesetId {
         self.id
