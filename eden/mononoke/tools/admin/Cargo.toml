@@ -102,6 +102,7 @@ repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity
 repo_lock = { version = "0.1.0", path = "../../repo_attributes/repo_lock/repo_lock" }
 sapling-dag = { version = "0.1.0", path = "../../../scm/lib/dag" }
 sapling-dag-types = { version = "0.1.0", path = "../../../scm/lib/dag/dag-types", features = ["for-tests", "serialize-abomonation"] }
+sapling-renderdag = { version = "0.1.0", path = "../../../scm/lib/renderdag" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_depth"] }
 skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }

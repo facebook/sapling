@@ -51,3 +51,18 @@ returns D, E, F, G, H, I and J (order can vary since there are two branches so w
   * (glob)
   * (glob)
   * (glob)
+
+returns G, F, E, and C in graph form, and shows that E is a merge commit.
+  $ mononoke_admin commit-graph -R repo ancestors-difference --graph --heads $G --common $D
+  o  9711852ec4f4b42937dd5b760c7b3f84345bf48c74b7ef3ca7118d1d7928744d
+  │
+  o  48779d8d497815015031dc3f3e9888abc8cf8273184ebd9ca8a395e24d501c90
+  │
+  o    f0c81a03319da010415f712831abe8469ba3c30b93b0b07af175302b8c15f0e6
+  ├─╮
+  │ │
+  │ ~
+  │
+  o  e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
+  │
+  ~
