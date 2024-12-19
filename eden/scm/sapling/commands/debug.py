@@ -4005,3 +4005,22 @@ def debugwatchmansubscribe(ui, repo, **opts) -> None:
                 if event:
                     ui.write("%s\n" % json.dumps(event, indent=2, sort_keys=True))
             start = time.time()
+
+
+@command(
+    "debugpathhistory",
+    [("r", "rev", "", "revisions to check", _("REV"))],
+    _("[PATH]..."),
+)
+def debugpathhistory(ui, repo, *args, **opts) -> None:
+    """show path history before a given revision (inclusive)"""
+    ctx = scmutil.revsingle(repo, opts.get("rev", "."))
+    paths = scmutil.rootrelpaths(ctx, args)
+    if not paths:
+        raise error.Abort(_("no paths specified"))
+
+    dag = repo.changelog.dag
+    nodes = repo.pathhistory(paths, dag.ancestors([ctx.node()]))
+    for node in nodes:
+        ctx = repo[node]
+        ui.write("%s %s\n" % (repo[node], ctx.description().split("\n")[0]))
