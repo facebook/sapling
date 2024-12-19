@@ -21,8 +21,9 @@ pub struct CompactLocalStorageCmd {}
 #[async_trait]
 impl crate::Subcommand for CompactLocalStorageCmd {
     async fn run(&self) -> Result<ExitCode> {
-        let client = EdenFsInstance::global().connect(None).await?;
-        client.debugCompactLocalStorage().await?;
+        EdenFsInstance::global()
+            .debug_compact_local_storage()
+            .await?;
         Ok(0)
     }
 }

@@ -198,14 +198,9 @@ pub enum PrefetchCmd {
 
 impl PrefetchCmd {
     async fn finish(&self, output_path: &PathBuf) -> Result<ExitCode> {
-        let client = EdenFsInstance::global()
-            .connect(None)
-            .await
-            .with_context(|| anyhow!("Could not connect to EdenFS server"))?;
-        let files = client
-            .stopRecordingBackingStoreFetch()
-            .await
-            .with_context(|| anyhow!("stopRecordingBackingStoreFetch thrift call failed"))?;
+        let files = EdenFsInstance::global()
+            .stop_recording_backing_store_fetch()
+            .await?;
         let fetched_files = files
             .fetchedFilePaths
             .get("SaplingBackingStore")
@@ -223,11 +218,9 @@ impl PrefetchCmd {
     }
 
     async fn record(&self) -> Result<ExitCode> {
-        let client = EdenFsInstance::global().connect(None).await?;
-        client
-            .startRecordingBackingStoreFetch()
-            .await
-            .with_context(|| anyhow!("startRecordingBackingStoreFetch thrift call failed"))?;
+        EdenFsInstance::global()
+            .start_recording_backing_store_fetch()
+            .await?;
         Ok(0)
     }
 

@@ -21,8 +21,9 @@ pub struct ClearLocalCachesCmd {}
 #[async_trait]
 impl crate::Subcommand for ClearLocalCachesCmd {
     async fn run(&self) -> Result<ExitCode> {
-        let client = EdenFsInstance::global().connect(None).await?;
-        client.debugClearLocalStoreCaches().await?;
+        EdenFsInstance::global()
+            .debug_clear_local_store_caches()
+            .await?;
         Ok(0)
     }
 }

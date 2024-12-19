@@ -255,10 +255,7 @@ impl EdenFsInstance {
         mount_point: &Option<PathBuf>,
         timeout: Option<Duration>,
     ) -> Result<crate::types::JournalPosition> {
-        let client = self
-            .connect(timeout)
-            .await
-            .context("Unable to connect to EdenFS daemon")?;
+        let client = self.get_connected_thrift_client(timeout).await?;
         let mount_point_path = get_mount_point(mount_point)?;
         let mount_point = bytes_from_path(mount_point_path)?;
         client
@@ -278,10 +275,7 @@ impl EdenFsInstance {
         excluded_roots: &Option<Vec<PathBuf>>,
         timeout: Option<Duration>,
     ) -> Result<crate::types::ChangesSinceV2Result> {
-        let client = self
-            .connect(timeout)
-            .await
-            .context("Unable to connect to EdenFS daemon")?;
+        let client = self.get_connected_thrift_client(timeout).await?;
         let params = ChangesSinceV2Params {
             mountPoint: bytes_from_path(get_mount_point(mount_point)?)?,
             fromPosition: from_position.clone().into(),
@@ -416,10 +410,7 @@ impl EdenFsInstance {
     }
 
     pub async fn unmount(&self, path: &Path) -> Result<()> {
-        let client = self
-            .connect(None)
-            .await
-            .with_context(|| "Unable to connect to EdenFS daemon")?;
+        let client = self.get_connected_thrift_client(None).await?;
 
         let encoded_path = bytes_from_path(path.to_path_buf())
             .with_context(|| format!("Failed to encode path {}", path.display()))?;
@@ -435,13 +426,8 @@ impl EdenFsInstance {
         &self,
         mount_point: PathBuf,
     ) -> Result<thrift_types::edenfs::GetCurrentSnapshotInfoResponse> {
-        let client = self
-            .connect(None)
-            .await
-            .with_context(|| "Unable to connect to EdenFS daemon")?;
-
+        let client = self.get_connected_thrift_client(None).await?;
         let mount_point = bytes_from_path(mount_point)?;
-
         let snapshot_info_params = GetCurrentSnapshotInfoRequest {
             mountId: MountId {
                 mountPoint: mount_point,
@@ -464,11 +450,7 @@ impl EdenFsInstance {
         list_ignored: bool,
         root_id_options: Option<thrift_types::edenfs::RootIdOptions>,
     ) -> Result<thrift_types::edenfs::GetScmStatusResult> {
-        let client = self
-            .connect(None)
-            .await
-            .with_context(|| "Unable to connect to EdenFS daemon")?;
-
+        let client = self.get_connected_thrift_client(None).await?;
         client
             .getScmStatusV2(&GetScmStatusParams {
                 mountPoint: bytes_from_path(mount_point)?,
@@ -502,11 +484,7 @@ impl EdenFsInstance {
         let target_path = bytes_from_path(target_path.to_path_buf())
             .with_context(|| format!("Failed to get target '{}' as str", target_path.display()))?;
 
-        let client = self
-            .connect(None)
-            .await
-            .with_context(|| "Unable to connect to EdenFS daemon")?;
-
+        let client = self.get_connected_thrift_client(None).await?;
         client
             .addBindMount(&mount_path, &repo_path, &target_path)
             .await
@@ -528,11 +506,7 @@ impl EdenFsInstance {
             format!("Failed to get repo point '{}' as str", repo_path.display())
         })?;
 
-        let client = self
-            .connect(None)
-            .await
-            .with_context(|| "Unable to connect to EdenFS daemon")?;
-
+        let client = self.get_connected_thrift_client(None).await?;
         client
             .removeBindMount(&mount_path, &repo_path)
             .await
@@ -552,6 +526,61 @@ impl EdenFsInstance {
             .getConfig(&params)
             .await
             .map_err(|_| EdenFsError::Other(anyhow!("failed to get default eden config data")))
+    }
+
+    pub async fn stop_recording_backing_store_fetch(
+        &self,
+    ) -> Result<thrift_types::edenfs::GetFetchedFilesResult> {
+        let client = self.get_connected_thrift_client(None).await?;
+        let files = client
+            .stopRecordingBackingStoreFetch()
+            .await
+            .with_context(|| anyhow!("stopRecordingBackingStoreFetch thrift call failed"))?;
+        Ok(files)
+    }
+
+    pub async fn start_recording_backing_store_fetch(&self) -> Result<()> {
+        let client = self.get_connected_thrift_client(None).await?;
+        client
+            .startRecordingBackingStoreFetch()
+            .await
+            .with_context(|| anyhow!("startRecordingBackingStoreFetch thrift call failed"))?;
+        Ok(())
+    }
+
+    pub async fn debug_clear_local_store_caches(&self) -> Result<()> {
+        let client = self.get_connected_thrift_client(None).await?;
+        client
+            .debugClearLocalStoreCaches()
+            .await
+            .map_err(|_| EdenFsError::Other(anyhow!("failed to call debugClearLocalStoreCaches")))
+    }
+
+    pub async fn debug_compact_local_storage(&self) -> Result<()> {
+        let client = self.get_connected_thrift_client(None).await?;
+        client
+            .debugCompactLocalStorage()
+            .await
+            .map_err(|_| EdenFsError::Other(anyhow!("failed to call debugCompactLocalStorage")))
+    }
+
+    pub async fn clear_and_compact_local_store(&self) -> Result<()> {
+        let client = self.get_connected_thrift_client(None).await?;
+        client
+            .clearAndCompactLocalStore()
+            .await
+            .map_err(|_| EdenFsError::Other(anyhow!("failed to call clearAndCompactLocalStore")))
+    }
+
+    pub async fn get_connected_thrift_client(
+        &self,
+        timeout: Option<Duration>,
+    ) -> Result<EdenFsClient> {
+        let connected_client = self
+            .connect(timeout)
+            .await
+            .with_context(|| "Unable to connect to EdenFS daemon")?;
+        Ok(connected_client)
     }
 }
 
