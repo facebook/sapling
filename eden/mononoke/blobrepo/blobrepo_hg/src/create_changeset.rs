@@ -103,6 +103,7 @@ impl CreateChangeset {
         self,
         ctx: CoreContext,
         repo: &(impl RepoBlobstoreArc + CommitGraphWriterArc + BonsaiHgMappingArc + Send + Sync),
+        bonsai: Option<BonsaiChangeset>,
         mut scuba_logger: MononokeScubaSampleBuilder,
     ) -> ChangesetHandle {
         STATS::create_changeset.add_value(1);
@@ -173,20 +174,29 @@ impl CreateChangeset {
 
                 STATS::create_changeset_cf_count.add_value(files.len() as i64);
                 let hg_cs = make_new_changeset(parents, root_mf_id, cs_metadata, files)?;
-                let bonsai_cs = {
-                    let bonsai_cs = create_bonsai_changeset_object(
-                        &ctx,
-                        hg_cs.clone(),
-                        parent_manifest_hashes.clone(),
-                        bonsai_parents,
-                        &blobstore,
-                    )
-                    .await?;
-                    if let Some(origin_repo) = self.verify_origin_repo.as_ref() {
-                        verify_bonsai_changeset_with_origin(&ctx, bonsai_cs, &hg_cs, origin_repo)
+
+                let bonsai_cs = match bonsai {
+                    Some(bs) => bs,
+                    None => {
+                        let bonsai_cs = create_bonsai_changeset_object(
+                            &ctx,
+                            hg_cs.clone(),
+                            parent_manifest_hashes.clone(),
+                            bonsai_parents,
+                            &blobstore,
+                        )
+                        .await?;
+                        if let Some(origin_repo) = self.verify_origin_repo.as_ref() {
+                            verify_bonsai_changeset_with_origin(
+                                &ctx,
+                                bonsai_cs,
+                                &hg_cs,
+                                origin_repo,
+                            )
                             .await?
-                    } else {
-                        bonsai_cs
+                        } else {
+                            bonsai_cs
+                        }
                     }
                 };
 

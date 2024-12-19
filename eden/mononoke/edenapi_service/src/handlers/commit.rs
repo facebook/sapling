@@ -508,6 +508,7 @@ impl SaplingRemoteApiHandler for UploadHgChangesetsHandler {
                 Ok((
                     HgChangesetId::new(HgNodeHash::from(changeset.node_id)),
                     to_revlog_changeset(changeset.changeset_content)?,
+                    None,
                 ))
             })
             .collect::<Result<Vec<_>, Error>>()?;

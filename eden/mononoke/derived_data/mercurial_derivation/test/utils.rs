@@ -184,6 +184,7 @@ pub fn create_changeset_no_parents(
     create_changeset.create(
         CoreContext::test_mock(fb),
         repo,
+        None,
         MononokeScubaSampleBuilder::with_discard(),
     )
 }
@@ -220,6 +221,7 @@ pub fn create_changeset_one_parent(
     create_changeset.create(
         CoreContext::test_mock(fb),
         repo,
+        None,
         MononokeScubaSampleBuilder::with_discard(),
     )
 }

@@ -1255,6 +1255,7 @@ impl<'r, R: Repo> Bundle2Resolver<'r, R> {
                         &filelogs,
                         &manifests,
                         maybe_backup_repo_source.clone(),
+                        None,
                     )
                     .await
                     .with_context(err_context)?

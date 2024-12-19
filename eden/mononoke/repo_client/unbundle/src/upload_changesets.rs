@@ -36,6 +36,7 @@ use mercurial_types::HgNodeKey;
 use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
 use mercurial_types::NULL_HASH;
+use mononoke_types::BonsaiChangeset;
 use scuba_ext::MononokeScubaSampleBuilder;
 use wirepack::TreemanifestEntry;
 use wireproto_handler::BackupSourceRepo;
@@ -289,6 +290,7 @@ pub async fn upload_changeset(
     filelogs: &Filelogs,
     manifests: &Manifests,
     maybe_backup_repo_source: Option<BackupSourceRepo>,
+    bonsai: Option<BonsaiChangeset>,
 ) -> Result<UploadedChangesets, Error> {
     let NewBlobs {
         root_manifest,
@@ -319,7 +321,7 @@ pub async fn upload_changeset(
         verify_origin_repo: maybe_backup_repo_source,
         upload_to_blobstore_only: false,
     };
-    let scheduled_uploading = create_changeset.create(ctx, &repo, scuba_logger);
+    let scheduled_uploading = create_changeset.create(ctx, &repo, bonsai, scuba_logger);
 
     uploaded_changesets.insert(node, scheduled_uploading);
     Ok(uploaded_changesets)

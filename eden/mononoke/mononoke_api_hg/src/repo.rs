@@ -378,13 +378,13 @@ impl<R: MononokeRepo> HgRepoContext<R> {
     /// Store HgChangeset. The function also generates bonsai changeset and stores all necessary mappings.
     pub async fn store_hg_changesets(
         &self,
-        changesets: Vec<(HgChangesetId, RevlogChangeset)>,
+        changesets: Vec<(HgChangesetId, RevlogChangeset, Option<BonsaiChangeset>)>,
         mutations: Vec<HgMutationEntry>,
     ) -> Result<Vec<Result<(HgChangesetId, BonsaiChangeset), MononokeError>>, MononokeError> {
         let mut uploaded_changesets: HashMap<HgChangesetId, ChangesetHandle> = HashMap::new();
         let filelogs = HashMap::new();
         let manifests = HashMap::new();
-        for (node, revlog_cs) in changesets {
+        for (node, revlog_cs, bonsai) in changesets {
             uploaded_changesets = upload_changeset(
                 self.ctx().clone(),
                 self.repo().clone(),
@@ -395,6 +395,7 @@ impl<R: MononokeRepo> HgRepoContext<R> {
                 &filelogs,
                 &manifests,
                 None, /* maybe_backup_repo_source (unsupported here) */
+                bonsai,
             )
             .await
             .map_err(MononokeError::from)?;

@@ -490,7 +490,8 @@ impl<R: BlobimportRepoLike + Clone + 'static> UploadChangesets<R> {
                     verify_origin_repo: origin_repo.clone(),
                     upload_to_blobstore_only: false,
                 };
-                let cshandle = create_changeset.create(ctx.clone(), &repo, scuba_logger.clone());
+                let cshandle =
+                    create_changeset.create(ctx.clone(), &repo, None, scuba_logger.clone());
                 parent_changeset_handles.insert(csid, cshandle.clone());
 
                 cloned!(ctx);
