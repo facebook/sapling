@@ -166,6 +166,7 @@ function clone_and_log_large_repo {
   clone_large_repo
 
   cd "$LARGE_REPO_NAME" || exit
+  enable commitcloud infinitepush # to push commits to server
 
   for LARGE_BCS_ID in "${LARGE_BCS_IDS[@]}"; do
     LARGE_CS_ID=$(mononoke_admin convert --from bonsai --to hg -R "$LARGE_REPO_NAME" "$LARGE_BCS_ID" --derive)

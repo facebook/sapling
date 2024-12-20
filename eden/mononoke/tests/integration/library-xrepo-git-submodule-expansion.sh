@@ -481,3 +481,17 @@ CONFIG
 
   cd "$orig_pwd" || exit
 }
+
+# Helper that takes a message and a file and creates a git commit
+function mk_git_commit() {
+  file=${2-file}
+  echo "$1" > "$file"
+  git add "$file"
+  git commit -aqm "$1"
+}
+
+# Helper that takes a message and a file and creates a sapling commit
+function mk_sl_commit() {
+  echo "$1" > "${2-file}"
+  sl commit -Aq -m "$1"
+}
