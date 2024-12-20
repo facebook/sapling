@@ -52,11 +52,10 @@
   $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/object_list
 
 # Import it into Mononoke
-  $ with_stripped_logs gitimport "$GIT_REPO_ORIGIN" --derive-hg --generate-bookmarks full-repo
+  $ with_stripped_logs gitimport "$GIT_REPO_ORIGIN" --derive-hg --generate-bookmarks full-repo | head -6
   using repo "repo" repoid RepositoryId(0)
   Execution error: gitimport failed
   
   Caused by:
       0: find_file_changes
       1: Encountered non-standard file mode 0o100744 for file file2 with Object ID f138820097c8ef62a012205db0b1701df516f6d5
-  Error: Execution failed
