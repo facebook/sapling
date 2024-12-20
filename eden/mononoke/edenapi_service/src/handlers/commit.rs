@@ -652,19 +652,37 @@ impl SaplingRemoteApiHandler for FetchSnapshotHandler {
             .bubble_from_changeset(repo.ctx(), &cs_id)
             .await
             .context("Failure in fetching bubble from changeset")?
-            .context("Snapshot not in a bubble")?;
+            .ok_or_else(|| {
+                HttpError::e404(MononokeError::NotAvailable(format!(
+                    "Snapshot for changeset {} not found in bubble",
+                    cs_id
+                )))
+            })?;
         let labels = repo
             .ephemeral_store()
             .labels_from_bubble(repo.ctx(), &bubble_id)
             .await
             .context("Failed to fetch labels associated with the snapshot")?;
         let blobstore = repo.bubble_blobstore(Some(bubble_id)).await?;
-        let cs = cs_id
+        let fallible_cs = cs_id
             .load(repo.ctx(), &blobstore)
             .await
-            .context("Failed to load bonsai changeset through bubble blobstore")
-            .map_err(MononokeError::from)?
-            .into_mut();
+            .context("Failed to load bonsai changeset through bubble blobstore");
+        let cs = match fallible_cs {
+            Ok(cs) => cs.into_mut(),
+            Err(e) => {
+                let bubble_expired = format!("{:?}", e).contains("has expired");
+                let err = if bubble_expired {
+                    HttpError::e400(MononokeError::NotAvailable(format!(
+                        "Snapshot for changeset {} with bubble ID {} expired",
+                        cs_id, bubble_id
+                    )))
+                } else {
+                    HttpError::e500(MononokeError::from(e))
+                };
+                return Err(err.into());
+            }
+        };
         let time = cs.author_date.timestamp_secs();
         let tz = cs.author_date.tz_offset_secs();
         let response = FetchSnapshotResponse {
@@ -744,7 +762,12 @@ impl SaplingRemoteApiHandler for AlterSnapshotHandler {
             .ephemeral_store()
             .bubble_from_changeset(repo.ctx(), &cs_id)
             .await?
-            .context("Snapshot does not exist or has already expired")?;
+            .ok_or_else(|| {
+                HttpError::e404(MononokeError::NotAvailable(format!(
+                    "Snapshot for changeset {} not found in bubble",
+                    cs_id
+                )))
+            })?;
         let (label_addition, label_removal) = (
             !request.labels_to_add.is_empty(),
             !request.labels_to_remove.is_empty(),
