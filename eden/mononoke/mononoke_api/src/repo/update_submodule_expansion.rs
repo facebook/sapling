@@ -9,12 +9,16 @@ use std::collections::BTreeMap;
 
 use anyhow::anyhow;
 use anyhow::Context;
+use futures::stream;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
 use maplit::btreemap;
 use metaconfig_types::CommitSyncConfig;
 use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime as MononokeDateTime;
+use mononoke_types::FileChange;
 use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
@@ -57,6 +61,8 @@ impl<R: MononokeRepo> RepoContext<R> {
     /// repo.
     pub async fn update_submodule_expansion(
         &self,
+        // Large repo commit on top of which the one updating the submodule
+        // expansion should be created.
         base_changeset_id: ChangesetId,
         submodule_expansion_path: NonRootMPath,
         submodule_expansion_update: SubmoduleExpansionUpdate,
@@ -105,7 +111,19 @@ impl<R: MononokeRepo> RepoContext<R> {
             .await
             .context("Failed to sync small repo commit updating submodule to large repo")?;
 
-        match mb_large_repo_cs_ctx {
+        // The small repo commit will not necessarily be synced to the large repo
+        // on top of the base changeset id provided, so rebase it and get a new
+        // changeset that will be returned to the user.
+        let mb_rebased_large_repo_cs_ctx = stream::iter(mb_large_repo_cs_ctx.into_iter())
+            .then(|cs_ctx| async move {
+                self.unsafe_rebase_large_repo_changeset(cs_ctx, base_changeset_id)
+                    .await
+            })
+            .boxed()
+            .try_next()
+            .await?;
+
+        match mb_rebased_large_repo_cs_ctx {
             Some(cs_ctx) => Ok(cs_ctx),
             None => Err(anyhow!(
                 "Small repo commit updating submodule wasn't synced to large repo"
@@ -312,5 +330,48 @@ impl<R: MononokeRepo> RepoContext<R> {
             .ok_or_else(|| anyhow!("Commit sync config version {commit_sync_version} not found"))?;
 
         Ok(large_repo_sync_config)
+    }
+
+    /// Rebase the large repo commit updating the submodule expansion to the
+    /// base changeset id provided.
+    ///
+    /// The unsafe part refers to the fact that this function doesn't perform any
+    /// validation or conflict check - it just rewrites the commit parent. It's on
+    /// caller to ensure that this operation will yield correct changeset.
+    async fn unsafe_rebase_large_repo_changeset(
+        &self,
+        update_submodule_cs_ctx: ChangesetContext<R>,
+        target_cs_id: ChangesetId,
+    ) -> Result<ChangesetContext<R>, MononokeError> {
+        let bcs = update_submodule_cs_ctx.bonsai_changeset().await?;
+        let mut rebased_bcs = bcs.into_mut();
+        if rebased_bcs.parents.is_empty() {
+            rebased_bcs.parents.push(target_cs_id);
+        } else {
+            rebased_bcs.parents[0] = target_cs_id;
+        }
+
+        for file_change in rebased_bcs.file_changes.values_mut() {
+            match file_change {
+                FileChange::Change(fc) => {
+                    if let Some((_, ref mut parent)) = fc.copy_from_mut() {
+                        *parent = target_cs_id;
+                    }
+                }
+                FileChange::Deletion
+                | FileChange::UntrackedDeletion
+                | FileChange::UntrackedChange(_) => {}
+            }
+        }
+
+        let rebased_bcs = rebased_bcs.freeze()?;
+        let rebased_cs_id = rebased_bcs.get_changeset_id();
+        changesets_creation::save_changesets(&self.ctx, &self.repo, vec![rebased_bcs]).await?;
+
+        let rebased_cs_ctx = self.changeset(rebased_cs_id).await?.ok_or(anyhow!(
+            "Failed to get changeset context for rebased changeset"
+        ))?;
+
+        Ok(rebased_cs_ctx)
     }
 }
