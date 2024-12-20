@@ -39,7 +39,7 @@
 # Start up the Mononoke Git Service
   $ mononoke_git_service
 # Clone the Git repo from Mononoke
-  $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
+  $ git_client -c http.extraHeader="x-fb-product-log: git:123:pid1234_1234" clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
   Cloning into 'repo'...
   $ cd repo
 
@@ -49,7 +49,7 @@
   $ git commit -qam "Another commit on master_bookmark"
 
 # Push all the changes made so far
-  $ git_client push origin master_bookmark
+  $ git_client -c http.extraHeader="x-fb-product-log: git:123:pid1234_5678" push origin master_bookmark
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
      e8615d6..60fb9c7  master_bookmark -> master_bookmark
 
@@ -58,4 +58,4 @@
 
 # Verify the push validation errors got recorded in scuba
   $ jq -S .normal "$SCUBA" | grep product | wc -l
-  25
+  21
