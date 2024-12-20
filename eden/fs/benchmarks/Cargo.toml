@@ -12,7 +12,7 @@ name = "benchmarks"
 path = "benchmarks.rs"
 
 [dependencies]
-criterion = "0.5.1"
+criterion = { version = "0.5.1", features = ["csv_output"] }
 rand = { version = "0.8", features = ["small_rng"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
