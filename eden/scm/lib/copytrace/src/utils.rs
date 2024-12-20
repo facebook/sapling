@@ -29,11 +29,6 @@ const DEFAULT_SIMILARITY_THRESHOLD: f32 = 0.8;
 /// Maximum rename edit cost determines whether we treat two files as a rename
 const DEFAULT_MAX_EDIT_COST: u64 = 1000;
 
-/// Contants for path similarity score. The actually value does not matter
-/// here, we are more care about the ordering. Based on Git community's data,
-/// ~70%+ of renames have the same basename:
-/// https://github.com/git/git/blob/74cc1aa55f30ed76424a0e7226ab519aa6265061/diffcore-rename.c#L904-L907
-
 /// Computes the similarity score between file paths.
 ///
 /// The score will be in range [0.0, 1.0]. Higher number means more similar.
