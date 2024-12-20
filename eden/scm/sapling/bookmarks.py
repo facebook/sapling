@@ -13,6 +13,7 @@
 from __future__ import absolute_import
 
 import errno
+import string
 import struct
 import typing
 
@@ -250,7 +251,7 @@ class bmstore(dict):
             raise error.Abort(
                 _("bookmark '%s' already exists (use -f to force)") % mark
             )
-        if len(mark) > 3 and not force:
+        if len(mark) > 3 and not force and all(c in string.hexdigits for c in mark):
             try:
                 shadowhash = mark in self._repo
             except error.LookupError:  # ambiguous identifier

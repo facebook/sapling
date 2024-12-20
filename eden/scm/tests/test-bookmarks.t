@@ -346,11 +346,9 @@ bookmark with existing name
   abort: bookmark 'Z' already exists (use -f to force)
   [255]
 
-bookmark with name of branch
+bookmark with name of branch (allowed - branches are deprecated)
 
   $ hg bookmark default
-  bookmark default matches a changeset hash
-  (did you leave a -r out of an 'hg bookmark' command?)
   $ hg bookmark -f default
   $ hg book -d default
 
@@ -373,6 +371,10 @@ bookmark with a name that matches a node id
   test-hook-bookmark: db815d6d32e6:   -> db815d6d32e69058eadefc8cffbad37675707975
   $ hg bookmark -d 925d80f479bb
   $ hg bookmark -d db815d6d32e6
+Don't warn if name clearly isn't a hex node.
+  $ hg push --to remote-bookmark-name --create -q
+  $ hg bookmark remote-bookmark-name
+  $ hg book -d remote-bookmark-name
 
   $ cd ..
 
