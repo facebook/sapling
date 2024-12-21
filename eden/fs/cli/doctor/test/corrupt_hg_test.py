@@ -228,9 +228,19 @@ Repairing hg directory contents for {self.checkout.path}...<green>fixed<reset>
 Found inconsistent/missing data in {hg_dot_path}:
   Found a journal file in backing repo, might have an interrupted transaction
 Repairing hg directory contents for {checkout_path}...<red>error<reset>
-(.*\n)+
+Failed to fix or verify fix for problem HgDirectoryError: CalledProcessError: Command 'hg' returned non-zero exit status 1.
+│ Traceback .*
+(.*\n){{15}}.*
+│ subprocess.CalledProcessError: Command 'hg' returned non-zero exit status 1.
+stdout:
+
+stderr:
+repair error
+
+
 <red>Failed to fix 1 problem.<reset>
 .*""",
+                msg=f"formatted output:\n{out.getvalue()}",
             )
 
     def _verify_hg_dir(self) -> None:

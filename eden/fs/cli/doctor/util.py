@@ -169,6 +169,13 @@ def format_exception(ex: BaseException, with_tb: bool = False) -> str:
     result.append(f"{type(ex).__name__}: {ex}")
     if with_tb:
         result.extend(format_traceback(ex, "│ "))
+    # Get CalledProcess output
+    if type(ex) is subprocess.CalledProcessError:
+        result.append("stdout:")
+        result.append(ex.stdout.decode("utf-8"))
+        result.append("stderr:")
+        result.append(ex.stderr.decode("utf-8"))
+
     context = ex.__context__
 
     if context:
