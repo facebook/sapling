@@ -182,8 +182,8 @@ class ChangesTestCommon(testBase):
             # For CommitTransition, from_bytes is the current hash and to_bytes is the previous hash
             buildLargeChange(
                 LargeChangeNotification.COMMITTRANSITION,
-                from_bytes=bytes.fromhex(commit1),
-                to_bytes=bytes.fromhex(self.commit0),
+                from_bytes=bytes.fromhex(self.commit0),
+                to_bytes=bytes.fromhex(commit1),
             ),
         ]
         self.assertTrue(self.check_changes(changes1.changes, expected_changes1))
@@ -193,8 +193,8 @@ class ChangesTestCommon(testBase):
         expected_changes2 = [
             buildLargeChange(
                 LargeChangeNotification.COMMITTRANSITION,
-                from_bytes=bytes.fromhex(self.commit0),
-                to_bytes=bytes.fromhex(commit1),
+                from_bytes=bytes.fromhex(commit1),
+                to_bytes=bytes.fromhex(self.commit0),
             ),
         ]
         self.assertTrue(self.check_changes(changes2.changes, expected_changes2))

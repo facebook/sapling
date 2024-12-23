@@ -2425,9 +2425,9 @@ void EdenServiceHandler::sync_changesSinceV2(
         },
         [&](const RootUpdateJournalDelta& current) -> void {
           CommitTransition commitTransition;
-          commitTransition.from_ref() = rootIdCodec.renderRootId(currentHash);
-          commitTransition.to_ref() =
+          commitTransition.from_ref() =
               rootIdCodec.renderRootId(current.fromHash);
+          commitTransition.to_ref() = rootIdCodec.renderRootId(currentHash);
           currentHash = current.fromHash;
 
           LargeChangeNotification largeChange;
