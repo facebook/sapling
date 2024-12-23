@@ -455,9 +455,8 @@ void SaplingBackingStore::setFetchBlobCounters(
 
   if (isOBCEnabled_) {
     getBlobPerRepoLatencies_ += watch.elapsed().count();
-  } else {
-    stats_->addDuration(&SaplingBackingStoreStats::fetchBlob, watch.elapsed());
   }
+  stats_->addDuration(&SaplingBackingStoreStats::fetchBlob, watch.elapsed());
 
   if (fetchResult == ObjectFetchContext::FetchResult::Success) {
     stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccess);
@@ -727,10 +726,9 @@ void SaplingBackingStore::processTreeImportRequests(
       if (promise->isFulfilled()) {
         if (isOBCEnabled_) {
           getTreePerRepoLatencies_ += watch.elapsed().count();
-        } else {
-          stats_->addDuration(
-              &SaplingBackingStoreStats::fetchTree, watch.elapsed());
         }
+        stats_->addDuration(
+            &SaplingBackingStoreStats::fetchTree, watch.elapsed());
         stats_->increment(&SaplingBackingStoreStats::fetchTreeSuccess);
         if (store_.dogfoodingHost()) {
           stats_->increment(
