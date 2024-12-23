@@ -27,7 +27,6 @@ use edenapi::SaplingRemoteApi;
 use edenapi::SaplingRemoteApiError;
 use manifest_tree::ReadTreeManifest;
 use metalog::MetaLog;
-use metrics::ods;
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 use repo_minimal_info::constants::SUPPORTED_DEFAULT_REQUIREMENTS;
@@ -172,13 +171,6 @@ impl Repo {
             });
 
         let locker = Arc::new(RepoLocker::new(&config, store_path.clone())?);
-
-        let is_obc_enabled = config.get_or::<bool>("scmstore", "enable-obc", || false)?;
-        if is_obc_enabled {
-            if let Err(err) = ods::initialize_obc_client() {
-                tracing::warn!(?err, "error creating OBC client");
-            }
-        }
 
         Ok(Repo {
             path,

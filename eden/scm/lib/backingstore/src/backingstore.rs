@@ -28,6 +28,7 @@ use edenapi::types::CommitId;
 use edenapi::BlockingResponse;
 use edenapi::RECENT_DOGFOODING_REQUESTS;
 use log::warn;
+use metrics::ods;
 use repo::repo::Repo;
 use repo::RepoMinimalInfo;
 use storemodel::BoxIterator;
@@ -147,6 +148,13 @@ impl BackingStore {
         let treestore = repo.tree_store()?;
 
         let config = repo.config().clone();
+
+        let is_obc_enabled = config.get_or::<bool>("scmstore", "enable-obc", || false)?;
+        if is_obc_enabled {
+            if let Err(err) = ods::initialize_obc_client() {
+                tracing::warn!(?err, "error creating OBC client");
+            }
+        }
 
         Ok(Inner {
             treestore,

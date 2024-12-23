@@ -27,6 +27,7 @@ sapling-edenapi = { version = "0.1.0", path = "../edenapi" }
 sapling-identity = { version = "0.1.0", path = "../identity" }
 sapling-indexedlog = { version = "0.1.0", path = "../indexedlog", features = ["configurable"] }
 sapling-manifest = { version = "0.1.0", path = "../manifest" }
+sapling-metrics = { version = "0.1.0", path = "../metrics" }
 sapling-repo = { version = "0.1.0", path = "../repo" }
 sapling-storemodel = { version = "0.1.0", path = "../storemodel" }
 sapling-tracing-collector = { version = "0.1.0", path = "../tracing-collector" }
