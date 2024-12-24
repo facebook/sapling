@@ -14,4 +14,4 @@ cmdutil = { version = "0.1.0", path = "../../cmdutil" }
 sapling-clidispatch = { version = "0.1.0", path = "../../../clidispatch" }
 sapling-hg-metrics = { version = "0.1.0", path = "../../../hg-metrics" }
 sapling-repo = { version = "0.1.0", path = "../../../repo" }
-tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

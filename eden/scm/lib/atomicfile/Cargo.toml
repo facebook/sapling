@@ -15,4 +15,4 @@ name = "atomicfile"
 
 [dependencies]
 tempfile = "3.8"
-tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

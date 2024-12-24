@@ -30,7 +30,7 @@ sapling-types = { version = "0.1.0", path = "../types" }
 sapling-xdiff = { version = "0.1.0", path = "../xdiff" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 thiserror = "2"
-tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
 sapling-manifest-tree = { version = "0.1.0", path = "../manifest-tree", features = ["for-tests"] }

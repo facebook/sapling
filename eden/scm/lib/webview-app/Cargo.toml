@@ -23,5 +23,5 @@ base64 = "0.21"
 open = "4"
 sapling-version = { version = "0.1.0", path = "../version" }
 tinyfiledialogs = "3.9.1"
-tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 webview-sys = { version = "0.6.2", path = "../third-party/webview-sys" }

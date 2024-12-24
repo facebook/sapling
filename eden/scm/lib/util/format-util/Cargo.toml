@@ -21,4 +21,4 @@ sapling-minibytes = { version = "0.1.0", path = "../../minibytes" }
 sapling-types = { version = "0.1.0", path = "../../types" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 sha1 = "0.10.5"
-tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

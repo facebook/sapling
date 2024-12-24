@@ -23,7 +23,7 @@ sapling-rewrite-macros = { version = "0.1.0", path = "../util/rewrite-macros" }
 sapling-types = { version = "0.1.0", path = "../types" }
 thiserror = "2"
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"], optional = true }
-tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }

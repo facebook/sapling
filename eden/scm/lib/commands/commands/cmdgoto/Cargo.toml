@@ -21,7 +21,7 @@ sapling-repo = { version = "0.1.0", path = "../../../repo", features = ["wdir"] 
 sapling-repostate = { version = "0.1.0", path = "../../../workingcopy/repostate" }
 sapling-util = { version = "0.1.0", path = "../../../util" }
 sapling-workingcopy = { version = "0.1.0", path = "../../../workingcopy" }
-tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [features]
 default = []

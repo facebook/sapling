@@ -17,6 +17,6 @@ sapling-nodeipc = { version = "0.1.0", path = "../../util/nodeipc" }
 sapling-progress-model = { version = "0.1.0", path = "../model" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 termwiz = { version = "0.22", features = ["widgets"] }
-tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 unicode-segmentation = "1.6.0"
 unicode-width = "=0.1.12"

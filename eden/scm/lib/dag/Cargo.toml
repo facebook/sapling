@@ -34,7 +34,7 @@ sapling-vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 tempfile = { version = "3.8", optional = true }
 thiserror = "2"
-tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
 fs2 = "0.4"

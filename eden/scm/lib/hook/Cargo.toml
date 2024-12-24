@@ -20,4 +20,4 @@ sapling-identity = { version = "0.1.0", path = "../identity" }
 sapling-io = { version = "0.1.0", path = "../io" }
 sapling-minibytes = { version = "0.1.0", path = "../minibytes" }
 sapling-spawn-ext = { version = "0.1.0", path = "../spawn-ext" }
-tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

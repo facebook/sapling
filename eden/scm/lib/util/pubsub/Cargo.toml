@@ -14,4 +14,4 @@ name = "pubsub"
 
 [dependencies]
 anyhow = "1.0.86"
-tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

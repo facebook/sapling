@@ -16,4 +16,4 @@ name = "termlogger"
 sapling-identity = { version = "0.1.0", path = "../../../identity" }
 sapling-io = { version = "0.1.0", path = "../.." }
 sapling-lazystr = { version = "0.1.0", path = "../../../lazystr" }
-tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

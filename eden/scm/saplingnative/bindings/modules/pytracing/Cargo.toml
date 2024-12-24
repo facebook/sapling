@@ -16,4 +16,4 @@ sapling-tracing-collector = { version = "0.1.0", path = "../../../../lib/tracing
 sapling-tracing-reload = { version = "0.1.0", path = "../../../../lib/tracing-reload" }
 sapling-tracing-runtime-callsite = { version = "0.1.0", path = "../../../../lib/tracing-runtime-callsite" }
 serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_depth"] }
-tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

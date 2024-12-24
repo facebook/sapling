@@ -40,7 +40,7 @@ sapling-configmodel = { version = "0.1.0", path = "../config/model", optional = 
 sapling-minibytes = { version = "0.1.0", path = "../minibytes" }
 sapling-vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
 tempfile = "3.8"
-tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 twox-hash = "1.6.1"
 
 [dev-dependencies]

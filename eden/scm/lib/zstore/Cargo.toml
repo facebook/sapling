@@ -23,7 +23,7 @@ sapling-types = { version = "0.1.0", path = "../types" }
 sapling-zstdelta = { version = "0.1.0", path = "../zstdelta" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
 sha1 = "0.10.5"
-tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
 quickcheck = "1.0"

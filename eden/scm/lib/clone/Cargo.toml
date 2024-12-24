@@ -21,7 +21,7 @@ sapling-repo = { version = "0.1.0", path = "../repo" }
 sapling-types = { version = "0.1.0", path = "../types" }
 sapling-util = { version = "0.1.0", path = "../util" }
 thiserror = "2"
-tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
 tempfile = "3.8"

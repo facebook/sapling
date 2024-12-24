@@ -29,4 +29,4 @@ sapling-progress-model = { version = "0.1.0", path = "../progress/model" }
 sapling-spawn-ext = { version = "0.1.0", path = "../spawn-ext" }
 sapling-storemodel = { version = "0.1.0", path = "../storemodel" }
 sapling-types = { version = "0.1.0", path = "../types" }
-tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

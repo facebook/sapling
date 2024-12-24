@@ -18,4 +18,4 @@ git2 = "0.14"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 sapling-dag = { version = "0.1.0", path = ".." }
 sapling-nonblocking = { version = "0.1.0", path = "../../nonblocking" }
-tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

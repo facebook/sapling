@@ -12,7 +12,7 @@ configparser = { package = "sapling-configloader", version = "0.1.0", path = "..
 pyblackbox = { path = "../../saplingnative/bindings/modules/pyblackbox" }
 sapling-atexit = { version = "0.1.0", path = "../../lib/util/atexit" }
 sapling-clidispatch = { version = "0.1.0", path = "../../lib/clidispatch" }
-tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 dirs = { version = "2.0", optional = true }

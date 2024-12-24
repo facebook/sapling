@@ -18,7 +18,7 @@ sapling-configmodel = { version = "0.1.0", path = "../model" }
 sapling-hgrc-parser = { version = "0.1.0", path = "../hgrc-parser" }
 sapling-minibytes = { version = "0.1.0", path = "../../minibytes" }
 sapling-util = { version = "0.1.0", path = "../../util" }
-tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
 tempfile = "3.8"

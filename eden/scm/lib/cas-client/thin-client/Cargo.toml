@@ -20,4 +20,4 @@ sapling-cas-client = { version = "0.1.0", path = ".." }
 sapling-configmodel = { version = "0.1.0", path = "../../config/model" }
 sapling-factory = { version = "0.1.0", path = "../../util/factory" }
 sapling-re-cas-common = { version = "0.1.0", path = "../re-cas-common" }
-tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

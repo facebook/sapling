@@ -15,7 +15,7 @@ sapling-revisionstore = { version = "0.1.0", path = "../../../../lib/revisionsto
 sapling-storemodel = { version = "0.1.0", path = "../../../../lib/storemodel" }
 sapling-types = { version = "0.1.0", path = "../../../../lib/types" }
 sapling-vfs = { version = "0.1.0", path = "../../../../lib/vfs" }
-tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
 memmap2 = "0.5.10"

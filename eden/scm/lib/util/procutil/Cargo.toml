@@ -13,7 +13,7 @@ license = "MIT"
 name = "procutil"
 
 [dependencies]
-tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = "0.2.139"

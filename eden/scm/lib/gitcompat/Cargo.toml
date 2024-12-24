@@ -22,7 +22,7 @@ sapling-pathmatcher-types = { version = "0.1.0", path = "../pathmatcher/types" }
 sapling-spawn-ext = { version = "0.1.0", path = "../spawn-ext" }
 sapling-treestate = { version = "0.1.0", path = "../treestate" }
 sapling-types = { version = "0.1.0", path = "../types" }
-tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
 tempfile = "3.8"

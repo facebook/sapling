@@ -25,7 +25,7 @@ sapling-spawn-ext = { version = "0.1.0", path = "../spawn-ext" }
 sapling-udsipc = { version = "0.1.0", path = "../util/udsipc" }
 sapling-version = { version = "0.1.0", path = "../version" }
 serde = { version = "1.0.185", features = ["derive", "rc"] }
-tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = "0.2.139"

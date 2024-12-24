@@ -17,7 +17,7 @@ sapling-edenfs-client = { version = "0.1.0", path = "../../../edenfs-client", op
 sapling-repo = { version = "0.1.0", path = "../../../repo" }
 sapling-treestate = { version = "0.1.0", path = "../../../treestate" }
 sapling-workingcopy = { version = "0.1.0", path = "../../../workingcopy" }
-tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [features]
 default = []

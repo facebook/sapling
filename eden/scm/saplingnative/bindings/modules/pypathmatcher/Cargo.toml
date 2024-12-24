@@ -12,4 +12,4 @@ sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" 
 sapling-io = { version = "0.1.0", path = "../../../../lib/io" }
 sapling-pathmatcher = { version = "0.1.0", path = "../../../../lib/pathmatcher" }
 sapling-types = { version = "0.1.0", path = "../../../../lib/types" }
-tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

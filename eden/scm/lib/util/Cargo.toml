@@ -25,7 +25,7 @@ sapling-rewrite-macros = { version = "0.1.0", path = "rewrite-macros" }
 shell-escape = "0.1.5"
 shellexpand = "2.1.2"
 thiserror = "2"
-tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 whoami = "1.5"
 
 [dev-dependencies]

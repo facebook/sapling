@@ -45,7 +45,7 @@ sapling-types = { version = "0.1.0", path = "../types" }
 sapling-util = { version = "0.1.0", path = "../util" }
 sapling-workingcopy = { version = "0.1.0", path = "../workingcopy", optional = true }
 thiserror = "2"
-tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
 rand_chacha = "0.3"

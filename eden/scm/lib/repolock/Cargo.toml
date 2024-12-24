@@ -20,7 +20,7 @@ sapling-configmodel = { version = "0.1.0", path = "../config/model" }
 sapling-progress-model = { version = "0.1.0", path = "../progress/model" }
 sapling-util = { version = "0.1.0", path = "../util" }
 thiserror = "2"
-tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
 anyhow = "1.0.86"

@@ -28,5 +28,5 @@ sapling-repo = { version = "0.1.0", path = "../../../repo" }
 sapling-repourl = { version = "0.1.0", path = "../../../repo/url" }
 sapling-types = { version = "0.1.0", path = "../../../types" }
 sapling-util = { version = "0.1.0", path = "../../../util" }
-tracing = { version = "0.1.40", features = ["attributes", "valuable"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 url = "2.5.2"
