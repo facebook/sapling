@@ -6,11 +6,10 @@
  */
 
 import type {LineInfo} from '../linelog';
-import type {Rev} from './fileStackState';
+import type {FileStackState, Rev} from './fileStackState';
 import type {RecordOf} from 'immutable';
 
 import {assert} from '../utils';
-import {FileStackState} from './fileStackState';
 import {List, Record, Map as ImMap} from 'immutable';
 import {diffLines, splitLines} from 'shared/diff';
 import {dedup, nullthrows} from 'shared/utils';
@@ -298,52 +297,9 @@ export function analyseFileStack(
 
 /**
  * Apply edits specified by `chunks`.
- * Each `chunk` can specify which rev it wants to absorb to by setting `selectedRev`.
- */
-export function applyFileStackEdits(
-  stack: FileStackState,
-  chunks: Iterable<AbsorbEdit>,
-): FileStackState {
-  // See also [apply](https://github.com/facebook/sapling/blob/6f29531e83daa62d9bd3bc58b712755d34f41493/eden/scm/sapling/ext/absorb/__init__.py#L321)
-  assert(stack.revLength > 0, 'stack should not be empty');
-  let linelog = stack.convertToLineLog();
-  // Remap revs from rev to rev * 2. So we can edit rev * 2 + 1 to override contents.
-  linelog = linelog.remapRevs(new Map(Array.from({length: stack.revLength}, (_, i) => [i, i * 2])));
-  const oldRev = stack.revLength - 1;
-  // Apply the changes. Assuming there are no overlapping chunks, we apply
-  // from end to start so the line numbers won't need change.
-  const sortedChunks = [...chunks]
-    .filter(c => c.selectedRev != null)
-    .toSorted((a, b) => b.oldEnd - a.oldEnd);
-  sortedChunks.forEach(chunk => {
-    const targetRev = nullthrows(chunk.selectedRev);
-    assert(
-      targetRev >= chunk.introductionRev,
-      `selectedRev ${targetRev} must be >= introductionRev ${chunk.introductionRev}`,
-    );
-    assert(
-      targetRev > 0,
-      'selectedRev must be > 0 since rev 0 is from the immutable public commit',
-    );
-    // Edit the content of a past revision (targetRev, and follow-ups) from a
-    // future revision (oldRev, matches the line numbers).
-    linelog = linelog.editChunk(
-      oldRev * 2,
-      chunk.oldStart,
-      chunk.oldEnd,
-      targetRev * 2 + 1,
-      chunk.newLines.toArray(),
-    );
-  });
-  const texts = Array.from({length: stack.revLength}, (_, i) => linelog.checkOut(i * 2 + 1));
-  return new FileStackState(texts);
-}
-
-/**
- * Apply edits specified by `chunks`.
  * The `chunk.selectedRev` is expected to include the `AbsorbEditId`.
  */
-function applyFileStackEditsWithAbsorbId(
+export function applyFileStackEditsWithAbsorbId(
   stack: FileStackState,
   chunks: Iterable<AbsorbEdit>,
 ): FileStackState {

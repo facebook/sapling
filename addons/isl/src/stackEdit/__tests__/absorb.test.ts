@@ -7,11 +7,11 @@
 
 import type {AbsorbEdit, AbsorbEditId} from '../absorb';
 import type {Rev} from '../fileStackState';
-import type {List, Map as ImMap} from 'immutable';
+import type {Map as ImMap} from 'immutable';
 
 import {
   analyseFileStack,
-  applyFileStackEdits,
+  applyFileStackEditsWithAbsorbId,
   calculateAbsorbEditsForFileStack,
   embedAbsorbId,
   extractRevAbsorbId,
@@ -147,25 +147,29 @@ describe('analyseFileStack', () => {
   describe('applyFileStackEdits', () => {
     it('edits 3 lines by 3 insertions', () => {
       // Replace ['1','2','3'] to ['a','b','c'], 1->a, 2->b, 3->c.
-      const stack = createStack(['', '1↵', '1↵2↵', '1↵2↵3↵']);
-      const chunks = analyseFileStack(stack, injectNewLines('a↵b↵c↵'));
-      expect(applyChunks(stack, chunks)).toMatchInlineSnapshot(`" a↵ a↵b↵ a↵b↵c↵"`);
+      const fullStack = createStack(['', '1↵', '1↵2↵', '1↵2↵3↵', 'a↵b↵c↵']);
+      const edits = calculateAbsorbEditsForFileStack(fullStack)[1];
+      const stack = fullStack.truncate(fullStack.revLength - 1);
+      expect(applyEdits(stack, edits.values())).toMatchInlineSnapshot(`" a↵ a↵b↵ a↵b↵c↵"`);
       // Tweak the `selectedRev` so the 1->a, 2->b changes happen at the last rev.
-      const chunks2 = chunks.map(c => c.set('selectedRev', 3));
-      expect(applyChunks(stack, chunks2)).toMatchInlineSnapshot(`" 1↵ 1↵2↵ a↵b↵c↵"`);
+      const edits2 = edits.map(c => c.set('selectedRev', 3));
+      expect(applyEdits(stack, edits2.values())).toMatchInlineSnapshot(`" 1↵ 1↵2↵ a↵b↵c↵"`);
       // Drop the "2->b" change by setting selectedRev to `null`.
-      const chunks3 = chunks.map(c => (c.oldStart === 1 ? c.set('selectedRev', null) : c));
-      expect(applyChunks(stack, chunks3)).toMatchInlineSnapshot(`" a↵ a↵2↵ a↵2↵c↵"`);
+      const edits3 = edits.map(c => (c.oldStart === 1 ? c.set('selectedRev', null) : c));
+      expect(applyEdits(stack, edits3.values())).toMatchInlineSnapshot(`" a↵ a↵2↵ a↵2↵c↵ a↵b↵c↵"`);
     });
 
     it('edits do not need to be 1:1 line mapping', () => {
       // Replace ['111','2','333'] to ['aaaa','2','cc']. 111->aaaa. 333->cc.
-      const stack = createStack(['', '2↵', '1↵1↵1↵2↵3↵3↵3↵']);
-      const chunks = analyseFileStack(stack, injectNewLines('a↵a↵a↵a↵2↵c↵c↵'));
-      expect(applyChunks(stack, chunks)).toMatchInlineSnapshot(`" 2↵ a↵a↵a↵a↵2↵c↵c↵"`);
+      const fullStack = createStack(['', '2↵', '1↵1↵1↵2↵3↵3↵3↵', 'a↵a↵a↵a↵2↵c↵c↵']);
+      const edits = calculateAbsorbEditsForFileStack(fullStack)[1];
+      const stack = fullStack.truncate(fullStack.revLength - 1);
+      expect(applyEdits(stack, edits.values())).toMatchInlineSnapshot(`" 2↵ a↵a↵a↵a↵2↵c↵c↵"`);
       // Drop the "1->aaa" change by setting selectedRev to `null`.
-      const chunks3 = chunks.map(c => (c.oldStart === 0 ? {...c, selectedRev: null} : c));
-      expect(applyChunks(stack, chunks3)).toMatchInlineSnapshot(`" 2↵ 1↵1↵1↵2↵c↵c↵"`);
+      const edits2 = edits.map(c => (c.oldStart === 0 ? c.set('selectedRev', null) : c));
+      expect(applyEdits(stack, edits2.values())).toMatchInlineSnapshot(
+        `" 2↵ 1↵1↵1↵2↵c↵c↵ a↵a↵a↵a↵2↵c↵c↵"`,
+      );
     });
   });
 
@@ -304,8 +308,9 @@ describe('analyseFileStack', () => {
       .join('\n');
   }
 
-  function applyChunks(stack: FileStackState, chunks: Iterable<AbsorbEdit>): string {
-    return compactTexts(applyFileStackEdits(stack, chunks).convertToPlainText());
+  function applyEdits(stack: FileStackState, edits: Iterable<AbsorbEdit>): string {
+    const editedStack = applyFileStackEditsWithAbsorbId(stack, edits);
+    return compactTexts(editedStack.revs().map(rev => editedStack.getRev(revWithAbsorb(rev))));
   }
 
   /** Replace "↵" with "\n" */
@@ -319,8 +324,8 @@ describe('analyseFileStack', () => {
 });
 
 /** Turn ["a\n", "a\nb\n"] to "a↵ ab↵". */
-function compactTexts(texts: List<string>): string {
-  return texts.map(t => t.replaceAll('\n', '↵')).join(' ');
+function compactTexts(texts: Iterable<string>): string {
+  return [...texts].map(t => t.replaceAll('\n', '↵')).join(' ');
 }
 
 export function describeAbsorbIdChunkMap(map: ImMap<AbsorbEditId, AbsorbEdit>): string[] {
