@@ -189,6 +189,15 @@ export class FileStackState extends SelfUpdate<FileStackStateRecord> {
     return this.fromFlattenLines(lines, this.revLength);
   }
 
+  /**
+   * Truncate the stack. Drop rev (inclusive) and higher revs.
+   * Note: This is only implemented for linelog.
+   */
+  truncate(rev: Rev): FileStackState {
+    const log = this.convertToLineLog().truncate(rev);
+    return this.fromLineLog(log);
+  }
+
   // Internal format conversions.
 
   /** Convert to LineLog representation on demand. */
