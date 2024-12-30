@@ -630,6 +630,27 @@ class Code implements ValueObject {
     return [newCode, newMaxRev];
   }
 
+  /**
+   * Drop edits for revs >= the given rev. Returns [newCode, newMaxRev].
+   */
+  truncate(rev: Rev): [Code, Rev] {
+    const valueOfString = `TRUNC${rev}`;
+    return this.rewriteInsts((inst, pc) => {
+      if (inst.op === Op.JGE || inst.op === Op.LINE) {
+        if (inst.rev >= rev) {
+          // NOP.
+          return J({pc: pc + 1}) as Inst;
+        }
+      } else if (inst.op === Op.JL) {
+        if (inst.rev >= rev) {
+          // Unconditional jump.
+          return J({pc: inst.pc}) as Inst;
+        }
+      }
+      return inst;
+    }, valueOfString);
+  }
+
   private newCode(instList: List<Inst>, newValueOf: string): Code {
     const newStr = this.__valueOf + '\0' + newValueOf;
     // We want bitwise operations.
@@ -819,6 +840,14 @@ class LineLog extends SelfUpdate<LineLogRecord> {
    */
   remapRevs(revMap: Map<Rev, Rev>): LineLog {
     const [newCode, newMaxRev] = this.code.remapRevs(revMap);
+    return new LineLog({code: newCode, maxRev: newMaxRev});
+  }
+
+  /**
+   * Truncate linelog. Drop rev (inclusive) and higher revs.
+   */
+  truncate(rev: Rev): LineLog {
+    const [newCode, newMaxRev] = this.code.truncate(rev);
     return new LineLog({code: newCode, maxRev: newMaxRev});
   }
 

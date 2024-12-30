@@ -392,6 +392,32 @@ describe('LineLog', () => {
     }
   });
 
+  it('supports truncation', () => {
+    const textList = ['a\nb\nc\n', 'b\nc\nd\n', 'b\nd\ne\n', 'f\n'];
+    const log = logFromTextList(textList);
+    // Note: rev 0 is empty.
+    for (let truncateRev = 0; truncateRev < textList.length; truncateRev++) {
+      const truncatedLog = log.truncate(truncateRev);
+      expect(truncatedLog.maxRev).toBe(Math.max(0, truncateRev - 1));
+      for (let rev = 0; rev < textList.length; rev++) {
+        const text = truncatedLog.checkOut(rev);
+        if (rev < truncateRev) {
+          expect(text).toBe(rev < 1 ? '' : textList[rev - 1]);
+        } else {
+          // By contract, rev >= truncateRev are removed, so their content should be the same as truncateRev - 1.
+          expect(text).toBe(truncateRev <= 1 ? '' : log.checkOut(truncateRev - 1));
+        }
+      }
+      // We can still append content to the truncatedLog.
+      const text = 'a\nc\ne\n';
+      const modifiedLog = truncatedLog.recordText(text);
+      expect(modifiedLog.checkOut(modifiedLog.maxRev)).toBe(text);
+      for (let rev = 0; rev < truncateRev; rev++) {
+        expect(modifiedLog.checkOut(rev)).toBe(log.checkOut(rev));
+      }
+    }
+  });
+
   // Ported from test-linelog-edits.py (D3709431)
   // Compare LineLog.editChunk against List<string>.splice edits.
   it('stress tests against random edits', () => {
