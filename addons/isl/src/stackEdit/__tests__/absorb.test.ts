@@ -8,7 +8,7 @@
 import type {AbsorbDiffChunk} from '../absorb';
 import type {List} from 'immutable';
 
-import {analyseFileStack, applyFileStackEdits} from '../absorb';
+import {analyseFileStack, applyFileStackEdits, embedAbsorbId, extractRevAbsorbId} from '../absorb';
 import {FileStackState} from '../fileStackState';
 
 // See also [test-fb-ext-absorb-filefixupstate.py](https://github.com/facebook/sapling/blob/eb3d35d/eden/scm/tests/test-fb-ext-absorb-filefixupstate.py#L75)
@@ -145,6 +145,15 @@ describe('analyseFileStack', () => {
       // Drop the "1->aaa" change by setting selectedRev to `null`.
       const chunks3 = chunks.map(c => (c.oldStart === 0 ? {...c, selectedRev: null} : c));
       expect(applyChunks(stack, chunks3)).toMatchInlineSnapshot(`" 2 1112cc"`);
+    });
+  });
+
+  describe('absorbId', () => {
+    it('can be embedded into rev, and extracted out', () => {
+      const plainRev = 567;
+      const absorbEditId = 890;
+      const rev = embedAbsorbId(plainRev, absorbEditId);
+      expect(extractRevAbsorbId(rev)).toEqual([plainRev, absorbEditId]);
     });
   });
 

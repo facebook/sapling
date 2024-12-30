@@ -49,6 +49,44 @@ export const AbsorbDiffChunk = Record<AbsorbDiffChunkProps>({
 export type AbsorbDiffChunk = RecordOf<AbsorbDiffChunkProps>;
 
 /**
+ * "Edit" id to distinguish different chunk edits.
+ * Note a diff chunk might be split into multiple edits.
+ */
+export type AbsorbEditId = number;
+
+/**
+ * Maximum `AbsorbEditId` (exclusive). Must be an exponent of 2.
+ *
+ * Practically this shares the 52 bits (defined by IEEE 754) with the integer
+ * part of the `Rev`.
+ */
+// eslint-disable-next-line no-bitwise
+const MAX_ABSORB_EDIT_ID = 1 << 20;
+const ABSORB_EDIT_ID_FRACTIONAL_UNIT = 1 / MAX_ABSORB_EDIT_ID;
+
+/** Extract the "AbsorbEditId" from a linelog Rev */
+export function extractRevAbsorbId(rev: Rev): [Rev, AbsorbEditId] {
+  const fractional = rev % 1;
+  const integerRev = rev - fractional;
+  const absorbEditId = fractional / ABSORB_EDIT_ID_FRACTIONAL_UNIT - 1;
+  assert(
+    Number.isInteger(absorbEditId) && absorbEditId >= 0,
+    `${rev} does not contain valid AbsorbEditId`,
+  );
+  return [integerRev, absorbEditId];
+}
+
+/** Embed an absorbEditId into a Rev */
+export function embedAbsorbId(rev: Rev, absorbEditId: AbsorbEditId): Rev {
+  assert(Number.isInteger(rev), `${rev} already has an absorbEditId embedded`);
+  assert(
+    absorbEditId < MAX_ABSORB_EDIT_ID - 1,
+    `absorbEditId (${absorbEditId}) must be < MAX_ABSORB_EDIT_ID - 1 (${MAX_ABSORB_EDIT_ID} - 1)`,
+  );
+  return rev + ABSORB_EDIT_ID_FRACTIONAL_UNIT * (absorbEditId + 1);
+}
+
+/**
  * Given a stack and the latest changes (usually at the stack top),
  * calculate the diff chunks and the revs that they might be absorbed to.
  * The rev 0 of the file stack should come from a "public" (immutable) commit.
