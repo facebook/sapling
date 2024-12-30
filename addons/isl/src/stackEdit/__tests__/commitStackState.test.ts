@@ -10,6 +10,7 @@ import type {ExportCommit, ExportStack} from 'shared/types/stack';
 
 import {ABSENT_FILE, CommitIdx, CommitStackState, CommitState} from '../commitStackState';
 import {FileStackState} from '../fileStackState';
+import {describeAbsorbIdChunkMap} from './absorb.test';
 import {List, Set as ImSet, Map as ImMap} from 'immutable';
 import {nullthrows} from 'shared/utils';
 
@@ -1010,5 +1011,91 @@ describe('CommitStackState', () => {
       expect(file.data).toBe('');
       expect(file.flags).toBe('');
     });
+  });
+
+  describe('absorb', () => {
+    const absorbStack1: ExportStack = [
+      {
+        ...exportCommitDefault,
+        immutable: true,
+        node: 'Z_NODE',
+        relevantFiles: {
+          'seq.txt': {data: '0\n'},
+          'rename_from.txt': null,
+        },
+        requested: false,
+        text: 'PublicCommit',
+      },
+      {
+        ...exportCommitDefault,
+        files: {
+          'seq.txt': {data: '0\n1\n'},
+          'rename_from.txt': {data: '1\n'},
+        },
+        node: 'A_NODE',
+        parents: ['Z_NODE'],
+        relevantFiles: {'rename_to.txt': null},
+        text: 'CommitA',
+      },
+      {
+        ...exportCommitDefault,
+        files: {
+          'seq.txt': {data: '0\n1\n2\n'},
+          'rename_to.txt': {copyFrom: 'rename_from.txt', data: '1\n'},
+          'rename_from.txt': null,
+        },
+        node: 'B_NODE',
+        parents: ['A_NODE'],
+        text: 'CommitB',
+      },
+      {
+        ...exportCommitDefault,
+        // Working copy changes. 012 => xyz.
+        files: {
+          'seq.txt': {data: 'x\ny\nz\n'},
+          'rename_to.txt': {data: 'p\n'},
+        },
+        node: 'WDIR',
+        parents: ['B_NODE'],
+        text: 'Wdir',
+      },
+    ];
+
+    it('can prepare for absorb', () => {
+      const stack = new CommitStackState(absorbStack1);
+      expect(stack.describeFileStacks()).toMatchInlineSnapshot(`
+        [
+          "0:./rename_from.txt 1:CommitA/rename_from.txt(1↵) 2:CommitB/rename_to.txt(1↵) 3:Wdir/rename_to.txt(p↵)",
+          "0:./seq.txt(0↵) 1:CommitA/seq.txt(0↵1↵) 2:CommitB/seq.txt(0↵1↵2↵) 3:Wdir/seq.txt(x↵y↵z↵)",
+        ]
+      `);
+      const stackWithAbsorb = stack.analyseAbsorb();
+      expect(stackWithAbsorb.hasPendingAbsorb()).toBeTruthy();
+      // The "1 => p" change in "rename_to.txt" is absorbed following file renames into rename_from.txt.
+      // The "1 => y", "2 => z" changes in "seq.txt" are absorbed to CommitA and CommitB.
+      // The "0 => x" change in "seq.txt" is left in the working copy as "0" is an immutable line (public commit).
+      expect(stackWithAbsorb.describeFileStacks()).toMatchInlineSnapshot(`
+        [
+          "0:./rename_from.txt 1:CommitA/rename_from.txt(1↵;absorbed:p↵)",
+          "0:./seq.txt(0↵) 1:CommitA/seq.txt(0↵1↵;absorbed:0↵y↵) 2:CommitB/seq.txt(0↵y↵2↵;absorbed:0↵y↵z↵) 3:Wdir/seq.txt(0↵y↵z↵;absorbed:x↵y↵z↵)",
+        ]
+      `);
+      expect(describeAbsorbExtra(stackWithAbsorb)).toMatchInlineSnapshot(`
+        {
+          "0": [
+            "0: -1 +p Selected=1 Introduced=1",
+          ],
+          "1": [
+            "0: -0 +x Introduced=0",
+            "1: -1 +y Selected=1 Introduced=1",
+            "2: -2 +z Selected=2 Introduced=2",
+          ],
+        }
+      `);
+    });
+
+    function describeAbsorbExtra(stack: CommitStackState) {
+      return stack.absorbExtra.map(describeAbsorbIdChunkMap).toJS();
+    }
   });
 });

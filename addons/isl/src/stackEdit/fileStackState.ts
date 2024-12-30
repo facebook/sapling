@@ -35,7 +35,9 @@ export class FileStackState extends SelfUpdate<FileStackStateRecord> {
   }
 
   fromLineLog(log: LineLog): FileStackState {
-    return new FileStackState(Source({type: 'linelog', value: log, revLength: log.maxRev + 1}));
+    return new FileStackState(
+      Source({type: 'linelog', value: log, revLength: Math.floor(log.maxRev) + 1}),
+    );
   }
 
   fromFlattenLines(lines: List<FlattenLine>, revLength: number | undefined): FileStackState {

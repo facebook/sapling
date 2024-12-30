@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {AbsorbDiffChunk, AbsorbEditId} from './absorb';
 import type {Rev} from './fileStackState';
 import type {RecordOf} from 'immutable';
 import type {Author, Hash, RepoPath} from 'shared/types/common';
@@ -26,6 +27,7 @@ import {
 import {t} from '../i18n';
 import {readAtom} from '../jotaiUtils';
 import {assert} from '../utils';
+import {calculateAbsorbEditsForFileStack, revWithAbsorb} from './absorb';
 import {FileStackState} from './fileStackState';
 import deepEqual from 'fast-deep-equal';
 import {Seq, List, Map as ImMap, Set as ImSet, Record, is} from 'immutable';
@@ -90,6 +92,15 @@ type CommitStackProps = {
    * Note the commitRev could be -1, meaning that `bottomFiles` is used.
    */
   fileToCommit: ImMap<FileIdx, CommitIdx>;
+
+  /**
+   * Extra information for absorb.
+   *
+   * The state might also be calculated from the linelog file stacks
+   * (by editing the linelogs, and calculating diffs). It's also tracked here
+   * for ease-of-access.
+   */
+  absorbExtra: AbsorbExtra;
 };
 
 // Factory function for creating instances.
@@ -101,7 +112,14 @@ const CommitStackRecord = Record<CommitStackProps>({
   fileStacks: List(),
   commitToFile: ImMap(),
   fileToCommit: ImMap(),
+  absorbExtra: ImMap(),
 });
+
+/**
+ * For absorb use-case, each file stack (keyed by the index of fileStacks) has
+ * an AbsorbEditId->AbsorbDiffChunk mapping.
+ */
+type AbsorbExtra = ImMap<number, ImMap<AbsorbEditId, AbsorbDiffChunk>>;
 
 // Type of *instances* created by the `CommitStackRecord`.
 // This makes `CommitStackState` work more like a common OOP `class Foo`:
@@ -164,6 +182,10 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
 
   get fileToCommit(): ImMap<FileIdx, CommitIdx> {
     return this.inner.fileToCommit;
+  }
+
+  get absorbExtra(): AbsorbExtra {
+    return this.inner.absorbExtra;
   }
 
   merge(props: Partial<CommitStackProps>): CommitStackState {
@@ -520,6 +542,49 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     );
   }
 
+  // Absorb related {{{
+
+  /** Check if there is a pending absorb in this stack */
+  hasPendingAbsorb(): boolean {
+    return !this.inner.absorbExtra.isEmpty();
+  }
+
+  /**
+   * Prepare for absorb use-case. Break down "wdir()" edits into the stack
+   * with special revs so they can be later moved around.
+   * See `calculateAbsorbEditsForFileStack` for details.
+   *
+   * This function assumes the stack top is "wdir()" to absorb, and the stack
+   * bottom is immutable (public()).
+   */
+  analyseAbsorb(): CommitStackState {
+    const stack = this.maybeBuildFileStacks();
+    const wdirCommitRev = stack.stack.size - 1;
+    assert(wdirCommitRev > 0, 'stack cannot be empty');
+    let newFileStacks = stack.fileStacks;
+    let absorbExtra: AbsorbExtra = ImMap();
+    stack.fileStacks.forEach((fileStack, fileIdx) => {
+      const topFileRev = fileStack.revLength - 1;
+      if (topFileRev < 0) {
+        // Empty file stack. Skip.
+        return;
+      }
+      const rev = stack.fileToCommit.get(FileIdx({fileIdx, fileRev: topFileRev}))?.rev;
+      if (rev != wdirCommitRev) {
+        // wdir() did not change this file. Skip.
+        return;
+      }
+      const [newFileStack, absorbMap] = calculateAbsorbEditsForFileStack(fileStack);
+      absorbExtra = absorbExtra.set(fileIdx, absorbMap);
+      newFileStacks = newFileStacks.set(fileIdx, newFileStack);
+    });
+    const newStackInner = stack.inner.set('fileStacks', newFileStacks);
+    const newStack = new CommitStackState(undefined, newStackInner).set('absorbExtra', absorbExtra);
+    return newStack;
+  }
+
+  // }}} (absorb related)
+
   /**
    * (Re-)build file stacks and mappings.
    *
@@ -711,6 +776,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     const state = this.maybeBuildFileStacks();
     const fileToCommit = state.fileToCommit;
     const stack = state.stack;
+    const hasAbsorb = state.hasPendingAbsorb();
     return state.fileStacks
       .map((fileStack, fileIdx) => {
         return fileStack
@@ -718,7 +784,10 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
           .map(fileRev => {
             const value = fileToCommit.get(FileIdx({fileIdx, fileRev}));
             const spans = [`${fileRev}:`];
-            assert(value != null, 'fileToCommit should have all file stack revs');
+            assert(
+              value != null,
+              `fileToCommit should have all file stack revs (missing: fileIdx=${fileIdx} fileRev=${fileRev})`,
+            );
             const {rev, path} = value;
             const [commitTitle, absent] =
               rev < 0
@@ -729,7 +798,16 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
                   ])(nullthrows(stack.get(rev)));
             spans.push(`${commitTitle}/${path}`);
             if (showContent && !absent) {
-              spans.push(`(${fileStack.getRev(fileRev)})`);
+              let content = fileStack.getRev(fileRev).replaceAll('\n', '↵');
+              if (hasAbsorb) {
+                const absorbedContent = fileStack
+                  .getRev(revWithAbsorb(fileRev))
+                  .replaceAll('\n', '↵');
+                if (absorbedContent !== content) {
+                  content += `;absorbed:${absorbedContent}`;
+                }
+              }
+              spans.push(`(${content})`);
             }
             return spans.join('');
           })
