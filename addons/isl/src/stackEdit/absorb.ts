@@ -21,7 +21,17 @@ export type AbsorbDiffChunkProps = {
   oldStart: number;
   /** The end line of the old content (start from 0, exclusive). */
   oldEnd: number;
-  /** The new content to replace the old content. */
+  /**
+   * The old content to be replaced by newLines.
+   * If you know the full content of the old file as `allLines`, you
+   * can also use `allLines.slice(oldStart, oldEnd)` to get this.
+   */
+  oldLines: List<string>;
+  /** The start line of the new content (start from 0, inclusive). */
+  newStart: number;
+  /** The end line of the new content (start from 0, exclusive). */
+  newEnd: number;
+  /** The new content to replace oldLines. */
   newLines: List<string>;
   /**
    * Which rev introduces the "old" chunk.
@@ -42,6 +52,9 @@ export type AbsorbDiffChunkProps = {
 export const AbsorbDiffChunk = Record<AbsorbDiffChunkProps>({
   oldStart: 0,
   oldEnd: 0,
+  oldLines: List(),
+  newStart: 0,
+  newEnd: 0,
   newLines: List(),
   introductionRev: 0,
   selectedRev: null,
@@ -122,6 +135,9 @@ export function analyseFileStack(stack: FileStackState, newText: string): List<A
         AbsorbDiffChunk({
           oldStart: a1,
           oldEnd: a2,
+          oldLines: List(oldLines.slice(a1, a2)),
+          newStart: b1,
+          newEnd: b2,
           newLines: List(newLines.slice(b1, b2)),
           introductionRev,
           selectedRev: introductionRev,
@@ -135,6 +151,9 @@ export function analyseFileStack(stack: FileStackState, newText: string): List<A
           AbsorbDiffChunk({
             oldStart,
             oldEnd,
+            oldLines: List(oldLines.slice(oldStart, oldEnd)),
+            newStart: b1,
+            newEnd: b2,
             newLines: List([]),
             introductionRev,
             selectedRev: introductionRev,
@@ -148,11 +167,16 @@ export function analyseFileStack(stack: FileStackState, newText: string): List<A
       // still break the chunks to individual lines.
       const delta = b1 - a1;
       splitChunk(a1, a2, oldLineInfos, (oldStart, oldEnd, introductionRev) => {
+        const newStart = oldStart + delta;
+        const newEnd = oldEnd + delta;
         result.push(
           AbsorbDiffChunk({
             oldStart,
             oldEnd,
-            newLines: List(newLines.slice(oldStart + delta, oldEnd + delta)),
+            oldLines: List(oldLines.slice(oldStart, oldEnd)),
+            newStart,
+            newEnd,
+            newLines: List(newLines.slice(newStart, newEnd)),
             introductionRev,
             selectedRev: introductionRev,
           }),
@@ -170,6 +194,9 @@ export function analyseFileStack(stack: FileStackState, newText: string): List<A
         AbsorbDiffChunk({
           oldStart: a1,
           oldEnd: a2,
+          oldLines: List(oldLines.slice(a1, a2)),
+          newStart: b1,
+          newEnd: b2,
           newLines: List(newLines.slice(b1, b2)),
           introductionRev: Math.max(0, ...involvedRevs),
           selectedRev: null,

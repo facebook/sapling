@@ -10,6 +10,7 @@ import type {List} from 'immutable';
 
 import {analyseFileStack, applyFileStackEdits, embedAbsorbId, extractRevAbsorbId} from '../absorb';
 import {FileStackState} from '../fileStackState';
+import {splitLines} from 'shared/diff';
 
 // See also [test-fb-ext-absorb-filefixupstate.py](https://github.com/facebook/sapling/blob/eb3d35d/eden/scm/tests/test-fb-ext-absorb-filefixupstate.py#L75)
 describe('analyseFileStack', () => {
@@ -162,14 +163,19 @@ describe('analyseFileStack', () => {
   }
 
   function analyseFile(stack: FileStackState, newText: string): string {
-    const chunks = analyseFileStack(stack, injectNewLines(newText));
+    const text = injectNewLines(newText);
+    const oldLines = splitLines(stack.getRev(stack.revLength - 1));
+    const newLines = splitLines(text);
+    const chunks = analyseFileStack(stack, text);
     return chunks
-      .map(
-        c =>
-          `${c.oldStart}:${c.oldEnd}=>'${c.newLines.map(l => l.replace('\n', '')).join('')}': Rev ${
-            c.introductionRev
-          }+ Selected ${c.selectedRev}`,
-      )
+      .map(c => {
+        // Check the old and new line numbers and content match.
+        expect(oldLines.slice(c.oldStart, c.oldEnd)).toEqual(c.oldLines.toArray());
+        expect(newLines.slice(c.newStart, c.newEnd)).toEqual(c.newLines.toArray());
+        return `${c.oldStart}:${c.oldEnd}=>'${c.newLines
+          .map(l => l.replace('\n', ''))
+          .join('')}': Rev ${c.introductionRev}+ Selected ${c.selectedRev}`;
+      })
       .join('\n');
   }
 
