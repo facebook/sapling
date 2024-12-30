@@ -583,6 +583,35 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     return newStack;
   }
 
+  /**
+   * For an absorb edit, defined by `fileIdx`, and `absorbEditId`, return the
+   * currently selected and possible "absorb into" commit revs.
+   *
+   * The edit can be looked up from the `absorbExtra` state.
+   */
+  getAbsorbCommitRevs(
+    fileIdx: number,
+    absorbEditId: AbsorbEditId,
+  ): {candidateRevs: ReadonlyArray<Rev>; selectedRev?: Rev} {
+    const fileStack = nullthrows(this.fileStacks.get(fileIdx));
+    const edit = nullthrows(this.absorbExtra.get(fileIdx)?.get(absorbEditId));
+    const toCommitRev = (fileRev: Rev | null | undefined): Rev | undefined => {
+      if (fileRev == null) {
+        return undefined;
+      }
+      return this.fileToCommit.get(FileIdx({fileIdx, fileRev}))?.rev;
+    };
+    // diffChunk uses fileRev, map it to commitRev.
+    const selectedRev = toCommitRev(edit.selectedRev);
+    const startCandidateFileRev = Math.max(1, edit.introductionRev); // skip rev 0 (public, immutable)
+    const endCandidateFileRev = fileStack.revLength;
+    const candidateRevs: Rev[] = [];
+    for (let fileRev = startCandidateFileRev; fileRev < endCandidateFileRev; ++fileRev) {
+      candidateRevs.push(nullthrows(toCommitRev(fileRev)));
+    }
+    return {selectedRev, candidateRevs};
+  }
+
   // }}} (absorb related)
 
   /**

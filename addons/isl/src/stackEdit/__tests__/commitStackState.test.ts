@@ -1094,8 +1094,147 @@ describe('CommitStackState', () => {
       `);
     });
 
+    const absorbStack2: ExportStack = [
+      {
+        ...exportCommitDefault,
+        immutable: true,
+        node: 'Z_NODE',
+        relevantFiles: {
+          'a.txt': null,
+        },
+        requested: false,
+        text: 'PublicCommit',
+      },
+      {
+        ...exportCommitDefault,
+        files: {
+          'a.txt': {data: 'a1\na2\na3\n'},
+        },
+        node: 'A_NODE',
+        parents: ['Z_NODE'],
+        relevantFiles: {'b.txt': null},
+        text: 'CommitA',
+      },
+      {
+        ...exportCommitDefault,
+        files: {
+          'b.txt': {data: 'b1\nb2\nb3\n'},
+        },
+        relevantFiles: {
+          'a.txt': {data: 'a1\na2\na3\n'},
+          'c.txt': {data: 'c1\nc2\nc3\n'},
+        },
+        node: 'B_NODE',
+        parents: ['A_NODE'],
+        text: 'CommitB',
+      },
+      {
+        ...exportCommitDefault,
+        files: {
+          'a.txt': {data: 'a1\na2\na3\nx1\n'},
+          'b.txt': {data: 'b1\nb2\nb3\ny1\n'},
+          'c.txt': {data: 'c1\nc2\nc3\nz1\n'},
+        },
+        node: 'C_NODE',
+        parents: ['B_NODE'],
+        text: 'CommitC',
+      },
+      {
+        ...exportCommitDefault,
+        files: {
+          'a.txt': {data: 'A1\na2\na3\nX1\n'},
+          'b.txt': {data: 'B1\nb2\nb3\nY1\n'},
+          'c.txt': {data: 'C1\nC2\nc3\nz1\n'},
+        },
+        node: 'WDIR',
+        parents: ['C_NODE'],
+        text: 'Wdir',
+      },
+    ];
+
+    it('provides absorb candidate revs', () => {
+      const stack = new CommitStackState(absorbStack2).analyseAbsorb();
+      expect(describeAbsorbExtra(stack)).toMatchInlineSnapshot(`
+        {
+          "0": [
+            "0: -a1 +A1 Selected=1 Introduced=1",
+            "1: -x1 +X1 Selected=2 Introduced=2",
+          ],
+          "1": [
+            "0: -b1 +B1 Selected=1 Introduced=1",
+            "1: -y1 +Y1 Selected=2 Introduced=2",
+          ],
+          "2": [
+            "0: -c1 c2 +C1 C2 Introduced=0",
+          ],
+        }
+      `);
+      expect(describeAbsorbEditCommits(stack)).toEqual([
+        {
+          // The "a1 -> A1" change is applied to "CommitA" which introduced "a".
+          // It can be applied to "CommitC" which changes "a.txt" too.
+          // It cannot be applied to "CommitB" which didn't change "a.txt" (and
+          // therefore not tracked by linelog).
+          id: 'a.txt/0',
+          diff: ['a1', 'A1'],
+          selected: 'CommitA',
+          candidates: ['CommitA', 'CommitC'],
+        },
+        {
+          // The "x1 -> X1" change is applied to "CommitC" which introduced "c".
+          id: 'a.txt/1',
+          diff: ['x1', 'X1'],
+          selected: 'CommitC',
+          candidates: ['CommitC'],
+        },
+        {
+          // The "b1 -> B1" change belongs to CommitB.
+          id: 'b.txt/0',
+          diff: ['b1', 'B1'],
+          selected: 'CommitB',
+          candidates: ['CommitB', 'CommitC'],
+        },
+        {
+          // The "y1 -> Y1" change belongs to CommitB.
+          id: 'b.txt/1',
+          diff: ['y1', 'Y1'],
+          selected: 'CommitC',
+          candidates: ['CommitC'],
+        },
+        {
+          // The "c1c2 -> C1C2" change is not automatically absorbed, since
+          // "ccc" is public/immutable.
+          id: 'c.txt/0',
+          diff: ['c1c2', 'C1C2'],
+          selected: undefined,
+          // CommitC is a candidate because it modifies c.txt.
+          candidates: ['CommitC', 'Wdir'],
+        },
+      ]);
+    });
+
     function describeAbsorbExtra(stack: CommitStackState) {
       return stack.absorbExtra.map(describeAbsorbIdChunkMap).toJS();
+    }
+
+    function describeAbsorbEditCommits(stack: CommitStackState) {
+      const describeCommit = (rev: Rev) => nullthrows(stack.get(rev)).text;
+      const result: object[] = [];
+      stack.absorbExtra.forEach((absorbEdits, fileIdx) => {
+        absorbEdits.forEach((absorbEdit, absorbEditId) => {
+          const {candidateRevs, selectedRev} = stack.getAbsorbCommitRevs(fileIdx, absorbEditId);
+          result.push({
+            id: `${stack.getFileStackPath(fileIdx, absorbEdit.introductionRev)}/${absorbEditId}`,
+            diff: [
+              absorbEdit.oldLines.join('').replaceAll('\n', ''),
+              absorbEdit.newLines.join('').replaceAll('\n', ''),
+            ],
+            candidates: candidateRevs.map(describeCommit),
+            selected: selectedRev && describeCommit(selectedRev),
+          });
+        });
+      });
+      return result;
     }
   });
 });
