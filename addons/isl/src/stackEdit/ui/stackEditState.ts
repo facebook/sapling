@@ -370,7 +370,7 @@ function rewriteWdirContent(stack: ExportStack): ExportStack {
 }
 
 /** The "wdir()" virtual hash. */
-const WDIR_NODE = 'ffffffffffffffffffffffffffffffffffffffff';
+export const WDIR_NODE = 'ffffffffffffffffffffffffffffffffffffffff';
 
 /**
  * Commit hashes being stack edited for general purpose.
