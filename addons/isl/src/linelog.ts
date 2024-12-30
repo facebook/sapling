@@ -137,7 +137,19 @@ type END = RecordOf<{
 /** Program counter (offset to instructions). */
 type Pc = number;
 
-/** Revision number. Usually starts from 1. Larger number means newer versions. */
+/** Revision number. Usually starts from 1. Larger number means newer versions.
+ *
+ * For advanced use-cases, this can be a floating number. For example, absorb
+ * might use rev 2.5 between rev2 and rev 3, indicating the chunk is currently
+ * absorbed into rev 2 (by checking out 2.999), while still preserving the rev
+ * 2 losslessly (by checking out 2, instead of 2.999). `absorb` might also use
+ * different fractional part to "tag" the chunk so they can be treated
+ * differently. For example, there are 2 chunk edits in the working copy a.txt,
+ * absorb might use `1 / 1024` to represent the first edit, and `2 / 1024` for
+ * the second chunk edit so those edits can be moved (remapped) separately.
+ * absorb might also split a chunk edit into multiple edits so the individual
+ * lines can be moved separately.
+ */
 type Rev = number;
 
 /** Index of a line. Starts from 0. */
