@@ -1,4 +1,6 @@
+load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
 load("@fbsource//tools/build_defs:buckconfig.bzl", "read_bool")
+load("//eden:defs.bzl", "get_integration_test_env_and_deps")
 
 def excluded_t_tests():
     excluded = []
@@ -92,3 +94,102 @@ def get_blocklist():
     elif read_bool("fbcode", "mode_mac_enabled", False):
         return blocklist_prefix + "osx"
     return blocklist_prefix + "centos7"
+
+_RT_ENV = {
+    "HGEXECUTABLEPATH": "$(location //eden/scm:hg_test)",
+    "HGRUNTEST_SKIP_ENV": "1",
+    "HGTEST_BLOCKLIST": get_blocklist(),
+    "HGTEST_CERTDIR": "$(location //eden/mononoke/tests/integration/certs/facebook:test_certs)",
+    # used by unittestify.py
+    "HGTEST_DIR": "eden/scm/tests",
+    "HGTEST_DUMMYSSH": "$(location :dummyssh3)",
+    "HGTEST_EXCLUDED": get_hg_run_tests_excluded(),
+    "HGTEST_GETDB_SH": "$(location //eden/scm/fb/tests:getdb_sh)",
+    "HGTEST_HG": "$(location //eden/scm:hg_test)",
+    "HGTEST_NORMAL_LAYOUT": "0",
+    "HGTEST_PYTHON": "fbpython",
+    "HGTEST_RUN_TESTS_PY": "$(location :run_tests_py)",
+    "HGTEST_SLOWTIMEOUT": "2147483647",
+    # used by run-tests.py
+    # buck test has its own timeout so just disable run-tests.py
+    # timeout practically.
+    "HGTEST_TIMEOUT": "2147483647",
+    # The one below determines the location of all misc. files required by run-tests.py but not directly
+    # imported by it. This is especially important when running in opt mode.
+    "RUNTESTDIR": "$(location :test_files)",
+    "URLENCODE": "$(location //eden/mononoke/tests/integration:urlencode)",
+}
+
+_RT_RESOURCES = {
+    "//eden/scm/tests:dummyssh3": "dummyssh3.par",
+    "//eden/scm:hg_test": "hg.sh",
+    "//eden/scm:hgpython_test": "hgpython.sh",
+}
+
+SRCS = dict(
+    [("unittestify.py", "unittestify.py")],
+)
+
+# Generartes a test target
+# Do not use excluded and included at the same time
+def run_tests_target(
+        name = None,
+        watchman = False,
+        eden = False,
+        mononoke = False,
+        excluded = None,
+        included = None,
+        **kwargs):
+    if not name:
+        extras = ""
+        if eden:
+            extras += "edenfs_"
+        if watchman:
+            extras += "watchman_"
+        if mononoke:
+            extras += "mononoke_"
+        name = "hg_%srun_tests" % extras
+    resources = dict(_RT_RESOURCES)
+    if not eden:
+        ENV = dict(_RT_ENV)
+        rt_deps = []
+    else:
+        artifacts = get_integration_test_env_and_deps()
+        ENV = artifacts["env"]
+        ENV.update(_RT_ENV)
+        ENV["HGTEST_RUN_TESTS_PY"] = "$(location :run_tests_py_eden)"
+        ENV["HGTEST_USE_EDEN"] = "1"
+        rt_deps = artifacts["deps"]
+    if watchman:
+        ENV["HGTEST_WATCHMAN"] = "$(location //watchman:watchman)"
+        resources["//watchman:watchman"] = "watchman"
+    if mononoke:
+        ENV["USE_MONONOKE"] = "1"
+        ENV["HGTEST_MONONOKE_SERVER"] = "$(location //eden/mononoke:mononoke)"
+        ENV["HGTEST_GET_FREE_SOCKET"] = "$(location //eden/mononoke/tests/integration:get_free_socket)"
+        ENV["TEST_FIXTURES"] = "$(location //eden/mononoke/tests/integration:test_fixtures)"
+        ENV["JUST_KNOBS_DEFAULTS"] = "$(location //eden/mononoke/mononoke_macros:just_knobs_defaults)"
+        ENV["FB_TEST_FIXTURES"] = "$(location //eden/mononoke/tests/integration/facebook:facebook_test_fixtures)"
+        resources["//eden/mononoke/tests/integration/certs/facebook:test_certs"] = "certs"
+        resources["//eden/mononoke/tests/integration:get_free_socket"] = "get_free_socket.par"
+        resources["//eden/mononoke:mononoke"] = "mononoke"
+        rt_deps.append("//eden/mononoke/tests/integration/certs/facebook:test_certs")
+        rt_deps.append("//eden/mononoke/tests/integration:test_fixtures")
+    if excluded:
+        ENV["HGTEST_EXCLUDED"] = excluded
+    if included:
+        ENV["HGTEST_INCLUDED"] = included
+        ENV.pop("HGTEST_EXCLUDED")
+    python_unittest(
+        name = name,
+        srcs = SRCS,
+        # non-python deps should be in cpp_deps (even if not cpp)
+        cpp_deps = [
+            "//eden/scm:scm_prompt",
+        ],
+        env = ENV,
+        resources = resources,
+        supports_static_listing = False,
+        runtime_deps = rt_deps,
+        **kwargs
+    )
