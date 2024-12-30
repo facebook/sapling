@@ -94,6 +94,7 @@ class FindExeClass:
             env="EDENFSCTL_REAL_PATH",
             buck_path="eden/fs/cli/edenfsctl.par",
             cmake_path="eden/fs/cli/edenfsctl.real",
+            system_candidates=["/usr/local/bin/edenfsctl.real"],
         )
 
     @cached_property
@@ -103,6 +104,7 @@ class FindExeClass:
             env="EDENFSCTL_RUST_PATH",
             buck_path="eden/fs/cli_rs/edenfsctl/edenfsctl#binary/edenfsctl",
             cmake_path="eden/fs/cli_rs/edenfsctl/release/edenfsctl",
+            system_candidates=["/usr/local/bin/edenfsctl"],
         )
 
     @cached_property
@@ -113,6 +115,7 @@ class FindExeClass:
             env="EDENFS_SERVER_PATH",
             buck_path="eden/fs/service/edenfs" + edenfs_suffix,
             cmake_path="eden/fs/edenfs",
+            system_candidates=["/usr/local/libexec/eden/edenfs"],
         )
 
     @cached_property
@@ -253,6 +256,7 @@ class FindExeClass:
         buck_path: Optional[str] = None,
         cmake_path: Optional[str] = None,
         buck_cell_path: Optional[str] = None,
+        system_candidates: Optional[List[str]] = None,
     ) -> str:
         exe = self._find_exe_optional(
             name=name,
@@ -261,6 +265,7 @@ class FindExeClass:
             cmake_path=cmake_path,
             require_found=True,
             buck_cell_path=buck_cell_path,
+            system_candidates=system_candidates,
         )
         assert exe is not None
         return exe
