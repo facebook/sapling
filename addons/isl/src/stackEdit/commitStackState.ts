@@ -27,7 +27,12 @@ import {
 import {t} from '../i18n';
 import {readAtom} from '../jotaiUtils';
 import {assert} from '../utils';
-import {calculateAbsorbEditsForFileStack, revWithAbsorb} from './absorb';
+import {
+  calculateAbsorbEditsForFileStack,
+  embedAbsorbId,
+  extractRevAbsorbId,
+  revWithAbsorb,
+} from './absorb';
 import {FileStackState} from './fileStackState';
 import deepEqual from 'fast-deep-equal';
 import {Seq, List, Map as ImMap, Set as ImSet, Record, is} from 'immutable';
@@ -610,6 +615,61 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
       candidateRevs.push(nullthrows(toCommitRev(fileRev)));
     }
     return {selectedRev, candidateRevs};
+  }
+
+  /**
+   * Set `rev` as the "target commit" (amend --to) of an "absorb edit".
+   * Happens when the user moves the absorb edit among candidate commits.
+   *
+   * Throws if the edit cannot be fulfilled, for example, the `commitRev` is
+   * before the commit introducing the change (conflict), or if the `commitRev`
+   * does not touch the file being edited (current limiation, might be lifted).
+   */
+  setAbsorbEditDestination(
+    fileIdx: number,
+    absorbEditId: AbsorbEditId,
+    commitRev: Rev,
+  ): CommitStackState {
+    assert(this.hasPendingAbsorb(), 'stack is not prepared for absorb');
+    const fileStack = nullthrows(this.fileStacks.get(fileIdx));
+    const edit = nullthrows(this.absorbExtra.get(fileIdx)?.get(absorbEditId));
+    const selectedFileRev = edit.selectedRev;
+    if (selectedFileRev != null) {
+      const currentCommitRev = this.fileToCommit.get(
+        FileIdx({fileIdx, fileRev: selectedFileRev}),
+      )?.rev;
+      if (currentCommitRev === commitRev) {
+        // No need to edit.
+        return this;
+      }
+    }
+    // Figure out the "file rev" from "commit rev", since we don't know the
+    // "path" of the file at the "commitRev", for now, we just naively looks up
+    // the fileRev one by one... for now
+    for (
+      let fileRev = Math.max(1, edit.introductionRev);
+      fileRev < fileStack.revLength;
+      ++fileRev
+    ) {
+      if (this.fileToCommit.get(FileIdx({fileIdx, fileRev}))?.rev === commitRev) {
+        // Update linelog to move the edit to "fileRev".
+        const newFileRev = embedAbsorbId(fileRev, absorbEditId);
+        const newFileStack = fileStack.remapRevs(rev =>
+          !Number.isInteger(rev) && extractRevAbsorbId(rev)[1] === absorbEditId ? newFileRev : rev,
+        );
+        // Update the absorb extra too.
+        const newEdit = edit.set('selectedRev', fileRev);
+        const newAbsorbExtra = this.absorbExtra.setIn([fileIdx, absorbEditId], newEdit);
+        // It's possible that "wdir()" is all absorbed, the new stack is
+        // shorter than the original stack. So we bypass the length check.
+        const newStack = this.setFileStackInternal(fileIdx, newFileStack).set(
+          'absorbExtra',
+          newAbsorbExtra,
+        );
+        return newStack;
+      }
+    }
+    throw new Error('setAbsorbIntoRev did not find corresponding commit to absorb');
   }
 
   // }}} (absorb related)

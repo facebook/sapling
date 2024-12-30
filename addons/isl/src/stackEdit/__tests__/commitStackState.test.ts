@@ -1213,6 +1213,39 @@ describe('CommitStackState', () => {
       ]);
     });
 
+    it('updates absorb destination commit', () => {
+      const stack = new CommitStackState(absorbStack2).analyseAbsorb();
+      // Move the "a1 -> A1" change from CommitA to CommitC.
+      // See the above test's "describeAbsorbExtra" to confirm that "a1 -> A1"
+      // has fileIdx=0 and absorbEditId=0.
+      // CommitC has rev=3.
+      const newStack = stack.setAbsorbEditDestination(0, 0, 3);
+      // "-a1 +A1" now has "Selected=2":
+      expect(describeAbsorbExtra(newStack)).toMatchInlineSnapshot(`
+        {
+          "0": [
+            "0: -a1↵ +A1↵ Selected=2 Introduced=1",
+            "1: -x1↵ +X1↵ Selected=2 Introduced=2",
+          ],
+          "1": [
+            "0: -b1↵ +B1↵ Selected=1 Introduced=1",
+            "1: -y1↵ +Y1↵ Selected=2 Introduced=2",
+          ],
+          "2": [
+            "0: -c1↵ c2↵ +C1↵ C2↵ Introduced=0",
+          ],
+        }
+      `);
+      // The A1 is now absorbed at CommitC.
+      expect(newStack.describeFileStacks()).toMatchInlineSnapshot(`
+        [
+          "0:./a.txt 1:CommitA/a.txt(a1↵a2↵a3↵) 2:CommitC/a.txt(a1↵a2↵a3↵x1↵;absorbed:A1↵a2↵a3↵X1↵)",
+          "0:./b.txt 1:CommitB/b.txt(b1↵b2↵b3↵;absorbed:B1↵b2↵b3↵) 2:CommitC/b.txt(B1↵b2↵b3↵y1↵;absorbed:B1↵b2↵b3↵Y1↵)",
+          "0:./c.txt(c1↵c2↵c3↵) 1:CommitC/c.txt(c1↵c2↵c3↵z1↵) 2:Wdir/c.txt(c1↵c2↵c3↵z1↵;absorbed:C1↵C2↵c3↵z1↵)",
+        ]
+      `);
+    });
+
     function describeAbsorbExtra(stack: CommitStackState) {
       return stack.absorbExtra.map(describeAbsorbIdChunkMap).toJS();
     }
