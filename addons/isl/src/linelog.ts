@@ -598,21 +598,34 @@ class Code implements ValueObject {
   }
 
   remapRevs(revMap: Map<Rev, Rev>): [Code, Rev] {
+    const valueOfString = [...revMap.entries()].toString();
+    return this.rewriteInsts((c, _pc) => {
+      if (c.op === Op.JGE || c.op === Op.JL || c.op === Op.LINE) {
+        const newRev = revMap.get(c.rev) ?? c.rev;
+        // TypeScript cannot prove `c` has `rev`. Ideally it can figure out it automatically.
+        return (c as RecordOf<{rev: number}>).set('rev', newRev) as Inst;
+      }
+      return c;
+    }, valueOfString);
+  }
+
+  /**
+   * Rewrite all instructions. Returns [newCode, newMaxRev].
+   * `valueOfString` sets a unique string that represents the change for equal tests.
+   */
+  rewriteInsts(func: (inst: Inst, pc: Pc) => Inst, valueOfString?: string): [Code, Rev] {
     let newMaxRev = 0;
     const newInstList = this.instList
-      .map(c => {
-        if (c.op === Op.JGE || c.op === Op.JL || c.op === Op.LINE) {
-          const newRev = revMap.get(c.rev) ?? c.rev;
-          if (newRev > newMaxRev) {
-            newMaxRev = newRev;
-          }
-          // TypeScript cannot prove `c` has `rev`. Ideally it can figure out it automatically.
-          return (c as RecordOf<{rev: number}>).set('rev', newRev) as Inst;
+      .map((inst, pc) => {
+        const newInst = func(inst, pc);
+        const newRev = (newInst as RecordOf<{rev: number}>).rev;
+        if (newRev != null && newRev > newMaxRev) {
+          newMaxRev = newRev;
         }
-        return c;
+        return newInst;
       })
       .toList();
-    const newValueOf = `R${[...revMap.entries()]}`;
+    const newValueOf = `R${valueOfString ?? func}`;
     const newCode = this.newCode(newInstList, newValueOf);
     return [newCode, newMaxRev];
   }
