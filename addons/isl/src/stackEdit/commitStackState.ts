@@ -1364,11 +1364,22 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     return state.buildFileStacks();
   }
 
-  /** Replace a file stack. */
+  /** Replace a file stack. Throws if the new stack has a different length. */
   setFileStack(fileIdx: number, stack: FileStackState): CommitStackState {
+    return this.setFileStackInternal(fileIdx, stack, (oldStack, newStack) => {
+      assert(oldStack.revLength === newStack.revLength, 'fileStack length mismatch');
+    });
+  }
+
+  /** Internal use: replace a file stack. */
+  private setFileStackInternal(
+    fileIdx: number,
+    stack: FileStackState,
+    check?: (oldStack: FileStackState, newStack: FileStackState) => void,
+  ): CommitStackState {
     const oldStack = this.fileStacks.get(fileIdx);
     assert(oldStack != null, 'fileIdx out of range');
-    assert(oldStack.revLength === stack.revLength, 'fileStack length mismatch');
+    check?.(oldStack, stack);
     const newInner = this.inner.setIn(['fileStacks', fileIdx], stack);
     return new CommitStackState(undefined, newInner);
   }
