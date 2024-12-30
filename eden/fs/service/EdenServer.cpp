@@ -111,6 +111,7 @@
 
 #ifdef EDEN_HAVE_SERVER_OBSERVER
 #include "common/fb303/cpp/ThreadPoolExecutorCounters.h" // @manual
+#include "common/network/Hostname.h"
 #include "eden/fs/service/facebook/ServerObserver.h" // @manual
 #endif
 
@@ -909,9 +910,17 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
 #endif
 
 void EdenServer::startPeriodicTasks() {
-  // Report memory usage stats once every 30 seconds
-  memoryStatsTask_.updateInterval(30s);
   auto config = serverState_->getReloadableConfig()->getEdenConfig();
+  if (config->enableOBCOnEden.getValue()) {
+    // Get the hostname without the ".facebook.com" suffix
+    auto hostname = facebook::network::getLocalHost(/*stripFbDomain=*/true);
+    memory_vm_rss_bytes_ = monitoring::OBCAvg(
+        monitoring::OdsCategoryId::ODS_EDEN,
+        fmt::format("eden.{}", kMemoryVmRssBytes),
+        {hostname});
+    // Report memory usage stats once every 60 seconds
+    memoryStatsTask_.updateInterval(60s);
+  }
   updatePeriodicTaskIntervals(*config);
 
 #ifndef _WIN32
@@ -2502,7 +2511,8 @@ void EdenServer::flushStatsNow() {
 void EdenServer::reportMemoryStats() {
   auto memoryStats = facebook::eden::proc_util::readMemoryStats();
   if (memoryStats) {
-    // TODO: Add a counter for the total memory used by edenfs through OBC API
+    // Bump the OBC counters for the current memory usage
+    memory_vm_rss_bytes_ += memoryStats->resident;
   }
 }
 
