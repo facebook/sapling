@@ -1083,12 +1083,12 @@ describe('CommitStackState', () => {
       expect(describeAbsorbExtra(stackWithAbsorb)).toMatchInlineSnapshot(`
         {
           "0": [
-            "0: -1 +p Selected=1 Introduced=1",
+            "0: -1↵ +p↵ Selected=1 Introduced=1",
           ],
           "1": [
-            "0: -0 +x Introduced=0",
-            "1: -1 +y Selected=1 Introduced=1",
-            "2: -2 +z Selected=2 Introduced=2",
+            "0: -0↵ +x↵ Introduced=0",
+            "1: -1↵ +y↵ Selected=1 Introduced=1",
+            "2: -2↵ +z↵ Selected=2 Introduced=2",
           ],
         }
       `);
@@ -1157,15 +1157,15 @@ describe('CommitStackState', () => {
       expect(describeAbsorbExtra(stack)).toMatchInlineSnapshot(`
         {
           "0": [
-            "0: -a1 +A1 Selected=1 Introduced=1",
-            "1: -x1 +X1 Selected=2 Introduced=2",
+            "0: -a1↵ +A1↵ Selected=1 Introduced=1",
+            "1: -x1↵ +X1↵ Selected=2 Introduced=2",
           ],
           "1": [
-            "0: -b1 +B1 Selected=1 Introduced=1",
-            "1: -y1 +Y1 Selected=2 Introduced=2",
+            "0: -b1↵ +B1↵ Selected=1 Introduced=1",
+            "1: -y1↵ +Y1↵ Selected=2 Introduced=2",
           ],
           "2": [
-            "0: -c1 c2 +C1 C2 Introduced=0",
+            "0: -c1↵ c2↵ +C1↵ C2↵ Introduced=0",
           ],
         }
       `);
@@ -1176,28 +1176,28 @@ describe('CommitStackState', () => {
           // It cannot be applied to "CommitB" which didn't change "a.txt" (and
           // therefore not tracked by linelog).
           id: 'a.txt/0',
-          diff: ['a1', 'A1'],
+          diff: ['a1↵', 'A1↵'],
           selected: 'CommitA',
           candidates: ['CommitA', 'CommitC'],
         },
         {
           // The "x1 -> X1" change is applied to "CommitC" which introduced "c".
           id: 'a.txt/1',
-          diff: ['x1', 'X1'],
+          diff: ['x1↵', 'X1↵'],
           selected: 'CommitC',
           candidates: ['CommitC'],
         },
         {
           // The "b1 -> B1" change belongs to CommitB.
           id: 'b.txt/0',
-          diff: ['b1', 'B1'],
+          diff: ['b1↵', 'B1↵'],
           selected: 'CommitB',
           candidates: ['CommitB', 'CommitC'],
         },
         {
           // The "y1 -> Y1" change belongs to CommitB.
           id: 'b.txt/1',
-          diff: ['y1', 'Y1'],
+          diff: ['y1↵', 'Y1↵'],
           selected: 'CommitC',
           candidates: ['CommitC'],
         },
@@ -1205,7 +1205,7 @@ describe('CommitStackState', () => {
           // The "c1c2 -> C1C2" change is not automatically absorbed, since
           // "ccc" is public/immutable.
           id: 'c.txt/0',
-          diff: ['c1c2', 'C1C2'],
+          diff: ['c1↵c2↵', 'C1↵C2↵'],
           selected: undefined,
           // CommitC is a candidate because it modifies c.txt.
           candidates: ['CommitC', 'Wdir'],
@@ -1217,6 +1217,10 @@ describe('CommitStackState', () => {
       return stack.absorbExtra.map(describeAbsorbIdChunkMap).toJS();
     }
 
+    function replaceNewLines(text: string): string {
+      return text.replaceAll('\n', '↵');
+    }
+
     function describeAbsorbEditCommits(stack: CommitStackState) {
       const describeCommit = (rev: Rev) => nullthrows(stack.get(rev)).text;
       const result: object[] = [];
@@ -1226,8 +1230,8 @@ describe('CommitStackState', () => {
           result.push({
             id: `${stack.getFileStackPath(fileIdx, absorbEdit.introductionRev)}/${absorbEditId}`,
             diff: [
-              absorbEdit.oldLines.join('').replaceAll('\n', ''),
-              absorbEdit.newLines.join('').replaceAll('\n', ''),
+              replaceNewLines(absorbEdit.oldLines.join('')),
+              replaceNewLines(absorbEdit.newLines.join('')),
             ],
             candidates: candidateRevs.map(describeCommit),
             selected: selectedRev && describeCommit(selectedRev),
