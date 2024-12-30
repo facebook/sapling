@@ -376,10 +376,12 @@ export const WDIR_NODE = 'ffffffffffffffffffffffffffffffffffffffff';
  * Commit hashes being stack edited for general purpose.
  * Setting to a non-empty value (which can be using the revsetlang)
  * triggers server-side loading.
+ *
+ * For advance use-cases, the "hashes" could be revset expressions.
  */
 export const editingStackIntentionHashes = atom<
-  [Intention, Set<Hash>],
-  [[Intention, Set<Hash>]],
+  [Intention, Set<Hash | string>],
+  [[Intention, Set<Hash | string>]],
   void
 >(
   get => {

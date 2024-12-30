@@ -43,11 +43,12 @@ export function MaybeEditStackModal() {
   const isLoaded = isEditing && loadingState.state === 'hasValue';
 
   return isLoaded ? (
-    stackIntention === 'split' ? (
-      <LoadedSplitModal />
-    ) : (
-      <LoadedEditStackModal />
-    )
+    {
+      split: () => <LoadedSplitModal />,
+      general: () => <LoadedEditStackModal />,
+      // TODO: implement absorb model.
+      absorb: () => null,
+    }[stackIntention]()
   ) : isEditing ? (
     <Modal
       dataTestId="edit-stack-loading"

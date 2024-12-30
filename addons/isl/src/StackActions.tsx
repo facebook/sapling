@@ -321,6 +321,7 @@ export function AbsorbButton() {
   const experimentalFeatures = useAtomValue(hasExperimentalFeatures);
   const selection = useUncommittedSelection();
   const dag = useAtomValue(dagWithPreviews);
+  const [[, stackHashes], setStackIntentionHashes] = useAtom(editingStackIntentionHashes);
 
   if (!experimentalFeatures) {
     return null;
@@ -331,6 +332,8 @@ export function AbsorbButton() {
   const stack = dag.ancestors(dot == null ? [] : [dot.hash], {within: dag.draft()});
   if (dot == null) {
     disableReason = t('Absorb requires a working copy');
+  } else if (stackHashes.size > 0) {
+    disableReason = t('Cannot initialize absorb while editing a stack');
   } else if (dot.phase === 'public') {
     disableReason = t('Absorb only works for draft commits');
   } else if (stack.size <= 1) {
@@ -354,7 +357,10 @@ export function AbsorbButton() {
         key="absorb"
         disabled={disableReason != null}
         onClick={() => {
-          // TODO: Implement absorb modal.
+          // Since "wdir()" might race with the "dot" and "stack" here,
+          // use ".%public()", avoid "stack" to avoid inconsistent state
+          // (ex. "wdir()" is no longer the "stack" top).
+          setStackIntentionHashes(['absorb', new Set<string>(['wdir()', '(.%public())'])]);
         }}>
         <Icon slot="start" icon="replace-all" />
         <T>Absorb</T>
