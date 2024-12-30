@@ -285,31 +285,31 @@ describe('analyseFileStack', () => {
       .join('');
   }
 
-  /** Turn ["a\n", "a\nb\n"] to "a ab". */
-  function compactTexts(texts: List<string>): string {
-    return texts.map(t => t.replace(/\n/g, '')).join(' ');
-  }
-
   function compactText(text: string): string {
     return text.replaceAll('\n', '');
   }
-
-  function describeAbsorbIdChunkMap(map: ImMap<AbsorbEditId, AbsorbDiffChunk>): string[] {
-    const result: string[] = [];
-    map.forEach((chunk, id) => {
-      const words: string[] = [`${id}:`];
-      if (!chunk.oldLines.isEmpty()) {
-        words.push(`-${compactTexts(chunk.oldLines)}`);
-      }
-      if (!chunk.newLines.isEmpty()) {
-        words.push(`+${compactTexts(chunk.newLines)}`);
-      }
-      if (chunk.selectedRev != null) {
-        words.push(`Selected=${chunk.selectedRev}`);
-      }
-      words.push(`Introduced=${chunk.introductionRev}`);
-      result.push(words.join(' '));
-    });
-    return result;
-  }
 });
+
+/** Turn ["a\n", "a\nb\n"] to "a ab". */
+function compactTexts(texts: List<string>): string {
+  return texts.map(t => t.replace(/\n/g, '')).join(' ');
+}
+
+export function describeAbsorbIdChunkMap(map: ImMap<AbsorbEditId, AbsorbDiffChunk>): string[] {
+  const result: string[] = [];
+  map.forEach((chunk, id) => {
+    const words: string[] = [`${id}:`];
+    if (!chunk.oldLines.isEmpty()) {
+      words.push(`-${compactTexts(chunk.oldLines)}`);
+    }
+    if (!chunk.newLines.isEmpty()) {
+      words.push(`+${compactTexts(chunk.newLines)}`);
+    }
+    if (chunk.selectedRev != null) {
+      words.push(`Selected=${chunk.selectedRev}`);
+    }
+    words.push(`Introduced=${chunk.introductionRev}`);
+    result.push(words.join(' '));
+  });
+  return result;
+}
