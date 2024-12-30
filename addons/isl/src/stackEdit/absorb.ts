@@ -146,9 +146,7 @@ export function calculateAbsorbEditsForFileStack(
     wdirRev >= 1,
     'calculateAbsorbEditsForFileStack requires at least one wdir(), one public()',
   );
-  const newText = stack.getRev(wdirRev);
-  const stackTopRev = wdirRev - 1;
-  const diffChunks = analyseFileStack(stack, newText, stackTopRev);
+  const diffChunks = analyseFileStackWithWdirAtTop(stack, {wdirRev});
   // Drop wdirRev, then re-insert the chunks.
   let newStack = stack.truncate(wdirRev);
   // Assign absorbEditId to each chunk.
@@ -164,6 +162,21 @@ export function calculateAbsorbEditsForFileStack(
   // Re-insert the chunks with the absorbId.
   newStack = applyFileStackEditsWithAbsorbId(newStack, diffChunksWithAbsorbId);
   return [newStack, absorbIdToDiffChunk];
+}
+
+/**
+ * Similar to `analyseFileStack`, but the stack contains the "wdir()" at the top:
+ * The stack revisions look like: `[0:public] [1] [2] ... [stackTop] [wdir]`.
+ */
+export function analyseFileStackWithWdirAtTop(
+  stack: FileStackState,
+  options?: {wdirRev?: Rev},
+): List<AbsorbEdit> {
+  const wdirRev = options?.wdirRev ?? stack.revLength - 1;
+  const stackTopRev = wdirRev - 1;
+  assert(stackTopRev >= 0, 'stackTopRev must be positive');
+  const newText = stack.getRev(wdirRev);
+  return analyseFileStack(stack, newText, stackTopRev);
 }
 
 /**
