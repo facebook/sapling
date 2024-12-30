@@ -427,6 +427,7 @@ static constexpr folly::StringPiece kNfsReadDirPlusCount60{
     "nfs.readdirplus_us.count.60"};
 
 static constexpr folly::StringPiece kFsChannelTaskCount{"fs.task.count"};
+static constexpr folly::StringPiece kMemoryVmRssBytes{"memory_vm_rss_bytes"};
 
 EdenServer::EdenServer(
     std::vector<std::string> originalCommandLine,
@@ -534,6 +535,15 @@ EdenServer::EdenServer(
       return ex->getTaskQueueSize();
     }
     return (size_t)0;
+  });
+
+  counters->registerCallback(kMemoryVmRssBytes, [] {
+    auto memoryStats = facebook::eden::proc_util::readMemoryStats();
+    if (memoryStats) {
+      return memoryStats->resident;
+    } else {
+      return (size_t)0;
+    }
   });
 
 #ifdef __APPLE__
@@ -2490,20 +2500,9 @@ void EdenServer::flushStatsNow() {
 }
 
 void EdenServer::reportMemoryStats() {
-  constexpr folly::StringPiece kRssBytes{"memory_vm_rss_bytes"};
-
   auto memoryStats = facebook::eden::proc_util::readMemoryStats();
   if (memoryStats) {
-    // TODO: Stop using the legacy addStatValue() call that checks to see
-    // if it needs to re-export counters each time it is used.
-    //
-    // It's not really even clear to me that it's worth exporting this a
-    // timeseries vs a simple counter.  We mainly only care about the
-    // last 60-second timeseries level.  Since we only update this once
-    // every 30 seconds we are basically just reporting an average of the
-    // last 2 data points.
-    fb303::ServiceData::get()->addStatValue(
-        kRssBytes, memoryStats->resident, fb303::AVG);
+    // TODO: Add a counter for the total memory used by edenfs through OBC API
   }
 }
 
