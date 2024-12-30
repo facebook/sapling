@@ -5,10 +5,18 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {AbsorbDiffChunk} from '../absorb';
-import type {List} from 'immutable';
+import type {AbsorbDiffChunk, AbsorbEditId} from '../absorb';
+import type {Rev} from '../fileStackState';
+import type {List, Map as ImMap} from 'immutable';
 
-import {analyseFileStack, applyFileStackEdits, embedAbsorbId, extractRevAbsorbId} from '../absorb';
+import {
+  analyseFileStack,
+  applyFileStackEdits,
+  calculateAbsorbEditsForFileStack,
+  embedAbsorbId,
+  extractRevAbsorbId,
+  revWithAbsorb,
+} from '../absorb';
 import {FileStackState} from '../fileStackState';
 import {splitLines} from 'shared/diff';
 
@@ -158,6 +166,92 @@ describe('analyseFileStack', () => {
     });
   });
 
+  describe('calculateAbsorbEditsForFileStack', () => {
+    it('analyses a stack', () => {
+      const stack = createStack(['pub', 'pub1234', 'pub23456', 'pUbx346y']);
+      const [analysedStack, absorbMap] = calculateAbsorbEditsForFileStack(stack);
+      expect(describeAbsorbIdChunkMap(absorbMap)).toMatchInlineSnapshot(`
+        [
+          "0: -u +U Introduced=0",
+          "1: -2 +x Selected=1 Introduced=1",
+          "2: -5 Selected=2 Introduced=2",
+          "3: +y Selected=2 Introduced=2",
+        ]
+      `);
+      const show = (rev: Rev) => compactText(analysedStack.getRev(rev));
+      // Rev 1 original.
+      expect(show(1)).toMatchInlineSnapshot(`"pub1234"`);
+      // Rev 1.99 is Rev 1 with the absorb "-2 -x" chunk applied.
+      expect(show(1.99)).toMatchInlineSnapshot(`"pub1x34"`);
+      // Rev 2 original.
+      expect(show(2)).toMatchInlineSnapshot(`"pubx3456"`);
+      // Rev 2.99 is Rev 2 with the absorb "-5 +y" applied.
+      const rev299 = revWithAbsorb(2);
+      expect(show(rev299)).toMatchInlineSnapshot(`"pubx346y"`);
+      // Rev 3 "wdir()" is dropped - no changes from 2.99.
+      expect(show(3)).toMatchInlineSnapshot(`"pubx346y"`);
+      // Rev 3.99 includes changes left in "wdir()": "pub" -> "pUb".
+      // This edit changes the "public" portion so it wasn't absorbed by default.
+      expect(show(3.99)).toMatchInlineSnapshot(`"pUbx346y"`);
+      expect(analysedStack.convertToLineLog().code.describeHumanReadableInstructions())
+        .toMatchInlineSnapshot(`
+        [
+          "0: J 1",
+          "1: JL 0 5",
+          "2: LINE 0 "p"",
+          "3: J 30",
+          "4: LINE 0 "b"",
+          "5: J 6",
+          "6: JL 1 11",
+          "7: J 16",
+          "8: J 25",
+          "9: LINE 1 "3"",
+          "10: LINE 1 "4"",
+          "11: J 12",
+          "12: JL 2 15",
+          "13: J 22",
+          "14: LINE 2 "6"",
+          "15: J 19",
+          "16: JGE 2 8",
+          "17: LINE 1 "1"",
+          "18: J 8",
+          "19: J 21",
+          "20: J 21",
+          "21: J 35",
+          "22: J 23",
+          "23: J 38",
+          "24: J 14",
+          "25: J 27",
+          "26: J 27",
+          "27: J 28",
+          "28: J 41",
+          "29: J 9",
+          "30: J 32",
+          "31: J 32",
+          "32: J 33",
+          "33: J 46",
+          "34: J 4",
+          "35: JL 2.0000038146972656 37",
+          "36: LINE 2.0000038146972656 "y"",
+          "37: END",
+          "38: JGE 2.000002861022949 24",
+          "39: LINE 2 "5"",
+          "40: J 24",
+          "41: JL 1.0000019073486328 43",
+          "42: LINE 1.0000019073486328 "x"",
+          "43: JGE 1.0000019073486328 29",
+          "44: LINE 1 "2"",
+          "45: J 29",
+          "46: JL 3.0000009536743164 48",
+          "47: LINE 3.0000009536743164 "U"",
+          "48: JGE 3.0000009536743164 34",
+          "49: LINE 0 "u"",
+          "50: J 34",
+        ]
+      `);
+    });
+  });
+
   function createStack(texts: string[]): FileStackState {
     return new FileStackState(texts.map(t => injectNewLines(t)));
   }
@@ -194,5 +288,28 @@ describe('analyseFileStack', () => {
   /** Turn ["a\n", "a\nb\n"] to "a ab". */
   function compactTexts(texts: List<string>): string {
     return texts.map(t => t.replace(/\n/g, '')).join(' ');
+  }
+
+  function compactText(text: string): string {
+    return text.replaceAll('\n', '');
+  }
+
+  function describeAbsorbIdChunkMap(map: ImMap<AbsorbEditId, AbsorbDiffChunk>): string[] {
+    const result: string[] = [];
+    map.forEach((chunk, id) => {
+      const words: string[] = [`${id}:`];
+      if (!chunk.oldLines.isEmpty()) {
+        words.push(`-${compactTexts(chunk.oldLines)}`);
+      }
+      if (!chunk.newLines.isEmpty()) {
+        words.push(`+${compactTexts(chunk.newLines)}`);
+      }
+      if (chunk.selectedRev != null) {
+        words.push(`Selected=${chunk.selectedRev}`);
+      }
+      words.push(`Introduced=${chunk.introductionRev}`);
+      result.push(words.join(' '));
+    });
+    return result;
   }
 });

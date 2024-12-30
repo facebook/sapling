@@ -11,7 +11,7 @@ import type {RecordOf} from 'immutable';
 
 import {assert} from '../utils';
 import {FileStackState} from './fileStackState';
-import {List, Record} from 'immutable';
+import {List, Record, Map as ImMap} from 'immutable';
 import {diffLines, splitLines} from 'shared/diff';
 import {dedup, nullthrows} from 'shared/utils';
 
@@ -47,6 +47,8 @@ export type AbsorbDiffChunkProps = {
    * Must be >= introductionRev.
    */
   selectedRev: Rev | null;
+  /** The "AbsorbEditId" associated with this diff chunk. */
+  absorbEditId?: AbsorbEditId;
 };
 
 export const AbsorbDiffChunk = Record<AbsorbDiffChunkProps>({
@@ -58,6 +60,7 @@ export const AbsorbDiffChunk = Record<AbsorbDiffChunkProps>({
   newLines: List(),
   introductionRev: 0,
   selectedRev: null,
+  absorbEditId: undefined,
 });
 export type AbsorbDiffChunk = RecordOf<AbsorbDiffChunkProps>;
 
@@ -100,14 +103,75 @@ export function embedAbsorbId(rev: Rev, absorbEditId: AbsorbEditId): Rev {
 }
 
 /**
+ * Returns a rev with all absorb edits for this rev included.
+ * For example, `revWithAbsorb(2)` might return something like `2.999`.
+ * */
+export function revWithAbsorb(rev: Rev): Rev {
+  return Math.floor(rev) + 1 - ABSORB_EDIT_ID_FRACTIONAL_UNIT;
+}
+
+/**
+ * Calculate absorb edits for a stack.
+ *
+ * The stack top is treated as `wdir()` to be absorbed to the rest of the
+ * stack. The stack bottom is treated as imutable `public()`.
+ *
+ * All edits in `wdir()` will be broken down and labeled with `AbsorbEditId`s.
+ * If an edit with `id: AbsorbEditId` has a default absorb destination
+ * `x: Rev`, then this edit will be inserted in linelog as rev
+ * `embedAbsorbId(x, id)`, and can be checked out via
+ * `linelog.checkOut(revWithAbsorb(x))`.
+ *
+ * If an edit has no default destination, for example, the surrounding lines
+ * belong to public commit (rev 0), the edit will be left in the `wdir()`,
+ * and can be checked out using `revWithAbsorb(wdirRev)`, where `wdirRev` is
+ * the max integer rev in the linelog.
+ *
+ * Returns `FileStackState` with absorb edits embedded in the linelog, along
+ * with a mapping from the `AbsorbEditId` to the diff chunk.
+ */
+export function calculateAbsorbEditsForFileStack(
+  stack: FileStackState,
+): [FileStackState, ImMap<AbsorbEditId, AbsorbDiffChunk>] {
+  // rev 0 (public), 1, 2, ..., wdirRev-1 (stack top to absorb), wdirRev (wdir virtual rev)
+  const wdirRev = stack.revLength - 1;
+  assert(
+    wdirRev >= 1,
+    'calculateAbsorbEditsForFileStack requires at least one wdir(), one public()',
+  );
+  const newText = stack.getRev(wdirRev);
+  const stackTopRev = wdirRev - 1;
+  const diffChunks = analyseFileStack(stack, newText, stackTopRev);
+  // Drop wdirRev, then re-insert the chunks.
+  let newStack = stack.truncate(wdirRev);
+  // Assign absorbEditId to each chunk.
+  let nextAbsorbId = 0;
+  let absorbIdToDiffChunk = ImMap<AbsorbEditId, AbsorbDiffChunk>();
+  const diffChunksWithAbsorbId = diffChunks.map(chunk => {
+    const absorbEditId = nextAbsorbId;
+    const newChunk = chunk.set('absorbEditId', absorbEditId);
+    absorbIdToDiffChunk = absorbIdToDiffChunk.set(absorbEditId, newChunk);
+    nextAbsorbId += 1;
+    return newChunk;
+  });
+  // Re-insert the chunks with the absorbId.
+  newStack = applyFileStackEditsWithAbsorbId(newStack, diffChunksWithAbsorbId);
+  return [newStack, absorbIdToDiffChunk];
+}
+
+/**
  * Given a stack and the latest changes (usually at the stack top),
  * calculate the diff chunks and the revs that they might be absorbed to.
  * The rev 0 of the file stack should come from a "public" (immutable) commit.
  */
-export function analyseFileStack(stack: FileStackState, newText: string): List<AbsorbDiffChunk> {
+export function analyseFileStack(
+  stack: FileStackState,
+  newText: string,
+  stackTopRev?: Rev,
+): List<AbsorbDiffChunk> {
   assert(stack.revLength > 0, 'stack should not be empty');
   const linelog = stack.convertToLineLog();
-  const oldRev = stack.revLength - 1;
+  const oldRev = stackTopRev ?? stack.revLength - 1;
   const oldText = stack.getRev(oldRev);
   const oldLines = splitLines(oldText);
   // The `LineInfo` contains "blame" information.
@@ -248,6 +312,47 @@ export function applyFileStackEdits(
   });
   const texts = Array.from({length: stack.revLength}, (_, i) => linelog.checkOut(i * 2 + 1));
   return new FileStackState(texts);
+}
+
+/**
+ * Apply edits specified by `chunks`.
+ * The `chunk.selectedRev` is expected to include the `AbsorbEditId`.
+ */
+function applyFileStackEditsWithAbsorbId(
+  stack: FileStackState,
+  chunks: Iterable<AbsorbDiffChunk>,
+): FileStackState {
+  assert(stack.revLength > 0, 'stack should not be empty');
+  let linelog = stack.convertToLineLog();
+  const wdirRev = stack.revLength;
+  const stackTopRev = wdirRev - 1;
+  // Apply the changes. Assuming there are no overlapping chunks, we apply
+  // from end to start so the line numbers won't need change.
+  const sortedChunks = [...chunks].toSorted((a, b) => b.oldEnd - a.oldEnd);
+  sortedChunks.forEach(chunk => {
+    // If not "selected" to amend to a commit, leave the chunk at the wdir.
+    const baseRev = chunk.selectedRev ?? wdirRev;
+    const absorbEditId = nullthrows(chunk.absorbEditId);
+    const targetRev = embedAbsorbId(baseRev, absorbEditId);
+    assert(
+      targetRev >= chunk.introductionRev,
+      `selectedRev ${targetRev} must be >= introductionRev ${chunk.introductionRev}`,
+    );
+    assert(
+      targetRev > 0,
+      'selectedRev must be > 0 since rev 0 is from the immutable public commit',
+    );
+    // Edit the content of a past revision (targetRev, and follow-ups) from a
+    // future revision (oldRev, matches the line numbers).
+    linelog = linelog.editChunk(
+      stackTopRev,
+      chunk.oldStart,
+      chunk.oldEnd,
+      targetRev,
+      chunk.newLines.toArray(),
+    );
+  });
+  return stack.fromLineLog(linelog);
 }
 
 /** Split the start..end chunk into sub-chunks so each chunk has the same "blame" rev. */
