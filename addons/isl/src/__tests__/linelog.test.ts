@@ -593,6 +593,14 @@ describe('LineLog', () => {
       });
     });
 
+    it('takes a mapping function', () => {
+      const log = logFromTextList(['a\n', 'a\nb\n']).remapRevs(r =>
+        r === 2 ? 1 : r === 1 ? 2 : r,
+      );
+      expect(log.checkOut(1)).toBe('b\n');
+      expect(log.checkOut(2)).toBe('a\nb\n');
+    });
+
     it('can merge changes', () => {
       const log = logFromTextList(['b\n', 'b\nc\n', 'a\nb\nc\n']).remapRevs(new Map([[2, 1]]));
       expect(log.checkOut(1)).toBe('b\nc\n');

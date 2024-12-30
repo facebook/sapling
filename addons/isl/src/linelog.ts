@@ -597,7 +597,19 @@ class Code implements ValueObject {
     }
   }
 
-  remapRevs(revMap: Map<Rev, Rev>): [Code, Rev] {
+  remapRevs(revMapOrFunc: Map<Rev, Rev> | ((rev: Rev) => Rev)): [Code, Rev] {
+    let revMap = new Map<Rev, Rev>();
+    if (typeof revMapOrFunc === 'function') {
+      this.instList.forEach(inst => {
+        const rev = (inst as RecordOf<{rev?: number}>).rev;
+        if (rev != null && !revMap.has(rev)) {
+          revMap.set(rev, revMapOrFunc(rev));
+        }
+      });
+    } else {
+      revMap = revMapOrFunc;
+    }
+
     const valueOfString = [...revMap.entries()].toString();
     return this.rewriteInsts((c, _pc) => {
       if (c.op === Op.JGE || c.op === Op.JL || c.op === Op.LINE) {
@@ -838,7 +850,7 @@ class LineLog extends SelfUpdate<LineLogRecord> {
    * a dependency check and avoid troublesome reorders like
    * moving a change to before its dependency.
    */
-  remapRevs(revMap: Map<Rev, Rev>): LineLog {
+  remapRevs(revMap: Map<Rev, Rev> | ((rev: Rev) => Rev)): LineLog {
     const [newCode, newMaxRev] = this.code.remapRevs(revMap);
     return new LineLog({code: newCode, maxRev: newMaxRev});
   }

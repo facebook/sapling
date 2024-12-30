@@ -132,7 +132,7 @@ export class FileStackState extends SelfUpdate<FileStackStateRecord> {
    * and insertion. The callsite is responsible for checking
    * `revDepMap` to ensure the reordering can be "conflict"-free.
    */
-  remapRevs(revMap: Map<Rev, Rev>): FileStackState {
+  remapRevs(revMap: Map<Rev, Rev> | ((rev: Rev) => Rev)): FileStackState {
     const log = this.convertToLineLog().remapRevs(revMap);
     return this.fromLineLog(log);
   }
