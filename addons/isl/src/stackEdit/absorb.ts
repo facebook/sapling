@@ -16,7 +16,7 @@ import {diffLines, splitLines} from 'shared/diff';
 import {dedup, nullthrows} from 'shared/utils';
 
 /** A diff chunk analyzed by `analyseFileStack`. */
-export type AbsorbDiffChunkProps = {
+export type AbsorbEditProps = {
   /** The start line of the old content (start from 0, inclusive). */
   oldStart: number;
   /** The end line of the old content (start from 0, exclusive). */
@@ -51,7 +51,15 @@ export type AbsorbDiffChunkProps = {
   absorbEditId?: AbsorbEditId;
 };
 
-export const AbsorbDiffChunk = Record<AbsorbDiffChunkProps>({
+/**
+ * Represents an absorb edit from the wdir to the stack.
+ *
+ * This looks like a diff chunk, with extra info like "blame" (introductionRev)
+ * and "amend -to" (selectedRev). Note this is not 1:1 mapping to diff chunks,
+ * since one diff chunk might be split into multiple `AbsorbEdit`s if they need
+ * to be absorbed to different commits.
+ */
+export const AbsorbEdit = Record<AbsorbEditProps>({
   oldStart: 0,
   oldEnd: 0,
   oldLines: List(),
@@ -62,11 +70,10 @@ export const AbsorbDiffChunk = Record<AbsorbDiffChunkProps>({
   selectedRev: null,
   absorbEditId: undefined,
 });
-export type AbsorbDiffChunk = RecordOf<AbsorbDiffChunkProps>;
+export type AbsorbEdit = RecordOf<AbsorbEditProps>;
 
 /**
- * "Edit" id to distinguish different chunk edits.
- * Note a diff chunk might be split into multiple edits.
+ * Identifier of an `AbsorbEdit` in a file stack.
  */
 export type AbsorbEditId = number;
 
@@ -132,7 +139,7 @@ export function revWithAbsorb(rev: Rev): Rev {
  */
 export function calculateAbsorbEditsForFileStack(
   stack: FileStackState,
-): [FileStackState, ImMap<AbsorbEditId, AbsorbDiffChunk>] {
+): [FileStackState, ImMap<AbsorbEditId, AbsorbEdit>] {
   // rev 0 (public), 1, 2, ..., wdirRev-1 (stack top to absorb), wdirRev (wdir virtual rev)
   const wdirRev = stack.revLength - 1;
   assert(
@@ -146,7 +153,7 @@ export function calculateAbsorbEditsForFileStack(
   let newStack = stack.truncate(wdirRev);
   // Assign absorbEditId to each chunk.
   let nextAbsorbId = 0;
-  let absorbIdToDiffChunk = ImMap<AbsorbEditId, AbsorbDiffChunk>();
+  let absorbIdToDiffChunk = ImMap<AbsorbEditId, AbsorbEdit>();
   const diffChunksWithAbsorbId = diffChunks.map(chunk => {
     const absorbEditId = nextAbsorbId;
     const newChunk = chunk.set('absorbEditId', absorbEditId);
@@ -168,7 +175,7 @@ export function analyseFileStack(
   stack: FileStackState,
   newText: string,
   stackTopRev?: Rev,
-): List<AbsorbDiffChunk> {
+): List<AbsorbEdit> {
   assert(stack.revLength > 0, 'stack should not be empty');
   const linelog = stack.convertToLineLog();
   const oldRev = stackTopRev ?? stack.revLength - 1;
@@ -177,7 +184,7 @@ export function analyseFileStack(
   // The `LineInfo` contains "blame" information.
   const oldLineInfos = linelog.checkOutLines(oldRev);
   const newLines = splitLines(newText);
-  const result: Array<AbsorbDiffChunk> = [];
+  const result: Array<AbsorbEdit> = [];
   diffLines(oldLines, newLines).forEach(([a1, a2, b1, b2]) => {
     // a1, a2: line numbers in the `oldRev`.
     // b1, b2: line numbers in `newText`.
@@ -196,7 +203,7 @@ export function analyseFileStack(
       // For simplicity, we're not checking the "continuous" lines here yet (different from Python).
       const introductionRev = involvedRevs[0];
       result.push(
-        AbsorbDiffChunk({
+        AbsorbEdit({
           oldStart: a1,
           oldEnd: a2,
           oldLines: List(oldLines.slice(a1, a2)),
@@ -212,7 +219,7 @@ export function analyseFileStack(
       // For simplicity, we're not checking the "continuous" lines here yet (different from Python).
       splitChunk(a1, a2, oldLineInfos, (oldStart, oldEnd, introductionRev) => {
         result.push(
-          AbsorbDiffChunk({
+          AbsorbEdit({
             oldStart,
             oldEnd,
             oldLines: List(oldLines.slice(oldStart, oldEnd)),
@@ -234,7 +241,7 @@ export function analyseFileStack(
         const newStart = oldStart + delta;
         const newEnd = oldEnd + delta;
         result.push(
-          AbsorbDiffChunk({
+          AbsorbEdit({
             oldStart,
             oldEnd,
             oldLines: List(oldLines.slice(oldStart, oldEnd)),
@@ -255,7 +262,7 @@ export function analyseFileStack(
       // only be absorbed to the "max" rev where the left side is
       // "settled" down.
       result.push(
-        AbsorbDiffChunk({
+        AbsorbEdit({
           oldStart: a1,
           oldEnd: a2,
           oldLines: List(oldLines.slice(a1, a2)),
@@ -277,7 +284,7 @@ export function analyseFileStack(
  */
 export function applyFileStackEdits(
   stack: FileStackState,
-  chunks: Iterable<AbsorbDiffChunk>,
+  chunks: Iterable<AbsorbEdit>,
 ): FileStackState {
   // See also [apply](https://github.com/facebook/sapling/blob/6f29531e83daa62d9bd3bc58b712755d34f41493/eden/scm/sapling/ext/absorb/__init__.py#L321)
   assert(stack.revLength > 0, 'stack should not be empty');
@@ -320,7 +327,7 @@ export function applyFileStackEdits(
  */
 function applyFileStackEditsWithAbsorbId(
   stack: FileStackState,
-  chunks: Iterable<AbsorbDiffChunk>,
+  chunks: Iterable<AbsorbEdit>,
 ): FileStackState {
   assert(stack.revLength > 0, 'stack should not be empty');
   let linelog = stack.convertToLineLog();

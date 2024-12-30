@@ -6,7 +6,7 @@
  */
 
 import type {Hash} from '../../types';
-import type {AbsorbDiffChunk} from '../absorb';
+import type {AbsorbEdit} from '../absorb';
 import type {CommitState} from '../commitStackState';
 import type {RecordOf} from 'immutable';
 import type {RepoPath} from 'shared/types/common';
@@ -54,7 +54,7 @@ type StackStateWithOperationProps = {
    */
   absorbChunks: AbsorbChunks;
 };
-type AbsorbChunks = ImMap<RepoPath, List<AbsorbDiffChunk>>;
+type AbsorbChunks = ImMap<RepoPath, List<AbsorbEdit>>;
 
 type Intention = 'general' | 'split' | 'absorb';
 

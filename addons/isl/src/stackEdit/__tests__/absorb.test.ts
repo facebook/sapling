@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {AbsorbDiffChunk, AbsorbEditId} from '../absorb';
+import type {AbsorbEdit, AbsorbEditId} from '../absorb';
 import type {Rev} from '../fileStackState';
 import type {List, Map as ImMap} from 'immutable';
 
@@ -304,7 +304,7 @@ describe('analyseFileStack', () => {
       .join('\n');
   }
 
-  function applyChunks(stack: FileStackState, chunks: Iterable<AbsorbDiffChunk>): string {
+  function applyChunks(stack: FileStackState, chunks: Iterable<AbsorbEdit>): string {
     return compactTexts(applyFileStackEdits(stack, chunks).convertToPlainText());
   }
 
@@ -323,7 +323,7 @@ function compactTexts(texts: List<string>): string {
   return texts.map(t => t.replaceAll('\n', '↵')).join(' ');
 }
 
-export function describeAbsorbIdChunkMap(map: ImMap<AbsorbEditId, AbsorbDiffChunk>): string[] {
+export function describeAbsorbIdChunkMap(map: ImMap<AbsorbEditId, AbsorbEdit>): string[] {
   const result: string[] = [];
   map.forEach((chunk, id) => {
     const words: string[] = [`${id}:`];

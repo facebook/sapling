@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {AbsorbDiffChunk, AbsorbEditId} from './absorb';
+import type {AbsorbEdit, AbsorbEditId} from './absorb';
 import type {Rev} from './fileStackState';
 import type {RecordOf} from 'immutable';
 import type {Author, Hash, RepoPath} from 'shared/types/common';
@@ -117,9 +117,9 @@ const CommitStackRecord = Record<CommitStackProps>({
 
 /**
  * For absorb use-case, each file stack (keyed by the index of fileStacks) has
- * an AbsorbEditId->AbsorbDiffChunk mapping.
+ * an AbsorbEditId->AbsorbEdit mapping.
  */
-type AbsorbExtra = ImMap<number, ImMap<AbsorbEditId, AbsorbDiffChunk>>;
+type AbsorbExtra = ImMap<number, ImMap<AbsorbEditId, AbsorbEdit>>;
 
 // Type of *instances* created by the `CommitStackRecord`.
 // This makes `CommitStackState` work more like a common OOP `class Foo`:
