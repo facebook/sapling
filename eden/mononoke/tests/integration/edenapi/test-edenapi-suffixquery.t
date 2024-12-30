@@ -6,7 +6,6 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ setup_common_config
-  $ setconfig experimental.edenapi-suffixquery=true
 
   $ start_and_wait_for_mononoke_server
   $ quiet testtool_drawdag -R repo << EOF
