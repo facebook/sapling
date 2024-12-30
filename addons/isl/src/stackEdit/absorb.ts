@@ -48,7 +48,7 @@ export type AbsorbEditProps = {
    */
   selectedRev: Rev | null;
   /** The "AbsorbEditId" associated with this diff chunk. */
-  absorbEditId?: AbsorbEditId;
+  absorbEditId: AbsorbEditId;
 };
 
 /**
@@ -68,7 +68,7 @@ export const AbsorbEdit = Record<AbsorbEditProps>({
   newLines: List(),
   introductionRev: 0,
   selectedRev: null,
-  absorbEditId: undefined,
+  absorbEditId: 0,
 });
 export type AbsorbEdit = RecordOf<AbsorbEditProps>;
 
@@ -149,15 +149,10 @@ export function calculateAbsorbEditsForFileStack(
   const diffChunks = analyseFileStackWithWdirAtTop(stack, {wdirRev});
   // Drop wdirRev, then re-insert the chunks.
   let newStack = stack.truncate(wdirRev);
-  // Assign absorbEditId to each chunk.
-  let nextAbsorbId = 0;
   let absorbIdToDiffChunk = ImMap<AbsorbEditId, AbsorbEdit>();
   const diffChunksWithAbsorbId = diffChunks.map(chunk => {
-    const absorbEditId = nextAbsorbId;
-    const newChunk = chunk.set('absorbEditId', absorbEditId);
-    absorbIdToDiffChunk = absorbIdToDiffChunk.set(absorbEditId, newChunk);
-    nextAbsorbId += 1;
-    return newChunk;
+    absorbIdToDiffChunk = absorbIdToDiffChunk.set(chunk.absorbEditId, chunk);
+    return chunk;
   });
   // Re-insert the chunks with the absorbId.
   newStack = applyFileStackEditsWithAbsorbId(newStack, diffChunksWithAbsorbId);
@@ -198,6 +193,12 @@ export function analyseFileStack(
   const oldLineInfos = linelog.checkOutLines(oldRev);
   const newLines = splitLines(newText);
   const result: Array<AbsorbEdit> = [];
+  let nextAbsorbId = 0;
+  const allocateAbsorbId = () => {
+    const id = nextAbsorbId;
+    nextAbsorbId += 1;
+    return id;
+  };
   diffLines(oldLines, newLines).forEach(([a1, a2, b1, b2]) => {
     // a1, a2: line numbers in the `oldRev`.
     // b1, b2: line numbers in `newText`.
@@ -225,6 +226,7 @@ export function analyseFileStack(
           newLines: List(newLines.slice(b1, b2)),
           introductionRev,
           selectedRev: introductionRev,
+          absorbEditId: allocateAbsorbId(),
         }),
       );
     } else if (b1 === b2) {
@@ -241,6 +243,7 @@ export function analyseFileStack(
             newLines: List([]),
             introductionRev,
             selectedRev: introductionRev,
+            absorbEditId: allocateAbsorbId(),
           }),
         );
       });
@@ -263,6 +266,7 @@ export function analyseFileStack(
             newLines: List(newLines.slice(newStart, newEnd)),
             introductionRev,
             selectedRev: introductionRev === 0 ? null : introductionRev,
+            absorbEditId: allocateAbsorbId(),
           }),
         );
       });
@@ -284,6 +288,7 @@ export function analyseFileStack(
           newLines: List(newLines.slice(b1, b2)),
           introductionRev: Math.max(0, ...involvedRevs),
           selectedRev: null,
+          absorbEditId: allocateAbsorbId(),
         }),
       );
     }
