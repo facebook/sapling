@@ -250,6 +250,20 @@ describe('analyseFileStack', () => {
         ]
       `);
     });
+
+    it('1:1 line mapping edit can include immutable lines', () => {
+      const stack = createStack(['p', 'p1', 'p12', 'PXY']);
+      const [, absorbMap] = calculateAbsorbEditsForFileStack(stack);
+      // Absorbed edits: "1 => X"; "2 => Y" (selected is set)
+      // "p => P" is left in the working copy, since "p" is considered immutable.
+      expect(describeAbsorbIdChunkMap(absorbMap)).toMatchInlineSnapshot(`
+        [
+          "0: -p +P Introduced=0",
+          "1: -1 +X Selected=1 Introduced=1",
+          "2: -2 +Y Selected=2 Introduced=2",
+        ]
+      `);
+    });
   });
 
   function createStack(texts: string[]): FileStackState {

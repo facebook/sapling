@@ -224,7 +224,7 @@ export function analyseFileStack(
           }),
         );
       });
-    } else if (a2 - a1 === b2 - b1 && involvedLineInfos.every(info => info.rev > 0)) {
+    } else if (a2 - a1 === b2 - b1 && involvedLineInfos.some(info => info.rev > 0)) {
       // Line count matches on both side. No public lines.
       // We assume the "a" and "b" sides are 1:1 mapped.
       // So, even if the "a"-side lines blame to different revs, we can
@@ -242,7 +242,7 @@ export function analyseFileStack(
             newEnd,
             newLines: List(newLines.slice(newStart, newEnd)),
             introductionRev,
-            selectedRev: introductionRev,
+            selectedRev: introductionRev === 0 ? null : introductionRev,
           }),
         );
       });
