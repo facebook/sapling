@@ -91,11 +91,11 @@ impl DerivedDataManager {
     #[async_recursion]
     /// Returns the appropriate manager to derive given changeset, either this
     /// manager, or some secondary manager in the chain.
-    async fn get_manager(
-        &self,
+    async fn get_manager<'s>(
+        &'s self,
         ctx: &CoreContext,
         cs_id: ChangesetId,
-    ) -> anyhow::Result<&DerivedDataManager> {
+    ) -> anyhow::Result<&'s DerivedDataManager> {
         Ok(if let Some(secondary) = &self.inner.secondary {
             if secondary
                 .assigner

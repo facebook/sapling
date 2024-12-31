@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![allow(elided_named_lifetimes)]
+
 use std::collections::HashMap;
 use std::iter;
 use std::str;

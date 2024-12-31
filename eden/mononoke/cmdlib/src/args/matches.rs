@@ -297,7 +297,7 @@ impl<'a> MononokeMatches<'a> {
         self.matches.is_present(name)
     }
 
-    pub fn subcommand(&'a self) -> (&str, Option<&'a ArgMatches<'a>>) {
+    pub fn subcommand(&self) -> (&str, Option<&ArgMatches<'a>>) {
         self.matches.subcommand()
     }
 

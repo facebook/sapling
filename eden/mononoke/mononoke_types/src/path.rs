@@ -909,14 +909,14 @@ impl AsRef<[MPathElement]> for NonRootMPath {
 
 pub fn non_root_mpath_element_iter<'a>(
     mpath: &'a Option<NonRootMPath>,
-) -> Box<dyn Iterator<Item = &MPathElement> + 'a> {
+) -> Box<dyn Iterator<Item = &'a MPathElement> + 'a> {
     match mpath {
         Some(path) => Box::new(path.into_iter()),
         None => Box::new(std::iter::empty()),
     }
 }
 
-pub fn mpath_element_iter<'a>(mpath: &'a MPath) -> Box<dyn Iterator<Item = &MPathElement> + 'a> {
+pub fn mpath_element_iter<'a>(mpath: &'a MPath) -> Box<dyn Iterator<Item = &'a MPathElement> + 'a> {
     Box::new(mpath.into_iter())
 }
 
@@ -1264,7 +1264,7 @@ pub struct CaseConflictTrie<'a> {
 }
 
 impl<'a> CaseConflictTrie<'a> {
-    fn new(exclusions: &'a PrefixTrie) -> CaseConflictTrie {
+    fn new(exclusions: &'a PrefixTrie) -> CaseConflictTrie<'a> {
         CaseConflictTrie {
             children: Default::default(),
             lowercase_to_original: Default::default(),
