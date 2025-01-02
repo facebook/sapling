@@ -273,6 +273,8 @@ impl EdenFsInstance {
         include_vcs_roots: bool,
         included_roots: &Option<Vec<PathBuf>>,
         excluded_roots: &Option<Vec<PathBuf>>,
+        included_suffixes: &Option<Vec<String>>,
+        excluded_suffixes: &Option<Vec<String>>,
         timeout: Option<Duration>,
     ) -> Result<crate::types::ChangesSinceV2Result> {
         let client = self.get_connected_thrift_client(timeout).await?;
@@ -290,6 +292,8 @@ impl EdenFsInstance {
                     .map(|er| bytes_from_path(er.to_path_buf()).expect("Invalid excluded_roots"))
                     .collect::<Vec<_>>()
             }),
+            includedSuffixes: included_suffixes.clone(),
+            excludedSuffixes: excluded_suffixes.clone(),
             ..Default::default()
         };
         client

@@ -45,6 +45,18 @@ pub struct ChangesSinceCmd {
     )]
     excluded_roots: Option<Vec<PathBuf>>,
 
+    #[clap(
+        long,
+        help = "Included suffixes in the output. None means include all suffixes"
+    )]
+    included_suffixes: Option<Vec<String>>,
+
+    #[clap(
+        long,
+        help = "Excluded suffixes in the output. None means exclude no suffixes"
+    )]
+    excluded_suffixes: Option<Vec<String>>,
+
     #[clap(long, help = "Print the output in JSON format")]
     json: bool,
 }
@@ -67,6 +79,8 @@ impl crate::Subcommand for ChangesSinceCmd {
                 self.include_vcs_roots,
                 &self.included_roots,
                 &self.excluded_roots,
+                &self.included_suffixes,
+                &self.excluded_suffixes,
                 None,
             )
             .await?;
