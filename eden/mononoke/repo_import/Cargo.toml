@@ -35,7 +35,7 @@ git_ref_content_mapping = { version = "0.1.0", path = "../git_ref_content_mappin
 gix-hash = "0.15.1"
 import_direct = { version = "0.1.0", path = "../git/import_direct" }
 import_tools = { version = "0.1.0", path = "../git/import_tools" }
-itertools = "0.13.0"
+itertools = "0.14.0"
 live_commit_sync_config = { version = "0.1.0", path = "../commit_rewriting/live_commit_sync_config" }
 manifest = { version = "0.1.0", path = "../manifest" }
 maplit = "1.0"

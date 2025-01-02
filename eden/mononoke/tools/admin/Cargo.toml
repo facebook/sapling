@@ -67,7 +67,7 @@ git_symbolic_refs = { version = "0.1.0", path = "../../git_symbolic_refs" }
 git_types = { version = "0.1.0", path = "../../git/git_types" }
 gix-hash = "0.15.1"
 gix-object = "0.46.0"
-itertools = "0.13.0"
+itertools = "0.14.0"
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"

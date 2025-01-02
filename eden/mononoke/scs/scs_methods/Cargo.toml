@@ -35,7 +35,7 @@ futures_watchdog = { version = "0.1.0", path = "../../common/futures_watchdog" }
 git_types = { version = "0.1.0", path = "../../git/git_types" }
 gix-hash = "0.15.1"
 hooks = { version = "0.1.0", path = "../../hooks" }
-itertools = "0.13.0"
+itertools = "0.14.0"
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 maplit = "1.0"
 megarepo_api = { version = "0.1.0", path = "../../megarepo_api" }

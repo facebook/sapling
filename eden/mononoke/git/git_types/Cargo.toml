@@ -27,7 +27,7 @@ git_types_thrift = { version = "0.1.0", path = "if" }
 gix-actor = "0.33.1"
 gix-hash = "0.15.1"
 gix-object = "0.46.0"
-itertools = "0.13.0"
+itertools = "0.14.0"
 lazy_static = "1.4"
 manifest = { version = "0.1.0", path = "../../manifest" }
 megarepo_error = { version = "0.1.0", path = "../../megarepo_api/megarepo_error" }

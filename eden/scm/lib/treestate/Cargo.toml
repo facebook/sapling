@@ -31,7 +31,7 @@ twox-hash = "1.6.1"
 uuid = { version = "1.2", features = ["serde", "v4", "v5", "v6", "v7", "v8"] }
 
 [dev-dependencies]
-itertools = "0.13.0"
+itertools = "0.14.0"
 pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }
 quickcheck = "1.0"
 rand = { version = "0.8", features = ["small_rng"] }

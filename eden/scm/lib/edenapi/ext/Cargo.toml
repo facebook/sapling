@@ -18,7 +18,7 @@ blake2 = "0.10"
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 crossbeam = "0.8"
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
-itertools = "0.13.0"
+itertools = "0.14.0"
 sapling-edenapi = { version = "0.1.0", path = ".." }
 sapling-edenapi_types = { version = "0.1.0", path = "../types" }
 sapling-minibytes = { version = "0.1.0", path = "../../minibytes" }
