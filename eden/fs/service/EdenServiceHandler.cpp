@@ -2274,14 +2274,31 @@ void EdenServiceHandler::sync_changesSinceV2(
     std::unique_ptr<ChangesSinceV2Params> params) {
   auto mountHandle = lookupMount(params->mountPoint());
   const auto& fromPosition = *params->fromPosition_ref();
+  auto includedRoots = params->includedRoots_ref().has_value()
+      ? params->includedRoots_ref().value()
+      : std::vector<PathString>{};
+  auto excludedRoots = params->excludedRoots_ref().has_value()
+      ? params->excludedRoots_ref().value()
+      : std::vector<PathString>{};
+  auto includedSuffixes = params->includedSuffixes_ref().has_value()
+      ? params->includedSuffixes_ref().value()
+      : std::vector<std::string>{};
+  auto excludedSuffixes = params->excludedSuffixes_ref().has_value()
+      ? params->excludedSuffixes_ref().value()
+      : std::vector<std::string>{};
+
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG3,
       *params->mountPoint(),
       fmt::format(
-          "fromPosition={}:{}:{}",
+          "fromPosition={}:{}:{}, includedRoots:{}, excludedRoots:{}, includedSuffixes:{}, excludedSuffixes:{}",
           fromPosition.mountGeneration().value(),
           fromPosition.sequenceNumber().value(),
-          fromPosition.snapshotHash().value()));
+          fromPosition.snapshotHash().value(),
+          toLogArg(includedRoots),
+          toLogArg(excludedRoots),
+          toLogArg(includedSuffixes),
+          toLogArg(excludedSuffixes)));
 
   auto latestJournalEntry = mountHandle.getJournal().getLatest();
   std::optional<JournalDelta::SequenceNumber> toSequence;
@@ -2315,12 +2332,6 @@ void EdenServiceHandler::sync_changesSinceV2(
     // TODO: move to helper
     auto config = server_->getServerState()->getEdenConfig();
     auto maxNumberOfChanges = config->notifyMaxNumberOfChanges.getValue();
-    auto includedRoots = params->includedRoots_ref().has_value()
-        ? params->includedRoots_ref().value()
-        : std::vector<PathString>{};
-    auto excludedRoots = params->excludedRoots_ref().has_value()
-        ? params->excludedRoots_ref().value()
-        : std::vector<PathString>{};
     auto includedAndExcludeRoots = buildIncludedAndExcludedRoots(
         params->includeVCSRoots().has_value()
             ? params->includeVCSRoots().value()
