@@ -391,7 +391,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
               <T>Files Changed</T>
               <Badge>{commit.totalFileCount}</Badge>
             </SmallCapsTitle>
-            <DiffStats commit={commit} />
+            {commit.phase !== 'public' ? <DiffStats commit={commit} /> : null}
             <div className="changed-file-list">
               <div className="button-row">
                 <OpenComparisonViewButton
