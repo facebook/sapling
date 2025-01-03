@@ -22,7 +22,6 @@ use mononoke_api::Mononoke;
 use mononoke_api::MononokeRepo;
 use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
-use mutable_renames::MutableRenames;
 
 use crate::common::derive_all_types;
 use crate::common::MegarepoOp;
@@ -48,7 +47,6 @@ use crate::common::MegarepoOp;
 pub struct AddSyncTarget<'a, R> {
     pub megarepo_configs: &'a Arc<dyn MononokeMegarepoConfigs>,
     pub mononoke: &'a Arc<Mononoke<R>>,
-    pub mutable_renames: &'a Arc<MutableRenames>,
 }
 
 impl<'a, R> MegarepoOp<R> for AddSyncTarget<'a, R> {
@@ -61,12 +59,10 @@ impl<'a, R: MononokeRepo> AddSyncTarget<'a, R> {
     pub fn new(
         megarepo_configs: &'a Arc<dyn MononokeMegarepoConfigs>,
         mononoke: &'a Arc<Mononoke<R>>,
-        mutable_renames: &'a Arc<MutableRenames>,
     ) -> Self {
         Self {
             megarepo_configs,
             mononoke,
-            mutable_renames,
         }
     }
 
@@ -106,7 +102,6 @@ impl<'a, R: MononokeRepo> AddSyncTarget<'a, R> {
                 repo.repo(),
                 &sync_target_config.sources,
                 &changesets_to_merge,
-                self.mutable_renames,
             )
             .await?;
         scuba.log_with_msg("Created move commits", None);

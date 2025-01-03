@@ -21,7 +21,6 @@ use bookmarks::BookmarksRef;
 use bulk_derivation::BulkDerivation;
 use bytes::Bytes;
 use changesets_creation::save_changesets;
-use commit_graph::CommitGraph;
 use commit_transformation::create_directory_source_to_target_multi_mover;
 use commit_transformation::create_source_to_target_multi_mover;
 use commit_transformation::DirectoryMultiMover;
@@ -40,7 +39,6 @@ use itertools::EitherOrBoth;
 use itertools::Itertools;
 use manifest::bonsai_diff;
 use manifest::BonsaiDiffFileChange;
-use manifest::Entry;
 use manifest::ManifestOps;
 use megarepo_config::MononokeMegarepoConfigs;
 use megarepo_config::Source;
@@ -72,18 +70,14 @@ use mononoke_types::FileType;
 use mononoke_types::GitLfs;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
-use mutable_renames::MutableRenameEntry;
-use mutable_renames::MutableRenames;
 use repo_authorization::AuthorizationContext;
 use sorted_vector_map::SortedVectorMap;
-use unodes::RootUnodeManifestId;
 
 use crate::Repo;
 
 pub struct SourceAndMovedChangesets {
     pub source: ChangesetId,
     pub moved: BonsaiChangeset,
-    pub mutable_renames: Vec<MutableRenameEntry>,
 }
 
 const MAX_BOOKMARK_MOVE_ATTEMPTS: usize = 5;
@@ -402,7 +396,6 @@ pub trait MegarepoOp<R> {
         repo: &R,
         cs_id: ChangesetId,
         mover: &MultiMover,
-        directory_mover: &DirectoryMultiMover,
         linkfiles: BTreeMap<NonRootMPath, FileChange>,
         source_name: &SourceName,
     ) -> Result<SourceAndMovedChangesets, MegarepoError>
@@ -466,29 +459,9 @@ pub trait MegarepoOp<R> {
         )
         .freeze()?;
 
-        let mutable_renames = if let Ok(true) = justknobs::eval(
-            "scm/mononoke:megarepo_disable_mutable_rename_creation",
-            None,
-            Some(repo.repo_identity().name()),
-        ) {
-            // Skip creating mutable renames
-            Vec::new()
-        } else {
-            self.create_mutable_renames(
-                ctx,
-                repo,
-                cs_id,
-                moved_bcs.get_changeset_id(),
-                mover,
-                directory_mover,
-            )
-            .await?
-        };
-
         let source_and_moved_changeset = SourceAndMovedChangesets {
             source: cs_id,
             moved: moved_bcs,
-            mutable_renames,
         };
         Ok(source_and_moved_changeset)
     }
@@ -533,76 +506,6 @@ pub trait MegarepoOp<R> {
         Ok(all_paths)
     }
 
-    async fn create_mutable_renames(
-        &self,
-        ctx: &CoreContext,
-        repo: &R,
-        cs_id: ChangesetId,
-        dst_cs_id: ChangesetId,
-        mover: &MultiMover,
-        directory_mover: &DirectoryMultiMover,
-    ) -> Result<Vec<MutableRenameEntry>, Error>
-    where
-        R: Repo,
-    {
-        let root_unode_id = repo
-            .repo_derived_data()
-            .derive::<RootUnodeManifestId>(ctx, cs_id)
-            .await
-            .map_err(Error::from)?;
-        let unode_id = root_unode_id.manifest_unode_id();
-
-        let entries = unode_id
-            .list_all_entries(ctx.clone(), repo.repo_blobstore().clone())
-            .try_collect::<Vec<_>>()
-            .await?;
-
-        let mut res = vec![];
-        for (src_path, entry) in entries {
-            match (src_path.into_optional_non_root_path(), entry) {
-                (Some(src_path), Entry::Leaf(leaf)) => {
-                    // TODO(mitrandir): we record file
-                    // moves to mutable_renames even though these moves are already
-                    // recorded in non-mutable renames. We have to do it because
-                    // scsc log doesn't use non-mutable renames,
-                    // but we'd like to use it
-                    // (see https://fb.quip.com/GzYMAwil1JXX for more details)
-                    let dst_paths = mover(&src_path)?;
-                    for dst_path in dst_paths {
-                        let mutable_rename_entry = MutableRenameEntry::new(
-                            dst_cs_id,
-                            dst_path.into(),
-                            cs_id,
-                            src_path.clone().into(),
-                            Entry::Leaf(leaf),
-                        )?;
-                        res.push(mutable_rename_entry);
-                    }
-                }
-                (src_path, Entry::Tree(tree)) => {
-                    let src_path = src_path.into();
-                    let dst_paths = directory_mover(&src_path)?;
-                    for dst_path in dst_paths {
-                        let mutable_rename_entry = MutableRenameEntry::new(
-                            dst_cs_id,
-                            dst_path,
-                            cs_id,
-                            src_path.clone(),
-                            Entry::Tree(tree),
-                        )?;
-                        res.push(mutable_rename_entry);
-                    }
-                }
-                _ => {
-                    // We shouldn't end up in this branch
-                    continue;
-                }
-            }
-        }
-
-        Ok(res)
-    }
-
     // Creates move commits on top of source changesets that we want to merge
     // into the target. These move commits put all source files into a correct place
     // in a target.
@@ -612,7 +515,6 @@ pub trait MegarepoOp<R> {
         repo: &'b R,
         sources: &[Source],
         changesets_to_merge: &'b BTreeMap<SourceName, ChangesetId>,
-        mutable_renames: &Arc<MutableRenames>,
     ) -> Result<Vec<(SourceName, SourceAndMovedChangesets)>, Error>
     where
         R: MononokeRepo,
@@ -648,7 +550,6 @@ pub trait MegarepoOp<R> {
                             repo,
                             changeset_id,
                             &mover,
-                            &directory_mover,
                             linkfiles,
                             &source_name,
                         )
@@ -689,24 +590,6 @@ pub trait MegarepoOp<R> {
         )
         .await?;
 
-        let mutable_renames_count: usize = move_commits
-            .iter()
-            .map(|(_, css)| css.mutable_renames.len())
-            .sum();
-        if mutable_renames_count > 0 {
-            let mut scuba = ctx.scuba().clone();
-            scuba.add("mutable_renames_count", mutable_renames_count);
-            scuba.log_with_msg("Started saving mutable renames", None);
-            self.save_mutable_renames(
-                ctx,
-                repo.commit_graph(),
-                mutable_renames,
-                move_commits.iter().map(|(_, css)| &css.mutable_renames),
-            )
-            .await?;
-            scuba.log_with_msg("Saved mutable renames", None);
-        }
-
         let mut scuba = ctx.scuba().clone();
         scuba.add("move_commits_count", move_commits.len());
         scuba.log_with_msg("Started deriving move commits", None);
@@ -724,24 +607,6 @@ pub trait MegarepoOp<R> {
         scuba.log_with_msg("Derived move commits", None);
 
         Ok(move_commits)
-    }
-
-    async fn save_mutable_renames<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        commit_graph: &'a CommitGraph,
-        mutable_renames: &'a Arc<MutableRenames>,
-        entries_iter: impl Iterator<Item = &'a Vec<MutableRenameEntry>> + Send + 'async_trait,
-    ) -> Result<(), Error> {
-        for entries in entries_iter {
-            for chunk in entries.chunks(100) {
-                mutable_renames
-                    .add_or_overwrite_renames(ctx, commit_graph, chunk.to_vec())
-                    .await?;
-            }
-        }
-
-        Ok(())
     }
 
     async fn validate_changeset_to_merge(

@@ -75,8 +75,7 @@ async fn test_add_sync_target_simple(fb: FacebookInit) -> Result<(), Error> {
 
     let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
 
-    let add_sync_target =
-        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
+    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
     let repo = add_sync_target
         .find_repo_by_id(&ctx, target.repo_id)
         .await?;
@@ -141,12 +140,8 @@ async fn test_add_sync_target_simple(fb: FacebookInit) -> Result<(), Error> {
         .set_to(cs_id)
         .await?;
 
-    let sync_changeset = SyncChangeset::new(
-        &configs_storage,
-        &test.mononoke,
-        &test.megarepo_mapping,
-        &test.mutable_renames,
-    );
+    let sync_changeset =
+        SyncChangeset::new(&configs_storage, &test.mononoke, &test.megarepo_mapping);
 
     sync_changeset
         .sync(&ctx, cs_id, &first_source_name, &target, target_cs_id)
@@ -216,8 +211,7 @@ async fn test_add_sync_target_with_linkfiles(fb: FacebookInit) -> Result<(), Err
 
     let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
 
-    let add_sync_target =
-        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
+    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
     let repo = add_sync_target
         .find_repo_by_id(&ctx, target.repo_id)
         .await?;
@@ -307,8 +301,7 @@ async fn test_add_sync_target_invalid_same_prefix(fb: FacebookInit) -> Result<()
 
     let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
 
-    let add_sync_target =
-        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
+    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
     let repo = add_sync_target
         .find_repo_by_id(&ctx, target.repo_id)
         .await?;
@@ -374,8 +367,7 @@ async fn test_add_sync_target_same_file_different_prefix(fb: FacebookInit) -> Re
 
     let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
 
-    let add_sync_target =
-        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
+    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
     let repo = add_sync_target
         .find_repo_by_id(&ctx, target.repo_id)
         .await?;
@@ -474,8 +466,7 @@ async fn test_add_sync_target_invalid_linkfiles(fb: FacebookInit) -> Result<(), 
 
     let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
 
-    let add_sync_target =
-        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
+    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
     let repo = add_sync_target
         .find_repo_by_id(&ctx, target.repo_id)
         .await?;
@@ -532,8 +523,7 @@ async fn test_add_sync_target_invalid_hash_to_merge(fb: FacebookInit) -> Result<
 
     let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
 
-    let add_sync_target =
-        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
+    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
     let repo = add_sync_target
         .find_repo_by_id(&ctx, target.repo_id)
         .await?;
@@ -611,8 +601,7 @@ async fn test_add_sync_target_merge_three_sources(fb: FacebookInit) -> Result<()
 
     let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
 
-    let add_sync_target =
-        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
+    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
     let repo = add_sync_target
         .find_repo_by_id(&ctx, target.repo_id)
         .await?;
@@ -717,8 +706,7 @@ async fn test_add_sync_target_repeat_same_request(fb: FacebookInit) -> Result<()
 
     let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
 
-    let add_sync_target =
-        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
+    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
     let repo = add_sync_target
         .find_repo_by_id(&ctx, target.repo_id)
         .await?;
@@ -742,8 +730,7 @@ async fn test_add_sync_target_repeat_same_request(fb: FacebookInit) -> Result<()
 
     // Now repeat the same request again (as if client retries a reqeust that has already
     // succeeded). We should get the same result as the first time.
-    let add_sync_target =
-        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
+    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
     let second_result = add_sync_target
         .run(
             &ctx,
@@ -759,8 +746,7 @@ async fn test_add_sync_target_repeat_same_request(fb: FacebookInit) -> Result<()
     assert_eq!(first_result, second_result);
 
     // Now modify the request - it should fail
-    let add_sync_target =
-        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
+    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
     assert!(
         add_sync_target
             .run(
@@ -777,8 +763,7 @@ async fn test_add_sync_target_repeat_same_request(fb: FacebookInit) -> Result<()
 
     // Now send different config with the same name - should fail
     sync_target_config.sources = vec![];
-    let add_sync_target =
-        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
+    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
     let res = add_sync_target
         .run(
             &ctx,

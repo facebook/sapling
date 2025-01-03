@@ -17,7 +17,6 @@ use mononoke_api::Mononoke;
 use mononoke_api::MononokeRepo;
 use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
-use mutable_renames::MutableRenames;
 
 use crate::common::find_source_config;
 use crate::common::find_target_bookmark_and_value;
@@ -30,7 +29,6 @@ use crate::common::MegarepoOp;
 pub struct RemergeSource<'a, R> {
     pub megarepo_configs: &'a Arc<dyn MononokeMegarepoConfigs>,
     pub mononoke: &'a Arc<Mononoke<R>>,
-    pub mutable_renames: &'a Arc<MutableRenames>,
 }
 
 impl<'a, R> MegarepoOp<R> for RemergeSource<'a, R> {
@@ -43,12 +41,10 @@ impl<'a, R: MononokeRepo> RemergeSource<'a, R> {
     pub fn new(
         megarepo_configs: &'a Arc<dyn MononokeMegarepoConfigs>,
         mononoke: &'a Arc<Mononoke<R>>,
-        mutable_renames: &'a Arc<MutableRenames>,
     ) -> Self {
         Self {
             megarepo_configs,
             mononoke,
-            mutable_renames,
         }
     }
 
@@ -110,7 +106,6 @@ impl<'a, R: MononokeRepo> RemergeSource<'a, R> {
                 target_repo.repo(),
                 &[source_config.clone()],
                 new_remapping_state.get_all_latest_synced_changesets(),
-                self.mutable_renames,
             )
             .await?;
 

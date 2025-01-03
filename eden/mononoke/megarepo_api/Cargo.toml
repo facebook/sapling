@@ -37,7 +37,6 @@ metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_api = { version = "0.1.0", path = "../mononoke_api" }
 mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
-mutable_renames = { version = "0.1.0", path = "../mutable_renames" }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 repo_authorization = { version = "0.1.0", path = "../repo_authorization" }
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
@@ -47,7 +46,6 @@ repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 serde_json = { version = "1.0.132", features = ["float_roundtrip", "unbounded_depth"] }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-unodes = { version = "0.1.0", path = "../derived_data/unodes" }
 
 [dev-dependencies]
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

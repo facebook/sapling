@@ -15,8 +15,6 @@ use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::Loadable;
 use changesets_creation::save_changesets;
-use commit_graph::CommitGraphRef;
-use commit_transformation::create_directory_source_to_target_multi_mover;
 use commit_transformation::create_source_to_target_multi_mover;
 use commit_transformation::rewrite_as_squashed_commit;
 use commit_transformation::rewrite_commit;
@@ -40,7 +38,6 @@ use mononoke_api::MononokeRepo;
 use mononoke_api::RepoContext;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use mutable_renames::MutableRenames;
 use repo_blobstore::RepoBlobstoreRef;
 
 use crate::common::find_source_config;
@@ -53,7 +50,6 @@ pub(crate) struct SyncChangeset<'a, R> {
     megarepo_configs: &'a Arc<dyn MononokeMegarepoConfigs>,
     mononoke: &'a Arc<Mononoke<R>>,
     target_megarepo_mapping: &'a Arc<MegarepoMapping>,
-    mutable_renames: &'a Arc<MutableRenames>,
 }
 
 #[async_trait]
@@ -107,13 +103,11 @@ impl<'a, R: MononokeRepo> SyncChangeset<'a, R> {
         megarepo_configs: &'a Arc<dyn MononokeMegarepoConfigs>,
         mononoke: &'a Arc<Mononoke<R>>,
         target_megarepo_mapping: &'a Arc<MegarepoMapping>,
-        mutable_renames: &'a Arc<MutableRenames>,
     ) -> Self {
         Self {
             megarepo_configs,
             mononoke,
             target_megarepo_mapping,
-            mutable_renames,
         }
     }
 
@@ -343,8 +337,6 @@ impl<'a, R: MononokeRepo> SyncChangeset<'a, R> {
         let side_parents = source_cs.parents().filter(|p| *p != latest_synced_cs_id);
         let mover = create_source_to_target_multi_mover(source.mapping.clone())
             .map_err(MegarepoError::request)?;
-        let directory_mover = create_directory_source_to_target_multi_mover(source.mapping.clone())
-            .map_err(MegarepoError::request)?;
         let moved_commits = stream::iter(side_parents)
             .map(|parent| {
                 self.create_single_move_commit(
@@ -352,7 +344,6 @@ impl<'a, R: MononokeRepo> SyncChangeset<'a, R> {
                     target_repo.repo(),
                     parent.clone(),
                     &mover,
-                    &directory_mover,
                     Default::default(),
                     source_name,
                 )
@@ -367,22 +358,6 @@ impl<'a, R: MononokeRepo> SyncChangeset<'a, R> {
             moved_commits.iter().map(|css| css.moved.clone()).collect(),
         )
         .await?;
-
-        let mutable_renames_count: usize = moved_commits
-            .iter()
-            .map(|css| css.mutable_renames.len())
-            .sum();
-        let mut scuba = ctx.scuba().clone();
-        scuba.add("mutable_renames_count", mutable_renames_count);
-        scuba.log_with_msg("Started saving mutable renames", None);
-        self.save_mutable_renames(
-            ctx,
-            target_repo.repo().commit_graph(),
-            self.mutable_renames,
-            moved_commits.iter().map(|css| &css.mutable_renames),
-        )
-        .await?;
-        scuba.log_with_msg("Saved mutable renames", None);
 
         Ok(moved_commits)
     }
@@ -656,12 +631,8 @@ mod test {
             .await?;
 
         let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage);
-        let sync_changeset = SyncChangeset::new(
-            &configs_storage,
-            &test.mononoke,
-            &test.megarepo_mapping,
-            &test.mutable_renames,
-        );
+        let sync_changeset =
+            SyncChangeset::new(&configs_storage, &test.mononoke, &test.megarepo_mapping);
         println!("Trying to sync already synced commit again");
         let res = sync_changeset
             .sync(
@@ -742,12 +713,8 @@ mod test {
             .await?;
 
         let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage);
-        let sync_changeset = SyncChangeset::new(
-            &configs_storage,
-            &test.mononoke,
-            &test.megarepo_mapping,
-            &test.mutable_renames,
-        );
+        let sync_changeset =
+            SyncChangeset::new(&configs_storage, &test.mononoke, &test.megarepo_mapping);
 
         let merge_parent_1_source =
             CreateCommitContext::new(&ctx, &test.repo, vec![init_source_cs_id])
@@ -909,12 +876,8 @@ mod test {
 
         print!("Syncing one commit to each of sources... 1");
         let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage);
-        let sync_changeset = SyncChangeset::new(
-            &configs_storage,
-            &test.mononoke,
-            &test.megarepo_mapping,
-            &test.mutable_renames,
-        );
+        let sync_changeset =
+            SyncChangeset::new(&configs_storage, &test.mononoke, &test.megarepo_mapping);
         let source1_cs_id = CreateCommitContext::new(&ctx, &test.repo, vec![init_source1_cs_id])
             .add_file("anotherfile1", "anothercontent")
             .commit()
@@ -1034,12 +997,8 @@ mod test {
             .await?;
 
         let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage);
-        let sync_changeset = SyncChangeset::new(
-            &configs_storage,
-            &test.mononoke,
-            &test.megarepo_mapping,
-            &test.mutable_renames,
-        );
+        let sync_changeset =
+            SyncChangeset::new(&configs_storage, &test.mononoke, &test.megarepo_mapping);
 
         let source_cs_id = CreateCommitContext::new(&ctx, &test.repo, vec![init_source_cs_id])
             .add_file("anotherfile", "anothercontent")
@@ -1109,12 +1068,8 @@ mod test {
             .await?;
 
         let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage);
-        let sync_changeset = SyncChangeset::new(
-            &configs_storage,
-            &test.mononoke,
-            &test.megarepo_mapping,
-            &test.mutable_renames,
-        );
+        let sync_changeset =
+            SyncChangeset::new(&configs_storage, &test.mononoke, &test.megarepo_mapping);
 
         let main_line = CreateCommitContext::new(&ctx, &test.repo, vec![init_source_cs_id])
             .add_file("file_in_mainline", "mainline1")

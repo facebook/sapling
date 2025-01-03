@@ -52,8 +52,7 @@ async fn test_add_branching_sync_target_success(fb: FacebookInit) -> Result<(), 
 
     let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
 
-    let add_sync_target =
-        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
+    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
     let repo = add_sync_target
         .find_repo_by_id(&ctx, target.repo_id)
         .await?;
@@ -141,8 +140,7 @@ async fn test_add_branching_sync_target_wrong_branch(fb: FacebookInit) -> Result
 
     let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
 
-    let add_sync_target =
-        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
+    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
     let repo = add_sync_target
         .find_repo_by_id(&ctx, target.repo_id)
         .await?;
@@ -184,8 +182,7 @@ async fn test_add_branching_sync_target_wrong_branch(fb: FacebookInit) -> Result
 
     let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
 
-    let add_sync_target =
-        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
+    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
     let repo = add_sync_target
         .find_repo_by_id(&ctx, target.repo_id)
         .await?;

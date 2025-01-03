@@ -33,7 +33,6 @@ use mononoke_api::MononokeRepo;
 use mononoke_api::Repo;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
-use mutable_renames::MutableRenames;
 use repo_identity::RepoIdentityRef;
 use test_repo_factory::TestRepoFactory;
 use tests_utils::bookmark;
@@ -48,7 +47,6 @@ pub struct MegarepoTest<R> {
     pub megarepo_mapping: Arc<MegarepoMapping>,
     pub mononoke: Arc<Mononoke<R>>,
     pub configs_storage: TestMononokeMegarepoConfigs,
-    pub mutable_renames: Arc<MutableRenames>,
 }
 
 impl MegarepoTest<Repo> {
@@ -57,9 +55,6 @@ impl MegarepoTest<Repo> {
         let mut factory = TestRepoFactory::new(ctx.fb)?;
         factory.with_id(id);
         let megarepo_mapping = factory.megarepo_mapping();
-        let config = factory.repo_config();
-        let repo_identity = factory.repo_identity(&config);
-        let mutable_renames = factory.mutable_renames(&repo_identity)?;
         let repo: Repo = factory.build().await?;
         let mononoke =
             Arc::new(Mononoke::new_test(vec![("repo".to_string(), repo.clone())]).await?);
@@ -70,7 +65,6 @@ impl MegarepoTest<Repo> {
             megarepo_mapping,
             mononoke,
             configs_storage,
-            mutable_renames,
         })
     }
 }

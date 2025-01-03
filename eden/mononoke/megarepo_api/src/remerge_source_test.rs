@@ -76,8 +76,7 @@ async fn test_remerge_source_simple(fb: FacebookInit) -> Result<(), Error> {
 
     let configs_storage: Arc<dyn MononokeMegarepoConfigs> = Arc::new(test.configs_storage.clone());
 
-    let add_sync_target =
-        AddSyncTarget::new(&configs_storage, &test.mononoke, &test.mutable_renames);
+    let add_sync_target = AddSyncTarget::new(&configs_storage, &test.mononoke);
     let repo = add_sync_target
         .find_repo_by_id(&ctx, target.repo_id)
         .await?;
@@ -132,8 +131,7 @@ async fn test_remerge_source_simple(fb: FacebookInit) -> Result<(), Error> {
         }
     );
 
-    let remerge_source =
-        RemergeSource::new(&configs_storage, &test.mononoke, &test.mutable_renames);
+    let remerge_source = RemergeSource::new(&configs_storage, &test.mononoke);
     let old_target_cs_id = target_cs_id;
     remerge_source
         .run(
@@ -146,8 +144,7 @@ async fn test_remerge_source_simple(fb: FacebookInit) -> Result<(), Error> {
         )
         .await?;
 
-    let remerge_source =
-        RemergeSource::new(&configs_storage, &test.mononoke, &test.mutable_renames);
+    let remerge_source = RemergeSource::new(&configs_storage, &test.mononoke);
     // Retry, make sure it doesn't fail
     target_cs_id = remerge_source
         .run(
