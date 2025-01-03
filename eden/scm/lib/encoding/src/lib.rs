@@ -93,16 +93,6 @@ mod tests {
     fn test_utf8_roundtrip() {
         let bytes = b"\xE7\xAE\xA1\xE7\x90\x86\xE5\x91\x98\x2F\xE6\xA1\x8C\xE9\x9D\xA2";
 
-        #[cfg(windows)]
-        let bytes = {
-            use local_encoding::Encoder;
-            use local_encoding::Encoding;
-            match Encoding::ANSI.to_bytes(::std::str::from_utf8(bytes).expect("from_utf8")) {
-                Ok(s) => s,
-                _ => return, // Cannot be encoded using local encoding. Skip the test.
-            }
-        };
-
         check_roundtrip(&bytes[..]).expect("roundtrip");
     }
 
