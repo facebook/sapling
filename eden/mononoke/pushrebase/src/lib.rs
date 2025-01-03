@@ -966,16 +966,10 @@ async fn rebase_changeset(
         Some(timestamp) => {
             let author_tz = bcs.author_date.tz_offset_secs();
             bcs.author_date = DateTime::from_timestamp(timestamp.timestamp_seconds(), author_tz)?;
-            if let Ok(true) = justknobs::eval(
-                "scm/mononoke:pushrebase_rewrite_committer_date",
-                None,
-                Some(repo.repo_identity().name()),
-            ) {
-                if let Some(committer_date) = &mut bcs.committer_date {
-                    let committer_tz = committer_date.tz_offset_secs();
-                    *committer_date =
-                        DateTime::from_timestamp(timestamp.timestamp_seconds(), committer_tz)?;
-                }
+            if let Some(committer_date) = &mut bcs.committer_date {
+                let committer_tz = committer_date.tz_offset_secs();
+                *committer_date =
+                    DateTime::from_timestamp(timestamp.timestamp_seconds(), committer_tz)?;
             }
         }
         None => {}
