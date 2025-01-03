@@ -1030,14 +1030,7 @@ impl<'r, R: Repo> Bundle2Resolver<'r, R> {
                 .await?;
 
                 let mut ctx = self.ctx.clone();
-                if is_infinitepush
-                    && justknobs::eval(
-                        "scm/mononoke:commit_cloud_use_background_session_class",
-                        None,
-                        None,
-                    )
-                    .unwrap_or_default()
-                {
+                if is_infinitepush {
                     ctx.session_mut()
                         .override_session_class(SessionClass::BackgroundUnlessTooSlow);
                 }
