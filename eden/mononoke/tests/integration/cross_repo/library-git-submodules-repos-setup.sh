@@ -4,19 +4,15 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# Store common functions related to setting up repos for cross-repo sync
+# with git submodules integration tests.
+# Functions here create/imports repos, add/modify commits or merge them.
+
 # shellcheck source=fbcode/eden/mononoke/tests/integration/library.sh
 . "${TEST_FIXTURES}/library.sh"
-. "${TEST_FIXTURES}/library-xrepo-sync-with-git-submodules.sh"
+. "${TEST_FIXTURES}/cross_repo/library-git-submodules-config-setup.sh"
+. "${TEST_FIXTURES}/cross_repo/library-git-submodules-helpers.sh"
 
-GIT_REPO_A="${TESTTMP}/git-repo-a"
-GIT_REPO_B="${TESTTMP}/git-repo-b"
-GIT_REPO_C="${TESTTMP}/git-repo-c"
-REPO_C_ID=12
-REPO_B_ID=13
-
-# Avoid local clone error "fatal: transport 'file' not allowed" in new Git versions (see CVE-2022-39253).
-export XDG_CONFIG_HOME=$TESTTMP
-git config --global protocol.file.allow always
 
 
 function setup_git_repos_a_b_c {
@@ -259,9 +255,7 @@ function make_changes_to_git_repos_a_b_c {
 }
 
 
-function print_section() {
-    printf "\n\nNOTE: %s\n" "$1"
-}
+
 
 # Create a commit in repo_b that can be used to update its submodule pointer
 # from the large repo
@@ -480,18 +474,4 @@ CONFIG
   fi
 
   cd "$orig_pwd" || exit
-}
-
-# Helper that takes a message and a file and creates a git commit
-function mk_git_commit() {
-  file=${2-file}
-  echo "$1" > "$file"
-  git add "$file"
-  git commit -aqm "$1"
-}
-
-# Helper that takes a message and a file and creates a sapling commit
-function mk_sl_commit() {
-  echo "$1" > "${2-file}"
-  sl commit -Aq -m "$1"
 }

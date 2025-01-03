@@ -412,7 +412,7 @@ so they'll be dumped to files to keep this (already long) integration test short
   $ export SUBMODULE_REPO_NAME="submodule_repo"
   $ export SUBMODULE_REPO_ID=11
 
-  $ . "${TEST_FIXTURES}/library-xrepo-git-submodule-expansion.sh"
+  $ . "${TEST_FIXTURES}/cross_repo/library-git-submodules-repos-setup.sh"
 
 -- Setting up mutable counter for live forward sync
 -- NOTE: this might need to be updated/refactored when setting up test for backsyncing

@@ -4,6 +4,12 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+
+
+# Common config setup for cross-repo sync with git submodules integration tests, e.g.
+# set/export environment variables, create/update config files.
+
+
 # shellcheck source=fbcode/eden/mononoke/tests/integration/library.sh
 . "${TEST_FIXTURES}/library.sh"
 
@@ -15,6 +21,20 @@ REPOTYPE="blob_files"
 NEW_BOOKMARK_NAME="SYNCED_HEAD"
 
 LATEST_CONFIG_VERSION_NAME="INITIAL_IMPORT_SYNC_CONFIG"
+
+export GIT_REPO_A="${TESTTMP}/git-repo-a"
+export GIT_REPO_B="${TESTTMP}/git-repo-b"
+export GIT_REPO_C="${TESTTMP}/git-repo-c"
+export REPO_B_ID=13
+export REPO_C_ID=12
+export REPO_B_NAME="repo_b"
+export REPO_C_NAME="repo_c"
+
+
+# Avoid local clone error "fatal: transport 'file' not allowed" in new Git versions (see CVE-2022-39253).
+export XDG_CONFIG_HOME=$TESTTMP
+git config --global protocol.file.allow always
+
 
 
 
@@ -154,48 +174,4 @@ EOF
   sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES ($LARGE_REPO_ID, 'xreposync_from_$SUBMODULE_REPO_ID', 1)";
 
   cd "$TESTTMP" || exit
-}
-
-function sl_log() {
-   hg log --graph -T '{node|short} {desc}\n' "$@"
-}
-
-function clone_and_log_large_repo {
-  LARGE_BCS_IDS=( "$@" )
-  cd "$TESTTMP" || exit
-  clone_large_repo
-
-  cd "$LARGE_REPO_NAME" || exit
-  enable commitcloud infinitepush # to push commits to server
-
-  for LARGE_BCS_ID in "${LARGE_BCS_IDS[@]}"; do
-    LARGE_CS_ID=$(mononoke_admin convert --from bonsai --to hg -R "$LARGE_REPO_NAME" "$LARGE_BCS_ID" --derive)
-    if [ -n "$LARGE_CS_ID" ]; then
-      hg pull -q -r "$LARGE_CS_ID"
-    fi
-  done
-
-  sl_log --stat -r "sort(all(), desc)"
-
-  printf "\n\nRunning mononoke_admin to verify mapping\n\n"
-  for LARGE_BCS_ID in "${LARGE_BCS_IDS[@]}"; do
-    quiet_grep RewrittenAs -- with_stripped_logs mononoke_admin cross-repo --source-repo-id "$LARGE_REPO_ID" --target-repo-id "$SUBMODULE_REPO_ID" map -i "$LARGE_BCS_ID"
-  done
-
-  printf "\nDeriving all the enabled derived data types\n"
-  for LARGE_BCS_ID in "${LARGE_BCS_IDS[@]}"; do
-    quiet mononoke_admin derived-data -R "$LARGE_REPO_NAME" derive --all-types \
-      -i "$LARGE_BCS_ID" 2>&1| rg "Error" || true # filter to keep only Error line if there is an error
-  done
-}
-
-# Clone the large repo if it hasn't been cloned yet
-function clone_large_repo {
-  orig_pwd=$(pwd)
-  cd "$TESTTMP" || exit
-  if [ ! -d "$LARGE_REPO_NAME" ]; then
-    hg clone -q "mono:$LARGE_REPO_NAME" "$LARGE_REPO_NAME"
-  fi
-
-  cd "$orig_pwd" || exit
 }

@@ -12,7 +12,8 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
-  $ . "${TEST_FIXTURES}/library-xrepo-sync-with-git-submodules.sh"
+  $ . "${TEST_FIXTURES}/cross_repo/library-git-submodules-config-setup.sh"
+  $ . "${TEST_FIXTURES}/cross_repo/library-git-submodules-helpers.sh"
 
 
 

@@ -25,7 +25,7 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
-  $ . "${TEST_FIXTURES}/library-xrepo-git-submodule-expansion.sh"
+  $ . "${TEST_FIXTURES}/cross_repo/library-git-submodules-repos-setup.sh"
 
 
 
