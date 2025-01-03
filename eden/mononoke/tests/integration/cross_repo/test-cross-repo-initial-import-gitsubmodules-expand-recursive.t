@@ -16,11 +16,6 @@
 # import the new commits and run the forward syncer again, to test the workflow
 # one more time.
 
--- Define the large and small repo ids and names before calling any helpers
-  $ export LARGE_REPO_NAME="large_repo"
-  $ export LARGE_REPO_ID=10
-  $ export SUBMODULE_REPO_NAME="small_repo"
-  $ export SUBMODULE_REPO_ID=11
   $ export ENABLE_BOOKMARK_CACHE=1
 
   $ . "${TEST_FIXTURES}/library.sh"

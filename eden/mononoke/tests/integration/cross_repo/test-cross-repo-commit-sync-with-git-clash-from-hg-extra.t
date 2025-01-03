@@ -4,11 +4,6 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
--- Define the large and small repo ids and names before calling any helpers
-  $ export LARGE_REPO_NAME="large_repo"
-  $ export LARGE_REPO_ID=10
-  $ export SUBMODULE_REPO_NAME="small_repo"
-  $ export SUBMODULE_REPO_ID=11
   $ export COMMIT_DATE="1985-09-04T00:00:00.00Z"
   $ export MASTER_BOOKMARK_NAME="master_bookmark"
 

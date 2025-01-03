@@ -30,6 +30,12 @@ export REPO_C_ID=12
 export REPO_B_NAME="repo_b"
 export REPO_C_NAME="repo_c"
 
+export LARGE_REPO_NAME=${LARGE_REPO_NAME-"large_repo"}
+export LARGE_REPO_ID=${LARGE_REPO_ID-10}
+export SUBMODULE_REPO_NAME=${SUBMODULE_REPO_NAME-"small_repo"}
+export SUBMODULE_REPO_ID=${SUBMODULE_REPO_ID-11}
+
+
 # Avoid local clone error "fatal: transport 'file' not allowed" in new Git versions (see CVE-2022-39253).
 export XDG_CONFIG_HOME=$TESTTMP
 git config --global protocol.file.allow always
