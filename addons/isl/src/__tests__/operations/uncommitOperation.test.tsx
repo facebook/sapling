@@ -65,7 +65,7 @@ describe('UncommitOperation', () => {
       expectMessageSentToServer({
         type: 'fetchCommitChangedFiles',
         hash,
-        limit: 1000,
+        limit: undefined,
       });
     });
     act(() => {

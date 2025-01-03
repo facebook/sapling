@@ -811,7 +811,7 @@ export type ClientToServerMessage =
   | {type: 'fetchCommitMessageTemplate'}
   | {type: 'fetchShelvedChanges'}
   | {type: 'fetchLatestCommit'; revset: string}
-  | {type: 'fetchCommitChangedFiles'; hash: Hash; limit: number}
+  | {type: 'fetchCommitChangedFiles'; hash: Hash; limit?: number}
   | {
       type: 'uploadFile';
       filename: string;

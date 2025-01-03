@@ -68,13 +68,17 @@ describe('ChangedFilesWithFetching', () => {
   it("Does not fetch files if they're already all fetched", () => {
     CommitInfoTestUtils.clickToSelectCommit('a');
 
-    expectMessageNOTSentToServer({type: 'fetchCommitChangedFiles', hash: expect.anything()});
+    expectMessageNOTSentToServer({
+      type: 'fetchCommitChangedFiles',
+      hash: 'a',
+      limit: expect.anything(),
+    });
   });
 
   it('Fetches files and shows additional pages', async () => {
     CommitInfoTestUtils.clickToSelectCommit('b');
 
-    expectMessageSentToServer({type: 'fetchCommitChangedFiles', hash: 'b', limit: 1000});
+    expectMessageSentToServer({type: 'fetchCommitChangedFiles', hash: 'b', limit: undefined});
     act(() => {
       simulateMessageFromServer({
         type: 'fetchedCommitChangedFiles',

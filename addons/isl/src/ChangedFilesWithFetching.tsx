@@ -21,20 +21,24 @@ const commitFilesCache = new LRU<Hash, Promise<Result<FilesSample>>>(10);
  * and is missing file statuses.
  * But we want to be able to scroll through pages of files,
  * and also see their statuses (added, removed, etc).
- * So fetch all files for the currently selected commit,
+ * So all files for the currently selected commit,
  * to augment the subset we already have.
+ * Public commits typically don't need to fetch all files,
+ * so we only fetch a subset for performance reasons.
  */
 export function ChangedFilesWithFetching({commit}: {commit: CommitInfo}) {
   const [fetchedAllFiles, setFetchedAllFiles] = useState<FilesSample | undefined>(undefined);
 
   useEffect(() => {
     setFetchedAllFiles(undefined);
-    getChangedFilesForHash(commit.hash).then(result => {
-      if (result.value != null) {
-        setFetchedAllFiles(result.value);
-      }
-    });
-  }, [commit.hash]);
+    getChangedFilesForHash(commit.hash, commit.phase === 'public' ? 1_000 : undefined).then(
+      result => {
+        if (result.value != null) {
+          setFetchedAllFiles(result.value);
+        }
+      },
+    );
+  }, [commit.hash, commit.phase]);
 
   return (
     <ChangedFiles
@@ -66,7 +70,10 @@ export function ChangedFilesWithFetching({commit}: {commit: CommitInfo}) {
  * Get changed files in a given commit.
  * A small subset of the files may have already been fetched,
  * or in some cases no files may be cached yet and all files need to be fetched asynchronously. */
-export function getChangedFilesForHash(hash: Hash, limit = 1000): Promise<Result<FilesSample>> {
+export function getChangedFilesForHash(
+  hash: Hash,
+  limit?: number | undefined,
+): Promise<Result<FilesSample>> {
   const foundPromise = commitFilesCache.get(hash);
   if (foundPromise != null) {
     return foundPromise;

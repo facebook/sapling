@@ -656,7 +656,10 @@ export default class ServerToClientAPI {
               type: 'fetchedCommitChangedFiles',
               hash: data.hash,
               result: {
-                value: {filesSample: files.slice(0, data.limit), totalFileCount: files.length},
+                value: {
+                  filesSample: data.limit != null ? files.slice(0, data.limit) : files,
+                  totalFileCount: files.length,
+                },
               },
             });
           })
