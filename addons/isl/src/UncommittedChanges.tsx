@@ -268,7 +268,7 @@ export function ChangedFiles(props: {
   const [pageNum, setPageNum] = useState(0);
   const isLastPage = pageNum >= Math.floor((totalFiles - 1) / PAGE_SIZE);
   const rangeStart = pageNum * PAGE_SIZE;
-  const rangeEnd = Math.min(filesSubset.length, (pageNum + 1) * PAGE_SIZE);
+  const rangeEnd = Math.min(totalFiles, (pageNum + 1) * PAGE_SIZE);
   const hasAdditionalPages = filesSubset.length > PAGE_SIZE;
 
   // We paginate files, but also paginate our fetches for generated statuses
@@ -282,6 +282,9 @@ export function ChangedFiles(props: {
     () => filesSubset.slice(fetchRangeStart, fetchRangeEnd).map(f => f.path),
     [filesSubset, fetchRangeStart, fetchRangeEnd],
   );
+
+  const filesMissingDueToFetchLimit =
+    filesToQueryGeneratedStatus.length === 0 && totalFiles > 0 && filesSubset.length > 0;
 
   const generatedStatuses = useGeneratedFileStatuses(filesToQueryGeneratedStatus);
   const filesToSort = filesSubset.slice(fetchRangeStart, fetchRangeEnd);
@@ -372,13 +375,22 @@ export function ChangedFiles(props: {
           )}
         </Banner>
       ) : null}
-      {totalFiles > PAGE_SIZE * PAGE_FETCH_COUNT && (
+      {filesMissingDueToFetchLimit ? (
+        <Banner
+          key="not-everything-fetched"
+          icon={<Icon icon="warning" />}
+          kind={BannerKind.warning}>
+          <T replace={{$maxFiles: PAGE_SIZE * PAGE_FETCH_COUNT}}>
+            There are more than $maxFiles files, not all files have been fetched
+          </T>
+        </Banner>
+      ) : totalFiles > PAGE_SIZE * PAGE_FETCH_COUNT ? (
         <Banner key="too-many-files" icon={<Icon icon="warning" />} kind={BannerKind.warning}>
           <T replace={{$maxFiles: PAGE_SIZE * PAGE_FETCH_COUNT}}>
             There are more than $maxFiles files, some files may appear out of order
           </T>
         </Banner>
-      )}
+      ) : null}
       {displayType === 'tree' ? (
         <FileTree {...rest} files={processedFiles} displayType={displayType} />
       ) : shouldShowRepoHeaders ? (

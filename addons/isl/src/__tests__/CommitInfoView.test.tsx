@@ -113,7 +113,7 @@ describe('CommitInfoView', () => {
           simulateCommits({
             value: [
               COMMIT('1', 'some public base', '0', {phase: 'public'}),
-              COMMIT('a', 'My Commit', '1', {filePathsSample: ['src/ca.js']}),
+              COMMIT('a', 'My Commit', '1', {filePathsSample: ['src/ca.js'], totalFileCount: 1}),
               COMMIT('b', 'Head Commit', 'a', {
                 isDot: true,
                 filePathsSample: ['src/cb.js'],
