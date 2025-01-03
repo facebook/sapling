@@ -90,6 +90,10 @@ impl LogMiddleware {
 }
 
 fn log_request_slog(logger: &Logger, state: &mut State, entry: LogEntry) -> Option<()> {
+    if !justknobs::eval("scm/mononoke:request_log_enabled", None, None).unwrap_or(false) {
+        return None;
+    }
+
     let uri = Uri::try_borrow_from(state)?;
     if uri.path() == "/health_check" {
         return None;
