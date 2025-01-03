@@ -400,7 +400,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
                 <OpenAllFilesButton commit={commit} />
                 <SplitButton trackerEventName="SplitOpenFromSplitSuggestion" commit={commit} />
               </div>
-              <ChangedFilesWithFetching commit={commit} />{' '}
+              <ChangedFilesWithFetching commit={commit} />
             </div>
           </Section>
         )}

@@ -9,6 +9,9 @@ import type {Hash, Result, CommitInfo, FilesSample, ChangedFile} from './types';
 
 import serverAPI from './ClientToServerAPI';
 import {ChangedFiles} from './UncommittedChanges';
+import {t, T} from './i18n';
+import {Button} from 'isl-components/Button';
+import {Tooltip} from 'isl-components/Tooltip';
 import {useState, useEffect} from 'react';
 import {ComparisonType} from 'shared/Comparison';
 import {LRU} from 'shared/LRU';
@@ -23,22 +26,42 @@ const commitFilesCache = new LRU<Hash, Promise<Result<FilesSample>>>(10);
  * and also see their statuses (added, removed, etc).
  * So all files for the currently selected commit,
  * to augment the subset we already have.
- * Public commits typically don't need to fetch all files,
- * so we only fetch a subset for performance reasons.
+ * Public commits don't show changed files by default for performance,
+ * but instead show a button used to fetch all the files.
  */
 export function ChangedFilesWithFetching({commit}: {commit: CommitInfo}) {
   const [fetchedAllFiles, setFetchedAllFiles] = useState<FilesSample | undefined>(undefined);
 
+  const [showingPublicWarning, setShowPublicWarning] = useState(commit.phase === 'public');
   useEffect(() => {
-    setFetchedAllFiles(undefined);
-    getChangedFilesForHash(commit.hash, commit.phase === 'public' ? 1_000 : undefined).then(
-      result => {
-        if (result.value != null) {
-          setFetchedAllFiles(result.value);
-        }
-      },
-    );
+    setShowPublicWarning(commit.phase === 'public');
   }, [commit.hash, commit.phase]);
+
+  useEffect(() => {
+    if (showingPublicWarning === true) {
+      return;
+    }
+
+    setFetchedAllFiles(undefined);
+    getChangedFilesForHash(commit.hash, undefined).then(result => {
+      if (result.value != null) {
+        setFetchedAllFiles(result.value);
+      }
+    });
+  }, [commit.hash, showingPublicWarning]);
+
+  if (showingPublicWarning) {
+    return (
+      <Tooltip
+        title={t(
+          'Changed files are not loaded for public commits by default, for performance. Click to load changed files.',
+        )}>
+        <Button onClick={() => setShowPublicWarning(false)}>
+          <T>Load changed files</T>
+        </Button>
+      </Tooltip>
+    );
+  }
 
   return (
     <ChangedFiles
