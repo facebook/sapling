@@ -30,7 +30,6 @@ export REPO_C_ID=12
 export REPO_B_NAME="repo_b"
 export REPO_C_NAME="repo_c"
 
-
 # Avoid local clone error "fatal: transport 'file' not allowed" in new Git versions (see CVE-2022-39253).
 export XDG_CONFIG_HOME=$TESTTMP
 git config --global protocol.file.allow always
@@ -128,13 +127,21 @@ function run_common_xrepo_sync_with_gitsubmodules_setup {
   export XDG_CONFIG_HOME=$TESTTMP
   git config --global protocol.file.allow always
   git config --global advice.skippedCherryPicks false
+  export INFINITEPUSH_ALLOW_WRITES=true
 
-  INFINITEPUSH_ALLOW_WRITES=true REPOID="$LARGE_REPO_ID" \
-    REPONAME="$LARGE_REPO_NAME" setup_common_config "$REPOTYPE"
+  REPOID="$LARGE_REPO_ID" REPONAME="$LARGE_REPO_NAME" \
+    setup_common_config "$REPOTYPE"
   # Enable writes in small repo as well, so we can update bookmarks when running gitimport,
   # and set the default commit identity schema to git.
-  INFINITEPUSH_ALLOW_WRITES=true REPOID="$SUBMODULE_REPO_ID" \
-    REPONAME="$SUBMODULE_REPO_NAME" COMMIT_IDENTITY_SCHEME=3 setup_common_config "$REPOTYPE"
+  REPOID="$SUBMODULE_REPO_ID" REPONAME="$SUBMODULE_REPO_NAME" \
+    COMMIT_IDENTITY_SCHEME=3 setup_common_config "$REPOTYPE"
+
+  REPOID="$REPO_C_ID" REPONAME="repo_c" \
+    COMMIT_IDENTITY_SCHEME=3  setup_common_config "$REPOTYPE"
+
+  REPOID="$REPO_B_ID" REPONAME="repo_b" \
+    COMMIT_IDENTITY_SCHEME=3 setup_common_config "$REPOTYPE"
+
 
   # Save a copy of the config before the deny_files hook, so we can disable it later
   cp "$TESTTMP/mononoke-config/repos/$LARGE_REPO_NAME/server.toml" "$TESTTMP/old_large_repo_config.toml"

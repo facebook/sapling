@@ -16,8 +16,7 @@
   $ . "${TEST_FIXTURES}/cross_repo/library-git-submodules-helpers.sh"
 
 Setup configuration
-  $ run_common_xrepo_sync_with_gitsubmodules_setup
-  L_A=b006a2b1425af8612bc80ff4aa9fa8a1a2c44936ad167dd21cb9af2a9a0248c4
+  $ quiet run_common_xrepo_sync_with_gitsubmodules_setup
 
 # This tests the scenario where a commit contains ONLY changes to git submodules
 # i.e. there are not file changes that should be synced to the large repo.

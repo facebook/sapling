@@ -30,14 +30,8 @@
 
 
 Run the x-repo with submodules setup  
-  $ REPOID="$REPO_C_ID" REPONAME="repo_c" \
-  > COMMIT_IDENTITY_SCHEME=3  setup_common_config "$REPOTYPE"
 
-  $ REPOID="$REPO_B_ID" REPONAME="repo_b" \
-  > COMMIT_IDENTITY_SCHEME=3 setup_common_config "$REPOTYPE"
-
-  $ run_common_xrepo_sync_with_gitsubmodules_setup
-  L_A=b006a2b1425af8612bc80ff4aa9fa8a1a2c44936ad167dd21cb9af2a9a0248c4
+  $ quiet run_common_xrepo_sync_with_gitsubmodules_setup
   $ set_git_submodules_action_in_config_version "$LATEST_CONFIG_VERSION_NAME" "$SUBMODULE_REPO_ID" 3 # 3=expand
   $ set_git_submodule_dependencies_in_config_version "$LATEST_CONFIG_VERSION_NAME" \
   > "$SUBMODULE_REPO_ID" "{\"git-repo-b\": $REPO_B_ID, \"git-repo-b/git-repo-c\": $REPO_C_ID, \"repo_c\": $REPO_C_ID}"

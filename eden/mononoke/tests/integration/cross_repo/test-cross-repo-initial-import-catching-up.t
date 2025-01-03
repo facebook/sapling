@@ -18,8 +18,7 @@
 
 
 Setup configuration
-  $ run_common_xrepo_sync_with_gitsubmodules_setup
-  L_A=b006a2b1425af8612bc80ff4aa9fa8a1a2c44936ad167dd21cb9af2a9a0248c4
+  $ quiet run_common_xrepo_sync_with_gitsubmodules_setup
 
 # Test how the initial-import command behaves when it runs again after new
 # commits have been added to the small repo.
