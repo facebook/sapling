@@ -10,6 +10,7 @@
 
 # shellcheck source=fbcode/eden/mononoke/tests/integration/library.sh
 . "${TEST_FIXTURES}/library.sh"
+. "${TEST_FIXTURES}/library-push-redirector.sh"
 . "${TEST_FIXTURES}/cross_repo/library-git-submodules-config-setup.sh"
 . "${TEST_FIXTURES}/cross_repo/library-git-submodules-helpers.sh"
 
@@ -474,4 +475,51 @@ CONFIG
   fi
 
   cd "$orig_pwd" || exit
+}
+
+# Creates repos B and C, sets up repo A and merges it into the large repo.
+function create_and_merge_submodule_repo {
+  # Setup git repos A, B and C
+  setup_git_repos_a_b_c
+
+  # Import all git repos into Mononoke
+  gitimport_repos_a_b_c
+
+  # Merge repo A into the large repo
+  merge_repo_a_to_large_repo
+}
+
+# - Runs `create_and_merge_submodule_repo`
+# - Makes further changes to the repos to ensure they are synced properly
+# - Sets up live sync
+function setup_all_repos_for_test {
+  UPDATE_REPO_A=${UPDATE_REPO_A-1}
+
+  create_and_merge_submodule_repo
+
+  # Make changes to submodule and make sure they're synced properly
+  make_changes_to_git_repos_a_b_c
+
+  # Import the changes from the git repos B and C into their Mononoke repos
+  REPOID="$REPO_C_ID" QUIET_LOGGING_LOG_FILE="$TESTTMP/gitimport_repo_c.out"  \
+   quiet gitimport "$GIT_REPO_C" --bypass-derived-data-backfilling \
+   --bypass-readonly --generate-bookmarks missing-for-commit "$GIT_REPO_C_HEAD"
+
+  REPOID="$REPO_B_ID" QUIET_LOGGING_LOG_FILE="$TESTTMP/gitimport_repo_b.out" \
+   quiet gitimport "$GIT_REPO_B" --bypass-derived-data-backfilling \
+   --bypass-readonly --generate-bookmarks missing-for-commit "$GIT_REPO_B_HEAD"
+
+  # Set up live forward syncer, which should sync all commits in small repo's (repo A)
+  # heads/master_bookmark bookmark to large repo's master_bookmark bookmark via pushrebase
+  touch "$TESTTMP/xreposync.out"
+  with_stripped_logs mononoke_x_repo_sync_forever "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID"
+
+  # Import the changes from git repo A into its Mononoke repo. They should be automatically
+  # forward synced to the large repo
+  # TODO: generate or not bookmarks for SCS tests UPDATE_REPO_A
+  if [ "$UPDATE_REPO_A" != 0 ]; then
+    REPOID="$SUBMODULE_REPO_ID" with_stripped_logs gitimport "$GIT_REPO_A" --bypass-derived-data-backfilling \
+      --bypass-readonly --generate-bookmarks missing-for-commit "$GIT_REPO_A_HEAD" > "$TESTTMP/gitimport_output"
+  fi
+
 }

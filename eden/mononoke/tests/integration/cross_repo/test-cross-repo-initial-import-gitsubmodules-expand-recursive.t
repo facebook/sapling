@@ -33,40 +33,11 @@ Run the x-repo with submodules setup
   $ killandwait $MONONOKE_PID
   $ start_and_wait_for_mononoke_server
 
-
--- Setup git repos A, B and C
-  $ quiet setup_git_repos_a_b_c
-
--- Import all git repos into Mononoke
-  $ quiet gitimport_repos_a_b_c
-
--- Merge repo A into the large repo
-  $ REPO_A_FOLDER="smallrepofolder1" quiet merge_repo_a_to_large_repo
-
--- Make changes to submodule and make sure they're synced properly
-  $ quiet make_changes_to_git_repos_a_b_c
+  $ REPO_A_FOLDER="smallrepofolder1" quiet setup_all_repos_for_test
 
   $ mononoke_admin bookmarks -R "$SUBMODULE_REPO_NAME" list -S hg
   heads/master_bookmark
 
--- Import the changes from the git repos B and C into their Mononoke repos
-  $ REPOID="$REPO_C_ID" QUIET_LOGGING_LOG_FILE="$TESTTMP/gitimport_repo_c.out"  \
-  > quiet gitimport "$GIT_REPO_C" --bypass-derived-data-backfilling \
-  > --bypass-readonly --generate-bookmarks missing-for-commit "$GIT_REPO_C_HEAD"
-
-  $ REPOID="$REPO_B_ID" QUIET_LOGGING_LOG_FILE="$TESTTMP/gitimport_repo_b.out" \
-  > quiet gitimport "$GIT_REPO_B" --bypass-derived-data-backfilling \
-  > --bypass-readonly --generate-bookmarks missing-for-commit "$GIT_REPO_B_HEAD"
-
-Set up live forward syncer, which should sync all commits in small repo's (repo A)
-heads/master_bookmark bookmark to large repo's master_bookmark bookmark via pushrebase
-  $ touch $TESTTMP/xreposync.out
-  $ with_stripped_logs mononoke_x_repo_sync_forever "$SUBMODULE_REPO_ID" "$LARGE_REPO_ID" 
-
--- Import the changes from git repo A into its Mononoke repo. They should be automatically
--- forward synced to the large repo
-  $ REPOID="$SUBMODULE_REPO_ID" with_stripped_logs gitimport "$GIT_REPO_A" --bypass-derived-data-backfilling \
-  > --bypass-readonly --generate-bookmarks missing-for-commit "$GIT_REPO_A_HEAD" > $TESTTMP/gitimport_output
 
   $ QUIET_LOGGING_LOG_FILE="$TESTTMP/xrepo_sync_last_logs.out" with_stripped_logs wait_for_xrepo_sync 2
 
