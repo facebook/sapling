@@ -430,10 +430,10 @@ so they'll be dumped to files to keep this (already long) integration test short
   > COMMIT_IDENTITY_SCHEME=3 setup_common_config "$REPOTYPE"
 
 -- Setup git repos A, B and C
-  $ setup_git_repos_a_b_c &> $TESTTMP/setup_git_repos_a_b_c.out
+  $ quiet setup_git_repos_a_b_c
 
 -- Import all git repos into Mononoke
-  $ gitimport_repos_a_b_c &> $TESTTMP/gitimport_repos_a_b_c.out
+  $ quiet gitimport_repos_a_b_c
 
 -- Update the commit sync config
   $ update_commit_sync_map_for_import_expanding_git_submodules
@@ -443,7 +443,7 @@ so they'll be dumped to files to keep this (already long) integration test short
 -- Merge repo A into the large repo
   $ NOOP_CONFIG_VERSION_NAME="$SUBMODULE_NOOP_VERSION_NAME" \
   > CONFIG_VERSION_NAME="$AFTER_SUBMODULE_REPO_VERSION_NAME" \
-  > MASTER_BOOKMARK="master_bookmark" merge_repo_a_to_large_repo &> $TESTTMP/merge_repo_a_to_large_repo.out
+  > MASTER_BOOKMARK="master_bookmark" quiet merge_repo_a_to_large_repo
 
 -- Set up live forward syncer, which should sync all commits in submodule repo's
 -- heads/master bookmark to large repo's master bookmark via pushrebase
