@@ -294,6 +294,7 @@ struct FinishedMount : public EdenFSEvent {
         inode_catalog_type(inode_catalog_type) {}
 
   void populate(DynamicEvent& event) const override {
+    event.addString("backing_store_type", backing_store_type);
     event.addString("repo_type", repo_type);
     event.addString("repo_source", repo_source);
     event.addString("fs_channel_type", fs_channel_type);
