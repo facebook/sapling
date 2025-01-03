@@ -14,7 +14,7 @@ name = "backingstore"
 crate-type = ["lib", "staticlib"]
 
 [dependencies]
-anyhow = "1.0.86"
+anyhow = "1.0.95"
 arc-swap = "1.5"
 cxx = "1.0.119"
 env_logger = "0.10"

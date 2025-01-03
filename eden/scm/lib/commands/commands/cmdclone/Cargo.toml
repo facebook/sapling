@@ -10,7 +10,7 @@ repository = "https://github.com/facebook/sapling"
 license = "GPL-2.0-only"
 
 [dependencies]
-anyhow = "1.0.86"
+anyhow = "1.0.95"
 cmdpy = { version = "0.1.0", path = "../../cmdpy" }
 cmdutil = { version = "0.1.0", path = "../../cmdutil" }
 fail = { version = "0.4", features = ["failpoints"] }

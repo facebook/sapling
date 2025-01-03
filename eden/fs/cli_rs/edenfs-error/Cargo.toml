@@ -8,6 +8,6 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.86"
+anyhow = "1.0.95"
 thiserror = "2"
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }

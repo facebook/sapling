@@ -13,7 +13,7 @@ license = "MIT"
 name = "manifest"
 
 [dependencies]
-anyhow = "1.0.86"
+anyhow = "1.0.95"
 quickcheck = { version = "1.0", optional = true }
 sapling-pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 sapling-types = { version = "0.1.0", path = "../types" }

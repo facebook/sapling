@@ -13,7 +13,7 @@ license = "MIT"
 name = "cas_client"
 
 [dependencies]
-anyhow = "1.0.86"
+anyhow = "1.0.95"
 async-trait = "0.1.71"
 auto_impl = "1.1.0"
 futures = { version = "0.3.30", features = ["async-await", "compat"] }

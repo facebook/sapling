@@ -13,7 +13,7 @@ license = "MIT"
 name = "fsinfo"
 
 [dependencies]
-anyhow = "1.0.86"
+anyhow = "1.0.95"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = "0.2.139"

@@ -13,7 +13,7 @@ license = "MIT"
 name = "edenapi"
 
 [dependencies]
-anyhow = "1.0.86"
+anyhow = "1.0.95"
 async-trait = "0.1.71"
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }

@@ -18,7 +18,7 @@ name = "bench"
 harness = false
 
 [dependencies]
-anyhow = "1.0.86"
+anyhow = "1.0.95"
 base64 = "0.21"
 dirs = "2.0"
 faccess = "0.2.4"

@@ -17,7 +17,7 @@ name = "http_cli"
 path = "src/bin/cli.rs"
 
 [dependencies]
-anyhow = "1.0.86"
+anyhow = "1.0.95"
 async-compression = { version = "0.4.9", features = ["brotli", "bzip2", "deflate", "futures-io", "gzip", "tokio", "zlib", "zstd", "zstdmt"] }
 auto_impl = "1.1.0"
 curl = { version = "0.4.41", features = ["http2"] }

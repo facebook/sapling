@@ -13,7 +13,7 @@ license = "MIT"
 name = "auth"
 
 [dependencies]
-anyhow = "1.0.86"
+anyhow = "1.0.95"
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 indexmap = { version = "2.2.6", features = ["arbitrary", "rayon", "serde"] }
 pem = "3.0.3"

@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.86"
+anyhow = "1.0.95"
 cpython = { version = "0.7.2", default-features = false }
 sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 sapling-io = { version = "0.1.0", path = "../../../../lib/io" }

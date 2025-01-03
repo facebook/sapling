@@ -18,7 +18,7 @@ thiserror = "2"
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
-anyhow = "1.0.86"
+anyhow = "1.0.95"
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }

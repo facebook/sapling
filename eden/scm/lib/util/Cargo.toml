@@ -14,7 +14,7 @@ license = "MIT"
 name = "util"
 
 [dependencies]
-anyhow = "1.0.86"
+anyhow = "1.0.95"
 dirs = "2.0"
 fn-error-context = "0.2"
 fs2 = "0.4"

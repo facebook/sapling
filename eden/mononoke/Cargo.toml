@@ -33,7 +33,7 @@ name = "sqlblob_gc"
 path = "cmds/sqlblob_gc/main.rs"
 
 [dependencies]
-anyhow = "1.0.86"
+anyhow = "1.0.95"
 ascii = "1.0"
 blobrepo_override = { version = "0.1.0", path = "blobrepo/override" }
 blobrepo_utils = { version = "0.1.0", path = "blobrepo_utils" }

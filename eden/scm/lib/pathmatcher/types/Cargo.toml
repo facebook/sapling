@@ -13,5 +13,5 @@ license = "MIT"
 name = "pathmatcher_types"
 
 [dependencies]
-anyhow = "1.0.86"
+anyhow = "1.0.95"
 sapling-types = { version = "0.1.0", path = "../../types" }

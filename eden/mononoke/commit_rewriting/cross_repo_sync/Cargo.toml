@@ -12,7 +12,7 @@ name = "cross_repo_sync_test"
 path = "test/main.rs"
 
 [dependencies]
-anyhow = "1.0.86"
+anyhow = "1.0.95"
 async-recursion = "1.1.1"
 async-trait = "0.1.71"
 blobstore = { version = "0.1.0", path = "../../blobstore" }

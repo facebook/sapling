@@ -13,7 +13,7 @@ license = "MIT"
 name = "nodemap"
 
 [dependencies]
-anyhow = "1.0.86"
+anyhow = "1.0.95"
 sapling-indexedlog = { version = "0.1.0", path = "../indexedlog" }
 sapling-types = { version = "0.1.0", path = "../types" }
 thiserror = "2"

@@ -17,7 +17,7 @@ name = "macro_test"
 path = "test/basic_test.rs"
 
 [dependencies]
-anyhow = "1.0.86"
+anyhow = "1.0.95"
 blake3 = { version = "=1.5.0", features = ["rayon", "traits-preview"] }
 bytes = { version = "1.6.0", features = ["serde"] }
 paste = "1.0.14"

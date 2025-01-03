@@ -10,7 +10,7 @@ repository = "https://github.com/facebook/sapling"
 license = "GPL-2.0-only"
 
 [dependencies]
-anyhow = "1.0.86"
+anyhow = "1.0.95"
 cmdutil = { version = "0.1.0", path = "../../cmdutil" }
 fs-err = { version = "2.6.0", features = ["tokio"] }
 sapling-checkout = { version = "0.1.0", path = "../../../checkout" }

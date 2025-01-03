@@ -21,7 +21,7 @@ mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 mononoke_types-mocks = { version = "0.1.0", path = "../../../mononoke_types/mocks" }
 
 [dev-dependencies]
-anyhow = "1.0.86"
+anyhow = "1.0.95"
 bytes = { version = "1.6.0", features = ["serde"] }
 mononoke_macros = { version = "0.1.0", path = "../../../mononoke_macros" }
 quickcheck = "1.0"

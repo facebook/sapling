@@ -13,7 +13,7 @@ license = "MIT"
 name = "gitcompat"
 
 [dependencies]
-anyhow = "1.0.86"
+anyhow = "1.0.95"
 filetime = "0.2.9"
 fs-err = { version = "2.6.0", features = ["tokio"] }
 sapling-configmodel = { version = "0.1.0", path = "../config/model" }

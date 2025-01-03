@@ -15,7 +15,7 @@ doctest = false
 doc = false
 
 [dependencies]
-anyhow = "1.0.86"
+anyhow = "1.0.95"
 async-trait = "0.1.71"
 async_requests_types_thrift__clients = { package = "async_requests_types_thrift_clients", version = "0.1.0", path = "../clients" }
 async_requests_types_thrift__types = { package = "async_requests_types_thrift", version = "0.1.0", path = ".." }
