@@ -10,9 +10,9 @@ import type {DagCommitInfo} from './dag/dag';
 import type {ExtendedGraphRow} from './dag/render';
 import type {Hash} from './types';
 
-import serverAPI from './ClientToServerAPI';
 import {Commit, InlineProgressSpan} from './Commit';
 import {Center, LargeSpinner} from './ComponentUtils';
+import {FetchingAdditionalCommitsRow} from './FetchAdditionalCommitsButton';
 import {isHighlightedCommit} from './HighlightedCommits';
 import {RegularGlyph, RenderDag, YouAreHereGlyph} from './RenderDag';
 import {StackActions} from './StackActions';
@@ -30,17 +30,10 @@ import {
   useShortcutToRebaseSelected,
   useCommitCallbacks,
 } from './selection';
-import {
-  commitFetchError,
-  commitsShownRange,
-  isFetchingAdditionalCommits,
-  latestUncommittedChangesData,
-} from './serverAPIState';
+import {commitFetchError, latestUncommittedChangesData} from './serverAPIState';
 import {MaybeEditStackModal} from './stackEdit/ui/EditStackModal';
 import {Button} from 'isl-components/Button';
 import {ErrorNotice} from 'isl-components/ErrorNotice';
-import {Icon} from 'isl-components/Icon';
-import {Tooltip, DOCUMENTATION_DELAY} from 'isl-components/Tooltip';
 import {ErrorShortMessages} from 'isl-server/src/constants';
 import {atom, useAtomValue} from 'jotai';
 
@@ -243,43 +236,4 @@ function CommitFetchError({error}: {error: Error}) {
     );
   }
   return <ErrorNotice title={t('Failed to fetch commits')} error={error} />;
-}
-
-function FetchingAdditionalCommitsRow() {
-  return (
-    <div className="fetch-additional-commits-row">
-      <FetchingAdditionalCommitsButton />
-      <FetchingAdditionalCommitsIndicator />
-    </div>
-  );
-}
-
-function FetchingAdditionalCommitsIndicator() {
-  const isFetching = useAtomValue(isFetchingAdditionalCommits);
-  return isFetching ? <Icon icon="loading" /> : null;
-}
-
-function FetchingAdditionalCommitsButton() {
-  const shownRange = useAtomValue(commitsShownRange);
-  const isFetching = useAtomValue(isFetchingAdditionalCommits);
-  if (shownRange === undefined) {
-    return null;
-  }
-  const commitsShownMessage = t('Showing commits from the last $numDays days', {
-    replace: {$numDays: shownRange.toString()},
-  });
-  return (
-    <Tooltip placement="top" delayMs={DOCUMENTATION_DELAY} title={commitsShownMessage}>
-      <Button
-        disabled={isFetching}
-        onClick={() => {
-          serverAPI.postMessage({
-            type: 'loadMoreCommits',
-          });
-        }}
-        icon>
-        <T>Load more commits</T>
-      </Button>
-    </Tooltip>
-  );
 }
