@@ -8,7 +8,7 @@
 use std::sync::Arc;
 
 use obc_lib::obc_client::OBCClient;
-use obc_lib::obc_client::OBCClientOptionsBuilder;
+use obc_lib::obc_client::OBCClientOptions;
 use obc_lib::AggValue;
 use obc_lib::OBCBumper as _;
 use once_cell::sync::OnceCell;
@@ -49,11 +49,10 @@ pub fn initialize_obc_client() -> anyhow::Result<()> {
         ));
     }
     OBC_CLIENT.get_or_try_init(|| -> anyhow::Result<OBCClientWrapper> {
-        let opts = OBCClientOptionsBuilder::default()
-            .ods_category("eden".to_string())
+        let opts = OBCClientOptions::builder()
+            .ods_category("eden")
             .append_agg_type_suffix(false)
-            .build()
-            .map_err(anyhow::Error::msg)?;
+            .build();
         Ok(OBCClientWrapper::new(Arc::new(OBCClient::new(
             fbinit::expect_init(),
             opts,
