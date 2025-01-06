@@ -180,8 +180,11 @@ pub async fn verify_working_copy_with_version<'a, R: Repo>(
         SubmoduleDeps::NotNeeded | SubmoduleDeps::NotAvailable => None,
     };
     let movers = commit_syncer.get_movers_by_version(version).await?;
-    let exp_and_metadata_paths =
-        list_possible_expansion_and_metadata_paths(&movers.mover, submodules_action, &sm_exp_data)?;
+    let exp_and_metadata_paths = list_possible_expansion_and_metadata_paths(
+        movers.mover.as_ref(),
+        submodules_action,
+        &sm_exp_data,
+    )?;
 
     let large_repo_prefixes_to_visit =
         get_large_repo_prefixes_to_visit(&commit_syncer, version, live_commit_sync_config).await?;
@@ -202,7 +205,7 @@ pub async fn verify_working_copy_with_version<'a, R: Repo>(
         large_root_fsnode_id,
         Target(small_repo),
         small_root_fsnode_id,
-        &movers.reverse_mover,
+        movers.reverse_mover.as_ref(),
         large_repo_prefixes_to_visit.clone().into_iter().collect(),
         submodules_action,
         &sm_exp_data,
@@ -220,7 +223,7 @@ pub async fn verify_working_copy_with_version<'a, R: Repo>(
     info!(ctx.logger(), "###");
     let small_repo_prefixes_to_visit = large_repo_prefixes_to_visit
         .into_iter()
-        .map(|prefix| wrap_mover_result(&movers.reverse_mover, &prefix))
+        .map(|prefix| wrap_mover_result(movers.reverse_mover.as_ref(), &prefix))
         .collect::<Result<Vec<Option<Option<NonRootMPath>>>, Error>>()?
         .into_iter()
         .flatten()
@@ -232,7 +235,7 @@ pub async fn verify_working_copy_with_version<'a, R: Repo>(
         small_root_fsnode_id,
         Target(large_repo),
         large_root_fsnode_id,
-        &movers.mover,
+        movers.mover.as_ref(),
         small_repo_prefixes_to_visit,
         submodules_action,
         &sm_exp_data,
@@ -338,7 +341,7 @@ async fn verify_working_copy_inner<'a>(
     source_root_fsnode_id: FsnodeId,
     target_repo: Target<&'a impl Repo>,
     target_root_fsnode_id: FsnodeId,
-    mover: &Mover,
+    mover: &dyn Mover,
     prefixes_to_visit: Vec<Option<NonRootMPath>>,
     submodules_action: GitSubmodulesChangesAction,
     sm_exp_data: &Option<SubmoduleExpansionData<'a, impl Repo>>,
@@ -409,11 +412,11 @@ async fn verify_working_copy_inner<'a>(
 // Also, the function assumes that the repo root always rewrites to repo root.
 // (which is true in the only usecase here: preserve mode)
 fn wrap_mover_result(
-    mover: &Mover,
+    mover: &dyn Mover,
     path: &Option<NonRootMPath>,
 ) -> Result<Option<Option<NonRootMPath>>, Error> {
     match path {
-        Some(mpath) => match mover(mpath) {
+        Some(mpath) => match mover.move_path(mpath) {
             Ok(opt_mpath) => Ok(opt_mpath.map(Some)),
             Err(err) => {
                 for cause in err.chain() {
@@ -439,7 +442,7 @@ async fn verify_git_submodule_expansion_small_to_large<'a>(
     small_repo: Source<&'a impl Repo>,
     large_repo: Target<&'a impl Repo>,
     sm_exp_data: &Option<SubmoduleExpansionData<'a, impl Repo>>,
-    mover: &Mover,
+    mover: &dyn Mover,
     submodule_path: NonRootMPath,
     submodule_fsnode_file_entry: FsnodeFile,
     large_root_fsnode_id: FsnodeId,
@@ -449,8 +452,9 @@ async fn verify_git_submodule_expansion_small_to_large<'a>(
         .as_ref()
         .ok_or(anyhow!("submodule expansion data neded for validation"))?;
     // STEP 2: Compute the expansion path and find is fsnode in the large repo
-    let expansion_path =
-        mover(&submodule_path)?.ok_or(anyhow!("submodule path rewrites to nothing!"))?;
+    let expansion_path = mover
+        .move_path(&submodule_path)?
+        .ok_or(anyhow!("submodule path rewrites to nothing!"))?;
     let expansion_fsnode_entry = large_root_fsnode_id
         .find_entry(
             ctx.clone(),
@@ -565,7 +569,7 @@ async fn verify_git_submodule_expansion_small_to_large<'a>(
 async fn verify_git_submodule_expansion_large_to_small<'a>(
     ctx: &'a CoreContext,
     small_repo: Target<&'a impl Repo>,
-    mover: &Mover,
+    mover: &dyn Mover,
     sm_exp_data: &Option<SubmoduleExpansionData<'a, impl Repo>>,
     small_root_fsnode_id: FsnodeId,
     expansion_path: NonRootMPath,
@@ -578,7 +582,7 @@ async fn verify_git_submodule_expansion_large_to_small<'a>(
         .ok_or(anyhow!("submodule expansion data neded for validation"))?;
 
     // STEP 2: Compute the submodule path and find is fsnode in the small repo
-    let submodule_path = if let Some(submodule_path) = mover(&expansion_path)? {
+    let submodule_path = if let Some(submodule_path) = mover.move_path(&expansion_path)? {
         submodule_path
     } else {
         return Err(anyhow!("expansion path rewrites to nothing in small repo!"));
@@ -679,7 +683,7 @@ struct ExpansionAndMetadataPaths {
 }
 
 fn list_possible_expansion_and_metadata_paths<'a>(
-    small_to_large_mover: &Mover,
+    small_to_large_mover: &dyn Mover,
     submodules_action: GitSubmodulesChangesAction,
     sm_exp_data: &Option<SubmoduleExpansionData<'a, impl Repo>>,
 ) -> Result<ExpansionAndMetadataPaths, Error> {
@@ -696,7 +700,7 @@ fn list_possible_expansion_and_metadata_paths<'a>(
 
             for submodule_path in sm_exp_data.submodule_deps.keys() {
                 let expansion_path =
-                    if let Some(expansion_path) = small_to_large_mover(submodule_path)? {
+                    if let Some(expansion_path) = small_to_large_mover.move_path(submodule_path)? {
                         expansion_path
                     } else {
                         return Err(anyhow!(
@@ -814,7 +818,7 @@ async fn verify_and_filter_out_submodule_changes<'a>(
     source_dir: Fsnode,
     target_repo: Target<&'a impl Repo>,
     target_root_fsnode_id: FsnodeId,
-    mover: &Mover,
+    mover: &dyn Mover,
     submodules_action: GitSubmodulesChangesAction,
     sm_exp_data: &Option<SubmoduleExpansionData<'a, impl Repo>>,
     exp_and_metadata_paths: &ExpansionAndMetadataPaths,
@@ -947,7 +951,7 @@ async fn verify_dir<'a>(
     source_root_fsnode_id: FsnodeId,
     target_repo: Target<&'a impl Repo>,
     target_root_fsnode_id: FsnodeId,
-    mover: &Mover,
+    mover: &dyn Mover,
     prefixes_to_visit: &HashSet<NonRootMPath>,
     submodules_action: GitSubmodulesChangesAction,
     sm_exp_data: &Option<SubmoduleExpansionData<'a, impl Repo>>,

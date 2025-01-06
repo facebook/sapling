@@ -75,6 +75,7 @@ use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::RepositoryId;
+use movers::CrossRepoMover;
 use movers::DefaultAction;
 use movers::Mover;
 use movers::Movers;
@@ -965,6 +966,30 @@ async fn fetch_recovery_state(
     Ok(recovery_fields)
 }
 
+struct CombinedMover {
+    movers: Vec<Arc<dyn Mover>>,
+}
+
+impl CombinedMover {
+    fn new(movers: Vec<Arc<dyn Mover>>) -> Self {
+        CombinedMover { movers }
+    }
+}
+
+impl Mover for CombinedMover {
+    fn move_path(&self, source_path: &NonRootMPath) -> Result<Option<NonRootMPath>, Error> {
+        let mut path = source_path.clone();
+        for mover in &self.movers {
+            let maybe_path = mover.move_path(&path)?;
+            path = match maybe_path {
+                Some(moved_path) => moved_path,
+                None => return Ok(None),
+            };
+        }
+        Ok(Some(path))
+    }
+}
+
 async fn repo_import(
     app: &MononokeApp,
     ctx: CoreContext,
@@ -1038,15 +1063,12 @@ async fn repo_import(
     )
     .await?;
     let mut maybe_small_repo_back_sync_vars = None;
-    let mover = movers::mover_factory(
+    let mover = Arc::new(CrossRepoMover::new(
         HashMap::new(),
         DefaultAction::PrependPrefix(dest_path_prefix),
-    )?;
+    )?);
 
-    let mut movers = vec![Movers {
-        mover: mover.clone(),
-        reverse_mover: get_reverse_mover(),
-    }];
+    let mut movers: Vec<Arc<dyn Mover>> = vec![mover.clone()];
 
     if let Some(large_repo_config) = maybe_large_repo_config {
         let (large_repo, large_repo_import_setting, syncers) = get_pushredirected_vars(
@@ -1079,7 +1101,8 @@ async fn repo_import(
             syncers
                 .small_to_large
                 .get_movers_by_version(&version)
-                .await?,
+                .await?
+                .mover,
         );
 
         maybe_small_repo_back_sync_vars = Some(SmallRepoBackSyncVars {
@@ -1105,20 +1128,11 @@ async fn repo_import(
         }
     }
 
-    let combined_mover: Mover = Arc::new(move |source_path: &NonRootMPath| {
-        let mut mutable_path = source_path.clone();
-        for mover_pair in movers.clone() {
-            let maybe_path = (mover_pair.mover)(&mutable_path)?;
-            mutable_path = match maybe_path {
-                Some(moved_path) => moved_path,
-                None => return Ok(None),
-            };
-        }
-        Ok(Some(mutable_path))
-    });
+    let combined_mover = Arc::new(CombinedMover::new(movers));
+
     let combined_movers = Movers {
         mover: combined_mover.clone(),
-        reverse_mover: get_reverse_mover(),
+        reverse_mover: Arc::new(InvalidReverseMover),
     };
 
     // Importing process starts here
@@ -1613,16 +1627,12 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     }
 }
 
-/// The reverse_mover is used to backsync changes to submodule expansion, so it
-/// shouldn't ever be needed by repo_import, since it should only perform
-/// forward sync (i.e. small to large).
-///
-/// This mover will satisfy the type system and will crash if the assumption
-/// from above doesn't hold anymore.
-pub(crate) fn get_reverse_mover() -> Mover {
-    Arc::new(move |_source_path: &NonRootMPath| {
+pub(crate) struct InvalidReverseMover;
+
+impl Mover for InvalidReverseMover {
+    fn move_path(&self, _source_path: &NonRootMPath) -> Result<Option<NonRootMPath>, Error> {
         Err(anyhow!(
             "Reverse mover should never be called for repo_import tool"
         ))
-    })
+    }
 }

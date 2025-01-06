@@ -477,7 +477,7 @@ where
     pub async fn get_reverse_mover_by_version(
         &self,
         version: &CommitSyncConfigVersion,
-    ) -> Result<Mover, Error> {
+    ) -> Result<Arc<dyn Mover>, Error> {
         let (source_repo, target_repo) = self.get_source_target();
         get_reverse_mover(
             Arc::clone(&self.live_commit_sync_config),

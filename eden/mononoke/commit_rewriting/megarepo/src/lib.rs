@@ -83,13 +83,13 @@ fn get_all_file_moves<'a>(
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
     hg_cs: HgBlobChangeset,
-    path_converter: &'a Mover,
+    path_converter: &'a dyn Mover,
 ) -> impl Stream<Item = Result<FileMove, Error>> + 'a {
     hg_cs
         .manifestid()
         .list_leaf_entries(ctx.clone(), repo.repo_blobstore().clone())
         .try_filter_map(move |(old_path, (file_type, filenode_id))| async move {
-            let maybe_new_path = path_converter(&old_path).unwrap();
+            let maybe_new_path = path_converter.move_path(&old_path).unwrap();
             if Some(&old_path) == maybe_new_path.as_ref() {
                 // path does not need to be changed, drop from the stream
                 Ok(None)
@@ -127,7 +127,7 @@ pub async fn perform_move<'a>(
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
     parent_bcs_id: ChangesetId,
-    path_converter: Mover,
+    path_converter: &'a dyn Mover,
     resulting_changeset_args: ChangesetArgs,
 ) -> Result<HgChangesetId, Error> {
     let mut stack = perform_stack_move_impl(
@@ -160,7 +160,7 @@ pub async fn perform_stack_move<'a>(
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
     parent_bcs_id: ChangesetId,
-    path_converter: Mover,
+    path_converter: &'a dyn Mover,
     max_num_of_moves_in_commit: NonZeroU64,
     resulting_changeset_args: impl ChangesetArgsFactory + 'a,
 ) -> Result<Vec<HgChangesetId>, Error> {
@@ -186,7 +186,7 @@ async fn perform_stack_move_impl<'a, Chunker>(
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
     mut parent_bcs_id: ChangesetId,
-    path_converter: Mover,
+    path_converter: &'a dyn Mover,
     chunker: Chunker,
     resulting_changeset_args: impl ChangesetArgsFactory + 'a,
 ) -> Result<Vec<HgChangesetId>, Error>
@@ -197,7 +197,7 @@ where
 
     let parent_hg_cs = parent_hg_cs_id.load(ctx, repo.repo_blobstore()).await?;
 
-    let mut file_changes = get_all_file_moves(ctx, repo, parent_hg_cs, &path_converter)
+    let mut file_changes = get_all_file_moves(ctx, repo, parent_hg_cs, path_converter)
         .try_fold(vec![], {
             move |mut collected, file_move| {
                 collected.push(file_move);
@@ -302,6 +302,22 @@ mod test {
 
     use super::*;
 
+    struct TestMover(Box<dyn Fn(&NonRootMPath) -> Result<Option<NonRootMPath>> + Send + Sync>);
+
+    impl TestMover {
+        fn new(
+            f: impl Fn(&NonRootMPath) -> Result<Option<NonRootMPath>> + Send + Sync + 'static,
+        ) -> Self {
+            Self(Box::new(f))
+        }
+    }
+
+    impl Mover for TestMover {
+        fn move_path(&self, p: &NonRootMPath) -> Result<Option<NonRootMPath>> {
+            (self.0)(p)
+        }
+    }
+
     fn identity_mover(p: &NonRootMPath) -> Result<Option<NonRootMPath>> {
         Ok(Some(p.clone()))
     }
@@ -392,7 +408,7 @@ mod test {
             &ctx,
             &repo,
             bcs_id,
-            Arc::new(identity_mover),
+            &TestMover::new(identity_mover),
             changeset_args,
         )
         .await
@@ -411,9 +427,15 @@ mod test {
     #[mononoke::fbinit_test]
     async fn test_drop_file(fb: FacebookInit) {
         let (ctx, repo, _hg_cs_id, bcs_id, changeset_args) = prepare(fb).await;
-        let newcs = perform_move(&ctx, &repo, bcs_id, Arc::new(skip_one), changeset_args)
-            .await
-            .unwrap();
+        let newcs = perform_move(
+            &ctx,
+            &repo,
+            bcs_id,
+            &TestMover::new(skip_one),
+            changeset_args,
+        )
+        .await
+        .unwrap();
         let newcs = get_bonsai_by_hg_cs_id(ctx.clone(), repo.clone(), newcs).await;
 
         let BonsaiChangesetMut {
@@ -433,9 +455,15 @@ mod test {
     #[mononoke::fbinit_test]
     async fn test_shift_path_by_one(fb: FacebookInit) {
         let (ctx, repo, _hg_cs_id, bcs_id, changeset_args) = prepare(fb).await;
-        let newcs = perform_move(&ctx, &repo, bcs_id, Arc::new(shift_one), changeset_args)
-            .await
-            .unwrap();
+        let newcs = perform_move(
+            &ctx,
+            &repo,
+            bcs_id,
+            &TestMover::new(shift_one),
+            changeset_args,
+        )
+        .await
+        .unwrap();
         let newcs = get_bonsai_by_hg_cs_id(ctx.clone(), repo.clone(), newcs).await;
 
         let BonsaiChangesetMut {
@@ -483,7 +511,7 @@ mod test {
             &ctx,
             &repo,
             old_bcs_id,
-            Arc::new(shift_one_skip_another),
+            &TestMover::new(shift_one_skip_another),
             changeset_args,
         )
         .await
@@ -518,7 +546,7 @@ mod test {
             &ctx,
             &repo,
             old_bcs_id,
-            Arc::new(shift_all),
+            &TestMover::new(shift_all),
             NonZeroU64::new(1).unwrap(),
             create_cs_args,
         )
@@ -531,7 +559,7 @@ mod test {
             &ctx,
             &repo,
             old_bcs_id,
-            Arc::new(shift_all),
+            &TestMover::new(shift_all),
             NonZeroU64::new(2).unwrap(),
             create_cs_args,
         )

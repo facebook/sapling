@@ -67,7 +67,7 @@ impl CompactedSubmoduleBonsai {
         self,
         ctx: &'a CoreContext,
         remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
-        mover: Mover,
+        mover: Arc<dyn Mover>,
         large_repo: &'a R,
         rewrite_opts: RewriteOpts,
     ) -> Result<Option<BonsaiChangesetMut>> {
@@ -97,7 +97,7 @@ pub(crate) async fn compact_all_submodule_expansion_file_changes<'a, R: Repo>(
     large_repo: &'a R,
     // Forward sync mover is needed to convert paths from submodule configs,
     // which are all relative small repo root, to their large repo counter-parts
-    forward_sync_mover: Mover,
+    forward_sync_mover: Arc<dyn Mover>,
 ) -> Result<CompactedSubmoduleBonsai> {
     let bonsai = bonsai_mut.freeze()?;
 
@@ -143,7 +143,7 @@ async fn compact_all_submodule_expansion_file_changes_impl<'a, R: Repo>(
     valid_bonsai: ValidSubmoduleExpansionBonsai,
     sm_exp_data: SubmoduleExpansionData<'a, R>,
     large_repo: &'a R,
-    forward_sync_mover: Mover,
+    forward_sync_mover: Arc<dyn Mover>,
 ) -> Result<BonsaiChangesetMut> {
     let (bonsai, validation_token) = valid_bonsai.into_inner_with_token();
     let bonsai_mut = bonsai.into_mut();
@@ -213,7 +213,7 @@ async fn compact_submodule_expansion_file_changes<'a, R: Repo>(
     mut bonsai_mut: BonsaiChangesetMut,
     large_repo: &'a R,
     x_repo_submodule_metadata_file_prefix: &'a str,
-    forward_sync_mover: Mover,
+    forward_sync_mover: Arc<dyn Mover>,
     sm_path: &'a NonRootMPath,
     // Token that ensures that this function can't be called without performing
     // submodule expansion validation on the provided bonsai.
@@ -231,13 +231,15 @@ async fn compact_submodule_expansion_file_changes<'a, R: Repo>(
         ),
     );
 
-    let synced_sm_metadata_file_path = forward_sync_mover(&x_repo_sm_metadata_file_path)
+    let synced_sm_metadata_file_path = forward_sync_mover
+        .move_path(&x_repo_sm_metadata_file_path)
         .with_context(|| anyhow!("Mover failed on path {x_repo_sm_metadata_file_path}"))?
         .ok_or_else(|| {
             anyhow!("Mover didn't return any path for path {x_repo_sm_metadata_file_path}")
         })?;
 
-    let large_repo_sm_path = forward_sync_mover(sm_path)
+    let large_repo_sm_path = forward_sync_mover
+        .move_path(sm_path)
         .with_context(|| anyhow!("Forward sync mover failed on submodule path: {sm_path}"))?
         .ok_or(anyhow!(
             "Forward sync mover didn't provide large repo path for submodule path: {sm_path}"

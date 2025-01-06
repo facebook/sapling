@@ -363,7 +363,7 @@ async fn generate_additional_file_changes(
     let additional_file_changes = FuturesUnordered::new();
     for diff_res in bonsai_diff {
         let mover = large_to_small.get_movers_by_version(version).await?.mover;
-        let maybe_new_path = mover(diff_res.path())?;
+        let maybe_new_path = mover.move_path(diff_res.path())?;
         if maybe_new_path.is_some() {
             continue;
         }

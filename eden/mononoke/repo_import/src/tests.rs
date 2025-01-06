@@ -60,6 +60,7 @@ mod tests {
     use mononoke_types::RepositoryId;
     use mononoke_types_mocks::changesetid::ONES_CSID as MON_CSID;
     use mononoke_types_mocks::changesetid::TWOS_CSID;
+    use movers::CrossRepoMover;
     use movers::DefaultAction;
     use movers::Mover;
     use movers::Movers;
@@ -81,14 +82,15 @@ mod tests {
     use crate::find_mapping_version;
     use crate::get_large_repo_config_if_pushredirected;
     use crate::get_large_repo_setting;
-    use crate::get_reverse_mover;
     use crate::merge_imported_commit;
     use crate::move_bookmark;
     use crate::push_merge_commit;
     use crate::rewrite_file_paths;
     use crate::ChangesetArgs;
     use crate::CheckerFlags;
+    use crate::CombinedMover;
     use crate::ImportStage;
+    use crate::InvalidReverseMover;
     use crate::RecoveryFields;
     use crate::Repo;
     use crate::RepoImportSetting;
@@ -743,10 +745,10 @@ mod tests {
 
         let large_to_small_syncer = syncers.large_to_small;
         let mut movers = vec![];
-        let importing_mover = movers::mover_factory(
+        let importing_mover: Arc<dyn Mover> = Arc::new(CrossRepoMover::new(
             HashMap::new(),
             DefaultAction::PrependPrefix(mp("dest_path_prefix")),
-        )?;
+        )?);
         movers.push(importing_mover);
         movers.push(
             syncers
@@ -756,21 +758,11 @@ mod tests {
                 .mover,
         );
 
-        let combined_mover: Mover = Arc::new(move |source_path: &NonRootMPath| {
-            let mut mutable_path = source_path.clone();
-            for mover in movers.clone() {
-                let maybe_path = mover(&mutable_path)?;
-                mutable_path = match maybe_path {
-                    Some(moved_path) => moved_path,
-                    None => return Ok(None),
-                };
-            }
-            Ok(Some(mutable_path))
-        });
+        let combined_mover = Arc::new(CombinedMover::new(movers));
 
         let combined_movers = Movers {
             mover: combined_mover.clone(),
-            reverse_mover: get_reverse_mover(),
+            reverse_mover: Arc::new(InvalidReverseMover),
         };
 
         let (shifted_bcs_ids, _git_merge_shifted_bcs_id) = rewrite_file_paths(
@@ -916,10 +908,10 @@ mod tests {
 
         let large_to_small_syncer = syncers.large_to_small;
         let mut movers = vec![];
-        let importing_mover = movers::mover_factory(
+        let importing_mover: Arc<dyn Mover> = Arc::new(CrossRepoMover::new(
             HashMap::new(),
             DefaultAction::PrependPrefix(mp("dest_path_prefix")),
-        )?;
+        )?);
         movers.push(importing_mover);
         movers.push(
             syncers
@@ -929,20 +921,10 @@ mod tests {
                 .mover,
         );
 
-        let combined_mover: Mover = Arc::new(move |source_path: &NonRootMPath| {
-            let mut mutable_path = source_path.clone();
-            for mover in movers.clone() {
-                let maybe_path = mover(&mutable_path)?;
-                mutable_path = match maybe_path {
-                    Some(moved_path) => moved_path,
-                    None => return Ok(None),
-                };
-            }
-            Ok(Some(mutable_path))
-        });
+        let combined_mover = Arc::new(CombinedMover::new(movers));
         let combined_movers = Movers {
             mover: combined_mover.clone(),
-            reverse_mover: get_reverse_mover(),
+            reverse_mover: Arc::new(InvalidReverseMover),
         };
 
         let (large_repo_cs_ids, _) = rewrite_file_paths(

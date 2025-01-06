@@ -244,7 +244,7 @@ async fn run_move<'a>(
             ctx,
             &repo,
             parent_bcs_id,
-            mover,
+            mover.as_ref(),
             max_num_of_moves_in_commit,
             |num: StackPosition| {
                 let mut args = resulting_changeset_args.clone();
@@ -261,7 +261,14 @@ async fn run_move<'a>(
             changesets.last()
         );
     } else {
-        perform_move(ctx, &repo, parent_bcs_id, mover, resulting_changeset_args).await?;
+        perform_move(
+            ctx,
+            &repo,
+            parent_bcs_id,
+            mover.as_ref(),
+            resulting_changeset_args,
+        )
+        .await?;
     }
     Ok(())
 }
@@ -863,7 +870,7 @@ async fn run_mover<'a>(
         .value_of(PATH)
         .ok_or_else(|| format_err!("{} not set", PATH))?;
     let path = NonRootMPath::new(path)?;
-    println!("{:?}", (movers.mover)(&path));
+    println!("{:?}", movers.mover.move_path(&path));
     Ok(())
 }
 
@@ -1326,7 +1333,7 @@ async fn run_delete_no_longer_bound_files_from_large_repo<'a>(
     for (path, entry) in entries {
         if let Entry::Leaf(_) = entry {
             let path = path.try_into().unwrap();
-            if mover(&path)?.is_none() {
+            if mover.move_path(&path)?.is_none() {
                 to_delete.push(path);
             }
         }
@@ -1360,7 +1367,7 @@ async fn find_mover_for_commit<R: cross_repo_sync::Repo>(
     ctx: &CoreContext,
     commit_syncer: &CommitSyncer<R>,
     cs_id: ChangesetId,
-) -> Result<Mover, Error> {
+) -> Result<Arc<dyn Mover>, Error> {
     let maybe_sync_outcome = commit_syncer.get_commit_sync_outcome(ctx, cs_id).await?;
 
     let sync_outcome = maybe_sync_outcome.context("source commit was not remapped yet")?;

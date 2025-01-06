@@ -193,10 +193,10 @@ pub async fn rewrite_commit<'a, R: Repo>(
 
 /// Mover moves a path to at most a single path, while MultiMover can move a
 /// path to multiple.
-pub fn mover_to_multi_mover(mover: Mover) -> MultiMover<'static> {
+pub fn mover_to_multi_mover(mover: Arc<dyn Mover>) -> MultiMover<'static> {
     Arc::new(
         move |path: &NonRootMPath| -> Result<Vec<NonRootMPath>, Error> {
-            Ok(mover(path)?.into_iter().collect())
+            Ok(mover.move_path(path)?.into_iter().collect())
         },
     )
 }

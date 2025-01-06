@@ -444,7 +444,7 @@ async fn create_file_changes(
         movers.reverse_mover
     };
 
-    if mover(&path)?.is_none() {
+    if mover.move_path(&path)?.is_none() {
         return Err(anyhow!(
             "cannot dump mapping to a file because path doesn't rewrite to a small repo"
         ));

@@ -56,6 +56,8 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
+use movers::CrossRepoMover;
+use movers::DefaultAction;
 use mutable_counters::MutableCounters;
 use phases::Phases;
 use pushrebase_mutation_mapping::PushrebaseMutationMapping;
@@ -382,14 +384,11 @@ where
         bookmark: None,
         mark_public: false,
     };
-    let move_hg_cs = perform_move(
-        ctx,
-        &megarepo,
-        second_bcs_id,
-        Arc::new(prefix_mover),
-        move_cs_args,
-    )
-    .await?;
+    let mover = CrossRepoMover::new(
+        HashMap::new(),
+        DefaultAction::PrependPrefix(NonRootMPath::new("prefix")?),
+    )?;
+    let move_hg_cs = perform_move(ctx, &megarepo, second_bcs_id, &mover, move_cs_args).await?;
 
     let maybe_move_bcs_id = megarepo
         .bonsai_hg_mapping()
@@ -473,13 +472,6 @@ pub fn base_commit_sync_config(
         },
         version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     }
-}
-
-/// Fine to have Option<NonRootMPath> in this case since the optional part is not for representing root paths
-/// but instead to handle control flow differently
-fn prefix_mover(v: &NonRootMPath) -> Result<Option<NonRootMPath>, Error> {
-    let prefix = NonRootMPath::new("prefix").unwrap();
-    Ok(Some(NonRootMPath::join(&prefix, v)))
 }
 
 pub fn get_live_commit_sync_config() -> Arc<dyn LiveCommitSyncConfig> {

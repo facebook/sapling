@@ -95,7 +95,7 @@ pub async fn get_mover(
     version: &CommitSyncConfigVersion,
     source_repo_id: RepositoryId,
     target_repo_id: RepositoryId,
-) -> Result<Mover> {
+) -> Result<Arc<dyn Mover>> {
     let Movers { mover, .. } = get_movers(
         live_commit_sync_config,
         version,
@@ -111,7 +111,7 @@ pub async fn get_reverse_mover(
     version: &CommitSyncConfigVersion,
     source_repo_id: RepositoryId,
     target_repo_id: RepositoryId,
-) -> Result<Mover> {
+) -> Result<Arc<dyn Mover>> {
     let Movers { reverse_mover, .. } = get_movers(
         live_commit_sync_config,
         version,

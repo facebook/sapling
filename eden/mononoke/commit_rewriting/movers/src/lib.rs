@@ -38,23 +38,25 @@ pub enum ErrorKind {
     NonPrefixFreeMap(NonRootMPath, NonRootMPath),
 }
 
-/// A function to modify paths during repo sync
-/// Here are the meanings of the return values:
-/// - `Ok(Some(newpath))` - the path should be
-///   replaced with `newpath` during sync
-/// - `Ok(None)` - the path should not be synced
-/// - `Err(e)` - the sync should fail, as this function
-///   could not figure out how to rewrite path
-///
-/// Fine to have Option<NonRootMPath> in this case since the optional part is not for representing root paths
-/// but instead to handle control flow differently
-pub type Mover = Arc<dyn Fn(&NonRootMPath) -> Result<Option<NonRootMPath>> + Send + Sync + 'static>;
+pub trait Mover: Send + Sync + 'static {
+    /// Move a path during cross-repo sync.
+    ///
+    /// The return values mean:
+    /// - `Ok(Some(new_path))` - The path should be replaced with `newpath`.
+    /// - `Ok(None)` - The path should not be synced
+    /// - `Err(e)` - The sync should fail, as this function could not figure
+    ///   out how to rewrite the path.
+    ///
+    /// NOTE: The return type is `Option<NonRootMPath>`, but `None` means do
+    /// not sync, rather than the root path.
+    fn move_path(&self, source_path: &NonRootMPath) -> Result<Option<NonRootMPath>>;
+}
 
 /// A struct to contain forward and reverse `Mover`
 #[derive(Clone)]
 pub struct Movers {
-    pub mover: Mover,
-    pub reverse_mover: Mover,
+    pub mover: Arc<dyn Mover>,
+    pub reverse_mover: Arc<dyn Mover>,
 }
 
 /// An action, configured for a given prefix
@@ -151,24 +153,69 @@ fn get_path_action<'a, I: IntoIterator<Item = &'a MPathElement>>(
     }
 }
 
-/// Create a `Mover`, given a path prefix map and a default action
-pub fn mover_factory(
-    prefix_map: HashMap<NonRootMPath, PrefixAction>,
+pub struct CrossRepoMover {
+    /// Map of prefixes to their actions, sorted by longest prefix first.
+    prefix_map: Vec<(NonRootMPath, PrefixAction)>,
+    /// The default action to apply to paths that don't match any prefix.
     default_action: DefaultAction,
-) -> Result<Mover> {
-    // We want `prefix_map` to be ordered longest-to-shortest
-    // to allow non-prefix-free maps in the future. For these kinds
-    // of maps, we need to ensure we always try to match the longest
-    // prefix first, as it's more specific.
-    let prefix_map: Vec<(NonRootMPath, PrefixAction)> = {
-        let mut v: Vec<(NonRootMPath, PrefixAction)> = prefix_map.into_iter().collect();
-        v.sort_unstable_by_key(|(ref mpath, _)| mpath.len());
-        v.reverse();
-        v
-    };
+    /// A reverse mover to check against,
+    reverse_mover: Option<Arc<dyn Mover>>,
+}
 
-    Ok(Arc::new(move |source_path: &NonRootMPath| {
-        let path_and_prefix_action = prefix_map
+impl CrossRepoMover {
+    /// Create a `Mover`, given a path prefix map and a default action
+    pub fn new(
+        prefix_map: HashMap<NonRootMPath, PrefixAction>,
+        default_action: DefaultAction,
+    ) -> Result<Self> {
+        // We want `prefix_map` to be ordered longest-to-shortest
+        // to allow non-prefix-free maps in the future. For these kinds
+        // of maps, we need to ensure we always try to match the longest
+        // prefix first, as it's more specific.
+        let prefix_map: Vec<(NonRootMPath, PrefixAction)> = {
+            let mut v: Vec<(NonRootMPath, PrefixAction)> = prefix_map.into_iter().collect();
+            v.sort_unstable_by_key(|(ref mpath, _)| mpath.len());
+            v.reverse();
+            v
+        };
+        Ok(CrossRepoMover {
+            prefix_map,
+            default_action,
+            reverse_mover: None,
+        })
+    }
+
+    /// Create a `Mover`, given a path prefix map and a default action.
+    /// The mover will also check that the result of the move is the same
+    /// as the result of applying the reverse mover, and filter out any
+    /// paths that don't match the reverse mover.
+    pub fn new_with_reverse_mover_check(
+        prefix_map: HashMap<NonRootMPath, PrefixAction>,
+        default_action: DefaultAction,
+        reverse_mover: Arc<dyn Mover>,
+    ) -> Result<Self> {
+        // We want `prefix_map` to be ordered longest-to-shortest
+        // to allow non-prefix-free maps in the future. For these kinds
+        // of maps, we need to ensure we always try to match the longest
+        // prefix first, as it's more specific.
+        let prefix_map: Vec<(NonRootMPath, PrefixAction)> = {
+            let mut v: Vec<(NonRootMPath, PrefixAction)> = prefix_map.into_iter().collect();
+            v.sort_unstable_by_key(|(ref mpath, _)| mpath.len());
+            v.reverse();
+            v
+        };
+        Ok(CrossRepoMover {
+            prefix_map,
+            default_action,
+            reverse_mover: Some(reverse_mover),
+        })
+    }
+}
+
+impl Mover for CrossRepoMover {
+    fn move_path(&self, source_path: &NonRootMPath) -> Result<Option<NonRootMPath>> {
+        let path_and_prefix_action = self
+            .prefix_map
             .iter()
             .filter_map(|(candidate_prefix, candidate_action)| {
                 get_suffix_after(source_path, candidate_prefix)
@@ -181,12 +228,12 @@ pub fn mover_factory(
                 )
             })
             .next();
-        match path_and_prefix_action {
-            None => Ok(match default_action.clone() {
+        let mapped_path = match path_and_prefix_action {
+            None => match self.default_action.clone() {
                 DefaultAction::PrependPrefix(prefix) => Some(prefix.join(source_path)),
                 DefaultAction::Preserve => Some(source_path.clone()),
                 DefaultAction::DoNotSync => None,
-            }),
+            },
             Some((result_path_action, orig_prefix_action)) => result_path_action
                 .map(|path_action| match path_action {
                     PathAction::Change(path) => Some(path),
@@ -195,9 +242,15 @@ pub fn mover_factory(
                 .with_context(|| {
                     ErrorKind::PrefixActionFailure(orig_prefix_action.clone(), source_path.clone())
                 })
-                .map_err(Error::from),
-        }
-    }))
+                .map_err(Error::from)?,
+        };
+        if let (Some(mapped_path), Some(reverse_mover)) = (&mapped_path, &self.reverse_mover) {
+            if reverse_mover.move_path(mapped_path)?.as_ref() != Some(source_path) {
+                return Ok(None);
+            }
+        };
+        Ok(mapped_path)
+    }
 }
 
 // Given a full sync config and a small repo id,
@@ -222,7 +275,7 @@ fn get_small_repo_and_others_from_config(
 pub fn get_small_to_large_mover(
     commit_sync_config: &CommitSyncConfig,
     small_repo_id: RepositoryId,
-) -> Result<Mover> {
+) -> Result<Arc<dyn Mover>> {
     let (source_repo_config, _) =
         get_small_repo_and_others_from_config(commit_sync_config, small_repo_id)?;
     let default_action = source_repo_config.default_action.clone();
@@ -234,14 +287,14 @@ pub fn get_small_to_large_mover(
         .map(|(k, v)| (k, PrefixAction::Change(v)))
         .collect();
 
-    mover_factory(prefix_map, default_action)
+    Ok(Arc::new(CrossRepoMover::new(prefix_map, default_action)?))
 }
 
 /// Get a mover for a large-to-small repo sync
 pub fn get_large_to_small_mover(
     commit_sync_config: &CommitSyncConfig,
     small_repo_id: RepositoryId,
-) -> Result<Mover> {
+) -> Result<Arc<dyn Mover>> {
     let (target_repo_config, other_repo_configs) =
         get_small_repo_and_others_from_config(commit_sync_config, small_repo_id)?;
 
@@ -298,9 +351,8 @@ pub fn get_large_to_small_mover(
         }
     };
 
-    // default_large_to_small_mover is a mover that's built from the prefix_map and
-    // default_action we've just constructed. However it doesn't work correctly for all edge
-    // cases.
+    // We will build a mover from the prefix_map and default_action we've just
+    // constructed. However it doesn't work correctly for all edge cases.
     //
     // In particular, there might be multiple large repo paths that remap to the same
     // small repo path.
@@ -311,32 +363,19 @@ pub fn get_large_to_small_mover(
     //     mp("preserved/excluded") => mp("shifted/preserved/excluded"),
     // },
     //
-    // Now if we try to use default_large_to_small_mover to remap path shifted/preserved/1.txt,
+    // Now if we try to use the large to small mover to remap path shifted/preserved/1.txt,
     // then it will be remapped to preserved/1.txt, but this is incorrect, since preserved/1.txt
     // from small repo maps to preserved/1.txt in large repo.
-    // To fix this issue we do the following: we take corresponding small_to_large mover
-    // and remap back the path we got from applying default_large_to_small_mover.
-    // If this path is equal to the original path then we consider that default_large_to_small_mover
-    // returns correct path, otherwise we return None (i.e. a path from large repo doesn't remap
-    // to a path from small repo).
-    let default_large_to_small_mover = mover_factory(prefix_map, default_action)?;
-
+    // To fix this issue we do the following: we take the corresponding small_to_large mover and
+    // use it for a reverse mover check.  After mapping the path, it will reback the result back.
+    // If this path is equal to the original path then we consider that the mapping is correct.
+    // Otherwise we return None (i.e. a path from large repo doesn't remap to a path from small repo).
     let small_to_large_mover = get_small_to_large_mover(commit_sync_config, small_repo_id)?;
-    Ok(Arc::new(
-        move |path: &NonRootMPath| -> Result<Option<NonRootMPath>> {
-            let moved_large_to_small = default_large_to_small_mover(path)?;
-            match moved_large_to_small {
-                Some(moved_large_to_small) => {
-                    if small_to_large_mover(&moved_large_to_small)?.as_ref() == Some(path) {
-                        Ok(Some(moved_large_to_small))
-                    } else {
-                        Ok(None)
-                    }
-                }
-                None => Ok(None),
-            }
-        },
-    ))
+    Ok(Arc::new(CrossRepoMover::new_with_reverse_mover_check(
+        prefix_map,
+        default_action,
+        small_to_large_mover,
+    )?))
 }
 
 /// Get a forward and a reverse `Mover`, stored in the `Movers` struct
@@ -409,25 +448,25 @@ mod test {
             mp("path/which/is/longest") => PrefixAction::Change(mp("longest/renamed")),
             mp("path/which/") => PrefixAction::Change(mp("middle/renamed")),
         };
-        let mover = mover_factory(hm, DefaultAction::DoNotSync).unwrap();
+        let mover = CrossRepoMover::new(hm, DefaultAction::DoNotSync).unwrap();
         assert_eq!(
-            mover(&mp("path/which/is/longest/1.txt")).unwrap(),
+            mover.move_path(&mp("path/which/is/longest/1.txt")).unwrap(),
             Some(mp("longest/renamed/1.txt"))
         );
         assert_eq!(
-            mover(&mp("path/1.txt")).unwrap(),
+            mover.move_path(&mp("path/1.txt")).unwrap(),
             Some(mp("shortest/renamed/1.txt"))
         );
         assert_eq!(
-            mover(&mp("path/which/2.txt")).unwrap(),
+            mover.move_path(&mp("path/which/2.txt")).unwrap(),
             Some(mp("middle/renamed/2.txt"))
         );
         assert_eq!(
-            mover(&mp("path/which/subdir/2.txt")).unwrap(),
+            mover.move_path(&mp("path/which/subdir/2.txt")).unwrap(),
             Some(mp("middle/renamed/subdir/2.txt"))
         );
         assert_eq!(
-            mover(&mp("path/subdir/1.txt")).unwrap(),
+            mover.move_path(&mp("path/subdir/1.txt")).unwrap(),
             Some(mp("shortest/renamed/subdir/1.txt"))
         );
     }
@@ -440,26 +479,32 @@ mod test {
             mp("shiftme") => PrefixAction::Change(mp("shifted/shiftme")),
             mp("removeme") => PrefixAction::RemovePrefix,
         };
-        let mover = mover_factory(hm.clone(), DefaultAction::DoNotSync).unwrap();
-        assert_eq!(mover(&mp("renameme/wow")).unwrap(), Some(mp("renamed/wow")));
-        assert_eq!(mover(&mp("deleteme/wow")).unwrap(), None);
+        let mover = CrossRepoMover::new(hm.clone(), DefaultAction::DoNotSync).unwrap();
         assert_eq!(
-            mover(&mp("shiftme/wow")).unwrap(),
+            mover.move_path(&mp("renameme/wow")).unwrap(),
+            Some(mp("renamed/wow"))
+        );
+        assert_eq!(mover.move_path(&mp("deleteme/wow")).unwrap(), None);
+        assert_eq!(
+            mover.move_path(&mp("shiftme/wow")).unwrap(),
             Some(mp("shifted/shiftme/wow"))
         );
-        assert_eq!(mover(&mp("wow")).unwrap(), None);
-        assert_eq!(mover(&mp("removeme/wow")).unwrap(), Some(mp("wow")));
-        assert!(mover(&mp("removeme")).is_err());
+        assert_eq!(mover.move_path(&mp("wow")).unwrap(), None);
+        assert_eq!(
+            mover.move_path(&mp("removeme/wow")).unwrap(),
+            Some(mp("wow"))
+        );
+        assert!(mover.move_path(&mp("removeme")).is_err());
 
-        let mover = mover_factory(hm.clone(), DefaultAction::Preserve).unwrap();
-        assert_eq!(mover(&mp("wow")).unwrap(), Some(mp("wow")));
+        let mover = CrossRepoMover::new(hm.clone(), DefaultAction::Preserve).unwrap();
+        assert_eq!(mover.move_path(&mp("wow")).unwrap(), Some(mp("wow")));
 
-        let mover = mover_factory(
+        let mover = CrossRepoMover::new(
             hm,
             DefaultAction::PrependPrefix(NonRootMPath::new("dude").unwrap()),
         )
         .unwrap();
-        assert_eq!(mover(&mp("wow")).unwrap(), Some(mp("dude/wow")));
+        assert_eq!(mover.move_path(&mp("wow")).unwrap(), Some(mp("dude/wow")));
     }
 
     /*
@@ -523,17 +568,23 @@ mod test {
         // `preserved2` is a directory, preserved from repo2, so changes to
         // it in repo1 it have tbe shifted
         let f = mp("preserved2/f");
-        assert_eq!(mover(&f).unwrap(), Some(mp("repo1-rest/preserved2/f")));
+        assert_eq!(
+            mover.move_path(&f).unwrap(),
+            Some(mp("repo1-rest/preserved2/f"))
+        );
         let f = mp("preserved2/d/f");
-        assert_eq!(mover(&f).unwrap(), Some(mp("repo1-rest/preserved2/d/f")));
+        assert_eq!(
+            mover.move_path(&f).unwrap(),
+            Some(mp("repo1-rest/preserved2/d/f"))
+        );
         // `sub1` is a directory, remapped in repo2, but in repo1 is has
         // to be preserved
         let f = mp("sub1/f");
-        assert_eq!(mover(&f).unwrap(), Some(f.clone()));
+        assert_eq!(mover.move_path(&f).unwrap(), Some(f.clone()));
         // this is just a random file, not mentioned in either repo's configs
         // should be preserved, as repo1 has default_action preserve
         let f = mp("aeneas/was/a/lively/fellow");
-        assert_eq!(mover(&f).unwrap(), Some(f.clone()));
+        assert_eq!(mover.move_path(&f).unwrap(), Some(f.clone()));
     }
 
     #[mononoke::test]
@@ -543,19 +594,22 @@ mod test {
 
         // `preserved2` is a directory, preserved from repo2
         let f = mp("preserved2/f");
-        assert_eq!(mover(&f).unwrap(), Some(mp("preserved2/f")));
+        assert_eq!(mover.move_path(&f).unwrap(), Some(mp("preserved2/f")));
         let f = mp("preserved2/d/f");
-        assert_eq!(mover(&f).unwrap(), Some(mp("preserved2/d/f")));
+        assert_eq!(mover.move_path(&f).unwrap(), Some(mp("preserved2/d/f")));
         // `sub1` is a directory, remapped in repo2
         let f = mp("sub1/f");
-        assert_eq!(mover(&f).unwrap(), Some(mp("repo2-rest/sub1/f")));
+        assert_eq!(mover.move_path(&f).unwrap(), Some(mp("repo2-rest/sub1/f")));
         let f = mp("sub2/d/f");
-        assert_eq!(mover(&f).unwrap(), Some(mp("repo2-rest/sub2/d/f")));
+        assert_eq!(
+            mover.move_path(&f).unwrap(),
+            Some(mp("repo2-rest/sub2/d/f"))
+        );
         // this is just a random file, not mentioned in either repo's configs
         // should be shifted, as repo2 has default_action prepend prefix
         let f = mp("aeneas/was/a/lively/fellow");
         assert_eq!(
-            mover(&f).unwrap(),
+            mover.move_path(&f).unwrap(),
             Some(mp("shifted2/aeneas/was/a/lively/fellow"))
         );
     }
@@ -569,27 +623,27 @@ mod test {
         // any changes to large repo's `preserved2` dir could only come
         // from repo 1
         let f = mp("preserved2/f");
-        assert_eq!(mover_1(&f).unwrap(), None);
-        assert_eq!(mover_2(&f).unwrap(), Some(mp("preserved2/f")));
+        assert_eq!(mover_1.move_path(&f).unwrap(), None);
+        assert_eq!(mover_2.move_path(&f).unwrap(), Some(mp("preserved2/f")));
         // any changes to large repo's `sub1` dir could only come from repo 1
         let f = mp("sub1/f");
-        assert_eq!(mover_1(&f).unwrap(), Some(mp("sub1/f")));
-        assert_eq!(mover_2(&f).unwrap(), None);
+        assert_eq!(mover_1.move_path(&f).unwrap(), Some(mp("sub1/f")));
+        assert_eq!(mover_2.move_path(&f).unwrap(), None);
         // any changes to large repo's `repo1-rest/preserved2` dir could
         // only come from repo 1
         let f = mp("repo1-rest/preserved2/f");
-        assert_eq!(mover_1(&f).unwrap(), Some(mp("preserved2/f")));
-        assert_eq!(mover_2(&f).unwrap(), None);
+        assert_eq!(mover_1.move_path(&f).unwrap(), Some(mp("preserved2/f")));
+        assert_eq!(mover_2.move_path(&f).unwrap(), None);
         // any changes to large repo's `repo2-rest/sub1` dir could
         // only come from repo 2
         let f = mp("repo2-rest/sub1/f");
-        assert_eq!(mover_1(&f).unwrap(), None);
-        assert_eq!(mover_2(&f).unwrap(), Some(mp("sub1/f")));
+        assert_eq!(mover_1.move_path(&f).unwrap(), None);
+        assert_eq!(mover_2.move_path(&f).unwrap(), Some(mp("sub1/f")));
         // any changes to large repo's `shifted2` dir could
         // only come from repo 2
         let f = mp("shifted2/f");
-        assert_eq!(mover_1(&f).unwrap(), None);
-        assert_eq!(mover_2(&f).unwrap(), Some(mp("f")));
+        assert_eq!(mover_1.move_path(&f).unwrap(), None);
+        assert_eq!(mover_2.move_path(&f).unwrap(), Some(mp("f")));
 
         // Neither of the dirs below are remappings of any existing dir.
         // Neither `repo1-rest`, nor `repo2-rest` is a default
@@ -597,19 +651,22 @@ mod test {
         // Changes to these dirs could only be preserved from repo 1
         let f = mp("repo1-rest/aeneas/was/a/lively/fellow");
         assert_eq!(
-            mover_1(&f).unwrap(),
+            mover_1.move_path(&f).unwrap(),
             Some(mp("repo1-rest/aeneas/was/a/lively/fellow"))
         );
-        assert_eq!(mover_2(&f).unwrap(), None);
+        assert_eq!(mover_2.move_path(&f).unwrap(), None);
         let f = mp("repo2-rest/aeneas/was/a/lively/fellow");
         assert_eq!(
-            mover_1(&f).unwrap(),
+            mover_1.move_path(&f).unwrap(),
             Some(mp("repo2-rest/aeneas/was/a/lively/fellow"))
         );
-        assert_eq!(mover_2(&f).unwrap(), None);
+        assert_eq!(mover_2.move_path(&f).unwrap(), None);
         let f = mp("aeneas/was/a/lively/fellow");
-        assert_eq!(mover_1(&f).unwrap(), Some(mp("aeneas/was/a/lively/fellow")));
-        assert_eq!(mover_2(&f).unwrap(), None);
+        assert_eq!(
+            mover_1.move_path(&f).unwrap(),
+            Some(mp("aeneas/was/a/lively/fellow"))
+        );
+        assert_eq!(mover_2.move_path(&f).unwrap(), None);
 
         // There no correct way to behave when the file has the same
         // name as a prependable prefix. Generally we will prevent
@@ -620,8 +677,8 @@ mod test {
         // change that too, but failing to sync to one of the small
         // repos should be a signal enough to us that this needs looking.
         let prefix_only = mp("shifted2");
-        assert!(mover_2(&prefix_only).is_err());
-        assert_eq!(mover_1(&prefix_only).unwrap(), None);
+        assert!(mover_2.move_path(&prefix_only).is_err());
+        assert_eq!(mover_1.move_path(&prefix_only).unwrap(), None);
     }
 
     /*
@@ -687,27 +744,30 @@ mod test {
         // `preserved2` is an identical directory, we should replay changes
         // to it to both small repos
         let f = mp("preserved2/f");
-        assert_eq!(mover_1(&f).unwrap(), Some(mp("preserved2/f")));
-        assert_eq!(mover_2(&f).unwrap(), Some(mp("preserved2/f")));
+        assert_eq!(mover_1.move_path(&f).unwrap(), Some(mp("preserved2/f")));
+        assert_eq!(mover_2.move_path(&f).unwrap(), Some(mp("preserved2/f")));
         // any changes to large repo's `sub1` dir could only come from repo 1
         let f = mp("sub1/f");
-        assert_eq!(mover_1(&f).unwrap(), Some(mp("sub1/f")));
-        assert_eq!(mover_2(&f).unwrap(), None);
+        assert_eq!(mover_1.move_path(&f).unwrap(), Some(mp("sub1/f")));
+        assert_eq!(mover_2.move_path(&f).unwrap(), None);
         // any changes to large repo's `repo1-rest/preserved2` dir could
         // only come from repo 1
         let f = mp("repo1-rest/preserved2/f");
-        assert_eq!(mover_1(&f).unwrap(), Some(mp("repo1-rest/preserved2/f")));
-        assert_eq!(mover_2(&f).unwrap(), None);
+        assert_eq!(
+            mover_1.move_path(&f).unwrap(),
+            Some(mp("repo1-rest/preserved2/f"))
+        );
+        assert_eq!(mover_2.move_path(&f).unwrap(), None);
         // any changes to large repo's `repo2-rest/sub1` dir could
         // only come from repo 2
         let f = mp("repo2-rest/sub1/f");
-        assert_eq!(mover_1(&f).unwrap(), None);
-        assert_eq!(mover_2(&f).unwrap(), Some(mp("sub1/f")));
+        assert_eq!(mover_1.move_path(&f).unwrap(), None);
+        assert_eq!(mover_2.move_path(&f).unwrap(), Some(mp("sub1/f")));
         // any changes to large repo's `shifted2` dir could
         // only come from repo 2
         let f = mp("shifted2/f");
-        assert_eq!(mover_1(&f).unwrap(), None);
-        assert_eq!(mover_2(&f).unwrap(), Some(mp("f")));
+        assert_eq!(mover_1.move_path(&f).unwrap(), None);
+        assert_eq!(mover_2.move_path(&f).unwrap(), Some(mp("f")));
 
         // Neither of the dirs below are remappings of any existing dir.
         // Neither `repo1-rest`, nor `repo2-rest` is a default
@@ -715,19 +775,22 @@ mod test {
         // Changes to these dirs could only be preserved from repo 1
         let f = mp("repo1-rest/aeneas/was/a/lively/fellow");
         assert_eq!(
-            mover_1(&f).unwrap(),
+            mover_1.move_path(&f).unwrap(),
             Some(mp("repo1-rest/aeneas/was/a/lively/fellow"))
         );
-        assert_eq!(mover_2(&f).unwrap(), None);
+        assert_eq!(mover_2.move_path(&f).unwrap(), None);
         let f = mp("repo2-rest/aeneas/was/a/lively/fellow");
         assert_eq!(
-            mover_1(&f).unwrap(),
+            mover_1.move_path(&f).unwrap(),
             Some(mp("repo2-rest/aeneas/was/a/lively/fellow"))
         );
-        assert_eq!(mover_2(&f).unwrap(), None);
+        assert_eq!(mover_2.move_path(&f).unwrap(), None);
         let f = mp("aeneas/was/a/lively/fellow");
-        assert_eq!(mover_1(&f).unwrap(), Some(mp("aeneas/was/a/lively/fellow")));
-        assert_eq!(mover_2(&f).unwrap(), None);
+        assert_eq!(
+            mover_1.move_path(&f).unwrap(),
+            Some(mp("aeneas/was/a/lively/fellow"))
+        );
+        assert_eq!(mover_2.move_path(&f).unwrap(), None);
 
         // There no correct way to behave when the file has the same
         // name as a prependable prefix. Generally we will prevent
@@ -738,8 +801,8 @@ mod test {
         // change that too, but failing to sync to one of the small
         // repos should be a signal enough to us that this needs looking.
         let prefix_only = mp("shifted2");
-        assert!(mover_2(&prefix_only).is_err());
-        assert_eq!(mover_1(&prefix_only).unwrap(), None);
+        assert!(mover_2.move_path(&prefix_only).is_err());
+        assert_eq!(mover_1.move_path(&prefix_only).unwrap(), None);
     }
 
     fn get_small_repo_sync_config_non_prefix_free() -> SmallRepoCommitSyncConfig {
@@ -775,20 +838,20 @@ mod test {
         // `preserved2` is an identical directory, we should replay changes
         // to it to both small repos
         let f = mp("preserved2/f");
-        assert_eq!(mover(&f)?, Some(mp("preserved2/f")));
+        assert_eq!(mover.move_path(&f)?, Some(mp("preserved2/f")));
 
         // This file is not from small repo, so should be remapped to None
         let f = mp("randomefile");
-        assert_eq!(mover(&f)?, None);
+        assert_eq!(mover.move_path(&f)?, None);
 
         // Any changes to large repo's `sub1` dir could only come from repo 1
         let f = mp("repo2-rest/sub1/f");
-        assert_eq!(mover(&f)?, Some(mp("sub1/f")));
+        assert_eq!(mover.move_path(&f)?, Some(mp("sub1/f")));
 
         // This is an subtree of sub1, but this subtree is preserved. Make
         // sure path doesnt' change
         let f = mp("sub1/preserved");
-        assert_eq!(mover(&f)?, Some(mp("sub1/preserved")));
+        assert_eq!(mover.move_path(&f)?, Some(mp("sub1/preserved")));
 
         Ok(())
     }
@@ -823,16 +886,16 @@ mod test {
         )?;
 
         let f = mp("shifted/f");
-        assert_eq!(mover(&f)?, Some(mp("f")));
+        assert_eq!(mover.move_path(&f)?, Some(mp("f")));
 
         let f = mp("shifted/preserved/1.txt");
-        assert_eq!(mover(&f)?, None);
+        assert_eq!(mover.move_path(&f)?, None);
 
         let f = mp("shifted/preserved/excluded/1");
-        assert_eq!(mover(&f)?, Some(mp("preserved/excluded/1")));
+        assert_eq!(mover.move_path(&f)?, Some(mp("preserved/excluded/1")));
 
         let f = mp("preserved/excluded/1");
-        assert_eq!(mover(&f)?, None);
+        assert_eq!(mover.move_path(&f)?, None);
 
         Ok(())
     }

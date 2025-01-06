@@ -341,7 +341,7 @@ pub(crate) fn get_submodule_expansions_affected<'a, R: Repo>(
     sm_exp_data: &SubmoduleExpansionData<'a, R>,
     // Bonsai from the large repo
     bonsai: &BonsaiChangesetMut,
-    mover: Mover,
+    mover: Arc<dyn Mover>,
 ) -> Result<Vec<NonRootMPath>> {
     let submodules_affected = sm_exp_data
         .submodule_deps
@@ -356,7 +356,7 @@ pub(crate) fn get_submodule_expansions_affected<'a, R: Repo>(
             let submodule_expansion_changed = bonsai
                 .file_changes
                 .iter()
-                .map(|(p, _)| mover(p))
+                .map(|(p, _)| mover.move_path(p))
                 .filter_map(Result::transpose)
                 .process_results(|mut iter| {
                     iter.any(|small_repo_path| {

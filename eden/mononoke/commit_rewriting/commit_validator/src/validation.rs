@@ -185,9 +185,9 @@ impl FilenodeDiff {
         Self { mpath, payload }
     }
 
-    pub fn apply_mover(self, mover: &Mover) -> Result<Option<Self>, Error> {
+    pub fn apply_mover(self, mover: &dyn Mover) -> Result<Option<Self>, Error> {
         let Self { mpath, payload } = self;
-        mover(&mpath).map(|maybe_moved_mpath| {
+        mover.move_path(&mpath).map(|maybe_moved_mpath| {
             maybe_moved_mpath.map(|moved_mpath| Self::new(moved_mpath, payload))
         })
     }
@@ -260,7 +260,7 @@ impl ValidationHelper {
     fn move_full_manifest_diff_large_to_small(
         &self,
         full_manifest_diff: Large<FullManifestDiff>,
-        large_to_small_mover: &Mover,
+        large_to_small_mover: &dyn Mover,
     ) -> Result<Large<FullManifestDiff>, Error> {
         let moved_fmd: Result<FullManifestDiff, Error> = full_manifest_diff
             .0
@@ -688,7 +688,7 @@ impl ValidationHelpers {
         &self,
         small_repo_id: &Small<RepositoryId>,
         version_name: &CommitSyncConfigVersion,
-    ) -> Result<(Mover, Mover), Error> {
+    ) -> Result<(Arc<dyn Mover>, Arc<dyn Mover>), Error> {
         let commit_sync_config = self
             .live_commit_sync_config
             .get_commit_sync_config_by_version(self.large_repo.repo_identity().id(), version_name)
@@ -1127,13 +1127,13 @@ async fn validate_full_manifest_diffs_equivalence<'a>(
     small_cs_id: &'a Small<ChangesetId>,
     large_repo_full_manifest_diff: Large<FullManifestDiff>,
     small_repo_full_manifest_diff: Small<FullManifestDiff>,
-    small_to_large_mover: Mover,
-    large_to_small_mover: Mover,
+    small_to_large_mover: Arc<dyn Mover>,
+    large_to_small_mover: Arc<dyn Mover>,
 ) -> Result<(), Error> {
     let moved_large_repo_full_manifest_diff = validation_helper
         .move_full_manifest_diff_large_to_small(
             large_repo_full_manifest_diff,
-            &large_to_small_mover,
+            large_to_small_mover.as_ref(),
         )?;
 
     // Let's remove all `FilenodeDiff` structs, which are strictly equivalent
@@ -1178,7 +1178,7 @@ async fn validate_full_manifest_diffs_equivalence<'a>(
     )> = vec![];
 
     for (small_mpath, small_payload) in in_small_but_not_in_large {
-        if small_to_large_mover(small_mpath.0)?.is_none() {
+        if small_to_large_mover.move_path(small_mpath.0)?.is_none() {
             // It is expected to be missing in the large repo
             continue;
         };
@@ -1213,12 +1213,15 @@ async fn validate_full_manifest_diffs_equivalence<'a>(
                 |(small_mpath, payload): (Small<&NonRootMPath>, Large<&FilenodeDiffPayload>)| {
                     // `in_large_but_not_in_small` was initially populated by small
                     // paths, so let's convert
-                    let large_mpath = small_to_large_mover(small_mpath.0)?.ok_or_else(|| {
-                        format_err!(
-                            "{:?} unexpectedly produces None when moved small-to-large",
-                            small_mpath.0
-                        )
-                    })?;
+                    let large_mpath =
+                        small_to_large_mover
+                            .move_path(small_mpath.0)?
+                            .ok_or_else(|| {
+                                format_err!(
+                                    "{:?} unexpectedly produces None when moved small-to-large",
+                                    small_mpath.0
+                                )
+                            })?;
 
                     Result::<_, Error>::Ok((Large(large_mpath), payload))
                 },
@@ -1237,12 +1240,14 @@ async fn validate_full_manifest_diffs_equivalence<'a>(
         .await?
         .into_iter()
         .map(|small_mpath: Small<NonRootMPath>| {
-            let large_mpath = small_to_large_mover(&small_mpath.0)?.ok_or_else(|| {
-                format_err!(
-                    "{:?} surprisingly produces None when moved small-to-large",
-                    small_mpath
-                )
-            })?;
+            let large_mpath = small_to_large_mover
+                .move_path(&small_mpath.0)?
+                .ok_or_else(|| {
+                    format_err!(
+                        "{:?} surprisingly produces None when moved small-to-large",
+                        small_mpath
+                    )
+                })?;
 
             Ok(Large(large_mpath))
         })
@@ -1357,8 +1362,8 @@ async fn validate_in_a_single_repo(
     small_cs_id: Small<ChangesetId>,
     large_repo_full_manifest_diff: Large<FullManifestDiff>,
     small_repo_full_manifest_diff: Small<FullManifestDiff>,
-    small_to_large_mover: Mover,
-    large_to_small_mover: Mover,
+    small_to_large_mover: Arc<dyn Mover>,
+    large_to_small_mover: Arc<dyn Mover>,
     mapping: SqlSyncedCommitMapping,
 ) -> Result<(), Error> {
     validate_full_manifest_diffs_equivalence(

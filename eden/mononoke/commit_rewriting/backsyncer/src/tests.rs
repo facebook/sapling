@@ -1152,7 +1152,8 @@ async fn compare_contents(
     let filtered_source_content: HashMap<_, _> = source_content
         .into_iter()
         .filter_map(|(key, value)| {
-            mover(&NonRootMPath::new(key).unwrap())
+            mover
+                .move_path(&NonRootMPath::new(key).unwrap())
                 .unwrap()
                 .map(|key| (key, value))
         })

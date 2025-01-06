@@ -79,7 +79,7 @@ impl ValidSubmoduleExpansionBonsai {
         bonsai: BonsaiChangeset,
         // TODO(T179533620): fetch mover from commit sync config, instead of
         // requiring it to be provided by callers.
-        mover: Mover,
+        mover: Arc<dyn Mover>,
     ) -> Result<ValidSubmoduleExpansionBonsai> {
         // For every submodule dependency, get all changes in their directories.
 
@@ -148,7 +148,7 @@ async fn validate_submodule_expansion<'a, R: Repo>(
     bonsai: BonsaiChangeset,
     submodule_path: &'a NonRootMPath,
     submodule_repo: &'a R,
-    mover: Mover,
+    mover: Arc<dyn Mover>,
 ) -> Result<BonsaiChangeset> {
     log_debug(
         ctx,
@@ -172,7 +172,7 @@ async fn validate_submodule_expansion<'a, R: Repo>(
 
     // Submodule path in the large repo, after calling the mover(e.g. to prepend
     // the small repo's path).
-    let synced_submodule_path = mover(submodule_path)?.ok_or(anyhow!(
+    let synced_submodule_path = mover.move_path(submodule_path)?.ok_or(anyhow!(
         "Mover failed to provide submodule path in the large repo"
     ))?;
 
