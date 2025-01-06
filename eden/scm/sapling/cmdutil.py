@@ -5028,6 +5028,9 @@ def registerdiffgrafts(from_paths, to_paths, *ctxs):
     if not ctxs:
         return error.ProgrammingError("registerdiffgrafts() requires ctxs")
 
+    if not from_paths and not to_paths:
+        return None
+
     subtreeutil.validate_path_size(from_paths, to_paths)
     subtreeutil.validate_path_overlap(from_paths, to_paths)
 
