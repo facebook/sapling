@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::iter::Iterator;
+use std::time::Duration;
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -82,6 +83,7 @@ impl EdenapiSender {
             .repo_name(&reponame)
             .server_url(url)
             .http_config(http_config)
+            .timeout(Duration::from_secs(20))
             .build()?;
 
         let res = client.health().await;
