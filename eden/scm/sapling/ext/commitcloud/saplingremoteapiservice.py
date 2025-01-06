@@ -20,7 +20,7 @@ from . import baseservice
 class SaplingRemoteAPIService(baseservice.BaseService):
     """Remote commit-cloud service implemented using Sapling Remote API."""
 
-    def __init__(self, ui, repo, fallback):
+    def __init__(self, ui, repo):
         self.ui = ui
         if repo is None:
             raise error.Abort(
@@ -28,7 +28,6 @@ class SaplingRemoteAPIService(baseservice.BaseService):
             )
         self.repo = repo
         self.repo.edenapi.capabilities()  # Check Sapling Remote API is reachable
-        self.fallback = fallback
 
     def check(self):
         return True
@@ -238,13 +237,6 @@ class SaplingRemoteAPIService(baseservice.BaseService):
         except Exception as e:
             raise error.UnexpectedError(self.ui, e)
 
-    def updatecheckoutlocations(
-        self, reponame, workspace, hostname, commit, checkoutpath, sharedpath, unixname
-    ):
-        return self.fallback.updatecheckoutlocations(
-            reponame, workspace, hostname, commit, checkoutpath, sharedpath, unixname
-        )
-
     def getworkspaces(self, reponame, prefix):
         """Fetch Commit Cloud workspaces for the given prefix"""
         self.ui.debug(
@@ -323,10 +315,6 @@ class SaplingRemoteAPIService(baseservice.BaseService):
             "version": version,
         }
         self.repo.edenapi.cloudrollbackworkspace(data)
-
-    def cleanupworkspace(self, reponame, workspace):
-        """Cleanup unnecessary remote bookmarks from the given workspace"""
-        return self.fallback.cleanupworkspace(reponame, workspace)
 
     def gethistoricalversions(self, reponame, workspace):
         self.ui.debug(
