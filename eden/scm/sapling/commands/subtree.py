@@ -58,6 +58,14 @@ def subtree_copies(repo, ctx, **args):
         return json.dumps(copies)
 
 
+@templatekw.templatekeyword("subtree_merges")
+def subtree_merges(repo, ctx, **args):
+    merges = get_subtree_merges(repo, ctx.node())
+    if merges:
+        merges = [c.to_full_dict() for c in merges]
+        return json.dumps(merges)
+
+
 @command(
     "subtree",
     [],

@@ -101,6 +101,14 @@ class SubtreeMerge:
             "to_path": self.to_path,
         }
 
+    def to_full_dict(self):
+        return {
+            "from_commit": self.from_commit,
+            "from_path": self.from_path,
+            "to_path": self.to_path,
+            "v": self.version,
+        }
+
 
 def gen_branch_info(
     repo,
