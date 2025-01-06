@@ -191,14 +191,19 @@ pub async fn rewrite_commit<'a, R: Repo>(
     Ok(CommitRewriteResult::new(mb_rewritten, HashMap::new()))
 }
 
+/// Adapter from Mover to MultiMover.
+struct MoverMultiMover(Arc<dyn Mover>);
+
+impl MultiMover for MoverMultiMover {
+    fn multi_move_path(&self, path: &NonRootMPath) -> Result<Vec<NonRootMPath>> {
+        Ok(self.0.move_path(path)?.into_iter().collect())
+    }
+}
+
 /// Mover moves a path to at most a single path, while MultiMover can move a
 /// path to multiple.
-pub fn mover_to_multi_mover(mover: Arc<dyn Mover>) -> MultiMover<'static> {
-    Arc::new(
-        move |path: &NonRootMPath| -> Result<Vec<NonRootMPath>, Error> {
-            Ok(mover.move_path(path)?.into_iter().collect())
-        },
-    )
+pub fn mover_to_multi_mover(mover: Arc<dyn Mover>) -> Arc<dyn MultiMover> {
+    Arc::new(MoverMultiMover(mover))
 }
 
 pub(crate) async fn remap_parents<'a, R: Repo>(

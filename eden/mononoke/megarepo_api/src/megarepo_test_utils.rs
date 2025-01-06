@@ -114,7 +114,7 @@ impl<R: MononokeRepo> MegarepoTest<R> {
             let source_wc = list_working_copy_utf8(ctx, &self.repo, init_source_cs_id).await?;
 
             for (file, content) in source_wc {
-                let target_files = mover(&file)?;
+                let target_files = mover.multi_move_path(&file)?;
                 for target_file in target_files {
                     init_target_cs = init_target_cs.add_file(target_file, content.clone());
                 }

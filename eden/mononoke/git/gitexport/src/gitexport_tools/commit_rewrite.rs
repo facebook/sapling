@@ -150,10 +150,10 @@ pub async fn rewrite_partial_changesets<R: MononokeRepo>(
                         })
                         .collect::<Vec<_>>();
 
-                    let multi_mover = build_multi_mover_for_changeset(
+                    let multi_mover = Arc::new(GitExportMultiMover::new(
                         source_repo_ctx.ctx().logger(),
                         export_paths.as_slice(),
-                    )?;
+                    ));
 
                     if file_changes.is_empty() {
                         return Err(anyhow!("No relevant file changes in changeset"));
@@ -195,7 +195,8 @@ pub async fn rewrite_partial_changesets<R: MononokeRepo>(
 
                 async move {
                     let ctx: &CoreContext = source_repo_ctx.ctx();
-                    let multi_mover = build_multi_mover_for_changeset(ctx.logger(), &export_paths)?;
+                    let multi_mover =
+                        Arc::new(GitExportMultiMover::new(ctx.logger(), &export_paths));
                     let (new_bcs, remapped_parents, export_paths_not_created) =
                         create_bonsai_for_new_repo(
                             &source_repo_ctx,
@@ -281,7 +282,7 @@ pub async fn rewrite_partial_changesets<R: MononokeRepo>(
 /// BonsaiChangeset containing only the changes to those paths.
 async fn create_bonsai_for_new_repo<'a, R: MononokeRepo>(
     source_repo_ctx: &RepoContext<R>,
-    multi_mover: MultiMover<'_>,
+    multi_mover: Arc<dyn MultiMover + 'a>,
     changeset_parents: &ChangesetParents,
     mut remapped_parents: HashMap<ChangesetId, ChangesetId>,
     changeset_ctx: ChangesetContext<R>,
@@ -470,7 +471,7 @@ async fn get_export_paths_for_changeset<'a, R: MononokeRepo>(
     Ok(export_paths)
 }
 
-/// The MultiMover closure is called for every path affected by a commit being
+/// The MultiMover is called for every path affected by a commit being
 /// copied and it should determine if the changes to the path should be
 /// included or not in the new commit.
 ///
@@ -492,25 +493,38 @@ async fn get_export_paths_for_changeset<'a, R: MononokeRepo>(
 /// in `f` should NOT be exported.
 ///
 /// In this case, `export_path_infos` would be `[("new", "f", ("old", "D")]`.
-fn build_multi_mover_for_changeset<'a>(
+struct GitExportMultiMover<'a> {
     logger: &'a Logger,
     export_paths: &'a [NonRootMPath],
-) -> Result<MultiMover<'a>> {
-    let multi_mover: MultiMover = Arc::new(
-        move |source_path: &NonRootMPath| -> Result<Vec<NonRootMPath>> {
-            let should_export = export_paths.iter().any(|p| p.is_prefix_of(source_path));
+}
 
-            if !should_export {
-                trace!(logger, "Path {:#?} will NOT be exported.", &source_path);
-                return Ok(vec![]);
-            }
+impl<'a> GitExportMultiMover<'a> {
+    fn new(logger: &'a Logger, export_paths: &'a [NonRootMPath]) -> Self {
+        Self {
+            logger,
+            export_paths,
+        }
+    }
+}
 
-            trace!(logger, "Path {:#?} will be exported.", &source_path);
-            Ok(vec![source_path.clone()])
-        },
-    );
+impl<'a> MultiMover for GitExportMultiMover<'a> {
+    fn multi_move_path(&self, source_path: &NonRootMPath) -> Result<Vec<NonRootMPath>> {
+        let should_export = self
+            .export_paths
+            .iter()
+            .any(|p| p.is_prefix_of(source_path));
 
-    Ok(multi_mover)
+        if !should_export {
+            trace!(
+                self.logger,
+                "Path {:#?} will NOT be exported.", &source_path
+            );
+            return Ok(vec![]);
+        }
+
+        trace!(self.logger, "Path {:#?} will be exported.", &source_path);
+        Ok(vec![source_path.clone()])
+    }
 }
 
 /// Create a temporary repository to store the changesets that affect the export

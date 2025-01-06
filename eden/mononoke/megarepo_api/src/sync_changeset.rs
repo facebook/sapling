@@ -343,7 +343,7 @@ impl<'a, R: MononokeRepo> SyncChangeset<'a, R> {
                     ctx,
                     target_repo.repo(),
                     parent.clone(),
-                    &mover,
+                    mover.as_ref(),
                     Default::default(),
                     source_name,
                 )

@@ -53,8 +53,11 @@ use slog::Logger;
 use sorted_vector_map::SortedVectorMap;
 use thiserror::Error;
 
-pub type MultiMover<'a> =
-    Arc<dyn Fn(&NonRootMPath) -> Result<Vec<NonRootMPath>, Error> + Send + Sync + 'a>;
+pub trait MultiMover: Send + Sync {
+    // Move a path, to potentially multiple locations.
+    fn multi_move_path(&self, path: &NonRootMPath) -> Result<Vec<NonRootMPath>>;
+}
+
 pub type DirectoryMultiMover =
     Arc<dyn Fn(&MPath) -> Result<Vec<MPath>, Error> + Send + Sync + 'static>;
 
@@ -121,42 +124,54 @@ pub enum ErrorKind {
     MissingForcedParent(ChangesetId),
 }
 
+pub struct MegarepoMultiMover {
+    overrides: Vec<(String, Vec<String>)>,
+    prefix: Option<NonRootMPath>,
+}
+
+impl MegarepoMultiMover {
+    pub fn new(mapping_rules: SourceMappingRules) -> Result<Self> {
+        // We apply the longest prefix first
+        let mut overrides = mapping_rules.overrides.into_iter().collect::<Vec<_>>();
+        overrides.sort_unstable_by_key(|(ref prefix, _)| prefix.len());
+        overrides.reverse();
+        let prefix = NonRootMPath::new_opt(mapping_rules.default_prefix)?;
+        Ok(Self { overrides, prefix })
+    }
+}
+
+impl MultiMover for MegarepoMultiMover {
+    fn multi_move_path(&self, path: &NonRootMPath) -> Result<Vec<NonRootMPath>> {
+        for (override_prefix_src, dsts) in &self.overrides {
+            let override_prefix_src = NonRootMPath::new(override_prefix_src.clone())?;
+            if override_prefix_src.is_prefix_of(path) {
+                let suffix: Vec<_> = path
+                    .into_iter()
+                    .skip(override_prefix_src.num_components())
+                    .collect();
+
+                return dsts
+                    .iter()
+                    .map(|dst| {
+                        let override_prefix = NonRootMPath::new_opt(dst)?;
+                        NonRootMPath::join_opt(override_prefix.as_ref(), suffix.clone())
+                            .ok_or_else(|| anyhow!("unexpected empty path"))
+                    })
+                    .collect::<Result<_, _>>();
+            }
+        }
+
+        Ok(vec![
+            NonRootMPath::join_opt(self.prefix.as_ref(), path)
+                .ok_or_else(|| anyhow!("unexpected empty path"))?,
+        ])
+    }
+}
+
 pub fn create_source_to_target_multi_mover(
     mapping_rules: SourceMappingRules,
-) -> Result<MultiMover<'static>, Error> {
-    // We apply the longest prefix first
-    let mut overrides = mapping_rules.overrides.into_iter().collect::<Vec<_>>();
-    overrides.sort_unstable_by_key(|(ref prefix, _)| prefix.len());
-    overrides.reverse();
-    let prefix = NonRootMPath::new_opt(mapping_rules.default_prefix)?;
-
-    Ok(Arc::new(
-        move |path: &NonRootMPath| -> Result<Vec<NonRootMPath>, Error> {
-            for (override_prefix_src, dsts) in &overrides {
-                let override_prefix_src = NonRootMPath::new(override_prefix_src.clone())?;
-                if override_prefix_src.is_prefix_of(path) {
-                    let suffix: Vec<_> = path
-                        .into_iter()
-                        .skip(override_prefix_src.num_components())
-                        .collect();
-
-                    return dsts
-                        .iter()
-                        .map(|dst| {
-                            let override_prefix = NonRootMPath::new_opt(dst)?;
-                            NonRootMPath::join_opt(override_prefix.as_ref(), suffix.clone())
-                                .ok_or_else(|| anyhow!("unexpected empty path"))
-                        })
-                        .collect::<Result<_, _>>();
-                }
-            }
-
-            Ok(vec![
-                NonRootMPath::join_opt(prefix.as_ref(), path)
-                    .ok_or_else(|| anyhow!("unexpected empty path"))?,
-            ])
-        },
-    ))
+) -> Result<Arc<dyn MultiMover + 'static>, Error> {
+    Ok(Arc::new(MegarepoMultiMover::new(mapping_rules)?))
 }
 
 pub fn create_directory_source_to_target_multi_mover(
@@ -245,7 +260,7 @@ pub async fn get_renamed_implicit_deletes<'a, I: IntoIterator<Item = ChangesetId
     ctx: &'a CoreContext,
     file_changes: Vec<(&NonRootMPath, &FileChange)>,
     parent_changeset_ids: I,
-    mover: MultiMover<'a>,
+    mover: Arc<dyn MultiMover + 'a>,
     source_repo: &'a impl Repo,
 ) -> Result<Vec<Vec<NonRootMPath>>, Error> {
     let parent_manifest_ids =
@@ -264,7 +279,10 @@ pub async fn get_renamed_implicit_deletes<'a, I: IntoIterator<Item = ChangesetId
         get_implicit_deletes(ctx, store, paths_added, parent_manifest_ids)
             .try_collect()
             .await?;
-    implicit_deletes.iter().map(|mpath| mover(mpath)).collect()
+    implicit_deletes
+        .iter()
+        .map(|mpath| mover.multi_move_path(mpath))
+        .collect()
 }
 
 /// Determines what to do in commits rewriting to empty commit in small repo.
@@ -339,7 +357,7 @@ pub async fn rewrite_commit<'a>(
     ctx: &'a CoreContext,
     cs: BonsaiChangesetMut,
     remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
-    mover: MultiMover<'a>,
+    mover: Arc<dyn MultiMover + 'a>,
     source_repo: &'a impl Repo,
     force_first_parent: Option<ChangesetId>,
     rewrite_opts: RewriteOpts,
@@ -363,7 +381,7 @@ pub async fn rewrite_commit_with_file_changes_filter<'a>(
     ctx: &'a CoreContext,
     cs: BonsaiChangesetMut,
     remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
-    mover: MultiMover<'a>,
+    mover: Arc<dyn MultiMover + 'a>,
     source_repo: &'a impl Repo,
     force_first_parent: Option<ChangesetId>,
     rewrite_opts: RewriteOpts,
@@ -423,7 +441,7 @@ pub async fn rewrite_as_squashed_commit<'a>(
     source_cs_id: ChangesetId,
     (source_parent_cs_id, target_parent_cs_id): (ChangesetId, ChangesetId),
     mut cs: BonsaiChangesetMut,
-    mover: MultiMover<'a>,
+    mover: Arc<dyn MultiMover + 'a>,
     side_commits_info: Vec<String>,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
     let diff_stream = find_bonsai_diff(ctx, source_repo, source_parent_cs_id, source_cs_id).await?;
@@ -439,7 +457,7 @@ pub async fn rewrite_as_squashed_commit<'a>(
     let rewritten_changes = diff_changes
         .into_iter()
         .map(|(path, change)| {
-            let new_paths = mover(&path)?;
+            let new_paths = mover.multi_move_path(&path)?;
             Ok(new_paths
                 .into_iter()
                 .map(|new_path| (new_path, change.clone()))
@@ -470,7 +488,7 @@ pub async fn rewrite_stack_no_merges<'a>(
     ctx: &'a CoreContext,
     css: Vec<BonsaiChangeset>,
     mut rewritten_parent: ChangesetId,
-    mover: MultiMover<'a>,
+    mover: Arc<dyn MultiMover + 'a>,
     source_repo: &'a impl Repo,
     force_first_parent: Option<ChangesetId>,
     mut modify_bonsai_cs: impl FnMut((ChangesetId, BonsaiChangesetMut)) -> BonsaiChangesetMut,
@@ -550,7 +568,7 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
     logger: &Logger,
     mut cs: BonsaiChangesetMut,
     remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
-    mover: MultiMover,
+    mover: Arc<dyn MultiMover + 'a>,
     file_change_filters: Vec<FileChangeFilter<'a>>,
     force_first_parent: Option<ChangesetId>,
     renamed_implicit_deletes: Vec<Vec<NonRootMPath>>,
@@ -584,10 +602,10 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
                 fn rewrite_copy_from(
                     copy_from: &(NonRootMPath, ChangesetId),
                     remapped_parents: &HashMap<ChangesetId, ChangesetId>,
-                    mover: MultiMover,
+                    mover: &dyn MultiMover,
                 ) -> Result<Option<(NonRootMPath, ChangesetId)>, Error> {
                     let (path, copy_from_commit) = copy_from;
-                    let new_paths = mover(path)?;
+                    let new_paths = mover.multi_move_path(path)?;
                     let copy_from_commit =
                         remapped_parents.get(copy_from_commit).ok_or_else(|| {
                             Error::from(ErrorKind::MissingRemappedCommit(*copy_from_commit))
@@ -610,7 +628,7 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
                 fn rewrite_file_change(
                     change: &TrackedFileChange,
                     remapped_parents: &HashMap<ChangesetId, ChangesetId>,
-                    mover: MultiMover,
+                    mover: &dyn MultiMover,
                 ) -> Result<FileChange, Error> {
                     let new_copy_from = change
                         .copy_from()
@@ -629,13 +647,11 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
                     path: &NonRootMPath,
                     change: &FileChange,
                     remapped_parents: &HashMap<ChangesetId, ChangesetId>,
-                    mover: MultiMover,
+                    mover: &dyn MultiMover,
                 ) -> Result<Vec<(NonRootMPath, FileChange)>, Error> {
-                    let new_paths = mover(path)?;
+                    let new_paths = mover.multi_move_path(path)?;
                     let change = match change {
-                        FileChange::Change(tc) => {
-                            rewrite_file_change(tc, remapped_parents, mover.clone())?
-                        }
+                        FileChange::Change(tc) => rewrite_file_change(tc, remapped_parents, mover)?,
                         FileChange::Deletion => FileChange::Deletion,
                         FileChange::UntrackedDeletion | FileChange::UntrackedChange(_) => {
                             bail!("Can't rewrite untracked changes")
@@ -646,7 +662,7 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
                         .map(|new_path| (new_path, change.clone()))
                         .collect())
                 }
-                do_rewrite(path, change, remapped_parents, mover.clone())
+                do_rewrite(path, change, remapped_parents, mover.as_ref())
             })
             .collect::<Result<Vec<Vec<_>>, _>>()?;
 
@@ -966,7 +982,7 @@ mod test {
         };
         let multi_mover = create_source_to_target_multi_mover(mapping_rules)?;
         assert_eq!(
-            multi_mover(&NonRootMPath::new("path")?)?,
+            multi_mover.multi_move_path(&NonRootMPath::new("path")?)?,
             vec![NonRootMPath::new("path")?]
         );
         Ok(())
@@ -980,7 +996,7 @@ mod test {
         };
         let multi_mover = create_source_to_target_multi_mover(mapping_rules)?;
         assert_eq!(
-            multi_mover(&NonRootMPath::new("path")?)?,
+            multi_mover.multi_move_path(&NonRootMPath::new("path")?)?,
             vec![NonRootMPath::new("prefix/path")?]
         );
         Ok(())
@@ -1000,12 +1016,12 @@ mod test {
         };
         let multi_mover = create_source_to_target_multi_mover(mapping_rules)?;
         assert_eq!(
-            multi_mover(&NonRootMPath::new("path")?)?,
+            multi_mover.multi_move_path(&NonRootMPath::new("path")?)?,
             vec![NonRootMPath::new("prefix/path")?]
         );
 
         assert_eq!(
-            multi_mover(&NonRootMPath::new("override/path")?)?,
+            multi_mover.multi_move_path(&NonRootMPath::new("override/path")?)?,
             vec![
                 NonRootMPath::new("overriden_1/path")?,
                 NonRootMPath::new("overriden_2/path")?,
@@ -1030,12 +1046,12 @@ mod test {
         };
         let multi_mover = create_source_to_target_multi_mover(mapping_rules)?;
         assert_eq!(
-            multi_mover(&NonRootMPath::new("prefix/path")?)?,
+            multi_mover.multi_move_path(&NonRootMPath::new("prefix/path")?)?,
             vec![NonRootMPath::new("prefix_1/path")?]
         );
 
         assert_eq!(
-            multi_mover(&NonRootMPath::new("prefix/sub/path")?)?,
+            multi_mover.multi_move_path(&NonRootMPath::new("prefix/sub/path")?)?,
             vec![NonRootMPath::new("prefix/sub_1/path")?]
         );
 
@@ -1495,11 +1511,15 @@ mod test {
             .commit()
             .await?;
 
-        let identity_multi_mover = Arc::new(
-            move |path: &NonRootMPath| -> Result<Vec<NonRootMPath>, Error> {
+        struct IdentityMultiMover;
+
+        impl MultiMover for IdentityMultiMover {
+            fn multi_move_path(&self, path: &NonRootMPath) -> Result<Vec<NonRootMPath>, Error> {
                 Ok(vec![path.clone()])
-            },
-        );
+            }
+        }
+
+        let identity_multi_mover = Arc::new(IdentityMultiMover);
 
         async fn verify_affected_paths(
             ctx: &CoreContext,
@@ -1766,7 +1786,7 @@ mod test {
         repo: &'a Repo,
         bcs_id: ChangesetId,
         parents: HashMap<ChangesetId, ChangesetId>,
-        multi_mover: MultiMover<'a>,
+        multi_mover: Arc<dyn MultiMover + 'a>,
         force_first_parent: Option<ChangesetId>,
     ) -> Result<ChangesetId, Error> {
         test_rewrite_commit_cs_id_with_file_change_filters(
@@ -1786,7 +1806,7 @@ mod test {
         repo: &'a Repo,
         bcs_id: ChangesetId,
         parents: HashMap<ChangesetId, ChangesetId>,
-        multi_mover: MultiMover<'a>,
+        multi_mover: Arc<dyn MultiMover + 'a>,
         force_first_parent: Option<ChangesetId>,
         file_change_filters: Vec<FileChangeFilter<'a>>,
     ) -> Result<ChangesetId, Error> {

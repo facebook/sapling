@@ -395,7 +395,7 @@ pub trait MegarepoOp<R> {
         ctx: &CoreContext,
         repo: &R,
         cs_id: ChangesetId,
-        mover: &MultiMover,
+        mover: &dyn MultiMover,
         linkfiles: BTreeMap<NonRootMPath, FileChange>,
         source_name: &SourceName,
     ) -> Result<SourceAndMovedChangesets, MegarepoError>
@@ -430,7 +430,7 @@ pub trait MegarepoOp<R> {
 
         let mut file_changes: Vec<(NonRootMPath, FileChange)> = vec![];
         for (path, file) in entries {
-            let moved = mover(&path)?;
+            let moved = mover.multi_move_path(&path)?;
 
             // Check that path doesn't move to itself - in that case we don't need to
             // delete file
@@ -488,9 +488,11 @@ pub trait MegarepoOp<R> {
             .map_err(MegarepoError::internal)?
             .map_err(MegarepoError::internal)
             .and_then(|path| async move {
-                Ok(mover(&path.into_optional_non_root_path().ok_or_else(
-                    || MegarepoError::internal(anyhow!("mpath can't be null")),
-                )?)?)
+                Ok(mover.multi_move_path(
+                    &path
+                        .into_optional_non_root_path()
+                        .ok_or_else(|| MegarepoError::internal(anyhow!("mpath can't be null")))?,
+                )?)
             })
             .try_collect()
             .await?;
@@ -549,7 +551,7 @@ pub trait MegarepoOp<R> {
                             ctx,
                             repo,
                             changeset_id,
-                            &mover,
+                            mover.as_ref(),
                             linkfiles,
                             &source_name,
                         )
