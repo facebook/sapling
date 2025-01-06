@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+#[cfg(feature = "fb")]
+use std::str::FromStr;
+
 use clidispatch::ReqCtx;
 use cmdutil::define_flags;
 #[cfg(feature = "fb")]
@@ -57,7 +60,7 @@ pub fn run(ctx: ReqCtx<DebugDynamicConfigOpts>, repo: Option<&Repo>) -> Result<u
             false,
             config
                 .get("experimental", "dynamic-config-domain-override")
-                .and_then(|d| configloader::fb::Domain::from_str(d.as_ref())),
+                .and_then(|d| configloader::fb::Domain::from_str(d.as_ref()).ok()),
         )?;
     }
     #[cfg(not(feature = "fb"))]

@@ -19,6 +19,8 @@ use std::io::Error as IOError;
 use std::io::ErrorKind;
 use std::path::Path;
 use std::path::PathBuf;
+#[cfg(feature = "fb")]
+use std::str::FromStr;
 use std::sync::Arc;
 
 #[cfg(feature = "fb")]
@@ -942,7 +944,7 @@ fn load_dynamic(
         _ => false,
     };
 
-    let domain_override = domain_override.and_then(|d| Domain::from_str(d.as_ref()));
+    let domain_override = domain_override.and_then(|d| Domain::from_str(d.as_ref()).ok());
 
     let needs_sync_generation =
         // No current dynamic config - need to generate.
