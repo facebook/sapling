@@ -53,6 +53,14 @@ class BranchType(Enum):
             # unreachable
             raise error.ProgrammingError("unknown branch type")
 
+    def to_str(self):
+        if self == BranchType.DEEP_COPY:
+            return "deepcopy"
+        elif self == BranchType.SHALLOW_COPY:
+            return "copy"
+        else:
+            raise error.ProgrammingError("unknown branch type")
+
 
 @dataclass
 class SubtreeBranch:
@@ -67,6 +75,15 @@ class SubtreeBranch:
             "from_commit": self.from_commit,
             "from_path": self.from_path,
             "to_path": self.to_path,
+        }
+
+    def to_full_dict(self):
+        return {
+            "from_commit": self.from_commit,
+            "from_path": self.from_path,
+            "to_path": self.to_path,
+            "v": self.version,
+            "type": self.branch_type.to_str(),
         }
 
 

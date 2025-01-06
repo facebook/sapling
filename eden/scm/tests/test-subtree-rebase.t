@@ -15,8 +15,8 @@ test rebase subtree copy commit and keep the subtree copy metadata
   copying foo to foo2
   $ hg rebase -r . -d $B
   rebasing dad7999e558f "subtree copy foo to foo2"
-  $ hg dbsh -c 'print(repo["."].extra())'
-  {'branch': 'default', 'rebase_source': 'dad7999e558f896af0f4e032eca26ecc5de27ed8', 'test_subtree': '[{"deepcopies":[{"from_commit":"b4cb27eee4e2633aae0d62de87523007d1b5bfdd","from_path":"foo","to_path":"foo2"}],"v":1}]'}
+  $ hg log -r . -T '{subtree_copies}\n'
+  [{"from_commit": "b4cb27eee4e2633aae0d62de87523007d1b5bfdd", "from_path": "foo", "to_path": "foo2", "v": 1, "type": "deepcopy"}]
 
 test rebase subtree copy commit fails if the to-path is updated on the dest side
   $ newclientrepo

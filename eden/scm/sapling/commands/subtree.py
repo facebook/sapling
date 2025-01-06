@@ -3,6 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+import json
 import os
 import time
 from collections import defaultdict
@@ -29,6 +30,7 @@ from ..cmdutil import (
     dryrunopts,
     mergetoolopts,
     subtree_path_opts,
+    templatekw,
     walkopts,
 )
 from ..i18n import _
@@ -46,6 +48,14 @@ MAX_SUBTREE_COPY_FILE_COUNT = 10_000
 MERGE_BASE_TIMEOUT_SECS = 120
 
 readonly = registrar.command.readonly
+
+
+@templatekw.templatekeyword("subtree_copies")
+def subtree_copies(repo, ctx, **args):
+    copies = get_subtree_branches(repo, ctx.node())
+    if copies:
+        copies = [c.to_full_dict() for c in copies]
+        return json.dumps(copies)
 
 
 @command(
