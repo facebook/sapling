@@ -24,14 +24,6 @@
   >   ]
   > CONFIG
 
-  $ merge_just_knobs <<EOF
-  > {
-  >   "bools": {
-  >     "scm/mononoke:run_hooks_on_additional_changesets": true
-  >   }
-  > }
-  > EOF
-
   $ setup_configerator_configs
   $ enable_pushredirect 1
 

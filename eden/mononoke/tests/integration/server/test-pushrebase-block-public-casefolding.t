@@ -18,14 +18,6 @@ setup configuration
   > hooks_skip_ancestors_of=["master_bookmark"]
   > CONFIG
 
-  $ merge_just_knobs <<EOF
-  > {
-  >   "bools": {
-  >     "scm/mononoke:run_hooks_on_additional_changesets": true
-  >   }
-  > }
-  > EOF
-
   $ setup_common_hg_configs
   $ setconfig remotenames.selectivepulldefault=master_bookmark,other
   $ cd $TESTTMP
