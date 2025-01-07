@@ -25,13 +25,13 @@ jobs:
     - name: Show disk space after freeing up
       run: df -h
     - name: Update system package info
-      run: sudo apt-get update
+      run: sudo --preserve-env=http_proxy apt-get update
     - name: Install system deps
-      run: sudo python3 build/fbcode_builder/getdeps.py --allow-system-packages install-system-deps --recursive sapling && sudo python3 build/fbcode_builder/getdeps.py --allow-system-packages install-system-deps --recursive patchelf
+      run: sudo --preserve-env=http_proxy python3 build/fbcode_builder/getdeps.py --allow-system-packages install-system-deps --recursive sapling && sudo --preserve-env=http_proxy python3 build/fbcode_builder/getdeps.py --allow-system-packages install-system-deps --recursive patchelf
     - name: Install locale-gen
-      run: sudo apt-get install locales
+      run: sudo --preserve-env=http_proxy apt-get install locales
     - name: Ensure en_US.UTF-8 locale present
-      run: sudo locale-gen en_US.UTF-8
+      run: sudo --preserve-env=http_proxy locale-gen en_US.UTF-8
     - id: paths
       name: Query paths
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages query-paths --recursive --src-dir=. sapling  >> "$GITHUB_OUTPUT"
