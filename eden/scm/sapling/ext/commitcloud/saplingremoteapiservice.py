@@ -334,6 +334,19 @@ class SaplingRemoteAPIService(baseservice.BaseService):
 
         return versions
 
+    def cleanupworkspace(self, reponame, workspace):
+        """Cleanup unnecessary remote bookmarks from the given workspace"""
+        raise error.Abort(
+            "Unsupored oeration"
+        )  # TODO(lmvasquezg): Implement this or fully deprecate
+
+    def updatecheckoutlocations(
+        self, reponame, workspace, hostname, commit, checkoutpath, sharedpath, unixname
+    ):
+        raise error.Abort(
+            "Unsupored oeration"
+        )  # TODO(lmvasquezg): Implement this or fully deprecate
+
     def _castreferences(self, refs):
         """
         1. Create list of heads from head_dates data. Server may omit heads to reduce data transmission.
