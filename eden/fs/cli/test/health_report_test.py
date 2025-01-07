@@ -158,7 +158,7 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         self.assertEqual(
             HealthReportCmd.error_codes,
             {
-                HealthReportCmd.ErrorCode.EDEN_NOT_RUNNING: "Could not find EdenFS daemon pid.",
+                HealthReportCmd.ErrorCode.EDEN_NOT_RUNNING: "Failed to find EdenFS daemon pid",
             },
         )
 
@@ -252,7 +252,7 @@ class HealthReportTest(unittest.TestCase, TemporaryDirectoryMixin):
         self.assertEqual(
             HealthReportCmd.error_codes,
             {
-                HealthReportCmd.ErrorCode.INVALID_CERTS: "Couldn't validate x509 certificates."
+                HealthReportCmd.ErrorCode.INVALID_CERTS: "Failed to validate x509 certificates"
             },
         )
 

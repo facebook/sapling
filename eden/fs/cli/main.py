@@ -1220,11 +1220,11 @@ class HealthReportCmd(Subcmd):
 
         def description(self) -> str:
             descriptions = {
-                self.EDEN_NOT_RUNNING: "The EdenFS daemon is not running.",
+                self.EDEN_NOT_RUNNING: "The EdenFS daemon doesn't seem to be running.",
                 self.STALE_EDEN_VERSION: "The running EdenFS daemon is over 30 days out-of-date.",
-                self.INVALID_CERTS: "The EdenFS couldn't find a valid user certificate.",
-                self.NO_REPO_MOUNT_FOUND: "One or more checkouts are unmounted: ",
-                self.CHEF_NOT_RUNNING: "Chef is not running on your machine.",
+                self.INVALID_CERTS: "EdenFS couldn't find a valid user certificate.",
+                self.NO_REPO_MOUNT_FOUND: "One or more checkouts are identified as unmounted.",
+                self.CHEF_NOT_RUNNING: "Chef doesn't seem to be running on your machine.",
             }
             return descriptions[self]
 
@@ -1245,7 +1245,7 @@ class HealthReportCmd(Subcmd):
         health_info = instance.check_health()
         if not health_info.is_healthy():
             self.error_codes[HealthReportCmd.ErrorCode.EDEN_NOT_RUNNING] = (
-                "Could not find EdenFS daemon pid."
+                "Failed to find EdenFS daemon pid"
             )
             return False
 
@@ -1253,14 +1253,14 @@ class HealthReportCmd(Subcmd):
             self.running_version = instance.get_running_version()
         except EdenNotRunningError:
             self.error_codes[HealthReportCmd.ErrorCode.EDEN_NOT_RUNNING] = (
-                "Couldn't retrieve EdenFS running version."
+                "Failed to retrieve EdenFS running version"
             )
             return False
 
         self.version_info = version_mod.get_version_info(self.running_version)
         if not self.version_info.is_eden_running:
             self.error_codes[HealthReportCmd.ErrorCode.EDEN_NOT_RUNNING] = (
-                "Couldn't retrieve EdenFS running version."
+                "Failed to retrieve EdenFS running version"
             )
             return False
         return True
@@ -1284,7 +1284,7 @@ class HealthReportCmd(Subcmd):
             return True
         # cert error!
         self.error_codes[HealthReportCmd.ErrorCode.INVALID_CERTS] = (
-            "Couldn't validate x509 certificates."
+            "Failed to validate x509 certificates"
         )
         return False
 
@@ -1299,17 +1299,20 @@ class HealthReportCmd(Subcmd):
 
             if unmounted_repos:
                 self.error_codes[HealthReportCmd.ErrorCode.NO_REPO_MOUNT_FOUND] = (
-                    ", ".join(unmounted_repos)
+                    ", ".join(unmounted_repos) + " not mounted correctly"
                 )
                 return False
 
             return True
+
         except Exception as ex:
-            print(f"Couldn't retrieve EdenFS checkouts info.: {ex}", file=sys.stderr)
-            return True
+            self.error_codes[HealthReportCmd.ErrorCode.NO_REPO_MOUNT_FOUND] = " ".join(
+                ["Failed to retrieve EdenFS checkouts info: ", ex.args[0]]
+            )
+            return False
 
     def is_chef_running(self) -> bool:
-        """Examine the status of Chef."""
+        """Examine the status of Chef runs."""
         chef_log_path = get_chef_log_path(platform.system())
         if chef_log_path is None or chef_log_path == "":
             print(f"Skipping chef run check for platform {platform.system()}.")
@@ -1321,9 +1324,10 @@ class HealthReportCmd(Subcmd):
                 last_chef_run_sec = chef_log[CHEF_LOG_TIMESTAMP_KEY]
 
                 if not isinstance(last_chef_run_sec, (int, float)):
-                    raise ValueError(
-                        f"Invalid/missing timestamp in {CHEF_LOG_TIMESTAMP_KEY}"
+                    self.error_codes[HealthReportCmd.ErrorCode.CHEF_NOT_RUNNING] = (
+                        "Invalid/missing timestamp in " + CHEF_LOG_TIMESTAMP_KEY
                     )
+                    return False
 
                 last_chef_run = datetime.fromtimestamp(last_chef_run_sec)
 
@@ -1335,7 +1339,7 @@ class HealthReportCmd(Subcmd):
                     self.error_codes[HealthReportCmd.ErrorCode.CHEF_NOT_RUNNING] = (
                         "Last run was "
                         + str((ms_since_last_run / 3600000))
-                        + " hours ago."
+                        + " hours ago"
                     )
                     return False
                 return True
@@ -1362,7 +1366,9 @@ class HealthReportCmd(Subcmd):
         data = [
             {
                 "error": error_code.name,
-                "description": error_code.description() + error_additional_info,
+                "description": error_additional_info
+                + ". Possible causes: "
+                + error_code.description(),
             }
             for error_code, error_additional_info in HealthReportCmd.error_codes.items()
         ]
@@ -1389,11 +1395,12 @@ class HealthReportCmd(Subcmd):
                 )
             ):
                 exit_code = 1
-        except Exception as ex:
-            print(ex)
 
-        self.print_error_codes_json(out)
-        return exit_code
+            self.print_error_codes_json(out)
+            return exit_code
+
+        except Exception as ex:
+            raise Exception("Failed to run health report: " + str(ex))
 
 
 @subcmd("strace", "Monitor FUSE requests.")
