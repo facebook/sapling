@@ -202,8 +202,8 @@
       },
       {
         "command": "sapling.open-comments",
-        "key": "ctrl-shift-g",
-        "mac": "cmd-shift-g",
+        "key": "alt-shift-g",
+        "mac": "alt-shift-g",
         "when": "isl.inlineCommentSidePanelEnabled && activeWebviewPanelId != 'sapling.comments'"
       }
     ],
