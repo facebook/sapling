@@ -22,6 +22,7 @@ commit_graph_types = { version = "0.1.0", path = "../../repo_attributes/commit_g
 context = { version = "0.1.0", path = "../../server/context" }
 filestore = { version = "0.1.0", path = "../../filestore" }
 futures = { version = "0.3.30", features = ["async-await", "compat"] }
+futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 git_symbolic_refs = { version = "0.1.0", path = "../../git_symbolic_refs" }
 git_types = { version = "0.1.0", path = "../git_types" }
 gix-date = "0.9.2"
@@ -38,5 +39,6 @@ repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 rustc-hash = "1.1.0"
+scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 tempfile = "3.8"
 tokio = { version = "1.41.0", features = ["full", "test-util", "tracing"] }

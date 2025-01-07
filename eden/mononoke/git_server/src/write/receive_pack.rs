@@ -13,6 +13,7 @@ use cloned::cloned;
 use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures_stats::TimedTryFutureExt;
 use gotham::mime;
 use gotham::state::FromState;
 use gotham::state::State;
@@ -28,6 +29,7 @@ use packetline::encode::flush_to_write;
 use packetline::encode::write_text_packetline;
 use protocol::pack_processor::parse_pack;
 use repo_blobstore::RepoBlobstoreArc;
+use scuba_ext::FutureStatsScubaExt;
 use slog::info;
 
 use crate::command::Command;
@@ -87,15 +89,15 @@ async fn push<'a>(
             return reject_push(repo_name.as_str(), state, &push_args.ref_updates).await;
         }
         let (ctx, blobstore) = (
-            &request_context.ctx,
+            &request_context.ctx.clone_with_repo_name(&repo_name),
             request_context.repo.repo_blobstore_arc().clone(),
         );
-        info!(
-            request_context.ctx.logger(),
-            "Parsing packfile for repo {}", repo_name
-        );
+        let scuba = ctx.scuba().clone();
         // Parse the packfile provided as part of the push and verify that its valid
-        let parsed_objects = parse_pack(push_args.pack_file, ctx, blobstore.clone()).await?;
+        let parsed_objects = parse_pack(push_args.pack_file, ctx, blobstore.clone())
+            .try_timed()
+            .await?
+            .log_future_stats(scuba.clone(), "Parsed complete Packfile", None);
         // Generate the GitObjectStore using the parsed objects
         let object_store = Arc::new(GitObjectStore::new(parsed_objects, ctx, blobstore.clone()));
         // Instantiate the LFS configuration
@@ -118,10 +120,6 @@ async fn push<'a>(
         } else {
             GitImportLfs::new_disabled()
         };
-        info!(
-            request_context.ctx.logger(),
-            "Uploading packfile objects for repo {}", repo_name
-        );
         // Upload the objects corresponding to the push to the underlying store
         let ref_map = upload_objects(
             ctx,
@@ -130,34 +128,36 @@ async fn push<'a>(
             &push_args.ref_updates,
             lfs,
         )
-        .await?;
-        info!(
-            request_context.ctx.logger(),
-            "Uploaded packfile objects for repo {}. Sending PACK_OK to the client", repo_name
+        .try_timed()
+        .await?
+        .log_future_stats(
+            scuba.clone(),
+            "GitImport, Derivation and Bonsai creation completed",
+            None,
         );
+
         // We were successful in parsing the pack and uploading the objects to underlying store. Indicate this to the client
-        write_text_packetline(PACK_OK, &mut output).await?;
+        write_text_packetline(PACK_OK, &mut output)
+            .try_timed()
+            .await?
+            .log_future_stats(scuba.clone(), "Sent Packfile OK", None);
         // Create bonsai_git_mapping store to enable mapping lookup during bookmark movement
         let git_bonsai_mapping_store = Arc::new(GitMappingsStore::new(
             ctx,
             request_context.repo.bonsai_git_mapping_arc(),
             ref_map,
         ));
-        info!(
-            request_context.ctx.logger(),
-            "Updating refs for repo {}", repo_name
-        );
+
         let updated_refs = refs_update(
             &push_args,
             request_context.clone(),
             git_bonsai_mapping_store.clone(),
             object_store.clone(),
         )
-        .await?;
-        info!(
-            request_context.ctx.logger(),
-            "Updated refs for repo {}. Sending ref update status to the client", repo_name
-        );
+        .try_timed()
+        .await?
+        .log_future_stats(scuba.clone(), "Bookmark movement completed", None);
+
         let mut validation_errors = PushValidationErrors::default();
         // For each ref, update the status as ok or ng based on the result of the bookmark set operation
         for (updated_ref, result) in updated_refs {

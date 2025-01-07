@@ -21,6 +21,7 @@ use data::entry::Header::RefDelta;
 use futures::stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures_stats::TimedTryFutureExt;
 use git_types::fetch_git_object_bytes;
 use git_types::GitIdentifier;
 use git_types::HeaderState;
@@ -40,6 +41,7 @@ use mononoke_types::hash::GitSha1;
 use packfile::types::BaseObject;
 use repo_blobstore::RepoBlobstore;
 use rustc_hash::FxHashMap;
+use scuba_ext::FutureStatsScubaExt;
 use tempfile::Builder;
 
 use crate::PACKFILE_SUFFIX;
@@ -151,21 +153,32 @@ async fn parse_stored_pack(
     ctx: &CoreContext,
     blobstore: Arc<RepoBlobstore>,
 ) -> Result<FxHashMap<ObjectId, ObjectContent>> {
-    let pack_file = File::at(pack_path, Kind::Sha1).with_context(|| {
+    let pack_file = Arc::new(File::at(pack_path, Kind::Sha1).with_context(|| {
         format!(
             "Error while opening packfile for push at {}",
             pack_path.display()
         )
-    })?;
+    })?);
     // Verify that the packfile is valid
-    pack_file
-        .verify_checksum(&mut Discard, &AtomicBool::new(false))
-        .context("The checksum of the packfile is invalid")?;
+    tokio::task::spawn_blocking({
+        let pack_file = pack_file.clone();
+        move || {
+            pack_file
+                .verify_checksum(&mut Discard, &AtomicBool::new(false))
+                .context("The checksum of the packfile is invalid")
+        }
+    })
+    .try_timed()
+    .await?
+    .log_future_stats(ctx.scuba().clone(), "Verified Packfile Checksum", None)?;
 
     // Load all the prerequisite objects
-    let prereq_objects = fetch_prereq_objects(&pack_file, ctx, blobstore.clone()).await?;
+    let prereq_objects = fetch_prereq_objects(&pack_file, ctx, blobstore.clone())
+        .try_timed()
+        .await?
+        .log_future_stats(ctx.scuba().clone(), "Fetched Prerequisite Objects", None);
 
-    stream::iter(
+    let parsed_objects = stream::iter(
         pack_file
             .streaming_iter()
             .context("Failure in iterating packfile")?,
@@ -200,5 +213,9 @@ async fn parse_stored_pack(
         Err(e) => anyhow::bail!("Failure in iterating packfile entry: {:?}", e),
     })
     .try_collect::<FxHashMap<_, _>>()
-    .await
+    .try_timed()
+    .await?
+    .log_future_stats(ctx.scuba().clone(), "Decoded objects from Packfile", None);
+
+    Ok(parsed_objects)
 }
