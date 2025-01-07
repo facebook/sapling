@@ -334,7 +334,6 @@ impl HookManager {
                     .hooks
                     .get(hook_name)
                     .ok_or_else(|| HookManagerError::NoSuchHook(hook_name.to_string()))?;
-                scuba.add("hook", hook_name.to_string());
                 Ok((hook_name, hook))
             })
             // Collapse out if an error happened
@@ -351,6 +350,7 @@ impl HookManager {
                     .filter(|cs| log_if_bypassed_by_commit_msg(&scuba, hook, cs))
                     .collect::<Vec<_>>();
                 cloned!(mut scuba);
+                scuba.add("hook", hook_name.to_string());
                 hook.get_futures_for_changeset_or_file_hooks(
                     ctx,
                     bookmark,
