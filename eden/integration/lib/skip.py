@@ -103,7 +103,6 @@ if sys.platform == "win32":
         ],
         "unixsocket_test.UnixSocketTestHg": True,
         "userinfo_test.UserInfoTest": True,
-
         #
         # Test classes from the hg integration test binary
         #
@@ -135,7 +134,7 @@ if sys.platform == "win32":
         "hg.update_test.UpdateCacheInvalidationTest": [
             "test_changing_file_contents_creates_new_inode_and_flushes_dcache",
             # Similar to above, this test is marked flaky on the TestX UI. To avoid
-        # the FilteredFS mixin showing up as broken, we skip it altogether.
+            # the FilteredFS mixin showing up as broken, we skip it altogether.
             "test_file_locked_removal",
         ],
         "hg.update_test.UpdateTest": [
@@ -344,7 +343,7 @@ def _have_ntapi_extension_module() -> bool:
         return False
 
     try:
-        from eden.integration.lib.ntapi import (  # @manual  # @nolint
+        from eden.integration.lib.ntapi import (  # @manual  # noqa: F401
             get_directory_entry_size,
         )
 
@@ -404,7 +403,7 @@ if sys.platform.startswith("linux"):
         ],
     }
 
-    for (testModule, disabled) in NFS_TEST_DISABLED.items():
+    for testModule, disabled in NFS_TEST_DISABLED.items():
         for vcs in ["Hg", "Git"]:
             TEST_DISABLED[testModule + "NFS" + vcs] = disabled
 
@@ -458,7 +457,7 @@ except ImportError:
 # We temporarily need to add skips for FilteredFS mixins. Do not add FilteredFS
 # specific skips here. Add them below to FILTERED_TEST_DISABLED instead.
 FILTEREDFS_PARITY = {}
-for (class_name, value_name) in TEST_DISABLED.items():
+for class_name, value_name in TEST_DISABLED.items():
     if class_name.endswith("Hg"):
         FILTEREDFS_PARITY[class_name.replace("Hg", "FilteredHg")] = value_name
     elif not class_name.endswith("FilteredHg") and not class_name.endswith("Git"):
@@ -480,7 +479,7 @@ FILTEREDFS_TEST_DISABLED = {
         "test_disallow_bind_mount_outside_repo",
     ],
 }
-for (testModule, disabled) in FILTEREDFS_TEST_DISABLED.items():
+for testModule, disabled in FILTEREDFS_TEST_DISABLED.items():
     # We should add skips for all combinations of FilteredHg mixins.
     other_mixins = ["", "NFS"] if sys.platform != "win32" else ["", "InMemory"]
     for mixin in other_mixins:
