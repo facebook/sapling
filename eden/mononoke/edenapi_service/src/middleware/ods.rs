@@ -16,6 +16,10 @@ use hyper::Response;
 use hyper::StatusCode;
 use permission_checker::MononokeIdentitySetExt;
 use stats::prelude::*;
+#[cfg(fbcode_build)]
+use MononokeEdenapiRequest_ods3::Instrument_MononokeEdenapiRequest;
+#[cfg(fbcode_build)]
+use MononokeEdenapiRequest_ods3_types::MononokeEdenapiRequest;
 
 use crate::handlers::HandlerInfo;
 use crate::handlers::SaplingRemoteApiMethod;
@@ -86,6 +90,9 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
     let hander_info = state.try_borrow::<HandlerInfo>()?;
     let method = hander_info.method?;
 
+    #[cfg(fbcode_build)]
+    let instrument = Instrument_MononokeEdenapiRequest::new();
+
     let callbacks = state.try_borrow_mut::<PostResponseCallbacks>()?;
 
     callbacks.add(move |info| {
@@ -93,6 +100,7 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
             let dur_ms = duration.as_millis() as i64;
 
             use SaplingRemoteApiMethod::*;
+            // Log the duration of the request on ODS1
             match method {
                 AlterSnapshot => STATS::alter_snapshot_duration_ms.add_value(dur_ms),
                 Blame => STATS::blame_duration_ms.add_value(dur_ms),
@@ -150,6 +158,14 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
                 }
                 UploadTrees => STATS::upload_trees_duration_ms.add_value(dur_ms),
             }
+
+            #[cfg(fbcode_build)]
+            // Log the duration of the request on ODS3
+            instrument.observe(MononokeEdenapiRequest {
+                edenapi_method: Some(method.to_string()),
+                duration_ms: Some(dur_ms as f64),
+                ..Default::default()
+            });
         }
 
         let method = method.to_string();
