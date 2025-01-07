@@ -56,7 +56,7 @@
   $ cd "$TESTTMP"
   $ with_stripped_logs gitimport "$GIT_REPO" --derive-hg full-repo
   using repo "repo" repoid RepositoryId(0)
-  GitRepo:$TESTTMP/repo-git commit 2 of 2 - Oid:69a26531 => Bid:1213979c
+  GitRepo:$TESTTMP/repo-git commit 2 of 2 - Oid:69a26531 => Bid:1213979c* (glob)
   Hg: Sha1(8ce3eae44760b500bf3f2c3922a95dcd3c908e9e): HgManifestId(HgNodeHash(Sha1(009adbc8d457927d2e1883c08b0692bc45089839)))
   Hg: Sha1(69a265312a2c29cdf5667ff401d895a66e6ac02a): HgManifestId(HgNodeHash(Sha1(009adbc8d457927d2e1883c08b0692bc45089839)))
   Ref: "refs/heads/another_committer": Some(ChangesetId(Blake2(1213979c6023f23e70dbe8845d773078ac1e0506bc2ab98382a329da0cb379a7)))

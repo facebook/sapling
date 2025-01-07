@@ -15,7 +15,7 @@ Use common repo setup
 Git Import
   $ with_stripped_logs gitimport "$GIT_REPO_SERVER" --generate-bookmarks --concurrency 100 --derive-hg full-repo
   using repo "repo" repoid RepositoryId(0)
-  GitRepo:$TESTTMP/repo-git-server commit 3 of 3 - Oid:c13a0ad2 => Bid:63ca8c6f
+  GitRepo:$TESTTMP/repo-git-server commit 3 of 3 - Oid:c13a0ad2 => Bid:63ca8c6f* (glob)
   Hg: Sha1(cd1f06e78e52e64d693fe02d19cf3a427ab1c7f4): HgManifestId(HgNodeHash(Sha1(0ed5ff2a892144296f5abaca61b5759c7f69b551)))
   Hg: Sha1(ec907399950a922e347f484167d9597485acf6a3): HgManifestId(HgNodeHash(Sha1(a754e6297b9438be3c3463bd07f635a7bb26eb39)))
   Hg: Sha1(c13a0ad234813977286c5827533de22af7f04fc5): HgManifestId(HgNodeHash(Sha1(8c3afe88bfee82fe7eaa26c061875ce6395f9a98)))

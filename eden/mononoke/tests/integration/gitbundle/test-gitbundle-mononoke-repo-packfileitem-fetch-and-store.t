@@ -79,7 +79,7 @@
   $ cd "$TESTTMP"
   $ with_stripped_logs gitimport "$GIT_REPO" --generate-bookmarks full-repo
   using repo "repo" repoid RepositoryId(0)
-  GitRepo:$TESTTMP/repo-git commit 7 of 7 - Oid:e460783b => Bid:73a90516
+  GitRepo:$TESTTMP/repo-git commit 7 of 7 - Oid:e460783b => Bid:73a90516, repo: $TESTTMP/repo-git
   Ref: "refs/heads/dev_branch": Some(ChangesetId(Blake2(*))) (glob)
   Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(*))) (glob)
   Ref: "refs/heads/test_branch": Some(ChangesetId(Blake2(*))) (glob)

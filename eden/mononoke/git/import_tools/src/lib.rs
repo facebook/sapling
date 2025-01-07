@@ -40,6 +40,7 @@ use futures::Stream;
 use futures::StreamExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
+use futures_stats::TimedTryFutureExt;
 use git_symbolic_refs::GitSymbolicRefsEntry;
 pub use git_types::git_lfs::LfsPointerData;
 use gix_hash::ObjectId;
@@ -50,6 +51,7 @@ use manifest::BonsaiDiffFileChange;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
+use scuba_ext::FutureStatsScubaExt;
 use slog::debug;
 use slog::info;
 use sorted_vector_map::SortedVectorMap;
@@ -361,7 +363,8 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
     let dry_run = prefs.dry_run;
     let backfill_derivation = prefs.backfill_derivation.clone();
     let acc = Arc::new(acc);
-
+    let ctx = &ctx.clone_with_repo_name(&repo_name);
+    let scuba = ctx.scuba().clone();
     // How many commits to query from bonsai git mapping per SQL query.
     const SQL_CONCURRENCY: usize = 10_000;
     let mappings: Vec<(ObjectId, ChangesetId)> = stream::iter(all_commits.clone())
@@ -378,7 +381,13 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
         })
         .buffered(prefs.concurrency)
         .try_collect::<Vec<_>>()
+        .try_timed()
         .await?
+        .log_future_stats(
+            scuba.clone(),
+            "Prefetched existing BonsaiGit Mappings",
+            None,
+        )
         .into_iter()
         .flatten()
         .collect::<Vec<_>>();
@@ -404,13 +413,30 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
     let (finalize_sender, mut finalize_receiver) = mpsc::channel(prefs.concurrency);
     // Spawn off an async consumer that would finalize batches of commits which have been imported into Mononoke
     let batch_finalizer = tokio::spawn({
-        cloned!(backfill_derivation, ctx, acc, uploader, repo_name, count,);
+        cloned!(
+            backfill_derivation,
+            ctx,
+            acc,
+            uploader,
+            repo_name,
+            count,
+            scuba
+        );
         async move {
             while let Some(incoming) = finalize_receiver.recv().await {
-                cloned!(backfill_derivation, ctx, acc, uploader, repo_name, count);
+                cloned!(
+                    backfill_derivation,
+                    ctx,
+                    acc,
+                    uploader,
+                    repo_name,
+                    count,
+                    mut scuba
+                );
                 async move {
                     let finalized_chunk_res = uploader
                         .finalize_batch(&ctx, dry_run, backfill_derivation, incoming, &acc)
+                        .try_timed()
                         .await
                         .context("finalize_batch");
                     let finalized_chunk = match finalized_chunk_res {
@@ -419,7 +445,11 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
                             info!(ctx.logger(), "{:?}", e);
                             anyhow::bail!(e);
                         }
-                        Ok(chunk) => chunk,
+                        Ok((stats, chunk)) => {
+                            scuba.add_future_stats(&stats);
+                            scuba.log_with_msg("Completed Finalize Batch", None);
+                            chunk
+                        }
                     };
                     let processed_count = finalized_chunk.len();
                     // Only log progress after every batch to avoid log-spew and wasted time
@@ -448,7 +478,7 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
     // Spawn off an async consumer that would generate bonsai commits for Git commits that have had their Git data and file changes uploaded
     // to Mononoke
     let bonsai_creator = tokio::spawn({
-        cloned!(ctx, uploader, acc);
+        cloned!(ctx, uploader, acc, mut scuba);
         let concurrency = prefs.concurrency;
         async move {
             let mut batch_buffer = Vec::with_capacity(concurrency);
@@ -463,6 +493,7 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
                         &acc,
                         dry_run,
                     )
+                    .try_timed()
                     .await
                     .context("generate_changeset_for_commit");
                 let int_cs = match int_cs_result {
@@ -471,7 +502,11 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
                         info!(ctx.logger(), "{:?}", e);
                         anyhow::bail!(e);
                     }
-                    Ok(int_cs) => int_cs,
+                    Ok((stats, int_cs)) => {
+                        scuba.add_future_stats(&stats);
+                        scuba.log_with_msg("Created Bonsai Changeset for Git Commit", None);
+                        int_cs
+                    }
                 };
                 let git_sha1 = oid_to_sha1(&oid)?;
                 batch_buffer.push((git_sha1, int_cs));
@@ -565,7 +600,16 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
             }
         })
         .try_buffered(prefs.concurrency);
-    while let Some((extracted_commit, file_changes)) = commits_with_file_changes.try_next().await? {
+    while let Some((extracted_commit, file_changes)) = commits_with_file_changes
+        .try_next()
+        .try_timed()
+        .await?
+        .log_future_stats(
+            scuba.clone(),
+            "Uploaded Content Blob, Git Blob, Commits and Trees",
+            None,
+        )
+    {
         bonsai_sender
             .send((extracted_commit, file_changes))
             .await

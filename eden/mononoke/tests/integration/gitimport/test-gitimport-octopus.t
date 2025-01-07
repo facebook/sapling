@@ -49,7 +49,7 @@
   $ cd "$TESTTMP"
   $ with_stripped_logs gitimport "$GIT_REPO" full-repo
   using repo "repo" repoid RepositoryId(0)
-  GitRepo:$TESTTMP/repo-git commit 5 of 5 - Oid:207fa6e3 => Bid:cc6482da
+  GitRepo:$TESTTMP/repo-git commit 5 of 5 - Oid:207fa6e3 => Bid:cc6482da* (glob)
   Ref: "refs/heads/branch1": Some(ChangesetId(Blake2(7db05defca4d86fbafe97460d971c74fcb571da08f921252990831d86816ab5f)))
   Ref: "refs/heads/branch2": Some(ChangesetId(Blake2(3f6085be18c9325ed283c4b4f766737470a243e00f7236db58e48ab918410d45)))
   Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(cc6482da2d0514725c8e52d064f83963dfbc3b4f7d6bee8e90cc21e2dd555f7d)))
