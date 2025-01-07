@@ -11,6 +11,7 @@ use anyhow::Result;
 use blobstore::Loadable;
 use bytes::Bytes;
 use bytes::BytesMut;
+use cloned::cloned;
 use context::CoreContext;
 use edenapi_service::utils::to_hg_path;
 use edenapi_types::commit::BonsaiExtra;
@@ -158,7 +159,7 @@ pub fn to_identical_changeset(
             .collect(),
     };
 
-    let bonsai_parents = BonsaiParents::from_iter(parents.iter().map(|p| (*p).into()));
+    let bonsai_parents = BonsaiParents::from_iter(parents.clone().iter().map(|p| (*p).into()));
 
     // Ensure items are indeed equivalent between bonsai and hg changeset
     ensure!(author.as_bytes() == hg_cs.user(), "Author mismatch");
@@ -188,7 +189,7 @@ pub fn to_identical_changeset(
                 value: value.to_vec(),
             })
             .collect(),
-        file_changes: to_file_change(&file_changes, bcs.parents())?,
+        file_changes: to_file_change(&file_changes, parents.iter().copied())?,
         message: message.to_string(),
         is_snapshot,
         hg_info,
@@ -197,7 +198,7 @@ pub fn to_identical_changeset(
 
 fn to_file_change(
     map: &SortedVectorMap<NonRootMPath, FileChange>,
-    mut parents: impl Iterator<Item = ChangesetId>,
+    parents: impl Iterator<Item = ChangesetId> + Clone,
 ) -> Result<Vec<(RepoPathBuf, BonsaiFileChange)>> {
     let res = map
         .into_iter()
@@ -216,9 +217,10 @@ fn to_file_change(
                     file_type: tc.file_type().try_into()?,
                     copy_info: match tc.copy_from() {
                         Some((path, cs_id)) => {
-                            let index = parents.position(|parent| parent == *cs_id).ok_or(
-                                anyhow::anyhow!("Error: Copy from info doesn't match parents"),
-                            )?;
+                            cloned!(mut parents);
+                            let index = parents
+                                .position(|parent| parent == *cs_id)
+                                .ok_or(anyhow::anyhow!("Copy from info doesn't match parents"))?;
                             Some((to_hg_path(path)?, index))
                         }
                         None => None,
