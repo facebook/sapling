@@ -318,6 +318,9 @@ function SingleAbsorbEdit(props: {edit: AbsorbEdit; inDraggingOverlay?: boolean}
         try {
           newStack = stack.setAbsorbEditDestination(fileStackIndex, absorbEditId, rev);
           writeAtom(draggingHint, null);
+          // `handleDrag` won't be updated with "refreshed" `stackEdit`.
+          // So `push` can work like `replaceTopOperation` while dragging.
+          stackEdit.push(newStack, {name: 'absorbMove', commit});
         } catch {
           writeAtom(
             draggingHint,
@@ -325,11 +328,6 @@ function SingleAbsorbEdit(props: {edit: AbsorbEdit; inDraggingOverlay?: boolean}
               'Diff chunk can only be applied to commits that modify the file and has the context lines introduced earlier.',
             ),
           );
-        }
-        if (isDragging == null) {
-          stackEdit.push(newStack, {name: 'absorbMove', commit});
-        } else {
-          stackEdit.replaceTopOperation(newStack, {name: 'absorbMove', commit});
         }
       }
     } else {
