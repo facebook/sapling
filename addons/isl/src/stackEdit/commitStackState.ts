@@ -563,7 +563,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
    * bottom is immutable (public()).
    */
   analyseAbsorb(): CommitStackState {
-    const stack = this.maybeBuildFileStacks();
+    const stack = this.useFileStack();
     const wdirCommitRev = stack.stack.size - 1;
     assert(wdirCommitRev > 0, 'stack cannot be empty');
     let newFileStacks = stack.fileStacks;
@@ -839,8 +839,13 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     });
   }
 
-  /** Build file stacks if it's not present. */
-  maybeBuildFileStacks(opts?: BuildFileStackOptions): CommitStackState {
+  /**
+   * Build file stacks if it's not present.
+   * This is part of the `useFileStack` implementation detail.
+   * It does not ensure the file stack references are actually used for `getFile`.
+   * For public API, use `useFileStack` instead.
+   */
+  private maybeBuildFileStacks(opts?: BuildFileStackOptions): CommitStackState {
     return this.fileStacks.size === 0 ? this.buildFileStacks(opts) : this;
   }
 
@@ -914,7 +919,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
    * its content to `22` and commit C deleted `z.txt`.
    */
   describeFileStacks(showContent = true): string[] {
-    const state = this.maybeBuildFileStacks();
+    const state = this.useFileStack();
     const fileToCommit = state.fileToCommit;
     const stack = state.stack;
     const hasAbsorb = state.hasPendingAbsorb();
@@ -1080,7 +1085,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
    */
   calculateDepMap = cachedMethod(this.calculateDepMapImpl, {cache: calculateDepMapCache});
   private calculateDepMapImpl(): Readonly<Map<Rev, Set<Rev>>> {
-    const state = this.maybeBuildFileStacks();
+    const state = this.useFileStack();
     const depMap = new Map<Rev, Set<Rev>>(state.stack.map(c => [c.rev, new Set()]));
 
     const fileIdxRevToCommitRev = (fileIdx: FileStackIndex, fileRev: Rev): Rev =>
@@ -1369,7 +1374,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
    * If `order` is `this.revs()` then no reorder is done.
    */
   canReorder(order: Rev[]): boolean {
-    const state = this.maybeBuildFileStacks();
+    const state = this.useFileStack();
     if (!state.isStackLinear()) {
       return false;
     }
