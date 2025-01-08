@@ -399,6 +399,10 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
    *   Under the hood, this changes the "goto" to "reset".
    * - rewriteDate: if set, the unix timestamp (in seconds) for newly
    *   created commits.
+   * - skipWdir: if set, skip changes for the wdir() virtual commit.
+   *   This is desirable for operations like absorb, or "amend --to",
+   *   where the working copy is expected to stay unchanged regardless
+   *   of the current partial/chunk selection.
    *
    * Example use-cases:
    * - Editing a stack (clean working copy): goto = origCurrentHash
@@ -409,6 +413,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     goto?: Rev | Hash;
     preserveDirtyFiles?: boolean;
     rewriteDate?: number;
+    skipWdir?: boolean;
   }): ImportStack {
     // Resolve goto to a Rev.
     // Special case: if it's at the old stack top, use the new stack top instead.
@@ -428,8 +433,11 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     });
 
     // Figure out what commits are changed.
-    const changedCommits: CommitState[] =
+    let changedCommits: CommitState[] =
       firstChangedRev < 0 ? [] : state.stack.slice(firstChangedRev).toArray();
+    if (opts?.skipWdir) {
+      changedCommits = changedCommits.filter(c => !c.originalNodes.contains(WDIR_NODE));
+    }
     const changedRevs: Set<Rev> = new Set(changedCommits.map(c => c.rev));
     const revToMark = (rev: Rev): Mark => `:r${rev}`;
     const revToMarkOrHash = (rev: Rev): Mark | Hash => {
@@ -482,7 +490,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
         date: [opts?.rewriteDate ?? commit.date.unix, commit.date.tz],
         text,
         parents: commit.parents.toArray().map(revToMarkOrHash),
-        predecessors: commit.originalNodes.toArray(),
+        predecessors: commit.originalNodes.toArray().filter(n => n !== WDIR_NODE),
         files: newFiles,
       };
       return ['commit', importCommit];

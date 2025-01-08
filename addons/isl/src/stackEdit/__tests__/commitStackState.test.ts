@@ -8,6 +8,7 @@
 import type {Rev} from '../fileStackState';
 import type {ExportCommit, ExportStack} from 'shared/types/stack';
 
+import {WDIR_NODE} from '../../dag/virtualCommit';
 import {
   ABSENT_FILE,
   CommitIdx,
@@ -802,6 +803,45 @@ describe('CommitStackState', () => {
         ['commit', {date: [40, 0], text: 'C'}],
         ['commit', {date: [40, 0], text: 'B'}],
       ]);
+    });
+
+    it('optionally skips wdir()', () => {
+      const stack = new CommitStackState([
+        {
+          ...exportCommitDefault,
+          files: {
+            'x.txt': {data: '11'},
+          },
+          node: WDIR_NODE,
+          parents: [],
+          text: 'Temp commit',
+        },
+      ]).setFile(0, 'x.txt', f => f.set('data', '22'));
+      expect(stack.calculateImportStack()).toMatchInlineSnapshot(`
+        [
+          [
+            "commit",
+            {
+              "author": "test <test@example.com>",
+              "date": [
+                0,
+                0,
+              ],
+              "files": {
+                "x.txt": {
+                  "data": "22",
+                  "flags": "",
+                },
+              },
+              "mark": ":r0",
+              "parents": [],
+              "predecessors": [],
+              "text": "Temp commit",
+            },
+          ],
+        ]
+      `);
+      expect(stack.calculateImportStack({skipWdir: true})).toMatchInlineSnapshot(`[]`);
     });
   });
 
