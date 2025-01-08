@@ -8,6 +8,7 @@
 //! Recursively fetch the contents of a directory.
 
 use std::borrow::Cow;
+use std::future;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
@@ -19,17 +20,26 @@ use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use bytesize::ByteSize;
+use cloned::cloned;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::pin_mut;
 use futures::stream;
+use futures::stream::BoxStream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use futures::TryFutureExt;
 use scs_client_raw::thrift;
 use scs_client_raw::ScsClient;
+use source_control::FileChunk;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::AsyncWriteExt;
+use tokio::io::BufWriter;
+use tokio::sync::mpsc;
+use tokio_stream::wrappers::ReceiverStream;
+use tokio_util::compat::Compat;
+use tokio_util::compat::TokioAsyncWriteCompatExt;
 
 use crate::args::commit_id::resolve_commit_id;
 use crate::args::commit_id::CommitIdArgs;
@@ -47,8 +57,27 @@ const TREE_CHUNK_SIZE: i64 = source_control::TREE_LIST_MAX_LIMIT;
 const FILE_CHUNK_SIZE: i64 = source_control::FILE_CONTENT_CHUNK_RECOMMENDED_SIZE;
 
 /// Number of concurrent fetches.
-const CONCURRENT_TREE_FETCHES: usize = 4;
-const CONCURRENT_FILE_FETCHES: usize = 4;
+const CONCURRENT_TREE_FETCHES: usize = 10;
+/// How many chunks for single file to buffer ahead.
+const WRITER_CHUNK_BUFFER_SIZE: usize = 5;
+/// How many file handles to buffer when traversing the tree.
+const READY_TO_DOWNLOAD_FILE_STREAM_BUFFER_SIZE: usize = 100;
+/// How many download chunks to buffer ahead.
+const DOWNLOADER_OUTPUT_CHUNK_BUFFER_SIZE: usize = 25;
+/// How many files can be written concurrently to disk.
+const CONCURRENT_FILE_WRITES: usize = 30;
+
+type Archive = async_tar::Builder<Compat<tokio::fs::File>>;
+
+#[derive(Clone)]
+struct FileMetadata {
+    size: u64,
+    path: PathBuf,
+    entry_type: thrift::EntryType,
+}
+
+type FileSender =
+    mpsc::Sender<BoxStream<'static, BoxFuture<'static, anyhow::Result<(FileMetadata, FileChunk)>>>>;
 
 #[derive(clap::Parser)]
 /// Recursively fetch the contents of a directory
@@ -76,6 +105,12 @@ pub(super) struct CommandArgs {
     #[clap(long)]
     /// Perform additional requests to try for case insensitive matches
     case_insensitive: bool,
+    #[clap(long)]
+    /// Rather than downloading to a directory, create a tar archive
+    tar: bool,
+    /// Concurrent file fetches (multiply by 50MB to get extra memory footprint)
+    #[clap(long, default_value_t = 40)]
+    concurrent_file_fetches: usize,
 }
 
 /// Returns a stream of the names of the entries in a single directory `path`.
@@ -147,6 +182,13 @@ impl Casefold {
             Casefold::Insensitive => s.into().to_lowercase().into(),
         }
     }
+}
+
+/// Whether to create dirs at destination
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+enum CreateDirs {
+    Yes,
+    No,
 }
 
 /// Returns an arbitrary case insensitive match of `subpath` within the (case
@@ -246,6 +288,7 @@ fn join_path(path: &str, elem: &str) -> String {
 
 fn export_tree_entry(
     path: &str,
+    tx: FileSender,
     destination: &Path,
     entry: thrift::TreeEntry,
 ) -> Result<ExportItem> {
@@ -253,12 +296,14 @@ fn export_tree_entry(
         thrift::EntryInfo::tree(info) => Ok(ExportItem::Tree {
             path: join_path(path, &entry.name),
             id: info.id,
+            tx,
             destination: destination.join(&entry.name),
             filter: None,
         }),
         thrift::EntryInfo::file(info) => Ok(ExportItem::File {
             path: join_path(path, &entry.name),
             id: info.id,
+            tx,
             destination: destination.join(&entry.name),
             size: info.file_size as u64,
             type_: entry.r#type,
@@ -271,6 +316,7 @@ fn export_tree_entry(
 
 fn export_filtered_tree_entry(
     path: &str,
+    tx: FileSender,
     destination: &Path,
     entry: thrift::TreeEntry,
     filter: &mut PathTree,
@@ -286,6 +332,7 @@ fn export_filtered_tree_entry(
             Ok(Some(ExportItem::Tree {
                 path: join_path(path, &entry.name),
                 id: info.id,
+                tx,
                 destination: destination.join(&entry.name),
                 filter: subfilter,
             }))
@@ -294,6 +341,7 @@ fn export_filtered_tree_entry(
         (Some(PathItem::Target), thrift::EntryInfo::file(info)) => Ok(Some(ExportItem::File {
             path: join_path(path, &entry.name),
             id: info.id,
+            tx,
             destination: destination.join(&entry.name),
             size: info.file_size as u64,
             type_: entry.r#type,
@@ -307,11 +355,15 @@ async fn export_tree(
     repo: thrift::RepoSpecifier,
     path: String,
     id: Vec<u8>,
+    tx: FileSender,
     destination: PathBuf,
     filter: Option<PathTree>,
     casefold: Casefold,
+    create_dirs: CreateDirs,
 ) -> Result<Vec<ExportItem>> {
-    tokio::fs::create_dir(&destination).await?;
+    if create_dirs == CreateDirs::Yes {
+        tokio::fs::create_dir(&destination).await?;
+    }
     let tree = thrift::TreeSpecifier::by_id(thrift::TreeIdSpecifier {
         repo,
         id,
@@ -351,8 +403,15 @@ async fn export_tree(
             .chain(other_tree_chunks)
             .flatten()
             .filter_map(|entry| {
-                export_filtered_tree_entry(&path, &destination, entry, &mut filter, casefold)
-                    .transpose()
+                export_filtered_tree_entry(
+                    &path,
+                    tx.clone(),
+                    &destination,
+                    entry,
+                    &mut filter,
+                    casefold,
+                )
+                .transpose()
             })
             .collect::<Result<_, _>>()?
     } else {
@@ -360,7 +419,7 @@ async fn export_tree(
             .into_iter()
             .chain(other_tree_chunks)
             .flatten()
-            .map(|entry| export_tree_entry(&path, &destination, entry))
+            .map(|entry| export_tree_entry(&path, tx.clone(), &destination, entry))
             .collect::<Result<_, _>>()?
     };
     Ok(output)
@@ -370,70 +429,60 @@ async fn export_file(
     connection: ScsClient,
     repo: thrift::RepoSpecifier,
     id: Vec<u8>,
+    tx: FileSender,
     destination: PathBuf,
     size: u64,
-    type_: thrift::EntryType,
-    bytes_written: &Arc<AtomicU64>,
+    _type_: thrift::EntryType,
 ) -> Result<()> {
     let file = thrift::FileSpecifier::by_id(thrift::FileIdSpecifier {
         repo,
         id,
         ..Default::default()
     });
-    let mut responses = stream::iter((0..size).step_by(FILE_CHUNK_SIZE as usize))
-        .map({
-            move |offset| {
-                let params = thrift::FileContentChunkParams {
-                    offset: offset as i64,
-                    size: FILE_CHUNK_SIZE,
-                    ..Default::default()
-                };
-                connection.file_content_chunk(&file, &params)
-            }
-        })
-        .buffered(CONCURRENT_FILE_FETCHES);
-
-    #[cfg(unix)]
-    {
-        if type_ == thrift::EntryType::LINK {
-            use std::ffi::OsStr;
-            use std::os::unix::ffi::OsStrExt;
-            let mut target = Vec::new();
-            while let Some(response) = responses.try_next().await? {
-                target.extend_from_slice(response.data.as_slice());
-            }
-            tokio::fs::symlink(OsStr::from_bytes(target.as_slice()), &destination).await?;
-            bytes_written.fetch_add(size, Ordering::Relaxed);
-            return Ok(());
-        }
-    }
-
-    let mut out_file = tokio::fs::File::create(&destination).await?;
-    while let Some(response) = responses.try_next().await? {
-        let len = response.data.len() as u64;
-        out_file.write_all(&response.data).await?;
-        bytes_written.fetch_add(len, Ordering::Relaxed);
-    }
-
-    #[cfg(unix)]
-    {
-        if type_ == thrift::EntryType::EXEC {
-            // Tokio doesn't support setting permissions yet, so we must use
-            // the standard library.
-            use std::os::unix::fs::PermissionsExt;
-            let out_file = out_file.into_std().await;
-            tokio::task::spawn_blocking(move || {
-                let metadata = out_file.metadata()?;
-                let mut permissions = metadata.permissions();
-                let mode = permissions.mode();
-                // Propagate read permissions to execute permissions.
-                permissions.set_mode(mode | ((mode & 0o444) >> 2));
-                std::fs::set_permissions(&destination, permissions)?;
-                anyhow::Ok(())
+    let file_metadata = FileMetadata {
+        size,
+        path: destination.clone(),
+        entry_type: _type_,
+    };
+    let responses = if size > 0 {
+        stream::iter((0..size).step_by(FILE_CHUNK_SIZE as usize))
+            .map({
+                move |offset| {
+                    let params = thrift::FileContentChunkParams {
+                        offset: offset as i64,
+                        size: FILE_CHUNK_SIZE,
+                        ..Default::default()
+                    };
+                    connection
+                        .file_content_chunk(&file, &params)
+                        .map_err(anyhow::Error::from)
+                        .map_ok({
+                            cloned!(file_metadata);
+                            move |chunk| (file_metadata, chunk)
+                        })
+                        .boxed()
+                }
             })
-            .await??;
-        }
-    }
+            .left_stream()
+    } else {
+        // Even though they have no content we have to emit empty files to the
+        // metadata gets through
+        stream::once(future::ready(
+            future::ready(anyhow::Ok((
+                file_metadata,
+                FileChunk {
+                    offset: 0,
+                    file_size: 0,
+                    data: vec![],
+                    ..Default::default()
+                },
+            )))
+            .boxed(),
+        ))
+        .right_stream()
+    };
+
+    let _ = tx.send(Box::pin(responses)).await;
 
     Ok(())
 }
@@ -443,37 +492,40 @@ async fn export_item(
     repo: thrift::RepoSpecifier,
     item: ExportItem,
     casefold: Casefold,
+    create_dirs: CreateDirs,
     files_written: Arc<AtomicU64>,
-    bytes_written: Arc<AtomicU64>,
 ) -> Result<(Option<String>, Vec<ExportItem>)> {
     match item {
         ExportItem::Tree {
             path,
             id,
+            tx,
             destination,
             filter,
         } => {
-            let items =
-                export_tree(connection, repo, path, id, destination, filter, casefold).await?;
+            let items = export_tree(
+                connection,
+                repo,
+                path,
+                id,
+                tx,
+                destination,
+                filter,
+                casefold,
+                create_dirs,
+            )
+            .await?;
             Ok((None, items))
         }
         ExportItem::File {
             path,
             id,
+            tx,
             destination,
             size,
             type_,
         } => {
-            export_file(
-                connection,
-                repo,
-                id,
-                destination,
-                size,
-                type_,
-                &bytes_written,
-            )
-            .await?;
+            export_file(connection, repo, id, tx, destination, size, type_).await?;
             files_written.fetch_add(1, Ordering::Relaxed);
             Ok((Some(path), Vec::new()))
         }
@@ -484,12 +536,14 @@ enum ExportItem {
     Tree {
         path: String,
         id: Vec<u8>,
+        tx: FileSender,
         destination: PathBuf,
         filter: Option<PathTree>,
     },
     File {
         path: String,
         id: Vec<u8>,
+        tx: FileSender,
         destination: PathBuf,
         size: u64,
         type_: thrift::EntryType,
@@ -509,8 +563,162 @@ impl Render for ExportedFile {
     }
 }
 
+async fn downloader(
+    rx: mpsc::Receiver<
+        BoxStream<'static, BoxFuture<'static, anyhow::Result<(FileMetadata, FileChunk)>>>,
+    >,
+    tx: mpsc::Sender<(FileMetadata, FileChunk)>,
+    concurrent_file_fetches: usize,
+) -> anyhow::Result<()> {
+    let mut flattened_stream = ReceiverStream::new(rx)
+        .flatten()
+        .buffered(concurrent_file_fetches);
+
+    while let Some(item) = flattened_stream.try_next().await? {
+        tx.send(item).await?;
+    }
+    Ok(())
+}
+
+async fn archive_writer<'a, 'b>(
+    mut receiver: mpsc::Receiver<(FileMetadata, FileChunk)>,
+    archive: Archive,
+    bytes_written: Arc<AtomicU64>,
+) -> anyhow::Result<()> {
+    // Setup initial state
+    let mut last_path: Option<PathBuf> = None;
+    // throwaway channel (so we don't need to use optional and overcomplicate code later)
+    #[allow(unused_assignments)]
+    let (mut tx, mut rx) = mpsc::channel(WRITER_CHUNK_BUFFER_SIZE);
+    let mut fut = Box::new(tokio::spawn(async move { std::io::Result::Ok(archive) }));
+
+    while let Some((file_metadata, chunk)) = receiver.recv().await {
+        if last_path.as_ref() != Some(&file_metadata.path) {
+            // Await previous write that should return the archive handle back
+            drop(tx);
+            let mut archive = fut.await??;
+
+            // Create new channels for next path to write
+            (tx, rx) = mpsc::channel::<Result<Vec<u8>, std::io::Error>>(WRITER_CHUNK_BUFFER_SIZE);
+
+            // Kick off the next write
+            {
+                cloned!(file_metadata);
+                let mut header = async_tar::Header::new_gnu();
+                header.set_size(file_metadata.size);
+                header.set_cksum();
+
+                match file_metadata.entry_type {
+                    thrift::EntryType::EXEC => {
+                        header.set_mode(0o755);
+                    }
+                    _ => {
+                        header.set_mode(0o644);
+                    }
+                }
+
+                fut = Box::new(tokio::spawn(async move {
+                    archive
+                        .append_data(
+                            &mut header,
+                            file_metadata.path.clone(),
+                            ReceiverStream::new(rx).into_async_read(),
+                        )
+                        .await?;
+                    Ok(archive)
+                }));
+            }
+        }
+        let len = chunk.data.len() as u64;
+        tx.send(Ok(chunk.data)).await?;
+        bytes_written.fetch_add(len, Ordering::Relaxed);
+        last_path = Some(file_metadata.path);
+    }
+    drop(tx);
+    // Finish last write. We don't need archive anymore.
+    let _archive = fut.await?;
+    Ok(())
+}
+
+async fn filesystem_writer<'a, 'b>(
+    mut receiver: mpsc::Receiver<(FileMetadata, FileChunk)>,
+    bytes_written: Arc<AtomicU64>,
+) -> anyhow::Result<()> {
+    // Setup initial state
+    let mut last_path: Option<PathBuf> = None;
+
+    // throwaway channel (so we don't need to use optional and overcomplicate code later)
+    #[allow(unused_assignments)]
+    let (mut chunks_tx, mut chunks_rx) = mpsc::channel(WRITER_CHUNK_BUFFER_SIZE);
+
+    // channel with all pending file writes, once it's empty we finished all the writes
+    let (file_writes_tx, file_writes_rx) = mpsc::channel(CONCURRENT_FILE_WRITES);
+    let file_writes: tokio::task::JoinHandle<std::result::Result<(), anyhow::Error>> = tokio::spawn(
+        ReceiverStream::new(file_writes_rx)
+            .map(Ok)
+            .try_for_each(|fut| async move { fut.await? }),
+    );
+
+    while let Some((file_metadata, chunk)) = receiver.recv().await {
+        if last_path.as_ref() != Some(&file_metadata.path) {
+            drop(chunks_tx);
+
+            // Create new channels for next path to write
+            (chunks_tx, chunks_rx) = mpsc::channel::<Vec<u8>>(WRITER_CHUNK_BUFFER_SIZE);
+
+            // Kick off the next write
+            {
+                cloned!(file_metadata);
+                if file_metadata.entry_type == thrift::EntryType::LINK && cfg!(unix) {
+                    use std::ffi::OsStr;
+                    use std::os::unix::ffi::OsStrExt;
+                    let fut = Box::new(tokio::spawn(async move {
+                        let chunks: Vec<Vec<u8>> = ReceiverStream::new(chunks_rx).collect().await;
+                        let data = chunks.into_iter().flatten().collect::<Vec<u8>>();
+                        tokio::fs::symlink(OsStr::from_bytes(data.as_slice()), &file_metadata.path)
+                            .await?;
+                        Ok(())
+                    }));
+                    file_writes_tx.send(fut).await?;
+                } else {
+                    let out_file = tokio::fs::File::create(&file_metadata.path).await?;
+                    // Create a buffered writer for the file
+                    let mut writer = BufWriter::new(out_file);
+                    let fut = Box::new(tokio::spawn(async move {
+                        while let Some(chunk) = chunks_rx.recv().await {
+                            writer.write_all(&chunk).await?;
+                        }
+                        writer.flush().await?;
+                        Ok(())
+                    }));
+                    file_writes_tx.send(fut).await?;
+                    #[cfg(unix)]
+                    if file_metadata.entry_type == thrift::EntryType::EXEC {
+                        use std::os::unix::fs::PermissionsExt;
+                        let out_file = tokio::fs::File::open(&file_metadata.path).await?;
+                        let mut permissions = out_file.metadata().await?.permissions();
+                        let mode = permissions.mode();
+                        // Propagate read permissions to execute permissions.
+                        permissions.set_mode(mode | ((mode & 0o444) >> 2));
+                        tokio::fs::set_permissions(file_metadata.path, permissions).await?
+                    }
+                }
+            }
+        }
+        let len = chunk.data.len() as u64;
+        chunks_tx.send(chunk.data).await?;
+        bytes_written.fetch_add(len, Ordering::Relaxed);
+        last_path = Some(file_metadata.path);
+    }
+    drop(chunks_tx);
+    drop(file_writes_tx);
+    // Wait for all pending writes to finish
+    file_writes.await??;
+    Ok(())
+}
+
 pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
-    let destination: PathBuf = args.output;
+    let mut destination: PathBuf = args.output;
     if destination.exists() {
         bail!(
             "destination ({}) already exists",
@@ -590,6 +798,31 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let files_written = Arc::new(AtomicU64::new(0));
     let bytes_written = Arc::new(AtomicU64::new(0));
 
+    let (tx, rx) = mpsc::channel(READY_TO_DOWNLOAD_FILE_STREAM_BUFFER_SIZE);
+    let (downloader_tx, downloader_rx) = mpsc::channel(DOWNLOADER_OUTPUT_CHUNK_BUFFER_SIZE);
+    let downloader = tokio::spawn(downloader(rx, downloader_tx, args.concurrent_file_fetches));
+
+    let (file_writer, create_dirs) = if args.tar {
+        let archive =
+            async_tar::Builder::new(tokio::fs::File::create(&destination).await?.compat_write());
+
+        // the destination is the internal destination within tar archive
+        destination = repo.name.clone().into();
+        (
+            tokio::spawn(archive_writer(
+                downloader_rx,
+                archive,
+                bytes_written.clone(),
+            )),
+            CreateDirs::No,
+        )
+    } else {
+        (
+            tokio::spawn(filesystem_writer(downloader_rx, bytes_written.clone())),
+            CreateDirs::Yes,
+        )
+    };
+
     let item = match (response.r#type, response.info) {
         (Some(_type), Some(thrift::EntryInfo::tree(info))) => {
             file_count = info.descendant_files_count as u64;
@@ -597,6 +830,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
             ExportItem::Tree {
                 path,
                 id: info.id,
+                tx,
                 destination,
                 filter: path_tree,
             }
@@ -612,6 +846,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
             ExportItem::File {
                 path,
                 id: info.id,
+                tx,
                 destination,
                 size: info.file_size as u64,
                 type_,
@@ -624,15 +859,14 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
 
     let stream = bounded_traversal::bounded_traversal_stream(100, Some(item), {
         let files_written = files_written.clone();
-        let bytes_written = bytes_written.clone();
         move |item| {
             export_item(
                 conn.clone(),
                 repo.clone(),
                 item,
                 casefold,
+                create_dirs,
                 files_written.clone(),
-                bytes_written.clone(),
             )
             .boxed()
         }
@@ -660,5 +894,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         );
         ProgressOutput::new(message, bytes_written, total_size)
     });
-    app.target.render(&(), render).await
+    app.target.render(&(), render).await?;
+    file_writer.await??;
+    downloader.await?
 }
