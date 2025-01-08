@@ -718,12 +718,12 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     // Figure out the "file rev" from "commit rev", since we don't know the
     // "path" of the file at the "commitRev", for now, we just naively looks up
     // the fileRev one by one... for now
-    for (
-      let fileRev = Math.max(1, edit.introductionRev);
-      fileRev < fileStack.revLength;
-      ++fileRev
-    ) {
-      if (this.fileToCommit.get(FileIdx({fileIdx, fileRev}))?.rev === commitRev) {
+    for (let fileRev = Math.max(1, edit.introductionRev); ; ++fileRev) {
+      const candidateCommitRev = this.fileToCommit.get(FileIdx({fileIdx, fileRev}))?.rev;
+      if (candidateCommitRev == null) {
+        break;
+      }
+      if (candidateCommitRev === commitRev) {
         // Update linelog to move the edit to "fileRev".
         const newFileRev = embedAbsorbId(fileRev, absorbEditId);
         const newFileStack = fileStack.remapRevs(rev =>

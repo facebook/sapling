@@ -1298,12 +1298,9 @@ describe('CommitStackState', () => {
       const newStack2 = newStack.setAbsorbEditDestination(0, 0, 1);
       expect(newStack2.absorbExtra.get(0)?.get(0)?.selectedRev).toBe(1);
       // It can be moved to wdir(), the top rev.
-      // FIXME: This does not work yet.
       const topRev = nullthrows(newStack2.revs().at(-1));
-      try {
-        const newStack3 = newStack2.setAbsorbEditDestination(0, 0, topRev);
-        expect(newStack3.absorbExtra.get(0)?.get(0)?.selectedRev).toBe(topRev);
-      } catch {}
+      const newStack3 = newStack2.setAbsorbEditDestination(0, 0, topRev);
+      expect(newStack3.getAbsorbCommitRevs(0, 0).selectedRev).toBe(topRev);
     });
 
     it('updates getUtf8 with pending absorb edits', () => {
