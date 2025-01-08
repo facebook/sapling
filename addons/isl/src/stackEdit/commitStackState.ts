@@ -209,6 +209,16 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     return [...this.stack.keys()];
   }
 
+  /** Find the first "Rev" that satisify the condition. */
+  findRev(predicate: (commit: CommitState, rev: Rev) => boolean): Rev | undefined {
+    return this.stack.findIndex(predicate);
+  }
+
+  /** Find the last "Rev" that satisify the condition. */
+  findLastRev(predicate: (commit: CommitState, rev: Rev) => boolean): Rev | undefined {
+    return this.stack.findLastIndex(predicate);
+  }
+
   /**
    * Return mutable revs.
    * This filters out public or commits outside the original stack export request.
@@ -2097,3 +2107,5 @@ export const ABSENT_FILE = FileState({
   data: '',
   flags: ABSENT_FLAG,
 });
+
+export type {Rev};
