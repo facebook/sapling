@@ -110,6 +110,22 @@ export function StackEditConfirmButtons(): React.ReactElement {
     setStackIntentionHashes(['general', new Set<Hash>()]);
   };
 
+  let cancelTooltip = t('Discard stack editing changes');
+  let confirmTooltip = t('Save stack editing changes');
+  let confirmText = t('Save changes');
+  switch (stackIntention) {
+    case 'split':
+      cancelTooltip = t('Cancel split');
+      confirmTooltip = t('Apply split changes');
+      confirmText = t('Split');
+      break;
+    case 'absorb':
+      cancelTooltip = t('Cancel absorb');
+      confirmTooltip = t('Apply absorb changes');
+      confirmText = t('Absorb');
+      break;
+  }
+
   // Show [Edit file stack] [Cancel] [Save changes] [Undo] [Redo].
   return (
     <>
@@ -143,26 +159,18 @@ export function StackEditConfirmButtons(): React.ReactElement {
           <Icon icon="redo" />
         </Button>
       </Tooltip>
-      <Tooltip
-        title={stackIntention === 'split' ? t('Cancel split') : t('Discard stack editing changes')}
-        delayMs={DOCUMENTATION_DELAY}
-        placement="bottom">
+      <Tooltip title={cancelTooltip} delayMs={DOCUMENTATION_DELAY} placement="bottom">
         <Button className="cancel-edit-stack-button" onClick={handleCancel}>
           <T>Cancel</T>
         </Button>
       </Tooltip>
-      <Tooltip
-        title={
-          stackIntention === 'split' ? t('Apply split changes') : t('Save stack editing changes')
-        }
-        delayMs={DOCUMENTATION_DELAY}
-        placement="bottom">
+      <Tooltip title={confirmTooltip} delayMs={DOCUMENTATION_DELAY} placement="bottom">
         <Button
           className="confirm-edit-stack-button"
           data-testid="confirm-edit-stack-button"
           primary
           onClick={handleSaveChanges}>
-          {stackIntention === 'split' ? <T>Split</T> : <T>Save changes</T>}
+          {confirmText}
         </Button>
       </Tooltip>
     </>
