@@ -648,13 +648,20 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
    * Only returns a subset of `absorbExtra` that has the `rev` selected.
    */
   absorbExtraByCommitRev(rev: Rev): AbsorbExtra {
-    const isWdir = this.get(rev)?.originalNodes.contains(WDIR_NODE);
+    const commit = this.get(rev);
+    const isWdir = commit?.originalNodes.contains(WDIR_NODE);
     return ImMap<FileStackIndex, ImMap<AbsorbEditId, AbsorbEdit>>().withMutations(mut => {
       let result = mut;
       this.absorbExtra.forEach((edits, fileStackIndex) => {
         edits.forEach((edit, editId) => {
           assert(edit.absorbEditId === editId, 'absorbEditId should match its map key');
-          if (edit.selectedRev === rev || (edit.selectedRev == null && isWdir)) {
+          const fileRev = edit.selectedRev;
+          const fileIdx = edit.fileStackIndex;
+          const selectedCommitRev =
+            fileRev != null &&
+            fileIdx != null &&
+            this.fileToCommit.get(FileIdx({fileIdx, fileRev}))?.rev;
+          if (selectedCommitRev === rev || (edit.selectedRev == null && isWdir)) {
             if (!result.has(fileStackIndex)) {
               result = result.set(fileStackIndex, ImMap<AbsorbEditId, AbsorbEdit>());
             }
