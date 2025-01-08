@@ -618,6 +618,29 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
   }
 
   /**
+   * Calculates the "candidateRevs" for all absorb edits.
+   *
+   * For example, in a 26-commit stack A..Z, only C and K changes a.txt, E and J
+   * changes b.txt. When the user wants to absorb changes from a.txt and b.txt,
+   * we only show 4 relevant commits: C, E, J, K.
+   *
+   * This function does not report public commits.
+   */
+  getAllAbsorbCandidateCommitRevs(): Set<Rev> {
+    const result = new Set<Rev>();
+    this.absorbExtra.forEach((edits, fileIdx) => {
+      edits.forEach((_edit, absorbEditId) => {
+        this.getAbsorbCommitRevs(fileIdx, absorbEditId)?.candidateRevs.forEach(rev => {
+          if (this.get(rev)?.immutableKind !== 'hash') {
+            result.add(rev);
+          }
+        });
+      });
+    });
+    return result;
+  }
+
+  /**
    * Set `rev` as the "target commit" (amend --to) of an "absorb edit".
    * Happens when the user moves the absorb edit among candidate commits.
    *
