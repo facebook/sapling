@@ -6,20 +6,22 @@
  */
 
 import type {DragHandler} from '../../DragHandle';
+import type {RenderGlyphResult} from '../../RenderDag';
 import type {Dag} from '../../dag/dag';
 import type {DagCommitInfo} from '../../dag/dagCommitInfo';
 import type {AbsorbEdit, AbsorbEditId} from '../absorb';
-import type {CommitStackState, FileStackIndex} from '../commitStackState';
+import type {CommitStackState, FileStackIndex, Rev} from '../commitStackState';
 import type {Map as ImMap} from 'immutable';
 
 import {FileHeader, IconType} from '../../ComparisonView/SplitDiffView/SplitDiffFileHeader';
 import {DragHandle} from '../../DragHandle';
 import {DraggingOverlay} from '../../DraggingOverlay';
-import {RenderDag} from '../../RenderDag';
+import {defaultRenderGlyph, RenderDag} from '../../RenderDag';
 import {YOU_ARE_HERE_VIRTUAL_COMMIT} from '../../dag/virtualCommit';
-import {writeAtom} from '../../jotaiUtils';
+import {t} from '../../i18n';
+import {readAtom, writeAtom} from '../../jotaiUtils';
 import {calculateDagFromStack} from '../stackDag';
-import {useStackEditState} from './stackEditState';
+import {stackEditStack, useStackEditState} from './stackEditState';
 import * as stylex from '@stylexjs/stylex';
 import {Icon} from 'isl-components/Icon';
 import {atom, useAtomValue} from 'jotai';
@@ -47,6 +49,9 @@ const styles = stylex.create({
     backgroundColor: {
       ':hover': 'var(--tooltip-background)',
     },
+  },
+  candidateDropTarget: {
+    backgroundColor: 'var(--tooltip-background)',
   },
   absorbEditCode: {
     borderCollapse: 'collapse',
@@ -94,6 +99,7 @@ const styles = stylex.create({
 
 /** The `AbsorbEdit` that is currently being dragged. */
 const draggingAbsorbEdit = atom<AbsorbEdit | null>(null);
+const draggingHint = atom<string | null>(null);
 const onDragRef: {current: null | DragHandler} = {current: null};
 
 export function AbsorbStackEditPanel() {
@@ -104,9 +110,11 @@ export function AbsorbStackEditPanel() {
   return (
     <>
       <RenderDag
+        className="absorb-dag"
         dag={dag}
         renderCommit={renderCommit}
         renderCommitExtras={renderCommitExtras}
+        renderGlyph={RenderGlyph}
         subset={subset}
       />
       <AbsorbDraggingOverlay />
@@ -114,10 +122,41 @@ export function AbsorbStackEditPanel() {
   );
 }
 
+const candidateDropTargetRevs = atom<readonly Rev[] | undefined>(get => {
+  const edit = get(draggingAbsorbEdit);
+  const stack = get(stackEditStack);
+  if (edit == null || stack == null) {
+    return undefined;
+  }
+  return stack.getAbsorbCommitRevs(nullthrows(edit.fileStackIndex), edit.absorbEditId)
+    .candidateRevs;
+});
+
+function RenderGlyph(info: DagCommitInfo): RenderGlyphResult {
+  const revs = useAtomValue(candidateDropTargetRevs);
+  const rev = info.stackRev;
+  const [kind, inner] = defaultRenderGlyph(info);
+  let newInner = inner;
+  if (kind === 'inside-tile' && rev != null && revs?.includes(rev)) {
+    // This is a candidate drop target. Wrap in a SVG circle.
+    const circle = (
+      <circle cx={0} cy={0} r={8} fill="transparent" stroke="var(--focus-border)" strokeWidth={4} />
+    );
+    newInner = (
+      <>
+        {circle}
+        {inner}
+      </>
+    );
+  }
+  return [kind, newInner];
+}
+
 function AbsorbDraggingOverlay() {
   const absorbEdit = useAtomValue(draggingAbsorbEdit);
+  const hint = useAtomValue(draggingHint);
   return (
-    <DraggingOverlay onDragRef={onDragRef}>
+    <DraggingOverlay onDragRef={onDragRef} hint={hint}>
       {absorbEdit && <SingleAbsorbEdit edit={absorbEdit} inDraggingOverlay={true} />}
     </DraggingOverlay>
   );
@@ -146,6 +185,45 @@ function renderCommit(info: DagCommitInfo) {
 
 function renderCommitExtras(info: DagCommitInfo) {
   return <AbsorbDagCommitExtras info={info} />;
+}
+
+/**
+ * Scan the absorb dag DOM and extract [data-reorder-id], or the commit key,
+ * from the dragging destination.
+ */
+function findDragDestinationCommitKey(y: number): string | undefined {
+  const container = document.querySelector('.absorb-dag');
+  if (container == null) {
+    return undefined;
+  }
+  const containerY = container.getBoundingClientRect().y;
+  const relativeY = y - containerY;
+  let bestKey: string | undefined = undefined;
+  let bestDelta: number = Infinity;
+  for (const element of container.querySelectorAll('.render-dag-row-group')) {
+    const divElement = element as HTMLDivElement;
+    // use offSetTop instead of getBoundingClientRect() to avoid
+    // being affected by ongoing animation.
+    const y1 = divElement.offsetTop;
+    const y2 = y1 + divElement.offsetHeight;
+    const commitKey = divElement.getAttribute('data-reorder-id');
+    const delta = Math.abs(relativeY - (y1 + y2) / 2);
+    if (relativeY >= y1 && commitKey != null && delta < bestDelta) {
+      bestKey = commitKey;
+      bestDelta = delta;
+    }
+  }
+  return bestKey;
+}
+
+/** Similar to `findDragDestinationCommitKey` but reports the rev. */
+function findDragDestinationCommitRev(y: number, stack: CommitStackState): Rev | undefined {
+  const key = findDragDestinationCommitKey(y);
+  if (key == null) {
+    return undefined;
+  }
+  // Convert key to rev.
+  return stack.findRev(commit => commit.key === key);
 }
 
 /** Show file paths and diff chunks. */
@@ -193,11 +271,51 @@ function AbsorbEditsForFile(props: {
 
 function SingleAbsorbEdit(props: {edit: AbsorbEdit; inDraggingOverlay?: boolean}) {
   const {edit, inDraggingOverlay} = props;
-  const currentDragging = useAtomValue(draggingAbsorbEdit);
+  const isDragging = useAtomValue(draggingAbsorbEdit);
+  const stackEdit = useStackEditState();
 
   const handleDrag = (x: number, y: number, isDragging: boolean) => {
-    writeAtom(draggingAbsorbEdit, isDragging ? edit : null);
+    // Visual update.
     onDragRef.current?.(x, y, isDragging);
+    // State update.
+    if (isDragging) {
+      // The 'stack' in the closure might be outdated. Read the latest.
+      const stack = readAtom(stackEditStack);
+      if (stack == null) {
+        return;
+      }
+      const rev = findDragDestinationCommitRev(y, stack);
+      const fileStackIndex = nullthrows(edit.fileStackIndex);
+      const absorbEditId = edit.absorbEditId;
+      if (
+        rev != null &&
+        rev !== stack?.getAbsorbCommitRevs(fileStackIndex, absorbEditId).selectedRev
+      ) {
+        const commit = nullthrows(stack.get(rev));
+        let newStack = stack;
+        try {
+          newStack = stack.setAbsorbEditDestination(fileStackIndex, absorbEditId, rev);
+          writeAtom(draggingHint, null);
+        } catch {
+          writeAtom(
+            draggingHint,
+            t(
+              'Diff chunk can only be applied to commits that modify the file and has the context lines introduced earlier.',
+            ),
+          );
+        }
+        if (isDragging == null) {
+          stackEdit.push(newStack, {name: 'absorbMove', commit});
+        } else {
+          stackEdit.replaceTopOperation(newStack, {name: 'absorbMove', commit});
+        }
+      }
+    } else {
+      // Ensure the hint is cleared when not dragging.
+      // Otherwise the hint div might have unwanted side effects on interaction.
+      writeAtom(draggingHint, null);
+    }
+    writeAtom(draggingAbsorbEdit, isDragging ? edit : null);
   };
 
   return (
@@ -205,7 +323,7 @@ function SingleAbsorbEdit(props: {edit: AbsorbEdit; inDraggingOverlay?: boolean}
       {...stylex.props(
         styles.absorbEditSingleChunk,
         inDraggingOverlay && styles.inDraggingOverlay,
-        !inDraggingOverlay && currentDragging === edit && styles.beingDragged,
+        !inDraggingOverlay && isDragging === edit && styles.beingDragged,
       )}>
       <div {...stylex.props(styles.dragHandlerWrapper)}>
         <DragHandle onDrag={handleDrag}>
