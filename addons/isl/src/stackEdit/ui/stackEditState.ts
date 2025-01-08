@@ -23,6 +23,7 @@ import {waitForNothingRunning} from '../../operationsState';
 import {uncommittedSelection} from '../../partialSelection';
 import {CommitStackState} from '../../stackEdit/commitStackState';
 import {assert, registerDisposable} from '../../utils';
+import {WDIR_NODE} from '../commitStackState';
 import {List, Record} from 'immutable';
 import {atom, useAtom} from 'jotai';
 import {nullthrows} from 'shared/utils';
@@ -341,9 +342,6 @@ function rewriteWdirContent(stack: ExportStack): ExportStack {
   });
 }
 
-/** The "wdir()" virtual hash. */
-export const WDIR_NODE = 'ffffffffffffffffffffffffffffffffffffffff';
-
 /**
  * Commit hashes being stack edited for general purpose.
  * Setting to a non-empty value (which can be using the revsetlang)
@@ -569,3 +567,5 @@ export function sendStackEditMetrics(save = true) {
   tracker?.track('StackEditMetrics', {duration, extras: {...currentMetrics, save}});
   currentMetrics.splitFromSuggestion = 0; // Reset for next time.
 }
+
+export {WDIR_NODE};

@@ -2057,3 +2057,6 @@ export const ABSENT_FILE = FileState({
   data: '',
   flags: ABSENT_FLAG,
 });
+
+/** The "wdir()" virtual hash. */
+export const WDIR_NODE = 'ffffffffffffffffffffffffffffffffffffffff';
