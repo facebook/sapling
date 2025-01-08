@@ -588,7 +588,9 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
         // wdir() did not change this file. Skip.
         return;
       }
-      const [newFileStack, absorbMap] = calculateAbsorbEditsForFileStack(fileStack);
+      const [newFileStack, absorbMap] = calculateAbsorbEditsForFileStack(fileStack, {
+        fileStackIndex: fileIdx,
+      });
       absorbExtra = absorbExtra.set(fileIdx, absorbMap);
       newFileStacks = newFileStacks.set(fileIdx, newFileStack);
     });

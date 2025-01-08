@@ -6,6 +6,7 @@
  */
 
 import type {LineInfo} from '../linelog';
+import type {FileStackIndex} from './commitStackState';
 import type {FileStackState, Rev} from './fileStackState';
 import type {RecordOf} from 'immutable';
 
@@ -48,6 +49,8 @@ export type AbsorbEditProps = {
   selectedRev: Rev | null;
   /** The "AbsorbEditId" associated with this diff chunk. */
   absorbEditId: AbsorbEditId;
+  /** The file stack index (in commitState) associated with this diff chunk. */
+  fileStackIndex?: FileStackIndex;
 };
 
 /**
@@ -68,6 +71,7 @@ export const AbsorbEdit = Record<AbsorbEditProps>({
   introductionRev: 0,
   selectedRev: null,
   absorbEditId: 0,
+  fileStackIndex: undefined,
 });
 export type AbsorbEdit = RecordOf<AbsorbEditProps>;
 
@@ -138,6 +142,7 @@ export function revWithAbsorb(rev: Rev): Rev {
  */
 export function calculateAbsorbEditsForFileStack(
   stack: FileStackState,
+  options?: {fileStackIndex?: FileStackIndex},
 ): [FileStackState, ImMap<AbsorbEditId, AbsorbEdit>] {
   // rev 0 (public), 1, 2, ..., wdirRev-1 (stack top to absorb), wdirRev (wdir virtual rev)
   const wdirRev = stack.revLength - 1;
@@ -145,7 +150,8 @@ export function calculateAbsorbEditsForFileStack(
     wdirRev >= 1,
     'calculateAbsorbEditsForFileStack requires at least one wdir(), one public()',
   );
-  const diffChunks = analyseFileStackWithWdirAtTop(stack, {wdirRev});
+  const fileStackIndex = options?.fileStackIndex;
+  const diffChunks = analyseFileStackWithWdirAtTop(stack, {wdirRev, fileStackIndex});
   // Drop wdirRev, then re-insert the chunks.
   let newStack = stack.truncate(wdirRev);
   let absorbIdToDiffChunk = ImMap<AbsorbEditId, AbsorbEdit>();
@@ -164,13 +170,18 @@ export function calculateAbsorbEditsForFileStack(
  */
 export function analyseFileStackWithWdirAtTop(
   stack: FileStackState,
-  options?: {wdirRev?: Rev},
+  options?: {wdirRev?: Rev; fileStackIndex?: FileStackIndex},
 ): List<AbsorbEdit> {
   const wdirRev = options?.wdirRev ?? stack.revLength - 1;
   const stackTopRev = wdirRev - 1;
   assert(stackTopRev >= 0, 'stackTopRev must be positive');
   const newText = stack.getRev(wdirRev);
-  return analyseFileStack(stack, newText, stackTopRev);
+  let edits = analyseFileStack(stack, newText, stackTopRev);
+  const fileStackIndex = options?.fileStackIndex;
+  if (fileStackIndex != null) {
+    edits = edits.map(edit => edit.set('fileStackIndex', fileStackIndex));
+  }
+  return edits;
 }
 
 /**
