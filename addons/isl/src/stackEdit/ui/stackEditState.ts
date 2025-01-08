@@ -565,7 +565,8 @@ export function bumpStackEditMetric(key: keyof StackEditMetrics) {
 export function sendStackEditMetrics(save = true) {
   const tracker = getTracker();
   const duration = Date.now() - currentMetricsStartTime;
-  tracker?.track('StackEditMetrics', {duration, extras: {...currentMetrics, save}});
+  const intention = readAtom(stackEditState).intention;
+  tracker?.track('StackEditMetrics', {duration, extras: {...currentMetrics, save, intention}});
   currentMetrics.splitFromSuggestion = 0; // Reset for next time.
 }
 
