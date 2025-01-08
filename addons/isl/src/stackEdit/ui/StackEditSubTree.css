@@ -31,7 +31,7 @@
   opacity: 1;
 }
 
-.stack-edit-subtree .drag-handle {
+.drag-handle {
   cursor: grab;
   display: flex;
   padding: var(--button-icon-padding);

@@ -12,11 +12,13 @@ import type {CommitStackState, FileStackIndex} from '../commitStackState';
 import type {Map as ImMap} from 'immutable';
 
 import {FileHeader, IconType} from '../../ComparisonView/SplitDiffView/SplitDiffFileHeader';
+import {DragHandle} from '../../DragHandle';
 import {RenderDag} from '../../RenderDag';
 import {YOU_ARE_HERE_VIRTUAL_COMMIT} from '../../dag/virtualCommit';
 import {calculateDagFromStack} from '../stackDag';
 import {useStackEditState} from './stackEditState';
 import * as stylex from '@stylexjs/stylex';
+import {Icon} from 'isl-components/Icon';
 import {nullthrows} from 'shared/utils';
 
 const styles = stylex.create({
@@ -25,6 +27,16 @@ const styles = stylex.create({
     // The negative margins match <FileHeader />.
     marginLeft: -1,
     marginRight: -1,
+    display: 'flex',
+  },
+  dragHandlerWrapper: {
+    width: 'fit-content',
+    display: 'flex',
+    alignItems: 'center',
+    padding: '0 var(--pad)',
+    backgroundColor: {
+      ':hover': 'var(--tooltip-background)',
+    },
   },
   absorbEditCode: {
     borderCollapse: 'collapse',
@@ -157,6 +169,11 @@ function SingleAbsorbEdit(props: {edit: AbsorbEdit}) {
   const {edit} = props;
   return (
     <div {...stylex.props(styles.absorbEditSingleChunk)}>
+      <div {...stylex.props(styles.dragHandlerWrapper)}>
+        <DragHandle>
+          <Icon icon="grabber" />
+        </DragHandle>
+      </div>
       <table {...stylex.props(styles.absorbEditCode)} border={0} cellPadding={0} cellSpacing={0}>
         <colgroup>
           <col width={50} />
