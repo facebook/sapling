@@ -228,7 +228,13 @@ export const stackEditState = (() => {
         typeof newValue === 'function' ? newValue(get(inner)) : newValue;
       if (hashes.size > 0 && history.state === 'loading' && history.exportedStack !== undefined) {
         try {
-          const stack = new CommitStackState(history.exportedStack).buildFileStacks();
+          let stack = new CommitStackState(history.exportedStack).buildFileStacks();
+          if (intention === 'absorb') {
+            // Perform absorb analysis. Note: the absorb use-case has an extra
+            // "wdir()" at the stack top for absorb purpose. When the intention
+            // is "general" or "split", there is no "wdir()" in the stack.
+            stack = stack.analyseAbsorb();
+          }
           const historyValue = new History({
             history: List([StackStateWithOperation({state: stack})]),
             currentIndex: 0,
