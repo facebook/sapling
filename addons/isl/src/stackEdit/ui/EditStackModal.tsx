@@ -47,7 +47,7 @@ export function MaybeEditStackModal() {
       split: () => <LoadedSplitModal />,
       general: () => <LoadedEditStackModal />,
       // TODO: implement absorb model.
-      absorb: () => null,
+      absorb: () => <LoadedAbsorbModal />,
     }[stackIntention]()
   ) : isEditing ? (
     <Modal
@@ -77,6 +77,22 @@ function LoadedSplitModal() {
   return (
     <Modal dataTestId="interactive-split-modal" className="split-single-commit-modal-contents">
       <SplitStackEditPanel />
+      <Row style={{padding: 'var(--pad) 0', justifyContent: 'flex-end', zIndex: 1}}>
+        <StackEditConfirmButtons />
+      </Row>
+    </Modal>
+  );
+}
+
+/**
+ * A Modal for dedicated absorb UI.
+ * While absorbing, the other edit stacks features are unavailable.
+ * See `StackStateWithOperationProps.absorbChunks` for details.
+ */
+function LoadedAbsorbModal() {
+  return (
+    <Modal dataTestId="interactive-absorb-modal" className="absorb-modal-contents">
+      <div>Absorb is not yet available.</div>
       <Row style={{padding: 'var(--pad) 0', justifyContent: 'flex-end', zIndex: 1}}>
         <StackEditConfirmButtons />
       </Row>
