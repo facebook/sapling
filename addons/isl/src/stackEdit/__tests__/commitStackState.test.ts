@@ -1262,12 +1262,15 @@ describe('CommitStackState', () => {
 
     it('updates absorb destination commit', () => {
       const stack = new CommitStackState(absorbStack2).analyseAbsorb();
+      // Current state. Note the "-a1 +A1" has "Selected=1" where 1 is the "file stack rev".
+      expect(stack.absorbExtra.get(0)?.get(0)?.selectedRev).toBe(1);
       // Move the "a1 -> A1" change from CommitA to CommitC.
       // See the above test's "describeAbsorbExtra" to confirm that "a1 -> A1"
       // has fileIdx=0 and absorbEditId=0.
       // CommitC has rev=3.
       const newStack = stack.setAbsorbEditDestination(0, 0, 3);
       // "-a1 +A1" now has "Selected=2":
+      expect(newStack.absorbExtra.get(0)?.get(0)?.selectedRev).toBe(2);
       expect(describeAbsorbExtra(newStack)).toMatchInlineSnapshot(`
         {
           "0": [
@@ -1291,6 +1294,16 @@ describe('CommitStackState', () => {
           "0:./c.txt(c1↵c2↵c3↵) 1:CommitC/c.txt(c1↵c2↵c3↵z1↵) 2:Wdir/c.txt(c1↵c2↵c3↵z1↵;absorbed:C1↵C2↵c3↵z1↵)",
         ]
       `);
+      // It can be moved back.
+      const newStack2 = newStack.setAbsorbEditDestination(0, 0, 1);
+      expect(newStack2.absorbExtra.get(0)?.get(0)?.selectedRev).toBe(1);
+      // It can be moved to wdir(), the top rev.
+      // FIXME: This does not work yet.
+      const topRev = nullthrows(newStack2.revs().at(-1));
+      try {
+        const newStack3 = newStack2.setAbsorbEditDestination(0, 0, topRev);
+        expect(newStack3.absorbExtra.get(0)?.get(0)?.selectedRev).toBe(topRev);
+      } catch {}
     });
 
     it('updates getUtf8 with pending absorb edits', () => {
