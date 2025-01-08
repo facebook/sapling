@@ -265,6 +265,16 @@ export const stackEditState = (() => {
   );
 })();
 
+/**
+ * Read-only access to the stack being edited.
+ * This can be useful without going through `UseStackEditState`.
+ * This is an atom so it can be used as a dependency of other atoms.
+ */
+export const stackEditStack = atom<CommitStackState | undefined>(get => {
+  const state = get(stackEditState);
+  return state.history.state === 'hasValue' ? state.history.value.current.state : undefined;
+});
+
 // Subscribe to server exportedStack events.
 registerDisposable(
   stackEditState,
