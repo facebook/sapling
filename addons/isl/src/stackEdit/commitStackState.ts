@@ -672,6 +672,19 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     throw new Error('setAbsorbIntoRev did not find corresponding commit to absorb');
   }
 
+  /**
+   * Apply pending absorb edits.
+   *
+   * After this, absorb edits can no longer be edited by `setAbsorbEditDestination`,
+   * `hasPendingAbsorb()` returns `false`, and `calculateImportStack()` can be used.
+   */
+  applyAbsorbEdits(): CommitStackState {
+    if (!this.hasPendingAbsorb()) {
+      return this;
+    }
+    return this.useFileContent().set('absorbExtra', ImMap());
+  }
+
   // }}} (absorb related)
 
   /**

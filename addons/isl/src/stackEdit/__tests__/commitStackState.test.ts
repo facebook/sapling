@@ -1272,6 +1272,28 @@ describe('CommitStackState', () => {
       expect(get(stack2, 0, 1, false)).toMatchInlineSnapshot(`"a1↵a2↵a3↵"`);
     });
 
+    it('can apply absorb edits', () => {
+      const beforeStack = new CommitStackState(absorbStack2).useFileStack().analyseAbsorb();
+      expect(beforeStack.useFileStack().describeFileStacks()).toMatchInlineSnapshot(`
+        [
+          "0:./a.txt 1:CommitA/a.txt(a1↵a2↵a3↵;absorbed:A1↵a2↵a3↵) 2:CommitC/a.txt(A1↵a2↵a3↵x1↵;absorbed:A1↵a2↵a3↵X1↵)",
+          "0:./b.txt 1:CommitB/b.txt(b1↵b2↵b3↵;absorbed:B1↵b2↵b3↵) 2:CommitC/b.txt(B1↵b2↵b3↵y1↵;absorbed:B1↵b2↵b3↵Y1↵)",
+          "0:./c.txt(c1↵c2↵c3↵) 1:CommitC/c.txt(c1↵c2↵c3↵z1↵) 2:Wdir/c.txt(c1↵c2↵c3↵z1↵;absorbed:C1↵C2↵c3↵z1↵)",
+        ]
+      `);
+      // After `applyAbsorbEdits`, "absorbed:" contents become real contents.
+      const afterStack = beforeStack.applyAbsorbEdits();
+      expect(afterStack.hasPendingAbsorb()).toBeFalsy();
+      expect(describeAbsorbExtra(afterStack)).toMatchInlineSnapshot(`{}`);
+      expect(afterStack.useFileStack().describeFileStacks()).toMatchInlineSnapshot(`
+        [
+          "0:./a.txt 1:CommitA/a.txt(A1↵a2↵a3↵) 2:CommitC/a.txt(A1↵a2↵a3↵X1↵) 3:Wdir/a.txt(A1↵a2↵a3↵X1↵)",
+          "0:./b.txt 1:CommitB/b.txt(B1↵b2↵b3↵) 2:CommitC/b.txt(B1↵b2↵b3↵Y1↵) 3:Wdir/b.txt(B1↵b2↵b3↵Y1↵)",
+          "0:./c.txt(c1↵c2↵c3↵) 1:CommitC/c.txt(c1↵c2↵c3↵z1↵) 2:Wdir/c.txt(C1↵C2↵c3↵z1↵)",
+        ]
+      `);
+    });
+
     function describeAbsorbExtra(stack: CommitStackState) {
       return stack.absorbExtra.map(describeAbsorbIdChunkMap).toJS();
     }
