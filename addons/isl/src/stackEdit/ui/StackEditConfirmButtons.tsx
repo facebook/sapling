@@ -68,22 +68,29 @@ export function StackEditConfirmButtons(): React.ReactElement {
 
   const handleSaveChanges = () => {
     const originalHash = originalHead?.hash;
-    const importStack = stackEdit.commitStack.calculateImportStack({
+    const stack = stackEdit.commitStack.applyAbsorbEdits();
+    const isAbsorb = stackEdit.intention === 'absorb';
+    const importStack = stack.calculateImportStack({
       goto: originalHash,
       rewriteDate: Date.now() / 1000,
+      // Do not write anything to the working copy, for absorb (esp. with partial selection)
+      skipWdir: isAbsorb,
+      // Also, preserve dirty files. So if an absorb edit is left "unabsorbed" in the "wdir()",
+      // it will be preserved without being dropped.
+      preserveDirtyFiles: isAbsorb,
     });
-    const op = new ImportStackOperation(importStack, stackEdit.commitStack.originalStack);
+    const op = new ImportStackOperation(importStack, stack.originalStack);
     runOperation(op);
     sendStackEditMetrics(true);
 
-    invalidateUnsavedCommitMessages(stackEdit.commitStack.originalStack.map(c => c.node));
+    invalidateUnsavedCommitMessages(stack.originalStack.map(c => c.node));
 
     // For standalone split, follow-up with a rebase.
     // Note: the rebase might fail with conflicted pending changes.
     // rebase is technically incorrect if the user edits the changes.
     // We should move the rebase logic to debugimportstack and make
     // it handle pending changes just fine.
-    const stackTop = stackEdit.commitStack.originalStack.at(-1)?.node;
+    const stackTop = stack.originalStack.at(-1)?.node;
     if (stackIntention === 'split' && stackTop != null) {
       const children = dag.children(stackTop);
       if (children.size > 0) {
