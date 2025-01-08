@@ -9,6 +9,7 @@ import {Row, FlexSpacer, ScrollY, Center} from '../../ComponentUtils';
 import {Modal} from '../../Modal';
 import {tracker} from '../../analytics';
 import {t} from '../../i18n';
+import {AbsorbStackEditPanel} from './AbsorbStackEditPanel';
 import {SplitStackEditPanel, SplitStackToolbar} from './SplitStackEditPanel';
 import {StackEditConfirmButtons} from './StackEditConfirmButtons';
 import {StackEditSubTree} from './StackEditSubTree';
@@ -92,7 +93,7 @@ function LoadedSplitModal() {
 function LoadedAbsorbModal() {
   return (
     <Modal dataTestId="interactive-absorb-modal" className="absorb-modal-contents">
-      <div>Absorb is not yet available.</div>
+      <AbsorbStackEditPanel />
       <Row style={{padding: 'var(--pad) 0', justifyContent: 'flex-end', zIndex: 1}}>
         <StackEditConfirmButtons />
       </Row>
