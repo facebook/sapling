@@ -784,18 +784,6 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     return this.fileStacks.size === 0 ? this.buildFileStacks(opts) : this;
   }
 
-  /** Invalidate file stacks so they need to be rebuilt from commit contents. */
-  invalidateFileStacks(): CommitStackState {
-    if (this.fileStacks.isEmpty()) {
-      return this;
-    }
-    return this.useFileContent().merge({
-      fileStacks: List(),
-      commitToFile: ImMap(),
-      fileToCommit: ImMap(),
-    });
-  }
-
   /**
    * Switch file contents to use FileStack as source of truth.
    * Useful when using FileStack to edit files.
@@ -824,6 +812,10 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
         return file.set('data', data);
       }
       return file;
+    }).merge({
+      fileStacks: List(),
+      commitToFile: ImMap(),
+      fileToCommit: ImMap(),
     });
   }
 
@@ -1243,7 +1235,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
    */
   insertEmpty(rev: Rev, message: string, splitFromRev?: Rev): CommitStackState {
     assert(rev <= this.stack.size && rev >= 0, 'rev out of range');
-    const state = this.invalidateFileStacks();
+    const state = this.useFileContent();
     let newStack;
     const newKey = this.nextKey('insert');
     const originalNodes = splitFromRev == null ? undefined : state.get(splitFromRev)?.originalNodes;
@@ -1541,7 +1533,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     );
 
     const contentSubStack = subStack.useFileContent();
-    const state = this.invalidateFileStacks();
+    const state = this.useFileContent();
 
     // Used to detect "unchanged" files in subStack.
     const afterFileMap = new Map(
