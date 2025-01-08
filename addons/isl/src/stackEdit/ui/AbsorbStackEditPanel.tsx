@@ -18,11 +18,12 @@ import {DragHandle} from '../../DragHandle';
 import {DraggingOverlay} from '../../DraggingOverlay';
 import {defaultRenderGlyph, RenderDag} from '../../RenderDag';
 import {YOU_ARE_HERE_VIRTUAL_COMMIT} from '../../dag/virtualCommit';
-import {t} from '../../i18n';
+import {t, T} from '../../i18n';
 import {readAtom, writeAtom} from '../../jotaiUtils';
 import {calculateDagFromStack} from '../stackDag';
 import {stackEditStack, useStackEditState} from './stackEditState';
 import * as stylex from '@stylexjs/stylex';
+import {Column, Row} from 'isl-components/Flex';
 import {Icon} from 'isl-components/Icon';
 import {atom, useAtomValue} from 'jotai';
 import {nullthrows} from 'shared/utils';
@@ -95,6 +96,9 @@ const styles = stylex.create({
   commitTitle: {
     padding: 'var(--halfpad) var(--pad)',
   },
+  instruction: {
+    padding: 'var(--halfpad) var(--pad)',
+  },
 });
 
 /** The `AbsorbEdit` that is currently being dragged. */
@@ -109,14 +113,32 @@ export function AbsorbStackEditPanel() {
   const subset = relevantSubset(stack, dag);
   return (
     <>
-      <RenderDag
-        className="absorb-dag"
-        dag={dag}
-        renderCommit={renderCommit}
-        renderCommitExtras={renderCommitExtras}
-        renderGlyph={RenderGlyph}
-        subset={subset}
-      />
+      <Column>
+        <div {...stylex.props(styles.instruction)}>
+          <Row>
+            <Icon icon="info" />
+            <div>
+              <T>Drag a diff chunk to a commit to amend the diff chunk into the commit.</T>
+              <br />
+              <T>Diff chunks under "You are here" will be left in the working copy.</T>
+              <br />
+              <T>Only commits that modify related files are shown.</T>
+            </div>
+          </Row>
+        </div>
+        <RenderDag
+          className="absorb-dag"
+          dag={dag}
+          renderCommit={renderCommit}
+          renderCommitExtras={renderCommitExtras}
+          renderGlyph={RenderGlyph}
+          subset={subset}
+          style={{
+            /* make it "containing block" so findDragDestinationCommitKey works */
+            position: 'relative',
+          }}
+        />
+      </Column>
       <AbsorbDraggingOverlay />
     </>
   );
