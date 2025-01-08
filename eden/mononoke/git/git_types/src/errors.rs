@@ -34,7 +34,7 @@ pub enum GitError {
     InvalidPackfileItem(String),
 
     /// The raw object content provided do not correspond to a valid git object.
-    #[error("Invalid git object content provided for object ID {0}. Cause: {1}")]
+    #[error("Invalid git object content provided for object ID {0}. Cause: {1:?}")]
     InvalidContent(String, GitInternalError),
 
     /// The requested bubble does not exist.  Either it was never created or has expired.
@@ -45,7 +45,7 @@ pub enum GitError {
 
     /// Failed to get or store the git object in Mononoke store.
     #[error(
-        "Failed to get or store the git object (ID: {0}) or its packfile item in blobstore. Cause: {1}"
+        "Failed to get or store the git object (ID: {0}) or its packfile item in blobstore. Cause: {1:?}"
     )]
     StorageFailure(String, GitInternalError),
 
@@ -57,7 +57,7 @@ pub enum GitError {
 
     /// The provided git object could not be converted to a valid bonsai changeset.
     #[error(
-        "Validation failure while persisting git object (ID: {0}) as a bonsai changeset. Cause: {1}"
+        "Validation failure while persisting git object (ID: {0}) as a bonsai changeset. Cause: {1:?}"
     )]
     InvalidBonsai(String, GitInternalError),
 

@@ -288,7 +288,8 @@ pub async fn create_annotated_tag(
     annotated_tag: BonsaiAnnotatedTag,
     target_is_tag: bool,
 ) -> Result<mononoke_types::ChangesetId, GitError> {
-    let tag_id = format!("{:?}", annotated_tag);
+    let tag_hash = tag_hash.unwrap_or_else(|| ObjectId::null(gix_hash::Kind::Sha1));
+    let tag_id = tag_hash.clone();
 
     // Create the new Bonsai Changeset. The `freeze` method validates
     // that the bonsai changeset is internally consistent.
@@ -306,14 +307,14 @@ pub async fn create_annotated_tag(
 
     let changeset = changeset
         .freeze()
-        .map_err(|e| GitError::InvalidBonsai(tag_id.clone(), e.into()))?;
+        .map_err(|e| GitError::InvalidBonsai(tag_id.to_string(), e.into()))?;
 
     let changeset_id = changeset.get_changeset_id();
     // Store the created changeset
     changesets_creation::save_changesets(ctx, repo, vec![changeset])
         .await
-        .map_err(|e| GitError::StorageFailure(tag_id.clone(), e.into()))?;
-    let tag_hash = tag_hash.unwrap_or_else(|| ObjectId::null(gix_hash::Kind::Sha1));
+        .map_err(|e| anyhow::anyhow!("Error in saving changeset {}, Cause: {:?}", changeset_id, e))
+        .map_err(|e| GitError::StorageFailure(tag_id.to_string(), e.into()))?;
     let tag_hash = GitSha1::from_bytes(tag_hash.as_bytes())
         .map_err(|_| GitError::InvalidHash(tag_hash.to_string()))?;
     // Create a mapping between the tag name and the metadata changeset
@@ -326,7 +327,14 @@ pub async fn create_annotated_tag(
     repo.bonsai_tag_mapping()
         .add_or_update_mappings(vec![mapping_entry])
         .await
-        .map_err(|e| GitError::StorageFailure(tag_id, e.into()))?;
+        .map_err(|e| {
+            anyhow::anyhow!(
+                "Error in storing bonsai tag mappings for tag {}, Cause: {:?}",
+                tag_id.to_string(),
+                e
+            )
+        })
+        .map_err(|e| GitError::StorageFailure(tag_id.to_string(), e.into()))?;
     Ok(changeset_id)
 }
 
