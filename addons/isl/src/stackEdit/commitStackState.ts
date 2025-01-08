@@ -124,7 +124,7 @@ const CommitStackRecord = Record<CommitStackProps>({
  * For absorb use-case, each file stack (keyed by the index of fileStacks) has
  * an AbsorbEditId->AbsorbEdit mapping.
  */
-type AbsorbExtra = ImMap<number, ImMap<AbsorbEditId, AbsorbEdit>>;
+type AbsorbExtra = ImMap<FileStackIndex, ImMap<AbsorbEditId, AbsorbEdit>>;
 
 // Type of *instances* created by the `CommitStackRecord`.
 // This makes `CommitStackState` work more like a common OOP `class Foo`:
@@ -615,6 +615,30 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
       candidateRevs.push(nullthrows(toCommitRev(fileRev)));
     }
     return {selectedRev, candidateRevs};
+  }
+
+  /**
+   * Filter `absorbExtra` by commit rev.
+   *
+   * Only returns a subset of `absorbExtra` that has the `rev` selected.
+   */
+  absorbExtraByCommitRev(rev: Rev): AbsorbExtra {
+    const isWdir = this.get(rev)?.originalNodes.contains(WDIR_NODE);
+    return ImMap<FileStackIndex, ImMap<AbsorbEditId, AbsorbEdit>>().withMutations(mut => {
+      let result = mut;
+      this.absorbExtra.forEach((edits, fileStackIndex) => {
+        edits.forEach((edit, editId) => {
+          assert(edit.absorbEditId === editId, 'absorbEditId should match its map key');
+          if (edit.selectedRev === rev || (edit.selectedRev == null && isWdir)) {
+            if (!result.has(fileStackIndex)) {
+              result = result.set(fileStackIndex, ImMap<AbsorbEditId, AbsorbEdit>());
+            }
+            result = result.setIn([fileStackIndex, editId], edit);
+          }
+        });
+      });
+      return result;
+    });
   }
 
   /**
@@ -2025,7 +2049,7 @@ export type FileState = RecordOf<FileStateProps>;
 export const FileMetadata = Record<FileMetadataProps>({copyFrom: undefined, flags: ''});
 export type FileMetadata = RecordOf<FileMetadataProps>;
 
-type FileStackIndex = number;
+export type FileStackIndex = number;
 
 type FileIdxProps = {
   fileIdx: FileStackIndex;
