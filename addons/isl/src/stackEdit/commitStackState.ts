@@ -629,11 +629,15 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     };
     // diffChunk uses fileRev, map it to commitRev.
     const selectedRev = toCommitRev(edit.selectedRev);
-    const startCandidateFileRev = Math.max(1, edit.introductionRev); // skip rev 0 (public, immutable)
+    const startCandidateFileRev = Math.max(1, edit.introductionRev); // skip file rev 0 (bottomFiles)
     const endCandidateFileRev = fileStack.revLength;
     const candidateRevs: Rev[] = [];
     for (let fileRev = startCandidateFileRev; fileRev < endCandidateFileRev; ++fileRev) {
-      candidateRevs.push(nullthrows(toCommitRev(fileRev)));
+      const rev = toCommitRev(fileRev);
+      // Skip immutable (public) commits.
+      if (rev != null && this.get(rev)?.immutableKind !== 'hash') {
+        candidateRevs.push(rev);
+      }
     }
     return {selectedRev, candidateRevs};
   }
