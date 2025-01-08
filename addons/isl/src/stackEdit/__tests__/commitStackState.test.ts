@@ -8,7 +8,14 @@
 import type {Rev} from '../fileStackState';
 import type {ExportCommit, ExportStack} from 'shared/types/stack';
 
-import {ABSENT_FILE, CommitIdx, CommitStackState, CommitState} from '../commitStackState';
+import {
+  ABSENT_FILE,
+  CommitIdx,
+  CommitStackState,
+  CommitState,
+  FileIdx,
+  FileState,
+} from '../commitStackState';
 import {FileStackState} from '../fileStackState';
 import {describeAbsorbIdChunkMap} from './absorb.test';
 import {List, Set as ImSet, Map as ImMap} from 'immutable';
@@ -1244,6 +1251,25 @@ describe('CommitStackState', () => {
           "0:./c.txt(c1↵c2↵c3↵) 1:CommitC/c.txt(c1↵c2↵c3↵z1↵) 2:Wdir/c.txt(c1↵c2↵c3↵z1↵;absorbed:C1↵C2↵c3↵z1↵)",
         ]
       `);
+    });
+
+    it('updates getUtf8 with pending absorb edits', () => {
+      const stack1 = new CommitStackState(absorbStack2).useFileStack();
+      const get = (
+        stack: CommitStackState,
+        fileIdx: number,
+        fileRev: Rev,
+        considerAbsorb?: boolean,
+      ) =>
+        replaceNewLines(
+          stack.getUtf8Data(FileState({data: FileIdx({fileIdx, fileRev})}), considerAbsorb),
+        );
+      expect(get(stack1, 0, 1)).toMatchInlineSnapshot(`"a1↵a2↵a3↵"`);
+      // getUtf8Data considers the pending absorb (a1 -> A1).
+      const stack2 = stack1.analyseAbsorb();
+      expect(get(stack2, 0, 1)).toMatchInlineSnapshot(`"A1↵a2↵a3↵"`);
+      // Can still ask for the content without absorb explicitly.
+      expect(get(stack2, 0, 1, false)).toMatchInlineSnapshot(`"a1↵a2↵a3↵"`);
     });
 
     function describeAbsorbExtra(stack: CommitStackState) {

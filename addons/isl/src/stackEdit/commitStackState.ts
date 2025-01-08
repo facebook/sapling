@@ -956,13 +956,20 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     return file == null || isAbsent(file);
   }
 
-  /** Extract utf-8 data from a file. */
-  getUtf8Data(file: FileState): string {
+  /**
+   * Extract utf-8 data from a file.
+   * Pending absorb is applied if considerPendingAbsorb is true.
+   */
+  getUtf8Data(file: FileState, considerPendingAbsorb = true): string {
     if (typeof file.data === 'string') {
       return file.data;
     }
     if (file.data instanceof FileIdx) {
-      return nullthrows(this.fileStacks.get(file.data.fileIdx)).getRev(file.data.fileRev);
+      let fileRev = file.data.fileRev;
+      if (considerPendingAbsorb && this.hasPendingAbsorb()) {
+        fileRev = revWithAbsorb(fileRev);
+      }
+      return nullthrows(this.fileStacks.get(file.data.fileIdx)).getRev(fileRev);
     } else {
       throw new Error('getUtf8Data called on non-utf8 file.');
     }
