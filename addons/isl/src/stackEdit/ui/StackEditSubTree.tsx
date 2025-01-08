@@ -343,6 +343,9 @@ export function UndoDescription({op}: {op?: StackEditOpDescription}): React.Reac
     return <T replace={{$file: op.fileDesc}}>editing file stack: $file</T>;
   } else if (op.name === 'split') {
     return <T replace={{$file: op.path}}>editing $file via interactive split</T>;
+  } else if (op.name === 'absorbMove') {
+    const replace = {$commit: <CommitTitle commit={op.commit} />};
+    return <T replace={replace}>Moved a diff chunk to $commit</T>;
   }
   return <T>unknown</T>;
 }
