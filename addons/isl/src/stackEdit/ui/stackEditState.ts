@@ -17,13 +17,13 @@ import {
   commitMessageFieldsToString,
 } from '../../CommitInfoView/CommitMessageFields';
 import {getTracker} from '../../analytics/globalTracker';
+import {WDIR_NODE} from '../../dag/virtualCommit';
 import {t} from '../../i18n';
 import {readAtom, writeAtom} from '../../jotaiUtils';
 import {waitForNothingRunning} from '../../operationsState';
 import {uncommittedSelection} from '../../partialSelection';
 import {CommitStackState} from '../../stackEdit/commitStackState';
 import {assert, registerDisposable} from '../../utils';
-import {WDIR_NODE} from '../commitStackState';
 import {List, Record} from 'immutable';
 import {atom, useAtom} from 'jotai';
 import {nullthrows} from 'shared/utils';

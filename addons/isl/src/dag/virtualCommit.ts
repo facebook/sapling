@@ -8,8 +8,14 @@
 import {t} from '../i18n';
 import {DagCommitInfo} from './dagCommitInfo';
 
+/**
+ * The "wdir()" virtual hash.
+ * This needs to match the CLI's interpretion of "wdir()". See `wdirhex` in sapling/node.py.
+ */
+export const WDIR_NODE = 'ffffffffffffffffffffffffffffffffffffffff';
+
 export const YOU_ARE_HERE_VIRTUAL_COMMIT: DagCommitInfo = DagCommitInfo.fromCommitInfo({
-  hash: 'YOU_ARE_HERE',
+  hash: WDIR_NODE,
   title: '',
   parents: [],
   phase: 'draft',

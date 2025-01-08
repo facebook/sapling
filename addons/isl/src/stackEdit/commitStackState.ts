@@ -24,6 +24,7 @@ import {
   mergeCommitMessageFields,
   parseCommitMessageFields,
 } from '../CommitInfoView/CommitMessageFields';
+import {WDIR_NODE} from '../dag/virtualCommit';
 import {t} from '../i18n';
 import {readAtom} from '../jotaiUtils';
 import {assert} from '../utils';
@@ -2086,6 +2087,3 @@ export const ABSENT_FILE = FileState({
   data: '',
   flags: ABSENT_FLAG,
 });
-
-/** The "wdir()" virtual hash. */
-export const WDIR_NODE = 'ffffffffffffffffffffffffffffffffffffffff';
