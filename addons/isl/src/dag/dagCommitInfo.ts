@@ -33,6 +33,9 @@ type DagExt = {
 
   /** If true, this is a virtual "You are here" commit. */
   isYouAreHere?: boolean;
+
+  /** If constructed from a "CommitStack", the "Rev" of the commit. */
+  stackRev?: number;
 };
 
 // Note: There are some non-immutable containers (Array) in `CommitInfo`
@@ -69,6 +72,7 @@ const CommitInfoExtRecord = Record<CommitInfoExtProps>({
   ancestors: undefined,
   seqNumber: undefined,
   isYouAreHere: undefined,
+  stackRev: undefined,
 });
 type CommitInfoExtRecord = RecordOf<CommitInfoExtProps>;
 
@@ -188,6 +192,10 @@ export class DagCommitInfo extends SelfUpdate<CommitInfoExtRecord> {
 
   get isYouAreHere(): boolean | undefined {
     return this.inner.isYouAreHere;
+  }
+
+  get stackRev(): number | undefined {
+    return this.inner.stackRev;
   }
 
   get maxCommonPathPrefix(): string {

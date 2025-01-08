@@ -42,7 +42,8 @@ function calculateDagFromStackImpl(stack: CommitStackState): Dag {
     const maybeDotCommit = stack.stack.findLast(commit => commit.originalNodes.contains(dotNode));
     if (maybeDotCommit != null) {
       dotKey = maybeDotCommit.key;
-      dag = dag.add([YOU_ARE_HERE_VIRTUAL_COMMIT.set('parents', [dotKey])]);
+      const wdirRev = stack.stack.findLastIndex(commit => commit.originalNodes.contains(WDIR_NODE));
+      dag = dag.add([YOU_ARE_HERE_VIRTUAL_COMMIT.merge({parents: [dotKey], stackRev: wdirRev})]);
     }
   }
 
@@ -67,6 +68,7 @@ function calculateDagFromStackImpl(stack: CommitStackState): Dag {
           author: commit.author,
           date: new Date(commit.date.unix),
           isDot: commit.key === dotKey,
+          stackRev: rev,
           // Other fields are omitted for now, since nobody uses them yet.
         });
       }),
