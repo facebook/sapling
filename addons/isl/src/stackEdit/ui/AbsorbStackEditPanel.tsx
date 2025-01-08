@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {DragHandler} from '../../DragHandle';
 import type {Dag} from '../../dag/dag';
 import type {DagCommitInfo} from '../../dag/dagCommitInfo';
 import type {AbsorbEdit, AbsorbEditId} from '../absorb';
@@ -13,12 +14,15 @@ import type {Map as ImMap} from 'immutable';
 
 import {FileHeader, IconType} from '../../ComparisonView/SplitDiffView/SplitDiffFileHeader';
 import {DragHandle} from '../../DragHandle';
+import {DraggingOverlay} from '../../DraggingOverlay';
 import {RenderDag} from '../../RenderDag';
 import {YOU_ARE_HERE_VIRTUAL_COMMIT} from '../../dag/virtualCommit';
+import {writeAtom} from '../../jotaiUtils';
 import {calculateDagFromStack} from '../stackDag';
 import {useStackEditState} from './stackEditState';
 import * as stylex from '@stylexjs/stylex';
 import {Icon} from 'isl-components/Icon';
+import {atom, useAtomValue} from 'jotai';
 import {nullthrows} from 'shared/utils';
 
 const styles = stylex.create({
@@ -28,6 +32,12 @@ const styles = stylex.create({
     marginLeft: -1,
     marginRight: -1,
     display: 'flex',
+  },
+  inDraggingOverlay: {
+    border: 'none',
+  },
+  beingDragged: {
+    opacity: 0.5,
   },
   dragHandlerWrapper: {
     width: 'fit-content',
@@ -82,18 +92,34 @@ const styles = stylex.create({
   },
 });
 
+/** The `AbsorbEdit` that is currently being dragged. */
+const draggingAbsorbEdit = atom<AbsorbEdit | null>(null);
+const onDragRef: {current: null | DragHandler} = {current: null};
+
 export function AbsorbStackEditPanel() {
   const stackEdit = useStackEditState();
   const stack = stackEdit.commitStack;
   const dag = calculateDagFromStack(stack);
   const subset = relevantSubset(stack, dag);
   return (
-    <RenderDag
-      dag={dag}
-      renderCommit={renderCommit}
-      renderCommitExtras={renderCommitExtras}
-      subset={subset}
-    />
+    <>
+      <RenderDag
+        dag={dag}
+        renderCommit={renderCommit}
+        renderCommitExtras={renderCommitExtras}
+        subset={subset}
+      />
+      <AbsorbDraggingOverlay />
+    </>
+  );
+}
+
+function AbsorbDraggingOverlay() {
+  const absorbEdit = useAtomValue(draggingAbsorbEdit);
+  return (
+    <DraggingOverlay onDragRef={onDragRef}>
+      {absorbEdit && <SingleAbsorbEdit edit={absorbEdit} inDraggingOverlay={true} />}
+    </DraggingOverlay>
   );
 }
 
@@ -165,12 +191,24 @@ function AbsorbEditsForFile(props: {
   );
 }
 
-function SingleAbsorbEdit(props: {edit: AbsorbEdit}) {
-  const {edit} = props;
+function SingleAbsorbEdit(props: {edit: AbsorbEdit; inDraggingOverlay?: boolean}) {
+  const {edit, inDraggingOverlay} = props;
+  const currentDragging = useAtomValue(draggingAbsorbEdit);
+
+  const handleDrag = (x: number, y: number, isDragging: boolean) => {
+    writeAtom(draggingAbsorbEdit, isDragging ? edit : null);
+    onDragRef.current?.(x, y, isDragging);
+  };
+
   return (
-    <div {...stylex.props(styles.absorbEditSingleChunk)}>
+    <div
+      {...stylex.props(
+        styles.absorbEditSingleChunk,
+        inDraggingOverlay && styles.inDraggingOverlay,
+        !inDraggingOverlay && currentDragging === edit && styles.beingDragged,
+      )}>
       <div {...stylex.props(styles.dragHandlerWrapper)}>
-        <DragHandle>
+        <DragHandle onDrag={handleDrag}>
           <Icon icon="grabber" />
         </DragHandle>
       </div>
