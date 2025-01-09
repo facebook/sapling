@@ -177,3 +177,30 @@ test split subtree copy commit
   $ hg split
   abort: cannot split subtree copy/merge commits
   [255]
+
+test graft subtree copy and merge commits
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B  # B/foo/x = 1a\n2\n3\n
+  > |
+  > A  # A/foo/x = 1\n2\n3\n
+  > EOS
+  $ hg go -q $B
+  $ hg subtree copy -r $A --from-path foo --to-path bar -m "subtree copy foo to bar"
+  copying foo to bar
+  $ hg subtree merge -r $B --from-path foo --to-path bar -q
+  $ hg ci -m "subtree merge foo to bar"
+  $ hg log -G -T '{node|short} {desc|firstline}'
+  @  5d2f9c7b4852 subtree merge foo to bar
+  │
+  o  ee6785824a72 subtree copy foo to bar
+  │
+  o  c4fbbcdf676b B
+  │
+  o  b4cb27eee4e2 A
+  $ hg go -q $B
+  $ hg graft 5d2f9c7b4852 ee6785824a72
+  skipping ungraftable subtree copy and merge revision 5d2f9c7b4852
+  skipping ungraftable subtree copy and merge revision ee6785824a72
+  abort: empty revision set was specified
+  [255]

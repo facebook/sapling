@@ -2598,6 +2598,16 @@ def _dograft(ui, repo, *revs, **opts):
     for rev in repo.revs("%ld and merge()", revs):
         ui.warn(_("skipping ungraftable merge revision %d\n") % rev)
         skipped.add(rev)
+    # check subtree copy and merge
+    for rev in revs:
+        if rev in skipped:
+            continue
+        ctx = repo[rev]
+        if subtreeutil.get_subtree_metadata(ctx.extra()):
+            ui.warn(
+                _("skipping ungraftable subtree copy and merge revision %s\n") % ctx
+            )
+            skipped.add(rev)
     revs = [r for r in revs if r not in skipped]
     if not revs:
         raise error.Abort(_("empty revision set was specified"))
