@@ -18,7 +18,7 @@ import {t, T} from '../../i18n';
 import {SplitCommitIcon} from '../../icons/SplitCommitIcon';
 import {reorderedRevs} from '../commitStackState';
 import {ReorderState} from '../reorderState';
-import {bumpStackEditMetric, useStackEditState} from './stackEditState';
+import {bumpStackEditMetric, useStackEditState, WDIR_NODE} from './stackEditState';
 import {is} from 'immutable';
 import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
@@ -344,12 +344,15 @@ export function UndoDescription({op}: {op?: StackEditOpDescription}): React.Reac
     return <T replace={{$file: op.path}}>editing $file via interactive split</T>;
   } else if (op.name === 'absorbMove') {
     const replace = {$commit: <CommitTitle commit={op.commit} />};
-    return <T replace={replace}>Moved a diff chunk to $commit</T>;
+    return <T replace={replace}>moving a diff chunk to $commit</T>;
   }
   return <T>unknown</T>;
 }
 
 /** Used in undo tooltip. Styled. */
 function CommitTitle({commit}: {commit: CommitState}): React.ReactElement {
+  if (commit.originalNodes.contains(WDIR_NODE)) {
+    return <T>the working copy</T>;
+  }
   return <span className="commit-title">{commit.text.split('\n', 1).at(0)}</span>;
 }
