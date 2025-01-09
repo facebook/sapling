@@ -9,9 +9,11 @@ import type {DragHandler} from '../../DragHandle';
 import type {RenderGlyphResult} from '../../RenderDag';
 import type {Dag} from '../../dag/dag';
 import type {DagCommitInfo} from '../../dag/dagCommitInfo';
+import type {HashSet} from '../../dag/set';
 import type {AbsorbEdit, AbsorbEditId} from '../absorb';
 import type {CommitStackState, FileRev, FileStackIndex, CommitRev} from '../commitStackState';
 import type {Map as ImMap} from 'immutable';
+import type {ReactNode} from 'react';
 
 import {FileHeader, IconType} from '../../ComparisonView/SplitDiffView/SplitDiffFileHeader';
 import {ScrollY} from '../../ComponentUtils';
@@ -27,6 +29,7 @@ import * as stylex from '@stylexjs/stylex';
 import {Column, Row} from 'isl-components/Flex';
 import {Icon} from 'isl-components/Icon';
 import {atom, useAtomValue} from 'jotai';
+import React from 'react';
 import {nullthrows} from 'shared/utils';
 
 const styles = stylex.create({
@@ -102,6 +105,9 @@ const styles = stylex.create({
   instruction: {
     padding: 'var(--halfpad) var(--pad)',
   },
+  inlineIcon: {
+    verticalAlign: 'bottom',
+  },
   scrollYPadding: {
     paddingRight: 'var(--pad)',
   },
@@ -120,18 +126,7 @@ export function AbsorbStackEditPanel() {
   return (
     <>
       <Column>
-        <div {...stylex.props(styles.instruction)}>
-          <Row>
-            <Icon icon="info" />
-            <div>
-              <T>Drag a diff chunk to a commit to amend the diff chunk into the commit.</T>
-              <br />
-              <T>Diff chunks under "You are here" will be left in the working copy.</T>
-              <br />
-              <T>Only commits that modify related files are shown.</T>
-            </div>
-          </Row>
-        </div>
+        <AbsorbInstruction dag={dag} subset={subset} />
         <ScrollY maxSize="calc(100vh - 200px)" {...stylex.props(styles.scrollYPadding)}>
           <RenderDag
             className="absorb-dag"
@@ -149,6 +144,45 @@ export function AbsorbStackEditPanel() {
       </Column>
       <AbsorbDraggingOverlay />
     </>
+  );
+}
+
+function AbsorbInstruction(props: {subset: HashSet; dag: Dag}) {
+  const {dag, subset} = props;
+  const hasOmittedCommits = subset.size < dag.all().size;
+  const hasDndDestinations = subset.intersect(dag.draft()).size > 1;
+  const tips: ReactNode[] = [];
+  if (hasDndDestinations) {
+    tips.push(<T>Diff chunks under a commit will be amended to the commit.</T>);
+  }
+  tips.push(<T>Diff chunks under "You are here" will be left in the working copy.</T>);
+  if (hasDndDestinations) {
+    tips.push(
+      <T
+        replace={{$grabber: <Icon icon="grabber" size="S" {...stylex.props(styles.inlineIcon)} />}}>
+        Commits are pre-selected based on blame information. Drag $grabber to adjust.
+      </T>,
+    );
+    if (hasOmittedCommits) {
+      tips.push(<T>Only commits that modify related files/areas are shown.</T>);
+    }
+  } else {
+    tips.push(<T>Nothing to absorb. The commit stack did not modify relevant files.</T>);
+  }
+  return (
+    <div {...stylex.props(styles.instruction)}>
+      <Row>
+        <Icon icon="info" />
+        <div>
+          {tips.map((tip, idx) => (
+            <React.Fragment key={idx}>
+              {idx > 0 && <br />}
+              {tip}
+            </React.Fragment>
+          ))}
+        </div>
+      </Row>
+    </div>
   );
 }
 
