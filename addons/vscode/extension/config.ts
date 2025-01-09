@@ -20,7 +20,6 @@ export function getCLICommand(): string {
   // prettier-disable
   return (
     vscode.workspace.getConfiguration('sapling').get('commandPath') ||
-    Internal.SLCommand ||
     (os.platform() === 'win32' ? 'sl.exe' : 'sl')
   );
 }
