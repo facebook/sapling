@@ -6,7 +6,7 @@
  */
 
 import type {DragHandler} from '../../DragHandle';
-import type {CommitState, Rev} from '../commitStackState';
+import type {CommitState, CommitRev} from '../commitStackState';
 import type {StackEditOpDescription, UseStackEditState} from './stackEditState';
 
 import {AnimatedReorderGroup} from '../../AnimatedReorderGroup';
@@ -49,7 +49,7 @@ export function StackEditSubTree(props: ActivateSplitProps): React.ReactElement 
   const draggingHintText: string | null =
     reorderState.draggingRevs.size > 1 ? t('Dependent commits are moved together') : null;
 
-  const getDragHandler = (rev: Rev): DragHandler => {
+  const getDragHandler = (rev: CommitRev): DragHandler => {
     // Track `reorderState` updates in case the <DragHandle/>-captured `reorderState` gets outdated.
     // Note: this would be unnecessary if React provides `getState()` instead of `state`.
     let currentReorderState = reorderState;
@@ -138,7 +138,7 @@ export function StackEditCommit({
   isReorderPreview,
   activateSplitTab,
 }: {
-  rev: Rev;
+  rev: CommitRev;
   stackEdit: UseStackEditState;
   onDrag?: DragHandler;
   isReorderPreview?: boolean;
@@ -275,7 +275,7 @@ export function StackEditCommit({
 function calculateReorderOffset(
   container: HTMLDivElement,
   y: number,
-  draggingRev: Rev,
+  draggingRev: CommitRev,
   invisibleRevCount = 1,
 ): number {
   let belowCount = 0;

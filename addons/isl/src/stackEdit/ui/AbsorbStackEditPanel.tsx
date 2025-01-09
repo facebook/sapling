@@ -10,7 +10,7 @@ import type {RenderGlyphResult} from '../../RenderDag';
 import type {Dag} from '../../dag/dag';
 import type {DagCommitInfo} from '../../dag/dagCommitInfo';
 import type {AbsorbEdit, AbsorbEditId} from '../absorb';
-import type {CommitStackState, FileRev, FileStackIndex, Rev} from '../commitStackState';
+import type {CommitStackState, FileRev, FileStackIndex, CommitRev} from '../commitStackState';
 import type {Map as ImMap} from 'immutable';
 
 import {FileHeader, IconType} from '../../ComparisonView/SplitDiffView/SplitDiffFileHeader';
@@ -152,7 +152,7 @@ export function AbsorbStackEditPanel() {
   );
 }
 
-const candidateDropTargetRevs = atom<readonly Rev[] | undefined>(get => {
+const candidateDropTargetRevs = atom<readonly CommitRev[] | undefined>(get => {
   const edit = get(draggingAbsorbEdit);
   const stack = get(stackEditStack);
   if (edit == null || stack == null) {
@@ -247,7 +247,7 @@ function findDragDestinationCommitKey(y: number): string | undefined {
 }
 
 /** Similar to `findDragDestinationCommitKey` but reports the rev. */
-function findDragDestinationCommitRev(y: number, stack: CommitStackState): Rev | undefined {
+function findDragDestinationCommitRev(y: number, stack: CommitStackState): CommitRev | undefined {
   const key = findDragDestinationCommitKey(y);
   if (key == null) {
     return undefined;

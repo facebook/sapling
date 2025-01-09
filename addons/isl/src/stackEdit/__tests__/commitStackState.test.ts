@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {FileRev, Rev} from '../commitStackState';
+import type {FileRev, CommitRev} from '../commitStackState';
 import type {ExportCommit, ExportStack} from 'shared/types/stack';
 
 import {WDIR_NODE} from '../../dag/virtualCommit';
@@ -146,8 +146,8 @@ describe('CommitStackState', () => {
   it('logs commit history', () => {
     const stack = new CommitStackState(exportStack1);
     expect(stack.revs()).toStrictEqual([0, 1, 2, 3]);
-    expect([...stack.log(1 as Rev)]).toStrictEqual([1, 0]);
-    expect([...stack.log(3 as Rev)]).toStrictEqual([3, 2, 1, 0]);
+    expect([...stack.log(1 as CommitRev)]).toStrictEqual([1, 0]);
+    expect([...stack.log(3 as CommitRev)]).toStrictEqual([3, 2, 1, 0]);
   });
 
   describe('log file history', () => {
@@ -155,34 +155,36 @@ describe('CommitStackState', () => {
     const extend = (stack: CommitStackState, revPathPairs: Array<[number, string]>) => {
       return revPathPairs.map(([rev, path]) => {
         const file =
-          rev >= 0 ? stack.get(rev as Rev)?.files.get(path) : stack.bottomFiles.get(path);
-        expect(file).toBe(stack.getFile(rev as Rev, path));
+          rev >= 0 ? stack.get(rev as CommitRev)?.files.get(path) : stack.bottomFiles.get(path);
+        expect(file).toBe(stack.getFile(rev as CommitRev, path));
         return [rev, path, file];
       });
     };
 
     it('logs file history', () => {
       const stack = new CommitStackState(exportStack1);
-      expect([...stack.logFile(3 as Rev, 'x.txt')]).toStrictEqual(
+      expect([...stack.logFile(3 as CommitRev, 'x.txt')]).toStrictEqual(
         extend(stack, [
           [2, 'x.txt'],
           [1, 'x.txt'],
         ]),
       );
-      expect([...stack.logFile(3 as Rev, 'y.txt')]).toStrictEqual(extend(stack, [[2, 'y.txt']]));
-      expect([...stack.logFile(3 as Rev, 'z.txt')]).toStrictEqual(
+      expect([...stack.logFile(3 as CommitRev, 'y.txt')]).toStrictEqual(
+        extend(stack, [[2, 'y.txt']]),
+      );
+      expect([...stack.logFile(3 as CommitRev, 'z.txt')]).toStrictEqual(
         extend(stack, [
           [3, 'z.txt'],
           [1, 'z.txt'],
         ]),
       );
       // Changes in not requested commits (rev 0) are ignored.
-      expect([...stack.logFile(3 as Rev, 'k.txt')]).toStrictEqual([]);
+      expect([...stack.logFile(3 as CommitRev, 'k.txt')]).toStrictEqual([]);
     });
 
     it('logs file history following renames', () => {
       const stack = new CommitStackState(exportStack1);
-      expect([...stack.logFile(3 as Rev, 'y.txt', true)]).toStrictEqual(
+      expect([...stack.logFile(3 as CommitRev, 'y.txt', true)]).toStrictEqual(
         extend(stack, [
           [2, 'y.txt'],
           [1, 'x.txt'],
@@ -193,7 +195,7 @@ describe('CommitStackState', () => {
     it('logs file history including the bottom', () => {
       const stack = new CommitStackState(exportStack1);
       ['x.txt', 'z.txt'].forEach(path => {
-        expect([...stack.logFile(1 as Rev, path, true, true)]).toStrictEqual(
+        expect([...stack.logFile(1 as CommitRev, path, true, true)]).toStrictEqual(
           extend(stack, [
             [1, path],
             // rev 0 does not change x.txt or z.txt
@@ -217,29 +219,29 @@ describe('CommitStackState', () => {
           text: 'Commit Foo',
         },
       ]);
-      const file = stack.getFile(0 as Rev, 'z.txt');
+      const file = stack.getFile(0 as CommitRev, 'z.txt');
       expect(stack.getUtf8Data(file)).toBe('33');
-      const [, , parentFileWithRename] = stack.parentFile(0 as Rev, 'z.txt', true);
+      const [, , parentFileWithRename] = stack.parentFile(0 as CommitRev, 'z.txt', true);
       expect(stack.getUtf8Data(parentFileWithRename)).toBe('11');
-      const [, , parentFile] = stack.parentFile(0 as Rev, 'z.txt', false);
+      const [, , parentFile] = stack.parentFile(0 as CommitRev, 'z.txt', false);
       expect(stack.getUtf8Data(parentFile)).toBe('22');
     });
   });
 
   it('provides file contents at given revs', () => {
     const stack = new CommitStackState(exportStack1);
-    expect(stack.getFile(0 as Rev, 'x.txt')).toBe(ABSENT_FILE);
-    expect(stack.getFile(0 as Rev, 'y.txt')).toBe(ABSENT_FILE);
-    expect(stack.getFile(0 as Rev, 'z.txt')).toMatchObject({data: '11'});
-    expect(stack.getFile(1 as Rev, 'x.txt')).toMatchObject({data: '33'});
-    expect(stack.getFile(1 as Rev, 'y.txt')).toBe(ABSENT_FILE);
-    expect(stack.getFile(1 as Rev, 'z.txt')).toMatchObject({data: '22'});
-    expect(stack.getFile(2 as Rev, 'x.txt')).toBe(ABSENT_FILE);
-    expect(stack.getFile(2 as Rev, 'y.txt')).toMatchObject({data: '33'});
-    expect(stack.getFile(2 as Rev, 'z.txt')).toMatchObject({data: '22'});
-    expect(stack.getFile(3 as Rev, 'x.txt')).toBe(ABSENT_FILE);
-    expect(stack.getFile(3 as Rev, 'y.txt')).toMatchObject({data: '33'});
-    expect(stack.getFile(3 as Rev, 'z.txt')).toBe(ABSENT_FILE);
+    expect(stack.getFile(0 as CommitRev, 'x.txt')).toBe(ABSENT_FILE);
+    expect(stack.getFile(0 as CommitRev, 'y.txt')).toBe(ABSENT_FILE);
+    expect(stack.getFile(0 as CommitRev, 'z.txt')).toMatchObject({data: '11'});
+    expect(stack.getFile(1 as CommitRev, 'x.txt')).toMatchObject({data: '33'});
+    expect(stack.getFile(1 as CommitRev, 'y.txt')).toBe(ABSENT_FILE);
+    expect(stack.getFile(1 as CommitRev, 'z.txt')).toMatchObject({data: '22'});
+    expect(stack.getFile(2 as CommitRev, 'x.txt')).toBe(ABSENT_FILE);
+    expect(stack.getFile(2 as CommitRev, 'y.txt')).toMatchObject({data: '33'});
+    expect(stack.getFile(2 as CommitRev, 'z.txt')).toMatchObject({data: '22'});
+    expect(stack.getFile(3 as CommitRev, 'x.txt')).toBe(ABSENT_FILE);
+    expect(stack.getFile(3 as CommitRev, 'y.txt')).toMatchObject({data: '33'});
+    expect(stack.getFile(3 as CommitRev, 'z.txt')).toBe(ABSENT_FILE);
   });
 
   describe('builds FileStack', () => {
@@ -402,8 +404,8 @@ describe('CommitStackState', () => {
         {...e, node: 'B', parents: ['A'], immutable: false},
         {...e, node: 'C', parents: ['B'], immutable: false},
       ]);
-      expect(stack.canFoldDown(1 as Rev)).toBeFalsy();
-      expect(stack.canFoldDown(2 as Rev)).toBeTruthy();
+      expect(stack.canFoldDown(1 as CommitRev)).toBeFalsy();
+      expect(stack.canFoldDown(2 as CommitRev)).toBeTruthy();
     });
 
     it('cannot be used for out-of-range commits', () => {
@@ -411,9 +413,9 @@ describe('CommitStackState', () => {
         {...e, node: 'A'},
         {...e, node: 'B', parents: ['A']},
       ]);
-      expect(stack.canFoldDown(0 as Rev)).toBeFalsy();
-      expect(stack.canFoldDown(1 as Rev)).toBeTruthy();
-      expect(stack.canFoldDown(2 as Rev)).toBeFalsy();
+      expect(stack.canFoldDown(0 as CommitRev)).toBeFalsy();
+      expect(stack.canFoldDown(1 as CommitRev)).toBeTruthy();
+      expect(stack.canFoldDown(2 as CommitRev)).toBeFalsy();
     });
 
     it('cannot be used for forks', () => {
@@ -422,8 +424,8 @@ describe('CommitStackState', () => {
         {...e, node: 'B', parents: ['A']},
         {...e, node: 'C', parents: ['A']},
       ]);
-      expect(stack.canFoldDown(1 as Rev)).toBeFalsy();
-      expect(stack.canFoldDown(2 as Rev)).toBeFalsy();
+      expect(stack.canFoldDown(1 as CommitRev)).toBeFalsy();
+      expect(stack.canFoldDown(2 as CommitRev)).toBeFalsy();
     });
 
     it('works for simple edits', () => {
@@ -438,8 +440,8 @@ describe('CommitStackState', () => {
         {...e, node: 'B', text: 'Commit B', parents: ['A'], files: {'x.txt': {data: 'yy'}}},
         {...e, node: 'C', text: 'Commit C', parents: ['B'], files: {'x.txt': {data: 'zz'}}},
       ]);
-      expect(stack.canFoldDown(1 as Rev)).toBeTruthy();
-      stack = stack.foldDown(1 as Rev);
+      expect(stack.canFoldDown(1 as CommitRev)).toBeTruthy();
+      stack = stack.foldDown(1 as CommitRev);
       expect(stack.stack.size).toBe(2);
       expect(stack.stack.get(0)?.toJS()).toMatchObject({
         key: 'A',
@@ -463,8 +465,8 @@ describe('CommitStackState', () => {
         {...e, node: 'A', parents: [], files: {'x.txt': {data: 'xx'}}},
         {...e, node: 'B', parents: ['A'], files: {'y.txt': {data: 'yy', copyFrom: 'x.txt'}}},
       ]);
-      expect(stack.canFoldDown(1 as Rev)).toBeTruthy();
-      stack = stack.foldDown(1 as Rev);
+      expect(stack.canFoldDown(1 as CommitRev)).toBeTruthy();
+      stack = stack.foldDown(1 as CommitRev);
       expect(stack.stack.get(0)?.toJS()).toMatchObject({
         files: {
           'x.txt': {data: 'xx'},
@@ -485,8 +487,8 @@ describe('CommitStackState', () => {
         },
       ]);
       // Fold B+C.
-      expect(stack.canFoldDown(2 as Rev)).toBeTruthy();
-      stack = stack.foldDown(2 as Rev);
+      expect(stack.canFoldDown(2 as CommitRev)).toBeTruthy();
+      stack = stack.foldDown(2 as CommitRev);
       expect(stack.stack.get(1)?.toJS()).toMatchObject({
         files: {
           y1t: {data: 'y1', copyFrom: 'yt'}, // reuse copyFrom: 'yt' from commit B.
@@ -502,8 +504,8 @@ describe('CommitStackState', () => {
         {...e, node: 'C', parents: ['B'], files: {zt: {data: 'zz', copyFrom: 'yt'}, yt: null}},
       ]);
       // Fold B+C.
-      expect(stack.canFoldDown(2 as Rev)).toBeTruthy();
-      stack = stack.foldDown(2 as Rev);
+      expect(stack.canFoldDown(2 as CommitRev)).toBeTruthy();
+      stack = stack.foldDown(2 as CommitRev);
       expect(stack.stack.get(1)?.toJS()).toMatchObject({
         files: {
           xt: ABSENT_FILE.toJS(),
@@ -520,8 +522,8 @@ describe('CommitStackState', () => {
         {...e, node: 'C', parents: ['B'], files: {xt: {data: 'xx'}}},
       ]);
       // Fold B+C.
-      expect(stack.canFoldDown(2 as Rev)).toBeTruthy();
-      stack = stack.foldDown(2 as Rev);
+      expect(stack.canFoldDown(2 as CommitRev)).toBeTruthy();
+      stack = stack.foldDown(2 as CommitRev);
       expect(stack.stack.get(1)?.toJS()).toMatchObject({
         files: {zt: {data: 'zz'}}, // changes to 'yt' is removed.
       });
@@ -537,9 +539,9 @@ describe('CommitStackState', () => {
         {...e, node: 'B', parents: ['A'], immutable: true},
         {...e, node: 'C', parents: ['B'], immutable: false},
       ]);
-      expect(stack.canDrop(0 as Rev)).toBeFalsy();
-      expect(stack.canDrop(1 as Rev)).toBeFalsy();
-      expect(stack.canDrop(2 as Rev)).toBeTruthy();
+      expect(stack.canDrop(0 as CommitRev)).toBeFalsy();
+      expect(stack.canDrop(1 as CommitRev)).toBeFalsy();
+      expect(stack.canDrop(2 as CommitRev)).toBeTruthy();
     });
 
     it('detects content dependencies', () => {
@@ -549,10 +551,10 @@ describe('CommitStackState', () => {
         {...e, node: 'C', parents: ['B'], files: {xx: {data: '0\n1\n2\n3\n'}}},
         {...e, node: 'D', parents: ['C'], files: {xx: {data: '0\n1\n2\n4\n'}}},
       ]);
-      expect(stack.canDrop(0 as Rev)).toBeFalsy();
-      expect(stack.canDrop(1 as Rev)).toBeTruthy();
-      expect(stack.canDrop(2 as Rev)).toBeFalsy(); // D depends on C
-      expect(stack.canDrop(3 as Rev)).toBeTruthy();
+      expect(stack.canDrop(0 as CommitRev)).toBeFalsy();
+      expect(stack.canDrop(1 as CommitRev)).toBeTruthy();
+      expect(stack.canDrop(2 as CommitRev)).toBeFalsy(); // D depends on C
+      expect(stack.canDrop(3 as CommitRev)).toBeTruthy();
     });
 
     it('detects commit graph dependencies', () => {
@@ -562,10 +564,10 @@ describe('CommitStackState', () => {
         {...e, node: 'C', parents: ['A'], files: {xx: {data: '3'}}},
         {...e, node: 'D', parents: ['C'], files: {xx: {data: '4'}}},
       ]);
-      expect(stack.canDrop(0 as Rev)).toBeFalsy();
-      expect(stack.canDrop(1 as Rev)).toBeTruthy();
-      expect(stack.canDrop(2 as Rev)).toBeFalsy();
-      expect(stack.canDrop(3 as Rev)).toBeTruthy();
+      expect(stack.canDrop(0 as CommitRev)).toBeFalsy();
+      expect(stack.canDrop(1 as CommitRev)).toBeTruthy();
+      expect(stack.canDrop(2 as CommitRev)).toBeFalsy();
+      expect(stack.canDrop(3 as CommitRev)).toBeTruthy();
     });
 
     it('for a change in the middle of a stack', () => {
@@ -574,10 +576,10 @@ describe('CommitStackState', () => {
         {...e, node: 'B', parents: ['A'], files: {xx: {data: 'p\nx\ny\n'}}},
         {...e, node: 'C', parents: ['B'], files: {xx: {data: 'p\nx\ny\nz\n'}}},
       ]);
-      expect(stack.canDrop(0 as Rev)).toBeFalsy();
-      expect(stack.canDrop(1 as Rev)).toBeTruthy();
-      expect(stack.canDrop(2 as Rev)).toBeTruthy();
-      stack = stack.drop(1 as Rev);
+      expect(stack.canDrop(0 as CommitRev)).toBeFalsy();
+      expect(stack.canDrop(1 as CommitRev)).toBeTruthy();
+      expect(stack.canDrop(2 as CommitRev)).toBeTruthy();
+      stack = stack.drop(1 as CommitRev);
       expect(stack.stack.size).toBe(2);
       expect(stack.stack.get(1)?.toJS()).toMatchObject({
         originalNodes: ['C'],
@@ -596,9 +598,9 @@ describe('CommitStackState', () => {
         {...e, node: 'B', parents: ['A'], immutable: true},
         {...e, node: 'C', parents: ['B'], immutable: false},
       ]);
-      expect(stack.canReorder([0, 2, 1] as Rev[])).toBeFalsy();
-      expect(stack.canReorder([1, 0, 2] as Rev[])).toBeFalsy();
-      expect(stack.canReorder([0, 1, 2] as Rev[])).toBeTruthy();
+      expect(stack.canReorder([0, 2, 1] as CommitRev[])).toBeFalsy();
+      expect(stack.canReorder([1, 0, 2] as CommitRev[])).toBeFalsy();
+      expect(stack.canReorder([0, 1, 2] as CommitRev[])).toBeTruthy();
     });
 
     it('respects content dependencies', () => {
@@ -608,10 +610,10 @@ describe('CommitStackState', () => {
         {...e, node: 'C', parents: ['B'], files: {xx: {data: '0\n1\n2\n3\n'}}},
         {...e, node: 'D', parents: ['C'], files: {xx: {data: '0\n1\n2\n4\n'}}},
       ]);
-      expect(stack.canReorder([0, 2, 3, 1] as Rev[])).toBeTruthy();
-      expect(stack.canReorder([0, 2, 1, 3] as Rev[])).toBeTruthy();
-      expect(stack.canReorder([0, 3, 2, 1] as Rev[])).toBeFalsy();
-      expect(stack.canReorder([0, 3, 1, 2] as Rev[])).toBeFalsy();
+      expect(stack.canReorder([0, 2, 3, 1] as CommitRev[])).toBeTruthy();
+      expect(stack.canReorder([0, 2, 1, 3] as CommitRev[])).toBeTruthy();
+      expect(stack.canReorder([0, 3, 2, 1] as CommitRev[])).toBeFalsy();
+      expect(stack.canReorder([0, 3, 1, 2] as CommitRev[])).toBeFalsy();
     });
 
     it('refuses to reorder non-linear stack', () => {
@@ -621,9 +623,9 @@ describe('CommitStackState', () => {
         {...e, node: 'C', parents: ['A'], files: {xx: {data: '3'}}},
         {...e, node: 'D', parents: ['C'], files: {xx: {data: '4'}}},
       ]);
-      expect(stack.canReorder([0, 2, 3, 1] as Rev[])).toBeFalsy();
-      expect(stack.canReorder([0, 2, 1, 3] as Rev[])).toBeFalsy();
-      expect(stack.canReorder([0, 1, 2, 3] as Rev[])).toBeFalsy();
+      expect(stack.canReorder([0, 2, 3, 1] as CommitRev[])).toBeFalsy();
+      expect(stack.canReorder([0, 2, 1, 3] as CommitRev[])).toBeFalsy();
+      expect(stack.canReorder([0, 1, 2, 3] as CommitRev[])).toBeFalsy();
     });
 
     it('can reorder a long stack', () => {
@@ -641,16 +643,16 @@ describe('CommitStackState', () => {
         {...e, node: 'A', files: {xx: {data: '1\n'}}},
         {...e, node: 'B', parents: ['A'], files: {xx: {data: '1\n2\n'}}},
       ]);
-      expect(stack.canReorder([1, 0] as Rev[])).toBeTruthy();
-      stack = stack.reorder([1, 0] as Rev[]);
+      expect(stack.canReorder([1, 0] as CommitRev[])).toBeTruthy();
+      stack = stack.reorder([1, 0] as CommitRev[]);
       expect(stack.stack.toArray().map(c => c.files.get('xx')?.data)).toMatchObject([
         '2\n',
         '1\n2\n',
       ]);
       expect(stack.stack.toArray().map(c => c.key)).toMatchObject(['B', 'A']);
       // Reorder back.
-      expect(stack.canReorder([1, 0] as Rev[])).toBeTruthy();
-      stack = stack.reorder([1, 0] as Rev[]);
+      expect(stack.canReorder([1, 0] as CommitRev[])).toBeTruthy();
+      stack = stack.reorder([1, 0] as CommitRev[]);
       expect(stack.stack.toArray().map(c => c.files.get('xx')?.data)).toMatchObject([
         '1\n',
         '1\n2\n',
@@ -668,11 +670,11 @@ describe('CommitStackState', () => {
       ]);
 
       // A-B-C-D-E => A-C-E-B-D.
-      let order = [0, 2, 4, 1, 3] as Rev[];
+      let order = [0, 2, 4, 1, 3] as CommitRev[];
       expect(stack.canReorder(order)).toBeTruthy();
       stack = stack.reorder(order);
-      const getNode = (r: Rev) => stack.stack.get(r)?.originalNodes?.first();
-      const getParents = (r: Rev) => stack.stack.get(r)?.parents?.toJS();
+      const getNode = (r: CommitRev) => stack.stack.get(r)?.originalNodes?.first();
+      const getParents = (r: CommitRev) => stack.stack.get(r)?.parents?.toJS();
       expect(stack.revs().map(getNode)).toMatchObject(['A', 'C', 'E', 'B', 'D']);
       expect(stack.revs().map(getParents)).toMatchObject([[], [0], [1], [2], [3]]);
       expect(stack.revs().map(r => stack.getFile(r, 'xx').data)).toMatchObject([
@@ -691,7 +693,7 @@ describe('CommitStackState', () => {
       ]);
 
       // Reorder back. A-C-E-B-D => A-B-C-D-E.
-      order = [0, 3, 1, 4, 2] as Rev[];
+      order = [0, 3, 1, 4, 2] as CommitRev[];
       expect(stack.canReorder(order)).toBeTruthy();
       stack = stack.reorder(order);
       expect(stack.revs().map(getNode)).toMatchObject(['A', 'B', 'C', 'D', 'E']);
@@ -748,7 +750,7 @@ describe('CommitStackState', () => {
 
     it('follows reorder', () => {
       // Reorder B and C in the example stack.
-      const stack = new CommitStackState(exportStack1).reorder([0, 1, 3, 2] as Rev[]);
+      const stack = new CommitStackState(exportStack1).reorder([0, 1, 3, 2] as CommitRev[]);
       expect(stack.calculateImportStack({goto: 'B_NODE', preserveDirtyFiles: true})).toMatchObject([
         ['commit', {text: 'C'}],
         ['commit', {mark: ':r3', text: 'B'}],
@@ -758,7 +760,7 @@ describe('CommitStackState', () => {
 
     it('stays at the stack top on reorder', () => {
       // Reorder B and C in the example stack.
-      const stack = new CommitStackState(exportStack1).reorder([0, 1, 3, 2] as Rev[]);
+      const stack = new CommitStackState(exportStack1).reorder([0, 1, 3, 2] as CommitRev[]);
       expect(stack.calculateImportStack({goto: 'C_NODE'})).toMatchObject([
         ['commit', {text: 'C'}],
         ['commit', {mark: ':r3', text: 'B'}],
@@ -785,12 +787,14 @@ describe('CommitStackState', () => {
       const stack = new CommitStackState(exportStack1).updateEachFile((_rev, file, path) =>
         path === 'y.txt' ? file.set('data', '333') : file,
       );
-      expect(stack.calculateImportStack({goto: 3 as Rev})).toMatchObject([
+      expect(stack.calculateImportStack({goto: 3 as CommitRev})).toMatchObject([
         ['commit', {}],
         ['commit', {}],
         ['goto', {mark: ':r3'}],
       ]);
-      expect(stack.calculateImportStack({goto: 3 as Rev, preserveDirtyFiles: true})).toMatchObject([
+      expect(
+        stack.calculateImportStack({goto: 3 as CommitRev, preserveDirtyFiles: true}),
+      ).toMatchObject([
         ['commit', {}],
         ['commit', {}],
         ['reset', {mark: ':r3'}],
@@ -799,7 +803,7 @@ describe('CommitStackState', () => {
 
     it('optionally rewrites commit date', () => {
       // Swap the last 2 commits.
-      const stack = new CommitStackState(exportStack1).reorder([0, 1, 3, 2] as Rev[]);
+      const stack = new CommitStackState(exportStack1).reorder([0, 1, 3, 2] as CommitRev[]);
       expect(stack.calculateImportStack({rewriteDate: 40})).toMatchObject([
         ['commit', {date: [40, 0], text: 'C'}],
         ['commit', {date: [40, 0], text: 'B'}],
@@ -817,7 +821,7 @@ describe('CommitStackState', () => {
           parents: [],
           text: 'Temp commit',
         },
-      ]).setFile(0 as Rev, 'x.txt', f => f.set('data', '22'));
+      ]).setFile(0 as CommitRev, 'x.txt', f => f.set('data', '22'));
       expect(stack.calculateImportStack()).toMatchInlineSnapshot(`
         [
           [
@@ -849,19 +853,19 @@ describe('CommitStackState', () => {
   describe('denseSubStack', () => {
     it('provides bottomFiles', () => {
       const stack = new CommitStackState(exportStack1);
-      let subStack = stack.denseSubStack(List([3 as Rev])); // C
+      let subStack = stack.denseSubStack(List([3 as CommitRev])); // C
       // The bottom files contains z (deleted) and its content is before deletion.
       expect([...subStack.bottomFiles.keys()].sort()).toEqual(['z.txt']);
       expect(subStack.bottomFiles.get('z.txt')?.data).toBe('22');
 
-      subStack = stack.denseSubStack(List([2, 3] as Rev[])); // B, C
+      subStack = stack.denseSubStack(List([2, 3] as CommitRev[])); // B, C
       // The bottom files contains x (deleted), y (modified) and z (deleted).
       expect([...subStack.bottomFiles.keys()].sort()).toEqual(['x.txt', 'y.txt', 'z.txt']);
     });
 
     it('marks all files at every commit as changed', () => {
       const stack = new CommitStackState(exportStack1);
-      const subStack = stack.denseSubStack(List([2, 3] as Rev[])); // B, C
+      const subStack = stack.denseSubStack(List([2, 3] as CommitRev[])); // B, C
       // All commits (B, C) should have 3 files (x.txt, y.txt, z.txt) marked as "changed".
       expect(subStack.stack.map(c => c.files.size).toJS()).toEqual([3, 3]);
       // All file stacks (x.txt, y.txt, z.txt) should have 3 revs (bottomFile, B, C).
@@ -881,7 +885,7 @@ describe('CommitStackState', () => {
         [2, [1]],
         [3, [2]],
       ]);
-      expect(getRevs(stack.insertEmpty(2 as Rev, 'foo'))).toEqual([
+      expect(getRevs(stack.insertEmpty(2 as CommitRev, 'foo'))).toEqual([
         [0, []],
         [1, [0]],
         [2, [1]],
@@ -891,7 +895,7 @@ describe('CommitStackState', () => {
     });
 
     it('inserts at stack top', () => {
-      expect(getRevs(stack.insertEmpty(4 as Rev, 'foo'))).toEqual([
+      expect(getRevs(stack.insertEmpty(4 as CommitRev, 'foo'))).toEqual([
         [0, []],
         [1, [0]],
         [2, [1]],
@@ -902,25 +906,25 @@ describe('CommitStackState', () => {
 
     it('uses the provided commit message', () => {
       const msg = 'provided message\nfoobar';
-      ([0, 2, 4] as Rev[]).forEach(i => {
+      ([0, 2, 4] as CommitRev[]).forEach(i => {
         expect(stack.insertEmpty(i, msg).stack.get(i)?.text).toBe(msg);
       });
     });
 
     it('provides unique keys for inserted commits', () => {
       const newStack = stack
-        .insertEmpty(1 as Rev, '')
-        .insertEmpty(1 as Rev, '')
-        .insertEmpty(1 as Rev, '');
+        .insertEmpty(1 as CommitRev, '')
+        .insertEmpty(1 as CommitRev, '')
+        .insertEmpty(1 as CommitRev, '');
       const keys = newStack.stack.map(c => c.key);
       expect(keys.size).toBe(ImSet(keys).size);
     });
 
     // The "originalNodes" are useful for split to set predecessors correctly.
     it('preserves the originalNodes with splitFromRev', () => {
-      ([1, 4] as Rev[]).forEach(i => {
-        const newStack = stack.insertEmpty(i, '', 2 as Rev);
-        expect(newStack.get(i)?.originalNodes).toBe(stack.get(2 as Rev)?.originalNodes);
+      ([1, 4] as CommitRev[]).forEach(i => {
+        const newStack = stack.insertEmpty(i, '', 2 as CommitRev);
+        expect(newStack.get(i)?.originalNodes).toBe(stack.get(2 as CommitRev)?.originalNodes);
         expect(newStack.get(i)?.originalNodes?.isEmpty()).toBeFalsy();
         const anotherStack = stack.insertEmpty(i, '');
         expect(anotherStack.get(i)?.originalNodes?.isEmpty()).toBeTruthy();
@@ -930,15 +934,15 @@ describe('CommitStackState', () => {
 
   describe('applySubStack', () => {
     const stack = new CommitStackState(exportStack1);
-    const subStack = stack.denseSubStack(List([2, 3] as Rev[]));
+    const subStack = stack.denseSubStack(List([2, 3] as CommitRev[]));
     const emptyStack = subStack.set('stack', List());
 
     const getChangedFiles = (state: CommitStackState, rev: number): Array<string> => {
-      return [...nullthrows(state.stack.get(rev as Rev)).files.keys()].sort();
+      return [...nullthrows(state.stack.get(rev as CommitRev)).files.keys()].sort();
     };
 
     it('optimizes file changes by removing unmodified changes', () => {
-      const newStack = stack.applySubStack(2 as Rev, 4 as Rev, subStack);
+      const newStack = stack.applySubStack(2 as CommitRev, 4 as CommitRev, subStack);
       expect(newStack.stack.size).toBe(stack.stack.size);
       // The original `stack` does not have unmodified changes.
       // To verify that `newStack` does not have unmodified changes, check it
@@ -955,13 +959,13 @@ describe('CommitStackState', () => {
         subStack.stack.setIn([1, 'files'], nullthrows(subStack.stack.get(0)).files),
       );
       // `applySubStack` should drop the 2nd commit in `newSubStack`.
-      const newStack = stack.applySubStack(2 as Rev, 4 as Rev, newSubStack);
+      const newStack = stack.applySubStack(2 as CommitRev, 4 as CommitRev, newSubStack);
       newStack.assertRevOrder();
       expect(newStack.stack.size).toBe(stack.stack.size - 1);
     });
 
     it('rewrites revs for the remaining of the stack', () => {
-      const newStack = stack.applySubStack(1 as Rev, 2 as Rev, emptyStack);
+      const newStack = stack.applySubStack(1 as CommitRev, 2 as CommitRev, emptyStack);
       newStack.assertRevOrder();
       [1, 2].forEach(i => {
         expect(newStack.stack.get(i)?.toJS()).toMatchObject({rev: i, parents: [i - 1]});
@@ -969,7 +973,7 @@ describe('CommitStackState', () => {
     });
 
     it('rewrites revs for the inserted stack', () => {
-      const newStack = stack.applySubStack(2 as Rev, 3 as Rev, subStack);
+      const newStack = stack.applySubStack(2 as CommitRev, 3 as CommitRev, subStack);
       newStack.assertRevOrder();
       [2, 3, 4].forEach(i => {
         expect(newStack.stack.get(i)?.toJS()).toMatchObject({rev: i, parents: [i - 1]});
@@ -983,25 +987,25 @@ describe('CommitStackState', () => {
         List([
           CommitState({
             key: 'foo',
-            files: ImMap([['x.txt', stack.getFile(1 as Rev, 'x.txt')]]),
+            files: ImMap([['x.txt', stack.getFile(1 as CommitRev, 'x.txt')]]),
           }),
         ]),
       );
-      const newStack = stack.applySubStack(1 as Rev, 3 as Rev, newSubStack);
+      const newStack = stack.applySubStack(1 as CommitRev, 3 as CommitRev, newSubStack);
 
       // 'y.txt' was added by the old stack, not the new stack. So it is re-added
       // to preserve its old content.
       // 'x.txt' was added by the new stack, deleted by the old stack. So it is
       // re-deleted.
       expect(getChangedFiles(newStack, 2)).toEqual(['x.txt', 'y.txt', 'z.txt']);
-      expect(newStack.getFile(2 as Rev, 'y.txt').data).toBe('33');
-      expect(newStack.getFile(2 as Rev, 'x.txt')).toBe(ABSENT_FILE);
+      expect(newStack.getFile(2 as CommitRev, 'y.txt').data).toBe('33');
+      expect(newStack.getFile(2 as CommitRev, 'x.txt')).toBe(ABSENT_FILE);
     });
 
     it('update keys to avoid conflict', () => {
       const oldKey = nullthrows(stack.stack.get(1)).key;
       const newSubStack = subStack.set('stack', subStack.stack.setIn([0, 'key'], oldKey));
-      const newStack = stack.applySubStack(2 as Rev, 3 as Rev, newSubStack);
+      const newStack = stack.applySubStack(2 as CommitRev, 3 as CommitRev, newSubStack);
 
       // Keys are still unique.
       const keys = newStack.stack.map(c => c.key);
@@ -1011,22 +1015,22 @@ describe('CommitStackState', () => {
 
     it('drops ABSENT flag if content is not empty', () => {
       // x.txt was deleted by subStack rev 0 (B). We are moving it to be deleted by rev 1 (C).
-      expect(subStack.getFile(0 as Rev, 'x.txt').flags).toBe(ABSENT_FILE.flags);
+      expect(subStack.getFile(0 as CommitRev, 'x.txt').flags).toBe(ABSENT_FILE.flags);
       // To break the deletion into done by 2 commits, we edit the file stack of 'x.txt'.
       const fileIdx = nullthrows(
-        subStack.commitToFile.get(CommitIdx({rev: 0 as Rev, path: 'x.txt'})),
+        subStack.commitToFile.get(CommitIdx({rev: 0 as CommitRev, path: 'x.txt'})),
       ).fileIdx;
       const fileStack = nullthrows(subStack.fileStacks.get(fileIdx));
       // The file stack has 3 revs: (base, before deletion), (deleted at rev 0), (deleted at rev 1).
       expect(fileStack.convertToPlainText().toArray()).toEqual(['33', '', '']);
       const newFileStack = new FileStackState(['33', '3', '']);
       const newSubStack = subStack.setFileStack(fileIdx, newFileStack);
-      expect(newSubStack.getUtf8Data(newSubStack.getFile(0 as Rev, 'x.txt'))).toBe('3');
+      expect(newSubStack.getUtf8Data(newSubStack.getFile(0 as CommitRev, 'x.txt'))).toBe('3');
       // Apply the file stack back to the main stack.
-      const newStack = stack.applySubStack(2 as Rev, 4 as Rev, newSubStack);
+      const newStack = stack.applySubStack(2 as CommitRev, 4 as CommitRev, newSubStack);
       expect(newStack.stack.size).toBe(4);
       // Check that x.txt in rev 2 (B) is '3', not absent.
-      const file = newStack.getFile(2 as Rev, 'x.txt');
+      const file = newStack.getFile(2 as CommitRev, 'x.txt');
       expect(file.data).toBe('3');
       expect(file.flags ?? '').not.toContain(ABSENT_FILE.flags);
 
@@ -1048,7 +1052,7 @@ describe('CommitStackState', () => {
       // This was a herustics when `flags` are not handled properly. Now it is no longer needed.
       // y.txt was added by subStack rev 0 (B). We are moving it to be added by rev 1 (C).
       const fileIdx = nullthrows(
-        subStack.commitToFile.get(CommitIdx({rev: 0 as Rev, path: 'y.txt'})),
+        subStack.commitToFile.get(CommitIdx({rev: 0 as CommitRev, path: 'y.txt'})),
       ).fileIdx;
       const fileStack = nullthrows(subStack.fileStacks.get(fileIdx));
       // The file stack has 3 revs: (base, before add), (add by rev 0), (unchanged by rev 1).
@@ -1056,9 +1060,9 @@ describe('CommitStackState', () => {
       const newFileStack = new FileStackState(['', '', '33']);
       const newSubStack = subStack.setFileStack(fileIdx, newFileStack);
       // Apply the file stack back to the main stack.
-      const newStack = stack.applySubStack(2 as Rev, 4 as Rev, newSubStack);
+      const newStack = stack.applySubStack(2 as CommitRev, 4 as CommitRev, newSubStack);
       // Check that y.txt in rev 2 (B) is absent, not just empty.
-      const file = newStack.getFile(2 as Rev, 'y.txt');
+      const file = newStack.getFile(2 as CommitRev, 'y.txt');
       expect(file.data).toBe('');
       expect(file.flags).toBe('');
     });
@@ -1272,7 +1276,7 @@ describe('CommitStackState', () => {
       // See the above test's "describeAbsorbExtra" to confirm that "a1 -> A1"
       // has fileIdx=0 and absorbEditId=0.
       // CommitC has rev=3.
-      const newStack = stack.setAbsorbEditDestination(0, 0, 3 as Rev);
+      const newStack = stack.setAbsorbEditDestination(0, 0, 3 as CommitRev);
       // "-a1 +A1" now has "Selected=2":
       expect(newStack.absorbExtra.get(0)?.get(0)?.selectedRev).toBe(2);
       expect(describeAbsorbExtra(newStack)).toMatchInlineSnapshot(`
@@ -1299,7 +1303,7 @@ describe('CommitStackState', () => {
         ]
       `);
       // It can be moved back.
-      const newStack2 = newStack.setAbsorbEditDestination(0, 0, 1 as Rev);
+      const newStack2 = newStack.setAbsorbEditDestination(0, 0, 1 as CommitRev);
       expect(newStack2.absorbExtra.get(0)?.get(0)?.selectedRev).toBe(1);
       // It can be moved to wdir(), the top rev.
       const topRev = nullthrows(newStack2.revs().at(-1));
@@ -1360,7 +1364,7 @@ describe('CommitStackState', () => {
     }
 
     function describeAbsorbEditCommits(stack: CommitStackState) {
-      const describeCommit = (rev: Rev) => nullthrows(stack.get(rev)).text;
+      const describeCommit = (rev: CommitRev) => nullthrows(stack.get(rev)).text;
       const result: object[] = [];
       stack.absorbExtra.forEach((absorbEdits, fileIdx) => {
         absorbEdits.forEach((absorbEdit, absorbEditId) => {

@@ -6,7 +6,7 @@
  */
 
 import type {CommitMessageFields} from '../../CommitInfoView/types';
-import type {CommitStackState, FileMetadata, FileStackIndex, Rev} from '../commitStackState';
+import type {CommitStackState, FileMetadata, FileStackIndex, CommitRev} from '../commitStackState';
 import type {FileStackState, FileRev} from '../fileStackState';
 import type {UseStackEditState} from './stackEditState';
 import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
@@ -86,13 +86,13 @@ export function SplitStackEditPanel() {
   const message = commitMessageFieldsToString(schema, fields);
   const subStack = commitStack
     .insertEmpty(next(endRev), message, endRev)
-    .denseSubStack(Range(startRev, endRev + 2).toList() as List<Rev>);
+    .denseSubStack(Range(startRev, endRev + 2).toList() as List<CommitRev>);
 
-  const insertBlankCommit = (rev: Rev) => {
+  const insertBlankCommit = (rev: CommitRev) => {
     const fields: CommitMessageFields = {...messageTemplate, Title: t('New Commit')};
     const message = commitMessageFieldsToString(schema, fields);
 
-    const newStack = stackEdit.commitStack.insertEmpty((startRev + rev) as Rev, message);
+    const newStack = stackEdit.commitStack.insertEmpty((startRev + rev) as CommitRev, message);
 
     bumpStackEditMetric('splitInsertBlank');
 
@@ -125,15 +125,15 @@ export function SplitStackEditPanel() {
 
 type SplitColumnProps = {
   subStack: CommitStackState;
-  rev: Rev;
-  insertBlankCommit: (rev: Rev) => unknown;
+  rev: CommitRev;
+  insertBlankCommit: (rev: CommitRev) => unknown;
 };
 
 function InsertBlankCommitButton({
   beforeRev,
   onClick,
 }: {
-  beforeRev: Rev | undefined;
+  beforeRev: CommitRev | undefined;
   onClick: () => unknown;
 }) {
   return (
@@ -297,7 +297,7 @@ function SplitColumn(props: SplitColumnProps) {
 
 type SplitEditorWithTitleProps = {
   subStack: CommitStackState;
-  rev: Rev;
+  rev: CommitRev;
   path: RepoPath;
   fileStack?: FileStackState;
   fileIdx?: number;
@@ -718,10 +718,12 @@ function EditableCommitTitle(props: MaybeEditableCommitTitleProps) {
   );
 }
 
-function findStartEndRevs(stackEdit: UseStackEditState): [Rev | undefined, Rev | undefined] {
+function findStartEndRevs(
+  stackEdit: UseStackEditState,
+): [CommitRev | undefined, CommitRev | undefined] {
   const {splitRange, intention, commitStack} = stackEdit;
   if (intention === 'split') {
-    return [1 as Rev, prev(commitStack.size as Rev)];
+    return [1 as CommitRev, prev(commitStack.size as CommitRev)];
   }
   const startRev = commitStack.findCommitByKey(splitRange.startKey)?.rev;
   let endRev = commitStack.findCommitByKey(splitRange.endKey)?.rev;

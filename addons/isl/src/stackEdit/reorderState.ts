@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Rev} from './commitStackState';
+import type {CommitRev} from './commitStackState';
 
 import {CommitStackState} from './commitStackState';
 import {List, Record} from 'immutable';
@@ -15,22 +15,22 @@ type ReorderResult = {
   offset: number;
 
   /** Reorder result that satisfy dependencies. */
-  order: Rev[];
+  order: CommitRev[];
 
   /** Dependent revs that are also moved. */
-  deps: Rev[];
+  deps: CommitRev[];
 };
 
 function* range(
   start: number,
   end: number,
-  filterFunc?: (i: Rev) => boolean,
-): IterableIterator<Rev> {
+  filterFunc?: (i: CommitRev) => boolean,
+): IterableIterator<CommitRev> {
   for (let i = start; i < end; i++) {
-    if (filterFunc && !filterFunc(i as Rev)) {
+    if (filterFunc && !filterFunc(i as CommitRev)) {
       continue;
     }
-    yield i as Rev;
+    yield i as CommitRev;
   }
 }
 
@@ -40,9 +40,9 @@ function* range(
  */
 export function reorderWithDeps(
   n: number,
-  origRev: Rev,
+  origRev: CommitRev,
   desiredOffset: number,
-  depMap: Readonly<Map<Rev, Set<Rev>>>,
+  depMap: Readonly<Map<CommitRev, Set<CommitRev>>>,
 ): Readonly<ReorderResult> {
   const offset =
     origRev + desiredOffset < 0
@@ -51,14 +51,14 @@ export function reorderWithDeps(
       ? n - 1 - origRev
       : desiredOffset;
 
-  let order: Rev[] = [];
-  const deps: Rev[] = [origRev];
-  const filterFunc = (i: Rev) => !deps.includes(i);
+  let order: CommitRev[] = [];
+  const deps: CommitRev[] = [origRev];
+  const filterFunc = (i: CommitRev) => !deps.includes(i);
   if (offset < 0) {
     // Moved down.
     const depRevs = new Set(depMap.get(origRev) ?? []);
     for (let i = -1; i >= offset; i--) {
-      const rev = (origRev + i) as Rev;
+      const rev = (origRev + i) as CommitRev;
       if (depRevs.has(rev)) {
         deps.push(rev);
         depMap.get(rev)?.forEach(r => depRevs.add(r));
@@ -69,7 +69,7 @@ export function reorderWithDeps(
   } else if (offset > 0) {
     // Moved up.
     for (let i = 1; i <= offset; i++) {
-      const rev = (origRev + i) as Rev;
+      const rev = (origRev + i) as CommitRev;
       const dep = depMap.get(rev);
       if (dep && (dep.has(origRev) || deps.some(r => dep.has(r)))) {
         deps.push(rev);
@@ -91,11 +91,11 @@ export function reorderWithDeps(
 export class ReorderState extends Record({
   offset: 0,
   commitStack: new CommitStackState([]),
-  reorderRevs: List<Rev>(),
-  draggingRevs: List<Rev>(),
-  draggingRev: -1 as Rev,
+  reorderRevs: List<CommitRev>(),
+  draggingRevs: List<CommitRev>(),
+  draggingRev: -1 as CommitRev,
 }) {
-  static init(commitStack: CommitStackState, draggingRev: Rev): ReorderState {
+  static init(commitStack: CommitStackState, draggingRev: CommitRev): ReorderState {
     return new ReorderState({
       offset: 0,
       commitStack,
