@@ -32,7 +32,7 @@ import {isAbsent} from '../commitStackState';
 import {computeLinesForFileStackEditor} from './FileStackEditorLines';
 import {bumpStackEditMetric, SplitRangeRecord, useStackEditState} from './stackEditState';
 import * as stylex from '@stylexjs/stylex';
-import {Set as ImSet, Range} from 'immutable';
+import {Set as ImSet, type List, Range} from 'immutable';
 import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
 import {Subtle} from 'isl-components/Subtle';
@@ -84,14 +84,14 @@ export function SplitStackEditPanel() {
   const fields: CommitMessageFields = {...messageTemplate, Title: emptyTitle};
   const message = commitMessageFieldsToString(schema, fields);
   const subStack = commitStack
-    .insertEmpty(endRev + 1, message, endRev)
-    .denseSubStack(Range(startRev, endRev + 2).toList());
+    .insertEmpty(next(endRev), message, endRev)
+    .denseSubStack(Range(startRev, endRev + 2).toList() as List<Rev>);
 
   const insertBlankCommit = (rev: Rev) => {
     const fields: CommitMessageFields = {...messageTemplate, Title: t('New Commit')};
     const message = commitMessageFieldsToString(schema, fields);
 
-    const newStack = stackEdit.commitStack.insertEmpty(startRev + rev, message);
+    const newStack = stackEdit.commitStack.insertEmpty((startRev + rev) as Rev, message);
 
     bumpStackEditMetric('splitInsertBlank');
 
@@ -216,7 +216,7 @@ function SplitColumn(props: SplitColumnProps) {
 
   const nonEditables = nonEditablePaths.flatMap(path => {
     const file = subStack.getFile(rev, path);
-    const prev = subStack.getFile(rev - 1, path);
+    const prev = subStack.getFile(previous(rev), path);
     const isModified = !file.equals(prev);
     if (!isModified) {
       return [];
@@ -327,11 +327,11 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
   const setSubStack = (newSubStack: CommitStackState) => {
     const [startRev, endRev] = findStartEndRevs(stackEdit);
     if (startRev != null && endRev != null) {
-      const newCommitStack = commitStack.applySubStack(startRev, endRev + 1, newSubStack);
+      const newCommitStack = commitStack.applySubStack(startRev, next(endRev), newSubStack);
       // Find the new split range.
       const endOffset = newCommitStack.size - commitStack.size;
       const startKey = newCommitStack.get(startRev)?.key ?? '';
-      const endKey = newCommitStack.get(endRev + endOffset)?.key ?? '';
+      const endKey = newCommitStack.get(next(endRev, endOffset))?.key ?? '';
       const splitRange = SplitRangeRecord({startKey, endKey});
       // Update the main stack state.
       stackEdit.push(newCommitStack, {name: 'split', path}, splitRange);
@@ -357,7 +357,7 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
     //             v1--v2--v2--v4--v5 (replace v3 with v2)
     //             If v3 has 'copyFrom', update 'copyFrom' on 'v4'.
     //             v4 should not have 'copyFrom'.
-    const [fromRev, toRev] = dir === 'left' ? [rev, rev - 1] : [rev - 1, rev];
+    const [fromRev, toRev] = dir === 'left' ? [rev, previous(rev)] : [previous(rev), rev];
     const fromFile = subStack.getFile(fromRev, path);
     let newStack = subStack.setFile(toRev, path, oldFile => {
       if (dir === 'left' && oldFile.copyFrom != null) {
@@ -367,7 +367,7 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
     });
     if (file.copyFrom != null) {
       if (dir === 'right') {
-        newStack = newStack.setFile(rev + 1, path, f => f.set('copyFrom', file.copyFrom));
+        newStack = newStack.setFile(next(rev), path, f => f.set('copyFrom', file.copyFrom));
       } else {
         newStack = newStack.setFile(rev, path, f => f.remove('copyFrom'));
       }
@@ -387,10 +387,10 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
     }
   }
   const canMoveLeft =
-    rev > 0 && (file.copyFrom == null || isAbsent(subStack.getFile(rev - 1, path)));
+    rev > 0 && (file.copyFrom == null || isAbsent(subStack.getFile(previous(rev), path)));
   let copyFromText = undefined;
   if (file.copyFrom != null) {
-    const copyFromFile = subStack.getFile(rev - 1, file.copyFrom);
+    const copyFromFile = subStack.getFile(previous(rev), file.copyFrom);
     try {
       // This will throw if copyFromFile is non-text (binary, or too large).
       copyFromText = subStack.getUtf8Data(copyFromFile);
@@ -694,9 +694,9 @@ function EditableCommitTitle(props: MaybeEditableCommitTitleProps) {
         const fields: CommitMessageFields = {...messageTemplate, Title: newTitle};
         const message = commitMessageFieldsToString(schema, fields);
         if (endRev != null) {
-          const newStack = commitStack.insertEmpty(endRev + 1, message);
+          const newStack = commitStack.insertEmpty(next(endRev), message);
 
-          const newEnd = newStack.get(endRev + 1);
+          const newEnd = newStack.get(next(endRev));
           if (newEnd != null) {
             let {splitRange} = stackEdit;
             splitRange = splitRange.set('endKey', newEnd.key);
@@ -720,7 +720,7 @@ function EditableCommitTitle(props: MaybeEditableCommitTitleProps) {
 function findStartEndRevs(stackEdit: UseStackEditState): [Rev | undefined, Rev | undefined] {
   const {splitRange, intention, commitStack} = stackEdit;
   if (intention === 'split') {
-    return [1, commitStack.size - 1];
+    return [1 as Rev, (commitStack.size - 1) as Rev];
   }
   const startRev = commitStack.findCommitByKey(splitRange.startKey)?.rev;
   let endRev = commitStack.findCommitByKey(splitRange.endKey)?.rev;
@@ -900,4 +900,12 @@ export function SplitFile(props: SplitFileProps) {
 
 export function SplitStackToolbar() {
   return <StackRangeSelectorButton />;
+}
+
+function next<T extends number>(rev: T, offset = 1): T {
+  return (rev + offset) as T;
+}
+
+function previous<T extends number>(rev: T, offset = 1): T {
+  return (rev - offset) as T;
 }

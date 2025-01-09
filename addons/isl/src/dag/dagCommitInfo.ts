@@ -6,6 +6,7 @@
  */
 
 import type {CommitPreview, WithPreviewType} from '../previews';
+import type {Rev} from '../stackEdit/commitStackState';
 import type {
   CommitInfo,
   CommitPhaseType,
@@ -35,7 +36,7 @@ type DagExt = {
   isYouAreHere?: boolean;
 
   /** If constructed from a "CommitStack", the "Rev" of the commit. */
-  stackRev?: number;
+  stackRev?: Rev;
 };
 
 // Note: There are some non-immutable containers (Array) in `CommitInfo`
@@ -194,7 +195,7 @@ export class DagCommitInfo extends SelfUpdate<CommitInfoExtRecord> {
     return this.inner.isYouAreHere;
   }
 
-  get stackRev(): number | undefined {
+  get stackRev(): Rev | undefined {
     return this.inner.stackRev;
   }
 

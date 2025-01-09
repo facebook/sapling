@@ -206,17 +206,21 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
 
   /** Returns all valid revs. */
   revs(): Rev[] {
-    return [...this.stack.keys()];
+    return [...this.stack.keys()] as Rev[];
   }
 
   /** Find the first "Rev" that satisify the condition. */
   findRev(predicate: (commit: CommitState, rev: Rev) => boolean): Rev | undefined {
-    return this.stack.findIndex(predicate);
+    return this.stack.findIndex(predicate as (commit: CommitState, rev: number) => boolean) as
+      | Rev
+      | undefined;
   }
 
   /** Find the last "Rev" that satisify the condition. */
   findLastRev(predicate: (commit: CommitState, rev: Rev) => boolean): Rev | undefined {
-    return this.stack.findLastIndex(predicate);
+    return this.stack.findLastIndex(predicate as (commit: CommitState, rev: number) => boolean) as
+      | Rev
+      | undefined;
   }
 
   /**
@@ -295,7 +299,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     // Check "copyFrom".
     const copyFrom = file.copyFrom;
     if (copyFrom != null) {
-      const p1 = this.singleParentRev(rev) ?? -1;
+      const p1 = this.singleParentRev(rev) ?? (-1 as Rev);
       if (!isAbsent(this.getFile(p1, path))) {
         file = file.remove('copyFrom');
       } else {
@@ -388,7 +392,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     if (includeBottom && lastFile != null) {
       const bottomFile = this.bottomFiles.get(path);
       if (bottomFile != null && (path !== lastPath || !bottomFile.equals(lastFile))) {
-        yield [-1, path, bottomFile];
+        yield [-1 as Rev, path, bottomFile];
       }
     }
   }
@@ -431,7 +435,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
       typeof opts?.goto === 'string'
         ? this.originalStack.at(-1)?.node == opts.goto
           ? this.stack.last()?.rev
-          : this.stack.findLastKey(c => c.originalNodes.has(opts.goto as string))
+          : this.findLastRev(c => c.originalNodes.has(opts.goto as string))
         : opts?.goto;
 
     // Figure out the first changed rev.
@@ -539,7 +543,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
    * "bottomFiles", aka. its introducing rev is outside the stack.
    */
   parentFile(rev: Rev, path: RepoPath, followRenames = true): [Rev, RepoPath, FileState] {
-    let prevRev = -1;
+    let prevRev = -1 as Rev;
     let prevPath = path;
     let prevFile = nullthrows(this.bottomFiles.get(path));
     const includeBottom = true;
@@ -839,7 +843,8 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     // Migrate off 'fileStack' type, since we are going to replace the file stacks.
     const state = this.useFileContent();
 
-    state.stack.forEach((commit, rev) => {
+    state.stack.forEach((commit, revNumber) => {
+      const rev = revNumber as Rev;
       const files = commit.files;
       // Process order: renames, non-copy, copies.
       const priorityFiles: [number, RepoPath, FileState][] = [...files.entries()].map(
@@ -1206,7 +1211,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
    * The callsite should take care of `files` updates.
    */
   rewriteStackDroppingRev(rev: Rev): CommitStackState {
-    const revMapFunc = (r: Rev) => (r < rev ? r : r - 1);
+    const revMapFunc = (r: Rev) => (r < rev ? r : ((r - 1) as Rev));
     const newStack = this.stack
       .filter(c => c.rev !== rev)
       .map(c => rewriteCommitRevs(c, revMapFunc));
@@ -1346,7 +1351,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
       newStack = this.stack.push(
         CommitState({
           rev,
-          parents: List(rev === 0 ? [] : [rev - 1]),
+          parents: List(rev === 0 ? [] : [(rev - 1) as Rev]),
           text: message,
           key: newKey,
           author: top.author,
@@ -1355,7 +1360,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
         }),
       );
     } else {
-      const revMapFunc = (r: Rev) => (r >= rev ? r + 1 : r);
+      const revMapFunc = (r: Rev) => (r >= rev ? ((r + 1) as Rev) : r);
       const origParents = nullthrows(state.stack.get(rev)).parents;
       newStack = state.stack
         .map(c => rewriteCommitRevs(c, revMapFunc))
@@ -1428,7 +1433,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
       return false;
     }
 
-    const map = new Map<Rev, Rev>(order.map((fromRev, toRev) => [fromRev, toRev]));
+    const map = new Map<Rev, Rev>(order.map((fromRev, toRev) => [fromRev as Rev, toRev as Rev]));
     // Check dependencies.
     const depMap = state.calculateDepMap();
     for (const [rev, depRevs] of depMap) {
@@ -1452,7 +1457,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
 
   canMoveDown = cachedMethod(this.canMoveDownImpl, {cache: canMoveDownCache});
   private canMoveDownImpl(rev: Rev): boolean {
-    return rev > 0 && this.canMoveUp(rev - 1);
+    return rev > 0 && this.canMoveUp((rev - 1) as Rev);
   }
 
   canMoveUp = cachedMethod(this.canMoveUpImpl, {cache: canMoveUpCache});
@@ -1468,7 +1473,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
    * This should only be called when `canReorder(order)` returned `true`.
    */
   reorder(order: Rev[]): CommitStackState {
-    const commitRevMap = new Map<Rev, Rev>(order.map((fromRev, toRev) => [fromRev, toRev]));
+    const commitRevMap = new Map<Rev, Rev>(order.map((fromRev, toRev) => [fromRev, toRev as Rev]));
 
     // Reorder file contents. This is somewhat tricky involving multiple
     // mappings. Here is an example:
@@ -1517,7 +1522,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     // Update state.stack.
     const newStack = state.stack.map((_commit, rev) => {
       const commit = nullthrows(state.stack.get(order[rev]));
-      return commit.merge({parents: List(rev > 0 ? [rev - 1] : []), rev});
+      return commit.merge({parents: List(rev > 0 ? [(rev - 1) as Rev] : []), rev: rev as Rev});
     });
     state = state.set('stack', newStack);
 
@@ -1606,8 +1611,8 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
         });
         return files;
       });
-      const parents = i === 0 ? List<Rev>() : List([i - 1]);
-      return commit.merge({rev: i, files: newFiles, parents});
+      const parents = i === 0 ? List<Rev>() : List([(i - 1) as Rev]);
+      return commit.merge({rev: i as Rev, files: newFiles, parents});
     });
 
     const record = CommitStackRecord({
@@ -1705,9 +1710,9 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
         return Seq(keep ? [[path, file]] : []);
       });
       const isFirst = c.rev === 0;
-      let commit = rewriteCommitRevs(pickKey(c), r => r + startRev).set('files', newFiles);
+      let commit = rewriteCommitRevs(pickKey(c), r => (r + startRev) as Rev).set('files', newFiles);
       if (isFirst && startRev > 0) {
-        commit = commit.set('parents', List([startRev - 1]));
+        commit = commit.set('parents', List([(startRev - 1) as Rev]));
       }
       return commit;
     };
@@ -1759,7 +1764,10 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
         }
         const offset = newSubStackSize - (endRev - startRev);
         return Seq([
-          rewriteCommitRevs(commit, r => (r >= startRev && r < endRev ? endRev - 1 : r) + offset),
+          rewriteCommitRevs(
+            commit,
+            r => ((r >= startRev && r < endRev ? endRev - 1 : r) + offset) as Rev,
+          ),
         ]);
       }
     });
@@ -1847,7 +1855,7 @@ function getCommitStatesFromExportStack(stack: Readonly<ExportStack>): List<Comm
   checkStackParents(stack);
 
   // Prepare nodeToRev convertion.
-  const revs: Rev[] = [...stack.keys()];
+  const revs: Rev[] = [...stack.keys()] as Rev[];
   const nodeToRevMap: Map<Hash, Rev> = new Map(revs.map(rev => [stack[rev].node, rev]));
   const nodeToRev = (node: Hash): Rev => {
     const rev = nodeToRevMap.get(node);
@@ -2048,7 +2056,7 @@ type CommitStateProps = {
 };
 
 export const CommitState = Record<CommitStateProps>({
-  rev: 0,
+  rev: 0 as Rev,
   originalNodes: ImSet(),
   key: '',
   author: '',
@@ -2107,7 +2115,7 @@ type CommitIdxProps = {
 export const FileIdx = Record<FileIdxProps>({fileIdx: 0, fileRev: 0 as FileRev});
 export type FileIdx = RecordOf<FileIdxProps>;
 
-export const CommitIdx = Record<CommitIdxProps>({rev: -1, path: ''});
+export const CommitIdx = Record<CommitIdxProps>({rev: -1 as Rev, path: ''});
 export type CommitIdx = RecordOf<CommitIdxProps>;
 
 export const ABSENT_FLAG = 'a';
@@ -2128,4 +2136,4 @@ export const ABSENT_FILE = FileState({
 export type {FileRev};
 
 /** A revision number used in the `CommitStackState`. Identifies a commit in the stack. */
-export type Rev = number;
+export type Rev = number & {__branded: 'CommitRev'};
