@@ -13,6 +13,7 @@ import type {Block, LineIdx} from 'shared/diff';
 import {CommitTitle} from '../../CommitTitle';
 import {Row, ScrollX, ScrollY} from '../../ComponentUtils';
 import {FlattenLine} from '../../linelog';
+import {max, next, prev} from '../revMath';
 import {computeLinesForFileStackEditor} from './FileStackEditorLines';
 import {TextEditable} from './TextEditable';
 import deepEqual from 'fast-deep-equal';
@@ -107,7 +108,7 @@ export function FileStackEditor(props: EditorProps) {
   // Diff with the left side.
   const bText = stack.getRev(rev);
   const bLines = splitLines(bText);
-  const aLines = splitLines(stack.getRev(Math.max(0, rev - 1) as FileRev));
+  const aLines = splitLines(stack.getRev(max(prev(rev), 0)));
   const abBlocks = diffBlocks(aLines, bLines);
 
   const rightMost = rev + 1 >= stack.revLength;
@@ -116,7 +117,7 @@ export function FileStackEditor(props: EditorProps) {
   let cbBlocks: Array<Block> = [];
   let blocks = abBlocks;
   if (!rightMost && mode === 'side-by-side-diff') {
-    const cText = stack.getRev((rev + 1) as FileRev);
+    const cText = stack.getRev(next(rev));
     const cLines = splitLines(cText);
     cbBlocks = diffBlocks(cLines, bLines);
     blocks = mergeBlocks(abBlocks, cbBlocks);

@@ -9,6 +9,7 @@ import type {FlattenLine, LineIdx} from '../linelog';
 import type {RecordOf} from 'immutable';
 
 import {LineLog} from '../linelog';
+import {next} from './revMath';
 import {Record, List} from 'immutable';
 import {SelfUpdate} from 'shared/immutableExt';
 
@@ -100,7 +101,7 @@ export class FileStackState extends SelfUpdate<FileStackStateRecord> {
    * accordingly. Otherwise, no other revs are updated.
    */
   editText(rev: FileRev, text: string, updateStack = true): FileStackState {
-    const revLength = rev >= this.source.revLength ? ((rev + 1) as FileRev) : this.source.revLength;
+    const revLength = rev >= this.source.revLength ? next(rev) : this.source.revLength;
     let source = this.source;
     if (updateStack) {
       const log = this.convertToLineLog().recordText(text, rev);

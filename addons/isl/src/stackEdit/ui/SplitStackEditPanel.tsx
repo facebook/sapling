@@ -29,6 +29,7 @@ import {readAtom} from '../../jotaiUtils';
 import {themeState} from '../../theme';
 import {GeneratedStatus} from '../../types';
 import {isAbsent} from '../commitStackState';
+import {max, next, prev} from '../revMath';
 import {computeLinesForFileStackEditor} from './FileStackEditorLines';
 import {bumpStackEditMetric, SplitRangeRecord, useStackEditState} from './stackEditState';
 import * as stylex from '@stylexjs/stylex';
@@ -194,7 +195,7 @@ function SplitColumn(props: SplitColumnProps) {
     // subStack is a "dense" stack. fileRev is commitRev + 1.
     const fileRev = (rev + 1) as FileRev;
     const isModified =
-      (fileRev > 0 && fileStack.getRev((fileRev - 1) as FileRev) !== fileStack.getRev(fileRev)) ||
+      (fileRev > 0 && fileStack.getRev(prev(fileRev)) !== fileStack.getRev(fileRev)) ||
       subStack.changedFileMetadata(rev, path) != null;
     const editor = (
       <SplitEditorWithTitle
@@ -216,8 +217,8 @@ function SplitColumn(props: SplitColumnProps) {
 
   const nonEditables = nonEditablePaths.flatMap(path => {
     const file = subStack.getFile(rev, path);
-    const prev = subStack.getFile(previous(rev), path);
-    const isModified = !file.equals(prev);
+    const prevFile = subStack.getFile(prev(rev), path);
+    const isModified = !file.equals(prevFile);
     if (!isModified) {
       return [];
     }
@@ -357,7 +358,7 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
     //             v1--v2--v2--v4--v5 (replace v3 with v2)
     //             If v3 has 'copyFrom', update 'copyFrom' on 'v4'.
     //             v4 should not have 'copyFrom'.
-    const [fromRev, toRev] = dir === 'left' ? [rev, previous(rev)] : [previous(rev), rev];
+    const [fromRev, toRev] = dir === 'left' ? [rev, prev(rev)] : [prev(rev), rev];
     const fromFile = subStack.getFile(fromRev, path);
     let newStack = subStack.setFile(toRev, path, oldFile => {
       if (dir === 'left' && oldFile.copyFrom != null) {
@@ -387,10 +388,10 @@ function SplitEditorWithTitle(props: SplitEditorWithTitleProps) {
     }
   }
   const canMoveLeft =
-    rev > 0 && (file.copyFrom == null || isAbsent(subStack.getFile(previous(rev), path)));
+    rev > 0 && (file.copyFrom == null || isAbsent(subStack.getFile(prev(rev), path)));
   let copyFromText = undefined;
   if (file.copyFrom != null) {
-    const copyFromFile = subStack.getFile(previous(rev), file.copyFrom);
+    const copyFromFile = subStack.getFile(prev(rev), file.copyFrom);
     try {
       // This will throw if copyFromFile is non-text (binary, or too large).
       copyFromText = subStack.getUtf8Data(copyFromFile);
@@ -720,7 +721,7 @@ function EditableCommitTitle(props: MaybeEditableCommitTitleProps) {
 function findStartEndRevs(stackEdit: UseStackEditState): [Rev | undefined, Rev | undefined] {
   const {splitRange, intention, commitStack} = stackEdit;
   if (intention === 'split') {
-    return [1 as Rev, (commitStack.size - 1) as Rev];
+    return [1 as Rev, prev(commitStack.size as Rev)];
   }
   const startRev = commitStack.findCommitByKey(splitRange.startKey)?.rev;
   let endRev = commitStack.findCommitByKey(splitRange.endKey)?.rev;
@@ -835,7 +836,7 @@ export function SplitFile(props: SplitFileProps) {
 
   // Diff with the left side.
   const bText = stack.getRev(rev);
-  const aText = copyFromText ?? stack.getRev(Math.max(0, rev - 1) as FileRev);
+  const aText = copyFromText ?? stack.getRev(max(prev(rev), 0));
   // memo to avoid syntax highlighting repeatedly even when the text hasn't changed
   const bLines = useMemo(() => splitLines(bText), [bText]);
   const aLines = useMemo(() => splitLines(aText), [aText]);
@@ -900,12 +901,4 @@ export function SplitFile(props: SplitFileProps) {
 
 export function SplitStackToolbar() {
   return <StackRangeSelectorButton />;
-}
-
-function next<T extends number>(rev: T, offset = 1): T {
-  return (rev + offset) as T;
-}
-
-function previous<T extends number>(rev: T, offset = 1): T {
-  return (rev - offset) as T;
 }

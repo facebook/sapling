@@ -11,6 +11,7 @@ import type {FileStackState, FileRev} from './fileStackState';
 import type {RecordOf} from 'immutable';
 
 import {assert} from '../utils';
+import {max, prev} from './revMath';
 import {List, Record, Map as ImMap} from 'immutable';
 import {diffLines, splitLines} from 'shared/diff';
 import {dedup, nullthrows} from 'shared/utils';
@@ -145,7 +146,7 @@ export function calculateAbsorbEditsForFileStack(
   options?: {fileStackIndex?: FileStackIndex},
 ): [FileStackState, ImMap<AbsorbEditId, AbsorbEdit>] {
   // rev 0 (public), 1, 2, ..., wdirRev-1 (stack top to absorb), wdirRev (wdir virtual rev)
-  const wdirRev = (stack.revLength - 1) as FileRev;
+  const wdirRev = prev(stack.revLength as FileRev);
   assert(
     wdirRev >= 1,
     'calculateAbsorbEditsForFileStack requires at least one wdir(), one public()',
@@ -172,8 +173,8 @@ export function analyseFileStackWithWdirAtTop(
   stack: FileStackState,
   options?: {wdirRev?: FileRev; fileStackIndex?: FileStackIndex},
 ): List<AbsorbEdit> {
-  const wdirRev = options?.wdirRev ?? ((stack.revLength - 1) as FileRev);
-  const stackTopRev = (wdirRev - 1) as FileRev;
+  const wdirRev = options?.wdirRev ?? prev(stack.revLength as FileRev);
+  const stackTopRev = prev(wdirRev);
   assert(stackTopRev >= 0, 'stackTopRev must be positive');
   const newText = stack.getRev(wdirRev);
   let edits = analyseFileStack(stack, newText, stackTopRev);
@@ -196,7 +197,7 @@ export function analyseFileStack(
 ): List<AbsorbEdit> {
   assert(stack.revLength > 0, 'stack should not be empty');
   const linelog = stack.convertToLineLog();
-  const oldRev = stackTopRev ?? ((stack.revLength - 1) as FileRev);
+  const oldRev = stackTopRev ?? prev(stack.revLength as FileRev);
   const oldText = stack.getRev(oldRev);
   const oldLines = splitLines(oldText);
   // The `LineInfo` contains "blame" information.
@@ -298,7 +299,7 @@ export function analyseFileStack(
           newStart: b1,
           newEnd: b2,
           newLines: List(newLines.slice(b1, b2)),
-          introductionRev: Math.max(0, ...involvedRevs) as FileRev,
+          introductionRev: max(...involvedRevs, 0),
           selectedRev: null,
           absorbEditId: allocateAbsorbId(),
         }),

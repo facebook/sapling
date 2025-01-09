@@ -35,6 +35,7 @@ import {
   revWithAbsorb,
 } from './absorb';
 import {FileStackState} from './fileStackState';
+import {max, next, prev} from './revMath';
 import deepEqual from 'fast-deep-equal';
 import {Seq, List, Map as ImMap, Set as ImSet, Record, is} from 'immutable';
 import {LRU, cachedMethod} from 'shared/LRU';
@@ -592,7 +593,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     let newFileStacks = stack.fileStacks;
     let absorbExtra: AbsorbExtra = ImMap();
     stack.fileStacks.forEach((fileStack, fileIdx) => {
-      const topFileRev = (fileStack.revLength - 1) as FileRev;
+      const topFileRev = prev(fileStack.revLength as FileRev);
       if (topFileRev < 0) {
         // Empty file stack. Skip.
         return;
@@ -729,11 +730,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     // Figure out the "file rev" from "commit rev", since we don't know the
     // "path" of the file at the "commitRev", for now, we just naively looks up
     // the fileRev one by one... for now
-    for (
-      let fileRev = Math.max(1, edit.introductionRev) as FileRev;
-      ;
-      fileRev = (fileRev + 1) as FileRev
-    ) {
+    for (let fileRev = max(edit.introductionRev, 1); ; fileRev = next(fileRev)) {
       const candidateCommitRev = this.fileToCommit.get(FileIdx({fileIdx, fileRev}))?.rev;
       if (candidateCommitRev == null) {
         break;
@@ -802,7 +799,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
             // File stack history is linear. Only reuse it if its last
             // rev matches `prevFileRev`
             if (prevFileStack.source.revLength === prev.fileRev + 1) {
-              const fileRev = (prev.fileRev + 1) as FileRev;
+              const fileRev = next(prev.fileRev);
               fileStacks[prev.fileIdx] = prevFileStack.editText(
                 fileRev,
                 state.getUtf8Data(file),
@@ -1008,7 +1005,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     const fileStack = nullthrows(this.fileStacks.get(fileIdx));
     const revLength = fileStack.revLength - 1;
     const nameAtFirstRev = this.getFileStackPath(fileIdx, 0 as FileRev);
-    const nameAtLastRev = this.getFileStackPath(fileIdx, (revLength - 1) as FileRev);
+    const nameAtLastRev = this.getFileStackPath(fileIdx, prev(revLength as FileRev));
     const words = [];
     if (nameAtFirstRev) {
       words.push(nameAtFirstRev);
@@ -1211,7 +1208,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
    * The callsite should take care of `files` updates.
    */
   rewriteStackDroppingRev(rev: Rev): CommitStackState {
-    const revMapFunc = (r: Rev) => (r < rev ? r : ((r - 1) as Rev));
+    const revMapFunc = (r: Rev) => (r < rev ? r : prev(r));
     const newStack = this.stack
       .filter(c => c.rev !== rev)
       .map(c => rewriteCommitRevs(c, revMapFunc));
@@ -1351,7 +1348,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
       newStack = this.stack.push(
         CommitState({
           rev,
-          parents: List(rev === 0 ? [] : [(rev - 1) as Rev]),
+          parents: List(rev === 0 ? [] : [prev(rev)]),
           text: message,
           key: newKey,
           author: top.author,
@@ -1360,7 +1357,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
         }),
       );
     } else {
-      const revMapFunc = (r: Rev) => (r >= rev ? ((r + 1) as Rev) : r);
+      const revMapFunc = (r: Rev) => (r >= rev ? next(r) : r);
       const origParents = nullthrows(state.stack.get(rev)).parents;
       newStack = state.stack
         .map(c => rewriteCommitRevs(c, revMapFunc))
@@ -1457,7 +1454,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
 
   canMoveDown = cachedMethod(this.canMoveDownImpl, {cache: canMoveDownCache});
   private canMoveDownImpl(rev: Rev): boolean {
-    return rev > 0 && this.canMoveUp((rev - 1) as Rev);
+    return rev > 0 && this.canMoveUp(prev(rev));
   }
 
   canMoveUp = cachedMethod(this.canMoveUpImpl, {cache: canMoveUpCache});
@@ -1522,7 +1519,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     // Update state.stack.
     const newStack = state.stack.map((_commit, rev) => {
       const commit = nullthrows(state.stack.get(order[rev]));
-      return commit.merge({parents: List(rev > 0 ? [(rev - 1) as Rev] : []), rev: rev as Rev});
+      return commit.merge({parents: List(rev > 0 ? [prev(rev as Rev)] : []), rev: rev as Rev});
     });
     state = state.set('stack', newStack);
 
@@ -1611,7 +1608,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
         });
         return files;
       });
-      const parents = i === 0 ? List<Rev>() : List([(i - 1) as Rev]);
+      const parents = i === 0 ? List<Rev>() : List([prev(i as Rev)]);
       return commit.merge({rev: i as Rev, files: newFiles, parents});
     });
 
@@ -1712,7 +1709,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
       const isFirst = c.rev === 0;
       let commit = rewriteCommitRevs(pickKey(c), r => (r + startRev) as Rev).set('files', newFiles);
       if (isFirst && startRev > 0) {
-        commit = commit.set('parents', List([(startRev - 1) as Rev]));
+        commit = commit.set('parents', List([prev(startRev)]));
       }
       return commit;
     };

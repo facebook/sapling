@@ -11,6 +11,7 @@ import type {FileStackState, FileRev} from '../fileStackState';
 import type {RangeInfo} from './TextEditable';
 
 import {t} from '../../i18n';
+import {prev} from '../revMath';
 import {bumpStackEditMetric} from './stackEditState';
 import {Set as ImSet, Range} from 'immutable';
 import {applyTokenizationToLine} from 'shared/createTokenizedIntralineDiff';
@@ -138,7 +139,7 @@ export function computeLinesForFileStackEditor(
       }
 
       // Actually move the lines.
-      const aRev = (rev - 1) as FileRev;
+      const aRev = prev(rev);
       const bRev = rev;
       let currentAIdx = 0;
       let currentBIdx = 0;
