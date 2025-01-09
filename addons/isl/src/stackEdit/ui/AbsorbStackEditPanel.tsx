@@ -61,6 +61,8 @@ const styles = stylex.create({
     whiteSpace: 'pre-wrap',
     fontFamily: 'var(--monospace-fontFamily)',
     fontSize: 'var(--editor-font-size)',
+    // Fill the width when there are long lines in another diff chunk.
+    flexGrow: 1,
   },
   absorbEditPathTitle: {
     padding: 'var(--halfpad) var(--pad)',
