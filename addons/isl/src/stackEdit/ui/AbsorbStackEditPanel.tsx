@@ -14,6 +14,7 @@ import type {CommitStackState, FileStackIndex, Rev} from '../commitStackState';
 import type {Map as ImMap} from 'immutable';
 
 import {FileHeader, IconType} from '../../ComparisonView/SplitDiffView/SplitDiffFileHeader';
+import {ScrollY} from '../../ComponentUtils';
 import {DragHandle} from '../../DragHandle';
 import {DraggingOverlay} from '../../DraggingOverlay';
 import {defaultRenderGlyph, RenderDag} from '../../RenderDag';
@@ -99,6 +100,9 @@ const styles = stylex.create({
   instruction: {
     padding: 'var(--halfpad) var(--pad)',
   },
+  scrollYPadding: {
+    paddingRight: 'var(--pad)',
+  },
 });
 
 /** The `AbsorbEdit` that is currently being dragged. */
@@ -126,18 +130,20 @@ export function AbsorbStackEditPanel() {
             </div>
           </Row>
         </div>
-        <RenderDag
-          className="absorb-dag"
-          dag={dag}
-          renderCommit={renderCommit}
-          renderCommitExtras={renderCommitExtras}
-          renderGlyph={RenderGlyph}
-          subset={subset}
-          style={{
-            /* make it "containing block" so findDragDestinationCommitKey works */
-            position: 'relative',
-          }}
-        />
+        <ScrollY maxSize="calc(100vh - 200px)" {...stylex.props(styles.scrollYPadding)}>
+          <RenderDag
+            className="absorb-dag"
+            dag={dag}
+            renderCommit={renderCommit}
+            renderCommitExtras={renderCommitExtras}
+            renderGlyph={RenderGlyph}
+            subset={subset}
+            style={{
+              /* make it "containing block" so findDragDestinationCommitKey works */
+              position: 'relative',
+            }}
+          />
+        </ScrollY>
       </Column>
       <AbsorbDraggingOverlay />
     </>
