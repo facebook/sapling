@@ -35,7 +35,7 @@ export class FileStackState extends SelfUpdate<FileStackStateRecord> {
     return this.inner.source;
   }
 
-  get revLength(): number {
+  get revLength(): FileRev {
     return this.inner.source.revLength;
   }
 

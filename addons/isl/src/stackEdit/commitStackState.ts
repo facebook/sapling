@@ -593,7 +593,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     let newFileStacks = stack.fileStacks;
     let absorbExtra: AbsorbExtra = ImMap();
     stack.fileStacks.forEach((fileStack, fileIdx) => {
-      const topFileRev = prev(fileStack.revLength as FileRev);
+      const topFileRev = prev(fileStack.revLength);
       if (topFileRev < 0) {
         // Empty file stack. Skip.
         return;
@@ -1003,9 +1003,9 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
   /** File name for `fileStacks[index]`. If the file is renamed, return  */
   getFileStackDescription(fileIdx: number): string {
     const fileStack = nullthrows(this.fileStacks.get(fileIdx));
-    const revLength = fileStack.revLength - 1;
+    const revLength = prev(fileStack.revLength);
     const nameAtFirstRev = this.getFileStackPath(fileIdx, 0 as FileRev);
-    const nameAtLastRev = this.getFileStackPath(fileIdx, prev(revLength as FileRev));
+    const nameAtLastRev = this.getFileStackPath(fileIdx, prev(revLength));
     const words = [];
     if (nameAtFirstRev) {
       words.push(nameAtFirstRev);

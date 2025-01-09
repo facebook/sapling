@@ -146,7 +146,7 @@ export function calculateAbsorbEditsForFileStack(
   options?: {fileStackIndex?: FileStackIndex},
 ): [FileStackState, ImMap<AbsorbEditId, AbsorbEdit>] {
   // rev 0 (public), 1, 2, ..., wdirRev-1 (stack top to absorb), wdirRev (wdir virtual rev)
-  const wdirRev = prev(stack.revLength as FileRev);
+  const wdirRev = prev(stack.revLength);
   assert(
     wdirRev >= 1,
     'calculateAbsorbEditsForFileStack requires at least one wdir(), one public()',
@@ -173,7 +173,7 @@ export function analyseFileStackWithWdirAtTop(
   stack: FileStackState,
   options?: {wdirRev?: FileRev; fileStackIndex?: FileStackIndex},
 ): List<AbsorbEdit> {
-  const wdirRev = options?.wdirRev ?? prev(stack.revLength as FileRev);
+  const wdirRev = options?.wdirRev ?? prev(stack.revLength);
   const stackTopRev = prev(wdirRev);
   assert(stackTopRev >= 0, 'stackTopRev must be positive');
   const newText = stack.getRev(wdirRev);
@@ -197,7 +197,7 @@ export function analyseFileStack(
 ): List<AbsorbEdit> {
   assert(stack.revLength > 0, 'stack should not be empty');
   const linelog = stack.convertToLineLog();
-  const oldRev = stackTopRev ?? prev(stack.revLength as FileRev);
+  const oldRev = stackTopRev ?? prev(stack.revLength);
   const oldText = stack.getRev(oldRev);
   const oldLines = splitLines(oldText);
   // The `LineInfo` contains "blame" information.
