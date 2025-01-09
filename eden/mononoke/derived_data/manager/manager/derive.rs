@@ -732,15 +732,15 @@ impl DerivedDataManager {
         // and highest ancestors of the batch.
         let mut seen = HashSet::new();
         let mut heads = HashSet::new();
-        let mut ancestors = HashSet::new();
+        let mut ancestors = HashMap::new();
         for bonsai in bonsais.iter() {
             let csid = bonsai.get_changeset_id();
-            if ancestors.contains(&csid) {
+            if ancestors.contains_key(&csid) {
                 return Err(anyhow!("batch not in topological order at {}", csid).into());
             }
             for parent in bonsai.parents() {
                 if !seen.contains(&parent) {
-                    ancestors.insert(parent);
+                    ancestors.insert(csid.clone(), parent);
                 }
                 heads.remove(&parent);
             }
@@ -751,7 +751,18 @@ impl DerivedDataManager {
         // Dependency checks: all ancestors should have this derived
         // data type derived
         stream::iter(ancestors)
-            .map(|csid| derivation_ctx_ref.fetch_dependency::<Derivable>(ctx, csid))
+            .map(|(child, csid)| {
+                derivation_ctx_ref
+                    .fetch_dependency::<Derivable>(ctx, csid)
+                    .map_err(move |err| {
+                        err.context(format!(
+                            "failed to fetch dependency for deriving {} for {} - data was not derived for {}",
+                            Derivable::NAME,
+                            child,
+                            csid
+                        ))
+                    })
+            })
             .buffered(100)
             .try_for_each(|_| async { Ok(()) })
             .await
