@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Rev} from './fileStackState';
+import type {Rev} from './commitStackState';
 
 import {CommitStackState} from './commitStackState';
 import {List, Record} from 'immutable';
@@ -24,13 +24,13 @@ type ReorderResult = {
 function* range(
   start: number,
   end: number,
-  filterFunc?: (i: number) => boolean,
-): IterableIterator<number> {
+  filterFunc?: (i: Rev) => boolean,
+): IterableIterator<Rev> {
   for (let i = start; i < end; i++) {
-    if (filterFunc && !filterFunc(i)) {
+    if (filterFunc && !filterFunc(i as Rev)) {
       continue;
     }
-    yield i;
+    yield i as Rev;
   }
 }
 
@@ -58,7 +58,7 @@ export function reorderWithDeps(
     // Moved down.
     const depRevs = new Set(depMap.get(origRev) ?? []);
     for (let i = -1; i >= offset; i--) {
-      const rev = origRev + i;
+      const rev = (origRev + i) as Rev;
       if (depRevs.has(rev)) {
         deps.push(rev);
         depMap.get(rev)?.forEach(r => depRevs.add(r));
@@ -69,7 +69,7 @@ export function reorderWithDeps(
   } else if (offset > 0) {
     // Moved up.
     for (let i = 1; i <= offset; i++) {
-      const rev = origRev + i;
+      const rev = (origRev + i) as Rev;
       const dep = depMap.get(rev);
       if (dep && (dep.has(origRev) || deps.some(r => dep.has(r)))) {
         deps.push(rev);

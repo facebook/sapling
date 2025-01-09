@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Rev} from '../fileStackState';
+import type {Rev} from '../commitStackState';
 
 import {reorderWithDeps} from '../reorderState';
 

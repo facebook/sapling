@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {FileStackState, Rev} from '../fileStackState';
+import type {FileStackState, FileRev} from '../fileStackState';
 import type {Mode} from './FileStackEditorLines';
 import type {RangeInfo} from './TextEditable';
 import type {Block, LineIdx} from 'shared/diff';
@@ -38,7 +38,7 @@ type EditorRowProps = {
   setStack: (stack: FileStackState) => void;
 
   /** Function to get the "title" of a rev. */
-  getTitle?: (rev: Rev) => string;
+  getTitle?: (rev: FileRev) => string;
 
   /**
    * Skip editing (or showing) given revs.
@@ -47,7 +47,7 @@ type EditorRowProps = {
    * (introduced by a previous public commit). rev 0 is not shown if it is
    * absent, aka. rev 1 added the file.
    */
-  skip?: (rev: Rev) => boolean;
+  skip?: (rev: FileRev) => boolean;
 
   /** Diff mode. */
   mode: Mode;
@@ -58,7 +58,7 @@ type EditorRowProps = {
 
 type EditorProps = EditorRowProps & {
   /** The rev in the stack to edit. */
-  rev: Rev;
+  rev: FileRev;
 };
 
 export function FileStackEditor(props: EditorProps) {
@@ -107,7 +107,7 @@ export function FileStackEditor(props: EditorProps) {
   // Diff with the left side.
   const bText = stack.getRev(rev);
   const bLines = splitLines(bText);
-  const aLines = splitLines(stack.getRev(Math.max(0, rev - 1)));
+  const aLines = splitLines(stack.getRev(Math.max(0, rev - 1) as FileRev));
   const abBlocks = diffBlocks(aLines, bLines);
 
   const rightMost = rev + 1 >= stack.revLength;
@@ -116,7 +116,7 @@ export function FileStackEditor(props: EditorProps) {
   let cbBlocks: Array<Block> = [];
   let blocks = abBlocks;
   if (!rightMost && mode === 'side-by-side-diff') {
-    const cText = stack.getRev(rev + 1);
+    const cText = stack.getRev((rev + 1) as FileRev);
     const cLines = splitLines(cText);
     cbBlocks = diffBlocks(cLines, bLines);
     blocks = mergeBlocks(abBlocks, cbBlocks);
@@ -228,7 +228,7 @@ export function FileStackEditor(props: EditorProps) {
 /** The unified stack view is different from other views. */
 function FileStackEditorUnifiedStack(props: EditorRowProps) {
   type ClickPosition = {
-    rev: Rev;
+    rev: FileRev;
     lineIdx: LineIdx;
     checked?: boolean;
   };
@@ -298,7 +298,7 @@ function FileStackEditorUnifiedStack(props: EditorRowProps) {
 
   const handlePointerDown = (
     lineIdx: LineIdx,
-    rev: Rev,
+    rev: FileRev,
     checked: boolean,
     e: React.PointerEvent,
   ) => {
@@ -306,13 +306,13 @@ function FileStackEditorUnifiedStack(props: EditorRowProps) {
       setClickStart({lineIdx, rev, checked});
     }
   };
-  const handlePointerMove = (lineIdx: LineIdx, rev: Rev, e: React.PointerEvent) => {
+  const handlePointerMove = (lineIdx: LineIdx, rev: FileRev, e: React.PointerEvent) => {
     if (e.isPrimary && clickStart != null) {
       const newClickEnd = {lineIdx, rev, checked: false};
       setClickEnd(v => (deepEqual(v, newClickEnd) ? v : newClickEnd));
     }
   };
-  const handlePointerUp = (lineIdx: LineIdx, rev: Rev, e: React.PointerEvent) => {
+  const handlePointerUp = (lineIdx: LineIdx, rev: FileRev, e: React.PointerEvent) => {
     setClickEnd(null);
     if (e.isPrimary && clickStart != null) {
       const [lineRange, revRange] = getSelRanges(clickStart, {lineIdx, rev});
@@ -434,8 +434,8 @@ function FileStackEditorUnifiedStack(props: EditorRowProps) {
     const textLines = lines.map(l => l.data).toArray();
     const text = textLines.join('');
     const handleTextChange = (newText: string) => {
-      const immutableRev = 0;
-      const immutableRevs: ImSet<Rev> = ImSet([immutableRev]);
+      const immutableRev = 0 as FileRev;
+      const immutableRevs: ImSet<FileRev> = ImSet([immutableRev]);
       const newTextLines = splitLines(newText);
       const blocks = diffBlocks(textLines, newTextLines);
       const newFlattenLines: List<FlattenLine> = List<FlattenLine>().withMutations(mut => {
@@ -447,8 +447,9 @@ function FileStackEditorUnifiedStack(props: EditorRowProps) {
             // Plain text does not have "revs" info.
             // We just reuse the last line on the a-side. This should work fine for
             // single-line insertion or edits.
-            const fallbackRevs: ImSet<Rev> =
-              lines.get(Math.max(a1, a2 - 1))?.revs?.delete(immutableRev) ?? ImSet();
+            const fallbackRevs: ImSet<FileRev> = (lines
+              .get(Math.max(a1, a2 - 1))
+              ?.revs?.delete(immutableRev) ?? ImSet()) as ImSet<FileRev>;
             // Public (immutableRev, rev 0) lines cannot be deleted. Enforce that.
             const aLines = Range(a1, a2)
               .map(ai => lines.get(ai))
@@ -510,10 +511,10 @@ export function FileStackEditorRow(props: EditorRowProps) {
 }
 
 function getSkipGetTitleOrDefault(props: EditorRowProps): {
-  skip: (rev: Rev) => boolean;
-  getTitle: (rev: Rev) => string;
+  skip: (rev: FileRev) => boolean;
+  getTitle: (rev: FileRev) => string;
 } {
-  const skip = props.skip ?? ((rev: Rev) => rev === 0);
+  const skip = props.skip ?? ((rev: FileRev) => rev === 0);
   const getTitle = props.getTitle ?? (() => '');
   return {skip, getTitle};
 }

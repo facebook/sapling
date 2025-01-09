@@ -6,7 +6,7 @@
  */
 
 import type {AbsorbEdit, AbsorbEditId} from './absorb';
-import type {Rev} from './fileStackState';
+import type {FileRev} from './fileStackState';
 import type {RecordOf} from 'immutable';
 import type {Author, Hash, RepoPath} from 'shared/types/common';
 import type {
@@ -588,7 +588,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     let newFileStacks = stack.fileStacks;
     let absorbExtra: AbsorbExtra = ImMap();
     stack.fileStacks.forEach((fileStack, fileIdx) => {
-      const topFileRev = fileStack.revLength - 1;
+      const topFileRev = (fileStack.revLength - 1) as FileRev;
       if (topFileRev < 0) {
         // Empty file stack. Skip.
         return;
@@ -621,7 +621,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
   ): {candidateRevs: ReadonlyArray<Rev>; selectedRev?: Rev} {
     const fileStack = nullthrows(this.fileStacks.get(fileIdx));
     const edit = nullthrows(this.absorbExtra.get(fileIdx)?.get(absorbEditId));
-    const toCommitRev = (fileRev: Rev | null | undefined): Rev | undefined => {
+    const toCommitRev = (fileRev: FileRev | null | undefined): Rev | undefined => {
       if (fileRev == null) {
         return undefined;
       }
@@ -633,7 +633,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     const endCandidateFileRev = fileStack.revLength;
     const candidateRevs: Rev[] = [];
     for (let fileRev = startCandidateFileRev; fileRev < endCandidateFileRev; ++fileRev) {
-      const rev = toCommitRev(fileRev);
+      const rev = toCommitRev(fileRev as FileRev);
       // Skip immutable (public) commits.
       if (rev != null && this.get(rev)?.immutableKind !== 'hash') {
         candidateRevs.push(rev);
@@ -725,7 +725,11 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     // Figure out the "file rev" from "commit rev", since we don't know the
     // "path" of the file at the "commitRev", for now, we just naively looks up
     // the fileRev one by one... for now
-    for (let fileRev = Math.max(1, edit.introductionRev); ; ++fileRev) {
+    for (
+      let fileRev = Math.max(1, edit.introductionRev) as FileRev;
+      ;
+      fileRev = (fileRev + 1) as FileRev
+    ) {
       const candidateCommitRev = this.fileToCommit.get(FileIdx({fileIdx, fileRev}))?.rev;
       if (candidateCommitRev == null) {
         break;
@@ -794,7 +798,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
             // File stack history is linear. Only reuse it if its last
             // rev matches `prevFileRev`
             if (prevFileStack.source.revLength === prev.fileRev + 1) {
-              const fileRev = prev.fileRev + 1;
+              const fileRev = (prev.fileRev + 1) as FileRev;
               fileStacks[prev.fileIdx] = prevFileStack.editText(
                 fileRev,
                 state.getUtf8Data(file),
@@ -812,7 +816,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
           // Cannot reuse an existing file stack. Create a new file stack.
           const fileIdx = fileStacks.length;
           let fileTextList = [state.getUtf8Data(file)];
-          let fileRev = 0;
+          let fileRev = 0 as FileRev;
           if (isUtf8(prevFile)) {
             // Use "prevFile" as rev 0 (immutable public).
             fileTextList = [state.getUtf8Data(prevFile), ...fileTextList];
@@ -820,7 +824,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
             const fIdx = FileIdx({fileIdx, fileRev});
             commitToFile = commitToFile.set(cIdx, fIdx);
             fileToCommit = fileToCommit.set(fIdx, cIdx);
-            fileRev = 1;
+            fileRev = 1 as FileRev;
           }
           const fileStack = new FileStackState(fileTextList);
           fileStacks.push(fileStack);
@@ -998,8 +1002,8 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
   getFileStackDescription(fileIdx: number): string {
     const fileStack = nullthrows(this.fileStacks.get(fileIdx));
     const revLength = fileStack.revLength - 1;
-    const nameAtFirstRev = this.getFileStackPath(fileIdx, 0);
-    const nameAtLastRev = this.getFileStackPath(fileIdx, revLength - 1);
+    const nameAtFirstRev = this.getFileStackPath(fileIdx, 0 as FileRev);
+    const nameAtLastRev = this.getFileStackPath(fileIdx, (revLength - 1) as FileRev);
     const words = [];
     if (nameAtFirstRev) {
       words.push(nameAtFirstRev);
@@ -1016,7 +1020,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
   }
 
   /** Get the path name for a specific revision in the given file stack. */
-  getFileStackPath(fileIdx: number, fileRev: number): string | undefined {
+  getFileStackPath(fileIdx: number, fileRev: FileRev): string | undefined {
     return this.fileToCommit.get(FileIdx({fileIdx, fileRev}))?.path;
   }
 
@@ -1024,7 +1028,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
    * Get the commit from a file stack revision.
    * Returns undefined when rev is out of range, or the commit is "public" (ex. fileRev is 0).
    */
-  getCommitFromFileStackRev(fileIdx: number, fileRev: Rev): CommitState | undefined {
+  getCommitFromFileStackRev(fileIdx: number, fileRev: FileRev): CommitState | undefined {
     const commitRev = this.fileToCommit.get(FileIdx({fileIdx, fileRev}))?.rev;
     if (commitRev == null || commitRev < 0) {
       return undefined;
@@ -1035,7 +1039,7 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
   /**
    * Test if a file rev is "absent". An absent file is different from an empty file.
    */
-  isAbsentFromFileStackRev(fileIdx: number, fileRev: Rev): boolean {
+  isAbsentFromFileStackRev(fileIdx: number, fileRev: FileRev): boolean {
     const commitIdx = this.fileToCommit.get(FileIdx({fileIdx, fileRev}));
     if (commitIdx == null) {
       return true;
@@ -1120,13 +1124,13 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
     const state = this.useFileStack();
     const depMap = new Map<Rev, Set<Rev>>(state.stack.map(c => [c.rev, new Set()]));
 
-    const fileIdxRevToCommitRev = (fileIdx: FileStackIndex, fileRev: Rev): Rev =>
+    const fileIdxRevToCommitRev = (fileIdx: FileStackIndex, fileRev: FileRev): Rev =>
       nullthrows(state.fileToCommit.get(FileIdx({fileIdx, fileRev}))).rev;
 
     // Ask FileStack for dependencies about content edits.
     state.fileStacks.forEach((fileStack, fileIdx) => {
       const fileDepMap = fileStack.calculateDepMap();
-      const toCommitRev = (rev: Rev) => fileIdxRevToCommitRev(fileIdx, rev);
+      const toCommitRev = (rev: FileRev) => fileIdxRevToCommitRev(fileIdx, rev);
       // Convert file revs to commit revs.
       fileDepMap.forEach((valueFileRevs, keyFileRev) => {
         const keyCommitRev = toCommitRev(keyFileRev);
@@ -1497,13 +1501,13 @@ export class CommitStackState extends SelfUpdate<CommitStackRecord> {
       // commitRevs and mappedCommitRevs might not overlap, although they
       // have the same length (fileRevs.length). Turn them into compact
       // sequence to reason about.
-      const fromRevs: Rev[] = compactSequence(commitRevs);
-      const toRevs: Rev[] = compactSequence(mappedCommitRevs);
+      const fromRevs: FileRev[] = compactSequence(commitRevs);
+      const toRevs: FileRev[] = compactSequence(mappedCommitRevs);
       if (deepEqual(fromRevs, toRevs)) {
         return fileStack;
       }
       // Mapping: zip(original revs, mapped file revs)
-      const fileRevMap = new Map<Rev, Rev>(zip(fromRevs, toRevs));
+      const fileRevMap = new Map<FileRev, FileRev>(zip(fromRevs, toRevs));
       fileStack = fileStack.remapRevs(fileRevMap);
       // Apply the reverse mapping. See the above comment for why this is necessary.
       return new FileStackState(fileRevs.map(fileRev => fileStack.getRev(toRevs[fileRev])));
@@ -1972,10 +1976,12 @@ export function toMetadata(file: FileState): FileMetadata {
 /**
  * Turn distinct numbers to a 0..n sequence preserving the order.
  * For example, turn [0, 100, 50] into [0, 2, 1].
+ * This could convert CommitRevs to FileRevs, assuming the file
+ * stack is a sub-sequence of the commit sequence.
  */
-function compactSequence(revs: Rev[]): Rev[] {
+function compactSequence(revs: Rev[]): FileRev[] {
   const sortedRevs = [...revs].sort((aRev, bRev) => aRev - bRev);
-  return revs.map(rev => sortedRevs.indexOf(rev));
+  return revs.map(rev => sortedRevs.indexOf(rev) as FileRev);
 }
 
 /** Reorder rev and rev + 1. Return [] if rev is out of range */
@@ -2090,7 +2096,7 @@ export type FileStackIndex = number;
 
 type FileIdxProps = {
   fileIdx: FileStackIndex;
-  fileRev: Rev;
+  fileRev: FileRev;
 };
 
 type CommitIdxProps = {
@@ -2098,7 +2104,7 @@ type CommitIdxProps = {
   path: RepoPath;
 };
 
-export const FileIdx = Record<FileIdxProps>({fileIdx: 0, fileRev: 0});
+export const FileIdx = Record<FileIdxProps>({fileIdx: 0, fileRev: 0 as FileRev});
 export type FileIdx = RecordOf<FileIdxProps>;
 
 export const CommitIdx = Record<CommitIdxProps>({rev: -1, path: ''});
@@ -2119,4 +2125,7 @@ export const ABSENT_FILE = FileState({
   flags: ABSENT_FLAG,
 });
 
-export type {Rev};
+export type {FileRev};
+
+/** A revision number used in the `CommitStackState`. Identifies a commit in the stack. */
+export type Rev = number;

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {FileStackState, Rev} from '../fileStackState';
+import type {FileStackState, FileRev} from '../fileStackState';
 import type {Mode} from './FileStackEditorLines';
 
 import {Row} from '../../ComponentUtils';
@@ -78,7 +78,7 @@ export default function FileStackEditPanel() {
 
   // Properties for file stack editing.
   const stack = nullthrows(commitStack.fileStacks.get(fileIdx));
-  const getTitle = (rev: Rev) =>
+  const getTitle = (rev: FileRev) =>
     commitStack.getCommitFromFileStackRev(fileIdx, rev)?.text ??
     t(
       '(Base version)\n\n' +
@@ -86,7 +86,7 @@ export default function FileStackEditPanel() {
         'Cannot be edited here.\n\n' +
         'Provided to show diff against changes in the stack.',
     );
-  const skip = (rev: Rev) => commitStack.isAbsentFromFileStackRev(fileIdx, rev);
+  const skip = (rev: FileRev) => commitStack.isAbsentFromFileStackRev(fileIdx, rev);
   const setStack = (newStack: FileStackState) => {
     const fileDesc = commitStack.getFileStackDescription(fileIdx);
     const newCommitStack = commitStack.setFileStack(fileIdx, newStack);

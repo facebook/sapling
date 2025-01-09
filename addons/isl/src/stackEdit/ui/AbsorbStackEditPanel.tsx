@@ -10,7 +10,7 @@ import type {RenderGlyphResult} from '../../RenderDag';
 import type {Dag} from '../../dag/dag';
 import type {DagCommitInfo} from '../../dag/dagCommitInfo';
 import type {AbsorbEdit, AbsorbEditId} from '../absorb';
-import type {CommitStackState, FileStackIndex, Rev} from '../commitStackState';
+import type {CommitStackState, FileRev, FileStackIndex, Rev} from '../commitStackState';
 import type {Map as ImMap} from 'immutable';
 
 import {FileHeader, IconType} from '../../ComparisonView/SplitDiffView/SplitDiffFileHeader';
@@ -290,7 +290,7 @@ function AbsorbEditsForFile(props: {
   const stack = stackEdit.commitStack;
   // Display a file path.
   // NOTE: In case the file is renamed, only the "before rename" path is shown.
-  const path = stack.getFileStackPath(props.fileStackIndex, 0);
+  const path = stack.getFileStackPath(props.fileStackIndex, 0 as FileRev);
   return (
     <div>
       {path && <FileHeader path={path} iconType={IconType.Modified} />}

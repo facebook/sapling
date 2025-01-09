@@ -6,8 +6,7 @@
  */
 
 import type {DragHandler} from '../../DragHandle';
-import type {CommitState} from '../commitStackState';
-import type {Rev} from '../fileStackState';
+import type {CommitState, Rev} from '../commitStackState';
 import type {StackEditOpDescription, UseStackEditState} from './stackEditState';
 
 import {AnimatedReorderGroup} from '../../AnimatedReorderGroup';

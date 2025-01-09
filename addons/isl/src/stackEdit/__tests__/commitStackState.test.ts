@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Rev} from '../fileStackState';
+import type {FileRev, Rev} from '../commitStackState';
 import type {ExportCommit, ExportStack} from 'shared/types/stack';
 
 import {WDIR_NODE} from '../../dag/virtualCommit';
@@ -1308,11 +1308,14 @@ describe('CommitStackState', () => {
       const get = (
         stack: CommitStackState,
         fileIdx: number,
-        fileRev: Rev,
+        fileRev: number,
         considerAbsorb?: boolean,
       ) =>
         replaceNewLines(
-          stack.getUtf8Data(FileState({data: FileIdx({fileIdx, fileRev})}), considerAbsorb),
+          stack.getUtf8Data(
+            FileState({data: FileIdx({fileIdx, fileRev: fileRev as FileRev})}),
+            considerAbsorb,
+          ),
         );
       expect(get(stack1, 0, 1)).toMatchInlineSnapshot(`"a1↵a2↵a3↵"`);
       // getUtf8Data considers the pending absorb (a1 -> A1).

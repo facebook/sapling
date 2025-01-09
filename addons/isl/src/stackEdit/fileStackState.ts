@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {FlattenLine, Rev, LineIdx} from '../linelog';
+import type {FlattenLine, LineIdx} from '../linelog';
 import type {RecordOf} from 'immutable';
 
 import {LineLog} from '../linelog';
@@ -19,7 +19,11 @@ export class FileStackState extends SelfUpdate<FileStackStateRecord> {
   constructor(value: Source | string[]) {
     if (Array.isArray(value)) {
       const contents: string[] = value;
-      const source = Source({type: 'plain', value: List(contents), revLength: contents.length});
+      const source = Source({
+        type: 'plain',
+        value: List(contents),
+        revLength: contents.length as FileRev,
+      });
       super(FileStackStateRecord({source}));
     } else {
       super(FileStackStateRecord({source: value}));
@@ -36,12 +40,12 @@ export class FileStackState extends SelfUpdate<FileStackStateRecord> {
 
   fromLineLog(log: LineLog): FileStackState {
     return new FileStackState(
-      Source({type: 'linelog', value: log, revLength: Math.floor(log.maxRev) + 1}),
+      Source({type: 'linelog', value: log, revLength: (Math.floor(log.maxRev) + 1) as FileRev}),
     );
   }
 
   fromFlattenLines(lines: List<FlattenLine>, revLength: number | undefined): FileStackState {
-    const newRevLength = revLength ?? lines.map(l => l.revs.max()).max() ?? 0;
+    const newRevLength = (revLength ?? lines.map(l => l.revs.max()).max() ?? 0) as FileRev;
     const source = Source({type: 'flatten', value: lines, revLength: newRevLength});
     return new FileStackState(source);
   }
@@ -52,7 +56,7 @@ export class FileStackState extends SelfUpdate<FileStackStateRecord> {
    * Obtain the content at the given revision.
    * 0 <= rev < this.revLength
    */
-  getRev(rev: Rev): string {
+  getRev(rev: FileRev): string {
     const type = this.source.type;
     if (type === 'linelog') {
       return this.source.value.checkOut(rev);
@@ -68,24 +72,24 @@ export class FileStackState extends SelfUpdate<FileStackStateRecord> {
   }
 
   /** Array of valid revisions. */
-  revs(): Rev[] {
-    return [...Array(this.source.revLength).keys()];
+  revs(): FileRev[] {
+    return [...Array(this.source.revLength).keys()] as FileRev[];
   }
 
   /**
    * Calculate the dependencies of revisions.
    * For example, `{5: [3, 1]}` means rev 5 depends on rev 3 and rev 1.
    */
-  calculateDepMap(): Map<Rev, Set<Rev>> {
-    return this.convertToLineLog().calculateDepMap();
+  calculateDepMap(): Map<FileRev, Set<FileRev>> {
+    return this.convertToLineLog().calculateDepMap() as Map<FileRev, Set<FileRev>>;
   }
 
   /** Figure out which `rev` introduces the lines. */
-  blame(rev: Rev): Rev[] {
+  blame(rev: FileRev): FileRev[] {
     const log = this.convertToLineLog();
     const lines = log.checkOutLines(rev);
     // Skip the last 'END' line.
-    return lines.slice(0, lines.length - 1).map(l => l.rev);
+    return lines.slice(0, lines.length - 1).map(l => l.rev as FileRev);
   }
 
   // Write operations.
@@ -95,8 +99,8 @@ export class FileStackState extends SelfUpdate<FileStackStateRecord> {
    * If `updateStack` is true, the rest of the stack will be updated
    * accordingly. Otherwise, no other revs are updated.
    */
-  editText(rev: Rev, text: string, updateStack = true): FileStackState {
-    const revLength = rev >= this.source.revLength ? rev + 1 : this.source.revLength;
+  editText(rev: FileRev, text: string, updateStack = true): FileStackState {
+    const revLength = rev >= this.source.revLength ? ((rev + 1) as FileRev) : this.source.revLength;
     let source = this.source;
     if (updateStack) {
       const log = this.convertToLineLog().recordText(text, rev);
@@ -124,7 +128,13 @@ export class FileStackState extends SelfUpdate<FileStackStateRecord> {
    * So `aRev` is the stack top, since the diff uses line numbers in the
    * stack top. `bRev` is the revisions that each chunk blames to.
    */
-  editChunk(aRev: Rev, a1: LineIdx, a2: LineIdx, bRev: Rev, bLines: string[]): FileStackState {
+  editChunk(
+    aRev: FileRev,
+    a1: LineIdx,
+    a2: LineIdx,
+    bRev: FileRev,
+    bLines: string[],
+  ): FileStackState {
     const log = this.convertToLineLog().editChunk(aRev, a1, a2, bRev, bLines);
     return this.fromLineLog(log);
   }
@@ -134,8 +144,10 @@ export class FileStackState extends SelfUpdate<FileStackStateRecord> {
    * and insertion. The callsite is responsible for checking
    * `revDepMap` to ensure the reordering can be "conflict"-free.
    */
-  remapRevs(revMap: Map<Rev, Rev> | ((rev: Rev) => Rev)): FileStackState {
-    const log = this.convertToLineLog().remapRevs(revMap);
+  remapRevs(revMap: Map<FileRev, FileRev> | ((rev: FileRev) => FileRev)): FileStackState {
+    const log = this.convertToLineLog().remapRevs(
+      revMap as Map<number, number> | ((rev: number) => number),
+    );
     return this.fromLineLog(log);
   }
 
@@ -146,11 +158,11 @@ export class FileStackState extends SelfUpdate<FileStackStateRecord> {
    * PERF: It would be better to just use linelog to complete the edit.
    */
   moveLines(
-    aRev: Rev,
+    aRev: FileRev,
     a1: LineIdx,
     a2: LineIdx,
-    includeRevs?: Rev[],
-    excludeRevs?: Rev[],
+    includeRevs?: FileRev[],
+    excludeRevs?: FileRev[],
   ): FileStackState {
     let revLineIdx = 0;
     const editLine = (line: FlattenLine): FlattenLine => {
@@ -195,7 +207,7 @@ export class FileStackState extends SelfUpdate<FileStackStateRecord> {
    * Truncate the stack. Drop rev (inclusive) and higher revs.
    * Note: This is only implemented for linelog.
    */
-  truncate(rev: Rev): FileStackState {
+  truncate(rev: FileRev): FileStackState {
     const log = this.convertToLineLog().truncate(rev);
     return this.fromLineLog(log);
   }
@@ -251,23 +263,23 @@ type SourceProps =
   | {
       type: 'linelog';
       value: LineLog;
-      revLength: number;
+      revLength: FileRev;
     }
   | {
       type: 'plain';
       value: List<string>;
-      revLength: number;
+      revLength: FileRev;
     }
   | {
       type: 'flatten';
       value: List<FlattenLine>;
-      revLength: number;
+      revLength: FileRev;
     };
 
 export const Source = Record<SourceProps>({
   type: 'plain',
   value: List([]),
-  revLength: 0,
+  revLength: 0 as FileRev,
 });
 type Source = RecordOf<SourceProps>;
 
@@ -277,4 +289,5 @@ type FileStackStateProps = {
 const FileStackStateRecord = Record<FileStackStateProps>({source: Source()});
 type FileStackStateRecord = RecordOf<FileStackStateProps>;
 
-export type {Rev};
+/** A revision number used in the `FileStackState`. Identifies a version of a multi-version file. */
+export type FileRev = number & {__brand: 'FileStackRev'};

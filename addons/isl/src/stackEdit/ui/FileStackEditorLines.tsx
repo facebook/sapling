@@ -7,7 +7,7 @@
 
 import type {TokenizedHunk} from '../../ComparisonView/SplitDiffView/syntaxHighlightingTypes';
 import type {FlattenLine} from '../../linelog';
-import type {FileStackState, Rev} from '../fileStackState';
+import type {FileStackState, FileRev} from '../fileStackState';
 import type {RangeInfo} from './TextEditable';
 
 import {t} from '../../i18n';
@@ -34,7 +34,7 @@ export type Mode = 'unified-diff' | 'side-by-side-diff' | 'unified-stack';
 export function computeLinesForFileStackEditor(
   stack: FileStackState,
   setStack: (stack: FileStackState) => unknown,
-  rev: Rev,
+  rev: FileRev,
   mode: Mode,
   aLines: Array<string>,
   bLines: Array<string>,
@@ -138,7 +138,7 @@ export function computeLinesForFileStackEditor(
       }
 
       // Actually move the lines.
-      const aRev = rev - 1;
+      const aRev = (rev - 1) as FileRev;
       const bRev = rev;
       let currentAIdx = 0;
       let currentBIdx = 0;

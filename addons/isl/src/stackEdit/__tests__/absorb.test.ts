@@ -6,7 +6,7 @@
  */
 
 import type {AbsorbEdit, AbsorbEditId} from '../absorb';
-import type {Rev} from '../fileStackState';
+import type {FileRev} from '../fileStackState';
 import type {Map as ImMap} from 'immutable';
 
 import {
@@ -149,10 +149,10 @@ describe('analyseFileStack', () => {
       // Replace ['1','2','3'] to ['a','b','c'], 1->a, 2->b, 3->c.
       const fullStack = createStack(['', '1↵', '1↵2↵', '1↵2↵3↵', 'a↵b↵c↵']);
       const edits = calculateAbsorbEditsForFileStack(fullStack)[1];
-      const stack = fullStack.truncate(fullStack.revLength - 1);
+      const stack = fullStack.truncate((fullStack.revLength - 1) as FileRev);
       expect(applyEdits(stack, edits.values())).toMatchInlineSnapshot(`" a↵ a↵b↵ a↵b↵c↵"`);
       // Tweak the `selectedRev` so the 1->a, 2->b changes happen at the last rev.
-      const edits2 = edits.map(c => c.set('selectedRev', 3));
+      const edits2 = edits.map(c => c.set('selectedRev', 3 as FileRev));
       expect(applyEdits(stack, edits2.values())).toMatchInlineSnapshot(`" 1↵ 1↵2↵ a↵b↵c↵"`);
       // Drop the "2->b" change by setting selectedRev to `null`.
       const edits3 = edits.map(c => (c.oldStart === 1 ? c.set('selectedRev', null) : c));
@@ -163,7 +163,7 @@ describe('analyseFileStack', () => {
       // Replace ['111','2','333'] to ['aaaa','2','cc']. 111->aaaa. 333->cc.
       const fullStack = createStack(['', '2↵', '1↵1↵1↵2↵3↵3↵3↵', 'a↵a↵a↵a↵2↵c↵c↵']);
       const edits = calculateAbsorbEditsForFileStack(fullStack)[1];
-      const stack = fullStack.truncate(fullStack.revLength - 1);
+      const stack = fullStack.truncate((fullStack.revLength - 1) as FileRev);
       expect(applyEdits(stack, edits.values())).toMatchInlineSnapshot(`" 2↵ a↵a↵a↵a↵2↵c↵c↵"`);
       // Drop the "1->aaa" change by setting selectedRev to `null`.
       const edits2 = edits.map(c => (c.oldStart === 0 ? c.set('selectedRev', null) : c));
@@ -177,7 +177,7 @@ describe('analyseFileStack', () => {
     it('can be embedded into rev, and extracted out', () => {
       const plainRev = 567;
       const absorbEditId = 890;
-      const rev = embedAbsorbId(plainRev, absorbEditId);
+      const rev = embedAbsorbId(plainRev as FileRev, absorbEditId);
       expect(extractRevAbsorbId(rev)).toEqual([plainRev, absorbEditId]);
     });
   });
@@ -199,7 +199,7 @@ describe('analyseFileStack', () => {
           "3: +y↵ Selected=2 Introduced=2",
         ]
       `);
-      const show = (rev: Rev) => compactText(analysedStack.getRev(rev));
+      const show = (rev: number) => compactText(analysedStack.getRev(rev as FileRev));
       // Rev 1 original.
       expect(show(1)).toMatchInlineSnapshot(`"p↵u↵b↵1↵2↵3↵4↵"`);
       // Rev 1.99 is Rev 1 with the absorb "-2 -x" chunk applied.
@@ -207,7 +207,7 @@ describe('analyseFileStack', () => {
       // Rev 2 original.
       expect(show(2)).toMatchInlineSnapshot(`"p↵u↵b↵x↵3↵4↵5↵6↵"`);
       // Rev 2.99 is Rev 2 with the absorb "-5 +y" applied.
-      const rev299 = revWithAbsorb(2);
+      const rev299 = revWithAbsorb(2 as FileRev);
       expect(show(rev299)).toMatchInlineSnapshot(`"p↵u↵b↵x↵3↵4↵6↵y↵"`);
       // Rev 3 "wdir()" is dropped - no changes from 2.99.
       expect(show(3)).toMatchInlineSnapshot(`"p↵u↵b↵x↵3↵4↵6↵y↵"`);
@@ -293,7 +293,7 @@ describe('analyseFileStack', () => {
 
   function analyseFile(stack: FileStackState, newText: string): string {
     const text = injectNewLines(newText);
-    const oldLines = splitLines(stack.getRev(stack.revLength - 1));
+    const oldLines = splitLines(stack.getRev((stack.revLength - 1) as FileRev));
     const newLines = splitLines(text);
     const chunks = analyseFileStack(stack, text);
     return chunks

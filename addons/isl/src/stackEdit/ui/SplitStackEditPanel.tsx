@@ -6,8 +6,8 @@
  */
 
 import type {CommitMessageFields} from '../../CommitInfoView/types';
-import type {CommitStackState, FileMetadata} from '../commitStackState';
-import type {FileStackState, Rev} from '../fileStackState';
+import type {CommitStackState, FileMetadata, FileStackIndex, Rev} from '../commitStackState';
+import type {FileStackState, FileRev} from '../fileStackState';
 import type {UseStackEditState} from './stackEditState';
 import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 import type {RepoPath} from 'shared/types/common';
@@ -173,8 +173,8 @@ function SplitColumn(props: SplitColumnProps) {
   const editablePathsSet = new Set(editablePaths);
   const generatedStatuses = useGeneratedFileStatuses(editablePaths);
   const sortedFileStacks = subStack.fileStacks
-    .flatMap((fileStack, fileIdx): Array<[RepoPath, FileStackState, Rev]> => {
-      const path = subStack.getFileStackPath(fileIdx, 0) ?? '';
+    .flatMap((fileStack, fileIdx): Array<[RepoPath, FileStackState, FileStackIndex]> => {
+      const path = subStack.getFileStackPath(fileIdx, 0 as FileRev) ?? '';
       return editablePathsSet.has(path) ? [[path, fileStack, fileIdx]] : [];
     })
     .sort((a, b) => {
@@ -192,9 +192,9 @@ function SplitColumn(props: SplitColumnProps) {
 
   const editables = sortedFileStacks.flatMap(([path, fileStack, fileIdx]) => {
     // subStack is a "dense" stack. fileRev is commitRev + 1.
-    const fileRev = rev + 1;
+    const fileRev = (rev + 1) as FileRev;
     const isModified =
-      (fileRev > 0 && fileStack.getRev(fileRev - 1) !== fileStack.getRev(fileRev)) ||
+      (fileRev > 0 && fileStack.getRev((fileRev - 1) as FileRev) !== fileStack.getRev(fileRev)) ||
       subStack.changedFileMetadata(rev, path) != null;
     const editor = (
       <SplitEditorWithTitle
@@ -300,7 +300,7 @@ type SplitEditorWithTitleProps = {
   path: RepoPath;
   fileStack?: FileStackState;
   fileIdx?: number;
-  fileRev?: Rev;
+  fileRev?: FileRev;
   collapsed: boolean;
   toggleCollapsed: () => unknown;
   generatedStatus?: GeneratedStatus;
@@ -776,7 +776,7 @@ type SplitFileProps = {
   setStack: (stack: FileStackState) => void;
 
   /** Function to get the "title" of a rev. */
-  getTitle?: (rev: Rev) => string;
+  getTitle?: (rev: FileRev) => string;
 
   /**
    * Skip editing (or showing) given revs.
@@ -785,10 +785,10 @@ type SplitFileProps = {
    * (introduced by a previous public commit). rev 0 is not shown if it is
    * absent, aka. rev 1 added the file.
    */
-  skip?: (rev: Rev) => boolean;
+  skip?: (rev: FileRev) => boolean;
 
   /** The rev in the stack to edit. */
-  rev: Rev;
+  rev: FileRev;
 
   /** The filepath */
   path: string;
@@ -835,7 +835,7 @@ export function SplitFile(props: SplitFileProps) {
 
   // Diff with the left side.
   const bText = stack.getRev(rev);
-  const aText = copyFromText ?? stack.getRev(Math.max(0, rev - 1));
+  const aText = copyFromText ?? stack.getRev(Math.max(0, rev - 1) as FileRev);
   // memo to avoid syntax highlighting repeatedly even when the text hasn't changed
   const bLines = useMemo(() => splitLines(bText), [bText]);
   const aLines = useMemo(() => splitLines(aText), [aText]);

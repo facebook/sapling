@@ -7,7 +7,7 @@
 
 import type {LineInfo} from '../linelog';
 import type {FileStackIndex} from './commitStackState';
-import type {FileStackState, Rev} from './fileStackState';
+import type {FileStackState, FileRev} from './fileStackState';
 import type {RecordOf} from 'immutable';
 
 import {assert} from '../utils';
@@ -38,7 +38,7 @@ export type AbsorbEditProps = {
    * The following revs are expected to contain this chunk too.
    * This is usually the "blame" rev in the stack.
    */
-  introductionRev: Rev;
+  introductionRev: FileRev;
   /**
    * File revision (starts from 0) that the diff chunk is currently
    * selected to apply to. `null`: no selectioin.
@@ -46,7 +46,7 @@ export type AbsorbEditProps = {
    * the user can change this to a different rev.
    * Must be >= introductionRev.
    */
-  selectedRev: Rev | null;
+  selectedRev: FileRev | null;
   /** The "AbsorbEditId" associated with this diff chunk. */
   absorbEditId: AbsorbEditId;
   /** The file stack index (in commitState) associated with this diff chunk. */
@@ -68,7 +68,7 @@ export const AbsorbEdit = Record<AbsorbEditProps>({
   newStart: 0,
   newEnd: 0,
   newLines: List(),
-  introductionRev: 0,
+  introductionRev: 0 as FileRev,
   selectedRev: null,
   absorbEditId: 0,
   fileStackIndex: undefined,
@@ -91,7 +91,7 @@ const MAX_ABSORB_EDIT_ID = 1 << 20;
 const ABSORB_EDIT_ID_FRACTIONAL_UNIT = 1 / MAX_ABSORB_EDIT_ID;
 
 /** Extract the "AbsorbEditId" from a linelog Rev */
-export function extractRevAbsorbId(rev: Rev): [Rev, AbsorbEditId] {
+export function extractRevAbsorbId(rev: FileRev): [FileRev, AbsorbEditId] {
   const fractional = rev % 1;
   const integerRev = rev - fractional;
   const absorbEditId = fractional / ABSORB_EDIT_ID_FRACTIONAL_UNIT - 1;
@@ -99,25 +99,25 @@ export function extractRevAbsorbId(rev: Rev): [Rev, AbsorbEditId] {
     Number.isInteger(absorbEditId) && absorbEditId >= 0,
     `${rev} does not contain valid AbsorbEditId`,
   );
-  return [integerRev, absorbEditId];
+  return [integerRev as FileRev, absorbEditId];
 }
 
 /** Embed an absorbEditId into a Rev */
-export function embedAbsorbId(rev: Rev, absorbEditId: AbsorbEditId): Rev {
+export function embedAbsorbId(rev: FileRev, absorbEditId: AbsorbEditId): FileRev {
   assert(Number.isInteger(rev), `${rev} already has an absorbEditId embedded`);
   assert(
     absorbEditId < MAX_ABSORB_EDIT_ID - 1,
     `absorbEditId (${absorbEditId}) must be < MAX_ABSORB_EDIT_ID - 1 (${MAX_ABSORB_EDIT_ID} - 1)`,
   );
-  return rev + ABSORB_EDIT_ID_FRACTIONAL_UNIT * (absorbEditId + 1);
+  return (rev + ABSORB_EDIT_ID_FRACTIONAL_UNIT * (absorbEditId + 1)) as FileRev;
 }
 
 /**
  * Returns a rev with all absorb edits for this rev included.
  * For example, `revWithAbsorb(2)` might return something like `2.999`.
  * */
-export function revWithAbsorb(rev: Rev): Rev {
-  return Math.floor(rev) + 1 - ABSORB_EDIT_ID_FRACTIONAL_UNIT;
+export function revWithAbsorb(rev: FileRev): FileRev {
+  return (Math.floor(rev) + 1 - ABSORB_EDIT_ID_FRACTIONAL_UNIT) as FileRev;
 }
 
 /**
@@ -145,7 +145,7 @@ export function calculateAbsorbEditsForFileStack(
   options?: {fileStackIndex?: FileStackIndex},
 ): [FileStackState, ImMap<AbsorbEditId, AbsorbEdit>] {
   // rev 0 (public), 1, 2, ..., wdirRev-1 (stack top to absorb), wdirRev (wdir virtual rev)
-  const wdirRev = stack.revLength - 1;
+  const wdirRev = (stack.revLength - 1) as FileRev;
   assert(
     wdirRev >= 1,
     'calculateAbsorbEditsForFileStack requires at least one wdir(), one public()',
@@ -170,10 +170,10 @@ export function calculateAbsorbEditsForFileStack(
  */
 export function analyseFileStackWithWdirAtTop(
   stack: FileStackState,
-  options?: {wdirRev?: Rev; fileStackIndex?: FileStackIndex},
+  options?: {wdirRev?: FileRev; fileStackIndex?: FileStackIndex},
 ): List<AbsorbEdit> {
-  const wdirRev = options?.wdirRev ?? stack.revLength - 1;
-  const stackTopRev = wdirRev - 1;
+  const wdirRev = options?.wdirRev ?? ((stack.revLength - 1) as FileRev);
+  const stackTopRev = (wdirRev - 1) as FileRev;
   assert(stackTopRev >= 0, 'stackTopRev must be positive');
   const newText = stack.getRev(wdirRev);
   let edits = analyseFileStack(stack, newText, stackTopRev);
@@ -192,11 +192,11 @@ export function analyseFileStackWithWdirAtTop(
 export function analyseFileStack(
   stack: FileStackState,
   newText: string,
-  stackTopRev?: Rev,
+  stackTopRev?: FileRev,
 ): List<AbsorbEdit> {
   assert(stack.revLength > 0, 'stack should not be empty');
   const linelog = stack.convertToLineLog();
-  const oldRev = stackTopRev ?? stack.revLength - 1;
+  const oldRev = stackTopRev ?? ((stack.revLength - 1) as FileRev);
   const oldText = stack.getRev(oldRev);
   const oldLines = splitLines(oldText);
   // The `LineInfo` contains "blame" information.
@@ -221,7 +221,9 @@ export function analyseFileStack(
     }
     // Check the revs. Skip public commits. The Python implementation only skips public
     // for insertions. Here we aggressively skip public lines for modification and deletion too.
-    const involvedRevs = dedup(involvedLineInfos.map(info => info.rev).filter(rev => rev > 0));
+    const involvedRevs = dedup(
+      involvedLineInfos.map(info => info.rev as FileRev).filter(rev => rev > 0),
+    );
     if (involvedRevs.length === 1) {
       // Only one rev. Set selectedRev to this.
       // For simplicity, we're not checking the "continuous" lines here yet (different from Python).
@@ -296,7 +298,7 @@ export function analyseFileStack(
           newStart: b1,
           newEnd: b2,
           newLines: List(newLines.slice(b1, b2)),
-          introductionRev: Math.max(0, ...involvedRevs),
+          introductionRev: Math.max(0, ...involvedRevs) as FileRev,
           selectedRev: null,
           absorbEditId: allocateAbsorbId(),
         }),
@@ -323,7 +325,7 @@ export function applyFileStackEditsWithAbsorbId(
   const sortedChunks = [...chunks].toSorted((a, b) => b.oldEnd - a.oldEnd);
   sortedChunks.forEach(chunk => {
     // If not "selected" to amend to a commit, leave the chunk at the wdir.
-    const baseRev = chunk.selectedRev ?? wdirRev;
+    const baseRev = chunk.selectedRev ?? (wdirRev as FileRev);
     const absorbEditId = nullthrows(chunk.absorbEditId);
     const targetRev = embedAbsorbId(baseRev, absorbEditId);
     assert(
@@ -352,11 +354,11 @@ function splitChunk(
   start: number,
   end: number,
   lineInfos: readonly LineInfo[],
-  callback: (_start: number, _end: number, _introductionRev: Rev) => void,
+  callback: (_start: number, _end: number, _introductionRev: FileRev) => void,
 ) {
   let lastStart = start;
   for (let i = start; i < end; i++) {
-    const introductionRev = lineInfos[i].rev;
+    const introductionRev = lineInfos[i].rev as FileRev;
     if (i + 1 === end || introductionRev != lineInfos[i + 1].rev) {
       callback(lastStart, i + 1, introductionRev);
       lastStart = i + 1;
