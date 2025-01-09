@@ -20,7 +20,7 @@
   $ echo "this is file1" > file1
   $ git add file1
   $ git commit -qam "Add file1"
-# Create a tag pointing to the first commit  
+# Create a tag pointing to the first commit
   $ git tag -a -m "new tag" first_tag
   $ current_first_tag=$(git rev-parse HEAD)
   $ echo "this is file2" > file2
@@ -78,18 +78,18 @@
   $ wait_for_git_bookmark_create refs/tags/past_tag
 
 # Verify the timed futures logged with log tags show up in scuba logs
-  $ jq -S .normal "$SCUBA" | grep -e "Packfile" -e "GitImport" -e "Bookmark movement" -e "Prerequisite" -e "Objects" -e "Prefetched" -e "Content Blob" -e "Bonsai Changeset" -e "Finalize Batch"
-    "log_tag": "Verified Packfile Checksum",
-    "log_tag": "Fetched Prerequisite Objects",
+  $ jq .normal "$SCUBA" | grep -e "Packfile" -e "GitImport" -e "Bookmark movement" -e "Prerequisite" -e "Objects" -e "Prefetched" -e "Content Blob" -e "Bonsai Changeset" -e "Finalize Batch" | sort
+    "log_tag": "Bookmark movement completed",
+    "log_tag": "Completed Finalize Batch",
+    "log_tag": "Created Bonsai Changeset for Git Commit",
+    "log_tag": "Created Bonsai Changeset for Git Commit",
     "log_tag": "Decoded objects from Packfile",
+    "log_tag": "Fetched Prerequisite Objects",
+    "log_tag": "GitImport, Derivation and Bonsai creation completed",
     "log_tag": "Parsed complete Packfile",
     "log_tag": "Prefetched existing BonsaiGit Mappings",
-    "log_tag": "Uploaded Content Blob, Git Blob, Commits and Trees",
-    "log_tag": "Uploaded Content Blob, Git Blob, Commits and Trees",
-    "log_tag": "Uploaded Content Blob, Git Blob, Commits and Trees",
-    "log_tag": "Created Bonsai Changeset for Git Commit",
-    "log_tag": "Created Bonsai Changeset for Git Commit",
-    "log_tag": "Completed Finalize Batch",
-    "log_tag": "GitImport, Derivation and Bonsai creation completed",
     "log_tag": "Sent Packfile OK",
-    "log_tag": "Bookmark movement completed",
+    "log_tag": "Uploaded Content Blob, Git Blob, Commits and Trees",
+    "log_tag": "Uploaded Content Blob, Git Blob, Commits and Trees",
+    "log_tag": "Uploaded Content Blob, Git Blob, Commits and Trees",
+    "log_tag": "Verified Packfile Checksum",
