@@ -24,7 +24,6 @@ from facebook.eden.ttypes import (
 from .lib import testcase
 from .lib.hgrepo import HgRepository
 
-
 Counters = typing.Mapping[str, float]
 
 logger = logging.getLogger(__name__)
@@ -516,6 +515,7 @@ class CountersTest(testcase.EdenRepoTest):
             for item in s
             if not item.startswith("scribe.")
             and not item.startswith("thrift.")
+            and not item.startswith("keystore.")  # from Sapling
             and not item.startswith("memory_vm_rss_bytes")
         }
 

@@ -52,6 +52,10 @@
 #include "eden/fs/store/git/GitBackingStore.h" // @manual
 #endif
 
+#ifdef EDEN_HAVE_FBINIT
+#include <common/init/light.h>
+#endif
+
 DEFINE_bool(edenfs, false, "This legacy argument is ignored.");
 DEFINE_bool(allowRoot, false, "Allow running eden directly as root");
 
@@ -210,7 +214,14 @@ std::string DefaultEdenMain::getLocalHostname() {
 }
 
 void DefaultEdenMain::init(int* argc, char*** argv) {
+  // OSS buck build should/can also call fbinit. fbinit is required at least for
+  // ODS counters to be incremented from Rust (which EdenFS integration tests
+  // may want to test).
+#ifdef EDEN_HAVE_FBINIT
+  facebook::init::initFacebookLight(argc, argv);
+#else
   folly::init(argc, argv);
+#endif
 }
 
 void DefaultEdenMain::prepare(const EdenServer& /*server*/) {
