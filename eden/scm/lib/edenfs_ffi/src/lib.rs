@@ -17,6 +17,7 @@ use cxx::UniquePtr;
 use manifest::FileMetadata;
 use manifest::FsNodeMetadata;
 use manifest::Manifest;
+use metrics::Counter;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use pathmatcher::DirectoryMatch;
@@ -29,17 +30,20 @@ use types::HgId;
 use types::RepoPath;
 use types::RepoPathBuf;
 
-mod metrics;
-
 use crate::ffi::set_matcher_error;
 use crate::ffi::set_matcher_promise_error;
 use crate::ffi::set_matcher_promise_result;
 use crate::ffi::set_matcher_result;
 use crate::ffi::MatcherPromise;
 use crate::ffi::MatcherWrapper;
-use crate::metrics::FilteredFSMetrics;
 
 static REPO_HASHMAP: Lazy<Mutex<HashMap<PathBuf, Repo>>> = Lazy::new(|| Mutex::new(HashMap::new()));
+
+static LOOKUPS: Counter = Counter::new_counter("edenffi.ffs.lookups");
+static LOOKUP_FAILURES: Counter = Counter::new_counter("edenffi.ffs.lookup_failures");
+static INVALID_REPO: Counter = Counter::new_counter("edenffi.ffs.invalid_repo");
+static REPO_CACHE_MISSES: Counter = Counter::new_counter("edenffi.ffs.repo_cache_misses");
+static REPO_CACHE_HITS: Counter = Counter::new_counter("edenffi.ffs.repo_cache_hits");
 
 // A helper class to parse/validate FilterIDs that are passed to Mercurial
 struct FilterId {
@@ -207,9 +211,8 @@ fn profile_contents_from_repo(
     id: FilterId,
     abs_repo_path: PathBuf,
     promise: UniquePtr<MatcherPromise>,
-    metrics: &mut FilteredFSMetrics,
 ) {
-    match _profile_contents_from_repo(id, abs_repo_path, metrics) {
+    match _profile_contents_from_repo(id, abs_repo_path) {
         Ok(res) => {
             set_matcher_promise_result(promise, res);
         }
@@ -223,18 +226,17 @@ fn profile_contents_from_repo(
 fn _profile_contents_from_repo(
     id: FilterId,
     abs_repo_path: PathBuf,
-    metrics: &mut FilteredFSMetrics,
 ) -> Result<Box<MercurialMatcher>, anyhow::Error> {
     let mut repo_map = REPO_HASHMAP.lock();
     if !repo_map.contains_key(&abs_repo_path) {
         // Load the repo and store it for later use
-        metrics.repo_miss();
+        REPO_CACHE_MISSES.increment();
         let repo = Repo::load(&abs_repo_path, &[]).with_context(|| {
             anyhow!("failed to load Repo object for {}", abs_repo_path.display())
         })?;
         repo_map.insert(abs_repo_path.clone(), repo);
     } else {
-        metrics.repo_hit();
+        REPO_CACHE_HITS.increment();
     }
     let repo = repo_map.get_mut(&abs_repo_path).context("loading repo")?;
 
@@ -291,7 +293,7 @@ fn _profile_contents_from_repo(
     // invalid. Return an always matcher instead of erroring out.
     let sparse_matcher = matcher.unwrap_or_else(|e| {
         tracing::warn!("Failed to get sparse matcher for active filter: {:?}", e);
-        metrics.failure();
+        LOOKUP_FAILURES.increment();
         Matcher::new(
             vec![TreeMatcher::always()],
             vec![vec!["always_matcher".to_string()]],
@@ -310,8 +312,7 @@ pub fn profile_from_filter_id(
     checkout_path: &str,
     promise: UniquePtr<MatcherPromise>,
 ) -> Result<(), anyhow::Error> {
-    let mut metrics = FilteredFSMetrics::default();
-    metrics.lookup();
+    LOOKUPS.increment();
 
     // Parse the FilterID
     let filter_id = FilterId::from_str(id)?;
@@ -320,7 +321,7 @@ pub fn profile_from_filter_id(
     // should correspond to a valid hg/sl repo that Mercurial is aware of.
     let abs_repo_path = PathBuf::from(checkout_path);
     if identity::sniff_dir(&abs_repo_path).is_err() {
-        metrics.invalid_repo();
+        INVALID_REPO.increment();
         return Err(anyhow!(
             "{} is not a valid hg repo",
             abs_repo_path.display()
@@ -330,12 +331,7 @@ pub fn profile_from_filter_id(
     // If we've already loaded a filter from this repo before, we can skip Repo
     // object creation. Otherwise, we need to pay the 1 time cost of creating
     // the Repo object.
-    profile_contents_from_repo(filter_id, abs_repo_path, promise, &mut metrics);
-
-    // Update ODS counters with information about the filter we just loaded
-    if let Err(err) = metrics.update_ods() {
-        tracing::error!(?err, "error updating edenffi ods counters");
-    }
+    profile_contents_from_repo(filter_id, abs_repo_path, promise);
 
     Ok(())
 }

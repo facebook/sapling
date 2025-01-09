@@ -14,7 +14,6 @@ from eden.integration.hg.lib.hg_extension_test_base import (
     filteredhg_test,
     FilteredHgTestCase,
 )
-
 from eden.integration.lib import hgrepo
 
 
@@ -342,10 +341,7 @@ bdir/README.md
         self.set_active_filter("top_level_filter")
         counters = self.get_counters()
         expected_counters = [
-            "edenffi.ffs.invalid_repo",
-            "edenffi.ffs.lookup_failures",
             "edenffi.ffs.lookups",
-            "edenffi.ffs.repo_cache_hits",
             "edenffi.ffs.repo_cache_misses",
         ]
         for ec in expected_counters:
@@ -354,7 +350,7 @@ bdir/README.md
     def test_lookup_failure_counter(self) -> None:
         self.set_active_filter("top_level_filter")
         counters = self.get_counters()
-        self.assertEqual(counters["edenffi.ffs.lookup_failures"], 0)
+        self.assertNotIn("edenffi.ffs.lookup_failures", counters)
         self.set_active_filter("does_not_exist")
         counters = self.get_counters()
         self.assertGreaterEqual(counters["edenffi.ffs.lookup_failures"], 1)
