@@ -342,6 +342,7 @@ function SingleAbsorbEdit(props: {edit: AbsorbEdit; inDraggingOverlay?: boolean}
     // Visual update.
     onDragRef.current?.(x, y, isDragging);
     // State update.
+    let newDraggingHint: string | null = null;
     if (isDragging) {
       // The 'stack' in the closure might be outdated. Read the latest.
       const stack = readAtom(stackEditStack);
@@ -359,24 +360,20 @@ function SingleAbsorbEdit(props: {edit: AbsorbEdit; inDraggingOverlay?: boolean}
         let newStack = stack;
         try {
           newStack = stack.setAbsorbEditDestination(fileStackIndex, absorbEditId, rev);
-          writeAtom(draggingHint, null);
           // `handleDrag` won't be updated with "refreshed" `stackEdit`.
           // So `push` can work like `replaceTopOperation` while dragging.
           stackEdit.push(newStack, {name: 'absorbMove', commit});
         } catch {
-          writeAtom(
-            draggingHint,
-            t(
-              'Diff chunk can only be applied to commits that modify the file and has the context lines introduced earlier.',
-            ),
+          newDraggingHint = t(
+            'Diff chunk can only be applied to a commit that modifies the file and has matching context lines.',
           );
         }
       }
-    } else {
-      // Ensure the hint is cleared when not dragging.
-      // Otherwise the hint div might have unwanted side effects on interaction.
-      writeAtom(draggingHint, null);
     }
+    // Ensure the hint is cleared when:
+    // 1) not dragging. (important because the hint div interferes user interaction even if it's invisible)
+    // 2) dragging back from an invalid rev to the current (valid) rev.
+    writeAtom(draggingHint, newDraggingHint);
     writeAtom(draggingAbsorbEdit, isDragging ? edit : null);
   };
 
