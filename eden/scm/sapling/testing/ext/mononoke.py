@@ -530,9 +530,6 @@ log-dir={test_tmp}
 
     if not env.getenv("DEBUGRUNTEST_ENABLED"):
         config_content += f"""
-[remotenames]
-selectivepull=True
-
 [checkout]
 use-rust=false
 
