@@ -1373,14 +1373,16 @@ pub fn filesystem_checkout(
     Ok(plan.stats())
 }
 
-// Apply outstanding working copy changes to the given manifest. This includes
-// the working copy changes in the diff between the working copy manifest and
-// the checkout target manifest.
+// Apply outstanding working copy changes to the current manifest. This causes the working
+// copy changes to be included in the diff between the working copy manifest and the
+// checkout target manifest. This allows the diff to naturally revert pending changes for
+// "sl go --clean".
 fn overlay_working_changes(
     config: &dyn Config,
     vfs: &VFS,
     mf: &mut TreeManifest,
     status: &Status,
+    // Corresponds to "--clean", meaning we want to "clean" pending changes as we check out.
     clean: bool,
 ) -> Result<()> {
     use FileStatus::*;
@@ -1397,6 +1399,10 @@ fn overlay_working_changes(
     for (p, s) in status.iter() {
         match s {
             Modified => {
+                // If we want --clean, insert special modified node id for this file. This
+                // forces the diff to say that the file differs and must be overwritten.
+                // It might be slightly more correct to compute the real node for the
+                // pending change, but doesn't seem necessary.
                 if clean {
                     mf.insert(
                         p.to_owned(),
@@ -1405,22 +1411,26 @@ fn overlay_working_changes(
                 }
             }
             Added => {
-                // Ignore "path already a directory" insertion errors. They happen for
-                // non-clean updates after removing file "foo" and then adding file
-                // "foo/bar". The update will conflict on the removed file, so it isn't
-                // important to have a path conflict for the added file as well.
+                // Insert pending adds into manifest. This allows path conflicts to be
+                // detected (e.g. you add file "foo", other side adds file "foo/bar").
+
+                // Ignore "path already a directory" insertion errors. They happen when
+                // you've removed file "foo" and added file "foo/bar". The update will
+                // conflict on the removed file, so it isn't important to have a path
+                // conflict for the added file as well.
                 let _ = mf.insert(
                     p.to_owned(),
                     FileMetadata {
                         hgid: MF_ADDED_NODE_ID,
                         file_type: file_type(vfs, p),
-                        // When doing "sl go -C", we don't want to delete pending adds unless necessary.
-                        // This flag makes the manifest diff skip this file unless it conflicts.
-                        ignore_unless_conflict: clean,
+                        ignore_unless_conflict: true,
                     },
                 );
             }
             Unknown => {
+                // If we want to catch path conflicts (unknown files), add unknown files
+                // into the manifest so the diff operation can notice they have a path
+                // conflict with the other side.
                 if config.get_or("experimental", "checkout.rust-path-conflicts", || true)? {
                     let _ = mf.insert(
                         p.to_owned(),

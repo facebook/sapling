@@ -21,13 +21,13 @@ First test uncommited changes that should not conflict
   R A
   ? untracked
 
-FIXME: "added" shouldn't conflict
   $ hg go -q $B
-  abort: 1 conflicting file changes:
-   added
-  (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
-  [255]
 
+  $ hg st
+  M B
+  A added
+  R A
+  ? untracked
 
 Then test --clean works for different types of conflicts
   $ newclientrepo <<EOF
@@ -57,10 +57,9 @@ Then test --clean works for different types of conflicts
   ? changed
 
   $ hg go -q $C
-  abort: 5 conflicting file changes:
+  abort: 4 conflicting file changes:
    added1
    added2
-   added3
    changed
    removed
   (commit, shelve, goto --clean to discard all your changes, or goto --merge to merge them)
