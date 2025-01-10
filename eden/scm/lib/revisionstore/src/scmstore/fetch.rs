@@ -340,13 +340,21 @@ impl<T> FetchResults<T> {
         Ok(missing)
     }
 
-    /// Return the single requested file if found, or any errors encountered
+    /// Return the single requested file if found, or any errors encountered. `Ok(None)`
+    /// is returned only in LocalOnly mode (where it is expected for content to not be
+    /// available). If remote fetching is enabled and the key wasn't found, an error is
+    /// returned (since this is unexpected and indicates a bug or data corruption).
     pub fn single(self) -> Result<Option<T>> {
         let mut first = None;
         for result in self {
-            let (_, value) = result?;
-            if first.is_none() {
-                first = Some(value)
+            match result {
+                Ok((_key, value)) => {
+                    if first.is_none() {
+                        first = Some(value)
+                    }
+                }
+                Err(KeyFetchError::NotFoundLocally(_)) => continue,
+                Err(err) => return Err(err.into()),
             }
         }
 

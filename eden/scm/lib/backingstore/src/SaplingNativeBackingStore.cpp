@@ -65,6 +65,8 @@ std::optional<ManifestId> SaplingNativeBackingStore::getManifestNode(
   }
 }
 
+// Fetch a single tree. "Not found" is propagated as nullptr to avoid exception
+// overhead.
 folly::Try<std::shared_ptr<Tree>> SaplingNativeBackingStore::getTree(
     NodeId node,
     FetchMode fetch_mode) {
@@ -74,13 +76,11 @@ folly::Try<std::shared_ptr<Tree>> SaplingNativeBackingStore::getTree(
         *store_.get(),
         rust::Slice<const uint8_t>{node.data(), node.size()},
         fetch_mode);
-    XCHECK(
-        tree.get(),
-        "sapling_backingstore_get_tree returned a nullptr, but did not throw an exception.");
     return tree;
   });
 }
 
+// Batch fetch trees. "Not found" is propagated as an exception.
 void SaplingNativeBackingStore::getTreeBatch(
     SaplingRequestRange requests,
     sapling::FetchMode fetch_mode,

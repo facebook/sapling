@@ -1336,7 +1336,8 @@ TreePtr SaplingBackingStore::getTreeLocal(
     const HgProxyHash& proxyHash) {
   auto tree =
       store_.getTree(proxyHash.byteHash(), sapling::FetchMode::LocalOnly);
-  if (tree.hasValue()) {
+
+  if (tree.hasValue() && tree.value()) {
     auto hgObjectIdFormat =
         config_->getEdenConfig()->hgObjectIdFormat.getValue();
     return fromRawTree(
@@ -1358,10 +1359,14 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeRemote(
   using GetTreeResult = folly::Try<TreePtr>;
 
   if (tree.hasValue()) {
-    auto hgObjectIdFormat =
-        config_->getEdenConfig()->hgObjectIdFormat.getValue();
-    return GetTreeResult{fromRawTree(
-        tree.value().get(), edenTreeId, path, std::move(hgObjectIdFormat))};
+    if (tree.value()) {
+      auto hgObjectIdFormat =
+          config_->getEdenConfig()->hgObjectIdFormat.getValue();
+      return GetTreeResult{fromRawTree(
+          tree.value().get(), edenTreeId, path, std::move(hgObjectIdFormat))};
+    } else {
+      return GetTreeResult{nullptr};
+    }
   } else {
     return GetTreeResult{tree.exception()};
   }
@@ -1746,7 +1751,8 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeFromBackingStore(
     fetch_mode = sapling::FetchMode::LocalOnly;
   }
   tree = store_.getTree(manifestId.getBytes(), fetch_mode);
-  if (tree.hasException() && fetch_mode == sapling::FetchMode::LocalOnly) {
+  if (tree.hasValue() && !tree.value() &&
+      fetch_mode == sapling::FetchMode::LocalOnly) {
     // Mercurial might have just written the tree to the store. Refresh the
     // store and try again, this time allowing remote fetches.
     store_.flush();
@@ -1757,6 +1763,11 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeFromBackingStore(
   using GetTreeResult = folly::Try<TreePtr>;
 
   if (tree.hasValue()) {
+    if (!tree.value()) {
+      return GetTreeResult{std::runtime_error{
+          fmt::format("no tree found for {} (path={})", manifestId, path)}};
+    }
+
     auto hgObjectIdFormat =
         config_->getEdenConfig()->hgObjectIdFormat.getValue();
     switch (fetch_mode) {
@@ -1802,8 +1813,8 @@ folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
         // Do not check for whether blobs are already present locally, this
         // check is useful for latency oriented workflows, not for throughput
         // oriented ones. Mercurial will anyway not re-fetch a blob that is
-        // already present locally, so the check for local blob is pure overhead
-        // when prefetching.
+        // already present locally, so the check for local blob is pure
+        // overhead when prefetching.
         std::vector<ImmediateFuture<GetBlobResult>> futures;
         futures.reserve(ids.size());
 

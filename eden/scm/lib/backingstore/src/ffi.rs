@@ -267,12 +267,10 @@ pub fn sapling_backingstore_get_tree(
     node: &[u8],
     fetch_mode: ffi::FetchMode,
 ) -> Result<SharedPtr<ffi::Tree>> {
-    Ok(SharedPtr::new(
-        store
-            .get_tree(node, FetchMode::from(fetch_mode))
-            .and_then(|opt| opt.ok_or_else(|| Error::msg("no tree found")))
-            .and_then(|entry| entry.try_into())?,
-    ))
+    Ok(match store.get_tree(node, FetchMode::from(fetch_mode))? {
+        Some(entry) => SharedPtr::new(entry.try_into()?),
+        None => SharedPtr::null(),
+    })
 }
 
 pub fn sapling_backingstore_get_tree_batch(
