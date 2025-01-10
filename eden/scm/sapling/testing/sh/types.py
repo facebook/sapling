@@ -120,9 +120,13 @@ class Env:
         if name == "PWD":
             return self.fs.cwd()
         value = self.envvars.get(name)
-        if value is None and self.parent is not None:
-            value = self.parent.getenv(name)
-        return value or alt
+        if value is None:
+            if self.parent is not None:
+                return self.parent.getenv(name, alt)
+            else:
+                return alt
+        else:
+            return value
 
     def setenv(self, name: str, value: str, scope: Optional[Scope] = None):
         assert isinstance(value, str), f"setenv {name}={repr(value)} is not a str"
