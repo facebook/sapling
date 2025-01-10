@@ -161,7 +161,7 @@ pub(crate) mod ffi {
         pub unsafe fn sapling_backingstore_get_name(store: &BackingStore) -> Result<String>;
 
         pub fn sapling_backingstore_get_manifest(
-            store: &mut BackingStore,
+            store: &BackingStore,
             node: &[u8],
         ) -> Result<[u8; 20]>;
 
@@ -258,10 +258,7 @@ pub unsafe fn sapling_backingstore_get_name(store: &BackingStore) -> Result<Stri
     store.name()
 }
 
-pub fn sapling_backingstore_get_manifest(
-    store: &mut BackingStore,
-    node: &[u8],
-) -> Result<[u8; 20]> {
+pub fn sapling_backingstore_get_manifest(store: &BackingStore, node: &[u8]) -> Result<[u8; 20]> {
     store.get_manifest(node)
 }
 
