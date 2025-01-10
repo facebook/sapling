@@ -150,11 +150,11 @@ impl ModernSyncSender for EdenapiSender {
                 .process_files_upload(full_items, None, None)
                 .await?;
 
+            let actual_responses = response.entries.try_collect::<Vec<_>>().await?.len();
             info!(
                 &self.logger,
-                "Upload response: {:?}",
-                response.entries.try_collect::<Vec<_>>().await?
-            );
+                "Uploaded {:?} contents successfully", actual_responses
+            )
         }
 
         Ok(())
@@ -172,10 +172,10 @@ impl ModernSyncSender for EdenapiSender {
             .await?;
 
         let res = self.client.upload_trees_batch(entries).await?;
+        let actual_responses = res.entries.try_collect::<Vec<_>>().await?.len();
         info!(
             &self.logger,
-            "Upload tree response: {:?}",
-            res.entries.try_collect::<Vec<_>>().await?
+            "Uploaded {:?} trees successfully", actual_responses
         );
         Ok(())
     }
@@ -192,10 +192,10 @@ impl ModernSyncSender for EdenapiSender {
             .await?;
 
         let res = self.client.upload_filenodes_batch(filenodes).await?;
+        let actual_responses = res.entries.try_collect::<Vec<_>>().await?.len();
         info!(
             &self.logger,
-            "Upload filenodes response: {:?}",
-            res.entries.try_collect::<Vec<_>>().await?
+            "Uploaded {:?} filenodes successfully", actual_responses
         );
         Ok(())
     }
