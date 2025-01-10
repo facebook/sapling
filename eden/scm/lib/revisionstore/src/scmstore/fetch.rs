@@ -142,21 +142,21 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
         // requested item won't be in `pending` since it was satisfied via SLAPI.
         let mut incomplete = errors.fetch_errors;
         for (key, _value) in self.pending.into_iter() {
-            let err = incomplete.remove(&key).unwrap_or_else(|| {
-                let msg = if self.mode.is_local() {
-                    "not found locally and not contacting server"
-                } else if self.mode.is_remote() {
-                    // This should really never happen. If a key fails to fetch, it should've been
-                    // associated with a keyed error and put in incomplete already.
-                    "server did not provide content"
-                } else {
-                    "server did not provide content"
-                };
-                anyhow!("{}", msg)
-            });
-            let _ = self
-                .found_tx
-                .send(Err(KeyFetchError::KeyedError(KeyedError(key, err))));
+            let err = match incomplete.remove(&key) {
+                Some(err) => KeyFetchError::KeyedError(KeyedError(key, err)),
+                None => {
+                    if self.mode.is_local() {
+                        KeyFetchError::NotFoundLocally(key)
+                    } else {
+                        // Should not happen normally since `incomplete` should contain the specific error we got from server.
+                        KeyFetchError::KeyedError(KeyedError(
+                            key,
+                            anyhow!("server did not provide content"),
+                        ))
+                    }
+                }
+            };
+            let _ = self.found_tx.send(Err(err));
         }
 
         for err in errors.other_errors {
@@ -202,6 +202,9 @@ impl<T: StoreValue + std::fmt::Debug> CommonFetchState<T> {
 
 #[derive(Debug)]
 pub enum KeyFetchError {
+    // No unexpected error, but key was not in local repo store.
+    NotFoundLocally(Key),
+    // Unexpected error, including key not found in remote store.
     KeyedError(KeyedError),
     Other(Error),
 }
@@ -212,6 +215,7 @@ impl std::error::Error for KeyFetchError {
         match self {
             Self::Other(err) => Some(err.as_ref()),
             Self::KeyedError(err) => Some(err),
+            Self::NotFoundLocally(_) => None,
         }
     }
 }
@@ -221,7 +225,10 @@ impl fmt::Display for KeyFetchError {
         match self {
             Self::Other(err) => err.fmt(f),
             Self::KeyedError(KeyedError(key, err)) => {
-                write!(f, "Key fetch failed {}: {:?}", key, err)
+                write!(f, "key fetch failed {}: {:?}", key, err)
+            }
+            Self::NotFoundLocally(key) => {
+                write!(f, "key not in local store and not contacting remote: {key}")
             }
         }
     }
@@ -297,6 +304,9 @@ impl<T> FetchResults<T> {
                     KeyFetchError::KeyedError(KeyedError(key, err)) => {
                         missing.insert(key, err);
                     }
+                    KeyFetchError::NotFoundLocally(ref key) => {
+                        missing.insert(key.clone(), err.into());
+                    }
                     KeyFetchError::Other(err) => {
                         errors.push(err);
                     }
@@ -316,7 +326,10 @@ impl<T> FetchResults<T> {
                 Ok(_) => {}
                 Err(err) => match err {
                     KeyFetchError::KeyedError(KeyedError(key, _err)) => {
-                        missing.push(key.clone());
+                        missing.push(key);
+                    }
+                    KeyFetchError::NotFoundLocally(key) => {
+                        missing.push(key);
                     }
                     KeyFetchError::Other(err) => {
                         return Err(err);

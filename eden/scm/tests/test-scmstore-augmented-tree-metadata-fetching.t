@@ -382,7 +382,14 @@ Verify we do have tree locally, but don't have aux data locally:
           ),
           hgid: HgId("2aabbe46539594a3aede2a262ebfbcd3107ad10c"),
       },
-      "not found locally and not contacting server",
+      NotFoundLocally(
+          Key {
+              path: RepoPathBuf(
+                  "dir",
+              ),
+              hgid: HgId("2aabbe46539594a3aede2a262ebfbcd3107ad10c"),
+          },
+      ),
   )
 
 Can fetch remotely:
