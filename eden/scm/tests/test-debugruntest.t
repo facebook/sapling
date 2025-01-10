@@ -273,36 +273,36 @@ Respect IFS for read():
   > done
   > }
 
-FIXME: should output lines
   $ readlines <<EOS
   > 
   > hi
   > 
   > there
   > EOS
+  LINE: ''
+  LINE: 'hi'
+  LINE: ''
+  LINE: 'there'
 
   $ readlines <<EOS
   >   data
   > EOS
   LINE: 'data'
 
-FIXME: should include whitespace
   $ IFS= readlines <<EOS
   >   data  
   > EOS
-  LINE: 'data'
+  LINE: '  data  '
 
 
-FIXME: should separate fields
   $ IFS=: read one two <<EOS
   > foo:bar:baz
   > EOS
   $ echo "'$one' '$two'"
-  'foo:bar:baz' 'foo:bar:baz'
+  'foo' 'bar:baz'
 
-FIXME: should unset $two
   $ IFS=: read one two <<EOS
   > foo
   > EOS
   $ echo "'$one' '$two'"
-  'foo' 'foo'
+  'foo' ''

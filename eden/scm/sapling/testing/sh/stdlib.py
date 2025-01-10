@@ -506,14 +506,39 @@ def _sedscript(script: str, lines: List[str]) -> List[str]:
 
 @command
 def read(args: List[str], stdin: BinaryIO, env: Env) -> int:
+    # Clear vars out first so we don't forget to unset them.
+    for name in args:
+        if name.startswith("-"):
+            raise NotImplementedError(f"read {name}")
+        env.setenv(name, "", Scope.SHELL)
+
     # do not consume the entire stdin
-    line = stdin.readline().strip().decode()
-    if line:
-        for name in args:
-            env.setenv(name, line, Scope.SHELL)
-        return 0
-    else:
+    line = stdin.readline().decode()
+    if line == "":
         return 1
+
+    if not args:
+        return 0
+
+    splitty = env.getenv("IFS", " \t")
+
+    strippy = "\n"
+    # Strip space and tab, if they are in IFS
+    if " " in splitty:
+        strippy += " "
+    if "\t" in splitty:
+        strippy += "\t"
+
+    line = line.strip(strippy)
+
+    if splitty:
+        parts = line.split(splitty, len(args) - 1)
+    else:
+        parts = [line]
+    for n, v in zip(args, parts):
+        env.setenv(n, v, Scope.SHELL)
+
+    return 0
 
 
 @command
