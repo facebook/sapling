@@ -219,8 +219,12 @@ impl TreeStore {
                         .pending(wants_aux, false)
                         .map(|(key, _attrs)| key.clone())
                         .collect();
+
+                    let (mut found, mut miss) = (0, 0);
                     for key in pending.into_iter() {
                         if let Some(entry) = tree_aux_store.get(&key.hgid)? {
+                            found += 1;
+
                             tracing::trace!(?key, ?entry, "found tree aux entry in cache");
                             if cas_client.is_some() {
                                 tracing::trace!(target: "cas", ?key, ?entry, "found tree aux data");
@@ -233,8 +237,12 @@ impl TreeStore {
                                     aux_data: Some(entry),
                                 },
                             );
+                        } else {
+                            miss += 1;
                         }
                     }
+                    state.metrics.aux.cache.hit(found);
+                    state.metrics.aux.cache.miss(miss);
                 }
             }
 

@@ -88,10 +88,11 @@ Empty shared caches.
 scmstore can fetch trees from CAS:
 
 First fetch root tree to trigger fetching "dir" aux data:
-  $ hg debugscmstore -r $A --mode tree "" >/dev/null
+  $ hg debugscmstore -r $A --mode tree "" --config devel.print-metrics=scmstore.tree.fetch.aux >/dev/null
+  scmstore.tree.fetch.aux.cache.misses: 1
 
 Then fetch "dir" from CAS:
-  $ hg debugscmstore -r $A --mode tree "dir"
+  $ hg debugscmstore -r $A --mode tree "dir" --config devel.print-metrics=scmstore.tree.fetch.aux
   Successfully fetched tree: (
       Key {
           path: RepoPathBuf(
@@ -135,6 +136,7 @@ Then fetch "dir" from CAS:
           aux_data: None,
       },
   )
+  scmstore.tree.fetch.aux.cache.hits: 1
 
 Empty the caches
   $ setconfig remotefilelog.cachepath=$TESTTMP/cache4
