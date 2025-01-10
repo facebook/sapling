@@ -17,6 +17,7 @@ anyhow = "1.0.95"
 crossbeam = "0.8"
 fail = { version = "0.4", features = ["failpoints"] }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
+redacted = { version = "0.1.0", path = "../util/redacted" }
 sapling-async-runtime = { version = "0.1.0", path = "../async-runtime" }
 sapling-atexit = { version = "0.1.0", path = "../util/atexit" }
 sapling-configmodel = { version = "0.1.0", path = "../config/model" }

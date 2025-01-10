@@ -43,6 +43,7 @@ use pathmatcher::Matcher;
 use pathmatcher::UnionMatcher;
 use progress_model::ProgressBar;
 use progress_model::Registry;
+use redacted::redact_if_needed;
 use repo::repo::Repo;
 use serde::Deserialize;
 use storemodel::FileStore;
@@ -355,6 +356,9 @@ impl CheckoutPlan {
                     }
                     Ok(v) => v,
                 };
+
+                let data = redact_if_needed(data);
+
                 let action = actions
                     .get(&key)
                     .ok_or_else(|| format_err!("Storage returned unknown key {}", key))?;
