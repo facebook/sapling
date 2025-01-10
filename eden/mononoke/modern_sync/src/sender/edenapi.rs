@@ -10,6 +10,7 @@ use std::collections::HashSet;
 use std::iter::Iterator;
 use std::time::Duration;
 
+use anyhow::ensure;
 use anyhow::Result;
 use async_trait::async_trait;
 use clientinfo::ClientEntryPoint;
@@ -145,12 +146,20 @@ impl ModernSyncSender for EdenapiSender {
                 full_items.push((id, bytes.into()));
             }
 
+            let expected_responses = full_items.len();
             let response = self
                 .client
                 .process_files_upload(full_items, None, None)
                 .await?;
 
             let actual_responses = response.entries.try_collect::<Vec<_>>().await?.len();
+
+            ensure!(
+                expected_responses == actual_responses,
+                "Content upload: Expected {} responses, got {}",
+                expected_responses,
+                actual_responses
+            );
             info!(
                 &self.logger,
                 "Uploaded {:?} contents successfully", actual_responses
@@ -171,8 +180,15 @@ impl ModernSyncSender for EdenapiSender {
             .try_collect::<Vec<_>>()
             .await?;
 
+        let expected_responses = entries.len();
         let res = self.client.upload_trees_batch(entries).await?;
         let actual_responses = res.entries.try_collect::<Vec<_>>().await?.len();
+        ensure!(
+            expected_responses == actual_responses,
+            "Trees upload: Expected {} responses, got {}",
+            expected_responses,
+            actual_responses,
+        );
         info!(
             &self.logger,
             "Uploaded {:?} trees successfully", actual_responses
@@ -191,8 +207,15 @@ impl ModernSyncSender for EdenapiSender {
             .try_collect::<Vec<_>>()
             .await?;
 
+        let expected_responses = filenodes.len();
         let res = self.client.upload_filenodes_batch(filenodes).await?;
         let actual_responses = res.entries.try_collect::<Vec<_>>().await?.len();
+        ensure!(
+            expected_responses == actual_responses,
+            "Filenodes upload: Expected {} responses, got {}",
+            expected_responses,
+            actual_responses
+        );
         info!(
             &self.logger,
             "Uploaded {:?} filenodes successfully", actual_responses
