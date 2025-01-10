@@ -189,7 +189,12 @@ pub fn to_identical_changeset(
                 value: value.to_vec(),
             })
             .collect(),
-        file_changes: to_file_change(&file_changes, parents.iter().copied())?,
+        bonsai_file_changes: to_file_change(&file_changes, parents.iter().copied())?,
+        hg_file_changes: hg_cs
+            .files()
+            .iter()
+            .map(to_hg_path)
+            .collect::<Result<Vec<RepoPathBuf>>>()?,
         message: message.to_string(),
         is_snapshot,
         hg_info,
@@ -197,14 +202,14 @@ pub fn to_identical_changeset(
 }
 
 fn to_file_change(
-    map: &SortedVectorMap<NonRootMPath, FileChange>,
+    bonsai_changes: &SortedVectorMap<NonRootMPath, FileChange>,
     parents: impl Iterator<Item = ChangesetId> + Clone,
 ) -> Result<Vec<(RepoPathBuf, BonsaiFileChange)>> {
-    let res = map
+    let res = bonsai_changes
         .into_iter()
         .map(|(path, fc)| {
-            let path = RepoPathBuf::from_string(path.to_string())?;
-            let fc = match fc {
+            let repo_path = RepoPathBuf::from_string(path.clone().to_string())?;
+            let bs_fc = match fc {
                 FileChange::Deletion => BonsaiFileChange::Deletion,
                 FileChange::UntrackedDeletion => BonsaiFileChange::UntrackedDeletion,
                 FileChange::Change(tc) => BonsaiFileChange::Change {
@@ -236,7 +241,7 @@ fn to_file_change(
                     file_type: uc.file_type().try_into()?,
                 },
             };
-            Ok((path, fc))
+            Ok((repo_path, bs_fc))
         })
         .collect::<Result<Vec<(RepoPathBuf, BonsaiFileChange)>, Error>>()?;
     Ok(res)

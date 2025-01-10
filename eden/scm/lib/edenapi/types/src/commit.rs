@@ -599,12 +599,14 @@ pub struct IdenticalChangesetContent {
     #[id(7)]
     pub extras: Vec<BonsaiExtra>,
     #[id(8)]
-    pub file_changes: Vec<(RepoPathBuf, BonsaiFileChange)>,
+    pub bonsai_file_changes: Vec<(RepoPathBuf, BonsaiFileChange)>,
     #[id(9)]
-    pub message: String,
+    pub hg_file_changes: Vec<RepoPathBuf>,
     #[id(10)]
-    pub is_snapshot: bool,
+    pub message: String,
     #[id(11)]
+    pub is_snapshot: bool,
+    #[id(12)]
     pub hg_info: HgInfo,
 }
 
@@ -624,11 +626,7 @@ impl From<IdenticalChangesetContent> for HgChangesetContent {
                     value: extra.value,
                 })
                 .collect(),
-            files: changeset
-                .file_changes
-                .into_iter()
-                .map(|(path, _)| path)
-                .collect(),
+            files: changeset.hg_file_changes,
             message: changeset.message.into_bytes(),
         }
     }
@@ -642,7 +640,7 @@ impl From<IdenticalChangesetContent> for BonsaiChangesetContent {
             time: changeset.time,
             tz: changeset.tz,
             extra: changeset.extras,
-            file_changes: changeset.file_changes,
+            file_changes: changeset.bonsai_file_changes,
             message: changeset.message,
             is_snapshot: changeset.is_snapshot,
         }
