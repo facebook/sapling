@@ -584,8 +584,12 @@ folly::Try<BlobPtr> SaplingBackingStore::getBlobFromBackingStore(
   using GetBlobResult = folly::Try<BlobPtr>;
 
   if (blob.hasValue()) {
-    return GetBlobResult{
-        std::make_shared<BlobPtr::element_type>(std::move(*blob.value()))};
+    if (blob.value()) {
+      return GetBlobResult{
+          std::make_shared<BlobPtr::element_type>(std::move(*blob.value()))};
+    } else {
+      return GetBlobResult{nullptr};
+    }
   } else {
     return GetBlobResult{blob.exception()};
   }
@@ -1391,7 +1395,7 @@ folly::SemiFuture<BackingStore::GetBlobResult> SaplingBackingStore::getBlob(
       ObjectFetchContext::ObjectType::Blob);
 
   auto blob = getBlobLocal(proxyHash);
-  if (blob.hasValue()) {
+  if (blob.hasValue() && blob.value()) {
     stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccess);
     if (store_.dogfoodingHost()) {
       stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccessDogfooding);

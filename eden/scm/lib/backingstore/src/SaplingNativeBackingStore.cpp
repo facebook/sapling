@@ -155,29 +155,34 @@ void SaplingNativeBackingStore::getTreeAuxDataBatch(
       std::move(resolver));
 }
 
+// Fetch a single blob. "Not found" is propagated as nullptr to avoid exception
+// overhead.
 folly::Try<std::unique_ptr<folly::IOBuf>> SaplingNativeBackingStore::getBlob(
     NodeId node,
     FetchMode fetch_mode) {
   XLOGF(DBG7, "Importing blob node={} from hgcache", folly::hexlify(node));
   return folly::makeTryWith([&] {
-    auto blob = sapling_backingstore_get_blob(
-                    *store_.get(),
-                    rust::Slice<const uint8_t>{node.data(), node.size()},
-                    fetch_mode)
-                    .into_raw();
-    XCHECK(
-        blob,
-        "sapling_backingstore_get_blob returned a nullptr, but did not throw an exception.");
-    return folly::IOBuf::takeOwnership(
-        reinterpret_cast<void*>(blob->bytes.data()),
-        blob->bytes.size(),
-        [](void* /* buf */, void* blob) mutable {
-          auto vec = rust::Box<Blob>::from_raw(reinterpret_cast<Blob*>(blob));
-        },
-        reinterpret_cast<void*>(blob));
+    auto opt_blob = sapling_backingstore_get_blob(
+        *store_.get(),
+        rust::Slice<const uint8_t>{node.data(), node.size()},
+        fetch_mode);
+
+    if (!opt_blob.present) {
+      return std::unique_ptr<folly::IOBuf>(nullptr);
+    } else {
+      auto blob = opt_blob.blob.into_raw();
+      return folly::IOBuf::takeOwnership(
+          reinterpret_cast<void*>(blob->bytes.data()),
+          blob->bytes.size(),
+          [](void* /* buf */, void* blob) mutable {
+            auto vec = rust::Box<Blob>::from_raw(reinterpret_cast<Blob*>(blob));
+          },
+          reinterpret_cast<void*>(blob));
+    }
   });
 }
 
+// Batch fetch blobs. "Not found" is propagated as an exception.
 void SaplingNativeBackingStore::getBlobBatch(
     SaplingRequestRange requests,
     sapling::FetchMode fetch_mode,

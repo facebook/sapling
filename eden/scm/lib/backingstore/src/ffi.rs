@@ -107,6 +107,11 @@ pub(crate) mod ffi {
         pub(crate) bytes: Vec<u8>,
     }
 
+    pub struct OptionalBlob {
+        present: bool,
+        blob: Box<Blob>,
+    }
+
     pub struct FileAuxData {
         total_size: u64,
         content_sha1: [u8; 20],
@@ -195,7 +200,7 @@ pub(crate) mod ffi {
             store: &BackingStore,
             node: &[u8],
             fetch_mode: FetchMode,
-        ) -> Result<Box<Blob>>;
+        ) -> Result<OptionalBlob>;
 
         pub fn sapling_backingstore_get_blob_batch(
             store: &BackingStore,
@@ -329,11 +334,17 @@ pub fn sapling_backingstore_get_blob(
     store: &BackingStore,
     node: &[u8],
     fetch_mode: ffi::FetchMode,
-) -> Result<Box<ffi::Blob>> {
-    let bytes = store
-        .get_blob(node, FetchMode::from(fetch_mode))
-        .and_then(|opt| opt.ok_or_else(|| Error::msg("no blob found")))?;
-    Ok(Box::new(ffi::Blob { bytes }))
+) -> Result<ffi::OptionalBlob> {
+    match store.get_blob(node, FetchMode::from(fetch_mode))? {
+        Some(blob) => Ok(ffi::OptionalBlob {
+            blob: Box::new(ffi::Blob { bytes: blob }),
+            present: true,
+        }),
+        None => Ok(ffi::OptionalBlob {
+            blob: Box::new(ffi::Blob { bytes: Vec::new() }),
+            present: false,
+        }),
+    }
 }
 
 pub fn sapling_backingstore_get_blob_batch(
