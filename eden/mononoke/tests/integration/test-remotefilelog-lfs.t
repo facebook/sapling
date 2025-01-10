@@ -151,7 +151,6 @@ Create a new client repository, using getpack (with its own cachepath)
   pulling from mono:repo
  
   $ hg update -r master_bookmark -v
-  resolving manifests
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ sha256sum lfs-largefile

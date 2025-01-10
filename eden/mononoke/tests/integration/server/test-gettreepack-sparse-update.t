@@ -85,12 +85,6 @@ Checkout commits. Expect BFS prefetch to fill our tree
    INFO fetch_edenapi{* requests=1 *}: revisionstore::scmstore::tree::fetch: exit (glob)
    INFO fetch_edenapi: revisionstore::scmstore::tree::fetch: enter
    INFO fetch_edenapi{* requests=1 *:scmstore::tree::fetch: exit (glob)
-   INFO fetch_edenapi: revisionstore::scmstore::tree::fetch: enter
-   INFO fetch_edenapi{* requests=1 *}: revisionstore::scmstore::tree::fetch: exit (glob)
-   INFO fetch_edenapi: revisionstore::scmstore::tree::fetch: enter
-   INFO fetch_edenapi{* requests=1 *:scmstore::tree::fetch: exit (glob)
-   INFO fetch_edenapi: revisionstore::scmstore::tree::fetch: enter
-   INFO fetch_edenapi{* requests=1 *}: revisionstore::scmstore::tree::fetch: exit (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 # Now, force load the root tree for the commit again, and do update to master_bookmark

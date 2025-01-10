@@ -78,7 +78,6 @@ Create a new client repository, using getpack (with its own cachepath).
 
 Make sure lfs is not used during update
   $ hg update -r master_bookmark -v
-  resolving manifests
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Create a new client repository, using getpack (with its own cachepath).
@@ -100,5 +99,4 @@ Create a new client repository, using getpack (with its own cachepath).
 
 Now set wantslfspointers, make sure we download lfs pointers
   $ hg update -r master_bookmark -v --config lfs.wantslfspointers=True
-  resolving manifests
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved

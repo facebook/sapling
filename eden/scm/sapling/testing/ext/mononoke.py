@@ -528,15 +528,6 @@ use-case=source-control-testing
 log-dir={test_tmp}
 """
 
-    if not env.getenv("DEBUGRUNTEST_ENABLED"):
-        config_content += f"""
-[checkout]
-use-rust=false
-
-[workingcopy]
-rust-checkout=false
-"""
-
     with fs.open(hg_rc_path, "a") as f:
         f.write(config_content.encode())
 

@@ -101,7 +101,6 @@
   0
 
   $ hg update -r master_bookmark -v
-  resolving manifests
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 # Check that alias.sha1.hgfilenode -> sha256.file_content is generated
