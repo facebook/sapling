@@ -428,8 +428,6 @@ void SaplingBackingStore::setPrefetchBlobCounters(
 
   if (fetchResult == ObjectFetchContext::FetchResult::Success) {
     stats_->increment(&SaplingBackingStoreStats::prefetchBlobSuccess);
-  } else if (fetchResult == ObjectFetchContext::FetchResult::SuccessInRetry) {
-    stats_->increment(&SaplingBackingStoreStats::prefetchBlobRetrySuccess);
   } else {
     EDEN_BUG() << "Unknown fetch request result: " << enumValue(fetchResult);
   }
@@ -460,8 +458,6 @@ void SaplingBackingStore::setFetchBlobCounters(
 
   if (fetchResult == ObjectFetchContext::FetchResult::Success) {
     stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccess);
-  } else if (fetchResult == ObjectFetchContext::FetchResult::SuccessInRetry) {
-    stats_->increment(&SaplingBackingStoreStats::fetchBlobRetrySuccess);
   } else {
     EDEN_BUG() << "Unknown fetch request result: " << enumValue(fetchResult);
   }

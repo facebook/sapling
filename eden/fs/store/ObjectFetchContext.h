@@ -65,11 +65,9 @@ class ObjectFetchContext : public RefCounted {
    * It shows that the fetch was successful or not.
    */
   enum class FetchResult : uint8_t {
-    /** The fetch was successful in the first try*/
+    /** The fetch was successful */
     Success,
-    /** The fetch was successful in the retry*/
-    SuccessInRetry,
-    /** The fetch request failed in retry*/
+    /** The fetch failed */
     Failure,
   };
 

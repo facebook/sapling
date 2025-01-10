@@ -524,18 +524,14 @@ struct SaplingBackingStoreStats : StatsGroup<SaplingBackingStoreStats> {
   Counter fetchBlobLocal{"store.sapling.fetch_blob_local"};
   Counter fetchBlobSuccess{"store.sapling.fetch_blob_success"};
   Counter fetchBlobFailure{"store.sapling.fetch_blob_failure"};
-  Counter fetchBlobRetrySuccess{"store.sapling.fetch_blob_retry_success"};
   Counter fetchBlobSuccessDogfooding{
       "store.sapling.fetch_blob_success_dogfooding"};
   Counter fetchBlobFailureDogfooding{
       "store.sapling.fetch_blob_failure_dogfooding"};
-  Counter fetchBlobRetrySuccessDogfooding{
-      "store.sapling.fetch_blob_retry_success_dogfooding"};
   Duration prefetchBlob{"store.sapling.prefetch_blob_us"};
   Counter prefetchBlobLocal{"store.sapling.prefetch_blob_local"};
   Counter prefetchBlobSuccess{"store.sapling.prefetch_blob_success"};
   Counter prefetchBlobFailure{"store.sapling.prefetch_blob_failure"};
-  Counter prefetchBlobRetrySuccess{"store.sapling.prefetch_blob_retry_success"};
   Duration getBlobAuxData{"store.sapling.get_blob_metadata_us"};
   Duration fetchBlobAuxData{"store.sapling.fetch_blob_metadata_us"};
   Counter fetchBlobAuxDataLocal{"store.sapling.fetch_blob_metadata_local"};
