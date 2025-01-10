@@ -260,3 +260,49 @@ Python -c works:
   hello
   $ hg debugpython -- -c 'print("hello")'
   hello
+
+
+Respect IFS for read():
+
+  $ read line </dev/null
+  [1]
+
+  $ readlines() {
+  > while read line; do
+  >   echo "LINE: '$line'"
+  > done
+  > }
+
+FIXME: should output lines
+  $ readlines <<EOS
+  > 
+  > hi
+  > 
+  > there
+  > EOS
+
+  $ readlines <<EOS
+  >   data
+  > EOS
+  LINE: 'data'
+
+FIXME: should include whitespace
+  $ IFS= readlines <<EOS
+  >   data  
+  > EOS
+  LINE: 'data'
+
+
+FIXME: should separate fields
+  $ IFS=: read one two <<EOS
+  > foo:bar:baz
+  > EOS
+  $ echo "'$one' '$two'"
+  'foo:bar:baz' 'foo:bar:baz'
+
+FIXME: should unset $two
+  $ IFS=: read one two <<EOS
+  > foo
+  > EOS
+  $ echo "'$one' '$two'"
+  'foo' 'foo'
