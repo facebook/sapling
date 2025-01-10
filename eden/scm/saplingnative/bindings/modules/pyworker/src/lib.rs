@@ -28,7 +28,7 @@ use crossbeam::channel::bounded;
 use crossbeam::channel::Receiver;
 use crossbeam::channel::Sender;
 use pyrevisionstore::filescmstore;
-use revisionstore::redact_if_needed;
+use redacted::redact_if_needed;
 use revisionstore::scmstore::FileStore;
 use revisionstore::trait_impls::ArcFileStore;
 use storemodel::KeyStore;
@@ -107,7 +107,7 @@ impl<Ret: Send + 'static, Work: Sync + Send + 'static> Worker<Ret, Work> {
     ///     performance.
     ///  3) Since pushing work to the worker is single threaded, the batched work
     ///     has a high chance of being on the same files, increasing locality.
-    ///     
+    ///
     /// Caveat: the batch size was chosen semi-arbitrarily, and should be
     /// tweaked, too high of a value, and the progress reporting won't be
     /// good, too small of a value and the performance will suffer.

@@ -30,6 +30,7 @@ paste = "1.0.14"
 quickcheck = "1.0"
 quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 rand = { version = "0.8", features = ["small_rng"] }
+redacted = { version = "0.1.0", path = "../util/redacted" }
 sapling-async-runtime = { version = "0.1.0", path = "../async-runtime" }
 sapling-cas-client = { version = "0.1.0", path = "../cas-client" }
 sapling-clientinfo = { version = "0.1.0", path = "../clientinfo" }

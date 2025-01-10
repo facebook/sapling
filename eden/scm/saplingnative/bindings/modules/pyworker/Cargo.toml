@@ -10,6 +10,7 @@ anyhow = "1.0.95"
 cpython = { version = "0.7.2", default-features = false }
 crossbeam = "0.8"
 pyrevisionstore = { version = "0.1.0", path = "../pyrevisionstore" }
+redacted = { version = "0.1.0", path = "../../../../lib/util/redacted" }
 sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 sapling-revisionstore = { version = "0.1.0", path = "../../../../lib/revisionstore" }
 sapling-storemodel = { version = "0.1.0", path = "../../../../lib/storemodel" }
