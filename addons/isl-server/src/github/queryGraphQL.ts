@@ -53,6 +53,7 @@ export default async function queryGraphQL<TData, TVariables>(
     return json.data;
   } catch (error: unknown) {
     if (isEjecaError(error)) {
+      // FIXME: we're never setting `code` in ejeca, so this is always false!
       if (error.code === 'ENOENT' || error.code === 'EACCES') {
         // `gh` not installed on path
         throw new Error(`GhNotInstalledError: ${(error as Error).stack}`);

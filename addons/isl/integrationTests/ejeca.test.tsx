@@ -6,11 +6,12 @@
  */
 
 import type {EjecaChildProcess} from 'shared/ejeca';
+
 import {ejeca} from 'shared/ejeca';
 
 describe('test running binaries', () => {
   it('we can get both streams and awaitables', async () => {
-    let spawned = ejeca('node', ['-e', "console.log('uno') ; console.error('dos')"]);
+    const spawned = ejeca('node', ['-e', "console.log('uno') ; console.error('dos')"]);
     let streamOut = '';
     let streamErr = '';
     spawned.stdout?.on('data', data => {
@@ -33,11 +34,8 @@ describe('test running binaries', () => {
 
   it('when erroring out the command name is present', async () => {
     const spawned = ejeca('node', ['-', 'foo("bar")'], {input: 'babar'});
-    await expect(spawned).rejects.toThrow(
-      expect.objectContaining({
-        escapedCommand: 'node "-" "foo(\\"bar\\")"',
-        message: 'Command `node "-" "foo(\\"bar\\")"` exited with non-zero status',
-      }),
+    await expect(spawned).rejects.toThrowErrorMatchingInlineSnapshot(
+      `"Command \`node "-" "foo(\\"bar\\")"\` exited with non-zero status with exit code 1"`,
     );
   });
 
@@ -120,7 +118,7 @@ console.log("Goodbye");
     killArgs: Parameters<EjecaChildProcess['kill']> = [],
     expectedSignal?: string,
   ) => {
-    let spawned = ejeca('node', ['-', ...pythonArgs], {
+    const spawned = ejeca('node', ['-', ...pythonArgs], {
       input: sighandlerScript,
     });
     setTimeout(() => spawned.kill(...killArgs), 1000);

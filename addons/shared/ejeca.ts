@@ -8,6 +8,7 @@
 import type {ChildProcess, IOType, SpawnOptions, Serializable} from 'node:child_process';
 import type {Stream} from 'node:stream';
 
+import {truncate} from './utils';
 import getStream from 'get-stream';
 import {spawn} from 'node:child_process';
 import {Readable} from 'node:stream';
@@ -171,8 +172,6 @@ export interface EjecaReturn {
   killed: boolean;
 }
 
-export interface EjecaError extends Error, EjecaReturn {}
-
 interface EjecaChildPromise {
   catch<ResultType = never>(
     onRejected?: (reason: EjecaError) => ResultType | PromiseLike<ResultType>,
@@ -244,7 +243,7 @@ function getSpawnedPromise(
     values => {
       const [{exitCode, signal}, stdout, stderr] = values;
       const stripfinalNl = options?.stripFinalNewline ?? true;
-      const ret = {
+      const ret: EjecaReturn = {
         exitCode,
         signal,
         stdout: maybeStripFinalNewline(stdout, stripfinalNl),
@@ -253,21 +252,39 @@ function getSpawnedPromise(
         escapedCommand,
       };
       if (exitCode !== 0 || signal != undefined) {
-        const err = new Error(
-          `Command \`${ret.escapedCommand.slice(0, 50)}\` ` +
-            (signal != null ? 'was killed' : 'exited with non-zero status'),
-        ) as unknown as EjecaError;
-        err.exitCode = ret.exitCode;
-        err.signal = ret.signal;
-        err.stdout = ret.stdout;
-        err.stderr = ret.stderr;
-        err.killed = ret.killed;
-        err.escapedCommand = ret.escapedCommand;
-        throw err;
+        throw new EjecaError(ret);
       }
       return ret;
     },
   );
+}
+
+export class EjecaError extends Error implements EjecaReturn {
+  escapedCommand: string;
+  exitCode: number;
+  signal?: string;
+  stdout: string;
+  stderr: string;
+  killed: boolean;
+
+  constructor(info: EjecaReturn) {
+    const message =
+      `Command \`${truncate(info.escapedCommand, 50)}\` ` +
+      (info.signal != null ? 'was killed' : 'exited with non-zero status') +
+      (info.signal != null ? ` with signal ${info.signal}` : ` with exit code ${info.exitCode}`);
+    super(message);
+
+    this.exitCode = info.exitCode;
+    this.signal = info.signal;
+    this.stdout = info.stdout;
+    this.stderr = info.stderr;
+    this.killed = info.killed;
+    this.escapedCommand = info.escapedCommand;
+  }
+
+  toString() {
+    return `${this.message}\n${JSON.stringify(this, undefined, 2)}\n`;
+  }
 }
 
 function getStreamPromise(origStream: Stream | null): Promise<string> {

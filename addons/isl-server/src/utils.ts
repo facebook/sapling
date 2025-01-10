@@ -164,6 +164,7 @@ export function parseExecJson<T>(
     });
 }
 
+// FIXME: we're not ever setting `code`!
 export function isEjecaError(s: unknown): s is EjecaError & {code?: string} {
   return s != null && typeof s === 'object' && 'exitCode' in s;
 }
