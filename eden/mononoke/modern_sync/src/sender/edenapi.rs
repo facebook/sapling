@@ -267,10 +267,11 @@ impl ModernSyncSender for EdenapiSender {
             .await?;
 
         let res = self.client.upload_identical_changesets(entries).await?;
+        let responses = res.entries.try_collect::<Vec<_>>().await?;
+        ensure!(!responses.is_empty(), "Not all changesets were uploaded");
         info!(
             &self.logger,
-            "Upload hg changeset response: {:?}",
-            res.entries.try_collect::<Vec<_>>().await?
+            "Upload hg changeset response: {:?}", responses
         );
 
         Ok(())
