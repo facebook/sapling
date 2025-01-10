@@ -19,5 +19,4 @@ sapling-types = { version = "0.1.0", path = "../types" }
 winapi = { version = "0.3", features = ["everything", "std"] }
 
 [target.'cfg(windows)'.dependencies]
-local-encoding = "*"
 winapi = "0.3"
