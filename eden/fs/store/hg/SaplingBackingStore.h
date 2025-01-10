@@ -364,21 +364,6 @@ class SaplingBackingStore final : public BackingStore {
       ObjectFetchContextPtr context,
       const ObjectFetchContext::ObjectType type);
 
-  folly::Future<TreePtr> retryGetTree(
-      const Hash20& manifestNode,
-      const ObjectId& edenTreeID,
-      RelativePathPiece path,
-      ObjectFetchContextPtr context,
-      const ObjectFetchContext::ObjectType type);
-
-  folly::Future<TreePtr> retryGetTreeImpl(
-      Hash20 manifestNode,
-      ObjectId edenTreeID,
-      RelativePath path,
-      std::shared_ptr<LocalStore::WriteBatch> writeBatch,
-      ObjectFetchContextPtr context,
-      const ObjectFetchContext::ObjectType type);
-
   /**
    * Imports the tree identified by the given hash from the hg cache.
    * Returns nullptr if not found.

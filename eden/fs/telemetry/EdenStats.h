@@ -501,13 +501,10 @@ struct SaplingBackingStoreStats : StatsGroup<SaplingBackingStoreStats> {
   Counter fetchTreeLocal{"store.sapling.fetch_tree_local"};
   Counter fetchTreeSuccess{"store.sapling.fetch_tree_success"};
   Counter fetchTreeFailure{"store.sapling.fetch_tree_failure"};
-  Counter fetchTreeRetrySuccess{"store.sapling.fetch_tree_retry_success"};
   Counter fetchTreeSuccessDogfooding{
       "store.sapling.fetch_tree_success_dogfooding"};
   Counter fetchTreeFailureDogfooding{
       "store.sapling.fetch_tree_failure_dogfooding"};
-  Counter fetchTreeRetrySuccessDogfooding{
-      "store.sapling.fetch_tree_retry_success_dogfooding"};
   Duration getTreeAuxData{"store.sapling.get_tree_metadata_us"};
   Duration fetchTreeAuxData{"store.sapling.fetch_tree_metadata_us"};
   Counter fetchTreeAuxDataLocal{"store.sapling.fetch_tree_metadata_local"};
@@ -516,15 +513,12 @@ struct SaplingBackingStoreStats : StatsGroup<SaplingBackingStoreStats> {
   Counter getRootTreeLocal{"store.sapling.get_root_tree_local"};
   Counter getRootTreeSuccess{"store.sapling.get_root_tree_success"};
   Counter getRootTreeFailure{"store.sapling.get_root_tree_failure"};
-  Counter getRootTreeRetrySuccess{"store.sapling.get_root_tree_retry_success"};
   Counter importManifestForRootLocal{
       "store.sapling.import_manifest_for_root_local"};
   Counter importManifestForRootSuccess{
       "store.sapling.import_manifest_for_root_success"};
   Counter importManifestForRootFailure{
       "store.sapling.import_manifest_for_root_failure"};
-  Counter importManifestForRootRetrySuccess{
-      "store.sapling.import_manifest_for_root_retry_success"};
   Duration getBlob{"store.sapling.get_blob_us"};
   Duration fetchBlob{"store.sapling.fetch_blob_us"};
   Counter fetchBlobLocal{"store.sapling.fetch_blob_local"};
