@@ -204,6 +204,23 @@ impl TreeStore {
         );
 
         let process_func = move || -> Result<()> {
+            // Handle queries for null tree id (with null content response). scmstore is
+            // the end of the line, so if we consistently handle null id then callers at
+            // any level can confidently assume null tree ids are handled.
+            state
+                .common
+                .iter_pending(TreeAttributes::CONTENT, false, |key| {
+                    if key.hgid.is_null() {
+                        Some(StoreTree {
+                            content: Some(LazyTree::Null),
+                            parents: Some(Parents::None),
+                            aux_data: None,
+                        })
+                    } else {
+                        None
+                    }
+                });
+
             let fetch_cas = fetch_remote && cas_client.is_some();
 
             if fetch_local || fetch_cas {

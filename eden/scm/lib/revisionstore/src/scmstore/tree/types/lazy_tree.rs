@@ -38,6 +38,9 @@ pub(crate) enum LazyTree {
     /// Tree data from CAS. Note that CAS actually contains AugmentedTree (without
     /// digest), but we have the digest in-hand so we store an AugmentedTreeWithDigest.
     Cas(AugmentedTreeWithDigest),
+
+    // Null tree is a special case with null content.
+    Null,
 }
 
 pub enum AuxData {
@@ -53,6 +56,7 @@ impl LazyTree {
             IndexedLog(entry) => Some(entry.key().hgid),
             SaplingRemoteApi(entry) => Some(entry.key().hgid),
             Cas(entry) => Some(entry.augmented_tree.hg_node_id),
+            Null => Some(NULL_ID),
         }
     }
 
@@ -68,6 +72,7 @@ impl LazyTree {
                 tree.write_sapling_tree_blob(&mut data)?;
                 data.into()
             }
+            Null => Bytes::default(),
         })
     }
 
@@ -81,6 +86,7 @@ impl LazyTree {
             }
             // Don't write CAS entries to local cache.
             Cas(_) => None,
+            Null => None,
         })
     }
 

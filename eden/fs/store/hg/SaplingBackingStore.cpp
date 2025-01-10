@@ -1871,15 +1871,6 @@ folly::Future<TreePtr> SaplingBackingStore::retryGetTree(
       manifestNode,
       path);
 
-  // Explicitly check for the null ID on the root directory.
-  // This isn't actually present in the mercurial data store; it has to be
-  // handled specially in the code.
-  if (path.empty() && manifestNode == kZeroHash) {
-    auto tree = std::make_shared<TreePtr::element_type>(
-        Tree::container{kPathMapDefaultCaseSensitive}, edenTreeID);
-    return folly::makeFuture(std::move(tree));
-  }
-
   if (!FLAGS_hg_fetch_missing_trees) {
     auto ew = folly::exception_wrapper{std::runtime_error{
         "Data not available via edenapi, skipping fallback to importer because "
