@@ -72,6 +72,12 @@ def _uploadfilenodes(repo, fctxs):
     """Upload file content and filenodes"""
     if not fctxs:
         return
+
+    # Batch fetch file parents in case we don't have them locally.
+    repo.fileslog.metadatastore.prefetch(
+        [(f.path(), f.filenode()) for f in fctxs], length=1
+    )
+
     keys = []
     for fctx in fctxs:
         p1, p2 = fctx.filelog().parents(fctx.filenode())
