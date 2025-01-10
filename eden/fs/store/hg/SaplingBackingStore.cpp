@@ -697,8 +697,6 @@ folly::Try<BlobPtr> SaplingBackingStore::getBlobFromBackingStore(
 
 void SaplingBackingStore::processTreeImportRequests(
     std::vector<std::shared_ptr<SaplingImportRequest>>&& requests) {
-  folly::stop_watch<std::chrono::milliseconds> watch;
-
   for (auto& request : requests) {
     auto* treeImport = request->getRequest<SaplingImportRequest::TreeImport>();
 
@@ -716,64 +714,13 @@ void SaplingBackingStore::processTreeImportRequests(
   }
 
   getTreeBatch(requests, sapling::FetchMode::AllowRemote);
-
-  {
-    std::vector<folly::SemiFuture<folly::Unit>> futures;
-    futures.reserve(requests.size());
-
-    for (auto& request : requests) {
-      auto* promise = request->getPromise<TreePtr>();
-      if (promise->isFulfilled()) {
-        if (isOBCEnabled_) {
-          getTreePerRepoLatencies_ += watch.elapsed().count();
-        }
-        stats_->addDuration(
-            &SaplingBackingStoreStats::fetchTree, watch.elapsed());
-        stats_->increment(&SaplingBackingStoreStats::fetchTreeSuccess);
-        if (store_.dogfoodingHost()) {
-          stats_->increment(
-              &SaplingBackingStoreStats::fetchTreeSuccessDogfooding);
-        }
-        continue;
-      }
-      // The tree was not found in the first try. Let's retry to import the tree
-      // from backingstore
-      auto* treeImport =
-          request->getRequest<SaplingImportRequest::TreeImport>();
-      auto treeSemiFuture =
-          retryGetTree(
-              treeImport->proxyHash
-                  .revHash(), // this is really the manifest node
-              treeImport->hash,
-              treeImport->proxyHash.path(),
-              request->getContext().copy(),
-              ObjectFetchContext::ObjectType::Tree)
-              .semi();
-      futures.emplace_back(
-          std::move(treeSemiFuture)
-              .defer([request = std::move(request),
-                      watch,
-                      stats = stats_.copy()](auto&& result) mutable {
-                XLOGF(
-                    DBG4,
-                    "Imported tree after retry for {}",
-                    request->getRequest<SaplingImportRequest::TreeImport>()
-                        ->hash);
-                stats->addDuration(
-                    &SaplingBackingStoreStats::fetchTree, watch.elapsed());
-                request
-                    ->getPromise<SaplingImportRequest::TreeImport::Response>()
-                    ->setTry(std::forward<decltype(result)>(result));
-              }));
-    }
-
-    folly::collectAll(futures).wait();
-  }
 }
 
 void SaplingBackingStore::getTreeBatch(
     const ImportRequestsList& importRequests,
     sapling::FetchMode fetch_mode) {
+  folly::stop_watch<std::chrono::milliseconds> batchWatch;
+
   auto preparedRequests = prepareRequests<SaplingImportRequest::TreeImport>(
       importRequests, SaplingImportObject::TREE);
   auto importRequestsMap = std::move(preparedRequests.first);
@@ -796,7 +743,11 @@ void SaplingBackingStore::getTreeBatch(
               index,
               requests.size(),
               content.exception().what().toStdString());
-          return;
+          stats_->increment(&SaplingBackingStoreStats::fetchTreeFailure);
+          if (store_.dogfoodingHost()) {
+            stats_->increment(
+                &SaplingBackingStoreStats::fetchTreeFailureDogfooding);
+          }
         } else {
           XLOGF(
               DBG4,
@@ -804,6 +755,18 @@ void SaplingBackingStore::getTreeBatch(
               folly::hexlify(requests[index].node),
               index,
               requests.size());
+          stats_->increment(&SaplingBackingStoreStats::fetchTreeSuccess);
+          if (store_.dogfoodingHost()) {
+            stats_->increment(
+                &SaplingBackingStoreStats::fetchTreeSuccessDogfooding);
+          }
+        }
+
+        if (isOBCEnabled_) {
+          getTreePerRepoLatencies_ += batchWatch.elapsed().count();
+        } else {
+          stats_->addDuration(
+              &SaplingBackingStoreStats::fetchTree, batchWatch.elapsed());
         }
 
         const auto& nodeId = requests[index].node;
