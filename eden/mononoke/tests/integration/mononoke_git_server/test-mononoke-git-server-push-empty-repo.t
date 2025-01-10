@@ -35,5 +35,5 @@
 
 # Push Git repository to Mononoke
   $ git_client push origin --all
-  error: failed to push some refs to 'https://*/repos/git/ro/repo.git' (glob)
-  [1]
+  To https://*/repos/git/ro/repo.git (glob)
+   * [new branch]      master_bookmark -> master_bookmark

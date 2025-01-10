@@ -9,6 +9,8 @@ use core::str;
 
 use anyhow::Error;
 use bytes::Bytes;
+use gix_hash::Kind;
+use gix_hash::ObjectId;
 use gotham::mime;
 use gotham::state::FromState;
 use gotham::state::State;
@@ -84,14 +86,29 @@ async fn write_advertisement(
     .into_iter()
     .collect();
     refs.sort_by(|a, b| a.0.cmp(&b.0));
+
     let mut refs = refs.into_iter();
-    if let Some((ref_name, target)) = refs.next() {
-        let first_ref_line = ref_line(ref_name.as_str(), &target);
-        write_text_packetline(
-            format!("{}\0{}", first_ref_line, RECEIVE_PACK_CAPABILITIES).as_bytes(),
-            output,
-        )
-        .await?;
+    match refs.next() {
+        Some((ref_name, target)) => {
+            let first_ref_line = ref_line(ref_name.as_str(), &target);
+            write_text_packetline(
+                format!("{}\0{}", first_ref_line, RECEIVE_PACK_CAPABILITIES).as_bytes(),
+                output,
+            )
+            .await?;
+        }
+        None => {
+            write_text_packetline(
+                format!(
+                    "{} capabilities^{{}}\0{}",
+                    ObjectId::null(Kind::Sha1),
+                    RECEIVE_PACK_CAPABILITIES
+                )
+                .as_bytes(),
+                output,
+            )
+            .await?;
+        }
     }
     for (ref_name, target) in refs {
         write_text_packetline(ref_line(ref_name.as_str(), &target).as_bytes(), output).await?;
