@@ -429,13 +429,6 @@ class SaplingBackingStore final : public BackingStore {
       const ObjectId& id,
       const ObjectFetchContextPtr& context) override;
 
-  // Get blob step functions
-  folly::SemiFuture<BlobPtr> retryGetBlob(
-      HgProxyHash hgInfo,
-      ObjectFetchContextPtr context,
-      const SaplingImportRequest::FetchType fetch_type,
-      folly::stop_watch<std::chrono::milliseconds> watch);
-
   /**
    * Import multiple blobs at once. The vector parameters have to be the same
    * length. Promises passed in will be resolved if a blob is successfully

@@ -494,8 +494,6 @@ void SaplingBackingStore::setBlobCounters(
 
 void SaplingBackingStore::processBlobImportRequests(
     std::vector<std::shared_ptr<SaplingImportRequest>>&& requests) {
-  folly::stop_watch<std::chrono::milliseconds> watch;
-
   XLOGF(DBG4, "Processing blob import batch size={}", requests.size());
 
   for (auto& request : requests) {
@@ -515,121 +513,6 @@ void SaplingBackingStore::processBlobImportRequests(
   }
 
   getBlobBatch(requests, sapling::FetchMode::AllowRemote);
-
-  {
-    std::vector<folly::SemiFuture<folly::Unit>> futures;
-    futures.reserve(requests.size());
-
-    for (auto& request : requests) {
-      auto* promise = request->getPromise<BlobPtr>();
-      if (promise->isFulfilled()) {
-        setBlobCounters(
-            request->getContext().copy(),
-            request->getFetchType(),
-            ObjectFetchContext::FetchedSource::Unknown,
-            ObjectFetchContext::FetchResult::Success,
-            watch);
-        continue;
-      }
-      // The blobs were either not found locally, or, when EdenAPI is enabled,
-      // not found on the server. Let's retry to import the blob
-      // Note: we don't pass request to this function  to avoid making copies
-      // of the shared ptr (which requires an atomic instruction every time
-      // the refcount changes)
-      auto fetchSemiFuture = retryGetBlob(
-          request->getRequest<SaplingImportRequest::BlobImport>()->proxyHash,
-          request->getContext().copy(),
-          request->getFetchType(),
-          watch);
-      futures.emplace_back(
-          std::move(fetchSemiFuture)
-              .defer([request = std::move(request),
-                      stats = stats_.copy()](auto&& result) mutable {
-                XLOGF(
-                    DBG4,
-                    "Imported blob from HgImporter for {}",
-                    request->getRequest<SaplingImportRequest::BlobImport>()
-                        ->hash);
-                request
-                    ->getPromise<SaplingImportRequest::BlobImport::Response>()
-                    ->setTry(std::forward<decltype(result)>(result));
-              }));
-    }
-
-    folly::collectAll(futures).wait();
-  }
-}
-
-folly::SemiFuture<BlobPtr> SaplingBackingStore::retryGetBlob(
-    HgProxyHash hgInfo,
-    ObjectFetchContextPtr context,
-    const SaplingImportRequest::FetchType fetch_type,
-    folly::stop_watch<std::chrono::milliseconds> watch) {
-  return folly::via(
-      retryThreadPool_.get(),
-      [this,
-       hgInfo = std::move(hgInfo),
-       context = context.copy(),
-       fetch_type,
-       watch] {
-        std::unique_ptr<RequestMetricsScope> queueTracker;
-        switch (fetch_type) {
-          case SaplingImportRequest::FetchType::Fetch:
-            queueTracker = std::make_unique<RequestMetricsScope>(
-                &this->liveImportBlobWatches_);
-            break;
-          case SaplingImportRequest::FetchType::Prefetch:
-            queueTracker = std::make_unique<RequestMetricsScope>(
-                &this->liveImportPrefetchWatches_);
-            break;
-        }
-
-        // NOTE: In the future we plan to update
-        // SaplingNativeBackingStore to provide and
-        // asynchronous interface enabling us to perform our retries
-        // there. In the meantime we use retryThreadPool_ for these
-        // longer-running retry requests to avoid starving
-        // serverThreadPool_.
-
-        // Flush (and refresh) SaplingNativeBackingStore to ensure all
-        // data is written and to rescan pack files or local indexes
-        flush();
-
-        // Retry using datapackStore (SaplingNativeBackingStore).
-        auto result = folly::makeFuture<BlobPtr>(BlobPtr{nullptr});
-
-        auto blob =
-            getBlobFromBackingStore(hgInfo, sapling::FetchMode::AllowRemote);
-
-        if (blob.hasValue()) {
-          setBlobCounters(
-              context.copy(),
-              fetch_type,
-              ObjectFetchContext::FetchedSource::Unknown,
-              ObjectFetchContext::FetchResult::SuccessInRetry,
-              watch);
-          result = blob.value();
-        } else {
-          // Record miss and return error
-          if (structuredLogger_) {
-            structuredLogger_->logEvent(FetchMiss{
-                store_.getRepoName(),
-                FetchMiss::Blob,
-                blob.exception().what().toStdString(),
-                true, // isRetry
-                store_.dogfoodingHost()});
-          }
-          setBlobCounters(
-              context.copy(),
-              fetch_type,
-              ObjectFetchContext::FetchedSource::Unknown,
-              ObjectFetchContext::FetchResult::Failure,
-              watch);
-          auto ew = folly::exception_wrapper{blob.exception()};
-          result = folly::makeFuture<BlobPtr>(std::move(ew));
-        }
-        return result;
-      });
 }
 
 void SaplingBackingStore::getBlobBatch(
@@ -639,6 +522,7 @@ void SaplingBackingStore::getBlobBatch(
       importRequests, SaplingImportObject::BLOB);
   auto importRequestsMap = std::move(preparedRequests.first);
   auto requests = std::move(preparedRequests.second);
+  folly::stop_watch<std::chrono::milliseconds> batchWatch;
 
   store_.getBlobBatch(
       folly::range(requests),
@@ -653,7 +537,15 @@ void SaplingBackingStore::getBlobBatch(
               index,
               requests.size(),
               content.exception().what().toStdString());
-          return;
+
+          if (structuredLogger_) {
+            structuredLogger_->logEvent(FetchMiss{
+                store_.getRepoName(),
+                FetchMiss::Blob,
+                content.exception().what().toStdString(),
+                false, // isRetry
+                store_.dogfoodingHost()});
+          }
         } else {
           XLOGF(
               DBG4,
@@ -673,6 +565,14 @@ void SaplingBackingStore::getBlobBatch(
         for (auto& importRequest : importRequestList) {
           importRequest->getPromise<BlobPtr>()->setWith(
               [&]() -> folly::Try<BlobPtr> { return result; });
+
+          setBlobCounters(
+              importRequest->getContext().copy(),
+              importRequest->getFetchType(),
+              ObjectFetchContext::FetchedSource::Unknown,
+              content.hasException() ? ObjectFetchContext::FetchResult::Failure
+                                     : ObjectFetchContext::FetchResult::Success,
+              batchWatch);
         }
 
         // Make sure that we're stopping this watch.
