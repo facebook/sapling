@@ -164,9 +164,20 @@ export function parseExecJson<T>(
     });
 }
 
-// FIXME: we're not ever setting `code`!
-export function isEjecaError(s: unknown): s is EjecaError & {code?: string} {
+export type EjecaSpawnError = Error & {code: string; path: string};
+
+/**
+ * True if an Ejeca spawned process exits non-zero or is killed.
+ * @see {EjecaSpawnError} for when a process fails to spawn in the first place (e.g. ENOENT).
+ */
+export function isEjecaError(s: unknown): s is EjecaError {
   return s != null && typeof s === 'object' && 'exitCode' in s;
+}
+
+/** True when Ejeca fails to spawn a process, e.g. ENOENT.
+ * (as opposed to the command spawning, then exiting non-zero) */
+export function isEjecaSpawnError(s: unknown): s is EjecaSpawnError {
+  return s != null && typeof s === 'object' && 'code' in s;
 }
 
 export function fromEntries<V>(entries: Array<[string, V]>): {
