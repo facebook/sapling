@@ -1169,7 +1169,7 @@ SaplingBackingStore::getTreeAuxData(
       ObjectFetchContext::ObjectType::TreeAuxData);
 
   auto auxData = getLocalTreeAuxData(proxyHash);
-  if (auxData.hasValue()) {
+  if (auxData.hasValue() && auxData.value()) {
     stats_->increment(&SaplingBackingStoreStats::fetchTreeAuxDataSuccess);
     stats_->increment(&SaplingBackingStoreStats::fetchTreeAuxDataLocal);
     return folly::makeSemiFuture(GetTreeAuxResult{
@@ -1241,10 +1241,14 @@ folly::Try<TreeAuxDataPtr> SaplingBackingStore::getLocalTreeAuxData(
   using GetTreeAuxDataResult = folly::Try<TreeAuxDataPtr>;
 
   if (auxData.hasValue()) {
-    return GetTreeAuxDataResult{
-        std::make_shared<TreeAuxDataPtr::element_type>(TreeAuxData{
-            Hash32{std::move(auxData.value()->digest_hash)},
-            auxData.value()->digest_size})};
+    if (auxData.value()) {
+      return GetTreeAuxDataResult{
+          std::make_shared<TreeAuxDataPtr::element_type>(TreeAuxData{
+              Hash32{std::move(auxData.value()->digest_hash)},
+              auxData.value()->digest_size})};
+    } else {
+      return GetTreeAuxDataResult{nullptr};
+    }
   } else {
     return GetTreeAuxDataResult{auxData.exception()};
   }
@@ -1495,7 +1499,7 @@ SaplingBackingStore::getBlobAuxData(
       ObjectFetchContext::ObjectType::BlobAuxData);
 
   auto auxData = getLocalBlobAuxData(proxyHash);
-  if (auxData.hasValue()) {
+  if (auxData.hasValue() && auxData.value()) {
     stats_->increment(&SaplingBackingStoreStats::fetchBlobAuxDataSuccess);
     stats_->increment(&SaplingBackingStoreStats::fetchBlobAuxDataLocal);
     return folly::makeSemiFuture(GetBlobAuxResult{
@@ -1572,11 +1576,15 @@ folly::Try<BlobAuxDataPtr> SaplingBackingStore::getLocalBlobAuxData(
   using GetBlobAuxDataResult = folly::Try<BlobAuxDataPtr>;
 
   if (auxData.hasValue()) {
-    return GetBlobAuxDataResult{
-        std::make_shared<BlobAuxDataPtr::element_type>(BlobAuxData{
-            Hash20{std::move(auxData.value()->content_sha1)},
-            Hash32{std::move(auxData.value()->content_blake3)},
-            auxData.value()->total_size})};
+    if (auxData.value()) {
+      return GetBlobAuxDataResult{
+          std::make_shared<BlobAuxDataPtr::element_type>(BlobAuxData{
+              Hash20{std::move(auxData.value()->content_sha1)},
+              Hash32{std::move(auxData.value()->content_blake3)},
+              auxData.value()->total_size})};
+    } else {
+      return GetBlobAuxDataResult{nullptr};
+    }
   } else {
     return GetBlobAuxDataResult{auxData.exception()};
   }

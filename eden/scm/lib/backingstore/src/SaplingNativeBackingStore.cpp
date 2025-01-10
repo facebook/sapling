@@ -118,14 +118,10 @@ SaplingNativeBackingStore::getTreeAuxData(NodeId node, bool local) {
       "Importing tree aux data node={} from hgcache",
       folly::hexlify(node));
   return folly::makeTryWith([&] {
-    auto auxData = sapling_backingstore_get_tree_aux(
+    return sapling_backingstore_get_tree_aux(
         *store_.get(),
         rust::Slice<const uint8_t>{node.data(), node.size()},
         fetch_mode);
-    XCHECK(
-        auxData.get(),
-        "sapling_backingstore_get_tree_aux returned a nullptr, but did not throw an exception.");
-    return auxData;
   });
 }
 
@@ -220,14 +216,10 @@ SaplingNativeBackingStore::getBlobAuxData(NodeId node, bool local) {
       "Importing blob aux data node={} from hgcache",
       folly::hexlify(node));
   return folly::makeTryWith([&] {
-    auto auxData = sapling_backingstore_get_file_aux(
+    return sapling_backingstore_get_file_aux(
         *store_.get(),
         rust::Slice<const uint8_t>{node.data(), node.size()},
         fetch_mode);
-    XCHECK(
-        auxData.get(),
-        "sapling_backingstore_get_file_aux returned a nullptr, but did not throw an exception.");
-    return auxData;
   });
 }
 

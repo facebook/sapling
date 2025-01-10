@@ -303,12 +303,10 @@ pub fn sapling_backingstore_get_tree_aux(
     node: &[u8],
     fetch_mode: ffi::FetchMode,
 ) -> Result<SharedPtr<ffi::TreeAuxData>> {
-    Ok(SharedPtr::new(
-        store
-            .get_tree_aux(node, FetchMode::from(fetch_mode))
-            .and_then(|opt| opt.ok_or_else(|| Error::msg("no tree aux data found")))?
-            .into(),
-    ))
+    match store.get_tree_aux(node, FetchMode::from(fetch_mode))? {
+        Some(aux) => Ok(SharedPtr::new(aux.into())),
+        None => Ok(SharedPtr::null()),
+    }
 }
 
 pub fn sapling_backingstore_get_tree_aux_batch(
@@ -373,12 +371,10 @@ pub fn sapling_backingstore_get_file_aux(
     node: &[u8],
     fetch_mode: ffi::FetchMode,
 ) -> Result<SharedPtr<ffi::FileAuxData>> {
-    Ok(SharedPtr::new(
-        store
-            .get_file_aux(node, FetchMode::from(fetch_mode))
-            .and_then(|opt| opt.ok_or_else(|| Error::msg("no file aux data found")))?
-            .into(),
-    ))
+    match store.get_file_aux(node, FetchMode::from(fetch_mode))? {
+        Some(aux) => Ok(SharedPtr::new(aux.into())),
+        None => Ok(SharedPtr::null()),
+    }
 }
 
 pub fn sapling_backingstore_get_file_aux_batch(
