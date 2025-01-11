@@ -12,7 +12,9 @@ use std::io::Read;
 #[cfg(target_os = "macos")]
 use std::io::Write;
 
+use anyhow::anyhow;
 use anyhow::bail;
+use anyhow::Context;
 use anyhow::Result;
 use clap::App;
 use clap::Arg;
@@ -92,18 +94,17 @@ async fn main() -> Result<()> {
     let commitcloud_tcpreceiver_handler = commitcloud_tcpreceiver.serve();
     let commitcloud_workspacesubscriber_handler = commitcloud_workspacesubscriber.serve()?;
 
-    // join running services, this will block
-    match commitcloud_tcpreceiver_handler.await {
-        Ok(result) => result?,
-        Err(_) => bail!("commitcloud tcpreceiver panicked"),
-    };
-
-    match commitcloud_workspacesubscriber_handler.await {
-        Ok(result) => result?,
-        Err(_) => bail!("commitcloud workspace subscriber panicked"),
-    };
-
-    Ok(())
+    // Block until either service errors out.
+    tokio::select! {
+        result = commitcloud_tcpreceiver_handler => {
+            result?.and_then(|_| Err(anyhow!("unexpected Ok() exit")))
+                .context("commitcloud tcpreceiver")
+        }
+        result = commitcloud_workspacesubscriber_handler => {
+            result?.and_then(|_| Err(anyhow!("unexpected Ok() exit")))
+                .context("commitcloud workspace subscriber")
+        }
+    }
 }
 
 /// Refuse to run if nice is too high (i.e. process has low priority)
