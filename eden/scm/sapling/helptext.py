@@ -4683,7 +4683,7 @@ The ``diff`` command supports cross-directory comparisons::
 
     $ echo a > my-project/file
     $ echo b > my-branch/file
-    $ @prog@ diff --from-path my-project --to-path my-branch
+    $ @prog@ subtree diff --from-path my-project --to-path my-branch
 
 Files outside ``--from-path`` in the left side are ignored, and files
 outside ``--to-path`` on the right side are ignored.
@@ -4706,5 +4706,5 @@ Directory branching aware operations support multiple ``--from-path``/``--to-pat
     # Modify "file" in both branches and then diff both branches against "my-project":
     $ echo branch1 > my-branch1/file
     $ echo branch2 > my-branch2/file
-    $ @prog@ diff --from-path my-project --to-path my-branch1 --from-path my-project --to-path my-branch2
+    $ @prog@ subtree diff --from-path my-project --to-path my-branch1 --from-path my-project --to-path my-branch2
 """

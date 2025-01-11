@@ -2192,6 +2192,11 @@ def diff(ui, repo, *pats, **opts):
 
     Returns 0 on success.
     """
+    if opts.get("from_path") or opts.get("to_path"):
+        raise error.Abort(
+            _("'--from-path' and '--to-path' are deprecated for '@prog@ diff' command"),
+            hint=_("use '@prog@ subtree diff' to diff between directories"),
+        )
 
     do_diff(ui, repo, *pats, **opts)
 
