@@ -16,6 +16,7 @@ use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
+use edenfs_client::utils::locate_eden_config_dir;
 use edenfs_client::EdenFsInstance;
 use hg_util::path::expand_path;
 use tracing::event;
@@ -203,7 +204,7 @@ impl MainCommand {
         } else if let Some(config_dir) = self
             .subcommand
             .get_mount_path_override()
-            .and_then(|x| util::locate_eden_config_dir(&x))
+            .and_then(|x| locate_eden_config_dir(&x))
         {
             Ok(config_dir)
         // Then check if the current working directory is an EdenFS mount. If not, we should
@@ -212,7 +213,7 @@ impl MainCommand {
             Ok(env::current_dir()
                 .map_err(From::from)
                 .and_then(|cwd| {
-                    util::locate_eden_config_dir(&cwd)
+                    locate_eden_config_dir(&cwd)
                         .ok_or_else(|| anyhow!("cwd is not in an eden mount"))
                 })
                 .unwrap_or(expand_path(DEFAULT_CONFIG_DIR)))

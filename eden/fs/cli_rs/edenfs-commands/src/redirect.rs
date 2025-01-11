@@ -36,13 +36,13 @@ use edenfs_client::redirect::RedirectionType;
 #[cfg(target_os = "macos")]
 use edenfs_client::redirect::APFS_HELPER;
 use edenfs_client::redirect::REPO_SOURCE;
+use edenfs_client::utils::expand_path_or_cwd;
+use edenfs_client::utils::remove_trailing_slash;
 use edenfs_client::EdenFsInstance;
 use hg_util::path::expand_path;
 use tabular::row;
 use tabular::Table;
 
-use crate::util::expand_path_or_cwd;
-use crate::util::remove_trailing_slash;
 use crate::ExitCode;
 use crate::Subcommand;
 
