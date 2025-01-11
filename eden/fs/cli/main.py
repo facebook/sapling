@@ -1397,10 +1397,11 @@ class HealthReportCmd(Subcmd):
                 exit_code = 1
 
             self.print_error_codes_json(out)
-            return exit_code
-
         except Exception as ex:
-            raise Exception("Failed to run health report: " + str(ex))
+            print(f"Failed to run health report: {str(ex)}", file=sys.stderr)
+            exit_code = 255
+
+        return exit_code
 
 
 @subcmd("strace", "Monitor FUSE requests.")
