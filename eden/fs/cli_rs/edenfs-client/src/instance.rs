@@ -66,6 +66,17 @@ use crate::StreamingEdenFsClient;
 // EdenFsInstance through every subcommand
 static INSTANCE: OnceLock<EdenFsInstance> = OnceLock::new();
 
+// Default config and etc dirs
+#[cfg(unix)]
+pub const DEFAULT_CONFIG_DIR: &str = "~/local/.eden";
+#[cfg(unix)]
+pub const DEFAULT_ETC_EDEN_DIR: &str = "/etc/eden";
+
+#[cfg(windows)]
+pub const DEFAULT_CONFIG_DIR: &str = "~\\.eden";
+#[cfg(windows)]
+pub const DEFAULT_ETC_EDEN_DIR: &str = "C:\\ProgramData\\facebook\\eden";
+
 /// These paths are relative to the user's client directory.
 const CLIENTS_DIR: &str = "clients";
 const CONFIG_JSON: &str = "config.json";

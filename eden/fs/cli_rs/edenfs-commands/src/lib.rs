@@ -5,18 +5,17 @@
  * GNU General Public License version 2.
  */
 
-use std::env;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
 
-use anyhow::anyhow;
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
-use edenfs_client::utils::locate_eden_config_dir;
+use edenfs_client::utils::get_config_dir;
+use edenfs_client::utils::get_etc_eden_dir;
+use edenfs_client::utils::get_home_dir;
 use edenfs_client::EdenFsInstance;
 use hg_util::path::expand_path;
 use tracing::event;
@@ -38,16 +37,6 @@ mod status;
 mod top;
 mod uptime;
 mod util;
-
-#[cfg(unix)]
-const DEFAULT_CONFIG_DIR: &str = "~/local/.eden";
-#[cfg(unix)]
-const DEFAULT_ETC_EDEN_DIR: &str = "/etc/eden";
-
-#[cfg(windows)]
-const DEFAULT_CONFIG_DIR: &str = "~\\.eden";
-#[cfg(windows)]
-const DEFAULT_ETC_EDEN_DIR: &str = "C:\\ProgramData\\facebook\\eden";
 
 // Used to determine whether we should gate off certain oxidized edenfsctl commands
 const ROLLOUT_JSON: &str = "edenfsctl_rollout.json";
@@ -191,43 +180,6 @@ impl Subcommand for TopLevelSubcommand {
 }
 
 impl MainCommand {
-    fn get_config_dir(&self) -> Result<PathBuf> {
-        // A config dir might be provided as a top-level argument. Top-level arguments take
-        // precedent over sub-command args.
-        if let Some(config_dir) = &self.config_dir {
-            if config_dir.as_os_str().is_empty() {
-                bail!("empty --config-dir path specified")
-            }
-            Ok(config_dir.clone())
-        // Then check if the optional mount path provided by some subcommands is an EdenFS mount.
-        // If it's provided and is a valid EdenFS mount, use the mounts config dir.
-        } else if let Some(config_dir) = self
-            .subcommand
-            .get_mount_path_override()
-            .and_then(|x| locate_eden_config_dir(&x))
-        {
-            Ok(config_dir)
-        // Then check if the current working directory is an EdenFS mount. If not, we should
-        // default to the default config-dir location which varies by platform.
-        } else {
-            Ok(env::current_dir()
-                .map_err(From::from)
-                .and_then(|cwd| {
-                    locate_eden_config_dir(&cwd)
-                        .ok_or_else(|| anyhow!("cwd is not in an eden mount"))
-                })
-                .unwrap_or(expand_path(DEFAULT_CONFIG_DIR)))
-        }
-    }
-
-    fn get_home_dir(&self) -> Option<PathBuf> {
-        if let Some(home_dir) = &self.home_dir {
-            Some(home_dir.clone())
-        } else {
-            dirs::home_dir()
-        }
-    }
-
     fn set_working_directory(&self) -> Result<()> {
         if let Some(checkout_dir) = &self.checkout_dir {
             std::env::set_current_dir(checkout_dir).with_context(|| {
@@ -264,9 +216,9 @@ impl MainCommand {
         event!(Level::TRACE, cmd = ?self, "Dispatching");
 
         EdenFsInstance::init(
-            self.get_config_dir()?,
+            get_config_dir(&self.config_dir, &self.subcommand.get_mount_path_override())?,
             get_etc_eden_dir(&self.etc_eden_dir),
-            self.get_home_dir(),
+            get_home_dir(&self.home_dir),
         );
         // Use EdenFsInstance::global() to access the instance from now on
         self.subcommand.run().await
@@ -300,12 +252,4 @@ fn is_command_enabled_in_json(name: &str, etc_eden_dir_override: &Option<PathBuf
     let map = json.as_object()?;
 
     map.get(name).and_then(|v| v.as_bool())
-}
-
-fn get_etc_eden_dir(etc_eden_dir_override: &Option<PathBuf>) -> PathBuf {
-    if let Some(etc_eden_dir) = etc_eden_dir_override {
-        etc_eden_dir.clone()
-    } else {
-        DEFAULT_ETC_EDEN_DIR.into()
-    }
 }

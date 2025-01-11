@@ -5,13 +5,18 @@
  * GNU General Public License version 2.
  */
 
+use std::env;
 use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::anyhow;
+use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
 use hg_util::path::expand_path;
+
+use crate::instance::DEFAULT_CONFIG_DIR;
+use crate::instance::DEFAULT_ETC_EDEN_DIR;
 
 /// Traverse up and locate the repository root
 pub fn locate_repo_root(path: &Path) -> Option<&Path> {
@@ -73,4 +78,50 @@ pub fn locate_eden_config_dir(path: &Path) -> Option<PathBuf> {
         }
     }
     None
+}
+
+pub fn get_config_dir(
+    config_dir_override: &Option<PathBuf>,
+    mount_path_override: &Option<PathBuf>,
+) -> Result<PathBuf> {
+    // A config dir might be provided as a top-level argument. Top-level arguments take
+    // precedent over sub-command args.
+    if let Some(config_dir) = config_dir_override {
+        if config_dir.as_os_str().is_empty() {
+            bail!("empty --config-dir path specified")
+        }
+        Ok(config_dir.clone())
+    // Then check if the optional mount path provided by some subcommands is an EdenFS mount.
+    // If it's provided and is a valid EdenFS mount, use the mounts config dir.
+    } else if let Some(config_dir) = mount_path_override
+        .as_ref()
+        .and_then(|x| locate_eden_config_dir(x))
+    {
+        Ok(config_dir)
+    // Then check if the current working directory is an EdenFS mount. If not, we should
+    // default to the default config-dir location which varies by platform.
+    } else {
+        Ok(env::current_dir()
+            .map_err(From::from)
+            .and_then(|cwd| {
+                locate_eden_config_dir(&cwd).ok_or_else(|| anyhow!("cwd is not in an eden mount"))
+            })
+            .unwrap_or(expand_path(DEFAULT_CONFIG_DIR)))
+    }
+}
+
+pub fn get_etc_eden_dir(etc_eden_dir_override: &Option<PathBuf>) -> PathBuf {
+    if let Some(etc_eden_dir) = etc_eden_dir_override {
+        etc_eden_dir.clone()
+    } else {
+        DEFAULT_ETC_EDEN_DIR.into()
+    }
+}
+
+pub fn get_home_dir(home_dir_override: &Option<PathBuf>) -> Option<PathBuf> {
+    if let Some(home_dir) = home_dir_override {
+        Some(home_dir.clone())
+    } else {
+        dirs::home_dir()
+    }
 }
