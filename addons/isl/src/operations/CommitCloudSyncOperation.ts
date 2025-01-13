@@ -10,11 +10,15 @@ import {Operation} from './Operation';
 export class CommitCloudSyncOperation extends Operation {
   static opName = 'CommitCloudSync';
 
-  constructor() {
+  constructor(private full = false) {
     super('CommitCloudSyncOperation');
   }
 
   getArgs() {
-    return ['cloud', 'sync'];
+    const args = ['cloud', 'sync'];
+    if (this.full) {
+      args.push('--full');
+    }
+    return args;
   }
 }
