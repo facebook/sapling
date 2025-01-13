@@ -2238,6 +2238,8 @@ buildIncludedAndExcludedRoots(
 bool isPathIncluded(
     const std::vector<RelativePath>& includedRoots,
     const std::vector<RelativePath>& excludedRoots,
+    const std::vector<std::string>& includedSuffixes,
+    const std::vector<std::string>& excludedSuffixes,
     RelativePath path) {
   if (!includedRoots.empty()) {
     bool included = false;
@@ -2255,11 +2257,35 @@ bool isPathIncluded(
     }
   }
 
+  if (!includedSuffixes.empty()) {
+    bool included = false;
+    // test to see if path matches includedSuffixes - include the path
+    for (const auto& includedSuffix : includedSuffixes) {
+      if (ends_with(path.asString(), includedSuffix)) {
+        included = true;
+        break;
+      }
+    }
+
+    // includedSuffixes not empty and no match - do not include the path
+    if (!included) {
+      return false;
+    }
+  }
+
   // if exclude filter is not empty
   if (!excludedRoots.empty()) {
     // test to see if path matches excludedRoots - exclude the path
     for (const auto& excludedRoot : excludedRoots) {
       if (excludedRoot == path || excludedRoot.isParentDirOf(path)) {
+        return false;
+      }
+    }
+  }
+
+  if (!excludedSuffixes.empty()) {
+    for (const auto& excludedSuffix : excludedSuffixes) {
+      if (ends_with(path.asString(), excludedSuffix)) {
         return false;
       }
     }
@@ -2339,6 +2365,8 @@ void EdenServiceHandler::sync_changesSinceV2(
         config->vcsDirectories.getValue(),
         includedRoots,
         excludedRoots);
+    auto includedAndExcludedSuffixes = std::make_pair(
+        std::move(includedSuffixes), std::move(excludedSuffixes));
 
     const auto isTruncated = mountHandle.getJournal().forEachDelta(
         *fromPosition.sequenceNumber_ref() + 1,
@@ -2354,6 +2382,8 @@ void EdenServiceHandler::sync_changesSinceV2(
           bool includePath1 = isPathIncluded(
               includedAndExcludeRoots.first,
               includedAndExcludeRoots.second,
+              includedAndExcludedSuffixes.first,
+              includedAndExcludedSuffixes.second,
               current.path1);
           bool includePath2 = false;
 
@@ -2363,11 +2393,14 @@ void EdenServiceHandler::sync_changesSinceV2(
           if (current.isPath2Valid) {
             // Determine if path2 passes filters, but only if path1 one
             // doesn't to avoid an extra lookup
-            includePath2 = includePath1 ? false
-                                        : isPathIncluded(
-                                              includedAndExcludeRoots.first,
-                                              includedAndExcludeRoots.second,
-                                              current.path2);
+            includePath2 = includePath1
+                ? false
+                : isPathIncluded(
+                      includedAndExcludeRoots.first,
+                      includedAndExcludeRoots.second,
+                      includedAndExcludedSuffixes.first,
+                      includedAndExcludedSuffixes.second,
+                      current.path2);
             if (includePath1 || includePath2) {
               const auto& info = current.info2;
               // NOTE: we could do a bunch of runtime checks here to
