@@ -20,6 +20,7 @@ use blobstore::BlobstoreBytes;
 use blobstore::BlobstoreGetData;
 use blobstore::Storable;
 use bytes::Bytes;
+use cloned::cloned;
 use context::CoreContext;
 use derived_data_manager::dependencies;
 use derived_data_manager::BonsaiDerivable;
@@ -371,6 +372,33 @@ impl BonsaiDerivable for RootGitDeltaManifestV2Id {
         _parents: Vec<Self>,
     ) -> Result<Self> {
         derive_single(ctx, derivation_ctx, bonsai).await
+    }
+
+    async fn derive_batch(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        bonsais: Vec<BonsaiChangeset>,
+    ) -> Result<HashMap<ChangesetId, Self>> {
+        let ctx = Arc::new(ctx.clone());
+        let derivation_ctx = Arc::new(derivation_ctx.clone());
+        let output = stream::iter(bonsais)
+            .map(Ok)
+            .map_ok(|bonsai| {
+                cloned!(ctx, derivation_ctx);
+                async move {
+                    let output = tokio::spawn(async move {
+                        let bonsai_id = bonsai.get_changeset_id();
+                        let gdm_v2 = derive_single(&ctx, &derivation_ctx, bonsai).await?;
+                        anyhow::Ok((bonsai_id, gdm_v2))
+                    })
+                    .await??;
+                    anyhow::Ok(output)
+                }
+            })
+            .try_buffer_unordered(100)
+            .try_collect::<Vec<_>>()
+            .await?;
+        Ok(output.into_iter().collect())
     }
 
     async fn derive_from_predecessor(
