@@ -13,12 +13,22 @@ setup backing repo
 #else
   $ eden --home-dir $TESTTMP restart 2>1 > /dev/null
 #endif
-  $ newclientrepo
+  $ newclientrepo crepo1 serverrepo
   $ drawdag <<'EOS'
   > B
   > |
   > A
   > EOS
+  $ for i in html www/html .dps i/.mean slowly; do
+  >   mkdir -p $i
+  > done
+  $ for i in foo.bcmap html/baz.bcmap www/html/baz.bcmap baz.txt foo.txt bar.rs throw.dot .dps/very.dot .more.dot .stop.dot i/.mean/slow.dot slowly/.and.by.slow.dot throw.dot; do
+  >   touch $i
+  > done
+  $ hg commit -Am "many files now" -q
+  $ hg push --to master --create -q
+  $ hg push --to theB -r $B --create -q
+  $ newclientrepo clientrepo serverrepo
 
 test eden glob with allowlisted queries
   $ eden debug logging eden/fs/service=DBG4 > /dev/null
@@ -26,9 +36,6 @@ test eden glob with allowlisted queries
   foo.bcmap
   html/baz.bcmap
   www/html/baz.bcmap
-  $ mkdir www
-  $ mkdir html
-  $ mkdir www/html
   $ cd html
   $ eden glob '**/*.bcmap' --list-only-files
   baz.bcmap
@@ -49,16 +56,16 @@ test eden glob with allowlisted queries
   $ mkdir depth1
   $ cd depth1
 # return nothing due to not being in repo root
-  $ eden glob **/*.rs --list-only-files
+  $ eden glob '**/*.rs' --list-only-files
 # Add repo flag to use root instead of cwd
-  $ eden glob **/*.rs --list-only-files --repo $TESTTMP/repo1
+  $ eden glob '**/*.rs' --list-only-files --repo $TESTTMP/clientrepo
   bar.rs
   $ mkdir depth2
   $ cd depth2
-  $ eden glob **/*.dot --list-only-files --repo $TESTTMP/repo1
+  $ eden glob '**/*.dot' --list-only-files --repo $TESTTMP/clientrepo
   throw.dot
   $ cd ../..
-  $ eden glob **/*.dot --include-dot-files --list-only-files
+  $ eden glob '**/*.dot' --include-dot-files --list-only-files
   .dps/very.dot
   .more.dot
   .stop.dot
@@ -67,15 +74,15 @@ test eden glob with allowlisted queries
   throw.dot
 
 Test local files
-  $ eden glob **/*.local --list-only-files
+  $ eden glob '**/*.local' --list-only-files
   $ touch local.local
-  $ eden glob **/*.local --list-only-files
+  $ eden glob '**/*.local' --list-only-files
   local.local
 # Test that local files do not show up when using revision
-  $ eden glob **/*.local --list-only-files --revision 0000000000000000000000000000000000000000
+  $ eden glob '**/*.local' --list-only-files --revision 0000000000000000000000000000000000000000
 
 # Test that local file dtype changes register
-  $ hg checkout $A > /dev/null
+  $ hg checkout $A -q
   $ touch bar.rs
   $ hg add bar.rs
   $ hg amend 2> /dev/null
