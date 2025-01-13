@@ -29,3 +29,5 @@ Quick check for making sure this test is capable of using EdenFS
   A
   bar
   foo
+
+  $ hg st
