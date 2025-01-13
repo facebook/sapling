@@ -48,7 +48,7 @@ pub fn decorate_workspace_name_to_valid_acl_name(name: &str) -> String {
     workspace_decorated = workspace_decorated
         .chars()
         .map(|c| {
-            if c.is_alphanumeric() || allowed_punctuation.contains(&c) {
+            if c.is_ascii_alphanumeric() || allowed_punctuation.contains(&c) {
                 c
             } else {
                 '_'
@@ -132,6 +132,10 @@ mod test {
                 "user/testuser@oculus.com/other name with spaces"
             ),
             "user/testuser_oculus.com/other_name_with_spaces"
+        );
+        assert_eq!(
+            decorate_workspace_name_to_valid_acl_name("user/testuser/秘密项目"),
+            "user/testuser/____"
         );
     }
 }
