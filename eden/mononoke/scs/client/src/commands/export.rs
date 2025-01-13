@@ -669,7 +669,9 @@ async fn filesystem_writer<'a, 'b>(
             // Kick off the next write
             {
                 cloned!(file_metadata);
-                if file_metadata.entry_type == thrift::EntryType::LINK && cfg!(unix) {
+
+                #[cfg(unix)]
+                if file_metadata.entry_type == thrift::EntryType::LINK {
                     use std::ffi::OsStr;
                     use std::os::unix::ffi::OsStrExt;
                     let fut = Box::new(tokio::spawn(async move {
@@ -680,28 +682,30 @@ async fn filesystem_writer<'a, 'b>(
                         Ok(())
                     }));
                     file_writes_tx.send(fut).await?;
-                } else {
-                    let out_file = tokio::fs::File::create(&file_metadata.path).await?;
-                    // Create a buffered writer for the file
-                    let mut writer = BufWriter::new(out_file);
-                    let fut = Box::new(tokio::spawn(async move {
-                        while let Some(chunk) = chunks_rx.recv().await {
-                            writer.write_all(&chunk).await?;
-                        }
-                        writer.flush().await?;
-                        Ok(())
-                    }));
-                    file_writes_tx.send(fut).await?;
-                    #[cfg(unix)]
-                    if file_metadata.entry_type == thrift::EntryType::EXEC {
-                        use std::os::unix::fs::PermissionsExt;
-                        let out_file = tokio::fs::File::open(&file_metadata.path).await?;
-                        let mut permissions = out_file.metadata().await?.permissions();
-                        let mode = permissions.mode();
-                        // Propagate read permissions to execute permissions.
-                        permissions.set_mode(mode | ((mode & 0o444) >> 2));
-                        tokio::fs::set_permissions(file_metadata.path, permissions).await?
+                    continue;
+                }
+
+                let out_file = tokio::fs::File::create(&file_metadata.path).await?;
+                // Create a buffered writer for the file
+                let mut writer = BufWriter::new(out_file);
+                let fut = Box::new(tokio::spawn(async move {
+                    while let Some(chunk) = chunks_rx.recv().await {
+                        writer.write_all(&chunk).await?;
                     }
+                    writer.flush().await?;
+                    Ok(())
+                }));
+                file_writes_tx.send(fut).await?;
+
+                #[cfg(unix)]
+                if file_metadata.entry_type == thrift::EntryType::EXEC {
+                    use std::os::unix::fs::PermissionsExt;
+                    let out_file = tokio::fs::File::open(&file_metadata.path).await?;
+                    let mut permissions = out_file.metadata().await?.permissions();
+                    let mode = permissions.mode();
+                    // Propagate read permissions to execute permissions.
+                    permissions.set_mode(mode | ((mode & 0o444) >> 2));
+                    tokio::fs::set_permissions(file_metadata.path, permissions).await?
                 }
             }
         }
