@@ -67,7 +67,7 @@ Create a tracking bookmark
 Test push tracking
 
   $ cd ..
-  $ newclientrepo repo2 test:repo1 a b
+  $ newclientrepo repo2 repo1 a b
   $ setconfig 'remotenames.selectivepulldefault=a b'
   $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
   @  b  remote/b

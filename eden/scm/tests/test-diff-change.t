@@ -37,7 +37,7 @@ Testing diff --change
 Test dumb revspecs: top-level "x:y", "x:", ":y" and ":" ranges should be handled
 as pairs even if x == y, but not for "f(x:y)" nor "x::y" (issue3474, issue4774)
 
-  $ newclientrepo dumbspec test:a_server book
+  $ newclientrepo dumbspec a_server book
   $ echo "wdir" > file.txt
 
   $ hg diff -r 'desc(third)':'desc(third)'
@@ -70,7 +70,7 @@ as pairs even if x == y, but not for "f(x:y)" nor "x::y" (issue3474, issue4774)
   abort: empty revision range
   [255]
 
-  $ newclientrepo dumbspec-rev0 test:a_server book head0
+  $ newclientrepo dumbspec-rev0 a_server book head0
   $ hg up -q head0
   $ echo "wdir" > file.txt
 

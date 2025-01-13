@@ -22,7 +22,7 @@ Set up
   $ hg commit -qAm cc
   $ hg bookmark three -i
   $ hg push -q -r . --to three --create
-  $ newclientrepo clone test:repo_server one two three
+  $ newclientrepo clone repo_server one two three
 
 Test that hg pull --rebase aborts without --dest
   $ hg log -G --all -T '{node|short} {bookmarks} {remotenames}'

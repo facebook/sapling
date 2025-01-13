@@ -12,7 +12,7 @@ Make sure we minimize content fetches:
   >      # A/.hgdirsync = foo.bar = baz\n
   > EOS
 
-  $ newclientrepo client test:server
+  $ newclientrepo client server
   $ enable dirsync
   $ hg go -q $B
   $ hg rm a_dir/a

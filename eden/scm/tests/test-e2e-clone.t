@@ -11,7 +11,7 @@
   >     # A/bar = bar
   > EOS
   $ hg push -r $A --to master --create -q
-  $ newclientrepo repo2 "mononoke://$(mononoke_address)/repo1"
+  $ newclientrepo repo2 repo1
   $ cd "$TESTTMP/repo2"
   $ eden list
   $TESTTMP/repo1
@@ -31,3 +31,7 @@ Quick check for making sure this test is capable of using EdenFS
   foo
 
   $ hg st
+
+Check that pulling is using the correct url
+  $ hg pull
+  pulling from test:repo1

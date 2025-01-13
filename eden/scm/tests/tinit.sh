@@ -50,19 +50,18 @@ newclientrepo() {
   fi
   if [ -z "$server" ]; then
     if [ -n "$USE_MONONOKE" ] ; then
-      servername="${reponame}"
-      newserver "${servername}"
-      server="mononoke://$(mononoke_address)/${servername}"
+      server="${reponame}"
     else
-      server="test:${reponame}_server"
+      server="${reponame}_server"
     fi
   fi
   if [ -z "$USE_MONONOKE" ] ; then
     remflog="--config remotefilelog.reponame=${reponame}"
   else
+    newserver "${server}"
     remflog=""
   fi
-  hg clone --config "clone.use-rust=True" $remflog -q "$server" "$TESTTMP/$reponame"
+  hg clone --config "clone.use-rust=True" $remflog -q "test:${server}" "$TESTTMP/$reponame"
 
   local drawdaginput=""
   while IFS= read line
@@ -96,6 +95,11 @@ newremoterepo() {
 
 newserver() {
   local reponame="$1"
+  mkdir -p "$TESTTMP/.servers"
+  if [ -f "$TESTTMP/.servers/$reponame" ]; then
+    return 0
+  fi
+  touch "$TESTTMP/.servers/$reponame"
   if [ -n "$USE_MONONOKE" ] ; then
     REPONAME=$reponame setup_common_config
     mononoke

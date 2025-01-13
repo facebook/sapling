@@ -9,7 +9,7 @@
   >     # bookmark master = A
   > EOS
 
-  $ newclientrepo client test:repo
+  $ newclientrepo client repo
   $ ls -l
   -rw-r--r-- A
   -rwxr-xr-x exec

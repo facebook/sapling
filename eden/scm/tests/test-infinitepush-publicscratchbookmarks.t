@@ -13,8 +13,8 @@
   $ hg commit -Aqm commit1
   $ hg book master
 
-  $ newclientrepo client1 test:server
-  $ newclientrepo client2 test:server
+  $ newclientrepo client1 server
+  $ newclientrepo client2 server
   $ cd ../client1
 
 Attempt to push a public commit to a scratch bookmark.  There is no scratch

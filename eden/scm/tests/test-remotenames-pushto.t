@@ -8,7 +8,7 @@ Set up extension and repos
 For convenience. The test was written without selectivepull and uses the "@" bookmark.
   $ setconfig remotenames.selectivepulldefault=master,@
 
-  $ newclientrepo repo2 test:repo1
+  $ newclientrepo repo2 repo1
 
 Test that anonymous heads are disallowed by default
 

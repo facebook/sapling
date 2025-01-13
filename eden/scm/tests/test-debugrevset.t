@@ -93,7 +93,7 @@ Test remote/lazy hash prefix lookup:
   112478962961147124edd43549aedd1a335e44bf
   426bada5c67598ca65036d57d9e4b64b0c1ce7a0
 
-  $ newclientrepo client test:remote
+  $ newclientrepo client remote
 
   $ hg debugrevset 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
   426bada5c67598ca65036d57d9e4b64b0c1ce7a0

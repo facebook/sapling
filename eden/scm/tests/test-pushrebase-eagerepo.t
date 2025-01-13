@@ -34,7 +34,7 @@ Set up server repository
 
 Test fast forward push
 
-  $ newclientrepo client test:server
+  $ newclientrepo client server
   $ hg up -q master
   $ echo x >> a && hg commit -qm 'add a'
   $ hg commit --amend -qm 'changed message'
@@ -64,7 +64,7 @@ Test fast forward push
   o  2bb9d20e471c initial
 
 the master bookmark should point to the latest commit
-  $ newclientrepo client2 test:server
+  $ newclientrepo client2 server
   $ log
   @  ea98a8f95390 changed message remote/master
   │
@@ -80,7 +80,7 @@ test pushrebase conflicts
 #endif
 
 Test pushrebase a diff stack
-  $ newclientrepo client3 test:server
+  $ newclientrepo client3 server
   $ hg go -q 2bb9d20e471c
   $ echo 1 >> c && hg ci -qAm "add c"
   $ echo 2 >> c && hg ci -qm "update c"

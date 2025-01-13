@@ -12,7 +12,7 @@
   > A
   > EOS
 
-  $ newclientrepo client test:server
+  $ newclientrepo client server
   $ hg go -q $B
   $ cat B
   B (no-eol)

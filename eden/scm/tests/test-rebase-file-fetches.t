@@ -16,7 +16,7 @@ Make sure we minimize content fetches:
   >      # A/.hgdirsync = foo.bar = baz\n
   > EOS
 
-  $ newclientrepo client test:server
+  $ newclientrepo client server
   $ enable dirsync
   $ LOG=file_fetches=trace,tree_fetches=trace hg rebase -q -r $B -d $C
   TRACE tree_fetches: attrs=["content"] keys=["@0a5b2149", "@550bab77", "@e06512eb"]
@@ -36,7 +36,7 @@ Make sure we batch tree fetches well:
   >      # A/.hgdirsync = foo.bar = baz\n
   > EOS
 
-  $ newclientrepo client2 test:server2
+  $ newclientrepo client2 server2
   $ enable dirsync
   $ hg pull -qr $C
   $ LOG=file_fetches=trace,tree_fetches=trace hg rebase -q -s $B -d $E
@@ -62,7 +62,7 @@ Make sure we batch fetch content for files needing merge:
   >      # A/.hgdirsync = foo.bar = baz\n
   > EOS
 
-  $ newclientrepo client3 test:server3
+  $ newclientrepo client3 server3
   $ enable dirsync
   $ LOG=file_fetches=trace,tree_fetches=trace hg rebase -q -r $B -d $C
   TRACE tree_fetches: attrs=["content"] keys=["@629dc730", "@77806f9c", "@da6ef8ac"]

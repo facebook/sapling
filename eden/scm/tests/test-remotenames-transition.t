@@ -14,7 +14,7 @@ Set up extension and repos
   $ hg boo bm1
   $ hg boo bm2
   $ cd ..
-  $ newclientrepo repo2 test:repo1 bm1
+  $ newclientrepo repo2 repo1 bm1
   $ setconfig 'remotenames.selectivepulldefault=bm1 bm2'
   $ hg pull
   pulling from test:repo1

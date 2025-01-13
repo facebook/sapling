@@ -2,7 +2,7 @@
   $ setconfig scmstore.fetch-from-cas=true scmstore.fetch-tree-aux-data=true scmstore.tree-metadata-mode=always
 
 First sanity check eagerepo works as CAS store
-  $ newclientrepo client1 test:server
+  $ newclientrepo client1 server
   $ echo "A  # A/dir/file = contents" | drawdag
 
 Remote doesn't know about commit yet.
@@ -59,7 +59,7 @@ Can also fetch tree data.
 
 Empty local/shared caches.
   $ setconfig remotefilelog.cachepath=$TESTTMP/cache2
-  $ newclientrepo client2 test:server
+  $ newclientrepo client2 server
   $ hg pull -qB main
 
 scmstore can fetch (pure) file content from CAS:

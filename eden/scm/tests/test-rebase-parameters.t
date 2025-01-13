@@ -48,14 +48,14 @@
 
 Version with only two heads (to allow default destination to work)
 
-  $ newclientrepo a2heads test:a
+  $ newclientrepo a2heads a
   $ hg pull -r $D
   pulling from test:a
   searching for changes
 
 These fail:
 
-  $ newclientrepo a0 test:a
+  $ newclientrepo a0 a
   $ hg pull -r $I -r $G -r $D
   pulling from test:a
   searching for changes

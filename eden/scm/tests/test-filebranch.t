@@ -25,7 +25,7 @@ Creating base:
   $ hg commit -m "base"
   $ hg push -q -r . --to book --create
 
-  $ newclientrepo b test:a_server book
+  $ newclientrepo b a_server book
 
 Creating branch a:
 

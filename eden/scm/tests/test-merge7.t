@@ -14,7 +14,7 @@ initial
   $ hg push -q --to book --create
 
 clone
-  $ newclientrepo test-b test:test-a_server book
+  $ newclientrepo test-b test-a_server book
 
 change test-a
   $ cd ../test-a

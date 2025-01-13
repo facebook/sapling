@@ -7,7 +7,7 @@
   $ setconfig checkout.use-rust=true
 
 Create a repo that touches a few files
-  $ newclientrepo client1 test:server
+  $ newclientrepo client1 server
   $ mkdir dir1 dir2
   $ touch dir1/x
   $ touch dir2/x

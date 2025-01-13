@@ -22,7 +22,7 @@ Test hg pull --rebase degrades gracefully if rebase extension is not loaded
   $ mkcommit root
   $ hg book bookmarkonremote
 
-  $ newclientrepo localrepo test:remoterepo bookmarkonremote
+  $ newclientrepo localrepo remoterepo bookmarkonremote
 
 Make sure to enable tracking
   $ hg book bmtrackingremote --track remote/bookmarkonremote

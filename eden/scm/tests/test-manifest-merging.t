@@ -16,7 +16,7 @@
   $ hg push -q --to book --create
   $ cd ..
 
-  $ newclientrepo work test:base_server book
+  $ newclientrepo work base_server book
 
   $ echo beta > beta
   $ hg ci -A -m 'add beta'

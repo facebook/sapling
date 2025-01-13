@@ -12,7 +12,7 @@
   >    # A/file=file
   > EOS
 
-  $ newclientrepo client test:server
+  $ newclientrepo client server
   $ hg pull -q -r $A
 
 Sanity check that children metadata isn't fetched by default:

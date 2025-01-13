@@ -520,7 +520,7 @@ Test update_distance logging:
 # Test output when there are lots of edenapi errors:
 #if no-eden
 
-  $ newclientrepo broken_client test:broken_server
+  $ newclientrepo broken_client broken_server
   $ cd ~/broken_server
   $ for i in `seq 10`; do touch file_$i; done
   $ hg commit -Aqm foo

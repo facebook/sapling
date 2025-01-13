@@ -26,7 +26,7 @@
 
 # Non-bookmarked public heads should not be visible in smartlog
 
-  $ newclientrepo client test:repo_server master1
+  $ newclientrepo client repo_server master1
   $ hg book mybook -r 'desc(x1)'
   $ hg up 'desc(x1)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

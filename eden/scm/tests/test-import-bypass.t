@@ -10,7 +10,7 @@
 
 Test --bypass with other options
 
-  $ newclientrepo repo-options test:server
+  $ newclientrepo repo-options server
   $ echo a > a
   $ hg ci -Am adda
   adding a
@@ -243,7 +243,7 @@ Test applying multiple patches
   $ hg push -r . -q --to head2 --create
   $ hg export . > ../patch2.diff
   $ cd ..
-  $ newclientrepo repo-multi1 test:server head1 head2
+  $ newclientrepo repo-multi1 server head1 head2
   $ hg up 'desc(adda)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg import --bypass ../patch1.diff ../patch2.diff
@@ -263,7 +263,7 @@ Test applying multiple patches
 
 Test applying multiple patches with --exact
 
-  $ newclientrepo repo-multi2 test:server head1 head2
+  $ newclientrepo repo-multi2 server head1 head2
   $ hg up 540395c44225
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg import --bypass --exact ../patch1.diff ../patch2.diff

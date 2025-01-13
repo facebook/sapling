@@ -29,7 +29,7 @@ Prepare Repo:
 
 Clone the lazy repo:
 
-  $ newclientrepo cloned1 test:e1
+  $ newclientrepo cloned1 e1
 
 Commit and edit on top of B:
 

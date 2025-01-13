@@ -21,7 +21,7 @@
   $ hg -R repo commit -qAm a
   $ hg -R repo bookmark master
   $ hg -R repo push -q -r . --to book --create
-  $ newclientrepo clone test:repo_server book
+  $ newclientrepo clone repo_server book
 
 # Pull --rebase with no local changes
 

@@ -9,7 +9,7 @@
   > A
   > EOS
 
-  $ newclientrepo client test:server
+  $ newclientrepo client server
 
 First, sanity that we don't have any data locally:
   $ hg debugscmstore -r $A A --fetch-mode=LOCAL --mode=file

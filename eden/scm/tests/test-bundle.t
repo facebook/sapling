@@ -48,7 +48,7 @@ Bundle --all
 
 Bundle test to full.hg
 
-  $ hg -R test bundle full.hg test:empty_server
+  $ hg -R test bundle full.hg empty_server
   searching for changes
   9 changesets found
 
@@ -193,7 +193,7 @@ test for 540d1059c802
   $ hg ci -m 'add foo'
   $ hg push -q -r . --to book --create
 
-  $ newclientrepo copy test:orig_server book
+  $ newclientrepo copy orig_server book
 
   $ echo >> foo
   $ hg ci -m 'change foo'

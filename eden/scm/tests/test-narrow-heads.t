@@ -24,7 +24,7 @@ Prepare the server repo
 
 Prepare the client repo
 
-  $ newclientrepo client test:server_server fake_master stable
+  $ newclientrepo client server_server fake_master stable
 
 Verify the commits
 

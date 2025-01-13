@@ -13,9 +13,9 @@
   $ hg ci -m "added a b"
   $ hg push -r . -q --to book --create
 
-  $ newclientrepo test3 test:test1_server book
+  $ newclientrepo test3 test1_server book
 
-  $ newclientrepo test2 test:test1_server book
+  $ newclientrepo test2 test1_server book
   $ chmod +x a
   $ hg ci -m "chmod +x a"
   $ hg push -q -r . --to book2 --create

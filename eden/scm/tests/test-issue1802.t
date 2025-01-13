@@ -15,12 +15,12 @@ Create extension that can disable exec checks:
   >     extensions.wrapfunction(util, 'checkexec', checkexec)
   > EOF
 
-  $ newclientrepo unix-repo test:server
+  $ newclientrepo unix-repo server
   $ touch a
   $ hg add a
   $ hg commit -m 'unix: add a'
   $ hg push -q -r . --to book --create
-  $ newclientrepo win-repo test:server book
+  $ newclientrepo win-repo server book
   $ cd ../unix-repo
   $ chmod +x a
   $ hg commit -m 'unix: chmod a'

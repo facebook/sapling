@@ -11,7 +11,7 @@ Setup the server
 
 Setup the client
 
-  $ newclientrepo client test:master_server
+  $ newclientrepo client master_server
 
 Make some commits
 

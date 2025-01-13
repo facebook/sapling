@@ -9,7 +9,7 @@
 
 Test import and merge diffs
 
-  $ newclientrepo repo test:server
+  $ newclientrepo repo server
   $ echo a > a
   $ hg ci -Am adda
   adding a
@@ -33,7 +33,7 @@ Test import and merge diffs
   $ hg ci -m merge
   $ hg export . > ../merge.diff
   $ grep -v '^merge$' ../merge.diff > ../merge.nomsg.diff
-  $ newclientrepo repo2 test:server rev2
+  $ newclientrepo repo2 server rev2
   $ hg pull -B rev3
   pulling from test:server
   searching for changes
@@ -124,7 +124,7 @@ Test that --exact on a bad header doesn't corrupt the repo (issue3616)
   >>> with open("../a.patch", "ab") as apatch:
   ...     _ = apatch.write(b"".join(open("out", "rb").readlines()[7:]))
 
-  $ newclientrepo repor-clone test:repo3_server rev0
+  $ newclientrepo repor-clone repo3_server rev0
   $ hg pull -q -B rev1
 
   $ hg import --exact ../a.patch

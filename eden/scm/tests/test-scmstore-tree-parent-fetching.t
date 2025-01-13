@@ -7,7 +7,7 @@
   > A  # A/dir/file=foo
   > EOS
 
-  $ newclientrepo client test:server
+  $ newclientrepo client server
   $ hg pull -qr $B
 
 We can fetch tree parents:

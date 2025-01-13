@@ -14,7 +14,7 @@ Prepare
   adding a
   $ hg -R a push -q --to book --create
 
-  $ newclientrepo b test:a_server book
+  $ newclientrepo b a_server book
   $ cd ..
 
 Test that raising an exception in the release function doesn't cause the lock to choke

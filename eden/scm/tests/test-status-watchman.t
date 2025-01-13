@@ -3,7 +3,7 @@
 
   $ enable sparse
 
-  $ newclientrepo client test:server
+  $ newclientrepo client server
 
   $ cd ~/server
   $ drawdag <<EOS

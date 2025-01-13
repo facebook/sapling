@@ -40,7 +40,7 @@ create two heads to verify that we only see one change in the log later
 
 clone, commit, pull
   $ hg push -q -r . --to head2 --create
-  $ newclientrepo blackboxtest2 test:blackboxtest_server head1 head2
+  $ newclientrepo blackboxtest2 blackboxtest_server head1 head2
   $ cd ../blackboxtest
   $ echo c > c
   $ hg commit -Amc

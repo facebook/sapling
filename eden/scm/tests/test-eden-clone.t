@@ -7,7 +7,7 @@ setup backing repo
   $ setconfig checkout.use-rust=True
   $ setconfig experimental.rust-clone-updaterev=True
 
-  $ newclientrepo e1_client test:e1 << 'EOS'
+  $ newclientrepo e1_client e1 << 'EOS'
   > E  # bookmark master = E
   > |
   > D

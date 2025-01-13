@@ -87,7 +87,7 @@ Y are swapped 0 to 2 times, and merge those branches.
 
 Try the same on a shallow repo
 
-  $ newclientrepo shallow1 test:nonshallow1_server book
+  $ newclientrepo shallow1 nonshallow1_server book
   * files fetched over * (glob) (?)
 
   $ for i in B C D E H; do
@@ -195,7 +195,7 @@ With "--removed", it is slightly better.
 
 Try again in a shallow repo:
 
-  $ newclientrepo shallow2 test:nonshallow2_server book
+  $ newclientrepo shallow2 nonshallow2_server book
 
   $ for i in A C E G; do
   >   echo log via $i:

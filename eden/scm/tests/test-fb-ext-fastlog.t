@@ -30,7 +30,7 @@
   $ hg push -q --to master --create
   $ cd ..
 
-  $ newclientrepo shallow test:master_server
+  $ newclientrepo shallow master_server
   $ echo x >> x
   $ hg commit -Aqm xx2
   $ cd ../master

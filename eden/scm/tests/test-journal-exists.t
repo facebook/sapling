@@ -7,7 +7,7 @@
   adding a
   $ hg push -q -r . --to book --create
 
-  $ newclientrepo foo test:repo_server book
+  $ newclientrepo foo repo_server book
   $ cd ../repo
 
 Journal is cleaned up automatically.

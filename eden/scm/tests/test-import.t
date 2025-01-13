@@ -44,7 +44,7 @@
 # (this also tests that editor is not invoked, if the patch contains the
 # commit message and '--edit' is not specified)
 
-  $ newclientrepo b test:a_server rev0
+  $ newclientrepo b a_server rev0
   $ HGEDITOR=cat hg import ../exported-tip.patch
   applying ../exported-tip.patch
 
@@ -65,7 +65,7 @@
   > print('patching file a')
   > open('a', 'wb').write(b'line2\n')
   > EOF
-  $ newclientrepo b0 test:a_server rev0
+  $ newclientrepo b0 a_server rev0
   $ HGEDITOR=cat hg --config "ui.patch=hg debugpython -- ../dummypatch.py" import --edit ../exported-tip.patch
   applying ../exported-tip.patch
   second change
@@ -83,7 +83,7 @@
 # (this also tests that editor is invoked, if the patch doesn't contain
 # the commit message, regardless of '--edit')
 
-  $ newclientrepo b1 test:a_server rev0
+  $ newclientrepo b1 a_server rev0
   $ cat > $TESTTMP/editor.sh << 'EOF'
   > env | grep HGEDITFORM
   > cat \$1
@@ -117,7 +117,7 @@
 
 # import of plain diff should be ok with message
 
-  $ newclientrepo b2 test:a_server rev0
+  $ newclientrepo b2 a_server rev0
   $ hg import -mpatch ../diffed-tip.patch
   applying ../diffed-tip.patch
 
@@ -125,7 +125,7 @@
 # (this also tests that editor is not invoked, if
 # '--message'/'--logfile' is specified and '--edit' is not)
 
-  $ newclientrepo b3 test:a_server rev0
+  $ newclientrepo b3 a_server rev0
   $ hg import -mpatch -d '1 0' -u 'user@nowhere.net' ../diffed-tip.patch
   applying ../diffed-tip.patch
   $ hg tip -pv
@@ -148,7 +148,7 @@
 # (this also tests that editor is not invoked, if '--no-commit' is
 # specified, regardless of '--edit')
 
-  $ newclientrepo b4 test:a_server rev0
+  $ newclientrepo b4 a_server rev0
   $ HGEDITOR=cat hg import --no-commit --edit ../diffed-tip.patch
   applying ../diffed-tip.patch
   $ hg diff --nodates
@@ -161,7 +161,7 @@
 
 # import of malformed plain diff should fail
 
-  $ newclientrepo b5 test:a_server rev0
+  $ newclientrepo b5 a_server rev0
 
   $ sed 's/1,1/foo/' < ../diffed-tip.patch > ../broken.patch
 
@@ -175,7 +175,7 @@
 # used to hide a bug.
 
   $ mkdir dir
-  $ newclientrepo dir/b test:a_server rev0
+  $ newclientrepo dir/b a_server rev0
   $ cd ..
   $ hg -R b import ../exported-tip.patch
   applying ../exported-tip.patch
@@ -183,7 +183,7 @@
 
 # import from stdin
 
-  $ newclientrepo b6 test:a_server rev0
+  $ newclientrepo b6 a_server rev0
   $ hg import - < ../exported-tip.patch
   applying patch from stdin
 
@@ -200,7 +200,7 @@
 
 # override commit message
 
-  $ newclientrepo b8 test:a_server rev0
+  $ newclientrepo b8 a_server rev0
   $ cd ..
   $ hg --cwd b8 import -m override - < exported-tip.patch
   applying patch from stdin
@@ -223,7 +223,7 @@ Python utility:
 
 # plain diff in email, subject, message body
 
-  $ newclientrepo b9 test:a_server rev0
+  $ newclientrepo b9 a_server rev0
   $ cd ..
 
   >>> mkmsg("diffed-tip.patch", "msg.patch")
@@ -237,7 +237,7 @@ Python utility:
 
 # hg export in email, should use patch header
 
-  $ newclientrepo b10 test:a_server rev0
+  $ newclientrepo b10 a_server rev0
   $ cd ..
 
   >>> mkmsg("exported-tip.patch", "msg.patch")
@@ -263,7 +263,7 @@ Python utility:
 
 # plain diff in email, [PATCH] subject, message body with subject
 
-  $ newclientrepo b11 test:a_server rev0
+  $ newclientrepo b11 a_server rev0
   $ cd ..
 
   >>> mkmsg2("diffed-tip.patch", "msg.patch")
@@ -285,7 +285,7 @@ Python utility:
   $ hg --cwd a book rev2
   $ hg --cwd a book -i
   $ hg --cwd a export -o '../patch%n' rev1 rev2
-  $ newclientrepo b12 test:a_server rev0
+  $ newclientrepo b12 a_server rev0
   $ cd ..
   $ hg --cwd b12 parents --template 'parent: {desc}\n'
   parent: a
@@ -315,7 +315,7 @@ Python utility:
 
 # hg import in a subdirectory
 
-  $ newclientrepo b13 test:a_server rev0
+  $ newclientrepo b13 a_server rev0
   $ cd ..
   $ hg --cwd a export tip > tmp
 

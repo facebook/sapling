@@ -46,7 +46,7 @@ $3 - working dir action
 
   $ tb()
   > {
-  >     newclientrepo t2 test:t_server book
+  >     newclientrepo t2 t_server book
   >     hg co -q -C 'desc(o0)'
   > 
   >     echo % add a $count

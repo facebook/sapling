@@ -23,7 +23,7 @@
 
 # Resetting past a remote bookmark should not delete the remote bookmark
 
-  $ newclientrepo client test:repo_server foo
+  $ newclientrepo client repo_server foo
   $ hg book --list-remote *
   $ hg book bar
   $ hg reset --clean 'remote/foo^'

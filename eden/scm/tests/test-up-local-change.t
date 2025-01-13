@@ -15,7 +15,7 @@
   $ hg commit -m "1"
   $ hg book main
 
-  $ newclientrepo r2 ~/r1 main
+  $ newclientrepo r2 r1 main
   $ hg up tip
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo abc > a
@@ -36,7 +36,7 @@
 
   $ cd ../r2
   $ hg pull
-  pulling from $TESTTMP/r1
+  pulling from test:r1
   searching for changes
   $ hg status
   M a
@@ -203,7 +203,7 @@ test a local add
 
   $ cd ..
   $ hg init a
-  $ newclientrepo b ~/a
+  $ newclientrepo b a
   $ cd ..
   $ echo a > b/a
   $ echo a > a/a
@@ -213,7 +213,7 @@ test a local add
   $ cd b
   $ hg add a
   $ hg pull -u -B main
-  pulling from $TESTTMP/a
+  pulling from test:a
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg st
 

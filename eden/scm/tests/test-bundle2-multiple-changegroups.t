@@ -60,7 +60,7 @@ Start with a simple repository with a single commit
 
 Clone
 
-  $ newclientrepo clone test:repo_server head1
+  $ newclientrepo clone repo_server head1
 
 Add two linear commits
 

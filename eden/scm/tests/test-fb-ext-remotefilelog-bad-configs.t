@@ -12,7 +12,7 @@ no-check-code
   $ hg commit -qAm xy
   $ hg push --to master --create -q
 
-  $ newclientrepo shallow test:master_server
+  $ newclientrepo shallow master_server
 
 Verify error message when no fallback specified
 

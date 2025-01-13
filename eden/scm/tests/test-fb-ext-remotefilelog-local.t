@@ -16,7 +16,7 @@
 
   $ cd ..
 
-  $ newclientrepo shallow test:master
+  $ newclientrepo shallow master
 
 # status
 
@@ -138,7 +138,7 @@
   2 changesets found
   $ cd ..
 
-  $ newclientrepo shallow2 test:master
+  $ newclientrepo shallow2 master
   $ hg unbundle ../local.bundle
   adding changesets
   adding manifests
@@ -168,7 +168,7 @@
 # commit without producing new node
 
   $ cd $TESTTMP
-  $ newclientrepo shallow3 test:master
+  $ newclientrepo shallow3 master
   $ echo 1 > A
   $ hg commit -m foo -A A
   $ hg log -r . -T '{node}\n'

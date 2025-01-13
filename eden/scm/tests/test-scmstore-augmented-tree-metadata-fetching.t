@@ -14,7 +14,7 @@
   >    # A/file=file
   > EOS
 
-  $ newclientrepo client test:server
+  $ newclientrepo client server
   $ hg pull -q -r $A
 
 Sanity check that children metadata isn't fetched by default:
@@ -298,7 +298,7 @@ Fetch mode can also trigger tree metadata fetch:
   )
 
 
-  $ newclientrepo client2 test:server
+  $ newclientrepo client2 server
   $ hg pull -q -r $A
   $ setconfig remotefilelog.cachepath=$TESTTMP/cache4
 

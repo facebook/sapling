@@ -7,7 +7,7 @@
 
 Pull master bookmark
 
-  $ newclientrepo localrepo test:remoterepo
+  $ newclientrepo localrepo remoterepo
   $ cd ../remoterepo
   $ echo a > a
   $ hg add a
@@ -137,7 +137,7 @@ Trying to update to unknown bookmark
   [255]
 
   $ cd ..
-  $ newclientrepo localrepo2 test:remoterepo
+  $ newclientrepo localrepo2 remoterepo
   $ hg pull
   pulling from test:remoterepo
   $ hg book --list-subscriptions
@@ -187,7 +187,7 @@ Check that `--remote` shows real remote bookmarks from default remote
 Clone remote repo with the selectivepull enabled
   $ cd ..
 
-  $ newclientrepo new_localrepo test:remoterepo
+  $ newclientrepo new_localrepo remoterepo
 
   $ hg book --list-subscriptions
      default/master            0238718db2b1

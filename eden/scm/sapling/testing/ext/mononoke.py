@@ -218,6 +218,7 @@ def wait_for_mononoke(args: List[str], stderr: BinaryIO, fs: ShellFS, env: Env) 
             f"""
 [schemes]
 mono=mononoke://{mononoke_address_v}/{{1}}
+test=mononoke://{mononoke_address_v}/{{1}}
 [edenapi]
 url=https://localhost:{mononoke_socket}/edenapi/
 """.encode()

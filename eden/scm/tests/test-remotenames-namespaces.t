@@ -23,7 +23,7 @@
   $ hg commit -qm a
   $ hg boo bm2
   $ cd ..
-  $ newclientrepo repo2 test:repo1 bm2
+  $ newclientrepo repo2 repo1 bm2
   $ hg bookmark local
 
 # Test colors

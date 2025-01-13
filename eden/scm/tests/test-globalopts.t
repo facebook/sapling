@@ -4,20 +4,20 @@
   $ setconfig devel.collapse-traceback=true
 
   $ newclientrepo server
-  $ newclientrepo a test:server_server
+  $ newclientrepo a server_server
   $ echo a > a
   $ hg ci -A -d'1 0' -m a
   adding a
   $ hg push -q -r . --to master_a --create
 
-  $ newclientrepo b test:server_server
+  $ newclientrepo b server_server
   $ echo b > b
   $ hg ci -A -d'1 0' -m b
   adding b
   $ hg push -q -r . --to master_b --create --force
   warning: repository is unrelated
 
-  $ newclientrepo c test:server_server master_a
+  $ newclientrepo c server_server master_a
   $ cat >> .hg/hgrc <<EOF
   > [paths]
   > relative = ../a

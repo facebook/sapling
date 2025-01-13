@@ -24,5 +24,5 @@
   $ hg push -r . -q --to book --create
 
   $ cd ..
-  $ newclientrepo b test:a_server
+  $ newclientrepo b a_server
   $ hg log

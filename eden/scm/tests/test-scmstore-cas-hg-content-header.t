@@ -11,7 +11,7 @@
   > A  # A/foo = foo\n
   > EOS
 
-  $ newclientrepo client test:server
+  $ newclientrepo client server
   $ hg go -q $B
   $ hg dbsh -c "print(repo['$B']['renamed'].data())"
   b'foo\n'

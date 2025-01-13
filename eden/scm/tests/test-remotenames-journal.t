@@ -20,7 +20,7 @@ Skip if journal is not available in mercurial
 Test journal with remote bookmarks works on clone
 
   $ cd ..
-  $ newclientrepo local test:remote bm bmwillnotmove
+  $ newclientrepo local remote bm bmwillnotmove
   $ hg journal remote/bm
   previous locations of 'remote/bm':
   94cf1ae9e2c8  pull -q -B bm
