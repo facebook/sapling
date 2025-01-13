@@ -43,7 +43,7 @@ e.g.
 ./incremental_integration_setup.sh server/server
 ```
 
-Note, `incremental_integration_setup.sh` builds with `@fbcode//mode/dev-nosan-lg` by default,
+Note, `incremental_integration_setup.sh` builds with `@fbcode//mode/dev` by default,
 you can add @mode/opt, then it will build in opt mode
 
 ```sh

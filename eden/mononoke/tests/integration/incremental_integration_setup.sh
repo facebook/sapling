@@ -27,8 +27,8 @@ fi
 
 shift
 
-# Set the default build mode to 'mode/dev-nosan-lg', which is the same mode used in CI.
-build_args=("@fbcode//mode/dev-nosan-lg")
+# Set the default build mode to 'mode/dev', which is the same mode used in CI.
+build_args=("@fbcode//mode/dev")
 if [ $# -ne 0 ]; then
     build_args=("$@")
 fi

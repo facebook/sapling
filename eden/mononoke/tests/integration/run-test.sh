@@ -9,7 +9,7 @@ function print_help {
     echo
     echo "Usage: $0 [--oss | --opt | --flagfile <FLAGFILE>] test-file.t ..."
     echo
-    echo "The default build mode is dev-nosan-lg."
+    echo "The default build mode is ${mode}."
     echo "--oss    change build mode to fbcode//mode/dev-rust-oss"
     echo "--flagfile FLAGFILE change build mode to specified one"
     exit 1
@@ -24,7 +24,7 @@ if [ $# -eq 0 ]; then
     print_help
 fi
 
-mode="fbcode//mode/dev-nosan-lg"
+mode="fbcode//mode/dev"
 
 while [[ $# -gt 0 ]]; do
   arg="$1"
