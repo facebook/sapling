@@ -290,18 +290,18 @@ pub async fn process_one_changeset(
     sender: Arc<dyn ModernSyncSender + Send + Sync>,
     log_to_ods: bool,
 ) -> Result<()> {
-    info!(logger, "Processing commit {:?}", cs_id);
+    info!(logger, "Processing changeset {:?}", cs_id);
 
     let cs_info = repo
         .repo_derived_data()
         .derive::<ChangesetInfo>(ctx, cs_id.clone())
         .await?;
     let bs = cs_id.load(ctx, repo.repo_blobstore()).await?;
-    let thing: Vec<_> = bs.file_changes().collect();
+    let bs_fc: Vec<_> = bs.file_changes().collect();
 
     let mut contents = Vec::new();
 
-    for (_path, file_change) in thing {
+    for (_path, file_change) in bs_fc {
         let cid = match file_change {
             FileChange::Change(change) => Some(change.content_id()),
             FileChange::UntrackedChange(change) => Some(change.content_id()),
@@ -332,6 +332,7 @@ pub async fn process_one_changeset(
     let (mut mf_ids, file_ids) =
         sort_manifest_changes(ctx, repo.repo_blobstore(), hg_mf_id, mf_ids_p).await?;
     mf_ids.push(hg_mf_id);
+
     sender.upload_trees(mf_ids).await?;
     sender.upload_filenodes(file_ids).await?;
     sender.upload_identical_changeset(vec![(hg_cs, bs)]).await?;
