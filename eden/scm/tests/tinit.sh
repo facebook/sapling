@@ -103,7 +103,7 @@ newserver() {
   if [ -n "$USE_MONONOKE" ] ; then
     REPONAME=$reponame setup_common_config
     mononoke
-    MONONOKE_START_TIMEOUT=60 wait_for_mononoke "$TESTTMP/$reponame"
+    MONONOKE_START_TIMEOUT=60 wait_for_mononoke
     REPOID=${REPOID:-0}
     export REPOID=$((REPOID+1))
   elif [ -f "$TESTTMP/.eagerepo" ] ; then
