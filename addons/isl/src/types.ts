@@ -146,6 +146,7 @@ export type DiffComment = {
   html: string;
   content?: string;
   created: Date;
+  commitHash?: string;
   /** If it's an inline comment, this is the file path with the comment */
   filename?: string;
   /** If it's an inline comment, this is the line it was added */
@@ -153,8 +154,6 @@ export type DiffComment = {
   reactions: Array<DiffCommentReaction>;
   /** Suggestion for how to change the code, as a patch */
   suggestedChange?: SuggestedChange;
-  // codePatchSuggestedChange?: SuggestedChange;
-  // signalSuggestedChange?: SuggestedChange;
   replies: Array<DiffComment>;
   /** If this comment has been resolved. true => "resolved", false => "unresolved", null => the comment is not resolvable, don't show any UI for it */
   isResolved?: boolean;
