@@ -1,5 +1,5 @@
 
-#require eden
+#require eden mononoke
 
 setup backing repo
 
@@ -31,11 +31,8 @@ setup backing repo
   $ newclientrepo clientrepo serverrepo
 
 test raw edenapi queries
-TODO(T189729875): remove the mononoke if once eagerrepo can deal with this more easily
-#if mononoke
   $ hg debugapi -e suffix_query -i "{'Hg': '$(hg whereami)'}" -i "['.bcmap']" -i "['html']"
   [{"file_path": "html/baz.bcmap"}]
-#endif
 
 test eden glob with allowlisted queries
   $ eden debug logging eden/fs/service=DBG4 > /dev/null
