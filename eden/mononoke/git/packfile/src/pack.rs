@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashMap;
-use std::hash::BuildHasherDefault;
 use std::io::Write;
 
 use anyhow::Context;
@@ -17,8 +16,8 @@ use gix_hash::ObjectId;
 use gix_pack::data::header;
 use gix_pack::data::output::Entry;
 use gix_pack::data::Version;
+use rustc_hash::FxBuildHasher;
 use rustc_hash::FxHashMap;
-use rustc_hash::FxHasher;
 use thiserror::Error;
 use tokio::io::AsyncWrite;
 use tokio::io::AsyncWriteExt;
@@ -85,10 +84,7 @@ impl<T: AsyncWrite + Unpin> PackfileWriter<T> {
             // Git uses V2 right now so we do the same
             header_info: Some((Version::V2, count)),
             object_offset_with_validity: Vec::with_capacity(count as usize),
-            object_id_with_index: HashMap::with_capacity_and_hasher(
-                count as usize,
-                BuildHasherDefault::<FxHasher>::default(),
-            ),
+            object_id_with_index: HashMap::with_capacity_and_hasher(count as usize, FxBuildHasher),
             delta_form,
         }
     }
