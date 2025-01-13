@@ -2357,8 +2357,10 @@ class DebugRunTestTest(Test):
         if use_edenfs:
             self._edenfsmanager.start(env)
 
+        cmd = env.get("HGTEST_DEBUGRUNTEST_HG", self._hgcommand)
+
         cmdargs = [
-            self._hgcommand,
+            cmd,
             "debugpython",
             "--",
             "-m",
