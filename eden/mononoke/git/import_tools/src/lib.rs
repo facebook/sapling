@@ -600,32 +600,54 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
             }
         })
         .try_buffered(prefs.concurrency);
-    while let Some((extracted_commit, file_changes)) = commits_with_file_changes
-        .try_next()
-        .try_timed()
-        .await?
-        .log_future_stats(
-            scuba.clone(),
-            "Uploaded Content Blob, Git Blob, Commits and Trees",
-            None,
-        )
-    {
-        bonsai_sender
-            .send((extracted_commit, file_changes))
-            .await
-            .context("Receiver dropped while sending Vec<(ExtractedCommit, FileChanges)>")?;
+    async {
+        while let Some((extracted_commit, file_changes)) = commits_with_file_changes
+            .try_next()
+            .try_timed()
+            .await?
+            .log_future_stats(
+                scuba.clone(),
+                "Uploaded Content Blob, Git Blob, Commits and Trees",
+                None,
+            )
+        {
+            bonsai_sender
+                .send((extracted_commit, file_changes))
+                .await
+                .context("Receiver dropped while sending Vec<(ExtractedCommit, FileChanges)>")?;
+        }
+        anyhow::Ok(())
     }
+    .try_timed()
+    .await?
+    .log_future_stats(
+        scuba.clone(),
+        "Uploaded Content Blob, Git Blob, Commits and Trees for all commits",
+        None,
+    );
     // Drop the sender since we finished sending all the commits to the bonsai creator
     drop(bonsai_sender);
     // Ensure that the bonsai creator has completed before we exit
     bonsai_creator
+        .try_timed()
         .await
         .context("Error while running bonsai_creator for commits")?
+        .log_future_stats(
+            scuba.clone(),
+            "Completed Bonsai Changeset creation for all commits",
+            None,
+        )
         .context("Panic while running bonsai_creator for commits")?;
     // Ensure that the batch finalization has completed before we exit
     batch_finalizer
+        .try_timed()
         .await
         .context("Error while running finalize_batch for commits")?
+        .log_future_stats(
+            scuba.clone(),
+            "Completed Finalize Batch for all commits",
+            None,
+        )
         .context("Panic while running finalize_batch for commits")?;
 
     debug!(ctx.logger(), "Completed git import for repo {}.", repo_name);

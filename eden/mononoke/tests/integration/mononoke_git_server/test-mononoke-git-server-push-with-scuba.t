@@ -80,6 +80,8 @@
 # Verify the timed futures logged with log tags show up in scuba logs
   $ jq .normal "$SCUBA" | grep -e "Packfile" -e "GitImport" -e "Bookmark movement" -e "Prerequisite" -e "Objects" -e "Prefetched" -e "Content Blob" -e "Bonsai Changeset" -e "Finalize Batch" | sort
     "log_tag": "Bookmark movement completed",
+    "log_tag": "Completed Bonsai Changeset creation for all commits",
+    "log_tag": "Completed Finalize Batch for all commits",
     "log_tag": "Completed Finalize Batch",
     "log_tag": "Created Bonsai Changeset for Git Commit",
     "log_tag": "Created Bonsai Changeset for Git Commit",
@@ -89,6 +91,7 @@
     "log_tag": "Parsed complete Packfile",
     "log_tag": "Prefetched existing BonsaiGit Mappings",
     "log_tag": "Sent Packfile OK",
+    "log_tag": "Uploaded Content Blob, Git Blob, Commits and Trees for all commits",
     "log_tag": "Uploaded Content Blob, Git Blob, Commits and Trees",
     "log_tag": "Uploaded Content Blob, Git Blob, Commits and Trees",
     "log_tag": "Uploaded Content Blob, Git Blob, Commits and Trees",
