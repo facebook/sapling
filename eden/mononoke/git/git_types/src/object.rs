@@ -53,13 +53,17 @@ impl ObjectKind {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct ObjectContent {
     pub parsed: Object,
     pub raw: Bytes,
 }
 
 impl ObjectContent {
+    pub fn new(parsed: Object, raw: Bytes) -> Self {
+        Self { parsed, raw }
+    }
+
     pub fn is_tree(&self) -> bool {
         self.parsed.as_tree().is_some()
     }

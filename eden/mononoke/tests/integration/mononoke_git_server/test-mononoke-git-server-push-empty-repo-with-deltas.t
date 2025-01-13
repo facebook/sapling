@@ -24,25 +24,36 @@
   $ echo "AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1." > file1
   $ git add .
   $ git commit -qam "Add file1"  
-  $ git tag -a -m "new tag" first_tag  
 # File1 should be large enough that Git create a delta for it
   $ echo "AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile1.AddFile2." > file1
   $ echo "This is file2" > file2.txt
   $ git add .
   $ git commit -qam "Modified file1, Added file2"
-  $ git tag -a empty_tag -m ""
+# Get list of all objects for verification later
+  $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/object_list
 
-Push Git repository to Mononoke
+# Push Git repository to Mononoke
   $ git pack-objects --all --stdout > packfile
   $ last_commit=$(git rev-parse HEAD)
-Create the capabilities string
+# Create the capabilities string
   $ capabilities="report-status quiet object-format=sha1"
   $ printf "00980000000000000000000000000000000000000000 $last_commit refs/heads/master_bookmark\0 $capabilities" >> push_data
   $ echo -n "0000" >> push_data
   $ cat packfile >> push_data
-Pipe the push data to CURL
+# Pipe the push data to CURL
   $ curl -X POST $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git/git-receive-pack -H 'Content-Type: application/x-git-receive-pack-request' -H 'Accept: application/x-git-receive-pack-result' -H 'Accept-Encoding: deflate, gzip, br' -k --cert "$TEST_CERTDIR/client0.crt" --key "$TEST_CERTDIR/client0.key" --data-binary "@push_data" -s -w "\nResponse code: %{http_code}\n"
-  Error in decoding packfile entry: RefDelta { base_id: Sha1(ccce194714ee3fae382fad2f4a67cd6c1a7320cd) }: A delta chain could not be followed as the ref base with id ccce194714ee3fae382fad2f4a67cd6c1a7320cd could not be found
-  Response code: 500
+  *unpack ok (glob)
+  *ok refs/heads/master_bookmark (glob)
+  * (glob)
+  Response code: 200
+
+  $ wait_for_git_bookmark_create refs/heads/master_bookmark
+
+# Clone the repo from Mononoke and validate that the push worked
+  $ cd $TESTTMP
+  $ git_client clone -q $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git check_repo
+  $ cd check_repo
+  $ git rev-list --objects --all | git cat-file --batch-check='%(objectname) %(objecttype) %(rest)' | sort > $TESTTMP/new_object_list
+  $ diff -w $TESTTMP/new_object_list $TESTTMP/object_list
 
  
