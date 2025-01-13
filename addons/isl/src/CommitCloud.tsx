@@ -19,6 +19,7 @@ import {CommitCloudSyncOperation} from './operations/CommitCloudSyncOperation';
 import {useRunOperation} from './operationsState';
 import {CommitPreview, dagWithPreviews, useMostRecentPendingOperation} from './previews';
 import {RelativeDate} from './relativeDate';
+import {repoRootAndCwd} from './repositoryData';
 import {CommitCloudBackupStatus} from './types';
 import {registerDisposable} from './utils';
 import {Button} from 'isl-components/Button';
@@ -33,6 +34,21 @@ import {useCallback, useEffect, useRef, useState} from 'react';
 import {notEmpty} from 'shared/utils';
 
 import './CommitCloud.css';
+
+export const commitCloudEnabledAtom = atom(async (get): Promise<boolean> => {
+  // depend on the cwd so we recheck when the cwd changes
+  get(repoRootAndCwd);
+
+  serverAPI.postMessage({
+    type: 'getConfig',
+    name: 'extensions.commitcloud',
+  });
+  const message = await serverAPI.nextMessageMatching('gotConfig', message => {
+    return message.name === 'extensions.commitcloud';
+  });
+  const enabled = message.value != null && message.value !== '!';
+  return enabled;
+});
 
 const cloudSyncStateAtom = atom<Result<CommitCloudSyncState> | null>(null);
 

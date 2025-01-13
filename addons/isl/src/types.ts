@@ -734,6 +734,7 @@ export const allConfigNames = [
   'ui.username',
   'ui.merge',
   'fbcodereview.code-browser-url',
+  'extensions.commitcloud',
 ] as const;
 
 /** sl configs read by ISL */

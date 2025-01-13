@@ -162,7 +162,7 @@ export function atomWithOnChange<T>(
  * Creates a lazily initialized atom.
  * On first read, trigger `load` to get the actual value.
  * `fallback` provides the value when the async `load` is running.
- * `original` is an optioinal nullable atom to provide the value.
+ * `original` is an optional nullable atom to provide the value.
  */
 export function lazyAtom<T>(
   load: (get: Getter) => Promise<T> | T,

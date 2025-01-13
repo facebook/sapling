@@ -74,7 +74,12 @@ describe('CommitTreeList', () => {
     act(() => simulateMessageFromServer({type: 'beganLoadingMoreCommits'}));
     act(() => simulateCommits({value: allCommits}));
 
-    expect(screen.getByText('Fetch all cloud commits'));
+    expectMessageSentToServer({type: 'getConfig', name: 'extensions.commitcloud'});
+    act(() =>
+      simulateMessageFromServer({type: 'gotConfig', name: 'extensions.commitcloud', value: ''}),
+    );
+
+    await waitFor(() => expect(screen.getByText('Fetch all cloud commits')));
     mockNextOperationId('1');
     fireEvent.click(screen.getByText('Fetch all cloud commits'));
     expectMessageSentToServer({
@@ -110,5 +115,26 @@ describe('CommitTreeList', () => {
       expect(screen.queryByText('Load more commits')).not.toBeInTheDocument();
       expect(screen.queryByText('Fetch all cloud commits')).not.toBeInTheDocument();
     });
+  });
+
+  it('does not show cloud sync button if commit cloud not enabled', async () => {
+    fireEvent.click(screen.getByText('Load more commits'));
+    expectMessageSentToServer({type: 'loadMoreCommits'});
+    act(() => simulateMessageFromServer({type: 'commitsShownRange', rangeInDays: 60}));
+    act(() => simulateMessageFromServer({type: 'beganLoadingMoreCommits'}));
+    act(() => simulateCommits({value: allCommits}));
+
+    fireEvent.click(screen.getByText('Load more commits'));
+    expectMessageSentToServer({type: 'loadMoreCommits'});
+    act(() => simulateMessageFromServer({type: 'commitsShownRange', rangeInDays: undefined}));
+    act(() => simulateMessageFromServer({type: 'beganLoadingMoreCommits'}));
+    act(() => simulateCommits({value: allCommits}));
+
+    expectMessageSentToServer({type: 'getConfig', name: 'extensions.commitcloud'});
+    await act(async () =>
+      simulateMessageFromServer({type: 'gotConfig', name: 'extensions.commitcloud', value: '!'}),
+    );
+
+    expect(screen.queryByText('Fetch all cloud commits')).not.toBeInTheDocument();
   });
 });

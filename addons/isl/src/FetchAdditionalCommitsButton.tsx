@@ -6,6 +6,7 @@
  */
 
 import serverAPI from './ClientToServerAPI';
+import {commitCloudEnabledAtom} from './CommitCloud';
 import {t, T} from './i18n';
 import {writeAtom} from './jotaiUtils';
 import {CommitCloudSyncOperation} from './operations/CommitCloudSyncOperation';
@@ -16,13 +17,16 @@ import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
 import {DOCUMENTATION_DELAY, Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtomValue} from 'jotai';
+import {Suspense} from 'react';
 
 export function FetchingAdditionalCommitsRow() {
   return (
-    <div className="fetch-additional-commits-row">
-      <FetchingAdditionalCommitsButton />
-      <FetchingAdditionalCommitsIndicator />
-    </div>
+    <Suspense>
+      <div className="fetch-additional-commits-row">
+        <FetchingAdditionalCommitsButton />
+        <FetchingAdditionalCommitsIndicator />
+      </div>
+    </Suspense>
   );
 }
 
@@ -35,44 +39,57 @@ function FetchingAdditionalCommitsIndicator() {
 
 function FetchingAdditionalCommitsButton() {
   const shownRange = useAtomValue(commitsShownRange);
-  const isRunningSync = useIsOperationRunningOrQueued(CommitCloudSyncOperation) != null;
-  const isFetching = useAtomValue(isFetchingAdditionalCommits);
-  const isLoading = isFetching || isRunningSync;
+  const isLoading = useAtomValue(isFetchingAdditionalCommits);
   const hasAlreadySynced = useAtomValue(hasSyncedFromCloudAtom);
-  const runOperation = useRunOperation();
   if (shownRange === undefined && hasAlreadySynced) {
     return null;
   }
   const fetchFromCloudNext = shownRange == null;
-  const commitsShownMessage = fetchFromCloudNext
-    ? t('Showing full commit history. Click to fetch all commits from Commit Cloud')
-    : t('Showing commits from the last $numDays days', {
-        replace: {$numDays: shownRange.toString()},
-      });
+  if (fetchFromCloudNext) {
+    return <LoadMoreFromCloudButton />;
+  }
+  const commitsShownMessage = t('Showing commits from the last $numDays days', {
+    replace: {$numDays: shownRange.toString()},
+  });
   return (
     <Tooltip placement="top" delayMs={DOCUMENTATION_DELAY} title={commitsShownMessage}>
       <Button
         disabled={isLoading}
         onClick={() => {
-          if (fetchFromCloudNext) {
-            runOperation(new CommitCloudSyncOperation(/* full */ true)).then(() =>
-              writeAtom(hasSyncedFromCloudAtom, true),
-            );
-            return;
-          }
-
           serverAPI.postMessage({
             type: 'loadMoreCommits',
           });
         }}
         icon>
-        {fetchFromCloudNext ? (
-          <>
-            <Icon icon={isLoading ? 'spinner' : 'cloud-download'} /> Fetch all cloud commits
-          </>
-        ) : (
-          <T>Load more commits</T>
-        )}
+        <T>Load more commits</T>
+      </Button>
+    </Tooltip>
+  );
+}
+
+function LoadMoreFromCloudButton() {
+  const runOperation = useRunOperation();
+  const isRunning = useIsOperationRunningOrQueued(CommitCloudSyncOperation) != null;
+  const isFetching = useAtomValue(isFetchingAdditionalCommits);
+  const isLoading = isRunning || isFetching;
+  const isCloudEnabled = useAtomValue(commitCloudEnabledAtom);
+  if (!isCloudEnabled) {
+    return null;
+  }
+  return (
+    <Tooltip
+      placement="top"
+      delayMs={DOCUMENTATION_DELAY}
+      title={t('Showing full commit history. Click to fetch all commits from Commit Cloud')}>
+      <Button
+        disabled={isLoading}
+        onClick={() => {
+          runOperation(new CommitCloudSyncOperation(/* full */ true)).then(() =>
+            writeAtom(hasSyncedFromCloudAtom, true),
+          );
+        }}
+        icon>
+        <Icon icon={isLoading ? 'spinner' : 'cloud-download'} /> Fetch all cloud commits
       </Button>
     </Tooltip>
   );

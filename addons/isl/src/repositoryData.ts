@@ -75,7 +75,7 @@ export const irrelevantCwdDeemphasisEnabled = localStorageBackedAtom<boolean>(
  * A string of repo root and the "cwd". Note a same "cwd" does not infer the same repo,
  * when there are nested (ex. submodule) repos.
  */
-const repoRootAndCwd = atom<string>(get => `${get(serverCwd)}\n${get(repoRoot)}`);
+export const repoRootAndCwd = atom<string>(get => `${get(serverCwd)}\n${get(repoRoot)}`);
 
 /** A specific version of `atomResetOnDepChange`. */
 export function atomResetOnCwdChange<T>(defaultValue: T) {
