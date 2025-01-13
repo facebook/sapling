@@ -67,7 +67,12 @@ class JournalTestBase(testcase.EdenRepoTest):
         return False
 
     def getChangesSinceV2(
-        self, position, included_roots=None, excluded_roots=None
+        self,
+        position,
+        included_roots=None,
+        excluded_roots=None,
+        included_suffixes=None,
+        excluded_suffixes=None,
     ) -> ChangesSinceV2Result:
         return self.client.changesSinceV2(
             ChangesSinceV2Params(
@@ -75,6 +80,8 @@ class JournalTestBase(testcase.EdenRepoTest):
                 fromPosition=position,
                 includedRoots=included_roots,
                 excludedRoots=excluded_roots,
+                includedSuffixes=included_suffixes,
+                excludedSuffixes=excluded_suffixes,
             )
         )
 

@@ -104,6 +104,68 @@ class ChangesTestCommon(testBase):
         )
         self.assertEqual(changes.changes, [])
 
+    def test_include_file_suffix(self):
+        # use removed files for cross-os compatibility
+        self.repo_write_file("test_file.ext1", "", add=False)
+        self.repo_write_file("test_file.ext2", "", add=False)
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.rm("test_file.ext1")
+        self.rm("test_file.ext2")
+        changes = self.getChangesSinceV2(position=position, included_suffixes=[".ext1"])
+        expected_changes = [
+            buildSmallChange(
+                SmallChangeNotification.REMOVED,
+                Dtype.REGULAR,
+                path=b"test_file.ext1",
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    def test_exclude_file_suffix(self):
+        self.repo_write_file("test_file.ext1", "", add=False)
+        self.repo_write_file("test_file.ext2", "", add=False)
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.rm("test_file.ext1")
+        self.rm("test_file.ext2")
+        changes = self.getChangesSinceV2(position=position, excluded_suffixes=[".ext1"])
+        expected_changes = [
+            buildSmallChange(
+                SmallChangeNotification.REMOVED,
+                Dtype.REGULAR,
+                path=b"test_file.ext2",
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    def test_incude_exclude_file_same_suffix(self):
+        self.repo_write_file("test_file.ext1", "", add=False)
+        self.repo_write_file("test_file.ext2", "", add=False)
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.rm("test_file.ext1")
+        self.rm("test_file.ext2")
+        changes = self.getChangesSinceV2(
+            position=position, included_suffixes=[".ext1"], excluded_suffixes=[".ext1"]
+        )
+        self.assertEqual(changes.changes, [])
+
+    def test_incude_exclude_file_suffix(self):
+        self.repo_write_file("test_file.ext1", "", add=False)
+        self.repo_write_file("test_file.ext2", "", add=False)
+        position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
+        self.rm("test_file.ext1")
+        self.rm("test_file.ext2")
+        changes = self.getChangesSinceV2(
+            position=position, included_suffixes=[".ext1"], excluded_suffixes=[".ext2"]
+        )
+        expected_changes = [
+            buildSmallChange(
+                SmallChangeNotification.REMOVED,
+                Dtype.REGULAR,
+                path=b"test_file.ext1",
+            ),
+        ]
+        self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
     def test_modify_file(self):
         self.repo_write_file("test_file", "", add=False)
         position = self.client.getCurrentJournalPosition(self.mount_path_bytes)
