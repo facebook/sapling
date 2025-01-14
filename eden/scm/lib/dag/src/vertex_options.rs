@@ -123,6 +123,32 @@ impl VertexListWithOptions {
             .collect()
     }
 
+    /// Filter out the heads. Only keep the ones when `predicate` returns `true`.
+    pub fn filter(self, predicate: &dyn Fn(&Vertex, &VertexOptions) -> bool) -> Self {
+        self.list
+            .into_iter()
+            .filter(|v| predicate(&v.0, &v.1))
+            .collect::<Vec<_>>()
+            .into()
+    }
+
+    /// Similar to `filter`, but reports errors.
+    pub fn try_filter(
+        self,
+        predicate: &dyn Fn(&Vertex, &VertexOptions) -> anyhow::Result<bool>,
+    ) -> anyhow::Result<Self> {
+        Ok(self
+            .list
+            .into_iter()
+            .filter_map(|v| match predicate(&v.0, &v.1) {
+                Err(e) => Some(Err(e)),
+                Ok(true) => Some(Ok(v)),
+                Ok(false) => None,
+            })
+            .collect::<anyhow::Result<Vec<_>>>()?
+            .into())
+    }
+
     /// Test if this list is empty.
     pub fn is_empty(&self) -> bool {
         self.list.is_empty()
