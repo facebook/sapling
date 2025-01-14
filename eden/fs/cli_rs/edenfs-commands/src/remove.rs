@@ -15,6 +15,7 @@ use std::io::ErrorKind;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Context;
@@ -74,7 +75,7 @@ struct RemoveContext {
     original_path: String,
     canonical_path: PathBuf,
     preserve_mount_point: bool,
-    io: Messenger,
+    io: Arc<Messenger>,
 }
 
 impl RemoveContext {
@@ -82,7 +83,7 @@ impl RemoveContext {
         original_path: String,
         canonical_path: PathBuf,
         preserve_mount_point: bool,
-        io: Messenger,
+        io: Arc<Messenger>,
     ) -> RemoveContext {
         RemoveContext {
             original_path,
@@ -489,8 +490,12 @@ impl Subcommand for RemoveCmd {
             },
         };
 
-        let messenger =
-            Messenger::new(IO::stdio(), self.skip_prompt, self.suppress_output, self.no);
+        let messenger = Arc::new(Messenger::new(
+            IO::stdio(),
+            self.skip_prompt,
+            self.suppress_output,
+            self.no,
+        ));
 
         if !self.skip_prompt {
             let prompt = path_type_res.unwrap().get_prompt(vec![&self.paths[0]]);
@@ -506,7 +511,7 @@ impl Subcommand for RemoveCmd {
             self.paths[0].clone(),
             canonicalized_path.unwrap(),
             self.preserve_mount_point,
-            messenger,
+            messenger.clone(),
         );
 
         let mut state = Some(start_state);
