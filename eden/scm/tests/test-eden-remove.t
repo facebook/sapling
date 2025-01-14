@@ -103,3 +103,23 @@ remove with failpoint set so the validation step will fail
   $ FAILPOINTS=remove:validate=return EDENFSCTL_ONLY_RUST=true eden remove -q -y $TESTTMP/wcrepo/
   Error: failpoint: expected failure
   [1]
+
+reclone for testing the removal of multiple checkouts
+  $ eden clone --allow-empty-repo $TESTTMP/backingrepo $TESTTMP/wcrepo-1
+  Cloning new repository at $TESTTMP/wcrepo-1...
+  Success.  Checked out commit 00000000
+  $ eden clone --allow-empty-repo $TESTTMP/backingrepo $TESTTMP/wcrepo-2
+  Cloning new repository at $TESTTMP/wcrepo-2...
+  Success.  Checked out commit 00000000
+
+remove multiplt checkouts
+  $ EDENFSCTL_ONLY_RUST=true eden remove -q -y $TESTTMP/wcrepo-2 $TESTTMP/wcrepo-1
+
+check to make sure the checkouts are cleanly removed
+  $ ls $TESTTMP/wcrepo-2
+  ls: $TESTTMP/wcrepo-2: $ENOENT$
+  [1]
+
+  $ ls $TESTTMP/wcrepo-1
+  ls: $TESTTMP/wcrepo-1: $ENOENT$
+  [1]

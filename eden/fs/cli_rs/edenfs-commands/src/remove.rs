@@ -6,6 +6,7 @@
  */
 
 //! edenfsctl remove
+use std::collections::HashMap;
 use std::fmt;
 use std::fs;
 #[cfg(unix)]
@@ -74,6 +75,7 @@ pub struct RemoveCmd {
 struct RemoveContext {
     original_path: String,
     canonical_path: PathBuf,
+    path_type: PathType,
     preserve_mount_point: bool,
     io: Arc<Messenger>,
 }
@@ -82,12 +84,14 @@ impl RemoveContext {
     fn new(
         original_path: String,
         canonical_path: PathBuf,
+        path_type: PathType,
         preserve_mount_point: bool,
         io: Arc<Messenger>,
     ) -> RemoveContext {
         RemoveContext {
             original_path,
             canonical_path,
+            path_type,
             preserve_mount_point,
             io,
         }
@@ -205,7 +209,7 @@ fn clean_mount_point(path: &Path) -> Result<()> {
         .with_context(|| anyhow!("Failed to remove repo directory {}", path.display()))
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 enum PathType {
     ActiveEdenMount,
     InactiveEdenMount,
@@ -393,19 +397,14 @@ async fn validate_removal_completion(context: &RemoveContext) -> Result<()> {
 #[async_trait]
 impl Subcommand for RemoveCmd {
     async fn run(&self) -> Result<ExitCode> {
-        // TODO: remove this check eventually because we should be able to remove multiple paths
-        assert!(
-            self.paths.len() == 1,
-            "Currently supporting only one path given per run"
-        );
-
         if self.skip_prompt && self.no {
             return Err(anyhow!(
                 "Both '-y' and '-n' are provided. This is not supported.\nExiting."
             ));
         }
 
-        let (canonicalized_path, path_type) = classify_path(&self.paths[0]).await?;
+        let mut type_paths_map: HashMap<PathType, Vec<&str>> = HashMap::new();
+        let mut remove_contexts: Vec<RemoveContext> = Vec::new();
 
         let messenger = Arc::new(Messenger::new(
             IO::stdio(),
@@ -414,28 +413,63 @@ impl Subcommand for RemoveCmd {
             self.no,
         ));
 
-        if !self.skip_prompt {
-            let prompt = path_type.get_prompt(vec![&self.paths[0]]);
+        for path in &self.paths {
+            let (canonicalized_path, path_type) = classify_path(path).await?;
 
-            if !messenger.prompt_user(prompt)? {
+            let context = RemoveContext::new(
+                path.clone(),
+                canonicalized_path,
+                path_type,
+                self.preserve_mount_point,
+                messenger.clone(),
+            );
+            remove_contexts.push(context);
+
+            let paths = match path_type {
+                PathType::InactiveEdenMount => {
+                    // InactiveEdenMount and ActiveEdenMount share the same prompt
+                    // so we need to combine them together
+                    type_paths_map
+                        .entry(PathType::ActiveEdenMount)
+                        .or_insert(Vec::new())
+                }
+                _ => type_paths_map.entry(path_type).or_insert(Vec::new()),
+            };
+            paths.push(path);
+        }
+
+        // show the prompt with aggregated information
+        if !self.skip_prompt {
+            let mut prompts: Vec<String> = Vec::new();
+            for t in [
+                PathType::ActiveEdenMount,
+                PathType::RegularFile,
+                PathType::Unknown,
+            ]
+            .into_iter()
+            {
+                if type_paths_map.contains_key(&t) {
+                    let paths = type_paths_map.get(&t).unwrap();
+                    let prompt = t.get_prompt(paths.to_vec());
+                    prompts.push(prompt);
+                }
+            }
+
+            if !messenger.prompt_user(prompts.join("\n"))? {
                 return Err(anyhow!(
                     "User did not confirm the removal. Stopping. Nothing removed!"
                 ));
             }
         }
 
-        let context = RemoveContext::new(
-            self.paths[0].clone(),
-            canonicalized_path,
-            self.preserve_mount_point,
-            messenger.clone(),
-        );
+        for context in remove_contexts {
+            context.path_type.remove(&context).await?;
+        }
 
-        path_type.remove(&context).await?;
-
-        context
-            .io
-            .success(format!("\nSuccessfully removed {}", context.original_path));
+        messenger.success(format!(
+            "\nSuccessfully removed:\n{}",
+            self.paths.join("\n")
+        ));
         Ok(0)
     }
 }
