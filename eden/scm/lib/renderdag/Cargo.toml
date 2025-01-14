@@ -14,7 +14,7 @@ license = "MIT"
 name = "renderdag"
 
 [dependencies]
-bitflags = { version = "2.6", features = ["serde"] }
+bitflags = "2.6"
 serde = { version = "1.0.185", features = ["derive", "rc"], optional = true }
 
 [dev-dependencies]
@@ -23,4 +23,4 @@ unicode-width = "=0.1.12"
 
 [features]
 default = []
-serialize = ["serde"]
+serialize = ["dep:serde", "bitflags/serde"]
