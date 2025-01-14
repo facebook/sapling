@@ -30,6 +30,7 @@ use fail::fail_point;
 use io::IO;
 use termlogger::TermLogger;
 use tracing::debug;
+use tracing::warn;
 
 use crate::ExitCode;
 use crate::Subcommand;
@@ -329,6 +330,117 @@ impl CleanUp {
         forcefully_remove_dir_all(path)
             .with_context(|| anyhow!("Failed to remove repo directory {}", path.display()))
     }
+}
+
+#[derive(Debug)]
+enum PathType {
+    ActiveEdenMount,
+    InactiveEdenMount,
+    RegularFile,
+    Unknown,
+}
+
+// Validate and canonicalize the given path into absolute path with the type of PathBuf.
+// Then determine a type for this path.
+//
+// Returns a tuple of:
+//   1. canonicalized path (Option)
+//   2. type of path (Result)
+async fn classify_path(path: &str) -> (Option<PathBuf>, Result<PathType>) {
+    let path_buf = PathBuf::from(path);
+
+    match path_buf.canonicalize() {
+        Err(e) => (None, Err(e.into())),
+        Ok(canonicalized_path) => {
+            let path = canonicalized_path.as_path();
+            if path.is_file() {
+                return (Some(canonicalized_path), Ok(PathType::RegularFile));
+            }
+
+            if !path.is_dir() {
+                // This is rare, but when it happens we should warn it.
+                warn!(
+                    "path {} is not a file or directory, please make sure it exists and you have permission to it.",
+                    path.display()
+                );
+                return (
+                    Some(canonicalized_path),
+                    Err(anyhow!("Not a file or directory")),
+                );
+            }
+
+            debug!("{} is determined as a directory", path.display());
+
+            if is_active_eden_mount(path) {
+                debug!(
+                    "path {} is determined to be an active EdenFS mount",
+                    path.display()
+                );
+
+                return (Some(canonicalized_path), Ok(PathType::ActiveEdenMount));
+            }
+
+            debug!("{} is not an active EdenFS mount", path.display());
+
+            // Check if it's a directory managed under eden
+            let mut path_copy = canonicalized_path.clone();
+            loop {
+                if path_copy.pop() {
+                    if is_active_eden_mount(&path_copy) {
+                        let err_msg = format!(
+                            "{} is not the root of checkout {}, not removing",
+                            path.display(),
+                            path_copy.display()
+                        );
+                        return (Some(canonicalized_path), Err(anyhow!(err_msg)));
+                    } else {
+                        continue;
+                    }
+                }
+                break;
+            }
+
+            // Maybe it's a directory that is left after unmount
+            // If so, unregister it and clean from there
+            match path_in_eden_config(path).await {
+                Ok(true) => {
+                    return (Some(canonicalized_path), Ok(PathType::InactiveEdenMount));
+                }
+                Err(e) => {
+                    return (Some(canonicalized_path), Err(e));
+                }
+                _ => (),
+            }
+
+            // It's a directory that is not listed inside config.json
+            // We don't know how to handle it properly, so move to "Unknown" state
+            // and try to handle from there with "the best efforts".
+            (Some(canonicalized_path), Ok(PathType::Unknown))
+        }
+    }
+}
+
+#[cfg(unix)]
+fn is_active_eden_mount(path: &Path) -> bool {
+    // For Linux and Mac, an active Eden mount should have a dir named ".eden" under the
+    // repo root and there should be a symlink named "root" which points to the repo root
+    let unix_eden_dot_dir_path = path.join(".eden").join("root");
+
+    match unix_eden_dot_dir_path.canonicalize() {
+        Ok(resolved_path) => resolved_path == path,
+        _ => false,
+    }
+}
+
+#[cfg(windows)]
+fn is_active_eden_mount(path: &Path) -> bool {
+    // For Windows, an active EdenFS mount should have a dir named ".eden" under the
+    // repo and there should be a file named "config" under the ".eden" dir
+    let config_path = path.join(".eden").join("config");
+    if !config_path.exists() {
+        return false;
+    }
+    true
 }
 
 async fn validate_state_run(context: &mut RemoveContext) -> Result<Option<State>> {
@@ -670,6 +782,42 @@ mod tests {
         assert!(
             matches!(state, State::Determination(_)),
             "Expected Determination state"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_classify_path_regular_file() {
+        let temp_dir = prepare_directory();
+        let file_path_buf = temp_dir.path().join("temporary-file.txt");
+        fs::write(file_path_buf.as_path(), "anything").unwrap_or_else(|err| {
+            panic!(
+                "cannot write to a file at {}: {}",
+                file_path_buf.display(),
+                err
+            )
+        });
+
+        let (p, t) = classify_path(file_path_buf.to_str().unwrap()).await;
+        assert!(
+            p == Some(file_path_buf.canonicalize().unwrap()),
+            "path of a regular file should be canonicalized"
+        );
+        assert!(
+            matches!(t, Ok(PathType::RegularFile)),
+            "path of a regular file should be classified as RegFile"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_classify_nonexistent_path() {
+        let tmp_dir = prepare_directory();
+        let path = format!("{}/test/no_file", tmp_dir.path().to_str().unwrap());
+        let path_buf = PathBuf::from(path);
+        let (p, t) = classify_path(path_buf.to_str().unwrap()).await;
+        assert!(p.is_none(), "nonexistent path should not be canonicalized");
+        assert!(
+            t.is_err(),
+            "nonexistent path should be classified as Invalid"
         );
     }
 }
