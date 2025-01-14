@@ -85,6 +85,7 @@ Before config change
   ~
 
 -- check the same commit in the small repo
+  $ wait_for_bookmark_move_away_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK $PREV_BOOK_VALUE
   $ cd "$TESTTMP/small-hg-client"
   $ hg pull -q
   $ hg up -q $MASTER_BOOKMARK
@@ -165,6 +166,7 @@ Before config change
   ~
 
 -- check the same commit in the small repo
+  $ wait_for_bookmark_move_away_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK $PREV_BOOK_VALUE
   $ cd "$TESTTMP/small-hg-client"
   $ hg pull -q
   $ hg up -q $MASTER_BOOKMARK
@@ -218,6 +220,7 @@ Before config change
   successful sync
   X Repo Sync execution finished from small repo imported_repo to large repo large-mon
 
+  $ wait_for_bookmark_move_away_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK $PREV_BOOK_VALUE
   $ cd "$TESTTMP/small-hg-client"
   $ hg pull -q
   $ hg update $MASTER_BOOKMARK
@@ -435,7 +438,7 @@ so they'll be dumped to files to keep this (already long) integration test short
 
   $ NOOP_CONFIG_VERSION_NAME="$SUBMODULE_NOOP_VERSION_NAME" \
   > CONFIG_VERSION_NAME="$AFTER_SUBMODULE_REPO_VERSION_NAME" \
-  > MASTER_BOOKMARK="master_bookmark" create_and_merge_submodule_repo
+  > MASTER_BOOKMARK="master_bookmark" quiet create_and_merge_submodule_repo
 
 -- Set up live forward syncer, which should sync all commits in submodule repo's
 -- heads/master bookmark to large repo's master bookmark via pushrebase
@@ -456,6 +459,7 @@ so they'll be dumped to files to keep this (already long) integration test short
 
 
 -- Check if changes were backsynced properly
+  $ wait_for_bookmark_move_away_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK $PREV_BOOK_VALUE
   $ cd "$TESTTMP/small-hg-client"
   $ hg pull -q
   $ log_globalrev -l 10
@@ -503,6 +507,7 @@ so they'll be dumped to files to keep this (already long) integration test short
 
 
 -- Check if changes were backsynced properly to small repo
+  $ wait_for_bookmark_move_away_edenapi $SMALL_REPO_NAME $MASTER_BOOKMARK $PREV_BOOK_VALUE
   $ cd "$TESTTMP/small-hg-client"
   $ hg pull -q
   $ hg log -G -T "{desc} [{node|short}]\n" -l 30 --stat
