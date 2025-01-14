@@ -161,8 +161,8 @@ def custom_manifest_rule(name, manifest_file, targets):
 
     return list(targets.values())
 
-def dott_test(name, dott_files, deps, use_mysql = False, disable_all_network_access_target = True, enable_async_requests_worker = False):
-    _dott_test(name, dott_files, deps, use_mysql, False, enable_async_requests_worker = enable_async_requests_worker)
+def dott_test(name, dott_files, deps, use_mysql = False, disable_all_network_access_target = True, enable_async_requests_worker = False, labels = ()):
+    _dott_test(name, dott_files, deps, use_mysql, False, enable_async_requests_worker = enable_async_requests_worker, labels = labels)
 
     if use_mysql:
         # NOTE: We need network to talk to MySQL
@@ -172,7 +172,7 @@ def dott_test(name, dott_files, deps, use_mysql = False, disable_all_network_acc
         # there's not much sense in blocking network for OSS builds
         _dott_test(name + "-disable-all-network-access", dott_files, deps, use_mysql, disable_all_network_access = True, rust_allow_oss_build = False, enable_async_requests_worker = enable_async_requests_worker)
 
-def _dott_test(name, dott_files, deps, use_mysql = False, disable_all_network_access = True, rust_allow_oss_build = None, enable_async_requests_worker = False):
+def _dott_test(name, dott_files, deps, use_mysql = False, disable_all_network_access = True, rust_allow_oss_build = None, enable_async_requests_worker = False, labels = ()):
     manifest_target = name + "-manifest"
 
     noop_for_oss = rust_common.is_noop_in_oss_build(rust_allow_oss_build)
@@ -262,6 +262,9 @@ def _dott_test(name, dott_files, deps, use_mysql = False, disable_all_network_ac
     env = test_utils.add_llvm_coverage_tools_to_env(env)
     env = test_utils.add_llvm_coverage_additional_targets_to_env(env, resolved_deps)
 
+    labels = list(labels) if labels else []
+    labels += ["tpx-test-type:mononoke_integration", "tpx:supports_coverage"]
+
     # and now the actual test
     custom_unittest(
         name = name,
@@ -270,10 +273,10 @@ def _dott_test(name, dott_files, deps, use_mysql = False, disable_all_network_ac
             "$(location :%s)" % manifest_target,
         ] + extra_args,
         env = env,
-        tags = ["tpx-test-type:mononoke_integration", "tpx:supports_coverage"],
         # This is not really a junit test. It pretends to be one for testpilot. For
         # tpx we want to do better, override the "test type" through a label to
         # work with both testpilot and tpx for now.
         type = "junit",
         deps = resolved_deps,
+        labels = labels,
     )
