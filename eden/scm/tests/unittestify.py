@@ -13,6 +13,7 @@ import os
 import random
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import unittest
@@ -62,8 +63,15 @@ def prepareargsenv(runtestsdir, port=None):
     if port:
         args += ["--port", "%s" % port]
 
-    if hgpath:
-        args.append("--with-hg=%s" % hgpath)
+    global hgpath
+
+    if hgpath is None:
+        hgpath = shutil.which("hg.real")
+        # Make sure to keep these in sync with targets.bzl
+        env["HGEXECUTABLEPATH"] = hgpath
+        env["HGTEST_HG"] = hgpath
+        env["HG_REAL_BIN"] = hgpath
+    args.append("--with-hg=%s" % hgpath)
     if watchman:
         args += ["--with-watchman", watchman]
     # set HGDATAPATH
@@ -83,6 +91,10 @@ def prepareargsenv(runtestsdir, port=None):
         env["MONONOKE_SERVER"] = mononoke_server
         env["GET_FREE_SOCKET"] = get_free_socket
 
+    for k, v in env.items():
+        if v is None:
+            print(f"Found a none at {k}")
+
     return args, env
 
 
@@ -94,6 +106,7 @@ def gettestmethod(name, port):
             args, env = prepareargsenv(self._runtests_dir, port)
             args += os.getenv("HGTEST_RUNTESTS_ARGS", "").split()
             # run run-tests.py for a single test
+            print(f"The args are {args}, and the name is {name}")
             p = subprocess.Popen(
                 args + [name], env=env, stderr=subprocess.PIPE, stdout=subprocess.PIPE
             )

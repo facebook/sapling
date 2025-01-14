@@ -137,6 +137,7 @@ def run_tests_target(
         watchman = False,
         eden = False,
         mononoke = False,
+        env_overrides = dict(),
         excluded = None,
         included = None,
         **kwargs):
@@ -180,6 +181,11 @@ def run_tests_target(
     if included:
         ENV["HGTEST_INCLUDED"] = included
         ENV.pop("HGTEST_EXCLUDED")
+    for k, v in env_overrides.items():
+        if v:
+            ENV[k] = v
+        else:
+            ENV.pop(k)
     python_unittest(
         name = name,
         srcs = SRCS,
@@ -193,3 +199,50 @@ def run_tests_target(
         runtime_deps = rt_deps,
         **kwargs
     )
+
+def generate_trinity_smoketests(included, **kwargs):
+    hg_d = [
+        {},
+        {
+            # Make sure to keep these in sync with unittestify
+            "HGEXECUTABLEPATH": None,
+            "HGTEST_DEBUGRUNTEST_HG": _RT_ENV["HGEXECUTABLEPATH"],
+            "HGTEST_HG": None,
+            "HG_REAL_BIN": None,
+        },
+    ]
+    hg_s = ["", "prod_hg_"]
+    eden_d = [
+        {},
+        {
+            "EDENFSCTL_REAL_PATH": None,
+            "EDENFSCTL_RUST_PATH": None,
+            "EDENFS_SERVER_PATH": None,
+        },
+    ]
+    eden_s = ["", "prod_eden_"]
+    mononoke_d = [
+        {},
+        {
+            # mononoke_stable is the entire squashfs fbpkg, so we need to get
+            # the binary
+            "HGTEST_MONONOKE_SERVER": "$(location :mononoke_stable)/mononoke",
+        },
+    ]
+    mononoke_s = ["", "prod_mononoke_"]
+    for hg in range(2):
+        for eden in range(2):
+            for mononoke in range(2):
+                if hg + eden + mononoke == 0:
+                    # This is the default smoke test, so we don't generate one
+                    continue
+                name = "trinity_smoke_%stest" % (hg_s[hg] + eden_s[eden] + mononoke_s[mononoke])
+                run_tests_target(
+                    name = name,
+                    eden = True,
+                    mononoke = True,
+                    watchman = True,
+                    env_overrides = hg_d[hg] | eden_d[eden] | mononoke_d[mononoke],
+                    included = included,
+                    **kwargs
+                )
