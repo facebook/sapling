@@ -175,6 +175,9 @@ struct GitimportArgs {
     /// Allow non standard file mode (i.e. not 100744, 100655, etc.)
     #[clap(long)]
     allow_non_standard_file_mode: bool,
+    /// Allow the import of repos with refs pointing to blobs or trees
+    #[clap(long)]
+    allow_content_refs: bool,
     /// Don't backfill derived data during this import.
     /// This is dangerous if used in conjunction with generate_bookmarks as public
     /// commits which are not derived may create high load for the derived data service
@@ -317,6 +320,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         concurrency: args.concurrency,
         submodules: !args.discard_submodules,
         allow_non_standard_file_mode: args.allow_non_standard_file_mode,
+        allow_content_refs: args.allow_content_refs,
         backfill_derivation,
         lfs,
         ..Default::default()

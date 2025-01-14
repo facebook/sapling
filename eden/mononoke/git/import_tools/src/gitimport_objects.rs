@@ -213,6 +213,8 @@ pub struct GitimportPreferences {
     pub submodules: bool,
     /// Whether we should allow non-standard file mode.
     pub allow_non_standard_file_mode: bool,
+    /// Whether we should allow refs pointing to blobs or trees
+    pub allow_content_refs: bool,
     /// Flag for controlling whether we should stream changed trees per commit. In case of deep-nested
     /// trees, gitimport can hang without making progress. Disable this flag to avoid that issue.
     pub stream_for_changed_trees: bool,
@@ -233,6 +235,7 @@ impl Default for GitimportPreferences {
             backfill_derivation: BackfillDerivation::No,
             stream_for_changed_trees: true,
             allow_non_standard_file_mode: false,
+            allow_content_refs: false,
         }
     }
 }
