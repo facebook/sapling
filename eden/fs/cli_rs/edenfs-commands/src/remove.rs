@@ -103,18 +103,9 @@ impl fmt::Display for RemoveContext {
 struct RegFile {}
 impl RegFile {
     async fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
-        if context
-            .io
-            .prompt_user("{} is a file, do you still want to remove it?".to_string())?
-        {
-            fs::remove_file(context.canonical_path.as_path())
-                .with_context(|| format!("Failed to remove mount point {}", context))?;
-            return Ok(None);
-        }
-
-        Err(anyhow!(
-            "User did not confirm the removal. Stopping. Nothing removed!"
-        ))
+        fs::remove_file(context.canonical_path.as_path())
+            .with_context(|| format!("Failed to remove mount point {}", context))?;
+        Ok(None)
     }
 }
 
@@ -123,11 +114,6 @@ struct ActiveEdenMount {}
 impl ActiveEdenMount {
     async fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
         // TODO: stop process first
-        if !context.io.prompt_user(construct_start_prompt(context))? {
-            return Err(anyhow!(
-                "User did not confirm the removal. Stopping. Nothing removed!"
-            ));
-        }
 
         context
             .io
@@ -242,12 +228,46 @@ impl CleanUp {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 enum PathType {
     ActiveEdenMount,
     InactiveEdenMount,
     RegularFile,
     Unknown,
+}
+
+impl PathType {
+    fn get_prompt(&self, paths: Vec<&str>) -> String {
+        let prompt_str = match self {
+            PathType::ActiveEdenMount | PathType::InactiveEdenMount => format!(
+                "Warning: this operation will permanently delete the following EdenFS checkouts:\n\
+         \n\
+         {}\n\
+         \n\
+         Any uncommitted changes and shelves in this checkout will be lost forever.\n",
+                paths.join("\n")
+            ),
+
+            PathType::RegularFile => format!(
+                "Warning: this operation will permanently delete the following files:\n\
+        \n\
+        {}\n\
+        \n\
+        After deletion, they will be lost forever.\n",
+                paths.join("\n")
+            ),
+
+            PathType::Unknown => format!(
+                "Warning: the following paths are directories not managed by EdenFS:\n\
+        \n\
+        {}\n\
+        \n\
+                Any files in them will be lost forever. \n",
+                paths.join("\n")
+            ),
+        };
+        prompt_str.yellow().to_string()
+    }
 }
 
 // Validate and canonicalize the given path into absolute path with the type of PathBuf.
@@ -389,30 +409,7 @@ async fn validate_state_run(context: &mut RemoveContext) -> Result<Option<State>
 struct Unknown {}
 impl Unknown {
     async fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
-        // If this directory is empty, we want to let the user know and let the
-        // user decide if we should proceed
-        // Otherwise, ask the user if we should try our best to remove it
-        let prompt = match fs::read_dir(context.canonical_path.as_path())
-            .with_context(|| format!("Failed to list contents under {}", context))?
-            .count()
-            == 0
-        {
-            true => format!("{} is not an EdenFS mount and it's empty.", context),
-            false => format!(
-                "{} is a non-empty directory that is not an EdenFS mount.\n\
-                Any files in this directory will be lost forever. \n\
-                Do you still want to remove it?",
-                context
-            ),
-        };
-
-        if context.io.prompt_user(prompt)? {
-            return Ok(Some(State::CleanUp(CleanUp {})));
-        }
-
-        Err(anyhow!(
-            "User did not confirm the removal. Stopping. Nothing removed!"
-        ))
+        Ok(Some(State::CleanUp(CleanUp {})))
     }
 }
 
@@ -494,6 +491,16 @@ impl Subcommand for RemoveCmd {
 
         let messenger =
             Messenger::new(IO::stdio(), self.skip_prompt, self.suppress_output, self.no);
+
+        if !self.skip_prompt {
+            let prompt = path_type_res.unwrap().get_prompt(vec![&self.paths[0]]);
+
+            if !messenger.prompt_user(prompt)? {
+                return Err(anyhow!(
+                    "User did not confirm the removal. Stopping. Nothing removed!"
+                ));
+            }
+        }
 
         let mut context = RemoveContext::new(
             self.paths[0].clone(),
@@ -580,19 +587,6 @@ impl Messenger {
         }
         Ok(true)
     }
-}
-
-fn construct_start_prompt(context: &RemoveContext) -> String {
-    format!(
-        "Warning: this operation will permanently delete the following checkouts:\n\
-         \n\
-         {}\n\
-         \n\
-         Any uncommitted changes and shelves in this checkout will be lost forever.\n",
-        dunce::simplified(&context.canonical_path).to_string_lossy(),
-    )
-    .yellow()
-    .to_string()
 }
 
 #[cfg(test)]
