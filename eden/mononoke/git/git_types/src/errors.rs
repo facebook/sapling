@@ -37,12 +37,6 @@ pub enum GitError {
     #[error("Invalid git object content provided for object ID {0}. Cause: {1:?}")]
     InvalidContent(String, GitInternalError),
 
-    /// The requested bubble does not exist.  Either it was never created or has expired.
-    #[error(
-        "The object corresponding to object ID {0} is a git blob. Cannot upload raw blob content"
-    )]
-    DisallowedBlobObject(String),
-
     /// Failed to get or store the git object in Mononoke store.
     #[error(
         "Failed to get or store the git object (ID: {0}) or its packfile item in blobstore. Cause: {1:?}"

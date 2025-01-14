@@ -56,27 +56,6 @@ async fn basic_upload_non_blob_git_object(fb: FacebookInit) -> Result<()> {
 }
 
 #[mononoke::fbinit_test]
-/// Validate that we get an error while trying to upload a git blob through this method.
-async fn blob_upload_non_blob_git_object(fb: FacebookInit) -> Result<()> {
-    let ctx = CoreContext::test_mock(fb);
-    let repo_ctx = init_repo(&ctx).await?;
-    let blob = gix_object::Blob {
-        data: "Some file content".as_bytes().to_vec(),
-    };
-    let mut bytes = blob.loose_header().into_vec();
-    blob.write_to(bytes.by_ref())?;
-    let sha1_hash = hash_bytes(Sha1IncrementalHasher::new(), bytes.as_slice());
-    let output = repo_ctx
-        .upload_non_blob_git_object(gix_hash::oid::try_from_bytes(sha1_hash.as_ref())?, bytes)
-        .await;
-    assert!(matches!(
-        output.expect_err("Expected error during git object upload"),
-        GitError::DisallowedBlobObject(_)
-    ));
-    Ok(())
-}
-
-#[mononoke::fbinit_test]
 /// Validate that we get an error while trying to upload invalid git bytes with this method.
 async fn invalid_bytes_upload_non_blob_git_object(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);

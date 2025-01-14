@@ -65,19 +65,12 @@ where
     };
     // Check if the bytes actually correspond to a valid Git object
     let blobstore_bytes = BlobstoreBytes::from_bytes(bytes.clone());
-    let git_obj = gix_object::ObjectRef::from_loose(bytes.as_ref()).map_err(|e| {
+    gix_object::ObjectRef::from_loose(bytes.as_ref()).map_err(|e| {
         GitError::InvalidContent(
             git_hash.to_hex().to_string(),
             anyhow::anyhow!(e.to_string()).into(),
         )
     })?;
-    // Check if the git object is not a raw content blob. Raw content blobs are uploaded directly through
-    // LFS. This method supports git commits, trees, tags, notes and similar pointer objects.
-    if let gix_object::ObjectRef::Blob(_) = git_obj {
-        return Err(GitError::DisallowedBlobObject(
-            git_hash.to_hex().to_string(),
-        ));
-    }
     // The bytes are valid, upload to blobstore with the key:
     // git_object_{hex-value-of-hash}
     let blobstore_key = format!("{}{}{}", GIT_OBJECT_PREFIX, SEPARATOR, git_hash.to_hex());
@@ -85,7 +78,6 @@ where
         .put(ctx, blobstore_key, blobstore_bytes)
         .await
         .map_err(|e| GitError::StorageFailure(git_hash.to_hex().to_string(), e.into()))
-    // TODO(rajshar): Create and upload PackfileItem corresponding to the stored git object
 }
 
 /// Free function for fetching the raw bytes of stored git objects.
