@@ -100,133 +100,109 @@ impl fmt::Display for RemoveContext {
     }
 }
 
-#[derive(Debug)]
-struct RegFile {}
-impl RegFile {
-    async fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
-        fs::remove_file(context.canonical_path.as_path())
-            .with_context(|| format!("Failed to remove mount point {}", context))?;
-        Ok(None)
-    }
-}
+async fn remove_active_eden_mount(context: &RemoveContext) -> Result<()> {
+    // TODO: stop process first
+    context
+        .io
+        .info(format!("Unmounting repo at {} ...", context.original_path));
 
-#[derive(Debug)]
-struct ActiveEdenMount {}
-impl ActiveEdenMount {
-    async fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
-        // TODO: stop process first
+    let instance = EdenFsInstance::global();
 
-        context
-            .io
-            .info(format!("Unmounting repo at {} ...", context.original_path));
-
-        let instance = EdenFsInstance::global();
-
-        match instance.unmount(&context.canonical_path).await {
-            Ok(_) => {
-                context.io.done();
-                Ok(Some(State::InactiveEdenMount(InactiveEdenMount {})))
-            }
-            Err(e) => Err(anyhow!(
-                "Failed to unmount mount point at {}: {}",
-                context,
-                e
-            )),
+    match instance.unmount(&context.canonical_path).await {
+        Ok(_) => {
+            context.io.done();
+            remove_inactive_eden_mount(context).await
         }
+        Err(e) => Err(anyhow!(
+            "Failed to unmount mount point at {}: {}",
+            context,
+            e
+        )),
     }
 }
 
-#[derive(Debug)]
-struct InactiveEdenMount {}
-impl InactiveEdenMount {
-    async fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
-        context.io.info(format!(
-            "Unregistering repo {} from EdenFS configs...",
+async fn remove_inactive_eden_mount(context: &RemoveContext) -> Result<()> {
+    context.io.info(format!(
+        "Unregistering repo {} from EdenFS configs...",
+        context.original_path
+    ));
+    remove_client_config_dir(context)?;
+    remove_client_config_entry(context)?;
+
+    context.io.done();
+
+    clean_up(context).await
+}
+
+fn remove_client_config_dir(context: &RemoveContext) -> Result<()> {
+    let instance = EdenFsInstance::global();
+
+    match fs::remove_dir_all(instance.client_dir_for_mount_point(&context.canonical_path)?) {
+        Ok(_) => Ok(()),
+        Err(e) if e.kind() == ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(anyhow!(
+            "Failed to remove client config directory for {}: {}",
+            context,
+            e
+        )),
+    }
+}
+
+fn remove_client_config_entry(context: &RemoveContext) -> Result<()> {
+    let instance = EdenFsInstance::global();
+
+    instance
+        .remove_path_from_directory_map(&context.canonical_path)
+        .with_context(|| format!("Failed to remove {} from config json file", context))
+}
+
+async fn clean_up(context: &RemoveContext) -> Result<()> {
+    if context.preserve_mount_point {
+        context.io.warn(format!(
+            "preserve_mount_point flag is set, not removing the mount point {}!",
             context.original_path
         ));
-        self.remove_client_config_dir(context)?;
-        self.remove_client_config_entry(context)?;
-
+        Ok(())
+    } else {
+        context.io.info(format!(
+            "Cleaning up the directory {} ...",
+            context.original_path
+        ));
+        clean_mount_point(&context.canonical_path)
+            .with_context(|| anyhow!("Failed to clean mount point {}", context))?;
         context.io.done();
 
-        Ok(Some(State::CleanUp(CleanUp {})))
-    }
-
-    fn remove_client_config_dir(&self, context: &RemoveContext) -> Result<()> {
-        let instance = EdenFsInstance::global();
-
-        match fs::remove_dir_all(instance.client_dir_for_mount_point(&context.canonical_path)?) {
-            Ok(_) => Ok(()),
-            Err(e) if e.kind() == ErrorKind::NotFound => Ok(()),
-            Err(e) => Err(anyhow!(
-                "Failed to remove client config directory for {}: {}",
-                context,
-                e
-            )),
-        }
-    }
-
-    fn remove_client_config_entry(&self, context: &RemoveContext) -> Result<()> {
-        let instance = EdenFsInstance::global();
-
-        instance
-            .remove_path_from_directory_map(&context.canonical_path)
-            .with_context(|| format!("Failed to remove {} from config json file", context))
+        validate_removal_completion(context).await
     }
 }
 
-#[derive(Debug)]
-struct CleanUp {}
-impl CleanUp {
-    async fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
-        if context.preserve_mount_point {
-            context.io.warn(format!(
-                "preserve_mount_point flag is set, not removing the mount point {}!",
-                context.original_path
-            ));
-            Ok(None)
-        } else {
-            context.io.info(format!(
-                "Cleaning up the directory {} ...",
-                context.original_path
-            ));
-            self.clean_mount_point(&context.canonical_path)
-                .await
-                .with_context(|| anyhow!("Failed to clean mount point {}", context))?;
-            context.io.done();
+#[cfg(unix)]
+fn clean_mount_point(path: &Path) -> Result<()> {
+    let perms = Permissions::from_mode(0o755);
+    fs::set_permissions(path, perms)
+        .with_context(|| format!("Failed to set permission 755 for path {}", path.display()))?;
+    forcefully_remove_dir_all(path)
+        .with_context(|| format!("Failed to remove mount point {}", path.display()))
+}
 
-            Ok(Some(State::Validation))
-        }
-    }
-
-    #[cfg(unix)]
-    async fn clean_mount_point(&self, path: &Path) -> Result<()> {
-        let perms = Permissions::from_mode(0o755);
-        fs::set_permissions(path, perms)
-            .with_context(|| format!("Failed to set permission 755 for path {}", path.display()))?;
-        forcefully_remove_dir_all(path)
-            .with_context(|| format!("Failed to remove mount point {}", path.display()))
-    }
-
-    #[cfg(windows)]
-    async fn clean_mount_point(&self, path: &Path) -> Result<()> {
-        // forcefully_remove_dir_all() is simply a wrapper of remove_dir_all() which handles the retry logic.
-        //
-        // There is a chance that remove_dir_all() can hit the error:
-        // """
-        // Failed to remove mount point \\?\C:\open\repo-for-safe-remove: The provider that supports,
-        // file system virtualization is temporarily unavailable. (os error 369)
-        // """
-        //
-        // Hopefully, retrying the command will fix the issue since it's temporary.
-        // But if we keep seeing this error even after retrying, we should consider implementing
-        // something similar to Remove-Item(rm) cmdlet from PowerShell.
-        //
-        // Note: It's known that "rm -f -r" should be able to remove the repo but we should not rely
-        // on it from the code.
-        forcefully_remove_dir_all(path)
-            .with_context(|| anyhow!("Failed to remove repo directory {}", path.display()))
-    }
+#[cfg(windows)]
+fn clean_mount_point(path: &Path) -> Result<()> {
+    // forcefully_remove_dir_all() is simply a wrapper of remove_dir_all() which handles the retry logic.
+    //
+    // There is a chance that remove_dir_all() can hit the error:
+    // """
+    // Failed to remove mount point \\?\C:\open\repo-for-safe-remove: The provider that supports,
+    // file system virtualization is temporarily unavailable. (os error 369)
+    // """
+    //
+    // Hopefully, retrying the command will fix the issue since it's temporary.
+    // But if we keep seeing this error even after retrying, we should consider implementing
+    // something similar to Remove-Item(rm) cmdlet from PowerShell.
+    //
+    // Note: It's known that "rm -f -r" should be able to remove the repo but we should not rely
+    // on it from the code.
+    forcefully_remove_dir_all(path)
+        .with_context(|| anyhow!("Failed to remove repo directory {}", path.display()))
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -268,6 +244,17 @@ impl PathType {
             ),
         };
         prompt_str.yellow().to_string()
+    }
+
+    async fn remove(&self, context: &RemoveContext) -> Result<()> {
+        match self {
+            PathType::ActiveEdenMount => remove_active_eden_mount(context).await,
+            PathType::InactiveEdenMount => remove_inactive_eden_mount(context).await,
+            PathType::RegularFile => {
+                fs::remove_file(context.canonical_path.as_path()).map_err(Into::into)
+            }
+            PathType::Unknown => clean_up(context).await,
+        }
     }
 }
 
@@ -374,7 +361,7 @@ fn is_active_eden_mount(path: &Path) -> bool {
     true
 }
 
-async fn validate_state_run(context: &mut RemoveContext) -> Result<Option<State>> {
+async fn validate_removal_completion(context: &RemoveContext) -> Result<()> {
     context
         .io
         .info("Checking eden mount list and file system to verify the removal...".to_string());
@@ -392,7 +379,7 @@ async fn validate_state_run(context: &mut RemoveContext) -> Result<Option<State>
         match context.canonical_path.try_exists() {
             Ok(false) => {
                 context.io.done();
-                Ok(None)
+                Ok(())
             }
             Ok(true) => Err(anyhow!("Directory left by repo {} is not removed", context)),
             Err(e) => Err(anyhow!(
@@ -402,64 +389,7 @@ async fn validate_state_run(context: &mut RemoveContext) -> Result<Option<State>
             )),
         }
     } else {
-        Ok(None)
-    }
-}
-
-#[derive(Debug)]
-struct Unknown {}
-impl Unknown {
-    async fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
-        Ok(Some(State::CleanUp(CleanUp {})))
-    }
-}
-
-#[derive(Debug)]
-enum State {
-    // function states (no real action performed)
-    Validation,
-
-    // removal states (harmful operations)
-    ActiveEdenMount(ActiveEdenMount),
-    InactiveEdenMount(InactiveEdenMount),
-    CleanUp(CleanUp),
-    RegFile(RegFile),
-    Unknown(Unknown),
-}
-
-impl fmt::Display for State {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                State::RegFile(_) => "RegFile",
-                State::ActiveEdenMount(_) => "ActiveEdenMount",
-                State::CleanUp(_) => "CleanUp",
-                State::InactiveEdenMount(_) => "InactiveEdenMount",
-                State::Validation => "Validation",
-                State::Unknown(_) => "Unknown",
-            }
-        )
-    }
-}
-
-impl State {
-    /// Runs the actions defined for this state
-    /// There are three cases for the return value:
-    /// 1. Ok(Some(State)) - we succeed in moving to the next state
-    /// 2. Ok(None) - we are in a terminal state and the removal is successful
-    /// 3. Err - the removal failed
-    async fn run(&self, context: &mut RemoveContext) -> Result<Option<State>> {
-        debug!("State {} running...", self);
-        match self {
-            State::RegFile(inner) => inner.next(context).await,
-            State::ActiveEdenMount(inner) => inner.next(context).await,
-            State::InactiveEdenMount(inner) => inner.next(context).await,
-            State::CleanUp(inner) => inner.next(context).await,
-            State::Validation => validate_state_run(context).await,
-            State::Unknown(inner) => inner.next(context).await,
-        }
+        Ok(())
     }
 }
 
@@ -480,15 +410,7 @@ impl Subcommand for RemoveCmd {
 
         let (canonicalized_path, path_type_res) = classify_path(&self.paths[0]).await;
 
-        let start_state = match path_type_res {
-            Err(e) => return Err(e),
-            Ok(path_type) => match path_type {
-                PathType::ActiveEdenMount => State::ActiveEdenMount(ActiveEdenMount {}),
-                PathType::InactiveEdenMount => State::InactiveEdenMount(InactiveEdenMount {}),
-                PathType::RegularFile => State::RegFile(RegFile {}),
-                PathType::Unknown => State::Unknown(Unknown {}),
-            },
-        };
+        let path_type = path_type_res?;
 
         let messenger = Arc::new(Messenger::new(
             IO::stdio(),
@@ -498,7 +420,7 @@ impl Subcommand for RemoveCmd {
         ));
 
         if !self.skip_prompt {
-            let prompt = path_type_res.unwrap().get_prompt(vec![&self.paths[0]]);
+            let prompt = path_type.get_prompt(vec![&self.paths[0]]);
 
             if !messenger.prompt_user(prompt)? {
                 return Err(anyhow!(
@@ -507,23 +429,14 @@ impl Subcommand for RemoveCmd {
             }
         }
 
-        let mut context = RemoveContext::new(
+        let context = RemoveContext::new(
             self.paths[0].clone(),
             canonicalized_path.unwrap(),
             self.preserve_mount_point,
             messenger.clone(),
         );
 
-        let mut state = Some(start_state);
-
-        while state.is_some() {
-            match state.unwrap().run(&mut context).await {
-                Ok(next_state) => state = next_state,
-                Err(e) => {
-                    return Err(e);
-                }
-            }
-        }
+        path_type.remove(&context).await?;
 
         context
             .io
