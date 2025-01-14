@@ -7,6 +7,7 @@
 
 #include "eden/fs/testharness/HgBinary.h"
 #include <folly/Range.h>
+#include <folly/portability/Unistd.h>
 #include "eden/common/utils/PathFuncs.h"
 
 #ifdef _WIN32

@@ -218,8 +218,8 @@ Expected<GlobMatcher, string> GlobMatcher::create(
   // expressions, and we usually save a byte or two on bracket expressions.
   result.reserve(glob.size() + 6);
 
-  ssize_t prevOpcodeIdx = -1;
-  ssize_t curOpcodeIdx = -1;
+  ptrdiff_t prevOpcodeIdx = -1;
+  ptrdiff_t curOpcodeIdx = -1;
   auto addOpcode = [&](uint8_t opcode) {
     prevOpcodeIdx = curOpcodeIdx;
     curOpcodeIdx = result.size();
