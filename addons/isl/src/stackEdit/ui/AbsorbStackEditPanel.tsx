@@ -111,6 +111,9 @@ const styles = stylex.create({
   scrollYPadding: {
     paddingRight: 'var(--pad)',
   },
+  commitExtras: {
+    paddingLeft: 'var(--pad)',
+  },
 });
 
 /** The `AbsorbEdit` that is currently being dragged. */
@@ -306,7 +309,7 @@ function AbsorbDagCommitExtras(props: {info: DagCommitInfo}) {
   }
 
   return (
-    <div>
+    <div {...stylex.props(styles.commitExtras)}>
       {fileIdxToEdits
         .map((edits, fileIdx) => (
           <AbsorbEditsForFile fileStackIndex={fileIdx} absorbEdits={edits} key={fileIdx} />
