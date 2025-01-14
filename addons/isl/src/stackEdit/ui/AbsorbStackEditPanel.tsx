@@ -38,6 +38,7 @@ const styles = stylex.create({
     // The negative margins match <FileHeader />.
     marginLeft: -1,
     marginRight: -1,
+    marginBottom: -1,
     display: 'flex',
   },
   inDraggingOverlay: {
