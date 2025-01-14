@@ -10,6 +10,7 @@ import type {FileStackIndex} from './commitStackState';
 import type {FileStackState, FileRev} from './fileStackState';
 import type {RecordOf} from 'immutable';
 
+import {t} from '../i18n';
 import {assert} from '../utils';
 import {max, prev} from './revMath';
 import {List, Record, Map as ImMap} from 'immutable';
@@ -108,7 +109,10 @@ export function embedAbsorbId(rev: FileRev, absorbEditId: AbsorbEditId): FileRev
   assert(Number.isInteger(rev), `${rev} already has an absorbEditId embedded`);
   assert(
     absorbEditId < MAX_ABSORB_EDIT_ID - 1,
-    `absorbEditId (${absorbEditId}) must be < MAX_ABSORB_EDIT_ID - 1 (${MAX_ABSORB_EDIT_ID} - 1)`,
+    t(
+      `Number of absorb diff chunks exceeds maximum limit ($count). Please retry with only a subset of the changes.`,
+      {replace: {$count: (absorbEditId + 1).toString()}},
+    ),
   );
   return (rev + ABSORB_EDIT_ID_FRACTIONAL_UNIT * (absorbEditId + 1)) as FileRev;
 }
