@@ -95,6 +95,18 @@ impl EdenFsInstance {
         INSTANCE.get().expect("EdenFsInstance is not initialized")
     }
 
+    pub fn new(
+        config_dir: PathBuf,
+        etc_eden_dir: PathBuf,
+        home_dir: Option<PathBuf>,
+    ) -> EdenFsInstance {
+        Self {
+            config_dir,
+            etc_eden_dir,
+            home_dir,
+        }
+    }
+
     pub fn init(config_dir: PathBuf, etc_eden_dir: PathBuf, home_dir: Option<PathBuf>) {
         event!(
             Level::TRACE,
@@ -104,11 +116,7 @@ impl EdenFsInstance {
             "Creating EdenFsInstance"
         );
         INSTANCE
-            .set(Self {
-                config_dir,
-                etc_eden_dir,
-                home_dir,
-            })
+            .set(EdenFsInstance::new(config_dir, etc_eden_dir, home_dir))
             .expect("should be able to initialize EdenfsInstance")
     }
 
