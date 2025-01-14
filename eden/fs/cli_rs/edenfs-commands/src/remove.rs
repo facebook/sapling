@@ -262,17 +262,17 @@ impl PathType {
 // Then determine a type for this path.
 //
 // Returns a tuple of:
-//   1. canonicalized path (Option)
-//   2. type of path (Result)
-async fn classify_path(path: &str) -> (Option<PathBuf>, Result<PathType>) {
+//   1. Canonicalized path
+//   2. Type of path
+async fn classify_path(path: &str) -> Result<(PathBuf, PathType)> {
     let path_buf = PathBuf::from(path);
 
     match path_buf.canonicalize() {
-        Err(e) => (None, Err(e.into())),
+        Err(e) => Err(e.into()),
         Ok(canonicalized_path) => {
             let path = canonicalized_path.as_path();
             if path.is_file() {
-                return (Some(canonicalized_path), Ok(PathType::RegularFile));
+                return Ok((canonicalized_path, PathType::RegularFile));
             }
 
             if !path.is_dir() {
@@ -281,10 +281,7 @@ async fn classify_path(path: &str) -> (Option<PathBuf>, Result<PathType>) {
                     "path {} is not a file or directory, please make sure it exists and you have permission to it.",
                     path.display()
                 );
-                return (
-                    Some(canonicalized_path),
-                    Err(anyhow!("Not a file or directory")),
-                );
+                return Err(anyhow!("Not a file or directory"));
             }
 
             debug!("{} is determined as a directory", path.display());
@@ -295,7 +292,7 @@ async fn classify_path(path: &str) -> (Option<PathBuf>, Result<PathType>) {
                     path.display()
                 );
 
-                return (Some(canonicalized_path), Ok(PathType::ActiveEdenMount));
+                return Ok((canonicalized_path, PathType::ActiveEdenMount));
             }
 
             debug!("{} is not an active EdenFS mount", path.display());
@@ -310,7 +307,7 @@ async fn classify_path(path: &str) -> (Option<PathBuf>, Result<PathType>) {
                             path.display(),
                             path_copy.display()
                         );
-                        return (Some(canonicalized_path), Err(anyhow!(err_msg)));
+                        return Err(anyhow!(err_msg));
                     } else {
                         continue;
                     }
@@ -322,10 +319,10 @@ async fn classify_path(path: &str) -> (Option<PathBuf>, Result<PathType>) {
             // If so, unregister it and clean from there
             match path_in_eden_config(path).await {
                 Ok(true) => {
-                    return (Some(canonicalized_path), Ok(PathType::InactiveEdenMount));
+                    return Ok((canonicalized_path, PathType::InactiveEdenMount));
                 }
                 Err(e) => {
-                    return (Some(canonicalized_path), Err(e));
+                    return Err(e);
                 }
                 _ => (),
             }
@@ -333,7 +330,7 @@ async fn classify_path(path: &str) -> (Option<PathBuf>, Result<PathType>) {
             // It's a directory that is not listed inside config.json
             // We don't know how to handle it properly, so move to "Unknown" state
             // and try to handle from there with "the best efforts".
-            (Some(canonicalized_path), Ok(PathType::Unknown))
+            Ok((canonicalized_path, PathType::Unknown))
         }
     }
 }
@@ -408,9 +405,7 @@ impl Subcommand for RemoveCmd {
             ));
         }
 
-        let (canonicalized_path, path_type_res) = classify_path(&self.paths[0]).await;
-
-        let path_type = path_type_res?;
+        let (canonicalized_path, path_type) = classify_path(&self.paths[0]).await?;
 
         let messenger = Arc::new(Messenger::new(
             IO::stdio(),
@@ -431,7 +426,7 @@ impl Subcommand for RemoveCmd {
 
         let context = RemoveContext::new(
             self.paths[0].clone(),
-            canonicalized_path.unwrap(),
+            canonicalized_path,
             self.preserve_mount_point,
             messenger.clone(),
         );
@@ -541,13 +536,18 @@ mod tests {
             )
         });
 
-        let (p, t) = classify_path(file_path_buf.to_str().unwrap()).await;
+        let result = classify_path(file_path_buf.to_str().unwrap()).await;
         assert!(
-            p == Some(file_path_buf.canonicalize().unwrap()),
+            result.is_ok(),
+            "path of a regular file should be classified"
+        );
+        let (p, t) = result.unwrap();
+        assert!(
+            p == file_path_buf.canonicalize().unwrap(),
             "path of a regular file should be canonicalized"
         );
         assert!(
-            matches!(t, Ok(PathType::RegularFile)),
+            matches!(t, PathType::RegularFile),
             "path of a regular file should be classified as RegFile"
         );
     }
@@ -557,11 +557,10 @@ mod tests {
         let tmp_dir = prepare_directory();
         let path = format!("{}/test/no_file", tmp_dir.path().to_str().unwrap());
         let path_buf = PathBuf::from(path);
-        let (p, t) = classify_path(path_buf.to_str().unwrap()).await;
-        assert!(p.is_none(), "nonexistent path should not be canonicalized");
+        let result = classify_path(path_buf.to_str().unwrap()).await;
         assert!(
-            t.is_err(),
-            "nonexistent path should be classified as Invalid"
+            result.is_err(),
+            "nonexistent path should not be canonicalized"
         );
     }
 }
