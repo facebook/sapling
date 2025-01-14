@@ -98,12 +98,13 @@ pub async fn counter_check_and_bump<'a>(
             }
         }
         Ok(Err(e)) => {
+            // This can happen if the counter is not yet initialized
+            // or it's not been long enough. Bump and continue.
             debug!(
                 ctx.logger(),
                 "Failed getting rate limiting counter {}: {:?}", rate_limit_name, e
             );
-            let msg = format!("{}: Failed", rate_limit_name);
-            scuba.log_with_msg(&msg, None);
+            counter.bump(1.0);
             Ok(())
         }
         Err(_) => {
