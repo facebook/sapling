@@ -24,7 +24,6 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Error;
@@ -657,19 +656,63 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
     Ok(acc.into_inner())
 }
 
-/// Object representing Git refs. maybe_tag_id will only
-/// have a value if the ref is a tag pointing to a commit.
+/// Enum for the different types of targets for a Git ref
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub enum RefTarget {
+    #[default]
+    Commit,
+    Blob(ObjectId),
+    Tree(ObjectId),
+}
+
+impl RefTarget {
+    pub fn is_content(&self) -> bool {
+        match self {
+            RefTarget::Blob(_) | RefTarget::Tree(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_tree(&self) -> bool {
+        match self {
+            RefTarget::Tree(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn into_inner_hash(self) -> Result<ObjectId> {
+        match self {
+            RefTarget::Blob(oid) | RefTarget::Tree(oid) => Ok(oid),
+            _ => anyhow::bail!("RefTarget is not a content type and hence has no hash"),
+        }
+    }
+}
+
+/// Object representing the metadata associated with Git refs
+#[derive(Clone, Copy, Debug, Default, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct GitRefMetadata {
+    /// Object id of the tag if the ref is a tag
+    pub maybe_tag_id: Option<ObjectId>,
+    /// Flag indicating if the ref is a nested ref. Applies only for tags
+    pub nested_tag: bool,
+    /// The type of object that the ref points to
+    pub target: RefTarget,
+}
+
+/// Object representing Git refs
 #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct GitRef {
+    /// Name of the ref
     pub name: Vec<u8>,
-    pub maybe_tag_id: Option<ObjectId>,
+    /// Metadata associated with the ref
+    pub metadata: GitRefMetadata,
 }
 
 impl GitRef {
     fn new(name: Vec<u8>) -> Self {
         Self {
             name,
-            maybe_tag_id: None,
+            metadata: GitRefMetadata::default(),
         }
     }
 }
@@ -786,15 +829,18 @@ pub async fn read_git_refs(
                     format!("unable to read git object: {oid} for ref: {ref_name}")
                 })?;
                 match object.parsed {
-                    Object::Tree(_) => {
-                        // This happens in the Linux kernel repo, because Linus was being clever - a commit and a tree
-                        // are both treeish for the purposes of things like checkout and diff.
+                    Object::Commit(_) => {
+                        git_ref.metadata.target = RefTarget::Commit;
+                        refs.insert(git_ref, oid);
                         break;
                     }
                     Object::Blob(_) => {
-                        bail!("ref {} points to a blob", ref_name);
+                        git_ref.metadata.target = RefTarget::Blob(oid);
+                        refs.insert(git_ref, oid);
+                        break;
                     }
-                    Object::Commit(_) => {
+                    Object::Tree(_) => {
+                        git_ref.metadata.target = RefTarget::Tree(oid);
                         refs.insert(git_ref, oid);
                         break;
                     }
@@ -802,8 +848,12 @@ pub async fn read_git_refs(
                     // The loop is designed to peel the tag but we want the outermost
                     // tag object so only get the ID if we haven't already done it before.
                     Object::Tag(tag) => {
-                        if git_ref.maybe_tag_id.is_none() {
-                            git_ref.maybe_tag_id = Some(oid);
+                        if git_ref.metadata.maybe_tag_id.is_none() {
+                            git_ref.metadata.maybe_tag_id = Some(oid);
+                        } else {
+                            // We have already captured the tag id, which means this is atleast the
+                            // second tag in the chain. We want to mark this as a nested tag.
+                            git_ref.metadata.nested_tag = true;
                         }
                         oid = tag.target;
                     }

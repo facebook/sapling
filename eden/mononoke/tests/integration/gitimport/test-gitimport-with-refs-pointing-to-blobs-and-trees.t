@@ -44,8 +44,15 @@
   $ with_stripped_logs gitimport "$GIT_REPO" --concurrency 100 --generate-bookmarks full-repo
   using repo "repo" repoid RepositoryId(0)
   GitRepo:$TESTTMP/repo-git commit 1 of 1 - Oid:8ce3eae4 => Bid:032cd4dc, repo: $TESTTMP/repo-git
-  Execution error: read_git_refs failed
-  
-  Caused by:
-      ref refs/heads/branch_to_blob points to a blob
-  Error: Execution failed
+  Ref: "refs/heads/branch_to_blob": None
+  Ref: "refs/heads/branch_to_root_tree": None
+  Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
+  Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
+  Ref: "refs/tags/recursive_tag": None
+  Ref: "refs/tags/simple_tag_to_tree": None
+  Ref: "refs/tags/tag_to_tree": None
+  Initializing repo: repo
+  Initialized repo: repo
+  All repos initialized. It took: * seconds (glob)
+  Bookmark: "heads/master_bookmark": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (created)
+  Bookmark: "tags/first_tag": ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)) (created)

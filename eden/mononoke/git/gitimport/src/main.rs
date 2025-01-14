@@ -40,15 +40,19 @@ use fbinit::FacebookInit;
 use futures::future;
 use futures::TryStreamExt;
 use git_symbolic_refs::GitSymbolicRefsRef;
+use gix_hash::ObjectId;
 use import_tools::bookmark::BookmarkOperationErrorReporting;
 use import_tools::create_changeset_for_annotated_tag;
+use import_tools::git_reader::GitReader;
 use import_tools::import_tree_as_single_bonsai_changeset;
 use import_tools::set_bookmark;
+use import_tools::upload_git_object;
 use import_tools::upload_git_tag;
 use import_tools::BackfillDerivation;
 use import_tools::BookmarkOperation;
 use import_tools::GitImportLfs;
 use import_tools::GitRepoReader;
+use import_tools::GitUploader;
 use import_tools::GitimportPreferences;
 use import_tools::GitimportTarget;
 use import_tools::ReuploadCommits;
@@ -390,7 +394,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
             .into_iter()
             .map(|(git_ref, commit)| {
                 Ok((
-                    git_ref.maybe_tag_id,
+                    git_ref.metadata,
                     String::from_utf8(git_ref.name).map_err(|err| {
                         anyhow::anyhow!(
                             "Failed to parse git ref name {:?} due to invalid UTF-8 encoding, Cause: {}",
@@ -446,17 +450,61 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
             } else {
                 None
             };
+            // We can make the below loop concurrent but since refs pointing to content is an anomaly,
+            // we will only optimize its upload if we see a need.
+            for (ref_metadata, content_ref_name, _) in git_ref_mapping
+                .iter()
+                .filter(|(ref_metadata, _, _)| ref_metadata.target.is_content())
+            {
+                let ref_name = content_ref_name
+                    .strip_prefix("refs/")
+                    .context("Ref does not start with refs/")?
+                    .to_string();
+                if let Some(tag_id) = ref_metadata.maybe_tag_id {
+                    // If the ref pointing to tree or blob is a tag, then we need to upload the tag before
+                    // storing the git ref content mapping.
+                    process_tags(
+                        &ctx,
+                        &ref_name,
+                        tag_id,
+                        &existing_tags,
+                        &ChangesetId::empty(),
+                        reupload,
+                        uploader.clone(),
+                        reader.clone(),
+                    )
+                    .await?;
+                }
+                let is_tree = ref_metadata.target.is_tree();
+                let git_hash = ref_metadata.target.into_inner_hash()?;
+                // Before adding the git ref content mapping, ensure that the object pointed to by
+                // the content ref is already present in Mononoke
+                upload_git_object(&ctx, uploader.clone(), reader.clone(), &git_hash).await?;
+                // Only add git ref content mapping if the ref itself directly points to a
+                // tree or blob. If the ref is nested, do not add the mapping.
+                if !ref_metadata.nested_tag {
+                    uploader
+                        .generate_ref_content_mapping(
+                            &ctx,
+                            content_ref_name.to_string(),
+                            git_hash,
+                            is_tree,
+                        )
+                        .await?;
+                }
+            }
+
             for (maybe_tag_id, name, changeset) in
                 git_ref_mapping
                     .iter()
-                    .filter_map(|(maybe_tag_id, name, changeset)| {
+                    .filter_map(|(ref_metadata, name, changeset)| {
                         // Exclude the ref if its specified in the exclude-list OR if its not explicitly specified in the include-list (if exists)
                         let exclude_ref = args.exclude_refs.contains(name)
                             || !(args.include_refs.is_empty() || args.include_refs.contains(name));
                         if exclude_ref {
                             None
                         } else {
-                            changeset.map(|cs| (maybe_tag_id, name, cs))
+                            changeset.map(|cs| (ref_metadata.maybe_tag_id, name, cs))
                         }
                     })
             {
@@ -470,28 +518,17 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                     continue;
                 }
                 if let Some(tag_id) = maybe_tag_id {
-                    let new_or_updated_tag = existing_tags.get(&name).map_or(true, |tag_hash| {
-                        if let Ok(new_hash) = GitSha1::from_object_id(tag_id) {
-                            *tag_hash != new_hash
-                        } else {
-                            false
-                        }
-                    });
-                    // Only upload the tag if it's new or has changed.
-                    if new_or_updated_tag || reupload.reupload_commit() {
-                        // The ref getting imported is a tag, so store the raw git Tag object.
-                        upload_git_tag(&ctx, uploader.clone(), reader.clone(), tag_id).await?;
-                        // Create the changeset corresponding to the commit pointed to by the tag.
-                        create_changeset_for_annotated_tag(
-                            &ctx,
-                            uploader.clone(),
-                            reader.clone(),
-                            tag_id,
-                            Some(name.clone()),
-                            changeset,
-                        )
-                        .await?;
-                    }
+                    process_tags(
+                        &ctx,
+                        &name,
+                        tag_id,
+                        &existing_tags,
+                        changeset,
+                        reupload,
+                        uploader.clone(),
+                        reader.clone(),
+                    )
+                    .await?;
                 }
                 let bookmark_key = BookmarkKey::new(&name)?;
 
@@ -554,6 +591,41 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 }
             }
         };
+    }
+    Ok(())
+}
+
+async fn process_tags<Uploader: GitUploader, Reader: GitReader>(
+    ctx: &CoreContext,
+    name: &String,
+    tag_id: ObjectId,
+    existing_tags: &HashMap<String, GitSha1>,
+    changeset: &ChangesetId,
+    reupload: ReuploadCommits,
+    uploader: Arc<Uploader>,
+    reader: Arc<Reader>,
+) -> anyhow::Result<()> {
+    let new_or_updated_tag = existing_tags.get(name).map_or(true, |tag_hash| {
+        if let Ok(new_hash) = GitSha1::from_object_id(&tag_id) {
+            *tag_hash != new_hash
+        } else {
+            false
+        }
+    });
+    // Only upload the tag if it's new or has changed.
+    if new_or_updated_tag || reupload.reupload_commit() {
+        // The ref getting imported is a tag, so store the raw git Tag object.
+        upload_git_tag(ctx, uploader.clone(), reader.clone(), &tag_id).await?;
+        // Create the changeset corresponding to the commit pointed to by the tag.
+        create_changeset_for_annotated_tag(
+            ctx,
+            uploader.clone(),
+            reader.clone(),
+            &tag_id,
+            Some(name.clone()),
+            changeset,
+        )
+        .await?;
     }
     Ok(())
 }
