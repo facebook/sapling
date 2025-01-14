@@ -78,10 +78,15 @@ struct RemoveContext {
 }
 
 impl RemoveContext {
-    fn new(original_path: String, preserve_mount_point: bool, io: Messenger) -> RemoveContext {
+    fn new(
+        original_path: String,
+        canonical_path: PathBuf,
+        preserve_mount_point: bool,
+        io: Messenger,
+    ) -> RemoveContext {
         RemoveContext {
             original_path,
-            canonical_path: PathBuf::new(),
+            canonical_path,
             preserve_mount_point,
             io,
         }
@@ -91,101 +96,6 @@ impl RemoveContext {
 impl fmt::Display for RemoveContext {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.canonical_path.display())
-    }
-}
-
-#[derive(Debug)]
-struct SanityCheck {}
-impl SanityCheck {
-    /// This is the first step of the remove process. It will verify that the path is valid and exists.
-    async fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
-        let path = Path::new(&context.original_path)
-            .canonicalize()
-            .with_context(|| format!("Error canonicalizing path {}", context.original_path))?;
-        context.canonical_path = path;
-
-        Ok(Some(State::Determination(Determination {})))
-    }
-}
-
-#[derive(Debug)]
-struct Determination {}
-impl Determination {
-    async fn next(&self, context: &mut RemoveContext) -> Result<Option<State>> {
-        let path = context.canonical_path.as_path();
-
-        if path.is_file() {
-            debug!("path {} determined to be a regular file", context);
-            return Ok(Some(State::RegFile(RegFile {})));
-        }
-
-        if !path.is_dir() {
-            return Err(anyhow!(format!("{} is not a file or a directory", context)));
-        }
-
-        debug!("{} is determined as a directory", context);
-
-        if self.is_active_eden_mount(&context.canonical_path) {
-            debug!(
-                "path {} is determined to be an active EdenFS mount",
-                context
-            );
-
-            return Ok(Some(State::ActiveEdenMount(ActiveEdenMount {})));
-        }
-
-        debug!("{} is not an active EdenFS mount", path.display());
-
-        // Check if it's a directory managed under eden
-        let mut path_copy = context.canonical_path.clone();
-        loop {
-            if path_copy.pop() {
-                if self.is_active_eden_mount(&path_copy) {
-                    return Err(anyhow!(
-                        "{} is not the root of checkout {}, not removing",
-                        context,
-                        path_copy.display()
-                    ));
-                } else {
-                    continue;
-                }
-            }
-            break;
-        }
-
-        // Maybe it's a directory that is left after unmount
-        // If so, unregister it and clean from there
-        if path_in_eden_config(context.canonical_path.as_path()).await? {
-            return Ok(Some(State::InactiveEdenMount(InactiveEdenMount {})));
-        }
-
-        // It's a directory that is not listed inside config.json
-        // We don't know how to handle it properly, so move to "Unknown" state
-        // and try to handle from there with "the best efforts".
-        Ok(Some(State::Unknown(Unknown {})))
-    }
-
-    #[cfg(unix)]
-    fn is_active_eden_mount(&self, path: &Path) -> bool {
-        // For Linux and Mac, an active Eden mount should have a dir named ".eden" under the
-        // repo root and there should be a symlink named "root" which points to the repo root
-        let unix_eden_dot_dir_path = path.join(".eden").join("root");
-
-        match unix_eden_dot_dir_path.canonicalize() {
-            Ok(resolved_path) => resolved_path == path,
-            _ => false,
-        }
-    }
-
-    #[cfg(windows)]
-    fn is_active_eden_mount(&self, path: &Path) -> bool {
-        // For Windows, an active EdenFS mount should have a dir named ".eden" under the
-        // repo and there should be a file named "config" under the ".eden" dir
-        let config_path = path.join(".eden").join("config");
-        if !config_path.exists() {
-            return false;
-        }
-        true
     }
 }
 
@@ -509,8 +419,6 @@ impl Unknown {
 #[derive(Debug)]
 enum State {
     // function states (no real action performed)
-    SanityCheck(SanityCheck),
-    Determination(Determination),
     Validation,
 
     // removal states (harmful operations)
@@ -527,8 +435,6 @@ impl fmt::Display for State {
             f,
             "{}",
             match self {
-                State::SanityCheck(_) => "SanityCheck",
-                State::Determination(_) => "Determination",
                 State::RegFile(_) => "RegFile",
                 State::ActiveEdenMount(_) => "ActiveEdenMount",
                 State::CleanUp(_) => "CleanUp",
@@ -541,10 +447,6 @@ impl fmt::Display for State {
 }
 
 impl State {
-    fn start() -> State {
-        State::SanityCheck(SanityCheck {})
-    }
-
     /// Runs the actions defined for this state
     /// There are three cases for the return value:
     /// 1. Ok(Some(State)) - we succeed in moving to the next state
@@ -553,8 +455,6 @@ impl State {
     async fn run(&self, context: &mut RemoveContext) -> Result<Option<State>> {
         debug!("State {} running...", self);
         match self {
-            State::SanityCheck(inner) => inner.next(context).await,
-            State::Determination(inner) => inner.next(context).await,
             State::RegFile(inner) => inner.next(context).await,
             State::ActiveEdenMount(inner) => inner.next(context).await,
             State::InactiveEdenMount(inner) => inner.next(context).await,
@@ -576,16 +476,33 @@ impl Subcommand for RemoveCmd {
 
         if self.skip_prompt && self.no {
             return Err(anyhow!(
-                "Both '-y' and '-n' are provided. This is not supported.\nExisting."
+                "Both '-y' and '-n' are provided. This is not supported.\nExiting."
             ));
         }
+
+        let (canonicalized_path, path_type_res) = classify_path(&self.paths[0]).await;
+
+        let start_state = match path_type_res {
+            Err(e) => return Err(e),
+            Ok(path_type) => match path_type {
+                PathType::ActiveEdenMount => State::ActiveEdenMount(ActiveEdenMount {}),
+                PathType::InactiveEdenMount => State::InactiveEdenMount(InactiveEdenMount {}),
+                PathType::RegularFile => State::RegFile(RegFile {}),
+                PathType::Unknown => State::Unknown(Unknown {}),
+            },
+        };
 
         let messenger =
             Messenger::new(IO::stdio(), self.skip_prompt, self.suppress_output, self.no);
 
-        let mut context =
-            RemoveContext::new(self.paths[0].clone(), self.preserve_mount_point, messenger);
-        let mut state = Some(State::start());
+        let mut context = RemoveContext::new(
+            self.paths[0].clone(),
+            canonicalized_path.unwrap(),
+            self.preserve_mount_point,
+            messenger,
+        );
+
+        let mut state = Some(start_state);
 
         while state.is_some() {
             match state.unwrap().run(&mut context).await {
@@ -688,12 +605,6 @@ mod tests {
 
     use super::*;
 
-    #[cfg(unix)]
-    const PATH_NOT_FOUND_ERROR_MSG: &str = "No such file or directory";
-
-    #[cfg(windows)]
-    const PATH_NOT_FOUND_ERROR_MSG: &str = "The system cannot find the path specified";
-
     /// This helper function creates a directory structure that looks like this:
     /// "some_tmp_dir/test/nested/inner"
     /// then it returns the path to the "some_tmp_dir" directory
@@ -704,85 +615,6 @@ mod tests {
         println!("creating dirs: {:?}", prefix.to_str().unwrap());
         std::fs::create_dir_all(prefix).unwrap();
         temp_dir
-    }
-
-    fn default_context(original_path: String) -> RemoveContext {
-        let messenger = Messenger::new(IO::null(), true, true, false);
-        RemoveContext {
-            original_path,
-            canonical_path: PathBuf::new(),
-            preserve_mount_point: false,
-            io: messenger,
-        }
-    }
-
-    #[tokio::test]
-    async fn test_sanity_check_pass() {
-        let tmp_dir = prepare_directory();
-        let path = format!("{}/test/nested/../nested", tmp_dir.path().to_str().unwrap());
-        let mut context = default_context(path);
-        let state = State::start().run(&mut context).await.unwrap().unwrap();
-
-        assert!(
-            matches!(state, State::Determination(_)),
-            "Expected Determination state"
-        );
-        assert!(context.canonical_path.ends_with("test/nested"));
-    }
-
-    #[tokio::test]
-    async fn test_sanity_check_fail() {
-        let tmp_dir = prepare_directory();
-        let path = format!(
-            "{}/test/nested/../../nested/inner",
-            tmp_dir.path().to_str().unwrap()
-        );
-        let mut context = default_context(path);
-        let state: std::result::Result<Option<State>, anyhow::Error> =
-            State::start().run(&mut context).await;
-        assert!(state.is_err());
-        assert!(
-            state
-                .unwrap_err()
-                .root_cause()
-                .to_string()
-                .contains(PATH_NOT_FOUND_ERROR_MSG)
-        );
-    }
-
-    #[tokio::test]
-    async fn test_determine_regular_file() {
-        let temp_dir = prepare_directory();
-        let file_path_buf = temp_dir.path().join("temporary-file.txt");
-        fs::write(file_path_buf.as_path(), "anything").unwrap_or_else(|err| {
-            panic!(
-                "cannot write to a file at {}: {}",
-                file_path_buf.display(),
-                err
-            )
-        });
-
-        // When context includes a path to a regular file
-        let mut file_context = default_context(file_path_buf.display().to_string());
-        let mut state = State::start()
-            .run(&mut file_context)
-            .await
-            .unwrap()
-            .unwrap();
-        assert!(
-            matches!(state, State::Determination(_)),
-            "Expected Determination state"
-        );
-        state = state.run(&mut file_context).await.unwrap().unwrap();
-        assert!(matches!(state, State::RegFile(_)), "Expected RegFile state");
-
-        // When context includes a path to a directory
-        let mut dir_context = default_context(temp_dir.path().to_str().unwrap().to_string());
-        state = State::start().run(&mut dir_context).await.unwrap().unwrap();
-        assert!(
-            matches!(state, State::Determination(_)),
-            "Expected Determination state"
-        );
     }
 
     #[tokio::test]

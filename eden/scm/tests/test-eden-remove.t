@@ -11,7 +11,7 @@ setup backing repo
 Do not provide both '-y' and '-n'
   $ EDENFSCTL_ONLY_RUST=true eden remove -q -y -n $TESTTMP/wcrepo/test_dir
   Error: Both '-y' and '-n' are provided. This is not supported.
-  Existing.
+  Exiting.
   [1]
 
 touch a test file
