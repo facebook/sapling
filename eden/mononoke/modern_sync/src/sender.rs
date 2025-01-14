@@ -25,7 +25,7 @@ pub enum Entry {
     #[allow(unused)]
     FileNode(HgFileNodeId),
     #[allow(unused)]
-    HgChangeset(HgBlobChangeset),
+    HgChangeset(HgBlobChangeset, BonsaiChangeset),
 }
 
 #[async_trait]
@@ -38,8 +38,6 @@ pub trait ModernSyncSender {
     async fn upload_trees(&self, trees: Vec<HgManifestId>) -> Result<()>;
 
     async fn upload_filenodes(&self, filenodes: Vec<HgFileNodeId>) -> Result<()>;
-
-    async fn upload_hg_changeset(&self, hg_css: Vec<HgBlobChangeset>) -> Result<()>;
 
     async fn upload_identical_changeset(
         &self,

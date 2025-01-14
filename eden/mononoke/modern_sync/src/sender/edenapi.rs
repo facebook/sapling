@@ -212,21 +212,6 @@ impl ModernSyncSender for EdenapiSender {
         Ok(())
     }
 
-    async fn upload_hg_changeset(&self, hg_css: Vec<HgBlobChangeset>) -> Result<()> {
-        let entries = stream::iter(hg_css)
-            .map(util::to_upload_hg_changeset)
-            .try_collect::<Vec<_>>()
-            .await?;
-
-        let res = self.client.upload_changesets(entries, vec![]).await?;
-        info!(
-            &self.logger,
-            "Upload hg changeset response: {:?}",
-            res.entries.try_collect::<Vec<_>>().await?
-        );
-        Ok(())
-    }
-
     async fn set_bookmark(
         &self,
         bookmark: String,

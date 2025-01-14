@@ -40,7 +40,9 @@ impl ModernSyncSender for DummySender {
             }
             Entry::Tree(tree_id) => self.upload_trees(vec![tree_id]).await,
             Entry::FileNode(filenode_id) => self.upload_filenodes(vec![filenode_id]).await,
-            Entry::HgChangeset(hg_css) => self.upload_hg_changeset(vec![hg_css]).await,
+            Entry::HgChangeset(hg_cs, bcs) => {
+                self.upload_identical_changeset(vec![(hg_cs, bcs)]).await
+            }
         }
     }
 
@@ -62,17 +64,6 @@ impl ModernSyncSender for DummySender {
     async fn upload_filenodes(&self, filenodes: Vec<HgFileNodeId>) -> Result<()> {
         for filenode in filenodes {
             info!(&self.logger, "Uploading filenode with id {}", filenode);
-        }
-        Ok(())
-    }
-
-    async fn upload_hg_changeset(&self, hg_css: Vec<HgBlobChangeset>) -> Result<()> {
-        for hg_cs in hg_css {
-            info!(
-                &self.logger,
-                "Uploading hg changeset with id {}",
-                hg_cs.get_changeset_id()
-            );
         }
         Ok(())
     }
