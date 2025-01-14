@@ -2,7 +2,6 @@
 
 Test visibleheads sync between Git and Sl (dotgit).
 
-  $ export RUST_BACKTRACE=0
   $ . $TESTDIR/git.sh
 
   $ git init -qb main client-repo
@@ -214,15 +213,5 @@ A tree hash leaked into visibleheads:
   From $TESTTMP/tree-hash-leak-server-repo
    * [new ref]         73c8ee0cae8ffb843cc154c3bf28a12438801d3f -> remote/main
    * [new ref]         617601c79811cbbae338512798318b4e5b70c9ac -> refs/visibleheads/617601c79811cbbae338512798318b4e5b70c9ac
-  abort: resolving 617601c79811cbbae338512798318b4e5b70c9ac to git commit
-  
-  Caused by:
-      the requested type does not match the type in the ODB; class=Invalid (3); code=NotFound (-3)
-  [255]
   $ sl log -r tip -T '{node}\n'
-  abort: When constructing alloc::boxed::Box<dyn commits_trait::DagCommits + core::marker::Send> from dyn storemodel::StoreInfo, "10-git-commits" reported error
-  
-  Caused by:
-      0: resolving 617601c79811cbbae338512798318b4e5b70c9ac to git commit
-      1: the requested type does not match the type in the ODB; class=Invalid (3); code=NotFound (-3)
-  [255]
+  73c8ee0cae8ffb843cc154c3bf28a12438801d3f

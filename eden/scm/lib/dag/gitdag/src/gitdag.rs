@@ -87,8 +87,32 @@ fn sync_from_git(
     dag: &mut Dag,
     git_repo: &git2::Repository,
     heads: VertexListWithOptions,
-) -> dag::Result<()> {
+) -> anyhow::Result<()> {
     struct ForceSend<T>(T);
+
+    // Filter out non-commit (ex. tree) references.
+    let heads = heads.try_filter(&|vertex, _opts| {
+        let oid = git2::Oid::from_bytes(vertex.as_ref())?;
+        match git_repo.find_object(oid, Some(git2::ObjectType::Commit)) {
+            Err(e) if e.code() == git2::ErrorCode::NotFound => {
+                tracing::warn!(?vertex, "ignored missing git head");
+                Ok(false)
+            }
+            Ok(o) => {
+                let kind = match o.kind() {
+                    Some(v) => v,
+                    None => anyhow::bail!("unexpected: no git object type for {:?}", vertex),
+                };
+                if kind != git2::ObjectType::Commit {
+                    tracing::warn!(kind=?o.kind(), ?vertex, "ignored non-commit git head");
+                    Ok(false)
+                } else {
+                    Ok(true)
+                }
+            }
+            Err(e) => Err(e.into()),
+        }
+    })?;
 
     // See https://github.com/rust-lang/git2-rs/issues/194, libgit2 can be
     // accessed by a different thread.
