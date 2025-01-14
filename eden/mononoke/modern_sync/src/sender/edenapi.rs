@@ -7,7 +7,6 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::iter::Iterator;
 use std::time::Duration;
 
 use anyhow::ensure;
@@ -106,16 +105,6 @@ impl ModernSyncSender for EdenapiSender {
     }
 
     async fn upload_contents(&self, contents: Vec<(AnyFileContentId, FileContents)>) -> Result<()> {
-        info!(
-            &self.logger,
-            "Uploading contents: {:?}",
-            contents
-                .clone()
-                .into_iter()
-                .map(|(first, _)| first)
-                .collect::<Vec<_>>()
-        );
-
         // Batch contents by size
         let mut batches = Vec::new();
         let mut current_batch = Vec::new();
