@@ -350,6 +350,7 @@ function SingleAbsorbEdit(props: {edit: AbsorbEdit; inDraggingOverlay?: boolean}
   const {edit, inDraggingOverlay} = props;
   const isDragging = useAtomValue(draggingAbsorbEdit);
   const stackEdit = useStackEditState();
+  const reorderId = `absorb-${edit.fileStackIndex}-${edit.absorbEditId}`;
 
   const handleDrag = (x: number, y: number, isDragging: boolean) => {
     // Visual update.
@@ -396,7 +397,8 @@ function SingleAbsorbEdit(props: {edit: AbsorbEdit; inDraggingOverlay?: boolean}
         styles.absorbEditSingleChunk,
         inDraggingOverlay && styles.inDraggingOverlay,
         !inDraggingOverlay && isDragging === edit && styles.beingDragged,
-      )}>
+      )}
+      data-reorder-id={reorderId}>
       <div {...stylex.props(styles.dragHandlerWrapper)}>
         <DragHandle onDrag={handleDrag}>
           <Icon icon="grabber" />
