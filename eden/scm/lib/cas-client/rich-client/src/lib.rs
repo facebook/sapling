@@ -154,11 +154,13 @@ impl RichCasClient {
                         remote_cache_config.large_files = RemoteFetchPolicy::LOCAL_FETCH_WITH_SYNC;
                     }
                     CasCacheModeLocalFetch::SmallFilesLocally => {
+                        embedded_config.rich_client_config.disable_p2p = true;
                         remote_cache_config.mode = RemoteCacheManagerMode::ALL_FILES;
                         remote_cache_config.small_files = RemoteFetchPolicy::LOCAL_FETCH_WITH_SYNC;
                         remote_cache_config.large_files = RemoteFetchPolicy::REMOTE_FETCH;
                     }
                     CasCacheModeLocalFetch::AllRemote => {
+                        embedded_config.rich_client_config.disable_p2p = true;
                         remote_cache_config.mode = RemoteCacheManagerMode::ALL_FILES;
                         remote_cache_config.small_files = RemoteFetchPolicy::REMOTE_FETCH;
                         remote_cache_config.large_files = RemoteFetchPolicy::REMOTE_FETCH;
