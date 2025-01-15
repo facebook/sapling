@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     # Our build container already has Node, Yarn, and Python installed.
     container:
-      image: ${{ format('ghcr.io/{0}/build_ubuntu_20_04:latest', github.repository) }}
+      image: ${{ format('ghcr.io/{0}/build_ubuntu_22_04:latest', github.repository) }}
     steps:
       - name: Install fb-watchman
         run: curl -fsSL https://github.com/facebook/watchman/releases/download/v2023.09.18.00/watchman_ubuntu20.04_v2023.09.18.00.deb -o watchman.deb && apt -y -f install ./watchman.deb
