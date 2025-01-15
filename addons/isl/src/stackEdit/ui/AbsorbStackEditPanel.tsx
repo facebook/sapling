@@ -23,6 +23,7 @@ import {defaultRenderGlyph, RenderDag} from '../../RenderDag';
 import {YOU_ARE_HERE_VIRTUAL_COMMIT} from '../../dag/virtualCommit';
 import {t, T} from '../../i18n';
 import {readAtom, writeAtom} from '../../jotaiUtils';
+import {prev} from '../revMath';
 import {calculateDagFromStack} from '../stackDag';
 import {stackEditStack, useStackEditState} from './stackEditState';
 import * as stylex from '@stylexjs/stylex';
@@ -324,14 +325,22 @@ function AbsorbEditsForFile(props: {
   fileStackIndex: FileStackIndex;
   absorbEdits: ImMap<AbsorbEditId, AbsorbEdit>;
 }) {
-  const stackEdit = useStackEditState();
-  const stack = stackEdit.commitStack;
-  // Display a file path.
-  // NOTE: In case the file is renamed, only the "before rename" path is shown.
-  const path = stack.getFileStackPath(props.fileStackIndex, 0 as FileRev);
+  const {fileStackIndex, absorbEdits} = props;
+  const stack = nullthrows(useAtomValue(stackEditStack));
+  const fileStack = nullthrows(stack.fileStacks.get(fileStackIndex));
+  // In case the file is renamed, show "path1 -> path2" where path1 is the file
+  // name in the commit, and path2 is the file name in the working copy.
+  // Note: the line numbers we show are based on the working copy, not the commit.
+  // So it seems showing the file name in the working copy is relevant.
+  const fileRev = absorbEdits.first()?.selectedRev ?? (0 as FileRev);
+  const pathInCommit = stack.getFileStackPath(fileStackIndex, fileRev);
+  const wdirRev = prev(fileStack.revLength);
+  const pathInWorkingCopy = stack.getFileStackPath(fileStackIndex, wdirRev);
+  const path = pathInWorkingCopy ?? pathInCommit;
+
   return (
     <div>
-      {path && <FileHeader path={path} iconType={IconType.Modified} />}
+      {path && <FileHeader copyFrom={pathInCommit} path={path} iconType={IconType.Modified} />}
       {props.absorbEdits.map((edit, i) => <SingleAbsorbEdit edit={edit} key={i} />).valueSeq()}
     </div>
   );
