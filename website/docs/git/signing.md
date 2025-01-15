@@ -65,7 +65,7 @@ The Git documentation on GPG is a bit light on detail when it comes to ensuring 
 
 First, make sure that `gpg` is available on your `$PATH` and that `gpg --list-secret-keys --keyid-format LONG` lists the keys you expect. Note that you will have to run `gpg --gen-key` to create a key that matches your Sapling identity if you do not have one available already.
 
-A basic test to ensure that `gpg` is setup correctly is to use it to sign a pice of test data:
+A basic test to ensure that `gpg` is setup correctly is to use it to sign a piece of test data:
 
 ```
 echo "test" | gpg --clearsign
