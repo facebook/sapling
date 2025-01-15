@@ -40,7 +40,7 @@ import thrift.transport
 from eden.fs.cli.version import VersionInfo
 
 try:
-    from cli.py import par_telemetry
+    from cli.py import usage
 except ImportError:
     # in OSS define a stub
     class ParTelemetryStub:
@@ -49,7 +49,7 @@ except ImportError:
 
     # pyre-fixme[31]: Expression `eden.fs.cli.main.ParTelemetryStub()` is not a
     #  valid type.
-    par_telemetry = ParTelemetryStub()
+    usage = ParTelemetryStub()
 
 from eden.fs.cli.buck import get_buck_command, run_buck_command
 from eden.fs.cli.config import HG_REPO_TYPES
@@ -2933,7 +2933,7 @@ except AttributeError:
 def main() -> int:
     # This is called hundreds of millions of times on unique hosts.
     # Increase how often it's sampled.
-    par_telemetry.set_sample_rate(automation=10000)
+    usage.set_sample_rate(automation=10000)
     parser = create_parser()
     try:
         args = parser.parse_args()
