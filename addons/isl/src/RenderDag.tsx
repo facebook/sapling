@@ -318,7 +318,7 @@ function DagRowInner(props: {row: ExtendedGraphRow; info: DagCommitInfo} & Rende
         // one less than the extra indent added by the link line normally
         .slice(0, -1)
         .map((l, i) => (
-          <PadTile key={i} scaleY={0.3} line={PadLine.Parent} />
+          <PadTile key={i} scaleY={0.3} color={color} line={PadLine.Parent} />
         ))}
     </div>
   );
