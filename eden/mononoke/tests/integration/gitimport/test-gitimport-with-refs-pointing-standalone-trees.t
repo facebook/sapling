@@ -108,5 +108,6 @@
 
 # Now validate if we have stored the nested file within the root tree blob  
   $ mononoke_admin git-objects -R repo fetch --id $nested_blob_hash
-  Error: The object corresponding to object ID 055c6223c863e48683afc7fbc35468bda9f3c369 or its packfile item does not exist in the data store
-  [1]
+  The object is a Git Blob
+  
+  "this is a deep nested file\n"

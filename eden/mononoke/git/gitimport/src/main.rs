@@ -48,6 +48,7 @@ use import_tools::import_tree_as_single_bonsai_changeset;
 use import_tools::set_bookmark;
 use import_tools::upload_git_object;
 use import_tools::upload_git_tag;
+use import_tools::upload_git_tree_recursively;
 use import_tools::BackfillDerivation;
 use import_tools::BookmarkOperation;
 use import_tools::GitImportLfs;
@@ -483,7 +484,14 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 let git_hash = ref_metadata.target.into_inner_hash()?;
                 // Before adding the git ref content mapping, ensure that the object pointed to by
                 // the content ref is already present in Mononoke
-                upload_git_object(&ctx, uploader.clone(), reader.clone(), &git_hash).await?;
+                if is_tree {
+                    // The object pointed at is a tree. Ensure that all the members of the tree are uploaded
+                    // recursively
+                    upload_git_tree_recursively(&ctx, uploader.clone(), reader.clone(), &git_hash)
+                        .await?;
+                } else {
+                    upload_git_object(&ctx, uploader.clone(), reader.clone(), &git_hash).await?;
+                }
                 // Only add git ref content mapping if the ref itself directly points to a
                 // tree or blob. If the ref is nested, do not add the mapping.
                 if !ref_metadata.nested_tag {

@@ -16,6 +16,7 @@ mod gitlfs;
 
 use std::collections::BTreeMap;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::path::Path;
 use std::process::Stdio;
 use std::str;
@@ -46,6 +47,7 @@ use gix_hash::ObjectId;
 use gix_object::Kind;
 use gix_object::Object;
 use linked_hash_map::LinkedHashMap;
+use manifest::bonsai_diff;
 use manifest::BonsaiDiffFileChange;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileType;
@@ -273,6 +275,38 @@ pub async fn upload_git_object<Uploader: GitUploader, Reader: GitReader>(
         .with_context(|| format_err!("Failed to fetch git object {}", object_id))?;
     upload_git_object_by_content(ctx, uploader, object_id, object_bytes).await?;
     Ok(())
+}
+
+pub async fn upload_git_tree_recursively<Uploader: GitUploader, Reader: GitReader>(
+    ctx: &CoreContext,
+    uploader: Arc<Uploader>,
+    reader: Arc<Reader>,
+    tree_id: &ObjectId,
+) -> Result<()> {
+    // First upload the base tree
+    upload_git_object(ctx, uploader.clone(), reader.clone(), tree_id).await?;
+    let tree = GitTree::<true>(*tree_id);
+    // Then upload all subtrees and blobs within it
+    bonsai_diff(ctx.clone(), reader.clone(), tree, HashSet::new())
+        .map_ok(|diff| {
+            cloned!(ctx, uploader, reader);
+            async move {
+                tokio::spawn(async move {
+                    use BonsaiDiffFileChange::*;
+                    match diff {
+                        Changed(_, (_, GitLeaf(oid))) | ChangedReusedId(_, (_, GitLeaf(oid))) => {
+                            upload_git_object(&ctx, uploader, reader, &oid).await
+                        }
+                        _ => Ok(()),
+                    }
+                })
+                .await??;
+                anyhow::Ok(())
+            }
+        })
+        .try_buffer_unordered(100)
+        .try_collect()
+        .await
 }
 
 pub fn upload_git_tag<'a, Uploader: GitUploader, Reader: GitReader>(
