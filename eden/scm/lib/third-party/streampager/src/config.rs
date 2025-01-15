@@ -233,6 +233,10 @@ impl Config {
         }
         self
     }
+
+    pub(crate) fn from_user_config() -> Self {
+        Self::from_config_file().with_env()
+    }
 }
 
 fn parse_bool(value: &str) -> Option<bool> {
