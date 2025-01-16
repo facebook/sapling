@@ -14,6 +14,7 @@ use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
+use bytes::Bytes;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::TryFutureExt;
@@ -441,4 +442,39 @@ async fn hook_manager_repo(fb: FacebookInit, repo: &BasicTestRepo) -> HookManage
 
 fn to_mpath(string: &str) -> NonRootMPath {
     NonRootMPath::new(string).unwrap()
+}
+
+#[mononoke::fbinit_test]
+async fn test_hook_file_content_provider_limit_file_size(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: BasicTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
+    let root_id = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("small", "small")
+        .add_file("large", "this-file-is-very-very-long")
+        .commit()
+        .await?;
+    let root = root_id.load(&ctx, repo.repo_blobstore()).await?;
+    let small_id = root
+        .file_changes_map()
+        .get(&to_mpath("small"))
+        .unwrap()
+        .content_id()
+        .unwrap();
+    let large_id = root
+        .file_changes_map()
+        .get(&to_mpath("large"))
+        .unwrap()
+        .content_id()
+        .unwrap();
+    let mut hook_state_provider = RepoHookStateProvider::new(&repo);
+    hook_state_provider.max_file_size = 10;
+    assert_eq!(
+        hook_state_provider.get_file_text(&ctx, small_id).await?,
+        Some(Bytes::from_static(b"small")),
+    );
+    assert_eq!(
+        hook_state_provider.get_file_text(&ctx, large_id).await?,
+        None,
+    );
+    Ok(())
 }

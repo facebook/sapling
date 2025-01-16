@@ -6,7 +6,6 @@
  */
 
 pub mod memory;
-pub mod text_only;
 
 use std::collections::HashMap;
 
@@ -68,9 +67,18 @@ pub trait HookStateProvider: Send + Sync {
     ) -> Result<ContentMetadataV2, HookStateProviderError>;
 
     /// The text of a file with a particular content id.  If the content is
+    /// not appropriate to analyze (e.g. because it is too large or contains
+    /// binary data), then the provider may return `None`.
+    async fn get_file_text<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        id: ContentId,
+    ) -> Result<Option<Bytes>, HookStateProviderError>;
+
+    /// The raw bytes of a file with a particular content id.  If the content is
     /// not appropriate to analyze (e.g. because it is too large), then the
     /// provider may return `None`.
-    async fn get_file_text<'a>(
+    async fn get_file_bytes<'a>(
         &'a self,
         ctx: &'a CoreContext,
         id: ContentId,

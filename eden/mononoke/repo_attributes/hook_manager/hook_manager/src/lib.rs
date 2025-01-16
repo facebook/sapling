@@ -40,7 +40,6 @@ pub use crate::errors::HookStateProviderError;
 pub use crate::manager::HookManager;
 use crate::manager::HooksOutcome;
 pub use crate::provider::memory::InMemoryHookStateProvider;
-pub use crate::provider::text_only::TextOnlyHookStateProvider;
 pub use crate::provider::FileChangeType;
 pub use crate::provider::HookStateProvider;
 pub use crate::provider::PathContent;

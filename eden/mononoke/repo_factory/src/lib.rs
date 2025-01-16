@@ -112,7 +112,6 @@ use git_symbolic_refs::ArcGitSymbolicRefs;
 use git_symbolic_refs::SqlGitSymbolicRefsBuilder;
 use hook_manager::manager::ArcHookManager;
 use hook_manager::manager::HookManager;
-use hook_manager::TextOnlyHookStateProvider;
 use hooks::hook_loader::load_hooks;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use memcache::KeyGen;
@@ -1496,14 +1495,12 @@ impl RepoFactory {
         }
 
         let hook_manager = async {
-            let content_provider = Box::new(TextOnlyHookStateProvider::new(
-                RepoHookStateProvider::from_parts(
-                    bookmarks.clone(),
-                    repo_blobstore.clone(),
-                    repo_derived_data.clone(),
-                    bonsai_tag_mapping.clone(),
-                    bonsai_git_mapping.clone(),
-                ),
+            let content_provider = Box::new(RepoHookStateProvider::from_parts(
+                bookmarks.clone(),
+                repo_blobstore.clone(),
+                repo_derived_data.clone(),
+                bonsai_tag_mapping.clone(),
+                bonsai_git_mapping.clone(),
                 repo_config.hook_max_file_size,
             ));
 

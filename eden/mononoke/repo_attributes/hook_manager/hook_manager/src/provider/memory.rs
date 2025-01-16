@@ -99,6 +99,14 @@ impl HookStateProvider for InMemoryHookStateProvider {
             })
     }
 
+    async fn get_file_bytes<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        id: ContentId,
+    ) -> Result<Option<Bytes>, HookStateProviderError> {
+        self.get_file_text(_ctx, id).await
+    }
+
     async fn find_content<'a>(
         &'a self,
         _ctx: &'a CoreContext,

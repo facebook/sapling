@@ -64,6 +64,7 @@ pub struct RepoHookStateProvider {
     repo_derived_data: ArcRepoDerivedData,
     bonsai_tag_mapping: ArcBonsaiTagMapping,
     bonsai_git_mapping: ArcBonsaiGitMapping,
+    max_file_size: u64,
 }
 
 #[async_trait]
@@ -85,10 +86,30 @@ impl HookStateProvider for RepoHookStateProvider {
         ctx: &'a CoreContext,
         id: ContentId,
     ) -> Result<Option<Bytes>, HookStateProviderError> {
-        filestore::fetch_concat_opt(&self.repo_blobstore, ctx, &id.into())
+        let file_bytes = self.get_file_bytes(ctx, id).await?;
+
+        // Filter out files with null bytes
+        let file_bytes = file_bytes.filter(|b| !b.contains(&0));
+
+        Ok(file_bytes)
+    }
+
+    async fn get_file_bytes<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        id: ContentId,
+    ) -> Result<Option<Bytes>, HookStateProviderError> {
+        // Don't fetch content if we know the object is too large
+        let size = self.get_file_metadata(ctx, id).await?.total_size;
+        if size > self.max_file_size {
+            return Ok(None);
+        }
+
+        let file_bytes = filestore::fetch_concat_opt(&self.repo_blobstore, ctx, &id.into())
             .await?
-            .ok_or(HookStateProviderError::ContentIdNotFound(id))
-            .map(Option::Some)
+            .ok_or(HookStateProviderError::ContentIdNotFound(id))?;
+
+        Ok(Some(file_bytes))
     }
 
     async fn find_content<'a>(
@@ -350,7 +371,7 @@ impl HookStateProvider for RepoHookStateProvider {
 
 impl RepoHookStateProvider {
     pub fn new(
-        container: &(
+        repo: &(
              impl RepoBlobstoreArc
              + BookmarksArc
              + RepoDerivedDataArc
@@ -358,11 +379,12 @@ impl RepoHookStateProvider {
              + BonsaiGitMappingArc
          ),
     ) -> RepoHookStateProvider {
-        let repo_blobstore = container.repo_blobstore_arc();
-        let bookmarks = container.bookmarks_arc();
-        let repo_derived_data = container.repo_derived_data_arc();
-        let bonsai_tag_mapping = container.bonsai_tag_mapping_arc();
-        let bonsai_git_mapping = container.bonsai_git_mapping_arc();
+        let repo_blobstore = repo.repo_blobstore_arc();
+        let bookmarks = repo.bookmarks_arc();
+        let repo_derived_data = repo.repo_derived_data_arc();
+        let bonsai_tag_mapping = repo.bonsai_tag_mapping_arc();
+        let bonsai_git_mapping = repo.bonsai_git_mapping_arc();
+        let max_file_size = u64::MAX;
 
         RepoHookStateProvider {
             repo_blobstore,
@@ -370,6 +392,7 @@ impl RepoHookStateProvider {
             repo_derived_data,
             bonsai_tag_mapping,
             bonsai_git_mapping,
+            max_file_size,
         }
     }
 
@@ -379,6 +402,7 @@ impl RepoHookStateProvider {
         repo_derived_data: ArcRepoDerivedData,
         bonsai_tag_mapping: ArcBonsaiTagMapping,
         bonsai_git_mapping: ArcBonsaiGitMapping,
+        max_file_size: u64,
     ) -> Self {
         RepoHookStateProvider {
             repo_blobstore,
@@ -386,6 +410,7 @@ impl RepoHookStateProvider {
             repo_derived_data,
             bonsai_tag_mapping,
             bonsai_git_mapping,
+            max_file_size,
         }
     }
 }

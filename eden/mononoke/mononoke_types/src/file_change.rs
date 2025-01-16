@@ -310,6 +310,14 @@ impl FileChange {
         }
     }
 
+    pub fn content_id(&self) -> Option<ContentId> {
+        match &self {
+            Self::Change(tc) => Some(tc.content_id()),
+            Self::UntrackedChange(uc) => Some(uc.content_id),
+            Self::Deletion | Self::UntrackedDeletion => None,
+        }
+    }
+
     pub fn copy_from(&self) -> Option<&(NonRootMPath, ChangesetId)> {
         match self {
             Self::Change(tc) => tc.copy_from(),

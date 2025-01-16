@@ -753,6 +753,7 @@ impl TestRepoFactory {
             repo_derived_data.clone(),
             bonsai_tag_mapping.clone(),
             bonsai_git_mapping.clone(),
+            u64::MAX,
         );
 
         Arc::new(HookManager::new_test(

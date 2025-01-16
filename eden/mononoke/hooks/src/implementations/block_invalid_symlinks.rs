@@ -108,7 +108,7 @@ impl FileHook for BlockInvalidSymlinksHook {
                 }
 
                 if let Some(text) = content_manager
-                    .get_file_text(ctx, change.content_id())
+                    .get_file_bytes(ctx, change.content_id())
                     .await?
                 {
                     if !self.config.allow_newlines && text.contains(&b'\n') {
