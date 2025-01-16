@@ -13,7 +13,6 @@ mod errors;
 mod hook_running;
 mod processing;
 mod push_redirector;
-mod rate_limits;
 mod resolver;
 mod response;
 mod stats;

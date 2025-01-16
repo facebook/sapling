@@ -219,17 +219,9 @@ impl<'de> Deserialize<'de> for MononokeRateLimitConfig {
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| D::Error::custom(format!("{:?}", e)))?;
 
-        let total_file_changes = raw_config
-            .total_file_changes
-            .clone()
-            .map(|v| v.try_into())
-            .transpose()
-            .map_err(|e| D::Error::custom(format!("{:?}", e)))?;
-
         Ok(Self {
             rate_limits,
             load_shed_limits,
-            total_file_changes,
         })
     }
 }

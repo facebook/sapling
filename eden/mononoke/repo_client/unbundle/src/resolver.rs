@@ -46,7 +46,6 @@ use metaconfig_types::PushParams;
 use metaconfig_types::PushrebaseFlags;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use rate_limiting::RateLimitBody;
 use slog::trace;
 use topo_sort::sort_topological;
 use wirepack::parse_treemanifest_bundle2;
@@ -58,8 +57,6 @@ use crate::changegroup::split_changegroup;
 use crate::errors::*;
 use crate::hook_running::make_hook_rejection_remapper;
 use crate::hook_running::HookRejectionRemapper;
-use crate::rate_limits::enforce_file_changes_rate_limits;
-use crate::rate_limits::RateLimitedPushKind;
 use crate::stats::*;
 use crate::upload_blobs::upload_hg_blobs;
 use crate::upload_changesets::upload_changeset;
@@ -129,12 +126,6 @@ pub enum BundleResolverError {
     HookError(Vec<HgHookRejection>),
     PushrebaseConflicts(Vec<pushrebase::PushrebaseConflict>),
     Error(Error),
-    RateLimitExceeded {
-        limit_name: String,
-        limit: RateLimitBody,
-        entity: String,
-        value: f64,
-    },
 }
 
 impl From<Error> for BundleResolverError {
@@ -163,21 +154,6 @@ impl From<BundleResolverError> for Error {
             PushrebaseConflicts(conflicts) => {
                 format_err!("pushrebase failed Conflicts({:?})", conflicts)
             }
-            RateLimitExceeded {
-                limit_name,
-                limit,
-                entity,
-                value,
-            } => format_err!(
-                "Rate limit exceeded: {} for {}. \
-                 The maximum allowed value is {} over a sliding {}s interval. \
-                 If allowed, the value would be {}.",
-                limit_name,
-                entity,
-                limit.raw_config.limit,
-                limit.window.as_secs(),
-                value,
-            ),
             Error(err) => err,
         }
     }
@@ -960,12 +936,6 @@ impl<'r, R: Repo> Bundle2Resolver<'r, R> {
                     );
                 }
 
-                let push_kind = if is_infinitepush {
-                    RateLimitedPushKind::InfinitePush
-                } else {
-                    RateLimitedPushKind::Public
-                };
-
                 let (changesets, filelogs) = split_changegroup(parts);
                 let changesets: Vec<(HgChangesetId, RevlogChangeset)> =
                     convert_to_revlog_changesets(changesets)
@@ -1021,13 +991,6 @@ impl<'r, R: Repo> Bundle2Resolver<'r, R> {
                 } else {
                     changesets
                 };
-
-                enforce_file_changes_rate_limits(
-                    self.ctx,
-                    push_kind,
-                    changesets.iter().map(|(_, rc)| rc),
-                )
-                .await?;
 
                 let mut ctx = self.ctx.clone();
                 if is_infinitepush {

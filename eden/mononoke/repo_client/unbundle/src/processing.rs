@@ -34,7 +34,6 @@ use stats::prelude::*;
 
 use crate::hook_running::map_hook_rejections;
 use crate::hook_running::HookRejectionRemapper;
-use crate::rate_limits::enforce_commit_rate_limits;
 use crate::response::UnbundleBookmarkOnlyPushRebaseResponse;
 use crate::response::UnbundleInfinitePushResponse;
 use crate::response::UnbundlePushRebaseResponse;
@@ -70,8 +69,6 @@ pub async fn run_post_resolve_action(
     action: PostResolveAction,
     cross_repo_push_source: CrossRepoPushSource,
 ) -> Result<UnbundleResponse, BundleResolverError> {
-    enforce_commit_rate_limits(ctx, &action).await?;
-
     // FIXME: it's used not only in pushrebase, so it worth moving
     // populate_git_mapping outside of PushrebaseParams.
     let unbundle_response = match action {

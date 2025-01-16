@@ -137,10 +137,6 @@ impl RateLimiter for MononokeRateLimits {
             .find(|r| r.fci_metric.metric == metric)
             .cloned()
     }
-
-    fn total_file_changes_limit(&self) -> Option<RateLimitBody> {
-        self.config.total_file_changes.clone()
-    }
 }
 
 #[derive(Clone)]

@@ -63,8 +63,6 @@ pub trait RateLimiter {
 
     fn category(&self) -> &str;
 
-    fn total_file_changes_limit(&self) -> Option<RateLimitBody>;
-
     fn find_rate_limit(&self, metric: Metric) -> Option<RateLimit>;
 }
 
@@ -109,8 +107,6 @@ pub struct RateLimitBody {
 pub struct MononokeRateLimitConfig {
     pub rate_limits: Vec<RateLimit>,
     pub load_shed_limits: Vec<LoadShedLimit>,
-    #[allow(dead_code)]
-    total_file_changes: Option<RateLimitBody>,
 }
 
 #[derive(Debug, Clone)]

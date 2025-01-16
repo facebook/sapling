@@ -1695,9 +1695,6 @@ impl<R: Repo> HgCommands for RepoClient<R> {
                         PushrebaseConflicts(..) => {
                             STATS::push_conflicts.add_value(1, (reponame,));
                         }
-                        RateLimitExceeded { .. } => {
-                            STATS::rate_limits_exceeded.add_value(1, (reponame,));
-                        }
                         Error(..) => {
                             STATS::push_error.add_value(1, (reponame,));
                         }

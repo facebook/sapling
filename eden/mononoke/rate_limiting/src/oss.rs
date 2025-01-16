@@ -65,10 +65,6 @@ impl RateLimiter for FakeLimiter {
         &self.category
     }
 
-    fn total_file_changes_limit(&self) -> Option<RateLimitBody> {
-        None
-    }
-
     fn find_rate_limit(&self, metric: Metric) -> Option<RateLimit> {
         None
     }
